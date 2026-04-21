@@ -1,0 +1,114 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://noetheon.github.io/vuln-prioritizer/schemas/evidence-bundle-verification-report.schema.json",
+  "title": "vuln-prioritizer evidence bundle verification report",
+  "description": "Verification contract emitted by `report verify-evidence-bundle --format json`.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["metadata", "summary", "items"],
+  "properties": {
+    "metadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "generated_at", "bundle_path"],
+      "properties": {
+        "schema_version": {
+          "const": "1.2.0"
+        },
+        "generated_at": {
+          "type": "string"
+        },
+        "bundle_path": {
+          "type": "string"
+        },
+        "manifest_schema_version": {
+          "type": ["string", "null"]
+        },
+        "bundle_kind": {
+          "type": ["string", "null"]
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "ok",
+        "total_members",
+        "expected_files",
+        "verified_files",
+        "missing_files",
+        "modified_files",
+        "unexpected_files",
+        "manifest_errors"
+      ],
+      "properties": {
+        "ok": {
+          "type": "boolean"
+        },
+        "total_members": {
+          "type": "integer"
+        },
+        "expected_files": {
+          "type": "integer"
+        },
+        "verified_files": {
+          "type": "integer"
+        },
+        "missing_files": {
+          "type": "integer"
+        },
+        "modified_files": {
+          "type": "integer"
+        },
+        "unexpected_files": {
+          "type": "integer"
+        },
+        "manifest_errors": {
+          "type": "integer"
+        }
+      }
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/verificationItem"
+      }
+    }
+  },
+  "$defs": {
+    "verificationItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "status", "detail"],
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "kind": {
+          "type": ["string", "null"]
+        },
+        "status": {
+          "enum": ["ok", "missing", "modified", "unexpected", "error"]
+        },
+        "detail": {
+          "type": "string"
+        },
+        "expected_size_bytes": {
+          "type": ["integer", "null"]
+        },
+        "actual_size_bytes": {
+          "type": ["integer", "null"]
+        },
+        "expected_sha256": {
+          "type": ["string", "null"],
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "actual_sha256": {
+          "type": ["string", "null"],
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      }
+    }
+  }
+}

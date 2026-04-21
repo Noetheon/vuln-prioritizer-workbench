@@ -29,7 +29,7 @@ Core commands:
 - `snapshot create|diff`: capture a run and compare before/after states
 - `rollup`: aggregate saved analysis or snapshots by asset or service
 - `attack validate|coverage|navigator-layer`: validate and use local ATT&CK mappings
-- `report html|evidence-bundle`: render HTML or build reproducible ZIP evidence packages
+- `report html|evidence-bundle|verify-evidence-bundle`: render HTML, build reproducible ZIP evidence packages, or verify bundle integrity
 - `data status|update|verify`: inspect and maintain local data/cache state
 
 Supported inputs:
@@ -148,6 +148,19 @@ vuln-prioritizer rollup \
   --input after.json \
   --by service \
   --format markdown
+```
+
+### 5. Evidence Bundle Integrity Verification
+
+```bash
+vuln-prioritizer report evidence-bundle \
+  --input analysis.json \
+  --output evidence.zip
+
+vuln-prioritizer report verify-evidence-bundle \
+  --input evidence.zip \
+  --format json \
+  --output evidence-verification.json
 ```
 
 ## Runtime Config

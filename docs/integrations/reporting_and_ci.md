@@ -20,6 +20,7 @@ Today the CLI supports:
 - `data verify`
 - `report html --input analysis.json --output report.html`
 - `report evidence-bundle --input analysis.json --output evidence.zip`
+- `report verify-evidence-bundle --input evidence.zip --format json`
 - `attack validate|coverage|navigator-layer`
 
 The repository root also exposes a composite GitHub Action via [`action.yml`](https://github.com/Noetheon/vuln-prioritizer-cli/blob/main/action.yml).
@@ -129,6 +130,22 @@ The bundle packages:
 - `manifest.json` with checksums and artifact metadata
 - the original input file when it can be resolved from the saved analysis metadata
 
+Integrity verification contract:
+
+```bash
+vuln-prioritizer report verify-evidence-bundle \
+  --input evidence.zip \
+  --format json \
+  --output evidence-verification.json
+```
+
+The verifier:
+
+- re-reads `manifest.json`
+- recomputes SHA-256 and byte size for declared bundle members
+- reports missing, modified, unexpected, and malformed content clearly
+- returns exit code `1` when bundle integrity problems are detected
+
 ### Runtime Config + Summary Sidecars
 
 Current contract:
@@ -210,6 +227,15 @@ vuln-prioritizer analyze \
 vuln-prioritizer report html \
   --input analysis.json \
   --output report.html
+
+vuln-prioritizer report evidence-bundle \
+  --input analysis.json \
+  --output evidence.zip
+
+vuln-prioritizer report verify-evidence-bundle \
+  --input evidence.zip \
+  --format json \
+  --output evidence-verification.json
 
 vuln-prioritizer data verify \
   --cve CVE-2021-44228 \

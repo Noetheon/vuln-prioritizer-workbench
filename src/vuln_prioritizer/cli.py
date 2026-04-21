@@ -48,6 +48,9 @@ from vuln_prioritizer.models import (
     EpssData,
     EvidenceBundleFile,
     EvidenceBundleManifest,
+    EvidenceBundleVerificationItem,
+    EvidenceBundleVerificationMetadata,
+    EvidenceBundleVerificationSummary,
     KevData,
     NvdData,
     ParsedInput,
@@ -76,6 +79,7 @@ from vuln_prioritizer.reporter import (
     generate_compare_markdown,
     generate_doctor_json,
     generate_evidence_bundle_manifest_json,
+    generate_evidence_bundle_verification_json,
     generate_explain_json,
     generate_explain_markdown,
     generate_html_report,
@@ -88,6 +92,7 @@ from vuln_prioritizer.reporter import (
     generate_snapshot_diff_markdown,
     generate_summary_markdown,
     render_compare_table,
+    render_evidence_bundle_verification_table,
     render_explain_view,
     render_findings_table,
     render_rollup_table,
@@ -1356,6 +1361,43 @@ def report_evidence_bundle(
     )
     console.print(f"[green]Wrote evidence bundle to {output}[/green]")
     console.print(f"[green]Included {len(manifest.files)} artifact(s) plus manifest.[/green]")
+
+
+@report_app.command("verify-evidence-bundle")
+def report_verify_evidence_bundle(
+    input: Path = typer.Option(..., "--input", exists=True, dir_okay=False, readable=True),
+    output: Path | None = typer.Option(None, "--output", dir_okay=False),
+    format: OutputFormat = typer.Option(OutputFormat.table, "--format"),
+) -> None:
+    """Verify evidence bundle manifest integrity against the ZIP members."""
+    _validate_output_mode(format, output)
+    _validate_command_formats(
+        command_name="report verify-evidence-bundle",
+        format=format,
+        allowed_formats={OutputFormat.json, OutputFormat.table},
+    )
+
+    metadata, summary, items = _verify_evidence_bundle(input)
+    console.print(
+        Panel(
+            "\n".join(
+                [
+                    f"Bundle: {metadata.bundle_path}",
+                    f"Manifest schema: {metadata.manifest_schema_version or 'unavailable'}",
+                    f"Verification result: {'passed' if summary.ok else 'failed'}",
+                ]
+            ),
+            title="Evidence Bundle",
+        )
+    )
+    console.print(render_evidence_bundle_verification_table(items, summary))
+
+    if output is not None:
+        write_output(output, generate_evidence_bundle_verification_json(items, summary, metadata))
+        console.print(f"[green]Wrote json output to {output}[/green]")
+
+    if not summary.ok:
+        raise typer.Exit(code=1)
 
 
 def _prepare_analysis(
@@ -2929,6 +2971,193 @@ def _load_analysis_report_payload(input_path: Path) -> dict:
     return payload
 
 
+def _verify_evidence_bundle(
+    bundle_path: Path,
+) -> tuple[
+    EvidenceBundleVerificationMetadata,
+    EvidenceBundleVerificationSummary,
+    list[EvidenceBundleVerificationItem],
+]:
+    try:
+        with zipfile.ZipFile(bundle_path, "r") as archive:
+            member_paths = sorted(info.filename for info in archive.infolist() if not info.is_dir())
+            metadata = EvidenceBundleVerificationMetadata(
+                generated_at=iso_utc_now(),
+                bundle_path=str(bundle_path),
+            )
+
+            if "manifest.json" not in member_paths:
+                items = [
+                    EvidenceBundleVerificationItem(
+                        path="manifest.json",
+                        status="missing",
+                        detail="Bundle does not contain manifest.json.",
+                    )
+                ]
+                summary = EvidenceBundleVerificationSummary(
+                    ok=False,
+                    total_members=len(member_paths),
+                    manifest_errors=1,
+                    missing_files=1,
+                )
+                return metadata, summary, items
+
+            try:
+                manifest_payload = json.loads(archive.read("manifest.json"))
+            except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+                items = [
+                    EvidenceBundleVerificationItem(
+                        path="manifest.json",
+                        status="error",
+                        detail=f"Manifest is not valid JSON: {str(exc)}.",
+                    )
+                ]
+                summary = EvidenceBundleVerificationSummary(
+                    ok=False,
+                    total_members=len(member_paths),
+                    manifest_errors=1,
+                )
+                return metadata, summary, items
+
+            if not isinstance(manifest_payload, dict):
+                items = [
+                    EvidenceBundleVerificationItem(
+                        path="manifest.json",
+                        status="error",
+                        detail="Manifest must decode to a JSON object.",
+                    )
+                ]
+                summary = EvidenceBundleVerificationSummary(
+                    ok=False,
+                    total_members=len(member_paths),
+                    manifest_errors=1,
+                )
+                return metadata, summary, items
+
+            try:
+                manifest = EvidenceBundleManifest.model_validate(manifest_payload)
+            except ValidationError as exc:
+                items = [
+                    EvidenceBundleVerificationItem(
+                        path="manifest.json",
+                        status="error",
+                        detail=_format_evidence_manifest_validation_error(exc),
+                    )
+                ]
+                summary = EvidenceBundleVerificationSummary(
+                    ok=False,
+                    total_members=len(member_paths),
+                    manifest_errors=1,
+                )
+                return metadata, summary, items
+
+            metadata = EvidenceBundleVerificationMetadata(
+                generated_at=iso_utc_now(),
+                bundle_path=str(bundle_path),
+                manifest_schema_version=manifest.schema_version,
+                bundle_kind=manifest.bundle_kind,
+            )
+
+            manifest_errors = _validate_evidence_manifest_structure(manifest)
+            if manifest_errors:
+                summary = EvidenceBundleVerificationSummary(
+                    ok=False,
+                    total_members=len(member_paths),
+                    expected_files=len(manifest.files),
+                    manifest_errors=len(manifest_errors),
+                )
+                return metadata, summary, manifest_errors
+
+            items = []
+            verified_files = 0
+            missing_files = 0
+            modified_files = 0
+            actual_members = set(member_paths)
+            expected_paths = {entry.path for entry in manifest.files}
+            for expected in manifest.files:
+                if expected.path not in actual_members:
+                    missing_files += 1
+                    items.append(
+                        EvidenceBundleVerificationItem(
+                            path=expected.path,
+                            kind=expected.kind,
+                            status="missing",
+                            detail="Archive member declared in manifest is missing.",
+                            expected_size_bytes=expected.size_bytes,
+                            expected_sha256=expected.sha256,
+                        )
+                    )
+                    continue
+
+                content = archive.read(expected.path)
+                actual_size = len(content)
+                actual_sha256 = hashlib.sha256(content).hexdigest()
+                if actual_size != expected.size_bytes or actual_sha256 != expected.sha256:
+                    modified_files += 1
+                    items.append(
+                        EvidenceBundleVerificationItem(
+                            path=expected.path,
+                            kind=expected.kind,
+                            status="modified",
+                            detail=_describe_evidence_bundle_mismatch(
+                                expected=expected,
+                                actual_size=actual_size,
+                                actual_sha256=actual_sha256,
+                            ),
+                            expected_size_bytes=expected.size_bytes,
+                            actual_size_bytes=actual_size,
+                            expected_sha256=expected.sha256,
+                            actual_sha256=actual_sha256,
+                        )
+                    )
+                    continue
+
+                verified_files += 1
+                items.append(
+                    EvidenceBundleVerificationItem(
+                        path=expected.path,
+                        kind=expected.kind,
+                        status="ok",
+                        detail="Archive member matches the manifest checksum.",
+                        expected_size_bytes=expected.size_bytes,
+                        actual_size_bytes=actual_size,
+                        expected_sha256=expected.sha256,
+                        actual_sha256=actual_sha256,
+                    )
+                )
+
+            unexpected_members = sorted(
+                path
+                for path in member_paths
+                if path not in expected_paths and path != "manifest.json"
+            )
+            for unexpected_path in unexpected_members:
+                items.append(
+                    EvidenceBundleVerificationItem(
+                        path=unexpected_path,
+                        status="unexpected",
+                        detail="Archive member is present but not declared in manifest.",
+                        actual_size_bytes=archive.getinfo(unexpected_path).file_size,
+                        actual_sha256=hashlib.sha256(archive.read(unexpected_path)).hexdigest(),
+                    )
+                )
+
+            summary = EvidenceBundleVerificationSummary(
+                ok=not (missing_files or modified_files or unexpected_members),
+                total_members=len(member_paths),
+                expected_files=len(manifest.files),
+                verified_files=verified_files,
+                missing_files=missing_files,
+                modified_files=modified_files,
+                unexpected_files=len(unexpected_members),
+                manifest_errors=0,
+            )
+            return metadata, summary, items
+    except zipfile.BadZipFile as exc:
+        _exit_input_validation(f"{bundle_path} is not a valid ZIP archive: {exc}.")
+    raise AssertionError("unreachable")
+
+
 def _write_evidence_bundle(
     *,
     analysis_path: Path,
@@ -3008,6 +3237,59 @@ def _bundle_file_entry(*, path: str, content: bytes, kind: str) -> EvidenceBundl
         size_bytes=len(content),
         sha256=hashlib.sha256(content).hexdigest(),
     )
+
+
+def _validate_evidence_manifest_structure(
+    manifest: EvidenceBundleManifest,
+) -> list[EvidenceBundleVerificationItem]:
+    errors: list[EvidenceBundleVerificationItem] = []
+    seen_paths: set[str] = set()
+    for entry in manifest.files:
+        if entry.path == "manifest.json":
+            errors.append(
+                EvidenceBundleVerificationItem(
+                    path="manifest.json",
+                    kind=entry.kind,
+                    status="error",
+                    detail="Manifest must not declare manifest.json as a bundle member.",
+                )
+            )
+        if entry.path in seen_paths:
+            errors.append(
+                EvidenceBundleVerificationItem(
+                    path=entry.path,
+                    kind=entry.kind,
+                    status="error",
+                    detail="Manifest declares the same bundle member path more than once.",
+                )
+            )
+        seen_paths.add(entry.path)
+    return errors
+
+
+def _format_evidence_manifest_validation_error(exc: ValidationError) -> str:
+    if not exc.errors():
+        return "Manifest failed validation."
+    first_error = exc.errors()[0]
+    location = ".".join(str(part) for part in first_error.get("loc", ())) or "manifest"
+    message = first_error.get("msg", "validation error")
+    return f"Manifest failed validation at {location}: {message}."
+
+
+def _describe_evidence_bundle_mismatch(
+    *,
+    expected: EvidenceBundleFile,
+    actual_size: int,
+    actual_sha256: str,
+) -> str:
+    mismatches: list[str] = []
+    if actual_size != expected.size_bytes:
+        mismatches.append(f"size {actual_size} != manifest {expected.size_bytes}")
+    if actual_sha256 != expected.sha256:
+        mismatches.append("sha256 mismatch")
+    if not mismatches:
+        return "Archive member does not match the manifest."
+    return "Archive member does not match the manifest: " + ", ".join(mismatches) + "."
 
 
 def _handle_fail_on(findings: list[PrioritizedFinding], fail_on: PriorityFilter) -> None:

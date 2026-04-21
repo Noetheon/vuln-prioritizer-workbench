@@ -19,6 +19,9 @@ from vuln_prioritizer.models import (
     DoctorReport,
     EpssData,
     EvidenceBundleManifest,
+    EvidenceBundleVerificationItem,
+    EvidenceBundleVerificationMetadata,
+    EvidenceBundleVerificationSummary,
     KevData,
     NvdData,
     PrioritizedFinding,
@@ -678,6 +681,36 @@ def generate_doctor_json(report: DoctorReport) -> str:
 def generate_evidence_bundle_manifest_json(manifest: EvidenceBundleManifest) -> str:
     """Render the JSON manifest stored inside evidence bundles."""
     return json.dumps(manifest.model_dump(), indent=2, sort_keys=True)
+
+
+def render_evidence_bundle_verification_table(
+    items: list[EvidenceBundleVerificationItem],
+    summary: EvidenceBundleVerificationSummary,
+) -> Table:
+    """Build the Rich table shown for evidence bundle verification."""
+    table = Table(title="Evidence Bundle Verification", show_lines=False)
+    table.add_column("Path", style="bold")
+    table.add_column("Status")
+    table.add_column("Detail", overflow="fold")
+    for item in items:
+        table.add_row(item.path, item.status.upper(), item.detail)
+    if not items and summary.ok:
+        table.add_row("manifest.json", "OK", "No bundle integrity issues were detected.")
+    return table
+
+
+def generate_evidence_bundle_verification_json(
+    items: list[EvidenceBundleVerificationItem],
+    summary: EvidenceBundleVerificationSummary,
+    metadata: EvidenceBundleVerificationMetadata,
+) -> str:
+    """Render the JSON evidence bundle verification export."""
+    payload = {
+        "metadata": metadata.model_dump(),
+        "summary": summary.model_dump(),
+        "items": [item.model_dump() for item in items],
+    }
+    return json.dumps(payload, indent=2, sort_keys=True)
 
 
 def write_output(path: Path, content: str) -> None:

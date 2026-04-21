@@ -565,6 +565,36 @@ class EvidenceBundleManifest(StrictModel):
     files: list[EvidenceBundleFile] = Field(default_factory=list)
 
 
+class EvidenceBundleVerificationMetadata(StrictModel):
+    schema_version: str = "1.2.0"
+    generated_at: str
+    bundle_path: str
+    manifest_schema_version: str | None = None
+    bundle_kind: str | None = None
+
+
+class EvidenceBundleVerificationSummary(StrictModel):
+    ok: bool = False
+    total_members: int = 0
+    expected_files: int = 0
+    verified_files: int = 0
+    missing_files: int = 0
+    modified_files: int = 0
+    unexpected_files: int = 0
+    manifest_errors: int = 0
+
+
+class EvidenceBundleVerificationItem(StrictModel):
+    path: str
+    kind: str | None = None
+    status: str
+    detail: str
+    expected_size_bytes: int | None = None
+    actual_size_bytes: int | None = None
+    expected_sha256: str | None = None
+    actual_sha256: str | None = None
+
+
 class WaiverRule(StrictModel):
     id: str | None = None
     cve_id: str

@@ -13,6 +13,9 @@ from vuln_prioritizer.cli import app
 from vuln_prioritizer.models import (
     DoctorCheck,
     DoctorReport,
+    EvidenceBundleVerificationItem,
+    EvidenceBundleVerificationMetadata,
+    EvidenceBundleVerificationSummary,
     PrioritizedFinding,
     RollupBucket,
     RollupCandidate,
@@ -25,6 +28,7 @@ from vuln_prioritizer.models import (
 from vuln_prioritizer.reporter import (
     build_snapshot_report_payload,
     generate_doctor_json,
+    generate_evidence_bundle_verification_json,
     generate_rollup_json,
     generate_snapshot_diff_json,
 )
@@ -235,6 +239,43 @@ def test_evidence_bundle_manifest_matches_published_schema(monkeypatch, tmp_path
 
     jsonschema.validate(manifest, _load_schema("evidence-bundle-manifest.schema.json"))
     assert manifest["included_input_copy"] is True
+
+
+def test_evidence_bundle_verification_json_matches_published_schema() -> None:
+    payload = json.loads(
+        generate_evidence_bundle_verification_json(
+            [
+                EvidenceBundleVerificationItem(
+                    path="report.html",
+                    kind="html-report",
+                    status="modified",
+                    detail="Archive member does not match the manifest: sha256 mismatch.",
+                    expected_size_bytes=120,
+                    actual_size_bytes=121,
+                    expected_sha256="a" * 64,
+                    actual_sha256="b" * 64,
+                )
+            ],
+            EvidenceBundleVerificationSummary(
+                ok=False,
+                total_members=5,
+                expected_files=4,
+                verified_files=3,
+                missing_files=0,
+                modified_files=1,
+                unexpected_files=0,
+                manifest_errors=0,
+            ),
+            EvidenceBundleVerificationMetadata(
+                generated_at="2026-04-21T12:00:00Z",
+                bundle_path="/tmp/evidence.zip",
+                manifest_schema_version="1.1.0",
+                bundle_kind="evidence-bundle",
+            ),
+        )
+    )
+
+    jsonschema.validate(payload, _load_schema("evidence-bundle-verification-report.schema.json"))
 
 
 def test_action_contract_exposes_summary_and_config_wiring() -> None:

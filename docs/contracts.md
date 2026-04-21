@@ -27,6 +27,7 @@ The following outputs are the current documented machine interfaces:
 - `analyze --summary-output <path>`
 - `report html --input <analysis-json>`
 - `report evidence-bundle --input <analysis-json>`
+- `report verify-evidence-bundle --input <evidence-zip> --format json`
 
 Published JSON schemas in `docs/schemas/` cover:
 
@@ -38,9 +39,11 @@ Published JSON schemas in `docs/schemas/` cover:
 - `snapshot-diff-report.schema.json`
 - `rollup-report.schema.json`
 - `evidence-bundle-manifest.schema.json`
+- `evidence-bundle-verification-report.schema.json`
 
 `report html` is a secondary renderer over the analysis JSON contract. It does not define its own independent source model.
 `report evidence-bundle` is a ZIP transport over the analysis JSON contract. Its published machine contract is the `manifest.json` stored inside the bundle.
+`report verify-evidence-bundle` is the published integrity-report contract for saved evidence ZIP bundles.
 
 ## JSON envelope contract
 
@@ -60,6 +63,7 @@ Primary payload keys by command:
 - `snapshot diff`: `items`, plus `summary`
 - `rollup`: `buckets`
 - `report evidence-bundle`: `manifest.json` with `files`
+- `report verify-evidence-bundle`: `items`, plus `summary`
 
 ### `metadata.schema_version`
 
@@ -83,6 +87,7 @@ New v1.1 helper contracts use their own envelope versions:
 - `snapshot create`: `metadata.schema_version = 1.1.0`
 - `snapshot diff`: `metadata.schema_version = 1.1.0`
 - `rollup`: `metadata.schema_version = 1.2.0`
+- `report verify-evidence-bundle`: `metadata.schema_version = 1.2.0`
 
 ## Semantic contract
 
@@ -185,6 +190,7 @@ The public combinations currently intended for use are:
 - `data verify`: terminal only
 - `report html`: HTML file output
 - `report evidence-bundle`: ZIP file output containing `analysis.json`, `report.html`, `summary.md`, and `manifest.json`
+- `report verify-evidence-bundle`: `table` and `json`
 
 Important boundary:
 
@@ -249,5 +255,6 @@ The following are intentionally not covered by the published JSON schemas:
 - undocumented JSON payloads from helper commands such as `attack validate` and `attack coverage`
 - HTML, Markdown, and terminal wording for `doctor`, `snapshot diff`, and `rollup`
 - exact ZIP layout details inside `report evidence-bundle` beyond the published `manifest.json` contract
+- cryptographic signing or provenance attestation for evidence bundles; current verification checks ZIP members against the embedded manifest only
 
 Those surfaces are useful, but they should not be treated as strict automation contracts unless they are later given their own published schemas.

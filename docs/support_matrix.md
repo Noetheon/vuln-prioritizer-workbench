@@ -19,6 +19,7 @@
 | `data verify` | optional `--input PATH` / `--cve` | none | none | Terminal-only cache coverage, checksum, and local file verification. |
 | `report html` | analysis JSON | `html` | Consumes analysis JSON contract | No live enrichment during rendering. |
 | `report evidence-bundle` | analysis JSON | `zip` | Manifest schema inside bundle | Packages saved analysis JSON, regenerated HTML, Markdown summary, and optional source input copy. |
+| `report verify-evidence-bundle` | evidence ZIP | `json` | JSON schema | Verifies ZIP members against the embedded manifest and reports missing, modified, unexpected, or malformed bundle content. |
 
 ## Input-format matrix
 
@@ -69,6 +70,7 @@ Without a matching target, the explain flow still works, but asset-join and exac
 - Prefer `--html-output` when one analyze run needs both machine-readable JSON and a human-facing HTML artifact.
 - Prefer `--summary-output` when GitHub Actions, PR automation, or local review needs a compact Markdown executive summary.
 - Prefer `report evidence-bundle` when a review board or release gate needs a reproducible offline artifact set from a saved analysis run.
+- Prefer `report verify-evidence-bundle` before shipping or archiving an evidence ZIP outside the repository or CI workspace.
 - `report html` expects an analysis JSON export, not compare JSON or explain JSON.
 - `sarif` is part of the documented contract only for `analyze`.
 - `data status`, `data update`, and `data verify` are intentionally human-facing terminal commands today.
