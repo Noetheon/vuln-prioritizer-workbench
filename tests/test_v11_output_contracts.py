@@ -57,6 +57,8 @@ from vuln_prioritizer.reporter import (
 runner = CliRunner()
 SCHEMA_ROOT = Path(__file__).resolve().parents[1] / "docs" / "schemas"
 ACTION_FILE = Path(__file__).resolve().parents[1] / "action.yml"
+RELEASE_WORKFLOW = Path(__file__).resolve().parents[1] / ".github" / "workflows" / "release.yml"
+TESTPYPI_WORKFLOW = Path(__file__).resolve().parents[1] / ".github" / "workflows" / "testpypi.yml"
 
 
 def _load_schema(name: str) -> dict:
@@ -475,3 +477,52 @@ def test_action_contract_exposes_summary_and_config_wiring() -> None:
     assert "render_compact_summary" in run_block
     assert "$RUNNER_TEMP/vuln-prioritizer-summary.md" in run_block
     assert "$GITHUB_STEP_SUMMARY" in run_block
+
+
+def test_release_workflow_is_tag_bound_and_verifies_pypi_install() -> None:
+    payload = yaml.safe_load(RELEASE_WORKFLOW.read_text(encoding="utf-8"))
+    jobs = payload["jobs"]
+    build_steps = jobs["build-and-release"]["steps"]
+    github_release_steps = [
+        step for step in build_steps if step.get("uses") == "softprops/action-gh-release@v3"
+    ]
+
+    assert github_release_steps
+    assert all(
+        "startsWith(github.ref, 'refs/tags/v')" in step["if"] for step in github_release_steps
+    )
+    assert "startsWith(github.ref, 'refs/tags/v')" in jobs["publish-pypi"]["if"]
+    assert "PYPI_PUBLISH_ENABLED" in jobs["publish-pypi"]["if"]
+
+    verify_job = jobs["verify-pypi-install"]
+    assert verify_job["needs"] == "publish-pypi"
+    assert "startsWith(github.ref, 'refs/tags/v')" in verify_job["if"]
+    verify_run = verify_job["steps"][-1]["run"]
+    assert 'version="${GITHUB_REF_NAME#v}"' in verify_run
+    assert 'python -m pip install --force-reinstall "vuln-prioritizer==${version}"' in verify_run
+    assert "vuln-prioritizer --help" in verify_run
+    assert "vuln-prioritizer doctor --format json --output doctor.json" in verify_run
+
+
+def test_testpypi_workflow_exposes_version_output_and_hosted_index_verification() -> None:
+    payload = yaml.safe_load(TESTPYPI_WORKFLOW.read_text(encoding="utf-8"))
+    jobs = payload["jobs"]
+
+    assert (
+        jobs["build"]["outputs"]["package_version"]
+        == "${{ steps.package_version.outputs.version }}"
+    )
+    build_steps = jobs["build"]["steps"]
+    version_step = next(step for step in build_steps if step.get("id") == "package_version")
+    assert "payload['project']['version']" in version_step["run"]
+
+    verify_job = jobs["verify-testpypi-install"]
+    assert verify_job["needs"] == ["build", "publish-testpypi"]
+    assert "TEST_PYPI_PUBLISH_ENABLED" in verify_job["if"]
+    verify_run = verify_job["steps"][-1]["run"]
+    assert "needs.build.outputs.package_version" in verify_run
+    assert "--index-url https://test.pypi.org/simple/" in verify_run
+    assert "--extra-index-url https://pypi.org/simple/" in verify_run
+    assert "python -m pip install --force-reinstall \\" in verify_run
+    assert "vuln-prioritizer --help" in verify_run
+    assert "vuln-prioritizer doctor --format json --output doctor.json" in verify_run

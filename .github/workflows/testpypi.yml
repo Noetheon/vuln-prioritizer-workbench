@@ -6,6 +6,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    outputs:
+      package_version: ${{ steps.package_version.outputs.version }}
 
     steps:
       - name: Check out repository
@@ -32,12 +34,24 @@ jobs:
         run: |
           python -m pip install --force-reinstall dist/*.whl
           vuln-prioritizer --help
+          vuln-prioritizer doctor --format json --output doctor.json
 
       - name: Upload release artifacts
         uses: actions/upload-artifact@v7
         with:
           name: release-dist
           path: dist/*
+
+      - name: Resolve package version
+        id: package_version
+        shell: bash
+        run: |
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          import tomllib
+          from pathlib import Path
+          payload = tomllib.loads(Path("pyproject.toml").read_text(encoding="utf-8"))
+          print(f"version={payload['project']['version']}")
+          PY
 
   publish-testpypi:
     needs: build
@@ -59,3 +73,35 @@ jobs:
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           repository-url: https://test.pypi.org/legacy/
+
+  verify-testpypi-install:
+    needs: [build, publish-testpypi]
+    if: vars.TEST_PYPI_PUBLISH_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Verify install from hosted TestPyPI
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="${{ needs.build.outputs.package_version }}"
+          python -m pip install --upgrade pip
+          for attempt in 1 2 3 4 5; do
+            if python -m pip install --force-reinstall \
+              --index-url https://test.pypi.org/simple/ \
+              --extra-index-url https://pypi.org/simple/ \
+              "vuln-prioritizer==${version}"; then
+              vuln-prioritizer --help
+              vuln-prioritizer doctor --format json --output doctor.json
+              exit 0
+            fi
+            if [[ "$attempt" -eq 5 ]]; then
+              echo "TestPyPI install verification failed after ${attempt} attempts." >&2
+              exit 1
+            fi
+            sleep 20
+          done

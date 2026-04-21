@@ -24,8 +24,10 @@ The workflow already does the important trusted-publishing pieces:
 Current safety model:
 
 - tagged releases always build artifacts and publish the GitHub Release
+- manual `workflow_dispatch` runs on the release workflow are preflight-only and do not create a GitHub Release or publish to PyPI
 - public PyPI publishing is gated behind the repository variable `PYPI_PUBLISH_ENABLED=true`
-- TestPyPI publishing is available through the manual workflow [`.github/workflows/testpypi.yml`](https://github.com/Noetheon/vuln-prioritizer-cli/blob/main/.github/workflows/testpypi.yml) and is gated behind `TEST_PYPI_PUBLISH_ENABLED=true`
+- the live PyPI workflow verifies a hosted-index install after publish
+- TestPyPI publishing is available through the manual workflow [`.github/workflows/testpypi.yml`](https://github.com/Noetheon/vuln-prioritizer-cli/blob/main/.github/workflows/testpypi.yml), is gated behind `TEST_PYPI_PUBLISH_ENABLED=true`, and verifies a hosted-index install after publish
 
 That keeps normal tagged releases green even before PyPI Trusted Publishing is fully configured.
 
@@ -56,6 +58,7 @@ git push origin vX.Y.Z
 
 5. Confirm that the GitHub Release workflow completed successfully.
 6. If PyPI publishing is enabled for the repository, verify that the package appeared on PyPI.
+7. Confirm that the workflow's hosted-index install verification step completed successfully.
 
 ## Restoring a Missing GitHub Release Object
 
@@ -82,7 +85,8 @@ Before the first public PyPI publish, validate the packaging and trusted-publish
 2. Set the repository variable `TEST_PYPI_PUBLISH_ENABLED=true`.
 3. Run the `TestPyPI Publish` workflow manually from GitHub Actions.
 4. Verify that the distributions appear on TestPyPI.
-5. Smoke-test installation from TestPyPI before enabling real PyPI publication.
+5. Confirm that the workflow's hosted-index install verification step completed successfully.
+6. Optionally repeat the install manually before enabling real PyPI publication.
 
 ## PyPI Trusted Publishing Checklist
 
@@ -113,28 +117,37 @@ When configuring the trusted publisher on PyPI, match these repository values:
 After each public release:
 
 1. Confirm the GitHub Release page exists and contains the built `sdist` and `wheel`.
-2. Install from the GitHub tag:
+2. Verify the documented GitHub tag install path:
 
 ```bash
 pipx install git+https://github.com/Noetheon/vuln-prioritizer-cli.git@vX.Y.Z
-vuln-prioritizer --help
+printf 'CVE-2021-44228\n' > smoke-cves.txt
+vuln-prioritizer analyze --input smoke-cves.txt --format json --output smoke.json
 ```
+
+This validates the supported source-at-tag install path. It does not validate installation from the GitHub Release asset files themselves.
 
 3. If PyPI is enabled, install from PyPI too:
 
 ```bash
 pipx install "vuln-prioritizer==X.Y.Z"
-vuln-prioritizer --help
+printf 'CVE-2021-44228\n' > smoke-cves.txt
+vuln-prioritizer analyze --input smoke-cves.txt --format json --output smoke.json
 ```
 
 4. Confirm the README install instructions still match reality.
 5. Confirm the release notes, tag, and GitHub Release object all use the same version string.
+6. If the workflow already performed hosted-index verification, treat the manual install checks here as a second-line confirmation rather than the only release proof.
 
 If TestPyPI is enabled, also verify the staging index first:
 
 ```bash
-pipx install --index-url https://test.pypi.org/simple/ "vuln-prioritizer==X.Y.Z"
-vuln-prioritizer --help
+pipx install \
+  --index-url https://test.pypi.org/simple/ \
+  --extra-index-url https://pypi.org/simple/ \
+  "vuln-prioritizer==X.Y.Z"
+printf 'CVE-2021-44228\n' > smoke-cves.txt
+vuln-prioritizer analyze --input smoke-cves.txt --format json --output smoke.json
 ```
 
 ## Failure Modes To Check First

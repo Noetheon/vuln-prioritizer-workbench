@@ -123,9 +123,9 @@ These steps must be done on GitHub. They are not created by local files alone:
 2. Create the recommended labels in the repository labels screen or via the GitHub API.
 3. Confirm GitHub is surfacing `SECURITY.md`, `CONTRIBUTING.md`, and `CODE_OF_CONDUCT.md` in the community health view.
 4. If private vulnerability reporting is desired, enable the repository security/advisory setting in GitHub.
-5. If public releases are enabled, confirm the GitHub Release object exists for the current tag and that the release workflow still matches the maintainer guidance in [docs/release_operations.md](./release_operations.md).
-6. If PyPI publishing is enabled, confirm the PyPI Trusted Publisher points at this repository, the `.github/workflows/release.yml` workflow, and the `pypi` environment.
-7. If TestPyPI validation is enabled, confirm the separate Trusted Publisher points at `.github/workflows/testpypi.yml`, the `testpypi` environment, and that the repository variable `TEST_PYPI_PUBLISH_ENABLED` is intentional.
+5. If public releases are enabled, confirm the GitHub Release object exists for the current tag and that the release workflow still matches the maintainer guidance in [docs/release_operations.md](./release_operations.md), including tag-only publish behavior.
+6. If PyPI publishing is enabled, confirm the PyPI Trusted Publisher points at this repository, the `.github/workflows/release.yml` workflow, and the `pypi` environment, and that the hosted-index install verification job is green.
+7. If TestPyPI validation is enabled, confirm the separate Trusted Publisher points at `.github/workflows/testpypi.yml`, the `testpypi` environment, that the repository variable `TEST_PYPI_PUBLISH_ENABLED` is intentional, and that the hosted-index install verification job is green.
 
 ## Local Repo Checklist
 
@@ -135,4 +135,5 @@ These items stay versioned in the repository and should be reviewed together:
 2. Keep `SECURITY.md` aligned with the actual disclosure path.
 3. Keep issue templates aligned with the current label names.
 4. Keep [docs/release_operations.md](./release_operations.md) aligned with the actual GitHub Release and PyPI publishing flow.
-5. Update this document when topics, labels, or triage conventions change.
+5. Revalidate README install wording and public quickstart examples whenever the supported public install path changes, especially when PyPI moves from gated to live.
+6. Update this document when topics, labels, or triage conventions change.

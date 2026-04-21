@@ -81,7 +81,8 @@ pipx install git+https://github.com/Noetheon/vuln-prioritizer-cli.git@v1.1.0
 vuln-prioritizer --help
 ```
 
-The repository is PyPI-ready, but the verified public install path is currently the tagged GitHub release above. Public PyPI/TestPyPI publication is wired and documented, but explicitly gated until the repository's trusted-publisher configuration is enabled.
+The repository is PyPI-ready, but the verified public install path is currently the GitHub tag install above. That is a source-at-tag install path, not a GitHub Release asset install path. Public PyPI/TestPyPI publication is wired and documented, but explicitly gated until the repository's trusted-publisher configuration is enabled.
+When PyPI goes live, the release workflows verify hosted-index installation automatically after publish; until then, the GitHub tag install above remains the supported public path.
 
 ### Local Development Install
 
@@ -102,10 +103,11 @@ Then set `NVD_API_KEY` in `.env` if you want authenticated NVD access.
 
 ## Quickstart
 
-### 1. Fastest Analyze Run
+### 1. Fastest Public-Install Analyze Run
 
 ```bash
-vuln-prioritizer analyze --input data/sample_cves.txt
+printf 'CVE-2021-44228\nCVE-2024-3094\n' > cves.txt
+vuln-prioritizer analyze --input cves.txt --format markdown --output report.md
 ```
 
 ### 2. CI-Friendly Analyze with Summary and HTML
@@ -234,7 +236,11 @@ Reference material:
 
 The repository includes a composite GitHub Action for `analyze` and `report html`.
 
+Use it after `actions/checkout`, because the scanned input files live in the consumer repository, not in the action repository.
+
 ```yaml
+- uses: actions/checkout@v6
+
 - name: Prioritize vulnerabilities
   uses: Noetheon/vuln-prioritizer-cli@v1.1.0
   with:
@@ -271,7 +277,7 @@ If you change docs, examples, or report artifacts, run `make release-check` so t
 Current release line:
 
 - stable `v1.1.0`
-- tagged GitHub install path available now
+- GitHub tag install path available now
 - GitHub Release restored for `v1.1.0`
 - PyPI and TestPyPI workflows prepared, but live publishing remains explicitly gated until trusted-publisher setup is enabled
 

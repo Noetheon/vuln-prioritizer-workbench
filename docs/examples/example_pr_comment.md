@@ -1,7 +1,7 @@
 # Vulnerability Prioritization Report
 
 ## Run Metadata
-- Generated at: `2026-04-21T21:38:55+00:00`
+- Generated at: `2026-04-21T21:47:31+00:00`
 - Input file: `data/input_fixtures/trivy_report.json`
 - Output format: `markdown`
 - ATT&CK context enabled: `no`
