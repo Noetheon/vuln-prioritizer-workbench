@@ -15,6 +15,7 @@ The split matters:
 | --- | --- | --- |
 | `CONTRIBUTING.md`, `SECURITY.md`, `CODE_OF_CONDUCT.md` | local docs in the repo | Versioned guidance. GitHub can surface these automatically. |
 | `.github/ISSUE_TEMPLATE/*.md` and `.github/ISSUE_TEMPLATE/config.yml` | local files in the repo | Versioned templates and contact links. GitHub uses them after they land on the default branch. |
+| [docs/release_operations.md](./release_operations.md) | local doc in the repo | Maintainer runbook for GitHub Releases and PyPI publishing. |
 | This document | local doc in the repo | Maintainer reference only. It does not create labels, topics, or repository settings by itself. |
 | Repository topics | GitHub UI or API | Must be configured on GitHub. |
 | Label definitions and colors | GitHub UI or API | Must be configured on GitHub. Template front matter can reference labels, but it does not create them. |
@@ -122,6 +123,8 @@ These steps must be done on GitHub. They are not created by local files alone:
 2. Create the recommended labels in the repository labels screen or via the GitHub API.
 3. Confirm GitHub is surfacing `SECURITY.md`, `CONTRIBUTING.md`, and `CODE_OF_CONDUCT.md` in the community health view.
 4. If private vulnerability reporting is desired, enable the repository security/advisory setting in GitHub.
+5. If public releases are enabled, confirm the GitHub Release object exists for the current tag and that the release workflow still matches the maintainer guidance in [docs/release_operations.md](./release_operations.md).
+6. If PyPI publishing is enabled, confirm the PyPI Trusted Publisher points at this repository, the `.github/workflows/release.yml` workflow, and the `pypi` environment.
 
 ## Local Repo Checklist
 
@@ -130,4 +133,5 @@ These items stay versioned in the repository and should be reviewed together:
 1. Keep `CONTRIBUTING.md` aligned with the real local quality gate and scope guardrails.
 2. Keep `SECURITY.md` aligned with the actual disclosure path.
 3. Keep issue templates aligned with the current label names.
-4. Update this document when topics, labels, or triage conventions change.
+4. Keep [docs/release_operations.md](./release_operations.md) aligned with the actual GitHub Release and PyPI publishing flow.
+5. Update this document when topics, labels, or triage conventions change.

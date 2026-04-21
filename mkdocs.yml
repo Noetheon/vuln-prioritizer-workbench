@@ -16,6 +16,7 @@ nav:
   - Integrations: integrations/reporting_and_ci.md
   - Gap Analysis: reference_cve_prioritizer_gap_analysis.md
   - Community Setup: community_repository_setup.md
+  - Release Operations: release_operations.md
   - Roadmap: roadmap.md
   - Examples:
       - Base Report: example_report.md

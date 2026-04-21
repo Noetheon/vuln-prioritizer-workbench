@@ -185,6 +185,7 @@ Start here:
 - [docs/methodology.md](docs/methodology.md)
 - [docs/evidence.md](docs/evidence.md)
 - [docs/integrations/reporting_and_ci.md](docs/integrations/reporting_and_ci.md)
+- [docs/release_operations.md](docs/release_operations.md)
 - [docs/releases/v1.1.0.md](docs/releases/v1.1.0.md)
 
 Reference material:
@@ -232,6 +233,7 @@ Current release line:
 
 - stable `v1.1.0`
 - tagged GitHub install path available now
+- GitHub Release restored for `v1.1.0`
 - PyPI publishing workflow prepared, but final public publishing still depends on repository-side credentials and release operations
 
 ## License
