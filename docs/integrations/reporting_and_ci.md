@@ -209,7 +209,7 @@ Compact step summary without an explicit summary artifact path:
 ```yaml
 - name: Prioritize vulnerabilities
   id: prioritize
-  uses: Noetheon/vuln-prioritizer-cli@v1.1.0
+  uses: Noetheon/vuln-prioritizer-cli@vX.Y.Z
   with:
     mode: analyze
     input: trivy-results.json
@@ -225,7 +225,7 @@ Compact PR comment body using the action-generated `summary-path`:
 ```yaml
 - name: Prioritize vulnerabilities
   id: prioritize
-  uses: Noetheon/vuln-prioritizer-cli@v1.1.0
+  uses: Noetheon/vuln-prioritizer-cli@vX.Y.Z
   with:
     mode: analyze
     input: trivy-results.json
@@ -254,7 +254,7 @@ Detailed HTML artifact flow with a reusable Markdown summary:
 ```yaml
 - name: Generate analysis JSON
   id: analyze
-  uses: Noetheon/vuln-prioritizer-cli@v1.1.0
+  uses: Noetheon/vuln-prioritizer-cli@vX.Y.Z
   with:
     mode: analyze
     input: trivy-results.json
@@ -265,6 +265,8 @@ Detailed HTML artifact flow with a reusable Markdown summary:
     summary-template: detailed
     github-step-summary: "true"
 ```
+
+Replace `vX.Y.Z` with the release tag or commit SHA you intend to consume. This document tracks the current `main` branch contract, so do not assume the latest tagged release already includes every example shown here.
 
 ## Local Workflow Equivalent
 

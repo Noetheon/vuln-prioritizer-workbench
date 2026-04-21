@@ -77,12 +77,13 @@ This project is not:
 ### Recommended: `pipx`
 
 ```bash
-pipx install git+https://github.com/Noetheon/vuln-prioritizer-cli.git@v1.1.0
+pipx install git+https://github.com/Noetheon/vuln-prioritizer-cli.git@vX.Y.Z
 vuln-prioritizer --help
 ```
 
-The repository is PyPI-ready, but the verified public install path is currently the GitHub tag install above. That is a source-at-tag install path, not a GitHub Release asset install path. Public PyPI/TestPyPI publication is wired and documented, but explicitly gated until the repository's trusted-publisher configuration is enabled.
-When PyPI goes live, the release workflows verify hosted-index installation automatically after publish; until then, the GitHub tag install above remains the supported public path.
+Replace `vX.Y.Z` with the GitHub release tag you intend to consume. This README tracks the current `main` branch, so a tagged public release can legitimately expose a smaller surface than the tip of `main`. The latest public release is currently `v1.1.0`.
+
+The repository is PyPI-ready, but the verified public install path is currently the GitHub tag install above. That is a source-at-tag install path, not a GitHub Release asset install path. Public PyPI/TestPyPI publication is wired and documented, but explicitly gated until the repository's trusted-publisher configuration is enabled. When PyPI goes live, the release workflows verify hosted-index installation automatically after publish; until then, the GitHub tag install above remains the supported public path and the release workflow also verifies the same source-at-tag install contract on tag pushes.
 
 ### Local Development Install
 
@@ -242,7 +243,7 @@ Use it after `actions/checkout`, because the scanned input files live in the con
 - uses: actions/checkout@v6
 
 - name: Prioritize vulnerabilities
-  uses: Noetheon/vuln-prioritizer-cli@v1.1.0
+  uses: Noetheon/vuln-prioritizer-cli@vX.Y.Z
   with:
     mode: analyze
     input: trivy-results.json
@@ -255,7 +256,7 @@ Use it after `actions/checkout`, because the scanned input files live in the con
     github-step-summary: "true"
 ```
 
-`summary-template` is backward-compatible and defaults to `detailed`. Set it to `compact` for GitHub step summaries or PR comments, or keep `detailed` when you want the full executive summary artifact. If a workflow only needs `$GITHUB_STEP_SUMMARY`, the action can now generate a summary without requiring an explicit `summary-output-path`.
+Replace `vX.Y.Z` with the release tag or commit SHA you want to consume. `summary-template` is backward-compatible and defaults to `detailed`. Set it to `compact` for GitHub step summaries or PR comments, or keep `detailed` when you want the full executive summary artifact. If a workflow only needs `$GITHUB_STEP_SUMMARY`, the action can now generate a summary without requiring an explicit `summary-output-path`.
 
 See [docs/integrations/reporting_and_ci.md](docs/integrations/reporting_and_ci.md) for the full contract and CI patterns, plus [docs/examples/github_action_summary_templates.md](docs/examples/github_action_summary_templates.md) for compact vs detailed examples.
 

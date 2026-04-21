@@ -127,6 +127,8 @@ vuln-prioritizer analyze --input smoke-cves.txt --format json --output smoke.jso
 
 This validates the supported source-at-tag install path. It does not validate installation from the GitHub Release asset files themselves.
 
+The tag-push release workflow now performs the same source-at-tag smoke automatically before publication. Keep the manual check here as an operator-level confirmation rather than the only verification step.
+
 3. If PyPI is enabled, install from PyPI too:
 
 ```bash

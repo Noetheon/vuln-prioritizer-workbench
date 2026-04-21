@@ -608,7 +608,7 @@
     "expired_waiver_count": 0,
     "filtered_out_count": 0,
     "findings_count": 1,
-    "generated_at": "2026-04-21T21:47:32+00:00",
+    "generated_at": "2026-04-21T12:00:00+00:00",
     "input_format": "cve-list",
     "input_path": "inline:CVE-2023-34362",
     "kev_hits": 1,

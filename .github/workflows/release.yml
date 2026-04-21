@@ -40,6 +40,15 @@ jobs:
           vuln-prioritizer --help
           vuln-prioritizer doctor --format json --output doctor.json
 
+      - name: Smoke test source-at-tag install path
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --upgrade pip pipx
+          python -m pipx run --spec "git+https://github.com/${GITHUB_REPOSITORY}.git@${GITHUB_REF_NAME}" vuln-prioritizer --help
+          python -m pipx run --spec "git+https://github.com/${GITHUB_REPOSITORY}.git@${GITHUB_REF_NAME}" vuln-prioritizer doctor --format json --output doctor-tag.json
+
       - name: Resolve release notes path
         id: release_notes
         shell: bash

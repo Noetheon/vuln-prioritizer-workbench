@@ -101,10 +101,10 @@ outputs:
     description: Output file path written by the action
     value: ${{ steps.run-cli.outputs.report-path }}
   html-report-path:
-    description: HTML sidecar path written by analyze mode when html-output-path is set
+    description: HTML output path written by analyze mode when html-output-path is set or by report-html mode at output-path
     value: ${{ steps.run-cli.outputs.html-report-path }}
   summary-path:
-    description: Markdown summary sidecar path written by analyze mode when summary-output-path is set
+    description: Markdown summary path written by analyze mode when summary-output-path is set or github-step-summary generates a temporary summary
     value: ${{ steps.run-cli.outputs.summary-path }}
 
 runs:

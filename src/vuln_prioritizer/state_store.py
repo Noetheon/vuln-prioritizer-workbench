@@ -235,13 +235,18 @@ class SQLiteStateStore:
         status_filter: str,
         latest_only: bool,
     ) -> list[dict[str, Any]]:
-        """Return waiver entries from the latest or full imported snapshot history."""
+        """Return waiver entries from the latest generated snapshot or full imported history."""
         self.initialize()
         with self._connect() as connection:
             latest_snapshot_id: int | None = None
             if latest_only:
                 latest = connection.execute(
-                    "SELECT id FROM snapshots ORDER BY imported_at DESC, id DESC LIMIT 1"
+                    """
+                    SELECT id
+                    FROM snapshots
+                    ORDER BY snapshot_generated_at DESC, id DESC
+                    LIMIT 1
+                    """
                 ).fetchone()
                 latest_snapshot_id = None if latest is None else int(latest["id"])
                 if latest_snapshot_id is None:

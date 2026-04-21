@@ -88,3 +88,22 @@ def test_load_runtime_config_rejects_invalid_yaml(tmp_path: Path) -> None:
 
     with pytest.raises(ValueError, match="not valid YAML"):
         load_runtime_config(config_file)
+
+
+def test_load_runtime_config_rejects_unreadable_file(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    config_file = tmp_path / CONFIG_FILENAME
+    config_file.write_text("version: 1\n", encoding="utf-8")
+    original_read_text = Path.read_text
+
+    def _raise_permission_error(self: Path, *args: object, **kwargs: object) -> str:
+        if self == config_file:
+            raise PermissionError("permission denied")
+        return original_read_text(self, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "read_text", _raise_permission_error)
+
+    with pytest.raises(ValueError, match="could not be read"):
+        load_runtime_config(config_file)

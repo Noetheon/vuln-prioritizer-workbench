@@ -191,6 +191,69 @@ def test_cli_state_waivers_filters_latest_snapshot_entries(tmp_path: Path) -> No
     assert [item["cve_id"] for item in payload["items"]] == ["CVE-2024-3002"]
 
 
+def test_cli_state_waivers_latest_only_uses_newest_generated_snapshot_for_out_of_order_imports(
+    tmp_path: Path,
+) -> None:
+    db_path = tmp_path / "state.db"
+    output_file = tmp_path / "waivers-latest-only.json"
+    store = SQLiteStateStore(db_path)
+    newest_generated_path = _write_snapshot_file(
+        tmp_path,
+        "waivers-newest-generated.json",
+        _snapshot_payload(
+            "2026-04-20T09:00:00+00:00",
+            [
+                _finding(
+                    "CVE-2024-3010",
+                    priority_label="High",
+                    priority_rank=2,
+                    waived=True,
+                    waiver_status="review_due",
+                )
+            ],
+        ),
+    )
+    older_generated_path = _write_snapshot_file(
+        tmp_path,
+        "waivers-older-generated.json",
+        _snapshot_payload(
+            "2026-04-10T09:00:00+00:00",
+            [_finding("CVE-2024-3009", priority_label="Critical", priority_rank=1, waived=True)],
+        ),
+    )
+    store.import_snapshot(
+        snapshot_path=newest_generated_path,
+        payload=json.loads(newest_generated_path.read_text(encoding="utf-8")),
+    )
+    store.import_snapshot(
+        snapshot_path=older_generated_path,
+        payload=json.loads(older_generated_path.read_text(encoding="utf-8")),
+    )
+
+    result = runner.invoke(
+        app,
+        [
+            "state",
+            "waivers",
+            "--db",
+            str(db_path),
+            "--latest-only",
+            "--format",
+            "json",
+            "--output",
+            str(output_file),
+        ],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(output_file.read_text(encoding="utf-8"))
+    assert payload["metadata"]["latest_only"] is True
+    assert [item["cve_id"] for item in payload["items"]] == ["CVE-2024-3010"]
+    assert [item["snapshot_generated_at"] for item in payload["items"]] == [
+        "2026-04-20T09:00:00+00:00"
+    ]
+
+
 def test_cli_state_top_services_supports_priority_filtered_json_output(
     monkeypatch,
     tmp_path: Path,

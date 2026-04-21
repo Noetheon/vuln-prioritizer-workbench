@@ -59,6 +59,10 @@ SCHEMA_ROOT = Path(__file__).resolve().parents[1] / "docs" / "schemas"
 ACTION_FILE = Path(__file__).resolve().parents[1] / "action.yml"
 RELEASE_WORKFLOW = Path(__file__).resolve().parents[1] / ".github" / "workflows" / "release.yml"
 TESTPYPI_WORKFLOW = Path(__file__).resolve().parents[1] / ".github" / "workflows" / "testpypi.yml"
+MAKEFILE = Path(__file__).resolve().parents[1] / "Makefile"
+README_FILE = Path(__file__).resolve().parents[1] / "README.md"
+CI_DOCS_FILE = Path(__file__).resolve().parents[1] / "docs" / "integrations" / "reporting_and_ci.md"
+EXAMPLES_README = Path(__file__).resolve().parents[1] / ".github" / "examples" / "README.md"
 
 
 def _load_schema(name: str) -> dict:
@@ -471,6 +475,8 @@ def test_action_contract_exposes_summary_and_config_wiring() -> None:
     assert "summary-template" in inputs
     assert "summary-path" in outputs
     assert "github-step-summary" in inputs
+    assert "report-html mode" in outputs["html-report-path"]["description"]
+    assert "github-step-summary" in outputs["summary-path"]["description"]
     assert "--config" in run_block
     assert "--no-config" in run_block
     assert "--summary-output" in run_block
@@ -491,6 +497,25 @@ def test_release_workflow_is_tag_bound_and_verifies_pypi_install() -> None:
     assert all(
         "startsWith(github.ref, 'refs/tags/v')" in step["if"] for step in github_release_steps
     )
+    release_gate_step = next(
+        step for step in build_steps if step.get("name") == "Run release gate before publishing"
+    )
+    assert release_gate_step["run"] == "make workflow-check"
+
+    tag_install_step = next(
+        step for step in build_steps if step.get("name") == "Smoke test source-at-tag install path"
+    )
+    tag_install_run = tag_install_step["run"]
+    assert "python -m pip install --upgrade pip pipx" in tag_install_run
+    assert (
+        'python -m pipx run --spec "git+https://github.com/'
+        '${GITHUB_REPOSITORY}.git@${GITHUB_REF_NAME}" vuln-prioritizer --help' in tag_install_run
+    )
+    assert (
+        'python -m pipx run --spec "git+https://github.com/'
+        '${GITHUB_REPOSITORY}.git@${GITHUB_REF_NAME}" vuln-prioritizer '
+        "doctor --format json --output doctor-tag.json" in tag_install_run
+    )
     assert "startsWith(github.ref, 'refs/tags/v')" in jobs["publish-pypi"]["if"]
     assert "PYPI_PUBLISH_ENABLED" in jobs["publish-pypi"]["if"]
 
@@ -502,6 +527,31 @@ def test_release_workflow_is_tag_bound_and_verifies_pypi_install() -> None:
     assert 'python -m pip install --force-reinstall "vuln-prioritizer==${version}"' in verify_run
     assert "vuln-prioritizer --help" in verify_run
     assert "vuln-prioritizer doctor --format json --output doctor.json" in verify_run
+
+
+def test_release_check_keeps_demo_sync_manual_and_deterministic() -> None:
+    makefile = MAKEFILE.read_text(encoding="utf-8")
+
+    assert "workflow-check:" in makefile
+    workflow_block = makefile.split("workflow-check:", 1)[1].split("demo-sync-check:", 1)[0]
+    assert "$(MAKE) demo-sync-check" not in workflow_block
+    assert "demo-sync-check:" in makefile
+    release_block = makefile.split("release-check:", 1)[1]
+    assert "$(MAKE) demo-sync-check" in release_block
+    assert "VULN_PRIORITIZER_FIXED_NOW" in makefile
+    assert "git diff --binary -- docs" in makefile
+    assert 'cmp -s "$$before" "$$after"' in makefile
+
+
+def test_public_docs_use_release_placeholders_for_install_examples() -> None:
+    readme = README_FILE.read_text(encoding="utf-8")
+    ci_docs = CI_DOCS_FILE.read_text(encoding="utf-8")
+    examples_readme = EXAMPLES_README.read_text(encoding="utf-8")
+
+    assert "@vX.Y.Z" in readme
+    assert "@vX.Y.Z" in ci_docs
+    assert "@vX.Y.Z" in examples_readme
+    assert "@v1.1.0" not in readme
 
 
 def test_testpypi_workflow_exposes_version_output_and_hosted_index_verification() -> None:

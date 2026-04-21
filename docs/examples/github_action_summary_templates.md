@@ -14,7 +14,7 @@ Use this when you want a concise summary in the Actions UI and do not need to ke
 ```yaml
 - name: Prioritize vulnerabilities
   id: prioritize
-  uses: Noetheon/vuln-prioritizer-cli@v1.1.0
+  uses: Noetheon/vuln-prioritizer-cli@vX.Y.Z
   with:
     mode: analyze
     input: trivy-results.json
@@ -38,7 +38,7 @@ Use the compact template when you want a small, reusable PR comment body without
 ```yaml
 - name: Prioritize vulnerabilities
   id: prioritize
-  uses: Noetheon/vuln-prioritizer-cli@v1.1.0
+  uses: Noetheon/vuln-prioritizer-cli@vX.Y.Z
   with:
     mode: analyze
     input: trivy-results.json
@@ -69,7 +69,7 @@ Use the detailed template when you want the complete executive summary file for 
 ```yaml
 - name: Generate analysis JSON
   id: analyze
-  uses: Noetheon/vuln-prioritizer-cli@v1.1.0
+  uses: Noetheon/vuln-prioritizer-cli@vX.Y.Z
   with:
     mode: analyze
     input: trivy-results.json
@@ -82,3 +82,5 @@ Use the detailed template when you want the complete executive summary file for 
 ```
 
 Detailed mode keeps the exact CLI summary content and still appends it to the Actions step summary when requested.
+
+Replace `vX.Y.Z` with the release tag or commit SHA you intend to consume. This page tracks the current `main` branch action contract.

@@ -157,6 +157,63 @@ def test_state_store_waiver_filters_respect_status_and_latest_scope(tmp_path: Pa
     assert [entry["cve_id"] for entry in expired_entries] == ["CVE-2024-3003"]
 
 
+def test_state_store_waiver_latest_only_uses_newest_generated_snapshot_for_out_of_order_imports(
+    tmp_path: Path,
+) -> None:
+    db_path = tmp_path / "state.db"
+    newest_generated_path = _write_snapshot_file(
+        tmp_path,
+        "waivers-newest-generated.json",
+        _snapshot_payload(
+            "2026-04-20T09:00:00+00:00",
+            [
+                _finding(
+                    "CVE-2024-3010",
+                    priority_label="High",
+                    priority_rank=2,
+                    waived=True,
+                    waiver_status="review_due",
+                    waiver_owner="team-app",
+                    waiver_review_on="2026-04-19",
+                )
+            ],
+        ),
+    )
+    older_generated_path = _write_snapshot_file(
+        tmp_path,
+        "waivers-older-generated.json",
+        _snapshot_payload(
+            "2026-04-10T09:00:00+00:00",
+            [
+                _finding(
+                    "CVE-2024-3009",
+                    priority_label="Critical",
+                    priority_rank=1,
+                    waived=True,
+                    waiver_owner="team-sec",
+                    waiver_expires_on="2026-05-01",
+                )
+            ],
+        ),
+    )
+    store = SQLiteStateStore(db_path)
+    store.import_snapshot(
+        snapshot_path=newest_generated_path,
+        payload=json.loads(newest_generated_path.read_text(encoding="utf-8")),
+    )
+    store.import_snapshot(
+        snapshot_path=older_generated_path,
+        payload=json.loads(older_generated_path.read_text(encoding="utf-8")),
+    )
+
+    latest_entries = store.waiver_entries(status_filter="all", latest_only=True)
+
+    assert [entry["cve_id"] for entry in latest_entries] == ["CVE-2024-3010"]
+    assert [entry["snapshot_generated_at"] for entry in latest_entries] == [
+        "2026-04-20T09:00:00+00:00"
+    ]
+
+
 def test_state_store_top_services_aggregates_across_recent_snapshots(
     monkeypatch,
     tmp_path: Path,

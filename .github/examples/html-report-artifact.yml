@@ -13,7 +13,7 @@ jobs:
 
       - name: Generate analysis JSON
         id: analyze
-        uses: Noetheon/vuln-prioritizer-cli@v1.1.0
+        uses: Noetheon/vuln-prioritizer-cli@vX.Y.Z
         with:
           mode: analyze
           input: trivy-results.json
@@ -30,7 +30,7 @@ jobs:
 
       - name: Render static HTML report
         id: render
-        uses: Noetheon/vuln-prioritizer-cli@v1.1.0
+        uses: Noetheon/vuln-prioritizer-cli@vX.Y.Z
         with:
           mode: report-html
           input: ${{ steps.analyze.outputs.report-path }}

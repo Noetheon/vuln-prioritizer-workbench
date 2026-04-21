@@ -4,7 +4,7 @@ These workflows are consumer-side examples for the current GitHub Action and CLI
 
 They are intentionally stored under `.github/examples/` instead of `.github/workflows/` so that the repository documents supported integration patterns without automatically running them inside this repo.
 
-Pin the action to a release tag in consumer repositories. The examples use `@v1.1.0` rather than `@main` for that reason.
+Pin the action to a release tag or commit SHA in consumer repositories. The examples use the placeholder `@vX.Y.Z` so they stay aligned with the current `main` branch docs instead of going stale when the latest public tag lags behind `main`.
 
 ## Included Examples
 
@@ -24,6 +24,6 @@ The action and examples assume the current repository provides:
 
 ## Integration Notes
 
-- Consumers should pin the action to a release tag once one is available for the desired version.
+- Consumers should replace `@vX.Y.Z` with the release tag or commit SHA that matches the surface they want to consume.
 - `actions/checkout` is still required in the consuming workflow because the scanned files live in the consumer repository, not in the action repository.
 - The action installs `vuln-prioritizer` from the action checkout and runs the local CLI entrypoint.

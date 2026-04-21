@@ -137,7 +137,12 @@ def discover_runtime_config(start_dir: Path) -> Path | None:
 def load_runtime_config(path: Path) -> LoadedRuntimeConfig:
     """Load and normalize a runtime config document."""
     try:
-        raw_document = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+        raw_text = path.read_text(encoding="utf-8")
+    except OSError as exc:
+        raise ValueError(f"{path} could not be read: {exc}") from exc
+
+    try:
+        raw_document = yaml.safe_load(raw_text) or {}
     except yaml.YAMLError as exc:
         raise ValueError(f"{path} is not valid YAML: {exc}") from exc
 

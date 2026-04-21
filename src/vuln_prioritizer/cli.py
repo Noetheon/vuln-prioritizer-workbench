@@ -21,6 +21,7 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
+from vuln_prioritizer import __version__
 from vuln_prioritizer.cache import FileCache
 from vuln_prioritizer.config import (
     DATA_SOURCES,
@@ -253,9 +254,23 @@ PRIORITY_LABELS = {
 }
 
 
+def _version_callback(value: bool) -> None:
+    if not value:
+        return
+    typer.echo(f"vuln-prioritizer {__version__}")
+    raise typer.Exit()
+
+
 @app.callback()
 def callback(
     ctx: typer.Context,
+    version: bool = typer.Option(
+        False,
+        "--version",
+        callback=_version_callback,
+        is_eager=True,
+        help="Show the application version and exit.",
+    ),
     config: Path | None = typer.Option(None, "--config", dir_okay=False, readable=True),
     no_config: bool = typer.Option(False, "--no-config"),
 ) -> None:

@@ -6,6 +6,7 @@ from pathlib import Path
 
 from typer.testing import CliRunner
 
+from vuln_prioritizer import __version__
 from vuln_prioritizer.cli import _build_attack_summary_from_findings, app
 from vuln_prioritizer.models import (
     AttackData,
@@ -804,6 +805,38 @@ def test_cli_analyze_uses_discovered_runtime_config_and_no_config_disables_it(
     no_config_payload = json.loads(no_config_output.read_text(encoding="utf-8"))
     assert no_config_payload["metadata"]["policy_profile"] == "default"
     assert no_config_payload["metadata"]["active_filters"] == []
+
+
+def test_cli_doctor_fails_cleanly_for_missing_runtime_config(tmp_path: Path) -> None:
+    missing_config = tmp_path / "missing-runtime-config.yml"
+
+    result = runner.invoke(
+        app,
+        [
+            "--config",
+            str(missing_config),
+            "doctor",
+        ],
+    )
+
+    assert result.exit_code == 2
+    assert "Input validation failed:" in result.stdout
+    assert missing_config.name in result.stdout
+    assert isinstance(result.exception, SystemExit)
+    assert "Traceback" not in result.stdout
+
+
+def test_cli_root_version_reports_package_version_without_loading_runtime_config(
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    (tmp_path / "vuln-prioritizer.yml").write_text("version: [broken\n", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+
+    result = runner.invoke(app, ["--version"])
+
+    assert result.exit_code == 0
+    assert result.stdout.strip() == f"vuln-prioritizer {__version__}"
 
 
 def test_cli_doctor_json_reports_healthy_local_state(tmp_path: Path) -> None:
