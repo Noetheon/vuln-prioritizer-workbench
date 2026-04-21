@@ -125,6 +125,7 @@ These steps must be done on GitHub. They are not created by local files alone:
 4. If private vulnerability reporting is desired, enable the repository security/advisory setting in GitHub.
 5. If public releases are enabled, confirm the GitHub Release object exists for the current tag and that the release workflow still matches the maintainer guidance in [docs/release_operations.md](./release_operations.md).
 6. If PyPI publishing is enabled, confirm the PyPI Trusted Publisher points at this repository, the `.github/workflows/release.yml` workflow, and the `pypi` environment.
+7. If TestPyPI validation is enabled, confirm the separate Trusted Publisher points at `.github/workflows/testpypi.yml`, the `testpypi` environment, and that the repository variable `TEST_PYPI_PUBLISH_ENABLED` is intentional.
 
 ## Local Repo Checklist
 

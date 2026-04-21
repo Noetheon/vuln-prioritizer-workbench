@@ -79,7 +79,7 @@ pipx install git+https://github.com/Noetheon/vuln-prioritizer-cli.git@v1.1.0
 vuln-prioritizer --help
 ```
 
-The repository is PyPI-ready, but the verified public install path is currently the tagged GitHub release above.
+The repository is PyPI-ready, but the verified public install path is currently the tagged GitHub release above. Public PyPI/TestPyPI publication is wired and documented, but explicitly gated until the repository's trusted-publisher configuration is enabled.
 
 ### Local Development Install
 
@@ -234,7 +234,7 @@ Current release line:
 - stable `v1.1.0`
 - tagged GitHub install path available now
 - GitHub Release restored for `v1.1.0`
-- PyPI publishing workflow prepared, but final public publishing still depends on repository-side credentials and release operations
+- PyPI and TestPyPI workflows prepared, but live publishing remains explicitly gated until trusted-publisher setup is enabled
 
 ## License
 
