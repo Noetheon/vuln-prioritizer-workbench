@@ -85,6 +85,12 @@ Replace `vX.Y.Z` with the GitHub release tag you intend to consume. This README 
 
 The repository is PyPI-ready, but the verified public install path is currently the GitHub tag install above. That is a source-at-tag install path, not a GitHub Release asset install path. Public PyPI/TestPyPI publication is wired and documented, but explicitly gated until the repository's trusted-publisher configuration is enabled. When PyPI goes live, the release workflows verify hosted-index installation automatically after publish; until then, the GitHub tag install above remains the supported public path and the release workflow also verifies the same source-at-tag install contract on tag pushes.
 
+### Example Scope
+
+- Works after `pipx install` alone: commands that use files you create yourself or already have in your own workspace, such as `cves.txt`, `trivy-results.json`, `analysis.json`, and `report.html`.
+- Needs extra local data files: ATT&CK examples require files that you pass via `--attack-mapping-file` and `--attack-technique-metadata-file`.
+- Repo checkout only: examples that reference `data/...`, `docs/...`, or `make ...`. In this repository those paths refer to checked-in fixtures, checked-in docs artifacts, or maintainer targets.
+
 ### Local Development Install
 
 ```bash
@@ -111,11 +117,11 @@ printf 'CVE-2021-44228\nCVE-2024-3094\n' > cves.txt
 vuln-prioritizer analyze --input cves.txt --format markdown --output report.md
 ```
 
-### 2. CI-Friendly Analyze with Summary and HTML
+### 2. Public-Install Analyze from Your Own Scanner Export
 
 ```bash
 vuln-prioritizer analyze \
-  --input data/input_fixtures/trivy_report.json \
+  --input trivy-results.json \
   --input-format trivy-json \
   --format json \
   --output analysis.json \
@@ -123,23 +129,11 @@ vuln-prioritizer analyze \
   --html-output report.html
 ```
 
-### 3. ATT&CK-Aware Analyze with Checked-In Fixture Data
-
-```bash
-vuln-prioritizer analyze \
-  --input data/sample_cves_mixed.txt \
-  --format markdown \
-  --output docs/example_attack_report.md \
-  --attack-source ctid-json \
-  --attack-mapping-file data/attack/ctid_kev_enterprise_2025-07-28_attack-16.1_subset.json \
-  --attack-technique-metadata-file data/attack/attack_techniques_enterprise_16.1_subset.json
-```
-
-### 4. Snapshot Diff and Service Rollup
+### 3. Public-Install Snapshot Diff and Service Rollup
 
 ```bash
 vuln-prioritizer snapshot create \
-  --input data/input_fixtures/trivy_report.json \
+  --input trivy-results.json \
   --input-format trivy-json \
   --output after.json
 
@@ -154,7 +148,7 @@ vuln-prioritizer rollup \
   --format markdown
 ```
 
-### 5. Evidence Bundle Integrity Verification
+### 4. Public-Install Evidence Bundle Integrity Verification
 
 ```bash
 vuln-prioritizer report evidence-bundle \
@@ -166,6 +160,20 @@ vuln-prioritizer report verify-evidence-bundle \
   --format json \
   --output evidence-verification.json
 ```
+
+### 5. ATT&CK-Aware Analyze with Your Own Local Mapping Files
+
+```bash
+vuln-prioritizer analyze \
+  --input cves.txt \
+  --format markdown \
+  --output attack-report.md \
+  --attack-source ctid-json \
+  --attack-mapping-file ./attack-mapping.json \
+  --attack-technique-metadata-file ./attack-techniques.json
+```
+
+Those ATT&CK files are not bundled by a `pipx` install. If you are working from a repository checkout, the checked-in demo inputs live under `data/attack/`.
 
 ### 6. Optional Local SQLite State Store
 
@@ -193,10 +201,11 @@ Example:
 
 ```yaml
 defaults:
-  attack_source: ctid-json
-  attack_mapping_file: data/attack/ctid_kev_enterprise_2025-07-28_attack-16.1_subset.json
-  attack_technique_metadata_file: data/attack/attack_techniques_enterprise_16.1_subset.json
   policy_profile: enterprise
+  # Add ATT&CK defaults only if you keep local mapping files yourself.
+  # attack_source: ctid-json
+  # attack_mapping_file: ./attack-mapping.json
+  # attack_technique_metadata_file: ./attack-techniques.json
 
 commands:
   analyze:
@@ -207,14 +216,14 @@ commands:
 Use it with auto-discovery or explicitly:
 
 ```bash
-vuln-prioritizer analyze --input data/sample_cves.txt
-vuln-prioritizer --config vuln-prioritizer.yml analyze --input data/sample_cves.txt
-vuln-prioritizer --no-config analyze --input data/sample_cves.txt
+vuln-prioritizer analyze --input cves.txt
+vuln-prioritizer --config vuln-prioritizer.yml analyze --input trivy-results.json --input-format trivy-json
+vuln-prioritizer --no-config analyze --input cves.txt
 ```
 
 ## Public Docs
 
-Start here:
+Start here for public CLI usage:
 
 - [docs/use_cases.md](docs/use_cases.md)
 - [docs/playbooks.md](docs/playbooks.md)
@@ -224,8 +233,11 @@ Start here:
 - [docs/methodology.md](docs/methodology.md)
 - [docs/evidence.md](docs/evidence.md)
 - [docs/integrations/reporting_and_ci.md](docs/integrations/reporting_and_ci.md)
-- [docs/release_operations.md](docs/release_operations.md)
 - [docs/releases/v1.1.0.md](docs/releases/v1.1.0.md)
+
+Maintainer / repo-checkout workflows:
+
+- [docs/release_operations.md](docs/release_operations.md)
 
 Reference material:
 

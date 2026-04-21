@@ -2,6 +2,9 @@
 
 This document describes the current SARIF, GitHub Action, PR comment, and HTML reporting integration surface.
 
+- Public-install-safe examples in this document use placeholders like `trivy-results.json`, `analysis.json`, `report.html`, and `evidence.zip`. They work after `pipx install` as long as you provide those files from your own repo, CI workspace, or workstation.
+- Repo checkout only: examples that use `data/...` or `make ...`. In this repository those refer to checked-in fixtures, checked-in example artifacts, or maintainer gates.
+
 ## Current Production State
 
 Today the CLI supports:
@@ -65,7 +68,7 @@ Outputs:
 - `html-report-path` when `html-output-path` is set or when `mode: report-html`
 - `summary-path` when a summary is requested via `summary-output-path` or `github-step-summary`
 
-The action installs the package from the action checkout and writes the resolved output path to the `report-path` output.
+The action installs the package from the action checkout and writes the resolved output path to the `report-path` output. In normal consumer workflows, that checkout is the consumer repository that contains `trivy-results.json` or similar scan inputs, not this repository's fixture tree.
 
 ### Summary Templates
 
@@ -200,7 +203,7 @@ Example output artifacts:
 - [docs/examples/example_results.sarif](../examples/example_results.sarif)
 - [docs/examples/example_report.html](../examples/example_report.html)
 
-These checked-in example artifacts are generated locally from the repository fixtures. They are not meant to imply that every consumer workflow uses identical sample data.
+These checked-in example artifacts are generated locally from the repository fixtures. They are not meant to imply that every consumer workflow uses identical sample data, and reproducing them byte-for-byte requires a repository checkout.
 
 ### Ready-to-Use GitHub Patterns
 
@@ -270,7 +273,9 @@ Replace `vX.Y.Z` with the release tag or commit SHA you intend to consume. This 
 
 ## Local Workflow Equivalent
 
-When hosted GitHub Actions are unavailable, the recommended local equivalent is:
+When hosted GitHub Actions are unavailable, there are two different local paths depending on whether you are validating this repository itself or just exercising the public CLI contract.
+
+### Repo Checkout Gates
 
 ```bash
 make workflow-check
@@ -292,17 +297,21 @@ make release-check
 That gate regenerates the Markdown comment body, SARIF sample, HTML report example, and the broader demo artifacts before rerunning docs, hygiene, and packaging checks.
 `make benchmark-check` is the narrower local regression sweep for the checked-in fixture benchmark cases.
 
-For consumer-facing integration smoke tests, validate the CLI contracts directly because the composite action is a thin wrapper around them:
+These `make` targets assume a checkout of this repository.
+
+### Consumer-Facing CLI Smoke Tests
+
+For install-safe integration smoke tests, validate the CLI contracts directly because the composite action is a thin wrapper around them:
 
 ```bash
 vuln-prioritizer analyze \
-  --input data/input_fixtures/trivy_report.json \
+  --input trivy-results.json \
   --input-format trivy-json \
   --format sarif \
   --output results.sarif
 
 vuln-prioritizer analyze \
-  --input data/input_fixtures/trivy_report.json \
+  --input trivy-results.json \
   --input-format trivy-json \
   --format json \
   --output analysis.json
@@ -322,9 +331,11 @@ vuln-prioritizer report verify-evidence-bundle \
 
 vuln-prioritizer data verify \
   --cve CVE-2021-44228 \
-  --attack-mapping-file data/attack/ctid_kev_enterprise_2025-07-28_attack-16.1_subset.json \
-  --attack-technique-metadata-file data/attack/attack_techniques_enterprise_16.1_subset.json
+  --attack-mapping-file ./attack-mapping.json \
+  --attack-technique-metadata-file ./attack-techniques.json
 ```
+
+The `data verify` example still requires local ATT&CK mapping files. Skip it when you are not exercising ATT&CK inputs.
 
 GitHub-only steps remain outside the local-equivalent scope:
 

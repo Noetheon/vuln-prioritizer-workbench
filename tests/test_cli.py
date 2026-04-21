@@ -26,6 +26,27 @@ FIXTURE_ROOT = Path(__file__).resolve().parents[1] / "data" / "input_fixtures"
 ATTACK_ROOT = Path(__file__).resolve().parents[1] / "data" / "attack"
 
 
+def _format_help_block(*args: str) -> str:
+    result = runner.invoke(app, [*args, "--help"])
+
+    assert result.exit_code == 0
+    lines = result.stdout.splitlines()
+    for index, line in enumerate(lines):
+        if "--format" not in line:
+            continue
+        block = [line]
+        next_index = index + 1
+        while next_index < len(lines):
+            next_line = lines[next_index]
+            if "--" in next_line:
+                break
+            block.append(next_line)
+            next_index += 1
+        return " ".join(part.strip() for part in block)
+
+    raise AssertionError("Expected a --format option in command help.")
+
+
 def test_cli_analyze_end_to_end_with_mocked_providers(monkeypatch, tmp_path: Path) -> None:
     input_file = _write_input_file(tmp_path)
     output_file = tmp_path / "report.md"
@@ -608,6 +629,42 @@ def test_cli_compare_rejects_sarif_format(tmp_path: Path) -> None:
 
     assert result.exit_code == 2
     assert "compare supports only --format json, markdown, table." in result.stdout
+
+
+def test_cli_analyze_help_lists_all_supported_formats() -> None:
+    help_block = _format_help_block("analyze")
+
+    assert "markdown" in help_block
+    assert "json" in help_block
+    assert "sarif" in help_block
+    assert "table" in help_block
+
+
+def test_cli_compare_help_omits_sarif_format() -> None:
+    help_block = _format_help_block("compare")
+
+    assert "markdown" in help_block
+    assert "json" in help_block
+    assert "table" in help_block
+    assert "sarif" not in help_block
+
+
+def test_cli_doctor_help_lists_only_table_and_json_formats() -> None:
+    help_block = _format_help_block("doctor")
+
+    assert "table" in help_block
+    assert "json" in help_block
+    assert "markdown" not in help_block
+    assert "sarif" not in help_block
+
+
+def test_cli_snapshot_create_help_lists_only_snapshot_export_formats() -> None:
+    help_block = _format_help_block("snapshot", "create")
+
+    assert "json" in help_block
+    assert "markdown" in help_block
+    assert "table" not in help_block
+    assert "sarif" not in help_block
 
 
 def test_cli_explain_rejects_sarif_format() -> None:

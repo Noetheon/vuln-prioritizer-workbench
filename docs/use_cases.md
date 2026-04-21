@@ -4,6 +4,8 @@ This page focuses on three concrete operational workflows that the current `v1.1
 
 If you want the shortest operator-facing runbooks instead of the product-story view, start with [Operator Playbooks](playbooks.md).
 
+All CLI examples below are repo-checkout examples that intentionally use the checked-in fixtures under `data/`. The commands themselves are part of the public CLI surface, but after `pipx install` alone you must replace those fixture paths with your own scanner exports, SBOMs, VEX files, asset-context CSVs, and ATT&CK mapping files.
+
 ## 1. Trivy + VEX + GitHub Summary
 
 Goal:
@@ -12,7 +14,7 @@ Goal:
 - suppress exact-match `not_affected` VEX cases
 - keep a JSON artifact plus a short Markdown summary for the GitHub run
 
-CLI shape:
+CLI shape (repo checkout example):
 
 ```bash
 vuln-prioritizer analyze \
@@ -38,7 +40,7 @@ Goal:
 - prioritize SBOM and dependency findings without introducing a second opaque risk model
 - compare raw CVSS-only intuition with enriched prioritization
 
-CLI shape:
+CLI shape (repo checkout example):
 
 ```bash
 vuln-prioritizer compare \
@@ -61,7 +63,7 @@ Goal:
 - attach mapped assets and business services
 - add optional ATT&CK context and later aggregate by asset or service
 
-CLI shape:
+CLI shape (repo checkout example):
 
 ```bash
 vuln-prioritizer analyze \

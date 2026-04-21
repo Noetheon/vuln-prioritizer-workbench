@@ -23,35 +23,41 @@ The site now includes the `v1.1.0` public-polish release notes and a committed m
 
 ## Quickstart
 
+- Works after a public install: examples that use files you create or already have locally, such as `cves.txt`, `trivy-results.json`, `analysis.json`, or `report.html`.
+- Requires local ATT&CK data files: examples that use `--attack-mapping-file` and `--attack-technique-metadata-file`.
+- Repo checkout only: examples that use `data/...` or `make ...` in this repository.
+
 Baseline analysis:
 
 ```bash
-vuln-prioritizer analyze --input data/sample_cves.txt
+printf 'CVE-2021-44228\nCVE-2024-3094\n' > cves.txt
+vuln-prioritizer analyze --input cves.txt
 ```
 
 Scanner-native analysis:
 
 ```bash
 vuln-prioritizer analyze \
-  --input data/input_fixtures/trivy_report.json \
+  --input trivy-results.json \
   --input-format trivy-json \
   --format json \
   --output analysis.json
 ```
 
-ATT&CK-aware analysis:
+ATT&CK-aware analysis with your own local mapping files:
 
 ```bash
 vuln-prioritizer analyze \
-  --input data/sample_cves_mixed.txt \
+  --input cves.txt \
   --format markdown \
-  --output docs/example_attack_report.md \
+  --output attack-report.md \
   --attack-source ctid-json \
-  --attack-mapping-file data/attack/ctid_kev_enterprise_2025-07-28_attack-16.1_subset.json \
-  --attack-technique-metadata-file data/attack/attack_techniques_enterprise_16.1_subset.json
+  --attack-mapping-file ./attack-mapping.json \
+  --attack-technique-metadata-file ./attack-techniques.json
 ```
 
 The documented default ATT&CK workflow is `ctid-json`. The older `local-csv` mode remains available only as a compatibility fallback.
+If you are working from a repository checkout, the checked-in demo ATT&CK files live under `data/attack/`; they are not installed by `pipx`.
 
 ## Documentation Structure
 
@@ -61,10 +67,11 @@ The documented default ATT&CK workflow is `ctid-json`. The older `local-csv` mod
 - Use [playbooks.md](playbooks.md) when you want the shortest role-oriented path for CI scans, SBOM triage, or infrastructure scan triage.
 - Use [integrations/reporting_and_ci.md](integrations/reporting_and_ci.md) for SARIF, GitHub Action, HTML, and local workflow guidance.
 - Use [roadmap.md](roadmap.md) for shipped scope and deliberate non-goals.
+- Use [release_operations.md](release_operations.md) for maintainer-only release, GitHub Release recovery, and PyPI/TestPyPI operations.
 - Use [community_repository_setup.md](community_repository_setup.md) for maintainer-facing public repo topics, labels, and triage defaults.
 - Use [releases/v1.1.0.md](releases/v1.1.0.md) for the current public-polish release slice.
 
-## Local Docs Preview
+## Local Docs Preview (Repo Checkout Only)
 
 Build the static site:
 

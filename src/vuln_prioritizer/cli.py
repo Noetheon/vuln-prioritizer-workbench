@@ -11,7 +11,7 @@ import zipfile
 from collections.abc import MutableMapping
 from enum import Enum
 from pathlib import Path
-from typing import cast
+from typing import Any, cast
 
 import requests
 import typer
@@ -172,6 +172,27 @@ class OutputFormat(str, Enum):
     table = "table"
 
 
+FULL_OUTPUT_FORMATS = (
+    OutputFormat.markdown,
+    OutputFormat.json,
+    OutputFormat.sarif,
+    OutputFormat.table,
+)
+REPORT_OUTPUT_FORMATS = (
+    OutputFormat.markdown,
+    OutputFormat.json,
+    OutputFormat.table,
+)
+TABLE_AND_JSON_OUTPUT_FORMATS = (
+    OutputFormat.table,
+    OutputFormat.json,
+)
+SNAPSHOT_CREATE_OUTPUT_FORMATS = (
+    OutputFormat.json,
+    OutputFormat.markdown,
+)
+
+
 class PriorityFilter(str, Enum):
     critical = "critical"
     high = "high"
@@ -254,6 +275,19 @@ PRIORITY_LABELS = {
 }
 
 
+def _format_metavar(allowed_formats: tuple[OutputFormat, ...]) -> str:
+    return "[" + "|".join(item.value for item in allowed_formats) + "]"
+
+
+def _output_format_option(default: OutputFormat, allowed_formats: tuple[OutputFormat, ...]) -> Any:
+    return typer.Option(
+        default,
+        "--format",
+        metavar=_format_metavar(allowed_formats),
+        show_choices=False,
+    )
+
+
 def _version_callback(value: bool) -> None:
     if not value:
         return
@@ -294,7 +328,7 @@ def analyze(
     output: Path | None = typer.Option(None, "--output", dir_okay=False),
     html_output: Path | None = typer.Option(None, "--html-output", dir_okay=False),
     summary_output: Path | None = typer.Option(None, "--summary-output", dir_okay=False),
-    format: OutputFormat = typer.Option(OutputFormat.markdown, "--format"),
+    format: OutputFormat = _output_format_option(OutputFormat.markdown, FULL_OUTPUT_FORMATS),
     input_format: InputFormat = typer.Option(InputFormat.auto, "--input-format"),
     no_attack: bool = typer.Option(False, "--no-attack"),
     attack_source: AttackSource = typer.Option(AttackSource.none, "--attack-source"),
@@ -348,12 +382,7 @@ def analyze(
     _validate_command_formats(
         command_name="analyze",
         format=format,
-        allowed_formats={
-            OutputFormat.markdown,
-            OutputFormat.json,
-            OutputFormat.sarif,
-            OutputFormat.table,
-        },
+        allowed_formats=set(FULL_OUTPUT_FORMATS),
     )
 
     findings, context = _prepare_analysis(
@@ -433,7 +462,7 @@ def compare(
     ctx: typer.Context,
     input: Path = typer.Option(..., "--input", exists=True, dir_okay=False, readable=True),
     output: Path | None = typer.Option(None, "--output", dir_okay=False),
-    format: OutputFormat = typer.Option(OutputFormat.markdown, "--format"),
+    format: OutputFormat = _output_format_option(OutputFormat.markdown, REPORT_OUTPUT_FORMATS),
     input_format: InputFormat = typer.Option(InputFormat.auto, "--input-format"),
     no_attack: bool = typer.Option(False, "--no-attack"),
     attack_source: AttackSource = typer.Option(AttackSource.none, "--attack-source"),
@@ -477,7 +506,7 @@ def compare(
     _validate_command_formats(
         command_name="compare",
         format=format,
-        allowed_formats={OutputFormat.markdown, OutputFormat.json, OutputFormat.table},
+        allowed_formats=set(REPORT_OUTPUT_FORMATS),
     )
 
     findings, context = _prepare_analysis(
@@ -541,7 +570,7 @@ def explain(
     ctx: typer.Context,
     cve: str = typer.Option(..., "--cve"),
     output: Path | None = typer.Option(None, "--output", dir_okay=False),
-    format: OutputFormat = typer.Option(OutputFormat.table, "--format"),
+    format: OutputFormat = _output_format_option(OutputFormat.table, REPORT_OUTPUT_FORMATS),
     no_attack: bool = typer.Option(False, "--no-attack"),
     attack_source: AttackSource = typer.Option(AttackSource.none, "--attack-source"),
     attack_mapping_file: Path | None = typer.Option(None, "--attack-mapping-file", dir_okay=False),
@@ -577,7 +606,7 @@ def explain(
     _validate_command_formats(
         command_name="explain",
         format=format,
-        allowed_formats={OutputFormat.markdown, OutputFormat.json, OutputFormat.table},
+        allowed_formats=set(REPORT_OUTPUT_FORMATS),
     )
 
     normalized_cve = normalize_cve_id(cve)
@@ -724,7 +753,7 @@ def explain(
 def doctor(
     ctx: typer.Context,
     output: Path | None = typer.Option(None, "--output", dir_okay=False),
-    format: OutputFormat = typer.Option(OutputFormat.table, "--format"),
+    format: OutputFormat = _output_format_option(OutputFormat.table, TABLE_AND_JSON_OUTPUT_FORMATS),
     live: bool = typer.Option(False, "--live"),
     cache_dir: Path = typer.Option(
         DEFAULT_CACHE_DIR, "--cache-dir", file_okay=False, dir_okay=True
@@ -742,7 +771,7 @@ def doctor(
     _validate_command_formats(
         command_name="doctor",
         format=format,
-        allowed_formats={OutputFormat.json, OutputFormat.table},
+        allowed_formats=set(TABLE_AND_JSON_OUTPUT_FORMATS),
     )
 
     report = _build_doctor_report(
@@ -790,7 +819,7 @@ def snapshot_create(
     ctx: typer.Context,
     input: Path = typer.Option(..., "--input", exists=True, dir_okay=False, readable=True),
     output: Path = typer.Option(..., "--output", dir_okay=False),
-    format: OutputFormat = typer.Option(OutputFormat.json, "--format"),
+    format: OutputFormat = _output_format_option(OutputFormat.json, SNAPSHOT_CREATE_OUTPUT_FORMATS),
     input_format: InputFormat = typer.Option(InputFormat.auto, "--input-format"),
     no_attack: bool = typer.Option(False, "--no-attack"),
     attack_source: AttackSource = typer.Option(AttackSource.none, "--attack-source"),
@@ -833,7 +862,7 @@ def snapshot_create(
     _validate_command_formats(
         command_name="snapshot create",
         format=format,
-        allowed_formats={OutputFormat.json, OutputFormat.markdown},
+        allowed_formats=set(SNAPSHOT_CREATE_OUTPUT_FORMATS),
     )
 
     findings, context = _prepare_analysis(
@@ -907,7 +936,7 @@ def snapshot_diff(
     before: Path = typer.Option(..., "--before", exists=True, dir_okay=False, readable=True),
     after: Path = typer.Option(..., "--after", exists=True, dir_okay=False, readable=True),
     output: Path | None = typer.Option(None, "--output", dir_okay=False),
-    format: OutputFormat = typer.Option(OutputFormat.table, "--format"),
+    format: OutputFormat = _output_format_option(OutputFormat.table, REPORT_OUTPUT_FORMATS),
     include_unchanged: bool = typer.Option(False, "--include-unchanged"),
 ) -> None:
     """Compare two snapshot artifacts by CVE."""
@@ -915,7 +944,7 @@ def snapshot_diff(
     _validate_command_formats(
         command_name="snapshot diff",
         format=format,
-        allowed_formats={OutputFormat.table, OutputFormat.markdown, OutputFormat.json},
+        allowed_formats=set(REPORT_OUTPUT_FORMATS),
     )
 
     before_payload = _load_snapshot_payload(before)
@@ -946,7 +975,7 @@ def rollup(
     input: Path = typer.Option(..., "--input", exists=True, dir_okay=False, readable=True),
     by: RollupBy = typer.Option(RollupBy.asset, "--by"),
     output: Path | None = typer.Option(None, "--output", dir_okay=False),
-    format: OutputFormat = typer.Option(OutputFormat.table, "--format"),
+    format: OutputFormat = _output_format_option(OutputFormat.table, REPORT_OUTPUT_FORMATS),
     top: int = typer.Option(5, "--top", min=1),
 ) -> None:
     """Aggregate analysis or snapshot findings by asset or business service."""
@@ -954,7 +983,7 @@ def rollup(
     _validate_command_formats(
         command_name="rollup",
         format=format,
-        allowed_formats={OutputFormat.table, OutputFormat.markdown, OutputFormat.json},
+        allowed_formats=set(REPORT_OUTPUT_FORMATS),
     )
 
     input_kind, payload = _load_rollup_payload(input)
@@ -981,14 +1010,14 @@ def rollup(
 def state_init(
     db: Path = typer.Option(..., "--db", dir_okay=False),
     output: Path | None = typer.Option(None, "--output", dir_okay=False),
-    format: OutputFormat = typer.Option(OutputFormat.table, "--format"),
+    format: OutputFormat = _output_format_option(OutputFormat.table, TABLE_AND_JSON_OUTPUT_FORMATS),
 ) -> None:
     """Initialize an optional local SQLite state store."""
     _validate_output_mode(format, output)
     _validate_command_formats(
         command_name="state init",
         format=format,
-        allowed_formats={OutputFormat.table, OutputFormat.json},
+        allowed_formats=set(TABLE_AND_JSON_OUTPUT_FORMATS),
     )
 
     store = _state_store_or_exit(db, expect_existing=False)
@@ -1018,14 +1047,14 @@ def state_import_snapshot(
     db: Path = typer.Option(..., "--db", dir_okay=False),
     input: Path = typer.Option(..., "--input", exists=True, dir_okay=False, readable=True),
     output: Path | None = typer.Option(None, "--output", dir_okay=False),
-    format: OutputFormat = typer.Option(OutputFormat.table, "--format"),
+    format: OutputFormat = _output_format_option(OutputFormat.table, TABLE_AND_JSON_OUTPUT_FORMATS),
 ) -> None:
     """Import a saved snapshot JSON artifact into the local state store."""
     _validate_output_mode(format, output)
     _validate_command_formats(
         command_name="state import-snapshot",
         format=format,
-        allowed_formats={OutputFormat.table, OutputFormat.json},
+        allowed_formats=set(TABLE_AND_JSON_OUTPUT_FORMATS),
     )
 
     payload = _load_snapshot_payload(input)
@@ -1060,14 +1089,14 @@ def state_history(
     db: Path = typer.Option(..., "--db", exists=False, dir_okay=False),
     cve: str = typer.Option(..., "--cve"),
     output: Path | None = typer.Option(None, "--output", dir_okay=False),
-    format: OutputFormat = typer.Option(OutputFormat.table, "--format"),
+    format: OutputFormat = _output_format_option(OutputFormat.table, TABLE_AND_JSON_OUTPUT_FORMATS),
 ) -> None:
     """Show persisted per-CVE history across imported snapshots."""
     _validate_output_mode(format, output)
     _validate_command_formats(
         command_name="state history",
         format=format,
-        allowed_formats={OutputFormat.table, OutputFormat.json},
+        allowed_formats=set(TABLE_AND_JSON_OUTPUT_FORMATS),
     )
 
     normalized_cve = normalize_cve_id(cve)
@@ -1108,14 +1137,14 @@ def state_waivers(
     status: StateWaiverStatusFilter = typer.Option(StateWaiverStatusFilter.all, "--status"),
     latest_only: bool = typer.Option(True, "--latest-only/--all-snapshots"),
     output: Path | None = typer.Option(None, "--output", dir_okay=False),
-    format: OutputFormat = typer.Option(OutputFormat.table, "--format"),
+    format: OutputFormat = _output_format_option(OutputFormat.table, TABLE_AND_JSON_OUTPUT_FORMATS),
 ) -> None:
     """Show waiver lifecycle entries from imported snapshot history."""
     _validate_output_mode(format, output)
     _validate_command_formats(
         command_name="state waivers",
         format=format,
-        allowed_formats={OutputFormat.table, OutputFormat.json},
+        allowed_formats=set(TABLE_AND_JSON_OUTPUT_FORMATS),
     )
 
     store = _state_store_or_exit(db, expect_existing=True)
@@ -1156,14 +1185,14 @@ def state_top_services(
     priority: StatePriorityScope = typer.Option(StatePriorityScope.all, "--priority"),
     limit: int = typer.Option(10, "--limit", min=1),
     output: Path | None = typer.Option(None, "--output", dir_okay=False),
-    format: OutputFormat = typer.Option(OutputFormat.table, "--format"),
+    format: OutputFormat = _output_format_option(OutputFormat.table, TABLE_AND_JSON_OUTPUT_FORMATS),
 ) -> None:
     """Show repeated recent services across imported snapshot history."""
     _validate_output_mode(format, output)
     _validate_command_formats(
         command_name="state top-services",
         format=format,
-        allowed_formats={OutputFormat.table, OutputFormat.json},
+        allowed_formats=set(TABLE_AND_JSON_OUTPUT_FORMATS),
     )
 
     store = _state_store_or_exit(db, expect_existing=True)
@@ -1207,14 +1236,14 @@ def attack_validate(
         None, "--attack-technique-metadata-file", dir_okay=False
     ),
     output: Path | None = typer.Option(None, "--output", dir_okay=False),
-    format: OutputFormat = typer.Option(OutputFormat.table, "--format"),
+    format: OutputFormat = _output_format_option(OutputFormat.table, REPORT_OUTPUT_FORMATS),
 ) -> None:
     """Validate local ATT&CK mapping and metadata files."""
     _validate_output_mode(format, output)
     _validate_command_formats(
         command_name="attack validate",
         format=format,
-        allowed_formats={OutputFormat.markdown, OutputFormat.json, OutputFormat.table},
+        allowed_formats=set(REPORT_OUTPUT_FORMATS),
     )
 
     result = _validate_attack_inputs_or_exit(
@@ -1243,7 +1272,7 @@ def attack_coverage(
         None, "--attack-technique-metadata-file", dir_okay=False
     ),
     output: Path | None = typer.Option(None, "--output", dir_okay=False),
-    format: OutputFormat = typer.Option(OutputFormat.table, "--format"),
+    format: OutputFormat = _output_format_option(OutputFormat.table, REPORT_OUTPUT_FORMATS),
     max_cves: int | None = typer.Option(None, "--max-cves", min=1),
 ) -> None:
     """Show ATT&CK coverage for a local CVE list."""
@@ -1251,7 +1280,7 @@ def attack_coverage(
     _validate_command_formats(
         command_name="attack coverage",
         format=format,
-        allowed_formats={OutputFormat.markdown, OutputFormat.json, OutputFormat.table},
+        allowed_formats=set(REPORT_OUTPUT_FORMATS),
     )
 
     cve_ids, total_input_rows, parser_warnings = _read_input_cves(input, max_cves=max_cves)
@@ -1657,14 +1686,14 @@ def report_evidence_bundle(
 def report_verify_evidence_bundle(
     input: Path = typer.Option(..., "--input", exists=True, dir_okay=False, readable=True),
     output: Path | None = typer.Option(None, "--output", dir_okay=False),
-    format: OutputFormat = typer.Option(OutputFormat.table, "--format"),
+    format: OutputFormat = _output_format_option(OutputFormat.table, TABLE_AND_JSON_OUTPUT_FORMATS),
 ) -> None:
     """Verify evidence bundle manifest integrity against the ZIP members."""
     _validate_output_mode(format, output)
     _validate_command_formats(
         command_name="report verify-evidence-bundle",
         format=format,
-        allowed_formats={OutputFormat.json, OutputFormat.table},
+        allowed_formats=set(TABLE_AND_JSON_OUTPUT_FORMATS),
     )
 
     metadata, summary, items = _verify_evidence_bundle(input)
