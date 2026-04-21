@@ -10,6 +10,11 @@
 | `doctor` | optional local files and runtime config | `json` | JSON schema | Local environment, cache, file, waiver-health, and optional live-source diagnostics. |
 | `snapshot create` | `--input PATH` | `markdown`, `json` | JSON schema | Reusable point-in-time artifact over the same prioritization pipeline as `analyze`. |
 | `snapshot diff` | two snapshot JSON files | `markdown`, `json` | JSON schema | Categorizes `added`, `removed`, priority, and context changes per CVE. |
+| `state init` | `--db PATH` | `json` | JSON schema | Initializes the optional local SQLite backing store used only for persisted snapshot history. |
+| `state import-snapshot` | snapshot JSON file | `json` | JSON schema | Imports a saved `snapshot create --format json` artifact into the optional local SQLite state store. |
+| `state history` | local SQLite DB + `--cve` | `json` | JSON schema | Returns persisted per-CVE history across imported snapshots. |
+| `state waivers` | local SQLite DB | `json` | JSON schema | Shows persisted waiver lifecycle debt from the latest snapshot or full imported history. |
+| `state top-services` | local SQLite DB | `json` | JSON schema | Shows repeated service pressure across imported snapshots without rerunning enrichment. |
 | `rollup` | analysis JSON or snapshot JSON | `markdown`, `json` | JSON schema | Aggregates findings by `asset_id` or `asset_business_service`, keeps waiver lifecycle debt visible, and ranks buckets for remediation planning without rerunning enrichment. |
 | `attack validate` | ATT&CK local files | `markdown`, `json` | No published schema yet | Validates local mapping and metadata artifacts; `ctid-json` is the preferred workflow. |
 | `attack coverage` | `--input PATH` | `markdown`, `json` | No published schema yet | Uses the same input loader for CVE extraction. |
@@ -71,9 +76,11 @@ Without a matching target, the explain flow still works, but asset-join and exac
 - Prefer `--input-format` over `auto` in CI if reproducibility matters.
 - Prefer `--html-output` when one analyze run needs both machine-readable JSON and a human-facing HTML artifact.
 - Prefer `--summary-output` when GitHub Actions, PR automation, or local review needs a compact Markdown executive summary.
+- Prefer `state import-snapshot` plus `state history|waivers|top-services` when you need repeated local review over saved snapshots rather than another live enrichment run.
 - Prefer `report evidence-bundle` when a review board or release gate needs a reproducible offline artifact set from a saved analysis run.
 - Prefer `report verify-evidence-bundle` before shipping or archiving an evidence ZIP outside the repository or CI workspace.
 - `report html` expects an analysis JSON export, not compare JSON or explain JSON.
 - `sarif` is part of the documented contract only for `analyze`.
 - `data status`, `data update`, and `data verify` are intentionally human-facing terminal commands today.
+- The optional SQLite state store is separate from the existing file cache and does not change `analyze`, `snapshot`, or `report` output semantics.
 - `vuln-prioritizer.yml` is the documented runtime-config filename; `--config` and `--no-config` are the stable CLI overrides.

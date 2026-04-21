@@ -12,7 +12,7 @@
 ## Why Use It
 
 - Transparent, rule-based prioritization instead of opaque scoring.
-- Local-first workflows with saved JSON, HTML reports, snapshots, rollups, and evidence bundles.
+- Local-first workflows with saved JSON, HTML reports, snapshots, optional SQLite-backed history views, rollups, and evidence bundles.
 - Optional ATT&CK context from local CTID/MITRE data, not heuristic CVE-to-ATT&CK guesses.
 - CI-friendly outputs including Markdown summaries, SARIF, GitHub Action support, and policy gates.
 - Explicit support for VEX, asset context, waivers, and reproducible review artifacts.
@@ -27,6 +27,7 @@ Core commands:
 - `explain`: explain a single CVE decision in detail
 - `doctor`: validate local setup, config, cache, files, and optional live source reachability
 - `snapshot create|diff`: capture a run and compare before/after states
+- `state init|import-snapshot|history|waivers|top-services`: persist snapshots in an optional local SQLite store and inspect history, waiver debt, or repeated services
 - `rollup`: aggregate saved analysis or snapshots by asset or service
 - `attack validate|coverage|navigator-layer`: validate and use local ATT&CK mappings
 - `report html|evidence-bundle|verify-evidence-bundle`: render HTML, build reproducible ZIP evidence packages, or verify bundle integrity
@@ -163,9 +164,27 @@ vuln-prioritizer report verify-evidence-bundle \
   --output evidence-verification.json
 ```
 
+### 6. Optional Local SQLite State Store
+
+```bash
+vuln-prioritizer state init --db build/state.db
+
+vuln-prioritizer state import-snapshot \
+  --db build/state.db \
+  --input after.json
+
+vuln-prioritizer state top-services \
+  --db build/state.db \
+  --days 30 \
+  --format json \
+  --output state-top-services.json
+```
+
 ## Runtime Config
 
 `v1.1.0` adds first-class runtime config via `vuln-prioritizer.yml`.
+
+The optional SQLite state store is intentionally separate: it is local-only, opt-in, and does not change `analyze`, `report`, `snapshot`, or evidence semantics.
 
 Example:
 
@@ -174,11 +193,12 @@ defaults:
   attack_source: ctid-json
   attack_mapping_file: data/attack/ctid_kev_enterprise_2025-07-28_attack-16.1_subset.json
   attack_technique_metadata_file: data/attack/attack_techniques_enterprise_16.1_subset.json
-  policy_profile: balanced
+  policy_profile: enterprise
 
-analyze:
-  format: json
-  summary_output: build/summary.md
+commands:
+  analyze:
+    format: json
+    summary_output: build/summary.md
 ```
 
 Use it with auto-discovery or explicitly:

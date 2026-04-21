@@ -32,6 +32,17 @@ from vuln_prioritizer.models import (
     SnapshotDiffMetadata,
     SnapshotDiffSummary,
     SnapshotMetadata,
+    StateHistoryEntry,
+    StateHistoryMetadata,
+    StateHistoryReport,
+    StateImportReport,
+    StateInitReport,
+    StateTopServiceEntry,
+    StateTopServicesMetadata,
+    StateTopServicesReport,
+    StateWaiverEntry,
+    StateWaiverMetadata,
+    StateWaiverReport,
 )
 
 
@@ -671,6 +682,151 @@ def _format_rollup_reason(bucket: RollupBucket) -> str:
     if not bucket.context_hints:
         return base
     return base + " (" + ", ".join(bucket.context_hints) + ")"
+
+
+def render_state_init_panel(report: StateInitReport) -> Panel:
+    """Render the terminal summary for state init."""
+    return Panel(
+        "\n".join(
+            [
+                f"Schema version: {report.metadata.schema_version}",
+                f"Database path: {report.metadata.db_path}",
+                f"Snapshots imported: {report.summary.snapshot_count}",
+            ]
+        ),
+        title="State Store Initialized",
+    )
+
+
+def generate_state_init_json(report: StateInitReport) -> str:
+    """Render the JSON state-init export."""
+    return json.dumps(report.model_dump(), indent=2, sort_keys=True)
+
+
+def render_state_import_panel(report: StateImportReport) -> Panel:
+    """Render the terminal summary for state import."""
+    lines = [
+        f"Database path: {report.metadata.db_path}",
+        f"Input snapshot: {report.metadata.input_path}",
+        f"Imported: {'yes' if report.summary.imported else 'no (duplicate)'}",
+        "Snapshot id: "
+        + (str(report.summary.snapshot_id) if report.summary.snapshot_id is not None else "N.A."),
+        f"Snapshot generated at: {report.summary.snapshot_generated_at or 'N.A.'}",
+        f"Findings imported: {report.summary.finding_count}",
+        f"Snapshots in store: {report.summary.snapshot_count}",
+    ]
+    return Panel("\n".join(lines), title="State Snapshot Import")
+
+
+def generate_state_import_json(report: StateImportReport) -> str:
+    """Render the JSON state-import export."""
+    return json.dumps(report.model_dump(), indent=2, sort_keys=True)
+
+
+def render_state_history_table(
+    items: list[StateHistoryEntry],
+    metadata: StateHistoryMetadata,
+) -> Table:
+    """Build the Rich table shown for persisted CVE history."""
+    table = Table(title=f"State History: {metadata.cve_id}", show_lines=False)
+    table.add_column("Snapshot", style="bold")
+    table.add_column("Priority")
+    table.add_column("KEV")
+    table.add_column("Waiver")
+    table.add_column("Owner")
+    table.add_column("Services", overflow="fold")
+    table.add_column("Asset IDs", overflow="fold")
+    for item in items:
+        table.add_row(
+            item.snapshot_generated_at,
+            item.priority_label,
+            "Yes" if item.in_kev else "No",
+            _format_state_waiver_status(item.waived, item.waiver_status),
+            item.waiver_owner or "N.A.",
+            ", ".join(item.services) or "N.A.",
+            ", ".join(item.asset_ids) or "N.A.",
+        )
+    table.caption = f"Entries: {metadata.entry_count}"
+    return table
+
+
+def generate_state_history_json(report: StateHistoryReport) -> str:
+    """Render the JSON state-history export."""
+    return json.dumps(report.model_dump(), indent=2, sort_keys=True)
+
+
+def render_state_waivers_table(
+    items: list[StateWaiverEntry],
+    metadata: StateWaiverMetadata,
+) -> Table:
+    """Build the Rich table shown for persisted waiver views."""
+    table = Table(title="Persisted Waiver View", show_lines=False)
+    table.add_column("Snapshot", style="bold")
+    table.add_column("CVE")
+    table.add_column("Priority")
+    table.add_column("Status")
+    table.add_column("Owner")
+    table.add_column("Review On")
+    table.add_column("Expires On")
+    for item in items:
+        table.add_row(
+            item.snapshot_generated_at,
+            item.cve_id,
+            item.priority_label,
+            item.waiver_status,
+            item.waiver_owner or "N.A.",
+            item.waiver_review_on or "N.A.",
+            item.waiver_expires_on or "N.A.",
+        )
+    scope_label = "latest snapshot only" if metadata.latest_only else "all snapshots"
+    table.caption = (
+        f"Entries: {metadata.entry_count} | Filter: {metadata.status_filter} | Scope: {scope_label}"
+    )
+    return table
+
+
+def generate_state_waivers_json(report: StateWaiverReport) -> str:
+    """Render the JSON state-waivers export."""
+    return json.dumps(report.model_dump(), indent=2, sort_keys=True)
+
+
+def render_state_top_services_table(
+    items: list[StateTopServiceEntry],
+    metadata: StateTopServicesMetadata,
+) -> Table:
+    """Build the Rich table shown for persisted top-service views."""
+    table = Table(title="Persisted Top Services", show_lines=False)
+    table.add_column("Service", style="bold")
+    table.add_column("Occurrences")
+    table.add_column("Distinct CVEs")
+    table.add_column("Snapshots")
+    table.add_column("KEV")
+    table.add_column("Latest Seen")
+    for item in items:
+        table.add_row(
+            item.service,
+            str(item.occurrence_count),
+            str(item.distinct_cves),
+            str(item.snapshot_count),
+            str(item.kev_count),
+            item.latest_seen or "N.A.",
+        )
+    table.caption = (
+        f"Entries: {metadata.entry_count} | Days: {metadata.days} | "
+        f"Priority: {metadata.priority_filter} | Limit: {metadata.limit}"
+    )
+    return table
+
+
+def generate_state_top_services_json(report: StateTopServicesReport) -> str:
+    """Render the JSON state-top-services export."""
+    return json.dumps(report.model_dump(), indent=2, sort_keys=True)
+
+
+def _format_state_waiver_status(waived: bool, waiver_status: str | None) -> str:
+    if not waived and waiver_status is None:
+        return "No"
+    return waiver_status or "active"
 
 
 def generate_doctor_json(report: DoctorReport) -> str:

@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://noetheon.github.io/vuln-prioritizer/schemas/state-import-report.schema.json",
+  "title": "vuln-prioritizer state import report",
+  "description": "JSON contract for `state import-snapshot --format json`.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["metadata", "summary"],
+  "properties": {
+    "metadata": {
+      "$ref": "#/$defs/metadata"
+    },
+    "summary": {
+      "$ref": "#/$defs/summary"
+    }
+  },
+  "$defs": {
+    "nullableInteger": {
+      "type": ["integer", "null"]
+    },
+    "nullableString": {
+      "type": ["string", "null"]
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "generated_at", "db_path", "input_path"],
+      "properties": {
+        "schema_version": {
+          "const": "1.2.0"
+        },
+        "generated_at": {
+          "type": "string"
+        },
+        "db_path": {
+          "type": "string"
+        },
+        "input_path": {
+          "type": "string"
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "imported",
+        "snapshot_id",
+        "snapshot_generated_at",
+        "finding_count",
+        "snapshot_count"
+      ],
+      "properties": {
+        "imported": {
+          "type": "boolean"
+        },
+        "snapshot_id": {
+          "$ref": "#/$defs/nullableInteger"
+        },
+        "snapshot_generated_at": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "finding_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "snapshot_count": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    }
+  }
+}
