@@ -83,7 +83,7 @@ The bundled schemas target the currently emitted version, `1.0.0`.
 
 New v1.1 helper contracts use their own envelope versions:
 
-- `doctor`: top-level `schema_version = 1.1.0`
+- `doctor`: top-level `schema_version = 1.2.0`
 - `snapshot create`: `metadata.schema_version = 1.1.0`
 - `snapshot diff`: `metadata.schema_version = 1.1.0`
 - `rollup`: `metadata.schema_version = 1.2.0`
@@ -219,7 +219,7 @@ Current command behavior for the main flows:
 `doctor` follows the same exit taxonomy and uses:
 
 - `0`: all checks are `ok`
-- `1`: one or more checks are `warn` or `error`
+- `1`: one or more checks are `degraded` or `error`
 - `2`: invalid CLI or runtime-config input
 
 Consumers should treat warning text as informational and not parse it as a stable error taxonomy.
@@ -243,6 +243,18 @@ This repository documents its public contract explicitly, so the compatibility p
 Current compatibility alias:
 
 - `--offline-attack-file` remains the legacy local-CSV ATT&CK path alias; `ctid-json` is the preferred ATT&CK mode for new usage
+
+### Doctor contract notes
+
+`doctor` is the supported first troubleshooting command for local setup and source reachability.
+
+Current guarantees:
+
+- each check includes a stable machine-oriented `check_id`
+- each check includes explicit `scope`, `category`, and `status`
+- `status` is one of `ok`, `degraded`, or `error`
+- the top-level `summary` reports `overall_status` plus status counts for automation
+- live-only checks appear only when `--live` is enabled
 
 ### Non-contract surfaces
 

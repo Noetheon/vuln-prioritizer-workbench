@@ -65,6 +65,8 @@ Without a matching target, the explain flow still works, but asset-join and exac
 
 ## Output notes
 
+- Run `doctor` first when installation, runtime config, cache health, ATT&CK inputs, or live source reachability is unclear.
+- For automation, key off `doctor` `check_id` and `status`, not the human-readable `detail` text.
 - Prefer JSON for automation.
 - Prefer `--input-format` over `auto` in CI if reproducibility matters.
 - Prefer `--html-output` when one analyze run needs both machine-readable JSON and a human-facing HTML artifact.

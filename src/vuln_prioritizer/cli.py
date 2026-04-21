@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import sys
 import zipfile
 from collections.abc import MutableMapping
@@ -44,6 +45,7 @@ from vuln_prioritizer.models import (
     ContextPolicyProfile,
     DoctorCheck,
     DoctorReport,
+    DoctorSummary,
     EnrichmentResult,
     EpssData,
     EvidenceBundleFile,
@@ -702,6 +704,13 @@ def doctor(
                     f"Generated at: {report.generated_at}",
                     f"Runtime config: {report.config_file or 'Not discovered'}",
                     f"Live probes: {'enabled' if report.live else 'disabled'}",
+                    f"Overall status: {report.summary.overall_status}",
+                    (
+                        "Check counts: "
+                        f"{report.summary.ok_count} ok, "
+                        f"{report.summary.degraded_count} degraded, "
+                        f"{report.summary.error_count} error"
+                    ),
                 ]
             ),
             title="Doctor",
@@ -713,7 +722,7 @@ def doctor(
         write_output(output, generate_doctor_json(report))
         console.print(f"[green]Wrote json output to {output}[/green]")
 
-    if any(check.status != "ok" for check in report.checks):
+    if any(check.status in {"degraded", "error"} for check in report.checks):
         raise typer.Exit(code=1)
 
 
@@ -2286,17 +2295,26 @@ def _build_doctor_report(
 
     python_ok = sys.version_info >= (3, 11)
     checks.append(
-        DoctorCheck(
+        _doctor_check(
+            "runtime.python",
             name="python",
+            category="runtime",
             status="ok" if python_ok else "error",
             detail=f"Python {sys.version.split()[0]}",
+            hint="Use Python 3.11 or newer." if not python_ok else None,
         )
     )
     checks.append(
-        DoctorCheck(
+        _doctor_check(
+            "runtime.config",
             name="runtime_config",
+            category="config",
             status="ok",
-            detail=str(loaded.path) if loaded is not None else "No runtime config discovered.",
+            detail=(
+                str(loaded.path)
+                if loaded is not None
+                else "No runtime config discovered; using built-in defaults."
+            ),
         )
     )
 
@@ -2313,6 +2331,7 @@ def _build_doctor_report(
         referenced_files.append(("Cache directory", cache_dir))
 
     for label, path in _unique_path_entries(referenced_files):
+        category = "cache" if label == "Cache directory" else "path"
         if label == "Cache directory":
             status = "ok"
             detail = (
@@ -2320,28 +2339,49 @@ def _build_doctor_report(
                 if path.exists()
                 else f"{path} does not exist yet and will be created on demand."
             )
+            hint = None
         else:
             status = "ok" if path.exists() else "error"
             detail = f"{path} exists." if path.exists() else f"{path} does not exist."
+            hint = (
+                None
+                if path.exists()
+                else "Check the configured path or supply the file explicitly."
+            )
         checks.append(
-            DoctorCheck(
+            _doctor_check(
+                _doctor_check_id(label),
                 name=_doctor_check_name(label),
+                category=category,
                 status=status,
                 detail=detail,
+                hint=hint,
             )
         )
 
     cache = FileCache(cache_dir, cache_ttl_hours)
     for namespace in ("nvd", "epss", "kev"):
         cache_status = cache.inspect_namespace(namespace)
+        status = "ok"
+        if cache_status["invalid_count"]:
+            status = "error"
+        elif cache_status["expired_count"]:
+            status = "degraded"
         checks.append(
-            DoctorCheck(
+            _doctor_check(
+                f"cache.{namespace}",
                 name=f"cache_{namespace}",
-                status="ok",
+                category="cache",
+                status=status,
                 detail=(
                     f"{cache_status['file_count']} files, {cache_status['valid_count']} valid, "
                     f"{cache_status['expired_count']} expired, "
                     f"{cache_status['invalid_count']} invalid."
+                ),
+                hint=(
+                    "Refresh the cache with `data update` or clear invalid cache files."
+                    if status != "ok"
+                    else None
                 ),
             )
         )
@@ -2361,21 +2401,35 @@ def _build_doctor_report(
     if effective_waiver_file is not None:
         try:
             waiver_rules = load_waiver_rules(effective_waiver_file)
-            summary = summarize_waiver_rules(waiver_rules)
-            if summary.expired_count:
+            waiver_summary = summarize_waiver_rules(waiver_rules)
+            if waiver_summary.expired_count:
                 status = "error"
-            elif summary.review_due_count:
-                status = "warn"
+            elif waiver_summary.review_due_count:
+                status = "degraded"
             else:
                 status = "ok"
             detail = (
-                f"{summary.total_rules} rules, {summary.active_count} active, "
-                f"{summary.review_due_count} review due, {summary.expired_count} expired."
+                f"{waiver_summary.total_rules} rules, {waiver_summary.active_count} active, "
+                f"{waiver_summary.review_due_count} review due, "
+                f"{waiver_summary.expired_count} expired."
             )
         except ValueError as exc:
             status = "error"
             detail = str(exc)
-        checks.append(DoctorCheck(name="waiver_health", status=status, detail=detail))
+        checks.append(
+            _doctor_check(
+                "waiver.health",
+                name="waiver_health",
+                category="waiver",
+                status=status,
+                detail=detail,
+                hint=(
+                    "Review expired or review-due waivers and update the waiver file."
+                    if status != "ok"
+                    else None
+                ),
+            )
+        )
 
     if effective_attack_mapping_file is not None:
         try:
@@ -2384,7 +2438,7 @@ def _build_doctor_report(
                 attack_mapping_file=effective_attack_mapping_file,
                 attack_technique_metadata_file=effective_attack_metadata_file,
             )
-            status = "warn" if result["warnings"] else "ok"
+            status = "degraded" if result["warnings"] else "ok"
             detail = (
                 f"{result['unique_cves']} CVEs, {result['mapping_count']} mapping objects, "
                 f"{result['technique_count']} technique metadata entries."
@@ -2392,15 +2446,52 @@ def _build_doctor_report(
         except (OSError, ValidationError, ValueError) as exc:
             status = "error"
             detail = str(exc)
-        checks.append(DoctorCheck(name="attack_validation", status=status, detail=detail))
+        checks.append(
+            _doctor_check(
+                "attack.validation",
+                name="attack_validation",
+                category="attack",
+                status=status,
+                detail=detail,
+                hint=(
+                    "Run `attack validate` directly to inspect ATT&CK mapping issues."
+                    if status != "ok"
+                    else None
+                ),
+            )
+        )
 
     if live:
+        nvd_api_key = os.getenv(DEFAULT_NVD_API_KEY_ENV)
+        checks.append(
+            _doctor_check(
+                "auth.nvd_api_key",
+                name="nvd_api_key",
+                category="auth",
+                status="ok" if nvd_api_key else "degraded",
+                detail=(
+                    f"{DEFAULT_NVD_API_KEY_ENV} is configured."
+                    if nvd_api_key
+                    else (
+                        f"{DEFAULT_NVD_API_KEY_ENV} is not configured; live checks and NVD "
+                        "enrichment will use anonymous rate limits."
+                    )
+                ),
+                hint=(
+                    f"Set {DEFAULT_NVD_API_KEY_ENV} for higher NVD rate limits."
+                    if not nvd_api_key
+                    else None
+                ),
+            )
+        )
         checks.extend(_run_live_doctor_checks())
 
+    doctor_summary = _summarize_doctor_checks(checks)
     return DoctorReport(
         generated_at=iso_utc_now(),
         live=live,
         config_file=str(loaded.path) if loaded is not None else None,
+        summary=doctor_summary,
         checks=checks,
     )
 
@@ -2429,10 +2520,20 @@ def _handle_waiver_lifecycle_fail_on(
 def _render_doctor_table(report: DoctorReport) -> Table:
     table = Table(title="Doctor Checks", show_lines=False)
     table.add_column("Check", style="bold")
+    table.add_column("ID")
+    table.add_column("Scope")
+    table.add_column("Category")
     table.add_column("Status")
     table.add_column("Detail", overflow="fold")
     for check in report.checks:
-        table.add_row(check.name, check.status.upper(), check.detail)
+        table.add_row(
+            check.name,
+            check.check_id,
+            check.scope,
+            check.category,
+            check.status.upper(),
+            check.detail if check.hint is None else f"{check.detail} Hint: {check.hint}",
+        )
     return table
 
 
@@ -2462,8 +2563,23 @@ def _probe_live_source(
         response = requests.get(url, params=params, timeout=5)
         response.raise_for_status()
     except requests.RequestException as exc:
-        return DoctorCheck(name=name, status="error", detail=str(exc))
-    return DoctorCheck(name=name, status="ok", detail=f"{url} reachable ({response.status_code}).")
+        return _doctor_check(
+            f"live.{name}",
+            name=name,
+            scope="live",
+            category="connectivity",
+            status="error",
+            detail=str(exc),
+            hint="Check network reachability, proxy configuration, and source availability.",
+        )
+    return _doctor_check(
+        f"live.{name}",
+        name=name,
+        scope="live",
+        category="connectivity",
+        status="ok",
+        detail=f"{url} reachable ({response.status_code}).",
+    )
 
 
 def _probe_kev_live_source() -> DoctorCheck:
@@ -2472,15 +2588,23 @@ def _probe_kev_live_source() -> DoctorCheck:
         return primary
     mirror = _probe_live_source("kev_mirror", KEV_MIRROR_URL)
     if mirror.status == "ok":
-        return DoctorCheck(
+        return _doctor_check(
+            "live.kev_feed",
             name="kev_feed",
-            status="warn",
+            scope="live",
+            category="connectivity",
+            status="degraded",
             detail="Primary KEV feed unreachable; mirror endpoint reachable.",
+            hint="Prefer the primary feed when possible; mirror fallback is active.",
         )
-    return DoctorCheck(
+    return _doctor_check(
+        "live.kev_feed",
         name="kev_feed",
+        scope="live",
+        category="connectivity",
         status="error",
         detail=f"Primary and mirror KEV endpoints failed: {primary.detail} / {mirror.detail}",
+        hint="Check outbound connectivity and KEV source availability.",
     )
 
 
@@ -2500,6 +2624,52 @@ def _doctor_check_name(label: str) -> str:
     normalized = label.lower().replace("att&ck", "attack")
     normalized = normalized.replace(" ", "_").replace("&", "and")
     return normalized
+
+
+def _doctor_check_id(label: str) -> str:
+    normalized = _doctor_check_name(label)
+    if normalized == "cache_directory":
+        return "cache.directory"
+    return f"path.{normalized}"
+
+
+def _doctor_check(
+    check_id: str,
+    *,
+    name: str,
+    status: str,
+    detail: str,
+    scope: str = "local",
+    category: str = "general",
+    hint: str | None = None,
+) -> DoctorCheck:
+    return DoctorCheck(
+        check_id=check_id,
+        name=name,
+        scope=scope,
+        category=category,
+        status=status,
+        detail=detail,
+        hint=hint,
+    )
+
+
+def _summarize_doctor_checks(checks: list[DoctorCheck]) -> DoctorSummary:
+    ok_count = sum(1 for check in checks if check.status == "ok")
+    degraded_count = sum(1 for check in checks if check.status == "degraded")
+    error_count = sum(1 for check in checks if check.status == "error")
+    if error_count:
+        overall_status = "error"
+    elif degraded_count:
+        overall_status = "degraded"
+    else:
+        overall_status = "ok"
+    return DoctorSummary(
+        overall_status=overall_status,
+        ok_count=ok_count,
+        degraded_count=degraded_count,
+        error_count=error_count,
+    )
 
 
 def _load_json_document_or_exit(input_path: Path) -> dict:
