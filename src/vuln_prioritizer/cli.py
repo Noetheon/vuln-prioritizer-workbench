@@ -109,7 +109,11 @@ from vuln_prioritizer.services.contextualization import (
 )
 from vuln_prioritizer.services.enrichment import EnrichmentService
 from vuln_prioritizer.services.prioritization import PrioritizationService
-from vuln_prioritizer.services.waivers import apply_waivers, load_waiver_rules
+from vuln_prioritizer.services.waivers import (
+    apply_waivers,
+    load_waiver_rules,
+    summarize_waiver_rules,
+)
 from vuln_prioritizer.utils import iso_utc_now, normalize_cve_id
 
 app = typer.Typer(help="Prioritize known CVEs with NVD, EPSS, KEV, and ATT&CK context.")
@@ -253,6 +257,8 @@ def analyze(
     show_suppressed: bool = typer.Option(False, "--show-suppressed"),
     hide_waived: bool = typer.Option(False, "--hide-waived"),
     fail_on: PriorityFilter | None = typer.Option(None, "--fail-on"),
+    fail_on_expired_waivers: bool = typer.Option(False, "--fail-on-expired-waivers"),
+    fail_on_review_due_waivers: bool = typer.Option(False, "--fail-on-review-due-waivers"),
     max_cves: int | None = typer.Option(None, "--max-cves", min=1),
     offline_kev_file: Path | None = typer.Option(None, "--offline-kev-file", dir_okay=False),
     offline_attack_file: Path | None = typer.Option(None, "--offline-attack-file", dir_okay=False),
@@ -349,6 +355,11 @@ def analyze(
         console.print(f"[green]Wrote markdown summary to {summary_output}[/green]")
     if fail_on is not None:
         _handle_fail_on(findings, fail_on)
+    _handle_waiver_lifecycle_fail_on(
+        context,
+        fail_on_expired_waivers=fail_on_expired_waivers,
+        fail_on_review_due_waivers=fail_on_review_due_waivers,
+    )
 
 
 @app.command()
@@ -653,6 +664,7 @@ def doctor(
         DEFAULT_CACHE_DIR, "--cache-dir", file_okay=False, dir_okay=True
     ),
     cache_ttl_hours: int = typer.Option(DEFAULT_CACHE_TTL_HOURS, "--cache-ttl-hours", min=1),
+    waiver_file: Path | None = typer.Option(None, "--waiver-file", dir_okay=False),
     offline_kev_file: Path | None = typer.Option(None, "--offline-kev-file", dir_okay=False),
     attack_mapping_file: Path | None = typer.Option(None, "--attack-mapping-file", dir_okay=False),
     attack_technique_metadata_file: Path | None = typer.Option(
@@ -672,6 +684,7 @@ def doctor(
         live=live,
         cache_dir=cache_dir,
         cache_ttl_hours=cache_ttl_hours,
+        waiver_file=waiver_file,
         offline_kev_file=offline_kev_file,
         attack_mapping_file=attack_mapping_file,
         attack_technique_metadata_file=attack_technique_metadata_file,
@@ -1474,6 +1487,10 @@ def _prepare_analysis(
         suppressed_by_vex=sum(1 for item in all_findings if item.suppressed_by_vex),
         under_investigation_count=sum(1 for item in all_findings if item.under_investigation),
         waived_count=sum(1 for item in all_findings if item.waived),
+        waiver_review_due_count=sum(
+            1 for item in all_findings if item.waiver_status == "review_due"
+        ),
+        expired_waiver_count=sum(1 for item in all_findings if item.waiver_status == "expired"),
         attack_summary=attack_summary,
         active_filters=_build_active_filters(
             priority_filters=priority_filters,
@@ -2217,6 +2234,7 @@ def _build_doctor_report(
     live: bool,
     cache_dir: Path,
     cache_ttl_hours: int,
+    waiver_file: Path | None,
     offline_kev_file: Path | None,
     attack_mapping_file: Path | None,
     attack_technique_metadata_file: Path | None,
@@ -2241,6 +2259,8 @@ def _build_doctor_report(
     )
 
     referenced_files = list(collect_referenced_files(loaded)) if loaded is not None else []
+    if waiver_file is not None:
+        referenced_files.append(("Waiver file", waiver_file))
     if offline_kev_file is not None:
         referenced_files.append(("Offline KEV file", offline_kev_file))
     if attack_mapping_file is not None:
@@ -2286,12 +2306,34 @@ def _build_doctor_report(
 
     effective_attack_mapping_file = attack_mapping_file
     effective_attack_metadata_file = attack_technique_metadata_file
+    effective_waiver_file = waiver_file
     if effective_attack_mapping_file is None and loaded is not None:
         defaults = loaded.document.defaults
+        if defaults.waiver_file and effective_waiver_file is None:
+            effective_waiver_file = Path(defaults.waiver_file)
         if defaults.attack_mapping_file:
             effective_attack_mapping_file = Path(defaults.attack_mapping_file)
         if defaults.attack_technique_metadata_file:
             effective_attack_metadata_file = Path(defaults.attack_technique_metadata_file)
+
+    if effective_waiver_file is not None:
+        try:
+            waiver_rules = load_waiver_rules(effective_waiver_file)
+            summary = summarize_waiver_rules(waiver_rules)
+            if summary.expired_count:
+                status = "error"
+            elif summary.review_due_count:
+                status = "warn"
+            else:
+                status = "ok"
+            detail = (
+                f"{summary.total_rules} rules, {summary.active_count} active, "
+                f"{summary.review_due_count} review due, {summary.expired_count} expired."
+            )
+        except ValueError as exc:
+            status = "error"
+            detail = str(exc)
+        checks.append(DoctorCheck(name="waiver_health", status=status, detail=detail))
 
     if effective_attack_mapping_file is not None:
         try:
@@ -2319,6 +2361,27 @@ def _build_doctor_report(
         config_file=str(loaded.path) if loaded is not None else None,
         checks=checks,
     )
+
+
+def _handle_waiver_lifecycle_fail_on(
+    context: AnalysisContext,
+    *,
+    fail_on_expired_waivers: bool,
+    fail_on_review_due_waivers: bool,
+) -> None:
+    if fail_on_expired_waivers and context.expired_waiver_count:
+        console.print(
+            "[red]Policy check failed:[/red] expired waivers were detected in the current findings."
+        )
+        raise typer.Exit(code=1)
+    if fail_on_review_due_waivers and (
+        context.waiver_review_due_count or context.expired_waiver_count
+    ):
+        console.print(
+            "[red]Policy check failed:[/red] review-due or expired waivers were "
+            "detected in the current findings."
+        )
+        raise typer.Exit(code=1)
 
 
 def _render_doctor_table(report: DoctorReport) -> Table:
@@ -2600,6 +2663,12 @@ def _build_rollup_buckets(
                 kev_count=sum(1 for finding in findings if finding.get("in_kev")),
                 attack_mapped_count=sum(1 for finding in findings if finding.get("attack_mapped")),
                 waived_count=sum(1 for finding in findings if finding.get("waived")),
+                waiver_review_due_count=sum(
+                    1 for finding in findings if finding.get("waiver_status") == "review_due"
+                ),
+                expired_waiver_count=sum(
+                    1 for finding in findings if finding.get("waiver_status") == "expired"
+                ),
                 internet_facing_count=sum(
                     1 for finding in findings if _finding_is_internet_facing(finding)
                 ),
@@ -2689,6 +2758,7 @@ def _build_rollup_candidate(finding: dict) -> RollupCandidate:
         cve_id=str(finding.get("cve_id", "N.A.")),
         priority_label=str(finding.get("priority_label", "Low")),
         waived=bool(finding.get("waived")),
+        waiver_status=_string_or_none(finding.get("waiver_status")),
         in_kev=bool(finding.get("in_kev")),
         highest_asset_criticality=_string_or_none(finding.get("highest_asset_criticality")),
         highest_asset_exposure=_string_or_none(
@@ -2726,6 +2796,14 @@ def _rollup_bucket_context_hints(findings: list[dict]) -> list[str]:
         hints.append(f"{under_investigation_count} under investigation")
     if waiver_owners:
         hints.append("waiver owners: " + ", ".join(waiver_owners))
+    review_due_count = sum(
+        1 for finding in findings if finding.get("waiver_status") == "review_due"
+    )
+    expired_count = sum(1 for finding in findings if finding.get("waiver_status") == "expired")
+    if review_due_count:
+        hints.append(f"{review_due_count} waiver review due")
+    if expired_count:
+        hints.append(f"{expired_count} waiver expired")
     return hints
 
 
@@ -2756,6 +2834,9 @@ def _rollup_bucket_rank_reason(
         signals.append(f"{production_count} production finding(s)")
     if len(actionable_findings) != len(findings):
         signals.append(f"{len(findings) - len(actionable_findings)} waived finding(s)")
+    expired_count = sum(1 for finding in findings if finding.get("waiver_status") == "expired")
+    if expired_count:
+        signals.append(f"{expired_count} expired waiver(s)")
     return "Ranked by " + ", ".join(signals) + "."
 
 
@@ -2770,9 +2851,13 @@ def _rollup_candidate_reason(finding: dict) -> str:
     criticality = _string_or_none(finding.get("highest_asset_criticality"))
     if criticality:
         reasons.append(f"{criticality} criticality")
-    if finding.get("waived"):
+    if finding.get("waiver_status") == "review_due":
+        reasons.append("waiver review due")
+    elif finding.get("waived"):
         waiver_owner = _string_or_none(finding.get("waiver_owner"))
         reasons.append(f"waived by {waiver_owner}" if waiver_owner else "waived")
+    elif finding.get("waiver_status") == "expired":
+        reasons.append("waiver expired")
     return ", ".join(reasons)
 
 

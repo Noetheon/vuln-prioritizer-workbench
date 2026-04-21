@@ -400,6 +400,98 @@ def test_cli_analyze_fail_on_ignores_waived_findings(monkeypatch, tmp_path: Path
     )
 
     assert result.exit_code == 0
+
+
+def test_cli_analyze_surfaces_review_due_waiver_state(monkeypatch, tmp_path: Path) -> None:
+    input_file = _write_input_file(tmp_path)
+    output_file = tmp_path / "review-due.json"
+    waiver_file = _write_waiver_file(
+        tmp_path,
+        cve_id="CVE-2021-44228",
+        owner="risk-review",
+        reason="Needs scheduled revalidation.",
+        expires_on="2026-04-25",
+        review_on="2026-04-20",
+    )
+    _install_fake_providers(monkeypatch)
+
+    result = runner.invoke(
+        app,
+        [
+            "analyze",
+            "--input",
+            str(input_file),
+            "--waiver-file",
+            str(waiver_file),
+            "--output",
+            str(output_file),
+            "--format",
+            "json",
+        ],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(output_file.read_text(encoding="utf-8"))
+    finding = next(item for item in payload["findings"] if item["cve_id"] == "CVE-2021-44228")
+    assert finding["waived"] is True
+    assert finding["waiver_status"] == "review_due"
+    assert finding["waiver_review_on"] == "2026-04-20"
+    assert payload["metadata"]["waiver_review_due_count"] == 1
+    assert payload["metadata"]["expired_waiver_count"] == 0
+
+
+def test_cli_analyze_surfaces_expired_waiver_and_optional_fail_hooks(
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    input_file = _write_input_file(tmp_path)
+    output_file = tmp_path / "expired.json"
+    waiver_file = _write_waiver_file(
+        tmp_path,
+        cve_id="CVE-2021-44228",
+        owner="risk-review",
+        reason="Expired waiver for validation.",
+        expires_on="2026-04-01",
+    )
+    _install_fake_providers(monkeypatch)
+
+    result = runner.invoke(
+        app,
+        [
+            "analyze",
+            "--input",
+            str(input_file),
+            "--waiver-file",
+            str(waiver_file),
+            "--output",
+            str(output_file),
+            "--format",
+            "json",
+        ],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(output_file.read_text(encoding="utf-8"))
+    finding = next(item for item in payload["findings"] if item["cve_id"] == "CVE-2021-44228")
+    assert finding["waived"] is False
+    assert finding["waiver_status"] == "expired"
+    assert payload["metadata"]["waived_count"] == 0
+    assert payload["metadata"]["expired_waiver_count"] == 1
+
+    fail_result = runner.invoke(
+        app,
+        [
+            "analyze",
+            "--input",
+            str(input_file),
+            "--waiver-file",
+            str(waiver_file),
+            "--fail-on-expired-waivers",
+        ],
+    )
+
+    assert fail_result.exit_code == 1
+    assert "expired waivers" in fail_result.stdout
     assert "Matched fail-on threshold" not in result.stdout
 
 
@@ -768,6 +860,42 @@ def test_cli_doctor_reports_missing_files_as_degraded(tmp_path: Path) -> None:
     statuses = {item["name"]: item["status"] for item in payload["checks"]}
     assert statuses["attack_mapping_file"] == "error"
     assert statuses["attack_validation"] == "error"
+
+
+def test_cli_doctor_reports_waiver_health(tmp_path: Path) -> None:
+    cache_dir = tmp_path / "cache"
+    cache_dir.mkdir()
+    output_file = tmp_path / "doctor-waivers.json"
+    waiver_file = _write_waiver_file(
+        tmp_path,
+        cve_id="CVE-2021-44228",
+        owner="risk-review",
+        reason="Needs formal review.",
+        expires_on="2026-04-25",
+        review_on="2026-04-20",
+    )
+
+    result = runner.invoke(
+        app,
+        [
+            "doctor",
+            "--cache-dir",
+            str(cache_dir),
+            "--waiver-file",
+            str(waiver_file),
+            "--output",
+            str(output_file),
+            "--format",
+            "json",
+        ],
+    )
+
+    assert result.exit_code == 1
+    payload = json.loads(output_file.read_text(encoding="utf-8"))
+    checks = {item["name"]: item for item in payload["checks"]}
+    assert checks["waiver_file"]["status"] == "ok"
+    assert checks["waiver_health"]["status"] == "warn"
+    assert "review due" in checks["waiver_health"]["detail"]
 
 
 def test_cli_doctor_rejects_invalid_discovered_runtime_config(monkeypatch, tmp_path: Path) -> None:
@@ -1413,6 +1541,8 @@ def test_cli_rollup_groups_analysis_results_by_service(monkeypatch, tmp_path: Pa
     assert buckets["payments"]["actionable_count"] == 0
     assert buckets["identity"]["waived_count"] == 1
     assert buckets["payments"]["waived_count"] == 1
+    assert buckets["identity"]["waiver_review_due_count"] == 0
+    assert buckets["identity"]["expired_waiver_count"] == 0
     assert "team-identity" in buckets["identity"]["owners"]
     assert "team-payments" in buckets["payments"]["owners"]
     assert "risk-review" in buckets["payments"]["owners"]
@@ -1450,22 +1580,21 @@ def _write_waiver_file(
     cve_id: str,
     owner: str,
     reason: str,
+    expires_on: str = "2027-12-31",
+    review_on: str | None = None,
 ) -> Path:
     waiver_file = tmp_path / "waivers.yml"
-    waiver_file.write_text(
-        "\n".join(
-            [
-                "waivers:",
-                "  - id: waiver-1",
-                f"    cve_id: {cve_id}",
-                f"    owner: {owner}",
-                f"    reason: {reason}",
-                "    expires_on: 2027-12-31",
-            ]
-        )
-        + "\n",
-        encoding="utf-8",
-    )
+    lines = [
+        "waivers:",
+        "  - id: waiver-1",
+        f"    cve_id: {cve_id}",
+        f"    owner: {owner}",
+        f"    reason: {reason}",
+        f"    expires_on: {expires_on}",
+    ]
+    if review_on is not None:
+        lines.append(f"    review_on: {review_on}")
+    waiver_file.write_text("\n".join(lines) + "\n", encoding="utf-8")
     return waiver_file
 
 

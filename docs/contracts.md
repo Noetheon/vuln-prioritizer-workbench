@@ -138,12 +138,17 @@ Current waiver contract:
 - waivers are explicit local YAML rules, not implicit suppressions
 - a waived finding remains prioritized and explainable unless `--hide-waived` is set
 - `waived_count` reports governance state even when waived findings are hidden from the default visible list
-- waived findings surface `waived`, `waiver_reason`, `waiver_owner`, `waiver_expires_on`, and, where relevant, `waiver_scope`
+- waived findings surface `waived`, `waiver_status`, `waiver_reason`, `waiver_owner`, `waiver_expires_on`, and, where relevant, `waiver_scope`
+- expired waivers are reported as lifecycle context and do not silently remain active
+- `review_on` is an optional waiver-file field; without it, waivers become review-due automatically as expiry approaches
+- `waiver_review_due_count` and `expired_waiver_count` summarize lifecycle state in analysis-style metadata
 - `--fail-on` ignores waived findings so governance exceptions do not fail a pipeline by themselves
+- `--fail-on-expired-waivers` and `--fail-on-review-due-waivers` are opt-in enforcement hooks
 
 Current rollup additions:
 
 - `waived_count` counts waived findings per bucket
+- `waiver_review_due_count` and `expired_waiver_count` keep waiver debt visible in rollup buckets
 - `actionable_count` separates active remediation work from total findings
 - `owners` summarizes dominant asset owners and waiver owners contributing to that bucket
 - `top_candidates` exposes structured per-bucket “patch these first” findings

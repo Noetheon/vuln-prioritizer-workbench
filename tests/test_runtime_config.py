@@ -76,6 +76,9 @@ def test_load_runtime_config_resolves_relative_paths_and_builds_default_map(
     )
     assert default_map["analyze"]["priority"] == ["high"]
     assert default_map["analyze"]["hide_waived"] is True
+    assert default_map["doctor"]["waiver_file"] == str(
+        (project / "rules" / "waivers.yml").resolve()
+    )
     assert default_map["snapshot"]["diff"]["include_unchanged"] is True
 
 

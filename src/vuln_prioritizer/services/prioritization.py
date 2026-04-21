@@ -180,9 +180,12 @@ class PrioritizationService:
                     context_summary=finding.context_summary,
                     suppressed_by_vex=finding.suppressed_by_vex,
                     waived=finding.waived,
+                    waiver_status=finding.waiver_status,
                     waiver_reason=finding.waiver_reason,
                     waiver_owner=finding.waiver_owner,
                     waiver_expires_on=finding.waiver_expires_on,
+                    waiver_review_on=finding.waiver_review_on,
+                    waiver_days_remaining=finding.waiver_days_remaining,
                     changed=cvss_only_rank != finding.priority_rank,
                     delta_rank=cvss_only_rank - finding.priority_rank,
                     change_reason=build_comparison_reason(
