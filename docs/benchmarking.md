@@ -35,6 +35,11 @@ Across those families it exercises all currently supported checked-in example fo
 - `nessus-xml`
 - `openvas-xml`
 
+It also includes a dedicated snapshot-diff regression corpus:
+
+- [`data/benchmarks/snapshot_diff_regressions.json`](https://github.com/Noetheon/vuln-prioritizer-cli/blob/main/data/benchmarks/snapshot_diff_regressions.json)
+- before/after fixture pairs under `data/benchmarks/snapshots/`
+
 ## What Each Benchmark Case Asserts
 
 Each benchmark case records deterministic invariants such as:
@@ -51,6 +56,13 @@ The benchmark suite intentionally uses the fake-provider path from the test suit
 
 - NVD/EPSS/KEV network drift does not break the benchmark corpus
 - failures point to parser and prioritization regressions instead of live-source variance
+
+For `snapshot diff`, the fixture corpus is fully local and deterministic.
+It locks down:
+
+- category detection for `added`, `removed`, `priority_up`, `priority_down`, `context_changed`, and `unchanged`
+- item ordering in the rendered JSON export
+- context-only change detection for all currently supported context fields
 
 ## Edge-Case Policy
 
@@ -99,6 +111,13 @@ make check
 ```
 
 5. If the fixture is a new supported input shape, also update the normalization contracts and the fixture tests.
+
+When adding snapshot-diff fixtures:
+
+1. Add the before/after JSON files under `data/benchmarks/snapshots/`.
+2. Register the pair in `data/benchmarks/snapshot_diff_regressions.json`.
+3. Record the exact expected `summary` and simplified `items` output.
+4. Keep context-only cases separate from priority-movement cases when that makes failures easier to diagnose.
 
 ## Maintainer Notes
 

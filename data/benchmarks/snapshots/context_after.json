@@ -1,0 +1,92 @@
+{
+  "metadata": {
+    "schema_version": "1.1.0",
+    "snapshot_kind": "snapshot"
+  },
+  "findings": [
+    {
+      "cve_id": "CVE-2024-1001",
+      "priority_label": "High",
+      "priority_rank": 2,
+      "in_kev": false,
+      "attack_mapped": true,
+      "attack_relevance": "High",
+      "attack_techniques": [
+        "T1059",
+        "T1190"
+      ],
+      "attack_tactics": [
+        "execution",
+        "initial-access"
+      ],
+      "provenance": {
+        "targets": [
+          "host:auth-01.example.internal"
+        ],
+        "asset_ids": [
+          "asset-auth-01"
+        ],
+        "occurrences": [
+          {
+            "asset_business_service": "identity"
+          }
+        ],
+        "vex_statuses": {}
+      }
+    },
+    {
+      "cve_id": "CVE-2024-1002",
+      "priority_label": "Critical",
+      "priority_rank": 1,
+      "in_kev": true,
+      "attack_mapped": true,
+      "attack_relevance": "High",
+      "attack_techniques": [
+        "T1190"
+      ],
+      "attack_tactics": [
+        "initial-access"
+      ],
+      "provenance": {
+        "targets": [
+          "host:edge-02.example.internal"
+        ],
+        "asset_ids": [
+          "asset-edge-02"
+        ],
+        "occurrences": [
+          {
+            "asset_business_service": "edge-api"
+          }
+        ],
+        "vex_statuses": {}
+      }
+    },
+    {
+      "cve_id": "CVE-2024-1003",
+      "priority_label": "Medium",
+      "priority_rank": 3,
+      "in_kev": false,
+      "attack_mapped": false,
+      "attack_relevance": "Unmapped",
+      "attack_techniques": [],
+      "attack_tactics": [],
+      "provenance": {
+        "targets": [
+          "host:payments-02.example.internal"
+        ],
+        "asset_ids": [
+          "asset-payments-02"
+        ],
+        "occurrences": [
+          {
+            "asset_business_service": "billing"
+          }
+        ],
+        "vex_statuses": {
+          "host:payments-02.example.internal": "under_investigation"
+        }
+      }
+    }
+  ]
+}

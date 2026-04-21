@@ -1,0 +1,108 @@
+{
+  "metadata": {
+    "schema_version": "1.1.0",
+    "snapshot_kind": "snapshot"
+  },
+  "findings": [
+    {
+      "cve_id": "CVE-2024-2002",
+      "priority_label": "Critical",
+      "priority_rank": 1,
+      "in_kev": true,
+      "attack_mapped": false,
+      "attack_relevance": "Unmapped",
+      "attack_techniques": [],
+      "attack_tactics": [],
+      "provenance": {
+        "targets": [
+          "host:edge-01.example.internal"
+        ],
+        "asset_ids": [
+          "asset-edge-01"
+        ],
+        "occurrences": [
+          {
+            "asset_business_service": "edge-api"
+          }
+        ],
+        "vex_statuses": {}
+      }
+    },
+    {
+      "cve_id": "CVE-2024-2003",
+      "priority_label": "Medium",
+      "priority_rank": 3,
+      "in_kev": false,
+      "attack_mapped": true,
+      "attack_relevance": "Medium",
+      "attack_techniques": [
+        "T1059"
+      ],
+      "attack_tactics": [
+        "execution"
+      ],
+      "provenance": {
+        "targets": [
+          "host:payments-01.example.internal"
+        ],
+        "asset_ids": [
+          "asset-payments-01"
+        ],
+        "occurrences": [
+          {
+            "asset_business_service": "payments"
+          }
+        ],
+        "vex_statuses": {}
+      }
+    },
+    {
+      "cve_id": "CVE-2024-2004",
+      "priority_label": "Medium",
+      "priority_rank": 3,
+      "in_kev": false,
+      "attack_mapped": false,
+      "attack_relevance": "Unmapped",
+      "attack_techniques": [],
+      "attack_tactics": [],
+      "provenance": {
+        "targets": [
+          "host:identity-01.example.internal"
+        ],
+        "asset_ids": [
+          "asset-identity-01"
+        ],
+        "occurrences": [
+          {
+            "asset_business_service": "identity"
+          }
+        ],
+        "vex_statuses": {}
+      }
+    },
+    {
+      "cve_id": "CVE-2024-2005",
+      "priority_label": "Low",
+      "priority_rank": 4,
+      "in_kev": false,
+      "attack_mapped": false,
+      "attack_relevance": "Unmapped",
+      "attack_techniques": [],
+      "attack_tactics": [],
+      "provenance": {
+        "targets": [
+          "host:batch-01.example.internal"
+        ],
+        "asset_ids": [
+          "asset-batch-01"
+        ],
+        "occurrences": [
+          {
+            "asset_business_service": "batch"
+          }
+        ],
+        "vex_statuses": {}
+      }
+    }
+  ]
+}

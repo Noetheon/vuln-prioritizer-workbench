@@ -1,0 +1,118 @@
+{
+  "schema_version": "1.0.0",
+  "context_change_fields": [
+    "kev",
+    "attack_mapped",
+    "attack_relevance",
+    "attack_techniques",
+    "attack_tactics",
+    "targets",
+    "asset_ids",
+    "services",
+    "vex"
+  ],
+  "cases": [
+    {
+      "name": "snapshot_diff_lifecycle",
+      "scenario": "Lifecycle-oriented before/after comparison covering added, removed, priority-up, priority-down, and unchanged items.",
+      "before": "data/benchmarks/snapshots/lifecycle_before.json",
+      "after": "data/benchmarks/snapshots/lifecycle_after.json",
+      "include_unchanged": true,
+      "expected_summary": {
+        "added": 1,
+        "removed": 1,
+        "priority_up": 1,
+        "priority_down": 1,
+        "context_changed": 0,
+        "unchanged": 1
+      },
+      "expected_items": [
+        {
+          "cve_id": "CVE-2024-2005",
+          "category": "added",
+          "before_priority": null,
+          "after_priority": "Low",
+          "context_change_fields": []
+        },
+        {
+          "cve_id": "CVE-2024-2001",
+          "category": "removed",
+          "before_priority": "High",
+          "after_priority": null,
+          "context_change_fields": []
+        },
+        {
+          "cve_id": "CVE-2024-2002",
+          "category": "priority_up",
+          "before_priority": "High",
+          "after_priority": "Critical",
+          "context_change_fields": []
+        },
+        {
+          "cve_id": "CVE-2024-2003",
+          "category": "priority_down",
+          "before_priority": "Critical",
+          "after_priority": "Medium",
+          "context_change_fields": []
+        },
+        {
+          "cve_id": "CVE-2024-2004",
+          "category": "unchanged",
+          "before_priority": "Medium",
+          "after_priority": "Medium",
+          "context_change_fields": []
+        }
+      ]
+    },
+    {
+      "name": "snapshot_diff_context_fields",
+      "scenario": "Context-only before/after comparison covering every supported context change field without any priority movement.",
+      "before": "data/benchmarks/snapshots/context_before.json",
+      "after": "data/benchmarks/snapshots/context_after.json",
+      "include_unchanged": false,
+      "expected_summary": {
+        "added": 0,
+        "removed": 0,
+        "priority_up": 0,
+        "priority_down": 0,
+        "context_changed": 3,
+        "unchanged": 0
+      },
+      "expected_items": [
+        {
+          "cve_id": "CVE-2024-1001",
+          "category": "context_changed",
+          "before_priority": "High",
+          "after_priority": "High",
+          "context_change_fields": [
+            "attack_mapped",
+            "attack_relevance",
+            "attack_techniques",
+            "attack_tactics"
+          ]
+        },
+        {
+          "cve_id": "CVE-2024-1002",
+          "category": "context_changed",
+          "before_priority": "Critical",
+          "after_priority": "Critical",
+          "context_change_fields": [
+            "kev"
+          ]
+        },
+        {
+          "cve_id": "CVE-2024-1003",
+          "category": "context_changed",
+          "before_priority": "Medium",
+          "after_priority": "Medium",
+          "context_change_fields": [
+            "targets",
+            "asset_ids",
+            "services",
+            "vex"
+          ]
+        }
+      ]
+    }
+  ]
+}
