@@ -11,6 +11,7 @@ The site now includes the `v1.1.0` public-polish release notes and a committed m
 - [Release notes: v1.1.0](releases/v1.1.0.md)
 - [Example HTML report](examples/example_report.html)
 - [Operational use cases](use_cases.md)
+- [Operator playbooks](playbooks.md)
 
 ## What It Does
 
@@ -57,6 +58,7 @@ The documented default ATT&CK workflow is `ctid-json`. The older `local-csv` mod
 - Start with [concept.md](concept.md) for positioning and scope.
 - Read [methodology.md](methodology.md) for scoring, ATT&CK, Asset Context, and VEX semantics.
 - Use [support_matrix.md](support_matrix.md) and [contracts.md](contracts.md) for stable consumer-facing surfaces.
+- Use [playbooks.md](playbooks.md) when you want the shortest role-oriented path for CI scans, SBOM triage, or infrastructure scan triage.
 - Use [integrations/reporting_and_ci.md](integrations/reporting_and_ci.md) for SARIF, GitHub Action, HTML, and local workflow guidance.
 - Use [roadmap.md](roadmap.md) for shipped scope and deliberate non-goals.
 - Use [community_repository_setup.md](community_repository_setup.md) for maintainer-facing public repo topics, labels, and triage defaults.

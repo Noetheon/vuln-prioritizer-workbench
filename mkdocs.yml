@@ -12,6 +12,11 @@ nav:
   - Benchmarking: benchmarking.md
   - Architecture: architecture.md
   - Use Cases: use_cases.md
+  - Playbooks:
+      - Overview: playbooks.md
+      - CI and Container Scanning: playbooks/ci_container_scanning.md
+      - SBOM and Dependency Triage: playbooks/sbom_triage.md
+      - Infrastructure Scan Triage: playbooks/infrastructure_scan_triage.md
   - Contracts: contracts.md
   - Support Matrix: support_matrix.md
   - Integrations: integrations/reporting_and_ci.md

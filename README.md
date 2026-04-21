@@ -194,6 +194,7 @@ vuln-prioritizer --no-config analyze --input data/sample_cves.txt
 Start here:
 
 - [docs/use_cases.md](docs/use_cases.md)
+- [docs/playbooks.md](docs/playbooks.md)
 - [docs/support_matrix.md](docs/support_matrix.md)
 - [docs/benchmarking.md](docs/benchmarking.md)
 - [docs/contracts.md](docs/contracts.md)
