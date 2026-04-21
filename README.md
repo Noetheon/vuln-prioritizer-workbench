@@ -223,11 +223,14 @@ The repository includes a composite GitHub Action for `analyze` and `report html
     output-format: json
     output-path: analysis.json
     summary-output-path: summary.md
+    summary-template: compact
     html-output-path: report.html
     github-step-summary: "true"
 ```
 
-See [docs/integrations/reporting_and_ci.md](docs/integrations/reporting_and_ci.md) for the full contract and CI patterns.
+`summary-template` is backward-compatible and defaults to `detailed`. Set it to `compact` for GitHub step summaries or PR comments, or keep `detailed` when you want the full executive summary artifact. If a workflow only needs `$GITHUB_STEP_SUMMARY`, the action can now generate a summary without requiring an explicit `summary-output-path`.
+
+See [docs/integrations/reporting_and_ci.md](docs/integrations/reporting_and_ci.md) for the full contract and CI patterns, plus [docs/examples/github_action_summary_templates.md](docs/examples/github_action_summary_templates.md) for compact vs detailed examples.
 
 ## Development
 

@@ -31,8 +31,12 @@ inputs:
     description: Optional analyze mode sidecar path for a Markdown summary report
     required: false
     default: ""
+  summary-template:
+    description: analyze mode only; summary rendering style, detailed or compact
+    required: false
+    default: detailed
   github-step-summary:
-    description: Set to true to append the Markdown summary output to the GitHub step summary
+    description: Set to true to append the rendered summary output to the GitHub step summary
     required: false
     default: "false"
   config-file:
@@ -126,7 +130,74 @@ runs:
         mode="${{ inputs.mode }}"
         html_report_path=""
         summary_path=""
+        summary_requested="false"
+        requested_summary_path="${{ inputs.summary-output-path }}"
+        summary_template="${{ inputs.summary-template }}"
+        cli_summary_path=""
         cmd=(vuln-prioritizer)
+
+        if [[ "$summary_template" != "detailed" && "$summary_template" != "compact" ]]; then
+          echo "Unsupported summary-template: $summary_template" >&2
+          exit 2
+        fi
+
+        render_compact_summary() {
+          python - "$1" "$2" <<'PY'
+        from __future__ import annotations
+
+        import sys
+        from pathlib import Path
+
+
+        source = Path(sys.argv[1])
+        destination = Path(sys.argv[2])
+        lines = source.read_text(encoding="utf-8").splitlines()
+
+        summary_fields: dict[str, str] = {}
+        top_findings: list[str] = []
+        in_top_findings = False
+
+        for line in lines:
+            if line.startswith("## "):
+                in_top_findings = line.strip() == "## Top Findings"
+                continue
+            if line.startswith("- "):
+                body = line[2:]
+                if in_top_findings:
+                    top_findings.append(body.split(": ", 1)[0])
+                elif ": " in body:
+                    key, value = body.split(": ", 1)
+                    summary_fields[key] = value
+
+        metrics = [
+            ("Findings shown", summary_fields.get("Findings shown", "N/A")),
+            ("Critical", summary_fields.get("Critical", "N/A")),
+            ("High", summary_fields.get("High", "N/A")),
+            ("KEV hits", summary_fields.get("KEV hits", "N/A")),
+            ("ATT&CK mapped", summary_fields.get("ATT&CK mapped CVEs", "N/A")),
+            ("Review due", summary_fields.get("Waiver review due", "N/A")),
+            ("Expired waivers", summary_fields.get("Expired waivers", "N/A")),
+        ]
+
+        header = [
+            "# Vulnerability Prioritization Summary",
+            "",
+            f"- Input: {summary_fields.get('Input', '`N/A`')}",
+            f"- Input format: {summary_fields.get('Input format', '`N/A`')}",
+            f"- Policy profile: {summary_fields.get('Policy profile', '`N/A`')}",
+            "",
+            "| Findings shown | Critical | High | KEV hits | ATT&CK mapped | Review due | Expired waivers |",
+            "| --- | --- | --- | --- | --- | --- | --- |",
+            "| " + " | ".join(value for _, value in metrics) + " |",
+        ]
+
+        if top_findings:
+            header.extend(["", "## Top Findings"])
+            header.extend(f"- {finding}" for finding in top_findings[:3])
+
+        destination.write_text("\n".join(header) + "\n", encoding="utf-8")
+        PY
+        }
 
         if [[ -n "${{ inputs.config-file }}" ]]; then
           cmd+=(--config "${{ inputs.config-file }}")
@@ -147,16 +218,25 @@ runs:
             --target-kind "${{ inputs.target-kind }}"
           )
 
+          if [[ -n "$requested_summary_path" || "${{ inputs.github-step-summary }}" == "true" ]]; then
+            summary_requested="true"
+            if [[ -z "$requested_summary_path" ]]; then
+              requested_summary_path="$RUNNER_TEMP/vuln-prioritizer-summary.md"
+            fi
+            if [[ "$summary_template" == "compact" ]]; then
+              cli_summary_path="$RUNNER_TEMP/vuln-prioritizer-summary-detailed.md"
+            else
+              cli_summary_path="$requested_summary_path"
+            fi
+            cmd+=(--summary-output "$cli_summary_path")
+          fi
+
           if [[ -n "${{ inputs.asset-context }}" ]]; then
             cmd+=(--asset-context "${{ inputs.asset-context }}")
           fi
           if [[ -n "${{ inputs.html-output-path }}" ]]; then
             cmd+=(--html-output "${{ inputs.html-output-path }}")
             html_report_path="${{ inputs.html-output-path }}"
-          fi
-          if [[ -n "${{ inputs.summary-output-path }}" ]]; then
-            cmd+=(--summary-output "${{ inputs.summary-output-path }}")
-            summary_path="${{ inputs.summary-output-path }}"
           fi
           if [[ -n "${{ inputs.target-ref }}" ]]; then
             cmd+=(--target-ref "${{ inputs.target-ref }}")
@@ -199,6 +279,12 @@ runs:
         printf ' %q' "${cmd[@]}"
         printf '\n'
         "${cmd[@]}"
+        if [[ "$summary_requested" == "true" ]]; then
+          if [[ "$summary_template" == "compact" ]]; then
+            render_compact_summary "$cli_summary_path" "$requested_summary_path"
+          fi
+          summary_path="$requested_summary_path"
+        fi
         echo "report-path=${{ inputs.output-path }}" >> "$GITHUB_OUTPUT"
         echo "html-report-path=$html_report_path" >> "$GITHUB_OUTPUT"
         echo "summary-path=$summary_path" >> "$GITHUB_OUTPUT"

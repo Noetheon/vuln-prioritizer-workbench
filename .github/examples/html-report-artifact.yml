@@ -20,6 +20,9 @@ jobs:
           input-format: trivy-json
           output-format: json
           output-path: analysis.json
+          summary-output-path: report-summary.md
+          summary-template: detailed
+          github-step-summary: "true"
           asset-context: assets.csv
           vex-files: |
             openvex.json
@@ -37,4 +40,6 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: vuln-prioritization-report
-          path: ${{ steps.render.outputs.report-path }}
+          path: |
+            ${{ steps.render.outputs.report-path }}
+            ${{ steps.analyze.outputs.summary-path }}
