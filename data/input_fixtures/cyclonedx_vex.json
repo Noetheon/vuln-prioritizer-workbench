@@ -1,0 +1,77 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.5",
+  "version": 1,
+  "metadata": {
+    "component": {
+      "type": "application",
+      "bom-ref": "github.com/acme/demo-app",
+      "name": "demo-app",
+      "version": "1.0.0"
+    }
+  },
+  "components": [
+    {
+      "bom-ref": "pkg:apk/alpine/xz@5.6.0-r0?arch=x86_64",
+      "type": "library",
+      "name": "xz",
+      "version": "5.6.0-r0",
+      "purl": "pkg:apk/alpine/xz@5.6.0-r0?arch=x86_64"
+    },
+    {
+      "bom-ref": "pkg:pypi/moveit-transfer@2023.0.0",
+      "type": "library",
+      "name": "moveit-transfer",
+      "version": "2023.0.0",
+      "purl": "pkg:pypi/moveit-transfer@2023.0.0"
+    },
+    {
+      "bom-ref": "pkg:generic/php-cgi@8.1.28",
+      "type": "library",
+      "name": "php-cgi",
+      "version": "8.1.28",
+      "purl": "pkg:generic/php-cgi@8.1.28"
+    }
+  ],
+  "vulnerabilities": [
+    {
+      "id": "CVE-2024-3094",
+      "affects": [
+        {
+          "ref": "pkg:apk/alpine/xz@5.6.0-r0?arch=x86_64"
+        }
+      ],
+      "analysis": {
+        "state": "affected",
+        "detail": "Upgrade immediately."
+      }
+    },
+    {
+      "id": "CVE-2023-34362",
+      "affects": [
+        {
+          "ref": "pkg:pypi/moveit-transfer@2023.0.0"
+        }
+      ],
+      "analysis": {
+        "state": "not_affected",
+        "justification": "vulnerable_code_not_present"
+      }
+    },
+    {
+      "id": "CVE-2024-4577",
+      "affects": [
+        {
+          "ref": "pkg:generic/php-cgi@8.1.28"
+        }
+      ],
+      "analysis": {
+        "state": "fixed",
+        "response": [
+          "update"
+        ],
+        "detail": "Patched in 8.1.29."
+      }
+    }
+  ]
+}

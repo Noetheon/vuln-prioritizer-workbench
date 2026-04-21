@@ -1,0 +1,116 @@
+{
+  "source": {
+    "type": "image",
+    "target": {
+      "userInput": "ghcr.io/acme/demo-app:1.0.0"
+    }
+  },
+  "distro": {
+    "name": "alpine",
+    "version": "3.19.0"
+  },
+  "matches": [
+    {
+      "vulnerability": {
+        "id": "CVE-2024-3094",
+        "severity": "Critical",
+        "fix": {
+          "versions": [
+            "5.6.1-r2"
+          ]
+        }
+      },
+      "artifact": {
+        "name": "xz",
+        "version": "5.6.0-r0",
+        "type": "apk",
+        "purl": "pkg:apk/alpine/xz@5.6.0-r0?arch=x86_64",
+        "locations": [
+          {
+            "path": "/lib/apk/db/installed"
+          }
+        ]
+      },
+      "fix": {
+        "versions": [
+          "5.6.1-r2"
+        ]
+      },
+      "matchDetails": [
+        {
+          "searchedBy": {
+            "location": "/lib/apk/db/installed"
+          }
+        }
+      ]
+    },
+    {
+      "vulnerability": {
+        "id": "CVE-2023-34362",
+        "severity": "Critical",
+        "fix": {
+          "versions": [
+            "2023.0.2"
+          ]
+        }
+      },
+      "artifact": {
+        "name": "moveit-transfer",
+        "version": "2023.0.0",
+        "type": "python",
+        "purl": "pkg:pypi/moveit-transfer@2023.0.0",
+        "locations": [
+          {
+            "path": "app/requirements.txt"
+          }
+        ]
+      },
+      "fix": {
+        "versions": [
+          "2023.0.2"
+        ]
+      },
+      "matchDetails": [
+        {
+          "searchedBy": {
+            "location": "app/requirements.txt"
+          }
+        }
+      ]
+    },
+    {
+      "vulnerability": {
+        "id": "GHSA-2m57-hf25-phgg",
+        "severity": "High",
+        "fix": {
+          "versions": [
+            "1.0.1"
+          ]
+        }
+      },
+      "artifact": {
+        "name": "non-cve-demo",
+        "version": "1.0.0",
+        "type": "npm",
+        "purl": "pkg:npm/non-cve-demo@1.0.0",
+        "locations": [
+          {
+            "path": "package-lock.json"
+          }
+        ]
+      },
+      "fix": {
+        "versions": [
+          "1.0.1"
+        ]
+      },
+      "matchDetails": [
+        {
+          "searchedBy": {
+            "location": "package-lock.json"
+          }
+        }
+      ]
+    }
+  ]
+}

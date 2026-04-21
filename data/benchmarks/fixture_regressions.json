@@ -1,0 +1,41 @@
+{
+  "cases": [
+    {
+      "name": "trivy_ci_triage",
+      "input": "data/input_fixtures/trivy_report.json",
+      "input_format": "trivy-json",
+      "extra_args": [
+        "--asset-context",
+        "data/input_fixtures/example_asset_context.csv",
+        "--vex-file",
+        "data/input_fixtures/openvex_statements.json"
+      ],
+      "expected_findings_count": 2,
+      "expected_filtered_out_count": 1,
+      "expected_counts_by_priority": {
+        "Critical": 1,
+        "High": 1
+      },
+      "expected_cves": [
+        "CVE-2024-4577",
+        "CVE-2024-3094"
+      ]
+    },
+    {
+      "name": "cyclonedx_dependency_triage",
+      "input": "data/input_fixtures/cyclonedx_bom.json",
+      "input_format": "cyclonedx-json",
+      "extra_args": [],
+      "expected_findings_count": 2,
+      "expected_filtered_out_count": 0,
+      "expected_counts_by_priority": {
+        "Critical": 1,
+        "High": 1
+      },
+      "expected_cves": [
+        "CVE-2023-34362",
+        "CVE-2024-3094"
+      ]
+    }
+  ]
+}

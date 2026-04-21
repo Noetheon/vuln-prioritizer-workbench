@@ -1,0 +1,105 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://noetheon.github.io/vuln-prioritizer/schemas/rollup-report.schema.json",
+  "title": "vuln-prioritizer rollup report",
+  "description": "JSON contract for `rollup --format json`.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["metadata", "buckets"],
+  "properties": {
+    "metadata": {
+      "$ref": "#/$defs/rollupMetadata"
+    },
+    "buckets": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/rollupBucket"
+      }
+    }
+  },
+  "$defs": {
+    "rollupMetadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "generated_at",
+        "input_path",
+        "input_kind",
+        "dimension"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "1.1.0"
+        },
+        "generated_at": {
+          "type": "string"
+        },
+        "input_path": {
+          "type": "string"
+        },
+        "input_kind": {
+          "type": "string"
+        },
+        "dimension": {
+          "type": "string"
+        },
+        "bucket_count": {
+          "type": "integer"
+        }
+      }
+    },
+    "rollupBucket": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["bucket", "dimension"],
+      "properties": {
+        "bucket": {
+          "type": "string"
+        },
+        "dimension": {
+          "type": "string"
+        },
+        "finding_count": {
+          "type": "integer"
+        },
+        "critical_count": {
+          "type": "integer"
+        },
+        "high_count": {
+          "type": "integer"
+        },
+        "kev_count": {
+          "type": "integer"
+        },
+        "attack_mapped_count": {
+          "type": "integer"
+        },
+        "waived_count": {
+          "type": "integer"
+        },
+        "highest_priority": {
+          "type": "string"
+        },
+        "owners": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "top_cves": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "recommended_actions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

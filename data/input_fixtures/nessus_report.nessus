@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<NessusClientData_v2>
+  <Report name="Acme Internal Scan">
+    <ReportHost name="web-01">
+      <HostProperties>
+        <tag name="host-fqdn">web-01.example.internal</tag>
+        <tag name="host-ip">192.0.2.10</tag>
+      </HostProperties>
+      <ReportItem
+        port="443"
+        svc_name="https"
+        protocol="tcp"
+        severity="4"
+        pluginID="10001"
+        pluginName="Apache Log4j Remote Code Execution"
+      >
+        <risk_factor>Critical</risk_factor>
+        <cve>CVE-2021-44228</cve>
+      </ReportItem>
+      <ReportItem
+        port="8443"
+        svc_name="https"
+        protocol="tcp"
+        severity="3"
+        pluginID="10002"
+        pluginName="MOVEit Transfer and XZ Exposure"
+      >
+        <risk_factor>High</risk_factor>
+        <cve>CVE-2023-34362, CVE-2024-3094</cve>
+      </ReportItem>
+      <ReportItem
+        port="22"
+        svc_name="ssh"
+        protocol="tcp"
+        severity="1"
+        pluginID="10003"
+        pluginName="Informational Without CVE"
+      >
+        <risk_factor>Low</risk_factor>
+      </ReportItem>
+    </ReportHost>
+    <ReportHost name="db-01">
+      <HostProperties>
+        <tag name="host-ip">192.0.2.20</tag>
+      </HostProperties>
+      <ReportItem
+        port="5432"
+        svc_name="postgresql"
+        protocol="tcp"
+        severity="2"
+        pluginID="10004"
+        pluginName="Synthetic Database Advisory"
+      >
+        <risk_factor>Medium</risk_factor>
+        <cve>GHSA-4mx6-2q88-pq62,CVE-2023-34362</cve>
+      </ReportItem>
+    </ReportHost>
+  </Report>
+</NessusClientData_v2>

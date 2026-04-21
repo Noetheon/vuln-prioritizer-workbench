@@ -1,0 +1,86 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Install project and dev dependencies
+        run: python -m pip install -e .[dev]
+
+      - name: Run release gate before publishing
+        run: make workflow-check
+
+      - name: Build source and wheel distributions
+        run: python -m build
+
+      - name: Validate built distributions
+        run: python -m twine check dist/*
+
+      - name: Smoke test built wheel
+        run: |
+          python -m pip install --force-reinstall dist/*.whl
+          vuln-prioritizer --help
+
+      - name: Resolve release notes path
+        id: release_notes
+        shell: bash
+        run: |
+          path="docs/releases/${GITHUB_REF_NAME}.md"
+          if [[ -f "$path" ]]; then
+            echo "body_path=$path" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Upload release artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-dist
+          path: dist/*
+
+      - name: Publish GitHub release from checked-in notes
+        if: steps.release_notes.outputs.body_path != ''
+        uses: softprops/action-gh-release@v3
+        with:
+          body_path: ${{ steps.release_notes.outputs.body_path }}
+          files: dist/*
+
+      - name: Publish GitHub release with generated notes
+        if: steps.release_notes.outputs.body_path == ''
+        uses: softprops/action-gh-release@v3
+        with:
+          generate_release_notes: true
+          files: dist/*
+
+  publish-pypi:
+    needs: build-and-release
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+    environment:
+      name: pypi
+    steps:
+      - name: Download built distributions
+        uses: actions/download-artifact@v8
+        with:
+          name: release-dist
+          path: dist
+
+      - name: Publish distributions to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1

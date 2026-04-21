@@ -1,0 +1,134 @@
+{
+  "description": "Navigator layer generated from local CTID ATT&CK mappings used by vuln-prioritizer.",
+  "domain": "enterprise-attack",
+  "gradient": {
+    "colors": [
+      "#dfe7fd",
+      "#4c6ef5"
+    ],
+    "maxValue": 2,
+    "minValue": 0
+  },
+  "legendItems": [
+    {
+      "color": "#4c6ef5",
+      "label": "Mapped technique"
+    }
+  ],
+  "name": "vuln-prioritizer ATT&CK coverage",
+  "selectTechniquesAcrossTactics": true,
+  "showTacticRowBackground": true,
+  "techniques": [
+    {
+      "comment": "Observed in 2 mapped CVE(s).",
+      "score": 2,
+      "techniqueID": "T1059"
+    },
+    {
+      "comment": "Observed in 2 mapped CVE(s).",
+      "score": 2,
+      "techniqueID": "T1068"
+    },
+    {
+      "comment": "Observed in 2 mapped CVE(s).",
+      "score": 2,
+      "techniqueID": "T1190"
+    },
+    {
+      "comment": "Observed in 1 mapped CVE(s).",
+      "score": 1,
+      "techniqueID": "T1003"
+    },
+    {
+      "comment": "Observed in 1 mapped CVE(s).",
+      "score": 1,
+      "techniqueID": "T1003.001"
+    },
+    {
+      "comment": "Observed in 1 mapped CVE(s).",
+      "score": 1,
+      "techniqueID": "T1005"
+    },
+    {
+      "comment": "Observed in 1 mapped CVE(s).",
+      "score": 1,
+      "techniqueID": "T1021"
+    },
+    {
+      "comment": "Observed in 1 mapped CVE(s).",
+      "score": 1,
+      "techniqueID": "T1033"
+    },
+    {
+      "comment": "Observed in 1 mapped CVE(s).",
+      "score": 1,
+      "techniqueID": "T1041"
+    },
+    {
+      "comment": "Observed in 1 mapped CVE(s).",
+      "score": 1,
+      "techniqueID": "T1053"
+    },
+    {
+      "comment": "Observed in 1 mapped CVE(s).",
+      "score": 1,
+      "techniqueID": "T1071.001"
+    },
+    {
+      "comment": "Observed in 1 mapped CVE(s).",
+      "score": 1,
+      "techniqueID": "T1082"
+    },
+    {
+      "comment": "Observed in 1 mapped CVE(s).",
+      "score": 1,
+      "techniqueID": "T1087.002"
+    },
+    {
+      "comment": "Observed in 1 mapped CVE(s).",
+      "score": 1,
+      "techniqueID": "T1105"
+    },
+    {
+      "comment": "Observed in 1 mapped CVE(s).",
+      "score": 1,
+      "techniqueID": "T1110"
+    },
+    {
+      "comment": "Observed in 1 mapped CVE(s).",
+      "score": 1,
+      "techniqueID": "T1112"
+    },
+    {
+      "comment": "Observed in 1 mapped CVE(s).",
+      "score": 1,
+      "techniqueID": "T1133"
+    },
+    {
+      "comment": "Observed in 1 mapped CVE(s).",
+      "score": 1,
+      "techniqueID": "T1136"
+    },
+    {
+      "comment": "Observed in 1 mapped CVE(s).",
+      "score": 1,
+      "techniqueID": "T1486"
+    },
+    {
+      "comment": "Observed in 1 mapped CVE(s).",
+      "score": 1,
+      "techniqueID": "T1531"
+    },
+    {
+      "comment": "Observed in 1 mapped CVE(s).",
+      "score": 1,
+      "techniqueID": "T1543"
+    },
+    {
+      "comment": "Observed in 1 mapped CVE(s).",
+      "score": 1,
+      "techniqueID": "T1570"
+    }
+  ],
+  "version": "4.5"
+}

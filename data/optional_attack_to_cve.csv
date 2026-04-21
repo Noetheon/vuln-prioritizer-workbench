@@ -1,0 +1,3 @@
+cve_id,attack_techniques,attack_tactics,attack_note
+CVE-2021-44228,T1190,Initial Access,Representative local mapping for remote service exposure impact.
+CVE-2023-44487,T1499,Impact,Representative local mapping for denial-of-service impact context.

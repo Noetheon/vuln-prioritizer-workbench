@@ -1,0 +1,38 @@
+site_name: vuln-prioritizer
+site_description: Threat-informed CLI for prioritizing known CVEs with CVSS, EPSS, KEV, ATT&CK, Asset Context, and VEX.
+repo_url: https://github.com/Noetheon/vuln-prioritizer-cli
+repo_name: Noetheon/vuln-prioritizer-cli
+theme:
+  name: mkdocs
+nav:
+  - Home: index.md
+  - Concept: concept.md
+  - Executive Summary: executive_summary.md
+  - Methodology: methodology.md
+  - Architecture: architecture.md
+  - Use Cases: use_cases.md
+  - Contracts: contracts.md
+  - Support Matrix: support_matrix.md
+  - Integrations: integrations/reporting_and_ci.md
+  - Gap Analysis: reference_cve_prioritizer_gap_analysis.md
+  - Community Setup: community_repository_setup.md
+  - Roadmap: roadmap.md
+  - Examples:
+      - Base Report: example_report.md
+      - Base Compare: example_compare.md
+      - ATT&CK Report: example_attack_report.md
+      - ATT&CK Compare: example_attack_compare.md
+      - ATT&CK Coverage: example_attack_coverage.md
+      - PR Comment Body: examples/example_pr_comment.md
+  - Historical Appendix:
+      - Historical Evidence Archive: evidence.md
+      - Current State Audit: evidence/current_state_audit.md
+      - V0.3 Submission Checklist: evidence/final_submission_checklist.md
+      - V0.3 Screenshot List: evidence/screenshot_capture_list.md
+  - Releases:
+      - v1.1.0: releases/v1.1.0.md
+      - v1.0.0: releases/v1.0.0.md
+      - v0.2.2: releases/v0.2.2.md
+      - v0.2.1: releases/v0.2.1.md
+      - v0.2.0: releases/v0.2.0.md
+      - v0.3.0: releases/v0.3.0.md

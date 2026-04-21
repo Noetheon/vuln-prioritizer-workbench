@@ -1,0 +1,92 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "vuln-prioritizer"
+version = "1.1.0"
+description = "Threat-informed CLI for prioritizing known CVEs with NVD, EPSS, KEV, ATT&CK, asset context, and VEX."
+readme = "README.md"
+requires-python = ">=3.11"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "vuln-prioritizer contributors" }]
+keywords = ["cve", "cvss", "epss", "kev", "security", "vulnerability-management"]
+classifiers = [
+  "Development Status :: 5 - Production/Stable",
+  "Environment :: Console",
+  "Intended Audience :: Information Technology",
+  "Intended Audience :: System Administrators",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Security",
+  "Topic :: Utilities",
+  "Typing :: Typed",
+]
+dependencies = [
+  "pydantic>=2.6,<3.0",
+  "PyYAML>=6.0,<7.0",
+  "python-dotenv>=1.0,<2.0",
+  "requests>=2.31,<3.0",
+  "rich>=13.7,<16.0",
+  "typer>=0.12,<1.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/Noetheon/vuln-prioritizer-cli"
+Repository = "https://github.com/Noetheon/vuln-prioritizer-cli"
+Issues = "https://github.com/Noetheon/vuln-prioritizer-cli/issues"
+Documentation = "https://github.com/Noetheon/vuln-prioritizer-cli/tree/main/docs"
+Changelog = "https://github.com/Noetheon/vuln-prioritizer-cli/blob/main/CHANGELOG.md"
+Security = "https://github.com/Noetheon/vuln-prioritizer-cli/security/policy"
+
+[project.optional-dependencies]
+dev = [
+  "build>=1.2,<2.0",
+  "jsonschema>=4.23,<5.0",
+  "mkdocs>=1.6,<2.0",
+  "mypy>=1.10,<2.0",
+  "pre-commit>=3.7,<5.0",
+  "pytest>=8.0,<10.0",
+  "ruff>=0.5,<1.0",
+  "twine>=6.0,<7.0",
+  "types-PyYAML>=6.0,<7.0",
+  "types-requests>=2.32,<3.0",
+]
+
+[project.scripts]
+vuln-prioritizer = "vuln_prioritizer.cli:main"
+
+[tool.setuptools.package-dir]
+"" = "src"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+vuln_prioritizer = ["py.typed"]
+
+[tool.pytest.ini_options]
+addopts = "-ra"
+testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]
+
+[tool.mypy]
+python_version = "3.11"
+files = ["src"]
+pretty = true
+show_error_codes = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+warn_unreachable = true
+no_implicit_optional = true
+check_untyped_defs = true
+disallow_untyped_defs = true

@@ -1,0 +1,64 @@
+# Operating system files
+.DS_Store
+Thumbs.db
+
+# Local note exports kept outside version control
+Threat-Informed Vulnerability Prioritization Report.html
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+.venv/
+venv/
+env/
+ENV/
+
+# Python bytecode and caches
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+.Python
+.mypy_cache/
+.ruff_cache/
+.pyre/
+.hypothesis/
+.ipynb_checkpoints/
+
+# Test, benchmark, and coverage artifacts
+.pytest_cache/
+.benchmarks/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+
+# Local application caches
+.cache/
+
+# Build and packaging artifacts
+build/
+dist/
+site/
+pip-wheel-metadata/
+*.egg-info/
+.eggs/
+*.egg
+
+# Tool-specific lock or state files
+.tox/
+.nox/
+
+# IDE and editor settings
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Local agent / Codex state
+.codex/
+.agents/
+.claude/

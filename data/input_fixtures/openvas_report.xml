@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<report id="demo-openvas-report">
+  <task>
+    <name>Acme External Validation</name>
+  </task>
+  <results>
+    <result id="result-1">
+      <name>MOVEit Transfer SQL Injection</name>
+      <host>app-01.example.internal</host>
+      <severity>9.8</severity>
+      <nvt oid="1.3.6.1.4.1.25623.1.0.100001">
+        <name>MOVEit Transfer SQL Injection</name>
+        <refs>
+          <ref type="cve" id="CVE-2023-34362" />
+        </refs>
+      </nvt>
+    </result>
+    <result id="result-2">
+      <name>XZ Utils Backdoor Exposure</name>
+      <host>app-02.example.internal</host>
+      <severity>10.0</severity>
+      <nvt oid="1.3.6.1.4.1.25623.1.0.100002">
+        <name>XZ Utils Backdoor Exposure</name>
+        <cve>CVE-2024-3094</cve>
+      </nvt>
+    </result>
+    <result id="result-3">
+      <name>Non-CVE Advisory Placeholder</name>
+      <host>app-03.example.internal</host>
+      <severity>3.1</severity>
+      <nvt oid="1.3.6.1.4.1.25623.1.0.100099">
+        <name>Non-CVE Advisory Placeholder</name>
+        <cve>GHSA-9m7r-4c2v-9j5j</cve>
+      </nvt>
+    </result>
+    <result id="result-4">
+      <name>Log4Shell Aggregate Exposure</name>
+      <host>app-02.example.internal</host>
+      <severity>8.8</severity>
+      <nvt oid="1.3.6.1.4.1.25623.1.0.100003">
+        <name>Log4Shell Aggregate Exposure</name>
+        <refs>
+          <ref type="cve" id="CVE-2021-44228" />
+          <ref type="cve" id="CVE-2023-34362" />
+        </refs>
+      </nvt>
+    </result>
+  </results>
+</report>

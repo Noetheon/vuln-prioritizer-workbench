@@ -1,0 +1,138 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://noetheon.github.io/vuln-prioritizer/schemas/snapshot-diff-report.schema.json",
+  "title": "vuln-prioritizer snapshot diff report",
+  "description": "JSON contract for `snapshot diff --format json`.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["metadata", "summary", "items"],
+  "properties": {
+    "metadata": {
+      "$ref": "#/$defs/snapshotDiffMetadata"
+    },
+    "summary": {
+      "$ref": "#/$defs/snapshotDiffSummary"
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/snapshotDiffItem"
+      }
+    }
+  },
+  "$defs": {
+    "snapshotDiffMetadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "generated_at", "before_path", "after_path"],
+      "properties": {
+        "schema_version": {
+          "const": "1.1.0"
+        },
+        "generated_at": {
+          "type": "string"
+        },
+        "before_path": {
+          "type": "string"
+        },
+        "after_path": {
+          "type": "string"
+        },
+        "include_unchanged": {
+          "type": "boolean"
+        }
+      }
+    },
+    "snapshotDiffSummary": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "added": {
+          "type": "integer"
+        },
+        "removed": {
+          "type": "integer"
+        },
+        "priority_up": {
+          "type": "integer"
+        },
+        "priority_down": {
+          "type": "integer"
+        },
+        "context_changed": {
+          "type": "integer"
+        },
+        "unchanged": {
+          "type": "integer"
+        }
+      }
+    },
+    "snapshotDiffItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["cve_id", "category"],
+      "properties": {
+        "cve_id": {
+          "type": "string"
+        },
+        "category": {
+          "type": "string"
+        },
+        "before_priority": {
+          "type": ["string", "null"]
+        },
+        "after_priority": {
+          "type": ["string", "null"]
+        },
+        "before_rank": {
+          "type": ["integer", "null"]
+        },
+        "after_rank": {
+          "type": ["integer", "null"]
+        },
+        "before_targets": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "after_targets": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "before_asset_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "after_asset_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "before_services": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "after_services": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "context_change_fields": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

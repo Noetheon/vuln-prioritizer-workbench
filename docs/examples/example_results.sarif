@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
+  "runs": [
+    {
+      "results": [
+        {
+          "level": "error",
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "composer.lock"
+                }
+              }
+            }
+          ],
+          "message": {
+            "text": "CVE-2024-4577: Critical priority based on CVSS/EPSS/KEV with contextual enrichment."
+          },
+          "properties": {
+            "attack_relevance": "Unmapped",
+            "components": [
+              "php-cgi 8.1.28"
+            ],
+            "cve": "CVE-2024-4577",
+            "cvss": 9.8,
+            "epss": 0.94393,
+            "in_kev": true,
+            "priority": "Critical",
+            "sources": [
+              "trivy-json"
+            ],
+            "suppressed_by_vex": false
+          },
+          "ruleId": "vuln-prioritizer/critical"
+        },
+        {
+          "level": "error",
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/lib/apk/db/installed"
+                }
+              }
+            }
+          ],
+          "message": {
+            "text": "CVE-2024-3094: Critical priority based on CVSS/EPSS/KEV with contextual enrichment."
+          },
+          "properties": {
+            "attack_relevance": "Unmapped",
+            "components": [
+              "xz 5.6.0-r0"
+            ],
+            "cve": "CVE-2024-3094",
+            "cvss": 10.0,
+            "epss": 0.84077,
+            "in_kev": false,
+            "priority": "Critical",
+            "sources": [
+              "trivy-json"
+            ],
+            "suppressed_by_vex": false
+          },
+          "ruleId": "vuln-prioritizer/critical"
+        }
+      ],
+      "tool": {
+        "driver": {
+          "name": "vuln-prioritizer",
+          "version": "1.0.0"
+        }
+      }
+    }
+  ],
+  "version": "2.1.0"
+}

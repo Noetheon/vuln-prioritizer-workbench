@@ -1,0 +1,80 @@
+{
+  "scanInfo": {
+    "engineVersion": "9.0.0"
+  },
+  "projectInfo": {
+    "name": "demo-app",
+    "reportDate": "2026-04-20T17:00:00Z"
+  },
+  "dependencies": [
+    {
+      "fileName": "container-rootfs/usr/bin/xz",
+      "filePath": "container-rootfs/usr/bin/xz",
+      "projectReferences": [
+        "/workspace/demo-app"
+      ],
+      "packages": [
+        {
+          "id": "pkg:apk/alpine/xz@5.6.0-r0?arch=x86_64"
+        }
+      ],
+      "vulnerabilities": [
+        {
+          "name": "CVE-2024-3094",
+          "severity": "CRITICAL",
+          "source": "NVD",
+          "description": "Backdoor in xz Utils supply chain.",
+          "fixedVersions": [
+            "5.6.1-r2"
+          ]
+        }
+      ]
+    },
+    {
+      "fileName": "backend/requirements.txt",
+      "filePath": "backend/requirements.txt",
+      "projectReferences": [
+        "/workspace/demo-app"
+      ],
+      "packages": [
+        {
+          "id": "pkg:pypi/moveit-transfer@2023.0.0"
+        }
+      ],
+      "vulnerabilities": [
+        {
+          "name": "CVE-2023-34362",
+          "severity": "HIGH",
+          "source": "NVD",
+          "description": "MOVEit Transfer SQL injection vulnerability.",
+          "fixedVersions": [
+            "2023.0.2"
+          ]
+        }
+      ]
+    },
+    {
+      "fileName": "package-lock.json",
+      "filePath": "package-lock.json",
+      "projectReferences": [
+        "/workspace/demo-app"
+      ],
+      "packages": [
+        {
+          "id": "pkg:npm/demo-only-package@1.0.0"
+        }
+      ],
+      "vulnerabilities": [
+        {
+          "name": "GHSA-4mx6-2q88-pq62",
+          "severity": "HIGH",
+          "source": "GitHub Advisory Database",
+          "description": "Non-CVE advisory included for filter coverage.",
+          "fixedVersions": [
+            "1.0.1"
+          ]
+        }
+      ]
+    }
+  ]
+}

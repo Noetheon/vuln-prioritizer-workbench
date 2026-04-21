@@ -1,0 +1,533 @@
+{
+  "inputs": {
+    "trivy-json": {
+      "fixture": "data/input_fixtures/trivy_report.json",
+      "top_level_kind": "object",
+      "raw_top_level_keys": [
+        "ArtifactName",
+        "ArtifactType",
+        "Results"
+      ],
+      "target_kind": "image",
+      "target_ref": "ghcr.io/acme/demo-app:1.0.0",
+      "expected_total_rows": 4,
+      "expected_occurrence_count": 3,
+      "expected_unique_cves": [
+        "CVE-2024-3094",
+        "CVE-2023-34362",
+        "CVE-2024-4577"
+      ],
+      "expected_non_cve_ids": [
+        "GHSA-9m7r-4c2v-9j5j"
+      ],
+      "expected_occurrences": [
+        {
+          "cve_id": "CVE-2024-3094",
+          "source_format": "trivy-json",
+          "component_name": "xz",
+          "component_version": "5.6.0-r0",
+          "purl": "pkg:apk/alpine/xz@5.6.0-r0?arch=x86_64",
+          "package_type": "apk",
+          "file_path": "/lib/apk/db/installed",
+          "dependency_path": null,
+          "fix_versions": [
+            "5.6.1-r2"
+          ],
+          "raw_severity": "CRITICAL"
+        },
+        {
+          "cve_id": "CVE-2023-34362",
+          "source_format": "trivy-json",
+          "component_name": "moveit-transfer",
+          "component_version": "2023.0.0",
+          "purl": "pkg:pypi/moveit-transfer@2023.0.0",
+          "package_type": "pip",
+          "file_path": "requirements.txt",
+          "dependency_path": null,
+          "fix_versions": [
+            "2023.0.2"
+          ],
+          "raw_severity": "CRITICAL"
+        },
+        {
+          "cve_id": "CVE-2024-4577",
+          "source_format": "trivy-json",
+          "component_name": "php-cgi",
+          "component_version": "8.1.28",
+          "purl": "pkg:generic/php-cgi@8.1.28",
+          "package_type": "composer",
+          "file_path": "composer.lock",
+          "dependency_path": null,
+          "fix_versions": [
+            "8.1.29"
+          ],
+          "raw_severity": "HIGH"
+        }
+      ]
+    },
+    "grype-json": {
+      "fixture": "data/input_fixtures/grype_report.json",
+      "top_level_kind": "object",
+      "raw_top_level_keys": [
+        "distro",
+        "matches",
+        "source"
+      ],
+      "target_kind": "image",
+      "target_ref": "ghcr.io/acme/demo-app:1.0.0",
+      "expected_total_rows": 3,
+      "expected_occurrence_count": 2,
+      "expected_unique_cves": [
+        "CVE-2024-3094",
+        "CVE-2023-34362"
+      ],
+      "expected_non_cve_ids": [
+        "GHSA-2m57-hf25-phgg"
+      ],
+      "expected_occurrences": [
+        {
+          "cve_id": "CVE-2024-3094",
+          "source_format": "grype-json",
+          "component_name": "xz",
+          "component_version": "5.6.0-r0",
+          "purl": "pkg:apk/alpine/xz@5.6.0-r0?arch=x86_64",
+          "package_type": "apk",
+          "file_path": "/lib/apk/db/installed",
+          "dependency_path": null,
+          "fix_versions": [
+            "5.6.1-r2"
+          ],
+          "raw_severity": "Critical"
+        },
+        {
+          "cve_id": "CVE-2023-34362",
+          "source_format": "grype-json",
+          "component_name": "moveit-transfer",
+          "component_version": "2023.0.0",
+          "purl": "pkg:pypi/moveit-transfer@2023.0.0",
+          "package_type": "python",
+          "file_path": "app/requirements.txt",
+          "dependency_path": null,
+          "fix_versions": [
+            "2023.0.2"
+          ],
+          "raw_severity": "Critical"
+        }
+      ]
+    },
+    "cyclonedx-json": {
+      "fixture": "data/input_fixtures/cyclonedx_bom.json",
+      "top_level_kind": "object",
+      "raw_top_level_keys": [
+        "bomFormat",
+        "components",
+        "metadata",
+        "specVersion",
+        "vulnerabilities"
+      ],
+      "target_kind": "repository",
+      "target_ref": "github.com/acme/demo-app",
+      "expected_total_rows": 3,
+      "expected_occurrence_count": 3,
+      "expected_unique_cves": [
+        "CVE-2024-3094",
+        "CVE-2023-34362"
+      ],
+      "expected_non_cve_ids": [
+        "GHSA-7g45-4rm6-3mm3"
+      ],
+      "expected_occurrences": [
+        {
+          "cve_id": "CVE-2024-3094",
+          "source_format": "cyclonedx-json",
+          "component_name": "xz",
+          "component_version": "5.6.0-r0",
+          "purl": "pkg:apk/alpine/xz@5.6.0-r0?arch=x86_64",
+          "package_type": "library",
+          "file_path": null,
+          "dependency_path": null,
+          "fix_versions": [],
+          "raw_severity": "critical"
+        },
+        {
+          "cve_id": "CVE-2024-3094",
+          "source_format": "cyclonedx-json",
+          "component_name": "xz-utils",
+          "component_version": "5.6.0-r0",
+          "purl": "pkg:apk/alpine/xz-utils@5.6.0-r0?arch=x86_64",
+          "package_type": "library",
+          "file_path": null,
+          "dependency_path": null,
+          "fix_versions": [],
+          "raw_severity": "critical"
+        },
+        {
+          "cve_id": "CVE-2023-34362",
+          "source_format": "cyclonedx-json",
+          "component_name": "moveit-transfer",
+          "component_version": "2023.0.0",
+          "purl": "pkg:pypi/moveit-transfer@2023.0.0",
+          "package_type": "library",
+          "file_path": null,
+          "dependency_path": null,
+          "fix_versions": [],
+          "raw_severity": "critical"
+        }
+      ]
+    },
+    "spdx-json": {
+      "fixture": "data/input_fixtures/spdx_bom.json",
+      "top_level_kind": "object",
+      "raw_top_level_keys": [
+        "SPDXID",
+        "annotations",
+        "documentNamespace",
+        "name",
+        "packages",
+        "spdxVersion"
+      ],
+      "target_kind": "repository",
+      "target_ref": "github.com/acme/demo-app",
+      "expected_total_rows": 3,
+      "expected_occurrence_count": 2,
+      "expected_unique_cves": [
+        "CVE-2024-3094",
+        "CVE-2024-4577"
+      ],
+      "expected_non_cve_ids": [
+        "GHSA-5x6r-8h2p-7h3g"
+      ],
+      "expected_occurrences": [
+        {
+          "cve_id": "CVE-2024-3094",
+          "source_format": "spdx-json",
+          "component_name": "xz",
+          "component_version": "5.6.0-r0",
+          "purl": "pkg:apk/alpine/xz@5.6.0-r0?arch=x86_64",
+          "package_type": "LIBRARY",
+          "file_path": "sbom.spdx.json",
+          "dependency_path": null,
+          "fix_versions": [],
+          "raw_severity": "CRITICAL"
+        },
+        {
+          "cve_id": "CVE-2024-4577",
+          "source_format": "spdx-json",
+          "component_name": "php-cgi",
+          "component_version": "8.1.28",
+          "purl": "pkg:generic/php-cgi@8.1.28",
+          "package_type": "LIBRARY",
+          "file_path": "sbom.spdx.json",
+          "dependency_path": null,
+          "fix_versions": [],
+          "raw_severity": "HIGH"
+        }
+      ]
+    },
+    "dependency-check-json": {
+      "fixture": "data/input_fixtures/dependency_check_report.json",
+      "top_level_kind": "object",
+      "raw_top_level_keys": [
+        "dependencies",
+        "projectInfo",
+        "scanInfo"
+      ],
+      "target_kind": "filesystem",
+      "target_ref": "/workspace/demo-app",
+      "expected_total_rows": 3,
+      "expected_occurrence_count": 2,
+      "expected_unique_cves": [
+        "CVE-2024-3094",
+        "CVE-2023-34362"
+      ],
+      "expected_non_cve_ids": [
+        "GHSA-4mx6-2q88-pq62"
+      ],
+      "expected_occurrences": [
+        {
+          "cve_id": "CVE-2024-3094",
+          "source_format": "dependency-check-json",
+          "component_name": "container-rootfs/usr/bin/xz",
+          "component_version": null,
+          "purl": null,
+          "package_type": null,
+          "file_path": "container-rootfs/usr/bin/xz",
+          "dependency_path": null,
+          "fix_versions": [],
+          "raw_severity": "CRITICAL"
+        },
+        {
+          "cve_id": "CVE-2023-34362",
+          "source_format": "dependency-check-json",
+          "component_name": "backend/requirements.txt",
+          "component_version": null,
+          "purl": null,
+          "package_type": null,
+          "file_path": "backend/requirements.txt",
+          "dependency_path": null,
+          "fix_versions": [],
+          "raw_severity": "HIGH"
+        }
+      ]
+    },
+    "github-alerts-json": {
+      "fixture": "data/input_fixtures/github_alerts_export.json",
+      "top_level_kind": "list",
+      "raw_item_keys": [
+        "dependency",
+        "number",
+        "security_advisory",
+        "security_vulnerability",
+        "state"
+      ],
+      "target_kind": "repository",
+      "target_ref": "github.com/acme/demo-app",
+      "expected_total_rows": 3,
+      "expected_occurrence_count": 2,
+      "expected_unique_cves": [
+        "CVE-2023-34362"
+      ],
+      "expected_non_cve_ids": [
+        "GHSA-8g2p-5pqh-5jmc"
+      ],
+      "expected_occurrences": [
+        {
+          "cve_id": "CVE-2023-34362",
+          "source_format": "github-alerts-json",
+          "component_name": "moveit-transfer",
+          "component_version": "requirements.txt",
+          "purl": null,
+          "package_type": "pip",
+          "file_path": "requirements.txt",
+          "dependency_path": null,
+          "fix_versions": [],
+          "raw_severity": "critical"
+        },
+        {
+          "cve_id": "CVE-2023-34362",
+          "source_format": "github-alerts-json",
+          "component_name": "moveit-transfer",
+          "component_version": "backend/requirements.txt",
+          "purl": null,
+          "package_type": "pip",
+          "file_path": "backend/requirements.txt",
+          "dependency_path": null,
+          "fix_versions": [],
+          "raw_severity": "critical"
+        }
+      ]
+    },
+    "nessus-xml": {
+      "fixture": "data/input_fixtures/nessus_report.nessus",
+      "fixture_format": "xml",
+      "top_level_kind": "xml",
+      "raw_top_level_tag": "NessusClientData_v2",
+      "raw_top_level_keys": [
+        "Report"
+      ],
+      "target_kind": "host",
+      "target_ref": "web-01.example.internal",
+      "expected_total_rows": 4,
+      "expected_occurrence_count": 4,
+      "expected_unique_cves": [
+        "CVE-2021-44228",
+        "CVE-2023-34362",
+        "CVE-2024-3094"
+      ],
+      "expected_non_cve_ids": [
+        "GHSA-4mx6-2q88-pq62"
+      ],
+      "expected_occurrences": [
+        {
+          "cve_id": "CVE-2021-44228",
+          "source_format": "nessus-xml",
+          "component_name": "Apache Log4j Remote Code Execution",
+          "component_version": "https/443/tcp",
+          "purl": null,
+          "package_type": "nessus-plugin",
+          "file_path": null,
+          "dependency_path": null,
+          "fix_versions": [],
+          "raw_severity": "Critical"
+        },
+        {
+          "cve_id": "CVE-2023-34362",
+          "source_format": "nessus-xml",
+          "component_name": "MOVEit Transfer and XZ Exposure",
+          "component_version": "https/8443/tcp",
+          "purl": null,
+          "package_type": "nessus-plugin",
+          "file_path": null,
+          "dependency_path": null,
+          "fix_versions": [],
+          "raw_severity": "High"
+        },
+        {
+          "cve_id": "CVE-2024-3094",
+          "source_format": "nessus-xml",
+          "component_name": "MOVEit Transfer and XZ Exposure",
+          "component_version": "https/8443/tcp",
+          "purl": null,
+          "package_type": "nessus-plugin",
+          "file_path": null,
+          "dependency_path": null,
+          "fix_versions": [],
+          "raw_severity": "High"
+        },
+        {
+          "cve_id": "CVE-2023-34362",
+          "source_format": "nessus-xml",
+          "component_name": "Synthetic Database Advisory",
+          "component_version": "postgresql/5432/tcp",
+          "purl": null,
+          "package_type": "nessus-plugin",
+          "file_path": null,
+          "dependency_path": null,
+          "fix_versions": [],
+          "raw_severity": "Medium"
+        }
+      ]
+    },
+    "openvas-xml": {
+      "fixture": "data/input_fixtures/openvas_report.xml",
+      "fixture_format": "xml",
+      "top_level_kind": "xml",
+      "raw_top_level_tag": "report",
+      "raw_top_level_keys": [
+        "task",
+        "results"
+      ],
+      "target_kind": "host",
+      "target_ref": "app-01.example.internal",
+      "expected_total_rows": 4,
+      "expected_occurrence_count": 4,
+      "expected_unique_cves": [
+        "CVE-2023-34362",
+        "CVE-2024-3094",
+        "CVE-2021-44228"
+      ],
+      "expected_non_cve_ids": [
+        "GHSA-9m7r-4c2v-9j5j"
+      ],
+      "expected_occurrences": [
+        {
+          "cve_id": "CVE-2023-34362",
+          "source_format": "openvas-xml",
+          "component_name": "MOVEit Transfer SQL Injection",
+          "component_version": null,
+          "purl": null,
+          "package_type": "openvas-nvt",
+          "file_path": null,
+          "dependency_path": null,
+          "fix_versions": [],
+          "raw_severity": "9.8"
+        },
+        {
+          "cve_id": "CVE-2024-3094",
+          "source_format": "openvas-xml",
+          "component_name": "XZ Utils Backdoor Exposure",
+          "component_version": null,
+          "purl": null,
+          "package_type": "openvas-nvt",
+          "file_path": null,
+          "dependency_path": null,
+          "fix_versions": [],
+          "raw_severity": "10.0"
+        },
+        {
+          "cve_id": "CVE-2021-44228",
+          "source_format": "openvas-xml",
+          "component_name": "Log4Shell Aggregate Exposure",
+          "component_version": null,
+          "purl": null,
+          "package_type": "openvas-nvt",
+          "file_path": null,
+          "dependency_path": null,
+          "fix_versions": [],
+          "raw_severity": "8.8"
+        },
+        {
+          "cve_id": "CVE-2023-34362",
+          "source_format": "openvas-xml",
+          "component_name": "Log4Shell Aggregate Exposure",
+          "component_version": null,
+          "purl": null,
+          "package_type": "openvas-nvt",
+          "file_path": null,
+          "dependency_path": null,
+          "fix_versions": [],
+          "raw_severity": "8.8"
+        }
+      ]
+    }
+  },
+  "vex_documents": {
+    "openvex-json": {
+      "fixture": "data/input_fixtures/openvex_statements.json",
+      "top_level_kind": "object",
+      "raw_top_level_keys": [
+        "@context",
+        "@id",
+        "author",
+        "statements",
+        "timestamp",
+        "version"
+      ],
+      "expected_statuses": [
+        "affected",
+        "not_affected",
+        "under_investigation"
+      ],
+      "expected_matches": [
+        {
+          "cve_id": "CVE-2024-3094",
+          "product_id": "pkg:apk/alpine/xz@5.6.0-r0?arch=x86_64",
+          "status": "affected"
+        },
+        {
+          "cve_id": "CVE-2023-34362",
+          "product_id": "pkg:pypi/moveit-transfer@2023.0.0",
+          "status": "not_affected"
+        },
+        {
+          "cve_id": "CVE-2024-4577",
+          "product_id": "pkg:generic/php-cgi@8.1.28",
+          "status": "under_investigation"
+        }
+      ]
+    },
+    "cyclonedx-vex-json": {
+      "fixture": "data/input_fixtures/cyclonedx_vex.json",
+      "top_level_kind": "object",
+      "raw_top_level_keys": [
+        "bomFormat",
+        "components",
+        "metadata",
+        "specVersion",
+        "vulnerabilities"
+      ],
+      "expected_statuses": [
+        "affected",
+        "fixed",
+        "not_affected"
+      ],
+      "expected_matches": [
+        {
+          "cve_id": "CVE-2024-3094",
+          "product_id": "pkg:apk/alpine/xz@5.6.0-r0?arch=x86_64",
+          "status": "affected"
+        },
+        {
+          "cve_id": "CVE-2023-34362",
+          "product_id": "pkg:pypi/moveit-transfer@2023.0.0",
+          "status": "not_affected"
+        },
+        {
+          "cve_id": "CVE-2024-4577",
+          "product_id": "pkg:generic/php-cgi@8.1.28",
+          "status": "fixed"
+        }
+      ]
+    }
+  }
+}

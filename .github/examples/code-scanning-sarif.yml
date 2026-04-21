@@ -1,0 +1,33 @@
+name: Example Consumer Workflow - SARIF Upload
+
+on:
+  workflow_dispatch:
+  pull_request:
+
+jobs:
+  prioritize:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Run vuln-prioritizer action
+        id: prioritize
+        uses: Noetheon/vuln-prioritizer-cli@v1.1.0
+        with:
+          mode: analyze
+          input: trivy-results.json
+          input-format: trivy-json
+          output-format: sarif
+          output-path: results.sarif
+          asset-context: assets.csv
+          vex-files: |
+            openvex.json
+          policy-profile: enterprise
+          fail-on: high
+
+      - name: Upload SARIF to GitHub Code Scanning
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: ${{ steps.prioritize.outputs.report-path }}

@@ -1,0 +1,14 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security disclosures
+    url: https://github.com/Noetheon/vuln-prioritizer-cli/security/policy
+    about: Report repository security issues privately and avoid posting exploit details in a public issue.
+  - name: Contribution guide
+    url: https://github.com/Noetheon/vuln-prioritizer-cli/blob/main/CONTRIBUTING.md
+    about: Read scope guardrails, local development setup, and the local quality gate before opening work.
+  - name: Community repository setup
+    url: https://github.com/Noetheon/vuln-prioritizer-cli/blob/main/docs/community_repository_setup.md
+    about: Maintainer-facing guidance for repo topics, labels, and minimal public issue triage.
+  - name: Code of conduct and contact
+    url: https://github.com/Noetheon/vuln-prioritizer-cli/blob/main/CODE_OF_CONDUCT.md
+    about: Review project conduct expectations and the maintainer contact path for conduct concerns.

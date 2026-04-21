@@ -1,0 +1,92 @@
+{
+  "spdxVersion": "SPDX-2.3",
+  "SPDXID": "SPDXRef-DOCUMENT",
+  "name": "demo-spdx",
+  "documentNamespace": "https://example.com/spdx/demo-spdx-1.0.0",
+  "packages": [
+    {
+      "SPDXID": "SPDXRef-Package-xz",
+      "name": "xz",
+      "versionInfo": "5.6.0-r0",
+      "primaryPackagePurpose": "LIBRARY",
+      "downloadLocation": "sbom.spdx.json",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:apk/alpine/xz@5.6.0-r0?arch=x86_64"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-Package-php",
+      "name": "php-cgi",
+      "versionInfo": "8.1.28",
+      "primaryPackagePurpose": "LIBRARY",
+      "downloadLocation": "sbom.spdx.json",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:generic/php-cgi@8.1.28"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-Package-demo",
+      "name": "demo-only-package",
+      "versionInfo": "1.0.0",
+      "primaryPackagePurpose": "LIBRARY",
+      "downloadLocation": "sbom.spdx.json"
+    }
+  ],
+  "annotations": [
+    {
+      "annotationType": "OTHER",
+      "annotationDate": "2026-04-20T17:00:00Z",
+      "annotator": "Tool: fixture-generator",
+      "comment": "vulnerability=CVE-2024-3094; package=SPDXRef-Package-xz; file_path=sbom.spdx.json; fix_versions=5.6.1-r2; severity=CRITICAL"
+    },
+    {
+      "annotationType": "OTHER",
+      "annotationDate": "2026-04-20T17:00:01Z",
+      "annotator": "Tool: fixture-generator",
+      "comment": "vulnerability=CVE-2024-4577; package=SPDXRef-Package-php; file_path=sbom.spdx.json; fix_versions=8.1.29; severity=HIGH"
+    },
+    {
+      "annotationType": "OTHER",
+      "annotationDate": "2026-04-20T17:00:02Z",
+      "annotator": "Tool: fixture-generator",
+      "comment": "vulnerability=GHSA-5x6r-8h2p-7h3g; package=SPDXRef-Package-demo; file_path=sbom.spdx.json; fix_versions=1.0.1; severity=HIGH"
+    }
+  ],
+  "vulnerabilities": [
+    {
+      "id": "CVE-2024-3094",
+      "severity": "CRITICAL",
+      "affects": [
+        {
+          "ref": "SPDXRef-Package-xz"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2024-4577",
+      "severity": "HIGH",
+      "affects": [
+        {
+          "ref": "SPDXRef-Package-php"
+        }
+      ]
+    },
+    {
+      "id": "GHSA-5x6r-8h2p-7h3g",
+      "severity": "HIGH",
+      "affects": [
+        {
+          "ref": "SPDXRef-Package-demo"
+        }
+      ]
+    }
+  ]
+}

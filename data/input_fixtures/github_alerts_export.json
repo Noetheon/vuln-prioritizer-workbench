@@ -1,0 +1,86 @@
+[
+  {
+    "number": 101,
+    "state": "open",
+    "dependency": {
+      "manifest_path": "requirements.txt",
+      "scope": "runtime",
+      "package": {
+        "ecosystem": "pip",
+        "name": "moveit-transfer"
+      }
+    },
+    "security_advisory": {
+      "ghsa_id": "GHSA-1111-2222-3333",
+      "cve_id": "CVE-2023-34362",
+      "severity": "critical",
+      "summary": "MOVEit Transfer SQL injection"
+    },
+    "security_vulnerability": {
+      "package": {
+        "ecosystem": "pip",
+        "name": "moveit-transfer"
+      },
+      "vulnerable_version_range": "< 2023.0.2",
+      "first_patched_version": {
+        "identifier": "2023.0.2"
+      }
+    }
+  },
+  {
+    "number": 102,
+    "state": "open",
+    "dependency": {
+      "manifest_path": "backend/requirements.txt",
+      "scope": "runtime",
+      "package": {
+        "ecosystem": "pip",
+        "name": "moveit-transfer"
+      }
+    },
+    "security_advisory": {
+      "ghsa_id": "GHSA-4444-5555-6666",
+      "cve_id": "CVE-2023-34362",
+      "severity": "critical",
+      "summary": "MOVEit Transfer SQL injection duplicate occurrence"
+    },
+    "security_vulnerability": {
+      "package": {
+        "ecosystem": "pip",
+        "name": "moveit-transfer"
+      },
+      "vulnerable_version_range": "< 2023.0.2",
+      "first_patched_version": {
+        "identifier": "2023.0.2"
+      }
+    }
+  },
+  {
+    "number": 103,
+    "state": "open",
+    "dependency": {
+      "manifest_path": "package-lock.json",
+      "scope": "runtime",
+      "package": {
+        "ecosystem": "npm",
+        "name": "demo-only-package"
+      }
+    },
+    "security_advisory": {
+      "ghsa_id": "GHSA-8g2p-5pqh-5jmc",
+      "cve_id": null,
+      "severity": "high",
+      "summary": "Non-CVE advisory included for filter coverage"
+    },
+    "security_vulnerability": {
+      "package": {
+        "ecosystem": "npm",
+        "name": "demo-only-package"
+      },
+      "vulnerable_version_range": "< 1.0.1",
+      "first_patched_version": {
+        "identifier": "1.0.1"
+      }
+    }
+  }
+]

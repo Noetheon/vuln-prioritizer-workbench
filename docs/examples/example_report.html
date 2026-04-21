@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>vuln-prioritizer report</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #17212b;
+      --muted: #5a6775;
+      --line: #d4dbe2;
+      --canvas: #f5f1e8;
+      --panel: #fffdf8;
+      --panel-alt: #f3efe5;
+      --accent: #0f5c4d;
+      --accent-soft: #dcebe7;
+      --danger: #8a2432;
+      --danger-soft: #f7dde1;
+      --warning: #8a5a12;
+      --warning-soft: #f6ead6;
+    }
+    body {
+      font-family: Georgia, "Times New Roman", serif;
+      margin: 0;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top right, rgba(15, 92, 77, 0.08), transparent 30%),
+        linear-gradient(180deg, #f8f4eb 0%, var(--canvas) 100%);
+    }
+    main { max-width: 1280px; margin: 0 auto; padding: 2.5rem 2rem 3rem; }
+    h1, h2 { margin-bottom: 0.5rem; }
+    p { line-height: 1.5; }
+    .eyebrow {
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--accent);
+      font-size: 0.78rem;
+      margin-bottom: 0.4rem;
+    }
+    .hero { margin-bottom: 2rem; }
+    .hero p { max-width: 70ch; color: var(--muted); }
+    .meta {
+      background: rgba(255, 253, 248, 0.9);
+      border: 1px solid var(--line);
+      padding: 1rem 1.2rem;
+      border-radius: 14px;
+      box-shadow: 0 10px 30px rgba(30, 40, 48, 0.06);
+    }
+    table { width: 100%; border-collapse: collapse; margin-top: 1rem; background: var(--panel); }
+    th, td {
+      border: 1px solid var(--line);
+      padding: 0.75rem;
+      text-align: left;
+      vertical-align: top;
+    }
+    th { background: var(--panel-alt); }
+    .summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; }
+    .summary.secondary { margin-top: 1rem; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .card {
+      background: rgba(255, 253, 248, 0.94);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 1rem;
+      box-shadow: 0 10px 24px rgba(23, 33, 43, 0.05);
+    }
+    .card strong {
+      display: block;
+      font-size: 0.85rem;
+      color: var(--muted);
+      margin-bottom: 0.35rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    .metric {
+      font-size: 2rem;
+      line-height: 1;
+    }
+    .subtle { margin-top: 0.35rem; color: var(--muted); font-size: 0.92rem; }
+    .badge {
+      display: inline-block;
+      padding: 0.2rem 0.55rem;
+      border-radius: 999px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .badge.urgency { background: var(--warning-soft); color: var(--warning); }
+    .badge.kev { background: var(--danger-soft); color: var(--danger); }
+    .section { margin-top: 2rem; }
+    @media (max-width: 900px) {
+      main { padding: 1.4rem 1rem 2rem; }
+      .summary, .summary.secondary { grid-template-columns: 1fr; }
+      table { display: block; overflow-x: auto; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <section class="hero">
+      <div class="eyebrow">Executive Vulnerability Brief</div>
+      <h1>vuln-prioritizer Executive Report</h1>
+      <p>
+        Deterministic prioritization based on NVD, FIRST EPSS, CISA KEV, and optional
+        local ATT&amp;CK context. KEV-listed findings are surfaced as known exploited risk.
+      </p>
+      <div class="meta">
+        <p><strong>Generated at:</strong> 2026-04-21T19:22:22+00:00</p>
+        <p><strong>Input:</strong> data/input_fixtures/trivy_report.json</p>
+        <p><strong>Input format:</strong> trivy-json</p>
+        <p>
+          <strong>Policy profile:</strong>
+          enterprise
+        </p>
+      </div>
+    </section>
+    <section class="section">
+      <h2>Executive Summary</h2>
+      <div class="summary">
+        <div class="card">
+          <strong>Findings shown</strong><span class="metric">2</span>
+        </div>
+        <div class="card">
+          <strong>Known exploited</strong><span class="metric">1</span>
+        </div>
+        <div class="card">
+          <strong>Critical</strong><span class="metric">2</span>
+        </div>
+      </div>
+      <div class="summary secondary">
+        <div class="card">
+          <strong>Suppressed by VEX</strong><span class="metric">1</span>
+        </div>
+        <div class="card">
+          <strong>ATT&amp;CK mapped CVEs</strong><span class="metric">0</span>
+        </div>
+        <div class="card">
+          <strong>Waived</strong><span class="metric">0</span>
+        </div>
+      </div>
+    </section>
+    <section class="section">
+      <h2>Top Risks</h2>
+      <table>
+        <thead>
+          <tr><th>CVE</th><th>Urgency</th><th>CVSS</th><th>EPSS</th><th>Exploit Status</th><th>Sources</th><th>Rationale</th><th>Context Recommendation</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>CVE-2024-4577</strong><div class="subtle">In PHP versions 8.1.* before 8.1.29, 8.2.* before 8.2.20, 8.3.* before 8.3.8, when using Apache and PHP-CGI on Windows, if the system is set up to use certain code pages, Windows may use &quot;Best-Fit&quot; behavior to replace characters in command line given to Win32 API functions. PHP CGI module may misinterpret those characters as PHP options, which may allow a malicious user to pass options to PHP binary being run, and thus reveal the source code of scripts, run arbitrary PHP code on the server, etc.</div></td><td><span class="badge urgency">Critical / KEV</span></td><td>9.8</td><td>0.94393</td><td><span class="badge kev">Known exploited (KEV)</span></td><td>trivy-json</td><td>CISA KEV lists this CVE as known exploited in the wild. NVD reports CVSS 9.8 (CRITICAL) via CVSS v3.1. FIRST EPSS is 0.944 (percentile 1.000). Input provenance includes 1 occurrence(s) from trivy-json. Affected components include: php-cgi 8.1.28. Seen in 1 occurrence(s). At least one matching VEX statement is still under investigation, so the finding remains visible.</td><td>Context does not raise the default response, but affected components and owners should still be reviewed.</td></tr><tr><td><strong>CVE-2024-3094</strong><div class="subtle">Malicious code was discovered in the upstream tarballs of xz, starting with version 5.6.0.
+Through a series of complex obfuscations, the liblzma build process extracts a prebuilt object file from a disguised test file existing in the source code, which is then used to modify specific functions in the liblzma code. This results in a modified liblzma library that can be used by any software linked against this library, intercepting and modifying the data interaction with this library.</div></td><td><span class="badge urgency">Critical</span></td><td>10.0</td><td>0.84077</td><td><span class="badge kev">No KEV listing</span></td><td>trivy-json</td><td>NVD reports CVSS 10.0 (CRITICAL) via CVSS v3.1. FIRST EPSS is 0.841 (percentile 0.993). Input provenance includes 1 occurrence(s) from trivy-json. Affected components include: xz 5.6.0-r0. Seen in 1 occurrence(s), across 1 mapped asset(s), highest asset criticality critical, highest exposure internet-facing.</td><td>Escalate validation and remediation because context indicates internet-facing exposure, production environment.</td></tr>
+        </tbody>
+      </table>
+    </section>
+  </main>
+</body>
+</html>

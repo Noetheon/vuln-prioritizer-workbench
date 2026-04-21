@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://noetheon.github.io/vuln-prioritizer/schemas/evidence-bundle-manifest.schema.json",
+  "title": "vuln-prioritizer evidence bundle manifest",
+  "description": "Manifest contract stored as `manifest.json` inside `report evidence-bundle` ZIP exports.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "bundle_kind",
+    "generated_at",
+    "source_analysis_path",
+    "included_input_copy",
+    "files"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.1.0"
+    },
+    "bundle_kind": {
+      "const": "evidence-bundle"
+    },
+    "generated_at": {
+      "type": "string"
+    },
+    "source_analysis_path": {
+      "type": "string"
+    },
+    "source_input_path": {
+      "type": ["string", "null"]
+    },
+    "findings_count": {
+      "type": "integer"
+    },
+    "kev_hits": {
+      "type": "integer"
+    },
+    "waived_count": {
+      "type": "integer"
+    },
+    "attack_mapped_cves": {
+      "type": "integer"
+    },
+    "included_input_copy": {
+      "type": "boolean"
+    },
+    "files": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/evidenceFile"
+      }
+    }
+  },
+  "$defs": {
+    "evidenceFile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "kind", "size_bytes", "sha256"],
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "size_bytes": {
+          "type": "integer"
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      }
+    }
+  }
+}

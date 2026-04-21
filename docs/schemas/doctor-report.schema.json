@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://noetheon.github.io/vuln-prioritizer/schemas/doctor-report.schema.json",
+  "title": "vuln-prioritizer doctor report",
+  "description": "JSON contract for `vuln-prioritizer doctor --format json`.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "generated_at", "live", "checks"],
+  "properties": {
+    "schema_version": {
+      "const": "1.1.0"
+    },
+    "generated_at": {
+      "type": "string"
+    },
+    "live": {
+      "type": "boolean"
+    },
+    "config_file": {
+      "$ref": "#/$defs/nullableString"
+    },
+    "checks": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/doctorCheck"
+      }
+    }
+  },
+  "$defs": {
+    "nullableString": {
+      "type": ["string", "null"]
+    },
+    "doctorCheck": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "status", "detail"],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "detail": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

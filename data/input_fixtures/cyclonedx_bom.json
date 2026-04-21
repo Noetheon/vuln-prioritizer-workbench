@@ -1,0 +1,122 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.5",
+  "version": 1,
+  "metadata": {
+    "component": {
+      "type": "application",
+      "bom-ref": "github.com/acme/demo-app",
+      "name": "demo-app",
+      "version": "1.0.0"
+    }
+  },
+  "components": [
+    {
+      "bom-ref": "pkg:apk/alpine/xz@5.6.0-r0?arch=x86_64",
+      "type": "library",
+      "name": "xz",
+      "version": "5.6.0-r0",
+      "purl": "pkg:apk/alpine/xz@5.6.0-r0?arch=x86_64"
+    },
+    {
+      "bom-ref": "pkg:apk/alpine/xz-utils@5.6.0-r0?arch=x86_64",
+      "type": "library",
+      "name": "xz-utils",
+      "version": "5.6.0-r0",
+      "purl": "pkg:apk/alpine/xz-utils@5.6.0-r0?arch=x86_64"
+    },
+    {
+      "bom-ref": "pkg:pypi/moveit-transfer@2023.0.0",
+      "type": "library",
+      "name": "moveit-transfer",
+      "version": "2023.0.0",
+      "purl": "pkg:pypi/moveit-transfer@2023.0.0"
+    },
+    {
+      "bom-ref": "pkg:generic/demo-lib@1.0.0",
+      "type": "library",
+      "name": "demo-lib",
+      "version": "1.0.0",
+      "purl": "pkg:generic/demo-lib@1.0.0"
+    }
+  ],
+  "vulnerabilities": [
+    {
+      "id": "CVE-2024-3094",
+      "source": {
+        "name": "NVD",
+        "url": "https://nvd.nist.gov/vuln/detail/CVE-2024-3094"
+      },
+      "ratings": [
+        {
+          "severity": "critical"
+        }
+      ],
+      "affects": [
+        {
+          "ref": "pkg:apk/alpine/xz@5.6.0-r0?arch=x86_64"
+        },
+        {
+          "ref": "pkg:apk/alpine/xz-utils@5.6.0-r0?arch=x86_64"
+        }
+      ],
+      "advisories": [
+        {
+          "url": "https://security.alpinelinux.org/CVE-2024-3094"
+        }
+      ],
+      "properties": [
+        {
+          "name": "fixVersion",
+          "value": "5.6.1-r2"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2023-34362",
+      "source": {
+        "name": "NVD",
+        "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-34362"
+      },
+      "ratings": [
+        {
+          "severity": "critical"
+        }
+      ],
+      "affects": [
+        {
+          "ref": "pkg:pypi/moveit-transfer@2023.0.0"
+        }
+      ],
+      "properties": [
+        {
+          "name": "fixVersion",
+          "value": "2023.0.2"
+        }
+      ]
+    },
+    {
+      "id": "GHSA-7g45-4rm6-3mm3",
+      "source": {
+        "name": "GitHub Advisory Database",
+        "url": "https://github.com/advisories/GHSA-7g45-4rm6-3mm3"
+      },
+      "ratings": [
+        {
+          "severity": "high"
+        }
+      ],
+      "affects": [
+        {
+          "ref": "pkg:generic/demo-lib@1.0.0"
+        }
+      ],
+      "properties": [
+        {
+          "name": "fixVersion",
+          "value": "1.0.1"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,44 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://example.com/vex/demo-openvex",
+  "author": "Example Security",
+  "timestamp": "2026-04-20T17:00:00Z",
+  "version": 1,
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "CVE-2024-3094"
+      },
+      "products": [
+        {
+          "@id": "pkg:apk/alpine/xz@5.6.0-r0?arch=x86_64"
+        }
+      ],
+      "status": "affected",
+      "action_statement": "Upgrade to 5.6.1-r2 immediately."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2023-34362"
+      },
+      "products": [
+        {
+          "@id": "pkg:pypi/moveit-transfer@2023.0.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2024-4577"
+      },
+      "products": [
+        {
+          "@id": "pkg:generic/php-cgi@8.1.28"
+        }
+      ],
+      "status": "under_investigation"
+    }
+  ]
+}

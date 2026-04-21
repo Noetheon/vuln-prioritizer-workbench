@@ -1,0 +1,207 @@
+name: vuln-prioritizer
+description: Run vuln-prioritizer analyze or render a static HTML report from analysis JSON.
+branding:
+  icon: shield
+  color: blue
+
+inputs:
+  mode:
+    description: analyze or report-html
+    required: false
+    default: analyze
+  input:
+    description: Input file passed to the CLI
+    required: true
+  input-format:
+    description: analyze mode only; auto, cve-list, trivy-json, grype-json, cyclonedx-json, spdx-json, dependency-check-json, github-alerts-json, nessus-xml, openvas-xml
+    required: false
+    default: auto
+  output-format:
+    description: analyze mode only; markdown, json, or sarif
+    required: false
+    default: markdown
+  output-path:
+    description: Output file path created by the CLI
+    required: true
+  html-output-path:
+    description: Optional analyze mode sidecar path for a direct HTML report
+    required: false
+    default: ""
+  summary-output-path:
+    description: Optional analyze mode sidecar path for a Markdown summary report
+    required: false
+    default: ""
+  github-step-summary:
+    description: Set to true to append the Markdown summary output to the GitHub step summary
+    required: false
+    default: "false"
+  config-file:
+    description: Optional runtime config file passed to the CLI
+    required: false
+    default: ""
+  no-config:
+    description: Set to true to disable runtime config discovery
+    required: false
+    default: "false"
+  asset-context:
+    description: Optional asset context CSV for analyze mode
+    required: false
+    default: ""
+  target-kind:
+    description: Optional target kind for analyze mode; generic, image, repository, filesystem, or host
+    required: false
+    default: generic
+  target-ref:
+    description: Optional target reference for analyze mode
+    required: false
+    default: ""
+  vex-files:
+    description: Optional newline-delimited list of VEX files for analyze mode
+    required: false
+    default: ""
+  fail-on:
+    description: Optional fail-on threshold for analyze mode; low, medium, high, or critical
+    required: false
+    default: ""
+  policy-profile:
+    description: Optional context policy profile name for analyze mode
+    required: false
+    default: default
+  policy-file:
+    description: Optional YAML policy file for analyze mode
+    required: false
+    default: ""
+  show-suppressed:
+    description: analyze mode only; set to true to keep VEX-suppressed findings visible
+    required: false
+    default: "false"
+  attack-source:
+    description: Optional ATT&CK source for analyze mode; none, local-csv, or ctid-json
+    required: false
+    default: none
+  attack-mapping-file:
+    description: Optional ATT&CK mapping file for analyze mode
+    required: false
+    default: ""
+  attack-technique-metadata-file:
+    description: Optional ATT&CK technique metadata file for analyze mode
+    required: false
+    default: ""
+  python-version:
+    description: Python version used to install and run the CLI
+    required: false
+    default: "3.11"
+
+outputs:
+  report-path:
+    description: Output file path written by the action
+    value: ${{ steps.run-cli.outputs.report-path }}
+  html-report-path:
+    description: HTML sidecar path written by analyze mode when html-output-path is set
+    value: ${{ steps.run-cli.outputs.html-report-path }}
+  summary-path:
+    description: Markdown summary sidecar path written by analyze mode when summary-output-path is set
+    value: ${{ steps.run-cli.outputs.summary-path }}
+
+runs:
+  using: composite
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v6
+      with:
+        python-version: ${{ inputs.python-version }}
+
+    - name: Install vuln-prioritizer from action checkout
+      shell: bash
+      run: |
+        python -m pip install --upgrade pip
+        python -m pip install "${{ github.action_path }}"
+
+    - name: Run vuln-prioritizer
+      id: run-cli
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        mode="${{ inputs.mode }}"
+        html_report_path=""
+        summary_path=""
+        cmd=(vuln-prioritizer)
+
+        if [[ -n "${{ inputs.config-file }}" ]]; then
+          cmd+=(--config "${{ inputs.config-file }}")
+        fi
+        if [[ "${{ inputs.no-config }}" == "true" ]]; then
+          cmd+=(--no-config)
+        fi
+
+        if [[ "$mode" == "analyze" ]]; then
+          cmd+=(
+            analyze
+            --input "${{ inputs.input }}"
+            --input-format "${{ inputs.input-format }}"
+            --format "${{ inputs.output-format }}"
+            --output "${{ inputs.output-path }}"
+            --policy-profile "${{ inputs.policy-profile }}"
+            --attack-source "${{ inputs.attack-source }}"
+            --target-kind "${{ inputs.target-kind }}"
+          )
+
+          if [[ -n "${{ inputs.asset-context }}" ]]; then
+            cmd+=(--asset-context "${{ inputs.asset-context }}")
+          fi
+          if [[ -n "${{ inputs.html-output-path }}" ]]; then
+            cmd+=(--html-output "${{ inputs.html-output-path }}")
+            html_report_path="${{ inputs.html-output-path }}"
+          fi
+          if [[ -n "${{ inputs.summary-output-path }}" ]]; then
+            cmd+=(--summary-output "${{ inputs.summary-output-path }}")
+            summary_path="${{ inputs.summary-output-path }}"
+          fi
+          if [[ -n "${{ inputs.target-ref }}" ]]; then
+            cmd+=(--target-ref "${{ inputs.target-ref }}")
+          fi
+          if [[ -n "${{ inputs.policy-file }}" ]]; then
+            cmd+=(--policy-file "${{ inputs.policy-file }}")
+          fi
+          if [[ -n "${{ inputs.fail-on }}" ]]; then
+            cmd+=(--fail-on "${{ inputs.fail-on }}")
+          fi
+          if [[ "${{ inputs.show-suppressed }}" == "true" ]]; then
+            cmd+=(--show-suppressed)
+          fi
+          if [[ -n "${{ inputs.attack-mapping-file }}" ]]; then
+            cmd+=(--attack-mapping-file "${{ inputs.attack-mapping-file }}")
+          fi
+          if [[ -n "${{ inputs.attack-technique-metadata-file }}" ]]; then
+            cmd+=(--attack-technique-metadata-file "${{ inputs.attack-technique-metadata-file }}")
+          fi
+          if [[ -n "${{ inputs.vex-files }}" ]]; then
+            while IFS= read -r vex_file; do
+              if [[ -n "$vex_file" ]]; then
+                cmd+=(--vex-file "$vex_file")
+              fi
+            done <<< "${{ inputs.vex-files }}"
+          fi
+        elif [[ "$mode" == "report-html" ]]; then
+          cmd+=(
+            report html
+            --input "${{ inputs.input }}"
+            --output "${{ inputs.output-path }}"
+          )
+          html_report_path="${{ inputs.output-path }}"
+        else
+          echo "Unsupported mode: $mode" >&2
+          exit 2
+        fi
+
+        printf 'Running command:'
+        printf ' %q' "${cmd[@]}"
+        printf '\n'
+        "${cmd[@]}"
+        echo "report-path=${{ inputs.output-path }}" >> "$GITHUB_OUTPUT"
+        echo "html-report-path=$html_report_path" >> "$GITHUB_OUTPUT"
+        echo "summary-path=$summary_path" >> "$GITHUB_OUTPUT"
+        if [[ "${{ inputs.github-step-summary }}" == "true" && -n "$summary_path" && -f "$summary_path" ]]; then
+          cat "$summary_path" >> "$GITHUB_STEP_SUMMARY"
+        fi

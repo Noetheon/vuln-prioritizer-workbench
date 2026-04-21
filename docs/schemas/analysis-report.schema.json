@@ -1,0 +1,517 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://noetheon.github.io/vuln-prioritizer/schemas/analysis-report.schema.json",
+  "title": "vuln-prioritizer analysis report",
+  "description": "JSON contract for `vuln-prioritizer analyze --format json`.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["metadata", "attack_summary", "findings"],
+  "properties": {
+    "metadata": {
+      "$ref": "#/$defs/analysisMetadata"
+    },
+    "attack_summary": {
+      "$ref": "#/$defs/attackSummary"
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/prioritizedFinding"
+      }
+    }
+  },
+  "$defs": {
+    "nullableString": {
+      "type": ["string", "null"]
+    },
+    "nullableNumber": {
+      "type": ["number", "null"]
+    },
+    "stringArray": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "integerMap": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "integer"
+      }
+    },
+    "priorityPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "critical_epss_threshold": {
+          "type": "number"
+        },
+        "critical_cvss_threshold": {
+          "type": "number"
+        },
+        "high_epss_threshold": {
+          "type": "number"
+        },
+        "high_cvss_threshold": {
+          "type": "number"
+        },
+        "medium_epss_threshold": {
+          "type": "number"
+        },
+        "medium_cvss_threshold": {
+          "type": "number"
+        }
+      }
+    },
+    "attackSummary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mapped_cves",
+        "unmapped_cves",
+        "mapping_type_distribution",
+        "technique_distribution",
+        "tactic_distribution"
+      ],
+      "properties": {
+        "mapped_cves": {
+          "type": "integer"
+        },
+        "unmapped_cves": {
+          "type": "integer"
+        },
+        "mapping_type_distribution": {
+          "$ref": "#/$defs/integerMap"
+        },
+        "technique_distribution": {
+          "$ref": "#/$defs/integerMap"
+        },
+        "tactic_distribution": {
+          "$ref": "#/$defs/integerMap"
+        }
+      }
+    },
+    "analysisMetadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "input_path", "output_format", "generated_at"],
+      "properties": {
+        "schema_version": {
+          "const": "1.0.0"
+        },
+        "input_path": {
+          "type": "string"
+        },
+        "output_path": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "config_file": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "output_format": {
+          "const": "json"
+        },
+        "generated_at": {
+          "type": "string"
+        },
+        "input_format": {
+          "type": "string"
+        },
+        "attack_enabled": {
+          "type": "boolean"
+        },
+        "attack_source": {
+          "type": "string"
+        },
+        "attack_mapping_file": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "attack_technique_metadata_file": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "attack_source_version": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "attack_version": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "attack_domain": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "mapping_framework": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "mapping_framework_version": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "warnings": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "total_input": {
+          "type": "integer"
+        },
+        "valid_input": {
+          "type": "integer"
+        },
+        "occurrences_count": {
+          "type": "integer"
+        },
+        "findings_count": {
+          "type": "integer"
+        },
+        "filtered_out_count": {
+          "type": "integer"
+        },
+        "nvd_hits": {
+          "type": "integer"
+        },
+        "epss_hits": {
+          "type": "integer"
+        },
+        "kev_hits": {
+          "type": "integer"
+        },
+        "attack_hits": {
+          "type": "integer"
+        },
+        "suppressed_by_vex": {
+          "type": "integer"
+        },
+        "under_investigation_count": {
+          "type": "integer"
+        },
+        "waived_count": {
+          "type": "integer"
+        },
+        "active_filters": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "policy_overrides": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "priority_policy": {
+          "$ref": "#/$defs/priorityPolicy"
+        },
+        "policy_profile": {
+          "type": "string"
+        },
+        "policy_file": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "waiver_file": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "counts_by_priority": {
+          "$ref": "#/$defs/integerMap"
+        },
+        "source_stats": {
+          "$ref": "#/$defs/integerMap"
+        },
+        "data_sources": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "cache_enabled": {
+          "type": "boolean"
+        },
+        "cache_dir": {
+          "$ref": "#/$defs/nullableString"
+        }
+      }
+    },
+    "attackMapping": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["capability_id", "attack_object_id"],
+      "properties": {
+        "capability_id": {
+          "type": "string"
+        },
+        "attack_object_id": {
+          "type": "string"
+        },
+        "attack_object_name": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "mapping_type": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "capability_group": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "capability_description": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "comments": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "references": {
+          "$ref": "#/$defs/stringArray"
+        }
+      }
+    },
+    "attackTechnique": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["attack_object_id", "name"],
+      "properties": {
+        "attack_object_id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "tactics": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "url": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "revoked": {
+          "type": "boolean"
+        },
+        "deprecated": {
+          "type": "boolean"
+        }
+      }
+    },
+    "inputOccurrence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["cve_id"],
+      "properties": {
+        "cve_id": {
+          "type": "string"
+        },
+        "source_format": {
+          "type": "string"
+        },
+        "component_name": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "component_version": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "purl": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "package_type": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "file_path": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "dependency_path": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "fix_versions": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "source_record_id": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "raw_severity": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "target_kind": {
+          "type": "string"
+        },
+        "target_ref": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "asset_id": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "asset_criticality": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "asset_exposure": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "asset_environment": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "asset_owner": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "asset_business_service": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "vex_status": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "vex_justification": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "vex_action_statement": {
+          "$ref": "#/$defs/nullableString"
+        }
+      }
+    },
+    "findingProvenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "occurrence_count": {
+          "type": "integer"
+        },
+        "active_occurrence_count": {
+          "type": "integer"
+        },
+        "suppressed_occurrence_count": {
+          "type": "integer"
+        },
+        "source_formats": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "components": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "affected_paths": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "fix_versions": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "targets": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "asset_ids": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "highest_asset_criticality": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "highest_asset_exposure": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "asset_count": {
+          "type": "integer"
+        },
+        "vex_statuses": {
+          "$ref": "#/$defs/integerMap"
+        },
+        "occurrences": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/inputOccurrence"
+          }
+        }
+      }
+    },
+    "prioritizedFinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "cve_id",
+        "priority_label",
+        "priority_rank",
+        "rationale",
+        "recommended_action"
+      ],
+      "properties": {
+        "cve_id": {
+          "type": "string"
+        },
+        "description": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "cvss_base_score": {
+          "$ref": "#/$defs/nullableNumber"
+        },
+        "cvss_severity": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "cvss_version": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "epss": {
+          "$ref": "#/$defs/nullableNumber"
+        },
+        "epss_percentile": {
+          "$ref": "#/$defs/nullableNumber"
+        },
+        "in_kev": {
+          "type": "boolean"
+        },
+        "attack_mapped": {
+          "type": "boolean"
+        },
+        "attack_relevance": {
+          "type": "string"
+        },
+        "attack_rationale": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "attack_techniques": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "attack_tactics": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "attack_note": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "attack_mappings": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/attackMapping"
+          }
+        },
+        "attack_technique_details": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/attackTechnique"
+          }
+        },
+        "provenance": {
+          "$ref": "#/$defs/findingProvenance"
+        },
+        "context_summary": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "context_recommendation": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "highest_asset_criticality": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "asset_count": {
+          "type": "integer"
+        },
+        "suppressed_by_vex": {
+          "type": "boolean"
+        },
+        "under_investigation": {
+          "type": "boolean"
+        },
+        "waived": {
+          "type": "boolean"
+        },
+        "waiver_reason": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "waiver_owner": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "waiver_expires_on": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "waiver_scope": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "priority_label": {
+          "enum": ["Critical", "High", "Medium", "Low"]
+        },
+        "priority_rank": {
+          "type": "integer"
+        },
+        "rationale": {
+          "type": "string"
+        },
+        "recommended_action": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

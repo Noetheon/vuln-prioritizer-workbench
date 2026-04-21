@@ -1,0 +1,40 @@
+name: Example Consumer Workflow - HTML Report
+
+on:
+  workflow_dispatch:
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Generate analysis JSON
+        id: analyze
+        uses: Noetheon/vuln-prioritizer-cli@v1.1.0
+        with:
+          mode: analyze
+          input: trivy-results.json
+          input-format: trivy-json
+          output-format: json
+          output-path: analysis.json
+          asset-context: assets.csv
+          vex-files: |
+            openvex.json
+          policy-profile: enterprise
+
+      - name: Render static HTML report
+        id: render
+        uses: Noetheon/vuln-prioritizer-cli@v1.1.0
+        with:
+          mode: report-html
+          input: ${{ steps.analyze.outputs.report-path }}
+          output-path: report.html
+
+      - name: Upload report artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: vuln-prioritization-report
+          path: ${{ steps.render.outputs.report-path }}
