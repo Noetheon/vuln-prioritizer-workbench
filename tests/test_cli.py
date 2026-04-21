@@ -1402,18 +1402,29 @@ def test_cli_rollup_groups_analysis_results_by_service(monkeypatch, tmp_path: Pa
     assert rollup_result.exit_code == 0
     payload = json.loads(rollup_file.read_text(encoding="utf-8"))
     buckets = {item["bucket"]: item for item in payload["buckets"]}
+    assert payload["metadata"]["schema_version"] == "1.2.0"
     assert payload["metadata"]["input_kind"] == "analysis"
     assert payload["metadata"]["dimension"] == "service"
+    assert payload["metadata"]["top"] == 5
     assert set(buckets) == {"identity", "payments"}
     assert buckets["identity"]["finding_count"] == 3
+    assert buckets["identity"]["actionable_count"] == 2
     assert buckets["payments"]["finding_count"] == 1
+    assert buckets["payments"]["actionable_count"] == 0
     assert buckets["identity"]["waived_count"] == 1
     assert buckets["payments"]["waived_count"] == 1
     assert "team-identity" in buckets["identity"]["owners"]
     assert "team-payments" in buckets["payments"]["owners"]
+    assert "risk-review" in buckets["payments"]["owners"]
     assert buckets["identity"]["recommended_actions"]
     assert "CVE-2023-34362" in buckets["identity"]["top_cves"]
     assert "CVE-2023-34362" in buckets["payments"]["top_cves"]
+    assert buckets["identity"]["remediation_rank"] > 0
+    assert buckets["identity"]["rank_reason"]
+    assert buckets["identity"]["context_hints"]
+    assert buckets["identity"]["top_candidates"]
+    assert buckets["identity"]["top_candidates"][0]["rank_reason"]
+    assert buckets["payments"]["top_candidates"][0]["waived"] is True
 
 
 def _write_input_file(tmp_path: Path) -> Path:

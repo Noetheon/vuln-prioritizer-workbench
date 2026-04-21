@@ -15,6 +15,7 @@ from vuln_prioritizer.models import (
     DoctorReport,
     PrioritizedFinding,
     RollupBucket,
+    RollupCandidate,
     RollupMetadata,
     SnapshotDiffItem,
     SnapshotDiffMetadata,
@@ -146,16 +147,37 @@ def test_rollup_json_matches_published_schema() -> None:
                 RollupBucket(
                     bucket="host:app-01",
                     dimension="asset",
+                    remediation_rank=1,
                     finding_count=2,
+                    actionable_count=1,
                     critical_count=1,
                     high_count=1,
                     kev_count=1,
                     attack_mapped_count=1,
                     waived_count=1,
+                    internet_facing_count=1,
+                    production_count=1,
                     highest_priority="Critical",
+                    rank_reason="Ranked by highest actionable priority Critical and 1 KEV finding.",
+                    context_hints=["1 KEV", "1 internet-facing"],
                     owners=["team-platform"],
                     top_cves=["CVE-2021-44228", "CVE-2024-0001"],
                     recommended_actions=["Patch immediately."],
+                    top_candidates=[
+                        RollupCandidate(
+                            cve_id="CVE-2021-44228",
+                            priority_label="Critical",
+                            waived=False,
+                            in_kev=True,
+                            highest_asset_criticality="Critical",
+                            highest_asset_exposure="internet-facing",
+                            asset_ids=["host:app-01"],
+                            services=["identity"],
+                            owners=["team-platform"],
+                            recommended_action="Patch immediately.",
+                            rank_reason="Critical, KEV, internet-facing, Critical criticality",
+                        )
+                    ],
                 )
             ],
             RollupMetadata(
@@ -164,6 +186,7 @@ def test_rollup_json_matches_published_schema() -> None:
                 input_kind="analysis",
                 dimension="asset",
                 bucket_count=1,
+                top=5,
             ),
         )
     )

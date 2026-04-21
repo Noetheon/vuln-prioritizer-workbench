@@ -23,6 +23,7 @@ from vuln_prioritizer.models import (
     NvdData,
     PrioritizedFinding,
     RollupBucket,
+    RollupCandidate,
     RollupMetadata,
     SnapshotDiffItem,
     SnapshotDiffMetadata,
@@ -545,29 +546,29 @@ def render_rollup_table(
 ) -> Table:
     """Build the Rich rollup table shown in the terminal."""
     table = Table(title=f"{metadata.dimension.title()} Rollup", show_lines=False)
+    table.add_column("Rank")
     table.add_column(metadata.dimension.title(), style="bold")
-    table.add_column("Findings")
+    table.add_column("Priority")
+    table.add_column("Actionable/Total")
     table.add_column("Critical")
-    table.add_column("High")
     table.add_column("KEV")
-    table.add_column("ATT&CK")
     table.add_column("Waived")
-    table.add_column("Highest Priority")
     table.add_column("Owners", overflow="fold")
-    table.add_column("Top CVEs", overflow="fold")
-    table.add_column("Top Actions", overflow="fold")
+    table.add_column("Patch First", overflow="fold")
+    table.add_column("Why First", overflow="fold")
+    table.add_column("Next Actions", overflow="fold")
     for bucket in buckets:
         table.add_row(
+            str(bucket.remediation_rank),
             bucket.bucket,
-            str(bucket.finding_count),
-            str(bucket.critical_count),
-            str(bucket.high_count),
-            str(bucket.kev_count),
-            str(bucket.attack_mapped_count),
-            str(bucket.waived_count),
             bucket.highest_priority,
+            f"{bucket.actionable_count}/{bucket.finding_count}",
+            str(bucket.critical_count),
+            str(bucket.kev_count),
+            str(bucket.waived_count),
             ", ".join(bucket.owners) or "N.A.",
-            ", ".join(bucket.top_cves) or "N.A.",
+            _format_rollup_candidates(bucket.top_candidates),
+            _format_rollup_reason(bucket),
             ", ".join(bucket.recommended_actions) or "N.A.",
         )
     return table
@@ -586,11 +587,12 @@ def generate_rollup_markdown(
         f"- Input kind: `{metadata.input_kind}`",
         f"- Dimension: `{metadata.dimension}`",
         f"- Buckets: {metadata.bucket_count}",
+        f"- Top remediation candidates per bucket: {metadata.top}",
         "",
         "## Buckets",
         "",
-        "| Bucket | Findings | Critical | High | KEV | ATT&CK | Waived | Highest Priority | "
-        "Owners | Top CVEs | Top Actions |",
+        "| Rank | Bucket | Priority | Actionable/Total | Critical | KEV | Waived | Owners | "
+        "Patch First | Why First | Next Actions |",
         "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
     ]
     for bucket in buckets:
@@ -598,16 +600,16 @@ def generate_rollup_markdown(
             "| "
             + " | ".join(
                 [
+                    str(bucket.remediation_rank),
                     escape_pipes(bucket.bucket),
-                    str(bucket.finding_count),
-                    str(bucket.critical_count),
-                    str(bucket.high_count),
-                    str(bucket.kev_count),
-                    str(bucket.attack_mapped_count),
-                    str(bucket.waived_count),
                     bucket.highest_priority,
+                    f"{bucket.actionable_count}/{bucket.finding_count}",
+                    str(bucket.critical_count),
+                    str(bucket.kev_count),
+                    str(bucket.waived_count),
                     escape_pipes(", ".join(bucket.owners) or "N.A."),
-                    escape_pipes(", ".join(bucket.top_cves) or "N.A."),
+                    escape_pipes(_format_rollup_candidates(bucket.top_candidates)),
+                    escape_pipes(_format_rollup_reason(bucket)),
                     escape_pipes(", ".join(bucket.recommended_actions) or "N.A."),
                 ]
             )
@@ -626,6 +628,32 @@ def generate_rollup_json(
         "buckets": [bucket.model_dump() for bucket in buckets],
     }
     return json.dumps(payload, indent=2, sort_keys=True)
+
+
+def _format_rollup_candidates(candidates: list[RollupCandidate]) -> str:
+    if not candidates:
+        return "N.A."
+    return "; ".join(f"{candidate.cve_id} ({candidate.rank_reason})" for candidate in candidates)
+
+
+def _format_rollup_reason(bucket: RollupBucket) -> str:
+    if bucket.actionable_count == 0:
+        base = "All findings waived"
+    else:
+        parts = [bucket.highest_priority]
+        if bucket.kev_count:
+            parts.append("KEV")
+        if bucket.internet_facing_count:
+            parts.append("internet-facing")
+        if bucket.production_count:
+            parts.append("prod")
+        if bucket.waived_count:
+            parts.append(f"{bucket.waived_count} waived")
+        base = " + ".join(parts)
+
+    if not bucket.context_hints:
+        return base
+    return base + " (" + ", ".join(bucket.context_hints) + ")"
 
 
 def generate_doctor_json(report: DoctorReport) -> str:

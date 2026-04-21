@@ -474,27 +474,49 @@ class SnapshotDiffItem(StrictModel):
 
 
 class RollupMetadata(StrictModel):
-    schema_version: str = "1.1.0"
+    schema_version: str = "1.2.0"
     generated_at: str
     input_path: str
     input_kind: str
     dimension: str
     bucket_count: int = 0
+    top: int = 5
+
+
+class RollupCandidate(StrictModel):
+    cve_id: str
+    priority_label: str
+    waived: bool = False
+    in_kev: bool = False
+    highest_asset_criticality: str | None = None
+    highest_asset_exposure: str | None = None
+    asset_ids: list[str] = Field(default_factory=list)
+    services: list[str] = Field(default_factory=list)
+    owners: list[str] = Field(default_factory=list)
+    recommended_action: str
+    rank_reason: str
 
 
 class RollupBucket(StrictModel):
     bucket: str
     dimension: str
+    remediation_rank: int = 0
     finding_count: int = 0
+    actionable_count: int = 0
     critical_count: int = 0
     high_count: int = 0
     kev_count: int = 0
     attack_mapped_count: int = 0
     waived_count: int = 0
+    internet_facing_count: int = 0
+    production_count: int = 0
     highest_priority: str = "Low"
+    rank_reason: str | None = None
+    context_hints: list[str] = Field(default_factory=list)
     top_cves: list[str] = Field(default_factory=list)
     owners: list[str] = Field(default_factory=list)
     recommended_actions: list[str] = Field(default_factory=list)
+    top_candidates: list[RollupCandidate] = Field(default_factory=list)
 
 
 class DoctorCheck(StrictModel):

@@ -40,6 +40,10 @@ It also includes a dedicated snapshot-diff regression corpus:
 - [`data/benchmarks/snapshot_diff_regressions.json`](https://github.com/Noetheon/vuln-prioritizer-cli/blob/main/data/benchmarks/snapshot_diff_regressions.json)
 - before/after fixture pairs under `data/benchmarks/snapshots/`
 
+And a committed remediation-planning rollup fixture:
+
+- [`data/benchmarks/rollup_remediation_analysis.json`](https://github.com/Noetheon/vuln-prioritizer-cli/blob/main/data/benchmarks/rollup_remediation_analysis.json)
+
 ## What Each Benchmark Case Asserts
 
 Each benchmark case records deterministic invariants such as:
@@ -63,6 +67,14 @@ It locks down:
 - category detection for `added`, `removed`, `priority_up`, `priority_down`, `context_changed`, and `unchanged`
 - item ordering in the rendered JSON export
 - context-only change detection for all currently supported context fields
+
+For `rollup`, the remediation fixture locks down:
+
+- remediation bucket ordering
+- actionable vs total finding counts
+- the visible `Unmapped` bucket behavior
+- multi-bucket findings that legitimately contribute to more than one service
+- structured top-candidate output per bucket
 
 ## Edge-Case Policy
 
@@ -118,6 +130,13 @@ When adding snapshot-diff fixtures:
 2. Register the pair in `data/benchmarks/snapshot_diff_regressions.json`.
 3. Record the exact expected `summary` and simplified `items` output.
 4. Keep context-only cases separate from priority-movement cases when that makes failures easier to diagnose.
+
+When updating the rollup remediation fixture:
+
+1. Prefer analysis JSON with realistic saved finding fields over synthetic bucket-only payloads.
+2. Keep at least one finding that contributes to multiple assets or services.
+3. Keep at least one active `Unmapped` finding and one fully waived bucket.
+4. Re-run `make benchmark-check` so ordering and candidate summaries stay stable.
 
 ## Maintainer Notes
 

@@ -1,0 +1,127 @@
+{
+  "attack_summary": {
+    "mapped_cves": 1,
+    "mapping_type_distribution": {
+      "technique": 1
+    },
+    "tactic_distribution": {
+      "Initial Access": 1
+    },
+    "technique_distribution": {
+      "T1190": 1
+    },
+    "unmapped_cves": 3
+  },
+  "findings": [
+    {
+      "attack_mapped": true,
+      "cve_id": "CVE-2025-1000",
+      "cvss_base_score": 9.8,
+      "epss": 0.96,
+      "highest_asset_criticality": "Critical",
+      "in_kev": true,
+      "priority_label": "Critical",
+      "priority_rank": 1,
+      "provenance": {
+        "asset_ids": [
+          "identity-api",
+          "shared-worker"
+        ],
+        "highest_asset_exposure": "internet-facing",
+        "occurrences": [
+          {
+            "asset_business_service": "identity",
+            "asset_environment": "prod",
+            "asset_exposure": "internet-facing",
+            "asset_owner": "team-identity"
+          },
+          {
+            "asset_business_service": "shared",
+            "asset_environment": "prod",
+            "asset_exposure": "internal",
+            "asset_owner": "team-shared"
+          }
+        ]
+      },
+      "recommended_action": "Patch immediately and restart the exposed service.",
+      "waived": false
+    },
+    {
+      "attack_mapped": false,
+      "cve_id": "CVE-2025-2000",
+      "cvss_base_score": 8.0,
+      "epss": 0.44,
+      "highest_asset_criticality": "High",
+      "in_kev": false,
+      "priority_label": "High",
+      "priority_rank": 2,
+      "provenance": {
+        "asset_ids": [
+          "shared-worker"
+        ],
+        "highest_asset_exposure": "internal",
+        "occurrences": [
+          {
+            "asset_business_service": "shared",
+            "asset_environment": "stage",
+            "asset_exposure": "internal",
+            "asset_owner": "team-shared"
+          }
+        ]
+      },
+      "recommended_action": "Patch in the next maintenance window.",
+      "waived": false
+    },
+    {
+      "attack_mapped": false,
+      "cve_id": "CVE-2025-3000",
+      "cvss_base_score": 9.1,
+      "epss": 0.81,
+      "highest_asset_criticality": "Critical",
+      "in_kev": false,
+      "priority_label": "Critical",
+      "priority_rank": 1,
+      "provenance": {
+        "asset_ids": [
+          "payments-api"
+        ],
+        "highest_asset_exposure": "internal",
+        "occurrences": [
+          {
+            "asset_business_service": "payments",
+            "asset_environment": "prod",
+            "asset_exposure": "internal",
+            "asset_owner": "team-payments"
+          }
+        ]
+      },
+      "recommended_action": "Patch during the coordinated payments restart.",
+      "waived": true,
+      "waiver_owner": "risk-review"
+    },
+    {
+      "attack_mapped": false,
+      "cve_id": "CVE-2025-4000",
+      "cvss_base_score": 5.5,
+      "epss": 0.08,
+      "highest_asset_criticality": null,
+      "in_kev": false,
+      "priority_label": "Medium",
+      "priority_rank": 3,
+      "provenance": {
+        "asset_ids": [],
+        "highest_asset_exposure": null,
+        "occurrences": []
+      },
+      "recommended_action": "Review remediation options.",
+      "waived": false
+    }
+  ],
+  "metadata": {
+    "generated_at": "2026-04-21T12:00:00Z",
+    "input_format": "openvas-xml",
+    "input_path": "data/input_fixtures/openvas_report.xml",
+    "output_format": "json",
+    "schema_version": "1.0.0"
+  }
+}

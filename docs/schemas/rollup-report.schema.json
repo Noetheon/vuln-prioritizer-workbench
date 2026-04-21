@@ -26,11 +26,13 @@
         "generated_at",
         "input_path",
         "input_kind",
-        "dimension"
+        "dimension",
+        "bucket_count",
+        "top"
       ],
       "properties": {
         "schema_version": {
-          "const": "1.1.0"
+          "const": "1.2.0"
         },
         "generated_at": {
           "type": "string"
@@ -46,13 +48,37 @@
         },
         "bucket_count": {
           "type": "integer"
+        },
+        "top": {
+          "type": "integer",
+          "minimum": 1
         }
       }
     },
     "rollupBucket": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["bucket", "dimension"],
+      "required": [
+        "bucket",
+        "dimension",
+        "remediation_rank",
+        "finding_count",
+        "actionable_count",
+        "critical_count",
+        "high_count",
+        "kev_count",
+        "attack_mapped_count",
+        "waived_count",
+        "internet_facing_count",
+        "production_count",
+        "highest_priority",
+        "rank_reason",
+        "context_hints",
+        "owners",
+        "top_cves",
+        "recommended_actions",
+        "top_candidates"
+      ],
       "properties": {
         "bucket": {
           "type": "string"
@@ -60,7 +86,14 @@
         "dimension": {
           "type": "string"
         },
+        "remediation_rank": {
+          "type": "integer",
+          "minimum": 1
+        },
         "finding_count": {
+          "type": "integer"
+        },
+        "actionable_count": {
           "type": "integer"
         },
         "critical_count": {
@@ -78,8 +111,23 @@
         "waived_count": {
           "type": "integer"
         },
+        "internet_facing_count": {
+          "type": "integer"
+        },
+        "production_count": {
+          "type": "integer"
+        },
         "highest_priority": {
           "type": "string"
+        },
+        "rank_reason": {
+          "type": ["string", "null"]
+        },
+        "context_hints": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
         },
         "owners": {
           "type": "array",
@@ -98,6 +146,73 @@
           "items": {
             "type": "string"
           }
+        },
+        "top_candidates": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/rollupCandidate"
+          }
+        }
+      }
+    },
+    "rollupCandidate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "cve_id",
+        "priority_label",
+        "waived",
+        "in_kev",
+        "highest_asset_criticality",
+        "highest_asset_exposure",
+        "asset_ids",
+        "services",
+        "owners",
+        "recommended_action",
+        "rank_reason"
+      ],
+      "properties": {
+        "cve_id": {
+          "type": "string"
+        },
+        "priority_label": {
+          "type": "string"
+        },
+        "waived": {
+          "type": "boolean"
+        },
+        "in_kev": {
+          "type": "boolean"
+        },
+        "highest_asset_criticality": {
+          "type": ["string", "null"]
+        },
+        "highest_asset_exposure": {
+          "type": ["string", "null"]
+        },
+        "asset_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "services": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "owners": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "recommended_action": {
+          "type": "string"
+        },
+        "rank_reason": {
+          "type": "string"
         }
       }
     }

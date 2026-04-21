@@ -27,7 +27,7 @@ check:
 	pytest
 
 benchmark-check:
-	$(PYTHON) -m pytest -q tests/test_benchmark_regressions.py tests/test_snapshot_diff_regressions.py
+	$(PYTHON) -m pytest -q tests/test_benchmark_regressions.py tests/test_snapshot_diff_regressions.py tests/test_rollup_regressions.py
 
 docs-check:
 	$(PYTHON) -m mkdocs build --clean

@@ -82,6 +82,7 @@ vuln-prioritizer rollup \
 Why it matters:
 
 - remediation can be discussed at the service layer, not only at the CVE layer
+- the rollup output now ranks services explicitly and surfaces per-bucket “patch these first” candidates
 - ATT&CK stays an explicit context layer instead of silently changing the base score
 
 ## Media

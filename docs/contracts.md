@@ -82,7 +82,7 @@ New v1.1 helper contracts use their own envelope versions:
 - `doctor`: top-level `schema_version = 1.1.0`
 - `snapshot create`: `metadata.schema_version = 1.1.0`
 - `snapshot diff`: `metadata.schema_version = 1.1.0`
-- `rollup`: `metadata.schema_version = 1.1.0`
+- `rollup`: `metadata.schema_version = 1.2.0`
 
 ## Semantic contract
 
@@ -144,7 +144,10 @@ Current waiver contract:
 Current rollup additions:
 
 - `waived_count` counts waived findings per bucket
-- `owners` summarizes the dominant asset owners contributing to that bucket
+- `actionable_count` separates active remediation work from total findings
+- `owners` summarizes dominant asset owners and waiver owners contributing to that bucket
+- `top_candidates` exposes structured per-bucket “patch these first” findings
+- `rank_reason` and `context_hints` explain why a bucket ranks where it does
 - `recommended_actions` summarizes the most common remediation actions in that bucket
 
 ### Context fields

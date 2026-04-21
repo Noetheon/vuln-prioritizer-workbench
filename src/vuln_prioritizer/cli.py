@@ -54,6 +54,7 @@ from vuln_prioritizer.models import (
     PrioritizedFinding,
     PriorityPolicy,
     RollupBucket,
+    RollupCandidate,
     RollupMetadata,
     SnapshotDiffItem,
     SnapshotDiffMetadata,
@@ -878,6 +879,7 @@ def rollup(
         input_kind=input_kind,
         dimension=by.value,
         bucket_count=len(buckets),
+        top=top,
     )
 
     console.print(render_rollup_table(buckets, metadata))
@@ -2577,13 +2579,17 @@ def _build_rollup_buckets(
         for bucket_name in bucket_names:
             by_bucket.setdefault(bucket_name, []).append(finding)
 
-    buckets: list[RollupBucket] = []
+    provisional_buckets: list[RollupBucket] = []
     for bucket_name, findings in by_bucket.items():
         sorted_findings = sorted(findings, key=_rollup_finding_sort_key)
-        buckets.append(
+        actionable_findings = [finding for finding in sorted_findings if not finding.get("waived")]
+        ranking_findings = actionable_findings or sorted_findings
+        top_candidates = [_build_rollup_candidate(finding) for finding in sorted_findings[:top]]
+        provisional_buckets.append(
             RollupBucket(
                 bucket=bucket_name,
                 dimension=dimension,
+                actionable_count=len(actionable_findings),
                 finding_count=len(findings),
                 critical_count=sum(
                     1 for finding in findings if finding.get("priority_label") == "Critical"
@@ -2594,15 +2600,29 @@ def _build_rollup_buckets(
                 kev_count=sum(1 for finding in findings if finding.get("in_kev")),
                 attack_mapped_count=sum(1 for finding in findings if finding.get("attack_mapped")),
                 waived_count=sum(1 for finding in findings if finding.get("waived")),
-                highest_priority=str(sorted_findings[0].get("priority_label", "Low")),
-                top_cves=[str(finding.get("cve_id")) for finding in sorted_findings[:top]],
+                internet_facing_count=sum(
+                    1 for finding in findings if _finding_is_internet_facing(finding)
+                ),
+                production_count=sum(1 for finding in findings if _finding_is_production(finding)),
+                highest_priority=str(ranking_findings[0].get("priority_label", "Low")),
+                rank_reason=_rollup_bucket_rank_reason(
+                    findings=findings,
+                    actionable_findings=actionable_findings,
+                    highest_priority=str(ranking_findings[0].get("priority_label", "Low")),
+                ),
+                context_hints=_rollup_bucket_context_hints(findings),
+                top_cves=[candidate.cve_id for candidate in top_candidates],
                 owners=_finding_top_owners(findings, top=top),
                 recommended_actions=_finding_top_actions(findings, top=top),
+                top_candidates=top_candidates,
             )
         )
 
-    buckets.sort(key=_rollup_bucket_sort_key)
-    return buckets
+    provisional_buckets.sort(key=_rollup_bucket_sort_key)
+    return [
+        bucket.model_copy(update={"remediation_rank": remediation_rank})
+        for remediation_rank, bucket in enumerate(provisional_buckets, start=1)
+    ]
 
 
 def _rollup_bucket_names(finding: dict, *, dimension: str) -> list[str]:
@@ -2616,8 +2636,12 @@ def _rollup_bucket_names(finding: dict, *, dimension: str) -> list[str]:
 def _rollup_finding_sort_key(finding: dict) -> tuple:
     priority_rank = int(finding.get("priority_rank", 99))
     return (
+        1 if finding.get("waived") else 0,
         priority_rank,
         0 if finding.get("in_kev") else 1,
+        0 if _finding_is_internet_facing(finding) else 1,
+        0 if _finding_is_production(finding) else 1,
+        _criticality_order(finding.get("highest_asset_criticality")),
         -float(finding.get("epss") or 0.0),
         -float(finding.get("cvss_base_score") or 0.0),
         str(finding.get("cve_id", "")),
@@ -2625,21 +2649,26 @@ def _rollup_finding_sort_key(finding: dict) -> tuple:
 
 
 def _rollup_bucket_sort_key(bucket: RollupBucket) -> tuple:
-    rank = {"Critical": 1, "High": 2, "Medium": 3, "Low": 4}.get(bucket.highest_priority, 99)
-    return (rank, -bucket.critical_count, -bucket.finding_count, bucket.bucket)
+    rank = {"Critical": 0, "High": 1, "Medium": 2, "Low": 3}.get(bucket.highest_priority, 99)
+    return (
+        0 if bucket.actionable_count > 0 else 1,
+        rank,
+        -bucket.kev_count,
+        -bucket.internet_facing_count,
+        -bucket.production_count,
+        -bucket.critical_count,
+        -bucket.actionable_count,
+        -bucket.finding_count,
+        bucket.bucket,
+    )
 
 
 def _finding_top_owners(findings: list[dict], *, top: int) -> list[str]:
     counts: dict[str, int] = {}
     for finding in findings:
-        owners = {
-            occurrence.get("asset_owner")
-            for occurrence in finding.get("provenance", {}).get("occurrences", [])
-            if occurrence.get("asset_owner")
-        }
+        owners = _finding_owner_hints(finding)
         for owner in owners:
-            owner_str = str(owner)
-            counts[owner_str] = counts.get(owner_str, 0) + 1
+            counts[owner] = counts.get(owner, 0) + 1
     ordered = sorted(counts.items(), key=lambda item: (-item[1], item[0]))
     return [owner for owner, _ in ordered[:top]]
 
@@ -2653,6 +2682,141 @@ def _finding_top_actions(findings: list[dict], *, top: int) -> list[str]:
         counts[action] = counts.get(action, 0) + 1
     ordered = sorted(counts.items(), key=lambda item: (-item[1], item[0]))
     return [action for action, _ in ordered[:top]]
+
+
+def _build_rollup_candidate(finding: dict) -> RollupCandidate:
+    return RollupCandidate(
+        cve_id=str(finding.get("cve_id", "N.A.")),
+        priority_label=str(finding.get("priority_label", "Low")),
+        waived=bool(finding.get("waived")),
+        in_kev=bool(finding.get("in_kev")),
+        highest_asset_criticality=_string_or_none(finding.get("highest_asset_criticality")),
+        highest_asset_exposure=_string_or_none(
+            finding.get("provenance", {}).get("highest_asset_exposure")
+        ),
+        asset_ids=[
+            str(asset_id)
+            for asset_id in finding.get("provenance", {}).get("asset_ids", [])
+            if asset_id
+        ],
+        services=_finding_services(finding),
+        owners=sorted(_finding_owner_hints(finding)),
+        recommended_action=str(finding.get("recommended_action") or "Review remediation options."),
+        rank_reason=_rollup_candidate_reason(finding),
+    )
+
+
+def _rollup_bucket_context_hints(findings: list[dict]) -> list[str]:
+    kev_count = sum(1 for finding in findings if finding.get("in_kev"))
+    internet_facing_count = sum(1 for finding in findings if _finding_is_internet_facing(finding))
+    production_count = sum(1 for finding in findings if _finding_is_production(finding))
+    under_investigation_count = sum(1 for finding in findings if finding.get("under_investigation"))
+    waiver_owners = sorted(
+        {str(finding.get("waiver_owner")) for finding in findings if finding.get("waiver_owner")}
+    )
+
+    hints: list[str] = []
+    if kev_count:
+        hints.append(f"{kev_count} KEV")
+    if internet_facing_count:
+        hints.append(f"{internet_facing_count} internet-facing")
+    if production_count:
+        hints.append(f"{production_count} prod")
+    if under_investigation_count:
+        hints.append(f"{under_investigation_count} under investigation")
+    if waiver_owners:
+        hints.append("waiver owners: " + ", ".join(waiver_owners))
+    return hints
+
+
+def _rollup_bucket_rank_reason(
+    *,
+    findings: list[dict],
+    actionable_findings: list[dict],
+    highest_priority: str,
+) -> str:
+    kev_count = sum(1 for finding in actionable_findings if finding.get("in_kev"))
+    internet_facing_count = sum(
+        1 for finding in actionable_findings if _finding_is_internet_facing(finding)
+    )
+    production_count = sum(1 for finding in actionable_findings if _finding_is_production(finding))
+
+    if not actionable_findings:
+        return (
+            "No actionable findings remain in this bucket; it is ranked after buckets with active "
+            "remediation work."
+        )
+
+    signals = [f"highest actionable priority {highest_priority}"]
+    if kev_count:
+        signals.append(f"{kev_count} KEV finding(s)")
+    if internet_facing_count:
+        signals.append(f"{internet_facing_count} internet-facing finding(s)")
+    if production_count:
+        signals.append(f"{production_count} production finding(s)")
+    if len(actionable_findings) != len(findings):
+        signals.append(f"{len(findings) - len(actionable_findings)} waived finding(s)")
+    return "Ranked by " + ", ".join(signals) + "."
+
+
+def _rollup_candidate_reason(finding: dict) -> str:
+    reasons = [str(finding.get("priority_label", "Low"))]
+    if finding.get("in_kev"):
+        reasons.append("KEV")
+    if _finding_is_internet_facing(finding):
+        reasons.append("internet-facing")
+    if _finding_is_production(finding):
+        reasons.append("prod")
+    criticality = _string_or_none(finding.get("highest_asset_criticality"))
+    if criticality:
+        reasons.append(f"{criticality} criticality")
+    if finding.get("waived"):
+        waiver_owner = _string_or_none(finding.get("waiver_owner"))
+        reasons.append(f"waived by {waiver_owner}" if waiver_owner else "waived")
+    return ", ".join(reasons)
+
+
+def _finding_owner_hints(finding: dict) -> set[str]:
+    owners = {
+        str(occurrence.get("asset_owner"))
+        for occurrence in finding.get("provenance", {}).get("occurrences", [])
+        if occurrence.get("asset_owner")
+    }
+    if finding.get("waiver_owner"):
+        owners.add(str(finding.get("waiver_owner")))
+    return owners
+
+
+def _finding_is_internet_facing(finding: dict) -> bool:
+    highest_exposure = _string_or_none(finding.get("provenance", {}).get("highest_asset_exposure"))
+    if highest_exposure and highest_exposure.lower() == "internet-facing":
+        return True
+    return any(
+        _string_or_none(occurrence.get("asset_exposure"), lowercase=True) == "internet-facing"
+        for occurrence in finding.get("provenance", {}).get("occurrences", [])
+    )
+
+
+def _finding_is_production(finding: dict) -> bool:
+    return any(
+        _string_or_none(occurrence.get("asset_environment"), lowercase=True)
+        in {"prod", "production"}
+        for occurrence in finding.get("provenance", {}).get("occurrences", [])
+    )
+
+
+def _criticality_order(value: object) -> int:
+    criticality = _string_or_none(value, lowercase=True)
+    return {"critical": 0, "high": 1, "medium": 2, "low": 3}.get(criticality or "", 4)
+
+
+def _string_or_none(value: object, *, lowercase: bool = False) -> str | None:
+    if value is None:
+        return None
+    text = str(value).strip()
+    if not text:
+        return None
+    return text.lower() if lowercase else text
 
 
 def _exit_input_validation(message: str) -> None:
