@@ -69,6 +69,8 @@
         "kev_count",
         "attack_mapped_count",
         "waived_count",
+        "waiver_review_due_count",
+        "expired_waiver_count",
         "internet_facing_count",
         "production_count",
         "highest_priority",
@@ -109,6 +111,12 @@
           "type": "integer"
         },
         "waived_count": {
+          "type": "integer"
+        },
+        "waiver_review_due_count": {
+          "type": "integer"
+        },
+        "expired_waiver_count": {
           "type": "integer"
         },
         "internet_facing_count": {
@@ -162,6 +170,7 @@
         "cve_id",
         "priority_label",
         "waived",
+        "waiver_status",
         "in_kev",
         "highest_asset_criticality",
         "highest_asset_exposure",
@@ -180,6 +189,9 @@
         },
         "waived": {
           "type": "boolean"
+        },
+        "waiver_status": {
+          "type": ["string", "null"]
         },
         "in_kev": {
           "type": "boolean"

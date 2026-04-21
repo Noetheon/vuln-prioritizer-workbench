@@ -50,6 +50,8 @@ class AnalyzeDefaults(StrictModel):
     show_suppressed: bool | None = None
     hide_waived: bool | None = None
     fail_on: str | None = None
+    fail_on_expired_waivers: bool | None = None
+    fail_on_review_due_waivers: bool | None = None
 
 
 class CompareDefaults(StrictModel):
@@ -170,6 +172,7 @@ def build_cli_default_map(loaded: LoadedRuntimeConfig) -> dict[str, Any]:
             **_compact_defaults(loaded.document.commands.doctor.model_dump()),
             **_compact_defaults(
                 {
+                    "waiver_file": loaded.document.defaults.waiver_file,
                     "cache_dir": loaded.document.defaults.cache_dir,
                     "cache_ttl_hours": loaded.document.defaults.cache_ttl_hours,
                     "offline_kev_file": loaded.document.defaults.offline_kev_file,

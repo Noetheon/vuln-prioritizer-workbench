@@ -183,6 +183,12 @@
         "waived_count": {
           "type": "integer"
         },
+        "waiver_review_due_count": {
+          "type": "integer"
+        },
+        "expired_waiver_count": {
+          "type": "integer"
+        },
         "active_filters": {
           "$ref": "#/$defs/stringArray"
         },
@@ -314,6 +320,12 @@
           "type": "integer"
         },
         "waived_count": {
+          "type": "integer"
+        },
+        "waiver_review_due_count": {
+          "type": "integer"
+        },
+        "expired_waiver_count": {
           "type": "integer"
         },
         "active_filters": {
@@ -623,6 +635,9 @@
         "waived": {
           "type": "boolean"
         },
+        "waiver_status": {
+          "$ref": "#/$defs/nullableString"
+        },
         "waiver_reason": {
           "$ref": "#/$defs/nullableString"
         },
@@ -631,6 +646,12 @@
         },
         "waiver_expires_on": {
           "$ref": "#/$defs/nullableString"
+        },
+        "waiver_review_on": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "waiver_days_remaining": {
+          "type": ["integer", "null"]
         },
         "waiver_scope": {
           "$ref": "#/$defs/nullableString"

@@ -16,6 +16,7 @@
 - Optional ATT&CK context from local CTID/MITRE data, not heuristic CVE-to-ATT&CK guesses.
 - CI-friendly outputs including Markdown summaries, SARIF, GitHub Action support, and policy gates.
 - Explicit support for VEX, asset context, waivers, and reproducible review artifacts.
+- Waiver lifecycle visibility with active, review-due, and expired states instead of silent long-lived exceptions.
 
 ## What It Can Do
 

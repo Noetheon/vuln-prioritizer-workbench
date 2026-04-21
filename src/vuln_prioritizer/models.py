@@ -335,9 +335,12 @@ class PrioritizedFinding(StrictModel):
     suppressed_by_vex: bool = False
     under_investigation: bool = False
     waived: bool = False
+    waiver_status: str | None = None
     waiver_reason: str | None = None
     waiver_owner: str | None = None
     waiver_expires_on: str | None = None
+    waiver_review_on: str | None = None
+    waiver_days_remaining: int | None = None
     waiver_scope: str | None = None
     priority_label: str
     priority_rank: int
@@ -366,9 +369,12 @@ class ComparisonFinding(StrictModel):
     context_summary: str | None = None
     suppressed_by_vex: bool = False
     waived: bool = False
+    waiver_status: str | None = None
     waiver_reason: str | None = None
     waiver_owner: str | None = None
     waiver_expires_on: str | None = None
+    waiver_review_on: str | None = None
+    waiver_days_remaining: int | None = None
     changed: bool
     delta_rank: int
     change_reason: str
@@ -420,6 +426,8 @@ class AnalysisContext(BaseModel):
     suppressed_by_vex: int = 0
     under_investigation_count: int = 0
     waived_count: int = 0
+    waiver_review_due_count: int = 0
+    expired_waiver_count: int = 0
     attack_summary: AttackSummary = Field(default_factory=AttackSummary)
     active_filters: list[str] = Field(default_factory=list)
     policy_overrides: list[str] = Field(default_factory=list)
@@ -487,6 +495,7 @@ class RollupCandidate(StrictModel):
     cve_id: str
     priority_label: str
     waived: bool = False
+    waiver_status: str | None = None
     in_kev: bool = False
     highest_asset_criticality: str | None = None
     highest_asset_exposure: str | None = None
@@ -508,6 +517,8 @@ class RollupBucket(StrictModel):
     kev_count: int = 0
     attack_mapped_count: int = 0
     waived_count: int = 0
+    waiver_review_due_count: int = 0
+    expired_waiver_count: int = 0
     internet_facing_count: int = 0
     production_count: int = 0
     highest_priority: str = "Low"
@@ -560,6 +571,15 @@ class WaiverRule(StrictModel):
     owner: str
     reason: str
     expires_on: str
+    review_on: str | None = None
     asset_ids: list[str] = Field(default_factory=list)
     targets: list[str] = Field(default_factory=list)
     services: list[str] = Field(default_factory=list)
+
+
+class WaiverHealthSummary(StrictModel):
+    total_rules: int = 0
+    active_count: int = 0
+    review_due_count: int = 0
+    expired_count: int = 0
+    review_window_days: int = 14

@@ -53,6 +53,7 @@ def render_findings_table(findings: list[PrioritizedFinding]) -> Table:
                 finding.suppressed_by_vex,
                 in_kev=finding.in_kev,
                 waived=finding.waived,
+                waiver_status=finding.waiver_status,
             ),
             format_score(finding.cvss_base_score, digits=1),
             format_score(finding.epss, digits=3),
@@ -88,6 +89,7 @@ def render_compare_table(comparisons: list[ComparisonFinding]) -> Table:
                 row.suppressed_by_vex,
                 in_kev=row.in_kev,
                 waived=row.waived,
+                waiver_status=row.waiver_status,
             ),
             _format_attack_indicator(row.attack_mapped, row.mapped_technique_count),
             row.attack_relevance,
@@ -140,6 +142,10 @@ def render_summary_panel(
         lines.append(f"Under investigation: {context.under_investigation_count}")
     if context.waived_count:
         lines.append(f"Waived: {context.waived_count}")
+    if context.waiver_review_due_count:
+        lines.append(f"Waiver review due: {context.waiver_review_due_count}")
+    if context.expired_waiver_count:
+        lines.append(f"Expired waivers: {context.expired_waiver_count}")
 
     if mode == "compare" and changed_count is not None:
         unchanged_count = max(context.findings_count - changed_count, 0)
@@ -338,6 +344,8 @@ def generate_summary_markdown(report_payload: dict) -> str:
         f"- High: {counts_by_priority.get('High', 0)}",
         f"- KEV hits: {metadata.get('kev_hits', 0)}",
         f"- Waived: {metadata.get('waived_count', 0)}",
+        f"- Waiver review due: {metadata.get('waiver_review_due_count', 0)}",
+        f"- Expired waivers: {metadata.get('expired_waiver_count', 0)}",
         f"- ATT&CK mapped CVEs: {attack_summary.get('mapped_cves', 0)}",
         "",
         "## Top Findings",
@@ -352,6 +360,7 @@ def generate_summary_markdown(report_payload: dict) -> str:
                     str(finding.get("priority_label", "N.A.")),
                     bool(finding.get("in_kev")),
                     bool(finding.get("waived")),
+                    str(finding.get("waiver_status")) if finding.get("waiver_status") else None,
                 )
                 + ": "
                 + normalize_whitespace(str(finding.get("rationale", "N.A.")))
@@ -413,7 +422,12 @@ def generate_compare_markdown(
                     escape_pipes(row.description or "N.A."),
                     row.cvss_only_label,
                     escape_pipes(
-                        _priority_display_label(row.enriched_label, row.in_kev, row.waived)
+                        _priority_display_label(
+                            row.enriched_label,
+                            row.in_kev,
+                            row.waived,
+                            row.waiver_status,
+                        )
                     ),
                     escape_pipes(
                         _format_attack_indicator(
@@ -1063,6 +1077,7 @@ def generate_html_report(report_payload: dict) -> str:
             str(finding.get("priority_label", "N.A.")),
             bool(finding.get("in_kev")),
             bool(finding.get("waived")),
+            str(finding.get("waiver_status")) if finding.get("waiver_status") else None,
         )
         exploit_status = _format_exploit_status(bool(finding.get("in_kev")))
         rationale = escape(finding.get("rationale") or "N.A.")
@@ -1083,6 +1098,8 @@ def generate_html_report(report_payload: dict) -> str:
     findings_count = escape(str(metadata.get("findings_count", 0)))
     suppressed_count = escape(str(metadata.get("suppressed_by_vex", 0)))
     waived_count = escape(str(metadata.get("waived_count", 0)))
+    review_due_count = escape(str(metadata.get("waiver_review_due_count", 0)))
+    expired_waiver_count = escape(str(metadata.get("expired_waiver_count", 0)))
     mapped_cves = escape(str(attack_summary.get("mapped_cves", 0)))
     kev_count = escape(str(kev_hits))
     critical_total = escape(str(critical_count))
@@ -1227,6 +1244,12 @@ def generate_html_report(report_payload: dict) -> str:
         <div class="card">
           <strong>Waived</strong><span class="metric">{waived_count}</span>
         </div>
+        <div class="card">
+          <strong>Waiver Review Due</strong><span class="metric">{review_due_count}</span>
+        </div>
+        <div class="card">
+          <strong>Expired Waivers</strong><span class="metric">{expired_waiver_count}</span>
+        </div>
       </div>
     </section>
     <section class="section">
@@ -1334,6 +1357,8 @@ def _summary_lines(context: AnalysisContext) -> list[str]:
         f"- KEV hits: {context.kev_hits}/{context.valid_input}",
         f"- ATT&CK hits: {context.attack_hits}/{context.valid_input}",
         f"- Waived: {context.waived_count}",
+        f"- Waiver review due: {context.waiver_review_due_count}",
+        f"- Expired waivers: {context.expired_waiver_count}",
     ]
     for label in ("Critical", "High", "Medium", "Low"):
         lines.append(f"- {label}: {context.counts_by_priority.get(label, 0)}")
@@ -1393,24 +1418,38 @@ def _format_priority_indicator(
     *,
     in_kev: bool,
     waived: bool = False,
+    waiver_status: str | None = None,
 ) -> str:
     parts: list[str] = []
     if in_kev:
         parts.append("KEV")
     if suppressed_by_vex:
         parts.append("suppressed")
-    if waived:
+    if waiver_status == "expired":
+        parts.append("waiver expired")
+    elif waiver_status == "review_due":
+        parts.append("waiver review due")
+    elif waived:
         parts.append("waived")
     if not parts:
         return priority_label
     return f"{priority_label} ({', '.join(parts)})"
 
 
-def _priority_display_label(priority_label: str, in_kev: bool, waived: bool = False) -> str:
+def _priority_display_label(
+    priority_label: str,
+    in_kev: bool,
+    waived: bool = False,
+    waiver_status: str | None = None,
+) -> str:
     parts = [priority_label]
     if in_kev:
         parts.append("KEV")
-    if waived:
+    if waiver_status == "expired":
+        parts.append("Waiver Expired")
+    elif waiver_status == "review_due":
+        parts.append("Waiver Review Due")
+    elif waived:
         parts.append("Waived")
     return " / ".join(parts)
 
@@ -1428,12 +1467,17 @@ def _format_vex_statuses(vex_statuses: dict[str, int]) -> str:
 
 
 def _format_waiver_status(finding: PrioritizedFinding) -> str:
-    if not finding.waived:
+    if not finding.waived and not finding.waiver_status:
         return "N.A."
     details = [
+        f"status={finding.waiver_status or ('active' if finding.waived else 'N.A.')}",
         f"owner={finding.waiver_owner or 'N.A.'}",
         f"expires={finding.waiver_expires_on or 'N.A.'}",
     ]
+    if finding.waiver_review_on:
+        details.append(f"review_on={finding.waiver_review_on}")
+    if finding.waiver_days_remaining is not None:
+        details.append(f"days_remaining={finding.waiver_days_remaining}")
     if finding.waiver_scope:
         details.append(f"scope={finding.waiver_scope}")
     return ", ".join(details)
