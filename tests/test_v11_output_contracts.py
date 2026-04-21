@@ -13,6 +13,7 @@ from vuln_prioritizer.cli import app
 from vuln_prioritizer.models import (
     DoctorCheck,
     DoctorReport,
+    DoctorSummary,
     EvidenceBundleVerificationItem,
     EvidenceBundleVerificationMetadata,
     EvidenceBundleVerificationSummary,
@@ -85,7 +86,31 @@ def test_doctor_json_matches_published_schema() -> None:
         generated_at="2026-04-21T12:00:00Z",
         live=True,
         config_file="/tmp/vuln-prioritizer.yml",
-        checks=[DoctorCheck(name="runtime_config", status="ok", detail="discovered")],
+        summary=DoctorSummary(
+            overall_status="degraded",
+            ok_count=1,
+            degraded_count=1,
+            error_count=0,
+        ),
+        checks=[
+            DoctorCheck(
+                check_id="runtime.config",
+                name="runtime_config",
+                scope="local",
+                category="config",
+                status="ok",
+                detail="discovered",
+            ),
+            DoctorCheck(
+                check_id="auth.nvd_api_key",
+                name="nvd_api_key",
+                scope="live",
+                category="auth",
+                status="degraded",
+                detail="NVD_API_KEY missing.",
+                hint="Set NVD_API_KEY for higher rate limits.",
+            ),
+        ],
     )
 
     payload = json.loads(generate_doctor_json(report))
@@ -290,9 +315,12 @@ def test_action_contract_exposes_summary_and_config_wiring() -> None:
     assert "config-file" in inputs
     assert "no-config" in inputs
     assert "summary-output-path" in inputs
+    assert "summary-template" in inputs
     assert "summary-path" in outputs
     assert "github-step-summary" in inputs
     assert "--config" in run_block
     assert "--no-config" in run_block
     assert "--summary-output" in run_block
+    assert "render_compact_summary" in run_block
+    assert "$RUNNER_TEMP/vuln-prioritizer-summary.md" in run_block
     assert "$GITHUB_STEP_SUMMARY" in run_block

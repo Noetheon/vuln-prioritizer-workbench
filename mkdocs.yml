@@ -26,6 +26,7 @@ nav:
       - ATT&CK Compare: example_attack_compare.md
       - ATT&CK Coverage: example_attack_coverage.md
       - PR Comment Body: examples/example_pr_comment.md
+      - GitHub Summary Templates: examples/github_action_summary_templates.md
   - Historical Appendix:
       - Historical Evidence Archive: evidence.md
       - Current State Audit: evidence/current_state_audit.md

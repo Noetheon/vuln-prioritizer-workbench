@@ -5,10 +5,10 @@
   "description": "JSON contract for `vuln-prioritizer doctor --format json`.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema_version", "generated_at", "live", "checks"],
+  "required": ["schema_version", "generated_at", "live", "summary", "checks"],
   "properties": {
     "schema_version": {
-      "const": "1.1.0"
+      "const": "1.2.0"
     },
     "generated_at": {
       "type": "string"
@@ -18,6 +18,9 @@
     },
     "config_file": {
       "$ref": "#/$defs/nullableString"
+    },
+    "summary": {
+      "$ref": "#/$defs/doctorSummary"
     },
     "checks": {
       "type": "array",
@@ -30,19 +33,50 @@
     "nullableString": {
       "type": ["string", "null"]
     },
+    "doctorSummary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["overall_status", "ok_count", "degraded_count", "error_count"],
+      "properties": {
+        "overall_status": {
+          "enum": ["ok", "degraded", "error"]
+        },
+        "ok_count": {
+          "type": "integer"
+        },
+        "degraded_count": {
+          "type": "integer"
+        },
+        "error_count": {
+          "type": "integer"
+        }
+      }
+    },
     "doctorCheck": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["name", "status", "detail"],
+      "required": ["check_id", "name", "scope", "category", "status", "detail"],
       "properties": {
+        "check_id": {
+          "type": "string"
+        },
         "name": {
           "type": "string"
         },
-        "status": {
+        "scope": {
+          "enum": ["local", "live"]
+        },
+        "category": {
           "type": "string"
+        },
+        "status": {
+          "enum": ["ok", "degraded", "error"]
         },
         "detail": {
           "type": "string"
+        },
+        "hint": {
+          "$ref": "#/$defs/nullableString"
         }
       }
     }
