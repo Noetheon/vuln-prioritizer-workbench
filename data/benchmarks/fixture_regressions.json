@@ -1,9 +1,35 @@
 {
+  "schema_version": "1.0.0",
+  "families": [
+    {
+      "id": "scanner-json",
+      "description": "Scanner and alert exports expressed as JSON documents.",
+      "required_edge_signal": "non-cve-or-duplicate-warning"
+    },
+    {
+      "id": "sbom-json",
+      "description": "SBOM and dependency-analysis exports expressed as JSON documents.",
+      "required_edge_signal": "non-cve-advisory-warning"
+    },
+    {
+      "id": "scanner-xml",
+      "description": "Infrastructure scanner XML exports with explicit parser behavior.",
+      "required_edge_signal": "non-cve-xml-warning"
+    }
+  ],
   "cases": [
     {
       "name": "trivy_ci_triage",
+      "family": "scanner-json",
+      "scenario": "Container CI triage with asset context and OpenVEX suppression.",
       "input": "data/input_fixtures/trivy_report.json",
       "input_format": "trivy-json",
+      "fixture_origin": "anonymized-public-fixture",
+      "edge_case": true,
+      "edge_signals": [
+        "non-cve-advisory-warning",
+        "vex-suppression"
+      ],
       "extra_args": [
         "--asset-context",
         "data/input_fixtures/example_asset_context.csv",
@@ -12,6 +38,10 @@
       ],
       "expected_findings_count": 2,
       "expected_filtered_out_count": 1,
+      "expected_occurrences_count": 3,
+      "expected_source_stats": {
+        "trivy-json": 3
+      },
       "expected_counts_by_priority": {
         "Critical": 1,
         "High": 1
@@ -19,15 +49,29 @@
       "expected_cves": [
         "CVE-2024-4577",
         "CVE-2024-3094"
+      ],
+      "expected_warning_substrings": [
+        "Ignored non-CVE Trivy vulnerability identifier"
       ]
     },
     {
-      "name": "cyclonedx_dependency_triage",
-      "input": "data/input_fixtures/cyclonedx_bom.json",
-      "input_format": "cyclonedx-json",
+      "name": "grype_container_triage",
+      "family": "scanner-json",
+      "scenario": "Container package scan with a mixed CVE/GHSA result set.",
+      "input": "data/input_fixtures/grype_report.json",
+      "input_format": "grype-json",
+      "fixture_origin": "anonymized-public-fixture",
+      "edge_case": true,
+      "edge_signals": [
+        "non-cve-advisory-warning"
+      ],
       "extra_args": [],
       "expected_findings_count": 2,
       "expected_filtered_out_count": 0,
+      "expected_occurrences_count": 2,
+      "expected_source_stats": {
+        "grype-json": 2
+      },
       "expected_counts_by_priority": {
         "Critical": 1,
         "High": 1
@@ -35,6 +79,190 @@
       "expected_cves": [
         "CVE-2023-34362",
         "CVE-2024-3094"
+      ],
+      "expected_warning_substrings": [
+        "Ignored non-CVE Grype vulnerability identifier"
+      ]
+    },
+    {
+      "name": "cyclonedx_dependency_triage",
+      "family": "sbom-json",
+      "scenario": "CycloneDX dependency triage with mixed advisory identifiers.",
+      "input": "data/input_fixtures/cyclonedx_bom.json",
+      "input_format": "cyclonedx-json",
+      "fixture_origin": "anonymized-public-fixture",
+      "edge_case": true,
+      "edge_signals": [
+        "non-cve-advisory-warning"
+      ],
+      "extra_args": [],
+      "expected_findings_count": 2,
+      "expected_filtered_out_count": 0,
+      "expected_occurrences_count": 3,
+      "expected_source_stats": {
+        "cyclonedx-json": 3
+      },
+      "expected_counts_by_priority": {
+        "Critical": 1,
+        "High": 1
+      },
+      "expected_cves": [
+        "CVE-2023-34362",
+        "CVE-2024-3094"
+      ],
+      "expected_warning_substrings": [
+        "Ignored non-CVE CycloneDX vulnerability identifier"
+      ]
+    },
+    {
+      "name": "spdx_dependency_triage",
+      "family": "sbom-json",
+      "scenario": "SPDX dependency triage with mixed CVE and GHSA identifiers.",
+      "input": "data/input_fixtures/spdx_bom.json",
+      "input_format": "spdx-json",
+      "fixture_origin": "anonymized-public-fixture",
+      "edge_case": true,
+      "edge_signals": [
+        "non-cve-advisory-warning"
+      ],
+      "extra_args": [],
+      "expected_findings_count": 2,
+      "expected_filtered_out_count": 0,
+      "expected_occurrences_count": 2,
+      "expected_source_stats": {
+        "spdx-json": 2
+      },
+      "expected_counts_by_priority": {
+        "Critical": 1,
+        "High": 1
+      },
+      "expected_cves": [
+        "CVE-2024-4577",
+        "CVE-2024-3094"
+      ],
+      "expected_warning_substrings": [
+        "Ignored non-CVE SPDX vulnerability identifier"
+      ]
+    },
+    {
+      "name": "dependency_check_webapp_triage",
+      "family": "sbom-json",
+      "scenario": "Dependency-Check web application triage with mixed advisory identifiers.",
+      "input": "data/input_fixtures/dependency_check_report.json",
+      "input_format": "dependency-check-json",
+      "fixture_origin": "anonymized-public-fixture",
+      "edge_case": true,
+      "edge_signals": [
+        "non-cve-advisory-warning"
+      ],
+      "extra_args": [],
+      "expected_findings_count": 2,
+      "expected_filtered_out_count": 0,
+      "expected_occurrences_count": 2,
+      "expected_source_stats": {
+        "dependency-check-json": 2
+      },
+      "expected_counts_by_priority": {
+        "Critical": 1,
+        "High": 1
+      },
+      "expected_cves": [
+        "CVE-2023-34362",
+        "CVE-2024-3094"
+      ],
+      "expected_warning_substrings": [
+        "Ignored non-CVE Dependency-Check vulnerability identifier"
+      ]
+    },
+    {
+      "name": "github_alerts_repo_triage",
+      "family": "scanner-json",
+      "scenario": "Repository alert export with a duplicate occurrence and a non-CVE advisory.",
+      "input": "data/input_fixtures/github_alerts_export.json",
+      "input_format": "github-alerts-json",
+      "fixture_origin": "anonymized-public-fixture",
+      "edge_case": true,
+      "edge_signals": [
+        "non-cve-advisory-warning",
+        "duplicate-occurrence"
+      ],
+      "extra_args": [],
+      "expected_findings_count": 1,
+      "expected_filtered_out_count": 0,
+      "expected_occurrences_count": 2,
+      "expected_source_stats": {
+        "github-alerts-json": 2
+      },
+      "expected_counts_by_priority": {
+        "Critical": 1
+      },
+      "expected_cves": [
+        "CVE-2023-34362"
+      ],
+      "expected_warning_substrings": [
+        "Ignored GitHub alert without a resolvable CVE identifier"
+      ]
+    },
+    {
+      "name": "nessus_infrastructure_triage",
+      "family": "scanner-xml",
+      "scenario": "Infrastructure scan triage from a Nessus export with explicit non-CVE filtering.",
+      "input": "data/input_fixtures/nessus_report.nessus",
+      "input_format": "nessus-xml",
+      "fixture_origin": "anonymized-public-fixture",
+      "edge_case": true,
+      "edge_signals": [
+        "non-cve-xml-warning"
+      ],
+      "extra_args": [],
+      "expected_findings_count": 3,
+      "expected_filtered_out_count": 0,
+      "expected_occurrences_count": 4,
+      "expected_source_stats": {
+        "nessus-xml": 4
+      },
+      "expected_counts_by_priority": {
+        "Critical": 2,
+        "High": 1
+      },
+      "expected_cves": [
+        "CVE-2023-34362",
+        "CVE-2021-44228",
+        "CVE-2024-3094"
+      ],
+      "expected_warning_substrings": [
+        "Ignored non-CVE Nessus identifier"
+      ]
+    },
+    {
+      "name": "openvas_infrastructure_triage",
+      "family": "scanner-xml",
+      "scenario": "Infrastructure scan triage from an OpenVAS export with explicit non-CVE filtering.",
+      "input": "data/input_fixtures/openvas_report.xml",
+      "input_format": "openvas-xml",
+      "fixture_origin": "anonymized-public-fixture",
+      "edge_case": true,
+      "edge_signals": [
+        "non-cve-xml-warning"
+      ],
+      "extra_args": [],
+      "expected_findings_count": 3,
+      "expected_filtered_out_count": 0,
+      "expected_occurrences_count": 4,
+      "expected_source_stats": {
+        "openvas-xml": 4
+      },
+      "expected_counts_by_priority": {
+        "Critical": 2,
+        "High": 1
+      },
+      "expected_cves": [
+        "CVE-2023-34362",
+        "CVE-2021-44228",
+        "CVE-2024-3094"
+      ],
+      "expected_warning_substrings": [
+        "Ignored non-CVE OpenVAS identifier"
       ]
     }
   ]

@@ -181,6 +181,7 @@ Start here:
 
 - [docs/use_cases.md](docs/use_cases.md)
 - [docs/support_matrix.md](docs/support_matrix.md)
+- [docs/benchmarking.md](docs/benchmarking.md)
 - [docs/contracts.md](docs/contracts.md)
 - [docs/methodology.md](docs/methodology.md)
 - [docs/evidence.md](docs/evidence.md)

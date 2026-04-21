@@ -9,6 +9,7 @@ nav:
   - Concept: concept.md
   - Executive Summary: executive_summary.md
   - Methodology: methodology.md
+  - Benchmarking: benchmarking.md
   - Architecture: architecture.md
   - Use Cases: use_cases.md
   - Contracts: contracts.md
