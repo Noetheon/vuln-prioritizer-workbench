@@ -21,6 +21,14 @@ The workflow already does the important trusted-publishing pieces:
 - it grants `id-token: write` on the PyPI job
 - it runs the PyPI job inside the `pypi` GitHub environment
 
+Current safety model:
+
+- tagged releases always build artifacts and publish the GitHub Release
+- public PyPI publishing is gated behind the repository variable `PYPI_PUBLISH_ENABLED=true`
+- TestPyPI publishing is available through the manual workflow [`.github/workflows/testpypi.yml`](https://github.com/Noetheon/vuln-prioritizer-cli/blob/main/.github/workflows/testpypi.yml) and is gated behind `TEST_PYPI_PUBLISH_ENABLED=true`
+
+That keeps normal tagged releases green even before PyPI Trusted Publishing is fully configured.
+
 ## Standard Tagged Release Flow
 
 Use this path for normal releases:
@@ -62,6 +70,20 @@ gh release create vX.Y.Z dist/* \
 
 This is the correct recovery path after accidental GitHub-side deletion or repository history cleanup, as long as the release tag still points to the intended tree.
 
+## TestPyPI Validation Path
+
+Before the first public PyPI publish, validate the packaging and trusted-publisher path through the manual TestPyPI workflow:
+
+1. Configure a trusted publisher for TestPyPI that matches:
+   - GitHub owner: `Noetheon`
+   - Repository: `vuln-prioritizer-cli`
+   - Workflow file: `.github/workflows/testpypi.yml`
+   - GitHub environment: `testpypi`
+2. Set the repository variable `TEST_PYPI_PUBLISH_ENABLED=true`.
+3. Run the `TestPyPI Publish` workflow manually from GitHub Actions.
+4. Verify that the distributions appear on TestPyPI.
+5. Smoke-test installation from TestPyPI before enabling real PyPI publication.
+
 ## PyPI Trusted Publishing Checklist
 
 The repository is already wired for PyPI Trusted Publishing in the workflow.
@@ -75,14 +97,16 @@ When configuring the trusted publisher on PyPI, match these repository values:
 - Repository: `vuln-prioritizer-cli`
 - Workflow file: `.github/workflows/release.yml`
 - GitHub environment: `pypi`
+- Repository variable to enable the publish job: `PYPI_PUBLISH_ENABLED=true`
 
 ### Setup Steps
 
 1. Decide whether the target PyPI project will be the current distribution name `vuln-prioritizer`.
 2. On PyPI, configure a Trusted Publisher for this repository and workflow.
 3. Keep the GitHub environment name as `pypi` so the workflow and PyPI configuration stay aligned.
-4. If the project does not exist yet on PyPI, use PyPI's trusted-publisher project-creation flow or create the project first and then register the publisher.
-5. Keep the PyPI publish job on GitHub limited to `id-token: write`; do not reintroduce long-lived API tokens.
+4. Set the repository variable `PYPI_PUBLISH_ENABLED=true` only after the trusted publisher is configured correctly.
+5. If the project does not exist yet on PyPI, use PyPI's trusted-publisher project-creation flow or create the project first and then register the publisher.
+6. Keep the PyPI publish job on GitHub limited to `id-token: write`; do not reintroduce long-lived API tokens.
 
 ## Post-Release Smoke Checks
 
@@ -106,12 +130,20 @@ vuln-prioritizer --help
 4. Confirm the README install instructions still match reality.
 5. Confirm the release notes, tag, and GitHub Release object all use the same version string.
 
+If TestPyPI is enabled, also verify the staging index first:
+
+```bash
+pipx install --index-url https://test.pypi.org/simple/ "vuln-prioritizer==X.Y.Z"
+vuln-prioritizer --help
+```
+
 ## Failure Modes To Check First
 
 If the PyPI publish job fails, check these before anything else:
 
 - the trusted publisher matches the exact repository and workflow file
 - the trusted publisher uses the same `pypi` environment as the GitHub workflow
+- the repository variable `PYPI_PUBLISH_ENABLED` is set to `true`
 - the publish job still has `id-token: write`
 - the tag and checked-in release notes refer to the same version
 - the built artifacts pass `twine check`
