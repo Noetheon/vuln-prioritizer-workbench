@@ -2,6 +2,8 @@
 
 This page focuses on three concrete operational workflows that the current `v1.1.0` surface supports well.
 
+If you want the shortest operator-facing runbooks instead of the product-story view, start with [Operator Playbooks](playbooks.md).
+
 ## 1. Trivy + VEX + GitHub Summary
 
 Goal:
