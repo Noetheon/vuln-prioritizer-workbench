@@ -1,7 +1,7 @@
 # Vulnerability Prioritization Report
 
 ## Run Metadata
-- Generated at: `2026-04-21T19:22:21+00:00`
+- Generated at: `2026-04-21T21:38:55+00:00`
 - Input file: `data/input_fixtures/trivy_report.json`
 - Output format: `markdown`
 - ATT&CK context enabled: `no`
@@ -34,6 +34,8 @@
 - KEV hits: 2/3
 - ATT&CK hits: 0/3
 - Waived: 0
+- Waiver review due: 0
+- Expired waivers: 0
 - Critical: 2
 - High: 0
 - Medium: 0

@@ -1,0 +1,105 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://noetheon.github.io/vuln-prioritizer/schemas/state-waivers-report.schema.json",
+  "title": "vuln-prioritizer state waivers report",
+  "description": "JSON contract for `state waivers --format json`.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["metadata", "items"],
+  "properties": {
+    "metadata": {
+      "$ref": "#/$defs/metadata"
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/item"
+      }
+    }
+  },
+  "$defs": {
+    "nullableInteger": {
+      "type": ["integer", "null"]
+    },
+    "nullableString": {
+      "type": ["string", "null"]
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "generated_at",
+        "db_path",
+        "status_filter",
+        "latest_only",
+        "entry_count"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "1.2.0"
+        },
+        "generated_at": {
+          "type": "string"
+        },
+        "db_path": {
+          "type": "string"
+        },
+        "status_filter": {
+          "enum": ["all", "active", "review_due", "expired"]
+        },
+        "latest_only": {
+          "type": "boolean"
+        },
+        "entry_count": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "item": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "snapshot_generated_at",
+        "snapshot_path",
+        "cve_id",
+        "priority_label",
+        "waiver_status",
+        "waiver_owner",
+        "waiver_expires_on",
+        "waiver_review_on",
+        "waiver_days_remaining"
+      ],
+      "properties": {
+        "snapshot_generated_at": {
+          "type": "string"
+        },
+        "snapshot_path": {
+          "type": "string"
+        },
+        "cve_id": {
+          "type": "string"
+        },
+        "priority_label": {
+          "type": "string"
+        },
+        "waiver_status": {
+          "type": "string"
+        },
+        "waiver_owner": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "waiver_expires_on": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "waiver_review_on": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "waiver_days_remaining": {
+          "$ref": "#/$defs/nullableInteger"
+        }
+      }
+    }
+  }
+}

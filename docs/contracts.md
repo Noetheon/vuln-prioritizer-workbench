@@ -22,6 +22,11 @@ The following outputs are the current documented machine interfaces:
 - `doctor --format json`
 - `snapshot create --format json`
 - `snapshot diff --format json`
+- `state init --format json`
+- `state import-snapshot --format json`
+- `state history --format json`
+- `state waivers --format json`
+- `state top-services --format json`
 - `rollup --format json`
 - `analyze --format sarif`
 - `analyze --summary-output <path>`
@@ -37,6 +42,11 @@ Published JSON schemas in `docs/schemas/` cover:
 - `doctor-report.schema.json`
 - `snapshot-report.schema.json`
 - `snapshot-diff-report.schema.json`
+- `state-init-report.schema.json`
+- `state-import-report.schema.json`
+- `state-history-report.schema.json`
+- `state-waivers-report.schema.json`
+- `state-top-services-report.schema.json`
 - `rollup-report.schema.json`
 - `evidence-bundle-manifest.schema.json`
 - `evidence-bundle-verification-report.schema.json`
@@ -47,11 +57,7 @@ Published JSON schemas in `docs/schemas/` cover:
 
 ## JSON envelope contract
 
-All documented JSON exports share the same pattern:
-
-- `metadata`
-- `attack_summary`
-- one primary payload key
+All documented JSON exports include explicit metadata or top-level version fields. Analysis-style reports keep the richer `metadata` + `attack_summary` envelope, while helper and state commands publish smaller purpose-built contracts.
 
 Primary payload keys by command:
 
@@ -61,6 +67,11 @@ Primary payload keys by command:
 - `doctor`: `checks`
 - `snapshot create`: `findings`
 - `snapshot diff`: `items`, plus `summary`
+- `state init`: `summary`
+- `state import-snapshot`: `summary`
+- `state history`: `items`
+- `state waivers`: `items`
+- `state top-services`: `items`
 - `rollup`: `buckets`
 - `report evidence-bundle`: `manifest.json` with `files`
 - `report verify-evidence-bundle`: `items`, plus `summary`
@@ -86,6 +97,11 @@ New v1.1 helper contracts use their own envelope versions:
 - `doctor`: top-level `schema_version = 1.2.0`
 - `snapshot create`: `metadata.schema_version = 1.1.0`
 - `snapshot diff`: `metadata.schema_version = 1.1.0`
+- `state init`: `metadata.schema_version = 1.2.0`
+- `state import-snapshot`: `metadata.schema_version = 1.2.0`
+- `state history`: `metadata.schema_version = 1.2.0`
+- `state waivers`: `metadata.schema_version = 1.2.0`
+- `state top-services`: `metadata.schema_version = 1.2.0`
 - `rollup`: `metadata.schema_version = 1.2.0`
 - `report verify-evidence-bundle`: `metadata.schema_version = 1.2.0`
 
@@ -181,6 +197,11 @@ The public combinations currently intended for use are:
 - `doctor`: `table`, `json`
 - `snapshot create`: `markdown`, `json`
 - `snapshot diff`: `table`, `markdown`, `json`
+- `state init`: `table`, `json`
+- `state import-snapshot`: `table`, `json`
+- `state history`: `table`, `json`
+- `state waivers`: `table`, `json`
+- `state top-services`: `table`, `json`
 - `rollup`: `table`, `markdown`, `json`
 - `attack validate`: `table`, `markdown`, `json`
 - `attack coverage`: `table`, `markdown`, `json`
@@ -207,6 +228,8 @@ The CLI now supports a project-level runtime config file:
 - `--config PATH` overrides discovery
 - `--no-config` disables discovery
 - precedence is built-in defaults < runtime config < explicit CLI flags
+
+The optional SQLite state store is intentionally separate from runtime config discovery today. It is an explicit local backing-store choice made via `state ... --db PATH`, not an implicit backend change for `analyze`, `snapshot`, `rollup`, or `report`.
 
 ### Exit behavior
 
@@ -265,8 +288,10 @@ The following are intentionally not covered by the published JSON schemas:
 - wording of warnings and recommendation text
 - terminal-only helper commands such as `data status`, `data update`, and `data verify`
 - undocumented JSON payloads from helper commands such as `attack validate` and `attack coverage`
-- HTML, Markdown, and terminal wording for `doctor`, `snapshot diff`, and `rollup`
+- HTML, Markdown, and terminal wording for `doctor`, `snapshot diff`, `state history`, `state waivers`, `state top-services`, and `rollup`
 - exact ZIP layout details inside `report evidence-bundle` beyond the published `manifest.json` contract
 - cryptographic signing or provenance attestation for evidence bundles; current verification checks ZIP members against the embedded manifest only
+
+The SQLite file format itself is also not a published contract. The stable automation surface for the optional local state store is the documented JSON output of the `state` subcommands, not the internal table layout.
 
 Those surfaces are useful, but they should not be treated as strict automation contracts unless they are later given their own published schemas.

@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import sqlite3
 import sys
 import zipfile
 from collections.abc import MutableMapping
@@ -65,6 +66,21 @@ from vuln_prioritizer.models import (
     SnapshotDiffMetadata,
     SnapshotDiffSummary,
     SnapshotMetadata,
+    StateHistoryEntry,
+    StateHistoryMetadata,
+    StateHistoryReport,
+    StateImportMetadata,
+    StateImportReport,
+    StateImportSummary,
+    StateInitMetadata,
+    StateInitReport,
+    StateInitSummary,
+    StateTopServiceEntry,
+    StateTopServicesMetadata,
+    StateTopServicesReport,
+    StateWaiverEntry,
+    StateWaiverMetadata,
+    StateWaiverReport,
     VexStatement,
     WaiverRule,
 )
@@ -92,6 +108,11 @@ from vuln_prioritizer.reporter import (
     generate_sarif_report,
     generate_snapshot_diff_json,
     generate_snapshot_diff_markdown,
+    generate_state_history_json,
+    generate_state_import_json,
+    generate_state_init_json,
+    generate_state_top_services_json,
+    generate_state_waivers_json,
     generate_summary_markdown,
     render_compare_table,
     render_evidence_bundle_verification_table,
@@ -99,6 +120,11 @@ from vuln_prioritizer.reporter import (
     render_findings_table,
     render_rollup_table,
     render_snapshot_diff_table,
+    render_state_history_table,
+    render_state_import_panel,
+    render_state_init_panel,
+    render_state_top_services_table,
+    render_state_waivers_table,
     render_summary_panel,
     write_output,
 )
@@ -121,6 +147,7 @@ from vuln_prioritizer.services.waivers import (
     load_waiver_rules,
     summarize_waiver_rules,
 )
+from vuln_prioritizer.state_store import SQLiteStateStore
 from vuln_prioritizer.utils import iso_utc_now, normalize_cve_id
 
 app = typer.Typer(help="Prioritize known CVEs with NVD, EPSS, KEV, and ATT&CK context.")
@@ -128,10 +155,12 @@ attack_app = typer.Typer(help="Validate and summarize local ATT&CK mapping files
 data_app = typer.Typer(help="Inspect cache state and local data-source metadata.")
 report_app = typer.Typer(help="Render secondary report formats from exported analysis JSON.")
 snapshot_app = typer.Typer(help="Create and compare prioritized snapshots.")
+state_app = typer.Typer(help="Persist snapshot history in an optional local SQLite store.")
 app.add_typer(attack_app, name="attack")
 app.add_typer(data_app, name="data")
 app.add_typer(report_app, name="report")
 app.add_typer(snapshot_app, name="snapshot")
+app.add_typer(state_app, name="state")
 console = Console()
 
 
@@ -199,6 +228,21 @@ class TargetKind(str, Enum):
 class RollupBy(str, Enum):
     asset = "asset"
     service = "service"
+
+
+class StateWaiverStatusFilter(str, Enum):
+    all = "all"
+    active = "active"
+    review_due = "review_due"
+    expired = "expired"
+
+
+class StatePriorityScope(str, Enum):
+    all = "all"
+    critical = "critical"
+    high = "high"
+    medium = "medium"
+    low = "low"
 
 
 PRIORITY_LABELS = {
@@ -916,6 +960,228 @@ def rollup(
         elif format == OutputFormat.json:
             write_output(output, generate_rollup_json(buckets, metadata))
         console.print(f"[green]Wrote {format.value} output to {output}[/green]")
+
+
+@state_app.command("init")
+def state_init(
+    db: Path = typer.Option(..., "--db", dir_okay=False),
+    output: Path | None = typer.Option(None, "--output", dir_okay=False),
+    format: OutputFormat = typer.Option(OutputFormat.table, "--format"),
+) -> None:
+    """Initialize an optional local SQLite state store."""
+    _validate_output_mode(format, output)
+    _validate_command_formats(
+        command_name="state init",
+        format=format,
+        allowed_formats={OutputFormat.table, OutputFormat.json},
+    )
+
+    store = _state_store_or_exit(db, expect_existing=False)
+    try:
+        store.initialize()
+        report = StateInitReport(
+            metadata=StateInitMetadata(
+                generated_at=iso_utc_now(),
+                db_path=str(db),
+            ),
+            summary=StateInitSummary(
+                initialized=True,
+                snapshot_count=store.snapshot_count(),
+            ),
+        )
+    except (OSError, sqlite3.Error, ValueError) as exc:
+        _exit_input_validation(str(exc))
+
+    console.print(render_state_init_panel(report))
+    if output is not None:
+        write_output(output, generate_state_init_json(report))
+        console.print(f"[green]Wrote json output to {output}[/green]")
+
+
+@state_app.command("import-snapshot")
+def state_import_snapshot(
+    db: Path = typer.Option(..., "--db", dir_okay=False),
+    input: Path = typer.Option(..., "--input", exists=True, dir_okay=False, readable=True),
+    output: Path | None = typer.Option(None, "--output", dir_okay=False),
+    format: OutputFormat = typer.Option(OutputFormat.table, "--format"),
+) -> None:
+    """Import a saved snapshot JSON artifact into the local state store."""
+    _validate_output_mode(format, output)
+    _validate_command_formats(
+        command_name="state import-snapshot",
+        format=format,
+        allowed_formats={OutputFormat.table, OutputFormat.json},
+    )
+
+    payload = _load_snapshot_payload(input)
+    store = _state_store_or_exit(db, expect_existing=False)
+    try:
+        summary = store.import_snapshot(snapshot_path=input, payload=payload)
+        report = StateImportReport(
+            metadata=StateImportMetadata(
+                generated_at=iso_utc_now(),
+                db_path=str(db),
+                input_path=str(input),
+            ),
+            summary=StateImportSummary(
+                imported=bool(summary["imported"]),
+                snapshot_id=int(summary["snapshot_id"]),
+                snapshot_generated_at=str(summary["snapshot_generated_at"]),
+                finding_count=int(summary["finding_count"]),
+                snapshot_count=store.snapshot_count(),
+            ),
+        )
+    except (OSError, sqlite3.Error, ValueError) as exc:
+        _exit_input_validation(str(exc))
+
+    console.print(render_state_import_panel(report))
+    if output is not None:
+        write_output(output, generate_state_import_json(report))
+        console.print(f"[green]Wrote json output to {output}[/green]")
+
+
+@state_app.command("history")
+def state_history(
+    db: Path = typer.Option(..., "--db", exists=False, dir_okay=False),
+    cve: str = typer.Option(..., "--cve"),
+    output: Path | None = typer.Option(None, "--output", dir_okay=False),
+    format: OutputFormat = typer.Option(OutputFormat.table, "--format"),
+) -> None:
+    """Show persisted per-CVE history across imported snapshots."""
+    _validate_output_mode(format, output)
+    _validate_command_formats(
+        command_name="state history",
+        format=format,
+        allowed_formats={OutputFormat.table, OutputFormat.json},
+    )
+
+    normalized_cve = normalize_cve_id(cve)
+    if normalized_cve is None:
+        _exit_input_validation(f"{cve!r} is not a valid CVE identifier.")
+    assert normalized_cve is not None
+
+    store = _state_store_or_exit(db, expect_existing=True)
+    try:
+        items = [
+            StateHistoryEntry.model_validate(item)
+            for item in store.cve_history(cve_id=normalized_cve)
+        ]
+    except (OSError, sqlite3.Error, ValueError) as exc:
+        _exit_input_validation(str(exc))
+
+    report = StateHistoryReport(
+        metadata=StateHistoryMetadata(
+            generated_at=iso_utc_now(),
+            db_path=str(db),
+            cve_id=normalized_cve,
+            entry_count=len(items),
+        ),
+        items=items,
+    )
+
+    if not items:
+        console.print(f"[yellow]No persisted history found for {normalized_cve}.[/yellow]")
+    console.print(render_state_history_table(items, report.metadata))
+    if output is not None:
+        write_output(output, generate_state_history_json(report))
+        console.print(f"[green]Wrote json output to {output}[/green]")
+
+
+@state_app.command("waivers")
+def state_waivers(
+    db: Path = typer.Option(..., "--db", exists=False, dir_okay=False),
+    status: StateWaiverStatusFilter = typer.Option(StateWaiverStatusFilter.all, "--status"),
+    latest_only: bool = typer.Option(True, "--latest-only/--all-snapshots"),
+    output: Path | None = typer.Option(None, "--output", dir_okay=False),
+    format: OutputFormat = typer.Option(OutputFormat.table, "--format"),
+) -> None:
+    """Show waiver lifecycle entries from imported snapshot history."""
+    _validate_output_mode(format, output)
+    _validate_command_formats(
+        command_name="state waivers",
+        format=format,
+        allowed_formats={OutputFormat.table, OutputFormat.json},
+    )
+
+    store = _state_store_or_exit(db, expect_existing=True)
+    try:
+        items = [
+            StateWaiverEntry.model_validate(item)
+            for item in store.waiver_entries(
+                status_filter=status.value,
+                latest_only=latest_only,
+            )
+        ]
+    except (OSError, sqlite3.Error, ValueError) as exc:
+        _exit_input_validation(str(exc))
+
+    report = StateWaiverReport(
+        metadata=StateWaiverMetadata(
+            generated_at=iso_utc_now(),
+            db_path=str(db),
+            status_filter=status.value,
+            latest_only=latest_only,
+            entry_count=len(items),
+        ),
+        items=items,
+    )
+
+    if not items:
+        console.print("[yellow]No persisted waiver entries matched the requested filter.[/yellow]")
+    console.print(render_state_waivers_table(items, report.metadata))
+    if output is not None:
+        write_output(output, generate_state_waivers_json(report))
+        console.print(f"[green]Wrote json output to {output}[/green]")
+
+
+@state_app.command("top-services")
+def state_top_services(
+    db: Path = typer.Option(..., "--db", exists=False, dir_okay=False),
+    days: int = typer.Option(30, "--days", min=1),
+    priority: StatePriorityScope = typer.Option(StatePriorityScope.all, "--priority"),
+    limit: int = typer.Option(10, "--limit", min=1),
+    output: Path | None = typer.Option(None, "--output", dir_okay=False),
+    format: OutputFormat = typer.Option(OutputFormat.table, "--format"),
+) -> None:
+    """Show repeated recent services across imported snapshot history."""
+    _validate_output_mode(format, output)
+    _validate_command_formats(
+        command_name="state top-services",
+        format=format,
+        allowed_formats={OutputFormat.table, OutputFormat.json},
+    )
+
+    store = _state_store_or_exit(db, expect_existing=True)
+    try:
+        items = [
+            StateTopServiceEntry.model_validate(item)
+            for item in store.top_services(
+                days=days,
+                priority_filter=priority.value,
+                limit=limit,
+            )
+        ]
+    except (OSError, sqlite3.Error, ValueError) as exc:
+        _exit_input_validation(str(exc))
+
+    report = StateTopServicesReport(
+        metadata=StateTopServicesMetadata(
+            generated_at=iso_utc_now(),
+            db_path=str(db),
+            days=days,
+            priority_filter=priority.value,
+            limit=limit,
+            entry_count=len(items),
+        ),
+        items=items,
+    )
+
+    if not items:
+        console.print("[yellow]No persisted service entries matched the requested window.[/yellow]")
+    console.print(render_state_top_services_table(items, report.metadata))
+    if output is not None:
+        write_output(output, generate_state_top_services_json(report))
+        console.print(f"[green]Wrote json output to {output}[/green]")
 
 
 @attack_app.command("validate")
@@ -3119,6 +3385,14 @@ def _string_or_none(value: object, *, lowercase: bool = False) -> str | None:
 def _exit_input_validation(message: str) -> None:
     console.print(f"[red]Input validation failed:[/red] {message}")
     raise typer.Exit(code=2)
+
+
+def _state_store_or_exit(db_path: Path, *, expect_existing: bool) -> SQLiteStateStore:
+    if expect_existing and not db_path.exists():
+        _exit_input_validation(
+            f"{db_path} does not exist. Run `state init` or `state import-snapshot` first."
+        )
+    return SQLiteStateStore(db_path)
 
 
 def _load_analysis_report_payload(input_path: Path) -> dict:

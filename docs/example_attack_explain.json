@@ -302,9 +302,12 @@
     },
     "suppressed_by_vex": false,
     "waived": false,
+    "waiver_days_remaining": null,
     "waiver_expires_on": null,
     "waiver_owner": null,
-    "waiver_reason": null
+    "waiver_reason": null,
+    "waiver_review_on": null,
+    "waiver_status": null
   },
   "epss": {
     "cve_id": "CVE-2023-34362",
@@ -562,10 +565,13 @@
     "suppressed_by_vex": false,
     "under_investigation": false,
     "waived": false,
+    "waiver_days_remaining": null,
     "waiver_expires_on": null,
     "waiver_owner": null,
     "waiver_reason": null,
-    "waiver_scope": null
+    "waiver_review_on": null,
+    "waiver_scope": null,
+    "waiver_status": null
   },
   "kev": {
     "cve_id": "CVE-2023-34362",
@@ -599,9 +605,10 @@
       "Input formats: cve-list"
     ],
     "epss_hits": 1,
+    "expired_waiver_count": 0,
     "filtered_out_count": 0,
     "findings_count": 1,
-    "generated_at": "2026-04-21T19:22:23+00:00",
+    "generated_at": "2026-04-21T21:38:57+00:00",
     "input_format": "cve-list",
     "input_path": "inline:CVE-2023-34362",
     "kev_hits": 1,
@@ -632,6 +639,7 @@
     "valid_input": 1,
     "waived_count": 0,
     "waiver_file": null,
+    "waiver_review_due_count": 0,
     "warnings": []
   },
   "nvd": {

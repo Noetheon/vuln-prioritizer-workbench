@@ -1,7 +1,7 @@
 # Vulnerability Prioritization Report
 
 ## Run Metadata
-- Generated at: `2026-04-21T19:22:22+00:00`
+- Generated at: `2026-04-21T21:38:56+00:00`
 - Input file: `data/sample_cves.txt`
 - Output format: `markdown`
 - ATT&CK context enabled: `no`
@@ -34,6 +34,8 @@
 - KEV hits: 3/4
 - ATT&CK hits: 0/4
 - Waived: 0
+- Waiver review due: 0
+- Expired waivers: 0
 - Critical: 4
 - High: 0
 - Medium: 0

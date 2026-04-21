@@ -1,0 +1,106 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://noetheon.github.io/vuln-prioritizer/schemas/state-history-report.schema.json",
+  "title": "vuln-prioritizer state history report",
+  "description": "JSON contract for `state history --format json`.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["metadata", "items"],
+  "properties": {
+    "metadata": {
+      "$ref": "#/$defs/metadata"
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/item"
+      }
+    }
+  },
+  "$defs": {
+    "nullableString": {
+      "type": ["string", "null"]
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "generated_at", "db_path", "cve_id", "entry_count"],
+      "properties": {
+        "schema_version": {
+          "const": "1.2.0"
+        },
+        "generated_at": {
+          "type": "string"
+        },
+        "db_path": {
+          "type": "string"
+        },
+        "cve_id": {
+          "type": "string"
+        },
+        "entry_count": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "item": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "snapshot_generated_at",
+        "snapshot_path",
+        "input_path",
+        "priority_label",
+        "priority_rank",
+        "in_kev",
+        "waived",
+        "waiver_status",
+        "waiver_owner",
+        "services",
+        "asset_ids"
+      ],
+      "properties": {
+        "snapshot_generated_at": {
+          "type": "string"
+        },
+        "snapshot_path": {
+          "type": "string"
+        },
+        "input_path": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "priority_label": {
+          "type": "string"
+        },
+        "priority_rank": {
+          "type": "integer"
+        },
+        "in_kev": {
+          "type": "boolean"
+        },
+        "waived": {
+          "type": "boolean"
+        },
+        "waiver_status": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "waiver_owner": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "services": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "asset_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

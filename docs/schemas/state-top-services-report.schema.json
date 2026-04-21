@@ -1,0 +1,100 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://noetheon.github.io/vuln-prioritizer/schemas/state-top-services-report.schema.json",
+  "title": "vuln-prioritizer state top services report",
+  "description": "JSON contract for `state top-services --format json`.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["metadata", "items"],
+  "properties": {
+    "metadata": {
+      "$ref": "#/$defs/metadata"
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/item"
+      }
+    }
+  },
+  "$defs": {
+    "nullableString": {
+      "type": ["string", "null"]
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "generated_at",
+        "db_path",
+        "days",
+        "priority_filter",
+        "limit",
+        "entry_count"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "1.2.0"
+        },
+        "generated_at": {
+          "type": "string"
+        },
+        "db_path": {
+          "type": "string"
+        },
+        "days": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "priority_filter": {
+          "enum": ["all", "critical", "high", "medium", "low"]
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "entry_count": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "item": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "service",
+        "occurrence_count",
+        "distinct_cves",
+        "snapshot_count",
+        "kev_count",
+        "latest_seen"
+      ],
+      "properties": {
+        "service": {
+          "type": "string"
+        },
+        "occurrence_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "distinct_cves": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "snapshot_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "kev_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "latest_seen": {
+          "$ref": "#/$defs/nullableString"
+        }
+      }
+    }
+  }
+}

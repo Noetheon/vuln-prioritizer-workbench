@@ -25,6 +25,21 @@ from vuln_prioritizer.models import (
     SnapshotDiffMetadata,
     SnapshotDiffSummary,
     SnapshotMetadata,
+    StateHistoryEntry,
+    StateHistoryMetadata,
+    StateHistoryReport,
+    StateImportMetadata,
+    StateImportReport,
+    StateImportSummary,
+    StateInitMetadata,
+    StateInitReport,
+    StateInitSummary,
+    StateTopServiceEntry,
+    StateTopServicesMetadata,
+    StateTopServicesReport,
+    StateWaiverEntry,
+    StateWaiverMetadata,
+    StateWaiverReport,
 )
 from vuln_prioritizer.reporter import (
     build_snapshot_report_payload,
@@ -32,6 +47,11 @@ from vuln_prioritizer.reporter import (
     generate_evidence_bundle_verification_json,
     generate_rollup_json,
     generate_snapshot_diff_json,
+    generate_state_history_json,
+    generate_state_import_json,
+    generate_state_init_json,
+    generate_state_top_services_json,
+    generate_state_waivers_json,
 )
 
 runner = CliRunner()
@@ -301,6 +321,137 @@ def test_evidence_bundle_verification_json_matches_published_schema() -> None:
     )
 
     jsonschema.validate(payload, _load_schema("evidence-bundle-verification-report.schema.json"))
+
+
+def test_state_init_json_matches_published_schema() -> None:
+    payload = json.loads(
+        generate_state_init_json(
+            StateInitReport(
+                metadata=StateInitMetadata(
+                    generated_at="2026-04-21T12:00:00Z",
+                    db_path="/tmp/state.db",
+                ),
+                summary=StateInitSummary(initialized=True, snapshot_count=2),
+            )
+        )
+    )
+
+    jsonschema.validate(payload, _load_schema("state-init-report.schema.json"))
+
+
+def test_state_import_json_matches_published_schema() -> None:
+    payload = json.loads(
+        generate_state_import_json(
+            StateImportReport(
+                metadata=StateImportMetadata(
+                    generated_at="2026-04-21T12:00:00Z",
+                    db_path="/tmp/state.db",
+                    input_path="/tmp/snapshot.json",
+                ),
+                summary=StateImportSummary(
+                    imported=False,
+                    snapshot_id=4,
+                    snapshot_generated_at="2026-04-20T09:00:00Z",
+                    finding_count=3,
+                    snapshot_count=4,
+                ),
+            )
+        )
+    )
+
+    jsonschema.validate(payload, _load_schema("state-import-report.schema.json"))
+
+
+def test_state_history_json_matches_published_schema() -> None:
+    payload = json.loads(
+        generate_state_history_json(
+            StateHistoryReport(
+                metadata=StateHistoryMetadata(
+                    generated_at="2026-04-21T12:00:00Z",
+                    db_path="/tmp/state.db",
+                    cve_id="CVE-2024-0001",
+                    entry_count=1,
+                ),
+                items=[
+                    StateHistoryEntry(
+                        snapshot_generated_at="2026-04-20T09:00:00Z",
+                        snapshot_path="/tmp/after.json",
+                        input_path="/tmp/input.txt",
+                        priority_label="Critical",
+                        priority_rank=1,
+                        in_kev=True,
+                        waived=False,
+                        waiver_status=None,
+                        waiver_owner=None,
+                        services=["identity"],
+                        asset_ids=["asset-01"],
+                    )
+                ],
+            )
+        )
+    )
+
+    jsonschema.validate(payload, _load_schema("state-history-report.schema.json"))
+
+
+def test_state_waivers_json_matches_published_schema() -> None:
+    payload = json.loads(
+        generate_state_waivers_json(
+            StateWaiverReport(
+                metadata=StateWaiverMetadata(
+                    generated_at="2026-04-21T12:00:00Z",
+                    db_path="/tmp/state.db",
+                    status_filter="review_due",
+                    latest_only=True,
+                    entry_count=1,
+                ),
+                items=[
+                    StateWaiverEntry(
+                        snapshot_generated_at="2026-04-20T09:00:00Z",
+                        snapshot_path="/tmp/latest.json",
+                        cve_id="CVE-2024-0001",
+                        priority_label="High",
+                        waiver_status="review_due",
+                        waiver_owner="risk-review",
+                        waiver_expires_on="2026-05-01",
+                        waiver_review_on="2026-04-15",
+                        waiver_days_remaining=10,
+                    )
+                ],
+            )
+        )
+    )
+
+    jsonschema.validate(payload, _load_schema("state-waivers-report.schema.json"))
+
+
+def test_state_top_services_json_matches_published_schema() -> None:
+    payload = json.loads(
+        generate_state_top_services_json(
+            StateTopServicesReport(
+                metadata=StateTopServicesMetadata(
+                    generated_at="2026-04-21T12:00:00Z",
+                    db_path="/tmp/state.db",
+                    days=30,
+                    priority_filter="critical",
+                    limit=5,
+                    entry_count=1,
+                ),
+                items=[
+                    StateTopServiceEntry(
+                        service="identity",
+                        occurrence_count=3,
+                        distinct_cves=2,
+                        snapshot_count=2,
+                        kev_count=1,
+                        latest_seen="2026-04-20T09:00:00Z",
+                    )
+                ],
+            )
+        )
+    )
+
+    jsonschema.validate(payload, _load_schema("state-top-services-report.schema.json"))
 
 
 def test_action_contract_exposes_summary_and_config_wiring() -> None:

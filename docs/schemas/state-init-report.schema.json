@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://noetheon.github.io/vuln-prioritizer/schemas/state-init-report.schema.json",
+  "title": "vuln-prioritizer state init report",
+  "description": "JSON contract for `state init --format json`.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["metadata", "summary"],
+  "properties": {
+    "metadata": {
+      "$ref": "#/$defs/metadata"
+    },
+    "summary": {
+      "$ref": "#/$defs/summary"
+    }
+  },
+  "$defs": {
+    "metadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "generated_at", "db_path"],
+      "properties": {
+        "schema_version": {
+          "const": "1.2.0"
+        },
+        "generated_at": {
+          "type": "string"
+        },
+        "db_path": {
+          "type": "string"
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["initialized", "snapshot_count"],
+      "properties": {
+        "initialized": {
+          "type": "boolean"
+        },
+        "snapshot_count": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    }
+  }
+}
