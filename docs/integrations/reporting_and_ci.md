@@ -43,6 +43,7 @@ Analyze-mode inputs:
 - `output-format`
 - `html-output-path`
 - `summary-output-path`
+- `summary-template`
 - `config-file`
 - `no-config`
 - `github-step-summary`
@@ -62,9 +63,23 @@ Outputs:
 
 - `report-path`
 - `html-report-path` when `html-output-path` is set or when `mode: report-html`
-- `summary-path` when `summary-output-path` is set
+- `summary-path` when a summary is requested via `summary-output-path` or `github-step-summary`
 
 The action installs the package from the action checkout and writes the resolved output path to the `report-path` output.
+
+### Summary Templates
+
+The action now supports two summary rendering styles in analyze mode:
+
+- `summary-template: detailed` preserves the full CLI executive summary
+- `summary-template: compact` emits a shorter GitHub-facing summary with:
+  - the key run metadata
+  - a single compact metrics table
+  - the top three findings without full rationale paragraphs
+
+The default remains `detailed`, so existing consumers stay compatible.
+
+When `github-step-summary: true`, the action will now generate a summary automatically even if `summary-output-path` is omitted. In that case, `summary-path` still resolves to the generated Markdown file so downstream steps can reuse it for PR comments or artifacts.
 
 ## SARIF for GitHub Code Scanning
 
@@ -165,9 +180,10 @@ For GitHub Actions consumers, the composite action now accepts:
 - `config-file`
 - `no-config`
 - `summary-output-path`
+- `summary-template`
 - `github-step-summary`
 
-When `github-step-summary: true` and a summary output path is supplied, the action appends the generated Markdown summary to `$GITHUB_STEP_SUMMARY`.
+When `github-step-summary: true`, the action appends the rendered Markdown summary to `$GITHUB_STEP_SUMMARY`. Consumers can switch between `summary-template: compact` and `summary-template: detailed` without changing the existing `summary-path` contract.
 
 ## Example Workflows
 
@@ -176,6 +192,7 @@ Consumer workflow examples:
 - [`.github/examples/code-scanning-sarif.yml`](https://github.com/Noetheon/vuln-prioritizer-cli/blob/main/.github/examples/code-scanning-sarif.yml)
 - [`.github/examples/pr-comment-report.yml`](https://github.com/Noetheon/vuln-prioritizer-cli/blob/main/.github/examples/pr-comment-report.yml)
 - [`.github/examples/html-report-artifact.yml`](https://github.com/Noetheon/vuln-prioritizer-cli/blob/main/.github/examples/html-report-artifact.yml)
+- [GitHub Action summary templates](../examples/github_action_summary_templates.md)
 
 Example output artifacts:
 
@@ -184,6 +201,70 @@ Example output artifacts:
 - [docs/examples/example_report.html](../examples/example_report.html)
 
 These checked-in example artifacts are generated locally from the repository fixtures. They are not meant to imply that every consumer workflow uses identical sample data.
+
+### Ready-to-Use GitHub Patterns
+
+Compact step summary without an explicit summary artifact path:
+
+```yaml
+- name: Prioritize vulnerabilities
+  id: prioritize
+  uses: Noetheon/vuln-prioritizer-cli@v1.1.0
+  with:
+    mode: analyze
+    input: trivy-results.json
+    input-format: trivy-json
+    output-format: sarif
+    output-path: results.sarif
+    summary-template: compact
+    github-step-summary: "true"
+```
+
+Compact PR comment body using the action-generated `summary-path`:
+
+```yaml
+- name: Prioritize vulnerabilities
+  id: prioritize
+  uses: Noetheon/vuln-prioritizer-cli@v1.1.0
+  with:
+    mode: analyze
+    input: trivy-results.json
+    input-format: trivy-json
+    output-format: json
+    output-path: analysis.json
+    summary-output-path: pr-comment.md
+    summary-template: compact
+
+- name: Publish PR comment
+  uses: actions/github-script@v7
+  with:
+    script: |
+      const fs = require("fs");
+      const body = fs.readFileSync("${{ steps.prioritize.outputs.summary-path }}", "utf8");
+      await github.rest.issues.createComment({
+        owner: context.repo.owner,
+        repo: context.repo.repo,
+        issue_number: context.issue.number,
+        body,
+      });
+```
+
+Detailed HTML artifact flow with a reusable Markdown summary:
+
+```yaml
+- name: Generate analysis JSON
+  id: analyze
+  uses: Noetheon/vuln-prioritizer-cli@v1.1.0
+  with:
+    mode: analyze
+    input: trivy-results.json
+    input-format: trivy-json
+    output-format: json
+    output-path: analysis.json
+    summary-output-path: report-summary.md
+    summary-template: detailed
+    github-step-summary: "true"
+```
 
 ## Local Workflow Equivalent
 

@@ -21,6 +21,8 @@ jobs:
           input-format: trivy-json
           output-format: sarif
           output-path: results.sarif
+          summary-template: compact
+          github-step-summary: "true"
           asset-context: assets.csv
           vex-files: |
             openvex.json

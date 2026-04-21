@@ -23,20 +23,23 @@ jobs:
           mode: analyze
           input: trivy-results.json
           input-format: trivy-json
-          output-format: markdown
-          output-path: vuln-prioritization.md
+          output-format: json
+          output-path: analysis.json
+          summary-output-path: pr-comment.md
+          summary-template: compact
+          github-step-summary: "true"
           asset-context: assets.csv
           vex-files: |
             openvex.json
           policy-profile: enterprise
 
-      - name: Publish PR comment
+      - name: Publish PR comment from compact summary
         if: github.event_name == 'pull_request'
         uses: actions/github-script@v7
         with:
           script: |
             const fs = require("fs");
-            const body = fs.readFileSync("${{ steps.prioritize.outputs.report-path }}", "utf8");
+            const body = fs.readFileSync("${{ steps.prioritize.outputs.summary-path }}", "utf8");
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
