@@ -24,7 +24,7 @@ Choose this workflow when:
 - you want to compare CVSS-only intuition against the enriched result
 - teams need a saved JSON artifact for later diffing or rollup
 
-## Fast comparison run
+## Fast Comparison Run (Repo Checkout Examples)
 
 Start with `compare` if the team wants to understand what enrichment changed before introducing a new gate.
 
@@ -53,6 +53,8 @@ Use this stage to answer:
 - which findings moved because of KEV or EPSS
 - which findings stayed flat despite high raw severity
 - whether the current policy profile is acceptable before introducing a fail gate
+
+If you are running from a public install instead of this repository checkout, replace the `data/input_fixtures/...` paths above with your own CycloneDX, SPDX, or Dependency-Check export files.
 
 ## Save a reusable analysis artifact
 

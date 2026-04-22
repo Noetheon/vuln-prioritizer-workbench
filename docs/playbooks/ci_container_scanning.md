@@ -26,7 +26,7 @@ Choose this workflow when:
 
 Prefer explicit `--input-format` in CI. Do not rely on `auto` if reproducibility matters.
 
-## Minimal local fixture run
+## Minimal Local Fixture Run (Repo Checkout Example)
 
 This uses the checked-in Trivy and OpenVEX fixtures and produces the three outputs most teams need first:
 
@@ -51,6 +51,8 @@ What this gives you:
 - a short Markdown summary for CI surfaces
 - a static HTML artifact for human review
 - VEX-aware suppression with the underlying evidence still preserved in the analysis payload
+
+If you are working from a `pipx` install or another consumer repository instead of this repository checkout, replace the `data/...` paths above with your own scanner export and VEX file.
 
 ## CI gate variant
 
@@ -122,3 +124,4 @@ After a CI run, the usual next steps are:
 - This tool prioritizes known findings; it does not replace the scanner.
 - OpenVEX suppression reduces noise but does not create a second opaque score.
 - If multiple teams consume the same workflow, consider a shared `vuln-prioritizer.yml` so CI defaults stay explicit and versioned.
+- The repo-fixture example above is for reproducible local validation; the public operator contract is the same command shape with user-supplied inputs.
