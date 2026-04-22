@@ -5,7 +5,11 @@
   "description": "JSON contract for `vuln-prioritizer analyze --format json`.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["metadata", "attack_summary", "findings"],
+  "required": [
+    "metadata",
+    "attack_summary",
+    "findings"
+  ],
   "properties": {
     "metadata": {
       "$ref": "#/$defs/analysisMetadata"
@@ -22,10 +26,16 @@
   },
   "$defs": {
     "nullableString": {
-      "type": ["string", "null"]
+      "type": [
+        "string",
+        "null"
+      ]
     },
     "nullableNumber": {
-      "type": ["number", "null"]
+      "type": [
+        "number",
+        "null"
+      ]
     },
     "stringArray": {
       "type": "array",
@@ -147,7 +157,12 @@
     "analysisMetadata": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["schema_version", "input_path", "output_format", "generated_at"],
+      "required": [
+        "schema_version",
+        "input_path",
+        "output_format",
+        "generated_at"
+      ],
       "properties": {
         "schema_version": {
           "const": "1.0.0"
@@ -263,6 +278,12 @@
         "under_investigation_count": {
           "type": "integer"
         },
+        "asset_match_conflict_count": {
+          "type": "integer"
+        },
+        "vex_conflict_count": {
+          "type": "integer"
+        },
         "waived_count": {
           "type": "integer"
         },
@@ -310,7 +331,10 @@
     "attackMapping": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["capability_id", "attack_object_id"],
+      "required": [
+        "capability_id",
+        "attack_object_id"
+      ],
       "properties": {
         "capability_id": {
           "type": "string"
@@ -341,7 +365,10 @@
     "attackTechnique": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["attack_object_id", "name"],
+      "required": [
+        "attack_object_id",
+        "name"
+      ],
       "properties": {
         "attack_object_id": {
           "type": "string"
@@ -366,7 +393,9 @@
     "inputOccurrence": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["cve_id"],
+      "required": [
+        "cve_id"
+      ],
       "properties": {
         "cve_id": {
           "type": "string"
@@ -433,6 +462,45 @@
         },
         "vex_action_statement": {
           "$ref": "#/$defs/nullableString"
+        },
+        "asset_match_rule_id": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "asset_match_row": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "asset_match_mode": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "asset_match_pattern": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "asset_match_precedence": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "asset_match_candidate_count": {
+          "type": "integer"
+        },
+        "vex_match_type": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "vex_source_format": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "vex_source_record_id": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "vex_source_path": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "vex_candidate_count": {
+          "type": "integer"
         }
       }
     },
@@ -592,13 +660,21 @@
           "$ref": "#/$defs/nullableString"
         },
         "waiver_days_remaining": {
-          "type": ["integer", "null"]
+          "type": [
+            "integer",
+            "null"
+          ]
         },
         "waiver_scope": {
           "$ref": "#/$defs/nullableString"
         },
         "priority_label": {
-          "enum": ["Critical", "High", "Medium", "Low"]
+          "enum": [
+            "Critical",
+            "High",
+            "Medium",
+            "Low"
+          ]
         },
         "priority_rank": {
           "type": "integer"
@@ -606,8 +682,53 @@
         "rationale": {
           "type": "string"
         },
+        "remediation": {
+          "$ref": "#/$defs/remediationPlan"
+        },
         "recommended_action": {
           "type": "string"
+        }
+      }
+    },
+    "remediationComponent": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "current_version": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "fixed_versions": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "package_type": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "purl": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "path": {
+          "$ref": "#/$defs/nullableString"
+        }
+      }
+    },
+    "remediationPlan": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "strategy": {
+          "type": "string"
+        },
+        "ecosystem": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "components": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/remediationComponent"
+          }
         }
       }
     }

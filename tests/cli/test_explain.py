@@ -107,6 +107,11 @@ def test_cli_explain_end_to_end_with_mocked_providers(
     assert payload["comparison"]["cvss_only_label"] == "Critical"
     assert payload["attack"]["attack_note"] == "Representative demo mapping note."
     assert payload["metadata"]["attack_source"] == "local-csv"
+    assert payload["finding"]["remediation"]["strategy"] in {
+        "generic-priority-guidance",
+        "review-upgrade-options",
+        "upgrade",
+    }
 
 
 def test_cli_explain_surfaces_waiver_details(

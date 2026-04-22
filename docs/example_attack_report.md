@@ -48,6 +48,8 @@
 - KEV hits: 4/5
 - ATT&CK hits: 3/5
 - Duplicate CVEs collapsed: 0
+- Asset-context conflicts resolved: 0
+- VEX conflicts resolved: 0
 - Waived: 0
 - Waiver review due: 0
 - Expired waivers: 0

@@ -17,9 +17,9 @@ from vuln_prioritizer.inputs import (
     load_asset_context_file,
     load_vex_files,
 )
+from vuln_prioritizer.inputs.loader import AssetContextCatalog
 from vuln_prioritizer.models import (
     AnalysisContext,
-    AssetContextRecord,
     AttackData,
     AttackSummary,
     ComparisonFinding,
@@ -159,7 +159,7 @@ def build_priority_policy(
 
 def load_asset_records_or_exit(
     asset_context: Path | None,
-) -> dict[tuple[str, str], AssetContextRecord]:
+) -> AssetContextCatalog:
     try:
         return load_asset_context_file(asset_context)
     except ValueError as exc:
@@ -565,6 +565,8 @@ def prepare_analysis(request: AnalysisRequest) -> tuple[list[PrioritizedFinding]
         attack_hits=attack_summary.mapped_cves,
         suppressed_by_vex=sum(1 for item in all_findings if item.suppressed_by_vex),
         under_investigation_count=sum(1 for item in all_findings if item.under_investigation),
+        asset_match_conflict_count=parsed_input.asset_match_conflict_count,
+        vex_conflict_count=parsed_input.vex_conflict_count,
         waived_count=sum(1 for item in all_findings if item.waived),
         waiver_review_due_count=sum(
             1 for item in all_findings if item.waiver_status == "review_due"
@@ -649,7 +651,7 @@ def prepare_explain(request: ExplainRequest) -> ExplainResult:
     epss = enrichment.epss.get(request.cve_id, EpssData(cve_id=request.cve_id))
     kev = enrichment.kev.get(request.cve_id, KevData(cve_id=request.cve_id, in_kev=False))
     attack = enrichment.attack.get(request.cve_id, AttackData(cve_id=request.cve_id))
-    warnings = enrichment.warnings + waiver_warnings
+    warnings = parsed_input.warnings + enrichment.warnings + waiver_warnings
     comparison = PrioritizationService(policy=request.policy).build_comparison([finding])[0]
     attack_summary = build_attack_summary_from_findings([finding])
 
@@ -685,6 +687,8 @@ def prepare_explain(request: ExplainRequest) -> ExplainResult:
         attack_hits=attack_summary.mapped_cves,
         suppressed_by_vex=sum(1 for item in findings if item.suppressed_by_vex),
         under_investigation_count=sum(1 for item in findings if item.under_investigation),
+        asset_match_conflict_count=parsed_input.asset_match_conflict_count,
+        vex_conflict_count=parsed_input.vex_conflict_count,
         waived_count=sum(1 for item in findings if item.waived),
         attack_summary=attack_summary,
         policy_overrides=request.policy.override_descriptions(),
