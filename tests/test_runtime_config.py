@@ -90,6 +90,29 @@ def test_load_runtime_config_rejects_invalid_yaml(tmp_path: Path) -> None:
         load_runtime_config(config_file)
 
 
+def test_build_cli_default_map_wraps_scalar_input_format_for_repeatable_cli_options(
+    tmp_path: Path,
+) -> None:
+    config_file = tmp_path / CONFIG_FILENAME
+    config_file.write_text(
+        "\n".join(
+            [
+                "version: 1",
+                "commands:",
+                "  analyze:",
+                "    input_format: cve-list",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    loaded = load_runtime_config(config_file)
+    default_map = build_cli_default_map(loaded)
+
+    assert default_map["analyze"]["input_format"] == ["cve-list"]
+
+
 def test_load_runtime_config_rejects_unreadable_file(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

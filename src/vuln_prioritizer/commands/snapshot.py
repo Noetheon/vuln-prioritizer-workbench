@@ -26,6 +26,7 @@ from vuln_prioritizer.cli_support.common import (
     SnapshotCreateOutputFormat,
     SortBy,
     TargetKind,
+    build_input_specs_or_exit,
     console,
     output_format_option,
     print_warnings,
@@ -63,12 +64,12 @@ from vuln_prioritizer.utils import iso_utc_now
 
 def snapshot_create(
     ctx: typer.Context,
-    input: Path = typer.Option(..., "--input", exists=True, dir_okay=False, readable=True),
+    input: list[Path] = typer.Option(..., "--input", exists=True, dir_okay=False, readable=True),
     output: Path = typer.Option(..., "--output", dir_okay=False),
     format: SnapshotCreateOutputFormat = output_format_option(
         SnapshotCreateOutputFormat.json, SNAPSHOT_CREATE_OUTPUT_FORMATS
     ),
-    input_format: InputFormat = typer.Option(InputFormat.auto, "--input-format"),
+    input_format: list[InputFormat] | None = typer.Option(None, "--input-format"),
     no_attack: bool = typer.Option(False, "--no-attack"),
     attack_source: AttackSource = typer.Option(AttackSource.none, "--attack-source"),
     attack_mapping_file: Path | None = typer.Option(None, "--attack-mapping-file", dir_okay=False),
@@ -98,6 +99,10 @@ def snapshot_create(
     max_cves: int | None = typer.Option(None, "--max-cves", min=1),
     offline_kev_file: Path | None = typer.Option(None, "--offline-kev-file", dir_okay=False),
     offline_attack_file: Path | None = typer.Option(None, "--offline-attack-file", dir_okay=False),
+    provider_snapshot_file: Path | None = typer.Option(
+        None, "--provider-snapshot-file", dir_okay=False
+    ),
+    locked_provider_data: bool = typer.Option(False, "--locked-provider-data"),
     nvd_api_key_env: str = typer.Option(DEFAULT_NVD_API_KEY_ENV, "--nvd-api-key-env"),
     no_cache: bool = typer.Option(False, "--no-cache"),
     cache_dir: Path = typer.Option(
@@ -115,10 +120,16 @@ def snapshot_create(
 
     findings, context = prepare_analysis(
         AnalysisRequest(
-            input_path=input,
+            input_specs=build_input_specs_or_exit(
+                input_paths=input,
+                input_formats=input_format,
+                command_name="snapshot create",
+                require_inputs=True,
+            ),
             output=output,
             format=format,
-            input_format=input_format,
+            provider_snapshot_file=provider_snapshot_file,
+            locked_provider_data=locked_provider_data,
             no_attack=no_attack,
             attack_source=attack_source,
             attack_mapping_file=attack_mapping_file,

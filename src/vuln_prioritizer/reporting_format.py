@@ -67,8 +67,39 @@ def _run_metadata_lines(context: AnalysisContext) -> list[str]:
     ]
     if context.output_path:
         lines.append(f"- Output path: `{context.output_path}`")
+    if context.provider_snapshot_file:
+        lines.append(f"- Provider snapshot file: `{context.provider_snapshot_file}`")
+        snapshot_mode = "locked" if context.locked_provider_data else "fallback"
+        lines.append(f"- Provider snapshot mode: `{snapshot_mode}`")
+    if context.provider_snapshot_sources:
+        lines.append(
+            "- Provider snapshot sources: " + f"`{', '.join(context.provider_snapshot_sources)}`"
+        )
+    if context.merged_input_count > 1:
+        lines.append(f"- Inputs merged: `{context.merged_input_count}`")
+    if context.input_paths:
+        lines.append(f"- Input files: `{', '.join(context.input_paths)}`")
+    for source in context.input_sources:
+        lines.append(
+            "- Source input: "
+            + f"`{source.input_path}` "
+            + f"({source.input_format}, rows={source.total_rows}, "
+            + f"occurrences={source.occurrence_count}, unique_cves={source.unique_cves})"
+        )
+    if context.duplicate_cve_count:
+        lines.append(f"- Duplicate CVEs collapsed: `{context.duplicate_cve_count}`")
     if context.cache_dir:
         lines.append(f"- Cache directory: `{context.cache_dir}`")
+    if context.nvd_diagnostics.requested:
+        diagnostics = context.nvd_diagnostics
+        lines.append(
+            "- NVD diagnostics: "
+            + f"`requested={diagnostics.requested}, "
+            + f"cache_hits={diagnostics.cache_hits}, "
+            + f"network_fetches={diagnostics.network_fetches}, "
+            + f"failures={diagnostics.failures}, "
+            + f"content_hits={diagnostics.content_hits}`"
+        )
     if context.attack_mapping_file:
         lines.append(f"- ATT&CK mapping file: `{context.attack_mapping_file}`")
     if context.attack_technique_metadata_file:
@@ -93,12 +124,15 @@ def _summary_lines(context: AnalysisContext) -> list[str]:
     lines = [
         f"- Total input rows: {context.total_input}",
         f"- Valid unique CVEs: {context.valid_input}",
+        f"- Merged inputs: {context.merged_input_count}",
         f"- Findings shown: {context.findings_count}",
         f"- Filtered out: {context.filtered_out_count}",
+        f"- Locked provider data: {'yes' if context.locked_provider_data else 'no'}",
         f"- NVD hits: {context.nvd_hits}/{context.valid_input}",
         f"- EPSS hits: {context.epss_hits}/{context.valid_input}",
         f"- KEV hits: {context.kev_hits}/{context.valid_input}",
         f"- ATT&CK hits: {context.attack_hits}/{context.valid_input}",
+        f"- Duplicate CVEs collapsed: {context.duplicate_cve_count}",
         f"- Waived: {context.waived_count}",
         f"- Waiver review due: {context.waiver_review_due_count}",
         f"- Expired waivers: {context.expired_waiver_count}",

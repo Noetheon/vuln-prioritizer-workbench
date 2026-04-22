@@ -8,7 +8,10 @@
 - ATT&CK source: `none`
 - Cache enabled: `yes`
 - Output path: `docs/examples/example_pr_comment.md`
+- Input files: `data/input_fixtures/trivy_report.json`
+- Source input: `data/input_fixtures/trivy_report.json` (trivy-json, rows=4, occurrences=3, unique_cves=3)
 - Cache directory: `.cache/vuln-prioritizer`
+- NVD diagnostics: `requested=3, cache_hits=3, network_fetches=0, failures=0, content_hits=3`
 - Policy overrides: `None`
 
 ## Data Sources
@@ -27,12 +30,15 @@
 ## Summary
 - Total input rows: 4
 - Valid unique CVEs: 3
+- Merged inputs: 1
 - Findings shown: 2
 - Filtered out: 1
+- Locked provider data: no
 - NVD hits: 3/3
 - EPSS hits: 3/3
 - KEV hits: 2/3
 - ATT&CK hits: 0/3
+- Duplicate CVEs collapsed: 0
 - Waived: 0
 - Waiver review due: 0
 - Expired waivers: 0

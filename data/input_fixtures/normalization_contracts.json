@@ -295,24 +295,28 @@
           "cve_id": "CVE-2023-34362",
           "source_format": "github-alerts-json",
           "component_name": "moveit-transfer",
-          "component_version": "requirements.txt",
+          "component_version": null,
           "purl": null,
           "package_type": "pip",
           "file_path": "requirements.txt",
           "dependency_path": null,
-          "fix_versions": [],
+          "fix_versions": [
+            "2023.0.2"
+          ],
           "raw_severity": "critical"
         },
         {
           "cve_id": "CVE-2023-34362",
           "source_format": "github-alerts-json",
           "component_name": "moveit-transfer",
-          "component_version": "backend/requirements.txt",
+          "component_version": null,
           "purl": null,
           "package_type": "pip",
           "file_path": "backend/requirements.txt",
           "dependency_path": null,
-          "fix_versions": [],
+          "fix_versions": [
+            "2023.0.2"
+          ],
           "raw_severity": "critical"
         }
       ]

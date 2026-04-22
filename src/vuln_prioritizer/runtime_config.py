@@ -26,6 +26,8 @@ class CommonDefaults(StrictModel):
     target_ref: str | None = None
     offline_kev_file: str | None = None
     offline_attack_file: str | None = None
+    provider_snapshot_file: str | None = None
+    locked_provider_data: bool | None = None
     nvd_api_key_env: str | None = None
     cache_dir: str | None = None
     cache_ttl_hours: int | None = None
@@ -160,14 +162,21 @@ def load_runtime_config(path: Path) -> LoadedRuntimeConfig:
 def build_cli_default_map(loaded: LoadedRuntimeConfig) -> dict[str, Any]:
     """Build a Click/Typer default_map from the loaded config."""
     general = _compact_defaults(loaded.document.defaults.model_dump())
+    general = _normalize_multi_value_option_defaults(general, option_names={"input_format"})
     default_map: dict[str, Any] = {
         "analyze": {
             **general,
-            **_compact_defaults(loaded.document.commands.analyze.model_dump()),
+            **_normalize_multi_value_option_defaults(
+                _compact_defaults(loaded.document.commands.analyze.model_dump()),
+                option_names={"input_format"},
+            ),
         },
         "compare": {
             **general,
-            **_compact_defaults(loaded.document.commands.compare.model_dump()),
+            **_normalize_multi_value_option_defaults(
+                _compact_defaults(loaded.document.commands.compare.model_dump()),
+                option_names={"input_format"},
+            ),
         },
         "explain": {
             **general,
@@ -192,7 +201,10 @@ def build_cli_default_map(loaded: LoadedRuntimeConfig) -> dict[str, Any]:
         "snapshot": {
             "create": {
                 **general,
-                **_compact_defaults(loaded.document.commands.snapshot.create.model_dump()),
+                **_normalize_multi_value_option_defaults(
+                    _compact_defaults(loaded.document.commands.snapshot.create.model_dump()),
+                    option_names={"input_format"},
+                ),
             },
             "diff": _compact_defaults(loaded.document.commands.snapshot.diff.model_dump()),
         },
@@ -212,6 +224,7 @@ def collect_referenced_files(loaded: LoadedRuntimeConfig) -> list[tuple[str, Pat
         "Waiver file": defaults.waiver_file,
         "Offline KEV file": defaults.offline_kev_file,
         "Offline ATT&CK file": defaults.offline_attack_file,
+        "Provider snapshot file": defaults.provider_snapshot_file,
         "Cache directory": defaults.cache_dir,
     }
     for label, value in scalar_paths.items():
@@ -242,6 +255,19 @@ def _compact_defaults(document: dict[str, Any]) -> dict[str, Any]:
     return compact
 
 
+def _normalize_multi_value_option_defaults(
+    defaults: dict[str, Any],
+    *,
+    option_names: set[str],
+) -> dict[str, Any]:
+    normalized = dict(defaults)
+    for option_name in option_names:
+        value = normalized.get(option_name)
+        if isinstance(value, str):
+            normalized[option_name] = [value]
+    return normalized
+
+
 def _normalize_runtime_document(document: dict[str, Any], *, base_dir: Path) -> dict[str, Any]:
     normalized = yaml.safe_load(yaml.safe_dump(document)) or {}
     path_keys = {
@@ -252,6 +278,7 @@ def _normalize_runtime_document(document: dict[str, Any], *, base_dir: Path) -> 
         "waiver_file",
         "offline_kev_file",
         "offline_attack_file",
+        "provider_snapshot_file",
         "cache_dir",
     }
 

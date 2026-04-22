@@ -27,6 +27,10 @@ The following outputs are the current documented machine interfaces:
 - `state history --format json`
 - `state waivers --format json`
 - `state top-services --format json`
+- `data status --format json`
+- `data update --format json`
+- `data verify --format json`
+- `data export-provider-snapshot`
 - `rollup --format json`
 - `analyze --format sarif`
 - `analyze --summary-output <path>`
@@ -47,6 +51,10 @@ Published JSON schemas in `docs/schemas/` cover:
 - `state-history-report.schema.json`
 - `state-waivers-report.schema.json`
 - `state-top-services-report.schema.json`
+- `data-status-report.schema.json`
+- `data-update-report.schema.json`
+- `data-verify-report.schema.json`
+- `provider-snapshot-report.schema.json`
 - `rollup-report.schema.json`
 - `evidence-bundle-manifest.schema.json`
 - `evidence-bundle-verification-report.schema.json`
@@ -72,6 +80,9 @@ Primary payload keys by command:
 - `state history`: `items`
 - `state waivers`: `items`
 - `state top-services`: `items`
+- `data status`: `namespaces`
+- `data update`: `sources`
+- `data verify`: `namespaces`, plus `coverage` and `local_files`
 - `rollup`: `buckets`
 - `report evidence-bundle`: `manifest.json` with `files`
 - `report verify-evidence-bundle`: `items`, plus `summary`
@@ -206,9 +217,9 @@ The public combinations currently intended for use are:
 - `attack validate`: `table`, `markdown`, `json`
 - `attack coverage`: `table`, `markdown`, `json`
 - `attack navigator-layer`: JSON file output
-- `data status`: terminal only
-- `data update`: terminal only
-- `data verify`: terminal only
+- `data status`: `table`, `json`
+- `data update`: `table`, `json`
+- `data verify`: `table`, `json`
 - `report html`: HTML file output
 - `report evidence-bundle`: ZIP file output containing `analysis.json`, `report.html`, `summary.md`, and `manifest.json`
 - `report verify-evidence-bundle`: `table` and `json`
@@ -286,7 +297,6 @@ The following are intentionally not covered by the published JSON schemas:
 - terminal table layout
 - Markdown table layout
 - wording of warnings and recommendation text
-- terminal-only helper commands such as `data status`, `data update`, and `data verify`
 - undocumented JSON payloads from helper commands such as `attack validate` and `attack coverage`
 - HTML, Markdown, and terminal wording for `doctor`, `snapshot diff`, `state history`, `state waivers`, `state top-services`, and `rollup`
 - exact ZIP layout details inside `report evidence-bundle` beyond the published `manifest.json` contract

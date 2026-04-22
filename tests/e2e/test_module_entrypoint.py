@@ -6,6 +6,16 @@ import subprocess
 import sys
 from pathlib import Path
 
+from vuln_prioritizer.models import (
+    EpssData,
+    KevData,
+    NvdData,
+    ProviderSnapshotItem,
+    ProviderSnapshotMetadata,
+    ProviderSnapshotReport,
+)
+from vuln_prioritizer.provider_snapshot import generate_provider_snapshot_json
+
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 SRC_PATH = PROJECT_ROOT / "src"
 PYTHON = sys.executable
@@ -32,6 +42,62 @@ def _run_cli(*args: str) -> subprocess.CompletedProcess[str]:
 def _assert_ok(result: subprocess.CompletedProcess[str]) -> None:
     assert result.returncode == 0, (
         f"exit={result.returncode}\nstdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+    )
+
+
+def _write_provider_snapshot(snapshot_file: Path, input_file: Path) -> None:
+    snapshot_file.write_text(
+        generate_provider_snapshot_json(
+            ProviderSnapshotReport(
+                metadata=ProviderSnapshotMetadata(
+                    generated_at="2026-04-22T12:00:00Z",
+                    input_path=str(input_file),
+                    input_paths=[str(input_file)],
+                    input_format="cve-list",
+                    selected_sources=["nvd", "epss", "kev"],
+                    requested_cves=2,
+                    output_path=str(snapshot_file),
+                    cache_enabled=False,
+                ),
+                items=[
+                    ProviderSnapshotItem(
+                        cve_id="CVE-2021-44228",
+                        nvd=NvdData(
+                            cve_id="CVE-2021-44228",
+                            description="Log4Shell",
+                            cvss_base_score=10.0,
+                            cvss_severity="CRITICAL",
+                            cvss_version="3.1",
+                        ),
+                        epss=EpssData(
+                            cve_id="CVE-2021-44228",
+                            epss=0.97,
+                            percentile=0.999,
+                            date="2026-04-20",
+                        ),
+                        kev=KevData(cve_id="CVE-2021-44228", in_kev=True),
+                    ),
+                    ProviderSnapshotItem(
+                        cve_id="CVE-2023-44487",
+                        nvd=NvdData(
+                            cve_id="CVE-2023-44487",
+                            description="HTTP/2 Rapid Reset",
+                            cvss_base_score=7.5,
+                            cvss_severity="HIGH",
+                            cvss_version="3.1",
+                        ),
+                        epss=EpssData(
+                            cve_id="CVE-2023-44487",
+                            epss=0.42,
+                            percentile=0.91,
+                            date="2026-04-20",
+                        ),
+                        kev=KevData(cve_id="CVE-2023-44487", in_kev=False),
+                    ),
+                ],
+            )
+        ),
+        encoding="utf-8",
     )
 
 
@@ -220,3 +286,93 @@ def test_module_entrypoint_snapshot_and_state_round_trip(tmp_path: Path) -> None
     assert history_payload["metadata"]["cve_id"] == "CVE-2024-2002"
     assert history_payload["items"][0]["priority_label"] == "Critical"
     assert {item["service"] for item in top_services_payload["items"]} >= {"edge-api", "payments"}
+
+
+def test_module_entrypoint_locked_provider_snapshot_round_trip(tmp_path: Path) -> None:
+    input_file = tmp_path / "cves.txt"
+    input_file.write_text("CVE-2021-44228\nCVE-2023-44487\n", encoding="utf-8")
+    snapshot_file = tmp_path / "provider-snapshot.json"
+    _write_provider_snapshot(snapshot_file, input_file)
+
+    analysis_file = tmp_path / "analysis.json"
+    compare_file = tmp_path / "compare.json"
+    explain_file = tmp_path / "explain.json"
+    snapshot_output_file = tmp_path / "snapshot.json"
+
+    analysis_result = _run_cli(
+        "analyze",
+        "--input",
+        str(input_file),
+        "--output",
+        str(analysis_file),
+        "--format",
+        "json",
+        "--provider-snapshot-file",
+        str(snapshot_file),
+        "--locked-provider-data",
+    )
+    _assert_ok(analysis_result)
+
+    compare_result = _run_cli(
+        "compare",
+        "--input",
+        str(input_file),
+        "--output",
+        str(compare_file),
+        "--format",
+        "json",
+        "--provider-snapshot-file",
+        str(snapshot_file),
+        "--locked-provider-data",
+    )
+    _assert_ok(compare_result)
+
+    explain_result = _run_cli(
+        "explain",
+        "--cve",
+        "CVE-2021-44228",
+        "--output",
+        str(explain_file),
+        "--format",
+        "json",
+        "--provider-snapshot-file",
+        str(snapshot_file),
+        "--locked-provider-data",
+    )
+    _assert_ok(explain_result)
+
+    snapshot_result = _run_cli(
+        "snapshot",
+        "create",
+        "--input",
+        str(input_file),
+        "--output",
+        str(snapshot_output_file),
+        "--format",
+        "json",
+        "--provider-snapshot-file",
+        str(snapshot_file),
+        "--locked-provider-data",
+    )
+    _assert_ok(snapshot_result)
+
+    analysis_payload = json.loads(analysis_file.read_text(encoding="utf-8"))
+    compare_payload = json.loads(compare_file.read_text(encoding="utf-8"))
+    explain_payload = json.loads(explain_file.read_text(encoding="utf-8"))
+    snapshot_payload = json.loads(snapshot_output_file.read_text(encoding="utf-8"))
+
+    assert analysis_payload["metadata"]["locked_provider_data"] is True
+    assert analysis_payload["metadata"]["provider_snapshot_sources"] == ["nvd", "epss", "kev"]
+    assert len(analysis_payload["findings"]) == 2
+
+    assert compare_payload["metadata"]["locked_provider_data"] is True
+    assert compare_payload["metadata"]["provider_snapshot_sources"] == ["nvd", "epss", "kev"]
+    assert len(compare_payload["comparisons"]) == 2
+
+    assert explain_payload["metadata"]["locked_provider_data"] is True
+    assert explain_payload["metadata"]["provider_snapshot_sources"] == ["nvd", "epss", "kev"]
+    assert explain_payload["finding"]["cve_id"] == "CVE-2021-44228"
+
+    assert snapshot_payload["metadata"]["locked_provider_data"] is True
+    assert snapshot_payload["metadata"]["provider_snapshot_sources"] == ["nvd", "epss", "kev"]
+    assert len(snapshot_payload["findings"]) == 2
