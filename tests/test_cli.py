@@ -31,25 +31,15 @@ def _format_help_block(*args: str) -> str:
     result = runner.invoke(app, [*args, "--help"], env={"COLUMNS": "200", "LINES": "40"})
 
     assert result.exit_code == 0
-    lines = result.stdout.splitlines()
-    for index, line in enumerate(lines):
-        if "--format" not in line:
-            continue
-        block = [line]
-        next_index = index + 1
-        while next_index < len(lines):
-            next_line = lines[next_index]
-            if "--" in next_line:
-                break
-            block.append(next_line)
-            next_index += 1
-        return " ".join(part.strip() for part in block)
-
-    raise AssertionError("Expected a --format option in command help.")
+    return result.stdout
 
 
 def _normalize_output(text: str) -> str:
     return re.sub(r"\s+", " ", text).strip()
+
+
+def _compact_output(text: str) -> str:
+    return re.sub(r"\s+", "", text)
 
 
 def test_cli_analyze_end_to_end_with_mocked_providers(monkeypatch, tmp_path: Path) -> None:
@@ -633,43 +623,41 @@ def test_cli_compare_rejects_sarif_format(tmp_path: Path) -> None:
     )
 
     assert result.exit_code == 2
-    assert "compare supports only --format json, markdown, table." in result.stdout
+    normalized_output = _normalize_output(result.output)
+    assert "Invalid value for '--format': 'sarif'" in normalized_output
+    assert "'markdown', 'json'" in normalized_output
+    assert "'table'." in normalized_output
 
 
 def test_cli_analyze_help_lists_all_supported_formats() -> None:
-    help_block = _format_help_block("analyze")
+    help_block = _compact_output(_format_help_block("analyze"))
 
-    assert "markdown" in help_block
-    assert "json" in help_block
-    assert "sarif" in help_block
-    assert "table" in help_block
+    assert "--format" in help_block
+    assert "[markdown|json|sarif|table]" in help_block
 
 
 def test_cli_compare_help_omits_sarif_format() -> None:
-    help_block = _format_help_block("compare")
+    help_block = _compact_output(_format_help_block("compare"))
 
-    assert "markdown" in help_block
-    assert "json" in help_block
-    assert "table" in help_block
-    assert "sarif" not in help_block
+    assert "--format" in help_block
+    assert "[markdown|json|table]" in help_block
+    assert "[markdown|json|sarif|table]" not in help_block
 
 
 def test_cli_doctor_help_lists_only_table_and_json_formats() -> None:
-    help_block = _format_help_block("doctor")
+    help_block = _compact_output(_format_help_block("doctor"))
 
-    assert "table" in help_block
-    assert "json" in help_block
-    assert "markdown" not in help_block
-    assert "sarif" not in help_block
+    assert "--format" in help_block
+    assert "[table|json]" in help_block
+    assert "[markdown|json|sarif|table]" not in help_block
 
 
 def test_cli_snapshot_create_help_lists_only_snapshot_export_formats() -> None:
-    help_block = _format_help_block("snapshot", "create")
+    help_block = _compact_output(_format_help_block("snapshot", "create"))
 
-    assert "json" in help_block
-    assert "markdown" in help_block
-    assert "table" not in help_block
-    assert "sarif" not in help_block
+    assert "--format" in help_block
+    assert "[json|markdown]" in help_block
+    assert "[markdown|json|sarif|table]" not in help_block
 
 
 def test_cli_explain_rejects_sarif_format() -> None:
@@ -685,7 +673,10 @@ def test_cli_explain_rejects_sarif_format() -> None:
     )
 
     assert result.exit_code == 2
-    assert "explain supports only --format json, markdown, table." in result.stdout
+    normalized_output = _normalize_output(result.output)
+    assert "Invalid value for '--format': 'sarif'" in normalized_output
+    assert "'markdown', 'json'" in normalized_output
+    assert "'table'." in normalized_output
 
 
 def test_cli_explain_end_to_end_with_mocked_providers(monkeypatch, tmp_path: Path) -> None:
@@ -883,7 +874,7 @@ def test_cli_doctor_fails_cleanly_for_missing_runtime_config(tmp_path: Path) -> 
 
     assert result.exit_code == 2
     assert "Input validation failed:" in result.stdout
-    assert missing_config.name in _normalize_output(result.stdout)
+    assert missing_config.name in _compact_output(result.stdout)
     assert isinstance(result.exception, SystemExit)
     assert "Traceback" not in result.stdout
 
@@ -1055,7 +1046,7 @@ def test_cli_doctor_rejects_invalid_discovered_runtime_config(monkeypatch, tmp_p
 
     assert result.exit_code == 2
     assert "Input validation failed:" in result.stdout
-    assert "vuln-prioritizer.yml" in _normalize_output(result.stdout)
+    assert "vuln-prioritizer.yml" in _compact_output(result.stdout)
 
 
 def test_cli_doctor_live_mode_runs_reachability_probes(monkeypatch, tmp_path: Path) -> None:
