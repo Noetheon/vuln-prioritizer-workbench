@@ -91,6 +91,18 @@ This repository already uses a small `area:*` set. Keep that convention instead 
 
 Do not create a public `security` issue label for vulnerability disclosures. Public issues should be rerouted to `SECURITY.md` instead of encouraging security reports in the issue tracker.
 
+### Automation Labels
+
+If dependency automation is enabled, keep the bot-facing label set small and explicit:
+
+| Label | Use when | Notes |
+| --- | --- | --- |
+| `dependencies` | a PR updates one or more project dependencies | Use for both Python package updates and workflow/action bumps. |
+| `python` | a dependency or packaging change is Python-specific | Useful for pip / build / tooling updates. |
+| `github-actions` | a change only affects GitHub Actions workflows or referenced actions | Useful for workflow dependency bumps and runner-related maintenance. |
+
+These are not a second issue-triage taxonomy. They mainly exist so Dependabot or maintainers can label automation PRs without overloading the public issue tracker.
+
 ## Minimal Issue Triage Conventions
 
 Use the following conventions to keep the public tracker readable:
