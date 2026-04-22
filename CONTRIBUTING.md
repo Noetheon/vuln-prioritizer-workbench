@@ -25,6 +25,8 @@ GitHub Actions are intentionally not required for day-to-day development. The CI
 make check
 ```
 
+For changes that are intended to land on `main`, prefer a pull request flow over direct pushes. The repository is maintained as a public project, so branch protection and hosted checks should act as a second line of defense after the local gate.
+
 This runs:
 
 - `ruff format --check`
@@ -84,3 +86,4 @@ make docs-check
 - Update `CHANGELOG.md` for user-visible or maintainer-relevant changes when appropriate.
 - Do not commit local secrets or local handoff notes.
 - Prefer deterministic mocks in tests over live network calls.
+- Treat direct pushes to `main` as an emergency path, not the normal maintainer workflow.

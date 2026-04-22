@@ -9,7 +9,7 @@ import sqlite3
 import sys
 import zipfile
 from collections.abc import MutableMapping
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 from typing import Any, cast
 
@@ -165,7 +165,7 @@ app.add_typer(state_app, name="state")
 console = Console()
 
 
-class OutputFormat(str, Enum):
+class OutputFormat(StrEnum):
     markdown = "markdown"
     json = "json"
     sarif = "sarif"
@@ -193,27 +193,27 @@ SNAPSHOT_CREATE_OUTPUT_FORMATS = (
 )
 
 
-class PriorityFilter(str, Enum):
+class PriorityFilter(StrEnum):
     critical = "critical"
     high = "high"
     medium = "medium"
     low = "low"
 
 
-class SortBy(str, Enum):
+class SortBy(StrEnum):
     priority = "priority"
     epss = "epss"
     cvss = "cvss"
     cve = "cve"
 
 
-class AttackSource(str, Enum):
+class AttackSource(StrEnum):
     none = "none"
     local_csv = "local-csv"
     ctid_json = "ctid-json"
 
 
-class InputFormat(str, Enum):
+class InputFormat(StrEnum):
     auto = "auto"
     cve_list = "cve-list"
     trivy_json = "trivy-json"
@@ -226,20 +226,20 @@ class InputFormat(str, Enum):
     openvas_xml = "openvas-xml"
 
 
-class PolicyProfile(str, Enum):
+class PolicyProfile(StrEnum):
     default = "default"
     enterprise = "enterprise"
     conservative = "conservative"
 
 
-class DataSourceName(str, Enum):
+class DataSourceName(StrEnum):
     all = "all"
     nvd = "nvd"
     epss = "epss"
     kev = "kev"
 
 
-class TargetKind(str, Enum):
+class TargetKind(StrEnum):
     generic = "generic"
     image = "image"
     repository = "repository"
@@ -247,19 +247,19 @@ class TargetKind(str, Enum):
     host = "host"
 
 
-class RollupBy(str, Enum):
+class RollupBy(StrEnum):
     asset = "asset"
     service = "service"
 
 
-class StateWaiverStatusFilter(str, Enum):
+class StateWaiverStatusFilter(StrEnum):
     all = "all"
     active = "active"
     review_due = "review_due"
     expired = "expired"
 
 
-class StatePriorityScope(str, Enum):
+class StatePriorityScope(StrEnum):
     all = "all"
     critical = "critical"
     high = "high"
