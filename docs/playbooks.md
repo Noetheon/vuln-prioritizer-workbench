@@ -9,6 +9,12 @@ They are intentionally operator-facing:
 - aligned with the current public CLI surface
 - cross-linked to the deeper reference docs instead of repeating them
 
+Scope note:
+
+- Public-install-safe examples use files you already have in your own workspace, such as `trivy-results.json`, `analysis.json`, or `report.html`.
+- Repo-checkout examples intentionally use the checked-in fixtures under `data/` and assume you are running from this repository root.
+- ATT&CK examples always require local mapping files unless the playbook explicitly points at the repository fixtures.
+
 Use the playbook that matches your workflow:
 
 - [CI and container scanning](playbooks/ci_container_scanning.md)
