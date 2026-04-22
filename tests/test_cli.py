@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
@@ -27,7 +28,7 @@ ATTACK_ROOT = Path(__file__).resolve().parents[1] / "data" / "attack"
 
 
 def _format_help_block(*args: str) -> str:
-    result = runner.invoke(app, [*args, "--help"])
+    result = runner.invoke(app, [*args, "--help"], env={"COLUMNS": "200", "LINES": "40"})
 
     assert result.exit_code == 0
     lines = result.stdout.splitlines()
@@ -45,6 +46,10 @@ def _format_help_block(*args: str) -> str:
         return " ".join(part.strip() for part in block)
 
     raise AssertionError("Expected a --format option in command help.")
+
+
+def _normalize_output(text: str) -> str:
+    return re.sub(r"\s+", " ", text).strip()
 
 
 def test_cli_analyze_end_to_end_with_mocked_providers(monkeypatch, tmp_path: Path) -> None:
@@ -878,7 +883,7 @@ def test_cli_doctor_fails_cleanly_for_missing_runtime_config(tmp_path: Path) -> 
 
     assert result.exit_code == 2
     assert "Input validation failed:" in result.stdout
-    assert missing_config.name in result.stdout
+    assert missing_config.name in _normalize_output(result.stdout)
     assert isinstance(result.exception, SystemExit)
     assert "Traceback" not in result.stdout
 
@@ -1050,7 +1055,7 @@ def test_cli_doctor_rejects_invalid_discovered_runtime_config(monkeypatch, tmp_p
 
     assert result.exit_code == 2
     assert "Input validation failed:" in result.stdout
-    assert "vuln-prioritizer.yml" in result.stdout
+    assert "vuln-prioritizer.yml" in _normalize_output(result.stdout)
 
 
 def test_cli_doctor_live_mode_runs_reachability_probes(monkeypatch, tmp_path: Path) -> None:
@@ -1234,7 +1239,7 @@ def test_cli_report_html_rejects_invalid_json(tmp_path: Path) -> None:
     )
 
     assert result.exit_code == 2
-    assert "is not valid JSON" in result.stdout
+    assert "is not valid JSON" in _normalize_output(result.stdout)
 
 
 def test_build_attack_summary_from_findings_preserves_mapping_type_distribution() -> None:
