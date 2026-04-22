@@ -22,7 +22,7 @@ jobs:
         run: python -m pip install -e .[dev]
 
       - name: Run release-equivalent local checks
-        run: make workflow-check
+        run: make release-check
 
       - name: Build source and wheel distributions
         run: python -m build

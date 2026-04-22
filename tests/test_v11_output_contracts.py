@@ -57,6 +57,7 @@ from vuln_prioritizer.reporter import (
 runner = CliRunner()
 SCHEMA_ROOT = Path(__file__).resolve().parents[1] / "docs" / "schemas"
 ACTION_FILE = Path(__file__).resolve().parents[1] / "action.yml"
+CI_WORKFLOW = Path(__file__).resolve().parents[1] / ".github" / "workflows" / "ci.yml"
 RELEASE_WORKFLOW = Path(__file__).resolve().parents[1] / ".github" / "workflows" / "release.yml"
 TESTPYPI_WORKFLOW = Path(__file__).resolve().parents[1] / ".github" / "workflows" / "testpypi.yml"
 MAKEFILE = Path(__file__).resolve().parents[1] / "Makefile"
@@ -485,6 +486,23 @@ def test_action_contract_exposes_summary_and_config_wiring() -> None:
     assert "$GITHUB_STEP_SUMMARY" in run_block
 
 
+def test_ci_workflow_runs_workflow_check_on_supported_python_versions() -> None:
+    payload = yaml.safe_load(CI_WORKFLOW.read_text(encoding="utf-8"))
+    check_job = payload["jobs"]["check"]
+    setup_step = next(
+        step for step in check_job["steps"] if step.get("uses") == "actions/setup-python@v6"
+    )
+    gate_step = next(
+        step
+        for step in check_job["steps"]
+        if step.get("name") == "Run local-equivalent workflow gate"
+    )
+
+    assert check_job["strategy"]["matrix"]["python-version"] == ["3.11", "3.12"]
+    assert setup_step["with"]["python-version"] == "${{ matrix.python-version }}"
+    assert gate_step["run"] == "make workflow-check"
+
+
 def test_release_workflow_is_tag_bound_and_verifies_pypi_install() -> None:
     payload = yaml.safe_load(RELEASE_WORKFLOW.read_text(encoding="utf-8"))
     jobs = payload["jobs"]
@@ -500,7 +518,7 @@ def test_release_workflow_is_tag_bound_and_verifies_pypi_install() -> None:
     release_gate_step = next(
         step for step in build_steps if step.get("name") == "Run release gate before publishing"
     )
-    assert release_gate_step["run"] == "make workflow-check"
+    assert release_gate_step["run"] == "make release-check"
 
     tag_install_step = next(
         step for step in build_steps if step.get("name") == "Smoke test source-at-tag install path"
@@ -563,7 +581,11 @@ def test_testpypi_workflow_exposes_version_output_and_hosted_index_verification(
         == "${{ steps.package_version.outputs.version }}"
     )
     build_steps = jobs["build"]["steps"]
+    release_gate_step = next(
+        step for step in build_steps if step.get("name") == "Run release-equivalent local checks"
+    )
     version_step = next(step for step in build_steps if step.get("id") == "package_version")
+    assert release_gate_step["run"] == "make release-check"
     assert "payload['project']['version']" in version_step["run"]
 
     verify_job = jobs["verify-testpypi-install"]
