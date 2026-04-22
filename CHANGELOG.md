@@ -14,6 +14,7 @@ and this project aims to follow [Semantic Versioning](https://semver.org/).
 - A local MkDocs-based documentation site with `make docs-check` and `make docs-serve`.
 - Maintainer-facing community setup guidance, issue template contact links, and a browsable docs landing page.
 - Stronger public metadata and security policy details for the stable OSS release line.
+- `SUPPORT.md` and `CODEOWNERS` for clearer public-repository routing and maintainer ownership.
 
 ### Changed
 
@@ -22,6 +23,7 @@ and this project aims to follow [Semantic Versioning](https://semver.org/).
 - Pinned consumer GitHub Action examples to the stable `v1.0.0` tag and widened the composite action surface to cover `target-kind` and `target-ref`.
 - Hardened CI/release workflows so hosted runs are aligned with the stronger local workflow gate before publishing artifacts.
 - Hardened ATT&CK validation and CLI failure handling around CTID/metadata file mismatches, missing files, and legacy `local-csv` messaging.
+- Clarified the public install story, support routing, and issue-template scope guidance for the public repository surface.
 
 ## [1.0.0] - 2026-04-20
 
