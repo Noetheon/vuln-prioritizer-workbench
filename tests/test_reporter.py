@@ -130,13 +130,13 @@ def test_compare_markdown_report_contains_changed_and_unchanged_rows() -> None:
     assert "- Waived: 0" in report
     assert "## ATT&CK Context Summary" in report
     assert (
-        "| CVE ID | Description | CVSS-only | Enriched | ATT&CK | Attack Relevance | "
+        "| CVE ID | Description | CVSS-only | Enriched | VEX | ATT&CK | Attack Relevance | "
         "Delta | Changed | CVSS | EPSS | KEV | Waiver | Reason |"
     ) in report
     assert "KEV membership raises this CVE" in report
     assert (
-        "| CVE-2024-0002 | No change | Low | Low | Unmapped | Unmapped | No change | No | "
-        "3.5 | N.A. | No | N.A. |" in report
+        "| CVE-2024-0002 | No change | Low | Low | N.A. | Unmapped | Unmapped | No change | "
+        "No | 3.5 | N.A. | No | N.A. |" in report
     )
 
 

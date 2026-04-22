@@ -35,17 +35,33 @@ jobs:
         run: python -m twine check dist/*
 
       - name: Smoke test built wheel
+        shell: bash
         run: |
+          set -euo pipefail
+          artifact_root="$RUNNER_TEMP/workflow-artifacts/testpypi-built-wheel"
+          mkdir -p "$artifact_root"
           python -m pip install --force-reinstall dist/*.whl
           vuln-prioritizer --help
-          vuln-prioritizer doctor --format json --output doctor.json
-          bash scripts/p1_installed_cli_smoke.sh
+          vuln-prioritizer doctor --format json --output "$artifact_root/doctor.json"
+          VULN_PRIORITIZER_SMOKE_OUTPUT_DIR="$artifact_root" bash scripts/p1_installed_cli_smoke.sh
+          VULN_PRIORITIZER_SMOKE_OUTPUT_DIR="$artifact_root" bash scripts/p2_installed_cli_smoke.sh
 
       - name: Upload release artifacts
         uses: actions/upload-artifact@v7
         with:
           name: release-dist
           path: dist/*
+
+      - name: Upload TestPyPI build debug artifacts on failure
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: testpypi-build-debug-artifacts
+          if-no-files-found: ignore
+          path: |
+            ${{ runner.temp }}/workflow-artifacts/**
+            docs/example*.json
+            docs/examples/*.json
 
       - name: Resolve package version
         id: package_version
@@ -101,6 +117,8 @@ jobs:
         run: |
           set -euo pipefail
           version="${{ needs.build.outputs.package_version }}"
+          artifact_root="$RUNNER_TEMP/workflow-artifacts/verify-testpypi-install"
+          mkdir -p "$artifact_root"
           python -m pip install --upgrade pip
           for attempt in 1 2 3 4 5; do
             if python -m pip install --force-reinstall \
@@ -108,8 +126,9 @@ jobs:
               --extra-index-url https://pypi.org/simple/ \
               "vuln-prioritizer==${version}"; then
               vuln-prioritizer --help
-              vuln-prioritizer doctor --format json --output doctor.json
-              bash scripts/p1_installed_cli_smoke.sh
+              vuln-prioritizer doctor --format json --output "$artifact_root/doctor.json"
+              VULN_PRIORITIZER_SMOKE_OUTPUT_DIR="$artifact_root" bash scripts/p1_installed_cli_smoke.sh
+              VULN_PRIORITIZER_SMOKE_OUTPUT_DIR="$artifact_root" bash scripts/p2_installed_cli_smoke.sh
               exit 0
             fi
             if [[ "$attempt" -eq 5 ]]; then
@@ -118,3 +137,14 @@ jobs:
             fi
             sleep 20
           done
+
+      - name: Upload TestPyPI verification debug artifacts on failure
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: verify-testpypi-debug-artifacts
+          if-no-files-found: ignore
+          path: |
+            ${{ runner.temp }}/workflow-artifacts/**
+            docs/example*.json
+            docs/examples/*.json

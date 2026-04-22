@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import csv
 import json
+from collections.abc import Iterator, Mapping
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Literal, overload
 
 from vuln_prioritizer.models import (
     AssetContextRecord,
@@ -19,6 +21,43 @@ from vuln_prioritizer.utils import normalize_cve_id
 from . import _cve_support, _occurrence_support, _vex_support, _xml_support
 
 
+@dataclass(frozen=True)
+class AssetContextRule:
+    rule_id: str
+    target_kind: str
+    target_ref: str
+    asset_record: AssetContextRecord
+    match_mode: str = "exact"
+    precedence: int = 0
+    order: int = 0
+
+
+@dataclass(frozen=True)
+class AssetContextLoadDiagnostics:
+    total_rows: int
+    loaded_rows: int
+    exact_rules: int
+    glob_rules: int
+    legacy_schema: bool
+    warnings: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class AssetContextCatalog(Mapping[tuple[str, str], AssetContextRecord]):
+    records: dict[tuple[str, str], AssetContextRecord]
+    rules: tuple[AssetContextRule, ...]
+    diagnostics: AssetContextLoadDiagnostics
+
+    def __getitem__(self, key: tuple[str, str]) -> AssetContextRecord:
+        return self.records[key]
+
+    def __iter__(self) -> Iterator[tuple[str, str]]:
+        return iter(self.records)
+
+    def __len__(self) -> int:
+        return len(self.records)
+
+
 class InputLoader:
     """Load different source formats into a normalized occurrence model."""
 
@@ -30,7 +69,7 @@ class InputLoader:
         max_cves: int | None = None,
         target_kind: str | None = None,
         target_ref: str | None = None,
-        asset_records: dict[tuple[str, str], AssetContextRecord] | None = None,
+        asset_records: Mapping[tuple[str, str], AssetContextRecord] | None = None,
         vex_statements: list[VexStatement] | None = None,
     ) -> ParsedInput:
         return self.load_many(
@@ -49,7 +88,7 @@ class InputLoader:
         max_cves: int | None = None,
         target_kind: str | None = None,
         target_ref: str | None = None,
-        asset_records: dict[tuple[str, str], AssetContextRecord] | None = None,
+        asset_records: Mapping[tuple[str, str], AssetContextRecord] | None = None,
         vex_statements: list[VexStatement] | None = None,
     ) -> ParsedInput:
         if not inputs:
@@ -60,6 +99,12 @@ class InputLoader:
         source_summaries: list[InputSourceSummary] = []
         resolved_formats: list[str] = []
         total_rows = 0
+        asset_match_conflict_count = 0
+        vex_conflict_count = 0
+
+        catalog_diagnostics = getattr(asset_records, "diagnostics", None)
+        if catalog_diagnostics and getattr(catalog_diagnostics, "warnings", None):
+            warnings.extend(catalog_diagnostics.warnings)
 
         for spec in inputs:
             parsed = _load_single_input(spec.path, input_format=spec.input_format)
@@ -74,14 +119,20 @@ class InputLoader:
                 )
                 for occurrence in parsed.occurrences
             ]
-            source_occurrences = _occurrence_support.apply_asset_context(
+            source_occurrences, asset_diagnostics = _occurrence_support.apply_asset_context(
                 source_occurrences,
-                asset_records or {},
+                asset_records if asset_records is not None else {},
+                return_diagnostics=True,
             )
-            source_occurrences = _vex_support.apply_vex_statements(
+            source_occurrences, vex_diagnostics = _vex_support.apply_vex_statements(
                 source_occurrences,
                 vex_statements or [],
+                return_diagnostics=True,
             )
+            warnings.extend(asset_diagnostics.warnings)
+            warnings.extend(vex_diagnostics.warnings)
+            asset_match_conflict_count += asset_diagnostics.ambiguous_occurrences
+            vex_conflict_count += vex_diagnostics.conflict_occurrences
             occurrences.extend(source_occurrences)
             source_summaries.append(
                 InputSourceSummary(
@@ -103,6 +154,8 @@ class InputLoader:
             input_paths=[str(spec.path) for spec in inputs],
             source_summaries=source_summaries,
             merged_input_count=len(inputs),
+            asset_match_conflict_count=asset_match_conflict_count,
+            vex_conflict_count=vex_conflict_count,
         )
 
 
@@ -160,7 +213,7 @@ def build_inline_input(
     *,
     target_kind: str | None = None,
     target_ref: str | None = None,
-    asset_records: dict[tuple[str, str], AssetContextRecord] | None = None,
+    asset_records: Mapping[tuple[str, str], AssetContextRecord] | None = None,
     vex_statements: list[VexStatement] | None = None,
 ) -> ParsedInput:
     """Build a parsed input for a single inline CVE."""
@@ -171,14 +224,27 @@ def build_inline_input(
         target_kind=(target_kind or "generic").lower(),
         target_ref=target_ref,
     )
-    occurrences = _occurrence_support.apply_asset_context([occurrence], asset_records or {})
-    occurrences = _vex_support.apply_vex_statements(occurrences, vex_statements or [])
+    occurrences, asset_diagnostics = _occurrence_support.apply_asset_context(
+        [occurrence],
+        asset_records if asset_records is not None else {},
+        return_diagnostics=True,
+    )
+    occurrences, vex_diagnostics = _vex_support.apply_vex_statements(
+        occurrences,
+        vex_statements or [],
+        return_diagnostics=True,
+    )
     return _occurrence_support.finalize_occurrences(
         occurrences,
         input_format="cve-list",
-        warnings=[],
+        warnings=[
+            *asset_diagnostics.warnings,
+            *vex_diagnostics.warnings,
+        ],
         total_rows=1,
         max_cves=1,
+        asset_match_conflict_count=asset_diagnostics.ambiguous_occurrences,
+        vex_conflict_count=vex_diagnostics.conflict_occurrences,
     )
 
 
@@ -230,59 +296,181 @@ def detect_input_format(path: Path, *, explicit_format: str = "auto") -> str:
     raise ValueError("Unable to auto-detect the JSON input format.")
 
 
-def load_asset_context_file(path: Path | None) -> dict[tuple[str, str], AssetContextRecord]:
-    """Load exact-match asset context records from CSV."""
+@overload
+def load_asset_context_file(
+    path: Path | None,
+    *,
+    return_diagnostics: Literal[False] = False,
+) -> AssetContextCatalog: ...
+
+
+@overload
+def load_asset_context_file(
+    path: Path | None,
+    *,
+    return_diagnostics: Literal[True],
+) -> tuple[AssetContextCatalog, AssetContextLoadDiagnostics]: ...
+
+
+def load_asset_context_file(
+    path: Path | None,
+    *,
+    return_diagnostics: bool = False,
+) -> AssetContextCatalog | tuple[AssetContextCatalog, AssetContextLoadDiagnostics]:
+    """Load ordered asset context rules from CSV."""
     if path is None:
-        return {}
+        empty = AssetContextCatalog(
+            records={},
+            rules=(),
+            diagnostics=AssetContextLoadDiagnostics(
+                total_rows=0,
+                loaded_rows=0,
+                exact_rules=0,
+                glob_rules=0,
+                legacy_schema=True,
+            ),
+        )
+        return (empty, empty.diagnostics) if return_diagnostics else empty
     with path.open("r", encoding="utf-8", newline="") as handle:
         reader = csv.DictReader(handle)
         if not reader.fieldnames:
             raise ValueError("Asset context CSV is missing a header row.")
+        fieldnames = {field.strip() for field in reader.fieldnames if field}
         required = {"target_kind", "target_ref", "asset_id"}
-        missing = required - {field.strip() for field in reader.fieldnames if field}
+        missing = required - fieldnames
         if missing:
             raise ValueError(
                 "Asset context CSV must contain columns: target_kind, target_ref, asset_id."
             )
 
+        optional_schema_fields = {"rule_id", "match_mode", "precedence"}
+        legacy_schema = not bool(optional_schema_fields & fieldnames)
         records: dict[tuple[str, str], AssetContextRecord] = {}
-        for row in reader:
+        rules: list[AssetContextRule] = []
+        exact_rule_count = 0
+        glob_rule_count = 0
+        loaded_rows = 0
+        total_rows = 0
+        warning_messages: list[str] = []
+        duplicate_exact_rows = 0
+        competing_rule_rows = 0
+        seen_signatures: set[tuple[str, str, str, int]] = set()
+
+        for order, row in enumerate(reader, start=1):
+            total_rows += 1
             target_kind = (row.get("target_kind") or "").strip().lower()
             target_ref = (row.get("target_ref") or "").strip()
             asset_id = (row.get("asset_id") or "").strip()
             if not target_kind or not target_ref or not asset_id:
                 continue
-            records[(target_kind, target_ref)] = AssetContextRecord(
+            loaded_rows += 1
+            match_mode = (row.get("match_mode") or "exact").strip().lower()
+            if match_mode not in {"exact", "glob"}:
+                raise ValueError("Asset context CSV match_mode must be either exact or glob.")
+            precedence_raw = (row.get("precedence") or "").strip()
+            if precedence_raw:
+                try:
+                    precedence = int(precedence_raw)
+                except ValueError as exc:
+                    raise ValueError(
+                        f"Asset context CSV precedence must be an integer, got {precedence_raw!r}."
+                    ) from exc
+            else:
+                precedence = order
+            rule_id = (row.get("rule_id") or "").strip() or f"asset-rule:{order}"
+            signature = (target_kind, target_ref, match_mode, precedence)
+            if legacy_schema and match_mode == "exact" and (target_kind, target_ref) in records:
+                duplicate_exact_rows += 1
+            elif signature in seen_signatures:
+                competing_rule_rows += 1
+            seen_signatures.add(signature)
+            record = AssetContextRecord(
                 target_kind=target_kind,
                 target_ref=target_ref,
                 asset_id=asset_id,
+                rule_id=rule_id,
+                match_mode=match_mode,
+                precedence=precedence,
+                row_number=order,
                 criticality=(row.get("criticality") or "").strip() or None,
                 exposure=(row.get("exposure") or "").strip() or None,
                 environment=(row.get("environment") or "").strip() or None,
                 owner=(row.get("owner") or "").strip() or None,
                 business_service=(row.get("business_service") or "").strip() or None,
             )
-    return records
+            records[(target_kind, target_ref)] = record
+            rules.append(
+                AssetContextRule(
+                    rule_id=rule_id,
+                    target_kind=target_kind,
+                    target_ref=target_ref,
+                    asset_record=record,
+                    match_mode=match_mode,
+                    precedence=precedence,
+                    order=order,
+                )
+            )
+            if match_mode == "glob":
+                glob_rule_count += 1
+            else:
+                exact_rule_count += 1
+
+    if duplicate_exact_rows:
+        warning_messages.append(
+            "Asset context CSV contains "
+            f"{duplicate_exact_rows} duplicate exact-match row(s); later rows remain preferred "
+            "under legacy precedence, but conflicts are now reported."
+        )
+    if competing_rule_rows:
+        warning_messages.append(
+            "Asset context CSV contains "
+            f"{competing_rule_rows} rule(s) that compete on the same target pattern or "
+            "precedence and may require deterministic tie-breaking."
+        )
+
+    catalog = AssetContextCatalog(
+        records=records,
+        rules=tuple(rules),
+        diagnostics=AssetContextLoadDiagnostics(
+            total_rows=total_rows,
+            loaded_rows=loaded_rows,
+            exact_rules=exact_rule_count,
+            glob_rules=glob_rule_count,
+            legacy_schema=legacy_schema,
+            warnings=tuple(warning_messages),
+        ),
+    )
+    return (catalog, catalog.diagnostics) if return_diagnostics else catalog
 
 
 def load_vex_files(paths: list[Path] | None) -> list[VexStatement]:
     """Load all supported VEX files."""
     statements: list[VexStatement] = []
-    for path in paths or []:
+    for file_order, path in enumerate(paths or [], start=1):
         if not path.exists() or not path.is_file():
             raise ValueError(f"VEX file does not exist: {path}")
         document = json.loads(path.read_text(encoding="utf-8"))
         if isinstance(document, dict) and "statements" in document:
-            statements.extend(_vex_support.parse_openvex_document(document))
+            file_statements = _vex_support.parse_openvex_document(document)
         elif (
             isinstance(document, dict)
             and "bomFormat" in document
             and "CycloneDX" in str(document.get("bomFormat"))
         ):
-            statements.extend(_vex_support.parse_cyclonedx_vex_document(document))
+            file_statements = _vex_support.parse_cyclonedx_vex_document(document)
         else:
             raise ValueError(
                 f"Unsupported VEX format for {path}. Use OpenVEX JSON or CycloneDX VEX JSON."
+            )
+        for statement_order, statement in enumerate(file_statements, start=1):
+            statements.append(
+                statement.model_copy(
+                    update={
+                        "source_path": str(path),
+                        "source_file_order": file_order,
+                        "statement_order": statement_order,
+                    }
+                )
             )
     return statements
 

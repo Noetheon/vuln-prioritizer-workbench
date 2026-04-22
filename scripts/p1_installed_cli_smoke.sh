@@ -2,8 +2,15 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-TMP_DIR="$(mktemp -d)"
-trap 'rm -rf "$TMP_DIR"' EXIT
+TMP_DIR="${VULN_PRIORITIZER_SMOKE_OUTPUT_DIR:-}"
+if [[ -n "$TMP_DIR" ]]; then
+  mkdir -p "$TMP_DIR"
+  CLEANUP_TMP_DIR=0
+else
+  TMP_DIR="$(mktemp -d)"
+  CLEANUP_TMP_DIR=1
+fi
+trap '[[ "$CLEANUP_TMP_DIR" == "1" ]] && rm -rf "$TMP_DIR"' EXIT
 PYTHON_BIN="${PYTHON_BIN:-python3}"
 
 if [[ "${VULN_PRIORITIZER_USE_MODULE:-0}" == "1" ]]; then

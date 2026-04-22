@@ -130,6 +130,7 @@ def render_findings_table(findings: list[PrioritizedFinding]) -> Table:
     table.add_column("Attack Relevance")
     table.add_column("Source")
     table.add_column("Description", overflow="fold")
+    table.add_column("Recommended Action", overflow="fold")
 
     for finding in findings:
         table.add_row(
@@ -148,6 +149,7 @@ def render_findings_table(findings: list[PrioritizedFinding]) -> Table:
             finding.attack_relevance,
             ", ".join(finding.provenance.source_formats) or "N.A.",
             truncate_text(finding.description or "N.A.", 90),
+            truncate_text(finding.recommended_action, 120),
         )
 
     return table
@@ -159,6 +161,7 @@ def render_compare_table(comparisons: list[ComparisonFinding]) -> Table:
     table.add_column("CVE", style="bold")
     table.add_column("CVSS-only")
     table.add_column("Enriched")
+    table.add_column("VEX")
     table.add_column("ATT&CK")
     table.add_column("Relevance")
     table.add_column("CVSS")
@@ -177,6 +180,7 @@ def render_compare_table(comparisons: list[ComparisonFinding]) -> Table:
                 waived=row.waived,
                 waiver_status=row.waiver_status,
             ),
+            "Under investigation" if row.under_investigation else "N.A.",
             _format_attack_indicator(row.attack_mapped, row.mapped_technique_count),
             row.attack_relevance,
             format_score(row.cvss_base_score, digits=1),
@@ -255,6 +259,10 @@ def render_summary_panel(
         lines.append(f"Suppressed by VEX: {context.suppressed_by_vex}")
     if context.under_investigation_count:
         lines.append(f"Under investigation: {context.under_investigation_count}")
+    if context.asset_match_conflict_count:
+        lines.append(f"Asset-context conflicts resolved: {context.asset_match_conflict_count}")
+    if context.vex_conflict_count:
+        lines.append(f"VEX conflicts resolved: {context.vex_conflict_count}")
     if context.waived_count:
         lines.append(f"Waived: {context.waived_count}")
     if context.waiver_review_due_count:
@@ -423,7 +431,7 @@ def generate_compare_markdown(
 ) -> str:
     """Render the Markdown comparison report."""
     comparison_header = (
-        "| CVE ID | Description | CVSS-only | Enriched | ATT&CK | Attack Relevance | "
+        "| CVE ID | Description | CVSS-only | Enriched | VEX | ATT&CK | Attack Relevance | "
         + "Delta | Changed | CVSS | EPSS | KEV | Waiver | Reason |"
     )
     changed_count = sum(1 for row in comparisons if row.changed)
@@ -459,7 +467,7 @@ def generate_compare_markdown(
             "## Comparison",
             "",
             comparison_header,
-            "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
+            "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
         ]
     )
 
@@ -479,6 +487,7 @@ def generate_compare_markdown(
                             row.waiver_status,
                         )
                     ),
+                    "under_investigation" if row.under_investigation else "N.A.",
                     escape_pipes(
                         _format_attack_indicator(
                             row.attack_mapped,
@@ -830,6 +839,8 @@ def render_explain_view(
     signal_table.add_row("Asset Criticality", finding.highest_asset_criticality or "N.A.")
     signal_table.add_row("Asset Count", str(finding.asset_count))
     signal_table.add_row("VEX Statuses", _format_vex_statuses(finding.provenance.vex_statuses))
+    signal_table.add_row("Remediation Strategy", finding.remediation.strategy)
+    signal_table.add_row("Remediation Ecosystem", finding.remediation.ecosystem or "N.A.")
     signal_table.add_row("Waiver", _format_waiver_status(finding))
     signal_table.add_row("KEV Vendor", kev.vendor_project or "N.A.")
     signal_table.add_row("KEV Product", kev.product or "N.A.")
@@ -907,6 +918,27 @@ def render_explain_view(
     else:
         applicability_table.add_row("N.A.", "N.A.", "N.A.", "N.A.", "N.A.")
 
+    remediation_table = Table(title="Remediation Components")
+    remediation_table.add_column("Component")
+    remediation_table.add_column("Path")
+    remediation_table.add_column("Fixed Versions")
+    remediation_table.add_column("Package Type")
+    remediation_table.add_column("PURL", overflow="fold")
+    if finding.remediation.components:
+        for component in finding.remediation.components:
+            remediation_table.add_row(
+                " ".join(
+                    part for part in [component.name, component.current_version] if part
+                ).strip()
+                or "N.A.",
+                component.path or "N.A.",
+                comma_or_na(component.fixed_versions),
+                component.package_type or "N.A.",
+                component.purl or "N.A.",
+            )
+    else:
+        remediation_table.add_row("N.A.", "N.A.", "N.A.", "N.A.", "N.A.")
+
     references = nvd.references[:10]
     references_panel = Panel(
         "\n".join(f"- {reference}" for reference in references) if references else "N.A.",
@@ -923,6 +955,7 @@ def render_explain_view(
         action_panel,
         context_panel,
         applicability_table,
+        remediation_table,
         references_panel,
     )
 
@@ -967,6 +1000,8 @@ def generate_explain_markdown(
             f"- Targets: {comma_or_na(finding.provenance.targets)}",
             f"- Highest Asset Criticality: `{finding.highest_asset_criticality or 'N.A.'}`",
             f"- VEX Statuses: {_format_vex_statuses(finding.provenance.vex_statuses)}",
+            f"- Remediation Strategy: `{finding.remediation.strategy}`",
+            f"- Remediation Ecosystem: `{finding.remediation.ecosystem or 'N.A.'}`",
             f"- Waiver: {_format_waiver_status(finding)}",
             "",
             "## Description",
@@ -1066,6 +1101,38 @@ def generate_explain_markdown(
     lines.extend(
         [
             "",
+            "## Remediation Components",
+            "",
+            "| Component | Path | Fixed Versions | Package Type | PURL |",
+            "| --- | --- | --- | --- | --- |",
+        ]
+    )
+    if finding.remediation.components:
+        for component in finding.remediation.components:
+            lines.append(
+                "| "
+                + " | ".join(
+                    [
+                        escape_pipes(
+                            " ".join(
+                                part for part in [component.name, component.current_version] if part
+                            ).strip()
+                            or "N.A."
+                        ),
+                        escape_pipes(component.path or "N.A."),
+                        escape_pipes(", ".join(component.fixed_versions) or "N.A."),
+                        escape_pipes(component.package_type or "N.A."),
+                        escape_pipes(component.purl or "N.A."),
+                    ]
+                )
+                + " |"
+            )
+    else:
+        lines.append("| N.A. | N.A. | N.A. | N.A. | N.A. |")
+
+    lines.extend(
+        [
+            "",
             "## KEV Metadata",
             f"- Vendor/Project: `{kev.vendor_project or 'N.A.'}`",
             f"- Product: `{kev.product or 'N.A.'}`",
@@ -1103,6 +1170,7 @@ def generate_html_report(report_payload: dict) -> str:
         exploit_status = _format_exploit_status(bool(finding.get("in_kev")))
         rationale = escape(finding.get("rationale") or "N.A.")
         description = escape(finding.get("description") or "N.A.")
+        recommended_action = escape(finding.get("recommended_action") or "N.A.")
         rows.append(
             "<tr>"
             f"<td><strong>{escape(finding.get('cve_id', 'N.A.'))}</strong>"
@@ -1113,6 +1181,7 @@ def generate_html_report(report_payload: dict) -> str:
             f'<td><span class="badge kev">{escape(exploit_status)}</span></td>'
             f"<td>{escape(source_label)}</td>"
             f"<td>{rationale}</td>"
+            f"<td>{recommended_action}</td>"
             f"<td>{escape(finding.get('context_recommendation') or 'N.A.')}</td>"
             "</tr>"
         )
@@ -1126,6 +1195,7 @@ def generate_html_report(report_payload: dict) -> str:
     critical_total = escape(str(critical_count))
     findings_header = "<th>CVE</th><th>Urgency</th><th>CVSS</th><th>EPSS</th>"
     findings_header += "<th>Exploit Status</th><th>Sources</th><th>Rationale</th>"
+    findings_header += "<th>Recommended Action</th>"
     findings_header += "<th>Context Recommendation</th>"
     return f"""<!doctype html>
 <html lang="en">

@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any, cast
 
 from vuln_prioritizer.models import (
+    RemediationPlan,
     RollupBucket,
     RollupCandidate,
     SnapshotDiffItem,
@@ -327,6 +328,7 @@ def build_rollup_candidate(finding: dict[str, Any]) -> RollupCandidate:
         ],
         services=finding_services(finding),
         owners=sorted(finding_owner_hints(finding)),
+        remediation=RemediationPlan.model_validate(finding.get("remediation") or {}),
         recommended_action=str(finding.get("recommended_action") or "Review remediation options."),
         rank_reason=rollup_candidate_reason(finding),
     )
