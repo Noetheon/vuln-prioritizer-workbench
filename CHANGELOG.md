@@ -26,6 +26,7 @@ and this project aims to follow [Semantic Versioning](https://semver.org/).
 - Clarified the public install story, support routing, and issue-template scope guidance for the public repository surface.
 - Documented the GitHub-side public repository hardening checklist around branch protection and repository security features.
 - Aligned the Dependabot label surface and maintainer docs with the public repository label taxonomy.
+- Cleaned up CodeQL findings around Markdown header construction, import consistency, and KEV mirror test URL matching.
 
 ## [1.0.0] - 2026-04-20
 

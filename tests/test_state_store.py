@@ -5,7 +5,6 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 import vuln_prioritizer.state_store as state_store_module
-from vuln_prioritizer.state_store import SQLiteStateStore
 
 
 def test_state_store_import_is_idempotent_for_identical_snapshot_bytes(tmp_path: Path) -> None:
@@ -18,7 +17,7 @@ def test_state_store_import_is_idempotent_for_identical_snapshot_bytes(tmp_path:
             [_finding("CVE-2024-1001", priority_label="High", priority_rank=2)],
         ),
     )
-    store = SQLiteStateStore(db_path)
+    store = state_store_module.SQLiteStateStore(db_path)
 
     first = store.import_snapshot(
         snapshot_path=snapshot_path,
@@ -71,7 +70,7 @@ def test_state_store_history_returns_newest_snapshot_first(tmp_path: Path) -> No
             ],
         ),
     )
-    store = SQLiteStateStore(db_path)
+    store = state_store_module.SQLiteStateStore(db_path)
     store.import_snapshot(
         snapshot_path=before_path,
         payload=json.loads(before_path.read_text(encoding="utf-8")),
@@ -136,7 +135,7 @@ def test_state_store_waiver_filters_respect_status_and_latest_scope(tmp_path: Pa
             ],
         ),
     )
-    store = SQLiteStateStore(db_path)
+    store = state_store_module.SQLiteStateStore(db_path)
     store.import_snapshot(
         snapshot_path=first_path,
         payload=json.loads(first_path.read_text(encoding="utf-8")),
@@ -196,7 +195,7 @@ def test_state_store_waiver_latest_only_uses_newest_generated_snapshot_for_out_o
             ],
         ),
     )
-    store = SQLiteStateStore(db_path)
+    store = state_store_module.SQLiteStateStore(db_path)
     store.import_snapshot(
         snapshot_path=newest_generated_path,
         payload=json.loads(newest_generated_path.read_text(encoding="utf-8")),
@@ -270,7 +269,7 @@ def test_state_store_top_services_aggregates_across_recent_snapshots(
             ],
         ),
     )
-    store = SQLiteStateStore(db_path)
+    store = state_store_module.SQLiteStateStore(db_path)
     store.import_snapshot(
         snapshot_path=first_path,
         payload=json.loads(first_path.read_text(encoding="utf-8")),

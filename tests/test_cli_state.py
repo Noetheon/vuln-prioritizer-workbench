@@ -8,7 +8,6 @@ from typer.testing import CliRunner
 
 import vuln_prioritizer.state_store as state_store_module
 from vuln_prioritizer.cli import app
-from vuln_prioritizer.state_store import SQLiteStateStore
 
 runner = CliRunner()
 
@@ -82,7 +81,7 @@ def test_cli_state_import_snapshot_reports_duplicate_imports(tmp_path: Path) -> 
 def test_cli_state_history_returns_json_in_newest_first_order(tmp_path: Path) -> None:
     db_path = tmp_path / "state.db"
     output_file = tmp_path / "history.json"
-    store = SQLiteStateStore(db_path)
+    store = state_store_module.SQLiteStateStore(db_path)
     before_path = _write_snapshot_file(
         tmp_path,
         "before.json",
@@ -133,7 +132,7 @@ def test_cli_state_history_returns_json_in_newest_first_order(tmp_path: Path) ->
 def test_cli_state_waivers_filters_latest_snapshot_entries(tmp_path: Path) -> None:
     db_path = tmp_path / "state.db"
     output_file = tmp_path / "waivers.json"
-    store = SQLiteStateStore(db_path)
+    store = state_store_module.SQLiteStateStore(db_path)
     first_path = _write_snapshot_file(
         tmp_path,
         "waivers-before.json",
@@ -196,7 +195,7 @@ def test_cli_state_waivers_latest_only_uses_newest_generated_snapshot_for_out_of
 ) -> None:
     db_path = tmp_path / "state.db"
     output_file = tmp_path / "waivers-latest-only.json"
-    store = SQLiteStateStore(db_path)
+    store = state_store_module.SQLiteStateStore(db_path)
     newest_generated_path = _write_snapshot_file(
         tmp_path,
         "waivers-newest-generated.json",
@@ -267,7 +266,7 @@ def test_cli_state_top_services_supports_priority_filtered_json_output(
 
     db_path = tmp_path / "state.db"
     output_file = tmp_path / "top-services.json"
-    store = SQLiteStateStore(db_path)
+    store = state_store_module.SQLiteStateStore(db_path)
     snapshot_path = _write_snapshot_file(
         tmp_path,
         "services.json",

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-from json import JSONDecodeError
 from pathlib import Path
 
 from vuln_prioritizer.models import AttackTechnique
@@ -23,7 +22,7 @@ class AttackMetadataProvider:
 
         try:
             payload = json.loads(offline_file.read_text(encoding="utf-8"))
-        except JSONDecodeError as exc:
+        except json.JSONDecodeError as exc:
             raise ValueError(
                 f"ATT&CK technique metadata JSON is not valid JSON: {exc.msg}."
             ) from exc

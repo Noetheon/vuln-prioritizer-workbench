@@ -6,6 +6,7 @@ from pathlib import Path
 import requests
 
 from vuln_prioritizer.cache import FileCache
+from vuln_prioritizer.config import KEV_FEED_URL
 from vuln_prioritizer.providers.attack import AttackProvider
 from vuln_prioritizer.providers.attack_metadata import AttackMetadataProvider
 from vuln_prioritizer.providers.ctid_mappings import CtidMappingsProvider
@@ -184,7 +185,7 @@ def test_kev_fetch_many_from_offline_json(tmp_path: Path) -> None:
 def test_kev_uses_mirror_when_primary_feed_fails() -> None:
     class Session:
         def get(self, url: str, **kwargs):  # noqa: ANN003
-            if "cisa.gov" in url:
+            if url == KEV_FEED_URL:
                 raise requests.RequestException("primary feed unavailable")
             return FakeResponse(
                 {
