@@ -24,6 +24,7 @@ and this project aims to follow [Semantic Versioning](https://semver.org/).
 - Hardened CI/release workflows so hosted runs are aligned with the stronger local workflow gate before publishing artifacts.
 - Hardened ATT&CK validation and CLI failure handling around CTID/metadata file mismatches, missing files, and legacy `local-csv` messaging.
 - Clarified the public install story, support routing, and issue-template scope guidance for the public repository surface.
+- Documented the GitHub-side public repository hardening checklist around branch protection and repository security features.
 
 ## [1.0.0] - 2026-04-20
 
