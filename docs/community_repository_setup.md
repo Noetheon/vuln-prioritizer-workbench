@@ -146,6 +146,21 @@ These steps must be done on GitHub. They are not created by local files alone:
 12. If PyPI publishing is enabled, confirm the PyPI Trusted Publisher points at this repository, the `.github/workflows/release.yml` workflow, and the `pypi` environment, and that the hosted-index install verification job is green.
 13. If TestPyPI validation is enabled, confirm the separate Trusted Publisher points at `.github/workflows/testpypi.yml`, the `testpypi` environment, that the repository variable `TEST_PYPI_PUBLISH_ENABLED` is intentional, and that the hosted-index install verification job is green.
 
+## Recommended `main` Protection Baseline
+
+For this repository, a practical baseline is:
+
+- required status checks: `check` and `Analyze Python`
+- strict status checks enabled so PRs must be up to date before merge
+- at least one approving review for pull requests
+- stale approvals dismissed on new commits
+- conversation resolution required
+- linear history required
+- force-push and branch deletion disabled
+- admin bypass retained for emergencies when there is only one maintainer
+
+This keeps normal contributions on the PR path without deadlocking a solo maintainer during release or incident work.
+
 ## Local Repo Checklist
 
 These items stay versioned in the repository and should be reviewed together:
