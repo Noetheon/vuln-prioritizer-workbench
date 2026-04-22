@@ -1358,9 +1358,8 @@ def test_cli_analyze_supports_trivy_vex_asset_context_and_custom_policy(
         "\n".join(
             [
                 "target_kind,target_ref,asset_id,criticality,exposure,environment,owner,business_service",
-                '"image","ghcr.io/acme/demo-app:1.0.0 (alpine 3.19)",'
-                '"api-gateway","critical","internet-facing","prod",'
-                '"platform-team","customer-login"',
+                '"image","ghcr.io/acme/demo-app:1.0.0 (alpine 3.19)","api-gateway",'
+                + '"critical","internet-facing","prod","platform-team","customer-login"',
             ]
         )
         + "\n",

@@ -186,6 +186,18 @@ def generate_markdown_report(
     context: AnalysisContext,
 ) -> str:
     """Render the Markdown report."""
+    findings_header = (
+        "| CVE ID | Description | CVSS | Severity | CVSS Version | EPSS | EPSS Percentile | "
+        + "KEV | ATT&CK | Attack Relevance | Sources | Asset Criticality | VEX | Waiver | "
+        + "Priority | Rationale | Recommended Action | Context Recommendation |"
+    )
+    findings_divider = (
+        "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | "
+        + "--- | --- | --- | --- | --- |"
+    )
+    attack_header = (
+        "| CVE ID | Mapping Types | Techniques | Tactics | Capability Groups | ATT&CK Note |"
+    )
     lines = [
         "# Vulnerability Prioritization Report",
         "",
@@ -208,11 +220,8 @@ def generate_markdown_report(
             "",
             "## Findings",
             "",
-            "| CVE ID | Description | CVSS | Severity | CVSS Version | EPSS | EPSS Percentile | "
-            "KEV | ATT&CK | Attack Relevance | Sources | Asset Criticality | VEX | Waiver | "
-            "Priority | Rationale | Recommended Action | Context Recommendation |",
-            "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | "
-            "--- | --- | --- | --- | --- |",
+            findings_header,
+            findings_divider,
         ]
     )
 
@@ -253,8 +262,7 @@ def generate_markdown_report(
     if any(finding.attack_mapped for finding in findings):
         lines.extend(
             [
-                "| CVE ID | Mapping Types | Techniques | Tactics | Capability Groups "
-                "| ATT&CK Note |",
+                attack_header,
                 "| --- | --- | --- | --- | --- | --- |",
             ]
         )
@@ -389,6 +397,10 @@ def generate_compare_markdown(
     context: AnalysisContext,
 ) -> str:
     """Render the Markdown comparison report."""
+    comparison_header = (
+        "| CVE ID | Description | CVSS-only | Enriched | ATT&CK | Attack Relevance | "
+        + "Delta | Changed | CVSS | EPSS | KEV | Waiver | Reason |"
+    )
     changed_count = sum(1 for row in comparisons if row.changed)
     lines = [
         "# Vulnerability Priority Comparison Report",
@@ -421,8 +433,7 @@ def generate_compare_markdown(
             "",
             "## Comparison",
             "",
-            "| CVE ID | Description | CVSS-only | Enriched | ATT&CK | Attack Relevance | "
-            "Delta | Changed | CVSS | EPSS | KEV | Waiver | Reason |",
+            comparison_header,
             "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
         ]
     )
@@ -607,6 +618,10 @@ def generate_rollup_markdown(
     metadata: RollupMetadata,
 ) -> str:
     """Render a Markdown rollup report."""
+    buckets_header = (
+        "| Rank | Bucket | Priority | Actionable/Total | Critical | KEV | Waived | Owners | "
+        + "Patch First | Why First | Next Actions |"
+    )
     lines = [
         f"# {metadata.dimension.title()} Rollup",
         "",
@@ -619,8 +634,7 @@ def generate_rollup_markdown(
         "",
         "## Buckets",
         "",
-        "| Rank | Bucket | Priority | Actionable/Total | Critical | KEV | Waived | Owners | "
-        "Patch First | Why First | Next Actions |",
+        buckets_header,
         "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
     ]
     for bucket in buckets:

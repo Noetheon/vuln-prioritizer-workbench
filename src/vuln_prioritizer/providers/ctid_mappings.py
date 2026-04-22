@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-from json import JSONDecodeError
 from pathlib import Path
 
 from vuln_prioritizer.models import AttackMapping
@@ -24,7 +23,7 @@ class CtidMappingsProvider:
 
         try:
             payload = json.loads(offline_file.read_text(encoding="utf-8"))
-        except JSONDecodeError as exc:
+        except json.JSONDecodeError as exc:
             raise ValueError(f"CTID ATT&CK mapping JSON is not valid JSON: {exc.msg}.") from exc
         metadata = payload.get("metadata")
         if not isinstance(metadata, dict):
