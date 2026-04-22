@@ -126,11 +126,13 @@ These steps must be done on GitHub. They are not created by local files alone:
 4. Enable discussions if you want a public support and workflow-help channel that is separate from issues.
 5. Disable the wiki when versioned docs in `docs/` are the authoritative documentation surface.
 6. Enable delete-branch-on-merge for normal PR hygiene.
-7. Confirm GitHub is surfacing `SECURITY.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, and `SUPPORT.md` in the community health surface where applicable.
-8. If private vulnerability reporting is desired, enable the repository security/advisory setting in GitHub after the repository is public.
-9. If public releases are enabled, confirm the GitHub Release object exists for the current tag and that the release workflow still matches the maintainer guidance in [docs/release_operations.md](./release_operations.md), including tag-only publish behavior.
-10. If PyPI publishing is enabled, confirm the PyPI Trusted Publisher points at this repository, the `.github/workflows/release.yml` workflow, and the `pypi` environment, and that the hosted-index install verification job is green.
-11. If TestPyPI validation is enabled, confirm the separate Trusted Publisher points at `.github/workflows/testpypi.yml`, the `testpypi` environment, that the repository variable `TEST_PYPI_PUBLISH_ENABLED` is intentional, and that the hosted-index install verification job is green.
+7. Protect `main` against force-push and deletion at minimum. Add stricter PR or status-check requirements only when they match the maintainer workflow you actually intend to enforce.
+8. Enable GitHub code security features that fit a public repository: secret scanning, push protection, vulnerability alerts, automated security fixes, and the existing CodeQL workflow.
+9. Confirm GitHub is surfacing `SECURITY.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, and `SUPPORT.md` in the community health surface where applicable.
+10. If private vulnerability reporting is desired, enable the repository security/advisory setting in GitHub after the repository is public.
+11. If public releases are enabled, confirm the GitHub Release object exists for the current tag and that the release workflow still matches the maintainer guidance in [docs/release_operations.md](./release_operations.md), including tag-only publish behavior.
+12. If PyPI publishing is enabled, confirm the PyPI Trusted Publisher points at this repository, the `.github/workflows/release.yml` workflow, and the `pypi` environment, and that the hosted-index install verification job is green.
+13. If TestPyPI validation is enabled, confirm the separate Trusted Publisher points at `.github/workflows/testpypi.yml`, the `testpypi` environment, that the repository variable `TEST_PYPI_PUBLISH_ENABLED` is intentional, and that the hosted-index install verification job is green.
 
 ## Local Repo Checklist
 
