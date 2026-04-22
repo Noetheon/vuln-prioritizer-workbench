@@ -21,6 +21,7 @@ Today the CLI supports:
 - `data status`
 - `data update`
 - `data verify`
+- `data export-provider-snapshot`
 - `report html --input analysis.json --output report.html`
 - `report evidence-bundle --input analysis.json --output evidence.zip`
 - `report verify-evidence-bundle --input evidence.zip --format json`
@@ -61,6 +62,8 @@ Analyze-mode inputs:
 - `attack-source`
 - `attack-mapping-file`
 - `attack-technique-metadata-file`
+- `provider-snapshot-file`
+- `locked-provider-data`
 
 Outputs:
 
@@ -69,6 +72,7 @@ Outputs:
 - `summary-path` when a summary is requested via `summary-output-path` or `github-step-summary`
 
 The action installs the package from the action checkout and writes the resolved output path to the `report-path` output. In normal consumer workflows, that checkout is the consumer repository that contains `trivy-results.json` or similar scan inputs, not this repository's fixture tree.
+`mode: analyze` accepts newline-delimited `input` and `input-format` values, so one action invocation can merge multiple scanner exports or mix one global format with per-input formats. `mode: report-html` still requires exactly one analysis JSON input.
 
 ### Summary Templates
 
@@ -215,8 +219,12 @@ Compact step summary without an explicit summary artifact path:
   uses: Noetheon/vuln-prioritizer-cli@vX.Y.Z
   with:
     mode: analyze
-    input: trivy-results.json
-    input-format: trivy-json
+    input: |
+      trivy-results.json
+      github-alerts-export.json
+    input-format: |
+      trivy-json
+      github-alerts-json
     output-format: sarif
     output-path: results.sarif
     summary-template: compact
@@ -231,8 +239,12 @@ Compact PR comment body using the action-generated `summary-path`:
   uses: Noetheon/vuln-prioritizer-cli@vX.Y.Z
   with:
     mode: analyze
-    input: trivy-results.json
-    input-format: trivy-json
+    input: |
+      trivy-results.json
+      github-alerts-export.json
+    input-format: |
+      trivy-json
+      github-alerts-json
     output-format: json
     output-path: analysis.json
     summary-output-path: pr-comment.md

@@ -12,6 +12,7 @@ from rich.console import Console
 from rich.panel import Panel
 
 from vuln_prioritizer import __version__
+from vuln_prioritizer.inputs.loader import InputSpec
 from vuln_prioritizer.runtime_config import (
     LoadedRuntimeConfig,
     discover_runtime_config,
@@ -240,6 +241,37 @@ def runtime_config(ctx: typer.Context) -> LoadedRuntimeConfig | None:
     obj = root.obj if isinstance(root.obj, dict) else {}
     loaded = obj.get("runtime_config")
     return loaded if isinstance(loaded, LoadedRuntimeConfig) else None
+
+
+def build_input_specs_or_exit(
+    *,
+    input_paths: list[Path] | None,
+    input_formats: list[InputFormat] | None,
+    command_name: str,
+    require_inputs: bool,
+) -> list[InputSpec]:
+    paths = input_paths or []
+    if require_inputs and not paths:
+        exit_input_validation(f"{command_name} requires at least one --input.")
+    if not paths:
+        return []
+
+    format_values = [item.value for item in (input_formats or [])]
+    if not format_values:
+        format_values = [InputFormat.auto.value] * len(paths)
+    elif len(format_values) == 1:
+        format_values = format_values * len(paths)
+    elif len(format_values) != len(paths):
+        exit_input_validation(
+            f"{command_name} received {len(paths)} --input value(s) but "
+            f"{len(format_values)} --input-format value(s). Use one shared --input-format "
+            "or one --input-format per --input."
+        )
+
+    return [
+        InputSpec(path=path, input_format=input_format)
+        for path, input_format in zip(paths, format_values, strict=True)
+    ]
 
 
 def validate_command_formats(

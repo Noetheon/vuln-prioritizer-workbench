@@ -1,0 +1,233 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://noetheon.github.io/vuln-prioritizer/schemas/data-status-report.schema.json",
+  "title": "vuln-prioritizer data status report",
+  "description": "JSON contract for `vuln-prioritizer data status --format json`.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["metadata", "summary", "namespaces", "attack", "warnings"],
+  "properties": {
+    "metadata": {
+      "$ref": "#/$defs/metadata"
+    },
+    "summary": {
+      "$ref": "#/$defs/summary"
+    },
+    "namespaces": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/namespaceStatus"
+      }
+    },
+    "attack": {
+      "$ref": "#/$defs/nullableAttackValidation"
+    },
+    "warnings": {
+      "$ref": "#/$defs/stringArray"
+    }
+  },
+  "$defs": {
+    "nullableString": {
+      "type": ["string", "null"]
+    },
+    "stringArray": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "command",
+        "generated_at",
+        "output_format",
+        "output_path",
+        "cache_dir",
+        "cache_ttl_hours",
+        "kev_mode",
+        "offline_kev_file"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "1.2.0"
+        },
+        "command": {
+          "const": "data status"
+        },
+        "generated_at": {
+          "type": "string"
+        },
+        "output_format": {
+          "const": "json"
+        },
+        "output_path": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "cache_dir": {
+          "type": "string"
+        },
+        "cache_ttl_hours": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "kev_mode": {
+          "enum": ["live/cache", "offline file"]
+        },
+        "offline_kev_file": {
+          "$ref": "#/$defs/nullableString"
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["namespace_count", "namespace_file_count", "attack_enabled"],
+      "properties": {
+        "namespace_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "namespace_file_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "attack_enabled": {
+          "type": "boolean"
+        }
+      }
+    },
+    "namespaceStatus": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "namespace",
+        "file_count",
+        "valid_count",
+        "expired_count",
+        "invalid_count",
+        "latest_cached_at",
+        "namespace_checksum"
+      ],
+      "properties": {
+        "namespace": {
+          "enum": ["nvd", "epss", "kev"]
+        },
+        "file_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "valid_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "expired_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "invalid_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "latest_cached_at": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "namespace_checksum": {
+          "$ref": "#/$defs/nullableString"
+        }
+      }
+    },
+    "attackValidation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source",
+        "mapping_file",
+        "mapping_file_sha256",
+        "technique_metadata_file",
+        "technique_metadata_file_sha256",
+        "source_version",
+        "attack_version",
+        "domain",
+        "mapping_framework",
+        "mapping_framework_version",
+        "mapping_count",
+        "unique_cves",
+        "technique_count",
+        "missing_metadata_ids",
+        "domain_mismatch",
+        "attack_version_mismatch",
+        "revoked_or_deprecated_count"
+      ],
+      "properties": {
+        "source": {
+          "type": "string"
+        },
+        "mapping_file": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "mapping_file_sha256": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "technique_metadata_file": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "technique_metadata_file_sha256": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "source_version": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "attack_version": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "domain": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "mapping_framework": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "mapping_framework_version": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "mapping_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "unique_cves": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "technique_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "missing_metadata_ids": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "domain_mismatch": {
+          "type": "boolean"
+        },
+        "attack_version_mismatch": {
+          "type": "boolean"
+        },
+        "revoked_or_deprecated_count": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "nullableAttackValidation": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/attackValidation"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  }
+}

@@ -47,8 +47,8 @@
     "description": "Apache Log4j2 2.0-beta9 through 2.15.0 (excluding security releases 2.12.2, 2.12.3, and 2.3.1) JNDI features used in configuration, log messages, and parameters do not protect against attacker controlled LDAP and other JNDI related endpoints. An attacker who can control log messages or log message parameters can execute arbitrary code loaded from LDAP servers when message lookup substitution is enabled. From log4j 2.15.0, this behavior has been disabled by default. From version 2.16.0 (along with 2.12.2, 2.12.3, and 2.3.1), this functionality has been completely removed. Note that this vulnerability is specific to log4j-core and does not affect log4net, log4cxx, or other Apache Logging Services projects.",
     "enriched_label": "Critical",
     "enriched_rank": 1,
-    "epss": 0.9445,
-    "epss_percentile": 0.99991,
+    "epss": 0.94465,
+    "epss_percentile": 0.99995,
     "in_kev": true,
     "mapped_tactics": [
       "Initial Access"
@@ -108,9 +108,9 @@
   },
   "epss": {
     "cve_id": "CVE-2021-44228",
-    "date": "2026-04-21",
-    "epss": 0.9445,
-    "percentile": 0.99991
+    "date": "2026-04-22",
+    "epss": 0.94465,
+    "percentile": 0.99995
   },
   "finding": {
     "asset_count": 0,
@@ -133,8 +133,8 @@
     "cvss_severity": "CRITICAL",
     "cvss_version": "3.1",
     "description": "Apache Log4j2 2.0-beta9 through 2.15.0 (excluding security releases 2.12.2, 2.12.3, and 2.3.1) JNDI features used in configuration, log messages, and parameters do not protect against attacker controlled LDAP and other JNDI related endpoints. An attacker who can control log messages or log message parameters can execute arbitrary code loaded from LDAP servers when message lookup substitution is enabled. From log4j 2.15.0, this behavior has been disabled by default. From version 2.16.0 (along with 2.12.2, 2.12.3, and 2.3.1), this functionality has been completely removed. Note that this vulnerability is specific to log4j-core and does not affect log4net, log4cxx, or other Apache Logging Services projects.",
-    "epss": 0.9445,
-    "epss_percentile": 0.99991,
+    "epss": 0.94465,
+    "epss_percentile": 0.99995,
     "highest_asset_criticality": null,
     "in_kev": true,
     "priority_label": "Critical",
@@ -226,6 +226,7 @@
       "Local ATT&CK CSV mapping",
       "Input formats: cve-list"
     ],
+    "duplicate_cve_count": 0,
     "epss_hits": 1,
     "expired_waiver_count": 0,
     "filtered_out_count": 0,
@@ -233,9 +234,20 @@
     "generated_at": "2026-04-21T12:00:00+00:00",
     "input_format": "cve-list",
     "input_path": "inline:CVE-2021-44228",
+    "input_paths": [],
+    "input_sources": [],
     "kev_hits": 1,
+    "locked_provider_data": false,
     "mapping_framework": null,
     "mapping_framework_version": null,
+    "merged_input_count": 1,
+    "nvd_diagnostics": {
+      "cache_hits": 1,
+      "content_hits": 1,
+      "failures": 0,
+      "network_fetches": 0,
+      "requested": 1
+    },
     "nvd_hits": 1,
     "occurrences_count": 1,
     "output_format": "json",
@@ -251,6 +263,8 @@
       "medium_cvss_threshold": 7.0,
       "medium_epss_threshold": 0.1
     },
+    "provider_snapshot_file": null,
+    "provider_snapshot_sources": [],
     "schema_version": "1.0.0",
     "source_stats": {
       "cve-list": 1

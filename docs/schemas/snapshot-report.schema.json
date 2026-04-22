@@ -39,6 +39,59 @@
         "type": "integer"
       }
     },
+    "inputSourceSummary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "input_path",
+        "input_format",
+        "total_rows",
+        "occurrence_count",
+        "unique_cves",
+        "warning_count"
+      ],
+      "properties": {
+        "input_path": {
+          "type": "string"
+        },
+        "input_format": {
+          "type": "string"
+        },
+        "total_rows": {
+          "type": "integer"
+        },
+        "occurrence_count": {
+          "type": "integer"
+        },
+        "unique_cves": {
+          "type": "integer"
+        },
+        "warning_count": {
+          "type": "integer"
+        }
+      }
+    },
+    "providerLookupDiagnostics": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "requested": {
+          "type": "integer"
+        },
+        "cache_hits": {
+          "type": "integer"
+        },
+        "network_fetches": {
+          "type": "integer"
+        },
+        "failures": {
+          "type": "integer"
+        },
+        "content_hits": {
+          "type": "integer"
+        }
+      }
+    },
     "priorityPolicy": {
       "type": "object",
       "additionalProperties": false,
@@ -117,6 +170,33 @@
         "input_format": {
           "type": "string"
         },
+        "input_paths": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "input_sources": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/inputSourceSummary"
+          }
+        },
+        "merged_input_count": {
+          "type": "integer"
+        },
+        "duplicate_cve_count": {
+          "type": "integer"
+        },
+        "provider_snapshot_file": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "locked_provider_data": {
+          "type": "boolean"
+        },
+        "provider_snapshot_sources": {
+          "$ref": "#/$defs/stringArray"
+        },
         "attack_enabled": {
           "type": "boolean"
         },
@@ -164,6 +244,9 @@
         },
         "nvd_hits": {
           "type": "integer"
+        },
+        "nvd_diagnostics": {
+          "$ref": "#/$defs/providerLookupDiagnostics"
         },
         "epss_hits": {
           "type": "integer"
@@ -256,6 +339,33 @@
         "input_format": {
           "type": "string"
         },
+        "input_paths": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "input_sources": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/inputSourceSummary"
+          }
+        },
+        "merged_input_count": {
+          "type": "integer"
+        },
+        "duplicate_cve_count": {
+          "type": "integer"
+        },
+        "provider_snapshot_file": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "locked_provider_data": {
+          "type": "boolean"
+        },
+        "provider_snapshot_sources": {
+          "$ref": "#/$defs/stringArray"
+        },
         "attack_enabled": {
           "type": "boolean"
         },
@@ -303,6 +413,9 @@
         },
         "nvd_hits": {
           "type": "integer"
+        },
+        "nvd_diagnostics": {
+          "$ref": "#/$defs/providerLookupDiagnostics"
         },
         "epss_hits": {
           "type": "integer"

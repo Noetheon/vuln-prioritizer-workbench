@@ -2,6 +2,7 @@
 
 from vuln_prioritizer.inputs.loader import (
     InputLoader,
+    InputSpec,
     build_inline_input,
     detect_input_format,
     load_asset_context_file,
@@ -10,6 +11,7 @@ from vuln_prioritizer.inputs.loader import (
 
 __all__ = [
     "InputLoader",
+    "InputSpec",
     "build_inline_input",
     "detect_input_format",
     "load_asset_context_file",

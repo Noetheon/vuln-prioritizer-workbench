@@ -12,6 +12,7 @@ from pydantic import ValidationError
 from vuln_prioritizer.config import DATA_SOURCES
 from vuln_prioritizer.inputs import (
     InputLoader,
+    InputSpec,
     build_inline_input,
     load_asset_context_file,
     load_vex_files,
@@ -30,9 +31,11 @@ from vuln_prioritizer.models import (
     ParsedInput,
     PrioritizedFinding,
     PriorityPolicy,
+    ProviderSnapshotReport,
     VexStatement,
     WaiverRule,
 )
+from vuln_prioritizer.provider_snapshot import load_provider_snapshot
 from vuln_prioritizer.services.attack_enrichment import AttackEnrichmentService
 from vuln_prioritizer.services.contextualization import (
     aggregate_provenance,
@@ -49,7 +52,6 @@ from vuln_prioritizer.utils import iso_utc_now
 from .common import (
     PRIORITY_LABELS,
     AttackSource,
-    InputFormat,
     PriorityFilter,
     SortBy,
     console,
@@ -59,10 +61,11 @@ from .common import (
 
 @dataclass(frozen=True)
 class AnalysisRequest:
-    input_path: Path
+    input_specs: list[InputSpec]
     output: Path | None
     format: StrEnum
-    input_format: InputFormat
+    provider_snapshot_file: Path | None
+    locked_provider_data: bool
     no_attack: bool
     attack_source: AttackSource
     attack_mapping_file: Path | None
@@ -96,6 +99,8 @@ class ExplainRequest:
     cve_id: str
     output: Path | None
     format: StrEnum
+    provider_snapshot_file: Path | None
+    locked_provider_data: bool
     no_attack: bool
     attack_source: AttackSource
     attack_mapping_file: Path | None
@@ -189,6 +194,16 @@ def load_context_profile_or_exit(
     raise AssertionError("unreachable")
 
 
+def load_provider_snapshot_or_exit(path: Path | None) -> ProviderSnapshotReport | None:
+    if path is None:
+        return None
+    try:
+        return load_provider_snapshot(path)
+    except ValueError as exc:
+        exit_input_validation(str(exc))
+    raise AssertionError("unreachable")
+
+
 def resolve_attack_options(
     *,
     no_attack: bool,
@@ -267,6 +282,10 @@ def build_attack_summary_from_findings(findings: list[PrioritizedFinding]) -> At
 
 def build_data_sources(enrichment: EnrichmentResult) -> list[str]:
     sources = list(DATA_SOURCES)
+    if enrichment.provider_snapshot_sources:
+        sources.append(
+            "Provider snapshot replay: " + ", ".join(sorted(enrichment.provider_snapshot_sources))
+        )
     if enrichment.attack_source == "ctid-mappings-explorer":
         sources.append("CTID Mappings Explorer (local JSON artifact)")
     elif enrichment.attack_source == "local-csv":
@@ -391,6 +410,8 @@ def build_findings(
     no_cache: bool,
     cache_dir: Path,
     cache_ttl_hours: int,
+    provider_snapshot: ProviderSnapshotReport | None = None,
+    locked_provider_data: bool = False,
 ) -> tuple[list[PrioritizedFinding], dict[str, int], EnrichmentResult]:
     validate_requested_attack_mode(
         attack_enabled=attack_enabled,
@@ -413,6 +434,8 @@ def build_findings(
             attack_mapping_file=attack_mapping_file,
             attack_technique_metadata_file=attack_technique_metadata_file,
             offline_attack_file=offline_attack_file,
+            provider_snapshot=provider_snapshot,
+            locked_provider_data=locked_provider_data,
         )
     except (OSError, ValidationError, ValueError) as exc:
         exit_input_validation(str(exc))
@@ -445,9 +468,11 @@ def prepare_analysis(request: AnalysisRequest) -> tuple[list[PrioritizedFinding]
     try:
         asset_records = load_asset_records_or_exit(request.asset_context)
         vex_statements = load_vex_statements_or_exit(request.vex_files)
-        parsed_input = InputLoader().load(
-            request.input_path,
-            input_format=request.input_format.value,
+        if request.locked_provider_data and request.provider_snapshot_file is None:
+            exit_input_validation("--locked-provider-data requires --provider-snapshot-file.")
+        provider_snapshot = load_provider_snapshot_or_exit(request.provider_snapshot_file)
+        parsed_input = InputLoader().load_many(
+            request.input_specs,
             max_cves=request.max_cves,
             target_kind=request.target_kind,
             target_ref=request.target_ref,
@@ -475,6 +500,8 @@ def prepare_analysis(request: AnalysisRequest) -> tuple[list[PrioritizedFinding]
         no_cache=request.no_cache,
         cache_dir=request.cache_dir,
         cache_ttl_hours=request.cache_ttl_hours,
+        provider_snapshot=provider_snapshot,
+        locked_provider_data=request.locked_provider_data,
     )
     all_findings, waiver_warnings = apply_waivers(all_findings, waiver_rules)
 
@@ -498,11 +525,24 @@ def prepare_analysis(request: AnalysisRequest) -> tuple[list[PrioritizedFinding]
     attack_summary = build_attack_summary_from_findings(findings)
 
     context = AnalysisContext(
-        input_path=str(request.input_path),
+        input_path=(
+            parsed_input.input_paths[0]
+            if parsed_input.input_paths
+            else str(request.input_specs[0].path)
+        ),
         output_path=str(request.output) if request.output else None,
         output_format=request.format.value,
         generated_at=iso_utc_now(),
         input_format=parsed_input.input_format,
+        input_paths=parsed_input.input_paths,
+        input_sources=parsed_input.source_summaries,
+        merged_input_count=parsed_input.merged_input_count,
+        duplicate_cve_count=parsed_input.duplicate_cve_count,
+        provider_snapshot_file=(
+            str(request.provider_snapshot_file) if request.provider_snapshot_file else None
+        ),
+        locked_provider_data=request.locked_provider_data,
+        provider_snapshot_sources=enrichment.provider_snapshot_sources,
         attack_enabled=attack_enabled,
         attack_source=enrichment.attack_source,
         attack_mapping_file=enrichment.attack_mapping_file,
@@ -519,6 +559,7 @@ def prepare_analysis(request: AnalysisRequest) -> tuple[list[PrioritizedFinding]
         findings_count=len(findings),
         filtered_out_count=max(len(all_findings) - len(findings), 0),
         nvd_hits=count_nvd_hits(enrichment),
+        nvd_diagnostics=enrichment.nvd_diagnostics,
         epss_hits=count_epss_hits(enrichment),
         kev_hits=count_kev_hits(enrichment),
         attack_hits=attack_summary.mapped_cves,
@@ -555,6 +596,9 @@ def prepare_analysis(request: AnalysisRequest) -> tuple[list[PrioritizedFinding]
 
 def prepare_explain(request: ExplainRequest) -> ExplainResult:
     context_profile = load_context_profile_or_exit(request.policy_profile, request.policy_file)
+    if request.locked_provider_data and request.provider_snapshot_file is None:
+        exit_input_validation("--locked-provider-data requires --provider-snapshot-file.")
+    provider_snapshot = load_provider_snapshot_or_exit(request.provider_snapshot_file)
     attack_enabled, resolved_attack_source, resolved_mapping_file, resolved_metadata_file = (
         resolve_attack_options(
             no_attack=request.no_attack,
@@ -589,6 +633,8 @@ def prepare_explain(request: ExplainRequest) -> ExplainResult:
         no_cache=request.no_cache,
         cache_dir=request.cache_dir,
         cache_ttl_hours=request.cache_ttl_hours,
+        provider_snapshot=provider_snapshot,
+        locked_provider_data=request.locked_provider_data,
     )
     findings, waiver_warnings = apply_waivers(findings, waiver_rules)
     if not request.show_suppressed:
@@ -612,6 +658,11 @@ def prepare_explain(request: ExplainRequest) -> ExplainResult:
         output_path=str(request.output) if request.output else None,
         output_format=request.format.value,
         generated_at=iso_utc_now(),
+        provider_snapshot_file=(
+            str(request.provider_snapshot_file) if request.provider_snapshot_file else None
+        ),
+        locked_provider_data=request.locked_provider_data,
+        provider_snapshot_sources=enrichment.provider_snapshot_sources,
         attack_enabled=attack_enabled,
         attack_source=enrichment.attack_source,
         attack_mapping_file=enrichment.attack_mapping_file,
@@ -628,6 +679,7 @@ def prepare_explain(request: ExplainRequest) -> ExplainResult:
         findings_count=1,
         filtered_out_count=0,
         nvd_hits=count_nvd_hits(enrichment),
+        nvd_diagnostics=enrichment.nvd_diagnostics,
         epss_hits=count_epss_hits(enrichment),
         kev_hits=count_kev_hits(enrichment),
         attack_hits=attack_summary.mapped_cves,
