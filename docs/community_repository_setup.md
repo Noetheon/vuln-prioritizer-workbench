@@ -19,6 +19,7 @@ The split matters:
 | This document | local doc in the repo | Maintainer reference only. It does not create labels, topics, or repository settings by itself. |
 | Repository topics | GitHub UI or API | Must be configured on GitHub. |
 | Label definitions and colors | GitHub UI or API | Must be configured on GitHub. Template front matter can reference labels, but it does not create them. |
+| Repository visibility and surface settings | GitHub UI or API | Public/private state, discussions, wiki, homepage, merge cleanup, and related toggles must be configured on GitHub. |
 | Private vulnerability reporting or security advisories settings | GitHub repository settings | Must be configured on GitHub if the project wants GitHub-managed private reporting in addition to `SECURITY.md`. |
 
 ## Recommended Repository Topics
@@ -78,15 +79,15 @@ Add only the few status labels that reduce back-and-forth:
 | `blocked` | work depends on an upstream change, external data issue, or another issue/PR | Remove it as soon as the blocker clears. |
 | `duplicate` | another open or closed issue already tracks the same work | Close with a link to the canonical issue. |
 
-### Optional Scope Labels
+### Area Labels
 
-Only add scope labels if issue volume justifies them. A small recommended set for this repo:
+This repository already uses a small `area:*` set. Keep that convention instead of introducing a second, competing scope taxonomy:
 
-- `scope:providers`
-- `scope:attack`
-- `scope:reporting`
-- `scope:inputs`
-- `scope:docs`
+- `area:benchmarking`
+- `area:workflow`
+- `area:governance`
+- `area:release`
+- `area:docs`
 
 Do not create a public `security` issue label for vulnerability disclosures. Public issues should be rerouted to `SECURITY.md` instead of encouraging security reports in the issue tracker.
 
@@ -98,7 +99,7 @@ Use the following conventions to keep the public tracker readable:
 2. Add `good first issue` only when the issue is small, self-contained, and includes a clear local check such as `make check`, a targeted test, or a doc-only review path.
 3. Add `help wanted` only when maintainers are ready to accept outside contributions now.
 4. Use at most one triage status label at a time.
-5. Add scope labels only when they help route work; do not label everything with every possible subsystem.
+5. Add at most one `area:*` label when it helps route work; do not label everything with every possible subsystem.
 6. Ask for sanitized reproduction details for bugs: exact command, input format, observed output, expected output, Python version, and OS.
 7. Close out-of-scope requests quickly when they would turn the project into a scanner, SaaS workflow tool, heuristic ATT&CK mapper, or unrelated security platform.
 8. Do not debug private security issues in public. Redirect them to `SECURITY.md` and avoid requesting exploit details in the issue thread.
@@ -119,13 +120,17 @@ If any of those are false, use `help wanted` or keep the issue unlabeled instead
 
 These steps must be done on GitHub. They are not created by local files alone:
 
-1. Add the recommended repository topics in the repository "About" panel.
-2. Create the recommended labels in the repository labels screen or via the GitHub API.
-3. Confirm GitHub is surfacing `SECURITY.md`, `CONTRIBUTING.md`, and `CODE_OF_CONDUCT.md` in the community health view.
-4. If private vulnerability reporting is desired, enable the repository security/advisory setting in GitHub.
-5. If public releases are enabled, confirm the GitHub Release object exists for the current tag and that the release workflow still matches the maintainer guidance in [docs/release_operations.md](./release_operations.md), including tag-only publish behavior.
-6. If PyPI publishing is enabled, confirm the PyPI Trusted Publisher points at this repository, the `.github/workflows/release.yml` workflow, and the `pypi` environment, and that the hosted-index install verification job is green.
-7. If TestPyPI validation is enabled, confirm the separate Trusted Publisher points at `.github/workflows/testpypi.yml`, the `testpypi` environment, that the repository variable `TEST_PYPI_PUBLISH_ENABLED` is intentional, and that the hosted-index install verification job is green.
+1. Set the repository visibility to `public` when the project is ready for external consumption.
+2. Add the recommended repository topics in the repository "About" panel.
+3. Set a concise repository description that matches the current product surface.
+4. Enable discussions if you want a public support and workflow-help channel that is separate from issues.
+5. Disable the wiki when versioned docs in `docs/` are the authoritative documentation surface.
+6. Enable delete-branch-on-merge for normal PR hygiene.
+7. Confirm GitHub is surfacing `SECURITY.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, and `SUPPORT.md` in the community health surface where applicable.
+8. If private vulnerability reporting is desired, enable the repository security/advisory setting in GitHub after the repository is public.
+9. If public releases are enabled, confirm the GitHub Release object exists for the current tag and that the release workflow still matches the maintainer guidance in [docs/release_operations.md](./release_operations.md), including tag-only publish behavior.
+10. If PyPI publishing is enabled, confirm the PyPI Trusted Publisher points at this repository, the `.github/workflows/release.yml` workflow, and the `pypi` environment, and that the hosted-index install verification job is green.
+11. If TestPyPI validation is enabled, confirm the separate Trusted Publisher points at `.github/workflows/testpypi.yml`, the `testpypi` environment, that the repository variable `TEST_PYPI_PUBLISH_ENABLED` is intentional, and that the hosted-index install verification job is green.
 
 ## Local Repo Checklist
 

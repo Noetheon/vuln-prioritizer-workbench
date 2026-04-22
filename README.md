@@ -239,6 +239,14 @@ Maintainer / repo-checkout workflows:
 
 - [docs/release_operations.md](docs/release_operations.md)
 
+## Community And Support
+
+- Usage questions and workflow help: GitHub Discussions
+- Reproducible bugs and scoped feature requests: GitHub Issues
+- Security reports: private vulnerability reporting when enabled, otherwise [SECURITY.md](SECURITY.md)
+- Contribution rules and local validation: [CONTRIBUTING.md](CONTRIBUTING.md)
+- Support routing: [SUPPORT.md](SUPPORT.md)
+
 Reference material:
 
 - [docs/roadmap.md](docs/roadmap.md)

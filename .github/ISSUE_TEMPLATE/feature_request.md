@@ -17,7 +17,7 @@ Describe the smallest useful version of the feature.
 ## Scope Check
 
 - [ ] this keeps the project focused on prioritizing known CVEs
-- [ ] this does not require a web UI or database
+- [ ] this does not require a web UI, hosted control plane, or non-optional remote database
 - [ ] this does not require heuristic or LLM-generated CVE-to-ATT&CK mapping
 
 ## Alternatives Considered
