@@ -101,6 +101,52 @@ def test_cli_compare_table_mode(
     assert "Unchanged rows:" in result.stdout
 
 
+def test_cli_compare_table_mode_surfaces_under_investigation(
+    install_fake_providers,
+    runner,
+    tmp_path: Path,
+) -> None:
+    input_file = tmp_path / "cves.txt"
+    input_file.write_text("CVE-2021-44228\n", encoding="utf-8")
+    vex_file = tmp_path / "vex.json"
+    vex_file.write_text(
+        json.dumps(
+            {
+                "statements": [
+                    {
+                        "vulnerability": {"name": "CVE-2021-44228"},
+                        "status": "under_investigation",
+                        "products": [{"subcomponents": [{"kind": "generic", "name": "default"}]}],
+                    }
+                ]
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    install_fake_providers()
+
+    result = runner.invoke(
+        app,
+        [
+            "compare",
+            "--input",
+            str(input_file),
+            "--vex-file",
+            str(vex_file),
+            "--target-kind",
+            "generic",
+            "--target-ref",
+            "default",
+            "--sort-by",
+            "cve",
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert "Under investigation" in result.stdout
+
+
 def test_cli_compare_json_export(
     install_fake_providers,
     runner,
@@ -133,6 +179,7 @@ def test_cli_compare_json_export(
     assert payload["metadata"]["active_filters"] == ["priority=High"]
     assert any(item["changed"] for item in payload["comparisons"])
     assert payload["attack_summary"]["mapped_cves"] == 0
+    assert all("under_investigation" in item for item in payload["comparisons"])
 
 
 def test_cli_compare_surfaces_waiver_details(

@@ -36,9 +36,20 @@ class InputOccurrence(StrictModel):
     asset_environment: str | None = None
     asset_owner: str | None = None
     asset_business_service: str | None = None
+    asset_match_rule_id: str | None = None
+    asset_match_row: int | None = None
+    asset_match_mode: str | None = None
+    asset_match_pattern: str | None = None
+    asset_match_precedence: int | None = None
+    asset_match_candidate_count: int = 0
     vex_status: str | None = None
     vex_justification: str | None = None
     vex_action_statement: str | None = None
+    vex_match_type: str | None = None
+    vex_source_format: str | None = None
+    vex_source_record_id: str | None = None
+    vex_source_path: str | None = None
+    vex_candidate_count: int = 0
 
 
 class InputSourceSummary(StrictModel):
@@ -61,6 +72,8 @@ class ParsedInput(BaseModel):
     source_summaries: list[InputSourceSummary] = Field(default_factory=list)
     merged_input_count: int = 1
     duplicate_cve_count: int = 0
+    asset_match_conflict_count: int = 0
+    vex_conflict_count: int = 0
 
 
 class FindingProvenance(StrictModel):
@@ -84,6 +97,10 @@ class AssetContextRecord(StrictModel):
     target_kind: str
     target_ref: str
     asset_id: str
+    rule_id: str | None = None
+    match_mode: str = "exact"
+    precedence: int = 0
+    row_number: int | None = None
     criticality: str | None = None
     exposure: str | None = None
     environment: str | None = None
@@ -159,6 +176,24 @@ class VexStatement(StrictModel):
     justification: str | None = None
     action_statement: str | None = None
     source_record_id: str | None = None
+    source_path: str | None = None
+    source_file_order: int | None = None
+    statement_order: int | None = None
+
+
+class RemediationComponent(StrictModel):
+    name: str | None = None
+    current_version: str | None = None
+    fixed_versions: list[str] = Field(default_factory=list)
+    package_type: str | None = None
+    purl: str | None = None
+    path: str | None = None
+
+
+class RemediationPlan(StrictModel):
+    strategy: str = "generic-priority-guidance"
+    ecosystem: str | None = None
+    components: list[RemediationComponent] = Field(default_factory=list)
 
 
 class NvdData(StrictModel):
@@ -358,6 +393,7 @@ class PrioritizedFinding(StrictModel):
     priority_label: str
     priority_rank: int
     rationale: str
+    remediation: RemediationPlan = Field(default_factory=RemediationPlan)
     recommended_action: str
 
 
@@ -381,6 +417,7 @@ class ComparisonFinding(StrictModel):
     provenance: FindingProvenance = Field(default_factory=FindingProvenance)
     context_summary: str | None = None
     suppressed_by_vex: bool = False
+    under_investigation: bool = False
     waived: bool = False
     waiver_status: str | None = None
     waiver_reason: str | None = None
@@ -456,6 +493,8 @@ class AnalysisContext(BaseModel):
     attack_hits: int = 0
     suppressed_by_vex: int = 0
     under_investigation_count: int = 0
+    asset_match_conflict_count: int = 0
+    vex_conflict_count: int = 0
     waived_count: int = 0
     waiver_review_due_count: int = 0
     expired_waiver_count: int = 0
@@ -562,6 +601,7 @@ class RollupCandidate(StrictModel):
     asset_ids: list[str] = Field(default_factory=list)
     services: list[str] = Field(default_factory=list)
     owners: list[str] = Field(default_factory=list)
+    remediation: RemediationPlan = Field(default_factory=RemediationPlan)
     recommended_action: str
     rank_reason: str
 

@@ -142,6 +142,14 @@ Current guarantees:
 - `attack_relevance` is a contextual, explainable helper label produced locally by this CLI
 - absence of ATT&CK data is represented as unmapped context, not guessed context
 
+### Remediation guidance
+
+Current remediation contract:
+
+- `remediation` is additive structured guidance, not a hidden scoring input
+- `recommended_action` is rendered from `remediation` plus the current priority label
+- remediation evidence is derived from occurrence-level package/component signals, not only the aggregated `fix_versions` union
+
 ### Provenance
 
 `provenance` is an aggregated per-CVE view over occurrence-level input evidence.
@@ -159,9 +167,19 @@ Current meaning:
 Current VEX contract:
 
 - VEX is evaluated per occurrence, not per naked CVE string alone
+- matching is deterministic and ranked by specificity before file order
 - `suppressed_by_vex` means all known occurrences are suppressed
 - `under_investigation` remains visible
 - exact text in `vex_justification` and `vex_action_statement` is informative, not enum-stable
+
+### Asset context semantics
+
+Current asset-context contract:
+
+- asset context is evaluated per occurrence, not per CVE aggregate
+- `target_kind` stays exact
+- `target_ref` supports deterministic `exact` and `glob` matching with precedence and CSV row tie-breaks
+- occurrence metadata exposes the winning asset rule when one matched
 
 ### Waiver semantics
 

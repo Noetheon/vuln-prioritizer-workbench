@@ -45,7 +45,7 @@ Status: shipped
 Status: shipped
 
 - `--vex-file` support for OpenVEX and CycloneDX VEX.
-- Occurrence-level applicability decisions with exact matching only.
+- Occurrence-level applicability decisions with deterministic ranked matching.
 - Visible suppression and investigation state in reports and explain output.
 
 ### `v0.7.0` GitHub and CI Integration

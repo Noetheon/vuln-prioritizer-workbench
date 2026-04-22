@@ -11,7 +11,7 @@ All CLI examples below are repo-checkout examples that intentionally use the che
 Goal:
 
 - turn a container-security scan into a CI-friendly prioritized summary
-- suppress exact-match `not_affected` VEX cases
+- suppress matching `not_affected` VEX cases
 - keep a JSON artifact plus a short Markdown summary for the GitHub run
 
 CLI shape (repo checkout example):

@@ -88,6 +88,10 @@ def _run_metadata_lines(context: AnalysisContext) -> list[str]:
         )
     if context.duplicate_cve_count:
         lines.append(f"- Duplicate CVEs collapsed: `{context.duplicate_cve_count}`")
+    if context.asset_match_conflict_count:
+        lines.append(f"- Asset-context conflicts resolved: `{context.asset_match_conflict_count}`")
+    if context.vex_conflict_count:
+        lines.append(f"- VEX conflicts resolved: `{context.vex_conflict_count}`")
     if context.cache_dir:
         lines.append(f"- Cache directory: `{context.cache_dir}`")
     if context.nvd_diagnostics.requested:
@@ -133,6 +137,8 @@ def _summary_lines(context: AnalysisContext) -> list[str]:
         f"- KEV hits: {context.kev_hits}/{context.valid_input}",
         f"- ATT&CK hits: {context.attack_hits}/{context.valid_input}",
         f"- Duplicate CVEs collapsed: {context.duplicate_cve_count}",
+        f"- Asset-context conflicts resolved: {context.asset_match_conflict_count}",
+        f"- VEX conflicts resolved: {context.vex_conflict_count}",
         f"- Waived: {context.waived_count}",
         f"- Waiver review due: {context.waiver_review_due_count}",
         f"- Expired waivers: {context.expired_waiver_count}",

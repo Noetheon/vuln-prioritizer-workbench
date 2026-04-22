@@ -58,12 +58,18 @@ runner = CliRunner()
 SCHEMA_ROOT = Path(__file__).resolve().parents[1] / "docs" / "schemas"
 ACTION_FILE = Path(__file__).resolve().parents[1] / "action.yml"
 CI_WORKFLOW = Path(__file__).resolve().parents[1] / ".github" / "workflows" / "ci.yml"
+MAINTENANCE_WORKFLOW = (
+    Path(__file__).resolve().parents[1] / ".github" / "workflows" / "maintenance.yml"
+)
 RELEASE_WORKFLOW = Path(__file__).resolve().parents[1] / ".github" / "workflows" / "release.yml"
 TESTPYPI_WORKFLOW = Path(__file__).resolve().parents[1] / ".github" / "workflows" / "testpypi.yml"
 MAKEFILE = Path(__file__).resolve().parents[1] / "Makefile"
 README_FILE = Path(__file__).resolve().parents[1] / "README.md"
 CI_DOCS_FILE = Path(__file__).resolve().parents[1] / "docs" / "integrations" / "reporting_and_ci.md"
 EXAMPLES_README = Path(__file__).resolve().parents[1] / ".github" / "examples" / "README.md"
+PIPX_SOURCE_SMOKE = Path(__file__).resolve().parents[1] / "scripts" / "p1_pipx_source_smoke.sh"
+P1_INSTALLED_SMOKE = Path(__file__).resolve().parents[1] / "scripts" / "p1_installed_cli_smoke.sh"
+P2_INSTALLED_SMOKE = Path(__file__).resolve().parents[1] / "scripts" / "p2_installed_cli_smoke.sh"
 
 
 def _load_schema(name: str) -> dict:
@@ -503,6 +509,42 @@ def test_ci_workflow_runs_workflow_check_on_supported_python_versions() -> None:
     assert gate_step["run"] == "make workflow-check"
 
 
+def test_maintenance_workflow_runs_weekly_release_check_and_install_smokes() -> None:
+    payload = yaml.safe_load(MAINTENANCE_WORKFLOW.read_text(encoding="utf-8"))
+    triggers = payload.get("on", payload.get(True))
+    jobs = payload["jobs"]
+    release_job = jobs["release-check-dry-run"]
+    install_job = jobs["install-smoke-matrix"]
+
+    assert "workflow_dispatch" in triggers
+    assert triggers["schedule"][0]["cron"]
+    assert release_job["runs-on"] == "ubuntu-latest"
+    release_gate = next(
+        step
+        for step in release_job["steps"]
+        if step.get("name") == "Run weekly release-check dry-run"
+    )
+    assert release_gate["run"] == "make release-check"
+
+    matrix = install_job["strategy"]["matrix"]
+    assert matrix["os"] == ["ubuntu-latest", "macos-latest"]
+    assert matrix["install-path"] == ["wheel", "pipx-source"]
+
+    wheel_step = next(
+        step
+        for step in install_job["steps"]
+        if step.get("name") == "Smoke test built wheel install path"
+    )
+    pipx_step = next(
+        step
+        for step in install_job["steps"]
+        if step.get("name") == "Smoke test pipx source install path"
+    )
+    assert "bash scripts/p1_installed_cli_smoke.sh" in wheel_step["run"]
+    assert "bash scripts/p2_installed_cli_smoke.sh" in wheel_step["run"]
+    assert "bash scripts/p1_pipx_source_smoke.sh" in pipx_step["run"]
+
+
 def test_release_workflow_is_tag_bound_and_verifies_pypi_install() -> None:
     payload = yaml.safe_load(RELEASE_WORKFLOW.read_text(encoding="utf-8"))
     jobs = payload["jobs"]
@@ -536,11 +578,40 @@ def test_release_workflow_is_tag_bound_and_verifies_pypi_install() -> None:
     verify_job = jobs["verify-pypi-install"]
     assert verify_job["needs"] == "publish-pypi"
     assert "startsWith(github.ref, 'refs/tags/v')" in verify_job["if"]
-    verify_run = verify_job["steps"][-1]["run"]
+    verify_run = next(
+        step for step in verify_job["steps"] if step.get("name") == "Verify install from live PyPI"
+    )["run"]
     assert 'version="${GITHUB_REF_NAME#v}"' in verify_run
     assert 'python -m pip install --force-reinstall "vuln-prioritizer==${version}"' in verify_run
     assert "vuln-prioritizer --help" in verify_run
-    assert "vuln-prioritizer doctor --format json --output doctor.json" in verify_run
+    assert (
+        'vuln-prioritizer doctor --format json --output "$artifact_root/doctor.json"' in verify_run
+    )
+    assert "bash scripts/p1_installed_cli_smoke.sh" in verify_run
+    assert "bash scripts/p2_installed_cli_smoke.sh" in verify_run
+
+    wheel_smoke_run = next(
+        step for step in build_steps if step.get("name") == "Smoke test built wheel"
+    )["run"]
+    failure_upload = next(
+        step
+        for step in build_steps
+        if step.get("name") == "Upload release debug artifacts on failure"
+    )
+    assert "bash scripts/p1_installed_cli_smoke.sh" in wheel_smoke_run
+    assert "bash scripts/p2_installed_cli_smoke.sh" in wheel_smoke_run
+    assert 'VULN_PRIORITIZER_SMOKE_OUTPUT_DIR="$artifact_root"' in wheel_smoke_run
+    assert failure_upload["if"] == "failure()"
+    assert "${{ runner.temp }}/workflow-artifacts/**" in failure_upload["with"]["path"]
+    assert "docs/example*.json" in failure_upload["with"]["path"]
+
+    verify_failure_upload = next(
+        step
+        for step in verify_job["steps"]
+        if step.get("name") == "Upload PyPI verification debug artifacts on failure"
+    )
+    assert verify_failure_upload["if"] == "failure()"
+    assert "${{ runner.temp }}/workflow-artifacts/**" in verify_failure_upload["with"]["path"]
 
 
 def test_release_check_keeps_demo_sync_manual_and_deterministic() -> None:
@@ -588,10 +659,56 @@ def test_testpypi_workflow_exposes_version_output_and_hosted_index_verification(
     verify_job = jobs["verify-testpypi-install"]
     assert verify_job["needs"] == ["build", "publish-testpypi"]
     assert "TEST_PYPI_PUBLISH_ENABLED" in verify_job["if"]
-    verify_run = verify_job["steps"][-1]["run"]
+    verify_run = next(
+        step
+        for step in verify_job["steps"]
+        if step.get("name") == "Verify install from hosted TestPyPI"
+    )["run"]
     assert "needs.build.outputs.package_version" in verify_run
     assert "--index-url https://test.pypi.org/simple/" in verify_run
     assert "--extra-index-url https://pypi.org/simple/" in verify_run
     assert "python -m pip install --force-reinstall \\" in verify_run
     assert "vuln-prioritizer --help" in verify_run
-    assert "vuln-prioritizer doctor --format json --output doctor.json" in verify_run
+    assert (
+        'vuln-prioritizer doctor --format json --output "$artifact_root/doctor.json"' in verify_run
+    )
+    assert "bash scripts/p1_installed_cli_smoke.sh" in verify_run
+    assert "bash scripts/p2_installed_cli_smoke.sh" in verify_run
+
+    wheel_smoke_run = next(
+        step for step in build_steps if step.get("name") == "Smoke test built wheel"
+    )["run"]
+    build_failure_upload = next(
+        step
+        for step in build_steps
+        if step.get("name") == "Upload TestPyPI build debug artifacts on failure"
+    )
+    assert "bash scripts/p1_installed_cli_smoke.sh" in wheel_smoke_run
+    assert "bash scripts/p2_installed_cli_smoke.sh" in wheel_smoke_run
+    assert 'VULN_PRIORITIZER_SMOKE_OUTPUT_DIR="$artifact_root"' in wheel_smoke_run
+    assert build_failure_upload["if"] == "failure()"
+    assert "${{ runner.temp }}/workflow-artifacts/**" in build_failure_upload["with"]["path"]
+
+    verify_failure_upload = next(
+        step
+        for step in verify_job["steps"]
+        if step.get("name") == "Upload TestPyPI verification debug artifacts on failure"
+    )
+    assert verify_failure_upload["if"] == "failure()"
+    assert "${{ runner.temp }}/workflow-artifacts/**" in verify_failure_upload["with"]["path"]
+
+
+def test_pipx_source_smoke_wraps_p1_and_p2_installed_smokes() -> None:
+    script = PIPX_SOURCE_SMOKE.read_text(encoding="utf-8")
+
+    assert "scripts/p1_installed_cli_smoke.sh" in script
+    assert "scripts/p2_installed_cli_smoke.sh" in script
+    assert "VULN_PRIORITIZER_SMOKE_OUTPUT_DIR" in script
+
+
+def test_installed_smokes_can_preserve_debug_outputs() -> None:
+    p1_script = P1_INSTALLED_SMOKE.read_text(encoding="utf-8")
+    p2_script = P2_INSTALLED_SMOKE.read_text(encoding="utf-8")
+
+    assert 'TMP_DIR="${VULN_PRIORITIZER_SMOKE_OUTPUT_DIR:-}"' in p1_script
+    assert 'TMP_DIR="${VULN_PRIORITIZER_SMOKE_OUTPUT_DIR:-}"' in p2_script

@@ -46,8 +46,8 @@
 | Feature | `analyze` | `compare` | `explain` | Notes |
 | --- | --- | --- | --- | --- |
 | ATT&CK enrichment | yes | yes | yes | Sources: `none`, `local-csv`, `ctid-json`. Prefer `ctid-json`; `local-csv` remains legacy compatibility only. No remote ATT&CK dependency. |
-| Asset context CSV | yes | yes | yes | Exact join on `(target_kind, target_ref)` only. |
-| VEX files | yes | yes | yes | Supports OpenVEX JSON and CycloneDX VEX JSON. |
+| Asset context CSV | yes | yes | yes | `target_kind` stays exact; `target_ref` supports deterministic `exact` and `glob` rules with optional `rule_id`, `match_mode`, `precedence`, and aggregated conflict reporting. |
+| VEX files | yes | yes | yes | Supports OpenVEX JSON and CycloneDX VEX JSON with deterministic ranked matching, occurrence-level match provenance, aggregated conflict reporting, and visible `under_investigation` status. |
 | Policy profiles | yes | yes | yes | Built-ins: `default`, `enterprise`, `conservative`. |
 | Custom policy file | yes | yes | yes | YAML-defined profiles, selected by `--policy-profile`. |
 | Waiver file | yes | yes | yes | YAML risk-acceptance rules mark findings as waived without deleting the underlying prioritization evidence. Optional `review_on` plus automatic near-expiry handling keep stale waivers visible. |
@@ -67,7 +67,7 @@ To make asset context or VEX matching meaningful with `explain`, provide:
 - optional `--asset-context`
 - optional `--vex-file`
 
-Without a matching target, the explain flow still works, but asset-join and exact-match VEX context may remain empty.
+Without a matching target, the explain flow still works, but asset-context and VEX applicability may remain empty.
 
 ## Output notes
 

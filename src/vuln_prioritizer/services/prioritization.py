@@ -21,9 +21,9 @@ from vuln_prioritizer.scoring import (
     build_rationale,
     determine_cvss_only_priority,
     determine_priority,
-    recommended_action,
 )
 from vuln_prioritizer.services.contextualization import is_suppressed_by_vex, is_under_investigation
+from vuln_prioritizer.services.remediation import RemediationService
 
 SortField = Literal["priority", "epss", "cvss", "cve"]
 
@@ -48,6 +48,7 @@ class PrioritizationService:
         findings: list[PrioritizedFinding] = []
         active_context_profile = context_profile or ContextPolicyProfile()
         provenance_map = provenance_by_cve or {}
+        remediation_service = RemediationService()
 
         for cve_id in cve_ids:
             nvd = nvd_data.get(cve_id, NvdData(cve_id=cve_id))
@@ -60,6 +61,10 @@ class PrioritizationService:
             under_investigation = is_under_investigation(provenance)
 
             priority_label, priority_rank = determine_priority(nvd, epss, kev, self.policy)
+            remediation, recommended_action = remediation_service.build_action(
+                provenance,
+                priority_label=priority_label,
+            )
             findings.append(
                 PrioritizedFinding(
                     cve_id=cve_id,
@@ -97,7 +102,8 @@ class PrioritizationService:
                         suppressed_by_vex=suppressed_by_vex,
                         under_investigation=under_investigation,
                     ),
-                    recommended_action=recommended_action(priority_label),
+                    remediation=remediation,
+                    recommended_action=recommended_action,
                 )
             )
 
@@ -179,6 +185,7 @@ class PrioritizationService:
                     provenance=finding.provenance,
                     context_summary=finding.context_summary,
                     suppressed_by_vex=finding.suppressed_by_vex,
+                    under_investigation=finding.under_investigation,
                     waived=finding.waived,
                     waiver_status=finding.waiver_status,
                     waiver_reason=finding.waiver_reason,

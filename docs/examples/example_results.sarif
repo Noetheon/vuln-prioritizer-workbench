@@ -27,10 +27,13 @@
             "epss": 0.94393,
             "in_kev": true,
             "priority": "Critical",
+            "remediation_ecosystem": null,
+            "remediation_strategy": "upgrade",
             "sources": [
               "trivy-json"
             ],
-            "suppressed_by_vex": false
+            "suppressed_by_vex": false,
+            "under_investigation": true
           },
           "ruleId": "vuln-prioritizer/critical"
         },
@@ -58,10 +61,13 @@
             "epss": 0.84077,
             "in_kev": false,
             "priority": "Critical",
+            "remediation_ecosystem": "apk",
+            "remediation_strategy": "upgrade",
             "sources": [
               "trivy-json"
             ],
-            "suppressed_by_vex": false
+            "suppressed_by_vex": false,
+            "under_investigation": false
           },
           "ruleId": "vuln-prioritizer/critical"
         }

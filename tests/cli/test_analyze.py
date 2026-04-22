@@ -991,6 +991,8 @@ def test_cli_analyze_supports_trivy_vex_asset_context_and_custom_policy(
     assert payload["metadata"]["policy_profile"] == "prod-urgent"
     assert payload["metadata"]["suppressed_by_vex"] == 1
     assert payload["metadata"]["under_investigation_count"] == 1
+    assert payload["metadata"]["asset_match_conflict_count"] == 0
+    assert payload["metadata"]["vex_conflict_count"] == 0
     assert payload["metadata"]["source_stats"] == {"trivy-json": 3}
     assert payload["metadata"]["schema_version"] == "1.0.0"
 
@@ -1003,6 +1005,10 @@ def test_cli_analyze_supports_trivy_vex_asset_context_and_custom_policy(
     )
     assert context_finding["highest_asset_criticality"] == "critical"
     assert context_finding["asset_count"] == 1
+    assert context_finding["remediation"]["strategy"] == "upgrade"
+    occurrence = context_finding["provenance"]["occurrences"][0]
+    assert occurrence["asset_match_mode"] == "exact"
+    assert occurrence["asset_match_candidate_count"] == 1
     assert (
         context_finding["context_recommendation"]
         == "Escalate validation and remediation because context indicates "
@@ -1044,3 +1050,85 @@ def test_cli_analyze_show_suppressed_keeps_vex_hidden_findings_visible(
     suppressed = next(item for item in payload["findings"] if item["cve_id"] == "CVE-2023-34362")
     assert suppressed["suppressed_by_vex"] is True
     assert suppressed["provenance"]["vex_statuses"] == {"not_affected": 1}
+
+
+def test_cli_analyze_reports_asset_and_vex_conflicts_with_deterministic_winners(
+    install_fake_providers,
+    runner,
+    tmp_path: Path,
+) -> None:
+    input_file = tmp_path / "cves.txt"
+    input_file.write_text("CVE-2021-44228\n", encoding="utf-8")
+    asset_context_file = tmp_path / "assets.csv"
+    asset_context_file.write_text(
+        "\n".join(
+            [
+                "rule_id,target_kind,target_ref,asset_id,match_mode,precedence,criticality",
+                "glob-rule,host,app-*,asset-glob,glob,10,medium",
+                "exact-rule,host,app-01,asset-exact,exact,10,critical",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    vex_file = tmp_path / "vex.json"
+    vex_file.write_text(
+        json.dumps(
+            {
+                "statements": [
+                    {
+                        "vulnerability": {"name": "CVE-2021-44228"},
+                        "status": "under_investigation",
+                        "products": [{"subcomponents": [{"kind": "host", "name": "app-01"}]}],
+                    },
+                    {
+                        "vulnerability": {"name": "CVE-2021-44228"},
+                        "status": "fixed",
+                        "products": [{"subcomponents": [{"kind": "host", "name": "app-01"}]}],
+                    },
+                ]
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    output_file = tmp_path / "analysis.json"
+    install_fake_providers()
+
+    result = runner.invoke(
+        app,
+        [
+            "analyze",
+            "--input",
+            str(input_file),
+            "--asset-context",
+            str(asset_context_file),
+            "--vex-file",
+            str(vex_file),
+            "--target-kind",
+            "host",
+            "--target-ref",
+            "app-01",
+            "--output",
+            str(output_file),
+            "--format",
+            "json",
+        ],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(output_file.read_text(encoding="utf-8"))
+    assert payload["metadata"]["asset_match_conflict_count"] == 1
+    assert payload["metadata"]["vex_conflict_count"] == 1
+    assert any("Asset context resolved" in warning for warning in payload["metadata"]["warnings"])
+    assert any("VEX resolved" in warning for warning in payload["metadata"]["warnings"])
+
+    finding = payload["findings"][0]
+    occurrence = finding["provenance"]["occurrences"][0]
+    assert occurrence["asset_id"] == "asset-exact"
+    assert occurrence["asset_match_rule_id"] == "exact-rule"
+    assert occurrence["asset_match_mode"] == "exact"
+    assert occurrence["asset_match_candidate_count"] == 2
+    assert occurrence["vex_status"] == "under_investigation"
+    assert occurrence["vex_match_type"] == "target"
+    assert occurrence["vex_candidate_count"] == 2

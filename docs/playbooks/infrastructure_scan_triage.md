@@ -21,7 +21,7 @@ All commands below assume you are running from the repository root.
 - ATT&CK mapping fixture: `data/attack/ctid_kev_enterprise_2025-07-28_attack-16.1_subset.json`
 - ATT&CK technique metadata fixture: `data/attack/attack_techniques_enterprise_16.1_subset.json`
 
-The checked-in asset-context CSV documents the column shape, but its sample row is image-focused. For real infrastructure triage, copy that schema and replace it with host or service identifiers that match your scanner-derived `target_kind` and `target_ref` values exactly.
+The checked-in asset-context CSV documents the column shape, but its sample row is image-focused. For real infrastructure triage, copy that schema and replace it with host or service identifiers that match your scanner-derived `target_kind` values and either exact or glob-style `target_ref` values, using `precedence` when multiple rules could overlap.
 
 ## 1. Validate the Operator Environment
 

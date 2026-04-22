@@ -5,7 +5,10 @@
   "description": "JSON contract for `rollup --format json`.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["metadata", "buckets"],
+  "required": [
+    "metadata",
+    "buckets"
+  ],
   "properties": {
     "metadata": {
       "$ref": "#/$defs/rollupMetadata"
@@ -129,7 +132,10 @@
           "type": "string"
         },
         "rank_reason": {
-          "type": ["string", "null"]
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "context_hints": {
           "type": "array",
@@ -191,16 +197,25 @@
           "type": "boolean"
         },
         "waiver_status": {
-          "type": ["string", "null"]
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "in_kev": {
           "type": "boolean"
         },
         "highest_asset_criticality": {
-          "type": ["string", "null"]
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "highest_asset_exposure": {
-          "type": ["string", "null"]
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "asset_ids": {
           "type": "array",
@@ -225,6 +240,72 @@
         },
         "rank_reason": {
           "type": "string"
+        },
+        "remediation": {
+          "$ref": "#/$defs/remediationPlan"
+        }
+      }
+    },
+    "remediationComponent": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "current_version": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "fixed_versions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "package_type": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "purl": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "path": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "remediationPlan": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "strategy": {
+          "type": "string"
+        },
+        "ecosystem": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "components": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/remediationComponent"
+          }
         }
       }
     }

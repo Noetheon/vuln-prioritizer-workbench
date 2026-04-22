@@ -76,8 +76,9 @@ Supported input families currently normalize into the same occurrence model:
 
 Important current rules:
 
-- asset context is an exact join on `(target_kind, target_ref)`
-- VEX suppression is exact-match oriented and evaluated at occurrence level
+- asset context is occurrence-based, keeps `target_kind` exact, and supports deterministic
+  `target_ref` exact/glob rules with precedence
+- VEX suppression is evaluated at occurrence level with deterministic specificity-based matching
 - `suppressed_by_vex` is true only when all known occurrences are suppressed
 - `under_investigation` stays visible and is not silently removed
 

@@ -109,7 +109,8 @@ Presentation notes:
 Asset context and VEX follow the same principle:
 
 - asset context changes explanatory recommendation text, not `priority_label`
-- VEX determines visibility/applicability at occurrence level
+- remediation guidance now uses explicit package/component evidence when available
+- VEX determines visibility/applicability at occurrence level with deterministic ranked matching
 - `--show-suppressed` exposes otherwise hidden fully-suppressed findings
 
 ## Comparison Mode

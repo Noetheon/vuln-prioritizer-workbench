@@ -79,6 +79,8 @@ def generate_summary_markdown(report_payload: dict[str, Any]) -> str:
         f"- Input format: `{metadata.get('input_format', 'N.A.')}`",
         f"- Merged inputs: {metadata.get('merged_input_count', 1)}",
         f"- Duplicate CVEs collapsed: {metadata.get('duplicate_cve_count', 0)}",
+        f"- Asset-context conflicts resolved: {metadata.get('asset_match_conflict_count', 0)}",
+        f"- VEX conflicts resolved: {metadata.get('vex_conflict_count', 0)}",
         f"- Policy profile: `{metadata.get('policy_profile', 'default')}`",
         f"- Findings shown: {metadata.get('findings_count', 0)}",
         f"- Critical: {counts_by_priority.get('Critical', 0)}",
@@ -116,6 +118,8 @@ def generate_summary_markdown(report_payload: dict[str, Any]) -> str:
                 )
                 + ": "
                 + normalize_whitespace(str(finding.get("rationale", "N.A.")))
+                + " Next action: "
+                + normalize_whitespace(str(finding.get("recommended_action", "N.A.")))
             )
     else:
         lines.append("- No findings matched the current filters.")
@@ -265,6 +269,9 @@ def generate_sarif_report(
                     "sources": finding.provenance.source_formats,
                     "components": finding.provenance.components,
                     "suppressed_by_vex": finding.suppressed_by_vex,
+                    "under_investigation": finding.under_investigation,
+                    "remediation_strategy": finding.remediation.strategy,
+                    "remediation_ecosystem": finding.remediation.ecosystem,
                 },
                 "locations": [
                     {

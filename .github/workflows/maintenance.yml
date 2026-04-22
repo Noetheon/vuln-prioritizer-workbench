@@ -1,0 +1,103 @@
+name: Maintenance
+
+on:
+  schedule:
+    - cron: "23 4 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  release-check-dry-run:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: |
+            pyproject.toml
+            .pre-commit-config.yaml
+
+      - name: Install project and dev dependencies
+        run: python -m pip install -e .[dev]
+
+      - name: Run weekly release-check dry-run
+        run: make release-check
+
+      - name: Upload maintenance dry-run artifacts on failure
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: maintenance-release-check-debug
+          if-no-files-found: ignore
+          path: |
+            ${{ runner.temp }}/workflow-artifacts/**
+            docs/example*.json
+            docs/examples/*.json
+
+  install-smoke-matrix:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ["ubuntu-latest", "macos-latest"]
+        install-path: ["wheel", "pipx-source"]
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: |
+            pyproject.toml
+            .pre-commit-config.yaml
+
+      - name: Install project and dev dependencies
+        run: python -m pip install -e .[dev]
+
+      - name: Smoke test built wheel install path
+        if: matrix.install-path == 'wheel'
+        shell: bash
+        run: |
+          set -euo pipefail
+          artifact_root="$RUNNER_TEMP/workflow-artifacts/install-smoke-${{ matrix.os }}-${{ matrix.install-path }}"
+          mkdir -p "$artifact_root"
+          python -m build
+          python -m pip install --force-reinstall dist/*.whl
+          vuln-prioritizer --help
+          vuln-prioritizer doctor --format json --output "$artifact_root/doctor.json"
+          VULN_PRIORITIZER_SMOKE_OUTPUT_DIR="$artifact_root" bash scripts/p1_installed_cli_smoke.sh
+          VULN_PRIORITIZER_SMOKE_OUTPUT_DIR="$artifact_root" bash scripts/p2_installed_cli_smoke.sh
+
+      - name: Smoke test pipx source install path
+        if: matrix.install-path == 'pipx-source'
+        shell: bash
+        run: |
+          set -euo pipefail
+          artifact_root="$RUNNER_TEMP/workflow-artifacts/install-smoke-${{ matrix.os }}-${{ matrix.install-path }}"
+          mkdir -p "$artifact_root"
+          python -m pip install --upgrade pip pipx
+          VULN_PRIORITIZER_SMOKE_OUTPUT_DIR="$artifact_root" PYTHON_BIN=python \
+            bash scripts/p1_pipx_source_smoke.sh
+
+      - name: Upload install smoke artifacts on failure
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: maintenance-install-smoke-debug-${{ matrix.os }}-${{ matrix.install-path }}
+          if-no-files-found: ignore
+          path: |
+            ${{ runner.temp }}/workflow-artifacts/**
+            docs/example*.json
+            docs/examples/*.json
