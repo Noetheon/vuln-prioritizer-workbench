@@ -25,6 +25,7 @@ from vuln_prioritizer.providers.nvd import NvdProvider
 runner = CliRunner()
 FIXTURE_ROOT = Path(__file__).resolve().parents[1] / "data" / "input_fixtures"
 ATTACK_ROOT = Path(__file__).resolve().parents[1] / "data" / "attack"
+ANSI_ESCAPE_PATTERN = re.compile(r"\x1b\[[0-9;]*[A-Za-z]")
 
 
 def _format_help_block(*args: str) -> str:
@@ -34,12 +35,16 @@ def _format_help_block(*args: str) -> str:
     return result.stdout
 
 
+def _strip_ansi(text: str) -> str:
+    return ANSI_ESCAPE_PATTERN.sub("", text)
+
+
 def _normalize_output(text: str) -> str:
-    return re.sub(r"\s+", " ", text).strip()
+    return re.sub(r"\s+", " ", _strip_ansi(text)).strip()
 
 
 def _compact_output(text: str) -> str:
-    return re.sub(r"\s+", "", text)
+    return re.sub(r"\s+", "", _strip_ansi(text))
 
 
 def test_cli_analyze_end_to_end_with_mocked_providers(monkeypatch, tmp_path: Path) -> None:
