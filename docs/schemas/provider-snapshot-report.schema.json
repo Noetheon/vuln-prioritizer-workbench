@@ -1,0 +1,219 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://noetheon.github.io/vuln-prioritizer/schemas/provider-snapshot-report.schema.json",
+  "title": "vuln-prioritizer provider snapshot report",
+  "description": "JSON contract for `vuln-prioritizer data export-provider-snapshot`.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["metadata", "items", "warnings"],
+  "properties": {
+    "metadata": {
+      "$ref": "#/$defs/metadata"
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/item"
+      }
+    },
+    "warnings": {
+      "$ref": "#/$defs/stringArray"
+    }
+  },
+  "$defs": {
+    "nullableString": {
+      "type": ["string", "null"]
+    },
+    "nullableNumber": {
+      "type": ["number", "null"]
+    },
+    "stringArray": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "nullableNvdData": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["cve_id"],
+          "properties": {
+            "cve_id": {
+              "type": "string"
+            },
+            "description": {
+              "$ref": "#/$defs/nullableString"
+            },
+            "cvss_base_score": {
+              "$ref": "#/$defs/nullableNumber"
+            },
+            "cvss_severity": {
+              "$ref": "#/$defs/nullableString"
+            },
+            "cvss_version": {
+              "$ref": "#/$defs/nullableString"
+            },
+            "published": {
+              "$ref": "#/$defs/nullableString"
+            },
+            "last_modified": {
+              "$ref": "#/$defs/nullableString"
+            },
+            "cwes": {
+              "$ref": "#/$defs/stringArray"
+            },
+            "references": {
+              "$ref": "#/$defs/stringArray"
+            }
+          }
+        }
+      ]
+    },
+    "nullableEpssData": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["cve_id"],
+          "properties": {
+            "cve_id": {
+              "type": "string"
+            },
+            "epss": {
+              "$ref": "#/$defs/nullableNumber"
+            },
+            "percentile": {
+              "$ref": "#/$defs/nullableNumber"
+            },
+            "date": {
+              "$ref": "#/$defs/nullableString"
+            }
+          }
+        }
+      ]
+    },
+    "nullableKevData": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["cve_id", "in_kev"],
+          "properties": {
+            "cve_id": {
+              "type": "string"
+            },
+            "in_kev": {
+              "type": "boolean"
+            },
+            "vendor_project": {
+              "$ref": "#/$defs/nullableString"
+            },
+            "product": {
+              "$ref": "#/$defs/nullableString"
+            },
+            "date_added": {
+              "$ref": "#/$defs/nullableString"
+            },
+            "required_action": {
+              "$ref": "#/$defs/nullableString"
+            },
+            "due_date": {
+              "$ref": "#/$defs/nullableString"
+            }
+          }
+        }
+      ]
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "artifact_kind",
+        "generated_at",
+        "input_path",
+        "input_paths",
+        "input_format",
+        "selected_sources",
+        "requested_cves",
+        "output_path",
+        "cache_enabled",
+        "cache_dir",
+        "offline_kev_file",
+        "nvd_api_key_env"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "1.2.0"
+        },
+        "artifact_kind": {
+          "const": "provider-snapshot"
+        },
+        "generated_at": {
+          "type": "string"
+        },
+        "input_path": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "input_paths": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "input_format": {
+          "type": "string"
+        },
+        "selected_sources": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "requested_cves": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "output_path": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "cache_enabled": {
+          "type": "boolean"
+        },
+        "cache_dir": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "offline_kev_file": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "nvd_api_key_env": {
+          "$ref": "#/$defs/nullableString"
+        }
+      }
+    },
+    "item": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["cve_id", "nvd", "epss", "kev"],
+      "properties": {
+        "cve_id": {
+          "type": "string"
+        },
+        "nvd": {
+          "$ref": "#/$defs/nullableNvdData"
+        },
+        "epss": {
+          "$ref": "#/$defs/nullableEpssData"
+        },
+        "kev": {
+          "$ref": "#/$defs/nullableKevData"
+        }
+      }
+    }
+  }
+}

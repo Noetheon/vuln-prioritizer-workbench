@@ -9,7 +9,7 @@ from pydantic import ValidationError
 from rich.table import Table
 
 from vuln_prioritizer.cache import FileCache
-from vuln_prioritizer.inputs import InputLoader
+from vuln_prioritizer.inputs import InputLoader, InputSpec
 from vuln_prioritizer.utils import normalize_cve_id
 
 from .common import DataSourceName, exit_input_validation
@@ -32,8 +32,7 @@ def data_sources_require_cves(sources: list[str]) -> bool:
 
 def load_data_command_cves_or_exit(
     *,
-    input_path: Path | None,
-    input_format: str,
+    input_specs: list[InputSpec],
     inline_cves: list[str],
     max_cves: int | None,
     required: bool,
@@ -41,11 +40,9 @@ def load_data_command_cves_or_exit(
     cve_ids: list[str] = []
     warnings: list[str] = []
 
-    if input_path is not None:
+    if input_specs:
         try:
-            parsed_input = InputLoader().load(
-                input_path, input_format=input_format, max_cves=max_cves
-            )
+            parsed_input = InputLoader().load_many(input_specs, max_cves=None)
         except (ValidationError, ValueError) as exc:
             exit_input_validation(str(exc))
         cve_ids.extend(parsed_input.unique_cves)
@@ -67,6 +64,38 @@ def load_data_command_cves_or_exit(
         exit_input_validation("NVD and EPSS cache refresh requires --input or at least one --cve.")
 
     return cve_ids, warnings
+
+
+def build_cache_coverage_rows(cache: FileCache, cve_ids: list[str]) -> list[dict[str, str | int]]:
+    nvd_hits = sum(1 for cve_id in cve_ids if cache.get_json("nvd", cve_id) is not None)
+    epss_hits = sum(1 for cve_id in cve_ids if cache.get_json("epss", cve_id) is not None)
+    kev_payload = cache.get_json("kev", "catalog")
+    kev_catalog = kev_payload if isinstance(kev_payload, dict) else {}
+    kev_hits = sum(1 for cve_id in cve_ids if cve_id in kev_catalog)
+    requested = len(cve_ids)
+    return [
+        {
+            "source": "NVD",
+            "cached": nvd_hits,
+            "requested": requested,
+            "coverage": f"{nvd_hits}/{requested}",
+            "details": "Fresh per-CVE cache entries available.",
+        },
+        {
+            "source": "EPSS",
+            "cached": epss_hits,
+            "requested": requested,
+            "coverage": f"{epss_hits}/{requested}",
+            "details": "Fresh per-CVE cache entries available.",
+        },
+        {
+            "source": "KEV",
+            "cached": kev_hits,
+            "requested": requested,
+            "coverage": f"{kev_hits}/{requested}",
+            "details": "Coverage derived from the cached KEV catalog index.",
+        },
+    ]
 
 
 def render_cache_namespace_table(statuses: list[dict[str, object]]) -> Table:
@@ -121,19 +150,8 @@ def render_cache_coverage_table(cache: FileCache, cve_ids: list[str]) -> Table:
     table.add_column("Cached Coverage")
     table.add_column("Details")
 
-    nvd_hits = sum(1 for cve_id in cve_ids if cache.get_json("nvd", cve_id) is not None)
-    epss_hits = sum(1 for cve_id in cve_ids if cache.get_json("epss", cve_id) is not None)
-    kev_payload = cache.get_json("kev", "catalog")
-    kev_catalog = kev_payload if isinstance(kev_payload, dict) else {}
-    kev_hits = sum(1 for cve_id in cve_ids if cve_id in kev_catalog)
-
-    table.add_row("NVD", f"{nvd_hits}/{len(cve_ids)}", "Fresh per-CVE cache entries available.")
-    table.add_row("EPSS", f"{epss_hits}/{len(cve_ids)}", "Fresh per-CVE cache entries available.")
-    table.add_row(
-        "KEV",
-        f"{kev_hits}/{len(cve_ids)}",
-        "Coverage derived from the cached KEV catalog index.",
-    )
+    for row in build_cache_coverage_rows(cache, cve_ids):
+        table.add_row(str(row["source"]), str(row["coverage"]), str(row["details"]))
     return table
 
 

@@ -5,7 +5,7 @@ ATTACK_METADATA_FILE := data/attack/attack_techniques_enterprise_16.1_subset.jso
 DEMO_FIXED_NOW := 2026-04-21T12:00:00+00:00
 DEMO_ENV := PYTHONPATH=src VULN_PRIORITIZER_FIXED_NOW=$(DEMO_FIXED_NOW)
 
-.PHONY: install test lint format typecheck check benchmark-check docs-check docs-serve workflow-check demo-sync-check package package-check release-check demo-report demo-compare demo-explain demo-attack-report demo-attack-compare demo-attack-explain demo-attack-coverage demo-attack-navigator demo-pr-comment demo-results-sarif demo-html-report precommit-install
+.PHONY: install test lint format typecheck check benchmark-check docs-check docs-serve actionlint-check workflow-check demo-sync-check package package-check pipx-source-smoke release-check demo-report demo-compare demo-explain demo-attack-report demo-attack-compare demo-attack-explain demo-attack-coverage demo-attack-navigator demo-pr-comment demo-results-sarif demo-html-report precommit-install
 
 install:
 	$(PYTHON) -m pip install -e .[dev]
@@ -37,9 +37,13 @@ docs-check:
 docs-serve:
 	$(PYTHON) -m mkdocs serve
 
+actionlint-check:
+	docker run --rm -v "$$(pwd):/repo" -w /repo rhysd/actionlint:1.7.12 -color .github/workflows/*.yml .github/examples/*.yml
+
 workflow-check:
 	$(MAKE) check
 	$(MAKE) docs-check
+	$(MAKE) actionlint-check
 	$(PYTHON) -m pre_commit run --all-files
 	$(MAKE) package-check
 
@@ -73,8 +77,13 @@ package:
 package-check: package
 	$(PYTHON) -m twine check dist/*
 
+pipx-source-smoke:
+	$(PYTHON) -m pip install --upgrade pip pipx
+	PYTHON_BIN=$(PYTHON) bash scripts/p1_pipx_source_smoke.sh
+
 release-check:
 	$(MAKE) workflow-check
+	$(MAKE) pipx-source-smoke
 	$(MAKE) demo-sync-check
 
 demo-report:

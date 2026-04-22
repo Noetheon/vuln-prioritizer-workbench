@@ -4,6 +4,9 @@ from __future__ import annotations
 
 import os
 import time
+from concurrent.futures import Future, ThreadPoolExecutor
+from dataclasses import dataclass
+from typing import Final
 
 import requests
 
@@ -17,6 +20,17 @@ from vuln_prioritizer.config import (
 from vuln_prioritizer.models import NvdData
 from vuln_prioritizer.utils import safe_float
 
+DEFAULT_NVD_MAX_CONCURRENCY: Final = 4
+
+
+@dataclass(slots=True, frozen=True)
+class NvdFetchDiagnostics:
+    requested: int = 0
+    cache_hits: int = 0
+    network_fetches: int = 0
+    failures: int = 0
+    content_hits: int = 0
+
 
 class NvdProvider:
     """Client for the NVD CVE API 2.0."""
@@ -27,13 +41,16 @@ class NvdProvider:
         api_key: str | None = None,
         timeout_seconds: int = HTTP_TIMEOUT_SECONDS,
         max_retries: int = HTTP_MAX_RETRIES,
+        max_concurrency: int = DEFAULT_NVD_MAX_CONCURRENCY,
         cache: FileCache | None = None,
     ) -> None:
         self.session = session or requests.Session()
         self.api_key = api_key
         self.timeout_seconds = timeout_seconds
         self.max_retries = max_retries
+        self.max_concurrency = max(1, max_concurrency)
         self.cache = cache
+        self.last_diagnostics = NvdFetchDiagnostics()
 
     @classmethod
     def from_env(
@@ -51,21 +68,61 @@ class NvdProvider:
         refresh: bool = False,
     ) -> tuple[dict[str, NvdData], list[str]]:
         """Fetch NVD data for each CVE with one request per identifier."""
-        results: dict[str, NvdData] = {}
-        warnings: list[str] = []
+        resolved: dict[str, NvdData] = {}
+        warnings_by_cve: dict[str, list[str]] = {}
+        pending_ids: list[str] = []
+        seen_ids: set[str] = set()
+        cache_hits = 0
+        failures = 0
 
         for cve_id in cve_ids:
+            if cve_id in seen_ids:
+                continue
+            seen_ids.add(cve_id)
             try:
                 cached = None if refresh else self._load_from_cache(cve_id)
                 if cached is not None:
-                    results[cve_id] = cached
+                    resolved[cve_id] = cached
+                    cache_hits += 1
                     continue
-                payload = self._request_cve(cve_id)
-                results[cve_id] = self.parse_payload(cve_id, payload)
-                self._store_in_cache(results[cve_id])
             except Exception as exc:  # noqa: BLE001 - provider should degrade gracefully
-                warnings.append(f"NVD lookup failed for {cve_id}: {exc}")
-                results[cve_id] = NvdData(cve_id=cve_id)
+                warnings_by_cve.setdefault(cve_id, []).append(
+                    f"NVD cache load failed for {cve_id}: {exc}"
+                )
+            pending_ids.append(cve_id)
+
+        if pending_ids:
+            max_workers = min(self.max_concurrency, len(pending_ids))
+            with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                futures: dict[str, Future[NvdData]] = {
+                    cve_id: executor.submit(self._fetch_and_cache_cve, cve_id)
+                    for cve_id in pending_ids
+                }
+                for cve_id in pending_ids:
+                    try:
+                        resolved[cve_id] = futures[cve_id].result()
+                    except Exception as exc:  # noqa: BLE001 - provider should degrade gracefully
+                        warnings_by_cve.setdefault(cve_id, []).append(
+                            f"NVD lookup failed for {cve_id}: {exc}"
+                        )
+                        resolved[cve_id] = NvdData(cve_id=cve_id)
+                        failures += 1
+
+        results: dict[str, NvdData] = {}
+        warnings: list[str] = []
+        for cve_id in cve_ids:
+            if cve_id in results:
+                continue
+            results[cve_id] = resolved.get(cve_id, NvdData(cve_id=cve_id))
+            warnings.extend(warnings_by_cve.get(cve_id, []))
+
+        self.last_diagnostics = NvdFetchDiagnostics(
+            requested=len(cve_ids),
+            cache_hits=cache_hits,
+            network_fetches=len(pending_ids),
+            failures=failures,
+            content_hits=sum(1 for item in results.values() if _has_nvd_content(item)),
+        )
 
         return results, warnings
 
@@ -81,6 +138,12 @@ class NvdProvider:
         if self.cache is None:
             return
         self.cache.set_json("nvd", data.cve_id, data.model_dump())
+
+    def _fetch_and_cache_cve(self, cve_id: str) -> NvdData:
+        payload = self._request_cve(cve_id)
+        data = self.parse_payload(cve_id, payload)
+        self._store_in_cache(data)
+        return data
 
     def _request_cve(self, cve_id: str) -> dict:
         headers = {"apiKey": self.api_key} if self.api_key else {}
@@ -180,3 +243,18 @@ def _extract_cvss(metrics: dict) -> tuple[float | None, str | None, str | None]:
         if score is not None or severity:
             return score, severity, versions[metric_key]
     return None, None, None
+
+
+def _has_nvd_content(item: NvdData) -> bool:
+    return any(
+        [
+            item.description is not None,
+            item.cvss_base_score is not None,
+            item.cvss_severity is not None,
+            item.cvss_version is not None,
+            item.published is not None,
+            item.last_modified is not None,
+            bool(item.cwes),
+            bool(item.references),
+        ]
+    )

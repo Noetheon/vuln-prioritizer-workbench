@@ -1,18 +1,21 @@
 from __future__ import annotations
 
 import json
+import threading
 from pathlib import Path
 
 import requests
 
 from vuln_prioritizer.cache import FileCache
 from vuln_prioritizer.config import KEV_FEED_URL
+from vuln_prioritizer.models import AttackData, EpssData, KevData, NvdData
 from vuln_prioritizer.providers.attack import AttackProvider
 from vuln_prioritizer.providers.attack_metadata import AttackMetadataProvider
 from vuln_prioritizer.providers.ctid_mappings import CtidMappingsProvider
 from vuln_prioritizer.providers.epss import EpssProvider
 from vuln_prioritizer.providers.kev import KevProvider
-from vuln_prioritizer.providers.nvd import NvdProvider
+from vuln_prioritizer.providers.nvd import NvdFetchDiagnostics, NvdProvider
+from vuln_prioritizer.services.enrichment import EnrichmentService
 
 
 class FakeResponse:
@@ -125,6 +128,203 @@ def test_nvd_uses_cache_on_second_fetch(tmp_path: Path) -> None:
     assert first_results["CVE-2026-1111"].description == "Cached NVD record"
     assert second_results["CVE-2026-1111"].description == "Cached NVD record"
     assert session.calls == 1
+
+
+def test_nvd_fetch_many_preserves_input_order_and_counts_diagnostics(tmp_path: Path) -> None:
+    class Session:
+        def get(self, *args, **kwargs):  # noqa: ANN002, ANN003
+            cve_id = kwargs["params"]["cveId"]
+            return FakeResponse(
+                {
+                    "vulnerabilities": [
+                        {
+                            "cve": {
+                                "descriptions": [{"lang": "en", "value": f"Live {cve_id}"}],
+                            }
+                        }
+                    ]
+                }
+            )
+
+    cache = FileCache(tmp_path / "cache", ttl_hours=24)
+    cache.set_json(
+        "nvd",
+        "CVE-2026-0002",
+        NvdData(cve_id="CVE-2026-0002", description="Cached record").model_dump(),
+    )
+    provider = NvdProvider(session=Session(), cache=cache, max_concurrency=2)
+
+    results, warnings = provider.fetch_many(["CVE-2026-0001", "CVE-2026-0002", "CVE-2026-0003"])
+
+    assert list(results) == ["CVE-2026-0001", "CVE-2026-0002", "CVE-2026-0003"]
+    assert warnings == []
+    assert results["CVE-2026-0002"].description == "Cached record"
+    assert provider.last_diagnostics == NvdFetchDiagnostics(
+        requested=3,
+        cache_hits=1,
+        network_fetches=2,
+        failures=0,
+        content_hits=3,
+    )
+
+
+def test_nvd_fetch_many_bounds_network_concurrency() -> None:
+    class Session:
+        def __init__(self) -> None:
+            self.lock = threading.Lock()
+            self.release = threading.Event()
+            self.seen = 0
+            self.in_flight = 0
+            self.max_in_flight = 0
+
+        def get(self, *args, **kwargs):  # noqa: ANN002, ANN003
+            cve_id = kwargs["params"]["cveId"]
+            with self.lock:
+                self.seen += 1
+                self.in_flight += 1
+                self.max_in_flight = max(self.max_in_flight, self.in_flight)
+                if self.seen >= 2:
+                    self.release.set()
+            self.release.wait(timeout=1)
+            with self.lock:
+                self.in_flight -= 1
+            return FakeResponse(
+                {
+                    "vulnerabilities": [
+                        {
+                            "cve": {
+                                "descriptions": [{"lang": "en", "value": f"Live {cve_id}"}],
+                            }
+                        }
+                    ]
+                }
+            )
+
+    session = Session()
+    provider = NvdProvider(session=session, max_concurrency=2)
+
+    results, warnings = provider.fetch_many(
+        [
+            "CVE-2026-0101",
+            "CVE-2026-0102",
+            "CVE-2026-0103",
+            "CVE-2026-0104",
+        ]
+    )
+
+    assert warnings == []
+    assert list(results) == [
+        "CVE-2026-0101",
+        "CVE-2026-0102",
+        "CVE-2026-0103",
+        "CVE-2026-0104",
+    ]
+    assert session.max_in_flight == 2
+
+
+def test_nvd_fetch_many_degrades_gracefully_and_keeps_warning_order() -> None:
+    class Session:
+        def get(self, *args, **kwargs):  # noqa: ANN002, ANN003
+            cve_id = kwargs["params"]["cveId"]
+            if cve_id == "CVE-2026-0202":
+                raise requests.RequestException("boom")
+            return FakeResponse(
+                {
+                    "vulnerabilities": [
+                        {
+                            "cve": {
+                                "descriptions": [{"lang": "en", "value": f"Live {cve_id}"}],
+                            }
+                        }
+                    ]
+                }
+            )
+
+    provider = NvdProvider(session=Session(), max_concurrency=3)
+
+    results, warnings = provider.fetch_many(["CVE-2026-0201", "CVE-2026-0202", "CVE-2026-0203"])
+
+    assert list(results) == ["CVE-2026-0201", "CVE-2026-0202", "CVE-2026-0203"]
+    assert warnings == ["NVD lookup failed for CVE-2026-0202: boom"]
+    assert results["CVE-2026-0201"].description == "Live CVE-2026-0201"
+    assert results["CVE-2026-0202"] == NvdData(cve_id="CVE-2026-0202")
+    assert results["CVE-2026-0203"].description == "Live CVE-2026-0203"
+    assert provider.last_diagnostics == NvdFetchDiagnostics(
+        requested=3,
+        cache_hits=0,
+        network_fetches=3,
+        failures=1,
+        content_hits=2,
+    )
+
+
+def test_enrichment_service_tracks_last_nvd_diagnostics() -> None:
+    class Session:
+        def get(self, *args, **kwargs):  # noqa: ANN002, ANN003
+            cve_id = kwargs["params"]["cveId"]
+            return FakeResponse(
+                {
+                    "vulnerabilities": [
+                        {
+                            "cve": {
+                                "descriptions": [{"lang": "en", "value": f"Live {cve_id}"}],
+                            }
+                        }
+                    ]
+                }
+            )
+
+    class StubEpssProvider:
+        def fetch_many(self, cve_ids, *, refresh: bool = False):  # noqa: ANN001, ARG002
+            return ({cve_id: EpssData(cve_id=cve_id) for cve_id in cve_ids}, [])
+
+    class StubKevProvider:
+        def fetch_many(  # noqa: ANN001, ARG002
+            self, cve_ids, offline_file=None, *, refresh: bool = False
+        ):
+            return ({cve_id: KevData(cve_id=cve_id) for cve_id in cve_ids}, [])
+
+    class StubAttackProvider:
+        def fetch_many(  # noqa: ANN001
+            self,
+            cve_ids,
+            *,
+            enabled: bool,
+            source: str,
+            mapping_file,
+            technique_metadata_file,
+            offline_file,
+        ):
+            return (
+                {cve_id: AttackData(cve_id=cve_id) for cve_id in cve_ids},
+                {
+                    "source": source if enabled else "none",
+                    "mapping_file": None,
+                    "technique_metadata_file": None,
+                    "source_version": None,
+                    "attack_version": None,
+                    "domain": None,
+                    "mapping_framework": None,
+                    "mapping_framework_version": None,
+                },
+                [],
+            )
+
+    service = EnrichmentService(session=Session(), use_cache=False)
+    service.epss = StubEpssProvider()
+    service.kev = StubKevProvider()
+    service.attack = StubAttackProvider()
+
+    result = service.enrich(["CVE-2026-0301"], attack_enabled=False)
+
+    assert result.nvd["CVE-2026-0301"].description == "Live CVE-2026-0301"
+    assert service.last_nvd_diagnostics == NvdFetchDiagnostics(
+        requested=1,
+        cache_hits=0,
+        network_fetches=1,
+        failures=0,
+        content_hits=1,
+    )
 
 
 def test_epss_fetch_many_parses_batch_payload() -> None:

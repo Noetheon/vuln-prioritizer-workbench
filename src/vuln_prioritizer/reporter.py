@@ -201,8 +201,10 @@ def render_summary_panel(
         f"Valid unique CVEs: {context.valid_input}",
         f"Occurrences: {context.occurrences_count}",
         f"Input format: {context.input_format}",
+        f"Merged inputs: {context.merged_input_count}",
         f"Findings shown: {context.findings_count}",
         f"Filtered out: {context.filtered_out_count}",
+        f"Locked provider data: {'yes' if context.locked_provider_data else 'no'}",
         f"NVD hits: {context.nvd_hits}/{context.valid_input}",
         f"EPSS hits: {context.epss_hits}/{context.valid_input}",
         f"KEV hits: {context.kev_hits}/{context.valid_input}",
@@ -222,6 +224,33 @@ def render_summary_panel(
             lines.append(f"ATT&CK version: {context.attack_version}")
     if context.source_stats:
         lines.append("Source stats: " + _format_distribution(context.source_stats))
+    if context.input_sources:
+        lines.extend(
+            [
+                "Input sources: "
+                + "; ".join(
+                    f"{Path(source.input_path).name} ({source.input_format}, "
+                    f"rows={source.total_rows}, unique_cves={source.unique_cves})"
+                    for source in context.input_sources
+                )
+            ]
+        )
+    if context.duplicate_cve_count:
+        lines.append(f"Duplicate CVEs collapsed: {context.duplicate_cve_count}")
+    if context.provider_snapshot_file:
+        lines.append(f"Provider snapshot: {context.provider_snapshot_file}")
+    if context.provider_snapshot_sources:
+        lines.append("Provider snapshot sources: " + ", ".join(context.provider_snapshot_sources))
+    if context.nvd_diagnostics.requested:
+        diagnostics = context.nvd_diagnostics
+        lines.append(
+            "NVD diagnostics: "
+            + f"requested={diagnostics.requested}, "
+            + f"cache_hits={diagnostics.cache_hits}, "
+            + f"network_fetches={diagnostics.network_fetches}, "
+            + f"failures={diagnostics.failures}, "
+            + f"content_hits={diagnostics.content_hits}"
+        )
     if context.suppressed_by_vex:
         lines.append(f"Suppressed by VEX: {context.suppressed_by_vex}")
     if context.under_investigation_count:
@@ -1207,11 +1236,34 @@ def generate_html_report(report_payload: dict) -> str:
         <p><strong>Generated at:</strong> {escape(str(metadata.get("generated_at", "N.A.")))}</p>
         <p><strong>Input:</strong> {escape(str(metadata.get("input_path", "N.A.")))}</p>
         <p><strong>Input format:</strong> {escape(str(metadata.get("input_format", "N.A.")))}</p>
+        <p><strong>Merged inputs:</strong> {escape(str(metadata.get("merged_input_count", 1)))}</p>
         <p>
           <strong>Policy profile:</strong>
           {escape(str(metadata.get("policy_profile", "default")))}
         </p>
       </div>
+    </section>
+    <section class="section">
+      <h2>Input Sources</h2>
+      <ul>
+        {
+        "".join(
+            "<li>"
+            + escape(str(source.get("input_path", "N.A.")))
+            + " ("
+            + escape(str(source.get("input_format", "N.A.")))
+            + f", rows={int(source.get('total_rows', 0))}, "
+            + f"occurrences={int(source.get('occurrence_count', 0))}, "
+            + f"unique_cves={int(source.get('unique_cves', 0))})"
+            + "</li>"
+            for source in metadata.get("input_sources", [])
+        )
+        or "<li>N.A.</li>"
+    }
+      </ul>
+      <p><strong>Duplicate CVEs collapsed:</strong> {
+        escape(str(metadata.get("duplicate_cve_count", 0)))
+    }</p>
     </section>
     <section class="section">
       <h2>Executive Summary</h2>

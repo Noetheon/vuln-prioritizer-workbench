@@ -526,14 +526,10 @@ def test_release_workflow_is_tag_bound_and_verifies_pypi_install() -> None:
     tag_install_run = tag_install_step["run"]
     assert "python -m pip install --upgrade pip pipx" in tag_install_run
     assert (
-        'python -m pipx run --spec "git+https://github.com/'
-        '${GITHUB_REPOSITORY}.git@${GITHUB_REF_NAME}" vuln-prioritizer --help' in tag_install_run
+        'VULN_PRIORITIZER_PIPX_SPEC="git+https://github.com/'
+        '${GITHUB_REPOSITORY}.git@${GITHUB_REF_NAME}" \\' in tag_install_run
     )
-    assert (
-        'python -m pipx run --spec "git+https://github.com/'
-        '${GITHUB_REPOSITORY}.git@${GITHUB_REF_NAME}" vuln-prioritizer '
-        "doctor --format json --output doctor-tag.json" in tag_install_run
-    )
+    assert "bash scripts/p1_pipx_source_smoke.sh" in tag_install_run
     assert "startsWith(github.ref, 'refs/tags/v')" in jobs["publish-pypi"]["if"]
     assert "PYPI_PUBLISH_ENABLED" in jobs["publish-pypi"]["if"]
 
@@ -555,6 +551,7 @@ def test_release_check_keeps_demo_sync_manual_and_deterministic() -> None:
     assert "$(MAKE) demo-sync-check" not in workflow_block
     assert "demo-sync-check:" in makefile
     release_block = makefile.split("release-check:", 1)[1]
+    assert "$(MAKE) pipx-source-smoke" in release_block
     assert "$(MAKE) demo-sync-check" in release_block
     assert "VULN_PRIORITIZER_FIXED_NOW" in makefile
     assert "git diff --binary -- docs" in makefile

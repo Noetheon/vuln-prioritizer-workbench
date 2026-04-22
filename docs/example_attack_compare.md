@@ -8,7 +8,10 @@
 - ATT&CK source: `ctid-mappings-explorer`
 - Cache enabled: `yes`
 - Output path: `docs/example_attack_compare.md`
+- Input files: `data/sample_cves_mixed.txt`
+- Source input: `data/sample_cves_mixed.txt` (cve-list, rows=5, occurrences=5, unique_cves=5)
 - Cache directory: `.cache/vuln-prioritizer`
+- NVD diagnostics: `requested=5, cache_hits=5, network_fetches=0, failures=0, content_hits=5`
 - ATT&CK mapping file: `data/attack/ctid_kev_enterprise_2025-07-28_attack-16.1_subset.json`
 - ATT&CK technique metadata file: `data/attack/attack_techniques_enterprise_16.1_subset.json`
 - ATT&CK mapping framework: `kev`
@@ -38,12 +41,15 @@
 ## Summary
 - Total input rows: 5
 - Valid unique CVEs: 5
+- Merged inputs: 1
 - Findings shown: 5
 - Filtered out: 0
+- Locked provider data: no
 - NVD hits: 5/5
 - EPSS hits: 5/5
 - KEV hits: 4/5
 - ATT&CK hits: 3/5
+- Duplicate CVEs collapsed: 0
 - Waived: 0
 - Waiver review due: 0
 - Expired waivers: 0

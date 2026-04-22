@@ -258,6 +258,7 @@ Reference material:
 The repository includes a composite GitHub Action for `analyze` and `report html`.
 
 Use it after `actions/checkout`, because the scanned input files live in the consumer repository, not in the action repository.
+In `mode: analyze`, `input` and `input-format` accept newline-delimited values so one action step can merge multiple sources. The action also supports `provider-snapshot-file` and `locked-provider-data` for deterministic replay.
 
 ```yaml
 - uses: actions/checkout@v6
@@ -266,8 +267,12 @@ Use it after `actions/checkout`, because the scanned input files live in the con
   uses: Noetheon/vuln-prioritizer-cli@vX.Y.Z
   with:
     mode: analyze
-    input: trivy-results.json
-    input-format: trivy-json
+    input: |
+      trivy-results.json
+      github-alerts-export.json
+    input-format: |
+      trivy-json
+      github-alerts-json
     output-format: json
     output-path: analysis.json
     summary-output-path: summary.md

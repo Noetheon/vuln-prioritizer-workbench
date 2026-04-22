@@ -21,6 +21,10 @@ jobs:
         uses: actions/setup-python@v6
         with:
           python-version: "3.11"
+          cache: pip
+          cache-dependency-path: |
+            pyproject.toml
+            .pre-commit-config.yaml
 
       - name: Install project and dev dependencies
         run: python -m pip install -e .[dev]
@@ -39,6 +43,7 @@ jobs:
           python -m pip install --force-reinstall dist/*.whl
           vuln-prioritizer --help
           vuln-prioritizer doctor --format json --output doctor.json
+          bash scripts/p1_installed_cli_smoke.sh
 
       - name: Smoke test source-at-tag install path
         if: startsWith(github.ref, 'refs/tags/v')
@@ -46,8 +51,8 @@ jobs:
         run: |
           set -euo pipefail
           python -m pip install --upgrade pip pipx
-          python -m pipx run --spec "git+https://github.com/${GITHUB_REPOSITORY}.git@${GITHUB_REF_NAME}" vuln-prioritizer --help
-          python -m pipx run --spec "git+https://github.com/${GITHUB_REPOSITORY}.git@${GITHUB_REF_NAME}" vuln-prioritizer doctor --format json --output doctor-tag.json
+          VULN_PRIORITIZER_PIPX_SPEC="git+https://github.com/${GITHUB_REPOSITORY}.git@${GITHUB_REF_NAME}" \
+            bash scripts/p1_pipx_source_smoke.sh
 
       - name: Resolve release notes path
         id: release_notes
@@ -101,10 +106,17 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/v') && vars.PYPI_PUBLISH_ENABLED == 'true'
     runs-on: ubuntu-latest
     steps:
+      - name: Check out repository fixtures
+        uses: actions/checkout@v6
+
       - name: Set up Python
         uses: actions/setup-python@v6
         with:
           python-version: "3.11"
+          cache: pip
+          cache-dependency-path: |
+            pyproject.toml
+            .pre-commit-config.yaml
 
       - name: Verify install from live PyPI
         shell: bash
@@ -116,6 +128,7 @@ jobs:
             if python -m pip install --force-reinstall "vuln-prioritizer==${version}"; then
               vuln-prioritizer --help
               vuln-prioritizer doctor --format json --output doctor.json
+              bash scripts/p1_installed_cli_smoke.sh
               exit 0
             fi
             if [[ "$attempt" -eq 5 ]]; then

@@ -4,11 +4,13 @@ from __future__ import annotations
 
 import csv
 import json
+from dataclasses import dataclass
 from pathlib import Path
 
 from vuln_prioritizer.models import (
     AssetContextRecord,
     InputOccurrence,
+    InputSourceSummary,
     ParsedInput,
     VexStatement,
 )
@@ -31,50 +33,126 @@ class InputLoader:
         asset_records: dict[tuple[str, str], AssetContextRecord] | None = None,
         vex_statements: list[VexStatement] | None = None,
     ) -> ParsedInput:
-        if not path.exists() or not path.is_file():
-            raise ValueError(f"Input file does not exist: {path}")
-
-        resolved_format = detect_input_format(path, explicit_format=input_format)
-        if resolved_format == "cve-list":
-            parsed = _parse_cve_list(path)
-        elif resolved_format == "trivy-json":
-            parsed = _parse_trivy_json(path)
-        elif resolved_format == "grype-json":
-            parsed = _parse_grype_json(path)
-        elif resolved_format == "cyclonedx-json":
-            parsed = _parse_cyclonedx_json(path)
-        elif resolved_format == "spdx-json":
-            parsed = _parse_spdx_json(path)
-        elif resolved_format == "dependency-check-json":
-            parsed = _parse_dependency_check_json(path)
-        elif resolved_format == "github-alerts-json":
-            parsed = _parse_github_alerts_json(path)
-        elif resolved_format == "nessus-xml":
-            parsed = _parse_nessus_xml(path)
-        elif resolved_format == "openvas-xml":
-            parsed = _parse_openvas_xml(path)
-        else:
-            raise ValueError(f"Unsupported input format: {resolved_format}")
-
-        occurrences = [
-            _occurrence_support.apply_manual_target(
-                occurrence,
-                target_kind=target_kind,
-                target_ref=target_ref,
-            )
-            for occurrence in parsed.occurrences
-        ]
-        occurrences = _occurrence_support.apply_asset_context(occurrences, asset_records or {})
-        occurrences = _vex_support.apply_vex_statements(occurrences, vex_statements or [])
-
-        final = _occurrence_support.finalize_occurrences(
-            occurrences,
-            input_format=resolved_format,
-            warnings=parsed.warnings,
-            total_rows=parsed.total_rows,
+        return self.load_many(
+            [InputSpec(path=path, input_format=input_format)],
             max_cves=max_cves,
+            target_kind=target_kind,
+            target_ref=target_ref,
+            asset_records=asset_records,
+            vex_statements=vex_statements,
         )
-        return final
+
+    def load_many(
+        self,
+        inputs: list[InputSpec],
+        *,
+        max_cves: int | None = None,
+        target_kind: str | None = None,
+        target_ref: str | None = None,
+        asset_records: dict[tuple[str, str], AssetContextRecord] | None = None,
+        vex_statements: list[VexStatement] | None = None,
+    ) -> ParsedInput:
+        if not inputs:
+            raise ValueError("At least one input file must be provided.")
+
+        warnings: list[str] = []
+        occurrences: list[InputOccurrence] = []
+        source_summaries: list[InputSourceSummary] = []
+        resolved_formats: list[str] = []
+        total_rows = 0
+
+        for spec in inputs:
+            parsed = _load_single_input(spec.path, input_format=spec.input_format)
+            resolved_formats.append(parsed.input_format)
+            total_rows += parsed.total_rows
+            warnings.extend(parsed.warnings)
+            source_occurrences = [
+                _occurrence_support.apply_manual_target(
+                    occurrence,
+                    target_kind=target_kind,
+                    target_ref=target_ref,
+                )
+                for occurrence in parsed.occurrences
+            ]
+            source_occurrences = _occurrence_support.apply_asset_context(
+                source_occurrences,
+                asset_records or {},
+            )
+            source_occurrences = _vex_support.apply_vex_statements(
+                source_occurrences,
+                vex_statements or [],
+            )
+            occurrences.extend(source_occurrences)
+            source_summaries.append(
+                InputSourceSummary(
+                    input_path=str(spec.path),
+                    input_format=parsed.input_format,
+                    total_rows=parsed.total_rows,
+                    occurrence_count=len(source_occurrences),
+                    unique_cves=_count_unique_cves(source_occurrences),
+                    warning_count=len(parsed.warnings),
+                )
+            )
+
+        return _occurrence_support.finalize_occurrences(
+            occurrences,
+            input_format=_effective_input_format(resolved_formats),
+            warnings=warnings,
+            total_rows=total_rows,
+            max_cves=max_cves,
+            input_paths=[str(spec.path) for spec in inputs],
+            source_summaries=source_summaries,
+            merged_input_count=len(inputs),
+        )
+
+
+@dataclass(frozen=True)
+class InputSpec:
+    path: Path
+    input_format: str = "auto"
+
+
+def _count_unique_cves(occurrences: list[InputOccurrence]) -> int:
+    return len({occurrence.cve_id for occurrence in occurrences})
+
+
+def _effective_input_format(resolved_formats: list[str]) -> str:
+    unique_formats = {item for item in resolved_formats if item}
+    if len(unique_formats) <= 1:
+        return resolved_formats[0] if resolved_formats else "cve-list"
+    return "mixed"
+
+
+def _load_single_input(
+    path: Path,
+    *,
+    input_format: str,
+) -> ParsedInput:
+    if not path.exists() or not path.is_file():
+        raise ValueError(f"Input file does not exist: {path}")
+
+    resolved_format = detect_input_format(path, explicit_format=input_format)
+    if resolved_format == "cve-list":
+        parsed = _parse_cve_list(path)
+    elif resolved_format == "trivy-json":
+        parsed = _parse_trivy_json(path)
+    elif resolved_format == "grype-json":
+        parsed = _parse_grype_json(path)
+    elif resolved_format == "cyclonedx-json":
+        parsed = _parse_cyclonedx_json(path)
+    elif resolved_format == "spdx-json":
+        parsed = _parse_spdx_json(path)
+    elif resolved_format == "dependency-check-json":
+        parsed = _parse_dependency_check_json(path)
+    elif resolved_format == "github-alerts-json":
+        parsed = _parse_github_alerts_json(path)
+    elif resolved_format == "nessus-xml":
+        parsed = _parse_nessus_xml(path)
+    elif resolved_format == "openvas-xml":
+        parsed = _parse_openvas_xml(path)
+    else:
+        raise ValueError(f"Unsupported input format: {resolved_format}")
+    return parsed
 
 
 def build_inline_input(
@@ -502,14 +580,23 @@ def _parse_github_alerts_json(path: Path) -> ParsedInput:
             continue
         dependency = alert.get("dependency", {})
         package = dependency.get("package", {})
+        vulnerability = alert.get("security_vulnerability", {})
+        first_patched_version = vulnerability.get("first_patched_version", {})
         occurrences.append(
             InputOccurrence(
                 cve_id=cve_id,
                 source_format="github-alerts-json",
                 component_name=package.get("name"),
-                component_version=dependency.get("manifest_path"),
+                component_version=_first_present_string(
+                    dependency.get("package_version"),
+                    dependency.get("version"),
+                    package.get("version"),
+                    vulnerability.get("package_version"),
+                    vulnerability.get("version"),
+                ),
                 package_type=package.get("ecosystem"),
                 file_path=dependency.get("manifest_path"),
+                fix_versions=_as_string_list([first_patched_version.get("identifier")]),
                 source_record_id=f"alert:{index}",
                 raw_severity=advisory.get("severity"),
                 target_kind="repository",
@@ -674,6 +761,13 @@ def _split_versions(value: object) -> list[str]:
             parts.extend(item.split(separator))
         result = parts
     return [item.strip() for item in result if item.strip()]
+
+
+def _first_present_string(*values: object) -> str | None:
+    for value in values:
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+    return None
 
 
 def _as_string_list(value: object) -> list[str]:

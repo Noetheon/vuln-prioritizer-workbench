@@ -604,6 +604,7 @@
       "CTID Mappings Explorer (local JSON artifact)",
       "Input formats: cve-list"
     ],
+    "duplicate_cve_count": 0,
     "epss_hits": 1,
     "expired_waiver_count": 0,
     "filtered_out_count": 0,
@@ -611,9 +612,20 @@
     "generated_at": "2026-04-21T12:00:00+00:00",
     "input_format": "cve-list",
     "input_path": "inline:CVE-2023-34362",
+    "input_paths": [],
+    "input_sources": [],
     "kev_hits": 1,
+    "locked_provider_data": false,
     "mapping_framework": "kev",
     "mapping_framework_version": "07/28/2025",
+    "merged_input_count": 1,
+    "nvd_diagnostics": {
+      "cache_hits": 1,
+      "content_hits": 1,
+      "failures": 0,
+      "network_fetches": 0,
+      "requested": 1
+    },
     "nvd_hits": 1,
     "occurrences_count": 1,
     "output_format": "json",
@@ -629,6 +641,8 @@
       "medium_cvss_threshold": 7.0,
       "medium_epss_threshold": 0.1
     },
+    "provider_snapshot_file": null,
+    "provider_snapshot_sources": [],
     "schema_version": "1.0.0",
     "source_stats": {
       "cve-list": 1
