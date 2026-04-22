@@ -35,7 +35,7 @@ flowchart LR
 
 ### CLI surface
 
-The command tree is defined in `src/vuln_prioritizer/cli.py`.
+`src/vuln_prioritizer/cli.py` is the CLI composition root. It assembles the public Typer tree, shared runtime defaults, and cross-command wiring, while private command modules and private support modules hold command handlers and reusable CLI-only helpers.
 
 Current public command groups:
 
@@ -50,7 +50,7 @@ Current public command groups:
 - `data verify`
 - `report html`
 
-The CLI owns flag parsing, validation, cache wiring, and output-mode dispatch. It does not contain parser-specific logic beyond compatibility routing.
+The command layer owns flag parsing, validation, cache wiring, and output-mode dispatch. The public command tree is part of the CLI surface; the private command/support modules are implementation detail and do not widen the architecture boundary. Parser-specific logic remains below this layer apart from compatibility routing.
 
 ### Input normalization
 
@@ -119,7 +119,7 @@ Current architectural boundary:
 
 ### Reporting
 
-`src/vuln_prioritizer/reporter.py` renders shared finding models into multiple views.
+`src/vuln_prioritizer/reporter.py` remains the public reporting facade and delegates report-format, JSON/payload, and serialization helpers to private internal reporting modules.
 
 Current output families:
 

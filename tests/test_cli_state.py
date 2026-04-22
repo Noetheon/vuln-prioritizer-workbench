@@ -4,6 +4,7 @@ import json
 from datetime import UTC, datetime
 from pathlib import Path
 
+from test_cli import _install_fake_providers
 from typer.testing import CliRunner
 
 import vuln_prioritizer.state_store as state_store_module
@@ -318,6 +319,134 @@ def test_cli_state_top_services_supports_priority_filtered_json_output(
     assert payload["metadata"]["priority_filter"] == "high"
     assert [item["service"] for item in payload["items"]] == ["identity"]
     assert payload["items"][0]["occurrence_count"] == 1
+
+
+def test_cli_state_round_trip_imports_cli_snapshot_and_queries_history_and_top_services(
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    fixture_root = Path(__file__).resolve().parents[1] / "data" / "input_fixtures"
+    db_path = tmp_path / "state.db"
+    snapshot_file = tmp_path / "snapshot.json"
+    import_file = tmp_path / "import.json"
+    history_file = tmp_path / "history.json"
+    top_services_file = tmp_path / "top-services.json"
+    asset_context_file = tmp_path / "assets.csv"
+    waiver_file = tmp_path / "waivers.yml"
+    asset_context_file.write_text(
+        "\n".join(
+            [
+                "target_kind,target_ref,asset_id,criticality,exposure,environment,owner,business_service",
+                "host,app-01.example.internal,payments-api,high,internal,prod,team-payments,payments",
+                "host,app-02.example.internal,identity-api,critical,internet-facing,prod,team-identity,identity",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    waiver_file.write_text(
+        "\n".join(
+            [
+                "waivers:",
+                "  - id: waiver-1",
+                "    cve_id: CVE-2023-34362",
+                "    owner: risk-review",
+                "    reason: Deferred until the coordinated service restart.",
+                "    expires_on: 2027-12-31",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    _install_fake_providers(monkeypatch)
+
+    snapshot_result = runner.invoke(
+        app,
+        [
+            "snapshot",
+            "create",
+            "--input",
+            str(fixture_root / "openvas_report.xml"),
+            "--input-format",
+            "openvas-xml",
+            "--asset-context",
+            str(asset_context_file),
+            "--waiver-file",
+            str(waiver_file),
+            "--output",
+            str(snapshot_file),
+            "--format",
+            "json",
+        ],
+    )
+
+    assert snapshot_result.exit_code == 0
+
+    import_result = runner.invoke(
+        app,
+        [
+            "state",
+            "import-snapshot",
+            "--db",
+            str(db_path),
+            "--input",
+            str(snapshot_file),
+            "--output",
+            str(import_file),
+            "--format",
+            "json",
+        ],
+    )
+
+    assert import_result.exit_code == 0
+    import_payload = json.loads(import_file.read_text(encoding="utf-8"))
+    assert import_payload["summary"]["imported"] is True
+    assert import_payload["summary"]["finding_count"] == 3
+
+    history_result = runner.invoke(
+        app,
+        [
+            "state",
+            "history",
+            "--db",
+            str(db_path),
+            "--cve",
+            "CVE-2023-34362",
+            "--output",
+            str(history_file),
+            "--format",
+            "json",
+        ],
+    )
+
+    assert history_result.exit_code == 0
+    history_payload = json.loads(history_file.read_text(encoding="utf-8"))
+    assert history_payload["metadata"]["cve_id"] == "CVE-2023-34362"
+    assert len(history_payload["items"]) == 1
+    assert set(history_payload["items"][0]["services"]) == {"identity", "payments"}
+
+    top_services_result = runner.invoke(
+        app,
+        [
+            "state",
+            "top-services",
+            "--db",
+            str(db_path),
+            "--days",
+            "3650",
+            "--output",
+            str(top_services_file),
+            "--format",
+            "json",
+        ],
+    )
+
+    assert top_services_result.exit_code == 0
+    top_services_payload = json.loads(top_services_file.read_text(encoding="utf-8"))
+    services = {item["service"]: item for item in top_services_payload["items"]}
+    assert {"identity", "payments"} <= set(services)
+    assert services["identity"]["occurrence_count"] == 3
+    assert services["payments"]["occurrence_count"] == 1
 
 
 def _write_snapshot_file(tmp_path: Path, name: str, payload: dict) -> Path:
