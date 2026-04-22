@@ -77,6 +77,8 @@ def generate_summary_markdown(report_payload: dict[str, Any]) -> str:
         "",
         f"- Input: `{metadata.get('input_path', 'N.A.')}`",
         f"- Input format: `{metadata.get('input_format', 'N.A.')}`",
+        f"- Merged inputs: {metadata.get('merged_input_count', 1)}",
+        f"- Duplicate CVEs collapsed: {metadata.get('duplicate_cve_count', 0)}",
         f"- Policy profile: `{metadata.get('policy_profile', 'default')}`",
         f"- Findings shown: {metadata.get('findings_count', 0)}",
         f"- Critical: {counts_by_priority.get('Critical', 0)}",
@@ -86,9 +88,20 @@ def generate_summary_markdown(report_payload: dict[str, Any]) -> str:
         f"- Waiver review due: {metadata.get('waiver_review_due_count', 0)}",
         f"- Expired waivers: {metadata.get('expired_waiver_count', 0)}",
         f"- ATT&CK mapped CVEs: {attack_summary.get('mapped_cves', 0)}",
-        "",
-        "## Top Findings",
     ]
+    input_sources = metadata.get("input_sources", [])
+    if input_sources:
+        lines.extend(["", "## Input Sources"])
+        for source in input_sources:
+            lines.append(
+                "- "
+                + f"`{source.get('input_path', 'N.A.')}` "
+                + f"({source.get('input_format', 'N.A.')}, rows={source.get('total_rows', 0)}, "
+                + f"occurrences={source.get('occurrence_count', 0)}, "
+                + f"unique_cves={source.get('unique_cves', 0)})"
+            )
+        lines.append("")
+    lines.extend(["", "## Top Findings"])
     if findings:
         top_findings = findings[:5]
         for finding in top_findings:

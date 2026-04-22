@@ -41,6 +41,15 @@ class InputOccurrence(StrictModel):
     vex_action_statement: str | None = None
 
 
+class InputSourceSummary(StrictModel):
+    input_path: str
+    input_format: str
+    total_rows: int = 0
+    occurrence_count: int = 0
+    unique_cves: int = 0
+    warning_count: int = 0
+
+
 class ParsedInput(BaseModel):
     input_format: str = "cve-list"
     total_rows: int = 0
@@ -48,6 +57,10 @@ class ParsedInput(BaseModel):
     unique_cves: list[str] = Field(default_factory=list)
     warnings: list[str] = Field(default_factory=list)
     source_stats: dict[str, int] = Field(default_factory=dict)
+    input_paths: list[str] = Field(default_factory=list)
+    source_summaries: list[InputSourceSummary] = Field(default_factory=list)
+    merged_input_count: int = 1
+    duplicate_cve_count: int = 0
 
 
 class FindingProvenance(StrictModel):
@@ -380,6 +393,14 @@ class ComparisonFinding(StrictModel):
     change_reason: str
 
 
+class ProviderLookupDiagnostics(StrictModel):
+    requested: int = 0
+    cache_hits: int = 0
+    network_fetches: int = 0
+    failures: int = 0
+    content_hits: int = 0
+
+
 class EnrichmentResult(BaseModel):
     nvd: dict[str, NvdData] = Field(default_factory=dict)
     epss: dict[str, EpssData] = Field(default_factory=dict)
@@ -395,6 +416,8 @@ class EnrichmentResult(BaseModel):
     mapping_framework_version: str | None = None
     parsed_input: ParsedInput = Field(default_factory=ParsedInput)
     warnings: list[str] = Field(default_factory=list)
+    nvd_diagnostics: ProviderLookupDiagnostics = Field(default_factory=ProviderLookupDiagnostics)
+    provider_snapshot_sources: list[str] = Field(default_factory=list)
 
 
 class AnalysisContext(BaseModel):
@@ -404,6 +427,13 @@ class AnalysisContext(BaseModel):
     output_format: str
     generated_at: str
     input_format: str = "cve-list"
+    input_paths: list[str] = Field(default_factory=list)
+    input_sources: list[InputSourceSummary] = Field(default_factory=list)
+    merged_input_count: int = 1
+    duplicate_cve_count: int = 0
+    provider_snapshot_file: str | None = None
+    locked_provider_data: bool = False
+    provider_snapshot_sources: list[str] = Field(default_factory=list)
     attack_enabled: bool = False
     attack_source: str = "none"
     attack_mapping_file: str | None = None
@@ -420,6 +450,7 @@ class AnalysisContext(BaseModel):
     findings_count: int = 0
     filtered_out_count: int = 0
     nvd_hits: int = 0
+    nvd_diagnostics: ProviderLookupDiagnostics = Field(default_factory=ProviderLookupDiagnostics)
     epss_hits: int = 0
     kev_hits: int = 0
     attack_hits: int = 0
@@ -446,6 +477,35 @@ class SnapshotMetadata(AnalysisContext):
     schema_version: str = "1.1.0"
     snapshot_kind: str = "snapshot"
     config_file: str | None = None
+
+
+class ProviderSnapshotMetadata(StrictModel):
+    schema_version: str = "1.2.0"
+    artifact_kind: str = "provider-snapshot"
+    generated_at: str
+    input_path: str | None = None
+    input_paths: list[str] = Field(default_factory=list)
+    input_format: str = "cve-list"
+    selected_sources: list[str] = Field(default_factory=list)
+    requested_cves: int = 0
+    output_path: str | None = None
+    cache_enabled: bool = False
+    cache_dir: str | None = None
+    offline_kev_file: str | None = None
+    nvd_api_key_env: str | None = None
+
+
+class ProviderSnapshotItem(StrictModel):
+    cve_id: str
+    nvd: NvdData | None = None
+    epss: EpssData | None = None
+    kev: KevData | None = None
+
+
+class ProviderSnapshotReport(StrictModel):
+    metadata: ProviderSnapshotMetadata
+    items: list[ProviderSnapshotItem] = Field(default_factory=list)
+    warnings: list[str] = Field(default_factory=list)
 
 
 class SnapshotDiffMetadata(StrictModel):

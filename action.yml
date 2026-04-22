@@ -10,10 +10,10 @@ inputs:
     required: false
     default: analyze
   input:
-    description: Input file passed to the CLI
+    description: Analyze mode accepts one or more newline-delimited input files; report-html expects one analysis JSON file
     required: true
   input-format:
-    description: analyze mode only; auto, cve-list, trivy-json, grype-json, cyclonedx-json, spdx-json, dependency-check-json, github-alerts-json, nessus-xml, openvas-xml
+    description: analyze mode only; auto, cve-list, trivy-json, grype-json, cyclonedx-json, spdx-json, dependency-check-json, github-alerts-json, nessus-xml, openvas-xml. Provide one value or a newline-delimited list aligned with input.
     required: false
     default: auto
   output-format:
@@ -91,6 +91,14 @@ inputs:
     description: Optional ATT&CK technique metadata file for analyze mode
     required: false
     default: ""
+  provider-snapshot-file:
+    description: Optional provider snapshot JSON for analyze mode fallback or locked replay
+    required: false
+    default: ""
+  locked-provider-data:
+    description: analyze mode only; set to true to forbid live provider lookups outside the provider snapshot
+    required: false
+    default: "false"
   python-version:
     description: Python version used to install and run the CLI
     required: false
@@ -140,6 +148,44 @@ runs:
           echo "Unsupported summary-template: $summary_template" >&2
           exit 2
         fi
+
+        count_nonempty_lines() {
+          local raw="$1"
+          local count=0
+          while IFS= read -r value; do
+            if [[ -n "$value" ]]; then
+              count=$((count + 1))
+            fi
+          done <<< "$raw"
+          printf '%s' "$count"
+        }
+
+        append_multiline_args() {
+          local flag="$1"
+          local raw="$2"
+          while IFS= read -r value; do
+            if [[ -n "$value" ]]; then
+              cmd+=("$flag" "$value")
+            fi
+          done <<< "$raw"
+        }
+
+        resolve_single_input() {
+          local raw="$1"
+          local input_count=0
+          local resolved=""
+          while IFS= read -r value; do
+            if [[ -n "$value" ]]; then
+              input_count=$((input_count + 1))
+              resolved="$value"
+            fi
+          done <<< "$raw"
+          if [[ "$input_count" -ne 1 ]]; then
+            echo "report-html mode expects exactly one input path." >&2
+            exit 2
+          fi
+          printf '%s' "$resolved"
+        }
 
         render_compact_summary() {
           python - "$1" "$2" <<'PY'
@@ -207,16 +253,20 @@ runs:
         fi
 
         if [[ "$mode" == "analyze" ]]; then
+          if [[ "$(count_nonempty_lines "${{ inputs.input }}")" -eq 0 ]]; then
+            echo "analyze mode requires at least one input path." >&2
+            exit 2
+          fi
           cmd+=(
             analyze
-            --input "${{ inputs.input }}"
-            --input-format "${{ inputs.input-format }}"
             --format "${{ inputs.output-format }}"
             --output "${{ inputs.output-path }}"
             --policy-profile "${{ inputs.policy-profile }}"
             --attack-source "${{ inputs.attack-source }}"
             --target-kind "${{ inputs.target-kind }}"
           )
+          append_multiline_args "--input" "${{ inputs.input }}"
+          append_multiline_args "--input-format" "${{ inputs.input-format }}"
 
           if [[ -n "$requested_summary_path" || "${{ inputs.github-step-summary }}" == "true" ]]; then
             summary_requested="true"
@@ -256,17 +306,20 @@ runs:
           if [[ -n "${{ inputs.attack-technique-metadata-file }}" ]]; then
             cmd+=(--attack-technique-metadata-file "${{ inputs.attack-technique-metadata-file }}")
           fi
+          if [[ -n "${{ inputs.provider-snapshot-file }}" ]]; then
+            cmd+=(--provider-snapshot-file "${{ inputs.provider-snapshot-file }}")
+          fi
+          if [[ "${{ inputs.locked-provider-data }}" == "true" ]]; then
+            cmd+=(--locked-provider-data)
+          fi
           if [[ -n "${{ inputs.vex-files }}" ]]; then
-            while IFS= read -r vex_file; do
-              if [[ -n "$vex_file" ]]; then
-                cmd+=(--vex-file "$vex_file")
-              fi
-            done <<< "${{ inputs.vex-files }}"
+            append_multiline_args "--vex-file" "${{ inputs.vex-files }}"
           fi
         elif [[ "$mode" == "report-html" ]]; then
+          report_input="$(resolve_single_input "${{ inputs.input }}")"
           cmd+=(
             report html
-            --input "${{ inputs.input }}"
+            --input "$report_input"
             --output "${{ inputs.output-path }}"
           )
           html_report_path="${{ inputs.output-path }}"

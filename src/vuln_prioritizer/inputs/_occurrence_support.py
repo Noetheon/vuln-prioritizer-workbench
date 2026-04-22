@@ -4,7 +4,12 @@ from __future__ import annotations
 
 from collections import Counter
 
-from vuln_prioritizer.models import AssetContextRecord, InputOccurrence, ParsedInput
+from vuln_prioritizer.models import (
+    AssetContextRecord,
+    InputOccurrence,
+    InputSourceSummary,
+    ParsedInput,
+)
 
 
 def apply_manual_target(
@@ -65,8 +70,16 @@ def finalize_occurrences(
     warnings: list[str],
     total_rows: int,
     max_cves: int | None,
+    input_paths: list[str] | None = None,
+    source_summaries: list[InputSourceSummary] | None = None,
+    merged_input_count: int = 1,
 ) -> ParsedInput:
     """Deduplicate, truncate, and package normalized occurrences."""
+    duplicate_cve_count = sum(
+        1
+        for count in Counter(occurrence.cve_id for occurrence in occurrences).values()
+        if count > 1
+    )
     seen: set[str] = set()
     unique_cves: list[str] = []
     for occurrence in occurrences:
@@ -86,7 +99,13 @@ def finalize_occurrences(
         occurrences = [occurrence for occurrence in occurrences if occurrence.cve_id in allowed]
 
     if not unique_cves:
-        raise ValueError("No valid CVE identifiers were found in the input file.")
+        raise ValueError("No valid CVE identifiers were found in the provided input.")
+
+    if merged_input_count > 1 and duplicate_cve_count:
+        warnings = warnings + [
+            "Merged input set collapsed duplicate CVEs for "
+            f"{duplicate_cve_count} CVE identifier(s) across {merged_input_count} input files."
+        ]
 
     source_stats = dict(Counter(occurrence.source_format for occurrence in occurrences))
     return ParsedInput(
@@ -96,4 +115,8 @@ def finalize_occurrences(
         unique_cves=unique_cves,
         warnings=warnings,
         source_stats=source_stats,
+        input_paths=input_paths or [],
+        source_summaries=source_summaries or [],
+        merged_input_count=merged_input_count,
+        duplicate_cve_count=duplicate_cve_count,
     )

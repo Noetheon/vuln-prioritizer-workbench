@@ -27,3 +27,5 @@ The action and examples assume the current repository provides:
 - Consumers should replace `@vX.Y.Z` with the release tag or commit SHA that matches the surface they want to consume.
 - `actions/checkout` is still required in the consuming workflow because the scanned files live in the consumer repository, not in the action repository.
 - The action installs `vuln-prioritizer` from the action checkout and runs the local CLI entrypoint.
+- In `mode: analyze`, `input` and `input-format` support newline-delimited values for merged multi-source runs.
+- Consumers can pass `provider-snapshot-file` and `locked-provider-data` when they want deterministic provider replay in the action wrapper.

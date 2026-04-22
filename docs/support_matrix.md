@@ -4,11 +4,11 @@
 
 | Command | Primary input | Supported file outputs | Current machine contract | Notes |
 | --- | --- | --- | --- | --- |
-| `analyze` | `--input PATH` | `markdown`, `json`, `sarif`, `html` sidecar via `--html-output` | JSON schema + SARIF 2.1.0 | `table` is terminal-only. Direct HTML is additive and does not replace the JSON contract. Optional waiver lifecycle gates exist via `--fail-on-expired-waivers` and `--fail-on-review-due-waivers`. |
-| `compare` | `--input PATH` | `markdown`, `json` | JSON schema | Comparison is `CVSS-only` vs enriched. |
+| `analyze` | repeatable `--input PATH` | `markdown`, `json`, `sarif`, `html` sidecar via `--html-output` | JSON schema + SARIF 2.1.0 | `table` is terminal-only. Direct HTML is additive and does not replace the JSON contract. Optional waiver lifecycle gates exist via `--fail-on-expired-waivers` and `--fail-on-review-due-waivers`. |
+| `compare` | repeatable `--input PATH` | `markdown`, `json` | JSON schema | Comparison is `CVSS-only` vs enriched. |
 | `explain` | `--cve CVE-...` | `markdown`, `json` | JSON schema | Single-CVE detailed view. |
 | `doctor` | optional local files and runtime config | `json` | JSON schema | Local environment, cache, file, waiver-health, and optional live-source diagnostics. |
-| `snapshot create` | `--input PATH` | `markdown`, `json` | JSON schema | Reusable point-in-time artifact over the same prioritization pipeline as `analyze`. |
+| `snapshot create` | repeatable `--input PATH` | `markdown`, `json` | JSON schema | Reusable point-in-time artifact over the same prioritization pipeline as `analyze`. |
 | `snapshot diff` | two snapshot JSON files | `markdown`, `json` | JSON schema | Categorizes `added`, `removed`, priority, and context changes per CVE. |
 | `state init` | `--db PATH` | `json` | JSON schema | Initializes the optional local SQLite backing store used only for persisted snapshot history. |
 | `state import-snapshot` | snapshot JSON file | `json` | JSON schema | Imports a saved `snapshot create --format json` artifact into the optional local SQLite state store. |
@@ -19,9 +19,10 @@
 | `attack validate` | ATT&CK local files | `markdown`, `json` | No published schema yet | Validates local mapping and metadata artifacts; `ctid-json` is the preferred workflow. |
 | `attack coverage` | `--input PATH` | `markdown`, `json` | No published schema yet | Uses the same input loader for CVE extraction. |
 | `attack navigator-layer` | `--input PATH` | Navigator layer JSON | Navigator JSON, no local schema here | Exports a frequency-based ATT&CK Navigator layer. |
-| `data status` | none | none | none | Terminal inspection only. |
-| `data update` | optional `--input PATH` / `--cve` | none | none | Terminal-only cache refresh for `nvd`, `epss`, and `kev`. |
-| `data verify` | optional `--input PATH` / `--cve` | none | none | Terminal-only cache coverage, checksum, and local file verification. |
+| `data status` | none | `json` | JSON schema | Cache namespace inspection plus optional local ATT&CK metadata validation. |
+| `data update` | optional repeatable `--input PATH` / `--cve` | `json` | JSON schema | Cache refresh for `nvd`, `epss`, and `kev`; `table` remains the default terminal view. |
+| `data verify` | optional repeatable `--input PATH` / `--cve` | `json` | JSON schema | Cache coverage, checksum, and pinned local file verification; `table` remains the default terminal view. |
+| `data export-provider-snapshot` | repeatable `--input PATH` and/or `--cve` | `json` | JSON schema | Exports replayable provider data for `nvd`, `epss`, and `kev` so later analysis can run in fallback or locked snapshot mode. |
 | `report html` | analysis JSON | `html` | Consumes analysis JSON contract | No live enrichment during rendering. |
 | `report evidence-bundle` | analysis JSON | `zip` | Manifest schema inside bundle | Packages saved analysis JSON, regenerated HTML, Markdown summary, and optional source input copy. |
 | `report verify-evidence-bundle` | evidence ZIP | `json` | JSON schema | Verifies ZIP members against the embedded manifest and reports missing, modified, unexpected, or malformed bundle content. |
@@ -81,6 +82,6 @@ Without a matching target, the explain flow still works, but asset-join and exac
 - Prefer `report verify-evidence-bundle` before shipping or archiving an evidence ZIP outside the repository or CI workspace.
 - `report html` expects an analysis JSON export, not compare JSON or explain JSON.
 - `sarif` is part of the documented contract only for `analyze`.
-- `data status`, `data update`, and `data verify` are intentionally human-facing terminal commands today.
+- `data status`, `data update`, and `data verify` now publish JSON contracts via `--format json`; their Rich table layout remains human-facing.
 - The optional SQLite state store is separate from the existing file cache and does not change `analyze`, `snapshot`, or `report` output semantics.
 - `vuln-prioritizer.yml` is the documented runtime-config filename; `--config` and `--no-config` are the stable CLI overrides.
