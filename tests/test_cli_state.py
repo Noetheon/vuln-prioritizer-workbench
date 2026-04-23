@@ -4,7 +4,7 @@ import json
 from datetime import UTC, datetime
 from pathlib import Path
 
-from test_cli import _install_fake_providers
+from _cli_helpers import install_fake_providers as _install_fake_providers
 from typer.testing import CliRunner
 
 import vuln_prioritizer.state_store as state_store_module

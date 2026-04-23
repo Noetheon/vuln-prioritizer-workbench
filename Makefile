@@ -5,18 +5,22 @@ ATTACK_METADATA_FILE := data/attack/attack_techniques_enterprise_16.1_subset.jso
 DEMO_FIXED_NOW := 2026-04-21T12:00:00+00:00
 DEMO_ENV := PYTHONPATH=src VULN_PRIORITIZER_FIXED_NOW=$(DEMO_FIXED_NOW)
 
-.PHONY: install test lint format typecheck check benchmark-check docs-check docs-serve actionlint-check workflow-check demo-sync-check package package-check pipx-source-smoke release-check demo-report demo-compare demo-explain demo-attack-report demo-attack-compare demo-attack-explain demo-attack-coverage demo-attack-navigator demo-pr-comment demo-results-sarif demo-html-report precommit-install
+.PHONY: install test lint format fix typecheck check benchmark-check docs-check docs-serve actionlint-check workflow-check demo-sync-check package package-check pipx-source-smoke release-check demo-report demo-compare demo-explain demo-attack-report demo-attack-compare demo-attack-explain demo-attack-coverage demo-attack-navigator demo-pr-comment demo-results-sarif demo-html-report precommit-install
 
 install:
 	$(PYTHON) -m pip install -e .[dev]
 
 test:
-	pytest
+	$(PYTHON) -m pytest
 
 lint:
 	$(PYTHON) -m ruff check .
 
 format:
+	$(PYTHON) -m ruff format .
+
+fix:
+	$(PYTHON) -m ruff check --fix .
 	$(PYTHON) -m ruff format .
 
 typecheck:
@@ -26,7 +30,7 @@ check:
 	$(PYTHON) -m ruff format --check .
 	$(PYTHON) -m ruff check .
 	$(PYTHON) -m mypy src
-	pytest
+	$(PYTHON) -m pytest
 
 benchmark-check:
 	$(PYTHON) -m pytest -q tests/test_benchmark_regressions.py tests/test_snapshot_diff_regressions.py tests/test_rollup_regressions.py

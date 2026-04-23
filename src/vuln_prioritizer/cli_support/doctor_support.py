@@ -5,7 +5,6 @@ from __future__ import annotations
 import os
 import sys
 from pathlib import Path
-from typing import Any
 
 import requests
 import typer
@@ -27,13 +26,6 @@ from vuln_prioritizer.utils import iso_utc_now
 
 from .attack_support import validate_attack_inputs
 from .common import runtime_config as get_runtime_config
-
-
-def _requests_module() -> Any:
-    cli_module = sys.modules.get("vuln_prioritizer.cli")
-    if cli_module is not None and hasattr(cli_module, "requests"):
-        return cli_module.requests
-    return requests
 
 
 def build_doctor_report(
@@ -295,9 +287,8 @@ def probe_live_source(
     *,
     params: dict[str, str] | None = None,
 ) -> DoctorCheck:
-    requests_module = _requests_module()
     try:
-        response = requests_module.get(url, params=params, timeout=5)
+        response = requests.get(url, params=params, timeout=5)
         response.raise_for_status()
     except requests.RequestException as exc:
         return doctor_check(

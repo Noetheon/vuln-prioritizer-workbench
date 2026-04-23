@@ -25,7 +25,7 @@ from vuln_prioritizer.provider_snapshot import resolve_snapshot_provider_data
 from vuln_prioritizer.providers.attack import AttackProvider
 from vuln_prioritizer.providers.epss import EpssProvider
 from vuln_prioritizer.providers.kev import KevProvider
-from vuln_prioritizer.providers.nvd import NvdFetchDiagnostics, NvdProvider
+from vuln_prioritizer.providers.nvd import NvdFetchDiagnostics, NvdProvider, has_nvd_content
 
 _T = TypeVar("_T", NvdData, EpssData, KevData)
 
@@ -154,7 +154,7 @@ class EnrichmentService:
                 cache_hits=0,
                 network_fetches=0,
                 failures=0,
-                content_hits=sum(1 for item in snapshot_results.values() if _has_nvd_content(item)),
+                content_hits=sum(1 for item in snapshot_results.values() if has_nvd_content(item)),
             )
         return _merge_provider_results(cve_ids, snapshot_results, live_results, NvdData), warnings
 
@@ -229,18 +229,3 @@ def _merge_provider_results(
         else:
             merged[cve_id] = model_cls(cve_id=cve_id)
     return merged
-
-
-def _has_nvd_content(item: NvdData) -> bool:
-    return any(
-        [
-            item.description is not None,
-            item.cvss_base_score is not None,
-            item.cvss_severity is not None,
-            item.cvss_version is not None,
-            item.published is not None,
-            item.last_modified is not None,
-            bool(item.cwes),
-            bool(item.references),
-        ]
-    )

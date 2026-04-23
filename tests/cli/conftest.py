@@ -1,24 +1,22 @@
 from __future__ import annotations
 
 import re
-import sys
 from collections.abc import Callable
 from pathlib import Path
 
 import pytest
+from _cli_helpers import (
+    install_fake_providers as _install_fake_providers,
+)
+from _cli_helpers import (
+    runner as _runner,
+)
+from _cli_helpers import (
+    write_input_file as _write_input_file,
+)
 from typer.testing import CliRunner
 
 from vuln_prioritizer.cli import app
-
-TESTS_DIR = Path(__file__).resolve().parents[1]
-if str(TESTS_DIR) not in sys.path:
-    sys.path.insert(0, str(TESTS_DIR))
-
-from _cli_helpers import (  # noqa: I001,E402
-    install_fake_providers as _install_fake_providers,
-    runner as _runner,
-    write_input_file as _write_input_file,
-)
 
 ANSI_ESCAPE_PATTERN = re.compile(r"\x1b\[[0-9;]*[A-Za-z]")
 

@@ -6,6 +6,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 from vuln_prioritizer.models import (
     EpssData,
     KevData,
@@ -19,6 +21,8 @@ from vuln_prioritizer.provider_snapshot import generate_provider_snapshot_json
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 SRC_PATH = PROJECT_ROOT / "src"
 PYTHON = sys.executable
+
+pytestmark = pytest.mark.e2e
 
 
 def _run_cli(*args: str) -> subprocess.CompletedProcess[str]:

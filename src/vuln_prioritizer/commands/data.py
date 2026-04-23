@@ -12,7 +12,6 @@ from pydantic import ValidationError
 from rich.panel import Panel
 
 from vuln_prioritizer.cache import FileCache
-from vuln_prioritizer.cli_support.analysis import has_nvd_content
 from vuln_prioritizer.cli_support.attack_support import validate_attack_inputs_or_exit
 from vuln_prioritizer.cli_support.common import (
     TABLE_AND_JSON_OUTPUT_FORMATS,
@@ -59,7 +58,7 @@ from vuln_prioritizer.models import (
 from vuln_prioritizer.provider_snapshot import generate_provider_snapshot_json
 from vuln_prioritizer.providers.epss import EpssProvider
 from vuln_prioritizer.providers.kev import KevProvider
-from vuln_prioritizer.providers.nvd import NvdProvider
+from vuln_prioritizer.providers.nvd import NvdProvider, has_nvd_content
 from vuln_prioritizer.reporter import write_output
 from vuln_prioritizer.utils import iso_utc_now
 

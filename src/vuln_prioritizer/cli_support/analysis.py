@@ -36,6 +36,7 @@ from vuln_prioritizer.models import (
     WaiverRule,
 )
 from vuln_prioritizer.provider_snapshot import load_provider_snapshot
+from vuln_prioritizer.providers.nvd import has_nvd_content
 from vuln_prioritizer.services.attack_enrichment import AttackEnrichmentService
 from vuln_prioritizer.services.contextualization import (
     aggregate_provenance,
@@ -294,21 +295,6 @@ def build_data_sources(enrichment: EnrichmentResult) -> list[str]:
     if parsed_input.source_stats:
         sources.append("Input formats: " + ", ".join(sorted(parsed_input.source_stats)))
     return sources
-
-
-def has_nvd_content(item: NvdData) -> bool:
-    return any(
-        [
-            item.description is not None,
-            item.cvss_base_score is not None,
-            item.cvss_severity is not None,
-            item.cvss_version is not None,
-            item.published is not None,
-            item.last_modified is not None,
-            bool(item.cwes),
-            bool(item.references),
-        ]
-    )
 
 
 def normalize_priority_filters(priority_filters: list[PriorityFilter] | None) -> set[str]:
