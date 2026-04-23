@@ -27,10 +27,15 @@ The following outputs are the current documented machine interfaces:
 - `state history --format json`
 - `state waivers --format json`
 - `state top-services --format json`
+- `state trends --format json`
+- `state service-history --format json`
+- `input validate --format json`
 - `data status --format json`
 - `data update --format json`
 - `data verify --format json`
 - `data export-provider-snapshot`
+- `attack validate --format json`
+- `attack coverage --format json`
 - `rollup --format json`
 - `analyze --format sarif`
 - `analyze --summary-output <path>`
@@ -51,10 +56,15 @@ Published JSON schemas in `docs/schemas/` cover:
 - `state-history-report.schema.json`
 - `state-waivers-report.schema.json`
 - `state-top-services-report.schema.json`
+- `state-trends-report.schema.json`
+- `state-service-history-report.schema.json`
+- `input-validation-report.schema.json`
 - `data-status-report.schema.json`
 - `data-update-report.schema.json`
 - `data-verify-report.schema.json`
 - `provider-snapshot-report.schema.json`
+- `attack-validation-report.schema.json`
+- `attack-coverage-report.schema.json`
 - `rollup-report.schema.json`
 - `evidence-bundle-manifest.schema.json`
 - `evidence-bundle-verification-report.schema.json`
@@ -80,16 +90,19 @@ Primary payload keys by command:
 - `state history`: `items`
 - `state waivers`: `items`
 - `state top-services`: `items`
+- `state trends`: `items`
+- `state service-history`: `items`
+- `input validate`: `summary`, `sources`, `asset_context`, and `vex`
 - `data status`: `namespaces`
 - `data update`: `sources`
 - `data verify`: `namespaces`, plus `coverage` and `local_files`
+- `attack validate`: validation counts and warning arrays
+- `attack coverage`: `items`, plus ATT&CK coverage `summary`
 - `rollup`: `buckets`
 - `report evidence-bundle`: `manifest.json` with `files`
 - `report verify-evidence-bundle`: `items`, plus `summary`
 
-### `metadata.schema_version`
-
-Every documented JSON export includes `metadata.schema_version`.
+### Schema versioning
 
 Current value:
 
@@ -101,9 +114,9 @@ Consumer guidance:
 - tolerate additive fields on the same major version
 - ignore unknown object members rather than failing on extra fields
 
-The bundled schemas target the currently emitted version, `1.0.0`.
+The primary analysis-style schemas target the currently emitted version, `1.0.0`.
 
-New v1.1 helper contracts use their own envelope versions:
+Helper contracts use either an explicit envelope version or their published schema as the contract version anchor:
 
 - `doctor`: top-level `schema_version = 1.2.0`
 - `snapshot create`: `metadata.schema_version = 1.1.0`
@@ -113,8 +126,14 @@ New v1.1 helper contracts use their own envelope versions:
 - `state history`: `metadata.schema_version = 1.2.0`
 - `state waivers`: `metadata.schema_version = 1.2.0`
 - `state top-services`: `metadata.schema_version = 1.2.0`
+- `state trends`: `metadata.schema_version = 1.2.0`
+- `state service-history`: `metadata.schema_version = 1.2.0`
+- `input validate`: `metadata.schema_version = 1.2.0`
+- `data status`, `data update`, and `data verify`: `metadata.schema_version = 1.2.0`
+- `data export-provider-snapshot`: `metadata.schema_version = 1.2.0`
 - `rollup`: `metadata.schema_version = 1.2.0`
 - `report verify-evidence-bundle`: `metadata.schema_version = 1.2.0`
+- `attack validate` and `attack coverage`: published schemas define their current stable JSON shape
 
 ## Semantic contract
 
@@ -231,6 +250,9 @@ The public combinations currently intended for use are:
 - `state history`: `table`, `json`
 - `state waivers`: `table`, `json`
 - `state top-services`: `table`, `json`
+- `state trends`: `table`, `json`
+- `state service-history`: `table`, `json`
+- `input validate`: `table`, `json`
 - `rollup`: `table`, `markdown`, `json`
 - `attack validate`: `table`, `markdown`, `json`
 - `attack coverage`: `table`, `markdown`, `json`
@@ -238,6 +260,7 @@ The public combinations currently intended for use are:
 - `data status`: `table`, `json`
 - `data update`: `table`, `json`
 - `data verify`: `table`, `json`
+- `data export-provider-snapshot`: JSON file output
 - `report html`: HTML file output
 - `report evidence-bundle`: ZIP file output containing `analysis.json`, `report.html`, `summary.md`, and `manifest.json`
 - `report verify-evidence-bundle`: `table` and `json`
@@ -282,7 +305,7 @@ This repository documents its public contract explicitly, so the compatibility p
 
 ### JSON compatibility
 
-- breaking machine-readable changes must update `metadata.schema_version`
+- breaking machine-readable changes must update the relevant schema version or published schema contract
 - additive fields on the same major version are allowed
 - narrative fields such as `rationale`, `recommended_action`, `context_summary`, `context_recommendation`, and warning strings are not text-stable parsing targets
 
@@ -315,7 +338,6 @@ The following are intentionally not covered by the published JSON schemas:
 - terminal table layout
 - Markdown table layout
 - wording of warnings and recommendation text
-- undocumented JSON payloads from helper commands such as `attack validate` and `attack coverage`
 - HTML, Markdown, and terminal wording for `doctor`, `snapshot diff`, `state history`, `state waivers`, `state top-services`, and `rollup`
 - exact ZIP layout details inside `report evidence-bundle` beyond the published `manifest.json` contract
 - cryptographic signing or provenance attestation for evidence bundles; current verification checks ZIP members against the embedded manifest only

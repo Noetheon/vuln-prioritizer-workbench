@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://noetheon.github.io/vuln-prioritizer/schemas/state-trends-report.schema.json",
+  "title": "vuln-prioritizer state trends report",
+  "description": "JSON contract for `vuln-prioritizer state trends --format json`.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["metadata", "items"],
+  "properties": {
+    "metadata": {"$ref": "#/$defs/metadata"},
+    "items": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/item"}
+    }
+  },
+  "$defs": {
+    "metadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "generated_at",
+        "db_path",
+        "days",
+        "priority_filter",
+        "entry_count"
+      ],
+      "properties": {
+        "schema_version": {"const": "1.2.0"},
+        "generated_at": {"type": "string"},
+        "db_path": {"type": "string"},
+        "days": {"type": "integer", "minimum": 1},
+        "priority_filter": {"type": "string"},
+        "entry_count": {"type": "integer"}
+      }
+    },
+    "item": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "snapshot_generated_at",
+        "snapshot_path",
+        "findings_count",
+        "critical_count",
+        "high_count",
+        "medium_count",
+        "low_count",
+        "kev_count",
+        "attack_mapped_count",
+        "waived_count"
+      ],
+      "properties": {
+        "snapshot_generated_at": {"type": "string"},
+        "snapshot_path": {"type": "string"},
+        "findings_count": {"type": "integer"},
+        "critical_count": {"type": "integer"},
+        "high_count": {"type": "integer"},
+        "medium_count": {"type": "integer"},
+        "low_count": {"type": "integer"},
+        "kev_count": {"type": "integer"},
+        "attack_mapped_count": {"type": "integer"},
+        "waived_count": {"type": "integer"}
+      }
+    }
+  }
+}

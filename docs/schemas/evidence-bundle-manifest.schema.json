@@ -29,6 +29,12 @@
     "source_input_path": {
       "type": ["string", "null"]
     },
+    "source_input_paths": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
     "findings_count": {
       "type": "integer"
     },

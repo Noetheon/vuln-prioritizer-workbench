@@ -8,6 +8,24 @@ from typing import Literal, overload
 from vuln_prioritizer.models import InputOccurrence, VexStatement
 from vuln_prioritizer.utils import normalize_cve_id
 
+OPENVEX_STATUS_MAP = {
+    "affected": "affected",
+    "fixed": "fixed",
+    "not_affected": "not_affected",
+    "under_investigation": "under_investigation",
+}
+
+CYCLONEDX_STATE_MAP = {
+    "affected": "affected",
+    "exploitable": "affected",
+    "false_positive": "not_affected",
+    "fixed": "fixed",
+    "in_triage": "under_investigation",
+    "not_affected": "not_affected",
+    "resolved": "fixed",
+    "resolved_with_pedigree": "fixed",
+}
+
 
 @dataclass(frozen=True)
 class VexMatchResult:
@@ -33,21 +51,29 @@ class VexMatchDiagnostics:
 def parse_openvex_document(document: dict) -> list[VexStatement]:
     """Parse OpenVEX JSON into normalized VEX statements."""
     statements: list[VexStatement] = []
-    for index, statement in enumerate(document.get("statements", []), start=1):
-        cve_id = normalize_cve_id(statement.get("vulnerability", {}).get("@id"))
+    for index, statement in enumerate(_dict_items(document.get("statements")), start=1):
+        vulnerability = _dict_value(statement.get("vulnerability"))
+        cve_id = normalize_cve_id(vulnerability.get("@id"))
         if cve_id is None:
-            cve_id = normalize_cve_id(statement.get("vulnerability", {}).get("name"))
+            cve_id = normalize_cve_id(vulnerability.get("name"))
         if cve_id is None:
             continue
-        for product in statement.get("products", []):
+        status = _normalize_vex_status(
+            statement.get("status"),
+            status_map=OPENVEX_STATUS_MAP,
+        )
+        if status is None:
+            continue
+        for product in _dict_items(statement.get("products")):
+            subcomponent = _first_dict(product.get("subcomponents"))
             statements.append(
                 VexStatement(
                     source_format="openvex-json",
                     cve_id=cve_id,
-                    status=(statement.get("status") or "").strip(),
+                    status=status,
                     purl=product.get("@id"),
-                    target_kind=product.get("subcomponents", [{}])[0].get("kind"),
-                    target_ref=product.get("subcomponents", [{}])[0].get("name"),
+                    target_kind=None if subcomponent is None else subcomponent.get("kind"),
+                    target_ref=None if subcomponent is None else subcomponent.get("name"),
                     justification=statement.get("justification"),
                     action_statement=statement.get("action_statement"),
                     source_record_id=f"statement:{index}",
@@ -60,18 +86,26 @@ def parse_cyclonedx_vex_document(document: dict) -> list[VexStatement]:
     """Parse CycloneDX VEX JSON into normalized VEX statements."""
     components = {
         component.get("bom-ref"): component
-        for component in document.get("components", [])
+        for component in _dict_items(document.get("components"))
         if component.get("bom-ref")
     }
+    metadata = _dict_value(document.get("metadata"))
+    root_component = _dict_value(metadata.get("component"))
     statements: list[VexStatement] = []
-    for index, vulnerability in enumerate(document.get("vulnerabilities", []), start=1):
+    for index, vulnerability in enumerate(_dict_items(document.get("vulnerabilities")), start=1):
         cve_id = normalize_cve_id(vulnerability.get("id"))
         if cve_id is None:
             continue
-        status = vulnerability.get("analysis", {}).get("state")
-        if not status:
+        analysis = vulnerability.get("analysis")
+        analysis = analysis if isinstance(analysis, dict) else {}
+        status = _normalize_vex_status(
+            analysis.get("state"),
+            status_map=CYCLONEDX_STATE_MAP,
+        )
+        if status is None:
             continue
-        for affect in vulnerability.get("affects", []):
+        action_statement = _first_string(analysis.get("response"))
+        for affect in _dict_items(vulnerability.get("affects")):
             component = components.get(affect.get("ref"), {})
             statements.append(
                 VexStatement(
@@ -82,9 +116,9 @@ def parse_cyclonedx_vex_document(document: dict) -> list[VexStatement]:
                     component_version=component.get("version"),
                     purl=component.get("purl"),
                     target_kind="repository",
-                    target_ref=document.get("metadata", {}).get("component", {}).get("name"),
-                    justification=vulnerability.get("analysis", {}).get("justification"),
-                    action_statement=vulnerability.get("analysis", {}).get("response", [None])[0],
+                    target_ref=root_component.get("name"),
+                    justification=analysis.get("justification"),
+                    action_statement=action_statement,
                     source_record_id=f"vulnerability:{index}",
                 )
             )
@@ -233,6 +267,8 @@ def _statement_specificity(
 ) -> tuple[str, int] | None:
     if statement.cve_id != occurrence.cve_id:
         return None
+    if _has_version_fields(statement) and not _component_version_matches(statement, occurrence):
+        return None
 
     if _purl_matches(statement, occurrence) and _target_matches(statement, occurrence):
         return "purl+target", _specificity_rank("purl+target")
@@ -294,11 +330,11 @@ def _component_name_matches(statement: VexStatement, occurrence: InputOccurrence
 
 
 def _component_version_matches(statement: VexStatement, occurrence: InputOccurrence) -> bool:
-    return bool(
-        statement.component_version is None
-        or occurrence.component_version is None
-        or statement.component_version == occurrence.component_version
-    )
+    if statement.component_version is None:
+        return True
+    if occurrence.component_version is None:
+        return False
+    return statement.component_version == occurrence.component_version
 
 
 def _target_matches(statement: VexStatement, occurrence: InputOccurrence) -> bool:
@@ -321,3 +357,45 @@ def _has_component_fields(statement: VexStatement) -> bool:
 
 def _has_version_fields(statement: VexStatement) -> bool:
     return statement.component_version is not None
+
+
+def _normalize_vex_status(
+    value: object,
+    *,
+    status_map: dict[str, str],
+) -> str | None:
+    if value is None:
+        return None
+    normalized = str(value).strip().lower().replace("-", "_")
+    return status_map.get(normalized)
+
+
+def _dict_items(value: object) -> list[dict]:
+    if not isinstance(value, list):
+        return []
+    return [item for item in value if isinstance(item, dict)]
+
+
+def _first_dict(value: object) -> dict | None:
+    if not isinstance(value, list):
+        return None
+    for item in value:
+        if isinstance(item, dict):
+            return item
+    return None
+
+
+def _dict_value(value: object) -> dict:
+    return value if isinstance(value, dict) else {}
+
+
+def _first_string(value: object) -> str | None:
+    if isinstance(value, str):
+        stripped = value.strip()
+        return stripped or None
+    if not isinstance(value, list):
+        return None
+    for item in value:
+        if isinstance(item, str) and item.strip():
+            return item.strip()
+    return None

@@ -26,7 +26,9 @@ if [[ -z "$PIPX_SPEC" ]]; then
     --exclude=.mypy_cache \
     --exclude=.pytest_cache \
     --exclude=.ruff_cache \
+    --exclude=.cache \
     --exclude=.tox \
+    --exclude=Library \
     --exclude=build \
     --exclude=dist \
     --exclude=site \
@@ -39,9 +41,11 @@ fi
 
 CLI=("$PYTHON_BIN" -m pipx run --spec "$PIPX_SPEC" vuln-prioritizer)
 DOCTOR_OUTPUT="$TMP_DIR/doctor.json"
+DOCTOR_CACHE_DIR="$TMP_DIR/doctor-cache"
+mkdir -p "$DOCTOR_CACHE_DIR"
 
 "${CLI[@]}" --help > /dev/null
-"${CLI[@]}" doctor --format json --output "$DOCTOR_OUTPUT"
+"${CLI[@]}" doctor --cache-dir "$DOCTOR_CACHE_DIR" --format json --output "$DOCTOR_OUTPUT"
 
 PYTHON_BIN="$PYTHON_BIN" \
 VULN_PRIORITIZER_PIPX_SPEC="$PIPX_SPEC" \

@@ -37,6 +37,7 @@ htmlcov/
 
 # Local application caches
 .cache/
+Library/
 
 # Build and packaging artifacts
 build/

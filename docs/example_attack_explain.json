@@ -245,7 +245,7 @@
     "enriched_label": "Critical",
     "enriched_rank": 1,
     "epss": 0.94254,
-    "epss_percentile": 0.99933,
+    "epss_percentile": 0.99934,
     "in_kev": true,
     "mapped_tactics": [
       "initial-access",
@@ -323,9 +323,9 @@
   },
   "epss": {
     "cve_id": "CVE-2023-34362",
-    "date": "2026-04-21",
+    "date": "2026-04-22",
     "epss": 0.94254,
-    "percentile": 0.99933
+    "percentile": 0.99934
   },
   "finding": {
     "asset_count": 0,
@@ -524,7 +524,7 @@
     "cvss_version": "3.1",
     "description": "In Progress MOVEit Transfer before 2021.0.6 (13.0.6), 2021.1.4 (13.1.4), 2022.0.4 (14.0.4), 2022.1.5 (14.1.5), and 2023.0.1 (15.0.1), a SQL injection vulnerability has been found in the MOVEit Transfer web application that could allow an unauthenticated attacker to gain access to MOVEit Transfer's database. Depending on the database engine being used (MySQL, Microsoft SQL Server, or Azure SQL), an attacker may be able to infer information about the structure and contents of the database, and execute SQL statements that alter or delete database elements. NOTE: this is exploited in the wild in May and June 2023; exploitation of unpatched systems can occur via HTTP or HTTPS. All versions (e.g., 2020.0 and 2019x) before the five explicitly mentioned versions are affected, including older unsupported versions.",
     "epss": 0.94254,
-    "epss_percentile": 0.99933,
+    "epss_percentile": 0.99934,
     "highest_asset_criticality": null,
     "in_kev": true,
     "priority_label": "Critical",
@@ -582,6 +582,44 @@
       "suppressed_occurrence_count": 0,
       "targets": [],
       "vex_statuses": {}
+    },
+    "provider_evidence": {
+      "epss": {
+        "cve_id": "CVE-2023-34362",
+        "date": "2026-04-22",
+        "epss": 0.94254,
+        "percentile": 0.99934
+      },
+      "kev": {
+        "cve_id": "CVE-2023-34362",
+        "date_added": "2023-06-02",
+        "due_date": "2023-06-23",
+        "in_kev": true,
+        "product": "MOVEit Transfer",
+        "required_action": "Apply updates per vendor instructions.",
+        "vendor_project": "Progress"
+      },
+      "nvd": {
+        "cve_id": "CVE-2023-34362",
+        "cvss_base_score": 9.8,
+        "cvss_severity": "CRITICAL",
+        "cvss_version": "3.1",
+        "cwes": [
+          "CWE-89"
+        ],
+        "description": "In Progress MOVEit Transfer before 2021.0.6 (13.0.6), 2021.1.4 (13.1.4), 2022.0.4 (14.0.4), 2022.1.5 (14.1.5), and 2023.0.1 (15.0.1), a SQL injection vulnerability has been found in the MOVEit Transfer web application that could allow an unauthenticated attacker to gain access to MOVEit Transfer's database. Depending on the database engine being used (MySQL, Microsoft SQL Server, or Azure SQL), an attacker may be able to infer information about the structure and contents of the database, and execute SQL statements that alter or delete database elements. NOTE: this is exploited in the wild in May and June 2023; exploitation of unpatched systems can occur via HTTP or HTTPS. All versions (e.g., 2020.0 and 2019x) before the five explicitly mentioned versions are affected, including older unsupported versions.",
+        "last_modified": "2025-10-27T14:37:08.460",
+        "published": "2023-06-02T14:15:09.487",
+        "references": [
+          "http://packetstormsecurity.com/files/172883/MOVEit-Transfer-SQL-Injection-Remote-Code-Execution.html",
+          "http://packetstormsecurity.com/files/173110/MOVEit-SQL-Injection.html",
+          "https://community.progress.com/s/article/MOVEit-Transfer-Critical-Vulnerability-31May2023",
+          "http://packetstormsecurity.com/files/172883/MOVEit-Transfer-SQL-Injection-Remote-Code-Execution.html",
+          "http://packetstormsecurity.com/files/173110/MOVEit-SQL-Injection.html",
+          "https://community.progress.com/s/article/MOVEit-Transfer-Critical-Vulnerability-31May2023",
+          "https://www.cisa.gov/known-exploited-vulnerabilities-catalog?field_cve=CVE-2023-34362"
+        ]
+      }
     },
     "rationale": "CISA KEV lists this CVE as known exploited in the wild. NVD reports CVSS 9.8 (CRITICAL) via CVSS v3.1. FIRST EPSS is 0.943 (percentile 0.999). ATT&CK context (High) maps this CVE to 7 technique(s): T1190, T1059, T1531, T1136, T1005, T1082, T1105. CTID mapping types: exploitation_technique, primary_impact, secondary_impact. CTID ATT&CK mappings include exploitation or primary impact behavior. ATT&CK mapping note: CVE-2023-34362 is a SQL injection vulnerability in a public-facing application. Adversaries have been observed to exploit this vulnerability to install malicious software on a target system, enabling them to discover system settings and information, enumerate the underlying SQL database, retrieve files, create administrator accounts, and delete accounts. Input provenance includes 1 occurrence(s) from cve-list. Seen in 1 occurrence(s).",
     "recommended_action": "Patch or mitigate immediately, validate exposure, strengthen detection coverage, and escalate potential business impact.",

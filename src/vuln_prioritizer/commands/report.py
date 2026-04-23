@@ -11,7 +11,9 @@ from vuln_prioritizer.cli_support.common import (
     TABLE_AND_JSON_OUTPUT_FORMATS,
     TableJsonOutputFormat,
     console,
+    emit_stdout,
     output_format_option,
+    should_emit_json_stdout,
     validate_command_formats,
     validate_output_mode,
 )
@@ -71,6 +73,13 @@ def report_verify_evidence_bundle(
     )
 
     metadata, summary, items = verify_evidence_bundle(input)
+    json_payload = generate_evidence_bundle_verification_json(items, summary, metadata)
+    if should_emit_json_stdout(format, output):
+        emit_stdout(json_payload)
+        if not summary.ok:
+            raise typer.Exit(code=1)
+        return
+
     console.print(
         Panel(
             "\n".join(
@@ -86,7 +95,7 @@ def report_verify_evidence_bundle(
     console.print(render_evidence_bundle_verification_table(items, summary))
 
     if output is not None:
-        write_output(output, generate_evidence_bundle_verification_json(items, summary, metadata))
+        write_output(output, json_payload)
         console.print(f"[green]Wrote json output to {output}[/green]")
 
     if not summary.ok:

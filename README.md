@@ -27,11 +27,12 @@ Core commands:
 - `explain`: explain a single CVE decision in detail
 - `doctor`: validate local setup, config, cache, files, and optional live source reachability
 - `snapshot create|diff`: capture a run and compare before/after states
-- `state init|import-snapshot|history|waivers|top-services`: persist snapshots in an optional local SQLite store and inspect history, waiver debt, or repeated services
+- `state init|import-snapshot|history|waivers|top-services|trends|service-history`: persist snapshots in an optional local SQLite store and inspect history, waiver debt, repeated services, or service trends
 - `rollup`: aggregate saved analysis or snapshots by asset or service
+- `input validate`: locally validate CVE lists, scanner/SBOM exports, asset context, and VEX before enrichment
 - `attack validate|coverage|navigator-layer`: validate and use local ATT&CK mappings
 - `report html|evidence-bundle|verify-evidence-bundle`: render HTML, build reproducible ZIP evidence packages, or verify bundle integrity
-- `data status|update|verify`: inspect and maintain local data/cache state
+- `data status|update|verify|export-provider-snapshot`: inspect cache state, maintain local provider data, and export replayable provider snapshots
 
 Supported inputs:
 
@@ -189,7 +190,27 @@ vuln-prioritizer state top-services \
   --days 30 \
   --format json \
   --output state-top-services.json
+
+vuln-prioritizer state trends --db build/state.db --format json
+vuln-prioritizer state service-history --db build/state.db --service payments
 ```
+
+### 7. Reproducible Provider Snapshot Replay
+
+```bash
+vuln-prioritizer data export-provider-snapshot \
+  --input cves.txt \
+  --output provider-snapshot.json
+
+vuln-prioritizer analyze \
+  --input cves.txt \
+  --provider-snapshot-file provider-snapshot.json \
+  --locked-provider-data \
+  --format json \
+  --output analysis.json
+```
+
+Use `--cache-only` on `data export-provider-snapshot` when local smoke tests must avoid live provider refreshes.
 
 ## Runtime Config
 
@@ -210,7 +231,13 @@ defaults:
 commands:
   analyze:
     format: json
-    summary_output: build/summary.md
+  attack:
+    validate:
+      attack_mapping_file: ./attack-mapping.json
+      attack_technique_metadata_file: ./attack-techniques.json
+  data:
+    export-provider-snapshot:
+      cache_only: true
 ```
 
 Use it with auto-discovery or explicitly:

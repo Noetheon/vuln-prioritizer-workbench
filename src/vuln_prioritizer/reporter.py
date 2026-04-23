@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections import Counter
+from collections.abc import Sequence
 from html import escape
 from pathlib import Path
 
@@ -30,8 +31,12 @@ from vuln_prioritizer.models import (
     StateHistoryMetadata,
     StateImportReport,
     StateInitReport,
+    StateServiceHistoryEntry,
+    StateServiceHistoryMetadata,
     StateTopServiceEntry,
     StateTopServicesMetadata,
+    StateTrendEntry,
+    StateTrendsMetadata,
     StateWaiverEntry,
     StateWaiverMetadata,
 )
@@ -75,7 +80,9 @@ from vuln_prioritizer.reporting_payloads import (
     generate_state_history_json,
     generate_state_import_json,
     generate_state_init_json,
+    generate_state_service_history_json,
     generate_state_top_services_json,
+    generate_state_trends_json,
     generate_state_waivers_json,
     generate_summary_markdown,
 )
@@ -102,7 +109,9 @@ __all__ = [
     "generate_state_history_json",
     "generate_state_import_json",
     "generate_state_init_json",
+    "generate_state_service_history_json",
     "generate_state_top_services_json",
+    "generate_state_trends_json",
     "generate_state_waivers_json",
     "generate_summary_markdown",
     "render_compare_table",
@@ -114,7 +123,9 @@ __all__ = [
     "render_state_history_table",
     "render_state_import_panel",
     "render_state_init_panel",
+    "render_state_service_history_table",
     "render_state_top_services_table",
+    "render_state_trends_table",
     "render_state_waivers_table",
     "render_summary_panel",
     "write_output",
@@ -784,6 +795,66 @@ def render_state_top_services_table(
     return table
 
 
+def render_state_trends_table(
+    items: list[StateTrendEntry],
+    metadata: StateTrendsMetadata,
+) -> Table:
+    """Build the Rich table shown for persisted snapshot trends."""
+    table = Table(title="Persisted Snapshot Trends", show_lines=False)
+    table.add_column("Snapshot", style="bold")
+    table.add_column("Findings")
+    table.add_column("Critical")
+    table.add_column("High")
+    table.add_column("KEV")
+    table.add_column("Attack")
+    table.add_column("Waived")
+    for item in items:
+        table.add_row(
+            item.snapshot_generated_at,
+            str(item.findings_count),
+            str(item.critical_count),
+            str(item.high_count),
+            str(item.kev_count),
+            str(item.attack_mapped_count),
+            str(item.waived_count),
+        )
+    table.caption = (
+        f"Entries: {metadata.entry_count} | Days: {metadata.days} | "
+        f"Priority: {metadata.priority_filter}"
+    )
+    return table
+
+
+def render_state_service_history_table(
+    items: list[StateServiceHistoryEntry],
+    metadata: StateServiceHistoryMetadata,
+) -> Table:
+    """Build the Rich table shown for persisted service history."""
+    table = Table(title=f"Service History: {metadata.service}", show_lines=False)
+    table.add_column("Snapshot", style="bold")
+    table.add_column("Occurrences")
+    table.add_column("Distinct CVEs")
+    table.add_column("Critical")
+    table.add_column("High")
+    table.add_column("KEV")
+    table.add_column("CVEs", overflow="fold")
+    for item in items:
+        table.add_row(
+            item.snapshot_generated_at,
+            str(item.occurrence_count),
+            str(item.distinct_cves),
+            str(item.critical_count),
+            str(item.high_count),
+            str(item.kev_count),
+            ", ".join(item.cve_ids) or "N.A.",
+        )
+    table.caption = (
+        f"Entries: {metadata.entry_count} | Days: {metadata.days} | "
+        f"Priority: {metadata.priority_filter}"
+    )
+    return table
+
+
 def render_evidence_bundle_verification_table(
     items: list[EvidenceBundleVerificationItem],
     summary: EvidenceBundleVerificationSummary,
@@ -1170,10 +1241,22 @@ def _html_score(value: object, *, digits: int) -> str:
     return escape("N.A.")
 
 
+def _html_int(value: object) -> int:
+    if isinstance(value, bool):
+        raise ValueError("boolean values are not counts")
+    if isinstance(value, int | float | str | bytes | bytearray):
+        return int(value)
+    raise TypeError(f"unsupported count type: {type(value).__name__}")
+
+
+def _html_counter(value: object) -> Counter[str]:
+    return value if isinstance(value, Counter) else Counter()
+
+
 def _html_rate(hits: object, total: object) -> str:
     try:
-        hit_count = int(hits)
-        total_count = int(total)
+        hit_count = _html_int(hits)
+        total_count = _html_int(total)
     except (TypeError, ValueError):
         return "N.A."
     if total_count <= 0:
@@ -1191,7 +1274,7 @@ def _html_slug(value: object) -> str:
     return slug or "item"
 
 
-def _html_unique_strings(values: list[object]) -> list[str]:
+def _html_unique_strings(values: Sequence[object]) -> list[str]:
     seen: set[str] = set()
     result: list[str] = []
     for value in values:
@@ -1394,7 +1477,7 @@ def _html_baseline_delta(finding: dict) -> dict[str, object]:
     }
 
 
-def _html_reference_links(urls: list[object], *, limit: int = 4) -> str:
+def _html_reference_links(urls: Sequence[object], *, limit: int = 4) -> str:
     values = _html_unique_strings(urls)[:limit]
     if not values:
         return '<p class="empty-copy">No provider references were preserved.</p>'
@@ -1885,9 +1968,9 @@ def _html_brief_summary(
         attack_copy = "ATT&CK context is disabled for this run"
 
     if occurrence_summary["has_asset_context"]:
-        services = _html_counter_items(occurrence_summary["services"], limit=1)
+        services = _html_counter_items(_html_counter(occurrence_summary["services"]), limit=1)
         service_note = f"; top service signal: {services[0][0]}" if services else ""
-        context_copy = f"Asset context is present for {int(occurrence_summary['asset_count'])} mapped asset(s){service_note}"
+        context_copy = f"Asset context is present for {_html_int(occurrence_summary['asset_count'])} mapped asset(s){service_note}"
     else:
         context_copy = "Asset ownership context is limited"
 
@@ -2171,9 +2254,7 @@ def _html_governance_block(finding: dict) -> str:
     provenance = finding.get("provenance", {})
     vex_statuses = provenance.get("vex_statuses", {}) if isinstance(provenance, dict) else {}
     vex_label = _format_vex_statuses(vex_statuses if isinstance(vex_statuses, dict) else {})
-    waiver_summary = (
-        _format_waiver_status(finding) if isinstance(finding, PrioritizedFinding) else None
-    )
+    waiver_summary = None
     if waiver_summary is None:
         waiver_details = []
         if finding.get("waived") or finding.get("waiver_status"):
@@ -2279,8 +2360,8 @@ def generate_html_report(report_payload: dict) -> str:
             if isinstance(top_provenance.get("occurrences", []), list)
             else []
         )
-        top_services = Counter()
-        top_owners = Counter()
+        top_services: Counter[str] = Counter()
+        top_owners: Counter[str] = Counter()
         for occurrence in top_occurrences:
             if not isinstance(occurrence, dict):
                 continue
@@ -2603,8 +2684,8 @@ def generate_html_report(report_payload: dict) -> str:
             if isinstance(provenance.get("occurrences", []), list)
             else []
         )
-        queue_services = Counter()
-        queue_owners = Counter()
+        queue_services: Counter[str] = Counter()
+        queue_owners: Counter[str] = Counter()
         for occurrence in occurrences:
             if not isinstance(occurrence, dict):
                 continue
@@ -2721,10 +2802,10 @@ def generate_html_report(report_payload: dict) -> str:
             if isinstance(provenance.get("occurrences", []), list)
             else []
         )
-        services = Counter()
-        owners = Counter()
-        exposures = Counter()
-        environments = Counter()
+        services: Counter[str] = Counter()
+        owners: Counter[str] = Counter()
+        exposures: Counter[str] = Counter()
+        environments: Counter[str] = Counter()
         for occurrence in occurrences:
             if not isinstance(occurrence, dict):
                 continue
@@ -4699,19 +4780,19 @@ def generate_html_report(report_payload: dict) -> str:
             </div>
             <div>
               <p class="label">Services</p>
-              <div class="chip-row">{_html_counter_chip_list(occurrence_summary["services"], empty_text="No service ownership data captured.")}</div>
+              <div class="chip-row">{_html_counter_chip_list(_html_counter(occurrence_summary["services"]), empty_text="No service ownership data captured.")}</div>
             </div>
             <div>
               <p class="label">Owners</p>
-              <div class="chip-row">{_html_counter_chip_list(occurrence_summary["owners"], empty_text="No owner routing data captured.")}</div>
+              <div class="chip-row">{_html_counter_chip_list(_html_counter(occurrence_summary["owners"]), empty_text="No owner routing data captured.")}</div>
             </div>
             <div>
               <p class="label">Exposure</p>
-              <div class="chip-row">{_html_counter_chip_list(occurrence_summary["exposures"], empty_text="No exposure signals captured.")}</div>
+              <div class="chip-row">{_html_counter_chip_list(_html_counter(occurrence_summary["exposures"]), empty_text="No exposure signals captured.")}</div>
             </div>
             <div>
               <p class="label">Environments</p>
-              <div class="chip-row">{_html_counter_chip_list(occurrence_summary["environments"], empty_text="No environment labels captured.")}</div>
+              <div class="chip-row">{_html_counter_chip_list(_html_counter(occurrence_summary["environments"]), empty_text="No environment labels captured.")}</div>
             </div>
           </article>
           <article class="panel-card stack">

@@ -536,6 +536,7 @@ class ProviderSnapshotMetadata(StrictModel):
     requested_cves: int = 0
     output_path: str | None = None
     cache_enabled: bool = False
+    cache_only: bool = False
     cache_dir: str | None = None
     offline_kev_file: str | None = None
     nvd_api_key_env: str | None = None
@@ -750,6 +751,60 @@ class StateTopServicesReport(StrictModel):
     items: list[StateTopServiceEntry] = Field(default_factory=list)
 
 
+class StateTrendsMetadata(StrictModel):
+    schema_version: str = "1.2.0"
+    generated_at: str
+    db_path: str
+    days: int
+    priority_filter: str = "all"
+    entry_count: int = 0
+
+
+class StateTrendEntry(StrictModel):
+    snapshot_generated_at: str
+    snapshot_path: str
+    findings_count: int = 0
+    critical_count: int = 0
+    high_count: int = 0
+    medium_count: int = 0
+    low_count: int = 0
+    kev_count: int = 0
+    attack_mapped_count: int = 0
+    waived_count: int = 0
+
+
+class StateTrendsReport(StrictModel):
+    metadata: StateTrendsMetadata
+    items: list[StateTrendEntry] = Field(default_factory=list)
+
+
+class StateServiceHistoryMetadata(StrictModel):
+    schema_version: str = "1.2.0"
+    generated_at: str
+    db_path: str
+    service: str
+    days: int
+    priority_filter: str = "all"
+    entry_count: int = 0
+
+
+class StateServiceHistoryEntry(StrictModel):
+    snapshot_generated_at: str
+    snapshot_path: str
+    occurrence_count: int = 0
+    distinct_cves: int = 0
+    critical_count: int = 0
+    high_count: int = 0
+    kev_count: int = 0
+    waived_count: int = 0
+    cve_ids: list[str] = Field(default_factory=list)
+
+
+class StateServiceHistoryReport(StrictModel):
+    metadata: StateServiceHistoryMetadata
+    items: list[StateServiceHistoryEntry] = Field(default_factory=list)
+
+
 class DoctorCheck(StrictModel):
     check_id: str
     name: str
@@ -789,6 +844,7 @@ class EvidenceBundleManifest(StrictModel):
     generated_at: str
     source_analysis_path: str
     source_input_path: str | None = None
+    source_input_paths: list[str] = Field(default_factory=list)
     findings_count: int = 0
     kev_hits: int = 0
     waived_count: int = 0

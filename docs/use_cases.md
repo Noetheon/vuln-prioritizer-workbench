@@ -1,6 +1,6 @@
 # Use Cases
 
-This page focuses on three concrete operational workflows that the current `v1.1.0` surface supports well.
+This page focuses on concrete operational workflows that the current CLI surface supports well.
 
 If you want the shortest operator-facing runbooks instead of the product-story view, start with [Operator Playbooks](playbooks.md).
 
@@ -88,6 +88,44 @@ Why it matters:
 - remediation can be discussed at the service layer, not only at the CVE layer
 - the rollup output now ranks services explicitly and surfaces per-bucket “patch these first” candidates
 - ATT&CK stays an explicit context layer instead of silently changing the base score
+
+## 4. Provider Snapshot Replay for Release Gates
+
+Goal:
+
+- pin `NVD + EPSS + KEV` evidence once
+- replay the same provider evidence later without refreshing live sources
+- keep local smoke tests deterministic with cache-only exports
+
+CLI shape:
+
+```bash
+vuln-prioritizer data export-provider-snapshot \
+  --input cves.txt \
+  --output provider-snapshot.json
+
+vuln-prioritizer analyze \
+  --input cves.txt \
+  --provider-snapshot-file provider-snapshot.json \
+  --locked-provider-data \
+  --format json \
+  --output analysis.json
+```
+
+Cache-only smoke shape:
+
+```bash
+vuln-prioritizer data export-provider-snapshot \
+  --input cves.txt \
+  --cache-only \
+  --output provider-snapshot.json
+```
+
+Why it matters:
+
+- release evidence can be reproduced without feed drift
+- CI smokes can run without requiring network refreshes
+- locked replay fails loudly if a selected provider source lacks required CVE coverage
 
 ## Media
 

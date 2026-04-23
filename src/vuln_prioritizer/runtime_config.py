@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any
 
 import yaml
-from pydantic import Field, ValidationError
+from pydantic import AliasChoices, Field, ValidationError
 
 from vuln_prioritizer.models import StrictModel
 
@@ -106,6 +106,91 @@ class RollupDefaults(StrictModel):
     top: int | None = None
 
 
+class AttackValidateDefaults(StrictModel):
+    attack_source: str | None = None
+    attack_mapping_file: str | None = None
+    attack_technique_metadata_file: str | None = None
+    format: str | None = None
+
+
+class AttackCoverageDefaults(AttackValidateDefaults):
+    max_cves: int | None = None
+
+
+class AttackNavigatorLayerDefaults(StrictModel):
+    attack_source: str | None = None
+    attack_mapping_file: str | None = None
+    attack_technique_metadata_file: str | None = None
+    max_cves: int | None = None
+
+
+class AttackDefaults(StrictModel):
+    validate_command: AttackValidateDefaults = Field(
+        default_factory=AttackValidateDefaults,
+        validation_alias=AliasChoices("validate", "validate_command"),
+    )
+    coverage: AttackCoverageDefaults = Field(default_factory=AttackCoverageDefaults)
+    navigator_layer: AttackNavigatorLayerDefaults = Field(
+        default_factory=AttackNavigatorLayerDefaults,
+        validation_alias=AliasChoices("navigator-layer", "navigator_layer"),
+    )
+
+
+class DataStatusDefaults(StrictModel):
+    cache_dir: str | None = None
+    cache_ttl_hours: int | None = None
+    offline_kev_file: str | None = None
+    attack_mapping_file: str | None = None
+    attack_technique_metadata_file: str | None = None
+    format: str | None = None
+    quiet: bool | None = None
+
+
+class DataUpdateDefaults(StrictModel):
+    source: list[str] = Field(default_factory=list)
+    input_format: str | None = None
+    max_cves: int | None = None
+    cache_dir: str | None = None
+    cache_ttl_hours: int | None = None
+    offline_kev_file: str | None = None
+    nvd_api_key_env: str | None = None
+    format: str | None = None
+    quiet: bool | None = None
+
+
+class DataVerifyDefaults(StrictModel):
+    input_format: str | None = None
+    max_cves: int | None = None
+    cache_dir: str | None = None
+    cache_ttl_hours: int | None = None
+    offline_kev_file: str | None = None
+    attack_mapping_file: str | None = None
+    attack_technique_metadata_file: str | None = None
+    format: str | None = None
+    quiet: bool | None = None
+
+
+class DataExportProviderSnapshotDefaults(StrictModel):
+    source: list[str] = Field(default_factory=list)
+    input_format: str | None = None
+    max_cves: int | None = None
+    cache_dir: str | None = None
+    cache_ttl_hours: int | None = None
+    offline_kev_file: str | None = None
+    nvd_api_key_env: str | None = None
+    cache_only: bool | None = None
+
+
+class DataDefaults(StrictModel):
+    status: DataStatusDefaults = Field(default_factory=DataStatusDefaults)
+    update: DataUpdateDefaults = Field(default_factory=DataUpdateDefaults)
+    verify: DataVerifyDefaults = Field(default_factory=DataVerifyDefaults)
+    export_provider_snapshot: DataExportProviderSnapshotDefaults = Field(
+        default_factory=DataExportProviderSnapshotDefaults,
+        validation_alias=AliasChoices("export-provider-snapshot", "export_provider_snapshot"),
+    )
+
+
 class CommandDefaults(StrictModel):
     analyze: AnalyzeDefaults = Field(default_factory=AnalyzeDefaults)
     compare: CompareDefaults = Field(default_factory=CompareDefaults)
@@ -113,6 +198,8 @@ class CommandDefaults(StrictModel):
     doctor: DoctorDefaults = Field(default_factory=DoctorDefaults)
     snapshot: SnapshotDefaults = Field(default_factory=SnapshotDefaults)
     rollup: RollupDefaults = Field(default_factory=RollupDefaults)
+    attack: AttackDefaults = Field(default_factory=AttackDefaults)
+    data: DataDefaults = Field(default_factory=DataDefaults)
 
 
 class RuntimeConfigDocument(StrictModel):
@@ -163,6 +250,23 @@ def build_cli_default_map(loaded: LoadedRuntimeConfig) -> dict[str, Any]:
     """Build a Click/Typer default_map from the loaded config."""
     general = _compact_defaults(loaded.document.defaults.model_dump())
     general = _normalize_multi_value_option_defaults(general, option_names={"input_format"})
+    attack_general = _compact_defaults(
+        {
+            "attack_source": loaded.document.defaults.attack_source,
+            "attack_mapping_file": loaded.document.defaults.attack_mapping_file,
+            "attack_technique_metadata_file": (
+                loaded.document.defaults.attack_technique_metadata_file
+            ),
+        }
+    )
+    data_general = _compact_defaults(
+        {
+            "cache_dir": loaded.document.defaults.cache_dir,
+            "cache_ttl_hours": loaded.document.defaults.cache_ttl_hours,
+            "offline_kev_file": loaded.document.defaults.offline_kev_file,
+            "nvd_api_key_env": loaded.document.defaults.nvd_api_key_env,
+        }
+    )
     default_map: dict[str, Any] = {
         "analyze": {
             **general,
@@ -208,6 +312,65 @@ def build_cli_default_map(loaded: LoadedRuntimeConfig) -> dict[str, Any]:
             },
             "diff": _compact_defaults(loaded.document.commands.snapshot.diff.model_dump()),
         },
+        "attack": {
+            "validate": {
+                **attack_general,
+                **_compact_defaults(loaded.document.commands.attack.validate_command.model_dump()),
+            },
+            "coverage": {
+                **attack_general,
+                **_compact_defaults(loaded.document.commands.attack.coverage.model_dump()),
+            },
+            "navigator-layer": {
+                **attack_general,
+                **_compact_defaults(loaded.document.commands.attack.navigator_layer.model_dump()),
+            },
+        },
+        "data": {
+            "status": {
+                **data_general,
+                **_compact_defaults(
+                    {
+                        "attack_mapping_file": loaded.document.defaults.attack_mapping_file,
+                        "attack_technique_metadata_file": (
+                            loaded.document.defaults.attack_technique_metadata_file
+                        ),
+                    }
+                ),
+                **_compact_defaults(loaded.document.commands.data.status.model_dump()),
+            },
+            "update": {
+                **data_general,
+                **_normalize_multi_value_option_defaults(
+                    _compact_defaults(loaded.document.commands.data.update.model_dump()),
+                    option_names={"input_format", "source"},
+                ),
+            },
+            "verify": {
+                **data_general,
+                **_compact_defaults(
+                    {
+                        "attack_mapping_file": loaded.document.defaults.attack_mapping_file,
+                        "attack_technique_metadata_file": (
+                            loaded.document.defaults.attack_technique_metadata_file
+                        ),
+                    }
+                ),
+                **_normalize_multi_value_option_defaults(
+                    _compact_defaults(loaded.document.commands.data.verify.model_dump()),
+                    option_names={"input_format"},
+                ),
+            },
+            "export-provider-snapshot": {
+                **data_general,
+                **_normalize_multi_value_option_defaults(
+                    _compact_defaults(
+                        loaded.document.commands.data.export_provider_snapshot.model_dump()
+                    ),
+                    option_names={"input_format", "source"},
+                ),
+            },
+        },
     }
     return default_map
 
@@ -228,6 +391,53 @@ def collect_referenced_files(loaded: LoadedRuntimeConfig) -> list[tuple[str, Pat
         "Cache directory": defaults.cache_dir,
     }
     for label, value in scalar_paths.items():
+        if value:
+            file_entries.append((label, Path(value)))
+    command_path_entries = {
+        "ATT&CK validate mapping file": (
+            loaded.document.commands.attack.validate_command.attack_mapping_file
+        ),
+        "ATT&CK validate technique metadata file": (
+            loaded.document.commands.attack.validate_command.attack_technique_metadata_file
+        ),
+        "ATT&CK coverage mapping file": (
+            loaded.document.commands.attack.coverage.attack_mapping_file
+        ),
+        "ATT&CK coverage technique metadata file": (
+            loaded.document.commands.attack.coverage.attack_technique_metadata_file
+        ),
+        "ATT&CK navigator mapping file": (
+            loaded.document.commands.attack.navigator_layer.attack_mapping_file
+        ),
+        "ATT&CK navigator technique metadata file": (
+            loaded.document.commands.attack.navigator_layer.attack_technique_metadata_file
+        ),
+        "Data status offline KEV file": loaded.document.commands.data.status.offline_kev_file,
+        "Data status ATT&CK mapping file": (
+            loaded.document.commands.data.status.attack_mapping_file
+        ),
+        "Data status ATT&CK technique metadata file": (
+            loaded.document.commands.data.status.attack_technique_metadata_file
+        ),
+        "Data update offline KEV file": loaded.document.commands.data.update.offline_kev_file,
+        "Data verify offline KEV file": loaded.document.commands.data.verify.offline_kev_file,
+        "Data verify ATT&CK mapping file": (
+            loaded.document.commands.data.verify.attack_mapping_file
+        ),
+        "Data verify ATT&CK technique metadata file": (
+            loaded.document.commands.data.verify.attack_technique_metadata_file
+        ),
+        "Provider snapshot offline KEV file": (
+            loaded.document.commands.data.export_provider_snapshot.offline_kev_file
+        ),
+        "Data status cache directory": loaded.document.commands.data.status.cache_dir,
+        "Data update cache directory": loaded.document.commands.data.update.cache_dir,
+        "Data verify cache directory": loaded.document.commands.data.verify.cache_dir,
+        "Provider snapshot cache directory": (
+            loaded.document.commands.data.export_provider_snapshot.cache_dir
+        ),
+    }
+    for label, value in command_path_entries.items():
         if value:
             file_entries.append((label, Path(value)))
     for vex_file in defaults.vex_file:
@@ -294,7 +504,58 @@ def _normalize_runtime_document(document: dict[str, Any], *, base_dir: Path) -> 
                 if item
             ]
 
+    commands = normalized.get("commands")
+    if isinstance(commands, dict):
+        _normalize_command_path_defaults(commands, base_dir=base_dir)
+
     return normalized
+
+
+def _normalize_command_path_defaults(commands: dict[str, Any], *, base_dir: Path) -> None:
+    attack_commands = commands.get("attack")
+    if isinstance(attack_commands, dict):
+        for command_name in ("validate", "coverage", "navigator-layer", "navigator_layer"):
+            command = attack_commands.get(command_name)
+            if isinstance(command, dict):
+                _resolve_path_fields(
+                    command,
+                    base_dir=base_dir,
+                    path_keys={"attack_mapping_file", "attack_technique_metadata_file"},
+                )
+
+    data_commands = commands.get("data")
+    if isinstance(data_commands, dict):
+        for command_name in (
+            "status",
+            "update",
+            "verify",
+            "export-provider-snapshot",
+            "export_provider_snapshot",
+        ):
+            command = data_commands.get(command_name)
+            if isinstance(command, dict):
+                _resolve_path_fields(
+                    command,
+                    base_dir=base_dir,
+                    path_keys={
+                        "offline_kev_file",
+                        "attack_mapping_file",
+                        "attack_technique_metadata_file",
+                        "cache_dir",
+                    },
+                )
+
+
+def _resolve_path_fields(
+    document: dict[str, Any],
+    *,
+    base_dir: Path,
+    path_keys: set[str],
+) -> None:
+    for key in path_keys:
+        value = document.get(key)
+        if isinstance(value, str) and value:
+            document[key] = str(_resolve_relative_path(value, base_dir=base_dir))
 
 
 def _resolve_relative_path(value: str, *, base_dir: Path) -> Path:

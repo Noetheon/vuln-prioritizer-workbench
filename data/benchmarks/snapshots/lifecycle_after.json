@@ -1,27 +1,33 @@
 {
   "metadata": {
     "schema_version": "1.1.0",
-    "snapshot_kind": "snapshot"
+    "snapshot_kind": "snapshot",
+    "input_path": "data/benchmarks/snapshots/lifecycle_after_input.txt",
+    "input_format": "cve-list",
+    "output_format": "json",
+    "generated_at": "2026-04-20T09:00:00+00:00"
   },
   "findings": [
     {
       "cve_id": "CVE-2024-2002",
       "priority_label": "Critical",
       "priority_rank": 1,
+      "rationale": "Benchmark lifecycle fixture critical KEV finding.",
+      "recommended_action": "Patch immediately in the benchmark scenario.",
       "in_kev": true,
       "attack_mapped": false,
       "attack_relevance": "Unmapped",
       "attack_techniques": [],
       "attack_tactics": [],
       "provenance": {
-        "targets": [
-          "host:edge-01.example.internal"
-        ],
-        "asset_ids": [
-          "asset-edge-01"
-        ],
+        "targets": ["host:edge-01.example.internal"],
+        "asset_ids": ["asset-edge-01"],
         "occurrences": [
           {
+            "cve_id": "CVE-2024-2002",
+            "source_format": "cve-list",
+            "target_kind": "host",
+            "target_ref": "edge-01.example.internal",
             "asset_business_service": "edge-api"
           }
         ],
@@ -32,24 +38,22 @@
       "cve_id": "CVE-2024-2003",
       "priority_label": "Medium",
       "priority_rank": 3,
+      "rationale": "Benchmark lifecycle fixture medium-priority finding.",
+      "recommended_action": "Schedule remediation according to the benchmark scenario.",
       "in_kev": false,
       "attack_mapped": true,
       "attack_relevance": "Medium",
-      "attack_techniques": [
-        "T1059"
-      ],
-      "attack_tactics": [
-        "execution"
-      ],
+      "attack_techniques": ["T1059"],
+      "attack_tactics": ["execution"],
       "provenance": {
-        "targets": [
-          "host:payments-01.example.internal"
-        ],
-        "asset_ids": [
-          "asset-payments-01"
-        ],
+        "targets": ["host:payments-01.example.internal"],
+        "asset_ids": ["asset-payments-01"],
         "occurrences": [
           {
+            "cve_id": "CVE-2024-2003",
+            "source_format": "cve-list",
+            "target_kind": "host",
+            "target_ref": "payments-01.example.internal",
             "asset_business_service": "payments"
           }
         ],
@@ -60,20 +64,22 @@
       "cve_id": "CVE-2024-2004",
       "priority_label": "Medium",
       "priority_rank": 3,
+      "rationale": "Benchmark lifecycle fixture medium-priority finding.",
+      "recommended_action": "Schedule remediation according to the benchmark scenario.",
       "in_kev": false,
       "attack_mapped": false,
       "attack_relevance": "Unmapped",
       "attack_techniques": [],
       "attack_tactics": [],
       "provenance": {
-        "targets": [
-          "host:identity-01.example.internal"
-        ],
-        "asset_ids": [
-          "asset-identity-01"
-        ],
+        "targets": ["host:identity-01.example.internal"],
+        "asset_ids": ["asset-identity-01"],
         "occurrences": [
           {
+            "cve_id": "CVE-2024-2004",
+            "source_format": "cve-list",
+            "target_kind": "host",
+            "target_ref": "identity-01.example.internal",
             "asset_business_service": "identity"
           }
         ],
@@ -84,20 +90,22 @@
       "cve_id": "CVE-2024-2005",
       "priority_label": "Low",
       "priority_rank": 4,
+      "rationale": "Benchmark lifecycle fixture low-priority finding.",
+      "recommended_action": "Track according to the benchmark scenario.",
       "in_kev": false,
       "attack_mapped": false,
       "attack_relevance": "Unmapped",
       "attack_techniques": [],
       "attack_tactics": [],
       "provenance": {
-        "targets": [
-          "host:batch-01.example.internal"
-        ],
-        "asset_ids": [
-          "asset-batch-01"
-        ],
+        "targets": ["host:batch-01.example.internal"],
+        "asset_ids": ["asset-batch-01"],
         "occurrences": [
           {
+            "cve_id": "CVE-2024-2005",
+            "source_format": "cve-list",
+            "target_kind": "host",
+            "target_ref": "batch-01.example.internal",
             "asset_business_service": "batch"
           }
         ],

@@ -9,6 +9,9 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
+from pydantic import ValidationError
+
+from vuln_prioritizer.models import PrioritizedFinding, SnapshotMetadata
 from vuln_prioritizer.utils import iso_utc_now
 
 STATE_SCHEMA_VERSION = "1"
@@ -82,6 +85,7 @@ class SQLiteStateStore:
 
     def import_snapshot(self, *, snapshot_path: Path, payload: dict[str, Any]) -> dict[str, Any]:
         """Import a validated snapshot JSON document into the local SQLite store."""
+        self._validate_snapshot_payload(payload)
         self.initialize()
         raw_bytes = snapshot_path.read_bytes()
         snapshot_sha256 = hashlib.sha256(raw_bytes).hexdigest()
@@ -316,7 +320,8 @@ class SQLiteStateStore:
                         s.snapshot_generated_at,
                         f.cve_id,
                         f.in_kev,
-                        f.services_json
+                        f.services_json,
+                        f.finding_json
                     FROM snapshot_findings AS f
                     JOIN snapshots AS s ON s.id = f.snapshot_id
                     WHERE s.snapshot_generated_at >= ?
@@ -332,7 +337,8 @@ class SQLiteStateStore:
                         s.snapshot_generated_at,
                         f.cve_id,
                         f.in_kev,
-                        f.services_json
+                        f.services_json,
+                        f.finding_json
                     FROM snapshot_findings AS f
                     JOIN snapshots AS s ON s.id = f.snapshot_id
                     WHERE s.snapshot_generated_at >= ? AND f.priority_label = ?
@@ -343,9 +349,11 @@ class SQLiteStateStore:
 
         by_service: dict[str, dict[str, Any]] = {}
         for row in rows:
-            services = json.loads(str(row["services_json"]))
-            service_names = services if services else ["Unmapped"]
-            for service in service_names:
+            service_counts = self._finding_service_counts(
+                json.loads(str(row["finding_json"])),
+                fallback_services=json.loads(str(row["services_json"])),
+            )
+            for service, occurrence_count in service_counts.items():
                 entry = by_service.setdefault(
                     service,
                     {
@@ -357,7 +365,7 @@ class SQLiteStateStore:
                         "latest_seen": None,
                     },
                 )
-                entry["occurrence_count"] += 1
+                entry["occurrence_count"] += occurrence_count
                 entry["distinct_cves"].add(str(row["cve_id"]))
                 entry["snapshot_ids"].add(int(row["snapshot_id"]))
                 if bool(row["in_kev"]):
@@ -387,6 +395,154 @@ class SQLiteStateStore:
             for entry in ordered[:limit]
         ]
 
+    def trends(self, *, days: int, priority_filter: str) -> list[dict[str, Any]]:
+        """Return per-snapshot aggregate trend rows."""
+        self.initialize()
+        cutoff = (datetime.now(UTC) - timedelta(days=days)).replace(microsecond=0).isoformat()
+        with self._connect() as connection:
+            rows = connection.execute(
+                """
+                SELECT
+                    s.id AS snapshot_id,
+                    s.snapshot_generated_at,
+                    s.snapshot_path,
+                    f.priority_label,
+                    f.in_kev,
+                    f.attack_mapped,
+                    f.waived
+                FROM snapshots AS s
+                LEFT JOIN snapshot_findings AS f ON s.id = f.snapshot_id
+                WHERE s.snapshot_generated_at >= ?
+                ORDER BY s.snapshot_generated_at ASC, s.id ASC, f.priority_rank ASC
+                """,
+                (cutoff,),
+            ).fetchall()
+
+        by_snapshot: dict[int, dict[str, Any]] = {}
+        for row in rows:
+            priority_label = row["priority_label"]
+            if priority_label is not None and priority_filter != "all":
+                if str(priority_label) != priority_filter.title():
+                    continue
+            snapshot_id = int(row["snapshot_id"])
+            entry = by_snapshot.setdefault(
+                snapshot_id,
+                {
+                    "snapshot_generated_at": str(row["snapshot_generated_at"]),
+                    "snapshot_path": str(row["snapshot_path"]),
+                    "findings_count": 0,
+                    "critical_count": 0,
+                    "high_count": 0,
+                    "medium_count": 0,
+                    "low_count": 0,
+                    "kev_count": 0,
+                    "attack_mapped_count": 0,
+                    "waived_count": 0,
+                },
+            )
+            if priority_label is None:
+                continue
+            entry["findings_count"] += 1
+            label_key = str(priority_label).lower() + "_count"
+            if label_key in entry:
+                entry[label_key] += 1
+            if bool(row["in_kev"]):
+                entry["kev_count"] += 1
+            if bool(row["attack_mapped"]):
+                entry["attack_mapped_count"] += 1
+            if bool(row["waived"]):
+                entry["waived_count"] += 1
+
+        return list(by_snapshot.values())
+
+    def service_history(
+        self,
+        *,
+        service: str,
+        days: int,
+        priority_filter: str,
+    ) -> list[dict[str, Any]]:
+        """Return per-snapshot history for one business service."""
+        self.initialize()
+        cutoff = (datetime.now(UTC) - timedelta(days=days)).replace(microsecond=0).isoformat()
+        with self._connect() as connection:
+            rows = connection.execute(
+                """
+                SELECT
+                    s.id AS snapshot_id,
+                    s.snapshot_generated_at,
+                    s.snapshot_path,
+                    f.cve_id,
+                    f.priority_label,
+                    f.in_kev,
+                    f.waived,
+                    f.services_json,
+                    f.finding_json
+                FROM snapshot_findings AS f
+                JOIN snapshots AS s ON s.id = f.snapshot_id
+                WHERE s.snapshot_generated_at >= ?
+                ORDER BY s.snapshot_generated_at ASC, s.id ASC, f.priority_rank ASC
+                """,
+                (cutoff,),
+            ).fetchall()
+
+        normalized_service = service.casefold()
+        by_snapshot: dict[int, dict[str, Any]] = {}
+        for row in rows:
+            service_counts = self._finding_service_counts(
+                json.loads(str(row["finding_json"])),
+                fallback_services=json.loads(str(row["services_json"])),
+            )
+            matching_occurrences = sum(
+                count
+                for service_name, count in service_counts.items()
+                if service_name.casefold() == normalized_service
+            )
+            if matching_occurrences == 0:
+                continue
+            priority_label = str(row["priority_label"])
+            if priority_filter != "all" and priority_label != priority_filter.title():
+                continue
+            snapshot_id = int(row["snapshot_id"])
+            entry = by_snapshot.setdefault(
+                snapshot_id,
+                {
+                    "snapshot_generated_at": str(row["snapshot_generated_at"]),
+                    "snapshot_path": str(row["snapshot_path"]),
+                    "occurrence_count": 0,
+                    "cve_ids": set(),
+                    "critical_count": 0,
+                    "high_count": 0,
+                    "kev_count": 0,
+                    "waived_count": 0,
+                },
+            )
+            entry["occurrence_count"] += matching_occurrences
+            entry["cve_ids"].add(str(row["cve_id"]))
+            if priority_label == "Critical":
+                entry["critical_count"] += 1
+            if priority_label == "High":
+                entry["high_count"] += 1
+            if bool(row["in_kev"]):
+                entry["kev_count"] += 1
+            if bool(row["waived"]):
+                entry["waived_count"] += 1
+
+        return [
+            {
+                "snapshot_generated_at": entry["snapshot_generated_at"],
+                "snapshot_path": entry["snapshot_path"],
+                "occurrence_count": int(entry["occurrence_count"]),
+                "distinct_cves": len(entry["cve_ids"]),
+                "critical_count": int(entry["critical_count"]),
+                "high_count": int(entry["high_count"]),
+                "kev_count": int(entry["kev_count"]),
+                "waived_count": int(entry["waived_count"]),
+                "cve_ids": sorted(entry["cve_ids"]),
+            }
+            for entry in by_snapshot.values()
+        ]
+
     def snapshot_count(self) -> int:
         """Return the number of imported snapshots."""
         self.initialize()
@@ -412,6 +568,33 @@ class SQLiteStateStore:
         return services
 
     @staticmethod
+    def _finding_service_counts(
+        finding: dict[str, Any],
+        *,
+        fallback_services: list[Any],
+    ) -> dict[str, int]:
+        counts: dict[str, int] = {}
+        provenance = finding.get("provenance")
+        occurrences = provenance.get("occurrences", []) if isinstance(provenance, dict) else []
+        if isinstance(occurrences, list):
+            for occurrence in occurrences:
+                if not isinstance(occurrence, dict):
+                    continue
+                service = SQLiteStateStore._string_or_none(occurrence.get("asset_business_service"))
+                if service is not None:
+                    counts[service] = counts.get(service, 0) + 1
+        if counts:
+            return dict(sorted(counts.items()))
+
+        for service_item in fallback_services:
+            service = SQLiteStateStore._string_or_none(service_item)
+            if service is not None:
+                counts[service] = counts.get(service, 0) + 1
+        if counts:
+            return dict(sorted(counts.items()))
+        return {"Unmapped": 1}
+
+    @staticmethod
     def _int_or_none(value: Any) -> int | None:
         if value is None:
             return None
@@ -433,3 +616,24 @@ class SQLiteStateStore:
             return iso_utc_now()
         normalized = text.replace("Z", "+00:00")
         return datetime.fromisoformat(normalized).astimezone(UTC).replace(microsecond=0).isoformat()
+
+    @staticmethod
+    def _validate_snapshot_payload(payload: dict[str, Any]) -> None:
+        metadata = payload.get("metadata")
+        findings = payload.get("findings")
+        if (
+            not isinstance(metadata, dict)
+            or not isinstance(findings, list)
+            or metadata.get("snapshot_kind") != "snapshot"
+        ):
+            raise ValueError(
+                "State import expects JSON produced by `snapshot create --format json`."
+            )
+        try:
+            SnapshotMetadata.model_validate(metadata)
+            for index, finding in enumerate(findings, start=1):
+                if not isinstance(finding, dict):
+                    raise ValueError(f"Snapshot finding #{index} must be a JSON object.")
+                PrioritizedFinding.model_validate(finding)
+        except (ValidationError, ValueError) as exc:
+            raise ValueError(f"Snapshot payload is not valid: {exc}") from exc

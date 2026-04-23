@@ -4,10 +4,11 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from pathlib import Path
-from typing import Any, cast
+from typing import Any, TypeVar, cast
 
 import typer
 from dotenv import load_dotenv
+from pydantic import ValidationError
 from rich.panel import Panel
 
 from vuln_prioritizer.cache import FileCache
@@ -61,6 +62,8 @@ from vuln_prioritizer.providers.kev import KevProvider
 from vuln_prioritizer.providers.nvd import NvdProvider
 from vuln_prioritizer.reporter import write_output
 from vuln_prioritizer.utils import iso_utc_now
+
+ProviderCacheRecord = TypeVar("ProviderCacheRecord", NvdData, EpssData)
 
 
 def data_status(
@@ -486,6 +489,11 @@ def data_export_provider_snapshot(
     cache_ttl_hours: int = typer.Option(DEFAULT_CACHE_TTL_HOURS, "--cache-ttl-hours", min=1),
     offline_kev_file: Path | None = typer.Option(None, "--offline-kev-file", dir_okay=False),
     nvd_api_key_env: str = typer.Option(DEFAULT_NVD_API_KEY_ENV, "--nvd-api-key-env"),
+    cache_only: bool = typer.Option(
+        False,
+        "--cache-only",
+        help="Export only locally cached/offline provider data; never refresh live providers.",
+    ),
 ) -> None:
     """Export pinned provider data for later replay."""
     load_dotenv()
@@ -508,23 +516,46 @@ def data_export_provider_snapshot(
     epss_results: dict[str, EpssData] = {}
     kev_results: dict[str, KevData] = {}
     if "nvd" in selected_sources:
-        nvd_results, provider_warnings = NvdProvider.from_env(
-            api_key_env=nvd_api_key_env,
-            cache=cache,
-        ).fetch_many(cve_ids, refresh=True)
+        if cache_only:
+            nvd_results, provider_warnings = load_cached_provider_records(
+                cache=cache,
+                namespace="nvd",
+                cve_ids=cve_ids,
+                model=NvdData,
+            )
+        else:
+            nvd_results, provider_warnings = NvdProvider.from_env(
+                api_key_env=nvd_api_key_env,
+                cache=cache,
+            ).fetch_many(cve_ids, refresh=True)
         warnings.extend(provider_warnings)
     if "epss" in selected_sources:
-        epss_results, provider_warnings = EpssProvider(cache=cache).fetch_many(
-            cve_ids,
-            refresh=True,
-        )
+        if cache_only:
+            epss_results, provider_warnings = load_cached_provider_records(
+                cache=cache,
+                namespace="epss",
+                cve_ids=cve_ids,
+                model=EpssData,
+            )
+        else:
+            epss_results, provider_warnings = EpssProvider(cache=cache).fetch_many(
+                cve_ids,
+                refresh=True,
+            )
         warnings.extend(provider_warnings)
     if "kev" in selected_sources:
-        kev_results, provider_warnings = KevProvider(cache=cache).fetch_many(
-            cve_ids,
-            offline_file=offline_kev_file,
-            refresh=True,
-        )
+        if cache_only:
+            kev_results, provider_warnings = load_cache_only_kev_records(
+                cache=cache,
+                cve_ids=cve_ids,
+                offline_kev_file=offline_kev_file,
+            )
+        else:
+            kev_results, provider_warnings = KevProvider(cache=cache).fetch_many(
+                cve_ids,
+                offline_file=offline_kev_file,
+                refresh=True,
+            )
         warnings.extend(provider_warnings)
 
     report = ProviderSnapshotReport(
@@ -537,6 +568,7 @@ def data_export_provider_snapshot(
             requested_cves=len(cve_ids),
             output_path=str(output),
             cache_enabled=True,
+            cache_only=cache_only,
             cache_dir=str(cache_dir),
             offline_kev_file=str(offline_kev_file) if offline_kev_file else None,
             nvd_api_key_env=nvd_api_key_env,
@@ -555,6 +587,77 @@ def data_export_provider_snapshot(
     write_output(output, generate_provider_snapshot_json(report))
     console.print(f"[green]Wrote provider snapshot output to {output}[/green]")
     print_warnings(warnings)
+
+
+def load_cached_provider_records(
+    *,
+    cache: FileCache,
+    namespace: str,
+    cve_ids: list[str],
+    model: type[ProviderCacheRecord],
+) -> tuple[dict[str, ProviderCacheRecord], list[str]]:
+    results: dict[str, ProviderCacheRecord] = {}
+    missing: list[str] = []
+    invalid: list[str] = []
+    for cve_id in cve_ids:
+        cached_payload = cache.get_json(namespace, cve_id)
+        if cached_payload is None:
+            missing.append(cve_id)
+            continue
+        try:
+            results[cve_id] = model.model_validate(cached_payload)
+        except ValidationError:
+            invalid.append(cve_id)
+
+    warnings: list[str] = []
+    if missing:
+        warnings.append(
+            f"cache-only {namespace.upper()} data missing for {len(missing)} CVE(s): "
+            + ", ".join(missing)
+            + "."
+        )
+    if invalid:
+        warnings.append(
+            f"cache-only {namespace.upper()} data invalid for {len(invalid)} CVE(s): "
+            + ", ".join(invalid)
+            + "."
+        )
+    return results, warnings
+
+
+def load_cache_only_kev_records(
+    *,
+    cache: FileCache,
+    cve_ids: list[str],
+    offline_kev_file: Path | None,
+) -> tuple[dict[str, KevData], list[str]]:
+    if offline_kev_file is not None:
+        return KevProvider(cache=cache).fetch_many(
+            cve_ids,
+            offline_file=offline_kev_file,
+            refresh=False,
+        )
+
+    cached_catalog = cache.get_json("kev", "catalog")
+    if not isinstance(cached_catalog, dict):
+        return {}, ["cache-only KEV catalog is missing from the local cache."]
+
+    index: dict[str, KevData] = {}
+    invalid: list[str] = []
+    for cve_id, item in cached_catalog.items():
+        try:
+            index[str(cve_id)] = KevData.model_validate(item)
+        except ValidationError:
+            invalid.append(str(cve_id))
+
+    warnings = (
+        ["cache-only KEV catalog contains invalid record(s): " + ", ".join(invalid) + "."]
+        if invalid
+        else []
+    )
+    return {
+        cve_id: index.get(cve_id, KevData(cve_id=cve_id, in_kev=False)) for cve_id in cve_ids
+    }, warnings
 
 
 def register(data_app: typer.Typer) -> None:

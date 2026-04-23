@@ -6,12 +6,16 @@ import json
 from pathlib import Path
 from typing import Any, cast
 
+from pydantic import ValidationError
+
 from vuln_prioritizer.models import (
+    PrioritizedFinding,
     RemediationPlan,
     RollupBucket,
     RollupCandidate,
     SnapshotDiffItem,
     SnapshotDiffSummary,
+    SnapshotMetadata,
 )
 
 from .common import RollupBy, exit_input_validation
@@ -29,6 +33,16 @@ def load_json_document_or_exit(input_path: Path) -> dict[str, Any]:
 
 def load_snapshot_payload(input_path: Path) -> dict[str, Any]:
     payload = load_json_document_or_exit(input_path)
+    try:
+        validate_snapshot_envelope(payload)
+    except ValueError as exc:
+        exit_input_validation(
+            f"snapshot diff expects JSON files with snapshot metadata and findings: {exc}"
+        )
+    return payload
+
+
+def validate_snapshot_envelope(payload: dict[str, Any]) -> None:
     metadata = payload.get("metadata")
     findings = payload.get("findings")
     if (
@@ -36,10 +50,30 @@ def load_snapshot_payload(input_path: Path) -> dict[str, Any]:
         or not isinstance(findings, list)
         or metadata.get("snapshot_kind") != "snapshot"
     ):
-        exit_input_validation(
-            "snapshot diff expects JSON files produced by `snapshot create --format json`."
+        raise ValueError("payload must contain snapshot metadata and a findings array.")
+
+
+def validate_snapshot_payload(payload: dict[str, Any]) -> None:
+    """Validate a snapshot JSON payload before downstream import or diffing."""
+    metadata = payload.get("metadata")
+    findings = payload.get("findings")
+    if (
+        not isinstance(metadata, dict)
+        or not isinstance(findings, list)
+        or metadata.get("snapshot_kind") != "snapshot"
+    ):
+        raise ValueError(
+            "payload must contain snapshot metadata and a findings array from "
+            "`snapshot create --format json`."
         )
-    return payload
+    try:
+        SnapshotMetadata.model_validate(metadata)
+        for index, finding in enumerate(findings, start=1):
+            if not isinstance(finding, dict):
+                raise ValueError(f"Snapshot finding #{index} must be a JSON object.")
+            PrioritizedFinding.model_validate(finding)
+    except (ValidationError, ValueError) as exc:
+        raise ValueError(str(exc)) from exc
 
 
 def load_rollup_payload(input_path: Path) -> tuple[str, dict[str, Any]]:

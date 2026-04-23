@@ -34,9 +34,15 @@ from vuln_prioritizer.models import (
     StateInitMetadata,
     StateInitReport,
     StateInitSummary,
+    StateServiceHistoryEntry,
+    StateServiceHistoryMetadata,
+    StateServiceHistoryReport,
     StateTopServiceEntry,
     StateTopServicesMetadata,
     StateTopServicesReport,
+    StateTrendEntry,
+    StateTrendsMetadata,
+    StateTrendsReport,
     StateWaiverEntry,
     StateWaiverMetadata,
     StateWaiverReport,
@@ -50,7 +56,9 @@ from vuln_prioritizer.reporter import (
     generate_state_history_json,
     generate_state_import_json,
     generate_state_init_json,
+    generate_state_service_history_json,
     generate_state_top_services_json,
+    generate_state_trends_json,
     generate_state_waivers_json,
 )
 
@@ -467,6 +475,70 @@ def test_state_top_services_json_matches_published_schema() -> None:
     jsonschema.validate(payload, _load_schema("state-top-services-report.schema.json"))
 
 
+def test_state_trends_json_matches_published_schema() -> None:
+    payload = json.loads(
+        generate_state_trends_json(
+            StateTrendsReport(
+                metadata=StateTrendsMetadata(
+                    generated_at="2026-04-21T12:00:00Z",
+                    db_path="/tmp/state.db",
+                    days=90,
+                    priority_filter="all",
+                    entry_count=1,
+                ),
+                items=[
+                    StateTrendEntry(
+                        snapshot_generated_at="2026-04-20T09:00:00Z",
+                        snapshot_path="/tmp/latest.json",
+                        findings_count=4,
+                        critical_count=1,
+                        high_count=2,
+                        medium_count=1,
+                        low_count=0,
+                        kev_count=1,
+                        attack_mapped_count=2,
+                        waived_count=1,
+                    )
+                ],
+            )
+        )
+    )
+
+    jsonschema.validate(payload, _load_schema("state-trends-report.schema.json"))
+
+
+def test_state_service_history_json_matches_published_schema() -> None:
+    payload = json.loads(
+        generate_state_service_history_json(
+            StateServiceHistoryReport(
+                metadata=StateServiceHistoryMetadata(
+                    generated_at="2026-04-21T12:00:00Z",
+                    db_path="/tmp/state.db",
+                    service="identity",
+                    days=90,
+                    priority_filter="all",
+                    entry_count=1,
+                ),
+                items=[
+                    StateServiceHistoryEntry(
+                        snapshot_generated_at="2026-04-20T09:00:00Z",
+                        snapshot_path="/tmp/latest.json",
+                        occurrence_count=3,
+                        distinct_cves=2,
+                        critical_count=1,
+                        high_count=1,
+                        kev_count=1,
+                        waived_count=0,
+                        cve_ids=["CVE-2024-0001", "CVE-2024-0002"],
+                    )
+                ],
+            )
+        )
+    )
+
+    jsonschema.validate(payload, _load_schema("state-service-history-report.schema.json"))
+
+
 def test_action_contract_exposes_summary_and_config_wiring() -> None:
     payload = yaml.safe_load(ACTION_FILE.read_text(encoding="utf-8"))
     inputs = payload["inputs"]
@@ -487,7 +559,8 @@ def test_action_contract_exposes_summary_and_config_wiring() -> None:
     assert "--config" in run_block
     assert "--no-config" in run_block
     assert "--summary-output" in run_block
-    assert "render_compact_summary" in run_block
+    assert "--summary-template" in run_block
+    assert "render_compact_summary" not in run_block
     assert "$RUNNER_TEMP/vuln-prioritizer-summary.md" in run_block
     assert "$GITHUB_STEP_SUMMARY" in run_block
 
@@ -704,6 +777,7 @@ def test_pipx_source_smoke_wraps_p1_and_p2_installed_smokes() -> None:
     assert "scripts/p1_installed_cli_smoke.sh" in script
     assert "scripts/p2_installed_cli_smoke.sh" in script
     assert "VULN_PRIORITIZER_SMOKE_OUTPUT_DIR" in script
+    assert "--exclude=Library" in script
 
 
 def test_installed_smokes_can_preserve_debug_outputs() -> None:

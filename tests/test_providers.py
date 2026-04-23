@@ -169,7 +169,7 @@ def test_nvd_fetch_many_preserves_input_order_and_counts_diagnostics(tmp_path: P
 
 
 def test_nvd_fetch_many_bounds_network_concurrency() -> None:
-    class Session:
+    class Monitor:
         def __init__(self) -> None:
             self.lock = threading.Lock()
             self.release = threading.Event()
@@ -177,17 +177,24 @@ def test_nvd_fetch_many_bounds_network_concurrency() -> None:
             self.in_flight = 0
             self.max_in_flight = 0
 
+    class Session:
+        def __init__(self, monitor: Monitor) -> None:
+            self.monitor = monitor
+
         def get(self, *args, **kwargs):  # noqa: ANN002, ANN003
             cve_id = kwargs["params"]["cveId"]
-            with self.lock:
-                self.seen += 1
-                self.in_flight += 1
-                self.max_in_flight = max(self.max_in_flight, self.in_flight)
-                if self.seen >= 2:
-                    self.release.set()
-            self.release.wait(timeout=1)
-            with self.lock:
-                self.in_flight -= 1
+            with self.monitor.lock:
+                self.monitor.seen += 1
+                self.monitor.in_flight += 1
+                self.monitor.max_in_flight = max(
+                    self.monitor.max_in_flight,
+                    self.monitor.in_flight,
+                )
+                if self.monitor.seen >= 2:
+                    self.monitor.release.set()
+            self.monitor.release.wait(timeout=1)
+            with self.monitor.lock:
+                self.monitor.in_flight -= 1
             return FakeResponse(
                 {
                     "vulnerabilities": [
@@ -200,8 +207,11 @@ def test_nvd_fetch_many_bounds_network_concurrency() -> None:
                 }
             )
 
-    session = Session()
-    provider = NvdProvider(session=session, max_concurrency=2)
+        def close(self) -> None:
+            pass
+
+    monitor = Monitor()
+    provider = NvdProvider(session_factory=lambda: Session(monitor), max_concurrency=2)
 
     results, warnings = provider.fetch_many(
         [
@@ -219,7 +229,7 @@ def test_nvd_fetch_many_bounds_network_concurrency() -> None:
         "CVE-2026-0103",
         "CVE-2026-0104",
     ]
-    assert session.max_in_flight == 2
+    assert monitor.max_in_flight == 2
 
 
 def test_nvd_fetch_many_degrades_gracefully_and_keeps_warning_order() -> None:

@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://noetheon.github.io/vuln-prioritizer/schemas/state-service-history-report.schema.json",
+  "title": "vuln-prioritizer state service history report",
+  "description": "JSON contract for `vuln-prioritizer state service-history --format json`.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["metadata", "items"],
+  "properties": {
+    "metadata": {"$ref": "#/$defs/metadata"},
+    "items": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/item"}
+    }
+  },
+  "$defs": {
+    "stringArray": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "generated_at",
+        "db_path",
+        "service",
+        "days",
+        "priority_filter",
+        "entry_count"
+      ],
+      "properties": {
+        "schema_version": {"const": "1.2.0"},
+        "generated_at": {"type": "string"},
+        "db_path": {"type": "string"},
+        "service": {"type": "string"},
+        "days": {"type": "integer", "minimum": 1},
+        "priority_filter": {"type": "string"},
+        "entry_count": {"type": "integer"}
+      }
+    },
+    "item": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "snapshot_generated_at",
+        "snapshot_path",
+        "occurrence_count",
+        "distinct_cves",
+        "critical_count",
+        "high_count",
+        "kev_count",
+        "waived_count",
+        "cve_ids"
+      ],
+      "properties": {
+        "snapshot_generated_at": {"type": "string"},
+        "snapshot_path": {"type": "string"},
+        "occurrence_count": {"type": "integer"},
+        "distinct_cves": {"type": "integer"},
+        "critical_count": {"type": "integer"},
+        "high_count": {"type": "integer"},
+        "kev_count": {"type": "integer"},
+        "waived_count": {"type": "integer"},
+        "cve_ids": {"$ref": "#/$defs/stringArray"}
+      }
+    }
+  }
+}

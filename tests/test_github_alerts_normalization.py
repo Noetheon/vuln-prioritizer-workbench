@@ -96,3 +96,36 @@ def test_github_alerts_first_patched_version_is_preserved_in_fix_versions(
     )
 
     assert occurrence.fix_versions == ["2023.0.2"]
+
+
+def test_github_alerts_null_first_patched_version_loads_without_fix_versions(
+    tmp_path: Path,
+) -> None:
+    occurrence = _load_first_occurrence(
+        tmp_path,
+        {
+            "number": 28,
+            "state": "open",
+            "dependency": {
+                "manifest_path": "requirements.txt",
+                "package": {
+                    "ecosystem": "pip",
+                    "name": "moveit-transfer",
+                },
+            },
+            "security_advisory": {
+                "ghsa_id": "GHSA-1111-2222-4444",
+                "cve_id": "CVE-2023-34362",
+                "severity": "critical",
+            },
+            "security_vulnerability": {
+                "package": {
+                    "ecosystem": "pip",
+                    "name": "moveit-transfer",
+                },
+                "first_patched_version": None,
+            },
+        },
+    )
+
+    assert occurrence.fix_versions == []

@@ -28,13 +28,16 @@ from vuln_prioritizer.cli_support.common import (
     PriorityFilter,
     ReportOutputFormat,
     SortBy,
+    SummaryTemplate,
     TableJsonOutputFormat,
     TargetKind,
     build_input_specs_or_exit,
     console,
+    emit_stdout,
     exit_input_validation,
     output_format_option,
     print_warnings,
+    should_emit_json_stdout,
     validate_command_formats,
     validate_output_mode,
     validate_unique_output_paths,
@@ -76,6 +79,9 @@ def analyze(
     output: Path | None = typer.Option(None, "--output", dir_okay=False),
     html_output: Path | None = typer.Option(None, "--html-output", dir_okay=False),
     summary_output: Path | None = typer.Option(None, "--summary-output", dir_okay=False),
+    summary_template: SummaryTemplate = typer.Option(
+        SummaryTemplate.detailed, "--summary-template"
+    ),
     format: OutputFormat = output_format_option(OutputFormat.markdown, FULL_OUTPUT_FORMATS),
     input_format: list[InputFormat] | None = typer.Option(None, "--input-format"),
     no_attack: bool = typer.Option(False, "--no-attack"),
@@ -185,11 +191,29 @@ def analyze(
         )
     )
 
+    payload = build_analysis_report_payload(findings, context)
+    if should_emit_json_stdout(format, output):
+        if html_output is not None:
+            write_output(html_output, generate_html_report(payload))
+        if summary_output is not None:
+            write_output(
+                summary_output,
+                generate_summary_markdown(payload, template=summary_template.value),
+            )
+        emit_stdout(generate_json_report(findings, context))
+        if fail_on is not None:
+            handle_fail_on(findings, fail_on)
+        handle_waiver_lifecycle_fail_on(
+            context,
+            fail_on_expired_waivers=fail_on_expired_waivers,
+            fail_on_review_due_waivers=fail_on_review_due_waivers,
+        )
+        return
+
     console.print(render_findings_table(findings))
     console.print(render_summary_panel(context))
     print_warnings(context.warnings)
 
-    payload = build_analysis_report_payload(findings, context)
     if output is not None:
         if format == OutputFormat.markdown:
             write_output(output, generate_markdown_report(findings, context))
@@ -202,7 +226,10 @@ def analyze(
         write_output(html_output, generate_html_report(payload))
         console.print(f"[green]Wrote html output to {html_output}[/green]")
     if summary_output is not None:
-        write_output(summary_output, generate_summary_markdown(payload))
+        write_output(
+            summary_output,
+            generate_summary_markdown(payload, template=summary_template.value),
+        )
         console.print(f"[green]Wrote markdown summary to {summary_output}[/green]")
     if fail_on is not None:
         handle_fail_on(findings, fail_on)
@@ -322,6 +349,10 @@ def compare(
     comparisons = prioritizer.build_comparison(findings, sort_by=sort_by.value)
     changed_count = sum(1 for row in comparisons if row.changed)
 
+    if should_emit_json_stdout(format, output):
+        emit_stdout(generate_compare_json(comparisons, context))
+        return
+
     console.print(render_compare_table(comparisons))
     console.print(render_summary_panel(context, mode="compare", changed_count=changed_count))
     print_warnings(context.warnings)
@@ -424,6 +455,20 @@ def explain(
         )
     )
 
+    if should_emit_json_stdout(format, output):
+        emit_stdout(
+            generate_explain_json(
+                result.finding,
+                result.nvd,
+                result.epss,
+                result.kev,
+                result.attack,
+                result.context,
+                result.comparison,
+            )
+        )
+        return
+
     console.print(
         render_explain_view(
             result.finding,
@@ -502,6 +547,12 @@ def doctor(
         attack_mapping_file=attack_mapping_file,
         attack_technique_metadata_file=attack_technique_metadata_file,
     )
+
+    if should_emit_json_stdout(format, output):
+        emit_stdout(generate_doctor_json(report))
+        if any(check.status in {"degraded", "error"} for check in report.checks):
+            raise typer.Exit(code=1)
+        return
 
     console.print(
         Panel(

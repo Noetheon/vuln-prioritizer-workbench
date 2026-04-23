@@ -185,6 +185,9 @@
         "cache_enabled": {
           "type": "boolean"
         },
+        "cache_only": {
+          "type": "boolean"
+        },
         "cache_dir": {
           "$ref": "#/$defs/nullableString"
         },

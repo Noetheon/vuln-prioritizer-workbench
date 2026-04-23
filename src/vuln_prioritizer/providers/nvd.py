@@ -6,6 +6,7 @@ import os
 import time
 from concurrent.futures import Future, ThreadPoolExecutor
 from dataclasses import dataclass
+from threading import Lock
 from typing import Final
 
 import requests
@@ -43,8 +44,11 @@ class NvdProvider:
         max_retries: int = HTTP_MAX_RETRIES,
         max_concurrency: int = DEFAULT_NVD_MAX_CONCURRENCY,
         cache: FileCache | None = None,
+        session_factory: type[requests.Session] | None = None,
     ) -> None:
-        self.session = session or requests.Session()
+        self.session = session
+        self.session_factory = session_factory or requests.Session
+        self._shared_session_lock = Lock()
         self.api_key = api_key
         self.timeout_seconds = timeout_seconds
         self.max_retries = max_retries
@@ -154,12 +158,7 @@ class NvdProvider:
         while attempt < self.max_retries:
             attempt += 1
             try:
-                response = self.session.get(
-                    NVD_API_URL,
-                    params=params,
-                    headers=headers,
-                    timeout=self.timeout_seconds,
-                )
+                response = self._session_get(params=params, headers=headers)
                 if response.status_code == 404:
                     return {}
                 if response.status_code in {429, 500, 502, 503, 504} and attempt < self.max_retries:
@@ -178,6 +177,27 @@ class NvdProvider:
         if last_error is not None:
             raise RuntimeError(str(last_error)) from last_error
         raise RuntimeError("NVD request failed without a response")
+
+    def _session_get(self, *, params: dict[str, str], headers: dict[str, str]) -> requests.Response:
+        if self.session is not None:
+            with self._shared_session_lock:
+                return self.session.get(
+                    NVD_API_URL,
+                    params=params,
+                    headers=headers,
+                    timeout=self.timeout_seconds,
+                )
+
+        session = self.session_factory()
+        try:
+            return session.get(
+                NVD_API_URL,
+                params=params,
+                headers=headers,
+                timeout=self.timeout_seconds,
+            )
+        finally:
+            session.close()
 
     @staticmethod
     def parse_payload(cve_id: str, payload: dict) -> NvdData:
