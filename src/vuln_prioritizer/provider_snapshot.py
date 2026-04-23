@@ -4,10 +4,16 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import TYPE_CHECKING
 
-from pydantic import BaseModel, ValidationError
+from pydantic import ValidationError
 
-from vuln_prioritizer.models import ProviderSnapshotItem, ProviderSnapshotReport
+from vuln_prioritizer.models import ProviderSnapshotReport
+
+if TYPE_CHECKING:
+    from pydantic import BaseModel
+
+    from vuln_prioritizer.models import ProviderSnapshotItem
 
 
 def generate_provider_snapshot_json(report: ProviderSnapshotReport) -> str:

@@ -98,7 +98,7 @@ def apply_vex_statements(
     *,
     return_diagnostics: Literal[False] = False,
 ) -> list[InputOccurrence]:
-    pass
+    raise NotImplementedError
 
 
 @overload
@@ -108,7 +108,7 @@ def apply_vex_statements(
     *,
     return_diagnostics: Literal[True],
 ) -> tuple[list[InputOccurrence], VexMatchDiagnostics]:
-    pass
+    raise NotImplementedError
 
 
 def apply_vex_statements(

@@ -302,7 +302,7 @@ def load_asset_context_file(
     *,
     return_diagnostics: Literal[False] = False,
 ) -> AssetContextCatalog:
-    pass
+    raise NotImplementedError
 
 
 @overload
@@ -311,7 +311,7 @@ def load_asset_context_file(
     *,
     return_diagnostics: Literal[True],
 ) -> tuple[AssetContextCatalog, AssetContextLoadDiagnostics]:
-    pass
+    raise NotImplementedError
 
 
 def load_asset_context_file(
