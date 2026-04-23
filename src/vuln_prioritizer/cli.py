@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import requests
 import typer
 
 from vuln_prioritizer.cli_support.analysis import (
@@ -81,7 +80,7 @@ def main() -> None:
     app()
 
 
-__all__ = ["app", "main", "_build_attack_summary_from_findings", "requests"]
+__all__ = ["app", "main", "_build_attack_summary_from_findings"]
 
 
 if __name__ == "__main__":

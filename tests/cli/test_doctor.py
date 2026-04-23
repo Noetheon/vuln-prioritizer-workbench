@@ -218,7 +218,7 @@ def test_cli_doctor_live_mode_runs_reachability_probes(
     def fake_get(url, params=None, timeout=5):  # noqa: ANN001
         return _FakeResponse()
 
-    monkeypatch.setattr("vuln_prioritizer.cli.requests.get", fake_get)
+    monkeypatch.setattr("vuln_prioritizer.cli_support.doctor_support.requests.get", fake_get)
     monkeypatch.setenv("NVD_API_KEY", "test-key")
 
     result = runner.invoke(
@@ -264,7 +264,7 @@ def test_cli_doctor_live_mode_warns_when_nvd_api_key_is_missing(
     def fake_get(url, params=None, timeout=5):  # noqa: ANN001
         return _FakeResponse()
 
-    monkeypatch.setattr("vuln_prioritizer.cli.requests.get", fake_get)
+    monkeypatch.setattr("vuln_prioritizer.cli_support.doctor_support.requests.get", fake_get)
     monkeypatch.delenv("NVD_API_KEY", raising=False)
 
     result = runner.invoke(

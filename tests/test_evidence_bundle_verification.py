@@ -4,7 +4,15 @@ import json
 import zipfile
 from pathlib import Path
 
-from test_cli import _install_fake_providers, _write_input_file, runner
+from _cli_helpers import (
+    install_fake_providers as _install_fake_providers,
+)
+from _cli_helpers import (
+    runner,
+)
+from _cli_helpers import (
+    write_input_file as _write_input_file,
+)
 
 from vuln_prioritizer.cli import app
 

@@ -1,21 +1,15 @@
 from __future__ import annotations
 
 import json
-import sys
 from collections import defaultdict
 from pathlib import Path
 
 import pytest
+from _cli_helpers import install_fake_providers as _install_fake_providers
+from _input_fixture_contracts import load_input_fixture_contracts
 from typer.testing import CliRunner
 
-TESTS_DIR = Path(__file__).resolve().parent
-if str(TESTS_DIR) not in sys.path:
-    sys.path.insert(0, str(TESTS_DIR))
-
-from _input_fixture_contracts import load_input_fixture_contracts  # noqa: E402
-from test_cli import _install_fake_providers  # noqa: E402
-
-from vuln_prioritizer.cli import app  # noqa: E402
+from vuln_prioritizer.cli import app
 
 runner = CliRunner()
 PROJECT_ROOT = Path(__file__).resolve().parents[1]

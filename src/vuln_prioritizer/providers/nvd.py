@@ -125,7 +125,7 @@ class NvdProvider:
             cache_hits=cache_hits,
             network_fetches=len(pending_ids),
             failures=failures,
-            content_hits=sum(1 for item in results.values() if _has_nvd_content(item)),
+            content_hits=sum(1 for item in results.values() if has_nvd_content(item)),
         )
 
         return results, warnings
@@ -265,7 +265,7 @@ def _extract_cvss(metrics: dict) -> tuple[float | None, str | None, str | None]:
     return None, None, None
 
 
-def _has_nvd_content(item: NvdData) -> bool:
+def has_nvd_content(item: NvdData) -> bool:
     return any(
         [
             item.description is not None,
@@ -278,3 +278,6 @@ def _has_nvd_content(item: NvdData) -> bool:
             bool(item.references),
         ]
     )
+
+
+_has_nvd_content = has_nvd_content

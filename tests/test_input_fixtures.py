@@ -2,18 +2,12 @@ from __future__ import annotations
 
 import json
 import re
-import sys
 import xml.etree.ElementTree as ET
 from collections.abc import Iterable
 from pathlib import Path
 
 import pytest
-
-TESTS_DIR = Path(__file__).resolve().parent
-if str(TESTS_DIR) not in sys.path:
-    sys.path.insert(0, str(TESTS_DIR))
-
-from _input_fixture_contracts import PROJECT_ROOT, load_input_fixture_contracts  # noqa: E402
+from _input_fixture_contracts import PROJECT_ROOT, load_input_fixture_contracts
 
 _CVE_PATTERN = re.compile(r"CVE-\d{4}-\d{4,7}")
 _GHSA_PATTERN = re.compile(r"GHSA-[a-z0-9-]+", re.IGNORECASE)

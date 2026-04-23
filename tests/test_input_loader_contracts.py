@@ -1,17 +1,11 @@
 from __future__ import annotations
 
 import importlib
-import sys
 from collections.abc import Mapping
 from pathlib import Path
 
 import pytest
-
-TESTS_DIR = Path(__file__).resolve().parent
-if str(TESTS_DIR) not in sys.path:
-    sys.path.insert(0, str(TESTS_DIR))
-
-from _input_fixture_contracts import PROJECT_ROOT, load_input_fixture_contracts  # noqa: E402
+from _input_fixture_contracts import PROJECT_ROOT, load_input_fixture_contracts
 
 _INPUT_CONTRACTS = load_input_fixture_contracts()["inputs"]
 _VEX_CONTRACTS = load_input_fixture_contracts()["vex_documents"]
@@ -54,19 +48,13 @@ def _project_occurrence(occurrence: object) -> dict[str, object]:
 
 
 def _load_loader_module():
-    if importlib.util.find_spec("vuln_prioritizer.inputs.loader") is None:
-        pytest.skip("Future InputLoader is not implemented yet.")
     return importlib.import_module("vuln_prioritizer.inputs.loader")
 
 
 @pytest.mark.parametrize(("format_name", "contract"), list(_INPUT_CONTRACTS.items()))
-def test_future_input_loader_matches_contracts(format_name: str, contract: dict) -> None:
+def test_input_loader_matches_contracts(format_name: str, contract: dict) -> None:
     loader_module = _load_loader_module()
-    input_loader_cls = getattr(loader_module, "InputLoader", None)
-    if input_loader_cls is None:
-        pytest.skip("Future InputLoader class is not implemented yet.")
-
-    loader = input_loader_cls()
+    loader = loader_module.InputLoader()
     parsed = loader.load(
         path=PROJECT_ROOT / Path(contract["fixture"]),
         input_format=format_name,
@@ -86,13 +74,9 @@ def test_future_input_loader_matches_contracts(format_name: str, contract: dict)
 
 
 @pytest.mark.parametrize(("format_name", "contract"), list(_VEX_CONTRACTS.items()))
-def test_future_vex_loader_matches_contracts(format_name: str, contract: dict) -> None:
+def test_vex_loader_matches_contracts(format_name: str, contract: dict) -> None:
     loader_module = _load_loader_module()
-    load_vex_files = getattr(loader_module, "load_vex_files", None)
-    if load_vex_files is None:
-        pytest.skip("Future load_vex_files helper is not implemented yet.")
-
-    statements = load_vex_files([PROJECT_ROOT / Path(contract["fixture"])])
+    statements = loader_module.load_vex_files([PROJECT_ROOT / Path(contract["fixture"])])
     projected = [
         {
             "cve_id": _read_field(statement, "cve_id"),
@@ -119,11 +103,7 @@ def test_xml_input_loader_preserves_non_cve_warnings(
     expected_identifier: str,
 ) -> None:
     loader_module = _load_loader_module()
-    input_loader_cls = getattr(loader_module, "InputLoader", None)
-    if input_loader_cls is None:
-        pytest.skip("Future InputLoader class is not implemented yet.")
-
-    loader = input_loader_cls()
+    loader = loader_module.InputLoader()
     parsed = loader.load(
         path=PROJECT_ROOT / Path(_INPUT_CONTRACTS[format_name]["fixture"]),
         input_format=format_name,
@@ -134,9 +114,6 @@ def test_xml_input_loader_preserves_non_cve_warnings(
 
 def test_detect_input_format_rejects_xml_doctype_and_entity_declarations(tmp_path: Path) -> None:
     loader_module = _load_loader_module()
-    detect_input_format = getattr(loader_module, "detect_input_format", None)
-    if detect_input_format is None:
-        pytest.skip("Future detect_input_format helper is not implemented yet.")
 
     xml_file = tmp_path / "unsafe.xml"
     xml_file.write_text(
@@ -147,18 +124,15 @@ def test_detect_input_format_rejects_xml_doctype_and_entity_declarations(tmp_pat
     )
 
     with pytest.raises(ValueError, match="DOCTYPE or ENTITY declaration"):
-        detect_input_format(xml_file)
+        loader_module.detect_input_format(xml_file)
 
 
 def test_input_loader_rejects_invalid_xml_with_explicit_format(tmp_path: Path) -> None:
     loader_module = _load_loader_module()
-    input_loader_cls = getattr(loader_module, "InputLoader", None)
-    if input_loader_cls is None:
-        pytest.skip("Future InputLoader class is not implemented yet.")
 
     xml_file = tmp_path / "broken.nessus"
     xml_file.write_text("<NessusClientData_v2><Report>", encoding="utf-8")
 
-    loader = input_loader_cls()
+    loader = loader_module.InputLoader()
     with pytest.raises(ValueError, match="XML input is not valid XML"):
         loader.load(path=xml_file, input_format="nessus-xml")

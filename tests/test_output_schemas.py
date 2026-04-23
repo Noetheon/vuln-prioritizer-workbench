@@ -1,33 +1,73 @@
 from __future__ import annotations
 
 import json
-import sys
 from pathlib import Path
 from typing import Any
 
 import jsonschema
+from _cli_helpers import (
+    install_fake_providers as _install_fake_providers,
+)
+from _cli_helpers import (
+    write_input_file as _write_input_file,
+)
 from typer.testing import CliRunner
 
-TESTS_DIR = Path(__file__).resolve().parent
-if str(TESTS_DIR) not in sys.path:
-    sys.path.insert(0, str(TESTS_DIR))
-
-from test_cli import _install_fake_providers, _write_input_file  # noqa: E402
-
-from vuln_prioritizer.cache import FileCache  # noqa: E402
-from vuln_prioritizer.cli import app  # noqa: E402
-from vuln_prioritizer.models import EpssData, KevData, NvdData  # noqa: E402
-from vuln_prioritizer.providers.epss import EpssProvider  # noqa: E402
-from vuln_prioritizer.providers.kev import KevProvider  # noqa: E402
-from vuln_prioritizer.providers.nvd import NvdProvider  # noqa: E402
+from vuln_prioritizer.cache import FileCache
+from vuln_prioritizer.cli import app
+from vuln_prioritizer.models import EpssData, KevData, NvdData
+from vuln_prioritizer.providers.epss import EpssProvider
+from vuln_prioritizer.providers.kev import KevProvider
+from vuln_prioritizer.providers.nvd import NvdProvider
 
 runner = CliRunner()
-SCHEMA_ROOT = Path(__file__).resolve().parents[1] / "docs" / "schemas"
-ATTACK_ROOT = Path(__file__).resolve().parents[1] / "data" / "attack"
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+SCHEMA_ROOT = PROJECT_ROOT / "docs" / "schemas"
+CONTRACTS_FILE = PROJECT_ROOT / "docs" / "contracts.md"
+ATTACK_ROOT = PROJECT_ROOT / "data" / "attack"
+
+
+def _schema_paths() -> list[Path]:
+    return sorted(SCHEMA_ROOT.glob("*.schema.json"))
 
 
 def _load_schema(name: str) -> dict:
     return json.loads((SCHEMA_ROOT / name).read_text(encoding="utf-8"))
+
+
+def _documented_schema_names() -> list[str]:
+    marker = "Published JSON schemas in `docs/schemas/` cover:"
+    document = CONTRACTS_FILE.read_text(encoding="utf-8")
+    _, schema_section = document.split(marker, maxsplit=1)
+    schema_names: list[str] = []
+
+    for line in schema_section.splitlines():
+        stripped = line.strip()
+        if not stripped:
+            if schema_names:
+                break
+            continue
+        if stripped.startswith("- `") and stripped.endswith("`"):
+            schema_names.append(stripped.removeprefix("- `").removesuffix("`"))
+            continue
+        if schema_names:
+            break
+
+    return schema_names
+
+
+def test_published_schema_documents_are_valid_json_schema() -> None:
+    for schema_path in _schema_paths():
+        schema = json.loads(schema_path.read_text(encoding="utf-8"))
+        jsonschema.Draft202012Validator.check_schema(schema)
+
+
+def test_contracts_schema_list_matches_schema_directory() -> None:
+    documented_names = _documented_schema_names()
+    schema_names = [path.name for path in _schema_paths()]
+
+    assert len(documented_names) == len(set(documented_names))
+    assert sorted(documented_names) == schema_names
 
 
 def _install_fake_data_update_providers(monkeypatch: Any) -> None:
