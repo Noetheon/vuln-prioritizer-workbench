@@ -51,6 +51,8 @@ _PACKAGE_TYPE_ECOSYSTEMS = {
     "rubygems": "rubygems",
 }
 
+_ComponentKey = tuple[str | None, str | None, str | None, str | None, str | None]
+
 
 class RemediationService:
     """Derive stable remediation hints from normalized occurrence evidence."""
@@ -114,14 +116,8 @@ def _coerce_occurrences(
 
 
 def _collect_components(occurrences: list[InputOccurrence]) -> list[RemediationComponent]:
-    buckets: dict[
-        tuple[str | None, str | None, str | None, str | None, str | None],
-        RemediationComponent,
-    ] = {}
-    fixed_version_sets: dict[
-        tuple[str | None, str | None, str | None, str | None, str | None],
-        set[str],
-    ] = {}
+    buckets: dict[_ComponentKey, RemediationComponent] = {}
+    fixed_version_sets: dict[_ComponentKey, set[str]] = {}
 
     for occurrence in occurrences:
         component = _build_component_seed(occurrence)

@@ -52,7 +52,7 @@ def apply_asset_context(
     *,
     return_diagnostics: Literal[False] = False,
 ) -> list[InputOccurrence]:
-    pass
+    raise NotImplementedError
 
 
 @overload
@@ -62,7 +62,7 @@ def apply_asset_context(
     *,
     return_diagnostics: Literal[True],
 ) -> tuple[list[InputOccurrence], AssetContextMatchDiagnostics]:
-    pass
+    raise NotImplementedError
 
 
 def apply_asset_context(

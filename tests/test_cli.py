@@ -7,8 +7,14 @@ TESTS_DIR = Path(__file__).resolve().parent
 if str(TESTS_DIR) not in sys.path:
     sys.path.insert(0, str(TESTS_DIR))
 
-from _cli_helpers import install_fake_providers as _install_fake_providers  # noqa: E402
-from _cli_helpers import runner  # noqa: E402
-from _cli_helpers import write_input_file as _write_input_file  # noqa: E402
+import _cli_helpers  # noqa: E402
 
-__all__ = ["_install_fake_providers", "runner", "_write_input_file"]
+runner = _cli_helpers.runner
+
+
+def _install_fake_providers(monkeypatch: object) -> None:
+    _cli_helpers.install_fake_providers(monkeypatch)
+
+
+def _write_input_file(tmp_path: Path) -> Path:
+    return _cli_helpers.write_input_file(tmp_path)
