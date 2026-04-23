@@ -19,6 +19,7 @@ from vuln_prioritizer.cli_support.common import (
 from vuln_prioritizer.commands.analysis import register as register_analysis_commands
 from vuln_prioritizer.commands.attack import register as register_attack_commands
 from vuln_prioritizer.commands.data import register as register_data_commands
+from vuln_prioritizer.commands.input import register as register_input_commands
 from vuln_prioritizer.commands.report import register as register_report_commands
 from vuln_prioritizer.commands.snapshot import register as register_snapshot_commands
 from vuln_prioritizer.commands.state import register as register_state_commands
@@ -27,12 +28,14 @@ from vuln_prioritizer.runtime_config import build_cli_default_map
 app = typer.Typer(help="Prioritize known CVEs with NVD, EPSS, KEV, and ATT&CK context.")
 attack_app = typer.Typer(help="Validate and summarize local ATT&CK mapping files.")
 data_app = typer.Typer(help="Inspect cache state and local data-source metadata.")
+input_app = typer.Typer(help="Validate local input, asset context, and VEX files.")
 report_app = typer.Typer(help="Render secondary report formats from exported analysis JSON.")
 snapshot_app = typer.Typer(help="Create and compare prioritized snapshots.")
 state_app = typer.Typer(help="Persist snapshot history in an optional local SQLite store.")
 
 app.add_typer(attack_app, name="attack")
 app.add_typer(data_app, name="data")
+app.add_typer(input_app, name="input")
 app.add_typer(report_app, name="report")
 app.add_typer(snapshot_app, name="snapshot")
 app.add_typer(state_app, name="state")
@@ -69,6 +72,7 @@ register_snapshot_commands(app, snapshot_app)
 register_state_commands(state_app)
 register_attack_commands(attack_app)
 register_data_commands(data_app)
+register_input_commands(input_app)
 register_report_commands(report_app)
 
 

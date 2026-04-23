@@ -411,3 +411,63 @@ def test_data_export_provider_snapshot_writes_replay_artifact(monkeypatch, tmp_p
     assert all(item["nvd"] is not None for item in payload["items"])
     assert all(item["epss"] is not None for item in payload["items"])
     assert all(item["kev"] is not None for item in payload["items"])
+
+
+def test_data_export_provider_snapshot_cache_only_uses_local_cache(
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    def fail_fetch_many(*args, **kwargs):  # noqa: ANN002, ANN003, ANN202
+        raise AssertionError("cache-only export must not call live provider fetch_many")
+
+    monkeypatch.setattr(NvdProvider, "fetch_many", fail_fetch_many)
+    monkeypatch.setattr(EpssProvider, "fetch_many", fail_fetch_many)
+    monkeypatch.setattr(KevProvider, "fetch_many", fail_fetch_many)
+
+    cache_dir = tmp_path / "cache"
+    cache = FileCache(cache_dir, ttl_hours=24)
+    input_file = tmp_path / "cves.txt"
+    output_file = tmp_path / "provider-snapshot.json"
+    input_file.write_text("CVE-2021-44228\nCVE-2024-3094\n", encoding="utf-8")
+    cache.set_json(
+        "nvd",
+        "CVE-2021-44228",
+        NvdData(cve_id="CVE-2021-44228", cvss_base_score=10.0).model_dump(),
+    )
+    cache.set_json(
+        "epss",
+        "CVE-2021-44228",
+        EpssData(cve_id="CVE-2021-44228", epss=0.97, percentile=0.99).model_dump(),
+    )
+    cache.set_json(
+        "kev",
+        "catalog",
+        {"CVE-2021-44228": KevData(cve_id="CVE-2021-44228", in_kev=True).model_dump()},
+    )
+
+    result = runner.invoke(
+        app,
+        [
+            "data",
+            "export-provider-snapshot",
+            "--input",
+            str(input_file),
+            "--output",
+            str(output_file),
+            "--cache-dir",
+            str(cache_dir),
+            "--cache-only",
+        ],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(output_file.read_text(encoding="utf-8"))
+    first_item, second_item = payload["items"]
+    assert payload["metadata"]["cache_only"] is True
+    assert first_item["nvd"] is not None
+    assert first_item["epss"] is not None
+    assert first_item["kev"]["in_kev"] is True
+    assert second_item["nvd"] is None
+    assert second_item["epss"] is None
+    assert second_item["kev"]["in_kev"] is False
+    assert any("cache-only NVD data missing" in warning for warning in payload["warnings"])

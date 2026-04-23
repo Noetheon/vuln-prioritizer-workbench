@@ -321,6 +321,105 @@ def test_cli_state_top_services_supports_priority_filtered_json_output(
     assert payload["items"][0]["occurrence_count"] == 1
 
 
+def test_cli_state_trends_and_service_history_return_json(
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    class FrozenDateTime(datetime):
+        @classmethod
+        def now(cls, tz=None):  # noqa: ANN206
+            return cls(2026, 4, 30, 12, 0, 0, tzinfo=tz or UTC)
+
+    monkeypatch.setattr(state_store_module, "datetime", FrozenDateTime)
+
+    db_path = tmp_path / "state.db"
+    store = state_store_module.SQLiteStateStore(db_path)
+    before_path = _write_snapshot_file(
+        tmp_path,
+        "before.json",
+        _snapshot_payload(
+            "2026-04-10T09:00:00+00:00",
+            [
+                _finding(
+                    "CVE-2024-5001",
+                    priority_label="High",
+                    priority_rank=2,
+                    services=["payments"],
+                )
+            ],
+        ),
+    )
+    after_path = _write_snapshot_file(
+        tmp_path,
+        "after.json",
+        _snapshot_payload(
+            "2026-04-20T09:00:00+00:00",
+            [
+                _finding(
+                    "CVE-2024-5001",
+                    priority_label="Critical",
+                    priority_rank=1,
+                    in_kev=True,
+                    services=["payments"],
+                ),
+                _finding(
+                    "CVE-2024-5002",
+                    priority_label="High",
+                    priority_rank=2,
+                    services=["identity"],
+                ),
+            ],
+        ),
+    )
+    store.import_snapshot(
+        snapshot_path=before_path,
+        payload=json.loads(before_path.read_text(encoding="utf-8")),
+    )
+    store.import_snapshot(
+        snapshot_path=after_path,
+        payload=json.loads(after_path.read_text(encoding="utf-8")),
+    )
+
+    trends_result = runner.invoke(
+        app,
+        [
+            "state",
+            "trends",
+            "--db",
+            str(db_path),
+            "--days",
+            "30",
+            "--format",
+            "json",
+        ],
+    )
+    service_result = runner.invoke(
+        app,
+        [
+            "state",
+            "service-history",
+            "--db",
+            str(db_path),
+            "--service",
+            "payments",
+            "--days",
+            "30",
+            "--format",
+            "json",
+        ],
+    )
+
+    assert trends_result.exit_code == 0
+    assert service_result.exit_code == 0
+    trends_payload = json.loads(trends_result.stdout)
+    service_payload = json.loads(service_result.stdout)
+    assert [item["findings_count"] for item in trends_payload["items"]] == [1, 2]
+    assert trends_payload["items"][1]["critical_count"] == 1
+    assert service_payload["metadata"]["service"] == "payments"
+    assert [item["distinct_cves"] for item in service_payload["items"]] == [1, 1]
+    assert service_payload["items"][1]["kev_count"] == 1
+
+
 def test_cli_state_round_trip_imports_cli_snapshot_and_queries_history_and_top_services(
     monkeypatch,
     tmp_path: Path,
@@ -462,6 +561,7 @@ def _snapshot_payload(generated_at: str, findings: list[dict]) -> dict:
             "generated_at": generated_at,
             "input_format": "cve-list",
             "input_path": "fixtures/cves.txt",
+            "output_format": "json",
         },
         "findings": findings,
     }
@@ -481,6 +581,8 @@ def _finding(
         "cve_id": cve_id,
         "priority_label": priority_label,
         "priority_rank": priority_rank,
+        "rationale": f"{priority_label} test rationale",
+        "recommended_action": "Review and remediate according to policy.",
         "in_kev": in_kev,
         "attack_mapped": False,
         "attack_relevance": "Unmapped",
@@ -492,6 +594,13 @@ def _finding(
         "waiver_days_remaining": None,
         "provenance": {
             "asset_ids": [],
-            "occurrences": [{"asset_business_service": service} for service in (services or [])],
+            "occurrences": [
+                {
+                    "cve_id": cve_id,
+                    "source_format": "cve-list",
+                    "asset_business_service": service,
+                }
+                for service in (services or [])
+            ],
         },
     }

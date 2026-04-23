@@ -34,6 +34,29 @@ def test_state_store_import_is_idempotent_for_identical_snapshot_bytes(tmp_path:
     assert store.snapshot_count() == 1
 
 
+def test_state_store_import_rejects_invalid_snapshot_payload(tmp_path: Path) -> None:
+    db_path = tmp_path / "state.db"
+    snapshot_path = _write_snapshot_file(
+        tmp_path,
+        "invalid.json",
+        {
+            "metadata": {"snapshot_kind": "snapshot"},
+            "findings": [{"cve_id": "CVE-2024-9999"}],
+        },
+    )
+    store = state_store_module.SQLiteStateStore(db_path)
+
+    try:
+        store.import_snapshot(
+            snapshot_path=snapshot_path,
+            payload=json.loads(snapshot_path.read_text(encoding="utf-8")),
+        )
+    except ValueError as exc:
+        assert "Snapshot payload is not valid" in str(exc)
+    else:
+        raise AssertionError("Expected invalid snapshot import to fail")
+
+
 def test_state_store_history_returns_newest_snapshot_first(tmp_path: Path) -> None:
     db_path = tmp_path / "state.db"
     before_path = _write_snapshot_file(
@@ -290,6 +313,58 @@ def test_state_store_top_services_aggregates_across_recent_snapshots(
     assert services[2]["occurrence_count"] == 1
 
 
+def test_state_store_service_counts_preserve_duplicate_occurrences(
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    class FrozenDateTime(datetime):
+        @classmethod
+        def now(cls, tz=None):  # noqa: ANN206
+            return cls(2026, 4, 30, 12, 0, 0, tzinfo=tz or UTC)
+
+    monkeypatch.setattr(state_store_module, "datetime", FrozenDateTime)
+
+    db_path = tmp_path / "state.db"
+    snapshot_path = _write_snapshot_file(
+        tmp_path,
+        "duplicate-services.json",
+        _snapshot_payload(
+            "2026-04-20T09:00:00+00:00",
+            [
+                _finding(
+                    "CVE-2024-4100",
+                    priority_label="Critical",
+                    priority_rank=1,
+                    in_kev=True,
+                    services=["payments", "payments", "identity"],
+                )
+            ],
+        ),
+    )
+    store = state_store_module.SQLiteStateStore(db_path)
+    store.import_snapshot(
+        snapshot_path=snapshot_path,
+        payload=json.loads(snapshot_path.read_text(encoding="utf-8")),
+    )
+
+    top_services = {
+        entry["service"]: entry
+        for entry in store.top_services(days=30, priority_filter="all", limit=10)
+    }
+    service_history = store.service_history(
+        service="payments",
+        days=30,
+        priority_filter="all",
+    )
+
+    assert top_services["payments"]["occurrence_count"] == 2
+    assert top_services["payments"]["distinct_cves"] == 1
+    assert top_services["payments"]["kev_count"] == 1
+    assert service_history[0]["occurrence_count"] == 2
+    assert service_history[0]["distinct_cves"] == 1
+    assert service_history[0]["critical_count"] == 1
+
+
 def _write_snapshot_file(tmp_path: Path, name: str, payload: dict) -> Path:
     path = tmp_path / name
     path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
@@ -300,9 +375,11 @@ def _snapshot_payload(generated_at: str, findings: list[dict]) -> dict:
     return {
         "metadata": {
             "snapshot_kind": "snapshot",
+            "schema_version": "1.1.0",
             "generated_at": generated_at,
             "input_format": "cve-list",
             "input_path": "fixtures/cves.txt",
+            "output_format": "json",
         },
         "findings": findings,
     }
@@ -336,8 +413,17 @@ def _finding(
         "waiver_expires_on": waiver_expires_on,
         "waiver_review_on": waiver_review_on,
         "waiver_days_remaining": waiver_days_remaining,
+        "rationale": "Test snapshot finding.",
+        "recommended_action": "Review remediation options.",
         "provenance": {
             "asset_ids": asset_ids or [],
-            "occurrences": [{"asset_business_service": service} for service in (services or [])],
+            "occurrences": [
+                {
+                    "cve_id": cve_id,
+                    "source_format": "cve-list",
+                    "asset_business_service": service,
+                }
+                for service in (services or [])
+            ],
         },
     }

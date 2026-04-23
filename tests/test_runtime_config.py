@@ -31,6 +31,10 @@ def test_load_runtime_config_resolves_relative_paths_and_builds_default_map(
     (project / "rules").mkdir()
     (project / "rules" / "policy.yml").write_text("profiles: {}\n", encoding="utf-8")
     (project / "rules" / "waivers.yml").write_text("waivers: []\n", encoding="utf-8")
+    (project / "attack").mkdir()
+    (project / "attack" / "mapping.json").write_text('{"mapping_objects":[]}\n', encoding="utf-8")
+    (project / "attack" / "metadata.json").write_text('{"techniques":[]}\n', encoding="utf-8")
+    (project / "kev.json").write_text('{"vulnerabilities":[]}\n', encoding="utf-8")
     (project / "vex.json").write_text('{"statements":[]}\n', encoding="utf-8")
 
     config_file = project / CONFIG_FILENAME
@@ -54,6 +58,22 @@ def test_load_runtime_config_resolves_relative_paths_and_builds_default_map(
                 "  snapshot:",
                 "    diff:",
                 "      include_unchanged: true",
+                "  attack:",
+                "    validate:",
+                "      attack_mapping_file: attack/mapping.json",
+                "      attack_technique_metadata_file: attack/metadata.json",
+                "      format: json",
+                "    coverage:",
+                "      max_cves: 25",
+                "  data:",
+                "    status:",
+                "      offline_kev_file: kev.json",
+                "    update:",
+                "      source:",
+                "        - nvd",
+                "      input_format: cve-list",
+                "    export-provider-snapshot:",
+                "      cache_only: true",
             ]
         )
         + "\n",
@@ -80,6 +100,20 @@ def test_load_runtime_config_resolves_relative_paths_and_builds_default_map(
         (project / "rules" / "waivers.yml").resolve()
     )
     assert default_map["snapshot"]["diff"]["include_unchanged"] is True
+    assert default_map["attack"]["validate"]["attack_mapping_file"] == str(
+        (project / "attack" / "mapping.json").resolve()
+    )
+    assert default_map["attack"]["validate"]["attack_technique_metadata_file"] == str(
+        (project / "attack" / "metadata.json").resolve()
+    )
+    assert default_map["attack"]["validate"]["format"] == "json"
+    assert default_map["attack"]["coverage"]["max_cves"] == 25
+    assert default_map["data"]["status"]["offline_kev_file"] == str(
+        (project / "kev.json").resolve()
+    )
+    assert default_map["data"]["update"]["source"] == ["nvd"]
+    assert default_map["data"]["update"]["input_format"] == ["cve-list"]
+    assert default_map["data"]["export-provider-snapshot"]["cache_only"] is True
 
 
 def test_load_runtime_config_rejects_invalid_yaml(tmp_path: Path) -> None:

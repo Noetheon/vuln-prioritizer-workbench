@@ -13,8 +13,10 @@ from vuln_prioritizer.cli_support.common import (
     StateWaiverStatusFilter,
     TableJsonOutputFormat,
     console,
+    emit_stdout,
     exit_input_validation,
     output_format_option,
+    should_emit_json_stdout,
     validate_command_formats,
     validate_output_mode,
 )
@@ -30,9 +32,15 @@ from vuln_prioritizer.models import (
     StateInitMetadata,
     StateInitReport,
     StateInitSummary,
+    StateServiceHistoryEntry,
+    StateServiceHistoryMetadata,
+    StateServiceHistoryReport,
     StateTopServiceEntry,
     StateTopServicesMetadata,
     StateTopServicesReport,
+    StateTrendEntry,
+    StateTrendsMetadata,
+    StateTrendsReport,
     StateWaiverEntry,
     StateWaiverMetadata,
     StateWaiverReport,
@@ -41,12 +49,16 @@ from vuln_prioritizer.reporter import (
     generate_state_history_json,
     generate_state_import_json,
     generate_state_init_json,
+    generate_state_service_history_json,
     generate_state_top_services_json,
+    generate_state_trends_json,
     generate_state_waivers_json,
     render_state_history_table,
     render_state_import_panel,
     render_state_init_panel,
+    render_state_service_history_table,
     render_state_top_services_table,
+    render_state_trends_table,
     render_state_waivers_table,
     write_output,
 )
@@ -83,6 +95,10 @@ def state_init(
         )
     except (OSError, sqlite3.Error, ValueError) as exc:
         exit_input_validation(str(exc))
+
+    if should_emit_json_stdout(format, output):
+        emit_stdout(generate_state_init_json(report))
+        return
 
     console.print(render_state_init_panel(report))
     if output is not None:
@@ -126,6 +142,10 @@ def state_import_snapshot(
         )
     except (OSError, sqlite3.Error, ValueError) as exc:
         exit_input_validation(str(exc))
+
+    if should_emit_json_stdout(format, output):
+        emit_stdout(generate_state_import_json(report))
+        return
 
     console.print(render_state_import_panel(report))
     if output is not None:
@@ -172,6 +192,10 @@ def state_history(
         ),
         items=items,
     )
+
+    if should_emit_json_stdout(format, output):
+        emit_stdout(generate_state_history_json(report))
+        return
 
     if not items:
         console.print(f"[yellow]No persisted history found for {normalized_cve}.[/yellow]")
@@ -220,6 +244,10 @@ def state_waivers(
         ),
         items=items,
     )
+
+    if should_emit_json_stdout(format, output):
+        emit_stdout(generate_state_waivers_json(report))
+        return
 
     if not items:
         console.print("[yellow]No persisted waiver entries matched the requested filter.[/yellow]")
@@ -272,11 +300,123 @@ def state_top_services(
         items=items,
     )
 
+    if should_emit_json_stdout(format, output):
+        emit_stdout(generate_state_top_services_json(report))
+        return
+
     if not items:
         console.print("[yellow]No persisted service entries matched the requested window.[/yellow]")
     console.print(render_state_top_services_table(items, report.metadata))
     if output is not None:
         write_output(output, generate_state_top_services_json(report))
+        console.print(f"[green]Wrote json output to {output}[/green]")
+
+
+def state_trends(
+    db: Path = typer.Option(..., "--db", exists=False, dir_okay=False),
+    days: int = typer.Option(90, "--days", min=1),
+    priority: StatePriorityScope = typer.Option(StatePriorityScope.all, "--priority"),
+    output: Path | None = typer.Option(None, "--output", dir_okay=False),
+    format: TableJsonOutputFormat = output_format_option(
+        TableJsonOutputFormat.table, TABLE_AND_JSON_OUTPUT_FORMATS
+    ),
+) -> None:
+    """Show persisted snapshot trend rows across imported snapshots."""
+    validate_output_mode(format, output)
+    validate_command_formats(
+        command_name="state trends",
+        format=format,
+        allowed_formats=set(TABLE_AND_JSON_OUTPUT_FORMATS),
+    )
+
+    store = state_store_or_exit(db, expect_existing=True)
+    try:
+        items = [
+            StateTrendEntry.model_validate(item)
+            for item in store.trends(days=days, priority_filter=priority.value)
+        ]
+    except (OSError, sqlite3.Error, ValueError) as exc:
+        exit_input_validation(str(exc))
+
+    report = StateTrendsReport(
+        metadata=StateTrendsMetadata(
+            generated_at=iso_utc_now(),
+            db_path=str(db),
+            days=days,
+            priority_filter=priority.value,
+            entry_count=len(items),
+        ),
+        items=items,
+    )
+
+    if should_emit_json_stdout(format, output):
+        emit_stdout(generate_state_trends_json(report))
+        return
+
+    if not items:
+        console.print("[yellow]No persisted trend entries matched the requested window.[/yellow]")
+    console.print(render_state_trends_table(items, report.metadata))
+    if output is not None:
+        write_output(output, generate_state_trends_json(report))
+        console.print(f"[green]Wrote json output to {output}[/green]")
+
+
+def state_service_history(
+    db: Path = typer.Option(..., "--db", exists=False, dir_okay=False),
+    service: str = typer.Option(..., "--service"),
+    days: int = typer.Option(90, "--days", min=1),
+    priority: StatePriorityScope = typer.Option(StatePriorityScope.all, "--priority"),
+    output: Path | None = typer.Option(None, "--output", dir_okay=False),
+    format: TableJsonOutputFormat = output_format_option(
+        TableJsonOutputFormat.table, TABLE_AND_JSON_OUTPUT_FORMATS
+    ),
+) -> None:
+    """Show persisted per-service history across imported snapshots."""
+    validate_output_mode(format, output)
+    validate_command_formats(
+        command_name="state service-history",
+        format=format,
+        allowed_formats=set(TABLE_AND_JSON_OUTPUT_FORMATS),
+    )
+
+    service_name = service.strip()
+    if not service_name:
+        exit_input_validation("--service must not be empty.")
+
+    store = state_store_or_exit(db, expect_existing=True)
+    try:
+        items = [
+            StateServiceHistoryEntry.model_validate(item)
+            for item in store.service_history(
+                service=service_name,
+                days=days,
+                priority_filter=priority.value,
+            )
+        ]
+    except (OSError, sqlite3.Error, ValueError) as exc:
+        exit_input_validation(str(exc))
+
+    report = StateServiceHistoryReport(
+        metadata=StateServiceHistoryMetadata(
+            generated_at=iso_utc_now(),
+            db_path=str(db),
+            service=service_name,
+            days=days,
+            priority_filter=priority.value,
+            entry_count=len(items),
+        ),
+        items=items,
+    )
+
+    if should_emit_json_stdout(format, output):
+        emit_stdout(generate_state_service_history_json(report))
+        return
+
+    if not items:
+        console.print("[yellow]No persisted service history matched the requested scope.[/yellow]")
+    console.print(render_state_service_history_table(items, report.metadata))
+    if output is not None:
+        write_output(output, generate_state_service_history_json(report))
         console.print(f"[green]Wrote json output to {output}[/green]")
 
 
@@ -286,3 +426,5 @@ def register(state_app: typer.Typer) -> None:
     state_app.command("history")(state_history)
     state_app.command("waivers")(state_waivers)
     state_app.command("top-services")(state_top_services)
+    state_app.command("trends")(state_trends)
+    state_app.command("service-history")(state_service_history)

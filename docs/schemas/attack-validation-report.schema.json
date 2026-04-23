@@ -1,0 +1,94 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://noetheon.github.io/vuln-prioritizer/schemas/attack-validation-report.schema.json",
+  "title": "vuln-prioritizer ATT&CK validation report",
+  "description": "JSON contract for `vuln-prioritizer attack validate --format json`.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "source",
+    "mapping_file",
+    "technique_metadata_file",
+    "source_version",
+    "attack_version",
+    "domain",
+    "mapping_framework",
+    "mapping_framework_version",
+    "mapping_count",
+    "unique_cves",
+    "technique_count",
+    "missing_metadata_ids",
+    "domain_mismatch",
+    "attack_version_mismatch",
+    "revoked_or_deprecated_count",
+    "warnings"
+  ],
+  "properties": {
+    "source": {
+      "type": "string"
+    },
+    "mapping_file": {
+      "type": "string"
+    },
+    "technique_metadata_file": {
+      "$ref": "#/$defs/nullableString"
+    },
+    "source_version": {
+      "$ref": "#/$defs/nullableString"
+    },
+    "attack_version": {
+      "$ref": "#/$defs/nullableString"
+    },
+    "domain": {
+      "$ref": "#/$defs/nullableString"
+    },
+    "mapping_framework": {
+      "$ref": "#/$defs/nullableString"
+    },
+    "mapping_framework_version": {
+      "$ref": "#/$defs/nullableString"
+    },
+    "mapping_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "unique_cves": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "technique_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "missing_metadata_ids": {
+      "$ref": "#/$defs/stringArray"
+    },
+    "domain_mismatch": {
+      "type": "boolean"
+    },
+    "attack_version_mismatch": {
+      "type": "boolean"
+    },
+    "revoked_or_deprecated_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "warnings": {
+      "$ref": "#/$defs/stringArray"
+    }
+  },
+  "$defs": {
+    "nullableString": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "stringArray": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}

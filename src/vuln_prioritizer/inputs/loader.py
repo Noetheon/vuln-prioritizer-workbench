@@ -771,7 +771,10 @@ def _parse_github_alerts_json(path: Path) -> ParsedInput:
         dependency = alert.get("dependency", {})
         package = dependency.get("package", {})
         vulnerability = alert.get("security_vulnerability", {})
-        first_patched_version = vulnerability.get("first_patched_version", {})
+        first_patched_version = vulnerability.get("first_patched_version")
+        first_patched_version = (
+            first_patched_version if isinstance(first_patched_version, dict) else {}
+        )
         occurrences.append(
             InputOccurrence(
                 cve_id=cve_id,
@@ -963,7 +966,7 @@ def _first_present_string(*values: object) -> str | None:
 def _as_string_list(value: object) -> list[str]:
     if not isinstance(value, list):
         return []
-    return [str(item).strip() for item in value if str(item).strip()]
+    return [str(item).strip() for item in value if item is not None and str(item).strip()]
 
 
 def _cyclonedx_rating(vulnerability: dict) -> str | None:

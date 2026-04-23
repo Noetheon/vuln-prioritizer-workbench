@@ -143,6 +143,55 @@ def test_cli_verify_evidence_bundle_detects_unexpected_member(
     assert unexpected_item["status"] == "unexpected"
 
 
+def test_cli_evidence_bundle_includes_all_multi_input_sources(
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    first_input = tmp_path / "cves-a.txt"
+    second_input = tmp_path / "cves-b.txt"
+    analysis_file = tmp_path / "analysis.json"
+    bundle_file = tmp_path / "evidence.zip"
+    first_input.write_text("CVE-2021-44228\n", encoding="utf-8")
+    second_input.write_text("CVE-2023-44487\n", encoding="utf-8")
+    _install_fake_providers(monkeypatch)
+
+    analyze_result = runner.invoke(
+        app,
+        [
+            "analyze",
+            "--input",
+            str(first_input),
+            "--input",
+            str(second_input),
+            "--output",
+            str(analysis_file),
+            "--format",
+            "json",
+        ],
+    )
+    bundle_result = runner.invoke(
+        app,
+        [
+            "report",
+            "evidence-bundle",
+            "--input",
+            str(analysis_file),
+            "--output",
+            str(bundle_file),
+        ],
+    )
+
+    assert analyze_result.exit_code == 0
+    assert bundle_result.exit_code == 0
+    with zipfile.ZipFile(bundle_file) as archive:
+        names = set(archive.namelist())
+        manifest = json.loads(archive.read("manifest.json"))
+
+    assert manifest["source_input_paths"] == [str(first_input), str(second_input)]
+    assert manifest["source_input_path"] == str(first_input)
+    assert {"input/001-cves-a.txt", "input/002-cves-b.txt"} <= names
+
+
 def _build_evidence_bundle(monkeypatch, tmp_path: Path) -> Path:
     input_file = _write_input_file(tmp_path)
     analysis_file = tmp_path / "analysis.json"

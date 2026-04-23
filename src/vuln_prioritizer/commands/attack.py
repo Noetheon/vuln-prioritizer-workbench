@@ -25,8 +25,10 @@ from vuln_prioritizer.cli_support.common import (
     OutputFormat,
     ReportOutputFormat,
     console,
+    emit_stdout,
     output_format_option,
     print_warnings,
+    should_emit_json_stdout,
     validate_command_formats,
     validate_output_mode,
 )
@@ -59,6 +61,11 @@ def attack_validate(
         attack_technique_metadata_file=attack_technique_metadata_file,
     )
 
+    json_payload = json.dumps(result, indent=2, sort_keys=True)
+    if should_emit_json_stdout(format, output):
+        emit_stdout(json_payload)
+        return
+
     console.print(render_attack_validation_panel(result))
     print_warnings(cast(list[str], result["warnings"]))
 
@@ -66,7 +73,7 @@ def attack_validate(
         if format == OutputFormat.markdown:
             write_output(output, generate_attack_validation_markdown(result))
         elif format == OutputFormat.json:
-            write_output(output, json.dumps(result, indent=2, sort_keys=True))
+            write_output(output, json_payload)
         console.print(f"[green]Wrote {format.value} output to {output}[/green]")
 
 
@@ -100,6 +107,23 @@ def attack_coverage(
     )
     summary = AttackEnrichmentService().summarize(attack_items)
     warnings = parser_warnings + warnings
+    json_payload = json.dumps(
+        {
+            "metadata": {
+                "input_path": str(input),
+                **metadata,
+            },
+            "summary": summary.model_dump(),
+            "items": [item.model_dump() for item in attack_items],
+            "warnings": warnings,
+        },
+        indent=2,
+        sort_keys=True,
+    )
+
+    if should_emit_json_stdout(format, output):
+        emit_stdout(json_payload)
+        return
 
     console.print(render_attack_coverage_table(attack_items))
     console.print(
@@ -136,22 +160,7 @@ def attack_coverage(
                 ),
             )
         elif format == OutputFormat.json:
-            write_output(
-                output,
-                json.dumps(
-                    {
-                        "metadata": {
-                            "input_path": str(input),
-                            **metadata,
-                        },
-                        "summary": summary.model_dump(),
-                        "items": [item.model_dump() for item in attack_items],
-                        "warnings": warnings,
-                    },
-                    indent=2,
-                    sort_keys=True,
-                ),
-            )
+            write_output(output, json_payload)
         console.print(f"[green]Wrote {format.value} output to {output}[/green]")
 
 

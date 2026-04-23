@@ -28,9 +28,11 @@ from vuln_prioritizer.cli_support.common import (
     TargetKind,
     build_input_specs_or_exit,
     console,
+    emit_stdout,
     output_format_option,
     print_warnings,
     runtime_config_path,
+    should_emit_json_stdout,
     validate_command_formats,
     validate_output_mode,
 )
@@ -224,6 +226,10 @@ def snapshot_diff(
         include_unchanged=include_unchanged,
     )
 
+    if should_emit_json_stdout(format, output):
+        emit_stdout(generate_snapshot_diff_json(items, summary, metadata))
+        return
+
     console.print(render_snapshot_diff_table(items, summary, metadata))
     if output is not None:
         if format == OutputFormat.markdown:
@@ -260,6 +266,10 @@ def rollup(
         bucket_count=len(buckets),
         top=top,
     )
+
+    if should_emit_json_stdout(format, output):
+        emit_stdout(generate_rollup_json(buckets, metadata))
+        return
 
     console.print(render_rollup_table(buckets, metadata))
     if output is not None:

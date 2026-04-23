@@ -1,0 +1,146 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://noetheon.github.io/vuln-prioritizer/schemas/input-validation-report.schema.json",
+  "title": "vuln-prioritizer input validation report",
+  "description": "JSON contract for `vuln-prioritizer input validate --format json`.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["metadata", "summary", "sources", "asset_context", "vex", "warnings"],
+  "properties": {
+    "metadata": {"$ref": "#/$defs/metadata"},
+    "summary": {"$ref": "#/$defs/summary"},
+    "sources": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/source"}
+    },
+    "asset_context": {"$ref": "#/$defs/assetContext"},
+    "vex": {"$ref": "#/$defs/vex"},
+    "warnings": {"$ref": "#/$defs/stringArray"}
+  },
+  "$defs": {
+    "nullableString": {"type": ["string", "null"]},
+    "nullableInteger": {"type": ["integer", "null"]},
+    "stringArray": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "integerMap": {
+      "type": "object",
+      "additionalProperties": {"type": "integer"}
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "command",
+        "generated_at",
+        "input_path",
+        "input_paths",
+        "input_format",
+        "output_format",
+        "output_path",
+        "asset_context",
+        "vex_files",
+        "target_kind",
+        "target_ref",
+        "max_cves"
+      ],
+      "properties": {
+        "schema_version": {"const": "1.2.0"},
+        "command": {"const": "input validate"},
+        "generated_at": {"type": "string"},
+        "input_path": {"$ref": "#/$defs/nullableString"},
+        "input_paths": {"$ref": "#/$defs/stringArray"},
+        "input_format": {"type": "string"},
+        "output_format": {"const": "json"},
+        "output_path": {"$ref": "#/$defs/nullableString"},
+        "asset_context": {"$ref": "#/$defs/nullableString"},
+        "vex_files": {"$ref": "#/$defs/stringArray"},
+        "target_kind": {"type": "string"},
+        "target_ref": {"$ref": "#/$defs/nullableString"},
+        "max_cves": {"$ref": "#/$defs/nullableInteger"}
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "ok",
+        "total_rows",
+        "occurrence_count",
+        "unique_cves",
+        "input_source_count",
+        "warning_count",
+        "asset_context_rows",
+        "asset_context_rules",
+        "vex_statement_count",
+        "asset_match_conflict_count",
+        "vex_conflict_count"
+      ],
+      "properties": {
+        "ok": {"type": "boolean"},
+        "total_rows": {"type": "integer"},
+        "occurrence_count": {"type": "integer"},
+        "unique_cves": {"type": "integer"},
+        "input_source_count": {"type": "integer"},
+        "warning_count": {"type": "integer"},
+        "asset_context_rows": {"type": "integer"},
+        "asset_context_rules": {"type": "integer"},
+        "vex_statement_count": {"type": "integer"},
+        "asset_match_conflict_count": {"type": "integer"},
+        "vex_conflict_count": {"type": "integer"}
+      }
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "input_path",
+        "input_format",
+        "total_rows",
+        "occurrence_count",
+        "unique_cves",
+        "warning_count"
+      ],
+      "properties": {
+        "input_path": {"type": "string"},
+        "input_format": {"type": "string"},
+        "total_rows": {"type": "integer"},
+        "occurrence_count": {"type": "integer"},
+        "unique_cves": {"type": "integer"},
+        "warning_count": {"type": "integer"}
+      }
+    },
+    "assetContext": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "total_rows",
+        "loaded_rows",
+        "exact_rules",
+        "glob_rules",
+        "legacy_schema",
+        "warnings"
+      ],
+      "properties": {
+        "total_rows": {"type": "integer"},
+        "loaded_rows": {"type": "integer"},
+        "exact_rules": {"type": "integer"},
+        "glob_rules": {"type": "integer"},
+        "legacy_schema": {"type": "boolean"},
+        "warnings": {"$ref": "#/$defs/stringArray"}
+      }
+    },
+    "vex": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["file_count", "statement_count", "statuses"],
+      "properties": {
+        "file_count": {"type": "integer"},
+        "statement_count": {"type": "integer"},
+        "statuses": {"$ref": "#/$defs/integerMap"}
+      }
+    }
+  }
+}

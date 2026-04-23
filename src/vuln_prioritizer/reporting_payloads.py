@@ -27,7 +27,9 @@ from vuln_prioritizer.models import (
     StateHistoryReport,
     StateImportReport,
     StateInitReport,
+    StateServiceHistoryReport,
     StateTopServicesReport,
+    StateTrendsReport,
     StateWaiverReport,
 )
 from vuln_prioritizer.reporting_format import _priority_display_label, normalize_whitespace
@@ -66,8 +68,17 @@ def build_snapshot_report_payload(
     }
 
 
-def generate_summary_markdown(report_payload: dict[str, Any]) -> str:
+def generate_summary_markdown(
+    report_payload: dict[str, Any],
+    *,
+    template: str = "detailed",
+) -> str:
     """Render a short executive Markdown summary from an analysis-style payload."""
+    if template == "compact":
+        return generate_compact_summary_markdown(report_payload)
+    if template != "detailed":
+        raise ValueError(f"Unsupported summary template: {template}")
+
     metadata = report_payload.get("metadata", {})
     attack_summary = report_payload.get("attack_summary", {})
     findings = report_payload.get("findings", [])
@@ -123,6 +134,51 @@ def generate_summary_markdown(report_payload: dict[str, Any]) -> str:
             )
     else:
         lines.append("- No findings matched the current filters.")
+    return "\n".join(lines) + "\n"
+
+
+def generate_compact_summary_markdown(report_payload: dict[str, Any]) -> str:
+    """Render a compact Markdown summary suitable for GitHub step summaries."""
+    metadata = report_payload.get("metadata", {})
+    attack_summary = report_payload.get("attack_summary", {})
+    findings = report_payload.get("findings", [])
+    counts_by_priority = metadata.get("counts_by_priority", {})
+    metrics = [
+        str(metadata.get("findings_count", 0)),
+        str(counts_by_priority.get("Critical", 0)),
+        str(counts_by_priority.get("High", 0)),
+        str(metadata.get("kev_hits", 0)),
+        str(attack_summary.get("mapped_cves", 0)),
+        str(metadata.get("waiver_review_due_count", 0)),
+        str(metadata.get("expired_waiver_count", 0)),
+    ]
+    lines = [
+        "# Vulnerability Prioritization Summary",
+        "",
+        f"- Input: `{metadata.get('input_path', 'N.A.')}`",
+        f"- Input format: `{metadata.get('input_format', 'N.A.')}`",
+        f"- Policy profile: `{metadata.get('policy_profile', 'default')}`",
+        "",
+        "| Findings shown | Critical | High | KEV hits | "
+        "ATT&CK mapped | Review due | Expired waivers |",
+        "| --- | --- | --- | --- | --- | --- | --- |",
+        "| " + " | ".join(metrics) + " |",
+    ]
+    if findings:
+        lines.extend(["", "## Top Findings"])
+        for finding in findings[:3]:
+            lines.append(
+                "- "
+                + f"{finding.get('cve_id', 'N.A.')} "
+                + "("
+                + _priority_display_label(
+                    str(finding.get("priority_label", "N.A.")),
+                    bool(finding.get("in_kev")),
+                    bool(finding.get("waived")),
+                    str(finding.get("waiver_status")) if finding.get("waiver_status") else None,
+                )
+                + ")"
+            )
     return "\n".join(lines) + "\n"
 
 
@@ -187,6 +243,16 @@ def generate_state_waivers_json(report: StateWaiverReport) -> str:
 
 def generate_state_top_services_json(report: StateTopServicesReport) -> str:
     """Render the JSON state-top-services export."""
+    return json.dumps(report.model_dump(), indent=2, sort_keys=True)
+
+
+def generate_state_trends_json(report: StateTrendsReport) -> str:
+    """Render the JSON state-trends export."""
+    return json.dumps(report.model_dump(), indent=2, sort_keys=True)
+
+
+def generate_state_service_history_json(report: StateServiceHistoryReport) -> str:
+    """Render the JSON state-service-history export."""
     return json.dumps(report.model_dump(), indent=2, sort_keys=True)
 
 

@@ -164,6 +164,80 @@ def test_explain_json_matches_published_schema(monkeypatch, tmp_path: Path) -> N
     jsonschema.validate(payload, _load_schema("explain-report.schema.json"))
 
 
+def test_attack_validation_json_matches_published_schema(tmp_path: Path) -> None:
+    output_file = tmp_path / "attack-validation.json"
+
+    result = runner.invoke(
+        app,
+        [
+            "attack",
+            "validate",
+            "--attack-mapping-file",
+            str(ATTACK_ROOT / "ctid_kev_enterprise_2025-07-28_attack-16.1_subset.json"),
+            "--attack-technique-metadata-file",
+            str(ATTACK_ROOT / "attack_techniques_enterprise_16.1_subset.json"),
+            "--output",
+            str(output_file),
+            "--format",
+            "json",
+        ],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(output_file.read_text(encoding="utf-8"))
+    jsonschema.validate(payload, _load_schema("attack-validation-report.schema.json"))
+
+
+def test_attack_coverage_json_matches_published_schema(tmp_path: Path) -> None:
+    output_file = tmp_path / "attack-coverage.json"
+
+    result = runner.invoke(
+        app,
+        [
+            "attack",
+            "coverage",
+            "--input",
+            "data/sample_cves_mixed.txt",
+            "--attack-mapping-file",
+            str(ATTACK_ROOT / "ctid_kev_enterprise_2025-07-28_attack-16.1_subset.json"),
+            "--attack-technique-metadata-file",
+            str(ATTACK_ROOT / "attack_techniques_enterprise_16.1_subset.json"),
+            "--output",
+            str(output_file),
+            "--format",
+            "json",
+        ],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(output_file.read_text(encoding="utf-8"))
+    jsonschema.validate(payload, _load_schema("attack-coverage-report.schema.json"))
+
+
+def test_input_validation_json_matches_published_schema(tmp_path: Path) -> None:
+    input_file = tmp_path / "cves.txt"
+    output_file = tmp_path / "input-validation.json"
+    input_file.write_text("CVE-2021-44228\n", encoding="utf-8")
+
+    result = runner.invoke(
+        app,
+        [
+            "input",
+            "validate",
+            "--input",
+            str(input_file),
+            "--output",
+            str(output_file),
+            "--format",
+            "json",
+        ],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(output_file.read_text(encoding="utf-8"))
+    jsonschema.validate(payload, _load_schema("input-validation-report.schema.json"))
+
+
 def test_data_status_json_matches_published_schema(tmp_path: Path) -> None:
     output_file = tmp_path / "data-status.json"
 

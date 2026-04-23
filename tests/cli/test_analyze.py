@@ -428,6 +428,41 @@ def test_cli_analyze_can_emit_markdown_summary_sidecar(
     assert "CVE-2021-44228" in summary
 
 
+def test_cli_analyze_can_emit_compact_summary_template(
+    install_fake_providers,
+    runner,
+    tmp_path: Path,
+    write_input_file,
+) -> None:
+    input_file = write_input_file(tmp_path)
+    output_file = tmp_path / "analysis.json"
+    summary_file = tmp_path / "summary.md"
+    install_fake_providers()
+
+    result = runner.invoke(
+        app,
+        [
+            "analyze",
+            "--input",
+            str(input_file),
+            "--output",
+            str(output_file),
+            "--format",
+            "json",
+            "--summary-output",
+            str(summary_file),
+            "--summary-template",
+            "compact",
+        ],
+    )
+
+    assert result.exit_code == 0
+    summary = summary_file.read_text(encoding="utf-8")
+    assert "| Findings shown | Critical | High | KEV hits | ATT&CK mapped |" in summary
+    assert "Merged inputs" not in summary
+    assert summary.count("CVE-") <= 3
+
+
 def test_cli_analyze_applies_waiver_file_and_hide_waived(
     install_fake_providers,
     runner,

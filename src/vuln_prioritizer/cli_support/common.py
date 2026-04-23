@@ -140,6 +140,11 @@ class StatePriorityScope(StrEnum):
     low = "low"
 
 
+class SummaryTemplate(StrEnum):
+    detailed = "detailed"
+    compact = "compact"
+
+
 PRIORITY_LABELS = {
     PriorityFilter.critical: "Critical",
     PriorityFilter.high: "High",
@@ -290,6 +295,14 @@ def validate_command_formats(
         f"[red]Input validation failed:[/red] {command_name} supports only --format {supported}."
     )
     raise typer.Exit(code=2)
+
+
+def should_emit_json_stdout(format: StrEnum, output: Path | None) -> bool:
+    return format.value == "json" and output is None
+
+
+def emit_stdout(content: str) -> None:
+    typer.echo(content)
 
 
 def print_warnings(warnings: list[str]) -> None:

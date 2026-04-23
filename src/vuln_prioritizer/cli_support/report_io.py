@@ -248,21 +248,32 @@ def write_evidence_bundle(
         ("report.html", generate_html_report(payload).encode("utf-8"), "html-report"),
         ("summary.md", generate_summary_markdown(payload).encode("utf-8"), "markdown-summary"),
     ]
-    resolved_input = resolve_analysis_input_path(metadata.get("input_path"), analysis_path)
+    reported_input_paths = analysis_input_paths(metadata)
+    resolved_inputs = [
+        resolved_input
+        for reported_path in reported_input_paths
+        if (resolved_input := resolve_analysis_input_path(reported_path, analysis_path)) is not None
+    ]
     included_input_copy = False
     if include_input_copy:
-        if resolved_input is not None:
-            bundle_entries.append(
-                (
-                    f"input/{resolved_input.name}",
-                    resolved_input.read_bytes(),
-                    "source-input",
+        if resolved_inputs:
+            multiple_inputs = len(reported_input_paths) > 1
+            for index, resolved_input in enumerate(resolved_inputs, start=1):
+                bundle_entries.append(
+                    (
+                        source_input_bundle_path(
+                            resolved_input,
+                            index=index,
+                            multiple=multiple_inputs,
+                        ),
+                        resolved_input.read_bytes(),
+                        "source-input",
+                    )
                 )
-            )
             included_input_copy = True
-        elif metadata.get("input_path"):
+        elif reported_input_paths:
             console.print(
-                "[yellow]Referenced input file could not be resolved; bundle will omit the "
+                "[yellow]Referenced input file(s) could not be resolved; bundle will omit the "
                 "original input copy.[/yellow]"
             )
 
@@ -273,7 +284,8 @@ def write_evidence_bundle(
     manifest = EvidenceBundleManifest(
         generated_at=iso_utc_now(),
         source_analysis_path=str(analysis_path),
-        source_input_path=str(metadata.get("input_path")) if metadata.get("input_path") else None,
+        source_input_path=reported_input_paths[0] if reported_input_paths else None,
+        source_input_paths=reported_input_paths,
         findings_count=int(metadata.get("findings_count", 0)),
         kev_hits=int(metadata.get("kev_hits", 0)),
         waived_count=int(metadata.get("waived_count", 0)),
@@ -288,6 +300,30 @@ def write_evidence_bundle(
             archive.writestr(path, content)
         archive.writestr("manifest.json", generate_evidence_bundle_manifest_json(manifest))
     return manifest
+
+
+def analysis_input_paths(metadata: object) -> list[str]:
+    if not isinstance(metadata, dict):
+        return []
+
+    input_paths = metadata.get("input_paths")
+    if isinstance(input_paths, list):
+        normalized = [
+            item.strip() for item in input_paths if isinstance(item, str) and item.strip()
+        ]
+        if normalized:
+            return normalized
+
+    input_path = metadata.get("input_path")
+    if isinstance(input_path, str) and input_path.strip():
+        return [input_path.strip()]
+    return []
+
+
+def source_input_bundle_path(resolved_input: Path, *, index: int, multiple: bool) -> str:
+    if multiple:
+        return f"input/{index:03d}-{resolved_input.name}"
+    return f"input/{resolved_input.name}"
 
 
 def resolve_analysis_input_path(reported_path: object, analysis_path: Path) -> Path | None:

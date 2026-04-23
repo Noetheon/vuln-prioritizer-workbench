@@ -1,0 +1,271 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://noetheon.github.io/vuln-prioritizer/schemas/attack-coverage-report.schema.json",
+  "title": "vuln-prioritizer ATT&CK coverage report",
+  "description": "JSON contract for `vuln-prioritizer attack coverage --format json`.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "metadata",
+    "summary",
+    "items",
+    "warnings"
+  ],
+  "properties": {
+    "metadata": {
+      "$ref": "#/$defs/metadata"
+    },
+    "summary": {
+      "$ref": "#/$defs/summary"
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/attackData"
+      }
+    },
+    "warnings": {
+      "$ref": "#/$defs/stringArray"
+    }
+  },
+  "$defs": {
+    "nullableString": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "stringArray": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "integerMap": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "integer"
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "input_path",
+        "source",
+        "mapping_file",
+        "technique_metadata_file",
+        "source_version",
+        "attack_version",
+        "domain",
+        "mapping_framework",
+        "mapping_framework_version"
+      ],
+      "properties": {
+        "input_path": {
+          "type": "string"
+        },
+        "source": {
+          "type": "string"
+        },
+        "mapping_file": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "technique_metadata_file": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "source_version": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "attack_version": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "domain": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "mapping_framework": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "mapping_framework_version": {
+          "$ref": "#/$defs/nullableString"
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mapped_cves",
+        "unmapped_cves",
+        "mapping_type_distribution",
+        "technique_distribution",
+        "tactic_distribution"
+      ],
+      "properties": {
+        "mapped_cves": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "unmapped_cves": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "mapping_type_distribution": {
+          "$ref": "#/$defs/integerMap"
+        },
+        "technique_distribution": {
+          "$ref": "#/$defs/integerMap"
+        },
+        "tactic_distribution": {
+          "$ref": "#/$defs/integerMap"
+        }
+      }
+    },
+    "attackMapping": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "capability_id",
+        "attack_object_id",
+        "attack_object_name",
+        "mapping_type",
+        "capability_group",
+        "capability_description",
+        "comments",
+        "references"
+      ],
+      "properties": {
+        "capability_id": {
+          "type": "string"
+        },
+        "attack_object_id": {
+          "type": "string"
+        },
+        "attack_object_name": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "mapping_type": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "capability_group": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "capability_description": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "comments": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "references": {
+          "$ref": "#/$defs/stringArray"
+        }
+      }
+    },
+    "attackTechnique": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "attack_object_id",
+        "name",
+        "tactics",
+        "url",
+        "revoked",
+        "deprecated"
+      ],
+      "properties": {
+        "attack_object_id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "tactics": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "url": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "revoked": {
+          "type": "boolean"
+        },
+        "deprecated": {
+          "type": "boolean"
+        }
+      }
+    },
+    "attackData": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "cve_id",
+        "mapped",
+        "source",
+        "source_version",
+        "attack_version",
+        "domain",
+        "mappings",
+        "techniques",
+        "mapping_types",
+        "capability_groups",
+        "attack_relevance",
+        "attack_rationale",
+        "attack_techniques",
+        "attack_tactics",
+        "attack_note"
+      ],
+      "properties": {
+        "cve_id": {
+          "type": "string"
+        },
+        "mapped": {
+          "type": "boolean"
+        },
+        "source": {
+          "type": "string"
+        },
+        "source_version": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "attack_version": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "domain": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "mappings": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/attackMapping"
+          }
+        },
+        "techniques": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/attackTechnique"
+          }
+        },
+        "mapping_types": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "capability_groups": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "attack_relevance": {
+          "type": "string"
+        },
+        "attack_rationale": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "attack_techniques": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "attack_tactics": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "attack_note": {
+          "$ref": "#/$defs/nullableString"
+        }
+      }
+    }
+  }
+}

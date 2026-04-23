@@ -15,9 +15,12 @@
 | `state history` | local SQLite DB + `--cve` | `json` | JSON schema | Returns persisted per-CVE history across imported snapshots. |
 | `state waivers` | local SQLite DB | `json` | JSON schema | Shows persisted waiver lifecycle debt from the latest snapshot or full imported history. |
 | `state top-services` | local SQLite DB | `json` | JSON schema | Shows repeated service pressure across imported snapshots without rerunning enrichment. |
+| `state trends` | local SQLite DB | `json` | JSON schema | Shows per-snapshot priority, KEV, ATT&CK, and waiver trends from imported snapshots. |
+| `state service-history` | local SQLite DB + `--service NAME` | `json` | JSON schema | Shows per-service history across imported snapshots without rerunning enrichment. |
+| `input validate` | repeatable `--input PATH`, optional asset/VEX files | `json` | JSON schema | Performs local parser, asset context, and VEX validation without provider lookups. |
 | `rollup` | analysis JSON or snapshot JSON | `markdown`, `json` | JSON schema | Aggregates findings by `asset_id` or `asset_business_service`, keeps waiver lifecycle debt visible, and ranks buckets for remediation planning without rerunning enrichment. |
-| `attack validate` | ATT&CK local files | `markdown`, `json` | No published schema yet | Validates local mapping and metadata artifacts; `ctid-json` is the preferred workflow. |
-| `attack coverage` | `--input PATH` | `markdown`, `json` | No published schema yet | Uses the same input loader for CVE extraction. |
+| `attack validate` | ATT&CK local files | `markdown`, `json` | JSON schema | Validates local mapping and metadata artifacts; `ctid-json` is the preferred workflow. |
+| `attack coverage` | `--input PATH` | `markdown`, `json` | JSON schema | Uses the same input loader for CVE extraction. |
 | `attack navigator-layer` | `--input PATH` | Navigator layer JSON | Navigator JSON, no local schema here | Exports a frequency-based ATT&CK Navigator layer. |
 | `data status` | none | `json` | JSON schema | Cache namespace inspection plus optional local ATT&CK metadata validation. |
 | `data update` | optional repeatable `--input PATH` / `--cve` | `json` | JSON schema | Cache refresh for `nvd`, `epss`, and `kev`; `table` remains the default terminal view. |
@@ -51,7 +54,7 @@
 | Policy profiles | yes | yes | yes | Built-ins: `default`, `enterprise`, `conservative`. |
 | Custom policy file | yes | yes | yes | YAML-defined profiles, selected by `--policy-profile`. |
 | Waiver file | yes | yes | yes | YAML risk-acceptance rules mark findings as waived without deleting the underlying prioritization evidence. Optional `review_on` plus automatic near-expiry handling keep stale waivers visible. |
-| Runtime config discovery | yes | yes | yes | Also applies to `doctor`, `snapshot create`, and `rollup` where relevant defaults exist. |
+| Runtime config discovery | yes | yes | yes | Also applies to `doctor`, `snapshot create`, `rollup`, `attack.*`, and `data.*` where relevant defaults exist. |
 | `--show-suppressed` | yes | yes | yes | Reveals findings fully suppressed by VEX. |
 | `--hide-waived` | yes | yes | no | Keeps waiver governance visible in metadata while removing waived findings from the default visible list. |
 | `--fail-on` | yes | no | no | Returns exit code `1` when the threshold is met. |
@@ -77,11 +80,11 @@ Without a matching target, the explain flow still works, but asset-context and V
 - Prefer `--input-format` over `auto` in CI if reproducibility matters.
 - Prefer `--html-output` when one analyze run needs both machine-readable JSON and a human-facing HTML artifact.
 - Prefer `--summary-output` when GitHub Actions, PR automation, or local review needs a compact Markdown executive summary.
-- Prefer `state import-snapshot` plus `state history|waivers|top-services` when you need repeated local review over saved snapshots rather than another live enrichment run.
+- Prefer `state import-snapshot` plus `state history|waivers|top-services|trends|service-history` when you need repeated local review over saved snapshots rather than another live enrichment run.
 - Prefer `report evidence-bundle` when a review board or release gate needs a reproducible offline artifact set from a saved analysis run.
 - Prefer `report verify-evidence-bundle` before shipping or archiving an evidence ZIP outside the repository or CI workspace.
 - `report html` expects an analysis JSON export, not compare JSON or explain JSON.
 - `sarif` is part of the documented contract only for `analyze`.
-- `data status`, `data update`, and `data verify` now publish JSON contracts via `--format json`; their Rich table layout remains human-facing.
+- `data status`, `data update`, `data verify`, and `data export-provider-snapshot` publish JSON contracts; their Rich table layout remains human-facing where applicable.
 - The optional SQLite state store is separate from the existing file cache and does not change `analyze`, `snapshot`, or `report` output semantics.
 - `vuln-prioritizer.yml` is the documented runtime-config filename; `--config` and `--no-config` are the stable CLI overrides.
