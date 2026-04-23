@@ -46,7 +46,10 @@ def test_cli_report_html_renders_from_analysis_json(
 
     assert html_result.exit_code == 0
     html = html_file.read_text(encoding="utf-8")
-    assert "<h1>vuln-prioritizer Executive Report</h1>" in html
+    assert 'data-section="executive-brief"' in html
+    assert "Key Signals" in html
+    assert "Decision &amp; Action" in html
+    assert "Priority Queue" in html
     assert "CVE-2021-44228" in html
 
 

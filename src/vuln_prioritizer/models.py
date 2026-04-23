@@ -225,6 +225,12 @@ class KevData(StrictModel):
     due_date: str | None = None
 
 
+class ProviderEvidence(StrictModel):
+    nvd: NvdData
+    epss: EpssData
+    kev: KevData
+
+
 class AttackMapping(StrictModel):
     capability_id: str
     attack_object_id: str
@@ -393,6 +399,7 @@ class PrioritizedFinding(StrictModel):
     priority_label: str
     priority_rank: int
     rationale: str
+    provider_evidence: ProviderEvidence | None = None
     remediation: RemediationPlan = Field(default_factory=RemediationPlan)
     recommended_action: str
 

@@ -644,6 +644,16 @@
             "$ref": "#/$defs/attackTechnique"
           }
         },
+        "provider_evidence": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/providerEvidence"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "provenance": {
           "$ref": "#/$defs/findingProvenance"
         },
@@ -711,6 +721,26 @@
         },
         "recommended_action": {
           "type": "string"
+        }
+      }
+    },
+    "providerEvidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "nvd",
+        "epss",
+        "kev"
+      ],
+      "properties": {
+        "nvd": {
+          "$ref": "#/$defs/nvdData"
+        },
+        "epss": {
+          "$ref": "#/$defs/epssData"
+        },
+        "kev": {
+          "$ref": "#/$defs/kevData"
         }
       }
     },

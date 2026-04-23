@@ -2,168 +2,1872 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>vuln-prioritizer report</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>vuln-prioritizer operations report</title>
   <style>
     :root {
-      color-scheme: light;
-      --ink: #17212b;
-      --muted: #5a6775;
-      --line: #d4dbe2;
-      --canvas: #f5f1e8;
-      --panel: #fffdf8;
-      --panel-alt: #f3efe5;
-      --accent: #0f5c4d;
-      --accent-soft: #dcebe7;
-      --danger: #8a2432;
-      --danger-soft: #f7dde1;
-      --warning: #8a5a12;
-      --warning-soft: #f6ead6;
+      --bg: #f5f6f8;
+      --surface: #ffffff;
+      --surface-sunken: #f8f9fb;
+      --text-1: #111827;
+      --text-2: #4b5563;
+      --text-3: #9ca3af;
+      --border: #e5e7eb;
+      --border-strong: #d1d5db;
+      --c-critical: #dc2626; --c-critical-bg: #fef2f2; --c-critical-border: #fecaca;
+      --c-high:     #ea580c; --c-high-bg:     #fff7ed; --c-high-border:     #fed7aa;
+      --c-medium:   #d97706; --c-medium-bg:   #fffbeb; --c-medium-border:   #fde68a;
+      --c-low:      #6b7280; --c-low-bg:      #f9fafb; --c-low-border:      #e5e7eb;
+      --c-info:     #2563eb; --c-info-bg:     #eff6ff; --c-info-border:     #bfdbfe;
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.08);
+      --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+      --radius: 10px;
+      --radius-sm: 6px;
+      --radius-chip: 4px;
+      --font-sans: "Avenir Next", "Segoe UI", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+      --font-serif: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
+      --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
     }
+    *, *::before, *::after { box-sizing: border-box; }
+    html { scroll-behavior: auto; }
     body {
-      font-family: Georgia, "Times New Roman", serif;
       margin: 0;
-      color: var(--ink);
+      min-height: 100vh;
+      font-family: var(--font-sans);
+      font-size: 15px;
+      line-height: 1.6;
+      color: var(--text-1);
       background:
-        radial-gradient(circle at top right, rgba(15, 92, 77, 0.08), transparent 30%),
-        linear-gradient(180deg, #f8f4eb 0%, var(--canvas) 100%);
+        radial-gradient(circle at top left, rgba(37, 99, 235, 0.04), transparent 26%),
+        linear-gradient(180deg, #f5f3ee 0%, #f6f7fa 42%, #eef2f8 100%);
     }
-    main { max-width: 1280px; margin: 0 auto; padding: 2.5rem 2rem 3rem; }
-    h1, h2 { margin-bottom: 0.5rem; }
-    p { line-height: 1.5; }
-    .eyebrow {
-      text-transform: uppercase;
-      letter-spacing: 0.12em;
-      color: var(--accent);
-      font-size: 0.78rem;
-      margin-bottom: 0.4rem;
+    main {
+      max-width: 1360px;
+      margin: 0 auto;
+      padding: 1rem 1rem calc(10rem + env(safe-area-inset-bottom, 0px));
     }
-    .hero { margin-bottom: 2rem; }
-    .hero p { max-width: 70ch; color: var(--muted); }
-    .meta {
-      background: rgba(255, 253, 248, 0.9);
-      border: 1px solid var(--line);
-      padding: 1rem 1.2rem;
-      border-radius: 14px;
-      box-shadow: 0 10px 30px rgba(30, 40, 48, 0.06);
+    h1, h2, h3, h4, h5, p, dl, ul {
+      margin-top: 0;
     }
-    table { width: 100%; border-collapse: collapse; margin-top: 1rem; background: var(--panel); }
-    th, td {
-      border: 1px solid var(--line);
-      padding: 0.75rem;
-      text-align: left;
-      vertical-align: top;
-    }
-    th { background: var(--panel-alt); }
-    .summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; }
-    .summary.secondary { margin-top: 1rem; grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .card {
-      background: rgba(255, 253, 248, 0.94);
-      border: 1px solid var(--line);
-      border-radius: 14px;
-      padding: 1rem;
-      box-shadow: 0 10px 24px rgba(23, 33, 43, 0.05);
-    }
-    .card strong {
-      display: block;
-      font-size: 0.85rem;
-      color: var(--muted);
-      margin-bottom: 0.35rem;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-    }
-    .metric {
-      font-size: 2rem;
-      line-height: 1;
-    }
-    .subtle { margin-top: 0.35rem; color: var(--muted); font-size: 0.92rem; }
-    .badge {
-      display: inline-block;
-      padding: 0.2rem 0.55rem;
-      border-radius: 999px;
-      font-size: 0.82rem;
+    h1 {
+      font-family: var(--font-serif);
+      font-size: clamp(1.65rem, 2.5vw, 2.3rem);
       font-weight: 700;
+      line-height: 1.08;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.35rem;
+    }
+    h2 {
+      font-family: var(--font-serif);
+      font-size: 1.4rem;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      margin-bottom: 0.3rem;
+    }
+    h3 { font-size: 1.05rem; font-weight: 600; margin-bottom: 0.25rem; }
+    h4 { font-size: 0.9rem; font-weight: 600; margin-bottom: 0.25rem; color: var(--text-2); }
+    h5 { font-size: 0.8rem; font-weight: 600; margin-bottom: 0.2rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-3); }
+    p {
+      line-height: 1.65;
+    }
+    a {
+      color: var(--c-info);
+      text-decoration: none;
+    }
+    a:hover { text-decoration: underline; }
+
+    /* ── Topbar ─────────────────────────────────────────── */
+    .topbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.5rem 1.5rem;
+      padding: 0.9rem 1.25rem;
+      background: linear-gradient(135deg, #101827 0%, #16233b 100%);
+      color: #f9fafb;
+      border-radius: var(--radius) var(--radius) 0 0;
+    }
+    .topbar-brand {
+      font-size: 0.85rem;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      color: #f9fafb;
+    }
+    .topbar-copy {
+      display: grid;
+      gap: 0.1rem;
+    }
+    .topbar-meta {
+      font-size: 0.78rem;
+      color: #9ca3af;
+      overflow-wrap: anywhere;
+    }
+    .topbar-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+      margin-left: auto;
+    }
+
+    /* ── Page nav ───────────────────────────────────────── */
+    .page-nav {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      box-shadow: var(--shadow-sm);
+    }
+    .page-nav a {
+      flex: 0 0 auto;
+      padding: 0.65rem 1.1rem;
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: var(--text-2);
+      text-decoration: none;
+      border-bottom: 2px solid transparent;
+      transition: color 120ms, border-color 120ms;
       white-space: nowrap;
     }
-    .badge.urgency { background: var(--warning-soft); color: var(--warning); }
-    .badge.kev { background: var(--danger-soft); color: var(--danger); }
-    .section { margin-top: 2rem; }
-    @media (max-width: 900px) {
-      main { padding: 1.4rem 1rem 2rem; }
-      .summary, .summary.secondary { grid-template-columns: 1fr; }
-      table { display: block; overflow-x: auto; }
+    .page-nav a:hover {
+      color: var(--text-1);
+      border-bottom-color: var(--border-strong);
+      text-decoration: none;
     }
-  </style>
+
+    /* ── Stats row ──────────────────────────────────────── */
+    .stats-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-top: 0;
+      border-radius: 0 0 var(--radius) var(--radius);
+      margin-bottom: 1.25rem;
+      overflow: hidden;
+    }
+    .stat-cell {
+      flex: 1 1 100px;
+      padding: 1rem 1.25rem;
+      border-right: 1px solid var(--border);
+      text-align: center;
+    }
+    .stat-cell:last-child { border-right: 0; }
+    .stat-value {
+      font-size: 1.9rem;
+      font-weight: 700;
+      line-height: 1;
+      margin-bottom: 0.2rem;
+      color: var(--text-1);
+    }
+    .stat-label {
+      font-size: 0.73rem;
+      font-weight: 500;
+      color: var(--text-3);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .stat-cell.is-critical .stat-value { color: var(--c-critical); }
+    .stat-cell.is-high     .stat-value { color: var(--c-high); }
+    .stat-cell.is-medium   .stat-value { color: var(--c-medium); }
+
+    /* ── Sections ───────────────────────────────────────── */
+    .section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      margin-top: 1.1rem;
+      overflow: hidden;
+      box-shadow: var(--shadow-sm);
+    }
+    .section-header {
+      padding: 1.1rem 1.35rem 0.85rem;
+      border-bottom: 1px solid var(--border);
+      background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,253,0.95));
+    }
+    .section-header h2 {
+      margin-bottom: 0.15rem;
+      font-size: 1.45rem;
+    }
+    .section-subtitle {
+      font-size: 0.82rem;
+      color: var(--text-2);
+      margin-bottom: 0;
+      max-width: 72rem;
+    }
+    .section-inner {
+      padding: 1.25rem 1.35rem;
+    }
+    .section-inner + .section-inner {
+      border-top: 1px solid var(--border);
+      padding-top: 1rem;
+    }
+    .stack {
+      display: grid;
+      gap: 0.85rem;
+    }
+    .panel-card {
+      padding: 1rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: linear-gradient(180deg, #ffffff 0%, #f8f9fc 100%);
+      min-width: 0;
+      box-shadow: var(--shadow-sm);
+      height: 100%;
+    }
+    .executive-hero-card {
+      background:
+        radial-gradient(circle at top right, rgba(234, 88, 12, 0.06), transparent 28%),
+        linear-gradient(180deg, #fffdfa 0%, #f9fbff 100%);
+    }
+    .executive-hero-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 0.9rem;
+      flex-wrap: wrap;
+    }
+    .hero-lead {
+      margin-bottom: 0;
+      font-size: 0.95rem;
+      color: var(--text-1);
+      line-height: 1.55;
+      max-width: 42rem;
+    }
+    .executive-focus-card {
+      padding: 1rem 1.05rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: linear-gradient(180deg, rgba(255,255,255,0.92), rgba(246,248,252,0.92));
+      display: grid;
+      gap: 0.85rem;
+      box-shadow: var(--shadow-sm);
+    }
+    .executive-focus-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+    .executive-focus-title {
+      margin: 0;
+      font-family: var(--font-serif);
+      font-size: clamp(1.15rem, 1.8vw, 1.4rem);
+      line-height: 1.08;
+      letter-spacing: -0.02em;
+      color: var(--text-1);
+    }
+    .executive-focus-copy {
+      margin: 0;
+      font-size: 0.88rem;
+      line-height: 1.6;
+      color: var(--text-1);
+      max-width: 58rem;
+    }
+    .executive-focus-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 0.65rem;
+    }
+    .executive-focus-item {
+      padding: 0.72rem 0.78rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: rgba(255, 255, 255, 0.78);
+      min-width: 0;
+    }
+    .executive-focus-item span {
+      display: block;
+      margin-bottom: 0.14rem;
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--text-3);
+    }
+    .executive-focus-item strong {
+      display: block;
+      font-size: 0.83rem;
+      font-weight: 600;
+      line-height: 1.4;
+      color: var(--text-1);
+      overflow-wrap: anywhere;
+    }
+    .review-flow-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 0.65rem;
+    }
+    .review-step {
+      padding: 0.78rem 0.82rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: rgba(255, 255, 255, 0.66);
+      min-width: 0;
+    }
+    .review-step-index {
+      display: block;
+      margin-bottom: 0.28rem;
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--c-info);
+    }
+    .review-step h4 {
+      margin-bottom: 0.3rem;
+      color: var(--text-1);
+    }
+    .review-step p {
+      margin: 0;
+      font-size: 0.78rem;
+      line-height: 1.5;
+      color: var(--text-2);
+    }
+    .hero-highlights {
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    }
+    .snapshot-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 0.65rem;
+    }
+    .snapshot-card {
+      padding: 0.8rem 0.85rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: rgba(255, 255, 255, 0.72);
+    }
+    .snapshot-label {
+      margin-bottom: 0.2rem;
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--text-3);
+    }
+    .snapshot-value {
+      margin-bottom: 0.25rem;
+      font-size: 1rem;
+      font-weight: 700;
+      line-height: 1.2;
+      color: var(--text-1);
+    }
+    .snapshot-detail {
+      margin: 0;
+      font-size: 0.76rem;
+      line-height: 1.45;
+      color: var(--text-2);
+    }
+
+    /* ── Metric cards ───────────────────────────────────── */
+    .metric-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 0.75rem;
+      align-items: stretch;
+    }
+    .metric-card {
+      padding: 0.85rem 1rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--surface-sunken);
+      height: 100%;
+    }
+    .metric-card[data-tone="critical"] { border-color: var(--c-critical-border); background: var(--c-critical-bg); }
+    .metric-card[data-tone="high"]     { border-color: var(--c-high-border);     background: var(--c-high-bg); }
+    .metric-card[data-tone="medium"]   { border-color: var(--c-medium-border);   background: var(--c-medium-bg); }
+    .metric-card[data-tone="warning"]  { border-color: var(--c-medium-border);   background: var(--c-medium-bg); }
+    .metric-card[data-tone="info"],
+    .metric-card[data-tone="accent"]   { border-color: var(--c-info-border);     background: var(--c-info-bg); }
+    .metric-label {
+      font-size: 0.72rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-3);
+      margin-bottom: 0.25rem;
+    }
+    .metric-value {
+      font-size: 1.55rem;
+      font-weight: 700;
+      line-height: 1;
+      color: var(--text-1);
+    }
+    .metric-card[data-tone="critical"] .metric-value { color: var(--c-critical); }
+    .metric-card[data-tone="high"]     .metric-value { color: var(--c-high); }
+    .metric-card[data-tone="medium"]   .metric-value { color: var(--c-medium); }
+    .metric-card[data-tone="warning"]  .metric-value { color: var(--c-medium); }
+    .metric-card[data-tone="info"],
+    .metric-card[data-tone="accent"]   { color: var(--c-info); }
+    .metric-detail {
+      font-size: 0.78rem;
+      color: var(--text-2);
+      margin-top: 0.25rem;
+      margin-bottom: 0;
+    }
+
+    /* ── Chips ──────────────────────────────────────────── */
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.18rem 0.55rem;
+      font-size: 0.72rem;
+      font-weight: 600;
+      border-radius: var(--radius-chip);
+      border: 1px solid var(--border);
+      background: var(--surface-sunken);
+      color: var(--text-2);
+      white-space: nowrap;
+    }
+    .chip-with-count {
+      gap: 0.38rem;
+    }
+    .chip-label {
+      min-width: 0;
+    }
+    .chip-count {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 1.15rem;
+      height: 1.15rem;
+      padding: 0 0.28rem;
+      border-radius: 999px;
+      background: rgba(17, 24, 39, 0.08);
+      color: var(--text-1);
+      font-size: 0.68rem;
+      font-weight: 700;
+      line-height: 1;
+    }
+    .chip[data-tone="critical"] { background: var(--c-critical-bg); border-color: var(--c-critical-border); color: var(--c-critical); }
+    .chip[data-tone="high"]     { background: var(--c-high-bg);     border-color: var(--c-high-border);     color: var(--c-high); }
+    .chip[data-tone="medium"]   { background: var(--c-medium-bg);   border-color: var(--c-medium-border);   color: var(--c-medium); }
+    .chip[data-tone="info"],
+    .chip[data-tone="accent"]   { background: var(--c-info-bg);     border-color: var(--c-info-border);     color: var(--c-info); }
+    .chip[data-tone="warning"]  { background: var(--c-medium-bg);   border-color: var(--c-medium-border);   color: var(--c-medium); }
+    .chip[data-tone="critical"] .chip-count {
+      background: rgba(220, 38, 38, 0.12);
+      color: var(--c-critical);
+    }
+    .chip[data-tone="high"] .chip-count {
+      background: rgba(234, 88, 12, 0.12);
+      color: var(--c-high);
+    }
+    .chip[data-tone="medium"] .chip-count,
+    .chip[data-tone="warning"] .chip-count {
+      background: rgba(217, 119, 6, 0.14);
+      color: var(--c-medium);
+    }
+    .chip[data-tone="info"] .chip-count,
+    .chip[data-tone="accent"] .chip-count {
+      background: rgba(37, 99, 235, 0.12);
+      color: var(--c-info);
+    }
+    .chip-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.3rem;
+    }
+    .empty-copy {
+      margin: 0;
+      color: var(--text-3);
+      font-size: 0.82rem;
+      line-height: 1.55;
+    }
+
+    /* ── Label ──────────────────────────────────────────── */
+    .label {
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-3);
+      margin-bottom: 0.3rem;
+    }
+
+    /* ── Data tables ────────────────────────────────────── */
+    .table-scroll { overflow-x: auto; }
+    .table-wrap { overflow-x: auto; }
+    .data-table,
+    .compact-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.82rem;
+    }
+    .data-table th,
+    .compact-table th {
+      padding: 0.5rem 0.75rem;
+      text-align: left;
+      font-size: 0.72rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--text-3);
+      background: var(--surface-sunken);
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+    .data-table td,
+    .compact-table td {
+      padding: 0.55rem 0.75rem;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+      overflow-wrap: anywhere;
+    }
+    .data-table tr:last-child td,
+    .compact-table tr:last-child td { border-bottom: 0; }
+    .data-table tr:hover td { background: var(--surface-sunken); }
+    .compact-list { margin: 0; }
+    .inline-link { word-break: break-all; }
+
+    /* ── Priority queue ─────────────────────────────────── */
+    .queue-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.84rem;
+    }
+    .queue-table th {
+      padding: 0.5rem 0.75rem;
+      text-align: left;
+      font-size: 0.72rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--text-3);
+      background: var(--surface-sunken);
+      border-bottom: 1px solid var(--border);
+    }
+    .queue-row td {
+      padding: 0.9rem 0.75rem;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+    .queue-row:last-child td { border-bottom: 0; }
+    .queue-num {
+      width: 2.5rem;
+      color: var(--text-3);
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-align: center;
+    }
+    .queue-main { width: 100%; }
+    .queue-row[data-priority="Critical"] td.queue-num { border-left: 3px solid var(--c-critical); }
+    .queue-row[data-priority="High"]     td.queue-num { border-left: 3px solid var(--c-high); }
+    .queue-row[data-priority="Medium"]   td.queue-num { border-left: 3px solid var(--c-medium); }
+    .queue-row[data-priority="Low"]      td.queue-num { border-left: 3px solid var(--c-low); }
+    .queue-cve-id {
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: var(--text-1);
+      text-decoration: none;
+    }
+    .queue-cve-id:hover { color: var(--c-info); text-decoration: underline; }
+    .queue-desc {
+      font-size: 0.82rem;
+      color: var(--text-2);
+      margin: 0.3rem 0 0;
+      line-height: 1.5;
+    }
+    .queue-desktop {
+      display: none;
+    }
+    .queue-mobile {
+      display: grid;
+    }
+    .queue-mobile-list {
+      gap: 0.85rem;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    }
+    .queue-mobile-card {
+      padding: 1rem 1.05rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: linear-gradient(180deg, #ffffff 0%, #f8f9fc 100%);
+      display: grid;
+      gap: 0.75rem;
+      box-shadow: var(--shadow-sm);
+    }
+    .queue-mobile-card[data-priority="Critical"] { border-left: 3px solid var(--c-critical); }
+    .queue-mobile-card[data-priority="High"] { border-left: 3px solid var(--c-high); }
+    .queue-mobile-card[data-priority="Medium"] { border-left: 3px solid var(--c-medium); }
+    .queue-mobile-card[data-priority="Low"] { border-left: 3px solid var(--c-low); }
+    .queue-mobile-top {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+    .queue-mobile-rank {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 2rem;
+      height: 2rem;
+      border-radius: 999px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--text-2);
+    }
+    .queue-mobile-action {
+      padding: 0.7rem 0.8rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--surface);
+    }
+    .queue-mobile-action p:last-child {
+      margin-bottom: 0;
+    }
+    .queue-mobile-link {
+      font-size: 0.82rem;
+      font-weight: 600;
+    }
+    .queue-metrics {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem 1rem;
+      font-size: 0.8rem;
+      color: var(--text-2);
+    }
+    .queue-metrics strong {
+      color: var(--text-1);
+      margin-right: 0.2rem;
+    }
+    .queue-context-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.55rem;
+    }
+    .queue-context-item {
+      padding: 0.55rem 0.65rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: rgba(255, 255, 255, 0.8);
+      min-width: 0;
+    }
+    .queue-context-item span {
+      display: block;
+      margin-bottom: 0.15rem;
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--text-3);
+    }
+    .queue-context-item strong {
+      display: block;
+      font-size: 0.82rem;
+      font-weight: 600;
+      line-height: 1.35;
+      color: var(--text-1);
+      overflow-wrap: anywhere;
+    }
+
+    /* ── Dossier 3-zone card ────────────────────────────── */
+    .dossier {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      margin-bottom: 0.85rem;
+      overflow: hidden;
+    }
+    .dossier:last-child { margin-bottom: 0; }
+    .dossier-head {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.5rem 1rem;
+      padding: 0.9rem 1.2rem;
+      background: var(--surface-sunken);
+      border-bottom: 1px solid var(--border);
+    }
+    .dossier-cve-id {
+      font-family: var(--font-serif);
+      font-size: clamp(1.18rem, 1.75vw, 1.45rem);
+      font-weight: 700;
+      color: var(--text-1);
+      letter-spacing: -0.02em;
+    }
+    .dossier-scores {
+      display: flex;
+      gap: 1.25rem;
+      margin-left: auto;
+      flex-wrap: wrap;
+    }
+    .score-item {
+      font-size: 0.8rem;
+      color: var(--text-2);
+    }
+    .score-item strong {
+      font-size: 1rem;
+      color: var(--text-1);
+      margin-right: 0.2rem;
+    }
+    .dossier-body {
+      padding: 1.1rem 1.2rem;
+      border-bottom: 1px solid var(--border);
+      display: grid;
+      gap: 0.95rem;
+    }
+    .dossier-desc {
+      font-size: 0.88rem;
+      color: var(--text-2);
+      margin-bottom: 0;
+      max-width: 72rem;
+      display: -webkit-box;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 4;
+      overflow: hidden;
+    }
+    .action-callout {
+      padding: 0.85rem 1rem;
+      border-radius: var(--radius-sm);
+      border-left: 3px solid var(--border-strong);
+      background: linear-gradient(180deg, rgba(255,255,255,0.75), rgba(255,255,255,0.35));
+      margin-bottom: 0;
+    }
+    .action-callout[data-urgency="critical"] { border-left-color: var(--c-critical); background: var(--c-critical-bg); }
+    .action-callout[data-urgency="high"]     { border-left-color: var(--c-high);     background: var(--c-high-bg); }
+    .action-callout[data-urgency="medium"]   { border-left-color: var(--c-medium);   background: var(--c-medium-bg); }
+    .action-callout[data-urgency="info"],
+    .action-callout[data-urgency="accent"]   { border-left-color: var(--c-info);     background: var(--c-info-bg); }
+    .action-callout-label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-3);
+      margin-bottom: 0.3rem;
+    }
+    .action-callout-text {
+      font-size: 0.88rem;
+      color: var(--text-1);
+      margin: 0;
+      line-height: 1.55;
+    }
+    .dossier-rationale {
+      font-size: 0.82rem;
+      color: var(--text-2);
+      margin: 0;
+      line-height: 1.6;
+    }
+    .dossier-summary {
+      margin: 0;
+      font-size: 0.86rem;
+      color: var(--text-2);
+      line-height: 1.65;
+      max-width: 74rem;
+      display: -webkit-box;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 3;
+      overflow: hidden;
+    }
+    .dossier-context {
+      font-size: 0.82rem;
+      color: var(--text-2);
+      margin-bottom: 0;
+    }
+    .insight-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 0.7rem;
+    }
+    .insight-card {
+      padding: 0.75rem 0.85rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--surface-sunken);
+      min-width: 0;
+    }
+    .insight-value {
+      margin: 0;
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: var(--text-1);
+      line-height: 1.45;
+    }
+    .insight-detail {
+      margin: 0.25rem 0 0;
+      font-size: 0.78rem;
+      color: var(--text-2);
+      line-height: 1.45;
+    }
+    .attack-preview {
+      display: grid;
+      gap: 0.85rem;
+      padding: 0.95rem 1rem;
+      border: 1px solid var(--c-info-border);
+      border-radius: var(--radius-sm);
+      background: linear-gradient(180deg, #fbfdff 0%, #f1f6ff 100%);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.7);
+    }
+    .attack-preview-empty {
+      border-color: var(--border-strong);
+      background: linear-gradient(180deg, #fbfcfe 0%, #f5f7fa 100%);
+    }
+    .attack-preview-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 0.8rem;
+      flex-wrap: wrap;
+    }
+    .attack-preview-head h3 {
+      margin-bottom: 0;
+      font-size: 1.02rem;
+      color: var(--text-1);
+    }
+    .attack-preview-copy {
+      margin: 0;
+      font-size: 0.84rem;
+      line-height: 1.65;
+      color: var(--text-1);
+      max-width: 72rem;
+      display: -webkit-box;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 3;
+      overflow: hidden;
+    }
+    .attack-preview-taxonomy {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.75rem;
+    }
+    .attack-mini-stack {
+      display: grid;
+      gap: 0.35rem;
+      min-width: 0;
+    }
+    .attack-mini-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 0.65rem;
+    }
+    .attack-mini-card {
+      padding: 0.75rem 0.8rem;
+      border: 1px solid rgba(191, 219, 254, 0.9);
+      border-radius: var(--radius-sm);
+      background: rgba(255,255,255,0.85);
+      min-width: 0;
+    }
+    .attack-mini-id {
+      margin-bottom: 0.2rem;
+      font-size: 0.76rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--c-info);
+    }
+    .attack-mini-name {
+      margin: 0;
+      font-size: 0.86rem;
+      font-weight: 600;
+      line-height: 1.4;
+      color: var(--text-1);
+    }
+    .attack-mini-meta {
+      margin: 0.28rem 0 0;
+      font-size: 0.76rem;
+      line-height: 1.45;
+      color: var(--text-2);
+    }
+
+    /* ── Dossier accordion ──────────────────────────────── */
+    .dossier-accordion {
+      padding: 0;
+    }
+    .dossier-drawer {
+      border-top: 1px solid var(--border);
+    }
+    .dossier-drawer summary {
+      padding: 0.65rem 1.2rem;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--text-2);
+      cursor: pointer;
+      list-style: none;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      user-select: none;
+    }
+    .dossier-drawer summary::-webkit-details-marker { display: none; }
+    .dossier-drawer summary::before {
+      content: "▶";
+      font-size: 0.6rem;
+      color: var(--text-3);
+      transition: transform 150ms;
+    }
+    .dossier-drawer[open] summary::before { transform: rotate(90deg); }
+    .dossier-drawer summary:hover { background: var(--surface-sunken); }
+    .dossier-drawer[open] summary {
+      background: linear-gradient(180deg, #fbfcfe 0%, #f4f7fb 100%);
+      color: var(--text-1);
+    }
+    .dossier-drawer-title {
+      min-width: 0;
+      margin-right: auto;
+    }
+    .drawer-meta {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--text-3);
+      text-align: right;
+      overflow-wrap: anywhere;
+    }
+    .dossier-drawer-body,
+    .dossier-drawer-inner {
+      padding: 0.9rem 1.2rem 1.1rem;
+      background: var(--surface-sunken);
+      border-top: 1px solid var(--border);
+    }
+    .routing-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 1rem;
+    }
+    .routing-grid dt {
+      margin-bottom: 0.35rem;
+    }
+    .routing-grid dd {
+      margin: 0;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+    }
+
+    /* ── Evidence groups ────────────────────────────────── */
+    .evidence-groups {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 1rem;
+    }
+    .evidence-group h5 { margin-bottom: 0.5rem; }
+    .evidence-group dl { margin: 0; }
+    .provider-links {
+      margin-top: 0.65rem;
+    }
+
+    /* ── Decision cards ─────────────────────────────────── */
+    .decision-grid-3 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 0.75rem;
+    }
+    .decision-stack {
+      display: grid;
+      gap: 0.75rem;
+      align-content: start;
+    }
+    .decision-card {
+      padding: 0.85rem 1rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--surface-sunken);
+      min-width: 0;
+      height: 100%;
+    }
+    .decision-card[data-priority="Critical"] { border-left: 3px solid var(--c-critical); background: var(--c-critical-bg); }
+    .decision-card[data-priority="High"]     { border-left: 3px solid var(--c-high);     background: var(--c-high-bg); }
+    .decision-card[data-priority="Medium"]   { border-left: 3px solid var(--c-medium);   background: var(--c-medium-bg); }
+    .decision-topline {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.5rem 0.75rem;
+      margin-bottom: 0.6rem;
+    }
+    .decision-topline h4 {
+      margin: 0;
+      font-size: 1rem;
+      color: var(--text-1);
+    }
+    .decision-action-line {
+      margin-bottom: 0.75rem;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--text-1);
+      line-height: 1.45;
+    }
+    .decision-chip-row {
+      margin-bottom: 0.75rem;
+    }
+    .decision-why {
+      margin: 0;
+      font-size: 0.82rem;
+      line-height: 1.55;
+      color: var(--text-2);
+    }
+    .decision-meta {
+      display: grid;
+      grid-template-columns: 120px 1fr;
+      gap: 0.35rem 0.85rem;
+      margin: 0;
+      font-size: 0.82rem;
+    }
+    .decision-meta dt {
+      color: var(--text-3);
+      font-weight: 600;
+    }
+    .decision-meta dd {
+      margin: 0;
+      color: var(--text-2);
+    }
+
+    /* ── Bucket cards (action plan) ─────────────────────── */
+    .action-plan-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 0.75rem;
+    }
+    .action-plan-stack {
+      display: grid;
+      gap: 1rem;
+      align-content: start;
+    }
+    .action-plan-section {
+      display: grid;
+      gap: 0.75rem;
+    }
+    .bucket-card {
+      padding: 0.85rem 1rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--surface-sunken);
+      min-width: 0;
+      height: 100%;
+    }
+    .bucket-topline {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+      margin-bottom: 0.55rem;
+    }
+    .bucket-topline h4 {
+      margin: 0;
+      color: var(--text-1);
+    }
+    .bucket-summary {
+      margin: 0 0 0.75rem;
+      font-size: 0.82rem;
+      line-height: 1.55;
+      color: var(--text-2);
+    }
+    .bucket-meta {
+      display: grid;
+      grid-template-columns: 110px 1fr;
+      gap: 0.35rem 0.8rem;
+      margin: 0;
+      font-size: 0.82rem;
+    }
+    .bucket-meta dt {
+      color: var(--text-3);
+      font-weight: 600;
+    }
+    .bucket-meta dd {
+      margin: 0;
+      color: var(--text-1);
+      overflow-wrap: anywhere;
+    }
+
+    /* ── Remediation items ──────────────────────────────── */
+    .remediation-items {
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+    }
+    .remediation-item {
+      padding: 0.7rem 0.9rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--surface-sunken);
+      font-size: 0.82rem;
+    }
+    .subtle {
+      margin-bottom: 0.3rem;
+      font-size: 0.8rem;
+      color: var(--text-2);
+    }
+
+    /* ── ATT&CK ──────────────────────────────────────────── */
+    .attack-detail-stack {
+      display: grid;
+      gap: 0.9rem;
+    }
+    .attack-snapshot-card {
+      padding: 1rem 1.05rem;
+      border: 1px solid var(--c-info-border);
+      border-radius: var(--radius-sm);
+      background: linear-gradient(180deg, #fcfdff 0%, #f1f6ff 100%);
+      display: grid;
+      gap: 0.8rem;
+    }
+    .attack-snapshot-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+    .attack-overview-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 0.75rem;
+    }
+    .attack-taxonomy-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 0.75rem;
+    }
+    .attack-block-card {
+      padding: 0.85rem 0.95rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: linear-gradient(180deg, #fbfcff 0%, #f5f8ff 100%);
+      min-width: 0;
+      height: 100%;
+    }
+    .attack-status-card {
+      padding: 0.9rem 1rem;
+      border: 1px solid var(--c-info-border);
+      border-radius: var(--radius-sm);
+      background: linear-gradient(180deg, #f8fbff 0%, #eef5ff 100%);
+      display: grid;
+      gap: 0.7rem;
+    }
+    .attack-note {
+      margin: 0;
+      font-size: 0.84rem;
+      line-height: 1.65;
+      color: var(--text-1);
+    }
+    .attack-technique-section {
+      display: grid;
+      gap: 0.5rem;
+    }
+    .attack-technique-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 0.75rem;
+    }
+    .attack-technique-card {
+      padding: 0.95rem 1rem;
+      border: 1px solid rgba(191, 219, 254, 0.95);
+      border-radius: calc(var(--radius-sm) + 2px);
+      background: linear-gradient(180deg, #ffffff 0%, #f7fbff 100%);
+      min-width: 0;
+      display: grid;
+      gap: 0.65rem;
+      box-shadow: var(--shadow-sm);
+    }
+    .attack-technique-kicker {
+      margin: 0;
+      font-size: 0.67rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-3);
+    }
+    .attack-technique-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 0.75rem;
+      margin-bottom: 0;
+    }
+    .attack-technique-id {
+      margin-bottom: 0.15rem;
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--c-info);
+    }
+    .attack-technique-link {
+      color: var(--c-info);
+      text-decoration: none;
+    }
+    .attack-technique-link:hover {
+      text-decoration: underline;
+    }
+    .attack-technique-name {
+      margin: 0;
+      font-size: 0.96rem;
+      line-height: 1.35;
+      color: var(--text-1);
+    }
+    .attack-technique-body {
+      display: grid;
+      gap: 0.55rem;
+    }
+    .attack-technique-meta-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.65rem;
+      padding-top: 0.05rem;
+      font-size: 0.78rem;
+      color: var(--text-2);
+    }
+    .attack-technique-meta-row span {
+      font-weight: 600;
+      color: var(--text-3);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      font-size: 0.67rem;
+    }
+    .attack-technique-meta-row strong {
+      color: var(--text-1);
+      font-weight: 700;
+      text-align: right;
+    }
+    .attack-technique-chip-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+    }
+    .attack-technique-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.65rem;
+      padding-top: 0.1rem;
+      font-size: 0.74rem;
+      color: var(--text-3);
+    }
+    .attack-technique-ref {
+      color: var(--c-info);
+      font-weight: 600;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+    .attack-technique-ref:hover {
+      text-decoration: underline;
+    }
+    .attack-dl,
+    .governance-dl {
+      margin: 0;
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 0.35rem 1rem;
+      font-size: 0.82rem;
+      align-items: start;
+    }
+    .attack-dl dt,
+    .governance-dl dt {
+      font-weight: 600;
+      color: var(--text-2);
+      white-space: nowrap;
+    }
+    .attack-dl dd,
+    .governance-dl dd {
+      margin: 0;
+      color: var(--text-1);
+    }
+    .governance-item { margin-bottom: 0.5rem; }
+
+    /* ── Two-col layout ─────────────────────────────────── */
+    .two-col {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 1rem;
+      align-items: start;
+    }
+    .three-col {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 0.75rem;
+      align-items: start;
+    }
+    .hero-grid {
+      grid-template-columns: minmax(0, 1.28fr) minmax(320px, 0.72fr);
+    }
+    .executive-meta-card {
+      align-content: start;
+    }
+    .decision-layout {
+      grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
+    }
+    .decision-layout > .panel-card {
+      height: auto;
+      align-self: start;
+    }
+    .decision-layout > .panel-card.stack {
+      align-content: start;
+    }
+    .attack-governance-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1.25fr) minmax(320px, 0.75fr);
+      gap: 1rem;
+      align-items: start;
+    }
+    .attack-side-stack {
+      display: grid;
+      gap: 1rem;
+      align-content: start;
+    }
+    .attack-primary-card {
+      align-self: start;
+    }
+    .summary-list {
+      display: grid;
+      gap: 0.5rem;
+      margin: 0;
+      padding-left: 1.2rem;
+      font-size: 0.84rem;
+      color: var(--text-2);
+      line-height: 1.55;
+    }
+    .kv-card-grid {
+      display: grid;
+      gap: 0.75rem;
+    }
+    .kv-card {
+      padding: 0.85rem 1rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--surface-sunken);
+      height: 100%;
+    }
+    .kv-card h4 {
+      margin-bottom: 0.55rem;
+      color: var(--text-1);
+      overflow-wrap: anywhere;
+    }
+    .compact-meta {
+      display: grid;
+      grid-template-columns: 92px 1fr;
+      gap: 0.35rem 0.75rem;
+      margin: 0;
+      font-size: 0.82rem;
+    }
+    .compact-meta dt {
+      color: var(--text-3);
+      font-weight: 600;
+    }
+    .compact-meta dd {
+      margin: 0;
+      color: var(--text-2);
+      overflow-wrap: anywhere;
+    }
+
+    /* ── Bullet list ────────────────────────────────────── */
+    .bullet-list {
+      padding-left: 1.3rem;
+      margin: 0;
+      font-size: 0.84rem;
+      color: var(--text-1);
+      line-height: 1.7;
+    }
+
+    /* ── Command chip / code ────────────────────────────── */
+    .command-chip {
+      display: inline-block;
+      padding: 0.15rem 0.5rem;
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      background: var(--surface-sunken);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-chip);
+      color: var(--text-1);
+    }
+
+    /* ── Meta row (key-value) ───────────────────────────── */
+    .meta-grid {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 0.3rem 1rem;
+      font-size: 0.82rem;
+    }
+    .meta-grid dt {
+      font-weight: 600;
+      color: var(--text-2);
+      white-space: nowrap;
+    }
+    .meta-grid dd {
+      margin: 0;
+      color: var(--text-1);
+    }
+
+    /* ── Method grid (how-to-read) ──────────────────────── */
+    .method-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 0.75rem;
+    }
+    .method-card {
+      padding: 0.75rem 0.9rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--surface-sunken);
+      font-size: 0.82rem;
+      height: 100%;
+    }
+    .report-footer {
+      margin-top: 1.15rem;
+      padding-bottom: env(safe-area-inset-bottom, 0px);
+    }
+    .report-footer-shell {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 1rem;
+      align-items: center;
+      padding: 1rem 1.2rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(246,248,252,0.98));
+      box-shadow: var(--shadow-sm);
+    }
+    .report-footer-note {
+      margin: 0;
+      max-width: 52rem;
+      font-size: 0.84rem;
+      line-height: 1.6;
+      color: var(--text-2);
+    }
+    .report-footer-meta {
+      display: grid;
+      justify-items: end;
+      gap: 0.3rem;
+      font-size: 0.78rem;
+      color: var(--text-3);
+      text-align: right;
+    }
+    .report-footer-link {
+      font-weight: 700;
+      color: var(--c-info);
+      text-decoration: none;
+    }
+    .report-footer-link:hover {
+      text-decoration: underline;
+    }
+    .report-tail-spacer {
+      height: max(320px, calc(14rem + env(safe-area-inset-bottom, 0px)));
+    }
+
+    /* ── Context toggle ─────────────────────────────────── */
+    .context-toggle summary {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      cursor: pointer;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--text-2);
+      margin-bottom: 0.75rem;
+      list-style: none;
+      padding: 0.35rem 0.7rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+    }
+    .context-toggle summary::-webkit-details-marker { display: none; }
+    .context-toggle[open] summary { margin-bottom: 0.9rem; }
+
+    /* ── Empty state ────────────────────────────────────── */
+    .empty-state {
+      padding: 2.5rem 1.5rem;
+      text-align: center;
+      color: var(--text-3);
+      font-size: 0.9rem;
+    }
+    .empty-state strong { display: block; font-size: 1.1rem; color: var(--text-2); margin-bottom: 0.5rem; }
+    .distribution-row {
+      display: grid;
+      grid-template-columns: 92px 1fr auto;
+      align-items: center;
+      gap: 0.65rem;
+      margin-bottom: 0.55rem;
+    }
+    .distribution-row:last-child {
+      margin-bottom: 0;
+    }
+    .distribution-label,
+    .distribution-count {
+      font-size: 0.8rem;
+      color: var(--text-2);
+    }
+    .distribution-track {
+      position: relative;
+      height: 0.55rem;
+      border-radius: 999px;
+      background: var(--border);
+      overflow: hidden;
+    }
+    .distribution-fill {
+      position: absolute;
+      inset: 0 auto 0 0;
+      border-radius: inherit;
+      background: var(--text-3);
+    }
+    .distribution-fill.tone-critical { background: var(--c-critical); }
+    .distribution-fill.tone-high { background: var(--c-high); }
+    .distribution-fill.tone-medium { background: var(--c-medium); }
+    .distribution-fill.tone-neutral { background: var(--c-low); }
+    .distribution-fill.tone-accent { background: var(--c-info); }
+
+    /* ── Misc ───────────────────────────────────────────── */
+    .muted { color: var(--text-3); font-size: 0.8rem; }
+    .na    { color: var(--text-3); font-style: italic; font-size: 0.82rem; }
+
+    /* ── Media queries ──────────────────────────────────── */
+    @media (max-width: 900px) {
+      .stats-row { flex-direction: column; }
+      .stat-cell { border-right: 0; border-bottom: 1px solid var(--border); }
+      .stat-cell:last-child { border-bottom: 0; }
+      .dossier-scores { margin-left: 0; }
+      .page-nav { overflow-x: auto; flex-wrap: nowrap; }
+      .topbar {
+        align-items: flex-start;
+      }
+      .topbar-chips {
+        margin-left: 0;
+      }
+      .hero-grid,
+      .decision-layout,
+      .attack-governance-layout {
+        grid-template-columns: 1fr;
+      }
+      .review-flow-grid,
+      .executive-focus-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+    @media (max-width: 780px) {
+      .queue-mobile-list {
+        grid-template-columns: 1fr;
+      }
+      .queue-context-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+    @media (max-width: 660px) {
+      .evidence-groups,
+      .two-col,
+      .three-col,
+      .attack-preview-taxonomy,
+      .review-flow-grid,
+      .executive-focus-grid,
+      .method-grid,
+      .routing-grid,
+      .insight-grid,
+      .attack-overview-grid,
+      .attack-taxonomy-grid,
+      .attack-technique-grid {
+        grid-template-columns: 1fr;
+      }
+      .report-footer-shell,
+      .report-footer-meta {
+        grid-template-columns: 1fr;
+        justify-items: start;
+        text-align: left;
+      }
+      .stats-row {
+        border-radius: var(--radius);
+      }
+      .section-header,
+      .section-inner {
+        padding-left: 1rem;
+        padding-right: 1rem;
+      }
+      .dossier-head,
+      .dossier-body,
+      .dossier-drawer summary,
+      .dossier-drawer-body {
+        padding-left: 1rem;
+        padding-right: 1rem;
+      }
+      .drawer-meta {
+        font-size: 0.72rem;
+      }
+      .compact-meta,
+      .decision-meta,
+      .bucket-meta {
+        grid-template-columns: 1fr;
+      }
+      .bucket-topline {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+      .attack-technique-meta-row,
+      .attack-technique-footer {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+      .data-table,
+      .compact-table,
+      .queue-table {
+        min-width: 560px;
+      }
+    }
+    </style>
 </head>
 <body>
   <main>
-    <section class="hero">
-      <div class="eyebrow">Executive Vulnerability Brief</div>
-      <h1>vuln-prioritizer Executive Report</h1>
-      <p>
-        Deterministic prioritization based on NVD, FIRST EPSS, CISA KEV, and optional
-        local ATT&amp;CK context. KEV-listed findings are surfaced as known exploited risk.
-      </p>
-      <div class="meta">
-        <p><strong>Generated at:</strong> 2026-04-21T12:00:00+00:00</p>
-        <p><strong>Input:</strong> data/input_fixtures/trivy_report.json</p>
-        <p><strong>Input format:</strong> trivy-json</p>
-        <p><strong>Merged inputs:</strong> 1</p>
-        <p>
-          <strong>Policy profile:</strong>
-          enterprise
-        </p>
-      </div>
-    </section>
-    <section class="section">
-      <h2>Input Sources</h2>
-      <ul>
-        <li>data/input_fixtures/trivy_report.json (trivy-json, rows=4, occurrences=3, unique_cves=3)</li>
-      </ul>
-      <p><strong>Duplicate CVEs collapsed:</strong> 0</p>
-    </section>
-    <section class="section">
-      <h2>Executive Summary</h2>
-      <div class="summary">
-        <div class="card">
-          <strong>Findings shown</strong><span class="metric">2</span>
+    <header class="report-shell">
+      <div class="topbar">
+        <div class="topbar-copy">
+          <div class="topbar-brand">vuln-prioritizer</div>
+          <div class="topbar-meta">Offline HTML report</div>
         </div>
-        <div class="card">
-          <strong>Known exploited</strong><span class="metric">1</span>
-        </div>
-        <div class="card">
-          <strong>Critical</strong><span class="metric">2</span>
+        <div class="topbar-meta">Generated 2026-04-23T15:57:10+00:00</div>
+        <div class="topbar-meta">Input data/input_fixtures/trivy_report.json</div>
+        <div class="topbar-meta">Format trivy-json</div>
+        <div class="topbar-chips">
+          <span class="chip" data-tone="accent">Policy enterprise</span>
+          <span class="chip" data-tone="accent">ATT&amp;CK Enabled</span>
+          <span class="chip" data-tone="warning">Warnings 1</span>
         </div>
       </div>
-      <div class="summary secondary">
-        <div class="card">
-          <strong>Suppressed by VEX</strong><span class="metric">1</span>
-        </div>
-        <div class="card">
-          <strong>ATT&amp;CK mapped CVEs</strong><span class="metric">0</span>
-        </div>
-        <div class="card">
-          <strong>Waived</strong><span class="metric">0</span>
-        </div>
-        <div class="card">
-          <strong>Waiver Review Due</strong><span class="metric">0</span>
-        </div>
-        <div class="card">
-          <strong>Expired Waivers</strong><span class="metric">0</span>
+      <nav class="page-nav" aria-label="Report sections"><a href="#executive-brief">Executive Brief</a><a href="#priority-queue">Priority Queue</a><a href="#decision-action">Decision &amp; Action</a><a href="#finding-dossiers">Finding Dossiers</a><a href="#coverage-context">Coverage &amp; Context</a><a href="#attack-governance">ATT&amp;CK &amp; Governance</a><a href="#how-to-read">How to Read</a></nav>
+      <div class="stats-row"><div class="stat-cell"><div class="stat-value">2</div><div class="stat-label">Visible findings</div></div><div class="stat-cell is-critical"><div class="stat-value">2</div><div class="stat-label">Critical</div></div><div class="stat-cell is-high"><div class="stat-value">1</div><div class="stat-label">KEV</div></div><div class="stat-cell is-medium"><div class="stat-value">1</div><div class="stat-label">Under investigation</div></div><div class="stat-cell"><div class="stat-value">1</div><div class="stat-label">Suppressed by VEX</div></div><div class="stat-cell"><div class="stat-value">0</div><div class="stat-label">Waiver review due</div></div></div>
+    </header>
+
+    <section class="section" id="executive-brief" data-section="executive-brief">
+      <div class="section-header">
+        <h1>Vulnerability prioritization report</h1>
+        <p class="section-subtitle">2 visible finding(s) across 3 valid CVE(s), 1 KEV-listed. ATT&amp;CK context is available for 1 visible CVE(s). Asset context is present for 1 mapped asset(s); top service signal: customer-login.</p>
+      </div>
+      <div class="section-inner">
+        <div class="two-col hero-grid">
+          <article class="panel-card stack executive-hero-card">
+            <div class="executive-hero-head">
+              <div>
+                <p class="label">What to know first</p>
+                <p class="hero-lead">Start with the top finding. Confirm owner and route, then open detailed evidence only if the decision is not already obvious.</p>
+              </div>
+              <div class="chip-row">
+                <span class="chip" data-tone="neutral">Visible queue 2</span>
+                <span class="chip" data-tone="critical">KEV 1</span>
+                <span class="chip" data-tone="warning">Suppressed by VEX 1</span>
+              </div>
+            </div>
+            <article class="executive-focus-card"><div class="executive-focus-head"><div><p class="label">Top of queue</p><h3 class="executive-focus-title">CVE-2024-4577</h3></div><div class="chip-row"><span class="chip" data-tone="critical">Critical / KEV</span><span class="chip" data-tone="critical">Known exploited</span><span class="chip" data-tone="info">12 TTPs</span></div></div><p class="executive-focus-copy">Upgrade affected components with known fixes: php-cgi 8.1.28 (composer.lock) -&gt; 8.1.29. Patch or mitigate immediately, validate exposure, strengthen detection coverage, and escalate potential business impact.</p><div class="executive-focus-grid"><article class="executive-focus-item"><span>Route</span><strong>Unmapped service</strong></article><article class="executive-focus-item"><span>Owner</span><strong>Unassigned owner</strong></article><article class="executive-focus-item"><span>Exposure</span><strong>No exposure signal</strong></article><article class="executive-focus-item"><span>Threat</span><strong>ATT&amp;CK High</strong></article></div></article>
+          </article>
+          <article class="panel-card stack executive-meta-card">
+            <div>
+              <p class="label">Run metadata</p>
+              <dl class="meta-grid">
+                <dt>Generated at</dt><dd>2026-04-23T15:57:10+00:00</dd>
+                <dt>Input</dt><dd>data/input_fixtures/trivy_report.json</dd>
+                <dt>Format</dt><dd>trivy-json</dd>
+                <dt>Policy profile</dt><dd>enterprise</dd>
+                <dt>Visible findings</dt><dd>2</dd>
+                <dt>Valid CVEs</dt><dd>3</dd>
+                <dt>Warnings</dt><dd>1</dd>
+              </dl>
+            </div>
+            <div>
+              <p class="label">Use this view</p>
+              <p class="muted">The top bar already gives the headline counts. This panel only keeps the run context that matters while reviewing the queue.</p>
+            </div>
+          </article>
         </div>
       </div>
     </section>
-    <section class="section">
-      <h2>Top Risks</h2>
-      <table>
-        <thead>
-          <tr><th>CVE</th><th>Urgency</th><th>CVSS</th><th>EPSS</th><th>Exploit Status</th><th>Sources</th><th>Rationale</th><th>Recommended Action</th><th>Context Recommendation</th></tr>
-        </thead>
-        <tbody>
-          <tr><td><strong>CVE-2024-4577</strong><div class="subtle">In PHP versions 8.1.* before 8.1.29, 8.2.* before 8.2.20, 8.3.* before 8.3.8, when using Apache and PHP-CGI on Windows, if the system is set up to use certain code pages, Windows may use &quot;Best-Fit&quot; behavior to replace characters in command line given to Win32 API functions. PHP CGI module may misinterpret those characters as PHP options, which may allow a malicious user to pass options to PHP binary being run, and thus reveal the source code of scripts, run arbitrary PHP code on the server, etc.</div></td><td><span class="badge urgency">Critical / KEV</span></td><td>9.8</td><td>0.94393</td><td><span class="badge kev">Known exploited (KEV)</span></td><td>trivy-json</td><td>CISA KEV lists this CVE as known exploited in the wild. NVD reports CVSS 9.8 (CRITICAL) via CVSS v3.1. FIRST EPSS is 0.944 (percentile 1.000). Input provenance includes 1 occurrence(s) from trivy-json. Affected components include: php-cgi 8.1.28. Seen in 1 occurrence(s). At least one matching VEX statement is still under investigation, so the finding remains visible.</td><td>Upgrade affected components with known fixes: php-cgi 8.1.28 (composer.lock) -&gt; 8.1.29. Patch or mitigate immediately, validate exposure, strengthen detection coverage, and escalate potential business impact.</td><td>Context does not raise the default response, but affected components and owners should still be reviewed.</td></tr><tr><td><strong>CVE-2024-3094</strong><div class="subtle">Malicious code was discovered in the upstream tarballs of xz, starting with version 5.6.0.
-Through a series of complex obfuscations, the liblzma build process extracts a prebuilt object file from a disguised test file existing in the source code, which is then used to modify specific functions in the liblzma code. This results in a modified liblzma library that can be used by any software linked against this library, intercepting and modifying the data interaction with this library.</div></td><td><span class="badge urgency">Critical</span></td><td>10.0</td><td>0.84077</td><td><span class="badge kev">No KEV listing</span></td><td>trivy-json</td><td>NVD reports CVSS 10.0 (CRITICAL) via CVSS v3.1. FIRST EPSS is 0.841 (percentile 0.993). Input provenance includes 1 occurrence(s) from trivy-json. Affected components include: xz 5.6.0-r0. Seen in 1 occurrence(s), across 1 mapped asset(s), highest asset criticality critical, highest exposure internet-facing.</td><td>Upgrade affected components with known fixes in apk: xz 5.6.0-r0 (/lib/apk/db/installed) -&gt; 5.6.1-r2. Patch or mitigate immediately, validate exposure, strengthen detection coverage, and escalate potential business impact.</td><td>Escalate validation and remediation because context indicates internet-facing exposure, production environment.</td></tr>
-        </tbody>
-      </table>
+
+    <section id="key-signals" data-section="key-signals" hidden aria-hidden="true">
+      <h2>Key Signals</h2>
     </section>
+
+    <section class="section" id="priority-queue" data-section="priority-queue">
+      <div class="section-header">
+        <h2>Priority Queue</h2>
+        <p class="section-subtitle">Start here. The queue is designed for quick reading before diving into evidence.</p>
+      </div>
+      <div class="section-inner">
+        <div class="table-wrap queue-desktop"><table class="data-table queue-table"><thead><tr><th>#</th><th>Finding</th><th>Immediate action</th><th>Dossier</th></tr></thead><tbody><tr class="queue-row" data-priority="Critical"><td class="queue-num">1</td><td class="queue-main"><a class="queue-cve-id" href="#finding-cve-2024-4577">CVE-2024-4577</a><div class="chip-row"><span class="chip" data-tone="critical">Critical / KEV</span><span class="chip" data-tone="critical">KEV</span><span class="chip" data-tone="info">12 TTPs</span><span class="chip" data-tone="warning">VEX review</span></div><p class="queue-desc">In PHP versions 8.1.* before 8.1.29, 8.2.* before 8.2.20, 8.3.* before 8.3.8, when using Apache and PHP-CGI on Windows, if the system is set up to use certain code pages, Window...</p></td><td class="queue-action">Upgrade affected components with known fixes: php-cgi 8.1.28 (composer.lock) -&gt; 8.1.29. Patch or mitigate immediately, validate exposure, strengthe...</td><td><a href="#finding-cve-2024-4577" style="font-size:0.8rem;color:var(--c-info);">Detail ↗</a></td></tr><tr class="queue-row" data-priority="Critical"><td class="queue-num">2</td><td class="queue-main"><a class="queue-cve-id" href="#finding-cve-2024-3094">CVE-2024-3094</a><div class="chip-row"><span class="chip" data-tone="critical">Critical</span></div><p class="queue-desc">Malicious code was discovered in the upstream tarballs of xz, starting with version 5.6.0. Through a series of complex obfuscations, the liblzma build process extracts a prebuil...</p></td><td class="queue-action">Upgrade affected components with known fixes in apk: xz 5.6.0-r0 (/lib/apk/db/installed) -&gt; 5.6.1-r2. Patch or mitigate immediately, validate expos...</td><td><a href="#finding-cve-2024-3094" style="font-size:0.8rem;color:var(--c-info);">Detail ↗</a></td></tr></tbody></table></div><div class="queue-mobile-list queue-mobile"><article class="queue-mobile-card" data-priority="Critical"><div class="queue-mobile-top"><div class="queue-mobile-rank">#1</div><a class="queue-cve-id" href="#finding-cve-2024-4577">CVE-2024-4577</a></div><div class="chip-row"><span class="chip" data-tone="critical">Critical / KEV</span><span class="chip" data-tone="critical">KEV</span><span class="chip" data-tone="info">12 TTPs</span><span class="chip" data-tone="warning">VEX review</span></div><div class="queue-metrics"><span><strong>9.8</strong> CVSS</span><span><strong>0.944</strong> EPSS</span><span><strong>1</strong> occurrences</span></div><p class="queue-desc">In PHP versions 8.1.* before 8.1.29, 8.2.* before 8.2.20, 8.3.* before 8.3.8, when using Apache and PHP-CGI on Windows, if the system is set up to use certain code pages, Window...</p><div class="queue-mobile-action"><p class="label">Immediate action</p><p>Upgrade affected components with known fixes: php-cgi 8.1.28 (composer.lock) -&gt; 8.1.29. Patch or mitigate immediately, validate expo...</p></div><div class="queue-context-grid"><div class="queue-context-item"><span>Service</span><strong>Unmapped service</strong></div><div class="queue-context-item"><span>Owner</span><strong>Unassigned owner</strong></div><div class="queue-context-item"><span>Exposure</span><strong>No exposure signal</strong></div><div class="queue-context-item"><span>Criticality</span><strong>No asset criticality</strong></div></div><a class="queue-mobile-link" href="#finding-cve-2024-4577">Open dossier</a></article><article class="queue-mobile-card" data-priority="Critical"><div class="queue-mobile-top"><div class="queue-mobile-rank">#2</div><a class="queue-cve-id" href="#finding-cve-2024-3094">CVE-2024-3094</a></div><div class="chip-row"><span class="chip" data-tone="critical">Critical</span></div><div class="queue-metrics"><span><strong>10.0</strong> CVSS</span><span><strong>0.841</strong> EPSS</span><span><strong>1</strong> occurrences</span></div><p class="queue-desc">Malicious code was discovered in the upstream tarballs of xz, starting with version 5.6.0. Through a series of complex obfuscations, the liblzma build process extracts a prebuil...</p><div class="queue-mobile-action"><p class="label">Immediate action</p><p>Upgrade affected components with known fixes in apk: xz 5.6.0-r0 (/lib/apk/db/installed) -&gt; 5.6.1-r2. Patch or mitigate immediately,...</p></div><div class="queue-context-grid"><div class="queue-context-item"><span>Service</span><strong>customer-login</strong></div><div class="queue-context-item"><span>Owner</span><strong>platform-team</strong></div><div class="queue-context-item"><span>Exposure</span><strong>internet-facing</strong></div><div class="queue-context-item"><span>Criticality</span><strong>critical</strong></div></div><a class="queue-mobile-link" href="#finding-cve-2024-3094">Open dossier</a></article></div>
+      </div>
+    </section>
+
+    <section class="section" id="decision-action" data-section="decision-action">
+      <div class="section-header">
+        <h2>Decision &amp; Action</h2>
+        <p class="section-subtitle">Ownership, sequencing, and why the top of the queue moved above a CVSS-only view.</p>
+      </div>
+      <div class="section-inner">
+        <div class="two-col decision-layout">
+        <article class="panel-card stack">
+          <div>
+            <p class="label">Escalation queue</p>
+            <h3>What needs action now</h3>
+          </div>
+          <div class="decision-stack"><div class="decision-card" data-priority="Critical"><div class="decision-topline"><h4>CVE-2024-4577</h4><span class="chip" data-tone="critical">Critical</span></div><p class="decision-action-line">Upgrade affected components with known fixes: php-cgi 8.1.28 (composer.lock) -&gt; 8.1.29. Patch or miti...</p><div class="decision-chip-row"><span class="chip" data-tone="neutral">Service Unmapped</span><span class="chip" data-tone="neutral">Owner Unassigned</span><span class="chip" data-tone="accent">CVSS-only baseline delta No change</span></div><p class="decision-why"><strong>Why now:</strong> CISA KEV lists this CVE as known exploited in the wild. NVD reports CVSS 9.8 (CRITICAL) via CVSS v3.1. FIRST EPSS is 0.944 (p...</p></div><div class="decision-card" data-priority="Critical"><div class="decision-topline"><h4>CVE-2024-3094</h4><span class="chip" data-tone="critical">Critical</span></div><p class="decision-action-line">Upgrade affected components with known fixes in apk: xz 5.6.0-r0 (/lib/apk/db/installed) -&gt; 5.6.1-r2....</p><div class="decision-chip-row"><span class="chip" data-tone="neutral">Service customer-login</span><span class="chip" data-tone="neutral">Owner platform-team</span><span class="chip" data-tone="accent">CVSS-only baseline delta No change</span></div><p class="decision-why"><strong>Why now:</strong> NVD reports CVSS 10.0 (CRITICAL) via CVSS v3.1. FIRST EPSS is 0.841 (percentile 0.993). Input provenance includes 1 occurrenc...</p></div></div>
+        </article>
+        <article class="panel-card stack">
+          <div>
+            <p class="label">Ownership</p>
+            <h3>Action plan</h3>
+          </div>
+          <div class="action-plan-stack"><div class="action-plan-section"><p class="label">Service queues</p><div class="bucket-card"><div class="bucket-topline"><h4>Service customer-login</h4><span class="chip" data-tone="accent">Rank 2</span></div><p class="bucket-summary">Ranked by highest actionable priority Critical, 1 internet-facing finding(s), 1 production finding(s).</p><dl class="bucket-meta"><dt>Highest priority</dt><dd>Critical</dd><dt>Owners</dt><dd>platform-team</dd><dt>Patch first</dt><dd>CVE-2024-3094</dd><dt>Suggested action</dt><dd>Upgrade affected components with known fixes in apk: xz 5.6.0-r0 (/lib/apk/db/installed) -&gt; 5.6.1-r2. Patch or mitigate immediately, validate exposure, strengthen detection coverage, and escalate potential business impact.</dd></dl></div></div><div class="action-plan-section"><p class="label">Asset queues</p><div class="bucket-card"><div class="bucket-topline"><h4>Asset api-gateway</h4><span class="chip" data-tone="accent">Rank 2</span></div><p class="bucket-summary">Ranked by highest actionable priority Critical, 1 internet-facing finding(s), 1 production finding(s).</p><dl class="bucket-meta"><dt>Highest priority</dt><dd>Critical</dd><dt>Owners</dt><dd>platform-team</dd><dt>Patch first</dt><dd>CVE-2024-3094</dd><dt>Suggested action</dt><dd>Upgrade affected components with known fixes in apk: xz 5.6.0-r0 (/lib/apk/db/installed) -&gt; 5.6.1-r2. Patch or mitigate immediately, validate exposure, strengthen detection coverage, and escalate potential business impact.</dd></dl></div></div></div>
+        </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="finding-dossiers" data-section="finding-dossiers">
+      <div class="section-header">
+        <h2>Finding Dossiers</h2>
+        <p class="section-subtitle">Detailed CVE views with recommended action up front and supporting evidence behind expanders.</p>
+      </div>
+      <div class="section-inner">
+        <article class="dossier" id="finding-cve-2024-4577"><div class="dossier-head"><span class="dossier-cve-id">CVE-2024-4577</span><div class="chip-row"><span class="chip" data-tone="critical">Critical / KEV</span><span class="chip" data-tone="critical">Known exploited (KEV)</span><span class="chip" data-tone="accent">ATT&amp;CK High</span><span class="chip" data-tone="info">12 TTPs</span><span class="chip" data-tone="warning">Under investigation</span></div><div class="dossier-scores"><div class="score-item"><strong>9.8</strong> CVSS</div><div class="score-item"><strong>0.944</strong> EPSS</div><div class="score-item"><strong>1</strong> occurrences</div></div></div><div class="dossier-body"><p class="dossier-desc">In PHP versions 8.1.* before 8.1.29, 8.2.* before 8.2.20, 8.3.* before 8.3.8, when using Apache and PHP-CGI on Windows, if the system is set up to use certain code pages, Windows may use &quot;Best-Fit&quot; behavior to replace characters in command line given to Win32 API functions. PHP CGI module may misinterpret those characters as PHP options, which may allow a malicious user to pass options to PHP binary being run, and thus reveal the source code of scripts, run arbitrary PHP code on the server, etc.</p><div class="action-callout" data-urgency="critical"><div class="action-callout-label">Recommended Action</div><p class="action-callout-text">Upgrade affected components with known fixes: php-cgi 8.1.28 (composer.lock) -&gt; 8.1.29. Patch or mitigate immediately, validate exposure, strengthen detection coverage, and escalate potential business impact.</p></div><div class="insight-grid"><article class="insight-card"><p class="label">Priority signal</p><p class="insight-value">KEV-listed, VEX under investigation, ATT&amp;CK High</p></article><article class="insight-card"><p class="label">Service and owner</p><p class="insight-value">Unmapped</p><p class="insight-detail">Unassigned</p></article><article class="insight-card"><p class="label">Component and target</p><p class="insight-value">php-cgi 8.1.28</p><p class="insight-detail">image:app/composer.lock</p></article><article class="insight-card"><p class="label">Exposure and environment</p><p class="insight-value">No exposure signal</p><p class="insight-detail">No environment label</p></article><article class="insight-card"><p class="label">Threat behavior</p><p class="insight-value">High</p><p class="insight-detail">12 technique(s), top tactic initial-access</p></article></div><section class="attack-preview"><div class="attack-preview-head"><div><p class="label">Threat behavior snapshot</p><h3>ATT&amp;CK view</h3></div><div class="chip-row"><span class="chip" data-tone="accent">ATT&amp;CK High</span><span class="chip" data-tone="info">12 TTPs</span><span class="chip" data-tone="neutral">10 tactics</span><span class="chip" data-tone="neutral">initial-access</span></div></div><p class="attack-preview-copy">CVE-2024-4577 is a PHP argument injection vulnerability that allows an adversary to execute arbitrary php commands. Threat actors have been observed utilizing Cobalt Strike and the TaoWu toolkit for post-exploitation activities, such as conducting reconnais...</p><div class="attack-preview-taxonomy"><div class="attack-mini-stack"><p class="label">Top tactics</p><span class="chip" data-tone="neutral">initial-access</span><span class="chip" data-tone="neutral">execution</span><span class="chip" data-tone="neutral">defense-evasion</span><span class="chip" data-tone="neutral">persistence</span></div><div class="attack-mini-stack"><p class="label">Mapping types</p><span class="chip" data-tone="accent">exploitation_technique</span><span class="chip" data-tone="accent">primary_impact</span><span class="chip" data-tone="accent">secondary_impact</span></div></div><div class="attack-mini-grid"><article class="attack-mini-card"><div class="attack-mini-id"><a class="attack-technique-link" href="https://attack.mitre.org/techniques/T1190">T1190</a></div><p class="attack-mini-name">Exploit Public-Facing Application</p><p class="attack-mini-meta">initial-access</p></article><article class="attack-mini-card"><div class="attack-mini-id"><a class="attack-technique-link" href="https://attack.mitre.org/techniques/T1059">T1059</a></div><p class="attack-mini-name">Command and Scripting Interpreter</p><p class="attack-mini-meta">execution</p></article><article class="attack-mini-card"><div class="attack-mini-id"><a class="attack-technique-link" href="https://attack.mitre.org/techniques/T1112">T1112</a></div><p class="attack-mini-name">Modify Registry</p><p class="attack-mini-meta">defense-evasion, persistence</p></article><article class="attack-mini-card"><div class="attack-mini-id"><a class="attack-technique-link" href="https://attack.mitre.org/techniques/T1053">T1053</a></div><p class="attack-mini-name">Scheduled Task/Job</p><p class="attack-mini-meta">execution, persistence, privilege-escalation</p></article></div></section><p class="dossier-summary">CISA KEV lists this CVE as known exploited in the wild. NVD reports CVSS 9.8 (CRITICAL) via CVSS v3.1. FIRST EPSS is 0.944 (percentile 1.000). ATT&amp;CK context (High) maps this CVE to 12 technique(s): T1190, T1059, T1112, T1053, T1543, T1033, T1068, T1071.001...</p><p class="dossier-context">Context does not raise the default response, but affected components and owners should still be reviewed.</p></div><div class="dossier-accordion"><details class="dossier-drawer"><summary>Provider evidence</summary><div class="dossier-drawer-body"><div class="evidence-groups"><div class="evidence-group"><h5>NVD evidence</h5><ul class="bullet-list compact-list"><li><strong>Published:</strong> 2024-06-09T20:15:09.550</li><li><strong>Last modified:</strong> 2025-11-03T19:23:39.437</li><li><strong>CVSS version:</strong> 3.1</li><li><strong>CWEs:</strong> CWE-78</li></ul><div class="provider-links"><p class="label">References</p><ul class="bullet-list compact-list"><li><a class="inline-link" href="http://www.openwall.com/lists/oss-security/2024/06/07/1">http://www.openwall.com/lists/oss-security/2024/06/07/1</a></li><li><a class="inline-link" href="https://arstechnica.com/security/2024/06/php-vulnerability-allows-attackers-to-run-malicious-code-on-windows-servers/">https://arstechnica.com/security/2024/06/php-vulnerability-allows-attackers-to-run-malicious-code-on-windows-servers/</a></li><li><a class="inline-link" href="https://blog.orange.tw/2024/06/cve-2024-4577-yet-another-php-rce.html">https://blog.orange.tw/2024/06/cve-2024-4577-yet-another-php-rce.html</a></li><li><a class="inline-link" href="https://cert.be/en/advisory/warning-php-remote-code-execution-patch-immediately">https://cert.be/en/advisory/warning-php-remote-code-execution-patch-immediately</a></li></ul></div></div><div class="evidence-group"><h5>FIRST EPSS evidence</h5><ul class="bullet-list compact-list"><li><strong>Score:</strong> 0.944</li><li><strong>Percentile:</strong> 1.000</li><li><strong>Score date:</strong> 2026-04-23</li></ul><p class="empty-copy" style="margin-top:0.5rem;font-size:0.8rem;">EPSS is a probability signal. It explains urgency, but KEV and the base threshold model still decide the priority label.</p></div><div class="evidence-group"><h5>CISA KEV evidence</h5><ul class="bullet-list compact-list"><li><strong>In KEV:</strong> Yes</li><li><strong>Vendor / product:</strong> PHP Group / PHP</li><li><strong>Date added:</strong> 2024-06-12</li><li><strong>Due date:</strong> 2024-07-03</li><li><strong>Required action:</strong> Apply mitigations per vendor instructions or discontinue use of the product if mitigations are unavailable.</li></ul></div></div></div></details><details class="dossier-drawer"><summary>CVSS-only baseline delta</summary><div class="dossier-drawer-body"><ul class="bullet-list compact-list"><li><strong>Baseline (CVSS-only):</strong> Critical</li><li><strong>Delta:</strong> No change</li></ul><p style="margin-top:0.75rem;font-size:0.875rem;color:var(--text-2);">CVSS and enrichment both support the same Critical outcome.</p></div></details><details class="dossier-drawer open"><summary><span class="dossier-drawer-title">ATT&amp;CK context</span><span class="drawer-meta">ATT&amp;CK High · 12 TTPs · initial-access</span></summary><div class="dossier-drawer-body"><div class="attack-detail-stack"><div class="attack-overview-grid"><article class="metric-card" data-tone="accent"><p class="metric-label">ATT&amp;CK relevance</p><p class="metric-value">ATT&amp;CK High</p><p class="metric-detail">Threat-context signal for this CVE</p></article><article class="metric-card" data-tone="info"><p class="metric-label">Techniques</p><p class="metric-value">12</p><p class="metric-detail">Mapped TTPs for this CVE</p></article><article class="metric-card" data-tone="default"><p class="metric-label">Tactics</p><p class="metric-value">10</p><p class="metric-detail">Mapped adversary phases</p></article><article class="metric-card" data-tone="default"><p class="metric-label">Mappings</p><p class="metric-value">12</p><p class="metric-detail">Imported CTID mapping objects</p></article></div><div class="attack-taxonomy-grid"><article class="attack-block-card"><p class="label">Tactics</p><span class="chip" data-tone="neutral">initial-access</span><span class="chip" data-tone="neutral">execution</span><span class="chip" data-tone="neutral">defense-evasion</span><span class="chip" data-tone="neutral">persistence</span><span class="chip" data-tone="neutral">privilege-escalation</span><span class="chip" data-tone="neutral">discovery</span><span class="chip" data-tone="neutral">command-and-control</span><span class="chip" data-tone="neutral">lateral-movement</span><span class="chip" data-tone="neutral">credential-access</span><span class="chip" data-tone="neutral">exfiltration</span></article><article class="attack-block-card"><p class="label">Mapping types</p><span class="chip" data-tone="info">exploitation_technique</span><span class="chip" data-tone="info">primary_impact</span><span class="chip" data-tone="info">secondary_impact</span></article><article class="attack-block-card"><p class="label">Capability groups</p><span class="chip" data-tone="accent">command_injection</span></article></div><article class="attack-block-card"><p class="label">Attack narrative</p><p class="attack-note">CVE-2024-4577 is a PHP argument injection vulnerability that allows an adversary to execute arbitrary php commands. Threat actors have been observed utilizing Cobalt Strike and the TaoWu toolkit for post-exploitation activities, such as conducting reconnaisance, establishing persistence, escalating privileges to SYSTEM level, and harvesting credentials.</p><p class="empty-copy" style="margin-top:0.55rem;">CTID ATT&amp;CK mappings include exploitation or primary impact behavior.</p></article><div class="attack-technique-section"><p class="label">Techniques and TTPs</p><div class="attack-technique-grid"><article class="attack-technique-card"><p class="attack-technique-kicker">MITRE technique</p><div class="attack-technique-head"><div><div class="attack-technique-id"><a class="attack-technique-link" href="https://attack.mitre.org/techniques/T1190">T1190</a></div><p class="attack-technique-name">Exploit Public-Facing Application</p></div><div class="chip-row"></div></div><div class="attack-technique-body"><div class="attack-technique-meta-row"><span>Primary tactic</span><strong>initial-access</strong></div><div class="attack-technique-chip-row"><span class="chip" data-tone="neutral">initial-access</span></div></div><div class="attack-technique-footer"><span>Mapped in local CTID data</span><a class="attack-technique-ref" href="https://attack.mitre.org/techniques/T1190">MITRE reference</a></div></article><article class="attack-technique-card"><p class="attack-technique-kicker">MITRE technique</p><div class="attack-technique-head"><div><div class="attack-technique-id"><a class="attack-technique-link" href="https://attack.mitre.org/techniques/T1059">T1059</a></div><p class="attack-technique-name">Command and Scripting Interpreter</p></div><div class="chip-row"></div></div><div class="attack-technique-body"><div class="attack-technique-meta-row"><span>Primary tactic</span><strong>execution</strong></div><div class="attack-technique-chip-row"><span class="chip" data-tone="neutral">execution</span></div></div><div class="attack-technique-footer"><span>Mapped in local CTID data</span><a class="attack-technique-ref" href="https://attack.mitre.org/techniques/T1059">MITRE reference</a></div></article><article class="attack-technique-card"><p class="attack-technique-kicker">MITRE technique</p><div class="attack-technique-head"><div><div class="attack-technique-id"><a class="attack-technique-link" href="https://attack.mitre.org/techniques/T1112">T1112</a></div><p class="attack-technique-name">Modify Registry</p></div><div class="chip-row"></div></div><div class="attack-technique-body"><div class="attack-technique-meta-row"><span>Primary tactic</span><strong>defense-evasion</strong></div><div class="attack-technique-chip-row"><span class="chip" data-tone="neutral">defense-evasion</span><span class="chip" data-tone="neutral">persistence</span></div></div><div class="attack-technique-footer"><span>Mapped in local CTID data</span><a class="attack-technique-ref" href="https://attack.mitre.org/techniques/T1112">MITRE reference</a></div></article><article class="attack-technique-card"><p class="attack-technique-kicker">MITRE technique</p><div class="attack-technique-head"><div><div class="attack-technique-id"><a class="attack-technique-link" href="https://attack.mitre.org/techniques/T1053">T1053</a></div><p class="attack-technique-name">Scheduled Task/Job</p></div><div class="chip-row"></div></div><div class="attack-technique-body"><div class="attack-technique-meta-row"><span>Primary tactic</span><strong>execution</strong></div><div class="attack-technique-chip-row"><span class="chip" data-tone="neutral">execution</span><span class="chip" data-tone="neutral">persistence</span><span class="chip" data-tone="neutral">privilege-escalation</span></div></div><div class="attack-technique-footer"><span>Mapped in local CTID data</span><a class="attack-technique-ref" href="https://attack.mitre.org/techniques/T1053">MITRE reference</a></div></article><article class="attack-technique-card"><p class="attack-technique-kicker">MITRE technique</p><div class="attack-technique-head"><div><div class="attack-technique-id"><a class="attack-technique-link" href="https://attack.mitre.org/techniques/T1543">T1543</a></div><p class="attack-technique-name">Create or Modify System Process</p></div><div class="chip-row"></div></div><div class="attack-technique-body"><div class="attack-technique-meta-row"><span>Primary tactic</span><strong>persistence</strong></div><div class="attack-technique-chip-row"><span class="chip" data-tone="neutral">persistence</span><span class="chip" data-tone="neutral">privilege-escalation</span></div></div><div class="attack-technique-footer"><span>Mapped in local CTID data</span><a class="attack-technique-ref" href="https://attack.mitre.org/techniques/T1543">MITRE reference</a></div></article><article class="attack-technique-card"><p class="attack-technique-kicker">MITRE technique</p><div class="attack-technique-head"><div><div class="attack-technique-id"><a class="attack-technique-link" href="https://attack.mitre.org/techniques/T1033">T1033</a></div><p class="attack-technique-name">System Owner/User Discovery</p></div><div class="chip-row"></div></div><div class="attack-technique-body"><div class="attack-technique-meta-row"><span>Primary tactic</span><strong>discovery</strong></div><div class="attack-technique-chip-row"><span class="chip" data-tone="neutral">discovery</span></div></div><div class="attack-technique-footer"><span>Mapped in local CTID data</span><a class="attack-technique-ref" href="https://attack.mitre.org/techniques/T1033">MITRE reference</a></div></article><article class="attack-technique-card"><p class="attack-technique-kicker">MITRE technique</p><div class="attack-technique-head"><div><div class="attack-technique-id"><a class="attack-technique-link" href="https://attack.mitre.org/techniques/T1068">T1068</a></div><p class="attack-technique-name">Exploitation for Privilege Escalation</p></div><div class="chip-row"></div></div><div class="attack-technique-body"><div class="attack-technique-meta-row"><span>Primary tactic</span><strong>privilege-escalation</strong></div><div class="attack-technique-chip-row"><span class="chip" data-tone="neutral">privilege-escalation</span></div></div><div class="attack-technique-footer"><span>Mapped in local CTID data</span><a class="attack-technique-ref" href="https://attack.mitre.org/techniques/T1068">MITRE reference</a></div></article><article class="attack-technique-card"><p class="attack-technique-kicker">MITRE technique</p><div class="attack-technique-head"><div><div class="attack-technique-id"><a class="attack-technique-link" href="https://attack.mitre.org/techniques/T1071/001">T1071.001</a></div><p class="attack-technique-name">Web Protocols</p></div><div class="chip-row"></div></div><div class="attack-technique-body"><div class="attack-technique-meta-row"><span>Primary tactic</span><strong>command-and-control</strong></div><div class="attack-technique-chip-row"><span class="chip" data-tone="neutral">command-and-control</span></div></div><div class="attack-technique-footer"><span>Mapped in local CTID data</span><a class="attack-technique-ref" href="https://attack.mitre.org/techniques/T1071/001">MITRE reference</a></div></article><article class="attack-technique-card"><p class="attack-technique-kicker">MITRE technique</p><div class="attack-technique-head"><div><div class="attack-technique-id"><a class="attack-technique-link" href="https://attack.mitre.org/techniques/T1570">T1570</a></div><p class="attack-technique-name">Lateral Tool Transfer</p></div><div class="chip-row"></div></div><div class="attack-technique-body"><div class="attack-technique-meta-row"><span>Primary tactic</span><strong>lateral-movement</strong></div><div class="attack-technique-chip-row"><span class="chip" data-tone="neutral">lateral-movement</span></div></div><div class="attack-technique-footer"><span>Mapped in local CTID data</span><a class="attack-technique-ref" href="https://attack.mitre.org/techniques/T1570">MITRE reference</a></div></article><article class="attack-technique-card"><p class="attack-technique-kicker">MITRE technique</p><div class="attack-technique-head"><div><div class="attack-technique-id"><a class="attack-technique-link" href="https://attack.mitre.org/techniques/T1003">T1003</a></div><p class="attack-technique-name">OS Credential Dumping</p></div><div class="chip-row"></div></div><div class="attack-technique-body"><div class="attack-technique-meta-row"><span>Primary tactic</span><strong>credential-access</strong></div><div class="attack-technique-chip-row"><span class="chip" data-tone="neutral">credential-access</span></div></div><div class="attack-technique-footer"><span>Mapped in local CTID data</span><a class="attack-technique-ref" href="https://attack.mitre.org/techniques/T1003">MITRE reference</a></div></article><article class="attack-technique-card"><p class="attack-technique-kicker">MITRE technique</p><div class="attack-technique-head"><div><div class="attack-technique-id"><a class="attack-technique-link" href="https://attack.mitre.org/techniques/T1003/001">T1003.001</a></div><p class="attack-technique-name">LSASS Memory</p></div><div class="chip-row"></div></div><div class="attack-technique-body"><div class="attack-technique-meta-row"><span>Primary tactic</span><strong>credential-access</strong></div><div class="attack-technique-chip-row"><span class="chip" data-tone="neutral">credential-access</span></div></div><div class="attack-technique-footer"><span>Mapped in local CTID data</span><a class="attack-technique-ref" href="https://attack.mitre.org/techniques/T1003/001">MITRE reference</a></div></article><article class="attack-technique-card"><p class="attack-technique-kicker">MITRE technique</p><div class="attack-technique-head"><div><div class="attack-technique-id"><a class="attack-technique-link" href="https://attack.mitre.org/techniques/T1041">T1041</a></div><p class="attack-technique-name">Exfiltration Over C2 Channel</p></div><div class="chip-row"></div></div><div class="attack-technique-body"><div class="attack-technique-meta-row"><span>Primary tactic</span><strong>exfiltration</strong></div><div class="attack-technique-chip-row"><span class="chip" data-tone="neutral">exfiltration</span></div></div><div class="attack-technique-footer"><span>Mapped in local CTID data</span><a class="attack-technique-ref" href="https://attack.mitre.org/techniques/T1041">MITRE reference</a></div></article></div></div><article class="attack-block-card"><p class="label">References</p><ul class="bullet-list compact-list"><li><a class="inline-link" href="https://arstechnica.com/security/2024/06/php-vulnerability-allows-attackers-to-run-malicious-code-on-windows-servers/">https://arstechnica.com/security/2024/06/php-vulnerability-allows-attackers-to-run-malicious-code-on-windows-servers/</a></li><li><a class="inline-link" href="https://www.cyber.gc.ca/en/alerts-advisories/al25-001-mass-exploitation-critical-php-cgi-vulnerability-cve-2024-4577">https://www.cyber.gc.ca/en/alerts-advisories/al25-001-mass-exploitation-critical-php-cgi-vulnerability-cve-2024-4577</a></li><li><a class="inline-link" href="https://www.greynoise.io/blog/mass-exploitation-critical-php-cgi-vulnerability-cve-2024-4577">https://www.greynoise.io/blog/mass-exploitation-critical-php-cgi-vulnerability-cve-2024-4577</a></li><li><a class="inline-link" href="https://blog.talosintelligence.com/new-persistent-attacks-japan/">https://blog.talosintelligence.com/new-persistent-attacks-japan/</a></li></ul></article></div></div></details><details class="dossier-drawer"><summary>Remediation detail</summary><div class="dossier-drawer-body"><div class="remediation-items"><div class="remediation-item"><h5>php-cgi</h5><p class="subtle">Current version: <strong>8.1.28</strong></p><p class="subtle">Fixed version(s): <strong>8.1.29</strong></p><p class="subtle">composer | composer.lock</p></div></div></div></details><details class="dossier-drawer"><summary>Decision logic</summary><div class="dossier-drawer-body"><p class="empty-copy">CISA KEV lists this CVE as known exploited in the wild. NVD reports CVSS 9.8 (CRITICAL) via CVSS v3.1. FIRST EPSS is 0.944 (percentile 1.000). ATT&amp;CK context (High) maps this CVE to 12 technique(s): T1190, T1059, T1112, T1053, T1543, T1033, T1068, T1071.001, T1570, T1003, T1003.001, T1041. CTID mapping types: exploitation_technique, primary_impact, secondary_impact. CTID ATT&amp;CK mappings include exploitation or primary impact behavior. ATT&amp;CK mapping note: CVE-2024-4577 is a PHP argument injection vulnerability that allows an adversary to execute arbitrary php commands. Threat actors have been observed utilizing Cobalt Strike and the TaoWu toolkit for post-exploitation activities, such as conducting reconnaisance, establishing persistence, escalating privileges to SYSTEM level, and harvesting credentials. Input provenance includes 1 occurrence(s) from trivy-json. Affected components include: php-cgi 8.1.28. Seen in 1 occurrence(s). At least one matching VEX statement is still under investigation, so the finding remains visible.</p></div></details><details class="dossier-drawer"><summary>Governance state</summary><div class="dossier-drawer-body"><dl class="governance-dl"><div class="governance-item"><dt>VEX state</dt><dd>under_investigation: 1</dd></div><div class="governance-item"><dt>Waiver state</dt><dd>N.A.</dd></div><div class="governance-item"><dt>Context summary</dt><dd>Seen in 1 occurrence(s).</dd></div></dl></div></details><details class="dossier-drawer"><summary>Routing context</summary><div class="dossier-drawer-body"><dl class="routing-grid"><div><dt class="label">Services</dt><dd><p class="empty-copy">No service ownership data captured.</p></dd></div><div><dt class="label">Owners</dt><dd><p class="empty-copy">No owner data captured.</p></dd></div><div><dt class="label">Exposure</dt><dd><p class="empty-copy">No exposure signals captured.</p></dd></div><div><dt class="label">Environment</dt><dd><p class="empty-copy">No environment labels captured.</p></dd></div><div><dt class="label">Source formats</dt><dd><span class="chip" data-tone="neutral">trivy-json</span></dd></div><div><dt class="label">Components</dt><dd><span class="chip" data-tone="neutral">php-cgi 8.1.28</span></dd></div><div><dt class="label">Targets</dt><dd><span class="chip" data-tone="neutral">image:app/composer.lock</span></dd></div></dl></div></details><details class="dossier-drawer"><summary>Occurrence evidence (1)</summary><div class="dossier-drawer-body"><div class="table-wrap"><table class="data-table compact-table"><thead><tr><th>Component</th><th>Target</th><th>Asset</th><th>Service</th><th>Owner</th><th>Exposure</th><th>Environment</th><th>VEX</th></tr></thead><tbody><tr><td>php-cgi 8.1.28</td><td>image:app/composer.lock</td><td>N.A.</td><td>N.A.</td><td>N.A.</td><td>N.A.</td><td>N.A.</td><td>under_investigation</td></tr></tbody></table></div></div></details></div></article><article class="dossier" id="finding-cve-2024-3094"><div class="dossier-head"><span class="dossier-cve-id">CVE-2024-3094</span><div class="chip-row"><span class="chip" data-tone="critical">Critical</span><span class="chip" data-tone="neutral">No KEV listing</span><span class="chip" data-tone="neutral">ATT&amp;CK Unmapped</span></div><div class="dossier-scores"><div class="score-item"><strong>10.0</strong> CVSS</div><div class="score-item"><strong>0.841</strong> EPSS</div><div class="score-item"><strong>1</strong> occurrences</div></div></div><div class="dossier-body"><p class="dossier-desc">Malicious code was discovered in the upstream tarballs of xz, starting with version 5.6.0. Through a series of complex obfuscations, the liblzma build process extracts a prebuilt object file from a disguised test file existing in the source code, which is then used to modify specific functions in the liblzma code. This results in a modified liblzma library that can be used by any software linked against this library, intercepting and modifying the data interaction with this library.</p><div class="action-callout" data-urgency="critical"><div class="action-callout-label">Recommended Action</div><p class="action-callout-text">Upgrade affected components with known fixes in apk: xz 5.6.0-r0 (/lib/apk/db/installed) -&gt; 5.6.1-r2. Patch or mitigate immediately, validate exposure, strengthen detection coverage, and escalate potential business impact.</p></div><div class="insight-grid"><article class="insight-card"><p class="label">Priority signal</p><p class="insight-value">Asset critical, internet-facing</p></article><article class="insight-card"><p class="label">Service and owner</p><p class="insight-value">customer-login</p><p class="insight-detail">platform-team</p></article><article class="insight-card"><p class="label">Component and target</p><p class="insight-value">xz 5.6.0-r0</p><p class="insight-detail">image:ghcr.io/acme/demo-app:1.0.0 (alpine 3.19)</p></article><article class="insight-card"><p class="label">Exposure and environment</p><p class="insight-value">internet-facing</p><p class="insight-detail">prod</p></article></div><section class="attack-preview attack-preview-empty"><div class="attack-preview-head"><div><p class="label">Threat behavior snapshot</p><h3>No mapped ATT&amp;CK behavior</h3></div><div class="chip-row"><span class="chip" data-tone="warning">Unmapped in local dataset</span></div></div><p class="attack-preview-copy">No CTID ATT&amp;CK mapping is available for this CVE.</p></section><p class="dossier-summary">NVD reports CVSS 10.0 (CRITICAL) via CVSS v3.1. FIRST EPSS is 0.841 (percentile 0.993). Input provenance includes 1 occurrence(s) from trivy-json. Affected components include: xz 5.6.0-r0. Seen in 1 occurrence(s), across 1 mapped asset(s), highest asset cri...</p><p class="dossier-context">Escalate validation and remediation because context indicates internet-facing exposure, production environment.</p></div><div class="dossier-accordion"><details class="dossier-drawer"><summary>Provider evidence</summary><div class="dossier-drawer-body"><div class="evidence-groups"><div class="evidence-group"><h5>NVD evidence</h5><ul class="bullet-list compact-list"><li><strong>Published:</strong> 2024-03-29T17:15:21.150</li><li><strong>Last modified:</strong> 2025-08-19T01:15:57.407</li><li><strong>CVSS version:</strong> 3.1</li><li><strong>CWEs:</strong> CWE-506</li></ul><div class="provider-links"><p class="label">References</p><ul class="bullet-list compact-list"><li><a class="inline-link" href="https://access.redhat.com/security/cve/CVE-2024-3094">https://access.redhat.com/security/cve/CVE-2024-3094</a></li><li><a class="inline-link" href="https://bugzilla.redhat.com/show_bug.cgi?id=2272210">https://bugzilla.redhat.com/show_bug.cgi?id=2272210</a></li><li><a class="inline-link" href="https://www.openwall.com/lists/oss-security/2024/03/29/4">https://www.openwall.com/lists/oss-security/2024/03/29/4</a></li><li><a class="inline-link" href="https://www.redhat.com/en/blog/urgent-security-alert-fedora-41-and-rawhide-users">https://www.redhat.com/en/blog/urgent-security-alert-fedora-41-and-rawhide-users</a></li></ul></div></div><div class="evidence-group"><h5>FIRST EPSS evidence</h5><ul class="bullet-list compact-list"><li><strong>Score:</strong> 0.841</li><li><strong>Percentile:</strong> 0.993</li><li><strong>Score date:</strong> 2026-04-22</li></ul><p class="empty-copy" style="margin-top:0.5rem;font-size:0.8rem;">EPSS is a probability signal. It explains urgency, but KEV and the base threshold model still decide the priority label.</p></div><div class="evidence-group"><h5>CISA KEV evidence</h5><ul class="bullet-list compact-list"><li><strong>In KEV:</strong> No</li><li><strong>Vendor / product:</strong> Not available.</li><li><strong>Date added:</strong> Not available.</li><li><strong>Due date:</strong> Not available.</li><li><strong>Required action:</strong> No KEV action text captured.</li></ul></div></div></div></details><details class="dossier-drawer"><summary>CVSS-only baseline delta</summary><div class="dossier-drawer-body"><ul class="bullet-list compact-list"><li><strong>Baseline (CVSS-only):</strong> Critical</li><li><strong>Delta:</strong> No change</li></ul><p style="margin-top:0.75rem;font-size:0.875rem;color:var(--text-2);">CVSS and enrichment both support the same Critical outcome.</p></div></details><details class="dossier-drawer"><summary><span class="dossier-drawer-title">ATT&amp;CK context</span><span class="drawer-meta">Unmapped</span></summary><div class="dossier-drawer-body"><div class="attack-status-card"><p class="label">Threat behavior unavailable</p><p class="empty-copy">This CVE is currently unmapped in the supplied local ATT&amp;CK dataset. The base priority remains valid, but adversary-behavior context is absent.</p><p class="attack-note">No CTID ATT&amp;CK mapping is available for this CVE.</p></div></div></details><details class="dossier-drawer"><summary>Remediation detail</summary><div class="dossier-drawer-body"><div class="remediation-items"><div class="remediation-item"><h5>xz</h5><p class="subtle">Current version: <strong>5.6.0-r0</strong></p><p class="subtle">Fixed version(s): <strong>5.6.1-r2</strong></p><p class="subtle">apk | /lib/apk/db/installed</p></div></div></div></details><details class="dossier-drawer"><summary>Decision logic</summary><div class="dossier-drawer-body"><p class="empty-copy">NVD reports CVSS 10.0 (CRITICAL) via CVSS v3.1. FIRST EPSS is 0.841 (percentile 0.993). Input provenance includes 1 occurrence(s) from trivy-json. Affected components include: xz 5.6.0-r0. Seen in 1 occurrence(s), across 1 mapped asset(s), highest asset criticality critical, highest exposure internet-facing.</p></div></details><details class="dossier-drawer"><summary>Governance state</summary><div class="dossier-drawer-body"><dl class="governance-dl"><div class="governance-item"><dt>VEX state</dt><dd>affected: 1</dd></div><div class="governance-item"><dt>Waiver state</dt><dd>N.A.</dd></div><div class="governance-item"><dt>Context summary</dt><dd>Seen in 1 occurrence(s), across 1 mapped asset(s), highest asset criticality critical, highest exposure internet-facing.</dd></div></dl></div></details><details class="dossier-drawer"><summary>Routing context</summary><div class="dossier-drawer-body"><dl class="routing-grid"><div><dt class="label">Services</dt><dd><span class="chip chip-with-count" data-tone="neutral"><span class="chip-label">customer-login</span><span class="chip-count">1</span></span></dd></div><div><dt class="label">Owners</dt><dd><span class="chip chip-with-count" data-tone="neutral"><span class="chip-label">platform-team</span><span class="chip-count">1</span></span></dd></div><div><dt class="label">Exposure</dt><dd><span class="chip chip-with-count" data-tone="neutral"><span class="chip-label">internet-facing</span><span class="chip-count">1</span></span></dd></div><div><dt class="label">Environment</dt><dd><span class="chip chip-with-count" data-tone="neutral"><span class="chip-label">prod</span><span class="chip-count">1</span></span></dd></div><div><dt class="label">Source formats</dt><dd><span class="chip" data-tone="neutral">trivy-json</span></dd></div><div><dt class="label">Components</dt><dd><span class="chip" data-tone="neutral">xz 5.6.0-r0</span></dd></div><div><dt class="label">Targets</dt><dd><span class="chip" data-tone="neutral">image:ghcr.io/acme/demo-app:1.0.0 (alpine 3.19)</span></dd></div></dl></div></details><details class="dossier-drawer"><summary>Occurrence evidence (1)</summary><div class="dossier-drawer-body"><div class="table-wrap"><table class="data-table compact-table"><thead><tr><th>Component</th><th>Target</th><th>Asset</th><th>Service</th><th>Owner</th><th>Exposure</th><th>Environment</th><th>VEX</th></tr></thead><tbody><tr><td>xz 5.6.0-r0</td><td>image:ghcr.io/acme/demo-app:1.0.0 (alpine 3.19)</td><td>api-gateway</td><td>customer-login</td><td>platform-team</td><td>internet-facing</td><td>prod</td><td>affected</td></tr></tbody></table></div></div></details></div></article>
+      </div>
+    </section>
+
+    <section class="section" id="coverage-context" data-section="coverage-context">
+      <div class="section-header">
+        <h2>Coverage &amp; Context</h2>
+        <p class="section-subtitle">Shows enrichment completeness and what routing context actually survived into the payload.</p>
+      </div>
+      <div class="section-inner">
+        <div class="metric-grid"><article class="metric-card" data-tone="default"><p class="metric-label">NVD Coverage</p><p class="metric-value">3/3 (100%)</p><p class="metric-detail">Description + CVSS coverage</p></article><article class="metric-card" data-tone="default"><p class="metric-label">EPSS Coverage</p><p class="metric-value">3/3 (100%)</p><p class="metric-detail">Exploit probability coverage</p></article><article class="metric-card" data-tone="critical"><p class="metric-label">KEV Coverage</p><p class="metric-value">2/3 (67%)</p><p class="metric-detail">Known exploited catalog coverage</p></article><article class="metric-card" data-tone="accent"><p class="metric-label">ATT&amp;CK Coverage</p><p class="metric-value">1/3 (33%)</p><p class="metric-detail">Mapped adversary behavior coverage</p></article></div>
+      </div>
+      <div class="section-inner">
+        <div class="three-col">
+          <article class="panel-card stack">
+            <div>
+              <p class="label">Coverage mix</p>
+              <h3>Priority distribution</h3>
+            </div>
+            <div class="distribution-row"><span class="distribution-label">Critical</span><div class="distribution-track"><span class="distribution-fill tone-critical" style="width: 100%"></span></div><span class="distribution-count">2</span></div><div class="distribution-row"><span class="distribution-label">High</span><div class="distribution-track"><span class="distribution-fill tone-high" style="width: 8%"></span></div><span class="distribution-count">0</span></div><div class="distribution-row"><span class="distribution-label">Medium</span><div class="distribution-track"><span class="distribution-fill tone-medium" style="width: 8%"></span></div><span class="distribution-count">0</span></div><div class="distribution-row"><span class="distribution-label">Low</span><div class="distribution-track"><span class="distribution-fill tone-neutral" style="width: 8%"></span></div><span class="distribution-count">0</span></div>
+          </article>
+          <article class="panel-card stack">
+            <div>
+              <p class="label">Routing context</p>
+              <h3>Who and what is affected</h3>
+            </div>
+            <div>
+              <p class="label">Services</p>
+              <div class="chip-row"><span class="chip chip-with-count" data-tone="neutral"><span class="chip-label">customer-login</span><span class="chip-count">1</span></span></div>
+            </div>
+            <div>
+              <p class="label">Owners</p>
+              <div class="chip-row"><span class="chip chip-with-count" data-tone="neutral"><span class="chip-label">platform-team</span><span class="chip-count">1</span></span></div>
+            </div>
+            <div>
+              <p class="label">Exposure</p>
+              <div class="chip-row"><span class="chip chip-with-count" data-tone="neutral"><span class="chip-label">internet-facing</span><span class="chip-count">1</span></span></div>
+            </div>
+            <div>
+              <p class="label">Environments</p>
+              <div class="chip-row"><span class="chip chip-with-count" data-tone="neutral"><span class="chip-label">prod</span><span class="chip-count">1</span></span></div>
+            </div>
+          </article>
+          <article class="panel-card stack">
+            <div>
+              <p class="label">Quality signals</p>
+              <h3>Warnings and density</h3>
+            </div>
+            <ul class="bullet-list"><li>Ignored non-CVE Trivy vulnerability identifier: &#x27;GHSA-9m7r-4c2v-9j5j&#x27;</li></ul>
+            <ul class="bullet-list">
+              <li><strong>Occurrences retained:</strong> 2</li>
+              <li><strong>Components in queue:</strong> 2</li>
+              <li><strong>Targets in queue:</strong> 2</li>
+              <li><strong>Mapped assets:</strong> 1</li>
+            </ul>
+          </article>
+        </div>
+      </div>
+      <div class="section-inner">
+        <article class="panel-card stack">
+          <div>
+            <p class="label">Payload completeness</p>
+            <h3>Input and preservation</h3>
+          </div>
+          <div class="table-wrap queue-desktop"><table class="data-table compact-table"><thead><tr><th>Input</th><th>Format</th><th>Rows</th><th>Occurrences</th><th>Unique CVEs</th></tr></thead><tbody><tr><td>data/input_fixtures/trivy_report.json</td><td>trivy-json</td><td>4</td><td>3</td><td>3</td></tr></tbody></table></div><div class="kv-card-grid queue-mobile"><article class="kv-card"><h4>data/input_fixtures/trivy_report.json</h4><dl class="compact-meta"><dt>Format</dt><dd>trivy-json</dd><dt>Rows</dt><dd>4</dd><dt>Occurrences</dt><dd>3</dd><dt>Unique CVEs</dt><dd>3</dd></dl></article></div>
+          <p class="muted">The table above shows which inputs made it into the saved analysis payload that powers this report.</p>
+        </article>
+      </div>
+      <div class="section-inner">
+        <article class="panel-card stack">
+          <div>
+            <p class="label">Provider notes</p>
+            <h3>Provider transparency</h3>
+          </div>
+          <div class="two-col"><div><h5>Provider transparency</h5><ul class="bullet-list compact-list"><li><strong>Cache enabled:</strong> yes</li><li><strong>Provider snapshot file:</strong> Not used for this run.</li><li><strong>Provider snapshot sources:</strong> N.A.</li><li><strong>NVD request diagnostics:</strong> requested=3, cache_hits=3, network_fetches=0, failures=0, content_hits=3</li></ul></div><div><h5>Provider freshness</h5><ul class="bullet-list compact-list"><li><strong>EPSS dates present:</strong> 2026-04-22, 2026-04-23</li><li><strong>KEV add dates present:</strong> 2024-06-12</li><li><strong>Warning count:</strong> 1</li></ul><p class="empty-copy" style="margin-top:0.5rem;font-size:0.8rem;">Freshness and diagnostics explain how much of the report is live enrichment, cached provider data, or pinned snapshot replay.</p></div></div>
+        </article>
+      </div>
+    </section>
+
+    <section class="section" id="attack-governance" data-section="attack-governance">
+      <div class="section-header">
+        <h2>ATT&amp;CK &amp; Governance</h2>
+        <p class="section-subtitle">Threat behavior plus control-state coverage: suppressed, investigated, waived, or missing.</p>
+      </div>
+      <div class="section-inner">
+        <div class="attack-governance-layout">
+        <article class="panel-card stack attack-primary-card">
+          <div>
+            <p class="label">Threat behavior</p>
+            <h3>ATT&amp;CK context</h3>
+          </div>
+          <div class="attack-detail-stack"><article class="attack-snapshot-card"><div class="attack-snapshot-head"><div><p class="label">Threat behavior in queue</p><h3>ATT&amp;CK coverage snapshot</h3></div><div class="chip-row"><span class="chip" data-tone="accent">Source ctid-mappings-explorer</span><span class="chip" data-tone="info">ATT&amp;CK v16.1</span><span class="chip" data-tone="neutral">Domain enterprise</span><span class="chip" data-tone="neutral">Framework kev</span><span class="chip" data-tone="neutral">Mapping version 07/28/2025</span></div></div><p class="attack-note">1 mapped visible CVE(s) contribute 12 technique(s) across 10 tactic(s) in this view. Most common technique signal: T1003 (1). Most common tactic signal: command-and-control (1).</p></article><div class="attack-overview-grid"><article class="metric-card" data-tone="info"><p class="metric-label">Mapped CVEs</p><p class="metric-value">1</p><p class="metric-detail">Visible mapped findings</p></article><article class="metric-card" data-tone="neutral"><p class="metric-label">Unmapped CVEs</p><p class="metric-value">1</p><p class="metric-detail">Visible findings without ATT&amp;CK mapping</p></article><article class="metric-card" data-tone="accent"><p class="metric-label">Techniques</p><p class="metric-value">12</p><p class="metric-detail">Unique ATT&amp;CK techniques in view</p></article><article class="metric-card" data-tone="default"><p class="metric-label">Tactics</p><p class="metric-value">10</p><p class="metric-detail">Unique ATT&amp;CK tactics in view</p></article></div><div class="attack-taxonomy-grid"><article class="attack-block-card"><p class="label">Top techniques</p><div class="chip-row"><span class="chip" data-tone="info">T1003 (1)</span><span class="chip" data-tone="info">T1003.001 (1)</span><span class="chip" data-tone="info">T1033 (1)</span><span class="chip" data-tone="info">T1041 (1)</span><span class="chip" data-tone="info">T1053 (1)</span><span class="chip" data-tone="info">T1059 (1)</span></div></article><article class="attack-block-card"><p class="label">Top tactics</p><div class="chip-row"><span class="chip" data-tone="neutral">command-and-control (1)</span><span class="chip" data-tone="neutral">credential-access (1)</span><span class="chip" data-tone="neutral">defense-evasion (1)</span><span class="chip" data-tone="neutral">discovery (1)</span><span class="chip" data-tone="neutral">execution (1)</span><span class="chip" data-tone="neutral">exfiltration (1)</span></div></article><article class="attack-block-card"><p class="label">Mapping types</p><div class="chip-row"><span class="chip" data-tone="accent">exploitation_technique (1)</span><span class="chip" data-tone="accent">primary_impact (1)</span><span class="chip" data-tone="accent">secondary_impact (1)</span></div></article></div>
+        </article>
+        <div class="attack-side-stack">
+          <article class="panel-card stack">
+            <div>
+              <p class="label">Control state</p>
+              <h3>Governance state</h3>
+            </div>
+            <ul class="bullet-list">
+              <li><strong>Suppressed by VEX:</strong> 1</li>
+              <li><strong>Under investigation:</strong> 1</li>
+              <li><strong>Waived findings:</strong> 0</li>
+              <li><strong>Waiver review due:</strong> 0</li>
+              <li><strong>Expired waivers:</strong> 0</li>
+              <li><strong>Waiver file:</strong> Not supplied for this run.</li>
+            </ul>
+          </article>
+          <article class="panel-card stack">
+            <div>
+              <p class="label">Next improvements</p>
+              <h3>Missing context</h3>
+            </div>
+            <div class="bucket-card"><h4>Track waivers explicitly</h4><p style="font-size:0.82rem;color:var(--text-2);margin-bottom:0;">Show accepted risk, owners, review dates, and expiry pressure instead of leaving governance debt off-report.</p><code class="command-chip">vuln-prioritizer analyze --waiver-file waivers.yml</code></div>
+          </article>
+        </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="how-to-read" data-section="how-to-read">
+      <div class="section-header">
+        <h2>How to Read This Report</h2>
+        <p class="section-subtitle">Interpretation rules for reviewers. Secondary to the live queue, but useful for governance and audit context.</p>
+      </div>
+      <div class="section-inner">
+        <details class="context-toggle">
+          <summary>Open method notes</summary>
+          <div class="method-grid">
+            <article class="method-card"><h4>Priority</h4><p class="empty-copy">The primary queue stays deterministic and rule-based from CVSS, EPSS, and KEV.</p></article><article class="method-card"><h4>KEV</h4><p class="empty-copy">A KEV listing means public evidence of exploitation in the wild and should trigger immediate scrutiny.</p></article><article class="method-card"><h4>ATT&amp;CK relevance</h4><p class="empty-copy">ATT&amp;CK explains threat behavior and management framing, but it does not silently replace the base score.</p></article><article class="method-card"><h4>VEX</h4><p class="empty-copy">VEX records applicability. Suppressed findings can disappear, while under-investigation findings stay visible.</p></article><article class="method-card"><h4>Waiver</h4><p class="empty-copy">Waivers document accepted risk with owners, review dates, and expiry pressure rather than hiding the finding.</p></article><article class="method-card"><h4>Asset context</h4><p class="empty-copy">Owner, service, exposure, and environment signals turn a generic finding into an operational remediation route.</p></article>
+          </div>
+        </details>
+      </div>
+    </section>
+
+    <footer class="report-footer">
+      <div class="report-footer-shell">
+        <div>
+          <p class="label">End of report</p>
+          <p class="report-footer-note">Static offline export for triage, routing, and evidence review. This footer adds final spacing so the last section is fully reachable in embedded browsers.</p>
+        </div>
+        <div class="report-footer-meta">
+          <span>Generated 2026-04-23T15:57:10+00:00</span>
+          <span>Input data/input_fixtures/trivy_report.json</span>
+          <a class="report-footer-link" href="#executive-brief">Back to top</a>
+        </div>
+      </div>
+    </footer>
+    <div class="report-tail-spacer" aria-hidden="true"></div>
+
   </main>
 </body>
 </html>

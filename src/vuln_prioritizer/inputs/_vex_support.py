@@ -97,7 +97,8 @@ def apply_vex_statements(
     statements: list[VexStatement],
     *,
     return_diagnostics: Literal[False] = False,
-) -> list[InputOccurrence]: ...
+) -> list[InputOccurrence]:
+    pass
 
 
 @overload
@@ -106,7 +107,8 @@ def apply_vex_statements(
     statements: list[VexStatement],
     *,
     return_diagnostics: Literal[True],
-) -> tuple[list[InputOccurrence], VexMatchDiagnostics]: ...
+) -> tuple[list[InputOccurrence], VexMatchDiagnostics]:
+    pass
 
 
 def apply_vex_statements(

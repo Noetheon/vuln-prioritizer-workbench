@@ -140,6 +140,233 @@ def test_compare_markdown_report_contains_changed_and_unchanged_rows() -> None:
     )
 
 
+def _base_html_payload() -> dict:
+    return {
+        "metadata": {
+            "generated_at": "2026-04-21T12:00:00+00:00",
+            "input_path": "trivy-results.json",
+            "input_format": "trivy-json",
+            "policy_profile": "enterprise",
+            "cache_enabled": True,
+            "merged_input_count": 1,
+            "valid_input": 2,
+            "findings_count": 1,
+            "filtered_out_count": 1,
+            "nvd_hits": 2,
+            "epss_hits": 2,
+            "kev_hits": 1,
+            "attack_hits": 0,
+            "suppressed_by_vex": 1,
+            "under_investigation_count": 1,
+            "waived_count": 0,
+            "waiver_review_due_count": 0,
+            "expired_waiver_count": 0,
+            "counts_by_priority": {"Critical": 1, "High": 0, "Medium": 0, "Low": 0},
+            "data_sources": ["NVD", "EPSS", "KEV", "Input formats: trivy-json"],
+            "warnings": ["Ignored non-CVE identifier GHSA-1234"],
+            "attack_enabled": False,
+            "duplicate_cve_count": 0,
+            "locked_provider_data": False,
+            "provider_snapshot_file": "provider-snapshot.json",
+            "provider_snapshot_sources": ["nvd", "epss", "kev"],
+            "nvd_diagnostics": {
+                "requested": 2,
+                "cache_hits": 1,
+                "network_fetches": 1,
+                "failures": 0,
+                "content_hits": 2,
+            },
+            "input_sources": [
+                {
+                    "input_path": "trivy-results.json",
+                    "input_format": "trivy-json",
+                    "total_rows": 4,
+                    "occurrence_count": 2,
+                    "unique_cves": 2,
+                }
+            ],
+        },
+        "attack_summary": {
+            "mapped_cves": 0,
+            "unmapped_cves": 1,
+            "technique_distribution": {},
+            "tactic_distribution": {},
+        },
+        "findings": [
+            {
+                "cve_id": "CVE-2024-3094",
+                "description": "Malicious code in xz backdoored upstream release tarballs.",
+                "cvss_base_score": 6.8,
+                "cvss_severity": "MEDIUM",
+                "epss": 0.841,
+                "epss_percentile": 0.993,
+                "in_kev": False,
+                "priority_label": "Critical",
+                "priority_rank": 1,
+                "rationale": "High EPSS raises this finding above its CVSS-only baseline and keeps it at the top of the queue.",
+                "recommended_action": "Upgrade xz immediately and verify downstream image rebuilds.",
+                "context_summary": "Seen in 1 occurrence, mapped to an internet-facing production service.",
+                "context_recommendation": "Escalate validation and remediation because the affected image backs a production login service.",
+                "attack_mapped": False,
+                "attack_relevance": "Unmapped",
+                "under_investigation": True,
+                "waived": False,
+                "waiver_status": None,
+                "asset_count": 1,
+                "highest_asset_criticality": "critical",
+                "provenance": {
+                    "occurrence_count": 1,
+                    "source_formats": ["trivy-json"],
+                    "components": ["xz 5.6.0-r0"],
+                    "affected_paths": ["/lib/apk/db/installed"],
+                    "fix_versions": ["5.6.1-r2"],
+                    "targets": ["image:ghcr.io/acme/demo-app:1.0.0"],
+                    "asset_ids": ["asset-login-prod"],
+                    "highest_asset_criticality": "critical",
+                    "highest_asset_exposure": "internet-facing",
+                    "vex_statuses": {"under_investigation": 1},
+                    "occurrences": [
+                        {
+                            "cve_id": "CVE-2024-3094",
+                            "component_name": "xz",
+                            "component_version": "5.6.0-r0",
+                            "target_kind": "image",
+                            "target_ref": "ghcr.io/acme/demo-app:1.0.0",
+                            "asset_id": "asset-login-prod",
+                            "asset_business_service": "customer-login",
+                            "asset_owner": "platform-team",
+                            "asset_exposure": "internet-facing",
+                            "asset_environment": "prod",
+                            "vex_status": "under_investigation",
+                        }
+                    ],
+                },
+                "remediation": {
+                    "strategy": "upgrade",
+                    "components": [
+                        {
+                            "name": "xz",
+                            "current_version": "5.6.0-r0",
+                            "fixed_versions": ["5.6.1-r2"],
+                            "package_type": "apk",
+                            "path": "/lib/apk/db/installed",
+                        }
+                    ],
+                },
+                "provider_evidence": {
+                    "nvd": {
+                        "cve_id": "CVE-2024-3094",
+                        "description": "Malicious code in xz backdoored upstream release tarballs.",
+                        "cvss_base_score": 6.8,
+                        "cvss_severity": "MEDIUM",
+                        "cvss_version": "3.1",
+                        "published": "2024-03-29T00:00:00Z",
+                        "last_modified": "2024-04-10T00:00:00Z",
+                        "cwes": ["CWE-506"],
+                        "references": [
+                            "https://nvd.nist.gov/vuln/detail/CVE-2024-3094",
+                            "https://www.cisa.gov/news-events/cybersecurity-advisories/aa24-100a",
+                        ],
+                    },
+                    "epss": {
+                        "cve_id": "CVE-2024-3094",
+                        "epss": 0.841,
+                        "percentile": 0.993,
+                        "date": "2026-04-21",
+                    },
+                    "kev": {
+                        "cve_id": "CVE-2024-3094",
+                        "in_kev": False,
+                        "vendor_project": "XZ Utils",
+                        "product": "xz",
+                        "date_added": "2024-04-01",
+                        "required_action": "Remove vulnerable versions from production images.",
+                        "due_date": "2024-04-05",
+                    },
+                },
+            }
+        ],
+    }
+
+
+def test_generate_html_report_contains_bridge_view_sections_and_context() -> None:
+    payload = _base_html_payload()
+
+    html = generate_html_report(payload)
+
+    assert 'data-section="executive-brief"' in html
+    assert 'data-section="key-signals"' in html
+    assert "How to Read This Report" in html
+    assert "Coverage &amp; Context" in html
+    assert "Decision &amp; Action" in html
+    assert "ATT&amp;CK &amp; Governance" in html
+    assert "Priority Queue" in html
+    assert "Finding Dossiers" in html
+    assert "Provider transparency" in html
+    assert "Action plan" in html
+    assert "CVSS-only baseline delta" in html
+    assert "Provider evidence" in html
+    assert "customer-login" in html
+    assert "platform-team" in html
+    assert "Under investigation" in html
+    assert "Published:" in html
+    assert "Score date:" in html
+    assert "Due date:" in html
+    assert "Raised by 2" in html
+    assert "vuln-prioritizer analyze --attack-source ctid-json" in html
+    assert "vuln-prioritizer analyze --waiver-file waivers.yml" in html
+
+
+def test_generate_html_report_renders_attack_and_waiver_states() -> None:
+    payload = _base_html_payload()
+    payload["metadata"]["attack_enabled"] = True
+    payload["metadata"]["attack_hits"] = 1
+    payload["metadata"]["waived_count"] = 1
+    payload["metadata"]["waiver_review_due_count"] = 1
+    payload["metadata"]["waiver_file"] = "waivers.yml"
+    payload["attack_summary"] = {
+        "mapped_cves": 1,
+        "unmapped_cves": 0,
+        "technique_distribution": {"T1190": 1},
+        "tactic_distribution": {"initial-access": 1},
+    }
+    payload["findings"][0]["attack_mapped"] = True
+    payload["findings"][0]["attack_relevance"] = "High"
+    payload["findings"][0]["attack_tactics"] = ["initial-access"]
+    payload["findings"][0]["attack_techniques"] = ["T1190"]
+    payload["findings"][0]["attack_note"] = "Representative remote exploitation behavior."
+    payload["findings"][0]["attack_mappings"] = [{"mapping_type": "exploitation_technique"}]
+    payload["findings"][0]["waived"] = True
+    payload["findings"][0]["waiver_status"] = "review_due"
+    payload["findings"][0]["waiver_owner"] = "security-team"
+    payload["findings"][0]["waiver_expires_on"] = "2026-05-01"
+    payload["findings"][0]["waiver_review_on"] = "2026-04-25"
+
+    html = generate_html_report(payload)
+
+    assert "Mapped CVEs" in html
+    assert "T1190 (1)" in html
+    assert "initial-access (1)" in html
+    assert "ATT&amp;CK High" in html
+    assert "Waiver review due" in html
+    assert "owner=security-team" in html
+    assert "Representative remote exploitation behavior." in html
+
+
+def test_generate_html_report_handles_empty_findings_state() -> None:
+    payload = _base_html_payload()
+    payload["metadata"]["findings_count"] = 0
+    payload["metadata"]["filtered_out_count"] = 2
+    payload["metadata"]["suppressed_by_vex"] = 1
+    payload["findings"] = []
+
+    html = generate_html_report(payload)
+
+    assert "No visible findings matched this export." in html
+    assert "0 visible finding(s)" in html
+    assert "Suppressed by VEX" in html
+
+
 def test_generate_html_report_escapes_dynamic_content() -> None:
     payload = {
         "metadata": {
@@ -149,6 +376,10 @@ def test_generate_html_report_escapes_dynamic_content() -> None:
             "policy_profile": "<b>enterprise</b>",
             "findings_count": 1,
             "suppressed_by_vex": 0,
+            "warnings": [],
+            "data_sources": [],
+            "input_sources": [],
+            "counts_by_priority": {},
         },
         "attack_summary": {"mapped_cves": 1},
         "findings": [
@@ -159,7 +390,10 @@ def test_generate_html_report_escapes_dynamic_content() -> None:
                 "epss": 0.9,
                 "in_kev": True,
                 "context_recommendation": '<img src=x onerror="alert(1)">',
-                "provenance": {"source_formats": ["scanner<script>"]},
+                "rationale": 'alert("x")',
+                "recommended_action": "Patch now",
+                "provenance": {"source_formats": ["scanner<script>"], "occurrences": []},
+                "remediation": {"components": []},
             }
         ],
     }
@@ -170,6 +404,7 @@ def test_generate_html_report_escapes_dynamic_content() -> None:
     assert "<img src=x onerror" not in html
     assert "&lt;Critical&gt;" in html
     assert "scanner&lt;script&gt;" in html
+    assert 'data-section="executive-brief"' in html
 
 
 def test_write_output_trims_trailing_whitespace(tmp_path: Path) -> None:

@@ -4,13 +4,10 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import TypeVar
 
 from pydantic import BaseModel, ValidationError
 
 from vuln_prioritizer.models import ProviderSnapshotItem, ProviderSnapshotReport
-
-_T = TypeVar("_T", bound=BaseModel)
 
 
 def generate_provider_snapshot_json(report: ProviderSnapshotReport) -> str:

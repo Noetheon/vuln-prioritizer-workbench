@@ -15,6 +15,7 @@ from vuln_prioritizer.models import (
     NvdData,
     PrioritizedFinding,
     PriorityPolicy,
+    ProviderEvidence,
 )
 from vuln_prioritizer.scoring import (
     build_comparison_reason,
@@ -101,6 +102,11 @@ class PrioritizationService:
                         context_summary=context_summary,
                         suppressed_by_vex=suppressed_by_vex,
                         under_investigation=under_investigation,
+                    ),
+                    provider_evidence=ProviderEvidence(
+                        nvd=nvd,
+                        epss=epss,
+                        kev=kev,
                     ),
                     remediation=remediation,
                     recommended_action=recommended_action,
