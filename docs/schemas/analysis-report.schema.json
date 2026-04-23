@@ -620,6 +620,16 @@
             "$ref": "#/$defs/attackTechnique"
           }
         },
+        "provider_evidence": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/providerEvidence"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "provenance": {
           "$ref": "#/$defs/findingProvenance"
         },
@@ -690,6 +700,26 @@
         }
       }
     },
+    "providerEvidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "nvd",
+        "epss",
+        "kev"
+      ],
+      "properties": {
+        "nvd": {
+          "$ref": "#/$defs/nvdData"
+        },
+        "epss": {
+          "$ref": "#/$defs/epssData"
+        },
+        "kev": {
+          "$ref": "#/$defs/kevData"
+        }
+      }
+    },
     "remediationComponent": {
       "type": "object",
       "additionalProperties": false,
@@ -729,6 +759,93 @@
           "items": {
             "$ref": "#/$defs/remediationComponent"
           }
+        }
+      }
+    },
+    "nvdData": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "cve_id"
+      ],
+      "properties": {
+        "cve_id": {
+          "type": "string"
+        },
+        "description": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "cvss_base_score": {
+          "$ref": "#/$defs/nullableNumber"
+        },
+        "cvss_severity": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "cvss_version": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "published": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "last_modified": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "cwes": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "references": {
+          "$ref": "#/$defs/stringArray"
+        }
+      }
+    },
+    "epssData": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "cve_id"
+      ],
+      "properties": {
+        "cve_id": {
+          "type": "string"
+        },
+        "epss": {
+          "$ref": "#/$defs/nullableNumber"
+        },
+        "percentile": {
+          "$ref": "#/$defs/nullableNumber"
+        },
+        "date": {
+          "$ref": "#/$defs/nullableString"
+        }
+      }
+    },
+    "kevData": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "cve_id"
+      ],
+      "properties": {
+        "cve_id": {
+          "type": "string"
+        },
+        "in_kev": {
+          "type": "boolean"
+        },
+        "vendor_project": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "product": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "date_added": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "required_action": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "due_date": {
+          "$ref": "#/$defs/nullableString"
         }
       }
     }

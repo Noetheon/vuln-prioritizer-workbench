@@ -114,16 +114,21 @@ def _coerce_occurrences(
 
 
 def _collect_components(occurrences: list[InputOccurrence]) -> list[RemediationComponent]:
-    ComponentKey = tuple[str | None, str | None, str | None, str | None, str | None]
-    buckets: dict[ComponentKey, RemediationComponent] = {}
-    fixed_version_sets: dict[ComponentKey, set[str]] = {}
+    buckets: dict[
+        tuple[str | None, str | None, str | None, str | None, str | None],
+        RemediationComponent,
+    ] = {}
+    fixed_version_sets: dict[
+        tuple[str | None, str | None, str | None, str | None, str | None],
+        set[str],
+    ] = {}
 
     for occurrence in occurrences:
         component = _build_component_seed(occurrence)
         if component is None:
             continue
 
-        key: ComponentKey = (
+        key = (
             component.name,
             component.current_version,
             component.package_type,

@@ -51,7 +51,8 @@ def apply_asset_context(
     asset_records: Mapping[tuple[str, str], AssetContextRecord] | Any,
     *,
     return_diagnostics: Literal[False] = False,
-) -> list[InputOccurrence]: ...
+) -> list[InputOccurrence]:
+    pass
 
 
 @overload
@@ -60,7 +61,8 @@ def apply_asset_context(
     asset_records: Mapping[tuple[str, str], AssetContextRecord] | Any,
     *,
     return_diagnostics: Literal[True],
-) -> tuple[list[InputOccurrence], AssetContextMatchDiagnostics]: ...
+) -> tuple[list[InputOccurrence], AssetContextMatchDiagnostics]:
+    pass
 
 
 def apply_asset_context(

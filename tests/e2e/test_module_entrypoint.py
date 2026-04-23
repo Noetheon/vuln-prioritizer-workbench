@@ -183,7 +183,7 @@ def test_module_entrypoint_report_evidence_bundle_round_trip(tmp_path: Path) -> 
     )
     _assert_ok(verification_result)
 
-    assert "<h1>vuln-prioritizer Executive Report</h1>" in html_file.read_text(encoding="utf-8")
+    assert "<h1>Vulnerability prioritization report</h1>" in html_file.read_text(encoding="utf-8")
     verification_payload = json.loads(verification_file.read_text(encoding="utf-8"))
     assert verification_payload["summary"]["ok"] is True
     assert verification_payload["summary"]["modified_files"] == 0

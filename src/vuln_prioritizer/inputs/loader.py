@@ -301,7 +301,8 @@ def load_asset_context_file(
     path: Path | None,
     *,
     return_diagnostics: Literal[False] = False,
-) -> AssetContextCatalog: ...
+) -> AssetContextCatalog:
+    pass
 
 
 @overload
@@ -309,7 +310,8 @@ def load_asset_context_file(
     path: Path | None,
     *,
     return_diagnostics: Literal[True],
-) -> tuple[AssetContextCatalog, AssetContextLoadDiagnostics]: ...
+) -> tuple[AssetContextCatalog, AssetContextLoadDiagnostics]:
+    pass
 
 
 def load_asset_context_file(
