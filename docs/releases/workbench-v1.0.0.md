@@ -4,7 +4,7 @@
 
 Workbench `v1.0.0` is the first release-ready Workbench milestone on top of the stable CLI core. It keeps the product boundary narrow: known-CVE prioritization from existing inputs, not scanning, exploitation, or generated CVE-to-ATT&CK mapping.
 
-These notes are Workbench milestone notes. The current package tree is versioned `1.1.0`, so a public package tag cut from `main` must use `v1.1.0` and the matching [v1.1.0 release notes](v1.1.0.md).
+These notes are Workbench milestone notes. The current package tree is versioned `1.1.0`, so a public package tag cut from `main` must use `v1.1.0` and the matching [v1.1.0 release notes](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/v1.1.0/docs/releases/v1.1.0.md).
 
 ## Included Scope
 
@@ -20,7 +20,7 @@ These notes are Workbench milestone notes. The current package tree is versioned
 
 ## Release Evidence
 
-The v1.0 release gate should attach or record:
+The v1.0 release gate recorded these historical acceptance criteria:
 
 - #60-#64 tracker closure evidence
 - `make workflow-check`
@@ -33,7 +33,7 @@ The v1.0 release gate should attach or record:
   `docs/examples/media/workbench-findings.png`,
   `docs/examples/media/workbench-finding-detail-ttp.png`, and
   `docs/examples/media/workbench-reports-evidence.png`
-- the completed checklist in [workbench-v1-release-checklist.md](../workbench-v1-release-checklist.md)
+- the completed checklist in [workbench-v1-release-checklist.md](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/v1.1.0/docs/workbench-v1-release-checklist.md)
 
 Dependency audit disposition for the 2026-04-24 release pass: `make dependency-audit` completed successfully and `pip-audit` reported no known vulnerabilities for `requirements.txt`; there are no accepted dependency-audit exceptions for this release.
 
