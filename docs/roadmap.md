@@ -1,8 +1,8 @@
 # Product Roadmap
 
-This roadmap records the release line implemented locally from the ATT&CK-focused `v0.3.0` baseline through the operational `v1.1.0` CLI line, and now tracks the Workbench as an additive self-hosted application layer.
+This roadmap records the release line implemented from the ATT&CK-focused `v0.3.0` baseline through the operational `v1.1.0` package line, including the additive self-hosted Workbench application layer.
 
-The current release remains a CLI for prioritizing known CVEs. The Workbench is planned on top of the same core; it is not a scanner and does not use heuristic or AI-generated CVE-to-ATT&CK mappings.
+The product remains a CLI and local Workbench for prioritizing known CVEs and imported findings. It is not a scanner and does not use heuristic or AI-generated CVE-to-ATT&CK mappings.
 
 ## Current Release Surface
 
@@ -19,24 +19,26 @@ The current release remains a CLI for prioritizing known CVEs. The Workbench is 
 
 ## Workbench Add-On Direction
 
-Status: MVP bootstrap available; implementation continues, documented by [docs/workbench-masterplan.md](./workbench-masterplan.md)
+Status: roadmap slices through Workbench v1.2 are implemented on `main`; the original implementation plan remains documented by [docs/workbench-masterplan.md](./workbench-masterplan.md).
 
 The Workbench turns the existing CLI/core behavior into a local-first, self-hosted vulnerability prioritization application. The CLI remains supported for automation and CI; the Workbench adds API, database-backed imports, a browser UI, team-oriented worklists, and report workflows around the same transparent prioritization model.
 
-MVP scope:
+Workbench scope:
 
 - Docker Compose quickstart as the local web/API runtime entry point.
 - SQLite-first deployment with provider cache, upload, and report directories mounted locally.
 - Import paths for CVE lists, `generic-occurrence-csv`, Trivy JSON, and Grype JSON.
 - Findings table and detail views that expose priority, evidence, owner/service context, and "why this priority?" explanations.
 - Dashboard and report flows for Markdown, HTML, JSON, and evidence bundles.
+- Assets, waivers, VEX, detection controls, coverage gaps, ATT&CK Navigator exports, and technique detail views.
+- Local API-token gating, optional PostgreSQL profile, scheduled provider snapshot refresh, GitHub issue export, config-as-code settings, SARIF validation, and CI/CD docs.
 
 The current `docker compose up --build` service runs the Workbench web application on `127.0.0.1:8000`; the CLI remains available through the installed `vuln-prioritizer` command.
 
 Current MVP limits:
 
 - Local-first single-node runtime, not a hardened public internet deployment.
-- SQLite remains the default. Optional PostgreSQL profile, local API-token gating, provider update jobs, config-as-code settings, and GitHub issue export are additive Workbench surfaces; background workers, queues, SSO, ticket sync, and multi-workspace support remain out of MVP scope.
+- SQLite remains the default. The optional PostgreSQL profile is a migration smoke path, and local API tokens are an automation control rather than a full public-internet auth model. Background workers, queues, SSO, ticket sync, and multi-workspace support remain out of MVP scope.
 - Web/API import path currently targets CVE lists, `generic-occurrence-csv`, Trivy JSON, and Grype JSON. The CLI remains the broader automation surface.
 - No vulnerability scanning, AI autopatching, or heuristic/AI CVE-to-ATT&CK mapping.
 
@@ -99,7 +101,7 @@ Status: shipped
 
 ### `v1.0.0` Stable OSS Release
 
-Status: implemented locally; release workflow is wired for tagged GitHub Releases and PyPI publishing
+Status: implemented; release workflow is wired for tagged GitHub Releases and gated PyPI publishing
 
 - Stable CLI and JSON contracts.
 - Documented and tested `pipx` installation.
@@ -108,7 +110,7 @@ Status: implemented locally; release workflow is wired for tagged GitHub Release
 
 ### `v1.1.0` Operability and Public Polish
 
-Status: implemented locally
+Status: implemented on `main`; `v1.1.0` is the valid package tag target for the current tree
 
 - First-class runtime config discovery via `vuln-prioritizer.yml`, plus `--config` and `--no-config`.
 - New `doctor`, `snapshot create`, `snapshot diff`, and `rollup` commands.

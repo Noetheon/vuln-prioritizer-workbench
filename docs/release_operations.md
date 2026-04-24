@@ -5,7 +5,7 @@ It is intentionally operational: use it when cutting a release, restoring a miss
 
 ## Current Release Model
 
-The repository currently ships releases through:
+The repository is prepared to ship releases through:
 
 - a version tag such as `v1.1.0`
 - the release workflow in [`release.yml`](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/.github/workflows/release.yml)
