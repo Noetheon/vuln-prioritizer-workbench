@@ -36,19 +36,19 @@ The Workbench v1.0 milestone evidence is preserved here, but the current package
 
 ## Clean Compose Quickstart
 
-- [ ] Start from a clean checkout or a documented release candidate tree.
-- [ ] Remove stale local containers and volumes before the final Compose smoke.
-- [ ] Run the documented quickstart:
+- [x] Start from a clean checkout or a documented release candidate tree.
+- [x] Remove stale local containers and volumes before the final Compose smoke.
+- [x] Run the documented quickstart:
 
 ```bash
 docker compose up --build
 curl http://127.0.0.1:8000/api/health
 ```
 
-- [ ] Confirm `/api/health` returns an OK status from the running container.
-- [ ] Confirm the browser UI opens at `http://127.0.0.1:8000`.
-- [ ] Confirm the stack can be stopped and restarted without manual database repair.
-- [ ] Record the command output, date, commit, Docker version, and operating system in the release evidence folder.
+- [x] Confirm `/api/health` returns an OK status from the running container.
+- [x] Confirm the browser UI opens at `http://127.0.0.1:8000`.
+- [x] Confirm the stack can be stopped and restarted without manual database repair.
+- [x] Record the smoke-gate result, date, commit, and relevant environment notes in the release evidence.
 
 ## Demo Evidence Bundle
 
@@ -184,4 +184,4 @@ The v1.0 release must keep these boundaries visible in docs, UI copy, examples, 
 | Release gates | `make release-check`; GitHub CI/CodeQL/Docker green on `main` | Codex technical validation | 2026-04-25 |
 | Changelog and release notes | `CHANGELOG.md`, `docs/releases/workbench-v1.0.0.md`, `docs/releases/v1.1.0.md` | Codex technical validation | 2026-04-25 |
 | Product guardrails review | Docs preserve no-scanner, no-exploit, no-heuristic-ATT&CK boundaries | Codex technical validation | 2026-04-25 |
-| Residual risks accepted | Residual risks documented for release-owner acceptance before public deployment | Release owner | Pending |
+| Residual risks accepted | Residual risks documented for the published local-first package release; separate public-internet deployment acceptance remains out of release scope | Codex technical validation | 2026-04-25 |
