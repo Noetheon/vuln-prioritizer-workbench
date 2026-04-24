@@ -1,7 +1,7 @@
-site_name: vuln-prioritizer
-site_description: Threat-informed CLI for prioritizing known CVEs with CVSS, EPSS, KEV, ATT&CK, Asset Context, and VEX.
-repo_url: https://github.com/Noetheon/vuln-prioritizer-cli
-repo_name: Noetheon/vuln-prioritizer-cli
+site_name: Vuln Prioritizer Workbench
+site_description: Local-first CLI and Workbench for prioritizing known CVEs with CVSS, EPSS, KEV, ATT&CK, Asset Context, and VEX.
+repo_url: https://github.com/Noetheon/vuln-prioritizer-workbench
+repo_name: Noetheon/vuln-prioritizer-workbench
 theme:
   name: mkdocs
 nav:
@@ -24,6 +24,10 @@ nav:
   - Community Setup: community_repository_setup.md
   - Release Operations: release_operations.md
   - Roadmap: roadmap.md
+  - Workbench Planning:
+      - MVP Masterplan: workbench-masterplan.md
+      - ATT&CK/TTP Masterplan V2: workbench-masterplan-attack-ttp-v2.md
+      - Engineering Roadmap V3: workbench-engineering-roadmap-attack-ttp-v3.md
   - Examples:
       - Base Report: example_report.md
       - Base Compare: example_compare.md

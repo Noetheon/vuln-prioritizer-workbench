@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import secrets
 from pathlib import Path
 from typing import Annotated, cast
 
@@ -11,7 +12,7 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
 from vuln_prioritizer.api.deps import get_db_session, get_workbench_settings
-from vuln_prioritizer.api.routes import _save_upload
+from vuln_prioritizer.api.routes import _resolve_provider_snapshot_path, _save_upload
 from vuln_prioritizer.db.repositories import WorkbenchRepository
 from vuln_prioritizer.services.workbench_analysis import (
     WorkbenchAnalysisError,
@@ -66,8 +67,13 @@ def create_project_form(
     csrf_token: Annotated[str, Form()] = "",
 ) -> RedirectResponse:
     _check_csrf(csrf_token, settings)
+    project_name = name.strip()
+    if not project_name:
+        raise HTTPException(status_code=422, detail="Project name is required.")
     repo = WorkbenchRepository(session)
-    project = repo.create_project(name=name.strip(), description=description.strip() or None)
+    if repo.get_project_by_name(project_name) is not None:
+        raise HTTPException(status_code=409, detail="Project already exists.")
+    project = repo.create_project(name=project_name, description=description.strip() or None)
     session.commit()
     return RedirectResponse(f"/projects/{project.id}/dashboard", status_code=303)
 
@@ -120,6 +126,10 @@ async def create_import_form(
 ) -> RedirectResponse:
     _check_csrf(csrf_token, settings)
     upload_path = await _save_upload(file, input_format=input_format, settings=settings)
+    snapshot_path = _resolve_provider_snapshot_path(
+        provider_snapshot_file,
+        settings=settings,
+    )
     try:
         result = run_workbench_import(
             session=session,
@@ -128,7 +138,7 @@ async def create_import_form(
             input_path=upload_path,
             original_filename=file.filename or upload_path.name,
             input_format=input_format,
-            provider_snapshot_file=Path(provider_snapshot_file) if provider_snapshot_file else None,
+            provider_snapshot_file=snapshot_path,
             locked_provider_data=locked_provider_data,
         )
     except WorkbenchAnalysisError as exc:
@@ -227,5 +237,5 @@ def create_evidence_form(
 
 
 def _check_csrf(submitted: str, settings: WorkbenchSettings) -> None:
-    if submitted != settings.csrf_token:
+    if not secrets.compare_digest(submitted, settings.csrf_token):
         raise HTTPException(status_code=403, detail="Invalid CSRF token.")

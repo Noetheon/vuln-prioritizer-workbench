@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import re
 from pathlib import Path
 from typing import Annotated, Any
@@ -11,6 +12,7 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
+from vuln_prioritizer import __version__
 from vuln_prioritizer.api.deps import get_db_session, get_workbench_settings
 from vuln_prioritizer.api.schemas import ProjectCreateRequest, ReportCreateRequest
 from vuln_prioritizer.db.repositories import WorkbenchRepository
@@ -51,6 +53,11 @@ def health(
     }
 
 
+@api_router.get("/version")
+def version() -> dict[str, Any]:
+    return {"version": __version__, "app": "Vuln Prioritizer Workbench"}
+
+
 @api_router.get("/projects")
 def list_projects(session: Annotated[Session, Depends(get_db_session)]) -> dict[str, Any]:
     projects = WorkbenchRepository(session).list_projects()
@@ -66,6 +73,8 @@ def create_project(
     if not name:
         raise HTTPException(status_code=422, detail="Project name is required.")
     repo = WorkbenchRepository(session)
+    if repo.get_project_by_name(name) is not None:
+        raise HTTPException(status_code=409, detail="Project already exists.")
     project = repo.create_project(name=name, description=payload.description)
     session.commit()
     return _project_payload(project)
@@ -82,6 +91,17 @@ def get_project(
     return _project_payload(project)
 
 
+@api_router.get("/projects/{project_id}/runs")
+def list_project_runs(
+    project_id: str,
+    session: Annotated[Session, Depends(get_db_session)],
+) -> dict[str, Any]:
+    repo = WorkbenchRepository(session)
+    if repo.get_project(project_id) is None:
+        raise HTTPException(status_code=404, detail="Project not found.")
+    return {"items": [_analysis_run_payload(run) for run in repo.list_analysis_runs(project_id)]}
+
+
 @api_router.post("/projects/{project_id}/imports")
 async def import_findings(
     project_id: str,
@@ -93,6 +113,7 @@ async def import_findings(
     locked_provider_data: Annotated[bool, Form()] = False,
 ) -> dict[str, Any]:
     upload_path = await _save_upload(file, input_format=input_format, settings=settings)
+    snapshot_path = _resolve_provider_snapshot_path(provider_snapshot_file, settings=settings)
     try:
         result = run_workbench_import(
             session=session,
@@ -101,7 +122,7 @@ async def import_findings(
             input_path=upload_path,
             original_filename=file.filename or upload_path.name,
             input_format=input_format,
-            provider_snapshot_file=Path(provider_snapshot_file) if provider_snapshot_file else None,
+            provider_snapshot_file=snapshot_path,
             locked_provider_data=locked_provider_data,
         )
     except WorkbenchAnalysisError as exc:
@@ -120,6 +141,25 @@ def get_analysis_run(
     if run is None:
         raise HTTPException(status_code=404, detail="Analysis run not found.")
     return _analysis_run_payload(run)
+
+
+@api_router.get("/runs/{run_id}")
+def get_run_alias(
+    run_id: str,
+    session: Annotated[Session, Depends(get_db_session)],
+) -> dict[str, Any]:
+    return get_analysis_run(run_id=run_id, session=session)
+
+
+@api_router.get("/runs/{run_id}/summary")
+def get_run_summary(
+    run_id: str,
+    session: Annotated[Session, Depends(get_db_session)],
+) -> dict[str, Any]:
+    run = WorkbenchRepository(session).get_analysis_run(run_id)
+    if run is None:
+        raise HTTPException(status_code=404, detail="Analysis run not found.")
+    return _analysis_run_payload(run)["summary"]
 
 
 @api_router.get("/projects/{project_id}/findings")
@@ -150,6 +190,24 @@ def get_finding(
     if finding is None:
         raise HTTPException(status_code=404, detail="Finding not found.")
     return _finding_payload(finding, include_detail=True)
+
+
+@api_router.get("/findings/{finding_id}/explain")
+def explain_finding(
+    finding_id: str,
+    session: Annotated[Session, Depends(get_db_session)],
+) -> dict[str, Any]:
+    finding = WorkbenchRepository(session).get_finding(finding_id)
+    if finding is None:
+        raise HTTPException(status_code=404, detail="Finding not found.")
+    return {
+        "finding_id": finding.id,
+        "cve_id": finding.cve_id,
+        "priority": finding.priority,
+        "rationale": finding.rationale,
+        "recommended_action": finding.recommended_action,
+        "explanation": finding.explanation_json,
+    }
 
 
 @api_router.post("/analysis-runs/{run_id}/reports")
@@ -194,22 +252,36 @@ def create_evidence_bundle(
 def download_report(
     report_id: str,
     session: Annotated[Session, Depends(get_db_session)],
+    settings: Annotated[WorkbenchSettings, Depends(get_workbench_settings)],
 ) -> FileResponse:
     report = WorkbenchRepository(session).get_report(report_id)
-    if report is None or not Path(report.path).is_file():
+    if report is None:
         raise HTTPException(status_code=404, detail="Report not found.")
-    return FileResponse(report.path, filename=Path(report.path).name)
+    report_path = _resolve_download_artifact(
+        report.path,
+        settings=settings,
+        expected_sha256=report.sha256,
+        missing_detail="Report not found.",
+    )
+    return FileResponse(report_path, filename=report_path.name)
 
 
 @api_router.get("/evidence-bundles/{bundle_id}/download")
 def download_evidence_bundle(
     bundle_id: str,
     session: Annotated[Session, Depends(get_db_session)],
+    settings: Annotated[WorkbenchSettings, Depends(get_workbench_settings)],
 ) -> FileResponse:
     bundle = WorkbenchRepository(session).get_evidence_bundle(bundle_id)
-    if bundle is None or not Path(bundle.path).is_file():
+    if bundle is None:
         raise HTTPException(status_code=404, detail="Evidence bundle not found.")
-    return FileResponse(bundle.path, filename=Path(bundle.path).name)
+    bundle_path = _resolve_download_artifact(
+        bundle.path,
+        settings=settings,
+        expected_sha256=bundle.sha256,
+        missing_detail="Evidence bundle not found.",
+    )
+    return FileResponse(bundle_path, filename=bundle_path.name)
 
 
 async def _save_upload(
@@ -243,6 +315,45 @@ async def _save_upload(
 def _sanitize_filename(filename: str) -> str:
     name = Path(filename).name.strip() or "upload"
     return re.sub(r"[^A-Za-z0-9._-]", "_", name)
+
+
+def _resolve_download_artifact(
+    value: str,
+    *,
+    settings: WorkbenchSettings,
+    expected_sha256: str,
+    missing_detail: str,
+) -> Path:
+    resolved = Path(value).resolve(strict=False)
+    report_root = settings.report_dir.resolve(strict=False)
+    if not resolved.is_relative_to(report_root) or not resolved.is_file():
+        raise HTTPException(status_code=404, detail=missing_detail)
+    actual_sha256 = hashlib.sha256(resolved.read_bytes()).hexdigest()
+    if actual_sha256 != expected_sha256:
+        raise HTTPException(status_code=409, detail="Artifact checksum mismatch.")
+    return resolved
+
+
+def _resolve_provider_snapshot_path(
+    value: str | None,
+    *,
+    settings: WorkbenchSettings,
+) -> Path | None:
+    if value is None or not value.strip():
+        return None
+
+    requested = Path(value.strip())
+    candidate = requested if requested.is_absolute() else Path.cwd() / requested
+    resolved = candidate.resolve(strict=False)
+    allowed_roots = [
+        settings.provider_snapshot_dir.resolve(strict=False),
+        settings.provider_cache_dir.resolve(strict=False),
+    ]
+    if not any(resolved.is_relative_to(root) for root in allowed_roots):
+        raise HTTPException(status_code=422, detail="Provider snapshot path is not allowed.")
+    if not resolved.is_file():
+        raise HTTPException(status_code=422, detail="Provider snapshot file does not exist.")
+    return resolved
 
 
 def _project_payload(project: Any) -> dict[str, Any]:

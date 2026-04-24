@@ -27,7 +27,7 @@ Today the CLI supports:
 - `report verify-evidence-bundle --input evidence.zip --format json`
 - `attack validate|coverage|navigator-layer`
 
-The repository root also exposes a composite GitHub Action via [`action.yml`](https://github.com/Noetheon/vuln-prioritizer-cli/blob/main/action.yml).
+The repository root also exposes a composite GitHub Action via [`action.yml`](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/action.yml).
 
 ## GitHub Action Contract
 
@@ -196,9 +196,9 @@ When `github-step-summary: true`, the action appends the rendered Markdown summa
 
 Consumer workflow examples:
 
-- [`.github/examples/code-scanning-sarif.yml`](https://github.com/Noetheon/vuln-prioritizer-cli/blob/main/.github/examples/code-scanning-sarif.yml)
-- [`.github/examples/pr-comment-report.yml`](https://github.com/Noetheon/vuln-prioritizer-cli/blob/main/.github/examples/pr-comment-report.yml)
-- [`.github/examples/html-report-artifact.yml`](https://github.com/Noetheon/vuln-prioritizer-cli/blob/main/.github/examples/html-report-artifact.yml)
+- [`.github/examples/code-scanning-sarif.yml`](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/.github/examples/code-scanning-sarif.yml)
+- [`.github/examples/pr-comment-report.yml`](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/.github/examples/pr-comment-report.yml)
+- [`.github/examples/html-report-artifact.yml`](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/.github/examples/html-report-artifact.yml)
 - [GitHub Action summary templates](../examples/github_action_summary_templates.md)
 
 Example output artifacts:
@@ -216,7 +216,7 @@ Compact step summary without an explicit summary artifact path:
 ```yaml
 - name: Prioritize vulnerabilities
   id: prioritize
-  uses: Noetheon/vuln-prioritizer-cli@vX.Y.Z
+  uses: Noetheon/vuln-prioritizer-workbench@vX.Y.Z
   with:
     mode: analyze
     input: |
@@ -236,7 +236,7 @@ Compact PR comment body using the action-generated `summary-path`:
 ```yaml
 - name: Prioritize vulnerabilities
   id: prioritize
-  uses: Noetheon/vuln-prioritizer-cli@vX.Y.Z
+  uses: Noetheon/vuln-prioritizer-workbench@vX.Y.Z
   with:
     mode: analyze
     input: |
@@ -269,7 +269,7 @@ Detailed HTML artifact flow with a reusable Markdown summary:
 ```yaml
 - name: Generate analysis JSON
   id: analyze
-  uses: Noetheon/vuln-prioritizer-cli@vX.Y.Z
+  uses: Noetheon/vuln-prioritizer-workbench@vX.Y.Z
   with:
     mode: analyze
     input: trivy-results.json

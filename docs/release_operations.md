@@ -8,7 +8,7 @@ It is intentionally operational: use it when cutting a release, restoring a miss
 The repository currently ships releases through:
 
 - a version tag such as `v1.1.0`
-- the release workflow in [`release.yml`](https://github.com/Noetheon/vuln-prioritizer-cli/blob/main/.github/workflows/release.yml)
+- the release workflow in [`release.yml`](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/.github/workflows/release.yml)
 - checked-in release notes under `docs/releases/`
 - GitHub Release artifacts built from the tagged tree
 
@@ -27,7 +27,7 @@ Current safety model:
 - manual `workflow_dispatch` runs on the release workflow are preflight-only and do not create a GitHub Release or publish to PyPI
 - public PyPI publishing is gated behind the repository variable `PYPI_PUBLISH_ENABLED=true`
 - the live PyPI workflow verifies a hosted-index install after publish
-- TestPyPI publishing is available through the manual workflow [`.github/workflows/testpypi.yml`](https://github.com/Noetheon/vuln-prioritizer-cli/blob/main/.github/workflows/testpypi.yml), is gated behind `TEST_PYPI_PUBLISH_ENABLED=true`, and verifies a hosted-index install after publish
+- TestPyPI publishing is available through the manual workflow [`.github/workflows/testpypi.yml`](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/.github/workflows/testpypi.yml), is gated behind `TEST_PYPI_PUBLISH_ENABLED=true`, and verifies a hosted-index install after publish
 
 That keeps normal tagged releases green even before PyPI Trusted Publishing is fully configured.
 
@@ -79,7 +79,7 @@ Before the first public PyPI publish, validate the packaging and trusted-publish
 
 1. Configure a trusted publisher for TestPyPI that matches:
    - GitHub owner: `Noetheon`
-   - Repository: `vuln-prioritizer-cli`
+   - Repository: `vuln-prioritizer-workbench`
    - Workflow file: `.github/workflows/testpypi.yml`
    - GitHub environment: `testpypi`
 2. Set the repository variable `TEST_PYPI_PUBLISH_ENABLED=true`.
@@ -98,7 +98,7 @@ The remaining setup is GitHub-side and PyPI-side configuration.
 When configuring the trusted publisher on PyPI, match these repository values:
 
 - GitHub owner: `Noetheon`
-- Repository: `vuln-prioritizer-cli`
+- Repository: `vuln-prioritizer-workbench`
 - Workflow file: `.github/workflows/release.yml`
 - GitHub environment: `pypi`
 - Repository variable to enable the publish job: `PYPI_PUBLISH_ENABLED=true`
@@ -120,7 +120,7 @@ After each public release:
 2. Verify the documented GitHub tag install path:
 
 ```bash
-pipx install git+https://github.com/Noetheon/vuln-prioritizer-cli.git@vX.Y.Z
+pipx install git+https://github.com/Noetheon/vuln-prioritizer-workbench.git@vX.Y.Z
 printf 'CVE-2021-44228\n' > smoke-cves.txt
 vuln-prioritizer analyze --input smoke-cves.txt --format json --output smoke.json
 ```
@@ -165,6 +165,6 @@ If the PyPI publish job fails, check these before anything else:
 
 ## Maintainer Notes
 
-- Keep this document in sync with [`release.yml`](https://github.com/Noetheon/vuln-prioritizer-cli/blob/main/.github/workflows/release.yml).
-- Keep the public install wording in [`README.md`](https://github.com/Noetheon/vuln-prioritizer-cli/blob/main/README.md) aligned with the real supported install path.
+- Keep this document in sync with [`release.yml`](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/.github/workflows/release.yml).
+- Keep the public install wording in [`README.md`](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/README.md) aligned with the real supported install path.
 - If PyPI goes live, update the README and release docs immediately so GitHub-tag install is no longer described as the only verified public path.

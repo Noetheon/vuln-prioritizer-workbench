@@ -20,7 +20,8 @@ USER workbench
 ENV VULN_PRIORITIZER_DB_URL=sqlite:////app/data/workbench.db \
     VULN_PRIORITIZER_UPLOAD_DIR=/app/uploads \
     VULN_PRIORITIZER_REPORT_DIR=/app/reports \
-    VULN_PRIORITIZER_CACHE_DIR=/app/.cache/vuln-prioritizer
+    VULN_PRIORITIZER_CACHE_DIR=/app/.cache/vuln-prioritizer \
+    VULN_PRIORITIZER_MAX_UPLOAD_MB=25
 
 EXPOSE 8000
 

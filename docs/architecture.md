@@ -2,14 +2,14 @@
 
 ## Scope
 
-`vuln-prioritizer` is a CLI for prioritizing known CVEs. It is not a scanner, does not discover vulnerabilities on its own, and does not perform heuristic or LLM-generated CVE-to-ATT&CK mapping.
+`vuln-prioritizer` is a CLI and local Workbench for prioritizing known CVEs. It is not a scanner, does not discover vulnerabilities on its own, and does not perform heuristic or LLM-generated CVE-to-ATT&CK mapping.
 
 The current runtime architecture keeps one invariant across all supported inputs:
 
 - normalize many source formats into occurrence-level CVE evidence
 - deduplicate to a unique CVE set for enrichment and base prioritization
 - preserve provenance, asset context, and VEX applicability as explainable context
-- render the same finding model into terminal, Markdown, JSON, SARIF, and HTML surfaces
+- render the same finding model into terminal, Markdown, JSON, SARIF, HTML, API, and Workbench web surfaces
 
 ## Flow
 
@@ -42,15 +42,34 @@ Current public command groups:
 - `analyze`
 - `compare`
 - `explain`
+- `doctor`
+- `snapshot create`
+- `snapshot diff`
+- `rollup`
+- `input validate`
+- `state`
 - `attack validate`
 - `attack coverage`
 - `attack navigator-layer`
 - `data status`
 - `data update`
 - `data verify`
+- `data export-provider-snapshot`
+- `db init`
 - `report html`
+- `report evidence-bundle`
+- `report verify-evidence-bundle`
+- `web serve`
 
 The command layer owns flag parsing, validation, cache wiring, and output-mode dispatch. The public command tree is part of the CLI surface; the private command/support modules are implementation detail and do not widen the architecture boundary. Parser-specific logic remains below this layer apart from compatibility routing.
+
+### Workbench surface
+
+The Workbench app is an additive FastAPI/Jinja2 layer over the existing core. `db init` loads the Workbench environment settings and initializes the SQLite schema. `web serve` starts the ASGI application with `--host`, `--port`, and optional `--reload`.
+
+Workbench runtime state is controlled by environment variables for database URL, upload directory, report directory, trusted provider snapshot directory, provider cache directory, upload size, NVD API-key environment name, and the local CSRF token. The Docker Compose path uses named volumes for writable runtime state and mounts checked-in demo data read-only for locked provider snapshot replay.
+
+The MVP web/API import path is intentionally narrower than the CLI input matrix: CVE lists, `generic-occurrence-csv`, Trivy JSON, and Grype JSON. The CLI remains the broader automation surface for SBOM, XML scanner exports, state snapshots, CI outputs, and advanced report generation.
 
 ### Input normalization
 

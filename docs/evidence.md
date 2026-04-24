@@ -15,12 +15,12 @@ Historical note: this evidence pack was originally assembled for the ATT&CK-focu
 
 Example inputs:
 
-- [`data/sample_cves.txt`](https://github.com/Noetheon/vuln-prioritizer-cli/blob/main/data/sample_cves.txt)
-- [`data/sample_cves_attack.txt`](https://github.com/Noetheon/vuln-prioritizer-cli/blob/main/data/sample_cves_attack.txt)
-- [`data/sample_cves_mixed.txt`](https://github.com/Noetheon/vuln-prioritizer-cli/blob/main/data/sample_cves_mixed.txt)
-- [`data/optional_attack_to_cve.csv`](https://github.com/Noetheon/vuln-prioritizer-cli/blob/main/data/optional_attack_to_cve.csv)
-- [`data/attack/ctid_kev_enterprise_2025-07-28_attack-16.1_subset.json`](https://github.com/Noetheon/vuln-prioritizer-cli/blob/main/data/attack/ctid_kev_enterprise_2025-07-28_attack-16.1_subset.json)
-- [`data/attack/attack_techniques_enterprise_16.1_subset.json`](https://github.com/Noetheon/vuln-prioritizer-cli/blob/main/data/attack/attack_techniques_enterprise_16.1_subset.json)
+- [`data/sample_cves.txt`](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/data/sample_cves.txt)
+- [`data/sample_cves_attack.txt`](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/data/sample_cves_attack.txt)
+- [`data/sample_cves_mixed.txt`](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/data/sample_cves_mixed.txt)
+- [`data/optional_attack_to_cve.csv`](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/data/optional_attack_to_cve.csv)
+- [`data/attack/ctid_kev_enterprise_2025-07-28_attack-16.1_subset.json`](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/data/attack/ctid_kev_enterprise_2025-07-28_attack-16.1_subset.json)
+- [`data/attack/attack_techniques_enterprise_16.1_subset.json`](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/data/attack/attack_techniques_enterprise_16.1_subset.json)
 
 Example outputs:
 

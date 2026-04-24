@@ -6,7 +6,7 @@ The current release remains a CLI for prioritizing known CVEs. The Workbench is 
 
 ## Current Release Surface
 
-- `v1.1.0` provides `analyze`, `compare`, `explain`, `doctor`, `snapshot create`, `snapshot diff`, `rollup`, `input validate`, `state`, `data`, `report html`, `report evidence-bundle`, `report verify-evidence-bundle`, and ATT&CK utility commands.
+- `v1.1.0` provides `analyze`, `compare`, `explain`, `doctor`, `snapshot create`, `snapshot diff`, `rollup`, `input validate`, `state`, `data`, `db init`, `web serve`, `report html`, `report evidence-bundle`, `report verify-evidence-bundle`, and ATT&CK utility commands.
 - `analyze` and `compare` support scanner/SBOM JSON input formats. Output support is command-specific; `analyze` provides Markdown, JSON, SARIF, table output, direct HTML sidecars, and Markdown summary sidecars for CI-friendly workflows.
 - Waiver files, evidence bundles, and fixture-benchmark regressions extend the operational governance surface without changing the transparent base score.
 - Runtime config discovery via `vuln-prioritizer.yml` is available for the main operational commands.
@@ -15,11 +15,11 @@ The current release remains a CLI for prioritizing known CVEs. The Workbench is 
 - ATT&CK, asset context, and VEX remain explicit contextual layers.
 - The composite GitHub Action mirrors `analyze` policy, waiver, provider/cache, filter, sort, and fail-gate flags as additive inputs.
 - Local quality gates now start enforcing coverage with `--cov-fail-under=85`, and temp-copy package/demo checks are available for read-only validation.
-- Docker and Compose provide a local runtime bootstrap for the CLI core under the future Workbench service name.
+- Docker and Compose provide a local runtime bootstrap for the Workbench MVP while keeping the CLI core available in the same image.
 
 ## Workbench Add-On Direction
 
-Status: MVP implementation in progress, documented by [docs/workbench-masterplan.md](./workbench-masterplan.md)
+Status: MVP bootstrap available; implementation continues, documented by [docs/workbench-masterplan.md](./workbench-masterplan.md)
 
 The Workbench turns the existing CLI/core behavior into a local-first, self-hosted vulnerability prioritization application. The CLI remains supported for automation and CI; the Workbench adds API, database-backed imports, a browser UI, team-oriented worklists, and report workflows around the same transparent prioritization model.
 
@@ -32,6 +32,13 @@ MVP scope:
 - Dashboard and report flows for Markdown, HTML, JSON, and evidence bundles.
 
 The current `docker compose up --build` service runs the Workbench web application on `127.0.0.1:8000`; the CLI remains available through the installed `vuln-prioritizer` command.
+
+Current MVP limits:
+
+- Local-first single-node runtime, not a hardened public internet deployment.
+- SQLite default, without PostgreSQL, background worker, queue, SSO, API-token, ticket-sync, or multi-workspace support.
+- Web/API import path currently targets CVE lists, `generic-occurrence-csv`, Trivy JSON, and Grype JSON. The CLI remains the broader automation surface.
+- No vulnerability scanning, AI autopatching, or heuristic/AI CVE-to-ATT&CK mapping.
 
 ## Implemented Release Line
 
@@ -109,9 +116,9 @@ Status: implemented locally
 - Published schemas for the new JSON helper contracts.
 - Public-polish docs updates for use cases, release notes, and committed media assets.
 
-## Deliberate Non-Goals Through `v1.1.0`
+## CLI Release-Line Non-Goals Through `v1.1.0`
 
-- Database-backed service
+- Database-backed service in the CLI-only release line; the Workbench branch adds this as an explicit app-layer surface.
 - ServiceNow or Jira integration
 - Mandatory live TAXII integration
 - Heuristic or ML-based CVE-to-ATT&CK mapping

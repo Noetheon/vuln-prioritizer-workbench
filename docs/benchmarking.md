@@ -16,7 +16,7 @@ It is a regression corpus for realistic scanner and SBOM exports that helps catc
 
 The current corpus lives in:
 
-- [`data/benchmarks/fixture_regressions.json`](https://github.com/Noetheon/vuln-prioritizer-cli/blob/main/data/benchmarks/fixture_regressions.json)
+- [`data/benchmarks/fixture_regressions.json`](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/data/benchmarks/fixture_regressions.json)
 
 It covers three major input families:
 
@@ -37,12 +37,12 @@ Across those families it exercises all currently supported checked-in example fo
 
 It also includes a dedicated snapshot-diff regression corpus:
 
-- [`data/benchmarks/snapshot_diff_regressions.json`](https://github.com/Noetheon/vuln-prioritizer-cli/blob/main/data/benchmarks/snapshot_diff_regressions.json)
+- [`data/benchmarks/snapshot_diff_regressions.json`](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/data/benchmarks/snapshot_diff_regressions.json)
 - before/after fixture pairs under `data/benchmarks/snapshots/`
 
 And a committed remediation-planning rollup fixture:
 
-- [`data/benchmarks/rollup_remediation_analysis.json`](https://github.com/Noetheon/vuln-prioritizer-cli/blob/main/data/benchmarks/rollup_remediation_analysis.json)
+- [`data/benchmarks/rollup_remediation_analysis.json`](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/data/benchmarks/rollup_remediation_analysis.json)
 
 ## What Each Benchmark Case Asserts
 

@@ -117,16 +117,22 @@ Then set `NVD_API_KEY` in `.env` if you want authenticated NVD access.
 
 ### Docker / Compose Workbench
 
-Run the self-hosted Workbench API and web UI locally:
+Run the current self-hosted Workbench MVP API and web UI locally:
 
 ```bash
 docker compose up --build
 ```
 
-Then open `http://127.0.0.1:8000`. The Compose service stores SQLite data in `./data/workbench.db`, uploads in `./build/workbench/uploads`, reports in `./build/workbench/reports`, and provider cache entries in `./.cache/vuln-prioritizer`.
+Then open `http://127.0.0.1:8000`. The Compose service stores SQLite data, uploads, reports, and provider cache entries in Docker named volumes, and mounts checked-in demo data read-only at `/app/examples`.
 
 ```bash
 curl http://127.0.0.1:8000/api/health
+```
+
+The container starts the web app with `vuln-prioritizer web serve --host 0.0.0.0 --port 8000`. The app initializes the SQLite schema on startup; you can also initialize the same database explicitly:
+
+```bash
+docker compose run --rm workbench vuln-prioritizer db init
 ```
 
 The CLI remains available in the same image:
@@ -135,6 +141,39 @@ The CLI remains available in the same image:
 docker build -t vuln-prioritizer-workbench:local .
 docker run --rm vuln-prioritizer-workbench:local vuln-prioritizer --help
 ```
+
+Equivalent local Workbench commands after a normal Python install:
+
+```bash
+export VULN_PRIORITIZER_DB_URL=sqlite:///./data/workbench.db
+export VULN_PRIORITIZER_UPLOAD_DIR=./data/uploads
+export VULN_PRIORITIZER_REPORT_DIR=./data/reports
+export VULN_PRIORITIZER_PROVIDER_SNAPSHOT_DIR=./data
+export VULN_PRIORITIZER_CACHE_DIR=./.cache/vuln-prioritizer
+vuln-prioritizer db init
+vuln-prioritizer web serve --host 127.0.0.1 --port 8000
+```
+
+Workbench runtime environment:
+
+| Variable | Default / Compose value | Purpose |
+| --- | --- | --- |
+| `NVD_API_KEY` | empty | Optional authenticated NVD access. |
+| `VULN_PRIORITIZER_NVD_API_KEY_ENV` | `NVD_API_KEY` | Name of the environment variable read for the NVD key. |
+| `VULN_PRIORITIZER_DB_URL` | local: `sqlite:///./data/workbench.db`; Compose: `sqlite:////app/data/workbench.db` | Workbench database URL. |
+| `VULN_PRIORITIZER_UPLOAD_DIR` | local: `data/uploads`; Compose: `/app/uploads` | Uploaded source files. |
+| `VULN_PRIORITIZER_REPORT_DIR` | local: `data/reports`; Compose: `/app/reports` | Generated reports and evidence bundles. |
+| `VULN_PRIORITIZER_PROVIDER_SNAPSHOT_DIR` | local: `data`; Compose: `/app/examples` | Trusted directory for locked provider snapshot replay. |
+| `VULN_PRIORITIZER_CACHE_DIR` | local: `.cache/vuln-prioritizer`; Compose: `/app/.cache/vuln-prioritizer` | Provider cache used by Workbench analysis. |
+| `VULN_PRIORITIZER_MAX_UPLOAD_MB` | `25` | Upload size limit per import. |
+| `VULN_PRIORITIZER_CSRF_TOKEN` | random per process when unset | Optional fixed local form token for repeatable demos. |
+
+Current Workbench MVP limitations:
+
+- The Compose path is local-first and single-node. It is not hardened for internet exposure.
+- The Workbench UI/API currently focuses on CVE lists, `generic-occurrence-csv`, Trivy JSON, and Grype JSON imports. The CLI still supports the broader input matrix documented below.
+- SQLite is the default supported Workbench runtime. PostgreSQL, background workers, SSO, API tokens, ticket sync, and multi-workspace tenancy are out of MVP scope.
+- The project still does not scan systems, patch software, or generate heuristic/AI CVE-to-ATT&CK mappings.
 
 Workbench planning lives in [docs/workbench-masterplan.md](docs/workbench-masterplan.md). The roadmap tracks how the current CLI release line is being repositioned as the reusable core for that add-on.
 
@@ -365,6 +404,12 @@ make package-check-temp
 ```
 
 If you change docs, examples, or report artifacts, run `make release-check` so the committed example outputs stay in sync. Use the `*-temp` targets when you want the same demo or package validation in a temporary copy without mutating checked-in docs artifacts or `dist/`.
+
+Pull request readiness:
+
+- State whether the change affects CLI, Workbench, Docker, docs, release, or packaging behavior.
+- Include the local checks you ran. For docs-only changes, `make docs-check` plus targeted CLI help checks is usually enough; broader behavior changes should use `make check` or `make release-check`.
+- Keep public examples aligned with the supported install path, the Workbench MVP limitations above, and the no-scanner/no-heuristic-ATT&CK scope boundary.
 
 ## Project Status
 

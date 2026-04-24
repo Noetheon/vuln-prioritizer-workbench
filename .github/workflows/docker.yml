@@ -1,0 +1,32 @@
+name: Docker
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  compose-smoke:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Build and start Workbench
+        run: docker compose up -d --build
+
+      - name: Wait for health endpoint
+        run: |
+          curl --retry 20 --retry-delay 2 --retry-connrefused --fail \
+            http://127.0.0.1:8000/api/health
+
+      - name: Show service status
+        run: docker compose ps
+
+      - name: Stop Workbench
+        if: always()
+        run: docker compose down -v --remove-orphans

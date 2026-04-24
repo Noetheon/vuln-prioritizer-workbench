@@ -14,7 +14,7 @@ Use this when you want a concise summary in the Actions UI and do not need to ke
 ```yaml
 - name: Prioritize vulnerabilities
   id: prioritize
-  uses: Noetheon/vuln-prioritizer-cli@vX.Y.Z
+  uses: Noetheon/vuln-prioritizer-workbench@vX.Y.Z
   with:
     mode: analyze
     input: trivy-results.json
@@ -38,7 +38,7 @@ Use the compact template when you want a small, reusable PR comment body without
 ```yaml
 - name: Prioritize vulnerabilities
   id: prioritize
-  uses: Noetheon/vuln-prioritizer-cli@vX.Y.Z
+  uses: Noetheon/vuln-prioritizer-workbench@vX.Y.Z
   with:
     mode: analyze
     input: trivy-results.json
@@ -69,7 +69,7 @@ Use the detailed template when you want the complete executive summary file for 
 ```yaml
 - name: Generate analysis JSON
   id: analyze
-  uses: Noetheon/vuln-prioritizer-cli@vX.Y.Z
+  uses: Noetheon/vuln-prioritizer-workbench@vX.Y.Z
   with:
     mode: analyze
     input: trivy-results.json
