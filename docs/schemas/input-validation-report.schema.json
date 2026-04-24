@@ -4,7 +4,7 @@
   "title": "vuln-prioritizer input validation report",
   "description": "JSON contract for `vuln-prioritizer input validate --format json`.",
   "type": "object",
-  "additionalProperties": false,
+  "additionalProperties": true,
   "required": [
     "metadata",
     "summary",
@@ -63,7 +63,7 @@
     },
     "metadata": {
       "type": "object",
-      "additionalProperties": false,
+      "additionalProperties": true,
       "required": [
         "schema_version",
         "command",
@@ -123,7 +123,7 @@
     },
     "summary": {
       "type": "object",
-      "additionalProperties": false,
+      "additionalProperties": true,
       "required": [
         "ok",
         "total_rows",
@@ -187,7 +187,7 @@
     },
     "source": {
       "type": "object",
-      "additionalProperties": false,
+      "additionalProperties": true,
       "required": [
         "input_path",
         "input_format",
@@ -231,7 +231,7 @@
     },
     "assetContext": {
       "type": "object",
-      "additionalProperties": false,
+      "additionalProperties": true,
       "required": [
         "total_rows",
         "loaded_rows",
@@ -266,7 +266,7 @@
     },
     "vex": {
       "type": "object",
-      "additionalProperties": false,
+      "additionalProperties": true,
       "required": [
         "file_count",
         "statement_count",

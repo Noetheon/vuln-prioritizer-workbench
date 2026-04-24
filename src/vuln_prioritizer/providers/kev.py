@@ -137,9 +137,12 @@ class KevProvider:
                 in_kev=True,
                 vendor_project=vulnerability.get("vendorProject"),
                 product=vulnerability.get("product"),
+                short_description=vulnerability.get("shortDescription"),
                 date_added=vulnerability.get("dateAdded"),
                 required_action=vulnerability.get("requiredAction"),
                 due_date=vulnerability.get("dueDate"),
+                known_ransomware_campaign_use=vulnerability.get("knownRansomwareCampaignUse"),
+                notes=vulnerability.get("notes"),
             )
         return index
 

@@ -41,6 +41,14 @@ def load_waiver_rules(path: Path | None) -> list[WaiverRule]:
             raise ValueError(f"Waiver entry #{index} in {path} has an invalid CVE identifier.")
         rule_document = dict(raw_rule)
         rule_document["cve_id"] = normalized_cve
+        for list_field in ("asset_ids", "targets", "services"):
+            if list_field in rule_document:
+                rule_document[list_field] = _normalize_scope_values(
+                    rule_document[list_field],
+                    field_name=list_field,
+                    entry_index=index,
+                    source_path=path,
+                )
         if rule_document.get("expires_on") is not None:
             rule_document["expires_on"] = str(rule_document["expires_on"])
         if rule_document.get("review_on") is not None:
@@ -51,6 +59,7 @@ def load_waiver_rules(path: Path | None) -> list[WaiverRule]:
             raise ValueError(f"Waiver entry #{index} in {path} is invalid: {exc}") from exc
         _validate_rule_dates(rule, source_path=path)
         rules.append(rule)
+    _validate_unique_rule_ids(rules, source_path=path)
     return rules
 
 
@@ -218,18 +227,66 @@ def _review_on(rule: WaiverRule) -> date | None:
 
 
 def _waiver_matches_finding(rule: WaiverRule, finding: PrioritizedFinding) -> bool:
-    if rule.asset_ids and not set(rule.asset_ids).intersection(finding.provenance.asset_ids):
+    finding_asset_ids = _normalized_set(finding.provenance.asset_ids)
+    if rule.asset_ids and not _normalized_set(rule.asset_ids).intersection(finding_asset_ids):
         return False
-    if rule.targets and not set(rule.targets).intersection(finding.provenance.targets):
+    finding_targets = _normalized_set(finding.provenance.targets)
+    if rule.targets and not _normalized_set(rule.targets).intersection(finding_targets):
         return False
     finding_services = {
         occurrence.asset_business_service
         for occurrence in finding.provenance.occurrences
         if occurrence.asset_business_service
     }
-    if rule.services and not set(rule.services).intersection(finding_services):
+    if rule.services and not _normalized_set(rule.services).intersection(
+        _normalized_set(finding_services)
+    ):
         return False
     return True
+
+
+def _validate_unique_rule_ids(rules: list[WaiverRule], *, source_path: Path) -> None:
+    seen: set[str] = set()
+    duplicates: set[str] = set()
+    for rule in rules:
+        if not rule.id:
+            continue
+        normalized = rule.id.casefold()
+        if normalized in seen:
+            duplicates.add(rule.id)
+        seen.add(normalized)
+    if duplicates:
+        raise ValueError(
+            f"{source_path} contains duplicate waiver id(s): " + ", ".join(sorted(duplicates)) + "."
+        )
+
+
+def _normalize_scope_values(
+    value: object,
+    *,
+    field_name: str,
+    entry_index: int,
+    source_path: Path,
+) -> list[str]:
+    if not isinstance(value, list):
+        raise ValueError(
+            f"Waiver entry #{entry_index} in {source_path} has invalid {field_name}: "
+            "expected a list."
+        )
+    normalized: list[str] = []
+    for item in value:
+        if item is None:
+            continue
+        text = str(item).strip()
+        if text and text not in normalized:
+            normalized.append(text)
+    return normalized
+
+
+def _normalized_set(values: object) -> set[str]:
+    if not isinstance(values, list | set | tuple):
+        return set()
+    return {str(value).strip().casefold() for value in values if str(value).strip()}
 
 
 def _apply_single_waiver(

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 from collections.abc import Iterable
+from urllib.parse import unquote
 
 from vuln_prioritizer.config import PRIORITY_RECOMMENDATIONS
 from vuln_prioritizer.models import (
@@ -177,6 +178,11 @@ def _coerce_occurrences(
 def _collect_components(occurrences: list[InputOccurrence]) -> list[RemediationComponent]:
     buckets: dict[_ComponentKey, RemediationComponent] = {}
     fixed_version_sets: dict[_ComponentKey, set[str]] = {}
+    target_sets: dict[_ComponentKey, set[str]] = {}
+    asset_id_sets: dict[_ComponentKey, set[str]] = {}
+    service_sets: dict[_ComponentKey, set[str]] = {}
+    owner_sets: dict[_ComponentKey, set[str]] = {}
+    occurrence_counts: dict[_ComponentKey, int] = {}
 
     for occurrence in occurrences:
         component = _build_component_seed(occurrence)
@@ -193,8 +199,18 @@ def _collect_components(occurrences: list[InputOccurrence]) -> list[RemediationC
         if key not in buckets:
             buckets[key] = component
             fixed_version_sets[key] = set(component.fixed_versions)
+            target_sets[key] = set(component.targets)
+            asset_id_sets[key] = set(component.asset_ids)
+            service_sets[key] = set(component.services)
+            owner_sets[key] = set(component.owners)
+            occurrence_counts[key] = component.occurrence_count
             continue
         fixed_version_sets[key].update(component.fixed_versions)
+        target_sets[key].update(component.targets)
+        asset_id_sets[key].update(component.asset_ids)
+        service_sets[key].update(component.services)
+        owner_sets[key].update(component.owners)
+        occurrence_counts[key] += max(component.occurrence_count, 1)
 
     components: list[RemediationComponent] = []
     for key, component in buckets.items():
@@ -203,6 +219,11 @@ def _collect_components(occurrences: list[InputOccurrence]) -> list[RemediationC
             component.model_copy(
                 update={
                     "fixed_versions": sorted(fixed_versions, key=_natural_sort_key),
+                    "occurrence_count": occurrence_counts[key],
+                    "targets": sorted(target_sets[key]),
+                    "asset_ids": sorted(asset_id_sets[key]),
+                    "services": sorted(service_sets[key]),
+                    "owners": sorted(owner_sets[key]),
                 }
             )
         )
@@ -233,6 +254,11 @@ def _build_component_seed(occurrence: InputOccurrence) -> RemediationComponent |
         package_type=package_type,
         purl=purl,
         path=path,
+        occurrence_count=1,
+        targets=_occurrence_targets(occurrence),
+        asset_ids=_single_value_list(occurrence.asset_id),
+        services=_single_value_list(occurrence.asset_business_service),
+        owners=_single_value_list(occurrence.asset_owner),
     )
 
 
@@ -269,10 +295,22 @@ def _purl_type(purl: str) -> str | None:
 def _name_from_purl(purl: str | None) -> str | None:
     if not purl:
         return None
-    if "/" not in purl:
+    normalized = purl.split("?", 1)[0].split("#", 1)[0]
+    if "/" not in normalized:
         return None
-    tail = purl.rsplit("/", 1)[-1]
-    return _clean_text(tail.split("@", 1)[0])
+    tail = normalized.rsplit("/", 1)[-1]
+    return _clean_text(unquote(tail.split("@", 1)[0]))
+
+
+def _occurrence_targets(occurrence: InputOccurrence) -> list[str]:
+    if not occurrence.target_ref:
+        return []
+    return [f"{occurrence.target_kind}:{occurrence.target_ref}"]
+
+
+def _single_value_list(value: str | None) -> list[str]:
+    cleaned = _clean_text(value)
+    return [] if cleaned is None else [cleaned]
 
 
 def _component_sort_key(component: RemediationComponent) -> tuple[object, ...]:

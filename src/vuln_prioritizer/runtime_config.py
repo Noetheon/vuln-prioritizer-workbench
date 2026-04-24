@@ -44,6 +44,7 @@ class CommonDefaults(StrictModel):
 class AnalyzeDefaults(StrictModel):
     format: str | None = None
     input_format: str | None = None
+    summary_template: str | None = None
     priority: list[str] = Field(default_factory=list)
     kev_only: bool | None = None
     min_cvss: float | None = None
@@ -79,6 +80,7 @@ class ExplainDefaults(StrictModel):
 class DoctorDefaults(StrictModel):
     format: str | None = None
     live: bool | None = None
+    nvd_api_key_env: str | None = None
 
 
 class SnapshotCreateDefaults(StrictModel):
@@ -118,6 +120,7 @@ class AttackValidateDefaults(StrictModel):
 
 
 class AttackCoverageDefaults(AttackValidateDefaults):
+    input_format: str | None = None
     max_cves: int | None = None
 
 
@@ -125,6 +128,7 @@ class AttackNavigatorLayerDefaults(StrictModel):
     attack_source: str | None = None
     attack_mapping_file: str | None = None
     attack_technique_metadata_file: str | None = None
+    input_format: str | None = None
     max_cves: int | None = None
 
 
@@ -291,19 +295,20 @@ def build_cli_default_map(loaded: LoadedRuntimeConfig) -> dict[str, Any]:
             **_compact_defaults(loaded.document.commands.explain.model_dump()),
         },
         "doctor": {
-            **_compact_defaults(loaded.document.commands.doctor.model_dump()),
             **_compact_defaults(
                 {
                     "waiver_file": loaded.document.defaults.waiver_file,
                     "cache_dir": loaded.document.defaults.cache_dir,
                     "cache_ttl_hours": loaded.document.defaults.cache_ttl_hours,
                     "offline_kev_file": loaded.document.defaults.offline_kev_file,
+                    "nvd_api_key_env": loaded.document.defaults.nvd_api_key_env,
                     "attack_mapping_file": loaded.document.defaults.attack_mapping_file,
                     "attack_technique_metadata_file": (
                         loaded.document.defaults.attack_technique_metadata_file
                     ),
                 }
             ),
+            **_compact_defaults(loaded.document.commands.doctor.model_dump()),
         },
         "rollup": _compact_defaults(loaded.document.commands.rollup.model_dump()),
         "snapshot": {
@@ -323,11 +328,17 @@ def build_cli_default_map(loaded: LoadedRuntimeConfig) -> dict[str, Any]:
             },
             "coverage": {
                 **attack_general,
-                **_compact_defaults(loaded.document.commands.attack.coverage.model_dump()),
+                **_normalize_multi_value_option_defaults(
+                    _compact_defaults(loaded.document.commands.attack.coverage.model_dump()),
+                    option_names={"input_format"},
+                ),
             },
             "navigator-layer": {
                 **attack_general,
-                **_compact_defaults(loaded.document.commands.attack.navigator_layer.model_dump()),
+                **_normalize_multi_value_option_defaults(
+                    _compact_defaults(loaded.document.commands.attack.navigator_layer.model_dump()),
+                    option_names={"input_format"},
+                ),
             },
         },
         "data": {

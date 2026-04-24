@@ -287,3 +287,48 @@ def test_cli_doctor_live_mode_warns_when_nvd_api_key_is_missing(
     assert payload["summary"]["overall_status"] == "degraded"
     assert checks["auth.nvd_api_key"]["status"] == "degraded"
     assert "anonymous rate limits" in checks["auth.nvd_api_key"]["detail"]
+
+
+def test_cli_doctor_live_mode_uses_custom_nvd_api_key_env(
+    runner,
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    cache_dir = tmp_path / "cache"
+    cache_dir.mkdir()
+    output_file = tmp_path / "doctor-live-custom-env.json"
+
+    class _FakeResponse:
+        status_code = 200
+
+        def raise_for_status(self) -> None:
+            return None
+
+    def fake_get(url, params=None, timeout=5):  # noqa: ANN001
+        return _FakeResponse()
+
+    monkeypatch.setattr("vuln_prioritizer.cli_support.doctor_support.requests.get", fake_get)
+    monkeypatch.delenv("NVD_API_KEY", raising=False)
+    monkeypatch.setenv("CUSTOM_NVD_KEY", "test-key")
+
+    result = runner.invoke(
+        app,
+        [
+            "doctor",
+            "--cache-dir",
+            str(cache_dir),
+            "--live",
+            "--nvd-api-key-env",
+            "CUSTOM_NVD_KEY",
+            "--output",
+            str(output_file),
+            "--format",
+            "json",
+        ],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(output_file.read_text(encoding="utf-8"))
+    checks = {item["check_id"]: item for item in payload["checks"]}
+    assert checks["auth.nvd_api_key"]["status"] == "ok"
+    assert checks["auth.nvd_api_key"]["detail"] == "CUSTOM_NVD_KEY is configured."

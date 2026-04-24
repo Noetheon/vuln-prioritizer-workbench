@@ -29,6 +29,18 @@ jobs:
       - name: Install project and dev dependencies
         run: python -m pip install -e .[dev]
 
+      - name: Verify tag matches package version
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        run: |
+          set -euo pipefail
+          package_version="$(python -c 'import tomllib; from pathlib import Path; print(tomllib.loads(Path("pyproject.toml").read_text())["project"]["version"])')"
+          tag_version="${GITHUB_REF_NAME#v}"
+          if [[ "$package_version" != "$tag_version" ]]; then
+            echo "Tag ${GITHUB_REF_NAME} does not match pyproject.toml version ${package_version}." >&2
+            exit 1
+          fi
+
       - name: Run release gate before publishing
         run: make release-check
 

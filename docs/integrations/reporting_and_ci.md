@@ -10,7 +10,7 @@ This document describes the current SARIF, GitHub Action, PR comment, and HTML r
 Today the CLI supports:
 
 - `analyze --format markdown|json|sarif|table`
-- `analyze --input-format auto|cve-list|trivy-json|grype-json|cyclonedx-json|spdx-json|dependency-check-json|github-alerts-json|nessus-xml|openvas-xml`
+- `analyze --input-format auto|cve-list|generic-occurrence-csv|trivy-json|grype-json|cyclonedx-json|spdx-json|dependency-check-json|github-alerts-json|nessus-xml|openvas-xml`
 - `analyze --html-output report.html`
 - `analyze --summary-output summary.md`
 - `compare --input-format ...`

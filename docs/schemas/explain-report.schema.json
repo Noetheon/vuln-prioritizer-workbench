@@ -4,7 +4,7 @@
   "title": "vuln-prioritizer explain report",
   "description": "JSON contract for `vuln-prioritizer explain --format json`.",
   "type": "object",
-  "additionalProperties": false,
+  "additionalProperties": true,
   "required": [
     "metadata",
     "attack_summary",
@@ -75,7 +75,7 @@
     },
     "inputSourceSummary": {
       "type": "object",
-      "additionalProperties": false,
+      "additionalProperties": true,
       "required": [
         "input_path",
         "input_format",
@@ -119,7 +119,7 @@
     },
     "providerLookupDiagnostics": {
       "type": "object",
-      "additionalProperties": false,
+      "additionalProperties": true,
       "properties": {
         "requested": {
           "type": "integer"
@@ -149,7 +149,7 @@
     },
     "priorityPolicy": {
       "type": "object",
-      "additionalProperties": false,
+      "additionalProperties": true,
       "properties": {
         "critical_epss_threshold": {
           "type": "number"
@@ -173,7 +173,7 @@
     },
     "attackSummary": {
       "type": "object",
-      "additionalProperties": false,
+      "additionalProperties": true,
       "required": [
         "mapped_cves",
         "unmapped_cves",
@@ -201,7 +201,7 @@
     },
     "analysisMetadata": {
       "type": "object",
-      "additionalProperties": false,
+      "additionalProperties": true,
       "required": [
         "schema_version",
         "input_path",
@@ -408,7 +408,7 @@
     },
     "attackMapping": {
       "type": "object",
-      "additionalProperties": false,
+      "additionalProperties": true,
       "required": [
         "capability_id",
         "attack_object_id"
@@ -442,7 +442,7 @@
     },
     "attackTechnique": {
       "type": "object",
-      "additionalProperties": false,
+      "additionalProperties": true,
       "required": [
         "attack_object_id",
         "name"
@@ -470,7 +470,7 @@
     },
     "inputOccurrence": {
       "type": "object",
-      "additionalProperties": false,
+      "additionalProperties": true,
       "required": [
         "cve_id"
       ],
@@ -584,7 +584,7 @@
     },
     "findingProvenance": {
       "type": "object",
-      "additionalProperties": false,
+      "additionalProperties": true,
       "properties": {
         "occurrence_count": {
           "type": "integer"
@@ -635,7 +635,7 @@
     },
     "prioritizedFinding": {
       "type": "object",
-      "additionalProperties": false,
+      "additionalProperties": true,
       "required": [
         "cve_id",
         "priority_label",
@@ -767,6 +767,9 @@
         "priority_rank": {
           "type": "integer"
         },
+        "priority_drivers": {
+          "$ref": "#/$defs/stringArray"
+        },
         "rationale": {
           "type": "string"
         },
@@ -798,7 +801,7 @@
     },
     "providerEvidence": {
       "type": "object",
-      "additionalProperties": false,
+      "additionalProperties": true,
       "required": [
         "nvd",
         "epss",
@@ -818,7 +821,7 @@
     },
     "comparisonFinding": {
       "type": "object",
-      "additionalProperties": false,
+      "additionalProperties": true,
       "required": [
         "cve_id",
         "cvss_only_label",
@@ -948,7 +951,7 @@
     },
     "nvdData": {
       "type": "object",
-      "additionalProperties": false,
+      "additionalProperties": true,
       "required": [
         "cve_id"
       ],
@@ -968,6 +971,12 @@
         "cvss_version": {
           "$ref": "#/$defs/nullableString"
         },
+        "cvss_vector": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "vulnerability_status": {
+          "$ref": "#/$defs/nullableString"
+        },
         "published": {
           "$ref": "#/$defs/nullableString"
         },
@@ -979,12 +988,18 @@
         },
         "references": {
           "$ref": "#/$defs/stringArray"
+        },
+        "reference_tags": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/stringArray"
+          }
         }
       }
     },
     "epssData": {
       "type": "object",
-      "additionalProperties": false,
+      "additionalProperties": true,
       "required": [
         "cve_id"
       ],
@@ -1005,7 +1020,7 @@
     },
     "kevData": {
       "type": "object",
-      "additionalProperties": false,
+      "additionalProperties": true,
       "required": [
         "cve_id"
       ],
@@ -1022,6 +1037,9 @@
         "product": {
           "$ref": "#/$defs/nullableString"
         },
+        "short_description": {
+          "$ref": "#/$defs/nullableString"
+        },
         "date_added": {
           "$ref": "#/$defs/nullableString"
         },
@@ -1030,12 +1048,18 @@
         },
         "due_date": {
           "$ref": "#/$defs/nullableString"
+        },
+        "known_ransomware_campaign_use": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "notes": {
+          "$ref": "#/$defs/nullableString"
         }
       }
     },
     "attackData": {
       "type": "object",
-      "additionalProperties": false,
+      "additionalProperties": true,
       "required": [
         "cve_id"
       ],
@@ -1095,7 +1119,7 @@
     },
     "remediationComponent": {
       "type": "object",
-      "additionalProperties": false,
+      "additionalProperties": true,
       "properties": {
         "name": {
           "$ref": "#/$defs/nullableString"
@@ -1114,12 +1138,27 @@
         },
         "path": {
           "$ref": "#/$defs/nullableString"
+        },
+        "occurrence_count": {
+          "type": "integer"
+        },
+        "targets": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "asset_ids": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "services": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "owners": {
+          "$ref": "#/$defs/stringArray"
         }
       }
     },
     "remediationPlan": {
       "type": "object",
-      "additionalProperties": false,
+      "additionalProperties": true,
       "properties": {
         "strategy": {
           "type": "string"

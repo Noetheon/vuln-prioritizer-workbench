@@ -4,7 +4,7 @@
   "title": "vuln-prioritizer snapshot diff report",
   "description": "JSON contract for `snapshot diff --format json`.",
   "type": "object",
-  "additionalProperties": false,
+  "additionalProperties": true,
   "required": ["metadata", "summary", "items"],
   "properties": {
     "metadata": {
@@ -23,7 +23,7 @@
   "$defs": {
     "snapshotDiffMetadata": {
       "type": "object",
-      "additionalProperties": false,
+      "additionalProperties": true,
       "required": ["schema_version", "generated_at", "before_path", "after_path"],
       "properties": {
         "schema_version": {
@@ -45,7 +45,7 @@
     },
     "snapshotDiffSummary": {
       "type": "object",
-      "additionalProperties": false,
+      "additionalProperties": true,
       "properties": {
         "added": {
           "type": "integer"
@@ -69,7 +69,7 @@
     },
     "snapshotDiffItem": {
       "type": "object",
-      "additionalProperties": false,
+      "additionalProperties": true,
       "required": ["cve_id", "category"],
       "properties": {
         "cve_id": {

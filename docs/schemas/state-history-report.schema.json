@@ -4,7 +4,7 @@
   "title": "vuln-prioritizer state history report",
   "description": "JSON contract for `state history --format json`.",
   "type": "object",
-  "additionalProperties": false,
+  "additionalProperties": true,
   "required": ["metadata", "items"],
   "properties": {
     "metadata": {
@@ -23,7 +23,7 @@
     },
     "metadata": {
       "type": "object",
-      "additionalProperties": false,
+      "additionalProperties": true,
       "required": ["schema_version", "generated_at", "db_path", "cve_id", "entry_count"],
       "properties": {
         "schema_version": {
@@ -46,7 +46,7 @@
     },
     "item": {
       "type": "object",
-      "additionalProperties": false,
+      "additionalProperties": true,
       "required": [
         "snapshot_generated_at",
         "snapshot_path",

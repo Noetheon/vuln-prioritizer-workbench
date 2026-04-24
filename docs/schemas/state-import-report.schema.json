@@ -4,7 +4,7 @@
   "title": "vuln-prioritizer state import report",
   "description": "JSON contract for `state import-snapshot --format json`.",
   "type": "object",
-  "additionalProperties": false,
+  "additionalProperties": true,
   "required": ["metadata", "summary"],
   "properties": {
     "metadata": {
@@ -23,7 +23,7 @@
     },
     "metadata": {
       "type": "object",
-      "additionalProperties": false,
+      "additionalProperties": true,
       "required": ["schema_version", "generated_at", "db_path", "input_path"],
       "properties": {
         "schema_version": {
@@ -42,7 +42,7 @@
     },
     "summary": {
       "type": "object",
-      "additionalProperties": false,
+      "additionalProperties": true,
       "required": [
         "imported",
         "snapshot_id",

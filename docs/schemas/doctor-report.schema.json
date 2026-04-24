@@ -4,7 +4,7 @@
   "title": "vuln-prioritizer doctor report",
   "description": "JSON contract for `vuln-prioritizer doctor --format json`.",
   "type": "object",
-  "additionalProperties": false,
+  "additionalProperties": true,
   "required": ["schema_version", "generated_at", "live", "summary", "checks"],
   "properties": {
     "schema_version": {
@@ -35,7 +35,7 @@
     },
     "doctorSummary": {
       "type": "object",
-      "additionalProperties": false,
+      "additionalProperties": true,
       "required": ["overall_status", "ok_count", "degraded_count", "error_count"],
       "properties": {
         "overall_status": {
@@ -54,7 +54,7 @@
     },
     "doctorCheck": {
       "type": "object",
-      "additionalProperties": false,
+      "additionalProperties": true,
       "required": ["check_id", "name", "scope", "category", "status", "detail"],
       "properties": {
         "check_id": {

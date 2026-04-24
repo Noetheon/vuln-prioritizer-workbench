@@ -32,6 +32,7 @@ def build_doctor_report(
     ctx: typer.Context,
     *,
     live: bool,
+    nvd_api_key_env: str = DEFAULT_NVD_API_KEY_ENV,
     cache_dir: Path,
     cache_ttl_hours: int,
     waiver_file: Path | None,
@@ -211,7 +212,7 @@ def build_doctor_report(
         )
 
     if live:
-        nvd_api_key = os.getenv(DEFAULT_NVD_API_KEY_ENV)
+        nvd_api_key = os.getenv(nvd_api_key_env)
         checks.append(
             doctor_check(
                 "auth.nvd_api_key",
@@ -219,15 +220,15 @@ def build_doctor_report(
                 category="auth",
                 status="ok" if nvd_api_key else "degraded",
                 detail=(
-                    f"{DEFAULT_NVD_API_KEY_ENV} is configured."
+                    f"{nvd_api_key_env} is configured."
                     if nvd_api_key
                     else (
-                        f"{DEFAULT_NVD_API_KEY_ENV} is not configured; live checks and NVD "
+                        f"{nvd_api_key_env} is not configured; live checks and NVD "
                         "enrichment will use anonymous rate limits."
                     )
                 ),
                 hint=(
-                    f"Set {DEFAULT_NVD_API_KEY_ENV} for higher NVD rate limits."
+                    f"Set {nvd_api_key_env} for higher NVD rate limits."
                     if not nvd_api_key
                     else None
                 ),

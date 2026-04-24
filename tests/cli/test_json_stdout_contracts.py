@@ -170,6 +170,32 @@ def test_attack_json_commands_without_output_emit_only_json_stdout(
     assert _raw_json_payload(coverage_result.stdout)["summary"]["mapped_cves"] == 3
 
 
+def test_input_validate_json_without_output_emits_only_json_stdout(
+    runner: CliRunner,
+    tmp_path: Path,
+) -> None:
+    input_file = tmp_path / "cves.txt"
+    input_file.write_text("CVE-2024-0001\n", encoding="utf-8")
+
+    result = runner.invoke(
+        app,
+        [
+            "--no-config",
+            "input",
+            "validate",
+            "--input",
+            str(input_file),
+            "--format",
+            "json",
+        ],
+    )
+
+    assert result.exit_code == 0
+    payload = _raw_json_payload(result.stdout)
+    assert payload["metadata"]["command"] == "input validate"
+    assert payload["summary"]["unique_cves"] == 1
+
+
 def test_snapshot_rollup_state_and_report_json_stdout_contracts(
     install_fake_providers,
     runner: CliRunner,

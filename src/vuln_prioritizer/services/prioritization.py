@@ -20,6 +20,7 @@ from vuln_prioritizer.models import (
 )
 from vuln_prioritizer.scoring import (
     build_comparison_reason,
+    build_priority_drivers,
     build_rationale,
     determine_cvss_only_priority,
     determine_priority,
@@ -96,6 +97,7 @@ class PrioritizationService:
                     under_investigation=under_investigation,
                     priority_label=priority_label,
                     priority_rank=priority_rank,
+                    priority_drivers=build_priority_drivers(nvd, epss, kev, self.policy),
                     rationale=build_rationale(
                         nvd,
                         epss,

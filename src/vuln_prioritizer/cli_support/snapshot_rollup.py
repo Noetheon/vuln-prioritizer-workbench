@@ -289,8 +289,22 @@ def rollup_bucket_names(finding: dict[str, Any], *, dimension: str) -> list[str]
     if dimension == RollupBy.asset.value:
         asset_ids = finding.get("provenance", {}).get("asset_ids", [])
         return sorted(asset_ids) if asset_ids else ["Unmapped"]
-    services = finding_services(finding)
-    return services if services else ["Unmapped"]
+    if dimension == RollupBy.service.value:
+        services = finding_services(finding)
+        return services if services else ["Unmapped"]
+    if dimension == RollupBy.owner.value:
+        owners = sorted(finding_owner_hints(finding))
+        return owners if owners else ["Unmapped"]
+    if dimension == RollupBy.exposure.value:
+        exposures = finding_exposures(finding)
+        return exposures if exposures else ["Unmapped"]
+    if dimension == RollupBy.environment.value:
+        environments = finding_environments(finding)
+        return environments if environments else ["Unmapped"]
+    if dimension == RollupBy.component.value:
+        components = finding.get("provenance", {}).get("components", [])
+        return sorted(str(component) for component in components if component) or ["Unmapped"]
+    return ["Unmapped"]
 
 
 def rollup_finding_sort_key(finding: dict[str, Any]) -> tuple[object, ...]:
@@ -480,6 +494,27 @@ def finding_is_production(finding: dict[str, Any]) -> bool:
         in {"prod", "production"}
         for occurrence in finding.get("provenance", {}).get("occurrences", [])
     )
+
+
+def finding_exposures(finding: dict[str, Any]) -> list[str]:
+    exposures = {
+        str(occurrence.get("asset_exposure"))
+        for occurrence in finding.get("provenance", {}).get("occurrences", [])
+        if occurrence.get("asset_exposure")
+    }
+    highest = string_or_none(finding.get("provenance", {}).get("highest_asset_exposure"))
+    if highest:
+        exposures.add(highest)
+    return sorted(exposures)
+
+
+def finding_environments(finding: dict[str, Any]) -> list[str]:
+    environments = {
+        str(occurrence.get("asset_environment"))
+        for occurrence in finding.get("provenance", {}).get("occurrences", [])
+        if occurrence.get("asset_environment")
+    }
+    return sorted(environments)
 
 
 def criticality_order(value: object) -> int:

@@ -4,7 +4,7 @@
   "title": "vuln-prioritizer state init report",
   "description": "JSON contract for `state init --format json`.",
   "type": "object",
-  "additionalProperties": false,
+  "additionalProperties": true,
   "required": ["metadata", "summary"],
   "properties": {
     "metadata": {
@@ -17,7 +17,7 @@
   "$defs": {
     "metadata": {
       "type": "object",
-      "additionalProperties": false,
+      "additionalProperties": true,
       "required": ["schema_version", "generated_at", "db_path"],
       "properties": {
         "schema_version": {
@@ -33,7 +33,7 @@
     },
     "summary": {
       "type": "object",
-      "additionalProperties": false,
+      "additionalProperties": true,
       "required": ["initialized", "snapshot_count"],
       "properties": {
         "initialized": {

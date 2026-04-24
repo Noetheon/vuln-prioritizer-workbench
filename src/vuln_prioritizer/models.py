@@ -192,6 +192,11 @@ class RemediationComponent(StrictModel):
     package_type: str | None = None
     purl: str | None = None
     path: str | None = None
+    occurrence_count: int = 0
+    targets: list[str] = Field(default_factory=list)
+    asset_ids: list[str] = Field(default_factory=list)
+    services: list[str] = Field(default_factory=list)
+    owners: list[str] = Field(default_factory=list)
 
 
 class RemediationPlan(StrictModel):
@@ -210,10 +215,13 @@ class NvdData(StrictModel):
     cvss_base_score: float | None = None
     cvss_severity: str | None = None
     cvss_version: str | None = None
+    cvss_vector: str | None = None
+    vulnerability_status: str | None = None
     published: str | None = None
     last_modified: str | None = None
     cwes: list[str] = Field(default_factory=list)
     references: list[str] = Field(default_factory=list)
+    reference_tags: dict[str, list[str]] = Field(default_factory=dict)
 
 
 class EpssData(StrictModel):
@@ -228,9 +236,12 @@ class KevData(StrictModel):
     in_kev: bool = False
     vendor_project: str | None = None
     product: str | None = None
+    short_description: str | None = None
     date_added: str | None = None
     required_action: str | None = None
     due_date: str | None = None
+    known_ransomware_campaign_use: str | None = None
+    notes: str | None = None
 
 
 class ProviderEvidence(StrictModel):
@@ -412,6 +423,7 @@ class PrioritizedFinding(StrictModel):
     context_rank_reasons: list[str] = Field(default_factory=list)
     priority_label: str
     priority_rank: int
+    priority_drivers: list[str] = Field(default_factory=list)
     rationale: str
     provider_evidence: ProviderEvidence | None = None
     remediation: RemediationPlan = Field(default_factory=RemediationPlan)
@@ -767,6 +779,7 @@ class StateTopServicesMetadata(StrictModel):
     days: int
     priority_filter: str = "all"
     limit: int = 10
+    latest_only: bool = False
     entry_count: int = 0
 
 

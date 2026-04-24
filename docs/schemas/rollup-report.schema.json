@@ -4,7 +4,7 @@
   "title": "vuln-prioritizer rollup report",
   "description": "JSON contract for `rollup --format json`.",
   "type": "object",
-  "additionalProperties": false,
+  "additionalProperties": true,
   "required": [
     "metadata",
     "buckets"
@@ -23,7 +23,7 @@
   "$defs": {
     "rollupMetadata": {
       "type": "object",
-      "additionalProperties": false,
+      "additionalProperties": true,
       "required": [
         "schema_version",
         "generated_at",
@@ -60,7 +60,7 @@
     },
     "rollupBucket": {
       "type": "object",
-      "additionalProperties": false,
+      "additionalProperties": true,
       "required": [
         "bucket",
         "dimension",
@@ -171,7 +171,7 @@
     },
     "rollupCandidate": {
       "type": "object",
-      "additionalProperties": false,
+      "additionalProperties": true,
       "required": [
         "cve_id",
         "priority_label",
@@ -248,7 +248,7 @@
     },
     "remediationComponent": {
       "type": "object",
-      "additionalProperties": false,
+      "additionalProperties": true,
       "properties": {
         "name": {
           "type": [
@@ -290,7 +290,7 @@
     },
     "remediationPlan": {
       "type": "object",
-      "additionalProperties": false,
+      "additionalProperties": true,
       "properties": {
         "strategy": {
           "type": "string"

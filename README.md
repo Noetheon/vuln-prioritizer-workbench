@@ -37,6 +37,7 @@ Core commands:
 Supported inputs:
 
 - `cve-list`
+- `generic-occurrence-csv`
 - `trivy-json`
 - `grype-json`
 - `cyclonedx-json`

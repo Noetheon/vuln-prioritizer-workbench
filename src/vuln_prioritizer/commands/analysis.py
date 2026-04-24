@@ -11,12 +11,14 @@ from rich.panel import Panel
 from vuln_prioritizer.cli_support.analysis import (
     AnalysisRequest,
     ExplainRequest,
+    ExplainResult,
     build_priority_policy,
     handle_fail_on,
     handle_provider_error_fail_on,
     handle_waiver_lifecycle_fail_on,
     prepare_analysis,
     prepare_explain,
+    prepare_saved_explain,
 )
 from vuln_prioritizer.cli_support.common import (
     FULL_OUTPUT_FORMATS,
@@ -389,6 +391,12 @@ def compare(
 def explain(
     ctx: typer.Context,
     cve: str = typer.Option(..., "--cve"),
+    analysis_json: Path | None = typer.Option(
+        None, "--analysis-json", exists=True, dir_okay=False, readable=True
+    ),
+    snapshot_json: Path | None = typer.Option(
+        None, "--snapshot-json", exists=True, dir_okay=False, readable=True
+    ),
     output: Path | None = typer.Option(None, "--output", dir_okay=False),
     format: ReportOutputFormat = output_format_option(
         ReportOutputFormat.table, REPORT_OUTPUT_FORMATS
@@ -440,6 +448,24 @@ def explain(
     if normalized_cve is None:
         exit_input_validation(f"Invalid CVE identifier: {cve!r}")
         raise AssertionError("unreachable")
+    if analysis_json is not None and snapshot_json is not None:
+        exit_input_validation("--analysis-json and --snapshot-json cannot be combined.")
+
+    saved_input = analysis_json or snapshot_json
+    if saved_input is not None:
+        result = prepare_saved_explain(
+            cve_id=normalized_cve,
+            input_path=saved_input,
+            output=output,
+            format=format,
+        )
+        _emit_explain_result(
+            result,
+            output=output,
+            format=format,
+            fail_on_provider_error=fail_on_provider_error,
+        )
+        return
 
     result = prepare_explain(
         ExplainRequest(
@@ -478,6 +504,21 @@ def explain(
         )
     )
 
+    _emit_explain_result(
+        result,
+        output=output,
+        format=format,
+        fail_on_provider_error=fail_on_provider_error,
+    )
+
+
+def _emit_explain_result(
+    result: ExplainResult,
+    *,
+    output: Path | None,
+    format: ReportOutputFormat,
+    fail_on_provider_error: bool,
+) -> None:
     if should_emit_json_stdout(format, output):
         emit_stdout(
             generate_explain_json(
@@ -549,6 +590,7 @@ def doctor(
         TableJsonOutputFormat.table, TABLE_AND_JSON_OUTPUT_FORMATS
     ),
     live: bool = typer.Option(False, "--live"),
+    nvd_api_key_env: str = typer.Option(DEFAULT_NVD_API_KEY_ENV, "--nvd-api-key-env"),
     cache_dir: Path = typer.Option(
         DEFAULT_CACHE_DIR, "--cache-dir", file_okay=False, dir_okay=True
     ),
@@ -571,6 +613,7 @@ def doctor(
     report = build_doctor_report(
         ctx,
         live=live,
+        nvd_api_key_env=nvd_api_key_env,
         cache_dir=cache_dir,
         cache_ttl_hours=cache_ttl_hours,
         waiver_file=waiver_file,

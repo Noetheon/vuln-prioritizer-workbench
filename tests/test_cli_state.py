@@ -321,6 +321,82 @@ def test_cli_state_top_services_supports_priority_filtered_json_output(
     assert payload["items"][0]["occurrence_count"] == 1
 
 
+def test_cli_state_top_services_latest_only_filters_to_newest_snapshot(
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    class FrozenDateTime(datetime):
+        @classmethod
+        def now(cls, tz=None):  # noqa: ANN206
+            return cls(2026, 4, 30, 12, 0, 0, tzinfo=tz or UTC)
+
+    monkeypatch.setattr(state_store_module, "datetime", FrozenDateTime)
+
+    db_path = tmp_path / "state.db"
+    output_file = tmp_path / "top-services-latest.json"
+    store = state_store_module.SQLiteStateStore(db_path)
+    newest_path = _write_snapshot_file(
+        tmp_path,
+        "services-newest.json",
+        _snapshot_payload(
+            "2026-04-20T09:00:00+00:00",
+            [
+                _finding(
+                    "CVE-2024-4010",
+                    priority_label="Critical",
+                    priority_rank=1,
+                    services=["identity"],
+                )
+            ],
+        ),
+    )
+    older_path = _write_snapshot_file(
+        tmp_path,
+        "services-older.json",
+        _snapshot_payload(
+            "2026-04-10T09:00:00+00:00",
+            [
+                _finding(
+                    "CVE-2024-4011",
+                    priority_label="Critical",
+                    priority_rank=1,
+                    services=["payments"],
+                )
+            ],
+        ),
+    )
+    store.import_snapshot(
+        snapshot_path=newest_path,
+        payload=json.loads(newest_path.read_text(encoding="utf-8")),
+    )
+    store.import_snapshot(
+        snapshot_path=older_path,
+        payload=json.loads(older_path.read_text(encoding="utf-8")),
+    )
+
+    result = runner.invoke(
+        app,
+        [
+            "state",
+            "top-services",
+            "--db",
+            str(db_path),
+            "--days",
+            "30",
+            "--latest-only",
+            "--format",
+            "json",
+            "--output",
+            str(output_file),
+        ],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(output_file.read_text(encoding="utf-8"))
+    assert payload["metadata"]["latest_only"] is True
+    assert [item["service"] for item in payload["items"]] == ["identity"]
+
+
 def test_cli_state_trends_and_service_history_return_json(
     monkeypatch,
     tmp_path: Path,

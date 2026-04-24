@@ -90,6 +90,7 @@ class AttackSource(StrEnum):
 class InputFormat(StrEnum):
     auto = "auto"
     cve_list = "cve-list"
+    generic_occurrence_csv = "generic-occurrence-csv"
     trivy_json = "trivy-json"
     grype_json = "grype-json"
     cyclonedx_json = "cyclonedx-json"
@@ -124,6 +125,10 @@ class TargetKind(StrEnum):
 class RollupBy(StrEnum):
     asset = "asset"
     service = "service"
+    owner = "owner"
+    exposure = "exposure"
+    environment = "environment"
+    component = "component"
 
 
 class StateWaiverStatusFilter(StrEnum):

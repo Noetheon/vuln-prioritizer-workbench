@@ -262,6 +262,7 @@ def state_top_services(
     days: int = typer.Option(30, "--days", min=1),
     priority: StatePriorityScope = typer.Option(StatePriorityScope.all, "--priority"),
     limit: int = typer.Option(10, "--limit", min=1),
+    latest_only: bool = typer.Option(False, "--latest-only"),
     output: Path | None = typer.Option(None, "--output", dir_okay=False),
     format: TableJsonOutputFormat = output_format_option(
         TableJsonOutputFormat.table, TABLE_AND_JSON_OUTPUT_FORMATS
@@ -283,6 +284,7 @@ def state_top_services(
                 days=days,
                 priority_filter=priority.value,
                 limit=limit,
+                latest_only=latest_only,
             )
         ]
     except (OSError, sqlite3.Error, ValueError) as exc:
@@ -295,6 +297,7 @@ def state_top_services(
             days=days,
             priority_filter=priority.value,
             limit=limit,
+            latest_only=latest_only,
             entry_count=len(items),
         ),
         items=items,

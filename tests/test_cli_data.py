@@ -151,6 +151,40 @@ def test_data_update_json_quiet_writes_only_file(monkeypatch, tmp_path: Path) ->
     assert [item["source"] for item in payload["sources"]] == ["nvd", "kev"]
 
 
+def test_data_update_json_output_file_does_not_echo_json_payload(
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    _install_fake_data_update_providers(monkeypatch)
+
+    cache_dir = tmp_path / "cache"
+    input_file = tmp_path / "cves.txt"
+    output_file = tmp_path / "data-update.json"
+    input_file.write_text("CVE-2021-44228\n", encoding="utf-8")
+
+    result = runner.invoke(
+        app,
+        [
+            "data",
+            "update",
+            "--source",
+            "nvd",
+            "--input",
+            str(input_file),
+            "--cache-dir",
+            str(cache_dir),
+            "--output",
+            str(output_file),
+            "--format",
+            "json",
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert output_file.exists()
+    assert result.stdout == ""
+
+
 def test_data_update_accepts_multiple_inputs(monkeypatch, tmp_path: Path) -> None:
     _install_fake_data_update_providers(monkeypatch)
 

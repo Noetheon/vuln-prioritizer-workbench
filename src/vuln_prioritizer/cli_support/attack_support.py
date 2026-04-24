@@ -9,7 +9,7 @@ from pydantic import ValidationError
 from rich.panel import Panel
 from rich.table import Table
 
-from vuln_prioritizer.inputs import InputLoader
+from vuln_prioritizer.inputs import InputLoader, InputSpec
 from vuln_prioritizer.models import AttackData, AttackSummary
 from vuln_prioritizer.providers.attack import AttackProvider
 from vuln_prioritizer.providers.attack_metadata import AttackMetadataProvider
@@ -41,6 +41,9 @@ def validate_attack_inputs(
     attack_mapping_file: Path,
     attack_technique_metadata_file: Path | None,
 ) -> dict[str, Any]:
+    if attack_source == AttackSource.none.value:
+        raise ValueError("ATT&CK utility commands require --attack-source ctid-json or local-csv.")
+
     warnings: list[str] = []
     metadata: dict[str, str | None]
     mapping_count = 0
@@ -133,6 +136,7 @@ def validate_attack_inputs(
         unique_cves = len(results)
 
     return {
+        "schema_version": "1.2.0",
         "source": metadata["source"],
         "mapping_file": metadata["mapping_file"],
         "technique_metadata_file": metadata.get("technique_metadata_file"),
@@ -205,6 +209,25 @@ def read_input_cves(input_path: Path, *, max_cves: int | None) -> tuple[list[str
     except (ValidationError, ValueError) as exc:
         exit_input_validation(str(exc))
     return parsed_input.unique_cves, parsed_input.total_rows, parsed_input.warnings
+
+
+def read_input_cves_from_specs(
+    input_specs: list[InputSpec],
+    *,
+    max_cves: int | None,
+) -> tuple[list[str], int, list[str], list[dict[str, object]], str, list[str]]:
+    try:
+        parsed_input = InputLoader().load_many(input_specs, max_cves=max_cves)
+    except (ValidationError, ValueError) as exc:
+        exit_input_validation(str(exc))
+    return (
+        parsed_input.unique_cves,
+        parsed_input.total_rows,
+        parsed_input.warnings,
+        [summary.model_dump() for summary in parsed_input.source_summaries],
+        parsed_input.input_format,
+        parsed_input.input_paths,
+    )
 
 
 def load_attack_only(

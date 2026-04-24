@@ -58,7 +58,7 @@
             ],
             "cve": "CVE-2024-3094",
             "cvss": 10.0,
-            "epss": 0.84077,
+            "epss": 0.84588,
             "in_kev": false,
             "priority": "Critical",
             "remediation_ecosystem": "apk",

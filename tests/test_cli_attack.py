@@ -109,6 +109,72 @@ def test_cli_attack_navigator_layer_exports_json(tmp_path: Path) -> None:
     assert payload["techniques"][0]["score"] >= 1
 
 
+def test_cli_attack_coverage_and_navigator_accept_generic_occurrence_input_format(
+    tmp_path: Path,
+) -> None:
+    input_file = tmp_path / "occurrences.csv"
+    coverage_file = tmp_path / "coverage.json"
+    navigator_file = tmp_path / "navigator.json"
+    input_file.write_text(
+        "\n".join(
+            [
+                "cve,component,version,target_kind,target,service",
+                "CVE-2023-34362,moveit-transfer,2023.0.0,repository,backend,identity",
+                "CVE-2024-3094,xz,5.6.0-r0,image,ghcr.io/acme/demo:1.0,platform",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    coverage_result = runner.invoke(
+        app,
+        [
+            "attack",
+            "coverage",
+            "--input",
+            str(input_file),
+            "--input-format",
+            "generic-occurrence-csv",
+            "--attack-mapping-file",
+            str(ATTACK_MAPPING_FILE),
+            "--attack-technique-metadata-file",
+            str(ATTACK_METADATA_FILE),
+            "--output",
+            str(coverage_file),
+            "--format",
+            "json",
+        ],
+    )
+    navigator_result = runner.invoke(
+        app,
+        [
+            "attack",
+            "navigator-layer",
+            "--input",
+            str(input_file),
+            "--input-format",
+            "generic-occurrence-csv",
+            "--attack-mapping-file",
+            str(ATTACK_MAPPING_FILE),
+            "--attack-technique-metadata-file",
+            str(ATTACK_METADATA_FILE),
+            "--output",
+            str(navigator_file),
+        ],
+    )
+
+    assert coverage_result.exit_code == 0
+    assert navigator_result.exit_code == 0
+    coverage = json.loads(coverage_file.read_text(encoding="utf-8"))
+    navigator = json.loads(navigator_file.read_text(encoding="utf-8"))
+    assert coverage["metadata"]["schema_version"] == "1.2.0"
+    assert coverage["metadata"]["input_format"] == "generic-occurrence-csv"
+    assert coverage["summary"]["mapped_cves"] == 1
+    assert coverage["summary"]["unmapped_cves"] == 1
+    assert navigator["techniques"]
+
+
 def test_cli_attack_validate_json_reports_cross_file_gaps(tmp_path: Path) -> None:
     mapping_file = tmp_path / "mapping.json"
     metadata_file = tmp_path / "metadata.json"
@@ -179,6 +245,7 @@ def test_cli_attack_validate_json_reports_cross_file_gaps(tmp_path: Path) -> Non
 
     assert result.exit_code == 0
     payload = json.loads(output_file.read_text(encoding="utf-8"))
+    assert payload["schema_version"] == "1.2.0"
     assert payload["missing_metadata_ids"] == ["T1059"]
     assert payload["domain_mismatch"] is True
     assert payload["attack_version_mismatch"] is True
