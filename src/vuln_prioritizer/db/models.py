@@ -57,6 +57,26 @@ class Project(Base):
         cascade="all, delete-orphan",
         passive_deletes=True,
     )
+    waivers: Mapped[list[Waiver]] = relationship(
+        back_populates="project",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+    detection_controls: Mapped[list[DetectionControl]] = relationship(
+        back_populates="project",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+    config_snapshots: Mapped[list[ProjectConfigSnapshot]] = relationship(
+        back_populates="project",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+    github_issue_exports: Mapped[list[GitHubIssueExport]] = relationship(
+        back_populates="project",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
 
 
 class ProviderSnapshot(Base):
@@ -426,3 +446,156 @@ class EvidenceBundle(Base):
     analysis_run: Mapped[AnalysisRun] = relationship(back_populates="evidence_bundles")
 
     __table_args__ = (Index("ix_evidence_bundles_run", "analysis_run_id"),)
+
+
+class Waiver(Base):
+    __tablename__ = "waivers"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=_uuid)
+    project_id: Mapped[str] = mapped_column(
+        ForeignKey("projects.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    cve_id: Mapped[str | None] = mapped_column(String(64))
+    finding_id: Mapped[str | None] = mapped_column(ForeignKey("findings.id", ondelete="SET NULL"))
+    asset_id: Mapped[str | None] = mapped_column(String(200))
+    component_name: Mapped[str | None] = mapped_column(String(300))
+    component_version: Mapped[str | None] = mapped_column(String(200))
+    service: Mapped[str | None] = mapped_column(String(200))
+    owner: Mapped[str] = mapped_column(String(200), nullable=False)
+    reason: Mapped[str] = mapped_column(Text, nullable=False)
+    expires_on: Mapped[str] = mapped_column(String(32), nullable=False)
+    review_on: Mapped[str | None] = mapped_column(String(32))
+    approval_ref: Mapped[str | None] = mapped_column(String(300))
+    ticket_url: Mapped[str | None] = mapped_column(String(1000))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=utc_now,
+        onupdate=utc_now,
+    )
+
+    project: Mapped[Project] = relationship(back_populates="waivers")
+
+    __table_args__ = (
+        Index("ix_waivers_project_cve", "project_id", "cve_id"),
+        Index("ix_waivers_project_asset", "project_id", "asset_id"),
+        Index("ix_waivers_finding", "finding_id"),
+    )
+
+
+class DetectionControl(Base):
+    __tablename__ = "detection_controls"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=_uuid)
+    project_id: Mapped[str] = mapped_column(
+        ForeignKey("projects.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    control_id: Mapped[str | None] = mapped_column(String(120))
+    name: Mapped[str] = mapped_column(String(300), nullable=False)
+    technique_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    technique_name: Mapped[str | None] = mapped_column(String(300))
+    source_type: Mapped[str | None] = mapped_column(String(120))
+    coverage_level: Mapped[str] = mapped_column(String(40), nullable=False, default="unknown")
+    environment: Mapped[str | None] = mapped_column(String(80))
+    owner: Mapped[str | None] = mapped_column(String(200))
+    evidence_ref: Mapped[str | None] = mapped_column(String(1000))
+    notes: Mapped[str | None] = mapped_column(Text)
+    last_verified_at: Mapped[str | None] = mapped_column(String(64))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=utc_now,
+        onupdate=utc_now,
+    )
+
+    project: Mapped[Project] = relationship(back_populates="detection_controls")
+
+    __table_args__ = (
+        Index("ix_detection_controls_project_technique", "project_id", "technique_id"),
+        Index(
+            "uq_detection_controls_project_identity",
+            "project_id",
+            "control_id",
+            "technique_id",
+            unique=True,
+        ),
+    )
+
+
+class ApiToken(Base):
+    __tablename__ = "api_tokens"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=_uuid)
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    token_hash: Mapped[str] = mapped_column(String(128), nullable=False, unique=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    last_used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    __table_args__ = (Index("ix_api_tokens_active", "revoked_at"),)
+
+
+class ProviderUpdateJob(Base):
+    __tablename__ = "provider_update_jobs"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=_uuid)
+    status: Mapped[str] = mapped_column(String(40), nullable=False, default="pending")
+    requested_sources_json: Mapped[list] = mapped_column(JSON, default=list)
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    error_message: Mapped[str | None] = mapped_column(Text)
+    metadata_json: Mapped[dict] = mapped_column(JSON, default=dict)
+
+    __table_args__ = (Index("ix_provider_update_jobs_started_at", "started_at"),)
+
+
+class ProjectConfigSnapshot(Base):
+    __tablename__ = "project_config_snapshots"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=_uuid)
+    project_id: Mapped[str] = mapped_column(
+        ForeignKey("projects.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    source: Mapped[str] = mapped_column(String(80), nullable=False, default="api")
+    config_json: Mapped[dict] = mapped_column(JSON, default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=utc_now,
+        onupdate=utc_now,
+    )
+
+    project: Mapped[Project] = relationship(back_populates="config_snapshots")
+
+    __table_args__ = (Index("ix_project_config_snapshots_project", "project_id", "created_at"),)
+
+
+class GitHubIssueExport(Base):
+    __tablename__ = "github_issue_exports"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=_uuid)
+    project_id: Mapped[str] = mapped_column(
+        ForeignKey("projects.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    finding_id: Mapped[str | None] = mapped_column(ForeignKey("findings.id", ondelete="SET NULL"))
+    duplicate_key: Mapped[str] = mapped_column(String(300), nullable=False)
+    title: Mapped[str] = mapped_column(String(500), nullable=False)
+    html_url: Mapped[str | None] = mapped_column(String(1000))
+    issue_number: Mapped[int | None] = mapped_column(Integer)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+
+    project: Mapped[Project] = relationship(back_populates="github_issue_exports")
+
+    __table_args__ = (
+        Index(
+            "uq_github_issue_exports_project_duplicate",
+            "project_id",
+            "duplicate_key",
+            unique=True,
+        ),
+        Index("ix_github_issue_exports_finding", "finding_id"),
+    )

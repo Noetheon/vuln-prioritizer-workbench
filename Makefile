@@ -10,7 +10,7 @@ DEMO_EVIDENCE_ANALYSIS_FILE := build/v1.0-demo-analysis.json
 DEMO_EVIDENCE_BUNDLE_FILE := build/v1.0-demo-evidence-bundle.zip
 DEMO_EVIDENCE_VERIFICATION_FILE := build/v1.0-demo-evidence-bundle-verification.json
 
-.PHONY: install test lint format fix typecheck check benchmark-check playwright-install playwright-check docs-check docs-serve actionlint-check workflow-check docker-demo-smoke dependency-audit demo-sync-check demo-sync-check-temp package package-check package-check-temp pipx-source-smoke release-check demo-report demo-compare demo-explain demo-attack-report demo-attack-compare demo-attack-explain demo-attack-coverage demo-attack-navigator demo-pr-comment demo-results-sarif demo-html-report demo-evidence-analysis demo-evidence-bundle demo-evidence-bundle-check precommit-install
+.PHONY: install test lint format fix typecheck check benchmark-check playwright-install playwright-check docs-check docs-serve actionlint-check workflow-check docker-demo-smoke docker-postgres-migration-smoke dependency-audit demo-sync-check demo-sync-check-temp package package-check package-check-temp pipx-source-smoke release-check demo-report demo-compare demo-explain demo-attack-report demo-attack-compare demo-attack-explain demo-attack-coverage demo-attack-navigator demo-pr-comment demo-results-sarif demo-html-report demo-evidence-analysis demo-evidence-bundle demo-evidence-bundle-check precommit-install
 
 install:
 	$(PYTHON) -m pip install -e .[dev]
@@ -73,6 +73,19 @@ docker-demo-smoke:
 		sleep 2; \
 	done; \
 	echo "Workbench health check failed." >&2; \
+	exit 1
+
+docker-postgres-migration-smoke:
+	@set -e; \
+	docker compose --profile postgres up -d --build postgres workbench-postgres; \
+	trap 'docker compose --profile postgres down -v --remove-orphans' EXIT; \
+	for attempt in $$(seq 1 30); do \
+		if $(PYTHON) -c "import urllib.request; print(urllib.request.urlopen('http://127.0.0.1:8001/api/health', timeout=2).read().decode())" 2>/dev/null; then \
+			exit 0; \
+		fi; \
+		sleep 2; \
+	done; \
+	echo "Postgres Workbench health check failed." >&2; \
 	exit 1
 
 dependency-audit:

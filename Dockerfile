@@ -12,7 +12,7 @@ COPY src ./src
 RUN python -m pip install --upgrade pip \
     && python -m pip install . \
     && adduser --disabled-password --gecos "" --uid 10001 workbench \
-    && mkdir -p /app/data /app/uploads /app/reports /app/.cache/vuln-prioritizer \
+    && mkdir -p /app/data /app/uploads /app/reports /app/provider-snapshots /app/.cache/vuln-prioritizer \
     && chown -R workbench:workbench /app
 
 USER workbench
@@ -20,6 +20,7 @@ USER workbench
 ENV VULN_PRIORITIZER_DB_URL=sqlite:////app/data/workbench.db \
     VULN_PRIORITIZER_UPLOAD_DIR=/app/uploads \
     VULN_PRIORITIZER_REPORT_DIR=/app/reports \
+    VULN_PRIORITIZER_PROVIDER_SNAPSHOT_DIR=/app/provider-snapshots \
     VULN_PRIORITIZER_CACHE_DIR=/app/.cache/vuln-prioritizer \
     VULN_PRIORITIZER_MAX_UPLOAD_MB=25
 

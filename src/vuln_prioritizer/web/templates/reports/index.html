@@ -7,7 +7,7 @@
     <h1>{{ run.input_filename or run.id }}</h1>
   </div>
   <div class="action-row">
-    {% for format in ["json", "markdown", "html", "csv"] %}
+    {% for format in ["json", "markdown", "html", "csv", "sarif"] %}
       <form method="post" action="/web/analysis-runs/{{ run.id }}/reports">
         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
         <input type="hidden" name="report_format" value="{{ format }}">

@@ -6,18 +6,18 @@ branding:
 
 inputs:
   mode:
-    description: analyze or report-html
+    description: analyze, report-html, workbench-report, report-evidence-bundle, or verify-evidence-bundle
     required: false
     default: analyze
   input:
-    description: Analyze mode accepts one or more newline-delimited input files; report-html expects one analysis JSON file
+    description: Analyze mode accepts one or more newline-delimited input files; report modes expect exactly one analysis JSON or evidence bundle file
     required: true
   input-format:
     description: analyze mode only; auto, cve-list, generic-occurrence-csv, trivy-json, grype-json, cyclonedx-json, spdx-json, dependency-check-json, github-alerts-json, nessus-xml, openvas-xml. Provide one value or a newline-delimited list aligned with input.
     required: false
     default: auto
   output-format:
-    description: analyze mode only; markdown, json, sarif, or table
+    description: analyze mode uses markdown, json, sarif, or table; workbench-report mode uses json, markdown, html, csv, or sarif
     required: false
     default: markdown
   output-path:
@@ -37,6 +37,10 @@ inputs:
     default: detailed
   github-step-summary:
     description: Set to true to append the rendered summary output to the GitHub step summary
+    required: false
+    default: "false"
+  validate-sarif:
+    description: Set to true to validate SARIF output after analyze/workbench-report when output-format is sarif
     required: false
     default: "false"
   config-file:
@@ -182,6 +186,9 @@ outputs:
   summary-path:
     description: Markdown summary path written by analyze mode when summary-output-path is set or github-step-summary generates a temporary summary
     value: ${{ steps.run-cli.outputs.summary-path }}
+  sarif-validation-path:
+    description: JSON SARIF validation report path written when validate-sarif is true
+    value: ${{ steps.run-cli.outputs.sarif-validation-path }}
 
 runs:
   using: composite
@@ -206,6 +213,8 @@ runs:
         mode="${{ inputs.mode }}"
         html_report_path=""
         summary_path=""
+        sarif_validation_path=""
+        sarif_report_path=""
         summary_requested="false"
         requested_summary_path="${{ inputs.summary-output-path }}"
         summary_template="${{ inputs.summary-template }}"
@@ -274,6 +283,9 @@ runs:
             --attack-source "${{ inputs.attack-source }}"
             --target-kind "${{ inputs.target-kind }}"
           )
+          if [[ "${{ inputs.output-format }}" == "sarif" ]]; then
+            sarif_report_path="${{ inputs.output-path }}"
+          fi
           append_multiline_args "--input" "${{ inputs.input }}"
           append_multiline_args "--input-format" "${{ inputs.input-format }}"
 
@@ -379,6 +391,35 @@ runs:
             --output "${{ inputs.output-path }}"
           )
           html_report_path="${{ inputs.output-path }}"
+        elif [[ "$mode" == "workbench-report" ]]; then
+          report_input="$(resolve_single_input "${{ inputs.input }}")"
+          cmd+=(
+            report workbench
+            --input "$report_input"
+            --output "${{ inputs.output-path }}"
+            --format "${{ inputs.output-format }}"
+          )
+          if [[ "${{ inputs.output-format }}" == "html" ]]; then
+            html_report_path="${{ inputs.output-path }}"
+          fi
+          if [[ "${{ inputs.output-format }}" == "sarif" ]]; then
+            sarif_report_path="${{ inputs.output-path }}"
+          fi
+        elif [[ "$mode" == "report-evidence-bundle" ]]; then
+          report_input="$(resolve_single_input "${{ inputs.input }}")"
+          cmd+=(
+            report evidence-bundle
+            --input "$report_input"
+            --output "${{ inputs.output-path }}"
+          )
+        elif [[ "$mode" == "verify-evidence-bundle" ]]; then
+          report_input="$(resolve_single_input "${{ inputs.input }}")"
+          cmd+=(
+            report verify-evidence-bundle
+            --input "$report_input"
+            --output "${{ inputs.output-path }}"
+            --format json
+          )
         else
           echo "Unsupported mode: $mode" >&2
           exit 2
@@ -388,12 +429,24 @@ runs:
         printf ' %q' "${cmd[@]}"
         printf '\n'
         "${cmd[@]}"
+        if [[ "${{ inputs.validate-sarif }}" == "true" ]]; then
+          if [[ -z "$sarif_report_path" ]]; then
+            echo "validate-sarif requires mode=analyze or mode=workbench-report with output-format=sarif." >&2
+            exit 2
+          fi
+          sarif_validation_path="$RUNNER_TEMP/vuln-prioritizer-sarif-validation.json"
+          vuln-prioritizer report validate-sarif \
+            --input "$sarif_report_path" \
+            --output "$sarif_validation_path" \
+            --format json
+        fi
         if [[ "$summary_requested" == "true" ]]; then
           summary_path="$requested_summary_path"
         fi
         echo "report-path=${{ inputs.output-path }}" >> "$GITHUB_OUTPUT"
         echo "html-report-path=$html_report_path" >> "$GITHUB_OUTPUT"
         echo "summary-path=$summary_path" >> "$GITHUB_OUTPUT"
+        echo "sarif-validation-path=$sarif_validation_path" >> "$GITHUB_OUTPUT"
         if [[ "${{ inputs.github-step-summary }}" == "true" && -n "$summary_path" && -f "$summary_path" ]]; then
           cat "$summary_path" >> "$GITHUB_STEP_SUMMARY"
         fi

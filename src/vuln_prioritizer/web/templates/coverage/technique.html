@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+{% block title %}{{ technique_id }} · ATT&amp;CK Technique{% endblock %}
+{% block content %}
+<section class="section">
+  <div class="section-head row">
+    <div>
+      <p class="eyebrow">Technique detail</p>
+      <h1>{{ technique_id }}{% if technique_name %} · {{ technique_name }}{% endif %}</h1>
+      <div class="chip-row left">
+        {% if metadata.deprecated %}<span class="badge review_due">Deprecated</span>{% endif %}
+        {% if metadata.revoked %}<span class="badge expired">Revoked</span>{% endif %}
+        {% if not metadata.deprecated and not metadata.revoked %}<span class="badge neutral">Current</span>{% endif %}
+      </div>
+    </div>
+    <a class="button" href="/projects/{{ project.id }}/coverage">Coverage gaps</a>
+  </div>
+  {% if coverage %}
+    <div class="metric-grid">
+      <article class="metric">
+        <span>Coverage</span>
+        <strong>{{ coverage.coverage_level }}</strong>
+      </article>
+      <article class="metric">
+        <span>Mapped findings</span>
+        <strong>{{ coverage.finding_count }}</strong>
+      </article>
+      <article class="metric">
+        <span>Critical</span>
+        <strong>{{ coverage.critical_finding_count }}</strong>
+      </article>
+      <article class="metric">
+        <span>KEV</span>
+        <strong>{{ coverage.kev_finding_count }}</strong>
+      </article>
+      <article class="metric">
+        <span>Controls</span>
+        <strong>{{ coverage.control_count }}</strong>
+      </article>
+      <article class="metric">
+        <span>Owner</span>
+        <strong>{{ coverage.owner or "Unassigned" }}</strong>
+      </article>
+    </div>
+  {% else %}
+    <p class="empty">No mapped findings or coverage records are available for this technique.</p>
+  {% endif %}
+</section>
+
+<section class="section split">
+  <div>
+    <div class="section-head">
+      <p class="eyebrow">Related findings</p>
+      <h2>Prioritized CVEs</h2>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>CVE</th>
+            <th>Priority</th>
+            <th>Owner</th>
+            <th>Service</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for finding in findings %}
+            <tr>
+              <td><a href="/findings/{{ finding.id }}">{{ finding.cve_id }}</a></td>
+              <td><span class="badge {{ finding.priority|lower }}">{{ finding.priority }}</span></td>
+              <td>{{ finding.asset.owner if finding.asset else "Unassigned" }}</td>
+              <td>{{ finding.asset.business_service if finding.asset else "Unmapped" }}</td>
+            </tr>
+          {% else %}
+            <tr><td colspan="4" class="empty">No findings are mapped to this technique.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div>
+    <div class="section-head">
+      <p class="eyebrow">Defensive controls</p>
+      <h2>Coverage evidence</h2>
+    </div>
+    <div class="stack">
+      {% for control in controls %}
+        <article class="panel">
+          <p class="eyebrow">{{ control.coverage_level }}</p>
+          <h2>{{ control.name }}</h2>
+          <p>{{ control.notes or "No notes captured." }}</p>
+          <table>
+            <tbody>
+              <tr><th>Owner</th><td>{{ control.owner or "Unassigned" }}</td></tr>
+              <tr><th>Environment</th><td>{{ control.environment or "N.A." }}</td></tr>
+              <tr><th>Evidence</th><td>{{ control.evidence_ref or "N.A." }}</td></tr>
+              <tr><th>Verified</th><td>{{ control.last_verified_at or "N.A." }}</td></tr>
+            </tbody>
+          </table>
+        </article>
+      {% else %}
+        <p class="empty">No detection controls are linked to this technique.</p>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+{% if coverage %}
+  <section class="section">
+    <article class="panel">
+      <p class="eyebrow">Recommended action</p>
+      <p>{{ coverage.recommended_action }}</p>
+      {% if coverage.tactic_ids %}
+        <p>Tactics: {{ coverage.tactic_ids|join(", ") }}</p>
+      {% endif %}
+    </article>
+  </section>
+{% endif %}
+{% endblock %}

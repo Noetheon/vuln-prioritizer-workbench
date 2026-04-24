@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import secrets
 from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
@@ -16,8 +17,10 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 from starlette.responses import Response
 
 from vuln_prioritizer.api.routes import api_router
+from vuln_prioritizer.api.security import api_token_digest
 from vuln_prioritizer.db import create_db_engine, create_session_factory
 from vuln_prioritizer.db.migrations import ensure_database_current
+from vuln_prioritizer.db.repositories import WorkbenchRepository
 from vuln_prioritizer.web.routes import templates, web_router
 from vuln_prioritizer.workbench_config import (
     WorkbenchSettings,
@@ -53,6 +56,7 @@ def create_app(
         TrustedHostMiddleware,
         allowed_hosts=list(active_settings.allowed_hosts),
     )
+    app.middleware("http")(_api_token_auth)
     app.middleware("http")(_upload_size_guard)
     app.middleware("http")(_security_headers)
     app.mount(
@@ -85,6 +89,59 @@ async def _security_headers(request: Request, call_next: Any) -> Any:
         "connect-src 'self'; frame-ancestors 'none'",
     )
     return response
+
+
+async def _api_token_auth(request: Request, call_next: Any) -> Any:
+    if not _requires_api_token_check(request):
+        return await call_next(request)
+    session_factory = getattr(request.app.state, "session_factory", None)
+    if session_factory is None:
+        return await call_next(request)
+    with session_factory() as session:
+        repo = WorkbenchRepository(session)
+        if not repo.has_active_api_tokens():
+            return await call_next(request)
+        raw_token = _request_api_token(request)
+        if raw_token is None:
+            return JSONResponse(
+                status_code=403,
+                content=_error_payload(
+                    detail="API token required.",
+                    code="forbidden",
+                    message="API token required.",
+                    details=None,
+                ),
+            )
+        token_hash = api_token_digest(raw_token)
+        token = repo.get_active_api_token_by_hash(token_hash)
+        if token is None or not secrets.compare_digest(token.token_hash, token_hash):
+            return JSONResponse(
+                status_code=403,
+                content=_error_payload(
+                    detail="Invalid API token.",
+                    code="forbidden",
+                    message="Invalid API token.",
+                    details=None,
+                ),
+            )
+        repo.mark_api_token_used(token)
+        session.commit()
+    return await call_next(request)
+
+
+def _requires_api_token_check(request: Request) -> bool:
+    if request.method not in {"POST", "PUT", "PATCH", "DELETE"}:
+        return False
+    return request.url.path.startswith("/api/")
+
+
+def _request_api_token(request: Request) -> str | None:
+    authorization = request.headers.get("authorization", "")
+    if authorization.lower().startswith("bearer "):
+        token = authorization[7:].strip()
+        return token or None
+    token = request.headers.get("x-api-token", "").strip()
+    return token or None
 
 
 async def _upload_size_guard(request: Request, call_next: Any) -> Any:

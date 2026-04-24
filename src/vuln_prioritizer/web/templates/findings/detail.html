@@ -88,6 +88,32 @@
         </article>
       </div>
     </section>
+  {% else %}
+    <section class="subsection">
+      <div class="section-head compact">
+        <p class="eyebrow">Governance</p>
+        <h2>Accept residual risk</h2>
+      </div>
+      <form class="form-panel" method="post" action="/web/projects/{{ finding.project_id }}/waivers">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <input type="hidden" name="finding_id" value="{{ finding.id }}">
+        <input type="hidden" name="cve_id" value="{{ finding.cve_id }}">
+        <input type="hidden" name="asset_id" value="{{ finding.asset.asset_id if finding.asset else '' }}">
+        <input type="hidden" name="component_name" value="{{ finding.component.name if finding.component else '' }}">
+        <input type="hidden" name="component_version" value="{{ finding.component.version if finding.component else '' }}">
+        <input type="hidden" name="service" value="{{ finding.asset.business_service if finding.asset else '' }}">
+        <div class="form-grid">
+          <label>Owner<input name="owner" required></label>
+          <label>Expires<input name="expires_on" type="date" required></label>
+          <label>Review<input name="review_on" type="date"></label>
+          <label>Approval<input name="approval_ref"></label>
+          <label>Ticket<input name="ticket_url"></label>
+        </div>
+        <label>Reason<textarea name="reason" required rows="3"></textarea></label>
+        <p class="muted">Residual risk remains visible on this finding and must be reviewed before the recorded date.</p>
+        <button class="button primary" type="submit">Create waiver</button>
+      </form>
+    </section>
   {% endif %}
   <section class="subsection">
     <div class="section-head compact">

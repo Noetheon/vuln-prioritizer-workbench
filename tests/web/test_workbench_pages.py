@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import shutil
 from pathlib import Path
 
 from bs4 import BeautifulSoup
@@ -27,12 +28,15 @@ EXPECTED_SAMPLE_CVES = {
 
 
 def _client(tmp_path: Path) -> TestClient:
+    snapshot_dir = tmp_path / "provider-snapshots"
+    snapshot_dir.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(DEMO_PROVIDER_SNAPSHOT, snapshot_dir / DEMO_PROVIDER_SNAPSHOT.name)
     settings = WorkbenchSettings(
         database_url=f"sqlite:///{tmp_path / 'workbench.db'}",
         upload_dir=tmp_path / "uploads",
         report_dir=tmp_path / "reports",
         provider_cache_dir=tmp_path / "cache",
-        provider_snapshot_dir=ROOT / "data",
+        provider_snapshot_dir=snapshot_dir,
         attack_artifact_dir=ROOT / "data" / "attack",
     )
     return TestClient(create_app(settings=settings))
@@ -90,6 +94,91 @@ def test_project_setup_dashboard_and_empty_findings_pages(tmp_path: Path) -> Non
     findings = client.get(f"/projects/{project_id}/findings")
     assert findings.status_code == 200
     assert "No findings imported." in findings.text
+
+
+def test_web_route_error_paths_and_local_redirects(tmp_path: Path) -> None:
+    client = _client(tmp_path)
+
+    root = client.get("/", follow_redirects=False)
+    assert root.status_code == 303
+    assert root.headers["location"] == "/projects/new"
+
+    favicon = client.get("/favicon.ico")
+    assert favicon.status_code == 204
+
+    setup = client.get("/projects/new")
+    token = _csrf_token(setup.text)
+    empty_project = client.post(
+        "/projects",
+        data={"name": "   ", "description": "", "csrf_token": token},
+    )
+    assert empty_project.status_code == 422
+
+    created = client.post(
+        "/projects",
+        data={"name": "error-path-demo", "description": "", "csrf_token": token},
+        follow_redirects=False,
+    )
+    assert created.status_code == 303
+    root = client.get("/", follow_redirects=False)
+    assert root.status_code == 303
+    assert root.headers["location"].endswith("/dashboard")
+
+    duplicate = client.post(
+        "/projects",
+        data={"name": "error-path-demo", "description": "", "csrf_token": token},
+    )
+    assert duplicate.status_code == 409
+
+    missing_gets = [
+        "/projects/missing/dashboard",
+        "/projects/missing/imports/new",
+        "/projects/missing/assets",
+        "/projects/missing/waivers",
+        "/projects/missing/coverage",
+        "/projects/missing/attack/techniques/T1190",
+        "/findings/missing",
+    ]
+    for path in missing_gets:
+        response = client.get(path)
+        assert response.status_code == 404, path
+
+    assert (
+        client.post(
+            "/web/assets/missing",
+            data={
+                "asset_id": "missing",
+                "owner": "",
+                "business_service": "",
+                "environment": "",
+                "exposure": "",
+                "criticality": "",
+                "csrf_token": token,
+            },
+        ).status_code
+        == 404
+    )
+    assert (
+        client.post(
+            "/web/waivers/missing/delete",
+            data={"csrf_token": token},
+        ).status_code
+        == 404
+    )
+    assert (
+        client.post(
+            "/web/projects/missing/coverage/import",
+            data={"csrf_token": token},
+            files={
+                "file": (
+                    "controls.csv",
+                    b"technique_id,coverage_level\nT1190,partial\n",
+                    "text/csv",
+                )
+            },
+        ).status_code
+        == 404
+    )
 
 
 def test_web_settings_redacts_database_password() -> None:
@@ -167,8 +256,23 @@ def test_web_import_report_page_and_finding_detail(tmp_path: Path) -> None:
     settings = client.get(f"/projects/{project_id}/settings")
     assert settings.status_code == 200
     assert "Provider sources" in settings.text
+    assert "Provider updates" in settings.text
     assert "NVD API key value" in settings.text
     assert "secret-api-key" not in settings.text
+    settings_token = _csrf_token(settings.text)
+    provider_job = client.post(
+        f"/web/projects/{project_id}/providers/update-jobs",
+        data={
+            "sources": ["nvd", "epss", "kev"],
+            "max_cves": "1",
+            "cache_only": "true",
+            "csrf_token": settings_token,
+        },
+        follow_redirects=False,
+    )
+    assert provider_job.status_code == 303
+    settings = client.get(f"/projects/{project_id}/settings")
+    assert "completed" in settings.text
 
     report_token = _csrf_token(reports.text)
     created_report = client.post(
@@ -272,6 +376,162 @@ def test_web_governance_page_surfaces_uploaded_context_vex_and_waivers(tmp_path:
     assert detail.status_code == 200
     assert 'href="javascript:alert(1)"' not in detail.text
     assert "javascript:alert(1)" in detail.text
+
+
+def test_web_assets_waivers_and_coverage_pages(tmp_path: Path) -> None:
+    client = _client(tmp_path)
+    project = client.post("/api/projects", json={"name": "governance-editor-web-demo"}).json()
+    imported = client.post(
+        f"/api/projects/{project['id']}/imports",
+        data={
+            "input_format": "trivy-json",
+            "provider_snapshot_file": DEMO_PROVIDER_SNAPSHOT.name,
+            "locked_provider_data": "true",
+            "attack_source": "ctid-json",
+            "attack_mapping_file": ATTACK_MAPPING.name,
+            "attack_technique_metadata_file": ATTACK_METADATA.name,
+        },
+        files={
+            "file": ("trivy.json", TRIVY_REPORT.read_bytes(), "application/json"),
+            "asset_context_file": ("asset-context.csv", ASSET_CONTEXT.read_bytes(), "text/csv"),
+        },
+    )
+    assert imported.status_code == 200, imported.text
+
+    assets = client.get(f"/projects/{project['id']}/assets")
+    assert assets.status_code == 200
+    assert "api-gateway" in assets.text
+    assert "platform-team" in assets.text
+    asset_token = _csrf_token(assets.text)
+    asset_payload = client.get(f"/api/projects/{project['id']}/assets").json()["items"][0]
+    updated_asset = client.post(
+        f"/web/assets/{asset_payload['id']}",
+        data={
+            "asset_id": "edge-gateway",
+            "owner": "risk-ui",
+            "business_service": "checkout",
+            "environment": "prod",
+            "exposure": "internet-facing",
+            "criticality": "critical",
+            "target_ref": asset_payload["target_ref"],
+            "csrf_token": asset_token,
+        },
+        follow_redirects=False,
+    )
+    assert updated_asset.status_code == 303
+    assert updated_asset.headers["location"] == f"/projects/{project['id']}/assets"
+
+    waivers = client.get(f"/projects/{project['id']}/waivers")
+    assert waivers.status_code == 200
+    assert "Create waiver" in waivers.text
+    waiver_token = _csrf_token(waivers.text)
+    findings_payload = client.get(
+        f"/api/projects/{project['id']}/findings",
+        params={"q": "CVE-2024-3094"},
+    ).json()["items"]
+    detail = client.get(f"/findings/{findings_payload[0]['id']}")
+    assert detail.status_code == 200
+    assert "Accept residual risk" in detail.text
+    assert "Create waiver" in detail.text
+    created_waiver = client.post(
+        f"/web/projects/{project['id']}/waivers",
+        data={
+            "cve_id": "CVE-2024-3094",
+            "asset_id": "edge-gateway",
+            "owner": "risk-ui",
+            "reason": "Temporary residual risk acceptance from the web editor.",
+            "expires_on": "2099-12-31",
+            "review_on": "2000-01-01",
+            "approval_ref": "CAB-UI",
+            "csrf_token": waiver_token,
+        },
+        follow_redirects=False,
+    )
+    assert created_waiver.status_code == 303
+    waivers = client.get(f"/projects/{project['id']}/waivers")
+    assert "risk-ui" in waivers.text
+    assert "review_due" in waivers.text
+    assert "badge review_due" in waivers.text
+    assert "Save review" in waivers.text
+    waiver_payload = client.get(f"/api/projects/{project['id']}/waivers").json()["items"][0]
+    waiver_update = client.post(
+        f"/web/waivers/{waiver_payload['id']}",
+        data={
+            "cve_id": "CVE-2024-3094",
+            "asset_id": "edge-gateway",
+            "owner": "risk-ui-reviewed",
+            "reason": "Residual risk reviewed and still accepted.",
+            "expires_on": "2099-12-31",
+            "review_on": "2099-12-01",
+            "approval_ref": "CAB-UI-2",
+            "csrf_token": waiver_token,
+        },
+        follow_redirects=False,
+    )
+    assert waiver_update.status_code == 303
+    waivers = client.get(f"/projects/{project['id']}/waivers")
+    assert "risk-ui-reviewed" in waivers.text
+    assert "active" in waivers.text
+
+    coverage = client.get(f"/projects/{project['id']}/coverage")
+    assert coverage.status_code == 200
+    assert "Detection coverage" in coverage.text
+    coverage_token = _csrf_token(coverage.text)
+    controls_csv = (
+        b"control_id,name,technique_id,coverage_level,owner,evidence_ref,notes\n"
+        b"edge-waf,WAF exploit-public-app rule,T1190,partial,secops,"
+        b"https://example.invalid/evidence,Needs production tuning\n"
+        b"shell-telemetry,Shell command telemetry,T9999,not_covered,secops,,Needs owner review\n"
+    )
+    imported_controls = client.post(
+        f"/web/projects/{project['id']}/coverage/import",
+        data={"csrf_token": coverage_token},
+        files={"file": ("controls.csv", controls_csv, "text/csv")},
+        follow_redirects=False,
+    )
+    assert imported_controls.status_code == 303
+    assert imported_controls.headers["location"] == f"/projects/{project['id']}/coverage"
+
+    coverage = client.get(f"/projects/{project['id']}/coverage")
+    assert "WAF exploit-public-app rule" in coverage.text
+    assert "Shell command telemetry" in coverage.text
+    assert "partial" in coverage.text
+
+    session_factory = create_session_factory(get_engine(client.app))
+    with session_factory() as session:
+        repo = WorkbenchRepository(session)
+        context = next(
+            ctx
+            for ctx in repo.list_project_attack_contexts(project["id"])
+            if any(
+                isinstance(technique, dict) and technique.get("attack_object_id") == "T1190"
+                for technique in ctx.techniques_json
+            )
+        )
+        context.techniques_json = [
+            {
+                **technique,
+                "deprecated": True,
+                "revoked": True,
+            }
+            if isinstance(technique, dict) and technique.get("attack_object_id") == "T1190"
+            else technique
+            for technique in context.techniques_json
+        ]
+        session.commit()
+
+    technique = client.get(f"/projects/{project['id']}/attack/techniques/T1190")
+    assert technique.status_code == 200
+    assert "Technique detail" in technique.text
+    assert "Deprecated" in technique.text
+    assert "Revoked" in technique.text
+    assert "WAF exploit-public-app rule" in technique.text
+    assert "CVE-" in technique.text
+
+    controls_only_technique = client.get(f"/projects/{project['id']}/attack/techniques/T9999")
+    assert controls_only_technique.status_code == 200
+    assert "Shell command telemetry" in controls_only_technique.text
+    assert "Mapped findings" in controls_only_technique.text
 
 
 def test_web_attack_dashboard_and_finding_ttp_context(tmp_path: Path) -> None:

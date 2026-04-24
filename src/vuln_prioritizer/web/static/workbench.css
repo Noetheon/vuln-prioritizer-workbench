@@ -92,6 +92,11 @@ a {
   gap: 14px;
 }
 
+.chip-row.left {
+  justify-content: flex-start;
+  margin-top: 10px;
+}
+
 .section-head.compact {
   margin-top: 28px;
 }
@@ -216,9 +221,20 @@ th {
 }
 
 .badge.low,
-.badge.neutral {
+.badge.neutral,
+.badge.active {
   background: #eef2f6;
   color: var(--low);
+}
+
+.badge.review_due {
+  background: #ffead5;
+  color: var(--high);
+}
+
+.badge.expired {
+  background: #fee4e2;
+  color: var(--critical);
 }
 
 .stack {
@@ -249,6 +265,29 @@ th {
   display: grid;
   gap: 16px;
   padding: 20px;
+}
+
+.form-grid,
+.inline-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+  align-items: end;
+}
+
+.inline-grid {
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+}
+
+.inline-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+  align-items: end;
+}
+
+.inline-form .grow {
+  grid-column: span 2;
 }
 
 .filter-bar {
@@ -353,6 +392,10 @@ textarea {
   color: var(--muted);
 }
 
+.muted {
+  color: var(--muted);
+}
+
 .pager {
   display: flex;
   gap: 10px;
@@ -370,7 +413,14 @@ textarea {
 
   .metric-grid,
   .split,
+  .form-grid,
+  .inline-grid,
+  .inline-form,
   .detail-grid {
     grid-template-columns: 1fr;
+  }
+
+  .inline-form .grow {
+    grid-column: span 1;
   }
 }

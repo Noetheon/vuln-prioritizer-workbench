@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}Assets · {{ project.name }}{% endblock %}
+{% block content %}
+<section class="section">
+  <div class="section-head row">
+    <div>
+      <p class="eyebrow">Assets</p>
+      <h1>{{ project.name }}</h1>
+    </div>
+    <a class="button" href="/projects/{{ project.id }}/findings">Findings</a>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Asset</th>
+          <th>Target</th>
+          <th>Owner</th>
+          <th>Service</th>
+          <th>Environment</th>
+          <th>Exposure</th>
+          <th>Criticality</th>
+          <th>Findings</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for asset in assets %}
+          <tr>
+            <td>{{ asset.asset_id }}</td>
+            <td>{{ asset.target_ref or "N.A." }}</td>
+            <td>{{ asset.owner or "Unassigned" }}</td>
+            <td>{{ asset.business_service or "Unmapped" }}</td>
+            <td>{{ asset.environment or "N.A." }}</td>
+            <td>{{ asset.exposure or "N.A." }}</td>
+            <td>{{ asset.criticality or "N.A." }}</td>
+            <td>{{ finding_counts.get(asset.id, 0) }}</td>
+          </tr>
+          <tr>
+            <td colspan="8">
+              <form class="inline-grid" method="post" action="/web/assets/{{ asset.id }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <label>Asset<input name="asset_id" value="{{ asset.asset_id }}"></label>
+                <label>Target<input name="target_ref" value="{{ asset.target_ref or '' }}"></label>
+                <label>Owner<input name="owner" value="{{ asset.owner or '' }}"></label>
+                <label>Service<input name="business_service" value="{{ asset.business_service or '' }}"></label>
+                <label>Environment<input name="environment" value="{{ asset.environment or '' }}"></label>
+                <label>Exposure<input name="exposure" value="{{ asset.exposure or '' }}"></label>
+                <label>Criticality<input name="criticality" value="{{ asset.criticality or '' }}"></label>
+                <button class="button primary" type="submit">Save</button>
+              </form>
+            </td>
+          </tr>
+        {% else %}
+          <tr><td colspan="8" class="empty">No assets captured yet. Import asset context with a Workbench run.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

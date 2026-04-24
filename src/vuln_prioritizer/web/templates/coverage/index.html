@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block title %}Detection Coverage · {{ project.name }}{% endblock %}
+{% block content %}
+<section class="section">
+  <div class="section-head row">
+    <div>
+      <p class="eyebrow">Detection coverage</p>
+      <h1>{{ project.name }}</h1>
+    </div>
+    <a class="button" href="/api/projects/{{ project.id }}/attack/coverage-gap-navigator-layer">Navigator layer</a>
+  </div>
+  <form class="form-panel" method="post" action="/web/projects/{{ project.id }}/coverage/import" enctype="multipart/form-data">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <label>Detection controls CSV/YAML
+      <input type="file" name="file" accept=".csv,.yml,.yaml,text/csv,text/yaml" required>
+    </label>
+    <button class="button primary" type="submit">Import controls</button>
+  </form>
+</section>
+
+<section class="section">
+  <div class="section-head">
+    <p class="eyebrow">Coverage gaps</p>
+    <h2>Mapped techniques needing review</h2>
+  </div>
+  <div class="metric-grid">
+    {% for level, count in gaps.summary.items() %}
+      <article class="metric"><span>{{ level }}</span><strong>{{ count }}</strong></article>
+    {% endfor %}
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Technique</th>
+          <th>Name</th>
+          <th>Coverage</th>
+          <th>Findings</th>
+          <th>Owner</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in gaps["items"] %}
+          <tr>
+            <td><a href="/projects/{{ project.id }}/attack/techniques/{{ item.technique_id }}">{{ item.technique_id }}</a></td>
+            <td>{{ item.name or "N.A." }}</td>
+            <td><span class="badge neutral">{{ item.coverage_level }}</span></td>
+            <td>{{ item.finding_count }}</td>
+            <td>{{ item.owner or "Unassigned" }}</td>
+            <td>{{ item.recommended_action }}</td>
+          </tr>
+        {% else %}
+          <tr><td colspan="6" class="empty">No mapped techniques are available for coverage analysis.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="section">
+  <div class="section-head">
+    <p class="eyebrow">Controls</p>
+    <h2>Imported detection evidence</h2>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Control</th>
+          <th>Technique</th>
+          <th>Coverage</th>
+          <th>Environment</th>
+          <th>Owner</th>
+          <th>Evidence</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for control in controls %}
+          <tr>
+            <td>{{ control.name }}</td>
+            <td>{{ control.technique_id }}</td>
+            <td>{{ control.coverage_level }}</td>
+            <td>{{ control.environment or "N.A." }}</td>
+            <td>{{ control.owner or "Unassigned" }}</td>
+            <td>{{ control.evidence_ref or "N.A." }}</td>
+          </tr>
+        {% else %}
+          <tr><td colspan="6" class="empty">No detection controls imported.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}
