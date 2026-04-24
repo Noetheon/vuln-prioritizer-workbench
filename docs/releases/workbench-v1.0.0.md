@@ -74,7 +74,7 @@ shasum -a 256 \
   build/v1.0-demo-evidence-bundle-verification.json
 ```
 
-Reference release-candidate run from the locked demo path:
+Reference release evidence run from the locked demo path:
 
 | Artifact | SHA-256 | Size |
 | --- | --- | ---: |
@@ -104,7 +104,7 @@ Manifest file entries:
 | `attack-navigator-layer.json` | `attack-navigator-layer` | `18d94bbe54e47b27c10db18eeaade92b4ceddd3ab08b2370625f08c866f9d331` | 1,825 bytes |
 | `input/trivy_report.json` | `source-input` | `43b29a02a88bc6d9c8c2e8d599a5218fcc253f025f42acbcc780e377bad26e82` | 2,200 bytes |
 
-Record the release-candidate commit with `git rev-parse HEAD`, the date of the run, and the exact command output. Do not include `.env` files, API keys, cookies, shell history, machine-specific home paths, or customer scanner exports in the public release evidence.
+Record the release commit with `git rev-parse HEAD`, the date of the run, and the exact command output. Do not include `.env` files, API keys, cookies, shell history, machine-specific home paths, or customer scanner exports in the public release evidence.
 
 ## Guardrails
 
@@ -119,4 +119,4 @@ Record the release-candidate commit with `git rev-parse HEAD`, the date of the r
 
 - The pinned ATT&CK STIX import, ATT&CK version/hash tracking, CTID provider provenance, and detection coverage work were completed on `main` after this Workbench v1.0 readiness milestone.
 - Local API-token gating, optional PostgreSQL profile, scheduled provider update jobs, SARIF/Action workflow expansion, GitHub issue export, config-as-code, and CI/CD docs were completed on `main` after this Workbench v1.0 readiness milestone.
-- Remaining public-release work is release-owner sign-off plus a package tag whose name matches `pyproject.toml`.
+- The `v1.1.0` package tag and GitHub Release now carry the completed Workbench scope from `main`; future Workbench work should be tracked as new issues rather than as unfinished v1.0 follow-up.
