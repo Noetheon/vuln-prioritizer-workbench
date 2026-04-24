@@ -12,7 +12,7 @@ The Workbench v1.0 milestone evidence is preserved here, but the current package
 - GitHub tracker issues `#2`-`#79` are closed, and Workbench milestones `v0.5` through `v1.2` have zero open issues.
 - Latest `main` GitHub checks for CI, CodeQL, and Docker completed successfully on `f5db33f58aa14eba23daa47b38def71b243466a3`.
 - Local closeout gates recorded for the implementation baseline: `make check` (`407 passed, 2 skipped`, 90.07% coverage), `make release-check`, `make demo-evidence-bundle-check`, and `make dependency-audit`.
-- This docs closeout branch also passed `make docs-check`, `make demo-evidence-bundle-check`, `make dependency-audit`, `make docker-demo-smoke`, and `make release-check` on 2026-04-25.
+- The post-release docs closeout pass also passed `make docs-check`, `make demo-evidence-bundle-check`, `make dependency-audit`, `make docker-demo-smoke`, and `make release-check` on 2026-04-25.
 - `python3 -m pip check` is not used as release evidence in the shared user-site environment because unrelated globally installed packages conflict with each other outside this project.
 - Public package tag and GitHub Release object: `v1.1.0` published from `23199ef85fb9ac08b9bb0e301b2aadbf3377f791`.
 
