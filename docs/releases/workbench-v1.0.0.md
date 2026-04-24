@@ -4,6 +4,8 @@
 
 Workbench `v1.0.0` is the first release-ready Workbench milestone on top of the stable CLI core. It keeps the product boundary narrow: known-CVE prioritization from existing inputs, not scanning, exploitation, or generated CVE-to-ATT&CK mapping.
 
+These notes are Workbench milestone notes. The current package tree is versioned `1.1.0`, so a public package tag cut from `main` must use `v1.1.0` and the matching [v1.1.0 release notes](v1.1.0.md).
+
 ## Included Scope
 
 - Local-first FastAPI and Jinja2 Workbench with SQLite default storage.
@@ -113,7 +115,8 @@ Record the release-candidate commit with `git rev-parse HEAD`, the date of the r
 - Evidence bundles are integrity artifacts, not encrypted archives.
 - The Workbench remains local-first and single-node; public-internet or multi-tenant deployment is out of this release scope.
 
-## Known Follow-up
+## Post-Milestone Status
 
-- v1.1 starts the pinned ATT&CK STIX import, ATT&CK version/hash tracking, CTID provider provenance, and detection coverage work.
-- v1.2 starts authentication, optional PostgreSQL, scheduled provider update jobs, SARIF/Action workflow expansion, GitHub issue export, config-as-code, and CI/CD docs.
+- The pinned ATT&CK STIX import, ATT&CK version/hash tracking, CTID provider provenance, and detection coverage work were completed on `main` after this Workbench v1.0 readiness milestone.
+- Local API-token gating, optional PostgreSQL profile, scheduled provider update jobs, SARIF/Action workflow expansion, GitHub issue export, config-as-code, and CI/CD docs were completed on `main` after this Workbench v1.0 readiness milestone.
+- Remaining public-release work is release-owner sign-off plus a package tag whose name matches `pyproject.toml`.

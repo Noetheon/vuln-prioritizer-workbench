@@ -4,7 +4,7 @@
 
 ## Public Docs Slice
 
-The site now includes the `v1.1.0` public-polish release notes and a committed media preview asset.
+The site includes the `v1.1.0` release notes, Workbench milestone evidence, and committed media preview assets.
 
 ![Documentation grid preview](media/grid.png)
 
@@ -22,7 +22,7 @@ The site now includes the `v1.1.0` public-polish release notes and a committed m
 - adds CTID/MITRE ATT&CK context without heuristic CVE-to-ATT&CK guesses
 - renders terminal, Markdown, JSON, SARIF, and static HTML outputs
 - supports local cache inspection and refresh workflows for reproducibility
-- runs a local Workbench MVP with API, browser UI, SQLite-backed imports, reports, and evidence bundles
+- runs a local Workbench with API, browser UI, SQLite-backed imports, reports, evidence bundles, governance context, and ATT&CK coverage views
 
 ## Quickstart
 
@@ -83,7 +83,7 @@ The web/API Workbench is local-first, SQLite-backed, and focused on CVE lists, `
 - Use [roadmap.md](roadmap.md) for shipped scope and deliberate non-goals.
 - Use [release_operations.md](release_operations.md) for maintainer-only release, GitHub Release recovery, and PyPI/TestPyPI operations.
 - Use [community_repository_setup.md](community_repository_setup.md) for maintainer-facing public repo topics, labels, and triage defaults.
-- Use [releases/v1.1.0.md](releases/v1.1.0.md) for the current public-polish release slice.
+- Use [releases/v1.1.0.md](releases/v1.1.0.md) for the current package release target.
 
 ## Local Docs Preview (Repo Checkout Only)
 
