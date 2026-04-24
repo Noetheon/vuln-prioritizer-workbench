@@ -5,7 +5,6 @@ from __future__ import annotations
 import secrets
 from pathlib import Path
 from typing import Annotated, cast
-from urllib.parse import quote
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, UploadFile
@@ -56,6 +55,20 @@ from vuln_prioritizer.workbench_config import WorkbenchSettings
 TEMPLATE_DIR = Path(__file__).parent / "templates"
 templates = Jinja2Templates(directory=str(TEMPLATE_DIR))
 web_router = APIRouter()
+
+_PROJECT_CHILD_ROUTES = frozenset(
+    {
+        "assets",
+        "coverage",
+        "dashboard",
+        "findings",
+        "governance",
+        "imports/new",
+        "settings",
+        "vulnerabilities",
+        "waivers",
+    }
+)
 
 
 @web_router.get("/", response_class=HTMLResponse)
@@ -354,7 +367,7 @@ def update_asset_form(
         criticality=criticality.strip() or None,
     )
     session.commit()
-    return RedirectResponse(f"/projects/{asset.project_id}/assets", status_code=303)
+    return RedirectResponse(_project_path(asset.project_id, "assets"), status_code=303)
 
 
 @web_router.get("/projects/{project_id}/waivers", response_class=HTMLResponse)
@@ -808,7 +821,16 @@ def _check_csrf(submitted: str, settings: WorkbenchSettings) -> None:
 
 
 def _project_path(project_id: str, child: str) -> str:
-    return f"/projects/{quote(project_id, safe='')}/{child}"
+    if child not in _PROJECT_CHILD_ROUTES:
+        raise HTTPException(status_code=404, detail="Project route not found.")
+    return f"/projects/{_safe_project_path_value(project_id)}/{child}"
+
+
+def _safe_project_path_value(value: str) -> str:
+    try:
+        return UUID(value).hex
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail="Project not found.") from exc
 
 
 def _optional_bool_filter(value: str | None) -> bool | None:

@@ -14,7 +14,7 @@ The product remains a CLI and local Workbench for prioritizing known CVEs and im
 - Default prioritization stays grounded in `CVSS + EPSS + KEV`.
 - ATT&CK, asset context, and VEX remain explicit contextual layers.
 - The composite GitHub Action mirrors `analyze` policy, waiver, provider/cache, filter, sort, and fail-gate flags as additive inputs.
-- Local quality gates now start enforcing coverage with `--cov-fail-under=85`, and temp-copy package/demo checks are available for read-only validation.
+- Local quality gates now start enforcing coverage with `--cov-fail-under=90`, and temp-copy package/demo checks are available for read-only validation.
 - Docker and Compose provide a local runtime bootstrap for the Workbench MVP while keeping the CLI core available in the same image.
 
 ## Workbench Add-On Direction
@@ -110,7 +110,7 @@ Status: implemented; release workflow is wired for tagged GitHub Releases and ga
 
 ### `v1.1.0` Operability and Public Polish
 
-Status: implemented on `main`; `v1.1.0` is the valid package tag target for the current tree
+Status: published as `v1.1.0`; current `main` contains post-release documentation and security hygiene updates
 
 - First-class runtime config discovery via `vuln-prioritizer.yml`, plus `--config` and `--no-config`.
 - New `doctor`, `snapshot create`, `snapshot diff`, and `rollup` commands.
