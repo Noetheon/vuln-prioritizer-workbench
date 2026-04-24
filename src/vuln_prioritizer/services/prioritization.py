@@ -170,7 +170,7 @@ class PrioritizationService:
         findings: list[PrioritizedFinding],
     ) -> list[PrioritizedFinding]:
         """Attach deterministic operational work-queue ranks without changing base priority."""
-        ordered = sorted(findings, key=lambda finding: _operational_sort_key(finding))
+        ordered = sorted(findings, key=_operational_sort_key)
         rank_by_cve = {finding.cve_id: index for index, finding in enumerate(ordered, start=1)}
         return [
             finding.model_copy(
