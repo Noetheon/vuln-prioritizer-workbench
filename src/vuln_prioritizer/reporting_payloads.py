@@ -240,8 +240,17 @@ def generate_compact_summary_markdown(report_payload: dict[str, Any]) -> str:
         f"- Input format: `{metadata.get('input_format', 'N.A.')}`",
         f"- Policy profile: `{metadata.get('policy_profile', 'default')}`",
         "",
-        "| Findings shown | Critical | High | KEV hits | "
-        "ATT&CK mapped | Review due | Expired waivers |",
+        " | ".join(
+            [
+                "| Findings shown",
+                "Critical",
+                "High",
+                "KEV hits",
+                "ATT&CK mapped",
+                "Review due",
+                "Expired waivers |",
+            ]
+        ),
         "| --- | --- | --- | --- | --- | --- | --- |",
         "| " + " | ".join(metrics) + " |",
     ]

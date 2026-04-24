@@ -327,6 +327,3 @@ def has_nvd_content(item: NvdData) -> bool:
             bool(item.reference_tags),
         ]
     )
-
-
-_has_nvd_content = has_nvd_content

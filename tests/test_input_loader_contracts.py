@@ -181,14 +181,61 @@ def test_generic_occurrence_csv_preserves_component_target_and_asset_context(
     input_file.write_text(
         "\n".join(
             [
-                "cve,component,version,purl,fix_version,target_kind,target,asset_id,"
-                "criticality,exposure,environment,owner,service,severity",
-                "CVE-2024-0001,Django,4.2.0,pkg:pypi/django@4.2.0,4.2.8,"
-                "repository,backend/requirements.txt,asset-api,Crit,public,production,"
-                "team-app,identity,HIGH",
+                ",".join(
+                    [
+                        "cve",
+                        "component",
+                        "version",
+                        "purl",
+                        "fix_version",
+                        "target_kind",
+                        "target",
+                        "asset_id",
+                        "criticality",
+                        "exposure",
+                        "environment",
+                        "owner",
+                        "service",
+                        "severity",
+                    ]
+                ),
+                ",".join(
+                    [
+                        "CVE-2024-0001",
+                        "Django",
+                        "4.2.0",
+                        "pkg:pypi/django@4.2.0",
+                        "4.2.8",
+                        "repository",
+                        "backend/requirements.txt",
+                        "asset-api",
+                        "Crit",
+                        "public",
+                        "production",
+                        "team-app",
+                        "identity",
+                        "HIGH",
+                    ]
+                ),
                 "not-a-cve,ignored,,,,,,,,,,,",
-                "CVE-2024-0002,openssl,3.0.0,,3.0.13,host,app-01,asset-host,"
-                "urgent,edge,live,team-platform,payments,critical",
+                ",".join(
+                    [
+                        "CVE-2024-0002",
+                        "openssl",
+                        "3.0.0",
+                        "",
+                        "3.0.13",
+                        "host",
+                        "app-01",
+                        "asset-host",
+                        "urgent",
+                        "edge",
+                        "live",
+                        "team-platform",
+                        "payments",
+                        "critical",
+                    ]
+                ),
             ]
         )
         + "\n",
