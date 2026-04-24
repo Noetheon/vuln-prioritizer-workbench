@@ -38,6 +38,9 @@ htmlcov/
 # Local application caches
 .cache/
 Library/
+/data/*.db
+/data/*.sqlite
+/data/*.sqlite3
 
 # Build and packaging artifacts
 build/
@@ -61,5 +64,6 @@ pip-wheel-metadata/
 
 # Local agent / Codex state
 .codex/
+.playwright-mcp/
 .agents/
 .claude/

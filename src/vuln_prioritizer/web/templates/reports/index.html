@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Reports · {{ run.input_filename or run.id }}{% endblock %}
+{% block content %}
+<section class="section">
+  <div class="section-head">
+    <p class="eyebrow">Run artifacts</p>
+    <h1>{{ run.input_filename or run.id }}</h1>
+  </div>
+  <div class="action-row">
+    {% for format in ["json", "markdown", "html"] %}
+      <form method="post" action="/web/analysis-runs/{{ run.id }}/reports">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <input type="hidden" name="report_format" value="{{ format }}">
+        <button class="button" type="submit">Create {{ format }}</button>
+      </form>
+    {% endfor %}
+    <form method="post" action="/web/analysis-runs/{{ run.id }}/evidence-bundle">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <button class="button primary" type="submit">Create evidence bundle</button>
+    </form>
+  </div>
+</section>
+
+<section class="section split">
+  <div>
+    <div class="section-head">
+      <p class="eyebrow">Reports</p>
+      <h2>Generated files</h2>
+    </div>
+    <div class="stack">
+      {% for report in reports %}
+        <a class="artifact-row" href="/api/reports/{{ report.id }}/download">
+          <span>{{ report.kind }}</span>
+          <strong>{{ report.format }}</strong>
+        </a>
+      {% else %}
+        <p class="empty">No reports generated.</p>
+      {% endfor %}
+    </div>
+  </div>
+  <div>
+    <div class="section-head">
+      <p class="eyebrow">Evidence</p>
+      <h2>Bundles</h2>
+    </div>
+    <div class="stack">
+      {% for bundle in bundles %}
+        <a class="artifact-row" href="/api/evidence-bundles/{{ bundle.id }}/download">
+          <span>Evidence ZIP</span>
+          <strong>{{ bundle.sha256[:10] }}</strong>
+        </a>
+      {% else %}
+        <p class="empty">No evidence bundles generated.</p>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endblock %}

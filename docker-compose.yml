@@ -1,0 +1,30 @@
+services:
+  workbench:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: vuln-prioritizer-workbench:local
+    ports:
+      - "127.0.0.1:8000:8000"
+    volumes:
+      - ./data:/app/data
+      - ./build/workbench/uploads:/app/uploads
+      - ./build/workbench/reports:/app/reports
+      - ./.cache/vuln-prioritizer:/app/.cache/vuln-prioritizer
+    environment:
+      NVD_API_KEY: ${NVD_API_KEY:-}
+      VULN_PRIORITIZER_DB_URL: sqlite:////app/data/workbench.db
+      VULN_PRIORITIZER_UPLOAD_DIR: /app/uploads
+      VULN_PRIORITIZER_REPORT_DIR: /app/reports
+      VULN_PRIORITIZER_CACHE_DIR: /app/.cache/vuln-prioritizer
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health')",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5

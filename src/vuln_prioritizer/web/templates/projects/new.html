@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}New Project · Vuln Prioritizer Workbench{% endblock %}
+{% block content %}
+<section class="section narrow">
+  <div class="section-head">
+    <p class="eyebrow">Workspace</p>
+    <h1>Create project</h1>
+  </div>
+  <form class="form-panel" method="post" action="/projects">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <label>
+      Project name
+      <input required name="name" autocomplete="off" placeholder="online-shop-demo">
+    </label>
+    <label>
+      Description
+      <textarea name="description" rows="4"></textarea>
+    </label>
+    <button class="button primary" type="submit">Create project</button>
+  </form>
+</section>
+{% endblock %}

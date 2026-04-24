@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block title %}{{ project.name }} · Dashboard{% endblock %}
+{% block content %}
+<section class="section">
+  <div class="section-head row">
+    <div>
+      <p class="eyebrow">Dashboard</p>
+      <h1>{{ project.name }}</h1>
+    </div>
+    <a class="button primary" href="/projects/{{ project.id }}/imports/new">Import findings</a>
+  </div>
+  <div class="metric-grid">
+    {% for label in ["Critical", "High", "Medium", "Low", "KEV", "Open"] %}
+      <article class="metric">
+        <span>{{ label }}</span>
+        <strong>{{ counts[label] }}</strong>
+      </article>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="section split">
+  <div>
+    <div class="section-head">
+      <p class="eyebrow">Work queue</p>
+      <h2>Top findings</h2>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Priority</th>
+            <th>CVE</th>
+            <th>Component</th>
+            <th>Service</th>
+            <th>Owner</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for finding in findings %}
+            <tr>
+              <td><span class="badge {{ finding.priority|lower }}">{{ finding.priority }}</span></td>
+              <td><a href="/findings/{{ finding.id }}">{{ finding.cve_id }}</a></td>
+              <td>{{ finding.component.name if finding.component else "N.A." }}</td>
+              <td>{{ finding.asset.business_service if finding.asset else "N.A." }}</td>
+              <td>{{ finding.asset.owner if finding.asset else "N.A." }}</td>
+            </tr>
+          {% else %}
+            <tr><td colspan="5" class="empty">No findings imported.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <aside>
+    <div class="section-head">
+      <p class="eyebrow">Services</p>
+      <h2>Risk by service</h2>
+    </div>
+    <div class="stack">
+      {% for service, count in top_services %}
+        <div class="service-row"><span>{{ service }}</span><strong>{{ count }}</strong></div>
+      {% else %}
+        <p class="empty">No service context captured.</p>
+      {% endfor %}
+    </div>
+    <div class="section-head compact">
+      <p class="eyebrow">Runs</p>
+      <h2>Recent imports</h2>
+    </div>
+    <div class="stack">
+      {% for run in runs %}
+        <a class="run-row" href="/analysis-runs/{{ run.id }}/reports">
+          <span>{{ run.input_type }}</span>
+          <strong>{{ run.status }}</strong>
+        </a>
+      {% else %}
+        <p class="empty">No import runs.</p>
+      {% endfor %}
+    </div>
+  </aside>
+</section>
+{% endblock %}

@@ -5,7 +5,7 @@
 [![Status: v1.1.0](https://img.shields.io/badge/status-v1.1.0-brightgreen)](./CHANGELOG.md)
 [![Quality: local-first](https://img.shields.io/badge/quality-local--first-informational)](#development)
 
-`vuln-prioritizer` is a Python CLI for prioritizing known CVEs. It accepts plain CVE lists plus scanner and SBOM exports, enriches them with `NVD + EPSS + CISA KEV`, and adds optional ATT&CK, asset-context, VEX, waiver, and evidence layers without turning the priority model into a black box.
+`vuln-prioritizer` is a Python CLI and self-hosted Workbench for prioritizing known CVEs. It accepts plain CVE lists plus scanner and SBOM exports, enriches them with `NVD + EPSS + CISA KEV`, and adds optional ATT&CK, asset-context, VEX, waiver, and evidence layers without turning the priority model into a black box.
 
 ![HTML report preview](docs/examples/media/html-report-preview.png)
 
@@ -17,6 +17,7 @@
 - CI-friendly outputs including Markdown summaries, SARIF, GitHub Action support, and policy gates.
 - Explicit support for VEX, asset context, waivers, and reproducible review artifacts.
 - Waiver lifecycle visibility with active, review-due, and expired states instead of silent long-lived exceptions.
+- A Docker/Compose path that makes the current CLI core easy to run and establishes the local Workbench bootstrap contract.
 
 ## What It Can Do
 
@@ -33,6 +34,8 @@ Core commands:
 - `attack validate|coverage|navigator-layer`: validate and use local ATT&CK mappings
 - `report html|evidence-bundle|verify-evidence-bundle`: render HTML, build reproducible ZIP evidence packages, or verify bundle integrity
 - `data status|update|verify|export-provider-snapshot`: inspect cache state, maintain local provider data, and export replayable provider snapshots
+- `db init`: initialize the Workbench SQLite database
+- `web serve`: run the FastAPI/Jinja2 Workbench web application
 
 Supported inputs:
 
@@ -62,7 +65,7 @@ Other commands expose the formats that fit their contract. For example, `report 
 
 This project is:
 
-- a CLI for known CVEs and existing findings
+- a CLI and local Workbench for known CVEs and existing findings
 - local-first and reproducibility-oriented
 - explicit about data provenance and scoring rules
 - designed for vulnerability management, security triage, and evidence generation
@@ -72,7 +75,7 @@ This project is not:
 - a scanner
 - a SIEM
 - a ticketing system
-- a web application
+- a replacement for heavier vulnerability-management platforms
 - a live TAXII harvester
 - a heuristic or LLM-based ATT&CK mapper
 
@@ -81,7 +84,7 @@ This project is not:
 ### Recommended: `pipx`
 
 ```bash
-pipx install git+https://github.com/Noetheon/vuln-prioritizer-cli.git@vX.Y.Z
+pipx install git+https://github.com/Noetheon/vuln-prioritizer-workbench.git@vX.Y.Z
 vuln-prioritizer --help
 ```
 
@@ -111,6 +114,29 @@ cp .env.example .env
 ```
 
 Then set `NVD_API_KEY` in `.env` if you want authenticated NVD access.
+
+### Docker / Compose Workbench
+
+Run the self-hosted Workbench API and web UI locally:
+
+```bash
+docker compose up --build
+```
+
+Then open `http://127.0.0.1:8000`. The Compose service stores SQLite data in `./data/workbench.db`, uploads in `./build/workbench/uploads`, reports in `./build/workbench/reports`, and provider cache entries in `./.cache/vuln-prioritizer`.
+
+```bash
+curl http://127.0.0.1:8000/api/health
+```
+
+The CLI remains available in the same image:
+
+```bash
+docker build -t vuln-prioritizer-workbench:local .
+docker run --rm vuln-prioritizer-workbench:local vuln-prioritizer --help
+```
+
+Workbench planning lives in [docs/workbench-masterplan.md](docs/workbench-masterplan.md). The roadmap tracks how the current CLI release line is being repositioned as the reusable core for that add-on.
 
 ## Quickstart
 
@@ -253,7 +279,7 @@ vuln-prioritizer --no-config analyze --input cves.txt
 
 ## Public Docs
 
-Start here for public CLI usage:
+Start here for public CLI usage and the Workbench add-on path:
 
 - [docs/use_cases.md](docs/use_cases.md)
 - [docs/playbooks.md](docs/playbooks.md)
@@ -264,6 +290,8 @@ Start here for public CLI usage:
 - [docs/evidence.md](docs/evidence.md)
 - [docs/integrations/reporting_and_ci.md](docs/integrations/reporting_and_ci.md)
 - [docs/releases/v1.1.0.md](docs/releases/v1.1.0.md)
+- [docs/roadmap.md](docs/roadmap.md)
+- [docs/workbench-masterplan.md](docs/workbench-masterplan.md)
 
 Maintainer / repo-checkout workflows:
 
@@ -294,7 +322,7 @@ In `mode: analyze`, `input` and `input-format` accept newline-delimited values s
 - uses: actions/checkout@v6
 
 - name: Prioritize vulnerabilities
-  uses: Noetheon/vuln-prioritizer-cli@vX.Y.Z
+  uses: Noetheon/vuln-prioritizer-workbench@vX.Y.Z
   with:
     mode: analyze
     input: |
@@ -343,6 +371,7 @@ If you change docs, examples, or report artifacts, run `make release-check` so t
 Current release line:
 
 - stable `v1.1.0`
+- Workbench MVP is planned as an add-on over the existing CLI/core behavior
 - GitHub tag install path available now
 - GitHub Release restored for `v1.1.0`
 - PyPI and TestPyPI workflows prepared, but live publishing remains explicitly gated until trusted-publisher setup is enabled
