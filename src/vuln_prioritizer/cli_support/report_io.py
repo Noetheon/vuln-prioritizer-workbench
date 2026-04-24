@@ -27,6 +27,9 @@ from vuln_prioritizer.utils import iso_utc_now
 
 from .common import console, exit_input_validation
 
+DETERMINISTIC_ZIP_TIMESTAMP = (1980, 1, 1, 0, 0, 0)
+DETERMINISTIC_ZIP_FILE_MODE = 0o644 << 16
+
 
 def load_analysis_report_payload(input_path: Path) -> dict[str, Any]:
     try:
@@ -312,9 +315,25 @@ def write_evidence_bundle(
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(output_path, "w", compression=zipfile.ZIP_DEFLATED) as archive:
         for path, content, _kind in bundle_entries:
-            archive.writestr(path, content)
-        archive.writestr("manifest.json", generate_evidence_bundle_manifest_json(manifest))
+            write_deterministic_zip_member(archive, path, content)
+        write_deterministic_zip_member(
+            archive,
+            "manifest.json",
+            generate_evidence_bundle_manifest_json(manifest).encode("utf-8"),
+        )
     return manifest
+
+
+def write_deterministic_zip_member(
+    archive: zipfile.ZipFile,
+    path: str,
+    content: bytes,
+) -> None:
+    info = zipfile.ZipInfo(filename=path, date_time=DETERMINISTIC_ZIP_TIMESTAMP)
+    info.compress_type = zipfile.ZIP_DEFLATED
+    info.create_system = 3
+    info.external_attr = DETERMINISTIC_ZIP_FILE_MODE
+    archive.writestr(info, content)
 
 
 def analysis_input_paths(metadata: object) -> list[str]:

@@ -228,6 +228,42 @@ def test_write_evidence_bundle_handles_missing_input_copy_and_navigator_layer(
         assert not any(name.startswith("input/") for name in names)
 
 
+def test_write_evidence_bundle_is_byte_stable_with_fixed_timestamp(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.setenv("VULN_PRIORITIZER_FIXED_NOW", "2026-04-21T12:00:00+00:00")
+    analysis_file = tmp_path / "analysis.json"
+    first_output = tmp_path / "first.zip"
+    second_output = tmp_path / "second.zip"
+    payload = {
+        "metadata": {
+            "input_path": "missing-input.txt",
+            "findings_count": 1,
+            "kev_hits": 0,
+            "waived_count": 0,
+        },
+        "attack_summary": {"mapped_cves": 0, "technique_distribution": {}},
+        "findings": [],
+    }
+    analysis_file.write_text(json.dumps(payload, sort_keys=True), encoding="utf-8")
+
+    write_evidence_bundle(
+        analysis_path=analysis_file,
+        output_path=first_output,
+        payload=payload,
+        include_input_copy=True,
+    )
+    write_evidence_bundle(
+        analysis_path=analysis_file,
+        output_path=second_output,
+        payload=payload,
+        include_input_copy=True,
+    )
+
+    assert first_output.read_bytes() == second_output.read_bytes()
+
+
 def test_manifest_validation_error_format_and_mismatch_descriptions() -> None:
     try:
         EvidenceBundleManifest.model_validate({"files": []})

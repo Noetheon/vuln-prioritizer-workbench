@@ -72,6 +72,36 @@ shasum -a 256 \
   build/v1.0-demo-evidence-bundle-verification.json
 ```
 
+Reference release-candidate run from the locked demo path:
+
+| Artifact | SHA-256 | Size |
+| --- | --- | ---: |
+| `build/v1.0-demo-analysis.json` | `89c65a424db58de2313d44d201c63c806155a3543d5ee1af8dc12512e5e3d77b` | 49,024 bytes |
+| `build/v1.0-demo-evidence-bundle.zip` | `246a80012271deae22be15dfbb7e24408c2431324b0a244cbe0e0ec58c8dbad2` | 28,473 bytes |
+| `build/v1.0-demo-evidence-bundle-verification.json` | `c1da50f6c006859b2737b99d1d6917c583fda05101ef663012ae432a7bca9634` | 2,566 bytes |
+| `manifest.json` inside the ZIP | `1c828e916bd7b0e1427921acde2c77efff8c30b8790992eed010ea241fafffbb` | 2,497 bytes |
+
+Manifest details for that run:
+
+- `schema_version`: `1.1.0`
+- `bundle_kind`: `evidence-bundle`
+- `generated_at`: `2026-04-21T12:00:00+00:00`
+- `source_analysis_sha256`: `89c65a424db58de2313d44d201c63c806155a3543d5ee1af8dc12512e5e3d77b`
+- `provider_snapshot.path`: `data/demo_provider_snapshot.json`
+- `provider_snapshot.sha256`: `a110e4c372a5ec750e0b766e23f19884596f6ac82185b8fd0eefe8384be71c5b`
+- `provider_snapshot.sources`: `nvd`, `epss`, `kev`
+- verification summary: `ok=true`, `expected_files=5`, `verified_files=5`, `missing_files=0`, `modified_files=0`, `unexpected_files=0`, `manifest_errors=0`
+
+Manifest file entries:
+
+| Bundle member | Kind | SHA-256 | Size |
+| --- | --- | --- | ---: |
+| `analysis.json` | `analysis-json` | `89c65a424db58de2313d44d201c63c806155a3543d5ee1af8dc12512e5e3d77b` | 49,024 bytes |
+| `report.html` | `html-report` | `9b958bf1103add7731b8068fa2fef61353f6a01a8cb47ea979b77dd6e0988f97` | 109,325 bytes |
+| `summary.md` | `markdown-summary` | `916377f25d8a84db8d338201c9e413d5df7a9518a0f2d06ece66e405fade10a3` | 3,038 bytes |
+| `attack-navigator-layer.json` | `attack-navigator-layer` | `18d94bbe54e47b27c10db18eeaade92b4ceddd3ab08b2370625f08c866f9d331` | 1,825 bytes |
+| `input/trivy_report.json` | `source-input` | `43b29a02a88bc6d9c8c2e8d599a5218fcc253f025f42acbcc780e377bad26e82` | 2,200 bytes |
+
 Record the release-candidate commit with `git rev-parse HEAD`, the date of the run, and the exact command output. Do not include `.env` files, API keys, cookies, shell history, machine-specific home paths, or customer scanner exports in the public release evidence.
 
 ## Guardrails
