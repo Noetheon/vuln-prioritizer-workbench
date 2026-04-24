@@ -103,9 +103,9 @@ pipx install git+https://github.com/Noetheon/vuln-prioritizer-workbench.git@vX.Y
 vuln-prioritizer --help
 ```
 
-Replace `vX.Y.Z` with the GitHub release tag you intend to consume. This README tracks the current `main` branch, so a tagged public release can legitimately expose a smaller surface than the tip of `main`. The current package release target from this tree is `v1.1.0`; use a reviewed commit SHA for maintainer-only source installs until that tag exists.
+Replace `vX.Y.Z` with the GitHub release tag you intend to consume. This README tracks the current `main` branch, so a tagged public release can legitimately expose a smaller surface than the tip of `main`. The latest public release is currently `v1.1.0`.
 
-The repository is PyPI-ready, but the verified public install path is the GitHub tag install above once a matching tag is published. That is a source-at-tag install path, not a GitHub Release asset install path. Public PyPI/TestPyPI publication is wired and documented, but explicitly gated until the repository's trusted-publisher configuration is enabled. When PyPI goes live, the release workflows verify hosted-index installation automatically after publish; until then, the GitHub tag install remains the supported public path and the release workflow also verifies the same source-at-tag install contract on tag pushes.
+The repository is PyPI-ready, but the verified public install path is currently the GitHub tag install above. That is a source-at-tag install path, not a GitHub Release asset install path. Public PyPI/TestPyPI publication is wired and documented, but explicitly gated until the repository's trusted-publisher configuration is enabled. When PyPI goes live, the release workflows verify hosted-index installation automatically after publish; until then, the GitHub tag install remains the supported public path and the release workflow also verifies the same source-at-tag install contract on tag pushes.
 
 ### Example Scope
 
@@ -502,8 +502,8 @@ Current release line:
 
 - current package line `v1.1.0`
 - Workbench local app, advanced ATT&CK, governance, reporting, and integration surfaces implemented on `main`
-- GitHub tag install path is the supported public install contract once `v1.1.0` is tagged
-- GitHub Release publication is automated by the tag workflow and uses checked-in release notes
+- GitHub tag install path is available for `v1.1.0`
+- GitHub Release is published for `v1.1.0` with source and wheel distribution assets
 - PyPI and TestPyPI workflows prepared, but live publishing remains explicitly gated until trusted-publisher setup is enabled
 
 ## License
