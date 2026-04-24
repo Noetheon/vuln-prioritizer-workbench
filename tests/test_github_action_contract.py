@@ -15,12 +15,16 @@ def test_action_exposes_p1_analyze_inputs() -> None:
 
     assert "provider-snapshot-file" in inputs
     assert "locked-provider-data" in inputs
+    assert "waiver-file" in inputs
+    assert "fail-on-provider-error" in inputs
+    assert "sort-by" in inputs
     assert "input" in inputs
     assert "input-format" in inputs
 
     assert "newline-delimited" in inputs["input"]["description"]
     assert "newline-delimited list aligned with input" in inputs["input-format"]["description"]
     assert inputs["locked-provider-data"]["default"] == "false"
+    assert "operational" in inputs["sort-by"]["description"]
 
 
 def test_action_run_step_supports_multiline_inputs_and_snapshot_replay() -> None:
@@ -34,4 +38,10 @@ def test_action_run_step_supports_multiline_inputs_and_snapshot_replay() -> None
     assert 'append_multiline_args "--vex-file" "${{ inputs.vex-files }}"' in script
     assert '--provider-snapshot-file "${{ inputs.provider-snapshot-file }}"' in script
     assert "cmd+=(--locked-provider-data)" in script
+    assert '--waiver-file "${{ inputs.waiver-file }}"' in script
+    assert "cmd+=(--hide-waived)" in script
+    assert "cmd+=(--fail-on-provider-error)" in script
+    assert '--sort-by "${{ inputs.sort-by }}"' in script
+    assert '--max-cves "${{ inputs.max-cves }}"' in script
+    assert '--cache-dir "${{ inputs.cache-dir }}"' in script
     assert "report-html mode expects exactly one input path." in script

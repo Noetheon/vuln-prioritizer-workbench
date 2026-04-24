@@ -306,6 +306,24 @@
           "items": {
             "$ref": "#/$defs/remediationComponent"
           }
+        },
+        "evidence_level": {
+          "type": "string"
+        },
+        "kev_required_action": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "kev_due_date": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "suppressed_occurrence_count": {
+          "type": "integer"
         }
       }
     }

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from vuln_prioritizer.models import FindingProvenance, InputOccurrence
+from vuln_prioritizer.models import FindingProvenance, InputOccurrence, KevData
 from vuln_prioritizer.services.remediation import (
     RemediationService,
     derive_remediation,
@@ -17,6 +17,7 @@ def _occurrence(
     dependency_path: str | None = None,
     file_path: str | None = None,
     fix_versions: list[str] | None = None,
+    vex_status: str | None = None,
 ) -> InputOccurrence:
     return InputOccurrence(
         cve_id="CVE-2024-0001",
@@ -27,6 +28,7 @@ def _occurrence(
         dependency_path=dependency_path,
         file_path=file_path,
         fix_versions=list(fix_versions or []),
+        vex_status=vex_status,
     )
 
 
@@ -135,3 +137,39 @@ def test_remediation_service_falls_back_to_priority_only_without_component_evide
         == "Document the finding, monitor for changes in exploitability or exposure, and address "
         "it during the normal patch cycle."
     )
+
+
+def test_remediation_uses_active_occurrences_and_surfaces_kev_action() -> None:
+    remediation = RemediationService().derive(
+        [
+            _occurrence(
+                component_name="active-lib",
+                component_version="1.0.0",
+                package_type="npm",
+                dependency_path="package-lock.json",
+            ),
+            _occurrence(
+                component_name="suppressed-lib",
+                component_version="1.0.0",
+                package_type="npm",
+                fix_versions=["2.0.0"],
+                vex_status="fixed",
+            ),
+        ],
+        kev=KevData(
+            cve_id="CVE-2024-0001",
+            in_kev=True,
+            required_action="Apply vendor update.",
+            due_date="2026-05-01",
+        ),
+    )
+
+    assert remediation.strategy == "review-upgrade-options"
+    assert remediation.evidence_level == "kev_action"
+    assert remediation.suppressed_occurrence_count == 1
+    assert remediation.kev_required_action == "Apply vendor update."
+    assert remediation.kev_due_date == "2026-05-01"
+    assert [component.name for component in remediation.components] == ["active-lib"]
+    action = render_recommended_action(remediation, priority_label="Critical")
+    assert action.startswith("CISA KEV required action: Apply vendor update.")
+    assert "KEV due date: 2026-05-01." in action

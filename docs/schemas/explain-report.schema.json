@@ -102,6 +102,18 @@
         },
         "warning_count": {
           "type": "integer"
+        },
+        "included_occurrence_count": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "included_unique_cves": {
+          "type": [
+            "integer",
+            "null"
+          ]
         }
       }
     },
@@ -123,6 +135,15 @@
         },
         "content_hits": {
           "type": "integer"
+        },
+        "empty_records": {
+          "type": "integer"
+        },
+        "stale_cache_hits": {
+          "type": "integer"
+        },
+        "degraded": {
+          "type": "boolean"
         }
       }
     },
@@ -349,6 +370,39 @@
         },
         "cache_dir": {
           "$ref": "#/$defs/nullableString"
+        },
+        "epss_diagnostics": {
+          "$ref": "#/$defs/providerLookupDiagnostics"
+        },
+        "kev_diagnostics": {
+          "$ref": "#/$defs/providerLookupDiagnostics"
+        },
+        "provider_degraded": {
+          "type": "boolean"
+        },
+        "provider_diagnostics": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/providerLookupDiagnostics"
+          }
+        },
+        "provider_freshness": {
+          "type": "object",
+          "additionalProperties": {
+            "type": [
+              "string",
+              "integer",
+              "number",
+              "boolean",
+              "null"
+            ]
+          }
+        },
+        "included_occurrence_count": {
+          "type": "integer"
+        },
+        "included_unique_cves": {
+          "type": "integer"
         }
       }
     },
@@ -721,6 +775,24 @@
         },
         "recommended_action": {
           "type": "string"
+        },
+        "waiver_id": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "waiver_matched_scope": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "waiver_approval_ref": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "waiver_ticket_url": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "operational_rank": {
+          "type": "integer"
+        },
+        "context_rank_reasons": {
+          "$ref": "#/$defs/stringArray"
         }
       }
     },
@@ -850,6 +922,27 @@
         },
         "change_reason": {
           "type": "string"
+        },
+        "waiver_id": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "waiver_matched_scope": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "waiver_approval_ref": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "waiver_ticket_url": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "operational_rank": {
+          "type": "integer"
+        },
+        "context_rank_reasons": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "waiver_scope": {
+          "$ref": "#/$defs/nullableString"
         }
       }
     },
@@ -1039,6 +1132,18 @@
           "items": {
             "$ref": "#/$defs/remediationComponent"
           }
+        },
+        "evidence_level": {
+          "type": "string"
+        },
+        "kev_required_action": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "kev_due_date": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "suppressed_occurrence_count": {
+          "type": "integer"
         }
       }
     }

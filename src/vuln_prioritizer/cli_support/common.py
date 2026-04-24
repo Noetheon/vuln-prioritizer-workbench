@@ -75,6 +75,7 @@ class PriorityFilter(StrEnum):
 
 class SortBy(StrEnum):
     priority = "priority"
+    operational = "operational"
     epss = "epss"
     cvss = "cvss"
     cve = "cve"

@@ -13,6 +13,7 @@ from vuln_prioritizer.cli_support.analysis import (
     ExplainRequest,
     build_priority_policy,
     handle_fail_on,
+    handle_provider_error_fail_on,
     handle_waiver_lifecycle_fail_on,
     prepare_analysis,
     prepare_explain,
@@ -111,6 +112,7 @@ def analyze(
     show_suppressed: bool = typer.Option(False, "--show-suppressed"),
     hide_waived: bool = typer.Option(False, "--hide-waived"),
     fail_on: PriorityFilter | None = typer.Option(None, "--fail-on"),
+    fail_on_provider_error: bool = typer.Option(False, "--fail-on-provider-error"),
     fail_on_expired_waivers: bool = typer.Option(False, "--fail-on-expired-waivers"),
     fail_on_review_due_waivers: bool = typer.Option(False, "--fail-on-review-due-waivers"),
     max_cves: int | None = typer.Option(None, "--max-cves", min=1),
@@ -182,6 +184,7 @@ def analyze(
             vex_files=vex_file or [],
             show_suppressed=show_suppressed,
             hide_waived=hide_waived,
+            fail_on_provider_error=fail_on_provider_error,
             max_cves=max_cves,
             offline_kev_file=offline_kev_file,
             nvd_api_key_env=nvd_api_key_env,
@@ -203,6 +206,10 @@ def analyze(
         emit_stdout(generate_json_report(findings, context))
         if fail_on is not None:
             handle_fail_on(findings, fail_on)
+        handle_provider_error_fail_on(
+            context,
+            fail_on_provider_error=fail_on_provider_error,
+        )
         handle_waiver_lifecycle_fail_on(
             context,
             fail_on_expired_waivers=fail_on_expired_waivers,
@@ -233,6 +240,10 @@ def analyze(
         console.print(f"[green]Wrote markdown summary to {summary_output}[/green]")
     if fail_on is not None:
         handle_fail_on(findings, fail_on)
+    handle_provider_error_fail_on(
+        context,
+        fail_on_provider_error=fail_on_provider_error,
+    )
     handle_waiver_lifecycle_fail_on(
         context,
         fail_on_expired_waivers=fail_on_expired_waivers,
@@ -274,6 +285,7 @@ def compare(
     vex_file: list[Path] | None = typer.Option(None, "--vex-file", dir_okay=False),
     show_suppressed: bool = typer.Option(False, "--show-suppressed"),
     hide_waived: bool = typer.Option(False, "--hide-waived"),
+    fail_on_provider_error: bool = typer.Option(False, "--fail-on-provider-error"),
     max_cves: int | None = typer.Option(None, "--max-cves", min=1),
     offline_kev_file: Path | None = typer.Option(None, "--offline-kev-file", dir_okay=False),
     offline_attack_file: Path | None = typer.Option(None, "--offline-attack-file", dir_okay=False),
@@ -336,6 +348,7 @@ def compare(
             vex_files=vex_file or [],
             show_suppressed=show_suppressed,
             hide_waived=hide_waived,
+            fail_on_provider_error=fail_on_provider_error,
             max_cves=max_cves,
             offline_kev_file=offline_kev_file,
             nvd_api_key_env=nvd_api_key_env,
@@ -351,6 +364,10 @@ def compare(
 
     if should_emit_json_stdout(format, output):
         emit_stdout(generate_compare_json(comparisons, context))
+        handle_provider_error_fail_on(
+            context,
+            fail_on_provider_error=fail_on_provider_error,
+        )
         return
 
     console.print(render_compare_table(comparisons))
@@ -363,6 +380,10 @@ def compare(
         elif format == OutputFormat.json:
             write_output(output, generate_compare_json(comparisons, context))
         console.print(f"[green]Wrote {format.value} output to {output}[/green]")
+    handle_provider_error_fail_on(
+        context,
+        fail_on_provider_error=fail_on_provider_error,
+    )
 
 
 def explain(
@@ -392,6 +413,7 @@ def explain(
     target_ref: str | None = typer.Option(None, "--target-ref"),
     vex_file: list[Path] | None = typer.Option(None, "--vex-file", dir_okay=False),
     show_suppressed: bool = typer.Option(False, "--show-suppressed"),
+    fail_on_provider_error: bool = typer.Option(False, "--fail-on-provider-error"),
     offline_kev_file: Path | None = typer.Option(None, "--offline-kev-file", dir_okay=False),
     offline_attack_file: Path | None = typer.Option(None, "--offline-attack-file", dir_okay=False),
     provider_snapshot_file: Path | None = typer.Option(
@@ -446,6 +468,7 @@ def explain(
             target_ref=target_ref,
             vex_files=vex_file or [],
             show_suppressed=show_suppressed,
+            fail_on_provider_error=fail_on_provider_error,
             offline_kev_file=offline_kev_file,
             offline_attack_file=offline_attack_file,
             nvd_api_key_env=nvd_api_key_env,
@@ -466,6 +489,10 @@ def explain(
                 result.context,
                 result.comparison,
             )
+        )
+        handle_provider_error_fail_on(
+            result.context,
+            fail_on_provider_error=fail_on_provider_error,
         )
         return
 
@@ -509,6 +536,10 @@ def explain(
                 ),
             )
         console.print(f"[green]Wrote {format.value} output to {output}[/green]")
+    handle_provider_error_fail_on(
+        result.context,
+        fail_on_provider_error=fail_on_provider_error,
+    )
 
 
 def doctor(

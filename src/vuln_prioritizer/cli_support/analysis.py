@@ -31,6 +31,7 @@ from vuln_prioritizer.models import (
     ParsedInput,
     PrioritizedFinding,
     PriorityPolicy,
+    ProviderLookupDiagnostics,
     ProviderSnapshotReport,
     VexStatement,
     WaiverRule,
@@ -87,6 +88,7 @@ class AnalysisRequest:
     vex_files: list[Path]
     show_suppressed: bool
     hide_waived: bool
+    fail_on_provider_error: bool
     max_cves: int | None
     offline_kev_file: Path | None
     nvd_api_key_env: str
@@ -115,6 +117,7 @@ class ExplainRequest:
     target_ref: str | None
     vex_files: list[Path]
     show_suppressed: bool
+    fail_on_provider_error: bool
     offline_kev_file: Path | None
     offline_attack_file: Path | None
     nvd_api_key_env: str
@@ -380,6 +383,56 @@ def handle_waiver_lifecycle_fail_on(
         raise typer.Exit(code=1)
 
 
+def handle_provider_error_fail_on(
+    context: AnalysisContext,
+    *,
+    fail_on_provider_error: bool,
+) -> None:
+    if not fail_on_provider_error or not context.provider_degraded:
+        return
+    console.print("[red]Policy check failed:[/red] provider enrichment degraded during the run.")
+    raise typer.Exit(code=1)
+
+
+def build_provider_diagnostics(
+    enrichment: EnrichmentResult,
+) -> dict[str, ProviderLookupDiagnostics]:
+    return {
+        "nvd": enrichment.nvd_diagnostics,
+        "epss": enrichment.epss_diagnostics,
+        "kev": enrichment.kev_diagnostics,
+    }
+
+
+def provider_degraded(enrichment: EnrichmentResult) -> bool:
+    return any(
+        diagnostics.degraded or diagnostics.failures > 0
+        for diagnostics in (
+            enrichment.nvd_diagnostics,
+            enrichment.epss_diagnostics,
+            enrichment.kev_diagnostics,
+        )
+    )
+
+
+def build_provider_freshness(
+    enrichment: EnrichmentResult,
+) -> dict[str, str | int | float | bool | None]:
+    nvd_last_modified = sorted(
+        item.last_modified for item in enrichment.nvd.values() if item.last_modified
+    )
+    epss_dates = sorted(item.date for item in enrichment.epss.values() if item.date)
+    kev_date_added = sorted(item.date_added for item in enrichment.kev.values() if item.date_added)
+    kev_due_dates = sorted(item.due_date for item in enrichment.kev.values() if item.due_date)
+    return {
+        "nvd_last_modified_min": nvd_last_modified[0] if nvd_last_modified else None,
+        "nvd_last_modified_max": nvd_last_modified[-1] if nvd_last_modified else None,
+        "latest_epss_date": epss_dates[-1] if epss_dates else None,
+        "kev_date_added_max": kev_date_added[-1] if kev_date_added else None,
+        "kev_due_date_min": kev_due_dates[0] if kev_due_dates else None,
+    }
+
+
 def build_findings(
     cve_ids: list[str],
     *,
@@ -496,6 +549,7 @@ def prepare_analysis(request: AnalysisRequest) -> tuple[list[PrioritizedFinding]
         raise typer.Exit(code=1)
 
     prioritizer = PrioritizationService(policy=request.policy)
+    all_findings = prioritizer.assign_operational_ranks(all_findings)
     normalized_priority_filters = normalize_priority_filters(request.priority_filters)
     filtered_findings = prioritizer.filter_findings(
         all_findings,
@@ -546,6 +600,11 @@ def prepare_analysis(request: AnalysisRequest) -> tuple[list[PrioritizedFinding]
         filtered_out_count=max(len(all_findings) - len(findings), 0),
         nvd_hits=count_nvd_hits(enrichment),
         nvd_diagnostics=enrichment.nvd_diagnostics,
+        epss_diagnostics=enrichment.epss_diagnostics,
+        kev_diagnostics=enrichment.kev_diagnostics,
+        provider_degraded=provider_degraded(enrichment),
+        provider_diagnostics=build_provider_diagnostics(enrichment),
+        provider_freshness=build_provider_freshness(enrichment),
         epss_hits=count_epss_hits(enrichment),
         kev_hits=count_kev_hits(enrichment),
         attack_hits=attack_summary.mapped_cves,
@@ -574,6 +633,8 @@ def prepare_analysis(request: AnalysisRequest) -> tuple[list[PrioritizedFinding]
         waiver_file=str(request.waiver_file) if request.waiver_file else None,
         counts_by_priority=prioritizer.count_by_priority(findings),
         source_stats=parsed_input.source_stats,
+        included_occurrence_count=parsed_input.included_occurrence_count,
+        included_unique_cves=parsed_input.included_unique_cves,
         data_sources=build_data_sources(enrichment),
         cache_enabled=not request.no_cache,
         cache_dir=str(request.cache_dir) if not request.no_cache else None,
@@ -625,6 +686,7 @@ def prepare_explain(request: ExplainRequest) -> ExplainResult:
         locked_provider_data=request.locked_provider_data,
     )
     findings, waiver_warnings = apply_waivers(findings, waiver_rules)
+    findings = PrioritizationService(policy=request.policy).assign_operational_ranks(findings)
     if not request.show_suppressed:
         findings = [finding for finding in findings if not finding.suppressed_by_vex]
 
@@ -668,6 +730,11 @@ def prepare_explain(request: ExplainRequest) -> ExplainResult:
         filtered_out_count=0,
         nvd_hits=count_nvd_hits(enrichment),
         nvd_diagnostics=enrichment.nvd_diagnostics,
+        epss_diagnostics=enrichment.epss_diagnostics,
+        kev_diagnostics=enrichment.kev_diagnostics,
+        provider_degraded=provider_degraded(enrichment),
+        provider_diagnostics=build_provider_diagnostics(enrichment),
+        provider_freshness=build_provider_freshness(enrichment),
         epss_hits=count_epss_hits(enrichment),
         kev_hits=count_kev_hits(enrichment),
         attack_hits=attack_summary.mapped_cves,
@@ -684,6 +751,8 @@ def prepare_explain(request: ExplainRequest) -> ExplainResult:
         waiver_file=str(request.waiver_file) if request.waiver_file else None,
         counts_by_priority=counts,
         source_stats=parsed_input.source_stats,
+        included_occurrence_count=parsed_input.included_occurrence_count,
+        included_unique_cves=parsed_input.included_unique_cves,
         input_format=parsed_input.input_format,
         data_sources=build_data_sources(enrichment),
         cache_enabled=not request.no_cache,

@@ -137,6 +137,7 @@ def render_findings_table(findings: list[PrioritizedFinding]) -> Table:
     table = Table(title="Vulnerability Prioritization", show_lines=False)
     table.add_column("CVE", style="bold")
     table.add_column("Priority")
+    table.add_column("Op Rank")
     table.add_column("CVSS")
     table.add_column("EPSS")
     table.add_column("KEV")
@@ -156,6 +157,7 @@ def render_findings_table(findings: list[PrioritizedFinding]) -> Table:
                 waived=finding.waived,
                 waiver_status=finding.waiver_status,
             ),
+            str(finding.operational_rank or "N.A."),
             format_score(finding.cvss_base_score, digits=1),
             format_score(finding.epss, digits=3),
             "Yes" if finding.in_kev else "No",
@@ -267,7 +269,35 @@ def render_summary_panel(
             + f"cache_hits={diagnostics.cache_hits}, "
             + f"network_fetches={diagnostics.network_fetches}, "
             + f"failures={diagnostics.failures}, "
-            + f"content_hits={diagnostics.content_hits}"
+            + f"content_hits={diagnostics.content_hits}, "
+            + f"empty_records={diagnostics.empty_records}, "
+            + f"stale_cache_hits={diagnostics.stale_cache_hits}"
+        )
+    if context.provider_degraded:
+        lines.append("Provider degraded: yes")
+    if context.epss_diagnostics.requested:
+        diagnostics = context.epss_diagnostics
+        lines.append(
+            "EPSS diagnostics: "
+            + f"requested={diagnostics.requested}, "
+            + f"cache_hits={diagnostics.cache_hits}, "
+            + f"network_fetches={diagnostics.network_fetches}, "
+            + f"failures={diagnostics.failures}, "
+            + f"content_hits={diagnostics.content_hits}, "
+            + f"empty_records={diagnostics.empty_records}, "
+            + f"stale_cache_hits={diagnostics.stale_cache_hits}"
+        )
+    if context.kev_diagnostics.requested:
+        diagnostics = context.kev_diagnostics
+        lines.append(
+            "KEV diagnostics: "
+            + f"requested={diagnostics.requested}, "
+            + f"cache_hits={diagnostics.cache_hits}, "
+            + f"network_fetches={diagnostics.network_fetches}, "
+            + f"failures={diagnostics.failures}, "
+            + f"content_hits={diagnostics.content_hits}, "
+            + f"empty_records={diagnostics.empty_records}, "
+            + f"stale_cache_hits={diagnostics.stale_cache_hits}"
         )
     if context.suppressed_by_vex:
         lines.append(f"Suppressed by VEX: {context.suppressed_by_vex}")
@@ -312,11 +342,12 @@ def generate_markdown_report(
     findings_header = (
         "| CVE ID | Description | CVSS | Severity | CVSS Version | EPSS | EPSS Percentile | "
         + "KEV | ATT&CK | Attack Relevance | Sources | Asset Criticality | VEX | Waiver | "
-        + "Priority | Rationale | Recommended Action | Context Recommendation |"
+        + "Priority | Operational Rank | Context Rank Reasons | Rationale | Recommended Action | "
+        + "Context Recommendation |"
     )
     findings_divider = (
         "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | "
-        + "--- | --- | --- | --- | --- |"
+        + "--- | --- | --- | --- | --- | --- | --- |"
     )
     attack_header = (
         "| CVE ID | Mapping Types | Techniques | Tactics | Capability Groups | ATT&CK Note |"
@@ -373,6 +404,8 @@ def generate_markdown_report(
                     escape_pipes(_format_vex_statuses(finding.provenance.vex_statuses)),
                     escape_pipes(_format_waiver_status(finding)),
                     finding.priority_label,
+                    str(finding.operational_rank or "N.A."),
+                    escape_pipes(", ".join(finding.context_rank_reasons) or "N.A."),
                     escape_pipes(finding.rationale),
                     escape_pipes(finding.recommended_action),
                     escape_pipes(finding.context_recommendation or "N.A."),

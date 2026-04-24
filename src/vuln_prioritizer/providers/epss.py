@@ -13,7 +13,7 @@ from vuln_prioritizer.config import (
     HTTP_MAX_RETRIES,
     HTTP_TIMEOUT_SECONDS,
 )
-from vuln_prioritizer.models import EpssData
+from vuln_prioritizer.models import EpssData, ProviderLookupDiagnostics
 from vuln_prioritizer.utils import chunk_cve_ids, safe_float
 
 
@@ -31,6 +31,7 @@ class EpssProvider:
         self.timeout_seconds = timeout_seconds
         self.max_retries = max_retries
         self.cache = cache
+        self.last_diagnostics = ProviderLookupDiagnostics()
 
     def fetch_many(
         self,
@@ -42,11 +43,15 @@ class EpssProvider:
         results: dict[str, EpssData] = {}
         warnings: list[str] = []
         missing: list[str] = []
+        cache_hits = 0
+        failures = 0
+        stale_cache_hits = 0
 
         for cve_id in cve_ids:
             cached = None if refresh else self._load_from_cache(cve_id)
             if cached is not None:
                 results[cve_id] = cached
+                cache_hits += 1
             else:
                 missing.append(cve_id)
 
@@ -54,7 +59,24 @@ class EpssProvider:
             try:
                 payload = self._request_chunk(chunk)
             except Exception as exc:  # noqa: BLE001
-                warnings.append("EPSS lookup failed for chunk " + ",".join(chunk) + f": {exc}")
+                failures += len(chunk)
+                recovered: list[str] = []
+                for cve_id in chunk:
+                    try:
+                        stale = self._load_from_cache(cve_id, allow_expired=True)
+                    except Exception:  # noqa: BLE001 - invalid stale cache is not recoverable
+                        stale = None
+                    if stale is None:
+                        continue
+                    results[cve_id] = stale
+                    stale_cache_hits += 1
+                    recovered.append(cve_id)
+                suffix = (
+                    "; using expired cached data for " + ", ".join(recovered) if recovered else ""
+                )
+                warnings.append(
+                    "EPSS lookup failed for chunk " + ",".join(chunk) + f": {exc}" + suffix
+                )
                 continue
 
             seen_in_chunk: set[str] = set()
@@ -78,12 +100,26 @@ class EpssProvider:
                 results[cve_id] = empty_result
                 self._store_in_cache(empty_result)
 
+        for cve_id in cve_ids:
+            results.setdefault(cve_id, EpssData(cve_id=cve_id))
+
+        content_hits = sum(1 for item in results.values() if has_epss_content(item))
+        self.last_diagnostics = ProviderLookupDiagnostics(
+            requested=len(cve_ids),
+            cache_hits=cache_hits,
+            network_fetches=len(missing),
+            failures=failures,
+            content_hits=content_hits,
+            empty_records=max(len(cve_ids) - content_hits, 0),
+            stale_cache_hits=stale_cache_hits,
+            degraded=failures > 0 or stale_cache_hits > 0,
+        )
         return results, warnings
 
-    def _load_from_cache(self, cve_id: str) -> EpssData | None:
+    def _load_from_cache(self, cve_id: str, *, allow_expired: bool = False) -> EpssData | None:
         if self.cache is None:
             return None
-        cached_payload = self.cache.get_json("epss", cve_id)
+        cached_payload = self.cache.get_json("epss", cve_id, allow_expired=allow_expired)
         if cached_payload is None:
             return None
         return EpssData.model_validate(cached_payload)
@@ -122,3 +158,7 @@ class EpssProvider:
         if last_error is not None:
             raise RuntimeError(str(last_error)) from last_error
         raise RuntimeError("EPSS request failed without a response")
+
+
+def has_epss_content(item: EpssData) -> bool:
+    return item.epss is not None or item.percentile is not None or item.date is not None

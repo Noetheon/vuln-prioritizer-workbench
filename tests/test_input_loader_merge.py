@@ -28,5 +28,9 @@ def test_input_loader_load_many_applies_global_dedupe_and_max_cves(tmp_path: Pat
     assert parsed.input_paths == [str(first_input), str(second_input)]
     assert parsed.merged_input_count == 2
     assert parsed.duplicate_cve_count == 1
+    assert parsed.included_occurrence_count == 3
+    assert parsed.included_unique_cves == 2
+    assert [summary.included_occurrence_count for summary in parsed.source_summaries] == [2, 1]
+    assert [summary.included_unique_cves for summary in parsed.source_summaries] == [2, 1]
     assert parsed.input_format == "cve-list"
     assert any("Applied --max-cves 2" in warning for warning in parsed.warnings)

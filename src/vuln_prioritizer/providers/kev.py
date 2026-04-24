@@ -10,7 +10,7 @@ import requests
 
 from vuln_prioritizer.cache import FileCache
 from vuln_prioritizer.config import HTTP_TIMEOUT_SECONDS, KEV_FEED_URL, KEV_MIRROR_URL
-from vuln_prioritizer.models import KevData
+from vuln_prioritizer.models import KevData, ProviderLookupDiagnostics
 from vuln_prioritizer.utils import normalize_cve_id
 
 
@@ -30,6 +30,8 @@ class KevProvider:
         self.feed_url = feed_url
         self.mirror_url = mirror_url
         self.cache = cache
+        self.last_diagnostics = ProviderLookupDiagnostics()
+        self._last_catalog_mode = "unknown"
 
     def fetch_many(
         self,
@@ -40,16 +42,40 @@ class KevProvider:
     ) -> tuple[dict[str, KevData], list[str]]:
         """Load KEV data and return membership metadata for the requested CVEs."""
         warnings: list[str] = []
+        catalog_loaded = True
 
         try:
             index = self._load_index(offline_file, refresh=refresh)
         except Exception as exc:  # noqa: BLE001
-            warnings.append(f"KEV catalog load failed: {exc}")
-            index = {}
+            catalog_loaded = False
+            try:
+                stale = self._load_from_cache(allow_expired=True)
+            except Exception:  # noqa: BLE001 - invalid stale cache is not recoverable
+                stale = None
+            if stale is not None:
+                warnings.append(f"KEV catalog load failed; using expired cached catalog: {exc}")
+                index = stale
+                self._last_catalog_mode = "stale-cache"
+            else:
+                warnings.append(f"KEV catalog load failed: {exc}")
+                index = {}
+                self._last_catalog_mode = "failed"
 
         results: dict[str, KevData] = {}
         for cve_id in cve_ids:
             results[cve_id] = index.get(cve_id, KevData(cve_id=cve_id, in_kev=False))
+        self.last_diagnostics = ProviderLookupDiagnostics(
+            requested=len(cve_ids),
+            cache_hits=len(cve_ids) if self._last_catalog_mode == "cache" else 0,
+            network_fetches=1 if self._last_catalog_mode == "live" else 0,
+            failures=0 if catalog_loaded else 1,
+            content_hits=sum(1 for item in results.values() if item.in_kev),
+            empty_records=(
+                0 if catalog_loaded or self._last_catalog_mode == "stale-cache" else len(cve_ids)
+            ),
+            stale_cache_hits=len(cve_ids) if self._last_catalog_mode == "stale-cache" else 0,
+            degraded=(not catalog_loaded) or self._last_catalog_mode == "stale-cache",
+        )
         return results, warnings
 
     def _load_index(
@@ -59,10 +85,12 @@ class KevProvider:
             index = self._load_offline_file(offline_file)
             if refresh:
                 self._store_in_cache(index)
+            self._last_catalog_mode = "offline"
             return index
 
         cached_index = None if refresh else self._load_from_cache()
         if cached_index is not None:
+            self._last_catalog_mode = "cache"
             return cached_index
 
         try:
@@ -72,6 +100,7 @@ class KevProvider:
 
         index = self._index_vulnerabilities(payload.get("vulnerabilities") or [])
         self._store_in_cache(index)
+        self._last_catalog_mode = "live"
         return index
 
     def _load_offline_file(self, path: Path) -> dict[str, KevData]:
@@ -114,10 +143,10 @@ class KevProvider:
             )
         return index
 
-    def _load_from_cache(self) -> dict[str, KevData] | None:
+    def _load_from_cache(self, *, allow_expired: bool = False) -> dict[str, KevData] | None:
         if self.cache is None:
             return None
-        cached_payload = self.cache.get_json("kev", "catalog")
+        cached_payload = self.cache.get_json("kev", "catalog", allow_expired=allow_expired)
         if cached_payload is None:
             return None
         return {cve_id: KevData.model_validate(item) for cve_id, item in cached_payload.items()}

@@ -28,7 +28,11 @@ from vuln_prioritizer.cli_support.common import (
     validate_output_mode,
 )
 from vuln_prioritizer.inputs import InputLoader, load_asset_context_file, load_vex_files
-from vuln_prioritizer.inputs.loader import AssetContextCatalog, AssetContextLoadDiagnostics
+from vuln_prioritizer.inputs.loader import (
+    AssetContextCatalog,
+    AssetContextLoadDiagnostics,
+    VexLoadDiagnostics,
+)
 from vuln_prioritizer.reporter import write_output
 from vuln_prioritizer.utils import iso_utc_now
 
@@ -69,7 +73,10 @@ def input_validate(
             asset_context,
             return_diagnostics=True,
         )
-        vex_statements = load_vex_files(vex_file or [])
+        vex_statements, vex_diagnostics = load_vex_files(
+            vex_file or [],
+            return_diagnostics=True,
+        )
         parsed_input = (
             InputLoader().load_many(
                 input_specs,
@@ -97,6 +104,7 @@ def input_validate(
         asset_diagnostics=asset_diagnostics,
         vex_files=vex_file or [],
         vex_statements=vex_statements,
+        vex_diagnostics=vex_diagnostics,
         parsed_input=parsed_input,
     )
     json_payload = json.dumps(report, indent=2, sort_keys=True)
@@ -128,11 +136,13 @@ def build_input_validation_report(
     asset_diagnostics: AssetContextLoadDiagnostics,
     vex_files: list[Path],
     vex_statements: list[Any],
+    vex_diagnostics: VexLoadDiagnostics,
     parsed_input: Any,
 ) -> dict[str, Any]:
     warnings = merge_warning_messages(
         list(parsed_input.warnings) if parsed_input is not None else [],
         list(asset_diagnostics.warnings),
+        list(vex_diagnostics.warnings),
     )
     status_counts = Counter(statement.status for statement in vex_statements)
     return {
@@ -156,11 +166,15 @@ def build_input_validation_report(
             "total_rows": int(getattr(parsed_input, "total_rows", 0)),
             "occurrence_count": len(getattr(parsed_input, "occurrences", [])),
             "unique_cves": len(getattr(parsed_input, "unique_cves", [])),
+            "included_occurrence_count": int(getattr(parsed_input, "included_occurrence_count", 0)),
+            "included_unique_cves": int(getattr(parsed_input, "included_unique_cves", 0)),
             "input_source_count": len(getattr(parsed_input, "source_summaries", [])),
             "warning_count": len(warnings),
             "asset_context_rows": asset_diagnostics.loaded_rows,
+            "asset_context_skipped_rows": asset_diagnostics.skipped_rows,
             "asset_context_rules": len(asset_records.rules),
             "vex_statement_count": len(vex_statements),
+            "vex_skipped_statements": vex_diagnostics.skipped_statements,
             "asset_match_conflict_count": int(
                 getattr(parsed_input, "asset_match_conflict_count", 0)
             ),
@@ -172,6 +186,7 @@ def build_input_validation_report(
         "asset_context": {
             "total_rows": asset_diagnostics.total_rows,
             "loaded_rows": asset_diagnostics.loaded_rows,
+            "skipped_rows": asset_diagnostics.skipped_rows,
             "exact_rules": asset_diagnostics.exact_rules,
             "glob_rules": asset_diagnostics.glob_rules,
             "legacy_schema": asset_diagnostics.legacy_schema,
@@ -180,7 +195,9 @@ def build_input_validation_report(
         "vex": {
             "file_count": len(vex_files),
             "statement_count": len(vex_statements),
+            "skipped_statements": vex_diagnostics.skipped_statements,
             "statuses": dict(sorted(status_counts.items())),
+            "warnings": list(vex_diagnostics.warnings),
         },
         "warnings": warnings,
     }
@@ -195,7 +212,9 @@ def render_input_validation_panel(report: dict[str, Any]) -> Panel:
         f"Occurrences: {summary['occurrence_count']}",
         f"Unique CVEs: {summary['unique_cves']}",
         f"Asset context rules: {summary['asset_context_rules']}",
+        f"Skipped asset rows: {summary['asset_context_skipped_rows']}",
         f"VEX statements: {summary['vex_statement_count']}",
+        f"Skipped VEX statements: {summary['vex_skipped_statements']}",
         f"Warnings: {summary['warning_count']}",
     ]
     return Panel("\n".join(lines), title="Input Validation")

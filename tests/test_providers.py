@@ -265,6 +265,8 @@ def test_nvd_fetch_many_degrades_gracefully_and_keeps_warning_order() -> None:
         network_fetches=3,
         failures=1,
         content_hits=2,
+        empty_records=1,
+        degraded=True,
     )
 
 
@@ -359,6 +361,40 @@ def test_epss_fetch_many_parses_batch_payload() -> None:
     assert warnings == []
     assert results["CVE-2021-44228"].epss == 0.973
     assert results["CVE-2021-44228"].percentile == 0.999
+
+
+def test_epss_uses_stale_cache_on_chunk_failure(tmp_path: Path) -> None:
+    class Session:
+        def get(self, *args, **kwargs):  # noqa: ANN002, ANN003
+            raise requests.RequestException("epss offline")
+
+    cache = FileCache(tmp_path / "cache", ttl_hours=1)
+    cache_path = cache._path_for("epss", "CVE-2021-44228")
+    cache_path.parent.mkdir(parents=True, exist_ok=True)
+    cache_path.write_text(
+        json.dumps(
+            {
+                "key": "CVE-2021-44228",
+                "cached_at": "2000-01-01T00:00:00+00:00",
+                "payload": EpssData(
+                    cve_id="CVE-2021-44228",
+                    epss=0.973,
+                    percentile=0.999,
+                    date="2026-04-18",
+                ).model_dump(),
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    provider = EpssProvider(session=Session(), cache=cache)
+    results, warnings = provider.fetch_many(["CVE-2021-44228"])
+
+    assert results["CVE-2021-44228"].epss == 0.973
+    assert any("using expired cached data" in warning for warning in warnings)
+    assert provider.last_diagnostics.stale_cache_hits == 1
+    assert provider.last_diagnostics.failures == 1
+    assert provider.last_diagnostics.degraded is True
 
 
 def test_kev_fetch_many_from_offline_json(tmp_path: Path) -> None:

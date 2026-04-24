@@ -46,7 +46,7 @@ Supported inputs:
 - `nessus-xml`
 - `openvas-xml`
 
-Supported outputs:
+Supported outputs vary by command. The main `analyze` command supports:
 
 - terminal table
 - `markdown`
@@ -54,6 +54,8 @@ Supported outputs:
 - `sarif`
 - direct HTML sidecars via `--html-output`
 - Markdown executive summaries via `--summary-output`
+
+Other commands expose the formats that fit their contract. For example, `report html` writes HTML from saved analysis JSON, evidence bundle commands write or verify ZIP bundles, and helper commands such as `doctor`, `snapshot`, `rollup`, `state`, `attack`, and `data` expose command-specific Markdown, JSON, or table output where supported.
 
 ## Scope Boundaries
 
@@ -285,7 +287,7 @@ Reference material:
 The repository includes a composite GitHub Action for `analyze` and `report html`.
 
 Use it after `actions/checkout`, because the scanned input files live in the consumer repository, not in the action repository.
-In `mode: analyze`, `input` and `input-format` accept newline-delimited values so one action step can merge multiple sources. The action also supports `provider-snapshot-file` and `locked-provider-data` for deterministic replay.
+In `mode: analyze`, `input` and `input-format` accept newline-delimited values so one action step can merge multiple sources. The action also passes through the CLI's waiver, filter, sort, cache, provider replay, and fail-gate flags for deterministic CI runs.
 
 ```yaml
 - uses: actions/checkout@v6
@@ -306,9 +308,17 @@ In `mode: analyze`, `input` and `input-format` accept newline-delimited values s
     summary-template: compact
     html-output-path: report.html
     github-step-summary: "true"
+    waiver-file: waivers.yml
+    hide-waived: "true"
+    fail-on: critical
+    fail-on-expired-waivers: "true"
+    sort-by: operational
+    max-cves: "250"
 ```
 
 Replace `vX.Y.Z` with the release tag or commit SHA you want to consume. `summary-template` is backward-compatible and defaults to `detailed`. Set it to `compact` for GitHub step summaries or PR comments, or keep `detailed` when you want the full executive summary artifact. If a workflow only needs `$GITHUB_STEP_SUMMARY`, the action can now generate a summary without requiring an explicit `summary-output-path`.
+
+Common analyze-only Action inputs include `waiver-file`, `hide-waived`, `fail-on-provider-error`, `fail-on-expired-waivers`, `fail-on-review-due-waivers`, `priority`, `kev-only`, `min-cvss`, `min-epss`, `sort-by`, `max-cves`, `provider-snapshot-file`, `locked-provider-data`, `no-cache`, `cache-dir`, `cache-ttl-hours`, `nvd-api-key-env`, `offline-kev-file`, and `offline-attack-file`.
 
 See [docs/integrations/reporting_and_ci.md](docs/integrations/reporting_and_ci.md) for the full contract and CI patterns, plus [docs/examples/github_action_summary_templates.md](docs/examples/github_action_summary_templates.md) for compact vs detailed examples.
 
@@ -321,9 +331,11 @@ python3 -m pytest -q
 make check
 make benchmark-check
 make release-check
+make demo-sync-check-temp
+make package-check-temp
 ```
 
-If you change docs, examples, or report artifacts, run `make release-check` so the committed example outputs stay in sync.
+If you change docs, examples, or report artifacts, run `make release-check` so the committed example outputs stay in sync. Use the `*-temp` targets when you want the same demo or package validation in a temporary copy without mutating checked-in docs artifacts or `dist/`.
 
 ## Project Status
 

@@ -50,6 +50,7 @@ dev = [
   "mypy>=1.10,<2.0",
   "pre-commit>=3.7,<5.0",
   "pytest>=8.0,<10.0",
+  "pytest-cov>=5.0,<8.0",
   "ruff>=0.5,<1.0",
   "twine>=6.0,<7.0",
   "types-PyYAML>=6.0,<7.0",
@@ -69,7 +70,7 @@ where = ["src"]
 vuln_prioritizer = ["py.typed"]
 
 [tool.pytest.ini_options]
-addopts = "-ra"
+addopts = "-ra --cov=vuln_prioritizer --cov-report=term-missing --cov-fail-under=85"
 testpaths = ["tests"]
 markers = [
   "e2e: end-to-end CLI entrypoint tests that may spawn subprocesses.",

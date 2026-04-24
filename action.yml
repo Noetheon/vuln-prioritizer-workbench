@@ -17,7 +17,7 @@ inputs:
     required: false
     default: auto
   output-format:
-    description: analyze mode only; markdown, json, or sarif
+    description: analyze mode only; markdown, json, sarif, or table
     required: false
     default: markdown
   output-path:
@@ -75,8 +75,16 @@ inputs:
     description: Optional YAML policy file for analyze mode
     required: false
     default: ""
+  waiver-file:
+    description: Optional waiver YAML file for analyze mode
+    required: false
+    default: ""
   show-suppressed:
     description: analyze mode only; set to true to keep VEX-suppressed findings visible
+    required: false
+    default: "false"
+  hide-waived:
+    description: analyze mode only; set to true to hide active waived findings
     required: false
     default: "false"
   attack-source:
@@ -97,6 +105,66 @@ inputs:
     default: ""
   locked-provider-data:
     description: analyze mode only; set to true to forbid live provider lookups outside the provider snapshot
+    required: false
+    default: "false"
+  no-cache:
+    description: analyze mode only; set to true to disable provider cache reads and writes
+    required: false
+    default: "false"
+  cache-dir:
+    description: Optional provider cache directory for analyze mode
+    required: false
+    default: ""
+  cache-ttl-hours:
+    description: Optional provider cache TTL in hours for analyze mode
+    required: false
+    default: ""
+  nvd-api-key-env:
+    description: Optional environment variable name containing the NVD API key for analyze mode
+    required: false
+    default: ""
+  offline-kev-file:
+    description: Optional local CISA KEV JSON file for analyze mode
+    required: false
+    default: ""
+  offline-attack-file:
+    description: Optional legacy local ATT&CK CSV file for analyze mode
+    required: false
+    default: ""
+  priority:
+    description: Optional post-enrichment priority filter for analyze mode; low, medium, high, or critical
+    required: false
+    default: ""
+  kev-only:
+    description: analyze mode only; set to true to include only CISA KEV findings
+    required: false
+    default: "false"
+  min-cvss:
+    description: Optional minimum CVSS filter for analyze mode
+    required: false
+    default: ""
+  min-epss:
+    description: Optional minimum EPSS filter for analyze mode
+    required: false
+    default: ""
+  sort-by:
+    description: Optional analyze sort key; priority, operational, epss, cvss, or cve
+    required: false
+    default: ""
+  max-cves:
+    description: Optional maximum number of CVEs to analyze
+    required: false
+    default: ""
+  fail-on-provider-error:
+    description: analyze mode only; set to true to fail when provider enrichment has errors
+    required: false
+    default: "false"
+  fail-on-expired-waivers:
+    description: analyze mode only; set to true to fail when expired waivers are present
+    required: false
+    default: "false"
+  fail-on-review-due-waivers:
+    description: analyze mode only; set to true to fail when waiver reviews are due
     required: false
     default: "false"
   python-version:
@@ -231,11 +299,44 @@ runs:
           if [[ -n "${{ inputs.policy-file }}" ]]; then
             cmd+=(--policy-file "${{ inputs.policy-file }}")
           fi
+          if [[ -n "${{ inputs.waiver-file }}" ]]; then
+            cmd+=(--waiver-file "${{ inputs.waiver-file }}")
+          fi
           if [[ -n "${{ inputs.fail-on }}" ]]; then
             cmd+=(--fail-on "${{ inputs.fail-on }}")
           fi
           if [[ "${{ inputs.show-suppressed }}" == "true" ]]; then
             cmd+=(--show-suppressed)
+          fi
+          if [[ "${{ inputs.hide-waived }}" == "true" ]]; then
+            cmd+=(--hide-waived)
+          fi
+          if [[ -n "${{ inputs.priority }}" ]]; then
+            cmd+=(--priority "${{ inputs.priority }}")
+          fi
+          if [[ "${{ inputs.kev-only }}" == "true" ]]; then
+            cmd+=(--kev-only)
+          fi
+          if [[ -n "${{ inputs.min-cvss }}" ]]; then
+            cmd+=(--min-cvss "${{ inputs.min-cvss }}")
+          fi
+          if [[ -n "${{ inputs.min-epss }}" ]]; then
+            cmd+=(--min-epss "${{ inputs.min-epss }}")
+          fi
+          if [[ -n "${{ inputs.sort-by }}" ]]; then
+            cmd+=(--sort-by "${{ inputs.sort-by }}")
+          fi
+          if [[ -n "${{ inputs.max-cves }}" ]]; then
+            cmd+=(--max-cves "${{ inputs.max-cves }}")
+          fi
+          if [[ "${{ inputs.fail-on-provider-error }}" == "true" ]]; then
+            cmd+=(--fail-on-provider-error)
+          fi
+          if [[ "${{ inputs.fail-on-expired-waivers }}" == "true" ]]; then
+            cmd+=(--fail-on-expired-waivers)
+          fi
+          if [[ "${{ inputs.fail-on-review-due-waivers }}" == "true" ]]; then
+            cmd+=(--fail-on-review-due-waivers)
           fi
           if [[ -n "${{ inputs.attack-mapping-file }}" ]]; then
             cmd+=(--attack-mapping-file "${{ inputs.attack-mapping-file }}")
@@ -248,6 +349,24 @@ runs:
           fi
           if [[ "${{ inputs.locked-provider-data }}" == "true" ]]; then
             cmd+=(--locked-provider-data)
+          fi
+          if [[ "${{ inputs.no-cache }}" == "true" ]]; then
+            cmd+=(--no-cache)
+          fi
+          if [[ -n "${{ inputs.cache-dir }}" ]]; then
+            cmd+=(--cache-dir "${{ inputs.cache-dir }}")
+          fi
+          if [[ -n "${{ inputs.cache-ttl-hours }}" ]]; then
+            cmd+=(--cache-ttl-hours "${{ inputs.cache-ttl-hours }}")
+          fi
+          if [[ -n "${{ inputs.nvd-api-key-env }}" ]]; then
+            cmd+=(--nvd-api-key-env "${{ inputs.nvd-api-key-env }}")
+          fi
+          if [[ -n "${{ inputs.offline-kev-file }}" ]]; then
+            cmd+=(--offline-kev-file "${{ inputs.offline-kev-file }}")
+          fi
+          if [[ -n "${{ inputs.offline-attack-file }}" ]]; then
+            cmd+=(--offline-attack-file "${{ inputs.offline-attack-file }}")
           fi
           if [[ -n "${{ inputs.vex-files }}" ]]; then
             append_multiline_args "--vex-file" "${{ inputs.vex-files }}"

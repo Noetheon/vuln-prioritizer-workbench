@@ -11,7 +11,9 @@
 - Input files: `data/sample_cves_mixed.txt`
 - Source input: `data/sample_cves_mixed.txt` (cve-list, rows=5, occurrences=5, unique_cves=5)
 - Cache directory: `.cache/vuln-prioritizer`
-- NVD diagnostics: `requested=5, cache_hits=4, network_fetches=1, failures=0, content_hits=5`
+- NVD diagnostics: `requested=5, cache_hits=4, network_fetches=1, failures=0, content_hits=5, empty_records=0, stale_cache_hits=0`
+- EPSS diagnostics: `requested=5, cache_hits=4, network_fetches=1, failures=0, content_hits=5, empty_records=0, stale_cache_hits=0`
+- KEV diagnostics: `requested=5, cache_hits=5, network_fetches=0, failures=0, content_hits=4, empty_records=0, stale_cache_hits=0`
 - ATT&CK mapping file: `data/attack/ctid_kev_enterprise_2025-07-28_attack-16.1_subset.json`
 - ATT&CK technique metadata file: `data/attack/attack_techniques_enterprise_16.1_subset.json`
 - ATT&CK mapping framework: `kev`
@@ -45,6 +47,7 @@
 - Findings shown: 5
 - Filtered out: 0
 - Locked provider data: no
+- Provider degraded: no
 - NVD hits: 5/5
 - EPSS hits: 5/5
 - KEV hits: 4/5

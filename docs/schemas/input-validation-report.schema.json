@@ -5,28 +5,61 @@
   "description": "JSON contract for `vuln-prioritizer input validate --format json`.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["metadata", "summary", "sources", "asset_context", "vex", "warnings"],
+  "required": [
+    "metadata",
+    "summary",
+    "sources",
+    "asset_context",
+    "vex",
+    "warnings"
+  ],
   "properties": {
-    "metadata": {"$ref": "#/$defs/metadata"},
-    "summary": {"$ref": "#/$defs/summary"},
+    "metadata": {
+      "$ref": "#/$defs/metadata"
+    },
+    "summary": {
+      "$ref": "#/$defs/summary"
+    },
     "sources": {
       "type": "array",
-      "items": {"$ref": "#/$defs/source"}
+      "items": {
+        "$ref": "#/$defs/source"
+      }
     },
-    "asset_context": {"$ref": "#/$defs/assetContext"},
-    "vex": {"$ref": "#/$defs/vex"},
-    "warnings": {"$ref": "#/$defs/stringArray"}
+    "asset_context": {
+      "$ref": "#/$defs/assetContext"
+    },
+    "vex": {
+      "$ref": "#/$defs/vex"
+    },
+    "warnings": {
+      "$ref": "#/$defs/stringArray"
+    }
   },
   "$defs": {
-    "nullableString": {"type": ["string", "null"]},
-    "nullableInteger": {"type": ["integer", "null"]},
+    "nullableString": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "nullableInteger": {
+      "type": [
+        "integer",
+        "null"
+      ]
+    },
     "stringArray": {
       "type": "array",
-      "items": {"type": "string"}
+      "items": {
+        "type": "string"
+      }
     },
     "integerMap": {
       "type": "object",
-      "additionalProperties": {"type": "integer"}
+      "additionalProperties": {
+        "type": "integer"
+      }
     },
     "metadata": {
       "type": "object",
@@ -47,19 +80,45 @@
         "max_cves"
       ],
       "properties": {
-        "schema_version": {"const": "1.2.0"},
-        "command": {"const": "input validate"},
-        "generated_at": {"type": "string"},
-        "input_path": {"$ref": "#/$defs/nullableString"},
-        "input_paths": {"$ref": "#/$defs/stringArray"},
-        "input_format": {"type": "string"},
-        "output_format": {"const": "json"},
-        "output_path": {"$ref": "#/$defs/nullableString"},
-        "asset_context": {"$ref": "#/$defs/nullableString"},
-        "vex_files": {"$ref": "#/$defs/stringArray"},
-        "target_kind": {"type": "string"},
-        "target_ref": {"$ref": "#/$defs/nullableString"},
-        "max_cves": {"$ref": "#/$defs/nullableInteger"}
+        "schema_version": {
+          "const": "1.2.0"
+        },
+        "command": {
+          "const": "input validate"
+        },
+        "generated_at": {
+          "type": "string"
+        },
+        "input_path": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "input_paths": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "input_format": {
+          "type": "string"
+        },
+        "output_format": {
+          "const": "json"
+        },
+        "output_path": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "asset_context": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "vex_files": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "target_kind": {
+          "type": "string"
+        },
+        "target_ref": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "max_cves": {
+          "$ref": "#/$defs/nullableInteger"
+        }
       }
     },
     "summary": {
@@ -79,17 +138,51 @@
         "vex_conflict_count"
       ],
       "properties": {
-        "ok": {"type": "boolean"},
-        "total_rows": {"type": "integer"},
-        "occurrence_count": {"type": "integer"},
-        "unique_cves": {"type": "integer"},
-        "input_source_count": {"type": "integer"},
-        "warning_count": {"type": "integer"},
-        "asset_context_rows": {"type": "integer"},
-        "asset_context_rules": {"type": "integer"},
-        "vex_statement_count": {"type": "integer"},
-        "asset_match_conflict_count": {"type": "integer"},
-        "vex_conflict_count": {"type": "integer"}
+        "ok": {
+          "type": "boolean"
+        },
+        "total_rows": {
+          "type": "integer"
+        },
+        "occurrence_count": {
+          "type": "integer"
+        },
+        "unique_cves": {
+          "type": "integer"
+        },
+        "input_source_count": {
+          "type": "integer"
+        },
+        "warning_count": {
+          "type": "integer"
+        },
+        "asset_context_rows": {
+          "type": "integer"
+        },
+        "asset_context_rules": {
+          "type": "integer"
+        },
+        "vex_statement_count": {
+          "type": "integer"
+        },
+        "asset_match_conflict_count": {
+          "type": "integer"
+        },
+        "vex_conflict_count": {
+          "type": "integer"
+        },
+        "included_occurrence_count": {
+          "type": "integer"
+        },
+        "included_unique_cves": {
+          "type": "integer"
+        },
+        "asset_context_skipped_rows": {
+          "type": "integer"
+        },
+        "vex_skipped_statements": {
+          "type": "integer"
+        }
       }
     },
     "source": {
@@ -104,12 +197,36 @@
         "warning_count"
       ],
       "properties": {
-        "input_path": {"type": "string"},
-        "input_format": {"type": "string"},
-        "total_rows": {"type": "integer"},
-        "occurrence_count": {"type": "integer"},
-        "unique_cves": {"type": "integer"},
-        "warning_count": {"type": "integer"}
+        "input_path": {
+          "type": "string"
+        },
+        "input_format": {
+          "type": "string"
+        },
+        "total_rows": {
+          "type": "integer"
+        },
+        "occurrence_count": {
+          "type": "integer"
+        },
+        "unique_cves": {
+          "type": "integer"
+        },
+        "warning_count": {
+          "type": "integer"
+        },
+        "included_occurrence_count": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "included_unique_cves": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        }
       }
     },
     "assetContext": {
@@ -124,22 +241,53 @@
         "warnings"
       ],
       "properties": {
-        "total_rows": {"type": "integer"},
-        "loaded_rows": {"type": "integer"},
-        "exact_rules": {"type": "integer"},
-        "glob_rules": {"type": "integer"},
-        "legacy_schema": {"type": "boolean"},
-        "warnings": {"$ref": "#/$defs/stringArray"}
+        "total_rows": {
+          "type": "integer"
+        },
+        "loaded_rows": {
+          "type": "integer"
+        },
+        "exact_rules": {
+          "type": "integer"
+        },
+        "glob_rules": {
+          "type": "integer"
+        },
+        "legacy_schema": {
+          "type": "boolean"
+        },
+        "warnings": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "skipped_rows": {
+          "type": "integer"
+        }
       }
     },
     "vex": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["file_count", "statement_count", "statuses"],
+      "required": [
+        "file_count",
+        "statement_count",
+        "statuses"
+      ],
       "properties": {
-        "file_count": {"type": "integer"},
-        "statement_count": {"type": "integer"},
-        "statuses": {"$ref": "#/$defs/integerMap"}
+        "file_count": {
+          "type": "integer"
+        },
+        "statement_count": {
+          "type": "integer"
+        },
+        "statuses": {
+          "$ref": "#/$defs/integerMap"
+        },
+        "skipped_statements": {
+          "type": "integer"
+        },
+        "warnings": {
+          "$ref": "#/$defs/stringArray"
+        }
       }
     }
   }

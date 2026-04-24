@@ -115,8 +115,14 @@ def apply_waivers(
     active_date = today or datetime.now(UTC).date()
     warnings: list[str] = []
     by_cve: dict[str, list[WaiverRule]] = {}
+    matched_rule_labels: set[str] = set()
     for rule in rules:
         by_cve.setdefault(rule.cve_id, []).append(rule)
+        if _waiver_scope(rule) == "global":
+            warnings.append(
+                f"Global waiver {_waiver_label(rule)} for {rule.cve_id} can match every asset "
+                "scope for that CVE."
+            )
 
     updated_findings: list[PrioritizedFinding] = []
     for finding in findings:
@@ -126,6 +132,7 @@ def apply_waivers(
         for rule in candidates:
             if not _waiver_matches_finding(rule, finding):
                 continue
+            matched_rule_labels.add(_waiver_label(rule))
             status = waiver_rule_status(rule, today=active_date)
             if status == "expired":
                 matching_expired.append(rule)
@@ -169,6 +176,12 @@ def apply_waivers(
                 status=selected_status,
             )
         )
+
+    unmatched_labels = [
+        _waiver_label(rule) for rule in rules if _waiver_label(rule) not in matched_rule_labels
+    ]
+    for label in unmatched_labels:
+        warnings.append(f"Waiver {label} did not match any finding.")
 
     return updated_findings, warnings
 
@@ -258,6 +271,10 @@ def _apply_single_waiver(
             "waiver_review_on": rule.review_on,
             "waiver_days_remaining": days_remaining,
             "waiver_scope": _waiver_scope(rule),
+            "waiver_id": rule.id,
+            "waiver_matched_scope": _waiver_scope(rule),
+            "waiver_approval_ref": rule.approval_ref,
+            "waiver_ticket_url": rule.ticket_url,
             "rationale": f"{finding.rationale.rstrip('.')} {waiver_note}",
             "context_recommendation": context_recommendation,
         }
@@ -292,6 +309,10 @@ def _apply_expired_waiver(
             "waiver_review_on": rule.review_on,
             "waiver_days_remaining": days_remaining,
             "waiver_scope": _waiver_scope(rule),
+            "waiver_id": rule.id,
+            "waiver_matched_scope": _waiver_scope(rule),
+            "waiver_approval_ref": rule.approval_ref,
+            "waiver_ticket_url": rule.ticket_url,
             "rationale": f"{finding.rationale.rstrip('.')} {waiver_note}",
             "context_recommendation": context_recommendation,
         }

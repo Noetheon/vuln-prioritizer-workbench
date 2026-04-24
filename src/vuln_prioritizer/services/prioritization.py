@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections import Counter
+from datetime import UTC, date, datetime
 from typing import Literal
 
 from vuln_prioritizer.models import (
@@ -25,8 +26,9 @@ from vuln_prioritizer.scoring import (
 )
 from vuln_prioritizer.services.contextualization import is_suppressed_by_vex, is_under_investigation
 from vuln_prioritizer.services.remediation import RemediationService
+from vuln_prioritizer.utils import iso_utc_now
 
-SortField = Literal["priority", "epss", "cvss", "cve"]
+SortField = Literal["priority", "epss", "cvss", "cve", "operational"]
 
 
 class PrioritizationService:
@@ -65,6 +67,7 @@ class PrioritizationService:
             remediation, recommended_action = remediation_service.build_action(
                 provenance,
                 priority_label=priority_label,
+                kev=kev,
             )
             findings.append(
                 PrioritizedFinding(
@@ -113,7 +116,8 @@ class PrioritizationService:
                 )
             )
 
-        sorted_findings = self.sort_findings(findings, sort_by="priority")
+        ranked_findings = self.assign_operational_ranks(findings)
+        sorted_findings = self.sort_findings(ranked_findings, sort_by="priority")
         return sorted_findings, self.count_by_priority(sorted_findings)
 
     def filter_findings(
@@ -159,6 +163,23 @@ class PrioritizationService:
         """Sort findings for terminal and report output."""
         return sorted(findings, key=lambda finding: _finding_sort_key(finding, sort_by))
 
+    def assign_operational_ranks(
+        self,
+        findings: list[PrioritizedFinding],
+    ) -> list[PrioritizedFinding]:
+        """Attach deterministic operational work-queue ranks without changing base priority."""
+        ordered = sorted(findings, key=lambda finding: _operational_sort_key(finding))
+        rank_by_cve = {finding.cve_id: index for index, finding in enumerate(ordered, start=1)}
+        return [
+            finding.model_copy(
+                update={
+                    "operational_rank": rank_by_cve[finding.cve_id],
+                    "context_rank_reasons": _context_rank_reasons(finding),
+                }
+            )
+            for finding in findings
+        ]
+
     def build_comparison(
         self,
         findings: list[PrioritizedFinding],
@@ -199,6 +220,13 @@ class PrioritizationService:
                     waiver_expires_on=finding.waiver_expires_on,
                     waiver_review_on=finding.waiver_review_on,
                     waiver_days_remaining=finding.waiver_days_remaining,
+                    waiver_scope=finding.waiver_scope,
+                    waiver_id=finding.waiver_id,
+                    waiver_matched_scope=finding.waiver_matched_scope,
+                    waiver_approval_ref=finding.waiver_approval_ref,
+                    waiver_ticket_url=finding.waiver_ticket_url,
+                    operational_rank=finding.operational_rank,
+                    context_rank_reasons=finding.context_rank_reasons,
                     changed=cvss_only_rank != finding.priority_rank,
                     delta_rank=cvss_only_rank - finding.priority_rank,
                     change_reason=build_comparison_reason(
@@ -219,6 +247,11 @@ class PrioritizationService:
 
 
 def _finding_sort_key(finding: PrioritizedFinding, sort_by: SortField) -> tuple:
+    if sort_by == "operational":
+        return (
+            finding.operational_rank or 999999,
+            finding.cve_id,
+        )
     if sort_by == "epss":
         return (
             _descending_numeric(finding.epss),
@@ -248,6 +281,11 @@ def _finding_sort_key(finding: PrioritizedFinding, sort_by: SortField) -> tuple:
 
 
 def _comparison_sort_key(row: ComparisonFinding, sort_by: SortField) -> tuple:
+    if sort_by == "operational":
+        return (
+            row.operational_rank or 999999,
+            row.cve_id,
+        )
     if sort_by == "epss":
         return (
             _descending_numeric(row.epss),
@@ -280,3 +318,104 @@ def _descending_numeric(value: float | None) -> tuple[int, float]:
     if value is None:
         return 1, 0.0
     return 0, -value
+
+
+def _operational_sort_key(finding: PrioritizedFinding) -> tuple:
+    return (
+        finding.priority_rank,
+        _waiver_work_queue_bucket(finding),
+        _kev_due_sort_key(finding),
+        0 if _is_internet_facing(finding) else 1,
+        0 if _is_production(finding) else 1,
+        _asset_criticality_sort_key(finding.highest_asset_criticality),
+        -finding.provenance.active_occurrence_count,
+        _attack_relevance_sort_key(finding.attack_relevance),
+        _descending_numeric(finding.epss),
+        _descending_numeric(finding.cvss_base_score),
+        finding.cve_id,
+    )
+
+
+def _waiver_work_queue_bucket(finding: PrioritizedFinding) -> int:
+    if finding.waiver_status == "review_due":
+        return 1
+    if finding.waived:
+        return 2
+    return 0
+
+
+def _kev_due_sort_key(finding: PrioritizedFinding) -> tuple[int, int]:
+    if not finding.in_kev or finding.provider_evidence is None:
+        return 2, 99999999
+    due_date = _parse_date(finding.provider_evidence.kev.due_date)
+    if due_date is None:
+        return 1, 99999999
+    today = _parse_date(iso_utc_now()) or datetime.now(UTC).date()
+    return (0 if due_date <= today else 1), due_date.toordinal()
+
+
+def _parse_date(value: str | None) -> date | None:
+    if value is None:
+        return None
+    text = value.strip()
+    if not text:
+        return None
+    try:
+        return date.fromisoformat(text[:10])
+    except ValueError:
+        return None
+
+
+def _is_internet_facing(finding: PrioritizedFinding) -> bool:
+    highest_exposure = finding.provenance.highest_asset_exposure
+    if highest_exposure and highest_exposure.lower() == "internet-facing":
+        return True
+    return any(
+        occurrence.asset_exposure and occurrence.asset_exposure.lower() == "internet-facing"
+        for occurrence in finding.provenance.occurrences
+    )
+
+
+def _is_production(finding: PrioritizedFinding) -> bool:
+    return any(
+        occurrence.asset_environment
+        and occurrence.asset_environment.lower() in {"prod", "production"}
+        for occurrence in finding.provenance.occurrences
+    )
+
+
+def _asset_criticality_sort_key(value: str | None) -> int:
+    return {"critical": 0, "high": 1, "medium": 2, "low": 3}.get((value or "").lower(), 4)
+
+
+def _attack_relevance_sort_key(value: str) -> int:
+    return {"High": 0, "Medium": 1, "Low": 2, "Unmapped": 3}.get(value, 4)
+
+
+def _context_rank_reasons(finding: PrioritizedFinding) -> list[str]:
+    reasons: list[str] = []
+    if finding.waiver_status == "expired":
+        reasons.append("expired waiver requires reassessment")
+    elif finding.waiver_status == "review_due":
+        reasons.append("waiver review due")
+    elif finding.waived:
+        reasons.append("active waiver lowers work-queue urgency")
+    if finding.in_kev:
+        due_date = (
+            None if finding.provider_evidence is None else finding.provider_evidence.kev.due_date
+        )
+        if due_date:
+            reasons.append(f"KEV due date {due_date}")
+        else:
+            reasons.append("KEV-listed")
+    if _is_internet_facing(finding):
+        reasons.append("internet-facing exposure")
+    if _is_production(finding):
+        reasons.append("production environment")
+    if finding.highest_asset_criticality:
+        reasons.append(f"{finding.highest_asset_criticality} asset criticality")
+    if finding.provenance.active_occurrence_count > 1:
+        reasons.append(f"{finding.provenance.active_occurrence_count} active occurrences")
+    if finding.attack_relevance in {"High", "Medium"}:
+        reasons.append(f"ATT&CK {finding.attack_relevance}")
+    return reasons

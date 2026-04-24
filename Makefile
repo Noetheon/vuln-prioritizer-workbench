@@ -5,7 +5,7 @@ ATTACK_METADATA_FILE := data/attack/attack_techniques_enterprise_16.1_subset.jso
 DEMO_FIXED_NOW := 2026-04-21T12:00:00+00:00
 DEMO_ENV := PYTHONPATH=src VULN_PRIORITIZER_FIXED_NOW=$(DEMO_FIXED_NOW)
 
-.PHONY: install test lint format fix typecheck check benchmark-check docs-check docs-serve actionlint-check workflow-check demo-sync-check package package-check pipx-source-smoke release-check demo-report demo-compare demo-explain demo-attack-report demo-attack-compare demo-attack-explain demo-attack-coverage demo-attack-navigator demo-pr-comment demo-results-sarif demo-html-report precommit-install
+.PHONY: install test lint format fix typecheck check benchmark-check docs-check docs-serve actionlint-check workflow-check demo-sync-check demo-sync-check-temp package package-check package-check-temp pipx-source-smoke release-check demo-report demo-compare demo-explain demo-attack-report demo-attack-compare demo-attack-explain demo-attack-coverage demo-attack-navigator demo-pr-comment demo-results-sarif demo-html-report precommit-install
 
 install:
 	$(PYTHON) -m pip install -e .[dev]
@@ -74,12 +74,26 @@ demo-sync-check:
 	fi; \
 	rm -f "$$before" "$$after"
 
+demo-sync-check-temp:
+	@set -e; \
+	tmp="$$(mktemp -d)"; \
+	trap 'rm -rf "$$tmp"' EXIT; \
+	rsync -a --exclude .venv --exclude dist --exclude build . "$$tmp"/; \
+	$(MAKE) -C "$$tmp" demo-sync-check
+
 package:
 	rm -rf dist
 	$(PYTHON) -m build
 
 package-check: package
 	$(PYTHON) -m twine check dist/*
+
+package-check-temp:
+	@set -e; \
+	tmp="$$(mktemp -d)"; \
+	trap 'rm -rf "$$tmp"' EXIT; \
+	rsync -a --exclude .venv --exclude dist --exclude build . "$$tmp"/; \
+	$(MAKE) -C "$$tmp" package-check
 
 pipx-source-smoke:
 	$(PYTHON) -m pip install --upgrade pip pipx
