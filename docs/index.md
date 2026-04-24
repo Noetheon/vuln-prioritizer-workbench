@@ -83,7 +83,7 @@ The web/API Workbench is local-first, SQLite-backed, and focused on CVE lists, `
 - Use [roadmap.md](roadmap.md) for shipped scope and deliberate non-goals.
 - Use [release_operations.md](release_operations.md) for maintainer-only release, GitHub Release recovery, and PyPI/TestPyPI operations.
 - Use [community_repository_setup.md](community_repository_setup.md) for maintainer-facing public repo topics, labels, and triage defaults.
-- Use [releases/v1.1.0.md](releases/v1.1.0.md) for the current package release target.
+- Use [releases/v1.1.0.md](releases/v1.1.0.md) for the current package release.
 
 ## Local Docs Preview (Repo Checkout Only)
 

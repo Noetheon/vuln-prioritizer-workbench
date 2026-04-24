@@ -14,7 +14,7 @@ The Workbench v1.0 milestone evidence is preserved here, but the current package
 - Local closeout gates recorded for the implementation baseline: `make check` (`407 passed, 2 skipped`, 90.07% coverage), `make release-check`, `make demo-evidence-bundle-check`, and `make dependency-audit`.
 - This docs closeout branch also passed `make docs-check`, `make demo-evidence-bundle-check`, `make dependency-audit`, `make docker-demo-smoke`, and `make release-check` on 2026-04-25.
 - `python3 -m pip check` is not used as release evidence in the shared user-site environment because unrelated globally installed packages conflict with each other outside this project.
-- Public package tag and GitHub Release object: pending until the release owner cuts `v1.1.0` from the intended release commit.
+- Public package tag and GitHub Release object: `v1.1.0` published from `23199ef85fb9ac08b9bb0e301b2aadbf3377f791`.
 
 ## GitHub Tracker Mapping
 
@@ -141,7 +141,7 @@ make docker-demo-smoke
 - [x] Run `make demo-sync-check-temp` before tagging when examples or report outputs changed.
 - [x] Confirm release workflow configuration still builds distributions, validates them, creates the GitHub Release from checked-in notes, and only publishes to PyPI when the repository gate allows it.
 - [x] Confirm the tagged release notes file exists under `docs/releases/`.
-- [ ] Confirm GitHub Release, tag, package metadata, and docs version all match.
+- [x] Confirm GitHub Release, tag, package metadata, and docs version all match.
 
 ## Changelog and Release Notes
 
