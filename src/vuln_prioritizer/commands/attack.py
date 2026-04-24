@@ -14,7 +14,7 @@ from vuln_prioritizer.cli_support.attack_support import (
     generate_attack_coverage_markdown,
     generate_attack_validation_markdown,
     load_attack_only_or_exit,
-    read_input_cves,
+    read_input_cves_from_specs,
     render_attack_coverage_table,
     render_attack_validation_panel,
     validate_attack_inputs_or_exit,
@@ -22,8 +22,10 @@ from vuln_prioritizer.cli_support.attack_support import (
 from vuln_prioritizer.cli_support.common import (
     REPORT_OUTPUT_FORMATS,
     AttackSource,
+    InputFormat,
     OutputFormat,
     ReportOutputFormat,
+    build_input_specs_or_exit,
     console,
     emit_stdout,
     output_format_option,
@@ -78,7 +80,8 @@ def attack_validate(
 
 
 def attack_coverage(
-    input: Path = typer.Option(..., "--input", exists=True, dir_okay=False, readable=True),
+    input: list[Path] = typer.Option(..., "--input", exists=True, dir_okay=False, readable=True),
+    input_format: list[InputFormat] | None = typer.Option(None, "--input-format"),
     attack_source: AttackSource = typer.Option(AttackSource.ctid_json, "--attack-source"),
     attack_mapping_file: Path = typer.Option(..., "--attack-mapping-file", dir_okay=False),
     attack_technique_metadata_file: Path | None = typer.Option(
@@ -98,7 +101,20 @@ def attack_coverage(
         allowed_formats=set(REPORT_OUTPUT_FORMATS),
     )
 
-    cve_ids, total_input_rows, parser_warnings = read_input_cves(input, max_cves=max_cves)
+    input_specs = build_input_specs_or_exit(
+        input_paths=input,
+        input_formats=input_format,
+        command_name="attack coverage",
+        require_inputs=True,
+    )
+    (
+        cve_ids,
+        total_input_rows,
+        parser_warnings,
+        input_sources,
+        effective_input_format,
+        input_paths,
+    ) = read_input_cves_from_specs(input_specs, max_cves=max_cves)
     attack_items, metadata, warnings = load_attack_only_or_exit(
         cve_ids,
         attack_source=attack_source.value,
@@ -110,7 +126,12 @@ def attack_coverage(
     json_payload = json.dumps(
         {
             "metadata": {
-                "input_path": str(input),
+                "schema_version": "1.2.0",
+                "input_path": input_paths[0] if input_paths else str(input[0]),
+                "input_paths": input_paths,
+                "input_format": effective_input_format,
+                "input_sources": input_sources,
+                "max_cves": max_cves,
                 **metadata,
             },
             "summary": summary.model_dump(),
@@ -152,7 +173,7 @@ def attack_coverage(
             write_output(
                 output,
                 generate_attack_coverage_markdown(
-                    input_path=str(input),
+                    input_path=", ".join(input_paths),
                     attack_items=attack_items,
                     summary=summary,
                     metadata=metadata,
@@ -165,7 +186,8 @@ def attack_coverage(
 
 
 def attack_navigator_layer(
-    input: Path = typer.Option(..., "--input", exists=True, dir_okay=False, readable=True),
+    input: list[Path] = typer.Option(..., "--input", exists=True, dir_okay=False, readable=True),
+    input_format: list[InputFormat] | None = typer.Option(None, "--input-format"),
     attack_source: AttackSource = typer.Option(AttackSource.ctid_json, "--attack-source"),
     attack_mapping_file: Path = typer.Option(..., "--attack-mapping-file", dir_okay=False),
     attack_technique_metadata_file: Path | None = typer.Option(
@@ -175,7 +197,16 @@ def attack_navigator_layer(
     max_cves: int | None = typer.Option(None, "--max-cves", min=1),
 ) -> None:
     """Export an ATT&CK Navigator layer from local mapping coverage."""
-    cve_ids, _, parser_warnings = read_input_cves(input, max_cves=max_cves)
+    input_specs = build_input_specs_or_exit(
+        input_paths=input,
+        input_formats=input_format,
+        command_name="attack navigator-layer",
+        require_inputs=True,
+    )
+    cve_ids, _, parser_warnings, _, _, input_paths = read_input_cves_from_specs(
+        input_specs,
+        max_cves=max_cves,
+    )
     attack_items, metadata, warnings = load_attack_only_or_exit(
         cve_ids,
         attack_source=attack_source.value,
@@ -188,7 +219,7 @@ def attack_navigator_layer(
         Panel(
             "\n".join(
                 [
-                    f"Input file: {input}",
+                    "Input file: " + (input_paths[0] if len(input_paths) == 1 else "mixed"),
                     f"Output file: {output}",
                     f"ATT&CK source: {metadata['source']}",
                     f"Mapped techniques: {len(layer['techniques'])}",

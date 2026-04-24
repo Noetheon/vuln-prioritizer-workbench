@@ -238,3 +238,95 @@ def test_ranked_vex_matching_uses_earlier_statement_when_specificity_ties() -> N
 
     resolved = apply_vex_statements([occurrence], statements)
     assert resolved[0].vex_status == "under_investigation"
+
+
+def test_vex_matching_canonicalizes_purls_and_component_names() -> None:
+    occurrence = _occurrence().model_copy(
+        update={
+            "component_name": " Django ",
+            "component_version": "4.2.0",
+            "purl": "pkg:pypi/Django@4.2.0?repository_url=https%3A%2F%2Fpypi.org",
+            "target_ref": None,
+        }
+    )
+    statements = [
+        _statement(status="fixed", purl="pkg:pypi/django@4.2.0"),
+        _statement(
+            status="not_affected",
+            component_name="django",
+            component_version="4.2.0",
+        ),
+    ]
+
+    match = match_vex_statement_details(occurrence, statements)
+
+    assert match is not None
+    assert match.specificity == "purl"
+    assert match.statement.status == "fixed"
+    assert match.candidate_count == 2
+
+
+def test_vex_matching_keeps_identity_qualifiers_distinct() -> None:
+    occurrence = _occurrence().model_copy(
+        update={
+            "purl": "pkg:deb/debian/openssl@3.0.0?distro=debian-12",
+            "target_ref": None,
+        }
+    )
+    statements = [
+        _statement(
+            status="not_affected",
+            purl="pkg:deb/debian/openssl@3.0.0?distro=debian-11",
+        ),
+        _statement(
+            status="fixed",
+            purl="pkg:deb/debian/openssl@3.0.0?repository_url=https%3A%2F%2Fdeb.debian.org&distro=debian-12",
+        ),
+    ]
+
+    match = match_vex_statement_details(occurrence, statements)
+
+    assert match is not None
+    assert match.specificity == "purl"
+    assert match.statement.status == "fixed"
+    assert match.candidate_count == 1
+
+
+def test_openvex_subcomponent_id_is_available_for_purl_matching() -> None:
+    statements = parse_openvex_document(
+        {
+            "statements": [
+                {
+                    "vulnerability": {"name": "CVE-2024-1234"},
+                    "status": "not_affected",
+                    "products": [
+                        {
+                            "@id": "pkg:oci/acme/app@sha256:abc",
+                            "subcomponents": [
+                                {
+                                    "@id": (
+                                        "pkg:pypi/Django@4.2.0?"
+                                        "repository_url=https%3A%2F%2Fpypi.org"
+                                    )
+                                }
+                            ],
+                        }
+                    ],
+                }
+            ]
+        }
+    )
+    occurrence = _occurrence().model_copy(
+        update={
+            "component_name": "django",
+            "component_version": "4.2.0",
+            "purl": "pkg:pypi/django@4.2.0",
+            "target_ref": None,
+        }
+    )
+
+    match = match_vex_statement_details(occurrence, statements)
+
+    assert match is not None
+    assert match.specificity == "purl"
+    assert match.statement.status == "not_affected"

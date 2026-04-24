@@ -113,3 +113,69 @@ def test_cli_input_validate_counts_standalone_asset_context_warnings(
     assert payload["summary"]["ok"] is False
     assert payload["summary"]["warning_count"] == 1
     assert payload["warnings"] == payload["asset_context"]["warnings"]
+
+
+def test_cli_input_validate_strict_fails_on_warnings_with_json_stdout(
+    runner,
+    tmp_path: Path,
+) -> None:
+    input_file = tmp_path / "cves.txt"
+    input_file.write_text("CVE-2024-0001\nnot-a-cve\n", encoding="utf-8")
+
+    result = runner.invoke(
+        app,
+        [
+            "input",
+            "validate",
+            "--input",
+            str(input_file),
+            "--format",
+            "json",
+            "--strict",
+        ],
+    )
+
+    assert result.exit_code == 1
+    payload = json.loads(result.stdout)
+    assert payload["summary"]["ok"] is False
+    assert payload["summary"]["warning_count"] == 1
+
+
+def test_cli_input_validate_strict_writes_output_before_failing(
+    runner,
+    tmp_path: Path,
+) -> None:
+    input_file = tmp_path / "generic-occurrences.csv"
+    output_file = tmp_path / "input-validation.json"
+    input_file.write_text(
+        "\n".join(
+            [
+                "cve,component,version,fix_version,target_kind,target,criticality",
+                "CVE-2024-0001,django,4.2.0,4.2.8,repository,backend,unknown",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    result = runner.invoke(
+        app,
+        [
+            "input",
+            "validate",
+            "--input",
+            str(input_file),
+            "--input-format",
+            "generic-occurrence-csv",
+            "--output",
+            str(output_file),
+            "--format",
+            "json",
+            "--strict",
+        ],
+    )
+
+    assert result.exit_code == 1
+    payload = json.loads(output_file.read_text(encoding="utf-8"))
+    assert payload["summary"]["ok"] is False
+    assert "unknown asset criticality" in "\n".join(payload["warnings"])

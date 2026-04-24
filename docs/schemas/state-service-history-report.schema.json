@@ -4,7 +4,7 @@
   "title": "vuln-prioritizer state service history report",
   "description": "JSON contract for `vuln-prioritizer state service-history --format json`.",
   "type": "object",
-  "additionalProperties": false,
+  "additionalProperties": true,
   "required": ["metadata", "items"],
   "properties": {
     "metadata": {"$ref": "#/$defs/metadata"},
@@ -20,7 +20,7 @@
     },
     "metadata": {
       "type": "object",
-      "additionalProperties": false,
+      "additionalProperties": true,
       "required": [
         "schema_version",
         "generated_at",
@@ -42,7 +42,7 @@
     },
     "item": {
       "type": "object",
-      "additionalProperties": false,
+      "additionalProperties": true,
       "required": [
         "snapshot_generated_at",
         "snapshot_path",

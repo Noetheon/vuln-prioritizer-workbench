@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
+from typing import Any, cast
 
 import typer
 from pydantic import ValidationError
@@ -743,6 +745,8 @@ def prepare_explain(request: ExplainRequest) -> ExplainResult:
         asset_match_conflict_count=parsed_input.asset_match_conflict_count,
         vex_conflict_count=parsed_input.vex_conflict_count,
         waived_count=sum(1 for item in findings if item.waived),
+        waiver_review_due_count=sum(1 for item in findings if item.waiver_status == "review_due"),
+        expired_waiver_count=sum(1 for item in findings if item.waiver_status == "expired"),
         attack_summary=attack_summary,
         policy_overrides=request.policy.override_descriptions(),
         priority_policy=request.policy,
@@ -768,4 +772,91 @@ def prepare_explain(request: ExplainRequest) -> ExplainResult:
         comparison=comparison,
         context=context,
         warnings=warnings,
+    )
+
+
+def prepare_saved_explain(
+    *,
+    cve_id: str,
+    input_path: Path,
+    output: Path | None,
+    format: StrEnum,
+) -> ExplainResult:
+    """Build an explain result from a saved analysis or snapshot JSON artifact."""
+    try:
+        payload = json.loads(input_path.read_text(encoding="utf-8"))
+    except OSError as exc:
+        exit_input_validation(f"{input_path} could not be read: {exc}")
+    except json.JSONDecodeError as exc:
+        exit_input_validation(f"{input_path} is not valid JSON: {exc.msg}.")
+    if not isinstance(payload, dict) or not isinstance(payload.get("findings"), list):
+        exit_input_validation("--analysis-json/--snapshot-json must contain a findings array.")
+
+    finding_payload = next(
+        (
+            item
+            for item in payload["findings"]
+            if isinstance(item, dict) and item.get("cve_id") == cve_id
+        ),
+        None,
+    )
+    if finding_payload is None:
+        exit_input_validation(f"{input_path} does not contain a finding for {cve_id}.")
+
+    try:
+        finding = PrioritizedFinding.model_validate(finding_payload, extra="ignore")
+        raw_metadata = payload.get("metadata")
+        metadata: dict[str, Any] = (
+            cast(dict[str, Any], raw_metadata) if isinstance(raw_metadata, dict) else {}
+        )
+        context = AnalysisContext.model_validate(
+            {
+                **metadata,
+                "input_path": str(input_path),
+                "output_path": str(output) if output else None,
+                "output_format": format.value,
+                "generated_at": metadata.get("generated_at") or iso_utc_now(),
+                "findings_count": 1,
+                "schema_version": "1.0.0",
+            }
+        )
+        attack_summary = AttackSummary.model_validate(
+            payload.get("attack_summary") or {},
+            extra="ignore",
+        )
+        context = context.model_copy(update={"attack_summary": attack_summary})
+    except ValidationError as exc:
+        exit_input_validation(f"{input_path} contains an invalid saved finding: {exc}")
+
+    evidence = finding.provider_evidence
+    nvd = evidence.nvd if evidence is not None else NvdData(cve_id=cve_id)
+    epss = evidence.epss if evidence is not None else EpssData(cve_id=cve_id)
+    kev = evidence.kev if evidence is not None else KevData(cve_id=cve_id, in_kev=False)
+    attack = AttackData(
+        cve_id=cve_id,
+        mapped=finding.attack_mapped,
+        source=context.attack_source,
+        source_version=context.attack_source_version,
+        attack_version=context.attack_version,
+        domain=context.attack_domain,
+        mappings=finding.attack_mappings,
+        techniques=finding.attack_technique_details,
+        attack_relevance=finding.attack_relevance,
+        attack_rationale=finding.attack_rationale,
+        attack_techniques=finding.attack_techniques,
+        attack_tactics=finding.attack_tactics,
+        attack_note=finding.attack_note,
+    )
+    comparison = PrioritizationService(policy=context.priority_policy).build_comparison([finding])[
+        0
+    ]
+    return ExplainResult(
+        finding=finding,
+        nvd=nvd,
+        epss=epss,
+        kev=kev,
+        attack=attack,
+        comparison=comparison,
+        context=context,
+        warnings=list(context.warnings),
     )

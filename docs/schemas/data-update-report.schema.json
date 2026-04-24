@@ -4,7 +4,7 @@
   "title": "vuln-prioritizer data update report",
   "description": "JSON contract for `vuln-prioritizer data update --format json`.",
   "type": "object",
-  "additionalProperties": false,
+  "additionalProperties": true,
   "required": ["metadata", "summary", "requested_cve_ids", "sources", "warnings"],
   "properties": {
     "metadata": {
@@ -41,7 +41,7 @@
     },
     "metadata": {
       "type": "object",
-      "additionalProperties": false,
+      "additionalProperties": true,
       "required": [
         "schema_version",
         "command",
@@ -107,7 +107,7 @@
     },
     "summary": {
       "type": "object",
-      "additionalProperties": false,
+      "additionalProperties": true,
       "required": ["selected_sources", "requested_cves", "updated_sources"],
       "properties": {
         "selected_sources": {
@@ -125,7 +125,7 @@
     },
     "updateSource": {
       "type": "object",
-      "additionalProperties": false,
+      "additionalProperties": true,
       "required": [
         "source",
         "mode",

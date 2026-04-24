@@ -8,12 +8,15 @@
 - ATT&CK source: `ctid-mappings-explorer`
 - Cache enabled: `yes`
 - Output path: `docs/example_attack_compare.md`
+- Provider snapshot file: `data/demo_provider_snapshot.json`
+- Provider snapshot mode: `locked`
+- Provider snapshot sources: `nvd, epss, kev`
 - Input files: `data/sample_cves_mixed.txt`
 - Source input: `data/sample_cves_mixed.txt` (cve-list, rows=5, occurrences=5, unique_cves=5)
 - Cache directory: `.cache/vuln-prioritizer`
-- NVD diagnostics: `requested=5, cache_hits=4, network_fetches=1, failures=0, content_hits=5, empty_records=0, stale_cache_hits=0`
-- EPSS diagnostics: `requested=5, cache_hits=4, network_fetches=1, failures=0, content_hits=5, empty_records=0, stale_cache_hits=0`
-- KEV diagnostics: `requested=5, cache_hits=5, network_fetches=0, failures=0, content_hits=4, empty_records=0, stale_cache_hits=0`
+- NVD diagnostics: `requested=5, cache_hits=0, network_fetches=0, failures=0, content_hits=5, empty_records=0, stale_cache_hits=0`
+- EPSS diagnostics: `requested=5, cache_hits=0, network_fetches=0, failures=0, content_hits=5, empty_records=0, stale_cache_hits=0`
+- KEV diagnostics: `requested=5, cache_hits=0, network_fetches=0, failures=0, content_hits=4, empty_records=0, stale_cache_hits=0`
 - ATT&CK mapping file: `data/attack/ctid_kev_enterprise_2025-07-28_attack-16.1_subset.json`
 - ATT&CK technique metadata file: `data/attack/attack_techniques_enterprise_16.1_subset.json`
 - ATT&CK mapping framework: `kev`
@@ -37,6 +40,7 @@
 - NVD CVE API 2.0
 - FIRST EPSS API
 - CISA Known Exploited Vulnerabilities Catalog
+- Provider snapshot replay: epss, kev, nvd
 - CTID Mappings Explorer (local JSON artifact)
 - Input formats: cve-list
 
@@ -46,7 +50,7 @@
 - Merged inputs: 1
 - Findings shown: 5
 - Filtered out: 0
-- Locked provider data: no
+- Locked provider data: yes
 - Provider degraded: no
 - NVD hits: 5/5
 - EPSS hits: 5/5
@@ -85,4 +89,4 @@
 | CVE-2024-4577 | In PHP versions 8.1.* before 8.1.29, 8.2.* before 8.2.20, 8.3.* before 8.3.8, when using Apache and PHP-CGI on Windows, if the system is set up to use certain code pages, Windows may use "Best-Fit" behavior to replace characters in command line given to Win32 API functions. PHP CGI module may misinterpret those characters as PHP options, which may allow a malicious user to pass options to PHP binary being run, and thus reveal the source code of scripts, run arbitrary PHP code on the server, etc. | Critical | Critical / KEV | N.A. | 12 technique(s) | High | No change | No | 9.8 | 0.944 | Yes | N.A. | CVSS and enrichment both support the same Critical outcome. |
 | CVE-2020-1472 | An elevation of privilege vulnerability exists when an attacker establishes a vulnerable Netlogon secure channel connection to a domain controller, using the Netlogon Remote Protocol (MS-NRPC). An attacker who successfully exploited the vulnerability could run a specially crafted application on a device on the network. To exploit the vulnerability, an unauthenticated attacker would be required to use MS-NRPC to connect to a domain controller to obtain domain administrator access. Microsoft is addressing the vulnerability in a phased two-part rollout. These updates address the vulnerability by modifying how Netlogon handles the usage of Netlogon secure channels. For guidelines on how to manage the changes required for this vulnerability and more information on the phased rollout, see How to manage the changes in Netlogon secure channel connections associated with CVE-2020-1472 (updated September 28, 2020). When the second phase of Windows updates become available in Q1 2021, customers will be notified via a revision to this security vulnerability. If you wish to be notified when these updates are released, we recommend that you register for the security notifications mailer to be alerted of content changes to this advisory. See Microsoft Technical Security Notifications. | Medium | Critical / KEV | N.A. | 6 technique(s) | High | Up 2 | Yes | 5.5 | 0.944 | Yes | N.A. | KEV membership raises this CVE from the CVSS-only Medium baseline to Critical. |
 | CVE-2023-34362 | In Progress MOVEit Transfer before 2021.0.6 (13.0.6), 2021.1.4 (13.1.4), 2022.0.4 (14.0.4), 2022.1.5 (14.1.5), and 2023.0.1 (15.0.1), a SQL injection vulnerability has been found in the MOVEit Transfer web application that could allow an unauthenticated attacker to gain access to MOVEit Transfer's database. Depending on the database engine being used (MySQL, Microsoft SQL Server, or Azure SQL), an attacker may be able to infer information about the structure and contents of the database, and execute SQL statements that alter or delete database elements. NOTE: this is exploited in the wild in May and June 2023; exploitation of unpatched systems can occur via HTTP or HTTPS. All versions (e.g., 2020.0 and 2019x) before the five explicitly mentioned versions are affected, including older unsupported versions. | Critical | Critical / KEV | N.A. | 7 technique(s) | High | No change | No | 9.8 | 0.943 | Yes | N.A. | CVSS and enrichment both support the same Critical outcome. |
-| CVE-2024-3094 | Malicious code was discovered in the upstream tarballs of xz, starting with version 5.6.0. Through a series of complex obfuscations, the liblzma build process extracts a prebuilt object file from a disguised test file existing in the source code, which is then used to modify specific functions in the liblzma code. This results in a modified liblzma library that can be used by any software linked against this library, intercepting and modifying the data interaction with this library. | Critical | Critical | N.A. | Unmapped | Unmapped | No change | No | 10.0 | 0.841 | No | N.A. | CVSS and enrichment both support the same Critical outcome. |
+| CVE-2024-3094 | Malicious code was discovered in the upstream tarballs of xz, starting with version 5.6.0. Through a series of complex obfuscations, the liblzma build process extracts a prebuilt object file from a disguised test file existing in the source code, which is then used to modify specific functions in the liblzma code. This results in a modified liblzma library that can be used by any software linked against this library, intercepting and modifying the data interaction with this library. | Critical | Critical | N.A. | Unmapped | Unmapped | No change | No | 10.0 | 0.846 | No | N.A. | CVSS and enrichment both support the same Critical outcome. |

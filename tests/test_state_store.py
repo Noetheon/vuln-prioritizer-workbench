@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import sqlite3
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -363,6 +364,138 @@ def test_state_store_service_counts_preserve_duplicate_occurrences(
     assert service_history[0]["occurrence_count"] == 2
     assert service_history[0]["distinct_cves"] == 1
     assert service_history[0]["critical_count"] == 1
+
+
+def test_state_store_migrates_v1_schema_and_sets_user_version(tmp_path: Path) -> None:
+    db_path = tmp_path / "state.db"
+    with sqlite3.connect(db_path) as connection:
+        connection.executescript(
+            """
+            CREATE TABLE state_meta (
+                key TEXT PRIMARY KEY,
+                value TEXT NOT NULL
+            );
+            CREATE TABLE snapshots (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                snapshot_sha256 TEXT NOT NULL UNIQUE,
+                imported_at TEXT NOT NULL,
+                snapshot_generated_at TEXT NOT NULL,
+                snapshot_path TEXT NOT NULL,
+                input_path TEXT,
+                input_format TEXT NOT NULL,
+                findings_count INTEGER NOT NULL,
+                metadata_json TEXT NOT NULL
+            );
+            CREATE TABLE snapshot_findings (
+                snapshot_id INTEGER NOT NULL REFERENCES snapshots(id) ON DELETE CASCADE,
+                cve_id TEXT NOT NULL,
+                priority_label TEXT NOT NULL,
+                priority_rank INTEGER NOT NULL,
+                in_kev INTEGER NOT NULL,
+                attack_mapped INTEGER NOT NULL,
+                attack_relevance TEXT NOT NULL,
+                waived INTEGER NOT NULL,
+                waiver_status TEXT,
+                waiver_owner TEXT,
+                waiver_expires_on TEXT,
+                waiver_review_on TEXT,
+                waiver_days_remaining INTEGER,
+                services_json TEXT NOT NULL,
+                asset_ids_json TEXT NOT NULL,
+                finding_json TEXT NOT NULL,
+                PRIMARY KEY (snapshot_id, cve_id)
+            );
+            PRAGMA user_version = 1;
+            """
+        )
+
+    state_store_module.SQLiteStateStore(db_path).initialize()
+
+    with sqlite3.connect(db_path) as connection:
+        user_version = connection.execute("PRAGMA user_version").fetchone()[0]
+        columns = {row[1] for row in connection.execute("PRAGMA table_info(snapshot_findings)")}
+        indexes = {row[1] for row in connection.execute("PRAGMA index_list(snapshot_findings)")}
+
+    assert user_version == state_store_module.STATE_SCHEMA_USER_VERSION
+    assert {
+        "waiver_id",
+        "waiver_scope",
+        "cvss_base_score",
+        "epss",
+        "operational_rank",
+        "suppressed_by_vex",
+        "remediation_strategy",
+    }.issubset(columns)
+    assert {
+        "idx_snapshot_findings_waiver_id",
+        "idx_snapshot_findings_waiver_scope",
+        "idx_snapshot_findings_cvss",
+        "idx_snapshot_findings_epss",
+        "idx_snapshot_findings_operational_rank",
+        "idx_snapshot_findings_remediation_strategy",
+    }.issubset(indexes)
+
+
+def test_state_store_top_services_latest_only_uses_newest_generated_snapshot(
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    class FrozenDateTime(datetime):
+        @classmethod
+        def now(cls, tz=None):  # noqa: ANN206
+            return cls(2026, 4, 30, 12, 0, 0, tzinfo=tz or UTC)
+
+    monkeypatch.setattr(state_store_module, "datetime", FrozenDateTime)
+
+    db_path = tmp_path / "state.db"
+    newest_path = _write_snapshot_file(
+        tmp_path,
+        "services-newest.json",
+        _snapshot_payload(
+            "2026-04-20T09:00:00+00:00",
+            [
+                _finding(
+                    "CVE-2024-4201",
+                    priority_label="Critical",
+                    priority_rank=1,
+                    services=["identity"],
+                )
+            ],
+        ),
+    )
+    older_path = _write_snapshot_file(
+        tmp_path,
+        "services-older.json",
+        _snapshot_payload(
+            "2026-04-10T09:00:00+00:00",
+            [
+                _finding(
+                    "CVE-2024-4202",
+                    priority_label="Critical",
+                    priority_rank=1,
+                    services=["payments"],
+                )
+            ],
+        ),
+    )
+    store = state_store_module.SQLiteStateStore(db_path)
+    store.import_snapshot(
+        snapshot_path=newest_path,
+        payload=json.loads(newest_path.read_text(encoding="utf-8")),
+    )
+    store.import_snapshot(
+        snapshot_path=older_path,
+        payload=json.loads(older_path.read_text(encoding="utf-8")),
+    )
+
+    services = store.top_services(
+        days=30,
+        priority_filter="all",
+        limit=10,
+        latest_only=True,
+    )
+
+    assert [entry["service"] for entry in services] == ["identity"]
 
 
 def _write_snapshot_file(tmp_path: Path, name: str, payload: dict) -> Path:

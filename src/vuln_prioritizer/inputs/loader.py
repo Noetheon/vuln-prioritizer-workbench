@@ -20,6 +20,42 @@ from vuln_prioritizer.utils import normalize_cve_id
 
 from . import _cve_support, _occurrence_support, _vex_support, _xml_support
 
+GENERIC_OCCURRENCE_CVE_FIELDS = {"cve_id", "cve", "vulnerability_id"}
+GENERIC_OCCURRENCE_HINT_FIELDS = {
+    "component",
+    "component_name",
+    "version",
+    "component_version",
+    "installed_version",
+    "purl",
+    "package_type",
+    "ecosystem",
+    "file_path",
+    "path",
+    "dependency_path",
+    "fix_versions",
+    "fixed_versions",
+    "fix_version",
+    "target_kind",
+    "target_ref",
+    "target",
+    "asset_ref",
+    "asset_id",
+    "criticality",
+    "asset_criticality",
+    "exposure",
+    "asset_exposure",
+    "environment",
+    "asset_environment",
+    "owner",
+    "asset_owner",
+    "business_service",
+    "service",
+    "asset_business_service",
+    "severity",
+    "raw_severity",
+}
+
 
 @dataclass(frozen=True)
 class AssetContextRule:
@@ -228,6 +264,8 @@ def _load_single_input(
     resolved_format = detect_input_format(path, explicit_format=input_format)
     if resolved_format == "cve-list":
         parsed = _parse_cve_list(path)
+    elif resolved_format == "generic-occurrence-csv":
+        parsed = _parse_generic_occurrence_csv(path)
     elif resolved_format == "trivy-json":
         parsed = _parse_trivy_json(path)
     elif resolved_format == "grype-json":
@@ -295,6 +333,8 @@ def detect_input_format(path: Path, *, explicit_format: str = "auto") -> str:
         return explicit_format
 
     suffix = path.suffix.lower()
+    if suffix == ".csv" and _looks_like_generic_occurrence_csv(path):
+        return "generic-occurrence-csv"
     if suffix in {".txt", ".csv"}:
         return "cve-list"
     if suffix == ".nessus":
@@ -438,9 +478,21 @@ def load_asset_context_file(
                 match_mode=match_mode,
                 precedence=precedence,
                 row_number=order,
-                criticality=(row.get("criticality") or "").strip() or None,
-                exposure=(row.get("exposure") or "").strip() or None,
-                environment=(row.get("environment") or "").strip() or None,
+                criticality=_normalize_asset_criticality(
+                    (row.get("criticality") or "").strip() or None,
+                    warnings=warning_messages,
+                    row_number=order,
+                ),
+                exposure=_normalize_asset_exposure(
+                    (row.get("exposure") or "").strip() or None,
+                    warnings=warning_messages,
+                    row_number=order,
+                ),
+                environment=_normalize_asset_environment(
+                    (row.get("environment") or "").strip() or None,
+                    warnings=warning_messages,
+                    row_number=order,
+                ),
                 owner=(row.get("owner") or "").strip() or None,
                 business_service=(row.get("business_service") or "").strip() or None,
             )
@@ -595,6 +647,90 @@ def _parse_cve_list(path: Path) -> ParsedInput:
     return ParsedInput(
         input_format="cve-list",
         total_rows=len(rows),
+        occurrences=occurrences,
+        warnings=warnings,
+    )
+
+
+def _parse_generic_occurrence_csv(path: Path) -> ParsedInput:
+    if path.suffix.lower() != ".csv":
+        raise ValueError("generic-occurrence-csv input must be a .csv file.")
+
+    warnings: list[str] = []
+    occurrences: list[InputOccurrence] = []
+    total_rows = 0
+    with path.open("r", encoding="utf-8", newline="") as handle:
+        reader = csv.DictReader(handle)
+        if not reader.fieldnames:
+            raise ValueError("generic-occurrence-csv is missing a header row.")
+        field_map = {field.strip().lower(): field for field in reader.fieldnames if field}
+        cve_field = _first_existing_field(field_map, "cve_id", "cve", "vulnerability_id")
+        if cve_field is None:
+            raise ValueError("generic-occurrence-csv must contain a cve_id or cve column.")
+
+        for row_number, row in enumerate(reader, start=2):
+            total_rows += 1
+            cve_id = normalize_cve_id(row.get(cve_field))
+            if cve_id is None:
+                warnings.append(
+                    f"Ignored invalid CVE identifier at line {row_number}: {row.get(cve_field)!r}"
+                )
+                continue
+            target_kind = _csv_value(row, field_map, "target_kind") or "generic"
+            target_ref = _csv_value(row, field_map, "target_ref", "target", "asset_ref")
+            occurrences.append(
+                InputOccurrence(
+                    cve_id=cve_id,
+                    source_format="generic-occurrence-csv",
+                    component_name=_csv_value(row, field_map, "component_name", "component"),
+                    component_version=_csv_value(
+                        row,
+                        field_map,
+                        "component_version",
+                        "version",
+                        "installed_version",
+                    ),
+                    purl=_csv_value(row, field_map, "purl"),
+                    package_type=_csv_value(row, field_map, "package_type", "ecosystem"),
+                    file_path=_csv_value(row, field_map, "file_path", "path"),
+                    dependency_path=_csv_value(row, field_map, "dependency_path"),
+                    fix_versions=_split_versions(
+                        _csv_value(row, field_map, "fix_versions", "fixed_versions", "fix_version")
+                    ),
+                    source_record_id=f"row:{row_number}",
+                    raw_severity=_csv_value(row, field_map, "severity", "raw_severity"),
+                    target_kind=target_kind.lower(),
+                    target_ref=target_ref,
+                    asset_id=_csv_value(row, field_map, "asset_id"),
+                    asset_criticality=_normalize_asset_criticality(
+                        _csv_value(row, field_map, "criticality", "asset_criticality"),
+                        warnings=warnings,
+                        row_number=row_number,
+                    ),
+                    asset_exposure=_normalize_asset_exposure(
+                        _csv_value(row, field_map, "exposure", "asset_exposure"),
+                        warnings=warnings,
+                        row_number=row_number,
+                    ),
+                    asset_environment=_normalize_asset_environment(
+                        _csv_value(row, field_map, "environment", "asset_environment"),
+                        warnings=warnings,
+                        row_number=row_number,
+                    ),
+                    asset_owner=_csv_value(row, field_map, "owner", "asset_owner"),
+                    asset_business_service=_csv_value(
+                        row,
+                        field_map,
+                        "business_service",
+                        "service",
+                        "asset_business_service",
+                    ),
+                )
+            )
+
+    return ParsedInput(
+        input_format="generic-occurrence-csv",
+        total_rows=total_rows,
         occurrences=occurrences,
         warnings=warnings,
     )
@@ -1057,6 +1193,117 @@ def _read_csv(path: Path) -> list[tuple[int, str]]:
                 continue
             rows.append((row_number, value))
         return rows
+
+
+def _first_existing_field(field_map: dict[str, str], *candidates: str) -> str | None:
+    for candidate in candidates:
+        field = field_map.get(candidate)
+        if field is not None:
+            return field
+    return None
+
+
+def _looks_like_generic_occurrence_csv(path: Path) -> bool:
+    try:
+        with path.open("r", encoding="utf-8", newline="") as handle:
+            reader = csv.reader(handle)
+            header = next(reader, [])
+    except csv.Error:
+        return False
+    normalized_header = {field.strip().lower() for field in header if field}
+    return bool(
+        normalized_header.intersection(GENERIC_OCCURRENCE_CVE_FIELDS)
+        and normalized_header.intersection(GENERIC_OCCURRENCE_HINT_FIELDS)
+    )
+
+
+def _csv_value(row: dict[str, str], field_map: dict[str, str], *candidates: str) -> str | None:
+    field = _first_existing_field(field_map, *candidates)
+    if field is None:
+        return None
+    value = (row.get(field) or "").strip()
+    return value or None
+
+
+def _normalize_asset_criticality(
+    value: str | None,
+    *,
+    warnings: list[str],
+    row_number: int,
+) -> str | None:
+    if value is None:
+        return None
+    normalized = value.strip().lower().replace("_", "-")
+    aliases = {
+        "crit": "critical",
+        "critical": "critical",
+        "high": "high",
+        "med": "medium",
+        "medium": "medium",
+        "low": "low",
+    }
+    resolved = aliases.get(normalized)
+    if resolved is None:
+        warnings.append(
+            f"Ignored unknown asset criticality at row {row_number}: {value!r}. "
+            "Allowed values are low, medium, high, critical."
+        )
+    return resolved
+
+
+def _normalize_asset_exposure(
+    value: str | None,
+    *,
+    warnings: list[str],
+    row_number: int,
+) -> str | None:
+    if value is None:
+        return None
+    normalized = value.strip().lower().replace("_", "-")
+    aliases = {
+        "internal": "internal",
+        "private": "internal",
+        "dmz": "dmz",
+        "internet": "internet-facing",
+        "external": "internet-facing",
+        "public": "internet-facing",
+        "internet-facing": "internet-facing",
+    }
+    resolved = aliases.get(normalized)
+    if resolved is None:
+        warnings.append(
+            f"Ignored unknown asset exposure at row {row_number}: {value!r}. "
+            "Allowed values are internal, dmz, internet-facing."
+        )
+    return resolved
+
+
+def _normalize_asset_environment(
+    value: str | None,
+    *,
+    warnings: list[str],
+    row_number: int,
+) -> str | None:
+    if value is None:
+        return None
+    normalized = value.strip().lower().replace("_", "-")
+    aliases = {
+        "prod": "prod",
+        "production": "prod",
+        "stage": "staging",
+        "staging": "staging",
+        "test": "test",
+        "qa": "test",
+        "dev": "dev",
+        "development": "dev",
+    }
+    resolved = aliases.get(normalized)
+    if resolved is None:
+        warnings.append(
+            f"Ignored unknown asset environment at row {row_number}: {value!r}. "
+            "Allowed values are prod, staging, test, dev."
+        )
+    return resolved
 
 
 def _split_versions(value: object) -> list[str]:

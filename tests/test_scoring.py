@@ -13,7 +13,11 @@ from vuln_prioritizer.models import (
     PriorityPolicy,
     ProviderEvidence,
 )
-from vuln_prioritizer.scoring import determine_cvss_only_priority, determine_priority
+from vuln_prioritizer.scoring import (
+    build_priority_drivers,
+    determine_cvss_only_priority,
+    determine_priority,
+)
 from vuln_prioritizer.services.prioritization import PrioritizationService
 
 
@@ -75,6 +79,19 @@ def test_kev_overrides_weaker_signals() -> None:
 
     assert label == "Critical"
     assert rank == 1
+
+
+def test_priority_drivers_expose_structured_threshold_matches() -> None:
+    nvd = NvdData(cve_id="CVE-2024-0001", cvss_base_score=7.2, cvss_severity="HIGH")
+    epss_data = EpssData(cve_id="CVE-2024-0001", epss=0.80, percentile=0.95)
+    kev = KevData(cve_id="CVE-2024-0001", in_kev=False)
+
+    assert build_priority_drivers(nvd, epss_data, kev, PriorityPolicy()) == [
+        "critical-epss-cvss",
+        "high-epss",
+        "medium-cvss",
+        "medium-epss",
+    ]
 
 
 def test_missing_scores_do_not_break_prioritization() -> None:

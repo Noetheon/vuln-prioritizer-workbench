@@ -194,3 +194,146 @@ def test_cli_explain_supports_locked_provider_snapshot_replay(
     assert payload["metadata"]["provider_snapshot_file"] == str(snapshot_file)
     assert payload["metadata"]["locked_provider_data"] is True
     assert payload["metadata"]["provider_snapshot_sources"] == ["nvd", "epss", "kev"]
+
+
+def test_cli_explain_can_use_saved_analysis_json_without_provider_lookups(
+    install_fake_providers,
+    runner,
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    analysis_file = tmp_path / "analysis.json"
+    explain_file = tmp_path / "explain-from-analysis.json"
+    input_file = tmp_path / "cves.txt"
+    input_file.write_text("CVE-2021-44228\n", encoding="utf-8")
+    install_fake_providers()
+
+    analysis_result = runner.invoke(
+        app,
+        [
+            "analyze",
+            "--input",
+            str(input_file),
+            "--output",
+            str(analysis_file),
+            "--format",
+            "json",
+        ],
+    )
+    assert analysis_result.exit_code == 0
+    analysis_payload = json.loads(analysis_file.read_text(encoding="utf-8"))
+    analysis_payload["findings"][0]["future_contract_field"] = {"ignored": True}
+    analysis_payload["findings"][0]["provider_evidence"]["nvd"]["future_nvd_field"] = "ignored"
+    analysis_payload["attack_summary"]["future_summary_field"] = 1
+    analysis_file.write_text(json.dumps(analysis_payload), encoding="utf-8")
+
+    def _fail_provider_lookup(*args, **kwargs):  # noqa: ANN002, ANN003
+        raise AssertionError("saved explain should not perform provider lookups")
+
+    monkeypatch.setattr(NvdProvider, "fetch_many", _fail_provider_lookup)
+    monkeypatch.setattr(EpssProvider, "fetch_many", _fail_provider_lookup)
+    monkeypatch.setattr(KevProvider, "fetch_many", _fail_provider_lookup)
+
+    result = runner.invoke(
+        app,
+        [
+            "explain",
+            "--cve",
+            "CVE-2021-44228",
+            "--analysis-json",
+            str(analysis_file),
+            "--output",
+            str(explain_file),
+            "--format",
+            "json",
+        ],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(explain_file.read_text(encoding="utf-8"))
+    assert payload["finding"]["cve_id"] == "CVE-2021-44228"
+    assert payload["metadata"]["input_path"] == str(analysis_file)
+    assert payload["metadata"]["schema_version"] == "1.0.0"
+    assert payload["comparison"]["enriched_label"] == payload["finding"]["priority_label"]
+
+
+def test_cli_explain_can_use_saved_snapshot_json_without_provider_lookups(
+    install_fake_providers,
+    runner,
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    snapshot_file = tmp_path / "snapshot.json"
+    explain_file = tmp_path / "explain-from-snapshot.json"
+    input_file = tmp_path / "cves.txt"
+    input_file.write_text("CVE-2021-44228\n", encoding="utf-8")
+    install_fake_providers()
+
+    snapshot_result = runner.invoke(
+        app,
+        [
+            "snapshot",
+            "create",
+            "--input",
+            str(input_file),
+            "--output",
+            str(snapshot_file),
+            "--format",
+            "json",
+        ],
+    )
+    assert snapshot_result.exit_code == 0
+
+    def _fail_provider_lookup(*args, **kwargs):  # noqa: ANN002, ANN003
+        raise AssertionError("saved explain should not perform provider lookups")
+
+    monkeypatch.setattr(NvdProvider, "fetch_many", _fail_provider_lookup)
+    monkeypatch.setattr(EpssProvider, "fetch_many", _fail_provider_lookup)
+    monkeypatch.setattr(KevProvider, "fetch_many", _fail_provider_lookup)
+
+    result = runner.invoke(
+        app,
+        [
+            "explain",
+            "--cve",
+            "CVE-2021-44228",
+            "--snapshot-json",
+            str(snapshot_file),
+            "--output",
+            str(explain_file),
+            "--format",
+            "json",
+        ],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(explain_file.read_text(encoding="utf-8"))
+    assert payload["finding"]["cve_id"] == "CVE-2021-44228"
+    assert payload["metadata"]["input_path"] == str(snapshot_file)
+    assert payload["metadata"]["schema_version"] == "1.0.0"
+
+
+def test_cli_explain_rejects_saved_analysis_and_snapshot_together(
+    runner,
+    tmp_path: Path,
+) -> None:
+    saved_json = tmp_path / "saved.json"
+    saved_json.write_text('{"metadata": {}, "findings": []}\n', encoding="utf-8")
+
+    result = runner.invoke(
+        app,
+        [
+            "explain",
+            "--cve",
+            "CVE-2021-44228",
+            "--analysis-json",
+            str(saved_json),
+            "--snapshot-json",
+            str(saved_json),
+            "--format",
+            "json",
+        ],
+    )
+
+    assert result.exit_code == 2
+    assert "--analysis-json and --snapshot-json cannot be combined" in result.stdout

@@ -51,6 +51,7 @@ def input_validate(
     format: TableJsonOutputFormat = output_format_option(
         TableJsonOutputFormat.table, TABLE_AND_JSON_OUTPUT_FORMATS
     ),
+    strict: bool = typer.Option(False, "--strict"),
 ) -> None:
     """Validate local input, asset context, and VEX files without provider lookups."""
     validate_output_mode(format, output)
@@ -111,6 +112,8 @@ def input_validate(
 
     if should_emit_json_stdout(format, output):
         emit_stdout(json_payload)
+        if strict and not report["summary"]["ok"]:
+            raise typer.Exit(code=1)
         return
 
     console.print(render_input_validation_panel(report))
@@ -121,6 +124,8 @@ def input_validate(
     if output is not None:
         write_output(output, json_payload)
         console.print(f"[green]Wrote json output to {output}[/green]")
+    if strict and not report["summary"]["ok"]:
+        raise typer.Exit(code=1)
 
 
 def build_input_validation_report(

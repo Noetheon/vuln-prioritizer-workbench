@@ -52,9 +52,12 @@ def test_load_runtime_config_resolves_relative_paths_and_builds_default_map(
                 "  policy_profile: enterprise",
                 "commands:",
                 "  analyze:",
+                "    summary_template: compact",
                 "    priority:",
                 "      - high",
                 "    hide_waived: true",
+                "  doctor:",
+                "    nvd_api_key_env: CUSTOM_NVD_KEY",
                 "  snapshot:",
                 "    diff:",
                 "      include_unchanged: true",
@@ -65,6 +68,9 @@ def test_load_runtime_config_resolves_relative_paths_and_builds_default_map(
                 "      format: json",
                 "    coverage:",
                 "      max_cves: 25",
+                "      input_format: generic-occurrence-csv",
+                "    navigator-layer:",
+                "      input_format: cve-list",
                 "  data:",
                 "    status:",
                 "      offline_kev_file: kev.json",
@@ -94,11 +100,13 @@ def test_load_runtime_config_resolves_relative_paths_and_builds_default_map(
     assert default_map["analyze"]["waiver_file"] == str(
         (project / "rules" / "waivers.yml").resolve()
     )
+    assert default_map["analyze"]["summary_template"] == "compact"
     assert default_map["analyze"]["priority"] == ["high"]
     assert default_map["analyze"]["hide_waived"] is True
     assert default_map["doctor"]["waiver_file"] == str(
         (project / "rules" / "waivers.yml").resolve()
     )
+    assert default_map["doctor"]["nvd_api_key_env"] == "CUSTOM_NVD_KEY"
     assert default_map["snapshot"]["diff"]["include_unchanged"] is True
     assert default_map["attack"]["validate"]["attack_mapping_file"] == str(
         (project / "attack" / "mapping.json").resolve()
@@ -108,6 +116,8 @@ def test_load_runtime_config_resolves_relative_paths_and_builds_default_map(
     )
     assert default_map["attack"]["validate"]["format"] == "json"
     assert default_map["attack"]["coverage"]["max_cves"] == 25
+    assert default_map["attack"]["coverage"]["input_format"] == ["generic-occurrence-csv"]
+    assert default_map["attack"]["navigator-layer"]["input_format"] == ["cve-list"]
     assert default_map["data"]["status"]["offline_kev_file"] == str(
         (project / "kev.json").resolve()
     )

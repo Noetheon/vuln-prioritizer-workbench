@@ -4,7 +4,7 @@
   "title": "vuln-prioritizer state top services report",
   "description": "JSON contract for `state top-services --format json`.",
   "type": "object",
-  "additionalProperties": false,
+  "additionalProperties": true,
   "required": ["metadata", "items"],
   "properties": {
     "metadata": {
@@ -23,7 +23,7 @@
     },
     "metadata": {
       "type": "object",
-      "additionalProperties": false,
+      "additionalProperties": true,
       "required": [
         "schema_version",
         "generated_at",
@@ -62,7 +62,7 @@
     },
     "item": {
       "type": "object",
-      "additionalProperties": false,
+      "additionalProperties": true,
       "required": [
         "service",
         "occurrence_count",

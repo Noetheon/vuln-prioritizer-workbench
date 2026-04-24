@@ -4,7 +4,7 @@
   "title": "vuln-prioritizer ATT&CK validation report",
   "description": "JSON contract for `vuln-prioritizer attack validate --format json`.",
   "type": "object",
-  "additionalProperties": false,
+  "additionalProperties": true,
   "required": [
     "source",
     "mapping_file",

@@ -14,7 +14,8 @@ from pydantic import ValidationError
 from vuln_prioritizer.models import PrioritizedFinding, SnapshotMetadata
 from vuln_prioritizer.utils import iso_utc_now
 
-STATE_SCHEMA_VERSION = "1"
+STATE_SCHEMA_VERSION = "2"
+STATE_SCHEMA_USER_VERSION = 2
 
 
 class SQLiteStateStore:
@@ -60,6 +61,13 @@ class SQLiteStateStore:
                     waiver_expires_on TEXT,
                     waiver_review_on TEXT,
                     waiver_days_remaining INTEGER,
+                    waiver_id TEXT,
+                    waiver_scope TEXT,
+                    cvss_base_score REAL,
+                    epss REAL,
+                    operational_rank INTEGER,
+                    suppressed_by_vex INTEGER NOT NULL DEFAULT 0,
+                    remediation_strategy TEXT,
                     services_json TEXT NOT NULL,
                     asset_ids_json TEXT NOT NULL,
                     finding_json TEXT NOT NULL,
@@ -74,9 +82,14 @@ class SQLiteStateStore:
                     ON snapshots(snapshot_generated_at);
                 """
             )
+            self._migrate(connection)
             connection.execute(
                 "INSERT OR IGNORE INTO state_meta(key, value) VALUES (?, ?)",
                 ("schema_version", STATE_SCHEMA_VERSION),
+            )
+            connection.execute(
+                "UPDATE state_meta SET value = ? WHERE key = ?",
+                (STATE_SCHEMA_VERSION, "schema_version"),
             )
             connection.execute(
                 "INSERT OR IGNORE INTO state_meta(key, value) VALUES (?, ?)",
@@ -158,10 +171,17 @@ class SQLiteStateStore:
                         waiver_expires_on,
                         waiver_review_on,
                         waiver_days_remaining,
+                        waiver_id,
+                        waiver_scope,
+                        cvss_base_score,
+                        epss,
+                        operational_rank,
+                        suppressed_by_vex,
+                        remediation_strategy,
                         services_json,
                         asset_ids_json,
                         finding_json
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     (
                         snapshot_id,
@@ -177,6 +197,17 @@ class SQLiteStateStore:
                         self._string_or_none(finding.get("waiver_expires_on")),
                         self._string_or_none(finding.get("waiver_review_on")),
                         self._int_or_none(finding.get("waiver_days_remaining")),
+                        self._string_or_none(finding.get("waiver_id")),
+                        self._string_or_none(finding.get("waiver_scope")),
+                        self._float_or_none(finding.get("cvss_base_score")),
+                        self._float_or_none(finding.get("epss")),
+                        self._int_or_none(finding.get("operational_rank")),
+                        1 if finding.get("suppressed_by_vex") else 0,
+                        self._string_or_none(
+                            (finding.get("remediation") or {}).get("strategy")
+                            if isinstance(finding.get("remediation"), dict)
+                            else None
+                        ),
                         json.dumps(services, sort_keys=True),
                         json.dumps(asset_ids, sort_keys=True),
                         json.dumps(finding, sort_keys=True),
@@ -307,14 +338,20 @@ class SQLiteStateStore:
         days: int,
         priority_filter: str,
         limit: int,
+        latest_only: bool = False,
     ) -> list[dict[str, Any]]:
         """Return repeated service counts from recent imported snapshots."""
         self.initialize()
         cutoff = (datetime.now(UTC) - timedelta(days=days)).replace(microsecond=0).isoformat()
         with self._connect() as connection:
+            latest_snapshot_id = self._latest_snapshot_id(connection) if latest_only else None
             if priority_filter == "all":
+                latest_clause = "AND s.id = ?" if latest_snapshot_id is not None else ""
+                params: tuple[Any, ...] = (
+                    (cutoff, latest_snapshot_id) if latest_snapshot_id is not None else (cutoff,)
+                )
                 rows = connection.execute(
-                    """
+                    f"""
                     SELECT
                         s.id AS snapshot_id,
                         s.snapshot_generated_at,
@@ -325,13 +362,20 @@ class SQLiteStateStore:
                     FROM snapshot_findings AS f
                     JOIN snapshots AS s ON s.id = f.snapshot_id
                     WHERE s.snapshot_generated_at >= ?
+                    {latest_clause}
                     ORDER BY s.snapshot_generated_at DESC, f.priority_rank ASC
                     """,
-                    (cutoff,),
+                    params,
                 ).fetchall()
             else:
+                latest_clause = "AND s.id = ?" if latest_snapshot_id is not None else ""
+                params = (
+                    (cutoff, priority_filter.title(), latest_snapshot_id)
+                    if latest_snapshot_id is not None
+                    else (cutoff, priority_filter.title())
+                )
                 rows = connection.execute(
-                    """
+                    f"""
                     SELECT
                         s.id AS snapshot_id,
                         s.snapshot_generated_at,
@@ -342,9 +386,10 @@ class SQLiteStateStore:
                     FROM snapshot_findings AS f
                     JOIN snapshots AS s ON s.id = f.snapshot_id
                     WHERE s.snapshot_generated_at >= ? AND f.priority_label = ?
+                    {latest_clause}
                     ORDER BY s.snapshot_generated_at DESC, f.priority_rank ASC
                     """,
-                    (cutoff, priority_filter.title()),
+                    params,
                 ).fetchall()
 
         by_service: dict[str, dict[str, Any]] = {}
@@ -556,6 +601,81 @@ class SQLiteStateStore:
         connection.execute("PRAGMA foreign_keys = ON")
         return connection
 
+    def _migrate(self, connection: sqlite3.Connection) -> None:
+        columns = {
+            str(row["name"])
+            for row in connection.execute("PRAGMA table_info(snapshot_findings)").fetchall()
+        }
+        migrations = {
+            "waiver_id": "ALTER TABLE snapshot_findings ADD COLUMN waiver_id TEXT",
+            "waiver_scope": "ALTER TABLE snapshot_findings ADD COLUMN waiver_scope TEXT",
+            "cvss_base_score": "ALTER TABLE snapshot_findings ADD COLUMN cvss_base_score REAL",
+            "epss": "ALTER TABLE snapshot_findings ADD COLUMN epss REAL",
+            "operational_rank": "ALTER TABLE snapshot_findings ADD COLUMN operational_rank INTEGER",
+            "suppressed_by_vex": (
+                "ALTER TABLE snapshot_findings ADD COLUMN suppressed_by_vex "
+                "INTEGER NOT NULL DEFAULT 0"
+            ),
+            "remediation_strategy": (
+                "ALTER TABLE snapshot_findings ADD COLUMN remediation_strategy TEXT"
+            ),
+        }
+        for column, statement in migrations.items():
+            if column not in columns:
+                connection.execute(statement)
+        for index_name, statement in {
+            "idx_snapshot_findings_waiver_id": (
+                "CREATE INDEX IF NOT EXISTS idx_snapshot_findings_waiver_id "
+                "ON snapshot_findings(waiver_id)"
+            ),
+            "idx_snapshot_findings_waiver_scope": (
+                "CREATE INDEX IF NOT EXISTS idx_snapshot_findings_waiver_scope "
+                "ON snapshot_findings(waiver_scope)"
+            ),
+            "idx_snapshot_findings_cvss": (
+                "CREATE INDEX IF NOT EXISTS idx_snapshot_findings_cvss "
+                "ON snapshot_findings(cvss_base_score)"
+            ),
+            "idx_snapshot_findings_epss": (
+                "CREATE INDEX IF NOT EXISTS idx_snapshot_findings_epss ON snapshot_findings(epss)"
+            ),
+            "idx_snapshot_findings_operational_rank": (
+                "CREATE INDEX IF NOT EXISTS idx_snapshot_findings_operational_rank "
+                "ON snapshot_findings(operational_rank)"
+            ),
+            "idx_snapshot_findings_remediation_strategy": (
+                "CREATE INDEX IF NOT EXISTS idx_snapshot_findings_remediation_strategy "
+                "ON snapshot_findings(remediation_strategy)"
+            ),
+        }.items():
+            if not self._index_exists(connection, index_name):
+                connection.execute(statement)
+        connection.execute(f"PRAGMA user_version = {STATE_SCHEMA_USER_VERSION}")
+
+    @staticmethod
+    def _latest_snapshot_id(connection: sqlite3.Connection) -> int | None:
+        row = connection.execute(
+            """
+            SELECT id
+            FROM snapshots
+            ORDER BY snapshot_generated_at DESC, id DESC
+            LIMIT 1
+            """
+        ).fetchone()
+        return None if row is None else int(row["id"])
+
+    @staticmethod
+    def _index_exists(connection: sqlite3.Connection, index_name: str) -> bool:
+        row = connection.execute(
+            """
+            SELECT 1
+            FROM sqlite_master
+            WHERE type = 'index' AND name = ?
+            """,
+            (index_name,),
+        ).fetchone()
+        return row is not None
+
     @staticmethod
     def _finding_services(finding: dict[str, Any]) -> list[str]:
         services = sorted(
@@ -599,6 +719,12 @@ class SQLiteStateStore:
         if value is None:
             return None
         return int(value)
+
+    @staticmethod
+    def _float_or_none(value: Any) -> float | None:
+        if value is None:
+            return None
+        return float(value)
 
     @staticmethod
     def _string_or_none(value: Any) -> str | None:

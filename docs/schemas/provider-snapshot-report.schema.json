@@ -4,7 +4,7 @@
   "title": "vuln-prioritizer provider snapshot report",
   "description": "JSON contract for `vuln-prioritizer data export-provider-snapshot`.",
   "type": "object",
-  "additionalProperties": false,
+  "additionalProperties": true,
   "required": ["metadata", "items", "warnings"],
   "properties": {
     "metadata": {
@@ -40,7 +40,7 @@
         },
         {
           "type": "object",
-          "additionalProperties": false,
+          "additionalProperties": true,
           "required": ["cve_id"],
           "properties": {
             "cve_id": {
@@ -81,7 +81,7 @@
         },
         {
           "type": "object",
-          "additionalProperties": false,
+          "additionalProperties": true,
           "required": ["cve_id"],
           "properties": {
             "cve_id": {
@@ -107,7 +107,7 @@
         },
         {
           "type": "object",
-          "additionalProperties": false,
+          "additionalProperties": true,
           "required": ["cve_id", "in_kev"],
           "properties": {
             "cve_id": {
@@ -137,7 +137,7 @@
     },
     "metadata": {
       "type": "object",
-      "additionalProperties": false,
+      "additionalProperties": true,
       "required": [
         "schema_version",
         "artifact_kind",
@@ -201,7 +201,7 @@
     },
     "item": {
       "type": "object",
-      "additionalProperties": false,
+      "additionalProperties": true,
       "required": ["cve_id", "nvd", "epss", "kev"],
       "properties": {
         "cve_id": {

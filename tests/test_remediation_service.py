@@ -18,6 +18,11 @@ def _occurrence(
     file_path: str | None = None,
     fix_versions: list[str] | None = None,
     vex_status: str | None = None,
+    target_kind: str = "generic",
+    target_ref: str | None = None,
+    asset_id: str | None = None,
+    asset_owner: str | None = None,
+    asset_business_service: str | None = None,
 ) -> InputOccurrence:
     return InputOccurrence(
         cve_id="CVE-2024-0001",
@@ -29,6 +34,11 @@ def _occurrence(
         file_path=file_path,
         fix_versions=list(fix_versions or []),
         vex_status=vex_status,
+        target_kind=target_kind,
+        target_ref=target_ref,
+        asset_id=asset_id,
+        asset_owner=asset_owner,
+        asset_business_service=asset_business_service,
     )
 
 
@@ -64,6 +74,11 @@ def test_remediation_service_prefers_actionable_component_evidence() -> None:
             "package_type": "npm",
             "purl": "pkg:npm/acme/widget@1.2.3",
             "path": "package-lock.json",
+            "occurrence_count": 2,
+            "targets": [],
+            "asset_ids": [],
+            "services": [],
+            "owners": [],
         }
     ]
 
@@ -96,6 +111,11 @@ def test_remediation_service_reviews_known_ecosystem_without_fix_versions() -> N
             "package_type": "python",
             "purl": None,
             "path": "requirements.txt",
+            "occurrence_count": 1,
+            "targets": [],
+            "asset_ids": [],
+            "services": [],
+            "owners": [],
         }
     ]
 
@@ -122,8 +142,47 @@ def test_remediation_service_preserves_generic_fix_only_evidence() -> None:
             "package_type": None,
             "purl": None,
             "path": None,
+            "occurrence_count": 2,
+            "targets": [],
+            "asset_ids": [],
+            "services": [],
+            "owners": [],
         }
     ]
+
+
+def test_remediation_components_include_occurrence_routing_context_and_purl_name() -> None:
+    remediation = RemediationService().derive(
+        [
+            _occurrence(
+                purl="pkg:maven/org.apache.logging.log4j/log4j-core@2.14.1",
+                fix_versions=["2.17.1"],
+                target_kind="repository",
+                target_ref="backend/pom.xml",
+                asset_id="asset-api",
+                asset_owner="team-app",
+                asset_business_service="identity",
+            ),
+            _occurrence(
+                purl="pkg:maven/org.apache.logging.log4j/log4j-core@2.14.1",
+                fix_versions=["2.17.0"],
+                target_kind="repository",
+                target_ref="worker/pom.xml",
+                asset_id="asset-worker",
+                asset_owner="team-platform",
+                asset_business_service="identity",
+            ),
+        ]
+    )
+
+    component = remediation.components[0]
+    assert component.name == "log4j-core"
+    assert component.occurrence_count == 2
+    assert component.fixed_versions == ["2.17.0", "2.17.1"]
+    assert component.targets == ["repository:backend/pom.xml", "repository:worker/pom.xml"]
+    assert component.asset_ids == ["asset-api", "asset-worker"]
+    assert component.services == ["identity"]
+    assert component.owners == ["team-app", "team-platform"]
 
 
 def test_remediation_service_falls_back_to_priority_only_without_component_evidence() -> None:

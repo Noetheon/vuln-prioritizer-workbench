@@ -46,6 +46,40 @@ def determine_priority(
     return label, PRIORITY_RANKS[label]
 
 
+def build_priority_drivers(
+    nvd: NvdData,
+    epss: EpssData,
+    kev: KevData,
+    policy: PriorityPolicy | None = None,
+) -> list[str]:
+    """Return structured priority rules that matched for this finding."""
+    active_policy = policy or PriorityPolicy()
+    drivers: list[str] = []
+    cvss = nvd.cvss_base_score
+    epss_score = epss.epss
+
+    if kev.in_kev:
+        drivers.append("kev")
+    if (
+        epss_score is not None
+        and epss_score >= active_policy.critical_epss_threshold
+        and cvss is not None
+        and cvss >= active_policy.critical_cvss_threshold
+    ):
+        drivers.append("critical-epss-cvss")
+    if epss_score is not None and epss_score >= active_policy.high_epss_threshold:
+        drivers.append("high-epss")
+    if cvss is not None and cvss >= active_policy.high_cvss_threshold:
+        drivers.append("high-cvss")
+    if cvss is not None and cvss >= active_policy.medium_cvss_threshold:
+        drivers.append("medium-cvss")
+    if epss_score is not None and epss_score >= active_policy.medium_epss_threshold:
+        drivers.append("medium-epss")
+    if not drivers:
+        drivers.append("default-low")
+    return drivers
+
+
 def determine_cvss_only_priority(cvss_base_score: float | None) -> tuple[str, int]:
     """Apply the comparison baseline that only uses CVSS severity bands."""
     if cvss_base_score is not None and cvss_base_score >= 9.0:

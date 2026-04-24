@@ -114,6 +114,11 @@ Consumer guidance:
 - tolerate additive fields on the same major version
 - ignore unknown object members rather than failing on extra fields
 
+The published JSON schemas are release validation artifacts and intentionally
+tolerate additive object members through `additionalProperties: true`. Consumers
+should treat same-major additive object members as tolerated and ignore fields
+they do not understand.
+
 The primary analysis-style schemas target the currently emitted version, `1.0.0`.
 
 Helper contracts use either an explicit envelope version or their published schema as the contract version anchor:

@@ -4,7 +4,7 @@
   "title": "vuln-prioritizer data verify report",
   "description": "JSON contract for `vuln-prioritizer data verify --format json`.",
   "type": "object",
-  "additionalProperties": false,
+  "additionalProperties": true,
   "required": [
     "metadata",
     "summary",
@@ -71,7 +71,7 @@
     },
     "metadata": {
       "type": "object",
-      "additionalProperties": false,
+      "additionalProperties": true,
       "required": [
         "schema_version",
         "command",
@@ -140,7 +140,7 @@
     },
     "summary": {
       "type": "object",
-      "additionalProperties": false,
+      "additionalProperties": true,
       "required": [
         "namespace_count",
         "requested_cves",
@@ -172,7 +172,7 @@
     },
     "namespaceStatus": {
       "type": "object",
-      "additionalProperties": false,
+      "additionalProperties": true,
       "required": [
         "namespace",
         "file_count",
@@ -216,7 +216,7 @@
     },
     "cacheCoverage": {
       "type": "object",
-      "additionalProperties": false,
+      "additionalProperties": true,
       "required": [
         "source",
         "cached_hits",
@@ -258,7 +258,7 @@
     },
     "localFile": {
       "type": "object",
-      "additionalProperties": false,
+      "additionalProperties": true,
       "required": [
         "label",
         "path",
@@ -283,7 +283,7 @@
     },
     "attackValidation": {
       "type": "object",
-      "additionalProperties": false,
+      "additionalProperties": true,
       "required": [
         "source",
         "mapping_file",

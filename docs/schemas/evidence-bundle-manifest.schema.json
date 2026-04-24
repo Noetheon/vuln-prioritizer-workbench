@@ -4,7 +4,7 @@
   "title": "vuln-prioritizer evidence bundle manifest",
   "description": "Manifest contract stored as `manifest.json` inside `report evidence-bundle` ZIP exports.",
   "type": "object",
-  "additionalProperties": false,
+  "additionalProperties": true,
   "required": [
     "schema_version",
     "bundle_kind",
@@ -60,7 +60,7 @@
   "$defs": {
     "evidenceFile": {
       "type": "object",
-      "additionalProperties": false,
+      "additionalProperties": true,
       "required": ["path", "kind", "size_bytes", "sha256"],
       "properties": {
         "path": {

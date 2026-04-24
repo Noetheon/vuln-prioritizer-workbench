@@ -44,10 +44,16 @@ def test_nvd_parse_payload_prefers_v40_and_collects_metadata() -> None:
                     ],
                     "published": "2026-01-01T00:00:00.000",
                     "lastModified": "2026-01-02T00:00:00.000",
+                    "vulnStatus": "Analyzed",
                     "weaknesses": [
                         {"description": [{"lang": "en", "value": "CWE-79"}]},
                     ],
-                    "references": [{"url": "https://example.com/advisory"}],
+                    "references": [
+                        {
+                            "url": "https://example.com/advisory",
+                            "tags": ["Vendor Advisory", "Patch"],
+                        }
+                    ],
                     "metrics": {
                         "cvssMetricV31": [
                             {
@@ -56,7 +62,11 @@ def test_nvd_parse_payload_prefers_v40_and_collects_metadata() -> None:
                         ],
                         "cvssMetricV40": [
                             {
-                                "cvssData": {"baseScore": 9.8, "baseSeverity": "CRITICAL"},
+                                "cvssData": {
+                                    "baseScore": 9.8,
+                                    "baseSeverity": "CRITICAL",
+                                    "vectorString": "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N",
+                                },
                             }
                         ],
                     },
@@ -71,8 +81,11 @@ def test_nvd_parse_payload_prefers_v40_and_collects_metadata() -> None:
     assert parsed.cvss_base_score == 9.8
     assert parsed.cvss_severity == "CRITICAL"
     assert parsed.cvss_version == "4.0"
+    assert parsed.cvss_vector == "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N"
+    assert parsed.vulnerability_status == "Analyzed"
     assert parsed.cwes == ["CWE-79"]
     assert parsed.references == ["https://example.com/advisory"]
+    assert parsed.reference_tags == {"https://example.com/advisory": ["Vendor Advisory", "Patch"]}
 
 
 def test_nvd_fetch_many_handles_missing_results() -> None:
@@ -407,9 +420,12 @@ def test_kev_fetch_many_from_offline_json(tmp_path: Path) -> None:
                         "cveID": "CVE-2021-44228",
                         "vendorProject": "Apache",
                         "product": "Log4j",
+                        "shortDescription": "Apache Log4j2 remote code execution.",
                         "dateAdded": "2021-12-10",
                         "requiredAction": "Patch now",
                         "dueDate": "2021-12-24",
+                        "knownRansomwareCampaignUse": "Known",
+                        "notes": "Frequently exploited in the wild.",
                     }
                 ]
             }
@@ -425,6 +441,9 @@ def test_kev_fetch_many_from_offline_json(tmp_path: Path) -> None:
 
     assert warnings == []
     assert results["CVE-2021-44228"].in_kev is True
+    assert results["CVE-2021-44228"].short_description == "Apache Log4j2 remote code execution."
+    assert results["CVE-2021-44228"].known_ransomware_campaign_use == "Known"
+    assert results["CVE-2021-44228"].notes == "Frequently exploited in the wild."
     assert results["CVE-2024-3094"].in_kev is False
 
 

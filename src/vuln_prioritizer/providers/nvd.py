@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import random
 import time
 from concurrent.futures import Future, ThreadPoolExecutor
 from dataclasses import dataclass
@@ -66,7 +67,13 @@ class NvdProvider:
         session: requests.Session | None = None,
         cache: FileCache | None = None,
     ) -> NvdProvider:
-        return cls(session=session, api_key=os.getenv(api_key_env), cache=cache)
+        api_key = os.getenv(api_key_env)
+        return cls(
+            session=session,
+            api_key=api_key,
+            cache=cache,
+            max_concurrency=DEFAULT_NVD_MAX_CONCURRENCY if api_key else 1,
+        )
 
     def fetch_many(
         self,
@@ -181,7 +188,7 @@ class NvdProvider:
                 if response.status_code == 404:
                     return {}
                 if response.status_code in {429, 500, 502, 503, 504} and attempt < self.max_retries:
-                    time.sleep(attempt)
+                    time.sleep(_retry_delay(response, attempt))
                     continue
                 response.raise_for_status()
                 return response.json()
@@ -189,7 +196,7 @@ class NvdProvider:
                 last_error = exc
                 status_code = getattr(getattr(exc, "response", None), "status_code", None)
                 if status_code in {429, 500, 502, 503, 504} and attempt < self.max_retries:
-                    time.sleep(attempt)
+                    time.sleep(_retry_delay(getattr(exc, "response", None), attempt))
                     continue
                 break
 
@@ -226,7 +233,7 @@ class NvdProvider:
             return NvdData(cve_id=cve_id)
 
         cve = (vulnerabilities[0] or {}).get("cve") or {}
-        score, severity, version = _extract_cvss(cve.get("metrics") or {})
+        score, severity, version, vector = _extract_cvss(cve.get("metrics") or {})
 
         cwes: list[str] = []
         for weakness in cve.get("weaknesses") or []:
@@ -235,11 +242,16 @@ class NvdProvider:
                 if value and value not in cwes:
                     cwes.append(value)
 
-        references = [
-            reference.get("url")
-            for reference in cve.get("references") or []
-            if reference.get("url")
-        ]
+        references = []
+        reference_tags: dict[str, list[str]] = {}
+        for reference in cve.get("references") or []:
+            url = reference.get("url")
+            if not url:
+                continue
+            references.append(url)
+            tags = [str(tag).strip() for tag in reference.get("tags") or [] if str(tag).strip()]
+            if tags:
+                reference_tags[url] = tags
 
         return NvdData(
             cve_id=cve_id,
@@ -247,10 +259,13 @@ class NvdProvider:
             cvss_base_score=score,
             cvss_severity=severity,
             cvss_version=version,
+            cvss_vector=vector,
+            vulnerability_status=cve.get("vulnStatus"),
             published=cve.get("published"),
             last_modified=cve.get("lastModified"),
             cwes=cwes,
             references=references,
+            reference_tags=reference_tags,
         )
 
 
@@ -264,7 +279,7 @@ def _pick_description(descriptions: list[dict]) -> str | None:
     return None
 
 
-def _extract_cvss(metrics: dict) -> tuple[float | None, str | None, str | None]:
+def _extract_cvss(metrics: dict) -> tuple[float | None, str | None, str | None, str | None]:
     versions = {
         "cvssMetricV40": "4.0",
         "cvssMetricV31": "3.1",
@@ -279,9 +294,21 @@ def _extract_cvss(metrics: dict) -> tuple[float | None, str | None, str | None]:
         cvss_data = metric.get("cvssData") or {}
         score = safe_float(cvss_data.get("baseScore"))
         severity = cvss_data.get("baseSeverity") or metric.get("baseSeverity")
+        vector = cvss_data.get("vectorString")
         if score is not None or severity:
-            return score, severity, versions[metric_key]
-    return None, None, None
+            return score, severity, versions[metric_key], vector
+    return None, None, None, None
+
+
+def _retry_delay(response: requests.Response | None, attempt: int) -> float:
+    headers = {} if response is None else getattr(response, "headers", {}) or {}
+    retry_after = headers.get("Retry-After")
+    if retry_after:
+        try:
+            return max(float(retry_after), 0.0)
+        except ValueError:
+            pass
+    return float(attempt) + random.uniform(0.0, 0.25)
 
 
 def has_nvd_content(item: NvdData) -> bool:
@@ -291,10 +318,13 @@ def has_nvd_content(item: NvdData) -> bool:
             item.cvss_base_score is not None,
             item.cvss_severity is not None,
             item.cvss_version is not None,
+            item.cvss_vector is not None,
+            item.vulnerability_status is not None,
             item.published is not None,
             item.last_modified is not None,
             bool(item.cwes),
             bool(item.references),
+            bool(item.reference_tags),
         ]
     )
 

@@ -53,7 +53,7 @@ def emit_data_json_payload(
     document = json.dumps(payload, indent=2, sort_keys=True)
     if output is not None:
         write_output(output, document)
-    if not quiet:
+    if output is None and not quiet:
         typer.echo(document)
 
 

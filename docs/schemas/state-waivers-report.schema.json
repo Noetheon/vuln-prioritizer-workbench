@@ -4,7 +4,7 @@
   "title": "vuln-prioritizer state waivers report",
   "description": "JSON contract for `state waivers --format json`.",
   "type": "object",
-  "additionalProperties": false,
+  "additionalProperties": true,
   "required": ["metadata", "items"],
   "properties": {
     "metadata": {
@@ -26,7 +26,7 @@
     },
     "metadata": {
       "type": "object",
-      "additionalProperties": false,
+      "additionalProperties": true,
       "required": [
         "schema_version",
         "generated_at",
@@ -59,7 +59,7 @@
     },
     "item": {
       "type": "object",
-      "additionalProperties": false,
+      "additionalProperties": true,
       "required": [
         "snapshot_generated_at",
         "snapshot_path",

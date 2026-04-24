@@ -13,7 +13,7 @@ inputs:
     description: Analyze mode accepts one or more newline-delimited input files; report-html expects one analysis JSON file
     required: true
   input-format:
-    description: analyze mode only; auto, cve-list, trivy-json, grype-json, cyclonedx-json, spdx-json, dependency-check-json, github-alerts-json, nessus-xml, openvas-xml. Provide one value or a newline-delimited list aligned with input.
+    description: analyze mode only; auto, cve-list, generic-occurrence-csv, trivy-json, grype-json, cyclonedx-json, spdx-json, dependency-check-json, github-alerts-json, nessus-xml, openvas-xml. Provide one value or a newline-delimited list aligned with input.
     required: false
     default: auto
   output-format:

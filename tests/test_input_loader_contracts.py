@@ -173,6 +173,68 @@ def test_dependency_check_empty_project_references_are_ignored(tmp_path: Path) -
     assert parsed.unique_cves == ["CVE-2024-0001"]
 
 
+def test_generic_occurrence_csv_preserves_component_target_and_asset_context(
+    tmp_path: Path,
+) -> None:
+    loader_module = _load_loader_module()
+    input_file = tmp_path / "generic-occurrences.csv"
+    input_file.write_text(
+        "\n".join(
+            [
+                "cve,component,version,purl,fix_version,target_kind,target,asset_id,"
+                "criticality,exposure,environment,owner,service,severity",
+                "CVE-2024-0001,Django,4.2.0,pkg:pypi/django@4.2.0,4.2.8,"
+                "repository,backend/requirements.txt,asset-api,Crit,public,production,"
+                "team-app,identity,HIGH",
+                "not-a-cve,ignored,,,,,,,,,,,",
+                "CVE-2024-0002,openssl,3.0.0,,3.0.13,host,app-01,asset-host,"
+                "urgent,edge,live,team-platform,payments,critical",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    parsed = loader_module.InputLoader().load(input_file)
+
+    assert parsed.total_rows == 3
+    assert parsed.input_format == "generic-occurrence-csv"
+    assert parsed.unique_cves == ["CVE-2024-0001", "CVE-2024-0002"]
+    first, second = parsed.occurrences
+    assert first.source_format == "generic-occurrence-csv"
+    assert first.component_name == "Django"
+    assert first.component_version == "4.2.0"
+    assert first.purl == "pkg:pypi/django@4.2.0"
+    assert first.fix_versions == ["4.2.8"]
+    assert first.target_kind == "repository"
+    assert first.target_ref == "backend/requirements.txt"
+    assert first.asset_id == "asset-api"
+    assert first.asset_criticality == "critical"
+    assert first.asset_exposure == "internet-facing"
+    assert first.asset_environment == "prod"
+    assert first.asset_owner == "team-app"
+    assert first.asset_business_service == "identity"
+    assert first.raw_severity == "HIGH"
+    assert second.asset_criticality is None
+    assert second.asset_exposure is None
+    assert second.asset_environment is None
+    assert any("Ignored invalid CVE identifier" in warning for warning in parsed.warnings)
+    assert any("unknown asset criticality" in warning for warning in parsed.warnings)
+    assert any("unknown asset exposure" in warning for warning in parsed.warnings)
+    assert any("unknown asset environment" in warning for warning in parsed.warnings)
+
+
+def test_plain_cve_csv_auto_detects_as_cve_list(tmp_path: Path) -> None:
+    loader_module = _load_loader_module()
+    input_file = tmp_path / "cves.csv"
+    input_file.write_text("cve_id\nCVE-2024-0001\n", encoding="utf-8")
+
+    parsed = loader_module.InputLoader().load(input_file)
+
+    assert parsed.input_format == "cve-list"
+    assert parsed.unique_cves == ["CVE-2024-0001"]
+
+
 def test_github_alerts_skips_non_object_items(tmp_path: Path) -> None:
     loader_module = _load_loader_module()
     input_file = tmp_path / "alerts.json"

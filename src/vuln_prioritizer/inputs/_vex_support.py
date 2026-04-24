@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Literal, overload
+from urllib.parse import parse_qsl, unquote
 
 from vuln_prioritizer.models import InputOccurrence, VexStatement
 from vuln_prioritizer.utils import normalize_cve_id
@@ -48,6 +49,16 @@ class VexMatchDiagnostics:
     warnings: tuple[str, ...] = ()
 
 
+@dataclass(frozen=True)
+class _CanonicalPurl:
+    core: str
+    qualifiers: tuple[tuple[str, str], ...]
+    subpath: str | None
+
+
+_NON_IDENTITY_PURL_QUALIFIERS = {"repository_url"}
+
+
 def parse_openvex_document(document: dict) -> list[VexStatement]:
     """Parse OpenVEX JSON into normalized VEX statements."""
     statements: list[VexStatement] = []
@@ -80,14 +91,21 @@ def parse_openvex_document(document: dict) -> list[VexStatement]:
                 )
                 continue
             for subcomponent in subcomponents:
+                subcomponent_purl = subcomponent.get("@id") or subcomponent.get("purl")
+                subcomponent_kind = subcomponent.get("kind")
                 statements.append(
                     VexStatement(
                         source_format="openvex-json",
                         cve_id=cve_id,
                         status=status,
-                        purl=product.get("@id"),
-                        target_kind=subcomponent.get("kind"),
-                        target_ref=subcomponent.get("name"),
+                        component_name=(
+                            subcomponent.get("component_name")
+                            or subcomponent.get("component")
+                            or (None if subcomponent_kind else subcomponent.get("name"))
+                        ),
+                        purl=subcomponent_purl or product.get("@id"),
+                        target_kind=subcomponent_kind,
+                        target_ref=subcomponent.get("name") or subcomponent_purl,
                         justification=statement.get("justification"),
                         action_statement=statement.get("action_statement"),
                         source_record_id=f"statement:{index}",
@@ -332,14 +350,22 @@ def _specificity_rank(specificity: str) -> int:
 
 
 def _purl_matches(statement: VexStatement, occurrence: InputOccurrence) -> bool:
-    return bool(statement.purl and occurrence.purl and statement.purl == occurrence.purl)
+    return bool(
+        statement.purl
+        and occurrence.purl
+        and _canonical_purls_match(
+            _canonical_purl(statement.purl),
+            _canonical_purl(occurrence.purl),
+        )
+    )
 
 
 def _component_name_matches(statement: VexStatement, occurrence: InputOccurrence) -> bool:
     return bool(
         statement.component_name
         and occurrence.component_name
-        and statement.component_name == occurrence.component_name
+        and _canonical_component_name(statement.component_name)
+        == _canonical_component_name(occurrence.component_name)
     )
 
 
@@ -348,7 +374,7 @@ def _component_version_matches(statement: VexStatement, occurrence: InputOccurre
         return True
     if occurrence.component_version is None:
         return False
-    return statement.component_version == occurrence.component_version
+    return statement.component_version.strip() == occurrence.component_version.strip()
 
 
 def _target_matches(statement: VexStatement, occurrence: InputOccurrence) -> bool:
@@ -357,8 +383,50 @@ def _target_matches(statement: VexStatement, occurrence: InputOccurrence) -> boo
         and statement.target_ref
         and occurrence.target_ref
         and statement.target_kind.lower() == occurrence.target_kind.lower()
-        and statement.target_ref == occurrence.target_ref
+        and _canonical_target_ref(statement.target_ref)
+        == _canonical_target_ref(occurrence.target_ref)
     )
+
+
+def _canonical_purl(value: str) -> _CanonicalPurl:
+    normalized = value.strip()
+    before_subpath, separator, raw_subpath = normalized.partition("#")
+    before_qualifiers, _, raw_qualifiers = before_subpath.partition("?")
+    core = unquote(before_qualifiers)
+    if core.startswith("pkg:"):
+        core = core[:4] + core[4:].casefold()
+    else:
+        core = core.casefold()
+    qualifiers = tuple(
+        sorted(
+            (
+                unquote(key).strip().casefold(),
+                unquote(qualifier_value).strip().casefold(),
+            )
+            for key, qualifier_value in parse_qsl(raw_qualifiers, keep_blank_values=True)
+            if unquote(key).strip().casefold() not in _NON_IDENTITY_PURL_QUALIFIERS
+        )
+    )
+    subpath = unquote(raw_subpath).strip().casefold() if separator else None
+    return _CanonicalPurl(core=core, qualifiers=qualifiers, subpath=subpath or None)
+
+
+def _canonical_purls_match(statement: _CanonicalPurl, occurrence: _CanonicalPurl) -> bool:
+    if statement.core != occurrence.core:
+        return False
+    if statement.subpath and statement.subpath != occurrence.subpath:
+        return False
+    if statement.qualifiers:
+        return statement.qualifiers == occurrence.qualifiers
+    return True
+
+
+def _canonical_component_name(value: str) -> str:
+    return " ".join(value.strip().casefold().split())
+
+
+def _canonical_target_ref(value: str) -> str:
+    return value.strip()
 
 
 def _has_target_fields(statement: VexStatement) -> bool:

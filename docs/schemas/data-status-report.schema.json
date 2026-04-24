@@ -4,7 +4,7 @@
   "title": "vuln-prioritizer data status report",
   "description": "JSON contract for `vuln-prioritizer data status --format json`.",
   "type": "object",
-  "additionalProperties": false,
+  "additionalProperties": true,
   "required": ["metadata", "summary", "namespaces", "attack", "warnings"],
   "properties": {
     "metadata": {
@@ -38,7 +38,7 @@
     },
     "metadata": {
       "type": "object",
-      "additionalProperties": false,
+      "additionalProperties": true,
       "required": [
         "schema_version",
         "command",
@@ -83,7 +83,7 @@
     },
     "summary": {
       "type": "object",
-      "additionalProperties": false,
+      "additionalProperties": true,
       "required": ["namespace_count", "namespace_file_count", "attack_enabled"],
       "properties": {
         "namespace_count": {
@@ -101,7 +101,7 @@
     },
     "namespaceStatus": {
       "type": "object",
-      "additionalProperties": false,
+      "additionalProperties": true,
       "required": [
         "namespace",
         "file_count",
@@ -141,7 +141,7 @@
     },
     "attackValidation": {
       "type": "object",
-      "additionalProperties": false,
+      "additionalProperties": true,
       "required": [
         "source",
         "mapping_file",

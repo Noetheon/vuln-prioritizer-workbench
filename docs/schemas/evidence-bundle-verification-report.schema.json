@@ -4,12 +4,12 @@
   "title": "vuln-prioritizer evidence bundle verification report",
   "description": "Verification contract emitted by `report verify-evidence-bundle --format json`.",
   "type": "object",
-  "additionalProperties": false,
+  "additionalProperties": true,
   "required": ["metadata", "summary", "items"],
   "properties": {
     "metadata": {
       "type": "object",
-      "additionalProperties": false,
+      "additionalProperties": true,
       "required": ["schema_version", "generated_at", "bundle_path"],
       "properties": {
         "schema_version": {
@@ -31,7 +31,7 @@
     },
     "summary": {
       "type": "object",
-      "additionalProperties": false,
+      "additionalProperties": true,
       "required": [
         "ok",
         "total_members",
@@ -79,7 +79,7 @@
   "$defs": {
     "verificationItem": {
       "type": "object",
-      "additionalProperties": false,
+      "additionalProperties": true,
       "required": ["path", "status", "detail"],
       "properties": {
         "path": {

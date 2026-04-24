@@ -164,6 +164,14 @@
     "highest_asset_criticality": null,
     "in_kev": true,
     "operational_rank": 1,
+    "priority_drivers": [
+      "kev",
+      "critical-epss-cvss",
+      "high-epss",
+      "high-cvss",
+      "medium-cvss",
+      "medium-epss"
+    ],
     "priority_label": "Critical",
     "priority_rank": 1,
     "provenance": {
@@ -232,14 +240,18 @@
         "date_added": "2021-12-10",
         "due_date": "2021-12-24",
         "in_kev": true,
+        "known_ransomware_campaign_use": null,
+        "notes": null,
         "product": "Log4j2",
         "required_action": "For all affected software assets for which updates exist, the only acceptable remediation actions are: 1) Apply updates; OR 2) remove affected assets from agency networks. Temporary mitigations using one of the measures provided at https://www.cisa.gov/uscert/ed-22-02-apache-log4j-recommended-mitigation-measures are only acceptable until updates are available.",
+        "short_description": null,
         "vendor_project": "Apache"
       },
       "nvd": {
         "cve_id": "CVE-2021-44228",
         "cvss_base_score": 10.0,
         "cvss_severity": "CRITICAL",
+        "cvss_vector": null,
         "cvss_version": "3.1",
         "cwes": [
           "CWE-20",
@@ -250,6 +262,7 @@
         "description": "Apache Log4j2 2.0-beta9 through 2.15.0 (excluding security releases 2.12.2, 2.12.3, and 2.3.1) JNDI features used in configuration, log messages, and parameters do not protect against attacker controlled LDAP and other JNDI related endpoints. An attacker who can control log messages or log message parameters can execute arbitrary code loaded from LDAP servers when message lookup substitution is enabled. From log4j 2.15.0, this behavior has been disabled by default. From version 2.16.0 (along with 2.12.2, 2.12.3, and 2.3.1), this functionality has been completely removed. Note that this vulnerability is specific to log4j-core and does not affect log4net, log4cxx, or other Apache Logging Services projects.",
         "last_modified": "2026-02-20T16:15:59.363",
         "published": "2021-12-10T10:15:09.143",
+        "reference_tags": {},
         "references": [
           "http://packetstormsecurity.com/files/165225/Apache-Log4j2-2.14.1-Remote-Code-Execution.html",
           "http://packetstormsecurity.com/files/165260/VMware-Security-Advisory-2021-0028.html",
@@ -354,7 +367,8 @@
           "https://www.oracle.com/security-alerts/cpuapr2022.html",
           "https://www.oracle.com/security-alerts/cpujan2022.html",
           "https://www.cisa.gov/known-exploited-vulnerabilities-catalog?field_cve=CVE-2021-44228"
-        ]
+        ],
+        "vulnerability_status": null
       }
     },
     "rationale": "CISA KEV lists this CVE as known exploited in the wild. NVD reports CVSS 10.0 (CRITICAL) via CVSS v3.1. FIRST EPSS is 0.945 (percentile 1.000). ATT&CK context (Medium) maps this CVE to 1 technique(s): T1190. Legacy local ATT&CK CSV context is available for this CVE. Prefer --attack-source ctid-json for structured CTID-backed ATT&CK context. ATT&CK mapping note: Representative local mapping for remote service exposure impact. Input provenance includes 1 occurrence(s) from cve-list. Seen in 1 occurrence(s).",
@@ -388,8 +402,11 @@
     "date_added": "2021-12-10",
     "due_date": "2021-12-24",
     "in_kev": true,
+    "known_ransomware_campaign_use": null,
+    "notes": null,
     "product": "Log4j2",
     "required_action": "For all affected software assets for which updates exist, the only acceptable remediation actions are: 1) Apply updates; OR 2) remove affected assets from agency networks. Temporary mitigations using one of the measures provided at https://www.cisa.gov/uscert/ed-22-02-apache-log4j-recommended-mitigation-measures are only acceptable until updates are available.",
+    "short_description": null,
     "vendor_project": "Apache"
   },
   "metadata": {
@@ -412,12 +429,13 @@
       "NVD CVE API 2.0",
       "FIRST EPSS API",
       "CISA Known Exploited Vulnerabilities Catalog",
+      "Provider snapshot replay: epss, kev, nvd",
       "Local ATT&CK CSV mapping",
       "Input formats: cve-list"
     ],
     "duplicate_cve_count": 0,
     "epss_diagnostics": {
-      "cache_hits": 1,
+      "cache_hits": 0,
       "content_hits": 1,
       "degraded": false,
       "empty_records": 0,
@@ -438,7 +456,7 @@
     "input_paths": [],
     "input_sources": [],
     "kev_diagnostics": {
-      "cache_hits": 1,
+      "cache_hits": 0,
       "content_hits": 1,
       "degraded": false,
       "empty_records": 0,
@@ -448,12 +466,12 @@
       "stale_cache_hits": 0
     },
     "kev_hits": 1,
-    "locked_provider_data": false,
+    "locked_provider_data": true,
     "mapping_framework": null,
     "mapping_framework_version": null,
     "merged_input_count": 1,
     "nvd_diagnostics": {
-      "cache_hits": 1,
+      "cache_hits": 0,
       "content_hits": 1,
       "degraded": false,
       "empty_records": 0,
@@ -480,7 +498,7 @@
     "provider_degraded": false,
     "provider_diagnostics": {
       "epss": {
-        "cache_hits": 1,
+        "cache_hits": 0,
         "content_hits": 1,
         "degraded": false,
         "empty_records": 0,
@@ -490,7 +508,7 @@
         "stale_cache_hits": 0
       },
       "kev": {
-        "cache_hits": 1,
+        "cache_hits": 0,
         "content_hits": 1,
         "degraded": false,
         "empty_records": 0,
@@ -500,7 +518,7 @@
         "stale_cache_hits": 0
       },
       "nvd": {
-        "cache_hits": 1,
+        "cache_hits": 0,
         "content_hits": 1,
         "degraded": false,
         "empty_records": 0,
@@ -517,8 +535,12 @@
       "nvd_last_modified_max": "2026-02-20T16:15:59.363",
       "nvd_last_modified_min": "2026-02-20T16:15:59.363"
     },
-    "provider_snapshot_file": null,
-    "provider_snapshot_sources": [],
+    "provider_snapshot_file": "data/demo_provider_snapshot.json",
+    "provider_snapshot_sources": [
+      "nvd",
+      "epss",
+      "kev"
+    ],
     "schema_version": "1.0.0",
     "source_stats": {
       "cve-list": 1
@@ -539,6 +561,7 @@
     "cve_id": "CVE-2021-44228",
     "cvss_base_score": 10.0,
     "cvss_severity": "CRITICAL",
+    "cvss_vector": null,
     "cvss_version": "3.1",
     "cwes": [
       "CWE-20",
@@ -549,6 +572,7 @@
     "description": "Apache Log4j2 2.0-beta9 through 2.15.0 (excluding security releases 2.12.2, 2.12.3, and 2.3.1) JNDI features used in configuration, log messages, and parameters do not protect against attacker controlled LDAP and other JNDI related endpoints. An attacker who can control log messages or log message parameters can execute arbitrary code loaded from LDAP servers when message lookup substitution is enabled. From log4j 2.15.0, this behavior has been disabled by default. From version 2.16.0 (along with 2.12.2, 2.12.3, and 2.3.1), this functionality has been completely removed. Note that this vulnerability is specific to log4j-core and does not affect log4net, log4cxx, or other Apache Logging Services projects.",
     "last_modified": "2026-02-20T16:15:59.363",
     "published": "2021-12-10T10:15:09.143",
+    "reference_tags": {},
     "references": [
       "http://packetstormsecurity.com/files/165225/Apache-Log4j2-2.14.1-Remote-Code-Execution.html",
       "http://packetstormsecurity.com/files/165260/VMware-Security-Advisory-2021-0028.html",
@@ -653,6 +677,7 @@
       "https://www.oracle.com/security-alerts/cpuapr2022.html",
       "https://www.oracle.com/security-alerts/cpujan2022.html",
       "https://www.cisa.gov/known-exploited-vulnerabilities-catalog?field_cve=CVE-2021-44228"
-    ]
+    ],
+    "vulnerability_status": null
   }
 }

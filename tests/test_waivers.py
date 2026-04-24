@@ -2,8 +2,19 @@ from __future__ import annotations
 
 from datetime import date
 
-from vuln_prioritizer.models import PrioritizedFinding, WaiverRule
-from vuln_prioritizer.services.waivers import apply_waivers, summarize_waiver_rules
+import pytest
+
+from vuln_prioritizer.models import (
+    FindingProvenance,
+    InputOccurrence,
+    PrioritizedFinding,
+    WaiverRule,
+)
+from vuln_prioritizer.services.waivers import (
+    apply_waivers,
+    load_waiver_rules,
+    summarize_waiver_rules,
+)
 
 
 def _finding(cve_id: str) -> PrioritizedFinding:
@@ -89,3 +100,93 @@ def test_apply_waivers_marks_review_due_and_expired_findings() -> None:
     assert by_cve["CVE-2024-0002"].waiver_days_remaining == -20
     assert any("review due" in warning for warning in warnings)
     assert any("expired waiver" in warning for warning in warnings)
+
+
+def test_load_waiver_rules_rejects_duplicate_ids_case_insensitively(tmp_path) -> None:
+    waiver_file = tmp_path / "waivers.yml"
+    waiver_file.write_text(
+        "\n".join(
+            [
+                "waivers:",
+                "  - id: accepted-risk",
+                "    cve_id: CVE-2024-0001",
+                "    owner: team-a",
+                "    reason: Accepted temporarily.",
+                "    expires_on: 2026-05-01",
+                "  - id: ACCEPTED-RISK",
+                "    cve_id: CVE-2024-0002",
+                "    owner: team-b",
+                "    reason: Accepted temporarily.",
+                "    expires_on: 2026-05-02",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="duplicate waiver id"):
+        load_waiver_rules(waiver_file)
+
+
+def test_load_waiver_rules_rejects_scalar_scope_fields(tmp_path) -> None:
+    waiver_file = tmp_path / "waivers.yml"
+    waiver_file.write_text(
+        "\n".join(
+            [
+                "waivers:",
+                "  - id: scalar-scope",
+                "    cve_id: CVE-2024-0001",
+                "    owner: team-a",
+                "    reason: Accepted temporarily.",
+                "    expires_on: 2026-05-01",
+                "    asset_ids: asset-api",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="invalid asset_ids"):
+        load_waiver_rules(waiver_file)
+
+
+def test_waiver_scope_matching_normalizes_asset_target_and_service_values() -> None:
+    finding = _finding("CVE-2024-0001").model_copy(
+        update={
+            "provenance": FindingProvenance(
+                asset_ids=[" Asset-API "],
+                targets=["repository:Backend/Requirements.txt"],
+                occurrences=[
+                    InputOccurrence(
+                        cve_id="CVE-2024-0001",
+                        target_kind="repository",
+                        target_ref="Backend/Requirements.txt",
+                        asset_business_service="Identity",
+                    )
+                ],
+            )
+        }
+    )
+
+    findings, warnings = apply_waivers(
+        [finding],
+        [
+            WaiverRule(
+                id="scoped",
+                cve_id="CVE-2024-0001",
+                owner="risk-review",
+                reason="Scoped acceptance.",
+                expires_on="2026-05-30",
+                asset_ids=["asset-api"],
+                targets=["REPOSITORY:backend/requirements.txt"],
+                services=["identity"],
+            )
+        ],
+        today=date(2026, 4, 21),
+    )
+
+    assert warnings == []
+    assert findings[0].waived is True
+    assert findings[0].waiver_id == "scoped"
+    assert findings[0].waiver_matched_scope is not None
+    assert "asset-api" in findings[0].waiver_matched_scope
