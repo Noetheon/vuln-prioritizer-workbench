@@ -32,6 +32,7 @@ def _client(tmp_path: Path) -> TestClient:
         upload_dir=tmp_path / "uploads",
         report_dir=tmp_path / "reports",
         provider_cache_dir=tmp_path / "cache",
+        provider_snapshot_dir=ROOT / "data",
     )
     return TestClient(create_app(settings=settings))
 
@@ -42,6 +43,7 @@ def _client_and_settings(tmp_path: Path) -> tuple[TestClient, WorkbenchSettings]
         upload_dir=tmp_path / "uploads",
         report_dir=tmp_path / "reports",
         provider_cache_dir=tmp_path / "cache",
+        provider_snapshot_dir=ROOT / "data",
     )
     return TestClient(create_app(settings=settings)), settings
 
@@ -57,7 +59,7 @@ def _import_sample(client: TestClient, project_id: str) -> dict[str, Any]:
         f"/api/projects/{project_id}/imports",
         data={
             "input_format": "cve-list",
-            "provider_snapshot_file": str(DEMO_PROVIDER_SNAPSHOT),
+            "provider_snapshot_file": DEMO_PROVIDER_SNAPSHOT.name,
             "locked_provider_data": "true",
         },
         files={"file": ("sample.txt", SAMPLE_CVES.read_bytes(), "text/plain")},
@@ -79,7 +81,7 @@ def _import_payload(
         f"/api/projects/{project_id}/imports",
         data={
             "input_format": input_format,
-            "provider_snapshot_file": str(DEMO_PROVIDER_SNAPSHOT),
+            "provider_snapshot_file": DEMO_PROVIDER_SNAPSHOT.name,
             "locked_provider_data": "true",
         },
         files={"file": (filename, content, content_type)},

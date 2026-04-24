@@ -168,6 +168,10 @@ Workbench runtime environment:
 | `VULN_PRIORITIZER_MAX_UPLOAD_MB` | `25` | Upload size limit per import. |
 | `VULN_PRIORITIZER_CSRF_TOKEN` | random per process when unset | Optional fixed local form token for repeatable demos. |
 
+For locked Workbench replay, submit only the snapshot filename, for example
+`demo_provider_snapshot.json`. The app resolves it from
+`VULN_PRIORITIZER_PROVIDER_SNAPSHOT_DIR` or the provider cache and rejects arbitrary paths.
+
 Current Workbench MVP limitations:
 
 - The Compose path is local-first and single-node. It is not hardened for internet exposure.
