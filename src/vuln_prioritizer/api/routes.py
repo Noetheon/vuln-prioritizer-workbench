@@ -36,6 +36,7 @@ ALLOWED_UPLOAD_SUFFIXES = {
     "trivy-json": {".json"},
     "grype-json": {".json"},
 }
+SAFE_SNAPSHOT_FILENAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*[.]json$")
 
 
 @api_router.get("/health")
@@ -342,18 +343,27 @@ def _resolve_provider_snapshot_path(
     if value is None or not value.strip():
         return None
 
-    requested = Path(value.strip())
-    candidate = requested if requested.is_absolute() else Path.cwd() / requested
-    resolved = candidate.resolve(strict=False)
-    allowed_roots = [
+    filename = value.strip()
+    if (
+        not SAFE_SNAPSHOT_FILENAME_RE.fullmatch(filename)
+        or "/" in filename
+        or "\\" in filename
+        or Path(filename).name != filename
+    ):
+        raise HTTPException(status_code=422, detail="Provider snapshot path is not allowed.")
+
+    allowed_roots = (
         settings.provider_snapshot_dir.resolve(strict=False),
         settings.provider_cache_dir.resolve(strict=False),
-    ]
-    if not any(resolved.is_relative_to(root) for root in allowed_roots):
-        raise HTTPException(status_code=422, detail="Provider snapshot path is not allowed.")
-    if not resolved.is_file():
-        raise HTTPException(status_code=422, detail="Provider snapshot file does not exist.")
-    return resolved
+    )
+    for root in allowed_roots:
+        if not root.is_dir():
+            continue
+        for child in root.iterdir():
+            if child.name == filename and child.is_file():
+                return child.resolve(strict=True)
+
+    raise HTTPException(status_code=422, detail="Provider snapshot file does not exist.")
 
 
 def _project_payload(project: Any) -> dict[str, Any]:

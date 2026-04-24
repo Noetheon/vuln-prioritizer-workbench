@@ -25,6 +25,7 @@ def _client(tmp_path: Path) -> TestClient:
         upload_dir=tmp_path / "uploads",
         report_dir=tmp_path / "reports",
         provider_cache_dir=tmp_path / "cache",
+        provider_snapshot_dir=ROOT / "data",
     )
     return TestClient(create_app(settings=settings))
 
@@ -96,7 +97,7 @@ def test_web_import_report_page_and_finding_detail(tmp_path: Path) -> None:
         f"/web/projects/{project_id}/imports",
         data={
             "input_format": "cve-list",
-            "provider_snapshot_file": str(DEMO_PROVIDER_SNAPSHOT),
+            "provider_snapshot_file": DEMO_PROVIDER_SNAPSHOT.name,
             "locked_provider_data": "true",
             "csrf_token": token,
         },

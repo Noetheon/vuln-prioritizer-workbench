@@ -8,9 +8,7 @@ from typing import Any
 from alembic import context
 from sqlalchemy import engine_from_config, pool
 
-# Import models so Alembic metadata is populated for autogenerate and migrations.
-from vuln_prioritizer.db import models as _models  # noqa: F401
-from vuln_prioritizer.db.base import target_metadata
+from vuln_prioritizer.db import target_metadata
 
 config = context.config
 

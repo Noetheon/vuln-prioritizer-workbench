@@ -5,6 +5,7 @@ from __future__ import annotations
 import secrets
 from pathlib import Path
 from typing import Annotated, cast
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request, UploadFile
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
@@ -205,19 +206,20 @@ def create_report_form(
     csrf_token: Annotated[str, Form()] = "",
 ) -> RedirectResponse:
     _check_csrf(csrf_token, settings)
+    safe_run_id = _safe_uuid_path_value(run_id)
     if report_format not in {"json", "markdown", "html"}:
         raise HTTPException(status_code=422, detail="Unsupported report format.")
     try:
         create_run_report(
             session=session,
             settings=settings,
-            analysis_run_id=run_id,
+            analysis_run_id=safe_run_id,
             report_format=cast(ReportFormat, report_format),
         )
     except WorkbenchReportError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     session.commit()
-    return RedirectResponse(f"/analysis-runs/{run_id}/reports", status_code=303)
+    return RedirectResponse(f"/analysis-runs/{safe_run_id}/reports", status_code=303)
 
 
 @web_router.post("/web/analysis-runs/{run_id}/evidence-bundle", response_class=HTMLResponse)
@@ -228,14 +230,22 @@ def create_evidence_form(
     csrf_token: Annotated[str, Form()] = "",
 ) -> RedirectResponse:
     _check_csrf(csrf_token, settings)
+    safe_run_id = _safe_uuid_path_value(run_id)
     try:
-        create_run_evidence_bundle(session=session, settings=settings, analysis_run_id=run_id)
+        create_run_evidence_bundle(session=session, settings=settings, analysis_run_id=safe_run_id)
     except WorkbenchReportError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     session.commit()
-    return RedirectResponse(f"/analysis-runs/{run_id}/reports", status_code=303)
+    return RedirectResponse(f"/analysis-runs/{safe_run_id}/reports", status_code=303)
 
 
 def _check_csrf(submitted: str, settings: WorkbenchSettings) -> None:
     if not secrets.compare_digest(submitted, settings.csrf_token):
         raise HTTPException(status_code=403, detail="Invalid CSRF token.")
+
+
+def _safe_uuid_path_value(value: str) -> str:
+    try:
+        return UUID(value).hex
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail="Analysis run not found.") from exc
