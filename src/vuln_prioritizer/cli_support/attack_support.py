@@ -78,6 +78,16 @@ def validate_attack_inputs(
             "domain": mapping_metadata.get("domain"),
             "mapping_framework": mapping_metadata.get("mapping_framework"),
             "mapping_framework_version": mapping_metadata.get("mapping_framework_version"),
+            "mapping_file_sha256": mapping_metadata.get("mapping_file_sha256"),
+            "technique_metadata_file_sha256": None,
+            "metadata_format": None,
+            "metadata_source": None,
+            "stix_spec_version": None,
+            "mapping_created_at": mapping_metadata.get("creation_date"),
+            "mapping_updated_at": mapping_metadata.get("last_update"),
+            "mapping_organization": mapping_metadata.get("organization"),
+            "mapping_author": mapping_metadata.get("author"),
+            "mapping_contact": mapping_metadata.get("contact"),
         }
         if attack_technique_metadata_file is not None:
             techniques, technique_metadata, technique_warnings = AttackMetadataProvider().load(
@@ -128,6 +138,12 @@ def validate_attack_inputs(
                 technique_metadata.get("attack_version") or metadata["attack_version"]
             )
             metadata["domain"] = technique_metadata.get("domain") or metadata["domain"]
+            metadata["technique_metadata_file_sha256"] = technique_metadata.get(
+                "metadata_file_sha256"
+            )
+            metadata["metadata_format"] = technique_metadata.get("metadata_format")
+            metadata["metadata_source"] = technique_metadata.get("metadata_source")
+            metadata["stix_spec_version"] = technique_metadata.get("stix_spec_version")
     else:
         provider = AttackProvider()
         results, metadata, provider_warnings = provider.inspect_legacy_csv(attack_mapping_file)
@@ -145,6 +161,16 @@ def validate_attack_inputs(
         "domain": metadata.get("domain"),
         "mapping_framework": metadata.get("mapping_framework"),
         "mapping_framework_version": metadata.get("mapping_framework_version"),
+        "mapping_file_sha256": metadata.get("mapping_file_sha256"),
+        "technique_metadata_file_sha256": metadata.get("technique_metadata_file_sha256"),
+        "metadata_format": metadata.get("metadata_format"),
+        "metadata_source": metadata.get("metadata_source"),
+        "stix_spec_version": metadata.get("stix_spec_version"),
+        "mapping_created_at": metadata.get("mapping_created_at"),
+        "mapping_updated_at": metadata.get("mapping_updated_at"),
+        "mapping_organization": metadata.get("mapping_organization"),
+        "mapping_author": metadata.get("mapping_author"),
+        "mapping_contact": metadata.get("mapping_contact"),
         "mapping_count": mapping_count,
         "unique_cves": unique_cves,
         "technique_count": technique_count,
@@ -167,6 +193,10 @@ def render_attack_validation_panel(result: dict[str, Any]) -> Panel:
         f"Source version: {result['source_version'] or 'N.A.'}",
         f"ATT&CK version: {result['attack_version'] or 'N.A.'}",
         f"Domain: {result['domain'] or 'N.A.'}",
+        f"Mapping SHA256: {result['mapping_file_sha256'] or 'N.A.'}",
+        f"Metadata SHA256: {result['technique_metadata_file_sha256'] or 'N.A.'}",
+        f"Metadata format: {result['metadata_format'] or 'N.A.'}",
+        f"STIX spec version: {result['stix_spec_version'] or 'N.A.'}",
         f"Missing technique metadata IDs: {', '.join(result['missing_metadata_ids']) or 'None'}",
         f"Domain mismatch: {'Yes' if result['domain_mismatch'] else 'No'}",
         f"ATT&CK version mismatch: {'Yes' if result['attack_version_mismatch'] else 'No'}",
@@ -188,6 +218,10 @@ def generate_attack_validation_markdown(result: dict[str, Any]) -> str:
         f"- Source version: `{result['source_version'] or 'N.A.'}`",
         f"- ATT&CK version: `{result['attack_version'] or 'N.A.'}`",
         f"- Domain: `{result['domain'] or 'N.A.'}`",
+        f"- Mapping SHA256: `{result['mapping_file_sha256'] or 'N.A.'}`",
+        f"- Metadata SHA256: `{result['technique_metadata_file_sha256'] or 'N.A.'}`",
+        f"- Metadata format: `{result['metadata_format'] or 'N.A.'}`",
+        f"- STIX spec version: `{result['stix_spec_version'] or 'N.A.'}`",
         "- Missing technique metadata IDs: "
         + (", ".join(result["missing_metadata_ids"]) or "None"),
         f"- Domain mismatch: {'Yes' if result['domain_mismatch'] else 'No'}",
@@ -304,6 +338,10 @@ def generate_attack_coverage_markdown(
         f"- ATT&CK source: `{metadata['source']}`",
         f"- Mapping file: `{metadata['mapping_file']}`",
         f"- Technique metadata file: `{metadata.get('technique_metadata_file') or 'N.A.'}`",
+        f"- Mapping SHA256: `{metadata.get('mapping_file_sha256') or 'N.A.'}`",
+        "- Technique metadata SHA256: "
+        + f"`{metadata.get('technique_metadata_file_sha256') or 'N.A.'}`",
+        f"- Metadata format: `{metadata.get('metadata_format') or 'N.A.'}`",
         f"- Mapped CVEs: {summary.mapped_cves}",
         f"- Unmapped CVEs: {summary.unmapped_cves}",
         "- Mapping type distribution: " + format_distribution(summary.mapping_type_distribution),

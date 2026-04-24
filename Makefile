@@ -6,8 +6,11 @@ DEMO_FIXED_NOW := 2026-04-21T12:00:00+00:00
 DEMO_ENV := PYTHONPATH=src VULN_PRIORITIZER_FIXED_NOW=$(DEMO_FIXED_NOW)
 DEMO_PROVIDER_SNAPSHOT_FILE := data/demo_provider_snapshot.json
 DEMO_PROVIDER_FLAGS := --provider-snapshot-file $(DEMO_PROVIDER_SNAPSHOT_FILE) --locked-provider-data
+DEMO_EVIDENCE_ANALYSIS_FILE := build/v1.0-demo-analysis.json
+DEMO_EVIDENCE_BUNDLE_FILE := build/v1.0-demo-evidence-bundle.zip
+DEMO_EVIDENCE_VERIFICATION_FILE := build/v1.0-demo-evidence-bundle-verification.json
 
-.PHONY: install test lint format fix typecheck check benchmark-check docs-check docs-serve actionlint-check workflow-check demo-sync-check demo-sync-check-temp package package-check package-check-temp pipx-source-smoke release-check demo-report demo-compare demo-explain demo-attack-report demo-attack-compare demo-attack-explain demo-attack-coverage demo-attack-navigator demo-pr-comment demo-results-sarif demo-html-report precommit-install
+.PHONY: install test lint format fix typecheck check benchmark-check playwright-install playwright-check docs-check docs-serve actionlint-check workflow-check docker-demo-smoke dependency-audit demo-sync-check demo-sync-check-temp package package-check package-check-temp pipx-source-smoke release-check demo-report demo-compare demo-explain demo-attack-report demo-attack-compare demo-attack-explain demo-attack-coverage demo-attack-navigator demo-pr-comment demo-results-sarif demo-html-report demo-evidence-analysis demo-evidence-bundle demo-evidence-bundle-check precommit-install
 
 install:
 	$(PYTHON) -m pip install -e .[dev]
@@ -37,6 +40,12 @@ check:
 benchmark-check:
 	$(PYTHON) -m pytest -q tests/test_benchmark_regressions.py tests/test_snapshot_diff_regressions.py tests/test_rollup_regressions.py
 
+playwright-install:
+	$(PYTHON) -m playwright install chromium
+
+playwright-check:
+	VULN_PRIORITIZER_RUN_PLAYWRIGHT=1 $(PYTHON) -m pytest -q tests/playwright --no-cov
+
 docs-check:
 	$(PYTHON) -m mkdocs build --clean
 
@@ -52,6 +61,26 @@ workflow-check:
 	$(MAKE) actionlint-check
 	$(PYTHON) -m pre_commit run --all-files
 	$(MAKE) package-check
+
+docker-demo-smoke:
+	@set -e; \
+	docker compose up -d --build; \
+	trap 'docker compose down -v --remove-orphans' EXIT; \
+	for attempt in $$(seq 1 30); do \
+		if $(PYTHON) -c "import urllib.request; print(urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=2).read().decode())" 2>/dev/null; then \
+			exit 0; \
+		fi; \
+		sleep 2; \
+	done; \
+	echo "Workbench health check failed." >&2; \
+	exit 1
+
+dependency-audit:
+	@$(PYTHON) -c "import pip_audit" >/dev/null 2>&1 || { \
+		echo "Install pip-audit first: python3 -m pip install pip-audit" >&2; \
+		exit 1; \
+	}
+	$(PYTHON) -m pip_audit --requirement requirements.txt
 
 demo-sync-check:
 	@before="$$(mktemp)"; after="$$(mktemp)"; \
@@ -140,6 +169,16 @@ demo-html-report:
 	mkdir -p build
 	$(DEMO_ENV) $(PYTHON) -m vuln_prioritizer.cli analyze --input data/input_fixtures/trivy_report.json --input-format trivy-json --asset-context data/input_fixtures/example_asset_context.csv --vex-file data/input_fixtures/openvex_statements.json --policy-profile enterprise --attack-source ctid-json --attack-mapping-file $(ATTACK_MAPPING_FILE) --attack-technique-metadata-file $(ATTACK_METADATA_FILE) --output build/example_report_analysis.json --format json $(DEMO_PROVIDER_FLAGS)
 	$(DEMO_ENV) $(PYTHON) -m vuln_prioritizer.cli report html --input build/example_report_analysis.json --output docs/examples/example_report.html
+
+demo-evidence-analysis:
+	mkdir -p build
+	$(DEMO_ENV) $(PYTHON) -m vuln_prioritizer.cli analyze --input data/input_fixtures/trivy_report.json --input-format trivy-json --asset-context data/input_fixtures/example_asset_context.csv --vex-file data/input_fixtures/openvex_statements.json --policy-profile enterprise --attack-source ctid-json --attack-mapping-file $(ATTACK_MAPPING_FILE) --attack-technique-metadata-file $(ATTACK_METADATA_FILE) --output $(DEMO_EVIDENCE_ANALYSIS_FILE) --format json $(DEMO_PROVIDER_FLAGS)
+
+demo-evidence-bundle: demo-evidence-analysis
+	$(DEMO_ENV) $(PYTHON) -m vuln_prioritizer.cli report evidence-bundle --input $(DEMO_EVIDENCE_ANALYSIS_FILE) --output $(DEMO_EVIDENCE_BUNDLE_FILE)
+
+demo-evidence-bundle-check: demo-evidence-bundle
+	$(DEMO_ENV) $(PYTHON) -m vuln_prioritizer.cli report verify-evidence-bundle --input $(DEMO_EVIDENCE_BUNDLE_FILE) --output $(DEMO_EVIDENCE_VERIFICATION_FILE) --format json
 
 precommit-install:
 	pre-commit install

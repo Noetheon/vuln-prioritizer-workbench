@@ -11,9 +11,11 @@ from sqlalchemy.orm import Session, selectinload
 from vuln_prioritizer.db.models import (
     AnalysisRun,
     Asset,
+    AttackMappingRecord,
     Component,
     EvidenceBundle,
     Finding,
+    FindingAttackContext,
     FindingOccurrence,
     Project,
     ProviderSnapshot,
@@ -66,6 +68,48 @@ class WorkbenchRepository:
         self.session.add(snapshot)
         self.session.flush()
         return snapshot
+
+    def get_provider_snapshot_by_hash(self, content_hash: str) -> ProviderSnapshot | None:
+        return self.session.scalar(
+            select(ProviderSnapshot).where(ProviderSnapshot.content_hash == content_hash)
+        )
+
+    def get_or_create_provider_snapshot(
+        self,
+        *,
+        content_hash: str,
+        nvd_last_sync: str | None = None,
+        epss_date: str | None = None,
+        kev_catalog_version: str | None = None,
+        metadata_json: dict | None = None,
+    ) -> ProviderSnapshot:
+        snapshot = self.get_provider_snapshot_by_hash(content_hash)
+        if snapshot is not None:
+            if nvd_last_sync is not None:
+                snapshot.nvd_last_sync = nvd_last_sync
+            if epss_date is not None:
+                snapshot.epss_date = epss_date
+            if kev_catalog_version is not None:
+                snapshot.kev_catalog_version = kev_catalog_version
+            if metadata_json is not None:
+                snapshot.metadata_json = metadata_json
+            self.session.flush()
+            return snapshot
+        return self.create_provider_snapshot(
+            content_hash=content_hash,
+            nvd_last_sync=nvd_last_sync,
+            epss_date=epss_date,
+            kev_catalog_version=kev_catalog_version,
+            metadata_json=metadata_json,
+        )
+
+    def list_provider_snapshots(self) -> list[ProviderSnapshot]:
+        statement = select(ProviderSnapshot).order_by(ProviderSnapshot.created_at.desc())
+        return list(self.session.scalars(statement))
+
+    def get_latest_provider_snapshot(self) -> ProviderSnapshot | None:
+        statement = select(ProviderSnapshot).order_by(ProviderSnapshot.created_at.desc()).limit(1)
+        return self.session.scalar(statement)
 
     def create_analysis_run(
         self,
@@ -204,6 +248,23 @@ class WorkbenchRepository:
         self.session.flush()
         return vulnerability
 
+    def get_vulnerability_by_cve(self, cve_id: str) -> Vulnerability | None:
+        return self.session.scalar(select(Vulnerability).where(Vulnerability.cve_id == cve_id))
+
+    def list_findings_for_cve(self, project_id: str, cve_id: str) -> list[Finding]:
+        statement = (
+            select(Finding)
+            .where(Finding.project_id == project_id, Finding.cve_id == cve_id)
+            .options(
+                selectinload(Finding.vulnerability),
+                selectinload(Finding.component),
+                selectinload(Finding.asset),
+                selectinload(Finding.occurrences),
+            )
+            .order_by(Finding.operational_rank, Finding.last_seen_at.desc())
+        )
+        return list(self.session.scalars(statement))
+
     def create_or_update_finding(
         self,
         *,
@@ -223,6 +284,18 @@ class WorkbenchRepository:
         cvss_base_score: float | None = None,
         attack_mapped: bool = False,
         suppressed_by_vex: bool = False,
+        under_investigation: bool = False,
+        waiver_status: str | None = None,
+        waiver_reason: str | None = None,
+        waiver_owner: str | None = None,
+        waiver_expires_on: str | None = None,
+        waiver_review_on: str | None = None,
+        waiver_days_remaining: int | None = None,
+        waiver_scope: str | None = None,
+        waiver_id: str | None = None,
+        waiver_matched_scope: str | None = None,
+        waiver_approval_ref: str | None = None,
+        waiver_ticket_url: str | None = None,
         recommended_action: str | None = None,
         rationale: str | None = None,
         explanation_json: dict | None = None,
@@ -258,6 +331,18 @@ class WorkbenchRepository:
         finding.cvss_base_score = cvss_base_score
         finding.attack_mapped = attack_mapped
         finding.suppressed_by_vex = suppressed_by_vex
+        finding.under_investigation = under_investigation
+        finding.waiver_status = waiver_status
+        finding.waiver_reason = waiver_reason
+        finding.waiver_owner = waiver_owner
+        finding.waiver_expires_on = waiver_expires_on
+        finding.waiver_review_on = waiver_review_on
+        finding.waiver_days_remaining = waiver_days_remaining
+        finding.waiver_scope = waiver_scope
+        finding.waiver_id = waiver_id
+        finding.waiver_matched_scope = waiver_matched_scope
+        finding.waiver_approval_ref = waiver_approval_ref
+        finding.waiver_ticket_url = waiver_ticket_url
         finding.recommended_action = recommended_action
         finding.rationale = rationale
         finding.explanation_json = explanation_json or {}
@@ -266,6 +351,116 @@ class WorkbenchRepository:
         finding.last_seen_at = utc_now()
         self.session.flush()
         return finding
+
+    def upsert_attack_mapping(
+        self,
+        *,
+        vulnerability_id: str,
+        cve_id: str,
+        attack_object_id: str,
+        source: str,
+        attack_object_name: str | None = None,
+        mapping_type: str | None = None,
+        source_version: str | None = None,
+        source_hash: str | None = None,
+        source_path: str | None = None,
+        attack_version: str | None = None,
+        domain: str | None = None,
+        metadata_hash: str | None = None,
+        metadata_path: str | None = None,
+        confidence: float | None = None,
+        review_status: str = "unreviewed",
+        rationale: str | None = None,
+        references_json: list[str] | None = None,
+        mapping_json: dict | None = None,
+    ) -> AttackMappingRecord:
+        statement = select(AttackMappingRecord).where(
+            AttackMappingRecord.source == source,
+            AttackMappingRecord.cve_id == cve_id,
+            AttackMappingRecord.attack_object_id == attack_object_id,
+            AttackMappingRecord.mapping_type == mapping_type,
+        )
+        mapping = self.session.scalar(statement)
+        if mapping is None:
+            mapping = AttackMappingRecord(
+                vulnerability_id=vulnerability_id,
+                cve_id=cve_id,
+                attack_object_id=attack_object_id,
+                source=source,
+            )
+            self.session.add(mapping)
+        mapping.vulnerability_id = vulnerability_id
+        mapping.attack_object_name = attack_object_name
+        mapping.mapping_type = mapping_type
+        mapping.source_version = source_version
+        mapping.source_hash = source_hash
+        mapping.source_path = source_path
+        mapping.attack_version = attack_version
+        mapping.domain = domain
+        mapping.metadata_hash = metadata_hash
+        mapping.metadata_path = metadata_path
+        mapping.confidence = confidence
+        mapping.review_status = review_status
+        mapping.rationale = rationale
+        mapping.references_json = references_json or []
+        mapping.mapping_json = mapping_json or {}
+        self.session.flush()
+        return mapping
+
+    def create_or_update_finding_attack_context(
+        self,
+        *,
+        finding_id: str,
+        analysis_run_id: str,
+        cve_id: str,
+        mapped: bool,
+        source: str,
+        attack_relevance: str,
+        threat_context_rank: int,
+        source_version: str | None = None,
+        source_hash: str | None = None,
+        source_path: str | None = None,
+        attack_version: str | None = None,
+        domain: str | None = None,
+        metadata_hash: str | None = None,
+        metadata_path: str | None = None,
+        rationale: str | None = None,
+        review_status: str = "unreviewed",
+        techniques_json: list[dict[str, Any]] | None = None,
+        tactics_json: list[str] | None = None,
+        mappings_json: list[dict[str, Any]] | None = None,
+    ) -> FindingAttackContext:
+        statement = select(FindingAttackContext).where(
+            FindingAttackContext.finding_id == finding_id,
+            FindingAttackContext.analysis_run_id == analysis_run_id,
+        )
+        context = self.session.scalar(statement)
+        if context is None:
+            context = FindingAttackContext(
+                finding_id=finding_id,
+                analysis_run_id=analysis_run_id,
+                cve_id=cve_id,
+            )
+            self.session.add(context)
+        context.cve_id = cve_id
+        context.mapped = mapped
+        context.source = source
+        context.source_version = source_version
+        context.source_hash = source_hash
+        context.source_path = source_path
+        context.attack_version = attack_version
+        context.domain = domain
+        context.metadata_hash = metadata_hash
+        context.metadata_path = metadata_path
+        context.attack_relevance = attack_relevance
+        context.threat_context_rank = threat_context_rank
+        context.rationale = rationale
+        context.review_status = review_status
+        context.techniques_json = techniques_json or []
+        context.tactics_json = tactics_json or []
+        context.mappings_json = mappings_json or []
+        self.session.flush()
+        return context
 
     def add_finding_occurrence(
         self,
@@ -298,6 +493,7 @@ class WorkbenchRepository:
                 selectinload(Finding.component),
                 selectinload(Finding.asset),
                 selectinload(Finding.occurrences),
+                selectinload(Finding.attack_contexts),
             )
             .order_by(Finding.operational_rank, Vulnerability.cve_id)
             .join(Finding.vulnerability)
@@ -324,9 +520,35 @@ class WorkbenchRepository:
                 selectinload(Finding.component),
                 selectinload(Finding.asset),
                 selectinload(Finding.occurrences),
+                selectinload(Finding.attack_contexts),
             )
         )
         return self.session.scalar(statement)
+
+    def list_finding_attack_contexts(self, finding_id: str) -> list[FindingAttackContext]:
+        statement = (
+            select(FindingAttackContext)
+            .where(FindingAttackContext.finding_id == finding_id)
+            .order_by(FindingAttackContext.threat_context_rank, FindingAttackContext.created_at)
+        )
+        return list(self.session.scalars(statement))
+
+    def list_run_attack_contexts(self, analysis_run_id: str) -> list[FindingAttackContext]:
+        statement = (
+            select(FindingAttackContext)
+            .where(FindingAttackContext.analysis_run_id == analysis_run_id)
+            .order_by(FindingAttackContext.threat_context_rank, FindingAttackContext.cve_id)
+        )
+        return list(self.session.scalars(statement))
+
+    def list_project_attack_contexts(self, project_id: str) -> list[FindingAttackContext]:
+        statement = (
+            select(FindingAttackContext)
+            .join(Finding, Finding.id == FindingAttackContext.finding_id)
+            .where(Finding.project_id == project_id)
+            .order_by(FindingAttackContext.threat_context_rank, FindingAttackContext.cve_id)
+        )
+        return list(self.session.scalars(statement))
 
     def add_report(
         self,

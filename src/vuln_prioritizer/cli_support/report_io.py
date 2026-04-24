@@ -12,6 +12,7 @@ from pydantic import ValidationError
 
 from vuln_prioritizer.models import (
     EvidenceBundleFile,
+    EvidenceBundleInputHash,
     EvidenceBundleManifest,
     EvidenceBundleVerificationItem,
     EvidenceBundleVerificationMetadata,
@@ -248,6 +249,15 @@ def write_evidence_bundle(
         ("report.html", generate_html_report(payload).encode("utf-8"), "html-report"),
         ("summary.md", generate_summary_markdown(payload).encode("utf-8"), "markdown-summary"),
     ]
+    navigator_layer = attack_navigator_layer_from_summary(attack_summary)
+    if navigator_layer is not None:
+        bundle_entries.append(
+            (
+                "attack-navigator-layer.json",
+                json.dumps(navigator_layer, indent=2, sort_keys=True).encode("utf-8"),
+                "attack-navigator-layer",
+            )
+        )
     reported_input_paths = analysis_input_paths(metadata)
     resolved_inputs = [
         resolved_input
@@ -281,11 +291,16 @@ def write_evidence_bundle(
         bundle_file_entry(path=path, content=content, kind=kind)
         for path, content, kind in bundle_entries
     ]
+    input_hashes = [input_hash_entry(path) for path in resolved_inputs]
     manifest = EvidenceBundleManifest(
         generated_at=iso_utc_now(),
         source_analysis_path=str(analysis_path),
+        source_analysis_sha256=hashlib.sha256(analysis_path.read_bytes()).hexdigest(),
         source_input_path=reported_input_paths[0] if reported_input_paths else None,
         source_input_paths=reported_input_paths,
+        source_input_hashes=input_hashes,
+        provider_snapshot=provider_snapshot_manifest_entry(metadata, analysis_path=analysis_path),
+        artifact_hashes={entry.path: entry.sha256 for entry in file_entries},
         findings_count=int(metadata.get("findings_count", 0)),
         kev_hits=int(metadata.get("kev_hits", 0)),
         waived_count=int(metadata.get("waived_count", 0)),
@@ -320,10 +335,80 @@ def analysis_input_paths(metadata: object) -> list[str]:
     return []
 
 
+def attack_navigator_layer_from_summary(attack_summary: object) -> dict[str, Any] | None:
+    if not isinstance(attack_summary, dict):
+        return None
+    technique_distribution = attack_summary.get("technique_distribution")
+    if not isinstance(technique_distribution, dict) or not technique_distribution:
+        return None
+    techniques: list[dict[str, Any]] = [
+        {
+            "techniqueID": technique_id,
+            "score": count,
+            "comment": f"Observed in {count} mapped CVE(s).",
+        }
+        for technique_id, count in sorted(
+            (
+                (str(key), int(value))
+                for key, value in technique_distribution.items()
+                if str(key).strip() and isinstance(value, int | float) and int(value) > 0
+            ),
+            key=lambda item: (-item[1], item[0]),
+        )
+    ]
+    if not techniques:
+        return None
+    max_score = max(int(item["score"]) for item in techniques)
+    return {
+        "name": "vuln-prioritizer ATT&CK coverage",
+        "version": "4.5",
+        "domain": "enterprise-attack",
+        "description": (
+            "Navigator layer generated from approved ATT&CK mappings in the evidence bundle."
+        ),
+        "gradient": {
+            "colors": ["#dfe7fd", "#4c6ef5"],
+            "minValue": 0,
+            "maxValue": max_score,
+        },
+        "techniques": techniques,
+        "legendItems": [{"label": "Mapped technique", "color": "#4c6ef5"}],
+        "showTacticRowBackground": True,
+        "selectTechniquesAcrossTactics": True,
+    }
+
+
 def source_input_bundle_path(resolved_input: Path, *, index: int, multiple: bool) -> str:
     if multiple:
         return f"input/{index:03d}-{resolved_input.name}"
     return f"input/{resolved_input.name}"
+
+
+def input_hash_entry(path: Path) -> EvidenceBundleInputHash:
+    content = path.read_bytes()
+    return EvidenceBundleInputHash(
+        path=str(path),
+        size_bytes=len(content),
+        sha256=hashlib.sha256(content).hexdigest(),
+    )
+
+
+def provider_snapshot_manifest_entry(metadata: object, *, analysis_path: Path) -> dict[str, Any]:
+    if not isinstance(metadata, dict):
+        return {}
+    snapshot_path = metadata.get("provider_snapshot_file")
+    snapshot_hash = metadata.get("provider_snapshot_hash")
+    if snapshot_hash is None:
+        resolved_snapshot = resolve_analysis_input_path(snapshot_path, analysis_path)
+        if resolved_snapshot is not None:
+            snapshot_hash = hashlib.sha256(resolved_snapshot.read_bytes()).hexdigest()
+    entry = {
+        "id": metadata.get("provider_snapshot_id"),
+        "sha256": snapshot_hash,
+        "path": snapshot_path,
+        "sources": metadata.get("provider_snapshot_sources", []),
+    }
+    return {key: value for key, value in entry.items() if value not in (None, "", [])}
 
 
 def resolve_analysis_input_path(reported_path: object, analysis_path: Path) -> Path | None:

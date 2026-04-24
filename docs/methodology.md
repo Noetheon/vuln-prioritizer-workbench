@@ -148,6 +148,7 @@ The current release line includes:
 - `attack navigator-layer`
 
 These commands work from local ATT&CK files and do not require NVD/EPSS/KEV.
+`attack validate` and `attack coverage` emit ATT&CK mapping and technique metadata SHA256 values so a run can identify the exact CTID/STIX artifacts used.
 
 ## Caching
 

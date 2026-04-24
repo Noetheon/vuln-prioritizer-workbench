@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}Governance · {{ project.name }}{% endblock %}
+{% block content %}
+<section class="section">
+  <div class="section-head row">
+    <div>
+      <p class="eyebrow">Governance</p>
+      <h1>{{ project.name }}</h1>
+    </div>
+    <a class="button" href="/projects/{{ project.id }}/findings">Findings</a>
+  </div>
+  <div class="metric-grid">
+    <article class="metric">
+      <span>Waived</span>
+      <strong>{{ summary.waiver_lifecycle.waived_count }}</strong>
+    </article>
+    <article class="metric">
+      <span>Review due</span>
+      <strong>{{ summary.waiver_lifecycle.review_due_count }}</strong>
+    </article>
+    <article class="metric">
+      <span>Expired</span>
+      <strong>{{ summary.waiver_lifecycle.expired_count }}</strong>
+    </article>
+    <article class="metric">
+      <span>VEX suppressed</span>
+      <strong>{{ summary.vex.suppressed_findings }}</strong>
+    </article>
+    <article class="metric">
+      <span>VEX review</span>
+      <strong>{{ summary.vex.under_investigation_findings }}</strong>
+    </article>
+  </div>
+</section>
+
+<section class="section split">
+  <div>
+    <div class="section-head">
+      <p class="eyebrow">Owners</p>
+      <h2>Remediation ownership</h2>
+    </div>
+    {% with rollups=summary.owner_rollups %}
+      {% include "governance/rollup_table.html" %}
+    {% endwith %}
+  </div>
+  <aside>
+    <div class="section-head">
+      <p class="eyebrow">Services</p>
+      <h2>Service pressure</h2>
+    </div>
+    {% with rollups=summary.service_rollups %}
+      {% include "governance/rollup_table.html" %}
+    {% endwith %}
+    <div class="section-head compact">
+      <p class="eyebrow">VEX</p>
+      <h2>Status counts</h2>
+    </div>
+    <div class="stack">
+      {% for status, count in summary.vex.status_counts.items() %}
+        <div class="service-row"><span>{{ status }}</span><strong>{{ count }}</strong></div>
+      {% else %}
+        <p class="empty">No VEX statuses captured.</p>
+      {% endfor %}
+    </div>
+  </aside>
+</section>
+{% endblock %}

@@ -9,6 +9,10 @@ and this project aims to follow [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Workbench v1.0 release notes, release checklist, and locked-provider demo evidence guidance for the local-first Workbench release line.
+- Workbench readiness gates for Docker Compose smoke testing and dependency audit review.
+- ATT&CK STIX bundle technique metadata import for pinned offline Workbench/CLI fixtures, preserving revoked and deprecated technique state without adding scanner or exploit behavior.
+- ATT&CK mapping and technique metadata hash provenance in analysis metadata, Workbench persistence, `/ttps` API responses, and release/evidence reports.
 - `data update` and `data verify` terminal workflows for explicit cache refresh, cache coverage checks, and pinned local file verification.
 - `make workflow-check` as the local equivalent for CI plus packaging metadata validation when hosted GitHub Actions are unavailable.
 - A local MkDocs-based documentation site with `make docs-check` and `make docs-serve`.
@@ -18,6 +22,9 @@ and this project aims to follow [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- Hardened Workbench local runtime behavior around host header validation, security headers, upload path cleanup, artifact downloads, secret redaction, and unsafe ATT&CK/waiver links.
+- Expanded Workbench reports, evidence bundles, ATT&CK context, governance rollups, and API pagination/filtering as additive surfaces over the existing CLI core.
+- Expanded CTID mapping provenance with creation/update metadata and explicit SHA256 tracking while keeping `ctid-json` as the canonical CVE-to-ATT&CK mapping source.
 - Expanded cache transparency from timestamp-only inspection to namespace counts, namespace checksums, and ATT&CK/local-file checksum visibility.
 - Documented the local workflow-equivalent path for SARIF, HTML, and cache verification when GitHub-hosted execution is unavailable.
 - Pinned consumer GitHub Action examples to the stable `v1.0.0` tag and widened the composite action surface to cover `target-kind` and `target-ref`.

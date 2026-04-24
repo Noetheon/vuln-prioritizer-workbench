@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import threading
 from pathlib import Path
@@ -531,6 +532,27 @@ def test_attack_metadata_provider_loads_subset_fixture() -> None:
     assert metadata["domain"] == "enterprise"
     assert results["T1059"].name == "Command and Scripting Interpreter"
     assert results["T1059"].tactics == ["execution"]
+    assert metadata["metadata_format"] == "vuln-prioritizer-technique-json"
+    assert len(metadata["metadata_file_sha256"] or "") == 64
+
+
+def test_attack_metadata_provider_loads_stix_bundle_fixture() -> None:
+    fixture = Path("data/attack/attack_stix_enterprise_16.1_subset.json")
+    provider = AttackMetadataProvider()
+
+    results, metadata, warnings = provider.load(fixture)
+
+    assert warnings == []
+    assert metadata["metadata_source"] == "mitre-attack-stix"
+    assert metadata["metadata_format"] == "stix-bundle"
+    assert metadata["metadata_file_sha256"] == hashlib.sha256(fixture.read_bytes()).hexdigest()
+    assert metadata["attack_version"] == "16.1"
+    assert metadata["domain"] == "enterprise"
+    assert metadata["stix_spec_version"] == "2.1"
+    assert results["T1190"].name == "Exploit Public-Facing Application"
+    assert results["T1190"].tactics == ["initial-access"]
+    assert results["T9999"].revoked is True
+    assert results["T9999"].deprecated is True
 
 
 def test_attack_provider_ctid_json_enriches_structured_attack_data() -> None:
@@ -547,6 +569,11 @@ def test_attack_provider_ctid_json_enriches_structured_attack_data() -> None:
     assert warnings == []
     assert metadata["source"] == "ctid-mappings-explorer"
     assert metadata["attack_version"] == "16.1"
+    assert len(metadata["mapping_file_sha256"] or "") == 64
+    assert len(metadata["technique_metadata_file_sha256"] or "") == 64
+    assert metadata["metadata_format"] == "vuln-prioritizer-technique-json"
+    assert metadata["mapping_created_at"] == "07/28/2025"
+    assert metadata["mapping_updated_at"] == "08/28/2025"
     assert results["CVE-2023-34362"].mapped is True
     assert results["CVE-2023-34362"].attack_relevance == "High"
     assert results["CVE-2023-34362"].mapping_types == [

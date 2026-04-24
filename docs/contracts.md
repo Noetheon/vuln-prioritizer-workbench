@@ -120,6 +120,7 @@ should treat same-major additive object members as tolerated and ignore fields
 they do not understand.
 
 The primary analysis-style schemas target the currently emitted version, `1.0.0`.
+ATT&CK provenance fields such as `attack_mapping_file_sha256`, `attack_technique_metadata_file_sha256`, `attack_metadata_format`, and `attack_stix_spec_version` are additive metadata fields on that same major contract.
 
 Helper contracts use either an explicit envelope version or their published schema as the contract version anchor:
 

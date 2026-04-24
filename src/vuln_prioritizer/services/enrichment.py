@@ -110,6 +110,18 @@ class EnrichmentService:
             attack_domain=attack_metadata["domain"],
             mapping_framework=attack_metadata["mapping_framework"],
             mapping_framework_version=attack_metadata["mapping_framework_version"],
+            attack_mapping_file_sha256=attack_metadata.get("mapping_file_sha256"),
+            attack_technique_metadata_file_sha256=attack_metadata.get(
+                "technique_metadata_file_sha256"
+            ),
+            attack_metadata_format=attack_metadata.get("metadata_format"),
+            attack_metadata_source=attack_metadata.get("metadata_source"),
+            attack_stix_spec_version=attack_metadata.get("stix_spec_version"),
+            attack_mapping_created_at=attack_metadata.get("mapping_created_at"),
+            attack_mapping_updated_at=attack_metadata.get("mapping_updated_at"),
+            attack_mapping_organization=attack_metadata.get("mapping_organization"),
+            attack_mapping_author=attack_metadata.get("mapping_author"),
+            attack_mapping_contact=attack_metadata.get("mapping_contact"),
             warnings=nvd_warnings + epss_warnings + kev_warnings + attack_warnings,
             nvd_diagnostics=ProviderLookupDiagnostics(
                 requested=self.last_nvd_diagnostics.requested,

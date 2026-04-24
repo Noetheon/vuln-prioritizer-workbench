@@ -7,12 +7,13 @@ from pathlib import Path
 
 from alembic import command
 from alembic.config import Config
-from sqlalchemy import MetaData
+from sqlalchemy import MetaData, create_engine, inspect
 
 from vuln_prioritizer.db.base import target_metadata
 
 INITIAL_REVISION = "0001_workbench_mvp"
-WORKBENCH_TABLES: Sequence[str] = (
+CURRENT_REVISION = "0004_workbench_attack_provenance"
+WORKBENCH_MVP_TABLES: Sequence[str] = (
     "projects",
     "provider_snapshots",
     "analysis_runs",
@@ -23,6 +24,40 @@ WORKBENCH_TABLES: Sequence[str] = (
     "finding_occurrences",
     "reports",
     "evidence_bundles",
+)
+WORKBENCH_TABLES: Sequence[str] = (
+    "projects",
+    "provider_snapshots",
+    "analysis_runs",
+    "assets",
+    "components",
+    "vulnerabilities",
+    "findings",
+    "finding_occurrences",
+    "attack_mappings",
+    "finding_attack_contexts",
+    "reports",
+    "evidence_bundles",
+)
+WORKBENCH_GOVERNANCE_COLUMNS: Sequence[str] = (
+    "under_investigation",
+    "waiver_status",
+    "waiver_reason",
+    "waiver_owner",
+    "waiver_expires_on",
+    "waiver_review_on",
+    "waiver_days_remaining",
+    "waiver_scope",
+    "waiver_id",
+    "waiver_matched_scope",
+    "waiver_approval_ref",
+    "waiver_ticket_url",
+)
+WORKBENCH_ATTACK_PROVENANCE_COLUMNS: Sequence[str] = (
+    "source_hash",
+    "source_path",
+    "metadata_hash",
+    "metadata_path",
 )
 
 
@@ -42,3 +77,28 @@ def alembic_config(database_url: str) -> Config:
 def upgrade_database(database_url: str, revision: str = "head") -> None:
     """Run Workbench database migrations up to the requested revision."""
     command.upgrade(alembic_config(database_url), revision)
+
+
+def ensure_database_current(database_url: str) -> None:
+    """Upgrade the Workbench database, stamping legacy create_all databases first."""
+    config = alembic_config(database_url)
+    engine = create_engine(database_url)
+    inspector = inspect(engine)
+    tables = set(inspector.get_table_names())
+    if WORKBENCH_MVP_TABLES[0] in tables and "alembic_version" not in tables:
+        target_revision = INITIAL_REVISION
+        if set(WORKBENCH_TABLES).issubset(tables):
+            finding_columns = {column["name"] for column in inspector.get_columns("findings")}
+            target_revision = (
+                "0003_workbench_governance_context"
+                if set(WORKBENCH_GOVERNANCE_COLUMNS).issubset(finding_columns)
+                else "0002_workbench_attack_core"
+            )
+            if target_revision == "0003_workbench_governance_context":
+                attack_columns = {
+                    column["name"] for column in inspector.get_columns("attack_mappings")
+                }
+                if set(WORKBENCH_ATTACK_PROVENANCE_COLUMNS).issubset(attack_columns):
+                    target_revision = CURRENT_REVISION
+        command.stamp(config, target_revision)
+    command.upgrade(config, "head")

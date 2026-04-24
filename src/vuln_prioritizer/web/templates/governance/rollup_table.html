@@ -1,0 +1,30 @@
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Findings</th>
+        <th>Actionable</th>
+        <th>Critical</th>
+        <th>High</th>
+        <th>Waivers</th>
+        <th>VEX</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for rollup in rollups %}
+        <tr>
+          <td>{{ rollup.label }}</td>
+          <td>{{ rollup.finding_count }}</td>
+          <td>{{ rollup.actionable_count }}</td>
+          <td>{{ rollup.critical_count }}</td>
+          <td>{{ rollup.high_count }}</td>
+          <td>{{ rollup.waived_count }} accepted · {{ rollup.waiver_review_due_count }} review · {{ rollup.expired_waiver_count }} expired</td>
+          <td>{{ rollup.suppressed_by_vex_count }} suppressed · {{ rollup.under_investigation_count }} review</td>
+        </tr>
+      {% else %}
+        <tr><td colspan="7" class="empty">No governance data captured.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>

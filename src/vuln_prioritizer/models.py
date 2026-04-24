@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
@@ -494,6 +496,16 @@ class EnrichmentResult(BaseModel):
     attack_domain: str | None = None
     mapping_framework: str | None = None
     mapping_framework_version: str | None = None
+    attack_mapping_file_sha256: str | None = None
+    attack_technique_metadata_file_sha256: str | None = None
+    attack_metadata_format: str | None = None
+    attack_metadata_source: str | None = None
+    attack_stix_spec_version: str | None = None
+    attack_mapping_created_at: str | None = None
+    attack_mapping_updated_at: str | None = None
+    attack_mapping_organization: str | None = None
+    attack_mapping_author: str | None = None
+    attack_mapping_contact: str | None = None
     parsed_input: ParsedInput = Field(default_factory=ParsedInput)
     warnings: list[str] = Field(default_factory=list)
     nvd_diagnostics: ProviderLookupDiagnostics = Field(default_factory=ProviderLookupDiagnostics)
@@ -525,6 +537,16 @@ class AnalysisContext(BaseModel):
     attack_domain: str | None = None
     mapping_framework: str | None = None
     mapping_framework_version: str | None = None
+    attack_mapping_file_sha256: str | None = None
+    attack_technique_metadata_file_sha256: str | None = None
+    attack_metadata_format: str | None = None
+    attack_metadata_source: str | None = None
+    attack_stix_spec_version: str | None = None
+    attack_mapping_created_at: str | None = None
+    attack_mapping_updated_at: str | None = None
+    attack_mapping_organization: str | None = None
+    attack_mapping_author: str | None = None
+    attack_mapping_contact: str | None = None
     warnings: list[str] = Field(default_factory=list)
     total_input: int = 0
     valid_input: int = 0
@@ -884,13 +906,23 @@ class EvidenceBundleFile(StrictModel):
     sha256: str
 
 
+class EvidenceBundleInputHash(StrictModel):
+    path: str
+    size_bytes: int
+    sha256: str
+
+
 class EvidenceBundleManifest(StrictModel):
     schema_version: str = "1.1.0"
     bundle_kind: str = "evidence-bundle"
     generated_at: str
     source_analysis_path: str
+    source_analysis_sha256: str | None = None
     source_input_path: str | None = None
     source_input_paths: list[str] = Field(default_factory=list)
+    source_input_hashes: list[EvidenceBundleInputHash] = Field(default_factory=list)
+    provider_snapshot: dict[str, Any] = Field(default_factory=dict)
+    artifact_hashes: dict[str, str] = Field(default_factory=dict)
     findings_count: int = 0
     kev_hits: int = 0
     waived_count: int = 0

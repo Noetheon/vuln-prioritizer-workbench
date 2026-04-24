@@ -105,6 +105,11 @@ class AnalysisRun(Base):
         passive_deletes=True,
     )
     findings: Mapped[list[Finding]] = relationship(back_populates="analysis_run")
+    attack_contexts: Mapped[list[FindingAttackContext]] = relationship(
+        back_populates="analysis_run",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
     reports: Mapped[list[Report]] = relationship(
         back_populates="analysis_run",
         cascade="all, delete-orphan",
@@ -176,6 +181,11 @@ class Vulnerability(Base):
     provider_json: Mapped[dict] = mapped_column(JSON, default=dict)
 
     findings: Mapped[list[Finding]] = relationship(back_populates="vulnerability")
+    attack_mappings: Mapped[list[AttackMappingRecord]] = relationship(
+        back_populates="vulnerability",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
 
 
 class Finding(Base):
@@ -208,6 +218,18 @@ class Finding(Base):
     cvss_base_score: Mapped[float | None] = mapped_column(Float)
     attack_mapped: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     suppressed_by_vex: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    under_investigation: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    waiver_status: Mapped[str | None] = mapped_column(String(80))
+    waiver_reason: Mapped[str | None] = mapped_column(Text)
+    waiver_owner: Mapped[str | None] = mapped_column(String(200))
+    waiver_expires_on: Mapped[str | None] = mapped_column(String(32))
+    waiver_review_on: Mapped[str | None] = mapped_column(String(32))
+    waiver_days_remaining: Mapped[int | None] = mapped_column(Integer)
+    waiver_scope: Mapped[str | None] = mapped_column(String(120))
+    waiver_id: Mapped[str | None] = mapped_column(String(200))
+    waiver_matched_scope: Mapped[str | None] = mapped_column(String(120))
+    waiver_approval_ref: Mapped[str | None] = mapped_column(String(300))
+    waiver_ticket_url: Mapped[str | None] = mapped_column(String(1000))
     recommended_action: Mapped[str | None] = mapped_column(Text)
     rationale: Mapped[str | None] = mapped_column(Text)
     explanation_json: Mapped[dict] = mapped_column(JSON, default=dict)
@@ -222,6 +244,11 @@ class Finding(Base):
     component: Mapped[Component | None] = relationship(back_populates="findings")
     asset: Mapped[Asset | None] = relationship(back_populates="findings")
     occurrences: Mapped[list[FindingOccurrence]] = relationship(
+        back_populates="finding",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+    attack_contexts: Mapped[list[FindingAttackContext]] = relationship(
         back_populates="finding",
         cascade="all, delete-orphan",
         passive_deletes=True,
@@ -263,6 +290,95 @@ class FindingOccurrence(Base):
     analysis_run: Mapped[AnalysisRun] = relationship(back_populates="occurrences")
 
     __table_args__ = (Index("ix_finding_occurrences_run", "analysis_run_id"),)
+
+
+class AttackMappingRecord(Base):
+    __tablename__ = "attack_mappings"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=_uuid)
+    vulnerability_id: Mapped[str] = mapped_column(
+        ForeignKey("vulnerabilities.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    cve_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    attack_object_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    attack_object_name: Mapped[str | None] = mapped_column(String(300))
+    mapping_type: Mapped[str | None] = mapped_column(String(120))
+    source: Mapped[str] = mapped_column(String(80), nullable=False)
+    source_version: Mapped[str | None] = mapped_column(String(120))
+    source_hash: Mapped[str | None] = mapped_column(String(128))
+    source_path: Mapped[str | None] = mapped_column(String(1000))
+    attack_version: Mapped[str | None] = mapped_column(String(80))
+    domain: Mapped[str | None] = mapped_column(String(80))
+    metadata_hash: Mapped[str | None] = mapped_column(String(128))
+    metadata_path: Mapped[str | None] = mapped_column(String(1000))
+    confidence: Mapped[float | None] = mapped_column(Float)
+    review_status: Mapped[str] = mapped_column(String(80), nullable=False, default="unreviewed")
+    rationale: Mapped[str | None] = mapped_column(Text)
+    references_json: Mapped[list] = mapped_column(JSON, default=list)
+    mapping_json: Mapped[dict] = mapped_column(JSON, default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+
+    vulnerability: Mapped[Vulnerability] = relationship(back_populates="attack_mappings")
+
+    __table_args__ = (
+        Index("ix_attack_mappings_cve_id", "cve_id"),
+        Index("ix_attack_mappings_technique", "attack_object_id"),
+        Index(
+            "uq_attack_mappings_source_cve_technique_type",
+            "source",
+            "cve_id",
+            "attack_object_id",
+            "mapping_type",
+            unique=True,
+        ),
+    )
+
+
+class FindingAttackContext(Base):
+    __tablename__ = "finding_attack_contexts"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=_uuid)
+    finding_id: Mapped[str] = mapped_column(
+        ForeignKey("findings.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    analysis_run_id: Mapped[str] = mapped_column(
+        ForeignKey("analysis_runs.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    cve_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    mapped: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    source: Mapped[str] = mapped_column(String(80), nullable=False, default="none")
+    source_version: Mapped[str | None] = mapped_column(String(120))
+    source_hash: Mapped[str | None] = mapped_column(String(128))
+    source_path: Mapped[str | None] = mapped_column(String(1000))
+    attack_version: Mapped[str | None] = mapped_column(String(80))
+    domain: Mapped[str | None] = mapped_column(String(80))
+    metadata_hash: Mapped[str | None] = mapped_column(String(128))
+    metadata_path: Mapped[str | None] = mapped_column(String(1000))
+    attack_relevance: Mapped[str] = mapped_column(String(40), nullable=False, default="Unmapped")
+    threat_context_rank: Mapped[int] = mapped_column(Integer, nullable=False, default=99)
+    rationale: Mapped[str | None] = mapped_column(Text)
+    review_status: Mapped[str] = mapped_column(String(80), nullable=False, default="unreviewed")
+    techniques_json: Mapped[list] = mapped_column(JSON, default=list)
+    tactics_json: Mapped[list] = mapped_column(JSON, default=list)
+    mappings_json: Mapped[list] = mapped_column(JSON, default=list)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+
+    finding: Mapped[Finding] = relationship(back_populates="attack_contexts")
+    analysis_run: Mapped[AnalysisRun] = relationship(back_populates="attack_contexts")
+
+    __table_args__ = (
+        Index(
+            "uq_finding_attack_contexts_finding_run",
+            "finding_id",
+            "analysis_run_id",
+            unique=True,
+        ),
+        Index("ix_finding_attack_contexts_run_rank", "analysis_run_id", "threat_context_rank"),
+        Index("ix_finding_attack_contexts_technique_source", "source", "attack_relevance"),
+    )
 
 
 class Report(Base):

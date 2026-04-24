@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}{{ status_code }} {{ error_title }} · Vuln Prioritizer Workbench{% endblock %}
+{% block content %}
+<section class="section narrow">
+  <div class="section-head">
+    <p class="eyebrow">Workbench error</p>
+    <h1>{{ status_code }} {{ error_title }}</h1>
+  </div>
+  <article class="panel">
+    <p>{{ error_message }}</p>
+    <div class="chip-row">
+      <span class="badge neutral">{{ error_code }}</span>
+      <a class="button primary" href="/">Open workspace</a>
+    </div>
+    {% if error_details %}
+      <details class="json-block">
+        <summary>Details</summary>
+        <pre>{{ error_details | tojson(indent=2) }}</pre>
+      </details>
+    {% endif %}
+  </article>
+</section>
+{% endblock %}

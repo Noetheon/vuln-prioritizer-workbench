@@ -129,6 +129,8 @@ Then open `http://127.0.0.1:8000`. The Compose service stores SQLite data, uploa
 curl http://127.0.0.1:8000/api/health
 ```
 
+Maintainers can run the same Compose readiness path through `make docker-demo-smoke`, which starts the service, polls `/api/health`, and tears the stack down after the check.
+
 The container starts the web app with `vuln-prioritizer web serve --host 0.0.0.0 --port 8000`. The app initializes the SQLite schema on startup; you can also initialize the same database explicitly:
 
 ```bash
@@ -167,6 +169,7 @@ Workbench runtime environment:
 | `VULN_PRIORITIZER_CACHE_DIR` | local: `.cache/vuln-prioritizer`; Compose: `/app/.cache/vuln-prioritizer` | Provider cache used by Workbench analysis. |
 | `VULN_PRIORITIZER_MAX_UPLOAD_MB` | `25` | Upload size limit per import. |
 | `VULN_PRIORITIZER_CSRF_TOKEN` | random per process when unset | Optional fixed local form token for repeatable demos. |
+| `VULN_PRIORITIZER_ALLOWED_HOSTS` | local: `127.0.0.1,localhost,testserver`; Compose: `127.0.0.1,localhost` | Comma-separated Host header allowlist for the local Workbench. |
 
 For locked Workbench replay, submit only the snapshot filename, for example
 `demo_provider_snapshot.json`. The app resolves it from
@@ -179,7 +182,7 @@ Current Workbench MVP limitations:
 - SQLite is the default supported Workbench runtime. PostgreSQL, background workers, SSO, API tokens, ticket sync, and multi-workspace tenancy are out of MVP scope.
 - The project still does not scan systems, patch software, or generate heuristic/AI CVE-to-ATT&CK mappings.
 
-Workbench planning lives in [docs/workbench-masterplan.md](docs/workbench-masterplan.md). The roadmap tracks how the current CLI release line is being repositioned as the reusable core for that add-on.
+Workbench readiness is tracked in [docs/workbench-threat-model.md](docs/workbench-threat-model.md), and planning lives in [docs/workbench-masterplan.md](docs/workbench-masterplan.md). The roadmap tracks how the current CLI release line is being repositioned as the reusable core for that add-on.
 
 ## Quickstart
 
@@ -402,12 +405,14 @@ Useful local gates:
 python3 -m pytest -q
 make check
 make benchmark-check
+make playwright-install
+make playwright-check
 make release-check
 make demo-sync-check-temp
 make package-check-temp
 ```
 
-If you change docs, examples, or report artifacts, run `make release-check` so the committed example outputs stay in sync. Use the `*-temp` targets when you want the same demo or package validation in a temporary copy without mutating checked-in docs artifacts or `dist/`.
+Use `make playwright-check` for real-browser Workbench coverage; run `make playwright-install` once on a development machine before the first Playwright run. If you change docs, examples, or report artifacts, run `make release-check` so the committed example outputs stay in sync. Use the `*-temp` targets when you want the same demo or package validation in a temporary copy without mutating checked-in docs artifacts or `dist/`.
 
 Pull request readiness:
 

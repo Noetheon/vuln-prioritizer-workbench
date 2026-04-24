@@ -13,7 +13,9 @@ DEFAULT_WORKBENCH_DB_URL = "sqlite:///./data/workbench.db"
 DEFAULT_UPLOAD_DIR = Path("data") / "uploads"
 DEFAULT_REPORT_DIR = Path("data") / "reports"
 DEFAULT_PROVIDER_SNAPSHOT_DIR = Path("data")
+DEFAULT_ATTACK_ARTIFACT_DIR = Path("data") / "attack"
 DEFAULT_MAX_UPLOAD_MB = 25
+DEFAULT_ALLOWED_HOSTS = ("127.0.0.1", "localhost", "testserver")
 
 
 @dataclass(frozen=True, slots=True)
@@ -24,10 +26,12 @@ class WorkbenchSettings:
     upload_dir: Path = DEFAULT_UPLOAD_DIR
     report_dir: Path = DEFAULT_REPORT_DIR
     provider_snapshot_dir: Path = DEFAULT_PROVIDER_SNAPSHOT_DIR
+    attack_artifact_dir: Path = DEFAULT_ATTACK_ARTIFACT_DIR
     provider_cache_dir: Path = DEFAULT_CACHE_DIR
     max_upload_mb: int = DEFAULT_MAX_UPLOAD_MB
     nvd_api_key_env: str = DEFAULT_NVD_API_KEY_ENV
     csrf_token: str = field(default_factory=lambda: secrets.token_urlsafe(32))
+    allowed_hosts: tuple[str, ...] = DEFAULT_ALLOWED_HOSTS
 
     @property
     def max_upload_bytes(self) -> int:
@@ -46,6 +50,9 @@ def load_workbench_settings() -> WorkbenchSettings:
                 str(DEFAULT_PROVIDER_SNAPSHOT_DIR),
             )
         ),
+        attack_artifact_dir=Path(
+            os.getenv("VULN_PRIORITIZER_ATTACK_ARTIFACT_DIR", str(DEFAULT_ATTACK_ARTIFACT_DIR))
+        ),
         provider_cache_dir=Path(os.getenv("VULN_PRIORITIZER_CACHE_DIR", str(DEFAULT_CACHE_DIR))),
         max_upload_mb=_positive_int_from_env(
             "VULN_PRIORITIZER_MAX_UPLOAD_MB",
@@ -53,6 +60,10 @@ def load_workbench_settings() -> WorkbenchSettings:
         ),
         nvd_api_key_env=os.getenv("VULN_PRIORITIZER_NVD_API_KEY_ENV", DEFAULT_NVD_API_KEY_ENV),
         csrf_token=os.getenv("VULN_PRIORITIZER_CSRF_TOKEN") or secrets.token_urlsafe(32),
+        allowed_hosts=_csv_tuple_from_env(
+            "VULN_PRIORITIZER_ALLOWED_HOSTS",
+            DEFAULT_ALLOWED_HOSTS,
+        ),
     )
 
 
@@ -61,16 +72,17 @@ def ensure_workbench_directories(settings: WorkbenchSettings) -> None:
     settings.upload_dir.mkdir(parents=True, exist_ok=True)
     settings.report_dir.mkdir(parents=True, exist_ok=True)
     settings.provider_cache_dir.mkdir(parents=True, exist_ok=True)
+    settings.attack_artifact_dir.mkdir(parents=True, exist_ok=True)
 
 
 def sqlite_path_from_url(database_url: str) -> Path | None:
     """Return a filesystem path for SQLite URLs, or None for non-SQLite URLs."""
     if database_url == "sqlite:///:memory:":
         return None
-    if database_url.startswith("sqlite:///"):
-        return Path(database_url.removeprefix("sqlite:///"))
     if database_url.startswith("sqlite:////"):
         return Path("/" + database_url.removeprefix("sqlite:////"))
+    if database_url.startswith("sqlite:///"):
+        return Path(database_url.removeprefix("sqlite:///"))
     return None
 
 
@@ -83,3 +95,11 @@ def _positive_int_from_env(name: str, default: int) -> int:
     except ValueError:
         return default
     return parsed if parsed > 0 else default
+
+
+def _csv_tuple_from_env(name: str, default: tuple[str, ...]) -> tuple[str, ...]:
+    raw_value = os.getenv(name)
+    if raw_value is None:
+        return default
+    values = tuple(value.strip() for value in raw_value.split(",") if value.strip())
+    return values or default

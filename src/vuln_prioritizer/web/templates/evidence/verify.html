@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}Evidence verification{% endblock %}
+{% block content %}
+<section class="section">
+  <div class="section-head">
+    <p class="eyebrow">Evidence</p>
+    <h1>Bundle verification</h1>
+  </div>
+  <div class="metric-grid">
+    <article class="metric">
+      <span>Status</span>
+      <strong>{{ "Passed" if summary.ok else "Failed" }}</strong>
+    </article>
+    <article class="metric">
+      <span>Verified</span>
+      <strong>{{ summary.verified_files }}</strong>
+    </article>
+    <article class="metric">
+      <span>Missing</span>
+      <strong>{{ summary.missing_files }}</strong>
+    </article>
+    <article class="metric">
+      <span>Modified</span>
+      <strong>{{ summary.modified_files }}</strong>
+    </article>
+    <article class="metric">
+      <span>Unexpected</span>
+      <strong>{{ summary.unexpected_files }}</strong>
+    </article>
+    <article class="metric">
+      <span>Manifest</span>
+      <strong>{{ summary.manifest_errors }}</strong>
+    </article>
+  </div>
+</section>
+
+<section class="section">
+  <div class="section-head">
+    <p class="eyebrow">Manifest</p>
+    <h2>{{ metadata.bundle_path }}</h2>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Path</th>
+          <th>Kind</th>
+          <th>Status</th>
+          <th>Detail</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in items %}
+          <tr>
+            <td>{{ item.path }}</td>
+            <td>{{ item.kind or "N.A." }}</td>
+            <td>{{ item.status }}</td>
+            <td>{{ item.detail }}</td>
+          </tr>
+        {% else %}
+          <tr><td colspan="4" class="empty">No verification items returned.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

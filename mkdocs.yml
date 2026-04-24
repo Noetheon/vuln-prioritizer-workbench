@@ -25,6 +25,10 @@ nav:
   - Release Operations: release_operations.md
   - Roadmap: roadmap.md
   - Workbench Planning:
+      - v1.0 Release Checklist: workbench-v1-release-checklist.md
+      - Offline Demo Runbook: workbench-offline-demo.md
+      - ATT&CK Methodology: workbench-attack-methodology.md
+      - Threat Model and Readiness: workbench-threat-model.md
       - MVP Masterplan: workbench-masterplan.md
       - ATT&CK/TTP Masterplan V2: workbench-masterplan-attack-ttp-v2.md
       - Engineering Roadmap V3: workbench-engineering-roadmap-attack-ttp-v3.md
@@ -42,6 +46,7 @@ nav:
       - V0.3 Submission Checklist: evidence/final_submission_checklist.md
       - V0.3 Screenshot List: evidence/screenshot_capture_list.md
   - Releases:
+      - Workbench v1.0.0: releases/workbench-v1.0.0.md
       - v1.1.0: releases/v1.1.0.md
       - v1.0.0: releases/v1.0.0.md
       - v0.2.2: releases/v0.2.2.md
