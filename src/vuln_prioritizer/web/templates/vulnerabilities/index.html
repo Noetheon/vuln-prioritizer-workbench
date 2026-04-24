@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block title %}Vulnerability Intelligence · {{ project.name }}{% endblock %}
+{% block content %}
+<section class="section">
+  <div class="section-head row">
+    <div>
+      <p class="eyebrow">Vulnerability Intelligence</p>
+      <h1>{{ project.name }}</h1>
+    </div>
+    <a class="button" href="/projects/{{ project.id }}/dashboard">Dashboard</a>
+  </div>
+  <form class="filter-bar" method="get" action="/projects/{{ project.id }}/vulnerabilities">
+    <label>
+      CVE ID
+      <input name="q" value="{{ query }}" placeholder="CVE-2024-3094">
+    </label>
+    <button class="button primary" type="submit">Lookup</button>
+  </form>
+</section>
+
+{% if vulnerability %}
+  <section class="section">
+    <div class="section-head">
+      <p class="eyebrow">Stored provider data</p>
+      <h2>{{ vulnerability.cve_id }}</h2>
+    </div>
+    <div class="detail-grid">
+      <article class="panel">
+        <p class="eyebrow">NVD</p>
+        <p>{{ vulnerability.description or "No NVD description captured." }}</p>
+      </article>
+      <article class="panel">
+        <p class="eyebrow">Scores</p>
+        <table>
+          <tbody>
+            <tr><th>Severity</th><td>{{ vulnerability.severity or "N.A." }}</td></tr>
+            <tr><th>CVSS</th><td>{{ "%.1f"|format(vulnerability.cvss_score) if vulnerability.cvss_score is not none else "N.A." }}</td></tr>
+            <tr><th>CWE</th><td>{{ vulnerability.cwe or "N.A." }}</td></tr>
+            <tr><th>Published</th><td>{{ vulnerability.published_at or "N.A." }}</td></tr>
+            <tr><th>Modified</th><td>{{ vulnerability.modified_at or "N.A." }}</td></tr>
+          </tbody>
+        </table>
+      </article>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-head">
+      <p class="eyebrow">Project findings</p>
+      <h2>Occurrences in {{ project.name }}</h2>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Priority</th>
+            <th>Component</th>
+            <th>Asset</th>
+            <th>Owner</th>
+            <th>EPSS</th>
+            <th>KEV</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for finding in findings %}
+            <tr>
+              <td><span class="badge {{ finding.priority|lower }}">{{ finding.priority }}</span></td>
+              <td><a href="/findings/{{ finding.id }}">{{ finding.component.name if finding.component else "N.A." }}</a></td>
+              <td>{{ finding.asset.asset_id if finding.asset else "N.A." }}</td>
+              <td>{{ finding.asset.owner if finding.asset else "N.A." }}</td>
+              <td>{{ "%.3f"|format(finding.epss) if finding.epss is not none else "N.A." }}</td>
+              <td>{{ "Yes" if finding.in_kev else "No" }}</td>
+            </tr>
+          {% else %}
+            <tr><td colspan="6" class="empty">No project finding references this CVE.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+{% elif looked_up %}
+  <section class="section">
+    <p class="empty">No stored provider data exists for this CVE in the Workbench database.</p>
+  </section>
+{% endif %}
+{% endblock %}

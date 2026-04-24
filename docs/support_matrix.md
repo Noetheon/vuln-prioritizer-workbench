@@ -51,7 +51,7 @@
 
 | Feature | `analyze` | `compare` | `explain` | Notes |
 | --- | --- | --- | --- | --- |
-| ATT&CK enrichment | yes | yes | yes | Sources: `none`, `local-csv`, `ctid-json`. Prefer `ctid-json`; `local-csv` remains legacy compatibility only. No remote ATT&CK dependency. |
+| ATT&CK enrichment | yes | yes | yes | Sources: `none`, `local-csv`, `ctid-json`. Prefer `ctid-json`; `local-csv` remains legacy compatibility only. Technique metadata can use the simplified local JSON or a pinned ATT&CK STIX bundle. No remote ATT&CK dependency. |
 | Asset context CSV | yes | yes | yes | `target_kind` stays exact; `target_ref` supports deterministic `exact` and `glob` rules with optional `rule_id`, `match_mode`, `precedence`, and aggregated conflict reporting. |
 | VEX files | yes | yes | yes | Supports OpenVEX JSON and CycloneDX VEX JSON with deterministic ranked matching, occurrence-level match provenance, aggregated conflict reporting, and visible `under_investigation` status. |
 | Policy profiles | yes | yes | yes | Built-ins: `default`, `enterprise`, `conservative`. |

@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 
 from vuln_prioritizer.models import AttackTechnique
+from vuln_prioritizer.providers.attack_stix import AttackStixProvider
 
 
 class AttackMetadataProvider:
@@ -20,12 +22,19 @@ class AttackMetadataProvider:
         if offline_file.suffix.lower() != ".json":
             raise ValueError("ATT&CK technique metadata file must be a JSON file.")
 
+        raw_content = offline_file.read_bytes()
         try:
-            payload = json.loads(offline_file.read_text(encoding="utf-8"))
+            payload = json.loads(raw_content.decode("utf-8"))
         except json.JSONDecodeError as exc:
             raise ValueError(
                 f"ATT&CK technique metadata JSON is not valid JSON: {exc.msg}."
             ) from exc
+        if isinstance(payload, dict) and payload.get("type") == "bundle":
+            return AttackStixProvider().load_payload(
+                payload,
+                source_path=offline_file,
+                raw_content=raw_content,
+            )
         techniques = payload.get("techniques")
         if not isinstance(techniques, list):
             raise ValueError("ATT&CK technique metadata JSON is missing a techniques array.")
@@ -66,6 +75,11 @@ class AttackMetadataProvider:
         normalized_metadata = {
             "attack_version": _normalize_optional_string(payload.get("attack_version")),
             "domain": _normalize_optional_string(payload.get("domain")),
+            "metadata_source": "local-technique-metadata",
+            "metadata_format": "vuln-prioritizer-technique-json",
+            "metadata_file_sha256": hashlib.sha256(raw_content).hexdigest(),
+            "metadata_file": str(offline_file),
+            "stix_spec_version": None,
         }
         return by_id, normalized_metadata, warnings
 

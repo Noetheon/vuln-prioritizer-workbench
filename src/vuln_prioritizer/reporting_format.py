@@ -134,14 +134,31 @@ def _run_metadata_lines(context: AnalysisContext) -> list[str]:
         lines.append("- Provider degraded: `yes`")
     if context.attack_mapping_file:
         lines.append(f"- ATT&CK mapping file: `{context.attack_mapping_file}`")
+    if context.attack_mapping_file_sha256:
+        lines.append(f"- ATT&CK mapping file SHA256: `{context.attack_mapping_file_sha256}`")
     if context.attack_technique_metadata_file:
         lines.append(
             f"- ATT&CK technique metadata file: `{context.attack_technique_metadata_file}`"
         )
+    if context.attack_technique_metadata_file_sha256:
+        lines.append(
+            "- ATT&CK technique metadata file SHA256: "
+            f"`{context.attack_technique_metadata_file_sha256}`"
+        )
+    if context.attack_metadata_format:
+        lines.append(f"- ATT&CK metadata format: `{context.attack_metadata_format}`")
+    if context.attack_metadata_source:
+        lines.append(f"- ATT&CK metadata source: `{context.attack_metadata_source}`")
+    if context.attack_stix_spec_version:
+        lines.append(f"- ATT&CK STIX spec version: `{context.attack_stix_spec_version}`")
     if context.mapping_framework:
         lines.append(f"- ATT&CK mapping framework: `{context.mapping_framework}`")
     if context.mapping_framework_version:
         lines.append(f"- ATT&CK mapping framework version: `{context.mapping_framework_version}`")
+    if context.attack_mapping_created_at:
+        lines.append(f"- ATT&CK mapping created: `{context.attack_mapping_created_at}`")
+    if context.attack_mapping_updated_at:
+        lines.append(f"- ATT&CK mapping updated: `{context.attack_mapping_updated_at}`")
     if context.attack_version:
         lines.append(f"- ATT&CK version: `{context.attack_version}`")
     if context.attack_domain:

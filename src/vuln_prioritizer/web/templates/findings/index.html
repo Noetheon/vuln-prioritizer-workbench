@@ -9,6 +9,57 @@
     </div>
     <a class="button" href="/projects/{{ project.id }}/dashboard">Dashboard</a>
   </div>
+  <form class="filter-bar" method="get" action="/projects/{{ project.id }}/findings">
+    <label>
+      Search
+      <input name="q" value="{{ filters.q }}" placeholder="CVE, component, owner">
+    </label>
+    <label>
+      Priority
+      <select name="priority">
+        <option value="">Any</option>
+        {% for value in ["Critical", "High", "Medium", "Low"] %}
+          <option value="{{ value }}" {% if filters.priority == value %}selected{% endif %}>{{ value }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>
+      Status
+      <select name="status">
+        <option value="">Any</option>
+        {% for value in ["open", "accepted", "suppressed", "fixed"] %}
+          <option value="{{ value }}" {% if filters.status == value %}selected{% endif %}>{{ value }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>
+      KEV
+      <select name="kev">
+        <option value="">Any</option>
+        <option value="true" {% if filters.kev is sameas true %}selected{% endif %}>Yes</option>
+        <option value="false" {% if filters.kev is sameas false %}selected{% endif %}>No</option>
+      </select>
+    </label>
+    <label>
+      Owner
+      <input name="owner" value="{{ filters.owner }}">
+    </label>
+    <label>
+      Service
+      <input name="service" value="{{ filters.service }}">
+    </label>
+    <label>
+      Sort
+      <select name="sort">
+        {% for value, label in [("operational", "Operational"), ("priority", "Priority"), ("epss", "EPSS"), ("cvss", "CVSS"), ("cve", "CVE"), ("last_seen", "Last seen")] %}
+          <option value="{{ value }}" {% if filters.sort == value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <input type="hidden" name="limit" value="{{ limit }}">
+    <button class="button primary" type="submit">Apply</button>
+  </form>
+  <p class="empty">Showing {{ offset + 1 if total else 0 }}-{{ offset + findings|length }} of {{ total }} findings.</p>
   <div class="table-wrap">
     <table>
       <thead>
@@ -22,6 +73,7 @@
           <th>EPSS</th>
           <th>CVSS</th>
           <th>Status</th>
+          <th>Governance</th>
         </tr>
       </thead>
       <tbody>
@@ -36,12 +88,33 @@
             <td>{{ "%.3f"|format(finding.epss) if finding.epss is not none else "N.A." }}</td>
             <td>{{ "%.1f"|format(finding.cvss_base_score) if finding.cvss_base_score is not none else "N.A." }}</td>
             <td>{{ finding.status }}</td>
+            <td>
+              {% if finding.suppressed_by_vex %}
+                VEX suppressed
+              {% elif finding.under_investigation %}
+                VEX review
+              {% elif finding.waiver_status %}
+                waiver {{ finding.waiver_status }}
+              {% elif finding.waived %}
+                waiver active
+              {% else %}
+                N.A.
+              {% endif %}
+            </td>
           </tr>
         {% else %}
-          <tr><td colspan="9" class="empty">No findings imported.</td></tr>
+          <tr><td colspan="10" class="empty">No findings imported.</td></tr>
         {% endfor %}
       </tbody>
     </table>
+  </div>
+  <div class="pager">
+    {% if offset > 0 %}
+      <a class="button" href="?q={{ filters.q }}&priority={{ filters.priority }}&status={{ filters.status }}&owner={{ filters.owner }}&service={{ filters.service }}&sort={{ filters.sort }}&limit={{ limit }}&offset={{ previous_offset }}">Previous</a>
+    {% endif %}
+    {% if next_offset is not none %}
+      <a class="button" href="?q={{ filters.q }}&priority={{ filters.priority }}&status={{ filters.status }}&owner={{ filters.owner }}&service={{ filters.service }}&sort={{ filters.sort }}&limit={{ limit }}&offset={{ next_offset }}">Next</a>
+    {% endif %}
   </div>
 </section>
 {% endblock %}

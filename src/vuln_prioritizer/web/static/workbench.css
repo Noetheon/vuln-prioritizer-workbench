@@ -35,6 +35,7 @@ a {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 12px;
   min-height: 64px;
   padding: 0 32px;
   border-bottom: 1px solid var(--line);
@@ -43,12 +44,15 @@ a {
 
 .brand {
   font-weight: 700;
+  overflow-wrap: anywhere;
   text-decoration: none;
 }
 
 .top-nav {
   display: flex;
+  flex-wrap: wrap;
   gap: 18px;
+  max-width: 100%;
   color: var(--muted);
   font-size: 14px;
 }
@@ -56,6 +60,8 @@ a {
 .top-nav a,
 .artifact-row,
 .run-row {
+  min-width: 0;
+  overflow-wrap: anywhere;
   text-decoration: none;
 }
 
@@ -148,6 +154,12 @@ h2 {
   gap: 28px;
 }
 
+.split > *,
+.detail-grid > *,
+.metric-grid > * {
+  min-width: 0;
+}
+
 .table-wrap {
   overflow-x: auto;
   border: 1px solid var(--line);
@@ -164,6 +176,7 @@ th,
 td {
   padding: 12px 14px;
   border-bottom: 1px solid var(--line);
+  overflow-wrap: anywhere;
   text-align: left;
   vertical-align: top;
   font-size: 14px;
@@ -225,10 +238,29 @@ th {
   background: var(--surface);
 }
 
+.service-row > *,
+.run-row > *,
+.artifact-row > * {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 .form-panel {
   display: grid;
   gap: 16px;
   padding: 20px;
+}
+
+.filter-bar {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+  align-items: end;
+  margin-bottom: 16px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
 }
 
 label {
@@ -289,8 +321,20 @@ textarea {
   margin-bottom: 18px;
 }
 
+.subsection {
+  margin-top: 24px;
+}
+
 .panel {
   padding: 18px;
+}
+
+.panel table {
+  table-layout: fixed;
+}
+
+.panel th {
+  width: 38%;
 }
 
 .json-block {
@@ -307,6 +351,13 @@ textarea {
 
 .empty {
   color: var(--muted);
+}
+
+.pager {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 14px;
 }
 
 @media (max-width: 860px) {

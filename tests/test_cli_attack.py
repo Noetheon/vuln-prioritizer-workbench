@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 
@@ -15,6 +16,7 @@ runner = CliRunner()
 
 ATTACK_MAPPING_FILE = Path("data/attack/ctid_kev_enterprise_2025-07-28_attack-16.1_subset.json")
 ATTACK_METADATA_FILE = Path("data/attack/attack_techniques_enterprise_16.1_subset.json")
+ATTACK_STIX_FILE = Path("data/attack/attack_stix_enterprise_16.1_subset.json")
 
 
 def test_cli_analyze_supports_ctid_attack_source(monkeypatch, tmp_path: Path) -> None:
@@ -253,6 +255,75 @@ def test_cli_attack_validate_json_reports_cross_file_gaps(tmp_path: Path) -> Non
     assert any("Missing ATT&CK technique metadata" in warning for warning in payload["warnings"])
     assert any("ATT&CK domain mismatch" in warning for warning in payload["warnings"])
     assert any("ATT&CK version mismatch" in warning for warning in payload["warnings"])
+
+
+def test_cli_attack_validate_json_reports_stix_and_hash_provenance(tmp_path: Path) -> None:
+    mapping_file = tmp_path / "mapping.json"
+    output_file = tmp_path / "validate-stix.json"
+    mapping_file.write_text(
+        json.dumps(
+            {
+                "metadata": {
+                    "technology_domain": "enterprise",
+                    "attack_version": "16.1",
+                    "mapping_framework": "kev",
+                    "mapping_framework_version": "07/28/2025",
+                    "mapping_types": {
+                        "primary_impact": {},
+                    },
+                    "creation_date": "07/28/2025",
+                    "last_update": "08/28/2025",
+                },
+                "mapping_objects": [
+                    {
+                        "capability_id": "CVE-2024-0001",
+                        "attack_object_id": "T1190",
+                        "attack_object_name": "Exploit Public-Facing Application",
+                        "mapping_type": "primary_impact",
+                    },
+                    {
+                        "capability_id": "CVE-2024-0002",
+                        "attack_object_id": "T9999",
+                        "attack_object_name": "Deprecated Test Technique",
+                        "mapping_type": "primary_impact",
+                    },
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    result = runner.invoke(
+        app,
+        [
+            "attack",
+            "validate",
+            "--attack-mapping-file",
+            str(mapping_file),
+            "--attack-technique-metadata-file",
+            str(ATTACK_STIX_FILE),
+            "--output",
+            str(output_file),
+            "--format",
+            "json",
+        ],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(output_file.read_text(encoding="utf-8"))
+    assert payload["metadata_source"] == "mitre-attack-stix"
+    assert payload["metadata_format"] == "stix-bundle"
+    assert payload["stix_spec_version"] == "2.1"
+    assert payload["attack_version"] == "16.1"
+    assert payload["domain"] == "enterprise"
+    assert payload["mapping_file_sha256"] == hashlib.sha256(mapping_file.read_bytes()).hexdigest()
+    assert (
+        payload["technique_metadata_file_sha256"]
+        == hashlib.sha256(ATTACK_STIX_FILE.read_bytes()).hexdigest()
+    )
+    assert payload["mapping_created_at"] == "07/28/2025"
+    assert payload["mapping_updated_at"] == "08/28/2025"
+    assert payload["revoked_or_deprecated_count"] == 1
 
 
 def test_cli_attack_validate_missing_mapping_file_exits_cleanly(tmp_path: Path) -> None:

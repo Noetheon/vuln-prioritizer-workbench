@@ -91,6 +91,46 @@ def test_repository_round_trip_persists_workbench_finding() -> None:
             operational_rank=1,
             explanation_json={"drivers": ["KEV", "internet-facing asset"]},
         )
+        repo.upsert_attack_mapping(
+            vulnerability_id=vulnerability.id,
+            cve_id=vulnerability.cve_id,
+            attack_object_id="T1190",
+            attack_object_name="Exploit Public-Facing Application",
+            mapping_type="exploitation_technique",
+            source="ctid",
+            source_hash="f" * 64,
+            source_path="data/attack/mapping.json",
+            metadata_hash="e" * 64,
+            metadata_path="data/attack/metadata.json",
+            confidence=1.0,
+            review_status="source_reviewed",
+            rationale="Imported from CTID mapping fixture.",
+            references_json=["https://example.invalid/advisory"],
+            mapping_json={"attack_object_id": "T1190"},
+        )
+        repo.create_or_update_finding_attack_context(
+            finding_id=finding.id,
+            analysis_run_id=run.id,
+            cve_id=vulnerability.cve_id,
+            mapped=True,
+            source="ctid",
+            source_hash="f" * 64,
+            source_path="data/attack/mapping.json",
+            metadata_hash="e" * 64,
+            metadata_path="data/attack/metadata.json",
+            attack_relevance="High",
+            threat_context_rank=1,
+            review_status="source_reviewed",
+            techniques_json=[
+                {
+                    "attack_object_id": "T1190",
+                    "name": "Exploit Public-Facing Application",
+                    "tactics": ["initial-access"],
+                }
+            ],
+            tactics_json=["initial-access"],
+            mappings_json=[{"attack_object_id": "T1190"}],
+        )
         repo.add_finding_occurrence(
             finding_id=finding.id,
             analysis_run_id=run.id,
@@ -114,7 +154,13 @@ def test_repository_round_trip_persists_workbench_finding() -> None:
         assert findings[0].asset is not None
         assert findings[0].asset.business_service == "checkout"
         assert findings[0].occurrences[0].fix_version == "3.0.9"
+        assert findings[0].attack_contexts[0].source == "ctid"
+        assert findings[0].attack_contexts[0].source_hash == "f" * 64
+        assert findings[0].attack_contexts[0].metadata_hash == "e" * 64
+        assert findings[0].attack_contexts[0].threat_context_rank == 1
         assert findings[0].explanation_json["drivers"] == ["KEV", "internet-facing asset"]
+        top_contexts = repo.list_project_attack_contexts(project.id)
+        assert top_contexts[0].techniques_json[0]["attack_object_id"] == "T1190"
 
 
 def test_repository_upserts_reuse_existing_records() -> None:

@@ -143,6 +143,16 @@ class AttackProvider:
             domain=technique_metadata.get("domain") or mapping_metadata.get("domain"),
             mapping_framework=mapping_metadata.get("mapping_framework"),
             mapping_framework_version=mapping_metadata.get("mapping_framework_version"),
+            mapping_file_sha256=mapping_metadata.get("mapping_file_sha256"),
+            technique_metadata_file_sha256=technique_metadata.get("metadata_file_sha256"),
+            metadata_format=technique_metadata.get("metadata_format"),
+            metadata_source=technique_metadata.get("metadata_source"),
+            stix_spec_version=technique_metadata.get("stix_spec_version"),
+            mapping_created_at=mapping_metadata.get("creation_date"),
+            mapping_updated_at=mapping_metadata.get("last_update"),
+            mapping_organization=mapping_metadata.get("organization"),
+            mapping_author=mapping_metadata.get("author"),
+            mapping_contact=mapping_metadata.get("contact"),
         )
         return results, metadata, mapping_warnings + metadata_warnings
 
@@ -227,6 +237,16 @@ def _build_metadata(
     domain: str | None = None,
     mapping_framework: str | None = None,
     mapping_framework_version: str | None = None,
+    mapping_file_sha256: str | None = None,
+    technique_metadata_file_sha256: str | None = None,
+    metadata_format: str | None = None,
+    metadata_source: str | None = None,
+    stix_spec_version: str | None = None,
+    mapping_created_at: str | None = None,
+    mapping_updated_at: str | None = None,
+    mapping_organization: str | None = None,
+    mapping_author: str | None = None,
+    mapping_contact: str | None = None,
 ) -> dict[str, str | None]:
     return {
         "source": source,
@@ -239,4 +259,14 @@ def _build_metadata(
         "domain": domain,
         "mapping_framework": mapping_framework,
         "mapping_framework_version": mapping_framework_version,
+        "mapping_file_sha256": mapping_file_sha256,
+        "technique_metadata_file_sha256": technique_metadata_file_sha256,
+        "metadata_format": metadata_format,
+        "metadata_source": metadata_source,
+        "stix_spec_version": stix_spec_version,
+        "mapping_created_at": mapping_created_at,
+        "mapping_updated_at": mapping_updated_at,
+        "mapping_organization": mapping_organization,
+        "mapping_author": mapping_author,
+        "mapping_contact": mapping_contact,
     }

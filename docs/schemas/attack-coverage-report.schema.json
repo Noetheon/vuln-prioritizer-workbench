@@ -59,7 +59,12 @@
         "attack_version",
         "domain",
         "mapping_framework",
-        "mapping_framework_version"
+        "mapping_framework_version",
+        "mapping_file_sha256",
+        "technique_metadata_file_sha256",
+        "metadata_format",
+        "metadata_source",
+        "stix_spec_version"
       ],
       "properties": {
         "input_path": {
@@ -87,6 +92,21 @@
           "$ref": "#/$defs/nullableString"
         },
         "mapping_framework_version": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "mapping_file_sha256": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "technique_metadata_file_sha256": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "metadata_format": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "metadata_source": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "stix_spec_version": {
           "$ref": "#/$defs/nullableString"
         }
       }

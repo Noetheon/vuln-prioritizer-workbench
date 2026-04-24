@@ -10,7 +10,7 @@
     <a class="button primary" href="/projects/{{ project.id }}/imports/new">Import findings</a>
   </div>
   <div class="metric-grid">
-    {% for label in ["Critical", "High", "Medium", "Low", "KEV", "Open"] %}
+    {% for label in ["Critical", "High", "Medium", "Low", "KEV", "Open", "VEX suppressed", "Waiver review due", "Expired waivers"] %}
       <article class="metric">
         <span>{{ label }}</span>
         <strong>{{ counts[label] }}</strong>
@@ -63,6 +63,39 @@
       {% else %}
         <p class="empty">No service context captured.</p>
       {% endfor %}
+    </div>
+    <div class="section-head compact">
+      <p class="eyebrow">ATT&amp;CK</p>
+      <h2>Top techniques</h2>
+    </div>
+    <div class="stack">
+      {% for technique in top_techniques %}
+        <div class="service-row">
+          <span>{{ technique.technique_id }} · {{ technique.name }}</span>
+          <strong>{{ technique.count }}</strong>
+        </div>
+      {% else %}
+        <p class="empty">No ATT&amp;CK context imported.</p>
+      {% endfor %}
+    </div>
+    <div class="section-head compact">
+      <p class="eyebrow">Providers</p>
+      <h2>Freshness</h2>
+    </div>
+    <div class="stack">
+      {% for source in provider_status.sources %}
+        <div class="service-row">
+          <span>{{ source.name|upper }}</span>
+          <strong>{{ source.value or "Missing" }}</strong>
+        </div>
+      {% else %}
+        <p class="empty">No provider snapshot recorded.</p>
+      {% endfor %}
+      {% if provider_status.warnings %}
+        {% for warning in provider_status.warnings %}
+          <p class="empty">{{ warning }}</p>
+        {% endfor %}
+      {% endif %}
     </div>
     <div class="section-head compact">
       <p class="eyebrow">Runs</p>

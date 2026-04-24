@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}Settings · {{ project.name }}{% endblock %}
+{% block content %}
+<section class="section">
+  <div class="section-head row">
+    <div>
+      <p class="eyebrow">Settings</p>
+      <h1>{{ project.name }}</h1>
+    </div>
+    <a class="button" href="/projects/{{ project.id }}/dashboard">Dashboard</a>
+  </div>
+  <div class="detail-grid">
+    <article class="panel">
+      <p class="eyebrow">Runtime</p>
+      <table>
+        <tbody>
+          <tr><th>Database URL</th><td>{{ database_url_display }}</td></tr>
+          <tr><th>Upload directory</th><td>{{ settings.upload_dir }}</td></tr>
+          <tr><th>Report directory</th><td>{{ settings.report_dir }}</td></tr>
+          <tr><th>Provider cache</th><td>{{ settings.provider_cache_dir }}</td></tr>
+          <tr><th>ATT&amp;CK directory</th><td>{{ settings.attack_artifact_dir }}</td></tr>
+          <tr><th>Max upload</th><td>{{ settings.max_upload_mb }} MB</td></tr>
+        </tbody>
+      </table>
+    </article>
+    <article class="panel">
+      <p class="eyebrow">Provider</p>
+      <table>
+        <tbody>
+          <tr><th>Snapshot directory</th><td>{{ settings.provider_snapshot_dir }}</td></tr>
+          <tr><th>NVD API key env</th><td>{{ settings.nvd_api_key_env }}</td></tr>
+          <tr><th>NVD API key value</th><td>{{ nvd_api_key_display }}</td></tr>
+          <tr><th>Latest snapshot</th><td>{{ provider_status.snapshot.content_hash or "Missing" }}</td></tr>
+          <tr><th>Status</th><td>{{ provider_status.status }}</td></tr>
+        </tbody>
+      </table>
+    </article>
+  </div>
+</section>
+
+<section class="section">
+  <div class="section-head">
+    <p class="eyebrow">Freshness</p>
+    <h2>Provider sources</h2>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Source</th>
+          <th>Selected</th>
+          <th>Available</th>
+          <th>Value</th>
+          <th>Detail</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for source in provider_status.sources %}
+          <tr>
+            <td>{{ source.name|upper }}</td>
+            <td>{{ "Yes" if source.selected else "No" }}</td>
+            <td>{{ "Yes" if source.available else "No" }}</td>
+            <td>{{ source.value or "N.A." }}</td>
+            <td>{{ source.detail or "N.A." }}</td>
+          </tr>
+        {% else %}
+          <tr><td colspan="5" class="empty">No provider snapshot recorded.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% for warning in provider_status.warnings %}
+    <p class="empty">{{ warning }}</p>
+  {% endfor %}
+</section>
+{% endblock %}

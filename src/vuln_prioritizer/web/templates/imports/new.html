@@ -29,6 +29,33 @@
       <input type="checkbox" name="locked_provider_data" value="true">
       Locked provider data
     </label>
+    <label>
+      ATT&amp;CK source
+      <select name="attack_source">
+        <option value="none">None</option>
+        <option value="ctid-json">CTID JSON</option>
+      </select>
+    </label>
+    <label>
+      ATT&amp;CK mapping file
+      <input name="attack_mapping_file" placeholder="ctid_kev_enterprise_2025-07-28_attack-16.1_subset.json">
+    </label>
+    <label>
+      ATT&amp;CK technique metadata
+      <input name="attack_technique_metadata_file" placeholder="attack_techniques_enterprise_16.1_subset.json">
+    </label>
+    <label>
+      Asset context
+      <input type="file" name="asset_context_file" accept=".csv,text/csv">
+    </label>
+    <label>
+      VEX document
+      <input type="file" name="vex_file" accept=".json,application/json">
+    </label>
+    <label>
+      Waiver file
+      <input type="file" name="waiver_file" accept=".yml,.yaml,text/yaml,application/x-yaml">
+    </label>
     <button class="button primary" type="submit">Start import</button>
   </form>
 </section>
