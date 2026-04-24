@@ -1,6 +1,6 @@
 # Community And Public Repository Setup
 
-This document is a maintainer checklist for running `vuln-prioritizer` as a public GitHub repository. It is intentionally scoped to a security-focused CLI for prioritizing known CVEs, not a general app platform or community program.
+This document is a maintainer checklist for running `vuln-prioritizer` as a public GitHub repository. It is intentionally scoped to a security-focused CLI and local Workbench for prioritizing known CVEs, not a general scanner, SaaS platform, or community program.
 
 Use it for two different jobs:
 
@@ -22,6 +22,18 @@ The split matters:
 | Repository visibility and surface settings | GitHub UI or API | Public/private state, discussions, wiki, homepage, merge cleanup, and related toggles must be configured on GitHub. |
 | Private vulnerability reporting or security advisories settings | GitHub repository settings | Must be configured on GitHub if the project wants GitHub-managed private reporting in addition to `SECURITY.md`. |
 
+## Current GitHub Metadata Check
+
+As of 2026-04-24, `gh repo view Noetheon/vuln-prioritizer-workbench` showed:
+
+- visibility: `PUBLIC`
+- default branch: `main`
+- description: `Local-first vulnerability prioritization workbench for explainable CVE remediation decisions.`
+- homepage: empty
+- topics: `cisa-kev`, `cve`, `cvss`, `devsecops`, `docker`, `epss`, `fastapi`, `nvd`, `python`, `risk-based-vulnerability-management`, `sbom`, `security-tools`, `sqlite`, `vex`, `vulnerability-management`
+
+Before broader public launch, set a homepage only if there is a stable docs, release, or project page URL to point at. GitHub-side settings should be rechecked after repository moves, renames, or release automation changes.
+
 ## Recommended Repository Topics
 
 Start with a small topic set that accurately describes the project:
@@ -41,8 +53,11 @@ Optional topics when they reflect the current release surface:
 
 - `openvex`
 - `cyclonedx`
+- `fastapi`
+- `docker`
+- `sqlite`
 
-Avoid adding adjacent-but-misleading topics such as `scanner`, `siem`, `edr`, or `threat-intelligence-platform`. The project is a local-first prioritization CLI for known CVEs, not a scanning engine or security platform.
+Avoid adding adjacent-but-misleading topics such as `scanner`, `siem`, `edr`, or `threat-intelligence-platform`. The project is a local-first prioritization CLI and Workbench for known CVEs, not a scanning engine or broad security platform.
 
 ## Recommended Label Taxonomy
 
@@ -160,6 +175,16 @@ For this repository, a practical baseline is:
 - admin bypass retained for emergencies when there is only one maintainer
 
 This keeps normal contributions on the PR path without deadlocking a solo maintainer during release or incident work.
+
+## Pull Request Readiness Baseline
+
+Treat a PR as ready for review when it:
+
+- explains whether the change affects CLI, Workbench, Docker, docs, release, packaging, or GitHub Action behavior
+- includes the local checks run, with `make check` for behavior changes and `make docs-check` or targeted command-help checks for docs-only changes
+- keeps README, roadmap, release operations, and public examples aligned with the currently supported install and Workbench quickstart paths
+- preserves the no-scanner and no-heuristic/AI CVE-to-ATT&CK scope boundaries
+- calls out any GitHub-side follow-up that cannot be completed by repository files, such as topics, homepage, branch protection, or trusted-publisher settings
 
 ## Local Repo Checklist
 

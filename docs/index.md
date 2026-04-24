@@ -1,6 +1,6 @@
 # vuln-prioritizer
 
-`vuln-prioritizer` is a local-first CLI for prioritizing known CVEs with transparent scoring from `CVSS + EPSS + KEV`, plus optional ATT&CK, asset-context, and VEX-aware explanation layers.
+`vuln-prioritizer` is a local-first CLI and self-hosted Workbench for prioritizing known CVEs with transparent scoring from `CVSS + EPSS + KEV`, plus optional ATT&CK, asset-context, and VEX-aware explanation layers.
 
 ## Public Docs Slice
 
@@ -20,6 +20,7 @@ The site now includes the `v1.1.0` public-polish release notes and a committed m
 - adds CTID/MITRE ATT&CK context without heuristic CVE-to-ATT&CK guesses
 - renders terminal, Markdown, JSON, SARIF, and static HTML outputs
 - supports local cache inspection and refresh workflows for reproducibility
+- runs a local Workbench MVP with API, browser UI, SQLite-backed imports, reports, and evidence bundles
 
 ## Quickstart
 
@@ -59,6 +60,15 @@ vuln-prioritizer analyze \
 The documented default ATT&CK workflow is `ctid-json`. The older `local-csv` mode remains available only as a compatibility fallback.
 If you are working from a repository checkout, the checked-in demo ATT&CK files live under `data/attack/`; they are not installed by `pipx`.
 
+Workbench MVP from a repository checkout:
+
+```bash
+docker compose up --build
+curl http://127.0.0.1:8000/api/health
+```
+
+The web/API MVP is local-first, SQLite-backed, and focused on CVE lists, `generic-occurrence-csv`, Trivy JSON, and Grype JSON imports. Use the CLI for the full automation/input matrix.
+
 ## Documentation Structure
 
 - Start with [concept.md](concept.md) for positioning and scope.
@@ -89,7 +99,7 @@ make docs-serve
 
 This project is intentionally:
 
-- a CLI for known CVEs
+- a CLI and local Workbench for known CVEs
 - explicit about upstream sources
 - local-first and demo-friendly
 - conservative about ATT&CK provenance and explainability
@@ -97,6 +107,7 @@ This project is intentionally:
 This project is intentionally not:
 
 - a vulnerability scanner
-- a web dashboard
+- a hosted SaaS product
+- a broad enterprise vulnerability-management platform
 - a ticketing platform
 - a heuristic or AI-generated ATT&CK mapper

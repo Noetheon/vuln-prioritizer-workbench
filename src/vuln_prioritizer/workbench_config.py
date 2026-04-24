@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import os
-from dataclasses import dataclass
+import secrets
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from vuln_prioritizer.config import DEFAULT_CACHE_DIR, DEFAULT_NVD_API_KEY_ENV
@@ -11,8 +12,8 @@ from vuln_prioritizer.config import DEFAULT_CACHE_DIR, DEFAULT_NVD_API_KEY_ENV
 DEFAULT_WORKBENCH_DB_URL = "sqlite:///./data/workbench.db"
 DEFAULT_UPLOAD_DIR = Path("data") / "uploads"
 DEFAULT_REPORT_DIR = Path("data") / "reports"
+DEFAULT_PROVIDER_SNAPSHOT_DIR = Path("data")
 DEFAULT_MAX_UPLOAD_MB = 25
-DEFAULT_CSRF_TOKEN = "local-workbench"
 
 
 @dataclass(frozen=True, slots=True)
@@ -22,10 +23,11 @@ class WorkbenchSettings:
     database_url: str = DEFAULT_WORKBENCH_DB_URL
     upload_dir: Path = DEFAULT_UPLOAD_DIR
     report_dir: Path = DEFAULT_REPORT_DIR
+    provider_snapshot_dir: Path = DEFAULT_PROVIDER_SNAPSHOT_DIR
     provider_cache_dir: Path = DEFAULT_CACHE_DIR
     max_upload_mb: int = DEFAULT_MAX_UPLOAD_MB
     nvd_api_key_env: str = DEFAULT_NVD_API_KEY_ENV
-    csrf_token: str = DEFAULT_CSRF_TOKEN
+    csrf_token: str = field(default_factory=lambda: secrets.token_urlsafe(32))
 
     @property
     def max_upload_bytes(self) -> int:
@@ -38,13 +40,19 @@ def load_workbench_settings() -> WorkbenchSettings:
         database_url=os.getenv("VULN_PRIORITIZER_DB_URL", DEFAULT_WORKBENCH_DB_URL),
         upload_dir=Path(os.getenv("VULN_PRIORITIZER_UPLOAD_DIR", str(DEFAULT_UPLOAD_DIR))),
         report_dir=Path(os.getenv("VULN_PRIORITIZER_REPORT_DIR", str(DEFAULT_REPORT_DIR))),
+        provider_snapshot_dir=Path(
+            os.getenv(
+                "VULN_PRIORITIZER_PROVIDER_SNAPSHOT_DIR",
+                str(DEFAULT_PROVIDER_SNAPSHOT_DIR),
+            )
+        ),
         provider_cache_dir=Path(os.getenv("VULN_PRIORITIZER_CACHE_DIR", str(DEFAULT_CACHE_DIR))),
         max_upload_mb=_positive_int_from_env(
             "VULN_PRIORITIZER_MAX_UPLOAD_MB",
             DEFAULT_MAX_UPLOAD_MB,
         ),
         nvd_api_key_env=os.getenv("VULN_PRIORITIZER_NVD_API_KEY_ENV", DEFAULT_NVD_API_KEY_ENV),
-        csrf_token=os.getenv("VULN_PRIORITIZER_CSRF_TOKEN", DEFAULT_CSRF_TOKEN),
+        csrf_token=os.getenv("VULN_PRIORITIZER_CSRF_TOKEN") or secrets.token_urlsafe(32),
     )
 
 

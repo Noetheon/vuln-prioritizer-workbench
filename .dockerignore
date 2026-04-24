@@ -11,7 +11,14 @@ __pycache__
 .benchmarks
 .DS_Store
 build
+data
 dist
+docs
+tests
 site
+htmlcov
 Library
 *.egg-info
+*.db
+*.sqlite
+*.sqlite3

@@ -44,6 +44,7 @@ def create_app(
     app.state.db_engine = engine
     app.state.session_factory = create_session_factory(engine)
 
+    app.middleware("http")(_upload_size_guard)
     app.middleware("http")(_security_headers)
     app.mount(
         "/static",
@@ -67,6 +68,30 @@ async def _security_headers(request: Request, call_next: Any) -> Any:
         "connect-src 'self'; frame-ancestors 'none'",
     )
     return response
+
+
+async def _upload_size_guard(request: Request, call_next: Any) -> Any:
+    if request.method == "POST" and _is_import_upload_path(request.url.path):
+        raw_content_length = request.headers.get("content-length")
+        if raw_content_length is not None:
+            try:
+                content_length = int(raw_content_length)
+            except ValueError:
+                content_length = 0
+            settings = getattr(request.app.state, "workbench_settings", None)
+            if isinstance(settings, WorkbenchSettings):
+                multipart_overhead = 64 * 1024
+                if content_length > settings.max_upload_bytes + multipart_overhead:
+                    return JSONResponse(
+                        status_code=413,
+                        content={"detail": "Upload exceeds configured limit."},
+                    )
+    return await call_next(request)
+
+
+def _is_import_upload_path(path: str) -> bool:
+    is_project_import = path.startswith("/api/projects/") or path.startswith("/web/projects/")
+    return is_project_import and path.endswith("/imports")
 
 
 async def _unexpected_error_handler(_request: Request, exc: Exception) -> JSONResponse:

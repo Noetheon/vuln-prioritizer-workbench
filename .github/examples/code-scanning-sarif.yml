@@ -14,7 +14,7 @@ jobs:
 
       - name: Run vuln-prioritizer action
         id: prioritize
-        uses: Noetheon/vuln-prioritizer-cli@vX.Y.Z
+        uses: Noetheon/vuln-prioritizer-workbench@vX.Y.Z
         with:
           mode: analyze
           input: trivy-results.json
