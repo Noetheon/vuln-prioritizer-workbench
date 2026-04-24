@@ -21,11 +21,15 @@ jobs:
 
       - name: Wait for health endpoint
         run: |
-          curl --retry 20 --retry-delay 2 --retry-connrefused --fail \
+          curl --retry 20 --retry-delay 2 --retry-connrefused --retry-all-errors --fail \
             http://127.0.0.1:8000/api/health
 
       - name: Show service status
         run: docker compose ps
+
+      - name: Show service logs on failure
+        if: failure()
+        run: docker compose logs --no-color
 
       - name: Stop Workbench
         if: always()
