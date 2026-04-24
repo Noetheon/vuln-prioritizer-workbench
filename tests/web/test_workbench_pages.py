@@ -3,12 +3,14 @@ from __future__ import annotations
 import shutil
 from pathlib import Path
 
+import pytest
 from bs4 import BeautifulSoup
+from fastapi import HTTPException
 from fastapi.testclient import TestClient
 
 from vuln_prioritizer.api.app import create_app, get_engine
 from vuln_prioritizer.db import WorkbenchRepository, create_session_factory
-from vuln_prioritizer.web.routes import _redacted_database_url
+from vuln_prioritizer.web.routes import _project_path, _redacted_database_url
 from vuln_prioritizer.workbench_config import WorkbenchSettings
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -179,6 +181,18 @@ def test_web_route_error_paths_and_local_redirects(tmp_path: Path) -> None:
         ).status_code
         == 404
     )
+
+
+def test_project_redirect_paths_are_local_and_validated() -> None:
+    project_id = "1" * 32
+
+    assert _project_path(project_id, "waivers") == f"/projects/{project_id}/waivers"
+    assert _project_path(project_id, "coverage") == f"/projects/{project_id}/coverage"
+
+    with pytest.raises(HTTPException):
+        _project_path("//example.invalid", "waivers")
+    with pytest.raises(HTTPException):
+        _project_path(project_id, "//example.invalid")
 
 
 def test_web_settings_redacts_database_password() -> None:

@@ -16,13 +16,13 @@ Workbench demo screenshots:
 ![Workbench finding detail with ATT&CK TTP context](docs/examples/media/workbench-finding-detail-ttp.png)
 ![Workbench reports and evidence](docs/examples/media/workbench-reports-evidence.png)
 
-README media refresh checklist for release candidates:
+README media maintenance checklist for future releases:
 
 - Capture screenshots from the locked offline demo path in [docs/workbench-offline-demo.md](docs/workbench-offline-demo.md), not from customer data or live provider-only runs.
 - Keep screenshot paths repository-relative, and keep or update README links in the same change.
 - Crop to the Workbench or report UI only; do not include shell history, API keys, cookies, private home-directory paths, browser profiles, or environment variable values.
 - Show secret-bearing settings only in their redacted `<set>` or `<not set>` state.
-- Commit generated screenshot replacements only as part of a release evidence change.
+- Commit generated screenshot replacements only as part of a release evidence or docs refresh change.
 
 ## Why Use It
 
@@ -437,7 +437,7 @@ Reference material:
 
 The repository includes a composite GitHub Action for `analyze`, static report rendering, Workbench-style report artifacts, evidence bundles, and SARIF validation.
 
-Use it after `actions/checkout`, because the scanned input files live in the consumer repository, not in the action repository.
+Use it after `actions/checkout`, because scanner exports, SBOMs, or other analysis input files live in the consumer repository, not in the action repository.
 In `mode: analyze`, `input` and `input-format` accept newline-delimited values so one action step can merge multiple sources. The action also passes through the CLI's waiver, filter, sort, cache, provider replay, and fail-gate flags for deterministic CI runs.
 
 ```yaml
