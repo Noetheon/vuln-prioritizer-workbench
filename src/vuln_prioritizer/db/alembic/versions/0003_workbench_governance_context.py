@@ -1,6 +1,6 @@
 """Add Workbench governance context fields.
 
-Revision ID: 0003_workbench_governance_context
+Revision ID: 0003_workbench_governance
 Revises: 0002_workbench_attack_core
 Create Date: 2026-04-24
 """
@@ -12,7 +12,7 @@ from typing import Any
 import sqlalchemy as sa
 from alembic import op
 
-revision = "0003_workbench_governance_context"
+revision = "0003_workbench_governance"
 down_revision = "0002_workbench_attack_core"
 branch_labels = None
 depends_on = None

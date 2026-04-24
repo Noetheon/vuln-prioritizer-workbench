@@ -14,6 +14,7 @@ This runbook keeps the Workbench demo reproducible without live provider calls. 
 make install
 python3 -m pytest -q tests/api/test_workbench_api.py tests/web/test_workbench_pages.py --no-cov
 make docker-demo-smoke
+make docker-postgres-migration-smoke
 make dependency-audit
 make demo-evidence-bundle-check
 docker compose up --build
@@ -61,6 +62,13 @@ If `pip-audit` is unavailable or advisory data cannot be reached, record that as
 - Settings page showing `<set>` or `<not set>` instead of secret values.
 - Reports page showing generated JSON, Markdown, HTML, and Evidence ZIP.
 - Downloaded Evidence ZIP verification output.
+
+Checked-in README screenshots from the current offline demo path:
+
+- `docs/examples/media/workbench-dashboard.png`
+- `docs/examples/media/workbench-findings.png`
+- `docs/examples/media/workbench-finding-detail-ttp.png`
+- `docs/examples/media/workbench-reports-evidence.png`
 
 ## Fallback Artifacts
 

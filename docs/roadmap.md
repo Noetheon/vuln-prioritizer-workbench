@@ -36,7 +36,7 @@ The current `docker compose up --build` service runs the Workbench web applicati
 Current MVP limits:
 
 - Local-first single-node runtime, not a hardened public internet deployment.
-- SQLite default, without PostgreSQL, background worker, queue, SSO, API-token, ticket-sync, or multi-workspace support.
+- SQLite remains the default. Optional PostgreSQL profile, local API-token gating, provider update jobs, config-as-code settings, and GitHub issue export are additive Workbench surfaces; background workers, queues, SSO, ticket sync, and multi-workspace support remain out of MVP scope.
 - Web/API import path currently targets CVE lists, `generic-occurrence-csv`, Trivy JSON, and Grype JSON. The CLI remains the broader automation surface.
 - No vulnerability scanning, AI autopatching, or heuristic/AI CVE-to-ATT&CK mapping.
 

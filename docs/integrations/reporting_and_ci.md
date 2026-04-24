@@ -1,6 +1,6 @@
 # Reporting and CI Integration
 
-This document describes the current SARIF, GitHub Action, PR comment, and HTML reporting integration surface.
+This document describes the current SARIF, GitHub Action, PR comment, HTML reporting, and Workbench reporting integration surface.
 
 - Public-install-safe examples in this document use placeholders like `trivy-results.json`, `analysis.json`, `report.html`, and `evidence.zip`. They work after `pipx install` as long as you provide those files from your own repo, CI workspace, or workstation.
 - Repo checkout only: examples that use `data/...` or `make ...`. In this repository those refer to checked-in fixtures, checked-in example artifacts, or maintainer gates.
@@ -31,10 +31,13 @@ The repository root also exposes a composite GitHub Action via [`action.yml`](ht
 
 ## GitHub Action Contract
 
-The composite action supports two modes:
+The current composite action supports these modes:
 
 - `mode: analyze`
 - `mode: report-html`
+- `mode: workbench-report`
+- `mode: report-evidence-bundle`
+- `mode: verify-evidence-bundle`
 
 Common inputs:
 
@@ -51,6 +54,7 @@ Analyze-mode inputs:
 - `config-file`
 - `no-config`
 - `github-step-summary`
+- `validate-sarif`
 - `asset-context`
 - `target-kind`
 - `target-ref`
@@ -70,9 +74,10 @@ Outputs:
 - `report-path`
 - `html-report-path` when `html-output-path` is set or when `mode: report-html`
 - `summary-path` when a summary is requested via `summary-output-path` or `github-step-summary`
+- `sarif-validation-path` when `validate-sarif: "true"`
 
 The action installs the package from the action checkout and writes the resolved output path to the `report-path` output. In normal consumer workflows, that checkout is the consumer repository that contains `trivy-results.json` or similar scan inputs, not this repository's fixture tree.
-`mode: analyze` accepts newline-delimited `input` and `input-format` values, so one action invocation can merge multiple scanner exports or mix one global format with per-input formats. `mode: report-html` still requires exactly one analysis JSON input.
+`mode: analyze` accepts newline-delimited `input` and `input-format` values, so one action invocation can merge multiple scanner exports or mix one global format with per-input formats. Report modes require exactly one input path.
 
 ### Summary Templates
 
@@ -168,6 +173,24 @@ The verifier:
 - reports missing, modified, unexpected, and malformed content clearly
 - returns exit code `1` when bundle integrity problems are detected
 
+### Workbench Reports
+
+Current Workbench contract:
+
+- `POST /api/analysis-runs/{run_id}/reports` creates a run artifact in one of the supported Workbench formats: `json`, `markdown`, `html`, `csv`, or `sarif`.
+- `GET /api/reports/{report_id}/download` downloads the server-owned artifact after path and checksum validation.
+- The Workbench web UI exposes the same report creation flow from `/analysis-runs/{run_id}/reports`.
+- CSV report cells that could be interpreted as spreadsheet formulas are escaped before output.
+
+The composite action also exposes the local file-based Workbench report renderer:
+
+- `mode: workbench-report` reads one exported analysis JSON file and writes `json`, `markdown`, `html`, `csv`, or `sarif` selected with `output-format`.
+- `mode: report-evidence-bundle` reads one exported analysis JSON file and writes an evidence ZIP.
+- `mode: verify-evidence-bundle` reads one evidence ZIP and writes a JSON verification report.
+- `validate-sarif: "true"` runs `vuln-prioritizer report validate-sarif` only when `mode: analyze` or `mode: workbench-report` also uses `output-format: sarif`; non-SARIF outputs fail early with an input error instead of validating the wrong artifact.
+
+The action does not start or expose a shared Workbench service. It works on explicit local files in the CI workspace and fails clearly when the report format is unsupported, the evidence bundle fails verification, or SARIF validation fails.
+
 ### Runtime Config + Summary Sidecars
 
 Current contract:
@@ -191,6 +214,24 @@ For GitHub Actions consumers, the composite action now accepts:
 - `github-step-summary`
 
 When `github-step-summary: true`, the action appends the rendered Markdown summary to `$GITHUB_STEP_SUMMARY`. Consumers can switch between `summary-template: compact` and `summary-template: detailed` without changing the existing `summary-path` contract.
+
+### Workbench Automation APIs
+
+Workbench project settings can be versioned externally and posted through
+`POST /api/projects/{project_id}/settings/config`. The API validates the same
+`vuln-prioritizer.yml` runtime config schema used by the CLI, stores an immutable project snapshot,
+and leaves backward-compatible defaults in effect when no snapshot exists.
+
+Provider update jobs are created through `POST /api/providers/update-jobs` or the Settings page.
+They are synchronous local jobs designed to be called by a trusted scheduler such as cron. Each job
+records requested sources, completion status, snapshot hashes, warnings, and failure detail without
+corrupting the previous provider snapshot on error.
+
+GitHub issue export is a two-step flow. Use
+`POST /api/projects/{project_id}/github/issues/preview` to review titles, labels, bodies, and
+duplicate keys. Use `POST /api/projects/{project_id}/github/issues/export` with `dry_run: false`,
+`repository: "owner/name"`, and a configured token environment variable to create issues. Created
+duplicate keys are persisted so repeated exports skip already-created Workbench issues.
 
 ## Example Workflows
 

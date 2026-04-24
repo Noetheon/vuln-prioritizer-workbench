@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% block title %}Waivers · {{ project.name }}{% endblock %}
+{% block content %}
+<section class="section">
+  <div class="section-head row">
+    <div>
+      <p class="eyebrow">Risk acceptance</p>
+      <h1>{{ project.name }}</h1>
+    </div>
+    <a class="button" href="/projects/{{ project.id }}/governance">Governance</a>
+  </div>
+  <form class="form-panel" method="post" action="/web/projects/{{ project.id }}/waivers">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <div class="form-grid">
+      <label>CVE<input name="cve_id" placeholder="CVE-2024-3094"></label>
+      <label>Finding
+        <select name="finding_id">
+          <option value="">Any matching finding</option>
+          {% for finding in findings %}
+            <option value="{{ finding.id }}">{{ finding.cve_id }} · {{ finding.asset.asset_id if finding.asset else "no asset" }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>Asset<input name="asset_id" placeholder="asset-api"></label>
+      <label>Service<input name="service" placeholder="customer-login"></label>
+      <label>Component<input name="component_name" placeholder="openssl"></label>
+      <label>Version<input name="component_version" placeholder="1.0.1"></label>
+      <label>Owner<input name="owner" required></label>
+      <label>Expires<input name="expires_on" type="date" required></label>
+      <label>Review<input name="review_on" type="date"></label>
+      <label>Approval<input name="approval_ref"></label>
+      <label>Ticket<input name="ticket_url"></label>
+    </div>
+    <label>Reason<textarea name="reason" required rows="3"></textarea></label>
+    <button class="button primary" type="submit">Create waiver</button>
+  </form>
+</section>
+
+<section class="section">
+  <div class="section-head">
+    <p class="eyebrow">Current waivers</p>
+    <h2>Visible accepted risk</h2>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Scope</th>
+          <th>Status</th>
+          <th>Owner</th>
+          <th>Expires</th>
+          <th>Review</th>
+          <th>Matches</th>
+          <th>Reason</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for waiver in waivers %}
+          <tr>
+            <td>
+              {{ waiver.cve_id or "" }}
+              {{ waiver.asset_id or "" }}
+              {{ waiver.service or "" }}
+              {{ waiver.component_name or "" }}
+            </td>
+            <td><span class="badge {{ waiver.status }}">{{ waiver.status }}</span></td>
+            <td>{{ waiver.owner }}</td>
+            <td>{{ waiver.expires_on }}</td>
+            <td>{{ waiver.review_on or "N.A." }}</td>
+            <td>{{ waiver.matched_findings }}</td>
+            <td>{{ waiver.reason }}<br><span class="muted">Residual risk remains accepted only for the documented scope and dates.</span></td>
+            <td>
+              <form method="post" action="/web/waivers/{{ waiver.id }}/delete">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <button class="button" type="submit">Delete</button>
+              </form>
+            </td>
+          </tr>
+          <tr>
+            <td colspan="8">
+              <form class="inline-form" method="post" action="/web/waivers/{{ waiver.id }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <input type="hidden" name="cve_id" value="{{ waiver.cve_id or '' }}">
+                <input type="hidden" name="finding_id" value="{{ waiver.finding_id or '' }}">
+                <input type="hidden" name="asset_id" value="{{ waiver.asset_id or '' }}">
+                <input type="hidden" name="component_name" value="{{ waiver.component_name or '' }}">
+                <input type="hidden" name="component_version" value="{{ waiver.component_version or '' }}">
+                <input type="hidden" name="service" value="{{ waiver.service or '' }}">
+                <label>Owner<input name="owner" value="{{ waiver.owner }}" required></label>
+                <label>Expires<input name="expires_on" type="date" value="{{ waiver.expires_on }}" required></label>
+                <label>Review<input name="review_on" type="date" value="{{ waiver.review_on or '' }}"></label>
+                <label>Approval<input name="approval_ref" value="{{ waiver.approval_ref or '' }}"></label>
+                <label>Ticket<input name="ticket_url" value="{{ waiver.ticket_url or '' }}"></label>
+                <label class="grow">Reason<textarea name="reason" required rows="1">{{ waiver.reason }}</textarea></label>
+                <button class="button" type="submit">Save review</button>
+              </form>
+            </td>
+          </tr>
+        {% else %}
+          <tr><td colspan="8" class="empty">No persisted waivers yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

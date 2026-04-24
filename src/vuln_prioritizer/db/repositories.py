@@ -10,17 +10,23 @@ from sqlalchemy.orm import Session, selectinload
 
 from vuln_prioritizer.db.models import (
     AnalysisRun,
+    ApiToken,
     Asset,
     AttackMappingRecord,
     Component,
+    DetectionControl,
     EvidenceBundle,
     Finding,
     FindingAttackContext,
     FindingOccurrence,
+    GitHubIssueExport,
     Project,
+    ProjectConfigSnapshot,
     ProviderSnapshot,
+    ProviderUpdateJob,
     Report,
     Vulnerability,
+    Waiver,
     utc_now,
 )
 
@@ -189,6 +195,119 @@ class WorkbenchRepository:
         asset.criticality = criticality
         self.session.flush()
         return asset
+
+    def list_project_assets(self, project_id: str) -> list[Asset]:
+        statement = select(Asset).where(Asset.project_id == project_id).order_by(Asset.asset_id)
+        return list(self.session.scalars(statement))
+
+    def get_asset(self, asset_id: str) -> Asset | None:
+        return self.session.get(Asset, asset_id)
+
+    def update_asset(
+        self,
+        asset: Asset,
+        *,
+        asset_id: str | None = None,
+        target_ref: str | None = None,
+        owner: str | None = None,
+        business_service: str | None = None,
+        environment: str | None = None,
+        exposure: str | None = None,
+        criticality: str | None = None,
+    ) -> Asset:
+        if asset_id is not None:
+            asset.asset_id = asset_id
+        asset.target_ref = target_ref
+        asset.owner = owner
+        asset.business_service = business_service
+        asset.environment = environment
+        asset.exposure = exposure
+        asset.criticality = criticality
+        self.session.flush()
+        return asset
+
+    def create_waiver(
+        self,
+        *,
+        project_id: str,
+        owner: str,
+        reason: str,
+        expires_on: str,
+        cve_id: str | None = None,
+        finding_id: str | None = None,
+        asset_id: str | None = None,
+        component_name: str | None = None,
+        component_version: str | None = None,
+        service: str | None = None,
+        review_on: str | None = None,
+        approval_ref: str | None = None,
+        ticket_url: str | None = None,
+    ) -> Waiver:
+        waiver = Waiver(
+            project_id=project_id,
+            owner=owner,
+            reason=reason,
+            expires_on=expires_on,
+            cve_id=cve_id,
+            finding_id=finding_id,
+            asset_id=asset_id,
+            component_name=component_name,
+            component_version=component_version,
+            service=service,
+            review_on=review_on,
+            approval_ref=approval_ref,
+            ticket_url=ticket_url,
+        )
+        self.session.add(waiver)
+        self.session.flush()
+        return waiver
+
+    def update_waiver(
+        self,
+        waiver: Waiver,
+        *,
+        owner: str,
+        reason: str,
+        expires_on: str,
+        cve_id: str | None = None,
+        finding_id: str | None = None,
+        asset_id: str | None = None,
+        component_name: str | None = None,
+        component_version: str | None = None,
+        service: str | None = None,
+        review_on: str | None = None,
+        approval_ref: str | None = None,
+        ticket_url: str | None = None,
+    ) -> Waiver:
+        waiver.owner = owner
+        waiver.reason = reason
+        waiver.expires_on = expires_on
+        waiver.cve_id = cve_id
+        waiver.finding_id = finding_id
+        waiver.asset_id = asset_id
+        waiver.component_name = component_name
+        waiver.component_version = component_version
+        waiver.service = service
+        waiver.review_on = review_on
+        waiver.approval_ref = approval_ref
+        waiver.ticket_url = ticket_url
+        self.session.flush()
+        return waiver
+
+    def get_waiver(self, waiver_id: str) -> Waiver | None:
+        return self.session.get(Waiver, waiver_id)
+
+    def list_project_waivers(self, project_id: str) -> list[Waiver]:
+        statement = (
+            select(Waiver)
+            .where(Waiver.project_id == project_id)
+            .order_by(Waiver.expires_on, Waiver.created_at)
+        )
+        return list(self.session.scalars(statement))
+
+    def delete_waiver(self, waiver: Waiver) -> None:
+        self.session.delete(waiver)
+        self.session.flush()
 
     def upsert_component(
         self,
@@ -550,6 +669,72 @@ class WorkbenchRepository:
         )
         return list(self.session.scalars(statement))
 
+    def upsert_detection_control(
+        self,
+        *,
+        project_id: str,
+        name: str,
+        technique_id: str,
+        control_id: str | None = None,
+        technique_name: str | None = None,
+        source_type: str | None = None,
+        coverage_level: str = "unknown",
+        environment: str | None = None,
+        owner: str | None = None,
+        evidence_ref: str | None = None,
+        notes: str | None = None,
+        last_verified_at: str | None = None,
+    ) -> DetectionControl:
+        statement = select(DetectionControl).where(
+            DetectionControl.project_id == project_id,
+            DetectionControl.technique_id == technique_id,
+        )
+        if control_id is not None:
+            statement = statement.where(DetectionControl.control_id == control_id)
+        else:
+            statement = statement.where(DetectionControl.control_id.is_(None))
+        control = self.session.scalar(statement)
+        if control is None:
+            control = DetectionControl(
+                project_id=project_id,
+                name=name,
+                technique_id=technique_id,
+                control_id=control_id,
+            )
+            self.session.add(control)
+        control.name = name
+        control.technique_name = technique_name
+        control.source_type = source_type
+        control.coverage_level = coverage_level
+        control.environment = environment
+        control.owner = owner
+        control.evidence_ref = evidence_ref
+        control.notes = notes
+        control.last_verified_at = last_verified_at
+        self.session.flush()
+        return control
+
+    def list_project_detection_controls(self, project_id: str) -> list[DetectionControl]:
+        statement = (
+            select(DetectionControl)
+            .where(DetectionControl.project_id == project_id)
+            .order_by(DetectionControl.technique_id, DetectionControl.name)
+        )
+        return list(self.session.scalars(statement))
+
+    def list_detection_controls_for_technique(
+        self, project_id: str, technique_id: str
+    ) -> list[DetectionControl]:
+        statement = (
+            select(DetectionControl)
+            .where(
+                DetectionControl.project_id == project_id,
+                DetectionControl.technique_id == technique_id,
+            )
+            .order_by(DetectionControl.coverage_level, DetectionControl.name)
+        )
+        return list(self.session.scalars(statement))
+
     def add_report(
         self,
         *,
@@ -613,6 +798,104 @@ class WorkbenchRepository:
             .order_by(EvidenceBundle.created_at.desc())
         )
         return list(self.session.scalars(statement))
+
+    def create_api_token(self, *, name: str, token_hash: str) -> ApiToken:
+        token = ApiToken(name=name, token_hash=token_hash)
+        self.session.add(token)
+        self.session.flush()
+        return token
+
+    def get_active_api_token_by_hash(self, token_hash: str) -> ApiToken | None:
+        return self.session.scalar(
+            select(ApiToken).where(ApiToken.token_hash == token_hash, ApiToken.revoked_at.is_(None))
+        )
+
+    def has_active_api_tokens(self) -> bool:
+        return (
+            self.session.scalar(select(ApiToken.id).where(ApiToken.revoked_at.is_(None)).limit(1))
+            is not None
+        )
+
+    def mark_api_token_used(self, token: ApiToken) -> None:
+        token.last_used_at = utc_now()
+        self.session.flush()
+
+    def create_provider_update_job(
+        self,
+        *,
+        status: str,
+        requested_sources_json: list[str],
+        metadata_json: dict[str, Any] | None = None,
+        error_message: str | None = None,
+    ) -> ProviderUpdateJob:
+        job = ProviderUpdateJob(
+            status=status,
+            requested_sources_json=requested_sources_json,
+            metadata_json=metadata_json or {},
+            error_message=error_message,
+            finished_at=utc_now() if status in {"completed", "failed"} else None,
+        )
+        self.session.add(job)
+        self.session.flush()
+        return job
+
+    def list_provider_update_jobs(self) -> list[ProviderUpdateJob]:
+        statement = select(ProviderUpdateJob).order_by(ProviderUpdateJob.started_at.desc())
+        return list(self.session.scalars(statement))
+
+    def github_issue_export_exists(self, project_id: str, duplicate_key: str) -> bool:
+        statement = select(GitHubIssueExport.id).where(
+            GitHubIssueExport.project_id == project_id,
+            GitHubIssueExport.duplicate_key == duplicate_key,
+        )
+        return self.session.scalar(statement) is not None
+
+    def create_github_issue_export(
+        self,
+        *,
+        project_id: str,
+        finding_id: str | None,
+        duplicate_key: str,
+        title: str,
+        html_url: str | None,
+        issue_number: int | None,
+    ) -> GitHubIssueExport:
+        export = GitHubIssueExport(
+            project_id=project_id,
+            finding_id=finding_id,
+            duplicate_key=duplicate_key,
+            title=title,
+            html_url=html_url,
+            issue_number=issue_number,
+        )
+        self.session.add(export)
+        self.session.flush()
+        return export
+
+    def save_project_config_snapshot(
+        self,
+        *,
+        project_id: str,
+        source: str,
+        config_json: dict[str, Any],
+    ) -> ProjectConfigSnapshot:
+        snapshot = ProjectConfigSnapshot(
+            project_id=project_id,
+            source=source,
+            config_json=config_json,
+        )
+        self.session.add(snapshot)
+        self.session.flush()
+        return snapshot
+
+    def get_latest_project_config_snapshot(self, project_id: str) -> ProjectConfigSnapshot | None:
+        statement = (
+            select(ProjectConfigSnapshot)
+            .where(ProjectConfigSnapshot.project_id == project_id)
+            .order_by(ProjectConfigSnapshot.created_at.desc())
+            .limit(1)
+        )
+        return self.session.scalar(statement)
 
     def _required(self, model: type[T], primary_key: str) -> T:
         instance = self.session.get(model, primary_key)

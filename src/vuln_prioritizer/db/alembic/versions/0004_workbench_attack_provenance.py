@@ -1,7 +1,7 @@
 """Add Workbench ATT&CK artifact provenance fields.
 
 Revision ID: 0004_workbench_attack_provenance
-Revises: 0003_workbench_governance_context
+Revises: 0003_workbench_governance
 Create Date: 2026-04-24
 """
 
@@ -11,7 +11,7 @@ import sqlalchemy as sa
 from alembic import op
 
 revision = "0004_workbench_attack_provenance"
-down_revision = "0003_workbench_governance_context"
+down_revision = "0003_workbench_governance"
 branch_labels = None
 depends_on = None
 
