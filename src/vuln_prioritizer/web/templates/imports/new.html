@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Import · {{ project.name }}{% endblock %}
+{% block content %}
+<section class="section narrow">
+  <div class="section-head">
+    <p class="eyebrow">Import</p>
+    <h1>{{ project.name }}</h1>
+  </div>
+  <form class="form-panel" method="post" action="/web/projects/{{ project.id }}/imports" enctype="multipart/form-data">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <label>
+      Input format
+      <select name="input_format">
+        <option value="cve-list">CVE list</option>
+        <option value="generic-occurrence-csv">Generic occurrence CSV</option>
+        <option value="trivy-json">Trivy JSON</option>
+        <option value="grype-json">Grype JSON</option>
+      </select>
+    </label>
+    <label>
+      File
+      <input required type="file" name="file">
+    </label>
+    <label>
+      Provider snapshot
+      <input name="provider_snapshot_file" placeholder="data/demo_provider_snapshot.json">
+    </label>
+    <label class="checkbox-row">
+      <input type="checkbox" name="locked_provider_data" value="true">
+      Locked provider data
+    </label>
+    <button class="button primary" type="submit">Start import</button>
+  </form>
+</section>
+{% endblock %}

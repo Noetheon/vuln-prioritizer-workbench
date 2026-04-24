@@ -1,8 +1,8 @@
 # Product Roadmap
 
-This roadmap now records the release line that was implemented locally from the ATT&CK-focused `v0.3.0` baseline through the operational `v1.1.0` release line.
+This roadmap records the release line implemented locally from the ATT&CK-focused `v0.3.0` baseline through the operational `v1.1.0` CLI line, and now tracks the Workbench as an additive self-hosted application layer.
 
-The project remains a CLI for prioritizing known CVEs. It is not a scanner, not a web application, and does not use heuristic or AI-generated CVE-to-ATT&CK mappings.
+The current release remains a CLI for prioritizing known CVEs. The Workbench is planned on top of the same core; it is not a scanner and does not use heuristic or AI-generated CVE-to-ATT&CK mappings.
 
 ## Current Release Surface
 
@@ -15,6 +15,23 @@ The project remains a CLI for prioritizing known CVEs. It is not a scanner, not 
 - ATT&CK, asset context, and VEX remain explicit contextual layers.
 - The composite GitHub Action mirrors `analyze` policy, waiver, provider/cache, filter, sort, and fail-gate flags as additive inputs.
 - Local quality gates now start enforcing coverage with `--cov-fail-under=85`, and temp-copy package/demo checks are available for read-only validation.
+- Docker and Compose provide a local runtime bootstrap for the CLI core under the future Workbench service name.
+
+## Workbench Add-On Direction
+
+Status: MVP implementation in progress, documented by [docs/workbench-masterplan.md](./workbench-masterplan.md)
+
+The Workbench turns the existing CLI/core behavior into a local-first, self-hosted vulnerability prioritization application. The CLI remains supported for automation and CI; the Workbench adds API, database-backed imports, a browser UI, team-oriented worklists, and report workflows around the same transparent prioritization model.
+
+MVP scope:
+
+- Docker Compose quickstart as the local web/API runtime entry point.
+- SQLite-first deployment with provider cache, upload, and report directories mounted locally.
+- Import paths for CVE lists, `generic-occurrence-csv`, Trivy JSON, and Grype JSON.
+- Findings table and detail views that expose priority, evidence, owner/service context, and "why this priority?" explanations.
+- Dashboard and report flows for Markdown, HTML, JSON, and evidence bundles.
+
+The current `docker compose up --build` service runs the Workbench web application on `127.0.0.1:8000`; the CLI remains available through the installed `vuln-prioritizer` command.
 
 ## Implemented Release Line
 
@@ -94,11 +111,18 @@ Status: implemented locally
 
 ## Deliberate Non-Goals Through `v1.1.0`
 
-- Web dashboard
 - Database-backed service
 - ServiceNow or Jira integration
 - Mandatory live TAXII integration
 - Heuristic or ML-based CVE-to-ATT&CK mapping
+
+## Deliberate Non-Goals For The Workbench MVP
+
+- Vulnerability scanning
+- SIEM replacement
+- Enterprise GRC replacement
+- Mandatory PostgreSQL, Redis, SSO, or ticketing integration
+- AI autopatching or generated CVE-to-ATT&CK mappings
 
 ## Current Integration Materials
 
@@ -108,7 +132,7 @@ The repository contains example integration and output materials for the shipped
 - [docs/examples/example_pr_comment.md](./examples/example_pr_comment.md)
 - [docs/examples/example_results.sarif](./examples/example_results.sarif)
 - [docs/examples/example_report.html](./examples/example_report.html)
-- [`.github/examples/README.md`](https://github.com/Noetheon/vuln-prioritizer-cli/blob/main/.github/examples/README.md)
+- [`.github/examples/README.md`](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/.github/examples/README.md)
 - [docs/community_repository_setup.md](./community_repository_setup.md)
 - `mkdocs.yml`
 

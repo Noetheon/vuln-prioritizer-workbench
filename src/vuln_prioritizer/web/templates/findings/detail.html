@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}{{ finding.cve_id }} · Finding{% endblock %}
+{% block content %}
+<section class="section">
+  <div class="section-head">
+    <p class="eyebrow">Finding detail</p>
+    <h1>{{ finding.cve_id }}</h1>
+    <div class="chip-row">
+      <span class="badge {{ finding.priority|lower }}">{{ finding.priority }}</span>
+      {% if finding.in_kev %}<span class="badge critical">KEV</span>{% endif %}
+      <span class="badge neutral">{{ finding.status }}</span>
+    </div>
+  </div>
+  <div class="detail-grid">
+    <article class="panel">
+      <p class="eyebrow">Why this priority?</p>
+      <p>{{ finding.rationale or "No rationale captured." }}</p>
+    </article>
+    <article class="panel">
+      <p class="eyebrow">Recommended action</p>
+      <p>{{ finding.recommended_action or "N.A." }}</p>
+    </article>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <tbody>
+        <tr><th>Component</th><td>{{ finding.component.name if finding.component else "N.A." }}</td></tr>
+        <tr><th>Version</th><td>{{ finding.component.version if finding.component else "N.A." }}</td></tr>
+        <tr><th>Asset</th><td>{{ finding.asset.asset_id if finding.asset else "N.A." }}</td></tr>
+        <tr><th>Service</th><td>{{ finding.asset.business_service if finding.asset else "N.A." }}</td></tr>
+        <tr><th>Owner</th><td>{{ finding.asset.owner if finding.asset else "N.A." }}</td></tr>
+        <tr><th>EPSS</th><td>{{ "%.3f"|format(finding.epss) if finding.epss is not none else "N.A." }}</td></tr>
+        <tr><th>CVSS</th><td>{{ "%.1f"|format(finding.cvss_base_score) if finding.cvss_base_score is not none else "N.A." }}</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <details class="json-block">
+    <summary>Raw finding JSON</summary>
+    <pre>{{ finding.finding_json | tojson(indent=2) }}</pre>
+  </details>
+</section>
+{% endblock %}

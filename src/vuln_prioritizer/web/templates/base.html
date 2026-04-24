@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Vuln Prioritizer Workbench{% endblock %}</title>
+    <link rel="stylesheet" href="/static/workbench.css">
+  </head>
+  <body>
+    <header class="app-header">
+      <a class="brand" href="/">Vuln Prioritizer Workbench</a>
+      <nav class="top-nav">
+        {% if project %}
+          <a href="/projects/{{ project.id }}/dashboard">Dashboard</a>
+          <a href="/projects/{{ project.id }}/imports/new">Import</a>
+          <a href="/projects/{{ project.id }}/findings">Findings</a>
+        {% endif %}
+      </nav>
+    </header>
+    <main class="page">
+      {% block content %}{% endblock %}
+    </main>
+  </body>
+</html>

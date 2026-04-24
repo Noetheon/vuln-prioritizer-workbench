@@ -26,31 +26,41 @@ classifiers = [
   "Typing :: Typed",
 ]
 dependencies = [
+  "aiofiles>=24.1,<25.0",
+  "alembic>=1.13,<2.0",
+  "fastapi>=0.115,<1.0",
+  "jinja2>=3.1,<4.0",
   "pydantic>=2.6,<3.0",
+  "python-multipart>=0.0.9,<1.0",
   "PyYAML>=6.0,<7.0",
   "python-dotenv>=1.0,<2.0",
   "requests>=2.31,<3.0",
   "rich>=13.7,<16.0",
+  "sqlalchemy>=2.0,<3.0",
   "typer>=0.12,<1.0",
+  "uvicorn[standard]>=0.30,<1.0",
 ]
 
 [project.urls]
-Homepage = "https://github.com/Noetheon/vuln-prioritizer-cli"
-Repository = "https://github.com/Noetheon/vuln-prioritizer-cli"
-Issues = "https://github.com/Noetheon/vuln-prioritizer-cli/issues"
-Documentation = "https://github.com/Noetheon/vuln-prioritizer-cli/tree/main/docs"
-Changelog = "https://github.com/Noetheon/vuln-prioritizer-cli/blob/main/CHANGELOG.md"
-Security = "https://github.com/Noetheon/vuln-prioritizer-cli/security/policy"
+Homepage = "https://github.com/Noetheon/vuln-prioritizer-workbench"
+Repository = "https://github.com/Noetheon/vuln-prioritizer-workbench"
+Issues = "https://github.com/Noetheon/vuln-prioritizer-workbench/issues"
+Documentation = "https://github.com/Noetheon/vuln-prioritizer-workbench/tree/main/docs"
+Changelog = "https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/CHANGELOG.md"
+Security = "https://github.com/Noetheon/vuln-prioritizer-workbench/security/policy"
 
 [project.optional-dependencies]
 dev = [
+  "beautifulsoup4>=4.12,<5.0",
   "build>=1.2,<2.0",
+  "httpx>=0.27,<1.0",
   "jsonschema>=4.23,<5.0",
   "mkdocs>=1.6,<2.0",
   "mypy>=1.10,<2.0",
   "pre-commit>=3.7,<5.0",
   "pytest>=8.0,<10.0",
   "pytest-cov>=5.0,<8.0",
+  "respx>=0.21,<1.0",
   "ruff>=0.5,<1.0",
   "twine>=6.0,<7.0",
   "types-PyYAML>=6.0,<7.0",
@@ -67,7 +77,7 @@ vuln-prioritizer = "vuln_prioritizer.cli:main"
 where = ["src"]
 
 [tool.setuptools.package-data]
-vuln_prioritizer = ["py.typed"]
+vuln_prioritizer = ["py.typed", "web/templates/**/*.html", "web/static/**/*"]
 
 [tool.pytest.ini_options]
 addopts = "-ra --cov=vuln_prioritizer --cov-report=term-missing --cov-fail-under=85"

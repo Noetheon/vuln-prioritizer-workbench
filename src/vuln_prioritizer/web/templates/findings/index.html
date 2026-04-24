@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Findings · {{ project.name }}{% endblock %}
+{% block content %}
+<section class="section">
+  <div class="section-head row">
+    <div>
+      <p class="eyebrow">Findings</p>
+      <h1>{{ project.name }}</h1>
+    </div>
+    <a class="button" href="/projects/{{ project.id }}/dashboard">Dashboard</a>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Rank</th>
+          <th>Priority</th>
+          <th>CVE</th>
+          <th>Component</th>
+          <th>Asset</th>
+          <th>Owner</th>
+          <th>EPSS</th>
+          <th>CVSS</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for finding in findings %}
+          <tr>
+            <td>{{ finding.operational_rank }}</td>
+            <td><span class="badge {{ finding.priority|lower }}">{{ finding.priority }}</span></td>
+            <td><a href="/findings/{{ finding.id }}">{{ finding.cve_id }}</a></td>
+            <td>{{ finding.component.name if finding.component else "N.A." }}</td>
+            <td>{{ finding.asset.asset_id if finding.asset else "N.A." }}</td>
+            <td>{{ finding.asset.owner if finding.asset else "N.A." }}</td>
+            <td>{{ "%.3f"|format(finding.epss) if finding.epss is not none else "N.A." }}</td>
+            <td>{{ "%.1f"|format(finding.cvss_base_score) if finding.cvss_base_score is not none else "N.A." }}</td>
+            <td>{{ finding.status }}</td>
+          </tr>
+        {% else %}
+          <tr><td colspan="9" class="empty">No findings imported.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}
