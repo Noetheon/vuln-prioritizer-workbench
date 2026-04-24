@@ -65,20 +65,34 @@ def parse_openvex_document(document: dict) -> list[VexStatement]:
         if status is None:
             continue
         for product in _dict_items(statement.get("products")):
-            subcomponent = _first_dict(product.get("subcomponents"))
-            statements.append(
-                VexStatement(
-                    source_format="openvex-json",
-                    cve_id=cve_id,
-                    status=status,
-                    purl=product.get("@id"),
-                    target_kind=None if subcomponent is None else subcomponent.get("kind"),
-                    target_ref=None if subcomponent is None else subcomponent.get("name"),
-                    justification=statement.get("justification"),
-                    action_statement=statement.get("action_statement"),
-                    source_record_id=f"statement:{index}",
+            subcomponents = _dict_items(product.get("subcomponents"))
+            if not subcomponents:
+                statements.append(
+                    VexStatement(
+                        source_format="openvex-json",
+                        cve_id=cve_id,
+                        status=status,
+                        purl=product.get("@id"),
+                        justification=statement.get("justification"),
+                        action_statement=statement.get("action_statement"),
+                        source_record_id=f"statement:{index}",
+                    )
                 )
-            )
+                continue
+            for subcomponent in subcomponents:
+                statements.append(
+                    VexStatement(
+                        source_format="openvex-json",
+                        cve_id=cve_id,
+                        status=status,
+                        purl=product.get("@id"),
+                        target_kind=subcomponent.get("kind"),
+                        target_ref=subcomponent.get("name"),
+                        justification=statement.get("justification"),
+                        action_statement=statement.get("action_statement"),
+                        source_record_id=f"statement:{index}",
+                    )
+                )
     return statements
 
 

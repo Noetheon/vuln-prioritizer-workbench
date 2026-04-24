@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 import typer
+from pydantic import ValidationError
 
 from vuln_prioritizer.cache import FileCache
 from vuln_prioritizer.cli_support.common import (
@@ -16,6 +17,8 @@ from vuln_prioritizer.cli_support.common import (
     validate_command_formats,
     validate_output_mode,
 )
+from vuln_prioritizer.models import EpssData, KevData, NvdData
+from vuln_prioritizer.providers.nvd import has_nvd_content
 from vuln_prioritizer.reporter import write_output
 from vuln_prioritizer.utils import iso_utc_now
 
@@ -219,29 +222,57 @@ def build_cache_coverage_items(
         return []
 
     requested = len(cve_ids)
-    nvd_hits = sum(1 for cve_id in cve_ids if cache.get_json("nvd", cve_id) is not None)
-    epss_hits = sum(1 for cve_id in cve_ids if cache.get_json("epss", cve_id) is not None)
+    nvd_hits, nvd_empty, nvd_invalid = _validated_per_cve_cache_hits(
+        cache=cache,
+        namespace="nvd",
+        cve_ids=cve_ids,
+        model=NvdData,
+    )
+    epss_hits, epss_empty, epss_invalid = _validated_per_cve_cache_hits(
+        cache=cache,
+        namespace="epss",
+        cve_ids=cve_ids,
+        model=EpssData,
+    )
     kev_payload = cache.get_json("kev", "catalog")
     kev_catalog = kev_payload if isinstance(kev_payload, dict) else {}
-    kev_hits = sum(1 for cve_id in cve_ids if cve_id in kev_catalog)
+    kev_hits = 0
+    kev_invalid = 0
+    for cve_id in cve_ids:
+        item = kev_catalog.get(cve_id)
+        if item is None:
+            continue
+        try:
+            parsed = KevData.model_validate(item)
+        except ValidationError:
+            kev_invalid += 1
+            continue
+        if parsed.in_kev:
+            kev_hits += 1
 
     return [
         build_coverage_item(
             source="nvd",
             cached_hits=nvd_hits,
             requested=requested,
-            details="Fresh per-CVE cache entries available.",
+            empty_records=nvd_empty,
+            invalid_records=nvd_invalid,
+            details="Fresh per-CVE cache entries validated with NVD schema and content checks.",
         ),
         build_coverage_item(
             source="epss",
             cached_hits=epss_hits,
             requested=requested,
-            details="Fresh per-CVE cache entries available.",
+            empty_records=epss_empty,
+            invalid_records=epss_invalid,
+            details="Fresh per-CVE cache entries validated with EPSS schema and content checks.",
         ),
         build_coverage_item(
             source="kev",
             cached_hits=kev_hits,
             requested=requested,
+            empty_records=0,
+            invalid_records=kev_invalid,
             details="Coverage derived from the cached KEV catalog index.",
         ),
     ]
@@ -252,6 +283,8 @@ def build_coverage_item(
     source: str,
     cached_hits: int,
     requested: int,
+    empty_records: int = 0,
+    invalid_records: int = 0,
     details: str,
 ) -> dict[str, object]:
     """Return one normalized cache coverage row."""
@@ -260,8 +293,41 @@ def build_coverage_item(
         "cached_hits": cached_hits,
         "requested_cves": requested,
         "coverage": f"{cached_hits}/{requested}",
+        "empty_records": empty_records,
+        "invalid_records": invalid_records,
         "details": details,
     }
+
+
+def _validated_per_cve_cache_hits(
+    *,
+    cache: FileCache,
+    namespace: str,
+    cve_ids: list[str],
+    model: type[NvdData] | type[EpssData],
+) -> tuple[int, int, int]:
+    hits = 0
+    empty = 0
+    invalid = 0
+    for cve_id in cve_ids:
+        cached_payload = cache.get_json(namespace, cve_id)
+        if cached_payload is None:
+            continue
+        try:
+            parsed = model.model_validate(cached_payload)
+        except ValidationError:
+            invalid += 1
+            continue
+        if isinstance(parsed, NvdData):
+            if has_nvd_content(parsed):
+                hits += 1
+            else:
+                empty += 1
+        elif parsed.epss is not None or parsed.percentile is not None or parsed.date is not None:
+            hits += 1
+        else:
+            empty += 1
+    return hits, empty, invalid
 
 
 def build_attack_validation_payload(

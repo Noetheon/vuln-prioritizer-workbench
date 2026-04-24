@@ -19,8 +19,8 @@ class FileCache:
         self.ttl = timedelta(hours=ttl_hours)
         self.cache_dir.mkdir(parents=True, exist_ok=True)
 
-    def get_json(self, namespace: str, key: str) -> Any | None:
-        """Return cached JSON payload if present and not expired."""
+    def get_json(self, namespace: str, key: str, *, allow_expired: bool = False) -> Any | None:
+        """Return cached JSON payload if present and fresh, unless expired payloads are allowed."""
         path = self._path_for(namespace, key)
         if not path.exists():
             return None
@@ -33,7 +33,7 @@ class FileCache:
             cached_at = datetime.fromisoformat(cached_at_raw)
             if cached_at.tzinfo is None:
                 cached_at = cached_at.replace(tzinfo=UTC)
-            if datetime.now(UTC) - cached_at > self.ttl:
+            if not allow_expired and datetime.now(UTC) - cached_at > self.ttl:
                 return None
             return document.get("payload")
         except (OSError, json.JSONDecodeError, ValueError):

@@ -36,9 +36,18 @@ class AssetContextRule:
 class AssetContextLoadDiagnostics:
     total_rows: int
     loaded_rows: int
+    skipped_rows: int
     exact_rules: int
     glob_rules: int
     legacy_schema: bool
+    warnings: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class VexLoadDiagnostics:
+    file_count: int
+    statement_count: int
+    skipped_statements: int
     warnings: tuple[str, ...] = ()
 
 
@@ -97,6 +106,7 @@ class InputLoader:
         warnings: list[str] = []
         occurrences: list[InputOccurrence] = []
         source_summaries: list[InputSourceSummary] = []
+        source_occurrence_groups: list[list[InputOccurrence]] = []
         resolved_formats: list[str] = []
         total_rows = 0
         asset_match_conflict_count = 0
@@ -134,6 +144,7 @@ class InputLoader:
             asset_match_conflict_count += asset_diagnostics.ambiguous_occurrences
             vex_conflict_count += vex_diagnostics.conflict_occurrences
             occurrences.extend(source_occurrences)
+            source_occurrence_groups.append(source_occurrences)
             source_summaries.append(
                 InputSourceSummary(
                     input_path=str(spec.path),
@@ -145,7 +156,7 @@ class InputLoader:
                 )
             )
 
-        return _occurrence_support.finalize_occurrences(
+        parsed = _occurrence_support.finalize_occurrences(
             occurrences,
             input_format=_effective_input_format(resolved_formats),
             warnings=warnings,
@@ -156,6 +167,36 @@ class InputLoader:
             merged_input_count=len(inputs),
             asset_match_conflict_count=asset_match_conflict_count,
             vex_conflict_count=vex_conflict_count,
+        )
+        included_cves = set(parsed.unique_cves)
+        return parsed.model_copy(
+            update={
+                "source_summaries": [
+                    summary.model_copy(
+                        update={
+                            "included_occurrence_count": len(
+                                [
+                                    occurrence
+                                    for occurrence in source_occurrences
+                                    if occurrence.cve_id in included_cves
+                                ]
+                            ),
+                            "included_unique_cves": _count_unique_cves(
+                                [
+                                    occurrence
+                                    for occurrence in source_occurrences
+                                    if occurrence.cve_id in included_cves
+                                ]
+                            ),
+                        }
+                    )
+                    for summary, source_occurrences in zip(
+                        parsed.source_summaries,
+                        source_occurrence_groups,
+                        strict=True,
+                    )
+                ]
+            }
         )
 
 
@@ -327,6 +368,7 @@ def load_asset_context_file(
             diagnostics=AssetContextLoadDiagnostics(
                 total_rows=0,
                 loaded_rows=0,
+                skipped_rows=0,
                 exact_rules=0,
                 glob_rules=0,
                 legacy_schema=True,
@@ -353,6 +395,7 @@ def load_asset_context_file(
         glob_rule_count = 0
         loaded_rows = 0
         total_rows = 0
+        skipped_rows = 0
         warning_messages: list[str] = []
         duplicate_exact_rows = 0
         competing_rule_rows = 0
@@ -364,6 +407,7 @@ def load_asset_context_file(
             target_ref = (row.get("target_ref") or "").strip()
             asset_id = (row.get("asset_id") or "").strip()
             if not target_kind or not target_ref or not asset_id:
+                skipped_rows += 1
                 continue
             loaded_rows += 1
             match_mode = (row.get("match_mode") or "exact").strip().lower()
@@ -436,6 +480,7 @@ def load_asset_context_file(
         diagnostics=AssetContextLoadDiagnostics(
             total_rows=total_rows,
             loaded_rows=loaded_rows,
+            skipped_rows=skipped_rows,
             exact_rules=exact_rule_count,
             glob_rules=glob_rule_count,
             legacy_schema=legacy_schema,
@@ -445,24 +490,66 @@ def load_asset_context_file(
     return (catalog, catalog.diagnostics) if return_diagnostics else catalog
 
 
-def load_vex_files(paths: list[Path] | None) -> list[VexStatement]:
+@overload
+def load_vex_files(
+    paths: list[Path] | None,
+    *,
+    return_diagnostics: Literal[False] = False,
+) -> list[VexStatement]:
+    raise NotImplementedError
+
+
+@overload
+def load_vex_files(
+    paths: list[Path] | None,
+    *,
+    return_diagnostics: Literal[True],
+) -> tuple[list[VexStatement], VexLoadDiagnostics]:
+    raise NotImplementedError
+
+
+def load_vex_files(
+    paths: list[Path] | None,
+    *,
+    return_diagnostics: bool = False,
+) -> list[VexStatement] | tuple[list[VexStatement], VexLoadDiagnostics]:
     """Load all supported VEX files."""
     statements: list[VexStatement] = []
+    skipped_statements = 0
+    warning_messages: list[str] = []
     for file_order, path in enumerate(paths or [], start=1):
         if not path.exists() or not path.is_file():
             raise ValueError(f"VEX file does not exist: {path}")
         document = json.loads(path.read_text(encoding="utf-8"))
         if isinstance(document, dict) and "statements" in document:
+            if not isinstance(document.get("statements"), list):
+                raise ValueError(f"OpenVEX JSON `statements` in {path} must be a list.")
             file_statements = _vex_support.parse_openvex_document(document)
+            total_statements = len(document["statements"])
         elif (
             isinstance(document, dict)
             and "bomFormat" in document
             and "CycloneDX" in str(document.get("bomFormat"))
         ):
+            if not isinstance(document.get("vulnerabilities"), list):
+                raise ValueError(f"CycloneDX VEX JSON `vulnerabilities` in {path} must be a list.")
             file_statements = _vex_support.parse_cyclonedx_vex_document(document)
+            total_statements = len(document["vulnerabilities"])
         else:
             raise ValueError(
                 f"Unsupported VEX format for {path}. Use OpenVEX JSON or CycloneDX VEX JSON."
+            )
+        loaded_statement_ids = {
+            statement.source_record_id
+            for statement in file_statements
+            if statement.source_record_id
+        }
+        file_skipped = max(total_statements - len(loaded_statement_ids), 0)
+        skipped_statements += file_skipped
+        if file_skipped:
+            warning_messages.append(
+                f"Skipped {file_skipped} VEX statement(s) in {path} because required "
+                "CVE, status, product, or affect data was missing or unsupported."
             )
         for statement_order, statement in enumerate(file_statements, start=1):
             statements.append(
@@ -474,7 +561,13 @@ def load_vex_files(paths: list[Path] | None) -> list[VexStatement]:
                     }
                 )
             )
-    return statements
+    diagnostics = VexLoadDiagnostics(
+        file_count=len(paths or []),
+        statement_count=len(statements),
+        skipped_statements=skipped_statements,
+        warnings=tuple(warning_messages),
+    )
+    return (statements, diagnostics) if return_diagnostics else statements
 
 
 def _parse_cve_list(path: Path) -> ParsedInput:
@@ -508,15 +601,18 @@ def _parse_cve_list(path: Path) -> ParsedInput:
 
 
 def _parse_trivy_json(path: Path) -> ParsedInput:
-    document = json.loads(path.read_text(encoding="utf-8"))
+    document = _load_json_object(path, "Trivy JSON")
     warnings: list[str] = []
     occurrences: list[InputOccurrence] = []
     total_rows = 0
 
-    for result_index, result in enumerate(document.get("Results", []), start=1):
+    for result_index, result in enumerate(_dict_items(document.get("Results")), start=1):
         target = result.get("Target")
         package_type = result.get("Type")
-        for vuln_index, vulnerability in enumerate(result.get("Vulnerabilities", []), start=1):
+        for vuln_index, vulnerability in enumerate(
+            _dict_items(result.get("Vulnerabilities")),
+            start=1,
+        ):
             total_rows += 1
             cve_id = _cve_support.normalize_cve_or_warn(
                 vulnerability.get("VulnerabilityID"),
@@ -532,7 +628,7 @@ def _parse_trivy_json(path: Path) -> ParsedInput:
                     source_format="trivy-json",
                     component_name=vulnerability.get("PkgName"),
                     component_version=vulnerability.get("InstalledVersion"),
-                    purl=vulnerability.get("PkgIdentifier", {}).get("PURL"),
+                    purl=_dict_value(vulnerability.get("PkgIdentifier")).get("PURL"),
                     package_type=package_type,
                     file_path=vulnerability.get("PkgPath"),
                     fix_versions=fix_versions,
@@ -552,15 +648,16 @@ def _parse_trivy_json(path: Path) -> ParsedInput:
 
 
 def _parse_grype_json(path: Path) -> ParsedInput:
-    document = json.loads(path.read_text(encoding="utf-8"))
+    document = _load_json_object(path, "Grype JSON")
     warnings: list[str] = []
     occurrences: list[InputOccurrence] = []
-    source_target = document.get("source", {}).get("target", {}).get("userInput") or document.get(
-        "source", {}
-    ).get("target", {}).get("name")
+    source = _dict_value(document.get("source"))
+    target = _dict_value(source.get("target"))
+    source_target = target.get("userInput") or target.get("name")
+    matches = _dict_items(document.get("matches"))
 
-    for index, match in enumerate(document.get("matches", []), start=1):
-        vulnerability = match.get("vulnerability", {})
+    for index, match in enumerate(matches, start=1):
+        vulnerability = _dict_value(match.get("vulnerability"))
         cve_id = _cve_support.normalize_cve_or_warn(
             vulnerability.get("id"),
             source_name="Grype",
@@ -568,8 +665,8 @@ def _parse_grype_json(path: Path) -> ParsedInput:
         )
         if cve_id is None:
             continue
-        artifact = match.get("artifact", {})
-        locations = artifact.get("locations", [])
+        artifact = _dict_value(match.get("artifact"))
+        locations = _dict_items(artifact.get("locations"))
         file_path = None
         if locations:
             file_path = locations[0].get("path") or locations[0].get("realPath")
@@ -582,7 +679,7 @@ def _parse_grype_json(path: Path) -> ParsedInput:
                 purl=artifact.get("purl"),
                 package_type=artifact.get("type"),
                 file_path=file_path,
-                fix_versions=_as_string_list(match.get("fix", {}).get("versions")),
+                fix_versions=_as_string_list(_dict_value(match.get("fix")).get("versions")),
                 source_record_id=f"match:{index}",
                 raw_severity=vulnerability.get("severity"),
                 target_kind="image",
@@ -592,24 +689,24 @@ def _parse_grype_json(path: Path) -> ParsedInput:
 
     return ParsedInput(
         input_format="grype-json",
-        total_rows=len(document.get("matches", [])),
+        total_rows=len(matches),
         occurrences=occurrences,
         warnings=warnings,
     )
 
 
 def _parse_cyclonedx_json(path: Path) -> ParsedInput:
-    document = json.loads(path.read_text(encoding="utf-8"))
+    document = _load_json_object(path, "CycloneDX JSON")
     warnings: list[str] = []
     occurrences: list[InputOccurrence] = []
     component_by_ref = {
         component.get("bom-ref"): component
-        for component in document.get("components", [])
+        for component in _dict_items(document.get("components"))
         if component.get("bom-ref")
     }
-    target_ref = document.get("metadata", {}).get("component", {}).get("name")
+    target_ref = _dict_value(_dict_value(document.get("metadata")).get("component")).get("name")
 
-    for index, vulnerability in enumerate(document.get("vulnerabilities", []), start=1):
+    for index, vulnerability in enumerate(_dict_items(document.get("vulnerabilities")), start=1):
         cve_id = _cve_support.normalize_cve_or_warn(
             vulnerability.get("id"),
             source_name="CycloneDX",
@@ -617,7 +714,7 @@ def _parse_cyclonedx_json(path: Path) -> ParsedInput:
         )
         if cve_id is None:
             continue
-        affects = vulnerability.get("affects", [])
+        affects = _dict_items(vulnerability.get("affects"))
         if not affects:
             occurrences.append(
                 InputOccurrence(
@@ -641,7 +738,9 @@ def _parse_cyclonedx_json(path: Path) -> ParsedInput:
                     component_version=component.get("version"),
                     purl=component.get("purl"),
                     package_type=component.get("type"),
-                    file_path=component.get("evidence", {}).get("identity", {}).get("field"),
+                    file_path=_dict_value(
+                        _dict_value(component.get("evidence")).get("identity")
+                    ).get("field"),
                     source_record_id=f"vulnerability:{index}:affect:{affect_index}",
                     raw_severity=_cyclonedx_rating(vulnerability),
                     target_kind="repository",
@@ -651,23 +750,23 @@ def _parse_cyclonedx_json(path: Path) -> ParsedInput:
 
     return ParsedInput(
         input_format="cyclonedx-json",
-        total_rows=len(document.get("vulnerabilities", [])),
+        total_rows=len(_dict_items(document.get("vulnerabilities"))),
         occurrences=occurrences,
         warnings=warnings,
     )
 
 
 def _parse_spdx_json(path: Path) -> ParsedInput:
-    document = json.loads(path.read_text(encoding="utf-8"))
+    document = _load_json_object(path, "SPDX JSON")
     warnings: list[str] = []
     occurrences: list[InputOccurrence] = []
     packages = {
         package.get("SPDXID"): package
-        for package in document.get("packages", [])
+        for package in _dict_items(document.get("packages"))
         if package.get("SPDXID")
     }
 
-    for index, vulnerability in enumerate(document.get("vulnerabilities", []), start=1):
+    for index, vulnerability in enumerate(_dict_items(document.get("vulnerabilities")), start=1):
         cve_id = _cve_support.normalize_cve_or_warn(
             vulnerability.get("id"),
             source_name="SPDX",
@@ -675,7 +774,7 @@ def _parse_spdx_json(path: Path) -> ParsedInput:
         )
         if cve_id is None:
             continue
-        affects = vulnerability.get("affects", [])
+        affects = _dict_items(vulnerability.get("affects"))
         if not affects:
             occurrences.append(
                 InputOccurrence(
@@ -708,20 +807,23 @@ def _parse_spdx_json(path: Path) -> ParsedInput:
 
     return ParsedInput(
         input_format="spdx-json",
-        total_rows=len(document.get("vulnerabilities", [])),
+        total_rows=len(_dict_items(document.get("vulnerabilities"))),
         occurrences=occurrences,
         warnings=warnings,
     )
 
 
 def _parse_dependency_check_json(path: Path) -> ParsedInput:
-    document = json.loads(path.read_text(encoding="utf-8"))
+    document = _load_json_object(path, "Dependency-Check JSON")
     warnings: list[str] = []
     occurrences: list[InputOccurrence] = []
-    dependencies = document.get("dependencies", [])
+    dependencies = _dict_items(document.get("dependencies"))
 
     for dep_index, dependency in enumerate(dependencies, start=1):
-        for vuln_index, vulnerability in enumerate(dependency.get("vulnerabilities", []), start=1):
+        for vuln_index, vulnerability in enumerate(
+            _dict_items(dependency.get("vulnerabilities")),
+            start=1,
+        ):
             cve_id = _cve_support.normalize_cve_or_warn(
                 vulnerability.get("name"),
                 source_name="Dependency-Check",
@@ -738,7 +840,7 @@ def _parse_dependency_check_json(path: Path) -> ParsedInput:
                     source_record_id=f"dependency:{dep_index}:vuln:{vuln_index}",
                     raw_severity=vulnerability.get("severity"),
                     target_kind="filesystem",
-                    target_ref=dependency.get("projectReferences", [None])[0],
+                    target_ref=_first_string_from_list(dependency.get("projectReferences")),
                 )
             )
 
@@ -752,13 +854,31 @@ def _parse_dependency_check_json(path: Path) -> ParsedInput:
 
 def _parse_github_alerts_json(path: Path) -> ParsedInput:
     document = json.loads(path.read_text(encoding="utf-8"))
-    alerts = document if isinstance(document, list) else document.get("alerts", [document])
+    raw_alerts: list[object]
+    if isinstance(document, list):
+        raw_alerts = document
+    elif isinstance(document, dict):
+        if "alerts" in document:
+            alerts_value = document.get("alerts")
+            if not isinstance(alerts_value, list):
+                raise ValueError("GitHub alerts JSON `alerts` must be a list.")
+            raw_alerts = alerts_value
+        else:
+            raw_alerts = [document]
+    else:
+        raise ValueError("GitHub alerts JSON must be an alert object, an alerts object, or a list.")
     warnings: list[str] = []
     occurrences: list[InputOccurrence] = []
+    alerts = _dict_items(raw_alerts)
+    skipped_alert_items = len(raw_alerts) - len(alerts)
+    if skipped_alert_items:
+        warnings.append(
+            f"Ignored {skipped_alert_items} GitHub alert item(s) that were not JSON objects."
+        )
 
     for index, alert in enumerate(alerts, start=1):
-        advisory = alert.get("security_advisory", {})
-        identifiers = advisory.get("identifiers", [])
+        advisory = _dict_value(alert.get("security_advisory"))
+        identifiers = _dict_items(advisory.get("identifiers"))
         cve_id = _cve_support.first_normalized_cve(
             [advisory.get("cve_id"), *(identifier.get("value") for identifier in identifiers)]
         )
@@ -768,9 +888,9 @@ def _parse_github_alerts_json(path: Path) -> ParsedInput:
                 f"{advisory.get('ghsa_id') or alert.get('number')!r}"
             )
             continue
-        dependency = alert.get("dependency", {})
-        package = dependency.get("package", {})
-        vulnerability = alert.get("security_vulnerability", {})
+        dependency = _dict_value(alert.get("dependency"))
+        package = _dict_value(dependency.get("package"))
+        vulnerability = _dict_value(alert.get("security_vulnerability"))
         first_patched_version = vulnerability.get("first_patched_version")
         first_patched_version = (
             first_patched_version if isinstance(first_patched_version, dict) else {}
@@ -799,7 +919,7 @@ def _parse_github_alerts_json(path: Path) -> ParsedInput:
 
     return ParsedInput(
         input_format="github-alerts-json",
-        total_rows=len(alerts),
+        total_rows=len(raw_alerts),
         occurrences=occurrences,
         warnings=warnings,
     )
@@ -969,8 +1089,34 @@ def _as_string_list(value: object) -> list[str]:
     return [str(item).strip() for item in value if item is not None and str(item).strip()]
 
 
+def _load_json_object(path: Path, document_name: str) -> dict:
+    document = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(document, dict):
+        raise ValueError(f"{document_name} must be a top-level JSON object.")
+    return document
+
+
+def _dict_value(value: object) -> dict:
+    return value if isinstance(value, dict) else {}
+
+
+def _dict_items(value: object) -> list[dict]:
+    if not isinstance(value, list):
+        return []
+    return [item for item in value if isinstance(item, dict)]
+
+
+def _first_string_from_list(value: object) -> str | None:
+    if not isinstance(value, list):
+        return None
+    for item in value:
+        if isinstance(item, str) and item.strip():
+            return item.strip()
+    return None
+
+
 def _cyclonedx_rating(vulnerability: dict) -> str | None:
-    ratings = vulnerability.get("ratings", [])
+    ratings = _dict_items(vulnerability.get("ratings"))
     if not ratings:
         return None
     severity = ratings[0].get("severity")
@@ -978,7 +1124,7 @@ def _cyclonedx_rating(vulnerability: dict) -> str | None:
 
 
 def _spdx_purl(package: dict) -> str | None:
-    for reference in package.get("externalRefs", []):
+    for reference in _dict_items(package.get("externalRefs")):
         if reference.get("referenceType") == "purl":
             return reference.get("referenceLocator")
     return None

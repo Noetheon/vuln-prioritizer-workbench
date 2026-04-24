@@ -279,6 +279,18 @@ def finalize_occurrences(
             f"{duplicate_cve_count} CVE identifier(s) across {merged_input_count} input files."
         ]
 
+    included_occurrence_count = len(occurrences)
+    included_unique_cves = len(unique_cves)
+    if source_summaries and len(source_summaries) == 1:
+        source_summaries = [
+            source_summaries[0].model_copy(
+                update={
+                    "included_occurrence_count": included_occurrence_count,
+                    "included_unique_cves": included_unique_cves,
+                }
+            )
+        ]
+
     source_stats = dict(Counter(occurrence.source_format for occurrence in occurrences))
     return ParsedInput(
         input_format=input_format,
@@ -289,6 +301,8 @@ def finalize_occurrences(
         source_stats=source_stats,
         input_paths=input_paths or [],
         source_summaries=source_summaries or [],
+        included_occurrence_count=included_occurrence_count,
+        included_unique_cves=included_unique_cves,
         merged_input_count=merged_input_count,
         duplicate_cve_count=duplicate_cve_count,
         asset_match_conflict_count=asset_match_conflict_count,

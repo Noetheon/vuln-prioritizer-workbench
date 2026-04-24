@@ -6,13 +6,15 @@ The project remains a CLI for prioritizing known CVEs. It is not a scanner, not 
 
 ## Current Release Surface
 
-- `v1.1.0` provides `analyze`, `compare`, `explain`, `doctor`, `snapshot create`, `snapshot diff`, `rollup`, `data status`, `report html`, `report evidence-bundle`, and ATT&CK utility commands.
-- `analyze` and `compare` support scanner/SBOM JSON input formats, plus Markdown/HTML summary sidecars for CI-friendly workflows.
+- `v1.1.0` provides `analyze`, `compare`, `explain`, `doctor`, `snapshot create`, `snapshot diff`, `rollup`, `input validate`, `state`, `data`, `report html`, `report evidence-bundle`, `report verify-evidence-bundle`, and ATT&CK utility commands.
+- `analyze` and `compare` support scanner/SBOM JSON input formats. Output support is command-specific; `analyze` provides Markdown, JSON, SARIF, table output, direct HTML sidecars, and Markdown summary sidecars for CI-friendly workflows.
 - Waiver files, evidence bundles, and fixture-benchmark regressions extend the operational governance surface without changing the transparent base score.
 - Runtime config discovery via `vuln-prioritizer.yml` is available for the main operational commands.
 - The base JSON export contract remains versioned with `metadata.schema_version = 1.0.0`; new helper surfaces ship as additive `1.1.0` contracts.
 - Default prioritization stays grounded in `CVSS + EPSS + KEV`.
 - ATT&CK, asset context, and VEX remain explicit contextual layers.
+- The composite GitHub Action mirrors `analyze` policy, waiver, provider/cache, filter, sort, and fail-gate flags as additive inputs.
+- Local quality gates now start enforcing coverage with `--cov-fail-under=85`, and temp-copy package/demo checks are available for read-only validation.
 
 ## Implemented Release Line
 

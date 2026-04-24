@@ -11,6 +11,7 @@ from dotenv import load_dotenv
 from vuln_prioritizer.cli_support.analysis import (
     AnalysisRequest,
     build_priority_policy,
+    handle_provider_error_fail_on,
     prepare_analysis,
 )
 from vuln_prioritizer.cli_support.common import (
@@ -98,6 +99,7 @@ def snapshot_create(
     vex_file: list[Path] | None = typer.Option(None, "--vex-file", dir_okay=False),
     show_suppressed: bool = typer.Option(False, "--show-suppressed"),
     hide_waived: bool = typer.Option(False, "--hide-waived"),
+    fail_on_provider_error: bool = typer.Option(False, "--fail-on-provider-error"),
     max_cves: int | None = typer.Option(None, "--max-cves", min=1),
     offline_kev_file: Path | None = typer.Option(None, "--offline-kev-file", dir_okay=False),
     offline_attack_file: Path | None = typer.Option(None, "--offline-attack-file", dir_okay=False),
@@ -159,6 +161,7 @@ def snapshot_create(
             vex_files=vex_file or [],
             show_suppressed=show_suppressed,
             hide_waived=hide_waived,
+            fail_on_provider_error=fail_on_provider_error,
             max_cves=max_cves,
             offline_kev_file=offline_kev_file,
             nvd_api_key_env=nvd_api_key_env,
@@ -193,6 +196,10 @@ def snapshot_create(
     else:
         write_output(output, generate_markdown_report(findings, snapshot_metadata))
     console.print(f"[green]Wrote snapshot {format.value} output to {output}[/green]")
+    handle_provider_error_fail_on(
+        snapshot_metadata,
+        fail_on_provider_error=fail_on_provider_error,
+    )
 
 
 def snapshot_diff(

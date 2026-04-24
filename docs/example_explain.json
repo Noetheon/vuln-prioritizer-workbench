@@ -36,6 +36,10 @@
     "attack_relevance": "Medium",
     "change_reason": "CVSS and enrichment both support the same Critical outcome.",
     "changed": false,
+    "context_rank_reasons": [
+      "KEV due date 2021-12-24",
+      "ATT&CK Medium"
+    ],
     "context_summary": "Seen in 1 occurrence(s).",
     "cve_id": "CVE-2021-44228",
     "cvss_base_score": 10.0,
@@ -54,6 +58,7 @@
       "Initial Access"
     ],
     "mapped_technique_count": 0,
+    "operational_rank": 1,
     "provenance": {
       "active_occurrence_count": 1,
       "affected_paths": [],
@@ -111,12 +116,17 @@
     "suppressed_by_vex": false,
     "under_investigation": false,
     "waived": false,
+    "waiver_approval_ref": null,
     "waiver_days_remaining": null,
     "waiver_expires_on": null,
+    "waiver_id": null,
+    "waiver_matched_scope": null,
     "waiver_owner": null,
     "waiver_reason": null,
     "waiver_review_on": null,
-    "waiver_status": null
+    "waiver_scope": null,
+    "waiver_status": null,
+    "waiver_ticket_url": null
   },
   "epss": {
     "cve_id": "CVE-2021-44228",
@@ -138,6 +148,10 @@
     "attack_techniques": [
       "T1190"
     ],
+    "context_rank_reasons": [
+      "KEV due date 2021-12-24",
+      "ATT&CK Medium"
+    ],
     "context_recommendation": "Review the affected components and assets in context before final remediation scheduling.",
     "context_summary": "Seen in 1 occurrence(s).",
     "cve_id": "CVE-2021-44228",
@@ -149,6 +163,7 @@
     "epss_percentile": 0.99996,
     "highest_asset_criticality": null,
     "in_kev": true,
+    "operational_rank": 1,
     "priority_label": "Critical",
     "priority_rank": 1,
     "provenance": {
@@ -343,22 +358,30 @@
       }
     },
     "rationale": "CISA KEV lists this CVE as known exploited in the wild. NVD reports CVSS 10.0 (CRITICAL) via CVSS v3.1. FIRST EPSS is 0.945 (percentile 1.000). ATT&CK context (Medium) maps this CVE to 1 technique(s): T1190. Legacy local ATT&CK CSV context is available for this CVE. Prefer --attack-source ctid-json for structured CTID-backed ATT&CK context. ATT&CK mapping note: Representative local mapping for remote service exposure impact. Input provenance includes 1 occurrence(s) from cve-list. Seen in 1 occurrence(s).",
-    "recommended_action": "Patch or mitigate immediately, validate exposure, strengthen detection coverage, and escalate potential business impact.",
+    "recommended_action": "CISA KEV required action: For all affected software assets for which updates exist, the only acceptable remediation actions are: 1) Apply updates; OR 2) remove affected assets from agency networks. Temporary mitigations using one of the measures provided at https://www.cisa.gov/uscert/ed-22-02-apache-log4j-recommended-mitigation-measures are only acceptable until updates are available. Patch or mitigate immediately, validate exposure, strengthen detection coverage, and escalate potential business impact. KEV due date: 2021-12-24.",
     "remediation": {
       "components": [],
       "ecosystem": null,
-      "strategy": "generic-priority-guidance"
+      "evidence_level": "kev_action",
+      "kev_due_date": "2021-12-24",
+      "kev_required_action": "For all affected software assets for which updates exist, the only acceptable remediation actions are: 1) Apply updates; OR 2) remove affected assets from agency networks. Temporary mitigations using one of the measures provided at https://www.cisa.gov/uscert/ed-22-02-apache-log4j-recommended-mitigation-measures are only acceptable until updates are available.",
+      "strategy": "generic-priority-guidance",
+      "suppressed_occurrence_count": 0
     },
     "suppressed_by_vex": false,
     "under_investigation": false,
     "waived": false,
+    "waiver_approval_ref": null,
     "waiver_days_remaining": null,
     "waiver_expires_on": null,
+    "waiver_id": null,
+    "waiver_matched_scope": null,
     "waiver_owner": null,
     "waiver_reason": null,
     "waiver_review_on": null,
     "waiver_scope": null,
-    "waiver_status": null
+    "waiver_status": null,
+    "waiver_ticket_url": null
   },
   "kev": {
     "cve_id": "CVE-2021-44228",
@@ -393,15 +416,37 @@
       "Input formats: cve-list"
     ],
     "duplicate_cve_count": 0,
+    "epss_diagnostics": {
+      "cache_hits": 1,
+      "content_hits": 1,
+      "degraded": false,
+      "empty_records": 0,
+      "failures": 0,
+      "network_fetches": 0,
+      "requested": 1,
+      "stale_cache_hits": 0
+    },
     "epss_hits": 1,
     "expired_waiver_count": 0,
     "filtered_out_count": 0,
     "findings_count": 1,
     "generated_at": "2026-04-21T12:00:00+00:00",
+    "included_occurrence_count": 1,
+    "included_unique_cves": 1,
     "input_format": "cve-list",
     "input_path": "inline:CVE-2021-44228",
     "input_paths": [],
     "input_sources": [],
+    "kev_diagnostics": {
+      "cache_hits": 1,
+      "content_hits": 1,
+      "degraded": false,
+      "empty_records": 0,
+      "failures": 0,
+      "network_fetches": 0,
+      "requested": 1,
+      "stale_cache_hits": 0
+    },
     "kev_hits": 1,
     "locked_provider_data": false,
     "mapping_framework": null,
@@ -410,9 +455,12 @@
     "nvd_diagnostics": {
       "cache_hits": 1,
       "content_hits": 1,
+      "degraded": false,
+      "empty_records": 0,
       "failures": 0,
       "network_fetches": 0,
-      "requested": 1
+      "requested": 1,
+      "stale_cache_hits": 0
     },
     "nvd_hits": 1,
     "occurrences_count": 1,
@@ -428,6 +476,46 @@
       "high_epss_threshold": 0.4,
       "medium_cvss_threshold": 7.0,
       "medium_epss_threshold": 0.1
+    },
+    "provider_degraded": false,
+    "provider_diagnostics": {
+      "epss": {
+        "cache_hits": 1,
+        "content_hits": 1,
+        "degraded": false,
+        "empty_records": 0,
+        "failures": 0,
+        "network_fetches": 0,
+        "requested": 1,
+        "stale_cache_hits": 0
+      },
+      "kev": {
+        "cache_hits": 1,
+        "content_hits": 1,
+        "degraded": false,
+        "empty_records": 0,
+        "failures": 0,
+        "network_fetches": 0,
+        "requested": 1,
+        "stale_cache_hits": 0
+      },
+      "nvd": {
+        "cache_hits": 1,
+        "content_hits": 1,
+        "degraded": false,
+        "empty_records": 0,
+        "failures": 0,
+        "network_fetches": 0,
+        "requested": 1,
+        "stale_cache_hits": 0
+      }
+    },
+    "provider_freshness": {
+      "kev_date_added_max": "2021-12-10",
+      "kev_due_date_min": "2021-12-24",
+      "latest_epss_date": "2026-04-23",
+      "nvd_last_modified_max": "2026-02-20T16:15:59.363",
+      "nvd_last_modified_min": "2026-02-20T16:15:59.363"
     },
     "provider_snapshot_file": null,
     "provider_snapshot_sources": [],

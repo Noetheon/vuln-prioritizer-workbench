@@ -52,6 +52,7 @@ class AnalyzeDefaults(StrictModel):
     show_suppressed: bool | None = None
     hide_waived: bool | None = None
     fail_on: str | None = None
+    fail_on_provider_error: bool | None = None
     fail_on_expired_waivers: bool | None = None
     fail_on_review_due_waivers: bool | None = None
 
@@ -66,11 +67,13 @@ class CompareDefaults(StrictModel):
     sort_by: str | None = None
     show_suppressed: bool | None = None
     hide_waived: bool | None = None
+    fail_on_provider_error: bool | None = None
 
 
 class ExplainDefaults(StrictModel):
     format: str | None = None
     show_suppressed: bool | None = None
+    fail_on_provider_error: bool | None = None
 
 
 class DoctorDefaults(StrictModel):
@@ -88,6 +91,7 @@ class SnapshotCreateDefaults(StrictModel):
     sort_by: str | None = None
     show_suppressed: bool | None = None
     hide_waived: bool | None = None
+    fail_on_provider_error: bool | None = None
 
 
 class SnapshotDiffDefaults(StrictModel):

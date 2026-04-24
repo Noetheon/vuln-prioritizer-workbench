@@ -5,10 +5,13 @@ import pytest
 from vuln_prioritizer.models import (
     AttackData,
     EpssData,
+    FindingProvenance,
+    InputOccurrence,
     KevData,
     NvdData,
     PrioritizedFinding,
     PriorityPolicy,
+    ProviderEvidence,
 )
 from vuln_prioritizer.scoring import determine_cvss_only_priority, determine_priority
 from vuln_prioritizer.services.prioritization import PrioritizationService
@@ -216,6 +219,67 @@ def test_sort_findings_supports_sort_override() -> None:
 
     assert [finding.cve_id for finding in by_epss] == ["CVE-2024-0001", "CVE-2024-0002"]
     assert [finding.cve_id for finding in by_cve] == ["CVE-2024-0001", "CVE-2024-0002"]
+
+
+def test_operational_sort_adds_work_queue_rank_without_changing_priority() -> None:
+    service = PrioritizationService()
+    expired_or_actionable = PrioritizedFinding(
+        cve_id="CVE-2024-0001",
+        cvss_base_score=8.0,
+        epss=0.25,
+        in_kev=True,
+        provider_evidence=ProviderEvidence(
+            nvd=NvdData(cve_id="CVE-2024-0001", cvss_base_score=8.0),
+            epss=EpssData(cve_id="CVE-2024-0001", epss=0.25),
+            kev=KevData(cve_id="CVE-2024-0001", in_kev=True, due_date="2026-04-01"),
+        ),
+        provenance=FindingProvenance(
+            occurrences=[
+                InputOccurrence(
+                    cve_id="CVE-2024-0001",
+                    asset_criticality="critical",
+                    asset_exposure="internet-facing",
+                    asset_environment="prod",
+                )
+            ]
+        ),
+        priority_label="High",
+        priority_rank=2,
+        rationale="Transparent base priority.",
+        recommended_action="Patch.",
+        waiver_status="expired",
+    )
+    review_due = expired_or_actionable.model_copy(
+        update={
+            "cve_id": "CVE-2024-0002",
+            "in_kev": False,
+            "provider_evidence": None,
+            "waiver_status": "review_due",
+        }
+    )
+    active_waiver = expired_or_actionable.model_copy(
+        update={
+            "cve_id": "CVE-2024-0003",
+            "in_kev": False,
+            "provider_evidence": None,
+            "waiver_status": "active",
+            "waived": True,
+        }
+    )
+
+    ranked = service.assign_operational_ranks([active_waiver, review_due, expired_or_actionable])
+    ordered = service.sort_findings(ranked, sort_by="operational")
+
+    assert [finding.priority_label for finding in ordered] == ["High", "High", "High"]
+    assert [finding.cve_id for finding in ordered] == [
+        "CVE-2024-0001",
+        "CVE-2024-0002",
+        "CVE-2024-0003",
+    ]
+    assert [finding.operational_rank for finding in ordered] == [1, 2, 3]
+    assert "KEV due date 2026-04-01" in ordered[0].context_rank_reasons
+    assert "waiver review due" in ordered[1].context_rank_reasons
+    assert "active waiver lowers work-queue urgency" in ordered[2].context_rank_reasons
 
 
 def test_build_comparison_marks_kev_upgrade() -> None:

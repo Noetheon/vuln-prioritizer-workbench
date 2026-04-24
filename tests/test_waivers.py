@@ -61,6 +61,8 @@ def test_apply_waivers_marks_review_due_and_expired_findings() -> None:
                 reason="Deferred until the next maintenance window.",
                 expires_on="2026-04-25",
                 review_on="2026-04-20",
+                approval_ref="CAB-42",
+                ticket_url="https://tickets.example/CAB-42",
             ),
             WaiverRule(
                 id="expired",
@@ -78,6 +80,10 @@ def test_apply_waivers_marks_review_due_and_expired_findings() -> None:
     assert by_cve["CVE-2024-0001"].waived is True
     assert by_cve["CVE-2024-0001"].waiver_status == "review_due"
     assert by_cve["CVE-2024-0001"].waiver_days_remaining == 4
+    assert by_cve["CVE-2024-0001"].waiver_id == "review-due"
+    assert by_cve["CVE-2024-0001"].waiver_matched_scope == "global"
+    assert by_cve["CVE-2024-0001"].waiver_approval_ref == "CAB-42"
+    assert by_cve["CVE-2024-0001"].waiver_ticket_url == "https://tickets.example/CAB-42"
     assert by_cve["CVE-2024-0002"].waived is False
     assert by_cve["CVE-2024-0002"].waiver_status == "expired"
     assert by_cve["CVE-2024-0002"].waiver_days_remaining == -20

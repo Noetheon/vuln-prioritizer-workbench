@@ -136,3 +136,79 @@ def test_input_loader_rejects_invalid_xml_with_explicit_format(tmp_path: Path) -
     loader = loader_module.InputLoader()
     with pytest.raises(ValueError, match="XML input is not valid XML"):
         loader.load(path=xml_file, input_format="nessus-xml")
+
+
+def test_json_parser_rejects_wrong_top_level_type_before_parser_access(tmp_path: Path) -> None:
+    loader_module = _load_loader_module()
+    input_file = tmp_path / "trivy.json"
+    input_file.write_text("[]", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="Trivy JSON must be a top-level JSON object"):
+        loader_module.InputLoader().load(input_file, input_format="trivy-json")
+
+
+def test_dependency_check_empty_project_references_are_ignored(tmp_path: Path) -> None:
+    loader_module = _load_loader_module()
+    input_file = tmp_path / "dependency-check.json"
+    input_file.write_text(
+        """{
+  "scanInfo": {},
+  "dependencies": [
+    {
+      "fileName": "app.jar",
+      "projectReferences": [],
+      "vulnerabilities": [{"name": "CVE-2024-0001", "severity": "HIGH"}]
+    }
+  ]
+}""",
+        encoding="utf-8",
+    )
+
+    parsed = loader_module.InputLoader().load(
+        input_file,
+        input_format="dependency-check-json",
+    )
+
+    assert parsed.occurrences[0].target_ref is None
+    assert parsed.unique_cves == ["CVE-2024-0001"]
+
+
+def test_github_alerts_skips_non_object_items(tmp_path: Path) -> None:
+    loader_module = _load_loader_module()
+    input_file = tmp_path / "alerts.json"
+    input_file.write_text(
+        """[
+  "not-an-alert-object",
+  {
+    "number": 7,
+    "security_advisory": {
+      "cve_id": "CVE-2024-0002",
+      "severity": "high",
+      "identifiers": []
+    },
+    "dependency": {
+      "package": {"name": "pkg", "ecosystem": "npm"},
+      "manifest_path": "package-lock.json"
+    }
+  }
+]""",
+        encoding="utf-8",
+    )
+
+    parsed = loader_module.InputLoader().load(
+        input_file,
+        input_format="github-alerts-json",
+    )
+
+    assert parsed.total_rows == 2
+    assert parsed.unique_cves == ["CVE-2024-0002"]
+    assert any("not JSON objects" in warning for warning in parsed.warnings)
+
+
+def test_vex_loader_rejects_wrong_statement_container_type(tmp_path: Path) -> None:
+    loader_module = _load_loader_module()
+    vex_file = tmp_path / "openvex.json"
+    vex_file.write_text('{"statements": {}}', encoding="utf-8")
+
+    with pytest.raises(ValueError, match="OpenVEX JSON `statements`"):
+        loader_module.load_vex_files([vex_file])

@@ -58,6 +58,8 @@ class InputSourceSummary(StrictModel):
     total_rows: int = 0
     occurrence_count: int = 0
     unique_cves: int = 0
+    included_occurrence_count: int | None = None
+    included_unique_cves: int | None = None
     warning_count: int = 0
 
 
@@ -72,6 +74,8 @@ class ParsedInput(BaseModel):
     source_summaries: list[InputSourceSummary] = Field(default_factory=list)
     merged_input_count: int = 1
     duplicate_cve_count: int = 0
+    included_occurrence_count: int = 0
+    included_unique_cves: int = 0
     asset_match_conflict_count: int = 0
     vex_conflict_count: int = 0
 
@@ -194,6 +198,10 @@ class RemediationPlan(StrictModel):
     strategy: str = "generic-priority-guidance"
     ecosystem: str | None = None
     components: list[RemediationComponent] = Field(default_factory=list)
+    evidence_level: str = "none"
+    kev_required_action: str | None = None
+    kev_due_date: str | None = None
+    suppressed_occurrence_count: int = 0
 
 
 class NvdData(StrictModel):
@@ -396,6 +404,12 @@ class PrioritizedFinding(StrictModel):
     waiver_review_on: str | None = None
     waiver_days_remaining: int | None = None
     waiver_scope: str | None = None
+    waiver_id: str | None = None
+    waiver_matched_scope: str | None = None
+    waiver_approval_ref: str | None = None
+    waiver_ticket_url: str | None = None
+    operational_rank: int = 0
+    context_rank_reasons: list[str] = Field(default_factory=list)
     priority_label: str
     priority_rank: int
     rationale: str
@@ -432,6 +446,13 @@ class ComparisonFinding(StrictModel):
     waiver_expires_on: str | None = None
     waiver_review_on: str | None = None
     waiver_days_remaining: int | None = None
+    waiver_scope: str | None = None
+    waiver_id: str | None = None
+    waiver_matched_scope: str | None = None
+    waiver_approval_ref: str | None = None
+    waiver_ticket_url: str | None = None
+    operational_rank: int = 0
+    context_rank_reasons: list[str] = Field(default_factory=list)
     changed: bool
     delta_rank: int
     change_reason: str
@@ -443,6 +464,9 @@ class ProviderLookupDiagnostics(StrictModel):
     network_fetches: int = 0
     failures: int = 0
     content_hits: int = 0
+    empty_records: int = 0
+    stale_cache_hits: int = 0
+    degraded: bool = False
 
 
 class EnrichmentResult(BaseModel):
@@ -461,6 +485,8 @@ class EnrichmentResult(BaseModel):
     parsed_input: ParsedInput = Field(default_factory=ParsedInput)
     warnings: list[str] = Field(default_factory=list)
     nvd_diagnostics: ProviderLookupDiagnostics = Field(default_factory=ProviderLookupDiagnostics)
+    epss_diagnostics: ProviderLookupDiagnostics = Field(default_factory=ProviderLookupDiagnostics)
+    kev_diagnostics: ProviderLookupDiagnostics = Field(default_factory=ProviderLookupDiagnostics)
     provider_snapshot_sources: list[str] = Field(default_factory=list)
 
 
@@ -495,6 +521,11 @@ class AnalysisContext(BaseModel):
     filtered_out_count: int = 0
     nvd_hits: int = 0
     nvd_diagnostics: ProviderLookupDiagnostics = Field(default_factory=ProviderLookupDiagnostics)
+    epss_diagnostics: ProviderLookupDiagnostics = Field(default_factory=ProviderLookupDiagnostics)
+    kev_diagnostics: ProviderLookupDiagnostics = Field(default_factory=ProviderLookupDiagnostics)
+    provider_degraded: bool = False
+    provider_diagnostics: dict[str, ProviderLookupDiagnostics] = Field(default_factory=dict)
+    provider_freshness: dict[str, str | int | float | bool | None] = Field(default_factory=dict)
     epss_hits: int = 0
     kev_hits: int = 0
     attack_hits: int = 0
@@ -514,6 +545,8 @@ class AnalysisContext(BaseModel):
     waiver_file: str | None = None
     counts_by_priority: dict[str, int] = Field(default_factory=dict)
     source_stats: dict[str, int] = Field(default_factory=dict)
+    included_occurrence_count: int = 0
+    included_unique_cves: int = 0
     data_sources: list[str] = Field(default_factory=list)
     cache_enabled: bool = False
     cache_dir: str | None = None
@@ -890,6 +923,8 @@ class WaiverRule(StrictModel):
     reason: str
     expires_on: str
     review_on: str | None = None
+    approval_ref: str | None = None
+    ticket_url: str | None = None
     asset_ids: list[str] = Field(default_factory=list)
     targets: list[str] = Field(default_factory=list)
     services: list[str] = Field(default_factory=list)

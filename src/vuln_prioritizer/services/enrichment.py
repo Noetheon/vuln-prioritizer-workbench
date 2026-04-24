@@ -53,6 +53,8 @@ class EnrichmentService:
         self.cache = cache
         self.cache_dir = cache_dir if use_cache else None
         self.last_nvd_diagnostics = NvdFetchDiagnostics()
+        self.last_epss_diagnostics = ProviderLookupDiagnostics()
+        self.last_kev_diagnostics = ProviderLookupDiagnostics()
 
     def enrich(
         self,
@@ -115,7 +117,12 @@ class EnrichmentService:
                 network_fetches=self.last_nvd_diagnostics.network_fetches,
                 failures=self.last_nvd_diagnostics.failures,
                 content_hits=self.last_nvd_diagnostics.content_hits,
+                empty_records=self.last_nvd_diagnostics.empty_records,
+                stale_cache_hits=self.last_nvd_diagnostics.stale_cache_hits,
+                degraded=self.last_nvd_diagnostics.degraded,
             ),
+            epss_diagnostics=self.last_epss_diagnostics,
+            kev_diagnostics=self.last_kev_diagnostics,
             provider_snapshot_sources=(
                 list(provider_snapshot.metadata.selected_sources) if provider_snapshot else []
             ),
@@ -155,6 +162,9 @@ class EnrichmentService:
                 network_fetches=0,
                 failures=0,
                 content_hits=sum(1 for item in snapshot_results.values() if has_nvd_content(item)),
+                empty_records=sum(
+                    1 for item in snapshot_results.values() if not has_nvd_content(item)
+                ),
             )
         return _merge_provider_results(cve_ids, snapshot_results, live_results, NvdData), warnings
 
@@ -181,6 +191,23 @@ class EnrichmentService:
                 "Provider snapshot is missing EPSS coverage for: " + ", ".join(sorted(missing_ids))
             )
         live_results, warnings = self.epss.fetch_many(missing_ids) if missing_ids else ({}, [])
+        if missing_ids:
+            self.last_epss_diagnostics = getattr(
+                self.epss,
+                "last_diagnostics",
+                _build_fallback_diagnostics(cve_ids, live_results, EpssData),
+            )
+        else:
+            content_hits = sum(
+                1
+                for item in snapshot_results.values()
+                if item.epss is not None or item.percentile is not None or item.date is not None
+            )
+            self.last_epss_diagnostics = ProviderLookupDiagnostics(
+                requested=len(cve_ids),
+                content_hits=content_hits,
+                empty_records=max(len(cve_ids) - content_hits, 0),
+            )
         return _merge_provider_results(cve_ids, snapshot_results, live_results, EpssData), warnings
 
     def _resolve_kev_results(
@@ -211,6 +238,17 @@ class EnrichmentService:
             if missing_ids
             else ({}, [])
         )
+        if missing_ids:
+            self.last_kev_diagnostics = getattr(
+                self.kev,
+                "last_diagnostics",
+                _build_fallback_diagnostics(cve_ids, live_results, KevData),
+            )
+        else:
+            self.last_kev_diagnostics = ProviderLookupDiagnostics(
+                requested=len(cve_ids),
+                content_hits=sum(1 for item in snapshot_results.values() if item.in_kev),
+            )
         return _merge_provider_results(cve_ids, snapshot_results, live_results, KevData), warnings
 
 
@@ -229,3 +267,30 @@ def _merge_provider_results(
         else:
             merged[cve_id] = model_cls(cve_id=cve_id)
     return merged
+
+
+def _build_fallback_diagnostics(
+    cve_ids: list[str],
+    results: dict[str, _T],
+    model_cls: type[_T],
+) -> ProviderLookupDiagnostics:
+    if model_cls is EpssData:
+        content_hits = sum(
+            1
+            for item in results.values()
+            if isinstance(item, EpssData)
+            and (item.epss is not None or item.percentile is not None or item.date is not None)
+        )
+    elif model_cls is KevData:
+        content_hits = sum(
+            1 for item in results.values() if isinstance(item, KevData) and item.in_kev
+        )
+    else:
+        content_hits = sum(
+            1 for item in results.values() if isinstance(item, NvdData) and has_nvd_content(item)
+        )
+    return ProviderLookupDiagnostics(
+        requested=len(cve_ids),
+        content_hits=content_hits,
+        empty_records=max(len(cve_ids) - content_hits, 0),
+    )

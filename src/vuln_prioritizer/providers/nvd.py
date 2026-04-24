@@ -31,6 +31,9 @@ class NvdFetchDiagnostics:
     network_fetches: int = 0
     failures: int = 0
     content_hits: int = 0
+    empty_records: int = 0
+    stale_cache_hits: int = 0
+    degraded: bool = False
 
 
 class NvdProvider:
@@ -78,6 +81,7 @@ class NvdProvider:
         seen_ids: set[str] = set()
         cache_hits = 0
         failures = 0
+        stale_cache_hits = 0
 
         for cve_id in cve_ids:
             if cve_id in seen_ids:
@@ -106,10 +110,21 @@ class NvdProvider:
                     try:
                         resolved[cve_id] = futures[cve_id].result()
                     except Exception as exc:  # noqa: BLE001 - provider should degrade gracefully
-                        warnings_by_cve.setdefault(cve_id, []).append(
-                            f"NVD lookup failed for {cve_id}: {exc}"
-                        )
-                        resolved[cve_id] = NvdData(cve_id=cve_id)
+                        try:
+                            stale = self._load_from_cache(cve_id, allow_expired=True)
+                        except Exception:  # noqa: BLE001 - invalid stale cache is not recoverable
+                            stale = None
+                        if stale is not None:
+                            warnings_by_cve.setdefault(cve_id, []).append(
+                                f"NVD lookup failed for {cve_id}; using expired cached data: {exc}"
+                            )
+                            resolved[cve_id] = stale
+                            stale_cache_hits += 1
+                        else:
+                            warnings_by_cve.setdefault(cve_id, []).append(
+                                f"NVD lookup failed for {cve_id}: {exc}"
+                            )
+                            resolved[cve_id] = NvdData(cve_id=cve_id)
                         failures += 1
 
         results: dict[str, NvdData] = {}
@@ -120,20 +135,24 @@ class NvdProvider:
             results[cve_id] = resolved.get(cve_id, NvdData(cve_id=cve_id))
             warnings.extend(warnings_by_cve.get(cve_id, []))
 
+        content_hits = sum(1 for item in results.values() if has_nvd_content(item))
         self.last_diagnostics = NvdFetchDiagnostics(
             requested=len(cve_ids),
             cache_hits=cache_hits,
             network_fetches=len(pending_ids),
             failures=failures,
-            content_hits=sum(1 for item in results.values() if has_nvd_content(item)),
+            content_hits=content_hits,
+            empty_records=max(len(results) - content_hits, 0),
+            stale_cache_hits=stale_cache_hits,
+            degraded=failures > 0 or stale_cache_hits > 0,
         )
 
         return results, warnings
 
-    def _load_from_cache(self, cve_id: str) -> NvdData | None:
+    def _load_from_cache(self, cve_id: str, *, allow_expired: bool = False) -> NvdData | None:
         if self.cache is None:
             return None
-        cached_payload = self.cache.get_json("nvd", cve_id)
+        cached_payload = self.cache.get_json("nvd", cve_id, allow_expired=allow_expired)
         if cached_payload is None:
             return None
         return NvdData.model_validate(cached_payload)

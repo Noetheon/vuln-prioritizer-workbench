@@ -52,10 +52,16 @@
   },
   "$defs": {
     "nullableInteger": {
-      "type": ["integer", "null"]
+      "type": [
+        "integer",
+        "null"
+      ]
     },
     "nullableString": {
-      "type": ["string", "null"]
+      "type": [
+        "string",
+        "null"
+      ]
     },
     "stringArray": {
       "type": "array",
@@ -122,7 +128,10 @@
           "$ref": "#/$defs/nullableInteger"
         },
         "kev_mode": {
-          "enum": ["live/cache", "offline file"]
+          "enum": [
+            "live/cache",
+            "offline file"
+          ]
         },
         "offline_kev_file": {
           "$ref": "#/$defs/nullableString"
@@ -175,7 +184,11 @@
       ],
       "properties": {
         "namespace": {
-          "enum": ["nvd", "epss", "kev"]
+          "enum": [
+            "nvd",
+            "epss",
+            "kev"
+          ]
         },
         "file_count": {
           "type": "integer",
@@ -204,10 +217,20 @@
     "cacheCoverage": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["source", "cached_hits", "requested_cves", "coverage", "details"],
+      "required": [
+        "source",
+        "cached_hits",
+        "requested_cves",
+        "coverage",
+        "details"
+      ],
       "properties": {
         "source": {
-          "enum": ["nvd", "epss", "kev"]
+          "enum": [
+            "nvd",
+            "epss",
+            "kev"
+          ]
         },
         "cached_hits": {
           "type": "integer",
@@ -222,13 +245,26 @@
         },
         "details": {
           "type": "string"
+        },
+        "empty_records": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "invalid_records": {
+          "type": "integer",
+          "minimum": 0
         }
       }
     },
     "localFile": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["label", "path", "size_bytes", "sha256"],
+      "required": [
+        "label",
+        "path",
+        "size_bytes",
+        "sha256"
+      ],
       "properties": {
         "label": {
           "type": "string"

@@ -102,8 +102,36 @@ def _run_metadata_lines(context: AnalysisContext) -> list[str]:
             + f"cache_hits={diagnostics.cache_hits}, "
             + f"network_fetches={diagnostics.network_fetches}, "
             + f"failures={diagnostics.failures}, "
-            + f"content_hits={diagnostics.content_hits}`"
+            + f"content_hits={diagnostics.content_hits}, "
+            + f"empty_records={diagnostics.empty_records}, "
+            + f"stale_cache_hits={diagnostics.stale_cache_hits}`"
         )
+    if context.epss_diagnostics.requested:
+        diagnostics = context.epss_diagnostics
+        lines.append(
+            "- EPSS diagnostics: "
+            + f"`requested={diagnostics.requested}, "
+            + f"cache_hits={diagnostics.cache_hits}, "
+            + f"network_fetches={diagnostics.network_fetches}, "
+            + f"failures={diagnostics.failures}, "
+            + f"content_hits={diagnostics.content_hits}, "
+            + f"empty_records={diagnostics.empty_records}, "
+            + f"stale_cache_hits={diagnostics.stale_cache_hits}`"
+        )
+    if context.kev_diagnostics.requested:
+        diagnostics = context.kev_diagnostics
+        lines.append(
+            "- KEV diagnostics: "
+            + f"`requested={diagnostics.requested}, "
+            + f"cache_hits={diagnostics.cache_hits}, "
+            + f"network_fetches={diagnostics.network_fetches}, "
+            + f"failures={diagnostics.failures}, "
+            + f"content_hits={diagnostics.content_hits}, "
+            + f"empty_records={diagnostics.empty_records}, "
+            + f"stale_cache_hits={diagnostics.stale_cache_hits}`"
+        )
+    if context.provider_degraded:
+        lines.append("- Provider degraded: `yes`")
     if context.attack_mapping_file:
         lines.append(f"- ATT&CK mapping file: `{context.attack_mapping_file}`")
     if context.attack_technique_metadata_file:
@@ -132,6 +160,7 @@ def _summary_lines(context: AnalysisContext) -> list[str]:
         f"- Findings shown: {context.findings_count}",
         f"- Filtered out: {context.filtered_out_count}",
         f"- Locked provider data: {'yes' if context.locked_provider_data else 'no'}",
+        f"- Provider degraded: {'yes' if context.provider_degraded else 'no'}",
         f"- NVD hits: {context.nvd_hits}/{context.valid_input}",
         f"- EPSS hits: {context.epss_hits}/{context.valid_input}",
         f"- KEV hits: {context.kev_hits}/{context.valid_input}",

@@ -11,7 +11,9 @@
 - Input files: `data/sample_cves.txt`
 - Source input: `data/sample_cves.txt` (cve-list, rows=4, occurrences=4, unique_cves=4)
 - Cache directory: `.cache/vuln-prioritizer`
-- NVD diagnostics: `requested=4, cache_hits=4, network_fetches=0, failures=0, content_hits=4`
+- NVD diagnostics: `requested=4, cache_hits=4, network_fetches=0, failures=0, content_hits=4, empty_records=0, stale_cache_hits=0`
+- EPSS diagnostics: `requested=4, cache_hits=4, network_fetches=0, failures=0, content_hits=4, empty_records=0, stale_cache_hits=0`
+- KEV diagnostics: `requested=4, cache_hits=4, network_fetches=0, failures=0, content_hits=3, empty_records=0, stale_cache_hits=0`
 - Policy overrides: `None`
 
 ## Baselines
@@ -36,6 +38,7 @@
 - Findings shown: 4
 - Filtered out: 0
 - Locked provider data: no
+- Provider degraded: no
 - NVD hits: 4/4
 - EPSS hits: 4/4
 - KEV hits: 3/4

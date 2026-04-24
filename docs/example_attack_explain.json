@@ -233,6 +233,10 @@
     "attack_relevance": "High",
     "change_reason": "CVSS and enrichment both support the same Critical outcome.",
     "changed": false,
+    "context_rank_reasons": [
+      "KEV due date 2023-06-23",
+      "ATT&CK High"
+    ],
     "context_summary": "Seen in 1 occurrence(s).",
     "cve_id": "CVE-2023-34362",
     "cvss_base_score": 9.8,
@@ -257,6 +261,7 @@
       "command-and-control"
     ],
     "mapped_technique_count": 7,
+    "operational_rank": 1,
     "provenance": {
       "active_occurrence_count": 1,
       "affected_paths": [],
@@ -314,12 +319,17 @@
     "suppressed_by_vex": false,
     "under_investigation": false,
     "waived": false,
+    "waiver_approval_ref": null,
     "waiver_days_remaining": null,
     "waiver_expires_on": null,
+    "waiver_id": null,
+    "waiver_matched_scope": null,
     "waiver_owner": null,
     "waiver_reason": null,
     "waiver_review_on": null,
-    "waiver_status": null
+    "waiver_scope": null,
+    "waiver_status": null,
+    "waiver_ticket_url": null
   },
   "epss": {
     "cve_id": "CVE-2023-34362",
@@ -516,6 +526,10 @@
       "T1082",
       "T1105"
     ],
+    "context_rank_reasons": [
+      "KEV due date 2023-06-23",
+      "ATT&CK High"
+    ],
     "context_recommendation": "Review the affected components and assets in context before final remediation scheduling.",
     "context_summary": "Seen in 1 occurrence(s).",
     "cve_id": "CVE-2023-34362",
@@ -527,6 +541,7 @@
     "epss_percentile": 0.99934,
     "highest_asset_criticality": null,
     "in_kev": true,
+    "operational_rank": 1,
     "priority_label": "Critical",
     "priority_rank": 1,
     "provenance": {
@@ -622,22 +637,30 @@
       }
     },
     "rationale": "CISA KEV lists this CVE as known exploited in the wild. NVD reports CVSS 9.8 (CRITICAL) via CVSS v3.1. FIRST EPSS is 0.943 (percentile 0.999). ATT&CK context (High) maps this CVE to 7 technique(s): T1190, T1059, T1531, T1136, T1005, T1082, T1105. CTID mapping types: exploitation_technique, primary_impact, secondary_impact. CTID ATT&CK mappings include exploitation or primary impact behavior. ATT&CK mapping note: CVE-2023-34362 is a SQL injection vulnerability in a public-facing application. Adversaries have been observed to exploit this vulnerability to install malicious software on a target system, enabling them to discover system settings and information, enumerate the underlying SQL database, retrieve files, create administrator accounts, and delete accounts. Input provenance includes 1 occurrence(s) from cve-list. Seen in 1 occurrence(s).",
-    "recommended_action": "Patch or mitigate immediately, validate exposure, strengthen detection coverage, and escalate potential business impact.",
+    "recommended_action": "CISA KEV required action: Apply updates per vendor instructions. Patch or mitigate immediately, validate exposure, strengthen detection coverage, and escalate potential business impact. KEV due date: 2023-06-23.",
     "remediation": {
       "components": [],
       "ecosystem": null,
-      "strategy": "generic-priority-guidance"
+      "evidence_level": "kev_action",
+      "kev_due_date": "2023-06-23",
+      "kev_required_action": "Apply updates per vendor instructions.",
+      "strategy": "generic-priority-guidance",
+      "suppressed_occurrence_count": 0
     },
     "suppressed_by_vex": false,
     "under_investigation": false,
     "waived": false,
+    "waiver_approval_ref": null,
     "waiver_days_remaining": null,
     "waiver_expires_on": null,
+    "waiver_id": null,
+    "waiver_matched_scope": null,
     "waiver_owner": null,
     "waiver_reason": null,
     "waiver_review_on": null,
     "waiver_scope": null,
-    "waiver_status": null
+    "waiver_status": null,
+    "waiver_ticket_url": null
   },
   "kev": {
     "cve_id": "CVE-2023-34362",
@@ -672,15 +695,37 @@
       "Input formats: cve-list"
     ],
     "duplicate_cve_count": 0,
+    "epss_diagnostics": {
+      "cache_hits": 1,
+      "content_hits": 1,
+      "degraded": false,
+      "empty_records": 0,
+      "failures": 0,
+      "network_fetches": 0,
+      "requested": 1,
+      "stale_cache_hits": 0
+    },
     "epss_hits": 1,
     "expired_waiver_count": 0,
     "filtered_out_count": 0,
     "findings_count": 1,
     "generated_at": "2026-04-21T12:00:00+00:00",
+    "included_occurrence_count": 1,
+    "included_unique_cves": 1,
     "input_format": "cve-list",
     "input_path": "inline:CVE-2023-34362",
     "input_paths": [],
     "input_sources": [],
+    "kev_diagnostics": {
+      "cache_hits": 1,
+      "content_hits": 1,
+      "degraded": false,
+      "empty_records": 0,
+      "failures": 0,
+      "network_fetches": 0,
+      "requested": 1,
+      "stale_cache_hits": 0
+    },
     "kev_hits": 1,
     "locked_provider_data": false,
     "mapping_framework": "kev",
@@ -689,9 +734,12 @@
     "nvd_diagnostics": {
       "cache_hits": 1,
       "content_hits": 1,
+      "degraded": false,
+      "empty_records": 0,
       "failures": 0,
       "network_fetches": 0,
-      "requested": 1
+      "requested": 1,
+      "stale_cache_hits": 0
     },
     "nvd_hits": 1,
     "occurrences_count": 1,
@@ -707,6 +755,46 @@
       "high_epss_threshold": 0.4,
       "medium_cvss_threshold": 7.0,
       "medium_epss_threshold": 0.1
+    },
+    "provider_degraded": false,
+    "provider_diagnostics": {
+      "epss": {
+        "cache_hits": 1,
+        "content_hits": 1,
+        "degraded": false,
+        "empty_records": 0,
+        "failures": 0,
+        "network_fetches": 0,
+        "requested": 1,
+        "stale_cache_hits": 0
+      },
+      "kev": {
+        "cache_hits": 1,
+        "content_hits": 1,
+        "degraded": false,
+        "empty_records": 0,
+        "failures": 0,
+        "network_fetches": 0,
+        "requested": 1,
+        "stale_cache_hits": 0
+      },
+      "nvd": {
+        "cache_hits": 1,
+        "content_hits": 1,
+        "degraded": false,
+        "empty_records": 0,
+        "failures": 0,
+        "network_fetches": 0,
+        "requested": 1,
+        "stale_cache_hits": 0
+      }
+    },
+    "provider_freshness": {
+      "kev_date_added_max": "2023-06-02",
+      "kev_due_date_min": "2023-06-23",
+      "latest_epss_date": "2026-04-22",
+      "nvd_last_modified_max": "2025-10-27T14:37:08.460",
+      "nvd_last_modified_min": "2025-10-27T14:37:08.460"
     },
     "provider_snapshot_file": null,
     "provider_snapshot_sources": [],

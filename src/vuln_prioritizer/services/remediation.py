@@ -9,11 +9,13 @@ from vuln_prioritizer.config import PRIORITY_RECOMMENDATIONS
 from vuln_prioritizer.models import (
     FindingProvenance,
     InputOccurrence,
+    KevData,
     RemediationComponent,
     RemediationPlan,
 )
 
 DEFAULT_REMEDIATION_FALLBACK = "Review remediation options."
+SUPPRESSED_VEX_STATUSES = {"not_affected", "fixed"}
 
 _PURL_ECOSYSTEMS = {
     "apk": "apk",
@@ -57,24 +59,57 @@ _ComponentKey = tuple[str | None, str | None, str | None, str | None, str | None
 class RemediationService:
     """Derive stable remediation hints from normalized occurrence evidence."""
 
-    def derive(self, evidence: FindingProvenance | Iterable[InputOccurrence]) -> RemediationPlan:
+    def derive(
+        self,
+        evidence: FindingProvenance | Iterable[InputOccurrence],
+        *,
+        kev: KevData | None = None,
+    ) -> RemediationPlan:
         occurrences = _coerce_occurrences(evidence)
+        suppressed_occurrence_count = sum(
+            1
+            for occurrence in occurrences
+            if (occurrence.vex_status or "").lower() in SUPPRESSED_VEX_STATUSES
+        )
+        active_occurrences = [
+            occurrence
+            for occurrence in occurrences
+            if (occurrence.vex_status or "").lower() not in SUPPRESSED_VEX_STATUSES
+        ]
+        if active_occurrences:
+            occurrences = active_occurrences
         components = _collect_components(occurrences)
         if not components:
-            return RemediationPlan()
+            return _apply_kev_evidence(
+                RemediationPlan(
+                    evidence_level="none",
+                    suppressed_occurrence_count=suppressed_occurrence_count,
+                ),
+                kev,
+            )
 
         actionable_components = [component for component in components if component.fixed_versions]
         if actionable_components:
-            return RemediationPlan(
-                strategy="upgrade",
-                ecosystem=_resolve_single_ecosystem(actionable_components),
-                components=actionable_components,
+            return _apply_kev_evidence(
+                RemediationPlan(
+                    strategy="upgrade",
+                    ecosystem=_resolve_single_ecosystem(actionable_components),
+                    components=actionable_components,
+                    evidence_level="fixed_version",
+                    suppressed_occurrence_count=suppressed_occurrence_count,
+                ),
+                kev,
             )
 
-        return RemediationPlan(
-            strategy="review-upgrade-options",
-            ecosystem=_resolve_single_ecosystem(components),
-            components=components,
+        return _apply_kev_evidence(
+            RemediationPlan(
+                strategy="review-upgrade-options",
+                ecosystem=_resolve_single_ecosystem(components),
+                components=components,
+                evidence_level="component",
+                suppressed_occurrence_count=suppressed_occurrence_count,
+            ),
+            kev,
         )
 
     def build_action(
@@ -82,16 +117,19 @@ class RemediationService:
         evidence: FindingProvenance | Iterable[InputOccurrence],
         *,
         priority_label: str,
+        kev: KevData | None = None,
     ) -> tuple[RemediationPlan, str]:
-        remediation = self.derive(evidence)
+        remediation = self.derive(evidence, kev=kev)
         return remediation, render_recommended_action(remediation, priority_label=priority_label)
 
 
 def derive_remediation(
     evidence: FindingProvenance | Iterable[InputOccurrence],
+    *,
+    kev: KevData | None = None,
 ) -> RemediationPlan:
     """Convenience wrapper around :class:`RemediationService`."""
-    return RemediationService().derive(evidence)
+    return RemediationService().derive(evidence, kev=kev)
 
 
 def render_recommended_action(remediation: RemediationPlan, *, priority_label: str) -> str:
@@ -99,12 +137,33 @@ def render_recommended_action(remediation: RemediationPlan, *, priority_label: s
     generic_guidance = PRIORITY_RECOMMENDATIONS[priority_label]
 
     if remediation.strategy == "upgrade" and remediation.components:
-        return _render_upgrade_action(remediation, generic_guidance)
+        action = _render_upgrade_action(remediation, generic_guidance)
+    elif remediation.strategy == "review-upgrade-options" and remediation.components:
+        action = _render_review_action(remediation, generic_guidance)
+    else:
+        action = generic_guidance
+    if remediation.kev_required_action:
+        action = (
+            f"CISA KEV required action: {remediation.kev_required_action.rstrip('.')}. {action}"
+        )
+    if remediation.kev_due_date:
+        action = f"{action} KEV due date: {remediation.kev_due_date}."
+    return action
 
-    if remediation.strategy == "review-upgrade-options" and remediation.components:
-        return _render_review_action(remediation, generic_guidance)
 
-    return generic_guidance
+def _apply_kev_evidence(remediation: RemediationPlan, kev: KevData | None) -> RemediationPlan:
+    if kev is None or not kev.in_kev:
+        return remediation
+    evidence_level = remediation.evidence_level
+    if kev.required_action:
+        evidence_level = "kev_action"
+    return remediation.model_copy(
+        update={
+            "evidence_level": evidence_level,
+            "kev_required_action": kev.required_action,
+            "kev_due_date": kev.due_date,
+        }
+    )
 
 
 def _coerce_occurrences(
