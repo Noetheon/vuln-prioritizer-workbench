@@ -4,7 +4,7 @@ from pathlib import Path
 
 from sqlalchemy import create_engine, inspect, text
 
-from vuln_prioritizer.db.migrations import WORKBENCH_TABLES, upgrade_database
+from vuln_prioritizer.db.migrations import CURRENT_REVISION, WORKBENCH_TABLES, upgrade_database
 
 
 def test_alembic_upgrade_creates_initial_workbench_schema(tmp_path: Path) -> None:
@@ -21,4 +21,4 @@ def test_alembic_upgrade_creates_initial_workbench_schema(tmp_path: Path) -> Non
 
     with engine.connect() as connection:
         revision = connection.execute(text("select version_num from alembic_version")).scalar_one()
-    assert revision == "0001_workbench_mvp"
+    assert revision == CURRENT_REVISION

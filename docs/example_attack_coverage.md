@@ -4,6 +4,9 @@
 - ATT&CK source: `ctid-mappings-explorer`
 - Mapping file: `data/attack/ctid_kev_enterprise_2025-07-28_attack-16.1_subset.json`
 - Technique metadata file: `data/attack/attack_techniques_enterprise_16.1_subset.json`
+- Mapping SHA256: `f604e08bd6370c2356a60c01963a9bc5c88f92fac0b2ee20102c0159d4a2c865`
+- Technique metadata SHA256: `486d0aa3aacf5c86cf5b8f9dd597210bcfd9d36cbd1331c1c303865dbd6c5c78`
+- Metadata format: `vuln-prioritizer-technique-json`
 - Mapped CVEs: 3
 - Unmapped CVEs: 2
 - Mapping type distribution: exploitation_technique: 3, primary_impact: 3, secondary_impact: 3

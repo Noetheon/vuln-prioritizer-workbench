@@ -7,7 +7,7 @@
     <h1>{{ run.input_filename or run.id }}</h1>
   </div>
   <div class="action-row">
-    {% for format in ["json", "markdown", "html"] %}
+    {% for format in ["json", "markdown", "html", "csv"] %}
       <form method="post" action="/web/analysis-runs/{{ run.id }}/reports">
         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
         <input type="hidden" name="report_format" value="{{ format }}">
@@ -45,10 +45,11 @@
     </div>
     <div class="stack">
       {% for bundle in bundles %}
-        <a class="artifact-row" href="/api/evidence-bundles/{{ bundle.id }}/download">
-          <span>Evidence ZIP</span>
+        <div class="artifact-row">
+          <a href="/api/evidence-bundles/{{ bundle.id }}/download">Evidence ZIP</a>
+          <a href="/evidence-bundles/{{ bundle.id }}/verify">Verify</a>
           <strong>{{ bundle.sha256[:10] }}</strong>
-        </a>
+        </div>
       {% else %}
         <p class="empty">No evidence bundles generated.</p>
       {% endfor %}

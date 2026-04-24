@@ -9,6 +9,8 @@ The site now includes the `v1.1.0` public-polish release notes and a committed m
 ![Documentation grid preview](media/grid.png)
 
 - [Release notes: v1.1.0](releases/v1.1.0.md)
+- [Release notes: Workbench v1.0.0](releases/workbench-v1.0.0.md)
+- [Workbench v1.0 release checklist](workbench-v1-release-checklist.md)
 - [Example HTML report](examples/example_report.html)
 - [Operational use cases](use_cases.md)
 - [Operator playbooks](playbooks.md)
@@ -60,14 +62,14 @@ vuln-prioritizer analyze \
 The documented default ATT&CK workflow is `ctid-json`. The older `local-csv` mode remains available only as a compatibility fallback.
 If you are working from a repository checkout, the checked-in demo ATT&CK files live under `data/attack/`; they are not installed by `pipx`.
 
-Workbench MVP from a repository checkout:
+Workbench v1.0 from a repository checkout:
 
 ```bash
 docker compose up --build
 curl http://127.0.0.1:8000/api/health
 ```
 
-The web/API MVP is local-first, SQLite-backed, and focused on CVE lists, `generic-occurrence-csv`, Trivy JSON, and Grype JSON imports. Use the CLI for the full automation/input matrix.
+The web/API Workbench is local-first, SQLite-backed, and focused on CVE lists, `generic-occurrence-csv`, Trivy JSON, and Grype JSON imports. Use the CLI for the full automation/input matrix.
 
 ## Documentation Structure
 
@@ -76,6 +78,8 @@ The web/API MVP is local-first, SQLite-backed, and focused on CVE lists, `generi
 - Use [support_matrix.md](support_matrix.md) and [contracts.md](contracts.md) for stable consumer-facing surfaces.
 - Use [playbooks.md](playbooks.md) when you want the shortest role-oriented path for CI scans, SBOM triage, or infrastructure scan triage.
 - Use [integrations/reporting_and_ci.md](integrations/reporting_and_ci.md) for SARIF, GitHub Action, HTML, and local workflow guidance.
+- Use [workbench-threat-model.md](workbench-threat-model.md) for Workbench security boundaries, residual risk, and release readiness checks.
+- Use [workbench-offline-demo.md](workbench-offline-demo.md) for the locked-provider Workbench demo and v1.0 release evidence path.
 - Use [roadmap.md](roadmap.md) for shipped scope and deliberate non-goals.
 - Use [release_operations.md](release_operations.md) for maintainer-only release, GitHub Release recovery, and PyPI/TestPyPI operations.
 - Use [community_repository_setup.md](community_repository_setup.md) for maintainer-facing public repo topics, labels, and triage defaults.

@@ -31,9 +31,120 @@
         <tr><th>Owner</th><td>{{ finding.asset.owner if finding.asset else "N.A." }}</td></tr>
         <tr><th>EPSS</th><td>{{ "%.3f"|format(finding.epss) if finding.epss is not none else "N.A." }}</td></tr>
         <tr><th>CVSS</th><td>{{ "%.1f"|format(finding.cvss_base_score) if finding.cvss_base_score is not none else "N.A." }}</td></tr>
+        <tr><th>VEX</th><td>
+          {% set vex_statuses = finding.finding_json.get("provenance", {}).get("vex_statuses", {}) if finding.finding_json else {} %}
+          {% if vex_statuses %}
+            {% for status, count in vex_statuses.items() %}{{ status }} ({{ count }}){% if not loop.last %}, {% endif %}{% endfor %}
+          {% elif finding.suppressed_by_vex %}
+            suppressed
+          {% elif finding.under_investigation %}
+            under_investigation
+          {% else %}
+            N.A.
+          {% endif %}
+        </td></tr>
+        <tr><th>Waiver</th><td>
+          {% if finding.waiver_status or finding.waived %}
+            {{ finding.waiver_status or "active" }}
+            {% if finding.waiver_owner %} · {{ finding.waiver_owner }}{% endif %}
+            {% if finding.waiver_expires_on %} · expires {{ finding.waiver_expires_on }}{% endif %}
+          {% else %}
+            N.A.
+          {% endif %}
+        </td></tr>
       </tbody>
     </table>
   </div>
+  {% if finding.waiver_status or finding.waived %}
+    <section class="subsection">
+      <div class="section-head compact">
+        <p class="eyebrow">Governance</p>
+        <h2>Waiver lifecycle</h2>
+      </div>
+      <div class="detail-grid">
+        <article class="panel">
+          <table>
+            <tbody>
+              <tr><th>ID</th><td>{{ finding.waiver_id or "N.A." }}</td></tr>
+              <tr><th>Status</th><td>{{ finding.waiver_status or "active" }}</td></tr>
+              <tr><th>Owner</th><td>{{ finding.waiver_owner or "N.A." }}</td></tr>
+              <tr><th>Expires</th><td>{{ finding.waiver_expires_on or "N.A." }}</td></tr>
+              <tr><th>Review</th><td>{{ finding.waiver_review_on or "N.A." }}</td></tr>
+              <tr><th>Days remaining</th><td>{{ finding.waiver_days_remaining if finding.waiver_days_remaining is not none else "N.A." }}</td></tr>
+            </tbody>
+          </table>
+        </article>
+        <article class="panel">
+          <p class="eyebrow">Reason</p>
+          <p>{{ finding.waiver_reason or "No waiver reason captured." }}</p>
+          {% if finding.waiver_approval_ref %}<p>Approval: {{ finding.waiver_approval_ref }}</p>{% endif %}
+          {% if finding.waiver_ticket_url %}
+            {% if finding.waiver_ticket_url.startswith("https://") or finding.waiver_ticket_url.startswith("http://") %}
+              <p><a href="{{ finding.waiver_ticket_url }}" rel="noopener noreferrer">Ticket</a></p>
+            {% else %}
+              <p>Ticket: {{ finding.waiver_ticket_url }}</p>
+            {% endif %}
+          {% endif %}
+        </article>
+      </div>
+    </section>
+  {% endif %}
+  <section class="subsection">
+    <div class="section-head compact">
+      <p class="eyebrow">ATT&amp;CK TTPs</p>
+      <h2>Threat context</h2>
+    </div>
+    {% if attack_context and attack_context.mapped %}
+      <div class="detail-grid">
+        <article class="panel">
+          <p class="eyebrow">Context</p>
+          <table>
+            <tbody>
+              <tr><th>Source</th><td>{{ attack_context.source }}</td></tr>
+              <tr><th>Review</th><td>{{ attack_context.review_status }}</td></tr>
+              <tr><th>Relevance</th><td>{{ attack_context.attack_relevance }}</td></tr>
+              <tr><th>Threat rank</th><td>{{ attack_context.threat_context_rank }}</td></tr>
+              <tr><th>ATT&amp;CK version</th><td>{{ attack_context.attack_version or "N.A." }}</td></tr>
+              <tr><th>Mapping SHA256</th><td>{{ attack_context.source_hash or "N.A." }}</td></tr>
+              <tr><th>Metadata SHA256</th><td>{{ attack_context.metadata_hash or "N.A." }}</td></tr>
+            </tbody>
+          </table>
+        </article>
+        <article class="panel">
+          <p class="eyebrow">Rationale</p>
+          <p>{{ attack_context.rationale or "No ATT&CK rationale captured." }}</p>
+        </article>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Technique</th>
+              <th>Name</th>
+              <th>Tactics</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for technique in attack_context.techniques_json %}
+              <tr>
+                <td>{{ technique.attack_object_id }}</td>
+                <td>
+                  {% if technique.url and (technique.url.startswith("https://") or technique.url.startswith("http://")) %}
+                    <a href="{{ technique.url }}" rel="noopener noreferrer">{{ technique.name }}</a>
+                  {% else %}
+                    {{ technique.name }}
+                  {% endif %}
+                </td>
+                <td>{{ technique.tactics|join(", ") if technique.tactics else "N.A." }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p class="empty">No approved ATT&amp;CK mapping is stored for this finding.</p>
+    {% endif %}
+  </section>
   <details class="json-block">
     <summary>Raw finding JSON</summary>
     <pre>{{ finding.finding_json | tojson(indent=2) }}</pre>

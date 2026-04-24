@@ -26,6 +26,10 @@
     "source_analysis_path": {
       "type": "string"
     },
+    "source_analysis_sha256": {
+      "type": ["string", "null"],
+      "pattern": "^[a-f0-9]{64}$"
+    },
     "source_input_path": {
       "type": ["string", "null"]
     },
@@ -33,6 +37,23 @@
       "type": "array",
       "items": {
         "type": "string"
+      }
+    },
+    "source_input_hashes": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/inputHash"
+      }
+    },
+    "provider_snapshot": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "artifact_hashes": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string",
+        "pattern": "^[a-f0-9]{64}$"
       }
     },
     "findings_count": {
@@ -67,6 +88,23 @@
           "type": "string"
         },
         "kind": {
+          "type": "string"
+        },
+        "size_bytes": {
+          "type": "integer"
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      }
+    },
+    "inputHash": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "size_bytes", "sha256"],
+      "properties": {
+        "path": {
           "type": "string"
         },
         "size_bytes": {

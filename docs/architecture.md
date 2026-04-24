@@ -71,6 +71,8 @@ Workbench runtime state is controlled by environment variables for database URL,
 
 The MVP web/API import path is intentionally narrower than the CLI input matrix: CVE lists, `generic-occurrence-csv`, Trivy JSON, and Grype JSON. The CLI remains the broader automation surface for SBOM, XML scanner exports, state snapshots, CI outputs, and advanced report generation.
 
+The Workbench threat model and readiness checklist are maintained in [workbench-threat-model.md](workbench-threat-model.md). The current architecture assumes a trusted local operator, SQLite default storage, and no public-internet exposure until authentication and shared-deployment hardening are added.
+
 ### Input normalization
 
 `src/vuln_prioritizer/inputs/loader.py` is the canonical input entry point.

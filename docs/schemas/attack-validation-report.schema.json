@@ -14,6 +14,16 @@
     "domain",
     "mapping_framework",
     "mapping_framework_version",
+    "mapping_file_sha256",
+    "technique_metadata_file_sha256",
+    "metadata_format",
+    "metadata_source",
+    "stix_spec_version",
+    "mapping_created_at",
+    "mapping_updated_at",
+    "mapping_organization",
+    "mapping_author",
+    "mapping_contact",
     "mapping_count",
     "unique_cves",
     "technique_count",
@@ -46,6 +56,36 @@
       "$ref": "#/$defs/nullableString"
     },
     "mapping_framework_version": {
+      "$ref": "#/$defs/nullableString"
+    },
+    "mapping_file_sha256": {
+      "$ref": "#/$defs/nullableString"
+    },
+    "technique_metadata_file_sha256": {
+      "$ref": "#/$defs/nullableString"
+    },
+    "metadata_format": {
+      "$ref": "#/$defs/nullableString"
+    },
+    "metadata_source": {
+      "$ref": "#/$defs/nullableString"
+    },
+    "stix_spec_version": {
+      "$ref": "#/$defs/nullableString"
+    },
+    "mapping_created_at": {
+      "$ref": "#/$defs/nullableString"
+    },
+    "mapping_updated_at": {
+      "$ref": "#/$defs/nullableString"
+    },
+    "mapping_organization": {
+      "$ref": "#/$defs/nullableString"
+    },
+    "mapping_author": {
+      "$ref": "#/$defs/nullableString"
+    },
+    "mapping_contact": {
       "$ref": "#/$defs/nullableString"
     },
     "mapping_count": {

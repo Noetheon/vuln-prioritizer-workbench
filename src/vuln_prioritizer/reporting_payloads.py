@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from collections import Counter
 from typing import Any
 
 from vuln_prioritizer.models import (
@@ -114,6 +115,35 @@ def generate_summary_markdown(
                 + f"unique_cves={source.get('unique_cves', 0)})"
             )
         lines.append("")
+    threat_context_findings = [
+        finding
+        for finding in findings
+        if isinstance(finding, dict)
+        and finding.get("attack_mapped")
+        and finding.get("attack_relevance") in {"High", "Medium"}
+        and finding.get("priority_label") != "Low"
+    ]
+    if threat_context_findings:
+        lines.extend(
+            [
+                "",
+                "## Threat-Informed Context",
+                (
+                    "ATT&CK context is shown separately from base priority and uses only "
+                    "approved mapping sources."
+                ),
+            ]
+        )
+        technique_distribution = attack_summary.get("technique_distribution", {})
+        if isinstance(technique_distribution, dict) and technique_distribution:
+            for technique_id, count in sorted(
+                technique_distribution.items(),
+                key=lambda item: (-int(item[1]), str(item[0])),
+            )[:5]:
+                lines.append(f"- {technique_id}: {count} mapped finding(s)")
+    governance_lines = _governance_summary_lines(metadata, findings)
+    if governance_lines:
+        lines.extend(["", "## Governance", *governance_lines])
     lines.extend(["", "## Top Findings"])
     if findings:
         top_findings = findings[:5]
@@ -135,6 +165,57 @@ def generate_summary_markdown(
     else:
         lines.append("- No findings matched the current filters.")
     return "\n".join(lines) + "\n"
+
+
+def _governance_summary_lines(metadata: dict[str, Any], findings: list[Any]) -> list[str]:
+    lines: list[str] = []
+    suppressed = int(metadata.get("suppressed_by_vex", 0) or 0)
+    under_investigation = int(metadata.get("under_investigation_count", 0) or 0)
+    waived = int(metadata.get("waived_count", 0) or 0)
+    review_due = int(metadata.get("waiver_review_due_count", 0) or 0)
+    expired = int(metadata.get("expired_waiver_count", 0) or 0)
+    if any((suppressed, under_investigation, waived, review_due, expired)):
+        lines.extend(
+            [
+                f"- Suppressed by VEX: {suppressed}",
+                f"- Under VEX investigation: {under_investigation}",
+                f"- Waived findings: {waived}",
+                f"- Waiver review due: {review_due}",
+                f"- Expired waivers: {expired}",
+            ]
+        )
+    owners, services = _owner_service_counters(findings)
+    if owners:
+        lines.append("- Top owners: " + _counter_preview(owners))
+    if services:
+        lines.append("- Top services: " + _counter_preview(services))
+    return lines
+
+
+def _owner_service_counters(findings: list[Any]) -> tuple[Counter[str], Counter[str]]:
+    owners: Counter[str] = Counter()
+    services: Counter[str] = Counter()
+    for finding in findings:
+        if not isinstance(finding, dict):
+            continue
+        provenance = finding.get("provenance")
+        occurrences = provenance.get("occurrences") if isinstance(provenance, dict) else None
+        if not isinstance(occurrences, list):
+            continue
+        for occurrence in occurrences:
+            if not isinstance(occurrence, dict):
+                continue
+            owner = occurrence.get("asset_owner")
+            service = occurrence.get("asset_business_service")
+            if owner:
+                owners[str(owner)] += 1
+            if service:
+                services[str(service)] += 1
+    return owners, services
+
+
+def _counter_preview(counter: Counter[str], *, limit: int = 5) -> str:
+    return ", ".join(f"{name} ({count})" for name, count in counter.most_common(limit))
 
 
 def generate_compact_summary_markdown(report_payload: dict[str, Any]) -> str:

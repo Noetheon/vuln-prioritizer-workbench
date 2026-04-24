@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 
@@ -21,8 +22,9 @@ class CtidMappingsProvider:
         if offline_file.suffix.lower() != ".json":
             raise ValueError("CTID ATT&CK mapping file must be a JSON file.")
 
+        raw_content = offline_file.read_bytes()
         try:
-            payload = json.loads(offline_file.read_text(encoding="utf-8"))
+            payload = json.loads(raw_content.decode("utf-8"))
         except json.JSONDecodeError as exc:
             raise ValueError(f"CTID ATT&CK mapping JSON is not valid JSON: {exc.msg}.") from exc
         metadata = payload.get("metadata")
@@ -108,6 +110,13 @@ class CtidMappingsProvider:
             "mapping_version": _normalize_optional_string(metadata.get("mapping_version")),
             "attack_version": _normalize_optional_string(metadata.get("attack_version")),
             "domain": _normalize_optional_string(metadata.get("technology_domain")),
+            "mapping_file_sha256": hashlib.sha256(raw_content).hexdigest(),
+            "mapping_file": str(offline_file),
+            "creation_date": _normalize_optional_string(metadata.get("creation_date")),
+            "last_update": _normalize_optional_string(metadata.get("last_update")),
+            "organization": _normalize_optional_string(metadata.get("organization")),
+            "author": _normalize_optional_string(metadata.get("author")),
+            "contact": _normalize_optional_string(metadata.get("contact")),
         }
         return grouped, normalized_metadata, warnings
 
