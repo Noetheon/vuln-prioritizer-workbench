@@ -9,6 +9,21 @@
 
 ![HTML report preview](docs/examples/media/html-report-preview.png)
 
+Workbench demo screenshots:
+
+![Workbench dashboard](docs/examples/media/workbench-dashboard.png)
+![Workbench findings](docs/examples/media/workbench-findings.png)
+![Workbench finding detail with ATT&CK TTP context](docs/examples/media/workbench-finding-detail-ttp.png)
+![Workbench reports and evidence](docs/examples/media/workbench-reports-evidence.png)
+
+README media refresh checklist for release candidates:
+
+- Capture screenshots from the locked offline demo path in [docs/workbench-offline-demo.md](docs/workbench-offline-demo.md), not from customer data or live provider-only runs.
+- Keep screenshot paths repository-relative, and keep or update README links in the same change.
+- Crop to the Workbench or report UI only; do not include shell history, API keys, cookies, private home-directory paths, browser profiles, or environment variable values.
+- Show secret-bearing settings only in their redacted `<set>` or `<not set>` state.
+- Commit generated screenshot replacements only as part of a release evidence change.
+
 ## Why Use It
 
 - Transparent, rule-based prioritization instead of opaque scoring.
@@ -123,13 +138,21 @@ Run the current self-hosted Workbench MVP API and web UI locally:
 docker compose up --build
 ```
 
-Then open `http://127.0.0.1:8000`. The Compose service stores SQLite data, uploads, reports, and provider cache entries in Docker named volumes, and mounts checked-in demo data read-only at `/app/examples`.
+Then open `http://127.0.0.1:8000`. The Compose service stores SQLite data, uploads, reports, provider snapshots, and provider cache entries in Docker named volumes, mounts checked-in demo data read-only at `/app/examples`, and copies demo provider snapshots into the writable snapshot volume on startup.
 
 ```bash
 curl http://127.0.0.1:8000/api/health
 ```
 
 Maintainers can run the same Compose readiness path through `make docker-demo-smoke`, which starts the service, polls `/api/health`, and tears the stack down after the check.
+
+SQLite is still the default. To smoke-test the optional Postgres profile and the same Alembic migration path, run:
+
+```bash
+make docker-postgres-migration-smoke
+```
+
+That starts the `postgres` and `workbench-postgres` profile services, serves the app on `http://127.0.0.1:8001`, and tears down the profile volumes after the health check.
 
 The container starts the web app with `vuln-prioritizer web serve --host 0.0.0.0 --port 8000`. The app initializes the SQLite schema on startup; you can also initialize the same database explicitly:
 
@@ -165,7 +188,7 @@ Workbench runtime environment:
 | `VULN_PRIORITIZER_DB_URL` | local: `sqlite:///./data/workbench.db`; Compose: `sqlite:////app/data/workbench.db` | Workbench database URL. |
 | `VULN_PRIORITIZER_UPLOAD_DIR` | local: `data/uploads`; Compose: `/app/uploads` | Uploaded source files. |
 | `VULN_PRIORITIZER_REPORT_DIR` | local: `data/reports`; Compose: `/app/reports` | Generated reports and evidence bundles. |
-| `VULN_PRIORITIZER_PROVIDER_SNAPSHOT_DIR` | local: `data`; Compose: `/app/examples` | Trusted directory for locked provider snapshot replay. |
+| `VULN_PRIORITIZER_PROVIDER_SNAPSHOT_DIR` | local: `data`; Compose: `/app/provider-snapshots` | Trusted directory for locked provider snapshot replay and generated provider update snapshots. |
 | `VULN_PRIORITIZER_CACHE_DIR` | local: `.cache/vuln-prioritizer`; Compose: `/app/.cache/vuln-prioritizer` | Provider cache used by Workbench analysis. |
 | `VULN_PRIORITIZER_MAX_UPLOAD_MB` | `25` | Upload size limit per import. |
 | `VULN_PRIORITIZER_CSRF_TOKEN` | random per process when unset | Optional fixed local form token for repeatable demos. |
@@ -175,11 +198,29 @@ For locked Workbench replay, submit only the snapshot filename, for example
 `demo_provider_snapshot.json`. The app resolves it from
 `VULN_PRIORITIZER_PROVIDER_SNAPSHOT_DIR` or the provider cache and rejects arbitrary paths.
 
+Workbench API token behavior is intentionally local-first. A fresh local database has no active
+tokens, so mutating `/api/*` requests remain open for the offline demo. Create the first token with
+`POST /api/tokens`; after any active token exists, `POST`, `PUT`, `PATCH`, and `DELETE` requests under
+`/api/` require `Authorization: Bearer <token>` or `X-API-Token: <token>`. Only SHA-256 token hashes
+are stored.
+
+Workbench project settings can be saved as config-as-code through
+`POST /api/projects/{project_id}/settings/config`. The payload uses the same
+`vuln-prioritizer.yml` schema as the CLI runtime config, rejects unknown keys, and keeps backward
+defaults when no project snapshot exists.
+
+Provider update jobs are available at `POST /api/providers/update-jobs` and from the Settings page.
+They are synchronous local jobs intended for cron or other trusted local schedulers; failures are
+recorded without replacing the previous provider snapshot. GitHub issue export starts with
+`POST /api/projects/{project_id}/github/issues/preview` and can create issues through
+`POST /api/projects/{project_id}/github/issues/export` when `dry_run` is false, a repository is
+provided, and the selected token environment variable is configured.
+
 Current Workbench MVP limitations:
 
 - The Compose path is local-first and single-node. It is not hardened for internet exposure.
 - The Workbench UI/API currently focuses on CVE lists, `generic-occurrence-csv`, Trivy JSON, and Grype JSON imports. The CLI still supports the broader input matrix documented below.
-- SQLite is the default supported Workbench runtime. PostgreSQL, background workers, SSO, API tokens, ticket sync, and multi-workspace tenancy are out of MVP scope.
+- SQLite remains the default Workbench runtime; the Compose Postgres profile is an optional migration smoke path. Background workers, SSO, ticket sync, and multi-workspace tenancy remain out of MVP scope.
 - The project still does not scan systems, patch software, or generate heuristic/AI CVE-to-ATT&CK mappings.
 
 Workbench readiness is tracked in [docs/workbench-threat-model.md](docs/workbench-threat-model.md), and planning lives in [docs/workbench-masterplan.md](docs/workbench-masterplan.md). The roadmap tracks how the current CLI release line is being repositioned as the reusable core for that add-on.
@@ -287,6 +328,41 @@ vuln-prioritizer analyze \
 
 Use `--cache-only` on `data export-provider-snapshot` when local smoke tests must avoid live provider refreshes.
 
+### 8. Maintainer Demo Evidence Bundle
+
+From a repository checkout, maintainers can reproduce the Workbench v1.0 demo evidence bundle without live provider calls:
+
+```bash
+make demo-evidence-bundle-check
+```
+
+The target uses checked-in fixtures, `data/demo_provider_snapshot.json`, locked provider replay, and the fixed demo timestamp configured in the `Makefile`. It writes:
+
+- `build/v1.0-demo-analysis.json`
+- `build/v1.0-demo-evidence-bundle.zip`
+- `build/v1.0-demo-evidence-bundle-verification.json`
+
+To verify an already generated bundle from the checkout, run the same CLI contract directly:
+
+```bash
+PYTHONPATH=src VULN_PRIORITIZER_FIXED_NOW=2026-04-21T12:00:00+00:00 \
+  python3 -m vuln_prioritizer.cli report verify-evidence-bundle \
+  --input build/v1.0-demo-evidence-bundle.zip \
+  --output build/v1.0-demo-evidence-bundle-verification.json \
+  --format json
+```
+
+Record release evidence with repository-relative paths only. Archive the command output, `git rev-parse HEAD`, the verification JSON where `summary.ok` is `true`, and SHA-256 values for the three generated files:
+
+```bash
+shasum -a 256 \
+  build/v1.0-demo-analysis.json \
+  build/v1.0-demo-evidence-bundle.zip \
+  build/v1.0-demo-evidence-bundle-verification.json
+```
+
+Do not record machine-specific absolute paths, `.env` contents, API keys, tokens, cookies, or private scanner exports in public release evidence.
+
 ## Runtime Config
 
 `v1.1.0` adds first-class runtime config via `vuln-prioritizer.yml`.
@@ -359,7 +435,7 @@ Reference material:
 
 ## GitHub Action
 
-The repository includes a composite GitHub Action for `analyze` and `report html`.
+The repository includes a composite GitHub Action for `analyze`, static report rendering, Workbench-style report artifacts, evidence bundles, and SARIF validation.
 
 Use it after `actions/checkout`, because the scanned input files live in the consumer repository, not in the action repository.
 In `mode: analyze`, `input` and `input-format` accept newline-delimited values so one action step can merge multiple sources. The action also passes through the CLI's waiver, filter, sort, cache, provider replay, and fail-gate flags for deterministic CI runs.
@@ -393,7 +469,7 @@ In `mode: analyze`, `input` and `input-format` accept newline-delimited values s
 
 Replace `vX.Y.Z` with the release tag or commit SHA you want to consume. `summary-template` is backward-compatible and defaults to `detailed`. Set it to `compact` for GitHub step summaries or PR comments, or keep `detailed` when you want the full executive summary artifact. If a workflow only needs `$GITHUB_STEP_SUMMARY`, the action can now generate a summary without requiring an explicit `summary-output-path`.
 
-Common analyze-only Action inputs include `waiver-file`, `hide-waived`, `fail-on-provider-error`, `fail-on-expired-waivers`, `fail-on-review-due-waivers`, `priority`, `kev-only`, `min-cvss`, `min-epss`, `sort-by`, `max-cves`, `provider-snapshot-file`, `locked-provider-data`, `no-cache`, `cache-dir`, `cache-ttl-hours`, `nvd-api-key-env`, `offline-kev-file`, and `offline-attack-file`.
+Common analyze-only Action inputs include `waiver-file`, `hide-waived`, `fail-on-provider-error`, `fail-on-expired-waivers`, `fail-on-review-due-waivers`, `priority`, `kev-only`, `min-cvss`, `min-epss`, `sort-by`, `max-cves`, `provider-snapshot-file`, `locked-provider-data`, `no-cache`, `cache-dir`, `cache-ttl-hours`, `nvd-api-key-env`, `offline-kev-file`, and `offline-attack-file`. Report modes include `report-html`, `workbench-report`, `report-evidence-bundle`, and `verify-evidence-bundle`; set `validate-sarif: "true"` when a SARIF output should fail the job before upload if the local SARIF contract is not met.
 
 See [docs/integrations/reporting_and_ci.md](docs/integrations/reporting_and_ci.md) for the full contract and CI patterns, plus [docs/examples/github_action_summary_templates.md](docs/examples/github_action_summary_templates.md) for compact vs detailed examples.
 

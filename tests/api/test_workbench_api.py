@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import io
 import json
+import shutil
 import zipfile
 from pathlib import Path
 from typing import Any
@@ -10,7 +11,13 @@ from typing import Any
 from fastapi.testclient import TestClient
 
 from vuln_prioritizer.api.app import create_app, get_engine
-from vuln_prioritizer.db import Finding, Vulnerability, WorkbenchRepository, create_session_factory
+from vuln_prioritizer.db import (
+    ApiToken,
+    Finding,
+    Vulnerability,
+    WorkbenchRepository,
+    create_session_factory,
+)
 from vuln_prioritizer.workbench_config import WorkbenchSettings
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -31,27 +38,36 @@ EXPECTED_SAMPLE_CVES = {
 
 
 def _client(tmp_path: Path) -> TestClient:
+    snapshot_dir = _provider_snapshot_dir(tmp_path)
     settings = WorkbenchSettings(
         database_url=f"sqlite:///{tmp_path / 'workbench.db'}",
         upload_dir=tmp_path / "uploads",
         report_dir=tmp_path / "reports",
         provider_cache_dir=tmp_path / "cache",
-        provider_snapshot_dir=ROOT / "data",
+        provider_snapshot_dir=snapshot_dir,
         attack_artifact_dir=ROOT / "data" / "attack",
     )
     return TestClient(create_app(settings=settings))
 
 
 def _client_and_settings(tmp_path: Path) -> tuple[TestClient, WorkbenchSettings]:
+    snapshot_dir = _provider_snapshot_dir(tmp_path)
     settings = WorkbenchSettings(
         database_url=f"sqlite:///{tmp_path / 'workbench.db'}",
         upload_dir=tmp_path / "uploads",
         report_dir=tmp_path / "reports",
         provider_cache_dir=tmp_path / "cache",
-        provider_snapshot_dir=ROOT / "data",
+        provider_snapshot_dir=snapshot_dir,
         attack_artifact_dir=ROOT / "data" / "attack",
     )
     return TestClient(create_app(settings=settings)), settings
+
+
+def _provider_snapshot_dir(tmp_path: Path) -> Path:
+    snapshot_dir = tmp_path / "provider-snapshots"
+    snapshot_dir.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(DEMO_PROVIDER_SNAPSHOT, snapshot_dir / DEMO_PROVIDER_SNAPSHOT.name)
+    return snapshot_dir
 
 
 def _create_project(client: TestClient) -> dict[str, Any]:
@@ -115,6 +131,9 @@ def test_workbench_health_and_project_crud(tmp_path: Path) -> None:
 
     project = _create_project(client)
     assert project["name"] == "online-shop-demo"
+    project_detail = client.get(f"/api/projects/{project['id']}")
+    assert project_detail.status_code == 200
+    assert project_detail.json()["name"] == "online-shop-demo"
 
     projects = client.get("/api/projects")
     assert projects.status_code == 200
@@ -225,6 +244,7 @@ def test_workbench_import_findings_reports_and_evidence(tmp_path: Path) -> None:
         "markdown": ("markdown-summary", b"# Vulnerability Prioritization Summary"),
         "html": ("html-report", b"Vulnerability"),
         "csv": ("findings-csv", b"cve_id,priority,status"),
+        "sarif": ("sarif-results", b'"version": "2.1.0"'),
     }
     for report_format, (expected_kind, expected_content) in report_expectations.items():
         report = client.post(
@@ -252,6 +272,15 @@ def test_workbench_import_findings_reports_and_evidence(tmp_path: Path) -> None:
             assert {
                 finding["cve_id"] for finding in analysis_payload["findings"]
             } == EXPECTED_SAMPLE_CVES
+        if report_format == "sarif":
+            sarif_payload = json.loads(report_download.text)
+            assert sarif_payload["runs"][0]["tool"]["driver"]["name"] == (
+                "vuln-prioritizer-workbench"
+            )
+            assert any(
+                result["properties"]["cve"] == "CVE-2021-44228"
+                for result in sarif_payload["runs"][0]["results"]
+            )
 
     bundle = client.post(f"/api/analysis-runs/{run['id']}/evidence-bundle")
     assert bundle.status_code == 200
@@ -502,6 +531,500 @@ def test_workbench_import_accepts_context_vex_and_waiver_uploads(tmp_path: Path)
     assert markdown_download.status_code == 200
     assert "## Governance" in markdown_download.text
     assert "Top owners: platform-team" in markdown_download.text
+
+
+def test_workbench_assets_and_persisted_waivers_update_current_findings(
+    tmp_path: Path,
+) -> None:
+    client = _client(tmp_path)
+    project = _create_project(client)
+    response = client.post(
+        f"/api/projects/{project['id']}/imports",
+        data={
+            "input_format": "trivy-json",
+            "provider_snapshot_file": DEMO_PROVIDER_SNAPSHOT.name,
+            "locked_provider_data": "true",
+        },
+        files={
+            "file": ("trivy.json", TRIVY_REPORT.read_bytes(), "application/json"),
+            "asset_context_file": ("asset-context.csv", ASSET_CONTEXT.read_bytes(), "text/csv"),
+        },
+    )
+    assert response.status_code == 200, response.text
+
+    assets = client.get(f"/api/projects/{project['id']}/assets")
+    assert assets.status_code == 200
+    [asset] = assets.json()["items"]
+    assert asset["asset_id"] == "api-gateway"
+    assert asset["owner"] == "platform-team"
+    assert asset["finding_count"] == 1
+    asset_detail = client.get(f"/api/assets/{asset['id']}")
+    assert asset_detail.status_code == 200
+    assert asset_detail.json()["asset_id"] == "api-gateway"
+
+    updated_asset = client.patch(
+        f"/api/assets/{asset['id']}",
+        json={
+            "asset_id": "edge-gateway",
+            "owner": "platform-risk",
+            "business_service": "checkout",
+            "environment": "prod",
+            "exposure": "internet-facing",
+            "criticality": "critical",
+        },
+    )
+    assert updated_asset.status_code == 200, updated_asset.text
+    assert updated_asset.json()["asset_id"] == "edge-gateway"
+
+    owner_only_update = client.patch(
+        f"/api/assets/{asset['id']}",
+        json={"owner": "platform-risk-review"},
+    )
+    assert owner_only_update.status_code == 200, owner_only_update.text
+    owner_only_payload = owner_only_update.json()
+    assert owner_only_payload["asset_id"] == "edge-gateway"
+    assert owner_only_payload["owner"] == "platform-risk-review"
+    assert owner_only_payload["business_service"] == "checkout"
+    assert owner_only_payload["environment"] == "prod"
+    assert owner_only_payload["exposure"] == "internet-facing"
+    assert owner_only_payload["criticality"] == "critical"
+
+    findings = client.get(f"/api/projects/{project['id']}/findings", params={"q": "CVE-2024-3094"})
+    assert findings.status_code == 200
+    xz_finding = findings.json()["items"][0]
+    assert xz_finding["asset"] == "edge-gateway"
+    assert xz_finding["owner"] == "platform-risk-review"
+    assert xz_finding["service"] == "checkout"
+
+    waiver = client.post(
+        f"/api/projects/{project['id']}/waivers",
+        json={
+            "cve_id": "CVE-2024-3094",
+            "asset_id": "edge-gateway",
+            "owner": "risk-owner",
+            "reason": "Temporary residual risk acceptance for staged remediation.",
+            "expires_on": "2099-12-31",
+            "review_on": "2000-01-01",
+            "approval_ref": "CAB-42",
+        },
+    )
+    assert waiver.status_code == 200, waiver.text
+    waiver_payload = waiver.json()
+    assert waiver_payload["status"] == "review_due"
+    assert waiver_payload["matched_findings"] == 1
+
+    updated_waiver = client.patch(
+        f"/api/waivers/{waiver_payload['id']}",
+        json={
+            "cve_id": "CVE-2024-3094",
+            "asset_id": "edge-gateway",
+            "owner": "risk-owner-updated",
+            "reason": "Residual risk accepted with compensating controls.",
+            "expires_on": "2099-12-31",
+            "review_on": "2099-12-01",
+            "approval_ref": "CAB-43",
+        },
+    )
+    assert updated_waiver.status_code == 200, updated_waiver.text
+    waiver_payload = updated_waiver.json()
+    assert waiver_payload["owner"] == "risk-owner-updated"
+    assert waiver_payload["status"] == "active"
+
+    waived_findings = client.get(
+        f"/api/projects/{project['id']}/findings",
+        params={"q": "CVE-2024-3094"},
+    )
+    assert waived_findings.status_code == 200
+    waived = waived_findings.json()["items"][0]
+    assert waived["waived"] is True
+    assert waived["waiver_status"] == "active"
+    assert waived["waiver_id"] == f"api:{waiver_payload['id']}"
+    assert waived["waiver_owner"] == "risk-owner-updated"
+
+    listed = client.get(f"/api/projects/{project['id']}/waivers")
+    assert listed.status_code == 200
+    assert listed.json()["items"][0]["matched_findings"] == 1
+
+    deleted = client.delete(f"/api/waivers/{waiver_payload['id']}")
+    assert deleted.status_code == 200
+    refreshed = client.get(
+        f"/api/projects/{project['id']}/findings",
+        params={"q": "CVE-2024-3094"},
+    )
+    assert refreshed.status_code == 200
+    assert refreshed.json()["items"][0]["waiver_id"] is None
+    assert refreshed.json()["items"][0]["waived"] is False
+
+
+def test_workbench_detection_controls_coverage_gaps_and_technique_detail(
+    tmp_path: Path,
+) -> None:
+    client = _client(tmp_path)
+    project = _create_project(client)
+    response = client.post(
+        f"/api/projects/{project['id']}/imports",
+        data={
+            "input_format": "trivy-json",
+            "provider_snapshot_file": DEMO_PROVIDER_SNAPSHOT.name,
+            "locked_provider_data": "true",
+            "attack_source": "ctid-json",
+            "attack_mapping_file": ATTACK_MAPPING.name,
+            "attack_technique_metadata_file": ATTACK_METADATA.name,
+        },
+        files={"file": ("trivy.json", TRIVY_REPORT.read_bytes(), "application/json")},
+    )
+    assert response.status_code == 200, response.text
+
+    controls_csv = (
+        b"control_id,name,technique_id,technique_name,coverage_level,owner,"
+        b"evidence_ref,notes,last_verified_at\n"
+        b"edge-waf,WAF exploit-public-app rule,T1190,Exploit Public-Facing Application,"
+        b"partial,secops,https://example.invalid/evidence,"
+        b"Needs production tuning,2026-04-01\n"
+        b"shell-telemetry,Shell command telemetry,T9999,Synthetic Technique,"
+        b"not_covered,secops,,Needs owner review,2026-04-02\n"
+    )
+    imported = client.post(
+        f"/api/projects/{project['id']}/detection-controls/import",
+        files={"file": ("controls.csv", controls_csv, "text/csv")},
+    )
+    assert imported.status_code == 200, imported.text
+    assert imported.json()["imported"] == 2
+    assert imported.json()["items"][0]["coverage_level"] == "partial"
+
+    controls = client.get(f"/api/projects/{project['id']}/detection-controls")
+    assert controls.status_code == 200
+    assert controls.json()["items"][0]["control_id"] == "edge-waf"
+
+    gaps = client.get(f"/api/projects/{project['id']}/attack/coverage-gaps")
+    assert gaps.status_code == 200
+    t1190 = next(item for item in gaps.json()["items"] if item["technique_id"] == "T1190")
+    assert t1190["coverage_level"] == "partial"
+    assert t1190["owner"] == "secops"
+    assert "compensating telemetry" in t1190["recommended_action"]
+    t9999 = next(item for item in gaps.json()["items"] if item["technique_id"] == "T9999")
+    assert t9999["finding_count"] == 0
+    assert t9999["coverage_level"] == "not_covered"
+
+    navigator = client.get(f"/api/projects/{project['id']}/attack/coverage-gap-navigator-layer")
+    assert navigator.status_code == 200
+    navigator_techniques = navigator.json()["techniques"]
+    assert any(
+        item["techniqueID"] == "T1190" and item["score"] == 60 for item in navigator_techniques
+    )
+    assert all("offensive" not in item["comment"].lower() for item in navigator_techniques)
+
+    detail = client.get(f"/api/projects/{project['id']}/attack/techniques/T1190")
+    assert detail.status_code == 200
+    detail_payload = detail.json()
+    assert detail_payload["technique_id"] == "T1190"
+    assert detail_payload["coverage"]["coverage_level"] == "partial"
+    assert detail_payload["controls"][0]["owner"] == "secops"
+    assert detail_payload["findings"]
+
+    controls_only_detail = client.get(f"/api/projects/{project['id']}/attack/techniques/T9999")
+    assert controls_only_detail.status_code == 200
+    assert controls_only_detail.json()["coverage"]["control_count"] == 1
+    assert controls_only_detail.json()["coverage"]["finding_count"] == 0
+
+
+def test_workbench_new_api_error_paths_and_detection_import_validation(
+    tmp_path: Path,
+) -> None:
+    client = _client(tmp_path)
+
+    empty_token_name = client.post("/api/tokens", json={"name": "   "})
+    assert empty_token_name.status_code == 422
+
+    missing_project_routes = [
+        ("get", "/api/projects/missing"),
+        ("get", "/api/projects/missing/assets"),
+        ("get", "/api/projects/missing/waivers"),
+        ("get", "/api/projects/missing/runs"),
+        ("get", "/api/projects/missing/findings"),
+        ("get", "/api/projects/missing/attack/top-techniques"),
+        ("get", "/api/projects/missing/detection-controls"),
+        ("get", "/api/projects/missing/attack/coverage-gaps"),
+        ("get", "/api/projects/missing/attack/coverage-gap-navigator-layer"),
+        ("get", "/api/projects/missing/attack/techniques/T1190"),
+    ]
+    for method, path in missing_project_routes:
+        response = getattr(client, method)(path)
+        assert response.status_code == 404, path
+
+    assert client.get("/api/assets/missing").status_code == 404
+    assert client.patch("/api/assets/missing", json={"owner": "nobody"}).status_code == 404
+    assert client.get("/api/analysis-runs/missing").status_code == 404
+    assert client.get("/api/runs/missing/summary").status_code == 404
+    assert client.get("/api/findings/missing").status_code == 404
+    assert client.get("/api/findings/missing/explain").status_code == 404
+    assert client.get("/api/findings/missing/ttps").status_code == 404
+    missing_waiver_response = client.delete("/api/waivers/missing")
+    assert missing_waiver_response.status_code == 404
+    assert (
+        client.patch(
+            "/api/waivers/missing",
+            json={
+                "cve_id": "CVE-2024-3094",
+                "owner": "risk",
+                "reason": "Missing waiver update.",
+                "expires_on": "2099-12-31",
+            },
+        ).status_code
+        == 404
+    )
+
+    project = _create_project(client)
+    no_scope = client.post(
+        f"/api/projects/{project['id']}/waivers",
+        json={
+            "owner": "risk",
+            "reason": "No scope.",
+            "expires_on": "2099-12-31",
+        },
+    )
+    assert no_scope.status_code == 422
+
+    bad_cve = client.post(
+        f"/api/projects/{project['id']}/waivers",
+        json={
+            "cve_id": "not-a-cve",
+            "owner": "risk",
+            "reason": "Invalid CVE.",
+            "expires_on": "2099-12-31",
+        },
+    )
+    assert bad_cve.status_code == 422
+
+    bad_finding = client.post(
+        f"/api/projects/{project['id']}/waivers",
+        json={
+            "finding_id": "missing",
+            "owner": "risk",
+            "reason": "Invalid finding.",
+            "expires_on": "2099-12-31",
+        },
+    )
+    assert bad_finding.status_code == 422
+
+    bad_review = client.post(
+        f"/api/projects/{project['id']}/waivers",
+        json={
+            "cve_id": "CVE-2024-3094",
+            "owner": "risk",
+            "reason": "Bad review date.",
+            "expires_on": "2099-01-01",
+            "review_on": "2099-02-01",
+        },
+    )
+    assert bad_review.status_code == 422
+
+    yaml_controls = b"""
+controls:
+  - control_id: edge-waf
+    name: WAF exploit-public-app rule
+    technique_id: T1190
+    coverage_level: partial
+    owner: secops
+"""
+    yaml_import = client.post(
+        f"/api/projects/{project['id']}/detection-controls/import",
+        files={"file": ("controls.yaml", yaml_controls, "text/yaml")},
+    )
+    assert yaml_import.status_code == 200, yaml_import.text
+    assert yaml_import.json()["items"][0]["technique_id"] == "T1190"
+
+    invalid_detection_uploads = [
+        ("controls.txt", b"technique_id,coverage_level\nT1190,partial\n"),
+        ("controls.csv", b""),
+        ("controls.csv", b"technique_id,coverage_level\nbad,partial\n"),
+        ("controls.csv", b"technique_id,coverage_level\nT1190,unsupported\n"),
+        ("controls.yaml", b"controls: {}\n"),
+    ]
+    for filename, content in invalid_detection_uploads:
+        response = client.post(
+            f"/api/projects/{project['id']}/detection-controls/import",
+            files={"file": (filename, content, "text/plain")},
+        )
+        assert response.status_code == 422, filename
+
+
+def test_workbench_api_tokens_config_provider_jobs_and_github_preview(
+    tmp_path: Path,
+    monkeypatch: Any,
+) -> None:
+    client = _client(tmp_path)
+
+    token_response = client.post("/api/tokens", json={"name": "local automation"})
+    assert token_response.status_code == 200, token_response.text
+    token_payload = token_response.json()
+    assert token_payload["token"].startswith("vpr_")
+
+    session_factory = create_session_factory(get_engine(client.app))
+    with session_factory() as session:
+        token_record = session.get(ApiToken, token_payload["id"])
+        assert token_record is not None
+        assert token_record.token_hash != token_payload["token"]
+        assert len(token_record.token_hash) == 64
+
+    blocked = client.post("/api/projects", json={"name": "blocked-without-token"})
+    assert blocked.status_code == 403
+
+    headers = {"X-API-Token": token_payload["token"]}
+    bad_token = client.post(
+        "/api/projects",
+        json={"name": "blocked-with-bad-token"},
+        headers={"X-API-Token": "wrong"},
+    )
+    assert bad_token.status_code == 403
+
+    project_response = client.post(
+        "/api/projects",
+        json={"name": "token-gated-project"},
+        headers=headers,
+    )
+    assert project_response.status_code == 200, project_response.text
+    project = project_response.json()
+
+    with session_factory() as session:
+        token_record = session.get(ApiToken, token_payload["id"])
+        assert token_record is not None
+        assert token_record.last_used_at is not None
+
+    imported = client.post(
+        f"/api/projects/{project['id']}/imports",
+        data={
+            "input_format": "cve-list",
+            "provider_snapshot_file": DEMO_PROVIDER_SNAPSHOT.name,
+            "locked_provider_data": "true",
+        },
+        files={"file": ("sample.txt", SAMPLE_CVES.read_bytes(), "text/plain")},
+        headers=headers,
+    )
+    assert imported.status_code == 200, imported.text
+
+    job = client.post(
+        "/api/providers/update-jobs",
+        json={"sources": ["nvd", "epss", "kev"], "cache_only": True},
+        headers=headers,
+    )
+    assert job.status_code == 200, job.text
+    job_payload = job.json()
+    assert job_payload["status"] == "completed"
+    assert job_payload["metadata"]["snapshot_preserved"] is True
+    assert job_payload["metadata"]["snapshot_created"] is True
+    assert job_payload["metadata"]["new_snapshot_id"]
+    assert job_payload["metadata"]["new_snapshot_hash"]
+    assert Path(job_payload["metadata"]["snapshot_path"]).is_file()
+
+    provider_status = client.get("/api/providers/status")
+    assert provider_status.status_code == 200
+    assert (
+        provider_status.json()["snapshot"]["content_hash"]
+        == job_payload["metadata"]["new_snapshot_hash"]
+    )
+
+    saved_config = client.post(
+        f"/api/projects/{project['id']}/settings/config",
+        json={
+            "config": {
+                "version": 1,
+                "defaults": {"locked_provider_data": True},
+                "commands": {"analyze": {"format": "json", "sort_by": "operational"}},
+            }
+        },
+        headers=headers,
+    )
+    assert saved_config.status_code == 200, saved_config.text
+    assert saved_config.json()["config"]["defaults"]["locked_provider_data"] is True
+
+    invalid_config = client.post(
+        f"/api/projects/{project['id']}/settings/config",
+        json={"config": {"unknown": True}},
+        headers=headers,
+    )
+    assert invalid_config.status_code == 422
+
+    loaded_config = client.get(f"/api/projects/{project['id']}/settings/config")
+    assert loaded_config.status_code == 200
+    assert loaded_config.json()["item"]["id"] == saved_config.json()["id"]
+
+    preview = client.post(
+        f"/api/projects/{project['id']}/github/issues/preview",
+        json={"limit": 4, "priority": "Critical", "milestone": "v1.2"},
+        headers=headers,
+    )
+    assert preview.status_code == 200, preview.text
+    preview_payload = preview.json()
+    assert preview_payload["dry_run"] is True
+    assert preview_payload["items"]
+    duplicate_keys = [item["duplicate_key"] for item in preview_payload["items"]]
+    assert len(duplicate_keys) == len(set(duplicate_keys))
+    assert all(item["milestone"] == "v1.2" for item in preview_payload["items"])
+
+    dry_run_export = client.post(
+        f"/api/projects/{project['id']}/github/issues/export",
+        json={
+            "repository": "acme/workbench-triage",
+            "limit": 1,
+            "priority": "Critical",
+            "dry_run": True,
+        },
+        headers=headers,
+    )
+    assert dry_run_export.status_code == 200, dry_run_export.text
+    assert dry_run_export.json()["items"][0]["status"] == "preview"
+
+    posted_payloads: list[dict[str, Any]] = []
+
+    class FakeGitHubResponse:
+        status_code = 201
+
+        def json(self) -> dict[str, Any]:
+            return {"html_url": "https://github.com/acme/workbench-triage/issues/7", "number": 7}
+
+    def fake_post(*args: Any, **kwargs: Any) -> FakeGitHubResponse:
+        assert args == ("https://api.github.com/repos/acme/workbench-triage/issues",)
+        assert kwargs["headers"]["Authorization"] == "Bearer ghp_test"
+        assert "ghp_test" not in kwargs["json"]["body"]
+        assert "vuln-prioritizer duplicate_key" in kwargs["json"]["body"]
+        posted_payloads.append(kwargs["json"])
+        return FakeGitHubResponse()
+
+    monkeypatch.setenv("GITHUB_TOKEN", "ghp_test")
+    monkeypatch.setattr("vuln_prioritizer.api.routes.requests.post", fake_post)
+    exported = client.post(
+        f"/api/projects/{project['id']}/github/issues/export",
+        json={
+            "repository": "acme/workbench-triage",
+            "limit": 1,
+            "priority": "Critical",
+            "dry_run": False,
+        },
+        headers=headers,
+    )
+    assert exported.status_code == 200, exported.text
+    exported_payload = exported.json()
+    assert exported_payload["created_count"] == 1
+    assert exported_payload["items"][0]["status"] == "created"
+    assert exported_payload["items"][0]["issue_url"].endswith("/issues/7")
+    assert len(posted_payloads) == 1
+
+    duplicate_export = client.post(
+        f"/api/projects/{project['id']}/github/issues/export",
+        json={
+            "repository": "acme/workbench-triage",
+            "limit": 1,
+            "priority": "Critical",
+            "dry_run": False,
+        },
+        headers=headers,
+    )
+    assert duplicate_export.status_code == 200, duplicate_export.text
+    assert duplicate_export.json()["created_count"] == 0
+    assert duplicate_export.json()["skipped_count"] == 1
+    assert duplicate_export.json()["items"][0]["status"] == "skipped_duplicate"
+    assert len(posted_payloads) == 1
 
 
 def test_workbench_csv_report_escapes_spreadsheet_formulas(tmp_path: Path) -> None:

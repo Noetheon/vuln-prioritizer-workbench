@@ -26,16 +26,53 @@ The v1.0 release gate should attach or record:
 - `make dependency-audit`
 - `make demo-sync-check-temp`
 - a verified demo evidence bundle from `make demo-evidence-bundle-check`
-- screenshots listed in [workbench-offline-demo.md](../workbench-offline-demo.md)
+- README screenshots from the locked offline demo:
+  `docs/examples/media/workbench-dashboard.png`,
+  `docs/examples/media/workbench-findings.png`,
+  `docs/examples/media/workbench-finding-detail-ttp.png`, and
+  `docs/examples/media/workbench-reports-evidence.png`
 - the completed checklist in [workbench-v1-release-checklist.md](../workbench-v1-release-checklist.md)
 
 Dependency audit disposition for the 2026-04-24 release pass: `make dependency-audit` completed successfully and `pip-audit` reported no known vulnerabilities for `requirements.txt`; there are no accepted dependency-audit exceptions for this release.
 
-Generated release-evidence artifact paths:
+### Reproducible Demo Evidence Bundle
+
+The reproducible demo bundle is generated from a repository checkout, the checked-in Trivy fixture, the checked-in asset context and VEX fixtures, the checked-in ATT&CK subset, and locked replay from `data/demo_provider_snapshot.json`. The `Makefile` pins `VULN_PRIORITIZER_FIXED_NOW=2026-04-21T12:00:00+00:00` for this path so release reviewers can compare artifacts without feed drift or local clock drift.
+
+Generate and verify the bundle with:
+
+```bash
+make demo-evidence-bundle-check
+```
+
+For an already generated bundle, the verification command is:
+
+```bash
+PYTHONPATH=src VULN_PRIORITIZER_FIXED_NOW=2026-04-21T12:00:00+00:00 \
+  python3 -m vuln_prioritizer.cli report verify-evidence-bundle \
+  --input build/v1.0-demo-evidence-bundle.zip \
+  --output build/v1.0-demo-evidence-bundle-verification.json \
+  --format json
+```
+
+Expected release-evidence artifact paths:
 
 - `build/v1.0-demo-analysis.json`
 - `build/v1.0-demo-evidence-bundle.zip`
 - `build/v1.0-demo-evidence-bundle-verification.json`
+
+The verification report must record `summary.ok` as `true`, with zero missing, modified, unexpected, or manifest-error entries. The evidence ZIP contains `manifest.json`, whose file entries, artifact hashes, source analysis hash, source input hashes, and provider snapshot metadata are the bundle's internal integrity record.
+
+Release notes or external evidence folders should record the SHA-256 values of the generated files without copying local absolute paths:
+
+```bash
+shasum -a 256 \
+  build/v1.0-demo-analysis.json \
+  build/v1.0-demo-evidence-bundle.zip \
+  build/v1.0-demo-evidence-bundle-verification.json
+```
+
+Record the release-candidate commit with `git rev-parse HEAD`, the date of the run, and the exact command output. Do not include `.env` files, API keys, cookies, shell history, machine-specific home paths, or customer scanner exports in the public release evidence.
 
 ## Guardrails
 

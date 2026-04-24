@@ -3,17 +3,23 @@
 from vuln_prioritizer.db.base import Base, metadata, target_metadata
 from vuln_prioritizer.db.models import (
     AnalysisRun,
+    ApiToken,
     Asset,
     AttackMappingRecord,
     Component,
+    DetectionControl,
     EvidenceBundle,
     Finding,
     FindingAttackContext,
     FindingOccurrence,
+    GitHubIssueExport,
     Project,
+    ProjectConfigSnapshot,
     ProviderSnapshot,
+    ProviderUpdateJob,
     Report,
     Vulnerability,
+    Waiver,
 )
 from vuln_prioritizer.db.repositories import WorkbenchRepository
 from vuln_prioritizer.db.session import (
@@ -27,18 +33,24 @@ from vuln_prioritizer.db.session import (
 
 __all__ = [
     "AnalysisRun",
+    "ApiToken",
     "Asset",
     "AttackMappingRecord",
     "Base",
     "Component",
+    "DetectionControl",
     "EvidenceBundle",
     "Finding",
     "FindingAttackContext",
     "FindingOccurrence",
+    "GitHubIssueExport",
     "Project",
+    "ProjectConfigSnapshot",
     "ProviderSnapshot",
+    "ProviderUpdateJob",
     "Report",
     "Vulnerability",
+    "Waiver",
     "WorkbenchRepository",
     "create_db_engine",
     "create_schema",

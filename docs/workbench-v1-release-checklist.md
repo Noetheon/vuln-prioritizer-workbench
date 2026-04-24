@@ -51,7 +51,18 @@ make demo-evidence-bundle-check
 - [ ] Attach or archive `build/v1.0-demo-analysis.json`, `build/v1.0-demo-evidence-bundle.zip`, and `build/v1.0-demo-evidence-bundle-verification.json` with the release evidence.
 - [ ] Save the evidence manifest, verification report, generated reports, and relevant command output together.
 - [ ] Confirm evidence artifacts show provider provenance, run metadata, source input format, and hashes where applicable.
+- [ ] Confirm `build/v1.0-demo-evidence-bundle-verification.json` records `summary.ok=true`, `missing_files=0`, `modified_files=0`, `unexpected_files=0`, and `manifest_errors=0`.
+- [ ] Record `git rev-parse HEAD`, the run date, and SHA-256 values for the three generated `build/v1.0-demo-*` artifacts:
+
+```bash
+shasum -a 256 \
+  build/v1.0-demo-analysis.json \
+  build/v1.0-demo-evidence-bundle.zip \
+  build/v1.0-demo-evidence-bundle-verification.json
+```
+
 - [ ] Confirm evidence artifacts do not include secrets, raw environment values, API keys, cookies, or private shell history.
+- [ ] Keep archived paths repository-relative; do not record private absolute paths from a maintainer workstation.
 
 ## Screenshot Set
 
@@ -66,6 +77,18 @@ Capture screenshots from the same release candidate that produced the evidence b
 - [ ] Settings or runtime status page showing secret redaction.
 - [ ] Reports page showing generated JSON, Markdown, HTML, and Evidence ZIP artifacts.
 - [ ] Evidence ZIP verification result.
+- [ ] README media links point to the current checked-in Workbench screenshots:
+  `docs/examples/media/workbench-dashboard.png`,
+  `docs/examples/media/workbench-findings.png`,
+  `docs/examples/media/workbench-finding-detail-ttp.png`, and
+  `docs/examples/media/workbench-reports-evidence.png`.
+
+Sanitization requirements:
+
+- [ ] Capture from the locked offline demo path, not customer scanner exports or live provider-only data.
+- [ ] Crop to the Workbench/report UI and avoid shell history, private browser profiles, local home-directory paths, and unrelated desktop content.
+- [ ] Confirm settings and runtime pages show secrets only as `<set>` or `<not set>`.
+- [ ] If README media links are refreshed, keep paths repository-relative and commit binary replacements only when the release owner explicitly approves them.
 
 ## Dependency Audit
 
@@ -129,7 +152,7 @@ The v1.0 release must keep these boundaries visible in docs, UI copy, examples, 
 ## Residual Risks to State
 
 - [ ] The Workbench is local-first and is not hardened for public internet exposure.
-- [ ] Authentication, authorization, SSO, API tokens, multi-user isolation, audit logging, and ticket sync remain outside the v1.0 local Workbench scope unless explicitly shipped.
+- [ ] SSO, multi-user isolation, audit logging, and ticket sync remain outside the v1.0 local Workbench scope unless explicitly shipped; the later local API-token gate is documented as a v1.2 automation control, not a full internet-facing auth model.
 - [ ] SQLite backup, retention, filesystem permissions, and local disk protection remain operator responsibilities.
 - [ ] Evidence bundles provide integrity checks but not encryption.
 - [ ] Imported scanner exports may contain sensitive hostnames, package paths, image names, services, owners, and environment labels.

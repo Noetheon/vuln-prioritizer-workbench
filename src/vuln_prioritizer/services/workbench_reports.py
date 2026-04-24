@@ -18,7 +18,7 @@ from vuln_prioritizer.reporter import generate_html_report
 from vuln_prioritizer.reporting_payloads import generate_summary_markdown
 from vuln_prioritizer.workbench_config import WorkbenchSettings
 
-ReportFormat = Literal["json", "markdown", "html", "csv"]
+ReportFormat = Literal["json", "markdown", "html", "csv", "sarif"]
 
 
 class WorkbenchReportError(RuntimeError):
@@ -56,6 +56,10 @@ def create_run_report(
         content = generate_findings_csv(payload)
         output_path = run_dir / "findings.csv"
         kind = "findings-csv"
+    elif report_format == "sarif":
+        content = generate_workbench_sarif(payload)
+        output_path = run_dir / "results.sarif"
+        kind = "sarif-results"
     else:
         raise WorkbenchReportError(f"Unsupported report format: {report_format}.")
 
@@ -197,6 +201,72 @@ def generate_findings_csv(report_payload: dict[str, Any]) -> str:
             }
         )
     return output.getvalue()
+
+
+def generate_workbench_sarif(report_payload: dict[str, Any]) -> str:
+    """Render SARIF from a stored Workbench analysis payload."""
+    level_map = {
+        "Critical": "error",
+        "High": "error",
+        "Medium": "warning",
+        "Low": "note",
+    }
+    raw_metadata = report_payload.get("metadata")
+    metadata: dict[str, Any] = raw_metadata if isinstance(raw_metadata, dict) else {}
+    input_path = str(
+        metadata.get("input_path") or metadata.get("input_format") or "workbench-input"
+    )
+    results: list[dict[str, Any]] = []
+    for finding in report_payload.get("findings", []):
+        if not isinstance(finding, dict):
+            continue
+        priority = str(finding.get("priority_label") or "Unprioritized")
+        cve_id = str(finding.get("cve_id") or "CVE-UNKNOWN")
+        provenance = (
+            finding.get("provenance") if isinstance(finding.get("provenance"), dict) else {}
+        )
+        paths = provenance.get("affected_paths") if isinstance(provenance, dict) else []
+        uri = str(paths[0]) if isinstance(paths, list) and paths else input_path
+        results.append(
+            {
+                "ruleId": f"vuln-prioritizer/{priority.lower()}",
+                "level": level_map.get(priority, "note"),
+                "message": {
+                    "text": (
+                        f"{cve_id}: {priority} priority based on CVSS/EPSS/KEV, "
+                        "asset context, and optional Workbench governance layers."
+                    )
+                },
+                "properties": {
+                    "cve": cve_id,
+                    "priority": priority,
+                    "cvss": finding.get("cvss_base_score"),
+                    "epss": finding.get("epss"),
+                    "in_kev": bool(finding.get("in_kev")),
+                    "attack_relevance": finding.get("attack_relevance"),
+                    "suppressed_by_vex": bool(finding.get("suppressed_by_vex")),
+                    "waived": bool(finding.get("waived")),
+                    "waiver_status": finding.get("waiver_status"),
+                },
+                "locations": [{"physicalLocation": {"artifactLocation": {"uri": uri}}}],
+            }
+        )
+    payload = {
+        "version": "2.1.0",
+        "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
+        "runs": [
+            {
+                "tool": {
+                    "driver": {
+                        "name": "vuln-prioritizer-workbench",
+                        "version": str(metadata.get("schema_version") or "1.1.0"),
+                    }
+                },
+                "results": results,
+            }
+        ],
+    }
+    return json.dumps(payload, indent=2, sort_keys=True)
 
 
 def _analysis_payload(value: object) -> dict[str, Any]:
