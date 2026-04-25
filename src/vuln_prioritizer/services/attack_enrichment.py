@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections import Counter
 from collections.abc import Iterable
 
+from vuln_prioritizer.attack_sources import ATTACK_SOURCE_LOCAL_CSV, LEGACY_LOCAL_CSV_RATIONALE
 from vuln_prioritizer.models import AttackData, AttackMapping, AttackSummary, AttackTechnique
 
 HIGH_IMPACT_TACTICS = {
@@ -90,15 +91,14 @@ class AttackEnrichmentService:
             )
             attack_relevance = "Medium" if mapped else "Unmapped"
             attack_rationale = (
-                "Legacy local ATT&CK CSV context is available for this CVE. "
-                "Prefer --attack-source ctid-json for structured CTID-backed ATT&CK context."
+                LEGACY_LOCAL_CSV_RATIONALE
                 if mapped
                 else "No ATT&CK context was provided for this CVE."
             )
             results[cve_id] = AttackData(
                 cve_id=cve_id,
                 mapped=mapped,
-                source="local-csv",
+                source=ATTACK_SOURCE_LOCAL_CSV,
                 source_version=None,
                 attack_version=None,
                 domain=None,

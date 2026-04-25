@@ -448,6 +448,143 @@ def test_kev_fetch_many_from_offline_json(tmp_path: Path) -> None:
     assert results["CVE-2024-3094"].in_kev is False
 
 
+def test_kev_fetch_many_from_offline_csv_normalizes_aliases_and_skips_invalid_rows(
+    tmp_path: Path,
+) -> None:
+    kev_file = tmp_path / "kev.csv"
+    kev_file.write_text(
+        "\n".join(
+            [
+                "cveId,vendorProject,product,shortDescription",
+                "CVE-2026-0001,Example Vendor,Example Product,CSV KEV entry",
+                "not-a-cve,Ignored Vendor,Ignored Product,Invalid row",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    provider = KevProvider()
+    results, warnings = provider.fetch_many(
+        ["CVE-2026-0001", "CVE-2026-0002"],
+        offline_file=kev_file,
+    )
+
+    assert warnings == []
+    assert results["CVE-2026-0001"].in_kev is True
+    assert results["CVE-2026-0001"].vendor_project == "Example Vendor"
+    assert results["CVE-2026-0001"].short_description == "CSV KEV entry"
+    assert results["CVE-2026-0002"].in_kev is False
+
+
+def test_kev_refresh_stores_offline_catalog_and_reuses_cache(tmp_path: Path) -> None:
+    class NoNetworkSession:
+        def get(self, *args, **kwargs):  # noqa: ANN002, ANN003
+            raise AssertionError("cache hit should not call KEV network")
+
+    kev_file = tmp_path / "kev.json"
+    kev_file.write_text(
+        json.dumps(
+            {
+                "vulnerabilities": [
+                    {
+                        "cveID": "CVE-2026-0003",
+                        "vendorProject": "Cached Vendor",
+                        "product": "Cached Product",
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    cache = FileCache(tmp_path / "cache", ttl_hours=24)
+
+    provider = KevProvider(cache=cache)
+    refreshed_results, refreshed_warnings = provider.fetch_many(
+        ["CVE-2026-0003"],
+        offline_file=kev_file,
+        refresh=True,
+    )
+    cached_provider = KevProvider(session=NoNetworkSession(), cache=cache)
+    cached_results, cached_warnings = cached_provider.fetch_many(["CVE-2026-0003"])
+
+    assert refreshed_warnings == []
+    assert refreshed_results["CVE-2026-0003"].in_kev is True
+    assert cached_warnings == []
+    assert cached_results["CVE-2026-0003"].product == "Cached Product"
+    assert cached_provider.last_diagnostics.cache_hits == 1
+    assert cached_provider.last_diagnostics.network_fetches == 0
+
+
+def test_kev_fetch_many_degrades_for_missing_offline_file(tmp_path: Path) -> None:
+    provider = KevProvider()
+
+    results, warnings = provider.fetch_many(
+        ["CVE-2026-0004"],
+        offline_file=tmp_path / "missing.json",
+    )
+
+    assert results["CVE-2026-0004"].in_kev is False
+    assert any("Offline KEV file not found" in warning for warning in warnings)
+    assert provider.last_diagnostics.failures == 1
+    assert provider.last_diagnostics.empty_records == 1
+    assert provider.last_diagnostics.degraded is True
+
+
+def test_kev_fetch_many_degrades_for_unsupported_offline_file(tmp_path: Path) -> None:
+    kev_file = tmp_path / "kev.txt"
+    kev_file.write_text("CVE-2026-0004\n", encoding="utf-8")
+    provider = KevProvider()
+
+    results, warnings = provider.fetch_many(
+        ["CVE-2026-0004"],
+        offline_file=kev_file,
+    )
+
+    assert results["CVE-2026-0004"].in_kev is False
+    assert any("Offline KEV file must be .json or .csv" in warning for warning in warnings)
+    assert provider.last_diagnostics.failures == 1
+    assert provider.last_diagnostics.empty_records == 1
+    assert provider.last_diagnostics.degraded is True
+
+
+def test_kev_fetch_many_uses_expired_cache_when_live_catalog_fails(tmp_path: Path) -> None:
+    class FailingSession:
+        def get(self, *args, **kwargs):  # noqa: ANN002, ANN003
+            raise requests.RequestException("KEV feed unavailable")
+
+    cache = FileCache(tmp_path / "cache", ttl_hours=1)
+    cache_path = cache._path_for("kev", "catalog")
+    cache_path.parent.mkdir(parents=True, exist_ok=True)
+    cache_path.write_text(
+        json.dumps(
+            {
+                "key": "catalog",
+                "cached_at": "2000-01-01T00:00:00+00:00",
+                "payload": {
+                    "CVE-2026-0005": KevData(
+                        cve_id="CVE-2026-0005",
+                        in_kev=True,
+                        vendor_project="Stale Vendor",
+                    ).model_dump()
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    provider = KevProvider(session=FailingSession(), cache=cache)
+    results, warnings = provider.fetch_many(["CVE-2026-0005", "CVE-2026-0006"])
+
+    assert results["CVE-2026-0005"].in_kev is True
+    assert results["CVE-2026-0005"].vendor_project == "Stale Vendor"
+    assert results["CVE-2026-0006"].in_kev is False
+    assert any("using expired cached catalog" in warning for warning in warnings)
+    assert provider.last_diagnostics.failures == 1
+    assert provider.last_diagnostics.stale_cache_hits == 2
+    assert provider.last_diagnostics.degraded is True
+
+
 def test_kev_uses_mirror_when_primary_feed_fails() -> None:
     class Session:
         def get(self, url: str, **kwargs):  # noqa: ANN003
