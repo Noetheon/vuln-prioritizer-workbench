@@ -24,6 +24,136 @@ def test_cli_state_init_is_idempotent(tmp_path: Path) -> None:
     assert db_path.exists()
 
 
+def test_cli_state_init_writes_json_output(tmp_path: Path) -> None:
+    db_path = tmp_path / "state.db"
+    output_file = tmp_path / "init.json"
+
+    result = runner.invoke(
+        app,
+        [
+            "state",
+            "init",
+            "--db",
+            str(db_path),
+            "--format",
+            "json",
+            "--output",
+            str(output_file),
+        ],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(output_file.read_text(encoding="utf-8"))
+    assert payload["summary"]["initialized"] is True
+    assert payload["summary"]["snapshot_count"] == 0
+
+
+def test_cli_state_empty_queries_emit_json_stdout(tmp_path: Path) -> None:
+    db_path = tmp_path / "state.db"
+    init_result = runner.invoke(app, ["state", "init", "--db", str(db_path)])
+
+    assert init_result.exit_code == 0
+
+    commands = [
+        ["state", "history", "--db", str(db_path), "--cve", "CVE-2026-0001"],
+        ["state", "waivers", "--db", str(db_path)],
+        ["state", "top-services", "--db", str(db_path)],
+    ]
+    for command in commands:
+        result = runner.invoke(app, [*command, "--format", "json"])
+
+        assert result.exit_code == 0
+        payload = json.loads(result.stdout)
+        assert payload["metadata"]["entry_count"] == 0
+        assert payload["items"] == []
+
+
+def test_cli_state_empty_table_queries_report_no_results(tmp_path: Path) -> None:
+    db_path = tmp_path / "state.db"
+    trends_output = tmp_path / "trends.json"
+    service_output = tmp_path / "service-history.json"
+    init_result = runner.invoke(app, ["state", "init", "--db", str(db_path)])
+
+    assert init_result.exit_code == 0
+
+    table_commands = [
+        (
+            ["state", "history", "--db", str(db_path), "--cve", "CVE-2026-0001"],
+            "No persisted history found for CVE-2026-0001",
+        ),
+        (
+            ["state", "waivers", "--db", str(db_path)],
+            "No persisted waiver entries matched the requested filter",
+        ),
+        (
+            ["state", "top-services", "--db", str(db_path)],
+            "No persisted service entries matched the requested window",
+        ),
+    ]
+    for command, expected_message in table_commands:
+        result = runner.invoke(app, command)
+
+        assert result.exit_code == 0
+        assert expected_message in result.stdout
+
+    trends_result = runner.invoke(
+        app,
+        [
+            "state",
+            "trends",
+            "--db",
+            str(db_path),
+            "--format",
+            "json",
+            "--output",
+            str(trends_output),
+        ],
+    )
+    service_result = runner.invoke(
+        app,
+        [
+            "state",
+            "service-history",
+            "--db",
+            str(db_path),
+            "--service",
+            "payments",
+            "--format",
+            "json",
+            "--output",
+            str(service_output),
+        ],
+    )
+
+    assert trends_result.exit_code == 0
+    assert "No persisted trend entries matched the requested window" in trends_result.stdout
+    assert json.loads(trends_output.read_text(encoding="utf-8"))["items"] == []
+    assert service_result.exit_code == 0
+    assert "No persisted service history matched the requested scope" in service_result.stdout
+    assert json.loads(service_output.read_text(encoding="utf-8"))["items"] == []
+
+
+def test_cli_state_rejects_invalid_query_inputs(tmp_path: Path) -> None:
+    db_path = tmp_path / "state.db"
+    init_result = runner.invoke(app, ["state", "init", "--db", str(db_path)])
+
+    assert init_result.exit_code == 0
+
+    invalid_cve = runner.invoke(
+        app,
+        ["state", "history", "--db", str(db_path), "--cve", "not-a-cve"],
+    )
+    empty_service = runner.invoke(
+        app,
+        ["state", "service-history", "--db", str(db_path), "--service", "   "],
+    )
+
+    assert invalid_cve.exit_code == 2
+    assert "'not-a-cve' is not a valid CVE identifier." in invalid_cve.stdout
+    assert empty_service.exit_code == 2
+    assert "--service must not be empty." in empty_service.stdout
+
+
 def test_cli_state_import_snapshot_reports_duplicate_imports(tmp_path: Path) -> None:
     db_path = tmp_path / "state.db"
     output_file = tmp_path / "import.json"

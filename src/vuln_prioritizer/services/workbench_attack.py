@@ -5,11 +5,17 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+from vuln_prioritizer.attack_sources import (
+    ATTACK_SOURCE_CTID_MAPPINGS_EXPLORER,
+    ATTACK_SOURCE_NONE,
+    WORKBENCH_ALLOWED_MAPPING_SOURCES,
+    WORKBENCH_ATTACK_SOURCE_CTID,
+    WORKBENCH_ATTACK_SOURCE_LOCAL_CURATED,
+    WORKBENCH_ATTACK_SOURCE_MANUAL,
+    WORKBENCH_DISALLOWED_MAPPING_SOURCE_PREFIXES,
+    WORKBENCH_DISALLOWED_MAPPING_SOURCES,
+)
 from vuln_prioritizer.models import AttackData, AttackMapping, AttackTechnique
-
-ALLOWED_MAPPING_SOURCES = {"ctid", "local_curated", "manual"}
-DISALLOWED_MAPPING_SOURCES = {"heuristic"}
-DISALLOWED_MAPPING_SOURCE_PREFIXES = ("llm", "llm_")
 
 
 class WorkbenchAttackValidationError(ValueError):
@@ -18,25 +24,28 @@ class WorkbenchAttackValidationError(ValueError):
 
 def validate_workbench_attack_source(source: str) -> None:
     normalized = source.strip().lower()
-    if normalized in DISALLOWED_MAPPING_SOURCES or normalized.startswith(
-        DISALLOWED_MAPPING_SOURCE_PREFIXES
+    if normalized in WORKBENCH_DISALLOWED_MAPPING_SOURCES or normalized.startswith(
+        WORKBENCH_DISALLOWED_MAPPING_SOURCE_PREFIXES
     ):
         raise WorkbenchAttackValidationError(
             "Heuristic or LLM-generated CVE-to-ATT&CK mappings are not accepted."
         )
-    if normalized not in ALLOWED_MAPPING_SOURCES:
+    if normalized not in WORKBENCH_ALLOWED_MAPPING_SOURCES:
         raise WorkbenchAttackValidationError(
             f"Unsupported Workbench ATT&CK mapping source: {source}."
         )
 
 
 def workbench_mapping_source(analysis_attack_source: str) -> str:
-    if analysis_attack_source == "ctid-mappings-explorer":
-        return "ctid"
-    if analysis_attack_source in {"local_curated", "manual"}:
+    if analysis_attack_source == ATTACK_SOURCE_CTID_MAPPINGS_EXPLORER:
+        return WORKBENCH_ATTACK_SOURCE_CTID
+    if analysis_attack_source in {
+        WORKBENCH_ATTACK_SOURCE_LOCAL_CURATED,
+        WORKBENCH_ATTACK_SOURCE_MANUAL,
+    }:
         return analysis_attack_source
-    if analysis_attack_source == "none":
-        return "none"
+    if analysis_attack_source == ATTACK_SOURCE_NONE:
+        return ATTACK_SOURCE_NONE
     raise WorkbenchAttackValidationError(
         f"Unsupported Workbench ATT&CK mapping source: {analysis_attack_source}."
     )
@@ -55,17 +64,17 @@ def threat_context_rank(attack: AttackData) -> int:
 def review_status_for_source(source: str, *, mapped: bool) -> str:
     if not mapped:
         return "not_applicable"
-    if source == "ctid":
+    if source == WORKBENCH_ATTACK_SOURCE_CTID:
         return "source_reviewed"
     return "needs_review"
 
 
 def confidence_for_source(source: str) -> float | None:
-    if source == "ctid":
+    if source == WORKBENCH_ATTACK_SOURCE_CTID:
         return 1.0
-    if source == "manual":
+    if source == WORKBENCH_ATTACK_SOURCE_MANUAL:
         return 0.8
-    if source == "local_curated":
+    if source == WORKBENCH_ATTACK_SOURCE_LOCAL_CURATED:
         return 0.7
     return None
 

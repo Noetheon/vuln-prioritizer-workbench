@@ -2,300 +2,69 @@
 
 from __future__ import annotations
 
-from typing import Any
+from pydantic import BaseModel, Field, model_validator
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+import vuln_prioritizer.models_artifacts as _models_artifacts
+import vuln_prioritizer.models_attack as _models_attack
+import vuln_prioritizer.models_input as _models_input
+import vuln_prioritizer.models_provider as _models_provider
+import vuln_prioritizer.models_remediation as _models_remediation
+import vuln_prioritizer.models_state as _models_state
+import vuln_prioritizer.models_waivers as _models_waivers
+from vuln_prioritizer.model_base import StrictModel
 
+AttackData = _models_attack.AttackData
+AttackMapping = _models_attack.AttackMapping
+AttackSummary = _models_attack.AttackSummary
+AttackTechnique = _models_attack.AttackTechnique
+AssetContextRecord = _models_input.AssetContextRecord
+ContextPolicyProfile = _models_input.ContextPolicyProfile
+DoctorCheck = _models_artifacts.DoctorCheck
+DoctorReport = _models_artifacts.DoctorReport
+DoctorSummary = _models_artifacts.DoctorSummary
+EvidenceBundleFile = _models_artifacts.EvidenceBundleFile
+EvidenceBundleInputHash = _models_artifacts.EvidenceBundleInputHash
+EvidenceBundleManifest = _models_artifacts.EvidenceBundleManifest
+EvidenceBundleVerificationItem = _models_artifacts.EvidenceBundleVerificationItem
+EvidenceBundleVerificationMetadata = _models_artifacts.EvidenceBundleVerificationMetadata
+EvidenceBundleVerificationSummary = _models_artifacts.EvidenceBundleVerificationSummary
+EpssData = _models_provider.EpssData
+FindingProvenance = _models_input.FindingProvenance
+InputItem = _models_input.InputItem
+InputOccurrence = _models_input.InputOccurrence
+InputSourceSummary = _models_input.InputSourceSummary
+KevData = _models_provider.KevData
+NvdData = _models_provider.NvdData
+ParsedInput = _models_input.ParsedInput
+ProviderEvidence = _models_provider.ProviderEvidence
+ProviderLookupDiagnostics = _models_provider.ProviderLookupDiagnostics
+RemediationComponent = _models_remediation.RemediationComponent
+RemediationPlan = _models_remediation.RemediationPlan
 
-class StrictModel(BaseModel):
-    """Base model with frozen instances and forbidden extra fields."""
-
-    model_config = ConfigDict(extra="forbid", frozen=True)
-
-
-class InputItem(StrictModel):
-    cve_id: str
-    source_format: str = "cve-list"
-
-
-class InputOccurrence(StrictModel):
-    cve_id: str
-    source_format: str = "cve-list"
-    component_name: str | None = None
-    component_version: str | None = None
-    purl: str | None = None
-    package_type: str | None = None
-    file_path: str | None = None
-    dependency_path: str | None = None
-    fix_versions: list[str] = Field(default_factory=list)
-    source_record_id: str | None = None
-    raw_severity: str | None = None
-    target_kind: str = "generic"
-    target_ref: str | None = None
-    asset_id: str | None = None
-    asset_criticality: str | None = None
-    asset_exposure: str | None = None
-    asset_environment: str | None = None
-    asset_owner: str | None = None
-    asset_business_service: str | None = None
-    asset_match_rule_id: str | None = None
-    asset_match_row: int | None = None
-    asset_match_mode: str | None = None
-    asset_match_pattern: str | None = None
-    asset_match_precedence: int | None = None
-    asset_match_candidate_count: int = 0
-    vex_status: str | None = None
-    vex_justification: str | None = None
-    vex_action_statement: str | None = None
-    vex_match_type: str | None = None
-    vex_source_format: str | None = None
-    vex_source_record_id: str | None = None
-    vex_source_path: str | None = None
-    vex_candidate_count: int = 0
-
-
-class InputSourceSummary(StrictModel):
-    input_path: str
-    input_format: str
-    total_rows: int = 0
-    occurrence_count: int = 0
-    unique_cves: int = 0
-    included_occurrence_count: int | None = None
-    included_unique_cves: int | None = None
-    warning_count: int = 0
-
-
-class ParsedInput(BaseModel):
-    input_format: str = "cve-list"
-    total_rows: int = 0
-    occurrences: list[InputOccurrence] = Field(default_factory=list)
-    unique_cves: list[str] = Field(default_factory=list)
-    warnings: list[str] = Field(default_factory=list)
-    source_stats: dict[str, int] = Field(default_factory=dict)
-    input_paths: list[str] = Field(default_factory=list)
-    source_summaries: list[InputSourceSummary] = Field(default_factory=list)
-    merged_input_count: int = 1
-    duplicate_cve_count: int = 0
-    included_occurrence_count: int = 0
-    included_unique_cves: int = 0
-    asset_match_conflict_count: int = 0
-    vex_conflict_count: int = 0
-
-
-class FindingProvenance(StrictModel):
-    occurrence_count: int = 0
-    active_occurrence_count: int = 0
-    suppressed_occurrence_count: int = 0
-    source_formats: list[str] = Field(default_factory=list)
-    components: list[str] = Field(default_factory=list)
-    affected_paths: list[str] = Field(default_factory=list)
-    fix_versions: list[str] = Field(default_factory=list)
-    targets: list[str] = Field(default_factory=list)
-    asset_ids: list[str] = Field(default_factory=list)
-    highest_asset_criticality: str | None = None
-    highest_asset_exposure: str | None = None
-    asset_count: int = 0
-    vex_statuses: dict[str, int] = Field(default_factory=dict)
-    occurrences: list[InputOccurrence] = Field(default_factory=list)
-
-
-class AssetContextRecord(StrictModel):
-    target_kind: str
-    target_ref: str
-    asset_id: str
-    rule_id: str | None = None
-    match_mode: str = "exact"
-    precedence: int = 0
-    row_number: int | None = None
-    criticality: str | None = None
-    exposure: str | None = None
-    environment: str | None = None
-    owner: str | None = None
-    business_service: str | None = None
-
-
-class ContextPolicyProfile(StrictModel):
-    name: str = "default"
-    narrative_only: bool = True
-    enterprise_escalation: bool = False
-    internet_facing_boost: bool = False
-    prod_asset_boost: bool = False
-
-    def describe(self, provenance: FindingProvenance) -> tuple[str | None, str | None]:
-        if provenance.occurrence_count == 0:
-            return None, None
-
-        summary_parts: list[str] = [
-            f"Seen in {provenance.occurrence_count} occurrence(s)",
-        ]
-        if provenance.asset_count:
-            summary_parts.append(f"across {provenance.asset_count} mapped asset(s)")
-        if provenance.highest_asset_criticality:
-            summary_parts.append(
-                f"highest asset criticality {provenance.highest_asset_criticality}"
-            )
-        if provenance.highest_asset_exposure:
-            summary_parts.append(f"highest exposure {provenance.highest_asset_exposure}")
-        summary = ", ".join(summary_parts) + "."
-
-        if self.narrative_only and not self.enterprise_escalation:
-            return summary, (
-                "Review the affected components and assets in context before final remediation "
-                "scheduling."
-            )
-
-        escalation_reasons: list[str] = []
-        if (
-            self.internet_facing_boost
-            and provenance.highest_asset_exposure
-            and provenance.highest_asset_exposure.lower() == "internet-facing"
-        ):
-            escalation_reasons.append("internet-facing exposure")
-        if self.prod_asset_boost and any(
-            occurrence.asset_environment and occurrence.asset_environment.lower() == "prod"
-            for occurrence in provenance.occurrences
-        ):
-            escalation_reasons.append("production environment")
-
-        if not escalation_reasons:
-            return summary, (
-                "Context does not raise the default response, but affected components and owners "
-                "should still be reviewed."
-            )
-
-        return summary, (
-            "Escalate validation and remediation because context indicates "
-            + ", ".join(escalation_reasons)
-            + "."
-        )
-
-
-class VexStatement(StrictModel):
-    source_format: str
-    cve_id: str
-    status: str
-    component_name: str | None = None
-    component_version: str | None = None
-    purl: str | None = None
-    target_kind: str | None = None
-    target_ref: str | None = None
-    justification: str | None = None
-    action_statement: str | None = None
-    source_record_id: str | None = None
-    source_path: str | None = None
-    source_file_order: int | None = None
-    statement_order: int | None = None
-
-
-class RemediationComponent(StrictModel):
-    name: str | None = None
-    current_version: str | None = None
-    fixed_versions: list[str] = Field(default_factory=list)
-    package_type: str | None = None
-    purl: str | None = None
-    path: str | None = None
-    occurrence_count: int = 0
-    targets: list[str] = Field(default_factory=list)
-    asset_ids: list[str] = Field(default_factory=list)
-    services: list[str] = Field(default_factory=list)
-    owners: list[str] = Field(default_factory=list)
-
-
-class RemediationPlan(StrictModel):
-    strategy: str = "generic-priority-guidance"
-    ecosystem: str | None = None
-    components: list[RemediationComponent] = Field(default_factory=list)
-    evidence_level: str = "none"
-    kev_required_action: str | None = None
-    kev_due_date: str | None = None
-    suppressed_occurrence_count: int = 0
-
-
-class NvdData(StrictModel):
-    cve_id: str
-    description: str | None = None
-    cvss_base_score: float | None = None
-    cvss_severity: str | None = None
-    cvss_version: str | None = None
-    cvss_vector: str | None = None
-    vulnerability_status: str | None = None
-    published: str | None = None
-    last_modified: str | None = None
-    cwes: list[str] = Field(default_factory=list)
-    references: list[str] = Field(default_factory=list)
-    reference_tags: dict[str, list[str]] = Field(default_factory=dict)
-
-
-class EpssData(StrictModel):
-    cve_id: str
-    epss: float | None = None
-    percentile: float | None = None
-    date: str | None = None
-
-
-class KevData(StrictModel):
-    cve_id: str
-    in_kev: bool = False
-    vendor_project: str | None = None
-    product: str | None = None
-    short_description: str | None = None
-    date_added: str | None = None
-    required_action: str | None = None
-    due_date: str | None = None
-    known_ransomware_campaign_use: str | None = None
-    notes: str | None = None
-
-
-class ProviderEvidence(StrictModel):
-    nvd: NvdData
-    epss: EpssData
-    kev: KevData
-
-
-class AttackMapping(StrictModel):
-    capability_id: str
-    attack_object_id: str
-    attack_object_name: str | None = None
-    mapping_type: str | None = None
-    capability_group: str | None = None
-    capability_description: str | None = None
-    comments: str | None = None
-    references: list[str] = Field(default_factory=list)
-
-
-class AttackTechnique(StrictModel):
-    attack_object_id: str
-    name: str
-    tactics: list[str] = Field(default_factory=list)
-    url: str | None = None
-    revoked: bool = False
-    deprecated: bool = False
-
-
-class AttackSummary(StrictModel):
-    mapped_cves: int = 0
-    unmapped_cves: int = 0
-    mapping_type_distribution: dict[str, int] = Field(default_factory=dict)
-    technique_distribution: dict[str, int] = Field(default_factory=dict)
-    tactic_distribution: dict[str, int] = Field(default_factory=dict)
-
-
-class AttackData(StrictModel):
-    cve_id: str
-    mapped: bool = False
-    source: str = "none"
-    source_version: str | None = None
-    attack_version: str | None = None
-    domain: str | None = None
-    mappings: list[AttackMapping] = Field(default_factory=list)
-    techniques: list[AttackTechnique] = Field(default_factory=list)
-    mapping_types: list[str] = Field(default_factory=list)
-    capability_groups: list[str] = Field(default_factory=list)
-    attack_relevance: str = "Unmapped"
-    attack_rationale: str | None = None
-    attack_techniques: list[str] = Field(default_factory=list)
-    attack_tactics: list[str] = Field(default_factory=list)
-    attack_note: str | None = None
+StateHistoryEntry = _models_state.StateHistoryEntry
+StateHistoryMetadata = _models_state.StateHistoryMetadata
+StateHistoryReport = _models_state.StateHistoryReport
+StateImportMetadata = _models_state.StateImportMetadata
+StateImportReport = _models_state.StateImportReport
+StateImportSummary = _models_state.StateImportSummary
+StateInitMetadata = _models_state.StateInitMetadata
+StateInitReport = _models_state.StateInitReport
+StateInitSummary = _models_state.StateInitSummary
+StateServiceHistoryEntry = _models_state.StateServiceHistoryEntry
+StateServiceHistoryMetadata = _models_state.StateServiceHistoryMetadata
+StateServiceHistoryReport = _models_state.StateServiceHistoryReport
+StateTopServiceEntry = _models_state.StateTopServiceEntry
+StateTopServicesMetadata = _models_state.StateTopServicesMetadata
+StateTopServicesReport = _models_state.StateTopServicesReport
+StateTrendEntry = _models_state.StateTrendEntry
+StateTrendsMetadata = _models_state.StateTrendsMetadata
+StateTrendsReport = _models_state.StateTrendsReport
+StateWaiverEntry = _models_state.StateWaiverEntry
+StateWaiverMetadata = _models_state.StateWaiverMetadata
+StateWaiverReport = _models_state.StateWaiverReport
+VexStatement = _models_input.VexStatement
+WaiverHealthSummary = _models_waivers.WaiverHealthSummary
+WaiverRule = _models_waivers.WaiverRule
 
 
 class PriorityPolicy(StrictModel):
@@ -470,17 +239,6 @@ class ComparisonFinding(StrictModel):
     changed: bool
     delta_rank: int
     change_reason: str
-
-
-class ProviderLookupDiagnostics(StrictModel):
-    requested: int = 0
-    cache_hits: int = 0
-    network_fetches: int = 0
-    failures: int = 0
-    content_hits: int = 0
-    empty_records: int = 0
-    stale_cache_hits: int = 0
-    degraded: bool = False
 
 
 class EnrichmentResult(BaseModel):
@@ -703,281 +461,3 @@ class RollupBucket(StrictModel):
     owners: list[str] = Field(default_factory=list)
     recommended_actions: list[str] = Field(default_factory=list)
     top_candidates: list[RollupCandidate] = Field(default_factory=list)
-
-
-class StateInitMetadata(StrictModel):
-    schema_version: str = "1.2.0"
-    generated_at: str
-    db_path: str
-
-
-class StateInitSummary(StrictModel):
-    initialized: bool = True
-    snapshot_count: int = 0
-
-
-class StateInitReport(StrictModel):
-    metadata: StateInitMetadata
-    summary: StateInitSummary = Field(default_factory=StateInitSummary)
-
-
-class StateImportMetadata(StrictModel):
-    schema_version: str = "1.2.0"
-    generated_at: str
-    db_path: str
-    input_path: str
-
-
-class StateImportSummary(StrictModel):
-    imported: bool = True
-    snapshot_id: int | None = None
-    snapshot_generated_at: str | None = None
-    finding_count: int = 0
-    snapshot_count: int = 0
-
-
-class StateImportReport(StrictModel):
-    metadata: StateImportMetadata
-    summary: StateImportSummary = Field(default_factory=StateImportSummary)
-
-
-class StateHistoryMetadata(StrictModel):
-    schema_version: str = "1.2.0"
-    generated_at: str
-    db_path: str
-    cve_id: str
-    entry_count: int = 0
-
-
-class StateHistoryEntry(StrictModel):
-    snapshot_generated_at: str
-    snapshot_path: str
-    input_path: str | None = None
-    priority_label: str
-    priority_rank: int
-    in_kev: bool = False
-    waived: bool = False
-    waiver_status: str | None = None
-    waiver_owner: str | None = None
-    services: list[str] = Field(default_factory=list)
-    asset_ids: list[str] = Field(default_factory=list)
-
-
-class StateHistoryReport(StrictModel):
-    metadata: StateHistoryMetadata
-    items: list[StateHistoryEntry] = Field(default_factory=list)
-
-
-class StateWaiverMetadata(StrictModel):
-    schema_version: str = "1.2.0"
-    generated_at: str
-    db_path: str
-    status_filter: str = "all"
-    latest_only: bool = True
-    entry_count: int = 0
-
-
-class StateWaiverEntry(StrictModel):
-    snapshot_generated_at: str
-    snapshot_path: str
-    cve_id: str
-    priority_label: str
-    waiver_status: str
-    waiver_owner: str | None = None
-    waiver_expires_on: str | None = None
-    waiver_review_on: str | None = None
-    waiver_days_remaining: int | None = None
-
-
-class StateWaiverReport(StrictModel):
-    metadata: StateWaiverMetadata
-    items: list[StateWaiverEntry] = Field(default_factory=list)
-
-
-class StateTopServicesMetadata(StrictModel):
-    schema_version: str = "1.2.0"
-    generated_at: str
-    db_path: str
-    days: int
-    priority_filter: str = "all"
-    limit: int = 10
-    latest_only: bool = False
-    entry_count: int = 0
-
-
-class StateTopServiceEntry(StrictModel):
-    service: str
-    occurrence_count: int = 0
-    distinct_cves: int = 0
-    snapshot_count: int = 0
-    kev_count: int = 0
-    latest_seen: str | None = None
-
-
-class StateTopServicesReport(StrictModel):
-    metadata: StateTopServicesMetadata
-    items: list[StateTopServiceEntry] = Field(default_factory=list)
-
-
-class StateTrendsMetadata(StrictModel):
-    schema_version: str = "1.2.0"
-    generated_at: str
-    db_path: str
-    days: int
-    priority_filter: str = "all"
-    entry_count: int = 0
-
-
-class StateTrendEntry(StrictModel):
-    snapshot_generated_at: str
-    snapshot_path: str
-    findings_count: int = 0
-    critical_count: int = 0
-    high_count: int = 0
-    medium_count: int = 0
-    low_count: int = 0
-    kev_count: int = 0
-    attack_mapped_count: int = 0
-    waived_count: int = 0
-
-
-class StateTrendsReport(StrictModel):
-    metadata: StateTrendsMetadata
-    items: list[StateTrendEntry] = Field(default_factory=list)
-
-
-class StateServiceHistoryMetadata(StrictModel):
-    schema_version: str = "1.2.0"
-    generated_at: str
-    db_path: str
-    service: str
-    days: int
-    priority_filter: str = "all"
-    entry_count: int = 0
-
-
-class StateServiceHistoryEntry(StrictModel):
-    snapshot_generated_at: str
-    snapshot_path: str
-    occurrence_count: int = 0
-    distinct_cves: int = 0
-    critical_count: int = 0
-    high_count: int = 0
-    kev_count: int = 0
-    waived_count: int = 0
-    cve_ids: list[str] = Field(default_factory=list)
-
-
-class StateServiceHistoryReport(StrictModel):
-    metadata: StateServiceHistoryMetadata
-    items: list[StateServiceHistoryEntry] = Field(default_factory=list)
-
-
-class DoctorCheck(StrictModel):
-    check_id: str
-    name: str
-    scope: str = "local"
-    category: str = "general"
-    status: str
-    detail: str
-    hint: str | None = None
-
-
-class DoctorSummary(StrictModel):
-    overall_status: str = "ok"
-    ok_count: int = 0
-    degraded_count: int = 0
-    error_count: int = 0
-
-
-class DoctorReport(StrictModel):
-    schema_version: str = "1.2.0"
-    generated_at: str
-    live: bool = False
-    config_file: str | None = None
-    summary: DoctorSummary = Field(default_factory=DoctorSummary)
-    checks: list[DoctorCheck] = Field(default_factory=list)
-
-
-class EvidenceBundleFile(StrictModel):
-    path: str
-    kind: str
-    size_bytes: int
-    sha256: str
-
-
-class EvidenceBundleInputHash(StrictModel):
-    path: str
-    size_bytes: int
-    sha256: str
-
-
-class EvidenceBundleManifest(StrictModel):
-    schema_version: str = "1.1.0"
-    bundle_kind: str = "evidence-bundle"
-    generated_at: str
-    source_analysis_path: str
-    source_analysis_sha256: str | None = None
-    source_input_path: str | None = None
-    source_input_paths: list[str] = Field(default_factory=list)
-    source_input_hashes: list[EvidenceBundleInputHash] = Field(default_factory=list)
-    provider_snapshot: dict[str, Any] = Field(default_factory=dict)
-    artifact_hashes: dict[str, str] = Field(default_factory=dict)
-    findings_count: int = 0
-    kev_hits: int = 0
-    waived_count: int = 0
-    attack_mapped_cves: int = 0
-    included_input_copy: bool = False
-    files: list[EvidenceBundleFile] = Field(default_factory=list)
-
-
-class EvidenceBundleVerificationMetadata(StrictModel):
-    schema_version: str = "1.2.0"
-    generated_at: str
-    bundle_path: str
-    manifest_schema_version: str | None = None
-    bundle_kind: str | None = None
-
-
-class EvidenceBundleVerificationSummary(StrictModel):
-    ok: bool = False
-    total_members: int = 0
-    expected_files: int = 0
-    verified_files: int = 0
-    missing_files: int = 0
-    modified_files: int = 0
-    unexpected_files: int = 0
-    manifest_errors: int = 0
-
-
-class EvidenceBundleVerificationItem(StrictModel):
-    path: str
-    kind: str | None = None
-    status: str
-    detail: str
-    expected_size_bytes: int | None = None
-    actual_size_bytes: int | None = None
-    expected_sha256: str | None = None
-    actual_sha256: str | None = None
-
-
-class WaiverRule(StrictModel):
-    id: str | None = None
-    cve_id: str
-    owner: str
-    reason: str
-    expires_on: str
-    review_on: str | None = None
-    approval_ref: str | None = None
-    ticket_url: str | None = None
-    asset_ids: list[str] = Field(default_factory=list)
-    targets: list[str] = Field(default_factory=list)
-    services: list[str] = Field(default_factory=list)
-
-
-class WaiverHealthSummary(StrictModel):
-    total_rules: int = 0
-    active_count: int = 0
-    review_due_count: int = 0
-    expired_count: int = 0
-    review_window_days: int = 14

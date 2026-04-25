@@ -11,29 +11,30 @@ from sqlalchemy.orm import Session, selectinload
 from vuln_prioritizer.db.models import (
     AnalysisRun,
     ApiToken,
-    Asset,
     AttackMappingRecord,
     Component,
     DetectionControl,
-    EvidenceBundle,
     Finding,
     FindingAttackContext,
     FindingOccurrence,
     GitHubIssueExport,
     Project,
     ProjectConfigSnapshot,
-    ProviderSnapshot,
-    ProviderUpdateJob,
-    Report,
     Vulnerability,
-    Waiver,
     utc_now,
 )
+from vuln_prioritizer.db.repository_artifacts import ArtifactRepositoryMixin
+from vuln_prioritizer.db.repository_assets import AssetWaiverRepositoryMixin
+from vuln_prioritizer.db.repository_providers import ProviderSnapshotRepositoryMixin
 
 T = TypeVar("T")
 
 
-class WorkbenchRepository:
+class WorkbenchRepository(
+    ProviderSnapshotRepositoryMixin,
+    AssetWaiverRepositoryMixin,
+    ArtifactRepositoryMixin,
+):
     """Small repository facade for the Workbench MVP persistence flow."""
 
     def __init__(self, session: Session) -> None:
@@ -54,68 +55,6 @@ class WorkbenchRepository:
     def list_projects(self) -> list[Project]:
         statement = select(Project).order_by(Project.created_at, Project.name)
         return list(self.session.scalars(statement))
-
-    def create_provider_snapshot(
-        self,
-        *,
-        content_hash: str | None = None,
-        nvd_last_sync: str | None = None,
-        epss_date: str | None = None,
-        kev_catalog_version: str | None = None,
-        metadata_json: dict | None = None,
-    ) -> ProviderSnapshot:
-        snapshot = ProviderSnapshot(
-            content_hash=content_hash,
-            nvd_last_sync=nvd_last_sync,
-            epss_date=epss_date,
-            kev_catalog_version=kev_catalog_version,
-            metadata_json=metadata_json or {},
-        )
-        self.session.add(snapshot)
-        self.session.flush()
-        return snapshot
-
-    def get_provider_snapshot_by_hash(self, content_hash: str) -> ProviderSnapshot | None:
-        return self.session.scalar(
-            select(ProviderSnapshot).where(ProviderSnapshot.content_hash == content_hash)
-        )
-
-    def get_or_create_provider_snapshot(
-        self,
-        *,
-        content_hash: str,
-        nvd_last_sync: str | None = None,
-        epss_date: str | None = None,
-        kev_catalog_version: str | None = None,
-        metadata_json: dict | None = None,
-    ) -> ProviderSnapshot:
-        snapshot = self.get_provider_snapshot_by_hash(content_hash)
-        if snapshot is not None:
-            if nvd_last_sync is not None:
-                snapshot.nvd_last_sync = nvd_last_sync
-            if epss_date is not None:
-                snapshot.epss_date = epss_date
-            if kev_catalog_version is not None:
-                snapshot.kev_catalog_version = kev_catalog_version
-            if metadata_json is not None:
-                snapshot.metadata_json = metadata_json
-            self.session.flush()
-            return snapshot
-        return self.create_provider_snapshot(
-            content_hash=content_hash,
-            nvd_last_sync=nvd_last_sync,
-            epss_date=epss_date,
-            kev_catalog_version=kev_catalog_version,
-            metadata_json=metadata_json,
-        )
-
-    def list_provider_snapshots(self) -> list[ProviderSnapshot]:
-        statement = select(ProviderSnapshot).order_by(ProviderSnapshot.created_at.desc())
-        return list(self.session.scalars(statement))
-
-    def get_latest_provider_snapshot(self) -> ProviderSnapshot | None:
-        statement = select(ProviderSnapshot).order_by(ProviderSnapshot.created_at.desc()).limit(1)
-        return self.session.scalar(statement)
 
     def create_analysis_run(
         self,
@@ -168,146 +107,6 @@ class WorkbenchRepository:
             run.summary_json = summary_json
         self.session.flush()
         return run
-
-    def upsert_asset(
-        self,
-        *,
-        project_id: str,
-        asset_id: str,
-        target_ref: str | None = None,
-        owner: str | None = None,
-        business_service: str | None = None,
-        environment: str | None = None,
-        exposure: str | None = None,
-        criticality: str | None = None,
-    ) -> Asset:
-        asset = self.session.scalar(
-            select(Asset).where(Asset.project_id == project_id, Asset.asset_id == asset_id)
-        )
-        if asset is None:
-            asset = Asset(project_id=project_id, asset_id=asset_id)
-            self.session.add(asset)
-        asset.target_ref = target_ref
-        asset.owner = owner
-        asset.business_service = business_service
-        asset.environment = environment
-        asset.exposure = exposure
-        asset.criticality = criticality
-        self.session.flush()
-        return asset
-
-    def list_project_assets(self, project_id: str) -> list[Asset]:
-        statement = select(Asset).where(Asset.project_id == project_id).order_by(Asset.asset_id)
-        return list(self.session.scalars(statement))
-
-    def get_asset(self, asset_id: str) -> Asset | None:
-        return self.session.get(Asset, asset_id)
-
-    def update_asset(
-        self,
-        asset: Asset,
-        *,
-        asset_id: str | None = None,
-        target_ref: str | None = None,
-        owner: str | None = None,
-        business_service: str | None = None,
-        environment: str | None = None,
-        exposure: str | None = None,
-        criticality: str | None = None,
-    ) -> Asset:
-        if asset_id is not None:
-            asset.asset_id = asset_id
-        asset.target_ref = target_ref
-        asset.owner = owner
-        asset.business_service = business_service
-        asset.environment = environment
-        asset.exposure = exposure
-        asset.criticality = criticality
-        self.session.flush()
-        return asset
-
-    def create_waiver(
-        self,
-        *,
-        project_id: str,
-        owner: str,
-        reason: str,
-        expires_on: str,
-        cve_id: str | None = None,
-        finding_id: str | None = None,
-        asset_id: str | None = None,
-        component_name: str | None = None,
-        component_version: str | None = None,
-        service: str | None = None,
-        review_on: str | None = None,
-        approval_ref: str | None = None,
-        ticket_url: str | None = None,
-    ) -> Waiver:
-        waiver = Waiver(
-            project_id=project_id,
-            owner=owner,
-            reason=reason,
-            expires_on=expires_on,
-            cve_id=cve_id,
-            finding_id=finding_id,
-            asset_id=asset_id,
-            component_name=component_name,
-            component_version=component_version,
-            service=service,
-            review_on=review_on,
-            approval_ref=approval_ref,
-            ticket_url=ticket_url,
-        )
-        self.session.add(waiver)
-        self.session.flush()
-        return waiver
-
-    def update_waiver(
-        self,
-        waiver: Waiver,
-        *,
-        owner: str,
-        reason: str,
-        expires_on: str,
-        cve_id: str | None = None,
-        finding_id: str | None = None,
-        asset_id: str | None = None,
-        component_name: str | None = None,
-        component_version: str | None = None,
-        service: str | None = None,
-        review_on: str | None = None,
-        approval_ref: str | None = None,
-        ticket_url: str | None = None,
-    ) -> Waiver:
-        waiver.owner = owner
-        waiver.reason = reason
-        waiver.expires_on = expires_on
-        waiver.cve_id = cve_id
-        waiver.finding_id = finding_id
-        waiver.asset_id = asset_id
-        waiver.component_name = component_name
-        waiver.component_version = component_version
-        waiver.service = service
-        waiver.review_on = review_on
-        waiver.approval_ref = approval_ref
-        waiver.ticket_url = ticket_url
-        self.session.flush()
-        return waiver
-
-    def get_waiver(self, waiver_id: str) -> Waiver | None:
-        return self.session.get(Waiver, waiver_id)
-
-    def list_project_waivers(self, project_id: str) -> list[Waiver]:
-        statement = (
-            select(Waiver)
-            .where(Waiver.project_id == project_id)
-            .order_by(Waiver.expires_on, Waiver.created_at)
-        )
-        return list(self.session.scalars(statement))
-
-    def delete_waiver(self, waiver: Waiver) -> None:
-        self.session.delete(waiver)
-        self.session.flush()
 
     def upsert_component(
         self,
@@ -735,70 +534,6 @@ class WorkbenchRepository:
         )
         return list(self.session.scalars(statement))
 
-    def add_report(
-        self,
-        *,
-        project_id: str,
-        analysis_run_id: str,
-        kind: str,
-        format: str,
-        path: str,
-        sha256: str,
-    ) -> Report:
-        report = Report(
-            project_id=project_id,
-            analysis_run_id=analysis_run_id,
-            kind=kind,
-            format=format,
-            path=path,
-            sha256=sha256,
-        )
-        self.session.add(report)
-        self.session.flush()
-        return report
-
-    def get_report(self, report_id: str) -> Report | None:
-        return self.session.get(Report, report_id)
-
-    def list_run_reports(self, analysis_run_id: str) -> list[Report]:
-        statement = (
-            select(Report)
-            .where(Report.analysis_run_id == analysis_run_id)
-            .order_by(Report.created_at.desc())
-        )
-        return list(self.session.scalars(statement))
-
-    def add_evidence_bundle(
-        self,
-        *,
-        project_id: str,
-        analysis_run_id: str,
-        path: str,
-        sha256: str,
-        manifest_json: dict[str, Any],
-    ) -> EvidenceBundle:
-        bundle = EvidenceBundle(
-            project_id=project_id,
-            analysis_run_id=analysis_run_id,
-            path=path,
-            sha256=sha256,
-            manifest_json=manifest_json,
-        )
-        self.session.add(bundle)
-        self.session.flush()
-        return bundle
-
-    def get_evidence_bundle(self, bundle_id: str) -> EvidenceBundle | None:
-        return self.session.get(EvidenceBundle, bundle_id)
-
-    def list_run_evidence_bundles(self, analysis_run_id: str) -> list[EvidenceBundle]:
-        statement = (
-            select(EvidenceBundle)
-            .where(EvidenceBundle.analysis_run_id == analysis_run_id)
-            .order_by(EvidenceBundle.created_at.desc())
-        )
-        return list(self.session.scalars(statement))
-
     def create_api_token(self, *, name: str, token_hash: str) -> ApiToken:
         token = ApiToken(name=name, token_hash=token_hash)
         self.session.add(token)
@@ -819,29 +554,6 @@ class WorkbenchRepository:
     def mark_api_token_used(self, token: ApiToken) -> None:
         token.last_used_at = utc_now()
         self.session.flush()
-
-    def create_provider_update_job(
-        self,
-        *,
-        status: str,
-        requested_sources_json: list[str],
-        metadata_json: dict[str, Any] | None = None,
-        error_message: str | None = None,
-    ) -> ProviderUpdateJob:
-        job = ProviderUpdateJob(
-            status=status,
-            requested_sources_json=requested_sources_json,
-            metadata_json=metadata_json or {},
-            error_message=error_message,
-            finished_at=utc_now() if status in {"completed", "failed"} else None,
-        )
-        self.session.add(job)
-        self.session.flush()
-        return job
-
-    def list_provider_update_jobs(self) -> list[ProviderUpdateJob]:
-        statement = select(ProviderUpdateJob).order_by(ProviderUpdateJob.started_at.desc())
-        return list(self.session.scalars(statement))
 
     def github_issue_export_exists(self, project_id: str, duplicate_key: str) -> bool:
         statement = select(GitHubIssueExport.id).where(
