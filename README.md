@@ -5,7 +5,7 @@
 [![Status: v1.1.0](https://img.shields.io/badge/status-v1.1.0-brightgreen)](./CHANGELOG.md)
 [![Quality: local-first](https://img.shields.io/badge/quality-local--first-informational)](#development)
 
-`vuln-prioritizer` is a Python CLI and self-hosted Workbench for prioritizing known CVEs. It accepts plain CVE lists plus scanner and SBOM exports, enriches them with `NVD + EPSS + CISA KEV`, and adds optional ATT&CK, asset-context, VEX, waiver, and evidence layers without turning the priority model into a black box.
+`vuln-prioritizer` is a Python CLI and self-hosted Workbench for prioritizing known CVEs. It accepts plain CVE lists plus existing scanner and SBOM exports, enriches them with `NVD + EPSS + CISA KEV`, and adds optional ATT&CK, asset-context, VEX, waiver, and evidence layers without turning the priority model into a black box.
 
 ![HTML report preview](docs/examples/media/html-report-preview.png)
 
@@ -32,20 +32,20 @@ README media maintenance checklist for future releases:
 - CI-friendly outputs including Markdown summaries, SARIF, GitHub Action support, and policy gates.
 - Explicit support for VEX, asset context, waivers, and reproducible review artifacts.
 - Waiver lifecycle visibility with active, review-due, and expired states instead of silent long-lived exceptions.
-- A Docker/Compose path that makes the current CLI core easy to run and establishes the local Workbench bootstrap contract.
+- A Docker/Compose path that runs the current local Workbench app while keeping the CLI core available in the same image.
 
 ## What It Can Do
 
 Core commands:
 
-- `analyze`: prioritize findings from CVE lists, scanners, or SBOM exports
+- `analyze`: prioritize findings from CVE lists, scanner exports, or SBOM exports
 - `compare`: show how enriched prioritization differs from CVSS-only
 - `explain`: explain a single CVE decision in detail
 - `doctor`: validate local setup, config, cache, files, and optional live source reachability
 - `snapshot create|diff`: capture a run and compare before/after states
 - `state init|import-snapshot|history|waivers|top-services|trends|service-history`: persist snapshots in an optional local SQLite store and inspect history, waiver debt, repeated services, or service trends
 - `rollup`: aggregate saved analysis or snapshots by asset or service
-- `input validate`: locally validate CVE lists, scanner/SBOM exports, asset context, and VEX before enrichment
+- `input validate`: locally validate CVE lists, scanner/SBOM export files, asset context, and VEX before enrichment
 - `attack validate|coverage|navigator-layer`: validate and use local ATT&CK mappings
 - `report html|evidence-bundle|verify-evidence-bundle`: render HTML, build reproducible ZIP evidence packages, or verify bundle integrity
 - `data status|update|verify|export-provider-snapshot`: inspect cache state, maintain local provider data, and export replayable provider snapshots
@@ -132,7 +132,7 @@ Then set `NVD_API_KEY` in `.env` if you want authenticated NVD access.
 
 ### Docker / Compose Workbench
 
-Run the current self-hosted Workbench MVP API and web UI locally:
+Run the current self-hosted Workbench API and web UI locally:
 
 ```bash
 docker compose up --build
@@ -216,14 +216,14 @@ recorded without replacing the previous provider snapshot. GitHub issue export s
 `POST /api/projects/{project_id}/github/issues/export` when `dry_run` is false, a repository is
 provided, and the selected token environment variable is configured.
 
-Current Workbench MVP limitations:
+Current local Workbench limitations:
 
 - The Compose path is local-first and single-node. It is not hardened for internet exposure.
 - The Workbench UI/API currently focuses on CVE lists, `generic-occurrence-csv`, Trivy JSON, and Grype JSON imports. The CLI still supports the broader input matrix documented below.
-- SQLite remains the default Workbench runtime; the Compose Postgres profile is an optional migration smoke path. Background workers, SSO, ticket sync, and multi-workspace tenancy remain out of MVP scope.
+- SQLite remains the default Workbench runtime; the Compose Postgres profile is an optional migration smoke path. Background workers, SSO, ticket sync, and multi-workspace tenancy remain outside the current local-first scope.
 - The project still does not scan systems, patch software, or generate heuristic/AI CVE-to-ATT&CK mappings.
 
-Workbench readiness is tracked in [docs/workbench-threat-model.md](docs/workbench-threat-model.md), and planning lives in [docs/workbench-masterplan.md](docs/workbench-masterplan.md). The roadmap tracks how the current CLI release line is being repositioned as the reusable core for that add-on.
+Current Workbench readiness is tracked in [docs/workbench-threat-model.md](docs/workbench-threat-model.md). The historical implementation plan remains available in [docs/workbench-masterplan.md](docs/workbench-masterplan.md), and [docs/roadmap.md](docs/roadmap.md) tracks the shipped CLI plus local Workbench release line.
 
 ## Quickstart
 
@@ -234,7 +234,7 @@ printf 'CVE-2021-44228\nCVE-2024-3094\n' > cves.txt
 vuln-prioritizer analyze --input cves.txt --format markdown --output report.md
 ```
 
-### 2. Public-Install Analyze from Your Own Scanner Export
+### 2. Public-Install Analyze from Your Own Existing Scan Export
 
 ```bash
 vuln-prioritizer analyze \
@@ -361,7 +361,7 @@ shasum -a 256 \
   build/v1.0-demo-evidence-bundle-verification.json
 ```
 
-Do not record machine-specific absolute paths, `.env` contents, API keys, tokens, cookies, or private scanner exports in public release evidence.
+Do not record machine-specific absolute paths, `.env` contents, API keys, tokens, cookies, or private scan exports in public release evidence.
 
 ## Runtime Config
 
@@ -401,7 +401,7 @@ vuln-prioritizer --no-config analyze --input cves.txt
 
 ## Public Docs
 
-Start here for public CLI usage and the Workbench add-on path:
+Start here for public CLI usage and the local Workbench app path:
 
 - [docs/use_cases.md](docs/use_cases.md)
 - [docs/playbooks.md](docs/playbooks.md)
@@ -413,7 +413,7 @@ Start here for public CLI usage and the Workbench add-on path:
 - [docs/integrations/reporting_and_ci.md](docs/integrations/reporting_and_ci.md)
 - [docs/releases/v1.1.0.md](docs/releases/v1.1.0.md)
 - [docs/roadmap.md](docs/roadmap.md)
-- [docs/workbench-masterplan.md](docs/workbench-masterplan.md)
+- Historical Workbench masterplan: [docs/workbench-masterplan.md](docs/workbench-masterplan.md)
 
 Maintainer / repo-checkout workflows:
 
@@ -423,7 +423,7 @@ Maintainer / repo-checkout workflows:
 
 - Usage questions and workflow help: GitHub Discussions
 - Reproducible bugs and scoped feature requests: GitHub Issues
-- Security reports: private vulnerability reporting when enabled, otherwise [SECURITY.md](SECURITY.md)
+- Security reports: GitHub private vulnerability reporting, with [SECURITY.md](SECURITY.md) as the fallback route
 - Contribution rules and local validation: [CONTRIBUTING.md](CONTRIBUTING.md)
 - Support routing: [SUPPORT.md](SUPPORT.md)
 
@@ -431,13 +431,12 @@ Reference material:
 
 - [docs/roadmap.md](docs/roadmap.md)
 - [docs/reference_cve_prioritizer_gap_analysis.md](docs/reference_cve_prioritizer_gap_analysis.md)
-- [docs/examples/media/workflow-demo.gif](docs/examples/media/workflow-demo.gif)
 
 ## GitHub Action
 
 The repository includes a composite GitHub Action for `analyze`, static report rendering, Workbench-style report artifacts, evidence bundles, and SARIF validation.
 
-Use it after `actions/checkout`, because scanner exports, SBOMs, or other analysis input files live in the consumer repository, not in the action repository.
+Use it after `actions/checkout`, because scan exports, SBOMs, or other analysis input files live in the consumer repository, not in the action repository.
 In `mode: analyze`, `input` and `input-format` accept newline-delimited values so one action step can merge multiple sources. The action also passes through the CLI's waiver, filter, sort, cache, provider replay, and fail-gate flags for deterministic CI runs.
 
 ```yaml
@@ -494,7 +493,7 @@ Pull request readiness:
 
 - State whether the change affects CLI, Workbench, Docker, docs, release, or packaging behavior.
 - Include the local checks you ran. For docs-only changes, `make docs-check` plus targeted CLI help checks is usually enough; broader behavior changes should use `make check` or `make release-check`.
-- Keep public examples aligned with the supported install path, the Workbench MVP limitations above, and the no-scanner/no-heuristic-ATT&CK scope boundary.
+- Keep public examples aligned with the supported install path, the local Workbench limitations above, and the no-scanner/no-heuristic-ATT&CK scope boundary.
 
 ## Project Status
 

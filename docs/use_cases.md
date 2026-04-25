@@ -4,13 +4,13 @@ This page focuses on concrete operational workflows that the current CLI surface
 
 If you want the shortest operator-facing runbooks instead of the product-story view, start with [Operator Playbooks](playbooks.md).
 
-All CLI examples below are repo-checkout examples that intentionally use the checked-in fixtures under `data/`. The commands themselves are part of the public CLI surface, but after `pipx install` alone you must replace those fixture paths with your own scanner exports, SBOMs, VEX files, asset-context CSVs, and ATT&CK mapping files.
+All CLI examples below are repo-checkout examples that intentionally use the checked-in fixtures under `data/`. The commands themselves are part of the public CLI surface, but after `pipx install` alone you must replace those fixture paths with your own existing scan exports, SBOMs, VEX files, asset-context CSVs, and ATT&CK mapping files.
 
 ## 1. Trivy + VEX + GitHub Summary
 
 Goal:
 
-- turn a container-security scan into a CI-friendly prioritized summary
+- turn an existing container-security scan export into a CI-friendly prioritized summary
 - suppress matching `not_affected` VEX cases
 - keep a JSON artifact plus a short Markdown summary for the GitHub run
 
@@ -59,7 +59,7 @@ Why it matters:
 
 Goal:
 
-- move from a flat infrastructure scan to service-aware prioritization
+- move from an existing infrastructure scan export to service-aware prioritization
 - attach mapped assets and business services
 - add optional ATT&CK context and later aggregate by asset or service
 
@@ -129,7 +129,6 @@ Why it matters:
 
 ## Media
 
-Committed preview assets live here:
+Current static preview assets live here:
 
 - [HTML report preview](examples/media/html-report-preview.png)
-- [Workflow demo GIF](examples/media/workflow-demo.gif)
