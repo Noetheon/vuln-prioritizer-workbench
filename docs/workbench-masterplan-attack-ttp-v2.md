@@ -5,6 +5,8 @@
 **Ausgangsprojekt:** `vuln-prioritizer` `1.1.0`
 **Ziel:** Aus der bestehenden Python-CLI wird eine vollständige, selbst hostbare Open-Source-Anwendung mit Weboberfläche, API, Datenbank, Import-Wizard, priorisierten Arbeitslisten, MITRE-ATT&CK-/TTP-Kontext, Detection-/Mitigation-Gaps, Evidence-Bundles und managementfähigen Reports.
 
+> Historischer Planungsstand: Dieses Dokument bleibt als Entwurfs- und Planungsartefakt erhalten. Verbindlich für den aktuellen Release-Stand sind `docs/roadmap.md`, `docs/workbench-v1-release-checklist.md` und `docs/releases/v1.1.0.md`; der aktuelle Coverage-Gate liegt bei 90%.
+
 ---
 
 ## 1. Entscheidung in einem Satz
@@ -1229,7 +1231,7 @@ vuln-prioritizer analyze examples/cve-list.txt \
 ### 21.2 Mindestkriterien
 
 - `pytest` grün.
-- Coverage >= 85%.
+- Coverage >= 90%.
 - `ruff check` grün.
 - `ruff format --check` grün.
 - `mypy` grün für Core/API.
@@ -1554,7 +1556,7 @@ Definition of Done:
 ### 24.2 Qualität
 
 - [ ] Tests grün.
-- [ ] Coverage >= 85%.
+- [ ] Coverage >= 90%.
 - [ ] Ruff grün.
 - [ ] Mypy für Core/API grün.
 - [ ] Keine Secrets in Repo.
