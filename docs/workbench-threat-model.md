@@ -1,15 +1,15 @@
-# Workbench Threat Model and Readiness Draft
+# Workbench Threat Model and Readiness
 
-Status: docs-only draft for the v1.2 Workbench readiness milestone.
+Status: current local-first Workbench threat model. Last reviewed: 2026-04-25.
 
 This page defines the defensive threat model and operational readiness assumptions for the local Workbench. It keeps the same product boundaries as the rest of the project: `vuln-prioritizer` prioritizes known CVEs and existing findings. It is not a scanner, exploit tool, proof-of-concept generator, or general-purpose vulnerability-management platform.
 
 ## Scope
 
-The v1.2 Workbench threat model covers:
+The current local-first Workbench threat model covers:
 
 - local CLI use and the self-hosted FastAPI/Jinja2 Workbench
-- import of existing CVE lists and selected scanner exports
+- import of existing CVE lists and selected scanner export files
 - provider enrichment from NVD, FIRST EPSS, CISA KEV, local caches, and locked provider snapshots
 - optional ATT&CK context from local CTID Mappings Explorer JSON and local technique metadata
 - SQLite-backed single-node Workbench state by default
@@ -17,7 +17,7 @@ The v1.2 Workbench threat model covers:
 - local-first API token bootstrap for mutating `/api/*` routes
 - generated JSON, Markdown, HTML, CSV, SARIF, and evidence bundle artifacts
 
-The v1.2 Workbench threat model does not cover:
+The current local-first Workbench threat model does not cover:
 
 - active network, host, container, cloud, or source-code scanning
 - exploitation, payload generation, exploit verification, or PoC handling
@@ -30,7 +30,7 @@ The v1.2 Workbench threat model does not cover:
 | Asset | Security objective | Notes |
 | --- | --- | --- |
 | Imported finding files | Confidentiality, integrity, provenance | Inputs may contain hostnames, package paths, image names, service names, owners, or environment labels. |
-| Normalized findings and run records | Integrity, reproducibility | The Workbench should preserve source provenance and not silently rewrite evidence. |
+| Normalized findings and run records | Integrity, reproducibility | The Workbench preserves source provenance and does not silently rewrite evidence. |
 | Provider enrichment data | Integrity, freshness transparency | NVD, EPSS, KEV, local cache, and locked snapshot data must remain distinguishable in outputs. |
 | ATT&CK mapping data | Integrity, source provenance | `ctid-json` is canonical for Workbench ATT&CK mappings. Technique metadata may enrich labels but must not create mappings. |
 | Asset context, VEX, and waivers | Integrity, auditability | These records influence explanation, applicability, or suppression and need explicit rationale. |
@@ -90,7 +90,7 @@ Primary boundaries:
 ## Operational Assumptions
 
 - The operator runs the Workbench on a trusted workstation, local VM, CI runner, or private single-node host.
-- The default database is SQLite. The optional Postgres Compose profile is for private single-node smoke testing or operator-managed deployments; clustered deployments, background workers, and multi-tenant state separation are not part of this draft.
+- The default database is SQLite. The optional Postgres Compose profile is for private single-node smoke testing or operator-managed deployments; clustered deployments, background workers, and multi-tenant state separation are not part of the current local-first scope.
 - The Workbench is not exposed directly to the public internet.
 - The operator controls local filesystem permissions for the SQLite database, uploads, reports, provider cache, and evidence bundles. For Postgres, the operator controls credentials, database network reachability, volumes, backups, and retention.
 - Imported files are treated as sensitive security data and are not committed unless they are sanitized fixtures.
@@ -102,7 +102,7 @@ Primary boundaries:
 
 ## Readiness Checklist
 
-The v1.2 Workbench is readiness-aligned when:
+The current local-first Workbench is readiness-aligned when:
 
 - scope text in README, architecture docs, and Workbench docs consistently says known-CVE prioritizer, not scanner
 - Workbench runtime docs identify SQLite as the default single-node persistence model and the Postgres profile as optional/private

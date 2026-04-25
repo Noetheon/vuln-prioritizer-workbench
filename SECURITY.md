@@ -10,8 +10,8 @@ If you discover a security issue in this repository, do not open a public bug re
 
 Preferred disclosure path:
 
-1. Use GitHub private vulnerability reporting or a GitHub security advisory draft if that repository feature is enabled.
-2. If private reporting is not available, contact the repository owner privately through the GitHub profile or repository security contact path before any public disclosure.
+1. Use GitHub private vulnerability reporting for this public repository.
+2. If that GitHub flow is temporarily unavailable, contact the repository owner privately through the GitHub profile or repository security contact path before any public disclosure.
 
 Avoid posting proof-of-concept exploit details, weaponized payloads, or sensitive reproduction steps in public issues.
 

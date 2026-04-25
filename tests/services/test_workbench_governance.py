@@ -1,9 +1,5 @@
 from __future__ import annotations
 
-import pytest
-
-pytest.importorskip("sqlalchemy")
-
 from vuln_prioritizer.db.models import Asset, Finding
 from vuln_prioritizer.services.workbench_governance import (
     build_governance_summary,
