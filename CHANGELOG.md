@@ -7,6 +7,10 @@ and this project aims to follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+- No notable changes yet.
+
+## [1.1.0] - 2026-04-25
+
 ### Added
 
 - Workbench v1.0 release notes, release checklist, and locked-provider demo evidence guidance for the local-first Workbench release line.
@@ -27,7 +31,7 @@ and this project aims to follow [Semantic Versioning](https://semver.org/).
 - Expanded CTID mapping provenance with creation/update metadata and explicit SHA256 tracking while keeping `ctid-json` as the canonical CVE-to-ATT&CK mapping source.
 - Expanded cache transparency from timestamp-only inspection to namespace counts, namespace checksums, and ATT&CK/local-file checksum visibility.
 - Documented the local workflow-equivalent path for SARIF, HTML, and cache verification when GitHub-hosted execution is unavailable.
-- Pinned consumer GitHub Action examples to the stable `v1.0.0` tag and widened the composite action surface to cover `target-kind` and `target-ref`.
+- Pinned consumer GitHub Action examples to explicit release tags and widened the composite action surface to cover `target-kind` and `target-ref`.
 - Hardened CI/release workflows so hosted runs are aligned with the stronger local workflow gate before publishing artifacts.
 - Hardened ATT&CK validation and CLI failure handling around CTID/metadata file mismatches, missing files, and legacy `local-csv` messaging.
 - Clarified the public install story, support routing, and issue-template scope guidance for the public repository surface.

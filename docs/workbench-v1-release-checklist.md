@@ -8,11 +8,12 @@ The Workbench v1.0 milestone evidence is preserved here, but the current package
 
 ## Current Closeout Evidence
 
-- Implementation baseline before this docs closeout: `f5db33f58aa14eba23daa47b38def71b243466a3`.
+- Historical implementation baseline before the first docs closeout: `f5db33f58aa14eba23daa47b38def71b243466a3`.
 - GitHub tracker issues `#2`-`#79` are closed, and Workbench milestones `v0.5` through `v1.2` have zero open issues.
-- Latest `main` GitHub checks for CI, CodeQL, and Docker completed successfully on `f5db33f58aa14eba23daa47b38def71b243466a3`.
+- Implementation closeout GitHub checks for CI, CodeQL, and Docker completed successfully on `f5db33f58aa14eba23daa47b38def71b243466a3`.
 - Local closeout gates recorded for the implementation baseline: `make check` (`407 passed, 2 skipped`, 90.07% coverage), `make release-check`, `make demo-evidence-bundle-check`, and `make dependency-audit`.
 - The post-release docs closeout pass also passed `make docs-check`, `make demo-evidence-bundle-check`, `make dependency-audit`, `make docker-demo-smoke`, and `make release-check` on 2026-04-25.
+- Post-release security and CodeQL hygiene through `50c3620fba76c343c8aadd3564b926937579f01b` left `main` green for CI, CodeQL, and Docker with zero open code-scanning alerts.
 - `python3 -m pip check` is not used as release evidence in the shared user-site environment because unrelated globally installed packages conflict with each other outside this project.
 - Public package tag and GitHub Release object: `v1.1.0` published from `23199ef85fb9ac08b9bb0e301b2aadbf3377f791`.
 
