@@ -6,6 +6,8 @@
 
 > Hinweis: Die V2-Inhalte bleiben enthalten. Die neue V3-Erweiterung beginnt ab Abschnitt 57 und ergänzt Versionen, Epics, konkrete GitHub Issues, Tests, Release-Gates, Definition of Done, Risiko-Register und die ATT&CK/TTP-Umsetzung als Software-Engineering-Plan.
 
+> Historischer Planungsstand: Dieses Dokument bleibt als Entwurfs- und Planungsartefakt erhalten. Verbindlich für den aktuellen Release-Stand sind `docs/roadmap.md`, `docs/workbench-v1-release-checklist.md` und `docs/releases/v1.1.0.md`; der aktuelle Coverage-Gate liegt bei 90%.
+
 ---
 
 # Vuln Prioritizer Workbench — vollständiger Open-Source-App-Masterplan mit MITRE ATT&CK/TTP-Vertiefung
@@ -1239,7 +1241,7 @@ vuln-prioritizer analyze examples/cve-list.txt \
 ### 21.2 Mindestkriterien
 
 - `pytest` grün.
-- Coverage >= 85%.
+- Coverage >= 90%.
 - `ruff check` grün.
 - `ruff format --check` grün.
 - `mypy` grün für Core/API.
@@ -1564,7 +1566,7 @@ Definition of Done:
 ### 24.2 Qualität
 
 - [ ] Tests grün.
-- [ ] Coverage >= 85%.
+- [ ] Coverage >= 90%.
 - [ ] Ruff grün.
 - [ ] Mypy für Core/API grün.
 - [ ] Keine Secrets in Repo.
