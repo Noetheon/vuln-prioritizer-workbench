@@ -24,14 +24,14 @@ nav:
   - Community Setup: community_repository_setup.md
   - Release Operations: release_operations.md
   - Roadmap: roadmap.md
-  - Workbench Planning:
+  - Historical Workbench Planning:
       - v1.0 Release Checklist: workbench-v1-release-checklist.md
       - Offline Demo Runbook: workbench-offline-demo.md
       - ATT&CK Methodology: workbench-attack-methodology.md
       - Threat Model and Readiness: workbench-threat-model.md
-      - MVP Masterplan: workbench-masterplan.md
-      - ATT&CK/TTP Masterplan V2: workbench-masterplan-attack-ttp-v2.md
-      - Engineering Roadmap V3: workbench-engineering-roadmap-attack-ttp-v3.md
+      - Historical MVP Masterplan: workbench-masterplan.md
+      - Historical ATT&CK/TTP Masterplan V2: workbench-masterplan-attack-ttp-v2.md
+      - Historical Engineering Roadmap V3: workbench-engineering-roadmap-attack-ttp-v3.md
   - Examples:
       - Base Report: example_report.md
       - Base Compare: example_compare.md
