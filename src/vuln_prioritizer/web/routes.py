@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import secrets
 from pathlib import Path
-from typing import Annotated, cast
+from typing import Annotated, Any, cast
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, UploadFile
@@ -37,9 +37,14 @@ from vuln_prioritizer.api.workbench_support import (
     _waiver_payload,
 )
 from vuln_prioritizer.db.repositories import WorkbenchRepository
+from vuln_prioritizer.reporting_executive import render_executive_report_html
 from vuln_prioritizer.services.workbench_analysis import (
     WorkbenchAnalysisError,
     run_workbench_import,
+)
+from vuln_prioritizer.services.workbench_executive_report import (
+    WorkbenchExecutiveReportError,
+    build_run_executive_report_model,
 )
 from vuln_prioritizer.services.workbench_governance import build_governance_summary
 from vuln_prioritizer.services.workbench_reports import (
@@ -148,13 +153,16 @@ def new_import(
     session: Annotated[Session, Depends(get_db_session)],
     settings: Annotated[WorkbenchSettings, Depends(get_workbench_settings)],
 ) -> HTMLResponse:
-    project = WorkbenchRepository(session).get_project(project_id)
+    repo = WorkbenchRepository(session)
+    project = repo.get_project(project_id)
     if project is None:
         raise HTTPException(status_code=404, detail="Project not found.")
     return templates.TemplateResponse(
         request,
         "imports/new.html",
-        {"project": project, "csrf_token": settings.csrf_token},
+        _project_nav_context(
+            repo, project, {"project": project, "csrf_token": settings.csrf_token}
+        ),
     )
 
 
@@ -243,8 +251,8 @@ def findings(
     kev: str | None = None,
     owner: str | None = None,
     service: str | None = None,
-    min_epss: float | None = Query(default=None, ge=0, le=1),
-    min_cvss: float | None = Query(default=None, ge=0, le=10),
+    min_epss: str | None = None,
+    min_cvss: str | None = None,
     sort: str = "operational",
     limit: int = Query(default=50, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
@@ -254,6 +262,8 @@ def findings(
     if project is None:
         raise HTTPException(status_code=404, detail="Project not found.")
     kev_filter = _optional_bool_filter(kev)
+    min_epss_filter = _optional_float_filter(min_epss, lower=0, upper=1, label="EPSS")
+    min_cvss_filter = _optional_float_filter(min_cvss, lower=0, upper=10, label="CVSS")
     filtered = _filter_findings(
         repo.list_project_findings(project.id),
         priority=priority or None,
@@ -262,31 +272,35 @@ def findings(
         kev=kev_filter,
         owner=owner or None,
         service=service or None,
-        min_epss=min_epss,
-        min_cvss=min_cvss,
+        min_epss=min_epss_filter,
+        min_cvss=min_cvss_filter,
     )
     sorted_findings = _sort_findings(filtered, sort=sort)
     paged = sorted_findings[offset : offset + limit]
     return templates.TemplateResponse(
         request,
         "findings/index.html",
-        findings_model(
+        _project_nav_context(
+            repo,
             project,
-            paged,
-            filters={
-                "priority": priority or "",
-                "status": status or "",
-                "q": q or "",
-                "kev": kev_filter,
-                "owner": owner or "",
-                "service": service or "",
-                "min_epss": min_epss,
-                "min_cvss": min_cvss,
-                "sort": sort,
-                "limit": limit,
-                "offset": offset,
-            },
-            total=len(sorted_findings),
+            findings_model(
+                project,
+                paged,
+                filters={
+                    "priority": priority or "",
+                    "status": status or "",
+                    "q": q or "",
+                    "kev": kev_filter,
+                    "owner": owner or "",
+                    "service": service or "",
+                    "min_epss": min_epss_filter,
+                    "min_cvss": min_cvss_filter,
+                    "sort": sort,
+                    "limit": limit,
+                    "offset": offset,
+                },
+                total=len(sorted_findings),
+            ),
         ),
     )
 
@@ -305,7 +319,7 @@ def governance(
     return templates.TemplateResponse(
         request,
         "governance/index.html",
-        {"project": project, "summary": summary},
+        _project_nav_context(repo, project, {"project": project, "summary": summary}),
     )
 
 
@@ -321,19 +335,39 @@ def assets_page(
     if project is None:
         raise HTTPException(status_code=404, detail="Project not found.")
     findings = repo.list_project_findings(project.id)
+    assets = repo.list_project_assets(project.id)
     finding_counts: dict[str, int] = {}
     for finding in findings:
         if finding.asset_id:
             finding_counts[finding.asset_id] = finding_counts.get(finding.asset_id, 0) + 1
+    asset_summary = {
+        "total": len(assets),
+        "owned": sum(1 for asset in assets if asset.owner),
+        "services": len({asset.business_service for asset in assets if asset.business_service}),
+        "internet_facing": sum(
+            1
+            for asset in assets
+            if str(asset.exposure or "").strip().lower()
+            in {"internet-facing", "public", "external"}
+        ),
+        "critical": sum(
+            1 for asset in assets if str(asset.criticality or "").strip().lower() == "critical"
+        ),
+    }
     return templates.TemplateResponse(
         request,
         "assets/index.html",
-        {
-            "project": project,
-            "assets": repo.list_project_assets(project.id),
-            "finding_counts": finding_counts,
-            "csrf_token": settings.csrf_token,
-        },
+        _project_nav_context(
+            repo,
+            project,
+            {
+                "project": project,
+                "assets": assets,
+                "asset_summary": asset_summary,
+                "finding_counts": finding_counts,
+                "csrf_token": settings.csrf_token,
+            },
+        ),
     )
 
 
@@ -389,15 +423,27 @@ def waivers_page(
         )
         for waiver in repo.list_project_waivers(project.id)
     ]
+    waiver_summary = {
+        "total": len(waivers),
+        "active": sum(1 for waiver in waivers if waiver["status"] == "active"),
+        "review_due": sum(1 for waiver in waivers if waiver["status"] == "review_due"),
+        "expired": sum(1 for waiver in waivers if waiver["status"] == "expired"),
+        "matched_findings": sum(int(waiver["matched_findings"]) for waiver in waivers),
+    }
     return templates.TemplateResponse(
         request,
         "waivers/index.html",
-        {
-            "project": project,
-            "waivers": waivers,
-            "findings": findings,
-            "csrf_token": settings.csrf_token,
-        },
+        _project_nav_context(
+            repo,
+            project,
+            {
+                "project": project,
+                "waivers": waivers,
+                "waiver_summary": waiver_summary,
+                "findings": findings,
+                "csrf_token": settings.csrf_token,
+            },
+        ),
     )
 
 
@@ -524,23 +570,34 @@ def coverage_page(
     project = repo.get_project(project_id)
     if project is None:
         raise HTTPException(status_code=404, detail="Project not found.")
+    controls = repo.list_project_detection_controls(project.id)
     gaps = _coverage_gap_payload(
         repo.list_project_attack_contexts(project.id),
-        repo.list_project_detection_controls(project.id),
+        controls,
         repo.list_project_findings(project.id),
     )
+    coverage_summary = {
+        "techniques": len(gaps["items"]),
+        "controls": len(controls),
+        "covered": gaps["summary"].get("covered", 0),
+        "partial": gaps["summary"].get("partial", 0),
+        "not_covered": gaps["summary"].get("not_covered", 0),
+        "unknown": gaps["summary"].get("unknown", 0),
+    }
     return templates.TemplateResponse(
         request,
         "coverage/index.html",
-        {
-            "project": project,
-            "controls": [
-                _detection_control_payload(control)
-                for control in repo.list_project_detection_controls(project.id)
-            ],
-            "gaps": gaps,
-            "csrf_token": settings.csrf_token,
-        },
+        _project_nav_context(
+            repo,
+            project,
+            {
+                "project": project,
+                "controls": [_detection_control_payload(control) for control in controls],
+                "coverage_summary": coverage_summary,
+                "gaps": gaps,
+                "csrf_token": settings.csrf_token,
+            },
+        ),
     )
 
 
@@ -578,16 +635,22 @@ def finding_detail(
     if finding is None:
         raise HTTPException(status_code=404, detail="Finding not found.")
     project = repo.get_project(finding.project_id)
+    if project is None:
+        raise HTTPException(status_code=404, detail="Project not found.")
     attack_contexts = repo.list_finding_attack_contexts(finding.id)
     return templates.TemplateResponse(
         request,
         "findings/detail.html",
-        {
-            "project": project,
-            "finding": finding,
-            "attack_context": attack_contexts[0] if attack_contexts else None,
-            "csrf_token": settings.csrf_token,
-        },
+        _project_nav_context(
+            repo,
+            project,
+            {
+                "project": project,
+                "finding": finding,
+                "attack_context": attack_contexts[0] if attack_contexts else None,
+                "csrf_token": settings.csrf_token,
+            },
+        ),
     )
 
 
@@ -627,15 +690,19 @@ def technique_detail_page(
     return templates.TemplateResponse(
         request,
         "coverage/technique.html",
-        {
-            "project": project,
-            "technique_id": technique_id,
-            "technique_name": technique_name,
-            "metadata": metadata,
-            "findings": findings,
-            "controls": [_detection_control_payload(control) for control in controls],
-            "coverage": coverage_items[0] if coverage_items else None,
-        },
+        _project_nav_context(
+            repo,
+            project,
+            {
+                "project": project,
+                "technique_id": technique_id,
+                "technique_name": technique_name,
+                "metadata": metadata,
+                "findings": findings,
+                "controls": [_detection_control_payload(control) for control in controls],
+                "coverage": coverage_items[0] if coverage_items else None,
+            },
+        ),
     )
 
 
@@ -656,17 +723,21 @@ def project_settings(
     return templates.TemplateResponse(
         request,
         "settings.html",
-        {
-            "project": project,
-            "settings": settings,
-            "database_url_display": _redacted_database_url(settings.database_url),
-            "provider_status": provider_status,
-            "provider_jobs": [
-                _provider_update_job_payload(job) for job in repo.list_provider_update_jobs()
-            ],
-            "nvd_api_key_display": _redacted_env_value(settings.nvd_api_key_env),
-            "csrf_token": settings.csrf_token,
-        },
+        _project_nav_context(
+            repo,
+            project,
+            {
+                "project": project,
+                "settings": settings,
+                "database_url_display": _redacted_database_url(settings.database_url),
+                "provider_status": provider_status,
+                "provider_jobs": [
+                    _provider_update_job_payload(job) for job in repo.list_provider_update_jobs()
+                ],
+                "nvd_api_key_display": _redacted_env_value(settings.nvd_api_key_env),
+                "csrf_token": settings.csrf_token,
+            },
+        ),
     )
 
 
@@ -717,16 +788,24 @@ def vulnerability_lookup(
     normalized_q = q.strip().upper()
     vulnerability = repo.get_vulnerability_by_cve(normalized_q) if normalized_q else None
     findings = repo.list_findings_for_cve(project.id, normalized_q) if vulnerability else []
+    suggested_findings = _sort_findings(repo.list_project_findings(project.id), sort="operational")[
+        :8
+    ]
     return templates.TemplateResponse(
         request,
         "vulnerabilities/index.html",
-        {
-            "project": project,
-            "query": q,
-            "vulnerability": vulnerability,
-            "findings": findings,
-            "looked_up": bool(normalized_q),
-        },
+        _project_nav_context(
+            repo,
+            project,
+            {
+                "project": project,
+                "query": q,
+                "vulnerability": vulnerability,
+                "findings": findings,
+                "suggested_findings": suggested_findings,
+                "looked_up": bool(normalized_q),
+            },
+        ),
     )
 
 
@@ -752,6 +831,31 @@ def run_reports(
             project=project,
         )
         | {"csrf_token": settings.csrf_token},
+    )
+
+
+@web_router.get("/analysis-runs/{run_id}/executive-report", response_class=HTMLResponse)
+def run_executive_report(
+    run_id: str,
+    session: Annotated[Session, Depends(get_db_session)],
+) -> HTMLResponse:
+    repo = WorkbenchRepository(session)
+    run = repo.get_analysis_run(_safe_uuid_path_value(run_id))
+    if run is None:
+        raise HTTPException(status_code=404, detail="Analysis run not found.")
+    project = repo.get_project(run.project_id)
+    try:
+        model = build_run_executive_report_model(repo=repo, run=run, project=project)
+    except WorkbenchExecutiveReportError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return HTMLResponse(
+        render_executive_report_html(
+            model,
+            stylesheet_href="/static/executive-report.css?v=executive-interactive-5",
+            script_href="/static/workbench.js?v=executive-interactive-5",
+            include_inline_styles=False,
+            back_href=f"/analysis-runs/{run.id}/reports",
+        )
     )
 
 
@@ -787,15 +891,26 @@ def verify_evidence_page(
     session: Annotated[Session, Depends(get_db_session)],
     settings: Annotated[WorkbenchSettings, Depends(get_workbench_settings)],
 ) -> HTMLResponse:
+    safe_bundle_id = _safe_uuid_path_value(bundle_id)
+    repo = WorkbenchRepository(session)
+    bundle = repo.get_evidence_bundle(safe_bundle_id)
+    if bundle is None:
+        raise HTTPException(status_code=404, detail="Evidence bundle not found.")
+    run = repo.get_analysis_run(bundle.analysis_run_id)
+    project = repo.get_project(bundle.project_id)
     try:
         result = verify_run_evidence_bundle(
             session=session,
             settings=settings,
-            bundle_id=_safe_uuid_path_value(bundle_id),
+            bundle_id=safe_bundle_id,
         )
     except WorkbenchReportError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
-    return templates.TemplateResponse(request, "evidence/verify.html", result)
+    return templates.TemplateResponse(
+        request,
+        "evidence/verify.html",
+        result | {"project": project, "run": run, "bundle": bundle},
+    )
 
 
 @web_router.post("/web/analysis-runs/{run_id}/evidence-bundle", response_class=HTMLResponse)
@@ -826,6 +941,17 @@ def _project_path(project_id: str, child: str) -> str:
     return f"/projects/{_safe_project_path_value(project_id)}/{child}"
 
 
+def _project_nav_context(
+    repo: WorkbenchRepository,
+    project: Any,
+    context: dict[str, Any],
+) -> dict[str, Any]:
+    if "latest_run" not in context:
+        runs = repo.list_analysis_runs(project.id)
+        context["latest_run"] = runs[0] if runs else None
+    return context
+
+
 def _safe_project_path_value(value: str) -> str:
     try:
         return UUID(value).hex
@@ -842,6 +968,24 @@ def _optional_bool_filter(value: str | None) -> bool | None:
     if normalized == "false":
         return False
     raise HTTPException(status_code=422, detail="Invalid boolean filter.")
+
+
+def _optional_float_filter(
+    value: str | None,
+    *,
+    lower: float,
+    upper: float,
+    label: str,
+) -> float | None:
+    if value is None or value == "":
+        return None
+    try:
+        parsed = float(value)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=f"Invalid {label} filter.") from exc
+    if parsed < lower or parsed > upper:
+        raise HTTPException(status_code=422, detail=f"Invalid {label} filter.")
+    return parsed
 
 
 def _redacted_database_url(database_url: str) -> str:

@@ -304,6 +304,12 @@ def test_generate_html_report_contains_bridge_view_sections_and_context() -> Non
     assert "Priority Queue" in html
     assert "Finding Dossiers" in html
     assert "Provider transparency" in html
+    assert "Findings by Severity and Signal" in html
+    assert "Provider Signals" in html
+    assert "Top ATT&amp;CK-Mapped Findings" in html
+    assert "Next 30 Days" in html
+    assert "Evidence Bundle Contents" in html
+    assert "Mapping Confidence" in html
     assert "Action plan" in html
     assert "CVSS-only baseline delta" in html
     assert "Provider evidence" in html

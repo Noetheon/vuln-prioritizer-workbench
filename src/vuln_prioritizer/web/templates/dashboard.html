@@ -1,14 +1,23 @@
 {% extends "base.html" %}
 {% block title %}{{ project.name }} · Dashboard{% endblock %}
 {% block content %}
-<section class="section">
-  <div class="section-head row">
-    <div>
-      <p class="eyebrow">Dashboard</p>
-      <h1>{{ project.name }}</h1>
-    </div>
+<section class="page-hero">
+  <div>
+    <p class="eyebrow">Dashboard</p>
+    <h1>Security dashboard</h1>
+    <p class="page-subtitle">
+      Operational view for {{ project.name }} across prioritized findings, provider state, ownership pressure and the latest analysis run.
+    </p>
+  </div>
+  <div class="page-actions">
+    {% if latest_run %}
+      <a class="button" href="/analysis-runs/{{ latest_run.id }}/executive-report">Executive Report</a>
+    {% endif %}
     <a class="button primary" href="/projects/{{ project.id }}/imports/new">Import findings</a>
   </div>
+</section>
+
+<section class="section">
   <div class="metric-grid">
     {% for label in ["Critical", "High", "Medium", "Low", "KEV", "Open", "VEX suppressed", "Waiver review due", "Expired waivers"] %}
       <article class="metric">
@@ -20,12 +29,12 @@
 </section>
 
 <section class="section split">
-  <div>
+  <div class="panel">
     <div class="section-head">
       <p class="eyebrow">Work queue</p>
       <h2>Top findings</h2>
     </div>
-    <div class="table-wrap">
+    <div class="table-wrap flush">
       <table>
         <thead>
           <tr>
@@ -52,7 +61,7 @@
       </table>
     </div>
   </div>
-  <aside>
+  <aside class="panel">
     <div class="section-head">
       <p class="eyebrow">Services</p>
       <h2>Risk by service</h2>

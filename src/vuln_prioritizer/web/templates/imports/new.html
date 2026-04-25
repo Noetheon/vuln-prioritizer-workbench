@@ -1,62 +1,106 @@
 {% extends "base.html" %}
 {% block title %}Import · {{ project.name }}{% endblock %}
 {% block content %}
-<section class="section narrow">
-  <div class="section-head">
+<section class="page-hero">
+  <div>
     <p class="eyebrow">Import</p>
-    <h1>{{ project.name }}</h1>
+    <h1>Import findings</h1>
+    <p class="page-subtitle">
+      Start a new analysis run for {{ project.name }} by uploading scanner output or a CVE list, then attach the evidence sources that should influence prioritization.
+    </p>
   </div>
-  <form class="form-panel" method="post" action="/web/projects/{{ project.id }}/imports" enctype="multipart/form-data">
+</section>
+
+<section class="section import-layout">
+  <form class="form-panel workbench-form" method="post" action="/web/projects/{{ project.id }}/imports" enctype="multipart/form-data">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-    <label>
-      Input format
-      <select name="input_format">
-        <option value="cve-list">CVE list</option>
-        <option value="generic-occurrence-csv">Generic occurrence CSV</option>
-        <option value="trivy-json">Trivy JSON</option>
-        <option value="grype-json">Grype JSON</option>
-      </select>
-    </label>
-    <label>
-      File
-      <input required type="file" name="file">
-    </label>
-    <label>
-      Provider snapshot
-      <input name="provider_snapshot_file" placeholder="demo_provider_snapshot.json">
-    </label>
-    <label class="checkbox-row">
-      <input type="checkbox" name="locked_provider_data" value="true">
-      Locked provider data
-    </label>
-    <label>
-      ATT&amp;CK source
-      <select name="attack_source">
-        <option value="none">None</option>
-        <option value="ctid-json">CTID JSON</option>
-      </select>
-    </label>
-    <label>
-      ATT&amp;CK mapping file
-      <input name="attack_mapping_file" placeholder="ctid_kev_enterprise_2025-07-28_attack-16.1_subset.json">
-    </label>
-    <label>
-      ATT&amp;CK technique metadata
-      <input name="attack_technique_metadata_file" placeholder="attack_techniques_enterprise_16.1_subset.json">
-    </label>
-    <label>
-      Asset context
-      <input type="file" name="asset_context_file" accept=".csv,text/csv">
-    </label>
-    <label>
-      VEX document
-      <input type="file" name="vex_file" accept=".json,application/json">
-    </label>
-    <label>
-      Waiver file
-      <input type="file" name="waiver_file" accept=".yml,.yaml,text/yaml,application/x-yaml">
-    </label>
-    <button class="button primary" type="submit">Start import</button>
+    <fieldset class="form-section">
+      <legend><span>01</span> Source input</legend>
+      <p class="muted">Choose the scanner or list format and upload the file that should become the run baseline.</p>
+      <div class="form-grid two">
+        <label>
+          Input format
+          <select name="input_format">
+            <option value="cve-list">CVE list</option>
+            <option value="generic-occurrence-csv">Generic occurrence CSV</option>
+            <option value="trivy-json">Trivy JSON</option>
+            <option value="grype-json">Grype JSON</option>
+          </select>
+        </label>
+        <label>
+          File
+          <input required type="file" name="file">
+        </label>
+      </div>
+    </fieldset>
+
+    <fieldset class="form-section">
+      <legend><span>02</span> Provider evidence</legend>
+      <p class="muted">Use a locked snapshot when the report must be reproducible from known NVD, EPSS and KEV inputs.</p>
+      <div class="form-grid two">
+        <label>
+          Provider snapshot
+          <input name="provider_snapshot_file" placeholder="demo_provider_snapshot.json">
+        </label>
+        <label class="checkbox-row">
+          <input type="checkbox" name="locked_provider_data" value="true">
+          Locked provider data
+        </label>
+      </div>
+    </fieldset>
+
+    <fieldset class="form-section">
+      <legend><span>03</span> Optional context</legend>
+      <p class="muted">Attach only the context you trust. Missing context stays visible as unavailable data instead of being guessed.</p>
+      <div class="form-grid two">
+        <label>
+          ATT&amp;CK source
+          <select name="attack_source">
+            <option value="none">None</option>
+            <option value="ctid-json">CTID JSON</option>
+          </select>
+        </label>
+        <label>
+          ATT&amp;CK mapping file
+          <input name="attack_mapping_file" placeholder="ctid_kev_enterprise_2025-07-28_attack-16.1_subset.json">
+        </label>
+        <label>
+          ATT&amp;CK technique metadata
+          <input name="attack_technique_metadata_file" placeholder="attack_techniques_enterprise_16.1_subset.json">
+        </label>
+        <label>
+          Asset context
+          <input type="file" name="asset_context_file" accept=".csv,text/csv">
+        </label>
+        <label>
+          VEX document
+          <input type="file" name="vex_file" accept=".json,application/json">
+        </label>
+        <label>
+          Waiver file
+          <input type="file" name="waiver_file" accept=".yml,.yaml,text/yaml,application/x-yaml">
+        </label>
+      </div>
+    </fieldset>
+
+    <div class="form-footer">
+      <p class="muted">The run will redirect to artifact generation after normalization, enrichment and scoring are complete.</p>
+      <button class="button primary" type="submit">Start import</button>
+    </div>
   </form>
+
+  <aside class="panel workflow-panel">
+    <div class="section-head">
+      <p class="eyebrow">Analysis pipeline</p>
+      <h2>What happens next</h2>
+    </div>
+    <div class="step-list">
+      <div><span>1</span><strong>Ingest</strong><p>Read CVEs, components, assets and optional governance files.</p></div>
+      <div><span>2</span><strong>Normalize</strong><p>Deduplicate CVEs and resolve project asset context.</p></div>
+      <div><span>3</span><strong>Enrich</strong><p>Join NVD, EPSS, KEV and approved ATT&amp;CK mappings.</p></div>
+      <div><span>4</span><strong>Prioritize</strong><p>Rank findings by operational priority and remediation signal.</p></div>
+      <div><span>5</span><strong>Report</strong><p>Create Workbench views, exports and evidence bundles.</p></div>
+    </div>
+  </aside>
 </section>
 {% endblock %}

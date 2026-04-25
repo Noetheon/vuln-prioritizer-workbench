@@ -1,16 +1,24 @@
 {% extends "base.html" %}
 {% block title %}{{ finding.cve_id }} · Finding{% endblock %}
 {% block content %}
-<section class="section">
-  <div class="section-head">
+<section class="page-hero">
+  <div>
     <p class="eyebrow">Finding detail</p>
-    <h1>{{ finding.cve_id }}</h1>
+    <h1>Finding detail</h1>
     <div class="chip-row">
       <span class="badge {{ finding.priority|lower }}">{{ finding.priority }}</span>
       {% if finding.in_kev %}<span class="badge critical">KEV</span>{% endif %}
       <span class="badge neutral">{{ finding.status }}</span>
     </div>
   </div>
+  <div class="hero-meta">
+    <span>CVE <strong>{{ finding.cve_id }}</strong></span>
+    <span>Project <strong>{{ project.name }}</strong></span>
+    <span>Owner <strong>{{ finding.asset.owner if finding.asset and finding.asset.owner else "Unassigned" }}</strong></span>
+  </div>
+</section>
+
+<section class="section">
   <div class="detail-grid">
     <article class="panel">
       <p class="eyebrow">Why this priority?</p>

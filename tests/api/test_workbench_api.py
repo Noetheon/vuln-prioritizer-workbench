@@ -181,6 +181,33 @@ def test_workbench_import_findings_reports_and_evidence(tmp_path: Path) -> None:
     assert run_summary.status_code == 200
     assert run_summary.json()["findings_count"] == len(EXPECTED_SAMPLE_CVES)
 
+    executive_report = client.get(f"/api/analysis-runs/{run['id']}/executive-report")
+    assert executive_report.status_code == 200
+    executive_payload = executive_report.json()
+    assert executive_payload["title"] == project["name"]
+    assert executive_payload["nav"][0]["label"] == "Executive Security Overview"
+    assert executive_payload["workspace_nav"]["groups"][0]["label"] == "Analyze"
+    assert any(
+        link["label"] == "Executive Report" and link["active"]
+        for group in executive_payload["workspace_nav"]["groups"]
+        for link in group["links"]
+    )
+    assert any(item["label"] == "KEV" for item in executive_payload["kpis"])
+    assert executive_payload["priority_findings"][0]["cve"].startswith("CVE-")
+    assert set(executive_payload) >= {
+        "overview_metrics",
+        "provider_cards",
+        "severity_signal_rows",
+        "asset_risk_rows",
+        "priority_kpis",
+        "attack",
+        "remediation",
+        "evidence",
+    }
+    assert executive_payload["attack"]["technique_strip"] is not None
+    assert executive_payload["remediation"]["next_steps"]
+    assert executive_payload["evidence"]["provider_rows"]
+
     findings = client.get(f"/api/projects/{project['id']}/findings")
     assert findings.status_code == 200
     items = findings.json()["items"]

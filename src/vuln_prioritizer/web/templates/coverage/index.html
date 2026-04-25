@@ -1,32 +1,57 @@
 {% extends "base.html" %}
 {% block title %}Detection Coverage · {{ project.name }}{% endblock %}
 {% block content %}
-<section class="section">
-  <div class="section-head row">
-    <div>
-      <p class="eyebrow">Detection coverage</p>
-      <h1>{{ project.name }}</h1>
-    </div>
+<section class="page-hero">
+  <div>
+    <p class="eyebrow">Detection coverage</p>
+    <h1>Detection coverage</h1>
+    <p class="page-subtitle">
+      Compare ATT&amp;CK-mapped findings in {{ project.name }} with imported detection controls to identify where monitoring coverage needs attention.
+    </p>
+  </div>
+  <div class="page-actions">
     <a class="button" href="/api/projects/{{ project.id }}/attack/coverage-gap-navigator-layer">Navigator layer</a>
   </div>
+</section>
+
+<section class="section">
+  <div class="metric-grid compact">
+    <article class="metric"><span>Techniques</span><strong>{{ coverage_summary.techniques }}</strong></article>
+    <article class="metric"><span>Controls</span><strong>{{ coverage_summary.controls }}</strong></article>
+    <article class="metric"><span>Covered</span><strong>{{ coverage_summary.covered }}</strong></article>
+    <article class="metric"><span>Partial</span><strong>{{ coverage_summary.partial }}</strong></article>
+    <article class="metric"><span>Not covered</span><strong>{{ coverage_summary.not_covered }}</strong></article>
+    <article class="metric"><span>Unknown</span><strong>{{ coverage_summary.unknown }}</strong></article>
+  </div>
+</section>
+
+<section class="section split compact-split">
   <form class="form-panel" method="post" action="/web/projects/{{ project.id }}/coverage/import" enctype="multipart/form-data">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <div>
+      <p class="eyebrow">Control evidence</p>
+      <h2>Import controls</h2>
+      <p class="muted">Upload detection coverage as CSV or YAML. Rows are joined by ATT&amp;CK technique ID.</p>
+    </div>
     <label>Detection controls CSV/YAML
       <input type="file" name="file" accept=".csv,.yml,.yaml,text/csv,text/yaml" required>
     </label>
     <button class="button primary" type="submit">Import controls</button>
   </form>
+  <aside class="panel insight-panel">
+    <p class="eyebrow">Coverage model</p>
+    <h2>Mapped techniques first</h2>
+    <p>Coverage gaps are based on ATT&amp;CK techniques already present in findings plus any technique IDs in imported controls. Unknown means no control evidence was supplied.</p>
+  </aside>
 </section>
 
 <section class="section">
-  <div class="section-head">
-    <p class="eyebrow">Coverage gaps</p>
-    <h2>Mapped techniques needing review</h2>
-  </div>
-  <div class="metric-grid">
-    {% for level, count in gaps.summary.items() %}
-      <article class="metric"><span>{{ level }}</span><strong>{{ count }}</strong></article>
-    {% endfor %}
+  <div class="section-head row">
+    <div>
+      <p class="eyebrow">Coverage gaps</p>
+      <h2>Mapped techniques needing review</h2>
+    </div>
+    <span class="muted">{{ gaps["items"]|length }} technique rows</span>
   </div>
   <div class="table-wrap">
     <table>
@@ -45,7 +70,7 @@
           <tr>
             <td><a href="/projects/{{ project.id }}/attack/techniques/{{ item.technique_id }}">{{ item.technique_id }}</a></td>
             <td>{{ item.name or "N.A." }}</td>
-            <td><span class="badge neutral">{{ item.coverage_level }}</span></td>
+            <td><span class="badge {{ item.coverage_level }}">{{ item.coverage_level }}</span></td>
             <td>{{ item.finding_count }}</td>
             <td>{{ item.owner or "Unassigned" }}</td>
             <td>{{ item.recommended_action }}</td>
@@ -59,9 +84,12 @@
 </section>
 
 <section class="section">
-  <div class="section-head">
-    <p class="eyebrow">Controls</p>
-    <h2>Imported detection evidence</h2>
+  <div class="section-head row">
+    <div>
+      <p class="eyebrow">Controls</p>
+      <h2>Imported detection evidence</h2>
+    </div>
+    <span class="muted">{{ controls|length }} controls</span>
   </div>
   <div class="table-wrap">
     <table>
@@ -80,7 +108,7 @@
           <tr>
             <td>{{ control.name }}</td>
             <td>{{ control.technique_id }}</td>
-            <td>{{ control.coverage_level }}</td>
+            <td><span class="badge {{ control.coverage_level }}">{{ control.coverage_level }}</span></td>
             <td>{{ control.environment or "N.A." }}</td>
             <td>{{ control.owner or "Unassigned" }}</td>
             <td>{{ control.evidence_ref or "N.A." }}</td>

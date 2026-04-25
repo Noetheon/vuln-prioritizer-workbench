@@ -103,6 +103,10 @@ from vuln_prioritizer.services.workbench_attack import (
     navigator_layer_from_contexts,
     top_technique_rows,
 )
+from vuln_prioritizer.services.workbench_executive_report import (
+    WorkbenchExecutiveReportError,
+    build_run_executive_report_model,
+)
 from vuln_prioritizer.services.workbench_governance import build_governance_summary
 from vuln_prioritizer.services.workbench_reports import (
     WorkbenchReportError,
@@ -447,6 +451,22 @@ def get_run_summary(
     if run is None:
         raise HTTPException(status_code=404, detail="Analysis run not found.")
     return _analysis_run_payload(run)["summary"]
+
+
+@api_router.get("/analysis-runs/{run_id}/executive-report")
+def get_run_executive_report(
+    run_id: str,
+    session: Annotated[Session, Depends(get_db_session)],
+) -> dict[str, Any]:
+    repo = WorkbenchRepository(session)
+    run = repo.get_analysis_run(run_id)
+    if run is None:
+        raise HTTPException(status_code=404, detail="Analysis run not found.")
+    project = repo.get_project(run.project_id)
+    try:
+        return build_run_executive_report_model(repo=repo, run=run, project=project)
+    except WorkbenchExecutiveReportError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 @api_router.get("/projects/{project_id}/findings", response_model=FindingsListResponse)

@@ -1,14 +1,29 @@
 {% extends "base.html" %}
 {% block title %}Settings · {{ project.name }}{% endblock %}
 {% block content %}
-<section class="section">
-  <div class="section-head row">
-    <div>
-      <p class="eyebrow">Settings</p>
-      <h1>{{ project.name }}</h1>
-    </div>
+<section class="page-hero">
+  <div>
+    <p class="eyebrow">Settings</p>
+    <h1>Settings</h1>
+    <p class="page-subtitle">
+      Runtime paths, provider snapshot state and refresh jobs for {{ project.name }}.
+    </p>
+  </div>
+  <div class="page-actions">
     <a class="button" href="/projects/{{ project.id }}/dashboard">Dashboard</a>
   </div>
+</section>
+
+<section class="section">
+  <div class="metric-grid compact">
+    <article class="metric text-metric"><span>Provider status</span><strong>{{ provider_status.status }}</strong></article>
+    <article class="metric"><span>Sources</span><strong>{{ provider_status.sources|length }}</strong></article>
+    <article class="metric"><span>Jobs</span><strong>{{ provider_jobs|length }}</strong></article>
+    <article class="metric"><span>Max upload</span><strong>{{ settings.max_upload_mb }} MB</strong></article>
+  </div>
+</section>
+
+<section class="section">
   <div class="detail-grid">
     <article class="panel">
       <p class="eyebrow">Runtime</p>
@@ -39,22 +54,29 @@
 </section>
 
 <section class="section">
-  <div class="section-head">
-    <p class="eyebrow">Provider updates</p>
-    <h2>Refresh jobs</h2>
+  <div class="split compact-split">
+    <form class="form-panel" method="post" action="/web/projects/{{ project.id }}/providers/update-jobs">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <div>
+        <p class="eyebrow">Provider updates</p>
+        <h2>Refresh jobs</h2>
+        <p class="muted">Jobs create a new snapshot only after the refresh artifact is written; failed jobs keep the previous snapshot intact.</p>
+      </div>
+      <div class="form-grid">
+        <label><input type="checkbox" name="sources" value="nvd" checked> NVD</label>
+        <label><input type="checkbox" name="sources" value="epss" checked> EPSS</label>
+        <label><input type="checkbox" name="sources" value="kev" checked> KEV</label>
+        <label>Max CVEs<input name="max_cves" type="number" min="1" max="500" placeholder="All current findings"></label>
+        <label><input type="checkbox" name="cache_only" value="true" checked> Cache-only</label>
+      </div>
+      <button class="button primary" type="submit">Start provider update</button>
+    </form>
+    <aside class="panel insight-panel">
+      <p class="eyebrow">Snapshot discipline</p>
+      <h2>Reports prefer locked data</h2>
+      <p>Use locked provider snapshots for reproducible executive reports. Live refresh jobs should be treated as new evidence, not silent changes to old runs.</p>
+    </aside>
   </div>
-  <form class="form-panel" method="post" action="/web/projects/{{ project.id }}/providers/update-jobs">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-    <div class="form-grid">
-      <label><input type="checkbox" name="sources" value="nvd" checked> NVD</label>
-      <label><input type="checkbox" name="sources" value="epss" checked> EPSS</label>
-      <label><input type="checkbox" name="sources" value="kev" checked> KEV</label>
-      <label>Max CVEs<input name="max_cves" type="number" min="1" max="500" placeholder="All current findings"></label>
-      <label><input type="checkbox" name="cache_only" value="true" checked> Cache-only</label>
-    </div>
-    <p class="muted">Jobs create a new snapshot only after the refresh artifact is written; failed jobs keep the previous snapshot intact.</p>
-    <button class="button primary" type="submit">Start provider update</button>
-  </form>
   <div class="table-wrap">
     <table>
       <thead>
