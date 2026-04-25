@@ -1,9 +1,5 @@
 from __future__ import annotations
 
-import pytest
-
-pytest.importorskip("sqlalchemy")
-
 from sqlalchemy import inspect, select
 
 from vuln_prioritizer.db import (

@@ -6,7 +6,7 @@
 
 > Hinweis: Die V2-Inhalte bleiben enthalten. Die neue V3-Erweiterung beginnt ab Abschnitt 57 und ergänzt Versionen, Epics, konkrete GitHub Issues, Tests, Release-Gates, Definition of Done, Risiko-Register und die ATT&CK/TTP-Umsetzung als Software-Engineering-Plan.
 
-> Historischer Planungsstand: Dieses Dokument bleibt als Entwurfs- und Planungsartefakt erhalten. Verbindlich für den aktuellen Release-Stand sind `docs/roadmap.md`, `docs/workbench-v1-release-checklist.md` und `docs/releases/v1.1.0.md`; der aktuelle Coverage-Gate liegt bei 90%.
+> Historischer Planungsstand: Dieses Dokument bleibt als Entwurfs- und Planungsartefakt erhalten. Es ist kein aktueller Backlog, keine aktuelle Release-Checkliste und keine Quelle für heutige Coverage-Gates. Verbindlich für den aktuellen Release-Stand sind `docs/roadmap.md`, `docs/workbench-threat-model.md`, `docs/workbench-v1-release-checklist.md` und `docs/releases/v1.1.0.md`; der aktuelle lokale Coverage-Gate liegt bei `--cov-fail-under=90`. Alle darunterliegenden alten Ziele unter 90% und alle nicht abgehakten Backlog-Punkte sind historischer Kontext.
 
 ---
 
@@ -3071,6 +3071,8 @@ Supported outputs:
 
 ## 51. GitHub-Backlog als konkrete Issues
 
+> Archivhinweis: Die folgenden Issue-Entwürfe sind ein historischer Planungsbacklog. Sie sind nicht der aktuelle öffentliche Projektbacklog; aktuelle shipped/local-first Workbench-Scope-Informationen stehen in `docs/roadmap.md` und `docs/releases/v1.1.0.md`.
+
 ### Epic 1 — ATT&CK-Lite
 
 ```text
@@ -4132,8 +4134,8 @@ Das Projekt wird releasefähig.
 - [ ] Parser Robustness Tests.
 - [ ] Performance Import 10.000 Findings.
 - [ ] E2E Demo Test.
-- [ ] Coverage Core >= 85%.
-- [ ] Coverage Services >= 75%.
+- [ ] Coverage Core >= 85% (historisches Teilziel; aktueller Gate ist 90% repo-weit).
+- [ ] Coverage Services >= 75% (historisches Teilziel; aktueller Gate ist 90% repo-weit).
 - [ ] Dependency Audit ohne kritische Findings oder mit dokumentierter Ausnahme.
 - [ ] CodeQL ohne kritische Findings.
 
@@ -4198,6 +4200,8 @@ Erster stabiler Open-Source-Release.
 ---
 
 ## 61. Epic-Backlog
+
+> Archivhinweis: Dieser Epic-Backlog ist eine historische Umsetzungsplanung. Nicht abgehakte Punkte in diesem Abschnitt sind nicht automatisch offene Arbeit auf `main`.
 
 ## 61.1 Epic E01 — Repo Governance und Open-Source-Reife
 
@@ -4871,7 +4875,7 @@ Diese Liste kann direkt in GitHub Issues übertragen werden.
 73. `[E13] Harden file upload handling`
 74. `[E13] Add safe report rendering tests`
 75. `[E14] Add performance test with 10k findings`
-76. `[E14] Raise core coverage gate to 85 percent`
+76. `[E14] Raise core coverage gate to 85 percent` (historical target; superseded by the current 90% repo-wide gate)
 77. `[E15] Complete Quickstart and Demo docs`
 78. `[E15] Complete scoring and ATT&CK methodology docs`
 79. `[E13] Run dependency audit and document exceptions`
@@ -4936,7 +4940,9 @@ Static Checks: Ruff, Mypy, Security, Schema, Docs
 | Performance Tests | Nutzbarkeit prüfen | 10.000 Findings Import |
 | Docs Tests | Beispiele und Links prüfen | MkDocs Build, Link Check |
 
-### 63.3 Coverage-Ziele
+### 63.3 Historische Coverage-Ziele
+
+> Aktueller Gate: Der heutige lokale Qualitätsgate liegt repo-weit bei `--cov-fail-under=90`. Die niedrigeren bereichsbezogenen Ziele in der Tabelle sind als historischer Planungsstand erhalten und dürfen nicht als aktuelle Ausnahme vom 90%-Gate gelesen werden.
 
 | Bereich | Mindestziel |
 |---|---:|

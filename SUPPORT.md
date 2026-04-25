@@ -32,7 +32,7 @@ Before opening an issue, include the exact command, input format, observed outpu
 
 Do not open public issues for security vulnerabilities in the CLI, release workflow, or repository configuration.
 
-Use the private vulnerability reporting flow if it is enabled for the public repository. Otherwise, follow [SECURITY.md](SECURITY.md).
+Use GitHub private vulnerability reporting for this public repository. If that flow is temporarily unavailable, follow [SECURITY.md](SECURITY.md).
 
 ## Scope Reminder
 

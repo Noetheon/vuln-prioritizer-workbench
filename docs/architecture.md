@@ -69,7 +69,7 @@ The Workbench app is an additive FastAPI/Jinja2 layer over the existing core. `d
 
 Workbench runtime state is controlled by environment variables for database URL, upload directory, report directory, trusted provider snapshot directory, provider cache directory, upload size, NVD API-key environment name, and the local CSRF token. The Docker Compose path uses named volumes for writable runtime state, keeps provider snapshots writable for refresh jobs, and mounts checked-in demo data read-only so startup can seed locked demo snapshots without making fixture data mutable.
 
-The MVP web/API import path is intentionally narrower than the CLI input matrix: CVE lists, `generic-occurrence-csv`, Trivy JSON, and Grype JSON. The CLI remains the broader automation surface for SBOM, XML scanner exports, state snapshots, CI outputs, and advanced report generation.
+The current web/API import path is intentionally narrower than the CLI input matrix: CVE lists, `generic-occurrence-csv`, Trivy JSON, and Grype JSON. The CLI remains the broader automation surface for SBOM, XML scanner exports, state snapshots, CI outputs, and advanced report generation.
 
 The Workbench threat model and readiness checklist are maintained in [workbench-threat-model.md](workbench-threat-model.md). The current architecture assumes a trusted local operator, SQLite default storage, and no public-internet exposure until authentication and shared-deployment hardening are added.
 
