@@ -91,6 +91,12 @@ markers = [
   "live_network: allow real network access through requests in this test.",
 ]
 
+[tool.coverage.run]
+omit = [
+  "src/vuln_prioritizer/db/alembic/env.py",
+  "src/vuln_prioritizer/db/alembic/versions/*.py",
+]
+
 [tool.ruff]
 target-version = "py311"
 line-length = 100
@@ -101,6 +107,7 @@ extend-select = ["B018"]
 
 [tool.ruff.lint.per-file-ignores]
 "src/vuln_prioritizer/reporter.py" = ["E501"]
+"src/vuln_prioritizer/reporting_html.py" = ["E501"]
 "tests/test_reporter.py" = ["E501"]
 
 [tool.mypy]

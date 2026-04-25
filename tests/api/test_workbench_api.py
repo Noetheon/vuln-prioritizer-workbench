@@ -992,7 +992,7 @@ def test_workbench_api_tokens_config_provider_jobs_and_github_preview(
         return FakeGitHubResponse()
 
     monkeypatch.setenv("GITHUB_TOKEN", "ghp_test")
-    monkeypatch.setattr("vuln_prioritizer.api.routes.requests.post", fake_post)
+    monkeypatch.setattr("vuln_prioritizer.api.workbench_github.requests.post", fake_post)
     exported = client.post(
         f"/api/projects/{project['id']}/github/issues/export",
         json={

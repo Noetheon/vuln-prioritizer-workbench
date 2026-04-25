@@ -6,6 +6,13 @@ import csv
 import re
 from pathlib import Path
 
+from vuln_prioritizer.attack_sources import (
+    ATTACK_SOURCE_CTID_JSON,
+    ATTACK_SOURCE_CTID_MAPPINGS_EXPLORER,
+    ATTACK_SOURCE_LOCAL_CSV,
+    ATTACK_SOURCE_NONE,
+    LEGACY_LOCAL_CSV_WARNING,
+)
 from vuln_prioritizer.models import AttackData, AttackTechnique
 from vuln_prioritizer.providers.attack_metadata import AttackMetadataProvider
 from vuln_prioritizer.providers.ctid_mappings import CtidMappingsProvider
@@ -28,22 +35,22 @@ class AttackProvider:
         cve_ids: list[str],
         *,
         enabled: bool,
-        source: str = "none",
+        source: str = ATTACK_SOURCE_NONE,
         mapping_file: Path | None = None,
         technique_metadata_file: Path | None = None,
         offline_file: Path | None = None,
     ) -> tuple[dict[str, AttackData], dict[str, str | None], list[str]]:
         if not enabled:
-            return {}, _build_metadata(source="none"), []
+            return {}, _build_metadata(source=ATTACK_SOURCE_NONE), []
 
-        if source == "none" and (mapping_file is not None or offline_file is not None):
+        if source == ATTACK_SOURCE_NONE and (mapping_file is not None or offline_file is not None):
             candidate = mapping_file or offline_file
             if candidate is not None and candidate.suffix.lower() == ".csv":
-                source = "local-csv"
+                source = ATTACK_SOURCE_LOCAL_CSV
             else:
-                source = "ctid-json"
-        if source == "none":
-            return {}, _build_metadata(source="none"), []
+                source = ATTACK_SOURCE_CTID_JSON
+        if source == ATTACK_SOURCE_NONE:
+            return {}, _build_metadata(source=ATTACK_SOURCE_NONE), []
 
         normalized_source = source
         if offline_file is not None and mapping_file is None:
@@ -55,13 +62,9 @@ class AttackProvider:
                 ["ATT&CK mode requested, but no ATT&CK mapping file was provided."],
             )
 
-        if normalized_source == "local-csv":
+        if normalized_source == ATTACK_SOURCE_LOCAL_CSV:
             results, warnings = self._load_legacy_csv(cve_ids, mapping_file)
-            warnings.insert(
-                0,
-                "ATT&CK source local-csv is a legacy compatibility mode; "
-                "prefer --attack-source ctid-json for structured CTID-backed ATT&CK context.",
-            )
+            warnings.insert(0, LEGACY_LOCAL_CSV_WARNING)
             if technique_metadata_file is not None:
                 warnings.append(
                     "ATT&CK technique metadata is ignored when --attack-source local-csv is used."
@@ -70,13 +73,13 @@ class AttackProvider:
             return (
                 enriched,
                 _build_metadata(
-                    source="local-csv",
+                    source=ATTACK_SOURCE_LOCAL_CSV,
                     mapping_file=mapping_file,
                 ),
                 warnings,
             )
 
-        if normalized_source == "ctid-json":
+        if normalized_source == ATTACK_SOURCE_CTID_JSON:
             return self._load_ctid_json(
                 cve_ids,
                 mapping_file=mapping_file,
@@ -97,10 +100,13 @@ class AttackProvider:
         results, warnings = self._load_legacy_csv([], mapping_file)
         warnings.insert(
             0,
-            "ATT&CK source local-csv is a legacy compatibility mode; "
-            "prefer --attack-source ctid-json for structured CTID-backed ATT&CK context.",
+            LEGACY_LOCAL_CSV_WARNING,
         )
-        return results, _build_metadata(source="local-csv", mapping_file=mapping_file), warnings
+        return (
+            results,
+            _build_metadata(source=ATTACK_SOURCE_LOCAL_CSV, mapping_file=mapping_file),
+            warnings,
+        )
 
     def _load_ctid_json(
         self,
@@ -123,7 +129,7 @@ class AttackProvider:
             cve_ids,
             mappings_by_cve=mappings_by_cve,
             techniques_by_id=techniques_by_id,
-            source="ctid-mappings-explorer",
+            source=ATTACK_SOURCE_CTID_MAPPINGS_EXPLORER,
             source_version=(
                 mapping_metadata.get("mapping_framework_version")
                 or mapping_metadata.get("mapping_version")
@@ -133,7 +139,7 @@ class AttackProvider:
             domain=technique_metadata.get("domain") or mapping_metadata.get("domain"),
         )
         metadata = _build_metadata(
-            source="ctid-mappings-explorer",
+            source=ATTACK_SOURCE_CTID_MAPPINGS_EXPLORER,
             mapping_file=mapping_file,
             technique_metadata_file=technique_metadata_file,
             source_version=mapping_metadata.get("mapping_framework_version")
@@ -208,7 +214,7 @@ class AttackProvider:
                 index[cve_id] = AttackData(
                     cve_id=cve_id,
                     mapped=bool(techniques or tactics or note),
-                    source="local-csv",
+                    source=ATTACK_SOURCE_LOCAL_CSV,
                     attack_techniques=techniques,
                     attack_tactics=tactics,
                     attack_note=note,

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import csv
 import json
-from collections.abc import Iterator, Mapping
+from collections.abc import Callable, Iterator, Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal, overload
@@ -262,29 +262,10 @@ def _load_single_input(
         raise ValueError(f"Input file does not exist: {path}")
 
     resolved_format = detect_input_format(path, explicit_format=input_format)
-    if resolved_format == "cve-list":
-        parsed = _parse_cve_list(path)
-    elif resolved_format == "generic-occurrence-csv":
-        parsed = _parse_generic_occurrence_csv(path)
-    elif resolved_format == "trivy-json":
-        parsed = _parse_trivy_json(path)
-    elif resolved_format == "grype-json":
-        parsed = _parse_grype_json(path)
-    elif resolved_format == "cyclonedx-json":
-        parsed = _parse_cyclonedx_json(path)
-    elif resolved_format == "spdx-json":
-        parsed = _parse_spdx_json(path)
-    elif resolved_format == "dependency-check-json":
-        parsed = _parse_dependency_check_json(path)
-    elif resolved_format == "github-alerts-json":
-        parsed = _parse_github_alerts_json(path)
-    elif resolved_format == "nessus-xml":
-        parsed = _parse_nessus_xml(path)
-    elif resolved_format == "openvas-xml":
-        parsed = _parse_openvas_xml(path)
-    else:
+    parser = _INPUT_PARSERS.get(resolved_format)
+    if parser is None:
         raise ValueError(f"Unsupported input format: {resolved_format}")
-    return parsed
+    return parser(path)
 
 
 def build_inline_input(
@@ -1375,3 +1356,23 @@ def _spdx_purl(package: dict) -> str | None:
         if reference.get("referenceType") == "purl":
             return reference.get("referenceLocator")
     return None
+
+
+_InputParser = Callable[[Path], ParsedInput]
+
+_INPUT_PARSERS: dict[str, _InputParser] = {
+    # CVE lists and occurrence CSVs.
+    "cve-list": _parse_cve_list,
+    "generic-occurrence-csv": _parse_generic_occurrence_csv,
+    # Scanner and advisory exports.
+    "trivy-json": _parse_trivy_json,
+    "grype-json": _parse_grype_json,
+    "dependency-check-json": _parse_dependency_check_json,
+    "github-alerts-json": _parse_github_alerts_json,
+    # SBOM formats.
+    "cyclonedx-json": _parse_cyclonedx_json,
+    "spdx-json": _parse_spdx_json,
+    # XML scanner exports; parsing stays limited to safe local XML support.
+    "nessus-xml": _parse_nessus_xml,
+    "openvas-xml": _parse_openvas_xml,
+}

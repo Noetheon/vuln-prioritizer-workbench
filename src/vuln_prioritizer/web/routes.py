@@ -14,7 +14,8 @@ from sqlalchemy.engine import make_url
 from sqlalchemy.orm import Session
 
 from vuln_prioritizer.api.deps import get_db_session, get_workbench_settings
-from vuln_prioritizer.api.routes import (
+from vuln_prioritizer.api.schemas import ProviderSourceName, ProviderUpdateJobRequest, WaiverRequest
+from vuln_prioritizer.api.workbench_support import (
     _cleanup_saved_uploads,
     _count_matching_waiver_findings,
     _coverage_gap_payload,
@@ -35,7 +36,6 @@ from vuln_prioritizer.api.routes import (
     _validated_waiver_values,
     _waiver_payload,
 )
-from vuln_prioritizer.api.schemas import ProviderSourceName, ProviderUpdateJobRequest, WaiverRequest
 from vuln_prioritizer.db.repositories import WorkbenchRepository
 from vuln_prioritizer.services.workbench_analysis import (
     WorkbenchAnalysisError,

@@ -7,11 +7,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-import typer
 from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
-from vuln_prioritizer.cli_support.analysis import AnalysisRequest, prepare_analysis
 from vuln_prioritizer.cli_support.common import (
     AttackSource,
     InputFormat,
@@ -25,6 +23,12 @@ from vuln_prioritizer.inputs.loader import InputSpec
 from vuln_prioritizer.models import AnalysisContext, AttackData, PrioritizedFinding, PriorityPolicy
 from vuln_prioritizer.provider_snapshot import load_provider_snapshot
 from vuln_prioritizer.reporting_payloads import build_analysis_report_payload
+from vuln_prioritizer.services.analysis import (
+    AnalysisInputError,
+    AnalysisNoFindingsError,
+    AnalysisRequest,
+    prepare_analysis,
+)
 from vuln_prioritizer.services.workbench_attack import (
     attack_mapping_payload,
     attack_technique_payload,
@@ -139,13 +143,15 @@ def run_workbench_import(
 
     try:
         findings, context = prepare_analysis(request)
-    except (OSError, ValidationError, ValueError) as exc:
+    except (
+        OSError,
+        ValidationError,
+        ValueError,
+        AnalysisInputError,
+        AnalysisNoFindingsError,
+    ) as exc:
         repo.finish_analysis_run(run.id, status="failed", error_message=str(exc))
         raise WorkbenchAnalysisError(str(exc)) from exc
-    except typer.Exit as exc:
-        detail = f"Analysis failed with exit code {exc.exit_code}."
-        repo.finish_analysis_run(run.id, status="failed", error_message=detail)
-        raise WorkbenchAnalysisError(detail) from exc
 
     payload = build_analysis_report_payload(findings, context)
     _attach_workbench_metadata(
