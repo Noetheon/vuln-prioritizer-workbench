@@ -64,6 +64,7 @@ def create_app(
         StaticFiles(directory=str(Path(__file__).parents[1] / "web" / "static")),
         name="static",
     )
+    app.add_api_route("/healthz", _healthz, methods=["GET"], include_in_schema=False)
     app.include_router(api_router)
     app.include_router(web_router)
     app.add_exception_handler(HTTPException, _http_error_handler)
@@ -130,6 +131,16 @@ async def _api_token_auth(request: Request, call_next: Any) -> Any:
 
 
 def _requires_api_token_check(request: Request) -> bool:
+    gated_get_paths = {"/api/diagnostics", "/api/tokens", "/api/audit-events", "/api/jobs"}
+    if request.method == "GET" and (
+        request.url.path in gated_get_paths
+        or (
+            request.url.path.startswith("/api/projects/")
+            and request.url.path.endswith("/audit-events")
+        )
+        or request.url.path.startswith("/api/jobs/")
+    ):
+        return True
     if request.method not in {"POST", "PUT", "PATCH", "DELETE"}:
         return False
     return request.url.path.startswith("/api/")
@@ -324,6 +335,10 @@ def _ensure_sqlite_parent(database_url: str) -> None:
     sqlite_path = sqlite_path_from_url(database_url)
     if sqlite_path is not None:
         sqlite_path.parent.mkdir(parents=True, exist_ok=True)
+
+
+def _healthz() -> dict[str, str]:
+    return {"status": "ok"}
 
 
 def main(host: str = "127.0.0.1", port: int = 8000) -> None:

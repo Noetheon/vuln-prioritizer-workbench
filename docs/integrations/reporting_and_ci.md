@@ -34,10 +34,20 @@ The repository root also exposes a composite GitHub Action via [`action.yml`](ht
 The current composite action supports these modes:
 
 - `mode: analyze`
+- `mode: compare`
+- `mode: explain`
+- `mode: doctor`
+- `mode: input-validate`
+- `mode: snapshot`
+- `mode: rollup`
+- `mode: data-verify`
+- `mode: attack-validate`
+- `mode: attack-coverage`
 - `mode: report-html`
 - `mode: workbench-report`
 - `mode: report-evidence-bundle`
 - `mode: verify-evidence-bundle`
+- `mode: validate-sarif`
 
 Common inputs:
 
@@ -56,6 +66,7 @@ Analyze-mode inputs:
 - `github-step-summary`
 - `validate-sarif`
 - `asset-context`
+- `defensive-context-file`
 - `target-kind`
 - `target-ref`
 - `vex-files`
@@ -68,16 +79,19 @@ Analyze-mode inputs:
 - `attack-technique-metadata-file`
 - `provider-snapshot-file`
 - `locked-provider-data`
+- `max-provider-age-hours`
+- `fail-on-stale-provider-data`
 
 Outputs:
 
 - `report-path`
 - `html-report-path` when `html-output-path` is set or when `mode: report-html`
 - `summary-path` when a summary is requested via `summary-output-path` or `github-step-summary`
-- `sarif-validation-path` when `validate-sarif: "true"`
+- `sarif-validation-path` when `mode: validate-sarif` or `validate-sarif: "true"`
 
 The action installs the package from the action checkout and writes the resolved output path to the `report-path` output. In normal consumer workflows, that checkout is the consumer repository that contains `trivy-results.json` or similar scan inputs, not this repository's fixture tree.
-`mode: analyze` accepts newline-delimited `input` and `input-format` values, so one action invocation can merge multiple scanner exports or mix one global format with per-input formats. Report modes require exactly one input path.
+`mode: analyze`, `compare`, `input-validate`, `snapshot`, and `attack-coverage` accept newline-delimited `input` and `input-format` values, so one action invocation can merge multiple scanner exports or mix one global format with per-input formats. Report, rollup, explain, and validation modes require exactly one artifact path. `explain` also requires the `cve` input and reads the supplied analysis or snapshot JSON through the saved-analysis path.
+`defensive-context-file` is passed through to `--defensive-context-file` for analyze, compare, and snapshot modes. It must point to a local/offline JSON context file in the workflow workspace; it does not fetch OSV, GHSA, Vulnrichment, or SSVC data and does not affect base priority scoring.
 
 ### Summary Templates
 
@@ -187,6 +201,7 @@ The composite action also exposes the local file-based Workbench report renderer
 - `mode: workbench-report` reads one exported analysis JSON file and writes `json`, `markdown`, `html`, `csv`, or `sarif` selected with `output-format`.
 - `mode: report-evidence-bundle` reads one exported analysis JSON file and writes an evidence ZIP.
 - `mode: verify-evidence-bundle` reads one evidence ZIP and writes a JSON verification report.
+- `mode: validate-sarif` reads one SARIF file and writes a JSON validation report.
 - `validate-sarif: "true"` runs `vuln-prioritizer report validate-sarif` only when `mode: analyze` or `mode: workbench-report` also uses `output-format: sarif`; non-SARIF outputs fail early with an input error instead of validating the wrong artifact.
 
 The action does not start or expose a shared Workbench service. It works on explicit local files in the CI workspace and fails clearly when the report format is unsupported, the evidence bundle fails verification, or SARIF validation fails.
@@ -221,6 +236,17 @@ Workbench project settings can be versioned externally and posted through
 `POST /api/projects/{project_id}/settings/config`. The API validates the same
 `vuln-prioritizer.yml` runtime config schema used by the CLI, stores an immutable project snapshot,
 and leaves backward-compatible defaults in effect when no snapshot exists.
+Config snapshot history is available through
+`GET /api/projects/{project_id}/settings/config/history`; snapshots can be diffed and rolled back
+through the corresponding `diff` and `rollback` endpoints.
+
+Finding lifecycle status can be updated with `PATCH /api/findings/{finding_id}`. Status changes are
+recorded in `FindingStatusHistory`, appear in detailed finding payloads, and are overlaid into newly
+generated JSON, CSV, HTML, SARIF, and evidence-bundle artifacts.
+
+Audit events are available project-wide through `GET /api/projects/{project_id}/audit-events` and
+globally through `GET /api/audit-events`. Diagnostics live at `GET /api/diagnostics`; token and
+diagnostics reads are token-gated once active API tokens exist.
 
 Provider update jobs are created through `POST /api/providers/update-jobs` or the Settings page.
 They are synchronous local jobs designed to be called by a trusted scheduler such as cron. Each job
@@ -399,5 +425,5 @@ GitHub-only steps remain outside the local-equivalent scope:
 ## Guardrails
 
 - The primary priority model remains transparent and rule-based from CVSS, EPSS, and KEV.
-- ATT&CK, asset context, and VEX remain explicit contextual layers and must not become undocumented weighting factors.
+- ATT&CK, defensive context, asset context, and VEX remain explicit contextual layers and must not become undocumented weighting factors.
 - CVE-to-ATT&CK mappings remain file-based and must not use heuristic or LLM-generated mappings.

@@ -1,14 +1,20 @@
 {% extends "base.html" %}
 {% block title %}Findings · {{ project.name }}{% endblock %}
 {% block content %}
-<section class="section">
-  <div class="section-head row">
-    <div>
-      <p class="eyebrow">Findings</p>
-      <h1>{{ project.name }}</h1>
-    </div>
+<section class="page-hero">
+  <div>
+    <p class="eyebrow">Findings</p>
+    <h1>Prioritized findings</h1>
+    <p class="page-subtitle">
+      Filter {{ project.name }} by CVE, owner, service, EPSS, CVSS, KEV and governance state.
+    </p>
+  </div>
+  <div class="page-actions">
     <a class="button" href="/projects/{{ project.id }}/dashboard">Dashboard</a>
   </div>
+</section>
+
+<section class="section">
   <form class="filter-bar" method="get" action="/projects/{{ project.id }}/findings">
     <label>
       Search
@@ -49,6 +55,14 @@
       <input name="service" value="{{ filters.service }}">
     </label>
     <label>
+      Min EPSS
+      <input name="min_epss" type="number" min="0" max="1" step="0.001" value="{{ filters.min_epss if filters.min_epss is not none else '' }}">
+    </label>
+    <label>
+      Min CVSS
+      <input name="min_cvss" type="number" min="0" max="10" step="0.1" value="{{ filters.min_cvss if filters.min_cvss is not none else '' }}">
+    </label>
+    <label>
       Sort
       <select name="sort">
         {% for value, label in [("operational", "Operational"), ("priority", "Priority"), ("epss", "EPSS"), ("cvss", "CVSS"), ("cve", "CVE"), ("last_seen", "Last seen")] %}
@@ -59,7 +73,10 @@
     <input type="hidden" name="limit" value="{{ limit }}">
     <button class="button primary" type="submit">Apply</button>
   </form>
-  <p class="empty">Showing {{ offset + 1 if total else 0 }}-{{ offset + findings|length }} of {{ total }} findings.</p>
+  <div class="table-meta">
+    <span>Showing {{ offset + 1 if total else 0 }}-{{ offset + findings|length }} of {{ total }} findings.</span>
+    <span>Sorted by {{ filters.sort or "operational" }}</span>
+  </div>
   <div class="table-wrap">
     <table>
       <thead>
@@ -109,11 +126,11 @@
     </table>
   </div>
   <div class="pager">
-    {% if offset > 0 %}
-      <a class="button" href="?q={{ filters.q }}&priority={{ filters.priority }}&status={{ filters.status }}&owner={{ filters.owner }}&service={{ filters.service }}&sort={{ filters.sort }}&limit={{ limit }}&offset={{ previous_offset }}">Previous</a>
+    {% if previous_href %}
+      <a class="button" href="{{ previous_href }}">Previous</a>
     {% endif %}
-    {% if next_offset is not none %}
-      <a class="button" href="?q={{ filters.q }}&priority={{ filters.priority }}&status={{ filters.status }}&owner={{ filters.owner }}&service={{ filters.service }}&sort={{ filters.sort }}&limit={{ limit }}&offset={{ next_offset }}">Next</a>
+    {% if next_href %}
+      <a class="button" href="{{ next_href }}">Next</a>
     {% endif %}
   </div>
 </section>

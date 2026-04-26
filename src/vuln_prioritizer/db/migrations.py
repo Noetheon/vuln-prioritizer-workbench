@@ -13,7 +13,7 @@ from sqlalchemy.engine import Engine
 from vuln_prioritizer.db.base import target_metadata
 
 INITIAL_REVISION = "0001_workbench_mvp"
-CURRENT_REVISION = "0005_workbench_integrations"
+CURRENT_REVISION = "0007_jobs_retention"
 LEGACY_REVISION_IDS = {
     "0003_workbench_governance_context": "0003_workbench_governance",
     "0005_workbench_governance_detection_integrations": "0005_workbench_integrations",
@@ -48,7 +48,13 @@ WORKBENCH_TABLES: Sequence[str] = (
     "api_tokens",
     "provider_update_jobs",
     "project_config_snapshots",
+    "project_artifact_retention",
     "github_issue_exports",
+    "finding_status_history",
+    "audit_events",
+    "detection_control_history",
+    "detection_control_attachments",
+    "workbench_jobs",
 )
 WORKBENCH_GOVERNANCE_COLUMNS: Sequence[str] = (
     "under_investigation",
@@ -71,7 +77,16 @@ WORKBENCH_ATTACK_PROVENANCE_COLUMNS: Sequence[str] = (
     "metadata_path",
 )
 WORKBENCH_V04_TABLES: Sequence[str] = tuple(
-    table for table in WORKBENCH_TABLES if table != "github_issue_exports"
+    table
+    for table in WORKBENCH_TABLES
+    if table not in {"github_issue_exports", "finding_status_history", "audit_events"}
+)
+WORKBENCH_LIFECYCLE_TABLES: Sequence[str] = ("finding_status_history", "audit_events")
+WORKBENCH_P1_TABLES: Sequence[str] = (
+    "detection_control_history",
+    "detection_control_attachments",
+    "workbench_jobs",
+    "project_artifact_retention",
 )
 
 
@@ -115,11 +130,16 @@ def ensure_database_current(database_url: str) -> None:
                     column["name"] for column in inspector.get_columns("attack_mappings")
                 }
                 if set(WORKBENCH_ATTACK_PROVENANCE_COLUMNS).issubset(attack_columns):
-                    target_revision = (
-                        CURRENT_REVISION
-                        if "github_issue_exports" in tables
-                        else "0004_workbench_attack_provenance"
-                    )
+                    if "github_issue_exports" not in tables:
+                        target_revision = "0004_workbench_attack_provenance"
+                    elif set(WORKBENCH_LIFECYCLE_TABLES).issubset(tables):
+                        target_revision = (
+                            CURRENT_REVISION
+                            if set(WORKBENCH_P1_TABLES).issubset(tables)
+                            else "0006_workbench_lifecycle_audit"
+                        )
+                    else:
+                        target_revision = "0005_workbench_integrations"
         command.stamp(config, target_revision)
     command.upgrade(config, "head")
 

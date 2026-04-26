@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 from collections import Counter
+from datetime import datetime
 from typing import Any
+from urllib.parse import urlencode
 
 from vuln_prioritizer.services.workbench_attack import top_technique_rows
 
@@ -24,6 +26,7 @@ def dashboard_model(
     )
     return {
         "project": project,
+        "latest_run": runs[0] if runs else None,
         "runs": runs[:5],
         "findings": findings[:10],
         "counts": {
@@ -68,6 +71,12 @@ def findings_model(
         "offset": offset,
         "previous_offset": max(offset - limit, 0),
         "next_offset": offset + limit if offset + limit < total_count else None,
+        "previous_href": _findings_page_href(active_filters, max(offset - limit, 0))
+        if offset > 0
+        else None,
+        "next_href": _findings_page_href(active_filters, offset + limit)
+        if offset + limit < total_count
+        else None,
     }
 
 
@@ -78,4 +87,92 @@ def reports_model(
     *,
     project: Any | None = None,
 ) -> dict[str, Any]:
-    return {"project": project, "run": run, "reports": reports, "bundles": bundles}
+    payload = run.summary_json if isinstance(run.summary_json, dict) else {}
+    raw_metadata = payload.get("metadata")
+    metadata: dict[str, Any] = raw_metadata if isinstance(raw_metadata, dict) else {}
+    raw_attack_summary = payload.get("attack_summary")
+    attack_summary: dict[str, Any] = (
+        raw_attack_summary if isinstance(raw_attack_summary, dict) else {}
+    )
+    raw_findings = payload.get("findings")
+    findings: list[Any] = raw_findings if isinstance(raw_findings, list) else []
+    raw_counts = metadata.get("counts_by_priority")
+    counts_by_priority: dict[str, Any] | Counter[str] = (
+        raw_counts
+        if isinstance(raw_counts, dict)
+        else Counter(str(finding.get("priority_label") or "Unprioritized") for finding in findings)
+    )
+    findings_count = int(metadata.get("findings_count") or len(findings) or 0)
+    return {
+        "project": project,
+        "run": run,
+        "reports": reports,
+        "bundles": bundles,
+        "report_formats": ["json", "markdown", "html", "csv", "sarif"],
+        "report_status": {
+            "findings": findings_count,
+            "critical": int(counts_by_priority.get("Critical", 0) or 0),
+            "high": int(counts_by_priority.get("High", 0) or 0),
+            "kev": int(metadata.get("kev_hits") or _count_truthy(findings, "in_kev")),
+            "attack_mapped": int(
+                attack_summary.get("mapped_cves") or _count_truthy(findings, "attack_mapped")
+            ),
+            "reports": len(reports),
+            "bundles": len(bundles),
+        },
+        "run_context": {
+            "input_format": metadata.get("input_format") or run.input_type,
+            "input_path": metadata.get("input_path") or run.input_filename or "Not available",
+            "generated_at": _format_timestamp(run.finished_at or run.started_at),
+            "status": run.status,
+            "snapshot": metadata.get("provider_snapshot_hash")
+            or metadata.get("provider_snapshot_file")
+            or "Not supplied",
+        },
+    }
+
+
+def _findings_page_href(filters: dict[str, Any], offset: int) -> str:
+    params: list[tuple[str, str]] = []
+    for key in (
+        "q",
+        "priority",
+        "status",
+        "kev",
+        "owner",
+        "service",
+        "min_epss",
+        "min_cvss",
+        "sort",
+        "limit",
+    ):
+        value = filters.get(key)
+        if key == "kev":
+            if value is True:
+                params.append((key, "true"))
+            elif value is False:
+                params.append((key, "false"))
+            continue
+        if value is None or value == "":
+            continue
+        params.append((key, str(value)))
+    params.append(("offset", str(offset)))
+    return f"?{urlencode(params)}"
+
+
+def _count_truthy(items: list[Any], key: str) -> int:
+    return sum(1 for item in items if isinstance(item, dict) and item.get(key))
+
+
+def _format_timestamp(value: Any) -> str:
+    if value is None:
+        return ""
+    if hasattr(value, "strftime"):
+        return value.strftime("%Y-%m-%d %H:%M")
+    raw_value = str(value)
+    normalized = raw_value.replace("Z", "+00:00")
+    try:
+        parsed = datetime.fromisoformat(normalized)
+    except ValueError:
+        return raw_value.replace("T", " ").split(".")[0]
+    return parsed.strftime("%Y-%m-%d %H:%M")

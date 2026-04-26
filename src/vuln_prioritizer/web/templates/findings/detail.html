@@ -1,16 +1,24 @@
 {% extends "base.html" %}
 {% block title %}{{ finding.cve_id }} · Finding{% endblock %}
 {% block content %}
-<section class="section">
-  <div class="section-head">
+<section class="page-hero">
+  <div>
     <p class="eyebrow">Finding detail</p>
-    <h1>{{ finding.cve_id }}</h1>
+    <h1>Finding detail</h1>
     <div class="chip-row">
       <span class="badge {{ finding.priority|lower }}">{{ finding.priority }}</span>
       {% if finding.in_kev %}<span class="badge critical">KEV</span>{% endif %}
       <span class="badge neutral">{{ finding.status }}</span>
     </div>
   </div>
+  <div class="hero-meta">
+    <span>CVE <strong>{{ finding.cve_id }}</strong></span>
+    <span>Project <strong>{{ project.name }}</strong></span>
+    <span>Owner <strong>{{ finding.asset.owner if finding.asset and finding.asset.owner else "Unassigned" }}</strong></span>
+  </div>
+</section>
+
+<section class="section">
   <div class="detail-grid">
     <article class="panel">
       <p class="eyebrow">Why this priority?</p>
@@ -55,6 +63,45 @@
       </tbody>
     </table>
   </div>
+  <section class="subsection">
+    <div class="section-head compact">
+      <p class="eyebrow">Lifecycle</p>
+      <h2>Status</h2>
+    </div>
+    <form class="form-panel" method="post" action="/web/findings/{{ finding.id }}/status">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <div class="form-grid">
+        <label>Status
+          <select name="status">
+            {% for option in ["open", "in_review", "remediating", "fixed", "accepted", "suppressed"] %}
+              <option value="{{ option }}" {% if option == finding.status %}selected{% endif %}>{{ option }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <label>Actor<input name="actor" placeholder="local-operator"></label>
+        <label>Reason<input name="reason" placeholder="Reviewed in maintenance window"></label>
+      </div>
+      <button class="button" type="submit">Update status</button>
+    </form>
+    {% if finding.status_history %}
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>When</th><th>From</th><th>To</th><th>Actor</th><th>Reason</th></tr></thead>
+          <tbody>
+            {% for event in finding.status_history %}
+              <tr>
+                <td>{{ event.created_at.strftime("%Y-%m-%d %H:%M") if event.created_at else "N.A." }}</td>
+                <td>{{ event.previous_status or "N.A." }}</td>
+                <td>{{ event.new_status }}</td>
+                <td>{{ event.actor or "N.A." }}</td>
+                <td>{{ event.reason or "N.A." }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% endif %}
+  </section>
   {% if finding.waiver_status or finding.waived %}
     <section class="subsection">
       <div class="section-head compact">
@@ -115,6 +162,39 @@
       </form>
     </section>
   {% endif %}
+  {% set defensive_contexts = finding.finding_json.get("defensive_contexts", []) if finding.finding_json else [] %}
+  <section class="subsection">
+    <div class="section-head compact">
+      <p class="eyebrow">Defensive context</p>
+      <h2>Additional sources</h2>
+    </div>
+    {% if defensive_contexts %}
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Source</th><th>ID</th><th>Severity</th><th>Decision</th><th>Summary</th></tr></thead>
+          <tbody>
+            {% for context in defensive_contexts %}
+              <tr>
+                <td>{{ context.source|upper }}</td>
+                <td>
+                  {% if context.url and (context.url.startswith("https://") or context.url.startswith("http://")) %}
+                    <a href="{{ context.url }}" rel="noopener noreferrer">{{ context.source_id or "Reference" }}</a>
+                  {% else %}
+                    {{ context.source_id or "N.A." }}
+                  {% endif %}
+                </td>
+                <td>{{ context.severity or "N.A." }}</td>
+                <td>{{ context.ssvc_decision or "N.A." }}</td>
+                <td>{{ context.summary or context.title or "N.A." }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p class="empty">No OSV, GHSA, Vulnrichment or SSVC context is stored for this finding.</p>
+    {% endif %}
+  </section>
   <section class="subsection">
     <div class="section-head compact">
       <p class="eyebrow">ATT&amp;CK TTPs</p>

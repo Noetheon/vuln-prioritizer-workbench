@@ -1,30 +1,108 @@
 <!doctype html>
+{% macro brand_mark() -%}
+  <svg class="shield-logo" viewBox="0 0 48 56" focusable="false" aria-hidden="true">
+    <path class="shield-logo-fill" d="M24 3 43 10.2v15.3c0 12.3-7.6 21.7-19 26.5C12.6 47.2 5 37.8 5 25.5V10.2L24 3z"/>
+    <path class="shield-logo-check" d="m15.2 28.2 6.1 6.1 12.8-14.1"/>
+  </svg>
+{%- endmacro %}
+{% macro nav_icon(name) -%}
+  {% if name == "project" %}
+    <svg viewBox="0 0 24 24" focusable="false"><path d="M12 3l7 3v5c0 4.5-2.8 8.1-7 10-4.2-1.9-7-5.5-7-10V6l7-3zm3.6 7.2-1.4-1.4-3.1 3.1-1.3-1.3-1.4 1.4 2.7 2.7 4.5-4.5z"/></svg>
+  {% elif name == "dashboard" %}
+    <svg viewBox="0 0 24 24" focusable="false"><path d="M4 4h7v7H4V4zm9 0h7v7h-7V4zM4 13h7v7H4v-7zm9 0h7v7h-7v-7z"/></svg>
+  {% elif name == "import" %}
+    <svg viewBox="0 0 24 24" focusable="false"><path d="M11 4h2v8l3-3 1.4 1.4L12 15.8l-5.4-5.4L8 9l3 3V4zM5 18h14v2H5v-2z"/></svg>
+  {% elif name == "findings" %}
+    <svg viewBox="0 0 24 24" focusable="false"><path d="M5 5h14v2H5V5zm0 6h14v2H5v-2zm0 6h10v2H5v-2z"/></svg>
+  {% elif name == "intelligence" %}
+    <svg viewBox="0 0 24 24" focusable="false"><path d="M10.5 4a6.5 6.5 0 014.9 10.8l4.4 4.4-1.4 1.4-4.4-4.4A6.5 6.5 0 1110.5 4zm0 2a4.5 4.5 0 100 9 4.5 4.5 0 000-9z"/></svg>
+  {% elif name == "governance" %}
+    <svg viewBox="0 0 24 24" focusable="false"><path d="M12 3l7 3v6c0 4-2.8 7.2-7 9-4.2-1.8-7-5-7-9V6l7-3zm-1 5v5l4 2 .9-1.8-2.9-1.4V8h-2z"/></svg>
+  {% elif name == "assets" %}
+    <svg viewBox="0 0 24 24" focusable="false"><path d="M4 5h16v5H4V5zm2 2v1h2V7H6zm-2 5h16v7H4v-7zm2 2v3h12v-3H6z"/></svg>
+  {% elif name == "waivers" %}
+    <svg viewBox="0 0 24 24" focusable="false"><path d="M12 3a9 9 0 100 18 9 9 0 000-18zm4.7 7.7-5.4 5.4-3-3 1.4-1.4 1.6 1.6 4-4 1.4 1.4z"/></svg>
+  {% elif name == "coverage" %}
+    <svg viewBox="0 0 24 24" focusable="false"><path d="M11 2h2v3.1A7 7 0 0118.9 11H22v2h-3.1A7 7 0 0113 18.9V22h-2v-3.1A7 7 0 015.1 13H2v-2h3.1A7 7 0 0111 5.1V2zm1 5a5 5 0 100 10 5 5 0 000-10zm0 3a2 2 0 110 4 2 2 0 010-4z"/></svg>
+  {% elif name == "artifacts" %}
+    <svg viewBox="0 0 24 24" focusable="false"><path d="M4 5h6l2 2h8v12H4V5zm2 4v8h12V9H6z"/></svg>
+  {% elif name == "report" %}
+    <svg viewBox="0 0 24 24" focusable="false"><path d="M6 3h9l3 3v15H6V3zm8 2v3h3l-3-3zM8 10h8v2H8v-2zm0 4h8v2H8v-2z"/></svg>
+  {% elif name == "settings" %}
+    <svg viewBox="0 0 24 24" focusable="false"><path d="M13 2l.6 2.5a7.8 7.8 0 011.7.7l2.2-1.3 2 3.4-2 1.5c.1.4.1.8.1 1.2s0 .8-.1 1.2l2 1.5-2 3.4-2.2-1.3c-.5.3-1.1.5-1.7.7L13 22h-4l-.6-2.5a7.8 7.8 0 01-1.7-.7l-2.2 1.3-2-3.4 2-1.5A8 8 0 014.4 14c0-.4 0-.8.1-1.2l-2-1.5 2-3.4 2.2 1.3c.5-.3 1.1-.5 1.7-.7L9 2h4zm-2 7a3 3 0 100 6 3 3 0 000-6z"/></svg>
+  {% endif %}
+{%- endmacro %}
 <html lang="en">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% block title %}Vuln Prioritizer Workbench{% endblock %}</title>
+    <script src="/static/workbench.js"></script>
     <link rel="stylesheet" href="/static/workbench.css">
   </head>
   <body>
     <header class="app-header">
-      <a class="brand" href="/">Vuln Prioritizer Workbench</a>
-      <nav class="top-nav">
-        {% if project %}
-          <a href="/projects/{{ project.id }}/dashboard">Dashboard</a>
-          <a href="/projects/{{ project.id }}/imports/new">Import</a>
-          <a href="/projects/{{ project.id }}/findings">Findings</a>
-          <a href="/projects/{{ project.id }}/governance">Governance</a>
-          <a href="/projects/{{ project.id }}/assets">Assets</a>
-          <a href="/projects/{{ project.id }}/waivers">Waivers</a>
-          <a href="/projects/{{ project.id }}/coverage">Coverage</a>
-          <a href="/projects/{{ project.id }}/vulnerabilities">Intelligence</a>
-          <a href="/projects/{{ project.id }}/settings">Settings</a>
-        {% endif %}
-      </nav>
+      <a class="brand" href="/">
+        <span class="brand-logo">{{ brand_mark() }}</span>
+        <span>Vuln Prioritizer Workbench</span>
+      </a>
     </header>
-    <main class="page">
-      {% block content %}{% endblock %}
-    </main>
+    <div class="app-shell{% if project %} has-sidebar{% endif %}">
+      {% if project %}
+        {% set current_path = request.url.path %}
+        {% set project_base = "/projects/" ~ project.id %}
+        {% set nav_run = none %}
+        {% if run is defined and run %}
+          {% set nav_run = run %}
+        {% elif latest_run is defined and latest_run %}
+          {% set nav_run = latest_run %}
+        {% elif runs is defined and runs %}
+          {% set nav_run = runs[0] %}
+        {% endif %}
+        <aside class="app-sidebar" aria-label="Project navigation">
+          <button class="sidebar-toggle" type="button" data-sidebar-toggle aria-label="Collapse navigation" aria-pressed="false">
+            <span class="sidebar-toggle-icon" aria-hidden="true"></span>
+            <span class="sidebar-toggle-text">Collapse</span>
+          </button>
+          <div class="sidebar-project">
+            <span class="project-emblem" aria-hidden="true">{{ brand_mark() }}</span>
+            <span class="project-copy">
+              <span>Project</span>
+              <strong>{{ project.name }}</strong>
+            </span>
+          </div>
+          <nav class="side-nav">
+            <div class="side-nav-group">
+              <p>Analyze</p>
+              <a href="{{ project_base }}/dashboard" title="Dashboard"{% if current_path == project_base ~ "/dashboard" %} aria-current="page"{% endif %}><span class="nav-icon" aria-hidden="true">{{ nav_icon("dashboard") }}</span><span class="nav-label">Dashboard</span></a>
+              <a href="{{ project_base }}/imports/new" title="Import"{% if current_path == project_base ~ "/imports/new" %} aria-current="page"{% endif %}><span class="nav-icon" aria-hidden="true">{{ nav_icon("import") }}</span><span class="nav-label">Import</span></a>
+              <a href="{{ project_base }}/findings" title="Findings"{% if current_path.startswith(project_base ~ "/findings") or current_path.startswith("/findings/") %} aria-current="page"{% endif %}><span class="nav-icon" aria-hidden="true">{{ nav_icon("findings") }}</span><span class="nav-label">Findings</span></a>
+              <a href="{{ project_base }}/vulnerabilities" title="Intelligence"{% if current_path == project_base ~ "/vulnerabilities" %} aria-current="page"{% endif %}><span class="nav-icon" aria-hidden="true">{{ nav_icon("intelligence") }}</span><span class="nav-label">Intelligence</span></a>
+            </div>
+            <div class="side-nav-group">
+              <p>Context</p>
+              <a href="{{ project_base }}/governance" title="Governance"{% if current_path == project_base ~ "/governance" %} aria-current="page"{% endif %}><span class="nav-icon" aria-hidden="true">{{ nav_icon("governance") }}</span><span class="nav-label">Governance</span></a>
+              <a href="{{ project_base }}/assets" title="Assets"{% if current_path == project_base ~ "/assets" %} aria-current="page"{% endif %}><span class="nav-icon" aria-hidden="true">{{ nav_icon("assets") }}</span><span class="nav-label">Assets</span></a>
+              <a href="{{ project_base }}/waivers" title="Waivers"{% if current_path == project_base ~ "/waivers" %} aria-current="page"{% endif %}><span class="nav-icon" aria-hidden="true">{{ nav_icon("waivers") }}</span><span class="nav-label">Waivers</span></a>
+              <a href="{{ project_base }}/coverage" title="Coverage"{% if current_path.startswith(project_base ~ "/coverage") or current_path.startswith(project_base ~ "/attack/") %} aria-current="page"{% endif %}><span class="nav-icon" aria-hidden="true">{{ nav_icon("coverage") }}</span><span class="nav-label">Coverage</span></a>
+            </div>
+            {% if nav_run %}
+              <div class="side-nav-group">
+                <p>Run</p>
+                <a href="/analysis-runs/{{ nav_run.id }}/reports" title="Run artifacts"{% if current_path == "/analysis-runs/" ~ nav_run.id ~ "/reports" or current_path.startswith("/evidence-bundles/") %} aria-current="page"{% endif %}><span class="nav-icon" aria-hidden="true">{{ nav_icon("artifacts") }}</span><span class="nav-label">Run artifacts</span></a>
+                <a href="/analysis-runs/{{ nav_run.id }}/executive-report" title="Executive Report"{% if current_path == "/analysis-runs/" ~ nav_run.id ~ "/executive-report" %} aria-current="page"{% endif %}><span class="nav-icon" aria-hidden="true">{{ nav_icon("report") }}</span><span class="nav-label">Executive Report</span></a>
+              </div>
+            {% endif %}
+            <div class="side-nav-group">
+              <p>Operate</p>
+              <a href="{{ project_base }}/settings" title="Settings"{% if current_path == project_base ~ "/settings" %} aria-current="page"{% endif %}><span class="nav-icon" aria-hidden="true">{{ nav_icon("settings") }}</span><span class="nav-label">Settings</span></a>
+            </div>
+          </nav>
+        </aside>
+      {% endif %}
+      <main class="page">
+        {% block content %}{% endblock %}
+      </main>
+    </div>
   </body>
 </html>

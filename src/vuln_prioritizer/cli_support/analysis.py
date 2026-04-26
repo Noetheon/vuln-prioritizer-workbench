@@ -197,6 +197,21 @@ def handle_provider_error_fail_on(
     raise typer.Exit(code=1)
 
 
+def handle_provider_staleness_fail_on(
+    context: AnalysisContext,
+    *,
+    fail_on_stale_provider_data: bool,
+) -> None:
+    if not fail_on_stale_provider_data or not context.provider_stale:
+        return
+    sources = ", ".join(sorted(context.provider_stale_sources)) or "unknown"
+    console.print(
+        "[red]Policy check failed:[/red] provider data exceeded "
+        f"--max-provider-age-hours for: {sources}."
+    )
+    raise typer.Exit(code=1)
+
+
 __all__ = [
     "AnalysisRequest",
     "ExplainRequest",
@@ -213,6 +228,7 @@ __all__ = [
     "count_nvd_hits",
     "handle_fail_on",
     "handle_provider_error_fail_on",
+    "handle_provider_staleness_fail_on",
     "handle_waiver_lifecycle_fail_on",
     "load_asset_records_or_exit",
     "load_context_profile_or_exit",

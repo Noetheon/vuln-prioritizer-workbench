@@ -135,6 +135,62 @@
         }
       ]
     },
+    "defensiveContext": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["cve_id", "source"],
+      "properties": {
+        "cve_id": {
+          "type": "string"
+        },
+        "source": {
+          "description": "Local defensive context source name. Current normalized values are osv, ghsa, vulnrichment, and ssvc.",
+          "type": "string"
+        },
+        "source_id": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "title": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "summary": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "severity": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "cvss_score": {
+          "$ref": "#/$defs/nullableNumber"
+        },
+        "ssvc_decision": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "exploitation": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "automatable": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "technical_impact": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "published": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "modified": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "url": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "references": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "tags": {
+          "$ref": "#/$defs/stringArray"
+        }
+      }
+    },
     "metadata": {
       "type": "object",
       "additionalProperties": true,
@@ -215,6 +271,13 @@
         },
         "kev": {
           "$ref": "#/$defs/nullableKevData"
+        },
+        "defensive_contexts": {
+          "description": "Optional local OSV, GHSA, Vulnrichment, or SSVC overlays stored with this CVE for locked replay. These are local contextual evidence records and are not live provider fetch results.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/defensiveContext"
+          }
         }
       }
     }

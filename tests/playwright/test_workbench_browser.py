@@ -133,7 +133,7 @@ def test_workbench_browser_happy_path_reports_and_responsive_pages(
     page.get_by_role("link", name="Import findings").click()
     page.wait_for_url(re.compile(r".*/imports/new"))
     page.select_option('select[name="input_format"]', "trivy-json")
-    page.set_input_files('input[name="file"]', str(TRIVY_REPORT))
+    page.set_input_files('input[name="files"]', str(TRIVY_REPORT))
     page.get_by_label("Provider snapshot").fill(DEMO_PROVIDER_SNAPSHOT.name)
     page.get_by_label("Locked provider data").check()
     page.select_option('select[name="attack_source"]', "ctid-json")
@@ -145,8 +145,9 @@ def test_workbench_browser_happy_path_reports_and_responsive_pages(
     with page.expect_navigation(wait_until="networkidle", timeout=60_000):
         page.get_by_role("button", name="Start import").click()
     run_id = _run_id_from_url(page.url)
-    page.get_by_text("Run artifacts").wait_for(timeout=10_000)
-    page.get_by_role("heading", name="trivy_report.json").wait_for(timeout=10_000)
+    page.get_by_role("main").get_by_text("Run artifacts").wait_for(timeout=10_000)
+    page.get_by_role("heading", name="Reports and evidence").wait_for(timeout=10_000)
+    page.locator(".hero-meta").get_by_text("trivy_report.json", exact=True).wait_for(timeout=10_000)
     page.get_by_text("No reports generated.").wait_for()
     _assert_usable_layout(page)
 
@@ -157,6 +158,8 @@ def test_workbench_browser_happy_path_reports_and_responsive_pages(
     page.get_by_text("T1190").wait_for()
     page.get_by_text("VEX suppressed").wait_for()
     page.get_by_text("Waiver review due").wait_for()
+    page.get_by_role("navigation").get_by_role("link", name="Run artifacts").wait_for()
+    page.get_by_role("navigation").get_by_role("link", name="Executive Report").wait_for()
     _assert_usable_layout(page)
 
     page.get_by_role("link", name="Governance").click()
@@ -207,6 +210,23 @@ def test_workbench_browser_happy_path_reports_and_responsive_pages(
     _assert_usable_layout(page)
 
     page.goto(f"{live_workbench.base_url}/analysis-runs/{run_id}/reports")
+    page.get_by_role("link", name="Open executive report").click()
+    page.get_by_role("heading", name="Executive Report").wait_for()
+    page.get_by_role("heading", name="Executive Security Overview").wait_for()
+    page.get_by_role("heading", name="Risk Posture and Source Signals").wait_for()
+    page.get_by_role("heading", name="Top ATT&CK-Mapped Findings").wait_for()
+    page.get_by_role("heading", name="Next 30 Days").wait_for()
+    page.get_by_role("heading", name="Evidence, Data Quality and Methodology").wait_for()
+    page.locator(".er-ranked-row").first.click()
+    page.locator(".er-live-insight", has_text="CVE-2023-34362").wait_for()
+    page.locator(
+        '#priority-findings .er-quadrant-scatter .er-dot[data-insight*="CVSS"]'
+    ).first.click()
+    page.locator(".er-live-insight", has_text="EPSS").wait_for()
+    assert page.locator(".er-live-insight").count() == 1
+    _assert_usable_layout(page)
+
+    page.goto(f"{live_workbench.base_url}/analysis-runs/{run_id}/reports")
     for report_format in ["json", "markdown", "html", "csv"]:
         with page.expect_navigation(wait_until="networkidle"):
             page.get_by_role("button", name=f"Create {report_format}").click()
@@ -245,13 +265,15 @@ def test_workbench_browser_happy_path_reports_and_responsive_pages(
 
     page.get_by_role("link", name="Vuln Prioritizer Workbench").click()
     page.wait_for_url(re.compile(r".*/dashboard"))
-    page.get_by_role("heading", name="playwright-workbench").wait_for()
+    page.get_by_role("heading", name="Security dashboard").wait_for()
+    page.locator(".sidebar-project").get_by_text("playwright-workbench", exact=True).wait_for()
 
     page.set_viewport_size({"width": 390, "height": 844})
     for path in [
         f"/projects/{project_id}/dashboard",
         f"/projects/{project_id}/findings",
         f"/analysis-runs/{run_id}/reports",
+        f"/analysis-runs/{run_id}/executive-report",
         f"/projects/{project_id}/settings",
     ]:
         page.goto(f"{live_workbench.base_url}{path}", wait_until="networkidle")
@@ -288,7 +310,7 @@ def test_workbench_browser_error_states_are_visible(
     page.goto(
         f"{live_workbench.base_url}/projects/{project_id}/imports/new", wait_until="networkidle"
     )
-    page.set_input_files('input[name="file"]', str(SAMPLE_CVES))
+    page.set_input_files('input[name="files"]', str(SAMPLE_CVES))
     page.get_by_label("Provider snapshot").fill("missing-snapshot.json")
     with page.expect_navigation(wait_until="networkidle") as invalid_import_navigation:
         page.get_by_role("button", name="Start import").click()
@@ -299,7 +321,8 @@ def test_workbench_browser_error_states_are_visible(
     _assert_workbench_error_page(page)
     page.get_by_role("link", name="Open workspace").click()
     page.wait_for_url(re.compile(r".*/dashboard"))
-    page.get_by_role("heading", name="playwright-errors").wait_for()
+    page.get_by_role("heading", name="Security dashboard").wait_for()
+    page.locator(".sidebar-project").get_by_text("playwright-errors", exact=True).wait_for()
 
     assert browser_errors == []
     context.close()
@@ -343,13 +366,33 @@ def _attach_browser_error_log(page: Any) -> list[str]:
 
 
 def _assert_usable_layout(page: Any) -> None:
-    page.locator("main.page").wait_for()
+    page.locator("main.page, .er-shell").first.wait_for()
     overflow = page.evaluate(
         """() => {
             const root = document.documentElement;
             const body = document.body;
             const width = Math.max(root.scrollWidth, body ? body.scrollWidth : 0);
-            return {scrollWidth: width, innerWidth: window.innerWidth};
+            const offenders = Array.from(document.querySelectorAll("body *"))
+                .map((el) => {
+                    const rect = el.getBoundingClientRect();
+                    return {
+                        tag: el.tagName,
+                        className: typeof el.className === "string" ? el.className : "",
+                        text: (el.textContent || "").trim().slice(0, 60),
+                        left: Math.round(rect.left),
+                        right: Math.round(rect.right),
+                        width: Math.round(rect.width),
+                        scrollWidth: el.scrollWidth,
+                        clientWidth: el.clientWidth,
+                    };
+                })
+                .filter(
+                    (item) =>
+                        item.right > window.innerWidth + 1 ||
+                        item.scrollWidth > item.clientWidth + 1
+                )
+                .slice(0, 8);
+            return {scrollWidth: width, innerWidth: window.innerWidth, offenders};
         }"""
     )
     assert overflow["scrollWidth"] <= overflow["innerWidth"] + 1, overflow

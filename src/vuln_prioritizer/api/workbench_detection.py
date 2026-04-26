@@ -14,6 +14,7 @@ from fastapi import HTTPException
 from vuln_prioritizer.api.workbench_waivers import _strip_or_none
 
 DETECTION_COVERAGE_LEVELS = {"covered", "partial", "not_covered", "unknown", "not_applicable"}
+DETECTION_REVIEW_STATUSES = {"unreviewed", "needs_review", "reviewed", "rejected", "stale"}
 WEAK_DETECTION_COVERAGE_LEVELS = {"partial", "not_covered", "unknown"}
 
 
@@ -59,6 +60,8 @@ def _detection_control_values(row: dict[str, Any], *, index: int) -> dict[str, A
         "environment": _strip_or_none(str(row.get("environment") or "")),
         "owner": _strip_or_none(str(row.get("owner") or "")),
         "evidence_ref": _strip_or_none(str(row.get("evidence_ref") or "")),
+        "evidence_refs_json": _normalize_evidence_refs(row.get("evidence_refs")),
+        "review_status": _normalize_review_status(row.get("review_status")),
         "notes": _strip_or_none(str(row.get("notes") or "")),
         "last_verified_at": _strip_or_none(str(row.get("last_verified_at") or "")),
     }
@@ -69,6 +72,24 @@ def _normalize_coverage_level(value: object) -> str:
     if normalized not in DETECTION_COVERAGE_LEVELS:
         raise HTTPException(status_code=422, detail=f"Unsupported coverage level: {value!r}.")
     return normalized
+
+
+def _normalize_review_status(value: object) -> str:
+    normalized = str(value or "unreviewed").strip().lower().replace("-", "_").replace(" ", "_")
+    if normalized not in DETECTION_REVIEW_STATUSES:
+        raise HTTPException(status_code=422, detail=f"Unsupported review status: {value!r}.")
+    return normalized
+
+
+def _normalize_evidence_refs(value: object) -> list[str]:
+    if value is None:
+        return []
+    if isinstance(value, list):
+        raw_values = value
+    else:
+        raw_values = str(value).replace("\n", ",").split(",")
+    refs = [str(item).strip() for item in raw_values if str(item).strip()]
+    return list(dict.fromkeys(refs))
 
 
 def _coverage_gap_payload(
@@ -235,6 +256,10 @@ def _detection_control_payload(control: Any) -> dict[str, Any]:
         "environment": control.environment,
         "owner": control.owner,
         "evidence_ref": control.evidence_ref,
+        "evidence_refs": list(control.evidence_refs_json or []),
+        "review_status": control.review_status,
+        "history_count": len(getattr(control, "history", []) or []),
+        "attachment_count": len(getattr(control, "attachments", []) or []),
         "notes": control.notes,
         "last_verified_at": control.last_verified_at,
     }

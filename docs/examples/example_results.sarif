@@ -17,6 +17,9 @@
           "message": {
             "text": "CVE-2024-4577: Critical priority based on CVSS/EPSS/KEV with contextual enrichment."
           },
+          "partialFingerprints": {
+            "vuln-prioritizer/v1": "5ce7ed89aaf27465c407bc81f6c40213280368cf6c909cf182adacdb2a8e7e04"
+          },
           "properties": {
             "attack_relevance": "Unmapped",
             "components": [
@@ -24,6 +27,9 @@
             ],
             "cve": "CVE-2024-4577",
             "cvss": 9.8,
+            "defensive_context_count": 0,
+            "defensive_context_ids": [],
+            "defensive_context_sources": [],
             "epss": 0.94393,
             "in_kev": true,
             "priority": "Critical",
@@ -51,6 +57,9 @@
           "message": {
             "text": "CVE-2024-3094: Critical priority based on CVSS/EPSS/KEV with contextual enrichment."
           },
+          "partialFingerprints": {
+            "vuln-prioritizer/v1": "3ef91edd578f2dfbeaa5b5faf19a986987fbe10b46f4bc2be2a155d4e88b2335"
+          },
           "properties": {
             "attack_relevance": "Unmapped",
             "components": [
@@ -58,6 +67,9 @@
             ],
             "cve": "CVE-2024-3094",
             "cvss": 10.0,
+            "defensive_context_count": 0,
+            "defensive_context_ids": [],
+            "defensive_context_sources": [],
             "epss": 0.84588,
             "in_kev": false,
             "priority": "Critical",
@@ -75,6 +87,72 @@
       "tool": {
         "driver": {
           "name": "vuln-prioritizer",
+          "rules": [
+            {
+              "fullDescription": {
+                "text": "Known CVE prioritized from CVSS, EPSS, and CISA KEV with optional contextual layers such as asset context, VEX, waivers, remediation, and ATT&CK mapping provenance."
+              },
+              "help": {
+                "text": "Review the CVE, provider evidence, affected component or asset, and recommended remediation action. This tool prioritizes supplied findings and does not scan systems."
+              },
+              "id": "vuln-prioritizer/critical",
+              "name": "Critical prioritized vulnerability",
+              "properties": {
+                "priority": "Critical"
+              },
+              "shortDescription": {
+                "text": "Critical vulnerability prioritization result."
+              }
+            },
+            {
+              "fullDescription": {
+                "text": "Known CVE prioritized from CVSS, EPSS, and CISA KEV with optional contextual layers such as asset context, VEX, waivers, remediation, and ATT&CK mapping provenance."
+              },
+              "help": {
+                "text": "Review the CVE, provider evidence, affected component or asset, and recommended remediation action. This tool prioritizes supplied findings and does not scan systems."
+              },
+              "id": "vuln-prioritizer/high",
+              "name": "High prioritized vulnerability",
+              "properties": {
+                "priority": "High"
+              },
+              "shortDescription": {
+                "text": "High vulnerability prioritization result."
+              }
+            },
+            {
+              "fullDescription": {
+                "text": "Known CVE prioritized from CVSS, EPSS, and CISA KEV with optional contextual layers such as asset context, VEX, waivers, remediation, and ATT&CK mapping provenance."
+              },
+              "help": {
+                "text": "Review the CVE, provider evidence, affected component or asset, and recommended remediation action. This tool prioritizes supplied findings and does not scan systems."
+              },
+              "id": "vuln-prioritizer/medium",
+              "name": "Medium prioritized vulnerability",
+              "properties": {
+                "priority": "Medium"
+              },
+              "shortDescription": {
+                "text": "Medium vulnerability prioritization result."
+              }
+            },
+            {
+              "fullDescription": {
+                "text": "Known CVE prioritized from CVSS, EPSS, and CISA KEV with optional contextual layers such as asset context, VEX, waivers, remediation, and ATT&CK mapping provenance."
+              },
+              "help": {
+                "text": "Review the CVE, provider evidence, affected component or asset, and recommended remediation action. This tool prioritizes supplied findings and does not scan systems."
+              },
+              "id": "vuln-prioritizer/low",
+              "name": "Low prioritized vulnerability",
+              "properties": {
+                "priority": "Low"
+              },
+              "shortDescription": {
+                "text": "Low vulnerability prioritization result."
+              }
+            }
+          ],
           "version": "1.0.0"
         }
       }

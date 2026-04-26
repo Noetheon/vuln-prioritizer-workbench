@@ -28,6 +28,7 @@ EvidenceBundleManifest = _models_artifacts.EvidenceBundleManifest
 EvidenceBundleVerificationItem = _models_artifacts.EvidenceBundleVerificationItem
 EvidenceBundleVerificationMetadata = _models_artifacts.EvidenceBundleVerificationMetadata
 EvidenceBundleVerificationSummary = _models_artifacts.EvidenceBundleVerificationSummary
+DefensiveContext = _models_provider.DefensiveContext
 EpssData = _models_provider.EpssData
 FindingProvenance = _models_input.FindingProvenance
 InputItem = _models_input.InputItem
@@ -197,6 +198,7 @@ class PrioritizedFinding(StrictModel):
     priority_drivers: list[str] = Field(default_factory=list)
     rationale: str
     provider_evidence: ProviderEvidence | None = None
+    defensive_contexts: list[DefensiveContext] = Field(default_factory=list)
     remediation: RemediationPlan = Field(default_factory=RemediationPlan)
     recommended_action: str
 
@@ -236,6 +238,7 @@ class ComparisonFinding(StrictModel):
     waiver_ticket_url: str | None = None
     operational_rank: int = 0
     context_rank_reasons: list[str] = Field(default_factory=list)
+    defensive_contexts: list[DefensiveContext] = Field(default_factory=list)
     changed: bool
     delta_rank: int
     change_reason: str
@@ -246,6 +249,9 @@ class EnrichmentResult(BaseModel):
     epss: dict[str, EpssData] = Field(default_factory=dict)
     kev: dict[str, KevData] = Field(default_factory=dict)
     attack: dict[str, AttackData] = Field(default_factory=dict)
+    defensive_contexts: dict[str, list[DefensiveContext]] = Field(default_factory=dict)
+    defensive_context_file: str | None = None
+    defensive_context_sources: list[str] = Field(default_factory=list)
     attack_source: str = "none"
     attack_mapping_file: str | None = None
     attack_technique_metadata_file: str | None = None
@@ -270,6 +276,7 @@ class EnrichmentResult(BaseModel):
     epss_diagnostics: ProviderLookupDiagnostics = Field(default_factory=ProviderLookupDiagnostics)
     kev_diagnostics: ProviderLookupDiagnostics = Field(default_factory=ProviderLookupDiagnostics)
     provider_snapshot_sources: list[str] = Field(default_factory=list)
+    provider_cache_timestamps: dict[str, str | None] = Field(default_factory=dict)
 
 
 class AnalysisContext(BaseModel):
@@ -286,6 +293,9 @@ class AnalysisContext(BaseModel):
     provider_snapshot_file: str | None = None
     locked_provider_data: bool = False
     provider_snapshot_sources: list[str] = Field(default_factory=list)
+    defensive_context_file: str | None = None
+    defensive_context_sources: list[str] = Field(default_factory=list)
+    defensive_context_hits: int = 0
     attack_enabled: bool = False
     attack_source: str = "none"
     attack_mapping_file: str | None = None
@@ -318,6 +328,9 @@ class AnalysisContext(BaseModel):
     provider_degraded: bool = False
     provider_diagnostics: dict[str, ProviderLookupDiagnostics] = Field(default_factory=dict)
     provider_freshness: dict[str, str | int | float | bool | None] = Field(default_factory=dict)
+    max_provider_age_hours: int | None = None
+    provider_stale: bool = False
+    provider_stale_sources: list[str] = Field(default_factory=list)
     epss_hits: int = 0
     kev_hits: int = 0
     attack_hits: int = 0
@@ -372,6 +385,7 @@ class ProviderSnapshotItem(StrictModel):
     nvd: NvdData | None = None
     epss: EpssData | None = None
     kev: KevData | None = None
+    defensive_contexts: list[DefensiveContext] = Field(default_factory=list)
 
 
 class ProviderSnapshotReport(StrictModel):

@@ -41,6 +41,7 @@ def _analysis_run_payload(run: Any) -> dict[str, Any]:
         "finished_at": run.finished_at.isoformat() if run.finished_at else None,
         "error_message": run.error_message,
         "provider_snapshot_id": run.provider_snapshot_id,
+        "job_id": run.metadata_json.get("job_id") if isinstance(run.metadata_json, dict) else None,
         "summary": {
             "findings_count": run.metadata_json.get("findings_count", 0),
             "kev_hits": run.metadata_json.get("kev_hits", 0),
@@ -59,6 +60,8 @@ def _analysis_run_payload(run: Any) -> dict[str, Any]:
             ),
             "attack_metadata_format": run.metadata_json.get("attack_metadata_format"),
             "attack_stix_spec_version": run.metadata_json.get("attack_stix_spec_version"),
+            "defensive_context_sources": run.metadata_json.get("defensive_context_sources", []),
+            "defensive_context_hits": run.metadata_json.get("defensive_context_hits", 0),
         },
     }
 
@@ -100,11 +103,52 @@ def _finding_payload(finding: Any, *, include_detail: bool = False) -> dict[str,
         "waiver_ticket_url": finding.waiver_ticket_url,
         "rationale": finding.rationale,
         "recommended_action": finding.recommended_action,
+        "defensive_contexts": _finding_defensive_contexts(finding),
     }
     if include_detail:
         payload["finding"] = finding.finding_json
         payload["occurrences"] = [item.evidence_json for item in finding.occurrences]
+        payload["status_history"] = [
+            _finding_status_history_payload(item) for item in getattr(finding, "status_history", [])
+        ]
     return payload
+
+
+def _finding_status_history_payload(item: Any) -> dict[str, Any]:
+    return {
+        "id": item.id,
+        "finding_id": item.finding_id,
+        "previous_status": item.previous_status,
+        "new_status": item.new_status,
+        "actor": item.actor,
+        "reason": item.reason,
+        "created_at": item.created_at.isoformat(),
+    }
+
+
+def _api_token_payload(token: Any) -> dict[str, Any]:
+    return {
+        "id": token.id,
+        "name": token.name,
+        "created_at": token.created_at.isoformat(),
+        "last_used_at": token.last_used_at.isoformat() if token.last_used_at else None,
+        "revoked_at": token.revoked_at.isoformat() if token.revoked_at else None,
+        "active": token.revoked_at is None,
+    }
+
+
+def _audit_event_payload(event: Any) -> dict[str, Any]:
+    return {
+        "id": event.id,
+        "project_id": event.project_id,
+        "event_type": event.event_type,
+        "target_type": event.target_type,
+        "target_id": event.target_id,
+        "actor": event.actor,
+        "message": event.message,
+        "metadata": event.metadata_json or {},
+        "created_at": event.created_at.isoformat(),
+    }
 
 
 def _finding_vex_statuses(finding: Any) -> dict[str, int]:
@@ -122,6 +166,13 @@ def _finding_vex_statuses(finding: Any) -> dict[str, int]:
         except (TypeError, ValueError):
             continue
     return statuses
+
+
+def _finding_defensive_contexts(finding: Any) -> list[dict[str, Any]]:
+    raw_contexts = finding.finding_json.get("defensive_contexts") if finding.finding_json else []
+    if not isinstance(raw_contexts, list):
+        return []
+    return [item for item in raw_contexts if isinstance(item, dict)]
 
 
 def _latest_threat_context_rank(finding: Any) -> int | None:
@@ -154,6 +205,48 @@ def _attack_context_payload(context: Any, *, finding_id: str) -> dict[str, Any]:
     }
 
 
+def _attack_review_queue_item_payload(context: Any) -> dict[str, Any]:
+    finding = context.finding
+    techniques = [item for item in (context.techniques_json or []) if isinstance(item, dict)]
+    mappings = [item for item in (context.mappings_json or []) if isinstance(item, dict)]
+    technique_ids = sorted(
+        {
+            str(item.get("attack_object_id") or item.get("technique_id"))
+            for item in techniques
+            if item.get("attack_object_id") or item.get("technique_id")
+        }
+    )
+    mapping_sources = sorted(
+        {
+            str(item.get("source") or context.source)
+            for item in mappings
+            if item.get("source") or context.source
+        }
+    )
+    return {
+        "finding_id": finding.id,
+        "cve_id": context.cve_id,
+        "priority": finding.priority,
+        "finding_status": finding.status,
+        "mapped": context.mapped,
+        "source": context.source,
+        "source_version": context.source_version,
+        "source_hash": context.source_hash,
+        "source_path": context.source_path,
+        "metadata_hash": context.metadata_hash,
+        "metadata_path": context.metadata_path,
+        "attack_relevance": context.attack_relevance,
+        "threat_context_rank": context.threat_context_rank,
+        "review_status": context.review_status,
+        "rationale": context.rationale,
+        "technique_ids": technique_ids,
+        "tactic_names": list(context.tactics_json or []),
+        "mapping_count": len(mappings),
+        "mapping_sources": mapping_sources,
+        "created_at": context.created_at.isoformat(),
+    }
+
+
 def _governance_payload(summary: Any) -> dict[str, Any]:
     return {
         "total_findings": summary.total_findings,
@@ -171,6 +264,69 @@ def _project_config_payload(snapshot: Any) -> dict[str, Any]:
         "source": snapshot.source,
         "config": snapshot.config_json or {},
         "created_at": snapshot.created_at.isoformat(),
+    }
+
+
+def _workbench_job_payload(job: Any) -> dict[str, Any]:
+    return {
+        "id": job.id,
+        "project_id": job.project_id,
+        "kind": job.kind,
+        "status": job.status,
+        "target_type": job.target_type,
+        "target_id": job.target_id,
+        "progress": job.progress,
+        "attempts": job.attempts,
+        "max_attempts": job.max_attempts,
+        "priority": job.priority,
+        "idempotency_key": job.idempotency_key,
+        "payload": job.payload_json or {},
+        "result": job.result_json or {},
+        "logs": job.logs_json or [],
+        "error_message": job.error_message,
+        "created_at": job.created_at.isoformat(),
+        "queued_at": job.queued_at.isoformat() if job.queued_at else None,
+        "started_at": job.started_at.isoformat() if job.started_at else None,
+        "heartbeat_at": job.heartbeat_at.isoformat() if job.heartbeat_at else None,
+        "finished_at": job.finished_at.isoformat() if job.finished_at else None,
+    }
+
+
+def _artifact_retention_payload(retention: Any, *, project_id: str) -> dict[str, Any]:
+    return {
+        "project_id": project_id,
+        "report_retention_days": retention.report_retention_days if retention else None,
+        "evidence_retention_days": retention.evidence_retention_days if retention else None,
+        "max_disk_usage_mb": retention.max_disk_usage_mb if retention else None,
+        "updated_at": retention.updated_at.isoformat() if retention else None,
+    }
+
+
+def _detection_control_history_payload(history: Any) -> dict[str, Any]:
+    return {
+        "id": history.id,
+        "project_id": history.project_id,
+        "control_id": history.control_id,
+        "event_type": history.event_type,
+        "actor": history.actor,
+        "reason": history.reason,
+        "previous": history.previous_json or {},
+        "current": history.current_json or {},
+        "created_at": history.created_at.isoformat(),
+    }
+
+
+def _detection_control_attachment_payload(attachment: Any) -> dict[str, Any]:
+    return {
+        "id": attachment.id,
+        "project_id": attachment.project_id,
+        "control_id": attachment.control_id,
+        "filename": attachment.filename,
+        "content_type": attachment.content_type,
+        "sha256": attachment.sha256,
+        "size_bytes": attachment.size_bytes,
+        "created_at": attachment.created_at.isoformat(),
+        "download_url": f"/api/detection-control-attachments/{attachment.id}/download",
     }
 
 

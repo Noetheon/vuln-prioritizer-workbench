@@ -233,6 +233,18 @@
         "provider_snapshot_sources": {
           "$ref": "#/$defs/stringArray"
         },
+        "defensive_context_file": {
+          "description": "Optional local JSON overlay file used for OSV, GHSA, Vulnrichment, or SSVC defensive context. This field is contextual evidence only and does not affect base priority scoring.",
+          "$ref": "#/$defs/nullableString"
+        },
+        "defensive_context_sources": {
+          "description": "Sorted local defensive context source names present in the run, for example osv, ghsa, vulnrichment, or ssvc.",
+          "$ref": "#/$defs/stringArray"
+        },
+        "defensive_context_hits": {
+          "description": "Number of findings with at least one local defensive context overlay. This count is informational and does not change priority_label.",
+          "type": "integer"
+        },
         "attack_enabled": {
           "type": "boolean"
         },
@@ -440,6 +452,18 @@
         },
         "provider_snapshot_sources": {
           "$ref": "#/$defs/stringArray"
+        },
+        "defensive_context_file": {
+          "description": "Optional local JSON overlay file used for OSV, GHSA, Vulnrichment, or SSVC defensive context. This field is contextual evidence only and does not affect base priority scoring.",
+          "$ref": "#/$defs/nullableString"
+        },
+        "defensive_context_sources": {
+          "description": "Sorted local defensive context source names present in the run, for example osv, ghsa, vulnrichment, or ssvc.",
+          "$ref": "#/$defs/stringArray"
+        },
+        "defensive_context_hits": {
+          "description": "Number of findings with at least one local defensive context overlay. This count is informational and does not change priority_label.",
+          "type": "integer"
         },
         "attack_enabled": {
           "type": "boolean"
@@ -895,6 +919,13 @@
             }
           ]
         },
+        "defensive_contexts": {
+          "description": "Optional local OSV, GHSA, Vulnrichment, or SSVC overlays attached to this finding as contextual evidence only. These entries do not change priority_label or priority_rank.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/defensiveContext"
+          }
+        },
         "provenance": {
           "$ref": "#/$defs/findingProvenance"
         },
@@ -986,6 +1017,65 @@
         }
       }
     },
+    "defensiveContext": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "cve_id",
+        "source"
+      ],
+      "properties": {
+        "cve_id": {
+          "type": "string"
+        },
+        "source": {
+          "description": "Local defensive context source name. Current normalized values are osv, ghsa, vulnrichment, and ssvc.",
+          "type": "string"
+        },
+        "source_id": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "title": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "summary": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "severity": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "cvss_score": {
+          "$ref": "#/$defs/nullableNumber"
+        },
+        "ssvc_decision": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "exploitation": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "automatable": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "technical_impact": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "published": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "modified": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "url": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "references": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "tags": {
+          "$ref": "#/$defs/stringArray"
+        }
+      }
+    },
     "providerEvidence": {
       "type": "object",
       "additionalProperties": true,
@@ -1003,6 +1093,13 @@
         },
         "kev": {
           "$ref": "#/$defs/kevData"
+        },
+        "defensive_contexts": {
+          "description": "Same local defensive context overlays attached to the finding, colocated with provider evidence for snapshot/replay consumers. This field is not provider-fetched live data.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/defensiveContext"
+          }
         }
       }
     },

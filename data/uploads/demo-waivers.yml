@@ -1,0 +1,8 @@
+waivers:
+  - id: demo-xz-review
+    cve_id: CVE-2024-3094
+    owner: risk-review
+    reason: Temporary acceptance for coordinated rollout.
+    expires_on: 2099-12-31
+    review_on: 2000-01-01
+    services: [customer-login]

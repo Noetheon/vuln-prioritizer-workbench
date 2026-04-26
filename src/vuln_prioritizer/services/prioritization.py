@@ -229,6 +229,7 @@ class PrioritizationService:
                     waiver_ticket_url=finding.waiver_ticket_url,
                     operational_rank=finding.operational_rank,
                     context_rank_reasons=finding.context_rank_reasons,
+                    defensive_contexts=finding.defensive_contexts,
                     changed=cvss_only_rank != finding.priority_rank,
                     delta_rank=cvss_only_rank - finding.priority_rank,
                     change_reason=build_comparison_reason(

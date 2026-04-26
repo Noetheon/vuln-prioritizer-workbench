@@ -24,6 +24,23 @@ class ReportCreateRequest(StrictModel):
     format: Literal["json", "markdown", "html", "csv", "sarif"] = "html"
 
 
+class WorkbenchJobCreateRequest(StrictModel):
+    kind: Literal["provider_update", "import_findings", "create_report", "create_evidence_bundle"]
+    project_id: str | None = None
+    target_type: str | None = None
+    target_id: str | None = None
+    payload: dict[str, Any] = Field(default_factory=dict)
+    idempotency_key: str | None = None
+    priority: int = Field(default=100, ge=0, le=1000)
+    max_attempts: int = Field(default=3, ge=1, le=10)
+
+
+class ArtifactRetentionRequest(StrictModel):
+    report_retention_days: int | None = Field(default=None, ge=1, le=3650)
+    evidence_retention_days: int | None = Field(default=None, ge=1, le=3650)
+    max_disk_usage_mb: int | None = Field(default=None, ge=1, le=1_000_000)
+
+
 class AssetUpdateRequest(StrictModel):
     asset_id: str | None = None
     target_ref: str | None = None
@@ -53,6 +70,12 @@ class ApiTokenCreateRequest(StrictModel):
     name: str
 
 
+class FindingStatusUpdateRequest(StrictModel):
+    status: Literal["open", "in_review", "remediating", "fixed", "accepted", "suppressed"]
+    reason: str | None = None
+    actor: str | None = None
+
+
 class ProviderUpdateJobRequest(StrictModel):
     sources: list[ProviderSourceName] = Field(default_factory=_default_provider_sources)
     cve_ids: list[str] = Field(default_factory=list)
@@ -73,8 +96,76 @@ class GitHubIssueExportRequest(GitHubIssuePreviewRequest):
     dry_run: bool = True
 
 
+class TicketSyncPreviewRequest(StrictModel):
+    provider: Literal["jira", "servicenow"]
+    limit: int = Field(default=20, ge=1, le=100)
+    priority: str | None = None
+    idempotency_prefix: str = "vuln-prioritizer"
+    jira_project_key: str | None = None
+    servicenow_table: str = "incident"
+
+
+class TicketSyncExportRequest(TicketSyncPreviewRequest):
+    base_url: str | None = None
+    token_env: str | None = None
+    dry_run: bool = True
+
+
 class ProjectConfigRequest(StrictModel):
     config: dict[str, Any]
+
+
+class DetectionControlRequest(StrictModel):
+    control_id: str | None = None
+    name: str
+    technique_id: str
+    technique_name: str | None = None
+    source_type: str | None = None
+    coverage_level: Literal["covered", "partial", "not_covered", "unknown", "not_applicable"] = (
+        "unknown"
+    )
+    environment: str | None = None
+    owner: str | None = None
+    evidence_ref: str | None = None
+    evidence_refs: list[str] = Field(default_factory=list)
+    review_status: Literal["unreviewed", "needs_review", "reviewed", "rejected", "stale"] = (
+        "unreviewed"
+    )
+    notes: str | None = None
+    last_verified_at: str | None = None
+
+
+class DetectionControlPatchRequest(StrictModel):
+    control_id: str | None = None
+    name: str | None = None
+    technique_id: str | None = None
+    technique_name: str | None = None
+    source_type: str | None = None
+    coverage_level: (
+        Literal["covered", "partial", "not_covered", "unknown", "not_applicable"] | None
+    ) = None
+    environment: str | None = None
+    owner: str | None = None
+    evidence_ref: str | None = None
+    evidence_refs: list[str] | None = None
+    review_status: Literal["unreviewed", "needs_review", "reviewed", "rejected", "stale"] | None = (
+        None
+    )
+    notes: str | None = None
+    last_verified_at: str | None = None
+
+
+class AttackReviewUpdateRequest(StrictModel):
+    review_status: Literal[
+        "unreviewed",
+        "needs_review",
+        "source_reviewed",
+        "reviewed",
+        "rejected",
+        "not_applicable",
+    ]
+    actor: str | None = None
+    reason: str | None = None
 
 
 class ErrorDetails(StrictModel):
@@ -137,6 +228,37 @@ class ApiTokenCreateResponse(StrictModel):
     created_at: str
 
 
+class ApiTokenResponse(StrictModel):
+    id: str
+    name: str
+    created_at: str
+    last_used_at: str | None = None
+    revoked_at: str | None = None
+    active: bool
+
+
+class FindingStatusHistoryResponse(StrictModel):
+    id: str
+    finding_id: str
+    previous_status: str | None = None
+    new_status: str
+    actor: str | None = None
+    reason: str | None = None
+    created_at: str
+
+
+class AuditEventResponse(StrictModel):
+    id: str
+    project_id: str | None = None
+    event_type: str
+    target_type: str | None = None
+    target_id: str | None = None
+    actor: str | None = None
+    message: str | None = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
+    created_at: str
+
+
 class ProviderUpdateJobResponse(StrictModel):
     id: str
     status: str
@@ -145,6 +267,33 @@ class ProviderUpdateJobResponse(StrictModel):
     finished_at: str | None = None
     error_message: str | None = None
     metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class WorkbenchJobResponse(StrictModel):
+    id: str
+    project_id: str | None = None
+    kind: str
+    status: str
+    target_type: str | None = None
+    target_id: str | None = None
+    progress: int
+    attempts: int
+    max_attempts: int
+    priority: int
+    idempotency_key: str | None = None
+    payload: dict[str, Any] = Field(default_factory=dict)
+    result: dict[str, Any] = Field(default_factory=dict)
+    logs: list[dict[str, Any]] = Field(default_factory=list)
+    error_message: str | None = None
+    created_at: str
+    queued_at: str | None = None
+    started_at: str | None = None
+    heartbeat_at: str | None = None
+    finished_at: str | None = None
+
+
+class WorkbenchJobListResponse(StrictModel):
+    items: list[WorkbenchJobResponse] = Field(default_factory=list)
 
 
 class AnalysisRunSummary(StrictModel):
@@ -162,6 +311,8 @@ class AnalysisRunSummary(StrictModel):
     attack_technique_metadata_file_sha256: str | None = None
     attack_metadata_format: str | None = None
     attack_stix_spec_version: str | None = None
+    defensive_context_sources: list[str] = Field(default_factory=list)
+    defensive_context_hits: int = 0
 
 
 class AnalysisRunResponse(StrictModel):
@@ -174,6 +325,7 @@ class AnalysisRunResponse(StrictModel):
     finished_at: str | None = None
     error_message: str | None = None
     provider_snapshot_id: str | None = None
+    job_id: str | None = None
     summary: AnalysisRunSummary
 
 
@@ -213,8 +365,10 @@ class FindingResponse(StrictModel):
     waiver_ticket_url: str | None = None
     rationale: str | None = None
     recommended_action: str | None = None
+    defensive_contexts: list[dict[str, Any]] = Field(default_factory=list)
     finding: dict[str, Any] | None = None
     occurrences: list[dict[str, Any]] | None = None
+    status_history: list[FindingStatusHistoryResponse] | None = None
 
 
 class FindingsListResponse(StrictModel):
@@ -304,6 +458,33 @@ class TopTechniquesResponse(StrictModel):
     items: list[AttackTechniqueSummary] = Field(default_factory=list)
 
 
+class AttackReviewQueueItem(StrictModel):
+    finding_id: str
+    cve_id: str
+    priority: str
+    finding_status: str
+    mapped: bool
+    source: str
+    source_version: str | None = None
+    source_hash: str | None = None
+    source_path: str | None = None
+    metadata_hash: str | None = None
+    metadata_path: str | None = None
+    attack_relevance: str
+    threat_context_rank: int
+    review_status: str
+    rationale: str | None = None
+    technique_ids: list[str] = Field(default_factory=list)
+    tactic_names: list[str] = Field(default_factory=list)
+    mapping_count: int = 0
+    mapping_sources: list[str] = Field(default_factory=list)
+    created_at: str
+
+
+class AttackReviewQueueResponse(StrictModel):
+    items: list[AttackReviewQueueItem] = Field(default_factory=list)
+
+
 class DetectionControlResponse(StrictModel):
     id: str
     project_id: str
@@ -316,8 +497,36 @@ class DetectionControlResponse(StrictModel):
     environment: str | None = None
     owner: str | None = None
     evidence_ref: str | None = None
+    evidence_refs: list[str] = Field(default_factory=list)
+    review_status: str = "unreviewed"
+    history_count: int = 0
+    attachment_count: int = 0
     notes: str | None = None
     last_verified_at: str | None = None
+
+
+class DetectionControlHistoryResponse(StrictModel):
+    id: str
+    project_id: str
+    control_id: str
+    event_type: str
+    actor: str | None = None
+    reason: str | None = None
+    previous: dict[str, Any] = Field(default_factory=dict)
+    current: dict[str, Any] = Field(default_factory=dict)
+    created_at: str
+
+
+class DetectionControlAttachmentResponse(StrictModel):
+    id: str
+    project_id: str
+    control_id: str
+    filename: str
+    content_type: str | None = None
+    sha256: str
+    size_bytes: int
+    created_at: str
+    download_url: str
 
 
 class DetectionControlImportResponse(StrictModel):
@@ -381,12 +590,57 @@ class GitHubIssueExportResponse(StrictModel):
     items: list[GitHubIssueExportItem] = Field(default_factory=list)
 
 
+class TicketSyncItem(StrictModel):
+    provider: Literal["jira", "servicenow"]
+    finding_id: str | None = None
+    title: str
+    body: str
+    duplicate_key: str
+    idempotency_key: str
+    labels: list[str] = Field(default_factory=list)
+    status: Literal["preview", "created", "skipped_duplicate"]
+    ticket_url: str | None = None
+    external_id: str | None = None
+
+
+class TicketSyncResponse(StrictModel):
+    dry_run: bool
+    created_count: int = 0
+    skipped_count: int = 0
+    items: list[TicketSyncItem] = Field(default_factory=list)
+
+
 class ProjectConfigResponse(StrictModel):
     id: str
     project_id: str
     source: str
     config: dict[str, Any]
     created_at: str
+
+
+class ArtifactRetentionResponse(StrictModel):
+    project_id: str
+    report_retention_days: int | None = None
+    evidence_retention_days: int | None = None
+    max_disk_usage_mb: int | None = None
+    updated_at: str | None = None
+
+
+class ArtifactCleanupResponse(StrictModel):
+    deleted_files: list[str] = Field(default_factory=list)
+    orphan_files: list[str] = Field(default_factory=list)
+    expired_reports: int = 0
+    expired_evidence_bundles: int = 0
+    bytes_removed: int = 0
+    dry_run: bool = True
+
+
+class ProjectConfigDiffResponse(StrictModel):
+    base_id: str | None = None
+    target_id: str
+    added: dict[str, Any] = Field(default_factory=dict)
+    removed: dict[str, Any] = Field(default_factory=dict)
+    changed: dict[str, dict[str, Any]] = Field(default_factory=dict)
 
 
 class GovernanceRollupItem(StrictModel):

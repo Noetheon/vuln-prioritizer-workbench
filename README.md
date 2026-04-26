@@ -5,7 +5,7 @@
 [![Status: v1.1.0](https://img.shields.io/badge/status-v1.1.0-brightgreen)](./CHANGELOG.md)
 [![Quality: local-first](https://img.shields.io/badge/quality-local--first-informational)](#development)
 
-`vuln-prioritizer` is a Python CLI and self-hosted Workbench for prioritizing known CVEs. It accepts plain CVE lists plus existing scanner and SBOM exports, enriches them with `NVD + EPSS + CISA KEV`, and adds optional ATT&CK, asset-context, VEX, waiver, and evidence layers without turning the priority model into a black box.
+`vuln-prioritizer` is a Python CLI and self-hosted Workbench for prioritizing known CVEs. It accepts plain CVE lists plus existing scanner and SBOM exports, enriches them with `NVD + EPSS + CISA KEV`, and adds optional ATT&CK, defensive-context, asset-context, VEX, waiver, and evidence layers without turning the priority model into a black box.
 
 ![HTML report preview](docs/examples/media/html-report-preview.png)
 
@@ -30,7 +30,7 @@ README media maintenance checklist for future releases:
 - Local-first workflows with saved JSON, HTML reports, snapshots, optional SQLite-backed history views, rollups, and evidence bundles.
 - Optional ATT&CK context from local CTID/MITRE data, not heuristic CVE-to-ATT&CK guesses.
 - CI-friendly outputs including Markdown summaries, SARIF, GitHub Action support, and policy gates.
-- Explicit support for VEX, asset context, waivers, and reproducible review artifacts.
+- Explicit support for local defensive context, VEX, asset context, waivers, and reproducible review artifacts.
 - Waiver lifecycle visibility with active, review-due, and expired states instead of silent long-lived exceptions.
 - A Docker/Compose path that runs the current local Workbench app while keeping the CLI core available in the same image.
 
@@ -46,6 +46,7 @@ Core commands:
 - `state init|import-snapshot|history|waivers|top-services|trends|service-history`: persist snapshots in an optional local SQLite store and inspect history, waiver debt, repeated services, or service trends
 - `rollup`: aggregate saved analysis or snapshots by asset or service
 - `input validate`: locally validate CVE lists, scanner/SBOM export files, asset context, and VEX before enrichment
+- `input inspect` / `input normalize`: emit normalized occurrences from supported inputs without provider lookup
 - `attack validate|coverage|navigator-layer`: validate and use local ATT&CK mappings
 - `report html|evidence-bundle|verify-evidence-bundle`: render HTML, build reproducible ZIP evidence packages, or verify bundle integrity
 - `data status|update|verify|export-provider-snapshot`: inspect cache state, maintain local provider data, and export replayable provider snapshots
@@ -219,11 +220,11 @@ provided, and the selected token environment variable is configured.
 Current local Workbench limitations:
 
 - The Compose path is local-first and single-node. It is not hardened for internet exposure.
-- The Workbench UI/API currently focuses on CVE lists, `generic-occurrence-csv`, Trivy JSON, and Grype JSON imports. The CLI still supports the broader input matrix documented below.
-- SQLite remains the default Workbench runtime; the Compose Postgres profile is an optional migration smoke path. Background workers, SSO, ticket sync, and multi-workspace tenancy remain outside the current local-first scope.
+- The Workbench UI/API supports the same input-format matrix as the CLI for local single-file and multi-file imports.
+- SQLite remains the default Workbench runtime; the Compose Postgres profile is an optional migration smoke path. The Workbench records durable job state for local imports, provider refreshes, reports, and evidence bundles, but a separate async worker process, SSO, organization-wide ticket sync policy, and multi-workspace tenancy remain outside the current local-first scope.
 - The project still does not scan systems, patch software, or generate heuristic/AI CVE-to-ATT&CK mappings.
 
-Current Workbench readiness is tracked in [docs/workbench-threat-model.md](docs/workbench-threat-model.md). The historical implementation plan remains available in [docs/workbench-masterplan.md](docs/workbench-masterplan.md), and [docs/roadmap.md](docs/roadmap.md) tracks the shipped CLI plus local Workbench release line.
+Current Workbench readiness and shared-deployment prerequisites are tracked in [docs/workbench-threat-model.md](docs/workbench-threat-model.md). The historical implementation plan remains available in [docs/workbench-masterplan.md](docs/workbench-masterplan.md), and [docs/roadmap.md](docs/roadmap.md) tracks the shipped CLI plus local Workbench release line.
 
 ## Quickstart
 
@@ -292,7 +293,20 @@ vuln-prioritizer analyze \
 
 Those ATT&CK files are not bundled by a `pipx` install. If you are working from a repository checkout, the checked-in demo inputs live under `data/attack/`.
 
-### 6. Optional Local SQLite State Store
+### 6. Optional Local Defensive Context Overlay
+
+```bash
+vuln-prioritizer analyze \
+  --input trivy-results.json \
+  --input-format trivy-json \
+  --defensive-context-file ./defensive-context.json \
+  --format json \
+  --output analysis.json
+```
+
+`--defensive-context-file` is a local/offline JSON overlay for OSV, GHSA, Vulnrichment, or SSVC evidence you already have. It is not a live advisory fetch path, and it does not affect the base priority scoring from CVSS, EPSS, and KEV.
+
+### 7. Optional Local SQLite State Store
 
 ```bash
 vuln-prioritizer state init --db build/state.db
@@ -311,7 +325,7 @@ vuln-prioritizer state trends --db build/state.db --format json
 vuln-prioritizer state service-history --db build/state.db --service payments
 ```
 
-### 7. Reproducible Provider Snapshot Replay
+### 8. Reproducible Provider Snapshot Replay
 
 ```bash
 vuln-prioritizer data export-provider-snapshot \
@@ -328,7 +342,7 @@ vuln-prioritizer analyze \
 
 Use `--cache-only` on `data export-provider-snapshot` when local smoke tests must avoid live provider refreshes.
 
-### 8. Maintainer Demo Evidence Bundle
+### 9. Maintainer Demo Evidence Bundle
 
 From a repository checkout, maintainers can reproduce the Workbench v1.0 demo evidence bundle without live provider calls:
 
@@ -434,7 +448,7 @@ Reference material:
 
 ## GitHub Action
 
-The repository includes a composite GitHub Action for `analyze`, static report rendering, Workbench-style report artifacts, evidence bundles, and SARIF validation.
+The repository includes a composite GitHub Action for `analyze`, `compare`, `explain`, `doctor`, input validation, snapshots, rollups, provider-data verification, ATT&CK validation/coverage, static report rendering, Workbench-style report artifacts, evidence bundles, and SARIF validation.
 
 Use it after `actions/checkout`, because scan exports, SBOMs, or other analysis input files live in the consumer repository, not in the action repository.
 In `mode: analyze`, `input` and `input-format` accept newline-delimited values so one action step can merge multiple sources. The action also passes through the CLI's waiver, filter, sort, cache, provider replay, and fail-gate flags for deterministic CI runs.
@@ -458,17 +472,20 @@ In `mode: analyze`, `input` and `input-format` accept newline-delimited values s
     summary-template: compact
     html-output-path: report.html
     github-step-summary: "true"
+    defensive-context-file: defensive-context.json
     waiver-file: waivers.yml
     hide-waived: "true"
     fail-on: critical
     fail-on-expired-waivers: "true"
+    max-provider-age-hours: "48"
+    fail-on-stale-provider-data: "true"
     sort-by: operational
     max-cves: "250"
 ```
 
 Replace `vX.Y.Z` with the release tag or commit SHA you want to consume. `summary-template` is backward-compatible and defaults to `detailed`. Set it to `compact` for GitHub step summaries or PR comments, or keep `detailed` when you want the full executive summary artifact. If a workflow only needs `$GITHUB_STEP_SUMMARY`, the action can now generate a summary without requiring an explicit `summary-output-path`.
 
-Common analyze-only Action inputs include `waiver-file`, `hide-waived`, `fail-on-provider-error`, `fail-on-expired-waivers`, `fail-on-review-due-waivers`, `priority`, `kev-only`, `min-cvss`, `min-epss`, `sort-by`, `max-cves`, `provider-snapshot-file`, `locked-provider-data`, `no-cache`, `cache-dir`, `cache-ttl-hours`, `nvd-api-key-env`, `offline-kev-file`, and `offline-attack-file`. Report modes include `report-html`, `workbench-report`, `report-evidence-bundle`, and `verify-evidence-bundle`; set `validate-sarif: "true"` when a SARIF output should fail the job before upload if the local SARIF contract is not met.
+Common analyze/compare/snapshot Action inputs include `waiver-file`, `defensive-context-file`, `hide-waived`, `fail-on-provider-error`, `fail-on-expired-waivers`, `fail-on-review-due-waivers`, `priority`, `kev-only`, `min-cvss`, `min-epss`, `sort-by`, `max-cves`, `provider-snapshot-file`, `locked-provider-data`, `max-provider-age-hours`, `fail-on-stale-provider-data`, `no-cache`, `cache-dir`, `cache-ttl-hours`, `nvd-api-key-env`, `offline-kev-file`, and `offline-attack-file`. `defensive-context-file` passes a local/offline JSON context overlay only; it does not fetch advisory data and does not change base priority scoring. Report modes include `report-html`, `workbench-report`, `report-evidence-bundle`, `verify-evidence-bundle`, and `validate-sarif`; set `validate-sarif: "true"` in analysis/report steps when a SARIF output should fail the job before upload if the local SARIF contract is not met.
 
 See [docs/integrations/reporting_and_ci.md](docs/integrations/reporting_and_ci.md) for the full contract and CI patterns, plus [docs/examples/github_action_summary_templates.md](docs/examples/github_action_summary_templates.md) for compact vs detailed examples.
 

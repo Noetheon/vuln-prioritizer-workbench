@@ -12,6 +12,7 @@ from vuln_prioritizer.cli_support.analysis import (
     AnalysisRequest,
     build_priority_policy,
     handle_provider_error_fail_on,
+    handle_provider_staleness_fail_on,
     prepare_analysis,
 )
 from vuln_prioritizer.cli_support.common import (
@@ -100,9 +101,14 @@ def snapshot_create(
     show_suppressed: bool = typer.Option(False, "--show-suppressed"),
     hide_waived: bool = typer.Option(False, "--hide-waived"),
     fail_on_provider_error: bool = typer.Option(False, "--fail-on-provider-error"),
+    max_provider_age_hours: int | None = typer.Option(None, "--max-provider-age-hours", min=1),
+    fail_on_stale_provider_data: bool = typer.Option(False, "--fail-on-stale-provider-data"),
     max_cves: int | None = typer.Option(None, "--max-cves", min=1),
     offline_kev_file: Path | None = typer.Option(None, "--offline-kev-file", dir_okay=False),
     offline_attack_file: Path | None = typer.Option(None, "--offline-attack-file", dir_okay=False),
+    defensive_context_file: Path | None = typer.Option(
+        None, "--defensive-context-file", dir_okay=False
+    ),
     provider_snapshot_file: Path | None = typer.Option(
         None, "--provider-snapshot-file", dir_okay=False
     ),
@@ -139,6 +145,7 @@ def snapshot_create(
             attack_mapping_file=attack_mapping_file,
             attack_technique_metadata_file=attack_technique_metadata_file,
             offline_attack_file=offline_attack_file,
+            defensive_context_file=defensive_context_file,
             priority_filters=priority,
             kev_only=kev_only,
             min_cvss=min_cvss,
@@ -168,6 +175,8 @@ def snapshot_create(
             no_cache=no_cache,
             cache_dir=cache_dir,
             cache_ttl_hours=cache_ttl_hours,
+            max_provider_age_hours=max_provider_age_hours,
+            fail_on_stale_provider_data=fail_on_stale_provider_data,
         )
     )
     config_path = runtime_config_path(ctx)
@@ -199,6 +208,10 @@ def snapshot_create(
     handle_provider_error_fail_on(
         snapshot_metadata,
         fail_on_provider_error=fail_on_provider_error,
+    )
+    handle_provider_staleness_fail_on(
+        snapshot_metadata,
+        fail_on_stale_provider_data=fail_on_stale_provider_data,
     )
 
 

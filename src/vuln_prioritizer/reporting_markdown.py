@@ -49,6 +49,7 @@ def generate_markdown_report(
     attack_header = (
         "| CVE ID | Mapping Types | Techniques | Tactics | Capability Groups | ATT&CK Note |"
     )
+    defensive_context_header = "| CVE ID | Sources | IDs | Severity | SSVC Decision | Summary |"
     lines = [
         "# Vulnerability Prioritization Report",
         "",
@@ -140,6 +141,65 @@ def generate_markdown_report(
             )
     else:
         lines.append("No mapped CVEs were included in this export.")
+
+    lines.extend(["", "## Defensive Context", ""])
+    if any(finding.defensive_contexts for finding in findings):
+        lines.extend(
+            [
+                defensive_context_header,
+                "| --- | --- | --- | --- | --- | --- |",
+            ]
+        )
+        for finding in findings:
+            if not finding.defensive_contexts:
+                continue
+            lines.append(
+                "| "
+                + " | ".join(
+                    [
+                        finding.cve_id,
+                        escape_pipes(
+                            ", ".join(
+                                sorted(
+                                    {
+                                        context.source.upper()
+                                        for context in finding.defensive_contexts
+                                    }
+                                )
+                            )
+                            or "N.A."
+                        ),
+                        escape_pipes(
+                            ", ".join(
+                                context.source_id or "N.A."
+                                for context in finding.defensive_contexts[:5]
+                            )
+                        ),
+                        escape_pipes(
+                            ", ".join(
+                                context.severity or "N.A."
+                                for context in finding.defensive_contexts[:5]
+                            )
+                        ),
+                        escape_pipes(
+                            ", ".join(
+                                context.ssvc_decision or "N.A."
+                                for context in finding.defensive_contexts[:5]
+                            )
+                        ),
+                        escape_pipes(
+                            normalize_whitespace(
+                                finding.defensive_contexts[0].summary
+                                or finding.defensive_contexts[0].title
+                                or "N.A."
+                            )
+                        ),
+                    ]
+                )
+                + " |"
+            )
+    else:
+        lines.append("No OSV, GHSA, Vulnrichment or SSVC context was included.")
 
     lines.extend(["", "## Finding Provenance", ""])
     if findings:
@@ -294,6 +354,10 @@ def generate_explain_markdown(
             f"- ATT&CK Techniques: {comma_or_na(attack.attack_techniques)}",
             f"- ATT&CK Tactics: {comma_or_na(attack.attack_tactics)}",
             f"- ATT&CK Note: {attack.attack_note or 'N.A.'}",
+            "- Defensive Context Sources: "
+            + comma_or_na(
+                sorted({context.source.upper() for context in finding.defensive_contexts})
+            ),
             f"- Sources: {comma_or_na(finding.provenance.source_formats)}",
             f"- Components: {comma_or_na(finding.provenance.components)}",
             f"- Targets: {comma_or_na(finding.provenance.targets)}",
@@ -339,6 +403,35 @@ def generate_explain_markdown(
             )
     else:
         lines.append("| N.A. | No CTID mapping | N.A. | N.A. | N.A. |")
+
+    lines.extend(["", "## Defensive Context", ""])
+    if finding.defensive_contexts:
+        lines.extend(
+            [
+                "| Source | ID | Severity | SSVC Decision | Summary |",
+                "| --- | --- | --- | --- | --- |",
+            ]
+        )
+        for context_item in finding.defensive_contexts:
+            lines.append(
+                "| "
+                + " | ".join(
+                    [
+                        escape_pipes(context_item.source.upper()),
+                        escape_pipes(context_item.source_id or "N.A."),
+                        escape_pipes(context_item.severity or "N.A."),
+                        escape_pipes(context_item.ssvc_decision or "N.A."),
+                        escape_pipes(
+                            normalize_whitespace(
+                                context_item.summary or context_item.title or "N.A."
+                            )
+                        ),
+                    ]
+                )
+                + " |"
+            )
+    else:
+        lines.append("No OSV, GHSA, Vulnrichment or SSVC context was included.")
 
     lines.extend(
         [

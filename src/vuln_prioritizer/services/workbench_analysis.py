@@ -10,7 +10,7 @@ from typing import Any
 from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
-from vuln_prioritizer.cli_support.common import (
+from vuln_prioritizer.cli_options import (
     AttackSource,
     InputFormat,
     OutputFormat,
@@ -47,6 +47,12 @@ SUPPORTED_WORKBENCH_INPUT_FORMATS = {
     InputFormat.generic_occurrence_csv.value,
     InputFormat.trivy_json.value,
     InputFormat.grype_json.value,
+    InputFormat.cyclonedx_json.value,
+    InputFormat.spdx_json.value,
+    InputFormat.dependency_check_json.value,
+    InputFormat.github_alerts_json.value,
+    InputFormat.nessus_xml.value,
+    InputFormat.openvas_xml.value,
 }
 
 
@@ -65,9 +71,9 @@ def run_workbench_import(
     session: Session,
     settings: WorkbenchSettings,
     project_id: str,
-    input_path: Path,
-    original_filename: str,
-    input_format: str,
+    input_path: Path | list[Path],
+    original_filename: str | list[str],
+    input_format: str | list[str],
     provider_snapshot_file: Path | None = None,
     locked_provider_data: bool = False,
     attack_source: str = AttackSource.none.value,
@@ -76,10 +82,14 @@ def run_workbench_import(
     asset_context_file: Path | None = None,
     vex_file: Path | None = None,
     waiver_file: Path | None = None,
+    defensive_context_file: Path | None = None,
 ) -> WorkbenchImportResult:
     """Analyze an uploaded file and persist the Workbench run."""
-    if input_format not in SUPPORTED_WORKBENCH_INPUT_FORMATS:
-        raise WorkbenchAnalysisError(f"Unsupported Workbench input format: {input_format}.")
+    input_paths, original_filenames, input_formats = _normalize_workbench_import_inputs(
+        input_path=input_path,
+        original_filename=original_filename,
+        input_format=input_format,
+    )
 
     repo = WorkbenchRepository(session)
     if repo.get_project(project_id) is None:
@@ -97,9 +107,9 @@ def run_workbench_import(
     )
     run = repo.create_analysis_run(
         project_id=project_id,
-        input_type=input_format,
-        input_filename=original_filename,
-        input_path=str(input_path),
+        input_type=_effective_workbench_input_type(input_formats),
+        input_filename=", ".join(original_filenames),
+        input_path="\n".join(str(path) for path in input_paths),
         status="running",
         provider_snapshot_id=provider_snapshot.id if provider_snapshot is not None else None,
     )
@@ -107,7 +117,10 @@ def run_workbench_import(
 
     attack_enabled = attack_source != AttackSource.none.value
     request = AnalysisRequest(
-        input_specs=[InputSpec(path=input_path, input_format=input_format)],
+        input_specs=[
+            InputSpec(path=path, input_format=input_format)
+            for path, input_format in zip(input_paths, input_formats, strict=True)
+        ],
         output=None,
         format=OutputFormat.json,
         provider_snapshot_file=provider_snapshot_file,
@@ -117,6 +130,7 @@ def run_workbench_import(
         attack_mapping_file=attack_mapping_file,
         attack_technique_metadata_file=attack_technique_metadata_file,
         offline_attack_file=None,
+        defensive_context_file=defensive_context_file,
         priority_filters=None,
         kev_only=False,
         min_cvss=None,
@@ -162,8 +176,10 @@ def run_workbench_import(
         asset_context_file=asset_context_file,
         vex_file=vex_file,
         waiver_file=waiver_file,
+        defensive_context_file=defensive_context_file,
     )
-    _persist_findings(repo, run, findings, context=context)
+    persisted_findings = _persist_findings(repo, run, findings, context=context)
+    _attach_workbench_finding_ids(payload, persisted_findings)
     repo.finish_analysis_run(
         run.id,
         status="completed",
@@ -175,6 +191,36 @@ def run_workbench_import(
     return WorkbenchImportResult(run=run, payload=payload)
 
 
+def _normalize_workbench_import_inputs(
+    *,
+    input_path: Path | list[Path],
+    original_filename: str | list[str],
+    input_format: str | list[str],
+) -> tuple[list[Path], list[str], list[str]]:
+    input_paths = input_path if isinstance(input_path, list) else [input_path]
+    original_filenames = (
+        original_filename if isinstance(original_filename, list) else [original_filename]
+    )
+    input_formats = input_format if isinstance(input_format, list) else [input_format]
+    if not input_paths:
+        raise WorkbenchAnalysisError("At least one Workbench input file is required.")
+    if len(input_paths) != len(original_filenames) or len(input_paths) != len(input_formats):
+        raise WorkbenchAnalysisError("Workbench input files, names, and formats must align.")
+    unsupported = [item for item in input_formats if item not in SUPPORTED_WORKBENCH_INPUT_FORMATS]
+    if unsupported:
+        raise WorkbenchAnalysisError(
+            "Unsupported Workbench input format: " + ", ".join(sorted(set(unsupported))) + "."
+        )
+    return input_paths, original_filenames, input_formats
+
+
+def _effective_workbench_input_type(input_formats: list[str]) -> str:
+    unique_formats = sorted(set(input_formats))
+    if len(unique_formats) == 1:
+        return unique_formats[0]
+    return "mixed"
+
+
 def _attach_workbench_metadata(
     payload: dict[str, Any],
     *,
@@ -184,6 +230,7 @@ def _attach_workbench_metadata(
     asset_context_file: Path | None,
     vex_file: Path | None,
     waiver_file: Path | None,
+    defensive_context_file: Path | None,
 ) -> None:
     metadata = payload.get("metadata")
     if not isinstance(metadata, dict):
@@ -211,6 +258,7 @@ def _attach_workbench_metadata(
         ("asset_context", asset_context_file),
         ("vex", vex_file),
         ("waiver", waiver_file),
+        ("defensive_context", defensive_context_file),
     ):
         if path is None:
             continue
@@ -228,6 +276,8 @@ def _attach_workbench_metadata(
             metadata["vex_files"] = [str(vex_file)]
         if waiver_file is not None:
             metadata["waiver_file"] = str(waiver_file)
+        if defensive_context_file is not None:
+            metadata["defensive_context_file"] = str(defensive_context_file)
 
 
 def _persist_findings(
@@ -236,7 +286,8 @@ def _persist_findings(
     findings: list[PrioritizedFinding],
     *,
     context: AnalysisContext,
-) -> None:
+) -> list[Any]:
+    persisted_findings: list[Any] = []
     for finding in findings:
         finding_payload = finding.model_dump()
         first_occurrence = (
@@ -333,6 +384,19 @@ def _persist_findings(
                 fix_version=", ".join(occurrence.fix_versions) if occurrence.fix_versions else None,
                 evidence_json=occurrence.model_dump(),
             )
+        persisted_findings.append(persisted)
+    return persisted_findings
+
+
+def _attach_workbench_finding_ids(payload: dict[str, Any], persisted_findings: list[Any]) -> None:
+    payload_findings = payload.get("findings")
+    if not isinstance(payload_findings, list):
+        return
+    for finding_payload, persisted in zip(payload_findings, persisted_findings, strict=False):
+        if not isinstance(finding_payload, dict):
+            continue
+        finding_payload["workbench_finding_id"] = persisted.id
+        finding_payload["status"] = persisted.status
 
 
 def _persist_attack_context(

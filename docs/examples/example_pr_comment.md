@@ -74,6 +74,10 @@ ATT&CK context was disabled for this export.
 
 No mapped CVEs were included in this export.
 
+## Defensive Context
+
+No OSV, GHSA, Vulnrichment or SSVC context was included.
+
 ## Finding Provenance
 
 | CVE ID | Sources | Components | Paths | Fix Versions | Targets | VEX Statuses |

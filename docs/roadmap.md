@@ -6,14 +6,14 @@ The product remains a CLI and local Workbench for prioritizing known CVEs and im
 
 ## Current Release Surface
 
-- `v1.1.0` provides `analyze`, `compare`, `explain`, `doctor`, `snapshot create`, `snapshot diff`, `rollup`, `input validate`, `state`, `data`, `db init`, `web serve`, `report html`, `report evidence-bundle`, `report verify-evidence-bundle`, and ATT&CK utility commands.
+- `v1.1.0` provides `analyze`, `compare`, `explain`, `doctor`, `snapshot create`, `snapshot diff`, `rollup`, `input validate`, `input inspect`, `input normalize`, `state`, `data`, `db init`, `web serve`, `report html`, `report evidence-bundle`, `report verify-evidence-bundle`, and ATT&CK utility commands.
 - `analyze` and `compare` support existing scanner/SBOM JSON export formats. Output support is command-specific; `analyze` provides Markdown, JSON, SARIF, table output, direct HTML sidecars, and Markdown summary sidecars for CI-friendly workflows.
 - Waiver files, evidence bundles, and fixture-benchmark regressions extend the operational governance surface without changing the transparent base score.
 - Runtime config discovery via `vuln-prioritizer.yml` is available for the main operational commands.
 - The base JSON export contract remains versioned with `metadata.schema_version = 1.0.0`; new helper surfaces ship as additive `1.1.0` contracts.
 - Default prioritization stays grounded in `CVSS + EPSS + KEV`.
 - ATT&CK, asset context, and VEX remain explicit contextual layers.
-- The composite GitHub Action mirrors `analyze` policy, waiver, provider/cache, filter, sort, and fail-gate flags as additive inputs.
+- The composite GitHub Action mirrors `analyze`, `compare`, `explain`, `doctor`, input validation, snapshot, rollup, provider verification, ATT&CK validation/coverage, reporting, evidence, SARIF validation, and provider freshness gates as additive inputs.
 - Local quality gates now start enforcing coverage with `--cov-fail-under=90`, and temp-copy package/demo checks are available for read-only validation.
 - Docker and Compose provide a local runtime bootstrap for the Workbench while keeping the CLI core available in the same image.
 
@@ -27,19 +27,19 @@ Current Workbench scope:
 
 - Docker Compose quickstart as the local web/API runtime entry point.
 - SQLite-first deployment with provider cache, upload, and report directories mounted locally.
-- Import paths for CVE lists, `generic-occurrence-csv`, Trivy JSON, and Grype JSON.
+- Import paths for the same local input-format matrix as the CLI, including CVE lists, generic occurrence CSV, Trivy JSON, Grype JSON, CycloneDX JSON, SPDX JSON, Dependency-Check JSON, GitHub alerts JSON, Nessus XML, and OpenVAS XML.
 - Findings table and detail views that expose priority, evidence, owner/service context, and "why this priority?" explanations.
 - Dashboard and report flows for Markdown, HTML, JSON, and evidence bundles.
 - Assets, waivers, VEX, detection controls, coverage gaps, ATT&CK Navigator exports, and technique detail views.
-- Local API-token gating, optional PostgreSQL profile, scheduled provider snapshot refresh, GitHub issue export, config-as-code settings, SARIF validation, and CI/CD docs.
+- Local API-token gating, optional PostgreSQL profile, provider snapshot refresh, durable local job records, artifact retention, ATT&CK review queue, GitHub/Jira/ServiceNow ticket previews and exports, config-as-code settings, SARIF validation, and CI/CD docs.
 
 The current `docker compose up --build` service runs the Workbench web application on `127.0.0.1:8000`; the CLI remains available through the installed `vuln-prioritizer` command.
 
 Current local Workbench limits:
 
 - Local-first single-node runtime, not a hardened public internet deployment.
-- SQLite remains the default. The optional PostgreSQL profile is a migration smoke path, and local API tokens are an automation control rather than a full public-internet auth model. Background workers, queues, SSO, ticket sync, and multi-workspace support remain outside the current local-first scope.
-- Web/API import path currently targets CVE lists, `generic-occurrence-csv`, Trivy JSON, and Grype JSON. The CLI remains the broader automation surface.
+- SQLite remains the default. The optional PostgreSQL profile is a migration smoke path, and local API tokens are an automation control rather than a full public-internet auth model. A separate async worker process, SSO, organization-wide ticket sync policy, and multi-workspace support remain outside the current local-first scope.
+- Web/API import path supports the same local input-format matrix as the CLI for single-file and multi-file imports.
 - No vulnerability scanning, AI autopatching, or heuristic/AI CVE-to-ATT&CK mapping.
 
 ## Implemented Release Line

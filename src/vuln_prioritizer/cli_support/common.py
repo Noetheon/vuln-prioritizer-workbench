@@ -12,6 +12,28 @@ from rich.console import Console
 from rich.panel import Panel
 
 from vuln_prioritizer import __version__
+from vuln_prioritizer.cli_options import (
+    FULL_OUTPUT_FORMATS,
+    PRIORITY_LABELS,
+    REPORT_OUTPUT_FORMATS,
+    SNAPSHOT_CREATE_OUTPUT_FORMATS,
+    TABLE_AND_JSON_OUTPUT_FORMATS,
+    AttackSource,
+    DataSourceName,
+    InputFormat,
+    OutputFormat,
+    PolicyProfile,
+    PriorityFilter,
+    ReportOutputFormat,
+    RollupBy,
+    SnapshotCreateOutputFormat,
+    SortBy,
+    StatePriorityScope,
+    StateWaiverStatusFilter,
+    SummaryTemplate,
+    TableJsonOutputFormat,
+    TargetKind,
+)
 from vuln_prioritizer.inputs.loader import InputSpec
 from vuln_prioritizer.runtime_config import (
     LoadedRuntimeConfig,
@@ -21,142 +43,44 @@ from vuln_prioritizer.runtime_config import (
 
 console = Console()
 
-
-class OutputFormat(StrEnum):
-    markdown = "markdown"
-    json = "json"
-    sarif = "sarif"
-    table = "table"
-
-
-class ReportOutputFormat(StrEnum):
-    markdown = "markdown"
-    json = "json"
-    table = "table"
-
-
-class TableJsonOutputFormat(StrEnum):
-    table = "table"
-    json = "json"
-
-
-class SnapshotCreateOutputFormat(StrEnum):
-    json = "json"
-    markdown = "markdown"
-
-
-FULL_OUTPUT_FORMATS = (
-    OutputFormat.markdown,
-    OutputFormat.json,
-    OutputFormat.sarif,
-    OutputFormat.table,
-)
-REPORT_OUTPUT_FORMATS = (
-    ReportOutputFormat.markdown,
-    ReportOutputFormat.json,
-    ReportOutputFormat.table,
-)
-TABLE_AND_JSON_OUTPUT_FORMATS = (
-    TableJsonOutputFormat.table,
-    TableJsonOutputFormat.json,
-)
-SNAPSHOT_CREATE_OUTPUT_FORMATS = (
-    SnapshotCreateOutputFormat.json,
-    SnapshotCreateOutputFormat.markdown,
-)
-
-
-class PriorityFilter(StrEnum):
-    critical = "critical"
-    high = "high"
-    medium = "medium"
-    low = "low"
-
-
-class SortBy(StrEnum):
-    priority = "priority"
-    operational = "operational"
-    epss = "epss"
-    cvss = "cvss"
-    cve = "cve"
-
-
-class AttackSource(StrEnum):
-    none = "none"
-    local_csv = "local-csv"
-    ctid_json = "ctid-json"
-
-
-class InputFormat(StrEnum):
-    auto = "auto"
-    cve_list = "cve-list"
-    generic_occurrence_csv = "generic-occurrence-csv"
-    trivy_json = "trivy-json"
-    grype_json = "grype-json"
-    cyclonedx_json = "cyclonedx-json"
-    spdx_json = "spdx-json"
-    dependency_check_json = "dependency-check-json"
-    github_alerts_json = "github-alerts-json"
-    nessus_xml = "nessus-xml"
-    openvas_xml = "openvas-xml"
-
-
-class PolicyProfile(StrEnum):
-    default = "default"
-    enterprise = "enterprise"
-    conservative = "conservative"
-
-
-class DataSourceName(StrEnum):
-    all = "all"
-    nvd = "nvd"
-    epss = "epss"
-    kev = "kev"
-
-
-class TargetKind(StrEnum):
-    generic = "generic"
-    image = "image"
-    repository = "repository"
-    filesystem = "filesystem"
-    host = "host"
-
-
-class RollupBy(StrEnum):
-    asset = "asset"
-    service = "service"
-    owner = "owner"
-    exposure = "exposure"
-    environment = "environment"
-    component = "component"
-
-
-class StateWaiverStatusFilter(StrEnum):
-    all = "all"
-    active = "active"
-    review_due = "review_due"
-    expired = "expired"
-
-
-class StatePriorityScope(StrEnum):
-    all = "all"
-    critical = "critical"
-    high = "high"
-    medium = "medium"
-    low = "low"
-
-
-class SummaryTemplate(StrEnum):
-    detailed = "detailed"
-    compact = "compact"
-
-
-PRIORITY_LABELS = {
-    PriorityFilter.critical: "Critical",
-    PriorityFilter.high: "High",
-    PriorityFilter.medium: "Medium",
-    PriorityFilter.low: "Low",
-}
+__all__ = [
+    "FULL_OUTPUT_FORMATS",
+    "PRIORITY_LABELS",
+    "REPORT_OUTPUT_FORMATS",
+    "SNAPSHOT_CREATE_OUTPUT_FORMATS",
+    "TABLE_AND_JSON_OUTPUT_FORMATS",
+    "AttackSource",
+    "DataSourceName",
+    "InputFormat",
+    "OutputFormat",
+    "PolicyProfile",
+    "PriorityFilter",
+    "ReportOutputFormat",
+    "RollupBy",
+    "SnapshotCreateOutputFormat",
+    "SortBy",
+    "StatePriorityScope",
+    "StateWaiverStatusFilter",
+    "SummaryTemplate",
+    "TableJsonOutputFormat",
+    "TargetKind",
+    "build_input_specs_or_exit",
+    "console",
+    "emit_stdout",
+    "exit_input_validation",
+    "format_metavar",
+    "load_runtime_config_for_session",
+    "merge_default_maps",
+    "output_format_option",
+    "print_warnings",
+    "runtime_config",
+    "runtime_config_path",
+    "should_emit_json_stdout",
+    "validate_command_formats",
+    "validate_output_mode",
+    "validate_unique_output_paths",
+    "version_callback",
+]
 
 
 def format_metavar(allowed_formats: tuple[StrEnum, ...]) -> str:

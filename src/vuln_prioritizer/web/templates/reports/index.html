@@ -1,59 +1,134 @@
 {% extends "base.html" %}
 {% block title %}Reports · {{ run.input_filename or run.id }}{% endblock %}
 {% block content %}
-<section class="section">
-  <div class="section-head">
+<section class="page-hero">
+  <div>
     <p class="eyebrow">Run artifacts</p>
-    <h1>{{ run.input_filename or run.id }}</h1>
+    <h1>Reports and evidence</h1>
+    <p class="page-subtitle">
+      Export hub for the analysis run. Generate executive views, machine-readable files, and a checksum-backed evidence bundle from the same preserved payload.
+    </p>
   </div>
-  <div class="action-row">
-    {% for format in ["json", "markdown", "html", "csv", "sarif"] %}
-      <form method="post" action="/web/analysis-runs/{{ run.id }}/reports">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-        <input type="hidden" name="report_format" value="{{ format }}">
-        <button class="button" type="submit">Create {{ format }}</button>
-      </form>
-    {% endfor %}
+  <div class="hero-meta">
+    <span>Project <strong>{{ project.name if project else "Not available" }}</strong></span>
+    <span>Input file <strong>{{ run.input_filename or "Not available" }}</strong></span>
+    <span>Input type <strong>{{ run_context.input_format }}</strong></span>
+    <span>Status <strong>{{ run_context.status }}</strong></span>
+    <span>Generated <strong>{{ run_context.generated_at or "Not available" }}</strong></span>
+  </div>
+</section>
+
+<section class="section">
+  <div class="metric-grid compact">
+    <article class="metric"><span>Findings</span><strong>{{ report_status.findings }}</strong></article>
+    <article class="metric"><span>Critical</span><strong>{{ report_status.critical }}</strong></article>
+    <article class="metric"><span>High</span><strong>{{ report_status.high }}</strong></article>
+    <article class="metric"><span>KEV</span><strong>{{ report_status.kev }}</strong></article>
+    <article class="metric"><span>ATT&amp;CK mapped</span><strong>{{ report_status.attack_mapped }}</strong></article>
+    <article class="metric"><span>Artifacts</span><strong>{{ report_status.reports + report_status.bundles }}</strong></article>
+  </div>
+</section>
+
+<section class="section report-actions">
+  <article class="panel action-panel featured">
+    <div>
+      <p class="eyebrow">Executive view</p>
+      <h2>Read the prioritized security story</h2>
+      <p class="muted">Open the browser report with section navigation, charts, ATT&amp;CK context, governance status, and methodology notes.</p>
+    </div>
+    <a class="button primary" href="/analysis-runs/{{ run.id }}/executive-report">Open executive report</a>
+  </article>
+
+  <article class="panel action-panel">
+    <div>
+      <p class="eyebrow">File exports</p>
+      <h2>Create durable report files</h2>
+      <p class="muted">Use JSON for automation, Markdown for reviews, HTML for offline sharing, CSV for triage, and SARIF for security tooling.</p>
+    </div>
+    <div class="button-cluster">
+      {% for format in report_formats %}
+        <form method="post" action="/web/analysis-runs/{{ run.id }}/reports">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <input type="hidden" name="report_format" value="{{ format }}">
+          <button class="button" type="submit">Create {{ format }}</button>
+        </form>
+      {% endfor %}
+    </div>
+  </article>
+
+  <article class="panel action-panel">
+    <div>
+      <p class="eyebrow">Evidence</p>
+      <h2>Package inputs and checksums</h2>
+      <p class="muted">Create a bundle that can be downloaded and verified from the Workbench without changing the underlying run.</p>
+    </div>
     <form method="post" action="/web/analysis-runs/{{ run.id }}/evidence-bundle">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
       <button class="button primary" type="submit">Create evidence bundle</button>
     </form>
-  </div>
+  </article>
 </section>
 
 <section class="section split">
-  <div>
+  <div class="panel">
     <div class="section-head">
       <p class="eyebrow">Reports</p>
       <h2>Generated files</h2>
     </div>
-    <div class="stack">
+    <div class="artifact-list">
       {% for report in reports %}
-        <a class="artifact-row" href="/api/reports/{{ report.id }}/download">
-          <span>{{ report.kind }}</span>
-          <strong>{{ report.format }}</strong>
+        <a class="artifact-row artifact-card" href="/api/reports/{{ report.id }}/download">
+          <span class="artifact-icon">{{ report.format[:1]|upper }}</span>
+          <span>
+            <strong>{{ report.kind }}</strong>
+            <small>{{ report.created_at }} · {{ report.sha256[:12] }}</small>
+          </span>
+          <em>{{ report.format }}</em>
         </a>
       {% else %}
-        <p class="empty">No reports generated.</p>
+        <div class="empty-state">
+          <strong>No reports generated.</strong>
+          <p>Create an export above when you need an artifact outside the live Workbench.</p>
+        </div>
       {% endfor %}
     </div>
   </div>
-  <div>
+  <aside class="panel">
     <div class="section-head">
       <p class="eyebrow">Evidence</p>
       <h2>Bundles</h2>
     </div>
-    <div class="stack">
+    <div class="artifact-list">
       {% for bundle in bundles %}
-        <div class="artifact-row">
-          <a href="/api/evidence-bundles/{{ bundle.id }}/download">Evidence ZIP</a>
-          <a href="/evidence-bundles/{{ bundle.id }}/verify">Verify</a>
-          <strong>{{ bundle.sha256[:10] }}</strong>
+        <div class="artifact-row artifact-card">
+          <span class="artifact-icon">E</span>
+          <span>
+            <strong><a href="/api/evidence-bundles/{{ bundle.id }}/download">Evidence ZIP</a></strong>
+            <small>{{ bundle.created_at }} · SHA {{ bundle.sha256[:12] }}</small>
+          </span>
+          <a class="button" href="/evidence-bundles/{{ bundle.id }}/verify">Verify</a>
         </div>
       {% else %}
-        <p class="empty">No evidence bundles generated.</p>
+        <div class="empty-state">
+          <strong>No evidence bundles generated.</strong>
+          <p>Generate one after the run is final and before handing the report to reviewers.</p>
+        </div>
       {% endfor %}
     </div>
-  </div>
+  </aside>
+</section>
+
+<section class="section">
+  <article class="panel run-context">
+    <div>
+      <p class="eyebrow">Run context</p>
+      <h2>Input and provider state</h2>
+    </div>
+    <dl class="definition-grid">
+      <div><dt>Input path</dt><dd>{{ run_context.input_path }}</dd></div>
+      <div><dt>Provider snapshot</dt><dd>{{ run_context.snapshot }}</dd></div>
+      <div><dt>Run ID</dt><dd class="mono">{{ run.id }}</dd></div>
+    </dl>
+  </article>
 </section>
 {% endblock %}

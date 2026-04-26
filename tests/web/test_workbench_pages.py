@@ -235,12 +235,54 @@ def test_web_import_report_page_and_finding_detail(tmp_path: Path) -> None:
     assert "completed" in dashboard.text
     assert "Freshness" in dashboard.text
     assert "EPSS" in dashboard.text
+    dashboard_soup = BeautifulSoup(dashboard.text, "html.parser")
+    assert (
+        dashboard_soup.select_one(f'a[href="/analysis-runs/{run_id}/executive-report"]') is not None
+    )
+    assert dashboard_soup.select_one(f'a[href="/analysis-runs/{run_id}/reports"]') is not None
 
     reports = client.get(reports_path)
     assert reports.status_code == 200
     assert "Run artifacts" in reports.text
+    assert "Open executive report" in reports.text
     assert "No reports generated." in reports.text
     assert "No evidence bundles generated." in reports.text
+    reports_soup = BeautifulSoup(reports.text, "html.parser")
+    sidebar = reports_soup.select_one(".app-sidebar")
+    assert sidebar is not None
+    assert [
+        group.get_text(" ", strip=True).split()[0] for group in sidebar.select(".side-nav-group")
+    ]
+    assert sidebar.select_one('a[aria-current="page"][href$="/reports"]') is not None
+    assert sidebar.select_one('a[href$="/executive-report"]') is not None
+
+    executive_report = client.get(f"/analysis-runs/{run_id}/executive-report")
+    assert executive_report.status_code == 200
+    assert "Executive Security Overview" in executive_report.text
+    assert "Risk Posture and Source Signals" in executive_report.text
+    assert "Evidence, Data Quality and Methodology" in executive_report.text
+    assert "Finding Dossiers" in executive_report.text
+    assert "Input and preservation" in executive_report.text
+    assert "Provider transparency" in executive_report.text
+    assert "Governance state" in executive_report.text
+    assert "How to Read This Report" in executive_report.text
+    assert "Findings by Severity and Signal" in executive_report.text
+    assert "Provider Signals" in executive_report.text
+    assert "Top ATT&amp;CK-Mapped Findings" in executive_report.text
+    assert "Next 30 Days" in executive_report.text
+    assert "Evidence Bundle Contents" in executive_report.text
+    assert "Mapping Confidence" in executive_report.text
+    executive_soup = BeautifulSoup(executive_report.text, "html.parser")
+    assert executive_soup.select_one(".er-app-header") is not None
+    assert executive_soup.select_one(".er-workspace-sidebar") is not None
+    assert executive_soup.select_one(".er-workspace-sidebar [data-sidebar-toggle]") is not None
+    assert executive_soup.select_one(".er-workspace-sidebar .nav-icon") is not None
+    assert (
+        executive_soup.select_one('.er-workspace-nav a[aria-current="page"]').get_text(strip=True)
+        == "Executive Report"
+    )
+    assert "/static/executive-report.css" in executive_report.text
+    assert "/static/workbench.js" in executive_report.text
 
     findings = client.get(f"/projects/{project_id}/findings")
     assert findings.status_code == 200
@@ -490,7 +532,29 @@ def test_web_assets_waivers_and_coverage_pages(tmp_path: Path) -> None:
     coverage = client.get(f"/projects/{project['id']}/coverage")
     assert coverage.status_code == 200
     assert "Detection coverage" in coverage.text
+    assert "Mapping review queue" in coverage.text
+    assert "T1190" in coverage.text
     coverage_token = _csrf_token(coverage.text)
+    mapped_finding = next(
+        item
+        for item in client.get(f"/api/projects/{project['id']}/findings").json()["items"]
+        if item["attack_mapped"]
+    )
+    updated_attack_review = client.post(
+        f"/web/findings/{mapped_finding['id']}/attack-review",
+        data={
+            "review_status": "needs_review",
+            "actor": "web-review",
+            "reason": "web review queue",
+            "csrf_token": coverage_token,
+        },
+        follow_redirects=False,
+    )
+    assert updated_attack_review.status_code == 303
+    assert updated_attack_review.headers["location"] == f"/projects/{project['id']}/coverage"
+    assert client.get(f"/api/findings/{mapped_finding['id']}/ttps").json()["review_status"] == (
+        "needs_review"
+    )
     controls_csv = (
         b"control_id,name,technique_id,coverage_level,owner,evidence_ref,notes\n"
         b"edge-waf,WAF exploit-public-app rule,T1190,partial,secops,"

@@ -42,10 +42,30 @@ class KevData(StrictModel):
     notes: str | None = None
 
 
+class DefensiveContext(StrictModel):
+    cve_id: str
+    source: str
+    source_id: str | None = None
+    title: str | None = None
+    summary: str | None = None
+    severity: str | None = None
+    cvss_score: float | None = None
+    ssvc_decision: str | None = None
+    exploitation: str | None = None
+    automatable: str | None = None
+    technical_impact: str | None = None
+    published: str | None = None
+    modified: str | None = None
+    url: str | None = None
+    references: list[str] = Field(default_factory=list)
+    tags: list[str] = Field(default_factory=list)
+
+
 class ProviderEvidence(StrictModel):
     nvd: NvdData
     epss: EpssData
     kev: KevData
+    defensive_contexts: list[DefensiveContext] = Field(default_factory=list)
 
 
 class ProviderLookupDiagnostics(StrictModel):

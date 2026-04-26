@@ -1,11 +1,27 @@
 {% extends "base.html" %}
 {% block title %}Evidence verification{% endblock %}
 {% block content %}
-<section class="section">
-  <div class="section-head">
+<section class="page-hero">
+  <div>
     <p class="eyebrow">Evidence</p>
     <h1>Bundle verification</h1>
+    <p class="page-subtitle">Validate the evidence manifest and checksums for the selected analysis bundle.</p>
   </div>
+  {% if bundle %}
+    <div class="hero-stack">
+      <div class="hero-meta">
+        <span>Project <strong>{{ project.name if project else "Not available" }}</strong></span>
+        <span>Status <strong>{{ "Passed" if summary.ok else "Failed" }}</strong></span>
+      </div>
+      <div class="action-row">
+        <a class="button" href="/analysis-runs/{{ bundle.analysis_run_id }}/reports">Run artifacts</a>
+        <a class="button primary" href="/api/evidence-bundles/{{ bundle.id }}/download">Download bundle</a>
+      </div>
+    </div>
+  {% endif %}
+</section>
+
+<section class="section">
   <div class="metric-grid">
     <article class="metric">
       <span>Status</span>

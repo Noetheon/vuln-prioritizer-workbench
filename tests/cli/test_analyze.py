@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from vuln_prioritizer.cli import _build_attack_summary_from_findings, app
@@ -20,6 +21,7 @@ from vuln_prioritizer.providers.attack import AttackProvider
 from vuln_prioritizer.providers.epss import EpssProvider
 from vuln_prioritizer.providers.kev import KevProvider
 from vuln_prioritizer.providers.nvd import NvdProvider
+from vuln_prioritizer.services.analysis import stale_provider_sources
 
 
 def test_cli_analyze_end_to_end_with_mocked_providers(
@@ -163,6 +165,100 @@ def test_cli_analyze_supports_custom_policy_thresholds(
     assert payload["metadata"]["policy_overrides"] == ["high-epss=0.300"]
 
 
+def test_cli_analyze_attaches_defensive_context_without_changing_priority(
+    install_fake_providers,
+    runner,
+    tmp_path: Path,
+    write_input_file,
+) -> None:
+    input_file = write_input_file(tmp_path)
+    baseline_output = tmp_path / "baseline.json"
+    contextual_output = tmp_path / "contextual.json"
+    context_file = tmp_path / "defensive-context.json"
+    context_file.write_text(
+        json.dumps(
+            {
+                "items": [
+                    {
+                        "cve_id": "CVE-2021-44228",
+                        "source": "osv",
+                        "source_id": "OSV-2021-44228",
+                        "severity": "CRITICAL",
+                        "summary": "Package advisory context.",
+                    },
+                    {
+                        "cve": "CVE-2021-44228",
+                        "source": "ssvc",
+                        "ssvc": {
+                            "decision": "act",
+                            "exploitation": "active",
+                            "automatable": "yes",
+                            "technical_impact": "total",
+                        },
+                    },
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    install_fake_providers()
+
+    baseline = runner.invoke(
+        app,
+        [
+            "analyze",
+            "--input",
+            str(input_file),
+            "--output",
+            str(baseline_output),
+            "--format",
+            "json",
+        ],
+    )
+    contextual = runner.invoke(
+        app,
+        [
+            "analyze",
+            "--input",
+            str(input_file),
+            "--defensive-context-file",
+            str(context_file),
+            "--output",
+            str(contextual_output),
+            "--format",
+            "json",
+        ],
+    )
+
+    assert baseline.exit_code == 0
+    assert contextual.exit_code == 0, contextual.stdout
+    baseline_payload = json.loads(baseline_output.read_text(encoding="utf-8"))
+    contextual_payload = json.loads(contextual_output.read_text(encoding="utf-8"))
+    base_finding = next(
+        item for item in baseline_payload["findings"] if item["cve_id"] == "CVE-2021-44228"
+    )
+    contextual_finding = next(
+        item for item in contextual_payload["findings"] if item["cve_id"] == "CVE-2021-44228"
+    )
+
+    assert contextual_payload["metadata"]["defensive_context_sources"] == ["osv", "ssvc"]
+    assert contextual_payload["metadata"]["defensive_context_hits"] == 1
+    assert (
+        contextual_payload["metadata"]["counts_by_priority"]
+        == baseline_payload["metadata"]["counts_by_priority"]
+    )
+    for field in ("priority_label", "priority_rank", "priority_drivers"):
+        assert contextual_finding[field] == base_finding[field]
+    assert [item["source"] for item in contextual_finding["defensive_contexts"]] == [
+        "osv",
+        "ssvc",
+    ]
+    assert (
+        contextual_finding["provider_evidence"]["defensive_contexts"]
+        == contextual_finding["defensive_contexts"]
+    )
+
+
 def test_cli_analyze_merges_multiple_inputs_and_surfaces_source_metadata(
     install_fake_providers,
     runner,
@@ -299,6 +395,8 @@ def test_cli_analyze_supports_locked_provider_snapshot_replay(
             "--provider-snapshot-file",
             str(snapshot_file),
             "--locked-provider-data",
+            "--max-provider-age-hours",
+            "1000000",
         ],
     )
 
@@ -307,6 +405,29 @@ def test_cli_analyze_supports_locked_provider_snapshot_replay(
     assert payload["metadata"]["provider_snapshot_file"] == str(snapshot_file)
     assert payload["metadata"]["locked_provider_data"] is True
     assert payload["metadata"]["provider_snapshot_sources"] == ["nvd", "epss", "kev"]
+    assert payload["metadata"]["max_provider_age_hours"] == 1000000
+    assert payload["metadata"]["provider_stale"] is False
+    assert payload["metadata"]["provider_stale_sources"] == []
+
+
+def test_provider_staleness_uses_snapshot_generated_at() -> None:
+    stale = stale_provider_sources(
+        {
+            "provider_snapshot_generated_at": "2026-04-20T00:00:00Z",
+            "lookup_completed_at": "2026-04-25T00:00:00Z",
+        },
+        max_age_hours=24,
+        snapshot_sources=["nvd", "epss"],
+        now=datetime(2026, 4, 25, tzinfo=UTC),
+    )
+    assert stale == ["nvd", "epss"]
+
+    fresh_live = stale_provider_sources(
+        {"lookup_completed_at": "2026-04-25T00:00:00Z"},
+        max_age_hours=24,
+        now=datetime(2026, 4, 25, tzinfo=UTC),
+    )
+    assert fresh_live == []
 
 
 def test_cli_analyze_rejects_locked_provider_snapshot_with_missing_coverage(
@@ -571,13 +692,16 @@ def test_cli_analyze_surfaces_review_due_waiver_state(
 ) -> None:
     input_file = write_input_file(tmp_path)
     output_file = tmp_path / "review-due.json"
+    today = datetime.now(UTC).date()
+    review_on = (today - timedelta(days=1)).isoformat()
+    expires_on = (today + timedelta(days=30)).isoformat()
     waiver_file = write_waiver_file(
         tmp_path,
         cve_id="CVE-2021-44228",
         owner="risk-review",
         reason="Needs scheduled revalidation.",
-        expires_on="2026-04-25",
-        review_on="2026-04-20",
+        expires_on=expires_on,
+        review_on=review_on,
     )
     install_fake_providers()
 
@@ -601,7 +725,7 @@ def test_cli_analyze_surfaces_review_due_waiver_state(
     finding = next(item for item in payload["findings"] if item["cve_id"] == "CVE-2021-44228")
     assert finding["waived"] is True
     assert finding["waiver_status"] == "review_due"
-    assert finding["waiver_review_on"] == "2026-04-20"
+    assert finding["waiver_review_on"] == review_on
     assert payload["metadata"]["waiver_review_due_count"] == 1
     assert payload["metadata"]["expired_waiver_count"] == 0
 
