@@ -38,7 +38,7 @@ check:
 	$(PYTHON) -m pytest
 
 benchmark-check:
-	$(PYTHON) -m pytest -q tests/test_benchmark_regressions.py tests/test_snapshot_diff_regressions.py tests/test_rollup_regressions.py
+	$(PYTHON) -m pytest -q tests/test_benchmark_regressions.py tests/test_snapshot_diff_regressions.py tests/test_rollup_regressions.py --no-cov
 
 playwright-install:
 	$(PYTHON) -m playwright install chromium
@@ -122,7 +122,10 @@ demo-sync-check-temp:
 	@set -e; \
 	tmp="$$(mktemp -d)"; \
 	trap 'rm -rf "$$tmp"' EXIT; \
-	rsync -a --exclude .venv --exclude dist --exclude build . "$$tmp"/; \
+	rsync -a --exclude .git --exclude .venv --exclude .cache --exclude Library --exclude dist --exclude build --exclude site --exclude .mypy_cache --exclude .pytest_cache --exclude .ruff_cache . "$$tmp"/; \
+	git -C "$$tmp" init -q; \
+	git -C "$$tmp" add docs; \
+	git -C "$$tmp" -c user.email=codex@example.invalid -c user.name=Codex commit -q -m baseline-docs -- docs; \
 	$(MAKE) -C "$$tmp" demo-sync-check
 
 package:
@@ -136,7 +139,7 @@ package-check-temp:
 	@set -e; \
 	tmp="$$(mktemp -d)"; \
 	trap 'rm -rf "$$tmp"' EXIT; \
-	rsync -a --exclude .venv --exclude dist --exclude build . "$$tmp"/; \
+	rsync -a --exclude .git --exclude .venv --exclude .cache --exclude Library --exclude dist --exclude build --exclude site --exclude .mypy_cache --exclude .pytest_cache --exclude .ruff_cache . "$$tmp"/; \
 	$(MAKE) -C "$$tmp" package-check
 
 pipx-source-smoke:

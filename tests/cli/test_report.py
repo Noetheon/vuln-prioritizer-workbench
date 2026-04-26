@@ -1,9 +1,19 @@
 from __future__ import annotations
 
 import json
+from datetime import UTC, datetime
 from pathlib import Path
+from types import SimpleNamespace
 
 from vuln_prioritizer.cli import app
+from vuln_prioritizer.sarif_validation import validate_sarif_payload
+from vuln_prioritizer.services.workbench_reports import (
+    _analysis_payload_with_current_lifecycle,
+    _csv_safe_cell,
+    _finding_status_label,
+    _first_occurrence_value,
+    _vex_statuses_label,
+)
 
 
 def test_cli_report_html_renders_from_analysis_json(
@@ -253,6 +263,138 @@ def test_cli_report_validate_sarif_rejects_invalid_document(runner, tmp_path: Pa
     )
     assert table_result.exit_code == 1
     assert "Validation result: failed" in table_result.stdout
+
+
+def test_sarif_validation_requires_declared_rules_and_fingerprints() -> None:
+    payload = {
+        "version": "2.1.0",
+        "runs": [
+            {},
+            "not-a-run",
+            {
+                "tool": {"driver": {"name": "vuln-prioritizer", "rules": [{"id": "declared"}]}},
+                "results": [
+                    {
+                        "ruleId": "undeclared",
+                        "level": "warning",
+                        "message": {"text": "CVE finding"},
+                        "locations": [
+                            {"physicalLocation": {"artifactLocation": {"uri": "sbom.json"}}}
+                        ],
+                    },
+                    "not-a-result",
+                ],
+            },
+        ],
+    }
+
+    errors = validate_sarif_payload(payload)
+
+    assert any("partialFingerprints" in error for error in errors)
+    assert any("is not declared in tool.driver.rules" in error for error in errors)
+
+
+def test_workbench_report_lifecycle_overlay_uses_id_and_stable_identity() -> None:
+    class FakeRepo:
+        def list_project_findings(self, project_id: str) -> list[SimpleNamespace]:
+            assert project_id == "project-1"
+            return [
+                SimpleNamespace(
+                    id="finding-1",
+                    cve_id="CVE-2024-0001",
+                    component=None,
+                    asset=None,
+                    status="fixed",
+                    status_history=[
+                        SimpleNamespace(
+                            id="history-1",
+                            finding_id="finding-1",
+                            previous_status="open",
+                            new_status="fixed",
+                            actor="tester",
+                            reason="patched",
+                            created_at=datetime(2026, 4, 25, tzinfo=UTC),
+                        )
+                    ],
+                ),
+                SimpleNamespace(
+                    id="finding-2",
+                    cve_id="CVE-2024-0002",
+                    component=SimpleNamespace(name="openssl", version="3.0.0"),
+                    asset=SimpleNamespace(asset_id="asset-api"),
+                    status="accepted",
+                    status_history=[],
+                ),
+            ]
+
+    payload = {
+        "metadata": {"schema_version": "1.1.0"},
+        "findings": [
+            {"cve_id": "CVE-2024-0001", "workbench_finding_id": "finding-1", "status": "open"},
+            {
+                "cve_id": "CVE-2024-0002",
+                "status": "open",
+                "provenance": {
+                    "occurrences": [
+                        {
+                            "component_name": "openssl",
+                            "component_version": "3.0.0",
+                            "asset_id": "asset-api",
+                        }
+                    ]
+                },
+            },
+            "not-a-finding",
+            {"cve_id": "CVE-2024-0003", "status": "open"},
+        ],
+    }
+
+    overlaid = _analysis_payload_with_current_lifecycle(FakeRepo(), payload, "project-1")  # type: ignore[arg-type]
+
+    assert overlaid["findings"][0]["status"] == "fixed"
+    assert overlaid["findings"][0]["status_history"][0]["new_status"] == "fixed"
+    assert overlaid["findings"][1]["status"] == "accepted"
+    assert overlaid["findings"][3]["status"] == "open"
+    assert payload["findings"][0]["status"] == "open"
+    assert (
+        _analysis_payload_with_current_lifecycle(
+            FakeRepo(),  # type: ignore[arg-type]
+            {"metadata": {}, "findings": "invalid"},
+            "project-1",
+        )["findings"]
+        == "invalid"
+    )
+
+
+def test_workbench_report_private_format_helpers_handle_edge_cases() -> None:
+    assert _csv_safe_cell("=cmd") == "'=cmd"
+    assert _csv_safe_cell("\tformula") == "'\tformula"
+    assert _first_occurrence_value({"occurrences": ["bad", {"path": "service/pom.xml"}]}, "path")
+    assert _first_occurrence_value({}, "path") == ""
+    assert _finding_status_label({"suppressed_by_vex": True}) == "suppressed"
+    assert _finding_status_label({"waived": True}) == "accepted"
+    assert _vex_statuses_label({}) == ""
+    assert _vex_statuses_label({"vex_statuses": {"fixed": 1, "affected": 2}}) == (
+        "affected:2;fixed:1"
+    )
+
+
+def test_cli_report_validate_sarif_rejects_json_array(runner, tmp_path: Path) -> None:
+    invalid_file = tmp_path / "array.sarif"
+    invalid_file.write_text("[]", encoding="utf-8")
+
+    result = runner.invoke(
+        app,
+        [
+            "report",
+            "validate-sarif",
+            "--input",
+            str(invalid_file),
+        ],
+    )
+
+    assert result.exit_code == 2
+    assert "must contain a JSON object." in " ".join(result.stdout.split())
 
 
 def test_cli_report_validate_sarif_rejects_bad_json(runner, tmp_path: Path) -> None:

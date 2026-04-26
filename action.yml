@@ -1,17 +1,21 @@
 name: vuln-prioritizer
-description: Run vuln-prioritizer analyze or render a static HTML report from analysis JSON.
+description: Run vuln-prioritizer analyze, render reports, package evidence, or validate SARIF.
 branding:
   icon: shield
   color: blue
 
 inputs:
   mode:
-    description: analyze, report-html, workbench-report, report-evidence-bundle, or verify-evidence-bundle
+    description: analyze, compare, explain, doctor, input-validate, input-inspect, input-normalize, snapshot, rollup, data-status, data-update, data-verify, data-export-provider-snapshot, attack-validate, attack-coverage, report-html, workbench-report, report-evidence-bundle, verify-evidence-bundle, or validate-sarif
     required: false
     default: analyze
   input:
-    description: Analyze mode accepts one or more newline-delimited input files; report modes expect exactly one analysis JSON or evidence bundle file
-    required: true
+    description: Analyze, compare, input-validate, snapshot, and attack-coverage accept one or more newline-delimited input files; report, rollup, explain, and validation modes expect exactly one artifact file such as analysis JSON, evidence ZIP, or SARIF; doctor and attack-validate ignore this value
+    required: false
+  cve:
+    description: Required for explain mode; CVE identifier to explain from the supplied analysis JSON or snapshot JSON
+    required: false
+    default: ""
   input-format:
     description: analyze mode only; auto, cve-list, generic-occurrence-csv, trivy-json, grype-json, cyclonedx-json, spdx-json, dependency-check-json, github-alerts-json, nessus-xml, openvas-xml. Provide one value or a newline-delimited list aligned with input.
     required: false
@@ -21,7 +25,7 @@ inputs:
     required: false
     default: markdown
   output-path:
-    description: Output file path created by the CLI
+    description: Output file path created by the CLI; validate-sarif mode writes a JSON SARIF validation report
     required: true
   html-output-path:
     description: Optional analyze mode sidecar path for a direct HTML report
@@ -83,6 +87,10 @@ inputs:
     description: Optional waiver YAML file for analyze mode
     required: false
     default: ""
+  defensive-context-file:
+    description: Optional local JSON context file for OSV, GHSA, Vulnrichment, or SSVC overlays in analyze, compare, and snapshot modes
+    required: false
+    default: ""
   show-suppressed:
     description: analyze mode only; set to true to keep VEX-suppressed findings visible
     required: false
@@ -131,6 +139,14 @@ inputs:
     description: Optional local CISA KEV JSON file for analyze mode
     required: false
     default: ""
+  data-sources:
+    description: Optional newline-delimited data sources for data-update or data-export-provider-snapshot; nvd, epss, kev
+    required: false
+    default: ""
+  cache-only:
+    description: data-export-provider-snapshot mode only; set to true to export only cache/offline provider records
+    required: false
+    default: "false"
   offline-attack-file:
     description: Optional legacy local ATT&CK CSV file for analyze mode
     required: false
@@ -155,12 +171,28 @@ inputs:
     description: Optional analyze sort key; priority, operational, epss, cvss, or cve
     required: false
     default: ""
+  rollup-by:
+    description: rollup mode only; aggregate by asset, service, owner, priority, or status
+    required: false
+    default: asset
+  rollup-top:
+    description: rollup mode only; maximum rows to include
+    required: false
+    default: "5"
   max-cves:
     description: Optional maximum number of CVEs to analyze
     required: false
     default: ""
   fail-on-provider-error:
     description: analyze mode only; set to true to fail when provider enrichment has errors
+    required: false
+    default: "false"
+  max-provider-age-hours:
+    description: analyze, compare, and snapshot modes; mark provider data stale when replayed snapshots exceed this age
+    required: false
+    default: ""
+  fail-on-stale-provider-data:
+    description: analyze, compare, and snapshot modes; set to true to fail when provider data is stale
     required: false
     default: "false"
   fail-on-expired-waivers:
@@ -187,7 +219,7 @@ outputs:
     description: Markdown summary path written by analyze mode when summary-output-path is set or github-step-summary generates a temporary summary
     value: ${{ steps.run-cli.outputs.summary-path }}
   sarif-validation-path:
-    description: JSON SARIF validation report path written when validate-sarif is true
+    description: JSON SARIF validation report path written by validate-sarif mode or when validate-sarif is true
     value: ${{ steps.run-cli.outputs.sarif-validation-path }}
 
 runs:
@@ -207,17 +239,68 @@ runs:
     - name: Run vuln-prioritizer
       id: run-cli
       shell: bash
+      env:
+        INPUT_MODE: ${{ inputs.mode }}
+        INPUT_INPUT: ${{ inputs.input }}
+        INPUT_CVE: ${{ inputs.cve }}
+        INPUT_INPUT_FORMAT: ${{ inputs.input-format }}
+        INPUT_OUTPUT_FORMAT: ${{ inputs.output-format }}
+        INPUT_OUTPUT_PATH: ${{ inputs.output-path }}
+        INPUT_HTML_OUTPUT_PATH: ${{ inputs.html-output-path }}
+        INPUT_SUMMARY_OUTPUT_PATH: ${{ inputs.summary-output-path }}
+        INPUT_SUMMARY_TEMPLATE: ${{ inputs.summary-template }}
+        INPUT_GITHUB_STEP_SUMMARY: ${{ inputs.github-step-summary }}
+        INPUT_VALIDATE_SARIF: ${{ inputs.validate-sarif }}
+        INPUT_CONFIG_FILE: ${{ inputs.config-file }}
+        INPUT_NO_CONFIG: ${{ inputs.no-config }}
+        INPUT_ASSET_CONTEXT: ${{ inputs.asset-context }}
+        INPUT_TARGET_KIND: ${{ inputs.target-kind }}
+        INPUT_TARGET_REF: ${{ inputs.target-ref }}
+        INPUT_VEX_FILES: ${{ inputs.vex-files }}
+        INPUT_FAIL_ON: ${{ inputs.fail-on }}
+        INPUT_POLICY_PROFILE: ${{ inputs.policy-profile }}
+        INPUT_POLICY_FILE: ${{ inputs.policy-file }}
+        INPUT_WAIVER_FILE: ${{ inputs.waiver-file }}
+        INPUT_DEFENSIVE_CONTEXT_FILE: ${{ inputs.defensive-context-file }}
+        INPUT_SHOW_SUPPRESSED: ${{ inputs.show-suppressed }}
+        INPUT_HIDE_WAIVED: ${{ inputs.hide-waived }}
+        INPUT_ATTACK_SOURCE: ${{ inputs.attack-source }}
+        INPUT_ATTACK_MAPPING_FILE: ${{ inputs.attack-mapping-file }}
+        INPUT_ATTACK_TECHNIQUE_METADATA_FILE: ${{ inputs.attack-technique-metadata-file }}
+        INPUT_PROVIDER_SNAPSHOT_FILE: ${{ inputs.provider-snapshot-file }}
+        INPUT_LOCKED_PROVIDER_DATA: ${{ inputs.locked-provider-data }}
+        INPUT_NO_CACHE: ${{ inputs.no-cache }}
+        INPUT_CACHE_DIR: ${{ inputs.cache-dir }}
+        INPUT_CACHE_TTL_HOURS: ${{ inputs.cache-ttl-hours }}
+        INPUT_NVD_API_KEY_ENV: ${{ inputs.nvd-api-key-env }}
+        INPUT_OFFLINE_KEV_FILE: ${{ inputs.offline-kev-file }}
+        INPUT_DATA_SOURCES: ${{ inputs.data-sources }}
+        INPUT_CACHE_ONLY: ${{ inputs.cache-only }}
+        INPUT_OFFLINE_ATTACK_FILE: ${{ inputs.offline-attack-file }}
+        INPUT_PRIORITY: ${{ inputs.priority }}
+        INPUT_KEV_ONLY: ${{ inputs.kev-only }}
+        INPUT_MIN_CVSS: ${{ inputs.min-cvss }}
+        INPUT_MIN_EPSS: ${{ inputs.min-epss }}
+        INPUT_SORT_BY: ${{ inputs.sort-by }}
+        INPUT_ROLLUP_BY: ${{ inputs.rollup-by }}
+        INPUT_ROLLUP_TOP: ${{ inputs.rollup-top }}
+        INPUT_MAX_CVES: ${{ inputs.max-cves }}
+        INPUT_FAIL_ON_PROVIDER_ERROR: ${{ inputs.fail-on-provider-error }}
+        INPUT_MAX_PROVIDER_AGE_HOURS: ${{ inputs.max-provider-age-hours }}
+        INPUT_FAIL_ON_STALE_PROVIDER_DATA: ${{ inputs.fail-on-stale-provider-data }}
+        INPUT_FAIL_ON_EXPIRED_WAIVERS: ${{ inputs.fail-on-expired-waivers }}
+        INPUT_FAIL_ON_REVIEW_DUE_WAIVERS: ${{ inputs.fail-on-review-due-waivers }}
       run: |
         set -euo pipefail
 
-        mode="${{ inputs.mode }}"
+        mode="$INPUT_MODE"
         html_report_path=""
         summary_path=""
         sarif_validation_path=""
         sarif_report_path=""
         summary_requested="false"
-        requested_summary_path="${{ inputs.summary-output-path }}"
-        summary_template="${{ inputs.summary-template }}"
+        requested_summary_path="$INPUT_SUMMARY_OUTPUT_PATH"
+        summary_template="$INPUT_SUMMARY_TEMPLATE"
         cmd=(vuln-prioritizer)
 
         if [[ "$summary_template" != "detailed" && "$summary_template" != "compact" ]]; then
@@ -246,6 +329,20 @@ runs:
           done <<< "$raw"
         }
 
+        write_action_output() {
+          local name="$1"
+          local value="$2"
+          local delimiter="vuln_prioritizer_output_${name}_${RANDOM}_${RANDOM}"
+          while [[ "$value" == *"$delimiter"* ]]; do
+            delimiter="vuln_prioritizer_output_${name}_${RANDOM}_${RANDOM}"
+          done
+          {
+            printf '%s<<%s\n' "$name" "$delimiter"
+            printf '%s\n' "$value"
+            printf '%s\n' "$delimiter"
+          } >> "$GITHUB_OUTPUT"
+        }
+
         resolve_single_input() {
           local raw="$1"
           local input_count=0
@@ -257,39 +354,39 @@ runs:
             fi
           done <<< "$raw"
           if [[ "$input_count" -ne 1 ]]; then
-            echo "report-html mode expects exactly one input path." >&2
+            echo "$mode mode expects exactly one input path." >&2
             exit 2
           fi
           printf '%s' "$resolved"
         }
 
-        if [[ -n "${{ inputs.config-file }}" ]]; then
-          cmd+=(--config "${{ inputs.config-file }}")
+        if [[ -n "$INPUT_CONFIG_FILE" ]]; then
+          cmd+=(--config "$INPUT_CONFIG_FILE")
         fi
-        if [[ "${{ inputs.no-config }}" == "true" ]]; then
+        if [[ "$INPUT_NO_CONFIG" == "true" ]]; then
           cmd+=(--no-config)
         fi
 
         if [[ "$mode" == "analyze" ]]; then
-          if [[ "$(count_nonempty_lines "${{ inputs.input }}")" -eq 0 ]]; then
+          if [[ "$(count_nonempty_lines "$INPUT_INPUT")" -eq 0 ]]; then
             echo "analyze mode requires at least one input path." >&2
             exit 2
           fi
           cmd+=(
             analyze
-            --format "${{ inputs.output-format }}"
-            --output "${{ inputs.output-path }}"
-            --policy-profile "${{ inputs.policy-profile }}"
-            --attack-source "${{ inputs.attack-source }}"
-            --target-kind "${{ inputs.target-kind }}"
+            --format "$INPUT_OUTPUT_FORMAT"
+            --output "$INPUT_OUTPUT_PATH"
+            --policy-profile "$INPUT_POLICY_PROFILE"
+            --attack-source "$INPUT_ATTACK_SOURCE"
+            --target-kind "$INPUT_TARGET_KIND"
           )
-          if [[ "${{ inputs.output-format }}" == "sarif" ]]; then
-            sarif_report_path="${{ inputs.output-path }}"
+          if [[ "$INPUT_OUTPUT_FORMAT" == "sarif" ]]; then
+            sarif_report_path="$INPUT_OUTPUT_PATH"
           fi
-          append_multiline_args "--input" "${{ inputs.input }}"
-          append_multiline_args "--input-format" "${{ inputs.input-format }}"
+          append_multiline_args "--input" "$INPUT_INPUT"
+          append_multiline_args "--input-format" "$INPUT_INPUT_FORMAT"
 
-          if [[ -n "$requested_summary_path" || "${{ inputs.github-step-summary }}" == "true" ]]; then
+          if [[ -n "$requested_summary_path" || "$INPUT_GITHUB_STEP_SUMMARY" == "true" ]]; then
             summary_requested="true"
             if [[ -z "$requested_summary_path" ]]; then
               requested_summary_path="$RUNNER_TEMP/vuln-prioritizer-summary.md"
@@ -298,128 +395,611 @@ runs:
             cmd+=(--summary-template "$summary_template")
           fi
 
-          if [[ -n "${{ inputs.asset-context }}" ]]; then
-            cmd+=(--asset-context "${{ inputs.asset-context }}")
+          if [[ -n "$INPUT_ASSET_CONTEXT" ]]; then
+            cmd+=(--asset-context "$INPUT_ASSET_CONTEXT")
           fi
-          if [[ -n "${{ inputs.html-output-path }}" ]]; then
-            cmd+=(--html-output "${{ inputs.html-output-path }}")
-            html_report_path="${{ inputs.html-output-path }}"
+          if [[ -n "$INPUT_HTML_OUTPUT_PATH" ]]; then
+            cmd+=(--html-output "$INPUT_HTML_OUTPUT_PATH")
+            html_report_path="$INPUT_HTML_OUTPUT_PATH"
           fi
-          if [[ -n "${{ inputs.target-ref }}" ]]; then
-            cmd+=(--target-ref "${{ inputs.target-ref }}")
+          if [[ -n "$INPUT_TARGET_REF" ]]; then
+            cmd+=(--target-ref "$INPUT_TARGET_REF")
           fi
-          if [[ -n "${{ inputs.policy-file }}" ]]; then
-            cmd+=(--policy-file "${{ inputs.policy-file }}")
+          if [[ -n "$INPUT_POLICY_FILE" ]]; then
+            cmd+=(--policy-file "$INPUT_POLICY_FILE")
           fi
-          if [[ -n "${{ inputs.waiver-file }}" ]]; then
-            cmd+=(--waiver-file "${{ inputs.waiver-file }}")
+          if [[ -n "$INPUT_WAIVER_FILE" ]]; then
+            cmd+=(--waiver-file "$INPUT_WAIVER_FILE")
           fi
-          if [[ -n "${{ inputs.fail-on }}" ]]; then
-            cmd+=(--fail-on "${{ inputs.fail-on }}")
+          if [[ -n "$INPUT_DEFENSIVE_CONTEXT_FILE" ]]; then
+            cmd+=(--defensive-context-file "$INPUT_DEFENSIVE_CONTEXT_FILE")
           fi
-          if [[ "${{ inputs.show-suppressed }}" == "true" ]]; then
+          if [[ -n "$INPUT_FAIL_ON" ]]; then
+            cmd+=(--fail-on "$INPUT_FAIL_ON")
+          fi
+          if [[ "$INPUT_SHOW_SUPPRESSED" == "true" ]]; then
             cmd+=(--show-suppressed)
           fi
-          if [[ "${{ inputs.hide-waived }}" == "true" ]]; then
+          if [[ "$INPUT_HIDE_WAIVED" == "true" ]]; then
             cmd+=(--hide-waived)
           fi
-          if [[ -n "${{ inputs.priority }}" ]]; then
-            cmd+=(--priority "${{ inputs.priority }}")
+          if [[ -n "$INPUT_PRIORITY" ]]; then
+            cmd+=(--priority "$INPUT_PRIORITY")
           fi
-          if [[ "${{ inputs.kev-only }}" == "true" ]]; then
+          if [[ "$INPUT_KEV_ONLY" == "true" ]]; then
             cmd+=(--kev-only)
           fi
-          if [[ -n "${{ inputs.min-cvss }}" ]]; then
-            cmd+=(--min-cvss "${{ inputs.min-cvss }}")
+          if [[ -n "$INPUT_MIN_CVSS" ]]; then
+            cmd+=(--min-cvss "$INPUT_MIN_CVSS")
           fi
-          if [[ -n "${{ inputs.min-epss }}" ]]; then
-            cmd+=(--min-epss "${{ inputs.min-epss }}")
+          if [[ -n "$INPUT_MIN_EPSS" ]]; then
+            cmd+=(--min-epss "$INPUT_MIN_EPSS")
           fi
-          if [[ -n "${{ inputs.sort-by }}" ]]; then
-            cmd+=(--sort-by "${{ inputs.sort-by }}")
+          if [[ -n "$INPUT_SORT_BY" ]]; then
+            cmd+=(--sort-by "$INPUT_SORT_BY")
           fi
-          if [[ -n "${{ inputs.max-cves }}" ]]; then
-            cmd+=(--max-cves "${{ inputs.max-cves }}")
+          if [[ -n "$INPUT_MAX_CVES" ]]; then
+            cmd+=(--max-cves "$INPUT_MAX_CVES")
           fi
-          if [[ "${{ inputs.fail-on-provider-error }}" == "true" ]]; then
+          if [[ "$INPUT_FAIL_ON_PROVIDER_ERROR" == "true" ]]; then
             cmd+=(--fail-on-provider-error)
           fi
-          if [[ "${{ inputs.fail-on-expired-waivers }}" == "true" ]]; then
+          if [[ -n "$INPUT_MAX_PROVIDER_AGE_HOURS" ]]; then
+            cmd+=(--max-provider-age-hours "$INPUT_MAX_PROVIDER_AGE_HOURS")
+          fi
+          if [[ "$INPUT_FAIL_ON_STALE_PROVIDER_DATA" == "true" ]]; then
+            cmd+=(--fail-on-stale-provider-data)
+          fi
+          if [[ "$INPUT_FAIL_ON_EXPIRED_WAIVERS" == "true" ]]; then
             cmd+=(--fail-on-expired-waivers)
           fi
-          if [[ "${{ inputs.fail-on-review-due-waivers }}" == "true" ]]; then
+          if [[ "$INPUT_FAIL_ON_REVIEW_DUE_WAIVERS" == "true" ]]; then
             cmd+=(--fail-on-review-due-waivers)
           fi
-          if [[ -n "${{ inputs.attack-mapping-file }}" ]]; then
-            cmd+=(--attack-mapping-file "${{ inputs.attack-mapping-file }}")
+          if [[ -n "$INPUT_ATTACK_MAPPING_FILE" ]]; then
+            cmd+=(--attack-mapping-file "$INPUT_ATTACK_MAPPING_FILE")
           fi
-          if [[ -n "${{ inputs.attack-technique-metadata-file }}" ]]; then
-            cmd+=(--attack-technique-metadata-file "${{ inputs.attack-technique-metadata-file }}")
+          if [[ -n "$INPUT_ATTACK_TECHNIQUE_METADATA_FILE" ]]; then
+            cmd+=(--attack-technique-metadata-file "$INPUT_ATTACK_TECHNIQUE_METADATA_FILE")
           fi
-          if [[ -n "${{ inputs.provider-snapshot-file }}" ]]; then
-            cmd+=(--provider-snapshot-file "${{ inputs.provider-snapshot-file }}")
+          if [[ -n "$INPUT_PROVIDER_SNAPSHOT_FILE" ]]; then
+            cmd+=(--provider-snapshot-file "$INPUT_PROVIDER_SNAPSHOT_FILE")
           fi
-          if [[ "${{ inputs.locked-provider-data }}" == "true" ]]; then
+          if [[ "$INPUT_LOCKED_PROVIDER_DATA" == "true" ]]; then
             cmd+=(--locked-provider-data)
           fi
-          if [[ "${{ inputs.no-cache }}" == "true" ]]; then
+          if [[ "$INPUT_NO_CACHE" == "true" ]]; then
             cmd+=(--no-cache)
           fi
-          if [[ -n "${{ inputs.cache-dir }}" ]]; then
-            cmd+=(--cache-dir "${{ inputs.cache-dir }}")
+          if [[ -n "$INPUT_CACHE_DIR" ]]; then
+            cmd+=(--cache-dir "$INPUT_CACHE_DIR")
           fi
-          if [[ -n "${{ inputs.cache-ttl-hours }}" ]]; then
-            cmd+=(--cache-ttl-hours "${{ inputs.cache-ttl-hours }}")
+          if [[ -n "$INPUT_CACHE_TTL_HOURS" ]]; then
+            cmd+=(--cache-ttl-hours "$INPUT_CACHE_TTL_HOURS")
           fi
-          if [[ -n "${{ inputs.nvd-api-key-env }}" ]]; then
-            cmd+=(--nvd-api-key-env "${{ inputs.nvd-api-key-env }}")
+          if [[ -n "$INPUT_NVD_API_KEY_ENV" ]]; then
+            cmd+=(--nvd-api-key-env "$INPUT_NVD_API_KEY_ENV")
           fi
-          if [[ -n "${{ inputs.offline-kev-file }}" ]]; then
-            cmd+=(--offline-kev-file "${{ inputs.offline-kev-file }}")
+          if [[ -n "$INPUT_OFFLINE_KEV_FILE" ]]; then
+            cmd+=(--offline-kev-file "$INPUT_OFFLINE_KEV_FILE")
           fi
-          if [[ -n "${{ inputs.offline-attack-file }}" ]]; then
-            cmd+=(--offline-attack-file "${{ inputs.offline-attack-file }}")
+          if [[ -n "$INPUT_OFFLINE_ATTACK_FILE" ]]; then
+            cmd+=(--offline-attack-file "$INPUT_OFFLINE_ATTACK_FILE")
           fi
-          if [[ -n "${{ inputs.vex-files }}" ]]; then
-            append_multiline_args "--vex-file" "${{ inputs.vex-files }}"
+          if [[ -n "$INPUT_VEX_FILES" ]]; then
+            append_multiline_args "--vex-file" "$INPUT_VEX_FILES"
+          fi
+        elif [[ "$mode" == "compare" ]]; then
+          if [[ "$(count_nonempty_lines "$INPUT_INPUT")" -eq 0 ]]; then
+            echo "compare mode requires at least one input path." >&2
+            exit 2
+          fi
+          cmd+=(
+            compare
+            --format "$INPUT_OUTPUT_FORMAT"
+            --output "$INPUT_OUTPUT_PATH"
+            --policy-profile "$INPUT_POLICY_PROFILE"
+            --attack-source "$INPUT_ATTACK_SOURCE"
+            --target-kind "$INPUT_TARGET_KIND"
+          )
+          append_multiline_args "--input" "$INPUT_INPUT"
+          append_multiline_args "--input-format" "$INPUT_INPUT_FORMAT"
+          if [[ -n "$INPUT_ASSET_CONTEXT" ]]; then
+            cmd+=(--asset-context "$INPUT_ASSET_CONTEXT")
+          fi
+          if [[ -n "$INPUT_TARGET_REF" ]]; then
+            cmd+=(--target-ref "$INPUT_TARGET_REF")
+          fi
+          if [[ -n "$INPUT_POLICY_FILE" ]]; then
+            cmd+=(--policy-file "$INPUT_POLICY_FILE")
+          fi
+          if [[ -n "$INPUT_WAIVER_FILE" ]]; then
+            cmd+=(--waiver-file "$INPUT_WAIVER_FILE")
+          fi
+          if [[ -n "$INPUT_DEFENSIVE_CONTEXT_FILE" ]]; then
+            cmd+=(--defensive-context-file "$INPUT_DEFENSIVE_CONTEXT_FILE")
+          fi
+          if [[ "$INPUT_SHOW_SUPPRESSED" == "true" ]]; then
+            cmd+=(--show-suppressed)
+          fi
+          if [[ "$INPUT_HIDE_WAIVED" == "true" ]]; then
+            cmd+=(--hide-waived)
+          fi
+          if [[ -n "$INPUT_PRIORITY" ]]; then
+            cmd+=(--priority "$INPUT_PRIORITY")
+          fi
+          if [[ "$INPUT_KEV_ONLY" == "true" ]]; then
+            cmd+=(--kev-only)
+          fi
+          if [[ -n "$INPUT_MIN_CVSS" ]]; then
+            cmd+=(--min-cvss "$INPUT_MIN_CVSS")
+          fi
+          if [[ -n "$INPUT_MIN_EPSS" ]]; then
+            cmd+=(--min-epss "$INPUT_MIN_EPSS")
+          fi
+          if [[ -n "$INPUT_SORT_BY" ]]; then
+            cmd+=(--sort-by "$INPUT_SORT_BY")
+          fi
+          if [[ -n "$INPUT_MAX_CVES" ]]; then
+            cmd+=(--max-cves "$INPUT_MAX_CVES")
+          fi
+          if [[ "$INPUT_FAIL_ON_PROVIDER_ERROR" == "true" ]]; then
+            cmd+=(--fail-on-provider-error)
+          fi
+          if [[ -n "$INPUT_MAX_PROVIDER_AGE_HOURS" ]]; then
+            cmd+=(--max-provider-age-hours "$INPUT_MAX_PROVIDER_AGE_HOURS")
+          fi
+          if [[ "$INPUT_FAIL_ON_STALE_PROVIDER_DATA" == "true" ]]; then
+            cmd+=(--fail-on-stale-provider-data)
+          fi
+          if [[ -n "$INPUT_ATTACK_MAPPING_FILE" ]]; then
+            cmd+=(--attack-mapping-file "$INPUT_ATTACK_MAPPING_FILE")
+          fi
+          if [[ -n "$INPUT_ATTACK_TECHNIQUE_METADATA_FILE" ]]; then
+            cmd+=(--attack-technique-metadata-file "$INPUT_ATTACK_TECHNIQUE_METADATA_FILE")
+          fi
+          if [[ -n "$INPUT_PROVIDER_SNAPSHOT_FILE" ]]; then
+            cmd+=(--provider-snapshot-file "$INPUT_PROVIDER_SNAPSHOT_FILE")
+          fi
+          if [[ "$INPUT_LOCKED_PROVIDER_DATA" == "true" ]]; then
+            cmd+=(--locked-provider-data)
+          fi
+          if [[ "$INPUT_NO_CACHE" == "true" ]]; then
+            cmd+=(--no-cache)
+          fi
+          if [[ -n "$INPUT_CACHE_DIR" ]]; then
+            cmd+=(--cache-dir "$INPUT_CACHE_DIR")
+          fi
+          if [[ -n "$INPUT_CACHE_TTL_HOURS" ]]; then
+            cmd+=(--cache-ttl-hours "$INPUT_CACHE_TTL_HOURS")
+          fi
+          if [[ -n "$INPUT_NVD_API_KEY_ENV" ]]; then
+            cmd+=(--nvd-api-key-env "$INPUT_NVD_API_KEY_ENV")
+          fi
+          if [[ -n "$INPUT_OFFLINE_KEV_FILE" ]]; then
+            cmd+=(--offline-kev-file "$INPUT_OFFLINE_KEV_FILE")
+          fi
+          if [[ -n "$INPUT_OFFLINE_ATTACK_FILE" ]]; then
+            cmd+=(--offline-attack-file "$INPUT_OFFLINE_ATTACK_FILE")
+          fi
+          if [[ -n "$INPUT_VEX_FILES" ]]; then
+            append_multiline_args "--vex-file" "$INPUT_VEX_FILES"
+          fi
+        elif [[ "$mode" == "explain" ]]; then
+          if [[ -z "$INPUT_CVE" ]]; then
+            echo "explain mode requires the cve input." >&2
+            exit 2
+          fi
+          explain_input="$(resolve_single_input "$INPUT_INPUT")"
+          cmd+=(
+            explain
+            --cve "$INPUT_CVE"
+            --analysis-json "$explain_input"
+            --output "$INPUT_OUTPUT_PATH"
+            --format "$INPUT_OUTPUT_FORMAT"
+          )
+        elif [[ "$mode" == "doctor" ]]; then
+          doctor_format="$INPUT_OUTPUT_FORMAT"
+          if [[ "$doctor_format" != "json" ]]; then
+            doctor_format="json"
+          fi
+          cmd+=(
+            doctor
+            --output "$INPUT_OUTPUT_PATH"
+            --format "$doctor_format"
+          )
+          if [[ -n "$INPUT_CACHE_DIR" ]]; then
+            cmd+=(--cache-dir "$INPUT_CACHE_DIR")
+          fi
+          if [[ -n "$INPUT_CACHE_TTL_HOURS" ]]; then
+            cmd+=(--cache-ttl-hours "$INPUT_CACHE_TTL_HOURS")
+          fi
+          if [[ -n "$INPUT_NVD_API_KEY_ENV" ]]; then
+            cmd+=(--nvd-api-key-env "$INPUT_NVD_API_KEY_ENV")
+          fi
+          if [[ -n "$INPUT_OFFLINE_KEV_FILE" ]]; then
+            cmd+=(--offline-kev-file "$INPUT_OFFLINE_KEV_FILE")
+          fi
+          if [[ -n "$INPUT_WAIVER_FILE" ]]; then
+            cmd+=(--waiver-file "$INPUT_WAIVER_FILE")
+          fi
+          if [[ -n "$INPUT_ATTACK_MAPPING_FILE" ]]; then
+            cmd+=(--attack-mapping-file "$INPUT_ATTACK_MAPPING_FILE")
+          fi
+          if [[ -n "$INPUT_ATTACK_TECHNIQUE_METADATA_FILE" ]]; then
+            cmd+=(--attack-technique-metadata-file "$INPUT_ATTACK_TECHNIQUE_METADATA_FILE")
+          fi
+        elif [[ "$mode" == "input-validate" ]]; then
+          input_validate_format="$INPUT_OUTPUT_FORMAT"
+          if [[ "$input_validate_format" != "json" ]]; then
+            input_validate_format="json"
+          fi
+          cmd+=(
+            input validate
+            --output "$INPUT_OUTPUT_PATH"
+            --format "$input_validate_format"
+            --target-kind "$INPUT_TARGET_KIND"
+          )
+          append_multiline_args "--input" "$INPUT_INPUT"
+          append_multiline_args "--input-format" "$INPUT_INPUT_FORMAT"
+          if [[ -n "$INPUT_ASSET_CONTEXT" ]]; then
+            cmd+=(--asset-context "$INPUT_ASSET_CONTEXT")
+          fi
+          if [[ -n "$INPUT_TARGET_REF" ]]; then
+            cmd+=(--target-ref "$INPUT_TARGET_REF")
+          fi
+          if [[ -n "$INPUT_MAX_CVES" ]]; then
+            cmd+=(--max-cves "$INPUT_MAX_CVES")
+          fi
+          if [[ -n "$INPUT_VEX_FILES" ]]; then
+            append_multiline_args "--vex-file" "$INPUT_VEX_FILES"
+          fi
+        elif [[ "$mode" == "input-inspect" || "$mode" == "input-normalize" ]]; then
+          input_command="inspect"
+          if [[ "$mode" == "input-normalize" ]]; then
+            input_command="normalize"
+          fi
+          input_output_format="$INPUT_OUTPUT_FORMAT"
+          if [[ "$input_output_format" != "json" ]]; then
+            input_output_format="json"
+          fi
+          cmd+=(
+            input "$input_command"
+            --output "$INPUT_OUTPUT_PATH"
+            --format "$input_output_format"
+            --target-kind "$INPUT_TARGET_KIND"
+          )
+          append_multiline_args "--input" "$INPUT_INPUT"
+          append_multiline_args "--input-format" "$INPUT_INPUT_FORMAT"
+          if [[ -n "$INPUT_ASSET_CONTEXT" ]]; then
+            cmd+=(--asset-context "$INPUT_ASSET_CONTEXT")
+          fi
+          if [[ -n "$INPUT_TARGET_REF" ]]; then
+            cmd+=(--target-ref "$INPUT_TARGET_REF")
+          fi
+          if [[ -n "$INPUT_MAX_CVES" ]]; then
+            cmd+=(--max-cves "$INPUT_MAX_CVES")
+          fi
+          if [[ -n "$INPUT_VEX_FILES" ]]; then
+            append_multiline_args "--vex-file" "$INPUT_VEX_FILES"
+          fi
+        elif [[ "$mode" == "snapshot" ]]; then
+          if [[ "$(count_nonempty_lines "$INPUT_INPUT")" -eq 0 ]]; then
+            echo "snapshot mode requires at least one input path." >&2
+            exit 2
+          fi
+          cmd+=(
+            snapshot create
+            --format "$INPUT_OUTPUT_FORMAT"
+            --output "$INPUT_OUTPUT_PATH"
+            --policy-profile "$INPUT_POLICY_PROFILE"
+            --attack-source "$INPUT_ATTACK_SOURCE"
+            --target-kind "$INPUT_TARGET_KIND"
+          )
+          append_multiline_args "--input" "$INPUT_INPUT"
+          append_multiline_args "--input-format" "$INPUT_INPUT_FORMAT"
+          if [[ -n "$INPUT_ASSET_CONTEXT" ]]; then
+            cmd+=(--asset-context "$INPUT_ASSET_CONTEXT")
+          fi
+          if [[ -n "$INPUT_TARGET_REF" ]]; then
+            cmd+=(--target-ref "$INPUT_TARGET_REF")
+          fi
+          if [[ -n "$INPUT_POLICY_FILE" ]]; then
+            cmd+=(--policy-file "$INPUT_POLICY_FILE")
+          fi
+          if [[ -n "$INPUT_WAIVER_FILE" ]]; then
+            cmd+=(--waiver-file "$INPUT_WAIVER_FILE")
+          fi
+          if [[ -n "$INPUT_DEFENSIVE_CONTEXT_FILE" ]]; then
+            cmd+=(--defensive-context-file "$INPUT_DEFENSIVE_CONTEXT_FILE")
+          fi
+          if [[ "$INPUT_SHOW_SUPPRESSED" == "true" ]]; then
+            cmd+=(--show-suppressed)
+          fi
+          if [[ "$INPUT_HIDE_WAIVED" == "true" ]]; then
+            cmd+=(--hide-waived)
+          fi
+          if [[ -n "$INPUT_PRIORITY" ]]; then
+            cmd+=(--priority "$INPUT_PRIORITY")
+          fi
+          if [[ "$INPUT_KEV_ONLY" == "true" ]]; then
+            cmd+=(--kev-only)
+          fi
+          if [[ -n "$INPUT_MIN_CVSS" ]]; then
+            cmd+=(--min-cvss "$INPUT_MIN_CVSS")
+          fi
+          if [[ -n "$INPUT_MIN_EPSS" ]]; then
+            cmd+=(--min-epss "$INPUT_MIN_EPSS")
+          fi
+          if [[ -n "$INPUT_SORT_BY" ]]; then
+            cmd+=(--sort-by "$INPUT_SORT_BY")
+          fi
+          if [[ -n "$INPUT_MAX_CVES" ]]; then
+            cmd+=(--max-cves "$INPUT_MAX_CVES")
+          fi
+          if [[ "$INPUT_FAIL_ON_PROVIDER_ERROR" == "true" ]]; then
+            cmd+=(--fail-on-provider-error)
+          fi
+          if [[ -n "$INPUT_MAX_PROVIDER_AGE_HOURS" ]]; then
+            cmd+=(--max-provider-age-hours "$INPUT_MAX_PROVIDER_AGE_HOURS")
+          fi
+          if [[ "$INPUT_FAIL_ON_STALE_PROVIDER_DATA" == "true" ]]; then
+            cmd+=(--fail-on-stale-provider-data)
+          fi
+          if [[ -n "$INPUT_ATTACK_MAPPING_FILE" ]]; then
+            cmd+=(--attack-mapping-file "$INPUT_ATTACK_MAPPING_FILE")
+          fi
+          if [[ -n "$INPUT_ATTACK_TECHNIQUE_METADATA_FILE" ]]; then
+            cmd+=(--attack-technique-metadata-file "$INPUT_ATTACK_TECHNIQUE_METADATA_FILE")
+          fi
+          if [[ -n "$INPUT_PROVIDER_SNAPSHOT_FILE" ]]; then
+            cmd+=(--provider-snapshot-file "$INPUT_PROVIDER_SNAPSHOT_FILE")
+          fi
+          if [[ "$INPUT_LOCKED_PROVIDER_DATA" == "true" ]]; then
+            cmd+=(--locked-provider-data)
+          fi
+          if [[ "$INPUT_NO_CACHE" == "true" ]]; then
+            cmd+=(--no-cache)
+          fi
+          if [[ -n "$INPUT_CACHE_DIR" ]]; then
+            cmd+=(--cache-dir "$INPUT_CACHE_DIR")
+          fi
+          if [[ -n "$INPUT_CACHE_TTL_HOURS" ]]; then
+            cmd+=(--cache-ttl-hours "$INPUT_CACHE_TTL_HOURS")
+          fi
+          if [[ -n "$INPUT_NVD_API_KEY_ENV" ]]; then
+            cmd+=(--nvd-api-key-env "$INPUT_NVD_API_KEY_ENV")
+          fi
+          if [[ -n "$INPUT_OFFLINE_KEV_FILE" ]]; then
+            cmd+=(--offline-kev-file "$INPUT_OFFLINE_KEV_FILE")
+          fi
+          if [[ -n "$INPUT_OFFLINE_ATTACK_FILE" ]]; then
+            cmd+=(--offline-attack-file "$INPUT_OFFLINE_ATTACK_FILE")
+          fi
+          if [[ -n "$INPUT_VEX_FILES" ]]; then
+            append_multiline_args "--vex-file" "$INPUT_VEX_FILES"
+          fi
+        elif [[ "$mode" == "rollup" ]]; then
+          report_input="$(resolve_single_input "$INPUT_INPUT")"
+          cmd+=(
+            rollup
+            --input "$report_input"
+            --output "$INPUT_OUTPUT_PATH"
+            --format "$INPUT_OUTPUT_FORMAT"
+            --by "$INPUT_ROLLUP_BY"
+            --top "$INPUT_ROLLUP_TOP"
+          )
+        elif [[ "$mode" == "data-status" ]]; then
+          data_status_format="$INPUT_OUTPUT_FORMAT"
+          if [[ "$data_status_format" != "json" ]]; then
+            data_status_format="json"
+          fi
+          cmd+=(
+            data status
+            --output "$INPUT_OUTPUT_PATH"
+            --format "$data_status_format"
+          )
+          if [[ -n "$INPUT_CACHE_DIR" ]]; then
+            cmd+=(--cache-dir "$INPUT_CACHE_DIR")
+          fi
+          if [[ -n "$INPUT_CACHE_TTL_HOURS" ]]; then
+            cmd+=(--cache-ttl-hours "$INPUT_CACHE_TTL_HOURS")
+          fi
+          if [[ -n "$INPUT_OFFLINE_KEV_FILE" ]]; then
+            cmd+=(--offline-kev-file "$INPUT_OFFLINE_KEV_FILE")
+          fi
+          if [[ -n "$INPUT_ATTACK_MAPPING_FILE" ]]; then
+            cmd+=(--attack-mapping-file "$INPUT_ATTACK_MAPPING_FILE")
+          fi
+          if [[ -n "$INPUT_ATTACK_TECHNIQUE_METADATA_FILE" ]]; then
+            cmd+=(--attack-technique-metadata-file "$INPUT_ATTACK_TECHNIQUE_METADATA_FILE")
+          fi
+        elif [[ "$mode" == "data-update" ]]; then
+          data_update_format="$INPUT_OUTPUT_FORMAT"
+          if [[ "$data_update_format" != "json" ]]; then
+            data_update_format="json"
+          fi
+          cmd+=(
+            data update
+            --output "$INPUT_OUTPUT_PATH"
+            --format "$data_update_format"
+          )
+          append_multiline_args "--source" "$INPUT_DATA_SOURCES"
+          append_multiline_args "--input" "$INPUT_INPUT"
+          append_multiline_args "--input-format" "$INPUT_INPUT_FORMAT"
+          if [[ -n "$INPUT_CVE" ]]; then
+            cmd+=(--cve "$INPUT_CVE")
+          fi
+          if [[ -n "$INPUT_MAX_CVES" ]]; then
+            cmd+=(--max-cves "$INPUT_MAX_CVES")
+          fi
+          if [[ -n "$INPUT_CACHE_DIR" ]]; then
+            cmd+=(--cache-dir "$INPUT_CACHE_DIR")
+          fi
+          if [[ -n "$INPUT_CACHE_TTL_HOURS" ]]; then
+            cmd+=(--cache-ttl-hours "$INPUT_CACHE_TTL_HOURS")
+          fi
+          if [[ -n "$INPUT_OFFLINE_KEV_FILE" ]]; then
+            cmd+=(--offline-kev-file "$INPUT_OFFLINE_KEV_FILE")
+          fi
+          if [[ -n "$INPUT_NVD_API_KEY_ENV" ]]; then
+            cmd+=(--nvd-api-key-env "$INPUT_NVD_API_KEY_ENV")
+          fi
+        elif [[ "$mode" == "data-verify" ]]; then
+          data_verify_format="$INPUT_OUTPUT_FORMAT"
+          if [[ "$data_verify_format" != "json" ]]; then
+            data_verify_format="json"
+          fi
+          cmd+=(
+            data verify
+            --output "$INPUT_OUTPUT_PATH"
+            --format "$data_verify_format"
+          )
+          append_multiline_args "--input" "$INPUT_INPUT"
+          append_multiline_args "--input-format" "$INPUT_INPUT_FORMAT"
+          if [[ -n "$INPUT_MAX_CVES" ]]; then
+            cmd+=(--max-cves "$INPUT_MAX_CVES")
+          fi
+          if [[ -n "$INPUT_CACHE_DIR" ]]; then
+            cmd+=(--cache-dir "$INPUT_CACHE_DIR")
+          fi
+          if [[ -n "$INPUT_CACHE_TTL_HOURS" ]]; then
+            cmd+=(--cache-ttl-hours "$INPUT_CACHE_TTL_HOURS")
+          fi
+          if [[ -n "$INPUT_OFFLINE_KEV_FILE" ]]; then
+            cmd+=(--offline-kev-file "$INPUT_OFFLINE_KEV_FILE")
+          fi
+          if [[ -n "$INPUT_ATTACK_MAPPING_FILE" ]]; then
+            cmd+=(--attack-mapping-file "$INPUT_ATTACK_MAPPING_FILE")
+          fi
+          if [[ -n "$INPUT_ATTACK_TECHNIQUE_METADATA_FILE" ]]; then
+            cmd+=(--attack-technique-metadata-file "$INPUT_ATTACK_TECHNIQUE_METADATA_FILE")
+          fi
+        elif [[ "$mode" == "data-export-provider-snapshot" ]]; then
+          cmd+=(
+            data export-provider-snapshot
+            --output "$INPUT_OUTPUT_PATH"
+          )
+          append_multiline_args "--source" "$INPUT_DATA_SOURCES"
+          append_multiline_args "--input" "$INPUT_INPUT"
+          append_multiline_args "--input-format" "$INPUT_INPUT_FORMAT"
+          if [[ -n "$INPUT_CVE" ]]; then
+            cmd+=(--cve "$INPUT_CVE")
+          fi
+          if [[ -n "$INPUT_MAX_CVES" ]]; then
+            cmd+=(--max-cves "$INPUT_MAX_CVES")
+          fi
+          if [[ -n "$INPUT_CACHE_DIR" ]]; then
+            cmd+=(--cache-dir "$INPUT_CACHE_DIR")
+          fi
+          if [[ -n "$INPUT_CACHE_TTL_HOURS" ]]; then
+            cmd+=(--cache-ttl-hours "$INPUT_CACHE_TTL_HOURS")
+          fi
+          if [[ -n "$INPUT_OFFLINE_KEV_FILE" ]]; then
+            cmd+=(--offline-kev-file "$INPUT_OFFLINE_KEV_FILE")
+          fi
+          if [[ -n "$INPUT_DEFENSIVE_CONTEXT_FILE" ]]; then
+            cmd+=(--defensive-context-file "$INPUT_DEFENSIVE_CONTEXT_FILE")
+          fi
+          if [[ -n "$INPUT_NVD_API_KEY_ENV" ]]; then
+            cmd+=(--nvd-api-key-env "$INPUT_NVD_API_KEY_ENV")
+          fi
+          if [[ "$INPUT_CACHE_ONLY" == "true" ]]; then
+            cmd+=(--cache-only)
+          fi
+        elif [[ "$mode" == "attack-validate" ]]; then
+          attack_source_for_validation="$INPUT_ATTACK_SOURCE"
+          if [[ "$attack_source_for_validation" == "none" ]]; then
+            attack_source_for_validation="ctid-json"
+          fi
+          cmd+=(
+            attack validate
+            --output "$INPUT_OUTPUT_PATH"
+            --format "$INPUT_OUTPUT_FORMAT"
+            --attack-source "$attack_source_for_validation"
+          )
+          if [[ -z "$INPUT_ATTACK_MAPPING_FILE" ]]; then
+            echo "attack-validate mode requires attack-mapping-file." >&2
+            exit 2
+          fi
+          cmd+=(--attack-mapping-file "$INPUT_ATTACK_MAPPING_FILE")
+          if [[ -n "$INPUT_ATTACK_TECHNIQUE_METADATA_FILE" ]]; then
+            cmd+=(--attack-technique-metadata-file "$INPUT_ATTACK_TECHNIQUE_METADATA_FILE")
+          fi
+        elif [[ "$mode" == "attack-coverage" ]]; then
+          if [[ "$(count_nonempty_lines "$INPUT_INPUT")" -eq 0 ]]; then
+            echo "attack-coverage mode requires at least one input path." >&2
+            exit 2
+          fi
+          attack_source_for_validation="$INPUT_ATTACK_SOURCE"
+          if [[ "$attack_source_for_validation" == "none" ]]; then
+            attack_source_for_validation="ctid-json"
+          fi
+          cmd+=(
+            attack coverage
+            --output "$INPUT_OUTPUT_PATH"
+            --format "$INPUT_OUTPUT_FORMAT"
+            --attack-source "$attack_source_for_validation"
+          )
+          append_multiline_args "--input" "$INPUT_INPUT"
+          append_multiline_args "--input-format" "$INPUT_INPUT_FORMAT"
+          if [[ -z "$INPUT_ATTACK_MAPPING_FILE" ]]; then
+            echo "attack-coverage mode requires attack-mapping-file." >&2
+            exit 2
+          fi
+          cmd+=(--attack-mapping-file "$INPUT_ATTACK_MAPPING_FILE")
+          if [[ -n "$INPUT_ATTACK_TECHNIQUE_METADATA_FILE" ]]; then
+            cmd+=(--attack-technique-metadata-file "$INPUT_ATTACK_TECHNIQUE_METADATA_FILE")
+          fi
+          if [[ -n "$INPUT_MAX_CVES" ]]; then
+            cmd+=(--max-cves "$INPUT_MAX_CVES")
           fi
         elif [[ "$mode" == "report-html" ]]; then
-          report_input="$(resolve_single_input "${{ inputs.input }}")"
+          report_input="$(resolve_single_input "$INPUT_INPUT")"
           cmd+=(
             report html
             --input "$report_input"
-            --output "${{ inputs.output-path }}"
+            --output "$INPUT_OUTPUT_PATH"
           )
-          html_report_path="${{ inputs.output-path }}"
+          html_report_path="$INPUT_OUTPUT_PATH"
         elif [[ "$mode" == "workbench-report" ]]; then
-          report_input="$(resolve_single_input "${{ inputs.input }}")"
+          report_input="$(resolve_single_input "$INPUT_INPUT")"
           cmd+=(
             report workbench
             --input "$report_input"
-            --output "${{ inputs.output-path }}"
-            --format "${{ inputs.output-format }}"
+            --output "$INPUT_OUTPUT_PATH"
+            --format "$INPUT_OUTPUT_FORMAT"
           )
-          if [[ "${{ inputs.output-format }}" == "html" ]]; then
-            html_report_path="${{ inputs.output-path }}"
+          if [[ "$INPUT_OUTPUT_FORMAT" == "html" ]]; then
+            html_report_path="$INPUT_OUTPUT_PATH"
           fi
-          if [[ "${{ inputs.output-format }}" == "sarif" ]]; then
-            sarif_report_path="${{ inputs.output-path }}"
+          if [[ "$INPUT_OUTPUT_FORMAT" == "sarif" ]]; then
+            sarif_report_path="$INPUT_OUTPUT_PATH"
           fi
         elif [[ "$mode" == "report-evidence-bundle" ]]; then
-          report_input="$(resolve_single_input "${{ inputs.input }}")"
+          report_input="$(resolve_single_input "$INPUT_INPUT")"
           cmd+=(
             report evidence-bundle
             --input "$report_input"
-            --output "${{ inputs.output-path }}"
+            --output "$INPUT_OUTPUT_PATH"
           )
         elif [[ "$mode" == "verify-evidence-bundle" ]]; then
-          report_input="$(resolve_single_input "${{ inputs.input }}")"
+          report_input="$(resolve_single_input "$INPUT_INPUT")"
           cmd+=(
             report verify-evidence-bundle
             --input "$report_input"
-            --output "${{ inputs.output-path }}"
+            --output "$INPUT_OUTPUT_PATH"
             --format json
           )
+        elif [[ "$mode" == "validate-sarif" ]]; then
+          report_input="$(resolve_single_input "$INPUT_INPUT")"
+          cmd+=(
+            report validate-sarif
+            --input "$report_input"
+            --output "$INPUT_OUTPUT_PATH"
+            --format json
+          )
+          sarif_validation_path="$INPUT_OUTPUT_PATH"
         else
           echo "Unsupported mode: $mode" >&2
           exit 2
@@ -429,7 +1009,7 @@ runs:
         printf ' %q' "${cmd[@]}"
         printf '\n'
         "${cmd[@]}"
-        if [[ "${{ inputs.validate-sarif }}" == "true" ]]; then
+        if [[ "$INPUT_VALIDATE_SARIF" == "true" && "$mode" != "validate-sarif" ]]; then
           if [[ -z "$sarif_report_path" ]]; then
             echo "validate-sarif requires mode=analyze or mode=workbench-report with output-format=sarif." >&2
             exit 2
@@ -443,10 +1023,10 @@ runs:
         if [[ "$summary_requested" == "true" ]]; then
           summary_path="$requested_summary_path"
         fi
-        echo "report-path=${{ inputs.output-path }}" >> "$GITHUB_OUTPUT"
-        echo "html-report-path=$html_report_path" >> "$GITHUB_OUTPUT"
-        echo "summary-path=$summary_path" >> "$GITHUB_OUTPUT"
-        echo "sarif-validation-path=$sarif_validation_path" >> "$GITHUB_OUTPUT"
-        if [[ "${{ inputs.github-step-summary }}" == "true" && -n "$summary_path" && -f "$summary_path" ]]; then
+        write_action_output "report-path" "$INPUT_OUTPUT_PATH"
+        write_action_output "html-report-path" "$html_report_path"
+        write_action_output "summary-path" "$summary_path"
+        write_action_output "sarif-validation-path" "$sarif_validation_path"
+        if [[ "$INPUT_GITHUB_STEP_SUMMARY" == "true" && -n "$summary_path" && -f "$summary_path" ]]; then
           cat "$summary_path" >> "$GITHUB_STEP_SUMMARY"
         fi

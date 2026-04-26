@@ -1,16 +1,37 @@
 {% extends "base.html" %}
 {% block title %}Waivers · {{ project.name }}{% endblock %}
 {% block content %}
-<section class="section">
-  <div class="section-head row">
-    <div>
-      <p class="eyebrow">Risk acceptance</p>
-      <h1>{{ project.name }}</h1>
-    </div>
+<section class="page-hero">
+  <div>
+    <p class="eyebrow">Risk acceptance</p>
+    <h1>Risk acceptance</h1>
+    <p class="page-subtitle">
+      Create scoped waivers for accepted residual risk in {{ project.name }}, keep review dates visible, and preserve finding matches for governance reporting.
+    </p>
+  </div>
+  <div class="page-actions">
     <a class="button" href="/projects/{{ project.id }}/governance">Governance</a>
   </div>
+</section>
+
+<section class="section">
+  <div class="metric-grid compact">
+    <article class="metric"><span>Waivers</span><strong>{{ waiver_summary.total }}</strong></article>
+    <article class="metric"><span>Active</span><strong>{{ waiver_summary.active }}</strong></article>
+    <article class="metric"><span>Review due</span><strong>{{ waiver_summary.review_due }}</strong></article>
+    <article class="metric"><span>Expired</span><strong>{{ waiver_summary.expired }}</strong></article>
+    <article class="metric"><span>Matched findings</span><strong>{{ waiver_summary.matched_findings }}</strong></article>
+  </div>
+</section>
+
+<section class="section split compact-split">
   <form class="form-panel" method="post" action="/web/projects/{{ project.id }}/waivers">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <div>
+      <p class="eyebrow">New waiver</p>
+      <h2>Create waiver</h2>
+      <p class="muted">Scope narrowly where possible. Owner, reason and expiry are required for every acceptance.</p>
+    </div>
     <div class="form-grid">
       <label>CVE<input name="cve_id" placeholder="CVE-2024-3094"></label>
       <label>Finding
@@ -34,12 +55,20 @@
     <label>Reason<textarea name="reason" required rows="3"></textarea></label>
     <button class="button primary" type="submit">Create waiver</button>
   </form>
+  <aside class="panel insight-panel">
+    <p class="eyebrow">Governance rule</p>
+    <h2>Acceptance is not remediation</h2>
+    <p>Waivers suppress operational urgency only for the documented scope and dates. Expired and review-due waivers are surfaced back into governance.</p>
+  </aside>
 </section>
 
 <section class="section">
-  <div class="section-head">
-    <p class="eyebrow">Current waivers</p>
-    <h2>Visible accepted risk</h2>
+  <div class="section-head row">
+    <div>
+      <p class="eyebrow">Current waivers</p>
+      <h2>Visible accepted risk</h2>
+    </div>
+    <span class="muted">{{ waivers|length }} records</span>
   </div>
   <div class="table-wrap">
     <table>

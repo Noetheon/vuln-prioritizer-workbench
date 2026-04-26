@@ -35,11 +35,23 @@ SARIF_MINIMUM_SCHEMA: dict[str, Any] = {
                         "properties": {
                             "driver": {
                                 "type": "object",
-                                "required": ["name"],
+                                "required": ["name", "rules"],
                                 "additionalProperties": True,
                                 "properties": {
                                     "name": {"type": "string", "minLength": 1},
                                     "version": {"type": "string"},
+                                    "rules": {
+                                        "type": "array",
+                                        "minItems": 1,
+                                        "items": {
+                                            "type": "object",
+                                            "required": ["id"],
+                                            "additionalProperties": True,
+                                            "properties": {
+                                                "id": {"type": "string", "minLength": 1}
+                                            },
+                                        },
+                                    },
                                 },
                             }
                         },
@@ -48,7 +60,13 @@ SARIF_MINIMUM_SCHEMA: dict[str, Any] = {
                         "type": "array",
                         "items": {
                             "type": "object",
-                            "required": ["ruleId", "level", "message", "locations"],
+                            "required": [
+                                "ruleId",
+                                "level",
+                                "message",
+                                "locations",
+                                "partialFingerprints",
+                            ],
                             "additionalProperties": True,
                             "properties": {
                                 "ruleId": {"type": "string", "minLength": 1},
@@ -95,6 +113,14 @@ SARIF_MINIMUM_SCHEMA: dict[str, Any] = {
                                         },
                                     },
                                 },
+                                "partialFingerprints": {
+                                    "type": "object",
+                                    "minProperties": 1,
+                                    "additionalProperties": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                    },
+                                },
                             },
                         },
                     },
@@ -125,6 +151,33 @@ def validate_sarif_payload(payload: dict[str, Any]) -> list[str]:
     for error in sorted(validator.iter_errors(payload), key=lambda item: list(item.path)):
         location = ".".join(str(part) for part in error.path) or "$"
         errors.append(f"{location}: {error.message}")
+    errors.extend(_validate_rule_references(payload))
+    return errors
+
+
+def _validate_rule_references(payload: dict[str, Any]) -> list[str]:
+    errors: list[str] = []
+    for run_index, run in enumerate(payload.get("runs", [])):
+        if not isinstance(run, dict):
+            continue
+        raw_tool = run.get("tool")
+        tool = raw_tool if isinstance(raw_tool, dict) else {}
+        raw_driver = tool.get("driver")
+        driver = raw_driver if isinstance(raw_driver, dict) else {}
+        rule_ids = {
+            str(rule.get("id"))
+            for rule in driver.get("rules", [])
+            if isinstance(rule, dict) and rule.get("id")
+        }
+        for result_index, result in enumerate(run.get("results", [])):
+            if not isinstance(result, dict):
+                continue
+            rule_id = str(result.get("ruleId") or "")
+            if rule_id and rule_ids and rule_id not in rule_ids:
+                errors.append(
+                    f"runs.{run_index}.results.{result_index}.ruleId: "
+                    f"{rule_id!r} is not declared in tool.driver.rules"
+                )
     return errors
 
 

@@ -1,14 +1,21 @@
 {% extends "base.html" %}
 {% block title %}Governance · {{ project.name }}{% endblock %}
 {% block content %}
-<section class="section">
-  <div class="section-head row">
-    <div>
-      <p class="eyebrow">Governance</p>
-      <h1>{{ project.name }}</h1>
-    </div>
-    <a class="button" href="/projects/{{ project.id }}/findings">Findings</a>
+<section class="page-hero">
+  <div>
+    <p class="eyebrow">Governance</p>
+    <h1>Governance</h1>
+    <p class="page-subtitle">
+      Track risk acceptance, VEX suppression and accountable owner queues for {{ project.name }} without hiding the underlying findings.
+    </p>
   </div>
+  <div class="page-actions">
+    <a class="button" href="/projects/{{ project.id }}/findings">Findings</a>
+    <a class="button" href="/projects/{{ project.id }}/waivers">Waivers</a>
+  </div>
+</section>
+
+<section class="section">
   <div class="metric-grid">
     <article class="metric">
       <span>Waived</span>
@@ -33,8 +40,26 @@
   </div>
 </section>
 
+<section class="section governance-strip">
+  <article class="panel insight-panel">
+    <p class="eyebrow">Immediate review</p>
+    <h2>{{ summary.waiver_lifecycle.review_due_count + summary.waiver_lifecycle.expired_count }} waiver items need attention</h2>
+    <p>Review due and expired waivers should be closed, renewed with approval, or converted back into actionable remediation work.</p>
+  </article>
+  <article class="panel insight-panel">
+    <p class="eyebrow">VEX state</p>
+    <h2>{{ summary.vex.suppressed_findings }} suppressed findings</h2>
+    <p>Suppression reflects supplied VEX status. Under-investigation findings stay visible for owner follow-up.</p>
+  </article>
+  <article class="panel insight-panel">
+    <p class="eyebrow">Ownership</p>
+    <h2>{{ summary.owner_rollups|length }} owner queues</h2>
+    <p>Rollups group findings by the current asset owner and service context captured during import.</p>
+  </article>
+</section>
+
 <section class="section split">
-  <div>
+  <div class="panel">
     <div class="section-head">
       <p class="eyebrow">Owners</p>
       <h2>Remediation ownership</h2>
@@ -43,7 +68,7 @@
       {% include "governance/rollup_table.html" %}
     {% endwith %}
   </div>
-  <aside>
+  <aside class="panel">
     <div class="section-head">
       <p class="eyebrow">Services</p>
       <h2>Service pressure</h2>
@@ -55,9 +80,9 @@
       <p class="eyebrow">VEX</p>
       <h2>Status counts</h2>
     </div>
-    <div class="stack">
+    <div class="status-list">
       {% for status, count in summary.vex.status_counts.items() %}
-        <div class="service-row"><span>{{ status }}</span><strong>{{ count }}</strong></div>
+        <div class="status-row"><span>{{ status }}</span><strong>{{ count }}</strong></div>
       {% else %}
         <p class="empty">No VEX statuses captured.</p>
       {% endfor %}

@@ -15,6 +15,7 @@ from vuln_prioritizer.cli_support.analysis import (
     build_priority_policy,
     handle_fail_on,
     handle_provider_error_fail_on,
+    handle_provider_staleness_fail_on,
     handle_waiver_lifecycle_fail_on,
     prepare_analysis,
     prepare_explain,
@@ -115,11 +116,16 @@ def analyze(
     hide_waived: bool = typer.Option(False, "--hide-waived"),
     fail_on: PriorityFilter | None = typer.Option(None, "--fail-on"),
     fail_on_provider_error: bool = typer.Option(False, "--fail-on-provider-error"),
+    max_provider_age_hours: int | None = typer.Option(None, "--max-provider-age-hours", min=1),
+    fail_on_stale_provider_data: bool = typer.Option(False, "--fail-on-stale-provider-data"),
     fail_on_expired_waivers: bool = typer.Option(False, "--fail-on-expired-waivers"),
     fail_on_review_due_waivers: bool = typer.Option(False, "--fail-on-review-due-waivers"),
     max_cves: int | None = typer.Option(None, "--max-cves", min=1),
     offline_kev_file: Path | None = typer.Option(None, "--offline-kev-file", dir_okay=False),
     offline_attack_file: Path | None = typer.Option(None, "--offline-attack-file", dir_okay=False),
+    defensive_context_file: Path | None = typer.Option(
+        None, "--defensive-context-file", dir_okay=False
+    ),
     provider_snapshot_file: Path | None = typer.Option(
         None, "--provider-snapshot-file", dir_okay=False
     ),
@@ -164,6 +170,7 @@ def analyze(
             attack_mapping_file=attack_mapping_file,
             attack_technique_metadata_file=attack_technique_metadata_file,
             offline_attack_file=offline_attack_file,
+            defensive_context_file=defensive_context_file,
             priority_filters=priority,
             kev_only=kev_only,
             min_cvss=min_cvss,
@@ -193,6 +200,8 @@ def analyze(
             no_cache=no_cache,
             cache_dir=cache_dir,
             cache_ttl_hours=cache_ttl_hours,
+            max_provider_age_hours=max_provider_age_hours,
+            fail_on_stale_provider_data=fail_on_stale_provider_data,
         )
     )
 
@@ -211,6 +220,10 @@ def analyze(
         handle_provider_error_fail_on(
             context,
             fail_on_provider_error=fail_on_provider_error,
+        )
+        handle_provider_staleness_fail_on(
+            context,
+            fail_on_stale_provider_data=fail_on_stale_provider_data,
         )
         handle_waiver_lifecycle_fail_on(
             context,
@@ -245,6 +258,10 @@ def analyze(
     handle_provider_error_fail_on(
         context,
         fail_on_provider_error=fail_on_provider_error,
+    )
+    handle_provider_staleness_fail_on(
+        context,
+        fail_on_stale_provider_data=fail_on_stale_provider_data,
     )
     handle_waiver_lifecycle_fail_on(
         context,
@@ -288,9 +305,14 @@ def compare(
     show_suppressed: bool = typer.Option(False, "--show-suppressed"),
     hide_waived: bool = typer.Option(False, "--hide-waived"),
     fail_on_provider_error: bool = typer.Option(False, "--fail-on-provider-error"),
+    max_provider_age_hours: int | None = typer.Option(None, "--max-provider-age-hours", min=1),
+    fail_on_stale_provider_data: bool = typer.Option(False, "--fail-on-stale-provider-data"),
     max_cves: int | None = typer.Option(None, "--max-cves", min=1),
     offline_kev_file: Path | None = typer.Option(None, "--offline-kev-file", dir_okay=False),
     offline_attack_file: Path | None = typer.Option(None, "--offline-attack-file", dir_okay=False),
+    defensive_context_file: Path | None = typer.Option(
+        None, "--defensive-context-file", dir_okay=False
+    ),
     provider_snapshot_file: Path | None = typer.Option(
         None, "--provider-snapshot-file", dir_okay=False
     ),
@@ -328,6 +350,7 @@ def compare(
             attack_mapping_file=attack_mapping_file,
             attack_technique_metadata_file=attack_technique_metadata_file,
             offline_attack_file=offline_attack_file,
+            defensive_context_file=defensive_context_file,
             priority_filters=priority,
             kev_only=kev_only,
             min_cvss=min_cvss,
@@ -357,6 +380,8 @@ def compare(
             no_cache=no_cache,
             cache_dir=cache_dir,
             cache_ttl_hours=cache_ttl_hours,
+            max_provider_age_hours=max_provider_age_hours,
+            fail_on_stale_provider_data=fail_on_stale_provider_data,
         )
     )
 
@@ -369,6 +394,10 @@ def compare(
         handle_provider_error_fail_on(
             context,
             fail_on_provider_error=fail_on_provider_error,
+        )
+        handle_provider_staleness_fail_on(
+            context,
+            fail_on_stale_provider_data=fail_on_stale_provider_data,
         )
         return
 
@@ -385,6 +414,10 @@ def compare(
     handle_provider_error_fail_on(
         context,
         fail_on_provider_error=fail_on_provider_error,
+    )
+    handle_provider_staleness_fail_on(
+        context,
+        fail_on_stale_provider_data=fail_on_stale_provider_data,
     )
 
 
@@ -424,6 +457,9 @@ def explain(
     fail_on_provider_error: bool = typer.Option(False, "--fail-on-provider-error"),
     offline_kev_file: Path | None = typer.Option(None, "--offline-kev-file", dir_okay=False),
     offline_attack_file: Path | None = typer.Option(None, "--offline-attack-file", dir_okay=False),
+    defensive_context_file: Path | None = typer.Option(
+        None, "--defensive-context-file", dir_okay=False
+    ),
     provider_snapshot_file: Path | None = typer.Option(
         None, "--provider-snapshot-file", dir_okay=False
     ),
@@ -497,6 +533,7 @@ def explain(
             fail_on_provider_error=fail_on_provider_error,
             offline_kev_file=offline_kev_file,
             offline_attack_file=offline_attack_file,
+            defensive_context_file=defensive_context_file,
             nvd_api_key_env=nvd_api_key_env,
             no_cache=no_cache,
             cache_dir=cache_dir,

@@ -1,15 +1,38 @@
 {% extends "base.html" %}
 {% block title %}Assets · {{ project.name }}{% endblock %}
 {% block content %}
+<section class="page-hero">
+  <div>
+    <p class="eyebrow">Assets</p>
+    <h1>Asset context</h1>
+    <p class="page-subtitle">
+      Maintain ownership, service, exposure and criticality context for {{ project.name }} so findings can be prioritized for real operational impact.
+    </p>
+  </div>
+  <div class="page-actions">
+    <a class="button" href="/projects/{{ project.id }}/findings">Findings</a>
+  </div>
+</section>
+
+<section class="section">
+  <div class="metric-grid compact">
+    <article class="metric"><span>Assets</span><strong>{{ asset_summary.total }}</strong></article>
+    <article class="metric"><span>Owned</span><strong>{{ asset_summary.owned }}</strong></article>
+    <article class="metric"><span>Services</span><strong>{{ asset_summary.services }}</strong></article>
+    <article class="metric"><span>Internet-facing</span><strong>{{ asset_summary.internet_facing }}</strong></article>
+    <article class="metric"><span>Critical</span><strong>{{ asset_summary.critical }}</strong></article>
+  </div>
+</section>
+
 <section class="section">
   <div class="section-head row">
     <div>
-      <p class="eyebrow">Assets</p>
-      <h1>{{ project.name }}</h1>
+      <p class="eyebrow">Asset inventory</p>
+      <h2>Editable context</h2>
     </div>
-    <a class="button" href="/projects/{{ project.id }}/findings">Findings</a>
+    <span class="muted">{{ assets|length }} assets</span>
   </div>
-  <div class="table-wrap">
+  <div class="table-wrap asset-table">
     <table>
       <thead>
         <tr>
@@ -31,8 +54,8 @@
             <td>{{ asset.owner or "Unassigned" }}</td>
             <td>{{ asset.business_service or "Unmapped" }}</td>
             <td>{{ asset.environment or "N.A." }}</td>
-            <td>{{ asset.exposure or "N.A." }}</td>
-            <td>{{ asset.criticality or "N.A." }}</td>
+            <td><span class="badge neutral">{{ asset.exposure or "N.A." }}</span></td>
+            <td><span class="badge {{ asset.criticality|lower if asset.criticality else 'neutral' }}">{{ asset.criticality or "N.A." }}</span></td>
             <td>{{ finding_counts.get(asset.id, 0) }}</td>
           </tr>
           <tr>

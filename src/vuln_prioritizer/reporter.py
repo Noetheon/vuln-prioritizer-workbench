@@ -217,6 +217,12 @@ def render_summary_panel(
         f"EPSS hits: {context.epss_hits}/{context.valid_input}",
         f"KEV hits: {context.kev_hits}/{context.valid_input}",
     ]
+    if context.defensive_context_sources:
+        lines.append(
+            "Defensive context: "
+            + ", ".join(source.upper() for source in context.defensive_context_sources)
+            + f" ({context.defensive_context_hits}/{context.valid_input})"
+        )
     if context.attack_enabled:
         lines.extend(
             [

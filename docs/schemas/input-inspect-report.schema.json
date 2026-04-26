@@ -1,0 +1,108 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://noetheon.github.io/vuln-prioritizer/schemas/input-inspect-report.schema.json",
+  "title": "vuln-prioritizer input inspect report",
+  "description": "JSON contract for `vuln-prioritizer input inspect` and `input normalize`.",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["metadata", "summary", "sources", "unique_cves", "occurrences", "warnings"],
+  "properties": {
+    "metadata": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["schema_version", "command", "generated_at", "input_paths", "input_format"],
+      "properties": {
+        "schema_version": {
+          "const": "1.3.0"
+        },
+        "command": {
+          "enum": ["input inspect", "input normalize"]
+        },
+        "generated_at": {
+          "type": "string"
+        },
+        "input_paths": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "input_format": {
+          "type": "string"
+        },
+        "output_format": {
+          "type": "string"
+        },
+        "output_path": {
+          "type": ["string", "null"]
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["total_rows", "occurrence_count", "unique_cves", "warning_count"],
+      "properties": {
+        "total_rows": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "occurrence_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "unique_cves": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "included_occurrence_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "included_unique_cves": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "warning_count": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "sources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": true
+      }
+    },
+    "unique_cves": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "occurrences": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "required": ["cve_id", "source_format"],
+        "properties": {
+          "cve_id": {
+            "type": "string"
+          },
+          "source_format": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}

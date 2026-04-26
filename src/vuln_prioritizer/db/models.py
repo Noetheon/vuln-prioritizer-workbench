@@ -47,6 +47,16 @@ class Project(Base):
         cascade="all, delete-orphan",
         passive_deletes=True,
     )
+    finding_status_history: Mapped[list[FindingStatusHistory]] = relationship(
+        back_populates="project",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+    audit_events: Mapped[list[AuditEvent]] = relationship(
+        back_populates="project",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
     reports: Mapped[list[Report]] = relationship(
         back_populates="project",
         cascade="all, delete-orphan",
@@ -68,6 +78,17 @@ class Project(Base):
         passive_deletes=True,
     )
     config_snapshots: Mapped[list[ProjectConfigSnapshot]] = relationship(
+        back_populates="project",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+    artifact_retention: Mapped[ProjectArtifactRetention | None] = relationship(
+        back_populates="project",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+        uselist=False,
+    )
+    workbench_jobs: Mapped[list[WorkbenchJob]] = relationship(
         back_populates="project",
         cascade="all, delete-orphan",
         passive_deletes=True,
@@ -273,6 +294,12 @@ class Finding(Base):
         cascade="all, delete-orphan",
         passive_deletes=True,
     )
+    status_history: Mapped[list[FindingStatusHistory]] = relationship(
+        back_populates="finding",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+        order_by="FindingStatusHistory.created_at",
+    )
 
     __table_args__ = (
         Index(
@@ -310,6 +337,33 @@ class FindingOccurrence(Base):
     analysis_run: Mapped[AnalysisRun] = relationship(back_populates="occurrences")
 
     __table_args__ = (Index("ix_finding_occurrences_run", "analysis_run_id"),)
+
+
+class FindingStatusHistory(Base):
+    __tablename__ = "finding_status_history"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=_uuid)
+    project_id: Mapped[str] = mapped_column(
+        ForeignKey("projects.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    finding_id: Mapped[str] = mapped_column(
+        ForeignKey("findings.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    previous_status: Mapped[str | None] = mapped_column(String(40))
+    new_status: Mapped[str] = mapped_column(String(40), nullable=False)
+    actor: Mapped[str | None] = mapped_column(String(200))
+    reason: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+
+    project: Mapped[Project] = relationship(back_populates="finding_status_history")
+    finding: Mapped[Finding] = relationship(back_populates="status_history")
+
+    __table_args__ = (
+        Index("ix_finding_status_history_finding", "finding_id", "created_at"),
+        Index("ix_finding_status_history_project", "project_id", "created_at"),
+    )
 
 
 class AttackMappingRecord(Base):
@@ -501,6 +555,8 @@ class DetectionControl(Base):
     environment: Mapped[str | None] = mapped_column(String(80))
     owner: Mapped[str | None] = mapped_column(String(200))
     evidence_ref: Mapped[str | None] = mapped_column(String(1000))
+    evidence_refs_json: Mapped[list] = mapped_column(JSON, default=list)
+    review_status: Mapped[str] = mapped_column(String(80), nullable=False, default="unreviewed")
     notes: Mapped[str | None] = mapped_column(Text)
     last_verified_at: Mapped[str | None] = mapped_column(String(64))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
@@ -511,6 +567,18 @@ class DetectionControl(Base):
     )
 
     project: Mapped[Project] = relationship(back_populates="detection_controls")
+    history: Mapped[list[DetectionControlHistory]] = relationship(
+        back_populates="control",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+        order_by="DetectionControlHistory.created_at",
+    )
+    attachments: Mapped[list[DetectionControlAttachment]] = relationship(
+        back_populates="control",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+        order_by="DetectionControlAttachment.created_at",
+    )
 
     __table_args__ = (
         Index("ix_detection_controls_project_technique", "project_id", "technique_id"),
@@ -521,6 +589,60 @@ class DetectionControl(Base):
             "technique_id",
             unique=True,
         ),
+    )
+
+
+class DetectionControlHistory(Base):
+    __tablename__ = "detection_control_history"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=_uuid)
+    project_id: Mapped[str] = mapped_column(
+        ForeignKey("projects.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    control_id: Mapped[str] = mapped_column(
+        ForeignKey("detection_controls.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    event_type: Mapped[str] = mapped_column(String(80), nullable=False)
+    actor: Mapped[str | None] = mapped_column(String(200))
+    reason: Mapped[str | None] = mapped_column(Text)
+    previous_json: Mapped[dict] = mapped_column(JSON, default=dict)
+    current_json: Mapped[dict] = mapped_column(JSON, default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+
+    control: Mapped[DetectionControl] = relationship(back_populates="history")
+
+    __table_args__ = (
+        Index("ix_detection_control_history_control", "control_id", "created_at"),
+        Index("ix_detection_control_history_project", "project_id", "created_at"),
+    )
+
+
+class DetectionControlAttachment(Base):
+    __tablename__ = "detection_control_attachments"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=_uuid)
+    project_id: Mapped[str] = mapped_column(
+        ForeignKey("projects.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    control_id: Mapped[str] = mapped_column(
+        ForeignKey("detection_controls.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    filename: Mapped[str] = mapped_column(String(500), nullable=False)
+    content_type: Mapped[str | None] = mapped_column(String(200))
+    path: Mapped[str] = mapped_column(String(1000), nullable=False)
+    sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    size_bytes: Mapped[int] = mapped_column(Integer, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+
+    control: Mapped[DetectionControl] = relationship(back_populates="attachments")
+
+    __table_args__ = (
+        Index("ix_detection_control_attachments_control", "control_id", "created_at"),
+        Index("ix_detection_control_attachments_project", "project_id", "created_at"),
     )
 
 
@@ -551,6 +673,42 @@ class ProviderUpdateJob(Base):
     __table_args__ = (Index("ix_provider_update_jobs_started_at", "started_at"),)
 
 
+class WorkbenchJob(Base):
+    __tablename__ = "workbench_jobs"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=_uuid)
+    project_id: Mapped[str | None] = mapped_column(ForeignKey("projects.id", ondelete="CASCADE"))
+    kind: Mapped[str] = mapped_column(String(80), nullable=False)
+    status: Mapped[str] = mapped_column(String(40), nullable=False, default="queued")
+    target_type: Mapped[str | None] = mapped_column(String(120))
+    target_id: Mapped[str | None] = mapped_column(String(120))
+    progress: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    max_attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=3)
+    priority: Mapped[int] = mapped_column(Integer, nullable=False, default=100)
+    idempotency_key: Mapped[str | None] = mapped_column(String(200), unique=True)
+    payload_json: Mapped[dict] = mapped_column(JSON, default=dict)
+    result_json: Mapped[dict] = mapped_column(JSON, default=dict)
+    logs_json: Mapped[list] = mapped_column(JSON, default=list)
+    error_message: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    queued_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=utc_now)
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    heartbeat_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    lease_owner: Mapped[str | None] = mapped_column(String(200))
+    lease_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    project: Mapped[Project | None] = relationship(back_populates="workbench_jobs")
+
+    __table_args__ = (
+        Index("ix_workbench_jobs_status_priority", "status", "priority", "queued_at"),
+        Index("ix_workbench_jobs_project_created", "project_id", "created_at"),
+        Index("ix_workbench_jobs_target", "target_type", "target_id"),
+        Index("ix_workbench_jobs_lease", "lease_expires_at"),
+    )
+
+
 class ProjectConfigSnapshot(Base):
     __tablename__ = "project_config_snapshots"
 
@@ -571,6 +729,30 @@ class ProjectConfigSnapshot(Base):
     project: Mapped[Project] = relationship(back_populates="config_snapshots")
 
     __table_args__ = (Index("ix_project_config_snapshots_project", "project_id", "created_at"),)
+
+
+class ProjectArtifactRetention(Base):
+    __tablename__ = "project_artifact_retention"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=_uuid)
+    project_id: Mapped[str] = mapped_column(
+        ForeignKey("projects.id", ondelete="CASCADE"),
+        nullable=False,
+        unique=True,
+    )
+    report_retention_days: Mapped[int | None] = mapped_column(Integer)
+    evidence_retention_days: Mapped[int | None] = mapped_column(Integer)
+    max_disk_usage_mb: Mapped[int | None] = mapped_column(Integer)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=utc_now,
+        onupdate=utc_now,
+    )
+
+    project: Mapped[Project] = relationship(back_populates="artifact_retention")
+
+    __table_args__ = (Index("ix_project_artifact_retention_project", "project_id"),)
 
 
 class GitHubIssueExport(Base):
@@ -598,4 +780,29 @@ class GitHubIssueExport(Base):
             unique=True,
         ),
         Index("ix_github_issue_exports_finding", "finding_id"),
+    )
+
+
+class AuditEvent(Base):
+    __tablename__ = "audit_events"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=_uuid)
+    project_id: Mapped[str | None] = mapped_column(
+        ForeignKey("projects.id", ondelete="CASCADE"),
+        nullable=True,
+    )
+    event_type: Mapped[str] = mapped_column(String(120), nullable=False)
+    target_type: Mapped[str | None] = mapped_column(String(120))
+    target_id: Mapped[str | None] = mapped_column(String(120))
+    actor: Mapped[str | None] = mapped_column(String(200))
+    message: Mapped[str | None] = mapped_column(Text)
+    metadata_json: Mapped[dict] = mapped_column(JSON, default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+
+    project: Mapped[Project | None] = relationship(back_populates="audit_events")
+
+    __table_args__ = (
+        Index("ix_audit_events_project_created", "project_id", "created_at"),
+        Index("ix_audit_events_event_type", "event_type"),
+        Index("ix_audit_events_target", "target_type", "target_id"),
     )

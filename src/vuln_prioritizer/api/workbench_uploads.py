@@ -21,11 +21,18 @@ ALLOWED_UPLOAD_SUFFIXES = {
     "generic-occurrence-csv": {".csv"},
     "trivy-json": {".json"},
     "grype-json": {".json"},
+    "cyclonedx-json": {".json"},
+    "spdx-json": {".json"},
+    "dependency-check-json": {".json"},
+    "github-alerts-json": {".json"},
+    "nessus-xml": {".nessus", ".xml"},
+    "openvas-xml": {".xml"},
 }
 ALLOWED_CONTEXT_UPLOAD_SUFFIXES = {
     "asset-context": {".csv"},
     "vex": {".json"},
     "waiver": {".yml", ".yaml"},
+    "defensive-context": {".json"},
 }
 SAFE_SNAPSHOT_FILENAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*[.]json$")
 SAFE_ATTACK_FILENAME_RE = SAFE_SNAPSHOT_FILENAME_RE
@@ -152,6 +159,25 @@ def _resolve_download_artifact(
     if actual_sha256 != expected_sha256:
         raise HTTPException(status_code=409, detail="Artifact checksum mismatch.")
     return resolved
+
+
+def _delete_download_artifact(
+    value: str,
+    *,
+    settings: WorkbenchSettings,
+    expected_sha256: str,
+) -> bool:
+    resolved = Path(value).resolve(strict=False)
+    report_root = settings.report_dir.resolve(strict=False)
+    if not resolved.is_relative_to(report_root):
+        raise HTTPException(status_code=422, detail="Artifact path is outside the report root.")
+    if not resolved.is_file():
+        return False
+    actual_sha256 = _sha256_file(resolved)
+    if actual_sha256 != expected_sha256:
+        raise HTTPException(status_code=409, detail="Artifact checksum mismatch.")
+    resolved.unlink()
+    return True
 
 
 def _sha256_file(path: Path) -> str:

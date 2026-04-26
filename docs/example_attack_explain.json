@@ -244,6 +244,7 @@
     "cvss_only_rank": 1,
     "cvss_severity": "CRITICAL",
     "cvss_version": "3.1",
+    "defensive_contexts": [],
     "delta_rank": 0,
     "description": "In Progress MOVEit Transfer before 2021.0.6 (13.0.6), 2021.1.4 (13.1.4), 2022.0.4 (14.0.4), 2022.1.5 (14.1.5), and 2023.0.1 (15.0.1), a SQL injection vulnerability has been found in the MOVEit Transfer web application that could allow an unauthenticated attacker to gain access to MOVEit Transfer's database. Depending on the database engine being used (MySQL, Microsoft SQL Server, or Azure SQL), an attacker may be able to infer information about the structure and contents of the database, and execute SQL statements that alter or delete database elements. NOTE: this is exploited in the wild in May and June 2023; exploitation of unpatched systems can occur via HTTP or HTTPS. All versions (e.g., 2020.0 and 2019x) before the five explicitly mentioned versions are affected, including older unsupported versions.",
     "enriched_label": "Critical",
@@ -536,6 +537,7 @@
     "cvss_base_score": 9.8,
     "cvss_severity": "CRITICAL",
     "cvss_version": "3.1",
+    "defensive_contexts": [],
     "description": "In Progress MOVEit Transfer before 2021.0.6 (13.0.6), 2021.1.4 (13.1.4), 2022.0.4 (14.0.4), 2022.1.5 (14.1.5), and 2023.0.1 (15.0.1), a SQL injection vulnerability has been found in the MOVEit Transfer web application that could allow an unauthenticated attacker to gain access to MOVEit Transfer's database. Depending on the database engine being used (MySQL, Microsoft SQL Server, or Azure SQL), an attacker may be able to infer information about the structure and contents of the database, and execute SQL statements that alter or delete database elements. NOTE: this is exploited in the wild in May and June 2023; exploitation of unpatched systems can occur via HTTP or HTTPS. All versions (e.g., 2020.0 and 2019x) before the five explicitly mentioned versions are affected, including older unsupported versions.",
     "epss": 0.94254,
     "epss_percentile": 0.99934,
@@ -607,6 +609,7 @@
       "vex_statuses": {}
     },
     "provider_evidence": {
+      "defensive_contexts": [],
       "epss": {
         "cve_id": "CVE-2023-34362",
         "date": "2026-04-23",
@@ -722,6 +725,9 @@
       "CTID Mappings Explorer (local JSON artifact)",
       "Input formats: cve-list"
     ],
+    "defensive_context_file": null,
+    "defensive_context_hits": 0,
+    "defensive_context_sources": [],
     "duplicate_cve_count": 0,
     "epss_diagnostics": {
       "cache_hits": 0,
@@ -758,6 +764,7 @@
     "locked_provider_data": true,
     "mapping_framework": "kev",
     "mapping_framework_version": "07/28/2025",
+    "max_provider_age_hours": null,
     "merged_input_count": 1,
     "nvd_diagnostics": {
       "cache_hits": 0,
@@ -818,11 +825,19 @@
       }
     },
     "provider_freshness": {
+      "epss_cache_latest_cached_at": null,
+      "epss_freshness_at": "2026-04-21T12:00:00+00:00",
+      "kev_cache_latest_cached_at": null,
       "kev_date_added_max": "2023-06-02",
       "kev_due_date_min": "2023-06-23",
+      "kev_freshness_at": "2026-04-21T12:00:00+00:00",
       "latest_epss_date": "2026-04-23",
+      "lookup_completed_at": "2026-04-21T12:00:00+00:00",
+      "nvd_cache_latest_cached_at": null,
+      "nvd_freshness_at": "2026-04-21T12:00:00+00:00",
       "nvd_last_modified_max": "2025-10-27T14:37:08.460",
-      "nvd_last_modified_min": "2025-10-27T14:37:08.460"
+      "nvd_last_modified_min": "2025-10-27T14:37:08.460",
+      "provider_snapshot_generated_at": "2026-04-21T12:00:00+00:00"
     },
     "provider_snapshot_file": "data/demo_provider_snapshot.json",
     "provider_snapshot_sources": [
@@ -830,6 +845,8 @@
       "epss",
       "kev"
     ],
+    "provider_stale": false,
+    "provider_stale_sources": [],
     "schema_version": "1.0.0",
     "source_stats": {
       "cve-list": 1

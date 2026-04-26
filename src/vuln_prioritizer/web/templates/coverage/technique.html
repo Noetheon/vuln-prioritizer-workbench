@@ -1,19 +1,29 @@
 {% extends "base.html" %}
 {% block title %}{{ technique_id }} · ATT&amp;CK Technique{% endblock %}
 {% block content %}
-<section class="section">
-  <div class="section-head row">
-    <div>
-      <p class="eyebrow">Technique detail</p>
-      <h1>{{ technique_id }}{% if technique_name %} · {{ technique_name }}{% endif %}</h1>
-      <div class="chip-row left">
-        {% if metadata.deprecated %}<span class="badge review_due">Deprecated</span>{% endif %}
-        {% if metadata.revoked %}<span class="badge expired">Revoked</span>{% endif %}
-        {% if not metadata.deprecated and not metadata.revoked %}<span class="badge neutral">Current</span>{% endif %}
-      </div>
+<section class="page-hero">
+  <div>
+    <p class="eyebrow">Technique detail</p>
+    <h1>ATT&amp;CK technique detail</h1>
+    <div class="chip-row left">
+      {% if metadata.deprecated %}<span class="badge review_due">Deprecated</span>{% endif %}
+      {% if metadata.revoked %}<span class="badge expired">Revoked</span>{% endif %}
+      {% if not metadata.deprecated and not metadata.revoked %}<span class="badge neutral">Current</span>{% endif %}
     </div>
-    <a class="button" href="/projects/{{ project.id }}/coverage">Coverage gaps</a>
   </div>
+  <div class="hero-stack">
+    <div class="hero-meta">
+      <span>Technique <strong>{{ technique_id }}</strong></span>
+      <span>Name <strong>{{ technique_name or "Not available" }}</strong></span>
+      <span>Project <strong>{{ project.name }}</strong></span>
+    </div>
+    <div class="page-actions">
+      <a class="button" href="/projects/{{ project.id }}/coverage">Coverage gaps</a>
+    </div>
+  </div>
+</section>
+
+<section class="section">
   {% if coverage %}
     <div class="metric-grid">
       <article class="metric">
@@ -36,7 +46,7 @@
         <span>Controls</span>
         <strong>{{ coverage.control_count }}</strong>
       </article>
-      <article class="metric">
+      <article class="metric text-metric">
         <span>Owner</span>
         <strong>{{ coverage.owner or "Unassigned" }}</strong>
       </article>
@@ -47,12 +57,12 @@
 </section>
 
 <section class="section split">
-  <div>
+  <div class="panel">
     <div class="section-head">
       <p class="eyebrow">Related findings</p>
       <h2>Prioritized CVEs</h2>
     </div>
-    <div class="table-wrap">
+    <div class="table-wrap flush">
       <table>
         <thead>
           <tr>
@@ -77,7 +87,7 @@
       </table>
     </div>
   </div>
-  <div>
+  <div class="panel">
     <div class="section-head">
       <p class="eyebrow">Defensive controls</p>
       <h2>Coverage evidence</h2>
@@ -93,9 +103,48 @@
               <tr><th>Owner</th><td>{{ control.owner or "Unassigned" }}</td></tr>
               <tr><th>Environment</th><td>{{ control.environment or "N.A." }}</td></tr>
               <tr><th>Evidence</th><td>{{ control.evidence_ref or "N.A." }}</td></tr>
+              <tr><th>Review</th><td>{{ control.review_status }}</td></tr>
               <tr><th>Verified</th><td>{{ control.last_verified_at or "N.A." }}</td></tr>
             </tbody>
           </table>
+          <form method="post" action="/web/detection-controls/{{ control.id }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <div class="form-grid">
+              <label>Coverage
+                <select name="coverage_level">
+                  {% for level in ["covered", "partial", "not_covered", "unknown", "not_applicable"] %}
+                    <option value="{{ level }}" {% if control.coverage_level == level %}selected{% endif %}>{{ level }}</option>
+                  {% endfor %}
+                </select>
+              </label>
+              <label>Review
+                <select name="review_status">
+                  {% for status in ["unreviewed", "needs_review", "reviewed", "rejected", "stale"] %}
+                    <option value="{{ status }}" {% if control.review_status == status %}selected{% endif %}>{{ status }}</option>
+                  {% endfor %}
+                </select>
+              </label>
+              <label>Owner<input name="owner" value="{{ control.owner or '' }}"></label>
+              <label>Evidence ref<input name="evidence_ref" value="{{ control.evidence_ref or '' }}"></label>
+            </div>
+            <label>Evidence refs<input name="evidence_refs" value="{{ control.evidence_refs|join(', ') }}"></label>
+            <label>Notes<textarea name="notes" rows="3">{{ control.notes or '' }}</textarea></label>
+            <button class="button" type="submit">Update control</button>
+          </form>
+          <form method="post" action="/web/detection-controls/{{ control.id }}/attachments" enctype="multipart/form-data">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <label>Evidence attachment
+              <input type="file" name="file" accept=".txt,.md,.json,.csv,.pdf,.png,.jpg,.jpeg" required>
+            </label>
+            <button class="button" type="submit">Upload evidence</button>
+          </form>
+          <div class="status-list">
+            {% for attachment in control.attachments %}
+              <div class="status-row"><span><a href="{{ attachment.download_url }}">{{ attachment.filename }}</a></span><strong>{{ attachment.size_bytes }} bytes</strong></div>
+            {% else %}
+              <p class="empty">No evidence attachments uploaded.</p>
+            {% endfor %}
+          </div>
         </article>
       {% else %}
         <p class="empty">No detection controls are linked to this technique.</p>

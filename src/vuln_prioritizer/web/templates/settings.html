@@ -1,14 +1,29 @@
 {% extends "base.html" %}
 {% block title %}Settings · {{ project.name }}{% endblock %}
 {% block content %}
-<section class="section">
-  <div class="section-head row">
-    <div>
-      <p class="eyebrow">Settings</p>
-      <h1>{{ project.name }}</h1>
-    </div>
+<section class="page-hero">
+  <div>
+    <p class="eyebrow">Settings</p>
+    <h1>Settings</h1>
+    <p class="page-subtitle">
+      Runtime paths, provider snapshot state and refresh jobs for {{ project.name }}.
+    </p>
+  </div>
+  <div class="page-actions">
     <a class="button" href="/projects/{{ project.id }}/dashboard">Dashboard</a>
   </div>
+</section>
+
+<section class="section">
+  <div class="metric-grid compact">
+    <article class="metric text-metric"><span>Provider status</span><strong>{{ provider_status.status }}</strong></article>
+    <article class="metric"><span>Sources</span><strong>{{ provider_status.sources|length }}</strong></article>
+    <article class="metric"><span>Jobs</span><strong>{{ provider_jobs|length }}</strong></article>
+    <article class="metric"><span>Max upload</span><strong>{{ settings.max_upload_mb }} MB</strong></article>
+  </div>
+</section>
+
+<section class="section">
   <div class="detail-grid">
     <article class="panel">
       <p class="eyebrow">Runtime</p>
@@ -39,22 +54,203 @@
 </section>
 
 <section class="section">
-  <div class="section-head">
-    <p class="eyebrow">Provider updates</p>
-    <h2>Refresh jobs</h2>
+  <div class="split compact-split">
+    <form class="form-panel" method="post" action="/web/projects/{{ project.id }}/api-tokens">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <div>
+        <p class="eyebrow">API tokens</p>
+        <h2>Create token</h2>
+      </div>
+      {% if created_api_token %}
+        <label>New token
+          <input readonly value="{{ created_api_token }}">
+        </label>
+      {% endif %}
+      <label>Name<input required name="name" maxlength="200" placeholder="automation"></label>
+      <button class="button primary" type="submit">Create token</button>
+    </form>
+    <aside class="panel">
+      <p class="eyebrow">Token lifecycle</p>
+      <h2>Active and revoked tokens</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Created</th>
+              <th>Last used</th>
+              <th>Status</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for token in api_tokens %}
+              <tr>
+                <td>{{ token.name }}</td>
+                <td>{{ token.created_at }}</td>
+                <td>{{ token.last_used_at or "N.A." }}</td>
+                <td>{{ "Revoked" if token.revoked_at else "Active" }}</td>
+                <td>
+                  {% if not token.revoked_at %}
+                    <form method="post" action="/web/projects/{{ project.id }}/api-tokens/{{ token.id }}/revoke">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                      <button class="button" type="submit">Revoke</button>
+                    </form>
+                  {% else %}
+                    N.A.
+                  {% endif %}
+                </td>
+              </tr>
+            {% else %}
+              <tr><td colspan="5" class="empty">No API tokens created.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </aside>
   </div>
-  <form class="form-panel" method="post" action="/web/projects/{{ project.id }}/providers/update-jobs">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-    <div class="form-grid">
-      <label><input type="checkbox" name="sources" value="nvd" checked> NVD</label>
-      <label><input type="checkbox" name="sources" value="epss" checked> EPSS</label>
-      <label><input type="checkbox" name="sources" value="kev" checked> KEV</label>
-      <label>Max CVEs<input name="max_cves" type="number" min="1" max="500" placeholder="All current findings"></label>
-      <label><input type="checkbox" name="cache_only" value="true" checked> Cache-only</label>
+</section>
+
+<section class="section">
+  <div class="split compact-split">
+    <form class="form-panel" method="post" action="/web/projects/{{ project.id }}/settings/config">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <div>
+        <p class="eyebrow">Project config</p>
+        <h2>Save snapshot</h2>
+      </div>
+      <label>Runtime config JSON/YAML
+        <textarea name="config_text" rows="12">{{ config_editor_text }}</textarea>
+      </label>
+      <button class="button primary" type="submit">Save config snapshot</button>
+    </form>
+    <aside class="panel">
+      <p class="eyebrow">Current snapshot</p>
+      {% if latest_config %}
+        <h2>{{ latest_config.source }}</h2>
+        <table>
+          <tbody>
+            <tr><th>ID</th><td>{{ latest_config.id }}</td></tr>
+            <tr><th>Created</th><td>{{ latest_config.created_at }}</td></tr>
+            <tr><th>Export</th><td><a href="/projects/{{ project.id }}/settings/config/{{ latest_config.id }}/export">Download JSON</a></td></tr>
+          </tbody>
+        </table>
+      {% else %}
+        <h2>No snapshot</h2>
+        <p class="empty">Save a config snapshot to apply project defaults to future imports and CI handoffs.</p>
+      {% endif %}
+    </aside>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Snapshot</th>
+          <th>Source</th>
+          <th>Created</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for snapshot in config_history %}
+          <tr>
+            <td>{{ snapshot.id }}</td>
+            <td>{{ snapshot.source }}</td>
+            <td>{{ snapshot.created_at }}</td>
+            <td class="button-row">
+              <a class="button" href="/projects/{{ project.id }}/settings?diff_config={{ snapshot.id }}">Diff</a>
+              <a class="button" href="/projects/{{ project.id }}/settings/config/{{ snapshot.id }}/export">Export</a>
+              <form method="post" action="/web/projects/{{ project.id }}/settings/config/{{ snapshot.id }}/rollback">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <button class="button" type="submit">Rollback</button>
+              </form>
+            </td>
+          </tr>
+        {% else %}
+          <tr><td colspan="4" class="empty">No config snapshots saved.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if config_diff %}
+    <div class="panel">
+      <p class="eyebrow">Config diff</p>
+      <h2>{{ config_diff.changed|length }} changed path{{ "" if config_diff.changed|length == 1 else "s" }}</h2>
+      <div class="table-wrap flush">
+        <table>
+          <thead><tr><th>Path</th><th>Before</th><th>After</th></tr></thead>
+          <tbody>
+            {% for path, item in config_diff.changed.items() %}
+              <tr>
+                <td>{{ path }}</td>
+                <td><code>{{ item.before }}</code></td>
+                <td><code>{{ item.after }}</code></td>
+              </tr>
+            {% else %}
+              <tr><td colspan="3" class="empty">No differences.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
     </div>
-    <p class="muted">Jobs create a new snapshot only after the refresh artifact is written; failed jobs keep the previous snapshot intact.</p>
-    <button class="button primary" type="submit">Start provider update</button>
-  </form>
+  {% endif %}
+</section>
+
+<section class="section">
+  <div class="split compact-split">
+    <form class="form-panel" method="post" action="/web/projects/{{ project.id }}/artifacts/retention">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <div>
+        <p class="eyebrow">Artifact retention</p>
+        <h2>Retention settings</h2>
+      </div>
+      <label>Report retention days
+        <input name="report_retention_days" type="number" min="1" value="{{ artifact_retention.report_retention_days if artifact_retention else '' }}">
+      </label>
+      <label>Evidence retention days
+        <input name="evidence_retention_days" type="number" min="1" value="{{ artifact_retention.evidence_retention_days if artifact_retention else '' }}">
+      </label>
+      <label>Max disk usage MB
+        <input name="max_disk_usage_mb" type="number" min="1" value="{{ artifact_retention.max_disk_usage_mb if artifact_retention else '' }}">
+      </label>
+      <button class="button primary" type="submit">Save retention</button>
+    </form>
+    <form class="form-panel" method="post" action="/web/projects/{{ project.id }}/artifacts/cleanup">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <div>
+        <p class="eyebrow">Cleanup</p>
+        <h2>Orphan cleanup</h2>
+      </div>
+      <label><input type="checkbox" name="delete" value="true"> Delete files instead of dry-run</label>
+      <button class="button" type="submit">Run cleanup</button>
+    </form>
+  </div>
+</section>
+
+<section class="section">
+  <div class="split compact-split">
+    <form class="form-panel" method="post" action="/web/projects/{{ project.id }}/providers/update-jobs">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <div>
+        <p class="eyebrow">Provider updates</p>
+        <h2>Refresh jobs</h2>
+        <p class="muted">Jobs create a new snapshot only after the refresh artifact is written; failed jobs keep the previous snapshot intact.</p>
+      </div>
+      <div class="form-grid">
+        <label><input type="checkbox" name="sources" value="nvd" checked> NVD</label>
+        <label><input type="checkbox" name="sources" value="epss" checked> EPSS</label>
+        <label><input type="checkbox" name="sources" value="kev" checked> KEV</label>
+        <label>Max CVEs<input name="max_cves" type="number" min="1" max="500" placeholder="All current findings"></label>
+        <label><input type="checkbox" name="cache_only" value="true" checked> Cache-only</label>
+      </div>
+      <button class="button primary" type="submit">Start provider update</button>
+    </form>
+    <aside class="panel insight-panel">
+      <p class="eyebrow">Snapshot discipline</p>
+      <h2>Reports prefer locked data</h2>
+      <p>Use locked provider snapshots for reproducible executive reports. Live refresh jobs should be treated as new evidence, not silent changes to old runs.</p>
+    </aside>
+  </div>
   <div class="table-wrap">
     <table>
       <thead>
@@ -79,6 +275,44 @@
           </tr>
         {% else %}
           <tr><td colspan="6" class="empty">No provider update jobs have run.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="section">
+  <div class="section-head row">
+    <div>
+      <p class="eyebrow">Job runner</p>
+      <h2>Recent durable jobs</h2>
+    </div>
+    <span class="muted">{{ workbench_jobs|length }} jobs</span>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Kind</th>
+          <th>Status</th>
+          <th>Progress</th>
+          <th>Target</th>
+          <th>Started</th>
+          <th>Finished</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for job in workbench_jobs %}
+          <tr>
+            <td>{{ job.kind }}</td>
+            <td><span class="badge {{ 'expired' if job.status == 'failed' else 'active' }}">{{ job.status }}</span></td>
+            <td>{{ job.progress }}%</td>
+            <td>{{ job.target_type or "N.A." }} {{ job.target_id or "" }}</td>
+            <td>{{ job.started_at or job.queued_at or "N.A." }}</td>
+            <td>{{ job.finished_at or "N.A." }}</td>
+          </tr>
+        {% else %}
+          <tr><td colspan="6" class="empty">No durable jobs recorded.</td></tr>
         {% endfor %}
       </tbody>
     </table>

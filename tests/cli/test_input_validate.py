@@ -179,3 +179,69 @@ def test_cli_input_validate_strict_writes_output_before_failing(
     payload = json.loads(output_file.read_text(encoding="utf-8"))
     assert payload["summary"]["ok"] is False
     assert "unknown asset criticality" in "\n".join(payload["warnings"])
+
+
+def test_cli_input_inspect_emits_normalized_occurrences_without_provider_lookup(
+    runner,
+    tmp_path: Path,
+) -> None:
+    input_file = tmp_path / "generic-occurrences.csv"
+    output_file = tmp_path / "normalized.json"
+    input_file.write_text(
+        "\n".join(
+            [
+                "cve,component,version,target_kind,target_ref,asset_id,owner,business_service",
+                "CVE-2024-3094,xz,5.6.0,repository,backend,asset-a,platform,payments",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    result = runner.invoke(
+        app,
+        [
+            "input",
+            "inspect",
+            "--input",
+            str(input_file),
+            "--input-format",
+            "generic-occurrence-csv",
+            "--output",
+            str(output_file),
+            "--format",
+            "json",
+        ],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(output_file.read_text(encoding="utf-8"))
+    assert payload["metadata"]["command"] == "input inspect"
+    assert payload["summary"]["occurrence_count"] == 1
+    assert payload["unique_cves"] == ["CVE-2024-3094"]
+    assert payload["occurrences"][0]["component_name"] == "xz"
+    assert payload["occurrences"][0]["asset_owner"] == "platform"
+    assert "provider_evidence" not in payload["occurrences"][0]
+
+
+def test_cli_input_normalize_alias_matches_inspect_contract(runner, tmp_path: Path) -> None:
+    input_file = tmp_path / "cves.txt"
+    input_file.write_text("CVE-2021-44228\n", encoding="utf-8")
+
+    result = runner.invoke(
+        app,
+        [
+            "input",
+            "normalize",
+            "--input",
+            str(input_file),
+            "--format",
+            "json",
+        ],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["metadata"]["command"] == "input normalize"
+    assert payload["summary"]["unique_cves"] == 1
+    assert payload["occurrences"][0]["cve_id"] == "CVE-2021-44228"
