@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ast
+import inspect
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -63,6 +64,33 @@ def test_workbench_web_routes_are_focused_facade_without_api_route_imports() -> 
         web_imports = _imported_modules(str(path.relative_to(ROOT)))
 
         assert "vuln_prioritizer.api.routes" not in web_imports, path
+
+
+def test_workbench_web_route_facade_preserves_legacy_private_helpers() -> None:
+    import vuln_prioritizer.web.routes as web_routes
+
+    expected_names = {
+        "_check_csrf",
+        "_project_path",
+        "_project_nav_context",
+        "_safe_project_path_value",
+        "_optional_bool_filter",
+        "_optional_float_filter",
+        "_redacted_database_url",
+        "_safe_uuid_path_value",
+        "_redacted_env_value",
+        "_runtime_config_from_text",
+        "_optional_positive_int",
+        "_csv_form_values",
+        "_asset_audit_snapshot",
+        "_validate_detection_attachment_filename",
+        "_web_config_diff",
+        "_web_collect_config_diff",
+        "_selected_import_files",
+    }
+
+    assert expected_names.issubset(set(web_routes.__all__))
+    assert {name for name in expected_names if not hasattr(web_routes, name)} == set()
 
 
 def test_workbench_support_does_not_reexport_from_api_routes() -> None:
@@ -166,6 +194,12 @@ def test_workbench_api_route_facade_preserves_legacy_private_helpers() -> None:
 
     assert expected_names.issubset(set(api_routes.__all__))
     assert {name for name in expected_names if not hasattr(api_routes, name)} == set()
+    assert set(inspect.signature(api_routes._execute_queued_workbench_job).parameters) == {
+        "repo",
+        "session",
+        "settings",
+        "job",
+    }
 
 
 def test_workbench_analysis_uses_cli_independent_analysis_service() -> None:

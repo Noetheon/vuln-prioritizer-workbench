@@ -110,10 +110,12 @@ def test_action_run_step_wires_step_summary_outputs_and_report_html_mode() -> No
     assert 'cmd+=(--summary-output "$requested_summary_path")' in script
     assert 'cmd+=(--summary-template "$summary_template")' in script
     assert 'cat "$summary_path" >> "$GITHUB_STEP_SUMMARY"' in script
-    assert 'echo "report-path=$INPUT_OUTPUT_PATH" >> "$GITHUB_OUTPUT"' in script
-    assert 'echo "html-report-path=$html_report_path" >> "$GITHUB_OUTPUT"' in script
-    assert 'echo "summary-path=$summary_path" >> "$GITHUB_OUTPUT"' in script
-    assert 'echo "sarif-validation-path=$sarif_validation_path" >> "$GITHUB_OUTPUT"' in script
+    assert "write_action_output()" in script
+    assert 'write_action_output "report-path" "$INPUT_OUTPUT_PATH"' in script
+    assert 'write_action_output "html-report-path" "$html_report_path"' in script
+    assert 'write_action_output "summary-path" "$summary_path"' in script
+    assert 'write_action_output "sarif-validation-path" "$sarif_validation_path"' in script
+    assert 'printf \'%s<<%s\\n\' "$name" "$delimiter"' in script
     assert "report html" in script
     assert 'html_report_path="$INPUT_OUTPUT_PATH"' in script
     assert "report validate-sarif" in script

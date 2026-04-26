@@ -329,6 +329,20 @@ runs:
           done <<< "$raw"
         }
 
+        write_action_output() {
+          local name="$1"
+          local value="$2"
+          local delimiter="vuln_prioritizer_output_${name}_${RANDOM}_${RANDOM}"
+          while [[ "$value" == *"$delimiter"* ]]; do
+            delimiter="vuln_prioritizer_output_${name}_${RANDOM}_${RANDOM}"
+          done
+          {
+            printf '%s<<%s\n' "$name" "$delimiter"
+            printf '%s\n' "$value"
+            printf '%s\n' "$delimiter"
+          } >> "$GITHUB_OUTPUT"
+        }
+
         resolve_single_input() {
           local raw="$1"
           local input_count=0
@@ -1009,10 +1023,10 @@ runs:
         if [[ "$summary_requested" == "true" ]]; then
           summary_path="$requested_summary_path"
         fi
-        echo "report-path=$INPUT_OUTPUT_PATH" >> "$GITHUB_OUTPUT"
-        echo "html-report-path=$html_report_path" >> "$GITHUB_OUTPUT"
-        echo "summary-path=$summary_path" >> "$GITHUB_OUTPUT"
-        echo "sarif-validation-path=$sarif_validation_path" >> "$GITHUB_OUTPUT"
+        write_action_output "report-path" "$INPUT_OUTPUT_PATH"
+        write_action_output "html-report-path" "$html_report_path"
+        write_action_output "summary-path" "$summary_path"
+        write_action_output "sarif-validation-path" "$sarif_validation_path"
         if [[ "$INPUT_GITHUB_STEP_SUMMARY" == "true" && -n "$summary_path" && -f "$summary_path" ]]; then
           cat "$summary_path" >> "$GITHUB_STEP_SUMMARY"
         fi

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from fastapi import APIRouter
 
 from vuln_prioritizer.api.workbench_artifact_routes import (
@@ -82,8 +84,10 @@ from vuln_prioritizer.api.workbench_integration_routes import (
     router as integration_router,
 )
 from vuln_prioritizer.api.workbench_jobs import (
+    _run_provider_update_job,
     _workbench_job_error_message,
     enqueue_workbench_job,
+    execute_queued_workbench_job,
     get_workbench_job,
     job_router,
     list_workbench_jobs,
@@ -150,9 +154,6 @@ from vuln_prioritizer.services.workbench_job_runner import (
     _queued_job_artifact_path,
     _queued_job_optional_artifact_path,
 )
-from vuln_prioritizer.services.workbench_job_runner import (
-    execute_queued_workbench_job as _execute_queued_workbench_job,
-)
 
 api_router = APIRouter(prefix="/api")
 api_router.include_router(system_router)
@@ -164,6 +165,24 @@ api_router.include_router(integration_router)
 api_router.include_router(artifact_router)
 api_router.include_router(job_router)
 api_router.include_router(provider_router)
+
+
+def _execute_queued_workbench_job(
+    *,
+    repo: Any,
+    session: Any,
+    settings: Any,
+    job: Any,
+) -> dict[str, Any]:
+    """Legacy facade for queued job execution with the pre-split signature."""
+    return execute_queued_workbench_job(
+        repo=repo,
+        session=session,
+        settings=settings,
+        job=job,
+        provider_update_runner=_run_provider_update_job,
+    )
+
 
 __all__ = [
     "api_router",
