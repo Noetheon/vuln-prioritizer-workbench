@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import os
 import re
+import socket
+from ipaddress import ip_address
 from typing import Any
-from urllib.parse import urljoin, urlparse
+from urllib.parse import urlparse, urlunparse
 
 import requests
 from fastapi import HTTPException
@@ -15,6 +17,8 @@ from vuln_prioritizer.api.schemas import TicketSyncPreviewRequest
 ENV_NAME_RE = re.compile(r"^[A-Z_][A-Z0-9_]*$")
 SERVICENOW_TABLE_RE = re.compile(r"^[A-Za-z0-9_]+$")
 JIRA_PROJECT_RE = re.compile(r"^[A-Z][A-Z0-9_]{1,20}$")
+TICKET_BASE_URL_ALLOWLIST_ENV = "VULN_PRIORITIZER_TICKET_BASE_URL_ALLOWLIST"
+BLOCKED_TICKET_HOST_SUFFIXES = (".localhost", ".local", ".internal")
 
 
 def _ticket_sync_token(token_env: str | None) -> str:
@@ -31,14 +35,112 @@ def _ticket_sync_token(token_env: str | None) -> str:
 
 
 def _ticket_base_url(base_url: str | None) -> str:
+    normalized_url = _normalized_https_base_url(base_url)
+    if normalized_url in _configured_ticket_base_urls():
+        return normalized_url
+    parsed = urlparse(normalized_url)
+    hostname = parsed.hostname
+    if hostname is None:
+        raise HTTPException(
+            status_code=422,
+            detail="base_url host is required.",
+        )
+    _ensure_public_ticket_host(hostname)
+    return normalized_url
+
+
+def _normalized_https_base_url(base_url: str | None) -> str:
     raw_url = (base_url or "").strip().rstrip("/")
     parsed = urlparse(raw_url)
-    if parsed.scheme != "https" or not parsed.netloc or parsed.username or parsed.password:
+    try:
+        port = parsed.port
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail="base_url port is invalid.") from exc
+    if (
+        parsed.scheme != "https"
+        or not parsed.netloc
+        or parsed.username
+        or parsed.password
+        or parsed.params
+        or parsed.query
+        or parsed.fragment
+    ):
         raise HTTPException(
             status_code=422,
             detail="base_url must be an HTTPS URL without embedded credentials.",
         )
-    return raw_url
+    if port is not None and port != 443:
+        raise HTTPException(status_code=422, detail="base_url must use the default HTTPS port.")
+    hostname = parsed.hostname
+    if hostname is None:
+        raise HTTPException(status_code=422, detail="base_url host is required.")
+    normalized_host = _normalized_ticket_hostname(hostname)
+    netloc = normalized_host if port is None else f"{normalized_host}:{port}"
+    return urlunparse(("https", netloc, parsed.path.rstrip("/"), "", "", "")).rstrip("/")
+
+
+def _configured_ticket_base_urls() -> set[str]:
+    raw_values = os.getenv(TICKET_BASE_URL_ALLOWLIST_ENV, "")
+    configured_urls: set[str] = set()
+    for raw_value in re.split(r"[\s,]+", raw_values):
+        if raw_value:
+            configured_urls.add(_normalized_https_base_url(raw_value))
+    return configured_urls
+
+
+def _normalized_ticket_hostname(hostname: str) -> str:
+    try:
+        return hostname.rstrip(".").lower().encode("idna").decode("ascii")
+    except UnicodeError as exc:
+        raise HTTPException(status_code=422, detail="base_url host is invalid.") from exc
+
+
+def _ensure_public_ticket_host(hostname: str) -> None:
+    normalized_host = _normalized_ticket_hostname(hostname)
+    if normalized_host == "localhost" or normalized_host.endswith(BLOCKED_TICKET_HOST_SUFFIXES):
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                "base_url host must resolve to a public address or be explicitly "
+                f"allowlisted via {TICKET_BASE_URL_ALLOWLIST_ENV}."
+            ),
+        )
+    try:
+        _ensure_public_ticket_address(normalized_host)
+        return
+    except ValueError:
+        pass
+    try:
+        resolved = socket.getaddrinfo(normalized_host, 443, type=socket.SOCK_STREAM)
+    except socket.gaierror as exc:
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                "base_url host must resolve to a public address or be explicitly "
+                f"allowlisted via {TICKET_BASE_URL_ALLOWLIST_ENV}."
+            ),
+        ) from exc
+    addresses = {entry[4][0] for entry in resolved if isinstance(entry[4][0], str)}
+    if not addresses:
+        raise HTTPException(status_code=422, detail="base_url host did not resolve.")
+    for address in addresses:
+        _ensure_public_ticket_address(address)
+
+
+def _ensure_public_ticket_address(address: str) -> None:
+    parsed_address = ip_address(address)
+    if not parsed_address.is_global:
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                "base_url host must resolve to a public address or be explicitly "
+                f"allowlisted via {TICKET_BASE_URL_ALLOWLIST_ENV}."
+            ),
+        )
+
+
+def _ticket_endpoint_url(base_url: str, path: str) -> str:
+    return f"{base_url}/{path.lstrip('/')}"
 
 
 def _jira_project_key(project_key: str | None) -> str:
@@ -123,8 +225,12 @@ def _create_jira_issue(
         }
     }
     try:
+        request_url = _ticket_endpoint_url(base_url, "rest/api/3/issue")
+
+        # _ticket_base_url restricts destinations to HTTPS allowlisted or public hosts.
+        # codeql[py/full-ssrf]
         response = requests.post(
-            urljoin(base_url + "/", "rest/api/3/issue"),
+            request_url,
             headers={
                 "Accept": "application/json",
                 "Authorization": f"Bearer {token}",
@@ -134,6 +240,7 @@ def _create_jira_issue(
             },
             json=jira_payload,
             timeout=10,
+            allow_redirects=False,
         )
     except requests.RequestException as exc:
         raise HTTPException(status_code=502, detail="Jira issue creation failed.") from exc
@@ -164,8 +271,12 @@ def _create_servicenow_ticket(
         "category": "security",
     }
     try:
+        request_url = _ticket_endpoint_url(base_url, f"api/now/table/{table}")
+
+        # _ticket_base_url restricts destinations to HTTPS allowlisted or public hosts.
+        # codeql[py/full-ssrf]
         response = requests.post(
-            urljoin(base_url + "/", f"api/now/table/{table}"),
+            request_url,
             headers={
                 "Accept": "application/json",
                 "Authorization": f"Bearer {token}",
@@ -175,6 +286,7 @@ def _create_servicenow_ticket(
             },
             json=servicenow_payload,
             timeout=10,
+            allow_redirects=False,
         )
     except requests.RequestException as exc:
         raise HTTPException(status_code=502, detail="ServiceNow ticket creation failed.") from exc

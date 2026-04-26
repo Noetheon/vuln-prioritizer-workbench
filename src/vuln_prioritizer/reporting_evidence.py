@@ -214,7 +214,6 @@ def verify_evidence_bundle(
             return metadata, summary, items
     except zipfile.BadZipFile as exc:
         raise ValueError(f"{bundle_path} is not a valid ZIP archive: {exc}.") from exc
-    raise AssertionError("unreachable")
 
 
 def write_evidence_bundle(

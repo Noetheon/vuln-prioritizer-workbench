@@ -1651,6 +1651,10 @@ def test_workbench_api_tokens_config_provider_jobs_and_github_preview(
 
     monkeypatch.setattr("vuln_prioritizer.api.workbench_tickets.requests.post", fake_ticket_post)
     monkeypatch.setenv("JIRA_TOKEN", "jira_test")
+    monkeypatch.setenv(
+        "VULN_PRIORITIZER_TICKET_BASE_URL_ALLOWLIST",
+        "https://jira.example.invalid,https://snow.example.invalid",
+    )
     jira_export = client.post(
         f"/api/projects/{project['id']}/tickets/export",
         json={
@@ -1719,6 +1723,18 @@ def test_workbench_api_tokens_config_provider_jobs_and_github_preview(
         headers=headers,
     )
     assert unsafe_ticket_export.status_code == 422
+    loopback_ticket_export = client.post(
+        f"/api/projects/{project['id']}/tickets/export",
+        json={
+            "provider": "jira",
+            "dry_run": False,
+            "base_url": "https://127.0.0.1",
+            "token_env": "JIRA_TOKEN",
+            "jira_project_key": "SEC",
+        },
+        headers=headers,
+    )
+    assert loopback_ticket_export.status_code == 422
 
     revoke = client.delete(f"/api/tokens/{token_payload['id']}", headers=headers)
     assert revoke.status_code == 200

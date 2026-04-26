@@ -176,5 +176,5 @@ def _run_provider_update_job(
 
 def _workbench_job_error_message(exc: Exception) -> str:
     if isinstance(exc, HTTPException):
-        return str(exc.detail)
-    return str(exc) or exc.__class__.__name__
+        return "Workbench job request failed."
+    return "Workbench job execution failed."

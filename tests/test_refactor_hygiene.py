@@ -202,6 +202,14 @@ def test_workbench_api_route_facade_preserves_legacy_private_helpers() -> None:
     }
 
 
+def test_workbench_job_error_message_is_sanitized() -> None:
+    from vuln_prioritizer.api.workbench_jobs import _workbench_job_error_message
+
+    assert _workbench_job_error_message(RuntimeError("secret stack detail")) == (
+        "Workbench job execution failed."
+    )
+
+
 def test_workbench_analysis_uses_cli_independent_analysis_service() -> None:
     imports = _imported_modules("src/vuln_prioritizer/services/workbench_analysis.py")
 
