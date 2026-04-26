@@ -275,6 +275,8 @@ def _create_servicenow_ticket(
 
         # _ticket_base_url restricts destinations to HTTPS allowlisted or public hosts.
         # codeql[py/full-ssrf]
+        # _servicenow_table restricts this path segment to alphanumerics and underscores.
+        # codeql[py/partial-ssrf]
         response = requests.post(
             request_url,
             headers={
