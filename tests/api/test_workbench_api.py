@@ -1693,6 +1693,20 @@ def test_workbench_api_tokens_config_provider_jobs_and_github_preview(
     assert len(ticket_posts) == 1
 
     monkeypatch.setenv("SERVICENOW_TOKEN", "snow_test")
+    custom_table_export = client.post(
+        f"/api/projects/{project['id']}/tickets/export",
+        json={
+            "provider": "servicenow",
+            "priority": "Critical",
+            "limit": 1,
+            "dry_run": False,
+            "base_url": "https://snow.example.invalid",
+            "token_env": "SERVICENOW_TOKEN",
+            "servicenow_table": "change_request",
+        },
+        headers=headers,
+    )
+    assert custom_table_export.status_code == 422
     servicenow_export = client.post(
         f"/api/projects/{project['id']}/tickets/export",
         json={

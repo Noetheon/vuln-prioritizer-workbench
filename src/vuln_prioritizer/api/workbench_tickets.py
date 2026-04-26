@@ -18,7 +18,9 @@ ENV_NAME_RE = re.compile(r"^[A-Z_][A-Z0-9_]*$")
 SERVICENOW_TABLE_RE = re.compile(r"^[A-Za-z0-9_]+$")
 JIRA_PROJECT_RE = re.compile(r"^[A-Z][A-Z0-9_]{1,20}$")
 TICKET_BASE_URL_ALLOWLIST_ENV = "VULN_PRIORITIZER_TICKET_BASE_URL_ALLOWLIST"
+SERVICENOW_TABLE_ALLOWLIST_ENV = "VULN_PRIORITIZER_SERVICENOW_TABLE_ALLOWLIST"
 BLOCKED_TICKET_HOST_SUFFIXES = (".localhost", ".local", ".internal")
+DEFAULT_SERVICENOW_TABLE_PATHS = {"incident": "api/now/table/incident"}
 
 
 def _ticket_sync_token(token_env: str | None) -> str:
@@ -157,6 +159,30 @@ def _servicenow_table(table: str) -> str:
     return normalized
 
 
+def _servicenow_table_path(table: str) -> str:
+    table_paths = dict(DEFAULT_SERVICENOW_TABLE_PATHS)
+    table_paths.update(_configured_servicenow_table_paths())
+    if table not in table_paths:
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                "servicenow_table must be 'incident' or explicitly server-allowlisted "
+                f"via {SERVICENOW_TABLE_ALLOWLIST_ENV}."
+            ),
+        )
+    return table_paths[table]
+
+
+def _configured_servicenow_table_paths() -> dict[str, str]:
+    raw_values = os.getenv(SERVICENOW_TABLE_ALLOWLIST_ENV, "")
+    table_paths: dict[str, str] = {}
+    for raw_value in re.split(r"[\s,]+", raw_values):
+        if raw_value:
+            table = _servicenow_table(raw_value)
+            table_paths[table] = f"api/now/table/{table}"
+    return table_paths
+
+
 def _ticket_preview_payload(finding: Any, *, payload: TicketSyncPreviewRequest) -> dict[str, Any]:
     duplicate_key = (
         f"{finding.project_id}:{payload.provider}:{finding.cve_id}:{finding.asset_id or 'no-asset'}"
@@ -271,12 +297,10 @@ def _create_servicenow_ticket(
         "category": "security",
     }
     try:
-        request_url = _ticket_endpoint_url(base_url, f"api/now/table/{table}")
+        request_url = _ticket_endpoint_url(base_url, _servicenow_table_path(table))
 
         # _ticket_base_url restricts destinations to HTTPS allowlisted or public hosts.
         # codeql[py/full-ssrf]
-        # _servicenow_table restricts this path segment to alphanumerics and underscores.
-        # codeql[py/partial-ssrf]
         response = requests.post(
             request_url,
             headers={
