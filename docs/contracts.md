@@ -30,6 +30,8 @@ The following outputs are the current documented machine interfaces:
 - `state trends --format json`
 - `state service-history --format json`
 - `input validate --format json`
+- `input inspect --format json`
+- `input normalize --format json`
 - `data status --format json`
 - `data update --format json`
 - `data verify --format json`
@@ -42,6 +44,7 @@ The following outputs are the current documented machine interfaces:
 - `report html --input <analysis-json>`
 - `report evidence-bundle --input <analysis-json>`
 - `report verify-evidence-bundle --input <evidence-zip> --format json`
+- `report validate-sarif --input <sarif> --format json`
 
 Published JSON schemas in `docs/schemas/` cover:
 
@@ -59,6 +62,7 @@ Published JSON schemas in `docs/schemas/` cover:
 - `state-trends-report.schema.json`
 - `state-service-history-report.schema.json`
 - `input-validation-report.schema.json`
+- `input-inspect-report.schema.json`
 - `data-status-report.schema.json`
 - `data-update-report.schema.json`
 - `data-verify-report.schema.json`
@@ -68,6 +72,9 @@ Published JSON schemas in `docs/schemas/` cover:
 - `rollup-report.schema.json`
 - `evidence-bundle-manifest.schema.json`
 - `evidence-bundle-verification-report.schema.json`
+
+`input-inspect-report.schema.json` covers both `input inspect --format json` and
+the `input normalize --format json` compatibility alias.
 
 `report html` is a secondary renderer over the analysis JSON contract. It does not define its own independent source model.
 `report evidence-bundle` is a ZIP transport over the analysis JSON contract. Its published machine contract is the `manifest.json` stored inside the bundle.
@@ -93,6 +100,7 @@ Primary payload keys by command:
 - `state trends`: `items`
 - `state service-history`: `items`
 - `input validate`: `summary`, `sources`, `asset_context`, and `vex`
+- `input inspect` / `input normalize`: `summary`, `sources`, `unique_cves`, and normalized `occurrences`
 - `data status`: `namespaces`
 - `data update`: `sources`
 - `data verify`: `namespaces`, plus `coverage` and `local_files`
@@ -121,6 +129,10 @@ they do not understand.
 
 The primary analysis-style schemas target the currently emitted version, `1.0.0`.
 ATT&CK provenance fields such as `attack_mapping_file_sha256`, `attack_technique_metadata_file_sha256`, `attack_metadata_format`, and `attack_stix_spec_version` are additive metadata fields on that same major contract.
+Defensive context fields such as `defensive_context_file`, `defensive_context_sources`,
+`defensive_context_hits`, per-finding `defensive_contexts`, and
+`provider_evidence.defensive_contexts` are additive local-context fields on the
+same major contract.
 
 Helper contracts use either an explicit envelope version or their published schema as the contract version anchor:
 
@@ -135,6 +147,7 @@ Helper contracts use either an explicit envelope version or their published sche
 - `state trends`: `metadata.schema_version = 1.2.0`
 - `state service-history`: `metadata.schema_version = 1.2.0`
 - `input validate`: `metadata.schema_version = 1.2.0`
+- `input inspect` / `input normalize`: `metadata.schema_version = 1.3.0`
 - `data status`, `data update`, and `data verify`: `metadata.schema_version = 1.2.0`
 - `data export-provider-snapshot`: `metadata.schema_version = 1.2.0`
 - `rollup`: `metadata.schema_version = 1.2.0`
@@ -154,6 +167,7 @@ Current rule:
 - it is derived from `CVSS + EPSS + KEV`
 - ATT&CK is contextual
 - asset context is contextual
+- defensive context is contextual
 - VEX can suppress a finding from the default visible list, but it does not create a new opaque risk score
 
 ### ATT&CK context
@@ -218,7 +232,55 @@ Current waiver contract:
 - `review_on` is an optional waiver-file field; without it, waivers become review-due automatically as expiry approaches
 - `waiver_review_due_count` and `expired_waiver_count` summarize lifecycle state in analysis-style metadata
 - `--fail-on` ignores waived findings so governance exceptions do not fail a pipeline by themselves
+
+### Provider freshness gates
+
+Current provider freshness contract:
+
+- `--max-provider-age-hours` is additive on `analyze`, `compare`, and `snapshot create`
+- `--fail-on-stale-provider-data` returns exit code `1` after writing requested output when provider data is stale
+- live lookups use the current run timestamp for freshness
+- locked provider-snapshot replay uses the snapshot `generated_at` timestamp for selected snapshot sources
+- analysis-style metadata may include `provider_freshness`, `max_provider_age_hours`, `provider_stale`, and `provider_stale_sources`
+
+### Defensive context semantics
+
+Current defensive-context contract:
+
+- `--defensive-context-file` reads a local JSON file only; the CLI does not fetch OSV, GHSA, Vulnrichment, or SSVC records live
+- allowed local overlay sources are normalized as `osv`, `ghsa`, `vulnrichment`, and `ssvc`
+- defensive context is informational evidence attached to findings, provider evidence, provider snapshots, and Workbench payloads
+- `defensive_context_file`, `defensive_context_sources`, and `defensive_context_hits` summarize local overlay usage in analysis-style metadata
+- `defensive_contexts` on findings and provider snapshot items contains the local overlay records used for review and locked replay
+- defensive context does not change `priority_label`, `priority_rank`, operational rank, or base scoring
+
+### Workbench API additions
+
+Workbench API changes are additive:
+
+- `PATCH /api/findings/{finding_id}` updates finding lifecycle status and records `FindingStatusHistory`
+- `GET /api/projects/{project_id}/audit-events` and `GET /api/audit-events` expose audit records
+- `GET /api/tokens` lists token metadata without token values; `DELETE /api/tokens/{id}` revokes tokens
+- `GET /api/diagnostics` exposes local runtime diagnostics and is token-gated once active tokens exist
+- `POST /api/projects/{project_id}/imports` accepts single-upload and additive multi-upload imports for all CLI input formats
+- `GET /api/jobs`, `GET /api/jobs/{id}`, `POST /api/jobs`, and `POST /api/jobs/{id}/retry` expose durable local job state for compatible synchronous operations
+- `DELETE /api/reports/{id}` and `DELETE /api/evidence-bundles/{id}` remove managed artifacts after checksum validation
+- `GET/PATCH /api/projects/{project_id}/artifacts/retention` and `POST /api/projects/{project_id}/artifacts/cleanup` manage report/evidence retention and cleanup
+- detection controls support API CRUD, review status, history, and bounded evidence attachments in addition to CSV/YAML import
+- `GET /api/projects/{project_id}/attack/review-queue` and `PATCH /api/findings/{finding_id}/ttps/review` expose review workflow for existing local/CTID ATT&CK context only
+- Workbench import summaries may include `defensive_context_sources` and `defensive_context_hits`, and finding/detail/report payloads may include per-finding `defensive_contexts` copied from local defensive context uploads
+- `POST /api/projects/{project_id}/tickets/preview` and `POST /api/projects/{project_id}/tickets/export` support Jira and ServiceNow ticket previews, dry-runs, explicit token environment variables, and idempotency keys without making either system a required dependency
+- project config snapshots can be listed, recursively diffed, exported, and rolled back through settings endpoints
 - `--fail-on-expired-waivers` and `--fail-on-review-due-waivers` are opt-in enforcement hooks
+
+### Parser and provider extension SDK
+
+The extension SDK is a static local contract:
+
+- input parser definitions are explicit local `InputParserDefinition` records with fixture metadata
+- provider definitions are explicit local `ProviderDefinition` records with a `fetch_many` protocol
+- SDK helpers validate names, duplicate registration, fixture metadata, and remote-code-loading flags
+- the SDK does not discover Python entry points, import user-supplied plugin paths, call subprocesses, or fetch executable code from URLs
 
 Current rollup additions:
 
@@ -259,6 +321,8 @@ The public combinations currently intended for use are:
 - `state trends`: `table`, `json`
 - `state service-history`: `table`, `json`
 - `input validate`: `table`, `json`
+- `input inspect`: `table`, `json`
+- `input normalize`: `table`, `json`
 - `rollup`: `table`, `markdown`, `json`
 - `attack validate`: `table`, `markdown`, `json`
 - `attack coverage`: `table`, `markdown`, `json`
@@ -270,6 +334,7 @@ The public combinations currently intended for use are:
 - `report html`: HTML file output
 - `report evidence-bundle`: ZIP file output containing `analysis.json`, `report.html`, `summary.md`, and `manifest.json`
 - `report verify-evidence-bundle`: `table` and `json`
+- `report validate-sarif`: `table` and `json`
 
 Important boundary:
 

@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from collections.abc import Sequence
 from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
 from enum import StrEnum
 from pathlib import Path
 from typing import Any, cast
@@ -51,6 +52,12 @@ from vuln_prioritizer.services.contextualization import (
     aggregate_provenance,
     load_context_profile,
 )
+from vuln_prioritizer.services.defensive_context import (
+    attach_defensive_contexts,
+    defensive_context_hit_count,
+    load_defensive_context_file,
+    merge_defensive_contexts,
+)
 from vuln_prioritizer.services.enrichment import EnrichmentService
 from vuln_prioritizer.services.prioritization import PrioritizationService, SortField
 from vuln_prioritizer.services.waivers import (
@@ -91,6 +98,7 @@ class AnalysisRequest:
     attack_mapping_file: Path | None
     attack_technique_metadata_file: Path | None
     offline_attack_file: Path | None
+    defensive_context_file: Path | None
     priority_filters: Sequence[StrEnum | str] | None
     kev_only: bool
     min_cvss: float | None
@@ -113,6 +121,8 @@ class AnalysisRequest:
     no_cache: bool
     cache_dir: Path
     cache_ttl_hours: int
+    max_provider_age_hours: int | None = None
+    fail_on_stale_provider_data: bool = False
 
 
 @dataclass(frozen=True)
@@ -138,6 +148,7 @@ class ExplainRequest:
     fail_on_provider_error: bool
     offline_kev_file: Path | None
     offline_attack_file: Path | None
+    defensive_context_file: Path | None
     nvd_api_key_env: str
     no_cache: bool
     cache_dir: Path
@@ -303,6 +314,11 @@ def build_data_sources(enrichment: EnrichmentResult) -> list[str]:
         sources.append(
             "Provider snapshot replay: " + ", ".join(sorted(enrichment.provider_snapshot_sources))
         )
+    if enrichment.defensive_context_sources:
+        sources.append(
+            "Defensive context: "
+            + ", ".join(source.upper() for source in enrichment.defensive_context_sources)
+        )
     if enrichment.attack_source == ATTACK_SOURCE_CTID_MAPPINGS_EXPLORER:
         sources.append("CTID Mappings Explorer (local JSON artifact)")
     elif enrichment.attack_source == ATTACK_SOURCE_LOCAL_CSV:
@@ -390,6 +406,9 @@ def provider_degraded(enrichment: EnrichmentResult) -> bool:
 
 def build_provider_freshness(
     enrichment: EnrichmentResult,
+    *,
+    provider_snapshot: ProviderSnapshotReport | None = None,
+    lookup_completed_at: str | None = None,
 ) -> dict[str, str | int | float | bool | None]:
     nvd_last_modified = sorted(
         item.last_modified for item in enrichment.nvd.values() if item.last_modified
@@ -397,13 +416,106 @@ def build_provider_freshness(
     epss_dates = sorted(item.date for item in enrichment.epss.values() if item.date)
     kev_date_added = sorted(item.date_added for item in enrichment.kev.values() if item.date_added)
     kev_due_dates = sorted(item.due_date for item in enrichment.kev.values() if item.due_date)
+    cache_timestamps = {} if provider_snapshot is not None else enrichment.provider_cache_timestamps
+    nvd_cache_latest = cache_timestamps.get("nvd")
+    epss_cache_latest = cache_timestamps.get("epss")
+    kev_cache_latest = cache_timestamps.get("kev")
     return {
         "nvd_last_modified_min": nvd_last_modified[0] if nvd_last_modified else None,
         "nvd_last_modified_max": nvd_last_modified[-1] if nvd_last_modified else None,
         "latest_epss_date": epss_dates[-1] if epss_dates else None,
         "kev_date_added_max": kev_date_added[-1] if kev_date_added else None,
         "kev_due_date_min": kev_due_dates[0] if kev_due_dates else None,
+        "nvd_cache_latest_cached_at": nvd_cache_latest,
+        "epss_cache_latest_cached_at": epss_cache_latest,
+        "kev_cache_latest_cached_at": kev_cache_latest,
+        "nvd_freshness_at": _provider_source_freshness_at(
+            diagnostics=enrichment.nvd_diagnostics,
+            cache_timestamp=nvd_cache_latest,
+            lookup_completed_at=lookup_completed_at,
+        ),
+        "epss_freshness_at": _provider_source_freshness_at(
+            diagnostics=enrichment.epss_diagnostics,
+            cache_timestamp=epss_cache_latest,
+            lookup_completed_at=lookup_completed_at,
+        ),
+        "kev_freshness_at": _provider_source_freshness_at(
+            diagnostics=enrichment.kev_diagnostics,
+            cache_timestamp=kev_cache_latest,
+            lookup_completed_at=lookup_completed_at,
+        ),
+        "provider_snapshot_generated_at": (
+            provider_snapshot.metadata.generated_at if provider_snapshot is not None else None
+        ),
+        "lookup_completed_at": lookup_completed_at,
     }
+
+
+def stale_provider_sources(
+    freshness: dict[str, str | int | float | bool | None],
+    *,
+    max_age_hours: int | None,
+    snapshot_sources: Sequence[str] | None = None,
+    now: datetime | None = None,
+) -> list[str]:
+    if max_age_hours is None:
+        return []
+    active_now = now or datetime.now(UTC)
+    threshold = active_now - timedelta(hours=max_age_hours)
+    if snapshot_sources is not None:
+        source_fields = {
+            source: "provider_snapshot_generated_at"
+            for source in snapshot_sources
+            if source in {"nvd", "epss", "kev"}
+        }
+    else:
+        source_fields = {
+            "nvd": "nvd_freshness_at",
+            "epss": "epss_freshness_at",
+            "kev": "kev_freshness_at",
+        }
+    stale_sources: list[str] = []
+    for source, field in source_fields.items():
+        value = freshness.get(field)
+        if value is None and snapshot_sources is None:
+            value = freshness.get("lookup_completed_at")
+        parsed = _parse_provider_timestamp(value)
+        if parsed is None or parsed < threshold:
+            stale_sources.append(source)
+    return stale_sources
+
+
+def _provider_source_freshness_at(
+    *,
+    diagnostics: ProviderLookupDiagnostics,
+    cache_timestamp: str | None,
+    lookup_completed_at: str | None,
+) -> str | None:
+    if diagnostics.cache_hits or diagnostics.stale_cache_hits:
+        return cache_timestamp
+    if diagnostics.network_fetches or diagnostics.content_hits or diagnostics.empty_records:
+        return lookup_completed_at
+    return cache_timestamp or lookup_completed_at
+
+
+def _parse_provider_timestamp(value: object) -> datetime | None:
+    if value is None:
+        return None
+    raw = str(value).strip()
+    if not raw:
+        return None
+    if raw.endswith("Z"):
+        raw = raw[:-1] + "+00:00"
+    try:
+        parsed = datetime.fromisoformat(raw)
+    except ValueError:
+        try:
+            parsed = datetime.fromisoformat(raw + "T00:00:00+00:00")
+        except ValueError:
+            return None
+    if parsed.tzinfo is None:
+        return parsed.replace(tzinfo=UTC)
+    return parsed.astimezone(UTC)
 
 
 def build_findings(
@@ -418,6 +530,7 @@ def build_findings(
     attack_technique_metadata_file: Path | None,
     offline_kev_file: Path | None,
     offline_attack_file: Path | None,
+    defensive_context_file: Path | None,
     nvd_api_key_env: str,
     no_cache: bool,
     cache_dir: Path,
@@ -452,6 +565,21 @@ def build_findings(
     except (OSError, ValidationError, ValueError) as exc:
         raise AnalysisInputError(str(exc)) from exc
     enrichment.parsed_input = parsed_input
+    try:
+        defensive_context_result = load_defensive_context_file(defensive_context_file)
+    except ValueError as exc:
+        raise AnalysisInputError(str(exc)) from exc
+    enrichment.defensive_contexts = merge_defensive_contexts(
+        enrichment.defensive_contexts,
+        defensive_context_result.contexts,
+    )
+    enrichment.defensive_context_sources = sorted(
+        set(enrichment.defensive_context_sources) | set(defensive_context_result.sources)
+    )
+    enrichment.defensive_context_file = (
+        str(defensive_context_file) if defensive_context_file else None
+    )
+    enrichment.warnings.extend(defensive_context_result.warnings)
     provenance_by_cve = aggregate_provenance(parsed_input.unique_cves, parsed_input.occurrences)
 
     prioritizer = PrioritizationService(policy=policy)
@@ -464,6 +592,7 @@ def build_findings(
         provenance_by_cve=provenance_by_cve,
         context_profile=context_profile,
     )
+    findings = attach_defensive_contexts(findings, enrichment.defensive_contexts)
     return findings, counts, enrichment
 
 
@@ -508,6 +637,7 @@ def prepare_analysis(request: AnalysisRequest) -> tuple[list[PrioritizedFinding]
         attack_technique_metadata_file=resolved_metadata_file,
         offline_kev_file=request.offline_kev_file,
         offline_attack_file=request.offline_attack_file,
+        defensive_context_file=request.defensive_context_file,
         nvd_api_key_env=request.nvd_api_key_env,
         no_cache=request.no_cache,
         cache_dir=request.cache_dir,
@@ -538,6 +668,22 @@ def prepare_analysis(request: AnalysisRequest) -> tuple[list[PrioritizedFinding]
     )
     warnings = parsed_input.warnings + enrichment.warnings + waiver_warnings
     attack_summary = build_attack_summary_from_findings(findings)
+    generated_at = iso_utc_now()
+    provider_freshness = build_provider_freshness(
+        enrichment,
+        provider_snapshot=provider_snapshot,
+        lookup_completed_at=generated_at,
+    )
+    provider_stale_sources = stale_provider_sources(
+        provider_freshness,
+        max_age_hours=request.max_provider_age_hours,
+        snapshot_sources=enrichment.provider_snapshot_sources,
+    )
+    if provider_stale_sources:
+        warnings.append(
+            "Provider data exceeded --max-provider-age-hours for: "
+            + ", ".join(sorted(provider_stale_sources))
+        )
 
     context = AnalysisContext(
         input_path=(
@@ -547,7 +693,7 @@ def prepare_analysis(request: AnalysisRequest) -> tuple[list[PrioritizedFinding]
         ),
         output_path=str(request.output) if request.output else None,
         output_format=_enum_value(request.format),
-        generated_at=iso_utc_now(),
+        generated_at=generated_at,
         input_format=parsed_input.input_format,
         input_paths=parsed_input.input_paths,
         input_sources=parsed_input.source_summaries,
@@ -558,6 +704,9 @@ def prepare_analysis(request: AnalysisRequest) -> tuple[list[PrioritizedFinding]
         ),
         locked_provider_data=request.locked_provider_data,
         provider_snapshot_sources=enrichment.provider_snapshot_sources,
+        defensive_context_file=enrichment.defensive_context_file,
+        defensive_context_sources=enrichment.defensive_context_sources,
+        defensive_context_hits=defensive_context_hit_count(findings),
         attack_enabled=attack_enabled,
         attack_source=enrichment.attack_source,
         attack_mapping_file=enrichment.attack_mapping_file,
@@ -589,7 +738,10 @@ def prepare_analysis(request: AnalysisRequest) -> tuple[list[PrioritizedFinding]
         kev_diagnostics=enrichment.kev_diagnostics,
         provider_degraded=provider_degraded(enrichment),
         provider_diagnostics=build_provider_diagnostics(enrichment),
-        provider_freshness=build_provider_freshness(enrichment),
+        provider_freshness=provider_freshness,
+        max_provider_age_hours=request.max_provider_age_hours,
+        provider_stale=bool(provider_stale_sources),
+        provider_stale_sources=provider_stale_sources,
         epss_hits=count_epss_hits(enrichment),
         kev_hits=count_kev_hits(enrichment),
         attack_hits=attack_summary.mapped_cves,
@@ -663,6 +815,7 @@ def prepare_explain(request: ExplainRequest) -> ExplainResult:
         attack_technique_metadata_file=resolved_metadata_file,
         offline_kev_file=request.offline_kev_file,
         offline_attack_file=request.offline_attack_file,
+        defensive_context_file=request.defensive_context_file,
         nvd_api_key_env=request.nvd_api_key_env,
         no_cache=request.no_cache,
         cache_dir=request.cache_dir,
@@ -686,17 +839,26 @@ def prepare_explain(request: ExplainRequest) -> ExplainResult:
     warnings = parsed_input.warnings + enrichment.warnings + waiver_warnings
     comparison = PrioritizationService(policy=request.policy).build_comparison([finding])[0]
     attack_summary = build_attack_summary_from_findings([finding])
+    generated_at = iso_utc_now()
+    provider_freshness = build_provider_freshness(
+        enrichment,
+        provider_snapshot=provider_snapshot,
+        lookup_completed_at=generated_at,
+    )
 
     context = AnalysisContext(
         input_path=f"inline:{request.cve_id}",
         output_path=str(request.output) if request.output else None,
         output_format=_enum_value(request.format),
-        generated_at=iso_utc_now(),
+        generated_at=generated_at,
         provider_snapshot_file=(
             str(request.provider_snapshot_file) if request.provider_snapshot_file else None
         ),
         locked_provider_data=request.locked_provider_data,
         provider_snapshot_sources=enrichment.provider_snapshot_sources,
+        defensive_context_file=enrichment.defensive_context_file,
+        defensive_context_sources=enrichment.defensive_context_sources,
+        defensive_context_hits=defensive_context_hit_count(findings),
         attack_enabled=attack_enabled,
         attack_source=enrichment.attack_source,
         attack_mapping_file=enrichment.attack_mapping_file,
@@ -728,7 +890,7 @@ def prepare_explain(request: ExplainRequest) -> ExplainResult:
         kev_diagnostics=enrichment.kev_diagnostics,
         provider_degraded=provider_degraded(enrichment),
         provider_diagnostics=build_provider_diagnostics(enrichment),
-        provider_freshness=build_provider_freshness(enrichment),
+        provider_freshness=provider_freshness,
         epss_hits=count_epss_hits(enrichment),
         kev_hits=count_kev_hits(enrichment),
         attack_hits=attack_summary.mapped_cves,

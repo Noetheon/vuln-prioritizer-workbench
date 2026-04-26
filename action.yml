@@ -1,17 +1,21 @@
 name: vuln-prioritizer
-description: Run vuln-prioritizer analyze or render a static HTML report from analysis JSON.
+description: Run vuln-prioritizer analyze, render reports, package evidence, or validate SARIF.
 branding:
   icon: shield
   color: blue
 
 inputs:
   mode:
-    description: analyze, report-html, workbench-report, report-evidence-bundle, or verify-evidence-bundle
+    description: analyze, compare, explain, doctor, input-validate, input-inspect, input-normalize, snapshot, rollup, data-status, data-update, data-verify, data-export-provider-snapshot, attack-validate, attack-coverage, report-html, workbench-report, report-evidence-bundle, verify-evidence-bundle, or validate-sarif
     required: false
     default: analyze
   input:
-    description: Analyze mode accepts one or more newline-delimited input files; report modes expect exactly one analysis JSON or evidence bundle file
-    required: true
+    description: Analyze, compare, input-validate, snapshot, and attack-coverage accept one or more newline-delimited input files; report, rollup, explain, and validation modes expect exactly one artifact file such as analysis JSON, evidence ZIP, or SARIF; doctor and attack-validate ignore this value
+    required: false
+  cve:
+    description: Required for explain mode; CVE identifier to explain from the supplied analysis JSON or snapshot JSON
+    required: false
+    default: ""
   input-format:
     description: analyze mode only; auto, cve-list, generic-occurrence-csv, trivy-json, grype-json, cyclonedx-json, spdx-json, dependency-check-json, github-alerts-json, nessus-xml, openvas-xml. Provide one value or a newline-delimited list aligned with input.
     required: false
@@ -21,7 +25,7 @@ inputs:
     required: false
     default: markdown
   output-path:
-    description: Output file path created by the CLI
+    description: Output file path created by the CLI; validate-sarif mode writes a JSON SARIF validation report
     required: true
   html-output-path:
     description: Optional analyze mode sidecar path for a direct HTML report
@@ -83,6 +87,10 @@ inputs:
     description: Optional waiver YAML file for analyze mode
     required: false
     default: ""
+  defensive-context-file:
+    description: Optional local JSON context file for OSV, GHSA, Vulnrichment, or SSVC overlays in analyze, compare, and snapshot modes
+    required: false
+    default: ""
   show-suppressed:
     description: analyze mode only; set to true to keep VEX-suppressed findings visible
     required: false
@@ -131,6 +139,14 @@ inputs:
     description: Optional local CISA KEV JSON file for analyze mode
     required: false
     default: ""
+  data-sources:
+    description: Optional newline-delimited data sources for data-update or data-export-provider-snapshot; nvd, epss, kev
+    required: false
+    default: ""
+  cache-only:
+    description: data-export-provider-snapshot mode only; set to true to export only cache/offline provider records
+    required: false
+    default: "false"
   offline-attack-file:
     description: Optional legacy local ATT&CK CSV file for analyze mode
     required: false
@@ -155,12 +171,28 @@ inputs:
     description: Optional analyze sort key; priority, operational, epss, cvss, or cve
     required: false
     default: ""
+  rollup-by:
+    description: rollup mode only; aggregate by asset, service, owner, priority, or status
+    required: false
+    default: asset
+  rollup-top:
+    description: rollup mode only; maximum rows to include
+    required: false
+    default: "5"
   max-cves:
     description: Optional maximum number of CVEs to analyze
     required: false
     default: ""
   fail-on-provider-error:
     description: analyze mode only; set to true to fail when provider enrichment has errors
+    required: false
+    default: "false"
+  max-provider-age-hours:
+    description: analyze, compare, and snapshot modes; mark provider data stale when replayed snapshots exceed this age
+    required: false
+    default: ""
+  fail-on-stale-provider-data:
+    description: analyze, compare, and snapshot modes; set to true to fail when provider data is stale
     required: false
     default: "false"
   fail-on-expired-waivers:
@@ -187,7 +219,7 @@ outputs:
     description: Markdown summary path written by analyze mode when summary-output-path is set or github-step-summary generates a temporary summary
     value: ${{ steps.run-cli.outputs.summary-path }}
   sarif-validation-path:
-    description: JSON SARIF validation report path written when validate-sarif is true
+    description: JSON SARIF validation report path written by validate-sarif mode or when validate-sarif is true
     value: ${{ steps.run-cli.outputs.sarif-validation-path }}
 
 runs:
@@ -257,7 +289,7 @@ runs:
             fi
           done <<< "$raw"
           if [[ "$input_count" -ne 1 ]]; then
-            echo "report-html mode expects exactly one input path." >&2
+            echo "$mode mode expects exactly one input path." >&2
             exit 2
           fi
           printf '%s' "$resolved"
@@ -314,6 +346,9 @@ runs:
           if [[ -n "${{ inputs.waiver-file }}" ]]; then
             cmd+=(--waiver-file "${{ inputs.waiver-file }}")
           fi
+          if [[ -n "${{ inputs.defensive-context-file }}" ]]; then
+            cmd+=(--defensive-context-file "${{ inputs.defensive-context-file }}")
+          fi
           if [[ -n "${{ inputs.fail-on }}" ]]; then
             cmd+=(--fail-on "${{ inputs.fail-on }}")
           fi
@@ -343,6 +378,12 @@ runs:
           fi
           if [[ "${{ inputs.fail-on-provider-error }}" == "true" ]]; then
             cmd+=(--fail-on-provider-error)
+          fi
+          if [[ -n "${{ inputs.max-provider-age-hours }}" ]]; then
+            cmd+=(--max-provider-age-hours "${{ inputs.max-provider-age-hours }}")
+          fi
+          if [[ "${{ inputs.fail-on-stale-provider-data }}" == "true" ]]; then
+            cmd+=(--fail-on-stale-provider-data)
           fi
           if [[ "${{ inputs.fail-on-expired-waivers }}" == "true" ]]; then
             cmd+=(--fail-on-expired-waivers)
@@ -383,6 +424,471 @@ runs:
           if [[ -n "${{ inputs.vex-files }}" ]]; then
             append_multiline_args "--vex-file" "${{ inputs.vex-files }}"
           fi
+        elif [[ "$mode" == "compare" ]]; then
+          if [[ "$(count_nonempty_lines "${{ inputs.input }}")" -eq 0 ]]; then
+            echo "compare mode requires at least one input path." >&2
+            exit 2
+          fi
+          cmd+=(
+            compare
+            --format "${{ inputs.output-format }}"
+            --output "${{ inputs.output-path }}"
+            --policy-profile "${{ inputs.policy-profile }}"
+            --attack-source "${{ inputs.attack-source }}"
+            --target-kind "${{ inputs.target-kind }}"
+          )
+          append_multiline_args "--input" "${{ inputs.input }}"
+          append_multiline_args "--input-format" "${{ inputs.input-format }}"
+          if [[ -n "${{ inputs.asset-context }}" ]]; then
+            cmd+=(--asset-context "${{ inputs.asset-context }}")
+          fi
+          if [[ -n "${{ inputs.target-ref }}" ]]; then
+            cmd+=(--target-ref "${{ inputs.target-ref }}")
+          fi
+          if [[ -n "${{ inputs.policy-file }}" ]]; then
+            cmd+=(--policy-file "${{ inputs.policy-file }}")
+          fi
+          if [[ -n "${{ inputs.waiver-file }}" ]]; then
+            cmd+=(--waiver-file "${{ inputs.waiver-file }}")
+          fi
+          if [[ -n "${{ inputs.defensive-context-file }}" ]]; then
+            cmd+=(--defensive-context-file "${{ inputs.defensive-context-file }}")
+          fi
+          if [[ "${{ inputs.show-suppressed }}" == "true" ]]; then
+            cmd+=(--show-suppressed)
+          fi
+          if [[ "${{ inputs.hide-waived }}" == "true" ]]; then
+            cmd+=(--hide-waived)
+          fi
+          if [[ -n "${{ inputs.priority }}" ]]; then
+            cmd+=(--priority "${{ inputs.priority }}")
+          fi
+          if [[ "${{ inputs.kev-only }}" == "true" ]]; then
+            cmd+=(--kev-only)
+          fi
+          if [[ -n "${{ inputs.min-cvss }}" ]]; then
+            cmd+=(--min-cvss "${{ inputs.min-cvss }}")
+          fi
+          if [[ -n "${{ inputs.min-epss }}" ]]; then
+            cmd+=(--min-epss "${{ inputs.min-epss }}")
+          fi
+          if [[ -n "${{ inputs.sort-by }}" ]]; then
+            cmd+=(--sort-by "${{ inputs.sort-by }}")
+          fi
+          if [[ -n "${{ inputs.max-cves }}" ]]; then
+            cmd+=(--max-cves "${{ inputs.max-cves }}")
+          fi
+          if [[ "${{ inputs.fail-on-provider-error }}" == "true" ]]; then
+            cmd+=(--fail-on-provider-error)
+          fi
+          if [[ -n "${{ inputs.max-provider-age-hours }}" ]]; then
+            cmd+=(--max-provider-age-hours "${{ inputs.max-provider-age-hours }}")
+          fi
+          if [[ "${{ inputs.fail-on-stale-provider-data }}" == "true" ]]; then
+            cmd+=(--fail-on-stale-provider-data)
+          fi
+          if [[ -n "${{ inputs.attack-mapping-file }}" ]]; then
+            cmd+=(--attack-mapping-file "${{ inputs.attack-mapping-file }}")
+          fi
+          if [[ -n "${{ inputs.attack-technique-metadata-file }}" ]]; then
+            cmd+=(--attack-technique-metadata-file "${{ inputs.attack-technique-metadata-file }}")
+          fi
+          if [[ -n "${{ inputs.provider-snapshot-file }}" ]]; then
+            cmd+=(--provider-snapshot-file "${{ inputs.provider-snapshot-file }}")
+          fi
+          if [[ "${{ inputs.locked-provider-data }}" == "true" ]]; then
+            cmd+=(--locked-provider-data)
+          fi
+          if [[ "${{ inputs.no-cache }}" == "true" ]]; then
+            cmd+=(--no-cache)
+          fi
+          if [[ -n "${{ inputs.cache-dir }}" ]]; then
+            cmd+=(--cache-dir "${{ inputs.cache-dir }}")
+          fi
+          if [[ -n "${{ inputs.cache-ttl-hours }}" ]]; then
+            cmd+=(--cache-ttl-hours "${{ inputs.cache-ttl-hours }}")
+          fi
+          if [[ -n "${{ inputs.nvd-api-key-env }}" ]]; then
+            cmd+=(--nvd-api-key-env "${{ inputs.nvd-api-key-env }}")
+          fi
+          if [[ -n "${{ inputs.offline-kev-file }}" ]]; then
+            cmd+=(--offline-kev-file "${{ inputs.offline-kev-file }}")
+          fi
+          if [[ -n "${{ inputs.offline-attack-file }}" ]]; then
+            cmd+=(--offline-attack-file "${{ inputs.offline-attack-file }}")
+          fi
+          if [[ -n "${{ inputs.vex-files }}" ]]; then
+            append_multiline_args "--vex-file" "${{ inputs.vex-files }}"
+          fi
+        elif [[ "$mode" == "explain" ]]; then
+          if [[ -z "${{ inputs.cve }}" ]]; then
+            echo "explain mode requires the cve input." >&2
+            exit 2
+          fi
+          explain_input="$(resolve_single_input "${{ inputs.input }}")"
+          cmd+=(
+            explain
+            --cve "${{ inputs.cve }}"
+            --analysis-json "$explain_input"
+            --output "${{ inputs.output-path }}"
+            --format "${{ inputs.output-format }}"
+          )
+        elif [[ "$mode" == "doctor" ]]; then
+          doctor_format="${{ inputs.output-format }}"
+          if [[ "$doctor_format" != "json" ]]; then
+            doctor_format="json"
+          fi
+          cmd+=(
+            doctor
+            --output "${{ inputs.output-path }}"
+            --format "$doctor_format"
+          )
+          if [[ -n "${{ inputs.cache-dir }}" ]]; then
+            cmd+=(--cache-dir "${{ inputs.cache-dir }}")
+          fi
+          if [[ -n "${{ inputs.cache-ttl-hours }}" ]]; then
+            cmd+=(--cache-ttl-hours "${{ inputs.cache-ttl-hours }}")
+          fi
+          if [[ -n "${{ inputs.nvd-api-key-env }}" ]]; then
+            cmd+=(--nvd-api-key-env "${{ inputs.nvd-api-key-env }}")
+          fi
+          if [[ -n "${{ inputs.offline-kev-file }}" ]]; then
+            cmd+=(--offline-kev-file "${{ inputs.offline-kev-file }}")
+          fi
+          if [[ -n "${{ inputs.waiver-file }}" ]]; then
+            cmd+=(--waiver-file "${{ inputs.waiver-file }}")
+          fi
+          if [[ -n "${{ inputs.attack-mapping-file }}" ]]; then
+            cmd+=(--attack-mapping-file "${{ inputs.attack-mapping-file }}")
+          fi
+          if [[ -n "${{ inputs.attack-technique-metadata-file }}" ]]; then
+            cmd+=(--attack-technique-metadata-file "${{ inputs.attack-technique-metadata-file }}")
+          fi
+        elif [[ "$mode" == "input-validate" ]]; then
+          input_validate_format="${{ inputs.output-format }}"
+          if [[ "$input_validate_format" != "json" ]]; then
+            input_validate_format="json"
+          fi
+          cmd+=(
+            input validate
+            --output "${{ inputs.output-path }}"
+            --format "$input_validate_format"
+            --target-kind "${{ inputs.target-kind }}"
+          )
+          append_multiline_args "--input" "${{ inputs.input }}"
+          append_multiline_args "--input-format" "${{ inputs.input-format }}"
+          if [[ -n "${{ inputs.asset-context }}" ]]; then
+            cmd+=(--asset-context "${{ inputs.asset-context }}")
+          fi
+          if [[ -n "${{ inputs.target-ref }}" ]]; then
+            cmd+=(--target-ref "${{ inputs.target-ref }}")
+          fi
+          if [[ -n "${{ inputs.max-cves }}" ]]; then
+            cmd+=(--max-cves "${{ inputs.max-cves }}")
+          fi
+          if [[ -n "${{ inputs.vex-files }}" ]]; then
+            append_multiline_args "--vex-file" "${{ inputs.vex-files }}"
+          fi
+        elif [[ "$mode" == "input-inspect" || "$mode" == "input-normalize" ]]; then
+          input_command="inspect"
+          if [[ "$mode" == "input-normalize" ]]; then
+            input_command="normalize"
+          fi
+          input_output_format="${{ inputs.output-format }}"
+          if [[ "$input_output_format" != "json" ]]; then
+            input_output_format="json"
+          fi
+          cmd+=(
+            input "$input_command"
+            --output "${{ inputs.output-path }}"
+            --format "$input_output_format"
+            --target-kind "${{ inputs.target-kind }}"
+          )
+          append_multiline_args "--input" "${{ inputs.input }}"
+          append_multiline_args "--input-format" "${{ inputs.input-format }}"
+          if [[ -n "${{ inputs.asset-context }}" ]]; then
+            cmd+=(--asset-context "${{ inputs.asset-context }}")
+          fi
+          if [[ -n "${{ inputs.target-ref }}" ]]; then
+            cmd+=(--target-ref "${{ inputs.target-ref }}")
+          fi
+          if [[ -n "${{ inputs.max-cves }}" ]]; then
+            cmd+=(--max-cves "${{ inputs.max-cves }}")
+          fi
+          if [[ -n "${{ inputs.vex-files }}" ]]; then
+            append_multiline_args "--vex-file" "${{ inputs.vex-files }}"
+          fi
+        elif [[ "$mode" == "snapshot" ]]; then
+          if [[ "$(count_nonempty_lines "${{ inputs.input }}")" -eq 0 ]]; then
+            echo "snapshot mode requires at least one input path." >&2
+            exit 2
+          fi
+          cmd+=(
+            snapshot create
+            --format "${{ inputs.output-format }}"
+            --output "${{ inputs.output-path }}"
+            --policy-profile "${{ inputs.policy-profile }}"
+            --attack-source "${{ inputs.attack-source }}"
+            --target-kind "${{ inputs.target-kind }}"
+          )
+          append_multiline_args "--input" "${{ inputs.input }}"
+          append_multiline_args "--input-format" "${{ inputs.input-format }}"
+          if [[ -n "${{ inputs.asset-context }}" ]]; then
+            cmd+=(--asset-context "${{ inputs.asset-context }}")
+          fi
+          if [[ -n "${{ inputs.target-ref }}" ]]; then
+            cmd+=(--target-ref "${{ inputs.target-ref }}")
+          fi
+          if [[ -n "${{ inputs.policy-file }}" ]]; then
+            cmd+=(--policy-file "${{ inputs.policy-file }}")
+          fi
+          if [[ -n "${{ inputs.waiver-file }}" ]]; then
+            cmd+=(--waiver-file "${{ inputs.waiver-file }}")
+          fi
+          if [[ -n "${{ inputs.defensive-context-file }}" ]]; then
+            cmd+=(--defensive-context-file "${{ inputs.defensive-context-file }}")
+          fi
+          if [[ "${{ inputs.show-suppressed }}" == "true" ]]; then
+            cmd+=(--show-suppressed)
+          fi
+          if [[ "${{ inputs.hide-waived }}" == "true" ]]; then
+            cmd+=(--hide-waived)
+          fi
+          if [[ -n "${{ inputs.priority }}" ]]; then
+            cmd+=(--priority "${{ inputs.priority }}")
+          fi
+          if [[ "${{ inputs.kev-only }}" == "true" ]]; then
+            cmd+=(--kev-only)
+          fi
+          if [[ -n "${{ inputs.min-cvss }}" ]]; then
+            cmd+=(--min-cvss "${{ inputs.min-cvss }}")
+          fi
+          if [[ -n "${{ inputs.min-epss }}" ]]; then
+            cmd+=(--min-epss "${{ inputs.min-epss }}")
+          fi
+          if [[ -n "${{ inputs.sort-by }}" ]]; then
+            cmd+=(--sort-by "${{ inputs.sort-by }}")
+          fi
+          if [[ -n "${{ inputs.max-cves }}" ]]; then
+            cmd+=(--max-cves "${{ inputs.max-cves }}")
+          fi
+          if [[ "${{ inputs.fail-on-provider-error }}" == "true" ]]; then
+            cmd+=(--fail-on-provider-error)
+          fi
+          if [[ -n "${{ inputs.max-provider-age-hours }}" ]]; then
+            cmd+=(--max-provider-age-hours "${{ inputs.max-provider-age-hours }}")
+          fi
+          if [[ "${{ inputs.fail-on-stale-provider-data }}" == "true" ]]; then
+            cmd+=(--fail-on-stale-provider-data)
+          fi
+          if [[ -n "${{ inputs.attack-mapping-file }}" ]]; then
+            cmd+=(--attack-mapping-file "${{ inputs.attack-mapping-file }}")
+          fi
+          if [[ -n "${{ inputs.attack-technique-metadata-file }}" ]]; then
+            cmd+=(--attack-technique-metadata-file "${{ inputs.attack-technique-metadata-file }}")
+          fi
+          if [[ -n "${{ inputs.provider-snapshot-file }}" ]]; then
+            cmd+=(--provider-snapshot-file "${{ inputs.provider-snapshot-file }}")
+          fi
+          if [[ "${{ inputs.locked-provider-data }}" == "true" ]]; then
+            cmd+=(--locked-provider-data)
+          fi
+          if [[ "${{ inputs.no-cache }}" == "true" ]]; then
+            cmd+=(--no-cache)
+          fi
+          if [[ -n "${{ inputs.cache-dir }}" ]]; then
+            cmd+=(--cache-dir "${{ inputs.cache-dir }}")
+          fi
+          if [[ -n "${{ inputs.cache-ttl-hours }}" ]]; then
+            cmd+=(--cache-ttl-hours "${{ inputs.cache-ttl-hours }}")
+          fi
+          if [[ -n "${{ inputs.nvd-api-key-env }}" ]]; then
+            cmd+=(--nvd-api-key-env "${{ inputs.nvd-api-key-env }}")
+          fi
+          if [[ -n "${{ inputs.offline-kev-file }}" ]]; then
+            cmd+=(--offline-kev-file "${{ inputs.offline-kev-file }}")
+          fi
+          if [[ -n "${{ inputs.offline-attack-file }}" ]]; then
+            cmd+=(--offline-attack-file "${{ inputs.offline-attack-file }}")
+          fi
+          if [[ -n "${{ inputs.vex-files }}" ]]; then
+            append_multiline_args "--vex-file" "${{ inputs.vex-files }}"
+          fi
+        elif [[ "$mode" == "rollup" ]]; then
+          report_input="$(resolve_single_input "${{ inputs.input }}")"
+          cmd+=(
+            rollup
+            --input "$report_input"
+            --output "${{ inputs.output-path }}"
+            --format "${{ inputs.output-format }}"
+            --by "${{ inputs.rollup-by }}"
+            --top "${{ inputs.rollup-top }}"
+          )
+        elif [[ "$mode" == "data-status" ]]; then
+          data_status_format="${{ inputs.output-format }}"
+          if [[ "$data_status_format" != "json" ]]; then
+            data_status_format="json"
+          fi
+          cmd+=(
+            data status
+            --output "${{ inputs.output-path }}"
+            --format "$data_status_format"
+          )
+          if [[ -n "${{ inputs.cache-dir }}" ]]; then
+            cmd+=(--cache-dir "${{ inputs.cache-dir }}")
+          fi
+          if [[ -n "${{ inputs.cache-ttl-hours }}" ]]; then
+            cmd+=(--cache-ttl-hours "${{ inputs.cache-ttl-hours }}")
+          fi
+          if [[ -n "${{ inputs.offline-kev-file }}" ]]; then
+            cmd+=(--offline-kev-file "${{ inputs.offline-kev-file }}")
+          fi
+          if [[ -n "${{ inputs.attack-mapping-file }}" ]]; then
+            cmd+=(--attack-mapping-file "${{ inputs.attack-mapping-file }}")
+          fi
+          if [[ -n "${{ inputs.attack-technique-metadata-file }}" ]]; then
+            cmd+=(--attack-technique-metadata-file "${{ inputs.attack-technique-metadata-file }}")
+          fi
+        elif [[ "$mode" == "data-update" ]]; then
+          data_update_format="${{ inputs.output-format }}"
+          if [[ "$data_update_format" != "json" ]]; then
+            data_update_format="json"
+          fi
+          cmd+=(
+            data update
+            --output "${{ inputs.output-path }}"
+            --format "$data_update_format"
+          )
+          append_multiline_args "--source" "${{ inputs.data-sources }}"
+          append_multiline_args "--input" "${{ inputs.input }}"
+          append_multiline_args "--input-format" "${{ inputs.input-format }}"
+          if [[ -n "${{ inputs.cve }}" ]]; then
+            cmd+=(--cve "${{ inputs.cve }}")
+          fi
+          if [[ -n "${{ inputs.max-cves }}" ]]; then
+            cmd+=(--max-cves "${{ inputs.max-cves }}")
+          fi
+          if [[ -n "${{ inputs.cache-dir }}" ]]; then
+            cmd+=(--cache-dir "${{ inputs.cache-dir }}")
+          fi
+          if [[ -n "${{ inputs.cache-ttl-hours }}" ]]; then
+            cmd+=(--cache-ttl-hours "${{ inputs.cache-ttl-hours }}")
+          fi
+          if [[ -n "${{ inputs.offline-kev-file }}" ]]; then
+            cmd+=(--offline-kev-file "${{ inputs.offline-kev-file }}")
+          fi
+          if [[ -n "${{ inputs.nvd-api-key-env }}" ]]; then
+            cmd+=(--nvd-api-key-env "${{ inputs.nvd-api-key-env }}")
+          fi
+        elif [[ "$mode" == "data-verify" ]]; then
+          data_verify_format="${{ inputs.output-format }}"
+          if [[ "$data_verify_format" != "json" ]]; then
+            data_verify_format="json"
+          fi
+          cmd+=(
+            data verify
+            --output "${{ inputs.output-path }}"
+            --format "$data_verify_format"
+          )
+          append_multiline_args "--input" "${{ inputs.input }}"
+          append_multiline_args "--input-format" "${{ inputs.input-format }}"
+          if [[ -n "${{ inputs.max-cves }}" ]]; then
+            cmd+=(--max-cves "${{ inputs.max-cves }}")
+          fi
+          if [[ -n "${{ inputs.cache-dir }}" ]]; then
+            cmd+=(--cache-dir "${{ inputs.cache-dir }}")
+          fi
+          if [[ -n "${{ inputs.cache-ttl-hours }}" ]]; then
+            cmd+=(--cache-ttl-hours "${{ inputs.cache-ttl-hours }}")
+          fi
+          if [[ -n "${{ inputs.offline-kev-file }}" ]]; then
+            cmd+=(--offline-kev-file "${{ inputs.offline-kev-file }}")
+          fi
+          if [[ -n "${{ inputs.attack-mapping-file }}" ]]; then
+            cmd+=(--attack-mapping-file "${{ inputs.attack-mapping-file }}")
+          fi
+          if [[ -n "${{ inputs.attack-technique-metadata-file }}" ]]; then
+            cmd+=(--attack-technique-metadata-file "${{ inputs.attack-technique-metadata-file }}")
+          fi
+        elif [[ "$mode" == "data-export-provider-snapshot" ]]; then
+          cmd+=(
+            data export-provider-snapshot
+            --output "${{ inputs.output-path }}"
+          )
+          append_multiline_args "--source" "${{ inputs.data-sources }}"
+          append_multiline_args "--input" "${{ inputs.input }}"
+          append_multiline_args "--input-format" "${{ inputs.input-format }}"
+          if [[ -n "${{ inputs.cve }}" ]]; then
+            cmd+=(--cve "${{ inputs.cve }}")
+          fi
+          if [[ -n "${{ inputs.max-cves }}" ]]; then
+            cmd+=(--max-cves "${{ inputs.max-cves }}")
+          fi
+          if [[ -n "${{ inputs.cache-dir }}" ]]; then
+            cmd+=(--cache-dir "${{ inputs.cache-dir }}")
+          fi
+          if [[ -n "${{ inputs.cache-ttl-hours }}" ]]; then
+            cmd+=(--cache-ttl-hours "${{ inputs.cache-ttl-hours }}")
+          fi
+          if [[ -n "${{ inputs.offline-kev-file }}" ]]; then
+            cmd+=(--offline-kev-file "${{ inputs.offline-kev-file }}")
+          fi
+          if [[ -n "${{ inputs.defensive-context-file }}" ]]; then
+            cmd+=(--defensive-context-file "${{ inputs.defensive-context-file }}")
+          fi
+          if [[ -n "${{ inputs.nvd-api-key-env }}" ]]; then
+            cmd+=(--nvd-api-key-env "${{ inputs.nvd-api-key-env }}")
+          fi
+          if [[ "${{ inputs.cache-only }}" == "true" ]]; then
+            cmd+=(--cache-only)
+          fi
+        elif [[ "$mode" == "attack-validate" ]]; then
+          attack_source_for_validation="${{ inputs.attack-source }}"
+          if [[ "$attack_source_for_validation" == "none" ]]; then
+            attack_source_for_validation="ctid-json"
+          fi
+          cmd+=(
+            attack validate
+            --output "${{ inputs.output-path }}"
+            --format "${{ inputs.output-format }}"
+            --attack-source "$attack_source_for_validation"
+          )
+          if [[ -z "${{ inputs.attack-mapping-file }}" ]]; then
+            echo "attack-validate mode requires attack-mapping-file." >&2
+            exit 2
+          fi
+          cmd+=(--attack-mapping-file "${{ inputs.attack-mapping-file }}")
+          if [[ -n "${{ inputs.attack-technique-metadata-file }}" ]]; then
+            cmd+=(--attack-technique-metadata-file "${{ inputs.attack-technique-metadata-file }}")
+          fi
+        elif [[ "$mode" == "attack-coverage" ]]; then
+          if [[ "$(count_nonempty_lines "${{ inputs.input }}")" -eq 0 ]]; then
+            echo "attack-coverage mode requires at least one input path." >&2
+            exit 2
+          fi
+          attack_source_for_validation="${{ inputs.attack-source }}"
+          if [[ "$attack_source_for_validation" == "none" ]]; then
+            attack_source_for_validation="ctid-json"
+          fi
+          cmd+=(
+            attack coverage
+            --output "${{ inputs.output-path }}"
+            --format "${{ inputs.output-format }}"
+            --attack-source "$attack_source_for_validation"
+          )
+          append_multiline_args "--input" "${{ inputs.input }}"
+          append_multiline_args "--input-format" "${{ inputs.input-format }}"
+          if [[ -z "${{ inputs.attack-mapping-file }}" ]]; then
+            echo "attack-coverage mode requires attack-mapping-file." >&2
+            exit 2
+          fi
+          cmd+=(--attack-mapping-file "${{ inputs.attack-mapping-file }}")
+          if [[ -n "${{ inputs.attack-technique-metadata-file }}" ]]; then
+            cmd+=(--attack-technique-metadata-file "${{ inputs.attack-technique-metadata-file }}")
+          fi
+          if [[ -n "${{ inputs.max-cves }}" ]]; then
+            cmd+=(--max-cves "${{ inputs.max-cves }}")
+          fi
         elif [[ "$mode" == "report-html" ]]; then
           report_input="$(resolve_single_input "${{ inputs.input }}")"
           cmd+=(
@@ -420,6 +926,15 @@ runs:
             --output "${{ inputs.output-path }}"
             --format json
           )
+        elif [[ "$mode" == "validate-sarif" ]]; then
+          report_input="$(resolve_single_input "${{ inputs.input }}")"
+          cmd+=(
+            report validate-sarif
+            --input "$report_input"
+            --output "${{ inputs.output-path }}"
+            --format json
+          )
+          sarif_validation_path="${{ inputs.output-path }}"
         else
           echo "Unsupported mode: $mode" >&2
           exit 2
@@ -429,7 +944,7 @@ runs:
         printf ' %q' "${cmd[@]}"
         printf '\n'
         "${cmd[@]}"
-        if [[ "${{ inputs.validate-sarif }}" == "true" ]]; then
+        if [[ "${{ inputs.validate-sarif }}" == "true" && "$mode" != "validate-sarif" ]]; then
           if [[ -z "$sarif_report_path" ]]; then
             echo "validate-sarif requires mode=analyze or mode=workbench-report with output-format=sarif." >&2
             exit 2

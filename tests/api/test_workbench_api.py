@@ -25,6 +25,12 @@ DEMO_PROVIDER_SNAPSHOT = ROOT / "data" / "demo_provider_snapshot.json"
 SAMPLE_CVES = ROOT / "data" / "sample_cves.txt"
 TRIVY_REPORT = ROOT / "data" / "input_fixtures" / "trivy_report.json"
 GRYPE_REPORT = ROOT / "data" / "input_fixtures" / "grype_report.json"
+CYCLONEDX_BOM = ROOT / "data" / "input_fixtures" / "cyclonedx_bom.json"
+SPDX_BOM = ROOT / "data" / "input_fixtures" / "spdx_bom.json"
+DEPENDENCY_CHECK_REPORT = ROOT / "data" / "input_fixtures" / "dependency_check_report.json"
+GITHUB_ALERTS_EXPORT = ROOT / "data" / "input_fixtures" / "github_alerts_export.json"
+NESSUS_REPORT = ROOT / "data" / "input_fixtures" / "nessus_report.nessus"
+OPENVAS_REPORT = ROOT / "data" / "input_fixtures" / "openvas_report.xml"
 ASSET_CONTEXT = ROOT / "data" / "input_fixtures" / "example_asset_context.csv"
 OPENVEX = ROOT / "data" / "input_fixtures" / "openvex_statements.json"
 ATTACK_MAPPING = ROOT / "data" / "attack" / "ctid_kev_enterprise_2025-07-28_attack-16.1_subset.json"
@@ -155,6 +161,7 @@ def test_workbench_import_findings_reports_and_evidence(tmp_path: Path) -> None:
     assert run["input_type"] == "cve-list"
     assert run["input_filename"] == "sample.txt"
     assert run["finished_at"] is not None
+    assert run["job_id"]
     assert run["summary"]["findings_count"] == len(EXPECTED_SAMPLE_CVES)
     assert run["summary"]["kev_hits"] >= 1
     assert run["summary"]["counts_by_priority"]
@@ -273,6 +280,7 @@ def test_workbench_import_findings_reports_and_evidence(tmp_path: Path) -> None:
         "csv": ("findings-csv", b"cve_id,priority,status"),
         "sarif": ("sarif-results", b'"version": "2.1.0"'),
     }
+    created_reports: list[dict[str, Any]] = []
     for report_format, (expected_kind, expected_content) in report_expectations.items():
         report = client.post(
             f"/api/analysis-runs/{run['id']}/reports",
@@ -280,6 +288,7 @@ def test_workbench_import_findings_reports_and_evidence(tmp_path: Path) -> None:
         )
         assert report.status_code == 200
         report_payload = report.json()
+        created_reports.append(report_payload)
         assert report_payload["format"] == report_format
         assert report_payload["kind"] == expected_kind
         assert len(report_payload["sha256"]) == 64
@@ -356,6 +365,235 @@ def test_workbench_import_findings_reports_and_evidence(tmp_path: Path) -> None:
     assert verification.status_code == 200
     assert verification.json()["summary"]["ok"] is True
 
+    jobs = client.get("/api/jobs", params={"project_id": project["id"]})
+    assert jobs.status_code == 200
+    job_items = jobs.json()["items"]
+    job_kinds = {item["kind"] for item in job_items}
+    assert {"import_findings", "create_report", "create_evidence_bundle"} <= job_kinds
+    assert all(
+        item["status"] == "completed"
+        for item in job_items
+        if item["kind"] in {"import_findings", "create_report", "create_evidence_bundle"}
+    )
+    import_job = client.get(f"/api/jobs/{run['job_id']}")
+    assert import_job.status_code == 200
+    assert import_job.json()["result"]["analysis_run_id"] == run["id"]
+
+    manual_job = client.post(
+        "/api/jobs",
+        json={
+            "kind": "create_report",
+            "project_id": project["id"],
+            "target_type": "analysis_run",
+            "target_id": run["id"],
+            "payload": {"analysis_run_id": run["id"], "format": "html"},
+            "idempotency_key": "manual-report-job",
+        },
+    )
+    assert manual_job.status_code == 200, manual_job.text
+    duplicate_job = client.post(
+        "/api/jobs",
+        json={
+            "kind": "create_report",
+            "project_id": project["id"],
+            "target_type": "analysis_run",
+            "target_id": run["id"],
+            "payload": {"analysis_run_id": run["id"], "format": "html"},
+            "idempotency_key": "manual-report-job",
+        },
+    )
+    assert duplicate_job.status_code == 200, duplicate_job.text
+    assert duplicate_job.json()["id"] == manual_job.json()["id"]
+    manual_run = client.post(f"/api/jobs/{manual_job.json()['id']}/run")
+    assert manual_run.status_code == 200, manual_run.text
+    assert manual_run.json()["status"] == "completed"
+    assert manual_run.json()["result"]["analysis_run_id"] == run["id"]
+    assert manual_run.json()["result"]["format"] == "html"
+
+    retry_job = next(item for item in job_items if item["kind"] == "create_report")
+    retry = client.post(f"/api/jobs/{retry_job['id']}/retry")
+    assert retry.status_code == 200
+    assert retry.json()["status"] == "queued"
+
+    default_retention = client.get(f"/api/projects/{project['id']}/artifacts/retention")
+    assert default_retention.status_code == 200
+    assert default_retention.json()["report_retention_days"] is None
+    retention = client.patch(
+        f"/api/projects/{project['id']}/artifacts/retention",
+        json={
+            "report_retention_days": 30,
+            "evidence_retention_days": 90,
+            "max_disk_usage_mb": 512,
+        },
+    )
+    assert retention.status_code == 200, retention.text
+    assert retention.json()["report_retention_days"] == 30
+    cleanup = client.post(
+        f"/api/projects/{project['id']}/artifacts/cleanup",
+        params={"dry_run": "true"},
+    )
+    assert cleanup.status_code == 200
+    assert cleanup.json()["dry_run"] is True
+
+    artifacts = client.get(f"/api/projects/{project['id']}/artifacts")
+    assert artifacts.status_code == 200
+    assert len(artifacts.json()["reports"]) == len(created_reports) + 1
+    assert len(artifacts.json()["evidence_bundles"]) == 1
+    assert artifacts.json()["disk_usage_bytes"] > 0
+
+    deleted_report = client.delete(f"/api/reports/{created_reports[0]['id']}")
+    assert deleted_report.status_code == 200
+    assert deleted_report.json()["artifact_removed"] is True
+    assert client.get(created_reports[0]["download_url"]).status_code == 404
+
+    deleted_bundle = client.delete(f"/api/evidence-bundles/{bundle_payload['id']}")
+    assert deleted_bundle.status_code == 200
+    assert deleted_bundle.json()["artifact_removed"] is True
+    assert client.get(bundle_payload["download_url"]).status_code == 404
+
+
+def test_project_artifact_cleanup_is_scoped_and_enforces_disk_cap(tmp_path: Path) -> None:
+    client, settings = _client_and_settings(tmp_path)
+    first = client.post("/api/projects", json={"name": "first"}).json()
+    second = client.post("/api/projects", json={"name": "second"}).json()
+    session_factory = create_session_factory(get_engine(client.app))
+    first_run_id = ""
+    second_file = settings.report_dir / "second-run" / "analysis.json"
+    with session_factory() as session:
+        repo = WorkbenchRepository(session)
+        first_run = repo.create_analysis_run(
+            project_id=first["id"],
+            input_type="cve-list",
+            input_filename="first.txt",
+            status="completed",
+        )
+        second_run = repo.create_analysis_run(
+            project_id=second["id"],
+            input_type="cve-list",
+            input_filename="second.txt",
+            status="completed",
+        )
+        first_run_id = first_run.id
+        first_dir = settings.report_dir / first_run.id
+        first_dir.mkdir(parents=True)
+        first_old = first_dir / "old.json"
+        first_new = first_dir / "new.json"
+        first_orphan = first_dir / "orphan.tmp"
+        first_old.write_text("x" * (1024 * 1024 + 10), encoding="utf-8")
+        first_new.write_text("fresh", encoding="utf-8")
+        first_orphan.write_text("orphan", encoding="utf-8")
+        second_file.parent.mkdir(parents=True)
+        second_file.write_text("do-not-delete", encoding="utf-8")
+        repo.add_report(
+            project_id=first["id"],
+            analysis_run_id=first_run.id,
+            kind="analysis-json",
+            format="json",
+            path=str(first_old),
+            sha256=hashlib.sha256(first_old.read_bytes()).hexdigest(),
+        )
+        repo.add_report(
+            project_id=first["id"],
+            analysis_run_id=first_run.id,
+            kind="analysis-json",
+            format="json",
+            path=str(first_new),
+            sha256=hashlib.sha256(first_new.read_bytes()).hexdigest(),
+        )
+        repo.add_report(
+            project_id=second["id"],
+            analysis_run_id=second_run.id,
+            kind="analysis-json",
+            format="json",
+            path=str(second_file),
+            sha256=hashlib.sha256(second_file.read_bytes()).hexdigest(),
+        )
+        repo.upsert_project_artifact_retention(
+            project_id=first["id"],
+            max_disk_usage_mb=1,
+        )
+        session.commit()
+
+    cleanup = client.post(
+        f"/api/projects/{first['id']}/artifacts/cleanup",
+        params={"dry_run": "false"},
+    )
+
+    assert cleanup.status_code == 200, cleanup.text
+    deleted = set(cleanup.json()["deleted_files"])
+    assert str(settings.report_dir / first_run_id / "orphan.tmp") in deleted
+    assert not (settings.report_dir / first_run_id / "old.json").exists()
+    assert not (settings.report_dir / first_run_id / "orphan.tmp").exists()
+    assert second_file.exists()
+
+
+def test_workbench_finding_lifecycle_audit_and_exports(tmp_path: Path) -> None:
+    client = _client(tmp_path)
+    project = _create_project(client)
+    run = _import_sample(client, project["id"])
+    findings = client.get(f"/api/projects/{project['id']}/findings").json()["items"]
+    finding = next(item for item in findings if item["cve_id"] == "CVE-2021-44228")
+
+    update = client.patch(
+        f"/api/findings/{finding['id']}",
+        json={"status": "in_review", "actor": "analyst", "reason": "triage started"},
+    )
+    assert update.status_code == 200
+    assert update.json()["status"] == "in_review"
+    history = update.json()["status_history"]
+    assert history[-1]["previous_status"] == "open"
+    assert history[-1]["new_status"] == "in_review"
+    assert history[-1]["actor"] == "analyst"
+
+    detail = client.get(f"/api/findings/{finding['id']}")
+    assert detail.status_code == 200
+    assert detail.json()["status_history"][-1]["reason"] == "triage started"
+
+    reimport = _import_sample(client, project["id"])
+    assert reimport["status"] == "completed"
+    after_reimport = client.get(f"/api/findings/{finding['id']}")
+    assert after_reimport.status_code == 200
+    assert after_reimport.json()["status"] == "in_review"
+    assert after_reimport.json()["status_history"][-1]["reason"] == "triage started"
+
+    audit = client.get(f"/api/projects/{project['id']}/audit-events")
+    assert audit.status_code == 200
+    event_types = [event["event_type"] for event in audit.json()["items"]]
+    assert "finding.status_changed" in event_types
+    assert "analysis_run.imported" in event_types
+    assert "project.created" in event_types
+
+    json_report = client.post(
+        f"/api/analysis-runs/{run['id']}/reports",
+        json={"format": "json"},
+    ).json()
+    json_download = client.get(json_report["download_url"])
+    payload = json.loads(json_download.text)
+    exported = next(item for item in payload["findings"] if item["cve_id"] == "CVE-2021-44228")
+    assert exported["status"] == "in_review"
+    assert exported["status_history"][-1]["actor"] == "analyst"
+
+    csv_report = client.post(
+        f"/api/analysis-runs/{run['id']}/reports",
+        json={"format": "csv"},
+    ).json()
+    csv_download = client.get(csv_report["download_url"])
+    assert "CVE-2021-44228,Critical,in_review" in csv_download.text
+
+    sarif_report = client.post(
+        f"/api/analysis-runs/{run['id']}/reports",
+        json={"format": "sarif"},
+    ).json()
+    sarif_payload = client.get(sarif_report["download_url"]).json()
+    result = next(
+        item
+        for item in sarif_payload["runs"][0]["results"]
+        if item["properties"]["cve"] == "CVE-2021-44228"
+    )
+    assert result["properties"]["status"] == "in_review"
+    assert result["partialFingerprints"]["vuln-prioritizer-workbench/v1"]
+    assert sarif_payload["runs"][0]["tool"]["driver"]["rules"]
+
 
 def test_workbench_imports_all_mvp_formats(tmp_path: Path) -> None:
     client = _client(tmp_path)
@@ -387,6 +625,48 @@ def test_workbench_imports_all_mvp_formats(tmp_path: Path) -> None:
             "application/json",
             {"CVE-2023-34362", "CVE-2024-3094"},
         ),
+        (
+            "cyclonedx-json",
+            "cyclonedx.json",
+            CYCLONEDX_BOM.read_bytes(),
+            "application/json",
+            {"CVE-2023-34362", "CVE-2024-3094"},
+        ),
+        (
+            "spdx-json",
+            "spdx.json",
+            SPDX_BOM.read_bytes(),
+            "application/json",
+            {"CVE-2024-3094", "CVE-2024-4577"},
+        ),
+        (
+            "dependency-check-json",
+            "dependency-check.json",
+            DEPENDENCY_CHECK_REPORT.read_bytes(),
+            "application/json",
+            {"CVE-2023-34362", "CVE-2024-3094"},
+        ),
+        (
+            "github-alerts-json",
+            "github-alerts.json",
+            GITHUB_ALERTS_EXPORT.read_bytes(),
+            "application/json",
+            {"CVE-2023-34362"},
+        ),
+        (
+            "nessus-xml",
+            "nessus-report.nessus",
+            NESSUS_REPORT.read_bytes(),
+            "application/xml",
+            {"CVE-2021-44228", "CVE-2023-34362", "CVE-2024-3094"},
+        ),
+        (
+            "openvas-xml",
+            "openvas-report.xml",
+            OPENVAS_REPORT.read_bytes(),
+            "application/xml",
+            {"CVE-2021-44228", "CVE-2023-34362", "CVE-2024-3094"},
+        ),
     ]
 
     for index, (input_format, filename, content, content_type, expected_cves) in enumerate(cases):
@@ -405,6 +685,98 @@ def test_workbench_imports_all_mvp_formats(tmp_path: Path) -> None:
         findings = client.get(f"/api/projects/{project['id']}/findings")
         assert findings.status_code == 200
         assert {item["cve_id"] for item in findings.json()["items"]} == expected_cves
+
+
+def test_workbench_multi_file_import_preserves_inputs_and_evidence(tmp_path: Path) -> None:
+    client = _client(tmp_path)
+    project = _create_project(client)
+    response = client.post(
+        f"/api/projects/{project['id']}/imports",
+        data={
+            "input_format": "trivy-json",
+            "input_formats": ["trivy-json", "spdx-json"],
+            "provider_snapshot_file": DEMO_PROVIDER_SNAPSHOT.name,
+            "locked_provider_data": "true",
+        },
+        files=[
+            ("files", ("trivy.json", TRIVY_REPORT.read_bytes(), "application/json")),
+            ("files", ("spdx.json", SPDX_BOM.read_bytes(), "application/json")),
+        ],
+    )
+    assert response.status_code == 200, response.text
+    run = response.json()
+    assert run["input_type"] == "mixed"
+    assert run["input_filename"] == "trivy.json, spdx.json"
+
+    findings = client.get(f"/api/projects/{project['id']}/findings", params={"sort": "cve"})
+    assert findings.status_code == 200
+    assert {item["cve_id"] for item in findings.json()["items"]} == {
+        "CVE-2023-34362",
+        "CVE-2024-3094",
+        "CVE-2024-4577",
+    }
+
+    bundle = client.post(f"/api/analysis-runs/{run['id']}/evidence-bundle")
+    assert bundle.status_code == 200
+    bundle_download = client.get(bundle.json()["download_url"])
+    with zipfile.ZipFile(io.BytesIO(bundle_download.content)) as archive:
+        names = set(archive.namelist())
+        assert "input/001-trivy.json" in names
+        assert "input/002-spdx.json" in names
+        manifest = json.loads(archive.read("manifest.json"))
+        assert manifest["included_input_copy"] is True
+        assert len(manifest["source_input_hashes"]) == 2
+
+
+def test_workbench_import_accepts_defensive_context_overlay(tmp_path: Path) -> None:
+    client = _client(tmp_path)
+    project = _create_project(client)
+    context_payload = {
+        "items": [
+            {
+                "cve_id": "CVE-2021-44228",
+                "source": "ghsa",
+                "source_id": "GHSA-log4shell",
+                "severity": "critical",
+                "summary": "GitHub Advisory context.",
+            }
+        ]
+    }
+
+    response = client.post(
+        f"/api/projects/{project['id']}/imports",
+        data={
+            "input_format": "cve-list",
+            "provider_snapshot_file": DEMO_PROVIDER_SNAPSHOT.name,
+            "locked_provider_data": "true",
+        },
+        files={
+            "file": ("sample.txt", SAMPLE_CVES.read_bytes(), "text/plain"),
+            "defensive_context_file": (
+                "context.json",
+                json.dumps(context_payload).encode("utf-8"),
+                "application/json",
+            ),
+        },
+    )
+
+    assert response.status_code == 200, response.text
+    assert response.json()["summary"]["defensive_context_sources"] == ["ghsa"]
+    findings = client.get(f"/api/projects/{project['id']}/findings").json()["items"]
+    finding = next(item for item in findings if item["cve_id"] == "CVE-2021-44228")
+    assert finding["defensive_contexts"][0]["source"] == "ghsa"
+
+
+def test_failed_sync_jobs_are_persisted(tmp_path: Path) -> None:
+    client = _client(tmp_path)
+
+    response = client.post("/api/analysis-runs/missing-run/reports", json={"format": "json"})
+
+    assert response.status_code == 422
+    jobs = client.get("/api/jobs", params={"kind": "create_report"}).json()["items"]
+    assert jobs
+    assert jobs[0]["status"] == "failed"
+    assert "Analysis run not found" in jobs[0]["error_message"]
 
 
 def test_workbench_attack_import_exposes_ttp_context_and_navigator(tmp_path: Path) -> None:
@@ -460,6 +832,38 @@ def test_workbench_attack_import_exposes_ttp_context_and_navigator(tmp_path: Pat
     top_techniques = client.get(f"/api/projects/{project['id']}/attack/top-techniques")
     assert top_techniques.status_code == 200
     assert any(item["technique_id"] == "T1190" for item in top_techniques.json()["items"])
+
+    review_queue = client.get(
+        f"/api/projects/{project['id']}/attack/review-queue",
+        params={"source": "ctid", "mapped": "true", "technique_id": "T1190"},
+    )
+    assert review_queue.status_code == 200, review_queue.text
+    review_items = review_queue.json()["items"]
+    assert any(item["cve_id"] == "CVE-2023-34362" for item in review_items)
+    assert all(item["source"] == "ctid" for item in review_items)
+    assert all("T1190" in item["technique_ids"] for item in review_items)
+
+    review_update = client.patch(
+        f"/api/findings/{moveit['id']}/ttps/review",
+        json={
+            "review_status": "needs_review",
+            "actor": "threat-review",
+            "reason": "mapping source inventory check",
+        },
+    )
+    assert review_update.status_code == 200, review_update.text
+    assert review_update.json()["review_status"] == "needs_review"
+    review_audit = client.get(f"/api/projects/{project['id']}/audit-events")
+    assert review_audit.status_code == 200
+    assert "attack_context.review_updated" in {
+        event["event_type"] for event in review_audit.json()["items"]
+    }
+
+    unsupported_review_source = client.get(
+        f"/api/projects/{project['id']}/attack/review-queue",
+        params={"source": "heuristic"},
+    )
+    assert unsupported_review_source.status_code == 422
 
     navigator = client.get(f"/api/analysis-runs/{run['id']}/attack/navigator-layer")
     assert navigator.status_code == 200
@@ -723,6 +1127,78 @@ def test_workbench_detection_controls_coverage_gaps_and_technique_detail(
     assert controls.status_code == 200
     assert controls.json()["items"][0]["control_id"] == "edge-waf"
 
+    created_control = client.post(
+        f"/api/projects/{project['id']}/detection-controls",
+        json={
+            "control_id": "edr-shell",
+            "name": "EDR shell telemetry",
+            "technique_id": "T1059",
+            "coverage_level": "covered",
+            "owner": "detection-team",
+            "evidence_ref": "case-123",
+            "evidence_refs": ["case-123", "runbook-7"],
+            "review_status": "needs_review",
+        },
+    )
+    assert created_control.status_code == 200, created_control.text
+    assert created_control.json()["review_status"] == "needs_review"
+    assert created_control.json()["evidence_refs"] == ["case-123", "runbook-7"]
+    patched_control = client.patch(
+        f"/api/detection-controls/{created_control.json()['id']}",
+        json={
+            "coverage_level": "partial",
+            "notes": "needs Linux tuning",
+            "review_status": "reviewed",
+            "evidence_refs": ["case-456"],
+        },
+    )
+    assert patched_control.status_code == 200
+    assert patched_control.json()["coverage_level"] == "partial"
+    assert patched_control.json()["notes"] == "needs Linux tuning"
+    assert patched_control.json()["review_status"] == "reviewed"
+    assert patched_control.json()["history_count"] >= 2
+
+    bad_attachment = client.post(
+        f"/api/detection-controls/{created_control.json()['id']}/attachments",
+        files={"file": ("tool.exe", b"not allowed", "application/octet-stream")},
+    )
+    assert bad_attachment.status_code == 422
+
+    attachment = client.post(
+        f"/api/detection-controls/{created_control.json()['id']}/attachments",
+        files={"file": ("evidence.md", b"# Evidence\nCovered by EDR.", "text/markdown")},
+    )
+    assert attachment.status_code == 200, attachment.text
+    attachment_payload = attachment.json()
+    assert attachment_payload["filename"] == "evidence.md"
+    assert (
+        attachment_payload["sha256"] == hashlib.sha256(b"# Evidence\nCovered by EDR.").hexdigest()
+    )
+
+    attachments = client.get(f"/api/detection-controls/{created_control.json()['id']}/attachments")
+    assert attachments.status_code == 200
+    assert [item["id"] for item in attachments.json()["items"]] == [attachment_payload["id"]]
+
+    attachment_download = client.get(
+        f"/api/detection-control-attachments/{attachment_payload['id']}/download"
+    )
+    assert attachment_download.status_code == 200
+    assert attachment_download.content == b"# Evidence\nCovered by EDR."
+
+    deleted_attachment = client.delete(
+        f"/api/detection-control-attachments/{attachment_payload['id']}"
+    )
+    assert deleted_attachment.status_code == 200
+    assert deleted_attachment.json()["artifact_removed"] is True
+
+    history = client.get(f"/api/detection-controls/{created_control.json()['id']}/history")
+    assert history.status_code == 200
+    history_events = {item["event_type"] for item in history.json()["items"]}
+    assert {"created", "updated", "attachment_added", "attachment_deleted"} <= history_events
+
+    deleted_control = client.delete(f"/api/detection-controls/{created_control.json()['id']}")
+    assert deleted_control.status_code == 200
+
     gaps = client.get(f"/api/projects/{project['id']}/attack/coverage-gaps")
     assert gaps.status_code == 200
     t1190 = next(item for item in gaps.json()["items"] if item["technique_id"] == "T1190")
@@ -886,6 +1362,7 @@ def test_workbench_api_tokens_config_provider_jobs_and_github_preview(
     assert token_response.status_code == 200, token_response.text
     token_payload = token_response.json()
     assert token_payload["token"].startswith("vpr_")
+    assert token_payload["token"] not in token_payload["id"]
 
     session_factory = create_session_factory(get_engine(client.app))
     with session_factory() as session:
@@ -894,10 +1371,34 @@ def test_workbench_api_tokens_config_provider_jobs_and_github_preview(
         assert token_record.token_hash != token_payload["token"]
         assert len(token_record.token_hash) == 64
 
+    assert client.get("/api/diagnostics").status_code == 403
+    assert client.get("/api/tokens").status_code == 403
+
+    headers = {"X-API-Token": token_payload["token"]}
+    listed_tokens = client.get("/api/tokens", headers=headers)
+    assert listed_tokens.status_code == 200
+    assert listed_tokens.json()["items"][0]["id"] == token_payload["id"]
+    assert "token" not in listed_tokens.json()["items"][0]
+
+    diagnostics = client.get("/api/diagnostics", headers=headers)
+    assert diagnostics.status_code == 200
+    assert diagnostics.json()["api_tokens_active"] is True
+
+    token_audit = client.get("/api/audit-events", headers=headers)
+    assert token_audit.status_code == 200
+    assert "api_token.created" in {event["event_type"] for event in token_audit.json()["items"]}
+
+    second_token = client.post(
+        "/api/tokens",
+        json={"name": "backup automation"},
+        headers=headers,
+    )
+    assert second_token.status_code == 200, second_token.text
+    second_headers = {"X-API-Token": second_token.json()["token"]}
+
     blocked = client.post("/api/projects", json={"name": "blocked-without-token"})
     assert blocked.status_code == 403
 
-    headers = {"X-API-Token": token_payload["token"]}
     bad_token = client.post(
         "/api/projects",
         json={"name": "blocked-with-bad-token"},
@@ -976,6 +1477,58 @@ def test_workbench_api_tokens_config_provider_jobs_and_github_preview(
     assert loaded_config.status_code == 200
     assert loaded_config.json()["item"]["id"] == saved_config.json()["id"]
 
+    updated_config = client.post(
+        f"/api/projects/{project['id']}/settings/config",
+        json={
+            "config": {
+                "version": 1,
+                "defaults": {"locked_provider_data": True},
+                "commands": {"analyze": {"format": "json", "sort_by": "epss"}},
+            }
+        },
+        headers=headers,
+    )
+    assert updated_config.status_code == 200, updated_config.text
+    history = client.get(
+        f"/api/projects/{project['id']}/settings/config/history",
+        headers=headers,
+    )
+    assert history.status_code == 200
+    assert [item["id"] for item in history.json()["items"]][:2] == [
+        updated_config.json()["id"],
+        saved_config.json()["id"],
+    ]
+    diff = client.get(
+        f"/api/projects/{project['id']}/settings/config/{updated_config.json()['id']}/diff",
+        params={"base_id": saved_config.json()["id"]},
+        headers=headers,
+    )
+    assert diff.status_code == 200
+    assert diff.json()["changed"]["commands.analyze.sort_by"] == {
+        "before": "operational",
+        "after": "epss",
+    }
+    defaults = client.get(
+        f"/api/projects/{project['id']}/settings/config/defaults",
+        headers=headers,
+    )
+    assert defaults.status_code == 200
+    assert defaults.json()["config"]["version"] == 1
+    exported_config = client.get(
+        f"/api/projects/{project['id']}/settings/config/{updated_config.json()['id']}/export",
+        headers=headers,
+    )
+    assert exported_config.status_code == 200
+    assert exported_config.headers["content-disposition"].startswith("attachment;")
+    assert exported_config.json()["commands"]["analyze"]["sort_by"] == "epss"
+    rollback = client.post(
+        f"/api/projects/{project['id']}/settings/config/{saved_config.json()['id']}/rollback",
+        headers=headers,
+    )
+    assert rollback.status_code == 200
+    assert rollback.json()["source"] == f"rollback:{saved_config.json()['id']}"
+    assert rollback.json()["config"]["commands"]["analyze"]["sort_by"] == "operational"
+
     preview = client.post(
         f"/api/projects/{project['id']}/github/issues/preview",
         json={"limit": 4, "priority": "Critical", "milestone": "v1.2"},
@@ -1052,6 +1605,134 @@ def test_workbench_api_tokens_config_provider_jobs_and_github_preview(
     assert duplicate_export.json()["skipped_count"] == 1
     assert duplicate_export.json()["items"][0]["status"] == "skipped_duplicate"
     assert len(posted_payloads) == 1
+
+    ticket_preview = client.post(
+        f"/api/projects/{project['id']}/tickets/preview",
+        json={"provider": "jira", "priority": "Critical", "limit": 1},
+        headers=headers,
+    )
+    assert ticket_preview.status_code == 200, ticket_preview.text
+    ticket_item = ticket_preview.json()["items"][0]
+    assert ticket_item["provider"] == "jira"
+    assert ticket_item["status"] == "preview"
+    assert ticket_item["idempotency_key"].startswith("vuln-prioritizer:")
+
+    ticket_posts: list[dict[str, Any]] = []
+
+    class FakeTicketResponse:
+        status_code = 201
+
+        def __init__(self, payload: dict[str, Any]) -> None:
+            self._payload = payload
+
+        def json(self) -> dict[str, Any]:
+            return self._payload
+
+    def fake_ticket_post(*args: Any, **kwargs: Any) -> FakeTicketResponse:
+        url = args[0]
+        assert kwargs["headers"]["Authorization"].startswith("Bearer ")
+        assert kwargs["headers"]["Idempotency-Key"].startswith("vuln-prioritizer:")
+        assert "jira_test" not in json.dumps(kwargs["json"])
+        assert "snow_test" not in json.dumps(kwargs["json"])
+        ticket_posts.append({"url": url, "json": kwargs["json"]})
+        if url == "https://jira.example.invalid/rest/api/3/issue":
+            return FakeTicketResponse({"key": "SEC-7", "id": "10007"})
+        if url == "https://snow.example.invalid/api/now/table/incident":
+            return FakeTicketResponse(
+                {
+                    "result": {
+                        "number": "INC0007",
+                        "sys_id": "abc123",
+                        "link": "https://snow.example.invalid/nav_to.do?uri=incident.do?sys_id=abc123",
+                    }
+                }
+            )
+        raise AssertionError(url)
+
+    monkeypatch.setattr("vuln_prioritizer.api.workbench_tickets.requests.post", fake_ticket_post)
+    monkeypatch.setenv("JIRA_TOKEN", "jira_test")
+    jira_export = client.post(
+        f"/api/projects/{project['id']}/tickets/export",
+        json={
+            "provider": "jira",
+            "priority": "Critical",
+            "limit": 1,
+            "dry_run": False,
+            "base_url": "https://jira.example.invalid",
+            "token_env": "JIRA_TOKEN",
+            "jira_project_key": "SEC",
+        },
+        headers=headers,
+    )
+    assert jira_export.status_code == 200, jira_export.text
+    assert jira_export.json()["created_count"] == 1
+    assert (
+        jira_export.json()["items"][0]["ticket_url"] == "https://jira.example.invalid/browse/SEC-7"
+    )
+    duplicate_jira_export = client.post(
+        f"/api/projects/{project['id']}/tickets/export",
+        json={
+            "provider": "jira",
+            "priority": "Critical",
+            "limit": 1,
+            "dry_run": False,
+            "base_url": "https://jira.example.invalid",
+            "token_env": "JIRA_TOKEN",
+            "jira_project_key": "SEC",
+        },
+        headers=headers,
+    )
+    assert duplicate_jira_export.status_code == 200, duplicate_jira_export.text
+    assert duplicate_jira_export.json()["created_count"] == 0
+    assert duplicate_jira_export.json()["skipped_count"] == 1
+    assert duplicate_jira_export.json()["items"][0]["status"] == "skipped_duplicate"
+    assert len(ticket_posts) == 1
+
+    monkeypatch.setenv("SERVICENOW_TOKEN", "snow_test")
+    servicenow_export = client.post(
+        f"/api/projects/{project['id']}/tickets/export",
+        json={
+            "provider": "servicenow",
+            "priority": "Critical",
+            "limit": 1,
+            "dry_run": False,
+            "base_url": "https://snow.example.invalid",
+            "token_env": "SERVICENOW_TOKEN",
+            "servicenow_table": "incident",
+        },
+        headers=headers,
+    )
+    assert servicenow_export.status_code == 200, servicenow_export.text
+    assert servicenow_export.json()["created_count"] == 1
+    assert servicenow_export.json()["items"][0]["external_id"] == "INC0007"
+    assert len(ticket_posts) == 2
+
+    unsafe_ticket_export = client.post(
+        f"/api/projects/{project['id']}/tickets/export",
+        json={
+            "provider": "jira",
+            "dry_run": False,
+            "base_url": "http://jira.example.invalid",
+            "token_env": "JIRA_TOKEN",
+            "jira_project_key": "SEC",
+        },
+        headers=headers,
+    )
+    assert unsafe_ticket_export.status_code == 422
+
+    revoke = client.delete(f"/api/tokens/{token_payload['id']}", headers=headers)
+    assert revoke.status_code == 200
+    assert revoke.json()["active"] is False
+    revoked_write = client.post(
+        "/api/projects",
+        json={"name": "blocked-revoked-token"},
+        headers=headers,
+    )
+    assert revoked_write.status_code == 403
+    listed_after_revoke = client.get("/api/tokens", headers=second_headers)
+    assert listed_after_revoke.status_code == 200
+    token_states = {item["id"]: item["active"] for item in listed_after_revoke.json()["items"]}
+    assert token_states[token_payload["id"]] is False
 
 
 def test_workbench_csv_report_escapes_spreadsheet_formulas(tmp_path: Path) -> None:

@@ -32,6 +32,8 @@ class CommonDefaults(StrictModel):
     cache_dir: str | None = None
     cache_ttl_hours: int | None = None
     no_cache: bool | None = None
+    max_provider_age_hours: int | None = None
+    fail_on_stale_provider_data: bool | None = None
     critical_epss_threshold: float | None = None
     critical_cvss_threshold: float | None = None
     high_epss_threshold: float | None = None
@@ -54,6 +56,8 @@ class AnalyzeDefaults(StrictModel):
     hide_waived: bool | None = None
     fail_on: str | None = None
     fail_on_provider_error: bool | None = None
+    max_provider_age_hours: int | None = None
+    fail_on_stale_provider_data: bool | None = None
     fail_on_expired_waivers: bool | None = None
     fail_on_review_due_waivers: bool | None = None
 
@@ -69,6 +73,8 @@ class CompareDefaults(StrictModel):
     show_suppressed: bool | None = None
     hide_waived: bool | None = None
     fail_on_provider_error: bool | None = None
+    max_provider_age_hours: int | None = None
+    fail_on_stale_provider_data: bool | None = None
 
 
 class ExplainDefaults(StrictModel):
@@ -94,6 +100,8 @@ class SnapshotCreateDefaults(StrictModel):
     show_suppressed: bool | None = None
     hide_waived: bool | None = None
     fail_on_provider_error: bool | None = None
+    max_provider_age_hours: int | None = None
+    fail_on_stale_provider_data: bool | None = None
 
 
 class SnapshotDiffDefaults(StrictModel):

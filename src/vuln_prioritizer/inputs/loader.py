@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import csv
 import json
-from collections.abc import Callable, Iterator, Mapping
+from collections.abc import Iterator, Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal, overload
@@ -19,6 +19,7 @@ from vuln_prioritizer.models import (
 from vuln_prioritizer.utils import normalize_cve_id
 
 from . import _cve_support, _occurrence_support, _vex_support, _xml_support
+from .sdk import InputParserDefinition, build_input_parser_registry
 
 GENERIC_OCCURRENCE_CVE_FIELDS = {"cve_id", "cve", "vulnerability_id"}
 GENERIC_OCCURRENCE_HINT_FIELDS = {
@@ -1358,21 +1359,80 @@ def _spdx_purl(package: dict) -> str | None:
     return None
 
 
-_InputParser = Callable[[Path], ParsedInput]
-
-_INPUT_PARSERS: dict[str, _InputParser] = {
+INPUT_PARSER_DEFINITIONS: tuple[InputParserDefinition, ...] = (
     # CVE lists and occurrence CSVs.
-    "cve-list": _parse_cve_list,
-    "generic-occurrence-csv": _parse_generic_occurrence_csv,
+    InputParserDefinition(
+        name="cve-list",
+        parser=_parse_cve_list,
+        file_suffixes=(".txt", ".csv"),
+        media_types=("text/plain", "text/csv"),
+        fixture_names=("sample_cves.txt",),
+    ),
+    InputParserDefinition(
+        name="generic-occurrence-csv",
+        parser=_parse_generic_occurrence_csv,
+        file_suffixes=(".csv",),
+        media_types=("text/csv",),
+    ),
     # Scanner and advisory exports.
-    "trivy-json": _parse_trivy_json,
-    "grype-json": _parse_grype_json,
-    "dependency-check-json": _parse_dependency_check_json,
-    "github-alerts-json": _parse_github_alerts_json,
+    InputParserDefinition(
+        name="trivy-json",
+        parser=_parse_trivy_json,
+        file_suffixes=(".json",),
+        media_types=("application/json",),
+        fixture_names=("trivy_report.json",),
+    ),
+    InputParserDefinition(
+        name="grype-json",
+        parser=_parse_grype_json,
+        file_suffixes=(".json",),
+        media_types=("application/json",),
+        fixture_names=("grype_report.json",),
+    ),
+    InputParserDefinition(
+        name="dependency-check-json",
+        parser=_parse_dependency_check_json,
+        file_suffixes=(".json",),
+        media_types=("application/json",),
+        fixture_names=("dependency_check_report.json",),
+    ),
+    InputParserDefinition(
+        name="github-alerts-json",
+        parser=_parse_github_alerts_json,
+        file_suffixes=(".json",),
+        media_types=("application/json",),
+        fixture_names=("github_alerts_export.json",),
+    ),
     # SBOM formats.
-    "cyclonedx-json": _parse_cyclonedx_json,
-    "spdx-json": _parse_spdx_json,
+    InputParserDefinition(
+        name="cyclonedx-json",
+        parser=_parse_cyclonedx_json,
+        file_suffixes=(".json",),
+        media_types=("application/json",),
+        fixture_names=("cyclonedx_bom.json",),
+    ),
+    InputParserDefinition(
+        name="spdx-json",
+        parser=_parse_spdx_json,
+        file_suffixes=(".json",),
+        media_types=("application/json",),
+        fixture_names=("spdx_bom.json",),
+    ),
     # XML scanner exports; parsing stays limited to safe local XML support.
-    "nessus-xml": _parse_nessus_xml,
-    "openvas-xml": _parse_openvas_xml,
-}
+    InputParserDefinition(
+        name="nessus-xml",
+        parser=_parse_nessus_xml,
+        file_suffixes=(".nessus", ".xml"),
+        media_types=("application/xml", "text/xml"),
+        fixture_names=("nessus_report.nessus",),
+    ),
+    InputParserDefinition(
+        name="openvas-xml",
+        parser=_parse_openvas_xml,
+        file_suffixes=(".xml",),
+        media_types=("application/xml", "text/xml"),
+        fixture_names=("openvas_report.xml",),
+    ),
+)
+
+_INPUT_PARSERS = dict(build_input_parser_registry(INPUT_PARSER_DEFINITIONS))

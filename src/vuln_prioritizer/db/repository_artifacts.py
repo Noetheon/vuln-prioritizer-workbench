@@ -48,6 +48,16 @@ class ArtifactRepositoryMixin:
         )
         return list(self.session.scalars(statement))
 
+    def list_project_reports(self, project_id: str) -> list[Report]:
+        statement = (
+            select(Report).where(Report.project_id == project_id).order_by(Report.created_at.desc())
+        )
+        return list(self.session.scalars(statement))
+
+    def delete_report(self, report: Report) -> None:
+        self.session.delete(report)
+        self.session.flush()
+
     def add_evidence_bundle(
         self,
         *,
@@ -78,3 +88,15 @@ class ArtifactRepositoryMixin:
             .order_by(EvidenceBundle.created_at.desc())
         )
         return list(self.session.scalars(statement))
+
+    def list_project_evidence_bundles(self, project_id: str) -> list[EvidenceBundle]:
+        statement = (
+            select(EvidenceBundle)
+            .where(EvidenceBundle.project_id == project_id)
+            .order_by(EvidenceBundle.created_at.desc())
+        )
+        return list(self.session.scalars(statement))
+
+    def delete_evidence_bundle(self, bundle: EvidenceBundle) -> None:
+        self.session.delete(bundle)
+        self.session.flush()

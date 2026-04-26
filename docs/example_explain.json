@@ -47,6 +47,7 @@
     "cvss_only_rank": 1,
     "cvss_severity": "CRITICAL",
     "cvss_version": "3.1",
+    "defensive_contexts": [],
     "delta_rank": 0,
     "description": "Apache Log4j2 2.0-beta9 through 2.15.0 (excluding security releases 2.12.2, 2.12.3, and 2.3.1) JNDI features used in configuration, log messages, and parameters do not protect against attacker controlled LDAP and other JNDI related endpoints. An attacker who can control log messages or log message parameters can execute arbitrary code loaded from LDAP servers when message lookup substitution is enabled. From log4j 2.15.0, this behavior has been disabled by default. From version 2.16.0 (along with 2.12.2, 2.12.3, and 2.3.1), this functionality has been completely removed. Note that this vulnerability is specific to log4j-core and does not affect log4net, log4cxx, or other Apache Logging Services projects.",
     "enriched_label": "Critical",
@@ -158,6 +159,7 @@
     "cvss_base_score": 10.0,
     "cvss_severity": "CRITICAL",
     "cvss_version": "3.1",
+    "defensive_contexts": [],
     "description": "Apache Log4j2 2.0-beta9 through 2.15.0 (excluding security releases 2.12.2, 2.12.3, and 2.3.1) JNDI features used in configuration, log messages, and parameters do not protect against attacker controlled LDAP and other JNDI related endpoints. An attacker who can control log messages or log message parameters can execute arbitrary code loaded from LDAP servers when message lookup substitution is enabled. From log4j 2.15.0, this behavior has been disabled by default. From version 2.16.0 (along with 2.12.2, 2.12.3, and 2.3.1), this functionality has been completely removed. Note that this vulnerability is specific to log4j-core and does not affect log4net, log4cxx, or other Apache Logging Services projects.",
     "epss": 0.94465,
     "epss_percentile": 0.99996,
@@ -229,6 +231,7 @@
       "vex_statuses": {}
     },
     "provider_evidence": {
+      "defensive_contexts": [],
       "epss": {
         "cve_id": "CVE-2021-44228",
         "date": "2026-04-23",
@@ -443,6 +446,9 @@
       "Local ATT&CK CSV mapping",
       "Input formats: cve-list"
     ],
+    "defensive_context_file": null,
+    "defensive_context_hits": 0,
+    "defensive_context_sources": [],
     "duplicate_cve_count": 0,
     "epss_diagnostics": {
       "cache_hits": 0,
@@ -479,6 +485,7 @@
     "locked_provider_data": true,
     "mapping_framework": null,
     "mapping_framework_version": null,
+    "max_provider_age_hours": null,
     "merged_input_count": 1,
     "nvd_diagnostics": {
       "cache_hits": 0,
@@ -539,11 +546,19 @@
       }
     },
     "provider_freshness": {
+      "epss_cache_latest_cached_at": null,
+      "epss_freshness_at": "2026-04-21T12:00:00+00:00",
+      "kev_cache_latest_cached_at": null,
       "kev_date_added_max": "2021-12-10",
       "kev_due_date_min": "2021-12-24",
+      "kev_freshness_at": "2026-04-21T12:00:00+00:00",
       "latest_epss_date": "2026-04-23",
+      "lookup_completed_at": "2026-04-21T12:00:00+00:00",
+      "nvd_cache_latest_cached_at": null,
+      "nvd_freshness_at": "2026-04-21T12:00:00+00:00",
       "nvd_last_modified_max": "2026-02-20T16:15:59.363",
-      "nvd_last_modified_min": "2026-02-20T16:15:59.363"
+      "nvd_last_modified_min": "2026-02-20T16:15:59.363",
+      "provider_snapshot_generated_at": "2026-04-21T12:00:00+00:00"
     },
     "provider_snapshot_file": "data/demo_provider_snapshot.json",
     "provider_snapshot_sources": [
@@ -551,6 +566,8 @@
       "epss",
       "kev"
     ],
+    "provider_stale": false,
+    "provider_stale_sources": [],
     "schema_version": "1.0.0",
     "source_stats": {
       "cve-list": 1

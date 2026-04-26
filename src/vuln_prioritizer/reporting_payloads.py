@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 from collections import Counter
 from typing import Any
@@ -406,6 +407,11 @@ def generate_sarif_report(
     }
     results: list[dict[str, Any]] = []
     for finding in findings:
+        artifact_uri = (
+            finding.provenance.affected_paths[0]
+            if finding.provenance.affected_paths
+            else context.input_path
+        )
         message = (
             f"{finding.cve_id}: {finding.priority_label} priority "
             "based on CVSS/EPSS/KEV with contextual enrichment."
@@ -422,6 +428,15 @@ def generate_sarif_report(
                     "epss": finding.epss,
                     "in_kev": finding.in_kev,
                     "attack_relevance": finding.attack_relevance,
+                    "defensive_context_sources": sorted(
+                        {context_item.source for context_item in finding.defensive_contexts}
+                    ),
+                    "defensive_context_count": len(finding.defensive_contexts),
+                    "defensive_context_ids": [
+                        context_item.source_id
+                        for context_item in finding.defensive_contexts
+                        if context_item.source_id
+                    ][:10],
                     "sources": finding.provenance.source_formats,
                     "components": finding.provenance.components,
                     "suppressed_by_vex": finding.suppressed_by_vex,
@@ -429,17 +444,10 @@ def generate_sarif_report(
                     "remediation_strategy": finding.remediation.strategy,
                     "remediation_ecosystem": finding.remediation.ecosystem,
                 },
-                "locations": [
-                    {
-                        "physicalLocation": {
-                            "artifactLocation": {
-                                "uri": finding.provenance.affected_paths[0]
-                                if finding.provenance.affected_paths
-                                else context.input_path
-                            }
-                        }
-                    }
-                ],
+                "partialFingerprints": {
+                    "vuln-prioritizer/v1": _sarif_fingerprint(finding, artifact_uri),
+                },
+                "locations": [{"physicalLocation": {"artifactLocation": {"uri": artifact_uri}}}],
             }
         )
     payload = {
@@ -451,6 +459,7 @@ def generate_sarif_report(
                     "driver": {
                         "name": "vuln-prioritizer",
                         "version": context.schema_version,
+                        "rules": _sarif_rules(),
                     }
                 },
                 "results": results,
@@ -458,3 +467,48 @@ def generate_sarif_report(
         ],
     }
     return json.dumps(payload, indent=2, sort_keys=True)
+
+
+def _sarif_rules() -> list[dict[str, Any]]:
+    rules = []
+    for priority, level in (
+        ("critical", "Critical"),
+        ("high", "High"),
+        ("medium", "Medium"),
+        ("low", "Low"),
+    ):
+        rules.append(
+            {
+                "id": f"vuln-prioritizer/{priority}",
+                "name": f"{level} prioritized vulnerability",
+                "shortDescription": {"text": f"{level} vulnerability prioritization result."},
+                "fullDescription": {
+                    "text": (
+                        "Known CVE prioritized from CVSS, EPSS, and CISA KEV with "
+                        "optional contextual layers such as asset context, VEX, waivers, "
+                        "remediation, and ATT&CK mapping provenance."
+                    )
+                },
+                "help": {
+                    "text": (
+                        "Review the CVE, provider evidence, affected component or asset, "
+                        "and recommended remediation action. This tool prioritizes supplied "
+                        "findings and does not scan systems."
+                    )
+                },
+                "properties": {"priority": level},
+            }
+        )
+    return rules
+
+
+def _sarif_fingerprint(finding: PrioritizedFinding, artifact_uri: str | None) -> str:
+    identity = "|".join(
+        [
+            finding.cve_id,
+            artifact_uri or "",
+            ",".join(finding.provenance.components),
+            ",".join(finding.provenance.asset_ids),
+        ]
+    )
+    return hashlib.sha256(identity.encode("utf-8")).hexdigest()

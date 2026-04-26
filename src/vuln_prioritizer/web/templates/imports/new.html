@@ -25,11 +25,17 @@
             <option value="generic-occurrence-csv">Generic occurrence CSV</option>
             <option value="trivy-json">Trivy JSON</option>
             <option value="grype-json">Grype JSON</option>
+            <option value="cyclonedx-json">CycloneDX JSON</option>
+            <option value="spdx-json">SPDX JSON</option>
+            <option value="dependency-check-json">Dependency-Check JSON</option>
+            <option value="github-alerts-json">GitHub alerts JSON</option>
+            <option value="nessus-xml">Nessus XML</option>
+            <option value="openvas-xml">OpenVAS XML</option>
           </select>
         </label>
         <label>
-          File
-          <input required type="file" name="file">
+          File(s)
+          <input required type="file" name="files" multiple>
         </label>
       </div>
     </fieldset>
@@ -80,6 +86,10 @@
           Waiver file
           <input type="file" name="waiver_file" accept=".yml,.yaml,text/yaml,application/x-yaml">
         </label>
+        <label>
+          Defensive context
+          <input type="file" name="defensive_context_file" accept=".json,application/json">
+        </label>
       </div>
     </fieldset>
 
@@ -97,7 +107,7 @@
     <div class="step-list">
       <div><span>1</span><strong>Ingest</strong><p>Read CVEs, components, assets and optional governance files.</p></div>
       <div><span>2</span><strong>Normalize</strong><p>Deduplicate CVEs and resolve project asset context.</p></div>
-      <div><span>3</span><strong>Enrich</strong><p>Join NVD, EPSS, KEV and approved ATT&amp;CK mappings.</p></div>
+      <div><span>3</span><strong>Enrich</strong><p>Join NVD, EPSS, KEV, defensive context and approved ATT&amp;CK mappings.</p></div>
       <div><span>4</span><strong>Prioritize</strong><p>Rank findings by operational priority and remediation signal.</p></div>
       <div><span>5</span><strong>Report</strong><p>Create Workbench views, exports and evidence bundles.</p></div>
     </div>

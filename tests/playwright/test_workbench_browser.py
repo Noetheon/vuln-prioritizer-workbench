@@ -133,7 +133,7 @@ def test_workbench_browser_happy_path_reports_and_responsive_pages(
     page.get_by_role("link", name="Import findings").click()
     page.wait_for_url(re.compile(r".*/imports/new"))
     page.select_option('select[name="input_format"]', "trivy-json")
-    page.set_input_files('input[name="file"]', str(TRIVY_REPORT))
+    page.set_input_files('input[name="files"]', str(TRIVY_REPORT))
     page.get_by_label("Provider snapshot").fill(DEMO_PROVIDER_SNAPSHOT.name)
     page.get_by_label("Locked provider data").check()
     page.select_option('select[name="attack_source"]', "ctid-json")
@@ -310,7 +310,7 @@ def test_workbench_browser_error_states_are_visible(
     page.goto(
         f"{live_workbench.base_url}/projects/{project_id}/imports/new", wait_until="networkidle"
     )
-    page.set_input_files('input[name="file"]', str(SAMPLE_CVES))
+    page.set_input_files('input[name="files"]', str(SAMPLE_CVES))
     page.get_by_label("Provider snapshot").fill("missing-snapshot.json")
     with page.expect_navigation(wait_until="networkidle") as invalid_import_navigation:
         page.get_by_role("button", name="Start import").click()

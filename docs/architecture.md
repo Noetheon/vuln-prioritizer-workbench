@@ -69,7 +69,7 @@ The Workbench app is an additive FastAPI/Jinja2 layer over the existing core. `d
 
 Workbench runtime state is controlled by environment variables for database URL, upload directory, report directory, trusted provider snapshot directory, provider cache directory, upload size, NVD API-key environment name, and the local CSRF token. The Docker Compose path uses named volumes for writable runtime state, keeps provider snapshots writable for refresh jobs, and mounts checked-in demo data read-only so startup can seed locked demo snapshots without making fixture data mutable.
 
-The current web/API import path is intentionally narrower than the CLI input matrix: CVE lists, `generic-occurrence-csv`, Trivy JSON, and Grype JSON. The CLI remains the broader automation surface for SBOM, XML scanner exports, state snapshots, CI outputs, and advanced report generation.
+The current web/API import path uses the same local input-format matrix as the CLI for single-upload and multi-upload imports: CVE lists, generic occurrence CSV, Trivy JSON, Grype JSON, Dependency-Check JSON, GitHub alerts JSON, CycloneDX JSON, SPDX JSON, Nessus XML, and OpenVAS XML. XML support remains safe local parsing of exported findings only; the Workbench does not scan systems.
 
 The Workbench threat model and readiness checklist are maintained in [workbench-threat-model.md](workbench-threat-model.md). The current architecture assumes a trusted local operator, SQLite default storage, and no public-internet exposure until authentication and shared-deployment hardening are added.
 
@@ -121,6 +121,8 @@ Current data sources:
 - optional local ATT&CK mappings from `local-csv` or `ctid-json`
 
 ATT&CK remains optional and file-based. There is no required remote ATT&CK dependency in the current design.
+
+The parser/provider extension SDK is a static local contract. It documents typed parser and provider definitions, fixture expectations, and validation helpers, but it does not load remote code, discover arbitrary Python entry points, or import user-supplied plugin paths.
 
 ### Prioritization
 

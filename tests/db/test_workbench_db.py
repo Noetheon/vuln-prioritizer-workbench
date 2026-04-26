@@ -196,3 +196,74 @@ def test_repository_upserts_reuse_existing_records() -> None:
 
     with session_scope(factory) as session:
         assert session.scalar(select(Finding.priority)) == "Critical"
+
+
+def test_repository_tracks_jobs_retention_and_detection_evidence() -> None:
+    engine = create_sqlite_engine(":memory:")
+    create_schema(engine)
+    factory = create_session_factory(engine)
+
+    with session_scope(factory) as session:
+        repo = WorkbenchRepository(session)
+        project = repo.create_project("p1-controls")
+        job = repo.enqueue_workbench_job(
+            kind="create_report",
+            project_id=project.id,
+            target_type="analysis_run",
+            target_id="run-1",
+            payload_json={"format": "json"},
+            idempotency_key="report:run-1:json",
+        )
+        assert (
+            repo.enqueue_workbench_job(
+                kind="create_report",
+                project_id=project.id,
+                idempotency_key="report:run-1:json",
+            ).id
+            == job.id
+        )
+        repo.start_workbench_job(job, worker_id="test")
+        repo.update_workbench_job_progress(job, progress=40, message="rendering")
+        repo.complete_workbench_job(job, result_json={"report_id": "report-1"})
+
+        retention = repo.upsert_project_artifact_retention(
+            project_id=project.id,
+            report_retention_days=30,
+            evidence_retention_days=90,
+            max_disk_usage_mb=512,
+        )
+
+        control = repo.upsert_detection_control(
+            project_id=project.id,
+            control_id="edr-shell",
+            name="EDR shell telemetry",
+            technique_id="T1059",
+            coverage_level="partial",
+            owner="secops",
+            evidence_refs_json=["case-1"],
+            review_status="needs_review",
+            history_actor="secops",
+        )
+        attachment = repo.add_detection_control_attachment(
+            control_id=control.id,
+            project_id=project.id,
+            filename="evidence.txt",
+            content_type="text/plain",
+            path="/tmp/evidence.txt",
+            sha256="a" * 64,
+            size_bytes=12,
+        )
+
+    with session_scope(factory) as session:
+        repo = WorkbenchRepository(session)
+        jobs = repo.list_workbench_jobs(project_id=project.id)
+        assert jobs[0].status == "completed"
+        assert jobs[0].progress == 100
+        assert jobs[0].result_json["report_id"] == "report-1"
+        assert repo.get_project_artifact_retention(project.id).id == retention.id
+        control = repo.get_detection_control(control.id)
+        assert control is not None
+        assert control.review_status == "needs_review"
+        assert control.evidence_refs_json == ["case-1"]
+        assert repo.list_detection_control_history(control.id)[0].event_type == "created"
+        assert repo.list_detection_control_attachments(control.id)[0].id == attachment.id

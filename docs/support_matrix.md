@@ -4,11 +4,11 @@
 
 | Command | Primary input | Supported file outputs | Current machine contract | Notes |
 | --- | --- | --- | --- | --- |
-| `analyze` | repeatable `--input PATH` | `markdown`, `json`, `sarif`, `html` sidecar via `--html-output` | JSON schema + SARIF 2.1.0 | `table` is terminal-only. Direct HTML is additive and does not replace the JSON contract. Optional waiver lifecycle gates exist via `--fail-on-expired-waivers` and `--fail-on-review-due-waivers`. |
-| `compare` | repeatable `--input PATH` | `markdown`, `json` | JSON schema | Comparison is `CVSS-only` vs enriched. |
+| `analyze` | repeatable `--input PATH` | `markdown`, `json`, `sarif`, `html` sidecar via `--html-output` | JSON schema + SARIF 2.1.0 | `table` is terminal-only. Direct HTML is additive and does not replace the JSON contract. Optional local defensive context, waiver lifecycle gates, and provider freshness gates are available for CI. |
+| `compare` | repeatable `--input PATH` | `markdown`, `json` | JSON schema | Comparison is `CVSS-only` vs enriched. Provider freshness gates are additive and use the same semantics as `analyze`. |
 | `explain` | `--cve CVE-...` | `markdown`, `json` | JSON schema | Single-CVE detailed view. |
 | `doctor` | optional local files and runtime config | `json` | JSON schema | Local environment, cache, file, waiver-health, and optional live-source diagnostics. |
-| `snapshot create` | repeatable `--input PATH` | `markdown`, `json` | JSON schema | Reusable point-in-time artifact over the same prioritization pipeline as `analyze`. |
+| `snapshot create` | repeatable `--input PATH` | `markdown`, `json` | JSON schema | Reusable point-in-time artifact over the same prioritization pipeline as `analyze`, including local defensive context and provider freshness metadata when requested. |
 | `snapshot diff` | two snapshot JSON files | `markdown`, `json` | JSON schema | Categorizes `added`, `removed`, priority, and context changes per CVE. |
 | `state init` | `--db PATH` | `json` | JSON schema | Initializes the optional local SQLite backing store used only for persisted snapshot history. |
 | `state import-snapshot` | snapshot JSON file | `json` | JSON schema | Imports a saved `snapshot create --format json` artifact into the optional local SQLite state store. |
@@ -18,6 +18,7 @@
 | `state trends` | local SQLite DB | `json` | JSON schema | Shows per-snapshot priority, KEV, ATT&CK, and waiver trends from imported snapshots. |
 | `state service-history` | local SQLite DB + `--service NAME` | `json` | JSON schema | Shows per-service history across imported snapshots without rerunning enrichment. |
 | `input validate` | repeatable `--input PATH`, optional asset/VEX files | `json` | JSON schema | Performs local parser, asset context, and VEX validation without provider lookups. |
+| `input inspect` / `input normalize` | repeatable `--input PATH`, optional asset/VEX files | `json` | JSON shape documented in contracts | Emits normalized occurrences and source summaries without provider lookups. `normalize` is an alias over the same contract. |
 | `rollup` | analysis JSON or snapshot JSON | `markdown`, `json` | JSON schema | Aggregates findings by `asset_id` or `asset_business_service`, keeps waiver lifecycle debt visible, and ranks buckets for remediation planning without rerunning enrichment. |
 | `attack validate` | ATT&CK local files | `markdown`, `json` | JSON schema | Validates local mapping and metadata artifacts; `ctid-json` is the preferred workflow. |
 | `attack coverage` | `--input PATH` | `markdown`, `json` | JSON schema | Uses the same input loader for CVE extraction. |
@@ -27,6 +28,7 @@
 | `data verify` | optional repeatable `--input PATH` / `--cve` | `json` | JSON schema | Cache coverage, checksum, and pinned local file verification; `table` remains the default terminal view. |
 | `data export-provider-snapshot` | repeatable `--input PATH` and/or `--cve` | `json` | JSON schema | Exports replayable provider data for `nvd`, `epss`, and `kev` so later analysis can run in fallback or locked snapshot mode. |
 | `db init` | Workbench environment settings | terminal status | Workbench schema/migration side effect | Initializes the Workbench SQLite database named by `VULN_PRIORITIZER_DB_URL`. |
+| `db cleanup-artifacts` | Workbench environment settings | terminal status | Workbench report/evidence cleanup side effect | Dry-runs by default; `--delete` removes expired/orphaned managed artifacts. |
 | `web serve` | Workbench environment settings | local HTTP service | FastAPI/OpenAPI + HTML UI | Serves the Workbench app with `--host`, `--port`, and optional `--reload`. |
 | `report html` | analysis JSON | `html` | Consumes analysis JSON contract | No live enrichment during rendering. |
 | `report evidence-bundle` | analysis JSON | `zip` | Manifest schema inside bundle | Packages saved analysis JSON, regenerated HTML, Markdown summary, and optional source input copy. |
@@ -52,6 +54,7 @@
 | Feature | `analyze` | `compare` | `explain` | Notes |
 | --- | --- | --- | --- | --- |
 | ATT&CK enrichment | yes | yes | yes | Sources: `none`, `local-csv`, `ctid-json`. Prefer `ctid-json`; `local-csv` remains legacy compatibility only. Technique metadata can use the simplified local JSON or a pinned ATT&CK STIX bundle. No remote ATT&CK dependency. |
+| Defensive context file | yes | yes | yes | `--defensive-context-file` reads a local/offline JSON overlay for OSV, GHSA, Vulnrichment, or SSVC evidence you already have. It is contextual evidence only; it does not fetch advisory data and does not change base priority scoring from CVSS, EPSS, and KEV. |
 | Asset context CSV | yes | yes | yes | `target_kind` stays exact; `target_ref` supports deterministic `exact` and `glob` rules with optional `rule_id`, `match_mode`, `precedence`, and aggregated conflict reporting. |
 | VEX files | yes | yes | yes | Supports OpenVEX JSON and CycloneDX VEX JSON with deterministic ranked matching, occurrence-level match provenance, aggregated conflict reporting, and visible `under_investigation` status. |
 | Policy profiles | yes | yes | yes | Built-ins: `default`, `enterprise`, `conservative`. |
@@ -91,4 +94,10 @@ Without a matching target, the explain flow still works, but asset-context and V
 - `data status`, `data update`, `data verify`, and `data export-provider-snapshot` publish JSON contracts; their Rich table layout remains human-facing where applicable.
 - The optional SQLite state store is separate from the existing file cache and does not change `analyze`, `snapshot`, or `report` output semantics.
 - The Workbench SQLite database is a separate application store controlled by `VULN_PRIORITIZER_DB_URL`; it does not replace the CLI state store or provider cache.
+- Workbench imports now accept the same input-format matrix as the CLI for single-upload and multi-upload import flows.
+- Workbench reports and evidence bundles overlay current finding lifecycle status/history from the DB when artifacts are generated.
+- Workbench imports, provider refreshes, reports, and evidence bundles record durable local job state while keeping existing synchronous endpoints compatible.
+- Workbench artifact retention, cleanup, detection-control history/attachments, config export/defaults, and ATT&CK review queue APIs are additive local Workbench surfaces.
+- Workbench ticket sync supports GitHub issues plus Jira and ServiceNow preview/export flows with dry-run defaults, idempotency keys, and explicit token environment variables.
+- Parser/provider SDK definitions are static local contracts and do not discover entry points or load remote code.
 - `vuln-prioritizer.yml` is the documented runtime-config filename; `--config` and `--no-config` are the stable CLI overrides.

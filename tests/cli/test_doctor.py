@@ -98,13 +98,14 @@ def test_cli_doctor_reports_waiver_health(
     cache_dir = tmp_path / "cache"
     cache_dir.mkdir()
     output_file = tmp_path / "doctor-waivers.json"
+    today = datetime.now(UTC).date()
     waiver_file = write_waiver_file(
         tmp_path,
         cve_id="CVE-2021-44228",
         owner="risk-review",
         reason="Needs formal review.",
-        expires_on="2026-04-25",
-        review_on="2026-04-20",
+        expires_on=(today + timedelta(days=30)).isoformat(),
+        review_on=(today - timedelta(days=1)).isoformat(),
     )
 
     result = runner.invoke(

@@ -128,6 +128,163 @@ def input_validate(
         raise typer.Exit(code=1)
 
 
+def input_inspect(
+    input: list[Path] = typer.Option(..., "--input", exists=True, dir_okay=False, readable=True),
+    input_format: list[InputFormat] | None = typer.Option(None, "--input-format"),
+    asset_context: Path | None = typer.Option(None, "--asset-context", dir_okay=False),
+    vex_file: list[Path] | None = typer.Option(None, "--vex-file", dir_okay=False),
+    target_kind: TargetKind = typer.Option(TargetKind.generic, "--target-kind"),
+    target_ref: str | None = typer.Option(None, "--target-ref"),
+    max_cves: int | None = typer.Option(None, "--max-cves", min=1),
+    output: Path | None = typer.Option(None, "--output", dir_okay=False),
+    format: TableJsonOutputFormat = output_format_option(
+        TableJsonOutputFormat.json, TABLE_AND_JSON_OUTPUT_FORMATS
+    ),
+) -> None:
+    """Emit normalized input occurrences without provider lookups."""
+    _run_input_inspect(
+        input=input,
+        input_format=input_format,
+        asset_context=asset_context,
+        vex_file=vex_file,
+        target_kind=target_kind,
+        target_ref=target_ref,
+        max_cves=max_cves,
+        output=output,
+        format=format,
+        command_name="input inspect",
+    )
+
+
+def _run_input_inspect(
+    *,
+    input: list[Path],
+    input_format: list[InputFormat] | None,
+    asset_context: Path | None,
+    vex_file: list[Path] | None,
+    target_kind: TargetKind,
+    target_ref: str | None,
+    max_cves: int | None,
+    output: Path | None,
+    format: TableJsonOutputFormat,
+    command_name: str,
+) -> None:
+    validate_output_mode(format, output)
+    validate_command_formats(
+        command_name=command_name,
+        format=format,
+        allowed_formats=set(TABLE_AND_JSON_OUTPUT_FORMATS),
+    )
+    input_specs = build_input_specs_or_exit(
+        input_paths=input,
+        input_formats=input_format,
+        command_name=command_name,
+        require_inputs=True,
+    )
+    try:
+        asset_records = load_asset_context_file(asset_context)
+        vex_statements = load_vex_files(vex_file or [])
+        parsed_input = InputLoader().load_many(
+            input_specs,
+            max_cves=max_cves,
+            target_kind=target_kind.value,
+            target_ref=target_ref,
+            asset_records=asset_records,
+            vex_statements=vex_statements,
+        )
+    except (OSError, ValidationError, ValueError) as exc:
+        exit_input_validation(str(exc))
+
+    warnings = list(parsed_input.warnings)
+    report = {
+        "metadata": {
+            "schema_version": "1.3.0",
+            "command": command_name,
+            "generated_at": iso_utc_now(),
+            "input_paths": [str(path) for path in input],
+            "input_format": parsed_input.input_format,
+            "output_format": format.value,
+            "output_path": str(output) if output else None,
+            "asset_context": str(asset_context) if asset_context else None,
+            "vex_files": [str(path) for path in vex_file or []],
+            "target_kind": target_kind.value,
+            "target_ref": target_ref,
+            "max_cves": max_cves,
+        },
+        "summary": {
+            "total_rows": parsed_input.total_rows,
+            "occurrence_count": len(parsed_input.occurrences),
+            "unique_cves": len(parsed_input.unique_cves),
+            "included_occurrence_count": parsed_input.included_occurrence_count,
+            "included_unique_cves": parsed_input.included_unique_cves,
+            "warning_count": len(parsed_input.warnings),
+        },
+        "sources": [source.model_dump() for source in parsed_input.source_summaries],
+        "unique_cves": parsed_input.unique_cves,
+        "occurrences": [occurrence.model_dump() for occurrence in parsed_input.occurrences],
+        "warnings": warnings,
+    }
+    json_payload = json.dumps(report, indent=2, sort_keys=True)
+
+    if should_emit_json_stdout(format, output):
+        emit_stdout(json_payload)
+        return
+
+    console.print(render_input_inspect_table(report))
+    print_warnings(warnings)
+    if output is not None:
+        write_output(output, json_payload)
+        console.print(f"[green]Wrote json output to {output}[/green]")
+
+
+def input_normalize(
+    input: list[Path] = typer.Option(..., "--input", exists=True, dir_okay=False, readable=True),
+    input_format: list[InputFormat] | None = typer.Option(None, "--input-format"),
+    asset_context: Path | None = typer.Option(None, "--asset-context", dir_okay=False),
+    vex_file: list[Path] | None = typer.Option(None, "--vex-file", dir_okay=False),
+    target_kind: TargetKind = typer.Option(TargetKind.generic, "--target-kind"),
+    target_ref: str | None = typer.Option(None, "--target-ref"),
+    max_cves: int | None = typer.Option(None, "--max-cves", min=1),
+    output: Path | None = typer.Option(None, "--output", dir_okay=False),
+    format: TableJsonOutputFormat = output_format_option(
+        TableJsonOutputFormat.json, TABLE_AND_JSON_OUTPUT_FORMATS
+    ),
+) -> None:
+    """Alias for input inspect."""
+    _run_input_inspect(
+        input=input,
+        input_format=input_format,
+        asset_context=asset_context,
+        vex_file=vex_file,
+        target_kind=target_kind,
+        target_ref=target_ref,
+        max_cves=max_cves,
+        output=output,
+        format=format,
+        command_name="input normalize",
+    )
+
+
+def render_input_inspect_table(report: dict[str, Any]) -> Table:
+    table = Table(title="Normalized Occurrences", show_lines=False)
+    table.add_column("CVE")
+    table.add_column("Format")
+    table.add_column("Component")
+    table.add_column("Version")
+    table.add_column("Target")
+    table.add_column("Asset")
+    for occurrence in report["occurrences"][:50]:
+        table.add_row(
+            occurrence.get("cve_id") or "",
+            occurrence.get("source_format") or "",
+            occurrence.get("component_name") or "",
+            occurrence.get("component_version") or "",
+            occurrence.get("target_ref") or "",
+            occurrence.get("asset_id") or "",
+        )
+    return table
+
+
 def build_input_validation_report(
     *,
     input_paths: list[Path],
@@ -268,3 +425,5 @@ def merge_warning_messages(*groups: list[str]) -> list[str]:
 
 def register(input_app: typer.Typer) -> None:
     input_app.command("validate")(input_validate)
+    input_app.command("inspect")(input_inspect)
+    input_app.command("normalize")(input_normalize)

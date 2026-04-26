@@ -5,22 +5,29 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any, TypeVar
 
-from sqlalchemy import Select, select
+from sqlalchemy import Select, func, or_, select
 from sqlalchemy.orm import Session, selectinload
 
 from vuln_prioritizer.db.models import (
     AnalysisRun,
     ApiToken,
+    Asset,
     AttackMappingRecord,
+    AuditEvent,
     Component,
     DetectionControl,
+    DetectionControlAttachment,
+    DetectionControlHistory,
     Finding,
     FindingAttackContext,
     FindingOccurrence,
+    FindingStatusHistory,
     GitHubIssueExport,
     Project,
+    ProjectArtifactRetention,
     ProjectConfigSnapshot,
     Vulnerability,
+    WorkbenchJob,
     utc_now,
 )
 from vuln_prioritizer.db.repository_artifacts import ArtifactRepositoryMixin
@@ -28,6 +35,8 @@ from vuln_prioritizer.db.repository_assets import AssetWaiverRepositoryMixin
 from vuln_prioritizer.db.repository_providers import ProviderSnapshotRepositoryMixin
 
 T = TypeVar("T")
+
+FINDING_SORT_FIELDS = {"operational", "priority", "epss", "cvss", "cve", "status"}
 
 
 class WorkbenchRepository(
@@ -227,6 +236,7 @@ class WorkbenchRepository(
             Finding.asset_id == asset_id,
         )
         finding = self.session.scalar(statement)
+        is_new = finding is None
         if finding is None:
             finding = Finding(
                 project_id=project_id,
@@ -239,7 +249,8 @@ class WorkbenchRepository(
             self.session.add(finding)
         finding.analysis_run_id = analysis_run_id
         finding.cve_id = cve_id
-        finding.status = status
+        if is_new:
+            finding.status = status
         finding.priority = priority
         finding.priority_rank = priority_rank
         finding.risk_score = risk_score
@@ -412,11 +423,84 @@ class WorkbenchRepository(
                 selectinload(Finding.asset),
                 selectinload(Finding.occurrences),
                 selectinload(Finding.attack_contexts),
+                selectinload(Finding.status_history),
             )
             .order_by(Finding.operational_rank, Vulnerability.cve_id)
             .join(Finding.vulnerability)
         )
         return list(self.session.scalars(statement))
+
+    def list_project_findings_page(
+        self,
+        project_id: str,
+        *,
+        priority: str | None = None,
+        status: str | None = None,
+        q: str | None = None,
+        kev: bool | None = None,
+        owner: str | None = None,
+        service: str | None = None,
+        min_epss: float | None = None,
+        min_cvss: float | None = None,
+        sort: str = "operational",
+        limit: int = 100,
+        offset: int = 0,
+    ) -> tuple[list[Finding], int]:
+        """Return a server-side filtered and paginated findings page."""
+        if sort not in FINDING_SORT_FIELDS:
+            raise ValueError(f"Unsupported findings sort field: {sort}.")
+
+        filters = [Finding.project_id == project_id]
+        if priority:
+            filters.append(Finding.priority == priority)
+        if status:
+            filters.append(Finding.status == status)
+        if kev is not None:
+            filters.append(Finding.in_kev.is_(kev))
+        if owner:
+            filters.append(Asset.owner == owner)
+        if service:
+            filters.append(Asset.business_service == service)
+        if min_epss is not None:
+            filters.append(Finding.epss.is_not(None))
+            filters.append(Finding.epss >= min_epss)
+        if min_cvss is not None:
+            filters.append(Finding.cvss_base_score.is_not(None))
+            filters.append(Finding.cvss_base_score >= min_cvss)
+        if q:
+            pattern = f"%{q.strip()}%"
+            filters.append(
+                or_(
+                    Finding.cve_id.ilike(pattern),
+                    Vulnerability.description.ilike(pattern),
+                    Component.name.ilike(pattern),
+                    Asset.asset_id.ilike(pattern),
+                    Asset.owner.ilike(pattern),
+                    Asset.business_service.ilike(pattern),
+                )
+            )
+
+        base = (
+            select(Finding)
+            .join(Finding.vulnerability)
+            .outerjoin(Finding.component)
+            .outerjoin(Finding.asset)
+            .where(*filters)
+        )
+        total = self.session.scalar(select(func.count()).select_from(base.subquery())) or 0
+        statement = (
+            base.options(
+                selectinload(Finding.vulnerability),
+                selectinload(Finding.component),
+                selectinload(Finding.asset),
+                selectinload(Finding.occurrences),
+                selectinload(Finding.attack_contexts),
+            )
+            .order_by(*_finding_order_by(sort))
+            .limit(limit)
+            .offset(offset)
+        )
+        return list(self.session.scalars(statement)), int(total)
 
     def list_analysis_runs(self, project_id: str) -> list[AnalysisRun]:
         statement = (
@@ -439,9 +523,42 @@ class WorkbenchRepository(
                 selectinload(Finding.asset),
                 selectinload(Finding.occurrences),
                 selectinload(Finding.attack_contexts),
+                selectinload(Finding.status_history),
             )
         )
         return self.session.scalar(statement)
+
+    def update_finding_status(
+        self,
+        finding: Finding,
+        *,
+        status: str,
+        actor: str | None = None,
+        reason: str | None = None,
+    ) -> FindingStatusHistory:
+        previous_status = finding.status
+        finding.status = status
+        finding.last_seen_at = utc_now()
+        history = FindingStatusHistory(
+            project_id=finding.project_id,
+            finding_id=finding.id,
+            previous_status=previous_status,
+            new_status=status,
+            actor=actor,
+            reason=reason,
+        )
+        finding.status_history.append(history)
+        self.session.add(history)
+        self.session.flush()
+        return history
+
+    def list_finding_status_history(self, finding_id: str) -> list[FindingStatusHistory]:
+        statement = (
+            select(FindingStatusHistory)
+            .where(FindingStatusHistory.finding_id == finding_id)
+            .order_by(FindingStatusHistory.created_at)
+        )
+        return list(self.session.scalars(statement))
 
     def list_finding_attack_contexts(self, finding_id: str) -> list[FindingAttackContext]:
         statement = (
@@ -468,6 +585,57 @@ class WorkbenchRepository(
         )
         return list(self.session.scalars(statement))
 
+    def list_project_attack_review_contexts(
+        self,
+        project_id: str,
+        *,
+        review_status: str | None = None,
+        source: str | None = None,
+        mapped: bool | None = None,
+        priority: str | None = None,
+        technique_id: str | None = None,
+        limit: int = 100,
+    ) -> list[FindingAttackContext]:
+        statement = (
+            select(FindingAttackContext)
+            .join(Finding, Finding.id == FindingAttackContext.finding_id)
+            .where(Finding.project_id == project_id)
+            .options(selectinload(FindingAttackContext.finding))
+        )
+        if review_status is not None:
+            statement = statement.where(FindingAttackContext.review_status == review_status)
+        if source is not None:
+            statement = statement.where(FindingAttackContext.source == source)
+        if mapped is not None:
+            statement = statement.where(FindingAttackContext.mapped == mapped)
+        if priority is not None:
+            statement = statement.where(Finding.priority == priority)
+        statement = statement.order_by(
+            FindingAttackContext.review_status,
+            FindingAttackContext.threat_context_rank,
+            FindingAttackContext.cve_id,
+        )
+        contexts = list(self.session.scalars(statement))
+        if technique_id is not None:
+            contexts = [
+                context
+                for context in contexts
+                if _attack_context_has_technique(context, technique_id)
+            ]
+        return contexts[:limit]
+
+    def update_finding_attack_review_status(
+        self,
+        finding_id: str,
+        *,
+        review_status: str,
+    ) -> list[FindingAttackContext]:
+        contexts = self.list_finding_attack_contexts(finding_id)
+        for context in contexts:
+            context.review_status = review_status
+        self.session.flush()
+        return contexts
+
     def upsert_detection_control(
         self,
         *,
@@ -481,8 +649,12 @@ class WorkbenchRepository(
         environment: str | None = None,
         owner: str | None = None,
         evidence_ref: str | None = None,
+        evidence_refs_json: list[str] | None = None,
+        review_status: str = "unreviewed",
         notes: str | None = None,
         last_verified_at: str | None = None,
+        history_actor: str | None = None,
+        history_reason: str | None = None,
     ) -> DetectionControl:
         statement = select(DetectionControl).where(
             DetectionControl.project_id == project_id,
@@ -501,6 +673,11 @@ class WorkbenchRepository(
                 control_id=control_id,
             )
             self.session.add(control)
+            previous: dict[str, Any] = {}
+            event_type = "created"
+        else:
+            previous = _detection_control_history_snapshot(control)
+            event_type = "updated"
         control.name = name
         control.technique_name = technique_name
         control.source_type = source_type
@@ -508,15 +685,88 @@ class WorkbenchRepository(
         control.environment = environment
         control.owner = owner
         control.evidence_ref = evidence_ref
+        control.evidence_refs_json = evidence_refs_json or []
+        control.review_status = review_status
         control.notes = notes
         control.last_verified_at = last_verified_at
         self.session.flush()
+        current = _detection_control_history_snapshot(control)
+        if previous != current:
+            self.add_detection_control_history(
+                control=control,
+                event_type=event_type,
+                actor=history_actor,
+                reason=history_reason,
+                previous_json=previous,
+                current_json=current,
+            )
+        return control
+
+    def update_detection_control(
+        self,
+        control: DetectionControl,
+        *,
+        name: str,
+        technique_id: str,
+        control_id: str | None = None,
+        technique_name: str | None = None,
+        source_type: str | None = None,
+        coverage_level: str = "unknown",
+        environment: str | None = None,
+        owner: str | None = None,
+        evidence_ref: str | None = None,
+        evidence_refs_json: list[str] | None = None,
+        review_status: str = "unreviewed",
+        notes: str | None = None,
+        last_verified_at: str | None = None,
+        history_actor: str | None = None,
+        history_reason: str | None = None,
+    ) -> DetectionControl:
+        existing = self.session.scalar(
+            select(DetectionControl).where(
+                DetectionControl.project_id == control.project_id,
+                DetectionControl.technique_id == technique_id,
+                DetectionControl.control_id == control_id,
+                DetectionControl.id != control.id,
+            )
+        )
+        if existing is not None:
+            raise ValueError("Detection control identity already exists.")
+        previous = _detection_control_history_snapshot(control)
+        control.name = name
+        control.technique_id = technique_id
+        control.control_id = control_id
+        control.technique_name = technique_name
+        control.source_type = source_type
+        control.coverage_level = coverage_level
+        control.environment = environment
+        control.owner = owner
+        control.evidence_ref = evidence_ref
+        control.evidence_refs_json = evidence_refs_json or []
+        control.review_status = review_status
+        control.notes = notes
+        control.last_verified_at = last_verified_at
+        self.session.flush()
+        current = _detection_control_history_snapshot(control)
+        if previous != current:
+            self.add_detection_control_history(
+                control=control,
+                event_type="updated",
+                actor=history_actor,
+                reason=history_reason,
+                previous_json=previous,
+                current_json=current,
+            )
         return control
 
     def list_project_detection_controls(self, project_id: str) -> list[DetectionControl]:
         statement = (
             select(DetectionControl)
             .where(DetectionControl.project_id == project_id)
+            .options(
+                selectinload(DetectionControl.history),
+                selectinload(DetectionControl.attachments),
+            )
             .order_by(DetectionControl.technique_id, DetectionControl.name)
         )
         return list(self.session.scalars(statement))
@@ -530,9 +780,104 @@ class WorkbenchRepository(
                 DetectionControl.project_id == project_id,
                 DetectionControl.technique_id == technique_id,
             )
+            .options(
+                selectinload(DetectionControl.history),
+                selectinload(DetectionControl.attachments),
+            )
             .order_by(DetectionControl.coverage_level, DetectionControl.name)
         )
         return list(self.session.scalars(statement))
+
+    def get_detection_control(self, control_id: str) -> DetectionControl | None:
+        statement = (
+            select(DetectionControl)
+            .where(DetectionControl.id == control_id)
+            .options(
+                selectinload(DetectionControl.history),
+                selectinload(DetectionControl.attachments),
+            )
+        )
+        return self.session.scalar(statement)
+
+    def delete_detection_control(self, control: DetectionControl) -> None:
+        self.session.delete(control)
+        self.session.flush()
+
+    def add_detection_control_history(
+        self,
+        *,
+        control: DetectionControl,
+        event_type: str,
+        actor: str | None = None,
+        reason: str | None = None,
+        previous_json: dict[str, Any] | None = None,
+        current_json: dict[str, Any] | None = None,
+    ) -> DetectionControlHistory:
+        history = DetectionControlHistory(
+            project_id=control.project_id,
+            control_id=control.id,
+            event_type=event_type,
+            actor=actor,
+            reason=reason,
+            previous_json=previous_json or {},
+            current_json=current_json or _detection_control_history_snapshot(control),
+        )
+        self.session.add(history)
+        self.session.flush()
+        if "history" in control.__dict__:
+            control.history.append(history)
+        return history
+
+    def list_detection_control_history(self, control_id: str) -> list[DetectionControlHistory]:
+        statement = (
+            select(DetectionControlHistory)
+            .where(DetectionControlHistory.control_id == control_id)
+            .order_by(DetectionControlHistory.created_at.desc())
+        )
+        return list(self.session.scalars(statement))
+
+    def add_detection_control_attachment(
+        self,
+        *,
+        control_id: str,
+        project_id: str,
+        filename: str,
+        path: str,
+        sha256: str,
+        size_bytes: int,
+        content_type: str | None = None,
+    ) -> DetectionControlAttachment:
+        attachment = DetectionControlAttachment(
+            control_id=control_id,
+            project_id=project_id,
+            filename=filename,
+            content_type=content_type,
+            path=path,
+            sha256=sha256,
+            size_bytes=size_bytes,
+        )
+        self.session.add(attachment)
+        self.session.flush()
+        return attachment
+
+    def get_detection_control_attachment(
+        self, attachment_id: str
+    ) -> DetectionControlAttachment | None:
+        return self.session.get(DetectionControlAttachment, attachment_id)
+
+    def list_detection_control_attachments(
+        self, control_id: str
+    ) -> list[DetectionControlAttachment]:
+        statement = (
+            select(DetectionControlAttachment)
+            .where(DetectionControlAttachment.control_id == control_id)
+            .order_by(DetectionControlAttachment.created_at.desc())
+        )
+        return list(self.session.scalars(statement))
+
+    def delete_detection_control_attachment(self, attachment: DetectionControlAttachment) -> None:
+        self.session.delete(attachment)
+        self.session.flush()
 
     def create_api_token(self, *, name: str, token_hash: str) -> ApiToken:
         token = ApiToken(name=name, token_hash=token_hash)
@@ -554,6 +899,18 @@ class WorkbenchRepository(
     def mark_api_token_used(self, token: ApiToken) -> None:
         token.last_used_at = utc_now()
         self.session.flush()
+
+    def list_api_tokens(self) -> list[ApiToken]:
+        statement = select(ApiToken).order_by(ApiToken.created_at.desc(), ApiToken.name)
+        return list(self.session.scalars(statement))
+
+    def get_api_token(self, token_id: str) -> ApiToken | None:
+        return self.session.get(ApiToken, token_id)
+
+    def revoke_api_token(self, token: ApiToken) -> ApiToken:
+        token.revoked_at = utc_now()
+        self.session.flush()
+        return token
 
     def github_issue_export_exists(self, project_id: str, duplicate_key: str) -> bool:
         statement = select(GitHubIssueExport.id).where(
@@ -609,8 +966,283 @@ class WorkbenchRepository(
         )
         return self.session.scalar(statement)
 
+    def get_project_config_snapshot(self, snapshot_id: str) -> ProjectConfigSnapshot | None:
+        return self.session.get(ProjectConfigSnapshot, snapshot_id)
+
+    def list_project_config_snapshots(
+        self,
+        project_id: str,
+        *,
+        limit: int = 50,
+    ) -> list[ProjectConfigSnapshot]:
+        statement = (
+            select(ProjectConfigSnapshot)
+            .where(ProjectConfigSnapshot.project_id == project_id)
+            .order_by(ProjectConfigSnapshot.created_at.desc())
+            .limit(limit)
+        )
+        return list(self.session.scalars(statement))
+
+    def create_audit_event(
+        self,
+        *,
+        event_type: str,
+        project_id: str | None = None,
+        target_type: str | None = None,
+        target_id: str | None = None,
+        actor: str | None = None,
+        message: str | None = None,
+        metadata_json: dict[str, Any] | None = None,
+    ) -> AuditEvent:
+        event = AuditEvent(
+            project_id=project_id,
+            event_type=event_type,
+            target_type=target_type,
+            target_id=target_id,
+            actor=actor,
+            message=message,
+            metadata_json=metadata_json or {},
+        )
+        self.session.add(event)
+        self.session.flush()
+        return event
+
+    def list_project_audit_events(self, project_id: str, *, limit: int = 100) -> list[AuditEvent]:
+        statement = (
+            select(AuditEvent)
+            .where(AuditEvent.project_id == project_id)
+            .order_by(AuditEvent.created_at.desc())
+            .limit(limit)
+        )
+        return list(self.session.scalars(statement))
+
+    def enqueue_workbench_job(
+        self,
+        *,
+        kind: str,
+        project_id: str | None = None,
+        target_type: str | None = None,
+        target_id: str | None = None,
+        payload_json: dict[str, Any] | None = None,
+        idempotency_key: str | None = None,
+        priority: int = 100,
+        max_attempts: int = 3,
+    ) -> WorkbenchJob:
+        if idempotency_key:
+            existing = self.session.scalar(
+                select(WorkbenchJob).where(WorkbenchJob.idempotency_key == idempotency_key)
+            )
+            if existing is not None:
+                return existing
+        job = WorkbenchJob(
+            kind=kind,
+            project_id=project_id,
+            target_type=target_type,
+            target_id=target_id,
+            payload_json=payload_json or {},
+            idempotency_key=idempotency_key,
+            priority=priority,
+            max_attempts=max_attempts,
+            logs_json=[],
+            result_json={},
+        )
+        self.session.add(job)
+        self.session.flush()
+        return job
+
+    def get_workbench_job(self, job_id: str) -> WorkbenchJob | None:
+        return self.session.get(WorkbenchJob, job_id)
+
+    def list_workbench_jobs(
+        self,
+        *,
+        project_id: str | None = None,
+        status: str | None = None,
+        kind: str | None = None,
+        limit: int = 100,
+    ) -> list[WorkbenchJob]:
+        statement = select(WorkbenchJob)
+        if project_id is not None:
+            statement = statement.where(WorkbenchJob.project_id == project_id)
+        if status is not None:
+            statement = statement.where(WorkbenchJob.status == status)
+        if kind is not None:
+            statement = statement.where(WorkbenchJob.kind == kind)
+        statement = statement.order_by(WorkbenchJob.created_at.desc()).limit(limit)
+        return list(self.session.scalars(statement))
+
+    def start_workbench_job(self, job: WorkbenchJob, *, worker_id: str = "sync") -> WorkbenchJob:
+        job.status = "running"
+        job.attempts += 1
+        job.started_at = utc_now()
+        job.heartbeat_at = job.started_at
+        job.lease_owner = worker_id
+        job.error_message = None
+        job.logs_json = [*_job_logs(job), _job_log_entry("started", progress=job.progress)]
+        self.session.flush()
+        return job
+
+    def update_workbench_job_progress(
+        self,
+        job: WorkbenchJob,
+        *,
+        progress: int,
+        message: str | None = None,
+    ) -> WorkbenchJob:
+        job.progress = max(0, min(100, progress))
+        job.heartbeat_at = utc_now()
+        logs = _job_logs(job)
+        if message:
+            logs.append(_job_log_entry(message, progress=job.progress))
+        job.logs_json = logs
+        self.session.flush()
+        return job
+
+    def complete_workbench_job(
+        self,
+        job: WorkbenchJob,
+        *,
+        result_json: dict[str, Any] | None = None,
+        message: str = "completed",
+    ) -> WorkbenchJob:
+        job.status = "completed"
+        job.progress = 100
+        job.result_json = result_json or {}
+        job.finished_at = utc_now()
+        job.heartbeat_at = job.finished_at
+        job.lease_owner = None
+        job.lease_expires_at = None
+        job.logs_json = [*_job_logs(job), _job_log_entry(message, progress=100)]
+        self.session.flush()
+        return job
+
+    def fail_workbench_job(
+        self,
+        job: WorkbenchJob,
+        *,
+        error_message: str,
+        retryable: bool = True,
+    ) -> WorkbenchJob:
+        job.status = "queued" if retryable and job.attempts < job.max_attempts else "failed"
+        job.error_message = error_message
+        job.finished_at = utc_now() if job.status == "failed" else None
+        job.heartbeat_at = utc_now()
+        job.lease_owner = None
+        job.lease_expires_at = None
+        job.logs_json = [*_job_logs(job), _job_log_entry(error_message, progress=job.progress)]
+        self.session.flush()
+        return job
+
+    def retry_workbench_job(self, job: WorkbenchJob) -> WorkbenchJob:
+        if job.status not in {"failed", "completed"}:
+            return job
+        job.status = "queued"
+        job.progress = 0
+        job.error_message = None
+        job.finished_at = None
+        job.queued_at = utc_now()
+        job.logs_json = [*_job_logs(job), _job_log_entry("retry queued", progress=0)]
+        self.session.flush()
+        return job
+
+    def get_project_artifact_retention(self, project_id: str) -> ProjectArtifactRetention | None:
+        return self.session.scalar(
+            select(ProjectArtifactRetention).where(
+                ProjectArtifactRetention.project_id == project_id
+            )
+        )
+
+    def upsert_project_artifact_retention(
+        self,
+        *,
+        project_id: str,
+        report_retention_days: int | None = None,
+        evidence_retention_days: int | None = None,
+        max_disk_usage_mb: int | None = None,
+    ) -> ProjectArtifactRetention:
+        retention = self.get_project_artifact_retention(project_id)
+        if retention is None:
+            retention = ProjectArtifactRetention(project_id=project_id)
+            self.session.add(retention)
+        retention.report_retention_days = report_retention_days
+        retention.evidence_retention_days = evidence_retention_days
+        retention.max_disk_usage_mb = max_disk_usage_mb
+        self.session.flush()
+        return retention
+
+    def list_audit_events(
+        self,
+        *,
+        project_id: str | None = None,
+        limit: int = 100,
+    ) -> list[AuditEvent]:
+        statement = select(AuditEvent)
+        if project_id is not None:
+            statement = statement.where(AuditEvent.project_id == project_id)
+        statement = statement.order_by(AuditEvent.created_at.desc()).limit(limit)
+        return list(self.session.scalars(statement))
+
     def _required(self, model: type[T], primary_key: str) -> T:
         instance = self.session.get(model, primary_key)
         if instance is None:
             raise LookupError(f"{model.__name__} not found: {primary_key}")
         return instance
+
+
+def _finding_order_by(sort: str) -> tuple[Any, ...]:
+    if sort == "priority":
+        return (Finding.priority_rank, Finding.operational_rank, Finding.cve_id)
+    if sort == "epss":
+        return (
+            Finding.epss.desc().nullslast(),
+            Finding.priority_rank,
+            Finding.operational_rank,
+            Finding.cve_id,
+        )
+    if sort == "cvss":
+        return (
+            Finding.cvss_base_score.desc().nullslast(),
+            Finding.priority_rank,
+            Finding.operational_rank,
+            Finding.cve_id,
+        )
+    if sort == "cve":
+        return (Finding.cve_id, Finding.operational_rank)
+    if sort == "status":
+        return (Finding.status, Finding.operational_rank, Finding.cve_id)
+    return (Finding.operational_rank, Finding.priority_rank, Finding.cve_id)
+
+
+def _detection_control_history_snapshot(control: DetectionControl) -> dict[str, Any]:
+    return {
+        "control_id": control.control_id,
+        "name": control.name,
+        "technique_id": control.technique_id,
+        "technique_name": control.technique_name,
+        "source_type": control.source_type,
+        "coverage_level": control.coverage_level,
+        "environment": control.environment,
+        "owner": control.owner,
+        "evidence_ref": control.evidence_ref,
+        "evidence_refs": list(control.evidence_refs_json or []),
+        "review_status": control.review_status,
+        "notes": control.notes,
+        "last_verified_at": control.last_verified_at,
+    }
+
+
+def _attack_context_has_technique(context: FindingAttackContext, technique_id: str) -> bool:
+    for technique in context.techniques_json or []:
+        if isinstance(technique, dict) and technique.get("attack_object_id") == technique_id:
+            return True
+        if isinstance(technique, dict) and technique.get("technique_id") == technique_id:
+            return True
+    return False
+
+
+def _job_logs(job: WorkbenchJob) -> list[dict[str, Any]]:
+    return list(job.logs_json) if isinstance(job.logs_json, list) else []
+
+
+def _job_log_entry(message: str, *, progress: int) -> dict[str, Any]:
+    return {"created_at": utc_now().isoformat(), "message": message, "progress": progress}

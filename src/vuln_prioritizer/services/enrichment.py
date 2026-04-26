@@ -14,6 +14,7 @@ from vuln_prioritizer.config import (
     DEFAULT_NVD_API_KEY_ENV,
 )
 from vuln_prioritizer.models import (
+    DefensiveContext,
     EnrichmentResult,
     EpssData,
     KevData,
@@ -96,12 +97,20 @@ class EnrichmentService:
             technique_metadata_file=attack_technique_metadata_file,
             offline_file=offline_attack_file,
         )
+        defensive_contexts = _snapshot_defensive_contexts(
+            provider_snapshot=provider_snapshot,
+            cve_ids=cve_ids,
+        )
 
         return EnrichmentResult(
             nvd=nvd_results,
             epss=epss_results,
             kev=kev_results,
             attack=attack_results,
+            defensive_contexts=defensive_contexts,
+            defensive_context_sources=sorted(
+                {context.source for items in defensive_contexts.values() for context in items}
+            ),
             attack_source=attack_metadata["source"] or "none",
             attack_mapping_file=attack_metadata["mapping_file"],
             attack_technique_metadata_file=attack_metadata["technique_metadata_file"],
@@ -138,7 +147,17 @@ class EnrichmentService:
             provider_snapshot_sources=(
                 list(provider_snapshot.metadata.selected_sources) if provider_snapshot else []
             ),
+            provider_cache_timestamps=self._provider_cache_timestamps(),
         )
+
+    def _provider_cache_timestamps(self) -> dict[str, str | None]:
+        if self.cache is None:
+            return {}
+        return {
+            "nvd": self.cache.latest_cached_at("nvd"),
+            "epss": self.cache.latest_cached_at("epss"),
+            "kev": self.cache.latest_cached_at("kev"),
+        }
 
     def _resolve_nvd_results(
         self,
@@ -262,6 +281,21 @@ class EnrichmentService:
                 content_hits=sum(1 for item in snapshot_results.values() if item.in_kev),
             )
         return _merge_provider_results(cve_ids, snapshot_results, live_results, KevData), warnings
+
+
+def _snapshot_defensive_contexts(
+    *,
+    provider_snapshot: ProviderSnapshotReport | None,
+    cve_ids: list[str],
+) -> dict[str, list[DefensiveContext]]:
+    if provider_snapshot is None:
+        return {}
+    indexed = {item.cve_id: item for item in provider_snapshot.items}
+    return {
+        cve_id: list(item.defensive_contexts)
+        for cve_id in cve_ids
+        if (item := indexed.get(cve_id)) is not None and item.defensive_contexts
+    }
 
 
 def _merge_provider_results(

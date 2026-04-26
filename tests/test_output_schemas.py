@@ -278,6 +278,30 @@ def test_input_validation_json_matches_published_schema(tmp_path: Path) -> None:
     jsonschema.validate(payload, _load_schema("input-validation-report.schema.json"))
 
 
+def test_input_inspect_json_matches_published_schema(tmp_path: Path) -> None:
+    input_file = tmp_path / "cves.txt"
+    output_file = tmp_path / "input-inspect.json"
+    input_file.write_text("CVE-2021-44228\n", encoding="utf-8")
+
+    result = runner.invoke(
+        app,
+        [
+            "input",
+            "inspect",
+            "--input",
+            str(input_file),
+            "--output",
+            str(output_file),
+            "--format",
+            "json",
+        ],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(output_file.read_text(encoding="utf-8"))
+    jsonschema.validate(payload, _load_schema("input-inspect-report.schema.json"))
+
+
 def test_data_status_json_matches_published_schema(tmp_path: Path) -> None:
     output_file = tmp_path / "data-status.json"
 

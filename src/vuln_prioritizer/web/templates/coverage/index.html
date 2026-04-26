@@ -48,6 +48,55 @@
 <section class="section">
   <div class="section-head row">
     <div>
+      <p class="eyebrow">ATT&amp;CK review</p>
+      <h2>Mapping review queue</h2>
+    </div>
+    <span class="muted">{{ review_queue|length }} findings</span>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>CVE</th>
+          <th>Priority</th>
+          <th>Source</th>
+          <th>Techniques</th>
+          <th>Review</th>
+          <th>Update</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in review_queue %}
+          <tr>
+            <td><a href="/findings/{{ item.finding_id }}">{{ item.cve_id }}</a></td>
+            <td><span class="badge {{ item.priority|lower }}">{{ item.priority }}</span></td>
+            <td>{{ item.source }}</td>
+            <td>{{ item.technique_ids|join(", ") if item.technique_ids else "Unmapped" }}</td>
+            <td>{{ item.review_status }}</td>
+            <td>
+              <form class="inline-form" method="post" action="/web/findings/{{ item.finding_id }}/attack-review">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <input type="hidden" name="actor" value="web">
+                <select name="review_status">
+                  {% for status in ["unreviewed", "needs_review", "source_reviewed", "reviewed", "rejected", "not_applicable"] %}
+                    <option value="{{ status }}" {% if item.review_status == status %}selected{% endif %}>{{ status }}</option>
+                  {% endfor %}
+                </select>
+                <button class="button secondary" type="submit">Save</button>
+              </form>
+            </td>
+          </tr>
+        {% else %}
+          <tr><td colspan="6" class="empty">No ATT&amp;CK context rows available for review.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="section">
+  <div class="section-head row">
+    <div>
       <p class="eyebrow">Coverage gaps</p>
       <h2>Mapped techniques needing review</h2>
     </div>
@@ -98,6 +147,7 @@
           <th>Control</th>
           <th>Technique</th>
           <th>Coverage</th>
+          <th>Review</th>
           <th>Environment</th>
           <th>Owner</th>
           <th>Evidence</th>
@@ -109,12 +159,13 @@
             <td>{{ control.name }}</td>
             <td>{{ control.technique_id }}</td>
             <td><span class="badge {{ control.coverage_level }}">{{ control.coverage_level }}</span></td>
+            <td>{{ control.review_status }}</td>
             <td>{{ control.environment or "N.A." }}</td>
             <td>{{ control.owner or "Unassigned" }}</td>
-            <td>{{ control.evidence_ref or "N.A." }}</td>
+            <td>{{ control.evidence_ref or "N.A." }}{% if control.attachment_count %} · {{ control.attachment_count }} file(s){% endif %}</td>
           </tr>
         {% else %}
-          <tr><td colspan="6" class="empty">No detection controls imported.</td></tr>
+          <tr><td colspan="7" class="empty">No detection controls imported.</td></tr>
         {% endfor %}
       </tbody>
     </table>

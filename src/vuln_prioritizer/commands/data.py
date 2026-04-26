@@ -60,6 +60,7 @@ from vuln_prioritizer.providers.epss import EpssProvider
 from vuln_prioritizer.providers.kev import KevProvider
 from vuln_prioritizer.providers.nvd import NvdProvider, has_nvd_content
 from vuln_prioritizer.reporter import write_output
+from vuln_prioritizer.services.defensive_context import load_defensive_context_file
 from vuln_prioritizer.utils import iso_utc_now
 
 ProviderCacheRecord = TypeVar("ProviderCacheRecord", NvdData, EpssData)
@@ -487,6 +488,9 @@ def data_export_provider_snapshot(
     ),
     cache_ttl_hours: int = typer.Option(DEFAULT_CACHE_TTL_HOURS, "--cache-ttl-hours", min=1),
     offline_kev_file: Path | None = typer.Option(None, "--offline-kev-file", dir_okay=False),
+    defensive_context_file: Path | None = typer.Option(
+        None, "--defensive-context-file", dir_okay=False
+    ),
     nvd_api_key_env: str = typer.Option(DEFAULT_NVD_API_KEY_ENV, "--nvd-api-key-env"),
     cache_only: bool = typer.Option(
         False,
@@ -514,6 +518,15 @@ def data_export_provider_snapshot(
     nvd_results: dict[str, NvdData] = {}
     epss_results: dict[str, EpssData] = {}
     kev_results: dict[str, KevData] = {}
+    try:
+        defensive_context_result = load_defensive_context_file(defensive_context_file)
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc), param_hint="--defensive-context-file") from exc
+    if defensive_context_result.sources:
+        for source_name in defensive_context_result.sources:
+            if source_name not in selected_sources:
+                selected_sources.append(source_name)
+        warnings.extend(defensive_context_result.warnings)
     if "nvd" in selected_sources:
         if cache_only:
             nvd_results, provider_warnings = load_cached_provider_records(
@@ -578,6 +591,7 @@ def data_export_provider_snapshot(
                 nvd=nvd_results.get(cve_id) if "nvd" in selected_sources else None,
                 epss=epss_results.get(cve_id) if "epss" in selected_sources else None,
                 kev=kev_results.get(cve_id) if "kev" in selected_sources else None,
+                defensive_contexts=defensive_context_result.contexts.get(cve_id, []),
             )
             for cve_id in cve_ids
         ],
