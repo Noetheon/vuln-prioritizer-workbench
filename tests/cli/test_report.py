@@ -394,8 +394,7 @@ def test_cli_report_validate_sarif_rejects_json_array(runner, tmp_path: Path) ->
     )
 
     assert result.exit_code == 2
-    assert "must contain a JSON" in result.stdout
-    assert "object." in result.stdout
+    assert "must contain a JSON object." in " ".join(result.stdout.split())
 
 
 def test_cli_report_validate_sarif_rejects_bad_json(runner, tmp_path: Path) -> None:
