@@ -10,7 +10,7 @@ from typing import Any
 from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
-from vuln_prioritizer.cli_support.common import (
+from vuln_prioritizer.cli_options import (
     AttackSource,
     InputFormat,
     OutputFormat,

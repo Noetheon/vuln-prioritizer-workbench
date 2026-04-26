@@ -6,6 +6,7 @@ import csv
 import re
 from pathlib import Path
 
+from vuln_prioritizer.attack_enrichment import AttackEnrichmentService
 from vuln_prioritizer.attack_sources import (
     ATTACK_SOURCE_CTID_JSON,
     ATTACK_SOURCE_CTID_MAPPINGS_EXPLORER,
@@ -16,7 +17,6 @@ from vuln_prioritizer.attack_sources import (
 from vuln_prioritizer.models import AttackData, AttackTechnique
 from vuln_prioritizer.providers.attack_metadata import AttackMetadataProvider
 from vuln_prioritizer.providers.ctid_mappings import CtidMappingsProvider
-from vuln_prioritizer.services.attack_enrichment import AttackEnrichmentService
 from vuln_prioritizer.utils import normalize_cve_id
 
 SEPARATOR_RE = re.compile(r"[;|]")

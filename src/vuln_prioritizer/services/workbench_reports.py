@@ -12,10 +12,10 @@ from uuid import uuid4
 
 from sqlalchemy.orm import Session
 
-from vuln_prioritizer.cli_support.report_io import verify_evidence_bundle, write_evidence_bundle
 from vuln_prioritizer.db.models import EvidenceBundle, Report
 from vuln_prioritizer.db.repositories import WorkbenchRepository
 from vuln_prioritizer.reporter import generate_html_report
+from vuln_prioritizer.reporting_evidence import verify_evidence_bundle, write_evidence_bundle
 from vuln_prioritizer.reporting_payloads import generate_summary_markdown
 from vuln_prioritizer.workbench_config import WorkbenchSettings
 

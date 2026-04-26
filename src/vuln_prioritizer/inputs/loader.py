@@ -16,9 +16,20 @@ from vuln_prioritizer.models import (
     ParsedInput,
     VexStatement,
 )
-from vuln_prioritizer.utils import normalize_cve_id
 
-from . import _cve_support, _occurrence_support, _vex_support, _xml_support
+from . import _occurrence_support, _vex_support, _xml_support
+from .parsers import (
+    parse_cve_list,
+    parse_cyclonedx_json,
+    parse_dependency_check_json,
+    parse_generic_occurrence_csv,
+    parse_github_alerts_json,
+    parse_grype_json,
+    parse_nessus_xml,
+    parse_openvas_xml,
+    parse_spdx_json,
+    parse_trivy_json,
+)
 from .sdk import InputParserDefinition, build_input_parser_registry
 
 GENERIC_OCCURRENCE_CVE_FIELDS = {"cve_id", "cve", "vulnerability_id"}
@@ -604,587 +615,6 @@ def load_vex_files(
     return (statements, diagnostics) if return_diagnostics else statements
 
 
-def _parse_cve_list(path: Path) -> ParsedInput:
-    suffix = path.suffix.lower()
-    if suffix not in {".txt", ".csv"}:
-        raise ValueError("Unsupported input format. Use .txt or .csv files.")
-
-    rows = _read_txt(path) if suffix == ".txt" else _read_csv(path)
-    warnings: list[str] = []
-    occurrences: list[InputOccurrence] = []
-
-    for line_number, raw_value in rows:
-        cve_id = normalize_cve_id(raw_value)
-        if cve_id is None:
-            warnings.append(f"Ignored invalid CVE identifier at line {line_number}: {raw_value!r}")
-            continue
-        occurrences.append(
-            InputOccurrence(
-                cve_id=cve_id,
-                source_format="cve-list",
-                source_record_id=f"line:{line_number}",
-            )
-        )
-
-    return ParsedInput(
-        input_format="cve-list",
-        total_rows=len(rows),
-        occurrences=occurrences,
-        warnings=warnings,
-    )
-
-
-def _parse_generic_occurrence_csv(path: Path) -> ParsedInput:
-    if path.suffix.lower() != ".csv":
-        raise ValueError("generic-occurrence-csv input must be a .csv file.")
-
-    warnings: list[str] = []
-    occurrences: list[InputOccurrence] = []
-    total_rows = 0
-    with path.open("r", encoding="utf-8", newline="") as handle:
-        reader = csv.DictReader(handle)
-        if not reader.fieldnames:
-            raise ValueError("generic-occurrence-csv is missing a header row.")
-        field_map = {field.strip().lower(): field for field in reader.fieldnames if field}
-        cve_field = _first_existing_field(field_map, "cve_id", "cve", "vulnerability_id")
-        if cve_field is None:
-            raise ValueError("generic-occurrence-csv must contain a cve_id or cve column.")
-
-        for row_number, row in enumerate(reader, start=2):
-            total_rows += 1
-            cve_id = normalize_cve_id(row.get(cve_field))
-            if cve_id is None:
-                warnings.append(
-                    f"Ignored invalid CVE identifier at line {row_number}: {row.get(cve_field)!r}"
-                )
-                continue
-            target_kind = _csv_value(row, field_map, "target_kind") or "generic"
-            target_ref = _csv_value(row, field_map, "target_ref", "target", "asset_ref")
-            occurrences.append(
-                InputOccurrence(
-                    cve_id=cve_id,
-                    source_format="generic-occurrence-csv",
-                    component_name=_csv_value(row, field_map, "component_name", "component"),
-                    component_version=_csv_value(
-                        row,
-                        field_map,
-                        "component_version",
-                        "version",
-                        "installed_version",
-                    ),
-                    purl=_csv_value(row, field_map, "purl"),
-                    package_type=_csv_value(row, field_map, "package_type", "ecosystem"),
-                    file_path=_csv_value(row, field_map, "file_path", "path"),
-                    dependency_path=_csv_value(row, field_map, "dependency_path"),
-                    fix_versions=_split_versions(
-                        _csv_value(row, field_map, "fix_versions", "fixed_versions", "fix_version")
-                    ),
-                    source_record_id=f"row:{row_number}",
-                    raw_severity=_csv_value(row, field_map, "severity", "raw_severity"),
-                    target_kind=target_kind.lower(),
-                    target_ref=target_ref,
-                    asset_id=_csv_value(row, field_map, "asset_id"),
-                    asset_criticality=_normalize_asset_criticality(
-                        _csv_value(row, field_map, "criticality", "asset_criticality"),
-                        warnings=warnings,
-                        row_number=row_number,
-                    ),
-                    asset_exposure=_normalize_asset_exposure(
-                        _csv_value(row, field_map, "exposure", "asset_exposure"),
-                        warnings=warnings,
-                        row_number=row_number,
-                    ),
-                    asset_environment=_normalize_asset_environment(
-                        _csv_value(row, field_map, "environment", "asset_environment"),
-                        warnings=warnings,
-                        row_number=row_number,
-                    ),
-                    asset_owner=_csv_value(row, field_map, "owner", "asset_owner"),
-                    asset_business_service=_csv_value(
-                        row,
-                        field_map,
-                        "business_service",
-                        "service",
-                        "asset_business_service",
-                    ),
-                )
-            )
-
-    return ParsedInput(
-        input_format="generic-occurrence-csv",
-        total_rows=total_rows,
-        occurrences=occurrences,
-        warnings=warnings,
-    )
-
-
-def _parse_trivy_json(path: Path) -> ParsedInput:
-    document = _load_json_object(path, "Trivy JSON")
-    warnings: list[str] = []
-    occurrences: list[InputOccurrence] = []
-    total_rows = 0
-
-    for result_index, result in enumerate(_dict_items(document.get("Results")), start=1):
-        target = result.get("Target")
-        package_type = result.get("Type")
-        for vuln_index, vulnerability in enumerate(
-            _dict_items(result.get("Vulnerabilities")),
-            start=1,
-        ):
-            total_rows += 1
-            cve_id = _cve_support.normalize_cve_or_warn(
-                vulnerability.get("VulnerabilityID"),
-                source_name="Trivy",
-                warnings=warnings,
-            )
-            if cve_id is None:
-                continue
-            fix_versions = _split_versions(vulnerability.get("FixedVersion"))
-            occurrences.append(
-                InputOccurrence(
-                    cve_id=cve_id,
-                    source_format="trivy-json",
-                    component_name=vulnerability.get("PkgName"),
-                    component_version=vulnerability.get("InstalledVersion"),
-                    purl=_dict_value(vulnerability.get("PkgIdentifier")).get("PURL"),
-                    package_type=package_type,
-                    file_path=vulnerability.get("PkgPath"),
-                    fix_versions=fix_versions,
-                    source_record_id=f"result:{result_index}:vuln:{vuln_index}",
-                    raw_severity=vulnerability.get("Severity"),
-                    target_kind="image",
-                    target_ref=target,
-                )
-            )
-
-    return ParsedInput(
-        input_format="trivy-json",
-        total_rows=total_rows,
-        occurrences=occurrences,
-        warnings=warnings,
-    )
-
-
-def _parse_grype_json(path: Path) -> ParsedInput:
-    document = _load_json_object(path, "Grype JSON")
-    warnings: list[str] = []
-    occurrences: list[InputOccurrence] = []
-    source = _dict_value(document.get("source"))
-    target = _dict_value(source.get("target"))
-    source_target = target.get("userInput") or target.get("name")
-    matches = _dict_items(document.get("matches"))
-
-    for index, match in enumerate(matches, start=1):
-        vulnerability = _dict_value(match.get("vulnerability"))
-        cve_id = _cve_support.normalize_cve_or_warn(
-            vulnerability.get("id"),
-            source_name="Grype",
-            warnings=warnings,
-        )
-        if cve_id is None:
-            continue
-        artifact = _dict_value(match.get("artifact"))
-        locations = _dict_items(artifact.get("locations"))
-        file_path = None
-        if locations:
-            file_path = locations[0].get("path") or locations[0].get("realPath")
-        occurrences.append(
-            InputOccurrence(
-                cve_id=cve_id,
-                source_format="grype-json",
-                component_name=artifact.get("name"),
-                component_version=artifact.get("version"),
-                purl=artifact.get("purl"),
-                package_type=artifact.get("type"),
-                file_path=file_path,
-                fix_versions=_as_string_list(_dict_value(match.get("fix")).get("versions")),
-                source_record_id=f"match:{index}",
-                raw_severity=vulnerability.get("severity"),
-                target_kind="image",
-                target_ref=source_target,
-            )
-        )
-
-    return ParsedInput(
-        input_format="grype-json",
-        total_rows=len(matches),
-        occurrences=occurrences,
-        warnings=warnings,
-    )
-
-
-def _parse_cyclonedx_json(path: Path) -> ParsedInput:
-    document = _load_json_object(path, "CycloneDX JSON")
-    warnings: list[str] = []
-    occurrences: list[InputOccurrence] = []
-    component_by_ref = {
-        component.get("bom-ref"): component
-        for component in _dict_items(document.get("components"))
-        if component.get("bom-ref")
-    }
-    target_ref = _dict_value(_dict_value(document.get("metadata")).get("component")).get("name")
-
-    for index, vulnerability in enumerate(_dict_items(document.get("vulnerabilities")), start=1):
-        cve_id = _cve_support.normalize_cve_or_warn(
-            vulnerability.get("id"),
-            source_name="CycloneDX",
-            warnings=warnings,
-        )
-        if cve_id is None:
-            continue
-        affects = _dict_items(vulnerability.get("affects"))
-        if not affects:
-            occurrences.append(
-                InputOccurrence(
-                    cve_id=cve_id,
-                    source_format="cyclonedx-json",
-                    source_record_id=f"vulnerability:{index}",
-                    raw_severity=_cyclonedx_rating(vulnerability),
-                    target_kind="repository",
-                    target_ref=target_ref,
-                )
-            )
-            continue
-        for affect_index, affect in enumerate(affects, start=1):
-            reference = affect.get("ref")
-            component = component_by_ref.get(reference, {})
-            occurrences.append(
-                InputOccurrence(
-                    cve_id=cve_id,
-                    source_format="cyclonedx-json",
-                    component_name=component.get("name"),
-                    component_version=component.get("version"),
-                    purl=component.get("purl"),
-                    package_type=component.get("type"),
-                    file_path=_dict_value(
-                        _dict_value(component.get("evidence")).get("identity")
-                    ).get("field"),
-                    source_record_id=f"vulnerability:{index}:affect:{affect_index}",
-                    raw_severity=_cyclonedx_rating(vulnerability),
-                    target_kind="repository",
-                    target_ref=target_ref,
-                )
-            )
-
-    return ParsedInput(
-        input_format="cyclonedx-json",
-        total_rows=len(_dict_items(document.get("vulnerabilities"))),
-        occurrences=occurrences,
-        warnings=warnings,
-    )
-
-
-def _parse_spdx_json(path: Path) -> ParsedInput:
-    document = _load_json_object(path, "SPDX JSON")
-    warnings: list[str] = []
-    occurrences: list[InputOccurrence] = []
-    packages = {
-        package.get("SPDXID"): package
-        for package in _dict_items(document.get("packages"))
-        if package.get("SPDXID")
-    }
-
-    for index, vulnerability in enumerate(_dict_items(document.get("vulnerabilities")), start=1):
-        cve_id = _cve_support.normalize_cve_or_warn(
-            vulnerability.get("id"),
-            source_name="SPDX",
-            warnings=warnings,
-        )
-        if cve_id is None:
-            continue
-        affects = _dict_items(vulnerability.get("affects"))
-        if not affects:
-            occurrences.append(
-                InputOccurrence(
-                    cve_id=cve_id,
-                    source_format="spdx-json",
-                    source_record_id=f"vulnerability:{index}",
-                    raw_severity=vulnerability.get("severity"),
-                    target_kind="repository",
-                    target_ref=document.get("name"),
-                )
-            )
-            continue
-        for affect_index, affect in enumerate(affects, start=1):
-            package = packages.get(affect.get("ref"), {})
-            occurrences.append(
-                InputOccurrence(
-                    cve_id=cve_id,
-                    source_format="spdx-json",
-                    component_name=package.get("name"),
-                    component_version=package.get("versionInfo"),
-                    purl=_spdx_purl(package),
-                    package_type=package.get("primaryPackagePurpose"),
-                    file_path=package.get("downloadLocation"),
-                    source_record_id=f"vulnerability:{index}:affect:{affect_index}",
-                    raw_severity=vulnerability.get("severity"),
-                    target_kind="repository",
-                    target_ref=document.get("name"),
-                )
-            )
-
-    return ParsedInput(
-        input_format="spdx-json",
-        total_rows=len(_dict_items(document.get("vulnerabilities"))),
-        occurrences=occurrences,
-        warnings=warnings,
-    )
-
-
-def _parse_dependency_check_json(path: Path) -> ParsedInput:
-    document = _load_json_object(path, "Dependency-Check JSON")
-    warnings: list[str] = []
-    occurrences: list[InputOccurrence] = []
-    dependencies = _dict_items(document.get("dependencies"))
-
-    for dep_index, dependency in enumerate(dependencies, start=1):
-        for vuln_index, vulnerability in enumerate(
-            _dict_items(dependency.get("vulnerabilities")),
-            start=1,
-        ):
-            cve_id = _cve_support.normalize_cve_or_warn(
-                vulnerability.get("name"),
-                source_name="Dependency-Check",
-                warnings=warnings,
-            )
-            if cve_id is None:
-                continue
-            occurrences.append(
-                InputOccurrence(
-                    cve_id=cve_id,
-                    source_format="dependency-check-json",
-                    component_name=dependency.get("fileName"),
-                    file_path=dependency.get("filePath"),
-                    source_record_id=f"dependency:{dep_index}:vuln:{vuln_index}",
-                    raw_severity=vulnerability.get("severity"),
-                    target_kind="filesystem",
-                    target_ref=_first_string_from_list(dependency.get("projectReferences")),
-                )
-            )
-
-    return ParsedInput(
-        input_format="dependency-check-json",
-        total_rows=len(dependencies),
-        occurrences=occurrences,
-        warnings=warnings,
-    )
-
-
-def _parse_github_alerts_json(path: Path) -> ParsedInput:
-    document = json.loads(path.read_text(encoding="utf-8"))
-    raw_alerts: list[object]
-    if isinstance(document, list):
-        raw_alerts = document
-    elif isinstance(document, dict):
-        if "alerts" in document:
-            alerts_value = document.get("alerts")
-            if not isinstance(alerts_value, list):
-                raise ValueError("GitHub alerts JSON `alerts` must be a list.")
-            raw_alerts = alerts_value
-        else:
-            raw_alerts = [document]
-    else:
-        raise ValueError("GitHub alerts JSON must be an alert object, an alerts object, or a list.")
-    warnings: list[str] = []
-    occurrences: list[InputOccurrence] = []
-    alerts = _dict_items(raw_alerts)
-    skipped_alert_items = len(raw_alerts) - len(alerts)
-    if skipped_alert_items:
-        warnings.append(
-            f"Ignored {skipped_alert_items} GitHub alert item(s) that were not JSON objects."
-        )
-
-    for index, alert in enumerate(alerts, start=1):
-        advisory = _dict_value(alert.get("security_advisory"))
-        identifiers = _dict_items(advisory.get("identifiers"))
-        cve_id = _cve_support.first_normalized_cve(
-            [advisory.get("cve_id"), *(identifier.get("value") for identifier in identifiers)]
-        )
-        if cve_id is None:
-            warnings.append(
-                "Ignored GitHub alert without a resolvable CVE identifier: "
-                f"{advisory.get('ghsa_id') or alert.get('number')!r}"
-            )
-            continue
-        dependency = _dict_value(alert.get("dependency"))
-        package = _dict_value(dependency.get("package"))
-        vulnerability = _dict_value(alert.get("security_vulnerability"))
-        first_patched_version = vulnerability.get("first_patched_version")
-        first_patched_version = (
-            first_patched_version if isinstance(first_patched_version, dict) else {}
-        )
-        occurrences.append(
-            InputOccurrence(
-                cve_id=cve_id,
-                source_format="github-alerts-json",
-                component_name=package.get("name"),
-                component_version=_first_present_string(
-                    dependency.get("package_version"),
-                    dependency.get("version"),
-                    package.get("version"),
-                    vulnerability.get("package_version"),
-                    vulnerability.get("version"),
-                ),
-                package_type=package.get("ecosystem"),
-                file_path=dependency.get("manifest_path"),
-                fix_versions=_as_string_list([first_patched_version.get("identifier")]),
-                source_record_id=f"alert:{index}",
-                raw_severity=advisory.get("severity"),
-                target_kind="repository",
-                target_ref=alert.get("html_url") or dependency.get("manifest_path"),
-            )
-        )
-
-    return ParsedInput(
-        input_format="github-alerts-json",
-        total_rows=len(raw_alerts),
-        occurrences=occurrences,
-        warnings=warnings,
-    )
-
-
-def _parse_nessus_xml(path: Path) -> ParsedInput:
-    root = _xml_support.load_xml_root(path)
-    warnings: list[str] = []
-    occurrences: list[InputOccurrence] = []
-    report_hosts = _xml_support.xml_descendants(root, "reporthost")
-
-    total_rows = 0
-    for host_index, report_host in enumerate(report_hosts, start=1):
-        target_ref = _xml_support.nessus_target_ref(report_host, host_index)
-        report_items = [
-            element
-            for element in report_host
-            if _xml_support.xml_local_name(element.tag) == "reportitem"
-        ]
-        for item_index, report_item in enumerate(report_items, start=1):
-            total_rows += 1
-            cve_ids = _xml_support.normalize_cve_tokens(
-                _xml_support.nessus_cve_tokens(report_item),
-                source_name="Nessus",
-                target_ref=target_ref,
-                warnings=warnings,
-            )
-            if not cve_ids:
-                continue
-            component_name = report_item.attrib.get("pluginName") or _xml_support.xml_child_text(
-                report_item,
-                "plugin_name",
-            )
-            service = _xml_support.nessus_service_label(report_item)
-            record_id = (
-                f"host:{host_index}:target:{target_ref}:item:{item_index}:"
-                f"plugin:{report_item.attrib.get('pluginID') or 'unknown'}"
-            )
-            for cve_id in cve_ids:
-                occurrences.append(
-                    InputOccurrence(
-                        cve_id=cve_id,
-                        source_format="nessus-xml",
-                        component_name=component_name,
-                        component_version=service,
-                        package_type="nessus-plugin",
-                        source_record_id=record_id,
-                        raw_severity=_xml_support.nessus_severity(report_item),
-                        target_kind="host",
-                        target_ref=target_ref,
-                    )
-                )
-
-    return ParsedInput(
-        input_format="nessus-xml",
-        total_rows=total_rows,
-        occurrences=occurrences,
-        warnings=warnings,
-    )
-
-
-def _parse_openvas_xml(path: Path) -> ParsedInput:
-    root = _xml_support.load_xml_root(path)
-    warnings: list[str] = []
-    occurrences: list[InputOccurrence] = []
-    results = _xml_support.xml_descendants(root, "result")
-
-    for result_index, result in enumerate(results, start=1):
-        target_ref = (
-            _xml_support.xml_child_text(result, "host")
-            or _xml_support.xml_child_text(result, "hostname")
-            or _xml_support.xml_child_text(result, "ip")
-            or f"openvas-target-{result_index}"
-        )
-        cve_ids = _xml_support.normalize_cve_tokens(
-            _xml_support.openvas_cve_tokens(result),
-            source_name="OpenVAS",
-            target_ref=target_ref,
-            warnings=warnings,
-        )
-        if not cve_ids:
-            continue
-        nvt = _xml_support.xml_child(result, "nvt")
-        component_name = _xml_support.xml_child_text(result, "name") or (
-            None if nvt is None else _xml_support.xml_child_text(nvt, "name")
-        )
-        for cve_id in cve_ids:
-            occurrences.append(
-                InputOccurrence(
-                    cve_id=cve_id,
-                    source_format="openvas-xml",
-                    component_name=component_name,
-                    package_type="openvas-nvt",
-                    source_record_id=f"result:{result_index}",
-                    raw_severity=_xml_support.xml_child_text(result, "severity")
-                    or _xml_support.xml_child_text(result, "threat"),
-                    target_kind="host",
-                    target_ref=target_ref,
-                )
-            )
-
-    return ParsedInput(
-        input_format="openvas-xml",
-        total_rows=len(results),
-        occurrences=occurrences,
-        warnings=warnings,
-    )
-
-
-def _read_txt(path: Path) -> list[tuple[int, str]]:
-    rows: list[tuple[int, str]] = []
-    with path.open("r", encoding="utf-8") as handle:
-        for line_number, line in enumerate(handle, start=1):
-            stripped = line.strip()
-            if not stripped:
-                continue
-            rows.append((line_number, stripped))
-    return rows
-
-
-def _read_csv(path: Path) -> list[tuple[int, str]]:
-    with path.open("r", encoding="utf-8", newline="") as handle:
-        reader = csv.DictReader(handle)
-        if not reader.fieldnames:
-            raise ValueError("CSV input is missing a header row.")
-        field_map = {field.strip().lower(): field for field in reader.fieldnames if field}
-        cve_field = field_map.get("cve") or field_map.get("cve_id")
-        if not cve_field:
-            raise ValueError("CSV input must contain a 'cve' or 'cve_id' column.")
-
-        rows: list[tuple[int, str]] = []
-        for row_number, row in enumerate(reader, start=2):
-            value = (row.get(cve_field) or "").strip()
-            if not value:
-                continue
-            rows.append((row_number, value))
-        return rows
-
-
-def _first_existing_field(field_map: dict[str, str], *candidates: str) -> str | None:
-    for candidate in candidates:
-        field = field_map.get(candidate)
-        if field is not None:
-            return field
-    return None
-
-
 def _looks_like_generic_occurrence_csv(path: Path) -> bool:
     try:
         with path.open("r", encoding="utf-8", newline="") as handle:
@@ -1197,14 +627,6 @@ def _looks_like_generic_occurrence_csv(path: Path) -> bool:
         normalized_header.intersection(GENERIC_OCCURRENCE_CVE_FIELDS)
         and normalized_header.intersection(GENERIC_OCCURRENCE_HINT_FIELDS)
     )
-
-
-def _csv_value(row: dict[str, str], field_map: dict[str, str], *candidates: str) -> str | None:
-    field = _first_existing_field(field_map, *candidates)
-    if field is None:
-        return None
-    value = (row.get(field) or "").strip()
-    return value or None
 
 
 def _normalize_asset_criticality(
@@ -1288,117 +710,46 @@ def _normalize_asset_environment(
     return resolved
 
 
-def _split_versions(value: object) -> list[str]:
-    if value is None:
-        return []
-    if isinstance(value, list):
-        return _as_string_list(value)
-    if not isinstance(value, str):
-        return []
-    separators = [",", "|"]
-    result = [value]
-    for separator in separators:
-        parts: list[str] = []
-        for item in result:
-            parts.extend(item.split(separator))
-        result = parts
-    return [item.strip() for item in result if item.strip()]
-
-
-def _first_present_string(*values: object) -> str | None:
-    for value in values:
-        if isinstance(value, str) and value.strip():
-            return value.strip()
-    return None
-
-
-def _as_string_list(value: object) -> list[str]:
-    if not isinstance(value, list):
-        return []
-    return [str(item).strip() for item in value if item is not None and str(item).strip()]
-
-
-def _load_json_object(path: Path, document_name: str) -> dict:
-    document = json.loads(path.read_text(encoding="utf-8"))
-    if not isinstance(document, dict):
-        raise ValueError(f"{document_name} must be a top-level JSON object.")
-    return document
-
-
-def _dict_value(value: object) -> dict:
-    return value if isinstance(value, dict) else {}
-
-
-def _dict_items(value: object) -> list[dict]:
-    if not isinstance(value, list):
-        return []
-    return [item for item in value if isinstance(item, dict)]
-
-
-def _first_string_from_list(value: object) -> str | None:
-    if not isinstance(value, list):
-        return None
-    for item in value:
-        if isinstance(item, str) and item.strip():
-            return item.strip()
-    return None
-
-
-def _cyclonedx_rating(vulnerability: dict) -> str | None:
-    ratings = _dict_items(vulnerability.get("ratings"))
-    if not ratings:
-        return None
-    severity = ratings[0].get("severity")
-    return str(severity) if severity else None
-
-
-def _spdx_purl(package: dict) -> str | None:
-    for reference in _dict_items(package.get("externalRefs")):
-        if reference.get("referenceType") == "purl":
-            return reference.get("referenceLocator")
-    return None
-
-
 INPUT_PARSER_DEFINITIONS: tuple[InputParserDefinition, ...] = (
     # CVE lists and occurrence CSVs.
     InputParserDefinition(
         name="cve-list",
-        parser=_parse_cve_list,
+        parser=parse_cve_list,
         file_suffixes=(".txt", ".csv"),
         media_types=("text/plain", "text/csv"),
         fixture_names=("sample_cves.txt",),
     ),
     InputParserDefinition(
         name="generic-occurrence-csv",
-        parser=_parse_generic_occurrence_csv,
+        parser=parse_generic_occurrence_csv,
         file_suffixes=(".csv",),
         media_types=("text/csv",),
     ),
     # Scanner and advisory exports.
     InputParserDefinition(
         name="trivy-json",
-        parser=_parse_trivy_json,
+        parser=parse_trivy_json,
         file_suffixes=(".json",),
         media_types=("application/json",),
         fixture_names=("trivy_report.json",),
     ),
     InputParserDefinition(
         name="grype-json",
-        parser=_parse_grype_json,
+        parser=parse_grype_json,
         file_suffixes=(".json",),
         media_types=("application/json",),
         fixture_names=("grype_report.json",),
     ),
     InputParserDefinition(
         name="dependency-check-json",
-        parser=_parse_dependency_check_json,
+        parser=parse_dependency_check_json,
         file_suffixes=(".json",),
         media_types=("application/json",),
         fixture_names=("dependency_check_report.json",),
     ),
     InputParserDefinition(
         name="github-alerts-json",
-        parser=_parse_github_alerts_json,
+        parser=parse_github_alerts_json,
         file_suffixes=(".json",),
         media_types=("application/json",),
         fixture_names=("github_alerts_export.json",),
@@ -1406,14 +757,14 @@ INPUT_PARSER_DEFINITIONS: tuple[InputParserDefinition, ...] = (
     # SBOM formats.
     InputParserDefinition(
         name="cyclonedx-json",
-        parser=_parse_cyclonedx_json,
+        parser=parse_cyclonedx_json,
         file_suffixes=(".json",),
         media_types=("application/json",),
         fixture_names=("cyclonedx_bom.json",),
     ),
     InputParserDefinition(
         name="spdx-json",
-        parser=_parse_spdx_json,
+        parser=parse_spdx_json,
         file_suffixes=(".json",),
         media_types=("application/json",),
         fixture_names=("spdx_bom.json",),
@@ -1421,14 +772,14 @@ INPUT_PARSER_DEFINITIONS: tuple[InputParserDefinition, ...] = (
     # XML scanner exports; parsing stays limited to safe local XML support.
     InputParserDefinition(
         name="nessus-xml",
-        parser=_parse_nessus_xml,
+        parser=parse_nessus_xml,
         file_suffixes=(".nessus", ".xml"),
         media_types=("application/xml", "text/xml"),
         fixture_names=("nessus_report.nessus",),
     ),
     InputParserDefinition(
         name="openvas-xml",
-        parser=_parse_openvas_xml,
+        parser=parse_openvas_xml,
         file_suffixes=(".xml",),
         media_types=("application/xml", "text/xml"),
         fixture_names=("openvas_report.xml",),
