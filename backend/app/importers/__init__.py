@@ -8,6 +8,7 @@ from app.importers.contracts import (
     InputPayload,
     NormalizedOccurrence,
 )
+from app.importers.cve_list import CVE_LIST_INPUT_TYPE, CveListImporter
 from app.importers.legacy import (
     DEFAULT_IMPORT_INPUT_TYPES,
     LegacyInputLoaderImporter,
@@ -22,7 +23,9 @@ from app.importers.registry import (
 
 __all__ = [
     "DuplicateInputTypeError",
+    "CVE_LIST_INPUT_TYPE",
     "DEFAULT_IMPORT_INPUT_TYPES",
+    "CveListImporter",
     "Importer",
     "ImporterError",
     "ImporterParseError",

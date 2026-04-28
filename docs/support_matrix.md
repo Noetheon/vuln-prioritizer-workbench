@@ -38,7 +38,7 @@
 
 | `--input-format` | Auto-detect | `analyze` / `compare` | `attack coverage` / `navigator-layer` | Normalized provenance currently preserved | Notes |
 | --- | --- | --- | --- | --- | --- |
-| `cve-list` | `.txt`, `.csv` | yes | yes | `cve_id`, source line/row | Historical compatibility path. |
+| `cve-list` | `.txt`, `.csv` | yes | yes | `cve_id`, optional `asset_ref`, `component`, `version`, source line/row | Plain TXT and minimal CSV CVE lists; see [CVE List Import](cve-list-import.md). |
 | `generic-occurrence-csv` | CSV with `cve`/`cve_id` plus optional component, version, PURL, fix, target, asset, owner, service, severity columns | yes | yes | component, version, purl, fix versions, target, asset context, owner, service | Additive manual-occurrence format for normalized backlog and spreadsheet exports. |
 | `trivy-json` | JSON with `Results` | yes | yes | component, version, purl, package type, path, fix versions, target image | Default target kind is `image`. |
 | `grype-json` | JSON with `matches` | yes | yes | component, version, purl, package type, path, fix versions, target image | Keeps the first artifact location as current path evidence. |
