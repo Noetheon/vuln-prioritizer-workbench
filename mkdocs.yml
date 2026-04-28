@@ -15,6 +15,7 @@ nav:
       - Template Replacement Strategy: architecture/template-replacement.md
       - Model Import Registry: architecture/model-imports.md
       - Core Workbench Schema: architecture/core-workbench-schema.md
+      - Analysis Run Provider Schema: architecture/analysis-run-provider-schema.md
   - Full Stack Template Migration: full_stack_fastapi_template_migration.md
   - VPW Template Execution Sequence: vpw_template_execution_sequence.md
   - Use Cases: use_cases.md

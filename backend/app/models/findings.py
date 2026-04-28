@@ -2,7 +2,7 @@
 
 import uuid
 from datetime import datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import JSON, Column, DateTime, Float, Index, Integer, String, UniqueConstraint
 from sqlmodel import Field, Relationship, SQLModel
@@ -12,6 +12,9 @@ from app.models.base import get_datetime_utc
 from app.models.enums import FindingPriority, FindingStatus
 from app.models.projects import Project
 from app.models.vulnerabilities import Vulnerability
+
+if TYPE_CHECKING:
+    from app.models.runs import FindingOccurrence
 
 
 class FindingBase(SQLModel):
@@ -118,3 +121,7 @@ class Finding(FindingBase, table=True):
     vulnerability: Vulnerability | None = Relationship(back_populates="findings")
     component: Component | None = Relationship(back_populates="findings")
     asset: Asset | None = Relationship(back_populates="findings")
+    occurrences: list["FindingOccurrence"] = Relationship(
+        back_populates="finding",
+        cascade_delete=True,
+    )

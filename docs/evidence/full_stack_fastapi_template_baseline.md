@@ -695,3 +695,70 @@ Residual risks:
   constraint and a domain `(project_id, vulnerability_id, component_id,
   asset_id)` constraint so future import services can provide stable dedup keys
   without weakening the initial domain contract.
+
+## VPW-009 Analysis Run Provider Models
+
+Branch:
+
+- `codex/vpw-009-run-provider-models`
+
+Scope:
+
+- Added SQLModel tables for `AnalysisRun`, `FindingOccurrence`, and
+  `ProviderSnapshot` under `backend/app/models/`.
+- Added stable `AnalysisRunStatus` string values: `pending`, `running`,
+  `completed`, `completed_with_errors`, `failed`, and `cancelled`.
+- Added Project to AnalysisRun, AnalysisRun to FindingOccurrence, Finding to
+  FindingOccurrence, and AnalysisRun to ProviderSnapshot relationships.
+- Added JSON fields for run errors/summaries, occurrence evidence, provider
+  source hashes, and provider source metadata.
+- Added Alembic revision `20260428_0003_analysis_run_provider_models.py`.
+- Documented DB constraints and provider snapshot example JSON in
+  `docs/architecture/analysis-run-provider-schema.md`.
+
+Commands run:
+
+```bash
+python3 -m pytest -q backend/tests/api/test_template_run_provider_models.py --no-cov
+python3 -m pytest -q backend/tests/api/test_template_core_workbench_models.py \
+  backend/tests/api/test_template_run_provider_models.py --no-cov
+python3 -m pytest -q backend/tests/api/test_template_model_metadata.py \
+  backend/tests/api/test_template_core_workbench_models.py \
+  backend/tests/api/test_template_run_provider_models.py --no-cov
+python3 -m ruff format --check backend/app \
+  backend/tests/api/test_template_run_provider_models.py
+python3 -m ruff check backend/app \
+  backend/tests/api/test_template_run_provider_models.py
+cd backend && python3 -m mypy app src
+make docs-check
+make check
+git diff --check
+# Temporary Alembic autogenerate dry-run:
+# copy backend/app/alembic to a temp dir, upgrade a fresh SQLite DB to head,
+# then run command.revision(..., autogenerate=True).
+```
+
+Results:
+
+- Focused run/provider model tests passed: 6 passed.
+- Core Workbench and run/provider model tests passed together: 11 passed.
+- Model metadata, core Workbench, and run/provider model tests passed: 14
+  passed.
+- Ruff format/check over `backend/app` and the new model tests passed.
+- Backend mypy over `app src` passed.
+- `make docs-check` passed.
+- `make check` passed: 561 passed, 2 skipped, total coverage 90.27%.
+- `git diff --check` passed.
+- Temporary Alembic autogenerate dry-run generated an empty migration body with
+  `pass` in both `upgrade()` and `downgrade()`, proving metadata and migrations
+  are aligned.
+
+Residual risks:
+
+- This slice intentionally does not add import execution, parser integration,
+  provider clients, provider update jobs, API routes, generated client changes,
+  reports, evidence bundles, ATT&CK context, or frontend screens. Those remain
+  separate VPW issues.
+- `FindingOccurrence` is the provenance source of truth for run-to-finding
+  linkage; this slice intentionally does not add a denormalized
+  `Finding.analysis_run_id`.
