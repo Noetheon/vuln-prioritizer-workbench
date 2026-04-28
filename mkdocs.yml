@@ -13,6 +13,7 @@ nav:
   - Architecture:
       - Overview: architecture/index.md
       - Template Replacement Strategy: architecture/template-replacement.md
+      - Model Import Registry: architecture/model-imports.md
   - Full Stack Template Migration: full_stack_fastapi_template_migration.md
   - VPW Template Execution Sequence: vpw_template_execution_sequence.md
   - Use Cases: use_cases.md

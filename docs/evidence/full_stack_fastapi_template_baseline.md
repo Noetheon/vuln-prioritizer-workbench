@@ -569,3 +569,61 @@ Residual risks:
 - The configured superuser remains a migration-shell bootstrap user. Full
   template user CRUD, password hashing/recovery, email flows, and production
   auth hardening remain later roadmap work.
+
+## FSFT-09 Model Modularization
+
+Branch:
+
+- `codex/fsft-09-model-modularization`
+
+Scope:
+
+- Replaced the monolithic `backend/app/models.py` file with a
+  `backend/app/models/` package.
+- Kept `app.models` as the stable public aggregator for API routes, tests,
+  database helpers, and future services.
+- Added `app.models.registry.import_table_models()` and made
+  `backend/app/alembic/env.py` call it before reading `SQLModel.metadata`.
+- Split model definitions into focused modules for auth DTOs, shared helpers,
+  users, projects, and Workbench status DTOs.
+- Added architecture documentation for the model import registry.
+
+Commands run:
+
+```bash
+python3 -m pytest -q backend/tests/api/test_template_backend_adapter.py \
+  backend/tests/api/test_template_auth_smoke.py \
+  backend/tests/api/test_template_projects.py --no-cov
+python3 -m pytest -q backend/tests/api/test_template_model_metadata.py \
+  backend/tests/api/test_template_projects.py --no-cov
+python3 -m ruff format --check backend/app
+python3 -m ruff check backend/app
+cd backend && python3 -m mypy app src
+make docs-check
+make check
+git diff --check
+# Temporary Alembic autogenerate dry-run:
+# copy backend/app/alembic to a temp dir, upgrade a fresh SQLite DB to head,
+# then run command.revision(..., autogenerate=True).
+```
+
+Results:
+
+- Existing template backend/auth/project/metadata tests passed: 21 passed.
+- New metadata plus project tests passed: 6 passed.
+- Ruff format/check over `backend/app` passed.
+- Backend mypy over `app src` passed.
+- `make docs-check` passed and built the MkDocs site successfully.
+- `make check` passed: 550 passed, 2 skipped, total coverage 90.27%.
+- `git diff --check` passed.
+- Temporary Alembic autogenerate dry-run generated an empty migration body with
+  `pass` in both `upgrade()` and `downgrade()`, proving metadata and the current
+  `user`/`project` migration are aligned.
+
+Residual risks:
+
+- This is a structural refactor only. It intentionally does not add new
+  Workbench tables beyond the existing `user` and `project` shell.
+- Future table-bearing modules must be added to
+  `app.models.registry.TABLE_MODEL_MODULES`; otherwise Alembic autogenerate can
+  miss them.

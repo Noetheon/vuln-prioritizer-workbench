@@ -171,6 +171,11 @@ not something to fake by pointing at the old SQLAlchemy/Jinja implementation.
   `backend/app/alembic`. This replaces the official template's demo `Item`
   pattern with Workbench `Project` ownership instead of reusing the legacy
   SQLAlchemy/Jinja Workbench stack.
+- `codex/fsft-09-model-modularization` splits the template backend models into
+  a focused `backend/app/models/` package while keeping `app.models` as the
+  stable public import surface. Alembic now calls `import_table_models()` before
+  reading `SQLModel.metadata`, and the import convention is documented in
+  [Model Import Registry](architecture/model-imports.md).
 
 Frontend issues `VPW-037` to `VPW-047` must wait until the backend OpenAPI client
 is generated and the template login flow remains green.
