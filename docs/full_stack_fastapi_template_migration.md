@@ -12,8 +12,9 @@ is a template-based full-stack application that reuses the existing
 
 ## Why This Direction
 
-The current app has FastAPI, a Workbench, persistence, reports, providers, ATT&CK,
-VEX, waivers, and evidence bundles. It does not have the actual template shape:
+At the time of this migration decision, the current app had FastAPI, a
+Workbench, persistence, reports, providers, ATT&CK, VEX, waivers, and evidence
+bundles, but not the actual template shape:
 
 - no documented `upstream` remote to `fastapi/full-stack-fastapi-template`
 - no Copier answer file or template baseline record
@@ -23,9 +24,9 @@ VEX, waivers, and evidence bundles. It does not have the actual template shape:
 - no SQLModel domain model layer
 - no generated frontend client workflow on `main`
 
-Trying to mutate the existing tree directly would mix two application
-architectures. The cleaner path is to preserve the domain code and build the
-Workbench shell from the template.
+Trying to mutate that tree directly would mix two application architectures. The
+cleaner path is to preserve the domain code and build the Workbench shell from
+the template. Current implementation progress is tracked below.
 
 ## Target Architecture
 

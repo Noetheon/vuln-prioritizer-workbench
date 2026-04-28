@@ -8,7 +8,8 @@ This page defines the defensive threat model and operational readiness assumptio
 
 The current local-first Workbench threat model covers:
 
-- local CLI use and the self-hosted FastAPI/Jinja2 Workbench
+- local CLI use, the legacy self-hosted FastAPI/Jinja2 Workbench command, and
+  the template-aligned Workbench shell during migration
 - import of existing CVE lists and selected scanner export files
 - provider enrichment from NVD, FIRST EPSS, CISA KEV, local caches, and locked provider snapshots
 - optional ATT&CK context from local CTID Mappings Explorer JSON and local technique metadata
@@ -21,7 +22,8 @@ The current local-first Workbench threat model covers:
 The current local-first Workbench threat model does not cover:
 
 - active network, host, container, cloud, or source-code scanning
-- exploitation, payload generation, exploit verification, or PoC handling
+- exploitation, payload generation, exploit verification, public PoC workflows,
+  exploit-instruction handling, or offensive attack-chain guidance
 - internet-exposed multi-tenant hosting
 - SSO, organization-wide ticket sync policy, background workers, or managed database operations
 - heuristic, fuzzy, or LLM-generated CVE-to-ATT&CK mapping
