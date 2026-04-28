@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from os import environ
 from typing import Literal, cast
 
@@ -18,6 +18,26 @@ class Settings:
     PROJECT_NAME: str = "Vuln Prioritizer Workbench"
     ENVIRONMENT: EnvironmentName = "local"
     LEGACY_API_PREFIX: str = "/api"
+    SECRET_KEY: str = "changethis"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 8
+    FIRST_SUPERUSER: str = "admin@example.com"
+    FIRST_SUPERUSER_PASSWORD: str = "changethis"
+    FRONTEND_HOST: str = "http://localhost:5173"
+    BACKEND_CORS_ORIGINS: tuple[str, ...] = field(default_factory=tuple)
+
+    @property
+    def all_cors_origins(self) -> tuple[str, ...]:
+        """Return configured CORS origins plus the primary frontend host."""
+        origins = [origin.rstrip("/") for origin in self.BACKEND_CORS_ORIGINS if origin]
+        frontend_host = self.FRONTEND_HOST.rstrip("/")
+        if frontend_host and frontend_host not in origins:
+            origins.append(frontend_host)
+        return tuple(origins)
+
+
+def parse_cors_origins(raw_origins: str) -> tuple[str, ...]:
+    """Parse comma-separated CORS origins using the template env var name."""
+    return tuple(origin.strip().rstrip("/") for origin in raw_origins.split(",") if origin.strip())
 
 
 def load_settings() -> Settings:
@@ -32,6 +52,14 @@ def load_settings() -> Settings:
         PROJECT_NAME=environ.get("PROJECT_NAME", "Vuln Prioritizer Workbench"),
         ENVIRONMENT=environment,
         LEGACY_API_PREFIX=environ.get("LEGACY_API_PREFIX", "/api"),
+        SECRET_KEY=environ.get("SECRET_KEY", "changethis"),
+        ACCESS_TOKEN_EXPIRE_MINUTES=int(
+            environ.get("ACCESS_TOKEN_EXPIRE_MINUTES", str(60 * 24 * 8))
+        ),
+        FIRST_SUPERUSER=environ.get("FIRST_SUPERUSER", "admin@example.com"),
+        FIRST_SUPERUSER_PASSWORD=environ.get("FIRST_SUPERUSER_PASSWORD", "changethis"),
+        FRONTEND_HOST=environ.get("FRONTEND_HOST", "http://localhost:5173"),
+        BACKEND_CORS_ORIGINS=parse_cors_origins(environ.get("BACKEND_CORS_ORIGINS", "")),
     )
 
 

@@ -22,6 +22,10 @@ button {
   font: inherit;
 }
 
+input {
+  font: inherit;
+}
+
 .app-shell {
   display: grid;
   grid-template-columns: 248px minmax(0, 1fr);
@@ -160,6 +164,45 @@ h2 {
   height: 9px;
   border-radius: 50%;
   background: #2f9e44;
+}
+
+.status-dot.muted {
+  background: #c2410c;
+}
+
+.template-status {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1px;
+  overflow: hidden;
+  border: 1px solid #d7e0dd;
+  border-radius: 8px;
+  background: #d7e0dd;
+}
+
+.template-status div {
+  min-height: 74px;
+  padding: 14px;
+  background: #ffffff;
+}
+
+.template-status span,
+.template-status strong {
+  display: block;
+}
+
+.template-status span {
+  color: #64748b;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.template-status strong {
+  margin-top: 6px;
+  overflow-wrap: anywhere;
+  color: #111827;
+  font-size: 0.98rem;
 }
 
 .metric-grid {
@@ -333,6 +376,97 @@ td {
   line-height: 1.4;
 }
 
+.login-screen {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  padding: 24px;
+  background:
+    linear-gradient(120deg, rgb(29 37 40 / 92%), rgb(15 118 110 / 76%)), #1d2528;
+}
+
+.login-panel {
+  display: grid;
+  gap: 24px;
+  width: min(100%, 430px);
+  border: 1px solid #d7e0dd;
+  border-radius: 8px;
+  padding: 28px;
+  background: #ffffff;
+  box-shadow: 0 24px 72px rgb(15 23 42 / 24%);
+}
+
+.compact-brand {
+  padding: 0;
+  color: #1f2937;
+}
+
+.login-copy h1 {
+  margin-top: 6px;
+}
+
+.login-form {
+  display: grid;
+  gap: 16px;
+}
+
+.login-form label,
+.login-form label span {
+  display: grid;
+  gap: 8px;
+}
+
+.login-form label span {
+  color: #334155;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.login-form input {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid #cad6d3;
+  border-radius: 8px;
+  padding: 0 12px;
+  background: #ffffff;
+  color: #111827;
+}
+
+.login-form input:focus {
+  border-color: #0f766e;
+  outline: 3px solid #cceee8;
+}
+
+.form-error {
+  margin: 0;
+  color: #991b1b;
+  font-weight: 700;
+}
+
+.primary-action {
+  min-height: 44px;
+  border: 0;
+  border-radius: 8px;
+  background: #0f766e;
+  color: #ffffff;
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.primary-action:disabled {
+  cursor: wait;
+  opacity: 0.72;
+}
+
+.login-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+  color: #475569;
+  font-size: 0.9rem;
+}
+
 @media (max-width: 960px) {
   .app-shell {
     grid-template-columns: 1fr;
@@ -358,7 +492,8 @@ td {
   }
 
   .metric-grid,
-  .content-grid {
+  .content-grid,
+  .template-status {
     grid-template-columns: 1fr;
   }
 }

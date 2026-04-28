@@ -14,11 +14,8 @@ python3 - <<'PY'
 import json
 from pathlib import Path
 
-from vuln_prioritizer.api.app import create_app
-from vuln_prioritizer.workbench_config import WorkbenchSettings
+from app.main import app
 
-settings = WorkbenchSettings(database_url="sqlite:///:memory:")
-app = create_app(settings=settings, initialize_database=False)
 Path("frontend/openapi.json").write_text(
     json.dumps(app.openapi(), indent=2, sort_keys=True) + "\n",
     encoding="utf-8",

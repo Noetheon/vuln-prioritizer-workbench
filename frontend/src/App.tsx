@@ -1,3 +1,4 @@
+import { useNavigate } from "@tanstack/react-router"
 import {
   Activity,
   AlertTriangle,
@@ -9,9 +10,19 @@ import {
   KeyRound,
   LayoutDashboard,
   ListChecks,
+  LogOut,
   Settings,
   ShieldCheck,
 } from "lucide-react"
+import { useEffect, useState } from "react"
+import { clearAccessToken } from "./auth"
+import {
+  ApiError,
+  type UserPublic,
+  UsersService,
+  WorkbenchService,
+  type WorkbenchStatus,
+} from "./client"
 
 const navItems = [
   { label: "Overview", icon: LayoutDashboard, active: true },
@@ -74,6 +85,48 @@ const timeline = [
 ]
 
 export function App() {
+  const navigate = useNavigate()
+  const [status, setStatus] = useState<WorkbenchStatus | null>(null)
+  const [currentUser, setCurrentUser] = useState<UserPublic | null>(null)
+  const [statusError, setStatusError] = useState("")
+
+  useEffect(() => {
+    let isMounted = true
+
+    async function loadTemplateState() {
+      try {
+        const [workbenchStatus, user] = await Promise.all([
+          WorkbenchService.templateWorkbenchStatus(),
+          UsersService.readUserMe(),
+        ])
+        if (isMounted) {
+          setStatus(workbenchStatus)
+          setCurrentUser(user)
+          setStatusError("")
+        }
+      } catch (caught) {
+        if (caught instanceof ApiError && [401, 403].includes(caught.status)) {
+          clearAccessToken()
+          await navigate({ to: "/login" })
+          return
+        }
+        if (isMounted) {
+          setStatusError("Backend adapter unavailable")
+        }
+      }
+    }
+
+    void loadTemplateState()
+    return () => {
+      isMounted = false
+    }
+  }, [navigate])
+
+  async function signOut() {
+    clearAccessToken()
+    await navigate({ to: "/login" })
+  }
+
   return (
     <div className="app-shell">
       <aside className="sidebar" aria-label="Workbench navigation">
@@ -100,7 +153,7 @@ export function App() {
         </nav>
         <div className="sidebar-footer">
           <KeyRound aria-hidden="true" size={18} />
-          <span>Local workspace</span>
+          <span>{currentUser?.email ?? "Local workspace"}</span>
         </div>
       </aside>
 
@@ -116,9 +169,48 @@ export function App() {
             aria-label="Workspace health"
           >
             <span className="status-dot" aria-hidden="true" />
-            <span>Backend adapter online</span>
+            <span>
+              {status?.status === "ok" ? "Backend adapter online" : statusError}
+            </span>
           </div>
+          <button
+            className="icon-button"
+            type="button"
+            aria-label="Sign out"
+            onClick={signOut}
+          >
+            <LogOut aria-hidden="true" size={18} />
+          </button>
         </header>
+
+        <section
+          className="template-status"
+          aria-label="Template backend status"
+        >
+          <div>
+            <span>Application</span>
+            <strong>{status?.app ?? "Vuln Prioritizer Workbench"}</strong>
+          </div>
+          <div>
+            <span>Core</span>
+            <strong>
+              {status?.core_package ?? "vuln_prioritizer"}{" "}
+              {status?.core_version ?? ""}
+            </strong>
+          </div>
+          <div>
+            <span>Migration</span>
+            <strong>{status?.migration.phase ?? "loading"}</strong>
+          </div>
+          <div>
+            <span>Legacy mount</span>
+            <strong>
+              {status?.migration.legacy_workbench_mounted
+                ? "enabled"
+                : "disabled"}
+            </strong>
+          </div>
+        </section>
 
         <section className="metric-grid" aria-label="Risk summary">
           {metrics.map((metric) => (

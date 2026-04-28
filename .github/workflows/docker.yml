@@ -23,11 +23,15 @@ jobs:
         run: |
           curl --retry 20 --retry-delay 2 --retry-connrefused --retry-all-errors --fail \
             http://127.0.0.1:8000/api/v1/workbench/status
+          curl --retry 20 --retry-delay 2 --retry-connrefused --retry-all-errors --fail \
+            http://127.0.0.1:8000/api/v1/utils/health-check/
 
       - name: Wait for frontend shell
         run: |
           curl --retry 20 --retry-delay 2 --retry-connrefused --retry-all-errors --fail \
             http://127.0.0.1:5173/
+          curl --retry 20 --retry-delay 2 --retry-connrefused --retry-all-errors --fail \
+            http://127.0.0.1:5173/login
 
       - name: Show service status
         run: docker compose -f compose.yml -f compose.override.yml ps

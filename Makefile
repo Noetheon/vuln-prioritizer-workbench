@@ -96,14 +96,27 @@ docker-demo-smoke:
 		echo "Template Workbench backend health check failed." >&2; \
 		exit 1; \
 	fi; \
+	if ! $(PYTHON) -c "import urllib.request; print(urllib.request.urlopen('http://127.0.0.1:8000/api/v1/utils/health-check/', timeout=2).read().decode())" 2>/dev/null; then \
+		echo "Template Workbench utility health check failed." >&2; \
+		exit 1; \
+	fi; \
+	frontend_ready=0; \
 	for attempt in $$(seq 1 30); do \
 		if $(PYTHON) -c "import urllib.request; print(urllib.request.urlopen('http://127.0.0.1:5173/', timeout=2).status)" 2>/dev/null; then \
-			exit 0; \
+			frontend_ready=1; \
+			break; \
 		fi; \
 		sleep 2; \
 	done; \
-	echo "Template Workbench frontend health check failed." >&2; \
-	exit 1
+	if [ "$$frontend_ready" != "1" ]; then \
+		echo "Template Workbench frontend health check failed." >&2; \
+		exit 1; \
+	fi; \
+	if ! $(PYTHON) -c "import urllib.request; print(urllib.request.urlopen('http://127.0.0.1:5173/login', timeout=2).status)" 2>/dev/null; then \
+		echo "Template Workbench login route check failed." >&2; \
+		exit 1; \
+	fi; \
+	echo "Template Workbench Docker smoke passed."
 
 docker-postgres-migration-smoke:
 	@set -e; \
