@@ -999,7 +999,7 @@ export const Body_create_import_form_web_projects__project_id__imports_postSchem
         asset_context_file: {
             anyOf: [
                 {
-                    format: 'binary',
+                    contentMediaType: 'application/octet-stream',
                     type: 'string'
                 },
                 {
@@ -1031,7 +1031,7 @@ export const Body_create_import_form_web_projects__project_id__imports_postSchem
         defensive_context_file: {
             anyOf: [
                 {
-                    format: 'binary',
+                    contentMediaType: 'application/octet-stream',
                     type: 'string'
                 },
                 {
@@ -1043,7 +1043,7 @@ export const Body_create_import_form_web_projects__project_id__imports_postSchem
         file: {
             anyOf: [
                 {
-                    format: 'binary',
+                    contentMediaType: 'application/octet-stream',
                     type: 'string'
                 },
                 {
@@ -1056,7 +1056,7 @@ export const Body_create_import_form_web_projects__project_id__imports_postSchem
             anyOf: [
                 {
                     items: {
-                        format: 'binary',
+                        contentMediaType: 'application/octet-stream',
                         type: 'string'
                     },
                     type: 'array'
@@ -1084,7 +1084,7 @@ export const Body_create_import_form_web_projects__project_id__imports_postSchem
         vex_file: {
             anyOf: [
                 {
-                    format: 'binary',
+                    contentMediaType: 'application/octet-stream',
                     type: 'string'
                 },
                 {
@@ -1096,7 +1096,7 @@ export const Body_create_import_form_web_projects__project_id__imports_postSchem
         waiver_file: {
             anyOf: [
                 {
-                    format: 'binary',
+                    contentMediaType: 'application/octet-stream',
                     type: 'string'
                 },
                 {
@@ -1271,7 +1271,7 @@ export const Body_delete_waiver_form_web_waivers__waiver_id__delete_postSchema =
 export const Body_import_detection_controls_api_projects__project_id__detection_controls_import_postSchema = {
     properties: {
         file: {
-            format: 'binary',
+            contentMediaType: 'application/octet-stream',
             title: 'File',
             type: 'string'
         }
@@ -1289,7 +1289,7 @@ export const Body_import_detection_controls_form_web_projects__project_id__cover
             type: 'string'
         },
         file: {
-            format: 'binary',
+            contentMediaType: 'application/octet-stream',
             title: 'File',
             type: 'string'
         }
@@ -1304,7 +1304,7 @@ export const Body_import_findings_api_projects__project_id__imports_postSchema =
         asset_context_file: {
             anyOf: [
                 {
-                    format: 'binary',
+                    contentMediaType: 'application/octet-stream',
                     type: 'string'
                 },
                 {
@@ -1343,7 +1343,7 @@ export const Body_import_findings_api_projects__project_id__imports_postSchema =
         defensive_context_file: {
             anyOf: [
                 {
-                    format: 'binary',
+                    contentMediaType: 'application/octet-stream',
                     type: 'string'
                 },
                 {
@@ -1355,7 +1355,7 @@ export const Body_import_findings_api_projects__project_id__imports_postSchema =
         file: {
             anyOf: [
                 {
-                    format: 'binary',
+                    contentMediaType: 'application/octet-stream',
                     type: 'string'
                 },
                 {
@@ -1368,7 +1368,7 @@ export const Body_import_findings_api_projects__project_id__imports_postSchema =
             anyOf: [
                 {
                     items: {
-                        format: 'binary',
+                        contentMediaType: 'application/octet-stream',
                         type: 'string'
                     },
                     type: 'array'
@@ -1416,7 +1416,7 @@ export const Body_import_findings_api_projects__project_id__imports_postSchema =
         vex_file: {
             anyOf: [
                 {
-                    format: 'binary',
+                    contentMediaType: 'application/octet-stream',
                     type: 'string'
                 },
                 {
@@ -1428,7 +1428,7 @@ export const Body_import_findings_api_projects__project_id__imports_postSchema =
         waiver_file: {
             anyOf: [
                 {
-                    format: 'binary',
+                    contentMediaType: 'application/octet-stream',
                     type: 'string'
                 },
                 {
@@ -1726,7 +1726,7 @@ export const Body_update_waiver_form_web_waivers__waiver_id__postSchema = {
 export const Body_upload_detection_control_attachment_api_detection_controls__control_id__attachments_postSchema = {
     properties: {
         file: {
-            format: 'binary',
+            contentMediaType: 'application/octet-stream',
             title: 'File',
             type: 'string'
         }
@@ -1744,7 +1744,7 @@ export const Body_upload_detection_control_attachment_form_web_detection_control
             type: 'string'
         },
         file: {
-            format: 'binary',
+            contentMediaType: 'application/octet-stream',
             title: 'File',
             type: 'string'
         }
@@ -4352,6 +4352,13 @@ export const TopTechniquesResponseSchema = {
 
 export const ValidationErrorSchema = {
     properties: {
+        ctx: {
+            title: 'Context',
+            type: 'object'
+        },
+        input: {
+            title: 'Input'
+        },
         loc: {
             items: {
                 anyOf: [

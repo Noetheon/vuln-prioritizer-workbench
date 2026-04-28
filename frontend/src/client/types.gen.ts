@@ -174,19 +174,19 @@ export type Body_create_evidence_form_web_analysis_runs__run_id__evidence_bundle
 };
 
 export type Body_create_import_form_web_projects__project_id__imports_post = {
-    asset_context_file?: ((Blob | File) | null);
+    asset_context_file?: (string | null);
     attack_mapping_file?: string;
     attack_source?: string;
     attack_technique_metadata_file?: string;
     csrf_token?: string;
-    defensive_context_file?: ((Blob | File) | null);
-    file?: ((Blob | File) | null);
-    files?: (Array<((Blob | File))> | null);
+    defensive_context_file?: (string | null);
+    file?: (string | null);
+    files?: (Array<(string)> | null);
     input_format: string;
     locked_provider_data?: boolean;
     provider_snapshot_file?: string;
-    vex_file?: ((Blob | File) | null);
-    waiver_file?: ((Blob | File) | null);
+    vex_file?: (string | null);
+    waiver_file?: (string | null);
 };
 
 export type Body_create_project_form_projects_post = {
@@ -228,28 +228,28 @@ export type Body_delete_waiver_form_web_waivers__waiver_id__delete_post = {
 };
 
 export type Body_import_detection_controls_api_projects__project_id__detection_controls_import_post = {
-    file: (Blob | File);
+    file: string;
 };
 
 export type Body_import_detection_controls_form_web_projects__project_id__coverage_import_post = {
     csrf_token?: string;
-    file: (Blob | File);
+    file: string;
 };
 
 export type Body_import_findings_api_projects__project_id__imports_post = {
-    asset_context_file?: ((Blob | File) | null);
+    asset_context_file?: (string | null);
     attack_mapping_file?: (string | null);
     attack_source?: string;
     attack_technique_metadata_file?: (string | null);
-    defensive_context_file?: ((Blob | File) | null);
-    file?: ((Blob | File) | null);
-    files?: (Array<((Blob | File))> | null);
+    defensive_context_file?: (string | null);
+    file?: (string | null);
+    files?: (Array<(string)> | null);
     input_format: string;
     input_formats?: (Array<(string)> | null);
     locked_provider_data?: boolean;
     provider_snapshot_file?: (string | null);
-    vex_file?: ((Blob | File) | null);
-    waiver_file?: ((Blob | File) | null);
+    vex_file?: (string | null);
+    waiver_file?: (string | null);
 };
 
 export type Body_revoke_api_token_form_web_projects__project_id__api_tokens__token_id__revoke_post = {
@@ -324,12 +324,12 @@ export type Body_update_waiver_form_web_waivers__waiver_id__post = {
 };
 
 export type Body_upload_detection_control_attachment_api_detection_controls__control_id__attachments_post = {
-    file: (Blob | File);
+    file: string;
 };
 
 export type Body_upload_detection_control_attachment_form_web_detection_controls__control_id__attachments_post = {
     csrf_token?: string;
-    file: (Blob | File);
+    file: string;
 };
 
 export type CoverageGapItem = {
@@ -841,6 +841,10 @@ export type TopTechniquesResponse = {
 };
 
 export type ValidationError = {
+    ctx?: {
+        [key: string]: unknown;
+    };
+    input?: unknown;
     loc: Array<(string | number)>;
     msg: string;
     type: string;

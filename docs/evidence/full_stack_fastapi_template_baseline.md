@@ -132,6 +132,9 @@ make frontend-build
 make frontend-generate-client
 git diff --exit-code -- frontend/src/client
 python3 -m pip install -e "backend[dev]"
+python3 -m pip install --upgrade --upgrade-strategy eager -e "backend[dev]"
+make frontend-generate-client
+git diff --exit-code -- frontend/src/client
 cd /tmp && python3 - <<'PY'
 import app.main
 import vuln_prioritizer
@@ -179,7 +182,8 @@ Results:
 - Frontend lint passed after limiting Biome to hand-written frontend files.
 - `make frontend-check` passed through npm fallback.
 - Frontend build passed through npm fallback.
-- Generated client regeneration passed without drift.
+- Generated client regeneration passed without drift after refreshing local
+  backend dependencies to match the fresh CI resolver output.
 - Editable backend install passed; `app.main` and `vuln_prioritizer` imported
   from `/tmp`.
 - Built wheel contains both `app/*` and `vuln_prioritizer/*`.
