@@ -36,7 +36,7 @@ if [[ -z "$PIPX_SPEC" ]]; then
     -C "$ROOT_DIR" . | tar -xf - -C "$REPO_COPY"
 
   SOURCE_ROOT="$REPO_COPY"
-  PIPX_SPEC="$REPO_COPY"
+  PIPX_SPEC="$REPO_COPY/backend"
 fi
 
 CLI=("$PYTHON_BIN" -m pipx run --spec "$PIPX_SPEC" vuln-prioritizer)

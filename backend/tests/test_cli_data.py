@@ -14,7 +14,7 @@ from vuln_prioritizer.providers.kev import KevProvider
 from vuln_prioritizer.providers.nvd import NvdProvider
 
 runner = CliRunner()
-ATTACK_ROOT = Path(__file__).resolve().parents[1] / "data" / "attack"
+ATTACK_ROOT = Path(__file__).resolve().parents[2] / "data" / "attack"
 
 
 def _install_fake_data_update_providers(monkeypatch: Any) -> None:

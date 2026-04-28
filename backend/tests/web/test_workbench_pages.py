@@ -13,7 +13,7 @@ from vuln_prioritizer.db import WorkbenchRepository, create_session_factory
 from vuln_prioritizer.web.routes import _project_path, _redacted_database_url
 from vuln_prioritizer.workbench_config import WorkbenchSettings
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[3]
 DEMO_PROVIDER_SNAPSHOT = ROOT / "data" / "demo_provider_snapshot.json"
 SAMPLE_CVES = ROOT / "data" / "sample_cves.txt"
 TRIVY_REPORT = ROOT / "data" / "input_fixtures" / "trivy_report.json"

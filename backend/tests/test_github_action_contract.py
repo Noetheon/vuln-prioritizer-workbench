@@ -1,12 +1,13 @@
 from __future__ import annotations
 
-from pathlib import Path
-
 import yaml
+from paths import REPO_ROOT
+
+ACTION_FILE = REPO_ROOT / "action.yml"
 
 
 def _load_action_definition() -> dict[str, object]:
-    return yaml.safe_load(Path("action.yml").read_text(encoding="utf-8"))
+    return yaml.safe_load(ACTION_FILE.read_text(encoding="utf-8"))
 
 
 def test_action_exposes_p1_analyze_inputs() -> None:
@@ -137,3 +138,11 @@ def test_action_shell_steps_do_not_interpolate_inputs_directly() -> None:
     assert run_steps
     for step in run_steps:
         assert "${{ inputs." not in step["run"]
+
+
+def test_action_installs_backend_package_from_composite_checkout() -> None:
+    action = _load_action_definition()
+    install_step = action["runs"]["steps"][1]
+
+    assert install_step["name"] == "Install vuln-prioritizer from action checkout"
+    assert 'python -m pip install "${{ github.action_path }}/backend"' in install_step["run"]

@@ -12,7 +12,7 @@ This runbook keeps the Workbench demo reproducible without live provider calls. 
 
 ```bash
 make install
-python3 -m pytest -q tests/api/test_workbench_api.py tests/web/test_workbench_pages.py --no-cov
+python3 -m pytest -q backend/tests/api/test_workbench_api.py backend/tests/web/test_workbench_pages.py --no-cov
 make docker-demo-smoke
 make docker-postgres-migration-smoke
 make dependency-audit

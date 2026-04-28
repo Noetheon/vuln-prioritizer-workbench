@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from paths import DATA_ROOT
 from typer.testing import CliRunner
 
 from vuln_prioritizer.cli import app
@@ -154,7 +155,7 @@ def test_attack_json_commands_without_output_emit_only_json_stdout(
             "attack",
             "coverage",
             "--input",
-            "data/sample_cves_mixed.txt",
+            str(DATA_ROOT / "sample_cves_mixed.txt"),
             "--attack-mapping-file",
             str(mapping_file),
             "--attack-technique-metadata-file",

@@ -100,7 +100,7 @@ This project is not:
 ### Recommended: `pipx`
 
 ```bash
-pipx install git+https://github.com/Noetheon/vuln-prioritizer-workbench.git@vX.Y.Z
+pipx install git+https://github.com/Noetheon/vuln-prioritizer-workbench.git@vX.Y.Z#subdirectory=backend
 vuln-prioritizer --help
 ```
 
@@ -119,8 +119,8 @@ The repository is PyPI-ready, but the verified public install path is currently 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-pip install -r requirements.txt
-pip install -e .[dev]
+pip install -r backend/requirements.txt
+pip install -e "backend[dev]"
 ```
 
 Optional:
@@ -359,7 +359,7 @@ The target uses checked-in fixtures, `data/demo_provider_snapshot.json`, locked 
 To verify an already generated bundle from the checkout, run the same CLI contract directly:
 
 ```bash
-PYTHONPATH=src VULN_PRIORITIZER_FIXED_NOW=2026-04-21T12:00:00+00:00 \
+PYTHONPATH=backend/src VULN_PRIORITIZER_FIXED_NOW=2026-04-21T12:00:00+00:00 \
   python3 -m vuln_prioritizer.cli report verify-evidence-bundle \
   --input build/v1.0-demo-evidence-bundle.zip \
   --output build/v1.0-demo-evidence-bundle-verification.json \

@@ -28,12 +28,12 @@ def runner() -> CliRunner:
 
 @pytest.fixture
 def fixture_root() -> Path:
-    return Path(__file__).resolve().parents[2] / "data" / "input_fixtures"
+    return Path(__file__).resolve().parents[3] / "data" / "input_fixtures"
 
 
 @pytest.fixture
 def attack_root() -> Path:
-    return Path(__file__).resolve().parents[2] / "data" / "attack"
+    return Path(__file__).resolve().parents[3] / "data" / "attack"
 
 
 @pytest.fixture
