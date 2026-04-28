@@ -37,6 +37,23 @@ class AssetBase(SQLModel):
     )
 
 
+class AssetCreate(AssetBase):
+    """Asset creation payload."""
+
+
+class AssetUpdate(SQLModel):
+    """Asset update payload."""
+
+    asset_key: str | None = Field(default=None, min_length=1, max_length=200)
+    name: str | None = Field(default=None, min_length=1, max_length=300)
+    target_ref: str | None = Field(default=None, max_length=500)
+    owner: str | None = Field(default=None, max_length=200)
+    business_service: str | None = Field(default=None, max_length=200)
+    environment: AssetEnvironment | None = None
+    exposure: AssetExposure | None = None
+    criticality: AssetCriticality | None = None
+
+
 class Asset(AssetBase, table=True):
     """Project-scoped asset affected by one or more findings."""
 
@@ -65,6 +82,22 @@ class Asset(AssetBase, table=True):
     )
     project: Project | None = Relationship(back_populates="assets")
     findings: list["Finding"] = Relationship(back_populates="asset")
+
+
+class AssetPublic(AssetBase):
+    """Public asset response shape."""
+
+    id: uuid.UUID
+    project_id: uuid.UUID
+    created_at: datetime
+    updated_at: datetime
+
+
+class AssetsPublic(SQLModel):
+    """Paginated asset collection response."""
+
+    data: list[AssetPublic]
+    count: int
 
 
 class ComponentBase(SQLModel):

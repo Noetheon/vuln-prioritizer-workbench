@@ -102,6 +102,21 @@ class AnalysisRun(AnalysisRunBase, table=True):
     )
 
 
+class AnalysisRunPublic(AnalysisRunBase):
+    """Public analysis run response shape."""
+
+    id: uuid.UUID
+    project_id: uuid.UUID
+    provider_snapshot_id: uuid.UUID | None
+
+
+class AnalysisRunsPublic(SQLModel):
+    """Paginated analysis run collection response."""
+
+    data: list[AnalysisRunPublic]
+    count: int
+
+
 class FindingOccurrenceBase(SQLModel):
     """Shared finding occurrence fields."""
 

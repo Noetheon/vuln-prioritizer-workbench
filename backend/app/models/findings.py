@@ -125,3 +125,24 @@ class Finding(FindingBase, table=True):
         back_populates="finding",
         cascade_delete=True,
     )
+
+
+class FindingPublic(FindingBase):
+    """Public finding response shape."""
+
+    id: uuid.UUID
+    project_id: uuid.UUID
+    vulnerability_id: uuid.UUID
+    component_id: uuid.UUID | None
+    asset_id: uuid.UUID | None
+    first_seen_at: datetime
+    last_seen_at: datetime
+    created_at: datetime
+    updated_at: datetime
+
+
+class FindingsPublic(SQLModel):
+    """Paginated finding collection response."""
+
+    data: list[FindingPublic]
+    count: int

@@ -157,3 +157,7 @@ class RunRepository:
             .order_by(col(AnalysisRun.started_at).desc())
         )
         return list(self.session.exec(statement).all())
+
+    def get_analysis_run(self, run_id: uuid.UUID) -> AnalysisRun | None:
+        """Return an analysis run by primary key."""
+        return self.session.get(AnalysisRun, run_id)
