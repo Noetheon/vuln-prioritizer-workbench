@@ -42,12 +42,12 @@ The Workbench v1.0 milestone evidence is preserved here, but the current package
 - [x] Run the documented quickstart:
 
 ```bash
-docker compose up --build
-curl http://127.0.0.1:8000/api/health
+docker compose -f compose.yml -f compose.override.yml up --build backend frontend
+curl http://127.0.0.1:8000/api/v1/workbench/status
 ```
 
-- [x] Confirm `/api/health` returns an OK status from the running container.
-- [x] Confirm the browser UI opens at `http://127.0.0.1:8000`.
+- [x] Confirm `/api/v1/workbench/status` returns an OK status from the running container.
+- [x] Confirm the React shell opens at `http://127.0.0.1:5173`.
 - [x] Confirm the stack can be stopped and restarted without manual database repair.
 - [x] Record the smoke-gate result, date, commit, and relevant environment notes in the release evidence.
 

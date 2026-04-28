@@ -5,7 +5,7 @@ import importlib
 from fastapi.routing import APIRoute
 from fastapi.testclient import TestClient
 
-from app.core.config import Settings
+from app.core.config import Settings, load_settings
 from app.main import app, create_app, custom_generate_unique_id
 
 
@@ -52,6 +52,28 @@ def test_template_backend_can_be_configured_without_legacy_workbench_side_effect
     assert selected_app.state.template_settings == selected_settings
     assert client.get("/api/health").status_code == 404
     assert client.get("/api/v1/workbench/status").json()["app"] == "VPW Template Adapter"
+
+
+def test_template_backend_settings_load_product_env_defaults(monkeypatch) -> None:
+    monkeypatch.setenv("PROJECT_NAME", "VPW Env Shell")
+    monkeypatch.setenv("ENVIRONMENT", "staging")
+    monkeypatch.setenv("API_V1_STR", "/api/custom")
+    monkeypatch.setenv("LEGACY_API_PREFIX", "/legacy-api")
+
+    selected_settings = load_settings()
+
+    assert selected_settings == Settings(
+        API_V1_STR="/api/custom",
+        PROJECT_NAME="VPW Env Shell",
+        ENVIRONMENT="staging",
+        LEGACY_API_PREFIX="/legacy-api",
+    )
+
+
+def test_template_backend_settings_fall_back_for_unknown_environment(monkeypatch) -> None:
+    monkeypatch.setenv("ENVIRONMENT", "qa")
+
+    assert load_settings().ENVIRONMENT == "local"
 
 
 def test_template_backend_adapter_does_not_import_legacy_web_or_db_stack() -> None:

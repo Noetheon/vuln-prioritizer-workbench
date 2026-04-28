@@ -205,3 +205,66 @@ Residual risks:
 - Real Playwright browser smoke was not run in this slice.
 - The generated client currently reflects the existing mixed API and HTML route
   OpenAPI surface; operation-id and route-shape cleanup remains follow-up work.
+
+## FSFT-03 Compose and Environment Alignment
+
+Branch:
+
+- `codex/fsft-03-compose-env`
+
+Scope:
+
+- Replaced the legacy default `docker-compose.yml` with template-style
+  `compose.yml`, `compose.override.yml`, and `compose.traefik.yml`.
+- Added frontend Docker/Nginx runtime files and a Playwright container scaffold.
+- Changed the backend image default command to the template backend shell
+  (`app.main:app`) while keeping the legacy CLI and Workbench command available
+  for profiled migration smoke checks.
+- Expanded `.env.example` and `frontend/.env.example` with template identity,
+  local routing, placeholder secrets, Compose image names, Postgres defaults,
+  and Vuln Prioritizer provider settings.
+
+Commands run:
+
+```bash
+docker compose -f compose.yml -f compose.override.yml config
+docker compose -f compose.yml -f compose.override.yml --profile postgres config
+make frontend-build
+make frontend-generate-client
+git diff --exit-code -- frontend/src/client
+make frontend-check
+python3 -m pytest -q backend/tests/api/test_template_backend_adapter.py \
+  backend/tests/test_workbench_integration_contracts.py --no-cov
+make check
+make docs-check
+make actionlint-check
+make package-check
+make docker-demo-smoke
+make docker-postgres-migration-smoke
+git diff --check
+```
+
+Results:
+
+- Default Compose config rendered successfully.
+- Postgres-profile Compose config rendered successfully.
+- Targeted template backend and Compose contract tests passed: 9 passed.
+- `make frontend-check` passed and regenerated the client without drift.
+- `make check` passed: 536 passed, 2 skipped, total coverage 90.27%.
+- `make docs-check`, `make actionlint-check`, `make package-check`, and
+  `git diff --check` passed.
+- `make docker-demo-smoke` built backend/frontend images, started `db`,
+  `backend`, and `frontend`, and received `status=ok` from
+  `/api/v1/workbench/status` plus HTTP 200 from the frontend root.
+- `make docker-postgres-migration-smoke` started `db` plus
+  `workbench-postgres` and received `status=ok`, `database=ok` from the legacy
+  Workbench `/api/health` endpoint.
+
+Residual risks:
+
+- This slice validates template Compose shape and the template backend shell; it
+  does not implement template JWT/users, SQLModel models, or the final React
+  feature migration.
+- `compose.traefik.yml` is infrastructure scaffolding only. Public deployment
+  hardening remains out of scope until the auth and production settings slices
+  land.

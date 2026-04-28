@@ -133,39 +133,50 @@ Then set `NVD_API_KEY` in `.env` if you want authenticated NVD access.
 
 ### Docker / Compose Workbench
 
-Run the current self-hosted Workbench API and web UI locally:
+Run the template-aligned Workbench shell and React frontend locally:
 
 ```bash
-docker compose up --build
+docker compose -f compose.yml -f compose.override.yml up --build backend frontend
 ```
 
-Then open `http://127.0.0.1:8000`. The Compose service stores SQLite data, uploads, reports, provider snapshots, and provider cache entries in Docker named volumes, mounts checked-in demo data read-only at `/app/examples`, and copies demo provider snapshots into the writable snapshot volume on startup.
+Then open `http://127.0.0.1:5173` for the React shell or call the template
+backend status endpoint:
 
 ```bash
-curl http://127.0.0.1:8000/api/health
+curl http://127.0.0.1:8000/api/v1/workbench/status
 ```
 
-Maintainers can run the same Compose readiness path through `make docker-demo-smoke`, which starts the service, polls `/api/health`, and tears the stack down after the check.
+Maintainers can run the same Compose readiness path through
+`make docker-demo-smoke`, which starts the backend and frontend, polls
+`/api/v1/workbench/status`, and tears the stack down after the check.
 
-SQLite is still the default. To smoke-test the optional Postgres profile and the same Alembic migration path, run:
+The default Compose stack now follows the FastAPI Full Stack Template shape:
+`db`, `backend`, and `frontend`. The backend service intentionally serves the
+new template shell (`app.main:app`) and does not claim the legacy Jinja2
+Workbench as migrated. To smoke-test the legacy Workbench against the optional
+Postgres profile and the same Alembic migration path, run:
 
 ```bash
 make docker-postgres-migration-smoke
 ```
 
-That starts the `postgres` and `workbench-postgres` profile services, serves the app on `http://127.0.0.1:8001`, and tears down the profile volumes after the health check.
+That starts `db` and the profiled `workbench-postgres` service, serves the
+legacy Workbench on `http://127.0.0.1:8001`, and tears down the profile volumes
+after the health check.
 
-The container starts the web app with `vuln-prioritizer web serve --host 0.0.0.0 --port 8000`. The app initializes the SQLite schema on startup; you can also initialize the same database explicitly:
+The backend image still contains the CLI and legacy Workbench command for
+profiled migration checks. You can initialize a profiled legacy database
+explicitly with:
 
 ```bash
-docker compose run --rm workbench vuln-prioritizer db init
+docker compose -f compose.yml -f compose.override.yml --profile postgres run --rm workbench-postgres vuln-prioritizer db init
 ```
 
 The CLI remains available in the same image:
 
 ```bash
-docker build -t vuln-prioritizer-workbench:local .
-docker run --rm vuln-prioritizer-workbench:local vuln-prioritizer --help
+docker build -f backend/Dockerfile -t vuln-prioritizer-workbench-backend:local .
+docker run --rm vuln-prioritizer-workbench-backend:local vuln-prioritizer --help
 ```
 
 Equivalent local Workbench commands after a normal Python install:
@@ -186,14 +197,14 @@ Workbench runtime environment:
 | --- | --- | --- |
 | `NVD_API_KEY` | empty | Optional authenticated NVD access. |
 | `VULN_PRIORITIZER_NVD_API_KEY_ENV` | `NVD_API_KEY` | Name of the environment variable read for the NVD key. |
-| `VULN_PRIORITIZER_DB_URL` | local: `sqlite:///./data/workbench.db`; Compose: `sqlite:////app/data/workbench.db` | Workbench database URL. |
+| `VULN_PRIORITIZER_DB_URL` | local: `sqlite:///./data/workbench.db`; profiled Compose migration smoke: `postgresql+psycopg://...@db:5432/workbench` | Legacy Workbench database URL. |
 | `VULN_PRIORITIZER_UPLOAD_DIR` | local: `data/uploads`; Compose: `/app/uploads` | Uploaded source files. |
 | `VULN_PRIORITIZER_REPORT_DIR` | local: `data/reports`; Compose: `/app/reports` | Generated reports and evidence bundles. |
 | `VULN_PRIORITIZER_PROVIDER_SNAPSHOT_DIR` | local: `data`; Compose: `/app/provider-snapshots` | Trusted directory for locked provider snapshot replay and generated provider update snapshots. |
 | `VULN_PRIORITIZER_CACHE_DIR` | local: `.cache/vuln-prioritizer`; Compose: `/app/.cache/vuln-prioritizer` | Provider cache used by Workbench analysis. |
 | `VULN_PRIORITIZER_MAX_UPLOAD_MB` | `25` | Upload size limit per import. |
 | `VULN_PRIORITIZER_CSRF_TOKEN` | random per process when unset | Optional fixed local form token for repeatable demos. |
-| `VULN_PRIORITIZER_ALLOWED_HOSTS` | local: `127.0.0.1,localhost,testserver`; Compose: `127.0.0.1,localhost` | Comma-separated Host header allowlist for the local Workbench. |
+| `VULN_PRIORITIZER_ALLOWED_HOSTS` | local: `127.0.0.1,localhost,testserver`; profiled Compose migration smoke: `127.0.0.1,localhost` | Comma-separated Host header allowlist for the local Workbench. |
 
 For locked Workbench replay, submit only the snapshot filename, for example
 `demo_provider_snapshot.json`. The app resolves it from
