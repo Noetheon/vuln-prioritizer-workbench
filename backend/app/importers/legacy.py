@@ -14,6 +14,7 @@ from app.importers.contracts import (
     InputPayload,
     NormalizedOccurrence,
 )
+from app.importers.cve_list import CveListImporter
 from vuln_prioritizer.cli_options import InputFormat
 from vuln_prioritizer.inputs.loader import InputLoader
 from vuln_prioritizer.models_input import InputOccurrence
@@ -73,7 +74,12 @@ class LegacyInputLoaderImporter:
 
 def default_importers() -> tuple[Importer, ...]:
     """Return importers for the currently supported local Workbench input types."""
-    return tuple(LegacyInputLoaderImporter(input_type) for input_type in DEFAULT_IMPORT_INPUT_TYPES)
+    legacy_importers = tuple(
+        LegacyInputLoaderImporter(input_type)
+        for input_type in DEFAULT_IMPORT_INPUT_TYPES
+        if input_type != InputFormat.cve_list.value
+    )
+    return (CveListImporter(), *legacy_importers)
 
 
 def _write_payload(path: Path, payload: InputPayload) -> None:

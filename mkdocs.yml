@@ -42,6 +42,7 @@ nav:
       - Historical ATT&CK/TTP Masterplan V2: workbench-masterplan-attack-ttp-v2.md
       - Historical Engineering Roadmap V3: workbench-engineering-roadmap-attack-ttp-v3.md
   - Examples:
+      - CVE List Import: cve-list-import.md
       - Base Report: example_report.md
       - Base Compare: example_compare.md
       - ATT&CK Report: example_attack_report.md

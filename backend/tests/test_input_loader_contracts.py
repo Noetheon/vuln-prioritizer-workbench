@@ -282,6 +282,43 @@ def test_plain_cve_csv_auto_detects_as_cve_list(tmp_path: Path) -> None:
     assert parsed.unique_cves == ["CVE-2024-0001"]
 
 
+def test_plain_cve_list_preserves_minimal_csv_context_and_deduplicates(tmp_path: Path) -> None:
+    loader_module = _load_loader_module()
+    input_file = tmp_path / "cves.csv"
+    input_file.write_text(
+        "\n".join(
+            [
+                "# comment before header",
+                "cve_id,asset_ref,component,version",
+                "CVE-2024-3094,build-host-1,xz,5.6.0",
+                "cve-2024-3094,build-host-1,xz,5.6.0",
+                "CVE-2024-4577,web-tier,php,8.3.7",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    parsed = loader_module.InputLoader().load(input_file, input_format="cve-list")
+
+    assert parsed.unique_cves == ["CVE-2024-3094", "CVE-2024-4577"]
+    assert len(parsed.occurrences) == 2
+    first = parsed.occurrences[0]
+    assert first.component_name == "xz"
+    assert first.component_version == "5.6.0"
+    assert first.target_ref == "build-host-1"
+
+
+def test_plain_cve_txt_skips_comment_lines(tmp_path: Path) -> None:
+    loader_module = _load_loader_module()
+    input_file = tmp_path / "cves.txt"
+    input_file.write_text("# comment\n\nCVE-2024-3094\n", encoding="utf-8")
+
+    parsed = loader_module.InputLoader().load(input_file, input_format="cve-list")
+
+    assert parsed.unique_cves == ["CVE-2024-3094"]
+    assert parsed.total_rows == 1
+
+
 def test_github_alerts_skips_non_object_items(tmp_path: Path) -> None:
     loader_module = _load_loader_module()
     input_file = tmp_path / "alerts.json"

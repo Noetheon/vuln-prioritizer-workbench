@@ -1,0 +1,5 @@
+# Valid cve-list TXT fixture.
+
+CVE-2021-44228
+cve-2022-22965
+CVE-2023-44487

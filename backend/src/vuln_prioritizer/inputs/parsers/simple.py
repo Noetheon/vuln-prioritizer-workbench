@@ -14,8 +14,6 @@ from .common import (
     normalize_asset_criticality,
     normalize_asset_environment,
     normalize_asset_exposure,
-    read_cve_csv,
-    read_txt,
     split_versions,
 )
 
@@ -25,20 +23,28 @@ def parse_cve_list(path: Path) -> ParsedInput:
     if suffix not in {".txt", ".csv"}:
         raise ValueError("Unsupported input format. Use .txt or .csv files.")
 
-    rows = read_txt(path) if suffix == ".txt" else read_cve_csv(path)
+    rows = _read_cve_txt(path) if suffix == ".txt" else _read_cve_csv(path)
     warnings: list[str] = []
     occurrences: list[InputOccurrence] = []
+    seen: set[tuple[str, str | None, str | None, str | None]] = set()
 
-    for line_number, raw_value in rows:
+    for line_number, raw_value, asset_ref, component, version in rows:
         cve_id = normalize_cve_id(raw_value)
         if cve_id is None:
             warnings.append(f"Ignored invalid CVE identifier at line {line_number}: {raw_value!r}")
             continue
+        key = (cve_id, asset_ref, component, version)
+        if key in seen:
+            continue
+        seen.add(key)
         occurrences.append(
             InputOccurrence(
                 cve_id=cve_id,
                 source_format="cve-list",
                 source_record_id=f"line:{line_number}",
+                component_name=component,
+                component_version=version,
+                target_ref=asset_ref,
             )
         )
 
@@ -48,6 +54,52 @@ def parse_cve_list(path: Path) -> ParsedInput:
         occurrences=occurrences,
         warnings=warnings,
     )
+
+
+def _read_cve_txt(path: Path) -> list[tuple[int, str, None, None, None]]:
+    rows: list[tuple[int, str, None, None, None]] = []
+    with path.open("r", encoding="utf-8") as handle:
+        for line_number, line in enumerate(handle, start=1):
+            value = line.strip()
+            if not value or value.startswith("#"):
+                continue
+            rows.append((line_number, value, None, None, None))
+    return rows
+
+
+def _read_cve_csv(path: Path) -> list[tuple[int, str, str | None, str | None, str | None]]:
+    indexed_lines = [
+        (line_number, line)
+        for line_number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1)
+        if line.strip() and not line.strip().startswith("#")
+    ]
+    if not indexed_lines:
+        raise ValueError("CSV input is missing a header row.")
+
+    reader = csv.DictReader([line for _, line in indexed_lines])
+    if not reader.fieldnames:
+        raise ValueError("CSV input is missing a header row.")
+    field_map = {field.strip().lower(): field for field in reader.fieldnames if field}
+    cve_field = first_existing_field(field_map, "cve_id", "cve")
+    if cve_field is None:
+        raise ValueError("CSV input must contain a 'cve_id' or 'cve' column.")
+
+    rows: list[tuple[int, str, str | None, str | None, str | None]] = []
+    data_line_numbers = [line_number for line_number, _ in indexed_lines[1:]]
+    for row, row_number in zip(reader, data_line_numbers, strict=True):
+        value = (row.get(cve_field) or "").strip()
+        if not value:
+            continue
+        rows.append(
+            (
+                row_number,
+                value,
+                csv_value(row, field_map, "asset_ref"),
+                csv_value(row, field_map, "component"),
+                csv_value(row, field_map, "version"),
+            )
+        )
+    return rows
 
 
 def parse_generic_occurrence_csv(path: Path) -> ParsedInput:
