@@ -179,11 +179,28 @@ class ErrorResponse(StrictModel):
     error: ErrorDetails
 
 
+class HealthResponse(StrictModel):
+    status: str
+    database: str
+    projects: int | None = None
+    upload_dir: str | None = None
+    report_dir: str | None = None
+
+
+class VersionResponse(StrictModel):
+    version: str
+    app: str
+
+
 class ProjectResponse(StrictModel):
     id: str
     name: str
     description: str | None = None
     created_at: str
+
+
+class ProjectsListResponse(StrictModel):
+    items: list[ProjectResponse] = Field(default_factory=list)
 
 
 class AssetResponse(StrictModel):
@@ -197,6 +214,10 @@ class AssetResponse(StrictModel):
     exposure: str | None = None
     criticality: str | None = None
     finding_count: int = 0
+
+
+class AssetsListResponse(StrictModel):
+    items: list[AssetResponse] = Field(default_factory=list)
 
 
 class WaiverResponse(StrictModel):
@@ -221,6 +242,14 @@ class WaiverResponse(StrictModel):
     updated_at: str
 
 
+class WaiversListResponse(StrictModel):
+    items: list[WaiverResponse] = Field(default_factory=list)
+
+
+class DeleteResponse(StrictModel):
+    deleted: bool
+
+
 class ApiTokenCreateResponse(StrictModel):
     id: str
     name: str
@@ -235,6 +264,19 @@ class ApiTokenResponse(StrictModel):
     last_used_at: str | None = None
     revoked_at: str | None = None
     active: bool
+
+
+class ApiTokensListResponse(StrictModel):
+    items: list[ApiTokenResponse] = Field(default_factory=list)
+    active_count: int = 0
+    requires_token_for_mutations: bool = False
+
+
+class ApiTokenDeleteResponse(StrictModel):
+    id: str
+    deleted: bool
+    revoked: bool
+    revoked_at: str
 
 
 class FindingStatusHistoryResponse(StrictModel):
@@ -267,6 +309,10 @@ class ProviderUpdateJobResponse(StrictModel):
     finished_at: str | None = None
     error_message: str | None = None
     metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class ProviderUpdateJobsListResponse(StrictModel):
+    items: list[ProviderUpdateJobResponse] = Field(default_factory=list)
 
 
 class WorkbenchJobResponse(StrictModel):
@@ -329,6 +375,10 @@ class AnalysisRunResponse(StrictModel):
     summary: AnalysisRunSummary
 
 
+class AnalysisRunsListResponse(StrictModel):
+    items: list[AnalysisRunResponse] = Field(default_factory=list)
+
+
 class FindingResponse(StrictModel):
     id: str
     project_id: str
@@ -378,6 +428,15 @@ class FindingsListResponse(StrictModel):
     offset: int
 
 
+class FindingExplainResponse(StrictModel):
+    finding_id: str
+    cve_id: str
+    priority: str
+    rationale: str | None = None
+    recommended_action: str | None = None
+    explanation: dict[str, Any] | None = None
+
+
 class ReportResponse(StrictModel):
     id: str
     analysis_run_id: str
@@ -393,6 +452,60 @@ class EvidenceBundleResponse(StrictModel):
     sha256: str
     download_url: str
     verify_url: str
+
+
+class ArtifactResponse(StrictModel):
+    id: str
+    project_id: str
+    analysis_run_id: str
+    type: Literal["report", "evidence_bundle"]
+    kind: str
+    format: str | None = None
+    sha256: str
+    created_at: str
+    download_url: str
+    verify_url: str | None = None
+
+
+class ArtifactsListResponse(StrictModel):
+    items: list[ArtifactResponse] = Field(default_factory=list)
+    total: int
+    limit: int
+    offset: int
+
+
+class ImportArtifactOptionResponse(StrictModel):
+    filename: str
+    kind: Literal["provider_snapshot", "attack_artifact"]
+    source: Literal["provider_snapshot_dir", "provider_cache_dir", "attack_artifact_dir"]
+    size_bytes: int
+    modified_at: str
+
+
+class WorkbenchArtifactsResponse(StrictModel):
+    items: list[ImportArtifactOptionResponse] = Field(default_factory=list)
+    provider_snapshots: list[ImportArtifactOptionResponse] = Field(default_factory=list)
+    attack_artifacts: list[ImportArtifactOptionResponse] = Field(default_factory=list)
+    total: int
+
+
+class AnalysisRunArtifactsResponse(StrictModel):
+    run: AnalysisRunResponse
+    reports: list[ReportResponse] = Field(default_factory=list)
+    evidence_bundles: list[EvidenceBundleResponse] = Field(default_factory=list)
+    items: list[ArtifactResponse] = Field(default_factory=list)
+
+
+class NavigatorLayerResponse(StrictModel):
+    version: str
+    name: str
+    domain: str
+    description: str | None = None
+    gradient: dict[str, Any] | None = None
+    legendItems: list[dict[str, Any]] = Field(default_factory=list)
+    showTacticRowBackground: bool | None = None
+    selectTechniquesAcrossTactics: bool | None = None
+    techniques: list[dict[str, Any]] = Field(default_factory=list)
 
 
 class ProviderSourceStatus(StrictModel):
@@ -458,6 +571,56 @@ class TopTechniquesResponse(StrictModel):
     items: list[AttackTechniqueSummary] = Field(default_factory=list)
 
 
+class DashboardServiceSummary(StrictModel):
+    service: str
+    finding_count: int
+
+
+class ProjectDashboardResponse(StrictModel):
+    project: ProjectResponse
+    counts: dict[str, int] = Field(default_factory=dict)
+    top_findings: list[FindingResponse] = Field(default_factory=list)
+    recent_runs: list[AnalysisRunResponse] = Field(default_factory=list)
+    top_services: list[DashboardServiceSummary] = Field(default_factory=list)
+    top_techniques: list[AttackTechniqueSummary] = Field(default_factory=list)
+    attack_mapped_count: int = 0
+    provider_status: ProviderStatusResponse
+
+
+class TokenAuthStatus(StrictModel):
+    active_count: int = 0
+    requires_token_for_mutations: bool = False
+
+
+class WorkbenchBootstrapResponse(StrictModel):
+    app: str
+    version: str
+    projects: list[ProjectResponse] = Field(default_factory=list)
+    latest_project_id: str | None = None
+    provider_status: ProviderStatusResponse
+    token_auth: TokenAuthStatus
+    supported_input_formats: list[str] = Field(default_factory=list)
+    supported_report_formats: list[str] = Field(default_factory=list)
+    supported_attack_sources: list[str] = Field(default_factory=list)
+    limits: dict[str, int] = Field(default_factory=dict)
+
+
+class VulnerabilityDetailResponse(StrictModel):
+    project: ProjectResponse
+    cve_id: str
+    source_id: str | None = None
+    title: str | None = None
+    description: str | None = None
+    cvss_score: float | None = None
+    cvss_vector: str | None = None
+    severity: str | None = None
+    cwe: str | None = None
+    published_at: str | None = None
+    modified_at: str | None = None
+    provider: dict[str, Any] = Field(default_factory=dict)
+    findings: list[FindingResponse] = Field(default_factory=list)
+
+
 class AttackReviewQueueItem(StrictModel):
     finding_id: str
     cve_id: str
@@ -503,6 +666,10 @@ class DetectionControlResponse(StrictModel):
     attachment_count: int = 0
     notes: str | None = None
     last_verified_at: str | None = None
+
+
+class DetectionControlsListResponse(StrictModel):
+    items: list[DetectionControlResponse] = Field(default_factory=list)
 
 
 class DetectionControlHistoryResponse(StrictModel):
@@ -616,6 +783,10 @@ class ProjectConfigResponse(StrictModel):
     source: str
     config: dict[str, Any]
     created_at: str
+
+
+class ProjectConfigItemResponse(StrictModel):
+    item: ProjectConfigResponse | None = None
 
 
 class ArtifactRetentionResponse(StrictModel):

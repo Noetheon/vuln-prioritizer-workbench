@@ -22,17 +22,29 @@ jobs:
             pyproject.toml
             .pre-commit-config.yaml
 
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
       - name: Install project and dev dependencies
         run: python -m pip install -e .[dev]
 
-      - name: Run release-equivalent local checks
-        run: make release-check
+      - name: Run release readiness before publishing
+        run: make release-readiness-check
 
       - name: Build source and wheel distributions
         run: python -m build
 
       - name: Validate built distributions
         run: python -m twine check dist/*
+
+      - name: Generate distribution checksum manifest
+        run: |
+          cd dist
+          sha256sum ./* > SHA256SUMS
 
       - name: Smoke test built wheel
         shell: bash
@@ -45,6 +57,7 @@ jobs:
           vuln-prioritizer doctor --format json --output "$artifact_root/doctor.json"
           VULN_PRIORITIZER_SMOKE_OUTPUT_DIR="$artifact_root" bash scripts/p1_installed_cli_smoke.sh
           VULN_PRIORITIZER_SMOKE_OUTPUT_DIR="$artifact_root" bash scripts/p2_installed_cli_smoke.sh
+          VULN_PRIORITIZER_BIN="$(command -v vuln-prioritizer)" python scripts/installed_web_smoke.py
 
       - name: Upload release artifacts
         uses: actions/upload-artifact@v7
@@ -90,6 +103,9 @@ jobs:
           name: release-dist
           path: dist
 
+      - name: Keep TestPyPI upload directory to distributions only
+        run: rm -f dist/SHA256SUMS
+
       - name: Publish distributions to TestPyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
@@ -129,6 +145,7 @@ jobs:
               vuln-prioritizer doctor --format json --output "$artifact_root/doctor.json"
               VULN_PRIORITIZER_SMOKE_OUTPUT_DIR="$artifact_root" bash scripts/p1_installed_cli_smoke.sh
               VULN_PRIORITIZER_SMOKE_OUTPUT_DIR="$artifact_root" bash scripts/p2_installed_cli_smoke.sh
+              VULN_PRIORITIZER_BIN="$(command -v vuln-prioritizer)" python scripts/installed_web_smoke.py
               exit 0
             fi
             if [[ "$attempt" -eq 5 ]]; then

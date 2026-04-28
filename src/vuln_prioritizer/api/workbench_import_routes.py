@@ -11,6 +11,8 @@ from sqlalchemy.orm import Session
 from vuln_prioritizer.api.deps import get_db_session, get_workbench_settings
 from vuln_prioritizer.api.schemas import (
     AnalysisRunResponse,
+    AnalysisRunsListResponse,
+    FindingExplainResponse,
     FindingResponse,
     FindingsListResponse,
     FindingStatusUpdateRequest,
@@ -48,7 +50,7 @@ from vuln_prioritizer.workbench_config import WorkbenchSettings
 router = APIRouter()
 
 
-@router.get("/projects/{project_id}/runs")
+@router.get("/projects/{project_id}/runs", response_model=AnalysisRunsListResponse)
 def list_project_runs(
     project_id: str,
     session: Annotated[Session, Depends(get_db_session)],
@@ -360,7 +362,7 @@ def update_finding_status(
     return _finding_payload(updated, include_detail=True)
 
 
-@router.get("/findings/{finding_id}/explain")
+@router.get("/findings/{finding_id}/explain", response_model=FindingExplainResponse)
 def explain_finding(
     finding_id: str,
     session: Annotated[Session, Depends(get_db_session)],

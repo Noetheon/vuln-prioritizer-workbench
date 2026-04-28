@@ -30,7 +30,10 @@ def test_upload_size_guard_rejects_oversized_import_upload() -> None:
         )
 
         assert response.status_code == 413
-        assert json.loads(response.body)["detail"] == "Upload exceeds configured limit."
+        payload = json.loads(response.body)
+        assert payload["detail"] == "Upload exceeds configured limit."
+        assert payload["error"]["code"] == "payload_too_large"
+        assert payload["error"]["details"]["max_upload_bytes"] == 1024 * 1024
 
     asyncio.run(_exercise())
 
@@ -129,13 +132,20 @@ def test_http_error_code_and_import_path_helpers_cover_public_codes() -> None:
     assert app_module._is_import_upload_path("/api/projects/p/imports") is True  # noqa: SLF001
     assert app_module._is_import_upload_path("/web/projects/p/imports") is True  # noqa: SLF001
     assert app_module._is_import_upload_path("/api/projects/p/runs") is False  # noqa: SLF001
+    requires_token = app_module._requires_api_token_check  # noqa: SLF001
+    assert requires_token(_request(path="/api/projects", method="POST")) is True
+    assert requires_token(_request(path="/web/projects/p/imports", method="POST")) is True
+    assert requires_token(_request(path="/projects", method="POST")) is True
+    assert requires_token(_request(path="/projects/new", method="GET")) is False
     assert app_module._http_error_code(404) == "not_found"  # noqa: SLF001
+    assert app_module._http_error_code(401) == "unauthorized"  # noqa: SLF001
     assert app_module._http_error_code(409) == "conflict"  # noqa: SLF001
     assert app_module._http_error_code(413) == "payload_too_large"  # noqa: SLF001
     assert app_module._http_error_code(422) == "validation_error"  # noqa: SLF001
     assert app_module._http_error_code(403) == "forbidden"  # noqa: SLF001
     assert app_module._http_error_code(418) == "http_error"  # noqa: SLF001
     assert app_module._http_status_title(409) == "Conflict"  # noqa: SLF001
+    assert app_module._http_status_title(401) == "Unauthorized"  # noqa: SLF001
     assert app_module._http_status_title(418) == "Request failed"  # noqa: SLF001
 
 

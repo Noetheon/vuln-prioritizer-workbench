@@ -120,7 +120,11 @@ def test_workbench_browser_happy_path_reports_and_responsive_pages(
     waiver_file = _write_waiver_file(live_workbench.tmp_path)
 
     page.goto(f"{live_workbench.base_url}/", wait_until="networkidle")
-    page.wait_for_url(re.compile(r".*/projects/new"))
+    page.wait_for_url(re.compile(r".*/app/?$"))
+    page.get_by_text("No project exists yet").wait_for()
+    _assert_usable_layout(page)
+
+    page.goto(f"{live_workbench.base_url}/projects/new", wait_until="networkidle")
     _assert_usable_layout(page)
 
     page.get_by_label("Project name").fill("playwright-workbench")
@@ -264,9 +268,9 @@ def test_workbench_browser_happy_path_reports_and_responsive_pages(
     _assert_usable_layout(page)
 
     page.get_by_role("link", name="Vuln Prioritizer Workbench").click()
-    page.wait_for_url(re.compile(r".*/dashboard"))
-    page.get_by_role("heading", name="Security dashboard").wait_for()
-    page.locator(".sidebar-project").get_by_text("playwright-workbench", exact=True).wait_for()
+    page.wait_for_url(re.compile(r".*/app/projects/.*/dashboard"))
+    page.get_by_role("heading", name="Prioritized work queue").wait_for()
+    page.get_by_role("heading", name="playwright-workbench").wait_for()
 
     page.set_viewport_size({"width": 390, "height": 844})
     for path in [
@@ -320,9 +324,9 @@ def test_workbench_browser_error_states_are_visible(
     page.get_by_text("Provider snapshot file does not exist.").wait_for()
     _assert_workbench_error_page(page)
     page.get_by_role("link", name="Open workspace").click()
-    page.wait_for_url(re.compile(r".*/dashboard"))
-    page.get_by_role("heading", name="Security dashboard").wait_for()
-    page.locator(".sidebar-project").get_by_text("playwright-errors", exact=True).wait_for()
+    page.wait_for_url(re.compile(r".*/app/projects/.*/dashboard"))
+    page.get_by_role("heading", name="Prioritized work queue").wait_for()
+    page.get_by_role("heading", name="playwright-errors").wait_for()
 
     assert browser_errors == []
     context.close()
@@ -366,7 +370,7 @@ def _attach_browser_error_log(page: Any) -> list[str]:
 
 
 def _assert_usable_layout(page: Any) -> None:
-    page.locator("main.page, .er-shell").first.wait_for()
+    page.locator("main.page, .er-shell, main").first.wait_for()
     overflow = page.evaluate(
         """() => {
             const root = document.documentElement;

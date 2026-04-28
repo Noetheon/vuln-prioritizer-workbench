@@ -22,7 +22,25 @@ jobs:
       - name: Wait for health endpoint
         run: |
           curl --retry 20 --retry-delay 2 --retry-connrefused --retry-all-errors --fail \
-            http://127.0.0.1:8000/api/health
+            http://127.0.0.1:8000/healthz
+
+      - name: Verify React Workbench entry and assets
+        run: |
+          python - <<'PY'
+          import re
+          import urllib.request
+
+          base = "http://127.0.0.1:8000"
+          root_url = urllib.request.urlopen(base + "/", timeout=5).geturl()
+          html = urllib.request.urlopen(base + "/app", timeout=5).read().decode()
+          deep_html = urllib.request.urlopen(base + "/app/projects/demo/dashboard", timeout=5).read().decode()
+          assets = set(re.findall(r'/static/app/assets/[^"<> ]+', html))
+          assert root_url.endswith("/app"), "Root did not redirect to the React Workbench"
+          assert assets, "React Workbench entry did not reference built assets"
+          assert html == deep_html, "SPA fallback did not serve the React entry"
+          for asset in assets:
+              urllib.request.urlopen(base + asset, timeout=5).read(1)
+          PY
 
       - name: Show service status
         run: docker compose ps
@@ -34,3 +52,13 @@ jobs:
       - name: Stop Workbench
         if: always()
         run: docker compose down -v --remove-orphans
+
+  postgres-migration-smoke:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Run Postgres migration smoke
+        run: make docker-postgres-migration-smoke

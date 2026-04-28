@@ -76,6 +76,7 @@ MAINTENANCE_WORKFLOW = (
 )
 RELEASE_WORKFLOW = Path(__file__).resolve().parents[1] / ".github" / "workflows" / "release.yml"
 TESTPYPI_WORKFLOW = Path(__file__).resolve().parents[1] / ".github" / "workflows" / "testpypi.yml"
+CODEQL_WORKFLOW = Path(__file__).resolve().parents[1] / ".github" / "workflows" / "codeql.yml"
 MAKEFILE = Path(__file__).resolve().parents[1] / "Makefile"
 README_FILE = Path(__file__).resolve().parents[1] / "README.md"
 CI_DOCS_FILE = Path(__file__).resolve().parents[1] / "docs" / "integrations" / "reporting_and_ci.md"
@@ -587,6 +588,17 @@ def test_ci_workflow_runs_workflow_check_on_supported_python_versions() -> None:
     assert gate_step["run"] == "make workflow-check"
 
 
+def test_codeql_workflow_scans_python_and_typescript_on_current_action() -> None:
+    payload = yaml.safe_load(CODEQL_WORKFLOW.read_text(encoding="utf-8"))
+    steps = payload["jobs"]["analyze"]["steps"]
+    init_step = next(step for step in steps if step.get("name") == "Initialize CodeQL")
+    analyze_step = next(step for step in steps if step.get("name") == "Perform CodeQL analysis")
+
+    assert init_step["uses"] == "github/codeql-action/init@v4"
+    assert analyze_step["uses"] == "github/codeql-action/analyze@v4"
+    assert init_step["with"]["languages"] == "python,javascript-typescript"
+
+
 def test_maintenance_workflow_runs_weekly_release_check_and_install_smokes() -> None:
     payload = yaml.safe_load(MAINTENANCE_WORKFLOW.read_text(encoding="utf-8"))
     triggers = payload.get("on", payload.get(True))
@@ -600,9 +612,9 @@ def test_maintenance_workflow_runs_weekly_release_check_and_install_smokes() -> 
     release_gate = next(
         step
         for step in release_job["steps"]
-        if step.get("name") == "Run weekly release-check dry-run"
+        if step.get("name") == "Run weekly release readiness dry-run"
     )
-    assert release_gate["run"] == "make release-check"
+    assert release_gate["run"] == "make release-readiness-check"
 
     matrix = install_job["strategy"]["matrix"]
     assert matrix["os"] == ["ubuntu-latest", "macos-latest"]
@@ -620,6 +632,7 @@ def test_maintenance_workflow_runs_weekly_release_check_and_install_smokes() -> 
     )
     assert "bash scripts/p1_installed_cli_smoke.sh" in wheel_step["run"]
     assert "bash scripts/p2_installed_cli_smoke.sh" in wheel_step["run"]
+    assert "python scripts/installed_web_smoke.py" in wheel_step["run"]
     assert "bash scripts/p1_pipx_source_smoke.sh" in pipx_step["run"]
 
 
@@ -636,9 +649,17 @@ def test_release_workflow_is_tag_bound_and_verifies_pypi_install() -> None:
         "startsWith(github.ref, 'refs/tags/v')" in step["if"] for step in github_release_steps
     )
     release_gate_step = next(
-        step for step in build_steps if step.get("name") == "Run release gate before publishing"
+        step
+        for step in build_steps
+        if step.get("name") == "Run release readiness before publishing"
     )
-    assert release_gate_step["run"] == "make release-check"
+    assert release_gate_step["run"] == "make release-readiness-check"
+    checksum_step = next(
+        step
+        for step in build_steps
+        if step.get("name") == "Generate distribution checksum manifest"
+    )
+    assert "sha256sum ./* > SHA256SUMS" in checksum_step["run"]
 
     tag_install_step = next(
         step for step in build_steps if step.get("name") == "Smoke test source-at-tag install path"
@@ -652,6 +673,13 @@ def test_release_workflow_is_tag_bound_and_verifies_pypi_install() -> None:
     assert "bash scripts/p1_pipx_source_smoke.sh" in tag_install_run
     assert "startsWith(github.ref, 'refs/tags/v')" in jobs["publish-pypi"]["if"]
     assert "PYPI_PUBLISH_ENABLED" in jobs["publish-pypi"]["if"]
+    pypi_publish_steps = jobs["publish-pypi"]["steps"]
+    upload_dir_cleanup = next(
+        step
+        for step in pypi_publish_steps
+        if step.get("name") == "Keep PyPI upload directory to distributions only"
+    )
+    assert upload_dir_cleanup["run"] == "rm -f dist/SHA256SUMS"
 
     verify_job = jobs["verify-pypi-install"]
     assert verify_job["needs"] == "publish-pypi"
@@ -667,6 +695,8 @@ def test_release_workflow_is_tag_bound_and_verifies_pypi_install() -> None:
     )
     assert "bash scripts/p1_installed_cli_smoke.sh" in verify_run
     assert "bash scripts/p2_installed_cli_smoke.sh" in verify_run
+    assert "python scripts/installed_web_smoke.py" in verify_run
+    assert 'VULN_PRIORITIZER_BIN="$(command -v vuln-prioritizer)"' in verify_run
 
     wheel_smoke_run = next(
         step for step in build_steps if step.get("name") == "Smoke test built wheel"
@@ -678,6 +708,8 @@ def test_release_workflow_is_tag_bound_and_verifies_pypi_install() -> None:
     )
     assert "bash scripts/p1_installed_cli_smoke.sh" in wheel_smoke_run
     assert "bash scripts/p2_installed_cli_smoke.sh" in wheel_smoke_run
+    assert "python scripts/installed_web_smoke.py" in wheel_smoke_run
+    assert 'VULN_PRIORITIZER_BIN="$(command -v vuln-prioritizer)"' in wheel_smoke_run
     assert 'VULN_PRIORITIZER_SMOKE_OUTPUT_DIR="$artifact_root"' in wheel_smoke_run
     assert failure_upload["if"] == "failure()"
     assert "${{ runner.temp }}/workflow-artifacts/**" in failure_upload["with"]["path"]
@@ -698,10 +730,74 @@ def test_release_check_keeps_demo_sync_manual_and_deterministic() -> None:
     assert "workflow-check:" in makefile
     workflow_block = makefile.split("workflow-check:", 1)[1].split("demo-sync-check:", 1)[0]
     assert "$(MAKE) demo-sync-check" not in workflow_block
+    assert "frontend-build: frontend-check" in makefile
+    frontend_sync_block = makefile.split("frontend-sync-check:", 1)[1].split("benchmark-check:", 1)[
+        0
+    ]
+    assert "git diff --exit-code -- src/vuln_prioritizer/web/static/app" in frontend_sync_block
+    assert (
+        "git ls-files --error-unmatch src/vuln_prioritizer/web/static/app/index.html"
+        in frontend_sync_block
+    )
+    assert "git ls-files 'src/vuln_prioritizer/web/static/app/assets/*.js'" in frontend_sync_block
+    assert (
+        "git ls-files --others --exclude-standard -- src/vuln_prioritizer/web/static/app"
+        in frontend_sync_block
+    )
+    tracked_source_block = makefile.split("tracked-source-check:", 1)[1].split(
+        "benchmark-check:", 1
+    )[0]
+    for path in [
+        "frontend/package.json",
+        "frontend/package-lock.json",
+        "scripts/check_package_static_assets.py",
+        "scripts/installed_web_smoke.py",
+        "docs/releases/v1.2.0.md",
+    ]:
+        assert path in tracked_source_block
+    assert 'git ls-files --error-unmatch "$$path"' in tracked_source_block
+    assert "Release source files are untracked" in tracked_source_block
     assert "demo-sync-check:" in makefile
     release_block = makefile.split("release-check:", 1)[1]
+    assert "$(MAKE) tracked-source-check" in release_block
     assert "$(MAKE) pipx-source-smoke" in release_block
     assert "$(MAKE) demo-sync-check" in release_block
+    package_check_block = makefile.split("package-check:", 1)[1].split("package-check-temp:", 1)[0]
+    package_check_header = next(
+        line for line in makefile.splitlines() if line.startswith("package-check:")
+    )
+    assert package_check_header == "package-check: package-installed-web-smoke"
+    assert "$(PYTHON) scripts/check_package_static_assets.py" in package_check_block
+    assert "VULN_PRIORITIZER_SKIP_PACKAGE_BUILD" not in package_check_block
+    assert "package-installed-web-smoke: package" in makefile
+    package_web_smoke_block = makefile.split("package-installed-web-smoke:", 1)[1].split(
+        "installed-web-smoke:", 1
+    )[0]
+    assert "$(PYTHON) -m venv" in package_web_smoke_block
+    assert '"$$venv/bin/python" -m pip install --force-reinstall dist/*.whl' in (
+        package_web_smoke_block
+    )
+    assert (
+        'VULN_PRIORITIZER_BIN="$$venv/bin/vuln-prioritizer" '
+        "$(PYTHON) scripts/installed_web_smoke.py"
+    ) in package_web_smoke_block
+    postgres_block = makefile.split("docker-postgres-migration-smoke:", 1)[1].split(
+        "dependency-audit:", 1
+    )[0]
+    assert "base='http://127.0.0.1:8001'" in postgres_block
+    assert "base + '/'" in postgres_block
+    assert "base + '/app'" in postgres_block
+    assert "base + '/app/projects/demo/dashboard'" in postgres_block
+    assert "/static/app/assets/" in postgres_block
+    assert "root.endswith('/app')" in postgres_block
+    assert "release-readiness-check:" in makefile
+    readiness_block = makefile.split("release-readiness-check:", 1)[1]
+    assert "$(MAKE) playwright-install" in readiness_block
+    assert "$(MAKE) playwright-check" in readiness_block
+    assert "$(MAKE) package-check-temp" in readiness_block
+    assert "$(MAKE) dependency-audit" in readiness_block
+    assert "$(MAKE) docker-demo-smoke" in readiness_block
+    assert "$(MAKE) docker-postgres-migration-smoke" in readiness_block
     assert "VULN_PRIORITIZER_FIXED_NOW" in makefile
     assert "git diff --binary -- docs" in makefile
     assert 'cmp -s "$$before" "$$after"' in makefile
@@ -728,11 +824,26 @@ def test_testpypi_workflow_exposes_version_output_and_hosted_index_verification(
     )
     build_steps = jobs["build"]["steps"]
     release_gate_step = next(
-        step for step in build_steps if step.get("name") == "Run release-equivalent local checks"
+        step
+        for step in build_steps
+        if step.get("name") == "Run release readiness before publishing"
     )
     version_step = next(step for step in build_steps if step.get("id") == "package_version")
-    assert release_gate_step["run"] == "make release-check"
+    assert release_gate_step["run"] == "make release-readiness-check"
+    checksum_step = next(
+        step
+        for step in build_steps
+        if step.get("name") == "Generate distribution checksum manifest"
+    )
+    assert "sha256sum ./* > SHA256SUMS" in checksum_step["run"]
     assert "payload['project']['version']" in version_step["run"]
+    testpypi_publish_steps = jobs["publish-testpypi"]["steps"]
+    upload_dir_cleanup = next(
+        step
+        for step in testpypi_publish_steps
+        if step.get("name") == "Keep TestPyPI upload directory to distributions only"
+    )
+    assert upload_dir_cleanup["run"] == "rm -f dist/SHA256SUMS"
 
     verify_job = jobs["verify-testpypi-install"]
     assert verify_job["needs"] == ["build", "publish-testpypi"]
@@ -752,6 +863,8 @@ def test_testpypi_workflow_exposes_version_output_and_hosted_index_verification(
     )
     assert "bash scripts/p1_installed_cli_smoke.sh" in verify_run
     assert "bash scripts/p2_installed_cli_smoke.sh" in verify_run
+    assert "python scripts/installed_web_smoke.py" in verify_run
+    assert 'VULN_PRIORITIZER_BIN="$(command -v vuln-prioritizer)"' in verify_run
 
     wheel_smoke_run = next(
         step for step in build_steps if step.get("name") == "Smoke test built wheel"
@@ -763,6 +876,8 @@ def test_testpypi_workflow_exposes_version_output_and_hosted_index_verification(
     )
     assert "bash scripts/p1_installed_cli_smoke.sh" in wheel_smoke_run
     assert "bash scripts/p2_installed_cli_smoke.sh" in wheel_smoke_run
+    assert "python scripts/installed_web_smoke.py" in wheel_smoke_run
+    assert 'VULN_PRIORITIZER_BIN="$(command -v vuln-prioritizer)"' in wheel_smoke_run
     assert 'VULN_PRIORITIZER_SMOKE_OUTPUT_DIR="$artifact_root"' in wheel_smoke_run
     assert build_failure_upload["if"] == "failure()"
     assert "${{ runner.temp }}/workflow-artifacts/**" in build_failure_upload["with"]["path"]

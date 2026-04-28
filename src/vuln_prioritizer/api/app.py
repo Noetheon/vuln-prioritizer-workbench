@@ -10,12 +10,13 @@ from typing import Any
 import uvicorn
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.engine import Engine
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 from starlette.responses import Response
 
+from vuln_prioritizer import __version__
 from vuln_prioritizer.api.routes import api_router
 from vuln_prioritizer.api.security import api_token_digest
 from vuln_prioritizer.db import create_db_engine, create_session_factory
@@ -46,7 +47,7 @@ def create_app(
 
     app = FastAPI(
         title="Vuln Prioritizer Workbench",
-        version="0.2.0-workbench-mvp",
+        version=__version__,
     )
     app.state.workbench_settings = active_settings
     app.state.db_engine = engine
@@ -65,6 +66,8 @@ def create_app(
         name="static",
     )
     app.add_api_route("/healthz", _healthz, methods=["GET"], include_in_schema=False)
+    app.add_api_route("/app", _react_app, methods=["GET"], include_in_schema=False)
+    app.add_api_route("/app/{path:path}", _react_app, methods=["GET"], include_in_schema=False)
     app.include_router(api_router)
     app.include_router(web_router)
     app.add_exception_handler(HTTPException, _http_error_handler)
@@ -87,7 +90,7 @@ async def _security_headers(request: Request, call_next: Any) -> Any:
         "Content-Security-Policy",
         "default-src 'self'; base-uri 'none'; object-src 'none'; "
         "script-src 'self'; style-src 'self'; img-src 'self' data:; "
-        "connect-src 'self'; frame-ancestors 'none'",
+        "connect-src 'self'; form-action 'self'; frame-ancestors 'none'",
     )
     return response
 
@@ -104,27 +107,11 @@ async def _api_token_auth(request: Request, call_next: Any) -> Any:
             return await call_next(request)
         raw_token = _request_api_token(request)
         if raw_token is None:
-            return JSONResponse(
-                status_code=403,
-                content=_error_payload(
-                    detail="API token required.",
-                    code="forbidden",
-                    message="API token required.",
-                    details=None,
-                ),
-            )
+            return _api_token_error_response(request, "API token required.")
         token_hash = api_token_digest(raw_token)
         token = repo.get_active_api_token_by_hash(token_hash)
         if token is None or not secrets.compare_digest(token.token_hash, token_hash):
-            return JSONResponse(
-                status_code=403,
-                content=_error_payload(
-                    detail="Invalid API token.",
-                    code="forbidden",
-                    message="Invalid API token.",
-                    details=None,
-                ),
-            )
+            return _api_token_error_response(request, "Invalid API token.")
         repo.mark_api_token_used(token)
         session.commit()
     return await call_next(request)
@@ -143,7 +130,8 @@ def _requires_api_token_check(request: Request) -> bool:
         return True
     if request.method not in {"POST", "PUT", "PATCH", "DELETE"}:
         return False
-    return request.url.path.startswith("/api/")
+    path = request.url.path
+    return path.startswith("/api/") or path.startswith("/web/") or path == "/projects"
 
 
 def _request_api_token(request: Request) -> str | None:
@@ -153,6 +141,29 @@ def _request_api_token(request: Request) -> str | None:
         return token or None
     token = request.headers.get("x-api-token", "").strip()
     return token or None
+
+
+def _api_token_error_response(request: Request, message: str) -> Response:
+    headers = {"WWW-Authenticate": "Bearer"}
+    if _should_render_html_error(request):
+        return _html_error_response(
+            request,
+            status_code=401,
+            code="unauthorized",
+            message=message,
+            details=None,
+            headers=headers,
+        )
+    return JSONResponse(
+        status_code=401,
+        headers=headers,
+        content=_error_payload(
+            detail=message,
+            code="unauthorized",
+            message=message,
+            details=None,
+        ),
+    )
 
 
 async def _upload_size_guard(request: Request, call_next: Any) -> Any:
@@ -169,7 +180,12 @@ async def _upload_size_guard(request: Request, call_next: Any) -> Any:
                 if content_length > settings.max_upload_bytes + multipart_overhead:
                     return JSONResponse(
                         status_code=413,
-                        content={"detail": "Upload exceeds configured limit."},
+                        content=_error_payload(
+                            detail="Upload exceeds configured limit.",
+                            code="payload_too_large",
+                            message="Upload exceeds configured limit.",
+                            details={"max_upload_bytes": settings.max_upload_bytes},
+                        ),
                     )
     return await call_next(request)
 
@@ -302,6 +318,8 @@ def _detail_message(detail: Any, *, fallback: str) -> str:
 
 
 def _http_error_code(status_code: int) -> str:
+    if status_code == 401:
+        return "unauthorized"
     if status_code == 404:
         return "not_found"
     if status_code == 409:
@@ -316,6 +334,8 @@ def _http_error_code(status_code: int) -> str:
 
 
 def _http_status_title(status_code: int) -> str:
+    if status_code == 401:
+        return "Unauthorized"
     if status_code == 403:
         return "Forbidden"
     if status_code == 404:
@@ -339,6 +359,17 @@ def _ensure_sqlite_parent(database_url: str) -> None:
 
 def _healthz() -> dict[str, str]:
     return {"status": "ok"}
+
+
+def _react_app() -> FileResponse:
+    index_path = Path(__file__).parents[1] / "web" / "static" / "app" / "index.html"
+    if not index_path.is_file():
+        raise HTTPException(status_code=404, detail="React Workbench app is not built.")
+    return FileResponse(
+        index_path,
+        media_type="text/html",
+        headers={"Cache-Control": "no-store"},
+    )
 
 
 def main(host: str = "127.0.0.1", port: int = 8000) -> None:

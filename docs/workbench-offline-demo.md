@@ -47,7 +47,7 @@ If `pip-audit` is unavailable or advisory data cannot be reached, record that as
 | Upload filename/path validation | `tests/api/test_workbench_api.py::test_workbench_rejects_unsupported_and_oversized_uploads` plus `test_workbench_rejects_untrusted_provider_snapshot_path`. |
 | Report/evidence downloads | `tests/api/test_workbench_api.py::test_workbench_import_findings_reports_and_evidence` and `test_workbench_downloads_reject_tampered_artifact_paths`; browser evidence should show report links and Evidence ZIP verification. |
 | 10k findings API smoke | `tests/api/test_workbench_api.py::test_workbench_findings_api_handles_10k_pagination_smoke`. |
-| Docker demo smoke | `make docker-demo-smoke` output showing `/api/health` returns `{"status":"ok"}` before teardown. |
+| Docker demo smoke | `make docker-demo-smoke` output showing `/healthz` returns `{"status":"ok"}` before React route/assets checks and teardown. |
 | Dependency audit | `make dependency-audit` result, or a documented exception when `pip-audit` or advisory data is unavailable. |
 | Demo evidence bundle | `make demo-evidence-bundle-check` output plus `build/v1.0-demo-evidence-bundle-verification.json` showing `ok=true`. |
 

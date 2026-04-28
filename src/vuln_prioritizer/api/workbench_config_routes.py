@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 from vuln_prioritizer.api.deps import get_db_session
 from vuln_prioritizer.api.schemas import (
     ProjectConfigDiffResponse,
+    ProjectConfigItemResponse,
     ProjectConfigRequest,
     ProjectConfigResponse,
 )
@@ -55,7 +56,7 @@ def save_project_config(
     return _project_config_payload(snapshot)
 
 
-@router.get("/projects/{project_id}/settings/config")
+@router.get("/projects/{project_id}/settings/config", response_model=ProjectConfigItemResponse)
 def get_project_config(
     project_id: str,
     session: Annotated[Session, Depends(get_db_session)],
