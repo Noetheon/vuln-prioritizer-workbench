@@ -268,3 +268,82 @@ Residual risks:
 - `compose.traefik.yml` is infrastructure scaffolding only. Public deployment
   hardening remains out of scope until the auth and production settings slices
   land.
+
+## FSFT-04 Template Login Smoke
+
+Branch:
+
+- `codex/fsft-04-template-login-smoke`
+
+Scope:
+
+- Added template-shaped backend routes for `/api/v1/login/access-token`,
+  `/api/v1/login/test-token`, `/api/v1/users/me`, and
+  `/api/v1/utils/health-check/`.
+- Added template-compatible settings for `SECRET_KEY`,
+  `ACCESS_TOKEN_EXPIRE_MINUTES`, `FIRST_SUPERUSER`,
+  `FIRST_SUPERUSER_PASSWORD`, `FRONTEND_HOST`, and `BACKEND_CORS_ORIGINS`.
+- Added CORS middleware for the React frontend origin.
+- Regenerated `frontend/src/client` from `backend/app/main.py` so the client now
+  represents the template backend shell instead of the legacy Jinja Workbench
+  OpenAPI surface.
+- Added TanStack Router login/dashboard wiring, bearer-token storage, and a
+  Playwright login smoke against the running FastAPI backend.
+- Extended Docker smoke checks to cover `/api/v1/utils/health-check/` and the
+  frontend `/login` route.
+
+Commands run:
+
+```bash
+python3 -m pytest -q backend/tests/api/test_template_backend_adapter.py \
+  backend/tests/api/test_template_auth_smoke.py --no-cov
+bash scripts/generate-client.sh
+npm --prefix frontend run lint
+npm --prefix frontend run build
+cd backend && python3 -m mypy app src
+npm --prefix frontend run test
+make frontend-check
+make check
+make docs-check
+make actionlint-check
+make package-check
+make docker-demo-smoke
+make docker-postgres-migration-smoke
+git diff --check
+# Captured /tmp/vpw-fsft04-login.png and /tmp/vpw-fsft04-dashboard.png
+# with Playwright against local uvicorn plus Vite dev servers.
+```
+
+Results:
+
+- Targeted template backend tests passed: 15 passed.
+- OpenAPI client generation from `app.main` passed.
+- Frontend lint passed after excluding the generated TanStack route tree from the
+  hand-written file lint set.
+- Frontend production build passed.
+- Backend mypy over `app` and `src` passed.
+- Playwright login smoke passed: 1 Chromium test logged in through
+  `/api/v1/login/access-token`, reached `/`, and verified user/status evidence.
+- `make frontend-check` passed: lint, build, and client generation completed.
+- `make check` passed: 544 passed, 2 skipped, total coverage 90.27%.
+- `make docs-check`, `make actionlint-check`, `make package-check`, and
+  `git diff --check` passed.
+- `make docker-demo-smoke` built backend/frontend images, started `db`,
+  `backend`, and `frontend`, and verified `/api/v1/workbench/status`,
+  `/api/v1/utils/health-check/`, the frontend root, and `/login`.
+- `make docker-postgres-migration-smoke` passed and kept the profiled legacy
+  Workbench Postgres health endpoint green.
+- Local screenshot artifacts were captured at `/tmp/vpw-fsft04-login.png` and
+  `/tmp/vpw-fsft04-dashboard.png`.
+
+Residual risks:
+
+- This is a template login smoke with a configured local superuser. It is not the
+  final DB-backed SQLModel user table, password hashing, recovery email,
+  signup, admin user CRUD, RBAC, or production auth hardening.
+- The first JWT helper is standard-library HS256 to avoid making the baseline
+  depend on a broken local `cryptography/cffi` wheel. A later auth-hardening
+  slice can swap to the official template dependency set once the lock/runtime
+  policy is settled.
+- Workbench domain APIs, Project/Finding SQLModel entities, and old Items removal
+  remain separate follow-up issues.

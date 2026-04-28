@@ -152,6 +152,12 @@ not something to fake by pointing at the old SQLAlchemy/Jinja implementation.
   `compose.traefik.yml`, starts the template backend shell plus React frontend,
   and keeps the legacy Workbench only as a profiled Postgres migration smoke
   service.
+- `codex/fsft-04-template-login-smoke` adds the first real template-shaped
+  login path: `/api/v1/login/access-token`, `/api/v1/login/test-token`,
+  `/api/v1/users/me`, `/api/v1/utils/health-check/`, CORS for the React
+  frontend, a generated OpenAPI client from `app.main`, TanStack Router login
+  wiring, and a Playwright login smoke. This is intentionally still a
+  configured-superuser smoke, not DB-backed SQLModel user management.
 
 Frontend issues `VPW-037` to `VPW-047` must wait until the backend OpenAPI client
 is generated and the template login flow remains green.

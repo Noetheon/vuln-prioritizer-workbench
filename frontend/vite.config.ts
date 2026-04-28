@@ -1,4 +1,5 @@
 import path from "node:path"
+import { tanstackRouter } from "@tanstack/router-plugin/vite"
 import react from "@vitejs/plugin-react-swc"
 import { defineConfig } from "vite"
 
@@ -15,5 +16,11 @@ export default defineConfig({
       "/api": "http://127.0.0.1:8000",
     },
   },
-  plugins: [react()],
+  plugins: [
+    tanstackRouter({
+      autoCodeSplitting: true,
+      target: "react",
+    }),
+    react(),
+  ],
 })
