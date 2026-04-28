@@ -181,6 +181,11 @@ not something to fake by pointing at the old SQLAlchemy/Jinja implementation.
   These tables include stable enum strings, JSON evidence/explanation fields,
   explicit foreign keys, and prepared dedup constraints without adding API
   routes, analysis runs, provider snapshots, or import services.
+- `codex/vpw-009-run-provider-models` adds the run provenance layer:
+  `analysis_run`, `finding_occurrence`, and `provider_snapshot`, with stable
+  run status strings, error state fields, provider source hashes/metadata, and
+  FKs back to Project/Finding without adding import APIs, provider clients, or
+  frontend screens.
 
 Frontend issues `VPW-037` to `VPW-047` must wait until the backend OpenAPI client
 is generated and the template login flow remains green.

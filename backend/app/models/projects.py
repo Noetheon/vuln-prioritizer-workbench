@@ -13,6 +13,7 @@ from app.models.users import User
 if TYPE_CHECKING:
     from app.models.assets import Asset
     from app.models.findings import Finding
+    from app.models.runs import AnalysisRun
 
 
 class ProjectBase(SQLModel):
@@ -56,6 +57,10 @@ class Project(ProjectBase, table=True):
     owner: User | None = Relationship(back_populates="projects")
     assets: list["Asset"] = Relationship(back_populates="project", cascade_delete=True)
     findings: list["Finding"] = Relationship(back_populates="project", cascade_delete=True)
+    analysis_runs: list["AnalysisRun"] = Relationship(
+        back_populates="project",
+        cascade_delete=True,
+    )
 
 
 class ProjectPublic(ProjectBase):

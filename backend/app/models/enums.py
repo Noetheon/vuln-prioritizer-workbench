@@ -50,3 +50,14 @@ class FindingStatus(StrEnum):
     FIXED = "fixed"
     ACCEPTED = "accepted"
     SUPPRESSED = "suppressed"
+
+
+class AnalysisRunStatus(StrEnum):
+    """Import or analysis run lifecycle state."""
+
+    PENDING = "pending"
+    RUNNING = "running"
+    COMPLETED = "completed"
+    COMPLETED_WITH_ERRORS = "completed_with_errors"
+    FAILED = "failed"
+    CANCELLED = "cancelled"

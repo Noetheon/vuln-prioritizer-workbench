@@ -8,6 +8,7 @@ in focused modules.
 from app.models.assets import Asset, AssetBase, Component, ComponentBase
 from app.models.auth import Token, TokenPayload
 from app.models.enums import (
+    AnalysisRunStatus,
     AssetCriticality,
     AssetEnvironment,
     AssetExposure,
@@ -24,11 +25,22 @@ from app.models.projects import (
     ProjectUpdate,
 )
 from app.models.registry import import_table_models
+from app.models.runs import (
+    AnalysisRun,
+    AnalysisRunBase,
+    FindingOccurrence,
+    FindingOccurrenceBase,
+    ProviderSnapshot,
+    ProviderSnapshotBase,
+)
 from app.models.users import User, UserBase, UserPublic, UsersPublic
 from app.models.vulnerabilities import Vulnerability, VulnerabilityBase
 from app.models.workbench import MigrationStatus, WorkbenchStatus
 
 __all__ = [
+    "AnalysisRun",
+    "AnalysisRunBase",
+    "AnalysisRunStatus",
     "Asset",
     "AssetBase",
     "AssetCriticality",
@@ -38,6 +50,8 @@ __all__ = [
     "ComponentBase",
     "Finding",
     "FindingBase",
+    "FindingOccurrence",
+    "FindingOccurrenceBase",
     "FindingPriority",
     "FindingStatus",
     "MigrationStatus",
@@ -47,6 +61,8 @@ __all__ = [
     "ProjectPublic",
     "ProjectsPublic",
     "ProjectUpdate",
+    "ProviderSnapshot",
+    "ProviderSnapshotBase",
     "Token",
     "TokenPayload",
     "User",
