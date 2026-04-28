@@ -6,7 +6,8 @@ import uuid
 
 from sqlmodel import Session, col, func, select
 
-from app.models import Project, ProjectCreate, User
+from app.models import Project, ProjectCreate, ProjectUpdate, User
+from app.models.base import get_datetime_utc
 
 
 class ProjectRepository:
@@ -46,3 +47,17 @@ class ProjectRepository:
         if user.is_superuser or project.owner_id == user.id:
             return project
         return None
+
+    def update_project(self, project: Project, project_in: ProjectUpdate) -> Project:
+        """Update mutable project fields without committing the transaction."""
+        update_data = project_in.model_dump(exclude_unset=True)
+        project.sqlmodel_update(update_data)
+        project.updated_at = get_datetime_utc()
+        self.session.add(project)
+        self.session.flush()
+        return project
+
+    def delete_project(self, project: Project) -> None:
+        """Delete a project without committing the transaction."""
+        self.session.delete(project)
+        self.session.flush()

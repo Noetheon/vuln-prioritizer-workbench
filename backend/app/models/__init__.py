@@ -5,7 +5,16 @@ use ``from app.models import User, ProjectPublic`` while table definitions live
 in focused modules.
 """
 
-from app.models.assets import Asset, AssetBase, Component, ComponentBase
+from app.models.assets import (
+    Asset,
+    AssetBase,
+    AssetCreate,
+    AssetPublic,
+    AssetsPublic,
+    AssetUpdate,
+    Component,
+    ComponentBase,
+)
 from app.models.auth import Token, TokenPayload
 from app.models.enums import (
     AnalysisRunStatus,
@@ -15,7 +24,7 @@ from app.models.enums import (
     FindingPriority,
     FindingStatus,
 )
-from app.models.findings import Finding, FindingBase
+from app.models.findings import Finding, FindingBase, FindingPublic, FindingsPublic
 from app.models.projects import (
     Project,
     ProjectBase,
@@ -28,6 +37,8 @@ from app.models.registry import import_table_models
 from app.models.runs import (
     AnalysisRun,
     AnalysisRunBase,
+    AnalysisRunPublic,
+    AnalysisRunsPublic,
     FindingOccurrence,
     FindingOccurrenceBase,
     ProviderSnapshot,
@@ -40,20 +51,28 @@ from app.models.workbench import MigrationStatus, WorkbenchStatus
 __all__ = [
     "AnalysisRun",
     "AnalysisRunBase",
+    "AnalysisRunPublic",
+    "AnalysisRunsPublic",
     "AnalysisRunStatus",
     "Asset",
     "AssetBase",
     "AssetCriticality",
+    "AssetCreate",
     "AssetEnvironment",
     "AssetExposure",
+    "AssetPublic",
+    "AssetsPublic",
+    "AssetUpdate",
     "Component",
     "ComponentBase",
     "Finding",
     "FindingBase",
     "FindingOccurrence",
     "FindingOccurrenceBase",
+    "FindingPublic",
     "FindingPriority",
     "FindingStatus",
+    "FindingsPublic",
     "MigrationStatus",
     "Project",
     "ProjectBase",

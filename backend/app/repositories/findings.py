@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from typing import Any
 
-from sqlmodel import Session, col, select
+from sqlmodel import Session, col, func, select
 
 from app.models import (
     Component,
@@ -165,3 +165,35 @@ class FindingRepository:
             .order_by(col(Finding.operational_rank), col(Finding.priority_rank), Finding.cve_id)
         )
         return list(self.session.exec(statement).all())
+
+    def list_project_findings_page(
+        self,
+        project_id: uuid.UUID,
+        *,
+        limit: int = 100,
+        offset: int = 0,
+        sort: str = "operational",
+    ) -> tuple[list[Finding], int]:
+        """Return a paginated project finding page."""
+        order_fields = {
+            "operational": (col(Finding.operational_rank), col(Finding.priority_rank)),
+            "priority": (col(Finding.priority_rank), col(Finding.cve_id)),
+            "cve": (col(Finding.cve_id),),
+            "status": (col(Finding.status), col(Finding.cve_id)),
+        }
+        if sort not in order_fields:
+            raise ValueError(f"Unsupported findings sort field: {sort}.")
+
+        count_statement = (
+            select(func.count()).select_from(Finding).where(Finding.project_id == project_id)
+        )
+        statement = (
+            select(Finding)
+            .where(Finding.project_id == project_id)
+            .order_by(*order_fields[sort])
+            .offset(offset)
+            .limit(limit)
+        )
+        count = self.session.exec(count_statement).one()
+        findings = self.session.exec(statement).all()
+        return list(findings), count

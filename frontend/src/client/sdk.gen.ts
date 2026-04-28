@@ -3,7 +3,130 @@
 import type { CancelablePromise } from './core/CancelablePromise';
 import { OpenAPI } from './core/OpenAPI';
 import { request as __request } from './core/request';
-import type { LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, ProjectsReadProjectsResponse, ProjectsCreateProjectData, ProjectsCreateProjectResponse, ProjectsReadProjectData, ProjectsReadProjectResponse, UsersReadUserMeResponse, UtilsHealthCheckResponse, WorkbenchTemplateWorkbenchStatusResponse } from './types.gen';
+import type { AssetsUpdateAssetData, AssetsUpdateAssetResponse, AssetsReadProjectAssetsData, AssetsReadProjectAssetsResponse, AssetsCreateProjectAssetData, AssetsCreateProjectAssetResponse, FindingsReadFindingData, FindingsReadFindingResponse, FindingsReadProjectFindingsData, FindingsReadProjectFindingsResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, ProjectsReadProjectsResponse, ProjectsCreateProjectData, ProjectsCreateProjectResponse, ProjectsDeleteProjectData, ProjectsDeleteProjectResponse, ProjectsReadProjectData, ProjectsReadProjectResponse, ProjectsUpdateProjectData, ProjectsUpdateProjectResponse, RunsReadProjectRunsData, RunsReadProjectRunsResponse, RunsReadRunData, RunsReadRunResponse, UsersReadUserMeResponse, UtilsHealthCheckResponse, WorkbenchTemplateWorkbenchStatusResponse } from './types.gen';
+
+export class AssetsService {
+    /**
+     * Update Asset
+     * Update an asset if its project is visible.
+     * @param data The data for the request.
+     * @param data.assetId
+     * @param data.requestBody
+     * @returns AssetPublic Successful Response
+     * @throws ApiError
+     */
+    public static updateAsset(data: AssetsUpdateAssetData): CancelablePromise<AssetsUpdateAssetResponse> {
+        return __request(OpenAPI, {
+            method: 'PATCH',
+            url: '/api/v1/assets/{asset_id}',
+            path: {
+                asset_id: data.assetId
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+
+    /**
+     * Read Project Assets
+     * List assets for a visible project.
+     * @param data The data for the request.
+     * @param data.projectId
+     * @returns AssetsPublic Successful Response
+     * @throws ApiError
+     */
+    public static readProjectAssets(data: AssetsReadProjectAssetsData): CancelablePromise<AssetsReadProjectAssetsResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/projects/{project_id}/assets/',
+            path: {
+                project_id: data.projectId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+
+    /**
+     * Create Project Asset
+     * Create or upsert an asset for a visible project.
+     * @param data The data for the request.
+     * @param data.projectId
+     * @param data.requestBody
+     * @returns AssetPublic Successful Response
+     * @throws ApiError
+     */
+    public static createProjectAsset(data: AssetsCreateProjectAssetData): CancelablePromise<AssetsCreateProjectAssetResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/projects/{project_id}/assets/',
+            path: {
+                project_id: data.projectId
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+}
+
+export class FindingsService {
+    /**
+     * Read Finding
+     * Read one finding if its project is visible.
+     * @param data The data for the request.
+     * @param data.findingId
+     * @returns FindingPublic Successful Response
+     * @throws ApiError
+     */
+    public static readFinding(data: FindingsReadFindingData): CancelablePromise<FindingsReadFindingResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/findings/{finding_id}',
+            path: {
+                finding_id: data.findingId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+
+    /**
+     * Read Project Findings
+     * List a paginated page of findings for a visible project.
+     * @param data The data for the request.
+     * @param data.projectId
+     * @param data.limit
+     * @param data.offset
+     * @param data.sort
+     * @returns FindingsPublic Successful Response
+     * @throws ApiError
+     */
+    public static readProjectFindings(data: FindingsReadProjectFindingsData): CancelablePromise<FindingsReadProjectFindingsResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/projects/{project_id}/findings/',
+            path: {
+                project_id: data.projectId
+            },
+            query: {
+                limit: data.limit,
+                offset: data.offset,
+                sort: data.sort
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+}
 
 export class LoginService {
     /**
@@ -75,6 +198,27 @@ export class ProjectsService {
     }
 
     /**
+     * Delete Project
+     * Delete a project if it belongs to the user or the user is superuser.
+     * @param data The data for the request.
+     * @param data.projectId
+     * @returns void Successful Response
+     * @throws ApiError
+     */
+    public static deleteProject(data: ProjectsDeleteProjectData): CancelablePromise<ProjectsDeleteProjectResponse> {
+        return __request(OpenAPI, {
+            method: 'DELETE',
+            url: '/api/v1/projects/{project_id}',
+            path: {
+                project_id: data.projectId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+
+    /**
      * Read Project
      * Read a single project if it belongs to the user or the user is superuser.
      * @param data The data for the request.
@@ -88,6 +232,74 @@ export class ProjectsService {
             url: '/api/v1/projects/{project_id}',
             path: {
                 project_id: data.projectId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+
+    /**
+     * Update Project
+     * Update a project if it belongs to the user or the user is superuser.
+     * @param data The data for the request.
+     * @param data.projectId
+     * @param data.requestBody
+     * @returns ProjectPublic Successful Response
+     * @throws ApiError
+     */
+    public static updateProject(data: ProjectsUpdateProjectData): CancelablePromise<ProjectsUpdateProjectResponse> {
+        return __request(OpenAPI, {
+            method: 'PATCH',
+            url: '/api/v1/projects/{project_id}',
+            path: {
+                project_id: data.projectId
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+}
+
+export class RunsService {
+    /**
+     * Read Project Runs
+     * List analysis runs for a visible project.
+     * @param data The data for the request.
+     * @param data.projectId
+     * @returns AnalysisRunsPublic Successful Response
+     * @throws ApiError
+     */
+    public static readProjectRuns(data: RunsReadProjectRunsData): CancelablePromise<RunsReadProjectRunsResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/projects/{project_id}/runs/',
+            path: {
+                project_id: data.projectId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+
+    /**
+     * Read Run
+     * Read one analysis run if its project is visible.
+     * @param data The data for the request.
+     * @param data.runId
+     * @returns AnalysisRunPublic Successful Response
+     * @throws ApiError
+     */
+    public static readRun(data: RunsReadRunData): CancelablePromise<RunsReadRunResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/runs/{run_id}',
+            path: {
+                run_id: data.runId
             },
             errors: {
                 422: 'Validation Error'
