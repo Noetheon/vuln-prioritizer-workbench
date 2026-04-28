@@ -490,3 +490,82 @@ Residual risks:
   required labels and milestones already exist.
 - Issue templates are Markdown templates. GitHub issue forms can be introduced
   later if maintainers want structured form validation.
+
+## FSFT-08 Project Domain Shell
+
+Branch:
+
+- `codex/fsft-08-project-domain-shell`
+
+Scope:
+
+- Added `sqlmodel` to the backend dependency set.
+- Added template-native DB helpers in `backend/app/core/db.py`, including a
+  stable configured-superuser UUID and SQLModel session dependency.
+- Replaced the auth-only Pydantic `UserPublic` shell with SQLModel-compatible
+  `User`, `UserPublic`, `Project`, `ProjectCreate`, `ProjectUpdate`,
+  `ProjectPublic`, and `ProjectsPublic` models.
+- Added `/api/v1/projects/` create/list/read routes with current-user ownership
+  and superuser visibility.
+- Added a separate template Alembic path under `backend/app/alembic` with the
+  initial `user` and `project` tables and no `item` table.
+- Updated auth smoke expectations for UUID-backed users and regenerated the
+  tracked TypeScript OpenAPI client files so `ProjectsService` is available.
+
+Commands run:
+
+```bash
+python3 -m pip install -e "backend[dev]"
+python3 -m pytest -q backend/tests/api/test_template_backend_adapter.py \
+  backend/tests/api/test_template_auth_smoke.py \
+  backend/tests/api/test_template_projects.py --no-cov
+bash scripts/generate-client.sh
+python3 -m ruff format --check backend/app \
+  backend/tests/api/test_template_auth_smoke.py \
+  backend/tests/api/test_template_projects.py
+python3 -m ruff check backend/app \
+  backend/tests/api/test_template_auth_smoke.py \
+  backend/tests/api/test_template_projects.py
+cd backend && python3 -m mypy app src
+make frontend-check
+make docs-check
+make check
+make docker-demo-smoke
+rg -n "vuln_prioritizer\.(db|web|api)|\bItem\b|ItemsService|/items|items\.router" \
+  backend/app frontend/src/client
+git diff --check
+# Temporary Postgres smoke:
+# docker run postgres:16-alpine, alembic upgrade backend/app/alembic to head,
+# then login and POST/GET /api/v1/projects/ through TestClient.
+```
+
+Results:
+
+- Local backend dependency install succeeded and installed `sqlmodel-0.0.38`.
+- Targeted backend tests passed: 18 passed.
+- OpenAPI client generation passed and updated
+  `frontend/src/client/{schemas.gen.ts,sdk.gen.ts,types.gen.ts}` with Project
+  schemas and `ProjectsService`.
+- Ruff format/check and backend mypy over `app src` passed.
+- `make frontend-check` passed: frontend lint, production build, and generated
+  client generation completed.
+- `make docs-check` passed and built the MkDocs site successfully.
+- `make check` passed: 547 passed, 2 skipped, total coverage 90.27%.
+- `make docker-demo-smoke` built backend/frontend images, installed
+  `sqlmodel-0.0.38` in the backend image, and verified template backend status,
+  utility health, frontend root, and login route smoke checks.
+- Temporary Postgres migration/API smoke passed: Alembic upgraded
+  `backend/app/alembic` to head, created `user`, `project`, and
+  `alembic_version`, confirmed no `item` table, and created/listed a Project via
+  `/api/v1/projects/`.
+- Template backend app and generated client contain no `Item`, `ItemsService`,
+  `/items`, `items.router`, or legacy `vuln_prioritizer.db/web/api` imports.
+- `git diff --check` passed.
+
+Residual risks:
+
+- This slice intentionally does not implement Findings, import pipelines,
+  project memberships, RBAC, project update/delete, or React project pages.
+- The configured superuser remains a migration-shell bootstrap user. Full
+  template user CRUD, password hashing/recovery, email flows, and production
+  auth hardening remain later roadmap work.

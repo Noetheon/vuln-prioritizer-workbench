@@ -22,6 +22,34 @@ export type MigrationStatus = {
 };
 
 /**
+ * Project creation payload.
+ */
+export type ProjectCreate = {
+    description?: (string | null);
+    name: string;
+};
+
+/**
+ * Public Project shape returned by the API.
+ */
+export type ProjectPublic = {
+    created_at: string;
+    description?: (string | null);
+    id: string;
+    name: string;
+    owner_id: string;
+    updated_at: string;
+};
+
+/**
+ * Paginated Project collection shape.
+ */
+export type ProjectsPublic = {
+    count: number;
+    data: Array<ProjectPublic>;
+};
+
+/**
  * OAuth2 bearer token response.
  */
 export type Token = {
@@ -30,9 +58,10 @@ export type Token = {
 };
 
 /**
- * Public user shape exposed by the template shell auth smoke.
+ * Public user shape exposed by template auth routes.
  */
 export type UserPublic = {
+    created_at: string;
     email: string;
     full_name?: (string | null);
     id: string;
@@ -69,6 +98,20 @@ export type LoginLoginAccessTokenData = {
 export type LoginLoginAccessTokenResponse = (Token);
 
 export type LoginTestTokenResponse = (UserPublic);
+
+export type ProjectsReadProjectsResponse = (ProjectsPublic);
+
+export type ProjectsCreateProjectData = {
+    requestBody: ProjectCreate;
+};
+
+export type ProjectsCreateProjectResponse = (ProjectPublic);
+
+export type ProjectsReadProjectData = {
+    projectId: string;
+};
+
+export type ProjectsReadProjectResponse = (ProjectPublic);
 
 export type UsersReadUserMeResponse = (UserPublic);
 

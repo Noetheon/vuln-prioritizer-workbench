@@ -164,6 +164,13 @@ not something to fake by pointing at the old SQLAlchemy/Jinja implementation.
   [Template Replacement Strategy](architecture/template-replacement.md):
   remove demo Items and introduce Workbench `Project`/`Finding` domain work in
   follow-up implementation PRs.
+- `codex/fsft-08-project-domain-shell` adds the first template-native SQLModel
+  domain shell: DB-backed `User` ownership, `Project` models and public schemas,
+  `/api/v1/projects` create/list/read routes, generated TypeScript client
+  updates, and a separate template Alembic migration path under
+  `backend/app/alembic`. This replaces the official template's demo `Item`
+  pattern with Workbench `Project` ownership instead of reusing the legacy
+  SQLAlchemy/Jinja Workbench stack.
 
 Frontend issues `VPW-037` to `VPW-047` must wait until the backend OpenAPI client
 is generated and the template login flow remains green.
