@@ -5,10 +5,10 @@ from __future__ import annotations
 import uuid
 
 from fastapi import APIRouter, HTTPException
-from sqlmodel import col, func, select
 
 from app.api.deps import CurrentUser, SessionDep
 from app.models import Project, ProjectCreate, ProjectPublic, ProjectsPublic
+from app.repositories import ProjectRepository
 
 router = APIRouter(prefix="/projects", tags=["projects"])
 
@@ -16,14 +16,7 @@ router = APIRouter(prefix="/projects", tags=["projects"])
 @router.get("/", response_model=ProjectsPublic)
 def read_projects(session: SessionDep, current_user: CurrentUser) -> ProjectsPublic:
     """List projects visible to the current user."""
-    count_statement = select(func.count()).select_from(Project)
-    statement = select(Project).order_by(col(Project.created_at).desc())
-    if not current_user.is_superuser:
-        count_statement = count_statement.where(Project.owner_id == current_user.id)
-        statement = statement.where(Project.owner_id == current_user.id)
-
-    count = session.exec(count_statement).one()
-    projects = session.exec(statement).all()
+    projects, count = ProjectRepository(session).list_visible_projects(current_user)
     return ProjectsPublic(
         data=[ProjectPublic.model_validate(project) for project in projects],
         count=count,
@@ -38,8 +31,7 @@ def create_project(
     project_in: ProjectCreate,
 ) -> Project:
     """Create a Project owned by the current user."""
-    project = Project.model_validate(project_in, update={"owner_id": current_user.id})
-    session.add(project)
+    project = ProjectRepository(session).create_project(project_in, owner_id=current_user.id)
     session.commit()
     session.refresh(project)
     return project
@@ -48,7 +40,8 @@ def create_project(
 @router.get("/{project_id}", response_model=ProjectPublic)
 def read_project(project_id: uuid.UUID, session: SessionDep, current_user: CurrentUser) -> Project:
     """Read a single project if it belongs to the user or the user is superuser."""
-    project = session.get(Project, project_id)
+    repository = ProjectRepository(session)
+    project = repository.get_project(project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
     if not current_user.is_superuser and project.owner_id != current_user.id:

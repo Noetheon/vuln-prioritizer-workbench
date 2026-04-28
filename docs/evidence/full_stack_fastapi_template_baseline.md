@@ -762,3 +762,59 @@ Residual risks:
 - `FindingOccurrence` is the provenance source of truth for run-to-finding
   linkage; this slice intentionally does not add a denormalized
   `Finding.analysis_run_id`.
+
+## VPW-010 Template Repository Layer
+
+Branch:
+
+- `codex/vpw-010-service-layer`
+
+Scope:
+
+- Added split template Workbench repositories under `backend/app/repositories/`:
+  `ProjectRepository`, `AssetRepository`, `FindingRepository`, and
+  `RunRepository`.
+- Updated template Project routes to delegate Project query/persistence logic to
+  `ProjectRepository`.
+- Kept User/Auth CRUD and authentication dependencies outside the Workbench
+  repositories.
+- Documented path ownership, transaction boundaries, route contract, and test
+  coverage in `docs/architecture/template-service-layer.md`.
+
+Commands run:
+
+```bash
+python3 -m pytest -q backend/tests/api/test_template_service_layer.py --no-cov
+python3 -m pytest -q backend/tests/api/test_template_projects.py \
+  backend/tests/api/test_template_core_workbench_models.py \
+  backend/tests/api/test_template_run_provider_models.py \
+  backend/tests/api/test_template_service_layer.py --no-cov
+python3 -m ruff format --check backend/app \
+  backend/tests/api/test_template_service_layer.py
+python3 -m ruff check backend/app \
+  backend/tests/api/test_template_service_layer.py
+cd backend && python3 -m mypy app src
+make docs-check
+make check
+git diff --check
+```
+
+Results:
+
+- Focused template service/repository tests passed: 4 passed.
+- Project, core Workbench, run/provider, and service/repository tests passed:
+  18 passed.
+- Ruff format/check over `backend/app` and the new service/repository tests
+  passed.
+- Backend mypy over `app src` passed.
+- `make docs-check` passed.
+- `make check` passed: 565 passed, 2 skipped, total coverage 90.27%.
+- `git diff --check` passed.
+
+Residual risks:
+
+- This slice intentionally does not add Asset/Finding/Run API routes; those
+  routes should use these repositories when introduced.
+- `backend/app/services/` remains intentionally absent until there is real
+  use-case orchestration across repositories, provider clients, parsers, or
+  report builders.
