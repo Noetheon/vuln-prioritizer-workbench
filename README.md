@@ -24,6 +24,27 @@ README media maintenance checklist for future releases:
 - Show secret-bearing settings only in their redacted `<set>` or `<not set>` state.
 - Commit generated screenshot replacements only as part of a release evidence or docs refresh change.
 
+## Problem And Goal
+
+Security teams often start with a long list of CVEs from scanners, SBOM tools,
+advisory exports, or issue trackers. Raw CVSS scores alone do not explain what
+should be fixed first, which systems are exposed, which findings are already
+covered by VEX/waivers, or which decisions need evidence.
+
+`vuln-prioritizer` turns existing CVE evidence into an explainable
+risk-to-decision workflow:
+
+```text
+existing findings or SBOM exports
+  -> normalized CVE occurrences
+  -> CVSS, EPSS, KEV, optional ATT&CK, asset, VEX, waiver, and provider context
+  -> transparent priority and rationale
+  -> reports, CI gates, evidence bundles, and Workbench decision queues
+```
+
+The goal is not to discover vulnerabilities. The goal is to help operators make
+defensible decisions from vulnerability evidence they already have.
+
 ## Why Use It
 
 - Transparent, rule-based prioritization instead of opaque scoring.
@@ -32,7 +53,8 @@ README media maintenance checklist for future releases:
 - CI-friendly outputs including Markdown summaries, SARIF, GitHub Action support, and policy gates.
 - Explicit support for local defensive context, VEX, asset context, waivers, and reproducible review artifacts.
 - Waiver lifecycle visibility with active, review-due, and expired states instead of silent long-lived exceptions.
-- A Docker/Compose path that runs the current local Workbench app while keeping the CLI core available in the same image.
+- A Docker/Compose path that runs the current template-aligned Workbench shell
+  while keeping the CLI core available in the same image.
 
 ## What It Can Do
 
@@ -89,11 +111,18 @@ This project is:
 This project is not:
 
 - a scanner
+- an exploit framework, PoC generator, or active probing tool
 - a SIEM
 - a ticketing system
+- an autopatcher or autonomous remediation agent
 - a replacement for heavier vulnerability-management platforms
 - a live TAXII harvester
 - a heuristic or LLM-based ATT&CK mapper
+
+It does not perform credential testing, network scanning, exploitation,
+payload generation, attack simulation, or heuristic CVE-to-ATT&CK mapping.
+ATT&CK support is defensive and evidence-based: use reviewed local mappings and
+technique metadata only.
 
 ## Installation
 
@@ -210,11 +239,15 @@ For locked Workbench replay, submit only the snapshot filename, for example
 `demo_provider_snapshot.json`. The app resolves it from
 `VULN_PRIORITIZER_PROVIDER_SNAPSHOT_DIR` or the provider cache and rejects arbitrary paths.
 
-Workbench API token behavior is intentionally local-first. A fresh local database has no active
+Legacy Workbench API token behavior is intentionally local-first. A fresh local database has no active
 tokens, so mutating `/api/*` requests remain open for the offline demo. Create the first token with
 `POST /api/tokens`; after any active token exists, `POST`, `PUT`, `PATCH`, and `DELETE` requests under
 `/api/` require `Authorization: Bearer <token>` or `X-API-Token: <token>`. Only SHA-256 token hashes
 are stored.
+
+The template-aligned Workbench shell currently has a configured-superuser JWT
+login smoke path. DB-backed template users, RBAC, and final project membership
+rules are separate migration work.
 
 Workbench project settings can be saved as config-as-code through
 `POST /api/projects/{project_id}/settings/config`. The payload uses the same
@@ -234,8 +267,26 @@ Current local Workbench limitations:
 - The Workbench UI/API supports the same input-format matrix as the CLI for local single-file and multi-file imports.
 - SQLite remains the default Workbench runtime; the Compose Postgres profile is an optional migration smoke path. The Workbench records durable job state for local imports, provider refreshes, reports, and evidence bundles, but a separate async worker process, SSO, organization-wide ticket sync policy, and multi-workspace tenancy remain outside the current local-first scope.
 - The project still does not scan systems, patch software, or generate heuristic/AI CVE-to-ATT&CK mappings.
+- Do not expose the local Workbench on the public internet without a separate hardening review covering TLS/proxying, backup/restore, audit retention, role design, token handling, and the threat model.
 
 Current Workbench readiness and shared-deployment prerequisites are tracked in [docs/workbench-threat-model.md](docs/workbench-threat-model.md). The historical implementation plan remains available in [docs/workbench-masterplan.md](docs/workbench-masterplan.md), and [docs/roadmap.md](docs/roadmap.md) tracks the shipped CLI plus local Workbench release line.
+
+## Demo
+
+For a local browser demo, use the checked-in offline runbook:
+[docs/workbench-offline-demo.md](docs/workbench-offline-demo.md). It uses
+repository fixtures and locked provider replay so screenshots and evidence can
+be reproduced without customer data or live-only provider behavior.
+
+For a template-migration smoke demo, run:
+
+```bash
+make docker-demo-smoke
+```
+
+That command starts the template backend and React shell, verifies
+`/api/v1/workbench/status`, checks the frontend and login route, then tears down
+the stack.
 
 ## Quickstart
 
@@ -291,6 +342,11 @@ vuln-prioritizer report verify-evidence-bundle \
 ```
 
 ### 5. ATT&CK-Aware Analyze with Your Own Local Mapping Files
+
+ATT&CK/TTP context in this project is defensive context for risk explanation,
+detection coverage, mitigation discussion, and prioritization. It is not
+exploit proof, attack-chain guidance, or evidence that a CVE is actively being
+used against your environment.
 
 ```bash
 vuln-prioritizer analyze \
@@ -438,6 +494,7 @@ Start here for public CLI usage and the local Workbench app path:
 - [docs/integrations/reporting_and_ci.md](docs/integrations/reporting_and_ci.md)
 - [docs/releases/v1.1.0.md](docs/releases/v1.1.0.md)
 - [docs/roadmap.md](docs/roadmap.md)
+- [ROADMAP.md](ROADMAP.md)
 - Historical Workbench masterplan: [docs/workbench-masterplan.md](docs/workbench-masterplan.md)
 
 Maintainer / repo-checkout workflows:

@@ -385,3 +385,47 @@ Residual risks:
   frontend pages. Those remain `VPW-006`, `VPW-008`, `VPW-011`, and `VPW-037`.
 - Current old SQLAlchemy/Jinja Workbench behavior remains reference material,
   not template completion evidence.
+
+## FSFT-06 Governance Docs
+
+Branch:
+
+- `codex/fsft-06-governance-docs`
+
+Scope:
+
+- Updated `README.md` with an explicit problem/goal statement,
+  risk-to-decision chain, expanded non-goals, demo path, ATT&CK/TTP safety
+  disclaimer, template-vs-legacy Workbench wording, and VPW roadmap link.
+- Updated `SECURITY.md` with local Workbench scope, responsible disclosure
+  handling, safe report guidance, and explicit non-scanner/non-exploit
+  boundaries.
+- Updated `CONTRIBUTING.md` with branch/PR rules, Codex working rules, evidence
+  expectations, and a security checklist.
+- Added root `ROADMAP.md` derived from the VPW execution plan.
+- Aligned `docs/roadmap.md`, `docs/workbench-threat-model.md`, and
+  `docs/full_stack_fastapi_template_migration.md` with the current
+  template-migration and local-first security posture.
+
+Commands run:
+
+```bash
+make docs-check
+python3 -m pytest -q backend/tests/api/test_template_backend_adapter.py \
+  backend/tests/api/test_template_auth_smoke.py --no-cov
+git diff --check
+```
+
+Results:
+
+- `make docs-check` passed and built the MkDocs site successfully.
+- Targeted template backend/auth tests passed: 15 passed.
+- `git diff --check` passed.
+
+Residual risks:
+
+- This slice is governance/docs-only. It does not create the VPW issue
+  templates or PR template requested by `VPW-005`.
+- Public/shared Workbench deployment remains out of scope until explicit
+  hardening work updates the threat model, auth, roles, retention,
+  backup/restore, and deployment docs.

@@ -4,6 +4,22 @@ This roadmap records the release line implemented from the ATT&CK-focused `v0.3.
 
 The product remains a CLI and local Workbench for prioritizing known CVEs and imported findings. It is not a scanner and does not use heuristic or AI-generated CVE-to-ATT&CK mappings.
 
+## Current VPW Template Roadmap
+
+The active duplicate VPW cycle is now tracked as a template-first execution
+track, summarized in the repository-root `ROADMAP.md`. It starts with
+FastAPI Full Stack Template baseline and governance work, then replaces demo
+Items with Workbench Projects and Findings, rebuilds import/enrichment/scoring
+APIs behind SQLModel/Alembic, and finally restores the React Workbench workflow,
+evidence, reporting, ATT&CK, asset, VEX, governance, deployment, release, and
+integration slices.
+
+Strict DoD evidence remains required for every VPW issue: scoped PR, commands
+run, artifacts or screenshots where relevant, residual risks, and follow-up
+links. Existing Jinja2/SQLAlchemy Workbench behavior is supporting reference
+material, not automatic completion evidence for template React/JWT/SQLModel
+work.
+
 ## Current Release Surface
 
 - `v1.1.0` provides `analyze`, `compare`, `explain`, `doctor`, `snapshot create`, `snapshot diff`, `rollup`, `input validate`, `input inspect`, `input normalize`, `state`, `data`, `db init`, `web serve`, `report html`, `report evidence-bundle`, `report verify-evidence-bundle`, and ATT&CK utility commands.
@@ -21,7 +37,7 @@ The product remains a CLI and local Workbench for prioritizing known CVEs and im
 
 Status: roadmap slices through Workbench v1.2 are implemented on `main`; the original implementation plan is preserved as a historical planning artifact in [docs/workbench-masterplan.md](./workbench-masterplan.md).
 
-The current Workbench exposes the existing CLI/core behavior as a local-first, self-hosted vulnerability prioritization application. The CLI remains supported for automation and CI; the Workbench adds API, database-backed imports, a browser UI, team-oriented worklists, and report workflows around the same transparent prioritization model.
+The current Workbench exposes the existing CLI/core behavior as a local-first, self-hosted vulnerability prioritization application. The CLI remains supported for automation and CI; the Workbench adds API, database-backed imports, a browser UI, local project worklists, and report workflows around the same transparent prioritization model.
 
 Current Workbench scope:
 
@@ -47,7 +63,7 @@ Current local Workbench limits:
 
 ## Implemented Release Line
 
-### `v0.3.1` Public Readiness
+### `v0.3.1` OSS Public Readiness
 
 Status: shipped
 
@@ -111,7 +127,7 @@ Status: implemented; release workflow is wired for tagged GitHub Releases and ga
 - Stable scanner/SBOM export inputs, Asset Context, VEX, and GitHub integration.
 - Local MkDocs-based documentation site for a browsable public doc surface.
 
-### `v1.1.0` Operability and Public Polish
+### `v1.1.0` Operability and OSS Public Polish
 
 Status: published as `v1.1.0`; current `main` contains post-release documentation and security hygiene updates
 
@@ -124,7 +140,7 @@ Status: published as `v1.1.0`; current `main` contains post-release documentatio
 ## CLI Release-Line Non-Goals Through `v1.1.0`
 
 - Database-backed service in the historical CLI-only release line; the current Workbench app exposes this as an explicit app-layer surface.
-- ServiceNow or Jira integration
+- ServiceNow or Jira integration in the historical CLI-only release line
 - Mandatory live TAXII integration
 - Heuristic or ML-based CVE-to-ATT&CK mapping
 
