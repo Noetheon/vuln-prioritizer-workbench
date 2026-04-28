@@ -347,3 +347,41 @@ Residual risks:
   policy is settled.
 - Workbench domain APIs, Project/Finding SQLModel entities, and old Items removal
   remain separate follow-up issues.
+
+## FSFT-05 Template Replacement Strategy
+
+Branch:
+
+- `codex/fsft-05-template-replacement-strategy`
+
+Scope:
+
+- Added `docs/architecture/template-replacement.md` as the VPW-003 inventory
+  and architecture decision record for replacing the official template demo
+  `Item` domain.
+- Moved the architecture overview to `docs/architecture/index.md` so the
+  roadmap-required architecture directory can contain this decision document.
+- Updated MkDocs navigation and migration progress notes to point at the new
+  strategy page.
+
+Commands run:
+
+```bash
+make docs-check
+python3 -m pytest -q backend/tests/api/test_template_backend_adapter.py \
+  backend/tests/api/test_template_auth_smoke.py --no-cov
+git diff --check
+```
+
+Results:
+
+- `make docs-check` passed and built the MkDocs site successfully.
+- Targeted template backend/auth tests passed: 15 passed.
+- `git diff --check` passed.
+
+Residual risks:
+
+- This slice does not implement `Project`/`Finding` SQLModel tables, APIs, or
+  frontend pages. Those remain `VPW-006`, `VPW-008`, `VPW-011`, and `VPW-037`.
+- Current old SQLAlchemy/Jinja Workbench behavior remains reference material,
+  not template completion evidence.
