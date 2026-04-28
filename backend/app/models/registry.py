@@ -5,6 +5,9 @@ from importlib import import_module
 TABLE_MODEL_MODULES = (
     "app.models.users",
     "app.models.projects",
+    "app.models.assets",
+    "app.models.vulnerabilities",
+    "app.models.findings",
 )
 
 
