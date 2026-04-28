@@ -429,3 +429,64 @@ Residual risks:
 - Public/shared Workbench deployment remains out of scope until explicit
   hardening work updates the threat model, auth, roles, retention,
   backup/restore, and deployment docs.
+
+## FSFT-07 GitHub Templates
+
+Branch:
+
+- `codex/fsft-07-github-templates`
+
+Scope:
+
+- Updated `.github/ISSUE_TEMPLATE/feature_request.md` and
+  `.github/ISSUE_TEMPLATE/bug_report.md` so they ask for target, scope, tests,
+  Definition of Done, and evidence.
+- Added required VPW issue templates:
+  `.github/ISSUE_TEMPLATE/parser.md`,
+  `.github/ISSUE_TEMPLATE/provider.md`,
+  `.github/ISSUE_TEMPLATE/attack_mapping_review.md`, and
+  `.github/ISSUE_TEMPLATE/security_hardening.md`.
+- Updated `.github/pull_request_template.md` with linked issue/VPW ID, scoped
+  validation, pasted command output, evidence artifacts, residual risk,
+  Definition of Done, and security review.
+- Verified the required roadmap labels and milestones already exist in GitHub;
+  no metadata write was needed for this slice.
+
+Commands run:
+
+```bash
+find .github/ISSUE_TEMPLATE -maxdepth 1 -type f -print | sort
+for f in .github/ISSUE_TEMPLATE/*.md .github/pull_request_template.md; do
+  rg -n '^(## Target|## Scope|## Tests|## Definition Of Done|## Evidence|## Security Review|## Validation)' "$f"
+done
+gh label list --limit 200 --json name --jq '.[].name' | rg '^(type:backend|type:frontend|type:api|type:db|type:parser|type:provider|type:attack|type:governance|type:docs|type:feature|type:security|priority:p0|priority:p1|priority:p2|status:strict-dod|status:needs-revalidation|status:template-gap)$' | sort
+gh api repos/Noetheon/vuln-prioritizer-workbench/milestones --paginate --jq '.[].title' | rg '^(v0\.1-template-baseline|v0\.2-domain-api-foundation|v0\.3-import-mvp|v0\.4-provider-enrichment|v0\.5-decision-engine|v0\.6-frontend-workflow|v0\.7-reports-evidence|v0\.8-attack-lite|v0\.9-governance-context|v1\.0-release-hardening|v1\.1-advanced-attack-detection|v1\.2-integrations)$' | sort
+make docs-check
+python3 -m pytest -q backend/tests/api/test_template_backend_adapter.py \
+  backend/tests/api/test_template_auth_smoke.py --no-cov
+git diff --check
+```
+
+Results:
+
+- Template path list contains feature, bug, parser, provider, ATT&CK mapping
+  review, security hardening, and config templates.
+- Required template sections are present across issue templates and the PR
+  template.
+- Required roadmap labels are present: `type:backend`, `type:frontend`,
+  `type:api`, `type:db`, `type:parser`, `type:provider`, `type:attack`,
+  `type:governance`, `type:docs`, `type:feature`, `type:security`,
+  `priority:p0`, `priority:p1`, `priority:p2`, `status:strict-dod`,
+  `status:needs-revalidation`, and `status:template-gap`.
+- Required roadmap milestones are present from `v0.1-template-baseline` through
+  `v1.2-integrations`.
+- `make docs-check` passed and built the MkDocs site successfully.
+- Targeted template backend/auth tests passed: 15 passed.
+- `git diff --check` passed.
+
+Residual risks:
+
+- This slice does not create or modify GitHub labels/milestones because the
+  required labels and milestones already exist.
+- Issue templates are Markdown templates. GitHub issue forms can be introduced
+  later if maintainers want structured form validation.
