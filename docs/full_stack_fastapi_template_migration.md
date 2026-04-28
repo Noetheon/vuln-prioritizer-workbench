@@ -147,6 +147,11 @@ not something to fake by pointing at the old SQLAlchemy/Jinja implementation.
   and a React/Vite frontend workspace scaffold. It intentionally does not mount
   or claim completion of the legacy Jinja2 and SQLAlchemy Workbench stack, nor
   does it claim template JWT, SQLModel, or Items replacement work.
+- `codex/fsft-03-compose-env` moves the default Compose entrypoint to
+  template-style `compose.yml`, `compose.override.yml`, and
+  `compose.traefik.yml`, starts the template backend shell plus React frontend,
+  and keeps the legacy Workbench only as a profiled Postgres migration smoke
+  service.
 
 Frontend issues `VPW-037` to `VPW-047` must wait until the backend OpenAPI client
 is generated and the template login flow remains green.

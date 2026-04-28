@@ -1,0 +1,60 @@
+services:
+  db:
+    restart: "no"
+
+  backend:
+    restart: "no"
+    ports:
+      - "127.0.0.1:8000:8000"
+    command:
+      [
+        "uvicorn",
+        "app.main:app",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        "8000",
+        "--reload",
+      ]
+    develop:
+      watch:
+        - path: ./backend/app
+          action: sync
+          target: /app/backend/app
+        - path: ./backend/src
+          action: sync
+          target: /app/backend/src
+        - path: ./backend/pyproject.toml
+          action: rebuild
+
+  frontend:
+    restart: "no"
+    ports:
+      - "127.0.0.1:5173:80"
+
+  workbench-postgres:
+    ports:
+      - "127.0.0.1:8001:8000"
+
+  playwright:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile.playwright
+      args:
+        VITE_API_URL: http://backend:8000
+        NODE_ENV: production
+    profiles:
+      - playwright
+    ipc: host
+    depends_on:
+      backend:
+        condition: service_healthy
+    environment:
+      VITE_API_URL: http://backend:8000
+      PLAYWRIGHT_HTML_HOST: 0.0.0.0
+      CI: ${CI:-}
+    volumes:
+      - ./frontend/blob-report:/app/frontend/blob-report
+      - ./frontend/test-results:/app/frontend/test-results
+    ports:
+      - "127.0.0.1:9323:9323"

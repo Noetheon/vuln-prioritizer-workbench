@@ -18,6 +18,7 @@ RUN python -m pip install --upgrade pip \
     && chown -R workbench:workbench /app
 
 USER workbench
+WORKDIR /app/backend
 
 ENV VULN_PRIORITIZER_DB_URL=sqlite:////app/data/workbench.db \
     VULN_PRIORITIZER_UPLOAD_DIR=/app/uploads \
@@ -28,4 +29,4 @@ ENV VULN_PRIORITIZER_DB_URL=sqlite:////app/data/workbench.db \
 
 EXPOSE 8000
 
-CMD ["vuln-prioritizer", "web", "serve", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

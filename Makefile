@@ -2,6 +2,7 @@ PYTHON ?= python3
 BACKEND_DIR := backend
 BACKEND_SRC := $(BACKEND_DIR)/src
 BACKEND_TESTS := $(BACKEND_DIR)/tests
+COMPOSE := docker compose -f compose.yml -f compose.override.yml
 
 ATTACK_MAPPING_FILE := data/attack/ctid_kev_enterprise_2025-07-28_attack-16.1_subset.json
 ATTACK_METADATA_FILE := data/attack/attack_techniques_enterprise_16.1_subset.json
@@ -81,21 +82,33 @@ workflow-check:
 
 docker-demo-smoke:
 	@set -e; \
-	docker compose up -d --build; \
-	trap 'docker compose down -v --remove-orphans' EXIT; \
+	$(COMPOSE) up -d --build backend frontend; \
+	trap '$(COMPOSE) down -v --remove-orphans' EXIT; \
+	backend_ready=0; \
 	for attempt in $$(seq 1 30); do \
-		if $(PYTHON) -c "import urllib.request; print(urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=2).read().decode())" 2>/dev/null; then \
+		if $(PYTHON) -c "import urllib.request; print(urllib.request.urlopen('http://127.0.0.1:8000/api/v1/workbench/status', timeout=2).read().decode())" 2>/dev/null; then \
+			backend_ready=1; \
+			break; \
+		fi; \
+		sleep 2; \
+	done; \
+	if [ "$$backend_ready" != "1" ]; then \
+		echo "Template Workbench backend health check failed." >&2; \
+		exit 1; \
+	fi; \
+	for attempt in $$(seq 1 30); do \
+		if $(PYTHON) -c "import urllib.request; print(urllib.request.urlopen('http://127.0.0.1:5173/', timeout=2).status)" 2>/dev/null; then \
 			exit 0; \
 		fi; \
 		sleep 2; \
 	done; \
-	echo "Workbench health check failed." >&2; \
+	echo "Template Workbench frontend health check failed." >&2; \
 	exit 1
 
 docker-postgres-migration-smoke:
 	@set -e; \
-	docker compose --profile postgres up -d --build postgres workbench-postgres; \
-	trap 'docker compose --profile postgres down -v --remove-orphans' EXIT; \
+	$(COMPOSE) --profile postgres up -d --build db workbench-postgres; \
+	trap '$(COMPOSE) --profile postgres down -v --remove-orphans' EXIT; \
 	for attempt in $$(seq 1 30); do \
 		if $(PYTHON) -c "import urllib.request; print(urllib.request.urlopen('http://127.0.0.1:8001/api/health', timeout=2).read().decode())" 2>/dev/null; then \
 			exit 0; \

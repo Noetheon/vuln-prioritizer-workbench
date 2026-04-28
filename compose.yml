@@ -1,0 +1,132 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    environment:
+      PGDATA: /var/lib/postgresql/data/pgdata
+      POSTGRES_DB: ${POSTGRES_DB:-workbench}
+      POSTGRES_USER: ${POSTGRES_USER:-workbench}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-workbench}
+    volumes:
+      - app-db-data:/var/lib/postgresql/data/pgdata
+
+  backend:
+    image: ${DOCKER_IMAGE_BACKEND:-vuln-prioritizer-workbench-backend}:${TAG:-local}
+    restart: always
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    depends_on:
+      db:
+        condition: service_healthy
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp
+    environment:
+      PROJECT_NAME: ${PROJECT_NAME:-Vuln Prioritizer Workbench}
+      ENVIRONMENT: ${ENVIRONMENT:-local}
+      DOMAIN: ${DOMAIN:-localhost}
+      FRONTEND_HOST: ${FRONTEND_HOST:-http://localhost:5173}
+      POSTGRES_SERVER: db
+      POSTGRES_PORT: ${POSTGRES_PORT:-5432}
+      POSTGRES_DB: ${POSTGRES_DB:-workbench}
+      POSTGRES_USER: ${POSTGRES_USER:-workbench}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-workbench}
+      NVD_API_KEY: ${NVD_API_KEY:-}
+      VULN_PRIORITIZER_NVD_API_KEY_ENV: ${VULN_PRIORITIZER_NVD_API_KEY_ENV:-NVD_API_KEY}
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/workbench/status', timeout=2)",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  frontend:
+    image: ${DOCKER_IMAGE_FRONTEND:-vuln-prioritizer-workbench-frontend}:${TAG:-local}
+    restart: always
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:8000}
+        NODE_ENV: ${NODE_ENV:-production}
+    depends_on:
+      backend:
+        condition: service_healthy
+
+  workbench-postgres:
+    image: ${DOCKER_IMAGE_BACKEND:-vuln-prioritizer-workbench-backend}:${TAG:-local}
+    profiles:
+      - postgres
+    restart: "no"
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    depends_on:
+      db:
+        condition: service_healthy
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp
+    volumes:
+      - workbench-postgres-uploads:/app/uploads
+      - workbench-postgres-reports:/app/reports
+      - workbench-postgres-provider-snapshots:/app/provider-snapshots
+      - workbench-postgres-cache:/app/.cache/vuln-prioritizer
+      - ./data:/app/examples:ro
+    command:
+      [
+        "sh",
+        "-c",
+        "cp -n /app/examples/*.json /app/provider-snapshots/ 2>/dev/null || true; exec vuln-prioritizer web serve --host 0.0.0.0 --port 8000",
+      ]
+    environment:
+      PYTHONDONTWRITEBYTECODE: "1"
+      NVD_API_KEY: ${NVD_API_KEY:-}
+      VULN_PRIORITIZER_DB_URL: postgresql+psycopg://${POSTGRES_USER:-workbench}:${POSTGRES_PASSWORD:-workbench}@db:5432/${POSTGRES_DB:-workbench}
+      VULN_PRIORITIZER_UPLOAD_DIR: /app/uploads
+      VULN_PRIORITIZER_REPORT_DIR: /app/reports
+      VULN_PRIORITIZER_PROVIDER_SNAPSHOT_DIR: /app/provider-snapshots
+      VULN_PRIORITIZER_ATTACK_ARTIFACT_DIR: /app/examples/attack
+      VULN_PRIORITIZER_CACHE_DIR: /app/.cache/vuln-prioritizer
+      VULN_PRIORITIZER_MAX_UPLOAD_MB: ${VULN_PRIORITIZER_MAX_UPLOAD_MB:-25}
+      VULN_PRIORITIZER_NVD_API_KEY_ENV: ${VULN_PRIORITIZER_NVD_API_KEY_ENV:-NVD_API_KEY}
+      VULN_PRIORITIZER_CSRF_TOKEN: ${VULN_PRIORITIZER_CSRF_TOKEN:-}
+      VULN_PRIORITIZER_ALLOWED_HOSTS: ${VULN_PRIORITIZER_ALLOWED_HOSTS:-127.0.0.1,localhost}
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=2)",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  app-db-data:
+  workbench-postgres-uploads:
+  workbench-postgres-reports:
+  workbench-postgres-provider-snapshots:
+  workbench-postgres-cache:
