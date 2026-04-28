@@ -11,6 +11,8 @@ nav:
   - Methodology: methodology.md
   - Benchmarking: benchmarking.md
   - Architecture: architecture.md
+  - Full Stack Template Migration: full_stack_fastapi_template_migration.md
+  - VPW Template Execution Sequence: vpw_template_execution_sequence.md
   - Use Cases: use_cases.md
   - Playbooks:
       - Overview: playbooks.md
@@ -41,6 +43,7 @@ nav:
       - PR Comment Body: examples/example_pr_comment.md
       - GitHub Summary Templates: examples/github_action_summary_templates.md
   - Historical Appendix:
+      - Full Stack Template Baseline Evidence: evidence/full_stack_fastapi_template_baseline.md
       - Historical Evidence Archive: evidence.md
       - Current State Audit: evidence/current_state_audit.md
       - V0.3 Submission Checklist: evidence/final_submission_checklist.md
