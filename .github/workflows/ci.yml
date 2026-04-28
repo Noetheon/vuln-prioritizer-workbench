@@ -32,3 +32,42 @@ jobs:
 
       - name: Run local-equivalent workflow gate
         run: make workflow-check
+
+  frontend:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: |
+            pyproject.toml
+            backend/pyproject.toml
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+
+      - name: Install backend package
+        run: python -m pip install -e "backend[dev]"
+
+      - name: Install frontend dependencies
+        run: npm --prefix frontend install --no-package-lock
+
+      - name: Lint frontend
+        run: make frontend-lint
+
+      - name: Build frontend
+        run: make frontend-build
+
+      - name: Regenerate frontend client
+        run: make frontend-generate-client
+
+      - name: Check generated frontend client drift
+        run: git diff --exit-code -- frontend/src/client

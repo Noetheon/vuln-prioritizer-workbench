@@ -72,11 +72,10 @@ dev = [
 [project.scripts]
 vuln-prioritizer = "vuln_prioritizer.cli:main"
 
-[tool.setuptools.package-dir]
-"" = "src"
-
 [tool.setuptools.packages.find]
-where = ["src"]
+where = ["src", "."]
+include = ["vuln_prioritizer*", "app*"]
+exclude = ["tests*"]
 
 [tool.setuptools.package-data]
 vuln_prioritizer = ["py.typed", "web/templates/**/*.html", "web/static/**/*"]
@@ -84,7 +83,7 @@ vuln_prioritizer = ["py.typed", "web/templates/**/*.html", "web/static/**/*"]
 [tool.pytest.ini_options]
 addopts = "-ra --cov=vuln_prioritizer --cov-report=term-missing --cov-fail-under=90"
 testpaths = ["tests"]
-pythonpath = ["src"]
+pythonpath = [".", "src"]
 markers = [
   "browser_e2e: real browser Workbench tests driven by Playwright.",
   "e2e: end-to-end CLI entrypoint tests that may spawn subprocesses.",
@@ -112,7 +111,7 @@ extend-select = ["B018"]
 
 [tool.mypy]
 python_version = "3.11"
-files = ["src"]
+files = ["app", "src"]
 pretty = true
 show_error_codes = true
 warn_unused_ignores = true

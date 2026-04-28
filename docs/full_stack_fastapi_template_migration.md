@@ -138,6 +138,16 @@ The SQLModel/JWT/domain replacement work from `VPW-006` onward should start afte
 the template baseline and backend workspace are stable. It is real roadmap work,
 not something to fake by pointing at the old SQLAlchemy/Jinja implementation.
 
+## Current Implementation Progress
+
+- `codex/fsft-01-backend-workspace` extracted the current Python package and
+  tests into `backend/` while preserving CLI, Docker, CI, and packaging behavior.
+- `codex/fsft-02-template-backend-adapter` introduces the first template-shaped
+  `backend/app` entrypoint with a versioned `/api/v1/workbench/status` adapter
+  and a React/Vite frontend workspace scaffold. It intentionally does not mount
+  or claim completion of the legacy Jinja2 and SQLAlchemy Workbench stack, nor
+  does it claim template JWT, SQLModel, or Items replacement work.
+
 Frontend issues `VPW-037` to `VPW-047` must wait until the backend OpenAPI client
 is generated and the template login flow remains green.
 
