@@ -77,6 +77,12 @@ The Workbench threat model and readiness checklist are maintained in [workbench-
 
 `backend/src/vuln_prioritizer/inputs/loader.py` is the canonical input entry point.
 
+The template-aligned Workbench import boundary is documented in
+[vpw-013-importer-contract.md](vpw-013-importer-contract.md). It defines the
+pure importer protocol, normalized occurrence DTO, registry lookup behavior,
+and the rule that parser adapters stay free of FastAPI, database, repository,
+and provider dependencies.
+
 Current normalized types:
 
 - `InputOccurrence`: one source occurrence of a CVE, including component, path, target, asset, and VEX fields

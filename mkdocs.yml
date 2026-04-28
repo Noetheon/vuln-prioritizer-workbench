@@ -17,6 +17,7 @@ nav:
       - Core Workbench Schema: architecture/core-workbench-schema.md
       - Analysis Run Provider Schema: architecture/analysis-run-provider-schema.md
       - Template Repository Layer: architecture/template-service-layer.md
+      - Template Importer Contract: architecture/vpw-013-importer-contract.md
   - Full Stack Template Migration: full_stack_fastapi_template_migration.md
   - VPW Template Execution Sequence: vpw_template_execution_sequence.md
   - Use Cases: use_cases.md
