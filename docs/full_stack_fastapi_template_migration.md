@@ -186,6 +186,11 @@ not something to fake by pointing at the old SQLAlchemy/Jinja implementation.
   run status strings, error state fields, provider source hashes/metadata, and
   FKs back to Project/Finding without adding import APIs, provider clients, or
   frontend screens.
+- `codex/vpw-010-service-layer` adds split template repositories under
+  `backend/app/repositories/` for Projects, Assets, Findings, and Runs. Existing
+  Project routes now delegate Workbench persistence/query construction to
+  `ProjectRepository`; User/Auth code remains outside the Workbench repository
+  layer.
 
 Frontend issues `VPW-037` to `VPW-047` must wait until the backend OpenAPI client
 is generated and the template login flow remains green.
