@@ -23,6 +23,7 @@ respx>=0.21,<1.0
 rich>=13.7,<16.0
 ruff>=0.5,<1.0
 sqlalchemy>=2.0,<3.0
+sqlmodel>=0.0.21,<1.0
 twine>=6.0,<7.0
 types-PyYAML>=6.0,<7.0
 types-requests>=2.32,<3.0

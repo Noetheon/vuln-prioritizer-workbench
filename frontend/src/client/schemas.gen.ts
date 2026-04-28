@@ -88,6 +88,100 @@ export const MigrationStatusSchema = {
     type: 'object'
 } as const;
 
+export const ProjectCreateSchema = {
+    description: 'Project creation payload.',
+    properties: {
+        description: {
+            anyOf: [
+                {
+                    maxLength: 4096,
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Description'
+        },
+        name: {
+            maxLength: 255,
+            minLength: 1,
+            title: 'Name',
+            type: 'string'
+        }
+    },
+    required: ['name'],
+    title: 'ProjectCreate',
+    type: 'object'
+} as const;
+
+export const ProjectPublicSchema = {
+    description: 'Public Project shape returned by the API.',
+    properties: {
+        created_at: {
+            format: 'date-time',
+            title: 'Created At',
+            type: 'string'
+        },
+        description: {
+            anyOf: [
+                {
+                    maxLength: 4096,
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Description'
+        },
+        id: {
+            format: 'uuid',
+            title: 'Id',
+            type: 'string'
+        },
+        name: {
+            maxLength: 255,
+            minLength: 1,
+            title: 'Name',
+            type: 'string'
+        },
+        owner_id: {
+            format: 'uuid',
+            title: 'Owner Id',
+            type: 'string'
+        },
+        updated_at: {
+            format: 'date-time',
+            title: 'Updated At',
+            type: 'string'
+        }
+    },
+    required: ['name', 'id', 'owner_id', 'created_at', 'updated_at'],
+    title: 'ProjectPublic',
+    type: 'object'
+} as const;
+
+export const ProjectsPublicSchema = {
+    description: 'Paginated Project collection shape.',
+    properties: {
+        count: {
+            title: 'Count',
+            type: 'integer'
+        },
+        data: {
+            items: {
+                '$ref': '#/components/schemas/ProjectPublic'
+            },
+            title: 'Data',
+            type: 'array'
+        }
+    },
+    required: ['data', 'count'],
+    title: 'ProjectsPublic',
+    type: 'object'
+} as const;
+
 export const TokenSchema = {
     description: 'OAuth2 bearer token response.',
     properties: {
@@ -107,9 +201,15 @@ export const TokenSchema = {
 } as const;
 
 export const UserPublicSchema = {
-    description: 'Public user shape exposed by the template shell auth smoke.',
+    description: 'Public user shape exposed by template auth routes.',
     properties: {
+        created_at: {
+            format: 'date-time',
+            title: 'Created At',
+            type: 'string'
+        },
         email: {
+            maxLength: 255,
             title: 'Email',
             type: 'string'
         },
@@ -125,6 +225,7 @@ export const UserPublicSchema = {
             title: 'Full Name'
         },
         id: {
+            format: 'uuid',
             title: 'Id',
             type: 'string'
         },
@@ -139,7 +240,7 @@ export const UserPublicSchema = {
             type: 'boolean'
         }
     },
-    required: ['id', 'email'],
+    required: ['email', 'id', 'created_at'],
     title: 'UserPublic',
     type: 'object'
 } as const;

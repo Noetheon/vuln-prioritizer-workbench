@@ -11,7 +11,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 from app.api.deps import CurrentUser
 from app.core import security
 from app.core.config import settings
-from app.models import Token, UserPublic
+from app.models import Token, User, UserPublic
 
 router = APIRouter(tags=["login"])
 
@@ -37,6 +37,6 @@ def login_access_token(
 
 
 @router.post("/login/test-token", response_model=UserPublic)
-def test_token(current_user: CurrentUser) -> UserPublic:
+def test_token(current_user: CurrentUser) -> User:
     """Test access token."""
     return current_user

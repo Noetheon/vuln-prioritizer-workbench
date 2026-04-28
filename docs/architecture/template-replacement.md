@@ -12,11 +12,12 @@ layout, `/api/v1` routing, JWT/user flow, generated OpenAPI client, React,
 TanStack Router/Query, Docker Compose, SQLModel, and Alembic. It does not keep
 the demo Item ownership model as the Workbench authorization model.
 
-Current state after `codex/fsft-04-template-login-smoke`: the active
-template-shaped app already omits `/items` and `ItemsService`. That is only
-baseline evidence that the demo surface was not copied into the shell. It is
-not completion evidence for `Project`, `Finding`, SQLModel persistence, or
-React Workbench feature parity.
+Current state after `codex/fsft-08-project-domain-shell`: the active
+template-shaped app omits `/items` and `ItemsService`, adds template-native
+SQLModel `User` and `Project` tables, and exposes `/api/v1/projects` through the
+generated client. That is completion evidence for the first `Project` domain
+shell only. It is not completion evidence for `Finding`, imports, memberships,
+RBAC, or React Workbench feature parity.
 
 ## VPW-003 Scope
 

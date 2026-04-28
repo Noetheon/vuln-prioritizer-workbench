@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from os import environ
 from typing import Literal, cast
+from urllib.parse import quote_plus
 
 EnvironmentName = Literal["local", "staging", "production"]
 VALID_ENVIRONMENTS: set[str] = {"local", "staging", "production"}
@@ -24,6 +25,7 @@ class Settings:
     FIRST_SUPERUSER_PASSWORD: str = "changethis"
     FRONTEND_HOST: str = "http://localhost:5173"
     BACKEND_CORS_ORIGINS: tuple[str, ...] = field(default_factory=tuple)
+    SQLALCHEMY_DATABASE_URI: str = "sqlite:///./template.db"
 
     @property
     def all_cors_origins(self) -> tuple[str, ...]:
@@ -38,6 +40,23 @@ class Settings:
 def parse_cors_origins(raw_origins: str) -> tuple[str, ...]:
     """Parse comma-separated CORS origins using the template env var name."""
     return tuple(origin.strip().rstrip("/") for origin in raw_origins.split(",") if origin.strip())
+
+
+def build_database_uri() -> str:
+    """Build the template-style database URL from explicit or Postgres env vars."""
+    explicit_uri = environ.get("SQLALCHEMY_DATABASE_URI") or environ.get("DATABASE_URL")
+    if explicit_uri:
+        return explicit_uri
+
+    postgres_server = environ.get("POSTGRES_SERVER")
+    if postgres_server:
+        user = quote_plus(environ.get("POSTGRES_USER", "postgres"))
+        password = quote_plus(environ.get("POSTGRES_PASSWORD", "postgres"))
+        port = environ.get("POSTGRES_PORT", "5432")
+        db = quote_plus(environ.get("POSTGRES_DB", "app"))
+        return f"postgresql+psycopg://{user}:{password}@{postgres_server}:{port}/{db}"
+
+    return "sqlite:///./template.db"
 
 
 def load_settings() -> Settings:
@@ -60,6 +79,7 @@ def load_settings() -> Settings:
         FIRST_SUPERUSER_PASSWORD=environ.get("FIRST_SUPERUSER_PASSWORD", "changethis"),
         FRONTEND_HOST=environ.get("FRONTEND_HOST", "http://localhost:5173"),
         BACKEND_CORS_ORIGINS=parse_cors_origins(environ.get("BACKEND_CORS_ORIGINS", "")),
+        SQLALCHEMY_DATABASE_URI=build_database_uri(),
     )
 
 
