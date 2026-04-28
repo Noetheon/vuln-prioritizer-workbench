@@ -176,6 +176,11 @@ not something to fake by pointing at the old SQLAlchemy/Jinja implementation.
   stable public import surface. Alembic now calls `import_table_models()` before
   reading `SQLModel.metadata`, and the import convention is documented in
   [Model Import Registry](architecture/model-imports.md).
+- `codex/fsft-10-core-workbench-tables` adds the first core Workbench SQLModel
+  tables after Project: `asset`, `component`, `vulnerability`, and `finding`.
+  These tables include stable enum strings, JSON evidence/explanation fields,
+  explicit foreign keys, and prepared dedup constraints without adding API
+  routes, analysis runs, provider snapshots, or import services.
 
 Frontend issues `VPW-037` to `VPW-047` must wait until the backend OpenAPI client
 is generated and the template login flow remains green.

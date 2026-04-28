@@ -627,3 +627,71 @@ Residual risks:
 - Future table-bearing modules must be added to
   `app.models.registry.TABLE_MODEL_MODULES`; otherwise Alembic autogenerate can
   miss them.
+
+## FSFT-10 Core Workbench Tables
+
+Branch:
+
+- `codex/fsft-10-core-workbench-tables`
+
+Scope:
+
+- Added SQLModel tables for `Asset`, `Component`, `Vulnerability`, and
+  `Finding` under `backend/app/models/`.
+- Added stable string enums for finding priority/status and asset environment,
+  exposure, and criticality.
+- Added Project relationships to assets/findings and Finding relationships to
+  vulnerability, component, and asset.
+- Added JSON fields for finding explanation, data quality, and evidence, plus
+  provider JSON on vulnerabilities.
+- Added Alembic revision `20260428_0002_core_workbench_tables.py`.
+- Documented DB constraints and the core schema in
+  `docs/architecture/core-workbench-schema.md`.
+
+Commands run:
+
+```bash
+python3 -m pytest -q backend/tests/api/test_template_core_workbench_models.py \
+  backend/tests/api/test_template_model_metadata.py \
+  backend/tests/api/test_template_projects.py --no-cov
+python3 -m pytest -q backend/tests/api/test_template_backend_adapter.py \
+  backend/tests/api/test_template_auth_smoke.py \
+  backend/tests/api/test_template_projects.py \
+  backend/tests/api/test_template_model_metadata.py \
+  backend/tests/api/test_template_core_workbench_models.py --no-cov
+python3 -m ruff format --check backend/app \
+  backend/tests/api/test_template_core_workbench_models.py
+python3 -m ruff check backend/app \
+  backend/tests/api/test_template_core_workbench_models.py
+cd backend && python3 -m mypy app src
+make docs-check
+make check
+git diff --check
+# Temporary Alembic autogenerate dry-run:
+# copy backend/app/alembic to a temp dir, upgrade a fresh SQLite DB to head,
+# then run command.revision(..., autogenerate=True).
+```
+
+Results:
+
+- Core Workbench model, metadata, and project tests passed: 11 passed.
+- Template adapter, auth smoke, project, metadata, and core Workbench model
+  tests passed: 26 passed.
+- Ruff format/check over `backend/app` and the new model tests passed.
+- Backend mypy over `app src` passed.
+- `make docs-check` passed.
+- `make check` passed: 555 passed, 2 skipped, total coverage 90.27%.
+- `git diff --check` passed.
+- Temporary Alembic autogenerate dry-run generated an empty migration body with
+  `pass` in both `upgrade()` and `downgrade()`, proving metadata and migrations
+  are aligned.
+
+Residual risks:
+
+- This slice intentionally does not add `AnalysisRun`, `FindingOccurrence`,
+  provider snapshots, ATT&CK context, status history, waivers, API routes, or
+  frontend screens. Those remain separate VPW items.
+- The finding dedup model includes both a technical `(project_id, dedup_key)`
+  constraint and a domain `(project_id, vulnerability_id, component_id,
+  asset_id)` constraint so future import services can provide stable dedup keys
+  without weakening the initial domain contract.

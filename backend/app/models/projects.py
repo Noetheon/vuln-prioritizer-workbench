@@ -2,12 +2,17 @@
 
 import uuid
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import Column, DateTime
 from sqlmodel import Field, Relationship, SQLModel
 
 from app.models.base import get_datetime_utc
 from app.models.users import User
+
+if TYPE_CHECKING:
+    from app.models.assets import Asset
+    from app.models.findings import Finding
 
 
 class ProjectBase(SQLModel):
@@ -49,6 +54,8 @@ class Project(ProjectBase, table=True):
         sa_column=Column(DateTime(timezone=True), nullable=False),
     )
     owner: User | None = Relationship(back_populates="projects")
+    assets: list["Asset"] = Relationship(back_populates="project", cascade_delete=True)
+    findings: list["Finding"] = Relationship(back_populates="project", cascade_delete=True)
 
 
 class ProjectPublic(ProjectBase):
