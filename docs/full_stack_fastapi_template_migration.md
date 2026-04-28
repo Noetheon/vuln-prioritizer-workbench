@@ -158,6 +158,11 @@ not something to fake by pointing at the old SQLAlchemy/Jinja implementation.
   frontend, a generated OpenAPI client from `app.main`, TanStack Router login
   wiring, and a Playwright login smoke. This is intentionally still a
   configured-superuser smoke, not DB-backed SQLModel user management.
+- `codex/fsft-05-template-replacement-strategy` documents the official template
+  `Item` inventory and the approved replacement direction in
+  [Template Replacement Strategy](architecture/template-replacement.md):
+  remove demo Items and introduce Workbench `Project`/`Finding` domain work in
+  follow-up implementation PRs.
 
 Frontend issues `VPW-037` to `VPW-047` must wait until the backend OpenAPI client
 is generated and the template login flow remains green.

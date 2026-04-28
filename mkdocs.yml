@@ -10,7 +10,9 @@ nav:
   - Executive Summary: executive_summary.md
   - Methodology: methodology.md
   - Benchmarking: benchmarking.md
-  - Architecture: architecture.md
+  - Architecture:
+      - Overview: architecture/index.md
+      - Template Replacement Strategy: architecture/template-replacement.md
   - Full Stack Template Migration: full_stack_fastapi_template_migration.md
   - VPW Template Execution Sequence: vpw_template_execution_sequence.md
   - Use Cases: use_cases.md

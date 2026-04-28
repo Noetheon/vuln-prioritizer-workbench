@@ -71,7 +71,7 @@ Workbench runtime state is controlled by environment variables for database URL,
 
 The current web/API import path uses the same local input-format matrix as the CLI for single-upload and multi-upload imports: CVE lists, generic occurrence CSV, Trivy JSON, Grype JSON, Dependency-Check JSON, GitHub alerts JSON, CycloneDX JSON, SPDX JSON, Nessus XML, and OpenVAS XML. XML support remains safe local parsing of exported findings only; the Workbench does not scan systems.
 
-The Workbench threat model and readiness checklist are maintained in [workbench-threat-model.md](workbench-threat-model.md). The current architecture assumes a trusted local operator, SQLite default storage, and no public-internet exposure until authentication and shared-deployment hardening are added.
+The Workbench threat model and readiness checklist are maintained in [workbench-threat-model.md](../workbench-threat-model.md). The current architecture assumes a trusted local operator, SQLite default storage, and no public-internet exposure until authentication and shared-deployment hardening are added.
 
 ### Input normalization
 
