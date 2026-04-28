@@ -2,26 +2,34 @@
 
 from __future__ import annotations
 
+from collections import Counter
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
-from vuln_prioritizer.api.deps import get_db_session
+from vuln_prioritizer.api.deps import get_db_session, get_workbench_settings
 from vuln_prioritizer.api.schemas import (
     AssetResponse,
+    AssetsListResponse,
     AssetUpdateRequest,
     AuditEventResponse,
     ProjectCreateRequest,
+    ProjectDashboardResponse,
     ProjectResponse,
+    ProjectsListResponse,
+    VulnerabilityDetailResponse,
     WaiverRequest,
     WaiverResponse,
+    WaiversListResponse,
 )
 from vuln_prioritizer.api.workbench_payloads import (
     _asset_payload,
     _audit_event_payload,
+    _finding_payload,
     _project_payload,
 )
+from vuln_prioritizer.api.workbench_providers import _provider_status_payload
 from vuln_prioritizer.api.workbench_route_support import (
     _asset_audit_snapshot,
 )
@@ -33,11 +41,13 @@ from vuln_prioritizer.api.workbench_waivers import (
     _waiver_payload,
 )
 from vuln_prioritizer.db.repositories import WorkbenchRepository
+from vuln_prioritizer.services.workbench_attack import top_technique_rows
+from vuln_prioritizer.workbench_config import WorkbenchSettings
 
 router = APIRouter()
 
 
-@router.get("/projects")
+@router.get("/projects", response_model=ProjectsListResponse)
 def list_projects(session: Annotated[Session, Depends(get_db_session)]) -> dict[str, Any]:
     projects = WorkbenchRepository(session).list_projects()
     return {"items": [_project_payload(project) for project in projects]}
@@ -77,6 +87,58 @@ def get_project(
     return _project_payload(project)
 
 
+@router.get("/projects/{project_id}/dashboard", response_model=ProjectDashboardResponse)
+def project_dashboard(
+    project_id: str,
+    session: Annotated[Session, Depends(get_db_session)],
+    settings: Annotated[WorkbenchSettings, Depends(get_workbench_settings)],
+) -> dict[str, Any]:
+    repo = WorkbenchRepository(session)
+    project = repo.get_project(project_id)
+    if project is None:
+        raise HTTPException(status_code=404, detail="Project not found.")
+    findings = repo.list_project_findings(project.id)
+    runs = repo.list_analysis_runs(project.id)
+    attack_contexts = repo.list_project_attack_contexts(project.id)
+    priority_counts = Counter(finding.priority for finding in findings)
+    service_counts = Counter(
+        finding.asset.business_service
+        for finding in findings
+        if finding.asset is not None and finding.asset.business_service
+    )
+    counts = {
+        "Critical": priority_counts.get("Critical", 0),
+        "High": priority_counts.get("High", 0),
+        "Medium": priority_counts.get("Medium", 0),
+        "Low": priority_counts.get("Low", 0),
+        "KEV": sum(1 for finding in findings if finding.in_kev),
+        "Open": sum(1 for finding in findings if finding.status == "open"),
+        "VEX suppressed": sum(1 for finding in findings if finding.suppressed_by_vex),
+        "Under investigation": sum(1 for finding in findings if finding.under_investigation),
+        "Waived": sum(1 for finding in findings if finding.waived),
+        "Waiver review due": sum(
+            1 for finding in findings if finding.waiver_status == "review_due"
+        ),
+        "Expired waivers": sum(1 for finding in findings if finding.waiver_status == "expired"),
+    }
+    return {
+        "project": _project_payload(project),
+        "counts": counts,
+        "top_findings": [_finding_payload(finding) for finding in findings[:10]],
+        "recent_runs": [_analysis_run_payload(run) for run in runs[:8]],
+        "top_services": [
+            {"service": service, "finding_count": count}
+            for service, count in service_counts.most_common(8)
+        ],
+        "top_techniques": top_technique_rows(attack_contexts, limit=8),
+        "attack_mapped_count": sum(1 for finding in findings if finding.attack_mapped),
+        "provider_status": _provider_status_payload(
+            repo.get_latest_provider_snapshot(),
+            settings=settings,
+        ),
+    }
+
+
 @router.get(
     "/projects/{project_id}/audit-events",
     response_model=dict[str, list[AuditEventResponse]],
@@ -114,7 +176,7 @@ def list_audit_events(
     }
 
 
-@router.get("/projects/{project_id}/assets")
+@router.get("/projects/{project_id}/assets", response_model=AssetsListResponse)
 def list_project_assets(
     project_id: str,
     session: Annotated[Session, Depends(get_db_session)],
@@ -133,6 +195,30 @@ def list_project_assets(
             for asset in repo.list_project_assets(project_id)
         ]
     }
+
+
+@router.get(
+    "/projects/{project_id}/vulnerabilities/{cve_id}",
+    response_model=VulnerabilityDetailResponse,
+)
+def get_project_vulnerability(
+    project_id: str,
+    cve_id: str,
+    session: Annotated[Session, Depends(get_db_session)],
+) -> dict[str, Any]:
+    repo = WorkbenchRepository(session)
+    project = repo.get_project(project_id)
+    if project is None:
+        raise HTTPException(status_code=404, detail="Project not found.")
+    normalized_cve_id = cve_id.strip().upper()
+    vulnerability = repo.get_vulnerability_by_cve(normalized_cve_id)
+    if vulnerability is None:
+        raise HTTPException(status_code=404, detail="Vulnerability not found.")
+    return _vulnerability_payload(
+        project,
+        vulnerability,
+        repo.list_findings_for_cve(project.id, normalized_cve_id),
+    )
 
 
 @router.get("/assets/{asset_row_id}", response_model=AssetResponse)
@@ -207,7 +293,7 @@ def update_asset(
     return _asset_payload(updated, finding_count=len(updated.findings))
 
 
-@router.get("/projects/{project_id}/waivers")
+@router.get("/projects/{project_id}/waivers", response_model=WaiversListResponse)
 def list_project_waivers(
     project_id: str,
     session: Annotated[Session, Depends(get_db_session)],
@@ -298,3 +384,31 @@ def delete_project_waiver(
     )
     session.commit()
     return {"deleted": True}
+
+
+def _analysis_run_payload(run: Any) -> dict[str, Any]:
+    from vuln_prioritizer.api.workbench_payloads import _analysis_run_payload as payload
+
+    return payload(run)
+
+
+def _vulnerability_payload(
+    project: Any,
+    vulnerability: Any,
+    findings: list[Any],
+) -> dict[str, Any]:
+    return {
+        "project": _project_payload(project),
+        "cve_id": vulnerability.cve_id,
+        "source_id": vulnerability.source_id,
+        "title": vulnerability.title,
+        "description": vulnerability.description,
+        "cvss_score": vulnerability.cvss_score,
+        "cvss_vector": vulnerability.cvss_vector,
+        "severity": vulnerability.severity,
+        "cwe": vulnerability.cwe,
+        "published_at": vulnerability.published_at,
+        "modified_at": vulnerability.modified_at,
+        "provider": vulnerability.provider_json or {},
+        "findings": [_finding_payload(finding, include_detail=True) for finding in findings],
+    }

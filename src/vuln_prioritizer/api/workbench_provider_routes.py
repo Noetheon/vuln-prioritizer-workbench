@@ -12,6 +12,7 @@ from vuln_prioritizer.api.schemas import (
     ProviderStatusResponse,
     ProviderUpdateJobRequest,
     ProviderUpdateJobResponse,
+    ProviderUpdateJobsListResponse,
 )
 from vuln_prioritizer.api.workbench_providers import (
     _create_provider_update_job_record,
@@ -34,7 +35,7 @@ def provider_status(
     return _provider_status_payload(snapshot, settings=settings)
 
 
-@provider_router.get("/providers/update-jobs")
+@provider_router.get("/providers/update-jobs", response_model=ProviderUpdateJobsListResponse)
 def list_provider_update_jobs(
     session: Annotated[Session, Depends(get_db_session)],
 ) -> dict[str, Any]:

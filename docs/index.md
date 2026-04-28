@@ -4,10 +4,11 @@
 
 ## Public Docs Slice
 
-The site includes the `v1.1.0` release notes, Workbench milestone evidence, and committed media preview assets.
+The site includes the `v1.2.0` release notes, Workbench milestone evidence, and committed media preview assets.
 
 ![Documentation grid preview](media/grid.png)
 
+- [Release notes: v1.2.0](releases/v1.2.0.md)
 - [Release notes: v1.1.0](releases/v1.1.0.md)
 - [Release notes: Workbench v1.0.0](releases/workbench-v1.0.0.md)
 - [Workbench v1.0 release checklist](workbench-v1-release-checklist.md)
@@ -66,7 +67,7 @@ Workbench v1.0 from a repository checkout:
 
 ```bash
 docker compose up --build
-curl http://127.0.0.1:8000/api/health
+curl http://127.0.0.1:8000/healthz
 ```
 
 The web/API Workbench is local-first, SQLite-backed, and focused on CVE lists, `generic-occurrence-csv`, Trivy JSON, and Grype JSON imports. Use the CLI for the full automation/input matrix.
@@ -83,7 +84,7 @@ The web/API Workbench is local-first, SQLite-backed, and focused on CVE lists, `
 - Use [roadmap.md](roadmap.md) for shipped scope and deliberate non-goals.
 - Use [release_operations.md](release_operations.md) for maintainer-only release, GitHub Release recovery, and PyPI/TestPyPI operations.
 - Use [community_repository_setup.md](community_repository_setup.md) for maintainer-facing public repo topics, labels, and triage defaults.
-- Use [releases/v1.1.0.md](releases/v1.1.0.md) for the current package release.
+- Use [releases/v1.2.0.md](releases/v1.2.0.md) for the current package release.
 
 ## Local Docs Preview (Repo Checkout Only)
 

@@ -21,6 +21,7 @@ from vuln_prioritizer.api.schemas import (
     DetectionControlPatchRequest,
     DetectionControlRequest,
     DetectionControlResponse,
+    DetectionControlsListResponse,
     FindingAttackContextResponse,
     GovernanceRollupsResponse,
     TechniqueDetailResponse,
@@ -168,7 +169,10 @@ def update_finding_attack_review(
     return _attack_context_payload(updated_contexts[0], finding_id=finding.id)
 
 
-@router.get("/projects/{project_id}/detection-controls")
+@router.get(
+    "/projects/{project_id}/detection-controls",
+    response_model=DetectionControlsListResponse,
+)
 def list_detection_controls(
     project_id: str,
     session: Annotated[Session, Depends(get_db_session)],

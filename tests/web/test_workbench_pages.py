@@ -103,7 +103,7 @@ def test_web_route_error_paths_and_local_redirects(tmp_path: Path) -> None:
 
     root = client.get("/", follow_redirects=False)
     assert root.status_code == 303
-    assert root.headers["location"] == "/projects/new"
+    assert root.headers["location"] == "/app"
 
     favicon = client.get("/favicon.ico")
     assert favicon.status_code == 204
@@ -124,7 +124,7 @@ def test_web_route_error_paths_and_local_redirects(tmp_path: Path) -> None:
     assert created.status_code == 303
     root = client.get("/", follow_redirects=False)
     assert root.status_code == 303
-    assert root.headers["location"].endswith("/dashboard")
+    assert root.headers["location"] == "/app"
 
     duplicate = client.post(
         "/projects",

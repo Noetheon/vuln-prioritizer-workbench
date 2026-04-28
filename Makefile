@@ -10,7 +10,7 @@ DEMO_EVIDENCE_ANALYSIS_FILE := build/v1.0-demo-analysis.json
 DEMO_EVIDENCE_BUNDLE_FILE := build/v1.0-demo-evidence-bundle.zip
 DEMO_EVIDENCE_VERIFICATION_FILE := build/v1.0-demo-evidence-bundle-verification.json
 
-.PHONY: install test lint format fix typecheck check benchmark-check playwright-install playwright-check docs-check docs-serve actionlint-check workflow-check docker-demo-smoke docker-postgres-migration-smoke dependency-audit demo-sync-check demo-sync-check-temp package package-check package-check-temp pipx-source-smoke release-check demo-report demo-compare demo-explain demo-attack-report demo-attack-compare demo-attack-explain demo-attack-coverage demo-attack-navigator demo-pr-comment demo-results-sarif demo-html-report demo-evidence-analysis demo-evidence-bundle demo-evidence-bundle-check precommit-install
+.PHONY: install test lint format fix typecheck check frontend-install frontend-check frontend-build frontend-sync-check tracked-source-check benchmark-check playwright-install playwright-check docs-check docs-serve actionlint-check workflow-check docker-demo-smoke docker-postgres-migration-smoke dependency-audit demo-sync-check demo-sync-check-temp package package-check package-check-temp package-installed-web-smoke installed-web-smoke pipx-source-smoke release-check release-readiness-check demo-report demo-compare demo-explain demo-attack-report demo-attack-compare demo-attack-explain demo-attack-coverage demo-attack-navigator demo-pr-comment demo-results-sarif demo-html-report demo-evidence-analysis demo-evidence-bundle demo-evidence-bundle-check precommit-install
 
 install:
 	$(PYTHON) -m pip install -e .[dev]
@@ -37,6 +37,44 @@ check:
 	$(PYTHON) -m mypy src
 	$(PYTHON) -m pytest
 
+frontend-install:
+	npm --prefix frontend ci
+
+frontend-check: frontend-install
+	npm --prefix frontend run check
+
+frontend-build: frontend-check
+	npm --prefix frontend run build
+
+frontend-sync-check: frontend-build
+	git diff --exit-code -- src/vuln_prioritizer/web/static/app
+	git ls-files --error-unmatch src/vuln_prioritizer/web/static/app/index.html >/dev/null
+	test -n "$$(git ls-files 'src/vuln_prioritizer/web/static/app/assets/*.js')"
+	test -n "$$(git ls-files 'src/vuln_prioritizer/web/static/app/assets/*.css')"
+	@test -z "$$(git ls-files --others --exclude-standard -- src/vuln_prioritizer/web/static/app)" || ( \
+		echo "React static app assets are untracked. Add src/vuln_prioritizer/web/static/app before release." >&2; \
+		git ls-files --others --exclude-standard -- src/vuln_prioritizer/web/static/app >&2; \
+		exit 1; \
+	)
+
+tracked-source-check:
+	@missing=""; \
+	for path in \
+		frontend/package.json \
+		frontend/package-lock.json \
+		scripts/check_package_static_assets.py \
+		scripts/installed_web_smoke.py \
+		docs/releases/v1.2.0.md; do \
+		if ! git ls-files --error-unmatch "$$path" >/dev/null 2>&1; then \
+			missing="$$missing $$path"; \
+		fi; \
+	done; \
+	if [ -n "$$missing" ]; then \
+		echo "Release source files are untracked. Add these files before release:" >&2; \
+		for path in $$missing; do echo "  $$path" >&2; done; \
+		exit 1; \
+	fi
+
 benchmark-check:
 	$(PYTHON) -m pytest -q tests/test_benchmark_regressions.py tests/test_snapshot_diff_regressions.py tests/test_rollup_regressions.py --no-cov
 
@@ -57,6 +95,7 @@ actionlint-check:
 
 workflow-check:
 	$(MAKE) check
+	$(MAKE) frontend-sync-check
 	$(MAKE) docs-check
 	$(MAKE) actionlint-check
 	$(PYTHON) -m pre_commit run --all-files
@@ -67,7 +106,8 @@ docker-demo-smoke:
 	docker compose up -d --build; \
 	trap 'docker compose down -v --remove-orphans' EXIT; \
 	for attempt in $$(seq 1 30); do \
-		if $(PYTHON) -c "import urllib.request; print(urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=2).read().decode())" 2>/dev/null; then \
+		if $(PYTHON) -c "import urllib.request; print(urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=2).read().decode())" 2>/dev/null; then \
+			$(PYTHON) -c "import re, urllib.request; base='http://127.0.0.1:8000'; root = urllib.request.urlopen(base + '/', timeout=2).geturl(); html = urllib.request.urlopen(base + '/app', timeout=2).read().decode(); deep = urllib.request.urlopen(base + '/app/projects/demo/dashboard', timeout=2).read().decode(); assets = set(re.findall(r'/static/app/assets/[^\"<> ]+', html)); assert root.endswith('/app') and assets and html == deep; [urllib.request.urlopen(base + asset, timeout=2).read(1) for asset in assets]; print('React Workbench entry, root redirect, and assets ok')"; \
 			exit 0; \
 		fi; \
 		sleep 2; \
@@ -80,7 +120,8 @@ docker-postgres-migration-smoke:
 	docker compose --profile postgres up -d --build postgres workbench-postgres; \
 	trap 'docker compose --profile postgres down -v --remove-orphans' EXIT; \
 	for attempt in $$(seq 1 30); do \
-		if $(PYTHON) -c "import urllib.request; print(urllib.request.urlopen('http://127.0.0.1:8001/api/health', timeout=2).read().decode())" 2>/dev/null; then \
+		if $(PYTHON) -c "import urllib.request; print(urllib.request.urlopen('http://127.0.0.1:8001/healthz', timeout=2).read().decode())" 2>/dev/null; then \
+			$(PYTHON) -c "import re, urllib.request; base='http://127.0.0.1:8001'; root = urllib.request.urlopen(base + '/', timeout=2).geturl(); html = urllib.request.urlopen(base + '/app', timeout=2).read().decode(); deep = urllib.request.urlopen(base + '/app/projects/demo/dashboard', timeout=2).read().decode(); assets = set(re.findall(r'/static/app/assets/[^\"<> ]+', html)); assert root.endswith('/app') and assets and html == deep; [urllib.request.urlopen(base + asset, timeout=2).read(1) for asset in assets]; print('Postgres React Workbench entry, root redirect, deep fallback, and assets ok')"; \
 			exit 0; \
 		fi; \
 		sleep 2; \
@@ -94,6 +135,7 @@ dependency-audit:
 		exit 1; \
 	}
 	$(PYTHON) -m pip_audit --requirement requirements.txt
+	npm --prefix frontend audit --audit-level=high
 
 demo-sync-check:
 	@before="$$(mktemp)"; after="$$(mktemp)"; \
@@ -132,8 +174,9 @@ package:
 	rm -rf dist
 	$(PYTHON) -m build
 
-package-check: package
+package-check: package-installed-web-smoke
 	$(PYTHON) -m twine check dist/*
+	$(PYTHON) scripts/check_package_static_assets.py
 
 package-check-temp:
 	@set -e; \
@@ -142,14 +185,37 @@ package-check-temp:
 	rsync -a --exclude .git --exclude .venv --exclude .cache --exclude Library --exclude dist --exclude build --exclude site --exclude .mypy_cache --exclude .pytest_cache --exclude .ruff_cache . "$$tmp"/; \
 	$(MAKE) -C "$$tmp" package-check
 
+package-installed-web-smoke: package
+	@set -e; \
+	tmp="$$(mktemp -d)"; \
+	trap 'rm -rf "$$tmp"' EXIT; \
+	venv="$$tmp/venv"; \
+	$(PYTHON) -m venv "$$venv"; \
+	"$$venv/bin/python" -m pip install --upgrade pip; \
+	"$$venv/bin/python" -m pip install --force-reinstall dist/*.whl; \
+	VULN_PRIORITIZER_BIN="$$venv/bin/vuln-prioritizer" $(PYTHON) scripts/installed_web_smoke.py
+
+installed-web-smoke:
+	$(PYTHON) scripts/installed_web_smoke.py
+
 pipx-source-smoke:
 	$(PYTHON) -m pip install --upgrade pip pipx
 	PYTHON_BIN=$(PYTHON) bash scripts/p1_pipx_source_smoke.sh
 
 release-check:
+	$(MAKE) tracked-source-check
 	$(MAKE) workflow-check
 	$(MAKE) pipx-source-smoke
 	$(MAKE) demo-sync-check
+
+release-readiness-check:
+	$(MAKE) release-check
+	$(MAKE) playwright-install
+	$(MAKE) playwright-check
+	$(MAKE) package-check-temp
+	$(MAKE) dependency-audit
+	$(MAKE) docker-demo-smoke
+	$(MAKE) docker-postgres-migration-smoke
 
 demo-report:
 	$(DEMO_ENV) $(PYTHON) -m vuln_prioritizer.cli analyze --input data/sample_cves.txt --output docs/example_report.md --format markdown $(DEMO_PROVIDER_FLAGS)

@@ -7,7 +7,7 @@ It is intentionally operational: use it when cutting a release, restoring a miss
 
 The repository ships releases through:
 
-- a version tag such as `v1.1.0`
+- a version tag such as `v1.2.0`
 - the release workflow in [`release.yml`](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/.github/workflows/release.yml)
 - checked-in release notes under `docs/releases/`
 - GitHub Release artifacts built from the tagged tree
@@ -16,6 +16,7 @@ The workflow already does the important trusted-publishing pieces:
 
 - it builds source and wheel distributions
 - it validates them with `twine check`
+- it runs the React Workbench release readiness gate before building artifacts
 - it publishes a GitHub Release from the checked-in notes when present
 - it uses `pypa/gh-action-pypi-publish@release/v1`
 - it grants `id-token: write` on the PyPI job
@@ -29,6 +30,16 @@ Current safety model:
 - the live PyPI workflow verifies a hosted-index install after publish
 - TestPyPI publishing is available through the manual workflow [`.github/workflows/testpypi.yml`](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/.github/workflows/testpypi.yml), is gated behind `TEST_PYPI_PUBLISH_ENABLED=true`, and verifies a hosted-index install after publish
 
+The React Workbench release line treats these files as tracked release inputs:
+
+- `frontend/package.json`
+- `frontend/package-lock.json`
+- `scripts/check_package_static_assets.py`
+- `scripts/installed_web_smoke.py`
+- `docs/releases/v1.2.0.md`
+
+`make release-check` fails if those files are present only as local untracked files.
+
 That keeps normal tagged releases green even before PyPI Trusted Publishing is fully configured.
 
 ## Standard Tagged Release Flow
@@ -36,10 +47,10 @@ That keeps normal tagged releases green even before PyPI Trusted Publishing is f
 Use this path for normal releases:
 
 1. Make sure the working tree is clean.
-2. Run the local release gate:
+2. Run the local readiness gate:
 
 ```bash
-make release-check
+make release-readiness-check
 ```
 
 3. Create or update the checked-in release notes file:
@@ -48,7 +59,14 @@ make release-check
 docs/releases/vX.Y.Z.md
 ```
 
-4. Tag the release:
+4. Confirm the React Workbench package surface is clean:
+
+```bash
+make frontend-sync-check
+make package-check
+```
+
+5. Tag the release:
 
 ```bash
 git tag -a vX.Y.Z -m "vX.Y.Z"
@@ -56,9 +74,11 @@ git push origin main
 git push origin vX.Y.Z
 ```
 
-5. Confirm that the GitHub Release workflow completed successfully.
-6. If PyPI publishing is enabled for the repository, verify that the package appeared on PyPI.
-7. Confirm that the workflow's hosted-index install verification step completed successfully.
+6. Confirm that the GitHub Release workflow completed successfully.
+7. If PyPI publishing is enabled for the repository, verify that the package appeared on PyPI.
+8. Confirm that the workflow's hosted-index install verification step completed successfully.
+
+`make release-readiness-check` includes `make release-check`, Playwright browser E2E, package static asset validation, package installed-web smoke, dependency audit, SQLite Docker Workbench smoke, and PostgreSQL migration smoke. `make release-check` includes the tracked-source guard, Python checks, React build/static sync, docs build, actionlint, pipx source smoke, and deterministic demo artifact sync.
 
 ## Restoring a Missing GitHub Release Object
 
@@ -84,9 +104,10 @@ Before the first public PyPI publish, validate the packaging and trusted-publish
    - GitHub environment: `testpypi`
 2. Set the repository variable `TEST_PYPI_PUBLISH_ENABLED=true`.
 3. Run the `TestPyPI Publish` workflow manually from GitHub Actions.
-4. Verify that the distributions appear on TestPyPI.
-5. Confirm that the workflow's hosted-index install verification step completed successfully.
-6. Optionally repeat the install manually before enabling real PyPI publication.
+4. Confirm the build job completed `make release-readiness-check` before the publish job started.
+5. Verify that the distributions appear on TestPyPI.
+6. Confirm that the workflow's hosted-index install verification step completed successfully.
+7. Optionally repeat the install manually before enabling real PyPI publication.
 
 ## PyPI Trusted Publishing Checklist
 
@@ -117,7 +138,13 @@ When configuring the trusted publisher on PyPI, match these repository values:
 After each public release:
 
 1. Confirm the GitHub Release page exists and contains the built `sdist` and `wheel`.
-2. Verify the documented GitHub tag install path:
+2. Verify the installed Workbench serves the packaged React app:
+
+```bash
+python scripts/installed_web_smoke.py
+```
+
+3. Verify the documented GitHub tag install path:
 
 ```bash
 pipx install git+https://github.com/Noetheon/vuln-prioritizer-workbench.git@vX.Y.Z
@@ -129,7 +156,7 @@ This validates the supported source-at-tag install path. It does not validate in
 
 The tag-push release workflow now performs the same source-at-tag smoke automatically before publication. Keep the manual check here as an operator-level confirmation rather than the only verification step.
 
-3. If PyPI is enabled, install from PyPI too:
+4. If PyPI is enabled, install from PyPI too:
 
 ```bash
 pipx install "vuln-prioritizer==X.Y.Z"
@@ -137,9 +164,9 @@ printf 'CVE-2021-44228\n' > smoke-cves.txt
 vuln-prioritizer analyze --input smoke-cves.txt --format json --output smoke.json
 ```
 
-4. Confirm the README install instructions still match reality.
-5. Confirm the release notes, tag, and GitHub Release object all use the same version string.
-6. If the workflow already performed hosted-index verification, treat the manual install checks here as a second-line confirmation rather than the only release proof.
+5. Confirm the README install instructions still match reality.
+6. Confirm the release notes, tag, and GitHub Release object all use the same version string.
+7. If the workflow already performed hosted-index verification, treat the manual install checks here as a second-line confirmation rather than the only release proof.
 
 If TestPyPI is enabled, also verify the staging index first:
 
@@ -162,6 +189,7 @@ If the PyPI publish job fails, check these before anything else:
 - the publish job still has `id-token: write`
 - the tag and checked-in release notes refer to the same version
 - the built artifacts pass `twine check`
+- the readiness job completed Playwright E2E, package static asset checks, package installed-web smoke, and Docker Workbench smoke before publish
 
 ## Maintainer Notes
 

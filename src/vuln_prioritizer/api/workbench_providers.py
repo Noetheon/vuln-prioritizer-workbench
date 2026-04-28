@@ -38,6 +38,16 @@ from vuln_prioritizer.providers.nvd import NvdProvider
 from vuln_prioritizer.utils import iso_utc_now, normalize_cve_id
 from vuln_prioritizer.workbench_config import WorkbenchSettings
 
+REDACTED_PROVIDER_CACHE_LABEL = "configured provider cache"
+REDACTED_PROVIDER_SNAPSHOT_LABEL = "configured provider snapshot store"
+_PROVIDER_PATH_METADATA_KEYS = {
+    "cache_dir",
+    "output_path",
+    "snapshot_dir",
+    "snapshot_path",
+    "source_path",
+}
+
 
 def _create_provider_update_job_record(
     *,
@@ -394,7 +404,9 @@ def _provider_status_payload(snapshot: Any, *, settings: WorkbenchSettings) -> d
         generated_at=metadata.get("generated_at") if isinstance(metadata, dict) else None,
         selected_sources=list(selected_sources),
         requested_cves=int(metadata.get("requested_cves", 0)) if isinstance(metadata, dict) else 0,
-        source_path=metadata.get("source_path") if isinstance(metadata, dict) else None,
+        source_path=(
+            _redacted_path_name(metadata.get("source_path")) if isinstance(metadata, dict) else None
+        ),
         locked_provider_data=locked_provider_data,
         missing=snapshot is None or bool(metadata.get("missing", False)),
     )
@@ -427,8 +439,8 @@ def _provider_status_payload(snapshot: Any, *, settings: WorkbenchSettings) -> d
         status="degraded" if snapshot is None or snapshot_status.missing else "ok",
         snapshot=snapshot_status,
         sources=sources,
-        cache_dir=str(settings.provider_cache_dir),
-        snapshot_dir=str(settings.provider_snapshot_dir),
+        cache_dir=REDACTED_PROVIDER_CACHE_LABEL,
+        snapshot_dir=REDACTED_PROVIDER_SNAPSHOT_LABEL,
         warnings=warnings,
     ).model_dump()
 
@@ -441,5 +453,21 @@ def _provider_update_job_payload(job: Any) -> dict[str, Any]:
         "started_at": job.started_at.isoformat(),
         "finished_at": job.finished_at.isoformat() if job.finished_at else None,
         "error_message": job.error_message,
-        "metadata": job.metadata_json or {},
+        "metadata": _redacted_provider_metadata(job.metadata_json or {}),
     }
+
+
+def _redacted_provider_metadata(metadata: dict[str, Any]) -> dict[str, Any]:
+    redacted: dict[str, Any] = {}
+    for key, value in metadata.items():
+        redacted[key] = _redacted_path_name(value) if key in _PROVIDER_PATH_METADATA_KEYS else value
+    return redacted
+
+
+def _redacted_path_name(value: Any) -> str | None:
+    if value is None:
+        return None
+    if not isinstance(value, str):
+        return str(value)
+    name = Path(value).name
+    return name or "configured"

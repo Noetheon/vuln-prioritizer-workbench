@@ -65,11 +65,11 @@ The command layer owns flag parsing, validation, cache wiring, and output-mode d
 
 ### Workbench surface
 
-The Workbench app is an additive FastAPI/Jinja2 layer over the existing core. `db init` loads the Workbench environment settings and initializes the SQLite schema. `web serve` starts the ASGI application with `--host`, `--port`, and optional `--reload`.
+The Workbench app is an additive FastAPI layer over the existing core. `db init` loads the Workbench environment settings and initializes the SQLite schema. `web serve` starts the ASGI application with `--host`, `--port`, and optional `--reload`; `/` redirects to the React Workbench at `/app` while the server-rendered Jinja pages remain as compatibility fallback routes.
 
 Workbench runtime state is controlled by environment variables for database URL, upload directory, report directory, trusted provider snapshot directory, provider cache directory, upload size, NVD API-key environment name, and the local CSRF token. The Docker Compose path uses named volumes for writable runtime state, keeps provider snapshots writable for refresh jobs, and mounts checked-in demo data read-only so startup can seed locked demo snapshots without making fixture data mutable.
 
-The current web/API import path uses the same local input-format matrix as the CLI for single-upload and multi-upload imports: CVE lists, generic occurrence CSV, Trivy JSON, Grype JSON, Dependency-Check JSON, GitHub alerts JSON, CycloneDX JSON, SPDX JSON, Nessus XML, and OpenVAS XML. XML support remains safe local parsing of exported findings only; the Workbench does not scan systems.
+The current web/API import path uses the same local input-format matrix as the CLI for single-upload and multi-upload imports: CVE lists, generic occurrence CSV, Trivy JSON, Grype JSON, Dependency-Check JSON, GitHub alerts JSON, CycloneDX JSON, SPDX JSON, Nessus XML, and OpenVAS XML. XML support remains safe local parsing of exported findings only; the Workbench does not scan systems. React calls the same-origin `/api/*` JSON contracts and does not scrape server-rendered HTML. Mutating React workflows use the local API-token guard once tokens exist; token values are kept in browser `sessionStorage` only.
 
 The Workbench threat model and readiness checklist are maintained in [workbench-threat-model.md](workbench-threat-model.md). The current architecture assumes a trusted local operator, SQLite default storage, and no public-internet exposure until authentication and shared-deployment hardening are added.
 

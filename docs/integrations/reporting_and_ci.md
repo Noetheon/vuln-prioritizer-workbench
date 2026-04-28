@@ -364,8 +364,11 @@ make benchmark-check
 That local gate intentionally covers:
 
 - the CI-equivalent code quality and test sweep
+- the React/Vite frontend install, typecheck, lint, test, build, and static asset sync check
 - `pre-commit` validation for workflow/action metadata and repo hygiene
 - source/wheel packaging plus `twine check`
+- wheel/sdist validation that the packaged React Workbench contains `index.html` plus hashed JS/CSS assets
+- installed-wheel Workbench web smoke in an isolated temporary venv using the packaged CLI binary
 
 For a release-oriented local sweep that also regenerates the published example artifacts, use:
 
@@ -374,6 +377,7 @@ make release-check
 ```
 
 That gate regenerates the Markdown comment body, SARIF sample, HTML report example, and the broader demo artifacts before rerunning docs, hygiene, and packaging checks.
+For a publishing-oriented sweep, use `make release-readiness-check`; it adds Python/npm dependency audit, the SQLite Docker Workbench smoke, and the optional PostgreSQL migration smoke on top of `make release-check`. Both Docker smokes check `/healthz`, the `/` to `/app` redirect, the React entry, a deep SPA fallback route, and packaged static assets.
 `make benchmark-check` is the narrower local regression sweep for the checked-in fixture benchmark cases.
 
 These `make` targets assume a checkout of this repository.

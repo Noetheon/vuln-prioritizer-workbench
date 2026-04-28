@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import io
 import json
+import re
 import shutil
 import zipfile
 from pathlib import Path
@@ -127,6 +128,7 @@ def test_workbench_health_and_project_crud(tmp_path: Path) -> None:
     assert health.headers["x-content-type-options"] == "nosniff"
     assert health.headers["x-frame-options"] == "DENY"
     assert "object-src 'none'" in health.headers["content-security-policy"]
+    assert "form-action 'self'" in health.headers["content-security-policy"]
 
     bad_host = client.get("/api/health", headers={"host": "evil.example"})
     assert bad_host.status_code == 400
@@ -134,6 +136,20 @@ def test_workbench_health_and_project_crud(tmp_path: Path) -> None:
     version = client.get("/api/version")
     assert version.status_code == 200
     assert version.json()["app"] == "Vuln Prioritizer Workbench"
+
+    root = client.get("/", follow_redirects=False)
+    assert root.status_code == 303
+    assert root.headers["location"] == "/app"
+    react_app = client.get("/app")
+    assert react_app.status_code == 200
+    assert react_app.headers["cache-control"] == "no-store"
+    assert "/static/app/assets/" in react_app.text
+    assets = set(re.findall(r'/static/app/assets/[^"<> ]+', react_app.text))
+    assert assets
+    for asset in assets:
+        response = client.get(asset)
+        assert response.status_code == 200
+        assert response.content
 
     project = _create_project(client)
     assert project["name"] == "online-shop-demo"
@@ -144,6 +160,19 @@ def test_workbench_health_and_project_crud(tmp_path: Path) -> None:
     projects = client.get("/api/projects")
     assert projects.status_code == 200
     assert projects.json()["items"][0]["id"] == project["id"]
+
+    for spa_path in [
+        "/app/projects",
+        "/app/new",
+        "/app/findings/placeholder",
+        "/app/analysis-runs/placeholder/reports",
+        f"/app/projects/{project['id']}/dashboard",
+        f"/app/projects/{project['id']}/runs/placeholder/artifacts",
+        "/app/evidence-bundles/placeholder/verify",
+    ]:
+        response = client.get(spa_path)
+        assert response.status_code == 200
+        assert response.text == react_app.text
 
     duplicate = client.post("/api/projects", json={"name": "online-shop-demo"})
     assert duplicate.status_code == 409
@@ -175,6 +204,46 @@ def test_workbench_import_findings_reports_and_evidence(tmp_path: Path) -> None:
     assert status_payload["snapshot"]["content_hash"]
     assert status_payload["snapshot"]["selected_sources"] == ["nvd", "epss", "kev"]
     assert {source["name"] for source in status_payload["sources"]} == {"nvd", "epss", "kev"}
+
+    bootstrap = client.get("/api/workbench/bootstrap")
+    assert bootstrap.status_code == 200
+    bootstrap_payload = bootstrap.json()
+    assert bootstrap_payload["latest_project_id"] == project["id"]
+    assert bootstrap_payload["projects"][0]["id"] == project["id"]
+    assert bootstrap_payload["token_auth"]["requires_token_for_mutations"] is False
+    assert "cve-list" in bootstrap_payload["supported_input_formats"]
+    assert "nessus-xml" in bootstrap_payload["supported_input_formats"]
+    assert bootstrap_payload["provider_status"]["status"] == "ok"
+
+    dashboard = client.get(f"/api/projects/{project['id']}/dashboard")
+    assert dashboard.status_code == 200
+    dashboard_payload = dashboard.json()
+    assert dashboard_payload["project"]["id"] == project["id"]
+    assert dashboard_payload["counts"]["KEV"] >= 1
+    assert dashboard_payload["top_findings"]
+    assert dashboard_payload["recent_runs"][0]["id"] == run["id"]
+
+    vulnerability = client.get(f"/api/projects/{project['id']}/vulnerabilities/CVE-2021-44228")
+    assert vulnerability.status_code == 200
+    vulnerability_payload = vulnerability.json()
+    assert vulnerability_payload["cve_id"] == "CVE-2021-44228"
+    assert vulnerability_payload["provider"]
+    assert vulnerability_payload["findings"][0]["cve_id"] == "CVE-2021-44228"
+
+    import_artifacts = client.get("/api/workbench/artifacts")
+    assert import_artifacts.status_code == 200
+    import_artifacts_payload = import_artifacts.json()
+    provider_option = next(
+        item
+        for item in import_artifacts_payload["provider_snapshots"]
+        if item["filename"] == DEMO_PROVIDER_SNAPSHOT.name
+    )
+    assert provider_option["kind"] == "provider_snapshot"
+    assert provider_option["source"] == "provider_snapshot_dir"
+    assert provider_option["size_bytes"] == DEMO_PROVIDER_SNAPSHOT.stat().st_size
+    assert provider_option["modified_at"].endswith("+00:00")
+    attack_filenames = {item["filename"] for item in import_artifacts_payload["attack_artifacts"]}
+    assert ATTACK_MAPPING.name in attack_filenames
 
     project_runs = client.get(f"/api/projects/{project['id']}/runs")
     assert project_runs.status_code == 200
@@ -364,6 +433,24 @@ def test_workbench_import_findings_reports_and_evidence(tmp_path: Path) -> None:
     verification = client.get(bundle_payload["verify_url"])
     assert verification.status_code == 200
     assert verification.json()["summary"]["ok"] is True
+
+    run_artifacts = client.get(f"/api/analysis-runs/{run['id']}/artifacts")
+    assert run_artifacts.status_code == 200
+    run_artifacts_payload = run_artifacts.json()
+    assert run_artifacts_payload["run"]["id"] == run["id"]
+    assert {item["type"] for item in run_artifacts_payload["items"]} == {
+        "report",
+        "evidence_bundle",
+    }
+    assert len(run_artifacts_payload["reports"]) == len(report_expectations)
+    assert run_artifacts_payload["evidence_bundles"][0]["id"] == bundle_payload["id"]
+
+    generated_artifacts = client.get("/api/workbench/generated-artifacts", params={"limit": 2})
+    assert generated_artifacts.status_code == 200
+    generated_artifacts_payload = generated_artifacts.json()
+    assert generated_artifacts_payload["total"] == len(report_expectations) + 1
+    assert generated_artifacts_payload["limit"] == 2
+    assert len(generated_artifacts_payload["items"]) == 2
 
     jobs = client.get("/api/jobs", params={"project_id": project["id"]})
     assert jobs.status_code == 200
@@ -1371,13 +1458,17 @@ def test_workbench_api_tokens_config_provider_jobs_and_github_preview(
         assert token_record.token_hash != token_payload["token"]
         assert len(token_record.token_hash) == 64
 
-    assert client.get("/api/diagnostics").status_code == 403
-    assert client.get("/api/tokens").status_code == 403
+    diagnostics_blocked = client.get("/api/diagnostics")
+    assert diagnostics_blocked.status_code == 401
+    assert diagnostics_blocked.headers["www-authenticate"] == "Bearer"
+    assert client.get("/api/tokens").status_code == 401
 
     headers = {"X-API-Token": token_payload["token"]}
     listed_tokens = client.get("/api/tokens", headers=headers)
     assert listed_tokens.status_code == 200
     assert listed_tokens.json()["items"][0]["id"] == token_payload["id"]
+    assert listed_tokens.json()["active_count"] == 1
+    assert listed_tokens.json()["requires_token_for_mutations"] is True
     assert "token" not in listed_tokens.json()["items"][0]
 
     diagnostics = client.get("/api/diagnostics", headers=headers)
@@ -1397,14 +1488,17 @@ def test_workbench_api_tokens_config_provider_jobs_and_github_preview(
     second_headers = {"X-API-Token": second_token.json()["token"]}
 
     blocked = client.post("/api/projects", json={"name": "blocked-without-token"})
-    assert blocked.status_code == 403
+    assert blocked.status_code == 401
+    assert blocked.headers["www-authenticate"] == "Bearer"
+    assert blocked.json()["error"]["code"] == "unauthorized"
 
     bad_token = client.post(
         "/api/projects",
         json={"name": "blocked-with-bad-token"},
         headers={"X-API-Token": "wrong"},
     )
-    assert bad_token.status_code == 403
+    assert bad_token.status_code == 401
+    assert bad_token.headers["www-authenticate"] == "Bearer"
 
     project_response = client.post(
         "/api/projects",
@@ -1443,7 +1537,10 @@ def test_workbench_api_tokens_config_provider_jobs_and_github_preview(
     assert job_payload["metadata"]["snapshot_created"] is True
     assert job_payload["metadata"]["new_snapshot_id"]
     assert job_payload["metadata"]["new_snapshot_hash"]
-    assert Path(job_payload["metadata"]["snapshot_path"]).is_file()
+    snapshot_path = job_payload["metadata"]["snapshot_path"]
+    assert Path(snapshot_path).name == snapshot_path
+    assert snapshot_path.startswith("workbench-provider-snapshot-")
+    assert snapshot_path.endswith(".json")
 
     provider_status = client.get("/api/providers/status")
     assert provider_status.status_code == 200
@@ -1752,17 +1849,26 @@ def test_workbench_api_tokens_config_provider_jobs_and_github_preview(
 
     revoke = client.delete(f"/api/tokens/{token_payload['id']}", headers=headers)
     assert revoke.status_code == 200
-    assert revoke.json()["active"] is False
+    assert revoke.json()["deleted"] is True
+    assert revoke.json()["revoked"] is True
     revoked_write = client.post(
         "/api/projects",
         json={"name": "blocked-revoked-token"},
         headers=headers,
     )
-    assert revoked_write.status_code == 403
+    assert revoked_write.status_code == 401
     listed_after_revoke = client.get("/api/tokens", headers=second_headers)
     assert listed_after_revoke.status_code == 200
+    assert listed_after_revoke.json()["active_count"] == 1
     token_states = {item["id"]: item["active"] for item in listed_after_revoke.json()["items"]}
     assert token_states[token_payload["id"]] is False
+
+    last_token_delete = client.delete(
+        f"/api/tokens/{second_token.json()['id']}",
+        headers=second_headers,
+    )
+    assert last_token_delete.status_code == 409
+    assert "replacement token" in last_token_delete.json()["detail"]
 
 
 def test_workbench_csv_report_escapes_spreadsheet_formulas(tmp_path: Path) -> None:

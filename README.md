@@ -2,7 +2,7 @@
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Status: v1.1.0](https://img.shields.io/badge/status-v1.1.0-brightgreen)](./CHANGELOG.md)
+[![Status: v1.2.0](https://img.shields.io/badge/status-v1.2.0-brightgreen)](./CHANGELOG.md)
 [![Quality: local-first](https://img.shields.io/badge/quality-local--first-informational)](#development)
 
 `vuln-prioritizer` is a Python CLI and self-hosted Workbench for prioritizing known CVEs. It accepts plain CVE lists plus existing scanner and SBOM exports, enriches them with `NVD + EPSS + CISA KEV`, and adds optional ATT&CK, defensive-context, asset-context, VEX, waiver, and evidence layers without turning the priority model into a black box.
@@ -51,7 +51,7 @@ Core commands:
 - `report html|evidence-bundle|verify-evidence-bundle`: render HTML, build reproducible ZIP evidence packages, or verify bundle integrity
 - `data status|update|verify|export-provider-snapshot`: inspect cache state, maintain local provider data, and export replayable provider snapshots
 - `db init`: initialize the Workbench SQLite database
-- `web serve`: run the FastAPI/Jinja2 Workbench web application
+- `web serve`: run the FastAPI Workbench web application, including the React Workbench UI under `/app`
 
 Supported inputs:
 
@@ -104,7 +104,7 @@ pipx install git+https://github.com/Noetheon/vuln-prioritizer-workbench.git@vX.Y
 vuln-prioritizer --help
 ```
 
-Replace `vX.Y.Z` with the GitHub release tag you intend to consume. This README tracks the current `main` branch, so a tagged public release can legitimately expose a smaller surface than the tip of `main`. The latest public release is currently `v1.1.0`.
+Replace `vX.Y.Z` with the GitHub release tag you intend to consume. This README tracks the current `main` branch, so a tagged public release can legitimately expose a smaller surface than the tip of `main`. The current package line is `v1.2.0`.
 
 The repository is PyPI-ready, but the verified public install path is currently the GitHub tag install above. That is a source-at-tag install path, not a GitHub Release asset install path. Public PyPI/TestPyPI publication is wired and documented, but explicitly gated until the repository's trusted-publisher configuration is enabled. When PyPI goes live, the release workflows verify hosted-index installation automatically after publish; until then, the GitHub tag install remains the supported public path and the release workflow also verifies the same source-at-tag install contract on tag pushes.
 
@@ -139,13 +139,13 @@ Run the current self-hosted Workbench API and web UI locally:
 docker compose up --build
 ```
 
-Then open `http://127.0.0.1:8000`. The Compose service stores SQLite data, uploads, reports, provider snapshots, and provider cache entries in Docker named volumes, mounts checked-in demo data read-only at `/app/examples`, and copies demo provider snapshots into the writable snapshot volume on startup.
+Then open `http://127.0.0.1:8000`; the root route redirects to the React Workbench UI at `/app`. The older server-rendered pages remain available under `/projects/...` and related legacy paths for compatibility during cutover. The Compose service stores SQLite data, uploads, reports, provider snapshots, and provider cache entries in Docker named volumes, mounts checked-in demo data read-only at `/app/examples`, and copies demo provider snapshots into the writable snapshot volume on startup.
 
 ```bash
-curl http://127.0.0.1:8000/api/health
+curl http://127.0.0.1:8000/healthz
 ```
 
-Maintainers can run the same Compose readiness path through `make docker-demo-smoke`, which starts the service, polls `/api/health`, and tears the stack down after the check.
+Maintainers can run the same Compose readiness path through `make docker-demo-smoke`, which starts the service, polls `/healthz`, checks the React Workbench entry and assets, and tears the stack down after the check.
 
 SQLite is still the default. To smoke-test the optional Postgres profile and the same Alembic migration path, run:
 
@@ -153,7 +153,7 @@ SQLite is still the default. To smoke-test the optional Postgres profile and the
 make docker-postgres-migration-smoke
 ```
 
-That starts the `postgres` and `workbench-postgres` profile services, serves the app on `http://127.0.0.1:8001`, and tears down the profile volumes after the health check.
+That starts the `postgres` and `workbench-postgres` profile services, serves the app on `http://127.0.0.1:8001`, checks `/healthz`, the root redirect to `/app`, the `/app` React entry, a deep SPA fallback route, and packaged static assets, then tears down the profile volumes.
 
 The container starts the web app with `vuln-prioritizer web serve --host 0.0.0.0 --port 8000`. The app initializes the SQLite schema on startup; you can also initialize the same database explicitly:
 
@@ -180,6 +180,8 @@ vuln-prioritizer db init
 vuln-prioritizer web serve --host 127.0.0.1 --port 8000
 ```
 
+The Workbench UI is React-first: `/` redirects to `/app`, and `/app` serves the packaged React surface for project creation, imports, triage, assets, waivers, coverage, reports/evidence, provider jobs, API tokens, and vulnerability lookup. `/projects/...` continues to serve the existing Jinja pages as a legacy compatibility fallback. The React bundle is prebuilt into the Python package static files, so normal `pipx` and Docker runtime use does not require Node.js.
+
 Workbench runtime environment:
 
 | Variable | Default / Compose value | Purpose |
@@ -200,10 +202,12 @@ For locked Workbench replay, submit only the snapshot filename, for example
 `VULN_PRIORITIZER_PROVIDER_SNAPSHOT_DIR` or the provider cache and rejects arbitrary paths.
 
 Workbench API token behavior is intentionally local-first. A fresh local database has no active
-tokens, so mutating `/api/*` requests remain open for the offline demo. Create the first token with
+tokens, so mutating API and legacy web requests remain open for the offline demo. Create the first token with
 `POST /api/tokens`; after any active token exists, `POST`, `PUT`, `PATCH`, and `DELETE` requests under
-`/api/` require `Authorization: Bearer <token>` or `X-API-Token: <token>`. Only SHA-256 token hashes
-are stored.
+`/api/`, `/web/`, and legacy project creation at `/projects` require
+`Authorization: Bearer <token>` or `X-API-Token: <token>`. Only PBKDF2-HMAC-SHA256 token digests are
+stored. The last active token cannot be revoked in place; create a replacement token first so the
+mutation guard does not silently fall back to open local-demo mode.
 
 Workbench project settings can be saved as config-as-code through
 `POST /api/projects/{project_id}/settings/config`. The payload uses the same
@@ -425,6 +429,7 @@ Start here for public CLI usage and the local Workbench app path:
 - [docs/methodology.md](docs/methodology.md)
 - [docs/evidence.md](docs/evidence.md)
 - [docs/integrations/reporting_and_ci.md](docs/integrations/reporting_and_ci.md)
+- [docs/releases/v1.2.0.md](docs/releases/v1.2.0.md)
 - [docs/releases/v1.1.0.md](docs/releases/v1.1.0.md)
 - [docs/roadmap.md](docs/roadmap.md)
 - Historical Workbench masterplan: [docs/workbench-masterplan.md](docs/workbench-masterplan.md)
@@ -498,13 +503,15 @@ python3 -m pytest -q
 make check
 make benchmark-check
 make playwright-install
+make frontend-sync-check
 make playwright-check
 make release-check
+make release-readiness-check
 make demo-sync-check-temp
 make package-check-temp
 ```
 
-Use `make playwright-check` for real-browser Workbench coverage; run `make playwright-install` once on a development machine before the first Playwright run. If you change docs, examples, or report artifacts, run `make release-check` so the committed example outputs stay in sync. Use the `*-temp` targets when you want the same demo or package validation in a temporary copy without mutating checked-in docs artifacts or `dist/`.
+Use `make frontend-sync-check` after React changes so `src/vuln_prioritizer/web/static/app` matches the Vite source; it runs the frontend check before rebuilding and diffing the packaged assets. Use `make playwright-check` for real-browser Workbench coverage; run `make playwright-install` once on a development machine before the first Playwright run. If you change docs, examples, or report artifacts, run `make release-check` so the committed example outputs stay in sync. Use `make release-readiness-check` before publishing or tagging when Docker and dependency-audit evidence should be part of the local closeout. `make package-check-temp` validates packaging in a temporary checkout, including the installed-wheel Workbench web smoke in an isolated venv. Use the `*-temp` targets when you want the same demo or package validation in a temporary copy without mutating checked-in docs artifacts or `dist/`.
 
 Pull request readiness:
 
@@ -516,10 +523,10 @@ Pull request readiness:
 
 Current release line:
 
-- current package line `v1.1.0`
+- current package line `v1.2.0`
 - Workbench local app, advanced ATT&CK, governance, reporting, and integration surfaces implemented on `main`
-- GitHub tag install path is available for `v1.1.0`
-- GitHub Release is published for `v1.1.0` with source and wheel distribution assets
+- GitHub tag install path is prepared for `v1.2.0`
+- GitHub Release publication is wired for `v1.2.0` with source, wheel, and checksum assets
 - PyPI and TestPyPI workflows prepared, but live publishing remains explicitly gated until trusted-publisher setup is enabled
 
 ## License

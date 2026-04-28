@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import ast
 import inspect
+import json
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -443,3 +444,21 @@ def test_sdist_manifest_excludes_partial_test_tree() -> None:
     manifest = (ROOT / "MANIFEST.in").read_text(encoding="utf-8")
 
     assert "prune tests" in manifest
+
+
+def test_react_workbench_static_entry_is_packaged() -> None:
+    index = ROOT / "src" / "vuln_prioritizer" / "web" / "static" / "app" / "index.html"
+
+    assert index.is_file()
+    html = index.read_text(encoding="utf-8")
+    assert "/static/app/assets/" in html
+    assert 'src="/app/assets/' not in html
+    assert 'href="/app/assets/' not in html
+
+
+def test_frontend_preview_uses_fastapi_app_routing() -> None:
+    package = json.loads((ROOT / "frontend" / "package.json").read_text(encoding="utf-8"))
+
+    preview = package["scripts"]["preview"]
+    assert "vite preview" not in preview
+    assert "vuln_prioritizer.cli web serve" in preview

@@ -10,15 +10,18 @@ from sqlalchemy.orm import Session
 
 from vuln_prioritizer.api.deps import get_db_session, get_workbench_settings
 from vuln_prioritizer.api.schemas import (
+    AnalysisRunArtifactsResponse,
     ArtifactCleanupResponse,
     ArtifactRetentionRequest,
     ArtifactRetentionResponse,
+    ArtifactsListResponse,
     EvidenceBundleResponse,
     EvidenceBundleVerificationResponse,
     ReportCreateRequest,
     ReportResponse,
 )
 from vuln_prioritizer.api.workbench_payloads import (
+    _analysis_run_payload,
     _artifact_retention_payload,
     _evidence_bundle_payload,
     _report_payload,
@@ -143,6 +146,42 @@ def list_project_artifacts(
         "disk_usage_bytes": _artifact_disk_usage(
             [report.path for report in reports] + [bundle.path for bundle in bundles]
         ),
+    }
+
+
+@router.get("/analysis-runs/{run_id}/artifacts", response_model=AnalysisRunArtifactsResponse)
+def list_analysis_run_artifacts(
+    run_id: str,
+    session: Annotated[Session, Depends(get_db_session)],
+) -> dict[str, Any]:
+    repo = WorkbenchRepository(session)
+    run = repo.get_analysis_run(run_id)
+    if run is None:
+        raise HTTPException(status_code=404, detail="Analysis run not found.")
+    reports = repo.list_run_reports(run.id)
+    bundles = repo.list_run_evidence_bundles(run.id)
+    return {
+        "run": _analysis_run_payload(run),
+        "reports": [_report_payload(report) for report in reports],
+        "evidence_bundles": [_evidence_bundle_payload(bundle) for bundle in bundles],
+        "items": _artifact_payloads(reports, bundles),
+    }
+
+
+@router.get("/workbench/generated-artifacts", response_model=ArtifactsListResponse)
+def list_generated_workbench_artifacts(
+    session: Annotated[Session, Depends(get_db_session)],
+    limit: int = Query(default=100, ge=1, le=500),
+    offset: int = Query(default=0, ge=0),
+) -> dict[str, Any]:
+    repo = WorkbenchRepository(session)
+    items = _artifact_payloads(repo.list_reports(), repo.list_evidence_bundles())
+    paged = items[offset : offset + limit]
+    return {
+        "items": paged,
+        "total": len(items),
+        "limit": limit,
+        "offset": offset,
     }
 
 
@@ -335,3 +374,34 @@ def verify_evidence_bundle_api(
         )
     except WorkbenchReportError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+def _artifact_payloads(reports: list[Any], bundles: list[Any]) -> list[dict[str, Any]]:
+    items = [_report_artifact_payload(report) for report in reports]
+    items.extend(_bundle_artifact_payload(bundle) for bundle in bundles)
+    return sorted(items, key=lambda item: item["created_at"], reverse=True)
+
+
+def _report_artifact_payload(report: Any) -> dict[str, Any]:
+    return {
+        **_report_payload(report),
+        "id": report.id,
+        "project_id": report.project_id,
+        "analysis_run_id": report.analysis_run_id,
+        "type": "report",
+        "created_at": report.created_at.isoformat(),
+        "verify_url": None,
+    }
+
+
+def _bundle_artifact_payload(bundle: Any) -> dict[str, Any]:
+    return {
+        **_evidence_bundle_payload(bundle),
+        "id": bundle.id,
+        "project_id": bundle.project_id,
+        "analysis_run_id": bundle.analysis_run_id,
+        "type": "evidence_bundle",
+        "kind": "evidence-bundle",
+        "format": "zip",
+        "created_at": bundle.created_at.isoformat(),
+    }

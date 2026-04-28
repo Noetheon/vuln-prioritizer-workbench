@@ -12,6 +12,11 @@ The project exposes three kinds of interfaces:
 
 The strongest contract today is the JSON export surface.
 
+The Workbench also exposes a same-origin JSON API for the React UI. That API is
+documented through FastAPI OpenAPI response models and is intentionally additive
+so the packaged `/app` frontend, CLI automation, and future integrations can
+evolve without scraping server-rendered HTML.
+
 ## Public machine-readable surfaces
 
 The following outputs are the current documented machine interfaces:
@@ -109,6 +114,87 @@ Primary payload keys by command:
 - `rollup`: `buckets`
 - `report evidence-bundle`: `manifest.json` with `files`
 - `report verify-evidence-bundle`: `items`, plus `summary`
+
+## Workbench API contract
+
+The React Workbench uses relative same-origin `/api/*` requests. Production
+deployments do not require CORS, and mutating API requests are guarded by the
+local API-token middleware once any active token exists. Token values are shown
+only at creation time and are kept by the React UI in browser `sessionStorage`.
+
+The following Workbench API surfaces are part of the current app contract:
+
+- `GET /api/workbench/bootstrap`: app/version metadata, project bootstrap
+  data, supported input/report/ATT&CK formats, upload limits, provider status,
+  and token-auth state
+- `GET /api/workbench/artifacts`: safe provider snapshot and ATT&CK artifact
+  basenames available for imports
+- `GET /api/workbench/generated-artifacts`: paginated generated report and
+  evidence-bundle metadata across runs
+- `GET /api/projects`: project list
+- `POST /api/projects`: create a project
+- `GET /api/projects/{project_id}`: project metadata
+- `GET /api/projects/{project_id}/dashboard`: dashboard counts, top findings,
+  recent runs, provider freshness, services, and ATT&CK pressure
+- `GET /api/projects/{project_id}/findings`: paginated and filterable finding
+  queue
+- `GET /api/findings/{finding_id}`: detailed finding payload
+- `GET /api/findings/{finding_id}/explain`: explainability payload for the
+  visible priority decision
+- `GET /api/findings/{finding_id}/ttps`: stored ATT&CK context for a finding
+- `GET /api/projects/{project_id}/vulnerabilities/{cve_id}`: stored provider
+  intelligence plus project occurrences
+- `GET /api/projects/{project_id}/assets`, `PATCH /api/assets/{asset_row_id}`:
+  asset context review and edit
+- `GET /api/projects/{project_id}/waivers`,
+  `POST /api/projects/{project_id}/waivers`, `PATCH /api/waivers/{waiver_id}`,
+  and `DELETE /api/waivers/{waiver_id}`: waiver lifecycle management
+- `GET /api/projects/{project_id}/detection-controls` and
+  `POST /api/projects/{project_id}/detection-controls/import`: ATT&CK coverage
+  controls and CSV import
+- `GET /api/projects/{project_id}/attack/coverage-gaps`,
+  `GET /api/projects/{project_id}/attack/coverage-gap-navigator-layer`,
+  `GET /api/projects/{project_id}/attack/top-techniques`, and
+  `GET /api/projects/{project_id}/attack/techniques/{technique_id}`: ATT&CK
+  coverage analysis and Navigator export
+- `GET /api/projects/{project_id}/runs`,
+  `GET /api/analysis-runs/{run_id}`,
+  `GET /api/analysis-runs/{run_id}/artifacts`,
+  `POST /api/analysis-runs/{run_id}/reports`,
+  `POST /api/analysis-runs/{run_id}/evidence-bundle`, and
+  `GET /api/analysis-runs/{run_id}/attack/navigator-layer`: run history,
+  reports, evidence bundles, verification links, and ATT&CK Navigator export
+- `GET /api/evidence-bundles/{bundle_id}/verify`: evidence-bundle integrity
+  verification
+- `GET /api/providers/status`, `GET /api/providers/update-jobs`, and
+  `POST /api/providers/update-jobs`: provider freshness and local update jobs
+- `GET /api/tokens`, `POST /api/tokens`, and `DELETE /api/tokens/{token_id}`:
+  token metadata, one-time token creation, and revoke
+- `GET /api/projects/{project_id}/settings/config` and
+  `POST /api/projects/{project_id}/settings/config`: validated project runtime
+  config snapshots
+- `POST /api/projects/{project_id}/github/issues/preview` and
+  `POST /api/projects/{project_id}/github/issues/export`: deterministic GitHub
+  issue preview and optional explicit export
+- `GET /api/projects/{project_id}/governance/rollups`: owner/service waiver
+  and VEX rollups
+
+Current Workbench API compatibility rules:
+
+- OpenAPI response models are the source of truth for field names and nested
+  shapes.
+- Same-major additive fields are allowed; clients should ignore unknown object
+  members.
+- IDs are opaque strings; consumers must not infer database table structure from
+  IDs.
+- Download and verify URLs are API-provided paths and should be followed as
+  given instead of reconstructed.
+- Error responses use the additive `detail` plus `error` envelope with a stable
+  machine-oriented `error.code`.
+- `401` token failures include a `WWW-Authenticate: Bearer` challenge.
+- Upload size failures use `413` with `error.code = payload_too_large`.
+- The `/app` React route and static assets are packaging/runtime surfaces, not
+  data APIs; automation should use `/api/*`.
 
 ### Schema versioning
 

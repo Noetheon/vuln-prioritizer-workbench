@@ -18,7 +18,7 @@ permissions:
 
 jobs:
   analyze:
-    name: Analyze Python
+    name: Analyze Python and TypeScript
     runs-on: ubuntu-latest
 
     steps:
@@ -37,7 +37,7 @@ jobs:
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v4
         with:
-          languages: python
+          languages: python,javascript-typescript
           queries: security-and-quality
 
       - name: Install project and dev dependencies

@@ -11,11 +11,8 @@ router = APIRouter()
 
 
 @router.get("/", response_class=HTMLResponse)
-def index(session: Annotated[Session, Depends(get_db_session)]) -> RedirectResponse:
-    projects = WorkbenchRepository(session).list_projects()
-    if not projects:
-        return RedirectResponse("/projects/new", status_code=303)
-    return RedirectResponse(f"/projects/{projects[-1].id}/dashboard", status_code=303)
+def index() -> RedirectResponse:
+    return RedirectResponse("/app", status_code=303)
 
 
 @router.get("/favicon.ico", include_in_schema=False)

@@ -6,11 +6,11 @@ The product remains a CLI and local Workbench for prioritizing known CVEs and im
 
 ## Current Release Surface
 
-- `v1.1.0` provides `analyze`, `compare`, `explain`, `doctor`, `snapshot create`, `snapshot diff`, `rollup`, `input validate`, `input inspect`, `input normalize`, `state`, `data`, `db init`, `web serve`, `report html`, `report evidence-bundle`, `report verify-evidence-bundle`, and ATT&CK utility commands.
+- `v1.2.0` provides `analyze`, `compare`, `explain`, `doctor`, `snapshot create`, `snapshot diff`, `rollup`, `input validate`, `input inspect`, `input normalize`, `state`, `data`, `db init`, `db cleanup-artifacts`, `web serve`, `report html`, `report evidence-bundle`, `report verify-evidence-bundle`, the React Workbench under `/app`, and ATT&CK utility commands.
 - `analyze` and `compare` support existing scanner/SBOM JSON export formats. Output support is command-specific; `analyze` provides Markdown, JSON, SARIF, table output, direct HTML sidecars, and Markdown summary sidecars for CI-friendly workflows.
 - Waiver files, evidence bundles, and fixture-benchmark regressions extend the operational governance surface without changing the transparent base score.
 - Runtime config discovery via `vuln-prioritizer.yml` is available for the main operational commands.
-- The base JSON export contract remains versioned with `metadata.schema_version = 1.0.0`; new helper surfaces ship as additive `1.1.0` contracts.
+- The base JSON export contract remains versioned with `metadata.schema_version = 1.0.0`; helper surfaces use additive `1.1.0` or `1.2.0` contracts depending on when they were introduced.
 - Default prioritization stays grounded in `CVSS + EPSS + KEV`.
 - ATT&CK, asset context, and VEX remain explicit contextual layers.
 - The composite GitHub Action mirrors `analyze`, `compare`, `explain`, `doctor`, input validation, snapshot, rollup, provider verification, ATT&CK validation/coverage, reporting, evidence, SARIF validation, and provider freshness gates as additive inputs.

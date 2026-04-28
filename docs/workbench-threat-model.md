@@ -1,6 +1,6 @@
 # Workbench Threat Model and Readiness
 
-Status: current local-first Workbench threat model. Last reviewed: 2026-04-25.
+Status: current local-first Workbench threat model. Last reviewed: 2026-04-28.
 
 This page defines the defensive threat model and operational readiness assumptions for the local Workbench. It keeps the same product boundaries as the rest of the project: `vuln-prioritizer` prioritizes known CVEs and existing findings. It is not a scanner, exploit tool, proof-of-concept generator, or general-purpose vulnerability-management platform.
 
@@ -8,7 +8,7 @@ This page defines the defensive threat model and operational readiness assumptio
 
 The current local-first Workbench threat model covers:
 
-- local CLI use and the self-hosted FastAPI/Jinja2 Workbench
+- local CLI use and the self-hosted FastAPI Workbench, including the React `/app` UI and legacy Jinja fallback routes during migration
 - import of existing CVE lists and selected scanner export files
 - provider enrichment from NVD, FIRST EPSS, CISA KEV, local caches, and locked provider snapshots
 - optional ATT&CK context from local CTID Mappings Explorer JSON and local technique metadata
@@ -64,7 +64,7 @@ flowchart LR
 Primary boundaries:
 
 - User or CI input to CLI/API: all uploaded files, paths, flags, and form fields are untrusted until validated.
-- Web UI to API handlers: browser requests need CSRF protection, size limits, method checks, and server-side validation.
+- Web UI to API handlers: browser requests need CSRF or token protection where applicable, size limits, method checks, and server-side validation. The React `/app` surface uses same-origin `/api/*` calls and the existing local API-token guard for mutating API requests.
 - API/CLI to filesystem: file reads and writes must stay inside configured upload, report, provider snapshot, and cache directories unless the CLI user explicitly supplies a path.
 - API/CLI to database: application code must use structured database access and must not expose raw SQL or table internals as a public contract.
 - Provider cache or snapshot to prioritization: cached and locked data must carry provenance so stale or replayed data is visible.
@@ -86,7 +86,7 @@ Primary boundaries:
 | Hidden scoring changes from context layers | Loss of trust in priority decisions | Keep base priority transparent from CVSS, EPSS, and KEV. Present ATT&CK, asset context, VEX, and waivers as separate rationale or applicability layers. |
 | SQLite corruption or single-node contention | Lost run history or failed imports | Document SQLite as default single-node storage, keep writes short, use migrations, and treat database backup/restore as an operator responsibility. |
 | Optional PostgreSQL profile misconfiguration | Unauthorized database access, persistent data exposure, or unavailable Workbench state | Keep the Compose profile bound to local/private use, avoid committing real credentials, prefer secret injection outside committed files, restrict database network reachability, use migrations consistently, and treat backups, retention, TLS, and role hardening as operator controls beyond the smoke profile. |
-| API token bootstrap misuse | Unauthorized state changes through local API routes | Keep token behavior local-first: a fresh local database has no active tokens for offline demos, the first token is created through `POST /api/tokens`, and mutating `/api/*` routes require `Authorization: Bearer <token>` or `X-API-Token: <token>` after any active token exists. Store only SHA-256 token hashes, update last-used metadata, and do not render token values again after creation. |
+| API token bootstrap misuse | Unauthorized state changes through local API and legacy web write routes | Keep token behavior local-first: a fresh local database has no active tokens for offline demos, the first token is created through `POST /api/tokens`, and mutating `/api/*`, `/web/*`, and `/projects` routes require `Authorization: Bearer <token>` or `X-API-Token: <token>` after any active token exists. Store only PBKDF2-HMAC-SHA256 token digests, update last-used metadata, do not render token values again after creation, and reject revoking the final active token without a replacement. |
 | Secret exposure in UI, logs, reports, or evidence bundles | Credential leakage | Redact API keys and token values, avoid printing full environment contents, and exclude secrets from generated reports and evidence manifests. |
 | Ticket sync posts sensitive finding metadata to the wrong destination | Exposure of CVEs, assets, owners, paths, or remediation detail in an external system | Keep ticket sync local-first and operator-initiated, require HTTPS `base_url` values without embedded credentials for Jira/ServiceNow, reject loopback/private ticket hosts unless explicitly server-allowlisted via `VULN_PRIORITIZER_TICKET_BASE_URL_ALLOWLIST`, require explicit `token_env` names that match environment-variable syntax, validate Jira project keys, use the default ServiceNow `incident` table unless extra tables are server-allowlisted via `VULN_PRIORITIZER_SERVICENOW_TABLE_ALLOWLIST`, and default export requests to `dry_run: true`. |
 | Duplicate or repeated ticket creation | Alert fatigue, duplicate remediation work, or noisy external audit trails | Generate deterministic duplicate keys and idempotency keys, persist created duplicate keys locally, skip duplicates on repeated exports, and send an `Idempotency-Key` header to Jira and ServiceNow create calls. |
@@ -152,11 +152,12 @@ The current local-first Workbench is readiness-aligned when:
 | Upload filename and path validation | `src/vuln_prioritizer/api/routes.py` rejects unsafe upload filenames, sanitizes stored names, restricts extensions per Workbench input/context type, stores uploads under UUID-owned directories, and restricts provider/ATT&CK artifact names to configured roots. | `tests/api/test_workbench_api.py::test_workbench_rejects_unsupported_and_oversized_uploads` covers traversal filenames and oversized uploads; `test_workbench_rejects_untrusted_provider_snapshot_path` covers snapshot path rejection. |
 | Report and evidence artifact downloads | `src/vuln_prioritizer/services/workbench_reports.py` writes run artifacts under the configured report directory; `src/vuln_prioritizer/api/routes.py` resolves downloads back under that root, verifies SHA-256, returns attachment downloads, and disables caching. | `tests/api/test_workbench_api.py::test_workbench_import_findings_reports_and_evidence` verifies JSON, Markdown, HTML, CSV, SARIF, evidence ZIP, manifest hashes, and verification URLs; `test_workbench_downloads_reject_tampered_artifact_paths` covers outside-root and checksum-tamper rejection. |
 | CSV report formula handling | `src/vuln_prioritizer/services/workbench_reports.py` prefixes formula-like CSV cells before writing Workbench findings reports. | `tests/api/test_workbench_api.py::test_workbench_csv_report_escapes_spreadsheet_formulas` covers component, owner, and service cells that begin with spreadsheet formula characters. |
-| API token bootstrap | `src/vuln_prioritizer/api/routes.py` creates one-time token values and stores SHA-256 hashes; `src/vuln_prioritizer/api/app.py` gates mutating `/api/*` requests once any active token exists and accepts `Authorization: Bearer` or `X-API-Token`. | `tests/api/test_workbench_api.py::test_workbench_api_tokens_config_provider_jobs_and_github_preview` verifies hash storage, blocked unauthenticated mutations after token creation, bad-token rejection, accepted token use, and `last_used_at` updates. |
+| API token bootstrap | `src/vuln_prioritizer/api/routes.py` creates one-time token values, stores PBKDF2-HMAC-SHA256 digests, and prevents revoking the final active token; `src/vuln_prioritizer/api/app.py` gates mutating `/api/*`, `/web/*`, and `/projects` requests once any active token exists and accepts `Authorization: Bearer` or `X-API-Token`. | `tests/api/test_workbench_api.py::test_workbench_api_tokens_config_provider_jobs_and_github_preview` verifies digest storage, blocked unauthenticated API and legacy web mutations after token creation, bad-token rejection, accepted token use, last-token revoke rejection, and `last_used_at` updates. |
 | Optional Postgres profile | `docker-compose.yml` keeps the default Workbench service on SQLite and adds `postgres` plus `workbench-postgres` under the `postgres` profile with a private `127.0.0.1:8001` bind. | `tests/test_workbench_integration_contracts.py::test_compose_keeps_sqlite_default_and_adds_postgres_profile` checks the profile contract; `make docker-postgres-migration-smoke` exercises the profile and Alembic path when Docker is available. |
 | 10k findings API smoke | `src/vuln_prioritizer/api/routes.py` exposes paginated findings with limit/offset and sort controls. This is a smoke check, not the final scale architecture. | `tests/api/test_workbench_api.py::test_workbench_findings_api_handles_10k_pagination_smoke` seeds 10,000 findings and verifies a high-offset page. |
-| Docker demo smoke | `docker compose up --build` is the supported local Workbench demo path. | `make docker-demo-smoke` starts Compose, polls `http://127.0.0.1:8000/api/health`, and tears the stack down with `docker compose down -v --remove-orphans`. |
-| Dependency audit | Project dependencies are reviewed from `requirements.txt`, not the caller's incidental global environment. | `make dependency-audit` requires `pip-audit` and runs `python3 -m pip_audit --requirement requirements.txt`; release notes or the release checklist should record the result and any accepted exceptions. |
+| React Workbench package assets | Vite builds to `src/vuln_prioritizer/web/static/app`, FastAPI redirects `/` to `/app`, and FastAPI serves `/app` plus deep SPA fallback routes without inline scripts. | `make frontend-sync-check` rebuilds the static app, `scripts/check_package_static_assets.py` checks wheel/sdist contents, `tests/api/test_workbench_api.py::test_workbench_health_and_project_crud` checks root redirect/deep SPA/static assets, and `tests/playwright/test_workbench_browser.py::test_react_workbench_mutation_path` exercises the React route when browser E2E is enabled. |
+| Docker demo smoke | `docker compose up --build` is the supported local Workbench demo path. | `make docker-demo-smoke` starts Compose, polls `http://127.0.0.1:8000/healthz`, checks the root redirect, fetches `/app`, checks a deep `/app/...` fallback, fetches referenced React assets, and tears the stack down with `docker compose down -v --remove-orphans`. |
+| Dependency audit | Project dependencies are reviewed from `requirements.txt` and the frontend lockfile, not the caller's incidental global environment. | `make dependency-audit` requires `pip-audit`, runs `python3 -m pip_audit --requirement requirements.txt`, and runs `npm --prefix frontend audit --audit-level=high`; release notes or the release checklist should record the result and any accepted exceptions. |
 
 ## Smoke and Audit Evidence
 
@@ -164,7 +165,7 @@ Maintain v1.2 readiness with local, repeatable checks:
 
 - `make check` for formatting, linting, typing, and the Python test suite.
 - `make workflow-check` before merge or release branches when Docker and pre-commit tooling are available.
-- `make docker-demo-smoke` for the Compose quickstart path; it starts the Workbench, polls `/api/health`, and removes the demo stack.
+- `make docker-demo-smoke` for the Compose quickstart path; it starts the Workbench, polls `/healthz`, checks the React route/assets, and removes the demo stack.
 - `make docker-postgres-migration-smoke` for the optional Postgres profile when Docker is available.
 - `make demo-sync-check-temp` before release when output changes affect checked-in examples, reports, SARIF, HTML, or evidence artifacts.
 - `make dependency-audit` for maintainer dependency review when `pip-audit` is installed and advisory data is reachable.

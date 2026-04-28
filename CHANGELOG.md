@@ -7,7 +7,26 @@ and this project aims to follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
-- No notable changes yet.
+## [1.2.0] - 2026-04-28
+
+### Added
+
+- React/Vite Workbench UI under `/app` with dashboard, imports, findings, finding detail, governance, assets, waivers, coverage, reports/evidence, provider jobs, API tokens, and vulnerability lookup.
+- Packaged React static assets in the Python wheel/sdist so normal `pipx`, Docker, and installed-package runtime use does not require Node.js.
+- Release and Docker smoke coverage for React app routing, deep SPA fallback, packaged assets, and optional PostgreSQL Workbench migrations.
+- Minimal `/healthz` readiness endpoint for Docker and installed-package web smokes.
+
+### Changed
+
+- The Workbench root route now redirects to the React UI at `/app`; existing Jinja routes remain as legacy compatibility fallback paths.
+- Release gates now include frontend build/static sync, package static asset validation, npm audit, built-wheel web smoke, distribution checksum generation, and stronger API OpenAPI response models.
+- API token challenges now use a `401` bearer-auth response, while the React client prompts for a session token and retries blocked mutations.
+- API token enforcement now covers legacy Workbench write routes (`/projects` and `/web/*`) after any active token exists, closing the compatibility-surface write bypass.
+- Revoking the final active API token is rejected so token-enabled Workbench instances do not silently return to open mutation mode.
+- React app HTML is served with `Cache-Control: no-store` so browsers do not keep stale entry files for hashed Vite assets.
+- `/api/health` now returns only minimal redacted service status; `/healthz` remains the public readiness endpoint for runtime checks.
+- Provider status and provider-job API responses now redact runtime directory paths and expose only safe labels or generated snapshot filenames.
+- FastAPI, Starlette, and python-multipart dependency floors were raised for the current file-serving/upload security baseline.
 
 ## [1.1.0] - 2026-04-25
 
