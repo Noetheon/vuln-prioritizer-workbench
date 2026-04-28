@@ -13,7 +13,7 @@ DEMO_EVIDENCE_ANALYSIS_FILE := build/v1.0-demo-analysis.json
 DEMO_EVIDENCE_BUNDLE_FILE := build/v1.0-demo-evidence-bundle.zip
 DEMO_EVIDENCE_VERIFICATION_FILE := build/v1.0-demo-evidence-bundle-verification.json
 
-.PHONY: install test lint format fix typecheck check benchmark-check playwright-install playwright-check docs-check docs-serve actionlint-check workflow-check docker-demo-smoke docker-postgres-migration-smoke dependency-audit demo-sync-check demo-sync-check-temp package package-check package-check-temp pipx-source-smoke release-check demo-report demo-compare demo-explain demo-attack-report demo-attack-compare demo-attack-explain demo-attack-coverage demo-attack-navigator demo-pr-comment demo-results-sarif demo-html-report demo-evidence-analysis demo-evidence-bundle demo-evidence-bundle-check precommit-install
+.PHONY: install test lint format fix typecheck check benchmark-check playwright-install playwright-check frontend-install frontend-build frontend-lint frontend-generate-client frontend-check docs-check docs-serve actionlint-check workflow-check docker-demo-smoke docker-postgres-migration-smoke dependency-audit demo-sync-check demo-sync-check-temp package package-check package-check-temp pipx-source-smoke release-check demo-report demo-compare demo-explain demo-attack-report demo-attack-compare demo-attack-explain demo-attack-coverage demo-attack-navigator demo-pr-comment demo-results-sarif demo-html-report demo-evidence-analysis demo-evidence-bundle demo-evidence-bundle-check precommit-install
 
 install:
 	$(PYTHON) -m pip install -e "$(BACKEND_DIR)[dev]"
@@ -32,12 +32,12 @@ fix:
 	$(PYTHON) -m ruff format $(BACKEND_DIR)
 
 typecheck:
-	cd $(BACKEND_DIR) && $(PYTHON) -m mypy src
+	cd $(BACKEND_DIR) && $(PYTHON) -m mypy app src
 
 check:
 	$(PYTHON) -m ruff format --check $(BACKEND_DIR)
 	$(PYTHON) -m ruff check $(BACKEND_DIR)
-	cd $(BACKEND_DIR) && $(PYTHON) -m mypy src
+	cd $(BACKEND_DIR) && $(PYTHON) -m mypy app src
 	$(PYTHON) -m pytest $(BACKEND_TESTS)
 
 benchmark-check:
@@ -48,6 +48,20 @@ playwright-install:
 
 playwright-check:
 	VULN_PRIORITIZER_RUN_PLAYWRIGHT=1 $(PYTHON) -m pytest -q $(BACKEND_TESTS)/playwright --no-cov
+
+frontend-install:
+	npm --prefix frontend install --no-package-lock
+
+frontend-build:
+	npm --prefix frontend run build
+
+frontend-lint:
+	npm --prefix frontend run lint
+
+frontend-generate-client:
+	bash scripts/generate-client.sh
+
+frontend-check: frontend-lint frontend-build frontend-generate-client
 
 docs-check:
 	$(PYTHON) -m mkdocs build --clean

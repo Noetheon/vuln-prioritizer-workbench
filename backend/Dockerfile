@@ -8,6 +8,7 @@ WORKDIR /app
 
 COPY README.md LICENSE ./
 COPY backend/pyproject.toml backend/requirements.txt backend/MANIFEST.in backend/README.md ./backend/
+COPY backend/app ./backend/app
 COPY backend/src ./backend/src
 
 RUN python -m pip install --upgrade pip \

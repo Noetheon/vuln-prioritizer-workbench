@@ -11,7 +11,7 @@ members = ["backend"]
 [tool.pytest.ini_options]
 addopts = "-ra --cov=vuln_prioritizer --cov-report=term-missing --cov-fail-under=90"
 testpaths = ["backend/tests"]
-pythonpath = ["backend/src"]
+pythonpath = ["backend", "backend/src"]
 markers = [
   "browser_e2e: real browser Workbench tests driven by Playwright.",
   "e2e: end-to-end CLI entrypoint tests that may spawn subprocesses.",
@@ -23,7 +23,7 @@ extend = "backend/pyproject.toml"
 
 [tool.mypy]
 python_version = "3.11"
-files = ["backend/src"]
+files = ["backend/app", "backend/src"]
 pretty = true
 show_error_codes = true
 warn_unused_ignores = true

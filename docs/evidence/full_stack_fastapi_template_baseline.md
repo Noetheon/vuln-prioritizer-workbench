@@ -102,3 +102,102 @@ Next actions:
 - Install or pin `uv` and `bun` for local baseline checks.
 - Capture frontend build, generated client, Playwright login smoke, and `/docs`
   evidence before closing `VPW-001`.
+
+## Template Shell And Frontend Workspace Slice
+
+Date: 2026-04-28
+
+Branch:
+
+- `codex/fsft-02-template-backend-adapter`
+
+Scope:
+
+- Added a template-shaped `backend/app` FastAPI entrypoint with versioned
+  `/api/v1/workbench/status` and `/api/v1/openapi.json` routes.
+- Added the React/Vite frontend workspace, Bun-compatible root workspace files,
+  npm fallback commands, Biome config, generated OpenAPI client output, and CI
+  frontend gates.
+- Kept the legacy Jinja2/SQLAlchemy Workbench running through the existing
+  `vuln_prioritizer.api.app:create_app` path. This slice does not claim template
+  JWT, SQLModel, Items replacement, or React feature parity.
+
+Commands run:
+
+```bash
+npm --prefix frontend install --no-package-lock
+npm --prefix frontend run lint
+make frontend-check
+make frontend-build
+make frontend-generate-client
+git diff --exit-code -- frontend/src/client
+python3 -m pip install -e "backend[dev]"
+cd /tmp && python3 - <<'PY'
+import app.main
+import vuln_prioritizer
+print(f"app={app.main.app.title}; core={vuln_prioritizer.__version__}")
+PY
+tmp="$(mktemp -d)"
+python3 -m build backend --wheel --outdir "$tmp/dist"
+python3 - <<'PY' "$tmp"
+import sys, zipfile
+from pathlib import Path
+wheel = next((Path(sys.argv[1]) / "dist").glob("*.whl"))
+with zipfile.ZipFile(wheel) as archive:
+    names = set(archive.namelist())
+required = {
+    "app/main.py",
+    "app/api/main.py",
+    "app/api/routes/workbench.py",
+    "vuln_prioritizer/cli.py",
+}
+missing = sorted(required - names)
+if missing:
+    raise SystemExit(f"missing from wheel: {missing}")
+print(wheel.name)
+PY
+python3 -m pytest -q backend/tests/api/test_template_backend_adapter.py \
+  backend/tests/api/test_app_guards.py \
+  backend/tests/api/test_workbench_api.py \
+  backend/tests/web/test_workbench_pages.py --no-cov
+make check
+make docs-check
+docker compose config
+make actionlint-check
+make typecheck
+npm --prefix frontend run dev -- --host 127.0.0.1 --port 5173
+curl -fsS http://127.0.0.1:5173/
+curl -fsS http://127.0.0.1:5173/src/main.tsx
+npm --prefix frontend exec -- playwright screenshot \
+  --viewport-size=1440,1000 http://127.0.0.1:5173 /tmp/vpw-frontend-shell.png
+npm --prefix frontend exec -- playwright screenshot \
+  --viewport-size=390,844 http://127.0.0.1:5173 /tmp/vpw-frontend-shell-mobile.png
+```
+
+Results:
+
+- Frontend lint passed after limiting Biome to hand-written frontend files.
+- `make frontend-check` passed through npm fallback.
+- Frontend build passed through npm fallback.
+- Generated client regeneration passed without drift.
+- Editable backend install passed; `app.main` and `vuln_prioritizer` imported
+  from `/tmp`.
+- Built wheel contains both `app/*` and `vuln_prioritizer/*`.
+- Targeted API/web tests passed: 40 passed.
+- `make check` passed: 533 passed, 2 skipped, total coverage 90.27%.
+- `make docs-check`, `docker compose config`, `make actionlint-check`, and
+  `make typecheck` passed.
+- Frontend dev server served the React shell at `http://127.0.0.1:5173/`.
+- Playwright screenshots were captured at `/tmp/vpw-frontend-shell.png` and
+  `/tmp/vpw-frontend-shell-mobile.png`.
+
+Residual risks:
+
+- `bun` and `uv` are still unavailable locally, so official Bun/uv template
+  commands remain pending.
+- `npm install --no-package-lock` reports 6 audit findings from the frontend
+  dependency set: 1 moderate, 4 high, and 1 critical. They need a dedicated
+  frontend dependency triage issue before production use.
+- Real Playwright browser smoke was not run in this slice.
+- The generated client currently reflects the existing mixed API and HTML route
+  OpenAPI surface; operation-id and route-shape cleanup remains follow-up work.
