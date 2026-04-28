@@ -9,7 +9,7 @@ from typer.testing import CliRunner
 from vuln_prioritizer.cli import app
 
 runner = CliRunner()
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 MANIFEST_FILE = PROJECT_ROOT / "data" / "benchmarks" / "snapshot_diff_regressions.json"
 
 

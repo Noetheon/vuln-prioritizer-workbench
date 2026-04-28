@@ -630,7 +630,7 @@ def test_cli_state_round_trip_imports_cli_snapshot_and_queries_history_and_top_s
     monkeypatch,
     tmp_path: Path,
 ) -> None:
-    fixture_root = Path(__file__).resolve().parents[1] / "data" / "input_fixtures"
+    fixture_root = Path(__file__).resolve().parents[2] / "data" / "input_fixtures"
     db_path = tmp_path / "state.db"
     snapshot_file = tmp_path / "snapshot.json"
     import_file = tmp_path / "import.json"

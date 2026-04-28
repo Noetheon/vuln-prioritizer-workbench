@@ -35,7 +35,7 @@ flowchart LR
 
 ### CLI surface
 
-`src/vuln_prioritizer/cli.py` is the CLI composition root. It assembles the public Typer tree, shared runtime defaults, and cross-command wiring, while private command modules and private support modules hold command handlers and reusable CLI-only helpers.
+`backend/src/vuln_prioritizer/cli.py` is the CLI composition root. It assembles the public Typer tree, shared runtime defaults, and cross-command wiring, while private command modules and private support modules hold command handlers and reusable CLI-only helpers.
 
 Current public command groups:
 
@@ -75,7 +75,7 @@ The Workbench threat model and readiness checklist are maintained in [workbench-
 
 ### Input normalization
 
-`src/vuln_prioritizer/inputs/loader.py` is the canonical input entry point.
+`backend/src/vuln_prioritizer/inputs/loader.py` is the canonical input entry point.
 
 Current normalized types:
 
@@ -89,11 +89,11 @@ Supported input families currently normalize into the same occurrence model:
 - SBOM JSON
 - advisory/export JSON
 
-`src/vuln_prioritizer/parser.py` remains a backward-compatible façade for historical `.txt` and `.csv` CVE-list flows and delegates internally to the loader.
+`backend/src/vuln_prioritizer/parser.py` remains a backward-compatible facade for historical `.txt` and `.csv` CVE-list flows and delegates internally to the loader.
 
 ### Provenance, asset context, and VEX
 
-`src/vuln_prioritizer/services/contextualization.py` aggregates occurrence-level data into per-CVE provenance and context.
+`backend/src/vuln_prioritizer/services/contextualization.py` aggregates occurrence-level data into per-CVE provenance and context.
 
 Important current rules:
 
@@ -111,7 +111,7 @@ This layer produces:
 
 ### Enrichment providers
 
-`src/vuln_prioritizer/services/enrichment.py` and the provider modules fetch external or local enrichment data.
+`backend/src/vuln_prioritizer/services/enrichment.py` and the provider modules fetch external or local enrichment data.
 
 Current data sources:
 
@@ -126,7 +126,7 @@ The parser/provider extension SDK is a static local contract. It documents typed
 
 ### Prioritization
 
-`src/vuln_prioritizer/services/prioritization.py` builds the primary finding set.
+`backend/src/vuln_prioritizer/services/prioritization.py` builds the primary finding set.
 
 The base `priority_label` is intentionally rule-based and transparent:
 
@@ -143,7 +143,7 @@ Current architectural boundary:
 
 ### Reporting
 
-`src/vuln_prioritizer/reporter.py` remains the public reporting facade and delegates report-format, JSON/payload, and serialization helpers to private internal reporting modules.
+`backend/src/vuln_prioritizer/reporter.py` remains the public reporting facade and delegates report-format, JSON/payload, and serialization helpers to private internal reporting modules.
 
 Current output families:
 

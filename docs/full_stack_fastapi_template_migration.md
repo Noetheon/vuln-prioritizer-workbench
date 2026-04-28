@@ -50,9 +50,9 @@ repo root
 `-- .copier/.copier-answers.yml
 ```
 
-The existing `src/vuln_prioritizer` code should first move under the template
-backend as `backend/src/vuln_prioritizer` so the current CLI and tests can keep
-working while the template app is introduced. A later cleanup can split it into a
+The existing `vuln_prioritizer` code now lives under the backend workspace as
+`backend/src/vuln_prioritizer` so the current CLI and tests can keep working
+while the template app is introduced. A later cleanup can split it into a
 separate `packages/vuln-prioritizer-core` package if that proves useful.
 
 Backend integration should call the core package through service boundaries

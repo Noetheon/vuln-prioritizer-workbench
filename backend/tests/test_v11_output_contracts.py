@@ -68,21 +68,21 @@ from vuln_prioritizer.reporter import (
 )
 
 runner = CliRunner()
-SCHEMA_ROOT = Path(__file__).resolve().parents[1] / "docs" / "schemas"
-ACTION_FILE = Path(__file__).resolve().parents[1] / "action.yml"
-CI_WORKFLOW = Path(__file__).resolve().parents[1] / ".github" / "workflows" / "ci.yml"
+SCHEMA_ROOT = Path(__file__).resolve().parents[2] / "docs" / "schemas"
+ACTION_FILE = Path(__file__).resolve().parents[2] / "action.yml"
+CI_WORKFLOW = Path(__file__).resolve().parents[2] / ".github" / "workflows" / "ci.yml"
 MAINTENANCE_WORKFLOW = (
-    Path(__file__).resolve().parents[1] / ".github" / "workflows" / "maintenance.yml"
+    Path(__file__).resolve().parents[2] / ".github" / "workflows" / "maintenance.yml"
 )
-RELEASE_WORKFLOW = Path(__file__).resolve().parents[1] / ".github" / "workflows" / "release.yml"
-TESTPYPI_WORKFLOW = Path(__file__).resolve().parents[1] / ".github" / "workflows" / "testpypi.yml"
-MAKEFILE = Path(__file__).resolve().parents[1] / "Makefile"
-README_FILE = Path(__file__).resolve().parents[1] / "README.md"
-CI_DOCS_FILE = Path(__file__).resolve().parents[1] / "docs" / "integrations" / "reporting_and_ci.md"
-EXAMPLES_README = Path(__file__).resolve().parents[1] / ".github" / "examples" / "README.md"
-PIPX_SOURCE_SMOKE = Path(__file__).resolve().parents[1] / "scripts" / "p1_pipx_source_smoke.sh"
-P1_INSTALLED_SMOKE = Path(__file__).resolve().parents[1] / "scripts" / "p1_installed_cli_smoke.sh"
-P2_INSTALLED_SMOKE = Path(__file__).resolve().parents[1] / "scripts" / "p2_installed_cli_smoke.sh"
+RELEASE_WORKFLOW = Path(__file__).resolve().parents[2] / ".github" / "workflows" / "release.yml"
+TESTPYPI_WORKFLOW = Path(__file__).resolve().parents[2] / ".github" / "workflows" / "testpypi.yml"
+MAKEFILE = Path(__file__).resolve().parents[2] / "Makefile"
+README_FILE = Path(__file__).resolve().parents[2] / "README.md"
+CI_DOCS_FILE = Path(__file__).resolve().parents[2] / "docs" / "integrations" / "reporting_and_ci.md"
+EXAMPLES_README = Path(__file__).resolve().parents[2] / ".github" / "examples" / "README.md"
+PIPX_SOURCE_SMOKE = Path(__file__).resolve().parents[2] / "scripts" / "p1_pipx_source_smoke.sh"
+P1_INSTALLED_SMOKE = Path(__file__).resolve().parents[2] / "scripts" / "p1_installed_cli_smoke.sh"
+P2_INSTALLED_SMOKE = Path(__file__).resolve().parents[2] / "scripts" / "p2_installed_cli_smoke.sh"
 
 
 def _load_schema(name: str) -> dict:
@@ -647,7 +647,7 @@ def test_release_workflow_is_tag_bound_and_verifies_pypi_install() -> None:
     assert "python -m pip install --upgrade pip pipx" in tag_install_run
     assert (
         'VULN_PRIORITIZER_PIPX_SPEC="git+https://github.com/'
-        '${GITHUB_REPOSITORY}.git@${GITHUB_REF_NAME}" \\' in tag_install_run
+        '${GITHUB_REPOSITORY}.git@${GITHUB_REF_NAME}#subdirectory=backend" \\' in tag_install_run
     )
     assert "bash scripts/p1_pipx_source_smoke.sh" in tag_install_run
     assert "startsWith(github.ref, 'refs/tags/v')" in jobs["publish-pypi"]["if"]

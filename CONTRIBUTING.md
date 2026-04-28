@@ -31,7 +31,7 @@ This runs:
 
 - `ruff format --check`
 - `ruff check`
-- `mypy src`
+- `mypy backend/src`
 - `pytest`
 
 ## Local Workflow Equivalent
@@ -46,7 +46,7 @@ This adds:
 
 - `python3 -m pre_commit run --all-files`
 - `python3 -m mkdocs build --clean`
-- `python3 -m build`
+- `python3 -m build backend --outdir dist`
 - `python3 -m twine check dist/*`
 
 ## Demo Artifacts

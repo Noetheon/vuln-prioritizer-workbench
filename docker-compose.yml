@@ -2,7 +2,7 @@ services:
   workbench:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: backend/Dockerfile
     image: vuln-prioritizer-workbench:local
     ports:
       - "127.0.0.1:8000:8000"
@@ -70,7 +70,7 @@ services:
   workbench-postgres:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: backend/Dockerfile
     image: vuln-prioritizer-workbench:local
     profiles:
       - postgres

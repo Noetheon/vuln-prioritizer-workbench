@@ -6,6 +6,7 @@ import threading
 from pathlib import Path
 
 import requests
+from paths import DATA_ROOT
 
 from vuln_prioritizer.cache import FileCache
 from vuln_prioritizer.config import KEV_FEED_URL
@@ -645,7 +646,7 @@ def test_ctid_provider_loads_official_subset_fixture() -> None:
     provider = CtidMappingsProvider()
 
     results, metadata, warnings = provider.load(
-        Path("data/attack/ctid_kev_enterprise_2025-07-28_attack-16.1_subset.json")
+        DATA_ROOT / "attack" / "ctid_kev_enterprise_2025-07-28_attack-16.1_subset.json"
     )
 
     assert warnings == []
@@ -661,7 +662,7 @@ def test_attack_metadata_provider_loads_subset_fixture() -> None:
     provider = AttackMetadataProvider()
 
     results, metadata, warnings = provider.load(
-        Path("data/attack/attack_techniques_enterprise_16.1_subset.json")
+        DATA_ROOT / "attack" / "attack_techniques_enterprise_16.1_subset.json"
     )
 
     assert warnings == []
@@ -674,7 +675,7 @@ def test_attack_metadata_provider_loads_subset_fixture() -> None:
 
 
 def test_attack_metadata_provider_loads_stix_bundle_fixture() -> None:
-    fixture = Path("data/attack/attack_stix_enterprise_16.1_subset.json")
+    fixture = DATA_ROOT / "attack" / "attack_stix_enterprise_16.1_subset.json"
     provider = AttackMetadataProvider()
 
     results, metadata, warnings = provider.load(fixture)
@@ -699,8 +700,12 @@ def test_attack_provider_ctid_json_enriches_structured_attack_data() -> None:
         ["CVE-2023-34362", "CVE-2024-3094"],
         enabled=True,
         source="ctid-json",
-        mapping_file=Path("data/attack/ctid_kev_enterprise_2025-07-28_attack-16.1_subset.json"),
-        technique_metadata_file=Path("data/attack/attack_techniques_enterprise_16.1_subset.json"),
+        mapping_file=DATA_ROOT
+        / "attack"
+        / "ctid_kev_enterprise_2025-07-28_attack-16.1_subset.json",
+        technique_metadata_file=DATA_ROOT
+        / "attack"
+        / "attack_techniques_enterprise_16.1_subset.json",
     )
 
     assert warnings == []

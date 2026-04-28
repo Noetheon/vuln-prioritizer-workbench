@@ -6,11 +6,12 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-COPY pyproject.toml README.md LICENSE requirements.txt ./
-COPY src ./src
+COPY README.md LICENSE ./
+COPY backend/pyproject.toml backend/requirements.txt backend/MANIFEST.in backend/README.md ./backend/
+COPY backend/src ./backend/src
 
 RUN python -m pip install --upgrade pip \
-    && python -m pip install . \
+    && python -m pip install ./backend \
     && adduser --disabled-password --gecos "" --uid 10001 workbench \
     && mkdir -p /app/data /app/uploads /app/reports /app/provider-snapshots /app/.cache/vuln-prioritizer \
     && chown -R workbench:workbench /app

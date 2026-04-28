@@ -4,6 +4,7 @@ import hashlib
 import json
 from pathlib import Path
 
+from paths import DATA_ROOT
 from typer.testing import CliRunner
 
 from vuln_prioritizer.cli import app
@@ -14,9 +15,14 @@ from vuln_prioritizer.providers.nvd import NvdProvider
 
 runner = CliRunner()
 
-ATTACK_MAPPING_FILE = Path("data/attack/ctid_kev_enterprise_2025-07-28_attack-16.1_subset.json")
-ATTACK_METADATA_FILE = Path("data/attack/attack_techniques_enterprise_16.1_subset.json")
-ATTACK_STIX_FILE = Path("data/attack/attack_stix_enterprise_16.1_subset.json")
+ATTACK_MAPPING_FILE = (
+    DATA_ROOT / "attack" / "ctid_kev_enterprise_2025-07-28_attack-16.1_subset.json"
+)
+ATTACK_METADATA_FILE = DATA_ROOT / "attack" / "attack_techniques_enterprise_16.1_subset.json"
+ATTACK_STIX_FILE = DATA_ROOT / "attack" / "attack_stix_enterprise_16.1_subset.json"
+SAMPLE_CVES_MIXED = DATA_ROOT / "sample_cves_mixed.txt"
+SAMPLE_CVES_ATTACK = DATA_ROOT / "sample_cves_attack.txt"
+OPTIONAL_ATTACK_TO_CVE = DATA_ROOT / "optional_attack_to_cve.csv"
 
 
 def test_cli_analyze_supports_ctid_attack_source(monkeypatch, tmp_path: Path) -> None:
@@ -66,7 +72,7 @@ def test_cli_attack_coverage_json_works_offline(tmp_path: Path) -> None:
             "attack",
             "coverage",
             "--input",
-            "data/sample_cves_mixed.txt",
+            str(SAMPLE_CVES_MIXED),
             "--attack-mapping-file",
             str(ATTACK_MAPPING_FILE),
             "--attack-technique-metadata-file",
@@ -94,7 +100,7 @@ def test_cli_attack_navigator_layer_exports_json(tmp_path: Path) -> None:
             "attack",
             "navigator-layer",
             "--input",
-            "data/sample_cves_attack.txt",
+            str(SAMPLE_CVES_ATTACK),
             "--attack-mapping-file",
             str(ATTACK_MAPPING_FILE),
             "--attack-technique-metadata-file",
@@ -353,7 +359,7 @@ def test_cli_attack_validate_local_csv_counts_rows_and_marks_legacy_mode(tmp_pat
             "--attack-source",
             "local-csv",
             "--attack-mapping-file",
-            "data/optional_attack_to_cve.csv",
+            str(OPTIONAL_ATTACK_TO_CVE),
             "--output",
             str(output_file),
             "--format",
@@ -376,7 +382,7 @@ def test_cli_attack_coverage_missing_mapping_file_exits_cleanly(tmp_path: Path) 
             "attack",
             "coverage",
             "--input",
-            "data/sample_cves_mixed.txt",
+            str(SAMPLE_CVES_MIXED),
             "--attack-mapping-file",
             str(tmp_path / "missing.json"),
         ],
@@ -396,7 +402,7 @@ def test_cli_attack_navigator_layer_invalid_metadata_json_exits_cleanly(tmp_path
             "attack",
             "navigator-layer",
             "--input",
-            "data/sample_cves_attack.txt",
+            str(SAMPLE_CVES_ATTACK),
             "--attack-mapping-file",
             str(ATTACK_MAPPING_FILE),
             "--attack-technique-metadata-file",

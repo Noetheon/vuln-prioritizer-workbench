@@ -15,8 +15,8 @@ from typing import Any
 
 import pytest
 
-ROOT = Path(__file__).resolve().parents[2]
-SRC = ROOT / "src"
+ROOT = Path(__file__).resolve().parents[3]
+SRC = ROOT / "backend" / "src"
 DEMO_PROVIDER_SNAPSHOT = ROOT / "data" / "demo_provider_snapshot.json"
 TRIVY_REPORT = ROOT / "data" / "input_fixtures" / "trivy_report.json"
 SAMPLE_CVES = ROOT / "data" / "sample_cves.txt"

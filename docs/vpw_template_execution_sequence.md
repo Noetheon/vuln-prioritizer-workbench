@@ -63,8 +63,8 @@ Issues:
 Goal:
 
 Move reusable parser, provider, scoring, report, ATT&CK, VEX, and governance
-logic from the current `src/vuln_prioritizer` package into a core package that the
-template backend can import.
+logic from the current `backend/src/vuln_prioritizer` package into a core package
+that the template backend can import.
 
 Rules:
 

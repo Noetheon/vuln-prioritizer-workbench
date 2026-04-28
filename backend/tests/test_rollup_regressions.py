@@ -9,8 +9,8 @@ from typer.testing import CliRunner
 from vuln_prioritizer.cli import app
 
 runner = CliRunner()
-BENCHMARK_ROOT = Path(__file__).resolve().parents[1] / "data" / "benchmarks"
-SCHEMA_ROOT = Path(__file__).resolve().parents[1] / "docs" / "schemas"
+BENCHMARK_ROOT = Path(__file__).resolve().parents[2] / "data" / "benchmarks"
+SCHEMA_ROOT = Path(__file__).resolve().parents[2] / "docs" / "schemas"
 
 
 def _load_schema(name: str) -> dict:

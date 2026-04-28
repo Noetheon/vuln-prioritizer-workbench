@@ -11,6 +11,7 @@ from _cli_helpers import (
 from _cli_helpers import (
     write_input_file as _write_input_file,
 )
+from paths import DATA_ROOT, DOCS_ROOT, REPO_ROOT
 from typer.testing import CliRunner
 
 from vuln_prioritizer.cache import FileCache
@@ -21,10 +22,10 @@ from vuln_prioritizer.providers.kev import KevProvider
 from vuln_prioritizer.providers.nvd import NvdProvider
 
 runner = CliRunner()
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
-SCHEMA_ROOT = PROJECT_ROOT / "docs" / "schemas"
-CONTRACTS_FILE = PROJECT_ROOT / "docs" / "contracts.md"
-ATTACK_ROOT = PROJECT_ROOT / "data" / "attack"
+PROJECT_ROOT = REPO_ROOT
+SCHEMA_ROOT = DOCS_ROOT / "schemas"
+CONTRACTS_FILE = DOCS_ROOT / "contracts.md"
+ATTACK_ROOT = DATA_ROOT / "attack"
 
 
 def _schema_paths() -> list[Path]:
@@ -237,7 +238,7 @@ def test_attack_coverage_json_matches_published_schema(tmp_path: Path) -> None:
             "attack",
             "coverage",
             "--input",
-            "data/sample_cves_mixed.txt",
+            str(DATA_ROOT / "sample_cves_mixed.txt"),
             "--attack-mapping-file",
             str(ATTACK_ROOT / "ctid_kev_enterprise_2025-07-28_attack-16.1_subset.json"),
             "--attack-technique-metadata-file",

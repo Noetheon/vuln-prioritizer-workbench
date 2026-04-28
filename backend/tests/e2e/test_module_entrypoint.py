@@ -18,8 +18,8 @@ from vuln_prioritizer.models import (
 )
 from vuln_prioritizer.provider_snapshot import generate_provider_snapshot_json
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-SRC_PATH = PROJECT_ROOT / "src"
+PROJECT_ROOT = Path(__file__).resolve().parents[3]
+SRC_PATH = PROJECT_ROOT / "backend" / "src"
 PYTHON = sys.executable
 
 pytestmark = pytest.mark.e2e

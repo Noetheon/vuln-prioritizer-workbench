@@ -181,7 +181,7 @@ The v1.0 release must keep these boundaries visible in docs, UI copy, examples, 
 | Compose quickstart | `make docker-demo-smoke`; GitHub Docker workflow green on `main` | Codex technical validation | 2026-04-25 |
 | Screenshot set | `docs/examples/media/workbench-*.png` | Codex technical validation | 2026-04-25 |
 | Evidence bundle verification | `make demo-evidence-bundle-check`; hashes recorded in Workbench and v1.1 release notes | Codex technical validation | 2026-04-25 |
-| Dependency audit | `make dependency-audit`; no known vulnerabilities reported for `requirements.txt` | Codex technical validation | 2026-04-25 |
+| Dependency audit | `make dependency-audit`; no known vulnerabilities reported for `backend/requirements.txt` | Codex technical validation | 2026-04-25 |
 | Release gates | `make release-check`; GitHub CI/CodeQL/Docker green on `main` | Codex technical validation | 2026-04-25 |
 | Changelog and release notes | `CHANGELOG.md`, `docs/releases/workbench-v1.0.0.md`, `docs/releases/v1.1.0.md` | Codex technical validation | 2026-04-25 |
 | Product guardrails review | Docs preserve no-scanner, no-exploit, no-heuristic-ATT&CK boundaries | Codex technical validation | 2026-04-25 |
