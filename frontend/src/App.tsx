@@ -306,6 +306,9 @@ const defaultFindingFilters: FindingFilters = {
 
 const findingPageSizes = [1, 10, 25, 50] as const
 
+type FindingDetailTab = "overview" | "ttp"
+type FindingAttackContext = NonNullable<FindingDetailPublic["attack_context"]>
+
 const findingPriorityOptions: FindingPriority[] = [
   "critical",
   "high",
@@ -782,6 +785,47 @@ function findingProviderGaps(
   return gaps
 }
 
+function attackTechniqueRows(context: FindingAttackContext | null) {
+  if (!context) {
+    return []
+  }
+  const techniques = context.techniques ?? []
+  if (techniques.length > 0) {
+    return techniques
+  }
+  return (context.mappings ?? []).map((mapping) => ({
+    confidence: mapping.confidence,
+    defensive_note: mapping.defensive_note,
+    name: mapping.technique_name,
+    rationale: mapping.rationale,
+    review_status: mapping.review_status,
+    source: mapping.source,
+    tactics: mapping.tactics ?? [],
+    technique_id: mapping.technique_id,
+    url: null,
+  }))
+}
+
+function attackTacticsLabel(values: string[] | null | undefined) {
+  return values && values.length > 0 ? values.join(", ") : "N.A."
+}
+
+function attackConfidenceLabel(value: string | null | undefined) {
+  return value ? labelize(value) : "Unknown"
+}
+
+function attackReviewLabel(value: string | null | undefined) {
+  return value ? labelize(value) : "Unreviewed"
+}
+
+function attackContextEmptyState(context: FindingAttackContext | null) {
+  return (
+    !context ||
+    context.mapped !== true ||
+    attackTechniqueRows(context).length === 0
+  )
+}
+
 function numericFilterValue(value: string) {
   const trimmed = value.trim()
   if (!trimmed) {
@@ -1071,6 +1115,8 @@ export function App() {
   const [findingDetailError, setFindingDetailError] = useState("")
   const [findingExplanationWarning, setFindingExplanationWarning] = useState("")
   const [findingDetailReloadKey, setFindingDetailReloadKey] = useState(0)
+  const [findingDetailTab, setFindingDetailTab] =
+    useState<FindingDetailTab>("overview")
   const selectedProject =
     projects.find((project) => project.id === selectedProjectId) ?? null
   const dashboardLoading = projectListLoading || summaryLoading
@@ -1098,6 +1144,9 @@ export function App() {
     findingExplanation,
   )
   const detailReasonRows = findingReasonRows(findingExplanation)
+  const detailAttackContext = findingDetail?.attack_context ?? null
+  const detailAttackTechniques = attackTechniqueRows(detailAttackContext)
+  const detailAttackEmpty = attackContextEmptyState(detailAttackContext)
   const selectedReportRun =
     projectRuns.find((run) => run.id === selectedRunId) ?? null
   const reportActionsEnabled =
@@ -1462,6 +1511,10 @@ export function App() {
     navigate,
     selectedProjectId,
   ])
+
+  useEffect(() => {
+    setFindingDetailTab("overview")
+  }, [findingDetailId])
 
   useEffect(() => {
     let isMounted = true
@@ -2829,213 +2882,421 @@ export function App() {
                       ))}
                     </section>
 
-                    <section
-                      className="why-priority-panel"
-                      aria-label="Why this priority"
+                    <div
+                      className="finding-detail-tabs"
+                      role="tablist"
+                      aria-label="Finding detail tabs"
                     >
-                      <div className="detail-section-heading">
-                        <h3>Why this priority</h3>
-                        <span>
-                          Score {formatNullableNumber(findingDetail.risk_score)}
-                        </span>
-                      </div>
-                      <p>{findingWhyText(findingDetail, findingExplanation)}</p>
-                      <div className="recommendation-callout">
-                        <span>Recommended action</span>
-                        <strong>
-                          {findingRecommendedAction(
-                            findingDetail,
-                            findingExplanation,
-                          )}
-                        </strong>
-                      </div>
-                      {detailReasonRows.length > 0 ? (
-                        <dl
-                          className="reason-list"
-                          aria-label="Matched reasons"
-                        >
-                          {detailReasonRows.map((reason) => (
-                            <div key={`${reason.label}:${reason.detail}`}>
-                              <dt>{labelize(reason.label)}</dt>
-                              <dd>{reason.detail}</dd>
-                            </div>
-                          ))}
-                        </dl>
-                      ) : null}
-                    </section>
-
-                    <section
-                      className="occurrences-panel"
-                      aria-label="Occurrences"
-                    >
-                      <div className="detail-section-heading">
-                        <h3>Occurrences</h3>
-                        <span>{detailOccurrences.length} source row(s)</span>
-                      </div>
-                      {detailOccurrences.length > 0 ? (
-                        <div className="table-wrap occurrences-table-wrap">
-                          <table aria-label="Occurrences table">
-                            <thead>
-                              <tr>
-                                <th>Source</th>
-                                <th>Component</th>
-                                <th>Asset</th>
-                                <th>Owner</th>
-                                <th>Severity</th>
-                                <th>Fix</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {detailOccurrences.map((occurrence, index) => {
-                                const fixVersions =
-                                  Array.isArray(occurrence.fix_versions) &&
-                                  occurrence.fix_versions.length > 0
-                                    ? occurrence.fix_versions.join(", ")
-                                    : stringValue(occurrence.fix_version)
-                                return (
-                                  <tr
-                                    key={
-                                      stringValue(occurrence.id) ??
-                                      `occurrence-${index + 1}`
-                                    }
-                                  >
-                                    <td>
-                                      <span className="finding-primary">
-                                        {optionalText(
-                                          stringValue(
-                                            occurrence.source_format,
-                                          ) ?? stringValue(occurrence.source),
-                                        )}
-                                      </span>
-                                      <small>
-                                        {optionalText(
-                                          stringValue(
-                                            occurrence.source_record_id,
-                                          ) ??
-                                            stringValue(
-                                              occurrence.raw_reference,
-                                            ),
-                                        )}
-                                      </small>
-                                    </td>
-                                    <td>
-                                      <span className="finding-primary">
-                                        {joinedValues([
-                                          stringValue(
-                                            occurrence.component_name,
-                                          ),
-                                          stringValue(
-                                            occurrence.component_version,
-                                          ),
-                                        ])}
-                                      </span>
-                                      <small>
-                                        {optionalText(
-                                          stringValue(occurrence.purl),
-                                        )}
-                                      </small>
-                                    </td>
-                                    <td>
-                                      <span className="finding-primary">
-                                        {optionalText(
-                                          stringValue(occurrence.asset_ref) ??
-                                            stringValue(occurrence.target_ref),
-                                        )}
-                                      </span>
-                                      <small>
-                                        {joinedValues([
-                                          stringValue(occurrence.target_kind),
-                                          labelize(
-                                            stringValue(
-                                              occurrence.asset_exposure,
-                                            ),
-                                          ),
-                                        ])}
-                                      </small>
-                                    </td>
-                                    <td>
-                                      <span className="finding-primary">
-                                        {optionalText(
-                                          stringValue(occurrence.asset_owner),
-                                        )}
-                                      </span>
-                                      <small>
-                                        {optionalText(
-                                          stringValue(
-                                            occurrence.asset_business_service,
-                                          ),
-                                        )}
-                                      </small>
-                                    </td>
-                                    <td>
-                                      {optionalText(
-                                        stringValue(occurrence.raw_severity),
-                                      )}
-                                    </td>
-                                    <td>{optionalText(fixVersions)}</td>
-                                  </tr>
-                                )
-                              })}
-                            </tbody>
-                          </table>
-                        </div>
-                      ) : (
-                        <p className="detail-empty">
-                          No source occurrences have been recorded for this
-                          finding.
-                        </p>
-                      )}
-                    </section>
-
-                    <section
-                      className="data-quality-panel"
-                      aria-label="Data Quality Flags"
-                    >
-                      <div className="detail-section-heading">
-                        <h3>Data Quality Flags</h3>
-                        <span>
-                          Confidence{" "}
-                          {findingExplanation?.data_quality_confidence ??
-                            stringValue(
-                              objectRecord(findingDetail.data_quality_json)
-                                .confidence,
-                            ) ??
-                            "high"}
-                        </span>
-                      </div>
-                      {detailDataQualityRows.length > 0 ? (
-                        <ul className="data-quality-list">
-                          {detailDataQualityRows.map((flag) => (
-                            <li key={flag.key}>
-                              <strong>{labelize(flag.code)}</strong>
-                              <span>
-                                {flag.source} / {labelize(flag.severity)}
-                              </span>
-                              <p>{flag.message}</p>
-                            </li>
-                          ))}
-                        </ul>
-                      ) : (
-                        <p className="detail-empty">
-                          No data quality flags recorded.
-                        </p>
-                      )}
-                      <section
-                        className="provider-gap-list"
-                        aria-label="Provider data coverage"
+                      <button
+                        aria-controls="finding-overview-panel"
+                        aria-selected={findingDetailTab === "overview"}
+                        className={
+                          findingDetailTab === "overview" ? "active" : ""
+                        }
+                        id="finding-overview-tab"
+                        onClick={() => setFindingDetailTab("overview")}
+                        role="tab"
+                        type="button"
                       >
-                        <span>Provider data coverage</span>
-                        {detailProviderGaps.length > 0 ? (
-                          <ul>
-                            {detailProviderGaps.map((gap) => (
-                              <li key={gap}>{gap}</li>
-                            ))}
-                          </ul>
+                        Overview
+                      </button>
+                      <button
+                        aria-controls="finding-ttp-panel"
+                        aria-selected={findingDetailTab === "ttp"}
+                        className={findingDetailTab === "ttp" ? "active" : ""}
+                        id="finding-ttp-tab"
+                        onClick={() => setFindingDetailTab("ttp")}
+                        role="tab"
+                        type="button"
+                      >
+                        TTP Context
+                      </button>
+                    </div>
+
+                    {findingDetailTab === "overview" ? (
+                      <div
+                        className="finding-detail-tab-panel"
+                        id="finding-overview-panel"
+                        role="tabpanel"
+                        aria-labelledby="finding-overview-tab"
+                      >
+                        <section
+                          className="why-priority-panel"
+                          aria-label="Why this priority"
+                        >
+                          <div className="detail-section-heading">
+                            <h3>Why this priority</h3>
+                            <span>
+                              Score{" "}
+                              {formatNullableNumber(findingDetail.risk_score)}
+                            </span>
+                          </div>
+                          <p>
+                            {findingWhyText(findingDetail, findingExplanation)}
+                          </p>
+                          <div className="recommendation-callout">
+                            <span>Recommended action</span>
+                            <strong>
+                              {findingRecommendedAction(
+                                findingDetail,
+                                findingExplanation,
+                              )}
+                            </strong>
+                          </div>
+                          {detailReasonRows.length > 0 ? (
+                            <dl
+                              className="reason-list"
+                              aria-label="Matched reasons"
+                            >
+                              {detailReasonRows.map((reason) => (
+                                <div key={`${reason.label}:${reason.detail}`}>
+                                  <dt>{labelize(reason.label)}</dt>
+                                  <dd>{reason.detail}</dd>
+                                </div>
+                              ))}
+                            </dl>
+                          ) : null}
+                        </section>
+
+                        <section
+                          className="occurrences-panel"
+                          aria-label="Occurrences"
+                        >
+                          <div className="detail-section-heading">
+                            <h3>Occurrences</h3>
+                            <span>
+                              {detailOccurrences.length} source row(s)
+                            </span>
+                          </div>
+                          {detailOccurrences.length > 0 ? (
+                            <div className="table-wrap occurrences-table-wrap">
+                              <table aria-label="Occurrences table">
+                                <thead>
+                                  <tr>
+                                    <th>Source</th>
+                                    <th>Component</th>
+                                    <th>Asset</th>
+                                    <th>Owner</th>
+                                    <th>Severity</th>
+                                    <th>Fix</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {detailOccurrences.map(
+                                    (occurrence, index) => {
+                                      const fixVersions =
+                                        Array.isArray(
+                                          occurrence.fix_versions,
+                                        ) && occurrence.fix_versions.length > 0
+                                          ? occurrence.fix_versions.join(", ")
+                                          : stringValue(occurrence.fix_version)
+                                      return (
+                                        <tr
+                                          key={
+                                            stringValue(occurrence.id) ??
+                                            `occurrence-${index + 1}`
+                                          }
+                                        >
+                                          <td>
+                                            <span className="finding-primary">
+                                              {optionalText(
+                                                stringValue(
+                                                  occurrence.source_format,
+                                                ) ??
+                                                  stringValue(
+                                                    occurrence.source,
+                                                  ),
+                                              )}
+                                            </span>
+                                            <small>
+                                              {optionalText(
+                                                stringValue(
+                                                  occurrence.source_record_id,
+                                                ) ??
+                                                  stringValue(
+                                                    occurrence.raw_reference,
+                                                  ),
+                                              )}
+                                            </small>
+                                          </td>
+                                          <td>
+                                            <span className="finding-primary">
+                                              {joinedValues([
+                                                stringValue(
+                                                  occurrence.component_name,
+                                                ),
+                                                stringValue(
+                                                  occurrence.component_version,
+                                                ),
+                                              ])}
+                                            </span>
+                                            <small>
+                                              {optionalText(
+                                                stringValue(occurrence.purl),
+                                              )}
+                                            </small>
+                                          </td>
+                                          <td>
+                                            <span className="finding-primary">
+                                              {optionalText(
+                                                stringValue(
+                                                  occurrence.asset_ref,
+                                                ) ??
+                                                  stringValue(
+                                                    occurrence.target_ref,
+                                                  ),
+                                              )}
+                                            </span>
+                                            <small>
+                                              {joinedValues([
+                                                stringValue(
+                                                  occurrence.target_kind,
+                                                ),
+                                                labelize(
+                                                  stringValue(
+                                                    occurrence.asset_exposure,
+                                                  ),
+                                                ),
+                                              ])}
+                                            </small>
+                                          </td>
+                                          <td>
+                                            <span className="finding-primary">
+                                              {optionalText(
+                                                stringValue(
+                                                  occurrence.asset_owner,
+                                                ),
+                                              )}
+                                            </span>
+                                            <small>
+                                              {optionalText(
+                                                stringValue(
+                                                  occurrence.asset_business_service,
+                                                ),
+                                              )}
+                                            </small>
+                                          </td>
+                                          <td>
+                                            {optionalText(
+                                              stringValue(
+                                                occurrence.raw_severity,
+                                              ),
+                                            )}
+                                          </td>
+                                          <td>{optionalText(fixVersions)}</td>
+                                        </tr>
+                                      )
+                                    },
+                                  )}
+                                </tbody>
+                              </table>
+                            </div>
+                          ) : (
+                            <p className="detail-empty">
+                              No source occurrences have been recorded for this
+                              finding.
+                            </p>
+                          )}
+                        </section>
+
+                        <section
+                          className="data-quality-panel"
+                          aria-label="Data Quality Flags"
+                        >
+                          <div className="detail-section-heading">
+                            <h3>Data Quality Flags</h3>
+                            <span>
+                              Confidence{" "}
+                              {findingExplanation?.data_quality_confidence ??
+                                stringValue(
+                                  objectRecord(findingDetail.data_quality_json)
+                                    .confidence,
+                                ) ??
+                                "high"}
+                            </span>
+                          </div>
+                          {detailDataQualityRows.length > 0 ? (
+                            <ul className="data-quality-list">
+                              {detailDataQualityRows.map((flag) => (
+                                <li key={flag.key}>
+                                  <strong>{labelize(flag.code)}</strong>
+                                  <span>
+                                    {flag.source} / {labelize(flag.severity)}
+                                  </span>
+                                  <p>{flag.message}</p>
+                                </li>
+                              ))}
+                            </ul>
+                          ) : (
+                            <p className="detail-empty">
+                              No data quality flags recorded.
+                            </p>
+                          )}
+                          <section
+                            className="provider-gap-list"
+                            aria-label="Provider data coverage"
+                          >
+                            <span>Provider data coverage</span>
+                            {detailProviderGaps.length > 0 ? (
+                              <ul>
+                                {detailProviderGaps.map((gap) => (
+                                  <li key={gap}>{gap}</li>
+                                ))}
+                              </ul>
+                            ) : (
+                              <p>No provider gaps for this finding.</p>
+                            )}
+                          </section>
+                        </section>
+                      </div>
+                    ) : (
+                      <section
+                        className="ttp-context-panel"
+                        id="finding-ttp-panel"
+                        role="tabpanel"
+                        aria-labelledby="finding-ttp-tab"
+                        aria-label="TTP Context"
+                      >
+                        <div className="detail-section-heading">
+                          <h3>ATT&amp;CK threat context</h3>
+                          <span>
+                            {detailAttackContext?.mapped
+                              ? "Mapped context"
+                              : "No approved mapping"}
+                          </span>
+                        </div>
+                        {detailAttackEmpty ? (
+                          <section
+                            className="ttp-empty-state"
+                            aria-label="TTP context empty state"
+                          >
+                            <strong>
+                              No approved ATT&amp;CK mapping is stored for this
+                              finding.
+                            </strong>
+                            <p>
+                              Workbench does not infer tactics or techniques for
+                              unmapped CVEs. Add a reviewed CTID or local
+                              curated mapping before using ATT&amp;CK context in
+                              queue decisions.
+                            </p>
+                          </section>
                         ) : (
-                          <p>No provider gaps for this finding.</p>
+                          <>
+                            <section
+                              className="ttp-summary-grid"
+                              aria-label="TTP context summary"
+                            >
+                              <article>
+                                <span>Source</span>
+                                <strong>
+                                  {detailAttackContext?.source ?? "none"}
+                                </strong>
+                              </article>
+                              <article>
+                                <span>Confidence</span>
+                                <strong
+                                  className={`ttp-confidence ${
+                                    detailAttackContext?.confidence ?? "unknown"
+                                  }`}
+                                >
+                                  {attackConfidenceLabel(
+                                    detailAttackContext?.confidence,
+                                  )}
+                                </strong>
+                                {detailAttackContext?.low_confidence ? (
+                                  <small>
+                                    Review required before using this context
+                                    for queue decisions.
+                                  </small>
+                                ) : null}
+                              </article>
+                              <article>
+                                <span>Review</span>
+                                <strong>
+                                  {attackReviewLabel(
+                                    detailAttackContext?.review_status,
+                                  )}
+                                </strong>
+                              </article>
+                              <article>
+                                <span>Relevance</span>
+                                <strong>
+                                  {detailAttackContext?.attack_relevance ??
+                                    "Mapped"}
+                                </strong>
+                              </article>
+                            </section>
+
+                            <div className="table-wrap ttp-table-wrap">
+                              <table aria-label="TTP Context techniques">
+                                <thead>
+                                  <tr>
+                                    <th>Technique</th>
+                                    <th>Tactics</th>
+                                    <th>Confidence</th>
+                                    <th>Review</th>
+                                    <th>Rationale</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {detailAttackTechniques.map((technique) => (
+                                    <tr key={technique.technique_id}>
+                                      <td>
+                                        <span className="finding-primary">
+                                          {technique.technique_id}
+                                        </span>
+                                        <small>
+                                          {optionalText(technique.name)}
+                                        </small>
+                                      </td>
+                                      <td>
+                                        {attackTacticsLabel(technique.tactics)}
+                                      </td>
+                                      <td>
+                                        <span
+                                          className={`ttp-confidence ${
+                                            technique.confidence ?? "unknown"
+                                          }`}
+                                        >
+                                          {attackConfidenceLabel(
+                                            technique.confidence,
+                                          )}
+                                        </span>
+                                      </td>
+                                      <td>
+                                        {attackReviewLabel(
+                                          technique.review_status,
+                                        )}
+                                      </td>
+                                      <td>
+                                        {optionalText(technique.rationale)}
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          </>
                         )}
+                        <section
+                          className="ttp-detection-placeholder"
+                          aria-label="Detection coverage"
+                        >
+                          <span>Detection coverage</span>
+                          <p>
+                            Coverage controls are not connected to this finding
+                            yet. Use this placeholder to record future detection
+                            and mitigation evidence.
+                          </p>
+                        </section>
+                        <p className="ttp-safety-note">
+                          Defensive context only: this tab does not provide
+                          exploit steps, payloads, PoC guidance, active probing,
+                          or offensive procedure instructions.
+                        </p>
                       </section>
-                    </section>
+                    )}
                   </>
                 ) : null}
               </section>

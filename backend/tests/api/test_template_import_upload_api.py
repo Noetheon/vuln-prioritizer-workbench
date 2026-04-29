@@ -16,6 +16,10 @@ from utils.template_workbench import (
 from app import models as app_models
 from app.services import TemplateAnalysisError
 
+PROJECT_ROOT = Path(__file__).resolve().parents[3]
+TRIVY_REPORT = PROJECT_ROOT / "data" / "input_fixtures" / "trivy_report.json"
+ATTACK_MAPPING = PROJECT_ROOT / "data" / "attack" / "local_curated_low_confidence_vpw058.yml"
+
 
 def test_valid_cve_list_upload_creates_analysis_run_and_stores_sha256(
     template_api_env: TemplateApiEnv,
@@ -117,6 +121,69 @@ def test_valid_cve_list_upload_creates_analysis_run_and_stores_sha256(
     assert summary_payload["kev_hits"] == payload["summary_json"]["kev_hits"]
     assert summary_payload["parse_errors"] == []
     assert summary_payload["input_upload"]["sha256"] == expected_sha256
+
+
+def test_attack_import_exposes_template_finding_ttp_context(
+    template_api_env: TemplateApiEnv,
+    tmp_path: Path,
+) -> None:
+    _configure_upload_dir(template_api_env, tmp_path)
+    headers = auth_headers(template_api_env.client)
+    project = create_project_via_api(template_api_env.client, headers)
+
+    response = template_api_env.client.post(
+        f"/api/v1/projects/{project['id']}/imports",
+        headers=headers,
+        data={
+            "input_type": "trivy-json",
+            "attack_source": "local-curated",
+            "attack_mapping_file": ATTACK_MAPPING.name,
+        },
+        files={"file": ("trivy.json", TRIVY_REPORT.read_bytes(), "application/json")},
+    )
+
+    assert response.status_code == 200, response.text
+    run_payload = response.json()
+    assert run_payload["summary_json"]["attack_mapped_cves"] == 1
+    assert run_payload["summary_json"]["attack_source"] == "local-curated"
+
+    findings = template_api_env.client.get(
+        f"/api/v1/projects/{project['id']}/findings/",
+        headers=headers,
+        params={"sort": "cve"},
+    )
+    assert findings.status_code == 200
+    finding_items = findings.json()["data"]
+    mapped = next(item for item in finding_items if item["cve_id"] == "CVE-2023-34362")
+    unmapped = next(item for item in finding_items if item["cve_id"] == "CVE-2024-3094")
+
+    mapped_detail = template_api_env.client.get(
+        f"/api/v1/findings/{mapped['id']}",
+        headers=headers,
+    )
+    assert mapped_detail.status_code == 200
+    attack_context = mapped_detail.json()["attack_context"]
+    assert attack_context["mapped"] is True
+    assert attack_context["source"] == "local-curated"
+    assert attack_context["confidence"] == "low"
+    assert attack_context["low_confidence"] is True
+    assert attack_context["review_status"] == "needs_review"
+    assert attack_context["mappings"][0]["technique_id"] == "T1190"
+    assert "reviewed" in attack_context["mappings"][0]["rationale"].lower()
+    assert "payload" not in attack_context["mappings"][0]["rationale"].lower()
+    assert attack_context["techniques"][0]["technique_id"] == "T1190"
+    assert "initial-access" in attack_context["tactics"]
+    assert "defensive triage" in attack_context["defensive_note"]
+
+    unmapped_detail = template_api_env.client.get(
+        f"/api/v1/findings/{unmapped['id']}",
+        headers=headers,
+    )
+    assert unmapped_detail.status_code == 200
+    empty_context = unmapped_detail.json()["attack_context"]
+    assert empty_context["mapped"] is False
+    assert empty_context["mappings"] == []
+    assert empty_context["techniques"] == []
 
 
 def test_decision_api_endpoints_expose_explain_summary_and_cvss_comparison(
@@ -598,6 +665,8 @@ def _configure_upload_dir(
     template_api_env.client.app.state.template_settings = replace(
         active_settings,
         IMPORT_UPLOAD_DIR=str(upload_dir),
+        PROVIDER_SNAPSHOT_DIR=str(PROJECT_ROOT / "data"),
+        ATTACK_ARTIFACT_DIR=str(PROJECT_ROOT / "data" / "attack"),
         MAX_UPLOAD_MB=max_upload_mb,
     )
     return upload_dir.resolve(strict=False)

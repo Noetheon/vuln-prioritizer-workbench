@@ -172,10 +172,57 @@ class FindingOccurrencePublic(SQLModel):
     created_at: datetime | None = None
 
 
+class FindingAttackMappingDetailPublic(SQLModel):
+    """Defensive ATT&CK mapping row for finding detail views."""
+
+    technique_id: str
+    technique_name: str | None = None
+    tactics: list[str] = Field(default_factory=list)
+    source: str | None = None
+    confidence: str | None = None
+    review_status: str | None = None
+    mapping_type: str | None = None
+    rationale: str | None = None
+    defensive_note: str | None = None
+    references: list[str] = Field(default_factory=list)
+
+
+class FindingAttackTechniqueDetailPublic(SQLModel):
+    """ATT&CK technique row rendered by the template Workbench detail tab."""
+
+    technique_id: str
+    name: str | None = None
+    tactics: list[str] = Field(default_factory=list)
+    url: str | None = None
+    source: str | None = None
+    confidence: str | None = None
+    review_status: str | None = None
+    rationale: str | None = None
+    defensive_note: str | None = None
+
+
+class FindingAttackContextDetailPublic(SQLModel):
+    """Safe finding-level ATT&CK context DTO for the React Workbench."""
+
+    mapped: bool = False
+    source: str = "none"
+    review_status: str = "unreviewed"
+    defensive_note: str | None = None
+    rationale: str | None = None
+    confidence: str | None = None
+    low_confidence: bool = False
+    attack_relevance: str = "Unmapped"
+    technique_ids: list[str] = Field(default_factory=list)
+    tactics: list[str] = Field(default_factory=list)
+    mappings: list[FindingAttackMappingDetailPublic] = Field(default_factory=list)
+    techniques: list[FindingAttackTechniqueDetailPublic] = Field(default_factory=list)
+
+
 class FindingDetailPublic(FindingPublic):
     """Public finding detail response shape."""
 
     occurrences: list[FindingOccurrencePublic] = Field(default_factory=list)
+    attack_context: FindingAttackContextDetailPublic | None = None
 
 
 class FindingsPublic(SQLModel):

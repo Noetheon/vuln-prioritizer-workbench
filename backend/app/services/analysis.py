@@ -65,6 +65,15 @@ class TemplateAnalysisResult:
             "epss_hits": self.context.epss_hits,
             "nvd_hits": self.context.nvd_hits,
             "provider_degraded": self.context.provider_degraded,
+            "attack_enabled": self.context.attack_enabled,
+            "attack_source": self.context.attack_source,
+            "attack_mapped_cves": self.context.attack_hits,
+            "attack_mapping_file": self.context.attack_mapping_file,
+            "attack_mapping_file_sha256": self.context.attack_mapping_file_sha256,
+            "attack_technique_metadata_file": self.context.attack_technique_metadata_file,
+            "attack_technique_metadata_file_sha256": (
+                self.context.attack_technique_metadata_file_sha256
+            ),
             "provider_data_quality_flags": _provider_quality_flags(
                 self.context.provider_data_quality_flags
             ),
@@ -86,20 +95,24 @@ class AnalysisService:
         input_type: str,
         provider_snapshot_file: Path | None = None,
         locked_provider_data: bool = False,
+        attack_source: AttackSource | str = AttackSource.none,
+        attack_mapping_file: Path | None = None,
+        attack_technique_metadata_file: Path | None = None,
     ) -> TemplateAnalysisResult:
         """Run parse/enrich/score/explain for one uploaded template import."""
         snapshot_path = provider_snapshot_file or self.default_provider_snapshot_file()
         use_locked_snapshot = locked_provider_data or snapshot_path is not None
+        normalized_attack_source = AttackSource(attack_source)
         request = AnalysisRequest(
             input_specs=[InputSpec(path=input_path, input_format=InputFormat(input_type).value)],
             output=None,
             format=OutputFormat.json,
             provider_snapshot_file=snapshot_path,
             locked_provider_data=use_locked_snapshot,
-            no_attack=True,
-            attack_source=AttackSource.none,
-            attack_mapping_file=None,
-            attack_technique_metadata_file=None,
+            no_attack=normalized_attack_source == AttackSource.none,
+            attack_source=normalized_attack_source,
+            attack_mapping_file=attack_mapping_file,
+            attack_technique_metadata_file=attack_technique_metadata_file,
             offline_attack_file=None,
             defensive_context_file=None,
             priority_filters=None,

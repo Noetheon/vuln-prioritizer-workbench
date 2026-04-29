@@ -1,0 +1,33 @@
+metadata:
+  mapping_framework: vuln-prioritizer-curated-attack
+  mapping_framework_version: "1.0"
+  mapping_version: "2026-04-29"
+  attack_version: "16.1"
+  technology_domain: enterprise-attack
+  creation_date: "2026-04-29"
+  last_update: "2026-04-29"
+  organization: Noetheon demo
+  author: reviewed-demo
+  contact: security@example.invalid
+  mapping_types:
+    exploitation: Reviewed defensive mapping from a CVE to initial-access context.
+    detection_context: Reviewed mapping used only to guide detection coverage review.
+mapping_objects:
+  - cve_id: CVE-2023-34362
+    technique_id: T1190
+    technique_name: Exploit Public-Facing Application
+    tactic_ids:
+      - TA0001
+    mapping_type: exploitation
+    capability_group: managed-file-transfer-risk
+    source: Maintainer defensive coverage review
+    source_url: https://ctid.mitre.org/projects/mappings-explorer
+    confidence: low
+    rationale: Low-confidence defensive context used only to trigger analyst review of exposure and monitoring coverage.
+    review_status: needs_review
+    reviewer: security-review
+    reviewed_at: "2026-04-29"
+    defensive_note: Treat this mapping as a review queue hint for defensive triage, not as confirmed exploitation behavior.
+    comments: Defensive context only; no reproduction, payload, or procedure guidance.
+    references:
+      - https://ctid.mitre.org/projects/mappings-explorer
