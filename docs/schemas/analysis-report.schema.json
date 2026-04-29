@@ -136,6 +136,7 @@
           "type": "string"
         },
         "code": {
+          "description": "Canonical provider quality code. VPW-027 adds nvd_missing, nvd_cvss_missing, epss_missing, epss_outdated, kev_unavailable, snapshot_locked, and provider_error; legacy generic provider codes remain additive.",
           "type": "string"
         },
         "message": {
@@ -756,6 +757,20 @@
             {
               "type": "null"
             }
+          ]
+        },
+        "data_quality_flags": {
+          "description": "Finding-scoped provider data-quality flags that explain missing, stale, locked, or degraded enrichment signals used for this finding.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/providerDataQualityFlag"
+          }
+        },
+        "data_quality_confidence": {
+          "enum": [
+            "high",
+            "medium",
+            "low"
           ]
         },
         "defensive_contexts": {

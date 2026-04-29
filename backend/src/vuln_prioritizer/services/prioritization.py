@@ -230,6 +230,8 @@ class PrioritizationService:
                     operational_rank=finding.operational_rank,
                     context_rank_reasons=finding.context_rank_reasons,
                     defensive_contexts=finding.defensive_contexts,
+                    data_quality_flags=finding.data_quality_flags,
+                    data_quality_confidence=finding.data_quality_confidence,
                     changed=cvss_only_rank != finding.priority_rank,
                     delta_rank=cvss_only_rank - finding.priority_rank,
                     change_reason=build_comparison_reason(

@@ -999,6 +999,21 @@ def _quality_rows(metadata: dict[str, Any], findings: list[dict[str, Any]]) -> l
             "pct": _pct(sum(1 for item in findings if not item.get("attack_mapped")), total),
         },
         {
+            "label": "Provider data-quality flags",
+            "value": sum(1 for item in findings if item.get("data_quality_flags")),
+            "pct": _pct(sum(1 for item in findings if item.get("data_quality_flags")), total),
+        },
+        {
+            "label": "Low data confidence",
+            "value": sum(
+                1 for item in findings if _text(item.get("data_quality_confidence")) == "low"
+            ),
+            "pct": _pct(
+                sum(1 for item in findings if _text(item.get("data_quality_confidence")) == "low"),
+                total,
+            ),
+        },
+        {
             "label": "Suppressed by VEX",
             "value": _int_value(metadata.get("suppressed_by_vex"))
             or sum(1 for item in findings if item.get("suppressed_by_vex")),

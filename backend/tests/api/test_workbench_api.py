@@ -240,6 +240,11 @@ def test_workbench_import_findings_reports_and_evidence(tmp_path: Path) -> None:
     items = findings.json()["items"]
     assert {item["cve_id"] for item in items} == EXPECTED_SAMPLE_CVES
     assert {item["status"] for item in items} == {"open"}
+    assert all(
+        "snapshot_locked" in {flag["code"] for flag in item["data_quality_flags"]} for item in items
+    )
+    assert {item["data_quality_confidence"] for item in items} == {"high"}
+    assert all(item["provider_evidence"]["nvd"]["cve_id"] == item["cve_id"] for item in items)
     assert [item["operational_rank"] for item in items] == sorted(
         item["operational_rank"] for item in items
     )
@@ -285,6 +290,9 @@ def test_workbench_import_findings_reports_and_evidence(tmp_path: Path) -> None:
     detail_payload = detail.json()
     assert detail_payload["finding"]["cve_id"] == "CVE-2021-44228"
     assert detail_payload["finding"]["provider_evidence"]["nvd"]["cve_id"] == "CVE-2021-44228"
+    assert "snapshot_locked" in {flag["code"] for flag in detail_payload["data_quality_flags"]}
+    assert detail_payload["data_quality_confidence"] == "high"
+    assert detail_payload["provider_evidence"]["nvd"]["cve_id"] == "CVE-2021-44228"
     session_factory = create_session_factory(get_engine(client.app))
     with session_factory() as session:
         vulnerability = (
@@ -311,13 +319,16 @@ def test_workbench_import_findings_reports_and_evidence(tmp_path: Path) -> None:
     explanation = client.get(f"/api/findings/{log4shell['id']}/explain")
     assert explanation.status_code == 200
     assert explanation.json()["cve_id"] == "CVE-2021-44228"
+    assert "snapshot_locked" in {flag["code"] for flag in explanation.json()["data_quality_flags"]}
+    assert explanation.json()["data_quality_confidence"] == "high"
+    assert explanation.json()["provider_evidence"]["nvd"]["cve_id"] == "CVE-2021-44228"
     assert explanation.json()["explanation"]["cve_id"] == "CVE-2021-44228"
 
     report_expectations = {
         "json": ("analysis-json", b'"locked_provider_data": true'),
         "markdown": ("markdown-summary", b"# Vulnerability Prioritization Summary"),
         "html": ("html-report", b"Vulnerability"),
-        "csv": ("findings-csv", b"cve_id,priority,status"),
+        "csv": ("findings-csv", b"data_quality_confidence,data_quality_flags"),
         "sarif": ("sarif-results", b'"version": "2.1.0"'),
     }
     created_reports: list[dict[str, Any]] = []
@@ -361,10 +372,16 @@ def test_workbench_import_findings_reports_and_evidence(tmp_path: Path) -> None:
             assert sarif_payload["runs"][0]["tool"]["driver"]["name"] == (
                 "vuln-prioritizer-workbench"
             )
-            assert any(
-                result["properties"]["cve"] == "CVE-2021-44228"
+            log4shell_sarif = next(
+                result
                 for result in sarif_payload["runs"][0]["results"]
+                if result["properties"]["cve"] == "CVE-2021-44228"
             )
+            assert "snapshot_locked" in log4shell_sarif["properties"]["data_quality_flag_codes"]
+            assert log4shell_sarif["properties"]["data_quality_confidence"] == "high"
+        if report_format == "csv":
+            assert b"snapshot_locked" in report_download.content
+            assert b"high" in report_download.content
 
     bundle = client.post(f"/api/analysis-runs/{run['id']}/evidence-bundle")
     assert bundle.status_code == 200

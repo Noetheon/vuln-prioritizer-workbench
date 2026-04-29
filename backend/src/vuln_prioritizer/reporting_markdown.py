@@ -26,6 +26,7 @@ from vuln_prioritizer.reporting_format import (
     comma_or_na,
     escape_pipes,
     format_change,
+    format_data_quality_flags,
     format_score,
     normalize_whitespace,
 )
@@ -39,12 +40,12 @@ def generate_markdown_report(
     findings_header = (
         "| CVE ID | Description | CVSS | Severity | CVSS Version | EPSS | EPSS Percentile | "
         + "KEV | ATT&CK | Attack Relevance | Sources | Asset Criticality | VEX | Waiver | "
-        + "Priority | Operational Rank | Context Rank Reasons | Rationale | Recommended Action | "
-        + "Context Recommendation |"
+        + "Priority | Data Quality | Confidence | Operational Rank | Context Rank Reasons | "
+        + "Rationale | Recommended Action | Context Recommendation |"
     )
     findings_divider = (
         "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | "
-        + "--- | --- | --- | --- | --- | --- | --- |"
+        + "--- | --- | --- | --- | --- | --- | --- | --- | --- |"
     )
     attack_header = (
         "| CVE ID | Mapping Types | Techniques | Tactics | Capability Groups | ATT&CK Note |"
@@ -102,6 +103,8 @@ def generate_markdown_report(
                     escape_pipes(_format_vex_statuses(finding.provenance.vex_statuses)),
                     escape_pipes(_format_waiver_status(finding)),
                     finding.priority_label,
+                    escape_pipes(format_data_quality_flags(finding)),
+                    escape_pipes(finding.data_quality_confidence),
                     str(finding.operational_rank or "N.A."),
                     escape_pipes(", ".join(finding.context_rank_reasons) or "N.A."),
                     escape_pipes(finding.rationale),
@@ -236,7 +239,7 @@ def generate_compare_markdown(
     """Render the Markdown comparison report."""
     comparison_header = (
         "| CVE ID | Description | CVSS-only | Enriched | VEX | ATT&CK | Attack Relevance | "
-        + "Delta | Changed | CVSS | EPSS | KEV | Waiver | Reason |"
+        + "Delta | Changed | CVSS | EPSS | KEV | Data Quality | Confidence | Waiver | Reason |"
     )
     changed_count = sum(1 for row in comparisons if row.changed)
     lines = [
@@ -271,7 +274,8 @@ def generate_compare_markdown(
             "## Comparison",
             "",
             comparison_header,
-            "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
+            "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | "
+            + "--- | --- | --- | --- |",
         ]
     )
 
@@ -304,6 +308,8 @@ def generate_compare_markdown(
                     format_score(row.cvss_base_score, digits=1),
                     format_score(row.epss, digits=3),
                     "Yes" if row.in_kev else "No",
+                    escape_pipes(format_data_quality_flags(row)),
+                    escape_pipes(row.data_quality_confidence),
                     (
                         f"owner={row.waiver_owner or 'N.A.'}, "
                         f"expires={row.waiver_expires_on or 'N.A.'}"
@@ -346,6 +352,8 @@ def generate_explain_markdown(
             f"- EPSS: `{format_score(finding.epss, 3)}`",
             f"- EPSS Percentile: `{format_score(finding.epss_percentile, 3)}`",
             f"- In KEV: `{'yes' if finding.in_kev else 'no'}`",
+            f"- Data Quality Flags: `{format_data_quality_flags(finding)}`",
+            f"- Data Quality Confidence: `{finding.data_quality_confidence}`",
             f"- Published: `{nvd.published or 'N.A.'}`",
             f"- Last Modified: `{nvd.last_modified or 'N.A.'}`",
             f"- CWEs: {comma_or_na(nvd.cwes)}",

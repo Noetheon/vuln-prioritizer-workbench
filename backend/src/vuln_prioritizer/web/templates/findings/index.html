@@ -89,6 +89,7 @@
           <th>Owner</th>
           <th>EPSS</th>
           <th>CVSS</th>
+          <th>Data quality</th>
           <th>Status</th>
           <th>Governance</th>
         </tr>
@@ -104,6 +105,14 @@
             <td>{{ finding.asset.owner if finding.asset else "N.A." }}</td>
             <td>{{ "%.3f"|format(finding.epss) if finding.epss is not none else "N.A." }}</td>
             <td>{{ "%.1f"|format(finding.cvss_base_score) if finding.cvss_base_score is not none else "N.A." }}</td>
+            {% set dq_flags = finding.finding_json.get("data_quality_flags", []) if finding.finding_json else [] %}
+            {% set dq_confidence = finding.finding_json.get("data_quality_confidence", "high") if finding.finding_json else "high" %}
+            <td>
+              {{ dq_confidence }}
+              {% if dq_flags %}
+                <span class="muted">({{ dq_flags | map(attribute="code") | join(", ") }})</span>
+              {% endif %}
+            </td>
             <td>{{ finding.status }}</td>
             <td>
               {% if finding.suppressed_by_vex %}
@@ -120,7 +129,7 @@
             </td>
           </tr>
         {% else %}
-          <tr><td colspan="10" class="empty">No findings imported.</td></tr>
+          <tr><td colspan="11" class="empty">No findings imported.</td></tr>
         {% endfor %}
       </tbody>
     </table>

@@ -198,6 +198,9 @@ data-quality behavior is documented in
 The provider snapshot format, Workbench import/export API, locked replay, and
 evidence-bundle inclusion behavior is documented in
 [VPW-026 Provider Snapshot Replay](vpw-026-provider-snapshot-replay.md).
+The finding-scoped provider data-quality flags and confidence behavior are
+documented in
+[VPW-027 Provider Data Quality Flags](vpw-027-provider-data-quality-flags.md).
 
 The current `data` command tree is intentionally small:
 

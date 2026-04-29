@@ -203,6 +203,8 @@ class PrioritizedFinding(StrictModel):
     priority_drivers: list[str] = Field(default_factory=list)
     rationale: str
     provider_evidence: ProviderEvidence | None = None
+    data_quality_flags: list[ProviderDataQualityFlag] = Field(default_factory=list)
+    data_quality_confidence: str = "high"
     defensive_contexts: list[DefensiveContext] = Field(default_factory=list)
     remediation: RemediationPlan = Field(default_factory=RemediationPlan)
     recommended_action: str
@@ -244,6 +246,8 @@ class ComparisonFinding(StrictModel):
     operational_rank: int = 0
     context_rank_reasons: list[str] = Field(default_factory=list)
     defensive_contexts: list[DefensiveContext] = Field(default_factory=list)
+    data_quality_flags: list[ProviderDataQualityFlag] = Field(default_factory=list)
+    data_quality_confidence: str = "high"
     changed: bool
     delta_rank: int
     change_reason: str

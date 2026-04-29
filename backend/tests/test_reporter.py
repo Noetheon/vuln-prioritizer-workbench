@@ -57,8 +57,8 @@ def test_markdown_report_contains_headers_summary_metadata_and_na(tmp_path: Path
     assert (
         "| CVE ID | Description | CVSS | Severity | CVSS Version | EPSS | EPSS Percentile | "
         "KEV | ATT&CK | Attack Relevance | Sources | Asset Criticality | VEX | Waiver | "
-        "Priority | Operational Rank | Context Rank Reasons | Rationale | Recommended Action | "
-        "Context Recommendation |"
+        "Priority | Data Quality | Confidence | Operational Rank | Context Rank Reasons | "
+        "Rationale | Recommended Action | Context Recommendation |"
     ) in report
     assert "N.A." in report
 
@@ -132,12 +132,12 @@ def test_compare_markdown_report_contains_changed_and_unchanged_rows() -> None:
     assert "## ATT&CK Context Summary" in report
     assert (
         "| CVE ID | Description | CVSS-only | Enriched | VEX | ATT&CK | Attack Relevance | "
-        "Delta | Changed | CVSS | EPSS | KEV | Waiver | Reason |"
+        "Delta | Changed | CVSS | EPSS | KEV | Data Quality | Confidence | Waiver | Reason |"
     ) in report
     assert "KEV membership raises this CVE" in report
     assert (
         "| CVE-2024-0002 | No change | Low | Low | N.A. | Unmapped | Unmapped | No change | "
-        "No | 3.5 | N.A. | No | N.A. |" in report
+        "No | 3.5 | N.A. | No | None | high | N.A. |" in report
     )
 
 

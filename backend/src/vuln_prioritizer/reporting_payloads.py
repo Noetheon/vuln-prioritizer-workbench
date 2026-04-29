@@ -434,6 +434,11 @@ def generate_sarif_report(
                     "cvss": finding.cvss_base_score,
                     "epss": finding.epss,
                     "in_kev": finding.in_kev,
+                    "data_quality_flags": [
+                        flag.model_dump() for flag in finding.data_quality_flags
+                    ],
+                    "data_quality_flag_codes": [flag.code for flag in finding.data_quality_flags],
+                    "data_quality_confidence": finding.data_quality_confidence,
                     "attack_relevance": finding.attack_relevance,
                     "defensive_context_sources": sorted(
                         {context_item.source for context_item in finding.defensive_contexts}
