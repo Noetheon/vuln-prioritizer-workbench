@@ -238,6 +238,11 @@ def _attack_methodology_lines(context: AnalysisContext) -> list[str]:
         "- ATT&CK context is sourced from explicit local files only.",
         "- No heuristic or LLM-generated CVE-to-ATT&CK mapping is performed.",
         "- ATT&CK relevance is reported separately and does not change the primary priority score.",
+        "- ATT&CK context is defensive context; it is not proof that exploitation occurred.",
+        (
+            "- Tactics describe objectives, techniques describe behavior categories, "
+            "and procedure-level details remain out of scope."
+        ),
     ]
 
 
@@ -252,6 +257,10 @@ def _attack_summary_lines(summary: AttackSummary, enabled: bool) -> list[str]:
         "- Technique distribution: " + _format_distribution(summary.technique_distribution),
         "- Tactic distribution: " + _format_distribution(summary.tactic_distribution),
         "- ATT&CK mappings are imported from explicit local CTID or local CSV files only.",
+        (
+            "- Reported tactics and techniques are defensive review context, "
+            "not operational procedure guidance."
+        ),
     ]
     return lines
 

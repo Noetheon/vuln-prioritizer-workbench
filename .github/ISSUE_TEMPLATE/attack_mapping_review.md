@@ -41,10 +41,14 @@ explanation. Do not frame mappings as exploit proof.
 
 - [ ] No heuristic, fuzzy, or LLM-generated CVE-to-ATT&CK mapping is introduced.
 - [ ] Unmapped CVEs remain explicitly unmapped.
+- [ ] Tactics, techniques, and procedure-level details are separated; procedure
+      guidance is not included.
 - [ ] The issue does not include exploit payloads, PoC instructions, offensive
       attack-chain guidance, or active exploitation claims.
 - [ ] ATT&CK context is presented as defensive context, not proof of active
       exploitation.
+- [ ] Any real-world exploitation statement is backed by KEV or another cited
+      source.
 
 ## Tests
 
@@ -52,6 +56,7 @@ explanation. Do not frame mappings as exploit proof.
 - [ ] `attack coverage`
 - [ ] Navigator layer generation
 - [ ] snapshot/report fixture
+- [ ] ATT&CK safety wording test
 - [ ] docs check
 - [ ] not applicable; rationale:
 

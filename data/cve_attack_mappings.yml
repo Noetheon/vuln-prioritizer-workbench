@@ -85,7 +85,7 @@ mapping_objects:
     reviewer: security-review
     reviewed_at: "2026-04-29"
     defensive_note: Use this mapping to prioritize remediation and exposure reduction only.
-    comments: Defensive prioritization note with no exploit procedure detail.
+    comments: Defensive prioritization note with no operational detail.
     references:
       - https://ctid.mitre.org/projects/mappings-explorer
   - cve_id: CVE-2023-3519
