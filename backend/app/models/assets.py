@@ -87,6 +87,8 @@ class AssetPublic(AssetBase):
     project_id: uuid.UUID
     created_at: datetime
     updated_at: datetime
+    finding_count: int = 0
+    rescore_needed: bool = False
 
 
 class AssetsPublic(SQLModel):

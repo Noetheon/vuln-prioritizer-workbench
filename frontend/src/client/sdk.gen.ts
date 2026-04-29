@@ -134,6 +134,7 @@ export class FindingsService {
      * @param data.owner
      * @param data.service
      * @param data.ownerService
+     * @param data.assetId
      * @param data.exposure
      * @param data.epssMin
      * @param data.epssMax
@@ -160,6 +161,7 @@ export class FindingsService {
                 owner: data.owner,
                 service: data.service,
                 owner_service: data.ownerService,
+                asset_id: data.assetId,
                 exposure: data.exposure,
                 epss_min: data.epssMin,
                 epss_max: data.epssMax,
