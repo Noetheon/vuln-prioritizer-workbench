@@ -68,6 +68,7 @@ Published JSON schemas in `docs/schemas/` cover:
 - `data-update-report.schema.json`
 - `data-verify-report.schema.json`
 - `provider-snapshot-report.schema.json`
+- `attack-curated-mapping.schema.json`
 - `attack-validation-report.schema.json`
 - `attack-coverage-report.schema.json`
 - `rollup-report.schema.json`
@@ -76,6 +77,9 @@ Published JSON schemas in `docs/schemas/` cover:
 
 `input-inspect-report.schema.json` covers both `input inspect --format json` and
 the `input normalize --format json` compatibility alias.
+`attack-curated-mapping.schema.json` is a local ATT&CK mapping artifact schema
+for reviewed JSON or YAML-compatible curated mapping files. It is an input
+contract, not a command output report.
 
 `report html` is a secondary renderer over the analysis JSON contract. It does not define its own independent source model.
 `report evidence-bundle` is a ZIP transport over the analysis JSON contract. Its published machine contract is the `manifest.json` stored inside the bundle.
