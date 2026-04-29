@@ -71,10 +71,28 @@ def _run_metadata_lines(context: AnalysisContext) -> list[str]:
         lines.append(f"- Provider snapshot file: `{context.provider_snapshot_file}`")
         snapshot_mode = "locked" if context.locked_provider_data else "fallback"
         lines.append(f"- Provider snapshot mode: `{snapshot_mode}`")
+    if context.provider_snapshot_id:
+        lines.append(f"- Provider snapshot ID: `{context.provider_snapshot_id}`")
+    if context.provider_snapshot_hash:
+        lines.append(f"- Provider snapshot hash: `{context.provider_snapshot_hash}`")
     if context.provider_snapshot_sources:
         lines.append(
             "- Provider snapshot sources: " + f"`{', '.join(context.provider_snapshot_sources)}`"
         )
+    snapshot_generated_at = context.provider_freshness.get("provider_snapshot_generated_at")
+    if snapshot_generated_at:
+        lines.append(f"- Provider snapshot generated at: `{snapshot_generated_at}`")
+    freshness_lines = [
+        (label, context.provider_freshness.get(field))
+        for label, field in (
+            ("NVD freshness", "nvd_freshness_at"),
+            ("EPSS freshness", "epss_freshness_at"),
+            ("KEV freshness", "kev_freshness_at"),
+        )
+    ]
+    for label, value in freshness_lines:
+        if value:
+            lines.append(f"- {label}: `{value}`")
     if context.merged_input_count > 1:
         lines.append(f"- Inputs merged: `{context.merged_input_count}`")
     if context.input_paths:

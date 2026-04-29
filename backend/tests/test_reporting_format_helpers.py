@@ -73,9 +73,17 @@ def test_metadata_and_summary_lines_include_optional_workbench_fields() -> None:
         generated_at="2026-04-24T10:00:00Z",
         merged_input_count=2,
         duplicate_cve_count=1,
+        provider_snapshot_id="snapshot-artifact-1",
+        provider_snapshot_hash="f" * 64,
         provider_snapshot_file="snapshot.json",
         locked_provider_data=True,
         provider_snapshot_sources=["nvd", "epss", "kev"],
+        provider_freshness={
+            "provider_snapshot_generated_at": "2026-04-24T09:00:00Z",
+            "nvd_freshness_at": "2026-04-24T09:00:00Z",
+            "epss_freshness_at": "2026-04-24T09:00:00Z",
+            "kev_freshness_at": "2026-04-24T09:00:00Z",
+        },
         attack_enabled=True,
         attack_source="ctid-mappings-explorer",
         attack_mapping_file="attack/mapping.json",
@@ -153,6 +161,10 @@ def test_metadata_and_summary_lines_include_optional_workbench_fields() -> None:
     summary = "\n".join(_summary_lines(context))
 
     assert "- Provider snapshot mode: `locked`" in metadata
+    assert "- Provider snapshot ID: `snapshot-artifact-1`" in metadata
+    assert f"- Provider snapshot hash: `{'f' * 64}`" in metadata
+    assert "- Provider snapshot generated at: `2026-04-24T09:00:00Z`" in metadata
+    assert "- NVD freshness: `2026-04-24T09:00:00Z`" in metadata
     assert "- Inputs merged: `2`" in metadata
     assert "- NVD diagnostics: `requested=2" in metadata
     assert "- EPSS data-quality flags: `provider_missing_data`" in metadata

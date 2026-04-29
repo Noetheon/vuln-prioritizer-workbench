@@ -15,6 +15,10 @@ from _cli_helpers import (
 )
 
 from vuln_prioritizer.cli import app
+from vuln_prioritizer.models import EpssData, KevData, NvdData
+from vuln_prioritizer.providers.epss import EpssProvider
+from vuln_prioritizer.providers.kev import KevProvider
+from vuln_prioritizer.providers.nvd import NvdProvider
 
 
 def test_cli_verify_evidence_bundle_succeeds_for_clean_bundle(
@@ -198,6 +202,132 @@ def test_cli_evidence_bundle_includes_all_multi_input_sources(
     assert manifest["source_input_paths"] == [str(first_input), str(second_input)]
     assert manifest["source_input_path"] == str(first_input)
     assert {"input/001-cves-a.txt", "input/002-cves-b.txt"} <= names
+
+
+def test_cli_evidence_bundle_includes_provider_snapshot_and_replays_offline(
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    input_file = _write_input_file(tmp_path)
+    snapshot_file = tmp_path / "provider-snapshot.json"
+    analysis_file = tmp_path / "analysis.json"
+    bundle_file = tmp_path / "evidence.zip"
+
+    def fake_nvd_fetch_many(
+        self: NvdProvider,  # noqa: ARG001
+        cve_ids: list[str],
+        *,
+        refresh: bool = False,  # noqa: ARG001
+    ) -> tuple[dict[str, NvdData], list[str]]:
+        return (
+            {
+                cve_id: NvdData(
+                    cve_id=cve_id,
+                    description=f"{cve_id} snapshot description",
+                    cvss_base_score=9.0,
+                    cvss_severity="CRITICAL",
+                    cvss_version="3.1",
+                )
+                for cve_id in cve_ids
+            },
+            [],
+        )
+
+    def fake_epss_fetch_many(
+        self: EpssProvider,  # noqa: ARG001
+        cve_ids: list[str],
+        *,
+        refresh: bool = False,  # noqa: ARG001
+    ) -> tuple[dict[str, EpssData], list[str]]:
+        return (
+            {
+                cve_id: EpssData(cve_id=cve_id, epss=0.5, percentile=0.9, date="2026-04-29")
+                for cve_id in cve_ids
+            },
+            [],
+        )
+
+    def fake_kev_fetch_many(
+        self: KevProvider,  # noqa: ARG001
+        cve_ids: list[str],
+        offline_file: Path | None = None,  # noqa: ARG001
+        *,
+        refresh: bool = False,  # noqa: ARG001
+    ) -> tuple[dict[str, KevData], list[str]]:
+        return ({cve_id: KevData(cve_id=cve_id, in_kev=False) for cve_id in cve_ids}, [])
+
+    monkeypatch.setattr(NvdProvider, "fetch_many", fake_nvd_fetch_many)
+    monkeypatch.setattr(EpssProvider, "fetch_many", fake_epss_fetch_many)
+    monkeypatch.setattr(KevProvider, "fetch_many", fake_kev_fetch_many)
+
+    export_result = runner.invoke(
+        app,
+        [
+            "data",
+            "export-provider-snapshot",
+            "--input",
+            str(input_file),
+            "--output",
+            str(snapshot_file),
+            "--cache-dir",
+            str(tmp_path / "cache"),
+        ],
+    )
+    assert export_result.exit_code == 0
+
+    def fail_fetch_many(*args, **kwargs):  # noqa: ANN002, ANN003
+        raise AssertionError("live provider should not be called during locked replay")
+
+    monkeypatch.setattr(NvdProvider, "fetch_many", fail_fetch_many)
+    monkeypatch.setattr(EpssProvider, "fetch_many", fail_fetch_many)
+    monkeypatch.setattr(KevProvider, "fetch_many", fail_fetch_many)
+
+    analyze_result = runner.invoke(
+        app,
+        [
+            "analyze",
+            "--input",
+            str(input_file),
+            "--output",
+            str(analysis_file),
+            "--format",
+            "json",
+            "--provider-snapshot-file",
+            str(snapshot_file),
+            "--locked-provider-data",
+        ],
+    )
+    assert analyze_result.exit_code == 0
+
+    bundle_result = runner.invoke(
+        app,
+        [
+            "report",
+            "evidence-bundle",
+            "--input",
+            str(analysis_file),
+            "--output",
+            str(bundle_file),
+        ],
+    )
+    assert bundle_result.exit_code == 0
+
+    with zipfile.ZipFile(bundle_file) as archive:
+        names = set(archive.namelist())
+        manifest = json.loads(archive.read("manifest.json"))
+        bundled_snapshot = json.loads(archive.read("provider/provider-snapshot.json"))
+
+    assert "provider/provider-snapshot.json" in names
+    assert bundled_snapshot["metadata"]["snapshot_format"] == "provider-snapshot.v1.json"
+    assert manifest["provider_snapshot"]["bundle_path"] == "provider/provider-snapshot.json"
+    assert (
+        manifest["provider_snapshot"]["sha256"]
+        == manifest["artifact_hashes"]["provider/provider-snapshot.json"]
+    )
+    assert any(
+        item["path"] == "provider/provider-snapshot.json" and item["kind"] == "provider-snapshot"
+        for item in manifest["files"]
+    )
 
 
 def _build_evidence_bundle(monkeypatch, tmp_path: Path) -> Path:

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 
@@ -24,6 +25,7 @@ def _write_provider_snapshot(snapshot_file: Path) -> None:
             ProviderSnapshotReport(
                 metadata=ProviderSnapshotMetadata(
                     generated_at="2026-04-22T12:00:00Z",
+                    snapshot_id="explain-provider-snapshot",
                     input_path="inline:CVE-2021-44228",
                     input_paths=[],
                     input_format="cve-list",
@@ -192,6 +194,11 @@ def test_cli_explain_supports_locked_provider_snapshot_replay(
     assert result.exit_code == 0
     payload = json.loads(output_file.read_text(encoding="utf-8"))
     assert payload["metadata"]["provider_snapshot_file"] == str(snapshot_file)
+    assert payload["metadata"]["provider_snapshot_id"] == "explain-provider-snapshot"
+    assert (
+        payload["metadata"]["provider_snapshot_hash"]
+        == hashlib.sha256(snapshot_file.read_bytes()).hexdigest()
+    )
     assert payload["metadata"]["locked_provider_data"] is True
     assert payload["metadata"]["provider_snapshot_sources"] == ["nvd", "epss", "kev"]
 

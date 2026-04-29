@@ -240,6 +240,29 @@ def write_evidence_bundle(
                 "attack-navigator-layer",
             )
         )
+    provider_snapshot_bundle_path = None
+    provider_snapshot_path = resolve_analysis_input_path(
+        metadata.get("provider_snapshot_file") if isinstance(metadata, dict) else None,
+        analysis_path,
+    )
+    if provider_snapshot_path is not None:
+        provider_snapshot_bundle_path = "provider/provider-snapshot.json"
+        bundle_entries.append(
+            (
+                provider_snapshot_bundle_path,
+                provider_snapshot_path.read_bytes(),
+                "provider-snapshot",
+            )
+        )
+    elif (
+        isinstance(metadata, dict)
+        and metadata.get("provider_snapshot_file")
+        and warning_callback is not None
+    ):
+        warning_callback(
+            "Referenced provider snapshot could not be resolved; bundle will omit the "
+            "snapshot copy."
+        )
     reported_input_paths = analysis_input_paths(metadata)
     resolved_inputs = [
         resolved_input
@@ -281,7 +304,11 @@ def write_evidence_bundle(
         source_input_path=reported_input_paths[0] if reported_input_paths else None,
         source_input_paths=reported_input_paths,
         source_input_hashes=input_hashes,
-        provider_snapshot=provider_snapshot_manifest_entry(metadata, analysis_path=analysis_path),
+        provider_snapshot=provider_snapshot_manifest_entry(
+            metadata,
+            analysis_path=analysis_path,
+            bundle_path=provider_snapshot_bundle_path,
+        ),
         artifact_hashes={entry.path: entry.sha256 for entry in file_entries},
         findings_count=int(metadata.get("findings_count", 0)),
         kev_hits=int(metadata.get("kev_hits", 0)),
@@ -391,7 +418,12 @@ def input_hash_entry(path: Path) -> EvidenceBundleInputHash:
     )
 
 
-def provider_snapshot_manifest_entry(metadata: object, *, analysis_path: Path) -> dict[str, Any]:
+def provider_snapshot_manifest_entry(
+    metadata: object,
+    *,
+    analysis_path: Path,
+    bundle_path: str | None = None,
+) -> dict[str, Any]:
     if not isinstance(metadata, dict):
         return {}
     snapshot_path = metadata.get("provider_snapshot_file")
@@ -404,6 +436,7 @@ def provider_snapshot_manifest_entry(metadata: object, *, analysis_path: Path) -
         "id": metadata.get("provider_snapshot_id"),
         "sha256": snapshot_hash,
         "path": snapshot_path,
+        "bundle_path": bundle_path,
         "sources": metadata.get("provider_snapshot_sources", []),
     }
     return {key: value for key, value in entry.items() if value not in (None, "", [])}

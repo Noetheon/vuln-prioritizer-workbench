@@ -221,6 +221,7 @@
       "required": [
         "schema_version",
         "artifact_kind",
+        "snapshot_format",
         "generated_at",
         "input_path",
         "input_paths",
@@ -231,6 +232,7 @@
         "cache_enabled",
         "cache_dir",
         "source_hashes",
+        "source_metadata",
         "offline_kev_file",
         "nvd_api_key_env"
       ],
@@ -240,6 +242,12 @@
         },
         "artifact_kind": {
           "const": "provider-snapshot"
+        },
+        "snapshot_format": {
+          "const": "provider-snapshot.v1.json"
+        },
+        "snapshot_id": {
+          "$ref": "#/$defs/nullableString"
         },
         "generated_at": {
           "type": "string"
@@ -276,6 +284,15 @@
           "type": "object",
           "additionalProperties": {
             "$ref": "#/$defs/nullableString"
+          }
+        },
+        "source_metadata": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": {
+              "type": ["string", "integer", "boolean", "null"]
+            }
           }
         },
         "offline_kev_file": {

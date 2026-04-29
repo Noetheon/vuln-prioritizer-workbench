@@ -298,6 +298,8 @@ class AnalysisContext(BaseModel):
     input_sources: list[InputSourceSummary] = Field(default_factory=list)
     merged_input_count: int = 1
     duplicate_cve_count: int = 0
+    provider_snapshot_id: str | None = None
+    provider_snapshot_hash: str | None = None
     provider_snapshot_file: str | None = None
     locked_provider_data: bool = False
     provider_snapshot_sources: list[str] = Field(default_factory=list)
@@ -377,6 +379,8 @@ class SnapshotMetadata(AnalysisContext):
 class ProviderSnapshotMetadata(StrictModel):
     schema_version: str = "1.2.0"
     artifact_kind: str = "provider-snapshot"
+    snapshot_format: str = "provider-snapshot.v1.json"
+    snapshot_id: str | None = None
     generated_at: str
     input_path: str | None = None
     input_paths: list[str] = Field(default_factory=list)
@@ -388,6 +392,7 @@ class ProviderSnapshotMetadata(StrictModel):
     cache_only: bool = False
     cache_dir: str | None = None
     source_hashes: dict[str, str | None] = Field(default_factory=dict)
+    source_metadata: dict[str, dict[str, str | int | bool | None]] = Field(default_factory=dict)
     offline_kev_file: str | None = None
     nvd_api_key_env: str | None = None
 

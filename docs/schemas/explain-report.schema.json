@@ -281,6 +281,12 @@
         "provider_snapshot_file": {
           "$ref": "#/$defs/nullableString"
         },
+        "provider_snapshot_id": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "provider_snapshot_hash": {
+          "$ref": "#/$defs/nullableString"
+        },
         "locked_provider_data": {
           "type": "boolean"
         },
@@ -439,6 +445,23 @@
         },
         "provider_freshness": {
           "type": "object",
+          "properties": {
+            "nvd_freshness_at": {
+              "$ref": "#/$defs/nullableString"
+            },
+            "epss_freshness_at": {
+              "$ref": "#/$defs/nullableString"
+            },
+            "kev_freshness_at": {
+              "$ref": "#/$defs/nullableString"
+            },
+            "provider_snapshot_generated_at": {
+              "$ref": "#/$defs/nullableString"
+            },
+            "lookup_completed_at": {
+              "$ref": "#/$defs/nullableString"
+            }
+          },
           "additionalProperties": {
             "type": [
               "string",

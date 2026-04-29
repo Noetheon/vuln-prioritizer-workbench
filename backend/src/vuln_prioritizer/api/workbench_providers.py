@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
@@ -147,9 +148,12 @@ def _run_provider_snapshot_refresh(
         )
         warnings.extend(source_warnings)
 
-    output_path = settings.provider_snapshot_dir / f"workbench-provider-snapshot-{uuid4().hex}.json"
+    snapshot_id = uuid4().hex
+    output_path = settings.provider_snapshot_dir / f"provider-snapshot-{snapshot_id}.json"
+    source_hashes = _provider_cache_source_hashes(cache, selected_sources)
     report = ProviderSnapshotReport(
         metadata=ProviderSnapshotMetadata(
+            snapshot_id=snapshot_id,
             generated_at=iso_utc_now(),
             input_paths=[],
             input_format="workbench-current-findings",
@@ -159,7 +163,13 @@ def _run_provider_snapshot_refresh(
             cache_enabled=True,
             cache_only=payload.cache_only,
             cache_dir=str(settings.provider_cache_dir),
-            source_hashes=_provider_cache_source_hashes(cache, selected_sources),
+            source_hashes=source_hashes,
+            source_metadata=_provider_source_metadata(
+                selected_sources=selected_sources,
+                source_hashes=source_hashes,
+                source_counts=source_counts,
+                cache_only=payload.cache_only,
+            ),
             nvd_api_key_env=settings.nvd_api_key_env,
         ),
         items=[
@@ -467,6 +477,156 @@ def _provider_cache_source_hashes(
         for source in selected_sources
         if source in {"nvd", "epss", "kev"}
     }
+
+
+def _provider_source_metadata(
+    *,
+    selected_sources: list[str],
+    source_hashes: dict[str, str | None],
+    source_counts: dict[str, dict[str, int]],
+    cache_only: bool,
+) -> dict[str, dict[str, str | int | bool | None]]:
+    source_labels = {
+        "nvd": "NVD CVE API 2.0",
+        "epss": "FIRST EPSS API",
+        "kev": "CISA KEV catalog",
+    }
+    return {
+        source: {
+            "source": source_labels[source],
+            "record_count": source_counts.get(source, {}).get("records", 0),
+            "fetched_count": source_counts.get(source, {}).get("fetched", 0),
+            "fallback_from_previous_snapshot": source_counts.get(source, {}).get(
+                "fallback_from_previous_snapshot", 0
+            ),
+            "missing_count": source_counts.get(source, {}).get("missing", 0),
+            "cache_only": cache_only,
+            "cache_namespace_hash": source_hashes.get(source),
+        }
+        for source in selected_sources
+        if source in source_labels
+    }
+
+
+def _provider_snapshot_payload(snapshot: Any) -> dict[str, Any]:
+    metadata = snapshot.metadata_json if isinstance(snapshot.metadata_json, dict) else {}
+    return {
+        "id": snapshot.id,
+        "created_at": snapshot.created_at.isoformat(),
+        "content_hash": snapshot.content_hash,
+        "nvd_last_sync": snapshot.nvd_last_sync,
+        "epss_date": snapshot.epss_date,
+        "kev_catalog_version": snapshot.kev_catalog_version,
+        "snapshot_id": metadata.get("snapshot_id"),
+        "snapshot_format": metadata.get("snapshot_format", "provider-snapshot.v1.json"),
+        "generated_at": metadata.get("generated_at"),
+        "selected_sources": list(metadata.get("selected_sources", [])),
+        "requested_cves": int(metadata.get("requested_cves", 0) or 0),
+        "source_hashes": metadata.get("source_hashes", {}),
+        "source_metadata": metadata.get("source_metadata", {}),
+        "source_path": metadata.get("source_path") or metadata.get("output_path"),
+        "warnings": metadata.get("warnings", []),
+    }
+
+
+def _resolve_provider_snapshot_artifact_path(
+    snapshot: Any,
+    *,
+    settings: WorkbenchSettings,
+) -> Path:
+    metadata = snapshot.metadata_json if isinstance(snapshot.metadata_json, dict) else {}
+    value = (
+        metadata.get("source_path") or metadata.get("snapshot_path") or metadata.get("output_path")
+    )
+    if not isinstance(value, str) or not value.strip():
+        raise HTTPException(status_code=404, detail="Provider snapshot artifact path is missing.")
+    path = Path(value).resolve(strict=False)
+    allowed_roots = (
+        settings.provider_snapshot_dir.resolve(strict=False),
+        settings.provider_cache_dir.resolve(strict=False),
+    )
+    if not any(path.is_relative_to(root) for root in allowed_roots):
+        raise HTTPException(
+            status_code=403, detail="Provider snapshot artifact path is outside allowed roots."
+        )
+    if not path.is_file():
+        raise HTTPException(status_code=404, detail="Provider snapshot artifact is not available.")
+    return path
+
+
+def _persist_imported_provider_snapshot(
+    *,
+    repo: WorkbenchRepository,
+    settings: WorkbenchSettings,
+    filename: str,
+    content: bytes,
+) -> Any:
+    try:
+        payload = json.loads(content.decode("utf-8"))
+        _validate_provider_snapshot_v1_payload(payload)
+        report = ProviderSnapshotReport.model_validate(payload)
+    except (UnicodeDecodeError, json.JSONDecodeError, ValidationError) as exc:
+        raise HTTPException(
+            status_code=422, detail=f"Invalid provider snapshot JSON: {exc}"
+        ) from exc
+
+    snapshot_id = report.metadata.snapshot_id or uuid4().hex
+    output_path = settings.provider_snapshot_dir / f"provider-snapshot-{snapshot_id}.json"
+    report = report.model_copy(
+        update={
+            "metadata": report.metadata.model_copy(
+                update={
+                    "snapshot_id": snapshot_id,
+                    "output_path": str(output_path),
+                }
+            )
+        }
+    )
+    document = generate_provider_snapshot_json(report).encode("utf-8")
+    content_hash = hashlib.sha256(document).hexdigest()
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_bytes(document)
+    metadata_json = report.metadata.model_dump()
+    metadata_json.update(
+        {
+            "source_path": str(output_path),
+            "imported_filename": filename,
+            "item_count": len(report.items),
+            "warnings": report.warnings,
+            "missing": False,
+            "generated_by": "provider-snapshot-import",
+        }
+    )
+    return repo.get_or_create_provider_snapshot(
+        content_hash=content_hash,
+        nvd_last_sync=_latest_nvd_sync(item.nvd for item in report.items if item.nvd is not None),
+        epss_date=_latest_epss_date(item.epss for item in report.items if item.epss is not None),
+        kev_catalog_version=_latest_kev_date(
+            item.kev for item in report.items if item.kev is not None
+        ),
+        metadata_json=metadata_json,
+    )
+
+
+def _validate_provider_snapshot_v1_payload(payload: Any) -> None:
+    if not isinstance(payload, dict):
+        raise HTTPException(status_code=422, detail="Provider snapshot JSON must be an object.")
+    metadata = payload.get("metadata")
+    if not isinstance(metadata, dict):
+        raise HTTPException(status_code=422, detail="Provider snapshot JSON requires metadata.")
+    if metadata.get("snapshot_format") != "provider-snapshot.v1.json":
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                "Provider snapshot import requires "
+                "metadata.snapshot_format=provider-snapshot.v1.json."
+            ),
+        )
+    if not isinstance(metadata.get("source_metadata"), dict):
+        raise HTTPException(
+            status_code=422,
+            detail="Provider snapshot import requires metadata.source_metadata.",
+        )
 
 
 def _provider_update_job_payload(job: Any) -> dict[str, Any]:

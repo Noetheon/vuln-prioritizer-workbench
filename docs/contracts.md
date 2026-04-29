@@ -241,6 +241,9 @@ Current provider freshness contract:
 - `--fail-on-stale-provider-data` returns exit code `1` after writing requested output when provider data is stale
 - live lookups use the current run timestamp for freshness
 - locked provider-snapshot replay uses the snapshot `generated_at` timestamp for selected snapshot sources
+- analysis-style metadata includes provider snapshot identity when available:
+  `provider_snapshot_id`, `provider_snapshot_hash`, `provider_snapshot_file`, and
+  `provider_snapshot_sources`
 - analysis-style metadata may include `provider_freshness`, `max_provider_age_hours`, `provider_stale`, and `provider_stale_sources`
 
 ### Provider enrichment service
@@ -249,6 +252,9 @@ Current provider service contract:
 
 - built-in NVD, EPSS, and KEV providers can be adapted to the shared
   `ProviderEnrichmentClient.enrich(cve_ids, **kwargs)` interface
+- provider snapshots use the additive `provider-snapshot.v1.json` format marker
+  in `metadata.snapshot_format`, plus `snapshot_id`, `source_hashes`, and
+  per-source `source_metadata`
 - NVD uses the CVE API 2.0 per requested CVE, sends an optional API key only
   through the configured request header, redacts configured key values from
   warnings, and degrades to cache or empty records instead of aborting analysis
@@ -265,6 +271,11 @@ Current provider service contract:
   `data_quality_flags`
 - provider snapshot metadata includes `source_hashes`, a map from selected
   provider source to the local cache namespace SHA-256 checksum or `null`
+- Workbench exposes provider snapshot list/detail/download/import API routes;
+  import accepts only explicit `provider-snapshot.v1.json` snapshots containing
+  `metadata.snapshot_format` and `metadata.source_metadata`, and evidence
+  bundles include the resolved provider snapshot JSON as
+  `provider/provider-snapshot.json` when a replay snapshot is part of the run
 - analysis-style metadata may include `provider_data_quality_flags`, keyed by
   source, when recoverable provider problems such as missing EPSS records,
   stale cache fallback, or provider warnings were observed
