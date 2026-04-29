@@ -434,6 +434,16 @@ def generate_sarif_report(
                     "priority_state": finding.priority_state or finding.priority_label,
                     "operational_score": finding.operational_score,
                     "operational_score_reasons": finding.operational_score_reasons,
+                    "explanation_reason_codes": (
+                        [reason.code for reason in finding.explanation.reasons]
+                        if finding.explanation
+                        else []
+                    ),
+                    "explanation_notes": (
+                        [note.model_dump() for note in finding.explanation.notes]
+                        if finding.explanation
+                        else []
+                    ),
                     "cvss": finding.cvss_base_score,
                     "epss": finding.epss,
                     "in_kev": finding.in_kev,

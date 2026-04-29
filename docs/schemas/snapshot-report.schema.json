@@ -1117,6 +1117,14 @@
         "operational_score_reasons": {
           "$ref": "#/$defs/stringArray"
         },
+        "explanation": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": true,
+          "description": "Structured why-this-priority explanation with stable reason codes, data sources, thresholds, notes, and human-readable text."
+        },
         "rationale": {
           "type": "string"
         },

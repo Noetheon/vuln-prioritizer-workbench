@@ -392,6 +392,12 @@ def explain_finding(
     finding = WorkbenchRepository(session).get_finding(finding_id)
     if finding is None:
         raise HTTPException(status_code=404, detail="Finding not found.")
+    explanation_json = (
+        finding.explanation_json if isinstance(finding.explanation_json, dict) else {}
+    )
+    decision_explanation = explanation_json.get("explanation")
+    if not isinstance(decision_explanation, dict):
+        decision_explanation = None
     return {
         "finding_id": finding.id,
         "cve_id": finding.cve_id,
@@ -399,19 +405,14 @@ def explain_finding(
         "rationale": finding.rationale,
         "recommended_action": finding.recommended_action,
         "data_quality_flags": (
-            finding.explanation_json.get("data_quality_flags", [])
-            if isinstance(finding.explanation_json, dict)
-            else []
+            explanation_json.get("data_quality_flags", []) if explanation_json else []
         ),
         "data_quality_confidence": (
-            finding.explanation_json.get("data_quality_confidence", "high")
-            if isinstance(finding.explanation_json, dict)
-            else "high"
+            explanation_json.get("data_quality_confidence", "high") if explanation_json else "high"
         ),
         "provider_evidence": (
-            finding.explanation_json.get("provider_evidence")
-            if isinstance(finding.explanation_json, dict)
-            else None
+            explanation_json.get("provider_evidence") if explanation_json else None
         ),
+        "decision_explanation": decision_explanation,
         "explanation": finding.explanation_json,
     }

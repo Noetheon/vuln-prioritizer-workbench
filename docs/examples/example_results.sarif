@@ -44,6 +44,23 @@
             "defensive_context_ids": [],
             "defensive_context_sources": [],
             "epss": 0.94393,
+            "explanation_notes": [
+              {
+                "code": "data_quality.snapshot_locked",
+                "message": "Provider snapshot replay is locked; live provider lookups are disabled.",
+                "severity": "info",
+                "source": "provider_snapshot"
+              }
+            ],
+            "explanation_reason_codes": [
+              "priority.kev.known_exploited",
+              "priority.critical.epss_cvss",
+              "priority.high.epss",
+              "priority.high.cvss",
+              "priority.medium.cvss",
+              "priority.medium.epss",
+              "operational.score"
+            ],
             "in_kev": true,
             "operational_score": 98,
             "operational_score_reasons": [
@@ -105,6 +122,22 @@
             "defensive_context_ids": [],
             "defensive_context_sources": [],
             "epss": 0.84588,
+            "explanation_notes": [
+              {
+                "code": "data_quality.snapshot_locked",
+                "message": "Provider snapshot replay is locked; live provider lookups are disabled.",
+                "severity": "info",
+                "source": "provider_snapshot"
+              }
+            ],
+            "explanation_reason_codes": [
+              "priority.critical.epss_cvss",
+              "priority.high.epss",
+              "priority.high.cvss",
+              "priority.medium.cvss",
+              "priority.medium.epss",
+              "operational.score"
+            ],
             "in_kev": false,
             "operational_score": 100,
             "operational_score_reasons": [

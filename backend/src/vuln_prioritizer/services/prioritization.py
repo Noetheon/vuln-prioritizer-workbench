@@ -6,6 +6,7 @@ from collections import Counter
 from datetime import UTC, date, datetime
 from typing import Literal
 
+from vuln_prioritizer.explanations import build_priority_explanation
 from vuln_prioritizer.models import (
     AttackData,
     ComparisonFinding,
@@ -187,12 +188,15 @@ class PrioritizationService:
 
     def _with_operational_score(self, finding: PrioritizedFinding) -> PrioritizedFinding:
         score, reasons = build_operational_score(finding, self.policy)
-        return finding.model_copy(
+        scored = finding.model_copy(
             update={
                 "priority_state": determine_priority_state(finding).value,
                 "operational_score": score,
                 "operational_score_reasons": reasons,
             }
+        )
+        return scored.model_copy(
+            update={"explanation": build_priority_explanation(scored, self.policy)}
         )
 
     def build_comparison(

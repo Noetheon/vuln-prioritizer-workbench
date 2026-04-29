@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import pytest
 
+from vuln_prioritizer.explanations import build_priority_explanation
 from vuln_prioritizer.models import (
     AttackData,
     EpssData,
@@ -12,6 +13,7 @@ from vuln_prioritizer.models import (
     PrioritizedFinding,
     PriorityLabel,
     PriorityPolicy,
+    ProviderDataQualityFlag,
     ProviderEvidence,
 )
 from vuln_prioritizer.scoring import (
@@ -195,6 +197,63 @@ def test_operational_score_is_explainable_and_clamped() -> None:
     assert "CISA KEV-listed: +15" in reasons
     assert "internet-facing asset context: +8" in reasons
     assert "clamped to 100" in reasons
+
+
+def test_priority_explanation_has_reason_codes_sources_and_thresholds() -> None:
+    finding = _finding(
+        cve_id="CVE-2024-0001",
+        priority_label="Critical",
+        priority_rank=1,
+        cvss=9.8,
+        epss=0.91,
+        in_kev=True,
+    ).model_copy(
+        update={
+            "priority_state": "Critical",
+            "priority_drivers": ["kev", "critical-epss-cvss", "high-epss", "high-cvss"],
+            "operational_score": 100,
+            "operational_score_reasons": ["base Critical priority: +70", "clamped to 100"],
+            "data_quality_flags": [
+                ProviderDataQualityFlag(
+                    source="nvd",
+                    code="snapshot_locked",
+                    message="Provider snapshot replay is locked.",
+                    severity="info",
+                    cve_id="CVE-2024-0001",
+                )
+            ],
+        }
+    )
+
+    explanation = build_priority_explanation(finding, PriorityPolicy())
+
+    assert explanation.cve_id == "CVE-2024-0001"
+    assert explanation.priority_state == "Critical"
+    assert explanation.reasons[0].code == "priority.kev.known_exploited"
+    assert explanation.reasons[0].source == "CISA KEV"
+    assert explanation.reasons[1].threshold == "EPSS >= 0.70 and CVSS >= 7.0"
+    assert {note.code for note in explanation.notes} == {"data_quality.snapshot_locked"}
+    assert "Recommended action" in explanation.human_readable
+
+
+def test_priority_explanation_notes_missing_cvss_and_epss_data() -> None:
+    finding = _finding(
+        cve_id="CVE-2024-0002",
+        priority_label="Low",
+        priority_rank=4,
+        cvss=None,
+        epss=None,
+        in_kev=False,
+    ).model_copy(update={"priority_state": "Low", "priority_drivers": ["default-low"]})
+
+    explanation = build_priority_explanation(finding, PriorityPolicy())
+
+    assert [reason.code for reason in explanation.reasons] == ["priority.low.default"]
+    assert {note.code for note in explanation.notes} == {
+        "missing.nvd_cvss",
+        "missing.first_epss",
+    }
+    assert "FIRST EPSS data is unavailable" in explanation.human_readable
 
 
 def test_priority_state_maps_suppressed_fixed_and_accepted_findings() -> None:
@@ -435,6 +494,8 @@ def test_operational_sort_adds_work_queue_rank_without_changing_priority() -> No
     assert "KEV due date 2026-04-01" in ordered[0].context_rank_reasons
     assert "waiver review due" in ordered[1].context_rank_reasons
     assert "active waiver lowers work-queue urgency" in ordered[2].context_rank_reasons
+    assert ordered[0].explanation is not None
+    assert ordered[0].explanation.reasons
 
 
 def test_build_comparison_marks_kev_upgrade() -> None:
