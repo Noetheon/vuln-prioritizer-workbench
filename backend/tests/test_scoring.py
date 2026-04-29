@@ -605,6 +605,12 @@ def test_operational_sort_adds_work_queue_rank_without_changing_priority() -> No
     assert "active waiver lowers work-queue urgency" in ordered[2].context_rank_reasons
     assert ordered[0].explanation is not None
     assert ordered[0].explanation.reasons
+    assert ordered[0].decision_guidance is not None
+    assert ordered[0].decision_guidance.sla.label == "High"
+    assert "Top finding #1" in ordered[0].decision_guidance.decision_statement
+    assert ordered[2].decision_guidance is not None
+    assert ordered[2].decision_guidance.template == "waiver"
+    assert "Accepted risk remains visible" in ordered[2].decision_guidance.visibility
 
 
 def test_build_comparison_marks_kev_upgrade() -> None:

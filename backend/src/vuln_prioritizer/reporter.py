@@ -137,6 +137,7 @@ def render_findings_table(findings: list[PrioritizedFinding]) -> Table:
     table.add_column("Attack Relevance")
     table.add_column("Source")
     table.add_column("Description", overflow="fold")
+    table.add_column("SLA")
     table.add_column("Recommended Action", overflow="fold")
 
     for finding in findings:
@@ -160,10 +161,17 @@ def render_findings_table(findings: list[PrioritizedFinding]) -> Table:
             finding.attack_relevance,
             ", ".join(finding.provenance.source_formats) or "N.A.",
             truncate_text(finding.description or "N.A.", 90),
+            _finding_sla_label(finding),
             truncate_text(finding.recommended_action, 120),
         )
 
     return table
+
+
+def _finding_sla_label(finding: PrioritizedFinding) -> str:
+    if finding.decision_guidance is None:
+        return "N.A."
+    return finding.decision_guidance.sla.label
 
 
 def render_compare_table(comparisons: list[ComparisonFinding]) -> Table:
@@ -457,6 +465,20 @@ def render_explain_view(
     action_panel = Panel(
         normalize_whitespace(finding.recommended_action), title="Recommended Action"
     )
+    if finding.decision_guidance:
+        decision_guidance_text = "\n".join(
+            [
+                f"Template: {finding.decision_guidance.template_label}",
+                f"SLA: {finding.decision_guidance.sla.label} - {finding.decision_guidance.sla.guidance}",
+                "Decision: " + normalize_whitespace(finding.decision_guidance.decision_statement),
+                "Business impact: "
+                + normalize_whitespace(finding.decision_guidance.business_impact.text),
+                "Visibility: " + normalize_whitespace(finding.decision_guidance.visibility),
+            ]
+        )
+    else:
+        decision_guidance_text = "N.A."
+    decision_panel = Panel(decision_guidance_text, title="Decision Guidance")
     context_panel = Panel(
         normalize_whitespace(finding.context_recommendation or "No context recommendation."),
         title="Context Recommendation",
@@ -523,6 +545,7 @@ def render_explain_view(
         attack_panel,
         comparison_panel,
         data_quality_panel,
+        decision_panel,
         action_panel,
         context_panel,
         applicability_table,

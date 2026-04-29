@@ -259,6 +259,8 @@ def test_workbench_import_findings_reports_and_evidence(tmp_path: Path) -> None:
         item["decision_explanation"]["recommended_action"] == item["recommended_action"]
         for item in items
     )
+    assert all(item["decision_guidance"]["decision_statement"] for item in items)
+    assert all(item["decision_guidance"]["sla"]["label"] for item in items)
 
     baseline_comparison = client.get(
         f"/api/projects/{project['id']}/baseline-comparison",
@@ -1152,6 +1154,9 @@ def test_workbench_import_accepts_context_vex_and_waiver_uploads(tmp_path: Path)
     assert by_cve["CVE-2024-3094"]["waiver_owner"] == "risk-review"
     assert by_cve["CVE-2024-3094"]["owner"] == "platform-team"
     assert by_cve["CVE-2024-3094"]["service"] == "customer-login"
+    assert by_cve["CVE-2024-3094"]["decision_guidance"]["template"] == "waiver"
+    assert by_cve["CVE-2024-3094"]["decision_guidance"]["sla"]["label"] == "Governance Review"
+    assert by_cve["CVE-2023-34362"]["decision_guidance"]["sla"]["label"] == "Evidence Review"
 
     governance = client.get(f"/api/projects/{project['id']}/governance/rollups")
     assert governance.status_code == 200

@@ -165,6 +165,10 @@ def generate_findings_csv(report_payload: dict[str, Any]) -> str:
         "attack_mapped",
         "attack_techniques",
         "defensive_context_sources",
+        "decision_template",
+        "decision_sla",
+        "decision_statement",
+        "business_impact",
         "recommended_action",
     ]
     writer = csv.DictWriter(output, fieldnames=fieldnames, lineterminator="\n")
@@ -177,6 +181,7 @@ def generate_findings_csv(report_payload: dict[str, Any]) -> str:
         defensive_contexts = [
             item for item in finding.get("defensive_contexts", []) if isinstance(item, dict)
         ]
+        decision_guidance = _decision_guidance(finding)
         writer.writerow(
             {
                 "cve_id": _csv_safe_cell(finding.get("cve_id")),
@@ -218,6 +223,10 @@ def generate_findings_csv(report_payload: dict[str, Any]) -> str:
                         )
                     )
                 ),
+                "decision_template": _csv_safe_cell(decision_guidance.get("template_label")),
+                "decision_sla": _csv_safe_cell(_decision_sla_label(decision_guidance)),
+                "decision_statement": _csv_safe_cell(decision_guidance.get("decision_statement")),
+                "business_impact": _csv_safe_cell(_decision_business_impact(decision_guidance)),
                 "recommended_action": _csv_safe_cell(finding.get("recommended_action")),
             }
         )
@@ -251,6 +260,7 @@ def generate_workbench_sarif(report_payload: dict[str, Any]) -> str:
         defensive_contexts = [
             item for item in finding.get("defensive_contexts", []) if isinstance(item, dict)
         ]
+        decision_guidance = _decision_guidance(finding)
         results.append(
             {
                 "ruleId": f"vuln-prioritizer/{priority.lower()}",
@@ -285,6 +295,10 @@ def generate_workbench_sarif(report_payload: dict[str, Any]) -> str:
                     "waived": bool(finding.get("waived")),
                     "waiver_status": finding.get("waiver_status"),
                     "status": _finding_status_label(finding),
+                    "decision_template": decision_guidance.get("template"),
+                    "decision_sla": decision_guidance.get("sla"),
+                    "decision_statement": decision_guidance.get("decision_statement"),
+                    "business_impact": decision_guidance.get("business_impact"),
                 },
                 "partialFingerprints": {
                     "vuln-prioritizer-workbench/v1": _workbench_sarif_fingerprint(
@@ -466,6 +480,32 @@ def _data_quality_flag_codes(finding: dict[str, Any]) -> list[str]:
         if code and str(code) not in codes:
             codes.append(str(code))
     return codes
+
+
+def _decision_guidance(finding: dict[str, Any]) -> dict[str, Any]:
+    guidance = finding.get("decision_guidance")
+    return guidance if isinstance(guidance, dict) else {}
+
+
+def _decision_sla_label(decision_guidance: dict[str, Any]) -> str:
+    sla = decision_guidance.get("sla")
+    if not isinstance(sla, dict):
+        return ""
+    label = str(sla.get("label") or "")
+    target_hours = sla.get("target_hours")
+    target_days = sla.get("target_days")
+    if isinstance(target_hours, int) and target_hours <= 48:
+        return f"{label} ({target_hours}h)"
+    if isinstance(target_days, int):
+        return f"{label} ({target_days}d)"
+    return label
+
+
+def _decision_business_impact(decision_guidance: dict[str, Any]) -> str:
+    business_impact = decision_guidance.get("business_impact")
+    if not isinstance(business_impact, dict):
+        return ""
+    return str(business_impact.get("text") or "")
 
 
 def _vex_statuses_label(provenance: dict[str, Any]) -> str:

@@ -58,7 +58,8 @@ def test_markdown_report_contains_headers_summary_metadata_and_na(tmp_path: Path
         "| CVE ID | Description | CVSS | Severity | CVSS Version | EPSS | EPSS Percentile | "
         "KEV | ATT&CK | Attack Relevance | Sources | Asset Criticality | VEX | Waiver | "
         "Priority | Priority State | Operational Score | Data Quality | Confidence | "
-        "Operational Rank | Context Rank Reasons | Rationale | Recommended Action | "
+        "Operational Rank | Context Rank Reasons | Rationale | Decision Template | SLA | "
+        "Decision Statement | Business Impact | Recommended Action | "
         "Context Recommendation |"
     ) in report
     assert "N.A." in report

@@ -430,6 +430,9 @@ def explain_finding(
         "priority": finding.priority,
         "rationale": finding.rationale,
         "recommended_action": finding.recommended_action,
+        "decision_guidance": (
+            explanation_json.get("decision_guidance") if explanation_json else None
+        ),
         "data_quality_flags": (
             explanation_json.get("data_quality_flags", []) if explanation_json else []
         ),

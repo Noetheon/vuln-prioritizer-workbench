@@ -218,6 +218,13 @@ Current remediation contract:
 - `remediation` is additive structured guidance, not a hidden scoring input
 - `recommended_action` is rendered from `remediation` plus the current priority label
 - remediation evidence is derived from occurrence-level package/component signals, not only the aggregated `fix_versions` union
+- `decision_guidance` is an additive structured recommendation object with a
+  template (`patch`, `mitigate`, `monitor`, `review`, or `waiver`), SLA target,
+  business-impact block, management-readable decision statement, visibility
+  rule, and `wording_policy = defensive_no_exploit_steps`
+- Accepted, suppressed, and fixed findings remain visible as governance states;
+  the generator changes their recommendation template and SLA, but does not hide
+  them as completed remediation
 
 ### Provenance
 

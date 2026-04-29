@@ -731,7 +731,7 @@ def _focus_cards(findings: list[dict[str, Any]]) -> list[dict[str, Any]]:
     for label, items in sorted(grouped.items(), key=lambda entry: (-len(entry[1]), entry[0]))[:3]:
         actions = []
         for finding in sorted(items, key=_finding_sort_key)[:3]:
-            action = _text(finding.get("recommended_action"), default="Review finding.")
+            action = _finding_decision_statement(finding)
             actions.append(
                 f"{_text(finding.get('cve_id'), default='CVE')}: {_truncate(action, 118)}"
             )
@@ -1268,7 +1268,9 @@ def _finding_row(finding: dict[str, Any]) -> dict[str, Any]:
         "owner": _finding_owner(finding),
         "status": _status_label(finding),
         "baseline_delta": _baseline_delta_label(finding),
-        "action": _text(finding.get("recommended_action"), default="Review finding."),
+        "decision_template": _finding_decision_template(finding),
+        "sla": _finding_sla_label(finding),
+        "action": _finding_decision_statement(finding),
         "rationale": _text(finding.get("rationale"), default="No rationale supplied."),
     }
 
@@ -1296,7 +1298,9 @@ def _finding_dossier_model(finding: dict[str, Any]) -> dict[str, Any]:
         "status": _status_label(finding),
         "vex": _vex_status(finding),
         "baseline_delta": _baseline_delta_label(finding),
-        "action": _text(finding.get("recommended_action"), default="Review finding."),
+        "decision_template": _finding_decision_template(finding),
+        "sla": _finding_sla_label(finding),
+        "action": _finding_decision_statement(finding),
         "rationale": _text(finding.get("rationale"), default="No rationale supplied."),
         "context_recommendation": _text(
             finding.get("context_recommendation"),
@@ -1320,6 +1324,36 @@ def _finding_dossier_model(finding: dict[str, Any]) -> dict[str, Any]:
             },
         ],
     }
+
+
+def _finding_decision_guidance(finding: dict[str, Any]) -> dict[str, Any]:
+    return _dict_value(finding.get("decision_guidance"))
+
+
+def _finding_decision_template(finding: dict[str, Any]) -> str:
+    guidance = _finding_decision_guidance(finding)
+    return _text(guidance.get("template_label"), default="not supplied")
+
+
+def _finding_sla_label(finding: dict[str, Any]) -> str:
+    guidance = _finding_decision_guidance(finding)
+    sla = _dict_value(guidance.get("sla"))
+    label = _text(sla.get("label"), default="not supplied")
+    target_hours = _int_value(sla.get("target_hours"))
+    target_days = _int_value(sla.get("target_days"))
+    if 0 < target_hours <= 48:
+        return f"{label} ({target_hours}h)"
+    if target_days:
+        return f"{label} ({target_days}d)"
+    return label
+
+
+def _finding_decision_statement(finding: dict[str, Any]) -> str:
+    guidance = _finding_decision_guidance(finding)
+    return _text(
+        guidance.get("decision_statement"),
+        default=_text(finding.get("recommended_action"), default="Review finding."),
+    )
 
 
 def _finding_sort_key(finding: dict[str, Any]) -> tuple[int, int, int, int, float, float, str]:

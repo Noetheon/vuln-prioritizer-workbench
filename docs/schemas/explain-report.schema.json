@@ -909,6 +909,17 @@
         "remediation": {
           "$ref": "#/$defs/remediationPlan"
         },
+        "decision_guidance": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/findingDecisionGuidance"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Structured recommendation, SLA, business-impact, and management decision statement generated from the finding evidence."
+        },
         "recommended_action": {
           "type": "string"
         },
@@ -1426,6 +1437,87 @@
         },
         "suppressed_occurrence_count": {
           "type": "integer"
+        }
+      }
+    },
+    "slaTarget": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["priority", "label", "guidance", "source"],
+      "properties": {
+        "priority": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "target_hours": {
+          "type": ["integer", "null"]
+        },
+        "target_days": {
+          "type": ["integer", "null"]
+        },
+        "guidance": {
+          "type": "string"
+        },
+        "source": {
+          "type": "string"
+        }
+      }
+    },
+    "businessImpactBlock": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["level", "text", "drivers"],
+      "properties": {
+        "level": {
+          "enum": ["critical", "high", "medium", "low", "governance"]
+        },
+        "text": {
+          "type": "string"
+        },
+        "drivers": {
+          "$ref": "#/$defs/stringArray"
+        }
+      }
+    },
+    "findingDecisionGuidance": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "template",
+        "template_label",
+        "sla",
+        "business_impact",
+        "decision_statement",
+        "visibility",
+        "wording_policy",
+        "reason_codes"
+      ],
+      "properties": {
+        "template": {
+          "enum": ["patch", "mitigate", "monitor", "review", "waiver"]
+        },
+        "template_label": {
+          "type": "string"
+        },
+        "sla": {
+          "$ref": "#/$defs/slaTarget"
+        },
+        "business_impact": {
+          "$ref": "#/$defs/businessImpactBlock"
+        },
+        "decision_statement": {
+          "type": "string"
+        },
+        "visibility": {
+          "type": "string"
+        },
+        "wording_policy": {
+          "const": "defensive_no_exploit_steps"
+        },
+        "reason_codes": {
+          "$ref": "#/$defs/stringArray"
         }
       }
     }

@@ -110,6 +110,7 @@ def _finding_payload(finding: Any, *, include_detail: bool = False) -> dict[str,
         "waiver_ticket_url": finding.waiver_ticket_url,
         "rationale": finding.rationale,
         "recommended_action": finding.recommended_action,
+        "decision_guidance": _finding_decision_guidance(finding),
         "decision_explanation": _finding_decision_explanation(finding),
         "data_quality_flags": _finding_data_quality_flags(finding),
         "data_quality_confidence": _finding_data_quality_confidence(finding),
@@ -152,6 +153,12 @@ def _finding_decision_explanation(finding: Any) -> dict[str, Any] | None:
     raw_finding = finding.finding_json if isinstance(finding.finding_json, dict) else {}
     explanation = raw_finding.get("explanation")
     return explanation if isinstance(explanation, dict) else None
+
+
+def _finding_decision_guidance(finding: Any) -> dict[str, Any] | None:
+    raw_finding = finding.finding_json if isinstance(finding.finding_json, dict) else {}
+    guidance = raw_finding.get("decision_guidance")
+    return guidance if isinstance(guidance, dict) else None
 
 
 def _finding_data_quality_confidence(finding: Any) -> str:

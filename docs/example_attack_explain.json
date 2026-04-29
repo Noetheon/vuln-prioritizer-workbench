@@ -571,6 +571,41 @@
         "source": "provider_snapshot"
       }
     ],
+    "decision_guidance": {
+      "business_impact": {
+        "drivers": [
+          "CISA KEV known-exploited listing",
+          "EPSS 0.943",
+          "CVSS 9.8",
+          "unknown asset context"
+        ],
+        "level": "critical",
+        "text": "Executive attention is warranted because the finding combines urgent security signals with business routing context: CISA KEV known-exploited listing; EPSS 0.943; CVSS 9.8; unknown asset context."
+      },
+      "decision_statement": "Top finding #1: Mitigate decision: mitigate CVE-2023-34362 with approved compensating controls while the owner confirms patch availability and affected scope. SLA: Emergency - Validate scope and begin remediation or approved mitigation within 24 hours. Business impact: Executive attention is warranted because the finding combines urgent security signals with business routing context: CISA KEV known-exploited listing; EPSS 0.943; CVSS 9.8; unknown asset context.",
+      "reason_codes": [
+        "template.mitigate",
+        "sla.critical.emergency",
+        "impact.critical",
+        "template.mitigate.urgent_without_fix_evidence",
+        "impact.cisa_kev_known_exploited_listing",
+        "impact.epss_0_943",
+        "impact.cvss_9_8",
+        "impact.unknown_asset_context"
+      ],
+      "sla": {
+        "guidance": "Validate scope and begin remediation or approved mitigation within 24 hours.",
+        "label": "Emergency",
+        "priority": "Critical",
+        "source": "default-priority-sla",
+        "target_days": 1,
+        "target_hours": 24
+      },
+      "template": "mitigate",
+      "template_label": "Mitigate",
+      "visibility": "Open remediation work remains visible until validation evidence supports closure.",
+      "wording_policy": "defensive_no_exploit_steps"
+    },
     "defensive_contexts": [],
     "description": "In Progress MOVEit Transfer before 2021.0.6 (13.0.6), 2021.1.4 (13.1.4), 2022.0.4 (14.0.4), 2022.1.5 (14.1.5), and 2023.0.1 (15.0.1), a SQL injection vulnerability has been found in the MOVEit Transfer web application that could allow an unauthenticated attacker to gain access to MOVEit Transfer's database. Depending on the database engine being used (MySQL, Microsoft SQL Server, or Azure SQL), an attacker may be able to infer information about the structure and contents of the database, and execute SQL statements that alter or delete database elements. NOTE: this is exploited in the wild in May and June 2023; exploitation of unpatched systems can occur via HTTP or HTTPS. All versions (e.g., 2020.0 and 2019x) before the five explicitly mentioned versions are affected, including older unsupported versions.",
     "epss": 0.94254,

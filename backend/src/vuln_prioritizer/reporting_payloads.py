@@ -178,8 +178,10 @@ def generate_summary_markdown(
                 )
                 + ": "
                 + normalize_whitespace(str(finding.get("rationale", "N.A.")))
-                + " Next action: "
-                + normalize_whitespace(str(finding.get("recommended_action", "N.A.")))
+                + " Decision: "
+                + normalize_whitespace(_finding_decision_statement(finding))
+                + " SLA: "
+                + normalize_whitespace(_finding_sla_label(finding))
             )
     else:
         lines.append("- No findings matched the current filters.")
@@ -219,6 +221,31 @@ def _baseline_comparison_summary_lines(report_payload: dict[str, Any]) -> list[s
                 + normalize_whitespace(str(item.get("reason", "N.A.")))
             )
     return lines
+
+
+def _finding_decision_statement(finding: dict[str, Any]) -> str:
+    guidance = finding.get("decision_guidance")
+    if isinstance(guidance, dict):
+        statement = guidance.get("decision_statement")
+        if statement:
+            return str(statement)
+    return str(finding.get("recommended_action", "N.A."))
+
+
+def _finding_sla_label(finding: dict[str, Any]) -> str:
+    guidance = finding.get("decision_guidance")
+    if isinstance(guidance, dict):
+        sla = guidance.get("sla")
+        if isinstance(sla, dict):
+            label = str(sla.get("label") or "N.A.")
+            target_days = sla.get("target_days")
+            target_hours = sla.get("target_hours")
+            if isinstance(target_hours, int) and target_hours <= 48:
+                return f"{label} ({target_hours}h)"
+            if isinstance(target_days, int):
+                return f"{label} ({target_days}d)"
+            return label
+    return "N.A."
 
 
 def _governance_summary_lines(metadata: dict[str, Any], findings: list[Any]) -> list[str]:
@@ -514,6 +541,26 @@ def generate_sarif_report(
                     "under_investigation": finding.under_investigation,
                     "remediation_strategy": finding.remediation.strategy,
                     "remediation_ecosystem": finding.remediation.ecosystem,
+                    "decision_template": (
+                        finding.decision_guidance.template
+                        if finding.decision_guidance is not None
+                        else None
+                    ),
+                    "decision_sla": (
+                        finding.decision_guidance.sla.model_dump()
+                        if finding.decision_guidance is not None
+                        else None
+                    ),
+                    "decision_statement": (
+                        finding.decision_guidance.decision_statement
+                        if finding.decision_guidance is not None
+                        else None
+                    ),
+                    "business_impact": (
+                        finding.decision_guidance.business_impact.model_dump()
+                        if finding.decision_guidance is not None
+                        else None
+                    ),
                 },
                 "partialFingerprints": {
                     "vuln-prioritizer/v1": _sarif_fingerprint(finding, artifact_uri),
