@@ -115,6 +115,21 @@ def test_provider_snapshot_v1_example_matches_schema_and_model() -> None:
     assert snapshot.metadata.source_metadata["nvd"]["source"] == "NVD CVE API 2.0"
 
 
+def test_demo_provider_snapshot_matches_schema_and_model() -> None:
+    payload = json.loads((DATA_ROOT / "demo_provider_snapshot.json").read_text(encoding="utf-8"))
+
+    jsonschema.validate(payload, _load_schema("provider-snapshot-report.schema.json"))
+    snapshot = ProviderSnapshotReport.model_validate(payload)
+
+    assert snapshot.metadata.snapshot_format == "provider-snapshot.v1.json"
+    assert snapshot.metadata.snapshot_id == "online-shop-demo-provider-snapshot-2026-04-21"
+    assert snapshot.metadata.cache_only is True
+    assert snapshot.metadata.source_metadata["nvd"]["record_count"] == 7
+    assert snapshot.metadata.source_metadata["epss"]["record_count"] == 7
+    assert snapshot.metadata.source_metadata["kev"]["record_count"] == 6
+    assert len(snapshot.items) == 7
+
+
 def _install_fake_data_update_providers(monkeypatch: Any) -> None:
     def fake_nvd_fetch_many(
         self: NvdProvider,

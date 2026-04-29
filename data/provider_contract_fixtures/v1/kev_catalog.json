@@ -1,0 +1,20 @@
+{
+  "catalogVersion": "2026.04.21",
+  "count": 1,
+  "dateReleased": "2026-04-21T00:00:00Z",
+  "title": "CISA Known Exploited Vulnerabilities Catalog subset fixture",
+  "vulnerabilities": [
+    {
+      "cveID": "CVE-2026-2001",
+      "dateAdded": "2026-04-21",
+      "dueDate": "2026-05-12",
+      "knownRansomwareCampaignUse": "Unknown",
+      "notes": "Synthetic VPW provider-contract fixture.",
+      "product": "Example Product",
+      "requiredAction": "Apply updates per vendor instructions.",
+      "shortDescription": "Example Product command injection vulnerability.",
+      "vendorProject": "Example Vendor",
+      "vulnerabilityName": "Example Product command injection vulnerability"
+    }
+  ]
+}

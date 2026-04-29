@@ -289,8 +289,10 @@ Current provider service contract:
   to Low without visible evidence
 - cache contract metadata includes namespace, raw key template, TTL seconds,
   and whether expired cache may be used on provider failure
-- required tests for this contract use fake providers or monkeypatching, not
-  live provider APIs
+- required tests for this contract use versioned fixtures under
+  `data/provider_contract_fixtures/v1`, fake providers, or monkeypatching, not
+  live provider APIs; live provider smoke tests are marked `live_network` and
+  skipped unless explicitly enabled
 
 ### Defensive context semantics
 

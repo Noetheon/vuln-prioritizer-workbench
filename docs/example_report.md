@@ -10,7 +10,8 @@
 - Output path: `docs/example_report.md`
 - Provider snapshot file: `data/demo_provider_snapshot.json`
 - Provider snapshot mode: `locked`
-- Provider snapshot hash: `a110e4c372a5ec750e0b766e23f19884596f6ac82185b8fd0eefe8384be71c5b`
+- Provider snapshot ID: `online-shop-demo-provider-snapshot-2026-04-21`
+- Provider snapshot hash: `d05f5901b8ea1434b59cb4d079313c16114663291e3133258375e77e87ee1d8f`
 - Provider snapshot sources: `nvd, epss, kev`
 - Provider snapshot generated at: `2026-04-21T12:00:00+00:00`
 - NVD freshness: `2026-04-21T12:00:00+00:00`

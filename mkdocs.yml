@@ -62,6 +62,7 @@ nav:
       - GitHub Summary Templates: examples/github_action_summary_templates.md
   - Historical Appendix:
       - Full Stack Template Baseline Evidence: evidence/full_stack_fastapi_template_baseline.md
+      - VPW-029 Provider Test Matrix: evidence/vpw-029-provider-testmatrix.md
       - Historical Evidence Archive: evidence.md
       - Current State Audit: evidence/current_state_audit.md
       - V0.3 Submission Checklist: evidence/final_submission_checklist.md

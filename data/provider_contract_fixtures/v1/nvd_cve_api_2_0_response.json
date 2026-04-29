@@ -1,0 +1,60 @@
+{
+  "format": "NVD_CVE",
+  "resultsPerPage": 1,
+  "startIndex": 0,
+  "timestamp": "2026-04-21T12:00:00.000",
+  "totalResults": 1,
+  "version": "2.0",
+  "vulnerabilities": [
+    {
+      "cve": {
+        "descriptions": [
+          {
+            "lang": "en",
+            "value": "Example Product allows command injection through a crafted request."
+          }
+        ],
+        "id": "CVE-2026-2001",
+        "lastModified": "2026-04-21T12:00:00.000",
+        "metrics": {
+          "cvssMetricV40": [
+            {
+              "cvssData": {
+                "baseScore": 9.3,
+                "baseSeverity": "CRITICAL",
+                "vectorString": "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N"
+              },
+              "source": "nvd@nist.gov",
+              "type": "Primary"
+            }
+          ]
+        },
+        "published": "2026-04-21T10:00:00.000",
+        "references": [
+          {
+            "source": "example.invalid",
+            "tags": [
+              "Vendor Advisory",
+              "Patch"
+            ],
+            "url": "https://example.invalid/advisory/CVE-2026-2001"
+          }
+        ],
+        "sourceIdentifier": "security@example.invalid",
+        "vulnStatus": "Analyzed",
+        "weaknesses": [
+          {
+            "description": [
+              {
+                "lang": "en",
+                "value": "CWE-78"
+              }
+            ],
+            "source": "nvd@nist.gov",
+            "type": "Primary"
+          }
+        ]
+      }
+    }
+  ]
+}

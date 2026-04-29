@@ -840,7 +840,34 @@
       "nvd",
       "epss",
       "kev"
-    ]
+    ],
+    "snapshot_format": "provider-snapshot.v1.json",
+    "snapshot_id": "online-shop-demo-provider-snapshot-2026-04-21",
+    "source_hashes": {
+      "epss": null,
+      "kev": null,
+      "nvd": null
+    },
+    "source_metadata": {
+      "epss": {
+        "cache_namespace_hash": null,
+        "cache_only": true,
+        "record_count": 7,
+        "source": "FIRST EPSS API"
+      },
+      "kev": {
+        "cache_namespace_hash": null,
+        "cache_only": true,
+        "record_count": 6,
+        "source": "CISA KEV catalog"
+      },
+      "nvd": {
+        "cache_namespace_hash": null,
+        "cache_only": true,
+        "record_count": 7,
+        "source": "NVD CVE API 2.0"
+      }
+    }
   },
   "warnings": []
 }

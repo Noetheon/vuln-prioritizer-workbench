@@ -12,6 +12,9 @@ This runbook keeps the Workbench demo reproducible without live provider calls. 
 
 ```bash
 make install
+make provider-snapshot-validate
+make provider-testmatrix
+make demo-offline-no-key-proof
 python3 -m pytest -q backend/tests/api/test_workbench_api.py backend/tests/web/test_workbench_pages.py --no-cov
 make docker-demo-smoke
 make docker-postgres-migration-smoke
@@ -50,6 +53,46 @@ If `pip-audit` is unavailable or advisory data cannot be reached, record that as
 | Docker demo smoke | `make docker-demo-smoke` output showing `/api/v1/workbench/status` returns `{"status":"ok"}` before teardown. |
 | Dependency audit | `make dependency-audit` result, or a documented exception when `pip-audit` or advisory data is unavailable. |
 | Demo evidence bundle | `make demo-evidence-bundle-check` output plus `build/v1.0-demo-evidence-bundle-verification.json` showing `ok=true`. |
+| Provider test matrix | `make provider-testmatrix` plus `docs/evidence/vpw-029-provider-testmatrix.md`. |
+| Offline/no-key proof | `make demo-offline-no-key-proof` output plus `build/vpw-029-demo-offline-no-key-proof.json` showing locked replay and provider `network_fetches=0`. |
+
+## Updating the Demo Provider Snapshot
+
+Only update `data/demo_provider_snapshot.json` as an intentional release task.
+The snapshot must remain a valid explicit `provider-snapshot.v1.json` artifact
+and must not depend on reviewer API keys or live provider availability.
+
+1. Refresh provider cache from a controlled maintainer environment:
+
+   ```bash
+   PYTHONPATH=backend/src python3 -m vuln_prioritizer.cli data update \
+     --input data/sample_cves.txt \
+     --cache-dir .cache/vuln-prioritizer \
+     --offline-kev-file data/input_fixtures/kev_catalog.json
+   ```
+
+2. Export the locked replay artifact:
+
+   ```bash
+   PYTHONPATH=backend/src python3 -m vuln_prioritizer.cli data export-provider-snapshot \
+     --input data/sample_cves.txt \
+     --output data/demo_provider_snapshot.json \
+     --cache-dir .cache/vuln-prioritizer \
+     --cache-only
+   ```
+
+3. Re-run the offline proof and generated demo artifacts:
+
+   ```bash
+   make provider-snapshot-validate
+   make demo-offline-no-key-proof
+   make demo-sync-check
+   make demo-evidence-bundle-check
+   ```
+
+4. Review the snapshot diff before committing. Expected changes are provider
+   dates, source hashes, provider records, and generated demo artifact hashes.
+   Do not commit secrets, local private paths, or customer scanner exports.
 
 ## Screenshot Evidence List
 
