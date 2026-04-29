@@ -67,6 +67,7 @@ class SortBy(StrEnum):
 class AttackSource(StrEnum):
     none = "none"
     local_csv = "local-csv"
+    local_curated = "local-curated"
     ctid_json = "ctid-json"
 
 

@@ -40,9 +40,11 @@ For XML ingest, the parser rejects `DOCTYPE` and `ENTITY` declarations before pa
 
 ### ATT&CK
 
-Two local ATT&CK modes exist:
+Three local ATT&CK modes exist:
 
 - `local-csv`: legacy compatibility mode for small hand-authored CSV mappings
+- `local-curated`: reviewed YAML/JSON curated mappings with confidence enum,
+  source, rationale, reviewer metadata, and defensive notes
 - `ctid-json`: structured CTID Mappings Explorer JSON plus local ATT&CK technique metadata
 
 The `ctid-json` workflow is the preferred current ATT&CK path.
@@ -57,6 +59,8 @@ ATT&CK rules:
 - curated local mappings require source, confidence, rationale, review status,
   and a defensive note; they must not include exploit payloads, commands, or
   step-by-step procedure guidance
+- curated local mapping confidence is one of `low`, `medium`, or `high`;
+  low-confidence entries are preserved but highlighted in the quality report
 
 ## ATT&CK Data Model
 
@@ -78,9 +82,9 @@ Compatibility projections remain available:
 
 `attack_relevance` is deterministic, local to this tool, and separate from the main priority label. It is not an official CTID field and it does not override the primary `CVSS + EPSS + KEV` priority:
 
-- `High`: at least one `exploitation_technique` or `primary_impact`, or tactics in the high-impact set
-- `Medium`: only `secondary_impact`, or mapped but incomplete metadata
-- `Low`: only `uncategorized`
+- `High`: at least one `exploitation_technique`, `primary_impact`, `exploitation`, or `impact`, or tactics in the high-impact set
+- `Medium`: only `secondary_impact` or `post_exploitation`, or mapped but incomplete metadata
+- `Low`: only `uncategorized`, `mitigation_context`, or `detection_context`
 - `Unmapped`: no CTID mapping found
 
 High-impact tactics are:
