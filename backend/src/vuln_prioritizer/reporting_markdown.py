@@ -30,6 +30,9 @@ from vuln_prioritizer.reporting_format import (
     format_score,
     normalize_whitespace,
 )
+from vuln_prioritizer.services.baseline_comparison import (
+    build_cvss_baseline_comparison_payload,
+)
 
 
 def generate_markdown_report(
@@ -65,6 +68,7 @@ def generate_markdown_report(
     lines.extend(_attack_methodology_lines(context))
     lines.extend(["", "## Summary"])
     lines.extend(_summary_lines(context))
+    lines.extend(_baseline_comparison_section(findings))
     lines.extend(["", "## ATT&CK Context Summary"])
     lines.extend(_attack_summary_lines(context.attack_summary, context.attack_enabled))
     lines.extend(["", "## Warnings"])
@@ -233,6 +237,37 @@ def generate_markdown_report(
             )
 
     return "\n".join(lines) + "\n"
+
+
+def _baseline_comparison_section(findings: list[PrioritizedFinding]) -> list[str]:
+    comparison = build_cvss_baseline_comparison_payload(
+        findings,
+        top_change_limit=5,
+        include_comparisons=False,
+    )
+    summary = comparison["summary"]
+    methodology = comparison["methodology"]
+    lines = [
+        "",
+        "## CVSS-only Baseline Comparison",
+        f"- Changed rows: {summary['changed']}",
+        f"- Up: {summary['up']}",
+        f"- Down: {summary['down']}",
+        f"- Unchanged: {summary['unchanged']}",
+        "- Method limit: " + normalize_whitespace(str(methodology["limitations"])),
+    ]
+    top_changes = comparison["top_changes"]
+    if top_changes:
+        lines.extend(["", "### Top Baseline Changes"])
+        for item in top_changes:
+            lines.append(
+                "- "
+                + f"{item['cve_id']}: {item['old_priority']} "
+                + f"(rank {item['old_rank']}) -> {item['new_priority']} "
+                + f"(rank {item['new_rank']}); "
+                + normalize_whitespace(str(item["reason"]))
+            )
+    return lines
 
 
 def generate_compare_markdown(

@@ -1,0 +1,65 @@
+{
+  "counts": {
+    "cvss_only": {
+      "Critical": 1,
+      "High": 0,
+      "Low": 0,
+      "Medium": 2
+    },
+    "enriched": {
+      "Critical": 1,
+      "High": 1,
+      "Low": 0,
+      "Medium": 1
+    }
+  },
+  "methodology": {
+    "baseline": "cvss-only",
+    "baseline_thresholds": {
+      "Critical": "CVSS >= 9.0",
+      "High": "7.0 <= CVSS < 9.0",
+      "Low": "CVSS < 4.0 or missing CVSS",
+      "Medium": "4.0 <= CVSS < 7.0"
+    },
+    "enriched": "Rule-based priority using CVSS, FIRST EPSS, CISA KEV, and supplied context such as ATT&CK, VEX, waivers, and asset metadata when present.",
+    "limitations": "This comparison is a decision-support view, not an absolute truth. It shows how the current enriched policy differs from a CVSS-only baseline and still requires asset-owner validation."
+  },
+  "project_id": "project-1",
+  "summary": {
+    "changed": 2,
+    "down": 1,
+    "total": 3,
+    "unchanged": 1,
+    "up": 1
+  },
+  "top_changes": [
+    {
+      "cve_id": "CVE-2026-0001",
+      "cvss": 5.5,
+      "delta_rank": 2,
+      "direction": "up",
+      "epss": 0.91,
+      "in_kev": true,
+      "new_priority": "Critical",
+      "new_rank": 1,
+      "old_priority": "Medium",
+      "old_rank": 3,
+      "operational_rank": 0,
+      "reason": "KEV membership raises this CVE from the CVSS-only Medium baseline to Critical."
+    },
+    {
+      "cve_id": "CVE-2026-0002",
+      "cvss": 9.8,
+      "delta_rank": -1,
+      "direction": "down",
+      "epss": 0.02,
+      "in_kev": false,
+      "new_priority": "High",
+      "new_rank": 2,
+      "old_priority": "Critical",
+      "old_rank": 1,
+      "operational_rank": 0,
+      "reason": "CVSS alone would rate this CVE as Critical, but the enriched model lowers it to High because EPSS/KEV signals do not meet the higher threshold."
+    }
+  ]
+}

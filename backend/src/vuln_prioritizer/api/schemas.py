@@ -76,6 +76,15 @@ class FindingStatusUpdateRequest(StrictModel):
     actor: str | None = None
 
 
+class BaselineComparisonResponse(StrictModel):
+    project_id: str | None = None
+    methodology: dict[str, Any]
+    summary: dict[str, int]
+    counts: dict[str, dict[str, int]]
+    top_changes: list[dict[str, Any]] = Field(default_factory=list)
+    comparisons: list[dict[str, Any]] = Field(default_factory=list)
+
+
 class ProviderUpdateJobRequest(StrictModel):
     sources: list[ProviderSourceName] = Field(default_factory=_default_provider_sources)
     cve_ids: list[str] = Field(default_factory=list)

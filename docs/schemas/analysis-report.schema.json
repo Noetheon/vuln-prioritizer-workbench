@@ -17,6 +17,9 @@
     "attack_summary": {
       "$ref": "#/$defs/attackSummary"
     },
+    "baseline_comparison": {
+      "$ref": "#/$defs/baselineComparison"
+    },
     "findings": {
       "type": "array",
       "items": {
@@ -203,6 +206,114 @@
         },
         "tactic_distribution": {
           "$ref": "#/$defs/integerMap"
+        }
+      }
+    },
+    "baselineComparison": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "methodology",
+        "summary",
+        "counts",
+        "top_changes"
+      ],
+      "properties": {
+        "project_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "methodology": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "baseline": {
+              "type": "string"
+            },
+            "baseline_thresholds": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            },
+            "enriched": {
+              "type": "string"
+            },
+            "limitations": {
+              "type": "string"
+            }
+          }
+        },
+        "summary": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "properties": {
+            "total": {
+              "type": "integer"
+            },
+            "changed": {
+              "type": "integer"
+            },
+            "up": {
+              "type": "integer"
+            },
+            "down": {
+              "type": "integer"
+            },
+            "unchanged": {
+              "type": "integer"
+            }
+          }
+        },
+        "counts": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer"
+            }
+          }
+        },
+        "top_changes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "properties": {
+              "cve_id": {
+                "type": "string"
+              },
+              "old_priority": {
+                "type": "string"
+              },
+              "old_rank": {
+                "type": "integer"
+              },
+              "new_priority": {
+                "type": "string"
+              },
+              "new_rank": {
+                "type": "integer"
+              },
+              "delta_rank": {
+                "type": "integer"
+              },
+              "direction": {
+                "enum": [
+                  "up",
+                  "down",
+                  "unchanged"
+                ]
+              },
+              "reason": {
+                "type": "string"
+              }
+            }
+          }
         }
       }
     },

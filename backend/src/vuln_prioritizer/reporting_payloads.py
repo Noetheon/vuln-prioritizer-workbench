@@ -35,6 +35,9 @@ from vuln_prioritizer.models import (
     StateWaiverReport,
 )
 from vuln_prioritizer.reporting_format import _priority_display_label, normalize_whitespace
+from vuln_prioritizer.services.baseline_comparison import (
+    build_cvss_baseline_comparison_payload,
+)
 
 
 def generate_json_report(
@@ -54,6 +57,11 @@ def build_analysis_report_payload(
     return {
         "metadata": _context_metadata(context),
         "attack_summary": context.attack_summary.model_dump(),
+        "baseline_comparison": build_cvss_baseline_comparison_payload(
+            findings,
+            top_change_limit=5,
+            include_comparisons=False,
+        ),
         "findings": [finding.model_dump() for finding in findings],
     }
 
@@ -152,6 +160,9 @@ def generate_summary_markdown(
     governance_lines = _governance_summary_lines(metadata, findings)
     if governance_lines:
         lines.extend(["", "## Governance", *governance_lines])
+    comparison_lines = _baseline_comparison_summary_lines(report_payload)
+    if comparison_lines:
+        lines.extend(["", "## CVSS-only Baseline Comparison", *comparison_lines])
     lines.extend(["", "## Top Findings"])
     if findings:
         top_findings = findings[:5]
@@ -173,6 +184,41 @@ def generate_summary_markdown(
     else:
         lines.append("- No findings matched the current filters.")
     return "\n".join(lines) + "\n"
+
+
+def _baseline_comparison_summary_lines(report_payload: dict[str, Any]) -> list[str]:
+    comparison = report_payload.get("baseline_comparison")
+    if not isinstance(comparison, dict):
+        return []
+    raw_summary = comparison.get("summary")
+    summary: dict[str, Any] = raw_summary if isinstance(raw_summary, dict) else {}
+    raw_methodology = comparison.get("methodology")
+    methodology: dict[str, Any] = raw_methodology if isinstance(raw_methodology, dict) else {}
+    lines = [
+        f"- Changed rows: {summary.get('changed', 0)}",
+        f"- Up: {summary.get('up', 0)}",
+        f"- Down: {summary.get('down', 0)}",
+        f"- Unchanged: {summary.get('unchanged', 0)}",
+    ]
+    limitation = methodology.get("limitations")
+    if limitation:
+        lines.append("- Method limit: " + normalize_whitespace(str(limitation)))
+    top_changes = comparison.get("top_changes")
+    if isinstance(top_changes, list) and top_changes:
+        lines.extend(["", "### Top Baseline Changes"])
+        for item in top_changes[:5]:
+            if not isinstance(item, dict):
+                continue
+            lines.append(
+                "- "
+                + f"{item.get('cve_id', 'N.A.')}: "
+                + f"{item.get('old_priority', 'N.A.')} "
+                + f"(rank {item.get('old_rank', 'N.A.')}) -> "
+                + f"{item.get('new_priority', 'N.A.')} "
+                + f"(rank {item.get('new_rank', 'N.A.')}); "
+                + normalize_whitespace(str(item.get("reason", "N.A.")))
+            )
+    return lines
 
 
 def _governance_summary_lines(metadata: dict[str, Any], findings: list[Any]) -> list[str]:

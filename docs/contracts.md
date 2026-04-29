@@ -80,13 +80,18 @@ the `input normalize --format json` compatibility alias.
 `report evidence-bundle` is a ZIP transport over the analysis JSON contract. Its published machine contract is the `manifest.json` stored inside the bundle.
 `report verify-evidence-bundle` is the published integrity-report contract for saved evidence ZIP bundles.
 
+`baseline_comparison` is additive on analysis-style payloads. It compares
+CVSS-only priority bands with the enriched policy and includes priority counts,
+up/down/unchanged totals, top changes with old/new rank, and a methodology
+limitation stating that the view is decision support rather than absolute truth.
+
 ## JSON envelope contract
 
 All documented JSON exports include explicit metadata or top-level version fields. Analysis-style reports keep the richer `metadata` + `attack_summary` envelope, while helper and state commands publish smaller purpose-built contracts.
 
 Primary payload keys by command:
 
-- `analyze`: `findings`
+- `analyze`: `findings`, optional `baseline_comparison`
 - `compare`: `comparisons`
 - `explain`: `finding`, plus `nvd`, `epss`, `kev`, `attack`, and `comparison`
 - `doctor`: `checks`

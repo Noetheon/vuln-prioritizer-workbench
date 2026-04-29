@@ -64,6 +64,16 @@
 - Low: 0
 - Active filters: None
 
+## CVSS-only Baseline Comparison
+- Changed rows: 1
+- Up: 1
+- Down: 0
+- Unchanged: 3
+- Method limit: This comparison is a decision-support view, not an absolute truth. It shows how the current enriched policy differs from a CVSS-only baseline and still requires asset-owner validation.
+
+### Top Baseline Changes
+- CVE-2023-44487: High (rank 2) -> Critical (rank 1); KEV membership raises this CVE from the CVSS-only High baseline to Critical.
+
 ## ATT&CK Context Summary
 ATT&CK context was disabled for this export.
 

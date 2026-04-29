@@ -147,6 +147,16 @@ The `compare` command still uses:
 - `CVSS-only`: Critical `>= 9.0`, High `>= 7.0`, Medium `>= 4.0`, Low otherwise
 - `Enriched`: the default CVSS/EPSS/KEV model above
 
+Workbench project comparison exposes the same baseline through
+`GET /api/projects/{project_id}/baseline-comparison`. The comparison reports
+counts per priority, up/down/unchanged rows, and top changes with old/new rank
+and the reason for the shift.
+
+This view is intentionally a decision-support lens, not an absolute truth. It
+shows how the current policy differs from a CVSS-only baseline; remediation
+owners still need to validate asset exposure, business criticality, compensating
+controls, and applicability.
+
 `compare` now additionally shows ATT&CK context:
 
 - mapped or unmapped state
