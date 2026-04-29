@@ -118,6 +118,10 @@ def execute_queued_workbench_job(
         original_filenames = _job_payload_list(
             payload.get("original_filenames") or payload.get("original_filename")
         )
+        content_types = cast(
+            list[str | None],
+            _job_payload_list(payload.get("content_types") or payload.get("content_type")),
+        )
         if not input_paths:
             raise WorkbenchAnalysisError("Queued import job is missing input_paths.")
         if len(input_formats) != len(input_paths):
@@ -137,6 +141,7 @@ def execute_queued_workbench_job(
             input_path=input_paths,
             original_filename=original_filenames,
             input_format=input_formats,
+            input_content_type=content_types if content_types else None,
             provider_snapshot_file=_queued_job_optional_artifact_path(
                 payload.get("provider_snapshot_file"),
                 settings=settings,

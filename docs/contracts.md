@@ -262,6 +262,7 @@ Workbench API changes are additive:
 - `GET /api/projects/{project_id}/audit-events` and `GET /api/audit-events` expose audit records
 - `GET /api/tokens` lists token metadata without token values; `DELETE /api/tokens/{id}` revokes tokens
 - `GET /api/diagnostics` exposes local runtime diagnostics and is token-gated once active tokens exist
+- `POST /api/v1/projects/{project_id}/imports` accepts a JWT-gated template Workbench upload, validates input type, extension, MIME hint, filename, and upload size, persists the uploaded file under the configured import upload root, and records upload SHA-256 plus structured `parse_errors` in the returned `AnalysisRun`
 - `POST /api/projects/{project_id}/imports` accepts single-upload and additive multi-upload imports for all CLI input formats
 - `GET /api/jobs`, `GET /api/jobs/{id}`, `POST /api/jobs`, and `POST /api/jobs/{id}/retry` expose durable local job state for compatible synchronous operations
 - `DELETE /api/reports/{id}` and `DELETE /api/evidence-bundles/{id}` remove managed artifacts after checksum validation

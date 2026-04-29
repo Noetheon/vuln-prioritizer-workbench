@@ -34,6 +34,7 @@ def test_vpw011_openapi_exposes_workbench_domain_routes_without_items() -> None:
         "/api/v1/projects/{project_id}",
         "/api/v1/projects/{project_id}/assets/",
         "/api/v1/assets/{asset_id}",
+        "/api/v1/projects/{project_id}/imports",
         "/api/v1/projects/{project_id}/runs/",
         "/api/v1/runs/{run_id}",
         "/api/v1/projects/{project_id}/findings/",
@@ -86,6 +87,14 @@ def test_vpw011_domain_routes_require_auth(template_api_env: TemplateApiEnv) -> 
         ),
         ("patch", f"/api/v1/assets/{asset_id}", {"json": {"name": "Renamed API"}}),
         ("get", f"/api/v1/projects/{project_id}/runs/", {}),
+        (
+            "post",
+            f"/api/v1/projects/{project_id}/imports",
+            {
+                "data": {"input_type": "cve-list"},
+                "files": {"file": ("sample.txt", b"CVE-2024-3094\n", "text/plain")},
+            },
+        ),
         ("get", f"/api/v1/runs/{run_id}", {}),
         (
             "get",

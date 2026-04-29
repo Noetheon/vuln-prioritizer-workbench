@@ -23,6 +23,7 @@ def run_sync_workbench_job(
     payload_json: dict[str, Any] | None = None,
     idempotency_key: str | None = None,
     worker_id: str = "sync",
+    preserve_side_effects_on: tuple[type[Exception], ...] = (),
     operation: Callable[[WorkbenchRepository, WorkbenchJob], T],
     result: Callable[[T], dict[str, Any]],
 ) -> tuple[WorkbenchJob, T]:
@@ -49,8 +50,13 @@ def run_sync_workbench_job(
     try:
         value = operation(repo, job)
     except Exception as exc:
-        nested.rollback()
+        if preserve_side_effects_on and isinstance(exc, preserve_side_effects_on):
+            nested.commit()
+        else:
+            nested.rollback()
         session.refresh(job)
+        if hasattr(exc, "job_id"):
+            setattr(exc, "job_id", job.id)
         repo.fail_workbench_job(job, error_message=str(exc), retryable=False)
         session.commit()
         raise

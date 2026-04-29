@@ -28,11 +28,29 @@ ALLOWED_UPLOAD_SUFFIXES = {
     "nessus-xml": {".nessus", ".xml"},
     "openvas-xml": {".xml"},
 }
+ALLOWED_UPLOAD_MIME_HINTS = {
+    "cve-list": {"text/plain", "text/csv", "application/vnd.ms-excel"},
+    "generic-occurrence-csv": {"text/csv", "text/plain", "application/vnd.ms-excel"},
+    "trivy-json": {"application/json", "text/json"},
+    "grype-json": {"application/json", "text/json"},
+    "cyclonedx-json": {"application/json", "text/json"},
+    "spdx-json": {"application/json", "text/json"},
+    "dependency-check-json": {"application/json", "text/json"},
+    "github-alerts-json": {"application/json", "text/json"},
+    "nessus-xml": {"application/xml", "text/xml"},
+    "openvas-xml": {"application/xml", "text/xml"},
+}
 ALLOWED_CONTEXT_UPLOAD_SUFFIXES = {
     "asset-context": {".csv"},
     "vex": {".json"},
     "waiver": {".yml", ".yaml"},
     "defensive-context": {".json"},
+}
+ALLOWED_CONTEXT_UPLOAD_MIME_HINTS = {
+    "asset-context": {"text/csv", "text/plain", "application/vnd.ms-excel"},
+    "vex": {"application/json", "text/json"},
+    "waiver": {"application/yaml", "application/x-yaml", "text/yaml", "text/plain"},
+    "defensive-context": {"application/json", "text/json"},
 }
 SAFE_SNAPSHOT_FILENAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*[.]json$")
 SAFE_ATTACK_FILENAME_RE = SAFE_SNAPSHOT_FILENAME_RE
@@ -63,6 +81,7 @@ async def _save_upload(
     suffix = Path(sanitized).suffix.lower()
     if suffix not in ALLOWED_UPLOAD_SUFFIXES[input_format]:
         raise HTTPException(status_code=422, detail="File extension does not match input format.")
+    _validate_mime_hint(file.content_type, allowed=ALLOWED_UPLOAD_MIME_HINTS[input_format])
 
     target_dir = settings.upload_dir / uuid4().hex
     target_dir.mkdir(parents=True, exist_ok=True)
@@ -96,6 +115,7 @@ async def _save_optional_context_upload(
     suffix = Path(sanitized).suffix.lower()
     if suffix not in allowed_suffixes:
         raise HTTPException(status_code=422, detail=f"{kind} file extension is not allowed.")
+    _validate_mime_hint(file.content_type, allowed=ALLOWED_CONTEXT_UPLOAD_MIME_HINTS[kind])
 
     target_dir = settings.upload_dir / uuid4().hex / "context"
     target_dir.mkdir(parents=True, exist_ok=True)
@@ -121,6 +141,16 @@ def _reject_unsafe_upload_filename(filename: str) -> None:
         raise HTTPException(status_code=422, detail="Upload filename is not allowed.")
     if any(ord(character) < 32 for character in filename):
         raise HTTPException(status_code=422, detail="Upload filename is not allowed.")
+
+
+def _validate_mime_hint(content_type: str | None, *, allowed: set[str]) -> None:
+    normalized = (content_type or "").split(";", maxsplit=1)[0].strip().lower()
+    if normalized in {"", "application/octet-stream"}:
+        return
+    if normalized not in allowed:
+        raise HTTPException(
+            status_code=422, detail="Upload content type does not match input format."
+        )
 
 
 def _artifact_response(path: Path, *, media_type: str) -> StreamingResponse:

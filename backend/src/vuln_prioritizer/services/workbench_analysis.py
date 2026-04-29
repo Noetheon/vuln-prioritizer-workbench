@@ -59,6 +59,20 @@ SUPPORTED_WORKBENCH_INPUT_FORMATS = {
 class WorkbenchAnalysisError(RuntimeError):
     """Raised when a Workbench import cannot be analyzed."""
 
+    def __init__(
+        self,
+        message: str,
+        *,
+        parse_errors: list[dict[str, Any]] | None = None,
+        analysis_run_id: str | None = None,
+        job_id: str | None = None,
+    ) -> None:
+        super().__init__(message)
+        self.message = message
+        self.parse_errors = parse_errors or []
+        self.analysis_run_id = analysis_run_id
+        self.job_id = job_id
+
 
 @dataclass(frozen=True, slots=True)
 class WorkbenchImportResult:
@@ -83,12 +97,17 @@ def run_workbench_import(
     vex_file: Path | None = None,
     waiver_file: Path | None = None,
     defensive_context_file: Path | None = None,
+    input_content_type: str | list[str | None] | None = None,
 ) -> WorkbenchImportResult:
     """Analyze an uploaded file and persist the Workbench run."""
     input_paths, original_filenames, input_formats = _normalize_workbench_import_inputs(
         input_path=input_path,
         original_filename=original_filename,
         input_format=input_format,
+    )
+    input_content_types = _normalize_optional_metadata_values(
+        input_content_type,
+        expected_count=len(input_paths),
     )
 
     repo = WorkbenchRepository(session)
@@ -112,6 +131,16 @@ def run_workbench_import(
         input_path="\n".join(str(path) for path in input_paths),
         status="running",
         provider_snapshot_id=provider_snapshot.id if provider_snapshot is not None else None,
+        metadata_json={
+            "input_uploads": _input_upload_metadata(
+                input_paths=input_paths,
+                original_filenames=original_filenames,
+                input_formats=input_formats,
+                input_content_types=input_content_types,
+            ),
+            "parse_errors": [],
+            "lifecycle_status": "running",
+        },
     )
     session.flush()
 
@@ -164,8 +193,27 @@ def run_workbench_import(
         AnalysisInputError,
         AnalysisNoFindingsError,
     ) as exc:
-        repo.finish_analysis_run(run.id, status="failed", error_message=str(exc))
-        raise WorkbenchAnalysisError(str(exc)) from exc
+        parse_errors = _input_parse_errors(
+            exc,
+            input_paths=input_paths,
+            original_filenames=original_filenames,
+            input_formats=input_formats,
+        )
+        repo.finish_analysis_run(
+            run.id,
+            status="failed",
+            error_message=str(exc),
+            metadata_json={
+                **run.metadata_json,
+                "parse_errors": parse_errors,
+                "lifecycle_status": "failed",
+            },
+        )
+        raise WorkbenchAnalysisError(
+            str(exc),
+            parse_errors=parse_errors,
+            analysis_run_id=run.id,
+        ) from exc
 
     payload = build_analysis_report_payload(findings, context)
     _attach_workbench_metadata(
@@ -183,7 +231,12 @@ def run_workbench_import(
     repo.finish_analysis_run(
         run.id,
         status="completed",
-        metadata_json=payload.get("metadata", {}),
+        metadata_json={
+            **run.metadata_json,
+            **payload.get("metadata", {}),
+            "parse_errors": [],
+            "lifecycle_status": "succeeded",
+        },
         attack_summary_json=payload.get("attack_summary", {}),
         summary_json=payload,
     )
@@ -212,6 +265,72 @@ def _normalize_workbench_import_inputs(
             "Unsupported Workbench input format: " + ", ".join(sorted(set(unsupported))) + "."
         )
     return input_paths, original_filenames, input_formats
+
+
+def _normalize_optional_metadata_values(
+    value: str | list[str | None] | None,
+    *,
+    expected_count: int,
+) -> list[str | None]:
+    values = value if isinstance(value, list) else [value] if value is not None else []
+    if len(values) != expected_count:
+        return [None] * expected_count
+    return [str(item) if item else None for item in values]
+
+
+def _input_upload_metadata(
+    *,
+    input_paths: list[Path],
+    original_filenames: list[str],
+    input_formats: list[str],
+    input_content_types: list[str | None],
+) -> list[dict[str, Any]]:
+    uploads: list[dict[str, Any]] = []
+    for path, original_filename, input_format, content_type in zip(
+        input_paths,
+        original_filenames,
+        input_formats,
+        input_content_types,
+        strict=True,
+    ):
+        content = path.read_bytes()
+        uploads.append(
+            {
+                "input_format": input_format,
+                "original_filename": original_filename,
+                "stored_filename": path.name,
+                "path": str(path),
+                "size_bytes": len(content),
+                "sha256": hashlib.sha256(content).hexdigest(),
+                "content_type": content_type,
+            }
+        )
+    return uploads
+
+
+def _input_parse_errors(
+    exc: Exception,
+    *,
+    input_paths: list[Path],
+    original_filenames: list[str],
+    input_formats: list[str],
+) -> list[dict[str, Any]]:
+    message = str(exc)
+    return [
+        {
+            "input_format": input_format,
+            "filename": original_filename,
+            "stored_filename": path.name,
+            "message": message,
+            "error_type": exc.__class__.__name__,
+        }
+        for path, original_filename, input_format in zip(
+            input_paths,
+            original_filenames,
+            input_formats,
+            strict=True,
+        )
+    ]
 
 
 def _effective_workbench_input_type(input_formats: list[str]) -> str:
