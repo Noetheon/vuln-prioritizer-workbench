@@ -208,6 +208,28 @@ class AssetResponse(StrictModel):
     finding_count: int = 0
 
 
+class AssetContextImportResponse(StrictModel):
+    project_id: str
+    imported_assets: int
+    created_assets: int
+    updated_assets: int
+    unchanged_assets: int
+    rescore_needed_findings: int
+    total_rows: int
+    loaded_rows: int
+    skipped_rows: int
+    warnings: list[str] = Field(default_factory=list)
+    asset_ids: list[str] = Field(default_factory=list)
+
+
+class AssetRecalculationResponse(StrictModel):
+    asset_id: str
+    asset_key: str
+    recalculated_findings: int
+    cleared_rescore_flags: int
+    operational_scores: list[int] = Field(default_factory=list)
+
+
 class WaiverResponse(StrictModel):
     id: str
     project_id: str

@@ -11,6 +11,12 @@ const validOccurrenceCsv = Buffer.from(
     "CVE-2024-4577,web-tier,php-cgi,8.3.7,pkg:deb/debian/php-cgi@8.3.7,HIGH,team-web,checkout,internal",
   ].join("\n"),
 )
+const validAssetContextCsv = Buffer.from(
+  [
+    "target_kind,target_ref,asset_id,owner,business_service,criticality,exposure,environment",
+    "generic,ui-sidecar,ui-sidecar-asset,team-sidecar,inventory-sidecar,high,internal,staging",
+  ].join("\n"),
+)
 const invalidOccurrenceCsv = Buffer.from(
   [
     "cve_id,asset_ref,component_name,component_version,purl,scanner,fix_version,severity,owner,business_service,exposure",
@@ -421,25 +427,32 @@ test("template frontend covers core Workbench E2E smoke", async ({ page }) => {
   ).toBeVisible()
   await expect(
     page.getByRole("region", { name: "Upload security notes" }),
-  ).toContainText("does not run scanners")
+  ).toContainText("asset context uploads")
   await expect(
     page.getByRole("region", { name: "Supported MVP formats" }),
   ).toContainText("trivy-json")
   await page.getByLabel("Import project").selectOption(project.id)
-  await page.getByLabel("Input type").selectOption("cve-list")
+  await page.getByLabel("Input type").selectOption("generic-occurrence-csv")
   const importFileInput = page.locator('input[name="importFile"]')
   await importFileInput.setInputFiles({
-    buffer: Buffer.from("CVE-2021-44228\nCVE-2024-3094\n"),
-    mimeType: "text/plain",
-    name: "import-wizard-cves.txt",
+    buffer: Buffer.from("cve_id,asset_ref\nCVE-2024-3094,ui-sidecar\n"),
+    mimeType: "text/csv",
+    name: "import-wizard-occurrences.csv",
   })
   await expect(importFileInput).toHaveJSProperty("files.length", 1)
+  const assetContextInput = page.locator('input[name="assetContextFile"]')
+  await assetContextInput.setInputFiles({
+    buffer: validAssetContextCsv,
+    mimeType: "text/csv",
+    name: "import-wizard-asset-context.csv",
+  })
+  await expect(assetContextInput).toHaveJSProperty("files.length", 1)
   await page.getByRole("button", { name: "Upload Import" }).click()
   await expect(
     page.getByRole("region", { name: "Import result" }),
   ).toContainText("succeeded")
   const importRuns = page.getByRole("region", { name: "Import runs" })
-  await expect(importRuns).toContainText("import-wizard-cves.txt")
+  await expect(importRuns).toContainText("import-wizard-occurrences.csv")
   await expect(importRuns).toContainText("succeeded")
   const runDetail = page.getByRole("region", { name: "Run detail" })
   await expect(runDetail).toContainText("Run Detail")
@@ -527,7 +540,7 @@ test("template frontend covers core Workbench E2E smoke", async ({ page }) => {
   const importedAssetRow = assetsTable.locator("tbody tr").filter({
     hasText: "build-host-1",
   })
-  await importedAssetRow.getByRole("button", { name: /build-host-1/ }).click()
+  await importedAssetRow.locator(".project-list-item").click()
   await expect(assetDetail).toContainText("build-host-1")
   await assetDetail.getByRole("button", { name: "Edit Asset" }).click()
   await assetDetail.getByLabel("Edit owner").fill("team-platform-updated")
@@ -541,6 +554,14 @@ test("template frontend covers core Workbench E2E smoke", async ({ page }) => {
   await expect(assetDetail).toContainText("payments-runtime")
   await expect(assetDetail).toContainText("Re-score needed")
   await expect(importedAssetRow).toContainText("Re-score needed")
+  await page.getByLabel("Asset owner filter").fill("team-platform-updated")
+  await expect(assetsTable).toContainText("build-host-1")
+  await expect(assetsTable).not.toContainText("web-tier")
+  await page.getByLabel("Asset service filter").fill("payments-runtime")
+  await expect(assetsTable).toContainText("build-host-1")
+  await page.getByRole("button", { name: "Clear Filters" }).click()
+  await expect(page.getByLabel("Asset owner filter")).toHaveValue("")
+  await expect(page.getByLabel("Asset service filter")).toHaveValue("")
   await page.screenshot({
     fullPage: true,
     path: "../docs/evidence/vpw-044-assets-page.png",
@@ -581,6 +602,21 @@ test("template frontend covers core Workbench E2E smoke", async ({ page }) => {
   })
   await page.getByRole("link", { name: "Back to Findings" }).click()
   await expect(page).toHaveURL(/\/findings$/)
+
+  await navigation.getByRole("link", { name: "Assets" }).click()
+  await assetsProjectSelect.selectOption(project.id)
+  const recalculationRow = assetsTable.locator("tbody tr").filter({
+    hasText: "build-host-1",
+  })
+  await recalculationRow.getByRole("button", { name: "Recalculate" }).click()
+  await expect(
+    page.getByText(/Recalculated \d+ finding\(s\) for build-host-1\./),
+  ).toBeVisible()
+  await expect(recalculationRow).toContainText("Current")
+  await page.screenshot({
+    fullPage: true,
+    path: "../docs/evidence/vpw-063-asset-recalculate.png",
+  })
 
   await navigation.getByRole("link", { name: "Imports" }).click()
   await expect(page).toHaveURL(/\/imports$/)

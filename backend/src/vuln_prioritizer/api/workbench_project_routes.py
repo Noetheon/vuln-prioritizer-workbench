@@ -4,11 +4,13 @@ from __future__ import annotations
 
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from sqlalchemy.orm import Session
 
-from vuln_prioritizer.api.deps import get_db_session
+from vuln_prioritizer.api.deps import get_db_session, get_workbench_settings
 from vuln_prioritizer.api.schemas import (
+    AssetContextImportResponse,
+    AssetRecalculationResponse,
     AssetResponse,
     AssetUpdateRequest,
     AuditEventResponse,
@@ -22,8 +24,9 @@ from vuln_prioritizer.api.workbench_payloads import (
     _audit_event_payload,
     _project_payload,
 )
-from vuln_prioritizer.api.workbench_route_support import (
-    _asset_audit_snapshot,
+from vuln_prioritizer.api.workbench_uploads import (
+    _cleanup_saved_uploads,
+    _save_optional_context_upload,
 )
 from vuln_prioritizer.api.workbench_waivers import (
     _count_matching_waiver_findings,
@@ -33,6 +36,15 @@ from vuln_prioritizer.api.workbench_waivers import (
     _waiver_payload,
 )
 from vuln_prioritizer.db.repositories import WorkbenchRepository
+from vuln_prioritizer.services.workbench_assets import (
+    asset_snapshot,
+    changed_asset_fields,
+    filter_assets_by_context,
+    import_asset_context_csv,
+    mark_asset_findings_rescore_needed,
+    recalculate_asset_findings,
+)
+from vuln_prioritizer.workbench_config import WorkbenchSettings
 
 router = APIRouter()
 
@@ -118,6 +130,8 @@ def list_audit_events(
 def list_project_assets(
     project_id: str,
     session: Annotated[Session, Depends(get_db_session)],
+    owner: str | None = None,
+    service: str | None = None,
 ) -> dict[str, Any]:
     repo = WorkbenchRepository(session)
     if repo.get_project(project_id) is None:
@@ -127,12 +141,60 @@ def list_project_assets(
     for finding in findings:
         if finding.asset_id:
             finding_counts[finding.asset_id] = finding_counts.get(finding.asset_id, 0) + 1
+    assets = filter_assets_by_context(
+        repo.list_project_assets(project_id),
+        owner=owner,
+        service=service,
+    )
     return {
         "items": [
-            _asset_payload(asset, finding_count=finding_counts.get(asset.id, 0))
-            for asset in repo.list_project_assets(project_id)
+            _asset_payload(asset, finding_count=finding_counts.get(asset.id, 0)) for asset in assets
         ]
     }
+
+
+@router.post(
+    "/projects/{project_id}/assets/import",
+    response_model=AssetContextImportResponse,
+)
+async def import_project_assets(
+    project_id: str,
+    session: Annotated[Session, Depends(get_db_session)],
+    settings: Annotated[WorkbenchSettings, Depends(get_workbench_settings)],
+    asset_context_file: Annotated[UploadFile | None, File()] = None,
+) -> dict[str, Any]:
+    repo = WorkbenchRepository(session)
+    if repo.get_project(project_id) is None:
+        raise HTTPException(status_code=404, detail="Project not found.")
+    asset_context_path = await _save_optional_context_upload(
+        asset_context_file,
+        kind="asset-context",
+        settings=settings,
+    )
+    if asset_context_path is None:
+        raise HTTPException(status_code=422, detail="Asset context CSV file is required.")
+    try:
+        result = import_asset_context_csv(
+            repo,
+            project_id=project_id,
+            asset_context_path=asset_context_path,
+        )
+    except ValueError as exc:
+        _cleanup_saved_uploads(asset_context_path)
+        raise HTTPException(
+            status_code=422,
+            detail=f"Asset context CSV import failed: {exc}",
+        ) from exc
+    repo.create_audit_event(
+        project_id=project_id,
+        event_type="asset_context.imported",
+        target_type="project",
+        target_id=project_id,
+        message="Asset context CSV was imported into the asset inventory.",
+        metadata_json=result.as_payload(project_id=project_id),
+    )
+    session.commit()
+    return result.as_payload(project_id=project_id)
 
 
 @router.get("/assets/{asset_row_id}", response_model=AssetResponse)
@@ -156,7 +218,7 @@ def update_asset(
     asset = repo.get_asset(asset_row_id)
     if asset is None:
         raise HTTPException(status_code=404, detail="Asset not found.")
-    previous = _asset_audit_snapshot(asset)
+    previous = asset_snapshot(asset)
     updated_fields = payload.model_fields_set
     updated = repo.update_asset(
         asset,
@@ -190,6 +252,11 @@ def update_asset(
             else asset.criticality
         ),
     )
+    changed_fields = changed_asset_fields(previous, asset_snapshot(updated))
+    marked_findings = mark_asset_findings_rescore_needed(
+        updated,
+        changed_fields=changed_fields,
+    )
     repo.create_audit_event(
         project_id=updated.project_id,
         event_type="asset.updated",
@@ -199,12 +266,37 @@ def update_asset(
         message=f"Asset {updated.asset_id!r} was updated.",
         metadata_json={
             "previous": previous,
-            "current": _asset_audit_snapshot(updated),
+            "current": asset_snapshot(updated),
             "updated_fields": sorted(updated_fields),
+            "changed_fields": changed_fields,
+            "rescore_needed_findings": marked_findings,
         },
     )
     session.commit()
     return _asset_payload(updated, finding_count=len(updated.findings))
+
+
+@router.post("/assets/{asset_row_id}/rescore", response_model=AssetRecalculationResponse)
+def recalculate_asset(
+    asset_row_id: str,
+    session: Annotated[Session, Depends(get_db_session)],
+) -> dict[str, Any]:
+    repo = WorkbenchRepository(session)
+    asset = repo.get_asset(asset_row_id)
+    if asset is None:
+        raise HTTPException(status_code=404, detail="Asset not found.")
+    result = recalculate_asset_findings(asset)
+    repo.create_audit_event(
+        project_id=asset.project_id,
+        event_type="asset.recalculated",
+        target_type="asset",
+        target_id=asset.id,
+        actor=asset.owner,
+        message=f"Asset {asset.asset_id!r} linked findings were recalculated.",
+        metadata_json=result.as_payload(asset=asset),
+    )
+    session.commit()
+    return result.as_payload(asset=asset)
 
 
 @router.get("/projects/{project_id}/waivers")

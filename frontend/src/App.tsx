@@ -282,11 +282,13 @@ const reportActionCards: Array<{
 ]
 
 type ImportWizardState = {
+  assetContextFile: File | null
   file: File | null
   inputType: ImportFormat
 }
 
 const defaultImportWizardState: ImportWizardState = {
+  assetContextFile: null,
   file: null,
   inputType: "cve-list",
 }
@@ -543,7 +545,26 @@ function apiErrorDetail(body: unknown) {
     return detail
   }
   if (Array.isArray(detail)) {
-    return "validation failed"
+    const messages = detail
+      .map((item) =>
+        typeof item === "object" && item !== null && "msg" in item
+          ? String((item as { msg?: unknown }).msg)
+          : "",
+      )
+      .filter(Boolean)
+    return messages.length > 0 ? messages.join("; ") : "validation failed"
+  }
+  if (typeof detail === "object" && detail !== null) {
+    const record = detail as Record<string, unknown>
+    const assetContextError = objectRecord(record.asset_context_error)
+    const analysisError = objectRecord(record.analysis_error)
+    return (
+      stringValue(record.message) ??
+      stringValue(assetContextError.message) ??
+      stringValue(analysisError.message) ??
+      stringValue(record.error) ??
+      null
+    )
   }
   return null
 }
@@ -1979,6 +2000,7 @@ export function App() {
     event.preventDefault()
     const formData = new FormData(event.currentTarget)
     const formFile = formData.get("importFile")
+    const formAssetContextFile = formData.get("assetContextFile")
     const formProjectId = formData.get("importProject")
     const importProjectId =
       typeof formProjectId === "string" && formProjectId.trim()
@@ -1987,6 +2009,11 @@ export function App() {
     const selectedFile =
       importWizard.file ??
       (formFile instanceof File && formFile.size > 0 ? formFile : null)
+    const selectedAssetContextFile =
+      importWizard.assetContextFile ??
+      (formAssetContextFile instanceof File && formAssetContextFile.size > 0
+        ? formAssetContextFile
+        : null)
     setImportError("")
     setImportRun(null)
     setImportRunSummary(null)
@@ -2006,6 +2033,12 @@ export function App() {
       const run = await ImportsService.importProjectUpload({
         projectId: importProjectId,
         formData: {
+          ...(selectedAssetContextFile
+            ? {
+                asset_context_file:
+                  selectedAssetContextFile as unknown as string,
+              }
+            : {}),
           file: selectedFile as unknown as string,
           input_type: importWizard.inputType,
         },
@@ -2534,6 +2567,21 @@ export function App() {
                       type="file"
                     />
                   </label>
+                  <label>
+                    <span>Asset context CSV</span>
+                    <input
+                      accept=".csv,text/csv"
+                      aria-label="Asset context CSV"
+                      name="assetContextFile"
+                      onChange={(event) =>
+                        setImportWizard((state) => ({
+                          ...state,
+                          assetContextFile: event.target.files?.[0] ?? null,
+                        }))
+                      }
+                      type="file"
+                    />
+                  </label>
                   <button
                     className="primary-action"
                     disabled={importLoading || projects.length === 0}
@@ -2565,6 +2613,10 @@ export function App() {
                     <li>Files are parsed locally by the Workbench backend.</li>
                     <li>
                       Uploads must match the selected format and extension.
+                    </li>
+                    <li>
+                      Optional asset context uploads must be CSV files with
+                      target and asset_id columns.
                     </li>
                     <li>Filename/path traversal is rejected before storage.</li>
                     <li>

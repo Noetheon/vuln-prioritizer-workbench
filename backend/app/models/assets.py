@@ -98,6 +98,33 @@ class AssetsPublic(SQLModel):
     count: int
 
 
+class AssetContextImportPublic(SQLModel):
+    """Summary returned after importing asset-context CSV rows."""
+
+    project_id: uuid.UUID
+    imported_assets: int = 0
+    created_assets: int = 0
+    updated_assets: int = 0
+    unchanged_assets: int = 0
+    rescore_needed_findings: int = 0
+    total_rows: int = 0
+    loaded_rows: int = 0
+    skipped_rows: int = 0
+    warnings: list[str] = Field(default_factory=list)
+    asset_keys: list[str] = Field(default_factory=list)
+
+
+class AssetRecalculatePublic(SQLModel):
+    """Summary returned after recalculating findings for one asset."""
+
+    asset_id: uuid.UUID
+    asset_key: str
+    recalculated_findings: int = 0
+    cleared_rescore_flags: int = 0
+    operational_scores: list[int] = Field(default_factory=list)
+    rescore_needed: bool = False
+
+
 class ComponentBase(SQLModel):
     """Shared component fields."""
 

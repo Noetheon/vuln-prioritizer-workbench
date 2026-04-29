@@ -55,8 +55,13 @@
         <tr><th>Component</th><td>{{ finding.component.name if finding.component else "N.A." }}</td></tr>
         <tr><th>Version</th><td>{{ finding.component.version if finding.component else "N.A." }}</td></tr>
         <tr><th>Asset</th><td>{{ finding.asset.asset_id if finding.asset else "N.A." }}</td></tr>
+        <tr><th>Target</th><td>{{ finding.asset.target_ref if finding.asset and finding.asset.target_ref else "N.A." }}</td></tr>
         <tr><th>Service</th><td>{{ finding.asset.business_service if finding.asset else "N.A." }}</td></tr>
         <tr><th>Owner</th><td>{{ finding.asset.owner if finding.asset else "N.A." }}</td></tr>
+        <tr><th>Environment</th><td>{{ finding.asset.environment if finding.asset and finding.asset.environment else "N.A." }}</td></tr>
+        <tr><th>Exposure</th><td>{{ finding.asset.exposure if finding.asset and finding.asset.exposure else "N.A." }}</td></tr>
+        <tr><th>Criticality</th><td>{{ finding.asset.criticality if finding.asset and finding.asset.criticality else "N.A." }}</td></tr>
+        <tr><th>Operational score</th><td>{{ "%.0f"|format(finding.risk_score) if finding.risk_score is not none else "N.A." }}</td></tr>
         <tr><th>EPSS</th><td>{{ "%.3f"|format(finding.epss) if finding.epss is not none else "N.A." }}</td></tr>
         <tr><th>CVSS</th><td>{{ "%.1f"|format(finding.cvss_base_score) if finding.cvss_base_score is not none else "N.A." }}</td></tr>
         <tr><th>Data quality</th><td>

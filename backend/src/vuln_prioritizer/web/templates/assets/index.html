@@ -10,6 +10,7 @@
     </p>
   </div>
   <div class="page-actions">
+    <a class="button" href="/projects/{{ project.id }}/imports/new">Import run</a>
     <a class="button" href="/projects/{{ project.id }}/findings">Findings</a>
   </div>
 </section>
@@ -17,10 +18,48 @@
 <section class="section">
   <div class="metric-grid compact">
     <article class="metric"><span>Assets</span><strong>{{ asset_summary.total }}</strong></article>
+    <article class="metric"><span>Filtered</span><strong>{{ asset_summary.filtered }}</strong></article>
     <article class="metric"><span>Owned</span><strong>{{ asset_summary.owned }}</strong></article>
     <article class="metric"><span>Services</span><strong>{{ asset_summary.services }}</strong></article>
     <article class="metric"><span>Internet-facing</span><strong>{{ asset_summary.internet_facing }}</strong></article>
     <article class="metric"><span>Critical</span><strong>{{ asset_summary.critical }}</strong></article>
+  </div>
+</section>
+
+<section class="section">
+  <div class="split compact-split">
+    <form class="form-panel" method="post" action="/web/projects/{{ project.id }}/assets/import" enctype="multipart/form-data">
+      <div>
+        <p class="eyebrow">CSV import</p>
+        <h2>Import asset context</h2>
+      </div>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <label>Asset context CSV
+        <input type="file" name="asset_context_file" accept=".csv,text/csv" required>
+      </label>
+      <div class="form-footer">
+        <p class="muted">Imports the CSV as editable asset inventory rows. Linked findings are marked for recalculation when existing asset context changes.</p>
+        <button class="button primary" type="submit">Import CSV</button>
+      </div>
+    </form>
+    <form class="form-panel" method="get" action="/projects/{{ project.id }}/assets">
+      <div>
+        <p class="eyebrow">Filters</p>
+        <h2>Owner and service</h2>
+      </div>
+      <div class="form-grid two">
+        <label>Owner
+          <input name="owner" value="{{ asset_filters.owner }}" placeholder="platform-team">
+        </label>
+        <label>Service
+          <input name="service" value="{{ asset_filters.service }}" placeholder="customer-login">
+        </label>
+      </div>
+      <div class="form-footer">
+        <a class="button" href="/projects/{{ project.id }}/assets">Clear</a>
+        <button class="button primary" type="submit">Apply filters</button>
+      </div>
+    </form>
   </div>
 </section>
 
@@ -44,6 +83,7 @@
           <th>Exposure</th>
           <th>Criticality</th>
           <th>Findings</th>
+          <th>Context status</th>
         </tr>
       </thead>
       <tbody>
@@ -57,9 +97,16 @@
             <td><span class="badge neutral">{{ asset.exposure or "N.A." }}</span></td>
             <td><span class="badge {{ asset.criticality|lower if asset.criticality else 'neutral' }}">{{ asset.criticality or "N.A." }}</span></td>
             <td>{{ finding_counts.get(asset.id, 0) }}</td>
+            <td>
+              {% if asset_rescore_status.get(asset.id) %}
+                <span class="badge needs_review">Re-score needed</span>
+              {% else %}
+                <span class="badge complete">Current</span>
+              {% endif %}
+            </td>
           </tr>
           <tr>
-            <td colspan="8">
+            <td colspan="9">
               <form class="inline-grid" method="post" action="/web/assets/{{ asset.id }}">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                 <label>Asset<input name="asset_id" value="{{ asset.asset_id }}"></label>
@@ -71,10 +118,14 @@
                 <label>Criticality<input name="criticality" value="{{ asset.criticality or '' }}"></label>
                 <button class="button primary" type="submit">Save</button>
               </form>
+              <form class="inline-grid" method="post" action="/web/assets/{{ asset.id }}/rescore">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <button class="button" type="submit">Recalculate linked findings</button>
+              </form>
             </td>
           </tr>
         {% else %}
-          <tr><td colspan="8" class="empty">No assets captured yet. Import asset context with a Workbench run.</td></tr>
+          <tr><td colspan="9" class="empty">No assets captured yet. Import asset context with a CSV or a Workbench run.</td></tr>
         {% endfor %}
       </tbody>
     </table>
