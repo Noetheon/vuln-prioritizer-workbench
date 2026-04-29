@@ -24,9 +24,17 @@ from app.importers import (
     build_importer_registry,
 )
 from app.importers.contracts import NormalizedOccurrence
-from app.models import AnalysisRun, AnalysisRunPublic, AnalysisRunStatus, FindingPriority
+from app.models import (
+    AnalysisRun,
+    AnalysisRunPublic,
+    AnalysisRunStatus,
+    FindingPriority,
+    FindingStatus,
+)
 from app.models.base import get_datetime_utc
 from app.repositories import AssetRepository, FindingRepository, RunRepository
+from app.services import AnalysisService, TemplateAnalysisError, TemplateAnalysisResult
+from vuln_prioritizer.models import PrioritizedFinding
 
 router = APIRouter(tags=["imports"])
 
@@ -64,6 +72,8 @@ async def import_project_upload(
     current_user: CurrentUser,
     input_type: str = Form(...),
     file: UploadFile = File(...),
+    provider_snapshot_file: str | None = Form(None),
+    locked_provider_data: bool = Form(False),
 ) -> AnalysisRun:
     """Securely upload, normalize, and persist one Workbench import file."""
     require_visible_project(session, current_user, project_id)
@@ -74,6 +84,10 @@ async def import_project_upload(
     stored_filename = _sanitize_filename(original_filename)
     _validate_upload_suffix(stored_filename, input_type=normalized_input_type)
     _validate_mime_hint(file.content_type, input_type=normalized_input_type)
+    provider_snapshot_path = _resolve_template_provider_snapshot_path(
+        provider_snapshot_file,
+        request=request,
+    )
 
     upload_bytes = await _read_bounded_upload(file, settings=_template_settings(request))
     upload_sha256 = hashlib.sha256(upload_bytes).hexdigest()
@@ -180,12 +194,71 @@ async def import_project_upload(
             },
         ) from exc
 
+    try:
+        analysis_result = AnalysisService(session, _template_settings(request)).analyze_import(
+            input_path=upload_path,
+            input_type=normalized_input_type,
+            provider_snapshot_file=provider_snapshot_path,
+            locked_provider_data=locked_provider_data,
+        )
+    except TemplateAnalysisError as exc:
+        failed_history = [*job_history, _job_status_entry("failed")]
+        failed_run = run_repo.finish_analysis_run(
+            run.id,
+            status=AnalysisRunStatus.FAILED,
+            error_message=str(exc),
+            error_json={
+                "analysis_error": {
+                    "message": str(exc),
+                    "stage": "enrich_score_explain",
+                    "error_type": exc.__class__.__name__,
+                },
+                "created_findings": 0,
+                "updated_findings": 0,
+                "ignored_lines": ignored_lines,
+                "import_job": _job_payload(
+                    job_id=job_id,
+                    status="failed",
+                    status_history=failed_history,
+                ),
+            },
+            summary_json={
+                **run.summary_json,
+                "import_job": _job_payload(
+                    job_id=job_id,
+                    status="failed",
+                    status_history=failed_history,
+                ),
+                "analysis_error": {
+                    "message": str(exc),
+                    "stage": "enrich_score_explain",
+                    "error_type": exc.__class__.__name__,
+                },
+                "parse_errors": [],
+                "created_findings": 0,
+                "updated_findings": 0,
+                "ignored_lines": ignored_lines,
+            },
+        )
+        session.commit()
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "message": "Import analysis failed.",
+                "analysis_run_id": str(failed_run.id),
+                "ignored_lines": ignored_lines,
+                "analysis_error": failed_run.error_json["analysis_error"],
+            },
+        ) from exc
+
     persist_summary = _persist_template_occurrences(
         session=session,
         project_id=project_id,
         run_id=run.id,
         occurrences=occurrences,
+        analysis_result=analysis_result,
     )
+    run.provider_snapshot_id = analysis_result.provider_snapshot_id
     finished_run = run_repo.finish_analysis_run(
         run.id,
         status=AnalysisRunStatus.SUCCEEDED,
@@ -196,6 +269,7 @@ async def import_project_upload(
                 status="succeeded",
                 status_history=[*job_history, _job_status_entry("succeeded")],
             ),
+            **analysis_result.summary_json,
             **persist_summary,
             "ignored_lines": ignored_lines,
             "input_sha256": upload_sha256,
@@ -226,6 +300,7 @@ def _persist_template_occurrences(
     project_id: uuid.UUID,
     run_id: uuid.UUID,
     occurrences: list[NormalizedOccurrence],
+    analysis_result: TemplateAnalysisResult,
 ) -> dict[str, Any]:
     asset_repo = AssetRepository(session)
     finding_repo = FindingRepository(session)
@@ -235,6 +310,7 @@ def _persist_template_occurrences(
     reused_count = 0
     touched_finding_ids: set[str] = set()
     for index, occurrence in enumerate(occurrences, start=1):
+        decision = _decision_for_occurrence(analysis_result, occurrence)
         dedup_parts = _dedup_key_parts(project_id, occurrence)
         dedup_key = _finding_dedup_key(dedup_parts)
         asset = (
@@ -260,7 +336,17 @@ def _persist_template_occurrences(
         vulnerability = finding_repo.upsert_vulnerability(
             cve_id=occurrence.cve,
             source_id=dedup_parts["source_id"],
-            severity=_string_evidence(occurrence.raw_evidence, "severity"),
+            title=occurrence.cve,
+            description=decision.description,
+            cvss_score=decision.cvss_base_score,
+            cvss_vector=_decision_cvss_vector(decision),
+            severity=(
+                decision.cvss_severity or _string_evidence(occurrence.raw_evidence, "severity")
+            ),
+            cwe=_decision_cwe(decision),
+            published_at=_decision_published(decision),
+            modified_at=_decision_modified(decision),
+            provider_json=_decision_provider_json(decision),
         )
         existing_finding = finding_repo.get_project_finding_by_dedup_key(
             project_id=project_id,
@@ -281,11 +367,32 @@ def _persist_template_occurrences(
             dedup_key=dedup_key,
             component_id=component.id if component else None,
             asset_id=asset.id if asset else None,
-            priority=FindingPriority.MEDIUM,
-            priority_rank=99,
-            operational_rank=index,
+            status=_decision_status(decision),
+            priority=_decision_priority(decision),
+            priority_rank=decision.priority_rank,
+            risk_score=float(decision.operational_score),
+            operational_rank=decision.operational_rank or index,
+            in_kev=decision.in_kev,
+            epss=decision.epss,
+            cvss_base_score=decision.cvss_base_score,
+            attack_mapped=decision.attack_mapped,
+            suppressed_by_vex=decision.suppressed_by_vex,
+            under_investigation=decision.under_investigation,
+            waived=decision.waived,
+            recommended_action=decision.recommended_action,
+            rationale=decision.rationale,
+            explanation_json=decision.model_dump(),
+            data_quality_json=_decision_data_quality_json(decision),
             evidence_json={
                 "import": dict(occurrence.raw_evidence),
+                "analysis": {
+                    "priority_state": decision.priority_state,
+                    "operational_score": decision.operational_score,
+                    "provider_snapshot_id": str(analysis_result.provider_snapshot_id)
+                    if analysis_result.provider_snapshot_id is not None
+                    else None,
+                    "provider_snapshot_hash": analysis_result.provider_snapshot_hash,
+                },
                 "dedup": {
                     "key": dedup_key,
                     "key_version": "vpw019-v1",
@@ -376,6 +483,82 @@ def _normalized_identity_value(value: str | None) -> str:
         return "__none__"
     normalized = value.strip()
     return normalized or "__none__"
+
+
+def _decision_for_occurrence(
+    analysis_result: TemplateAnalysisResult,
+    occurrence: NormalizedOccurrence,
+) -> PrioritizedFinding:
+    decision = analysis_result.findings_by_cve.get(occurrence.cve)
+    if decision is None:
+        raise TemplateAnalysisError(f"Decision analysis did not produce {occurrence.cve}.")
+    return decision
+
+
+def _decision_priority(decision: PrioritizedFinding) -> FindingPriority:
+    return FindingPriority(decision.priority_label.lower())
+
+
+def _decision_status(decision: PrioritizedFinding) -> FindingStatus:
+    if decision.suppressed_by_vex:
+        return FindingStatus.SUPPRESSED
+    if decision.waived:
+        return FindingStatus.ACCEPTED
+    return FindingStatus.OPEN
+
+
+def _decision_provider_json(decision: PrioritizedFinding) -> dict[str, Any]:
+    return decision.provider_evidence.model_dump() if decision.provider_evidence else {}
+
+
+def _decision_cvss_vector(decision: PrioritizedFinding) -> str | None:
+    if decision.provider_evidence is None:
+        return None
+    return decision.provider_evidence.nvd.cvss_vector
+
+
+def _decision_cwe(decision: PrioritizedFinding) -> str | None:
+    if decision.provider_evidence is None or not decision.provider_evidence.nvd.cwes:
+        return None
+    return ", ".join(decision.provider_evidence.nvd.cwes)
+
+
+def _decision_published(decision: PrioritizedFinding) -> str | None:
+    if decision.provider_evidence is None:
+        return None
+    return decision.provider_evidence.nvd.published
+
+
+def _decision_modified(decision: PrioritizedFinding) -> str | None:
+    if decision.provider_evidence is None:
+        return None
+    return decision.provider_evidence.nvd.last_modified
+
+
+def _decision_data_quality_json(decision: PrioritizedFinding) -> dict[str, Any]:
+    return {
+        "flags": [item.model_dump() for item in decision.data_quality_flags],
+        "confidence": decision.data_quality_confidence,
+    }
+
+
+def _resolve_template_provider_snapshot_path(
+    provider_snapshot_file: str | None,
+    *,
+    request: Request,
+) -> Path | None:
+    value = provider_snapshot_file.strip() if provider_snapshot_file else ""
+    if not value:
+        return None
+    if "/" in value or "\\" in value or Path(value).name != value:
+        raise HTTPException(status_code=422, detail="Provider snapshot path is not allowed.")
+    snapshot_root = _template_settings(request).provider_snapshot_dir_path.resolve(strict=False)
+    candidate = (snapshot_root / value).resolve(strict=False)
+    if not candidate.is_relative_to(snapshot_root):
+        raise HTTPException(status_code=422, detail="Provider snapshot path is not allowed.")
+    if not candidate.exists():
+        raise HTTPException(status_code=422, detail="Provider snapshot file does not exist.")
+    return candidate
 
 
 def _store_upload(
