@@ -2,20 +2,12 @@
 
 import uuid
 from datetime import datetime
-from typing import TYPE_CHECKING
+from typing import Optional
 
 from sqlalchemy import Column, DateTime
 from sqlmodel import Field, Relationship, SQLModel
 
 from app.models.base import get_datetime_utc
-
-# codeql[py/unsafe-cyclic-import] SQLModel runtime relationship target.
-from app.models.users import User
-
-if TYPE_CHECKING:
-    from app.models.assets import Asset
-    from app.models.findings import Finding
-    from app.models.runs import AnalysisRun
 
 
 class ProjectBase(SQLModel):
@@ -56,10 +48,10 @@ class Project(ProjectBase, table=True):
         default_factory=get_datetime_utc,
         sa_column=Column(DateTime(timezone=True), nullable=False),
     )
-    owner: User | None = Relationship(back_populates="projects")
-    assets: list["Asset"] = Relationship(back_populates="project", cascade_delete=True)
-    findings: list["Finding"] = Relationship(back_populates="project", cascade_delete=True)
-    analysis_runs: list["AnalysisRun"] = Relationship(
+    owner: Optional["User"] = Relationship(back_populates="projects")  # type: ignore[name-defined]  # noqa: F821
+    assets: list["Asset"] = Relationship(back_populates="project", cascade_delete=True)  # type: ignore[name-defined]  # noqa: F821
+    findings: list["Finding"] = Relationship(back_populates="project", cascade_delete=True)  # type: ignore[name-defined]  # noqa: F821
+    analysis_runs: list["AnalysisRun"] = Relationship(  # type: ignore[name-defined]  # noqa: F821
         back_populates="project",
         cascade_delete=True,
     )

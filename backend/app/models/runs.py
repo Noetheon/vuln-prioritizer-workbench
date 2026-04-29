@@ -2,19 +2,13 @@
 
 import uuid
 from datetime import datetime
-from typing import Any
+from typing import Any, Optional
 
 from sqlalchemy import JSON, Column, DateTime, Index, String, Text
 from sqlmodel import Field, Relationship, SQLModel
 
 from app.models.base import get_datetime_utc
 from app.models.enums import AnalysisRunStatus
-
-# codeql[py/unsafe-cyclic-import] SQLModel runtime relationship target.
-from app.models.findings import Finding
-
-# codeql[py/unsafe-cyclic-import] SQLModel runtime relationship target.
-from app.models.projects import Project
 
 
 class ProviderSnapshotBase(SQLModel):
@@ -98,7 +92,7 @@ class AnalysisRun(AnalysisRunBase, table=True):
         index=True,
         ondelete="SET NULL",
     )
-    project: Project | None = Relationship(back_populates="analysis_runs")
+    project: Optional["Project"] = Relationship(back_populates="analysis_runs")  # type: ignore[name-defined]  # noqa: F821
     provider_snapshot: ProviderSnapshot | None = Relationship(back_populates="analysis_runs")
     occurrences: list["FindingOccurrence"] = Relationship(
         back_populates="analysis_run",
@@ -187,5 +181,5 @@ class FindingOccurrence(FindingOccurrenceBase, table=True):
         nullable=False,
         ondelete="CASCADE",
     )
-    finding: Finding | None = Relationship(back_populates="occurrences")
+    finding: Optional["Finding"] = Relationship(back_populates="occurrences")  # type: ignore[name-defined]  # noqa: F821
     analysis_run: AnalysisRun | None = Relationship(back_populates="occurrences")

@@ -1079,14 +1079,20 @@ def test_kev_fetch_many_from_offline_csv_normalizes_aliases_and_skips_invalid_ro
     tmp_path: Path,
 ) -> None:
     kev_file = tmp_path / "kev.csv"
+    valid_row = (
+        "CVE-2026-0001,Example Vendor,Example Product,CSV vulnerability,"
+        + "CSV KEV entry,2026-04-29,2026-05-20,Patch CSV asset"
+    )
+    invalid_row = (
+        "not-a-cve,Ignored Vendor,Ignored Product,Invalid row,"
+        + "Invalid row,2026-04-29,2026-05-20,Ignore"
+    )
     kev_file.write_text(
         "\n".join(
             [
                 "cveId,vendorProject,product,vulnerability_name,shortDescription,dateAdded,dueDate,requiredAction",
-                "CVE-2026-0001,Example Vendor,Example Product,CSV vulnerability,"
-                "CSV KEV entry,2026-04-29,2026-05-20,Patch CSV asset",
-                "not-a-cve,Ignored Vendor,Ignored Product,Invalid row,"
-                "Invalid row,2026-04-29,2026-05-20,Ignore",
+                valid_row,
+                invalid_row,
             ]
         )
         + "\n",

@@ -2,24 +2,13 @@
 
 import uuid
 from datetime import datetime
-from typing import TYPE_CHECKING, Any
+from typing import Any, Optional
 
 from sqlalchemy import JSON, Column, DateTime, Float, Index, Integer, String, UniqueConstraint
 from sqlmodel import Field, Relationship, SQLModel
 
-# codeql[py/unsafe-cyclic-import] SQLModel runtime relationship target.
-from app.models.assets import Asset, Component
 from app.models.base import get_datetime_utc
 from app.models.enums import FindingPriority, FindingStatus
-
-# codeql[py/unsafe-cyclic-import] SQLModel runtime relationship target.
-from app.models.projects import Project
-
-# codeql[py/unsafe-cyclic-import] SQLModel runtime relationship target.
-from app.models.vulnerabilities import Vulnerability
-
-if TYPE_CHECKING:
-    from app.models.runs import FindingOccurrence
 
 
 class FindingBase(SQLModel):
@@ -122,11 +111,11 @@ class Finding(FindingBase, table=True):
         default_factory=get_datetime_utc,
         sa_column=Column(DateTime(timezone=True), nullable=False),
     )
-    project: Project | None = Relationship(back_populates="findings")
-    vulnerability: Vulnerability | None = Relationship(back_populates="findings")
-    component: Component | None = Relationship(back_populates="findings")
-    asset: Asset | None = Relationship(back_populates="findings")
-    occurrences: list["FindingOccurrence"] = Relationship(
+    project: Optional["Project"] = Relationship(back_populates="findings")  # type: ignore[name-defined]  # noqa: F821
+    vulnerability: Optional["Vulnerability"] = Relationship(back_populates="findings")  # type: ignore[name-defined]  # noqa: F821
+    component: Optional["Component"] = Relationship(back_populates="findings")  # type: ignore[name-defined]  # noqa: F821
+    asset: Optional["Asset"] = Relationship(back_populates="findings")  # type: ignore[name-defined]  # noqa: F821
+    occurrences: list["FindingOccurrence"] = Relationship(  # type: ignore[name-defined]  # noqa: F821
         back_populates="finding",
         cascade_delete=True,
     )

@@ -2,16 +2,11 @@
 
 import uuid
 from datetime import datetime
-from typing import TYPE_CHECKING
 
 from sqlalchemy import Column, DateTime
 from sqlmodel import Field, Relationship, SQLModel
 
 from app.models.base import get_datetime_utc
-
-if TYPE_CHECKING:
-    # codeql[py/unsafe-cyclic-import] SQLModel runtime relationship target.
-    from app.models.projects import Project
 
 
 class UserBase(SQLModel):
@@ -35,7 +30,7 @@ class User(UserBase, table=True):
         default_factory=get_datetime_utc,
         sa_column=Column(DateTime(timezone=True), nullable=False),
     )
-    projects: list["Project"] = Relationship(back_populates="owner", cascade_delete=True)
+    projects: list["Project"] = Relationship(back_populates="owner", cascade_delete=True)  # type: ignore[name-defined]  # noqa: F821
 
 
 class UserPublic(UserBase):

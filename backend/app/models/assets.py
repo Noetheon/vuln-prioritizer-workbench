@@ -2,19 +2,13 @@
 
 import uuid
 from datetime import datetime
-from typing import TYPE_CHECKING
+from typing import Optional
 
 from sqlalchemy import Column, DateTime, Index, String, UniqueConstraint
 from sqlmodel import Field, Relationship, SQLModel
 
 from app.models.base import get_datetime_utc
 from app.models.enums import AssetCriticality, AssetEnvironment, AssetExposure
-
-# codeql[py/unsafe-cyclic-import] SQLModel runtime relationship target.
-from app.models.projects import Project
-
-if TYPE_CHECKING:
-    from app.models.findings import Finding
 
 
 class AssetBase(SQLModel):
@@ -82,8 +76,8 @@ class Asset(AssetBase, table=True):
         default_factory=get_datetime_utc,
         sa_column=Column(DateTime(timezone=True), nullable=False),
     )
-    project: Project | None = Relationship(back_populates="assets")
-    findings: list["Finding"] = Relationship(back_populates="asset")
+    project: Optional["Project"] = Relationship(back_populates="assets")  # type: ignore[name-defined]  # noqa: F821
+    findings: list["Finding"] = Relationship(back_populates="asset")  # type: ignore[name-defined]  # noqa: F821
 
 
 class AssetPublic(AssetBase):
@@ -130,4 +124,4 @@ class Component(ComponentBase, table=True):
         default_factory=get_datetime_utc,
         sa_column=Column(DateTime(timezone=True), nullable=False),
     )
-    findings: list["Finding"] = Relationship(back_populates="component")
+    findings: list["Finding"] = Relationship(back_populates="component")  # type: ignore[name-defined]  # noqa: F821

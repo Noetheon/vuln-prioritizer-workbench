@@ -66,18 +66,19 @@ def test_generic_occurrence_csv_importer_accepts_quoted_multiline_values() -> No
 
 def test_generic_occurrence_csv_importer_accepts_compatibility_aliases() -> None:
     importer = GenericOccurrenceCsvImporter()
+    header = (
+        "vulnerability_id,target_ref,component,installed_version,fixed_versions,"
+        + "raw_severity,asset_owner,service,target_kind,asset_id,criticality,exposure,"
+        + "environment,ecosystem,path,dependency_path"
+    )
+    row = (
+        "CVE-2022-22965,checkout-api,spring-webmvc,5.3.17,5.3.18,HIGH,"
+        + "appsec,checkout,service,asset-1,critical,public,prod,maven,pom.xml,"
+        + "root > spring-webmvc"
+    )
 
     occurrences = importer.parse(
-        "\n".join(
-            [
-                "vulnerability_id,target_ref,component,installed_version,fixed_versions,"
-                "raw_severity,asset_owner,service,target_kind,asset_id,criticality,exposure,"
-                "environment,ecosystem,path,dependency_path",
-                "CVE-2022-22965,checkout-api,spring-webmvc,5.3.17,5.3.18,HIGH,"
-                "appsec,checkout,service,asset-1,critical,public,prod,maven,pom.xml,"
-                "root > spring-webmvc",
-            ]
-        ),
+        "\n".join([header, row]),
         filename="generic.csv",
     )
 

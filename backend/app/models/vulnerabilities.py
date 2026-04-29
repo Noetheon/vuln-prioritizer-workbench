@@ -2,16 +2,12 @@
 
 import uuid
 from datetime import datetime
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from sqlalchemy import JSON, Column, DateTime, Text
 from sqlmodel import Field, Relationship, SQLModel
 
 from app.models.base import get_datetime_utc
-
-if TYPE_CHECKING:
-    # codeql[py/unsafe-cyclic-import] SQLModel runtime relationship target.
-    from app.models.findings import Finding
 
 
 class VulnerabilityBase(SQLModel):
@@ -48,4 +44,4 @@ class Vulnerability(VulnerabilityBase, table=True):
         default_factory=get_datetime_utc,
         sa_column=Column(DateTime(timezone=True), nullable=False),
     )
-    findings: list["Finding"] = Relationship(back_populates="vulnerability")
+    findings: list["Finding"] = Relationship(back_populates="vulnerability")  # type: ignore[name-defined]  # noqa: F821
