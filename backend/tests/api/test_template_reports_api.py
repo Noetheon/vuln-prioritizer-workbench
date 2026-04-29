@@ -28,11 +28,13 @@ from utils.template_workbench import (
     seed_foreign_project_graph,
 )
 
+from app import models as app_models
 from app.main import app
 from app.services import (
     MarkdownProviderSnapshot,
     MarkdownReportFinding,
     MarkdownReportPayload,
+    build_attack_navigator_layer_payload,
     render_analysis_result_json,
     render_evidence_bundle_zip,
     render_findings_csv,
@@ -100,12 +102,20 @@ def test_vpw049_openapi_exposes_report_format_contract() -> None:
     assert {"ReportCreate", "ReportPublic", "ReportVerificationPublic", "ReportsPublic"}.issubset(
         payload["components"]["schemas"]
     )
-    assert payload["components"]["schemas"]["ReportCreate"]["properties"]["format"]["enum"] == [
+    report_create = payload["components"]["schemas"]["ReportCreate"]["properties"]
+    assert report_create["format"]["enum"] == [
         "markdown",
         "html",
         "json",
         "csv",
         "zip",
+        "attack-navigator",
+    ]
+    assert report_create["attack_filter"]["enum"] == [
+        "all",
+        "critical-high",
+        "kev",
+        "no-coverage",
     ]
 
 
@@ -323,6 +333,87 @@ def test_vpw050_findings_csv_export_create_downloads_stable_columns(
     assert rows[1]["data_quality_flags"] == "missing_asset_owner - Owner missing <img>"
 
 
+def test_vpw060_attack_navigator_report_create_downloads_filtered_layer(
+    template_api_env: TemplateApiEnv,
+    tmp_path: Path,
+) -> None:
+    report_dir = _configure_report_dir(template_api_env, tmp_path)
+    headers = auth_headers(template_api_env.client)
+    project = create_project_via_api(template_api_env.client, headers)
+    run_id = _seed_reportable_run(template_api_env, uuid.UUID(project["id"]))
+    _add_vpw060_attack_contexts(template_api_env, run_id)
+
+    response = template_api_env.client.post(
+        f"/api/v1/runs/{run_id}/reports",
+        headers=headers,
+        json={"format": "attack-navigator", "attack_filter": "all"},
+    )
+
+    assert response.status_code == 200, response.text
+    payload = response.json()
+    assert payload["format"] == "attack-navigator"
+    assert payload["kind"] == "attack-navigator-layer"
+    assert payload["filename"] == "attack-navigator-layer.json"
+    assert payload["content_type"] == "application/json; charset=utf-8"
+    assert payload["metadata_json"]["attack_filter"] == "all"
+    assert payload["metadata_json"]["technique_count"] == 2
+
+    with Session(template_api_env.engine) as session:
+        report = session.get(template_api_env.app_models.Report, uuid.UUID(payload["id"]))
+        assert report is not None
+        assert Path(report.path).resolve(strict=True).is_relative_to(report_dir)
+        assert report.path.endswith("attack-navigator-layer.json")
+
+    download = template_api_env.client.get(payload["download_url"], headers=headers)
+
+    assert download.status_code == 200
+    assert download.headers["cache-control"] == "no-store"
+    assert download.headers["x-content-type-options"] == "nosniff"
+    assert "attack-navigator-layer.json" in download.headers["content-disposition"]
+    assert download.headers["content-type"].startswith("application/json")
+    assert hashlib.sha256(download.content).hexdigest() == payload["sha256"]
+
+    layer = download.json()
+    assert layer["version"] == "4.5"
+    assert layer["domain"] == "enterprise-attack"
+    assert [item["techniqueID"] for item in layer["techniques"]] == ["T1059", "T1190"]
+    assert layer["techniques"][0]["score"] == 100.0
+    assert "CVE-2024-3094" in layer["techniques"][0]["comment"]
+    assert "Coverage: not assessed" in layer["techniques"][0]["comment"]
+    assert "payload" not in json.dumps(layer).lower()
+    assert _layer_metadata(layer, "Unmapped findings omitted") == "0"
+
+    kev_response = template_api_env.client.post(
+        f"/api/v1/runs/{run_id}/reports",
+        headers=headers,
+        json={"format": "attack-navigator", "attack_filter": "kev"},
+    )
+    assert kev_response.status_code == 200, kev_response.text
+    kev_layer = template_api_env.client.get(
+        kev_response.json()["download_url"],
+        headers=headers,
+    ).json()
+    assert [item["techniqueID"] for item in kev_layer["techniques"]] == ["T1190"]
+    assert _layer_metadata(kev_layer, "Filter") == "kev"
+    assert "KEV: 1 finding(s)" in kev_layer["techniques"][0]["comment"]
+
+    no_coverage_response = template_api_env.client.post(
+        f"/api/v1/runs/{run_id}/reports",
+        headers=headers,
+        json={"format": "attack-navigator", "attack_filter": "no-coverage"},
+    )
+    assert no_coverage_response.status_code == 200, no_coverage_response.text
+    no_coverage_layer = template_api_env.client.get(
+        no_coverage_response.json()["download_url"],
+        headers=headers,
+    ).json()
+    assert _layer_metadata(no_coverage_layer, "Filter") == "no-coverage"
+    assert all(
+        _technique_metadata(item, "Coverage") == "not assessed"
+        for item in no_coverage_layer["techniques"]
+    )
+
+
 def test_vpw050_csv_export_escapes_spreadsheet_formula_cells(
     template_api_env: TemplateApiEnv,
     tmp_path: Path,
@@ -469,6 +560,46 @@ def test_vpw051_evidence_bundle_zip_create_downloads_manifest_integrity(
         assert "provider-secret-key" not in bundle_text
         assert str(tmp_path) not in bundle_text
         assert "[REDACTED]" in bundle_text
+
+
+def test_vpw060_evidence_bundle_includes_attack_navigator_layer_when_mapped(
+    template_api_env: TemplateApiEnv,
+    tmp_path: Path,
+) -> None:
+    _configure_report_dir(template_api_env, tmp_path)
+    headers = auth_headers(template_api_env.client)
+    project = create_project_via_api(template_api_env.client, headers)
+    run_id = _seed_reportable_run(template_api_env, uuid.UUID(project["id"]))
+    _add_vpw060_attack_contexts(template_api_env, run_id)
+
+    response = template_api_env.client.post(
+        f"/api/v1/runs/{run_id}/reports",
+        headers=headers,
+        json={"format": "zip"},
+    )
+
+    assert response.status_code == 200, response.text
+    download = template_api_env.client.get(response.json()["download_url"], headers=headers)
+    assert download.status_code == 200
+
+    with zipfile.ZipFile(BytesIO(download.content)) as archive:
+        names = sorted(archive.namelist())
+        assert "attack-navigator-layer.json" in names
+        manifest = json.loads(archive.read("manifest.json"))
+        layer = json.loads(archive.read("attack-navigator-layer.json"))
+        layer_entry = next(
+            item for item in manifest["files"] if item["path"] == "attack-navigator-layer.json"
+        )
+        assert manifest["attack_navigator_layer"] == {
+            "bundle_path": "attack-navigator-layer.json",
+            "sha256": layer_entry["sha256"],
+        }
+        assert layer_entry["kind"] == "attack-navigator-layer"
+        assert (
+            layer_entry["sha256"]
+            == hashlib.sha256(archive.read("attack-navigator-layer.json")).hexdigest()
+        )
+        assert [item["techniqueID"] for item in layer["techniques"]] == ["T1059", "T1190"]
 
 
 def test_vpw052_evidence_bundle_verify_api_reports_clean_bundle(
@@ -636,6 +767,16 @@ def test_vpw051_evidence_bundle_renderer_snapshot_is_stable() -> None:
         )
         for item in manifest["files"]:
             assert item["sha256"] == hashlib.sha256(archive.read(item["path"])).hexdigest()
+
+
+def test_vpw060_attack_navigator_layer_snapshot_is_stable() -> None:
+    layer = _vpw060_snapshot_layer()
+
+    assert layer == json.loads(
+        (_repo_root() / "docs" / "evidence" / "vpw-060-attack-navigator-layer.json").read_text(
+            encoding="utf-8"
+        )
+    )
 
 
 def test_vpw048_report_auth_project_visibility_and_invalid_run_state(
@@ -932,6 +1073,20 @@ def test_vpw054_demo_report_artifacts_are_linked_and_secret_free() -> None:
         assert marker not in combined_text
 
 
+def _layer_metadata(layer: dict[str, Any], key: str) -> str | None:
+    for item in layer.get("metadata", []):
+        if item.get("name") == key:
+            return item.get("value")
+    return None
+
+
+def _technique_metadata(technique: dict[str, Any], key: str) -> str | None:
+    for item in technique.get("metadata", []):
+        if item.get("name") == key:
+            return item.get("value")
+    return None
+
+
 def _configure_report_dir(template_api_env: TemplateApiEnv, tmp_path: Path) -> Path:
     report_dir = (tmp_path / "template-reports").resolve(strict=False)
     active_settings = template_api_env.client.app.state.template_settings
@@ -975,6 +1130,79 @@ def _replace_zip_member(bundle: bytes, member_path: str, replacement: bytes) -> 
                 target_info.external_attr = source_info.external_attr
                 target.writestr(target_info, content)
     return output.getvalue()
+
+
+def _vpw060_snapshot_layer() -> dict[str, Any]:
+    project_id = uuid.UUID("00000000-0000-4000-8000-000000000060")
+    run_id = uuid.UUID("00000000-0000-4000-8000-000000000061")
+    finding_id = uuid.UUID("00000000-0000-4000-8000-000000000062")
+    vulnerability_id = uuid.UUID("00000000-0000-4000-8000-000000000063")
+    generated_at = datetime(2026, 4, 29, 12, 0, tzinfo=UTC)
+    finding = app_models.Finding(
+        id=finding_id,
+        project_id=project_id,
+        vulnerability_id=vulnerability_id,
+        cve_id=DEMO_CVE_LOG4SHELL,
+        dedup_key="vpw060-log4shell",
+        priority=app_models.FindingPriority.HIGH,
+        priority_rank=2,
+        operational_rank=1,
+        risk_score=94.2,
+        in_kev=True,
+        attack_mapped=True,
+    )
+    unmapped = app_models.Finding(
+        id=uuid.UUID("00000000-0000-4000-8000-000000000064"),
+        project_id=project_id,
+        vulnerability_id=uuid.UUID("00000000-0000-4000-8000-000000000065"),
+        cve_id=DEMO_CVE_XZ,
+        dedup_key="vpw060-xz",
+        priority=app_models.FindingPriority.CRITICAL,
+        priority_rank=1,
+        operational_rank=2,
+        risk_score=100.0,
+        in_kev=False,
+        attack_mapped=False,
+    )
+    context = app_models.FindingAttackContext(
+        id=uuid.UUID("00000000-0000-4000-8000-000000000066"),
+        finding_id=finding.id,
+        analysis_run_id=run_id,
+        cve_id=finding.cve_id,
+        mapped=True,
+        source="local-curated",
+        review_status="needs_review",
+        defensive_note="Defensive triage context only.",
+        rationale="Reviewed local mapping for defensive prioritization.",
+        technique_ids_json=["T1190"],
+        tactic_ids_json=["initial-access"],
+        mappings_json=[
+            {
+                "technique_id": "T1190",
+                "technique_name": "Exploit Public-Facing Application",
+                "attack_object_id": "T1190",
+                "attack_object_name": "Exploit Public-Facing Application",
+                "tactics": ["initial-access"],
+                "confidence": "low",
+                "review_status": "needs_review",
+                "source": "local-curated",
+                "mapping_type": "exploitation",
+                "defensive_note": "Use for defensive triage and coverage review.",
+                "rationale": "Reviewed local mapping; no procedural detail included.",
+            }
+        ],
+        created_at=generated_at,
+        updated_at=generated_at,
+    )
+    return build_attack_navigator_layer_payload(
+        project_id=project_id,
+        project_name="VPW-060 Snapshot",
+        run_id=run_id,
+        findings=[finding, unmapped],
+        attack_contexts=[context],
+        filter_value="all",
+        generated_at=generated_at,
+    )
 
 
 def _vpw050_snapshot_payload() -> MarkdownReportPayload:
@@ -1239,6 +1467,80 @@ def _add_vpw051_bundle_metadata(
         session.add(run)
         session.commit()
     return input_metadata
+
+
+def _add_vpw060_attack_contexts(
+    template_api_env: TemplateApiEnv,
+    run_id: uuid.UUID,
+) -> None:
+    app_models_for_env = template_api_env.app_models
+    with Session(template_api_env.engine) as session:
+        run = session.get(app_models_for_env.AnalysisRun, run_id)
+        assert run is not None
+        findings = {
+            finding.cve_id: finding
+            for finding in session.exec(
+                select(app_models_for_env.Finding).where(
+                    app_models_for_env.Finding.project_id == run.project_id
+                )
+            ).all()
+        }
+        log4shell = findings[DEMO_CVE_LOG4SHELL]
+        xz = findings[DEMO_CVE_XZ]
+        for finding, technique_id, technique_name, tactic, confidence, review_status in (
+            (
+                log4shell,
+                "T1190",
+                "Exploit Public-Facing Application",
+                "initial-access",
+                "medium",
+                "reviewed",
+            ),
+            (
+                xz,
+                "T1059",
+                "Command and Scripting Interpreter",
+                "execution",
+                "low",
+                "needs_review",
+            ),
+        ):
+            finding.attack_mapped = True
+            finding.explanation_json = {
+                **dict(finding.explanation_json or {}),
+                "attack_techniques": [technique_id],
+            }
+            session.add(finding)
+            session.add(
+                app_models_for_env.FindingAttackContext(
+                    finding_id=finding.id,
+                    analysis_run_id=run.id,
+                    cve_id=finding.cve_id,
+                    mapped=True,
+                    source="local-curated",
+                    review_status=review_status,
+                    defensive_note="Defensive triage context only; validate before action.",
+                    rationale="Reviewed local ATT&CK mapping for defensive prioritization.",
+                    technique_ids_json=[technique_id],
+                    tactic_ids_json=[tactic],
+                    mappings_json=[
+                        {
+                            "technique_id": technique_id,
+                            "technique_name": technique_name,
+                            "attack_object_id": technique_id,
+                            "attack_object_name": technique_name,
+                            "tactics": [tactic],
+                            "confidence": confidence,
+                            "review_status": review_status,
+                            "source": "local-curated",
+                            "mapping_type": "exploitation",
+                            "defensive_note": "Use for defensive triage and coverage review.",
+                            "rationale": "Reviewed local mapping; no procedural detail included.",
+                        }
+                    ],
+                )
+            )
+        session.commit()
 
 
 def _seed_reportable_run(template_api_env: TemplateApiEnv, project_id: uuid.UUID) -> uuid.UUID:

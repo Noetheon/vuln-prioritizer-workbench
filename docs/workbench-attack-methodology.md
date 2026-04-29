@@ -51,6 +51,11 @@ The current Workbench API preserves project, import, finding, report, and eviden
 - `GET /api/findings/{finding_id}/ttps` returns source provenance, source and metadata hashes, ATT&CK version/domain, `attack_relevance`, `threat_context_rank`, review status, tactics, techniques, and mapping payloads for the finding.
 - `GET /api/projects/{project_id}/attack/top-techniques` returns project-level technique rollups from persisted finding ATT&CK context.
 - `GET /api/analysis-runs/{run_id}/attack/navigator-layer` returns a Navigator layer from CTID-backed mapped techniques for the run.
+- Template report creation supports `POST /api/v1/runs/{run_id}/reports`
+  with `format=attack-navigator` and `attack_filter` set to `all`,
+  `critical-high`, `kev`, or `no-coverage`. The generated artifact downloads
+  through the same checksum-validated report download endpoint as other report
+  formats.
 - `POST /api/projects/{project_id}/detection-controls/import` and `GET /api/projects/{project_id}/detection-controls` manage defensive detection-control coverage records.
 - `GET /api/projects/{project_id}/attack/coverage-gaps`, `GET /api/projects/{project_id}/attack/coverage-gap-navigator-layer`, and `GET /api/projects/{project_id}/attack/techniques/{technique_id}` expose coverage gaps and technique detail without describing offensive procedures.
 - Report and evidence endpoints preserve ATT&CK context in generated artifacts without weakening download path and checksum validation.
@@ -73,6 +78,10 @@ Evidence artifacts make ATT&CK provenance auditable.
 - `analysis.json`: per-finding ATT&CK fields, CTID-backed mappings, source provenance, ATT&CK metadata, and unmapped state.
 - Generated Markdown/HTML/JSON/CSV/SARIF reports: ATT&CK context remains separate from base priority and uses defensive wording.
 - `attack-navigator-layer.json`: optional Navigator layer containing CTID-backed mapped techniques for the run.
+- Template evidence bundles include `attack-navigator-layer.json` when the run
+  has persisted mapped ATT&CK context. The layer comments findings, KEV status,
+  confidence, review status, source, and the current `not assessed` coverage
+  placeholder.
 - Coverage-gap Navigator output: optional defensive layer for techniques with partial, missing, or unknown detection coverage.
 - `evidence-bundle.zip`: analysis JSON, generated reports, manifest with SHA256 hashes, ATT&CK source provenance, and any Navigator layer generated for the run.
 - Manifest entries checksum every generated artifact, including optional ATT&CK Navigator output.

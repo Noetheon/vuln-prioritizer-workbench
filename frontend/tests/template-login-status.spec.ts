@@ -323,12 +323,17 @@ test("template frontend covers core Workbench E2E smoke", async ({ page }) => {
   await expect(reportCards).toContainText("HTML Executive Report")
   await expect(reportCards).toContainText("JSON Findings Export")
   await expect(reportCards).toContainText("CSV Findings Export")
+  await expect(reportCards).toContainText("ATT&CK Navigator Layer")
   await expect(reportCards).toContainText("Evidence Bundle")
   const expectedReports = [
     { action: "Generate Markdown", filename: "technical-report.md" },
     { action: "Generate HTML", filename: "executive-report.html" },
     { action: "Export JSON", filename: "analysis-result.v1.json" },
     { action: "Export CSV", filename: "findings.csv" },
+    {
+      action: "Export Navigator Layer",
+      filename: "attack-navigator-layer.json",
+    },
     { action: "Build Evidence Bundle", filename: "evidence-bundle.zip" },
   ]
   for (const report of expectedReports) {
@@ -344,7 +349,12 @@ test("template frontend covers core Workbench E2E smoke", async ({ page }) => {
   await expect(reportHistory).toContainText("executive-report.html")
   await expect(reportHistory).toContainText("analysis-result.v1.json")
   await expect(reportHistory).toContainText("findings.csv")
+  await expect(reportHistory).toContainText("attack-navigator-layer.json")
   await expect(reportHistory).toContainText("evidence-bundle.zip")
+  await page.screenshot({
+    fullPage: true,
+    path: "../docs/evidence/vpw-060-attack-navigator-layer.png",
+  })
   await reportHistory
     .getByRole("button", { name: "Verify evidence-bundle.zip" })
     .click()

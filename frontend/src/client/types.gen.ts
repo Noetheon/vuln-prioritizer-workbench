@@ -633,10 +633,13 @@ export type ProviderUpdateJobPublic = {
  * Request payload for creating a run report.
  */
 export type ReportCreate = {
-    format?: 'markdown' | 'html' | 'json' | 'csv' | 'zip';
+    attack_filter?: 'all' | 'critical-high' | 'kev' | 'no-coverage';
+    format?: 'markdown' | 'html' | 'json' | 'csv' | 'zip' | 'attack-navigator';
 };
 
-export type format = 'markdown' | 'html' | 'json' | 'csv' | 'zip';
+export type attack_filter = 'all' | 'critical-high' | 'kev' | 'no-coverage';
+
+export type format = 'markdown' | 'html' | 'json' | 'csv' | 'zip' | 'attack-navigator';
 
 /**
  * Public report metadata without exposing server filesystem paths.

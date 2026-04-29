@@ -49,6 +49,19 @@
       "type": "object",
       "additionalProperties": true
     },
+    "attack_navigator_layer": {
+      "type": ["object", "null"],
+      "additionalProperties": true,
+      "properties": {
+        "bundle_path": {
+          "type": "string"
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      }
+    },
     "artifact_hashes": {
       "type": "object",
       "additionalProperties": {

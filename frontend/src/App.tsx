@@ -202,7 +202,13 @@ const mvpImportFormats = [
 
 type ImportFormat = (typeof mvpImportFormats)[number]["value"]
 
-type TemplateReportFormat = "markdown" | "html" | "json" | "csv" | "zip"
+type TemplateReportFormat =
+  | "markdown"
+  | "html"
+  | "json"
+  | "csv"
+  | "zip"
+  | "attack-navigator"
 
 const reportActionCards: Array<{
   actionLabel: string
@@ -252,6 +258,16 @@ const reportActionCards: Array<{
     reportFormat: "csv",
     stage: "VPW-050",
     title: "CSV Findings Export",
+  },
+  {
+    actionLabel: "Export Navigator Layer",
+    detail:
+      "MITRE ATT&CK Navigator JSON with mapped techniques, risk scores, KEV notes, and coverage placeholders.",
+    format: "Navigator JSON",
+    icon: GitBranch,
+    reportFormat: "attack-navigator",
+    stage: "VPW-060",
+    title: "ATT&CK Navigator Layer",
   },
   {
     actionLabel: "Build Evidence Bundle",
@@ -956,6 +972,9 @@ function formatDateTime(value: string) {
 function reportFormatLabel(format: string) {
   if (format === "zip") {
     return "Evidence ZIP"
+  }
+  if (format === "attack-navigator") {
+    return "ATT&CK Navigator"
   }
   return format.toUpperCase()
 }
@@ -4114,10 +4133,10 @@ export function App() {
                     <span>Report generation</span>
                     <h3>Generate and download reports for the selected run</h3>
                     <p>
-                      Create Markdown, HTML, JSON, CSV, and evidence ZIP
-                      artifacts from completed template analysis runs. History
-                      rows stay linked to backend downloads and checksum-backed
-                      metadata.
+                      Create Markdown, HTML, JSON, CSV, ATT&CK Navigator, and
+                      evidence ZIP artifacts from completed template analysis
+                      runs. History rows stay linked to backend downloads and
+                      checksum-backed metadata.
                     </p>
                   </div>
                   <dl className="report-readiness-facts">
@@ -4281,7 +4300,9 @@ export function App() {
                     {reports.length === 0 ? (
                       <li className="report-history-row empty">
                         <span>No generated reports yet</span>
-                        <span>Markdown / HTML / JSON / CSV / ZIP</span>
+                        <span>
+                          Markdown / HTML / JSON / CSV / Navigator / ZIP
+                        </span>
                         <span>
                           {reportsLoading ? "Loading" : "Ready for VPW-053"}
                         </span>

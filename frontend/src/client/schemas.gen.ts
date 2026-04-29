@@ -2930,9 +2930,15 @@ export const ProviderUpdateJobPublicSchema = {
 export const ReportCreateSchema = {
     description: 'Request payload for creating a run report.',
     properties: {
+        attack_filter: {
+            default: 'all',
+            enum: ['all', 'critical-high', 'kev', 'no-coverage'],
+            title: 'Attack Filter',
+            type: 'string'
+        },
         format: {
             default: 'markdown',
-            enum: ['markdown', 'html', 'json', 'csv', 'zip'],
+            enum: ['markdown', 'html', 'json', 'csv', 'zip', 'attack-navigator'],
             title: 'Format',
             type: 'string'
         }
