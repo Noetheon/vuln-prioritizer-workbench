@@ -5,17 +5,22 @@ import {
   ArrowLeft,
   BarChart3,
   Database,
+  Download,
   FileArchive,
   FileInput,
+  FileJson,
+  FileText,
   FolderKanban,
   Gauge,
   GitBranch,
+  History,
   KeyRound,
   LayoutDashboard,
   ListChecks,
   LogOut,
   Settings,
   ShieldCheck,
+  Table2,
 } from "lucide-react"
 import { type FormEvent, useEffect, useState } from "react"
 import { clearAccessToken } from "./auth"
@@ -191,6 +196,54 @@ const mvpImportFormats = [
 ] as const
 
 type ImportFormat = (typeof mvpImportFormats)[number]["value"]
+
+const reportActionCards = [
+  {
+    actionLabel: "Generate Markdown",
+    detail:
+      "Technical report for analyst handoff, pull requests, and audit notes.",
+    format: "Markdown",
+    icon: FileText,
+    stage: "VPW-048",
+    title: "Markdown Technical Report",
+  },
+  {
+    actionLabel: "Generate HTML",
+    detail:
+      "Executive browser report with priority summary, evidence links, and safe rendering.",
+    format: "HTML",
+    icon: FileArchive,
+    stage: "VPW-049",
+    title: "HTML Executive Report",
+  },
+  {
+    actionLabel: "Export JSON",
+    detail:
+      "Machine-readable findings and analysis data for automation and downstream systems.",
+    format: "JSON",
+    icon: FileJson,
+    stage: "VPW-050",
+    title: "JSON Findings Export",
+  },
+  {
+    actionLabel: "Export CSV",
+    detail:
+      "Spreadsheet-friendly findings table for triage, filtering, and stakeholder review.",
+    format: "CSV",
+    icon: Table2,
+    stage: "VPW-050",
+    title: "CSV Findings Export",
+  },
+  {
+    actionLabel: "Build Evidence Bundle",
+    detail:
+      "ZIP package with reports, manifest, source artifacts, and SHA256 checksums.",
+    format: "Evidence ZIP",
+    icon: FileArchive,
+    stage: "VPW-051",
+    title: "Evidence Bundle",
+  },
+] as const
 
 type ImportWizardState = {
   file: File | null
@@ -1774,7 +1827,9 @@ export function App() {
 
         <section
           className={
-            currentPath === "/findings" || currentPath === "/providers"
+            currentPath === "/findings" ||
+            currentPath === "/providers" ||
+            currentPath === "/reports"
               ? "content-grid wide-workspace"
               : "content-grid"
           }
@@ -1803,7 +1858,9 @@ export function App() {
                         ? "Refresh findings"
                         : currentPath === "/providers"
                           ? "Refresh provider status"
-                          : "Refresh queue"
+                          : currentPath === "/reports"
+                            ? "Refresh report placeholders"
+                            : "Refresh queue"
                 }
                 onClick={() => {
                   if (currentPath === "/projects") {
@@ -1815,6 +1872,8 @@ export function App() {
                     refreshFindings()
                   } else if (currentPath === "/providers") {
                     void refreshProviderStatus()
+                  } else if (currentPath === "/reports") {
+                    void refreshProjects(selectedProjectId)
                   }
                 }}
               >
@@ -3475,6 +3534,104 @@ export function App() {
                       No provider update job has been recorded.
                     </p>
                   )}
+                </section>
+              </section>
+            ) : currentPath === "/reports" ? (
+              <section
+                className="reports-workflow"
+                aria-label="Reports page shell"
+              >
+                <section
+                  className="reports-readiness-panel"
+                  aria-label="Reports readiness"
+                >
+                  <div>
+                    <span>Report generation</span>
+                    <h3>Export actions staged for VPW-048 through VPW-053</h3>
+                    <p>
+                      This shell prepares the central Reports workspace. The
+                      buttons are intentionally disabled until the matching
+                      backend generators, export contracts, and download flows
+                      are enabled by the follow-up report issues.
+                    </p>
+                  </div>
+                  <dl className="report-readiness-facts">
+                    <div>
+                      <dt>Project</dt>
+                      <dd>{selectedProject?.name ?? "No project selected"}</dd>
+                    </div>
+                    <div>
+                      <dt>Findings</dt>
+                      <dd>{projectSummary?.finding_count ?? 0}</dd>
+                    </div>
+                    <div>
+                      <dt>Provider evidence</dt>
+                      <dd>{providerStatus?.snapshot_mode ?? "missing"}</dd>
+                    </div>
+                    <div>
+                      <dt>Activation</dt>
+                      <dd>Placeholder only</dd>
+                    </div>
+                  </dl>
+                </section>
+
+                <section
+                  className="report-card-grid"
+                  aria-label="Report export cards"
+                >
+                  {reportActionCards.map((card) => (
+                    <article className="report-action-card" key={card.title}>
+                      <div className="report-card-header">
+                        <card.icon aria-hidden="true" size={22} />
+                        <div>
+                          <span>{card.format}</span>
+                          <h3>{card.title}</h3>
+                        </div>
+                      </div>
+                      <p>{card.detail}</p>
+                      <div className="report-card-footer">
+                        <span className="report-stage-pill">{card.stage}</span>
+                        <button
+                          className="report-placeholder-button"
+                          disabled
+                          type="button"
+                        >
+                          <Download aria-hidden="true" size={16} />
+                          <span>{card.actionLabel}</span>
+                        </button>
+                      </div>
+                    </article>
+                  ))}
+                </section>
+
+                <section
+                  className="report-history-panel"
+                  aria-label="Reports history"
+                >
+                  <div className="detail-section-heading">
+                    <div>
+                      <h3>Report History</h3>
+                      <span>Prepared artifact list</span>
+                    </div>
+                    <History aria-hidden="true" size={20} />
+                  </div>
+                  <ul
+                    className="report-history-list"
+                    aria-label="Prepared report history list"
+                  >
+                    <li className="report-history-row heading">
+                      <span>Artifact</span>
+                      <span>Format</span>
+                      <span>Status</span>
+                      <span>Download</span>
+                    </li>
+                    <li className="report-history-row empty">
+                      <span>No generated reports yet</span>
+                      <span>Markdown / HTML / JSON / CSV / ZIP</span>
+                      <span>Waiting for VPW-048ff</span>
+                      <span>VPW-053 disabled</span>
+                    </li>
+                  </ul>
                 </section>
               </section>
             ) : (
