@@ -185,61 +185,58 @@ def run_workbench_import(
     )
 
     try:
-        findings, context = prepare_analysis(request)
-    except (
-        OSError,
-        ValidationError,
-        ValueError,
-        AnalysisInputError,
-        AnalysisNoFindingsError,
-    ) as exc:
-        parse_errors = _input_parse_errors(
-            exc,
-            input_paths=input_paths,
-            original_filenames=original_filenames,
-            input_formats=input_formats,
+        try:
+            findings, context = prepare_analysis(request)
+        except (
+            OSError,
+            ValidationError,
+            ValueError,
+            AnalysisInputError,
+            AnalysisNoFindingsError,
+        ) as exc:
+            parse_errors = _input_parse_errors(
+                exc,
+                input_paths=input_paths,
+                original_filenames=original_filenames,
+                input_formats=input_formats,
+            )
+            _mark_analysis_run_failed(repo, run, exc, parse_errors=parse_errors)
+            raise WorkbenchAnalysisError(
+                str(exc),
+                parse_errors=parse_errors,
+                analysis_run_id=run.id,
+            ) from exc
+
+        payload = build_analysis_report_payload(findings, context)
+        _attach_workbench_metadata(
+            payload,
+            provider_snapshot=provider_snapshot,
+            attack_mapping_file=attack_mapping_file,
+            attack_technique_metadata_file=attack_technique_metadata_file,
+            asset_context_file=asset_context_file,
+            vex_file=vex_file,
+            waiver_file=waiver_file,
+            defensive_context_file=defensive_context_file,
         )
+        persisted_findings = _persist_findings(repo, run, findings, context=context)
+        _attach_workbench_finding_ids(payload, persisted_findings)
         repo.finish_analysis_run(
             run.id,
-            status="failed",
-            error_message=str(exc),
+            status="completed",
             metadata_json={
                 **run.metadata_json,
-                "parse_errors": parse_errors,
-                "lifecycle_status": "failed",
+                **payload.get("metadata", {}),
+                "parse_errors": [],
+                "lifecycle_status": "succeeded",
             },
+            attack_summary_json=payload.get("attack_summary", {}),
+            summary_json=payload,
         )
-        raise WorkbenchAnalysisError(
-            str(exc),
-            parse_errors=parse_errors,
-            analysis_run_id=run.id,
-        ) from exc
-
-    payload = build_analysis_report_payload(findings, context)
-    _attach_workbench_metadata(
-        payload,
-        provider_snapshot=provider_snapshot,
-        attack_mapping_file=attack_mapping_file,
-        attack_technique_metadata_file=attack_technique_metadata_file,
-        asset_context_file=asset_context_file,
-        vex_file=vex_file,
-        waiver_file=waiver_file,
-        defensive_context_file=defensive_context_file,
-    )
-    persisted_findings = _persist_findings(repo, run, findings, context=context)
-    _attach_workbench_finding_ids(payload, persisted_findings)
-    repo.finish_analysis_run(
-        run.id,
-        status="completed",
-        metadata_json={
-            **run.metadata_json,
-            **payload.get("metadata", {}),
-            "parse_errors": [],
-            "lifecycle_status": "succeeded",
-        },
-        attack_summary_json=payload.get("attack_summary", {}),
-        summary_json=payload,
-    )
+    except WorkbenchAnalysisError:
+        raise
+    except Exception as exc:
+        _mark_analysis_run_failed(repo, run, exc, parse_errors=[])
+        raise WorkbenchAnalysisError(str(exc), analysis_run_id=run.id) from exc
     session.flush()
     return WorkbenchImportResult(run=run, payload=payload)
 
@@ -331,6 +328,25 @@ def _input_parse_errors(
             strict=True,
         )
     ]
+
+
+def _mark_analysis_run_failed(
+    repo: WorkbenchRepository,
+    run: AnalysisRun,
+    exc: Exception,
+    *,
+    parse_errors: list[dict[str, Any]],
+) -> None:
+    repo.finish_analysis_run(
+        run.id,
+        status="failed",
+        error_message=str(exc),
+        metadata_json={
+            **run.metadata_json,
+            "parse_errors": parse_errors,
+            "lifecycle_status": "failed",
+        },
+    )
 
 
 def _effective_workbench_input_type(input_formats: list[str]) -> str:

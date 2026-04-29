@@ -142,6 +142,10 @@ class AnalysisRunSummaryPublic(SQLModel):
     ignored_lines: int = 0
     occurrence_count: int = 0
     finding_count: int = 0
+    counts_by_priority: dict[str, int] = Field(default_factory=dict)
+    kev_hits: int = 0
+    provider_snapshot_id: uuid.UUID | None = None
+    provider_degraded: bool = False
     parse_errors: list[ImportParseErrorPublic] = Field(default_factory=list)
     import_job: dict[str, Any] = Field(default_factory=dict)
     input_upload: dict[str, Any] = Field(default_factory=dict)

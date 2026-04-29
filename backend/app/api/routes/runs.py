@@ -94,6 +94,10 @@ def _analysis_run_summary(run: AnalysisRun) -> AnalysisRunSummaryPublic:
         ignored_lines=_int_value(summary_json.get("ignored_lines")),
         occurrence_count=_int_value(summary_json.get("occurrence_count")),
         finding_count=_int_value(summary_json.get("finding_count")),
+        counts_by_priority=_priority_counts(summary_json.get("counts_by_priority")),
+        kev_hits=_int_value(summary_json.get("kev_hits")),
+        provider_snapshot_id=run.provider_snapshot_id,
+        provider_degraded=bool(summary_json.get("provider_degraded", False)),
         parse_errors=[ImportParseErrorPublic.model_validate(item) for item in parse_errors],
         import_job=_dict_value(summary_json.get("import_job") or error_json.get("import_job")),
         input_upload=_dict_value(summary_json.get("input_upload")),
@@ -115,6 +119,11 @@ def _parse_errors(
 
 def _dict_value(value: Any) -> dict[str, Any]:
     return dict(value) if isinstance(value, dict) else {}
+
+
+def _priority_counts(value: Any) -> dict[str, int]:
+    raw = _dict_value(value)
+    return {key: _int_value(raw.get(key)) for key in ("Critical", "High", "Medium", "Low")}
 
 
 def _int_value(value: Any) -> int:

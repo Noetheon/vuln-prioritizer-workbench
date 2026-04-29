@@ -107,6 +107,12 @@ class FindingRepository:
         in_kev: bool = False,
         epss: float | None = None,
         cvss_base_score: float | None = None,
+        attack_mapped: bool = False,
+        suppressed_by_vex: bool = False,
+        under_investigation: bool = False,
+        waived: bool = False,
+        recommended_action: str | None = None,
+        rationale: str | None = None,
         explanation_json: dict[str, Any] | None = None,
         data_quality_json: dict[str, Any] | None = None,
         evidence_json: dict[str, Any] | None = None,
@@ -149,6 +155,12 @@ class FindingRepository:
         finding.in_kev = in_kev
         finding.epss = epss
         finding.cvss_base_score = cvss_base_score
+        finding.attack_mapped = attack_mapped
+        finding.suppressed_by_vex = suppressed_by_vex
+        finding.under_investigation = under_investigation
+        finding.waived = waived
+        finding.recommended_action = recommended_action
+        finding.rationale = rationale
         finding.explanation_json = explanation_json or {}
         finding.data_quality_json = data_quality_json or {}
         finding.evidence_json = evidence_json or {}
