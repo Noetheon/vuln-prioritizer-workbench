@@ -47,6 +47,16 @@
     "cvss_only_rank": 1,
     "cvss_severity": "CRITICAL",
     "cvss_version": "3.1",
+    "data_quality_confidence": "high",
+    "data_quality_flags": [
+      {
+        "code": "snapshot_locked",
+        "cve_id": null,
+        "message": "Provider snapshot replay is locked; live provider lookups are disabled.",
+        "severity": "info",
+        "source": "provider_snapshot"
+      }
+    ],
     "defensive_contexts": [],
     "delta_rank": 0,
     "description": "Apache Log4j2 2.0-beta9 through 2.15.0 (excluding security releases 2.12.2, 2.12.3, and 2.3.1) JNDI features used in configuration, log messages, and parameters do not protect against attacker controlled LDAP and other JNDI related endpoints. An attacker who can control log messages or log message parameters can execute arbitrary code loaded from LDAP servers when message lookup substitution is enabled. From log4j 2.15.0, this behavior has been disabled by default. From version 2.16.0 (along with 2.12.2, 2.12.3, and 2.3.1), this functionality has been completely removed. Note that this vulnerability is specific to log4j-core and does not affect log4net, log4cxx, or other Apache Logging Services projects.",
@@ -159,6 +169,16 @@
     "cvss_base_score": 10.0,
     "cvss_severity": "CRITICAL",
     "cvss_version": "3.1",
+    "data_quality_confidence": "high",
+    "data_quality_flags": [
+      {
+        "code": "snapshot_locked",
+        "cve_id": null,
+        "message": "Provider snapshot replay is locked; live provider lookups are disabled.",
+        "severity": "info",
+        "source": "provider_snapshot"
+      }
+    ],
     "defensive_contexts": [],
     "description": "Apache Log4j2 2.0-beta9 through 2.15.0 (excluding security releases 2.12.2, 2.12.3, and 2.3.1) JNDI features used in configuration, log messages, and parameters do not protect against attacker controlled LDAP and other JNDI related endpoints. An attacker who can control log messages or log message parameters can execute arbitrary code loaded from LDAP servers when message lookup substitution is enabled. From log4j 2.15.0, this behavior has been disabled by default. From version 2.16.0 (along with 2.12.2, 2.12.3, and 2.3.1), this functionality has been completely removed. Note that this vulnerability is specific to log4j-core and does not affect log4net, log4cxx, or other Apache Logging Services projects.",
     "epss": 0.94465,
@@ -248,7 +268,8 @@
         "product": "Log4j2",
         "required_action": "For all affected software assets for which updates exist, the only acceptable remediation actions are: 1) Apply updates; OR 2) remove affected assets from agency networks. Temporary mitigations using one of the measures provided at https://www.cisa.gov/uscert/ed-22-02-apache-log4j-recommended-mitigation-measures are only acceptable until updates are available.",
         "short_description": null,
-        "vendor_project": "Apache"
+        "vendor_project": "Apache",
+        "vulnerability_name": null
       },
       "nvd": {
         "cve_id": "CVE-2021-44228",
@@ -410,7 +431,8 @@
     "product": "Log4j2",
     "required_action": "For all affected software assets for which updates exist, the only acceptable remediation actions are: 1) Apply updates; OR 2) remove affected assets from agency networks. Temporary mitigations using one of the measures provided at https://www.cisa.gov/uscert/ed-22-02-apache-log4j-recommended-mitigation-measures are only acceptable until updates are available.",
     "short_description": null,
-    "vendor_project": "Apache"
+    "vendor_project": "Apache",
+    "vulnerability_name": null
   },
   "metadata": {
     "active_filters": [],
@@ -512,6 +534,17 @@
       "medium_cvss_threshold": 7.0,
       "medium_epss_threshold": 0.1
     },
+    "provider_data_quality_flags": {
+      "provider_snapshot": [
+        {
+          "code": "snapshot_locked",
+          "cve_id": null,
+          "message": "Provider snapshot replay is locked; live provider lookups are disabled.",
+          "severity": "info",
+          "source": "provider_snapshot"
+        }
+      ]
+    },
     "provider_degraded": false,
     "provider_diagnostics": {
       "epss": {
@@ -561,6 +594,8 @@
       "provider_snapshot_generated_at": "2026-04-21T12:00:00+00:00"
     },
     "provider_snapshot_file": "data/demo_provider_snapshot.json",
+    "provider_snapshot_hash": "a110e4c372a5ec750e0b766e23f19884596f6ac82185b8fd0eefe8384be71c5b",
+    "provider_snapshot_id": null,
     "provider_snapshot_sources": [
       "nvd",
       "epss",

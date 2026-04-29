@@ -1,0 +1,17 @@
+FROM mcr.microsoft.com/playwright:v1.58.2-noble
+
+WORKDIR /app
+
+COPY package.json bun.lock /app/
+COPY frontend/package.json /app/frontend/
+
+RUN npm --prefix frontend install --no-package-lock
+
+COPY frontend /app/frontend
+
+ARG VITE_API_URL=http://backend:8000
+ARG NODE_ENV=production
+ENV VITE_API_URL=$VITE_API_URL
+ENV NODE_ENV=$NODE_ENV
+
+RUN npm --prefix frontend run build

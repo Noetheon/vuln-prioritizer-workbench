@@ -24,6 +24,27 @@ README media maintenance checklist for future releases:
 - Show secret-bearing settings only in their redacted `<set>` or `<not set>` state.
 - Commit generated screenshot replacements only as part of a release evidence or docs refresh change.
 
+## Problem And Goal
+
+Security teams often start with a long list of CVEs from scanners, SBOM tools,
+advisory exports, or issue trackers. Raw CVSS scores alone do not explain what
+should be fixed first, which systems are exposed, which findings are already
+covered by VEX/waivers, or which decisions need evidence.
+
+`vuln-prioritizer` turns existing CVE evidence into an explainable
+risk-to-decision workflow:
+
+```text
+existing findings or SBOM exports
+  -> normalized CVE occurrences
+  -> CVSS, EPSS, KEV, optional ATT&CK, asset, VEX, waiver, and provider context
+  -> transparent priority and rationale
+  -> reports, CI gates, evidence bundles, and Workbench decision queues
+```
+
+The goal is not to discover vulnerabilities. The goal is to help operators make
+defensible decisions from vulnerability evidence they already have.
+
 ## Why Use It
 
 - Transparent, rule-based prioritization instead of opaque scoring.
@@ -32,7 +53,8 @@ README media maintenance checklist for future releases:
 - CI-friendly outputs including Markdown summaries, SARIF, GitHub Action support, and policy gates.
 - Explicit support for local defensive context, VEX, asset context, waivers, and reproducible review artifacts.
 - Waiver lifecycle visibility with active, review-due, and expired states instead of silent long-lived exceptions.
-- A Docker/Compose path that runs the current local Workbench app while keeping the CLI core available in the same image.
+- A Docker/Compose path that runs the current template-aligned Workbench shell
+  while keeping the CLI core available in the same image.
 
 ## What It Can Do
 
@@ -89,18 +111,25 @@ This project is:
 This project is not:
 
 - a scanner
+- an exploit framework, PoC generator, or active probing tool
 - a SIEM
 - a ticketing system
+- an autopatcher or autonomous remediation agent
 - a replacement for heavier vulnerability-management platforms
 - a live TAXII harvester
 - a heuristic or LLM-based ATT&CK mapper
+
+It does not perform credential testing, network scanning, exploitation,
+payload generation, attack simulation, or heuristic CVE-to-ATT&CK mapping.
+ATT&CK support is defensive and evidence-based: use reviewed local mappings and
+technique metadata only.
 
 ## Installation
 
 ### Recommended: `pipx`
 
 ```bash
-pipx install git+https://github.com/Noetheon/vuln-prioritizer-workbench.git@vX.Y.Z
+pipx install git+https://github.com/Noetheon/vuln-prioritizer-workbench.git@vX.Y.Z#subdirectory=backend
 vuln-prioritizer --help
 ```
 
@@ -119,8 +148,8 @@ The repository is PyPI-ready, but the verified public install path is currently 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-pip install -r requirements.txt
-pip install -e .[dev]
+pip install -r backend/requirements.txt
+pip install -e "backend[dev]"
 ```
 
 Optional:
@@ -133,39 +162,50 @@ Then set `NVD_API_KEY` in `.env` if you want authenticated NVD access.
 
 ### Docker / Compose Workbench
 
-Run the current self-hosted Workbench API and web UI locally:
+Run the template-aligned Workbench shell and React frontend locally:
 
 ```bash
-docker compose up --build
+docker compose -f compose.yml -f compose.override.yml up --build backend frontend
 ```
 
-Then open `http://127.0.0.1:8000`. The Compose service stores SQLite data, uploads, reports, provider snapshots, and provider cache entries in Docker named volumes, mounts checked-in demo data read-only at `/app/examples`, and copies demo provider snapshots into the writable snapshot volume on startup.
+Then open `http://127.0.0.1:5173` for the React shell or call the template
+backend status endpoint:
 
 ```bash
-curl http://127.0.0.1:8000/api/health
+curl http://127.0.0.1:8000/api/v1/workbench/status
 ```
 
-Maintainers can run the same Compose readiness path through `make docker-demo-smoke`, which starts the service, polls `/api/health`, and tears the stack down after the check.
+Maintainers can run the same Compose readiness path through
+`make docker-demo-smoke`, which starts the backend and frontend, polls
+`/api/v1/workbench/status`, and tears the stack down after the check.
 
-SQLite is still the default. To smoke-test the optional Postgres profile and the same Alembic migration path, run:
+The default Compose stack now follows the FastAPI Full Stack Template shape:
+`db`, `backend`, and `frontend`. The backend service intentionally serves the
+new template shell (`app.main:app`) and does not claim the legacy Jinja2
+Workbench as migrated. To smoke-test the legacy Workbench against the optional
+Postgres profile and the same Alembic migration path, run:
 
 ```bash
 make docker-postgres-migration-smoke
 ```
 
-That starts the `postgres` and `workbench-postgres` profile services, serves the app on `http://127.0.0.1:8001`, and tears down the profile volumes after the health check.
+That starts `db` and the profiled `workbench-postgres` service, serves the
+legacy Workbench on `http://127.0.0.1:8001`, and tears down the profile volumes
+after the health check.
 
-The container starts the web app with `vuln-prioritizer web serve --host 0.0.0.0 --port 8000`. The app initializes the SQLite schema on startup; you can also initialize the same database explicitly:
+The backend image still contains the CLI and legacy Workbench command for
+profiled migration checks. You can initialize a profiled legacy database
+explicitly with:
 
 ```bash
-docker compose run --rm workbench vuln-prioritizer db init
+docker compose -f compose.yml -f compose.override.yml --profile postgres run --rm workbench-postgres vuln-prioritizer db init
 ```
 
 The CLI remains available in the same image:
 
 ```bash
-docker build -t vuln-prioritizer-workbench:local .
-docker run --rm vuln-prioritizer-workbench:local vuln-prioritizer --help
+docker build -f backend/Dockerfile -t vuln-prioritizer-workbench-backend:local .
+docker run --rm vuln-prioritizer-workbench-backend:local vuln-prioritizer --help
 ```
 
 Equivalent local Workbench commands after a normal Python install:
@@ -186,24 +226,28 @@ Workbench runtime environment:
 | --- | --- | --- |
 | `NVD_API_KEY` | empty | Optional authenticated NVD access. |
 | `VULN_PRIORITIZER_NVD_API_KEY_ENV` | `NVD_API_KEY` | Name of the environment variable read for the NVD key. |
-| `VULN_PRIORITIZER_DB_URL` | local: `sqlite:///./data/workbench.db`; Compose: `sqlite:////app/data/workbench.db` | Workbench database URL. |
+| `VULN_PRIORITIZER_DB_URL` | local: `sqlite:///./data/workbench.db`; profiled Compose migration smoke: `postgresql+psycopg://...@db:5432/workbench` | Legacy Workbench database URL. |
 | `VULN_PRIORITIZER_UPLOAD_DIR` | local: `data/uploads`; Compose: `/app/uploads` | Uploaded source files. |
 | `VULN_PRIORITIZER_REPORT_DIR` | local: `data/reports`; Compose: `/app/reports` | Generated reports and evidence bundles. |
 | `VULN_PRIORITIZER_PROVIDER_SNAPSHOT_DIR` | local: `data`; Compose: `/app/provider-snapshots` | Trusted directory for locked provider snapshot replay and generated provider update snapshots. |
 | `VULN_PRIORITIZER_CACHE_DIR` | local: `.cache/vuln-prioritizer`; Compose: `/app/.cache/vuln-prioritizer` | Provider cache used by Workbench analysis. |
 | `VULN_PRIORITIZER_MAX_UPLOAD_MB` | `25` | Upload size limit per import. |
 | `VULN_PRIORITIZER_CSRF_TOKEN` | random per process when unset | Optional fixed local form token for repeatable demos. |
-| `VULN_PRIORITIZER_ALLOWED_HOSTS` | local: `127.0.0.1,localhost,testserver`; Compose: `127.0.0.1,localhost` | Comma-separated Host header allowlist for the local Workbench. |
+| `VULN_PRIORITIZER_ALLOWED_HOSTS` | local: `127.0.0.1,localhost,testserver`; profiled Compose migration smoke: `127.0.0.1,localhost` | Comma-separated Host header allowlist for the local Workbench. |
 
 For locked Workbench replay, submit only the snapshot filename, for example
 `demo_provider_snapshot.json`. The app resolves it from
 `VULN_PRIORITIZER_PROVIDER_SNAPSHOT_DIR` or the provider cache and rejects arbitrary paths.
 
-Workbench API token behavior is intentionally local-first. A fresh local database has no active
+Legacy Workbench API token behavior is intentionally local-first. A fresh local database has no active
 tokens, so mutating `/api/*` requests remain open for the offline demo. Create the first token with
 `POST /api/tokens`; after any active token exists, `POST`, `PUT`, `PATCH`, and `DELETE` requests under
 `/api/` require `Authorization: Bearer <token>` or `X-API-Token: <token>`. Only SHA-256 token hashes
 are stored.
+
+The template-aligned Workbench shell currently has a configured-superuser JWT
+login smoke path. DB-backed template users, RBAC, and final project membership
+rules are separate migration work.
 
 Workbench project settings can be saved as config-as-code through
 `POST /api/projects/{project_id}/settings/config`. The payload uses the same
@@ -223,8 +267,26 @@ Current local Workbench limitations:
 - The Workbench UI/API supports the same input-format matrix as the CLI for local single-file and multi-file imports.
 - SQLite remains the default Workbench runtime; the Compose Postgres profile is an optional migration smoke path. The Workbench records durable job state for local imports, provider refreshes, reports, and evidence bundles, but a separate async worker process, SSO, organization-wide ticket sync policy, and multi-workspace tenancy remain outside the current local-first scope.
 - The project still does not scan systems, patch software, or generate heuristic/AI CVE-to-ATT&CK mappings.
+- Do not expose the local Workbench on the public internet without a separate hardening review covering TLS/proxying, backup/restore, audit retention, role design, token handling, and the threat model.
 
 Current Workbench readiness and shared-deployment prerequisites are tracked in [docs/workbench-threat-model.md](docs/workbench-threat-model.md). The historical implementation plan remains available in [docs/workbench-masterplan.md](docs/workbench-masterplan.md), and [docs/roadmap.md](docs/roadmap.md) tracks the shipped CLI plus local Workbench release line.
+
+## Demo
+
+For a local browser demo, use the checked-in offline runbook:
+[docs/workbench-offline-demo.md](docs/workbench-offline-demo.md). It uses
+repository fixtures and locked provider replay so screenshots and evidence can
+be reproduced without customer data or live-only provider behavior.
+
+For a template-migration smoke demo, run:
+
+```bash
+make docker-demo-smoke
+```
+
+That command starts the template backend and React shell, verifies
+`/api/v1/workbench/status`, checks the frontend and login route, then tears down
+the stack.
 
 ## Quickstart
 
@@ -280,6 +342,11 @@ vuln-prioritizer report verify-evidence-bundle \
 ```
 
 ### 5. ATT&CK-Aware Analyze with Your Own Local Mapping Files
+
+ATT&CK/TTP context in this project is defensive context for risk explanation,
+detection coverage, mitigation discussion, and prioritization. It is not
+exploit proof, attack-chain guidance, or evidence that a CVE is actively being
+used against your environment.
 
 ```bash
 vuln-prioritizer analyze \
@@ -359,7 +426,7 @@ The target uses checked-in fixtures, `data/demo_provider_snapshot.json`, locked 
 To verify an already generated bundle from the checkout, run the same CLI contract directly:
 
 ```bash
-PYTHONPATH=src VULN_PRIORITIZER_FIXED_NOW=2026-04-21T12:00:00+00:00 \
+PYTHONPATH=backend/src VULN_PRIORITIZER_FIXED_NOW=2026-04-21T12:00:00+00:00 \
   python3 -m vuln_prioritizer.cli report verify-evidence-bundle \
   --input build/v1.0-demo-evidence-bundle.zip \
   --output build/v1.0-demo-evidence-bundle-verification.json \
@@ -427,6 +494,7 @@ Start here for public CLI usage and the local Workbench app path:
 - [docs/integrations/reporting_and_ci.md](docs/integrations/reporting_and_ci.md)
 - [docs/releases/v1.1.0.md](docs/releases/v1.1.0.md)
 - [docs/roadmap.md](docs/roadmap.md)
+- [ROADMAP.md](ROADMAP.md)
 - Historical Workbench masterplan: [docs/workbench-masterplan.md](docs/workbench-masterplan.md)
 
 Maintainer / repo-checkout workflows:

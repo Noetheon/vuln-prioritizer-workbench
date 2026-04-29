@@ -1,0 +1,55 @@
+{
+  "source": {
+    "type": "image",
+    "target": {
+      "userInput": "ghcr.io/acme/demo-app:1.0.0"
+    }
+  },
+  "matches": [
+    {
+      "vulnerability": {
+        "id": "CVE-2024-3094",
+        "severity": "Critical",
+        "fix": {
+          "versions": ["5.6.1-r2"]
+        }
+      },
+      "artifact": {
+        "name": "xz",
+        "version": "5.6.0-r0",
+        "type": "apk",
+        "purl": "pkg:apk/alpine/xz@5.6.0-r0",
+        "locations": [
+          {
+            "path": "/lib/apk/db/installed"
+          }
+        ]
+      }
+    },
+    {
+      "vulnerability": {
+        "id": "GHSA-9m7r-4c2v-9j5j",
+        "relatedVulnerabilities": [
+          {
+            "id": "CVE-2023-34362"
+          }
+        ],
+        "severity": "High"
+      },
+      "artifact": {
+        "name": "moveit-transfer",
+        "version": "2023.0.0",
+        "type": "python",
+        "purl": "pkg:pypi/moveit-transfer@2023.0.0",
+        "locations": [
+          {
+            "realPath": "app/requirements.txt"
+          }
+        ]
+      },
+      "fix": {
+        "versions": ["2023.0.2"]
+      }
+    }
+  ]
+}

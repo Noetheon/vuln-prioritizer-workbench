@@ -241,7 +241,56 @@ Current provider freshness contract:
 - `--fail-on-stale-provider-data` returns exit code `1` after writing requested output when provider data is stale
 - live lookups use the current run timestamp for freshness
 - locked provider-snapshot replay uses the snapshot `generated_at` timestamp for selected snapshot sources
+- analysis-style metadata includes provider snapshot identity when available:
+  `provider_snapshot_id`, `provider_snapshot_hash`, `provider_snapshot_file`, and
+  `provider_snapshot_sources`
 - analysis-style metadata may include `provider_freshness`, `max_provider_age_hours`, `provider_stale`, and `provider_stale_sources`
+
+### Provider enrichment service
+
+Current provider service contract:
+
+- built-in NVD, EPSS, and KEV providers can be adapted to the shared
+  `ProviderEnrichmentClient.enrich(cve_ids, **kwargs)` interface
+- provider snapshots use the additive `provider-snapshot.v1.json` format marker
+  in `metadata.snapshot_format`, plus `snapshot_id`, `source_hashes`, and
+  per-source `source_metadata`
+- NVD uses the CVE API 2.0 per requested CVE, sends an optional API key only
+  through the configured request header, redacts configured key values from
+  warnings, and degrades to cache or empty records instead of aborting analysis
+- provider failures degrade into `ProviderStatus` and data-quality flags before
+  optional CI gates decide whether to fail the process
+- canonical provider data-quality codes are additive and include
+  `nvd_missing`, `nvd_cvss_missing`, `epss_missing`, `epss_outdated`,
+  `kev_unavailable`, `snapshot_locked`, and `provider_error`; legacy generic
+  codes such as `provider_failure`, `provider_missing_data`, `stale_cache`, and
+  `provider_warning` may still be emitted for compatibility
+- NVD records with provider metadata but no CVSS base score/version add an
+  `nvd_cvss_missing` data-quality flag with the affected `cve_id`
+- KEV provider data includes CISA catalog details such as
+  `vulnerability_name`, `vendor_project`, `product`, `date_added`, `due_date`,
+  and `required_action` when present in JSON, CSV, cache, or locked snapshot
+  sources
+- `ProviderStatus` includes `source`, `last_sync`, `cache_hit`, `cache_miss`,
+  cache counters, stale-cache counters, network/failure counters, and
+  `data_quality_flags`
+- provider snapshot metadata includes `source_hashes`, a map from selected
+  provider source to the local cache namespace SHA-256 checksum or `null`
+- Workbench exposes provider snapshot list/detail/download/import API routes;
+  import accepts only explicit `provider-snapshot.v1.json` snapshots containing
+  `metadata.snapshot_format` and `metadata.source_metadata`, and evidence
+  bundles include the resolved provider snapshot JSON as
+  `provider/provider-snapshot.json` when a replay snapshot is part of the run
+- analysis-style metadata may include `provider_data_quality_flags`, keyed by
+  source, when recoverable provider problems such as missing EPSS records,
+  stale cache fallback, or provider warnings were observed; individual
+  findings expose scoped `data_quality_flags` and `data_quality_confidence`
+  (`high`, `medium`, `low`) so missing data cannot silently collapse priority
+  to Low without visible evidence
+- cache contract metadata includes namespace, raw key template, TTL seconds,
+  and whether expired cache may be used on provider failure
+- required tests for this contract use fake providers or monkeypatching, not
+  live provider APIs
 
 ### Defensive context semantics
 
@@ -262,6 +311,11 @@ Workbench API changes are additive:
 - `GET /api/projects/{project_id}/audit-events` and `GET /api/audit-events` expose audit records
 - `GET /api/tokens` lists token metadata without token values; `DELETE /api/tokens/{id}` revokes tokens
 - `GET /api/diagnostics` exposes local runtime diagnostics and is token-gated once active tokens exist
+- `POST /api/v1/projects/{project_id}/imports` accepts a JWT-gated template Workbench upload, validates input type, extension, MIME hint, filename, and upload size, persists the uploaded file under the configured import upload root, and records upload SHA-256 plus structured `parse_errors` in the returned `AnalysisRun`
+- `GET /api/v1/projects/{project_id}/runs` and `GET /api/v1/projects/{project_id}/runs/` list visible template Workbench runs
+- `GET /api/v1/runs/{run_id}` returns the raw persisted template Workbench run for a visible project
+- `GET /api/v1/runs/{run_id}/summary` returns a UI-oriented summary with stable `created_findings`, `updated_findings`, `ignored_lines`, `occurrence_count`, `finding_count`, `parse_errors`, `import_job`, `input_upload`, and `dedup_summary` fields
+- `GET /api/v1/providers/status` returns an authenticated template adapter provider-status envelope for the React status card, including `status`, `snapshot`, `sources`, `latest_update_job`, `cache_dir`, `snapshot_dir`, `warnings`, `last_sync`, `last_error`, `cache_age_seconds`, and `snapshot_mode`; the legacy `GET /api/providers/status` route still exists with its current behavior during migration
 - `POST /api/projects/{project_id}/imports` accepts single-upload and additive multi-upload imports for all CLI input formats
 - `GET /api/jobs`, `GET /api/jobs/{id}`, `POST /api/jobs`, and `POST /api/jobs/{id}/retry` expose durable local job state for compatible synchronous operations
 - `DELETE /api/reports/{id}` and `DELETE /api/evidence-bundles/{id}` remove managed artifacts after checksum validation
@@ -272,6 +326,19 @@ Workbench API changes are additive:
 - `POST /api/projects/{project_id}/tickets/preview` and `POST /api/projects/{project_id}/tickets/export` support Jira and ServiceNow ticket previews, dry-runs, explicit token environment variables, and idempotency keys without making either system a required dependency
 - project config snapshots can be listed, recursively diffed, exported, and rolled back through settings endpoints
 - `--fail-on-expired-waivers` and `--fail-on-review-due-waivers` are opt-in enforcement hooks
+
+Template import parse errors use this additive shape in `parse_errors`:
+
+- `input_type`: normalized import type such as `cve-list`
+- `filename`: sanitized uploaded filename when available
+- `message`: parser-facing error text suitable for display
+- `error_type`: importer exception class name
+- `line`: 1-based input line number when the parser error includes one
+- `field`: logical field when inferable, for example `cve_id`
+- `value`: rejected value when inferable from the parser message
+
+Consumers should treat `line`, `field`, and `value` as optional and preserve
+unknown additive members.
 
 ### Parser and provider extension SDK
 

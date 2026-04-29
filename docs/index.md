@@ -65,11 +65,11 @@ If you are working from a repository checkout, the checked-in demo ATT&CK files 
 Workbench v1.0 from a repository checkout:
 
 ```bash
-docker compose up --build
-curl http://127.0.0.1:8000/api/health
+docker compose -f compose.yml -f compose.override.yml up --build backend frontend
+curl http://127.0.0.1:8000/api/v1/workbench/status
 ```
 
-The web/API Workbench is local-first, SQLite-backed, and focused on CVE lists, `generic-occurrence-csv`, Trivy JSON, and Grype JSON imports. Use the CLI for the full automation/input matrix.
+During the FastAPI template migration, Compose starts the template backend shell and React frontend. The legacy web/API Workbench remains local-first and focused on CVE lists, `generic-occurrence-csv`, Trivy JSON, and Grype JSON imports. Use the CLI for the full automation/input matrix.
 
 ## Documentation Structure
 

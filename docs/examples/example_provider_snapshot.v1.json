@@ -1,0 +1,95 @@
+{
+  "items": [
+    {
+      "cve_id": "CVE-2026-2001",
+      "epss": {
+        "cve_id": "CVE-2026-2001",
+        "date": "2026-04-29",
+        "epss": 0.91,
+        "percentile": 0.99
+      },
+      "kev": {
+        "cve_id": "CVE-2026-2001",
+        "date_added": "2026-04-29",
+        "due_date": "2026-05-20",
+        "in_kev": true,
+        "product": "Example Product",
+        "required_action": "Apply vendor update.",
+        "vendor_project": "Example Vendor",
+        "vulnerability_name": "Example Product remote code execution vulnerability"
+      },
+      "nvd": {
+        "cve_id": "CVE-2026-2001",
+        "cvss_base_score": 9.8,
+        "cvss_severity": "CRITICAL",
+        "cvss_vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:H/VA:H",
+        "cvss_version": "4.0",
+        "cwes": [
+          "CWE-79"
+        ],
+        "description": "Example NVD CVE record used to validate replay contracts.",
+        "last_modified": "2026-04-29T12:00:00.000",
+        "published": "2026-04-29T00:00:00.000",
+        "reference_tags": {
+          "https://example.invalid/advisory/CVE-2026-2001": [
+            "Vendor Advisory"
+          ]
+        },
+        "references": [
+          "https://example.invalid/advisory/CVE-2026-2001"
+        ],
+        "vulnerability_status": "Analyzed"
+      }
+    }
+  ],
+  "metadata": {
+    "artifact_kind": "provider-snapshot",
+    "cache_dir": ".cache/vuln-prioritizer",
+    "cache_enabled": true,
+    "cache_only": true,
+    "generated_at": "2026-04-29T12:00:00+00:00",
+    "input_format": "cve-list",
+    "input_path": "data/sample_cves.txt",
+    "input_paths": [
+      "data/sample_cves.txt"
+    ],
+    "nvd_api_key_env": "NVD_API_KEY",
+    "offline_kev_file": null,
+    "output_path": "provider-snapshot.v1.json",
+    "requested_cves": 1,
+    "schema_version": "1.2.0",
+    "selected_sources": [
+      "nvd",
+      "epss",
+      "kev"
+    ],
+    "snapshot_format": "provider-snapshot.v1.json",
+    "snapshot_id": "example-provider-snapshot-v1",
+    "source_hashes": {
+      "epss": "9c1a6f62b0ad34627b1ce37ff0b4f2210a6eb547c7f82ea139e5e7ace41f9b0d",
+      "kev": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+      "nvd": "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789"
+    },
+    "source_metadata": {
+      "epss": {
+        "cache_namespace_hash": "9c1a6f62b0ad34627b1ce37ff0b4f2210a6eb547c7f82ea139e5e7ace41f9b0d",
+        "cache_only": true,
+        "record_count": 1,
+        "source": "FIRST EPSS API"
+      },
+      "kev": {
+        "cache_namespace_hash": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        "cache_only": true,
+        "record_count": 1,
+        "source": "CISA KEV catalog"
+      },
+      "nvd": {
+        "cache_namespace_hash": "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
+        "cache_only": true,
+        "record_count": 1,
+        "source": "NVD CVE API 2.0"
+      }
+    }
+  },
+  "warnings": []
+}

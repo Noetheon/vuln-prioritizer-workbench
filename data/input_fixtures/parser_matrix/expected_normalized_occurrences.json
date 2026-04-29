@@ -1,0 +1,180 @@
+{
+  "cve-list": [
+    {
+      "asset_ref": null,
+      "component": null,
+      "cve": "CVE-2024-3094",
+      "fix_version": null,
+      "raw_evidence": {
+        "input_type": "cve-list",
+        "line_number": 2,
+        "source_record_id": "line:2"
+      },
+      "source": "cve-list",
+      "version": null
+    },
+    {
+      "asset_ref": null,
+      "component": null,
+      "cve": "CVE-2023-44487",
+      "fix_version": null,
+      "raw_evidence": {
+        "input_type": "cve-list",
+        "line_number": 3,
+        "source_record_id": "line:3"
+      },
+      "source": "cve-list",
+      "version": null
+    }
+  ],
+  "generic-occurrence-csv": [
+    {
+      "asset_ref": "build-host-1",
+      "component": "xz",
+      "cve": "CVE-2024-3094",
+      "fix_version": "5.6.1-r2",
+      "raw_evidence": {
+        "asset_criticality": null,
+        "asset_environment": null,
+        "asset_exposure": null,
+        "asset_id": null,
+        "business_service": "payments",
+        "dependency_path": null,
+        "file_path": null,
+        "input_type": "generic-occurrence-csv",
+        "line_number": 2,
+        "owner": "team-platform",
+        "package_type": null,
+        "purl": "pkg:apk/alpine/xz@5.6.0-r0",
+        "scanner": "trivy",
+        "severity": "CRITICAL",
+        "source_record_id": "row:2",
+        "target_kind": "host",
+        "target_ref": "build-host-1",
+        "unknown_columns": {}
+      },
+      "source": "generic-occurrence-csv",
+      "version": "5.6.0-r0"
+    },
+    {
+      "asset_ref": "web-tier",
+      "component": "php-cgi",
+      "cve": "CVE-2024-4577",
+      "fix_version": "8.3.8",
+      "raw_evidence": {
+        "asset_criticality": null,
+        "asset_environment": null,
+        "asset_exposure": null,
+        "asset_id": null,
+        "business_service": "checkout",
+        "dependency_path": null,
+        "file_path": null,
+        "input_type": "generic-occurrence-csv",
+        "line_number": 3,
+        "owner": "team-web",
+        "package_type": null,
+        "purl": "pkg:generic/php-cgi@8.3.7",
+        "scanner": "manual",
+        "severity": "HIGH",
+        "source_record_id": "row:3",
+        "target_kind": "service",
+        "target_ref": "web-tier",
+        "unknown_columns": {}
+      },
+      "source": "generic-occurrence-csv",
+      "version": "8.3.7"
+    }
+  ],
+  "trivy-json": [
+    {
+      "asset_ref": "ghcr.io/acme/demo-app:1.0.0 (alpine 3.19)",
+      "component": "xz",
+      "cve": "CVE-2024-3094",
+      "fix_version": "5.6.1-r2",
+      "raw_evidence": {
+        "asset_id": null,
+        "dependency_path": null,
+        "file_path": "/lib/apk/db/installed",
+        "fix_versions": ["5.6.1-r2"],
+        "package_type": "apk",
+        "purl": "pkg:apk/alpine/xz@5.6.0-r0",
+        "raw_severity": "CRITICAL",
+        "source_format": "trivy-json",
+        "source_id": "CVE-2024-3094",
+        "source_record_id": "result:1:vuln:1",
+        "target_kind": "image",
+        "target_ref": "ghcr.io/acme/demo-app:1.0.0 (alpine 3.19)"
+      },
+      "source": "trivy-json",
+      "version": "5.6.0-r0"
+    },
+    {
+      "asset_ref": "requirements.txt",
+      "component": "moveit-transfer",
+      "cve": "CVE-2023-34362",
+      "fix_version": "2023.0.2",
+      "raw_evidence": {
+        "asset_id": null,
+        "dependency_path": null,
+        "file_path": "requirements.txt",
+        "fix_versions": ["2023.0.2"],
+        "package_type": "pip",
+        "purl": "pkg:pypi/moveit-transfer@2023.0.0",
+        "raw_severity": "CRITICAL",
+        "source_format": "trivy-json",
+        "source_id": "GHSA-9m7r-4c2v-9j5j",
+        "source_record_id": "result:2:vuln:1",
+        "target_kind": "image",
+        "target_ref": "requirements.txt"
+      },
+      "source": "trivy-json",
+      "version": "2023.0.0"
+    }
+  ],
+  "grype-json": [
+    {
+      "asset_ref": "ghcr.io/acme/demo-app:1.0.0",
+      "component": "xz",
+      "cve": "CVE-2024-3094",
+      "fix_version": "5.6.1-r2",
+      "raw_evidence": {
+        "asset_id": null,
+        "dependency_path": null,
+        "file_path": "/lib/apk/db/installed",
+        "fix_versions": ["5.6.1-r2"],
+        "package_type": "apk",
+        "purl": "pkg:apk/alpine/xz@5.6.0-r0",
+        "raw_severity": "Critical",
+        "source_format": "grype-json",
+        "source_id": "CVE-2024-3094",
+        "source_record_id": "match:1",
+        "target_kind": "image",
+        "target_ref": "ghcr.io/acme/demo-app:1.0.0"
+      },
+      "source": "grype-json",
+      "version": "5.6.0-r0"
+    },
+    {
+      "asset_ref": "ghcr.io/acme/demo-app:1.0.0",
+      "component": "moveit-transfer",
+      "cve": "CVE-2023-34362",
+      "fix_version": "2023.0.2",
+      "raw_evidence": {
+        "asset_id": null,
+        "dependency_path": null,
+        "file_path": "app/requirements.txt",
+        "fix_versions": ["2023.0.2"],
+        "package_type": "python",
+        "purl": "pkg:pypi/moveit-transfer@2023.0.0",
+        "raw_severity": "High",
+        "source_format": "grype-json",
+        "source_id": "GHSA-9m7r-4c2v-9j5j",
+        "source_record_id": "match:2",
+        "target_kind": "image",
+        "target_ref": "ghcr.io/acme/demo-app:1.0.0"
+      },
+      "source": "grype-json",
+      "version": "2023.0.0"
+    }
+  ]
+}
