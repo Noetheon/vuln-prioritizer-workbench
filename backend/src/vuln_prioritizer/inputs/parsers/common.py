@@ -165,7 +165,10 @@ def as_string_list(value: object) -> list[str]:
 
 
 def load_json_object(path: Path, document_name: str) -> dict:
-    document = json.loads(path.read_text(encoding="utf-8"))
+    try:
+        document = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"{document_name} is invalid JSON: {exc.msg}.") from exc
     if not isinstance(document, dict):
         raise ValueError(f"{document_name} must be a top-level JSON object.")
     return document

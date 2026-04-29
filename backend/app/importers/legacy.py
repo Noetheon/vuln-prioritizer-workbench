@@ -120,6 +120,7 @@ def _normalize_occurrence(occurrence: InputOccurrence) -> NormalizedOccurrence:
 def _raw_evidence(occurrence: InputOccurrence) -> dict[str, Any]:
     return {
         "source_format": occurrence.source_format,
+        "source_id": occurrence.source_id,
         "source_record_id": occurrence.source_record_id,
         "purl": occurrence.purl,
         "package_type": occurrence.package_type,
