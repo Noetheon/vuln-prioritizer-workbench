@@ -461,6 +461,7 @@ def _persist_findings(
             status=_finding_status(finding),
             priority=finding.priority_label,
             priority_rank=finding.priority_rank,
+            risk_score=float(finding.operational_score),
             operational_rank=finding.operational_rank,
             in_kev=finding.in_kev,
             epss=finding.epss,

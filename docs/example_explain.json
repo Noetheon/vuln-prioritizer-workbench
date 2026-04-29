@@ -70,6 +70,14 @@
     ],
     "mapped_technique_count": 0,
     "operational_rank": 1,
+    "operational_score": 98,
+    "operational_score_reasons": [
+      "base Critical priority: +70",
+      "CISA KEV-listed: +15",
+      "critical EPSS/CVSS threshold: +8",
+      "high CVSS threshold: +5"
+    ],
+    "priority_state": "Critical",
     "provenance": {
       "active_occurrence_count": 1,
       "affected_paths": [],
@@ -186,6 +194,13 @@
     "highest_asset_criticality": null,
     "in_kev": true,
     "operational_rank": 1,
+    "operational_score": 98,
+    "operational_score_reasons": [
+      "base Critical priority: +70",
+      "CISA KEV-listed: +15",
+      "critical EPSS/CVSS threshold: +8",
+      "high CVSS threshold: +5"
+    ],
     "priority_drivers": [
       "kev",
       "critical-epss-cvss",
@@ -196,6 +211,7 @@
     ],
     "priority_label": "Critical",
     "priority_rank": 1,
+    "priority_state": "Critical",
     "provenance": {
       "active_occurrence_count": 1,
       "affected_paths": [],

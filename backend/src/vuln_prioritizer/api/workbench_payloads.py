@@ -78,6 +78,9 @@ def _finding_payload(finding: Any, *, include_detail: bool = False) -> dict[str,
         "cve_id": finding.cve_id,
         "priority": finding.priority,
         "priority_rank": finding.priority_rank,
+        "priority_state": _finding_priority_state(finding),
+        "risk_score": finding.risk_score,
+        "operational_score": _finding_operational_score(finding),
         "operational_rank": finding.operational_rank,
         "status": finding.status,
         "in_kev": finding.in_kev,
@@ -126,6 +129,22 @@ def _finding_data_quality_flags(finding: Any) -> list[dict[str, Any]]:
     raw_finding = finding.finding_json if isinstance(finding.finding_json, dict) else {}
     flags = raw_finding.get("data_quality_flags")
     return flags if isinstance(flags, list) else []
+
+
+def _finding_priority_state(finding: Any) -> str:
+    raw_finding = finding.finding_json if isinstance(finding.finding_json, dict) else {}
+    state = raw_finding.get("priority_state")
+    return str(state) if state else str(finding.priority)
+
+
+def _finding_operational_score(finding: Any) -> int:
+    raw_finding = finding.finding_json if isinstance(finding.finding_json, dict) else {}
+    score = raw_finding.get("operational_score")
+    if isinstance(score, int):
+        return score
+    if finding.risk_score is not None:
+        return int(finding.risk_score)
+    return 0
 
 
 def _finding_data_quality_confidence(finding: Any) -> str:

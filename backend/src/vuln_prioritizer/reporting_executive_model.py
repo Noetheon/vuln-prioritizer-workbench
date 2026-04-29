@@ -1214,7 +1214,8 @@ def _methodology_model(metadata: dict[str, Any]) -> list[dict[str, str]]:
             "title": "Transparent priority rules",
             "body": (
                 f"Policy profile {profile}; CVSS, EPSS, and KEV determine the base priority. "
-                f"Critical CVSS threshold: {critical_cvss}; high EPSS threshold: {high_epss}."
+                f"Critical CVSS threshold: {critical_cvss}; high EPSS threshold: {high_epss}. "
+                "The operational score is a clamped 0-100 queueing helper with explicit reasons."
             ),
         },
         {
@@ -1254,6 +1255,7 @@ def _finding_row(finding: dict[str, Any]) -> dict[str, Any]:
     return {
         "rank": _int_value(finding.get("operational_rank"))
         or _int_value(finding.get("priority_rank")),
+        "score": _int_value(finding.get("operational_score")),
         "cve": _text(finding.get("cve_id"), default="CVE"),
         "priority": _priority_label(finding),
         "tone": PRIORITY_TONES.get(_priority_label(finding), "low"),
@@ -1320,13 +1322,22 @@ def _finding_dossier_model(finding: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _finding_sort_key(finding: dict[str, Any]) -> tuple[int, int, int, float, float, str]:
+def _finding_sort_key(finding: dict[str, Any]) -> tuple[int, int, int, int, float, float, str]:
     operational = _int_value(finding.get("operational_rank")) or 9999
+    operational_score = -(_int_value(finding.get("operational_score")) or 0)
     priority = _int_value(finding.get("priority_rank")) or 99
     kev_rank = 0 if finding.get("in_kev") else 1
     epss_rank = -_float_value(finding.get("epss"))
     cvss_rank = -_float_value(finding.get("cvss_base_score"))
-    return (operational, priority, kev_rank, epss_rank, cvss_rank, _text(finding.get("cve_id")))
+    return (
+        operational,
+        operational_score,
+        priority,
+        kev_rank,
+        epss_rank,
+        cvss_rank,
+        _text(finding.get("cve_id")),
+    )
 
 
 def _finding_signal_score(finding: dict[str, Any]) -> float:

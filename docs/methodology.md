@@ -92,23 +92,43 @@ High-impact tactics are:
 
 ## Prioritization
 
-The primary priority score does not change in the stable release line:
+The base priority label is deterministic and rule-based:
 
 - `Critical`: KEV or `(EPSS >= 0.70 and CVSS >= 7.0)`
 - `High`: `EPSS >= 0.40` or `CVSS >= 9.0`
 - `Medium`: `CVSS >= 7.0` or `EPSS >= 0.10`
 - `Low`: everything else
 
-ATT&CK is a contextual signal. It enriches explanation, reporting, and management framing without silently changing the score.
+The priority enum used by the decision engine is:
+
+- `Critical`
+- `High`
+- `Medium`
+- `Low`
+- `Suppressed`
+- `Accepted`
+- `Fixed`
+
+`priority_label` keeps the base CVSS/EPSS/KEV result. `priority_state` may move
+to `Suppressed`, `Accepted`, or `Fixed` when VEX or waiver evidence changes the
+operational lifecycle state.
+
+The `operational_score` is a deterministic 0-100 queueing score. It is built
+from explicit contributions for base priority, KEV, EPSS/CVSS boundary matches,
+asset exposure, production context, asset criticality, and active occurrence
+count, then clamped to the 0-100 range. Every score includes
+`operational_score_reasons` so the score is reviewable rather than opaque.
+
+ATT&CK is a contextual signal. It enriches explanation, reporting, and management framing without silently changing the base priority.
 
 Presentation notes:
 
 - KEV membership is surfaced more aggressively in terminal and HTML views as known exploited urgency
-- this does not change `priority_label`, sorting, or the published JSON contract
+- this does not change `priority_label`
 
 Asset context and VEX follow the same principle:
 
-- asset context changes explanatory recommendation text, not `priority_label`
+- asset context changes explanatory recommendation text and the operational queue score, not `priority_label`
 - remediation guidance now uses explicit package/component evidence when available
 - VEX determines visibility/applicability at occurrence level with deterministic ranked matching
 - `--show-suppressed` exposes otherwise hidden fully-suppressed findings

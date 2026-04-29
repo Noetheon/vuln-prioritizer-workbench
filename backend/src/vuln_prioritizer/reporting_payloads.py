@@ -431,6 +431,9 @@ def generate_sarif_report(
                 "properties": {
                     "cve": finding.cve_id,
                     "priority": finding.priority_label,
+                    "priority_state": finding.priority_state or finding.priority_label,
+                    "operational_score": finding.operational_score,
+                    "operational_score_reasons": finding.operational_score_reasons,
                     "cvss": finding.cvss_base_score,
                     "epss": finding.epss,
                     "in_kev": finding.in_kev,

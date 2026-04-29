@@ -10,8 +10,12 @@ from vuln_prioritizer.models import (
     KevData,
     NvdData,
     PrioritizedFinding,
+    PriorityLabel,
     PriorityPolicy,
 )
+
+OPERATIONAL_SCORE_MIN = 0
+OPERATIONAL_SCORE_MAX = 100
 
 
 def determine_priority(
@@ -19,7 +23,7 @@ def determine_priority(
     epss: EpssData,
     kev: KevData,
     policy: PriorityPolicy | None = None,
-) -> tuple[str, int]:
+) -> tuple[PriorityLabel, int]:
     """Apply the fixed MVP priority rules."""
     active_policy = policy or PriorityPolicy()
     cvss = nvd.cvss_base_score
@@ -31,17 +35,17 @@ def determine_priority(
         and cvss is not None
         and cvss >= active_policy.critical_cvss_threshold
     ):
-        label = "Critical"
+        label = PriorityLabel.CRITICAL
     elif (epss_score is not None and epss_score >= active_policy.high_epss_threshold) or (
         cvss is not None and cvss >= active_policy.high_cvss_threshold
     ):
-        label = "High"
+        label = PriorityLabel.HIGH
     elif (cvss is not None and cvss >= active_policy.medium_cvss_threshold) or (
         epss_score is not None and epss_score >= active_policy.medium_epss_threshold
     ):
-        label = "Medium"
+        label = PriorityLabel.MEDIUM
     else:
-        label = "Low"
+        label = PriorityLabel.LOW
 
     return label, PRIORITY_RANKS[label]
 
@@ -80,18 +84,153 @@ def build_priority_drivers(
     return drivers
 
 
-def determine_cvss_only_priority(cvss_base_score: float | None) -> tuple[str, int]:
+def determine_cvss_only_priority(cvss_base_score: float | None) -> tuple[PriorityLabel, int]:
     """Apply the comparison baseline that only uses CVSS severity bands."""
     if cvss_base_score is not None and cvss_base_score >= 9.0:
-        label = "Critical"
+        label = PriorityLabel.CRITICAL
     elif cvss_base_score is not None and cvss_base_score >= 7.0:
-        label = "High"
+        label = PriorityLabel.HIGH
     elif cvss_base_score is not None and cvss_base_score >= 4.0:
-        label = "Medium"
+        label = PriorityLabel.MEDIUM
     else:
-        label = "Low"
+        label = PriorityLabel.LOW
 
     return label, PRIORITY_RANKS[label]
+
+
+def determine_priority_state(finding: PrioritizedFinding) -> PriorityLabel:
+    """Return the effective priority enum including governance terminal states."""
+    if finding.suppressed_by_vex:
+        statuses = {status.lower() for status in finding.provenance.vex_statuses}
+        if statuses and statuses <= {"fixed"}:
+            return PriorityLabel.FIXED
+        return PriorityLabel.SUPPRESSED
+    if finding.waived and finding.waiver_status in {"active", "review_due"}:
+        return PriorityLabel.ACCEPTED
+    try:
+        return PriorityLabel(finding.priority_label)
+    except ValueError:
+        return PriorityLabel.LOW
+
+
+def build_operational_score(
+    finding: PrioritizedFinding,
+    policy: PriorityPolicy | None = None,
+) -> tuple[int, list[str]]:
+    """Build an explainable 0-100 operational risk score from explicit rules."""
+    priority_state = determine_priority_state(finding)
+    if priority_state == PriorityLabel.FIXED:
+        return OPERATIONAL_SCORE_MIN, ["fixed VEX state clamps operational score to 0"]
+    if priority_state == PriorityLabel.SUPPRESSED:
+        return OPERATIONAL_SCORE_MIN, ["suppressed VEX state clamps operational score to 0"]
+
+    active_policy = policy or PriorityPolicy()
+    score = 0
+    reasons: list[str] = []
+
+    base_scores = {
+        PriorityLabel.CRITICAL: 70,
+        PriorityLabel.HIGH: 50,
+        PriorityLabel.MEDIUM: 30,
+        PriorityLabel.LOW: 10,
+        PriorityLabel.ACCEPTED: 25,
+    }
+    base_score = base_scores.get(priority_state, base_scores[PriorityLabel.LOW])
+    score += base_score
+    reasons.append(f"base {priority_state.value} priority: +{base_score}")
+
+    if finding.in_kev:
+        score += 15
+        reasons.append("CISA KEV-listed: +15")
+
+    if (
+        finding.epss is not None
+        and finding.epss >= active_policy.critical_epss_threshold
+        and finding.cvss_base_score is not None
+        and finding.cvss_base_score >= active_policy.critical_cvss_threshold
+    ):
+        score += 8
+        reasons.append("critical EPSS/CVSS threshold: +8")
+    elif finding.epss is not None and finding.epss >= active_policy.high_epss_threshold:
+        score += 5
+        reasons.append("high EPSS threshold: +5")
+    elif finding.epss is not None and finding.epss >= active_policy.medium_epss_threshold:
+        score += 2
+        reasons.append("medium EPSS threshold: +2")
+
+    if (
+        finding.cvss_base_score is not None
+        and finding.cvss_base_score >= active_policy.high_cvss_threshold
+    ):
+        score += 5
+        reasons.append("high CVSS threshold: +5")
+    elif (
+        finding.cvss_base_score is not None
+        and finding.cvss_base_score >= active_policy.medium_cvss_threshold
+    ):
+        score += 2
+        reasons.append("medium CVSS threshold: +2")
+
+    if _is_internet_facing(finding.provenance):
+        score += 8
+        reasons.append("internet-facing asset context: +8")
+    if _is_production(finding.provenance):
+        score += 5
+        reasons.append("production asset context: +5")
+
+    criticality_points = {
+        "critical": 7,
+        "high": 4,
+        "medium": 2,
+    }.get((finding.highest_asset_criticality or "").lower(), 0)
+    if criticality_points:
+        score += criticality_points
+        reasons.append(
+            f"{finding.highest_asset_criticality} asset criticality: +{criticality_points}"
+        )
+
+    extra_occurrences = max(finding.provenance.active_occurrence_count - 1, 0)
+    if extra_occurrences:
+        occurrence_points = min(extra_occurrences, 5)
+        score += occurrence_points
+        reasons.append(
+            f"{finding.provenance.active_occurrence_count} active occurrences: +{occurrence_points}"
+        )
+
+    if priority_state == PriorityLabel.ACCEPTED:
+        if finding.waiver_status == "review_due":
+            score -= 5
+            reasons.append("accepted risk review due: -5")
+        else:
+            score -= 20
+            reasons.append("active accepted-risk waiver: -20")
+
+    clamped_score = clamp_operational_score(score)
+    if clamped_score != score:
+        reasons.append(f"clamped to {clamped_score}")
+    return clamped_score, reasons
+
+
+def clamp_operational_score(score: int) -> int:
+    return max(OPERATIONAL_SCORE_MIN, min(OPERATIONAL_SCORE_MAX, score))
+
+
+def _is_internet_facing(provenance: FindingProvenance) -> bool:
+    highest_exposure = provenance.highest_asset_exposure
+    if highest_exposure and highest_exposure.lower() == "internet-facing":
+        return True
+    return any(
+        occurrence.asset_exposure and occurrence.asset_exposure.lower() == "internet-facing"
+        for occurrence in provenance.occurrences
+    )
+
+
+def _is_production(provenance: FindingProvenance) -> bool:
+    return any(
+        occurrence.asset_environment
+        and occurrence.asset_environment.lower() in {"prod", "production"}
+        for occurrence in provenance.occurrences
+    )
 
 
 def build_rationale(

@@ -127,6 +127,7 @@ def render_findings_table(findings: list[PrioritizedFinding]) -> Table:
     table.add_column("CVE", style="bold")
     table.add_column("Priority")
     table.add_column("Op Rank")
+    table.add_column("Op Score")
     table.add_column("CVSS")
     table.add_column("EPSS")
     table.add_column("KEV")
@@ -149,6 +150,7 @@ def render_findings_table(findings: list[PrioritizedFinding]) -> Table:
                 waiver_status=finding.waiver_status,
             ),
             str(finding.operational_rank or "N.A."),
+            str(finding.operational_score),
             format_score(finding.cvss_base_score, digits=1),
             format_score(finding.epss, digits=3),
             "Yes" if finding.in_kev else "No",
@@ -373,6 +375,8 @@ def render_explain_view(
     signal_table.add_column("Field", style="bold cyan")
     signal_table.add_column("Value")
     signal_table.add_row("Priority", finding.priority_label)
+    signal_table.add_row("Priority State", finding.priority_state or finding.priority_label)
+    signal_table.add_row("Operational Score", str(finding.operational_score))
     signal_table.add_row("CVSS", format_score(finding.cvss_base_score, digits=1))
     signal_table.add_row("CVSS Severity", finding.cvss_severity or "N.A.")
     signal_table.add_row("CVSS Version", finding.cvss_version or "N.A.")

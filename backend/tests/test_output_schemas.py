@@ -130,6 +130,37 @@ def test_demo_provider_snapshot_matches_schema_and_model() -> None:
     assert len(snapshot.items) == 7
 
 
+def test_example_score_json_documents_vpw_030_operational_score() -> None:
+    payload = json.loads(
+        (DOCS_ROOT / "examples" / "example_score.json").read_text(encoding="utf-8")
+    )
+
+    assert payload["priority_state"] == "Critical"
+    assert payload["operational_score"] == 100
+    assert "clamped to 100" in payload["operational_score_reasons"]
+
+
+def test_vpw_030_score_fields_remain_schema_optional() -> None:
+    new_fields = {
+        "priority_state",
+        "operational_score",
+        "operational_score_reasons",
+    }
+    schema_targets = [
+        ("analysis-report.schema.json", "prioritizedFinding"),
+        ("compare-report.schema.json", "comparisonFinding"),
+        ("explain-report.schema.json", "prioritizedFinding"),
+        ("explain-report.schema.json", "comparisonFinding"),
+        ("snapshot-report.schema.json", "prioritizedFinding"),
+    ]
+
+    for schema_name, definition_name in schema_targets:
+        definition = _load_schema(schema_name)["$defs"][definition_name]
+
+        assert new_fields <= set(definition["properties"])
+        assert not (new_fields & set(definition.get("required", [])))
+
+
 def _install_fake_data_update_providers(monkeypatch: Any) -> None:
     def fake_nvd_fetch_many(
         self: NvdProvider,
