@@ -560,6 +560,21 @@ export type ReportsPublic = {
 };
 
 /**
+ * Public evidence bundle verification report.
+ */
+export type ReportVerificationPublic = {
+    items?: Array<{
+        [key: string]: unknown;
+    }>;
+    metadata?: {
+        [key: string]: unknown;
+    };
+    summary?: {
+        [key: string]: unknown;
+    };
+};
+
+/**
  * OAuth2 bearer token response.
  */
 export type Token = {
@@ -717,6 +732,12 @@ export type ReportsDownloadReportData = {
 };
 
 export type ReportsDownloadReportResponse = (unknown);
+
+export type ReportsVerifyReportData = {
+    reportId: string;
+};
+
+export type ReportsVerifyReportResponse = (ReportVerificationPublic);
 
 export type ReportsReadRunReportsData = {
     runId: string;

@@ -79,7 +79,8 @@ def test_vpw049_openapi_exposes_report_format_contract() -> None:
     payload = response.json()
     assert "/api/v1/runs/{run_id}/reports" in payload["paths"]
     assert "/api/v1/reports/{report_id}/download" in payload["paths"]
-    assert {"ReportCreate", "ReportPublic", "ReportsPublic"}.issubset(
+    assert "/api/v1/reports/{report_id}/verify" in payload["paths"]
+    assert {"ReportCreate", "ReportPublic", "ReportVerificationPublic", "ReportsPublic"}.issubset(
         payload["components"]["schemas"]
     )
     assert payload["components"]["schemas"]["ReportCreate"]["properties"]["format"]["enum"] == [
@@ -453,6 +454,147 @@ def test_vpw051_evidence_bundle_zip_create_downloads_manifest_integrity(
         assert "[REDACTED]" in bundle_text
 
 
+def test_vpw052_evidence_bundle_verify_api_reports_clean_bundle(
+    template_api_env: TemplateApiEnv,
+    tmp_path: Path,
+) -> None:
+    _configure_report_dir(template_api_env, tmp_path)
+    headers = auth_headers(template_api_env.client)
+    project = create_project_via_api(template_api_env.client, headers)
+    run_id = _seed_reportable_run(template_api_env, uuid.UUID(project["id"]))
+
+    created = template_api_env.client.post(
+        f"/api/v1/runs/{run_id}/reports",
+        headers=headers,
+        json={"format": "zip"},
+    )
+    assert created.status_code == 200, created.text
+
+    verified = template_api_env.client.post(
+        f"/api/v1/reports/{created.json()['id']}/verify",
+        headers=headers,
+    )
+
+    assert verified.status_code == 200, verified.text
+    payload = verified.json()
+    jsonschema.validate(payload, _load_schema("evidence-bundle-verification-report.schema.json"))
+    assert payload["metadata"]["bundle_path"] == "evidence-bundle.zip"
+    assert payload["metadata"]["bundle_kind"] == "evidence-bundle"
+    assert payload["metadata"]["manifest_schema_version"] == "1.1.0"
+    assert payload["summary"] == {
+        "ok": True,
+        "total_members": 5,
+        "expected_files": 4,
+        "verified_files": 4,
+        "missing_files": 0,
+        "modified_files": 0,
+        "unexpected_files": 0,
+        "manifest_errors": 0,
+    }
+    assert {item["status"] for item in payload["items"]} == {"ok"}
+    assert str(tmp_path) not in json.dumps(payload)
+
+
+def test_vpw052_evidence_bundle_verify_api_reports_modified_member(
+    template_api_env: TemplateApiEnv,
+    tmp_path: Path,
+) -> None:
+    _configure_report_dir(template_api_env, tmp_path)
+    headers = auth_headers(template_api_env.client)
+    project = create_project_via_api(template_api_env.client, headers)
+    run_id = _seed_reportable_run(template_api_env, uuid.UUID(project["id"]))
+    created = template_api_env.client.post(
+        f"/api/v1/runs/{run_id}/reports",
+        headers=headers,
+        json={"format": "zip"},
+    )
+    assert created.status_code == 200, created.text
+    report_id = uuid.UUID(created.json()["id"])
+
+    with Session(template_api_env.engine) as session:
+        report = session.get(template_api_env.app_models.Report, report_id)
+        assert report is not None
+        report_path = Path(report.path)
+    tampered_bundle = _replace_zip_member(
+        report_path.read_bytes(),
+        "analysis.json",
+        b'{"schema":"analysis-result.v1","tampered":true}\n',
+    )
+    report_path.write_bytes(tampered_bundle)
+    with Session(template_api_env.engine) as session:
+        report = session.get(template_api_env.app_models.Report, report_id)
+        assert report is not None
+        report.sha256 = hashlib.sha256(tampered_bundle).hexdigest()
+        report.size_bytes = len(tampered_bundle)
+        session.add(report)
+        session.commit()
+
+    verified = template_api_env.client.post(
+        f"/api/v1/reports/{report_id}/verify",
+        headers=headers,
+    )
+
+    assert verified.status_code == 200, verified.text
+    payload = verified.json()
+    jsonschema.validate(payload, _load_schema("evidence-bundle-verification-report.schema.json"))
+    assert payload["summary"]["ok"] is False
+    assert payload["summary"]["modified_files"] == 1
+    assert payload["summary"]["verified_files"] == 3
+    modified_items = [item for item in payload["items"] if item["status"] == "modified"]
+    assert len(modified_items) == 1
+    assert modified_items[0]["path"] == "analysis.json"
+    assert modified_items[0]["kind"] == "analysis-json"
+    assert "sha256 mismatch" in modified_items[0]["detail"]
+    assert modified_items[0]["expected_sha256"] != modified_items[0]["actual_sha256"]
+
+
+def test_vpw052_verify_api_rejects_non_bundle_reports(
+    template_api_env: TemplateApiEnv,
+    tmp_path: Path,
+) -> None:
+    _configure_report_dir(template_api_env, tmp_path)
+    headers = auth_headers(template_api_env.client)
+    project = create_project_via_api(template_api_env.client, headers)
+    run_id = _seed_reportable_run(template_api_env, uuid.UUID(project["id"]))
+    created = template_api_env.client.post(
+        f"/api/v1/runs/{run_id}/reports",
+        headers=headers,
+        json={"format": "markdown"},
+    )
+    assert created.status_code == 200, created.text
+
+    response = template_api_env.client.post(
+        f"/api/v1/reports/{created.json()['id']}/verify",
+        headers=headers,
+    )
+
+    assert response.status_code == 422
+    assert response.json()["detail"] == "Report is not an evidence bundle"
+
+
+def test_vpw052_committed_verification_evidence_is_contract_valid() -> None:
+    schema = _load_schema("evidence-bundle-verification-report.schema.json")
+    evidence_dir = _repo_root() / "docs" / "evidence"
+    positive = json.loads(
+        (evidence_dir / "vpw-052-positive-verification.json").read_text(encoding="utf-8")
+    )
+    tampered = json.loads(
+        (evidence_dir / "vpw-052-tampered-verification.json").read_text(encoding="utf-8")
+    )
+
+    jsonschema.validate(positive, schema)
+    assert positive["summary"]["ok"] is True
+    assert positive["summary"]["verified_files"] == 4
+    assert {item["status"] for item in positive["items"]} == {"ok"}
+
+    jsonschema.validate(tampered, schema)
+    assert tampered["summary"]["ok"] is False
+    assert tampered["summary"]["modified_files"] == 1
+    assert [item["path"] for item in tampered["items"] if item["status"] == "modified"] == [
+        "analysis.json"
+    ]
+
+
 def test_vpw051_evidence_bundle_renderer_snapshot_is_stable() -> None:
     payload = _vpw051_snapshot_payload()
     bundle, manifest = render_evidence_bundle_zip(payload)
@@ -743,6 +885,27 @@ def _repo_root() -> Path:
 def _load_schema(filename: str) -> dict[str, Any]:
     schema_path = _repo_root() / "docs" / "schemas" / filename
     return json.loads(schema_path.read_text(encoding="utf-8"))
+
+
+def _replace_zip_member(bundle: bytes, member_path: str, replacement: bytes) -> bytes:
+    output = BytesIO()
+    with zipfile.ZipFile(BytesIO(bundle), "r") as source:
+        with zipfile.ZipFile(output, "w", compression=zipfile.ZIP_DEFLATED) as target:
+            for source_info in source.infolist():
+                content = (
+                    replacement
+                    if source_info.filename == member_path
+                    else source.read(source_info.filename)
+                )
+                target_info = zipfile.ZipInfo(
+                    filename=source_info.filename,
+                    date_time=source_info.date_time,
+                )
+                target_info.compress_type = source_info.compress_type
+                target_info.create_system = source_info.create_system
+                target_info.external_attr = source_info.external_attr
+                target.writestr(target_info, content)
+    return output.getvalue()
 
 
 def _vpw050_snapshot_payload() -> MarkdownReportPayload:

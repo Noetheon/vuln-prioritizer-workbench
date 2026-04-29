@@ -13,11 +13,13 @@ from app.services.reports import (
     MarkdownReportPayload,
     ReportGenerationError,
     ReportService,
+    ReportVerificationError,
     render_analysis_result_json,
     render_evidence_bundle_zip,
     render_findings_csv,
     render_html_executive_report,
     render_markdown_report,
+    verify_evidence_bundle_zip,
 )
 
 __all__ = [
@@ -27,6 +29,7 @@ __all__ = [
     "MarkdownReportFinding",
     "MarkdownReportPayload",
     "ReportGenerationError",
+    "ReportVerificationError",
     "ReportService",
     "TemplateAnalysisError",
     "TemplateAnalysisResult",
@@ -38,4 +41,5 @@ __all__ = [
     "render_findings_csv",
     "render_html_executive_report",
     "render_markdown_report",
+    "verify_evidence_bundle_zip",
 ]
