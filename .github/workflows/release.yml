@@ -24,17 +24,18 @@ jobs:
           cache: pip
           cache-dependency-path: |
             pyproject.toml
+            backend/pyproject.toml
             .pre-commit-config.yaml
 
       - name: Install project and dev dependencies
-        run: python -m pip install -e .[dev]
+        run: python -m pip install -e "backend[dev]"
 
       - name: Verify tag matches package version
         if: startsWith(github.ref, 'refs/tags/v')
         shell: bash
         run: |
           set -euo pipefail
-          package_version="$(python -c 'import tomllib; from pathlib import Path; print(tomllib.loads(Path("pyproject.toml").read_text())["project"]["version"])')"
+          package_version="$(python -c 'import tomllib; from pathlib import Path; print(tomllib.loads(Path("backend/pyproject.toml").read_text())["project"]["version"])')"
           tag_version="${GITHUB_REF_NAME#v}"
           if [[ "$package_version" != "$tag_version" ]]; then
             echo "Tag ${GITHUB_REF_NAME} does not match pyproject.toml version ${package_version}." >&2
@@ -45,7 +46,7 @@ jobs:
         run: make release-check
 
       - name: Build source and wheel distributions
-        run: python -m build
+        run: python -m build backend --outdir dist
 
       - name: Validate built distributions
         run: python -m twine check dist/*
@@ -71,7 +72,7 @@ jobs:
           mkdir -p "$artifact_root"
           python -m pip install --upgrade pip pipx
           VULN_PRIORITIZER_SMOKE_OUTPUT_DIR="$artifact_root" \
-          VULN_PRIORITIZER_PIPX_SPEC="git+https://github.com/${GITHUB_REPOSITORY}.git@${GITHUB_REF_NAME}" \
+          VULN_PRIORITIZER_PIPX_SPEC="git+https://github.com/${GITHUB_REPOSITORY}.git@${GITHUB_REF_NAME}#subdirectory=backend" \
             bash scripts/p1_pipx_source_smoke.sh
 
       - name: Resolve release notes path
@@ -147,6 +148,7 @@ jobs:
           cache: pip
           cache-dependency-path: |
             pyproject.toml
+            backend/pyproject.toml
             .pre-commit-config.yaml
 
       - name: Verify install from live PyPI

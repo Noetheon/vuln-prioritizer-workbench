@@ -38,16 +38,19 @@
 
 | `--input-format` | Auto-detect | `analyze` / `compare` | `attack coverage` / `navigator-layer` | Normalized provenance currently preserved | Notes |
 | --- | --- | --- | --- | --- | --- |
-| `cve-list` | `.txt`, `.csv` | yes | yes | `cve_id`, source line/row | Historical compatibility path. |
-| `generic-occurrence-csv` | CSV with `cve`/`cve_id` plus optional component, version, PURL, fix, target, asset, owner, service, severity columns | yes | yes | component, version, purl, fix versions, target, asset context, owner, service | Additive manual-occurrence format for normalized backlog and spreadsheet exports. |
-| `trivy-json` | JSON with `Results` | yes | yes | component, version, purl, package type, path, fix versions, target image | Default target kind is `image`. |
-| `grype-json` | JSON with `matches` | yes | yes | component, version, purl, package type, path, fix versions, target image | Keeps the first artifact location as current path evidence. |
+| `cve-list` | `.txt`, `.csv` | yes | yes | `cve_id`, optional `asset_ref`, `component`, `version`, source line/row | Plain TXT and minimal CSV CVE lists; see [CVE List Import](cve-list-import.md). |
+| `generic-occurrence-csv` | CSV with `cve`/`cve_id` plus optional component, version, PURL, fix, target, asset, owner, service, severity columns | yes | yes | component, version, purl, fix versions, target, asset context, owner, service | Additive manual-occurrence format for normalized backlog and spreadsheet exports; see [Generic Occurrence CSV Import](generic-occurrence-csv-import.md). |
+| `trivy-json` | JSON with `Results` | yes | yes | component, version, purl, package type, path, fix versions, target image, source ID | Default target kind is `image`; see [Trivy JSON Import](trivy-json-import.md). |
+| `grype-json` | JSON with `matches` | yes | yes | component, version, purl, package type, path, fix versions, target image, source ID | Keeps the first artifact location as current path evidence; see [Grype JSON Import](grype-json-import.md). |
 | `cyclonedx-json` | JSON with `bomFormat=CycloneDX` and vulnerabilities | yes | yes | component refs, purl, versions, dependency context when present | Used for SBOM+vuln exports, not plain BOMs without vulnerabilities. |
 | `spdx-json` | JSON with `spdxVersion` | yes | yes | package names, versions, file names when available | Current support is JSON only. |
 | `dependency-check-json` | JSON with `scanInfo` and `dependencies` | yes | yes | dependency path, package/file names, severity, fix/version hints where present | Current support is JSON only. |
 | `github-alerts-json` | JSON array or alert-like object | yes | yes | advisory source, package context when present | Contract assumes a pinned JSON export shape, not arbitrary API responses. |
 | `nessus-xml` | `.nessus` | yes | yes | host target, plugin name, service/port label, severity, source record id | Pinned Nessus XML export shape. Only resolvable CVEs are normalized. |
 | `openvas-xml` | pinned OpenVAS-style `.xml` | yes | yes | host target, NVT name, severity, source record id | Prefer explicit `--input-format openvas-xml` in CI. Only resolvable CVEs are normalized. |
+
+Maintainer-facing parser fixture regression coverage is documented in
+[VPW-013 Importer Contract](architecture/vpw-013-importer-contract.md).
 
 ## Feature overlay matrix
 

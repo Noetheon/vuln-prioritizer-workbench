@@ -27,6 +27,19 @@
             ],
             "cve": "CVE-2024-4577",
             "cvss": 9.8,
+            "data_quality_confidence": "high",
+            "data_quality_flag_codes": [
+              "snapshot_locked"
+            ],
+            "data_quality_flags": [
+              {
+                "code": "snapshot_locked",
+                "cve_id": null,
+                "message": "Provider snapshot replay is locked; live provider lookups are disabled.",
+                "severity": "info",
+                "source": "provider_snapshot"
+              }
+            ],
             "defensive_context_count": 0,
             "defensive_context_ids": [],
             "defensive_context_sources": [],
@@ -67,6 +80,19 @@
             ],
             "cve": "CVE-2024-3094",
             "cvss": 10.0,
+            "data_quality_confidence": "high",
+            "data_quality_flag_codes": [
+              "snapshot_locked"
+            ],
+            "data_quality_flags": [
+              {
+                "code": "snapshot_locked",
+                "cve_id": null,
+                "message": "Provider snapshot replay is locked; live provider lookups are disabled.",
+                "severity": "info",
+                "source": "provider_snapshot"
+              }
+            ],
             "defensive_context_count": 0,
             "defensive_context_ids": [],
             "defensive_context_sources": [],

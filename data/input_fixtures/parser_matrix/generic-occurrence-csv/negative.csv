@@ -1,0 +1,3 @@
+cve_id,asset_ref,component
+CVE-2024-3094,build-host-1,xz
+not-a-cve,build-host-2,openssl

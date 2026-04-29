@@ -1,50 +1,68 @@
 PYTHON ?= python3
+BACKEND_DIR := backend
+BACKEND_SRC := $(BACKEND_DIR)/src
+BACKEND_TESTS := $(BACKEND_DIR)/tests
+COMPOSE := docker compose -f compose.yml -f compose.override.yml
 
 ATTACK_MAPPING_FILE := data/attack/ctid_kev_enterprise_2025-07-28_attack-16.1_subset.json
 ATTACK_METADATA_FILE := data/attack/attack_techniques_enterprise_16.1_subset.json
 DEMO_FIXED_NOW := 2026-04-21T12:00:00+00:00
-DEMO_ENV := PYTHONPATH=src VULN_PRIORITIZER_FIXED_NOW=$(DEMO_FIXED_NOW)
+DEMO_ENV := PYTHONPATH=$(BACKEND_SRC) VULN_PRIORITIZER_FIXED_NOW=$(DEMO_FIXED_NOW)
 DEMO_PROVIDER_SNAPSHOT_FILE := data/demo_provider_snapshot.json
 DEMO_PROVIDER_FLAGS := --provider-snapshot-file $(DEMO_PROVIDER_SNAPSHOT_FILE) --locked-provider-data
 DEMO_EVIDENCE_ANALYSIS_FILE := build/v1.0-demo-analysis.json
 DEMO_EVIDENCE_BUNDLE_FILE := build/v1.0-demo-evidence-bundle.zip
 DEMO_EVIDENCE_VERIFICATION_FILE := build/v1.0-demo-evidence-bundle-verification.json
 
-.PHONY: install test lint format fix typecheck check benchmark-check playwright-install playwright-check docs-check docs-serve actionlint-check workflow-check docker-demo-smoke docker-postgres-migration-smoke dependency-audit demo-sync-check demo-sync-check-temp package package-check package-check-temp pipx-source-smoke release-check demo-report demo-compare demo-explain demo-attack-report demo-attack-compare demo-attack-explain demo-attack-coverage demo-attack-navigator demo-pr-comment demo-results-sarif demo-html-report demo-evidence-analysis demo-evidence-bundle demo-evidence-bundle-check precommit-install
+.PHONY: install test lint format fix typecheck check benchmark-check playwright-install playwright-check frontend-install frontend-build frontend-lint frontend-generate-client frontend-check docs-check docs-serve actionlint-check workflow-check docker-demo-smoke docker-postgres-migration-smoke dependency-audit demo-sync-check demo-sync-check-temp package package-check package-check-temp pipx-source-smoke release-check demo-report demo-compare demo-explain demo-attack-report demo-attack-compare demo-attack-explain demo-attack-coverage demo-attack-navigator demo-pr-comment demo-results-sarif demo-html-report demo-evidence-analysis demo-evidence-bundle demo-evidence-bundle-check precommit-install
 
 install:
-	$(PYTHON) -m pip install -e .[dev]
+	$(PYTHON) -m pip install -e "$(BACKEND_DIR)[dev]"
 
 test:
-	$(PYTHON) -m pytest
+	$(PYTHON) -m pytest $(BACKEND_TESTS)
 
 lint:
-	$(PYTHON) -m ruff check .
+	$(PYTHON) -m ruff check $(BACKEND_DIR)
 
 format:
-	$(PYTHON) -m ruff format .
+	$(PYTHON) -m ruff format $(BACKEND_DIR)
 
 fix:
-	$(PYTHON) -m ruff check --fix .
-	$(PYTHON) -m ruff format .
+	$(PYTHON) -m ruff check --fix $(BACKEND_DIR)
+	$(PYTHON) -m ruff format $(BACKEND_DIR)
 
 typecheck:
-	$(PYTHON) -m mypy src
+	cd $(BACKEND_DIR) && $(PYTHON) -m mypy app src
 
 check:
-	$(PYTHON) -m ruff format --check .
-	$(PYTHON) -m ruff check .
-	$(PYTHON) -m mypy src
-	$(PYTHON) -m pytest
+	$(PYTHON) -m ruff format --check $(BACKEND_DIR)
+	$(PYTHON) -m ruff check $(BACKEND_DIR)
+	cd $(BACKEND_DIR) && $(PYTHON) -m mypy app src
+	$(PYTHON) -m pytest $(BACKEND_TESTS)
 
 benchmark-check:
-	$(PYTHON) -m pytest -q tests/test_benchmark_regressions.py tests/test_snapshot_diff_regressions.py tests/test_rollup_regressions.py --no-cov
+	$(PYTHON) -m pytest -q $(BACKEND_TESTS)/test_benchmark_regressions.py $(BACKEND_TESTS)/test_snapshot_diff_regressions.py $(BACKEND_TESTS)/test_rollup_regressions.py --no-cov
 
 playwright-install:
 	$(PYTHON) -m playwright install chromium
 
 playwright-check:
-	VULN_PRIORITIZER_RUN_PLAYWRIGHT=1 $(PYTHON) -m pytest -q tests/playwright --no-cov
+	VULN_PRIORITIZER_RUN_PLAYWRIGHT=1 $(PYTHON) -m pytest -q $(BACKEND_TESTS)/playwright --no-cov
+
+frontend-install:
+	npm --prefix frontend install --no-package-lock
+
+frontend-build:
+	npm --prefix frontend run build
+
+frontend-lint:
+	npm --prefix frontend run lint
+
+frontend-generate-client:
+	bash scripts/generate-client.sh
+
+frontend-check: frontend-lint frontend-build frontend-generate-client
 
 docs-check:
 	$(PYTHON) -m mkdocs build --clean
@@ -64,21 +82,46 @@ workflow-check:
 
 docker-demo-smoke:
 	@set -e; \
-	docker compose up -d --build; \
-	trap 'docker compose down -v --remove-orphans' EXIT; \
+	$(COMPOSE) up -d --build backend frontend; \
+	trap '$(COMPOSE) down -v --remove-orphans' EXIT; \
+	backend_ready=0; \
 	for attempt in $$(seq 1 30); do \
-		if $(PYTHON) -c "import urllib.request; print(urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=2).read().decode())" 2>/dev/null; then \
-			exit 0; \
+		if $(PYTHON) -c "import urllib.request; print(urllib.request.urlopen('http://127.0.0.1:8000/api/v1/workbench/status', timeout=2).read().decode())" 2>/dev/null; then \
+			backend_ready=1; \
+			break; \
 		fi; \
 		sleep 2; \
 	done; \
-	echo "Workbench health check failed." >&2; \
-	exit 1
+	if [ "$$backend_ready" != "1" ]; then \
+		echo "Template Workbench backend health check failed." >&2; \
+		exit 1; \
+	fi; \
+	if ! $(PYTHON) -c "import urllib.request; print(urllib.request.urlopen('http://127.0.0.1:8000/api/v1/utils/health-check/', timeout=2).read().decode())" 2>/dev/null; then \
+		echo "Template Workbench utility health check failed." >&2; \
+		exit 1; \
+	fi; \
+	frontend_ready=0; \
+	for attempt in $$(seq 1 30); do \
+		if $(PYTHON) -c "import urllib.request; print(urllib.request.urlopen('http://127.0.0.1:5173/', timeout=2).status)" 2>/dev/null; then \
+			frontend_ready=1; \
+			break; \
+		fi; \
+		sleep 2; \
+	done; \
+	if [ "$$frontend_ready" != "1" ]; then \
+		echo "Template Workbench frontend health check failed." >&2; \
+		exit 1; \
+	fi; \
+	if ! $(PYTHON) -c "import urllib.request; print(urllib.request.urlopen('http://127.0.0.1:5173/login', timeout=2).status)" 2>/dev/null; then \
+		echo "Template Workbench login route check failed." >&2; \
+		exit 1; \
+	fi; \
+	echo "Template Workbench Docker smoke passed."
 
 docker-postgres-migration-smoke:
 	@set -e; \
-	docker compose --profile postgres up -d --build postgres workbench-postgres; \
-	trap 'docker compose --profile postgres down -v --remove-orphans' EXIT; \
+	$(COMPOSE) --profile postgres up -d --build db workbench-postgres; \
+	trap '$(COMPOSE) --profile postgres down -v --remove-orphans' EXIT; \
 	for attempt in $$(seq 1 30); do \
 		if $(PYTHON) -c "import urllib.request; print(urllib.request.urlopen('http://127.0.0.1:8001/api/health', timeout=2).read().decode())" 2>/dev/null; then \
 			exit 0; \
@@ -93,7 +136,7 @@ dependency-audit:
 		echo "Install pip-audit first: python3 -m pip install pip-audit" >&2; \
 		exit 1; \
 	}
-	$(PYTHON) -m pip_audit --requirement requirements.txt
+	$(PYTHON) -m pip_audit --requirement $(BACKEND_DIR)/requirements.txt
 
 demo-sync-check:
 	@before="$$(mktemp)"; after="$$(mktemp)"; \
@@ -130,7 +173,7 @@ demo-sync-check-temp:
 
 package:
 	rm -rf dist
-	$(PYTHON) -m build
+	$(PYTHON) -m build $(BACKEND_DIR) --outdir dist
 
 package-check: package
 	$(PYTHON) -m twine check dist/*

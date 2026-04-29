@@ -120,7 +120,7 @@ After each public release:
 2. Verify the documented GitHub tag install path:
 
 ```bash
-pipx install git+https://github.com/Noetheon/vuln-prioritizer-workbench.git@vX.Y.Z
+pipx install git+https://github.com/Noetheon/vuln-prioritizer-workbench.git@vX.Y.Z#subdirectory=backend
 printf 'CVE-2021-44228\n' > smoke-cves.txt
 vuln-prioritizer analyze --input smoke-cves.txt --format json --output smoke.json
 ```

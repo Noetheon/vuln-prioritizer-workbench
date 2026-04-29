@@ -1,0 +1,43 @@
+{
+  "ArtifactName": "ghcr.io/acme/demo-app:1.0.0",
+  "ArtifactType": "container_image",
+  "Results": [
+    {
+      "Target": "ghcr.io/acme/demo-app:1.0.0 (alpine 3.19)",
+      "Type": "apk",
+      "Class": "os-pkgs",
+      "Vulnerabilities": [
+        {
+          "VulnerabilityID": "CVE-2024-3094",
+          "PkgName": "xz",
+          "InstalledVersion": "5.6.0-r0",
+          "FixedVersion": "5.6.1-r2",
+          "PkgIdentifier": {
+            "PURL": "pkg:apk/alpine/xz@5.6.0-r0"
+          },
+          "PkgPath": "/lib/apk/db/installed",
+          "Severity": "CRITICAL"
+        }
+      ]
+    },
+    {
+      "Target": "requirements.txt",
+      "Type": "pip",
+      "Class": "lang-pkgs",
+      "Vulnerabilities": [
+        {
+          "VulnerabilityID": "GHSA-9m7r-4c2v-9j5j",
+          "CVEs": ["CVE-2023-34362"],
+          "PkgName": "moveit-transfer",
+          "InstalledVersion": "2023.0.0",
+          "FixedVersion": "2023.0.2",
+          "PkgIdentifier": {
+            "PURL": "pkg:pypi/moveit-transfer@2023.0.0"
+          },
+          "PkgPath": "requirements.txt",
+          "Severity": "CRITICAL"
+        }
+      ]
+    }
+  ]
+}

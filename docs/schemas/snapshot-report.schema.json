@@ -123,6 +123,37 @@
         }
       }
     },
+    "providerDataQualityFlag": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "source",
+        "code",
+        "message"
+      ],
+      "properties": {
+        "source": {
+          "type": "string"
+        },
+        "code": {
+          "description": "Canonical provider quality code. VPW-027 adds nvd_missing, nvd_cvss_missing, epss_missing, epss_outdated, kev_unavailable, snapshot_locked, and provider_error; legacy generic provider codes remain additive.",
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "severity": {
+          "enum": [
+            "info",
+            "warning",
+            "error"
+          ]
+        },
+        "cve_id": {
+          "$ref": "#/$defs/nullableString"
+        }
+      }
+    },
     "priorityPolicy": {
       "type": "object",
       "additionalProperties": true,
@@ -225,6 +256,12 @@
           "type": "integer"
         },
         "provider_snapshot_file": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "provider_snapshot_id": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "provider_snapshot_hash": {
           "$ref": "#/$defs/nullableString"
         },
         "locked_provider_data": {
@@ -374,8 +411,34 @@
             "$ref": "#/$defs/providerLookupDiagnostics"
           }
         },
+        "provider_data_quality_flags": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/providerDataQualityFlag"
+            }
+          }
+        },
         "provider_freshness": {
           "type": "object",
+          "properties": {
+            "nvd_freshness_at": {
+              "$ref": "#/$defs/nullableString"
+            },
+            "epss_freshness_at": {
+              "$ref": "#/$defs/nullableString"
+            },
+            "kev_freshness_at": {
+              "$ref": "#/$defs/nullableString"
+            },
+            "provider_snapshot_generated_at": {
+              "$ref": "#/$defs/nullableString"
+            },
+            "lookup_completed_at": {
+              "$ref": "#/$defs/nullableString"
+            }
+          },
           "additionalProperties": {
             "type": [
               "string",
@@ -445,6 +508,12 @@
           "type": "integer"
         },
         "provider_snapshot_file": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "provider_snapshot_id": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "provider_snapshot_hash": {
           "$ref": "#/$defs/nullableString"
         },
         "locked_provider_data": {
@@ -597,8 +666,34 @@
             "$ref": "#/$defs/providerLookupDiagnostics"
           }
         },
+        "provider_data_quality_flags": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/providerDataQualityFlag"
+            }
+          }
+        },
         "provider_freshness": {
           "type": "object",
+          "properties": {
+            "nvd_freshness_at": {
+              "$ref": "#/$defs/nullableString"
+            },
+            "epss_freshness_at": {
+              "$ref": "#/$defs/nullableString"
+            },
+            "kev_freshness_at": {
+              "$ref": "#/$defs/nullableString"
+            },
+            "provider_snapshot_generated_at": {
+              "$ref": "#/$defs/nullableString"
+            },
+            "lookup_completed_at": {
+              "$ref": "#/$defs/nullableString"
+            }
+          },
           "additionalProperties": {
             "type": [
               "string",
@@ -917,6 +1012,20 @@
             {
               "type": "null"
             }
+          ]
+        },
+        "data_quality_flags": {
+          "description": "Finding-scoped provider data-quality flags that explain missing, stale, locked, or degraded enrichment signals used for this finding.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/providerDataQualityFlag"
+          }
+        },
+        "data_quality_confidence": {
+          "enum": [
+            "high",
+            "medium",
+            "low"
           ]
         },
         "defensive_contexts": {
@@ -1258,6 +1367,9 @@
           "$ref": "#/$defs/nullableString"
         },
         "product": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "vulnerability_name": {
           "$ref": "#/$defs/nullableString"
         },
         "short_description": {

@@ -1,7 +1,7 @@
 version: 2
 updates:
   - package-ecosystem: "pip"
-    directory: "/"
+    directory: "/backend"
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 10
@@ -24,5 +24,18 @@ updates:
       - "github-actions"
     groups:
       github-actions:
+        patterns:
+          - "*"
+  - package-ecosystem: "npm"
+    directory: "/frontend"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+    labels:
+      - "maintenance"
+      - "dependencies"
+      - "frontend"
+    groups:
+      frontend-dependencies:
         patterns:
           - "*"

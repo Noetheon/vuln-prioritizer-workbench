@@ -1,0 +1,2 @@
+cve_id;asset_ref;component_name;component_version;purl;scanner;fix_version;severity;owner;business_service
+CVE-2024-3094;build-host-1;xz;5.6.0;pkg:apk/alpine/xz@5.6.0-r0;trivy;5.6.1-r2;CRITICAL;team-platform;payments

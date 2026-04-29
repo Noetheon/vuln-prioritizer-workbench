@@ -244,6 +244,16 @@
     "cvss_only_rank": 1,
     "cvss_severity": "CRITICAL",
     "cvss_version": "3.1",
+    "data_quality_confidence": "high",
+    "data_quality_flags": [
+      {
+        "code": "snapshot_locked",
+        "cve_id": null,
+        "message": "Provider snapshot replay is locked; live provider lookups are disabled.",
+        "severity": "info",
+        "source": "provider_snapshot"
+      }
+    ],
     "defensive_contexts": [],
     "delta_rank": 0,
     "description": "In Progress MOVEit Transfer before 2021.0.6 (13.0.6), 2021.1.4 (13.1.4), 2022.0.4 (14.0.4), 2022.1.5 (14.1.5), and 2023.0.1 (15.0.1), a SQL injection vulnerability has been found in the MOVEit Transfer web application that could allow an unauthenticated attacker to gain access to MOVEit Transfer's database. Depending on the database engine being used (MySQL, Microsoft SQL Server, or Azure SQL), an attacker may be able to infer information about the structure and contents of the database, and execute SQL statements that alter or delete database elements. NOTE: this is exploited in the wild in May and June 2023; exploitation of unpatched systems can occur via HTTP or HTTPS. All versions (e.g., 2020.0 and 2019x) before the five explicitly mentioned versions are affected, including older unsupported versions.",
@@ -537,6 +547,16 @@
     "cvss_base_score": 9.8,
     "cvss_severity": "CRITICAL",
     "cvss_version": "3.1",
+    "data_quality_confidence": "high",
+    "data_quality_flags": [
+      {
+        "code": "snapshot_locked",
+        "cve_id": null,
+        "message": "Provider snapshot replay is locked; live provider lookups are disabled.",
+        "severity": "info",
+        "source": "provider_snapshot"
+      }
+    ],
     "defensive_contexts": [],
     "description": "In Progress MOVEit Transfer before 2021.0.6 (13.0.6), 2021.1.4 (13.1.4), 2022.0.4 (14.0.4), 2022.1.5 (14.1.5), and 2023.0.1 (15.0.1), a SQL injection vulnerability has been found in the MOVEit Transfer web application that could allow an unauthenticated attacker to gain access to MOVEit Transfer's database. Depending on the database engine being used (MySQL, Microsoft SQL Server, or Azure SQL), an attacker may be able to infer information about the structure and contents of the database, and execute SQL statements that alter or delete database elements. NOTE: this is exploited in the wild in May and June 2023; exploitation of unpatched systems can occur via HTTP or HTTPS. All versions (e.g., 2020.0 and 2019x) before the five explicitly mentioned versions are affected, including older unsupported versions.",
     "epss": 0.94254,
@@ -626,7 +646,8 @@
         "product": "MOVEit Transfer",
         "required_action": "Apply updates per vendor instructions.",
         "short_description": null,
-        "vendor_project": "Progress"
+        "vendor_project": "Progress",
+        "vulnerability_name": null
       },
       "nvd": {
         "cve_id": "CVE-2023-34362",
@@ -689,7 +710,8 @@
     "product": "MOVEit Transfer",
     "required_action": "Apply updates per vendor instructions.",
     "short_description": null,
-    "vendor_project": "Progress"
+    "vendor_project": "Progress",
+    "vulnerability_name": null
   },
   "metadata": {
     "active_filters": [],
@@ -791,6 +813,17 @@
       "medium_cvss_threshold": 7.0,
       "medium_epss_threshold": 0.1
     },
+    "provider_data_quality_flags": {
+      "provider_snapshot": [
+        {
+          "code": "snapshot_locked",
+          "cve_id": null,
+          "message": "Provider snapshot replay is locked; live provider lookups are disabled.",
+          "severity": "info",
+          "source": "provider_snapshot"
+        }
+      ]
+    },
     "provider_degraded": false,
     "provider_diagnostics": {
       "epss": {
@@ -840,6 +873,8 @@
       "provider_snapshot_generated_at": "2026-04-21T12:00:00+00:00"
     },
     "provider_snapshot_file": "data/demo_provider_snapshot.json",
+    "provider_snapshot_hash": "a110e4c372a5ec750e0b766e23f19884596f6ac82185b8fd0eefe8384be71c5b",
+    "provider_snapshot_id": null,
     "provider_snapshot_sources": [
       "nvd",
       "epss",

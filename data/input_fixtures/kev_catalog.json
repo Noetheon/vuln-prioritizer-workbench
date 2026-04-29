@@ -1,0 +1,16 @@
+{
+  "vulnerabilities": [
+    {
+      "cveID": "CVE-2026-1001",
+      "vendorProject": "Example Vendor",
+      "product": "Example Product",
+      "vulnerabilityName": "Example Product command injection vulnerability",
+      "shortDescription": "Example Product command injection.",
+      "dateAdded": "2026-04-29",
+      "dueDate": "2026-05-20",
+      "requiredAction": "Apply the vendor update or remove affected systems.",
+      "knownRansomwareCampaignUse": "Unknown",
+      "notes": "Sanitized VPW-024 fixture."
+    }
+  ]
+}
