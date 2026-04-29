@@ -19,12 +19,17 @@ import {
 import { type FormEvent, useEffect, useState } from "react"
 import { clearAccessToken } from "./auth"
 import {
+  type AnalysisRunPublic,
+  type AnalysisRunSummaryPublic,
   ApiError,
+  type ImportParseErrorPublic,
+  ImportsService,
   type ProjectDecisionSummaryPublic,
   type ProjectPublic,
   ProjectsService,
   type ProviderStatusPublic,
   ProvidersService,
+  RunsService,
   type UserPublic,
   UsersService,
   WorkbenchService,
@@ -135,6 +140,45 @@ type ProjectFormState = {
 const emptyProjectForm: ProjectFormState = {
   name: "",
   description: "",
+}
+
+const mvpImportFormats = [
+  {
+    label: "CVE list",
+    value: "cve-list",
+    accept: ".txt,.csv,text/plain,text/csv",
+    detail: "Plain text or CSV with one CVE identifier per line.",
+  },
+  {
+    label: "Generic occurrence CSV",
+    value: "generic-occurrence-csv",
+    accept: ".csv,text/csv",
+    detail: "CSV with cve_id and optional asset/component context columns.",
+  },
+  {
+    label: "Trivy JSON",
+    value: "trivy-json",
+    accept: ".json,application/json",
+    detail: "Trivy vulnerability export in JSON format.",
+  },
+  {
+    label: "Grype JSON",
+    value: "grype-json",
+    accept: ".json,application/json",
+    detail: "Grype vulnerability export in JSON format.",
+  },
+] as const
+
+type ImportFormat = (typeof mvpImportFormats)[number]["value"]
+
+type ImportWizardState = {
+  file: File | null
+  inputType: ImportFormat
+}
+
+const defaultImportWizardState: ImportWizardState = {
+  file: null,
+  inputType: "cve-list",
 }
 
 const timeline = [
@@ -284,6 +328,53 @@ function apiErrorDetail(body: unknown) {
   return null
 }
 
+function analysisRunIdFromError(caught: unknown) {
+  if (!(caught instanceof ApiError)) {
+    return null
+  }
+  const detail = errorDetailObject(caught.body)
+  const analysisRunId = detail?.analysis_run_id
+  return typeof analysisRunId === "string" ? analysisRunId : null
+}
+
+function parseErrorsFromError(caught: unknown) {
+  if (!(caught instanceof ApiError)) {
+    return []
+  }
+  const detail = errorDetailObject(caught.body)
+  const parseErrors = detail?.parse_errors
+  return Array.isArray(parseErrors)
+    ? parseErrors.filter(isImportParseError)
+    : []
+}
+
+function errorDetailObject(body: unknown) {
+  if (typeof body !== "object" || body === null || !("detail" in body)) {
+    return null
+  }
+  const detail = (body as { detail?: unknown }).detail
+  return typeof detail === "object" && detail !== null
+    ? (detail as Record<string, unknown>)
+    : null
+}
+
+function isImportParseError(value: unknown): value is ImportParseErrorPublic {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "message" in value &&
+    typeof (value as { message?: unknown }).message === "string"
+  )
+}
+
+function importAccept(inputType: ImportFormat) {
+  return mvpImportFormats.find((format) => format.value === inputType)?.accept
+}
+
+function runStatusLabel(status: AnalysisRunPublic["status"]) {
+  return status ? status.replaceAll("_", " ") : "pending"
+}
+
 function validateProjectForm(form: ProjectFormState) {
   const name = form.name.trim()
   const description = form.description.trim()
@@ -341,6 +432,17 @@ export function App() {
   const [editProjectForm, setEditProjectForm] =
     useState<ProjectFormState>(emptyProjectForm)
   const [deleteConfirmed, setDeleteConfirmed] = useState(false)
+  const [importWizard, setImportWizard] = useState<ImportWizardState>(
+    defaultImportWizardState,
+  )
+  const [importLoading, setImportLoading] = useState(false)
+  const [importError, setImportError] = useState("")
+  const [importRun, setImportRun] = useState<AnalysisRunPublic | null>(null)
+  const [importRunSummary, setImportRunSummary] =
+    useState<AnalysisRunSummaryPublic | null>(null)
+  const [importParseErrors, setImportParseErrors] = useState<
+    ImportParseErrorPublic[]
+  >([])
   const selectedProject =
     projects.find((project) => project.id === selectedProjectId) ?? null
   const dashboardLoading = projectListLoading || summaryLoading
@@ -581,6 +683,54 @@ export function App() {
       setProjectActionError(apiErrorMessage("Project delete failed", caught))
     } finally {
       setProjectActionLoading(false)
+    }
+  }
+
+  async function submitImport(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    setImportError("")
+    setImportRun(null)
+    setImportRunSummary(null)
+    setImportParseErrors([])
+    if (!selectedProjectId) {
+      setImportError("Select or create a project before uploading.")
+      return
+    }
+    if (!importWizard.file) {
+      setImportError("Choose an import file before uploading.")
+      return
+    }
+
+    setImportLoading(true)
+    try {
+      const run = await ImportsService.importProjectUpload({
+        projectId: selectedProjectId,
+        formData: {
+          file: importWizard.file as unknown as string,
+          input_type: importWizard.inputType,
+        },
+      })
+      setImportRun(run)
+      const summary = await RunsService.readRunSummary({ runId: run.id })
+      setImportRunSummary(summary)
+      setImportParseErrors(summary.parse_errors ?? [])
+      await refreshProjects(selectedProjectId)
+    } catch (caught) {
+      setImportError(apiErrorMessage("Import upload failed", caught))
+      const runId = analysisRunIdFromError(caught)
+      const parseErrors = parseErrorsFromError(caught)
+      setImportParseErrors(parseErrors)
+      if (runId) {
+        try {
+          const summary = await RunsService.readRunSummary({ runId })
+          setImportRunSummary(summary)
+          setImportParseErrors(summary.parse_errors ?? parseErrors)
+        } catch {
+          setImportRunSummary(null)
+        }
+      }
+    } finally {
+      setImportLoading(false)
     }
   }
 
@@ -986,6 +1136,191 @@ export function App() {
                         Delete Project
                       </button>
                     </div>
+                  </section>
+                ) : null}
+              </section>
+            ) : currentPath === "/imports" ? (
+              <section className="import-wizard" aria-label="Import wizard">
+                <form className="import-form" onSubmit={submitImport}>
+                  <label>
+                    <span>Project</span>
+                    <select
+                      aria-label="Import project"
+                      disabled={projectListLoading || projects.length === 0}
+                      onChange={(event) =>
+                        setSelectedProjectId(event.target.value)
+                      }
+                      value={selectedProjectId}
+                    >
+                      {projects.length === 0 ? (
+                        <option value="">No projects</option>
+                      ) : null}
+                      {projects.map((project) => (
+                        <option key={project.id} value={project.id}>
+                          {project.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    <span>Input type</span>
+                    <select
+                      aria-label="Input type"
+                      onChange={(event) =>
+                        setImportWizard((state) => ({
+                          ...state,
+                          inputType: event.target.value as ImportFormat,
+                        }))
+                      }
+                      value={importWizard.inputType}
+                    >
+                      {mvpImportFormats.map((format) => (
+                        <option key={format.value} value={format.value}>
+                          {format.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    <span>Import file</span>
+                    <input
+                      accept={importAccept(importWizard.inputType)}
+                      aria-label="Import file"
+                      onChange={(event) =>
+                        setImportWizard((state) => ({
+                          ...state,
+                          file: event.target.files?.[0] ?? null,
+                        }))
+                      }
+                      type="file"
+                    />
+                  </label>
+                  <button
+                    className="primary-action"
+                    disabled={importLoading || projects.length === 0}
+                    type="submit"
+                  >
+                    {importLoading ? "Uploading" : "Upload Import"}
+                  </button>
+                </form>
+
+                <section
+                  className="format-list"
+                  aria-label="Supported MVP formats"
+                >
+                  {mvpImportFormats.map((format) => (
+                    <article key={format.value}>
+                      <strong>{format.label}</strong>
+                      <span>{format.value}</span>
+                      <p>{format.detail}</p>
+                    </article>
+                  ))}
+                </section>
+
+                <section
+                  className="security-notes"
+                  aria-label="Upload security notes"
+                >
+                  <h3>Upload Security Notes</h3>
+                  <ul>
+                    <li>Files are parsed locally by the Workbench backend.</li>
+                    <li>
+                      Uploads must match the selected format and extension.
+                    </li>
+                    <li>Filename/path traversal is rejected before storage.</li>
+                    <li>
+                      The import wizard does not run scanners or network probes.
+                    </li>
+                  </ul>
+                </section>
+
+                {importError ? (
+                  <p className="dashboard-alert" role="alert">
+                    {importError}
+                  </p>
+                ) : null}
+                {importLoading ? (
+                  <p className="dashboard-state" role="status">
+                    Uploading and parsing import file
+                  </p>
+                ) : null}
+
+                {projects.length === 0 && !projectListLoading ? (
+                  <section
+                    className="dashboard-empty"
+                    aria-label="Import empty state"
+                  >
+                    <h3>No project available</h3>
+                    <p>Create a project before uploading import files.</p>
+                    <Link className="primary-action" to="/projects">
+                      Projects
+                    </Link>
+                  </section>
+                ) : null}
+
+                {importRunSummary ? (
+                  <section className="import-result" aria-label="Import result">
+                    <div>
+                      <span>Run status</span>
+                      <strong>{runStatusLabel(importRunSummary.status)}</strong>
+                    </div>
+                    <div>
+                      <span>Created findings</span>
+                      <strong>{importRunSummary.created_findings ?? 0}</strong>
+                    </div>
+                    <div>
+                      <span>Updated findings</span>
+                      <strong>{importRunSummary.updated_findings ?? 0}</strong>
+                    </div>
+                    <div>
+                      <span>Ignored lines</span>
+                      <strong>{importRunSummary.ignored_lines ?? 0}</strong>
+                    </div>
+                  </section>
+                ) : importRun ? (
+                  <section className="import-result" aria-label="Import result">
+                    <div>
+                      <span>Run status</span>
+                      <strong>{runStatusLabel(importRun.status)}</strong>
+                    </div>
+                    <div>
+                      <span>Run id</span>
+                      <strong>{importRun.id.slice(0, 8)}</strong>
+                    </div>
+                  </section>
+                ) : null}
+
+                {importParseErrors.length > 0 ? (
+                  <section className="parse-errors" aria-label="Parser errors">
+                    <h3>Parser errors</h3>
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>Line</th>
+                          <th>Field</th>
+                          <th>Value</th>
+                          <th>Message</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {importParseErrors.map((error) => (
+                          <tr
+                            key={[
+                              error.filename,
+                              error.line,
+                              error.field,
+                              error.value,
+                              error.message,
+                            ].join(":")}
+                          >
+                            <td>{error.line ?? "N.A."}</td>
+                            <td>{error.field ?? "N.A."}</td>
+                            <td>{error.value ?? "N.A."}</td>
+                            <td>{error.message}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </section>
                 ) : null}
               </section>

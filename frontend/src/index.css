@@ -623,6 +623,140 @@ h2 {
   opacity: 0.55;
 }
 
+.import-wizard {
+  display: grid;
+  gap: 16px;
+  padding: 18px;
+}
+
+.import-form {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  align-items: end;
+  border: 1px solid #edf1ef;
+  border-radius: 8px;
+  padding: 16px;
+  background: #ffffff;
+}
+
+.import-form label {
+  display: grid;
+  gap: 7px;
+}
+
+.import-form label span {
+  color: #334155;
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
+.import-form select,
+.import-form input {
+  width: 100%;
+  min-height: 40px;
+  border: 1px solid #cad6d3;
+  border-radius: 8px;
+  padding: 8px 10px;
+  background: #ffffff;
+  color: #111827;
+}
+
+.format-list {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.format-list article,
+.security-notes,
+.parse-errors {
+  border: 1px solid #edf1ef;
+  border-radius: 8px;
+  padding: 14px;
+  background: #ffffff;
+}
+
+.format-list strong,
+.format-list span {
+  display: block;
+}
+
+.format-list strong {
+  color: #111827;
+}
+
+.format-list span {
+  margin-top: 4px;
+  color: #0f766e;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.format-list p,
+.security-notes li {
+  color: #475569;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.security-notes {
+  border-color: #bfdbfe;
+  background: #eff6ff;
+}
+
+.security-notes h3,
+.parse-errors h3 {
+  margin: 0 0 10px;
+  color: #111827;
+  font-size: 1.05rem;
+}
+
+.security-notes ul {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding-left: 20px;
+}
+
+.import-result {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1px;
+  overflow: hidden;
+  border: 1px solid #d7e0dd;
+  border-radius: 8px;
+  background: #d7e0dd;
+}
+
+.import-result div {
+  min-height: 70px;
+  padding: 14px;
+  background: #ffffff;
+}
+
+.import-result span,
+.import-result strong {
+  display: block;
+}
+
+.import-result span {
+  color: #64748b;
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.import-result strong {
+  margin-top: 6px;
+  color: #111827;
+  font-size: 1.1rem;
+}
+
+.parse-errors {
+  overflow-x: auto;
+}
+
 .settings-summary {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1059,6 +1193,9 @@ td {
   }
 
   .metric-grid,
+  .format-list,
+  .import-form,
+  .import-result,
   .summary-list,
   .project-meta,
   .settings-summary,
