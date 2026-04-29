@@ -1,0 +1,128 @@
+"""Report API routes for template Workbench analysis runs."""
+
+from __future__ import annotations
+
+import hashlib
+import uuid
+from pathlib import Path
+
+from fastapi import APIRouter, HTTPException, Request
+from starlette.responses import FileResponse
+
+from app.api.deps import CurrentUser, SessionDep
+from app.api.routes.workbench_access import require_visible_project
+from app.core.config import Settings
+from app.models import Report, ReportCreate, ReportPublic, ReportsPublic
+from app.repositories import ReportRepository, RunRepository
+from app.services import ReportGenerationError, ReportService
+
+router = APIRouter(tags=["reports"])
+
+
+@router.post("/runs/{run_id}/reports", response_model=ReportPublic)
+def create_run_report(
+    run_id: uuid.UUID,
+    payload: ReportCreate,
+    request: Request,
+    session: SessionDep,
+    current_user: CurrentUser,
+) -> ReportPublic:
+    """Create a Markdown technical report for a completed visible analysis run."""
+    if payload.format != "markdown":
+        raise HTTPException(status_code=422, detail="Only markdown reports are supported.")
+    run = RunRepository(session).get_analysis_run(run_id)
+    if run is None:
+        raise HTTPException(status_code=404, detail="Analysis run not found")
+    project = require_visible_project(session, current_user, run.project_id)
+    try:
+        report = ReportService(session, _template_settings(request)).create_markdown_report(
+            run=run,
+            project=project,
+        )
+    except ReportGenerationError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    session.commit()
+    session.refresh(report)
+    return _report_public(report, request)
+
+
+@router.get("/runs/{run_id}/reports", response_model=ReportsPublic)
+def read_run_reports(
+    run_id: uuid.UUID,
+    request: Request,
+    session: SessionDep,
+    current_user: CurrentUser,
+) -> ReportsPublic:
+    """List report metadata for a visible analysis run."""
+    run = RunRepository(session).get_analysis_run(run_id)
+    if run is None:
+        raise HTTPException(status_code=404, detail="Analysis run not found")
+    require_visible_project(session, current_user, run.project_id)
+    reports = ReportRepository(session).list_run_reports(run.id)
+    return ReportsPublic(
+        data=[_report_public(report, request) for report in reports],
+        count=len(reports),
+    )
+
+
+@router.get("/reports/{report_id}/download")
+def download_report(
+    report_id: uuid.UUID,
+    request: Request,
+    session: SessionDep,
+    current_user: CurrentUser,
+) -> FileResponse:
+    """Download a visible report after root and checksum validation."""
+    report = ReportRepository(session).get_report(report_id)
+    if report is None:
+        raise HTTPException(status_code=404, detail="Report not found")
+    require_visible_project(session, current_user, report.project_id)
+    report_path = _validated_report_path(report, _template_settings(request))
+    response = FileResponse(
+        report_path,
+        filename=report.filename,
+        media_type=report.content_type,
+    )
+    response.headers["Cache-Control"] = "no-store"
+    return response
+
+
+def _report_public(report: Report, request: Request) -> ReportPublic:
+    settings = _template_settings(request)
+    return ReportPublic(
+        id=report.id,
+        project_id=report.project_id,
+        analysis_run_id=report.analysis_run_id,
+        kind=report.kind,
+        format=report.format,
+        filename=report.filename,
+        content_type=report.content_type,
+        sha256=report.sha256,
+        size_bytes=report.size_bytes,
+        metadata_json=report.metadata_json,
+        created_at=report.created_at,
+        download_url=f"{settings.API_V1_STR}/reports/{report.id}/download",
+    )
+
+
+def _validated_report_path(report: Report, settings: Settings) -> Path:
+    root = settings.report_dir_path.resolve(strict=False)
+    try:
+        resolved = Path(report.path).resolve(strict=True)
+        resolved.relative_to(root)
+    except (FileNotFoundError, ValueError) as exc:
+        raise HTTPException(status_code=404, detail="Report artifact not found") from exc
+
+    if not resolved.is_file():
+        raise HTTPException(status_code=404, detail="Report artifact not found")
+    digest = hashlib.sha256(resolved.read_bytes()).hexdigest()
+    if digest != report.sha256:
+        raise HTTPException(status_code=409, detail="Report artifact checksum mismatch")
+    return resolved
+
+
+def _template_settings(request: Request) -> Settings:
+    candidate = getattr(request.app.state, "template_settings", None)
+    if isinstance(candidate, Settings):
+        return candidate
+    raise HTTPException(status_code=500, detail="Template settings are not configured.")

@@ -81,6 +81,8 @@ nav:
       - VPW-045 Provider Status Page: evidence/vpw-045-provider-status.md
       - VPW-046 Reports Page Shell: evidence/vpw-046-reports-page.md
       - VPW-047 Frontend E2E Smoke: evidence/vpw-047-frontend-e2e-smoke.md
+      - VPW-048 Markdown Report: evidence/vpw-048-markdown-report.md
+      - VPW-048 Example Technical Report: evidence/vpw-048/technical-report.md
       - Historical Evidence Archive: evidence.md
       - Current State Audit: evidence/current_state_audit.md
       - V0.3 Submission Checklist: evidence/final_submission_checklist.md

@@ -2426,6 +2426,108 @@ export const ProviderUpdateJobPublicSchema = {
     type: 'object'
 } as const;
 
+export const ReportCreateSchema = {
+    description: 'Request payload for creating a run report.',
+    properties: {
+        format: {
+            const: 'markdown',
+            default: 'markdown',
+            title: 'Format',
+            type: 'string'
+        }
+    },
+    title: 'ReportCreate',
+    type: 'object'
+} as const;
+
+export const ReportPublicSchema = {
+    description: 'Public report metadata without exposing server filesystem paths.',
+    properties: {
+        analysis_run_id: {
+            format: 'uuid',
+            title: 'Analysis Run Id',
+            type: 'string'
+        },
+        content_type: {
+            maxLength: 120,
+            title: 'Content Type',
+            type: 'string'
+        },
+        created_at: {
+            format: 'date-time',
+            title: 'Created At',
+            type: 'string'
+        },
+        download_url: {
+            title: 'Download Url',
+            type: 'string'
+        },
+        filename: {
+            maxLength: 500,
+            title: 'Filename',
+            type: 'string'
+        },
+        format: {
+            maxLength: 40,
+            title: 'Format',
+            type: 'string'
+        },
+        id: {
+            format: 'uuid',
+            title: 'Id',
+            type: 'string'
+        },
+        kind: {
+            maxLength: 80,
+            title: 'Kind',
+            type: 'string'
+        },
+        metadata_json: {
+            additionalProperties: true,
+            title: 'Metadata Json',
+            type: 'object'
+        },
+        project_id: {
+            format: 'uuid',
+            title: 'Project Id',
+            type: 'string'
+        },
+        sha256: {
+            maxLength: 64,
+            minLength: 64,
+            title: 'Sha256',
+            type: 'string'
+        },
+        size_bytes: {
+            title: 'Size Bytes',
+            type: 'integer'
+        }
+    },
+    required: ['kind', 'format', 'filename', 'content_type', 'sha256', 'size_bytes', 'id', 'project_id', 'analysis_run_id', 'created_at', 'download_url'],
+    title: 'ReportPublic',
+    type: 'object'
+} as const;
+
+export const ReportsPublicSchema = {
+    description: 'Collection response for reports.',
+    properties: {
+        count: {
+            title: 'Count',
+            type: 'integer'
+        },
+        data: {
+            items: {
+                '$ref': '#/components/schemas/ReportPublic'
+            },
+            title: 'Data',
+            type: 'array'
+        }
+    },
+    required: ['data', 'count'],
+    title: 'ReportsPublic',
+    type: 'object'
+} as const;
+
 export const TokenSchema = {
     description: 'OAuth2 bearer token response.',
     properties: {

@@ -43,6 +43,8 @@ def test_vpw011_openapi_exposes_workbench_domain_routes_without_items() -> None:
         "/api/v1/projects/{project_id}/runs/",
         "/api/v1/runs/{run_id}",
         "/api/v1/runs/{run_id}/summary",
+        "/api/v1/runs/{run_id}/reports",
+        "/api/v1/reports/{report_id}/download",
         "/api/v1/projects/{project_id}/findings/",
         "/api/v1/findings/{finding_id}",
         "/api/v1/findings/{finding_id}/explain",
@@ -70,6 +72,9 @@ def test_vpw011_openapi_exposes_workbench_domain_routes_without_items() -> None:
         "ProviderSnapshotStatusPublic",
         "ProviderSourceStatusPublic",
         "ProviderStatusPublic",
+        "ReportCreate",
+        "ReportPublic",
+        "ReportsPublic",
     }
     assert expected_paths.issubset(paths)
 
@@ -116,6 +121,9 @@ def test_vpw011_domain_routes_require_auth(template_api_env: TemplateApiEnv) -> 
         ("get", "/api/v1/providers/status", {}),
         ("get", f"/api/v1/runs/{run_id}", {}),
         ("get", f"/api/v1/runs/{run_id}/summary", {}),
+        ("get", f"/api/v1/runs/{run_id}/reports", {}),
+        ("post", f"/api/v1/runs/{run_id}/reports", {"json": {"format": "markdown"}}),
+        ("get", f"/api/v1/reports/{run_id}/download", {}),
         (
             "get",
             f"/api/v1/projects/{project_id}/findings/",
@@ -786,6 +794,9 @@ def test_vpw011_404_and_403_are_consistent_for_project_scoped_resources(
         ("patch", f"/api/v1/assets/{missing_id}", {"json": {"name": "Missing Asset"}}),
         ("get", f"/api/v1/runs/{missing_id}", {}),
         ("get", f"/api/v1/runs/{missing_id}/summary", {}),
+        ("get", f"/api/v1/runs/{missing_id}/reports", {}),
+        ("post", f"/api/v1/runs/{missing_id}/reports", {"json": {"format": "markdown"}}),
+        ("get", f"/api/v1/reports/{missing_id}/download", {}),
         ("get", f"/api/v1/findings/{missing_id}", {}),
         ("get", f"/api/v1/findings/{missing_id}/explain", {}),
         ("get", f"/api/v1/projects/{missing_id}/assets/", {}),
@@ -799,6 +810,8 @@ def test_vpw011_404_and_403_are_consistent_for_project_scoped_resources(
         ("patch", f"/api/v1/assets/{foreign['asset_id']}", {"json": {"name": "Foreign Asset"}}),
         ("get", f"/api/v1/runs/{foreign['run_id']}", {}),
         ("get", f"/api/v1/runs/{foreign['run_id']}/summary", {}),
+        ("get", f"/api/v1/runs/{foreign['run_id']}/reports", {}),
+        ("post", f"/api/v1/runs/{foreign['run_id']}/reports", {"json": {"format": "markdown"}}),
         ("get", f"/api/v1/findings/{foreign['finding_id']}", {}),
         ("get", f"/api/v1/findings/{foreign['finding_id']}/explain", {}),
         ("get", f"/api/v1/projects/{foreign['project_id']}/assets/", {}),

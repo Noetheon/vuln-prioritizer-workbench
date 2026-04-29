@@ -28,6 +28,7 @@ class Settings:
     BACKEND_CORS_ORIGINS: tuple[str, ...] = field(default_factory=tuple)
     SQLALCHEMY_DATABASE_URI: str = "sqlite:///./template.db"
     IMPORT_UPLOAD_DIR: str = "data/template-import-uploads"
+    REPORT_DIR: str = "data/template-reports"
     PROVIDER_SNAPSHOT_DIR: str = "data"
     PROVIDER_CACHE_DIR: str = "data/template-provider-cache"
     MAX_UPLOAD_MB: int = 25
@@ -45,6 +46,11 @@ class Settings:
     def import_upload_dir_path(self) -> Path:
         """Return the configured template import upload root."""
         return Path(self.IMPORT_UPLOAD_DIR)
+
+    @property
+    def report_dir_path(self) -> Path:
+        """Return the configured template report artifact root."""
+        return Path(self.REPORT_DIR)
 
     @property
     def provider_snapshot_dir_path(self) -> Path:
@@ -106,6 +112,7 @@ def load_settings() -> Settings:
         BACKEND_CORS_ORIGINS=parse_cors_origins(environ.get("BACKEND_CORS_ORIGINS", "")),
         SQLALCHEMY_DATABASE_URI=build_database_uri(),
         IMPORT_UPLOAD_DIR=environ.get("IMPORT_UPLOAD_DIR", "data/template-import-uploads"),
+        REPORT_DIR=environ.get("REPORT_DIR", "data/template-reports"),
         PROVIDER_SNAPSHOT_DIR=environ.get("PROVIDER_SNAPSHOT_DIR", "data"),
         PROVIDER_CACHE_DIR=environ.get("PROVIDER_CACHE_DIR", "data/template-provider-cache"),
         MAX_UPLOAD_MB=_positive_int_from_env("MAX_UPLOAD_MB", 25),
