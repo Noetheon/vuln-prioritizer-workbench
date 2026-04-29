@@ -7,10 +7,15 @@ from typing import TYPE_CHECKING, Any
 from sqlalchemy import JSON, Column, DateTime, Float, Index, Integer, String, UniqueConstraint
 from sqlmodel import Field, Relationship, SQLModel
 
+# codeql[py/unsafe-cyclic-import] SQLModel runtime relationship target.
 from app.models.assets import Asset, Component
 from app.models.base import get_datetime_utc
 from app.models.enums import FindingPriority, FindingStatus
+
+# codeql[py/unsafe-cyclic-import] SQLModel runtime relationship target.
 from app.models.projects import Project
+
+# codeql[py/unsafe-cyclic-import] SQLModel runtime relationship target.
 from app.models.vulnerabilities import Vulnerability
 
 if TYPE_CHECKING:

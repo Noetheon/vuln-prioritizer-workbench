@@ -10,6 +10,7 @@ from sqlmodel import Field, Relationship, SQLModel
 from app.models.base import get_datetime_utc
 
 if TYPE_CHECKING:
+    # codeql[py/unsafe-cyclic-import] SQLModel runtime relationship target.
     from app.models.findings import Finding
 
 

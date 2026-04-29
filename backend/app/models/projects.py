@@ -8,6 +8,8 @@ from sqlalchemy import Column, DateTime
 from sqlmodel import Field, Relationship, SQLModel
 
 from app.models.base import get_datetime_utc
+
+# codeql[py/unsafe-cyclic-import] SQLModel runtime relationship target.
 from app.models.users import User
 
 if TYPE_CHECKING:

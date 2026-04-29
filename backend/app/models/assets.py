@@ -9,6 +9,8 @@ from sqlmodel import Field, Relationship, SQLModel
 
 from app.models.base import get_datetime_utc
 from app.models.enums import AssetCriticality, AssetEnvironment, AssetExposure
+
+# codeql[py/unsafe-cyclic-import] SQLModel runtime relationship target.
 from app.models.projects import Project
 
 if TYPE_CHECKING:
