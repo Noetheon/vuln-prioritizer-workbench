@@ -1,0 +1,72 @@
+{
+  "schema_version": "1.0.0",
+  "issue": "VPW-057",
+  "examples": [
+    {
+      "cve_id": "CVE-2021-44228",
+      "attack_context": {
+        "cve_id": "CVE-2021-44228",
+        "mapped": true,
+        "source": "local-curated",
+        "source_version": "fixture",
+        "attack_version": "16.1",
+        "domain": "enterprise-attack",
+        "attack_relevance": "High",
+        "rationale": "Curated defensive mapping requires analyst review.",
+        "confidence": "low",
+        "low_confidence": true,
+        "techniques": [
+          {
+            "attack_object_id": "T1190",
+            "name": "Exploit Public-Facing Application",
+            "tactics": [
+              "initial-access"
+            ],
+            "url": null,
+            "revoked": false,
+            "deprecated": false
+          }
+        ],
+        "tactics": [
+          "Initial Access"
+        ],
+        "mappings": [
+          {
+            "capability_id": "CVE-2021-44228",
+            "attack_object_id": "T1190",
+            "attack_object_name": "Exploit Public-Facing Application",
+            "mapping_type": "exploitation",
+            "capability_group": null,
+            "capability_description": null,
+            "comments": null,
+            "source": "local-curated",
+            "confidence": "low",
+            "review_status": "needs_review",
+            "defensive_note": "Review-only defensive context.",
+            "reviewer": null,
+            "reviewed_at": null,
+            "references": []
+          }
+        ]
+      }
+    },
+    {
+      "cve_id": "CVE-2023-44487",
+      "attack_context": {
+        "cve_id": "CVE-2023-44487",
+        "mapped": false,
+        "source": "none",
+        "source_version": null,
+        "attack_version": null,
+        "domain": null,
+        "attack_relevance": "Unmapped",
+        "rationale": null,
+        "confidence": null,
+        "low_confidence": false,
+        "techniques": [],
+        "tactics": [],
+        "mappings": []
+      }
+    }
+  ]
+}

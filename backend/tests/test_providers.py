@@ -1441,6 +1441,12 @@ def test_curated_attack_mapping_provider_loads_yaml_fixture() -> None:
     assert bundle.quality_report["confidence_counts"] == {"high": 3, "low": 1, "medium": 2}
     assert bundle.quality_report["low_confidence_count"] == 1
     assert bundle.mappings_by_cve["CVE-2021-44228"][0].attack_object_id == "T1190"
+    assert bundle.mappings_by_cve["CVE-2021-44228"][0].confidence == "high"
+    assert bundle.mappings_by_cve["CVE-2021-44228"][0].review_status == "reviewed"
+    assert bundle.mappings_by_cve["CVE-2021-44228"][0].source == "local-curated"
+    low_confidence = bundle.mappings_by_cve["CVE-2021-26855"][0]
+    assert low_confidence.confidence == "low"
+    assert low_confidence.review_status == "needs_review"
     assert bundle.techniques_by_id["T1195.002"].tactics == ["initial-access"]
     assert any("Low-confidence curated" in warning for warning in bundle.warnings)
 

@@ -17,6 +17,7 @@ from vuln_prioritizer.attack_sources import (
     WORKBENCH_DISALLOWED_MAPPING_SOURCES,
 )
 from vuln_prioritizer.models import (
+    AttackConfidence,
     AttackMapping,
     AttackMappingType,
     AttackReviewStatus,
@@ -120,6 +121,12 @@ class CuratedAttackMappingProvider:
                     or parsed.mapping_type,
                     capability_description=parsed.rationale,
                     comments=_curated_mapping_comment(parsed, confidence_label),
+                    source=ATTACK_SOURCE_LOCAL_CURATED,
+                    confidence=cast(AttackConfidence, confidence_label),
+                    review_status=parsed.review_status,
+                    defensive_note=parsed.defensive_note,
+                    reviewer=parsed.metadata.get("reviewer"),
+                    reviewed_at=parsed.metadata.get("reviewed_at"),
                     references=parsed.references,
                 )
             )

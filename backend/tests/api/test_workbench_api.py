@@ -1027,17 +1027,41 @@ def test_workbench_attack_import_exposes_ttp_context_and_navigator(tmp_path: Pat
 
     findings = client.get(f"/api/projects/{project['id']}/findings", params={"sort": "cve"})
     assert findings.status_code == 200
-    mapped = [item for item in findings.json()["items"] if item["attack_mapped"]]
+    finding_items = findings.json()["items"]
+    mapped = [item for item in finding_items if item["attack_mapped"]]
     assert mapped
     assert all(item["threat_context_rank"] is not None for item in mapped)
 
     moveit = next(item for item in mapped if item["cve_id"] == "CVE-2023-34362")
+    detail = client.get(f"/api/findings/{moveit['id']}")
+    assert detail.status_code == 200
+    detail_context = detail.json()["attack_context"]
+    assert detail_context["mapped"] is True
+    assert detail_context["confidence"] == "high"
+    assert detail_context["low_confidence"] is False
+    assert {technique["attack_object_id"] for technique in detail_context["techniques"]} >= {
+        "T1190"
+    }
+    assert detail_context["mappings"]
+
+    unmapped = next(item for item in finding_items if not item["attack_mapped"])
+    unmapped_detail = client.get(f"/api/findings/{unmapped['id']}")
+    assert unmapped_detail.status_code == 200
+    empty_context = unmapped_detail.json()["attack_context"]
+    assert empty_context["mapped"] is False
+    assert empty_context["source"] == "none"
+    assert empty_context["confidence"] is None
+    assert empty_context["techniques"] == []
+    assert empty_context["mappings"] == []
+
     ttps = client.get(f"/api/findings/{moveit['id']}/ttps")
     assert ttps.status_code == 200
     ttp_payload = ttps.json()
     assert ttp_payload["source"] == "ctid"
     assert ttp_payload["review_status"] == "source_reviewed"
     assert ttp_payload["mapped"] is True
+    assert ttp_payload["confidence"] == "high"
+    assert ttp_payload["low_confidence"] is False
     assert ttp_payload["source_hash"] == hashlib.sha256(ATTACK_MAPPING.read_bytes()).hexdigest()
     assert ttp_payload["metadata_hash"] == hashlib.sha256(ATTACK_METADATA.read_bytes()).hexdigest()
     assert ttp_payload["source_path"].endswith(ATTACK_MAPPING.name)

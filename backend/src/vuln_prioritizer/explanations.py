@@ -205,6 +205,29 @@ def _explanation_notes(finding: PrioritizedFinding) -> list[ExplanationNote]:
                 message="An active or review-due waiver records accepted risk for this finding.",
             )
         )
+    if finding.attack_mapped:
+        notes.append(
+            ExplanationNote(
+                code="attack.context",
+                source="MITRE ATT&CK",
+                message=(
+                    "ATT&CK context is reported separately from base priority and does not "
+                    "change the hard priority label."
+                ),
+            )
+        )
+    if finding.attack_context.low_confidence:
+        notes.append(
+            ExplanationNote(
+                code="attack.low_confidence",
+                source="MITRE ATT&CK",
+                severity="warning",
+                message=(
+                    "Low-confidence ATT&CK context is retained for review and does not change "
+                    "base priority."
+                ),
+            )
+        )
     if _asset_context_unknown(finding):
         notes.append(
             ExplanationNote(

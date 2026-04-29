@@ -346,6 +346,32 @@ def test_vpw_031_explanation_field_remains_schema_optional() -> None:
         assert "explanation" not in definition.get("required", [])
 
 
+def test_vpw_057_attack_context_schema_fields_remain_optional() -> None:
+    for schema_name in (
+        "analysis-report.schema.json",
+        "explain-report.schema.json",
+        "snapshot-report.schema.json",
+    ):
+        schema = _load_schema(schema_name)
+        finding = schema["$defs"]["prioritizedFinding"]
+        attack_mapping = schema["$defs"]["attackMapping"]
+        attack_context = schema["$defs"]["findingAttackContextSummary"]
+
+        assert "attack_context" in finding["properties"]
+        assert "attack_context" not in finding.get("required", [])
+        assert "confidence" in attack_mapping["properties"]
+        assert "review_status" in attack_mapping["properties"]
+        assert {
+            "mapped",
+            "source",
+            "confidence",
+            "low_confidence",
+            "techniques",
+            "tactics",
+            "mappings",
+        } <= set(attack_context["properties"])
+
+
 def test_vpw_032_baseline_comparison_schema_and_example() -> None:
     schema = _load_schema("analysis-report.schema.json")
     payload = json.loads(
