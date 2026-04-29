@@ -52,7 +52,14 @@ from app.models.providers import (
     ProviderUpdateJobPublic,
 )
 from app.models.registry import import_table_models
-from app.models.reports import Report, ReportBase, ReportCreate, ReportPublic, ReportsPublic
+from app.models.reports import (
+    Report,
+    ReportBase,
+    ReportCreate,
+    ReportPublic,
+    ReportsPublic,
+    ReportVerificationPublic,
+)
 from app.models.runs import (
     AnalysisRun,
     AnalysisRunBase,
@@ -118,6 +125,7 @@ __all__ = [
     "ReportBase",
     "ReportCreate",
     "ReportPublic",
+    "ReportVerificationPublic",
     "ReportsPublic",
     "Token",
     "TokenPayload",
