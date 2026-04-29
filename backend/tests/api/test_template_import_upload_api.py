@@ -119,6 +119,98 @@ def test_valid_cve_list_upload_creates_analysis_run_and_stores_sha256(
     assert summary_payload["input_upload"]["sha256"] == expected_sha256
 
 
+def test_decision_api_endpoints_expose_explain_summary_and_cvss_comparison(
+    template_api_env: TemplateApiEnv,
+    tmp_path: Path,
+) -> None:
+    upload_dir = _configure_upload_dir(template_api_env, tmp_path)
+    headers = auth_headers(template_api_env.client)
+    project = create_project_via_api(template_api_env.client, headers)
+    content = b"CVE-2021-44228\nCVE-2024-3094\n"
+
+    import_response = template_api_env.client.post(
+        f"/api/v1/projects/{project['id']}/imports",
+        headers=headers,
+        data={"input_type": "cve-list"},
+        files={"file": ("decision-api.txt", content, "text/plain")},
+    )
+    assert import_response.status_code == 200
+    run_payload = import_response.json()
+    assert Path(run_payload["summary_json"]["input_upload"]["path"]).is_relative_to(upload_dir)
+
+    findings_response = template_api_env.client.get(
+        f"/api/v1/projects/{project['id']}/findings/",
+        headers=headers,
+    )
+    assert findings_response.status_code == 200
+    findings_payload = findings_response.json()
+    assert findings_payload["count"] == 2
+    finding_id = findings_payload["data"][0]["id"]
+
+    explain_response = template_api_env.client.get(
+        f"/api/v1/findings/{finding_id}/explain",
+        headers=headers,
+    )
+    assert explain_response.status_code == 200
+    explain_payload = explain_response.json()
+    assert explain_payload["finding_id"] == finding_id
+    assert explain_payload["project_id"] == project["id"]
+    assert explain_payload["priority"] == "critical"
+    assert explain_payload["decision_explanation"]["reason_codes"]
+    assert explain_payload["decision_guidance"]["decision_statement"]
+    assert explain_payload["provider_evidence"]["nvd"]
+    assert explain_payload["data_quality_confidence"] in {"high", "medium", "low"}
+
+    project_summary_response = template_api_env.client.get(
+        f"/api/v1/projects/{project['id']}/summary",
+        headers=headers,
+    )
+    assert project_summary_response.status_code == 200
+    project_summary = project_summary_response.json()
+    assert project_summary["project_id"] == project["id"]
+    assert project_summary["finding_count"] == 2
+    assert project_summary["open_finding_count"] == 2
+    assert project_summary["counts_by_priority"] == {
+        "Critical": 2,
+        "High": 0,
+        "Medium": 0,
+        "Low": 0,
+    }
+    assert project_summary["counts_by_status"] == {
+        "open": 2,
+        "in_review": 0,
+        "remediating": 0,
+        "fixed": 0,
+        "accepted": 0,
+        "suppressed": 0,
+    }
+    assert project_summary["kev_hits"] >= 1
+    assert project_summary["epss_hits"] == 2
+    assert project_summary["cvss_known_count"] == 2
+    assert project_summary["latest_run_id"] == run_payload["id"]
+    assert project_summary["latest_run_status"] == "succeeded"
+
+    comparison_response = template_api_env.client.get(
+        f"/api/v1/projects/{project['id']}/compare/cvss-only",
+        headers=headers,
+    )
+    assert comparison_response.status_code == 200
+    comparison_payload = comparison_response.json()
+    assert comparison_payload["project_id"] == project["id"]
+    assert comparison_payload["methodology"]["baseline"] == "cvss-only"
+    assert comparison_payload["summary"]["total"] == 2
+    assert comparison_payload["counts"]["enriched"] == {
+        "Critical": 2,
+        "High": 0,
+        "Medium": 0,
+        "Low": 0,
+    }
+    assert {item["cve_id"] for item in comparison_payload["comparisons"]} == {
+        "CVE-2021-44228",
+        "CVE-2024-3094",
+    }
+
+
 def test_double_import_deduplicates_findings_and_appends_occurrences(
     template_api_env: TemplateApiEnv,
     tmp_path: Path,

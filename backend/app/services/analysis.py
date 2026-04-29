@@ -27,6 +27,7 @@ from vuln_prioritizer.services.analysis import (
 
 DEFAULT_TEMPLATE_PROVIDER_SNAPSHOT = "demo_provider_snapshot.json"
 PRIORITY_LABELS = ("Critical", "High", "Medium", "Low")
+REPO_ROOT = Path(__file__).resolve().parents[3]
 
 
 class TemplateAnalysisError(RuntimeError):
@@ -154,7 +155,16 @@ class AnalysisService:
     def default_provider_snapshot_file(self) -> Path | None:
         """Return the local demo snapshot used for deterministic template imports."""
         candidate = self.settings.provider_snapshot_dir_path / DEFAULT_TEMPLATE_PROVIDER_SNAPSHOT
-        return candidate if candidate.exists() else None
+        if candidate.exists():
+            return candidate
+        if not self.settings.provider_snapshot_dir_path.is_absolute():
+            repo_candidate = (
+                REPO_ROOT
+                / self.settings.provider_snapshot_dir_path
+                / DEFAULT_TEMPLATE_PROVIDER_SNAPSHOT
+            )
+            return repo_candidate if repo_candidate.exists() else None
+        return None
 
     def persist_provider_snapshot(
         self,

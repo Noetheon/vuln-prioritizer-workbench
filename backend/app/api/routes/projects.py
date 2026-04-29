@@ -4,12 +4,21 @@ from __future__ import annotations
 
 import uuid
 
-from fastapi import APIRouter, Response
+from fastapi import APIRouter, Query, Response
 
 from app.api.deps import CurrentUser, SessionDep
 from app.api.routes.workbench_access import require_visible_project
-from app.models import Project, ProjectCreate, ProjectPublic, ProjectsPublic, ProjectUpdate
-from app.repositories import ProjectRepository
+from app.models import (
+    Project,
+    ProjectCreate,
+    ProjectCvssOnlyComparisonPublic,
+    ProjectDecisionSummaryPublic,
+    ProjectPublic,
+    ProjectsPublic,
+    ProjectUpdate,
+)
+from app.repositories import FindingRepository, ProjectRepository, RunRepository
+from app.services import build_cvss_only_comparison_payload, build_project_summary_payload
 
 router = APIRouter(prefix="/projects", tags=["projects"])
 
@@ -42,6 +51,37 @@ def create_project(
 def read_project(project_id: uuid.UUID, session: SessionDep, current_user: CurrentUser) -> Project:
     """Read a single project if it belongs to the user or the user is superuser."""
     return require_visible_project(session, current_user, project_id)
+
+
+@router.get("/{project_id}/summary", response_model=ProjectDecisionSummaryPublic)
+def read_project_summary(
+    project_id: uuid.UUID,
+    session: SessionDep,
+    current_user: CurrentUser,
+) -> ProjectDecisionSummaryPublic:
+    """Read a dashboard-oriented decision summary for one visible project."""
+    require_visible_project(session, current_user, project_id)
+    return build_project_summary_payload(
+        project_id=project_id,
+        findings=FindingRepository(session).list_project_findings(project_id),
+        runs=RunRepository(session).list_analysis_runs(project_id),
+    )
+
+
+@router.get("/{project_id}/compare/cvss-only", response_model=ProjectCvssOnlyComparisonPublic)
+def compare_project_cvss_only(
+    project_id: uuid.UUID,
+    session: SessionDep,
+    current_user: CurrentUser,
+    limit: int = Query(default=10, ge=0, le=100),
+) -> ProjectCvssOnlyComparisonPublic:
+    """Compare current enriched priorities with a CVSS-only baseline."""
+    require_visible_project(session, current_user, project_id)
+    return build_cvss_only_comparison_payload(
+        project_id=project_id,
+        findings=FindingRepository(session).list_project_findings(project_id),
+        top_change_limit=limit,
+    )
 
 
 @router.patch("/{project_id}", response_model=ProjectPublic)

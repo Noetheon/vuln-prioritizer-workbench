@@ -647,6 +647,139 @@ export const Body_login_login_access_tokenSchema = {
     type: 'object'
 } as const;
 
+export const FindingExplanationPublicSchema = {
+    description: 'Structured decision explanation for one persisted finding.',
+    properties: {
+        cve_id: {
+            title: 'Cve Id',
+            type: 'string'
+        },
+        data_quality_confidence: {
+            default: 'high',
+            title: 'Data Quality Confidence',
+            type: 'string'
+        },
+        data_quality_flags: {
+            items: {
+                additionalProperties: true,
+                type: 'object'
+            },
+            title: 'Data Quality Flags',
+            type: 'array'
+        },
+        decision_explanation: {
+            anyOf: [
+                {
+                    additionalProperties: true,
+                    type: 'object'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Decision Explanation'
+        },
+        decision_guidance: {
+            anyOf: [
+                {
+                    additionalProperties: true,
+                    type: 'object'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Decision Guidance'
+        },
+        explanation: {
+            additionalProperties: true,
+            title: 'Explanation',
+            type: 'object'
+        },
+        finding_id: {
+            format: 'uuid',
+            title: 'Finding Id',
+            type: 'string'
+        },
+        operational_rank: {
+            default: 0,
+            title: 'Operational Rank',
+            type: 'integer'
+        },
+        priority: {
+            '$ref': '#/components/schemas/FindingPriority'
+        },
+        priority_rank: {
+            title: 'Priority Rank',
+            type: 'integer'
+        },
+        priority_state: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Priority State'
+        },
+        project_id: {
+            format: 'uuid',
+            title: 'Project Id',
+            type: 'string'
+        },
+        provider_evidence: {
+            anyOf: [
+                {
+                    additionalProperties: true,
+                    type: 'object'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Provider Evidence'
+        },
+        rationale: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Rationale'
+        },
+        recommended_action: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Recommended Action'
+        },
+        risk_score: {
+            anyOf: [
+                {
+                    type: 'number'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Risk Score'
+        }
+    },
+    required: ['finding_id', 'project_id', 'cve_id', 'priority', 'priority_rank'],
+    title: 'FindingExplanationPublic',
+    type: 'object'
+} as const;
+
 export const FindingPrioritySchema = {
     description: 'Rule-based finding priority label.',
     enum: ['critical', 'high', 'medium', 'low'],
@@ -993,6 +1126,143 @@ export const ProjectCreateSchema = {
     },
     required: ['name'],
     title: 'ProjectCreate',
+    type: 'object'
+} as const;
+
+export const ProjectCvssOnlyComparisonPublicSchema = {
+    description: 'CVSS-only baseline comparison for stored template findings.',
+    properties: {
+        comparisons: {
+            items: {
+                additionalProperties: true,
+                type: 'object'
+            },
+            title: 'Comparisons',
+            type: 'array'
+        },
+        counts: {
+            additionalProperties: {
+                additionalProperties: {
+                    type: 'integer'
+                },
+                type: 'object'
+            },
+            title: 'Counts',
+            type: 'object'
+        },
+        methodology: {
+            additionalProperties: true,
+            title: 'Methodology',
+            type: 'object'
+        },
+        project_id: {
+            format: 'uuid',
+            title: 'Project Id',
+            type: 'string'
+        },
+        summary: {
+            additionalProperties: {
+                type: 'integer'
+            },
+            title: 'Summary',
+            type: 'object'
+        },
+        top_changes: {
+            items: {
+                additionalProperties: true,
+                type: 'object'
+            },
+            title: 'Top Changes',
+            type: 'array'
+        }
+    },
+    required: ['project_id', 'methodology', 'summary', 'counts'],
+    title: 'ProjectCvssOnlyComparisonPublic',
+    type: 'object'
+} as const;
+
+export const ProjectDecisionSummaryPublicSchema = {
+    description: 'Dashboard-oriented decision summary for one visible project.',
+    properties: {
+        counts_by_priority: {
+            additionalProperties: {
+                type: 'integer'
+            },
+            title: 'Counts By Priority',
+            type: 'object'
+        },
+        counts_by_status: {
+            additionalProperties: {
+                type: 'integer'
+            },
+            title: 'Counts By Status',
+            type: 'object'
+        },
+        cvss_known_count: {
+            default: 0,
+            title: 'Cvss Known Count',
+            type: 'integer'
+        },
+        epss_hits: {
+            default: 0,
+            title: 'Epss Hits',
+            type: 'integer'
+        },
+        finding_count: {
+            default: 0,
+            title: 'Finding Count',
+            type: 'integer'
+        },
+        kev_hits: {
+            default: 0,
+            title: 'Kev Hits',
+            type: 'integer'
+        },
+        latest_run_id: {
+            anyOf: [
+                {
+                    format: 'uuid',
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Latest Run Id'
+        },
+        latest_run_status: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/AnalysisRunStatus'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
+        latest_run_summary: {
+            additionalProperties: true,
+            title: 'Latest Run Summary',
+            type: 'object'
+        },
+        open_finding_count: {
+            default: 0,
+            title: 'Open Finding Count',
+            type: 'integer'
+        },
+        project_id: {
+            format: 'uuid',
+            title: 'Project Id',
+            type: 'string'
+        },
+        provider_degraded: {
+            default: false,
+            title: 'Provider Degraded',
+            type: 'boolean'
+        }
+    },
+    required: ['project_id'],
+    title: 'ProjectDecisionSummaryPublic',
     type: 'object'
 } as const;
 

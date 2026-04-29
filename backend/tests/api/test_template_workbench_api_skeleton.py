@@ -42,6 +42,9 @@ def test_vpw011_openapi_exposes_workbench_domain_routes_without_items() -> None:
         "/api/v1/runs/{run_id}/summary",
         "/api/v1/projects/{project_id}/findings/",
         "/api/v1/findings/{finding_id}",
+        "/api/v1/findings/{finding_id}/explain",
+        "/api/v1/projects/{project_id}/summary",
+        "/api/v1/projects/{project_id}/compare/cvss-only",
     }
     expected_schemas = {
         "AnalysisRunPublic",
@@ -52,9 +55,12 @@ def test_vpw011_openapi_exposes_workbench_domain_routes_without_items() -> None:
         "AssetsPublic",
         "AssetUpdate",
         "FindingPublic",
+        "FindingExplanationPublic",
         "FindingsPublic",
         "ImportParseErrorPublic",
         "ProjectCreate",
+        "ProjectCvssOnlyComparisonPublic",
+        "ProjectDecisionSummaryPublic",
         "ProjectPublic",
         "ProjectsPublic",
         "ProjectUpdate",
@@ -113,6 +119,9 @@ def test_vpw011_domain_routes_require_auth(template_api_env: TemplateApiEnv) -> 
             {"params": {"limit": 1, "offset": 0}},
         ),
         ("get", f"/api/v1/findings/{finding_id}", {}),
+        ("get", f"/api/v1/findings/{finding_id}/explain", {}),
+        ("get", f"/api/v1/projects/{project_id}/summary", {}),
+        ("get", f"/api/v1/projects/{project_id}/compare/cvss-only", {}),
     )
 
     for method, path, kwargs in protected_calls:
@@ -310,6 +319,75 @@ def test_vpw011_finding_list_and_get_support_pagination(
     assert detail["in_kev"] is True
 
 
+def test_vpw036_explain_returns_422_when_decision_payload_is_missing(
+    template_api_env: TemplateApiEnv,
+) -> None:
+    headers = auth_headers(template_api_env.client)
+    project = create_project_via_api(template_api_env.client, headers)
+    seeded = seed_finding_pair(
+        template_api_env.engine,
+        template_api_env.app_models,
+        template_api_env.repositories,
+        project_id=uuid.UUID(project["id"]),
+    )
+
+    response = template_api_env.client.get(
+        f"/api/v1/findings/{seeded['finding_ids'][0]}/explain",
+        headers=headers,
+    )
+
+    assert response.status_code == 422
+    assert response.json()["detail"] == "Finding explanation is not available."
+
+
+def test_vpw036_project_decision_endpoints_handle_empty_projects(
+    template_api_env: TemplateApiEnv,
+) -> None:
+    headers = auth_headers(template_api_env.client)
+    project = create_project_via_api(template_api_env.client, headers)
+
+    summary_response = template_api_env.client.get(
+        f"/api/v1/projects/{project['id']}/summary",
+        headers=headers,
+    )
+    assert summary_response.status_code == 200
+    summary_payload = summary_response.json()
+    assert summary_payload["finding_count"] == 0
+    assert summary_payload["open_finding_count"] == 0
+    assert summary_payload["counts_by_priority"] == {
+        "Critical": 0,
+        "High": 0,
+        "Medium": 0,
+        "Low": 0,
+    }
+    assert summary_payload["counts_by_status"] == {
+        "open": 0,
+        "in_review": 0,
+        "remediating": 0,
+        "fixed": 0,
+        "accepted": 0,
+        "suppressed": 0,
+    }
+    assert summary_payload["latest_run_id"] is None
+
+    comparison_response = template_api_env.client.get(
+        f"/api/v1/projects/{project['id']}/compare/cvss-only",
+        headers=headers,
+        params={"limit": 0},
+    )
+    assert comparison_response.status_code == 200
+    comparison_payload = comparison_response.json()
+    assert comparison_payload["summary"] == {
+        "total": 0,
+        "changed": 0,
+        "up": 0,
+        "down": 0,
+        "unchanged": 0,
+    }
+    assert comparison_payload["top_changes"] == []
+    assert comparison_payload["comparisons"] == []
+
+
 def test_vpw011_404_and_403_are_consistent_for_project_scoped_resources(
     restricted_template_api_env: TemplateApiEnv,
 ) -> None:
@@ -327,9 +405,12 @@ def test_vpw011_404_and_403_are_consistent_for_project_scoped_resources(
         ("get", f"/api/v1/runs/{missing_id}", {}),
         ("get", f"/api/v1/runs/{missing_id}/summary", {}),
         ("get", f"/api/v1/findings/{missing_id}", {}),
+        ("get", f"/api/v1/findings/{missing_id}/explain", {}),
         ("get", f"/api/v1/projects/{missing_id}/assets/", {}),
         ("get", f"/api/v1/projects/{missing_id}/runs/", {}),
         ("get", f"/api/v1/projects/{missing_id}/findings/", {}),
+        ("get", f"/api/v1/projects/{missing_id}/summary", {}),
+        ("get", f"/api/v1/projects/{missing_id}/compare/cvss-only", {}),
     )
     forbidden_calls: tuple[tuple[str, str, dict[str, Any]], ...] = (
         ("get", f"/api/v1/projects/{foreign['project_id']}", {}),
@@ -337,9 +418,12 @@ def test_vpw011_404_and_403_are_consistent_for_project_scoped_resources(
         ("get", f"/api/v1/runs/{foreign['run_id']}", {}),
         ("get", f"/api/v1/runs/{foreign['run_id']}/summary", {}),
         ("get", f"/api/v1/findings/{foreign['finding_id']}", {}),
+        ("get", f"/api/v1/findings/{foreign['finding_id']}/explain", {}),
         ("get", f"/api/v1/projects/{foreign['project_id']}/assets/", {}),
         ("get", f"/api/v1/projects/{foreign['project_id']}/runs/", {}),
         ("get", f"/api/v1/projects/{foreign['project_id']}/findings/", {}),
+        ("get", f"/api/v1/projects/{foreign['project_id']}/summary", {}),
+        ("get", f"/api/v1/projects/{foreign['project_id']}/compare/cvss-only", {}),
     )
 
     for method, path, kwargs in not_found_calls:

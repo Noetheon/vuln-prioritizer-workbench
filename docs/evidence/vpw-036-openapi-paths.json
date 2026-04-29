@@ -1,0 +1,445 @@
+{
+  "paths": {
+    "/api/v1/findings/{finding_id}/explain": {
+      "get": {
+        "description": "Read the persisted decision explanation for one visible finding.",
+        "operationId": "findings-explain_finding",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "finding_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Finding Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FindingExplanationPublic"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Explain Finding",
+        "tags": [
+          "findings"
+        ]
+      }
+    },
+    "/api/v1/projects/{project_id}/compare/cvss-only": {
+      "get": {
+        "description": "Compare current enriched priorities with a CVSS-only baseline.",
+        "operationId": "projects-compare_project_cvss_only",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Project Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 10,
+              "maximum": 100,
+              "minimum": 0,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectCvssOnlyComparisonPublic"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Compare Project Cvss Only",
+        "tags": [
+          "projects"
+        ]
+      }
+    },
+    "/api/v1/projects/{project_id}/summary": {
+      "get": {
+        "description": "Read a dashboard-oriented decision summary for one visible project.",
+        "operationId": "projects-read_project_summary",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectDecisionSummaryPublic"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Read Project Summary",
+        "tags": [
+          "projects"
+        ]
+      }
+    }
+  },
+  "schemas": {
+    "FindingExplanationPublic": {
+      "description": "Structured decision explanation for one persisted finding.",
+      "properties": {
+        "cve_id": {
+          "title": "Cve Id",
+          "type": "string"
+        },
+        "data_quality_confidence": {
+          "default": "high",
+          "title": "Data Quality Confidence",
+          "type": "string"
+        },
+        "data_quality_flags": {
+          "items": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "title": "Data Quality Flags",
+          "type": "array"
+        },
+        "decision_explanation": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Decision Explanation"
+        },
+        "decision_guidance": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Decision Guidance"
+        },
+        "explanation": {
+          "additionalProperties": true,
+          "title": "Explanation",
+          "type": "object"
+        },
+        "finding_id": {
+          "format": "uuid",
+          "title": "Finding Id",
+          "type": "string"
+        },
+        "operational_rank": {
+          "default": 0,
+          "title": "Operational Rank",
+          "type": "integer"
+        },
+        "priority": {
+          "$ref": "#/components/schemas/FindingPriority"
+        },
+        "priority_rank": {
+          "title": "Priority Rank",
+          "type": "integer"
+        },
+        "priority_state": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Priority State"
+        },
+        "project_id": {
+          "format": "uuid",
+          "title": "Project Id",
+          "type": "string"
+        },
+        "provider_evidence": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Provider Evidence"
+        },
+        "rationale": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Rationale"
+        },
+        "recommended_action": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Recommended Action"
+        },
+        "risk_score": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Risk Score"
+        }
+      },
+      "required": [
+        "finding_id",
+        "project_id",
+        "cve_id",
+        "priority",
+        "priority_rank"
+      ],
+      "title": "FindingExplanationPublic",
+      "type": "object"
+    },
+    "ProjectCvssOnlyComparisonPublic": {
+      "description": "CVSS-only baseline comparison for stored template findings.",
+      "properties": {
+        "comparisons": {
+          "items": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "title": "Comparisons",
+          "type": "array"
+        },
+        "counts": {
+          "additionalProperties": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object"
+          },
+          "title": "Counts",
+          "type": "object"
+        },
+        "methodology": {
+          "additionalProperties": true,
+          "title": "Methodology",
+          "type": "object"
+        },
+        "project_id": {
+          "format": "uuid",
+          "title": "Project Id",
+          "type": "string"
+        },
+        "summary": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "title": "Summary",
+          "type": "object"
+        },
+        "top_changes": {
+          "items": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "title": "Top Changes",
+          "type": "array"
+        }
+      },
+      "required": [
+        "project_id",
+        "methodology",
+        "summary",
+        "counts"
+      ],
+      "title": "ProjectCvssOnlyComparisonPublic",
+      "type": "object"
+    },
+    "ProjectDecisionSummaryPublic": {
+      "description": "Dashboard-oriented decision summary for one visible project.",
+      "properties": {
+        "counts_by_priority": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "title": "Counts By Priority",
+          "type": "object"
+        },
+        "counts_by_status": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "title": "Counts By Status",
+          "type": "object"
+        },
+        "cvss_known_count": {
+          "default": 0,
+          "title": "Cvss Known Count",
+          "type": "integer"
+        },
+        "epss_hits": {
+          "default": 0,
+          "title": "Epss Hits",
+          "type": "integer"
+        },
+        "finding_count": {
+          "default": 0,
+          "title": "Finding Count",
+          "type": "integer"
+        },
+        "kev_hits": {
+          "default": 0,
+          "title": "Kev Hits",
+          "type": "integer"
+        },
+        "latest_run_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Latest Run Id"
+        },
+        "latest_run_status": {
+          "anyOf": [
+            {
+              "$ref": "#/components/schemas/AnalysisRunStatus"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "latest_run_summary": {
+          "additionalProperties": true,
+          "title": "Latest Run Summary",
+          "type": "object"
+        },
+        "open_finding_count": {
+          "default": 0,
+          "title": "Open Finding Count",
+          "type": "integer"
+        },
+        "project_id": {
+          "format": "uuid",
+          "title": "Project Id",
+          "type": "string"
+        },
+        "provider_degraded": {
+          "default": false,
+          "title": "Provider Degraded",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "project_id"
+      ],
+      "title": "ProjectDecisionSummaryPublic",
+      "type": "object"
+    }
+  }
+}

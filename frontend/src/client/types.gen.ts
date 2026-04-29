@@ -160,6 +160,38 @@ export type Body_login_login_access_token = {
 };
 
 /**
+ * Structured decision explanation for one persisted finding.
+ */
+export type FindingExplanationPublic = {
+    cve_id: string;
+    data_quality_confidence?: string;
+    data_quality_flags?: Array<{
+        [key: string]: unknown;
+    }>;
+    decision_explanation?: ({
+    [key: string]: unknown;
+} | null);
+    decision_guidance?: ({
+    [key: string]: unknown;
+} | null);
+    explanation?: {
+        [key: string]: unknown;
+    };
+    finding_id: string;
+    operational_rank?: number;
+    priority: FindingPriority;
+    priority_rank: number;
+    priority_state?: (string | null);
+    project_id: string;
+    provider_evidence?: ({
+    [key: string]: unknown;
+} | null);
+    rationale?: (string | null);
+    recommended_action?: (string | null);
+    risk_score?: (number | null);
+};
+
+/**
  * Rule-based finding priority label.
  */
 export type FindingPriority = 'critical' | 'high' | 'medium' | 'low';
@@ -248,6 +280,54 @@ export type MigrationStatus = {
 export type ProjectCreate = {
     description?: (string | null);
     name: string;
+};
+
+/**
+ * CVSS-only baseline comparison for stored template findings.
+ */
+export type ProjectCvssOnlyComparisonPublic = {
+    comparisons?: Array<{
+        [key: string]: unknown;
+    }>;
+    counts: {
+        [key: string]: {
+            [key: string]: (number);
+        };
+    };
+    methodology: {
+        [key: string]: unknown;
+    };
+    project_id: string;
+    summary: {
+        [key: string]: (number);
+    };
+    top_changes?: Array<{
+        [key: string]: unknown;
+    }>;
+};
+
+/**
+ * Dashboard-oriented decision summary for one visible project.
+ */
+export type ProjectDecisionSummaryPublic = {
+    counts_by_priority?: {
+        [key: string]: (number);
+    };
+    counts_by_status?: {
+        [key: string]: (number);
+    };
+    cvss_known_count?: number;
+    epss_hits?: number;
+    finding_count?: number;
+    kev_hits?: number;
+    latest_run_id?: (string | null);
+    latest_run_status?: (AnalysisRunStatus | null);
+    latest_run_summary?: {
+        [key: string]: unknown;
+    };
+    open_finding_count?: number;
+    project_id: string;
+    provider_degraded?: boolean;
 };
 
 /**
@@ -418,6 +498,12 @@ export type FindingsReadFindingData = {
 
 export type FindingsReadFindingResponse = (FindingPublic);
 
+export type FindingsExplainFindingData = {
+    findingId: string;
+};
+
+export type FindingsExplainFindingResponse = (FindingExplanationPublic);
+
 export type FindingsReadProjectFindingsData = {
     limit?: number;
     offset?: number;
@@ -468,6 +554,19 @@ export type ProjectsUpdateProjectData = {
 };
 
 export type ProjectsUpdateProjectResponse = (ProjectPublic);
+
+export type ProjectsCompareProjectCvssOnlyData = {
+    limit?: number;
+    projectId: string;
+};
+
+export type ProjectsCompareProjectCvssOnlyResponse = (ProjectCvssOnlyComparisonPublic);
+
+export type ProjectsReadProjectSummaryData = {
+    projectId: string;
+};
+
+export type ProjectsReadProjectSummaryResponse = (ProjectDecisionSummaryPublic);
 
 export type ProvidersReadProviderStatusResponse = (ProviderStatusPublic);
 
