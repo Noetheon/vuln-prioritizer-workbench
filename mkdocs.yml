@@ -16,6 +16,7 @@ nav:
       - Model Import Registry: architecture/model-imports.md
       - Core Workbench Schema: architecture/core-workbench-schema.md
       - Analysis Run Provider Schema: architecture/analysis-run-provider-schema.md
+      - Provider Cache Status Snapshots: architecture/vpw-022-provider-cache-status-snapshots.md
       - Template Repository Layer: architecture/template-service-layer.md
       - Template Importer Contract: architecture/vpw-013-importer-contract.md
   - Full Stack Template Migration: full_stack_fastapi_template_migration.md
