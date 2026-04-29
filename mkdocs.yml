@@ -34,6 +34,7 @@ nav:
       - SBOM and Dependency Triage: playbooks/sbom_triage.md
       - Infrastructure Scan Triage: playbooks/infrastructure_scan_triage.md
   - Contracts: contracts.md
+  - ATT&CK Curated Mapping Schema: attack-ttp-methodology.md
   - Support Matrix: support_matrix.md
   - Integrations: integrations/reporting_and_ci.md
   - Gap Analysis: reference_cve_prioritizer_gap_analysis.md
@@ -90,6 +91,7 @@ nav:
       - VPW-052 Evidence Bundle Verification: evidence/vpw-052-evidence-bundle-verification.md
       - VPW-053 Report Downloads: evidence/vpw-053-report-downloads.md
       - VPW-054 Report Snapshots: evidence/vpw-054-report-snapshots.md
+      - VPW-055 ATT&CK Models And Schema: evidence/vpw-055-attack-models-schema.md
       - Historical Evidence Archive: evidence.md
       - Current State Audit: evidence/current_state_audit.md
       - V0.3 Submission Checklist: evidence/final_submission_checklist.md

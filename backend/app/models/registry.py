@@ -10,6 +10,7 @@ TABLE_MODEL_MODULES = (
     "app.models.findings",
     "app.models.runs",
     "app.models.reports",
+    "app.models.attack",
 )
 
 

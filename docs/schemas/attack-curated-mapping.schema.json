@@ -1,0 +1,181 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://noetheon.github.io/vuln-prioritizer/schemas/attack-curated-mapping.schema.json",
+  "title": "vuln-prioritizer curated CVE-to-ATT&CK mapping artifact",
+  "description": "Schema for local curated ATT&CK mapping artifacts. These mappings are defensive review evidence only and must not contain exploit procedures.",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "metadata",
+    "mapping_objects"
+  ],
+  "properties": {
+    "metadata": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "mapping_framework",
+        "mapping_framework_version",
+        "attack_version",
+        "technology_domain",
+        "mapping_types"
+      ],
+      "properties": {
+        "mapping_framework": {
+          "type": "string",
+          "minLength": 1
+        },
+        "mapping_framework_version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "mapping_version": {
+          "type": "string"
+        },
+        "attack_version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "technology_domain": {
+          "type": "string",
+          "minLength": 1
+        },
+        "creation_date": {
+          "type": "string"
+        },
+        "last_update": {
+          "type": "string"
+        },
+        "organization": {
+          "type": "string"
+        },
+        "author": {
+          "type": "string"
+        },
+        "contact": {
+          "type": "string"
+        },
+        "mapping_types": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "minProperties": 1
+        }
+      }
+    },
+    "mapping_objects": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/mappingObject"
+      }
+    }
+  },
+  "$defs": {
+    "mappingObject": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "cve_id",
+        "technique_id",
+        "mapping_type",
+        "source",
+        "confidence",
+        "rationale",
+        "review_status",
+        "defensive_note"
+      ],
+      "properties": {
+        "cve_id": {
+          "type": "string",
+          "pattern": "^CVE-\\d{4}-\\d{4,}$"
+        },
+        "technique_id": {
+          "type": "string",
+          "pattern": "^T\\d{4}(?:\\.\\d{3})?$"
+        },
+        "capability_id": {
+          "type": "string",
+          "description": "Optional CTID-compatible alias for cve_id.",
+          "pattern": "^CVE-\\d{4}-\\d{4,}$"
+        },
+        "attack_object_id": {
+          "type": "string",
+          "description": "Optional CTID-compatible alias for technique_id.",
+          "pattern": "^T\\d{4}(?:\\.\\d{3})?$"
+        },
+        "attack_object_name": {
+          "type": "string"
+        },
+        "tactic_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^TA\\d{4}$"
+          },
+          "uniqueItems": true
+        },
+        "mapping_type": {
+          "type": "string",
+          "enum": [
+            "exploitation",
+            "impact",
+            "post_exploitation",
+            "mitigation_context",
+            "detection_context"
+          ]
+        },
+        "capability_group": {
+          "type": "string"
+        },
+        "capability_description": {
+          "type": "string",
+          "description": "Short defensive context summary. Do not include payloads, commands, or exploit procedure steps."
+        },
+        "source": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source_url": {
+          "type": "string"
+        },
+        "confidence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "rationale": {
+          "type": "string",
+          "minLength": 1
+        },
+        "review_status": {
+          "type": "string",
+          "enum": [
+            "unreviewed",
+            "needs_review",
+            "reviewed",
+            "rejected",
+            "stale"
+          ]
+        },
+        "defensive_note": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Required safety note that frames the mapping as defensive triage, detection, or prioritization evidence."
+        },
+        "comments": {
+          "type": "string",
+          "description": "Reviewer comment for defensive interpretation only. Do not include payloads, commands, or exploit procedure steps."
+        },
+        "references": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        }
+      }
+    }
+  }
+}

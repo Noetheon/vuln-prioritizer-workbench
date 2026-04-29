@@ -22,6 +22,10 @@ Workbench ATT&CK enrichment is evidence-based and deterministic.
 - Do not use fuzzy matching, keyword matching, or tactic guesses to fill CTID gaps.
 - Do not silently promote analyst notes into canonical ATT&CK mappings.
 - If a CVE is absent from the CTID JSON source, report it as unmapped.
+- Curated local mappings require source, confidence, rationale, review status,
+  and a defensive note. Free-text comments must stay at defensive triage or
+  detection-context level and must not include exploit payloads, commands, or
+  step-by-step procedure guidance.
 
 Analyst annotations are outside the current Workbench contract. If added later, they need separate storage and display from CTID mappings.
 

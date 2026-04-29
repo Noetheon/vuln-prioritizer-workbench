@@ -1,0 +1,44 @@
+{
+  "metadata": {
+    "mapping_framework": "vuln-prioritizer-curated-attack",
+    "mapping_framework_version": "1.0",
+    "mapping_version": "2026-04-29",
+    "attack_version": "16.1",
+    "technology_domain": "enterprise-attack",
+    "creation_date": "2026-04-29",
+    "last_update": "2026-04-29",
+    "organization": "Noetheon demo",
+    "author": "reviewed-demo",
+    "contact": "security@example.invalid",
+    "mapping_types": {
+      "exploitation": "Reviewed defensive mapping from a CVE to initial access context.",
+      "impact": "Reviewed defensive mapping from a CVE to likely business impact context.",
+      "mitigation_context": "Reviewed mapping used only to guide defensive mitigation review."
+    }
+  },
+  "mapping_objects": [
+    {
+      "cve_id": "CVE-2021-44228",
+      "technique_id": "T1190",
+      "capability_id": "CVE-2021-44228",
+      "attack_object_id": "T1190",
+      "attack_object_name": "Exploit Public-Facing Application",
+      "tactic_ids": [
+        "TA0001"
+      ],
+      "mapping_type": "exploitation",
+      "capability_group": "public-facing-application-risk",
+      "capability_description": "Public-facing application exposure can raise defensive triage urgency when the CVE is present.",
+      "source": "CTID Mappings Explorer review",
+      "source_url": "https://ctid.mitre.org/projects/mappings-explorer",
+      "confidence": 0.9,
+      "rationale": "Reviewed mapping links the CVE to defensive initial-access context for exposure and detection review.",
+      "review_status": "reviewed",
+      "defensive_note": "Use this mapping to prioritize remediation, exposure review, and detection coverage. It is not exploit proof or procedure guidance.",
+      "comments": "Safe demo entry with no commands, payloads, or step-by-step procedure content.",
+      "references": [
+        "https://ctid.mitre.org/projects/mappings-explorer"
+      ]
+    }
+  ]
+}
