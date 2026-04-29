@@ -386,6 +386,11 @@ export const AssetPublicSchema = {
             '$ref': '#/components/schemas/AssetExposure',
             default: 'unknown'
         },
+        finding_count: {
+            default: 0,
+            title: 'Finding Count',
+            type: 'integer'
+        },
         id: {
             format: 'uuid',
             title: 'Id',
@@ -413,6 +418,11 @@ export const AssetPublicSchema = {
             format: 'uuid',
             title: 'Project Id',
             type: 'string'
+        },
+        rescore_needed: {
+            default: false,
+            title: 'Rescore Needed',
+            type: 'boolean'
         },
         target_ref: {
             anyOf: [
@@ -650,6 +660,28 @@ export const Body_login_login_access_tokenSchema = {
 export const FindingDetailPublicSchema = {
     description: 'Public finding detail response shape.',
     properties: {
+        asset_criticality: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Asset Criticality'
+        },
+        asset_environment: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Asset Environment'
+        },
         asset_id: {
             anyOf: [
                 {
@@ -683,6 +715,17 @@ export const FindingDetailPublicSchema = {
                 }
             ],
             title: 'Asset Name'
+        },
+        asset_target_ref: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Asset Target Ref'
         },
         attack_mapped: {
             default: false,
@@ -1309,6 +1352,28 @@ export const FindingPrioritySchema = {
 export const FindingPublicSchema = {
     description: 'Public finding response shape.',
     properties: {
+        asset_criticality: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Asset Criticality'
+        },
+        asset_environment: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Asset Environment'
+        },
         asset_id: {
             anyOf: [
                 {
@@ -1342,6 +1407,17 @@ export const FindingPublicSchema = {
                 }
             ],
             title: 'Asset Name'
+        },
+        asset_target_ref: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Asset Target Ref'
         },
         attack_mapped: {
             default: false,

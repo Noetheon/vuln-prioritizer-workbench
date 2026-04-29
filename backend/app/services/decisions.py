@@ -153,14 +153,16 @@ def _data_quality_flags(
     finding: Finding,
     explanation_json: dict[str, Any],
 ) -> list[dict[str, Any]]:
-    flags = explanation_json.get("data_quality_flags")
-    if isinstance(flags, list):
-        return [dict(item) for item in flags if isinstance(item, dict)]
     data_quality_json = _dict_value(finding.data_quality_json)
-    stored_flags = data_quality_json.get("flags")
-    if isinstance(stored_flags, list):
-        return [dict(item) for item in stored_flags if isinstance(item, dict)]
-    return []
+    return _flag_items(explanation_json.get("data_quality_flags")) + _flag_items(
+        data_quality_json.get("flags")
+    )
+
+
+def _flag_items(value: Any) -> list[dict[str, Any]]:
+    if not isinstance(value, list):
+        return []
+    return [dict(item) for item in value if isinstance(item, dict)]
 
 
 def _priority_label(value: str) -> str:

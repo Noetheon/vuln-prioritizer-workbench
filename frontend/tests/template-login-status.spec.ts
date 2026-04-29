@@ -22,6 +22,9 @@ test("template login reaches authenticated Workbench status shell", async ({
   const dashboardProjectName = `VPW Dashboard Project ${testRunSuffix}`
   const uiProjectName = `VPW UI Project ${testRunSuffix}`
   const editedUiProjectName = `VPW UI Project Edited ${testRunSuffix}`
+  const uiAssetKey = `playwright-asset-${testRunSuffix}`
+  const uiAssetName = `Playwright Asset ${testRunSuffix}`
+  const editedUiAssetName = `Playwright Asset Edited ${testRunSuffix}`
 
   await page.goto("/login")
 
@@ -219,6 +222,127 @@ test("template login reaches authenticated Workbench status shell", async ({
   )
   expect(occurrenceImport.ok()).toBeTruthy()
 
+  await navigation.getByRole("link", { name: "Assets" }).click()
+  await expect(page).toHaveURL(/\/assets$/)
+  await expect(page.getByRole("heading", { name: "Assets" })).toBeVisible()
+  const assetsProjectSelect = page.getByLabel("Assets project", {
+    exact: true,
+  })
+  await expect(assetsProjectSelect).toBeVisible()
+  await assetsProjectSelect.selectOption(project.id)
+  await expect(assetsProjectSelect).toHaveValue(project.id)
+  const createAssetForm = page.getByRole("region", {
+    name: "Create Asset form",
+  })
+  await expect(createAssetForm).toBeVisible()
+  await createAssetForm.getByRole("button", { name: "Create Asset" }).click()
+  await expect(page.getByText("Asset key is required.")).toBeVisible()
+  await createAssetForm.getByLabel("Asset key").fill(uiAssetKey)
+  await createAssetForm.getByLabel("Asset name").fill(uiAssetName)
+  await createAssetForm.getByLabel("Owner").fill("team-assets")
+  await createAssetForm.getByLabel("Business service").fill("inventory")
+  await createAssetForm.getByLabel("Target ref").fill("svc/inventory")
+  await createAssetForm.getByLabel("Criticality").selectOption("critical")
+  await createAssetForm.getByLabel("Environment").selectOption("production")
+  const exposureSelect = createAssetForm.getByLabel("Exposure")
+  await exposureSelect.evaluate((select) => {
+    const invalidOption = document.createElement("option")
+    invalidOption.value = "public"
+    invalidOption.textContent = "Public"
+    select.appendChild(invalidOption)
+  })
+  await exposureSelect.selectOption("public")
+  await createAssetForm.getByRole("button", { name: "Create Asset" }).click()
+  await expect(
+    page.getByText("Exposure must be a supported value."),
+  ).toBeVisible()
+  await exposureSelect.selectOption("internal")
+  await createAssetForm.getByRole("button", { name: "Create Asset" }).click()
+  await expect(page.getByText(`Asset ${uiAssetName} created.`)).toBeVisible()
+  const assetsTable = page.getByRole("table", { name: "Assets table" })
+  await expect(assetsTable).toContainText(uiAssetName)
+  await expect(assetsTable).toContainText("Critical")
+  await expect(assetsTable).toContainText("Production")
+  await expect(assetsTable).toContainText("Internal")
+  const manualAssetRow = assetsTable.locator("tbody tr").filter({
+    hasText: uiAssetName,
+  })
+  await manualAssetRow.getByRole("button", { name: "Edit" }).click()
+  const assetDetail = page.getByRole("region", { name: "Asset detail" })
+  await expect(assetDetail).toContainText(uiAssetName)
+  await assetDetail.getByLabel("Edit asset name").fill(editedUiAssetName)
+  await assetDetail.getByLabel("Edit criticality").selectOption("high")
+  await assetDetail.getByLabel("Edit environment").selectOption("staging")
+  await assetDetail.getByLabel("Edit exposure").selectOption("private")
+  await assetDetail.getByRole("button", { name: "Save Asset" }).click()
+  await expect(
+    page.getByText(`Asset ${editedUiAssetName} updated.`),
+  ).toBeVisible()
+  await expect(assetDetail).toContainText(editedUiAssetName)
+  await expect(assetDetail).toContainText("High")
+  await expect(assetDetail).toContainText("Staging")
+  await expect(assetDetail).toContainText("Private")
+  const importedAssetRow = assetsTable.locator("tbody tr").filter({
+    hasText: "build-host-1",
+  })
+  await importedAssetRow.getByRole("button", { name: /build-host-1/ }).click()
+  await expect(assetDetail).toContainText("build-host-1")
+  await assetDetail.getByRole("button", { name: "Edit Asset" }).click()
+  await assetDetail.getByLabel("Edit owner").fill("team-platform-updated")
+  await assetDetail.getByLabel("Edit business service").fill("payments-runtime")
+  await assetDetail.getByLabel("Edit criticality").selectOption("critical")
+  await assetDetail.getByLabel("Edit environment").selectOption("production")
+  await assetDetail.getByLabel("Edit exposure").selectOption("internet-facing")
+  await assetDetail.getByRole("button", { name: "Save Asset" }).click()
+  await expect(page.getByText("Asset build-host-1 updated.")).toBeVisible()
+  await expect(assetDetail).toContainText("team-platform-updated")
+  await expect(assetDetail).toContainText("payments-runtime")
+  await expect(assetDetail).toContainText("Re-score needed")
+  await expect(importedAssetRow).toContainText("Re-score needed")
+  await page.screenshot({
+    fullPage: true,
+    path: "../docs/evidence/vpw-044-assets-page.png",
+  })
+  const assetFindings = page.getByRole("region", {
+    name: "Findings for selected asset",
+  })
+  await expect(assetFindings).toContainText("Findings for Asset")
+  await expect(assetFindings).toContainText("CVE-2024-3094")
+  await expect(assetFindings).not.toContainText("CVE-2024-4577")
+  await assetFindings.getByRole("link", { name: "Findings" }).click()
+  await expect(page).toHaveURL(/\/findings\?assetId=/)
+  await expect(
+    page.locator('[aria-label="Asset finding filter"]'),
+  ).toContainText("build-host-1")
+  const filteredFindingsTable = page.getByRole("table", {
+    name: "Findings table",
+  })
+  await expect(filteredFindingsTable).toContainText("CVE-2024-3094")
+  await expect(filteredFindingsTable).not.toContainText("CVE-2024-4577")
+  await filteredFindingsTable
+    .getByRole("link", { name: "CVE-2024-3094" })
+    .click()
+  await expect(page).toHaveURL(/\/findings\/[0-9a-f-]{36}$/)
+  const assetFindingDetail = page.getByRole("region", {
+    exact: true,
+    name: "Finding detail",
+  })
+  await expect(assetFindingDetail).toContainText("build-host-1")
+  await expect(assetFindingDetail).toContainText("team-platform-updated")
+  await expect(assetFindingDetail).toContainText("payments-runtime")
+  await expect(assetFindingDetail).toContainText("Production")
+  await expect(assetFindingDetail).toContainText("Critical")
+  await expect(assetFindingDetail).toContainText("Asset Context Rescore Needed")
+  await page.screenshot({
+    fullPage: true,
+    path: "../docs/evidence/vpw-044-finding-context.png",
+  })
+  await page.getByRole("link", { name: "Back to Findings" }).click()
+  await expect(page).toHaveURL(/\/findings$/)
+
+  await navigation.getByRole("link", { name: "Imports" }).click()
+  await expect(page).toHaveURL(/\/imports$/)
+  await page.getByLabel("Import project").selectOption(project.id)
   await page.getByLabel("Input type").selectOption("generic-occurrence-csv")
   await page.getByLabel("Import file").setInputFiles({
     buffer: invalidOccurrenceCsv,

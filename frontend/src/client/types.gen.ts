@@ -113,10 +113,12 @@ export type AssetPublic = {
     criticality?: AssetCriticality;
     environment?: AssetEnvironment;
     exposure?: AssetExposure;
+    finding_count?: number;
     id: string;
     name: string;
     owner?: (string | null);
     project_id: string;
+    rescore_needed?: boolean;
     target_ref?: (string | null);
     updated_at: string;
 };
@@ -163,9 +165,12 @@ export type Body_login_login_access_token = {
  * Public finding detail response shape.
  */
 export type FindingDetailPublic = {
+    asset_criticality?: (string | null);
+    asset_environment?: (string | null);
     asset_id: (string | null);
     asset_key?: (string | null);
     asset_name?: (string | null);
+    asset_target_ref?: (string | null);
     attack_mapped?: boolean;
     business_service?: (string | null);
     component_id: (string | null);
@@ -276,9 +281,12 @@ export type FindingPriority = 'critical' | 'high' | 'medium' | 'low';
  * Public finding response shape.
  */
 export type FindingPublic = {
+    asset_criticality?: (string | null);
+    asset_environment?: (string | null);
     asset_id: (string | null);
     asset_key?: (string | null);
     asset_name?: (string | null);
+    asset_target_ref?: (string | null);
     attack_mapped?: boolean;
     business_service?: (string | null);
     component_id: (string | null);
@@ -589,6 +597,7 @@ export type FindingsExplainFindingData = {
 export type FindingsExplainFindingResponse = (FindingExplanationPublic);
 
 export type FindingsReadProjectFindingsData = {
+    assetId?: (string | null);
     cvssMax?: (number | null);
     cvssMin?: (number | null);
     direction?: 'asc' | 'desc';

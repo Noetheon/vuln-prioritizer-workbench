@@ -233,6 +233,7 @@ class FindingRepository:
         owner: str | None = None,
         service: str | None = None,
         owner_service: str | None = None,
+        asset_id: uuid.UUID | None = None,
         exposure: str | None = None,
         epss_min: float | None = None,
         epss_max: float | None = None,
@@ -275,6 +276,8 @@ class FindingRepository:
                     col(Asset.business_service).ilike(pattern),
                 )
             )
+        if asset_id is not None:
+            filters.append(Finding.asset_id == asset_id)
         if exposure is not None:
             filters.append(Asset.exposure == exposure)
         if epss_min is not None:
