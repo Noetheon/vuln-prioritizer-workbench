@@ -223,9 +223,11 @@ def _attack_context_section(model: dict[str, Any]) -> str:
   </div>
   <div class="er-two-col er-section-table">
     <article class="er-panel">
-      <h3>Illustrative TTP Chain</h3>
+      <h3>Illustrative Defensive TTP Sequence</h3>
       {_ttp_chain(attack["top_techniques"])}
-      <p class="er-muted">Illustrative example only. Not a guaranteed attack path.</p>
+      <p class="er-muted">
+        Defensive review sequence only. Not a confirmed attack path and not procedure guidance.
+      </p>
     </article>
     <article class="er-panel">
       <h3>Mapping Evidence</h3>
@@ -476,13 +478,19 @@ def _leadership_items(model: dict[str, Any]) -> list[dict[str, str]]:
 def _attack_value_items() -> list[dict[str, str]]:
     return [
         {
-            "title": "Adds adversary context",
-            "body": "Maps prioritized findings to attacker behaviors and real-world techniques.",
+            "title": "Adds defensive behavior context",
+            "body": (
+                "Maps prioritized findings to ATT&CK behavior categories for detection "
+                "and remediation review."
+            ),
             "tone": "accent",
         },
         {
-            "title": "Improves attack path review",
-            "body": "Shows where weaknesses can be chained into broader compromise.",
+            "title": "Improves defensive sequence review",
+            "body": (
+                "Shows source-backed tactics and techniques that may need coverage review; "
+                "it is not exploit proof."
+            ),
             "tone": "success",
         },
         {
@@ -959,9 +967,10 @@ def _decision_principles_html() -> str:
             "tone": "accent",
         },
         {
-            "title": "ATT&CK improves decision quality.",
+            "title": "ATT&CK improves defensive review.",
             "body": (
-                "Mapped tactics help reviewers understand adversary behavior and likely impact."
+                "Mapped tactics help reviewers understand source-backed behavior categories "
+                "and likely impact without claiming active exploitation."
             ),
             "tone": "success",
         },

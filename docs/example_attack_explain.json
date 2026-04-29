@@ -1,7 +1,7 @@
 {
   "attack": {
     "attack_note": "CVE-2023-34362 is a SQL injection vulnerability in a public-facing application. Adversaries have been observed to exploit this vulnerability to install malicious software on a target system, enabling them to discover system settings and information, enumerate the underlying SQL database, retrieve files, create administrator accounts, and delete accounts.",
-    "attack_rationale": "CTID ATT&CK mappings include exploitation or primary impact behavior.",
+    "attack_rationale": "ATT&CK mappings include reviewed exploitation or impact context.",
     "attack_relevance": "High",
     "attack_tactics": [
       "initial-access",
@@ -41,11 +41,17 @@
         "capability_group": "sql_injection",
         "capability_id": "CVE-2023-34362",
         "comments": "CVE-2023-34362 is a SQL injection vulnerability in a public-facing application. Adversaries have been observed to exploit this vulnerability to install malicious software on a target system, enabling them to discover system settings and information, enumerate the underlying SQL database, retrieve files, create administrator accounts, and delete accounts.",
+        "confidence": null,
+        "defensive_note": null,
         "mapping_type": "exploitation_technique",
         "references": [
           "https://www.cisa.gov/sites/default/files/2023-07/aa23-158a-stopransomware-cl0p-ransomware-gang-exploits-moveit-vulnerability_8.pdf",
           "https://www.cisa.gov/news-events/cybersecurity-advisories/aa23-158a"
-        ]
+        ],
+        "review_status": null,
+        "reviewed_at": null,
+        "reviewer": null,
+        "source": null
       },
       {
         "attack_object_id": "T1059",
@@ -54,11 +60,17 @@
         "capability_group": "sql_injection",
         "capability_id": "CVE-2023-34362",
         "comments": "CVE-2023-34362 is a SQL injection vulnerability in a public-facing application. Adversaries have been observed to exploit this vulnerability to install malicious software on a target system, enabling them to discover system settings and information, enumerate the underlying SQL database, retrieve files, create administrator accounts, and delete accounts.",
+        "confidence": null,
+        "defensive_note": null,
         "mapping_type": "primary_impact",
         "references": [
           "https://www.cisa.gov/sites/default/files/2023-07/aa23-158a-stopransomware-cl0p-ransomware-gang-exploits-moveit-vulnerability_8.pdf",
           "https://www.cisa.gov/news-events/cybersecurity-advisories/aa23-158a"
-        ]
+        ],
+        "review_status": null,
+        "reviewed_at": null,
+        "reviewer": null,
+        "source": null
       },
       {
         "attack_object_id": "T1531",
@@ -67,11 +79,17 @@
         "capability_group": "sql_injection",
         "capability_id": "CVE-2023-34362",
         "comments": "CVE-2023-34362 is a SQL injection vulnerability in a public-facing application. Adversaries have been observed to exploit this vulnerability to install malicious software on a target system, enabling them to discover system settings and information, enumerate the underlying SQL database, retrieve files, create administrator accounts, and delete accounts.",
+        "confidence": null,
+        "defensive_note": null,
         "mapping_type": "secondary_impact",
         "references": [
           "https://www.cisa.gov/sites/default/files/2023-07/aa23-158a-stopransomware-cl0p-ransomware-gang-exploits-moveit-vulnerability_8.pdf",
           "https://www.cisa.gov/news-events/cybersecurity-advisories/aa23-158a"
-        ]
+        ],
+        "review_status": null,
+        "reviewed_at": null,
+        "reviewer": null,
+        "source": null
       },
       {
         "attack_object_id": "T1136",
@@ -80,11 +98,17 @@
         "capability_group": "sql_injection",
         "capability_id": "CVE-2023-34362",
         "comments": "CVE-2023-34362 is a SQL injection vulnerability in a public-facing application. Adversaries have been observed to exploit this vulnerability to install malicious software on a target system, enabling them to discover system settings and information, enumerate the underlying SQL database, retrieve files, create administrator accounts, and delete accounts.",
+        "confidence": null,
+        "defensive_note": null,
         "mapping_type": "secondary_impact",
         "references": [
           "https://www.cisa.gov/sites/default/files/2023-07/aa23-158a-stopransomware-cl0p-ransomware-gang-exploits-moveit-vulnerability_8.pdf",
           "https://www.cisa.gov/news-events/cybersecurity-advisories/aa23-158a"
-        ]
+        ],
+        "review_status": null,
+        "reviewed_at": null,
+        "reviewer": null,
+        "source": null
       },
       {
         "attack_object_id": "T1005",
@@ -93,11 +117,17 @@
         "capability_group": "sql_injection",
         "capability_id": "CVE-2023-34362",
         "comments": "CVE-2023-34362 is a SQL injection vulnerability in a public-facing application. Adversaries have been observed to exploit this vulnerability to install malicious software on a target system, enabling them to discover system settings and information, enumerate the underlying SQL database, retrieve files, create administrator accounts, and delete accounts.",
+        "confidence": null,
+        "defensive_note": null,
         "mapping_type": "secondary_impact",
         "references": [
           "https://www.cisa.gov/sites/default/files/2023-07/aa23-158a-stopransomware-cl0p-ransomware-gang-exploits-moveit-vulnerability_8.pdf",
           "https://www.cisa.gov/news-events/cybersecurity-advisories/aa23-158a"
-        ]
+        ],
+        "review_status": null,
+        "reviewed_at": null,
+        "reviewer": null,
+        "source": null
       },
       {
         "attack_object_id": "T1082",
@@ -106,11 +136,17 @@
         "capability_group": "sql_injection",
         "capability_id": "CVE-2023-34362",
         "comments": "CVE-2023-34362 is a SQL injection vulnerability in a public-facing application. Adversaries have been observed to exploit this vulnerability to install malicious software on a target system, enabling them to discover system settings and information, enumerate the underlying SQL database, retrieve files, create administrator accounts, and delete accounts.",
+        "confidence": null,
+        "defensive_note": null,
         "mapping_type": "secondary_impact",
         "references": [
           "https://www.cisa.gov/sites/default/files/2023-07/aa23-158a-stopransomware-cl0p-ransomware-gang-exploits-moveit-vulnerability_8.pdf",
           "https://www.cisa.gov/news-events/cybersecurity-advisories/aa23-158a"
-        ]
+        ],
+        "review_status": null,
+        "reviewed_at": null,
+        "reviewer": null,
+        "source": null
       },
       {
         "attack_object_id": "T1105",
@@ -119,11 +155,17 @@
         "capability_group": "sql_injection",
         "capability_id": "CVE-2023-34362",
         "comments": "CVE-2023-34362 is a SQL injection vulnerability in a public-facing application. Adversaries have been observed to exploit this vulnerability to install malicious software on a target system, enabling them to discover system settings and information, enumerate the underlying SQL database, retrieve files, create administrator accounts, and delete accounts.",
+        "confidence": null,
+        "defensive_note": null,
         "mapping_type": "secondary_impact",
         "references": [
           "https://www.cisa.gov/sites/default/files/2023-07/aa23-158a-stopransomware-cl0p-ransomware-gang-exploits-moveit-vulnerability_8.pdf",
           "https://www.cisa.gov/news-events/cybersecurity-advisories/aa23-158a"
-        ]
+        ],
+        "review_status": null,
+        "reviewed_at": null,
+        "reviewer": null,
+        "source": null
       }
     ],
     "source": "ctid-mappings-explorer",
@@ -363,6 +405,234 @@
   },
   "finding": {
     "asset_count": 0,
+    "attack_context": {
+      "attack_relevance": "High",
+      "attack_version": "16.1",
+      "confidence": null,
+      "cve_id": "CVE-2023-34362",
+      "domain": "enterprise",
+      "low_confidence": false,
+      "mapped": true,
+      "mappings": [
+        {
+          "attack_object_id": "T1190",
+          "attack_object_name": "Exploit Public-Facing Application",
+          "capability_description": "Progress MOVEit Transfer SQL Injection Vulnerability",
+          "capability_group": "sql_injection",
+          "capability_id": "CVE-2023-34362",
+          "comments": "CVE-2023-34362 is a SQL injection vulnerability in a public-facing application. Adversaries have been observed to exploit this vulnerability to install malicious software on a target system, enabling them to discover system settings and information, enumerate the underlying SQL database, retrieve files, create administrator accounts, and delete accounts.",
+          "confidence": null,
+          "defensive_note": null,
+          "mapping_type": "exploitation_technique",
+          "references": [
+            "https://www.cisa.gov/sites/default/files/2023-07/aa23-158a-stopransomware-cl0p-ransomware-gang-exploits-moveit-vulnerability_8.pdf",
+            "https://www.cisa.gov/news-events/cybersecurity-advisories/aa23-158a"
+          ],
+          "review_status": null,
+          "reviewed_at": null,
+          "reviewer": null,
+          "source": null
+        },
+        {
+          "attack_object_id": "T1059",
+          "attack_object_name": "Command and Scripting Interpreter",
+          "capability_description": "Progress MOVEit Transfer SQL Injection Vulnerability",
+          "capability_group": "sql_injection",
+          "capability_id": "CVE-2023-34362",
+          "comments": "CVE-2023-34362 is a SQL injection vulnerability in a public-facing application. Adversaries have been observed to exploit this vulnerability to install malicious software on a target system, enabling them to discover system settings and information, enumerate the underlying SQL database, retrieve files, create administrator accounts, and delete accounts.",
+          "confidence": null,
+          "defensive_note": null,
+          "mapping_type": "primary_impact",
+          "references": [
+            "https://www.cisa.gov/sites/default/files/2023-07/aa23-158a-stopransomware-cl0p-ransomware-gang-exploits-moveit-vulnerability_8.pdf",
+            "https://www.cisa.gov/news-events/cybersecurity-advisories/aa23-158a"
+          ],
+          "review_status": null,
+          "reviewed_at": null,
+          "reviewer": null,
+          "source": null
+        },
+        {
+          "attack_object_id": "T1531",
+          "attack_object_name": "Account Access Removal",
+          "capability_description": "Progress MOVEit Transfer SQL Injection Vulnerability",
+          "capability_group": "sql_injection",
+          "capability_id": "CVE-2023-34362",
+          "comments": "CVE-2023-34362 is a SQL injection vulnerability in a public-facing application. Adversaries have been observed to exploit this vulnerability to install malicious software on a target system, enabling them to discover system settings and information, enumerate the underlying SQL database, retrieve files, create administrator accounts, and delete accounts.",
+          "confidence": null,
+          "defensive_note": null,
+          "mapping_type": "secondary_impact",
+          "references": [
+            "https://www.cisa.gov/sites/default/files/2023-07/aa23-158a-stopransomware-cl0p-ransomware-gang-exploits-moveit-vulnerability_8.pdf",
+            "https://www.cisa.gov/news-events/cybersecurity-advisories/aa23-158a"
+          ],
+          "review_status": null,
+          "reviewed_at": null,
+          "reviewer": null,
+          "source": null
+        },
+        {
+          "attack_object_id": "T1136",
+          "attack_object_name": "Create Account",
+          "capability_description": "Progress MOVEit Transfer SQL Injection Vulnerability",
+          "capability_group": "sql_injection",
+          "capability_id": "CVE-2023-34362",
+          "comments": "CVE-2023-34362 is a SQL injection vulnerability in a public-facing application. Adversaries have been observed to exploit this vulnerability to install malicious software on a target system, enabling them to discover system settings and information, enumerate the underlying SQL database, retrieve files, create administrator accounts, and delete accounts.",
+          "confidence": null,
+          "defensive_note": null,
+          "mapping_type": "secondary_impact",
+          "references": [
+            "https://www.cisa.gov/sites/default/files/2023-07/aa23-158a-stopransomware-cl0p-ransomware-gang-exploits-moveit-vulnerability_8.pdf",
+            "https://www.cisa.gov/news-events/cybersecurity-advisories/aa23-158a"
+          ],
+          "review_status": null,
+          "reviewed_at": null,
+          "reviewer": null,
+          "source": null
+        },
+        {
+          "attack_object_id": "T1005",
+          "attack_object_name": "Data from Local System",
+          "capability_description": "Progress MOVEit Transfer SQL Injection Vulnerability",
+          "capability_group": "sql_injection",
+          "capability_id": "CVE-2023-34362",
+          "comments": "CVE-2023-34362 is a SQL injection vulnerability in a public-facing application. Adversaries have been observed to exploit this vulnerability to install malicious software on a target system, enabling them to discover system settings and information, enumerate the underlying SQL database, retrieve files, create administrator accounts, and delete accounts.",
+          "confidence": null,
+          "defensive_note": null,
+          "mapping_type": "secondary_impact",
+          "references": [
+            "https://www.cisa.gov/sites/default/files/2023-07/aa23-158a-stopransomware-cl0p-ransomware-gang-exploits-moveit-vulnerability_8.pdf",
+            "https://www.cisa.gov/news-events/cybersecurity-advisories/aa23-158a"
+          ],
+          "review_status": null,
+          "reviewed_at": null,
+          "reviewer": null,
+          "source": null
+        },
+        {
+          "attack_object_id": "T1082",
+          "attack_object_name": "System Information Discovery",
+          "capability_description": "Progress MOVEit Transfer SQL Injection Vulnerability",
+          "capability_group": "sql_injection",
+          "capability_id": "CVE-2023-34362",
+          "comments": "CVE-2023-34362 is a SQL injection vulnerability in a public-facing application. Adversaries have been observed to exploit this vulnerability to install malicious software on a target system, enabling them to discover system settings and information, enumerate the underlying SQL database, retrieve files, create administrator accounts, and delete accounts.",
+          "confidence": null,
+          "defensive_note": null,
+          "mapping_type": "secondary_impact",
+          "references": [
+            "https://www.cisa.gov/sites/default/files/2023-07/aa23-158a-stopransomware-cl0p-ransomware-gang-exploits-moveit-vulnerability_8.pdf",
+            "https://www.cisa.gov/news-events/cybersecurity-advisories/aa23-158a"
+          ],
+          "review_status": null,
+          "reviewed_at": null,
+          "reviewer": null,
+          "source": null
+        },
+        {
+          "attack_object_id": "T1105",
+          "attack_object_name": "Ingress Tool Transfer",
+          "capability_description": "Progress MOVEit Transfer SQL Injection Vulnerability",
+          "capability_group": "sql_injection",
+          "capability_id": "CVE-2023-34362",
+          "comments": "CVE-2023-34362 is a SQL injection vulnerability in a public-facing application. Adversaries have been observed to exploit this vulnerability to install malicious software on a target system, enabling them to discover system settings and information, enumerate the underlying SQL database, retrieve files, create administrator accounts, and delete accounts.",
+          "confidence": null,
+          "defensive_note": null,
+          "mapping_type": "secondary_impact",
+          "references": [
+            "https://www.cisa.gov/sites/default/files/2023-07/aa23-158a-stopransomware-cl0p-ransomware-gang-exploits-moveit-vulnerability_8.pdf",
+            "https://www.cisa.gov/news-events/cybersecurity-advisories/aa23-158a"
+          ],
+          "review_status": null,
+          "reviewed_at": null,
+          "reviewer": null,
+          "source": null
+        }
+      ],
+      "rationale": "ATT&CK mappings include reviewed exploitation or impact context.",
+      "source": "ctid-mappings-explorer",
+      "source_version": "07/28/2025",
+      "tactics": [
+        "initial-access",
+        "execution",
+        "impact",
+        "persistence",
+        "collection",
+        "discovery",
+        "command-and-control"
+      ],
+      "techniques": [
+        {
+          "attack_object_id": "T1190",
+          "deprecated": false,
+          "name": "Exploit Public-Facing Application",
+          "revoked": false,
+          "tactics": [
+            "initial-access"
+          ],
+          "url": "https://attack.mitre.org/techniques/T1190"
+        },
+        {
+          "attack_object_id": "T1059",
+          "deprecated": false,
+          "name": "Command and Scripting Interpreter",
+          "revoked": false,
+          "tactics": [
+            "execution"
+          ],
+          "url": "https://attack.mitre.org/techniques/T1059"
+        },
+        {
+          "attack_object_id": "T1531",
+          "deprecated": false,
+          "name": "Account Access Removal",
+          "revoked": false,
+          "tactics": [
+            "impact"
+          ],
+          "url": "https://attack.mitre.org/techniques/T1531"
+        },
+        {
+          "attack_object_id": "T1136",
+          "deprecated": false,
+          "name": "Create Account",
+          "revoked": false,
+          "tactics": [
+            "persistence"
+          ],
+          "url": "https://attack.mitre.org/techniques/T1136"
+        },
+        {
+          "attack_object_id": "T1005",
+          "deprecated": false,
+          "name": "Data from Local System",
+          "revoked": false,
+          "tactics": [
+            "collection"
+          ],
+          "url": "https://attack.mitre.org/techniques/T1005"
+        },
+        {
+          "attack_object_id": "T1082",
+          "deprecated": false,
+          "name": "System Information Discovery",
+          "revoked": false,
+          "tactics": [
+            "discovery"
+          ],
+          "url": "https://attack.mitre.org/techniques/T1082"
+        },
+        {
+          "attack_object_id": "T1105",
+          "deprecated": false,
+          "name": "Ingress Tool Transfer",
+          "revoked": false,
+          "tactics": [
+            "command-and-control"
+          ],
+          "url": "https://attack.mitre.org/techniques/T1105"
+        }
+      ]
+    },
     "attack_mapped": true,
     "attack_mappings": [
       {
@@ -372,11 +642,17 @@
         "capability_group": "sql_injection",
         "capability_id": "CVE-2023-34362",
         "comments": "CVE-2023-34362 is a SQL injection vulnerability in a public-facing application. Adversaries have been observed to exploit this vulnerability to install malicious software on a target system, enabling them to discover system settings and information, enumerate the underlying SQL database, retrieve files, create administrator accounts, and delete accounts.",
+        "confidence": null,
+        "defensive_note": null,
         "mapping_type": "exploitation_technique",
         "references": [
           "https://www.cisa.gov/sites/default/files/2023-07/aa23-158a-stopransomware-cl0p-ransomware-gang-exploits-moveit-vulnerability_8.pdf",
           "https://www.cisa.gov/news-events/cybersecurity-advisories/aa23-158a"
-        ]
+        ],
+        "review_status": null,
+        "reviewed_at": null,
+        "reviewer": null,
+        "source": null
       },
       {
         "attack_object_id": "T1059",
@@ -385,11 +661,17 @@
         "capability_group": "sql_injection",
         "capability_id": "CVE-2023-34362",
         "comments": "CVE-2023-34362 is a SQL injection vulnerability in a public-facing application. Adversaries have been observed to exploit this vulnerability to install malicious software on a target system, enabling them to discover system settings and information, enumerate the underlying SQL database, retrieve files, create administrator accounts, and delete accounts.",
+        "confidence": null,
+        "defensive_note": null,
         "mapping_type": "primary_impact",
         "references": [
           "https://www.cisa.gov/sites/default/files/2023-07/aa23-158a-stopransomware-cl0p-ransomware-gang-exploits-moveit-vulnerability_8.pdf",
           "https://www.cisa.gov/news-events/cybersecurity-advisories/aa23-158a"
-        ]
+        ],
+        "review_status": null,
+        "reviewed_at": null,
+        "reviewer": null,
+        "source": null
       },
       {
         "attack_object_id": "T1531",
@@ -398,11 +680,17 @@
         "capability_group": "sql_injection",
         "capability_id": "CVE-2023-34362",
         "comments": "CVE-2023-34362 is a SQL injection vulnerability in a public-facing application. Adversaries have been observed to exploit this vulnerability to install malicious software on a target system, enabling them to discover system settings and information, enumerate the underlying SQL database, retrieve files, create administrator accounts, and delete accounts.",
+        "confidence": null,
+        "defensive_note": null,
         "mapping_type": "secondary_impact",
         "references": [
           "https://www.cisa.gov/sites/default/files/2023-07/aa23-158a-stopransomware-cl0p-ransomware-gang-exploits-moveit-vulnerability_8.pdf",
           "https://www.cisa.gov/news-events/cybersecurity-advisories/aa23-158a"
-        ]
+        ],
+        "review_status": null,
+        "reviewed_at": null,
+        "reviewer": null,
+        "source": null
       },
       {
         "attack_object_id": "T1136",
@@ -411,11 +699,17 @@
         "capability_group": "sql_injection",
         "capability_id": "CVE-2023-34362",
         "comments": "CVE-2023-34362 is a SQL injection vulnerability in a public-facing application. Adversaries have been observed to exploit this vulnerability to install malicious software on a target system, enabling them to discover system settings and information, enumerate the underlying SQL database, retrieve files, create administrator accounts, and delete accounts.",
+        "confidence": null,
+        "defensive_note": null,
         "mapping_type": "secondary_impact",
         "references": [
           "https://www.cisa.gov/sites/default/files/2023-07/aa23-158a-stopransomware-cl0p-ransomware-gang-exploits-moveit-vulnerability_8.pdf",
           "https://www.cisa.gov/news-events/cybersecurity-advisories/aa23-158a"
-        ]
+        ],
+        "review_status": null,
+        "reviewed_at": null,
+        "reviewer": null,
+        "source": null
       },
       {
         "attack_object_id": "T1005",
@@ -424,11 +718,17 @@
         "capability_group": "sql_injection",
         "capability_id": "CVE-2023-34362",
         "comments": "CVE-2023-34362 is a SQL injection vulnerability in a public-facing application. Adversaries have been observed to exploit this vulnerability to install malicious software on a target system, enabling them to discover system settings and information, enumerate the underlying SQL database, retrieve files, create administrator accounts, and delete accounts.",
+        "confidence": null,
+        "defensive_note": null,
         "mapping_type": "secondary_impact",
         "references": [
           "https://www.cisa.gov/sites/default/files/2023-07/aa23-158a-stopransomware-cl0p-ransomware-gang-exploits-moveit-vulnerability_8.pdf",
           "https://www.cisa.gov/news-events/cybersecurity-advisories/aa23-158a"
-        ]
+        ],
+        "review_status": null,
+        "reviewed_at": null,
+        "reviewer": null,
+        "source": null
       },
       {
         "attack_object_id": "T1082",
@@ -437,11 +737,17 @@
         "capability_group": "sql_injection",
         "capability_id": "CVE-2023-34362",
         "comments": "CVE-2023-34362 is a SQL injection vulnerability in a public-facing application. Adversaries have been observed to exploit this vulnerability to install malicious software on a target system, enabling them to discover system settings and information, enumerate the underlying SQL database, retrieve files, create administrator accounts, and delete accounts.",
+        "confidence": null,
+        "defensive_note": null,
         "mapping_type": "secondary_impact",
         "references": [
           "https://www.cisa.gov/sites/default/files/2023-07/aa23-158a-stopransomware-cl0p-ransomware-gang-exploits-moveit-vulnerability_8.pdf",
           "https://www.cisa.gov/news-events/cybersecurity-advisories/aa23-158a"
-        ]
+        ],
+        "review_status": null,
+        "reviewed_at": null,
+        "reviewer": null,
+        "source": null
       },
       {
         "attack_object_id": "T1105",
@@ -450,15 +756,21 @@
         "capability_group": "sql_injection",
         "capability_id": "CVE-2023-34362",
         "comments": "CVE-2023-34362 is a SQL injection vulnerability in a public-facing application. Adversaries have been observed to exploit this vulnerability to install malicious software on a target system, enabling them to discover system settings and information, enumerate the underlying SQL database, retrieve files, create administrator accounts, and delete accounts.",
+        "confidence": null,
+        "defensive_note": null,
         "mapping_type": "secondary_impact",
         "references": [
           "https://www.cisa.gov/sites/default/files/2023-07/aa23-158a-stopransomware-cl0p-ransomware-gang-exploits-moveit-vulnerability_8.pdf",
           "https://www.cisa.gov/news-events/cybersecurity-advisories/aa23-158a"
-        ]
+        ],
+        "review_status": null,
+        "reviewed_at": null,
+        "reviewer": null,
+        "source": null
       }
     ],
     "attack_note": "CVE-2023-34362 is a SQL injection vulnerability in a public-facing application. Adversaries have been observed to exploit this vulnerability to install malicious software on a target system, enabling them to discover system settings and information, enumerate the underlying SQL database, retrieve files, create administrator accounts, and delete accounts.",
-    "attack_rationale": "CTID ATT&CK mappings include exploitation or primary impact behavior.",
+    "attack_rationale": "ATT&CK mappings include reviewed exploitation or impact context.",
     "attack_relevance": "High",
     "attack_tactics": [
       "initial-access",
@@ -613,13 +925,19 @@
     "explanation": {
       "cve_id": "CVE-2023-34362",
       "data_quality_confidence": "high",
-      "human_readable": "CVE-2023-34362 is Critical because priority.kev.known_exploited, priority.critical.epss_cvss, priority.high.epss, priority.high.cvss. Recommended action: CISA KEV required action: Apply updates per vendor instructions. Patch or mitigate immediately, validate exposure, strengthen detection coverage, and escalate potential business impact. KEV due date: 2023-06-23. Asset context: unknown, not treated as safe. Notes: Provider snapshot replay is locked; live provider lookups are disabled. Asset context is unknown and must be validated; unknown context is not treated as safe.",
+      "human_readable": "CVE-2023-34362 is Critical because priority.kev.known_exploited, priority.critical.epss_cvss, priority.high.epss, priority.high.cvss. Recommended action: CISA KEV required action: Apply updates per vendor instructions. Patch or mitigate immediately, validate exposure, strengthen detection coverage, and escalate potential business impact. KEV due date: 2023-06-23. Asset context: unknown, not treated as safe. Notes: Provider snapshot replay is locked; live provider lookups are disabled. ATT&CK context is reported separately from base priority and does not change the hard priority label. Asset context is unknown and must be validated; unknown context is not treated as safe.",
       "notes": [
         {
           "code": "data_quality.snapshot_locked",
           "message": "Provider snapshot replay is locked; live provider lookups are disabled.",
           "severity": "info",
           "source": "provider_snapshot"
+        },
+        {
+          "code": "attack.context",
+          "message": "ATT&CK context is reported separately from base priority and does not change the hard priority label.",
+          "severity": "info",
+          "source": "MITRE ATT&CK"
         },
         {
           "code": "asset.context_unknown",
@@ -833,7 +1151,7 @@
         "vulnerability_status": null
       }
     },
-    "rationale": "CISA KEV lists this CVE as known exploited in the wild. NVD reports CVSS 9.8 (CRITICAL) via CVSS v3.1. FIRST EPSS is 0.943 (percentile 0.999). ATT&CK context (High) maps this CVE to 7 technique(s): T1190, T1059, T1531, T1136, T1005, T1082, T1105. CTID mapping types: exploitation_technique, primary_impact, secondary_impact. CTID ATT&CK mappings include exploitation or primary impact behavior. ATT&CK mapping note: CVE-2023-34362 is a SQL injection vulnerability in a public-facing application. Adversaries have been observed to exploit this vulnerability to install malicious software on a target system, enabling them to discover system settings and information, enumerate the underlying SQL database, retrieve files, create administrator accounts, and delete accounts. Input provenance includes 1 occurrence(s) from cve-list. Seen in 1 occurrence(s), asset context unknown.",
+    "rationale": "CISA KEV lists this CVE as known exploited in the wild. NVD reports CVSS 9.8 (CRITICAL) via CVSS v3.1. FIRST EPSS is 0.943 (percentile 0.999). ATT&CK context (High) maps this CVE to 7 technique(s): T1190, T1059, T1531, T1136, T1005, T1082, T1105. CTID mapping types: exploitation_technique, primary_impact, secondary_impact. ATT&CK mappings include reviewed exploitation or impact context. ATT&CK mapping note: CVE-2023-34362 is a SQL injection vulnerability in a public-facing application. Adversaries have been observed to exploit this vulnerability to install malicious software on a target system, enabling them to discover system settings and information, enumerate the underlying SQL database, retrieve files, create administrator accounts, and delete accounts. Input provenance includes 1 occurrence(s) from cve-list. Seen in 1 occurrence(s), asset context unknown.",
     "recommended_action": "CISA KEV required action: Apply updates per vendor instructions. Patch or mitigate immediately, validate exposure, strengthen detection coverage, and escalate potential business impact. KEV due date: 2023-06-23.",
     "remediation": {
       "components": [],

@@ -343,7 +343,7 @@ def test_generate_html_report_renders_attack_and_waiver_states() -> None:
     payload["findings"][0]["attack_relevance"] = "High"
     payload["findings"][0]["attack_tactics"] = ["initial-access"]
     payload["findings"][0]["attack_techniques"] = ["T1190"]
-    payload["findings"][0]["attack_note"] = "Representative remote exploitation behavior."
+    payload["findings"][0]["attack_note"] = "Representative source-backed defensive behavior."
     payload["findings"][0]["attack_mappings"] = [{"mapping_type": "exploitation_technique"}]
     payload["findings"][0]["waived"] = True
     payload["findings"][0]["waiver_status"] = "review_due"
@@ -357,9 +357,11 @@ def test_generate_html_report_renders_attack_and_waiver_states() -> None:
     assert "T1190 (1)" in html
     assert "initial-access (1)" in html
     assert "ATT&amp;CK High" in html
+    assert "Defensive review sequence only. Not a confirmed attack path" in html
+    assert "it is not exploit proof" in html
     assert "Waiver review due" in html
     assert "owner=security-team" in html
-    assert "Representative remote exploitation behavior." in html
+    assert "Representative source-backed defensive behavior." in html
 
 
 def test_generate_html_report_handles_empty_findings_state() -> None:

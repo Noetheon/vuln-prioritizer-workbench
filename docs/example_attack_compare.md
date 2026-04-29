@@ -48,6 +48,8 @@
 - ATT&CK context is sourced from explicit local files only.
 - No heuristic or LLM-generated CVE-to-ATT&CK mapping is performed.
 - ATT&CK relevance is reported separately and does not change the primary priority score.
+- ATT&CK context is defensive context; it is not proof that exploitation occurred.
+- Tactics describe objectives, techniques describe behavior categories, and procedure-level details remain out of scope.
 
 ## Data Sources
 - NVD CVE API 2.0
@@ -90,6 +92,7 @@
 - Technique distribution: T1059: 2, T1068: 2, T1190: 2, T1003: 1, T1003.001: 1, T1005: 1, T1021: 1, T1033: 1, T1041: 1, T1053: 1, T1071.001: 1, T1082: 1, T1087.002: 1, T1105: 1, T1110: 1, T1112: 1, T1133: 1, T1136: 1, T1486: 1, T1531: 1, T1543: 1, T1570: 1
 - Tactic distribution: discovery: 3, initial-access: 3, persistence: 3, command-and-control: 2, credential-access: 2, execution: 2, impact: 2, lateral-movement: 2, privilege-escalation: 2, collection: 1, defense-evasion: 1, exfiltration: 1
 - ATT&CK mappings are imported from explicit local CTID or local CSV files only.
+- Reported tactics and techniques are defensive review context, not operational procedure guidance.
 
 ## Warnings
 - None

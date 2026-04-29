@@ -1229,7 +1229,8 @@ def _methodology_model(metadata: dict[str, Any]) -> list[dict[str, str]]:
             "title": "ATT&CK as context",
             "body": (
                 "ATT&CK mappings are optional, source-controlled, and never generated "
-                "heuristically."
+                "heuristically. They provide defensive review context, not proof that "
+                "exploitation occurred or procedure guidance."
             ),
         },
         {

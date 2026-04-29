@@ -2,6 +2,11 @@
 
 Current state: this page describes the local Workbench ATT&CK contract reviewed on 2026-04-25. It is not an unshipped milestone plan. It complements the CLI ATT&CK methodology by documenting the implemented API, UI/report, and evidence behavior.
 
+The detailed curated-mapping methodology, Tactic/Technique/Procedure boundary,
+confidence rubric, and mapping review checklist live in
+[`docs/attack-ttp-methodology.md`](attack-ttp-methodology.md). Workbench report
+surfaces follow the same safety contract.
+
 ## Source Contract
 
 Workbench ATT&CK context uses CTID Mappings Explorer JSON as the canonical source for CVE-to-ATT&CK mappings.
@@ -71,6 +76,24 @@ The Workbench UI makes ATT&CK useful for triage without presenting it as a hidde
 - Detection-control and coverage-gap views describe defensive coverage status and recommended defensive follow-up.
 - Reports and generated artifacts include ATT&CK context only as optional, provenance-backed context.
 
+## Report Safety Contract
+
+Workbench ATT&CK-Lite report sections must follow these rules:
+
+- Tactics are objective categories, techniques are ATT&CK behavior categories,
+  and procedure-level details remain out of scope.
+- Report text may present mapped tactics, techniques, mapping types, review
+  status, confidence, source, and coverage state.
+- Report text must not include payloads, commands, reproduction steps, active
+  probing guidance, or operational exploit chains.
+- ATT&CK mappings must be described as defensive context, not as proof that a
+  local environment was exploited.
+- Real-world exploitation claims require KEV or another explicit cited source.
+  Without that source, reports may only say that a CVE is mapped to source-backed
+  ATT&CK context.
+- Unmapped CVEs remain unmapped; report generators must not fill gaps from
+  descriptions, keywords, vendor names, or LLM output.
+
 ## Current Evidence Artifacts
 
 Evidence artifacts make ATT&CK provenance auditable.
@@ -97,3 +120,5 @@ The current Workbench ATT&CK contract is aligned when:
 - ATT&CK fields stay separate from base priority fields.
 - API, UI, and artifact wording does not imply that ATT&CK changes the base score.
 - Evidence artifacts include enough source provenance to reproduce the ATT&CK context for a run.
+- Reports pass the ATT&CK safety wording checks for demo mappings, snapshot
+  reports, and Workbench summary artifacts.
