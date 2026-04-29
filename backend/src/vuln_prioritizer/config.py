@@ -31,6 +31,9 @@ PRIORITY_RANKS: Final = {
     "High": 2,
     "Medium": 3,
     "Low": 4,
+    "Accepted": 80,
+    "Suppressed": 90,
+    "Fixed": 100,
 }
 
 PRIORITY_RECOMMENDATIONS: Final = {
@@ -49,6 +52,17 @@ PRIORITY_RECOMMENDATIONS: Final = {
     "Low": (
         "Document the finding, monitor for changes in exploitability or exposure, "
         "and address it during the normal patch cycle."
+    ),
+    "Accepted": (
+        "Keep the accepted risk visible, monitor the waiver owner and expiry date, "
+        "and reassess before the next review."
+    ),
+    "Suppressed": (
+        "Keep the suppressed evidence available for audit and re-open if source context changes."
+    ),
+    "Fixed": (
+        "Keep the fixed evidence available for audit and verify the scanner no longer "
+        "reports the affected occurrence."
     ),
 }
 

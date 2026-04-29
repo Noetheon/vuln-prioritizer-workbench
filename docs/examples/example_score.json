@@ -1,0 +1,32 @@
+{
+  "cve_id": "CVE-2023-44487",
+  "priority_label": "Critical",
+  "priority_state": "Critical",
+  "priority_drivers": [
+    "kev",
+    "critical-epss-cvss",
+    "high-epss",
+    "medium-cvss",
+    "medium-epss"
+  ],
+  "signals": {
+    "cvss_base_score": 7.5,
+    "epss": 0.944,
+    "in_kev": true,
+    "asset_exposure": "internet-facing",
+    "asset_environment": "prod",
+    "asset_criticality": "critical",
+    "active_occurrences": 1
+  },
+  "operational_score": 100,
+  "operational_score_reasons": [
+    "base Critical priority: +70",
+    "CISA KEV-listed: +15",
+    "critical EPSS/CVSS threshold: +8",
+    "medium CVSS threshold: +2",
+    "internet-facing asset context: +8",
+    "production asset context: +5",
+    "critical asset criticality: +7",
+    "clamped to 100"
+  ]
+}

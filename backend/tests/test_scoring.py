@@ -10,13 +10,17 @@ from vuln_prioritizer.models import (
     KevData,
     NvdData,
     PrioritizedFinding,
+    PriorityLabel,
     PriorityPolicy,
     ProviderEvidence,
 )
 from vuln_prioritizer.scoring import (
+    build_operational_score,
     build_priority_drivers,
+    clamp_operational_score,
     determine_cvss_only_priority,
     determine_priority,
+    determine_priority_state,
 )
 from vuln_prioritizer.services.prioritization import PrioritizationService
 
@@ -115,6 +119,140 @@ def test_custom_policy_changes_priority_thresholds() -> None:
 
     assert label == "High"
     assert rank == 2
+
+
+def test_priority_label_enum_includes_governance_states() -> None:
+    assert [label.value for label in PriorityLabel] == [
+        "Critical",
+        "High",
+        "Medium",
+        "Low",
+        "Suppressed",
+        "Accepted",
+        "Fixed",
+    ]
+
+
+@pytest.mark.parametrize(
+    ("cvss", "epss", "expected"),
+    [
+        (7.0, 0.70, "Critical"),
+        (6.9, 0.70, "High"),
+        (7.0, 0.39, "Medium"),
+        (9.0, 0.01, "High"),
+        (8.9, 0.40, "High"),
+        (7.0, 0.09, "Medium"),
+        (6.9, 0.10, "Medium"),
+        (6.9, 0.09, "Low"),
+    ],
+)
+def test_priority_threshold_boundaries_are_inclusive(
+    cvss: float,
+    epss: float,
+    expected: str,
+) -> None:
+    nvd = NvdData(cve_id="CVE-2024-0001", cvss_base_score=cvss, cvss_severity="HIGH")
+    epss_data = EpssData(cve_id="CVE-2024-0001", epss=epss, percentile=0.5)
+    kev = KevData(cve_id="CVE-2024-0001", in_kev=False)
+
+    first_result = determine_priority(nvd, epss_data, kev)
+    second_result = determine_priority(nvd, epss_data, kev)
+
+    assert first_result == second_result
+    assert first_result[0] == expected
+
+
+def test_operational_score_is_explainable_and_clamped() -> None:
+    finding = _finding(
+        cve_id="CVE-2024-0001",
+        priority_label="Critical",
+        priority_rank=1,
+        cvss=10.0,
+        epss=0.95,
+        in_kev=True,
+    ).model_copy(
+        update={
+            "highest_asset_criticality": "critical",
+            "provenance": FindingProvenance(
+                occurrence_count=7,
+                active_occurrence_count=7,
+                highest_asset_exposure="internet-facing",
+                occurrences=[
+                    InputOccurrence(
+                        cve_id="CVE-2024-0001",
+                        asset_exposure="internet-facing",
+                        asset_environment="prod",
+                    )
+                ],
+            ),
+        }
+    )
+
+    score, reasons = build_operational_score(finding)
+
+    assert score == 100
+    assert "base Critical priority: +70" in reasons
+    assert "CISA KEV-listed: +15" in reasons
+    assert "internet-facing asset context: +8" in reasons
+    assert "clamped to 100" in reasons
+
+
+def test_priority_state_maps_suppressed_fixed_and_accepted_findings() -> None:
+    suppressed = _finding(
+        cve_id="CVE-2024-0001",
+        priority_label="High",
+        priority_rank=2,
+        cvss=8.0,
+        epss=0.50,
+        in_kev=False,
+    ).model_copy(
+        update={
+            "suppressed_by_vex": True,
+            "provenance": FindingProvenance(
+                occurrence_count=1,
+                active_occurrence_count=0,
+                suppressed_occurrence_count=1,
+                vex_statuses={"not_affected": 1},
+            ),
+        }
+    )
+    fixed = suppressed.model_copy(
+        update={
+            "provenance": FindingProvenance(
+                occurrence_count=1,
+                active_occurrence_count=0,
+                suppressed_occurrence_count=1,
+                vex_statuses={"fixed": 1},
+            )
+        }
+    )
+    accepted = suppressed.model_copy(
+        update={
+            "suppressed_by_vex": False,
+            "waived": True,
+            "waiver_status": "active",
+            "provenance": FindingProvenance(occurrence_count=1, active_occurrence_count=1),
+        }
+    )
+
+    assert determine_priority_state(suppressed) == PriorityLabel.SUPPRESSED
+    assert build_operational_score(suppressed) == (
+        0,
+        ["suppressed VEX state clamps operational score to 0"],
+    )
+    assert determine_priority_state(fixed) == PriorityLabel.FIXED
+    assert build_operational_score(fixed) == (
+        0,
+        ["fixed VEX state clamps operational score to 0"],
+    )
+    assert determine_priority_state(accepted) == PriorityLabel.ACCEPTED
+    assert build_operational_score(accepted)[0] == 12
+
+
+def test_clamp_operational_score_bounds_values() -> None:
+    assert clamp_operational_score(-10) == 0
+    assert clamp_operational_score(42) == 42
+    assert clamp_operational_score(120) == 100
 
 
 def test_attack_context_does_not_change_priority() -> None:

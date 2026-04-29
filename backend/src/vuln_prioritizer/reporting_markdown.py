@@ -40,12 +40,13 @@ def generate_markdown_report(
     findings_header = (
         "| CVE ID | Description | CVSS | Severity | CVSS Version | EPSS | EPSS Percentile | "
         + "KEV | ATT&CK | Attack Relevance | Sources | Asset Criticality | VEX | Waiver | "
-        + "Priority | Data Quality | Confidence | Operational Rank | Context Rank Reasons | "
-        + "Rationale | Recommended Action | Context Recommendation |"
+        + "Priority | Priority State | Operational Score | Data Quality | Confidence | "
+        + "Operational Rank | Context Rank Reasons | Rationale | Recommended Action | "
+        + "Context Recommendation |"
     )
     findings_divider = (
         "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | "
-        + "--- | --- | --- | --- | --- | --- | --- | --- | --- |"
+        + "--- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |"
     )
     attack_header = (
         "| CVE ID | Mapping Types | Techniques | Tactics | Capability Groups | ATT&CK Note |"
@@ -103,6 +104,8 @@ def generate_markdown_report(
                     escape_pipes(_format_vex_statuses(finding.provenance.vex_statuses)),
                     escape_pipes(_format_waiver_status(finding)),
                     finding.priority_label,
+                    finding.priority_state or finding.priority_label,
+                    str(finding.operational_score),
                     escape_pipes(format_data_quality_flags(finding)),
                     escape_pipes(finding.data_quality_confidence),
                     str(finding.operational_rank or "N.A."),

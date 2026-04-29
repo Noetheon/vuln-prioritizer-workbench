@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from enum import StrEnum
+
 from pydantic import BaseModel, Field, model_validator
 
 import vuln_prioritizer.models_artifacts as _models_artifacts
@@ -71,6 +73,16 @@ StateWaiverReport = _models_state.StateWaiverReport
 VexStatement = _models_input.VexStatement
 WaiverHealthSummary = _models_waivers.WaiverHealthSummary
 WaiverRule = _models_waivers.WaiverRule
+
+
+class PriorityLabel(StrEnum):
+    CRITICAL = "Critical"
+    HIGH = "High"
+    MEDIUM = "Medium"
+    LOW = "Low"
+    SUPPRESSED = "Suppressed"
+    ACCEPTED = "Accepted"
+    FIXED = "Fixed"
 
 
 class PriorityPolicy(StrictModel):
@@ -200,7 +212,10 @@ class PrioritizedFinding(StrictModel):
     context_rank_reasons: list[str] = Field(default_factory=list)
     priority_label: str
     priority_rank: int
+    priority_state: str | None = None
     priority_drivers: list[str] = Field(default_factory=list)
+    operational_score: int = 0
+    operational_score_reasons: list[str] = Field(default_factory=list)
     rationale: str
     provider_evidence: ProviderEvidence | None = None
     data_quality_flags: list[ProviderDataQualityFlag] = Field(default_factory=list)
@@ -245,6 +260,9 @@ class ComparisonFinding(StrictModel):
     waiver_ticket_url: str | None = None
     operational_rank: int = 0
     context_rank_reasons: list[str] = Field(default_factory=list)
+    priority_state: str | None = None
+    operational_score: int = 0
+    operational_score_reasons: list[str] = Field(default_factory=list)
     defensive_contexts: list[DefensiveContext] = Field(default_factory=list)
     data_quality_flags: list[ProviderDataQualityFlag] = Field(default_factory=list)
     data_quality_confidence: str = "high"

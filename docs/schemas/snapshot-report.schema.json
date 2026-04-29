@@ -1091,10 +1091,30 @@
             "Low"
           ]
         },
+        "priority_state": {
+          "enum": [
+            "Critical",
+            "High",
+            "Medium",
+            "Low",
+            "Suppressed",
+            "Accepted",
+            "Fixed",
+            null
+          ]
+        },
         "priority_rank": {
           "type": "integer"
         },
         "priority_drivers": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "operational_score": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "operational_score_reasons": {
           "$ref": "#/$defs/stringArray"
         },
         "rationale": {

@@ -145,7 +145,9 @@ Current architectural boundary:
 
 - `priority_label` is driven by CVSS, EPSS, and KEV
 - ATT&CK, asset context, and VEX add context, rationale, or suppression semantics
-- ATT&CK and asset context do not silently introduce a separate opaque risk score
+- `priority_state` adds the lifecycle enum values `Suppressed`, `Accepted`, and `Fixed`
+- `operational_score` is a transparent 0-100 queueing score with explicit reasons; asset context can affect that score, but not the base `priority_label`
+- ATT&CK does not silently introduce a separate opaque risk score
 
 ### Reporting
 
