@@ -40,17 +40,38 @@ def generate_markdown_report(
     context: AnalysisContext,
 ) -> str:
     """Render the Markdown report."""
-    findings_header = (
-        "| CVE ID | Description | CVSS | Severity | CVSS Version | EPSS | EPSS Percentile | "
-        + "KEV | ATT&CK | Attack Relevance | Sources | Asset Criticality | VEX | Waiver | "
-        + "Priority | Priority State | Operational Score | Data Quality | Confidence | "
-        + "Operational Rank | Context Rank Reasons | Rationale | Recommended Action | "
-        + "Context Recommendation |"
-    )
-    findings_divider = (
-        "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | "
-        + "--- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |"
-    )
+    findings_columns = [
+        "CVE ID",
+        "Description",
+        "CVSS",
+        "Severity",
+        "CVSS Version",
+        "EPSS",
+        "EPSS Percentile",
+        "KEV",
+        "ATT&CK",
+        "Attack Relevance",
+        "Sources",
+        "Asset Criticality",
+        "VEX",
+        "Waiver",
+        "Priority",
+        "Priority State",
+        "Operational Score",
+        "Data Quality",
+        "Confidence",
+        "Operational Rank",
+        "Context Rank Reasons",
+        "Rationale",
+        "Decision Template",
+        "SLA",
+        "Decision Statement",
+        "Business Impact",
+        "Recommended Action",
+        "Context Recommendation",
+    ]
+    findings_header = "| " + " | ".join(findings_columns) + " |"
+    findings_divider = "| " + " | ".join("---" for _ in findings_columns) + " |"
     attack_header = (
         "| CVE ID | Mapping Types | Techniques | Tactics | Capability Groups | ATT&CK Note |"
     )
@@ -115,6 +136,10 @@ def generate_markdown_report(
                     str(finding.operational_rank or "N.A."),
                     escape_pipes(", ".join(finding.context_rank_reasons) or "N.A."),
                     escape_pipes(finding.rationale),
+                    escape_pipes(_decision_template(finding)),
+                    escape_pipes(_decision_sla(finding)),
+                    escape_pipes(_decision_statement(finding)),
+                    escape_pipes(_business_impact(finding)),
                     escape_pipes(finding.recommended_action),
                     escape_pipes(finding.context_recommendation or "N.A."),
                 ]
@@ -237,6 +262,42 @@ def generate_markdown_report(
             )
 
     return "\n".join(lines) + "\n"
+
+
+def _decision_template(finding: PrioritizedFinding) -> str:
+    if finding.decision_guidance is None:
+        return "N.A."
+    return finding.decision_guidance.template_label
+
+
+def _decision_sla(finding: PrioritizedFinding) -> str:
+    if finding.decision_guidance is None:
+        return "N.A."
+    sla = finding.decision_guidance.sla
+    target = ""
+    if sla.target_hours is not None and sla.target_hours <= 48:
+        target = f" ({sla.target_hours}h)"
+    elif sla.target_days is not None:
+        target = f" ({sla.target_days}d)"
+    return f"{sla.label}{target}"
+
+
+def _decision_statement(finding: PrioritizedFinding) -> str:
+    if finding.decision_guidance is None:
+        return "N.A."
+    return finding.decision_guidance.decision_statement
+
+
+def _business_impact(finding: PrioritizedFinding) -> str:
+    if finding.decision_guidance is None:
+        return "N.A."
+    return finding.decision_guidance.business_impact.text
+
+
+def _decision_visibility(finding: PrioritizedFinding) -> str:
+    if finding.decision_guidance is None:
+        return "N.A."
+    return finding.decision_guidance.visibility
 
 
 def _baseline_comparison_section(findings: list[PrioritizedFinding]) -> list[str]:
@@ -528,6 +589,14 @@ def generate_explain_markdown(
             "- Delta vs Baseline: `"
             f"{format_change(comparison.delta_rank) if comparison else 'N.A.'}`",
             normalize_whitespace(comparison.change_reason if comparison is not None else "N.A."),
+            "",
+            "## Decision Guidance",
+            f"- Template: `{_decision_template(finding)}`",
+            f"- SLA: `{_decision_sla(finding)}`",
+            f"- Visibility: {normalize_whitespace(_decision_visibility(finding))}",
+            f"- Business Impact: {normalize_whitespace(_business_impact(finding))}",
+            "",
+            normalize_whitespace(_decision_statement(finding)),
             "",
             "## Recommended Action",
             normalize_whitespace(finding.recommended_action),

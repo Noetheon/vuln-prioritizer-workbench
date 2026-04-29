@@ -356,6 +356,32 @@ class AnalysisRunResponse(StrictModel):
     summary: AnalysisRunSummary
 
 
+class SlaTargetResponse(StrictModel):
+    priority: str
+    label: str
+    target_hours: int | None = None
+    target_days: int | None = None
+    guidance: str
+    source: str = "default-priority-sla"
+
+
+class BusinessImpactBlockResponse(StrictModel):
+    level: str
+    text: str
+    drivers: list[str] = Field(default_factory=list)
+
+
+class FindingDecisionGuidanceResponse(StrictModel):
+    template: Literal["patch", "mitigate", "monitor", "review", "waiver"]
+    template_label: str
+    sla: SlaTargetResponse
+    business_impact: BusinessImpactBlockResponse
+    decision_statement: str
+    visibility: str
+    reason_codes: list[str] = Field(default_factory=list)
+    wording_policy: str = "defensive_no_exploit_steps"
+
+
 class FindingResponse(StrictModel):
     id: str
     project_id: str
@@ -395,6 +421,7 @@ class FindingResponse(StrictModel):
     waiver_ticket_url: str | None = None
     rationale: str | None = None
     recommended_action: str | None = None
+    decision_guidance: FindingDecisionGuidanceResponse | None = None
     decision_explanation: dict[str, Any] | None = None
     data_quality_flags: list[dict[str, Any]] = Field(default_factory=list)
     data_quality_confidence: str = "high"

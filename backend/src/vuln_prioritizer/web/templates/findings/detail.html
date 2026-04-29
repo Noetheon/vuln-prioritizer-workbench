@@ -19,6 +19,7 @@
 </section>
 
 <section class="section">
+  {% set decision_guidance = finding.finding_json.get("decision_guidance") if finding.finding_json else none %}
   <div class="detail-grid">
     <article class="panel">
       <p class="eyebrow">Why this priority?</p>
@@ -27,6 +28,16 @@
     <article class="panel">
       <p class="eyebrow">Recommended action</p>
       <p>{{ finding.recommended_action or "N.A." }}</p>
+    </article>
+    <article class="panel">
+      <p class="eyebrow">Decision guidance</p>
+      {% if decision_guidance %}
+        {% set sla = decision_guidance.get("sla", {}) %}
+        <p><strong>{{ decision_guidance.get("template_label", "Review") }}</strong> · {{ sla.get("label", "SLA") }}</p>
+        <p>{{ decision_guidance.get("decision_statement", "N.A.") }}</p>
+      {% else %}
+        <p>N.A.</p>
+      {% endif %}
     </article>
   </div>
   <div class="table-wrap">

@@ -18,6 +18,7 @@ from vuln_prioritizer.cache import FileCache
 from vuln_prioritizer.cli import app
 from vuln_prioritizer.models import (
     EpssData,
+    FindingDecisionGuidance,
     KevData,
     NvdData,
     PriorityExplanation,
@@ -323,6 +324,37 @@ def test_vpw_033_asset_context_provenance_fields_remain_schema_optional() -> Non
 
         assert new_fields <= set(definition["properties"])
         assert not (new_fields & set(definition.get("required", [])))
+
+
+def test_vpw_034_recommendation_decision_example_matches_model() -> None:
+    payload = json.loads(
+        (DOCS_ROOT / "examples" / "example_recommendation_decision.json").read_text(
+            encoding="utf-8"
+        )
+    )
+
+    guidance = FindingDecisionGuidance.model_validate(payload)
+
+    assert guidance.template == "patch"
+    assert guidance.sla.label == "Emergency"
+    assert guidance.sla.target_hours == 24
+    assert guidance.wording_policy == "defensive_no_exploit_steps"
+
+
+def test_vpw_034_decision_guidance_field_remains_schema_optional() -> None:
+    for schema_name in (
+        "analysis-report.schema.json",
+        "explain-report.schema.json",
+        "snapshot-report.schema.json",
+    ):
+        schema = _load_schema(schema_name)
+        definition = schema["$defs"]["prioritizedFinding"]
+
+        assert "decision_guidance" in definition["properties"]
+        assert "decision_guidance" not in definition.get("required", [])
+        assert "findingDecisionGuidance" in schema["$defs"]
+        assert "slaTarget" in schema["$defs"]
+        assert "businessImpactBlock" in schema["$defs"]
 
 
 def _install_fake_data_update_providers(monkeypatch: Any) -> None:

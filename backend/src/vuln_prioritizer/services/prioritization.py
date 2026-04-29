@@ -29,6 +29,7 @@ from vuln_prioritizer.scoring import (
     determine_priority_state,
 )
 from vuln_prioritizer.services.contextualization import is_suppressed_by_vex, is_under_investigation
+from vuln_prioritizer.services.decision_guidance import DecisionGuidanceService
 from vuln_prioritizer.services.remediation import RemediationService
 from vuln_prioritizer.utils import iso_utc_now
 
@@ -176,15 +177,23 @@ class PrioritizationService:
         scored_findings = [self._with_operational_score(finding) for finding in findings]
         ordered = sorted(scored_findings, key=_operational_sort_key)
         rank_by_cve = {finding.cve_id: index for index, finding in enumerate(ordered, start=1)}
-        return [
-            finding.model_copy(
+        decision_guidance_service = DecisionGuidanceService()
+        ranked_findings: list[PrioritizedFinding] = []
+        for finding in scored_findings:
+            ranked = finding.model_copy(
                 update={
                     "operational_rank": rank_by_cve[finding.cve_id],
                     "context_rank_reasons": _context_rank_reasons(finding),
                 }
             )
-            for finding in scored_findings
-        ]
+            ranked_findings.append(
+                ranked.model_copy(
+                    update={
+                        "decision_guidance": decision_guidance_service.build(ranked),
+                    }
+                )
+            )
+        return ranked_findings
 
     def _with_operational_score(self, finding: PrioritizedFinding) -> PrioritizedFinding:
         score, reasons = build_operational_score(finding, self.policy)

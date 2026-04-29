@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field, model_validator
 
 import vuln_prioritizer.models_artifacts as _models_artifacts
 import vuln_prioritizer.models_attack as _models_attack
+import vuln_prioritizer.models_decision as _models_decision
 import vuln_prioritizer.models_input as _models_input
 import vuln_prioritizer.models_provider as _models_provider
 import vuln_prioritizer.models_remediation as _models_remediation
@@ -20,7 +21,9 @@ AttackMapping = _models_attack.AttackMapping
 AttackSummary = _models_attack.AttackSummary
 AttackTechnique = _models_attack.AttackTechnique
 AssetContextRecord = _models_input.AssetContextRecord
+BusinessImpactBlock = _models_decision.BusinessImpactBlock
 ContextPolicyProfile = _models_input.ContextPolicyProfile
+DecisionTemplate = _models_decision.DecisionTemplate
 DoctorCheck = _models_artifacts.DoctorCheck
 DoctorReport = _models_artifacts.DoctorReport
 DoctorSummary = _models_artifacts.DoctorSummary
@@ -32,6 +35,7 @@ EvidenceBundleVerificationMetadata = _models_artifacts.EvidenceBundleVerificatio
 EvidenceBundleVerificationSummary = _models_artifacts.EvidenceBundleVerificationSummary
 DefensiveContext = _models_provider.DefensiveContext
 EpssData = _models_provider.EpssData
+FindingDecisionGuidance = _models_decision.FindingDecisionGuidance
 FindingProvenance = _models_input.FindingProvenance
 InputItem = _models_input.InputItem
 InputOccurrence = _models_input.InputOccurrence
@@ -48,6 +52,7 @@ ProviderSnapshot = _models_provider.ProviderSnapshot
 ProviderStatus = _models_provider.ProviderStatus
 RemediationComponent = _models_remediation.RemediationComponent
 RemediationPlan = _models_remediation.RemediationPlan
+SlaTarget = _models_decision.SlaTarget
 
 StateHistoryEntry = _models_state.StateHistoryEntry
 StateHistoryMetadata = _models_state.StateHistoryMetadata
@@ -254,6 +259,7 @@ class PrioritizedFinding(StrictModel):
     data_quality_confidence: str = "high"
     defensive_contexts: list[DefensiveContext] = Field(default_factory=list)
     remediation: RemediationPlan = Field(default_factory=RemediationPlan)
+    decision_guidance: FindingDecisionGuidance | None = None
     recommended_action: str
 
 
