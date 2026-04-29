@@ -27,9 +27,15 @@ from vuln_prioritizer.services.enrichment import EnrichmentService
 
 
 class FakeResponse:
-    def __init__(self, json_data: dict | None = None, status_code: int = 200) -> None:
+    def __init__(
+        self,
+        json_data: dict | None = None,
+        status_code: int = 200,
+        headers: dict[str, str] | None = None,
+    ) -> None:
         self._json_data = json_data or {}
         self.status_code = status_code
+        self.headers = headers or {}
 
     def json(self) -> dict:
         return self._json_data
@@ -94,6 +100,41 @@ def test_nvd_parse_payload_prefers_v40_and_collects_metadata() -> None:
     assert parsed.cwes == ["CWE-79"]
     assert parsed.references == ["https://example.com/advisory"]
     assert parsed.reference_tags == {"https://example.com/advisory": ["Vendor Advisory", "Patch"]}
+
+
+def test_nvd_parse_payload_uses_later_primary_v31_metric() -> None:
+    payload = {
+        "vulnerabilities": [
+            {
+                "cve": {
+                    "descriptions": [{"lang": "en", "value": "CVSS v3 fallback"}],
+                    "metrics": {
+                        "cvssMetricV31": [
+                            {
+                                "type": "Secondary",
+                                "cvssData": {"vectorString": "CVSS:3.1/AV:L/AC:H"},
+                            },
+                            {
+                                "type": "Primary",
+                                "cvssData": {
+                                    "baseScore": 7.4,
+                                    "baseSeverity": "HIGH",
+                                    "vectorString": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N",
+                                },
+                            },
+                        ],
+                    },
+                }
+            }
+        ]
+    }
+
+    parsed = NvdProvider.parse_payload("CVE-2026-0002", payload)
+
+    assert parsed.cvss_base_score == 7.4
+    assert parsed.cvss_severity == "HIGH"
+    assert parsed.cvss_version == "3.1"
+    assert parsed.cvss_vector == "CVSS:3.1/AV:N/AC:H/PR:N/UI:N"
 
 
 def test_nvd_fetch_many_handles_missing_results() -> None:
@@ -291,6 +332,80 @@ def test_nvd_fetch_many_degrades_gracefully_and_keeps_warning_order() -> None:
     )
 
 
+def test_nvd_fetch_many_retries_rate_limited_response(monkeypatch) -> None:  # noqa: ANN001
+    sleep_calls: list[float] = []
+
+    class Session:
+        def __init__(self) -> None:
+            self.calls = 0
+
+        def get(self, *args, **kwargs):  # noqa: ANN002, ANN003
+            self.calls += 1
+            if self.calls == 1:
+                return FakeResponse(status_code=429, headers={"Retry-After": "0"})
+            return FakeResponse(
+                {
+                    "vulnerabilities": [
+                        {
+                            "cve": {
+                                "descriptions": [{"lang": "en", "value": "Retried NVD record"}],
+                                "metrics": {
+                                    "cvssMetricV40": [
+                                        {
+                                            "cvssData": {
+                                                "baseScore": 8.7,
+                                                "baseSeverity": "HIGH",
+                                            }
+                                        }
+                                    ]
+                                },
+                            }
+                        }
+                    ]
+                }
+            )
+
+    monkeypatch.setattr(
+        "vuln_prioritizer.providers.nvd.time.sleep",
+        lambda seconds: sleep_calls.append(seconds),
+    )
+    session = Session()
+    provider = NvdProvider(session=session, max_retries=2)
+
+    results, warnings = provider.fetch_many(["CVE-2026-0204"])
+
+    assert warnings == []
+    assert session.calls == 2
+    assert sleep_calls == [0.0]
+    assert results["CVE-2026-0204"].description == "Retried NVD record"
+    assert results["CVE-2026-0204"].cvss_version == "4.0"
+
+
+def test_nvd_api_key_from_env_is_sent_and_redacted_from_warnings(monkeypatch) -> None:  # noqa: ANN001
+    secret = "nvd-secret-value"
+
+    class Session:
+        def __init__(self) -> None:
+            self.headers: list[dict[str, str]] = []
+
+        def get(self, *args, **kwargs):  # noqa: ANN002, ANN003
+            self.headers.append(kwargs["headers"])
+            raise requests.RequestException(f"transport failure for apiKey={secret}")
+
+    monkeypatch.setenv("VPW_NVD_TEST_API_KEY", secret)
+    session = Session()
+    provider = NvdProvider.from_env(api_key_env="VPW_NVD_TEST_API_KEY", session=session)
+
+    results, warnings = provider.fetch_many(["CVE-2026-0205"])
+
+    assert session.headers == [{"apiKey": secret}]
+    assert results["CVE-2026-0205"] == NvdData(cve_id="CVE-2026-0205")
+    assert len(warnings) == 1
+    assert secret not in warnings[0]
+    assert "apiKey=<redacted>" in warnings[0]
+    assert provider.last_diagnostics.degraded is True
+
+
 def test_enrichment_service_tracks_last_nvd_diagnostics() -> None:
     class Session:
         def get(self, *args, **kwargs):  # noqa: ANN002, ANN003
@@ -358,6 +473,164 @@ def test_enrichment_service_tracks_last_nvd_diagnostics() -> None:
         failures=0,
         content_hits=1,
     )
+
+
+def test_enrichment_service_nvd_failure_records_data_quality_flags() -> None:
+    class ExplodingNvdProvider:
+        api_key = "nvd-secret-value"
+
+        def fetch_many(self, cve_ids):  # noqa: ANN001, ARG002
+            raise RuntimeError("invalid NVD cache for nvd-secret-value")
+
+    class StubEpssProvider:
+        last_diagnostics = ProviderLookupDiagnostics(
+            requested=1,
+            network_fetches=1,
+            content_hits=0,
+            empty_records=1,
+        )
+
+        def fetch_many(self, cve_ids):  # noqa: ANN001
+            return ({cve_id: EpssData(cve_id=cve_id) for cve_id in cve_ids}, [])
+
+    class StubKevProvider:
+        last_diagnostics = ProviderLookupDiagnostics(
+            requested=1,
+            network_fetches=1,
+            content_hits=0,
+            empty_records=1,
+        )
+
+        def fetch_many(self, cve_ids, offline_file=None):  # noqa: ANN001, ARG002
+            return ({cve_id: KevData(cve_id=cve_id) for cve_id in cve_ids}, [])
+
+    class StubAttackProvider:
+        def fetch_many(  # noqa: ANN001
+            self,
+            cve_ids,
+            *,
+            enabled: bool,
+            source: str,
+            mapping_file,
+            technique_metadata_file,
+            offline_file,
+        ):
+            return (
+                {cve_id: AttackData(cve_id=cve_id) for cve_id in cve_ids},
+                {
+                    "source": source if enabled else "none",
+                    "mapping_file": None,
+                    "technique_metadata_file": None,
+                    "source_version": None,
+                    "attack_version": None,
+                    "domain": None,
+                    "mapping_framework": None,
+                    "mapping_framework_version": None,
+                },
+                [],
+            )
+
+    service = EnrichmentService(use_cache=False)
+    service.nvd = ExplodingNvdProvider()
+    service.epss = StubEpssProvider()
+    service.kev = StubKevProvider()
+    service.attack = StubAttackProvider()
+
+    result = service.enrich(["CVE-2026-0401"], attack_enabled=False)
+
+    assert result.nvd["CVE-2026-0401"] == NvdData(cve_id="CVE-2026-0401")
+    assert result.warnings == ["NVD provider failed: invalid NVD cache for <redacted>"]
+    assert result.nvd_diagnostics.failures == 1
+    assert result.nvd_diagnostics.empty_records == 1
+    assert [flag.code for flag in result.provider_data_quality_flags["nvd"]] == [
+        "provider_failure",
+        "provider_missing_data",
+        "provider_warning",
+    ]
+    assert "nvd-secret-value" not in result.model_dump_json()
+
+
+def test_enrichment_service_flags_nvd_missing_cvss() -> None:
+    class StubNvdProvider:
+        last_diagnostics = NvdFetchDiagnostics(
+            requested=1,
+            network_fetches=1,
+            content_hits=1,
+        )
+
+        def fetch_many(self, cve_ids):  # noqa: ANN001
+            return (
+                {
+                    cve_id: NvdData(
+                        cve_id=cve_id,
+                        description="NVD record without CVSS metrics",
+                        published="2026-04-29T00:00:00.000",
+                    )
+                    for cve_id in cve_ids
+                },
+                [],
+            )
+
+    class StubEpssProvider:
+        last_diagnostics = ProviderLookupDiagnostics(
+            requested=1,
+            network_fetches=1,
+            content_hits=0,
+            empty_records=1,
+        )
+
+        def fetch_many(self, cve_ids):  # noqa: ANN001
+            return ({cve_id: EpssData(cve_id=cve_id) for cve_id in cve_ids}, [])
+
+    class StubKevProvider:
+        last_diagnostics = ProviderLookupDiagnostics(
+            requested=1,
+            network_fetches=1,
+            content_hits=0,
+            empty_records=1,
+        )
+
+        def fetch_many(self, cve_ids, offline_file=None):  # noqa: ANN001, ARG002
+            return ({cve_id: KevData(cve_id=cve_id) for cve_id in cve_ids}, [])
+
+    class StubAttackProvider:
+        def fetch_many(  # noqa: ANN001
+            self,
+            cve_ids,
+            *,
+            enabled: bool,
+            source: str,
+            mapping_file,
+            technique_metadata_file,
+            offline_file,
+        ):
+            return (
+                {cve_id: AttackData(cve_id=cve_id) for cve_id in cve_ids},
+                {
+                    "source": source if enabled else "none",
+                    "mapping_file": None,
+                    "technique_metadata_file": None,
+                    "source_version": None,
+                    "attack_version": None,
+                    "domain": None,
+                    "mapping_framework": None,
+                    "mapping_framework_version": None,
+                },
+                [],
+            )
+
+    service = EnrichmentService(use_cache=False)
+    service.nvd = StubNvdProvider()
+    service.epss = StubEpssProvider()
+    service.kev = StubKevProvider()
+    service.attack = StubAttackProvider()
+
+    result = service.enrich(["CVE-2026-0402"], attack_enabled=False)
+
+    flags = result.provider_data_quality_flags["nvd"]
+    assert [flag.code for flag in flags] == ["nvd_cvss_missing"]
+    assert flags[0].cve_id == "CVE-2026-0402"
+    assert "without a CVSS base score or version" in flags[0].message
 
 
 def test_enrichment_service_epss_failure_records_data_quality_flags() -> None:

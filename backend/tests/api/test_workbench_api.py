@@ -266,6 +266,20 @@ def test_workbench_import_findings_reports_and_evidence(tmp_path: Path) -> None:
     detail_payload = detail.json()
     assert detail_payload["finding"]["cve_id"] == "CVE-2021-44228"
     assert detail_payload["finding"]["provider_evidence"]["nvd"]["cve_id"] == "CVE-2021-44228"
+    session_factory = create_session_factory(get_engine(client.app))
+    with session_factory() as session:
+        vulnerability = (
+            session.query(Vulnerability).filter(Vulnerability.cve_id == "CVE-2021-44228").one()
+        )
+        assert vulnerability.description
+        assert "Log4j" in vulnerability.description
+        assert vulnerability.cvss_score == 10.0
+        assert vulnerability.severity == "CRITICAL"
+        assert vulnerability.cwe == "CWE-20, CWE-400, CWE-502, CWE-917"
+        assert vulnerability.published_at == "2021-12-10T10:15:09.143"
+        assert vulnerability.modified_at == "2026-02-20T16:15:59.363"
+        assert vulnerability.provider_json["nvd"]["cve_id"] == "CVE-2021-44228"
+        assert "apiKey" not in json.dumps(vulnerability.provider_json)
     assert detail_payload["kev_detail"]["cve_id"] == "CVE-2021-44228"
     assert detail_payload["kev_detail"]["in_kev"] is True
     assert detail_payload["kev_detail"]["vendor_project"] == "Apache"

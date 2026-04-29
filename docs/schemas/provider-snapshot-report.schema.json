@@ -58,6 +58,12 @@
             "cvss_version": {
               "$ref": "#/$defs/nullableString"
             },
+            "cvss_vector": {
+              "$ref": "#/$defs/nullableString"
+            },
+            "vulnerability_status": {
+              "$ref": "#/$defs/nullableString"
+            },
             "published": {
               "$ref": "#/$defs/nullableString"
             },
@@ -69,6 +75,12 @@
             },
             "references": {
               "$ref": "#/$defs/stringArray"
+            },
+            "reference_tags": {
+              "type": "object",
+              "additionalProperties": {
+                "$ref": "#/$defs/stringArray"
+              }
             }
           }
         }

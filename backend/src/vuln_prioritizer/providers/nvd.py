@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 import random
 import time
+from collections.abc import Sequence
 from concurrent.futures import Future, ThreadPoolExecutor
 from dataclasses import dataclass
 from threading import Lock
@@ -102,7 +103,7 @@ class NvdProvider:
                     continue
             except Exception as exc:  # noqa: BLE001 - provider should degrade gracefully
                 warnings_by_cve.setdefault(cve_id, []).append(
-                    f"NVD cache load failed for {cve_id}: {exc}"
+                    f"NVD cache load failed for {cve_id}: {self._safe_error_message(exc)}"
                 )
             pending_ids.append(cve_id)
 
@@ -117,19 +118,21 @@ class NvdProvider:
                     try:
                         resolved[cve_id] = futures[cve_id].result()
                     except Exception as exc:  # noqa: BLE001 - provider should degrade gracefully
+                        safe_error = self._safe_error_message(exc)
                         try:
                             stale = self._load_from_cache(cve_id, allow_expired=True)
                         except Exception:  # noqa: BLE001 - invalid stale cache is not recoverable
                             stale = None
                         if stale is not None:
                             warnings_by_cve.setdefault(cve_id, []).append(
-                                f"NVD lookup failed for {cve_id}; using expired cached data: {exc}"
+                                "NVD lookup failed for "
+                                f"{cve_id}; using expired cached data: {safe_error}"
                             )
                             resolved[cve_id] = stale
                             stale_cache_hits += 1
                         else:
                             warnings_by_cve.setdefault(cve_id, []).append(
-                                f"NVD lookup failed for {cve_id}: {exc}"
+                                f"NVD lookup failed for {cve_id}: {safe_error}"
                             )
                             resolved[cve_id] = NvdData(cve_id=cve_id)
                         failures += 1
@@ -201,8 +204,11 @@ class NvdProvider:
                 break
 
         if last_error is not None:
-            raise RuntimeError(str(last_error)) from last_error
+            raise RuntimeError(self._safe_error_message(last_error)) from last_error
         raise RuntimeError("NVD request failed without a response")
+
+    def _safe_error_message(self, exc: BaseException) -> str:
+        return _sanitize_error_message(str(exc), secrets=(self.api_key,))
 
     def _session_get(self, *, params: dict[str, str], headers: dict[str, str]) -> requests.Response:
         if self.session is not None:
@@ -290,14 +296,32 @@ def _extract_cvss(metrics: dict) -> tuple[float | None, str | None, str | None, 
         entries = metrics.get(metric_key) or []
         if not entries:
             continue
-        metric = entries[0] or {}
-        cvss_data = metric.get("cvssData") or {}
-        score = safe_float(cvss_data.get("baseScore"))
-        severity = cvss_data.get("baseSeverity") or metric.get("baseSeverity")
-        vector = cvss_data.get("vectorString")
-        if score is not None or severity:
-            return score, severity, versions[metric_key], vector
+        fallback: tuple[float | None, str | None, str | None, str | None] | None = None
+        for metric in _ordered_metric_entries(entries):
+            cvss_data = metric.get("cvssData") or {}
+            score = safe_float(cvss_data.get("baseScore"))
+            severity = cvss_data.get("baseSeverity") or metric.get("baseSeverity")
+            vector = cvss_data.get("vectorString")
+            candidate = (score, severity, versions[metric_key], vector)
+            if score is not None:
+                return candidate
+            if severity and fallback is None:
+                fallback = candidate
+        if fallback is not None:
+            return fallback
     return None, None, None, None
+
+
+def _ordered_metric_entries(entries: Sequence[dict]) -> list[dict]:
+    primary: list[dict] = []
+    secondary: list[dict] = []
+    for entry in entries:
+        metric = entry or {}
+        if str(metric.get("type") or "").lower() == "primary":
+            primary.append(metric)
+        else:
+            secondary.append(metric)
+    return primary + secondary
 
 
 def _retry_delay(response: requests.Response | None, attempt: int) -> float:
@@ -309,6 +333,14 @@ def _retry_delay(response: requests.Response | None, attempt: int) -> float:
         except ValueError:
             pass
     return float(attempt) + random.uniform(0.0, 0.25)
+
+
+def _sanitize_error_message(message: str, *, secrets: Sequence[str | None]) -> str:
+    redacted = message
+    for secret in secrets:
+        if secret:
+            redacted = redacted.replace(secret, "<redacted>")
+    return redacted
 
 
 def has_nvd_content(item: NvdData) -> bool:

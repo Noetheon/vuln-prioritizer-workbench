@@ -249,8 +249,13 @@ Current provider service contract:
 
 - built-in NVD, EPSS, and KEV providers can be adapted to the shared
   `ProviderEnrichmentClient.enrich(cve_ids, **kwargs)` interface
+- NVD uses the CVE API 2.0 per requested CVE, sends an optional API key only
+  through the configured request header, redacts configured key values from
+  warnings, and degrades to cache or empty records instead of aborting analysis
 - provider failures degrade into `ProviderStatus` and data-quality flags before
   optional CI gates decide whether to fail the process
+- NVD records with provider metadata but no CVSS base score/version add an
+  `nvd_cvss_missing` data-quality flag with the affected `cve_id`
 - KEV provider data includes CISA catalog details such as
   `vulnerability_name`, `vendor_project`, `product`, `date_added`, `due_date`,
   and `required_action` when present in JSON, CSV, cache, or locked snapshot

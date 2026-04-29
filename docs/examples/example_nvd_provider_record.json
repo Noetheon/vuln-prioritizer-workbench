@@ -1,0 +1,23 @@
+{
+  "cve_id": "CVE-2026-2001",
+  "description": "Example NVD CVE record used to validate provider evidence contracts.",
+  "cvss_base_score": 9.8,
+  "cvss_severity": "CRITICAL",
+  "cvss_version": "4.0",
+  "cvss_vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:H/VA:H",
+  "vulnerability_status": "Analyzed",
+  "published": "2026-04-29T00:00:00.000",
+  "last_modified": "2026-04-29T12:00:00.000",
+  "cwes": [
+    "CWE-79"
+  ],
+  "references": [
+    "https://example.invalid/advisory/CVE-2026-2001"
+  ],
+  "reference_tags": {
+    "https://example.invalid/advisory/CVE-2026-2001": [
+      "Vendor Advisory",
+      "Patch"
+    ]
+  }
+}
