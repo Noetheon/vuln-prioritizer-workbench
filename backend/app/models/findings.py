@@ -143,6 +143,38 @@ class FindingPublic(FindingBase):
     exposure: str | None = None
 
 
+class FindingOccurrencePublic(SQLModel):
+    """Public occurrence row for finding detail views."""
+
+    id: uuid.UUID
+    analysis_run_id: uuid.UUID
+    source: str | None = None
+    scanner: str | None = None
+    raw_reference: str | None = None
+    fix_version: str | None = None
+    source_format: str | None = None
+    source_id: str | None = None
+    source_record_id: str | None = None
+    component_name: str | None = None
+    component_version: str | None = None
+    purl: str | None = None
+    fix_versions: list[str] | None = None
+    target_kind: str | None = None
+    target_ref: str | None = None
+    asset_ref: str | None = None
+    asset_owner: str | None = None
+    asset_business_service: str | None = None
+    asset_exposure: str | None = None
+    raw_severity: str | None = None
+    created_at: datetime | None = None
+
+
+class FindingDetailPublic(FindingPublic):
+    """Public finding detail response shape."""
+
+    occurrences: list[FindingOccurrencePublic] = Field(default_factory=list)
+
+
 class FindingsPublic(SQLModel):
     """Paginated finding collection response."""
 

@@ -19,6 +19,7 @@ import { Route as LayoutProjectsRouteImport } from './routes/_layout/projects'
 import { Route as LayoutImportsRouteImport } from './routes/_layout/imports'
 import { Route as LayoutFindingsRouteImport } from './routes/_layout/findings'
 import { Route as LayoutAssetsRouteImport } from './routes/_layout/assets'
+import { Route as LayoutFindingsFindingIdRouteImport } from './routes/_layout/findings.$findingId'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -69,41 +70,49 @@ const LayoutAssetsRoute = LayoutAssetsRouteImport.update({
   path: '/assets',
   getParentRoute: () => LayoutRoute,
 } as any)
+const LayoutFindingsFindingIdRoute = LayoutFindingsFindingIdRouteImport.update({
+  id: '/$findingId',
+  path: '/$findingId',
+  getParentRoute: () => LayoutFindingsRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof LayoutIndexRoute
   '/login': typeof LoginRoute
   '/assets': typeof LayoutAssetsRoute
-  '/findings': typeof LayoutFindingsRoute
+  '/findings': typeof LayoutFindingsRouteWithChildren
   '/imports': typeof LayoutImportsRoute
   '/projects': typeof LayoutProjectsRoute
   '/providers': typeof LayoutProvidersRoute
   '/reports': typeof LayoutReportsRoute
   '/settings': typeof LayoutSettingsRoute
+  '/findings/$findingId': typeof LayoutFindingsFindingIdRoute
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/assets': typeof LayoutAssetsRoute
-  '/findings': typeof LayoutFindingsRoute
+  '/findings': typeof LayoutFindingsRouteWithChildren
   '/imports': typeof LayoutImportsRoute
   '/projects': typeof LayoutProjectsRoute
   '/providers': typeof LayoutProvidersRoute
   '/reports': typeof LayoutReportsRoute
   '/settings': typeof LayoutSettingsRoute
   '/': typeof LayoutIndexRoute
+  '/findings/$findingId': typeof LayoutFindingsFindingIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_layout': typeof LayoutRouteWithChildren
   '/login': typeof LoginRoute
   '/_layout/assets': typeof LayoutAssetsRoute
-  '/_layout/findings': typeof LayoutFindingsRoute
+  '/_layout/findings': typeof LayoutFindingsRouteWithChildren
   '/_layout/imports': typeof LayoutImportsRoute
   '/_layout/projects': typeof LayoutProjectsRoute
   '/_layout/providers': typeof LayoutProvidersRoute
   '/_layout/reports': typeof LayoutReportsRoute
   '/_layout/settings': typeof LayoutSettingsRoute
   '/_layout/': typeof LayoutIndexRoute
+  '/_layout/findings/$findingId': typeof LayoutFindingsFindingIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -117,6 +126,7 @@ export interface FileRouteTypes {
     | '/providers'
     | '/reports'
     | '/settings'
+    | '/findings/$findingId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/login'
@@ -128,6 +138,7 @@ export interface FileRouteTypes {
     | '/reports'
     | '/settings'
     | '/'
+    | '/findings/$findingId'
   id:
     | '__root__'
     | '/_layout'
@@ -140,6 +151,7 @@ export interface FileRouteTypes {
     | '/_layout/reports'
     | '/_layout/settings'
     | '/_layout/'
+    | '/_layout/findings/$findingId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -219,12 +231,31 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutAssetsRouteImport
       parentRoute: typeof LayoutRoute
     }
+    '/_layout/findings/$findingId': {
+      id: '/_layout/findings/$findingId'
+      path: '/$findingId'
+      fullPath: '/findings/$findingId'
+      preLoaderRoute: typeof LayoutFindingsFindingIdRouteImport
+      parentRoute: typeof LayoutFindingsRoute
+    }
   }
 }
 
+interface LayoutFindingsRouteChildren {
+  LayoutFindingsFindingIdRoute: typeof LayoutFindingsFindingIdRoute
+}
+
+const LayoutFindingsRouteChildren: LayoutFindingsRouteChildren = {
+  LayoutFindingsFindingIdRoute: LayoutFindingsFindingIdRoute,
+}
+
+const LayoutFindingsRouteWithChildren = LayoutFindingsRoute._addFileChildren(
+  LayoutFindingsRouteChildren,
+)
+
 interface LayoutRouteChildren {
   LayoutAssetsRoute: typeof LayoutAssetsRoute
-  LayoutFindingsRoute: typeof LayoutFindingsRoute
+  LayoutFindingsRoute: typeof LayoutFindingsRouteWithChildren
   LayoutImportsRoute: typeof LayoutImportsRoute
   LayoutProjectsRoute: typeof LayoutProjectsRoute
   LayoutProvidersRoute: typeof LayoutProvidersRoute
@@ -235,7 +266,7 @@ interface LayoutRouteChildren {
 
 const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutAssetsRoute: LayoutAssetsRoute,
-  LayoutFindingsRoute: LayoutFindingsRoute,
+  LayoutFindingsRoute: LayoutFindingsRouteWithChildren,
   LayoutImportsRoute: LayoutImportsRoute,
   LayoutProjectsRoute: LayoutProjectsRoute,
   LayoutProvidersRoute: LayoutProvidersRoute,

@@ -29,7 +29,14 @@ from app.models.enums import (
     FindingPriority,
     FindingStatus,
 )
-from app.models.findings import Finding, FindingBase, FindingPublic, FindingsPublic
+from app.models.findings import (
+    Finding,
+    FindingBase,
+    FindingDetailPublic,
+    FindingOccurrencePublic,
+    FindingPublic,
+    FindingsPublic,
+)
 from app.models.projects import (
     Project,
     ProjectBase,
@@ -81,9 +88,11 @@ __all__ = [
     "ComponentBase",
     "Finding",
     "FindingBase",
+    "FindingDetailPublic",
     "FindingExplanationPublic",
     "FindingOccurrence",
     "FindingOccurrenceBase",
+    "FindingOccurrencePublic",
     "FindingPublic",
     "FindingPriority",
     "FindingStatus",

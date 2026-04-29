@@ -12,7 +12,10 @@ from app.api.routes.workbench_access import require_visible_project
 from app.models import (
     AssetExposure,
     Finding,
+    FindingDetailPublic,
     FindingExplanationPublic,
+    FindingOccurrence,
+    FindingOccurrencePublic,
     FindingPriority,
     FindingPublic,
     FindingsPublic,
@@ -84,18 +87,18 @@ def read_project_findings(
     )
 
 
-@router.get("/findings/{finding_id}", response_model=FindingPublic)
+@router.get("/findings/{finding_id}", response_model=FindingDetailPublic)
 def read_finding(
     finding_id: uuid.UUID,
     session: SessionDep,
     current_user: CurrentUser,
-) -> FindingPublic:
+) -> FindingDetailPublic:
     """Read one finding if its project is visible."""
     finding = FindingRepository(session).get_finding(finding_id)
     if finding is None:
         raise HTTPException(status_code=404, detail="Finding not found")
     require_visible_project(session, current_user, finding.project_id)
-    return _finding_public(finding)
+    return _finding_detail_public(finding)
 
 
 def _finding_public(finding: Finding) -> FindingPublic:
@@ -112,6 +115,99 @@ def _finding_public(finding: Finding) -> FindingPublic:
             "exposure": finding.asset.exposure if finding.asset else None,
         }
     )
+
+
+def _finding_detail_public(finding: Finding) -> FindingDetailPublic:
+    """Return a finding detail DTO with source occurrence rows."""
+    return FindingDetailPublic.model_validate(_finding_public(finding)).model_copy(
+        update={
+            "occurrences": [
+                _finding_occurrence_public(occurrence, finding)
+                for occurrence in finding.occurrences
+            ],
+        }
+    )
+
+
+def _finding_occurrence_public(
+    occurrence: FindingOccurrence,
+    finding: Finding,
+) -> FindingOccurrencePublic:
+    """Return a conservative occurrence DTO from persisted columns and raw evidence."""
+    evidence = occurrence.evidence_json or {}
+    return FindingOccurrencePublic(
+        id=occurrence.id,
+        analysis_run_id=occurrence.analysis_run_id,
+        source=occurrence.source,
+        scanner=occurrence.scanner or _string_evidence(evidence, "scanner"),
+        raw_reference=occurrence.raw_reference,
+        fix_version=occurrence.fix_version,
+        source_format=(
+            _string_evidence(evidence, "source_format")
+            or _string_evidence(evidence, "input_type")
+            or occurrence.source
+        ),
+        source_id=_string_evidence(evidence, "source_id"),
+        source_record_id=_string_evidence(evidence, "source_record_id") or occurrence.raw_reference,
+        component_name=(
+            _string_evidence(evidence, "component_name")
+            or _string_evidence(evidence, "component")
+            or (finding.component.name if finding.component else None)
+        ),
+        component_version=(
+            _string_evidence(evidence, "component_version")
+            or _string_evidence(evidence, "version")
+            or (finding.component.version if finding.component else None)
+        ),
+        purl=_string_evidence(evidence, "purl")
+        or (finding.component.purl if finding.component else None),
+        fix_versions=_string_list_evidence(evidence, "fix_versions")
+        or ([occurrence.fix_version] if occurrence.fix_version else None),
+        target_kind=_string_evidence(evidence, "target_kind"),
+        target_ref=_string_evidence(evidence, "target_ref"),
+        asset_ref=(
+            _string_evidence(evidence, "asset_ref")
+            or _string_evidence(evidence, "asset_id")
+            or (finding.asset.asset_key if finding.asset else None)
+        ),
+        asset_owner=(
+            _string_evidence(evidence, "asset_owner")
+            or _string_evidence(evidence, "owner")
+            or (finding.asset.owner if finding.asset else None)
+        ),
+        asset_business_service=(
+            _string_evidence(evidence, "asset_business_service")
+            or _string_evidence(evidence, "business_service")
+            or (finding.asset.business_service if finding.asset else None)
+        ),
+        asset_exposure=(
+            _string_evidence(evidence, "asset_exposure")
+            or _string_evidence(evidence, "exposure")
+            or (finding.asset.exposure if finding.asset else None)
+        ),
+        raw_severity=_string_evidence(evidence, "raw_severity")
+        or _string_evidence(evidence, "severity"),
+        created_at=getattr(occurrence, "created_at", None),
+    )
+
+
+def _string_evidence(evidence: dict[str, object], key: str) -> str | None:
+    value = evidence.get(key)
+    if isinstance(value, str):
+        stripped = value.strip()
+        return stripped or None
+    return None
+
+
+def _string_list_evidence(evidence: dict[str, object], key: str) -> list[str] | None:
+    value = evidence.get(key)
+    if isinstance(value, list):
+        items = [item.strip() for item in value if isinstance(item, str) and item.strip()]
+        return items or None
+    if isinstance(value, str):
+        stripped = value.strip()
+        return [stripped] if stripped else None
+    return None
 
 
 @router.get("/findings/{finding_id}/explain", response_model=FindingExplanationPublic)

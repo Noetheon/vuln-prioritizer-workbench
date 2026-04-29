@@ -82,7 +82,7 @@ export class FindingsService {
      * Read one finding if its project is visible.
      * @param data The data for the request.
      * @param data.findingId
-     * @returns FindingPublic Successful Response
+     * @returns FindingDetailPublic Successful Response
      * @throws ApiError
      */
     public static readFinding(data: FindingsReadFindingData): CancelablePromise<FindingsReadFindingResponse> {
