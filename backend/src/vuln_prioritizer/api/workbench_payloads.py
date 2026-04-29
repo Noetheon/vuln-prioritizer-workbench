@@ -62,6 +62,9 @@ def _analysis_run_payload(run: Any) -> dict[str, Any]:
             "attack_stix_spec_version": run.metadata_json.get("attack_stix_spec_version"),
             "defensive_context_sources": run.metadata_json.get("defensive_context_sources", []),
             "defensive_context_hits": run.metadata_json.get("defensive_context_hits", 0),
+            "lifecycle_status": run.metadata_json.get("lifecycle_status"),
+            "input_uploads": run.metadata_json.get("input_uploads", []),
+            "parse_errors": run.metadata_json.get("parse_errors", []),
         },
     }
 

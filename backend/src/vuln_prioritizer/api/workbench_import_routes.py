@@ -78,6 +78,9 @@ async def import_findings(
     waiver_file: Annotated[UploadFile | None, File()] = None,
     defensive_context_file: Annotated[UploadFile | None, File()] = None,
 ) -> dict[str, Any]:
+    repo = WorkbenchRepository(session)
+    if repo.get_project(project_id) is None:
+        raise HTTPException(status_code=404, detail="Project not found.")
     upload_paths: list[Path] = []
     asset_context_path: Path | None = None
     vex_path: Path | None = None
@@ -130,6 +133,7 @@ async def import_findings(
                     item.filename or path.name
                     for item, path in zip(selected_files, upload_paths, strict=True)
                 ],
+                "content_types": [item.content_type for item in selected_files],
                 "input_count": len(upload_paths),
                 "locked_provider_data": locked_provider_data,
                 "attack_source": attack_source,
@@ -161,6 +165,9 @@ async def import_findings(
                 if len(upload_paths) > 1
                 else (selected_files[0].filename or upload_paths[0].name),
                 input_format=selected_formats if len(upload_paths) > 1 else selected_formats[0],
+                input_content_type=[item.content_type for item in selected_files]
+                if len(upload_paths) > 1
+                else selected_files[0].content_type,
                 provider_snapshot_file=snapshot_path,
                 locked_provider_data=locked_provider_data,
                 attack_source=attack_source,
@@ -175,18 +182,35 @@ async def import_findings(
                 "analysis_run_id": value.run.id,
                 "findings_count": value.run.metadata_json.get("findings_count", 0),
             },
+            preserve_side_effects_on=(WorkbenchAnalysisError,),
         )
         result.run.metadata_json = {**result.run.metadata_json, "job_id": job.id}
     except WorkbenchAnalysisError as exc:
-        _cleanup_saved_uploads(
-            *upload_paths,
-            asset_context_path,
-            vex_path,
-            waiver_path,
-            defensive_context_path,
-        )
+        if exc.analysis_run_id is None:
+            _cleanup_saved_uploads(
+                *upload_paths,
+                asset_context_path,
+                vex_path,
+                waiver_path,
+                defensive_context_path,
+            )
+        else:
+            failed_run = WorkbenchRepository(session).get_analysis_run(exc.analysis_run_id)
+            if failed_run is not None:
+                failed_run.metadata_json = {
+                    **failed_run.metadata_json,
+                    "job_id": exc.job_id,
+                }
         session.commit()
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
+        detail: Any = str(exc)
+        if exc.parse_errors:
+            detail = {
+                "message": str(exc),
+                "analysis_run_id": exc.analysis_run_id,
+                "job_id": exc.job_id,
+                "parse_errors": exc.parse_errors,
+            }
+        raise HTTPException(status_code=422, detail=detail) from exc
     except HTTPException:
         _cleanup_saved_uploads(
             *upload_paths,

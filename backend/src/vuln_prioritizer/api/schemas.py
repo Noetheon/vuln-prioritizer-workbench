@@ -313,6 +313,9 @@ class AnalysisRunSummary(StrictModel):
     attack_stix_spec_version: str | None = None
     defensive_context_sources: list[str] = Field(default_factory=list)
     defensive_context_hits: int = 0
+    lifecycle_status: str | None = None
+    input_uploads: list[dict[str, Any]] = Field(default_factory=list)
+    parse_errors: list[dict[str, Any]] = Field(default_factory=list)
 
 
 class AnalysisRunResponse(StrictModel):

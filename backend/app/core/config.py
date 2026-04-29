@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from os import environ
+from pathlib import Path
 from typing import Literal, cast
 from urllib.parse import quote_plus
 
@@ -26,6 +27,8 @@ class Settings:
     FRONTEND_HOST: str = "http://localhost:5173"
     BACKEND_CORS_ORIGINS: tuple[str, ...] = field(default_factory=tuple)
     SQLALCHEMY_DATABASE_URI: str = "sqlite:///./template.db"
+    IMPORT_UPLOAD_DIR: str = "data/template-import-uploads"
+    MAX_UPLOAD_MB: int = 25
 
     @property
     def all_cors_origins(self) -> tuple[str, ...]:
@@ -35,6 +38,16 @@ class Settings:
         if frontend_host and frontend_host not in origins:
             origins.append(frontend_host)
         return tuple(origins)
+
+    @property
+    def import_upload_dir_path(self) -> Path:
+        """Return the configured template import upload root."""
+        return Path(self.IMPORT_UPLOAD_DIR)
+
+    @property
+    def max_upload_bytes(self) -> int:
+        """Return the configured per-file upload limit in bytes."""
+        return self.MAX_UPLOAD_MB * 1024 * 1024
 
 
 def parse_cors_origins(raw_origins: str) -> tuple[str, ...]:
@@ -80,7 +93,20 @@ def load_settings() -> Settings:
         FRONTEND_HOST=environ.get("FRONTEND_HOST", "http://localhost:5173"),
         BACKEND_CORS_ORIGINS=parse_cors_origins(environ.get("BACKEND_CORS_ORIGINS", "")),
         SQLALCHEMY_DATABASE_URI=build_database_uri(),
+        IMPORT_UPLOAD_DIR=environ.get("IMPORT_UPLOAD_DIR", "data/template-import-uploads"),
+        MAX_UPLOAD_MB=_positive_int_from_env("MAX_UPLOAD_MB", 25),
     )
+
+
+def _positive_int_from_env(name: str, default: int) -> int:
+    raw_value = environ.get(name)
+    if raw_value is None:
+        return default
+    try:
+        parsed = int(raw_value)
+    except ValueError:
+        return default
+    return parsed if parsed > 0 else default
 
 
 settings = load_settings()

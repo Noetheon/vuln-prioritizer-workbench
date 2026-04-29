@@ -1821,6 +1821,9 @@ def test_workbench_rejects_unsupported_and_oversized_uploads(tmp_path: Path) -> 
     assert "Upload filename is not allowed" in path_traversal.text
     assert not (tmp_path / "trivy.json").exists()
 
+    existing_upload_paths = {
+        path.relative_to(settings.upload_dir) for path in settings.upload_dir.rglob("*")
+    }
     context_path_traversal = client.post(
         f"/api/projects/{project['id']}/imports",
         data={"input_format": "cve-list"},
@@ -1831,7 +1834,9 @@ def test_workbench_rejects_unsupported_and_oversized_uploads(tmp_path: Path) -> 
     )
     assert context_path_traversal.status_code == 422
     assert "Upload filename is not allowed" in context_path_traversal.text
-    assert not any(settings.upload_dir.rglob("*"))
+    assert {path.relative_to(settings.upload_dir) for path in settings.upload_dir.rglob("*")} == (
+        existing_upload_paths
+    )
 
     oversized = client.post(
         f"/api/projects/{project['id']}/imports",
