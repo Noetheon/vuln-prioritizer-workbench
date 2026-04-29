@@ -23,7 +23,7 @@ import {
   Table2,
 } from "lucide-react"
 import { type FormEvent, useEffect, useState } from "react"
-import { clearAccessToken } from "./auth"
+import { clearAccessToken, getAccessToken } from "./auth"
 import {
   type AnalysisRunPublic,
   type AnalysisRunSummaryPublic,
@@ -39,12 +39,15 @@ import {
   FindingsService,
   type ImportParseErrorPublic,
   ImportsService,
+  OpenAPI,
   type ProjectDecisionSummaryPublic,
   type ProjectPublic,
   ProjectsService,
   type ProviderSourceStatusPublic,
   type ProviderStatusPublic,
   ProvidersService,
+  type ReportPublic,
+  ReportsService,
   RunsService,
   type UserPublic,
   UsersService,
@@ -197,13 +200,24 @@ const mvpImportFormats = [
 
 type ImportFormat = (typeof mvpImportFormats)[number]["value"]
 
-const reportActionCards = [
+type TemplateReportFormat = "markdown" | "html" | "json" | "csv" | "zip"
+
+const reportActionCards: Array<{
+  actionLabel: string
+  detail: string
+  format: string
+  icon: typeof FileText
+  reportFormat: TemplateReportFormat
+  stage: string
+  title: string
+}> = [
   {
     actionLabel: "Generate Markdown",
     detail:
       "Technical report for analyst handoff, pull requests, and audit notes.",
     format: "Markdown",
     icon: FileText,
+    reportFormat: "markdown",
     stage: "VPW-048",
     title: "Markdown Technical Report",
   },
@@ -213,6 +227,7 @@ const reportActionCards = [
       "Executive browser report with priority summary, evidence links, and safe rendering.",
     format: "HTML",
     icon: FileArchive,
+    reportFormat: "html",
     stage: "VPW-049",
     title: "HTML Executive Report",
   },
@@ -222,6 +237,7 @@ const reportActionCards = [
       "Machine-readable findings and analysis data for automation and downstream systems.",
     format: "JSON",
     icon: FileJson,
+    reportFormat: "json",
     stage: "VPW-050",
     title: "JSON Findings Export",
   },
@@ -231,6 +247,7 @@ const reportActionCards = [
       "Spreadsheet-friendly findings table for triage, filtering, and stakeholder review.",
     format: "CSV",
     icon: Table2,
+    reportFormat: "csv",
     stage: "VPW-050",
     title: "CSV Findings Export",
   },
@@ -240,10 +257,11 @@ const reportActionCards = [
       "ZIP package with reports, manifest, source artifacts, and SHA256 checksums.",
     format: "Evidence ZIP",
     icon: FileArchive,
+    reportFormat: "zip",
     stage: "VPW-051",
     title: "Evidence Bundle",
   },
-] as const
+]
 
 type ImportWizardState = {
   file: File | null
@@ -850,6 +868,64 @@ function formatDateTime(value: string) {
   }).format(date)
 }
 
+function reportFormatLabel(format: string) {
+  if (format === "zip") {
+    return "Evidence ZIP"
+  }
+  return format.toUpperCase()
+}
+
+function reportSizeLabel(sizeBytes: number) {
+  if (sizeBytes < 1024) {
+    return `${sizeBytes} B`
+  }
+  if (sizeBytes < 1024 * 1024) {
+    return `${(sizeBytes / 1024).toFixed(1)} KB`
+  }
+  return `${(sizeBytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
+function isReportableRun(run: AnalysisRunPublic | null) {
+  return (
+    run?.status === "succeeded" ||
+    run?.status === "completed" ||
+    run?.status === "completed_with_errors"
+  )
+}
+
+function reportDownloadUrl(report: ReportPublic) {
+  if (report.download_url.startsWith("http")) {
+    return report.download_url
+  }
+  const base = OpenAPI.BASE.replace(/\/+$/, "")
+  return `${base}${report.download_url}`
+}
+
+async function downloadReportArtifact(report: ReportPublic) {
+  const token = getAccessToken()
+  const response = await fetch(reportDownloadUrl(report), {
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+  })
+  if (!response.ok) {
+    let detail = ""
+    try {
+      detail = apiErrorDetail(await response.json()) ?? ""
+    } catch {
+      detail = ""
+    }
+    throw new Error(detail || `HTTP ${response.status}`)
+  }
+  const blob = await response.blob()
+  const objectUrl = URL.createObjectURL(blob)
+  const anchor = document.createElement("a")
+  anchor.href = objectUrl
+  anchor.download = report.filename
+  document.body.append(anchor)
+  anchor.click()
+  anchor.remove()
+  URL.revokeObjectURL(objectUrl)
+}
+
 function providerSourceLabel(source: ProviderSourceStatusPublic) {
   return source.name.toUpperCase()
 }
@@ -964,6 +1040,15 @@ export function App() {
     useState<AnalysisRunSummaryPublic | null>(null)
   const [runDetailLoading, setRunDetailLoading] = useState(false)
   const [runDetailError, setRunDetailError] = useState("")
+  const [reports, setReports] = useState<ReportPublic[]>([])
+  const [reportsLoading, setReportsLoading] = useState(false)
+  const [reportsError, setReportsError] = useState("")
+  const [reportActionMessage, setReportActionMessage] = useState("")
+  const [reportActionError, setReportActionError] = useState("")
+  const [activeReportFormat, setActiveReportFormat] = useState<
+    TemplateReportFormat | ""
+  >("")
+  const [reportsReloadKey, setReportsReloadKey] = useState(0)
   const [findings, setFindings] = useState<FindingPublic[]>([])
   const [findingCount, setFindingCount] = useState(0)
   const [findingsLoading, setFindingsLoading] = useState(false)
@@ -1013,6 +1098,13 @@ export function App() {
     findingExplanation,
   )
   const detailReasonRows = findingReasonRows(findingExplanation)
+  const selectedReportRun =
+    projectRuns.find((run) => run.id === selectedRunId) ?? null
+  const reportActionsEnabled =
+    currentPath === "/reports" &&
+    Boolean(selectedReportRun) &&
+    isReportableRun(selectedReportRun) &&
+    !reportsLoading
 
   useEffect(() => {
     let isMounted = true
@@ -1150,7 +1242,10 @@ export function App() {
     let isMounted = true
 
     async function loadProjectRuns() {
-      if (currentPath !== "/imports" || !selectedProjectId) {
+      if (
+        !["/imports", "/reports"].includes(currentPath) ||
+        !selectedProjectId
+      ) {
         setProjectRuns([])
         setSelectedRunId("")
         setRunsError("")
@@ -1199,8 +1294,51 @@ export function App() {
   useEffect(() => {
     let isMounted = true
 
+    async function loadRunReports() {
+      if (currentPath !== "/reports" || !selectedRunId) {
+        setReports([])
+        setReportsError("")
+        setReportsLoading(false)
+        return
+      }
+
+      setReportsLoading(true)
+      setReportsError("")
+      try {
+        const reportPage = await ReportsService.readRunReports({
+          runId: selectedRunId,
+        })
+        if (isMounted) {
+          setReports(reportPage.data)
+        }
+      } catch (caught) {
+        if (caught instanceof ApiError && [401, 403].includes(caught.status)) {
+          clearAccessToken()
+          await navigate({ to: "/login" })
+          return
+        }
+        if (isMounted) {
+          setReports([])
+          setReportsError(apiErrorMessage("Report history unavailable", caught))
+        }
+      } finally {
+        if (isMounted) {
+          setReportsLoading(false)
+        }
+      }
+    }
+
+    void loadRunReports()
+    return () => {
+      isMounted = false
+    }
+  }, [currentPath, navigate, reportsReloadKey, selectedRunId])
+
+  useEffect(() => {
+    let isMounted = true
+
     async function loadRunDetail() {
-      if (currentPath !== "/imports" || !selectedRunId) {
+      if (!["/imports", "/reports"].includes(currentPath) || !selectedRunId) {
         setSelectedRun(null)
         setSelectedRunSummary(null)
         setRunDetailError("")
@@ -1516,6 +1654,71 @@ export function App() {
 
   function refreshFindingDetail() {
     setFindingDetailReloadKey((key) => key + 1)
+  }
+
+  function refreshReports() {
+    setReportsReloadKey((key) => key + 1)
+  }
+
+  async function createReport(format: TemplateReportFormat) {
+    if (!selectedRunId) {
+      setReportActionError(
+        "Select a completed analysis run before generating reports.",
+      )
+      return
+    }
+    setReportActionError("")
+    setReportActionMessage("")
+    setActiveReportFormat(format)
+    try {
+      const report = await ReportsService.createRunReport({
+        runId: selectedRunId,
+        requestBody: { format },
+      })
+      setReports((currentReports) => [report, ...currentReports])
+      setReportActionMessage(
+        `${reportFormatLabel(report.format)} report generated as ${report.filename}.`,
+      )
+    } catch (caught) {
+      setReportActionError(apiErrorMessage("Report generation failed", caught))
+    } finally {
+      setActiveReportFormat("")
+    }
+  }
+
+  async function downloadReport(report: ReportPublic) {
+    setReportActionError("")
+    setReportActionMessage("")
+    try {
+      await downloadReportArtifact(report)
+      setReportActionMessage(`Download started for ${report.filename}.`)
+    } catch (caught) {
+      setReportActionError(
+        caught instanceof Error
+          ? `Report download failed: ${caught.message}`
+          : "Report download failed: unexpected client error",
+      )
+    }
+  }
+
+  async function verifyEvidenceReport(report: ReportPublic) {
+    setReportActionError("")
+    setReportActionMessage("")
+    try {
+      const verification = await ReportsService.verifyReport({
+        reportId: report.id,
+      })
+      const summary = objectRecord(verification.summary)
+      setReportActionMessage(
+        summary.ok
+          ? `Evidence bundle verified: ${summary.verified_files ?? 0} files matched.`
+          : `Evidence bundle verification failed: ${summary.modified_files ?? 0} modified, ${summary.missing_files ?? 0} missing.`,
+      )
+    } catch (caught) {
+      setReportActionError(
+        apiErrorMessage("Evidence verification failed", caught),
+      )
+    }
   }
 
   async function createProject(event: FormEvent<HTMLFormElement>) {
@@ -1859,7 +2062,7 @@ export function App() {
                         : currentPath === "/providers"
                           ? "Refresh provider status"
                           : currentPath === "/reports"
-                            ? "Refresh report placeholders"
+                            ? "Refresh reports"
                             : "Refresh queue"
                 }
                 onClick={() => {
@@ -1873,7 +2076,8 @@ export function App() {
                   } else if (currentPath === "/providers") {
                     void refreshProviderStatus()
                   } else if (currentPath === "/reports") {
-                    void refreshProjects(selectedProjectId)
+                    void refreshProjectRuns(selectedRunId)
+                    refreshReports()
                   }
                 }}
               >
@@ -3539,7 +3743,7 @@ export function App() {
             ) : currentPath === "/reports" ? (
               <section
                 className="reports-workflow"
-                aria-label="Reports page shell"
+                aria-label="Reports workspace"
               >
                 <section
                   className="reports-readiness-panel"
@@ -3547,12 +3751,12 @@ export function App() {
                 >
                   <div>
                     <span>Report generation</span>
-                    <h3>Export actions staged for VPW-048 through VPW-053</h3>
+                    <h3>Generate and download reports for the selected run</h3>
                     <p>
-                      This shell prepares the central Reports workspace. The
-                      buttons are intentionally disabled until the matching
-                      backend generators, export contracts, and download flows
-                      are enabled by the follow-up report issues.
+                      Create Markdown, HTML, JSON, CSV, and evidence ZIP
+                      artifacts from completed template analysis runs. History
+                      rows stay linked to backend downloads and checksum-backed
+                      metadata.
                     </p>
                   </div>
                   <dl className="report-readiness-facts">
@@ -3561,19 +3765,99 @@ export function App() {
                       <dd>{selectedProject?.name ?? "No project selected"}</dd>
                     </div>
                     <div>
-                      <dt>Findings</dt>
-                      <dd>{projectSummary?.finding_count ?? 0}</dd>
+                      <dt>Run</dt>
+                      <dd>
+                        {selectedReportRun
+                          ? `${runStatusLabel(selectedReportRun.status)} / ${runFileLabel(selectedReportRun)}`
+                          : runsLoading
+                            ? "Loading runs"
+                            : "No reportable run"}
+                      </dd>
                     </div>
                     <div>
-                      <dt>Provider evidence</dt>
-                      <dd>{providerStatus?.snapshot_mode ?? "missing"}</dd>
+                      <dt>Findings</dt>
+                      <dd>
+                        {selectedRunSummary?.finding_count ??
+                          projectSummary?.finding_count ??
+                          0}
+                      </dd>
                     </div>
                     <div>
                       <dt>Activation</dt>
-                      <dd>Placeholder only</dd>
+                      <dd>
+                        {reportActionsEnabled
+                          ? "Ready"
+                          : "Select completed run"}
+                      </dd>
                     </div>
                   </dl>
                 </section>
+
+                <section
+                  className="report-run-panel"
+                  aria-label="Report run selection"
+                >
+                  <label>
+                    <span>Analysis run</span>
+                    <select
+                      aria-label="Report analysis run"
+                      disabled={runsLoading || projectRuns.length === 0}
+                      onChange={(event) => setSelectedRunId(event.target.value)}
+                      value={selectedRunId}
+                    >
+                      {projectRuns.length === 0 ? (
+                        <option value="">No runs available</option>
+                      ) : null}
+                      {projectRuns.map((run) => (
+                        <option key={run.id} value={run.id}>
+                          {`${runStatusLabel(run.status)} - ${runFileLabel(run)} - ${run.id.slice(0, 8)}`}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <div>
+                    <span>Report history</span>
+                    <strong>
+                      {reportsLoading
+                        ? "Loading"
+                        : `${reports.length} artifacts`}
+                    </strong>
+                  </div>
+                  <div>
+                    <span>Latest status</span>
+                    <strong>
+                      {selectedReportRun
+                        ? runStatusLabel(selectedReportRun.status)
+                        : "N.A."}
+                    </strong>
+                  </div>
+                </section>
+
+                {runsError ? (
+                  <p className="dashboard-alert" role="alert">
+                    {runsError}
+                  </p>
+                ) : null}
+                {runDetailError ? (
+                  <p className="dashboard-alert" role="alert">
+                    {runDetailError}
+                  </p>
+                ) : null}
+                {reportsError ? (
+                  <p className="dashboard-alert" role="alert">
+                    {reportsError}
+                  </p>
+                ) : null}
+                {reportActionError ? (
+                  <p className="dashboard-alert" role="alert">
+                    {reportActionError}
+                  </p>
+                ) : null}
+                {reportActionMessage ? (
+                  <p className="dashboard-success" role="status">
+                    {reportActionMessage}
+                  </p>
+                ) : null}
 
                 <section
                   className="report-card-grid"
@@ -3593,11 +3877,19 @@ export function App() {
                         <span className="report-stage-pill">{card.stage}</span>
                         <button
                           className="report-placeholder-button"
-                          disabled
+                          disabled={
+                            !reportActionsEnabled ||
+                            activeReportFormat === card.reportFormat
+                          }
+                          onClick={() => void createReport(card.reportFormat)}
                           type="button"
                         >
                           <Download aria-hidden="true" size={16} />
-                          <span>{card.actionLabel}</span>
+                          <span>
+                            {activeReportFormat === card.reportFormat
+                              ? "Generating"
+                              : card.actionLabel}
+                          </span>
                         </button>
                       </div>
                     </article>
@@ -3617,7 +3909,7 @@ export function App() {
                   </div>
                   <ul
                     className="report-history-list"
-                    aria-label="Prepared report history list"
+                    aria-label="Report history list"
                   >
                     <li className="report-history-row heading">
                       <span>Artifact</span>
@@ -3625,12 +3917,53 @@ export function App() {
                       <span>Status</span>
                       <span>Download</span>
                     </li>
-                    <li className="report-history-row empty">
-                      <span>No generated reports yet</span>
-                      <span>Markdown / HTML / JSON / CSV / ZIP</span>
-                      <span>Waiting for VPW-048ff</span>
-                      <span>VPW-053 disabled</span>
-                    </li>
+                    {reports.length === 0 ? (
+                      <li className="report-history-row empty">
+                        <span>No generated reports yet</span>
+                        <span>Markdown / HTML / JSON / CSV / ZIP</span>
+                        <span>
+                          {reportsLoading ? "Loading" : "Ready for VPW-053"}
+                        </span>
+                        <span>Generate first</span>
+                      </li>
+                    ) : (
+                      reports.map((report) => (
+                        <li className="report-history-row" key={report.id}>
+                          <span>
+                            <strong>{report.filename}</strong>
+                            <small>
+                              {report.sha256.slice(0, 12)} /{" "}
+                              {reportSizeLabel(report.size_bytes)}
+                            </small>
+                          </span>
+                          <span>{reportFormatLabel(report.format)}</span>
+                          <span>{formatDateTime(report.created_at)}</span>
+                          <span className="report-history-actions">
+                            {report.format === "zip" ? (
+                              <button
+                                className="icon-button"
+                                type="button"
+                                aria-label={`Verify ${report.filename}`}
+                                onClick={() =>
+                                  void verifyEvidenceReport(report)
+                                }
+                              >
+                                <ShieldCheck aria-hidden="true" size={16} />
+                              </button>
+                            ) : null}
+                            <button
+                              className="report-download-button"
+                              type="button"
+                              aria-label={`Download ${report.filename}`}
+                              onClick={() => void downloadReport(report)}
+                            >
+                              <Download aria-hidden="true" size={16} />
+                              <span>Download</span>
+                            </button>
+                          </span>
+                        </li>
+                      ))
+                    )}
                   </ul>
                 </section>
               </section>
