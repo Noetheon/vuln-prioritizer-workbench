@@ -36,6 +36,10 @@ def create_run_report(
         report_service = ReportService(session, _template_settings(request))
         if payload.format == "html":
             report = report_service.create_html_report(run=run, project=project)
+        elif payload.format == "json":
+            report = report_service.create_analysis_json_export(run=run, project=project)
+        elif payload.format == "csv":
+            report = report_service.create_findings_csv_export(run=run, project=project)
         else:
             report = report_service.create_markdown_report(run=run, project=project)
     except ReportGenerationError as exc:

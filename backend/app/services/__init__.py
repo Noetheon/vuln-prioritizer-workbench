@@ -13,6 +13,8 @@ from app.services.reports import (
     MarkdownReportPayload,
     ReportGenerationError,
     ReportService,
+    render_analysis_result_json,
+    render_findings_csv,
     render_html_executive_report,
     render_markdown_report,
 )
@@ -30,6 +32,8 @@ __all__ = [
     "build_cvss_only_comparison_payload",
     "build_finding_explanation_payload",
     "build_project_summary_payload",
+    "render_analysis_result_json",
+    "render_findings_csv",
     "render_html_executive_report",
     "render_markdown_report",
 ]

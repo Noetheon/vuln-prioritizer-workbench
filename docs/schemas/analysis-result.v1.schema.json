@@ -1,0 +1,490 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://noetheon.github.io/vuln-prioritizer-workbench/schemas/analysis-result.v1.schema.json",
+  "title": "vuln-prioritizer template analysis result v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "schema_version",
+    "generated_at",
+    "project",
+    "analysis_run",
+    "provider_snapshot",
+    "findings",
+    "explanations"
+  ],
+  "properties": {
+    "schema": {
+      "const": "analysis-result.v1"
+    },
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "generated_at": {
+      "$ref": "#/$defs/dateTime"
+    },
+    "project": {
+      "$ref": "#/$defs/project"
+    },
+    "analysis_run": {
+      "$ref": "#/$defs/analysisRun"
+    },
+    "provider_snapshot": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/providerSnapshot"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/finding"
+      }
+    },
+    "explanations": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object"
+      }
+    }
+  },
+  "$defs": {
+    "uuid": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "nullableUuid": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/uuid"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "dateTime": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "nullableDateTime": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/dateTime"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "nullableString": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "nullableNumber": {
+      "type": [
+        "number",
+        "null"
+      ]
+    },
+    "jsonObject": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "project": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "name",
+        "description",
+        "owner_id",
+        "created_at",
+        "updated_at"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/uuid"
+        },
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "owner_id": {
+          "$ref": "#/$defs/nullableUuid"
+        },
+        "created_at": {
+          "$ref": "#/$defs/nullableDateTime"
+        },
+        "updated_at": {
+          "$ref": "#/$defs/nullableDateTime"
+        }
+      }
+    },
+    "analysisRun": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "project_id",
+        "status",
+        "input_type",
+        "filename",
+        "started_at",
+        "finished_at",
+        "error_message",
+        "errors",
+        "summary"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/uuid"
+        },
+        "project_id": {
+          "$ref": "#/$defs/uuid"
+        },
+        "status": {
+          "type": "string"
+        },
+        "input_type": {
+          "type": "string"
+        },
+        "filename": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "started_at": {
+          "$ref": "#/$defs/nullableDateTime"
+        },
+        "finished_at": {
+          "$ref": "#/$defs/nullableDateTime"
+        },
+        "error_message": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "errors": {
+          "$ref": "#/$defs/jsonObject"
+        },
+        "summary": {
+          "$ref": "#/$defs/jsonObject"
+        }
+      }
+    },
+    "providerSnapshot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "created_at",
+        "content_hash",
+        "nvd_last_sync",
+        "epss_date",
+        "kev_catalog_version",
+        "source_hashes",
+        "source_metadata"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/nullableUuid"
+        },
+        "created_at": {
+          "$ref": "#/$defs/nullableDateTime"
+        },
+        "content_hash": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "nvd_last_sync": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "epss_date": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "kev_catalog_version": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "source_hashes": {
+          "$ref": "#/$defs/jsonObject"
+        },
+        "source_metadata": {
+          "$ref": "#/$defs/jsonObject"
+        }
+      }
+    },
+    "finding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "cve_id",
+        "status",
+        "priority",
+        "priority_raw",
+        "priority_rank",
+        "operational_rank",
+        "dedup_key",
+        "risk_score",
+        "epss",
+        "cvss_base_score",
+        "in_kev",
+        "attack_mapped",
+        "suppressed_by_vex",
+        "under_investigation",
+        "waived",
+        "asset",
+        "component",
+        "vulnerability",
+        "recommendation",
+        "data_quality",
+        "explanation",
+        "evidence",
+        "occurrences",
+        "first_seen_at",
+        "last_seen_at",
+        "created_at",
+        "updated_at"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/nullableUuid"
+        },
+        "cve_id": {
+          "type": "string",
+          "pattern": "^CVE-[0-9]{4}-[0-9]{4,}$"
+        },
+        "status": {
+          "type": "string"
+        },
+        "priority": {
+          "type": "string"
+        },
+        "priority_raw": {
+          "type": "string"
+        },
+        "priority_rank": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "operational_rank": {
+          "type": "integer"
+        },
+        "dedup_key": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "risk_score": {
+          "$ref": "#/$defs/nullableNumber"
+        },
+        "epss": {
+          "$ref": "#/$defs/nullableNumber"
+        },
+        "cvss_base_score": {
+          "$ref": "#/$defs/nullableNumber"
+        },
+        "in_kev": {
+          "type": "boolean"
+        },
+        "attack_mapped": {
+          "type": "boolean"
+        },
+        "suppressed_by_vex": {
+          "type": "boolean"
+        },
+        "under_investigation": {
+          "type": "boolean"
+        },
+        "waived": {
+          "type": "boolean"
+        },
+        "asset": {
+          "$ref": "#/$defs/asset"
+        },
+        "component": {
+          "$ref": "#/$defs/component"
+        },
+        "vulnerability": {
+          "$ref": "#/$defs/jsonObject"
+        },
+        "recommendation": {
+          "$ref": "#/$defs/recommendation"
+        },
+        "data_quality": {
+          "$ref": "#/$defs/dataQuality"
+        },
+        "explanation": {
+          "$ref": "#/$defs/jsonObject"
+        },
+        "evidence": {
+          "$ref": "#/$defs/jsonObject"
+        },
+        "occurrences": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/occurrence"
+          }
+        },
+        "first_seen_at": {
+          "$ref": "#/$defs/nullableDateTime"
+        },
+        "last_seen_at": {
+          "$ref": "#/$defs/nullableDateTime"
+        },
+        "created_at": {
+          "$ref": "#/$defs/nullableDateTime"
+        },
+        "updated_at": {
+          "$ref": "#/$defs/nullableDateTime"
+        }
+      }
+    },
+    "asset": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "label",
+        "asset_key",
+        "owner",
+        "business_service",
+        "environment",
+        "exposure",
+        "criticality"
+      ],
+      "properties": {
+        "label": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "asset_key": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "owner": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "business_service": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "environment": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "exposure": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "criticality": {
+          "$ref": "#/$defs/nullableString"
+        }
+      }
+    },
+    "component": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "label",
+        "purl"
+      ],
+      "properties": {
+        "label": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "purl": {
+          "$ref": "#/$defs/nullableString"
+        }
+      }
+    },
+    "recommendation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "rationale",
+        "recommended_action",
+        "decision_guidance",
+        "decision_statement",
+        "decision_sla",
+        "business_impact"
+      ],
+      "properties": {
+        "rationale": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "recommended_action": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "decision_guidance": {
+          "$ref": "#/$defs/jsonObject"
+        },
+        "decision_statement": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "decision_sla": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "business_impact": {
+          "$ref": "#/$defs/nullableString"
+        }
+      }
+    },
+    "dataQuality": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "confidence",
+        "flags",
+        "raw"
+      ],
+      "properties": {
+        "confidence": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "flags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "raw": {
+          "$ref": "#/$defs/jsonObject"
+        }
+      }
+    },
+    "occurrence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "analysis_run_id",
+        "source",
+        "raw_reference",
+        "evidence"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/uuid"
+        },
+        "analysis_run_id": {
+          "$ref": "#/$defs/uuid"
+        },
+        "source": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "scanner": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "raw_reference": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "fix_version": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "evidence": {
+          "$ref": "#/$defs/jsonObject"
+        }
+      }
+    }
+  }
+}

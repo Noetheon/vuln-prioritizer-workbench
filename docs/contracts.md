@@ -49,6 +49,7 @@ The following outputs are the current documented machine interfaces:
 Published JSON schemas in `docs/schemas/` cover:
 
 - `analysis-report.schema.json`
+- `analysis-result.v1.schema.json`
 - `compare-report.schema.json`
 - `explain-report.schema.json`
 - `doctor-report.schema.json`
@@ -361,6 +362,7 @@ Workbench API changes are additive:
 - `GET /api/v1/projects/{project_id}/summary` returns a dashboard-oriented decision summary with finding counts, priority/status buckets, provider-signal hit counts, latest run status, and latest run summary
 - `GET /api/v1/projects/{project_id}/compare/cvss-only` returns the CVSS-only baseline comparison for stored template findings, using the same methodology payload as the core decision engine
 - `GET /api/v1/providers/status` returns an authenticated template adapter provider-status envelope for the React status card, including `status`, `snapshot`, `sources`, `latest_update_job`, `cache_dir`, `snapshot_dir`, `warnings`, `last_sync`, `last_error`, `cache_age_seconds`, and `snapshot_mode`; the legacy `GET /api/providers/status` route still exists with its current behavior during migration
+- `POST /api/v1/runs/{run_id}/reports` accepts `markdown`, `html`, `json`, and `csv` for completed visible template runs. JSON exports use `analysis-result.v1.json` with `project`, `analysis_run`, `provider_snapshot`, `findings`, and `explanations`. CSV exports use `findings.csv` with stable spreadsheet-safe finding columns.
 - `POST /api/projects/{project_id}/imports` accepts single-upload and additive multi-upload imports for all CLI input formats
 - `GET /api/jobs`, `GET /api/jobs/{id}`, `POST /api/jobs`, and `POST /api/jobs/{id}/retry` expose durable local job state for compatible synchronous operations
 - `DELETE /api/reports/{id}` and `DELETE /api/evidence-bundles/{id}` remove managed artifacts after checksum validation
