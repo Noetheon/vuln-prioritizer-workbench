@@ -37,6 +37,7 @@ import {
   type ProjectDecisionSummaryPublic,
   type ProjectPublic,
   ProjectsService,
+  type ProviderSourceStatusPublic,
   type ProviderStatusPublic,
   ProvidersService,
   RunsService,
@@ -796,6 +797,61 @@ function formatDateTime(value: string) {
   }).format(date)
 }
 
+function providerSourceLabel(source: ProviderSourceStatusPublic) {
+  return source.name.toUpperCase()
+}
+
+function providerSourceState(source: ProviderSourceStatusPublic) {
+  if (source.stale) {
+    return "stale"
+  }
+  return source.available ? "available" : "missing"
+}
+
+function providerSourceDetail(source: ProviderSourceStatusPublic) {
+  if (source.last_error) {
+    return source.last_error
+  }
+  return source.detail ?? "No provider detail recorded."
+}
+
+function providerSnapshotId(providerStatus: ProviderStatusPublic | null) {
+  const metadata = objectRecord(providerStatus?.snapshot.source_metadata)
+  return (
+    stringValue(metadata.snapshot_id) ??
+    providerStatus?.snapshot.id ??
+    "No snapshot ID recorded"
+  )
+}
+
+function providerSelectedSources(providerStatus: ProviderStatusPublic | null) {
+  const selected = providerStatus?.snapshot.selected_sources ?? []
+  return selected.length > 0 ? selected.join(", ") : "No sources selected"
+}
+
+function providerSourceHashes(providerStatus: ProviderStatusPublic | null) {
+  const hashes = providerStatus?.snapshot.source_hashes ?? {}
+  const values = Object.entries(hashes).map(([source, hash]) =>
+    typeof hash === "string" && hash.trim()
+      ? `${source}: ${hash}`
+      : `${source}: N.A.`,
+  )
+  return values.length > 0 ? values.join(" | ") : "No source hashes recorded"
+}
+
+function providerDataQualityNotes(providerStatus: ProviderStatusPublic | null) {
+  const notes = [
+    "Status is based on the latest stored provider snapshot.",
+    "Missing, stale, or failed provider evidence is shown as degraded data quality.",
+  ]
+  if (providerStatus?.snapshot.locked_provider_data) {
+    notes.push(
+      "Locked replay is active; live provider lookups are not used for this snapshot.",
+    )
+  }
+  return notes
+}
+
 export function App() {
   const navigate = useNavigate()
   const location = useLocation()
@@ -814,6 +870,8 @@ export function App() {
   const [status, setStatus] = useState<WorkbenchStatus | null>(null)
   const [providerStatus, setProviderStatus] =
     useState<ProviderStatusPublic | null>(null)
+  const [providerStatusLoading, setProviderStatusLoading] = useState(true)
+  const [providerStatusError, setProviderStatusError] = useState("")
   const [currentUser, setCurrentUser] = useState<UserPublic | null>(null)
   const [statusError, setStatusError] = useState("")
   const [projects, setProjects] = useState<ProjectPublic[]>([])
@@ -907,6 +965,7 @@ export function App() {
     let isMounted = true
 
     async function loadTemplateState() {
+      setProviderStatusLoading(true)
       try {
         const [workbenchStatus, providerStatusResponse, user] =
           await Promise.all([
@@ -919,6 +978,7 @@ export function App() {
           setProviderStatus(providerStatusResponse)
           setCurrentUser(user)
           setStatusError("")
+          setProviderStatusError("")
         }
       } catch (caught) {
         if (caught instanceof ApiError && [401, 403].includes(caught.status)) {
@@ -928,6 +988,13 @@ export function App() {
         }
         if (isMounted) {
           setStatusError("Backend adapter unavailable")
+          setProviderStatusError(
+            apiErrorMessage("Provider status unavailable", caught),
+          )
+        }
+      } finally {
+        if (isMounted) {
+          setProviderStatusLoading(false)
         }
       }
     }
@@ -1292,6 +1359,26 @@ export function App() {
     })
     if (projectPage.data.length === 0) {
       setProjectSummary(null)
+    }
+  }
+
+  async function refreshProviderStatus() {
+    setProviderStatusLoading(true)
+    setProviderStatusError("")
+    try {
+      const statusResponse = await ProvidersService.readProviderStatus()
+      setProviderStatus(statusResponse)
+    } catch (caught) {
+      if (caught instanceof ApiError && [401, 403].includes(caught.status)) {
+        clearAccessToken()
+        await navigate({ to: "/login" })
+        return
+      }
+      setProviderStatusError(
+        apiErrorMessage("Provider status unavailable", caught),
+      )
+    } finally {
+      setProviderStatusLoading(false)
     }
   }
 
@@ -1687,7 +1774,7 @@ export function App() {
 
         <section
           className={
-            currentPath === "/findings"
+            currentPath === "/findings" || currentPath === "/providers"
               ? "content-grid wide-workspace"
               : "content-grid"
           }
@@ -1714,7 +1801,9 @@ export function App() {
                       ? "Refresh finding detail"
                       : currentPath === "/findings"
                         ? "Refresh findings"
-                        : "Refresh queue"
+                        : currentPath === "/providers"
+                          ? "Refresh provider status"
+                          : "Refresh queue"
                 }
                 onClick={() => {
                   if (currentPath === "/projects") {
@@ -1724,6 +1813,8 @@ export function App() {
                     refreshFindingDetail()
                   } else if (currentPath === "/findings") {
                     refreshFindings()
+                  } else if (currentPath === "/providers") {
+                    void refreshProviderStatus()
                   }
                 }}
               >
@@ -3136,6 +3227,256 @@ export function App() {
                   </div>
                 ) : null}
               </section>
+            ) : currentPath === "/providers" ? (
+              <section
+                className="providers-workflow"
+                aria-label="Provider Status page"
+              >
+                {providerStatusError ? (
+                  <p className="dashboard-alert" role="alert">
+                    {providerStatusError}
+                  </p>
+                ) : null}
+                {providerStatusLoading ? (
+                  <p className="dashboard-state" role="status">
+                    Loading provider status
+                  </p>
+                ) : null}
+
+                <section
+                  className="provider-summary-grid"
+                  aria-label="Provider status summary"
+                >
+                  <article className="provider-summary-card">
+                    <span>Status</span>
+                    <strong>{providerStatus?.status ?? "loading"}</strong>
+                    <small>
+                      {providerStatus?.last_error ??
+                        providerStatus?.warnings?.[0] ??
+                        "Latest provider evidence is usable."}
+                    </small>
+                  </article>
+                  <article className="provider-summary-card">
+                    <span>Snapshot mode</span>
+                    <strong>
+                      {providerStatus?.snapshot_mode ?? "missing"}
+                    </strong>
+                    <small>
+                      {providerStatus?.snapshot.locked_provider_data
+                        ? "Locked replay evidence"
+                        : "Stored provider evidence"}
+                    </small>
+                  </article>
+                  <article className="provider-summary-card">
+                    <span>Last sync</span>
+                    <strong>{providerStatus?.last_sync ?? "N.A."}</strong>
+                    <small>
+                      Cache age{" "}
+                      {formatCacheAge(providerStatus?.cache_age_seconds)}
+                    </small>
+                  </article>
+                  <article className="provider-summary-card">
+                    <span>Snapshot ID</span>
+                    <strong>{providerSnapshotId(providerStatus)}</strong>
+                    <small>
+                      {providerStatus?.snapshot.content_hash ??
+                        "No content hash recorded"}
+                    </small>
+                  </article>
+                </section>
+
+                <section
+                  className="provider-card-grid"
+                  aria-label="Provider cards"
+                >
+                  {(providerStatus?.sources ?? fallbackProviderSources).map(
+                    (source) => (
+                      <article
+                        aria-label={`${providerSourceLabel(source)} provider card`}
+                        className={`provider-card ${providerSourceState(source)}`}
+                        key={source.name}
+                        title={providerSourceDetail(source)}
+                      >
+                        <div className="provider-card-header">
+                          <div>
+                            <span>Provider</span>
+                            <h3>{providerSourceLabel(source)}</h3>
+                          </div>
+                          <span
+                            className={`source-pill ${providerSourceState(source)}`}
+                          >
+                            {providerSourceState(source)}
+                          </span>
+                        </div>
+                        <dl className="provider-card-facts">
+                          <div>
+                            <dt>Selected</dt>
+                            <dd>{source.selected ? "Yes" : "No"}</dd>
+                          </div>
+                          <div>
+                            <dt>Value</dt>
+                            <dd>{source.value ?? "N.A."}</dd>
+                          </div>
+                          <div>
+                            <dt>Last sync</dt>
+                            <dd>{source.last_sync ?? "N.A."}</dd>
+                          </div>
+                          <div>
+                            <dt>Cache age</dt>
+                            <dd>{formatCacheAge(source.cache_age_seconds)}</dd>
+                          </div>
+                        </dl>
+                        <p>{providerSourceDetail(source)}</p>
+                      </article>
+                    ),
+                  )}
+                </section>
+
+                <section
+                  className="provider-snapshot-panel"
+                  aria-label="Provider snapshot evidence"
+                >
+                  <div className="detail-section-heading">
+                    <h3>Provider Snapshot</h3>
+                    <span>{providerStatus?.snapshot.mode ?? "missing"}</span>
+                  </div>
+                  <dl className="project-meta">
+                    <div>
+                      <dt>Snapshot ID</dt>
+                      <dd>{providerSnapshotId(providerStatus)}</dd>
+                    </div>
+                    <div>
+                      <dt>Content hash</dt>
+                      <dd>
+                        {providerStatus?.snapshot.content_hash ??
+                          "No content hash recorded"}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>Generated</dt>
+                      <dd>
+                        {providerStatus?.snapshot.generated_at ??
+                          providerStatus?.snapshot.created_at ??
+                          "N.A."}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>Requested CVEs</dt>
+                      <dd>{providerStatus?.snapshot.requested_cves ?? 0}</dd>
+                    </div>
+                    <div>
+                      <dt>Selected sources</dt>
+                      <dd>{providerSelectedSources(providerStatus)}</dd>
+                    </div>
+                    <div>
+                      <dt>Source path</dt>
+                      <dd>{providerStatus?.snapshot.source_path ?? "N.A."}</dd>
+                    </div>
+                    <div>
+                      <dt>Cache dir</dt>
+                      <dd>{providerStatus?.cache_dir ?? "N.A."}</dd>
+                    </div>
+                    <div>
+                      <dt>Snapshot dir</dt>
+                      <dd>{providerStatus?.snapshot_dir ?? "N.A."}</dd>
+                    </div>
+                    <div>
+                      <dt>Source hashes</dt>
+                      <dd>{providerSourceHashes(providerStatus)}</dd>
+                    </div>
+                  </dl>
+                </section>
+
+                <section
+                  className="provider-quality-panel"
+                  aria-label="Provider data quality"
+                >
+                  <div className="detail-section-heading">
+                    <h3>Data Quality</h3>
+                    <span>Provider freshness and degraded evidence</span>
+                  </div>
+                  <ul className="data-quality-list">
+                    {providerDataQualityNotes(providerStatus).map((note) => (
+                      <li key={note}>
+                        <strong>Provider evidence</strong>
+                        <span>Data quality note</span>
+                        <p>{note}</p>
+                      </li>
+                    ))}
+                    {(providerStatus?.warnings ?? []).map((warning) => (
+                      <li key={warning}>
+                        <strong>Warning</strong>
+                        <span>Degraded evidence</span>
+                        <p>{warning}</p>
+                      </li>
+                    ))}
+                    {providerStatus?.last_error ? (
+                      <li>
+                        <strong>Last Error</strong>
+                        <span>Provider update failure</span>
+                        <p>{providerStatus.last_error}</p>
+                      </li>
+                    ) : null}
+                  </ul>
+                </section>
+
+                <section
+                  className="provider-snapshot-panel"
+                  aria-label="Latest provider update job"
+                >
+                  <div className="detail-section-heading">
+                    <h3>Latest Update Job</h3>
+                    <span>
+                      {providerStatus?.latest_update_job?.status ?? "none"}
+                    </span>
+                  </div>
+                  {providerStatus?.latest_update_job ? (
+                    <dl className="project-meta">
+                      <div>
+                        <dt>Job ID</dt>
+                        <dd>{providerStatus.latest_update_job.id}</dd>
+                      </div>
+                      <div>
+                        <dt>Status</dt>
+                        <dd>{providerStatus.latest_update_job.status}</dd>
+                      </div>
+                      <div>
+                        <dt>Requested sources</dt>
+                        <dd>
+                          {providerStatus.latest_update_job.requested_sources?.join(
+                            ", ",
+                          ) ?? "N.A."}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>Started</dt>
+                        <dd>
+                          {providerStatus.latest_update_job.started_at ??
+                            "N.A."}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>Finished</dt>
+                        <dd>
+                          {providerStatus.latest_update_job.finished_at ??
+                            "N.A."}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>Error</dt>
+                        <dd>
+                          {providerStatus.latest_update_job.error_message ??
+                            "None"}
+                        </dd>
+                      </div>
+                    </dl>
+                  ) : (
+                    <p className="detail-empty">
+                      No provider update job has been recorded.
+                    </p>
+                  )}
+                </section>
+              </section>
             ) : (
               <div className="dashboard-panel-body">
                 {dashboardError ? (
@@ -3323,7 +3664,7 @@ export function App() {
   )
 }
 
-const fallbackProviderSources = [
+const fallbackProviderSources: ProviderSourceStatusPublic[] = [
   { name: "nvd", available: false, value: null },
   { name: "epss", available: false, value: null },
   { name: "kev", available: false, value: null },
