@@ -271,6 +271,52 @@ def test_generic_occurrence_csv_preserves_component_target_and_asset_context(
     assert any("unknown asset environment" in warning for warning in parsed.warnings)
 
 
+def test_generic_occurrence_csv_sniffs_semicolon_dialect_and_warns_unknowns(
+    tmp_path: Path,
+) -> None:
+    loader_module = _load_loader_module()
+    input_file = tmp_path / "generic.csv"
+    input_file.write_text(
+        "\n".join(
+            [
+                "# comment before header",
+                "cve_id;asset_ref;component_name;component_version;scanner;ticket_url",
+                "CVE-2024-3094;build-host-1;xz;5.6.0;trivy;SEC-1001",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    parsed = loader_module.InputLoader().load(
+        input_file,
+        input_format="generic-occurrence-csv",
+    )
+
+    assert parsed.unique_cves == ["CVE-2024-3094"]
+    assert parsed.occurrences[0].target_ref == "build-host-1"
+    assert any("ticket_url" in warning for warning in parsed.warnings)
+
+
+def test_generic_occurrence_csv_accepts_quoted_multiline_values(tmp_path: Path) -> None:
+    loader_module = _load_loader_module()
+    input_file = tmp_path / "generic.csv"
+    input_file.write_text(
+        "cve_id,asset_ref,component_name,notes\n"
+        'CVE-2024-3094,build-host-1,xz,"line one\nline two"\n',
+        encoding="utf-8",
+    )
+
+    parsed = loader_module.InputLoader().load(
+        input_file,
+        input_format="generic-occurrence-csv",
+    )
+
+    assert parsed.unique_cves == ["CVE-2024-3094"]
+    assert parsed.occurrences[0].target_ref == "build-host-1"
+    assert parsed.occurrences[0].source_record_id == "row:2"
+    assert any("notes" in warning for warning in parsed.warnings)
+
+
 def test_plain_cve_csv_auto_detects_as_cve_list(tmp_path: Path) -> None:
     loader_module = _load_loader_module()
     input_file = tmp_path / "cves.csv"

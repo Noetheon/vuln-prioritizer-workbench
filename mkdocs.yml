@@ -43,6 +43,7 @@ nav:
       - Historical Engineering Roadmap V3: workbench-engineering-roadmap-attack-ttp-v3.md
   - Examples:
       - CVE List Import: cve-list-import.md
+      - Generic Occurrence CSV Import: generic-occurrence-csv-import.md
       - Base Report: example_report.md
       - Base Compare: example_compare.md
       - ATT&CK Report: example_attack_report.md
