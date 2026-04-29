@@ -403,6 +403,11 @@ def _is_internet_facing(finding: PrioritizedFinding) -> bool:
 
 
 def _is_production(finding: PrioritizedFinding) -> bool:
+    if any(
+        environment.lower() in {"prod", "production"}
+        for environment in finding.provenance.asset_environments
+    ):
+        return True
     return any(
         occurrence.asset_environment
         and occurrence.asset_environment.lower() in {"prod", "production"}
@@ -440,8 +445,63 @@ def _context_rank_reasons(finding: PrioritizedFinding) -> list[str]:
         reasons.append("production environment")
     if finding.highest_asset_criticality:
         reasons.append(f"{finding.highest_asset_criticality} asset criticality")
+    for service in _asset_business_services(finding)[:3]:
+        reasons.append(f"business service {service}")
+    for owner in _asset_owners(finding)[:3]:
+        reasons.append(f"owner {owner}")
+    if _asset_context_unknown(finding):
+        reasons.append("asset context unknown; validate before scheduling")
     if finding.provenance.active_occurrence_count > 1:
         reasons.append(f"{finding.provenance.active_occurrence_count} active occurrences")
     if finding.attack_relevance in {"High", "Medium"}:
         reasons.append(f"ATT&CK {finding.attack_relevance}")
     return reasons
+
+
+def _asset_business_services(finding: PrioritizedFinding) -> list[str]:
+    if finding.provenance.asset_business_services:
+        return finding.provenance.asset_business_services
+    return sorted(
+        {
+            occurrence.asset_business_service
+            for occurrence in finding.provenance.occurrences
+            if occurrence.asset_business_service
+        }
+    )
+
+
+def _asset_owners(finding: PrioritizedFinding) -> list[str]:
+    if finding.provenance.asset_owners:
+        return finding.provenance.asset_owners
+    return sorted(
+        {
+            occurrence.asset_owner
+            for occurrence in finding.provenance.occurrences
+            if occurrence.asset_owner
+        }
+    )
+
+
+def _asset_context_unknown(finding: PrioritizedFinding) -> bool:
+    provenance = finding.provenance
+    if provenance.occurrence_count == 0 and not provenance.occurrences:
+        return False
+    if (
+        provenance.asset_ids
+        or provenance.highest_asset_criticality
+        or provenance.highest_asset_exposure
+        or provenance.asset_environments
+        or provenance.asset_owners
+        or provenance.asset_business_services
+        or finding.highest_asset_criticality
+    ):
+        return False
+    return not any(
+        occurrence.asset_id
+        or occurrence.asset_criticality
+        or occurrence.asset_exposure
+        or occurrence.asset_environment
+        or occurrence.asset_owner
+        or occurrence.asset_business_service
+        for occurrence in provenance.occurrences
+    )

@@ -140,6 +140,10 @@ def _priority_reasons(
             )
         )
 
+    asset_reason = _asset_context_reason(finding)
+    if asset_reason is not None:
+        reasons.append(asset_reason)
+
     if finding.operational_score_reasons:
         reasons.append(
             ExplanationReason(
@@ -201,6 +205,18 @@ def _explanation_notes(finding: PrioritizedFinding) -> list[ExplanationNote]:
                 message="An active or review-due waiver records accepted risk for this finding.",
             )
         )
+    if _asset_context_unknown(finding):
+        notes.append(
+            ExplanationNote(
+                code="asset.context_unknown",
+                source="Asset Context",
+                severity="warning",
+                message=(
+                    "Asset context is unknown and must be validated; unknown context is not "
+                    "treated as safe."
+                ),
+            )
+        )
     return notes
 
 
@@ -217,10 +233,128 @@ def _human_readable(
     summary: str,
     notes: list[ExplanationNote],
 ) -> str:
+    asset_text = _asset_context_sentence(finding)
     note_text = ""
     if notes:
         note_text = " Notes: " + " ".join(note.message for note in notes[:4])
-    return f"{summary} Recommended action: {finding.recommended_action}{note_text}"
+    return f"{summary} Recommended action: {finding.recommended_action}{asset_text}{note_text}"
+
+
+def _asset_context_reason(finding: PrioritizedFinding) -> ExplanationReason | None:
+    summary = _asset_context_summary(finding)
+    if summary is None:
+        return None
+    return ExplanationReason(
+        code="asset.context",
+        source="Asset Context",
+        signal="asset_context",
+        value=summary,
+        threshold="explicit asset context; unknown context is not treated as safe",
+        message=(
+            "Asset context contributes to the operational score and work-queue rank when "
+            "exposure, environment, criticality, service, or owner data is supplied."
+        ),
+    )
+
+
+def _asset_context_sentence(finding: PrioritizedFinding) -> str:
+    summary = _asset_context_summary(finding)
+    if summary:
+        return f" Asset context: {summary}."
+    if _asset_context_unknown(finding):
+        return " Asset context: unknown, not treated as safe."
+    return ""
+
+
+def _asset_context_summary(finding: PrioritizedFinding) -> str | None:
+    parts: list[str] = []
+    if finding.provenance.highest_asset_exposure:
+        parts.append(f"exposure={finding.provenance.highest_asset_exposure}")
+    environments = _asset_environments(finding)
+    if environments:
+        parts.append("environment=" + _summarize_values(environments))
+    criticality = finding.highest_asset_criticality or finding.provenance.highest_asset_criticality
+    if criticality:
+        parts.append(f"criticality={criticality}")
+    services = _asset_business_services(finding)
+    if services:
+        parts.append("business_service=" + _summarize_values(services))
+    owners = _asset_owners(finding)
+    if owners:
+        parts.append("owner=" + _summarize_values(owners))
+    if finding.provenance.asset_count:
+        parts.append(f"mapped_assets={finding.provenance.asset_count}")
+    if not parts:
+        return None
+    return "; ".join(parts)
+
+
+def _summarize_values(values: list[str], *, limit: int = 3) -> str:
+    if len(values) <= limit:
+        return ", ".join(values)
+    shown = ", ".join(values[:limit])
+    return f"{shown}, +{len(values) - limit} more"
+
+
+def _asset_environments(finding: PrioritizedFinding) -> list[str]:
+    if finding.provenance.asset_environments:
+        return finding.provenance.asset_environments
+    return sorted(
+        {
+            occurrence.asset_environment
+            for occurrence in finding.provenance.occurrences
+            if occurrence.asset_environment
+        }
+    )
+
+
+def _asset_business_services(finding: PrioritizedFinding) -> list[str]:
+    if finding.provenance.asset_business_services:
+        return finding.provenance.asset_business_services
+    return sorted(
+        {
+            occurrence.asset_business_service
+            for occurrence in finding.provenance.occurrences
+            if occurrence.asset_business_service
+        }
+    )
+
+
+def _asset_owners(finding: PrioritizedFinding) -> list[str]:
+    if finding.provenance.asset_owners:
+        return finding.provenance.asset_owners
+    return sorted(
+        {
+            occurrence.asset_owner
+            for occurrence in finding.provenance.occurrences
+            if occurrence.asset_owner
+        }
+    )
+
+
+def _asset_context_unknown(finding: PrioritizedFinding) -> bool:
+    provenance = finding.provenance
+    if provenance.occurrence_count == 0 and not provenance.occurrences:
+        return False
+    if (
+        provenance.asset_ids
+        or provenance.highest_asset_criticality
+        or provenance.highest_asset_exposure
+        or provenance.asset_environments
+        or provenance.asset_owners
+        or provenance.asset_business_services
+        or finding.highest_asset_criticality
+    ):
+        return False
+    return not any(
+        occurrence.asset_id
+        or occurrence.asset_criticality
+        or occurrence.asset_exposure
+        or occurrence.asset_environment
+        or occurrence.asset_owner
+        or occurrence.asset_business_service
+        for occurrence in provenance.occurrences
+    )
 
 
 def _epss_cvss_value(finding: PrioritizedFinding) -> str:

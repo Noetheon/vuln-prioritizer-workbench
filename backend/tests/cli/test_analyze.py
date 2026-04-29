@@ -1238,7 +1238,23 @@ def test_cli_analyze_supports_trivy_vex_asset_context_and_custom_policy(
     )
     assert context_finding["highest_asset_criticality"] == "critical"
     assert context_finding["asset_count"] == 1
+    assert context_finding["provenance"]["highest_asset_exposure"] == "internet-facing"
+    assert context_finding["provenance"]["asset_environments"] == ["prod"]
+    assert context_finding["provenance"]["asset_owners"] == ["platform-team"]
+    assert context_finding["provenance"]["asset_business_services"] == ["customer-login"]
     assert context_finding["remediation"]["strategy"] == "upgrade"
+    assert (
+        "business service customer-login routing context: +0"
+        in (context_finding["operational_score_reasons"])
+    )
+    assert (
+        "owner platform-team routing context: +0" in (context_finding["operational_score_reasons"])
+    )
+    assert "asset.context" in context_finding["explanation"]["reason_codes"]
+    assert (
+        "Asset context: exposure=internet-facing"
+        in (context_finding["explanation"]["human_readable"])
+    )
     occurrence = context_finding["provenance"]["occurrences"][0]
     assert occurrence["asset_match_mode"] == "exact"
     assert occurrence["asset_match_candidate_count"] == 1

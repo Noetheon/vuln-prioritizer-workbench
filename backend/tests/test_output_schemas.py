@@ -144,6 +144,13 @@ def test_example_score_json_documents_vpw_030_operational_score() -> None:
     assert payload["priority_state"] == "Critical"
     assert payload["operational_score"] == 100
     assert "clamped to 100" in payload["operational_score_reasons"]
+    assert payload["signals"]["asset_owner"] == "platform-team"
+    assert payload["signals"]["asset_business_service"] == "customer-login"
+    assert (
+        "business service customer-login routing context: +0"
+        in (payload["operational_score_reasons"])
+    )
+    assert "owner platform-team routing context: +0" in payload["operational_score_reasons"]
 
 
 def test_example_explanation_json_documents_vpw_031_reason_codes() -> None:
@@ -235,6 +242,22 @@ def test_example_explanation_json_documents_vpw_031_reason_codes() -> None:
     }
 
 
+def test_vpw_033_asset_context_explanation_example_documents_modifiers() -> None:
+    payload = json.loads(
+        (DOCS_ROOT / "examples" / "example_asset_context_explanation.json").read_text(
+            encoding="utf-8"
+        )
+    )
+
+    PriorityExplanation.model_validate(payload)
+    assert payload["operational_score"] == 72
+    assert "asset.context" in payload["reason_codes"]
+    assert payload["reasons"][1]["source"] == "Asset Context"
+    assert "internet-facing" in payload["reasons"][1]["value"]
+    assert "customer-login" in payload["human_readable"]
+    assert "owner platform-team routing context: +0" in payload["reasons"][2]["message"]
+
+
 def test_vpw_030_score_fields_remain_schema_optional() -> None:
     new_fields = {
         "priority_state",
@@ -280,6 +303,26 @@ def test_vpw_032_baseline_comparison_schema_and_example() -> None:
     assert payload["top_changes"][0]["old_rank"] == 3
     assert payload["top_changes"][0]["new_rank"] == 1
     assert "not an absolute truth" in payload["methodology"]["limitations"]
+
+
+def test_vpw_033_asset_context_provenance_fields_remain_schema_optional() -> None:
+    new_fields = {
+        "asset_environments",
+        "asset_owners",
+        "asset_business_services",
+    }
+    schema_targets = [
+        "analysis-report.schema.json",
+        "compare-report.schema.json",
+        "explain-report.schema.json",
+        "snapshot-report.schema.json",
+    ]
+
+    for schema_name in schema_targets:
+        definition = _load_schema(schema_name)["$defs"]["findingProvenance"]
+
+        assert new_fields <= set(definition["properties"])
+        assert not (new_fields & set(definition.get("required", [])))
 
 
 def _install_fake_data_update_providers(monkeypatch: Any) -> None:

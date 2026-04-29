@@ -76,6 +76,13 @@ def aggregate_provenance(
             {f"{item.target_kind}:{item.target_ref}" for item in items if item.target_ref}
         )
         asset_ids = sorted({item.asset_id for item in items if item.asset_id})
+        asset_environments = sorted(
+            {item.asset_environment for item in items if item.asset_environment}
+        )
+        asset_owners = sorted({item.asset_owner for item in items if item.asset_owner})
+        asset_business_services = sorted(
+            {item.asset_business_service for item in items if item.asset_business_service}
+        )
         vex_statuses = dict(Counter(item.vex_status for item in items if item.vex_status))
         active_items = [
             item for item in items if (item.vex_status or "").lower() not in SUPPRESSED_VEX_STATUSES
@@ -94,6 +101,9 @@ def aggregate_provenance(
             asset_ids=asset_ids,
             highest_asset_criticality=_highest_criticality(items),
             highest_asset_exposure=_highest_exposure(items),
+            asset_environments=asset_environments,
+            asset_owners=asset_owners,
+            asset_business_services=asset_business_services,
             asset_count=len(asset_ids),
             vex_statuses=vex_statuses,
             occurrences=items,

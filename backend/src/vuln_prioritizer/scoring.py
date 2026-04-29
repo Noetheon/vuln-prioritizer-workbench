@@ -189,6 +189,13 @@ def build_operational_score(
             f"{finding.highest_asset_criticality} asset criticality: +{criticality_points}"
         )
 
+    for service in _asset_business_services(finding)[:3]:
+        reasons.append(f"business service {service} routing context: +0")
+    for owner in _asset_owners(finding)[:3]:
+        reasons.append(f"owner {owner} routing context: +0")
+    if _asset_context_unknown(finding):
+        reasons.append("asset context unknown: +0, not treated as safe")
+
     extra_occurrences = max(finding.provenance.active_occurrence_count - 1, 0)
     if extra_occurrences:
         occurrence_points = min(extra_occurrences, 5)
@@ -226,9 +233,63 @@ def _is_internet_facing(provenance: FindingProvenance) -> bool:
 
 
 def _is_production(provenance: FindingProvenance) -> bool:
+    if any(
+        environment.lower() in {"prod", "production"}
+        for environment in provenance.asset_environments
+    ):
+        return True
     return any(
         occurrence.asset_environment
         and occurrence.asset_environment.lower() in {"prod", "production"}
+        for occurrence in provenance.occurrences
+    )
+
+
+def _asset_business_services(finding: PrioritizedFinding) -> list[str]:
+    if finding.provenance.asset_business_services:
+        return finding.provenance.asset_business_services
+    return sorted(
+        {
+            occurrence.asset_business_service
+            for occurrence in finding.provenance.occurrences
+            if occurrence.asset_business_service
+        }
+    )
+
+
+def _asset_owners(finding: PrioritizedFinding) -> list[str]:
+    if finding.provenance.asset_owners:
+        return finding.provenance.asset_owners
+    return sorted(
+        {
+            occurrence.asset_owner
+            for occurrence in finding.provenance.occurrences
+            if occurrence.asset_owner
+        }
+    )
+
+
+def _asset_context_unknown(finding: PrioritizedFinding) -> bool:
+    provenance = finding.provenance
+    if provenance.occurrence_count == 0 and not provenance.occurrences:
+        return False
+    if (
+        provenance.asset_ids
+        or provenance.highest_asset_criticality
+        or provenance.highest_asset_exposure
+        or provenance.asset_environments
+        or provenance.asset_owners
+        or provenance.asset_business_services
+        or finding.highest_asset_criticality
+    ):
+        return False
+    return not any(
+        occurrence.asset_id
+        or occurrence.asset_criticality
+        or occurrence.asset_exposure
+        or occurrence.asset_environment
+        or occurrence.asset_owner
+        or occurrence.asset_business_service
         for occurrence in provenance.occurrences
     )
 

@@ -50,6 +50,12 @@
                 "message": "Provider snapshot replay is locked; live provider lookups are disabled.",
                 "severity": "info",
                 "source": "provider_snapshot"
+              },
+              {
+                "code": "asset.context_unknown",
+                "message": "Asset context is unknown and must be validated; unknown context is not treated as safe.",
+                "severity": "warning",
+                "source": "Asset Context"
               }
             ],
             "explanation_reason_codes": [
@@ -67,7 +73,8 @@
               "base Critical priority: +70",
               "CISA KEV-listed: +15",
               "critical EPSS/CVSS threshold: +8",
-              "high CVSS threshold: +5"
+              "high CVSS threshold: +5",
+              "asset context unknown: +0, not treated as safe"
             ],
             "priority": "Critical",
             "priority_state": "Critical",
@@ -136,6 +143,7 @@
               "priority.high.cvss",
               "priority.medium.cvss",
               "priority.medium.epss",
+              "asset.context",
               "operational.score"
             ],
             "in_kev": false,
@@ -147,6 +155,8 @@
               "internet-facing asset context: +8",
               "production asset context: +5",
               "critical asset criticality: +7",
+              "business service customer-login routing context: +0",
+              "owner platform-team routing context: +0",
               "clamped to 100"
             ],
             "priority": "Critical",

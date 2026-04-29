@@ -16,6 +16,8 @@
     "asset_exposure": "internet-facing",
     "asset_environment": "prod",
     "asset_criticality": "critical",
+    "asset_owner": "platform-team",
+    "asset_business_service": "customer-login",
     "active_occurrences": 1
   },
   "operational_score": 100,
@@ -27,6 +29,8 @@
     "internet-facing asset context: +8",
     "production asset context: +5",
     "critical asset criticality: +7",
+    "business service customer-login routing context: +0",
+    "owner platform-team routing context: +0",
     "clamped to 100"
   ]
 }

@@ -183,15 +183,20 @@ visible.
 
 `operational_score` is an additive integer from 0 to 100. It is computed from
 explicit contributions for base priority, KEV, EPSS/CVSS thresholds, asset
-exposure, production context, criticality, and active occurrence count, then
-clamped to the 0-100 range. `operational_score_reasons` lists the matched rules
-and clamp result.
+exposure, production context, criticality, and active occurrence count, plus
+explicit zero-point routing context for owner and business service, then clamped
+to the 0-100 range. `operational_score_reasons` lists the matched rules and
+clamp result. Unknown asset context is emitted as an explicit neutral reason and
+must not be interpreted as safe or lower-risk.
 
 `explanation` is the structured "why this priority?" object on generated
 findings. It includes stable `reason_codes`, detailed `reasons[]` entries with
 source, signal, value and threshold, human-readable text, data-quality notes, and
 the recommended action. Missing CVSS or EPSS data is represented as a note rather
-than hidden inside the narrative. The Workbench `/api/findings/{id}/explain`
+than hidden inside the narrative. Asset context appears as an explicit
+`asset.context` reason when exposure, environment, criticality, service, or owner
+data is present; unknown occurrence context appears as an `asset.context_unknown`
+warning note. The Workbench `/api/findings/{id}/explain`
 endpoint also exposes this object as `decision_explanation` while retaining the
 legacy raw finding payload under `explanation`.
 

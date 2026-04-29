@@ -694,6 +694,15 @@
         "highest_asset_exposure": {
           "$ref": "#/$defs/nullableString"
         },
+        "asset_environments": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "asset_owners": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "asset_business_services": {
+          "$ref": "#/$defs/stringArray"
+        },
         "asset_count": {
           "type": "integer"
         },
