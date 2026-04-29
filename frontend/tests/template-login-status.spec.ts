@@ -16,4 +16,13 @@ test("template login reaches authenticated Workbench status shell", async ({
   await expect(page.getByText("admin@example.com")).toBeVisible()
   await expect(page.getByText("template-backend-adapter")).toBeVisible()
   await expect(page.getByText("disabled")).toBeVisible()
+  await expect(
+    page.getByRole("heading", { name: "Provider Status" }),
+  ).toBeVisible()
+  await expect(page.getByText("Snapshot mode")).toBeVisible()
+  await expect(page.getByText("No snapshot recorded")).toBeVisible()
+  const providerSources = page.getByLabel("Provider sources")
+  await expect(providerSources.getByText("NVD", { exact: true })).toBeVisible()
+  await expect(providerSources.getByText("EPSS", { exact: true })).toBeVisible()
+  await expect(providerSources.getByText("KEV", { exact: true })).toBeVisible()
 })

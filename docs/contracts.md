@@ -315,6 +315,7 @@ Workbench API changes are additive:
 - `GET /api/v1/projects/{project_id}/runs` and `GET /api/v1/projects/{project_id}/runs/` list visible template Workbench runs
 - `GET /api/v1/runs/{run_id}` returns the raw persisted template Workbench run for a visible project
 - `GET /api/v1/runs/{run_id}/summary` returns a UI-oriented summary with stable `created_findings`, `updated_findings`, `ignored_lines`, `occurrence_count`, `finding_count`, `parse_errors`, `import_job`, `input_upload`, and `dedup_summary` fields
+- `GET /api/v1/providers/status` returns an authenticated template adapter provider-status envelope for the React status card, including `status`, `snapshot`, `sources`, `latest_update_job`, `cache_dir`, `snapshot_dir`, `warnings`, `last_sync`, `last_error`, `cache_age_seconds`, and `snapshot_mode`; the legacy `GET /api/providers/status` route still exists with its current behavior during migration
 - `POST /api/projects/{project_id}/imports` accepts single-upload and additive multi-upload imports for all CLI input formats
 - `GET /api/jobs`, `GET /api/jobs/{id}`, `POST /api/jobs`, and `POST /api/jobs/{id}/retry` expose durable local job state for compatible synchronous operations
 - `DELETE /api/reports/{id}` and `DELETE /api/evidence-bundles/{id}` remove managed artifacts after checksum validation

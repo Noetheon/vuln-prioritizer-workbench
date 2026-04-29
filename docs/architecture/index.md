@@ -201,6 +201,9 @@ evidence-bundle inclusion behavior is documented in
 The finding-scoped provider data-quality flags and confidence behavior are
 documented in
 [VPW-027 Provider Data Quality Flags](vpw-027-provider-data-quality-flags.md).
+The template-stack authenticated provider status API and React status-card
+evidence expectations are documented in
+[VPW-028 Provider Status API Card](vpw-028-provider-status-api-card.md).
 
 The current `data` command tree is intentionally small:
 

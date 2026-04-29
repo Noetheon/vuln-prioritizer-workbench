@@ -3,6 +3,7 @@ import {
   Activity,
   AlertTriangle,
   BarChart3,
+  Database,
   FileArchive,
   FileInput,
   Gauge,
@@ -18,6 +19,8 @@ import { useEffect, useState } from "react"
 import { clearAccessToken } from "./auth"
 import {
   ApiError,
+  type ProviderStatusPublic,
+  ProvidersService,
   type UserPublic,
   UsersService,
   WorkbenchService,
@@ -87,6 +90,8 @@ const timeline = [
 export function App() {
   const navigate = useNavigate()
   const [status, setStatus] = useState<WorkbenchStatus | null>(null)
+  const [providerStatus, setProviderStatus] =
+    useState<ProviderStatusPublic | null>(null)
   const [currentUser, setCurrentUser] = useState<UserPublic | null>(null)
   const [statusError, setStatusError] = useState("")
 
@@ -95,12 +100,15 @@ export function App() {
 
     async function loadTemplateState() {
       try {
-        const [workbenchStatus, user] = await Promise.all([
-          WorkbenchService.templateWorkbenchStatus(),
-          UsersService.readUserMe(),
-        ])
+        const [workbenchStatus, providerStatusResponse, user] =
+          await Promise.all([
+            WorkbenchService.templateWorkbenchStatus(),
+            ProvidersService.readProviderStatus(),
+            UsersService.readUserMe(),
+          ])
         if (isMounted) {
           setStatus(workbenchStatus)
+          setProviderStatus(providerStatusResponse)
           setCurrentUser(user)
           setStatusError("")
         }
@@ -274,6 +282,80 @@ export function App() {
           </div>
 
           <div className="side-panel">
+            <section
+              className="provider-status-section"
+              aria-label="Provider Status"
+            >
+              <div className="panel-header compact inline-header">
+                <div>
+                  <h2>Provider Status</h2>
+                  <span>
+                    {providerStatus?.snapshot.content_hash ??
+                      "No snapshot recorded"}
+                  </span>
+                </div>
+                <Database aria-hidden="true" size={18} />
+              </div>
+
+              <div
+                className={`provider-state ${
+                  providerStatus?.status === "ok" ? "ok" : "degraded"
+                }`}
+              >
+                <span>{providerStatus?.status ?? "loading"}</span>
+                <strong>{providerStatus?.snapshot_mode ?? "missing"}</strong>
+              </div>
+
+              <dl className="provider-facts">
+                <div>
+                  <dt>Snapshot mode</dt>
+                  <dd>{providerStatus?.snapshot_mode ?? "missing"}</dd>
+                </div>
+                <div>
+                  <dt>Last sync</dt>
+                  <dd>{providerStatus?.last_sync ?? "N.A."}</dd>
+                </div>
+                <div>
+                  <dt>Cache age</dt>
+                  <dd>{formatCacheAge(providerStatus?.cache_age_seconds)}</dd>
+                </div>
+                <div>
+                  <dt>Last error</dt>
+                  <dd>
+                    {providerStatus?.last_error ?? (statusError || "None")}
+                  </dd>
+                </div>
+              </dl>
+
+              <ul className="provider-sources" aria-label="Provider sources">
+                {(providerStatus?.sources ?? fallbackProviderSources).map(
+                  (source) => (
+                    <li className="provider-source" key={source.name}>
+                      <div>
+                        <strong>{source.name.toUpperCase()}</strong>
+                        <span>{source.value ?? "N.A."}</span>
+                      </div>
+                      <span
+                        className={
+                          source.available
+                            ? "source-pill available"
+                            : "source-pill"
+                        }
+                      >
+                        {source.available ? "available" : "missing"}
+                      </span>
+                    </li>
+                  ),
+                )}
+              </ul>
+
+              {(providerStatus?.warnings ?? []).map((warning) => (
+                <p className="provider-warning" key={warning}>
+                  {warning}
+                </p>
+              ))}
+            </section>
+
             <div className="panel-header compact">
               <div>
                 <h2>Evidence Flow</h2>
@@ -300,4 +382,26 @@ export function App() {
       </main>
     </div>
   )
+}
+
+const fallbackProviderSources = [
+  { name: "nvd", available: false, value: null },
+  { name: "epss", available: false, value: null },
+  { name: "kev", available: false, value: null },
+]
+
+function formatCacheAge(seconds: number | null | undefined): string {
+  if (seconds === null || seconds === undefined) {
+    return "N.A."
+  }
+  if (seconds < 60) {
+    return `${seconds}s`
+  }
+  if (seconds < 3600) {
+    return `${Math.floor(seconds / 60)}m`
+  }
+  if (seconds < 86400) {
+    return `${Math.floor(seconds / 3600)}h`
+  }
+  return `${Math.floor(seconds / 86400)}d`
 }

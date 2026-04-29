@@ -271,6 +271,78 @@ export type ProjectUpdate = {
 };
 
 /**
+ * Stable status projection for the latest provider snapshot.
+ */
+export type ProviderSnapshotStatusPublic = {
+    content_hash?: (string | null);
+    created_at?: (string | null);
+    epss_date?: (string | null);
+    generated_at?: (string | null);
+    id?: (string | null);
+    kev_catalog_version?: (string | null);
+    locked_provider_data?: boolean;
+    missing?: boolean;
+    mode?: string;
+    nvd_last_sync?: (string | null);
+    requested_cves?: number;
+    selected_sources?: Array<(string)>;
+    source_hashes?: {
+        [key: string]: unknown;
+    };
+    source_metadata?: {
+        [key: string]: unknown;
+    };
+    source_path?: (string | null);
+};
+
+/**
+ * Status for one provider source within the latest stored snapshot.
+ */
+export type ProviderSourceStatusPublic = {
+    available?: boolean;
+    cache_age_seconds?: (number | null);
+    detail?: (string | null);
+    last_error?: (string | null);
+    last_sync?: (string | null);
+    name: string;
+    selected?: boolean;
+    stale?: boolean;
+    value?: (string | null);
+};
+
+/**
+ * Provider status response for the template backend shell.
+ */
+export type ProviderStatusPublic = {
+    cache_age_seconds?: (number | null);
+    cache_dir?: (string | null);
+    last_error?: (string | null);
+    last_sync?: (string | null);
+    latest_update_job?: (ProviderUpdateJobPublic | null);
+    snapshot: ProviderSnapshotStatusPublic;
+    snapshot_dir?: (string | null);
+    snapshot_mode: string;
+    sources?: Array<ProviderSourceStatusPublic>;
+    status: string;
+    warnings?: Array<(string)>;
+};
+
+/**
+ * Placeholder shape for future provider update-job status records.
+ */
+export type ProviderUpdateJobPublic = {
+    error_message?: (string | null);
+    finished_at?: (string | null);
+    id: string;
+    metadata?: {
+        [key: string]: unknown;
+    };
+    requested_sources?: Array<(string)>;
+    started_at?: (string | null);
+    status: string;
+};
+
+/**
  * OAuth2 bearer token response.
  */
 export type Token = {
@@ -388,6 +460,8 @@ export type ProjectsUpdateProjectData = {
 };
 
 export type ProjectsUpdateProjectResponse = (ProjectPublic);
+
+export type ProvidersReadProviderStatusResponse = (ProviderStatusPublic);
 
 export type RunsReadProjectRunsWithoutTrailingSlashData = {
     projectId: string;

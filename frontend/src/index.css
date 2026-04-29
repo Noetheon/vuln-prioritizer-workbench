@@ -254,6 +254,150 @@ h2 {
   background: #ffffff;
 }
 
+.provider-status-section {
+  border-bottom: 1px solid #edf1ef;
+}
+
+.inline-header {
+  border-bottom: 0;
+}
+
+.provider-state {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 0 18px 14px;
+  border: 1px solid #d7e0dd;
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: #f8fafc;
+}
+
+.provider-state span {
+  color: #64748b;
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.provider-state strong {
+  color: #334155;
+  font-size: 0.95rem;
+}
+
+.provider-state.ok {
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+}
+
+.provider-state.ok strong {
+  color: #166534;
+}
+
+.provider-state.degraded {
+  border-color: #fed7aa;
+  background: #fff7ed;
+}
+
+.provider-state.degraded strong {
+  color: #9a3412;
+}
+
+.provider-facts {
+  display: grid;
+  gap: 1px;
+  margin: 0 18px 14px;
+  overflow: hidden;
+  border: 1px solid #edf1ef;
+  border-radius: 8px;
+  background: #edf1ef;
+}
+
+.provider-facts div {
+  display: grid;
+  grid-template-columns: 108px minmax(0, 1fr);
+  gap: 10px;
+  min-height: 38px;
+  padding: 8px 10px;
+  background: #ffffff;
+}
+
+.provider-facts dt,
+.provider-facts dd {
+  margin: 0;
+}
+
+.provider-facts dt {
+  color: #64748b;
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.provider-facts dd {
+  overflow-wrap: anywhere;
+  color: #1f2937;
+  font-size: 0.88rem;
+}
+
+.provider-sources {
+  display: grid;
+  gap: 8px;
+  margin: 0 18px 16px;
+}
+
+.provider-source {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 42px;
+  border: 1px solid #edf1ef;
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+
+.provider-source strong,
+.provider-source span {
+  display: block;
+}
+
+.provider-source strong {
+  color: #111827;
+  font-size: 0.84rem;
+}
+
+.provider-source span {
+  color: #64748b;
+  font-size: 0.78rem;
+}
+
+.source-pill {
+  min-width: 72px;
+  border-radius: 8px;
+  padding: 4px 8px;
+  background: #f1f5f9;
+  color: #475569;
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.source-pill.available {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.provider-warning {
+  margin: 0 18px 16px;
+  color: #9a3412;
+  font-size: 0.86rem;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
 .panel-header {
   display: flex;
   align-items: center;

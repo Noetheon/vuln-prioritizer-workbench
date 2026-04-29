@@ -33,6 +33,12 @@ from app.models.projects import (
     ProjectsPublic,
     ProjectUpdate,
 )
+from app.models.providers import (
+    ProviderSnapshotStatusPublic,
+    ProviderSourceStatusPublic,
+    ProviderStatusPublic,
+    ProviderUpdateJobPublic,
+)
 from app.models.registry import import_table_models
 from app.models.runs import (
     AnalysisRun,
@@ -86,6 +92,10 @@ __all__ = [
     "ProjectUpdate",
     "ProviderSnapshot",
     "ProviderSnapshotBase",
+    "ProviderSnapshotStatusPublic",
+    "ProviderSourceStatusPublic",
+    "ProviderStatusPublic",
+    "ProviderUpdateJobPublic",
     "Token",
     "TokenPayload",
     "User",

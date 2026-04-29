@@ -51,6 +51,11 @@ class RunRepository:
         statement = select(ProviderSnapshot).where(ProviderSnapshot.content_hash == content_hash)
         return self.session.exec(statement).first()
 
+    def get_latest_provider_snapshot(self) -> ProviderSnapshot | None:
+        """Return the newest provider snapshot for global provider status."""
+        statement = select(ProviderSnapshot).order_by(col(ProviderSnapshot.created_at).desc())
+        return self.session.exec(statement).first()
+
     def get_or_create_provider_snapshot(
         self,
         *,
@@ -161,3 +166,15 @@ class RunRepository:
     def get_analysis_run(self, run_id: uuid.UUID) -> AnalysisRun | None:
         """Return an analysis run by primary key."""
         return self.session.get(AnalysisRun, run_id)
+
+    def get_latest_failed_provider_update_run(self) -> AnalysisRun | None:
+        """Return the newest failed provider-update run, if the template shell recorded one."""
+        statement = (
+            select(AnalysisRun)
+            .where(
+                AnalysisRun.input_type == "provider_update",
+                AnalysisRun.status == AnalysisRunStatus.FAILED,
+            )
+            .order_by(col(AnalysisRun.started_at).desc())
+        )
+        return self.session.exec(statement).first()

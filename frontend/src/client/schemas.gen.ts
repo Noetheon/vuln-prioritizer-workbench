@@ -1051,6 +1051,383 @@ export const ProjectsPublicSchema = {
     type: 'object'
 } as const;
 
+export const ProviderSnapshotStatusPublicSchema = {
+    description: 'Stable status projection for the latest provider snapshot.',
+    properties: {
+        content_hash: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Content Hash'
+        },
+        created_at: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Created At'
+        },
+        epss_date: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Epss Date'
+        },
+        generated_at: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Generated At'
+        },
+        id: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Id'
+        },
+        kev_catalog_version: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Kev Catalog Version'
+        },
+        locked_provider_data: {
+            default: false,
+            title: 'Locked Provider Data',
+            type: 'boolean'
+        },
+        missing: {
+            default: true,
+            title: 'Missing',
+            type: 'boolean'
+        },
+        mode: {
+            default: 'missing',
+            title: 'Mode',
+            type: 'string'
+        },
+        nvd_last_sync: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Nvd Last Sync'
+        },
+        requested_cves: {
+            default: 0,
+            title: 'Requested Cves',
+            type: 'integer'
+        },
+        selected_sources: {
+            items: {
+                type: 'string'
+            },
+            title: 'Selected Sources',
+            type: 'array'
+        },
+        source_hashes: {
+            additionalProperties: true,
+            title: 'Source Hashes',
+            type: 'object'
+        },
+        source_metadata: {
+            additionalProperties: true,
+            title: 'Source Metadata',
+            type: 'object'
+        },
+        source_path: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Source Path'
+        }
+    },
+    title: 'ProviderSnapshotStatusPublic',
+    type: 'object'
+} as const;
+
+export const ProviderSourceStatusPublicSchema = {
+    description: 'Status for one provider source within the latest stored snapshot.',
+    properties: {
+        available: {
+            default: false,
+            title: 'Available',
+            type: 'boolean'
+        },
+        cache_age_seconds: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Cache Age Seconds'
+        },
+        detail: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Detail'
+        },
+        last_error: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Last Error'
+        },
+        last_sync: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Last Sync'
+        },
+        name: {
+            title: 'Name',
+            type: 'string'
+        },
+        selected: {
+            default: false,
+            title: 'Selected',
+            type: 'boolean'
+        },
+        stale: {
+            default: false,
+            title: 'Stale',
+            type: 'boolean'
+        },
+        value: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Value'
+        }
+    },
+    required: ['name'],
+    title: 'ProviderSourceStatusPublic',
+    type: 'object'
+} as const;
+
+export const ProviderStatusPublicSchema = {
+    description: 'Provider status response for the template backend shell.',
+    properties: {
+        cache_age_seconds: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Cache Age Seconds'
+        },
+        cache_dir: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Cache Dir'
+        },
+        last_error: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Last Error'
+        },
+        last_sync: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Last Sync'
+        },
+        latest_update_job: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/ProviderUpdateJobPublic'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
+        snapshot: {
+            '$ref': '#/components/schemas/ProviderSnapshotStatusPublic'
+        },
+        snapshot_dir: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Snapshot Dir'
+        },
+        snapshot_mode: {
+            title: 'Snapshot Mode',
+            type: 'string'
+        },
+        sources: {
+            items: {
+                '$ref': '#/components/schemas/ProviderSourceStatusPublic'
+            },
+            title: 'Sources',
+            type: 'array'
+        },
+        status: {
+            title: 'Status',
+            type: 'string'
+        },
+        warnings: {
+            items: {
+                type: 'string'
+            },
+            title: 'Warnings',
+            type: 'array'
+        }
+    },
+    required: ['status', 'snapshot', 'snapshot_mode'],
+    title: 'ProviderStatusPublic',
+    type: 'object'
+} as const;
+
+export const ProviderUpdateJobPublicSchema = {
+    description: 'Placeholder shape for future provider update-job status records.',
+    properties: {
+        error_message: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Error Message'
+        },
+        finished_at: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Finished At'
+        },
+        id: {
+            title: 'Id',
+            type: 'string'
+        },
+        metadata: {
+            additionalProperties: true,
+            title: 'Metadata',
+            type: 'object'
+        },
+        requested_sources: {
+            items: {
+                type: 'string'
+            },
+            title: 'Requested Sources',
+            type: 'array'
+        },
+        started_at: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Started At'
+        },
+        status: {
+            title: 'Status',
+            type: 'string'
+        }
+    },
+    required: ['id', 'status'],
+    title: 'ProviderUpdateJobPublic',
+    type: 'object'
+} as const;
+
 export const TokenSchema = {
     description: 'OAuth2 bearer token response.',
     properties: {

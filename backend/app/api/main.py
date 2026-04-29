@@ -4,12 +4,24 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
-from app.api.routes import assets, findings, imports, login, projects, runs, users, utils, workbench
+from app.api.routes import (
+    assets,
+    findings,
+    imports,
+    login,
+    projects,
+    providers,
+    runs,
+    users,
+    utils,
+    workbench,
+)
 
 api_router = APIRouter()
 api_router.include_router(login.router)
 api_router.include_router(projects.router)
 api_router.include_router(assets.router)
+api_router.include_router(providers.router)
 api_router.include_router(runs.router)
 api_router.include_router(imports.router)
 api_router.include_router(findings.router)

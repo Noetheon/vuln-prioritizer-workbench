@@ -35,6 +35,7 @@ def test_vpw011_openapi_exposes_workbench_domain_routes_without_items() -> None:
         "/api/v1/projects/{project_id}/assets/",
         "/api/v1/assets/{asset_id}",
         "/api/v1/projects/{project_id}/imports",
+        "/api/v1/providers/status",
         "/api/v1/projects/{project_id}/runs",
         "/api/v1/projects/{project_id}/runs/",
         "/api/v1/runs/{run_id}",
@@ -57,6 +58,9 @@ def test_vpw011_openapi_exposes_workbench_domain_routes_without_items() -> None:
         "ProjectPublic",
         "ProjectsPublic",
         "ProjectUpdate",
+        "ProviderSnapshotStatusPublic",
+        "ProviderSourceStatusPublic",
+        "ProviderStatusPublic",
     }
     assert expected_paths.issubset(paths)
 
@@ -100,6 +104,7 @@ def test_vpw011_domain_routes_require_auth(template_api_env: TemplateApiEnv) -> 
                 "files": {"file": ("sample.txt", b"CVE-2024-3094\n", "text/plain")},
             },
         ),
+        ("get", "/api/v1/providers/status", {}),
         ("get", f"/api/v1/runs/{run_id}", {}),
         ("get", f"/api/v1/runs/{run_id}/summary", {}),
         (
