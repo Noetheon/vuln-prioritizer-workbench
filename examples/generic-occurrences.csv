@@ -1,0 +1,4 @@
+cve_id,asset_ref,component_name,component_version,purl,scanner,fix_version,severity,owner,business_service
+CVE-2021-44228,web-prod-01,log4j-core,2.14.1,pkg:maven/org.apache.logging.log4j/log4j-core@2.14.1,manual-backlog,2.17.1,critical,platform-team,checkout
+CVE-2022-22965,checkout-api,spring-webmvc,5.3.17,pkg:maven/org.springframework/spring-webmvc@5.3.17,manual-backlog,5.3.18,high,appsec,checkout
+CVE-2023-44487,edge-proxy,nghttp2,1.52.0,pkg:generic/nghttp2@1.52.0,scanner-export,1.57.0,medium,network-team,edge

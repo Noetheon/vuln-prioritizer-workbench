@@ -47,7 +47,7 @@ def test_builtin_input_parser_definitions_are_static_local_contracts() -> None:
     for definition in loader.INPUT_PARSER_DEFINITIONS:
         validate_input_parser_definition(definition)
         assert definition.remote_code_loading is False
-        assert definition.fixture_names or definition.name == "generic-occurrence-csv"
+        assert definition.fixture_names
 
 
 def test_input_parser_sdk_rejects_remote_code_loading_and_duplicates() -> None:

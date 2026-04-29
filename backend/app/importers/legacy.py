@@ -15,6 +15,7 @@ from app.importers.contracts import (
     NormalizedOccurrence,
 )
 from app.importers.cve_list import CveListImporter
+from app.importers.generic_occurrence_csv import GenericOccurrenceCsvImporter
 from vuln_prioritizer.cli_options import InputFormat
 from vuln_prioritizer.inputs.loader import InputLoader
 from vuln_prioritizer.models_input import InputOccurrence
@@ -77,9 +78,13 @@ def default_importers() -> tuple[Importer, ...]:
     legacy_importers = tuple(
         LegacyInputLoaderImporter(input_type)
         for input_type in DEFAULT_IMPORT_INPUT_TYPES
-        if input_type != InputFormat.cve_list.value
+        if input_type
+        not in {
+            InputFormat.cve_list.value,
+            InputFormat.generic_occurrence_csv.value,
+        }
     )
-    return (CveListImporter(), *legacy_importers)
+    return (CveListImporter(), GenericOccurrenceCsvImporter(), *legacy_importers)
 
 
 def _write_payload(path: Path, payload: InputPayload) -> None:

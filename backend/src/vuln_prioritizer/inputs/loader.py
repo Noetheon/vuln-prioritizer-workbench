@@ -724,6 +724,7 @@ INPUT_PARSER_DEFINITIONS: tuple[InputParserDefinition, ...] = (
         parser=parse_generic_occurrence_csv,
         file_suffixes=(".csv",),
         media_types=("text/csv",),
+        fixture_names=("generic_occurrences.csv",),
     ),
     # Scanner and advisory exports.
     InputParserDefinition(

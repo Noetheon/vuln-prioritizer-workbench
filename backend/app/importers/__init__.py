@@ -9,6 +9,10 @@ from app.importers.contracts import (
     NormalizedOccurrence,
 )
 from app.importers.cve_list import CVE_LIST_INPUT_TYPE, CveListImporter
+from app.importers.generic_occurrence_csv import (
+    GENERIC_OCCURRENCE_CSV_INPUT_TYPE,
+    GenericOccurrenceCsvImporter,
+)
 from app.importers.legacy import (
     DEFAULT_IMPORT_INPUT_TYPES,
     LegacyInputLoaderImporter,
@@ -26,6 +30,8 @@ __all__ = [
     "CVE_LIST_INPUT_TYPE",
     "DEFAULT_IMPORT_INPUT_TYPES",
     "CveListImporter",
+    "GENERIC_OCCURRENCE_CSV_INPUT_TYPE",
+    "GenericOccurrenceCsvImporter",
     "Importer",
     "ImporterError",
     "ImporterParseError",
