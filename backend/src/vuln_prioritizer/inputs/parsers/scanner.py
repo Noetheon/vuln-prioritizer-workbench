@@ -95,18 +95,25 @@ def parse_grype_json(path: Path) -> ParsedInput:
     source = dict_value(document.get("source"))
     target = dict_value(source.get("target"))
     source_target = target.get("userInput") or target.get("name")
-    matches = dict_items(document.get("matches"))
+    target_kind = first_present_string(source.get("type")) or "image"
+    total_rows, matches = _grype_match_items(document.get("matches"), warnings=warnings)
 
-    for index, match in enumerate(matches, start=1):
-        vulnerability = dict_value(match.get("vulnerability"))
-        cve_id = _cve_support.normalize_cve_or_warn(
-            vulnerability.get("id"),
-            source_name="Grype",
-            warnings=warnings,
-        )
-        if cve_id is None:
+    for match_number, match_item in matches:
+        vulnerability = dict_value(match_item.get("vulnerability"))
+        if not vulnerability:
+            warnings.append(f"Ignored Grype match {match_number} without a vulnerability object.")
             continue
-        artifact = dict_value(match.get("artifact"))
+        source_id = first_present_string(vulnerability.get("id"))
+        cve_id = _cve_support.first_normalized_cve(_grype_cve_candidates(vulnerability))
+        if cve_id is None:
+            _warn_non_cve_grype_id(source_id, warnings)
+            continue
+        artifact = dict_value(match_item.get("artifact"))
+        if not artifact:
+            warnings.append(
+                f"Grype match {match_number} is missing an artifact object; "
+                "package evidence is incomplete."
+            )
         locations = dict_items(artifact.get("locations"))
         file_path = None
         if locations:
@@ -115,25 +122,80 @@ def parse_grype_json(path: Path) -> ParsedInput:
             InputOccurrence(
                 cve_id=cve_id,
                 source_format="grype-json",
+                source_id=source_id or cve_id,
                 component_name=artifact.get("name"),
                 component_version=artifact.get("version"),
                 purl=artifact.get("purl"),
                 package_type=artifact.get("type"),
                 file_path=file_path,
-                fix_versions=as_string_list(dict_value(match.get("fix")).get("versions")),
-                source_record_id=f"match:{index}",
+                fix_versions=_grype_fix_versions(match_item, vulnerability),
+                source_record_id=f"match:{match_number}",
                 raw_severity=vulnerability.get("severity"),
-                target_kind="image",
+                target_kind=target_kind,
                 target_ref=source_target,
             )
         )
 
     return ParsedInput(
         input_format="grype-json",
-        total_rows=len(matches),
+        total_rows=total_rows,
         occurrences=occurrences,
         warnings=warnings,
     )
+
+
+def _grype_match_items(value: object, *, warnings: list[str]) -> tuple[int, list[tuple[int, dict]]]:
+    if value is None:
+        warnings.append("Grype JSON does not contain a matches array.")
+        return 0, []
+    if not isinstance(value, list):
+        warnings.append("Ignored Grype `matches` value because it was not a list.")
+        return 0, []
+
+    matches: list[tuple[int, dict]] = []
+    for index, item in enumerate(value, start=1):
+        if isinstance(item, dict):
+            matches.append((index, item))
+            continue
+        warnings.append(
+            f"Ignored Grype match {index}: expected an object, got {type(item).__name__}."
+        )
+    return len(value), matches
+
+
+def _grype_cve_candidates(vulnerability: dict) -> list[str | None]:
+    candidates: list[str | None] = []
+    for field_name in ("id", "cve", "cve_id", "CVE", "CVEs", "aliases", "relatedVulnerabilities"):
+        value = vulnerability.get(field_name)
+        if isinstance(value, str):
+            candidates.append(value)
+            continue
+        if isinstance(value, list):
+            candidates.extend(_grype_related_id(item) for item in value)
+    return candidates
+
+
+def _grype_related_id(value: object) -> str | None:
+    if isinstance(value, str):
+        return value
+    if isinstance(value, dict):
+        return first_present_string(
+            value.get("id"), value.get("value"), value.get("vulnerabilityID")
+        )
+    return None
+
+
+def _warn_non_cve_grype_id(source_id: str | None, warnings: list[str]) -> None:
+    warnings.append(f"Ignored non-CVE Grype vulnerability identifier: {source_id!r}")
+
+
+def _grype_fix_versions(match: dict, vulnerability: dict) -> list[str]:
+    for fix_container in (dict_value(match.get("fix")), dict_value(vulnerability.get("fix"))):
+        for field_name in ("versions", "version"):
+            versions = split_versions(fix_container.get(field_name))
+            if versions:
+                return versions
+    return []
 
 
 def parse_dependency_check_json(path: Path) -> ParsedInput:
