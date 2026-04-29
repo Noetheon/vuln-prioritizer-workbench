@@ -109,6 +109,9 @@ def test_cli_explain_end_to_end_with_mocked_providers(
     assert payload["comparison"]["cvss_only_label"] == "Critical"
     assert payload["attack"]["attack_note"] == "Representative demo mapping note."
     assert payload["metadata"]["attack_source"] == "local-csv"
+    assert payload["finding"]["attack_context"]["mapped"] is True
+    assert payload["finding"]["attack_context"]["source"] == payload["attack"]["source"]
+    assert payload["finding"]["attack_context"]["tactics"] == payload["attack"]["attack_tactics"]
     assert payload["finding"]["remediation"]["strategy"] in {
         "generic-priority-guidance",
         "review-upgrade-options",

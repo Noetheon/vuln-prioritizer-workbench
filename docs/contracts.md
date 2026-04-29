@@ -218,6 +218,14 @@ Current guarantees:
 - no heuristic or LLM-generated CVE-to-ATT&CK mapping is performed
 - `attack_relevance` is a contextual, explainable helper label produced locally by this CLI
 - absence of ATT&CK data is represented as unmapped context, not guessed context
+- JSON findings include an additive `attack_context` object with mapped state,
+  source/version metadata, techniques, tactics, mappings, and curated
+  `confidence` when available
+- unmapped findings use `mapped=false`, `source=none`, `confidence=null`, and
+  empty `techniques`, `tactics`, and `mappings` arrays
+- low-confidence ATT&CK context is retained for review and surfaced in
+  explanations as `attack.low_confidence`; it does not change the hard base
+  priority label, rank, or priority drivers
 
 ### Remediation guidance
 
@@ -376,7 +384,7 @@ Workbench API changes are additive:
 - `DELETE /api/reports/{id}` and `DELETE /api/evidence-bundles/{id}` remove managed artifacts after checksum validation
 - `GET/PATCH /api/projects/{project_id}/artifacts/retention` and `POST /api/projects/{project_id}/artifacts/cleanup` manage report/evidence retention and cleanup
 - detection controls support API CRUD, review status, history, and bounded evidence attachments in addition to CSV/YAML import
-- `GET /api/projects/{project_id}/attack/review-queue` and `PATCH /api/findings/{finding_id}/ttps/review` expose review workflow for existing local/CTID ATT&CK context only
+- `GET /api/findings/{finding_id}` includes the latest stored `attack_context`; `GET /api/findings/{finding_id}/ttps`, `GET /api/projects/{project_id}/attack/review-queue`, and `PATCH /api/findings/{finding_id}/ttps/review` expose review workflow for existing local/CTID ATT&CK context only
 - Workbench import summaries may include `defensive_context_sources` and `defensive_context_hits`, and finding/detail/report payloads may include per-finding `defensive_contexts` copied from local defensive context uploads
 - `POST /api/projects/{project_id}/tickets/preview` and `POST /api/projects/{project_id}/tickets/export` support Jira and ServiceNow ticket previews, dry-runs, explicit token environment variables, and idempotency keys without making either system a required dependency
 - project config snapshots can be listed, recursively diffed, exported, and rolled back through settings endpoints

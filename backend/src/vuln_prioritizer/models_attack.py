@@ -12,6 +12,7 @@ from vuln_prioritizer.model_base import StrictModel
 ATTACK_TECHNIQUE_ID_PATTERN = r"^T\d{4}(?:\.\d{3})?$"
 ATTACK_TACTIC_ID_PATTERN = r"^TA\d{4}$"
 ATTACK_REVIEW_STATUSES = ("unreviewed", "needs_review", "reviewed", "rejected", "stale")
+ATTACK_CONFIDENCE_LEVELS = ("low", "medium", "high")
 ATTACK_MAPPING_TYPES = (
     "exploitation",
     "impact",
@@ -24,6 +25,7 @@ _TECHNIQUE_ID_RE = re.compile(ATTACK_TECHNIQUE_ID_PATTERN)
 _TACTIC_ID_RE = re.compile(ATTACK_TACTIC_ID_PATTERN)
 
 AttackReviewStatus = Literal["unreviewed", "needs_review", "reviewed", "rejected", "stale"]
+AttackConfidence = Literal["low", "medium", "high"]
 AttackMappingType = Literal[
     "exploitation",
     "impact",
@@ -81,6 +83,12 @@ class AttackMapping(StrictModel):
     capability_group: str | None = None
     capability_description: str | None = None
     comments: str | None = None
+    source: str | None = None
+    confidence: AttackConfidence | None = None
+    review_status: AttackReviewStatus | None = None
+    defensive_note: str | None = None
+    reviewer: str | None = None
+    reviewed_at: str | None = None
     references: list[str] = Field(default_factory=list)
 
 
@@ -151,6 +159,22 @@ class FindingAttackContext(StrictModel):
         if self.mapped and not self.mappings:
             raise ValueError("mapped finding ATT&CK context requires at least one mapping.")
         return self
+
+
+class FindingAttackContextSummary(StrictModel):
+    cve_id: str = ""
+    mapped: bool = False
+    source: str = "none"
+    source_version: str | None = None
+    attack_version: str | None = None
+    domain: str | None = None
+    attack_relevance: str = "Unmapped"
+    rationale: str | None = None
+    confidence: AttackConfidence | None = None
+    low_confidence: bool = False
+    techniques: list[AttackTechnique] = Field(default_factory=list)
+    tactics: list[str] = Field(default_factory=list)
+    mappings: list[AttackMapping] = Field(default_factory=list)
 
 
 class AttackSummary(StrictModel):

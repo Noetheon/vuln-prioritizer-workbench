@@ -741,6 +741,35 @@
         "comments": {
           "$ref": "#/$defs/nullableString"
         },
+        "source": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "confidence": {
+          "anyOf": [
+            {
+              "enum": [
+                "low",
+                "medium",
+                "high"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "review_status": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "defensive_note": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "reviewer": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "reviewed_at": {
+          "$ref": "#/$defs/nullableString"
+        },
         "references": {
           "$ref": "#/$defs/stringArray"
         }
@@ -771,6 +800,68 @@
         },
         "deprecated": {
           "type": "boolean"
+        }
+      }
+    },
+    "findingAttackContextSummary": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "cve_id": {
+          "type": "string"
+        },
+        "mapped": {
+          "type": "boolean"
+        },
+        "source": {
+          "type": "string"
+        },
+        "source_version": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "attack_version": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "domain": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "attack_relevance": {
+          "type": "string"
+        },
+        "rationale": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "confidence": {
+          "anyOf": [
+            {
+              "enum": [
+                "low",
+                "medium",
+                "high"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "low_confidence": {
+          "type": "boolean"
+        },
+        "techniques": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/attackTechnique"
+          }
+        },
+        "tactics": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "mappings": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/attackMapping"
+          }
         }
       }
     },
@@ -1012,6 +1103,9 @@
           "items": {
             "$ref": "#/$defs/attackTechnique"
           }
+        },
+        "attack_context": {
+          "$ref": "#/$defs/findingAttackContextSummary"
         },
         "provider_evidence": {
           "anyOf": [
