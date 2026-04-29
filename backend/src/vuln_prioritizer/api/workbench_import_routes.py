@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 from vuln_prioritizer.api.deps import get_db_session, get_workbench_settings
 from vuln_prioritizer.api.schemas import (
     AnalysisRunResponse,
+    BaselineComparisonResponse,
     FindingDetailResponse,
     FindingsListResponse,
     FindingStatusUpdateRequest,
@@ -34,6 +35,10 @@ from vuln_prioritizer.api.workbench_waivers import (
     _strip_or_none,
 )
 from vuln_prioritizer.db.repositories import WorkbenchRepository
+from vuln_prioritizer.models import PrioritizedFinding
+from vuln_prioritizer.services.baseline_comparison import (
+    build_cvss_baseline_comparison_payload,
+)
 from vuln_prioritizer.services.workbench_analysis import (
     WorkbenchAnalysisError,
     run_workbench_import,
@@ -335,6 +340,27 @@ def list_findings(
     }
 
 
+@router.get(
+    "/projects/{project_id}/baseline-comparison",
+    response_model=BaselineComparisonResponse,
+)
+def get_project_baseline_comparison(
+    project_id: str,
+    session: Annotated[Session, Depends(get_db_session)],
+    limit: int = Query(default=10, ge=0, le=100),
+) -> dict[str, Any]:
+    repo = WorkbenchRepository(session)
+    if repo.get_project(project_id) is None:
+        raise HTTPException(status_code=404, detail="Project not found.")
+    findings = repo.list_project_findings(project_id)
+    prioritized = [_prioritized_finding_from_workbench(finding) for finding in findings]
+    return build_cvss_baseline_comparison_payload(
+        prioritized,
+        project_id=project_id,
+        top_change_limit=limit,
+    )
+
+
 @router.get("/findings/{finding_id}", response_model=FindingDetailResponse)
 def get_finding(
     finding_id: str,
@@ -416,3 +442,26 @@ def explain_finding(
         "decision_explanation": decision_explanation,
         "explanation": finding.explanation_json,
     }
+
+
+def _prioritized_finding_from_workbench(finding: Any) -> PrioritizedFinding:
+    payload = finding.finding_json if isinstance(finding.finding_json, dict) else {}
+    if payload:
+        try:
+            return PrioritizedFinding.model_validate(payload)
+        except ValueError:
+            pass
+    return PrioritizedFinding(
+        cve_id=finding.cve_id,
+        description=getattr(finding.vulnerability, "description", None),
+        cvss_base_score=finding.cvss_base_score,
+        epss=finding.epss,
+        in_kev=finding.in_kev,
+        priority_label=finding.priority,
+        priority_rank=finding.priority_rank,
+        priority_state=finding.priority,
+        operational_rank=finding.operational_rank,
+        operational_score=int(finding.risk_score or 0),
+        rationale=finding.rationale or "Stored Workbench finding without raw rationale payload.",
+        recommended_action=finding.recommended_action or "Review the finding with the asset owner.",
+    )

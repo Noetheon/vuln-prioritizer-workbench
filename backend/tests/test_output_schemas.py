@@ -268,6 +268,20 @@ def test_vpw_031_explanation_field_remains_schema_optional() -> None:
         assert "explanation" not in definition.get("required", [])
 
 
+def test_vpw_032_baseline_comparison_schema_and_example() -> None:
+    schema = _load_schema("analysis-report.schema.json")
+    payload = json.loads(
+        (DOCS_ROOT / "examples" / "example_baseline_comparison.json").read_text(encoding="utf-8")
+    )
+
+    assert "baseline_comparison" in schema["properties"]
+    assert "baseline_comparison" not in schema.get("required", [])
+    jsonschema.validate(payload, schema["$defs"]["baselineComparison"])
+    assert payload["top_changes"][0]["old_rank"] == 3
+    assert payload["top_changes"][0]["new_rank"] == 1
+    assert "not an absolute truth" in payload["methodology"]["limitations"]
+
+
 def _install_fake_data_update_providers(monkeypatch: Any) -> None:
     def fake_nvd_fetch_many(
         self: NvdProvider,

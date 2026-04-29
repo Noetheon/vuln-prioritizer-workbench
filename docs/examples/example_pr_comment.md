@@ -64,6 +64,13 @@
 - Low: 0
 - Active filters: None
 
+## CVSS-only Baseline Comparison
+- Changed rows: 0
+- Up: 0
+- Down: 0
+- Unchanged: 2
+- Method limit: This comparison is a decision-support view, not an absolute truth. It shows how the current enriched policy differs from a CVSS-only baseline and still requires asset-owner validation.
+
 ## ATT&CK Context Summary
 ATT&CK context was disabled for this export.
 

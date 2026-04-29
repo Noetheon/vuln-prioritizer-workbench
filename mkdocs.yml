@@ -65,6 +65,7 @@ nav:
       - VPW-029 Provider Test Matrix: evidence/vpw-029-provider-testmatrix.md
       - VPW-030 Scoring Rules: evidence/vpw-030-scoring-rules.md
       - VPW-031 Explanation Engine: evidence/vpw-031-explanation-engine.md
+      - VPW-032 CVSS Baseline Comparison: evidence/vpw-032-cvss-baseline-comparison.md
       - Historical Evidence Archive: evidence.md
       - Current State Audit: evidence/current_state_audit.md
       - V0.3 Submission Checklist: evidence/final_submission_checklist.md
