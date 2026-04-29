@@ -1,5 +1,13 @@
 import { expect, test } from "@playwright/test"
 
+const validCveList = Buffer.from("CVE-2021-44228\nCVE-2024-3094\n")
+const invalidOccurrenceCsv = Buffer.from(
+  [
+    "cve_id,asset_ref,component_name,component_version,purl,scanner,fix_version,severity,owner,business_service",
+    "not-a-cve,build-host-1,xz,5.6.0,pkg:apk/alpine/xz@5.6.0-r0,trivy,5.6.1-r2,CRITICAL,team-platform,payments",
+  ].join("\n"),
+)
+
 test("template login reaches authenticated Workbench status shell", async ({
   page,
 }) => {
@@ -148,6 +156,42 @@ test("template login reaches authenticated Workbench status shell", async ({
     page.getByText("Project VPW UI Project Edited deleted."),
   ).toBeVisible()
   await expect(projectsList.getByText("VPW UI Project Edited")).toHaveCount(0)
+
+  await navigation.getByRole("link", { name: "Imports" }).click()
+  await expect(page).toHaveURL(/\/imports$/)
+  await expect(
+    page.getByRole("region", { name: "Import wizard" }),
+  ).toBeVisible()
+  await expect(
+    page.getByRole("region", { name: "Upload security notes" }),
+  ).toContainText("does not run scanners")
+  await expect(
+    page.getByRole("region", { name: "Supported MVP formats" }),
+  ).toContainText("trivy-json")
+  await page.getByLabel("Input type").selectOption("cve-list")
+  await page.getByLabel("Import file").setInputFiles({
+    buffer: validCveList,
+    mimeType: "text/plain",
+    name: "import-wizard-cves.txt",
+  })
+  await page.getByRole("button", { name: "Upload Import" }).click()
+  await expect(
+    page.getByRole("region", { name: "Import result" }),
+  ).toContainText("succeeded")
+  await expect(
+    page.getByRole("region", { name: "Import result" }),
+  ).toContainText("2")
+  await page.getByLabel("Input type").selectOption("generic-occurrence-csv")
+  await page.getByLabel("Import file").setInputFiles({
+    buffer: invalidOccurrenceCsv,
+    mimeType: "text/csv",
+    name: "invalid-occurrences.csv",
+  })
+  await page.getByRole("button", { name: "Upload Import" }).click()
+  await expect(page.getByRole("alert")).toContainText("Import upload failed")
+  await expect(
+    page.getByRole("region", { name: "Parser errors" }),
+  ).toContainText("cve_id")
 
   await navigation.getByRole("link", { name: "Settings" }).click()
   await expect(page).toHaveURL(/\/settings$/)
