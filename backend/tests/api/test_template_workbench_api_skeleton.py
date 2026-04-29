@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import uuid
+from datetime import timedelta
 from typing import Any
 
 from fastapi.testclient import TestClient
+from sqlmodel import Session
 from utils.template_workbench import (
     DEMO_CVE_LOG4SHELL,
     DEMO_CVE_XZ,
@@ -17,6 +19,7 @@ from utils.template_workbench import (
 )
 
 from app.main import app
+from app.models.base import get_datetime_utc
 
 
 def test_vpw011_openapi_exposes_workbench_domain_routes_without_items() -> None:
@@ -317,6 +320,264 @@ def test_vpw011_finding_list_and_get_support_pagination(
     assert detail["cve_id"] == DEMO_CVE_LOG4SHELL
     assert detail["priority"] == "critical"
     assert detail["in_kev"] is True
+
+
+def test_vpw042_findings_list_filters_and_display_fields(
+    template_api_env: TemplateApiEnv,
+) -> None:
+    headers = auth_headers(template_api_env.client)
+    project = create_project_via_api(template_api_env.client, headers)
+    seeded = _seed_vpw042_findings(template_api_env, uuid.UUID(project["id"]))
+
+    list_response = template_api_env.client.get(
+        f"/api/v1/projects/{project['id']}/findings/",
+        headers=headers,
+        params={"priority": "critical"},
+    )
+    assert list_response.status_code == 200, list_response.text
+    critical_page = list_response.json()
+    assert critical_page["count"] == 1
+    critical = critical_page["data"][0]
+    assert critical["id"] == str(seeded["critical"])
+    assert critical["component_name"] == "log4j-core"
+    assert critical["component_version"] == "2.14.1"
+    assert critical["component_purl"].startswith("pkg:maven/")
+    assert critical["asset_name"] == "Payments API"
+    assert critical["asset_key"] == "payments-api"
+    assert critical["owner"] == "platform"
+    assert critical["business_service"] == "payments"
+    assert critical["exposure"] == "internet-facing"
+
+    assert _finding_cves(template_api_env, project, headers, {"status": "suppressed"}) == [
+        "CVE-2024-4577"
+    ]
+    assert _finding_cves(template_api_env, project, headers, {"kev": "true"}) == [
+        DEMO_CVE_LOG4SHELL
+    ]
+    assert _finding_cves(template_api_env, project, headers, {"owner": "platform"}) == [
+        DEMO_CVE_LOG4SHELL
+    ]
+    assert _finding_cves(template_api_env, project, headers, {"service": "identity"}) == [
+        "CVE-2022-22965"
+    ]
+    assert _finding_cves(template_api_env, project, headers, {"owner_service": "payments"}) == [
+        DEMO_CVE_LOG4SHELL
+    ]
+    assert _finding_cves(template_api_env, project, headers, {"exposure": "internal"}) == [
+        "CVE-2022-22965"
+    ]
+    assert _finding_cves(
+        template_api_env,
+        project,
+        headers,
+        {"epss_min": "0.40", "epss_max": "0.50"},
+    ) == ["CVE-2024-4577"]
+    assert _finding_cves(
+        template_api_env,
+        project,
+        headers,
+        {"cvss_min": "8.0", "cvss_max": "9.0"},
+    ) == ["CVE-2022-22965"]
+
+    detail_response = template_api_env.client.get(
+        f"/api/v1/findings/{seeded['critical']}",
+        headers=headers,
+    )
+    assert detail_response.status_code == 200, detail_response.text
+    detail = detail_response.json()
+    assert detail["component_name"] == "log4j-core"
+    assert detail["asset_key"] == "payments-api"
+    assert detail["owner"] == "platform"
+    assert detail["business_service"] == "payments"
+    assert detail["exposure"] == "internet-facing"
+
+
+def test_vpw042_findings_sort_direction_and_pagination(
+    template_api_env: TemplateApiEnv,
+) -> None:
+    headers = auth_headers(template_api_env.client)
+    project = create_project_via_api(template_api_env.client, headers)
+    _seed_vpw042_findings(template_api_env, uuid.UUID(project["id"]))
+
+    score_page = _finding_cves(
+        template_api_env,
+        project,
+        headers,
+        {"sort": "score", "direction": "desc", "limit": "2", "offset": "1"},
+    )
+    assert score_page == ["CVE-2022-22965", "CVE-2024-4577"]
+    assert _finding_cves(
+        template_api_env,
+        project,
+        headers,
+        {"sort": "epss", "direction": "desc"},
+    ) == [DEMO_CVE_LOG4SHELL, "CVE-2024-4577", "CVE-2022-22965"]
+    assert _finding_cves(
+        template_api_env,
+        project,
+        headers,
+        {"sort": "cvss", "direction": "asc"},
+    ) == ["CVE-2024-4577", "CVE-2022-22965", DEMO_CVE_LOG4SHELL]
+    assert (
+        _finding_cves(
+            template_api_env,
+            project,
+            headers,
+            {"sort": "kev", "direction": "desc"},
+        )[0]
+        == DEMO_CVE_LOG4SHELL
+    )
+    assert _finding_cves(
+        template_api_env,
+        project,
+        headers,
+        {"sort": "last_seen", "direction": "desc"},
+    ) == [DEMO_CVE_LOG4SHELL, "CVE-2022-22965", "CVE-2024-4577"]
+
+
+def _finding_cves(
+    template_api_env: TemplateApiEnv,
+    project: dict[str, Any],
+    headers: dict[str, str],
+    params: dict[str, str],
+) -> list[str]:
+    response = template_api_env.client.get(
+        f"/api/v1/projects/{project['id']}/findings/",
+        headers=headers,
+        params=params,
+    )
+    assert response.status_code == 200, response.text
+    return [item["cve_id"] for item in response.json()["data"]]
+
+
+def _seed_vpw042_findings(
+    template_api_env: TemplateApiEnv,
+    project_id: uuid.UUID,
+) -> dict[str, uuid.UUID]:
+    """Seed deterministic findings with distinct filter and sort dimensions."""
+    app_models = template_api_env.app_models
+    repositories = template_api_env.repositories
+    now = get_datetime_utc()
+    with Session(template_api_env.engine) as session:
+        asset_repo = repositories.AssetRepository(session)
+        finding_repo = repositories.FindingRepository(session)
+        critical_asset = asset_repo.upsert_asset(
+            project_id=project_id,
+            asset_key="payments-api",
+            name="Payments API",
+            owner="platform",
+            business_service="payments",
+            exposure=app_models.AssetExposure.INTERNET_FACING,
+        )
+        high_asset = asset_repo.upsert_asset(
+            project_id=project_id,
+            asset_key="identity-api",
+            name="Identity API",
+            owner="appsec",
+            business_service="identity",
+            exposure=app_models.AssetExposure.INTERNAL,
+        )
+        medium_asset = asset_repo.upsert_asset(
+            project_id=project_id,
+            asset_key="edge-worker",
+            name="Edge Worker",
+            owner="web",
+            business_service="edge",
+            exposure=app_models.AssetExposure.PRIVATE,
+        )
+        critical_component = finding_repo.upsert_component(
+            name="log4j-core",
+            version="2.14.1",
+            purl=f"pkg:maven/org.apache.logging.log4j/log4j-core@{uuid.uuid4().hex}",
+            ecosystem="maven",
+        )
+        high_component = finding_repo.upsert_component(
+            name="spring-webmvc",
+            version="5.3.17",
+            purl=f"pkg:maven/org.springframework/spring-webmvc@{uuid.uuid4().hex}",
+            ecosystem="maven",
+        )
+        medium_component = finding_repo.upsert_component(
+            name="php-cgi",
+            version="8.3.7",
+            purl=f"pkg:deb/debian/php-cgi@{uuid.uuid4().hex}",
+            ecosystem="deb",
+        )
+        critical_vulnerability = finding_repo.upsert_vulnerability(
+            cve_id=DEMO_CVE_LOG4SHELL,
+            source_id=DEMO_CVE_LOG4SHELL,
+            cvss_score=10.0,
+            severity="CRITICAL",
+        )
+        high_vulnerability = finding_repo.upsert_vulnerability(
+            cve_id="CVE-2022-22965",
+            source_id="CVE-2022-22965",
+            cvss_score=8.1,
+            severity="HIGH",
+        )
+        medium_vulnerability = finding_repo.upsert_vulnerability(
+            cve_id="CVE-2024-4577",
+            source_id="CVE-2024-4577",
+            cvss_score=6.1,
+            severity="MEDIUM",
+        )
+        critical = finding_repo.create_or_update_finding(
+            project_id=project_id,
+            vulnerability_id=critical_vulnerability.id,
+            component_id=critical_component.id,
+            asset_id=critical_asset.id,
+            cve_id=DEMO_CVE_LOG4SHELL,
+            priority=app_models.FindingPriority.CRITICAL,
+            status=app_models.FindingStatus.OPEN,
+            priority_rank=1,
+            risk_score=99.0,
+            operational_rank=1,
+            in_kev=True,
+            epss=0.95,
+            cvss_base_score=10.0,
+        )
+        high = finding_repo.create_or_update_finding(
+            project_id=project_id,
+            vulnerability_id=high_vulnerability.id,
+            component_id=high_component.id,
+            asset_id=high_asset.id,
+            cve_id="CVE-2022-22965",
+            priority=app_models.FindingPriority.HIGH,
+            status=app_models.FindingStatus.FIXED,
+            priority_rank=2,
+            risk_score=88.0,
+            operational_rank=2,
+            in_kev=False,
+            epss=0.23,
+            cvss_base_score=8.1,
+        )
+        medium = finding_repo.create_or_update_finding(
+            project_id=project_id,
+            vulnerability_id=medium_vulnerability.id,
+            component_id=medium_component.id,
+            asset_id=medium_asset.id,
+            cve_id="CVE-2024-4577",
+            priority=app_models.FindingPriority.MEDIUM,
+            status=app_models.FindingStatus.SUPPRESSED,
+            priority_rank=3,
+            risk_score=42.0,
+            operational_rank=3,
+            in_kev=False,
+            epss=0.44,
+            cvss_base_score=6.1,
+        )
+        critical.last_seen_at = now
+        high.last_seen_at = now - timedelta(minutes=5)
+        medium.last_seen_at = now - timedelta(minutes=10)
+        session.add(critical)
+        session.add(high)
+        session.add(medium)
+        session.commit()
+        return {
+            "critical": critical.id,
+            "high": high.id,
+            "medium": medium.id,
+        }
 
 
 def test_vpw036_explain_returns_422_when_decision_payload_is_missing(

@@ -127,6 +127,18 @@ export class FindingsService {
      * @param data.limit
      * @param data.offset
      * @param data.sort
+     * @param data.direction
+     * @param data.priority
+     * @param data.status
+     * @param data.kev
+     * @param data.owner
+     * @param data.service
+     * @param data.ownerService
+     * @param data.exposure
+     * @param data.epssMin
+     * @param data.epssMax
+     * @param data.cvssMin
+     * @param data.cvssMax
      * @returns FindingsPublic Successful Response
      * @throws ApiError
      */
@@ -140,7 +152,19 @@ export class FindingsService {
             query: {
                 limit: data.limit,
                 offset: data.offset,
-                sort: data.sort
+                sort: data.sort,
+                direction: data.direction,
+                priority: data.priority,
+                status: data.status,
+                kev: data.kev,
+                owner: data.owner,
+                service: data.service,
+                owner_service: data.ownerService,
+                exposure: data.exposure,
+                epss_min: data.epssMin,
+                epss_max: data.epssMax,
+                cvss_min: data.cvssMin,
+                cvss_max: data.cvssMax
             },
             errors: {
                 422: 'Validation Error'
