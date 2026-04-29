@@ -647,6 +647,293 @@ export const Body_login_login_access_tokenSchema = {
     type: 'object'
 } as const;
 
+export const FindingDetailPublicSchema = {
+    description: 'Public finding detail response shape.',
+    properties: {
+        asset_id: {
+            anyOf: [
+                {
+                    format: 'uuid',
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Asset Id'
+        },
+        asset_key: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Asset Key'
+        },
+        asset_name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Asset Name'
+        },
+        attack_mapped: {
+            default: false,
+            title: 'Attack Mapped',
+            type: 'boolean'
+        },
+        business_service: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Business Service'
+        },
+        component_id: {
+            anyOf: [
+                {
+                    format: 'uuid',
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Component Id'
+        },
+        component_name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Component Name'
+        },
+        component_purl: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Component Purl'
+        },
+        component_version: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Component Version'
+        },
+        created_at: {
+            format: 'date-time',
+            title: 'Created At',
+            type: 'string'
+        },
+        cve_id: {
+            maxLength: 64,
+            minLength: 1,
+            title: 'Cve Id',
+            type: 'string'
+        },
+        cvss_base_score: {
+            anyOf: [
+                {
+                    type: 'number'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Cvss Base Score'
+        },
+        data_quality_json: {
+            additionalProperties: true,
+            title: 'Data Quality Json',
+            type: 'object'
+        },
+        dedup_key: {
+            maxLength: 512,
+            title: 'Dedup Key',
+            type: 'string'
+        },
+        epss: {
+            anyOf: [
+                {
+                    type: 'number'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Epss'
+        },
+        evidence_json: {
+            additionalProperties: true,
+            title: 'Evidence Json',
+            type: 'object'
+        },
+        explanation_json: {
+            additionalProperties: true,
+            title: 'Explanation Json',
+            type: 'object'
+        },
+        exposure: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Exposure'
+        },
+        first_seen_at: {
+            format: 'date-time',
+            title: 'First Seen At',
+            type: 'string'
+        },
+        id: {
+            format: 'uuid',
+            title: 'Id',
+            type: 'string'
+        },
+        in_kev: {
+            default: false,
+            title: 'In Kev',
+            type: 'boolean'
+        },
+        last_seen_at: {
+            format: 'date-time',
+            title: 'Last Seen At',
+            type: 'string'
+        },
+        occurrences: {
+            items: {
+                '$ref': '#/components/schemas/FindingOccurrencePublic'
+            },
+            title: 'Occurrences',
+            type: 'array'
+        },
+        operational_rank: {
+            default: 0,
+            title: 'Operational Rank',
+            type: 'integer'
+        },
+        owner: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Owner'
+        },
+        priority: {
+            '$ref': '#/components/schemas/FindingPriority',
+            default: 'medium'
+        },
+        priority_rank: {
+            default: 99,
+            title: 'Priority Rank',
+            type: 'integer'
+        },
+        project_id: {
+            format: 'uuid',
+            title: 'Project Id',
+            type: 'string'
+        },
+        rationale: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Rationale'
+        },
+        recommended_action: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Recommended Action'
+        },
+        risk_score: {
+            anyOf: [
+                {
+                    type: 'number'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Risk Score'
+        },
+        status: {
+            '$ref': '#/components/schemas/FindingStatus',
+            default: 'open'
+        },
+        suppressed_by_vex: {
+            default: false,
+            title: 'Suppressed By Vex',
+            type: 'boolean'
+        },
+        under_investigation: {
+            default: false,
+            title: 'Under Investigation',
+            type: 'boolean'
+        },
+        updated_at: {
+            format: 'date-time',
+            title: 'Updated At',
+            type: 'string'
+        },
+        vulnerability_id: {
+            format: 'uuid',
+            title: 'Vulnerability Id',
+            type: 'string'
+        },
+        waived: {
+            default: false,
+            title: 'Waived',
+            type: 'boolean'
+        }
+    },
+    required: ['cve_id', 'id', 'project_id', 'vulnerability_id', 'component_id', 'asset_id', 'first_seen_at', 'last_seen_at', 'created_at', 'updated_at'],
+    title: 'FindingDetailPublic',
+    type: 'object'
+} as const;
+
 export const FindingExplanationPublicSchema = {
     description: 'Structured decision explanation for one persisted finding.',
     properties: {
@@ -777,6 +1064,238 @@ export const FindingExplanationPublicSchema = {
     },
     required: ['finding_id', 'project_id', 'cve_id', 'priority', 'priority_rank'],
     title: 'FindingExplanationPublic',
+    type: 'object'
+} as const;
+
+export const FindingOccurrencePublicSchema = {
+    description: 'Public occurrence row for finding detail views.',
+    properties: {
+        analysis_run_id: {
+            format: 'uuid',
+            title: 'Analysis Run Id',
+            type: 'string'
+        },
+        asset_business_service: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Asset Business Service'
+        },
+        asset_exposure: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Asset Exposure'
+        },
+        asset_owner: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Asset Owner'
+        },
+        asset_ref: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Asset Ref'
+        },
+        component_name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Component Name'
+        },
+        component_version: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Component Version'
+        },
+        created_at: {
+            anyOf: [
+                {
+                    format: 'date-time',
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Created At'
+        },
+        fix_version: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Fix Version'
+        },
+        fix_versions: {
+            anyOf: [
+                {
+                    items: {
+                        type: 'string'
+                    },
+                    type: 'array'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Fix Versions'
+        },
+        id: {
+            format: 'uuid',
+            title: 'Id',
+            type: 'string'
+        },
+        purl: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Purl'
+        },
+        raw_reference: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Raw Reference'
+        },
+        raw_severity: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Raw Severity'
+        },
+        scanner: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Scanner'
+        },
+        source: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Source'
+        },
+        source_format: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Source Format'
+        },
+        source_id: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Source Id'
+        },
+        source_record_id: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Source Record Id'
+        },
+        target_kind: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Target Kind'
+        },
+        target_ref: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Target Ref'
+        }
+    },
+    required: ['id', 'analysis_run_id'],
+    title: 'FindingOccurrencePublic',
     type: 'object'
 } as const;
 
