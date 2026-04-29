@@ -179,13 +179,23 @@ test("template frontend covers core Workbench E2E smoke", async ({ page }) => {
 
   await navigation.getByRole("link", { name: "Reports" }).click()
   await expect(page).toHaveURL(/\/reports$/)
-  await expect(page.getByRole("heading", { name: "Reports" })).toBeVisible()
+  await expect(
+    page.getByRole("heading", { exact: true, name: "Reports" }),
+  ).toBeVisible()
   const reportsPage = page.getByRole("region", {
-    name: "Reports page shell",
+    name: "Reports workspace",
   })
-  await expect(reportsPage).toContainText("Export actions staged")
+  await expect(reportsPage).toContainText(
+    "Generate and download reports for the selected run",
+  )
   await expect(reportsPage).toContainText("VPW-048")
-  await expect(reportsPage).toContainText("VPW-053")
+  const reportRunSelect = page.getByLabel("Report analysis run")
+  await expect(reportRunSelect).toBeEnabled()
+  await expect(reportRunSelect).toHaveValue(/[0-9a-f-]{36}/)
+  const reportRunSelection = page.getByRole("region", {
+    name: "Report run selection",
+  })
+  await expect(reportRunSelection).toContainText("succeeded")
   const reportCards = page.getByRole("region", {
     name: "Report export cards",
   })
@@ -194,23 +204,42 @@ test("template frontend covers core Workbench E2E smoke", async ({ page }) => {
   await expect(reportCards).toContainText("JSON Findings Export")
   await expect(reportCards).toContainText("CSV Findings Export")
   await expect(reportCards).toContainText("Evidence Bundle")
-  for (const action of [
-    "Generate Markdown",
-    "Generate HTML",
-    "Export JSON",
-    "Export CSV",
-    "Build Evidence Bundle",
-  ]) {
-    await expect(
-      reportCards.getByRole("button", { name: action }),
-    ).toBeDisabled()
+  const expectedReports = [
+    { action: "Generate Markdown", filename: "technical-report.md" },
+    { action: "Generate HTML", filename: "executive-report.html" },
+    { action: "Export JSON", filename: "analysis-result.v1.json" },
+    { action: "Export CSV", filename: "findings.csv" },
+    { action: "Build Evidence Bundle", filename: "evidence-bundle.zip" },
+  ]
+  for (const report of expectedReports) {
+    const actionButton = reportCards.getByRole("button", {
+      name: report.action,
+    })
+    await expect(actionButton).toBeEnabled()
+    await actionButton.click()
+    await expect(reportsPage).toContainText(report.filename)
   }
-  await expect(
-    page.getByRole("region", { name: "Reports history" }),
-  ).toContainText("No generated reports yet")
+  const reportHistory = page.getByRole("region", { name: "Reports history" })
+  await expect(reportHistory).toContainText("technical-report.md")
+  await expect(reportHistory).toContainText("executive-report.html")
+  await expect(reportHistory).toContainText("analysis-result.v1.json")
+  await expect(reportHistory).toContainText("findings.csv")
+  await expect(reportHistory).toContainText("evidence-bundle.zip")
+  await reportHistory
+    .getByRole("button", { name: "Verify evidence-bundle.zip" })
+    .click()
+  await expect(reportsPage).toContainText("Evidence bundle verified")
+  for (const report of expectedReports) {
+    const downloadPromise = page.waitForEvent("download")
+    await reportHistory
+      .getByRole("button", { name: `Download ${report.filename}` })
+      .click()
+    const download = await downloadPromise
+    expect(download.suggestedFilename()).toBe(report.filename)
+  }
   await page.screenshot({
     fullPage: true,
-    path: "../docs/evidence/vpw-046-reports-page.png",
+    path: "../docs/evidence/vpw-053-report-downloads.png",
   })
 
   await navigation.getByRole("link", { name: "Projects" }).click()
