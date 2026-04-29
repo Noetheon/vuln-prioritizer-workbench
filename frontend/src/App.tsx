@@ -375,6 +375,78 @@ function runStatusLabel(status: AnalysisRunPublic["status"]) {
   return status ? status.replaceAll("_", " ") : "pending"
 }
 
+function runStatusTone(status: AnalysisRunPublic["status"]) {
+  if (status === "succeeded" || status === "completed") {
+    return "succeeded"
+  }
+  if (status === "failed" || status === "cancelled") {
+    return "failed"
+  }
+  if (status === "completed_with_errors") {
+    return "warning"
+  }
+  return "pending"
+}
+
+function runFileLabel(run: {
+  filename?: string | null
+  input_type: string
+  input_upload?: Record<string, unknown>
+  summary_json?: Record<string, unknown>
+}) {
+  const upload = objectRecord(
+    run.input_upload ?? run.summary_json?.input_upload,
+  )
+  const uploadFilename = stringValue(upload.filename)
+  return run.filename ?? uploadFilename ?? `${run.input_type} upload`
+}
+
+function failedRunCause(
+  run: AnalysisRunPublic | null,
+  summary: AnalysisRunSummaryPublic | null,
+) {
+  if (!run && !summary) {
+    return "No failure detail available."
+  }
+  const errorJson = objectRecord(summary?.error_json ?? run?.error_json)
+  const analysisError = objectRecord(errorJson.analysis_error)
+  return (
+    run?.error_message ??
+    stringValue(errorJson.message) ??
+    stringValue(errorJson.error) ??
+    stringValue(errorJson.last_error) ??
+    stringValue(analysisError.message) ??
+    "No failure detail available."
+  )
+}
+
+function objectRecord(value: unknown): Record<string, unknown> {
+  return typeof value === "object" && value !== null
+    ? (value as Record<string, unknown>)
+    : {}
+}
+
+function stringValue(value: unknown) {
+  return typeof value === "string" && value.trim() ? value : null
+}
+
+function metadataRows(value: unknown) {
+  return Object.entries(objectRecord(value)).filter(
+    ([key, entryValue]) =>
+      !key.toLowerCase().includes("path") &&
+      entryValue !== null &&
+      entryValue !== undefined &&
+      typeof entryValue !== "object",
+  )
+}
+
+function jsonPreview(value: unknown) {
+  const record = objectRecord(value)
+  return Object.keys(record).length > 0
+    ? JSON.stringify(record, null, 2)
+    : "No error JSON recorded."
+}
+
 function validateProjectForm(form: ProjectFormState) {
   const name = form.name.trim()
   const description = form.description.trim()
@@ -399,10 +471,14 @@ function projectRequestBody(form: ProjectFormState) {
 }
 
 function formatDateTime(value: string) {
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) {
+    return "N.A."
+  }
   return new Intl.DateTimeFormat(undefined, {
     dateStyle: "medium",
     timeStyle: "short",
-  }).format(new Date(value))
+  }).format(date)
 }
 
 export function App() {
@@ -443,6 +519,15 @@ export function App() {
   const [importParseErrors, setImportParseErrors] = useState<
     ImportParseErrorPublic[]
   >([])
+  const [projectRuns, setProjectRuns] = useState<AnalysisRunPublic[]>([])
+  const [runsLoading, setRunsLoading] = useState(false)
+  const [runsError, setRunsError] = useState("")
+  const [selectedRunId, setSelectedRunId] = useState("")
+  const [selectedRun, setSelectedRun] = useState<AnalysisRunPublic | null>(null)
+  const [selectedRunSummary, setSelectedRunSummary] =
+    useState<AnalysisRunSummaryPublic | null>(null)
+  const [runDetailLoading, setRunDetailLoading] = useState(false)
+  const [runDetailError, setRunDetailError] = useState("")
   const selectedProject =
     projects.find((project) => project.id === selectedProjectId) ?? null
   const dashboardLoading = projectListLoading || summaryLoading
@@ -576,6 +661,103 @@ export function App() {
     }
   }, [navigate, selectedProjectId])
 
+  useEffect(() => {
+    let isMounted = true
+
+    async function loadProjectRuns() {
+      if (currentPath !== "/imports" || !selectedProjectId) {
+        setProjectRuns([])
+        setSelectedRunId("")
+        setRunsError("")
+        setRunsLoading(false)
+        return
+      }
+
+      setRunsLoading(true)
+      setRunsError("")
+      try {
+        const runPage = await RunsService.readProjectRuns({
+          projectId: selectedProjectId,
+        })
+        if (isMounted) {
+          setProjectRuns(runPage.data)
+          setSelectedRunId((currentRunId) =>
+            runPage.data.some((run) => run.id === currentRunId)
+              ? currentRunId
+              : (runPage.data[0]?.id ?? ""),
+          )
+        }
+      } catch (caught) {
+        if (caught instanceof ApiError && [401, 403].includes(caught.status)) {
+          clearAccessToken()
+          await navigate({ to: "/login" })
+          return
+        }
+        if (isMounted) {
+          setProjectRuns([])
+          setSelectedRunId("")
+          setRunsError(apiErrorMessage("Import runs unavailable", caught))
+        }
+      } finally {
+        if (isMounted) {
+          setRunsLoading(false)
+        }
+      }
+    }
+
+    void loadProjectRuns()
+    return () => {
+      isMounted = false
+    }
+  }, [currentPath, navigate, selectedProjectId])
+
+  useEffect(() => {
+    let isMounted = true
+
+    async function loadRunDetail() {
+      if (currentPath !== "/imports" || !selectedRunId) {
+        setSelectedRun(null)
+        setSelectedRunSummary(null)
+        setRunDetailError("")
+        setRunDetailLoading(false)
+        return
+      }
+
+      setRunDetailLoading(true)
+      setRunDetailError("")
+      try {
+        const [run, summary] = await Promise.all([
+          RunsService.readRun({ runId: selectedRunId }),
+          RunsService.readRunSummary({ runId: selectedRunId }),
+        ])
+        if (isMounted) {
+          setSelectedRun(run)
+          setSelectedRunSummary(summary)
+        }
+      } catch (caught) {
+        if (caught instanceof ApiError && [401, 403].includes(caught.status)) {
+          clearAccessToken()
+          await navigate({ to: "/login" })
+          return
+        }
+        if (isMounted) {
+          setSelectedRun(null)
+          setSelectedRunSummary(null)
+          setRunDetailError(apiErrorMessage("Run detail unavailable", caught))
+        }
+      } finally {
+        if (isMounted) {
+          setRunDetailLoading(false)
+        }
+      }
+    }
+
+    void loadRunDetail()
+    return () => {
+      isMounted = false
+    }
+  }, [currentPath, navigate, selectedRunId])
+
   async function refreshProjects(preferredProjectId?: string) {
     const projectPage = await ProjectsService.readProjects()
     setProjects(projectPage.data)
@@ -595,6 +777,45 @@ export function App() {
     })
     if (projectPage.data.length === 0) {
       setProjectSummary(null)
+    }
+  }
+
+  async function refreshProjectRuns(preferredRunId?: string) {
+    if (!selectedProjectId) {
+      setProjectRuns([])
+      setSelectedRunId("")
+      return
+    }
+    setRunsLoading(true)
+    setRunsError("")
+    try {
+      const runPage = await RunsService.readProjectRuns({
+        projectId: selectedProjectId,
+      })
+      setProjectRuns(runPage.data)
+      setSelectedRunId((currentRunId) => {
+        if (
+          preferredRunId &&
+          runPage.data.some((run) => run.id === preferredRunId)
+        ) {
+          return preferredRunId
+        }
+        if (runPage.data.some((run) => run.id === currentRunId)) {
+          return currentRunId
+        }
+        return runPage.data[0]?.id ?? ""
+      })
+    } catch (caught) {
+      if (caught instanceof ApiError && [401, 403].includes(caught.status)) {
+        clearAccessToken()
+        await navigate({ to: "/login" })
+        return
+      }
+      setProjectRuns([])
+      setSelectedRunId("")
+      setRunsError(apiErrorMessage("Import runs unavailable", caught))
+    } finally {
+      setRunsLoading(false)
     }
   }
 
@@ -688,6 +909,12 @@ export function App() {
 
   async function submitImport(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    const fileInput = event.currentTarget.elements.namedItem("importFile")
+    const selectedFile =
+      importWizard.file ??
+      (fileInput instanceof HTMLInputElement
+        ? (fileInput.files?.[0] ?? null)
+        : null)
     setImportError("")
     setImportRun(null)
     setImportRunSummary(null)
@@ -696,7 +923,7 @@ export function App() {
       setImportError("Select or create a project before uploading.")
       return
     }
-    if (!importWizard.file) {
+    if (!selectedFile) {
       setImportError("Choose an import file before uploading.")
       return
     }
@@ -706,7 +933,7 @@ export function App() {
       const run = await ImportsService.importProjectUpload({
         projectId: selectedProjectId,
         formData: {
-          file: importWizard.file as unknown as string,
+          file: selectedFile as unknown as string,
           input_type: importWizard.inputType,
         },
       })
@@ -714,13 +941,16 @@ export function App() {
       const summary = await RunsService.readRunSummary({ runId: run.id })
       setImportRunSummary(summary)
       setImportParseErrors(summary.parse_errors ?? [])
+      setSelectedRunId(run.id)
       await refreshProjects(selectedProjectId)
+      await refreshProjectRuns(run.id)
     } catch (caught) {
       setImportError(apiErrorMessage("Import upload failed", caught))
       const runId = analysisRunIdFromError(caught)
       const parseErrors = parseErrorsFromError(caught)
       setImportParseErrors(parseErrors)
       if (runId) {
+        setSelectedRunId(runId)
         try {
           const summary = await RunsService.readRunSummary({ runId })
           setImportRunSummary(summary)
@@ -729,6 +959,8 @@ export function App() {
           setImportRunSummary(null)
         }
       }
+      await refreshProjects(selectedProjectId)
+      await refreshProjectRuns(runId ?? undefined)
     } finally {
       setImportLoading(false)
     }
@@ -1186,6 +1418,7 @@ export function App() {
                     <input
                       accept={importAccept(importWizard.inputType)}
                       aria-label="Import file"
+                      name="importFile"
                       onChange={(event) =>
                         setImportWizard((state) => ({
                           ...state,
@@ -1323,6 +1556,271 @@ export function App() {
                     </table>
                   </section>
                 ) : null}
+
+                <section className="runs-browser" aria-label="Import runs">
+                  <div className="runs-list-panel">
+                    <div className="runs-section-header">
+                      <div>
+                        <h3>Historical Runs</h3>
+                        <span>
+                          {selectedProject
+                            ? selectedProject.name
+                            : "No project selected"}
+                        </span>
+                      </div>
+                      <button
+                        className="secondary-action"
+                        disabled={runsLoading || !selectedProjectId}
+                        onClick={() => void refreshProjectRuns(selectedRunId)}
+                        type="button"
+                      >
+                        Refresh
+                      </button>
+                    </div>
+                    {runsError ? (
+                      <p className="dashboard-alert" role="alert">
+                        {runsError}
+                      </p>
+                    ) : null}
+                    {runsLoading ? (
+                      <p className="dashboard-state" role="status">
+                        Loading import runs
+                      </p>
+                    ) : null}
+                    {!runsLoading && projectRuns.length === 0 ? (
+                      <section
+                        className="dashboard-empty compact-empty"
+                        aria-label="Runs empty state"
+                      >
+                        <h3>No import runs yet</h3>
+                        <p>Upload a supported file to create run history.</p>
+                      </section>
+                    ) : null}
+                    {projectRuns.length > 0 ? (
+                      <ul className="runs-list">
+                        {projectRuns.map((run) => (
+                          <li key={run.id}>
+                            <button
+                              aria-current={
+                                selectedRunId === run.id ? "true" : undefined
+                              }
+                              className={
+                                selectedRunId === run.id
+                                  ? "run-list-item active"
+                                  : "run-list-item"
+                              }
+                              onClick={() => setSelectedRunId(run.id)}
+                              type="button"
+                            >
+                              <span
+                                className={`run-status ${runStatusTone(
+                                  run.status,
+                                )}`}
+                              >
+                                {runStatusLabel(run.status)}
+                              </span>
+                              <strong>{runFileLabel(run)}</strong>
+                              <span>{run.input_type}</span>
+                              <small>
+                                {formatDateTime(run.started_at ?? "")}
+                              </small>
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : null}
+                  </div>
+
+                  <section className="run-detail-panel" aria-label="Run detail">
+                    <div className="runs-section-header">
+                      <div>
+                        <h3>Run Detail</h3>
+                        <span>
+                          {selectedRunId
+                            ? selectedRunId.slice(0, 8)
+                            : "No run selected"}
+                        </span>
+                      </div>
+                      <Link className="secondary-action" to="/findings">
+                        Findings
+                      </Link>
+                    </div>
+                    {runDetailError ? (
+                      <p className="dashboard-alert" role="alert">
+                        {runDetailError}
+                      </p>
+                    ) : null}
+                    {runDetailLoading ? (
+                      <p className="dashboard-state" role="status">
+                        Loading run detail
+                      </p>
+                    ) : null}
+                    {!runDetailLoading && !selectedRunId ? (
+                      <section
+                        className="dashboard-empty compact-empty"
+                        aria-label="No run selected"
+                      >
+                        <h3>No run selected</h3>
+                        <p>
+                          Select a historical import run to inspect details.
+                        </p>
+                      </section>
+                    ) : null}
+                    {selectedRun && selectedRunSummary ? (
+                      <>
+                        <dl className="run-facts">
+                          <div>
+                            <dt>Status</dt>
+                            <dd>
+                              <span
+                                className={`run-status ${runStatusTone(
+                                  selectedRunSummary.status,
+                                )}`}
+                              >
+                                {runStatusLabel(selectedRunSummary.status)}
+                              </span>
+                            </dd>
+                          </div>
+                          <div>
+                            <dt>Input type</dt>
+                            <dd>{selectedRunSummary.input_type}</dd>
+                          </div>
+                          <div>
+                            <dt>Filename</dt>
+                            <dd>{runFileLabel(selectedRunSummary)}</dd>
+                          </div>
+                          <div>
+                            <dt>Started</dt>
+                            <dd>
+                              {formatDateTime(selectedRunSummary.started_at)}
+                            </dd>
+                          </div>
+                          <div>
+                            <dt>Finished</dt>
+                            <dd>
+                              {selectedRunSummary.finished_at
+                                ? formatDateTime(selectedRunSummary.finished_at)
+                                : "N.A."}
+                            </dd>
+                          </div>
+                          <div>
+                            <dt>Provider snapshot</dt>
+                            <dd>
+                              {selectedRunSummary.provider_snapshot_id ??
+                                "N.A."}
+                            </dd>
+                          </div>
+                        </dl>
+
+                        <section className="run-counts" aria-label="Run counts">
+                          <div>
+                            <span>Created</span>
+                            <strong>
+                              {selectedRunSummary.created_findings ?? 0}
+                            </strong>
+                          </div>
+                          <div>
+                            <span>Updated</span>
+                            <strong>
+                              {selectedRunSummary.updated_findings ?? 0}
+                            </strong>
+                          </div>
+                          <div>
+                            <span>Findings</span>
+                            <strong>
+                              {selectedRunSummary.finding_count ?? 0}
+                            </strong>
+                          </div>
+                          <div>
+                            <span>Ignored</span>
+                            <strong>
+                              {selectedRunSummary.ignored_lines ?? 0}
+                            </strong>
+                          </div>
+                        </section>
+
+                        {selectedRunSummary.status === "failed" ? (
+                          <section
+                            className="failure-cause"
+                            aria-label="Run failure cause"
+                          >
+                            <h4>Failure Cause</h4>
+                            <p>
+                              {failedRunCause(selectedRun, selectedRunSummary)}
+                            </p>
+                            <pre>
+                              {jsonPreview(selectedRunSummary.error_json)}
+                            </pre>
+                          </section>
+                        ) : null}
+
+                        <section
+                          className="upload-metadata"
+                          aria-label="Upload metadata"
+                        >
+                          <h4>Upload Metadata</h4>
+                          {metadataRows(selectedRunSummary.input_upload)
+                            .length > 0 ? (
+                            <dl>
+                              {metadataRows(
+                                selectedRunSummary.input_upload,
+                              ).map(([key, value]) => (
+                                <div key={key}>
+                                  <dt>{key}</dt>
+                                  <dd>{String(value)}</dd>
+                                </div>
+                              ))}
+                            </dl>
+                          ) : (
+                            <p>No upload metadata recorded.</p>
+                          )}
+                        </section>
+
+                        <section
+                          className="parse-errors"
+                          aria-label="Run parser errors"
+                        >
+                          <h3>Parse Errors</h3>
+                          {(selectedRunSummary.parse_errors ?? []).length >
+                          0 ? (
+                            <table>
+                              <thead>
+                                <tr>
+                                  <th>Line</th>
+                                  <th>Field</th>
+                                  <th>Value</th>
+                                  <th>Message</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {(selectedRunSummary.parse_errors ?? []).map(
+                                  (error) => (
+                                    <tr
+                                      key={[
+                                        error.filename,
+                                        error.line,
+                                        error.field,
+                                        error.value,
+                                        error.message,
+                                      ].join(":")}
+                                    >
+                                      <td>{error.line ?? "N.A."}</td>
+                                      <td>{error.field ?? "N.A."}</td>
+                                      <td>{error.value ?? "N.A."}</td>
+                                      <td>{error.message}</td>
+                                    </tr>
+                                  ),
+                                )}
+                              </tbody>
+                            </table>
+                          ) : (
+                            <p>No parser errors recorded.</p>
+                          )}
+                        </section>
+                      </>
+                    ) : null}
+                  </section>
+                </section>
               </section>
             ) : (
               <div className="dashboard-panel-body">

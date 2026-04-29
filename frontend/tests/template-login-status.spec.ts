@@ -181,6 +181,13 @@ test("template login reaches authenticated Workbench status shell", async ({
   await expect(
     page.getByRole("region", { name: "Import result" }),
   ).toContainText("2")
+  const importRuns = page.getByRole("region", { name: "Import runs" })
+  await expect(importRuns).toContainText("import-wizard-cves.txt")
+  await expect(importRuns).toContainText("succeeded")
+  const runDetail = page.getByRole("region", { name: "Run detail" })
+  await expect(runDetail).toContainText("Run Detail")
+  await expect(runDetail).toContainText("Created")
+  await expect(runDetail).toContainText("Provider snapshot")
   await page.getByLabel("Input type").selectOption("generic-occurrence-csv")
   await page.getByLabel("Import file").setInputFiles({
     buffer: invalidOccurrenceCsv,
@@ -190,8 +197,15 @@ test("template login reaches authenticated Workbench status shell", async ({
   await page.getByRole("button", { name: "Upload Import" }).click()
   await expect(page.getByRole("alert")).toContainText("Import upload failed")
   await expect(
-    page.getByRole("region", { name: "Parser errors" }),
+    page.getByRole("region", { exact: true, name: "Parser errors" }),
   ).toContainText("cve_id")
+  await expect(importRuns).toContainText("invalid-occurrences.csv")
+  await expect(importRuns).toContainText("failed")
+  await expect(runDetail).toContainText("Failure Cause")
+  await expect(runDetail).toContainText("cve_id")
+  await expect(runDetail).toContainText("not-a-cve")
+  await runDetail.getByRole("link", { name: "Findings" }).click()
+  await expect(page).toHaveURL(/\/findings$/)
 
   await navigation.getByRole("link", { name: "Settings" }).click()
   await expect(page).toHaveURL(/\/settings$/)
