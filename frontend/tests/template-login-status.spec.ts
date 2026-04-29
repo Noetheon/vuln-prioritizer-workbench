@@ -1,6 +1,9 @@
+import { readFileSync } from "node:fs"
 import { expect, test } from "@playwright/test"
 
 const validCveList = Buffer.from("CVE-2021-44228\nCVE-2024-3094\n")
+const trivyReport = readFileSync("../data/input_fixtures/trivy_report.json")
+const lowConfidenceAttackMapping = "local_curated_low_confidence_vpw058.yml"
 const validOccurrenceCsv = Buffer.from(
   [
     "cve_id,asset_ref,component,version,purl,severity,owner,business_service,exposure",
@@ -14,6 +17,104 @@ const invalidOccurrenceCsv = Buffer.from(
     "not-a-cve,build-host-1,xz,5.6.0,pkg:apk/alpine/xz@5.6.0-r0,trivy,5.6.1-r2,CRITICAL,team-platform,payments,public",
   ].join("\n"),
 )
+test("template finding detail renders TTP Context tab", async ({ page }) => {
+  test.setTimeout(60_000)
+  const testRunSuffix = Date.now().toString(36)
+  const projectName = `VPW TTP Context ${testRunSuffix}`
+
+  await page.goto("/login")
+  await page.getByLabel("Email").fill("admin@example.com")
+  await page.getByLabel("Password").fill("changethis")
+  await page.getByRole("button", { name: "Sign in" }).click()
+  await expect(page).toHaveURL(/\/$/)
+
+  const accessToken = await page.evaluate(() =>
+    window.localStorage.getItem("access_token"),
+  )
+  expect(accessToken).toBeTruthy()
+  const authHeaders = { Authorization: `Bearer ${accessToken}` }
+  const projectResponse = await page.request.post(
+    "http://127.0.0.1:8000/api/v1/projects/",
+    {
+      data: {
+        description: "Playwright TTP Context project",
+        name: projectName,
+      },
+      headers: authHeaders,
+    },
+  )
+  expect(projectResponse.ok()).toBeTruthy()
+  const project = (await projectResponse.json()) as { id: string }
+
+  const importResponse = await page.request.post(
+    `http://127.0.0.1:8000/api/v1/projects/${project.id}/imports`,
+    {
+      headers: authHeaders,
+      multipart: {
+        attack_mapping_file: lowConfidenceAttackMapping,
+        attack_source: "local-curated",
+        file: {
+          buffer: trivyReport,
+          mimeType: "application/json",
+          name: "trivy.json",
+        },
+        input_type: "trivy-json",
+      },
+    },
+  )
+  expect(importResponse.ok()).toBeTruthy()
+
+  const findingsResponse = await page.request.get(
+    `http://127.0.0.1:8000/api/v1/projects/${project.id}/findings/?sort=cve`,
+    { headers: authHeaders },
+  )
+  expect(findingsResponse.ok()).toBeTruthy()
+  const findingsPayload = (await findingsResponse.json()) as {
+    data: Array<{ attack_mapped?: boolean; cve_id: string; id: string }>
+  }
+  const mapped = findingsPayload.data.find(
+    (finding) => finding.cve_id === "CVE-2023-34362",
+  )
+  const unmapped = findingsPayload.data.find(
+    (finding) => finding.cve_id === "CVE-2024-3094",
+  )
+  expect(mapped?.id).toBeTruthy()
+  expect(unmapped?.id).toBeTruthy()
+
+  await page.goto(`/findings/${mapped?.id}`)
+  await expect(
+    page.getByRole("heading", { name: "CVE-2023-34362" }),
+  ).toBeVisible()
+  await page.getByRole("tab", { name: "TTP Context" }).click()
+  const ttpPanel = page.getByRole("tabpanel", { name: "TTP Context" })
+  await expect(ttpPanel).toContainText("ATT&CK threat context")
+  await expect(ttpPanel).toContainText("local-curated")
+  await expect(ttpPanel).toContainText("Low")
+  await expect(ttpPanel).toContainText("Review required")
+  await expect(ttpPanel).toContainText("Needs Review")
+  await expect(ttpPanel).toContainText("T1190")
+  await expect(ttpPanel).toContainText("Exploit Public-Facing Application")
+  await expect(ttpPanel).toContainText("Detection coverage")
+  await expect(ttpPanel).toContainText("Defensive context only")
+  await page.screenshot({
+    fullPage: true,
+    path: "../docs/evidence/vpw-058-ttp-context-tab.png",
+  })
+
+  await page.goto(`/findings/${unmapped?.id}`)
+  await expect(
+    page.getByRole("heading", { name: "CVE-2024-3094" }),
+  ).toBeVisible()
+  await page.getByRole("tab", { name: "TTP Context" }).click()
+  const emptyPanel = page.getByRole("tabpanel", { name: "TTP Context" })
+  await expect(emptyPanel).toContainText(
+    "No approved ATT&CK mapping is stored for this finding",
+  )
+  await expect(emptyPanel).toContainText(
+    "Workbench does not infer tactics or techniques",
+  )
+  await expect(emptyPanel).toContainText("Defensive context only")
+})
 test("template frontend covers core Workbench E2E smoke", async ({ page }) => {
   test.setTimeout(60_000)
   const testRunSuffix = Date.now().toString(36)

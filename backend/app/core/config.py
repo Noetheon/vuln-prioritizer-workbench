@@ -31,6 +31,7 @@ class Settings:
     REPORT_DIR: str = "data/template-reports"
     PROVIDER_SNAPSHOT_DIR: str = "data"
     PROVIDER_CACHE_DIR: str = "data/template-provider-cache"
+    ATTACK_ARTIFACT_DIR: str = "data/attack"
     MAX_UPLOAD_MB: int = 25
 
     @property
@@ -61,6 +62,11 @@ class Settings:
     def provider_cache_dir_path(self) -> Path:
         """Return the configured provider cache root for template imports."""
         return Path(self.PROVIDER_CACHE_DIR)
+
+    @property
+    def attack_artifact_dir_path(self) -> Path:
+        """Return the configured ATT&CK artifact root for template imports."""
+        return Path(self.ATTACK_ARTIFACT_DIR)
 
     @property
     def max_upload_bytes(self) -> int:
@@ -115,6 +121,7 @@ def load_settings() -> Settings:
         REPORT_DIR=environ.get("REPORT_DIR", "data/template-reports"),
         PROVIDER_SNAPSHOT_DIR=environ.get("PROVIDER_SNAPSHOT_DIR", "data"),
         PROVIDER_CACHE_DIR=environ.get("PROVIDER_CACHE_DIR", "data/template-provider-cache"),
+        ATTACK_ARTIFACT_DIR=environ.get("ATTACK_ARTIFACT_DIR", "data/attack"),
         MAX_UPLOAD_MB=_positive_int_from_env("MAX_UPLOAD_MB", 25),
     )
 

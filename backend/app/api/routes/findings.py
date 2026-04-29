@@ -6,12 +6,17 @@ import uuid
 from typing import Literal
 
 from fastapi import APIRouter, HTTPException, Query
+from sqlmodel import Session, col, select
 
 from app.api.deps import CurrentUser, SessionDep
 from app.api.routes.workbench_access import require_visible_project
 from app.models import (
     AssetExposure,
     Finding,
+    FindingAttackContext,
+    FindingAttackContextDetailPublic,
+    FindingAttackMappingDetailPublic,
+    FindingAttackTechniqueDetailPublic,
     FindingDetailPublic,
     FindingExplanationPublic,
     FindingOccurrence,
@@ -100,7 +105,7 @@ def read_finding(
     if finding is None:
         raise HTTPException(status_code=404, detail="Finding not found")
     require_visible_project(session, current_user, finding.project_id)
-    return _finding_detail_public(finding)
+    return _finding_detail_public_with_attack_context(session, finding)
 
 
 def _finding_public(finding: Finding) -> FindingPublic:
@@ -132,6 +137,272 @@ def _finding_detail_public(finding: Finding) -> FindingDetailPublic:
             ],
         }
     )
+
+
+def _finding_detail_public_with_attack_context(
+    session: Session,
+    finding: Finding,
+) -> FindingDetailPublic:
+    detail = _finding_detail_public(finding)
+    context = _latest_finding_attack_context(session, finding.id)
+    return detail.model_copy(
+        update={
+            "attack_context": _finding_attack_context_detail_public(context, finding),
+        }
+    )
+
+
+def _latest_finding_attack_context(
+    session: Session,
+    finding_id: uuid.UUID,
+) -> FindingAttackContext | None:
+    statement = (
+        select(FindingAttackContext)
+        .where(FindingAttackContext.finding_id == finding_id)
+        .order_by(col(FindingAttackContext.created_at).desc())
+    )
+    return session.exec(statement).first()
+
+
+def _finding_attack_context_detail_public(
+    context: FindingAttackContext | None,
+    finding: Finding,
+) -> FindingAttackContextDetailPublic | None:
+    if context is not None:
+        mappings = _attack_mapping_rows(
+            context.mappings_json,
+            source=context.source,
+            review_status=context.review_status,
+            context_rationale=context.rationale,
+            defensive_note=context.defensive_note,
+        )
+        techniques = _attack_technique_rows(
+            mappings,
+            context.technique_ids_json,
+            source=context.source,
+            review_status=context.review_status,
+            defensive_note=context.defensive_note,
+        )
+        confidence = _attack_context_confidence(mappings)
+        return FindingAttackContextDetailPublic(
+            mapped=context.mapped,
+            source=context.source,
+            review_status=context.review_status,
+            defensive_note=context.defensive_note,
+            rationale=context.rationale,
+            confidence=confidence,
+            low_confidence=confidence == "low",
+            attack_relevance="Mapped" if context.mapped else "Unmapped",
+            technique_ids=list(context.technique_ids_json),
+            tactics=_attack_context_tactics(mappings, techniques, context.tactic_ids_json),
+            mappings=mappings,
+            techniques=techniques,
+        )
+
+    raw_context = _object_record(finding.explanation_json.get("attack_context"))
+    if not raw_context or (
+        raw_context.get("mapped") is not True and raw_context.get("source") in {None, "none", ""}
+    ):
+        return None
+    mappings = _attack_mapping_rows(
+        _array_records(raw_context.get("mappings")),
+        source=_string_value(raw_context.get("source")) or "none",
+        review_status="reviewed" if raw_context.get("mapped") is True else "unreviewed",
+        context_rationale=_string_value(raw_context.get("rationale")),
+        defensive_note=_default_attack_defensive_note(raw_context.get("mapped") is True),
+    )
+    techniques = _attack_technique_rows(
+        mappings,
+        _attack_context_technique_ids(_array_records(raw_context.get("techniques"))),
+        source=_string_value(raw_context.get("source")) or "none",
+        review_status="reviewed" if raw_context.get("mapped") is True else "unreviewed",
+        defensive_note=_default_attack_defensive_note(raw_context.get("mapped") is True),
+    )
+    confidence = _string_value(raw_context.get("confidence")) or _attack_context_confidence(
+        mappings
+    )
+    return FindingAttackContextDetailPublic(
+        mapped=raw_context.get("mapped") is True,
+        source=_string_value(raw_context.get("source")) or "none",
+        review_status="reviewed" if raw_context.get("mapped") is True else "unreviewed",
+        defensive_note=_default_attack_defensive_note(raw_context.get("mapped") is True),
+        rationale=_string_value(raw_context.get("rationale")),
+        confidence=confidence,
+        low_confidence=confidence == "low" or raw_context.get("low_confidence") is True,
+        attack_relevance=_string_value(raw_context.get("attack_relevance")) or "Unmapped",
+        technique_ids=[row.technique_id for row in techniques],
+        tactics=_attack_context_tactics(mappings, techniques, []),
+        mappings=mappings,
+        techniques=techniques,
+    )
+
+
+def _attack_mapping_rows(
+    mappings_json: list[dict[str, object]],
+    *,
+    source: str,
+    review_status: str,
+    context_rationale: str | None,
+    defensive_note: str,
+) -> list[FindingAttackMappingDetailPublic]:
+    rows: list[FindingAttackMappingDetailPublic] = []
+    for mapping in mappings_json:
+        technique = _object_record(mapping.get("technique"))
+        technique_id = (
+            _string_value(mapping.get("attack_object_id"))
+            or _string_value(mapping.get("technique_id"))
+            or _string_value(technique.get("attack_object_id"))
+        )
+        if technique_id is None:
+            continue
+        confidence = _attack_confidence_label(mapping.get("confidence"))
+        rows.append(
+            FindingAttackMappingDetailPublic(
+                technique_id=technique_id,
+                technique_name=(
+                    _string_value(mapping.get("attack_object_name"))
+                    or _string_value(mapping.get("technique_name"))
+                    or _string_value(technique.get("name"))
+                ),
+                tactics=_string_list_value(mapping.get("tactics"))
+                or _string_list_value(technique.get("tactics")),
+                source=_string_value(mapping.get("source")) or source,
+                confidence=confidence,
+                review_status=_string_value(mapping.get("review_status")) or review_status,
+                mapping_type=_string_value(mapping.get("mapping_type")),
+                rationale=(
+                    _string_value(mapping.get("rationale"))
+                    or context_rationale
+                    or "Reviewed ATT&CK mapping for defensive triage."
+                ),
+                defensive_note=_string_value(mapping.get("defensive_note")) or defensive_note,
+                references=_string_list_value(mapping.get("references")),
+            )
+        )
+    return rows
+
+
+def _attack_technique_rows(
+    mappings: list[FindingAttackMappingDetailPublic],
+    technique_ids: list[str],
+    *,
+    source: str,
+    review_status: str,
+    defensive_note: str,
+) -> list[FindingAttackTechniqueDetailPublic]:
+    rows: list[FindingAttackTechniqueDetailPublic] = []
+    seen: set[str] = set()
+    for mapping in mappings:
+        if mapping.technique_id in seen:
+            continue
+        seen.add(mapping.technique_id)
+        rows.append(
+            FindingAttackTechniqueDetailPublic(
+                technique_id=mapping.technique_id,
+                name=mapping.technique_name,
+                tactics=mapping.tactics,
+                source=mapping.source or source,
+                confidence=mapping.confidence,
+                review_status=mapping.review_status or review_status,
+                rationale=mapping.rationale,
+                defensive_note=mapping.defensive_note or defensive_note,
+            )
+        )
+    for technique_id in technique_ids:
+        if technique_id not in seen:
+            rows.append(
+                FindingAttackTechniqueDetailPublic(
+                    technique_id=technique_id,
+                    source=source,
+                    review_status=review_status,
+                    defensive_note=defensive_note,
+                )
+            )
+    return rows
+
+
+def _attack_context_technique_ids(records: list[dict[str, object]]) -> list[str]:
+    values: list[str] = []
+    for item in records:
+        candidate = _string_value(item.get("attack_object_id")) or _string_value(
+            item.get("technique_id")
+        )
+        if candidate:
+            values.append(candidate)
+    return values
+
+
+def _attack_context_confidence(mappings: list[FindingAttackMappingDetailPublic]) -> str | None:
+    confidence_order = {"low": 0, "medium": 1, "high": 2}
+    labels = [mapping.confidence for mapping in mappings if mapping.confidence in confidence_order]
+    if not labels:
+        return None
+    return min(labels, key=lambda item: confidence_order[item])
+
+
+def _attack_confidence_label(value: object) -> str | None:
+    if isinstance(value, str):
+        normalized = value.strip().lower()
+        return normalized if normalized in {"low", "medium", "high"} else None
+    if isinstance(value, int | float):
+        if value >= 0.75:
+            return "high"
+        if value >= 0.4:
+            return "medium"
+        return "low"
+    return None
+
+
+def _attack_context_tactics(
+    mappings: list[FindingAttackMappingDetailPublic],
+    techniques: list[FindingAttackTechniqueDetailPublic],
+    context_tactics: list[str],
+) -> list[str]:
+    tactics: list[str] = []
+    for value in context_tactics:
+        if value and value not in tactics:
+            tactics.append(value)
+    for mapping in mappings:
+        for tactic in mapping.tactics:
+            if tactic and tactic not in tactics:
+                tactics.append(tactic)
+    for technique in techniques:
+        for tactic in technique.tactics:
+            if tactic and tactic not in tactics:
+                tactics.append(tactic)
+    return tactics
+
+
+def _default_attack_defensive_note(mapped: bool) -> str:
+    if mapped:
+        return (
+            "Use this ATT&CK context only for defensive triage, detection coverage, "
+            "and mitigation review."
+        )
+    return "No approved ATT&CK mapping is stored for this finding."
+
+
+def _object_record(value: object) -> dict[str, object]:
+    return value if isinstance(value, dict) else {}
+
+
+def _array_records(value: object) -> list[dict[str, object]]:
+    if not isinstance(value, list):
+        return []
+    return [item for item in value if isinstance(item, dict)]
+
+
+def _string_value(value: object) -> str | None:
+    if isinstance(value, str):
+        stripped = value.strip()
+        return stripped or None
+    return None
+
+
+def _string_list_value(value: object) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    return [item.strip() for item in value if isinstance(item, str) and item.strip()]
 
 
 def _finding_occurrence_public(

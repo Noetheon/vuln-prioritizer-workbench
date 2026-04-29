@@ -18,7 +18,16 @@
   </div>
 </section>
 
-<section class="section">
+<nav class="detail-tabs" aria-label="Finding detail sections">
+  <a href="#overview">Overview</a>
+  <a href="#lifecycle">Lifecycle</a>
+  <a href="#governance">Governance</a>
+  <a href="#defensive-context">Defensive context</a>
+  <a href="#ttp-context">TTP Context</a>
+  <a href="#raw-finding">Raw JSON</a>
+</nav>
+
+<section class="section" id="overview">
   {% set decision_guidance = finding.finding_json.get("decision_guidance") if finding.finding_json else none %}
   <div class="detail-grid">
     <article class="panel">
@@ -107,7 +116,7 @@
       </div>
     </section>
   {% endif %}
-  <section class="subsection">
+  <section class="subsection" id="lifecycle">
     <div class="section-head compact">
       <p class="eyebrow">Lifecycle</p>
       <h2>Status</h2>
@@ -147,7 +156,7 @@
     {% endif %}
   </section>
   {% if finding.waiver_status or finding.waived %}
-    <section class="subsection">
+    <section class="subsection" id="governance">
       <div class="section-head compact">
         <p class="eyebrow">Governance</p>
         <h2>Waiver lifecycle</h2>
@@ -180,7 +189,7 @@
       </div>
     </section>
   {% else %}
-    <section class="subsection">
+    <section class="subsection" id="governance">
       <div class="section-head compact">
         <p class="eyebrow">Governance</p>
         <h2>Accept residual risk</h2>
@@ -207,7 +216,7 @@
     </section>
   {% endif %}
   {% set defensive_contexts = finding.finding_json.get("defensive_contexts", []) if finding.finding_json else [] %}
-  <section class="subsection">
+  <section class="subsection" id="defensive-context">
     <div class="section-head compact">
       <p class="eyebrow">Defensive context</p>
       <h2>Additional sources</h2>
@@ -239,30 +248,58 @@
       <p class="empty">No OSV, GHSA, Vulnrichment or SSVC context is stored for this finding.</p>
     {% endif %}
   </section>
-  <section class="subsection">
+  <section class="subsection" id="ttp-context">
     <div class="section-head compact">
-      <p class="eyebrow">ATT&amp;CK TTPs</p>
-      <h2>Threat context</h2>
+      <p class="eyebrow">TTP Context</p>
+      <h2>ATT&amp;CK threat context</h2>
     </div>
-    {% if attack_context and attack_context.mapped %}
+    {% if attack_context_view and attack_context_view.mapped %}
+      <div class="ttp-summary-grid">
+        <article class="ttp-signal">
+          <span>Source</span>
+          <strong>{{ attack_context_view.source }}</strong>
+        </article>
+        <article class="ttp-signal">
+          <span>Confidence</span>
+          <strong>
+            <span class="badge {{ attack_context_view.confidence or 'unknown' }}">
+              {{ attack_context_view.confidence or "unknown" }}
+            </span>
+          </strong>
+          {% if attack_context_view.low_confidence %}
+            <p>Review required before using this context for queue decisions.</p>
+          {% endif %}
+        </article>
+        <article class="ttp-signal">
+          <span>Relevance</span>
+          <strong>{{ attack_context_view.attack_relevance }}</strong>
+        </article>
+        <article class="ttp-signal">
+          <span>Review</span>
+          <strong>{{ attack_context_view.review_status }}</strong>
+        </article>
+      </div>
       <div class="detail-grid">
         <article class="panel">
-          <p class="eyebrow">Context</p>
+          <p class="eyebrow">Tactic and technique context</p>
           <table>
             <tbody>
-              <tr><th>Source</th><td>{{ attack_context.source }}</td></tr>
-              <tr><th>Review</th><td>{{ attack_context.review_status }}</td></tr>
-              <tr><th>Relevance</th><td>{{ attack_context.attack_relevance }}</td></tr>
-              <tr><th>Threat rank</th><td>{{ attack_context.threat_context_rank }}</td></tr>
-              <tr><th>ATT&amp;CK version</th><td>{{ attack_context.attack_version or "N.A." }}</td></tr>
-              <tr><th>Mapping SHA256</th><td>{{ attack_context.source_hash or "N.A." }}</td></tr>
-              <tr><th>Metadata SHA256</th><td>{{ attack_context.metadata_hash or "N.A." }}</td></tr>
+              <tr><th>Tactics</th><td>{{ attack_context_view.tactics|join(", ") if attack_context_view.tactics else "N.A." }}</td></tr>
+              <tr><th>Techniques</th><td>{{ attack_context_view.techniques|length }}</td></tr>
+              <tr><th>Threat rank</th><td>{{ attack_context_view.threat_context_rank }}</td></tr>
+              <tr><th>ATT&amp;CK version</th><td>{{ attack_context_view.attack_version or "N.A." }}</td></tr>
+              <tr><th>Mapping SHA256</th><td>{{ attack_context_view.source_hash or "N.A." }}</td></tr>
+              <tr><th>Metadata SHA256</th><td>{{ attack_context_view.metadata_hash or "N.A." }}</td></tr>
             </tbody>
           </table>
         </article>
         <article class="panel">
-          <p class="eyebrow">Rationale</p>
-          <p>{{ attack_context.rationale or "No ATT&CK rationale captured." }}</p>
+          <p class="eyebrow">Defensive actions</p>
+          <ul class="action-list">
+            <li>Validate exposure, affected service ownership and remediation status.</li>
+            <li>Review detection coverage for the listed tactics and techniques.</li>
+            <li>Use this context to prioritize defensive review, not as exploit evidence.</li>
+          </ul>
         </article>
       </div>
       <div class="table-wrap">
@@ -272,10 +309,12 @@
               <th>Technique</th>
               <th>Name</th>
               <th>Tactics</th>
+              <th>Confidence</th>
+              <th>Review</th>
             </tr>
           </thead>
           <tbody>
-            {% for technique in attack_context.techniques_json %}
+            {% for technique in attack_context_view.technique_rows %}
               <tr>
                 <td>{{ technique.attack_object_id }}</td>
                 <td>
@@ -286,16 +325,37 @@
                   {% endif %}
                 </td>
                 <td>{{ technique.tactics|join(", ") if technique.tactics else "N.A." }}</td>
+                <td>
+                  <span class="badge {{ technique.confidence }}">
+                    {{ technique.confidence }}
+                  </span>
+                </td>
+                <td>{{ technique.review_status }}</td>
               </tr>
             {% endfor %}
           </tbody>
         </table>
       </div>
+      <div class="detail-grid">
+        <article class="panel">
+          <p class="eyebrow">Source rationale</p>
+          <p>{{ attack_context_view.rationale or "No ATT&CK rationale captured." }}</p>
+        </article>
+        <article class="panel muted-panel">
+          <p class="eyebrow">Detection coverage</p>
+          <p>Coverage review is not linked to this finding yet. Use the detection controls workspace to map controls to these techniques.</p>
+        </article>
+      </div>
+      <p class="safety-note">Safety note: this tab shows defensive ATT&amp;CK context only. It does not include exploit procedure guidance and does not change the base CVSS, EPSS and KEV priority.</p>
     {% else %}
-      <p class="empty">No approved ATT&amp;CK mapping is stored for this finding.</p>
+      <div class="empty-state ttp-empty">
+        <strong>No approved ATT&amp;CK mapping is stored for this finding.</strong>
+        <p>TTP Context remains empty until a reviewed local or CTID mapping is imported. The base priority still comes from CVSS, EPSS and KEV.</p>
+      </div>
+      <p class="safety-note">Safety note: unmapped means no approved ATT&amp;CK context is stored; the Workbench does not infer tactics or techniques.</p>
     {% endif %}
   </section>
-  <details class="json-block">
+  <details class="json-block" id="raw-finding">
     <summary>Raw finding JSON</summary>
     <pre>{{ finding.finding_json | tojson(indent=2) }}</pre>
   </details>

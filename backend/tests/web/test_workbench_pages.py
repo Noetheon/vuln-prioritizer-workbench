@@ -661,12 +661,33 @@ def test_web_attack_dashboard_and_finding_ttp_context(tmp_path: Path) -> None:
         techniques[0]["url"] = "javascript:alert(1)"
         techniques[0]["name"] = "Malicious ATT&CK link"
         contexts[0].techniques_json = techniques
+        mappings = [dict(item) for item in contexts[0].mappings_json]
+        mappings[0]["confidence"] = "low"
+        mappings[0]["review_status"] = "needs_review"
+        contexts[0].mappings_json = mappings
+        contexts[0].rationale = "Reviewed defensive rationale for TTP triage."
         session.commit()
 
     detail = client.get(f"/findings/{mapped['id']}")
     assert detail.status_code == 200
-    assert "ATT&amp;CK TTPs" in detail.text
-    assert "Threat context" in detail.text
+    assert "TTP Context" in detail.text
+    assert "ATT&amp;CK threat context" in detail.text
+    assert "Confidence" in detail.text
+    assert "low" in detail.text
+    assert "Review required before using this context for queue decisions." in detail.text
     assert "source_reviewed" in detail.text
+    assert "needs_review" in detail.text
+    assert "T1190" in detail.text
     assert "Malicious ATT&amp;CK link" in detail.text
+    assert "Reviewed defensive rationale for TTP triage." in detail.text
+    assert "Detection coverage" in detail.text
+    assert "Coverage review is not linked to this finding yet." in detail.text
+    assert "Safety note: this tab shows defensive ATT&amp;CK context only." in detail.text
     assert 'href="javascript:alert(1)"' not in detail.text
+
+    unmapped = next(item for item in findings.json()["items"] if not item["attack_mapped"])
+    empty_detail = client.get(f"/findings/{unmapped['id']}")
+    assert empty_detail.status_code == 200
+    assert "TTP Context" in empty_detail.text
+    assert "No approved ATT&amp;CK mapping is stored for this finding." in empty_detail.text
+    assert "the Workbench does not infer tactics or techniques" in empty_detail.text

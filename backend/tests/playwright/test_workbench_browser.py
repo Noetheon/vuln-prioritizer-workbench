@@ -283,6 +283,59 @@ def test_workbench_browser_happy_path_reports_and_responsive_pages(
     context.close()
 
 
+def test_workbench_browser_ttp_context_tab(
+    live_workbench: LiveWorkbench,
+    browser: Any,
+) -> None:
+    context = browser.new_context(viewport={"width": 1280, "height": 1000})
+    page = context.new_page()
+    browser_errors = _attach_browser_error_log(page)
+
+    page.goto(f"{live_workbench.base_url}/projects/new", wait_until="networkidle")
+    page.get_by_label("Project name").fill("playwright-ttp-context")
+    with page.expect_navigation(wait_until="networkidle"):
+        page.get_by_role("button", name="Create project").click()
+    project_id = _project_id_from_url(page.url)
+
+    page.get_by_role("link", name="Import findings").click()
+    page.wait_for_url(re.compile(r".*/imports/new"))
+    page.select_option('select[name="input_format"]', "trivy-json")
+    page.set_input_files('input[name="files"]', str(TRIVY_REPORT))
+    page.get_by_label("Provider snapshot").fill(DEMO_PROVIDER_SNAPSHOT.name)
+    page.get_by_label("Locked provider data").check()
+    page.select_option('select[name="attack_source"]', "ctid-json")
+    page.get_by_label("ATT&CK mapping file").fill(ATTACK_MAPPING.name)
+    page.get_by_label("ATT&CK technique metadata").fill(ATTACK_METADATA.name)
+    with page.expect_navigation(wait_until="networkidle", timeout=60_000):
+        page.get_by_role("button", name="Start import").click()
+
+    page.goto(f"{live_workbench.base_url}/projects/{project_id}/findings", wait_until="networkidle")
+    page.get_by_label("Search").fill("CVE-2023-34362")
+    page.get_by_role("button", name="Apply").click()
+    page.wait_for_url(re.compile(r".*[?&]q=CVE-2023-34362"))
+    page.get_by_role("link", name="CVE-2023-34362").click()
+    page.get_by_role("link", name="TTP Context").click()
+    page.get_by_role("heading", name="ATT&CK threat context").wait_for()
+    page.locator(".ttp-signal", has_text="Confidence").get_by_text("high").wait_for()
+    page.locator(".muted-panel", has_text="Detection coverage").wait_for()
+    page.get_by_text("Safety note: this tab shows defensive ATT&CK context only.").wait_for()
+    page.locator("#ttp-context").get_by_role("cell", name="T1190").wait_for()
+    _assert_usable_layout(page)
+
+    page.goto(f"{live_workbench.base_url}/projects/{project_id}/findings", wait_until="networkidle")
+    page.get_by_label("Search").fill("CVE-2024-3094")
+    page.get_by_role("button", name="Apply").click()
+    page.wait_for_url(re.compile(r".*[?&]q=CVE-2024-3094"))
+    page.get_by_role("link", name="CVE-2024-3094").click()
+    page.get_by_role("link", name="TTP Context").click()
+    page.get_by_text("No approved ATT&CK mapping is stored for this finding.").wait_for()
+    page.get_by_text("the Workbench does not infer tactics or techniques").wait_for()
+    _assert_usable_layout(page)
+
+    assert browser_errors == []
+    context.close()
+
+
 def test_workbench_browser_error_states_are_visible(
     live_workbench: LiveWorkbench,
     browser: Any,

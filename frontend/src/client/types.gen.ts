@@ -146,6 +146,9 @@ export type AssetUpdate = {
 };
 
 export type Body_imports_import_project_upload = {
+    attack_mapping_file?: (string | null);
+    attack_source?: string;
+    attack_technique_metadata_file?: (string | null);
     file: string;
     input_type: string;
     locked_provider_data?: boolean;
@@ -162,6 +165,55 @@ export type Body_login_login_access_token = {
 };
 
 /**
+ * Safe finding-level ATT&CK context DTO for the React Workbench.
+ */
+export type FindingAttackContextDetailPublic = {
+    attack_relevance?: string;
+    confidence?: (string | null);
+    defensive_note?: (string | null);
+    low_confidence?: boolean;
+    mapped?: boolean;
+    mappings?: Array<FindingAttackMappingDetailPublic>;
+    rationale?: (string | null);
+    review_status?: string;
+    source?: string;
+    tactics?: Array<(string)>;
+    technique_ids?: Array<(string)>;
+    techniques?: Array<FindingAttackTechniqueDetailPublic>;
+};
+
+/**
+ * Defensive ATT&CK mapping row for finding detail views.
+ */
+export type FindingAttackMappingDetailPublic = {
+    confidence?: (string | null);
+    defensive_note?: (string | null);
+    mapping_type?: (string | null);
+    rationale?: (string | null);
+    references?: Array<(string)>;
+    review_status?: (string | null);
+    source?: (string | null);
+    tactics?: Array<(string)>;
+    technique_id: string;
+    technique_name?: (string | null);
+};
+
+/**
+ * ATT&CK technique row rendered by the template Workbench detail tab.
+ */
+export type FindingAttackTechniqueDetailPublic = {
+    confidence?: (string | null);
+    defensive_note?: (string | null);
+    name?: (string | null);
+    rationale?: (string | null);
+    review_status?: (string | null);
+    source?: (string | null);
+    tactics?: Array<(string)>;
+    technique_id: string;
+    url?: (string | null);
+};
+
+/**
  * Public finding detail response shape.
  */
 export type FindingDetailPublic = {
@@ -171,6 +223,7 @@ export type FindingDetailPublic = {
     asset_key?: (string | null);
     asset_name?: (string | null);
     asset_target_ref?: (string | null);
+    attack_context?: (FindingAttackContextDetailPublic | null);
     attack_mapped?: boolean;
     business_service?: (string | null);
     component_id: (string | null);

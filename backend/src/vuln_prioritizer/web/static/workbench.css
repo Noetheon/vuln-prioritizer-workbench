@@ -739,6 +739,20 @@ td a {
   color: var(--accent);
 }
 
+.badge.source_reviewed,
+.badge.reviewed {
+  border-color: #bbf7d0;
+  background: #ecfdf5;
+  color: var(--success);
+}
+
+.badge.needs_review,
+.badge.stale {
+  border-color: #fde68a;
+  background: #fffbeb;
+  color: var(--medium);
+}
+
 .stack {
   display: grid;
   gap: 10px;
@@ -1061,12 +1075,115 @@ textarea:focus {
   margin-bottom: 18px;
 }
 
+.detail-tabs {
+  position: sticky;
+  top: 67px;
+  z-index: 5;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: -4px 0 22px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+  background: rgba(245, 247, 251, 0.92);
+  backdrop-filter: blur(10px);
+}
+
+.detail-tabs a {
+  display: inline-flex;
+  min-height: 34px;
+  align-items: center;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.78);
+  color: var(--text-soft);
+  font-size: 13px;
+  font-weight: 850;
+  text-decoration: none;
+}
+
+.detail-tabs a:hover,
+.detail-tabs a:focus-visible {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
 .subsection {
   margin-top: 24px;
+  scroll-margin-top: 124px;
 }
 
 .panel {
   padding: 18px;
+}
+
+.muted-panel {
+  background: var(--surface-soft);
+}
+
+.ttp-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.ttp-signal {
+  min-width: 0;
+  padding: 15px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.ttp-signal span {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 850;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.ttp-signal strong {
+  display: block;
+  margin-top: 7px;
+  color: var(--text);
+  font-size: 18px;
+  overflow-wrap: anywhere;
+}
+
+.ttp-signal p {
+  margin: 8px 0 0;
+  color: var(--medium);
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.action-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding-left: 18px;
+  color: var(--text-soft);
+}
+
+.safety-note {
+  margin: 14px 0 0;
+  padding: 12px 14px;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  background: #eff6ff;
+  color: #1e3a8a;
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.ttp-empty {
+  margin-bottom: 12px;
 }
 
 .insight-panel p:last-child,
@@ -1373,9 +1490,14 @@ textarea:focus {
   .inline-grid,
   .inline-form,
   .detail-grid,
+  .ttp-summary-grid,
   .definition-grid,
   .definition-grid.compact {
     grid-template-columns: 1fr;
+  }
+
+  .detail-tabs {
+    position: static;
   }
 
   .inline-form .grow {

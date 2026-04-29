@@ -45,6 +45,9 @@ from app.models.enums import (
 )
 from app.models.findings import (
     Finding,
+    FindingAttackContextDetailPublic,
+    FindingAttackMappingDetailPublic,
+    FindingAttackTechniqueDetailPublic,
     FindingBase,
     FindingDetailPublic,
     FindingOccurrencePublic,
@@ -120,7 +123,10 @@ __all__ = [
     "Finding",
     "FindingAttackContext",
     "FindingAttackContextBase",
+    "FindingAttackContextDetailPublic",
     "FindingAttackContextPublic",
+    "FindingAttackMappingDetailPublic",
+    "FindingAttackTechniqueDetailPublic",
     "FindingBase",
     "FindingDetailPublic",
     "FindingExplanationPublic",

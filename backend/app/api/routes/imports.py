@@ -29,12 +29,14 @@ from app.models import (
     AnalysisRunPublic,
     AnalysisRunStatus,
     AssetExposure,
+    FindingAttackContext,
     FindingPriority,
     FindingStatus,
 )
 from app.models.base import get_datetime_utc
 from app.repositories import AssetRepository, FindingRepository, RunRepository
 from app.services import AnalysisService, TemplateAnalysisError, TemplateAnalysisResult
+from vuln_prioritizer.cli_options import AttackSource
 from vuln_prioritizer.models import PrioritizedFinding
 
 router = APIRouter(tags=["imports"])
@@ -63,6 +65,7 @@ ALLOWED_UPLOAD_MIME_HINTS = {
     "nessus-xml": {"application/xml", "text/xml"},
     "openvas-xml": {"application/xml", "text/xml"},
 }
+SAFE_ATTACK_FILENAME_RE = re.compile(r"^[A-Za-z0-9._-]+$")
 
 
 @router.post("/projects/{project_id}/imports", response_model=AnalysisRunPublic)
@@ -75,6 +78,9 @@ async def import_project_upload(
     file: UploadFile = File(...),
     provider_snapshot_file: str | None = Form(None),
     locked_provider_data: bool = Form(False),
+    attack_source: str = Form("none"),
+    attack_mapping_file: str | None = Form(None),
+    attack_technique_metadata_file: str | None = Form(None),
 ) -> AnalysisRun:
     """Securely upload, normalize, and persist one Workbench import file."""
     require_visible_project(session, current_user, project_id)
@@ -88,6 +94,19 @@ async def import_project_upload(
     provider_snapshot_path = _resolve_template_provider_snapshot_path(
         provider_snapshot_file,
         request=request,
+    )
+    attack_mapping_path = _resolve_template_attack_artifact_path(
+        attack_mapping_file,
+        request=request,
+    )
+    attack_metadata_path = _resolve_template_attack_artifact_path(
+        attack_technique_metadata_file,
+        request=request,
+    )
+    normalized_attack_source = _validate_attack_import_options(
+        attack_source=attack_source,
+        attack_mapping_path=attack_mapping_path,
+        attack_metadata_path=attack_metadata_path,
     )
 
     upload_bytes = await _read_bounded_upload(file, settings=_template_settings(request))
@@ -201,6 +220,9 @@ async def import_project_upload(
             input_type=normalized_input_type,
             provider_snapshot_file=provider_snapshot_path,
             locked_provider_data=locked_provider_data,
+            attack_source=normalized_attack_source,
+            attack_mapping_file=attack_mapping_path,
+            attack_technique_metadata_file=attack_metadata_path,
         )
     except TemplateAnalysisError as exc:
         failed_history = [*job_history, _job_status_entry("failed")]
@@ -310,6 +332,7 @@ def _persist_template_occurrences(
     created_count = 0
     reused_count = 0
     touched_finding_ids: set[str] = set()
+    attack_context_finding_ids: set[uuid.UUID] = set()
     for index, occurrence in enumerate(occurrences, start=1):
         decision = _decision_for_occurrence(analysis_result, occurrence)
         dedup_parts = _dedup_key_parts(project_id, occurrence)
@@ -408,6 +431,17 @@ def _persist_template_occurrences(
                 },
             },
         )
+        if finding.id not in attack_context_finding_ids and _attack_context_enabled(
+            analysis_result,
+            decision,
+        ):
+            _persist_template_finding_attack_context(
+                session=session,
+                run_id=run_id,
+                finding_id=finding.id,
+                decision=decision,
+            )
+            attack_context_finding_ids.add(finding.id)
         if action == "created":
             created_count += 1
         else:
@@ -451,6 +485,116 @@ def _persist_template_occurrences(
             "decisions": decisions,
         },
     }
+
+
+def _attack_context_enabled(
+    analysis_result: TemplateAnalysisResult,
+    decision: PrioritizedFinding,
+) -> bool:
+    return analysis_result.context.attack_source != "none" or decision.attack_context.mapped
+
+
+def _persist_template_finding_attack_context(
+    *,
+    session: Session,
+    run_id: uuid.UUID,
+    finding_id: uuid.UUID,
+    decision: PrioritizedFinding,
+) -> None:
+    context = decision.attack_context
+    mappings = _attack_mapping_payloads(context.mappings, context.techniques)
+    techniques = [technique.model_dump() for technique in context.techniques]
+    technique_ids = _technique_ids_from_context(techniques, mappings, context.techniques)
+    session.add(
+        FindingAttackContext(
+            finding_id=finding_id,
+            analysis_run_id=run_id,
+            cve_id=decision.cve_id,
+            mapped=context.mapped,
+            source=context.source or "none",
+            review_status=_attack_context_review_status(
+                getattr(context, "review_status", None),
+                context.mapped,
+                mappings,
+            ),
+            defensive_note=_attack_context_defensive_note(context.mapped),
+            rationale=context.rationale,
+            technique_ids_json=technique_ids,
+            tactic_ids_json=_valid_attack_tactic_ids(context.tactics),
+            mappings_json=mappings,
+        )
+    )
+
+
+def _attack_mapping_payloads(mappings: list[Any], techniques: list[Any]) -> list[dict[str, Any]]:
+    techniques_by_id = {
+        technique.attack_object_id: technique.model_dump()
+        for technique in techniques
+        if getattr(technique, "attack_object_id", None)
+    }
+    payloads: list[dict[str, Any]] = []
+    for mapping in mappings:
+        payload = mapping.model_dump()
+        technique = techniques_by_id.get(payload.get("attack_object_id"))
+        if technique:
+            payload["technique"] = technique
+            payload["tactics"] = technique.get("tactics", [])
+            payload["technique_url"] = technique.get("url")
+        payloads.append(payload)
+    return payloads
+
+
+def _technique_ids_from_context(
+    techniques: list[dict[str, Any]],
+    mappings: list[dict[str, Any]],
+    technique_models: list[Any],
+) -> list[str]:
+    ids: list[str] = []
+    for technique in techniques:
+        candidate = _string_evidence(technique, "attack_object_id")
+        if candidate and candidate not in ids:
+            ids.append(candidate)
+    for mapping in mappings:
+        candidate = _string_evidence(mapping, "attack_object_id")
+        if candidate and candidate not in ids:
+            ids.append(candidate)
+    for technique in technique_models:
+        candidate = getattr(technique, "attack_object_id", None)
+        if isinstance(candidate, str) and candidate and candidate not in ids:
+            ids.append(candidate)
+    return ids
+
+
+def _valid_attack_tactic_ids(values: list[str]) -> list[str]:
+    return [value for value in values if re.fullmatch(r"TA\d{4}", value)]
+
+
+def _attack_context_review_status(
+    review_status: str | None,
+    mapped: bool,
+    mappings: list[dict[str, Any]],
+) -> str:
+    mapping_statuses = {
+        status
+        for mapping in mappings
+        if isinstance(status := mapping.get("review_status"), str)
+        and status in {"unreviewed", "needs_review", "reviewed", "rejected", "stale"}
+    }
+    for status in ("needs_review", "stale", "rejected", "unreviewed"):
+        if status in mapping_statuses:
+            return status
+    if review_status in {"unreviewed", "needs_review", "reviewed", "rejected", "stale"}:
+        return review_status
+    return "reviewed" if mapped else "unreviewed"
+
+
+def _attack_context_defensive_note(mapped: bool) -> str:
+    if mapped:
+        return (
+            "Use this ATT&CK context only for defensive triage, detection coverage, "
+            "and mitigation review."
+        )
+    return "No reviewed ATT&CK mapping is stored for this finding."
 
 
 def _dedup_key_parts(project_id: uuid.UUID, occurrence: NormalizedOccurrence) -> dict[str, str]:
@@ -566,6 +710,64 @@ def _resolve_template_provider_snapshot_path(
     if not candidate.exists():
         raise HTTPException(status_code=422, detail="Provider snapshot file does not exist.")
     return candidate
+
+
+def _resolve_template_attack_artifact_path(
+    value: str | None,
+    *,
+    request: Request,
+) -> Path | None:
+    filename = value.strip() if value else ""
+    if not filename:
+        return None
+    if (
+        not SAFE_ATTACK_FILENAME_RE.fullmatch(filename)
+        or "/" in filename
+        or "\\" in filename
+        or Path(filename).name != filename
+    ):
+        raise HTTPException(status_code=422, detail="ATT&CK artifact path is not allowed.")
+    artifact_root = _template_settings(request).attack_artifact_dir_path.resolve(strict=False)
+    candidate = (artifact_root / filename).resolve(strict=False)
+    if not candidate.is_relative_to(artifact_root):
+        raise HTTPException(status_code=422, detail="ATT&CK artifact path is not allowed.")
+    if not candidate.exists() or not candidate.is_file():
+        raise HTTPException(status_code=422, detail="ATT&CK artifact file does not exist.")
+    return candidate
+
+
+def _validate_attack_import_options(
+    *,
+    attack_source: str,
+    attack_mapping_path: Path | None,
+    attack_metadata_path: Path | None,
+) -> AttackSource:
+    raw_source = attack_source.strip() if attack_source else "none"
+    try:
+        normalized_source = AttackSource(raw_source)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Unsupported ATT&CK source: {raw_source}.",
+        ) from exc
+    if normalized_source == AttackSource.none:
+        if attack_mapping_path is not None or attack_metadata_path is not None:
+            raise HTTPException(
+                status_code=422,
+                detail="ATT&CK mapping files require attack_source=ctid-json.",
+            )
+        return normalized_source
+    if normalized_source not in {AttackSource.ctid_json, AttackSource.local_curated}:
+        raise HTTPException(
+            status_code=422,
+            detail="Template Workbench ATT&CK imports only support ctid-json or local-curated.",
+        )
+    if attack_mapping_path is None:
+        raise HTTPException(
+            status_code=422,
+            detail="ATT&CK imports require a mapping file.",
+        )
+    return normalized_source
 
 
 def _store_upload(

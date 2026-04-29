@@ -569,6 +569,33 @@ export const AssetsPublicSchema = {
 
 export const Body_imports_import_project_uploadSchema = {
     properties: {
+        attack_mapping_file: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Attack Mapping File'
+        },
+        attack_source: {
+            default: 'none',
+            title: 'Attack Source',
+            type: 'string'
+        },
+        attack_technique_metadata_file: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Attack Technique Metadata File'
+        },
         file: {
             contentMediaType: 'application/octet-stream',
             title: 'File',
@@ -657,6 +684,301 @@ export const Body_login_login_access_tokenSchema = {
     type: 'object'
 } as const;
 
+export const FindingAttackContextDetailPublicSchema = {
+    description: 'Safe finding-level ATT&CK context DTO for the React Workbench.',
+    properties: {
+        attack_relevance: {
+            default: 'Unmapped',
+            title: 'Attack Relevance',
+            type: 'string'
+        },
+        confidence: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Confidence'
+        },
+        defensive_note: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Defensive Note'
+        },
+        low_confidence: {
+            default: false,
+            title: 'Low Confidence',
+            type: 'boolean'
+        },
+        mapped: {
+            default: false,
+            title: 'Mapped',
+            type: 'boolean'
+        },
+        mappings: {
+            items: {
+                '$ref': '#/components/schemas/FindingAttackMappingDetailPublic'
+            },
+            title: 'Mappings',
+            type: 'array'
+        },
+        rationale: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Rationale'
+        },
+        review_status: {
+            default: 'unreviewed',
+            title: 'Review Status',
+            type: 'string'
+        },
+        source: {
+            default: 'none',
+            title: 'Source',
+            type: 'string'
+        },
+        tactics: {
+            items: {
+                type: 'string'
+            },
+            title: 'Tactics',
+            type: 'array'
+        },
+        technique_ids: {
+            items: {
+                type: 'string'
+            },
+            title: 'Technique Ids',
+            type: 'array'
+        },
+        techniques: {
+            items: {
+                '$ref': '#/components/schemas/FindingAttackTechniqueDetailPublic'
+            },
+            title: 'Techniques',
+            type: 'array'
+        }
+    },
+    title: 'FindingAttackContextDetailPublic',
+    type: 'object'
+} as const;
+
+export const FindingAttackMappingDetailPublicSchema = {
+    description: 'Defensive ATT&CK mapping row for finding detail views.',
+    properties: {
+        confidence: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Confidence'
+        },
+        defensive_note: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Defensive Note'
+        },
+        mapping_type: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Mapping Type'
+        },
+        rationale: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Rationale'
+        },
+        references: {
+            items: {
+                type: 'string'
+            },
+            title: 'References',
+            type: 'array'
+        },
+        review_status: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Review Status'
+        },
+        source: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Source'
+        },
+        tactics: {
+            items: {
+                type: 'string'
+            },
+            title: 'Tactics',
+            type: 'array'
+        },
+        technique_id: {
+            title: 'Technique Id',
+            type: 'string'
+        },
+        technique_name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Technique Name'
+        }
+    },
+    required: ['technique_id'],
+    title: 'FindingAttackMappingDetailPublic',
+    type: 'object'
+} as const;
+
+export const FindingAttackTechniqueDetailPublicSchema = {
+    description: 'ATT&CK technique row rendered by the template Workbench detail tab.',
+    properties: {
+        confidence: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Confidence'
+        },
+        defensive_note: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Defensive Note'
+        },
+        name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Name'
+        },
+        rationale: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Rationale'
+        },
+        review_status: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Review Status'
+        },
+        source: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Source'
+        },
+        tactics: {
+            items: {
+                type: 'string'
+            },
+            title: 'Tactics',
+            type: 'array'
+        },
+        technique_id: {
+            title: 'Technique Id',
+            type: 'string'
+        },
+        url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Url'
+        }
+    },
+    required: ['technique_id'],
+    title: 'FindingAttackTechniqueDetailPublic',
+    type: 'object'
+} as const;
+
 export const FindingDetailPublicSchema = {
     description: 'Public finding detail response shape.',
     properties: {
@@ -726,6 +1048,16 @@ export const FindingDetailPublicSchema = {
                 }
             ],
             title: 'Asset Target Ref'
+        },
+        attack_context: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/FindingAttackContextDetailPublic'
+                },
+                {
+                    type: 'null'
+                }
+            ]
         },
         attack_mapped: {
             default: false,
