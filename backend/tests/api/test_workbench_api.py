@@ -260,6 +260,26 @@ def test_workbench_import_findings_reports_and_evidence(tmp_path: Path) -> None:
         for item in items
     )
 
+    baseline_comparison = client.get(
+        f"/api/projects/{project['id']}/baseline-comparison",
+        params={"limit": 2},
+    )
+    assert baseline_comparison.status_code == 200
+    baseline_payload = baseline_comparison.json()
+    assert baseline_payload["project_id"] == project["id"]
+    assert baseline_payload["summary"]["total"] == len(EXPECTED_SAMPLE_CVES)
+    assert baseline_payload["summary"]["changed"] == len(
+        [item for item in baseline_payload["comparisons"] if item["changed"]]
+    )
+    assert set(baseline_payload["counts"]["cvss_only"]) == {"Critical", "High", "Medium", "Low"}
+    assert set(baseline_payload["counts"]["enriched"]) == {"Critical", "High", "Medium", "Low"}
+    assert len(baseline_payload["top_changes"]) <= 2
+    assert baseline_payload["top_changes"]
+    first_change = baseline_payload["top_changes"][0]
+    assert {"cve_id", "old_rank", "new_rank", "reason"} <= set(first_change)
+    assert "CVSS-only" in first_change["reason"]
+    assert "not an absolute truth" in baseline_payload["methodology"]["limitations"]
+
     filtered = client.get(
         f"/api/projects/{project['id']}/findings",
         params={"q": "CVE-2024-3094"},
@@ -377,6 +397,10 @@ def test_workbench_import_findings_reports_and_evidence(tmp_path: Path) -> None:
             analysis_payload = json.loads(report_download.text)
             assert analysis_payload["metadata"]["input_format"] == "cve-list"
             assert analysis_payload["metadata"]["locked_provider_data"] is True
+            assert analysis_payload["baseline_comparison"]["summary"]["total"] == len(
+                EXPECTED_SAMPLE_CVES
+            )
+            assert analysis_payload["baseline_comparison"]["top_changes"]
             assert {
                 finding["cve_id"] for finding in analysis_payload["findings"]
             } == EXPECTED_SAMPLE_CVES
@@ -403,6 +427,9 @@ def test_workbench_import_findings_reports_and_evidence(tmp_path: Path) -> None:
         if report_format == "csv":
             assert b"snapshot_locked" in report_download.content
             assert b"high" in report_download.content
+        if report_format == "markdown":
+            assert b"CVSS-only Baseline Comparison" in report_download.content
+            assert b"not an absolute truth" in report_download.content
 
     bundle = client.post(f"/api/analysis-runs/{run['id']}/evidence-bundle")
     assert bundle.status_code == 200
