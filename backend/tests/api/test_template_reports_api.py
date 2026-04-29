@@ -4,16 +4,17 @@ import csv
 import hashlib
 import json
 import uuid
+import zipfile
 from dataclasses import replace
 from datetime import UTC, datetime
-from io import StringIO
+from io import BytesIO, StringIO
 from pathlib import Path
 from typing import Any
 
 import jsonschema
 import pytest
 from fastapi.testclient import TestClient
-from sqlmodel import Session
+from sqlmodel import Session, select
 from utils.template_workbench import (
     DEMO_CVE_LOG4SHELL,
     DEMO_CVE_XZ,
@@ -33,6 +34,7 @@ from app.services import (
     MarkdownReportFinding,
     MarkdownReportPayload,
     render_analysis_result_json,
+    render_evidence_bundle_zip,
     render_findings_csv,
     render_html_executive_report,
     render_markdown_report,
@@ -85,6 +87,7 @@ def test_vpw049_openapi_exposes_report_format_contract() -> None:
         "html",
         "json",
         "csv",
+        "zip",
     ]
 
 
@@ -381,6 +384,99 @@ def test_vpw050_committed_evidence_artifacts_are_contract_valid() -> None:
     assert [row["cve_id"] for row in rows] == [DEMO_CVE_XZ, DEMO_CVE_LOG4SHELL]
     assert rows[0]["decision_sla"] == "Emergency / 24h"
     assert rows[1]["attack_techniques"] == "T1190"
+
+
+def test_vpw051_evidence_bundle_zip_create_downloads_manifest_integrity(
+    template_api_env: TemplateApiEnv,
+    tmp_path: Path,
+) -> None:
+    _configure_report_dir(template_api_env, tmp_path)
+    headers = auth_headers(template_api_env.client)
+    project = create_project_via_api(template_api_env.client, headers)
+    run_id = _seed_reportable_run(template_api_env, uuid.UUID(project["id"]))
+    input_metadata = _add_vpw051_bundle_metadata(template_api_env, run_id, tmp_path)
+
+    response = template_api_env.client.post(
+        f"/api/v1/runs/{run_id}/reports",
+        headers=headers,
+        json={"format": "zip"},
+    )
+
+    assert response.status_code == 200, response.text
+    payload = response.json()
+    assert payload["format"] == "zip"
+    assert payload["kind"] == "evidence-bundle"
+    assert payload["filename"] == "evidence-bundle.zip"
+    assert payload["content_type"] == "application/zip"
+
+    download = template_api_env.client.get(payload["download_url"], headers=headers)
+
+    assert download.status_code == 200
+    assert download.headers["cache-control"] == "no-store"
+    assert download.headers["x-content-type-options"] == "nosniff"
+    assert "evidence-bundle.zip" in download.headers["content-disposition"]
+    assert download.headers["content-type"].startswith("application/zip")
+    assert hashlib.sha256(download.content).hexdigest() == payload["sha256"]
+
+    with zipfile.ZipFile(BytesIO(download.content)) as archive:
+        names = sorted(archive.namelist())
+        assert names == [
+            "analysis.json",
+            "executive.html",
+            "manifest.json",
+            "provider-snapshot.json",
+            "technical.md",
+        ]
+        manifest = json.loads(archive.read("manifest.json"))
+        jsonschema.validate(manifest, _load_schema("evidence-bundle-manifest.schema.json"))
+        assert manifest["bundle_kind"] == "evidence-bundle"
+        assert manifest["source_analysis_path"] == "analysis.json"
+        assert manifest["source_input_hashes"] == [input_metadata]
+        assert manifest["included_input_copy"] is False
+        assert manifest["provider_snapshot"]["bundle_path"] == "provider-snapshot.json"
+        assert manifest["redaction"]["enabled"] is True
+        assert "manifest.json" not in {item["path"] for item in manifest["files"]}
+        for item in manifest["files"]:
+            content = archive.read(item["path"])
+            assert item["size_bytes"] == len(content)
+            assert item["sha256"] == hashlib.sha256(content).hexdigest()
+            assert manifest["artifact_hashes"][item["path"]] == item["sha256"]
+
+        bundle_text = "\n".join(
+            archive.read(name).decode("utf-8", errors="replace")
+            for name in names
+            if name.endswith((".json", ".md", ".html"))
+        )
+        assert "super-secret-token" not in bundle_text
+        assert "provider-secret-key" not in bundle_text
+        assert str(tmp_path) not in bundle_text
+        assert "[REDACTED]" in bundle_text
+
+
+def test_vpw051_evidence_bundle_renderer_snapshot_is_stable() -> None:
+    payload = _vpw051_snapshot_payload()
+    bundle, manifest = render_evidence_bundle_zip(payload)
+
+    with zipfile.ZipFile(BytesIO(bundle)) as archive:
+        assert sorted(archive.namelist()) == [
+            "analysis.json",
+            "executive.html",
+            "manifest.json",
+            "provider-snapshot.json",
+            "technical.md",
+        ]
+        stored_manifest = json.loads(archive.read("manifest.json"))
+        assert manifest == stored_manifest
+        assert (
+            archive.read("analysis.json")
+            == (_repo_root() / "docs" / "evidence" / "vpw-051-analysis.json").read_bytes()
+        )
+        assert (
+            archive.read("manifest.json")
+            == (_repo_root() / "docs" / "evidence" / "vpw-051-manifest.json").read_bytes()
+        )
+        for item in manifest["files"]:
+            assert item["sha256"] == hashlib.sha256(archive.read(item["path"])).hexdigest()
 
 
 def test_vpw048_report_auth_project_visibility_and_invalid_run_state(
@@ -796,6 +892,109 @@ def _vpw050_snapshot_payload() -> MarkdownReportPayload:
         run_finished_at=datetime(2026, 4, 29, 11, 45, tzinfo=UTC),
         run_errors={},
     )
+
+
+def _vpw051_snapshot_payload() -> MarkdownReportPayload:
+    payload = _vpw050_snapshot_payload()
+    input_sha256 = "a" * 64
+    first_finding = replace(
+        payload.findings[0],
+        recommended_action="Patch after using super-secret-token in the approval system.",
+        rationale="Review local evidence from /tmp/pytest/vpw-051-input.txt.",
+        evidence={
+            "source": "snapshot",
+            "authorization": "Bearer super-secret-token",
+            "upload_path": "/tmp/pytest/vpw-051-input.txt",
+        },
+    )
+    provider_snapshot = None
+    if payload.provider_snapshot is not None:
+        provider_snapshot = replace(
+            payload.provider_snapshot,
+            source_metadata={
+                **payload.provider_snapshot.source_metadata,
+                "source_path": "/Users/umut/private/provider-snapshot.json",
+                "api_key": "provider-secret-key",
+                "cache_dir": "/Users/umut/private/cache",
+            },
+        )
+    return replace(
+        payload,
+        summary={
+            **payload.summary,
+            "input_sha256": input_sha256,
+            "input_upload": {
+                "original_filename": "known-cves.txt",
+                "stored_filename": "known-cves.txt",
+                "size_bytes": 29,
+                "sha256": input_sha256,
+                "path": "/Users/umut/private/vpw-051-input.txt",
+                "token": "super-secret-token",
+            },
+        },
+        run_error="Bearer super-secret-token",
+        run_errors={"authorization": "Bearer super-secret-token"},
+        findings=[first_finding, *payload.findings[1:]],
+        provider_snapshot=provider_snapshot,
+    )
+
+
+def _add_vpw051_bundle_metadata(
+    template_api_env: TemplateApiEnv,
+    run_id: uuid.UUID,
+    tmp_path: Path,
+) -> dict[str, Any]:
+    app_models = template_api_env.app_models
+    upload_path = tmp_path / "private" / "known-cves.txt"
+    upload_content = f"{DEMO_CVE_XZ}\n{DEMO_CVE_LOG4SHELL}\n".encode()
+    upload_path.parent.mkdir(parents=True, exist_ok=True)
+    upload_path.write_bytes(upload_content)
+    input_metadata = {
+        "path": upload_path.name,
+        "size_bytes": len(upload_content),
+        "sha256": hashlib.sha256(upload_content).hexdigest(),
+    }
+    with Session(template_api_env.engine) as session:
+        run = session.get(app_models.AnalysisRun, run_id)
+        assert run is not None
+        run.summary_json = {
+            **dict(run.summary_json or {}),
+            "input_sha256": input_metadata["sha256"],
+            "input_upload": {
+                "original_filename": upload_path.name,
+                "stored_filename": upload_path.name,
+                "size_bytes": input_metadata["size_bytes"],
+                "sha256": input_metadata["sha256"],
+                "path": str(upload_path),
+                "token": "super-secret-token",
+            },
+        }
+        run.error_json = {"authorization": "Bearer super-secret-token"}
+        if run.provider_snapshot is not None:
+            run.provider_snapshot.source_metadata_json = {
+                **dict(run.provider_snapshot.source_metadata_json or {}),
+                "source_path": str(tmp_path / "private" / "provider-snapshot.json"),
+                "api_key": "provider-secret-key",
+                "cache_dir": str(tmp_path / "private" / "cache"),
+            }
+            session.add(run.provider_snapshot)
+        finding = session.exec(
+            select(app_models.Finding)
+            .where(app_models.Finding.project_id == run.project_id)
+            .where(app_models.Finding.cve_id == DEMO_CVE_XZ)
+        ).first()
+        assert finding is not None
+        finding.recommended_action = "Patch after using super-secret-token in the approval system."
+        finding.rationale = f"Review local evidence from {tmp_path}/private/vpw-051-input.txt."
+        finding.evidence_json = {
+            "source": "snapshot",
+            "authorization": "Bearer super-secret-token",
+            "upload_path": str(upload_path),
+        }
+        session.add(finding)
+        session.add(run)
+        session.commit()
+    return input_metadata
 
 
 def _seed_reportable_run(template_api_env: TemplateApiEnv, project_id: uuid.UUID) -> uuid.UUID:

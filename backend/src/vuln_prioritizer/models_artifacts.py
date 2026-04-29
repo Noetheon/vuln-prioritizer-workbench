@@ -64,6 +64,7 @@ class EvidenceBundleManifest(StrictModel):
     waived_count: int = 0
     attack_mapped_cves: int = 0
     included_input_copy: bool = False
+    redaction: dict[str, Any] = Field(default_factory=dict)
     files: list[EvidenceBundleFile] = Field(default_factory=list)
 
 
