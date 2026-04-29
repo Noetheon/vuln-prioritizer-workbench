@@ -280,6 +280,9 @@ class EnrichmentResult(BaseModel):
     nvd_diagnostics: ProviderLookupDiagnostics = Field(default_factory=ProviderLookupDiagnostics)
     epss_diagnostics: ProviderLookupDiagnostics = Field(default_factory=ProviderLookupDiagnostics)
     kev_diagnostics: ProviderLookupDiagnostics = Field(default_factory=ProviderLookupDiagnostics)
+    provider_data_quality_flags: dict[str, list[ProviderDataQualityFlag]] = Field(
+        default_factory=dict
+    )
     provider_snapshot_sources: list[str] = Field(default_factory=list)
     provider_cache_timestamps: dict[str, str | None] = Field(default_factory=dict)
 
@@ -332,6 +335,9 @@ class AnalysisContext(BaseModel):
     kev_diagnostics: ProviderLookupDiagnostics = Field(default_factory=ProviderLookupDiagnostics)
     provider_degraded: bool = False
     provider_diagnostics: dict[str, ProviderLookupDiagnostics] = Field(default_factory=dict)
+    provider_data_quality_flags: dict[str, list[ProviderDataQualityFlag]] = Field(
+        default_factory=dict
+    )
     provider_freshness: dict[str, str | int | float | bool | None] = Field(default_factory=dict)
     max_provider_age_hours: int | None = None
     provider_stale: bool = False

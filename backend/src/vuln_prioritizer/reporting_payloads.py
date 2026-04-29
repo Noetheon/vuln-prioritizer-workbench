@@ -52,7 +52,7 @@ def build_analysis_report_payload(
 ) -> dict[str, Any]:
     """Build the canonical analysis payload shared by JSON and HTML renderers."""
     return {
-        "metadata": context.model_dump(exclude={"attack_summary"}),
+        "metadata": _context_metadata(context),
         "attack_summary": context.attack_summary.model_dump(),
         "findings": [finding.model_dump() for finding in findings],
     }
@@ -64,10 +64,17 @@ def build_snapshot_report_payload(
 ) -> dict[str, Any]:
     """Build the canonical snapshot payload."""
     return {
-        "metadata": metadata.model_dump(exclude={"attack_summary"}),
+        "metadata": _context_metadata(metadata),
         "attack_summary": metadata.attack_summary.model_dump(),
         "findings": [finding.model_dump() for finding in findings],
     }
+
+
+def _context_metadata(context: AnalysisContext | SnapshotMetadata) -> dict[str, Any]:
+    metadata = context.model_dump(exclude={"attack_summary"})
+    if not metadata.get("provider_data_quality_flags"):
+        metadata.pop("provider_data_quality_flags", None)
+    return metadata
 
 
 def generate_summary_markdown(
@@ -279,7 +286,7 @@ def generate_compare_json(
 ) -> str:
     """Render the JSON comparison export."""
     payload = {
-        "metadata": context.model_dump(exclude={"attack_summary"}),
+        "metadata": _context_metadata(context),
         "attack_summary": context.attack_summary.model_dump(),
         "comparisons": [row.model_dump() for row in comparisons],
     }
@@ -382,7 +389,7 @@ def generate_explain_json(
 ) -> str:
     """Render a single-CVE detailed JSON explanation."""
     payload = {
-        "metadata": context.model_dump(exclude={"attack_summary"}),
+        "metadata": _context_metadata(context),
         "attack_summary": context.attack_summary.model_dump(),
         "finding": finding.model_dump(),
         "nvd": nvd.model_dump(),

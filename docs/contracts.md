@@ -254,6 +254,9 @@ Current provider service contract:
 - `ProviderStatus` includes `source`, `last_sync`, `cache_hit`, `cache_miss`,
   cache counters, stale-cache counters, network/failure counters, and
   `data_quality_flags`
+- analysis-style metadata may include `provider_data_quality_flags`, keyed by
+  source, when recoverable provider problems such as missing EPSS records,
+  stale cache fallback, or provider warnings were observed
 - cache contract metadata includes namespace, raw key template, TTL seconds,
   and whether expired cache may be used on provider failure
 - required tests for this contract use fake providers or monkeypatching, not

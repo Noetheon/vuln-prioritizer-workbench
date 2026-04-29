@@ -19,6 +19,7 @@ from vuln_prioritizer.models import (
     EpssData,
     KevData,
     NvdData,
+    ProviderDataQualityFlag,
     ProviderLookupDiagnostics,
     ProviderSnapshotReport,
 )
@@ -27,6 +28,7 @@ from vuln_prioritizer.providers.attack import AttackProvider
 from vuln_prioritizer.providers.epss import EpssProvider
 from vuln_prioritizer.providers.kev import KevProvider
 from vuln_prioritizer.providers.nvd import NvdFetchDiagnostics, NvdProvider, has_nvd_content
+from vuln_prioritizer.providers.sdk import provider_data_quality_flags
 
 _T = TypeVar("_T", NvdData, EpssData, KevData)
 
@@ -101,6 +103,18 @@ class EnrichmentService:
             provider_snapshot=provider_snapshot,
             cve_ids=cve_ids,
         )
+        nvd_diagnostics = ProviderLookupDiagnostics(
+            requested=self.last_nvd_diagnostics.requested,
+            cache_hits=self.last_nvd_diagnostics.cache_hits,
+            network_fetches=self.last_nvd_diagnostics.network_fetches,
+            failures=self.last_nvd_diagnostics.failures,
+            content_hits=self.last_nvd_diagnostics.content_hits,
+            empty_records=self.last_nvd_diagnostics.empty_records,
+            stale_cache_hits=self.last_nvd_diagnostics.stale_cache_hits,
+            degraded=self.last_nvd_diagnostics.degraded,
+        )
+        epss_diagnostics = self.last_epss_diagnostics
+        kev_diagnostics = self.last_kev_diagnostics
 
         return EnrichmentResult(
             nvd=nvd_results,
@@ -132,18 +146,14 @@ class EnrichmentService:
             attack_mapping_author=attack_metadata.get("mapping_author"),
             attack_mapping_contact=attack_metadata.get("mapping_contact"),
             warnings=nvd_warnings + epss_warnings + kev_warnings + attack_warnings,
-            nvd_diagnostics=ProviderLookupDiagnostics(
-                requested=self.last_nvd_diagnostics.requested,
-                cache_hits=self.last_nvd_diagnostics.cache_hits,
-                network_fetches=self.last_nvd_diagnostics.network_fetches,
-                failures=self.last_nvd_diagnostics.failures,
-                content_hits=self.last_nvd_diagnostics.content_hits,
-                empty_records=self.last_nvd_diagnostics.empty_records,
-                stale_cache_hits=self.last_nvd_diagnostics.stale_cache_hits,
-                degraded=self.last_nvd_diagnostics.degraded,
+            nvd_diagnostics=nvd_diagnostics,
+            epss_diagnostics=epss_diagnostics,
+            kev_diagnostics=kev_diagnostics,
+            provider_data_quality_flags=_provider_data_quality_flags(
+                nvd=(nvd_diagnostics, nvd_warnings),
+                epss=(epss_diagnostics, epss_warnings),
+                kev=(kev_diagnostics, kev_warnings),
             ),
-            epss_diagnostics=self.last_epss_diagnostics,
-            kev_diagnostics=self.last_kev_diagnostics,
             provider_snapshot_sources=(
                 list(provider_snapshot.metadata.selected_sources) if provider_snapshot else []
             ),
@@ -221,14 +231,30 @@ class EnrichmentService:
             raise ValueError(
                 "Provider snapshot is missing EPSS coverage for: " + ", ".join(sorted(missing_ids))
             )
-        live_results, warnings = self.epss.fetch_many(missing_ids) if missing_ids else ({}, [])
+        live_results: dict[str, EpssData]
+        warnings: list[str]
         if missing_ids:
-            self.last_epss_diagnostics = getattr(
-                self.epss,
-                "last_diagnostics",
-                _build_fallback_diagnostics(cve_ids, live_results, EpssData),
-            )
+            try:
+                live_results, warnings = self.epss.fetch_many(missing_ids)
+            except Exception as exc:  # noqa: BLE001 - EPSS must not abort analysis/import
+                live_results = {cve_id: EpssData(cve_id=cve_id) for cve_id in missing_ids}
+                warnings = [f"EPSS provider failed: {exc}"]
+                self.last_epss_diagnostics = ProviderLookupDiagnostics(
+                    requested=len(missing_ids),
+                    failures=len(missing_ids) or 1,
+                    empty_records=len(missing_ids),
+                    degraded=True,
+                )
+            else:
+                self.last_epss_diagnostics = getattr(
+                    self.epss,
+                    "last_diagnostics",
+                    _build_fallback_diagnostics(cve_ids, live_results, EpssData),
+                )
         else:
+            live_results, warnings = {}, []
+            # Snapshot-only replay still produces diagnostics so freshness and
+            # quality flags can be evaluated without a live EPSS request.
             content_hits = sum(
                 1
                 for item in snapshot_results.values()
@@ -296,6 +322,21 @@ def _snapshot_defensive_contexts(
         for cve_id in cve_ids
         if (item := indexed.get(cve_id)) is not None and item.defensive_contexts
     }
+
+
+def _provider_data_quality_flags(
+    **sources: tuple[ProviderLookupDiagnostics, list[str]],
+) -> dict[str, list[ProviderDataQualityFlag]]:
+    flags_by_source: dict[str, list[ProviderDataQualityFlag]] = {}
+    for source, (diagnostics, warnings) in sources.items():
+        flags = provider_data_quality_flags(
+            source=source,
+            diagnostics=diagnostics,
+            warnings=warnings,
+        )
+        if flags:
+            flags_by_source[source] = flags
+    return flags_by_source
 
 
 def _merge_provider_results(

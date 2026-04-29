@@ -155,6 +155,7 @@ def test_provider_failure_becomes_data_quality_flags_without_abort() -> None:
     assert result.status.empty_records == 1
     assert [flag.code for flag in result.status.data_quality_flags] == [
         "provider_failure",
+        "provider_missing_data",
         "provider_warning",
     ]
     assert result.status.data_quality_flags[0].message == "nvd lookup degraded with 1 failure(s)."
@@ -189,6 +190,31 @@ def test_stale_cache_diagnostics_become_data_quality_flags() -> None:
         "stale_cache",
         "provider_warning",
     ]
+
+
+def test_epss_missing_records_become_data_quality_flag() -> None:
+    provider = FakeProvider(
+        diagnostics=ProviderLookupDiagnostics(
+            requested=1,
+            network_fetches=1,
+            content_hits=0,
+            empty_records=1,
+        )
+    )
+    definition = ProviderDefinition(
+        name="epss",
+        provider=provider,
+        source_kind="epss",
+        cache_namespace="epss",
+    )
+
+    result = ProviderClientAdapter(definition=definition).enrich(["CVE-2026-0001"])
+
+    assert result.status.empty_records == 1
+    assert [flag.code for flag in result.status.data_quality_flags] == ["provider_missing_data"]
+    assert result.status.data_quality_flags[0].message == (
+        "epss returned no provider content for 1 requested CVE(s)."
+    )
 
 
 def test_provider_cache_contract_validation() -> None:

@@ -147,6 +147,36 @@
         }
       }
     },
+    "providerDataQualityFlag": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "source",
+        "code",
+        "message"
+      ],
+      "properties": {
+        "source": {
+          "type": "string"
+        },
+        "code": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "severity": {
+          "enum": [
+            "info",
+            "warning",
+            "error"
+          ]
+        },
+        "cve_id": {
+          "$ref": "#/$defs/nullableString"
+        }
+      }
+    },
     "priorityPolicy": {
       "type": "object",
       "additionalProperties": true,
@@ -396,6 +426,15 @@
           "type": "object",
           "additionalProperties": {
             "$ref": "#/$defs/providerLookupDiagnostics"
+          }
+        },
+        "provider_data_quality_flags": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/providerDataQualityFlag"
+            }
           }
         },
         "provider_freshness": {
