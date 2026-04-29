@@ -26,30 +26,29 @@ def parse_trivy_json(path: Path) -> ParsedInput:
     total_rows = 0
 
     for result_index, result in enumerate(dict_items(document.get("Results")), start=1):
-        target = result.get("Target")
-        package_type = result.get("Type")
+        target = first_present_string(result.get("Target"), document.get("ArtifactName"))
+        package_type = first_present_string(result.get("Type"))
         for vuln_index, vulnerability in enumerate(
             dict_items(result.get("Vulnerabilities")),
             start=1,
         ):
             total_rows += 1
-            cve_id = _cve_support.normalize_cve_or_warn(
-                vulnerability.get("VulnerabilityID"),
-                source_name="Trivy",
-                warnings=warnings,
-            )
+            source_id = first_present_string(vulnerability.get("VulnerabilityID"))
+            cve_id = _cve_support.first_normalized_cve(_trivy_cve_candidates(vulnerability))
             if cve_id is None:
+                _warn_non_cve_trivy_id(source_id, warnings)
                 continue
             occurrences.append(
                 InputOccurrence(
                     cve_id=cve_id,
                     source_format="trivy-json",
+                    source_id=source_id or cve_id,
                     component_name=vulnerability.get("PkgName"),
                     component_version=vulnerability.get("InstalledVersion"),
                     purl=dict_value(vulnerability.get("PkgIdentifier")).get("PURL"),
                     package_type=package_type,
                     file_path=vulnerability.get("PkgPath"),
-                    fix_versions=split_versions(vulnerability.get("FixedVersion")),
+                    fix_versions=_trivy_fix_versions(vulnerability),
                     source_record_id=f"result:{result_index}:vuln:{vuln_index}",
                     raw_severity=vulnerability.get("Severity"),
                     target_kind="image",
@@ -63,6 +62,30 @@ def parse_trivy_json(path: Path) -> ParsedInput:
         occurrences=occurrences,
         warnings=warnings,
     )
+
+
+def _trivy_cve_candidates(vulnerability: dict) -> list[str | None]:
+    candidates: list[str | None] = []
+    for field_name in ("VulnerabilityID", "CVE", "CVEID", "CVEs", "CVEIDs", "Aliases"):
+        value = vulnerability.get(field_name)
+        if isinstance(value, str):
+            candidates.append(value)
+            continue
+        if isinstance(value, list):
+            candidates.extend(str(item) for item in value if item is not None)
+    return candidates
+
+
+def _warn_non_cve_trivy_id(source_id: str | None, warnings: list[str]) -> None:
+    warnings.append(f"Ignored non-CVE Trivy vulnerability identifier: {source_id!r}")
+
+
+def _trivy_fix_versions(vulnerability: dict) -> list[str]:
+    for field_name in ("FixedVersion", "FixedVersions"):
+        versions = split_versions(vulnerability.get(field_name))
+        if versions:
+            return versions
+    return []
 
 
 def parse_grype_json(path: Path) -> ParsedInput:

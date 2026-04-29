@@ -15,6 +15,7 @@ class InputItem(StrictModel):
 class InputOccurrence(StrictModel):
     cve_id: str
     source_format: str = "cve-list"
+    source_id: str | None = Field(default=None, exclude_if=lambda value: value is None)
     component_name: str | None = None
     component_version: str | None = None
     purl: str | None = None

@@ -44,6 +44,7 @@ nav:
   - Examples:
       - CVE List Import: cve-list-import.md
       - Generic Occurrence CSV Import: generic-occurrence-csv-import.md
+      - Trivy JSON Import: trivy-json-import.md
       - Base Report: example_report.md
       - Base Compare: example_compare.md
       - ATT&CK Report: example_attack_report.md
