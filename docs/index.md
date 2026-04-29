@@ -77,6 +77,7 @@ During the FastAPI template migration, Compose starts the template backend shell
 - Start with [concept.md](concept.md) for positioning and scope.
 - Read [methodology.md](methodology.md) for scoring, ATT&CK, Asset Context, and VEX semantics.
 - Use [support_matrix.md](support_matrix.md) and [contracts.md](contracts.md) for stable consumer-facing surfaces.
+- Use [asset-context-csv.md](asset-context-csv.md) for the local asset-context CSV schema, match modes, precedence, and re-score semantics.
 - Use [playbooks.md](playbooks.md) when you want the shortest role-oriented path for CI scans, SBOM triage, or infrastructure scan triage.
 - Use [integrations/reporting_and_ci.md](integrations/reporting_and_ci.md) for SARIF, GitHub Action, HTML, and local workflow guidance.
 - Use [workbench-threat-model.md](workbench-threat-model.md) for Workbench security boundaries, residual risk, and release readiness checks.

@@ -4,7 +4,9 @@ from pathlib import Path
 
 from vuln_prioritizer.inputs._occurrence_support import apply_asset_context
 from vuln_prioritizer.inputs.loader import load_asset_context_file
-from vuln_prioritizer.models import InputOccurrence
+from vuln_prioritizer.models import InputOccurrence, PrioritizedFinding
+from vuln_prioritizer.services.contextualization import aggregate_provenance
+from vuln_prioritizer.services.prioritization import PrioritizationService
 
 
 def _occurrence() -> InputOccurrence:
@@ -92,5 +94,150 @@ def test_asset_context_higher_precedence_wins_and_returns_load_diagnostics(
     assert diagnostics.total_rows == 2
     assert diagnostics.loaded_rows == 2
     assert diagnostics.exact_rules == 2
+    assert diagnostics.contains_rules == 0
+    assert diagnostics.regex_rules == 0
     assert diagnostics.glob_rules == 0
     assert diagnostics.legacy_schema is False
+
+
+def test_asset_context_contains_rule_matches_asset_ref_alias_and_reports_invalid_enums(
+    tmp_path: Path,
+) -> None:
+    asset_context_file = tmp_path / "assets.csv"
+    asset_context_file.write_text(
+        "\n".join(
+            [
+                "rule_id,target_kind,asset_ref,asset_id,match_mode,precedence,"
+                "criticality,exposure,environment,owner,business_service",
+                "contains-rule,host,app-,asset-contains,contains,10,"
+                "tier-0,publicly,productionish,platform-team,checkout",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    catalog, diagnostics = load_asset_context_file(asset_context_file, return_diagnostics=True)
+    resolved, match_diagnostics = apply_asset_context(
+        [_occurrence()],
+        catalog,
+        return_diagnostics=True,
+    )
+
+    assert resolved[0].asset_id == "asset-contains"
+    assert resolved[0].asset_match_mode == "contains"
+    assert resolved[0].asset_owner == "platform-team"
+    assert resolved[0].asset_business_service == "checkout"
+    assert resolved[0].asset_criticality is None
+    assert resolved[0].asset_exposure is None
+    assert resolved[0].asset_environment is None
+    assert diagnostics.loaded_rows == 1
+    assert diagnostics.contains_rules == 1
+    assert diagnostics.regex_rules == 0
+    assert diagnostics.exact_rules == 0
+    assert diagnostics.glob_rules == 0
+    assert any("unknown asset criticality" in warning for warning in diagnostics.warnings)
+    assert any("unknown asset exposure" in warning for warning in diagnostics.warnings)
+    assert any("unknown asset environment" in warning for warning in diagnostics.warnings)
+    assert match_diagnostics.contains_matches == 1
+    assert match_diagnostics.regex_matches == 0
+    assert match_diagnostics.exact_matches == 0
+
+
+def test_asset_context_regex_rule_matches_and_loses_to_exact_on_tied_precedence(
+    tmp_path: Path,
+) -> None:
+    asset_context_file = tmp_path / "assets.csv"
+    asset_context_file.write_text(
+        "\n".join(
+            [
+                "rule_id,target_kind,target_ref,asset_id,match_mode,precedence",
+                "regex-rule,host,^app-[0-9]{2}$,asset-regex,regex,20",
+                "exact-rule,host,app-01,asset-exact,exact,20",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    catalog, diagnostics = load_asset_context_file(asset_context_file, return_diagnostics=True)
+    resolved, match_diagnostics = apply_asset_context(
+        [_occurrence()],
+        catalog,
+        return_diagnostics=True,
+    )
+
+    assert resolved[0].asset_id == "asset-exact"
+    assert resolved[0].asset_match_rule_id == "exact-rule"
+    assert resolved[0].asset_match_candidate_count == 2
+    assert diagnostics.regex_rules == 1
+    assert diagnostics.exact_rules == 1
+    assert match_diagnostics.exact_matches == 1
+    assert match_diagnostics.regex_matches == 0
+    assert match_diagnostics.ambiguous_occurrences == 1
+
+
+def test_asset_context_invalid_regex_reports_row_number(tmp_path: Path) -> None:
+    asset_context_file = tmp_path / "assets.csv"
+    asset_context_file.write_text(
+        "\n".join(
+            [
+                "rule_id,target_kind,target_ref,asset_id,match_mode,precedence",
+                "broken-regex,host,[app,asset-regex,regex,20",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    try:
+        load_asset_context_file(asset_context_file)
+    except ValueError as exc:
+        assert "regex at row 1 is invalid" in str(exc)
+    else:  # pragma: no cover - defensive assertion for clearer failure output
+        raise AssertionError("invalid regex should raise ValueError")
+
+
+def test_asset_context_application_recomputes_operational_score(
+    tmp_path: Path,
+) -> None:
+    asset_context_file = tmp_path / "assets.csv"
+    asset_context_file.write_text(
+        "\n".join(
+            [
+                "rule_id,target_kind,target_ref,asset_id,match_mode,precedence,"
+                "criticality,exposure,environment,owner,business_service",
+                "prod-api,host,app-01,asset-prod-api,exact,10,"
+                "critical,internet-facing,prod,platform-team,checkout",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    catalog = load_asset_context_file(asset_context_file)
+    enriched_occurrences = apply_asset_context([_occurrence()], catalog)
+    provenance = aggregate_provenance(["CVE-2024-9999"], enriched_occurrences)["CVE-2024-9999"]
+    finding = PrioritizedFinding(
+        cve_id="CVE-2024-9999",
+        priority_label="High",
+        priority_rank=2,
+        priority_drivers=["medium-cvss"],
+        cvss_base_score=8.0,
+        epss=0.05,
+        rationale="fixture finding",
+        recommended_action="patch",
+        provenance=provenance,
+        highest_asset_criticality=provenance.highest_asset_criticality,
+        asset_count=provenance.asset_count,
+    )
+
+    scored = PrioritizationService().assign_operational_ranks([finding])[0]
+
+    assert scored.priority_label == "High"
+    assert scored.operational_score == 72
+    assert "internet-facing asset context: +8" in scored.operational_score_reasons
+    assert "production asset context: +5" in scored.operational_score_reasons
+    assert "critical asset criticality: +7" in scored.operational_score_reasons
+    assert "business service checkout routing context: +0" in scored.operational_score_reasons
+    assert "owner platform-team routing context: +0" in scored.operational_score_reasons
