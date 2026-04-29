@@ -803,6 +803,7 @@ def test_vpw011_404_and_403_are_consistent_for_project_scoped_resources(
         ("get", f"/api/v1/projects/{missing_id}/runs/", {}),
         ("get", f"/api/v1/projects/{missing_id}/findings/", {}),
         ("get", f"/api/v1/projects/{missing_id}/summary", {}),
+        ("get", f"/api/v1/projects/{missing_id}/attack/summary", {}),
         ("get", f"/api/v1/projects/{missing_id}/compare/cvss-only", {}),
     )
     forbidden_calls: tuple[tuple[str, str, dict[str, Any]], ...] = (
@@ -818,6 +819,7 @@ def test_vpw011_404_and_403_are_consistent_for_project_scoped_resources(
         ("get", f"/api/v1/projects/{foreign['project_id']}/runs/", {}),
         ("get", f"/api/v1/projects/{foreign['project_id']}/findings/", {}),
         ("get", f"/api/v1/projects/{foreign['project_id']}/summary", {}),
+        ("get", f"/api/v1/projects/{foreign['project_id']}/attack/summary", {}),
         ("get", f"/api/v1/projects/{foreign['project_id']}/compare/cvss-only", {}),
     )
 

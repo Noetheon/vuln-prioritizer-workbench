@@ -10,6 +10,7 @@ from app.api.deps import CurrentUser, SessionDep
 from app.api.routes.workbench_access import require_visible_project
 from app.models import (
     Project,
+    ProjectAttackSummaryPublic,
     ProjectCreate,
     ProjectCvssOnlyComparisonPublic,
     ProjectDecisionSummaryPublic,
@@ -18,7 +19,11 @@ from app.models import (
     ProjectUpdate,
 )
 from app.repositories import FindingRepository, ProjectRepository, RunRepository
-from app.services import build_cvss_only_comparison_payload, build_project_summary_payload
+from app.services import (
+    build_cvss_only_comparison_payload,
+    build_project_attack_summary_payload,
+    build_project_summary_payload,
+)
 
 router = APIRouter(prefix="/projects", tags=["projects"])
 
@@ -65,6 +70,24 @@ def read_project_summary(
         project_id=project_id,
         findings=FindingRepository(session).list_project_findings(project_id),
         runs=RunRepository(session).list_analysis_runs(project_id),
+    )
+
+
+@router.get("/{project_id}/attack/summary", response_model=ProjectAttackSummaryPublic)
+def read_project_attack_summary(
+    project_id: uuid.UUID,
+    session: SessionDep,
+    current_user: CurrentUser,
+    limit: int = Query(default=5, ge=1, le=20),
+) -> ProjectAttackSummaryPublic:
+    """Read top ATT&CK techniques, tactics, and confidence distribution."""
+    require_visible_project(session, current_user, project_id)
+    finding_repo = FindingRepository(session)
+    return build_project_attack_summary_payload(
+        project_id=project_id,
+        findings=finding_repo.list_project_findings(project_id),
+        attack_contexts=finding_repo.list_project_attack_contexts(project_id),
+        top_limit=limit,
     )
 
 

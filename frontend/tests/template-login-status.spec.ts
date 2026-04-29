@@ -81,6 +81,25 @@ test("template finding detail renders TTP Context tab", async ({ page }) => {
   expect(mapped?.id).toBeTruthy()
   expect(unmapped?.id).toBeTruthy()
 
+  await page.goto("/")
+  const currentProjectSelect = page.getByLabel("Current project")
+  await expect(currentProjectSelect).toBeVisible()
+  await currentProjectSelect.selectOption(project.id)
+  const attackWidget = page.getByRole("region", {
+    name: "Top ATT&CK techniques dashboard widget",
+  })
+  await expect(attackWidget).toContainText("Top ATT&CK Techniques")
+  await expect(attackWidget).toContainText("T1190")
+  await expect(attackWidget).toContainText("Exploit Public-Facing Application")
+  await expect(attackWidget).toContainText("1 finding")
+  await expect(attackWidget).toContainText("Low 1")
+  await expect(attackWidget).toContainText("Mapped")
+  await expect(attackWidget).toContainText("Unmapped")
+  await page.screenshot({
+    fullPage: true,
+    path: "../docs/evidence/vpw-059-attack-summary-dashboard.png",
+  })
+
   await page.goto(`/findings/${mapped?.id}`)
   await expect(
     page.getByRole("heading", { name: "CVE-2023-34362" }),
@@ -398,11 +417,13 @@ test("template frontend covers core Workbench E2E smoke", async ({ page }) => {
   ).toContainText("trivy-json")
   await page.getByLabel("Import project").selectOption(project.id)
   await page.getByLabel("Input type").selectOption("cve-list")
-  await page.getByLabel("Import file").setInputFiles({
-    buffer: validCveList,
+  const importFileInput = page.locator('input[name="importFile"]')
+  await importFileInput.setInputFiles({
+    buffer: Buffer.from("CVE-2021-44228\nCVE-2024-3094\n"),
     mimeType: "text/plain",
     name: "import-wizard-cves.txt",
   })
+  await expect(importFileInput).toHaveJSProperty("files.length", 1)
   await page.getByRole("button", { name: "Upload Import" }).click()
   await expect(
     page.getByRole("region", { name: "Import result" }),
@@ -433,7 +454,9 @@ test("template frontend covers core Workbench E2E smoke", async ({ page }) => {
 
   await navigation.getByRole("link", { name: "Assets" }).click()
   await expect(page).toHaveURL(/\/assets$/)
-  await expect(page.getByRole("heading", { name: "Assets" })).toBeVisible()
+  await expect(
+    page.getByRole("heading", { exact: true, name: "Assets" }),
+  ).toBeVisible()
   const assetsProjectSelect = page.getByLabel("Assets project", {
     exact: true,
   })

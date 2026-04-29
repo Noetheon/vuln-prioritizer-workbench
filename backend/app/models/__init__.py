@@ -28,6 +28,9 @@ from app.models.attack import (
     FindingAttackContext,
     FindingAttackContextBase,
     FindingAttackContextPublic,
+    ProjectAttackSummaryPublic,
+    ProjectAttackTacticSummaryPublic,
+    ProjectAttackTechniqueSummaryPublic,
 )
 from app.models.auth import Token, TokenPayload
 from app.models.decisions import (
@@ -140,6 +143,9 @@ __all__ = [
     "ImportParseErrorPublic",
     "MigrationStatus",
     "Project",
+    "ProjectAttackSummaryPublic",
+    "ProjectAttackTacticSummaryPublic",
+    "ProjectAttackTechniqueSummaryPublic",
     "ProjectBase",
     "ProjectCreate",
     "ProjectCvssOnlyComparisonPublic",

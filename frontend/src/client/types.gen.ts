@@ -420,6 +420,60 @@ export type MigrationStatus = {
 };
 
 /**
+ * Project-level ATT&CK summary for the React dashboard widget.
+ */
+export type ProjectAttackSummaryPublic = {
+    confidence_distribution?: {
+        [key: string]: (number);
+    };
+    defensive_note?: string;
+    finding_count?: number;
+    mapped_coverage_percent?: number;
+    mapped_finding_count?: number;
+    project_id: string;
+    review_status_counts?: {
+        [key: string]: (number);
+    };
+    source_counts?: {
+        [key: string]: (number);
+    };
+    top_tactics?: Array<ProjectAttackTacticSummaryPublic>;
+    top_techniques?: Array<ProjectAttackTechniqueSummaryPublic>;
+    unmapped_finding_count?: number;
+};
+
+/**
+ * Dashboard row for a top ATT&CK tactic across project findings.
+ */
+export type ProjectAttackTacticSummaryPublic = {
+    finding_count?: number;
+    risk_score_total?: number;
+    tactic: string;
+    technique_count?: number;
+};
+
+/**
+ * Dashboard row for a top ATT&CK technique across project findings.
+ */
+export type ProjectAttackTechniqueSummaryPublic = {
+    confidence_counts?: {
+        [key: string]: (number);
+    };
+    finding_count?: number;
+    highest_risk_score?: number;
+    name?: (string | null);
+    review_status_counts?: {
+        [key: string]: (number);
+    };
+    risk_score_total?: number;
+    source_counts?: {
+        [key: string]: (number);
+    };
+    tactics?: Array<(string)>;
+    technique_id: string;
+};
+
+/**
  * Project creation payload.
  */
 export type ProjectCreate = {
@@ -764,6 +818,13 @@ export type ProjectsUpdateProjectData = {
 };
 
 export type ProjectsUpdateProjectResponse = (ProjectPublic);
+
+export type ProjectsReadProjectAttackSummaryData = {
+    limit?: number;
+    projectId: string;
+};
+
+export type ProjectsReadProjectAttackSummaryResponse = (ProjectAttackSummaryPublic);
 
 export type ProjectsCompareProjectCvssOnlyData = {
     limit?: number;

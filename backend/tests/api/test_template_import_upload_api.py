@@ -186,6 +186,55 @@ def test_attack_import_exposes_template_finding_ttp_context(
     assert empty_context["techniques"] == []
 
 
+def test_attack_summary_api_rolls_up_top_techniques_and_confidence(
+    template_api_env: TemplateApiEnv,
+    tmp_path: Path,
+) -> None:
+    _configure_upload_dir(template_api_env, tmp_path)
+    headers = auth_headers(template_api_env.client)
+    project = create_project_via_api(template_api_env.client, headers)
+
+    import_response = template_api_env.client.post(
+        f"/api/v1/projects/{project['id']}/imports",
+        headers=headers,
+        data={
+            "input_type": "trivy-json",
+            "attack_source": "local-curated",
+            "attack_mapping_file": ATTACK_MAPPING.name,
+        },
+        files={"file": ("trivy.json", TRIVY_REPORT.read_bytes(), "application/json")},
+    )
+    assert import_response.status_code == 200, import_response.text
+
+    response = template_api_env.client.get(
+        f"/api/v1/projects/{project['id']}/attack/summary",
+        headers=headers,
+    )
+
+    assert response.status_code == 200, response.text
+    payload = response.json()
+    assert payload["project_id"] == project["id"]
+    assert payload["finding_count"] == 3
+    assert payload["mapped_finding_count"] == 1
+    assert payload["unmapped_finding_count"] == 2
+    assert payload["mapped_coverage_percent"] == 33.3
+    assert payload["confidence_distribution"] == {
+        "high": 0,
+        "medium": 0,
+        "low": 1,
+        "unknown": 0,
+    }
+    assert payload["review_status_counts"]["needs_review"] == 1
+    assert payload["source_counts"] == {"local-curated": 1}
+    assert payload["top_techniques"][0]["technique_id"] == "T1190"
+    assert payload["top_techniques"][0]["name"] == "Exploit Public-Facing Application"
+    assert payload["top_techniques"][0]["finding_count"] == 1
+    assert payload["top_techniques"][0]["confidence_counts"]["low"] == 1
+    assert "initial-access" in payload["top_techniques"][0]["tactics"]
+    assert payload["top_tactics"][0]["tactic"] == "initial-access"
+    assert "defensive triage context only" in payload["defensive_note"]
+
+
 def test_decision_api_endpoints_expose_explain_summary_and_cvss_comparison(
     template_api_env: TemplateApiEnv,
     tmp_path: Path,

@@ -2117,6 +2117,175 @@ export const MigrationStatusSchema = {
     type: 'object'
 } as const;
 
+export const ProjectAttackSummaryPublicSchema = {
+    description: 'Project-level ATT&CK summary for the React dashboard widget.',
+    properties: {
+        confidence_distribution: {
+            additionalProperties: {
+                type: 'integer'
+            },
+            title: 'Confidence Distribution',
+            type: 'object'
+        },
+        defensive_note: {
+            default: 'ATT&CK summary is defensive triage context only. Mappings are reviewed inputs, not generated exploit guidance.',
+            title: 'Defensive Note',
+            type: 'string'
+        },
+        finding_count: {
+            default: 0,
+            title: 'Finding Count',
+            type: 'integer'
+        },
+        mapped_coverage_percent: {
+            default: 0,
+            title: 'Mapped Coverage Percent',
+            type: 'number'
+        },
+        mapped_finding_count: {
+            default: 0,
+            title: 'Mapped Finding Count',
+            type: 'integer'
+        },
+        project_id: {
+            format: 'uuid',
+            title: 'Project Id',
+            type: 'string'
+        },
+        review_status_counts: {
+            additionalProperties: {
+                type: 'integer'
+            },
+            title: 'Review Status Counts',
+            type: 'object'
+        },
+        source_counts: {
+            additionalProperties: {
+                type: 'integer'
+            },
+            title: 'Source Counts',
+            type: 'object'
+        },
+        top_tactics: {
+            items: {
+                '$ref': '#/components/schemas/ProjectAttackTacticSummaryPublic'
+            },
+            title: 'Top Tactics',
+            type: 'array'
+        },
+        top_techniques: {
+            items: {
+                '$ref': '#/components/schemas/ProjectAttackTechniqueSummaryPublic'
+            },
+            title: 'Top Techniques',
+            type: 'array'
+        },
+        unmapped_finding_count: {
+            default: 0,
+            title: 'Unmapped Finding Count',
+            type: 'integer'
+        }
+    },
+    required: ['project_id'],
+    title: 'ProjectAttackSummaryPublic',
+    type: 'object'
+} as const;
+
+export const ProjectAttackTacticSummaryPublicSchema = {
+    description: 'Dashboard row for a top ATT&CK tactic across project findings.',
+    properties: {
+        finding_count: {
+            default: 0,
+            title: 'Finding Count',
+            type: 'integer'
+        },
+        risk_score_total: {
+            default: 0,
+            title: 'Risk Score Total',
+            type: 'number'
+        },
+        tactic: {
+            title: 'Tactic',
+            type: 'string'
+        },
+        technique_count: {
+            default: 0,
+            title: 'Technique Count',
+            type: 'integer'
+        }
+    },
+    required: ['tactic'],
+    title: 'ProjectAttackTacticSummaryPublic',
+    type: 'object'
+} as const;
+
+export const ProjectAttackTechniqueSummaryPublicSchema = {
+    description: 'Dashboard row for a top ATT&CK technique across project findings.',
+    properties: {
+        confidence_counts: {
+            additionalProperties: {
+                type: 'integer'
+            },
+            title: 'Confidence Counts',
+            type: 'object'
+        },
+        finding_count: {
+            default: 0,
+            title: 'Finding Count',
+            type: 'integer'
+        },
+        highest_risk_score: {
+            default: 0,
+            title: 'Highest Risk Score',
+            type: 'number'
+        },
+        name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Name'
+        },
+        review_status_counts: {
+            additionalProperties: {
+                type: 'integer'
+            },
+            title: 'Review Status Counts',
+            type: 'object'
+        },
+        risk_score_total: {
+            default: 0,
+            title: 'Risk Score Total',
+            type: 'number'
+        },
+        source_counts: {
+            additionalProperties: {
+                type: 'integer'
+            },
+            title: 'Source Counts',
+            type: 'object'
+        },
+        tactics: {
+            items: {
+                type: 'string'
+            },
+            title: 'Tactics',
+            type: 'array'
+        },
+        technique_id: {
+            title: 'Technique Id',
+            type: 'string'
+        }
+    },
+    required: ['technique_id'],
+    title: 'ProjectAttackTechniqueSummaryPublic',
+    type: 'object'
+} as const;
+
 export const ProjectCreateSchema = {
     description: 'Project creation payload.',
     properties: {
