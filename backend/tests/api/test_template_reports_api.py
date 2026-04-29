@@ -27,11 +27,12 @@ from app.services import (
     MarkdownProviderSnapshot,
     MarkdownReportFinding,
     MarkdownReportPayload,
+    render_html_executive_report,
     render_markdown_report,
 )
 
 
-def test_vpw048_openapi_exposes_markdown_report_contract() -> None:
+def test_vpw049_openapi_exposes_report_format_contract() -> None:
     response = TestClient(app).get("/api/v1/openapi.json")
 
     assert response.status_code == 200
@@ -41,6 +42,10 @@ def test_vpw048_openapi_exposes_markdown_report_contract() -> None:
     assert {"ReportCreate", "ReportPublic", "ReportsPublic"}.issubset(
         payload["components"]["schemas"]
     )
+    assert payload["components"]["schemas"]["ReportCreate"]["properties"]["format"]["enum"] == [
+        "markdown",
+        "html",
+    ]
 
 
 def test_vpw048_markdown_report_create_downloads_for_completed_run(
@@ -93,6 +98,66 @@ def test_vpw048_markdown_report_create_downloads_for_completed_run(
     assert "<img" not in body
     assert "[open](" not in body
     assert "&lt;script&gt;" in body
+
+
+def test_vpw049_html_report_create_downloads_executive_report(
+    template_api_env: TemplateApiEnv,
+    tmp_path: Path,
+) -> None:
+    report_dir = _configure_report_dir(template_api_env, tmp_path)
+    headers = auth_headers(template_api_env.client)
+    project = create_project_via_api(template_api_env.client, headers)
+    run_id = _seed_reportable_run(template_api_env, uuid.UUID(project["id"]))
+
+    response = template_api_env.client.post(
+        f"/api/v1/runs/{run_id}/reports",
+        headers=headers,
+        json={"format": "html"},
+    )
+
+    assert response.status_code == 200, response.text
+    payload = response.json()
+    assert payload["format"] == "html"
+    assert payload["kind"] == "executive-html"
+    assert payload["filename"] == "executive-report.html"
+    assert payload["content_type"] == "text/html; charset=utf-8"
+    assert len(payload["sha256"]) == 64
+    assert payload["metadata_json"]["finding_count"] == 2
+    assert payload["metadata_json"]["format"] == "html"
+    assert payload["download_url"] == f"/api/v1/reports/{payload['id']}/download"
+
+    with Session(template_api_env.engine) as session:
+        report = session.get(template_api_env.app_models.Report, uuid.UUID(payload["id"]))
+        assert report is not None
+        assert Path(report.path).resolve(strict=True).is_relative_to(report_dir)
+        assert report.path.endswith("executive-report.html")
+
+    download = template_api_env.client.get(payload["download_url"], headers=headers)
+
+    assert download.status_code == 200
+    assert download.headers["cache-control"] == "no-store"
+    assert download.headers["x-content-type-options"] == "nosniff"
+    assert "attachment" in download.headers["content-disposition"]
+    assert "executive-report.html" in download.headers["content-disposition"]
+    assert download.headers["content-type"].startswith("text/html")
+    assert hashlib.sha256(download.content).hexdigest() == payload["sha256"]
+
+    body = download.text
+    assert "<!doctype html>" in body
+    assert "Executive Summary" in body
+    assert "Business Impact" in body
+    assert "Top Risks" in body
+    assert "Recommendations" in body
+    assert "Provider Freshness" in body
+    assert "Decision Statement" in body
+    assert "Emergency / 24h" in body
+    assert "sha256:vpw048-snapshot" in body
+    assert body.index(DEMO_CVE_XZ) < body.index(DEMO_CVE_LOG4SHELL)
+    assert "<script" not in body.lower()
+    assert "<img" not in body.lower()
+    assert 'href="javascript:' not in body.lower()
+    assert "&lt;script&gt;alert(1)&lt;/script&gt;" in body
+    assert "&lt;img src=x onerror=alert(1)&gt;" in body
 
 
 def test_vpw048_report_auth_project_visibility_and_invalid_run_state(
@@ -245,6 +310,85 @@ def test_vpw048_markdown_report_snapshot_is_stable() -> None:
     snapshot_path = Path(__file__).resolve().parent / "snapshots" / "vpw_048_technical_report.md"
 
     assert render_markdown_report(payload) == snapshot_path.read_text(encoding="utf-8")
+
+
+def test_vpw049_html_report_snapshot_is_stable() -> None:
+    payload = MarkdownReportPayload(
+        generated_at=datetime(2026, 4, 29, 12, 0, tzinfo=UTC),
+        project_id="00000000-0000-4000-8000-000000000049",
+        project_name="Executive Snapshot <script>alert(1)</script>",
+        run_id="00000000-0000-4000-8000-000000000155",
+        run_status="completed",
+        input_type="cve-list",
+        filename="known-cves.html",
+        summary={"finding_count": 2},
+        findings=[
+            MarkdownReportFinding(
+                operational_rank=1,
+                cve_id=DEMO_CVE_XZ,
+                priority="critical",
+                status="open",
+                risk_score=100.0,
+                epss=0.846,
+                cvss_base_score=10.0,
+                in_kev=False,
+                asset="Payments API",
+                component="xz 5.6.0-r0",
+                rationale="Internet-facing production asset with critical score.",
+                recommended_action="Patch [open](javascript:alert(1)) now.",
+                data_quality_confidence="high",
+                decision_statement=(
+                    "Decision Statement: patch CVE-2024-3094 on Payments API "
+                    "within the emergency SLA."
+                ),
+                business_impact=(
+                    "Customer payment traffic depends on the affected production API; "
+                    "delay increases outage and fraud exposure."
+                ),
+                decision_sla="Emergency / 24h",
+                data_quality_flags=[],
+            ),
+            MarkdownReportFinding(
+                operational_rank=2,
+                cve_id=DEMO_CVE_LOG4SHELL,
+                priority="high",
+                status="in_review",
+                risk_score=94.2,
+                epss=0.944,
+                cvss_base_score=10.0,
+                in_kev=True,
+                asset="Ops API",
+                component="log4j-core 2.14.1",
+                rationale="CISA KEV listing and vulnerable component evidence.",
+                recommended_action="Patch via vendor upgrade.",
+                data_quality_confidence="medium",
+                decision_statement=(
+                    "Decision Statement: patch CVE-2021-44228 after owner "
+                    "validation and compensating control review."
+                ),
+                business_impact="Operational tooling exposure requires management visibility.",
+                decision_sla="Emergency / 24h",
+                data_quality_flags=["missing_asset_owner - Owner is not set"],
+            ),
+        ],
+        provider_snapshot=MarkdownProviderSnapshot(
+            id="00000000-0000-4000-8000-000000000051",
+            content_hash="sha256:vpw049-snapshot",
+            nvd_last_sync="2026-04-28T10:15:00Z",
+            epss_date="2026-04-28",
+            kev_catalog_version="2026-04-28",
+            source_hashes={"provider_snapshot": "sha256:vpw049-snapshot"},
+            source_metadata={
+                "locked_provider_data": True,
+                "selected_sources": ["nvd", "epss", "kev"],
+                "source_path": "demo_provider_snapshot.json",
+                "item_count": 2,
+            },
+        ),
+    )
+    snapshot_path = Path(__file__).resolve().parent / "snapshots" / "vpw_049_executive_report.html"
+
+    assert render_html_executive_report(payload) == snapshot_path.read_text(encoding="utf-8")
 
 
 def _configure_report_dir(template_api_env: TemplateApiEnv, tmp_path: Path) -> Path:
@@ -406,7 +550,23 @@ def _seed_finding(
     finding.rationale = rationale
     finding.recommended_action = action
     finding.data_quality_json = {"confidence": confidence, "flags": flags}
-    finding.explanation_json = {"data_quality_confidence": confidence, "data_quality_flags": flags}
+    finding.explanation_json = {
+        "data_quality_confidence": confidence,
+        "data_quality_flags": flags,
+        "decision_guidance": {
+            "decision_statement": (
+                f"Decision Statement: remediate {cve_id} on {asset_name} with the "
+                "assigned owner before the emergency SLA expires."
+            ),
+            "business_impact": {
+                "text": (
+                    f"Executive attention is warranted for {asset_name} because the "
+                    f"finding combines {priority} priority with provider-backed risk signals."
+                ),
+            },
+            "sla": {"label": "Emergency", "target_hours": 24},
+        },
+    }
     session.flush()
     return finding
 
