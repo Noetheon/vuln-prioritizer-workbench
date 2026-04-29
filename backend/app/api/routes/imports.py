@@ -28,6 +28,7 @@ from app.models import (
     AnalysisRun,
     AnalysisRunPublic,
     AnalysisRunStatus,
+    AssetExposure,
     FindingPriority,
     FindingStatus,
 )
@@ -318,6 +319,12 @@ def _persist_template_occurrences(
                 project_id=project_id,
                 asset_key=occurrence.asset_ref,
                 name=occurrence.asset_ref,
+                owner=_string_evidence(occurrence.raw_evidence, "owner"),
+                business_service=_string_evidence(
+                    occurrence.raw_evidence,
+                    "business_service",
+                ),
+                exposure=_asset_exposure(occurrence.raw_evidence),
             )
             if occurrence.asset_ref
             else None
@@ -756,3 +763,20 @@ def _template_settings(request: Request) -> Settings:
 def _string_evidence(evidence: Mapping[str, Any], key: str) -> str | None:
     value = evidence.get(key)
     return str(value) if value else None
+
+
+def _asset_exposure(evidence: Mapping[str, Any]) -> AssetExposure:
+    raw = _string_evidence(evidence, "asset_exposure")
+    if raw is None:
+        return AssetExposure.UNKNOWN
+    normalized = raw.strip().lower().replace("_", "-")
+    aliases = {
+        "external": AssetExposure.INTERNET_FACING,
+        "internet": AssetExposure.INTERNET_FACING,
+        "internet-facing": AssetExposure.INTERNET_FACING,
+        "public": AssetExposure.INTERNET_FACING,
+        "internal": AssetExposure.INTERNAL,
+        "private": AssetExposure.PRIVATE,
+        "unknown": AssetExposure.UNKNOWN,
+    }
+    return aliases.get(normalized, AssetExposure.UNKNOWN)

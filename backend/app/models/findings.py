@@ -133,6 +133,14 @@ class FindingPublic(FindingBase):
     last_seen_at: datetime
     created_at: datetime
     updated_at: datetime
+    component_name: str | None = None
+    component_version: str | None = None
+    component_purl: str | None = None
+    asset_name: str | None = None
+    asset_key: str | None = None
+    owner: str | None = None
+    business_service: str | None = None
+    exposure: str | None = None
 
 
 class FindingsPublic(SQLModel):

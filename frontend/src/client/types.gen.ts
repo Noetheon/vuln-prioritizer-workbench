@@ -201,8 +201,14 @@ export type FindingPriority = 'critical' | 'high' | 'medium' | 'low';
  */
 export type FindingPublic = {
     asset_id: (string | null);
+    asset_key?: (string | null);
+    asset_name?: (string | null);
     attack_mapped?: boolean;
+    business_service?: (string | null);
     component_id: (string | null);
+    component_name?: (string | null);
+    component_purl?: (string | null);
+    component_version?: (string | null);
     created_at: string;
     cve_id: string;
     cvss_base_score?: (number | null);
@@ -217,11 +223,13 @@ export type FindingPublic = {
     explanation_json?: {
         [key: string]: unknown;
     };
+    exposure?: (string | null);
     first_seen_at: string;
     id: string;
     in_kev?: boolean;
     last_seen_at: string;
     operational_rank?: number;
+    owner?: (string | null);
     priority?: FindingPriority;
     priority_rank?: number;
     project_id: string;
@@ -505,10 +513,22 @@ export type FindingsExplainFindingData = {
 export type FindingsExplainFindingResponse = (FindingExplanationPublic);
 
 export type FindingsReadProjectFindingsData = {
+    cvssMax?: (number | null);
+    cvssMin?: (number | null);
+    direction?: 'asc' | 'desc';
+    epssMax?: (number | null);
+    epssMin?: (number | null);
+    exposure?: (AssetExposure | null);
+    kev?: (boolean | null);
     limit?: number;
     offset?: number;
+    owner?: (string | null);
+    ownerService?: (string | null);
+    priority?: (FindingPriority | null);
     projectId: string;
-    sort?: 'operational' | 'priority' | 'cve' | 'status';
+    service?: (string | null);
+    sort?: 'operational' | 'priority' | 'score' | 'cve' | 'status' | 'epss' | 'cvss' | 'kev' | 'last_seen';
+    status?: (FindingStatus | null);
 };
 
 export type FindingsReadProjectFindingsResponse = (FindingsPublic);
