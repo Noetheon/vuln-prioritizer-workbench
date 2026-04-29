@@ -1,0 +1,39 @@
+{
+  "id": "00000000-0000-4000-8000-000000000035",
+  "project_id": "00000000-0000-4000-8000-000000000001",
+  "status": "succeeded",
+  "provider_snapshot_id": "00000000-0000-4000-8000-000000000026",
+  "counts_by_priority": {
+    "Critical": 2,
+    "High": 0,
+    "Medium": 0,
+    "Low": 0
+  },
+  "kev_hits": 1,
+  "summary_json": {
+    "analysis_service": {
+      "pipeline": "parse-persist-enrich-score-explain",
+      "engine": "vuln_prioritizer.prepare_analysis"
+    },
+    "provider_snapshot_id": "00000000-0000-4000-8000-000000000026",
+    "provider_snapshot_hash": "d05f5901b8ea1434b59cb4d079313c16114663291e3133258375e77e87ee1d8f",
+    "provider_snapshot_file": "data/demo_provider_snapshot.json",
+    "locked_provider_data": true,
+    "findings_count": 2,
+    "occurrence_count": 2,
+    "finding_count": 2,
+    "created_findings": 2,
+    "updated_findings": 0,
+    "counts_by_priority": {
+      "Critical": 2,
+      "High": 0,
+      "Medium": 0,
+      "Low": 0
+    },
+    "kev_hits": 1,
+    "epss_hits": 2,
+    "nvd_hits": 2,
+    "provider_degraded": false,
+    "parse_errors": []
+  }
+}

@@ -66,15 +66,15 @@ def _provider_status_payload(
         sources=_source_statuses(snapshot, snapshot_status.selected_sources, last_error=last_error),
         latest_update_job=_provider_update_job(failed_update_run),
         cache_dir=(
-            _settings_path(active_settings, "provider_cache_dir", "PROVIDER_CACHE_DIR")
-            or _string_or_none(metadata.get("cache_dir"))
+            _string_or_none(metadata.get("cache_dir"))
+            or _settings_path(active_settings, "provider_cache_dir", "PROVIDER_CACHE_DIR")
         ),
-        snapshot_dir=_settings_path(
+        snapshot_dir=_string_or_none(metadata.get("snapshot_dir"))
+        or _settings_path(
             active_settings,
             "provider_snapshot_dir",
             "PROVIDER_SNAPSHOT_DIR",
-        )
-        or _string_or_none(metadata.get("snapshot_dir")),
+        ),
         warnings=warnings,
         last_sync=_last_sync(snapshot, metadata),
         last_error=last_error,

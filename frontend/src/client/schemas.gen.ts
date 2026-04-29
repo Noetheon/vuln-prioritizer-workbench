@@ -101,6 +101,13 @@ export const AnalysisRunStatusSchema = {
 export const AnalysisRunSummaryPublicSchema = {
     description: 'UI-oriented summary for one import or analysis run.',
     properties: {
+        counts_by_priority: {
+            additionalProperties: {
+                type: 'integer'
+            },
+            title: 'Counts By Priority',
+            type: 'object'
+        },
         created_findings: {
             default: 0,
             title: 'Created Findings',
@@ -168,6 +175,11 @@ export const AnalysisRunSummaryPublicSchema = {
             title: 'Input Upload',
             type: 'object'
         },
+        kev_hits: {
+            default: 0,
+            title: 'Kev Hits',
+            type: 'integer'
+        },
         occurrence_count: {
             default: 0,
             title: 'Occurrence Count',
@@ -184,6 +196,23 @@ export const AnalysisRunSummaryPublicSchema = {
             format: 'uuid',
             title: 'Project Id',
             type: 'string'
+        },
+        provider_degraded: {
+            default: false,
+            title: 'Provider Degraded',
+            type: 'boolean'
+        },
+        provider_snapshot_id: {
+            anyOf: [
+                {
+                    format: 'uuid',
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Provider Snapshot Id'
         },
         started_at: {
             format: 'date-time',
@@ -538,6 +567,22 @@ export const Body_imports_import_project_uploadSchema = {
         input_type: {
             title: 'Input Type',
             type: 'string'
+        },
+        locked_provider_data: {
+            default: false,
+            title: 'Locked Provider Data',
+            type: 'boolean'
+        },
+        provider_snapshot_file: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Provider Snapshot File'
         }
     },
     required: ['input_type', 'file'],

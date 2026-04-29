@@ -38,6 +38,9 @@ export type AnalysisRunStatus = 'pending' | 'running' | 'succeeded' | 'completed
  * UI-oriented summary for one import or analysis run.
  */
 export type AnalysisRunSummaryPublic = {
+    counts_by_priority?: {
+        [key: string]: (number);
+    };
     created_findings?: number;
     dedup_summary?: {
         [key: string]: unknown;
@@ -57,9 +60,12 @@ export type AnalysisRunSummaryPublic = {
     input_upload?: {
         [key: string]: unknown;
     };
+    kev_hits?: number;
     occurrence_count?: number;
     parse_errors?: Array<ImportParseErrorPublic>;
     project_id: string;
+    provider_degraded?: boolean;
+    provider_snapshot_id?: (string | null);
     started_at: string;
     status: AnalysisRunStatus;
     summary_json?: {
@@ -140,6 +146,8 @@ export type AssetUpdate = {
 export type Body_imports_import_project_upload = {
     file: string;
     input_type: string;
+    locked_provider_data?: boolean;
+    provider_snapshot_file?: (string | null);
 };
 
 export type Body_login_login_access_token = {

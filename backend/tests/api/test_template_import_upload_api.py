@@ -14,6 +14,7 @@ from utils.template_workbench import (
 )
 
 from app import models as app_models
+from app.services import TemplateAnalysisError
 
 
 def test_valid_cve_list_upload_creates_analysis_run_and_stores_sha256(
@@ -44,6 +45,18 @@ def test_valid_cve_list_upload_creates_analysis_run_and_stores_sha256(
     assert payload["summary_json"]["finding_count"] == 2
     assert payload["summary_json"]["dedup_summary"]["created_findings"] == 2
     assert payload["summary_json"]["dedup_summary"]["reused_findings"] == 0
+    assert payload["provider_snapshot_id"]
+    assert payload["summary_json"]["provider_snapshot_id"] == payload["provider_snapshot_id"]
+    assert payload["summary_json"]["analysis_service"]["pipeline"] == (
+        "parse-persist-enrich-score-explain"
+    )
+    assert payload["summary_json"]["counts_by_priority"] == {
+        "Critical": 2,
+        "High": 0,
+        "Medium": 0,
+        "Low": 0,
+    }
+    assert payload["summary_json"]["kev_hits"] >= 1
     assert payload["summary_json"]["created_findings"] == 2
     assert payload["summary_json"]["updated_findings"] == 0
     assert payload["summary_json"]["ignored_lines"] == 0
@@ -74,7 +87,16 @@ def test_valid_cve_list_upload_creates_analysis_run_and_stores_sha256(
         headers=headers,
     )
     assert findings.status_code == 200
+    finding_payloads = findings.json()["data"]
     assert findings.json()["count"] == 2
+    assert {item["priority"] for item in finding_payloads} == {"critical"}
+    assert all(item["risk_score"] is not None for item in finding_payloads)
+    assert all(item["operational_rank"] > 0 for item in finding_payloads)
+    assert all(item["explanation_json"]["explanation"]["reasons"] for item in finding_payloads)
+    assert all(
+        item["explanation_json"]["decision_guidance"]["decision_statement"]
+        for item in finding_payloads
+    )
 
     summary = template_api_env.client.get(
         f"/api/v1/runs/{payload['id']}/summary",
@@ -90,6 +112,9 @@ def test_valid_cve_list_upload_creates_analysis_run_and_stores_sha256(
     assert summary_payload["ignored_lines"] == 0
     assert summary_payload["occurrence_count"] == 2
     assert summary_payload["finding_count"] == 2
+    assert summary_payload["provider_snapshot_id"] == payload["provider_snapshot_id"]
+    assert summary_payload["counts_by_priority"] == payload["summary_json"]["counts_by_priority"]
+    assert summary_payload["kev_hits"] == payload["summary_json"]["kev_hits"]
     assert summary_payload["parse_errors"] == []
     assert summary_payload["input_upload"]["sha256"] == expected_sha256
 
@@ -126,6 +151,7 @@ def test_double_import_deduplicates_findings_and_appends_occurrences(
     } == {"created"}
 
     first_findings, first_occurrence_count = _finding_state(template_api_env, project_id)
+    first_decisions = _decision_state(first_findings)
     first_seen = {finding.cve_id: finding.first_seen_at for finding in first_findings}
     first_last_seen = {finding.cve_id: finding.last_seen_at for finding in first_findings}
     first_dedup_keys = {finding.cve_id: finding.dedup_key for finding in first_findings}
@@ -154,10 +180,12 @@ def test_double_import_deduplicates_findings_and_appends_occurrences(
     )
 
     second_findings, second_occurrence_count = _finding_state(template_api_env, project_id)
+    second_decisions = _decision_state(second_findings)
     assert len(first_findings) == 2
     assert first_occurrence_count == 2
     assert len(second_findings) == 2
     assert second_occurrence_count == 4
+    assert second_decisions == first_decisions
     assert {finding.cve_id: finding.first_seen_at for finding in second_findings} == first_seen
     assert {finding.cve_id: finding.dedup_key for finding in second_findings} == first_dedup_keys
     assert all(
@@ -183,6 +211,59 @@ def test_double_import_deduplicates_findings_and_appends_occurrences(
     assert summary_payload["finding_count"] == 2
     assert summary_payload["dedup_summary"]["reused_findings"] == 2
     assert {item["action"] for item in summary_payload["dedup_summary"]["decisions"]} == {"reused"}
+    assert (
+        summary_payload["counts_by_priority"]
+        == second_payload["summary_json"]["counts_by_priority"]
+    )
+
+
+def test_analysis_failure_persists_failed_run_without_partial_findings(
+    monkeypatch: pytest.MonkeyPatch,
+    template_api_env: TemplateApiEnv,
+    tmp_path: Path,
+) -> None:
+    _configure_upload_dir(template_api_env, tmp_path)
+    headers = auth_headers(template_api_env.client)
+    project = create_project_via_api(template_api_env.client, headers)
+
+    def _fail_analysis(*args: object, **kwargs: object) -> object:
+        raise TemplateAnalysisError("scoring failed")
+
+    monkeypatch.setattr(
+        "app.api.routes.imports.AnalysisService.analyze_import",
+        _fail_analysis,
+    )
+
+    response = template_api_env.client.post(
+        f"/api/v1/projects/{project['id']}/imports",
+        headers=headers,
+        data={"input_type": "cve-list"},
+        files={"file": ("sample.txt", b"CVE-2024-3094\n", "text/plain")},
+    )
+
+    assert response.status_code == 422
+    detail = response.json()["detail"]
+    assert detail["message"] == "Import analysis failed."
+    assert detail["analysis_error"]["stage"] == "enrich_score_explain"
+    assert "scoring failed" in detail["analysis_error"]["message"]
+
+    run = template_api_env.client.get(
+        f"/api/v1/runs/{detail['analysis_run_id']}",
+        headers=headers,
+    )
+    assert run.status_code == 200
+    run_payload = run.json()
+    assert run_payload["status"] == "failed"
+    assert run_payload["summary_json"]["analysis_error"]["stage"] == "enrich_score_explain"
+    assert run_payload["summary_json"]["created_findings"] == 0
+    assert run_payload["summary_json"]["updated_findings"] == 0
+
+    findings = template_api_env.client.get(
+        f"/api/v1/projects/{project['id']}/findings/",
+        headers=headers,
+    )
+    assert findings.status_code == 200
+    assert findings.json()["count"] == 0
 
 
 def test_same_cve_on_different_assets_creates_distinct_findings(
@@ -435,3 +516,19 @@ def _finding_state(
             ).all()
         )
         return findings, occurrence_count
+
+
+def _decision_state(findings: list[app_models.Finding]) -> dict[str, dict[str, object]]:
+    values: dict[str, dict[str, object]] = {}
+    for finding in findings:
+        explanation = finding.explanation_json.get("explanation", {})
+        guidance = finding.explanation_json.get("decision_guidance", {})
+        values[finding.cve_id] = {
+            "priority": str(finding.priority),
+            "priority_rank": finding.priority_rank,
+            "risk_score": finding.risk_score,
+            "operational_rank": finding.operational_rank,
+            "reason_codes": tuple(explanation.get("reason_codes", [])),
+            "decision_template": guidance.get("template"),
+        }
+    return values
