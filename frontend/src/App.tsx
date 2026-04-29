@@ -22,6 +22,12 @@ import {
   type AnalysisRunPublic,
   type AnalysisRunSummaryPublic,
   ApiError,
+  type AssetExposure,
+  type FindingPriority,
+  type FindingPublic,
+  type FindingStatus,
+  type FindingsReadProjectFindingsData,
+  FindingsService,
   type ImportParseErrorPublic,
   ImportsService,
   type ProjectDecisionSummaryPublic,
@@ -180,6 +186,74 @@ const defaultImportWizardState: ImportWizardState = {
   file: null,
   inputType: "cve-list",
 }
+
+type FindingsSort = NonNullable<FindingsReadProjectFindingsData["sort"]>
+type FindingsDirection = NonNullable<
+  FindingsReadProjectFindingsData["direction"]
+>
+
+type KevFilter = "" | "true" | "false"
+
+type FindingFilters = {
+  cvssMax: string
+  cvssMin: string
+  epssMax: string
+  epssMin: string
+  exposure: "" | AssetExposure
+  kev: KevFilter
+  ownerService: string
+  priority: "" | FindingPriority
+  status: "" | FindingStatus
+}
+
+const defaultFindingFilters: FindingFilters = {
+  cvssMax: "",
+  cvssMin: "",
+  epssMax: "",
+  epssMin: "",
+  exposure: "",
+  kev: "",
+  ownerService: "",
+  priority: "",
+  status: "",
+}
+
+const findingPageSizes = [1, 10, 25, 50] as const
+
+const findingPriorityOptions: FindingPriority[] = [
+  "critical",
+  "high",
+  "medium",
+  "low",
+]
+
+const findingStatusOptions: FindingStatus[] = [
+  "open",
+  "in_review",
+  "remediating",
+  "fixed",
+  "accepted",
+  "suppressed",
+]
+
+const findingExposureOptions: AssetExposure[] = [
+  "internet-facing",
+  "internal",
+  "private",
+  "unknown",
+]
+
+const findingSortOptions: { label: string; value: FindingsSort }[] = [
+  { label: "Operational", value: "operational" },
+  { label: "Priority", value: "priority" },
+  { label: "Score", value: "score" },
+  { label: "CVE", value: "cve" },
+  { label: "Status", value: "status" },
+  { label: "EPSS", value: "epss" },
+  { label: "CVSS", value: "cvss" },
+  { label: "KEV", value: "kev" },
+  { label: "Last Seen", value: "last_seen" },
+]
 
 const timeline = [
   "Provider snapshot locked",
@@ -430,6 +504,65 @@ function stringValue(value: unknown) {
   return typeof value === "string" && value.trim() ? value : null
 }
 
+function optionalText(value: string | null | undefined) {
+  return value?.trim() ? value : "N.A."
+}
+
+function labelize(value: string | null | undefined) {
+  if (!value) {
+    return "N.A."
+  }
+  return value
+    .replaceAll("_", " ")
+    .replaceAll("-", " ")
+    .replace(/\b\w/g, (match) => match.toUpperCase())
+}
+
+function formatNullableNumber(value: number | null | undefined) {
+  return value === null || value === undefined ? "N.A." : value.toFixed(1)
+}
+
+function formatEpss(value: number | null | undefined) {
+  return value === null || value === undefined
+    ? "N.A."
+    : `${Math.round(value * 1000) / 10}%`
+}
+
+function numericFilterValue(value: string) {
+  const trimmed = value.trim()
+  if (!trimmed) {
+    return undefined
+  }
+  const parsed = Number(trimmed)
+  return Number.isFinite(parsed) ? parsed : undefined
+}
+
+function hasActiveFindingFilters(filters: FindingFilters) {
+  return Object.values(filters).some((value) => value.trim() !== "")
+}
+
+function findingComponentLabel(finding: FindingPublic) {
+  const name = optionalText(finding.component_name)
+  return finding.component_version
+    ? `${name} ${finding.component_version}`
+    : name
+}
+
+function findingAssetLabel(finding: FindingPublic) {
+  return (
+    finding.asset_name ??
+    finding.asset_key ??
+    finding.business_service ??
+    "N.A."
+  )
+}
+
+function findingPriorityTone(finding: FindingPublic) {
+  return finding.priority === "critical" || finding.priority === "high"
+    ? finding.priority
+    : "standard"
+}
+
 function metadataRows(value: unknown) {
   return Object.entries(objectRecord(value)).filter(
     ([key, entryValue]) =>
@@ -528,6 +661,20 @@ export function App() {
     useState<AnalysisRunSummaryPublic | null>(null)
   const [runDetailLoading, setRunDetailLoading] = useState(false)
   const [runDetailError, setRunDetailError] = useState("")
+  const [findings, setFindings] = useState<FindingPublic[]>([])
+  const [findingCount, setFindingCount] = useState(0)
+  const [findingsLoading, setFindingsLoading] = useState(false)
+  const [findingsError, setFindingsError] = useState("")
+  const [findingFilters, setFindingFilters] = useState<FindingFilters>(
+    defaultFindingFilters,
+  )
+  const [findingSort, setFindingSort] = useState<FindingsSort>("operational")
+  const [findingDirection, setFindingDirection] =
+    useState<FindingsDirection>("asc")
+  const [findingPageSize, setFindingPageSize] =
+    useState<(typeof findingPageSizes)[number]>(10)
+  const [findingOffset, setFindingOffset] = useState(0)
+  const [findingReloadKey, setFindingReloadKey] = useState(0)
   const selectedProject =
     projects.find((project) => project.id === selectedProjectId) ?? null
   const dashboardLoading = projectListLoading || summaryLoading
@@ -537,6 +684,10 @@ export function App() {
     dashboardLoading,
   )
   const summaryRows = buildSummaryRows(projectSummary)
+  const findingPageStart =
+    findingCount === 0 ? 0 : Math.min(findingOffset + 1, findingCount)
+  const findingPageEnd = Math.min(findingOffset + findings.length, findingCount)
+  const activeFindingFilters = hasActiveFindingFilters(findingFilters)
 
   useEffect(() => {
     let isMounted = true
@@ -758,6 +909,86 @@ export function App() {
     }
   }, [currentPath, navigate, selectedRunId])
 
+  useEffect(() => {
+    let isMounted = true
+
+    async function loadFindingsPage() {
+      if (currentPath !== "/findings" || !selectedProjectId) {
+        setFindings([])
+        setFindingCount(0)
+        setFindingsError("")
+        setFindingsLoading(false)
+        return
+      }
+
+      setFindingsLoading(true)
+      setFindingsError("")
+      try {
+        const page = await FindingsService.readProjectFindings({
+          cvssMax: numericFilterValue(findingFilters.cvssMax),
+          cvssMin: numericFilterValue(findingFilters.cvssMin),
+          direction: findingDirection,
+          epssMax: numericFilterValue(findingFilters.epssMax),
+          epssMin: numericFilterValue(findingFilters.epssMin),
+          exposure: findingFilters.exposure || undefined,
+          kev:
+            findingFilters.kev === ""
+              ? undefined
+              : findingFilters.kev === "true",
+          limit: findingPageSize,
+          offset: findingOffset,
+          ownerService: findingFilters.ownerService.trim() || undefined,
+          priority: findingFilters.priority || undefined,
+          projectId: selectedProjectId,
+          sort: findingSort,
+          status: findingFilters.status || undefined,
+        })
+        if (isMounted) {
+          setFindings(page.data)
+          setFindingCount(page.count)
+        }
+      } catch (caught) {
+        if (caught instanceof ApiError && [401, 403].includes(caught.status)) {
+          clearAccessToken()
+          await navigate({ to: "/login" })
+          return
+        }
+        if (isMounted) {
+          setFindings([])
+          setFindingCount(0)
+          setFindingsError(apiErrorMessage("Findings unavailable", caught))
+        }
+      } finally {
+        if (isMounted) {
+          setFindingsLoading(false)
+        }
+      }
+    }
+
+    void loadFindingsPage()
+    return () => {
+      isMounted = false
+    }
+  }, [
+    currentPath,
+    findingDirection,
+    findingFilters.cvssMax,
+    findingFilters.cvssMin,
+    findingFilters.epssMax,
+    findingFilters.epssMin,
+    findingFilters.exposure,
+    findingFilters.kev,
+    findingFilters.ownerService,
+    findingFilters.priority,
+    findingFilters.status,
+    findingOffset,
+    findingPageSize,
+    findingReloadKey,
+    findingSort,
+    navigate,
+    selectedProjectId,
+  ])
+
   async function refreshProjects(preferredProjectId?: string) {
     const projectPage = await ProjectsService.readProjects()
     setProjects(projectPage.data)
@@ -817,6 +1048,43 @@ export function App() {
     } finally {
       setRunsLoading(false)
     }
+  }
+
+  function updateFindingFilter<Key extends keyof FindingFilters>(
+    key: Key,
+    value: FindingFilters[Key],
+  ) {
+    setFindingOffset(0)
+    setFindingFilters((filters) => ({ ...filters, [key]: value }))
+  }
+
+  function clearFindingFilters() {
+    setFindingOffset(0)
+    setFindingFilters(defaultFindingFilters)
+  }
+
+  function updateFindingSort(sort: FindingsSort) {
+    setFindingOffset(0)
+    setFindingSort(sort)
+  }
+
+  function updateFindingDirection(direction: FindingsDirection) {
+    setFindingOffset(0)
+    setFindingDirection(direction)
+  }
+
+  function updateFindingPageSize(size: number) {
+    const supportedSize = findingPageSizes.includes(
+      size as (typeof findingPageSizes)[number],
+    )
+      ? (size as (typeof findingPageSizes)[number])
+      : 10
+    setFindingOffset(0)
+    setFindingPageSize(supportedSize)
+  }
+
+  function refreshFindings() {
+    setFindingReloadKey((key) => key + 1)
   }
 
   async function createProject(event: FormEvent<HTMLFormElement>) {
@@ -1126,7 +1394,13 @@ export function App() {
           </section>
         ) : null}
 
-        <section className="content-grid">
+        <section
+          className={
+            currentPath === "/findings"
+              ? "content-grid wide-workspace"
+              : "content-grid"
+          }
+        >
           <div className="work-panel">
             <div className="panel-header">
               <div>
@@ -1139,11 +1413,16 @@ export function App() {
                 aria-label={
                   currentPath === "/projects"
                     ? "Refresh projects"
-                    : "Refresh queue"
+                    : currentPath === "/findings"
+                      ? "Refresh findings"
+                      : "Refresh queue"
                 }
                 onClick={() => {
                   if (currentPath === "/projects") {
                     void refreshProjects(selectedProjectId)
+                  }
+                  if (currentPath === "/findings") {
+                    refreshFindings()
                   }
                 }}
               >
@@ -1821,6 +2100,435 @@ export function App() {
                     ) : null}
                   </section>
                 </section>
+              </section>
+            ) : currentPath === "/findings" ? (
+              <section
+                className="findings-workflow"
+                aria-label="Findings table workflow"
+              >
+                <section
+                  className="findings-controls"
+                  aria-label="Findings filters"
+                >
+                  <label>
+                    <span>Project</span>
+                    <select
+                      aria-label="Findings project"
+                      disabled={projectListLoading || projects.length === 0}
+                      onChange={(event) => {
+                        setFindingOffset(0)
+                        setSelectedProjectId(event.target.value)
+                      }}
+                      value={selectedProjectId}
+                    >
+                      {projects.length === 0 ? (
+                        <option value="">No projects</option>
+                      ) : null}
+                      {projects.map((project) => (
+                        <option key={project.id} value={project.id}>
+                          {project.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    <span>Priority</span>
+                    <select
+                      aria-label="Priority filter"
+                      onChange={(event) =>
+                        updateFindingFilter(
+                          "priority",
+                          event.target.value as FindingFilters["priority"],
+                        )
+                      }
+                      value={findingFilters.priority}
+                    >
+                      <option value="">Any priority</option>
+                      {findingPriorityOptions.map((priority) => (
+                        <option key={priority} value={priority}>
+                          {labelize(priority)}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    <span>Status</span>
+                    <select
+                      aria-label="Status filter"
+                      onChange={(event) =>
+                        updateFindingFilter(
+                          "status",
+                          event.target.value as FindingFilters["status"],
+                        )
+                      }
+                      value={findingFilters.status}
+                    >
+                      <option value="">Any status</option>
+                      {findingStatusOptions.map((status) => (
+                        <option key={status} value={status}>
+                          {labelize(status)}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    <span>KEV</span>
+                    <select
+                      aria-label="KEV filter"
+                      onChange={(event) =>
+                        updateFindingFilter(
+                          "kev",
+                          event.target.value as KevFilter,
+                        )
+                      }
+                      value={findingFilters.kev}
+                    >
+                      <option value="">Any KEV</option>
+                      <option value="true">KEV only</option>
+                      <option value="false">Not KEV</option>
+                    </select>
+                  </label>
+                  <label>
+                    <span>Owner or service</span>
+                    <input
+                      aria-label="Owner service filter"
+                      onChange={(event) =>
+                        updateFindingFilter("ownerService", event.target.value)
+                      }
+                      placeholder="platform or payments"
+                      value={findingFilters.ownerService}
+                    />
+                  </label>
+                  <label>
+                    <span>Exposure</span>
+                    <select
+                      aria-label="Exposure filter"
+                      onChange={(event) =>
+                        updateFindingFilter(
+                          "exposure",
+                          event.target.value as FindingFilters["exposure"],
+                        )
+                      }
+                      value={findingFilters.exposure}
+                    >
+                      <option value="">Any exposure</option>
+                      {findingExposureOptions.map((exposure) => (
+                        <option key={exposure} value={exposure}>
+                          {labelize(exposure)}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    <span>EPSS min</span>
+                    <input
+                      aria-label="EPSS min filter"
+                      inputMode="decimal"
+                      max="1"
+                      min="0"
+                      onChange={(event) =>
+                        updateFindingFilter("epssMin", event.target.value)
+                      }
+                      placeholder="0.40"
+                      step="0.01"
+                      type="number"
+                      value={findingFilters.epssMin}
+                    />
+                  </label>
+                  <label>
+                    <span>EPSS max</span>
+                    <input
+                      aria-label="EPSS max filter"
+                      inputMode="decimal"
+                      max="1"
+                      min="0"
+                      onChange={(event) =>
+                        updateFindingFilter("epssMax", event.target.value)
+                      }
+                      placeholder="0.95"
+                      step="0.01"
+                      type="number"
+                      value={findingFilters.epssMax}
+                    />
+                  </label>
+                  <label>
+                    <span>CVSS min</span>
+                    <input
+                      aria-label="CVSS min filter"
+                      inputMode="decimal"
+                      max="10"
+                      min="0"
+                      onChange={(event) =>
+                        updateFindingFilter("cvssMin", event.target.value)
+                      }
+                      placeholder="7.0"
+                      step="0.1"
+                      type="number"
+                      value={findingFilters.cvssMin}
+                    />
+                  </label>
+                  <label>
+                    <span>CVSS max</span>
+                    <input
+                      aria-label="CVSS max filter"
+                      inputMode="decimal"
+                      max="10"
+                      min="0"
+                      onChange={(event) =>
+                        updateFindingFilter("cvssMax", event.target.value)
+                      }
+                      placeholder="10.0"
+                      step="0.1"
+                      type="number"
+                      value={findingFilters.cvssMax}
+                    />
+                  </label>
+                  <button
+                    className="secondary-action"
+                    disabled={!activeFindingFilters}
+                    onClick={clearFindingFilters}
+                    type="button"
+                  >
+                    Clear Filters
+                  </button>
+                </section>
+
+                <section
+                  className="findings-sortbar"
+                  aria-label="Findings sorting"
+                >
+                  <label>
+                    <span>Sort</span>
+                    <select
+                      aria-label="Sort findings"
+                      onChange={(event) =>
+                        updateFindingSort(event.target.value as FindingsSort)
+                      }
+                      value={findingSort}
+                    >
+                      {findingSortOptions.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    <span>Direction</span>
+                    <select
+                      aria-label="Sort direction"
+                      onChange={(event) =>
+                        updateFindingDirection(
+                          event.target.value as FindingsDirection,
+                        )
+                      }
+                      value={findingDirection}
+                    >
+                      <option value="asc">Ascending</option>
+                      <option value="desc">Descending</option>
+                    </select>
+                  </label>
+                  <label>
+                    <span>Page size</span>
+                    <select
+                      aria-label="Findings page size"
+                      onChange={(event) =>
+                        updateFindingPageSize(Number(event.target.value))
+                      }
+                      value={findingPageSize}
+                    >
+                      {findingPageSizes.map((size) => (
+                        <option key={size} value={size}>
+                          {size}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <div className="findings-page-summary" aria-live="polite">
+                    <span>Showing</span>
+                    <strong>
+                      {findingPageStart}-{findingPageEnd} of {findingCount}
+                    </strong>
+                  </div>
+                  <div className="findings-page-actions">
+                    <button
+                      className="secondary-action"
+                      disabled={findingsLoading || findingOffset === 0}
+                      onClick={() =>
+                        setFindingOffset((offset) =>
+                          Math.max(0, offset - findingPageSize),
+                        )
+                      }
+                      type="button"
+                    >
+                      Previous
+                    </button>
+                    <button
+                      className="secondary-action"
+                      disabled={
+                        findingsLoading ||
+                        findingOffset + findingPageSize >= findingCount
+                      }
+                      onClick={() =>
+                        setFindingOffset((offset) => offset + findingPageSize)
+                      }
+                      type="button"
+                    >
+                      Next
+                    </button>
+                  </div>
+                </section>
+
+                {findingsError ? (
+                  <p className="dashboard-alert" role="alert">
+                    {findingsError}
+                  </p>
+                ) : null}
+                {findingsLoading ? (
+                  <p className="dashboard-state" role="status">
+                    Loading findings
+                  </p>
+                ) : null}
+
+                {!findingsLoading && !findingsError && projects.length === 0 ? (
+                  <section
+                    className="dashboard-empty"
+                    aria-label="Findings no project empty state"
+                  >
+                    <h3>No projects yet</h3>
+                    <p>Create a project before reviewing findings.</p>
+                    <Link className="primary-action" to="/projects">
+                      Projects
+                    </Link>
+                  </section>
+                ) : null}
+
+                {!findingsLoading &&
+                !findingsError &&
+                selectedProject &&
+                findings.length === 0 &&
+                !activeFindingFilters ? (
+                  <section
+                    className="dashboard-empty"
+                    aria-label="Findings empty state"
+                  >
+                    <h3>No findings in {selectedProject.name}</h3>
+                    <p>
+                      Import scanner, SBOM, or CVE-list data to create findings.
+                    </p>
+                    <Link className="primary-action" to="/imports">
+                      Imports
+                    </Link>
+                  </section>
+                ) : null}
+
+                {!findingsLoading &&
+                !findingsError &&
+                selectedProject &&
+                findings.length === 0 &&
+                activeFindingFilters ? (
+                  <section
+                    className="dashboard-empty"
+                    aria-label="Findings filter empty state"
+                  >
+                    <h3>No findings match these filters</h3>
+                    <p>
+                      Clear or adjust filters to broaden the server-side query.
+                    </p>
+                    <button
+                      className="secondary-action"
+                      onClick={clearFindingFilters}
+                      type="button"
+                    >
+                      Clear Filters
+                    </button>
+                  </section>
+                ) : null}
+
+                {findings.length > 0 ? (
+                  <div className="table-wrap findings-table-wrap">
+                    <table aria-label="Findings table">
+                      <thead>
+                        <tr>
+                          <th>Priority</th>
+                          <th>Score</th>
+                          <th>CVE</th>
+                          <th>Component</th>
+                          <th>Asset</th>
+                          <th>Owner</th>
+                          <th>EPSS</th>
+                          <th>CVSS</th>
+                          <th>KEV</th>
+                          <th>Status</th>
+                          <th>Last Seen</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {findings.map((finding) => (
+                          <tr
+                            className={`finding-row tone-${findingPriorityTone(
+                              finding,
+                            )}`}
+                            key={finding.id}
+                          >
+                            <td>
+                              <span
+                                className={`severity ${
+                                  finding.priority ?? "low"
+                                }`}
+                              >
+                                {labelize(finding.priority)}
+                              </span>
+                            </td>
+                            <td>{formatNullableNumber(finding.risk_score)}</td>
+                            <td>
+                              <strong>{finding.cve_id}</strong>
+                            </td>
+                            <td>
+                              <span className="finding-primary">
+                                {findingComponentLabel(finding)}
+                              </span>
+                              <small>
+                                {optionalText(finding.component_purl)}
+                              </small>
+                            </td>
+                            <td>
+                              <span className="finding-primary">
+                                {findingAssetLabel(finding)}
+                              </span>
+                              <small>{labelize(finding.exposure)}</small>
+                            </td>
+                            <td>
+                              <span className="finding-primary">
+                                {optionalText(finding.owner)}
+                              </span>
+                              <small>
+                                {optionalText(finding.business_service)}
+                              </small>
+                            </td>
+                            <td>{formatEpss(finding.epss)}</td>
+                            <td>
+                              {formatNullableNumber(finding.cvss_base_score)}
+                            </td>
+                            <td>
+                              <span
+                                className={
+                                  finding.in_kev
+                                    ? "kev-pill matched"
+                                    : "kev-pill"
+                                }
+                              >
+                                {finding.in_kev ? "Yes" : "No"}
+                              </span>
+                            </td>
+                            <td>{labelize(finding.status)}</td>
+                            <td>{formatDateTime(finding.last_seen_at)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : null}
               </section>
             ) : (
               <div className="dashboard-panel-body">

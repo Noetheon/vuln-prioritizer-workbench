@@ -802,10 +802,43 @@ export const FindingPublicSchema = {
             ],
             title: 'Asset Id'
         },
+        asset_key: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Asset Key'
+        },
+        asset_name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Asset Name'
+        },
         attack_mapped: {
             default: false,
             title: 'Attack Mapped',
             type: 'boolean'
+        },
+        business_service: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Business Service'
         },
         component_id: {
             anyOf: [
@@ -818,6 +851,39 @@ export const FindingPublicSchema = {
                 }
             ],
             title: 'Component Id'
+        },
+        component_name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Component Name'
+        },
+        component_purl: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Component Purl'
+        },
+        component_version: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Component Version'
         },
         created_at: {
             format: 'date-time',
@@ -872,6 +938,17 @@ export const FindingPublicSchema = {
             title: 'Explanation Json',
             type: 'object'
         },
+        exposure: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Exposure'
+        },
         first_seen_at: {
             format: 'date-time',
             title: 'First Seen At',
@@ -896,6 +973,17 @@ export const FindingPublicSchema = {
             default: 0,
             title: 'Operational Rank',
             type: 'integer'
+        },
+        owner: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Owner'
         },
         priority: {
             '$ref': '#/components/schemas/FindingPriority',

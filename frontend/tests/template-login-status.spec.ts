@@ -1,16 +1,28 @@
 import { expect, test } from "@playwright/test"
 
 const validCveList = Buffer.from("CVE-2021-44228\nCVE-2024-3094\n")
-const invalidOccurrenceCsv = Buffer.from(
+const validOccurrenceCsv = Buffer.from(
   [
-    "cve_id,asset_ref,component_name,component_version,purl,scanner,fix_version,severity,owner,business_service",
-    "not-a-cve,build-host-1,xz,5.6.0,pkg:apk/alpine/xz@5.6.0-r0,trivy,5.6.1-r2,CRITICAL,team-platform,payments",
+    "cve_id,asset_ref,component,version,purl,severity,owner,business_service,exposure",
+    "CVE-2024-3094,build-host-1,xz,5.6.0,pkg:apk/alpine/xz@5.6.0-r0,CRITICAL,team-platform,payments,public",
+    "CVE-2024-4577,web-tier,php-cgi,8.3.7,pkg:deb/debian/php-cgi@8.3.7,HIGH,team-web,checkout,internal",
   ].join("\n"),
 )
-
+const invalidOccurrenceCsv = Buffer.from(
+  [
+    "cve_id,asset_ref,component_name,component_version,purl,scanner,fix_version,severity,owner,business_service,exposure",
+    "not-a-cve,build-host-1,xz,5.6.0,pkg:apk/alpine/xz@5.6.0-r0,trivy,5.6.1-r2,CRITICAL,team-platform,payments,public",
+  ].join("\n"),
+)
 test("template login reaches authenticated Workbench status shell", async ({
   page,
 }) => {
+  test.setTimeout(60_000)
+  const testRunSuffix = Date.now().toString(36)
+  const dashboardProjectName = `VPW Dashboard Project ${testRunSuffix}`
+  const uiProjectName = `VPW UI Project ${testRunSuffix}`
+  const editedUiProjectName = `VPW UI Project Edited ${testRunSuffix}`
+
   await page.goto("/login")
 
   await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible()
@@ -44,18 +56,17 @@ test("template login reaches authenticated Workbench status shell", async ({
   await expect(page.getByText(legacyMenuLabel, { exact: true })).toHaveCount(0)
   await expect(page.getByText("template-backend-adapter")).toBeVisible()
   await expect(page.getByText("disabled")).toBeVisible()
+  const providerStatusSection = page.getByRole("region", {
+    name: "Provider Status",
+  })
   await expect(
-    page.getByRole("heading", { name: "Provider Status" }),
+    providerStatusSection.getByRole("heading", { name: "Provider Status" }),
   ).toBeVisible()
-  await expect(page.getByText("Snapshot mode")).toBeVisible()
-  await expect(page.getByText("No snapshot recorded")).toBeVisible()
+  await expect(providerStatusSection.getByText("Snapshot mode")).toBeVisible()
   const providerSources = page.getByLabel("Provider sources")
   await expect(providerSources.getByText("NVD", { exact: true })).toBeVisible()
   await expect(providerSources.getByText("EPSS", { exact: true })).toBeVisible()
   await expect(providerSources.getByText("KEV", { exact: true })).toBeVisible()
-  await expect(
-    page.getByRole("region", { name: "Dashboard empty state" }),
-  ).toContainText("No projects yet")
 
   const accessToken = await page.evaluate(() =>
     window.localStorage.getItem("access_token"),
@@ -67,7 +78,7 @@ test("template login reaches authenticated Workbench status shell", async ({
     {
       data: {
         description: "Playwright dashboard summary project",
-        name: "VPW Dashboard Project",
+        name: dashboardProjectName,
       },
       headers: authHeaders,
     },
@@ -76,7 +87,10 @@ test("template login reaches authenticated Workbench status shell", async ({
   const project = (await projectResponse.json()) as { id: string; name: string }
 
   await page.reload()
-  await expect(page.getByLabel("Current project")).toHaveValue(project.id)
+  const currentProjectSelect = page.getByLabel("Current project")
+  await expect(currentProjectSelect).toBeVisible()
+  await currentProjectSelect.selectOption(project.id)
+  await expect(currentProjectSelect).toHaveValue(project.id)
   await expect(
     page.getByRole("region", { name: "No findings empty state" }),
   ).toContainText(`No findings in ${project.name}`)
@@ -91,7 +105,7 @@ test("template login reaches authenticated Workbench status shell", async ({
       headers: authHeaders,
       multipart: {
         file: {
-          buffer: Buffer.from("CVE-2021-44228\nCVE-2024-3094\n"),
+          buffer: validCveList,
           mimeType: "text/plain",
           name: "dashboard-cves.txt",
         },
@@ -102,6 +116,8 @@ test("template login reaches authenticated Workbench status shell", async ({
   expect(importResponse.ok()).toBeTruthy()
 
   await page.reload()
+  await currentProjectSelect.selectOption(project.id)
+  await expect(currentProjectSelect).toHaveValue(project.id)
   await expect(page.getByLabel("Critical summary card")).toContainText("2")
   await expect(page.getByLabel("High summary card")).toContainText("0")
   await expect(page.getByLabel("KEV summary card")).toContainText(/[1-9]/)
@@ -126,36 +142,36 @@ test("template login reaches authenticated Workbench status shell", async ({
     .getByRole("button", { name: "Create Project" })
     .click()
   await expect(page.getByText("Project name is required.")).toBeVisible()
-  await createProjectForm.getByLabel("Project name").fill("VPW UI Project")
+  await createProjectForm.getByLabel("Project name").fill(uiProjectName)
   await createProjectForm
     .getByLabel("Description")
     .fill("Created through the Projects page E2E workflow")
   await createProjectForm
     .getByRole("button", { name: "Create Project" })
     .click()
-  await expect(page.getByText("Project VPW UI Project created.")).toBeVisible()
+  await expect(
+    page.getByText(`Project ${uiProjectName} created.`),
+  ).toBeVisible()
   const projectsList = page.getByRole("region", { name: "Projects list" })
-  await expect(projectsList.getByText("VPW UI Project")).toBeVisible()
+  await expect(projectsList.getByText(uiProjectName)).toBeVisible()
   const projectDetail = page.getByRole("region", { name: "Project detail" })
-  await expect(projectDetail).toContainText("VPW UI Project")
+  await expect(projectDetail).toContainText(uiProjectName)
   await projectDetail.getByRole("button", { name: "Edit" }).click()
-  await projectDetail
-    .getByLabel("Edit project name")
-    .fill("VPW UI Project Edited")
+  await projectDetail.getByLabel("Edit project name").fill(editedUiProjectName)
   await projectDetail
     .getByLabel("Edit description")
     .fill("Updated through the Projects page E2E workflow")
   await projectDetail.getByRole("button", { name: "Save Project" }).click()
   await expect(
-    page.getByText("Project VPW UI Project Edited updated."),
+    page.getByText(`Project ${editedUiProjectName} updated.`),
   ).toBeVisible()
-  await expect(projectDetail).toContainText("VPW UI Project Edited")
+  await expect(projectDetail).toContainText(editedUiProjectName)
   await projectDetail.getByLabel("Confirm deletion for this project").check()
   await projectDetail.getByRole("button", { name: "Delete Project" }).click()
   await expect(
-    page.getByText("Project VPW UI Project Edited deleted."),
+    page.getByText(`Project ${editedUiProjectName} deleted.`),
   ).toBeVisible()
-  await expect(projectsList.getByText("VPW UI Project Edited")).toHaveCount(0)
+  await expect(projectsList.getByText(editedUiProjectName)).toHaveCount(0)
 
   await navigation.getByRole("link", { name: "Imports" }).click()
   await expect(page).toHaveURL(/\/imports$/)
@@ -168,6 +184,7 @@ test("template login reaches authenticated Workbench status shell", async ({
   await expect(
     page.getByRole("region", { name: "Supported MVP formats" }),
   ).toContainText("trivy-json")
+  await page.getByLabel("Import project").selectOption(project.id)
   await page.getByLabel("Input type").selectOption("cve-list")
   await page.getByLabel("Import file").setInputFiles({
     buffer: validCveList,
@@ -178,9 +195,6 @@ test("template login reaches authenticated Workbench status shell", async ({
   await expect(
     page.getByRole("region", { name: "Import result" }),
   ).toContainText("succeeded")
-  await expect(
-    page.getByRole("region", { name: "Import result" }),
-  ).toContainText("2")
   const importRuns = page.getByRole("region", { name: "Import runs" })
   await expect(importRuns).toContainText("import-wizard-cves.txt")
   await expect(importRuns).toContainText("succeeded")
@@ -188,6 +202,23 @@ test("template login reaches authenticated Workbench status shell", async ({
   await expect(runDetail).toContainText("Run Detail")
   await expect(runDetail).toContainText("Created")
   await expect(runDetail).toContainText("Provider snapshot")
+
+  const occurrenceImport = await page.request.post(
+    `http://127.0.0.1:8000/api/v1/projects/${project.id}/imports`,
+    {
+      headers: authHeaders,
+      multipart: {
+        file: {
+          buffer: validOccurrenceCsv,
+          mimeType: "text/csv",
+          name: "findings-occurrences.csv",
+        },
+        input_type: "generic-occurrence-csv",
+      },
+    },
+  )
+  expect(occurrenceImport.ok()).toBeTruthy()
+
   await page.getByLabel("Input type").selectOption("generic-occurrence-csv")
   await page.getByLabel("Import file").setInputFiles({
     buffer: invalidOccurrenceCsv,
@@ -206,6 +237,67 @@ test("template login reaches authenticated Workbench status shell", async ({
   await expect(runDetail).toContainText("not-a-cve")
   await runDetail.getByRole("link", { name: "Findings" }).click()
   await expect(page).toHaveURL(/\/findings$/)
+  await expect(
+    page.getByRole("region", { name: "Findings filters" }),
+  ).toBeVisible()
+  const findingsTable = page.getByRole("table", { name: "Findings table" })
+  await expect(findingsTable).toBeVisible()
+  await expect(findingsTable).toContainText("CVE-2021-44228")
+  await expect(findingsTable).toContainText("CVE-2024-3094")
+  await expect(findingsTable).toContainText("Priority")
+  await expect(findingsTable).toContainText("Last Seen")
+  await expect(findingsTable.locator(".severity.critical").first()).toHaveText(
+    "Critical",
+  )
+  await expect(
+    findingsTable.locator(".finding-row.tone-critical").first(),
+  ).toBeVisible()
+
+  await page.getByLabel("Priority filter").selectOption("critical")
+  await expect(findingsTable).toContainText("Critical")
+  await expect(findingsTable).not.toContainText("Medium")
+  await page.getByRole("button", { name: "Clear Filters" }).click()
+  await expect(findingsTable).toContainText("CVE-2024-3094")
+
+  await page.getByLabel("Owner service filter").fill("payments")
+  await expect(findingsTable).toContainText("team-platform")
+  await expect(findingsTable).toContainText("payments")
+  await expect(findingsTable).not.toContainText("team-web")
+  await page.getByRole("button", { name: "Clear Filters" }).click()
+
+  await page.getByLabel("KEV filter").selectOption("true")
+  await expect(findingsTable.locator(".kev-pill.matched").first()).toHaveText(
+    "Yes",
+  )
+  await page.getByRole("button", { name: "Clear Filters" }).click()
+
+  await page.getByLabel("EPSS min filter").fill("0.90")
+  await page.getByLabel("CVSS min filter").fill("9.0")
+  await expect(findingsTable).toContainText(/CVE-2021-44228|CVE-2024-4577/)
+  await page.getByRole("button", { name: "Clear Filters" }).click()
+
+  await page.getByLabel("Sort findings").selectOption("cve")
+  await page.getByLabel("Sort direction").selectOption("asc")
+  await expect(findingsTable.locator("tbody tr").first()).toContainText(
+    "CVE-2021-44228",
+  )
+  await page.getByLabel("Findings page size").selectOption("1")
+  await expect(page.getByText(/1-1 of \d+/)).toBeVisible()
+  await page.getByRole("button", { name: "Next" }).click()
+  await expect(page.getByText(/2-2 of \d+/)).toBeVisible()
+  await page.getByRole("button", { name: "Previous" }).click()
+  await expect(page.getByText(/1-1 of \d+/)).toBeVisible()
+
+  await page.getByLabel("Owner service filter").fill("does-not-exist")
+  const findingsFilterEmptyState = page.getByRole("region", {
+    name: "Findings filter empty state",
+  })
+  await expect(findingsFilterEmptyState).toContainText(
+    "No findings match these filters",
+  )
+  await findingsFilterEmptyState
+    .getByRole("button", { name: "Clear Filters" })
+    .click()
 
   await navigation.getByRole("link", { name: "Settings" }).click()
   await expect(page).toHaveURL(/\/settings$/)

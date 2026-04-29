@@ -221,9 +221,15 @@ def test_double_import_deduplicates_findings_and_appends_occurrences(
     project_id = uuid.UUID(project["id"])
     content = "\n".join(
         [
-            "cve_id,asset_ref,component,version,purl,severity",
-            "CVE-2024-3094,build-host-1,xz,5.6.0,pkg:apk/alpine/xz@5.6.0-r0,CRITICAL",
-            "CVE-2024-4577,web-tier,php-cgi,8.3.7,pkg:deb/debian/php-cgi@8.3.7,HIGH",
+            "cve_id,asset_ref,component,version,purl,severity,owner,business_service,exposure",
+            (
+                "CVE-2024-3094,build-host-1,xz,5.6.0,"
+                "pkg:apk/alpine/xz@5.6.0-r0,CRITICAL,team-platform,payments,public"
+            ),
+            (
+                "CVE-2024-4577,web-tier,php-cgi,8.3.7,"
+                "pkg:deb/debian/php-cgi@8.3.7,HIGH,team-web,checkout,internal"
+            ),
             "",
         ]
     ).encode()
@@ -283,6 +289,22 @@ def test_double_import_deduplicates_findings_and_appends_occurrences(
     assert all(
         finding.last_seen_at > first_last_seen[finding.cve_id] for finding in second_findings
     )
+    findings_response = template_api_env.client.get(
+        f"/api/v1/projects/{project['id']}/findings/",
+        headers=headers,
+        params={"sort": "cve"},
+    )
+    assert findings_response.status_code == 200, findings_response.text
+    findings_by_cve = {item["cve_id"]: item for item in findings_response.json()["data"]}
+    assert findings_by_cve["CVE-2024-3094"]["component_name"] == "xz"
+    assert findings_by_cve["CVE-2024-3094"]["component_version"] == "5.6.0"
+    assert findings_by_cve["CVE-2024-3094"]["asset_key"] == "build-host-1"
+    assert findings_by_cve["CVE-2024-3094"]["owner"] == "team-platform"
+    assert findings_by_cve["CVE-2024-3094"]["business_service"] == "payments"
+    assert findings_by_cve["CVE-2024-3094"]["exposure"] == "internet-facing"
+    assert findings_by_cve["CVE-2024-4577"]["owner"] == "team-web"
+    assert findings_by_cve["CVE-2024-4577"]["business_service"] == "checkout"
+    assert findings_by_cve["CVE-2024-4577"]["exposure"] == "internal"
 
     findings = template_api_env.client.get(
         f"/api/v1/projects/{project['id']}/findings/",
