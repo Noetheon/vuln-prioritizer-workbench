@@ -308,6 +308,17 @@ def provider_data_quality_flags(
                 ),
             )
         )
+    if diagnostics.empty_records:
+        flags.append(
+            ProviderDataQualityFlag(
+                source=source,
+                code="provider_missing_data",
+                message=(
+                    f"{source} returned no provider content for "
+                    f"{diagnostics.empty_records} requested CVE(s)."
+                ),
+            )
+        )
     for warning in warnings:
         flags.append(
             ProviderDataQualityFlag(

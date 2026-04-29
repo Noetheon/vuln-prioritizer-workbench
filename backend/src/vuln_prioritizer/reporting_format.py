@@ -132,6 +132,12 @@ def _run_metadata_lines(context: AnalysisContext) -> list[str]:
         )
     if context.provider_degraded:
         lines.append("- Provider degraded: `yes`")
+    if context.provider_data_quality_flags:
+        for provider_source, flags in sorted(context.provider_data_quality_flags.items()):
+            if not flags:
+                continue
+            flag_codes = ", ".join(flag.code for flag in flags)
+            lines.append(f"- {provider_source.upper()} data-quality flags: `{flag_codes}`")
     if context.attack_mapping_file:
         lines.append(f"- ATT&CK mapping file: `{context.attack_mapping_file}`")
     if context.attack_mapping_file_sha256:

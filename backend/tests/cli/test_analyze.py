@@ -12,6 +12,7 @@ from vuln_prioritizer.models import (
     KevData,
     NvdData,
     PrioritizedFinding,
+    ProviderLookupDiagnostics,
     ProviderSnapshotItem,
     ProviderSnapshotMetadata,
     ProviderSnapshotReport,
@@ -56,6 +57,56 @@ def test_cli_analyze_end_to_end_with_mocked_providers(
     assert "- Findings shown: 4" in report
     assert "- NVD hits: 4/4" in report
     assert "## ATT&CK Context Summary" in report
+
+
+def test_cli_analyze_surfaces_missing_epss_data_quality_flag(
+    install_fake_providers,
+    monkeypatch,
+    runner,
+    tmp_path: Path,
+    write_input_file,
+) -> None:
+    input_file = write_input_file(tmp_path)
+    output_file = tmp_path / "report.json"
+    install_fake_providers()
+
+    def fake_epss_missing(
+        self: EpssProvider,
+        cve_ids: list[str],
+    ) -> tuple[dict[str, EpssData], list[str]]:
+        self.last_diagnostics = ProviderLookupDiagnostics(
+            requested=len(cve_ids),
+            network_fetches=len(cve_ids),
+            content_hits=0,
+            empty_records=len(cve_ids),
+        )
+        return ({cve_id: EpssData(cve_id=cve_id) for cve_id in cve_ids}, [])
+
+    monkeypatch.setattr(EpssProvider, "fetch_many", fake_epss_missing)
+
+    result = runner.invoke(
+        app,
+        [
+            "analyze",
+            "--input",
+            str(input_file),
+            "--output",
+            str(output_file),
+            "--format",
+            "json",
+        ],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(output_file.read_text(encoding="utf-8"))
+
+    assert payload["metadata"]["epss_diagnostics"]["empty_records"] == 4
+    assert payload["metadata"]["provider_data_quality_flags"]["epss"][0]["code"] == (
+        "provider_missing_data"
+    )
+    assert payload["metadata"]["provider_data_quality_flags"]["epss"][0]["message"] == (
+        "epss returned no provider content for 4 requested CVE(s)."
+    )
 
 
 def test_cli_analyze_supports_priority_threshold_filters_and_sorting(

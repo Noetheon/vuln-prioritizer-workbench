@@ -10,7 +10,13 @@ from paths import DATA_ROOT
 
 from vuln_prioritizer.cache import FileCache
 from vuln_prioritizer.config import KEV_FEED_URL
-from vuln_prioritizer.models import AttackData, EpssData, KevData, NvdData
+from vuln_prioritizer.models import (
+    AttackData,
+    EpssData,
+    KevData,
+    NvdData,
+    ProviderLookupDiagnostics,
+)
 from vuln_prioritizer.providers.attack import AttackProvider
 from vuln_prioritizer.providers.attack_metadata import AttackMetadataProvider
 from vuln_prioritizer.providers.ctid_mappings import CtidMappingsProvider
@@ -354,9 +360,96 @@ def test_enrichment_service_tracks_last_nvd_diagnostics() -> None:
     )
 
 
+def test_enrichment_service_epss_failure_records_data_quality_flags() -> None:
+    class StubNvdProvider:
+        last_diagnostics = NvdFetchDiagnostics(
+            requested=1,
+            network_fetches=1,
+            content_hits=1,
+        )
+
+        def fetch_many(self, cve_ids):  # noqa: ANN001
+            return (
+                {
+                    cve_id: NvdData(
+                        cve_id=cve_id,
+                        description="NVD record",
+                        cvss_base_score=7.5,
+                    )
+                    for cve_id in cve_ids
+                },
+                [],
+            )
+
+    class ExplodingEpssProvider:
+        def fetch_many(self, cve_ids):  # noqa: ANN001, ARG002
+            raise RuntimeError("invalid EPSS cache")
+
+    class StubKevProvider:
+        last_diagnostics = ProviderLookupDiagnostics(
+            requested=1,
+            network_fetches=1,
+            content_hits=0,
+        )
+
+        def fetch_many(self, cve_ids, offline_file=None):  # noqa: ANN001, ARG002
+            return ({cve_id: KevData(cve_id=cve_id) for cve_id in cve_ids}, [])
+
+    class StubAttackProvider:
+        def fetch_many(  # noqa: ANN001
+            self,
+            cve_ids,
+            *,
+            enabled: bool,
+            source: str,
+            mapping_file,
+            technique_metadata_file,
+            offline_file,
+        ):
+            return (
+                {cve_id: AttackData(cve_id=cve_id) for cve_id in cve_ids},
+                {
+                    "source": source if enabled else "none",
+                    "mapping_file": None,
+                    "technique_metadata_file": None,
+                    "source_version": None,
+                    "attack_version": None,
+                    "domain": None,
+                    "mapping_framework": None,
+                    "mapping_framework_version": None,
+                },
+                [],
+            )
+
+    service = EnrichmentService(use_cache=False)
+    service.nvd = StubNvdProvider()
+    service.epss = ExplodingEpssProvider()
+    service.kev = StubKevProvider()
+    service.attack = StubAttackProvider()
+
+    result = service.enrich(["CVE-2026-0501"], attack_enabled=False)
+
+    assert result.epss["CVE-2026-0501"] == EpssData(cve_id="CVE-2026-0501")
+    assert result.warnings == ["EPSS provider failed: invalid EPSS cache"]
+    assert result.epss_diagnostics.failures == 1
+    assert result.epss_diagnostics.empty_records == 1
+    assert [flag.code for flag in result.provider_data_quality_flags["epss"]] == [
+        "provider_failure",
+        "provider_missing_data",
+        "provider_warning",
+    ]
+    assert result.provider_data_quality_flags["epss"][1].message == (
+        "epss returned no provider content for 1 requested CVE(s)."
+    )
+
+
 def test_epss_fetch_many_parses_batch_payload() -> None:
     class Session:
+        def __init__(self) -> None:
+            self.requests: list[str] = []
+
         def get(self, *args, **kwargs):  # noqa: ANN002, ANN003
+            self.requests.append(kwargs["params"]["cve"])
             return FakeResponse(
                 {
                     "data": [
@@ -365,17 +458,118 @@ def test_epss_fetch_many_parses_batch_payload() -> None:
                             "epss": "0.973",
                             "percentile": "0.999",
                             "date": "2026-04-18",
+                        },
+                        {
+                            "cve": "CVE-2023-1234",
+                            "epss": "0.125",
+                            "percentile": "0.456",
+                            "date": "2026-04-18",
+                        },
+                    ]
+                }
+            )
+
+    session = Session()
+    provider = EpssProvider(session=session)
+    results, warnings = provider.fetch_many(["CVE-2021-44228", "CVE-2023-1234"])
+
+    assert warnings == []
+    assert session.requests == ["CVE-2021-44228,CVE-2023-1234"]
+    assert results["CVE-2021-44228"].epss == 0.973
+    assert results["CVE-2021-44228"].percentile == 0.999
+    assert results["CVE-2021-44228"].date == "2026-04-18"
+    assert results["CVE-2023-1234"].epss == 0.125
+    assert results["CVE-2023-1234"].percentile == 0.456
+    assert provider.last_diagnostics.requested == 2
+    assert provider.last_diagnostics.network_fetches == 2
+    assert provider.last_diagnostics.content_hits == 2
+    assert provider.last_diagnostics.empty_records == 0
+
+
+def test_epss_fetch_many_reports_cache_hit_miss_and_freshness(tmp_path: Path) -> None:
+    class Session:
+        def __init__(self) -> None:
+            self.requests: list[str] = []
+
+        def get(self, *args, **kwargs):  # noqa: ANN002, ANN003
+            self.requests.append(kwargs["params"]["cve"])
+            return FakeResponse(
+                {
+                    "data": [
+                        {
+                            "cve": "CVE-2026-0002",
+                            "epss": "0.420",
+                            "percentile": "0.910",
+                            "date": "2026-04-29",
                         }
                     ]
                 }
             )
 
-    provider = EpssProvider(session=Session())
-    results, warnings = provider.fetch_many(["CVE-2021-44228"])
+    cache = FileCache(tmp_path / "cache", ttl_hours=24)
+    cache.set_json(
+        "epss",
+        "CVE-2026-0001",
+        EpssData(
+            cve_id="CVE-2026-0001",
+            epss=0.3,
+            percentile=0.8,
+            date="2026-04-28",
+        ).model_dump(),
+    )
+    session = Session()
+    provider = EpssProvider(session=session, cache=cache)
+
+    results, warnings = provider.fetch_many(["CVE-2026-0001", "CVE-2026-0002"])
 
     assert warnings == []
-    assert results["CVE-2021-44228"].epss == 0.973
-    assert results["CVE-2021-44228"].percentile == 0.999
+    assert session.requests == ["CVE-2026-0002"]
+    assert results["CVE-2026-0001"].date == "2026-04-28"
+    assert results["CVE-2026-0002"].epss == 0.42
+    assert results["CVE-2026-0002"].date == "2026-04-29"
+    assert cache.latest_cached_at("epss") is not None
+    assert provider.last_diagnostics.cache_hits == 1
+    assert provider.last_diagnostics.network_fetches == 1
+    assert provider.last_diagnostics.content_hits == 2
+    assert provider.last_diagnostics.empty_records == 0
+    assert provider.last_diagnostics.degraded is False
+
+
+def test_epss_fetch_many_records_missing_results(tmp_path: Path) -> None:
+    class Session:
+        def get(self, *args, **kwargs):  # noqa: ANN002, ANN003
+            return FakeResponse({"data": []})
+
+    cache = FileCache(tmp_path / "cache", ttl_hours=24)
+    provider = EpssProvider(session=Session(), cache=cache)
+
+    results, warnings = provider.fetch_many(["CVE-2026-0003"])
+
+    assert warnings == []
+    assert results["CVE-2026-0003"] == EpssData(cve_id="CVE-2026-0003")
+    assert cache.get_json("epss", "CVE-2026-0003") == EpssData(cve_id="CVE-2026-0003").model_dump()
+    assert provider.last_diagnostics.network_fetches == 1
+    assert provider.last_diagnostics.content_hits == 0
+    assert provider.last_diagnostics.empty_records == 1
+    assert provider.last_diagnostics.degraded is False
+
+
+def test_epss_fetch_many_degrades_without_stale_cache() -> None:
+    class Session:
+        def get(self, *args, **kwargs):  # noqa: ANN002, ANN003
+            raise requests.RequestException("epss offline")
+
+    provider = EpssProvider(session=Session())
+
+    results, warnings = provider.fetch_many(["CVE-2026-0004"])
+
+    assert results["CVE-2026-0004"] == EpssData(cve_id="CVE-2026-0004")
+    assert warnings == ["EPSS lookup failed for chunk CVE-2026-0004: epss offline"]
+    assert provider.last_diagnostics.network_fetches == 1
+    assert provider.last_diagnostics.failures == 1
+    assert provider.last_diagnostics.content_hits == 0
+    assert provider.last_diagnostics.empty_records == 1
+    assert provider.last_diagnostics.degraded is True
 
 
 def test_epss_uses_stale_cache_on_chunk_failure(tmp_path: Path) -> None:

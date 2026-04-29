@@ -6,6 +6,7 @@ from vuln_prioritizer.models import (
     AttackSummary,
     InputSourceSummary,
     PrioritizedFinding,
+    ProviderDataQualityFlag,
     ProviderLookupDiagnostics,
     RollupBucket,
     RollupCandidate,
@@ -126,6 +127,15 @@ def test_metadata_and_summary_lines_include_optional_workbench_fields() -> None:
             stale_cache_hits=1,
         ),
         provider_degraded=True,
+        provider_data_quality_flags={
+            "epss": [
+                ProviderDataQualityFlag(
+                    source="epss",
+                    code="provider_missing_data",
+                    message="epss returned no provider content for 1 requested CVE(s).",
+                )
+            ]
+        },
         asset_match_conflict_count=1,
         vex_conflict_count=1,
         waived_count=1,
@@ -145,6 +155,7 @@ def test_metadata_and_summary_lines_include_optional_workbench_fields() -> None:
     assert "- Provider snapshot mode: `locked`" in metadata
     assert "- Inputs merged: `2`" in metadata
     assert "- NVD diagnostics: `requested=2" in metadata
+    assert "- EPSS data-quality flags: `provider_missing_data`" in metadata
     assert "- ATT&CK STIX spec version: `2.1`" in metadata
     assert "- Waiver file: `waivers.yml`" in metadata
     assert "- Policy overrides: `critical-epss=0.500`" in metadata
