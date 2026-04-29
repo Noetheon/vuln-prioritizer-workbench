@@ -17,6 +17,7 @@ import vuln_prioritizer.models_waivers as _models_waivers
 from vuln_prioritizer.model_base import StrictModel
 
 AttackData = _models_attack.AttackData
+AttackConfidence = _models_attack.AttackConfidence
 AttackTactic = _models_attack.AttackTactic
 AttackMapping = _models_attack.AttackMapping
 AttackMappingType = _models_attack.AttackMappingType
@@ -25,6 +26,7 @@ AttackSummary = _models_attack.AttackSummary
 AttackTechnique = _models_attack.AttackTechnique
 CveAttackMapping = _models_attack.CveAttackMapping
 FindingAttackContext = _models_attack.FindingAttackContext
+FindingAttackContextSummary = _models_attack.FindingAttackContextSummary
 AssetContextRecord = _models_input.AssetContextRecord
 BusinessImpactBlock = _models_decision.BusinessImpactBlock
 ContextPolicyProfile = _models_input.ContextPolicyProfile
@@ -230,6 +232,7 @@ class PrioritizedFinding(StrictModel):
     attack_note: str | None = None
     attack_mappings: list[AttackMapping] = Field(default_factory=list)
     attack_technique_details: list[AttackTechnique] = Field(default_factory=list)
+    attack_context: FindingAttackContextSummary = Field(default_factory=FindingAttackContextSummary)
     provenance: FindingProvenance = Field(default_factory=FindingProvenance)
     context_summary: str | None = None
     context_recommendation: str | None = None

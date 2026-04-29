@@ -13,6 +13,7 @@ from vuln_prioritizer.services.workbench_attack import (
     WorkbenchAttackValidationError,
     attack_mapping_payload,
     attack_technique_payload,
+    confidence_for_mapping,
     confidence_for_source,
     mapping_rationale,
     navigator_layer_from_contexts,
@@ -82,6 +83,15 @@ def test_workbench_attack_review_confidence_and_payload_helpers() -> None:
     assert confidence_for_source("manual") == 0.8
     assert confidence_for_source("local_curated") == 0.7
     assert confidence_for_source("unknown") is None
+    assert confidence_for_mapping(mapping.model_copy(update={"confidence": "low"}), "ctid") == 0.3
+    assert (
+        confidence_for_mapping(mapping.model_copy(update={"confidence": "medium"}), "local_curated")
+        == 0.6
+    )
+    assert (
+        confidence_for_mapping(mapping.model_copy(update={"confidence": "high"}), "manual") == 0.9
+    )
+    assert confidence_for_mapping(mapping, "ctid") == 1.0
     assert mapping_rationale(mapping, mapped_attack) == "Exploit exposed app"
     assert (
         mapping_rationale(

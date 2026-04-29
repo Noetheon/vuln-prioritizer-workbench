@@ -120,6 +120,7 @@ def _finding_payload(finding: Any, *, include_detail: bool = False) -> dict[str,
     if include_detail:
         payload["finding"] = finding.finding_json
         payload["kev_detail"] = _finding_kev_detail(finding)
+        payload["attack_context"] = _finding_attack_context(finding)
         payload["occurrences"] = [item.evidence_json for item in finding.occurrences]
         payload["status_history"] = [
             _finding_status_history_payload(item) for item in getattr(finding, "status_history", [])
@@ -275,7 +276,22 @@ def _latest_threat_context_rank(finding: Any) -> int | None:
     return min(int(context.threat_context_rank) for context in contexts)
 
 
+def _finding_attack_context(finding: Any) -> dict[str, Any] | None:
+    contexts = getattr(finding, "attack_contexts", None) or []
+    if not contexts:
+        return None
+    context = sorted(
+        contexts,
+        key=lambda item: (
+            int(getattr(item, "threat_context_rank", 99)),
+            str(getattr(item, "created_at", "")),
+        ),
+    )[0]
+    return _attack_context_payload(context, finding_id=finding.id)
+
+
 def _attack_context_payload(context: Any, *, finding_id: str) -> dict[str, Any]:
+    confidence = _attack_context_confidence(context)
     return {
         "finding_id": finding_id,
         "cve_id": context.cve_id,
@@ -291,11 +307,35 @@ def _attack_context_payload(context: Any, *, finding_id: str) -> dict[str, Any]:
         "attack_relevance": context.attack_relevance,
         "threat_context_rank": context.threat_context_rank,
         "rationale": context.rationale,
+        "confidence": confidence,
+        "low_confidence": confidence == "low",
         "review_status": context.review_status,
         "techniques": context.techniques_json or [],
         "tactics": context.tactics_json or [],
         "mappings": context.mappings_json or [],
     }
+
+
+def _attack_context_confidence(context: Any) -> str | None:
+    mappings = [item for item in (context.mappings_json or []) if isinstance(item, dict)]
+    labels = {
+        str(item["confidence"]).strip().lower()
+        for item in mappings
+        if str(item.get("confidence") or "").strip().lower() in {"low", "medium", "high"}
+    }
+    if "low" in labels:
+        return "low"
+    if "medium" in labels:
+        return "medium"
+    if "high" in labels:
+        return "high"
+    if not context.mapped:
+        return None
+    if context.source == "ctid":
+        return "high"
+    if context.source in {"local_curated", "manual"}:
+        return "medium"
+    return None
 
 
 def _attack_review_queue_item_payload(context: Any) -> dict[str, Any]:

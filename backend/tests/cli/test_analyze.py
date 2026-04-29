@@ -8,6 +8,7 @@ from vuln_prioritizer.cli import _build_attack_summary_from_findings, app
 from vuln_prioritizer.models import (
     AttackData,
     AttackMapping,
+    AttackTechnique,
     EpssData,
     KevData,
     NvdData,
@@ -237,6 +238,121 @@ def test_cli_analyze_supports_custom_policy_thresholds(
     finding = next(item for item in payload["findings"] if item["cve_id"] == "CVE-2024-0004")
     assert finding["priority_label"] == "High"
     assert payload["metadata"]["policy_overrides"] == ["high-epss=0.300"]
+
+
+def test_cli_analyze_emits_attack_context_with_confidence_and_empty_state(
+    install_fake_providers,
+    monkeypatch,
+    runner,
+    tmp_path: Path,
+    write_input_file,
+) -> None:
+    input_file = write_input_file(tmp_path)
+    output_file = tmp_path / "attack-context.json"
+    mapping_file = tmp_path / "curated.yml"
+    mapping_file.write_text("metadata: {}\nmapping_objects: []\n", encoding="utf-8")
+    install_fake_providers()
+
+    def fake_attack_fetch_many(  # noqa: ANN001
+        self,
+        cve_ids,
+        *,
+        enabled,
+        source="none",
+        mapping_file=None,
+        technique_metadata_file=None,
+        offline_file=None,
+    ):
+        metadata = {
+            "source": "local-curated" if enabled else source,
+            "mapping_file": str(mapping_file) if mapping_file else None,
+            "technique_metadata_file": (
+                str(technique_metadata_file) if technique_metadata_file is not None else None
+            ),
+            "source_version": "fixture",
+            "attack_version": "16.1",
+            "domain": "enterprise-attack",
+            "mapping_framework": "vuln-prioritizer-curated-attack",
+            "mapping_framework_version": "1.0",
+        }
+        if not enabled:
+            return {}, metadata, []
+        return (
+            {
+                "CVE-2021-44228": AttackData(
+                    cve_id="CVE-2021-44228",
+                    mapped=True,
+                    source="local-curated",
+                    source_version="fixture",
+                    attack_version="16.1",
+                    domain="enterprise-attack",
+                    mappings=[
+                        AttackMapping(
+                            capability_id="CVE-2021-44228",
+                            attack_object_id="T1190",
+                            attack_object_name="Exploit Public-Facing Application",
+                            mapping_type="exploitation",
+                            confidence="low",
+                            review_status="needs_review",
+                            defensive_note="Review-only defensive context.",
+                        )
+                    ],
+                    techniques=[
+                        AttackTechnique(
+                            attack_object_id="T1190",
+                            name="Exploit Public-Facing Application",
+                            tactics=["initial-access"],
+                        )
+                    ],
+                    attack_relevance="High",
+                    attack_rationale="Curated defensive mapping requires analyst review.",
+                    attack_techniques=["T1190"],
+                    attack_tactics=["Initial Access"],
+                )
+            },
+            metadata,
+            [],
+        )
+
+    monkeypatch.setattr(AttackProvider, "fetch_many", fake_attack_fetch_many)
+
+    result = runner.invoke(
+        app,
+        [
+            "analyze",
+            "--input",
+            str(input_file),
+            "--output",
+            str(output_file),
+            "--format",
+            "json",
+            "--attack-source",
+            "local-curated",
+            "--attack-mapping-file",
+            str(mapping_file),
+        ],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(output_file.read_text(encoding="utf-8"))
+    mapped = next(item for item in payload["findings"] if item["cve_id"] == "CVE-2021-44228")
+    context = mapped["attack_context"]
+    assert context["mapped"] is True
+    assert context["confidence"] == "low"
+    assert context["low_confidence"] is True
+    assert context["mappings"][0]["confidence"] == "low"
+    assert context["techniques"][0]["attack_object_id"] == "T1190"
+    assert context["tactics"] == ["Initial Access"]
+    assert mapped["priority_label"] == "Critical"
+    assert "attack.low_confidence" in {note["code"] for note in mapped["explanation"]["notes"]}
+
+    unmapped = next(item for item in payload["findings"] if item["cve_id"] == "CVE-2023-44487")
+    empty_context = unmapped["attack_context"]
+    assert empty_context["mapped"] is False
+    assert empty_context["source"] == "none"
+    assert empty_context["confidence"] is None
+    assert empty_context["techniques"] == []
+    assert empty_context["mappings"] == []
 
 
 def test_cli_analyze_attaches_defensive_context_without_changing_priority(

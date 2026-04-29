@@ -432,8 +432,32 @@ class FindingResponse(StrictModel):
     status_history: list[FindingStatusHistoryResponse] | None = None
 
 
+class FindingAttackContextResponse(StrictModel):
+    finding_id: str
+    cve_id: str
+    mapped: bool
+    source: str
+    source_version: str | None = None
+    source_hash: str | None = None
+    source_path: str | None = None
+    attack_version: str | None = None
+    domain: str | None = None
+    metadata_hash: str | None = None
+    metadata_path: str | None = None
+    attack_relevance: str
+    threat_context_rank: int
+    rationale: str | None = None
+    confidence: str | None = None
+    low_confidence: bool = False
+    review_status: str
+    techniques: list[dict[str, Any]] = Field(default_factory=list)
+    tactics: list[str] = Field(default_factory=list)
+    mappings: list[dict[str, Any]] = Field(default_factory=list)
+
+
 class FindingDetailResponse(FindingResponse):
     kev_detail: KevDetailResponse | None = None
+    attack_context: FindingAttackContextResponse | None = None
 
 
 class FindingsListResponse(StrictModel):
@@ -524,27 +548,6 @@ class AttackTechniqueSummary(StrictModel):
     url: str | None = None
     count: int
     cves: list[str] = Field(default_factory=list)
-
-
-class FindingAttackContextResponse(StrictModel):
-    finding_id: str
-    cve_id: str
-    mapped: bool
-    source: str
-    source_version: str | None = None
-    source_hash: str | None = None
-    source_path: str | None = None
-    attack_version: str | None = None
-    domain: str | None = None
-    metadata_hash: str | None = None
-    metadata_path: str | None = None
-    attack_relevance: str
-    threat_context_rank: int
-    rationale: str | None = None
-    review_status: str
-    techniques: list[dict[str, Any]] = Field(default_factory=list)
-    tactics: list[str] = Field(default_factory=list)
-    mappings: list[dict[str, Any]] = Field(default_factory=list)
 
 
 class TopTechniquesResponse(StrictModel):

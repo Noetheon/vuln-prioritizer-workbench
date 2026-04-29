@@ -102,7 +102,7 @@ def test_repository_round_trip_persists_workbench_finding() -> None:
             review_status="source_reviewed",
             rationale="Imported from CTID mapping fixture.",
             references_json=["https://example.invalid/advisory"],
-            mapping_json={"attack_object_id": "T1190"},
+            mapping_json={"attack_object_id": "T1190", "confidence": "high"},
         )
         repo.create_or_update_finding_attack_context(
             finding_id=finding.id,
@@ -125,7 +125,7 @@ def test_repository_round_trip_persists_workbench_finding() -> None:
                 }
             ],
             tactics_json=["initial-access"],
-            mappings_json=[{"attack_object_id": "T1190"}],
+            mappings_json=[{"attack_object_id": "T1190", "confidence": "high"}],
         )
         repo.add_finding_occurrence(
             finding_id=finding.id,
@@ -154,6 +154,7 @@ def test_repository_round_trip_persists_workbench_finding() -> None:
         assert findings[0].attack_contexts[0].source_hash == "f" * 64
         assert findings[0].attack_contexts[0].metadata_hash == "e" * 64
         assert findings[0].attack_contexts[0].threat_context_rank == 1
+        assert findings[0].attack_contexts[0].mappings_json[0]["confidence"] == "high"
         assert findings[0].explanation_json["drivers"] == ["KEV", "internet-facing asset"]
         top_contexts = repo.list_project_attack_contexts(project.id)
         assert top_contexts[0].techniques_json[0]["attack_object_id"] == "T1190"

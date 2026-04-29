@@ -5,6 +5,8 @@ import pytest
 from vuln_prioritizer.explanations import build_priority_explanation
 from vuln_prioritizer.models import (
     AttackData,
+    AttackMapping,
+    AttackTechnique,
     EpssData,
     FindingProvenance,
     InputOccurrence,
@@ -443,6 +445,26 @@ def test_attack_context_does_not_change_priority() -> None:
         attack_data={
             cve_id: AttackData(
                 cve_id=cve_id,
+                mapped=True,
+                source="local-curated",
+                mappings=[
+                    AttackMapping(
+                        capability_id=cve_id,
+                        attack_object_id="T1190",
+                        attack_object_name="Exploit Public-Facing Application",
+                        mapping_type="exploitation",
+                        confidence="low",
+                        review_status="needs_review",
+                    )
+                ],
+                techniques=[
+                    AttackTechnique(
+                        attack_object_id="T1190",
+                        name="Exploit Public-Facing Application",
+                        tactics=["initial-access"],
+                    )
+                ],
+                attack_relevance="High",
                 attack_techniques=["T1190"],
                 attack_tactics=["Initial Access"],
             )
@@ -451,7 +473,14 @@ def test_attack_context_does_not_change_priority() -> None:
 
     assert findings_without_attack[0].priority_label == "High"
     assert findings_with_attack[0].priority_label == "High"
+    assert findings_with_attack[0].priority_rank == findings_without_attack[0].priority_rank
+    assert findings_with_attack[0].priority_drivers == findings_without_attack[0].priority_drivers
     assert findings_with_attack[0].attack_techniques == ["T1190"]
+    assert findings_with_attack[0].attack_context.confidence == "low"
+    assert findings_with_attack[0].attack_context.low_confidence is True
+    assert "attack.low_confidence" in {
+        note.code for note in findings_with_attack[0].explanation.notes
+    }
 
 
 def test_priority_policy_override_descriptions_only_include_changes() -> None:

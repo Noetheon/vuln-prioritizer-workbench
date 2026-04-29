@@ -18,6 +18,8 @@ from vuln_prioritizer.attack_sources import (
 )
 from vuln_prioritizer.models import AttackData, AttackMapping, AttackTechnique
 
+CONFIDENCE_SCORE_BY_LABEL = {"low": 0.3, "medium": 0.6, "high": 0.9}
+
 
 class WorkbenchAttackValidationError(ValueError):
     """Raised when Workbench ATT&CK inputs violate source guardrails."""
@@ -80,6 +82,12 @@ def confidence_for_source(source: str) -> float | None:
     if source == WORKBENCH_ATTACK_SOURCE_LOCAL_CURATED:
         return 0.7
     return None
+
+
+def confidence_for_mapping(mapping: AttackMapping, source: str) -> float | None:
+    if mapping.confidence is not None:
+        return CONFIDENCE_SCORE_BY_LABEL[mapping.confidence]
+    return confidence_for_source(source)
 
 
 def mapping_rationale(mapping: AttackMapping, attack: AttackData) -> str:

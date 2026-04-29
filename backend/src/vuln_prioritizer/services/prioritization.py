@@ -8,10 +8,12 @@ from typing import Literal
 
 from vuln_prioritizer.explanations import build_priority_explanation
 from vuln_prioritizer.models import (
+    AttackConfidence,
     AttackData,
     ComparisonFinding,
     ContextPolicyProfile,
     EpssData,
+    FindingAttackContextSummary,
     FindingProvenance,
     KevData,
     NvdData,
@@ -92,6 +94,7 @@ class PrioritizationService:
                     attack_note=attack.attack_note,
                     attack_mappings=attack.mappings,
                     attack_technique_details=attack.techniques,
+                    attack_context=_attack_context_summary(cve_id, attack),
                     provenance=provenance,
                     context_summary=context_summary,
                     context_recommendation=context_recommendation,
@@ -278,6 +281,36 @@ class PrioritizationService:
         """Count findings by enriched priority label."""
         counts = Counter(finding.priority_label for finding in findings)
         return dict(counts)
+
+
+def _attack_context_summary(cve_id: str, attack: AttackData) -> FindingAttackContextSummary:
+    confidence = _aggregate_mapping_confidence(attack)
+    return FindingAttackContextSummary(
+        cve_id=cve_id,
+        mapped=attack.mapped,
+        source=attack.source,
+        source_version=attack.source_version,
+        attack_version=attack.attack_version,
+        domain=attack.domain,
+        attack_relevance=attack.attack_relevance,
+        rationale=attack.attack_rationale,
+        confidence=confidence,
+        low_confidence=confidence == "low",
+        techniques=attack.techniques if attack.mapped else [],
+        tactics=attack.attack_tactics if attack.mapped else [],
+        mappings=attack.mappings if attack.mapped else [],
+    )
+
+
+def _aggregate_mapping_confidence(attack: AttackData) -> AttackConfidence | None:
+    labels = [mapping.confidence for mapping in attack.mappings if mapping.confidence is not None]
+    if not labels:
+        return None
+    if "low" in labels:
+        return "low"
+    if "medium" in labels:
+        return "medium"
+    return "high"
 
 
 def _finding_sort_key(finding: PrioritizedFinding, sort_by: SortField) -> tuple:

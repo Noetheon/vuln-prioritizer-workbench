@@ -32,7 +32,7 @@ from vuln_prioritizer.services.analysis import (
 from vuln_prioritizer.services.workbench_attack import (
     attack_mapping_payload,
     attack_technique_payload,
-    confidence_for_source,
+    confidence_for_mapping,
     mapping_rationale,
     review_status_for_source,
     threat_context_rank,
@@ -564,7 +564,7 @@ def _persist_attack_context(
             domain=context.attack_domain,
             metadata_hash=context.attack_technique_metadata_file_sha256,
             metadata_path=context.attack_technique_metadata_file,
-            confidence=confidence_for_source(source),
+            confidence=confidence_for_mapping(mapping, source),
             review_status=review_status,
             rationale=mapping_rationale(mapping, attack),
             references_json=mapping.references,
