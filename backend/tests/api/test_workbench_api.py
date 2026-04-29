@@ -254,6 +254,11 @@ def test_workbench_import_findings_reports_and_evidence(tmp_path: Path) -> None:
     assert all(item["priority_state"] in {"Critical", "High", "Medium", "Low"} for item in items)
     assert all(0 <= item["operational_score"] <= 100 for item in items)
     assert all(item["risk_score"] == float(item["operational_score"]) for item in items)
+    assert all(item["decision_explanation"]["reasons"] for item in items)
+    assert all(
+        item["decision_explanation"]["recommended_action"] == item["recommended_action"]
+        for item in items
+    )
 
     filtered = client.get(
         f"/api/projects/{project['id']}/findings",
@@ -298,6 +303,10 @@ def test_workbench_import_findings_reports_and_evidence(tmp_path: Path) -> None:
     assert detail_payload["priority_state"] == detail_payload["finding"]["priority_state"]
     assert detail_payload["operational_score"] == detail_payload["finding"]["operational_score"]
     assert detail_payload["finding"]["provider_evidence"]["nvd"]["cve_id"] == "CVE-2021-44228"
+    assert detail_payload["decision_explanation"]["cve_id"] == "CVE-2021-44228"
+    reason_codes = {reason["code"] for reason in detail_payload["decision_explanation"]["reasons"]}
+    assert "priority.kev.known_exploited" in reason_codes
+    assert all(reason["source"] for reason in detail_payload["decision_explanation"]["reasons"])
     assert "snapshot_locked" in {flag["code"] for flag in detail_payload["data_quality_flags"]}
     assert detail_payload["data_quality_confidence"] == "high"
     assert detail_payload["provider_evidence"]["nvd"]["cve_id"] == "CVE-2021-44228"
@@ -331,6 +340,10 @@ def test_workbench_import_findings_reports_and_evidence(tmp_path: Path) -> None:
     assert explanation.json()["data_quality_confidence"] == "high"
     assert explanation.json()["provider_evidence"]["nvd"]["cve_id"] == "CVE-2021-44228"
     assert explanation.json()["explanation"]["cve_id"] == "CVE-2021-44228"
+    assert explanation.json()["decision_explanation"]["cve_id"] == "CVE-2021-44228"
+    assert "priority.kev.known_exploited" in {
+        reason["code"] for reason in explanation.json()["decision_explanation"]["reasons"]
+    }
 
     report_expectations = {
         "json": ("analysis-json", b'"locked_provider_data": true'),

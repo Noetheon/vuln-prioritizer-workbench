@@ -569,6 +569,98 @@
     "description": "In Progress MOVEit Transfer before 2021.0.6 (13.0.6), 2021.1.4 (13.1.4), 2022.0.4 (14.0.4), 2022.1.5 (14.1.5), and 2023.0.1 (15.0.1), a SQL injection vulnerability has been found in the MOVEit Transfer web application that could allow an unauthenticated attacker to gain access to MOVEit Transfer's database. Depending on the database engine being used (MySQL, Microsoft SQL Server, or Azure SQL), an attacker may be able to infer information about the structure and contents of the database, and execute SQL statements that alter or delete database elements. NOTE: this is exploited in the wild in May and June 2023; exploitation of unpatched systems can occur via HTTP or HTTPS. All versions (e.g., 2020.0 and 2019x) before the five explicitly mentioned versions are affected, including older unsupported versions.",
     "epss": 0.94254,
     "epss_percentile": 0.99934,
+    "explanation": {
+      "cve_id": "CVE-2023-34362",
+      "data_quality_confidence": "high",
+      "human_readable": "CVE-2023-34362 is Critical because priority.kev.known_exploited, priority.critical.epss_cvss, priority.high.epss, priority.high.cvss. Recommended action: CISA KEV required action: Apply updates per vendor instructions. Patch or mitigate immediately, validate exposure, strengthen detection coverage, and escalate potential business impact. KEV due date: 2023-06-23. Notes: Provider snapshot replay is locked; live provider lookups are disabled.",
+      "notes": [
+        {
+          "code": "data_quality.snapshot_locked",
+          "message": "Provider snapshot replay is locked; live provider lookups are disabled.",
+          "severity": "info",
+          "source": "provider_snapshot"
+        }
+      ],
+      "operational_score": 98,
+      "priority_label": "Critical",
+      "priority_state": "Critical",
+      "reason_codes": [
+        "priority.kev.known_exploited",
+        "priority.critical.epss_cvss",
+        "priority.high.epss",
+        "priority.high.cvss",
+        "priority.medium.cvss",
+        "priority.medium.epss",
+        "operational.score"
+      ],
+      "reasons": [
+        {
+          "code": "priority.kev.known_exploited",
+          "matched": true,
+          "message": "CISA KEV lists this CVE as known exploited in the wild.",
+          "signal": "known_exploited",
+          "source": "CISA KEV",
+          "threshold": "listed == true",
+          "value": "listed"
+        },
+        {
+          "code": "priority.critical.epss_cvss",
+          "matched": true,
+          "message": "EPSS and CVSS meet the Critical escalation threshold.",
+          "signal": "epss_cvss_threshold",
+          "source": "FIRST EPSS + NVD CVSS",
+          "threshold": "EPSS >= 0.70 and CVSS >= 7.0",
+          "value": "EPSS=0.943, CVSS=9.8"
+        },
+        {
+          "code": "priority.high.epss",
+          "matched": true,
+          "message": "EPSS meets the High escalation threshold.",
+          "signal": "epss",
+          "source": "FIRST EPSS",
+          "threshold": "EPSS >= 0.40",
+          "value": "0.943"
+        },
+        {
+          "code": "priority.high.cvss",
+          "matched": true,
+          "message": "CVSS meets the High severity threshold.",
+          "signal": "cvss",
+          "source": "NVD CVSS",
+          "threshold": "CVSS >= 9.0",
+          "value": "9.8"
+        },
+        {
+          "code": "priority.medium.cvss",
+          "matched": true,
+          "message": "CVSS meets the Medium severity threshold.",
+          "signal": "cvss",
+          "source": "NVD CVSS",
+          "threshold": "CVSS >= 7.0",
+          "value": "9.8"
+        },
+        {
+          "code": "priority.medium.epss",
+          "matched": true,
+          "message": "EPSS meets the Medium escalation threshold.",
+          "signal": "epss",
+          "source": "FIRST EPSS",
+          "threshold": "EPSS >= 0.10",
+          "value": "0.943"
+        },
+        {
+          "code": "operational.score",
+          "matched": true,
+          "message": "Operational score reasons: base Critical priority: +70; CISA KEV-listed: +15; critical EPSS/CVSS threshold: +8; high CVSS threshold: +5",
+          "signal": "operational_score",
+          "source": "Decision Engine",
+          "threshold": "0 <= score <= 100",
+          "value": "98"
+        }
+      ],
+      "recommended_action": "CISA KEV required action: Apply updates per vendor instructions. Patch or mitigate immediately, validate exposure, strengthen detection coverage, and escalate potential business impact. KEV due date: 2023-06-23.",
+      "summary": "CVE-2023-34362 is Critical because priority.kev.known_exploited, priority.critical.epss_cvss, priority.high.epss, priority.high.cvss."
+    },
     "highest_asset_criticality": null,
     "in_kev": true,
     "operational_rank": 1,

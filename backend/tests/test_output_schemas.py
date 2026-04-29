@@ -16,7 +16,13 @@ from typer.testing import CliRunner
 
 from vuln_prioritizer.cache import FileCache
 from vuln_prioritizer.cli import app
-from vuln_prioritizer.models import EpssData, KevData, NvdData, ProviderSnapshotReport
+from vuln_prioritizer.models import (
+    EpssData,
+    KevData,
+    NvdData,
+    PriorityExplanation,
+    ProviderSnapshotReport,
+)
 from vuln_prioritizer.providers.epss import EpssProvider
 from vuln_prioritizer.providers.kev import KevProvider
 from vuln_prioritizer.providers.nvd import NvdProvider
@@ -140,6 +146,95 @@ def test_example_score_json_documents_vpw_030_operational_score() -> None:
     assert "clamped to 100" in payload["operational_score_reasons"]
 
 
+def test_example_explanation_json_documents_vpw_031_reason_codes() -> None:
+    payload = json.loads(
+        (DOCS_ROOT / "examples" / "example_explanation.json").read_text(encoding="utf-8")
+    )
+
+    PriorityExplanation.model_validate(payload)
+    assert payload == {
+        "cve_id": "CVE-2024-0001",
+        "data_quality_confidence": "high",
+        "human_readable": (
+            "CVE-2024-0001 is Critical because priority.kev.known_exploited, "
+            "priority.critical.epss_cvss, priority.high.epss, priority.high.cvss. "
+            "Recommended action: Patch immediately. Notes: Provider snapshot replay is locked."
+        ),
+        "notes": [
+            {
+                "code": "data_quality.snapshot_locked",
+                "message": "Provider snapshot replay is locked.",
+                "severity": "info",
+                "source": "nvd",
+            }
+        ],
+        "operational_score": 100,
+        "priority_label": "Critical",
+        "priority_state": "Critical",
+        "reason_codes": [
+            "priority.kev.known_exploited",
+            "priority.critical.epss_cvss",
+            "priority.high.epss",
+            "priority.high.cvss",
+            "operational.score",
+        ],
+        "reasons": [
+            {
+                "code": "priority.kev.known_exploited",
+                "matched": True,
+                "message": "CISA KEV lists this CVE as known exploited in the wild.",
+                "signal": "known_exploited",
+                "source": "CISA KEV",
+                "threshold": "listed == true",
+                "value": "listed",
+            },
+            {
+                "code": "priority.critical.epss_cvss",
+                "matched": True,
+                "message": "EPSS and CVSS meet the Critical escalation threshold.",
+                "signal": "epss_cvss_threshold",
+                "source": "FIRST EPSS + NVD CVSS",
+                "threshold": "EPSS >= 0.70 and CVSS >= 7.0",
+                "value": "EPSS=0.910, CVSS=9.8",
+            },
+            {
+                "code": "priority.high.epss",
+                "matched": True,
+                "message": "EPSS meets the High escalation threshold.",
+                "signal": "epss",
+                "source": "FIRST EPSS",
+                "threshold": "EPSS >= 0.40",
+                "value": "0.910",
+            },
+            {
+                "code": "priority.high.cvss",
+                "matched": True,
+                "message": "CVSS meets the High severity threshold.",
+                "signal": "cvss",
+                "source": "NVD CVSS",
+                "threshold": "CVSS >= 9.0",
+                "value": "9.8",
+            },
+            {
+                "code": "operational.score",
+                "matched": True,
+                "message": (
+                    "Operational score reasons: base Critical priority: +70; clamped to 100"
+                ),
+                "signal": "operational_score",
+                "source": "Decision Engine",
+                "threshold": "0 <= score <= 100",
+                "value": "100",
+            },
+        ],
+        "recommended_action": "Patch immediately.",
+        "summary": (
+            "CVE-2024-0001 is Critical because priority.kev.known_exploited, "
+            "priority.critical.epss_cvss, priority.high.epss, priority.high.cvss."
+        ),
+    }
+
+
 def test_vpw_030_score_fields_remain_schema_optional() -> None:
     new_fields = {
         "priority_state",
@@ -159,6 +254,18 @@ def test_vpw_030_score_fields_remain_schema_optional() -> None:
 
         assert new_fields <= set(definition["properties"])
         assert not (new_fields & set(definition.get("required", [])))
+
+
+def test_vpw_031_explanation_field_remains_schema_optional() -> None:
+    for schema_name in (
+        "analysis-report.schema.json",
+        "explain-report.schema.json",
+        "snapshot-report.schema.json",
+    ):
+        definition = _load_schema(schema_name)["$defs"]["prioritizedFinding"]
+
+        assert "explanation" in definition["properties"]
+        assert "explanation" not in definition.get("required", [])
 
 
 def _install_fake_data_update_providers(monkeypatch: Any) -> None:

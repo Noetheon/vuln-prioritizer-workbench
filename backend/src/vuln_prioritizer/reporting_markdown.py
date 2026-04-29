@@ -384,6 +384,45 @@ def generate_explain_markdown(
             "## Rationale",
             normalize_whitespace(finding.rationale),
             "",
+            "## Why This Priority",
+        ]
+    )
+    if finding.explanation:
+        lines.extend(
+            [
+                normalize_whitespace(finding.explanation.human_readable),
+                "",
+                "| Code | Source | Signal | Value | Threshold | Reason |",
+                "| --- | --- | --- | --- | --- | --- |",
+            ]
+        )
+        for reason in finding.explanation.reasons:
+            lines.append(
+                "| "
+                + " | ".join(
+                    [
+                        escape_pipes(reason.code),
+                        escape_pipes(reason.source),
+                        escape_pipes(reason.signal),
+                        escape_pipes(reason.value or "N.A."),
+                        escape_pipes(reason.threshold or "N.A."),
+                        escape_pipes(reason.message),
+                    ]
+                )
+                + " |"
+            )
+        if finding.explanation.notes:
+            lines.extend(["", "### Notes"])
+            for note in finding.explanation.notes:
+                lines.append(
+                    f"- `{note.code}` ({note.source}, {note.severity}): "
+                    + normalize_whitespace(note.message)
+                )
+    else:
+        lines.append("No structured priority explanation was generated.")
+    lines.extend(
+        [
+            "",
             "## ATT&CK Context",
             normalize_whitespace(attack.attack_rationale or "No ATT&CK rationale available."),
             "",
