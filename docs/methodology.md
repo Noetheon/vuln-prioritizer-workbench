@@ -119,6 +119,13 @@ asset exposure, production context, asset criticality, and active occurrence
 count, then clamped to the 0-100 range. Every score includes
 `operational_score_reasons` so the score is reviewable rather than opaque.
 
+Every generated finding also includes a structured `explanation` object. It
+turns the matched rules into stable reason codes such as
+`priority.kev.known_exploited`, `priority.critical.epss_cvss`, or
+`priority.low.default`; each reason carries its data source, signal value,
+threshold, and message. Missing provider data and data-quality flags are surfaced
+as notes so reviewers can distinguish a low signal from an unavailable signal.
+
 ATT&CK is a contextual signal. It enriches explanation, reporting, and management framing without silently changing the base priority.
 
 Presentation notes:

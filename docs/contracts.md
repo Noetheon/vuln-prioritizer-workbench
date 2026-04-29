@@ -182,6 +182,14 @@ exposure, production context, criticality, and active occurrence count, then
 clamped to the 0-100 range. `operational_score_reasons` lists the matched rules
 and clamp result.
 
+`explanation` is the structured "why this priority?" object on generated
+findings. It includes stable `reason_codes`, detailed `reasons[]` entries with
+source, signal, value and threshold, human-readable text, data-quality notes, and
+the recommended action. Missing CVSS or EPSS data is represented as a note rather
+than hidden inside the narrative. The Workbench `/api/findings/{id}/explain`
+endpoint also exposes this object as `decision_explanation` while retaining the
+legacy raw finding payload under `explanation`.
+
 ### ATT&CK context
 
 ATT&CK fields are optional enrichment.

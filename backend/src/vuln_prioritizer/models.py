@@ -172,6 +172,37 @@ class PriorityPolicy(StrictModel):
         return descriptions
 
 
+class ExplanationReason(StrictModel):
+    code: str
+    source: str
+    signal: str
+    value: str | None = None
+    threshold: str | None = None
+    matched: bool = True
+    message: str
+
+
+class ExplanationNote(StrictModel):
+    code: str
+    source: str
+    severity: str = "info"
+    message: str
+
+
+class PriorityExplanation(StrictModel):
+    cve_id: str
+    priority_label: str
+    priority_state: str | None = None
+    operational_score: int = 0
+    data_quality_confidence: str = "high"
+    summary: str
+    human_readable: str
+    reason_codes: list[str] = Field(default_factory=list)
+    reasons: list[ExplanationReason] = Field(default_factory=list)
+    notes: list[ExplanationNote] = Field(default_factory=list)
+    recommended_action: str
+
+
 class PrioritizedFinding(StrictModel):
     cve_id: str
     description: str | None = None
@@ -216,6 +247,7 @@ class PrioritizedFinding(StrictModel):
     priority_drivers: list[str] = Field(default_factory=list)
     operational_score: int = 0
     operational_score_reasons: list[str] = Field(default_factory=list)
+    explanation: PriorityExplanation | None = None
     rationale: str
     provider_evidence: ProviderEvidence | None = None
     data_quality_flags: list[ProviderDataQualityFlag] = Field(default_factory=list)

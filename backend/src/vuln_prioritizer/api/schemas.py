@@ -386,6 +386,7 @@ class FindingResponse(StrictModel):
     waiver_ticket_url: str | None = None
     rationale: str | None = None
     recommended_action: str | None = None
+    decision_explanation: dict[str, Any] | None = None
     data_quality_flags: list[dict[str, Any]] = Field(default_factory=list)
     data_quality_confidence: str = "high"
     provider_evidence: dict[str, Any] | None = None

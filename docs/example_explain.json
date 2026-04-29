@@ -191,6 +191,98 @@
     "description": "Apache Log4j2 2.0-beta9 through 2.15.0 (excluding security releases 2.12.2, 2.12.3, and 2.3.1) JNDI features used in configuration, log messages, and parameters do not protect against attacker controlled LDAP and other JNDI related endpoints. An attacker who can control log messages or log message parameters can execute arbitrary code loaded from LDAP servers when message lookup substitution is enabled. From log4j 2.15.0, this behavior has been disabled by default. From version 2.16.0 (along with 2.12.2, 2.12.3, and 2.3.1), this functionality has been completely removed. Note that this vulnerability is specific to log4j-core and does not affect log4net, log4cxx, or other Apache Logging Services projects.",
     "epss": 0.94465,
     "epss_percentile": 0.99996,
+    "explanation": {
+      "cve_id": "CVE-2021-44228",
+      "data_quality_confidence": "high",
+      "human_readable": "CVE-2021-44228 is Critical because priority.kev.known_exploited, priority.critical.epss_cvss, priority.high.epss, priority.high.cvss. Recommended action: CISA KEV required action: For all affected software assets for which updates exist, the only acceptable remediation actions are: 1) Apply updates; OR 2) remove affected assets from agency networks. Temporary mitigations using one of the measures provided at https://www.cisa.gov/uscert/ed-22-02-apache-log4j-recommended-mitigation-measures are only acceptable until updates are available. Patch or mitigate immediately, validate exposure, strengthen detection coverage, and escalate potential business impact. KEV due date: 2021-12-24. Notes: Provider snapshot replay is locked; live provider lookups are disabled.",
+      "notes": [
+        {
+          "code": "data_quality.snapshot_locked",
+          "message": "Provider snapshot replay is locked; live provider lookups are disabled.",
+          "severity": "info",
+          "source": "provider_snapshot"
+        }
+      ],
+      "operational_score": 98,
+      "priority_label": "Critical",
+      "priority_state": "Critical",
+      "reason_codes": [
+        "priority.kev.known_exploited",
+        "priority.critical.epss_cvss",
+        "priority.high.epss",
+        "priority.high.cvss",
+        "priority.medium.cvss",
+        "priority.medium.epss",
+        "operational.score"
+      ],
+      "reasons": [
+        {
+          "code": "priority.kev.known_exploited",
+          "matched": true,
+          "message": "CISA KEV lists this CVE as known exploited in the wild.",
+          "signal": "known_exploited",
+          "source": "CISA KEV",
+          "threshold": "listed == true",
+          "value": "listed"
+        },
+        {
+          "code": "priority.critical.epss_cvss",
+          "matched": true,
+          "message": "EPSS and CVSS meet the Critical escalation threshold.",
+          "signal": "epss_cvss_threshold",
+          "source": "FIRST EPSS + NVD CVSS",
+          "threshold": "EPSS >= 0.70 and CVSS >= 7.0",
+          "value": "EPSS=0.945, CVSS=10.0"
+        },
+        {
+          "code": "priority.high.epss",
+          "matched": true,
+          "message": "EPSS meets the High escalation threshold.",
+          "signal": "epss",
+          "source": "FIRST EPSS",
+          "threshold": "EPSS >= 0.40",
+          "value": "0.945"
+        },
+        {
+          "code": "priority.high.cvss",
+          "matched": true,
+          "message": "CVSS meets the High severity threshold.",
+          "signal": "cvss",
+          "source": "NVD CVSS",
+          "threshold": "CVSS >= 9.0",
+          "value": "10.0"
+        },
+        {
+          "code": "priority.medium.cvss",
+          "matched": true,
+          "message": "CVSS meets the Medium severity threshold.",
+          "signal": "cvss",
+          "source": "NVD CVSS",
+          "threshold": "CVSS >= 7.0",
+          "value": "10.0"
+        },
+        {
+          "code": "priority.medium.epss",
+          "matched": true,
+          "message": "EPSS meets the Medium escalation threshold.",
+          "signal": "epss",
+          "source": "FIRST EPSS",
+          "threshold": "EPSS >= 0.10",
+          "value": "0.945"
+        },
+        {
+          "code": "operational.score",
+          "matched": true,
+          "message": "Operational score reasons: base Critical priority: +70; CISA KEV-listed: +15; critical EPSS/CVSS threshold: +8; high CVSS threshold: +5",
+          "signal": "operational_score",
+          "source": "Decision Engine",
+          "threshold": "0 <= score <= 100",
+          "value": "98"
+        }
+      ],
+      "recommended_action": "CISA KEV required action: For all affected software assets for which updates exist, the only acceptable remediation actions are: 1) Apply updates; OR 2) remove affected assets from agency networks. Temporary mitigations using one of the measures provided at https://www.cisa.gov/uscert/ed-22-02-apache-log4j-recommended-mitigation-measures are only acceptable until updates are available. Patch or mitigate immediately, validate exposure, strengthen detection coverage, and escalate potential business impact. KEV due date: 2021-12-24.",
+      "summary": "CVE-2021-44228 is Critical because priority.kev.known_exploited, priority.critical.epss_cvss, priority.high.epss, priority.high.cvss."
+    },
     "highest_asset_criticality": null,
     "in_kev": true,
     "operational_rank": 1,
