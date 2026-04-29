@@ -344,6 +344,9 @@ def test_vpw042_findings_list_filters_and_display_fields(
     assert critical["component_purl"].startswith("pkg:maven/")
     assert critical["asset_name"] == "Payments API"
     assert critical["asset_key"] == "payments-api"
+    assert critical["asset_target_ref"] == "registry.example.test/payments-api:2026.04.28"
+    assert critical["asset_environment"] == "production"
+    assert critical["asset_criticality"] == "critical"
     assert critical["owner"] == "platform"
     assert critical["business_service"] == "payments"
     assert critical["exposure"] == "internet-facing"
@@ -363,6 +366,12 @@ def test_vpw042_findings_list_filters_and_display_fields(
     assert _finding_cves(template_api_env, project, headers, {"owner_service": "payments"}) == [
         DEMO_CVE_LOG4SHELL
     ]
+    assert _finding_cves(
+        template_api_env,
+        project,
+        headers,
+        {"asset_id": str(seeded["critical_asset"])},
+    ) == [DEMO_CVE_LOG4SHELL]
     assert _finding_cves(template_api_env, project, headers, {"exposure": "internal"}) == [
         "CVE-2022-22965"
     ]
@@ -387,6 +396,9 @@ def test_vpw042_findings_list_filters_and_display_fields(
     detail = detail_response.json()
     assert detail["component_name"] == "log4j-core"
     assert detail["asset_key"] == "payments-api"
+    assert detail["asset_target_ref"] == "registry.example.test/payments-api:2026.04.28"
+    assert detail["asset_environment"] == "production"
+    assert detail["asset_criticality"] == "critical"
     assert detail["owner"] == "platform"
     assert detail["business_service"] == "payments"
     assert detail["exposure"] == "internet-facing"
@@ -407,6 +419,41 @@ def test_vpw042_findings_list_filters_and_display_fields(
     assert occurrence["asset_business_service"] == "payments"
     assert occurrence["asset_exposure"] == "internet-facing"
     assert occurrence["raw_severity"] == "CRITICAL"
+
+    invalid_exposure = template_api_env.client.get(
+        f"/api/v1/projects/{project['id']}/findings/",
+        headers=headers,
+        params={"exposure": "public"},
+    )
+    assert invalid_exposure.status_code == 422
+
+
+def test_vpw044_asset_edit_rescore_flag_is_merged_into_explain(
+    template_api_env: TemplateApiEnv,
+) -> None:
+    headers = auth_headers(template_api_env.client)
+    project = create_project_via_api(template_api_env.client, headers)
+    seeded = _seed_vpw042_findings(template_api_env, uuid.UUID(project["id"]))
+
+    update_response = template_api_env.client.patch(
+        f"/api/v1/assets/{seeded['critical_asset']}",
+        headers=headers,
+        json={"criticality": "high"},
+    )
+    assert update_response.status_code == 200, update_response.text
+
+    explain_response = template_api_env.client.get(
+        f"/api/v1/findings/{seeded['critical']}/explain",
+        headers=headers,
+    )
+    assert explain_response.status_code == 200, explain_response.text
+    flags = explain_response.json()["data_quality_flags"]
+    codes = {flag["code"] for flag in flags}
+    assert "provider_snapshot_stale" in codes
+    assert "asset_context_rescore_needed" in codes
+    rescore_flag = next(flag for flag in flags if flag["code"] == "asset_context_rescore_needed")
+    assert rescore_flag["asset_id"] == str(seeded["critical_asset"])
+    assert rescore_flag["changed_fields"] == ["criticality"]
 
 
 def test_vpw042_findings_sort_direction_and_pagination(
@@ -482,25 +529,34 @@ def _seed_vpw042_findings(
             project_id=project_id,
             asset_key="payments-api",
             name="Payments API",
+            target_ref="registry.example.test/payments-api:2026.04.28",
             owner="platform",
             business_service="payments",
+            environment=app_models.AssetEnvironment.PRODUCTION,
             exposure=app_models.AssetExposure.INTERNET_FACING,
+            criticality=app_models.AssetCriticality.CRITICAL,
         )
         high_asset = asset_repo.upsert_asset(
             project_id=project_id,
             asset_key="identity-api",
             name="Identity API",
+            target_ref="registry.example.test/identity-api:2026.04.28",
             owner="appsec",
             business_service="identity",
+            environment=app_models.AssetEnvironment.PRODUCTION,
             exposure=app_models.AssetExposure.INTERNAL,
+            criticality=app_models.AssetCriticality.HIGH,
         )
         medium_asset = asset_repo.upsert_asset(
             project_id=project_id,
             asset_key="edge-worker",
             name="Edge Worker",
+            target_ref="edge-worker",
             owner="web",
             business_service="edge",
+            environment=app_models.AssetEnvironment.STAGING,
             exposure=app_models.AssetExposure.PRIVATE,
+            criticality=app_models.AssetCriticality.MEDIUM,
         )
         critical_component = finding_repo.upsert_component(
             name="log4j-core",
@@ -552,6 +608,20 @@ def _seed_vpw042_findings(
             in_kev=True,
             epss=0.95,
             cvss_base_score=10.0,
+            explanation_json={
+                "priority_state": "Critical",
+                "explanation": {
+                    "reason_codes": ["kev_catalog_match"],
+                    "score_inputs": {"kev": True, "epss": 0.95, "cvss": 10.0},
+                },
+                "data_quality_flags": [
+                    {
+                        "source": "provider",
+                        "code": "provider_snapshot_stale",
+                        "severity": "info",
+                    }
+                ],
+            },
         )
         high = finding_repo.create_or_update_finding(
             project_id=project_id,
@@ -625,6 +695,9 @@ def _seed_vpw042_findings(
             "critical": critical.id,
             "high": high.id,
             "medium": medium.id,
+            "critical_asset": critical_asset.id,
+            "high_asset": high_asset.id,
+            "medium_asset": medium_asset.id,
         }
 
 

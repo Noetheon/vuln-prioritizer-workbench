@@ -138,6 +138,9 @@ class FindingPublic(FindingBase):
     component_purl: str | None = None
     asset_name: str | None = None
     asset_key: str | None = None
+    asset_target_ref: str | None = None
+    asset_environment: str | None = None
+    asset_criticality: str | None = None
     owner: str | None = None
     business_service: str | None = None
     exposure: str | None = None

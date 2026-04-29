@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 import uuid
+from collections.abc import Sequence
+from datetime import datetime
+from typing import Any
 
 from sqlmodel import Session, select
 
@@ -13,6 +16,7 @@ from app.models import (
     AssetEnvironment,
     AssetExposure,
     AssetUpdate,
+    Finding,
 )
 from app.models.base import get_datetime_utc
 
@@ -88,3 +92,84 @@ class AssetRepository:
         self.session.add(asset)
         self.session.flush()
         return asset
+
+    def mark_asset_findings_rescore_needed(
+        self,
+        *,
+        asset_id: uuid.UUID,
+        changed_fields: Sequence[str],
+        changed_at: datetime | None = None,
+    ) -> int:
+        """Mark findings linked to an edited asset for explicit re-score review."""
+        timestamp = changed_at or get_datetime_utc()
+        changed = sorted(set(changed_fields))
+        statement = select(Finding).where(Finding.asset_id == asset_id)
+        findings = list(self.session.exec(statement).all())
+        for finding in findings:
+            finding.data_quality_json = _with_rescore_flag(
+                finding.data_quality_json,
+                asset_id=asset_id,
+                changed_fields=changed,
+                changed_at=timestamp,
+            )
+            finding.evidence_json = _with_rescore_evidence(
+                finding.evidence_json,
+                asset_id=asset_id,
+                changed_fields=changed,
+                changed_at=timestamp,
+            )
+            finding.updated_at = timestamp
+            self.session.add(finding)
+        self.session.flush()
+        return len(findings)
+
+
+def _with_rescore_flag(
+    payload: dict[str, Any],
+    *,
+    asset_id: uuid.UUID,
+    changed_fields: Sequence[str],
+    changed_at: datetime,
+) -> dict[str, Any]:
+    data_quality = dict(payload or {})
+    raw_flags = data_quality.get("flags")
+    flags = (
+        [dict(flag) for flag in raw_flags if isinstance(flag, dict)]
+        if isinstance(raw_flags, list)
+        else []
+    )
+    flags = [flag for flag in flags if flag.get("code") != "asset_context_rescore_needed"]
+    flags.append(
+        {
+            "source": "asset_context",
+            "code": "asset_context_rescore_needed",
+            "severity": "warning",
+            "message": (
+                "Asset context changed; rerun analysis or review the operational "
+                "score before relying on this priority."
+            ),
+            "asset_id": str(asset_id),
+            "changed_fields": list(changed_fields),
+            "changed_at": changed_at.isoformat(),
+        }
+    )
+    data_quality["flags"] = flags
+    data_quality["confidence"] = "medium"
+    return data_quality
+
+
+def _with_rescore_evidence(
+    payload: dict[str, Any],
+    *,
+    asset_id: uuid.UUID,
+    changed_fields: Sequence[str],
+    changed_at: datetime,
+) -> dict[str, Any]:
+    evidence = dict(payload or {})
+    evidence["asset_context"] = {
+        "rescore_needed": True,
+        "asset_id": str(asset_id),
+        "changed_fields": list(changed_fields),
+        "changed_at": changed_at.isoformat(),
+    }
+    return evidence

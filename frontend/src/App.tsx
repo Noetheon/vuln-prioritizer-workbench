@@ -591,7 +591,10 @@ function findingOverviewCards(finding: FindingDetailPublic) {
       detail: joinedValues([
         finding.owner,
         finding.business_service,
+        labelize(finding.asset_environment),
+        labelize(finding.asset_criticality),
         labelize(finding.exposure),
+        finding.asset_target_ref,
       ]),
       label: "Asset",
       value: findingAssetLabel(finding),
@@ -800,6 +803,13 @@ export function App() {
   const findingDetailId = findingIdFromPath(location.pathname)
   const isFindingDetail = findingDetailId !== null
   const isFindingsList = currentPath === "/findings" && !isFindingDetail
+  const findingSearchParams = new URLSearchParams(location.search)
+  const findingAssetId = isFindingsList
+    ? findingSearchParams.get("assetId")
+    : null
+  const findingAssetKey = isFindingsList
+    ? findingSearchParams.get("assetKey")
+    : null
   const routeDetail = routeDetails[currentPath]
   const [status, setStatus] = useState<WorkbenchStatus | null>(null)
   const [providerStatus, setProviderStatus] =
@@ -877,7 +887,8 @@ export function App() {
   const findingPageStart =
     findingCount === 0 ? 0 : Math.min(findingOffset + 1, findingCount)
   const findingPageEnd = Math.min(findingOffset + findings.length, findingCount)
-  const activeFindingFilters = hasActiveFindingFilters(findingFilters)
+  const activeFindingFilters =
+    hasActiveFindingFilters(findingFilters) || Boolean(findingAssetId)
   const detailOccurrences = findingOccurrenceRows(
     findingDetail,
     findingExplanation,
@@ -1140,6 +1151,7 @@ export function App() {
               : findingFilters.kev === "true",
           limit: findingPageSize,
           offset: findingOffset,
+          assetId: findingAssetId || undefined,
           ownerService: findingFilters.ownerService.trim() || undefined,
           priority: findingFilters.priority || undefined,
           projectId: selectedProjectId,
@@ -1187,6 +1199,7 @@ export function App() {
     findingPageSize,
     findingReloadKey,
     findingSort,
+    findingAssetId,
     isFindingsList,
     navigate,
     selectedProjectId,
@@ -1332,6 +1345,9 @@ export function App() {
   function clearFindingFilters() {
     setFindingOffset(0)
     setFindingFilters(defaultFindingFilters)
+    if (findingAssetId) {
+      void navigate({ to: "/findings" })
+    }
   }
 
   function updateFindingSort(sort: FindingsSort) {
@@ -2699,6 +2715,22 @@ export function App() {
                       ))}
                     </select>
                   </label>
+                  {findingAssetId ? (
+                    <section
+                      className="project-context"
+                      aria-label="Asset finding filter"
+                    >
+                      <span>Asset filter</span>
+                      <strong>{findingAssetKey ?? findingAssetId}</strong>
+                      <button
+                        className="secondary-action"
+                        onClick={() => clearFindingFilters()}
+                        type="button"
+                      >
+                        Clear Asset
+                      </button>
+                    </section>
+                  ) : null}
                   <label>
                     <span>Priority</span>
                     <select
