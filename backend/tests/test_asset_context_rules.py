@@ -107,10 +107,36 @@ def test_asset_context_contains_rule_matches_asset_ref_alias_and_reports_invalid
     asset_context_file.write_text(
         "\n".join(
             [
-                "rule_id,target_kind,asset_ref,asset_id,match_mode,precedence,"
-                "criticality,exposure,environment,owner,business_service",
-                "contains-rule,host,app-,asset-contains,contains,10,"
-                "tier-0,publicly,productionish,platform-team,checkout",
+                ",".join(
+                    [
+                        "rule_id",
+                        "target_kind",
+                        "asset_ref",
+                        "asset_id",
+                        "match_mode",
+                        "precedence",
+                        "criticality",
+                        "exposure",
+                        "environment",
+                        "owner",
+                        "business_service",
+                    ]
+                ),
+                ",".join(
+                    [
+                        "contains-rule",
+                        "host",
+                        "app-",
+                        "asset-contains",
+                        "contains",
+                        "10",
+                        "tier-0",
+                        "publicly",
+                        "productionish",
+                        "platform-team",
+                        "checkout",
+                    ]
+                ),
             ]
         )
         + "\n",
@@ -205,10 +231,36 @@ def test_asset_context_application_recomputes_operational_score(
     asset_context_file.write_text(
         "\n".join(
             [
-                "rule_id,target_kind,target_ref,asset_id,match_mode,precedence,"
-                "criticality,exposure,environment,owner,business_service",
-                "prod-api,host,app-01,asset-prod-api,exact,10,"
-                "critical,internet-facing,prod,platform-team,checkout",
+                ",".join(
+                    [
+                        "rule_id",
+                        "target_kind",
+                        "target_ref",
+                        "asset_id",
+                        "match_mode",
+                        "precedence",
+                        "criticality",
+                        "exposure",
+                        "environment",
+                        "owner",
+                        "business_service",
+                    ]
+                ),
+                ",".join(
+                    [
+                        "prod-api",
+                        "host",
+                        "app-01",
+                        "asset-prod-api",
+                        "exact",
+                        "10",
+                        "critical",
+                        "internet-facing",
+                        "prod",
+                        "platform-team",
+                        "checkout",
+                    ]
+                ),
             ]
         )
         + "\n",
