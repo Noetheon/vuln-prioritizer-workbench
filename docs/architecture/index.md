@@ -104,7 +104,8 @@ Supported input families currently normalize into the same occurrence model:
 Important current rules:
 
 - asset context is occurrence-based, keeps `target_kind` exact, and supports deterministic
-  `target_ref` exact/glob rules with precedence
+  `target_ref`/`asset_ref` `exact`, `contains`, `regex`, and compatibility `glob`
+  rules with precedence; see [Asset Context CSV](../asset-context-csv.md)
 - VEX suppression is evaluated at occurrence level with deterministic specificity-based matching
 - `suppressed_by_vex` is true only when all known occurrences are suppressed
 - `under_investigation` stays visible and is not silently removed

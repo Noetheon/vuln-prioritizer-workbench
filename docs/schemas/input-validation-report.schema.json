@@ -236,6 +236,8 @@
         "total_rows",
         "loaded_rows",
         "exact_rules",
+        "contains_rules",
+        "regex_rules",
         "glob_rules",
         "legacy_schema",
         "warnings"
@@ -248,6 +250,12 @@
           "type": "integer"
         },
         "exact_rules": {
+          "type": "integer"
+        },
+        "contains_rules": {
+          "type": "integer"
+        },
+        "regex_rules": {
           "type": "integer"
         },
         "glob_rules": {

@@ -656,8 +656,22 @@ def test_attack_coverage_json_matches_published_schema(tmp_path: Path) -> None:
 
 def test_input_validation_json_matches_published_schema(tmp_path: Path) -> None:
     input_file = tmp_path / "cves.txt"
+    asset_context_file = tmp_path / "asset-context.csv"
     output_file = tmp_path / "input-validation.json"
     input_file.write_text("CVE-2021-44228\n", encoding="utf-8")
+    asset_context_file.write_text(
+        "\n".join(
+            [
+                "rule_id,target_kind,target_ref,asset_ref,asset_id,match_mode,precedence",
+                "exact-rule,generic,service-a,,asset-a,exact,30",
+                "contains-rule,generic,service,,asset-service,contains,20",
+                "regex-rule,generic,^svc-[0-9]+$,,asset-regex,regex,10",
+                "glob-rule,generic,svc-*,,asset-glob,glob,5",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
 
     result = runner.invoke(
         app,
@@ -666,6 +680,8 @@ def test_input_validation_json_matches_published_schema(tmp_path: Path) -> None:
             "validate",
             "--input",
             str(input_file),
+            "--asset-context",
+            str(asset_context_file),
             "--output",
             str(output_file),
             "--format",
@@ -676,6 +692,10 @@ def test_input_validation_json_matches_published_schema(tmp_path: Path) -> None:
     assert result.exit_code == 0
     payload = json.loads(output_file.read_text(encoding="utf-8"))
     jsonschema.validate(payload, _load_schema("input-validation-report.schema.json"))
+    assert payload["asset_context"]["exact_rules"] == 1
+    assert payload["asset_context"]["contains_rules"] == 1
+    assert payload["asset_context"]["regex_rules"] == 1
+    assert payload["asset_context"]["glob_rules"] == 1
 
 
 def test_input_inspect_json_matches_published_schema(tmp_path: Path) -> None:

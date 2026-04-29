@@ -66,6 +66,10 @@ def test_cli_input_validate_json_reports_local_inputs_and_context(
     assert payload["summary"]["total_rows"] == 2
     assert payload["summary"]["unique_cves"] == 1
     assert payload["summary"]["asset_context_rules"] == 1
+    assert payload["asset_context"]["exact_rules"] == 1
+    assert payload["asset_context"]["contains_rules"] == 0
+    assert payload["asset_context"]["regex_rules"] == 0
+    assert payload["asset_context"]["glob_rules"] == 0
     assert payload["summary"]["vex_statement_count"] == 1
     assert payload["vex"]["statuses"] == {"under_investigation": 1}
     assert any("Ignored invalid CVE identifier" in warning for warning in payload["warnings"])

@@ -270,7 +270,10 @@ Current asset-context contract:
 
 - asset context is evaluated per occurrence, not per CVE aggregate
 - `target_kind` stays exact
-- `target_ref` supports deterministic `exact` and `glob` matching with precedence and CSV row tie-breaks
+- `target_ref` supports deterministic `exact`, `contains`, `regex`, and compatibility `glob` matching with precedence and CSV row tie-breaks
+- CSV files require `target_kind`, `asset_id`, and either `target_ref` or its `asset_ref` alias; see [Asset Context CSV](asset-context-csv.md)
+- unknown `criticality`, `exposure`, and `environment` enum values are ignored with warnings, while invalid `match_mode`, regex syntax, or non-integer `precedence` values fail validation
+- `input validate --format json` exposes `asset_context.exact_rules`, `contains_rules`, `regex_rules`, and `glob_rules`
 - occurrence metadata exposes the winning asset rule when one matched
 
 ### Waiver semantics
