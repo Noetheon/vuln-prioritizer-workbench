@@ -16,7 +16,7 @@ from typer.testing import CliRunner
 
 from vuln_prioritizer.cache import FileCache
 from vuln_prioritizer.cli import app
-from vuln_prioritizer.models import EpssData, KevData, NvdData
+from vuln_prioritizer.models import EpssData, KevData, NvdData, ProviderSnapshotReport
 from vuln_prioritizer.providers.epss import EpssProvider
 from vuln_prioritizer.providers.kev import KevProvider
 from vuln_prioritizer.providers.nvd import NvdProvider
@@ -100,6 +100,19 @@ def test_nvd_provider_record_example_matches_model() -> None:
             "Patch",
         ]
     }
+
+
+def test_provider_snapshot_v1_example_matches_schema_and_model() -> None:
+    payload = json.loads(
+        (DOCS_ROOT / "examples" / "example_provider_snapshot.v1.json").read_text(encoding="utf-8")
+    )
+
+    jsonschema.validate(payload, _load_schema("provider-snapshot-report.schema.json"))
+    snapshot = ProviderSnapshotReport.model_validate(payload)
+
+    assert snapshot.metadata.snapshot_format == "provider-snapshot.v1.json"
+    assert snapshot.metadata.snapshot_id == "example-provider-snapshot-v1"
+    assert snapshot.metadata.source_metadata["nvd"]["source"] == "NVD CVE API 2.0"
 
 
 def _install_fake_data_update_providers(monkeypatch: Any) -> None:
@@ -491,7 +504,10 @@ def test_provider_snapshot_json_matches_published_schema(monkeypatch, tmp_path: 
     assert result.exit_code == 0
     payload = json.loads(output_file.read_text(encoding="utf-8"))
     jsonschema.validate(payload, _load_schema("provider-snapshot-report.schema.json"))
+    assert payload["metadata"]["snapshot_format"] == "provider-snapshot.v1.json"
+    assert payload["metadata"]["snapshot_id"]
     assert set(payload["metadata"]["source_hashes"]) == {"nvd", "epss", "kev"}
+    assert payload["metadata"]["source_metadata"]["nvd"]["record_count"] == 2
     assert payload["items"][0]["kev"]["vulnerability_name"] == (
         "Apache Log4j2 remote code execution vulnerability"
     )

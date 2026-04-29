@@ -23,6 +23,7 @@ from vuln_prioritizer.workbench_config import WorkbenchSettings
 
 ROOT = Path(__file__).resolve().parents[3]
 DEMO_PROVIDER_SNAPSHOT = ROOT / "data" / "demo_provider_snapshot.json"
+EXAMPLE_PROVIDER_SNAPSHOT_V1 = ROOT / "docs" / "examples" / "example_provider_snapshot.v1.json"
 SAMPLE_CVES = ROOT / "data" / "sample_cves.txt"
 TRIVY_REPORT = ROOT / "data" / "input_fixtures" / "trivy_report.json"
 GRYPE_REPORT = ROOT / "data" / "input_fixtures" / "grype_report.json"
@@ -176,6 +177,24 @@ def test_workbench_import_findings_reports_and_evidence(tmp_path: Path) -> None:
     assert status_payload["snapshot"]["content_hash"]
     assert status_payload["snapshot"]["selected_sources"] == ["nvd", "epss", "kev"]
     assert {source["name"] for source in status_payload["sources"]} == {"nvd", "epss", "kev"}
+
+    snapshots = client.get("/api/providers/snapshots")
+    assert snapshots.status_code == 200
+    snapshot_items = snapshots.json()["items"]
+    current_snapshot = next(
+        item for item in snapshot_items if item["id"] == run["provider_snapshot_id"]
+    )
+    assert current_snapshot["snapshot_format"] == "provider-snapshot.v1.json"
+    assert current_snapshot["content_hash"] == status_payload["snapshot"]["content_hash"]
+    snapshot_detail = client.get(f"/api/providers/snapshots/{run['provider_snapshot_id']}")
+    assert snapshot_detail.status_code == 200
+    assert snapshot_detail.json()["id"] == run["provider_snapshot_id"]
+    snapshot_download = client.get(
+        f"/api/providers/snapshots/{run['provider_snapshot_id']}/download"
+    )
+    assert snapshot_download.status_code == 200
+    assert hashlib.sha256(snapshot_download.content).hexdigest() == current_snapshot["content_hash"]
+    assert snapshot_download.json()["metadata"]["artifact_kind"] == "provider-snapshot"
 
     project_runs = client.get(f"/api/projects/{project['id']}/runs")
     assert project_runs.status_code == 200
@@ -360,6 +379,7 @@ def test_workbench_import_findings_reports_and_evidence(tmp_path: Path) -> None:
         names = set(archive.namelist())
         assert {"analysis.json", "report.html", "summary.md", "manifest.json"} <= names
         assert "input/sample.txt" in names
+        assert "provider/provider-snapshot.json" in names
 
         analysis_payload = json.loads(archive.read("analysis.json"))
         assert analysis_payload["metadata"]["input_format"] == "cve-list"
@@ -377,8 +397,15 @@ def test_workbench_import_findings_reports_and_evidence(tmp_path: Path) -> None:
             manifest["provider_snapshot"]["sha256"]
             == analysis_payload["metadata"]["provider_snapshot_hash"]
         )
+        assert manifest["provider_snapshot"]["bundle_path"] == "provider/provider-snapshot.json"
         manifest_files = {item["path"]: item for item in manifest["files"]}
-        for artifact_name in ["analysis.json", "report.html", "summary.md", "input/sample.txt"]:
+        for artifact_name in [
+            "analysis.json",
+            "report.html",
+            "summary.md",
+            "input/sample.txt",
+            "provider/provider-snapshot.json",
+        ]:
             assert artifact_name in manifest_files
             assert (
                 manifest_files[artifact_name]["sha256"]
@@ -479,6 +506,55 @@ def test_workbench_import_findings_reports_and_evidence(tmp_path: Path) -> None:
     assert deleted_bundle.status_code == 200
     assert deleted_bundle.json()["artifact_removed"] is True
     assert client.get(bundle_payload["download_url"]).status_code == 404
+
+
+def test_workbench_imports_provider_snapshot_artifact(tmp_path: Path) -> None:
+    client = _client(tmp_path)
+
+    imported = client.post(
+        "/api/providers/snapshots/import",
+        files={
+            "file": (
+                "provider-snapshot.v1.json",
+                EXAMPLE_PROVIDER_SNAPSHOT_V1.read_bytes(),
+                "application/json",
+            )
+        },
+    )
+
+    assert imported.status_code == 200, imported.text
+    payload = imported.json()
+    assert payload["imported"] is True
+    assert payload["item"]["snapshot_format"] == "provider-snapshot.v1.json"
+    assert payload["item"]["content_hash"]
+
+    listed = client.get("/api/providers/snapshots")
+    assert listed.status_code == 200
+    assert payload["item"]["id"] in {item["id"] for item in listed.json()["items"]}
+
+    downloaded = client.get(f"/api/providers/snapshots/{payload['item']['id']}/download")
+    assert downloaded.status_code == 200
+    assert hashlib.sha256(downloaded.content).hexdigest() == payload["item"]["content_hash"]
+    assert downloaded.json()["metadata"]["snapshot_format"] == "provider-snapshot.v1.json"
+
+    legacy = client.post(
+        "/api/providers/snapshots/import",
+        files={
+            "file": (
+                "legacy-provider-snapshot.json",
+                DEMO_PROVIDER_SNAPSHOT.read_bytes(),
+                "application/json",
+            )
+        },
+    )
+    assert legacy.status_code == 422
+    assert "metadata.snapshot_format=provider-snapshot.v1.json" in legacy.text
+
+    invalid = client.post(
+        "/api/providers/snapshots/import",
+        files={"file": ("bad.json", b"{not-json", "application/json")},
+    )
+    assert invalid.status_code == 422
 
 
 def test_project_artifact_cleanup_is_scoped_and_enforces_disk_cap(tmp_path: Path) -> None:

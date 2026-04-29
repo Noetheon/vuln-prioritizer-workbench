@@ -20,6 +20,7 @@ nav:
       - EPSS Provider Cache: architecture/vpw-023-epss-provider-cache.md
       - KEV Provider Cache: architecture/vpw-024-kev-provider-cache.md
       - NVD Provider Fallback: architecture/vpw-025-nvd-provider-fallback.md
+      - Provider Snapshot Replay: architecture/vpw-026-provider-snapshot-replay.md
       - Template Repository Layer: architecture/template-service-layer.md
       - Template Importer Contract: architecture/vpw-013-importer-contract.md
   - Full Stack Template Migration: full_stack_fastapi_template_migration.md

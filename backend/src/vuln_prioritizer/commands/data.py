@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from pathlib import Path
 from typing import Any, TypeVar, cast
+from uuid import uuid4
 
 import typer
 from dotenv import load_dotenv
@@ -570,8 +571,10 @@ def data_export_provider_snapshot(
             )
         warnings.extend(provider_warnings)
 
+    source_hashes = _provider_cache_source_hashes(cache, selected_sources)
     report = ProviderSnapshotReport(
         metadata=ProviderSnapshotMetadata(
+            snapshot_id=uuid4().hex,
             generated_at=iso_utc_now(),
             input_path=str(input[0]) if input else None,
             input_paths=[str(path) for path in (input or [])],
@@ -582,7 +585,15 @@ def data_export_provider_snapshot(
             cache_enabled=True,
             cache_only=cache_only,
             cache_dir=str(cache_dir),
-            source_hashes=_provider_cache_source_hashes(cache, selected_sources),
+            source_hashes=source_hashes,
+            source_metadata=_provider_source_metadata(
+                selected_sources=selected_sources,
+                source_hashes=source_hashes,
+                nvd_results=nvd_results,
+                epss_results=epss_results,
+                kev_results=kev_results,
+                cache_only=cache_only,
+            ),
             offline_kev_file=str(offline_kev_file) if offline_kev_file else None,
             nvd_api_key_env=nvd_api_key_env,
         ),
@@ -611,6 +622,41 @@ def _provider_cache_source_hashes(
         source: cache.inspect_namespace(source)["namespace_checksum"]
         for source in selected_sources
         if source in {"nvd", "epss", "kev"}
+    }
+
+
+def _provider_source_metadata(
+    *,
+    selected_sources: Sequence[str],
+    source_hashes: dict[str, str | None],
+    nvd_results: dict[str, NvdData],
+    epss_results: dict[str, EpssData],
+    kev_results: dict[str, KevData],
+    cache_only: bool,
+) -> dict[str, dict[str, str | int | bool | None]]:
+    record_counts = {
+        "nvd": sum(1 for item in nvd_results.values() if has_nvd_content(item)),
+        "epss": sum(
+            1
+            for item in epss_results.values()
+            if item.epss is not None or item.percentile is not None or item.date is not None
+        ),
+        "kev": sum(1 for item in kev_results.values() if item.in_kev),
+    }
+    source_labels = {
+        "nvd": "NVD CVE API 2.0",
+        "epss": "FIRST EPSS API",
+        "kev": "CISA KEV catalog",
+    }
+    return {
+        source: {
+            "source": source_labels[source],
+            "record_count": record_counts[source],
+            "cache_only": cache_only,
+            "cache_namespace_hash": source_hashes.get(source),
+        }
+        for source in selected_sources
+        if source in source_labels
     }
 
 

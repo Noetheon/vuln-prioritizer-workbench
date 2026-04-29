@@ -446,6 +446,33 @@ class ProviderStatusResponse(StrictModel):
     warnings: list[str] = Field(default_factory=list)
 
 
+class ProviderSnapshotRecordResponse(StrictModel):
+    id: str
+    created_at: str
+    content_hash: str | None = None
+    nvd_last_sync: str | None = None
+    epss_date: str | None = None
+    kev_catalog_version: str | None = None
+    snapshot_id: str | None = None
+    snapshot_format: str = "provider-snapshot.v1.json"
+    generated_at: str | None = None
+    selected_sources: list[str] = Field(default_factory=list)
+    requested_cves: int = 0
+    source_hashes: dict[str, str | None] = Field(default_factory=dict)
+    source_metadata: dict[str, dict[str, Any]] = Field(default_factory=dict)
+    source_path: str | None = None
+    warnings: list[str] = Field(default_factory=list)
+
+
+class ProviderSnapshotListResponse(StrictModel):
+    items: list[ProviderSnapshotRecordResponse] = Field(default_factory=list)
+
+
+class ProviderSnapshotImportResponse(StrictModel):
+    imported: bool = True
+    item: ProviderSnapshotRecordResponse
+
+
 class AttackTechniqueSummary(StrictModel):
     technique_id: str
     name: str

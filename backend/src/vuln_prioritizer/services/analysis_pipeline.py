@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 from enum import StrEnum
 from pathlib import Path
@@ -277,6 +278,10 @@ def prepare_analysis(request: AnalysisRequest) -> tuple[list[PrioritizedFinding]
         input_sources=parsed_input.source_summaries,
         merged_input_count=parsed_input.merged_input_count,
         duplicate_cve_count=parsed_input.duplicate_cve_count,
+        provider_snapshot_id=(
+            provider_snapshot.metadata.snapshot_id if provider_snapshot is not None else None
+        ),
+        provider_snapshot_hash=_provider_snapshot_hash(request.provider_snapshot_file),
         provider_snapshot_file=(
             str(request.provider_snapshot_file) if request.provider_snapshot_file else None
         ),
@@ -359,6 +364,15 @@ def prepare_analysis(request: AnalysisRequest) -> tuple[list[PrioritizedFinding]
     return findings, context
 
 
+def _provider_snapshot_hash(path: Path | None) -> str | None:
+    if path is None:
+        return None
+    try:
+        return hashlib.sha256(path.read_bytes()).hexdigest()
+    except OSError:
+        return None
+
+
 def prepare_explain(request: ExplainRequest) -> ExplainResult:
     context_profile = load_context_profile_or_exit(request.policy_profile, request.policy_file)
     if request.locked_provider_data and request.provider_snapshot_file is None:
@@ -430,6 +444,10 @@ def prepare_explain(request: ExplainRequest) -> ExplainResult:
         output_path=str(request.output) if request.output else None,
         output_format=_enum_value(request.format),
         generated_at=generated_at,
+        provider_snapshot_id=(
+            provider_snapshot.metadata.snapshot_id if provider_snapshot is not None else None
+        ),
+        provider_snapshot_hash=_provider_snapshot_hash(request.provider_snapshot_file),
         provider_snapshot_file=(
             str(request.provider_snapshot_file) if request.provider_snapshot_file else None
         ),

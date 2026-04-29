@@ -253,8 +253,15 @@ def render_summary_panel(
         lines.append(f"Duplicate CVEs collapsed: {context.duplicate_cve_count}")
     if context.provider_snapshot_file:
         lines.append(f"Provider snapshot: {context.provider_snapshot_file}")
+    if context.provider_snapshot_id:
+        lines.append(f"Provider snapshot ID: {context.provider_snapshot_id}")
+    if context.provider_snapshot_hash:
+        lines.append(f"Provider snapshot hash: {context.provider_snapshot_hash}")
     if context.provider_snapshot_sources:
         lines.append("Provider snapshot sources: " + ", ".join(context.provider_snapshot_sources))
+    snapshot_generated_at = context.provider_freshness.get("provider_snapshot_generated_at")
+    if snapshot_generated_at:
+        lines.append(f"Provider snapshot generated at: {snapshot_generated_at}")
     if context.nvd_diagnostics.requested:
         diagnostics = context.nvd_diagnostics
         lines.append(

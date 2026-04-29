@@ -195,6 +195,9 @@ detail behavior is documented in
 The NVD-specific CVE API, fallback, CVSS parsing, and missing-CVSS
 data-quality behavior is documented in
 [VPW-025 NVD Provider Fallback](vpw-025-nvd-provider-fallback.md).
+The provider snapshot format, Workbench import/export API, locked replay, and
+evidence-bundle inclusion behavior is documented in
+[VPW-026 Provider Snapshot Replay](vpw-026-provider-snapshot-replay.md).
 
 The current `data` command tree is intentionally small:
 
