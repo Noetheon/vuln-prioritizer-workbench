@@ -16,7 +16,7 @@ import {
   Settings,
   ShieldCheck,
 } from "lucide-react"
-import { useEffect, useState } from "react"
+import { type FormEvent, useEffect, useState } from "react"
 import { clearAccessToken } from "./auth"
 import {
   ApiError,
@@ -126,6 +126,16 @@ const settingsSummary = (user: UserPublic | null) => [
     value: user ? "Authenticated" : "Loading",
   },
 ]
+
+type ProjectFormState = {
+  name: string
+  description: string
+}
+
+const emptyProjectForm: ProjectFormState = {
+  name: "",
+  description: "",
+}
 
 const timeline = [
   "Provider snapshot locked",
@@ -274,6 +284,36 @@ function apiErrorDetail(body: unknown) {
   return null
 }
 
+function validateProjectForm(form: ProjectFormState) {
+  const name = form.name.trim()
+  const description = form.description.trim()
+  if (!name) {
+    return "Project name is required."
+  }
+  if (name.length > 255) {
+    return "Project name must be 255 characters or fewer."
+  }
+  if (description.length > 4096) {
+    return "Project description must be 4096 characters or fewer."
+  }
+  return ""
+}
+
+function projectRequestBody(form: ProjectFormState) {
+  const description = form.description.trim()
+  return {
+    description: description ? description : null,
+    name: form.name.trim(),
+  }
+}
+
+function formatDateTime(value: string) {
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(new Date(value))
+}
+
 export function App() {
   const navigate = useNavigate()
   const location = useLocation()
@@ -291,6 +331,16 @@ export function App() {
   const [projectListLoading, setProjectListLoading] = useState(true)
   const [summaryLoading, setSummaryLoading] = useState(false)
   const [dashboardError, setDashboardError] = useState("")
+  const [createProjectForm, setCreateProjectForm] =
+    useState<ProjectFormState>(emptyProjectForm)
+  const [createProjectError, setCreateProjectError] = useState("")
+  const [projectActionError, setProjectActionError] = useState("")
+  const [projectActionMessage, setProjectActionMessage] = useState("")
+  const [projectActionLoading, setProjectActionLoading] = useState(false)
+  const [editProjectId, setEditProjectId] = useState("")
+  const [editProjectForm, setEditProjectForm] =
+    useState<ProjectFormState>(emptyProjectForm)
+  const [deleteConfirmed, setDeleteConfirmed] = useState(false)
   const selectedProject =
     projects.find((project) => project.id === selectedProjectId) ?? null
   const dashboardLoading = projectListLoading || summaryLoading
@@ -423,6 +473,116 @@ export function App() {
       isMounted = false
     }
   }, [navigate, selectedProjectId])
+
+  async function refreshProjects(preferredProjectId?: string) {
+    const projectPage = await ProjectsService.readProjects()
+    setProjects(projectPage.data)
+    setSelectedProjectId((previousProjectId) => {
+      if (
+        preferredProjectId &&
+        projectPage.data.some((project) => project.id === preferredProjectId)
+      ) {
+        return preferredProjectId
+      }
+      if (
+        projectPage.data.some((project) => project.id === previousProjectId)
+      ) {
+        return previousProjectId
+      }
+      return projectPage.data[0]?.id ?? ""
+    })
+    if (projectPage.data.length === 0) {
+      setProjectSummary(null)
+    }
+  }
+
+  async function createProject(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    setCreateProjectError("")
+    setProjectActionError("")
+    setProjectActionMessage("")
+    const validationError = validateProjectForm(createProjectForm)
+    if (validationError) {
+      setCreateProjectError(validationError)
+      return
+    }
+
+    setProjectActionLoading(true)
+    try {
+      const project = await ProjectsService.createProject({
+        requestBody: projectRequestBody(createProjectForm),
+      })
+      setCreateProjectForm(emptyProjectForm)
+      setProjectActionMessage(`Project ${project.name} created.`)
+      await refreshProjects(project.id)
+    } catch (caught) {
+      setProjectActionError(apiErrorMessage("Project create failed", caught))
+    } finally {
+      setProjectActionLoading(false)
+    }
+  }
+
+  function startEditProject(project: ProjectPublic) {
+    setEditProjectId(project.id)
+    setEditProjectForm({
+      description: project.description ?? "",
+      name: project.name,
+    })
+    setDeleteConfirmed(false)
+    setProjectActionError("")
+    setProjectActionMessage("")
+  }
+
+  async function saveProject(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (!editProjectId) {
+      return
+    }
+    setProjectActionError("")
+    setProjectActionMessage("")
+    const validationError = validateProjectForm(editProjectForm)
+    if (validationError) {
+      setProjectActionError(validationError)
+      return
+    }
+
+    setProjectActionLoading(true)
+    try {
+      const project = await ProjectsService.updateProject({
+        projectId: editProjectId,
+        requestBody: projectRequestBody(editProjectForm),
+      })
+      setEditProjectId("")
+      setProjectActionMessage(`Project ${project.name} updated.`)
+      await refreshProjects(project.id)
+    } catch (caught) {
+      setProjectActionError(apiErrorMessage("Project update failed", caught))
+    } finally {
+      setProjectActionLoading(false)
+    }
+  }
+
+  async function deleteProject(project: ProjectPublic) {
+    if (!deleteConfirmed) {
+      setProjectActionError("Confirm deletion before deleting this project.")
+      return
+    }
+
+    setProjectActionLoading(true)
+    setProjectActionError("")
+    setProjectActionMessage("")
+    try {
+      await ProjectsService.deleteProject({ projectId: project.id })
+      setDeleteConfirmed(false)
+      setEditProjectId("")
+      setProjectActionMessage(`Project ${project.name} deleted.`)
+      await refreshProjects()
+    } catch (caught) {
+      setProjectActionError(apiErrorMessage("Project delete failed", caught))
+    } finally {
+      setProjectActionLoading(false)
+    }
+  }
 
   async function signOut() {
     clearAccessToken()
@@ -594,90 +754,323 @@ export function App() {
               <button
                 className="icon-button"
                 type="button"
-                aria-label="Refresh queue"
+                aria-label={
+                  currentPath === "/projects"
+                    ? "Refresh projects"
+                    : "Refresh queue"
+                }
+                onClick={() => {
+                  if (currentPath === "/projects") {
+                    void refreshProjects(selectedProjectId)
+                  }
+                }}
               >
                 <Activity aria-hidden="true" size={18} />
               </button>
             </div>
 
-            <div className="dashboard-panel-body">
-              {dashboardError ? (
-                <p className="dashboard-alert" role="alert">
-                  {dashboardError}
-                </p>
-              ) : null}
-
-              {dashboardLoading ? (
-                <p className="dashboard-state" role="status">
-                  Loading dashboard summary
-                </p>
-              ) : null}
-
-              {!dashboardLoading && !dashboardError && projects.length === 0 ? (
+            {currentPath === "/projects" ? (
+              <section
+                className="projects-workflow"
+                aria-label="Projects workflow"
+              >
                 <section
-                  className="dashboard-empty"
-                  aria-label="Dashboard empty state"
+                  className="project-form-panel"
+                  aria-label="Create Project form"
                 >
-                  <h3>No projects yet</h3>
-                  <p>
-                    Create a project or import a CVE list to populate the
-                    dashboard.
-                  </p>
-                  <div className="empty-actions">
-                    <Link className="primary-action" to="/projects">
-                      Projects
-                    </Link>
-                    <Link className="secondary-action" to="/imports">
-                      Imports
-                    </Link>
-                  </div>
+                  <h3>Create Project</h3>
+                  <form onSubmit={createProject}>
+                    <label>
+                      <span>Project name</span>
+                      <input
+                        maxLength={255}
+                        onChange={(event) =>
+                          setCreateProjectForm((form) => ({
+                            ...form,
+                            name: event.target.value,
+                          }))
+                        }
+                        value={createProjectForm.name}
+                      />
+                    </label>
+                    <label>
+                      <span>Description</span>
+                      <textarea
+                        maxLength={4096}
+                        onChange={(event) =>
+                          setCreateProjectForm((form) => ({
+                            ...form,
+                            description: event.target.value,
+                          }))
+                        }
+                        rows={3}
+                        value={createProjectForm.description}
+                      />
+                    </label>
+                    {createProjectError ? (
+                      <p className="form-error">{createProjectError}</p>
+                    ) : null}
+                    <button
+                      className="primary-action"
+                      disabled={projectActionLoading}
+                      type="submit"
+                    >
+                      Create Project
+                    </button>
+                  </form>
                 </section>
-              ) : null}
 
-              {!dashboardLoading &&
-              !dashboardError &&
-              selectedProject &&
-              projectSummary !== null &&
-              (projectSummary.finding_count ?? 0) === 0 ? (
+                {projectActionError ? (
+                  <p className="dashboard-alert" role="alert">
+                    {projectActionError}
+                  </p>
+                ) : null}
+                {projectActionMessage ? (
+                  <p className="dashboard-state" role="status">
+                    {projectActionMessage}
+                  </p>
+                ) : null}
+
                 <section
-                  className="dashboard-empty"
-                  aria-label="No findings empty state"
+                  className="project-list-panel"
+                  aria-label="Projects list"
                 >
-                  <h3>No findings in {selectedProject.name}</h3>
-                  <p>
-                    Import scanner, SBOM, or CVE-list data to create findings.
-                  </p>
-                  <div className="empty-actions">
-                    <Link className="primary-action" to="/imports">
-                      Imports
-                    </Link>
-                    <Link className="secondary-action" to="/projects">
-                      Projects
-                    </Link>
-                  </div>
+                  {projectListLoading ? (
+                    <p className="dashboard-state" role="status">
+                      Loading projects
+                    </p>
+                  ) : null}
+                  {!projectListLoading && projects.length === 0 ? (
+                    <section
+                      className="dashboard-empty"
+                      aria-label="Projects empty state"
+                    >
+                      <h3>No projects yet</h3>
+                      <p>
+                        Create the first project to start importing CVEs and
+                        findings.
+                      </p>
+                    </section>
+                  ) : null}
+                  {projects.length > 0 ? (
+                    <ul className="project-list">
+                      {projects.map((project) => (
+                        <li key={project.id}>
+                          <button
+                            aria-current={
+                              project.id === selectedProjectId
+                                ? "true"
+                                : undefined
+                            }
+                            className={
+                              project.id === selectedProjectId
+                                ? "project-list-item active"
+                                : "project-list-item"
+                            }
+                            onClick={() => {
+                              setSelectedProjectId(project.id)
+                              setDeleteConfirmed(false)
+                              setEditProjectId("")
+                            }}
+                            type="button"
+                          >
+                            <strong>{project.name}</strong>
+                            <span>
+                              {project.description || "No description"}
+                            </span>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
                 </section>
-              ) : null}
 
-              {!dashboardLoading &&
-              !dashboardError &&
-              projectSummary !== null &&
-              (projectSummary.finding_count ?? 0) > 0 ? (
-                <dl
-                  className="summary-list"
-                  aria-label="Project decision summary"
-                >
-                  {summaryRows.map((row) => (
-                    <div key={row.label}>
-                      <dt>{row.label}</dt>
-                      <dd>
-                        <strong>{row.value}</strong>
-                        <span>{row.detail}</span>
-                      </dd>
+                {selectedProject ? (
+                  <section
+                    className="project-detail"
+                    aria-label="Project detail"
+                  >
+                    <div className="project-detail-header">
+                      <div>
+                        <span>Selected project</span>
+                        <h3>{selectedProject.name}</h3>
+                        <p>{selectedProject.description || "No description"}</p>
+                      </div>
+                      <button
+                        className="secondary-action"
+                        onClick={() => startEditProject(selectedProject)}
+                        type="button"
+                      >
+                        Edit
+                      </button>
                     </div>
-                  ))}
-                </dl>
-              ) : null}
-            </div>
+                    <dl className="project-meta">
+                      <div>
+                        <dt>Created</dt>
+                        <dd>{formatDateTime(selectedProject.created_at)}</dd>
+                      </div>
+                      <div>
+                        <dt>Updated</dt>
+                        <dd>{formatDateTime(selectedProject.updated_at)}</dd>
+                      </div>
+                    </dl>
+
+                    {editProjectId === selectedProject.id ? (
+                      <form
+                        className="project-edit-form"
+                        onSubmit={saveProject}
+                      >
+                        <label>
+                          <span>Edit project name</span>
+                          <input
+                            maxLength={255}
+                            onChange={(event) =>
+                              setEditProjectForm((form) => ({
+                                ...form,
+                                name: event.target.value,
+                              }))
+                            }
+                            value={editProjectForm.name}
+                          />
+                        </label>
+                        <label>
+                          <span>Edit description</span>
+                          <textarea
+                            maxLength={4096}
+                            onChange={(event) =>
+                              setEditProjectForm((form) => ({
+                                ...form,
+                                description: event.target.value,
+                              }))
+                            }
+                            rows={3}
+                            value={editProjectForm.description}
+                          />
+                        </label>
+                        <div className="project-actions">
+                          <button
+                            className="primary-action"
+                            disabled={projectActionLoading}
+                            type="submit"
+                          >
+                            Save Project
+                          </button>
+                          <button
+                            className="secondary-action"
+                            onClick={() => setEditProjectId("")}
+                            type="button"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </form>
+                    ) : null}
+
+                    <div className="delete-confirmation">
+                      <label>
+                        <input
+                          checked={deleteConfirmed}
+                          onChange={(event) =>
+                            setDeleteConfirmed(event.target.checked)
+                          }
+                          type="checkbox"
+                        />
+                        <span>Confirm deletion for this project</span>
+                      </label>
+                      <button
+                        className="danger-action"
+                        disabled={projectActionLoading || !deleteConfirmed}
+                        onClick={() => void deleteProject(selectedProject)}
+                        type="button"
+                      >
+                        Delete Project
+                      </button>
+                    </div>
+                  </section>
+                ) : null}
+              </section>
+            ) : (
+              <div className="dashboard-panel-body">
+                {dashboardError ? (
+                  <p className="dashboard-alert" role="alert">
+                    {dashboardError}
+                  </p>
+                ) : null}
+
+                {dashboardLoading ? (
+                  <p className="dashboard-state" role="status">
+                    Loading dashboard summary
+                  </p>
+                ) : null}
+
+                {!dashboardLoading &&
+                !dashboardError &&
+                projects.length === 0 ? (
+                  <section
+                    className="dashboard-empty"
+                    aria-label="Dashboard empty state"
+                  >
+                    <h3>No projects yet</h3>
+                    <p>
+                      Create a project or import a CVE list to populate the
+                      dashboard.
+                    </p>
+                    <div className="empty-actions">
+                      <Link className="primary-action" to="/projects">
+                        Projects
+                      </Link>
+                      <Link className="secondary-action" to="/imports">
+                        Imports
+                      </Link>
+                    </div>
+                  </section>
+                ) : null}
+
+                {!dashboardLoading &&
+                !dashboardError &&
+                selectedProject &&
+                projectSummary !== null &&
+                (projectSummary.finding_count ?? 0) === 0 ? (
+                  <section
+                    className="dashboard-empty"
+                    aria-label="No findings empty state"
+                  >
+                    <h3>No findings in {selectedProject.name}</h3>
+                    <p>
+                      Import scanner, SBOM, or CVE-list data to create findings.
+                    </p>
+                    <div className="empty-actions">
+                      <Link className="primary-action" to="/imports">
+                        Imports
+                      </Link>
+                      <Link className="secondary-action" to="/projects">
+                        Projects
+                      </Link>
+                    </div>
+                  </section>
+                ) : null}
+
+                {!dashboardLoading &&
+                !dashboardError &&
+                projectSummary !== null &&
+                (projectSummary.finding_count ?? 0) > 0 ? (
+                  <dl
+                    className="summary-list"
+                    aria-label="Project decision summary"
+                  >
+                    {summaryRows.map((row) => (
+                      <div key={row.label}>
+                        <dt>{row.label}</dt>
+                        <dd>
+                          <strong>{row.value}</strong>
+                          <span>{row.detail}</span>
+                        </dd>
+                      </div>
+                    ))}
+                  </dl>
+                ) : null}
+              </div>
+            )}
           </div>
 
           <div className="side-panel">

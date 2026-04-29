@@ -110,6 +110,44 @@ test("template login reaches authenticated Workbench status shell", async ({
   await navigation.getByRole("link", { name: "Projects" }).click()
   await expect(page).toHaveURL(/\/projects$/)
   await expect(page.getByRole("heading", { name: "Projects" })).toBeVisible()
+  const createProjectForm = page.getByRole("region", {
+    name: "Create Project form",
+  })
+  await expect(createProjectForm).toBeVisible()
+  await createProjectForm
+    .getByRole("button", { name: "Create Project" })
+    .click()
+  await expect(page.getByText("Project name is required.")).toBeVisible()
+  await createProjectForm.getByLabel("Project name").fill("VPW UI Project")
+  await createProjectForm
+    .getByLabel("Description")
+    .fill("Created through the Projects page E2E workflow")
+  await createProjectForm
+    .getByRole("button", { name: "Create Project" })
+    .click()
+  await expect(page.getByText("Project VPW UI Project created.")).toBeVisible()
+  const projectsList = page.getByRole("region", { name: "Projects list" })
+  await expect(projectsList.getByText("VPW UI Project")).toBeVisible()
+  const projectDetail = page.getByRole("region", { name: "Project detail" })
+  await expect(projectDetail).toContainText("VPW UI Project")
+  await projectDetail.getByRole("button", { name: "Edit" }).click()
+  await projectDetail
+    .getByLabel("Edit project name")
+    .fill("VPW UI Project Edited")
+  await projectDetail
+    .getByLabel("Edit description")
+    .fill("Updated through the Projects page E2E workflow")
+  await projectDetail.getByRole("button", { name: "Save Project" }).click()
+  await expect(
+    page.getByText("Project VPW UI Project Edited updated."),
+  ).toBeVisible()
+  await expect(projectDetail).toContainText("VPW UI Project Edited")
+  await projectDetail.getByLabel("Confirm deletion for this project").check()
+  await projectDetail.getByRole("button", { name: "Delete Project" }).click()
+  await expect(
+    page.getByText("Project VPW UI Project Edited deleted."),
+  ).toBeVisible()
+  await expect(projectsList.getByText("VPW UI Project Edited")).toHaveCount(0)
 
   await navigation.getByRole("link", { name: "Settings" }).click()
   await expect(page).toHaveURL(/\/settings$/)
