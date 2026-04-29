@@ -12,6 +12,13 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as LayoutRouteImport } from './routes/_layout'
 import { Route as LayoutIndexRouteImport } from './routes/_layout/index'
+import { Route as LayoutSettingsRouteImport } from './routes/_layout/settings'
+import { Route as LayoutReportsRouteImport } from './routes/_layout/reports'
+import { Route as LayoutProvidersRouteImport } from './routes/_layout/providers'
+import { Route as LayoutProjectsRouteImport } from './routes/_layout/projects'
+import { Route as LayoutImportsRouteImport } from './routes/_layout/imports'
+import { Route as LayoutFindingsRouteImport } from './routes/_layout/findings'
+import { Route as LayoutAssetsRouteImport } from './routes/_layout/assets'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -27,27 +34,112 @@ const LayoutIndexRoute = LayoutIndexRouteImport.update({
   path: '/',
   getParentRoute: () => LayoutRoute,
 } as any)
+const LayoutSettingsRoute = LayoutSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutReportsRoute = LayoutReportsRouteImport.update({
+  id: '/reports',
+  path: '/reports',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutProvidersRoute = LayoutProvidersRouteImport.update({
+  id: '/providers',
+  path: '/providers',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutProjectsRoute = LayoutProjectsRouteImport.update({
+  id: '/projects',
+  path: '/projects',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutImportsRoute = LayoutImportsRouteImport.update({
+  id: '/imports',
+  path: '/imports',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutFindingsRoute = LayoutFindingsRouteImport.update({
+  id: '/findings',
+  path: '/findings',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutAssetsRoute = LayoutAssetsRouteImport.update({
+  id: '/assets',
+  path: '/assets',
+  getParentRoute: () => LayoutRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof LayoutIndexRoute
   '/login': typeof LoginRoute
+  '/assets': typeof LayoutAssetsRoute
+  '/findings': typeof LayoutFindingsRoute
+  '/imports': typeof LayoutImportsRoute
+  '/projects': typeof LayoutProjectsRoute
+  '/providers': typeof LayoutProvidersRoute
+  '/reports': typeof LayoutReportsRoute
+  '/settings': typeof LayoutSettingsRoute
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
+  '/assets': typeof LayoutAssetsRoute
+  '/findings': typeof LayoutFindingsRoute
+  '/imports': typeof LayoutImportsRoute
+  '/projects': typeof LayoutProjectsRoute
+  '/providers': typeof LayoutProvidersRoute
+  '/reports': typeof LayoutReportsRoute
+  '/settings': typeof LayoutSettingsRoute
   '/': typeof LayoutIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_layout': typeof LayoutRouteWithChildren
   '/login': typeof LoginRoute
+  '/_layout/assets': typeof LayoutAssetsRoute
+  '/_layout/findings': typeof LayoutFindingsRoute
+  '/_layout/imports': typeof LayoutImportsRoute
+  '/_layout/projects': typeof LayoutProjectsRoute
+  '/_layout/providers': typeof LayoutProvidersRoute
+  '/_layout/reports': typeof LayoutReportsRoute
+  '/_layout/settings': typeof LayoutSettingsRoute
   '/_layout/': typeof LayoutIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/login'
+  fullPaths:
+    | '/'
+    | '/login'
+    | '/assets'
+    | '/findings'
+    | '/imports'
+    | '/projects'
+    | '/providers'
+    | '/reports'
+    | '/settings'
   fileRoutesByTo: FileRoutesByTo
-  to: '/login' | '/'
-  id: '__root__' | '/_layout' | '/login' | '/_layout/'
+  to:
+    | '/login'
+    | '/assets'
+    | '/findings'
+    | '/imports'
+    | '/projects'
+    | '/providers'
+    | '/reports'
+    | '/settings'
+    | '/'
+  id:
+    | '__root__'
+    | '/_layout'
+    | '/login'
+    | '/_layout/assets'
+    | '/_layout/findings'
+    | '/_layout/imports'
+    | '/_layout/projects'
+    | '/_layout/providers'
+    | '/_layout/reports'
+    | '/_layout/settings'
+    | '/_layout/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -78,14 +170,77 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutIndexRouteImport
       parentRoute: typeof LayoutRoute
     }
+    '/_layout/settings': {
+      id: '/_layout/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof LayoutSettingsRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/reports': {
+      id: '/_layout/reports'
+      path: '/reports'
+      fullPath: '/reports'
+      preLoaderRoute: typeof LayoutReportsRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/providers': {
+      id: '/_layout/providers'
+      path: '/providers'
+      fullPath: '/providers'
+      preLoaderRoute: typeof LayoutProvidersRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/projects': {
+      id: '/_layout/projects'
+      path: '/projects'
+      fullPath: '/projects'
+      preLoaderRoute: typeof LayoutProjectsRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/imports': {
+      id: '/_layout/imports'
+      path: '/imports'
+      fullPath: '/imports'
+      preLoaderRoute: typeof LayoutImportsRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/findings': {
+      id: '/_layout/findings'
+      path: '/findings'
+      fullPath: '/findings'
+      preLoaderRoute: typeof LayoutFindingsRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/assets': {
+      id: '/_layout/assets'
+      path: '/assets'
+      fullPath: '/assets'
+      preLoaderRoute: typeof LayoutAssetsRouteImport
+      parentRoute: typeof LayoutRoute
+    }
   }
 }
 
 interface LayoutRouteChildren {
+  LayoutAssetsRoute: typeof LayoutAssetsRoute
+  LayoutFindingsRoute: typeof LayoutFindingsRoute
+  LayoutImportsRoute: typeof LayoutImportsRoute
+  LayoutProjectsRoute: typeof LayoutProjectsRoute
+  LayoutProvidersRoute: typeof LayoutProvidersRoute
+  LayoutReportsRoute: typeof LayoutReportsRoute
+  LayoutSettingsRoute: typeof LayoutSettingsRoute
   LayoutIndexRoute: typeof LayoutIndexRoute
 }
 
 const LayoutRouteChildren: LayoutRouteChildren = {
+  LayoutAssetsRoute: LayoutAssetsRoute,
+  LayoutFindingsRoute: LayoutFindingsRoute,
+  LayoutImportsRoute: LayoutImportsRoute,
+  LayoutProjectsRoute: LayoutProjectsRoute,
+  LayoutProvidersRoute: LayoutProvidersRoute,
+  LayoutReportsRoute: LayoutReportsRoute,
+  LayoutSettingsRoute: LayoutSettingsRoute,
   LayoutIndexRoute: LayoutIndexRoute,
 }
 
