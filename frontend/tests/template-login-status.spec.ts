@@ -174,6 +174,42 @@ test("template login reaches authenticated Workbench status shell", async ({
     path: "../docs/evidence/vpw-045-provider-status.png",
   })
 
+  await navigation.getByRole("link", { name: "Reports" }).click()
+  await expect(page).toHaveURL(/\/reports$/)
+  await expect(page.getByRole("heading", { name: "Reports" })).toBeVisible()
+  const reportsPage = page.getByRole("region", {
+    name: "Reports page shell",
+  })
+  await expect(reportsPage).toContainText("Export actions staged")
+  await expect(reportsPage).toContainText("VPW-048")
+  await expect(reportsPage).toContainText("VPW-053")
+  const reportCards = page.getByRole("region", {
+    name: "Report export cards",
+  })
+  await expect(reportCards).toContainText("Markdown Technical Report")
+  await expect(reportCards).toContainText("HTML Executive Report")
+  await expect(reportCards).toContainText("JSON Findings Export")
+  await expect(reportCards).toContainText("CSV Findings Export")
+  await expect(reportCards).toContainText("Evidence Bundle")
+  for (const action of [
+    "Generate Markdown",
+    "Generate HTML",
+    "Export JSON",
+    "Export CSV",
+    "Build Evidence Bundle",
+  ]) {
+    await expect(
+      reportCards.getByRole("button", { name: action }),
+    ).toBeDisabled()
+  }
+  await expect(
+    page.getByRole("region", { name: "Reports history" }),
+  ).toContainText("No generated reports yet")
+  await page.screenshot({
+    fullPage: true,
+    path: "../docs/evidence/vpw-046-reports-page.png",
+  })
+
   await navigation.getByRole("link", { name: "Projects" }).click()
   await expect(page).toHaveURL(/\/projects$/)
   await expect(page.getByRole("heading", { name: "Projects" })).toBeVisible()
