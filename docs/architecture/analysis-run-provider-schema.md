@@ -140,6 +140,33 @@ Constraints and indexes:
 `grype`. `raw_reference` preserves the scanner or input reference needed for
 auditable traceability.
 
+## Import Deduplication
+
+Template import persistence uses a stable finding dedup key before each
+occurrence is attached to a run. The key material is:
+
+- `project_id`
+- CVE/source identifier, preferring importer `source_id` when present and
+  falling back to the normalized CVE
+- component identity, preferring PURL and falling back to
+  component/version/package type
+- `asset_ref`, or an explicit empty marker when no asset is present
+
+The stored `finding.dedup_key` is a `vpw019:` SHA-256 digest of that canonical
+material. The unhashed parts are written to `analysis_run.summary_json` under
+`dedup_summary.decisions` so each import run records whether a finding was
+created or reused. Re-importing the same normalized occurrences therefore adds
+new `finding_occurrence` rows for the new run while keeping the existing
+`finding.first_seen_at` and updating `finding.last_seen_at`.
+
+Edge cases:
+
+- The same CVE on a different asset is a different finding.
+- The same CVE on the same asset but a different PURL or component identity is
+  a different finding.
+- A missing component or asset participates in the key through an explicit
+  `__none__` marker, so minimal CVE-list uploads deduplicate across runs.
+
 ## Relationship Contract
 
 The expected graph is:

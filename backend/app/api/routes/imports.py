@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import re
 import shutil
 import uuid
@@ -168,7 +169,7 @@ async def import_project_upload(
             },
         ) from exc
 
-    _persist_template_occurrences(
+    persist_summary = _persist_template_occurrences(
         session=session,
         project_id=project_id,
         run_id=run.id,
@@ -184,8 +185,7 @@ async def import_project_upload(
                 status="succeeded",
                 status_history=[*job_history, _job_status_entry("succeeded")],
             ),
-            "occurrence_count": len(occurrences),
-            "finding_count": len(occurrences),
+            **persist_summary,
             "input_sha256": upload_sha256,
             "parse_errors": [],
         },
@@ -214,11 +214,17 @@ def _persist_template_occurrences(
     project_id: uuid.UUID,
     run_id: uuid.UUID,
     occurrences: list[NormalizedOccurrence],
-) -> None:
+) -> dict[str, Any]:
     asset_repo = AssetRepository(session)
     finding_repo = FindingRepository(session)
     run_repo = RunRepository(session)
+    decisions: list[dict[str, Any]] = []
+    created_count = 0
+    reused_count = 0
+    touched_finding_ids: set[str] = set()
     for index, occurrence in enumerate(occurrences, start=1):
+        dedup_parts = _dedup_key_parts(project_id, occurrence)
+        dedup_key = _finding_dedup_key(dedup_parts)
         asset = (
             asset_repo.upsert_asset(
                 project_id=project_id,
@@ -241,28 +247,120 @@ def _persist_template_occurrences(
         )
         vulnerability = finding_repo.upsert_vulnerability(
             cve_id=occurrence.cve,
-            source_id=occurrence.cve,
+            source_id=dedup_parts["source_id"],
             severity=_string_evidence(occurrence.raw_evidence, "severity"),
         )
+        existing_finding = finding_repo.get_project_finding_by_dedup_key(
+            project_id=project_id,
+            dedup_key=dedup_key,
+        )
+        if existing_finding is None:
+            existing_finding = finding_repo.get_project_finding_by_identity(
+                project_id=project_id,
+                vulnerability_id=vulnerability.id,
+                component_id=component.id if component else None,
+                asset_id=asset.id if asset else None,
+            )
+        action = "reused" if existing_finding is not None else "created"
         finding = finding_repo.create_or_update_finding(
             project_id=project_id,
             vulnerability_id=vulnerability.id,
             cve_id=occurrence.cve,
+            dedup_key=dedup_key,
             component_id=component.id if component else None,
             asset_id=asset.id if asset else None,
             priority=FindingPriority.MEDIUM,
             priority_rank=99,
             operational_rank=index,
-            evidence_json={"import": dict(occurrence.raw_evidence)},
+            evidence_json={
+                "import": dict(occurrence.raw_evidence),
+                "dedup": {
+                    "key": dedup_key,
+                    "key_version": "vpw019-v1",
+                    "action": action,
+                    "parts": dedup_parts,
+                },
+            },
         )
+        if action == "created":
+            created_count += 1
+        else:
+            reused_count += 1
+        touched_finding_ids.add(str(finding.id))
         run_repo.add_finding_occurrence(
             finding_id=finding.id,
             analysis_run_id=run_id,
             source=occurrence.source,
             raw_reference=_string_evidence(occurrence.raw_evidence, "source_record_id"),
             fix_version=occurrence.fix_version,
-            evidence_json=dict(occurrence.raw_evidence),
+            evidence_json={
+                **dict(occurrence.raw_evidence),
+                "dedup_key": dedup_key,
+                "dedup_action": action,
+            },
         )
+        decisions.append(
+            {
+                "action": action,
+                "dedup_key": dedup_key,
+                "finding_id": str(finding.id),
+                "cve": occurrence.cve,
+                "source_id": dedup_parts["source_id"],
+                "component_identity": dedup_parts["component_identity"],
+                "asset_ref": dedup_parts["asset_ref"],
+            }
+        )
+
+    return {
+        "occurrence_count": len(occurrences),
+        "finding_count": len(touched_finding_ids),
+        "dedup_summary": {
+            "key_version": "vpw019-v1",
+            "created_findings": created_count,
+            "reused_findings": reused_count,
+            "decision_count": len(decisions),
+            "decisions": decisions,
+        },
+    }
+
+
+def _dedup_key_parts(project_id: uuid.UUID, occurrence: NormalizedOccurrence) -> dict[str, str]:
+    source_id = _normalized_identity_value(
+        _string_evidence(occurrence.raw_evidence, "source_id")
+        or _string_evidence(occurrence.raw_evidence, "vulnerability_id")
+        or occurrence.cve
+    )
+    purl = _normalized_identity_value(_string_evidence(occurrence.raw_evidence, "purl"))
+    component_identity = purl
+    if component_identity == "__none__" and occurrence.component:
+        component_identity = "|".join(
+            [
+                "component",
+                _normalized_identity_value(occurrence.component),
+                _normalized_identity_value(occurrence.version),
+                _normalized_identity_value(
+                    _string_evidence(occurrence.raw_evidence, "package_type")
+                ),
+            ]
+        )
+    return {
+        "project_id": str(project_id),
+        "source_id": source_id,
+        "component_identity": component_identity,
+        "asset_ref": _normalized_identity_value(occurrence.asset_ref),
+    }
+
+
+def _finding_dedup_key(parts: Mapping[str, str]) -> str:
+    material = json.dumps(parts, sort_keys=True, separators=(",", ":"))
+    return "vpw019:" + hashlib.sha256(material.encode("utf-8")).hexdigest()
+
+
+def _normalized_identity_value(value: str | None) -> str:
+    if value is None:
+        return "__none__"
+    normalized = value.strip()
+    return normalized or "__none__"
 
 
 def _store_upload(

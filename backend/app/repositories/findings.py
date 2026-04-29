@@ -96,6 +96,7 @@ class FindingRepository:
         project_id: uuid.UUID,
         vulnerability_id: uuid.UUID,
         cve_id: str,
+        dedup_key: str | None = None,
         priority: FindingPriority | str,
         component_id: uuid.UUID | None = None,
         asset_id: uuid.UUID | None = None,
@@ -111,19 +112,18 @@ class FindingRepository:
         evidence_json: dict[str, Any] | None = None,
     ) -> Finding:
         """Create or update a finding by project/vulnerability/component/asset identity."""
-        filters: list[Any] = [
-            Finding.project_id == project_id,
-            Finding.vulnerability_id == vulnerability_id,
-        ]
-        filters.append(
-            col(Finding.component_id).is_(None)
-            if component_id is None
-            else Finding.component_id == component_id
+        finding = (
+            self.get_project_finding_by_dedup_key(project_id=project_id, dedup_key=dedup_key)
+            if dedup_key is not None
+            else None
         )
-        filters.append(
-            col(Finding.asset_id).is_(None) if asset_id is None else Finding.asset_id == asset_id
-        )
-        finding = self.session.exec(select(Finding).where(*filters)).first()
+        if finding is None:
+            finding = self.get_project_finding_by_identity(
+                project_id=project_id,
+                vulnerability_id=vulnerability_id,
+                component_id=component_id,
+                asset_id=asset_id,
+            )
         if finding is None:
             finding = Finding(
                 project_id=project_id,
@@ -131,12 +131,15 @@ class FindingRepository:
                 component_id=component_id,
                 asset_id=asset_id,
                 cve_id=cve_id,
+                dedup_key=dedup_key or str(uuid.uuid4()),
                 status=FindingStatus(status),
                 priority=FindingPriority(priority),
                 priority_rank=priority_rank,
             )
             self.session.add(finding)
 
+        if dedup_key is not None:
+            finding.dedup_key = dedup_key
         finding.cve_id = cve_id
         finding.priority = FindingPriority(priority)
         finding.priority_rank = priority_rank
@@ -152,6 +155,42 @@ class FindingRepository:
         finding.last_seen_at = get_datetime_utc()
         self.session.flush()
         return finding
+
+    def get_project_finding_by_dedup_key(
+        self,
+        *,
+        project_id: uuid.UUID,
+        dedup_key: str,
+    ) -> Finding | None:
+        """Return a project finding by its stable import dedup key."""
+        statement = select(Finding).where(
+            Finding.project_id == project_id,
+            Finding.dedup_key == dedup_key,
+        )
+        return self.session.exec(statement).first()
+
+    def get_project_finding_by_identity(
+        self,
+        *,
+        project_id: uuid.UUID,
+        vulnerability_id: uuid.UUID,
+        component_id: uuid.UUID | None = None,
+        asset_id: uuid.UUID | None = None,
+    ) -> Finding | None:
+        """Return a finding by project/vulnerability/component/asset identity."""
+        filters: list[Any] = [
+            Finding.project_id == project_id,
+            Finding.vulnerability_id == vulnerability_id,
+        ]
+        filters.append(
+            col(Finding.component_id).is_(None)
+            if component_id is None
+            else Finding.component_id == component_id
+        )
+        filters.append(
+            col(Finding.asset_id).is_(None) if asset_id is None else Finding.asset_id == asset_id
+        )
+        return self.session.exec(select(Finding).where(*filters)).first()
 
     def get_finding(self, finding_id: uuid.UUID) -> Finding | None:
         """Return a finding by primary key."""

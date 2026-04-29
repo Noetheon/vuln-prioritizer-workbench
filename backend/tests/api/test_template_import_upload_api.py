@@ -6,12 +6,14 @@ from dataclasses import replace
 from pathlib import Path
 
 import pytest
-from sqlmodel import Session
+from sqlmodel import Session, select
 from utils.template_workbench import (
     TemplateApiEnv,
     auth_headers,
     create_project_via_api,
 )
+
+from app import models as app_models
 
 
 def test_valid_cve_list_upload_creates_analysis_run_and_stores_sha256(
@@ -38,6 +40,10 @@ def test_valid_cve_list_upload_creates_analysis_run_and_stores_sha256(
     assert payload["filename"] == "Team_Scan__prod_.txt"
     assert payload["status"] == "succeeded"
     assert payload["summary_json"]["input_sha256"] == expected_sha256
+    assert payload["summary_json"]["occurrence_count"] == 2
+    assert payload["summary_json"]["finding_count"] == 2
+    assert payload["summary_json"]["dedup_summary"]["created_findings"] == 2
+    assert payload["summary_json"]["dedup_summary"]["reused_findings"] == 0
     assert payload["summary_json"]["input_upload"]["sha256"] == expected_sha256
     assert payload["summary_json"]["input_upload"]["original_filename"] == "Team Scan (prod).txt"
     assert payload["summary_json"]["input_upload"]["stored_filename"] == "Team_Scan__prod_.txt"
@@ -66,6 +72,119 @@ def test_valid_cve_list_upload_creates_analysis_run_and_stores_sha256(
     )
     assert findings.status_code == 200
     assert findings.json()["count"] == 2
+
+
+def test_double_import_deduplicates_findings_and_appends_occurrences(
+    template_api_env: TemplateApiEnv,
+    tmp_path: Path,
+) -> None:
+    _configure_upload_dir(template_api_env, tmp_path)
+    headers = auth_headers(template_api_env.client)
+    project = create_project_via_api(template_api_env.client, headers)
+    project_id = uuid.UUID(project["id"])
+    content = "\n".join(
+        [
+            "cve_id,asset_ref,component,version,purl,severity",
+            "CVE-2024-3094,build-host-1,xz,5.6.0,pkg:apk/alpine/xz@5.6.0-r0,CRITICAL",
+            "CVE-2024-4577,web-tier,php-cgi,8.3.7,pkg:deb/debian/php-cgi@8.3.7,HIGH",
+            "",
+        ]
+    ).encode()
+
+    first = template_api_env.client.post(
+        f"/api/v1/projects/{project['id']}/imports",
+        headers=headers,
+        data={"input_type": "generic-occurrence-csv"},
+        files={"file": ("occurrences.csv", content, "text/csv")},
+    )
+    assert first.status_code == 200, first.text
+    first_payload = first.json()
+    assert first_payload["summary_json"]["dedup_summary"]["created_findings"] == 2
+    assert first_payload["summary_json"]["dedup_summary"]["reused_findings"] == 0
+    assert {
+        item["action"] for item in first_payload["summary_json"]["dedup_summary"]["decisions"]
+    } == {"created"}
+
+    first_findings, first_occurrence_count = _finding_state(template_api_env, project_id)
+    first_seen = {finding.cve_id: finding.first_seen_at for finding in first_findings}
+    first_last_seen = {finding.cve_id: finding.last_seen_at for finding in first_findings}
+    first_dedup_keys = {finding.cve_id: finding.dedup_key for finding in first_findings}
+
+    second = template_api_env.client.post(
+        f"/api/v1/projects/{project['id']}/imports",
+        headers=headers,
+        data={"input_type": "generic-occurrence-csv"},
+        files={"file": ("occurrences.csv", content, "text/csv")},
+    )
+    assert second.status_code == 200, second.text
+    second_payload = second.json()
+    dedup_summary = second_payload["summary_json"]["dedup_summary"]
+    assert second_payload["summary_json"]["occurrence_count"] == 2
+    assert second_payload["summary_json"]["finding_count"] == 2
+    assert dedup_summary["created_findings"] == 0
+    assert dedup_summary["reused_findings"] == 2
+    assert dedup_summary["decision_count"] == 2
+    assert {item["action"] for item in dedup_summary["decisions"]} == {"reused"}
+    assert all(item["dedup_key"].startswith("vpw019:") for item in dedup_summary["decisions"])
+    assert all(
+        item["asset_ref"] in {"build-host-1", "web-tier"} for item in dedup_summary["decisions"]
+    )
+
+    second_findings, second_occurrence_count = _finding_state(template_api_env, project_id)
+    assert len(first_findings) == 2
+    assert first_occurrence_count == 2
+    assert len(second_findings) == 2
+    assert second_occurrence_count == 4
+    assert {finding.cve_id: finding.first_seen_at for finding in second_findings} == first_seen
+    assert {finding.cve_id: finding.dedup_key for finding in second_findings} == first_dedup_keys
+    assert all(
+        finding.last_seen_at > first_last_seen[finding.cve_id] for finding in second_findings
+    )
+
+    findings = template_api_env.client.get(
+        f"/api/v1/projects/{project['id']}/findings/",
+        headers=headers,
+    )
+    assert findings.status_code == 200
+    assert findings.json()["count"] == 2
+
+
+def test_same_cve_on_different_assets_creates_distinct_findings(
+    template_api_env: TemplateApiEnv,
+    tmp_path: Path,
+) -> None:
+    _configure_upload_dir(template_api_env, tmp_path)
+    headers = auth_headers(template_api_env.client)
+    project = create_project_via_api(template_api_env.client, headers)
+    project_id = uuid.UUID(project["id"])
+    content = "\n".join(
+        [
+            "cve_id,asset_ref,component,version,purl,severity",
+            "CVE-2024-3094,build-host-1,xz,5.6.0,pkg:apk/alpine/xz@5.6.0-r0,CRITICAL",
+            "CVE-2024-3094,build-host-2,xz,5.6.0,pkg:apk/alpine/xz@5.6.0-r0,CRITICAL",
+            "",
+        ]
+    ).encode()
+
+    response = template_api_env.client.post(
+        f"/api/v1/projects/{project['id']}/imports",
+        headers=headers,
+        data={"input_type": "generic-occurrence-csv"},
+        files={"file": ("same-cve-assets.csv", content, "text/csv")},
+    )
+
+    assert response.status_code == 200, response.text
+    payload = response.json()
+    assert payload["summary_json"]["finding_count"] == 2
+    assert payload["summary_json"]["dedup_summary"]["created_findings"] == 2
+    assert {
+        item["asset_ref"] for item in payload["summary_json"]["dedup_summary"]["decisions"]
+    } == {"build-host-1", "build-host-2"}
+
+    findings, occurrence_count = _finding_state(template_api_env, project_id)
+    assert len(findings) == 2
+    assert occurrence_count == 2
+    assert len({finding.dedup_key for finding in findings}) == 2
 
 
 @pytest.mark.parametrize(
@@ -215,3 +334,25 @@ def _run_count(template_api_env: TemplateApiEnv, project_id: uuid.UUID) -> int:
         return len(
             template_api_env.repositories.RunRepository(session).list_analysis_runs(project_id)
         )
+
+
+def _finding_state(
+    template_api_env: TemplateApiEnv,
+    project_id: uuid.UUID,
+) -> tuple[list[app_models.Finding], int]:
+    with Session(template_api_env.engine) as session:
+        findings = list(
+            session.exec(
+                select(app_models.Finding)
+                .where(app_models.Finding.project_id == project_id)
+                .order_by(app_models.Finding.cve_id)
+            )
+        )
+        occurrence_count = len(
+            session.exec(
+                select(app_models.FindingOccurrence)
+                .join(app_models.Finding)
+                .where(app_models.Finding.project_id == project_id)
+            ).all()
+        )
+        return findings, occurrence_count

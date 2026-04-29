@@ -205,6 +205,7 @@ def test_core_workbench_dedup_constraints_and_indexes_exist(migrated_engine: Eng
         _has_unique_constraint_or_index(inspector, "component", ("name", "version", "ecosystem"))
     )
     assert _has_unique_constraint_or_index(inspector, "vulnerability", ("cve_id",))
+    assert _has_unique_constraint_or_index(inspector, "finding", ("project_id", "dedup_key"))
     assert _has_unique_constraint_or_index(
         inspector,
         "finding",
