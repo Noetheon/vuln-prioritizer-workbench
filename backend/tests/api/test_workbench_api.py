@@ -19,6 +19,9 @@ from vuln_prioritizer.db import (
     WorkbenchRepository,
     create_session_factory,
 )
+from vuln_prioritizer.providers.epss import EpssProvider
+from vuln_prioritizer.providers.kev import KevProvider
+from vuln_prioritizer.providers.nvd import NvdProvider
 from vuln_prioritizer.workbench_config import WorkbenchSettings
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -525,6 +528,39 @@ def test_workbench_import_findings_reports_and_evidence(tmp_path: Path) -> None:
     assert client.get(bundle_payload["download_url"]).status_code == 404
 
 
+def test_online_shop_demo_import_uses_demo_snapshot_without_network_or_keys(
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.delenv("NVD_API_KEY", raising=False)
+
+    def _fail_live_provider(*args, **kwargs):  # noqa: ANN002, ANN003
+        raise AssertionError("online-shop-demo must use locked provider snapshot replay")
+
+    monkeypatch.setattr(NvdProvider, "fetch_many", _fail_live_provider)
+    monkeypatch.setattr(EpssProvider, "fetch_many", _fail_live_provider)
+    monkeypatch.setattr(KevProvider, "fetch_many", _fail_live_provider)
+
+    client = _client(tmp_path)
+    project = _create_project(client)
+    run = _import_sample(client, project["id"])
+
+    assert run["status"] == "completed"
+    assert run["provider_snapshot_id"]
+    assert run["summary"]["findings_count"] == len(EXPECTED_SAMPLE_CVES)
+    assert run["summary"]["provider_snapshot_id"] == run["provider_snapshot_id"]
+
+    provider_status = client.get("/api/providers/status")
+    assert provider_status.status_code == 200
+    payload = provider_status.json()
+    assert payload["status"] == "ok"
+    assert payload["snapshot"]["selected_sources"] == ["nvd", "epss", "kev"]
+
+    snapshot_detail = client.get(f"/api/providers/snapshots/{run['provider_snapshot_id']}")
+    assert snapshot_detail.status_code == 200
+    assert snapshot_detail.json()["snapshot_format"] == "provider-snapshot.v1.json"
+
+
 def test_workbench_imports_provider_snapshot_artifact(tmp_path: Path) -> None:
     client = _client(tmp_path)
 
@@ -559,7 +595,17 @@ def test_workbench_imports_provider_snapshot_artifact(tmp_path: Path) -> None:
         files={
             "file": (
                 "legacy-provider-snapshot.json",
-                DEMO_PROVIDER_SNAPSHOT.read_bytes(),
+                json.dumps(
+                    {
+                        "items": [],
+                        "metadata": {
+                            "artifact_kind": "provider-snapshot",
+                            "generated_at": "2026-04-21T12:00:00+00:00",
+                            "schema_version": "1.2.0",
+                        },
+                        "warnings": [],
+                    }
+                ).encode("utf-8"),
                 "application/json",
             )
         },

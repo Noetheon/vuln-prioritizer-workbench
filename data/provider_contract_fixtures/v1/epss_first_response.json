@@ -1,0 +1,17 @@
+{
+  "access": "public",
+  "data": [
+    {
+      "cve": "CVE-2026-2001",
+      "date": "2026-04-21",
+      "epss": "0.73456",
+      "percentile": "0.98765"
+    }
+  ],
+  "limit": 100,
+  "offset": 0,
+  "status": "OK",
+  "status-code": 200,
+  "total": 1,
+  "version": "1.0"
+}
