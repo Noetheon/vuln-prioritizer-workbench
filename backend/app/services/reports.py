@@ -2,13 +2,16 @@
 
 from __future__ import annotations
 
+import csv
 import hashlib
 import html
+import json
 import re
 import uuid
 from collections import Counter
 from dataclasses import dataclass, field
 from datetime import datetime
+from io import StringIO
 from pathlib import Path
 from typing import Any
 
@@ -29,10 +32,18 @@ from app.repositories import ReportRepository
 
 REPORT_KIND_TECHNICAL_MARKDOWN = "technical-markdown"
 REPORT_KIND_EXECUTIVE_HTML = "executive-html"
+REPORT_KIND_ANALYSIS_JSON = "analysis-result-json"
+REPORT_KIND_FINDINGS_CSV = "findings-csv"
 REPORT_FILENAME_TECHNICAL_MARKDOWN = "technical-report.md"
 REPORT_FILENAME_EXECUTIVE_HTML = "executive-report.html"
+REPORT_FILENAME_ANALYSIS_JSON = "analysis-result.v1.json"
+REPORT_FILENAME_FINDINGS_CSV = "findings.csv"
 REPORT_CONTENT_TYPE_MARKDOWN = "text/markdown; charset=utf-8"
 REPORT_CONTENT_TYPE_HTML = "text/html; charset=utf-8"
+REPORT_CONTENT_TYPE_JSON = "application/json; charset=utf-8"
+REPORT_CONTENT_TYPE_CSV = "text/csv; charset=utf-8"
+ANALYSIS_RESULT_SCHEMA = "analysis-result.v1"
+ANALYSIS_RESULT_SCHEMA_VERSION = "1.0.0"
 REPORT_SUPPORTED_RUN_STATUSES = {
     AnalysisRunStatus.COMPLETED,
     AnalysisRunStatus.COMPLETED_WITH_ERRORS,
@@ -40,6 +51,36 @@ REPORT_SUPPORTED_RUN_STATUSES = {
 }
 PRIORITY_LABELS = ("Critical", "High", "Medium", "Low")
 MARKDOWN_SPECIAL_CHARS = "\\`*_{}[]()!"
+CSV_FINDINGS_COLUMNS = [
+    "cve_id",
+    "priority",
+    "status",
+    "kev",
+    "epss",
+    "cvss",
+    "data_quality_confidence",
+    "data_quality_flags",
+    "component",
+    "asset",
+    "owner",
+    "service",
+    "vex_statuses",
+    "suppressed_by_vex",
+    "under_investigation",
+    "waived",
+    "waiver_status",
+    "waiver_owner",
+    "waiver_expires_on",
+    "waiver_review_on",
+    "attack_mapped",
+    "attack_techniques",
+    "defensive_context_sources",
+    "decision_template",
+    "decision_sla",
+    "decision_statement",
+    "business_impact",
+    "recommended_action",
+]
 EXECUTIVE_REPORT_CSS = """
 :root {
   color-scheme: light;
@@ -269,6 +310,7 @@ class MarkdownProviderSnapshot:
     nvd_last_sync: str | None
     epss_date: str | None
     kev_catalog_version: str | None
+    created_at: str | None = None
     source_hashes: dict[str, Any] = field(default_factory=dict)
     source_metadata: dict[str, Any] = field(default_factory=dict)
 
@@ -290,10 +332,33 @@ class MarkdownReportFinding:
     rationale: str | None
     recommended_action: str | None
     data_quality_confidence: str | None
+    id: str | None = None
+    dedup_key: str | None = None
+    priority_rank: int | None = None
+    asset_key: str | None = None
+    owner: str | None = None
+    business_service: str | None = None
+    environment: str | None = None
+    exposure: str | None = None
+    criticality: str | None = None
+    component_purl: str | None = None
+    attack_mapped: bool = False
+    suppressed_by_vex: bool = False
+    under_investigation: bool = False
+    waived: bool = False
     decision_statement: str | None = None
     business_impact: str | None = None
     decision_sla: str | None = None
     data_quality_flags: list[str] = field(default_factory=list)
+    vulnerability: dict[str, Any] = field(default_factory=dict)
+    explanation: dict[str, Any] = field(default_factory=dict)
+    data_quality: dict[str, Any] = field(default_factory=dict)
+    evidence: dict[str, Any] = field(default_factory=dict)
+    occurrences: list[dict[str, Any]] = field(default_factory=list)
+    first_seen_at: datetime | None = None
+    last_seen_at: datetime | None = None
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -310,6 +375,14 @@ class MarkdownReportPayload:
     summary: dict[str, Any]
     findings: list[MarkdownReportFinding]
     provider_snapshot: MarkdownProviderSnapshot | None
+    project_description: str | None = None
+    project_owner_id: str | None = None
+    project_created_at: datetime | None = None
+    project_updated_at: datetime | None = None
+    run_started_at: datetime | None = None
+    run_finished_at: datetime | None = None
+    run_error: str | None = None
+    run_errors: dict[str, Any] = field(default_factory=dict)
 
 
 class ReportService:
@@ -353,6 +426,40 @@ class ReportService:
             content_type=REPORT_CONTENT_TYPE_HTML,
         )
 
+    def create_analysis_json_export(self, *, run: AnalysisRun, project: Project) -> Report:
+        """Generate a stable analysis-result.v1 JSON export and persist its metadata."""
+        payload, findings, generated_at = self._report_payload(run=run, project=project)
+        content = render_analysis_result_json(payload)
+        return self._persist_report(
+            run=run,
+            project=project,
+            generated_at=generated_at,
+            finding_count=len(findings),
+            provider_snapshot_id=run.provider_snapshot_id,
+            content=content,
+            kind=REPORT_KIND_ANALYSIS_JSON,
+            report_format="json",
+            filename=REPORT_FILENAME_ANALYSIS_JSON,
+            content_type=REPORT_CONTENT_TYPE_JSON,
+        )
+
+    def create_findings_csv_export(self, *, run: AnalysisRun, project: Project) -> Report:
+        """Generate a stable findings CSV export and persist its metadata."""
+        payload, findings, generated_at = self._report_payload(run=run, project=project)
+        content = render_findings_csv(payload)
+        return self._persist_report(
+            run=run,
+            project=project,
+            generated_at=generated_at,
+            finding_count=len(findings),
+            provider_snapshot_id=run.provider_snapshot_id,
+            content=content,
+            kind=REPORT_KIND_FINDINGS_CSV,
+            report_format="csv",
+            filename=REPORT_FILENAME_FINDINGS_CSV,
+            content_type=REPORT_CONTENT_TYPE_CSV,
+        )
+
     def _report_payload(
         self,
         *,
@@ -366,6 +473,7 @@ class ReportService:
 
         generated_at = get_datetime_utc()
         findings = self._run_findings(run)
+        run_occurrences = self._run_occurrences_by_finding(run)
         payload = MarkdownReportPayload(
             generated_at=generated_at,
             project_id=str(project.id),
@@ -375,8 +483,22 @@ class ReportService:
             input_type=run.input_type,
             filename=run.filename,
             summary=dict(run.summary_json or {}),
-            findings=[_finding_payload(finding) for finding in findings],
+            findings=[
+                _finding_payload(
+                    finding,
+                    occurrences=run_occurrences.get(finding.id, []),
+                )
+                for finding in findings
+            ],
             provider_snapshot=_provider_snapshot_payload(run.provider_snapshot),
+            project_description=project.description,
+            project_owner_id=str(project.owner_id),
+            project_created_at=project.created_at,
+            project_updated_at=project.updated_at,
+            run_started_at=run.started_at,
+            run_finished_at=run.finished_at,
+            run_error=run.error_message,
+            run_errors=dict(run.error_json or {}),
         )
         return payload, findings, generated_at
 
@@ -445,6 +567,20 @@ class ReportService:
             findings.append(finding)
             seen_ids.add(finding.id)
         return findings
+
+    def _run_occurrences_by_finding(
+        self,
+        run: AnalysisRun,
+    ) -> dict[uuid.UUID, list[FindingOccurrence]]:
+        statement = (
+            select(FindingOccurrence)
+            .where(FindingOccurrence.analysis_run_id == run.id)
+            .order_by(col(FindingOccurrence.id))
+        )
+        occurrences: dict[uuid.UUID, list[FindingOccurrence]] = {}
+        for occurrence in self.session.exec(statement).all():
+            occurrences.setdefault(occurrence.finding_id, []).append(occurrence)
+        return occurrences
 
     def _report_path(
         self,
@@ -617,6 +753,113 @@ def render_markdown_report(payload: MarkdownReportPayload) -> str:
                 )
 
     return "\n".join(lines).rstrip() + "\n"
+
+
+def render_analysis_result_json(payload: MarkdownReportPayload) -> str:
+    """Render the stable machine-readable analysis-result.v1 JSON export."""
+    result = {
+        "schema": ANALYSIS_RESULT_SCHEMA,
+        "schema_version": ANALYSIS_RESULT_SCHEMA_VERSION,
+        "generated_at": _iso_datetime(payload.generated_at),
+        "project": {
+            "id": payload.project_id,
+            "name": payload.project_name,
+            "description": payload.project_description,
+            "owner_id": payload.project_owner_id,
+            "created_at": _iso_datetime(payload.project_created_at)
+            if payload.project_created_at
+            else None,
+            "updated_at": _iso_datetime(payload.project_updated_at)
+            if payload.project_updated_at
+            else None,
+        },
+        "analysis_run": {
+            "id": payload.run_id,
+            "project_id": payload.project_id,
+            "status": payload.run_status,
+            "input_type": payload.input_type,
+            "filename": payload.filename,
+            "started_at": _iso_datetime(payload.run_started_at) if payload.run_started_at else None,
+            "finished_at": _iso_datetime(payload.run_finished_at)
+            if payload.run_finished_at
+            else None,
+            "error_message": payload.run_error,
+            "errors": payload.run_errors,
+            "summary": payload.summary,
+        },
+        "provider_snapshot": _analysis_provider_snapshot(payload.provider_snapshot),
+        "findings": [_analysis_finding(finding) for finding in payload.findings],
+        "explanations": {
+            finding.cve_id: finding.explanation
+            for finding in payload.findings
+            if finding.explanation
+        },
+    }
+    return json.dumps(result, indent=2, sort_keys=True) + "\n"
+
+
+def render_findings_csv(payload: MarkdownReportPayload) -> str:
+    """Render a spreadsheet-safe findings CSV export."""
+    output = StringIO()
+    writer = csv.DictWriter(output, fieldnames=CSV_FINDINGS_COLUMNS, lineterminator="\n")
+    writer.writeheader()
+    for finding in payload.findings:
+        writer.writerow(
+            {
+                "cve_id": _csv_safe_cell(finding.cve_id),
+                "priority": _csv_safe_cell(_priority_label(finding.priority)),
+                "status": _csv_safe_cell(finding.status),
+                "kev": "yes" if finding.in_kev else "no",
+                "epss": _csv_safe_cell(_format_number(finding.epss)),
+                "cvss": _csv_safe_cell(_format_number(finding.cvss_base_score)),
+                "data_quality_confidence": _csv_safe_cell(
+                    finding.data_quality_confidence or "unknown"
+                ),
+                "data_quality_flags": _csv_safe_cell(";".join(finding.data_quality_flags)),
+                "component": _csv_safe_cell(finding.component),
+                "asset": _csv_safe_cell(finding.asset_key or finding.asset),
+                "owner": _csv_safe_cell(finding.owner),
+                "service": _csv_safe_cell(finding.business_service),
+                "vex_statuses": _csv_safe_cell(_vex_statuses_label(finding)),
+                "suppressed_by_vex": "yes"
+                if _boolish_signal(finding, "suppressed_by_vex")
+                else "no",
+                "under_investigation": (
+                    "yes" if _boolish_signal(finding, "under_investigation") else "no"
+                ),
+                "waived": "yes" if _boolish_signal(finding, "waived") else "no",
+                "waiver_status": _csv_safe_cell(finding.explanation.get("waiver_status")),
+                "waiver_owner": _csv_safe_cell(finding.explanation.get("waiver_owner")),
+                "waiver_expires_on": _csv_safe_cell(finding.explanation.get("waiver_expires_on")),
+                "waiver_review_on": _csv_safe_cell(finding.explanation.get("waiver_review_on")),
+                "attack_mapped": "yes" if _boolish_signal(finding, "attack_mapped") else "no",
+                "attack_techniques": _csv_safe_cell(
+                    ";".join(
+                        str(item) for item in _list_value(finding.explanation, "attack_techniques")
+                    )
+                ),
+                "defensive_context_sources": _csv_safe_cell(
+                    ";".join(
+                        sorted(
+                            {
+                                str(item.get("source")).upper()
+                                for item in _list_value(finding.explanation, "defensive_contexts")
+                                if isinstance(item, dict) and item.get("source")
+                            }
+                        )
+                    )
+                ),
+                "decision_template": _csv_safe_cell(
+                    _decision_guidance_from_payload(finding).get("template_label")
+                    or _decision_guidance_from_payload(finding).get("template")
+                ),
+                "decision_sla": _csv_safe_cell(finding.decision_sla),
+                "decision_statement": _csv_safe_cell(finding.decision_statement),
+                "business_impact": _csv_safe_cell(finding.business_impact),
+                "recommended_action": _csv_safe_cell(finding.recommended_action),
+            }
+        )
+    return output.getvalue()
 
 
 def render_html_executive_report(payload: MarkdownReportPayload) -> str:
@@ -845,21 +1088,114 @@ def _decision_statement(finding: MarkdownReportFinding) -> str:
     return finding.decision_statement or finding.recommended_action or "Review and assign an owner."
 
 
-def _finding_payload(finding: Finding) -> MarkdownReportFinding:
+def _analysis_provider_snapshot(snapshot: MarkdownProviderSnapshot | None) -> dict[str, Any] | None:
+    if snapshot is None:
+        return None
+    return {
+        "id": snapshot.id,
+        "created_at": snapshot.created_at,
+        "content_hash": snapshot.content_hash,
+        "nvd_last_sync": snapshot.nvd_last_sync,
+        "epss_date": snapshot.epss_date,
+        "kev_catalog_version": snapshot.kev_catalog_version,
+        "source_hashes": snapshot.source_hashes,
+        "source_metadata": snapshot.source_metadata,
+    }
+
+
+def _analysis_finding(finding: MarkdownReportFinding) -> dict[str, Any]:
+    return {
+        "id": finding.id,
+        "cve_id": finding.cve_id,
+        "status": finding.status,
+        "priority": _priority_label(finding.priority),
+        "priority_raw": finding.priority,
+        "priority_rank": finding.priority_rank,
+        "operational_rank": finding.operational_rank,
+        "dedup_key": finding.dedup_key,
+        "risk_score": finding.risk_score,
+        "epss": finding.epss,
+        "cvss_base_score": finding.cvss_base_score,
+        "in_kev": finding.in_kev,
+        "attack_mapped": _boolish_signal(finding, "attack_mapped"),
+        "suppressed_by_vex": _boolish_signal(finding, "suppressed_by_vex"),
+        "under_investigation": _boolish_signal(finding, "under_investigation"),
+        "waived": _boolish_signal(finding, "waived"),
+        "asset": {
+            "label": finding.asset,
+            "asset_key": finding.asset_key,
+            "owner": finding.owner,
+            "business_service": finding.business_service,
+            "environment": finding.environment,
+            "exposure": finding.exposure,
+            "criticality": finding.criticality,
+        },
+        "component": {
+            "label": finding.component,
+            "purl": finding.component_purl,
+        },
+        "vulnerability": finding.vulnerability,
+        "recommendation": {
+            "rationale": finding.rationale,
+            "recommended_action": finding.recommended_action,
+            "decision_guidance": _decision_guidance_from_payload(finding),
+            "decision_statement": finding.decision_statement,
+            "decision_sla": finding.decision_sla,
+            "business_impact": finding.business_impact,
+        },
+        "data_quality": {
+            "confidence": finding.data_quality_confidence,
+            "flags": finding.data_quality_flags,
+            "raw": finding.data_quality,
+        },
+        "explanation": finding.explanation,
+        "evidence": finding.evidence,
+        "occurrences": finding.occurrences,
+        "first_seen_at": _iso_datetime(finding.first_seen_at) if finding.first_seen_at else None,
+        "last_seen_at": _iso_datetime(finding.last_seen_at) if finding.last_seen_at else None,
+        "created_at": _iso_datetime(finding.created_at) if finding.created_at else None,
+        "updated_at": _iso_datetime(finding.updated_at) if finding.updated_at else None,
+    }
+
+
+def _finding_payload(
+    finding: Finding,
+    *,
+    occurrences: list[FindingOccurrence],
+) -> MarkdownReportFinding:
     decision_guidance = _decision_guidance(finding)
     return MarkdownReportFinding(
+        id=str(finding.id),
+        dedup_key=finding.dedup_key,
         operational_rank=finding.operational_rank,
         cve_id=finding.cve_id,
         priority=str(finding.priority),
         status=str(finding.status),
+        priority_rank=finding.priority_rank,
         risk_score=finding.risk_score,
         epss=finding.epss,
         cvss_base_score=finding.cvss_base_score,
         in_kev=finding.in_kev,
         asset=_asset_label(finding),
+        asset_key=finding.asset.asset_key if finding.asset is not None else None,
+        owner=finding.asset.owner if finding.asset is not None else None,
+        business_service=finding.asset.business_service if finding.asset is not None else None,
+        environment=str(finding.asset.environment) if finding.asset is not None else None,
+        exposure=str(finding.asset.exposure) if finding.asset is not None else None,
+        criticality=str(finding.asset.criticality) if finding.asset is not None else None,
         component=_component_label(finding),
+        component_purl=finding.component.purl if finding.component is not None else None,
+        attack_mapped=finding.attack_mapped,
+        suppressed_by_vex=finding.suppressed_by_vex,
+        under_investigation=finding.under_investigation,
+        waived=finding.waived,
+        vulnerability=_vulnerability_payload(finding),
         rationale=finding.rationale,
         recommended_action=finding.recommended_action,
+        explanation=_dict_value(finding.explanation_json),
+        data_quality=_dict_value(finding.data_quality_json),
+        evidence=_dict_value(finding.evidence_json),
+        occurrences=[_occurrence_payload(occurrence) for occurrence in occurrences],
         data_quality_confidence=_data_quality_confidence(finding),
         decision_statement=_decision_text(
             decision_guidance,
@@ -869,6 +1205,10 @@ def _finding_payload(finding: Finding) -> MarkdownReportFinding:
         business_impact=_decision_text(decision_guidance, "business_impact"),
         decision_sla=_decision_sla(decision_guidance),
         data_quality_flags=_data_quality_flags(finding),
+        first_seen_at=finding.first_seen_at,
+        last_seen_at=finding.last_seen_at,
+        created_at=finding.created_at,
+        updated_at=finding.updated_at,
     )
 
 
@@ -883,6 +1223,7 @@ def _provider_snapshot_payload(
         nvd_last_sync=snapshot.nvd_last_sync,
         epss_date=snapshot.epss_date,
         kev_catalog_version=snapshot.kev_catalog_version,
+        created_at=_iso_datetime(snapshot.created_at),
         source_hashes=dict(snapshot.source_hashes_json or {}),
         source_metadata=dict(snapshot.source_metadata_json or {}),
     )
@@ -902,6 +1243,38 @@ def _component_label(finding: Finding) -> str | None:
     return finding.component.name
 
 
+def _vulnerability_payload(finding: Finding) -> dict[str, Any]:
+    vulnerability = finding.vulnerability
+    if vulnerability is None:
+        return {}
+    return {
+        "id": str(vulnerability.id),
+        "source_id": vulnerability.source_id,
+        "title": vulnerability.title,
+        "description": vulnerability.description,
+        "cvss_score": vulnerability.cvss_score,
+        "cvss_vector": vulnerability.cvss_vector,
+        "severity": vulnerability.severity,
+        "cwe": vulnerability.cwe,
+        "published_at": vulnerability.published_at,
+        "modified_at": vulnerability.modified_at,
+        "provider": dict(vulnerability.provider_json or {}),
+    }
+
+
+def _occurrence_payload(occurrence: FindingOccurrence) -> dict[str, Any]:
+    evidence = _dict_value(occurrence.evidence_json)
+    return {
+        "id": str(occurrence.id),
+        "analysis_run_id": str(occurrence.analysis_run_id),
+        "source": occurrence.source,
+        "scanner": occurrence.scanner,
+        "raw_reference": occurrence.raw_reference,
+        "fix_version": occurrence.fix_version,
+        "evidence": evidence,
+    }
+
+
 def _data_quality_confidence(finding: Finding) -> str | None:
     explanation_json = _dict_value(finding.explanation_json)
     data_quality_json = _dict_value(finding.data_quality_json)
@@ -914,7 +1287,11 @@ def _data_quality_flags(finding: Finding) -> list[str]:
     data_quality_json = _dict_value(finding.data_quality_json)
     flags = _flag_items(explanation_json.get("data_quality_flags"))
     flags.extend(_flag_items(data_quality_json.get("flags")))
-    return flags
+    deduped: list[str] = []
+    for flag in flags:
+        if flag not in deduped:
+            deduped.append(flag)
+    return deduped
 
 
 def _decision_guidance(finding: Finding) -> dict[str, Any]:
@@ -1017,6 +1394,42 @@ def _safe_html(value: object | None) -> str:
     if not text:
         return "N/A"
     return html.escape(re.sub(r"\s+", " ", text), quote=True)
+
+
+def _csv_safe_cell(value: object | None) -> str:
+    text = "" if value is None else str(value)
+    if text.startswith(("\t", "\r", "\n")) or text.lstrip().startswith(("=", "+", "-", "@")):
+        return "'" + text
+    return text
+
+
+def _decision_guidance_from_payload(finding: MarkdownReportFinding) -> dict[str, Any]:
+    value = finding.explanation.get("decision_guidance")
+    return dict(value) if isinstance(value, dict) else {}
+
+
+def _boolish_signal(finding: MarkdownReportFinding, key: str) -> bool:
+    if hasattr(finding, key):
+        return bool(getattr(finding, key))
+    if key == "attack_mapped":
+        value: Any = finding.explanation.get(key, False)
+        if value is False:
+            value = finding.evidence.get(key, False)
+    else:
+        value = finding.explanation.get(key, False)
+    return bool(value)
+
+
+def _list_value(mapping: dict[str, Any], key: str) -> list[Any]:
+    value = mapping.get(key)
+    return value if isinstance(value, list) else []
+
+
+def _vex_statuses_label(finding: MarkdownReportFinding) -> str:
+    statuses = finding.explanation.get("vex_statuses")
+    if isinstance(statuses, dict):
+        return ";".join(f"{status}:{count}" for status, count in sorted(statuses.items()))
+    return ""
 
 
 def _format_number(value: float | None) -> str:

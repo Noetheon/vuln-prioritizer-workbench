@@ -1,12 +1,17 @@
 from __future__ import annotations
 
+import csv
 import hashlib
+import json
 import uuid
 from dataclasses import replace
 from datetime import UTC, datetime
+from io import StringIO
 from pathlib import Path
 from typing import Any
 
+import jsonschema
+import pytest
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 from utils.template_workbench import (
@@ -27,9 +32,42 @@ from app.services import (
     MarkdownProviderSnapshot,
     MarkdownReportFinding,
     MarkdownReportPayload,
+    render_analysis_result_json,
+    render_findings_csv,
     render_html_executive_report,
     render_markdown_report,
 )
+
+CSV_FINDINGS_COLUMNS = [
+    "cve_id",
+    "priority",
+    "status",
+    "kev",
+    "epss",
+    "cvss",
+    "data_quality_confidence",
+    "data_quality_flags",
+    "component",
+    "asset",
+    "owner",
+    "service",
+    "vex_statuses",
+    "suppressed_by_vex",
+    "under_investigation",
+    "waived",
+    "waiver_status",
+    "waiver_owner",
+    "waiver_expires_on",
+    "waiver_review_on",
+    "attack_mapped",
+    "attack_techniques",
+    "defensive_context_sources",
+    "decision_template",
+    "decision_sla",
+    "decision_statement",
+    "business_impact",
+    "recommended_action",
+]
 
 
 def test_vpw049_openapi_exposes_report_format_contract() -> None:
@@ -45,6 +83,8 @@ def test_vpw049_openapi_exposes_report_format_contract() -> None:
     assert payload["components"]["schemas"]["ReportCreate"]["properties"]["format"]["enum"] == [
         "markdown",
         "html",
+        "json",
+        "csv",
     ]
 
 
@@ -158,6 +198,189 @@ def test_vpw049_html_report_create_downloads_executive_report(
     assert 'href="javascript:' not in body.lower()
     assert "&lt;script&gt;alert(1)&lt;/script&gt;" in body
     assert "&lt;img src=x onerror=alert(1)&gt;" in body
+
+
+def test_vpw050_analysis_json_export_create_downloads_schema_valid_result(
+    template_api_env: TemplateApiEnv,
+    tmp_path: Path,
+) -> None:
+    report_dir = _configure_report_dir(template_api_env, tmp_path)
+    headers = auth_headers(template_api_env.client)
+    project = create_project_via_api(template_api_env.client, headers)
+    run_id = _seed_reportable_run(template_api_env, uuid.UUID(project["id"]))
+
+    response = template_api_env.client.post(
+        f"/api/v1/runs/{run_id}/reports",
+        headers=headers,
+        json={"format": "json"},
+    )
+
+    assert response.status_code == 200, response.text
+    payload = response.json()
+    assert payload["format"] == "json"
+    assert payload["kind"] == "analysis-result-json"
+    assert payload["filename"] == "analysis-result.v1.json"
+    assert payload["content_type"] == "application/json; charset=utf-8"
+    assert payload["metadata_json"]["finding_count"] == 2
+
+    with Session(template_api_env.engine) as session:
+        report = session.get(template_api_env.app_models.Report, uuid.UUID(payload["id"]))
+        assert report is not None
+        assert Path(report.path).resolve(strict=True).is_relative_to(report_dir)
+        assert report.path.endswith("analysis-result.v1.json")
+
+    download = template_api_env.client.get(payload["download_url"], headers=headers)
+
+    assert download.status_code == 200
+    assert download.headers["cache-control"] == "no-store"
+    assert download.headers["x-content-type-options"] == "nosniff"
+    assert "analysis-result.v1.json" in download.headers["content-disposition"]
+    assert download.headers["content-type"].startswith("application/json")
+    assert hashlib.sha256(download.content).hexdigest() == payload["sha256"]
+
+    body = download.json()
+    jsonschema.validate(body, _load_schema("analysis-result.v1.schema.json"))
+    assert body["schema"] == "analysis-result.v1"
+    assert body["schema_version"] == "1.0.0"
+    assert body["project"]["id"] == project["id"]
+    assert body["analysis_run"]["id"] == str(run_id)
+    assert body["provider_snapshot"]["content_hash"] == "sha256:vpw048-snapshot"
+    assert [finding["cve_id"] for finding in body["findings"]] == [
+        DEMO_CVE_XZ,
+        DEMO_CVE_LOG4SHELL,
+    ]
+    first = body["findings"][0]
+    assert first["recommendation"]["decision_statement"].startswith("Decision Statement:")
+    assert first["data_quality"]["raw"]["confidence"] == "high"
+    assert first["explanation"]["decision_guidance"]["sla"]["target_hours"] == 24
+    assert first["occurrences"][0]["analysis_run_id"] == str(run_id)
+    assert set(body["explanations"]) == {DEMO_CVE_XZ, DEMO_CVE_LOG4SHELL}
+
+
+def test_vpw050_findings_csv_export_create_downloads_stable_columns(
+    template_api_env: TemplateApiEnv,
+    tmp_path: Path,
+) -> None:
+    _configure_report_dir(template_api_env, tmp_path)
+    headers = auth_headers(template_api_env.client)
+    project = create_project_via_api(template_api_env.client, headers)
+    run_id = _seed_reportable_run(template_api_env, uuid.UUID(project["id"]))
+
+    response = template_api_env.client.post(
+        f"/api/v1/runs/{run_id}/reports",
+        headers=headers,
+        json={"format": "csv"},
+    )
+
+    assert response.status_code == 200, response.text
+    payload = response.json()
+    assert payload["format"] == "csv"
+    assert payload["kind"] == "findings-csv"
+    assert payload["filename"] == "findings.csv"
+    assert payload["content_type"] == "text/csv; charset=utf-8"
+
+    download = template_api_env.client.get(payload["download_url"], headers=headers)
+
+    assert download.status_code == 200
+    assert download.headers["cache-control"] == "no-store"
+    assert download.headers["x-content-type-options"] == "nosniff"
+    assert "findings.csv" in download.headers["content-disposition"]
+    assert download.headers["content-type"].startswith("text/csv")
+    assert hashlib.sha256(download.content).hexdigest() == payload["sha256"]
+
+    reader = csv.DictReader(StringIO(download.text))
+    assert reader.fieldnames == CSV_FINDINGS_COLUMNS
+    rows = list(reader)
+    assert [row["cve_id"] for row in rows] == [DEMO_CVE_XZ, DEMO_CVE_LOG4SHELL]
+    assert rows[0]["priority"] == "Critical"
+    assert rows[0]["kev"] == "no"
+    assert rows[0]["epss"] == "0.846"
+    assert rows[0]["cvss"] == "10"
+    assert rows[0]["asset"] == "payments-api"
+    assert rows[0]["decision_sla"] == "Emergency / 24h"
+    assert rows[0]["decision_statement"].startswith("Decision Statement:")
+    assert rows[1]["data_quality_flags"] == "missing_asset_owner - Owner missing <img>"
+
+
+def test_vpw050_csv_export_escapes_spreadsheet_formula_cells(
+    template_api_env: TemplateApiEnv,
+    tmp_path: Path,
+) -> None:
+    _configure_report_dir(template_api_env, tmp_path)
+    headers = auth_headers(template_api_env.client)
+    project = create_project_via_api(template_api_env.client, headers)
+    run_id = _seed_formula_run(template_api_env, uuid.UUID(project["id"]))
+
+    created = template_api_env.client.post(
+        f"/api/v1/runs/{run_id}/reports",
+        headers=headers,
+        json={"format": "csv"},
+    )
+
+    assert created.status_code == 200, created.text
+    csv_report = template_api_env.client.get(created.json()["download_url"], headers=headers)
+    assert csv_report.status_code == 200
+    text = csv_report.text
+    assert "'=HYPERLINK" in text
+    assert ",'=asset-key," in text
+    assert ",'+owner," in text
+    assert ",'@service," in text
+    assert "'\tformula_flag - flag" in text
+    assert "'-Patch now" in text
+    assert ",=asset-key," not in text
+    assert ",+owner," not in text
+    assert ",@service," not in text
+
+
+def test_vpw050_analysis_schema_rejects_contract_drift() -> None:
+    schema = _load_schema("analysis-result.v1.schema.json")
+    jsonschema.Draft202012Validator.check_schema(schema)
+    valid = json.loads(
+        (_repo_root() / "docs" / "evidence" / "vpw-050-analysis-result.v1.json").read_text(
+            encoding="utf-8"
+        )
+    )
+
+    jsonschema.validate(valid, schema)
+
+    missing_required = dict(valid)
+    missing_required.pop("findings")
+    with pytest.raises(jsonschema.ValidationError):
+        jsonschema.validate(missing_required, schema)
+
+    unexpected_top_level = dict(valid)
+    unexpected_top_level["unexpected_top_level"] = True
+    with pytest.raises(jsonschema.ValidationError):
+        jsonschema.validate(unexpected_top_level, schema)
+
+    malformed_finding = json.loads(json.dumps(valid))
+    malformed_finding["findings"][0].pop("recommendation")
+    with pytest.raises(jsonschema.ValidationError):
+        jsonschema.validate(malformed_finding, schema)
+
+
+def test_vpw050_committed_evidence_artifacts_are_contract_valid() -> None:
+    evidence_dir = _repo_root() / "docs" / "evidence"
+    schema = _load_schema("analysis-result.v1.schema.json")
+    analysis_json = json.loads(
+        (evidence_dir / "vpw-050-analysis-result.v1.json").read_text(encoding="utf-8")
+    )
+
+    jsonschema.validate(analysis_json, schema)
+    assert analysis_json["schema"] == "analysis-result.v1"
+    assert analysis_json["analysis_run"]["id"] == "00000000-0000-4000-8000-000000000050"
+    assert [finding["cve_id"] for finding in analysis_json["findings"]] == [
+        DEMO_CVE_XZ,
+        DEMO_CVE_LOG4SHELL,
+    ]
+
+    findings_csv = (evidence_dir / "vpw-050-findings.csv").read_text(encoding="utf-8")
+    reader = csv.DictReader(StringIO(findings_csv))
+    assert reader.fieldnames == CSV_FINDINGS_COLUMNS
+    rows = list(reader)
+    assert [row["cve_id"] for row in rows] == [DEMO_CVE_XZ, DEMO_CVE_LOG4SHELL]
+    assert rows[0]["decision_sla"] == "Emergency / 24h"
+    assert rows[1]["attack_techniques"] == "T1190"
 
 
 def test_vpw048_report_auth_project_visibility_and_invalid_run_state(
@@ -391,6 +614,22 @@ def test_vpw049_html_report_snapshot_is_stable() -> None:
     assert render_html_executive_report(payload) == snapshot_path.read_text(encoding="utf-8")
 
 
+def test_vpw050_analysis_json_export_snapshot_is_stable() -> None:
+    payload = _vpw050_snapshot_payload()
+    snapshot_path = (
+        Path(__file__).resolve().parent / "snapshots" / "vpw_050_analysis_result.v1.json"
+    )
+
+    assert render_analysis_result_json(payload) == snapshot_path.read_text(encoding="utf-8")
+
+
+def test_vpw050_findings_csv_export_snapshot_is_stable() -> None:
+    payload = _vpw050_snapshot_payload()
+    snapshot_path = Path(__file__).resolve().parent / "snapshots" / "vpw_050_findings.csv"
+
+    assert render_findings_csv(payload) == snapshot_path.read_text(encoding="utf-8")
+
+
 def _configure_report_dir(template_api_env: TemplateApiEnv, tmp_path: Path) -> Path:
     report_dir = (tmp_path / "template-reports").resolve(strict=False)
     active_settings = template_api_env.client.app.state.template_settings
@@ -399,6 +638,164 @@ def _configure_report_dir(template_api_env: TemplateApiEnv, tmp_path: Path) -> P
         REPORT_DIR=str(report_dir),
     )
     return report_dir
+
+
+def _repo_root() -> Path:
+    return Path(__file__).resolve().parents[3]
+
+
+def _load_schema(filename: str) -> dict[str, Any]:
+    schema_path = _repo_root() / "docs" / "schemas" / filename
+    return json.loads(schema_path.read_text(encoding="utf-8"))
+
+
+def _vpw050_snapshot_payload() -> MarkdownReportPayload:
+    return MarkdownReportPayload(
+        generated_at=datetime(2026, 4, 29, 12, 0, tzinfo=UTC),
+        project_id="00000000-0000-4000-8000-000000000156",
+        project_name="VPW-050 Snapshot",
+        run_id="00000000-0000-4000-8000-000000000050",
+        run_status="completed",
+        input_type="cve-list",
+        filename="known-cves.txt",
+        summary={"finding_count": 2, "counts_by_priority": {"Critical": 1, "High": 1}},
+        findings=[
+            MarkdownReportFinding(
+                id="00000000-0000-4000-8000-000000000501",
+                dedup_key="vpw050-xz",
+                operational_rank=1,
+                cve_id=DEMO_CVE_XZ,
+                priority="critical",
+                priority_rank=1,
+                status="open",
+                risk_score=100.0,
+                epss=0.846,
+                cvss_base_score=10.0,
+                in_kev=False,
+                attack_mapped=False,
+                asset="Payments API",
+                asset_key="payments-api",
+                owner="platform-team",
+                business_service="checkout",
+                environment="prod",
+                exposure="internet-facing",
+                criticality="critical",
+                component="xz 5.6.0-r0",
+                component_purl="pkg:apk/alpine/xz@5.6.0-r0",
+                vulnerability={"severity": "CRITICAL", "provider": {"nvd": "locked"}},
+                rationale="Internet-facing production asset with critical score.",
+                recommended_action="Patch [open](javascript:alert(1)) now.",
+                data_quality_confidence="high",
+                decision_statement=(
+                    "Decision Statement: patch CVE-2024-3094 on Payments API "
+                    "within the emergency SLA."
+                ),
+                business_impact="Checkout traffic depends on the affected service.",
+                decision_sla="Emergency / 24h",
+                explanation={
+                    "decision_guidance": {
+                        "template_label": "Patch",
+                        "decision_statement": (
+                            "Decision Statement: patch CVE-2024-3094 on Payments API "
+                            "within the emergency SLA."
+                        ),
+                    }
+                },
+                data_quality={"confidence": "high", "flags": []},
+                evidence={"source": "snapshot"},
+                occurrences=[
+                    {
+                        "id": "00000000-0000-4000-8000-000000000601",
+                        "analysis_run_id": "00000000-0000-4000-8000-000000000050",
+                        "source": "cve-list",
+                        "raw_reference": DEMO_CVE_XZ,
+                        "evidence": {"line": 1},
+                    }
+                ],
+                data_quality_flags=[],
+                first_seen_at=datetime(2026, 4, 29, 11, 0, tzinfo=UTC),
+                last_seen_at=datetime(2026, 4, 29, 11, 30, tzinfo=UTC),
+                created_at=datetime(2026, 4, 29, 11, 0, tzinfo=UTC),
+                updated_at=datetime(2026, 4, 29, 11, 30, tzinfo=UTC),
+            ),
+            MarkdownReportFinding(
+                id="00000000-0000-4000-8000-000000000502",
+                dedup_key="vpw050-log4shell",
+                operational_rank=2,
+                cve_id=DEMO_CVE_LOG4SHELL,
+                priority="high",
+                priority_rank=2,
+                status="in_review",
+                risk_score=94.2,
+                epss=0.944,
+                cvss_base_score=10.0,
+                in_kev=True,
+                attack_mapped=True,
+                asset="Ops API",
+                asset_key="ops-api",
+                owner="secops",
+                business_service="operations",
+                environment="prod",
+                exposure="internal",
+                criticality="high",
+                component="log4j-core 2.14.1",
+                component_purl="pkg:maven/org.apache.logging.log4j/log4j-core@2.14.1",
+                vulnerability={"severity": "CRITICAL", "provider": {"kev": True}},
+                rationale="CISA KEV listing and vulnerable component evidence.",
+                recommended_action="Patch via vendor upgrade.",
+                data_quality_confidence="medium",
+                decision_statement="Decision Statement: patch after owner validation.",
+                business_impact="Operational tooling exposure requires management visibility.",
+                decision_sla="Emergency / 24h",
+                explanation={
+                    "decision_guidance": {
+                        "template_label": "Patch",
+                        "decision_statement": "Decision Statement: patch after owner validation.",
+                    },
+                    "attack_techniques": ["T1190"],
+                },
+                data_quality={
+                    "confidence": "medium",
+                    "flags": [{"code": "missing_asset_owner", "message": "Owner is not set"}],
+                },
+                evidence={"source": "snapshot"},
+                occurrences=[
+                    {
+                        "id": "00000000-0000-4000-8000-000000000602",
+                        "analysis_run_id": "00000000-0000-4000-8000-000000000050",
+                        "source": "cve-list",
+                        "raw_reference": DEMO_CVE_LOG4SHELL,
+                        "evidence": {"line": 2},
+                    }
+                ],
+                data_quality_flags=["missing_asset_owner - Owner is not set"],
+                first_seen_at=datetime(2026, 4, 29, 11, 0, tzinfo=UTC),
+                last_seen_at=datetime(2026, 4, 29, 11, 30, tzinfo=UTC),
+                created_at=datetime(2026, 4, 29, 11, 0, tzinfo=UTC),
+                updated_at=datetime(2026, 4, 29, 11, 30, tzinfo=UTC),
+            ),
+        ],
+        provider_snapshot=MarkdownProviderSnapshot(
+            id="00000000-0000-4000-8000-000000000650",
+            content_hash="sha256:vpw050-snapshot",
+            nvd_last_sync="2026-04-28T10:15:00Z",
+            epss_date="2026-04-28",
+            kev_catalog_version="2026-04-28",
+            created_at="2026-04-28T10:20:00Z",
+            source_hashes={"provider_snapshot": "sha256:vpw050-snapshot"},
+            source_metadata={
+                "locked_provider_data": True,
+                "selected_sources": ["nvd", "epss", "kev"],
+            },
+        ),
+        project_description="Snapshot project for VPW-050 exports.",
+        project_owner_id="00000000-0000-4000-8000-000000000011",
+        project_created_at=datetime(2026, 4, 29, 10, 0, tzinfo=UTC),
+        project_updated_at=datetime(2026, 4, 29, 10, 30, tzinfo=UTC),
+        run_started_at=datetime(2026, 4, 29, 11, 0, tzinfo=UTC),
+        run_finished_at=datetime(2026, 4, 29, 11, 45, tzinfo=UTC),
+        run_errors={},
+    )
 
 
 def _seed_reportable_run(template_api_env: TemplateApiEnv, project_id: uuid.UUID) -> uuid.UUID:
@@ -492,6 +889,60 @@ def _seed_reportable_run(template_api_env: TemplateApiEnv, project_id: uuid.UUID
         return run_id
 
 
+def _seed_formula_run(template_api_env: TemplateApiEnv, project_id: uuid.UUID) -> uuid.UUID:
+    app_models = template_api_env.app_models
+    repositories = template_api_env.repositories
+    with Session(template_api_env.engine) as session:
+        run_repo = repositories.RunRepository(session)
+        snapshot = run_repo.get_or_create_provider_snapshot(
+            content_hash="sha256:vpw050-formula-snapshot",
+            nvd_last_sync="2026-04-28T10:15:00Z",
+            epss_date="2026-04-28",
+            kev_catalog_version="2026-04-28",
+        )
+        run = run_repo.create_analysis_run(
+            project_id=project_id,
+            provider_snapshot_id=snapshot.id,
+            input_type="generic-occurrence-csv",
+            filename="formula-cells.csv",
+            status=app_models.AnalysisRunStatus.COMPLETED,
+            summary_json={"finding_count": 1},
+        )
+        finding = _seed_finding(
+            session,
+            app_models,
+            repositories,
+            project_id=project_id,
+            cve_id=DEMO_CVE_XZ,
+            asset_key="=asset-key",
+            asset_name="=asset-name",
+            asset_owner="+owner",
+            asset_business_service="@service",
+            component_name='=HYPERLINK("https://example.invalid")',
+            component_version="5.6.0",
+            priority=app_models.FindingPriority.CRITICAL,
+            priority_rank=1,
+            operational_rank=1,
+            risk_score=100.0,
+            epss=0.846,
+            cvss=10.0,
+            in_kev=False,
+            rationale="\tTabbed rationale",
+            action="-Patch now",
+            confidence="high",
+            flags=[{"code": "\tformula_flag", "message": "flag"}],
+        )
+        run_repo.add_finding_occurrence(
+            finding_id=finding.id,
+            analysis_run_id=run.id,
+            source="generic-occurrence-csv",
+            raw_reference=DEMO_CVE_XZ,
+        )
+        run_id = run.id
+        session.commit()
+        return run_id
+
+
 def _seed_finding(
     session: Session,
     app_models: Any,
@@ -514,6 +965,8 @@ def _seed_finding(
     action: str,
     confidence: str,
     flags: list[dict[str, str]],
+    asset_owner: str | None = None,
+    asset_business_service: str | None = None,
 ) -> Any:
     asset = create_asset(
         session,
@@ -523,6 +976,10 @@ def _seed_finding(
         asset_key=asset_key,
         name=asset_name,
     )
+    if asset_owner is not None:
+        asset.owner = asset_owner
+    if asset_business_service is not None:
+        asset.business_service = asset_business_service
     component = create_component(
         session,
         repositories,
