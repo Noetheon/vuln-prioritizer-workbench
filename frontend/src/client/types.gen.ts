@@ -526,8 +526,10 @@ export type ProviderUpdateJobPublic = {
  * Request payload for creating a run report.
  */
 export type ReportCreate = {
-    format?: "markdown";
+    format?: 'markdown' | 'html';
 };
+
+export type format = 'markdown' | 'html';
 
 /**
  * Public report metadata without exposing server filesystem paths.

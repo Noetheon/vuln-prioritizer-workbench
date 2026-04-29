@@ -443,7 +443,7 @@ export class ReportsService {
 
     /**
      * Create Run Report
-     * Create a Markdown technical report for a completed visible analysis run.
+     * Create a report artifact for a completed visible analysis run.
      * @param data The data for the request.
      * @param data.runId
      * @param data.requestBody

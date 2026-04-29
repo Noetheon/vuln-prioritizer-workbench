@@ -13,7 +13,7 @@ from app.models.base import get_datetime_utc
 class ReportCreate(SQLModel):
     """Request payload for creating a run report."""
 
-    format: Literal["markdown"] = "markdown"
+    format: Literal["markdown", "html"] = "markdown"
 
 
 class ReportBase(SQLModel):
