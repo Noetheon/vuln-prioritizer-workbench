@@ -4,6 +4,8 @@ import uuid
 from datetime import datetime
 from typing import Any, Literal
 
+from pydantic import BaseModel
+from pydantic import Field as PydanticField
 from sqlalchemy import JSON, Column, DateTime, Index, Integer, String
 from sqlmodel import Field, SQLModel
 
@@ -75,3 +77,11 @@ class ReportsPublic(SQLModel):
 
     data: list[ReportPublic]
     count: int
+
+
+class ReportVerificationPublic(BaseModel):
+    """Public evidence bundle verification report."""
+
+    metadata: dict[str, Any] = PydanticField(default_factory=dict)
+    summary: dict[str, Any] = PydanticField(default_factory=dict)
+    items: list[dict[str, Any]] = PydanticField(default_factory=list)

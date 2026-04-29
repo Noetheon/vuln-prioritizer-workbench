@@ -2508,6 +2508,32 @@ export const ReportPublicSchema = {
     type: 'object'
 } as const;
 
+export const ReportVerificationPublicSchema = {
+    description: 'Public evidence bundle verification report.',
+    properties: {
+        items: {
+            items: {
+                additionalProperties: true,
+                type: 'object'
+            },
+            title: 'Items',
+            type: 'array'
+        },
+        metadata: {
+            additionalProperties: true,
+            title: 'Metadata',
+            type: 'object'
+        },
+        summary: {
+            additionalProperties: true,
+            title: 'Summary',
+            type: 'object'
+        }
+    },
+    title: 'ReportVerificationPublic',
+    type: 'object'
+} as const;
+
 export const ReportsPublicSchema = {
     description: 'Collection response for reports.',
     properties: {

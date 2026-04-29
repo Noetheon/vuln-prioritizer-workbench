@@ -12,9 +12,20 @@ from starlette.responses import FileResponse
 from app.api.deps import CurrentUser, SessionDep
 from app.api.routes.workbench_access import require_visible_project
 from app.core.config import Settings
-from app.models import Report, ReportCreate, ReportPublic, ReportsPublic
+from app.models import (
+    Report,
+    ReportCreate,
+    ReportPublic,
+    ReportsPublic,
+    ReportVerificationPublic,
+)
 from app.repositories import ReportRepository, RunRepository
-from app.services import ReportGenerationError, ReportService
+from app.services import (
+    ReportGenerationError,
+    ReportService,
+    ReportVerificationError,
+    verify_evidence_bundle_zip,
+)
 
 router = APIRouter(tags=["reports"])
 
@@ -91,6 +102,29 @@ def download_report(
     response.headers["Cache-Control"] = "no-store"
     response.headers["X-Content-Type-Options"] = "nosniff"
     return response
+
+
+@router.post("/reports/{report_id}/verify", response_model=ReportVerificationPublic)
+def verify_report(
+    report_id: uuid.UUID,
+    request: Request,
+    session: SessionDep,
+    current_user: CurrentUser,
+) -> ReportVerificationPublic:
+    """Verify a visible evidence bundle report against its embedded manifest."""
+    report = ReportRepository(session).get_report(report_id)
+    if report is None:
+        raise HTTPException(status_code=404, detail="Report not found")
+    require_visible_project(session, current_user, report.project_id)
+    if report.kind != "evidence-bundle" or report.format != "zip":
+        raise HTTPException(status_code=422, detail="Report is not an evidence bundle")
+
+    report_path = _validated_report_path(report, _template_settings(request))
+    try:
+        result = verify_evidence_bundle_zip(report_path, display_path=report.filename)
+    except ReportVerificationError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return ReportVerificationPublic(**result)
 
 
 def _report_public(report: Report, request: Request) -> ReportPublic:

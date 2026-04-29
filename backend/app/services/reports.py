@@ -30,6 +30,9 @@ from app.models import (
 )
 from app.models.base import get_datetime_utc
 from app.repositories import ReportRepository
+from vuln_prioritizer.reporting_evidence import (
+    verify_evidence_bundle as verify_evidence_bundle_archive,
+)
 
 REPORT_KIND_TECHNICAL_MARKDOWN = "technical-markdown"
 REPORT_KIND_EXECUTIVE_HTML = "executive-html"
@@ -323,6 +326,10 @@ thead th:nth-child(-n + 7) {
 
 class ReportGenerationError(RuntimeError):
     """Raised when a report cannot be generated from the stored run."""
+
+
+class ReportVerificationError(RuntimeError):
+    """Raised when an evidence bundle cannot be verified."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -1065,6 +1072,27 @@ def render_evidence_bundle_zip(payload: MarkdownReportPayload) -> tuple[bytes, d
             _write_deterministic_zip_member(archive, path, content)
         _write_deterministic_zip_member(archive, "manifest.json", _json_bytes(manifest))
     return output.getvalue(), manifest
+
+
+def verify_evidence_bundle_zip(
+    bundle_path: Path,
+    *,
+    display_path: str | None = None,
+) -> dict[str, Any]:
+    """Verify an evidence bundle ZIP and return the published report contract."""
+    try:
+        metadata, summary, items = verify_evidence_bundle_archive(bundle_path)
+    except ValueError as exc:
+        raise ReportVerificationError(str(exc)) from exc
+
+    metadata_payload = metadata.model_dump(mode="json")
+    if display_path is not None:
+        metadata_payload["bundle_path"] = display_path
+    return {
+        "metadata": metadata_payload,
+        "summary": summary.model_dump(mode="json"),
+        "items": [item.model_dump(mode="json") for item in items],
+    }
 
 
 def _json_bytes(payload: Any) -> bytes:
