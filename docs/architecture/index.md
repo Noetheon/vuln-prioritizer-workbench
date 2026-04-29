@@ -185,6 +185,9 @@ Terminal tables, panels, warning phrasing, and Markdown table layout are intenti
 
 NVD, EPSS, and KEV remain live/cache-backed data sources.
 
+The shared provider enrichment contract is documented in
+[VPW-022 Provider Cache, Status and Snapshots](vpw-022-provider-cache-status-snapshots.md).
+
 The current `data` command tree is intentionally small:
 
 - `data status` inspects namespace counts, timestamps, and local ATT&CK metadata

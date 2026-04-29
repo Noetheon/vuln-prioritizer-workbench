@@ -243,6 +243,22 @@ Current provider freshness contract:
 - locked provider-snapshot replay uses the snapshot `generated_at` timestamp for selected snapshot sources
 - analysis-style metadata may include `provider_freshness`, `max_provider_age_hours`, `provider_stale`, and `provider_stale_sources`
 
+### Provider enrichment service
+
+Current provider service contract:
+
+- built-in NVD, EPSS, and KEV providers can be adapted to the shared
+  `ProviderEnrichmentClient.enrich(cve_ids, **kwargs)` interface
+- provider failures degrade into `ProviderStatus` and data-quality flags before
+  optional CI gates decide whether to fail the process
+- `ProviderStatus` includes `source`, `last_sync`, `cache_hit`, `cache_miss`,
+  cache counters, stale-cache counters, network/failure counters, and
+  `data_quality_flags`
+- cache contract metadata includes namespace, raw key template, TTL seconds,
+  and whether expired cache may be used on provider failure
+- required tests for this contract use fake providers or monkeypatching, not
+  live provider APIs
+
 ### Defensive context semantics
 
 Current defensive-context contract:

@@ -223,6 +223,89 @@ nullable for that reason.
 }
 ```
 
+## Provider Enrichment Service Contract
+
+VPW-022 defines the provider service boundary used by provider enrichment code.
+Existing NVD, EPSS, and KEV clients still own their source-specific
+`fetch_many(...)` implementation, but callers can use the shared
+`ProviderEnrichmentClient.enrich(cve_ids, **kwargs)` contract through
+`ProviderClientAdapter`.
+
+The shared result contains:
+
+- `records`: provider records keyed by CVE
+- `warnings`: provider warnings suitable for report metadata
+- `status`: source status with `source`, `last_sync`, `cache_hit`,
+  `cache_miss`, `cache_hits`, `cache_misses`, `stale_cache_hits`,
+  `network_fetches`, `failures`, `content_hits`, `empty_records`, and
+  `degraded`
+- `snapshot`: in-memory DTO with `source`, `generated_at`, `requested_cves`,
+  `content_hits`, `record_keys`, and the same status object
+- `data_quality_flags`: stored under `status.data_quality_flags`
+
+Provider failures must degrade into status and data-quality flags rather than
+aborting the caller by default. Optional CLI or workflow gates may still fail a
+pipeline after output is written, but the provider contract must first preserve
+the failure as structured evidence.
+
+Example status DTO:
+
+```json
+{
+  "source": "epss",
+  "last_sync": "2026-04-29T10:15:00+00:00",
+  "requested": 1,
+  "cache_hit": true,
+  "cache_miss": false,
+  "cache_hits": 0,
+  "cache_misses": 0,
+  "stale_cache_hits": 1,
+  "network_fetches": 0,
+  "failures": 1,
+  "content_hits": 1,
+  "empty_records": 0,
+  "degraded": true,
+  "cache": {
+    "source": "epss",
+    "cache_enabled": true,
+    "namespace": "epss",
+    "key_template": "{cve_id}",
+    "ttl_seconds": 86400,
+    "stale_while_error": true
+  },
+  "data_quality_flags": [
+    {
+      "source": "epss",
+      "code": "stale_cache",
+      "message": "epss used expired cached data for 1 requested CVE(s).",
+      "severity": "warning",
+      "cve_id": null
+    }
+  ]
+}
+```
+
+Cache contract:
+
+- NVD and EPSS use cache namespace `nvd` / `epss` and a raw key template of
+  `{cve_id}`; the filesystem cache hashes that raw key before writing JSON.
+- KEV uses namespace `kev` and key template `catalog`.
+- TTL comes from `FileCache.ttl` unless a provider definition overrides
+  `cache_ttl_seconds`.
+- Expired cache entries are not returned for normal reads. Providers may retry
+  with `allow_expired=True` after live lookup failure and must mark the status
+  with `stale_cache_hits` plus data-quality flags.
+
+Timeout and retry contract:
+
+- NVD and EPSS use `HTTP_TIMEOUT_SECONDS` and `HTTP_MAX_RETRIES`.
+- NVD retries transient HTTP status codes with response-aware backoff.
+- EPSS retries transient HTTP status codes with bounded incremental delay.
+- KEV uses the shared timeout and falls back from the CISA feed to the GitHub
+  mirror before reporting degraded catalog status.
+- CI tests for this contract use fake providers or monkeypatched provider
+  methods only; required tests must not depend on live provider availability.
+
 ## Migration Contract
 
 The template Alembic head under `backend/app/alembic` must create the three

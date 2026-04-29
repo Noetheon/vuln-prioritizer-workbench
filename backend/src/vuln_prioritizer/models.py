@@ -38,7 +38,12 @@ KevData = _models_provider.KevData
 NvdData = _models_provider.NvdData
 ParsedInput = _models_input.ParsedInput
 ProviderEvidence = _models_provider.ProviderEvidence
+ProviderCacheContract = _models_provider.ProviderCacheContract
+ProviderDataQualityFlag = _models_provider.ProviderDataQualityFlag
+ProviderEnrichmentResult = _models_provider.ProviderEnrichmentResult
 ProviderLookupDiagnostics = _models_provider.ProviderLookupDiagnostics
+ProviderSnapshot = _models_provider.ProviderSnapshot
+ProviderStatus = _models_provider.ProviderStatus
 RemediationComponent = _models_remediation.RemediationComponent
 RemediationPlan = _models_remediation.RemediationPlan
 
