@@ -14,9 +14,7 @@ const invalidOccurrenceCsv = Buffer.from(
     "not-a-cve,build-host-1,xz,5.6.0,pkg:apk/alpine/xz@5.6.0-r0,trivy,5.6.1-r2,CRITICAL,team-platform,payments,public",
   ].join("\n"),
 )
-test("template login reaches authenticated Workbench status shell", async ({
-  page,
-}) => {
+test("template frontend covers core Workbench E2E smoke", async ({ page }) => {
   test.setTimeout(60_000)
   const testRunSuffix = Date.now().toString(36)
   const dashboardProjectName = `VPW Dashboard Project ${testRunSuffix}`
@@ -140,12 +138,17 @@ test("template login reaches authenticated Workbench status shell", async ({
   )
   expect(providerStatusResponse.ok()).toBeTruthy()
   const providerStatusPayload = (await providerStatusResponse.json()) as {
-    snapshot: { content_hash?: string | null; id?: string | null }
+    snapshot: {
+      content_hash?: string | null
+      id?: string | null
+      locked_provider_data?: boolean | null
+    }
     snapshot_mode: string
     sources?: Array<{ name: string }>
   }
-  expect(providerStatusPayload.snapshot_mode).not.toBe("missing")
+  expect(providerStatusPayload.snapshot_mode).toBe("locked")
   expect(providerStatusPayload.snapshot.content_hash).toBeTruthy()
+  expect(providerStatusPayload.snapshot.locked_provider_data).toBe(true)
   expect(providerStatusPayload.sources?.map((source) => source.name)).toEqual(
     expect.arrayContaining(["nvd", "epss", "kev"]),
   )
@@ -511,6 +514,10 @@ test("template login reaches authenticated Workbench status shell", async ({
   await expect(dataQuality).toContainText(
     /Confidence|snapshot|No data quality/i,
   )
+  await page.screenshot({
+    fullPage: true,
+    path: "../docs/evidence/vpw-047-core-workbench-flow.png",
+  })
   await page.screenshot({
     fullPage: true,
     path: "../docs/evidence/vpw-043-finding-detail.png",
