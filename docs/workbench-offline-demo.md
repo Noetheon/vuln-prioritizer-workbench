@@ -121,6 +121,9 @@ If the browser demo cannot be shown, use these checked-in or generated artifacts
 - `docs/example_compare.md`
 - `docs/example_attack_report.md`
 - `docs/examples/example_report.html`
+- `docs/examples/vpw-054-template-technical-report.md`
+- `docs/examples/vpw-054-template-executive-report.html`
+- `docs/examples/vpw-054-template-analysis-result.v1.json`
 - `docs/examples/example_pr_comment.md`
 - `docs/examples/example_results.sarif`
 - `data/demo_provider_snapshot.json`
