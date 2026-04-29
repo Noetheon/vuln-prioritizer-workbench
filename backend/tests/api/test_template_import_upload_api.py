@@ -447,6 +447,139 @@ def test_double_import_deduplicates_findings_and_appends_occurrences(
     )
 
 
+def test_import_upload_applies_asset_context_sidecar_to_template_findings(
+    template_api_env: TemplateApiEnv,
+    tmp_path: Path,
+) -> None:
+    upload_dir = _configure_upload_dir(template_api_env, tmp_path)
+    headers = auth_headers(template_api_env.client)
+    project = create_project_via_api(template_api_env.client, headers)
+    occurrence_csv = "\n".join(
+        [
+            "cve_id,asset_ref,component,version,purl,severity",
+            "CVE-2024-3094,web-tier,xz,5.6.0,pkg:apk/alpine/xz@5.6.0-r0,CRITICAL",
+            "",
+        ]
+    ).encode()
+    asset_context_csv = "\n".join(
+        [
+            (
+                "target_kind,target_ref,asset_id,owner,business_service,"
+                "criticality,exposure,environment"
+            ),
+            "generic,web-tier,asset-web-1,team-platform,payments,critical,public,prod",
+            "",
+        ]
+    ).encode()
+    expected_sidecar_sha256 = hashlib.sha256(asset_context_csv).hexdigest()
+
+    response = template_api_env.client.post(
+        f"/api/v1/projects/{project['id']}/imports",
+        headers=headers,
+        data={"input_type": "generic-occurrence-csv"},
+        files={
+            "file": ("occurrences.csv", occurrence_csv, "text/csv"),
+            "asset_context_file": ("asset-context.csv", asset_context_csv, "text/csv"),
+        },
+    )
+
+    assert response.status_code == 200, response.text
+    payload = response.json()
+    sidecar_upload = payload["summary_json"]["asset_context_upload"]
+    assert sidecar_upload["sha256"] == expected_sidecar_sha256
+    assert sidecar_upload["stored_filename"] == "asset-context.csv"
+    assert Path(sidecar_upload["path"]).is_relative_to(upload_dir)
+    assert Path(sidecar_upload["path"]).read_bytes() == asset_context_csv
+    assert payload["summary_json"]["asset_context"]["loaded_rows"] == 1
+    assert payload["summary_json"]["asset_context"]["matched_occurrences"] == 1
+    assert payload["summary_json"]["dedup_summary"]["decisions"][0]["asset_ref"] == "asset-web-1"
+
+    findings = template_api_env.client.get(
+        f"/api/v1/projects/{project['id']}/findings/",
+        headers=headers,
+    )
+    assert findings.status_code == 200, findings.text
+    finding = findings.json()["data"][0]
+    assert finding["asset_key"] == "asset-web-1"
+    assert finding["owner"] == "team-platform"
+    assert finding["business_service"] == "payments"
+    assert finding["asset_environment"] == "production"
+    assert finding["asset_criticality"] == "critical"
+    assert finding["exposure"] == "internet-facing"
+    assert finding["risk_score"] == 100.0
+
+    detail = template_api_env.client.get(f"/api/v1/findings/{finding['id']}", headers=headers)
+    assert detail.status_code == 200
+    explanation = detail.json()["explanation_json"]
+    assert explanation["operational_score"] == 100
+    assert "internet-facing asset context: +8" in explanation["operational_score_reasons"]
+    assert "production asset context: +5" in explanation["operational_score_reasons"]
+    assert "critical asset criticality: +7" in explanation["operational_score_reasons"]
+    assert explanation["highest_asset_criticality"] == "critical"
+    assert explanation["provenance"]["asset_ids"] == ["asset-web-1"]
+    assert explanation["provenance"]["highest_asset_exposure"] == "internet-facing"
+    assert explanation["provenance"]["asset_owners"] == ["team-platform"]
+    assert explanation["provenance"]["asset_business_services"] == ["payments"]
+    occurrence = detail.json()["occurrences"][0]
+    assert occurrence["asset_ref"] == "asset-web-1"
+    assert occurrence["target_ref"] == "web-tier"
+    assert occurrence["asset_owner"] == "team-platform"
+    assert occurrence["asset_business_service"] == "payments"
+    assert occurrence["asset_exposure"] == "internet-facing"
+
+
+def test_import_upload_rejects_invalid_asset_context_sidecar_with_clear_error(
+    template_api_env: TemplateApiEnv,
+    tmp_path: Path,
+) -> None:
+    _configure_upload_dir(template_api_env, tmp_path)
+    headers = auth_headers(template_api_env.client)
+    project = create_project_via_api(template_api_env.client, headers)
+
+    response = template_api_env.client.post(
+        f"/api/v1/projects/{project['id']}/imports",
+        headers=headers,
+        data={"input_type": "generic-occurrence-csv"},
+        files={
+            "file": (
+                "occurrences.csv",
+                b"cve_id,asset_ref\nCVE-2024-3094,web-tier\n",
+                "text/csv",
+            ),
+            "asset_context_file": (
+                "bad-asset-context.csv",
+                b"target_kind,target_ref\nhost,web-tier\n",
+                "text/csv",
+            ),
+        },
+    )
+
+    assert response.status_code == 422, response.text
+    detail = response.json()["detail"]
+    assert detail["message"] == "Asset context parsing failed."
+    assert detail["analysis_run_id"]
+    assert detail["asset_context_error"]["stage"] == "asset_context_parse"
+    assert "asset_id" in detail["asset_context_error"]["message"]
+
+    run = template_api_env.client.get(
+        f"/api/v1/runs/{detail['analysis_run_id']}",
+        headers=headers,
+    )
+    assert run.status_code == 200
+    run_payload = run.json()
+    assert run_payload["status"] == "failed"
+    assert run_payload["summary_json"]["asset_context_error"]["stage"] == ("asset_context_parse")
+    assert run_payload["summary_json"]["created_findings"] == 0
+    assert run_payload["summary_json"]["updated_findings"] == 0
+
+    findings = template_api_env.client.get(
+        f"/api/v1/projects/{project['id']}/findings/",
+        headers=headers,
+    )
+    assert findings.status_code == 200
+    assert findings.json()["count"] == 0
+
+
 def test_analysis_failure_persists_failed_run_without_partial_findings(
     monkeypatch: pytest.MonkeyPatch,
     template_api_env: TemplateApiEnv,

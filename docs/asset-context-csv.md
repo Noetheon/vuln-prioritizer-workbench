@@ -87,8 +87,10 @@ explanation text:
 - missing asset context is neutral and explicitly not treated as safe
 
 When asset data changes after analysis, re-run analysis with the updated CSV or
-trigger the Workbench re-score path so findings carry current owner, service,
-environment, exposure, and operational score reasons.
+trigger the Workbench asset recalculation path so findings carry current owner,
+service, environment, exposure, criticality, and operational score reasons. In
+the browser, the Assets page can import an asset-context CSV directly, filter by
+owner or service, edit asset rows, and recalculate linked findings after an edit.
 
 ## Example
 

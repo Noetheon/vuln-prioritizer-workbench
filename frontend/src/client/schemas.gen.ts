@@ -258,6 +258,74 @@ export const AnalysisRunsPublicSchema = {
     type: 'object'
 } as const;
 
+export const AssetContextImportPublicSchema = {
+    description: 'Summary returned after importing asset-context CSV rows.',
+    properties: {
+        asset_keys: {
+            items: {
+                type: 'string'
+            },
+            title: 'Asset Keys',
+            type: 'array'
+        },
+        created_assets: {
+            default: 0,
+            title: 'Created Assets',
+            type: 'integer'
+        },
+        imported_assets: {
+            default: 0,
+            title: 'Imported Assets',
+            type: 'integer'
+        },
+        loaded_rows: {
+            default: 0,
+            title: 'Loaded Rows',
+            type: 'integer'
+        },
+        project_id: {
+            format: 'uuid',
+            title: 'Project Id',
+            type: 'string'
+        },
+        rescore_needed_findings: {
+            default: 0,
+            title: 'Rescore Needed Findings',
+            type: 'integer'
+        },
+        skipped_rows: {
+            default: 0,
+            title: 'Skipped Rows',
+            type: 'integer'
+        },
+        total_rows: {
+            default: 0,
+            title: 'Total Rows',
+            type: 'integer'
+        },
+        unchanged_assets: {
+            default: 0,
+            title: 'Unchanged Assets',
+            type: 'integer'
+        },
+        updated_assets: {
+            default: 0,
+            title: 'Updated Assets',
+            type: 'integer'
+        },
+        warnings: {
+            items: {
+                type: 'string'
+            },
+            title: 'Warnings',
+            type: 'array'
+        }
+    },
+    required: ['project_id'],
+    title: 'AssetContextImportPublic',
+    type: 'object'
+} as const;
+
 export const AssetCreateSchema = {
     description: 'Asset creation payload.',
     properties: {
@@ -447,6 +515,46 @@ export const AssetPublicSchema = {
     type: 'object'
 } as const;
 
+export const AssetRecalculatePublicSchema = {
+    description: 'Summary returned after recalculating findings for one asset.',
+    properties: {
+        asset_id: {
+            format: 'uuid',
+            title: 'Asset Id',
+            type: 'string'
+        },
+        asset_key: {
+            title: 'Asset Key',
+            type: 'string'
+        },
+        cleared_rescore_flags: {
+            default: 0,
+            title: 'Cleared Rescore Flags',
+            type: 'integer'
+        },
+        operational_scores: {
+            items: {
+                type: 'integer'
+            },
+            title: 'Operational Scores',
+            type: 'array'
+        },
+        recalculated_findings: {
+            default: 0,
+            title: 'Recalculated Findings',
+            type: 'integer'
+        },
+        rescore_needed: {
+            default: false,
+            title: 'Rescore Needed',
+            type: 'boolean'
+        }
+    },
+    required: ['asset_id', 'asset_key'],
+    title: 'AssetRecalculatePublic',
+    type: 'object'
+} as const;
+
 export const AssetUpdateSchema = {
     description: 'Asset update payload.',
     properties: {
@@ -567,8 +675,39 @@ export const AssetsPublicSchema = {
     type: 'object'
 } as const;
 
+export const Body_assets_import_project_assetsSchema = {
+    properties: {
+        asset_context_file: {
+            anyOf: [
+                {
+                    contentMediaType: 'application/octet-stream',
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Asset Context File'
+        }
+    },
+    title: 'Body_assets-import_project_assets',
+    type: 'object'
+} as const;
+
 export const Body_imports_import_project_uploadSchema = {
     properties: {
+        asset_context_file: {
+            anyOf: [
+                {
+                    contentMediaType: 'application/octet-stream',
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Asset Context File'
+        },
         attack_mapping_file: {
             anyOf: [
                 {

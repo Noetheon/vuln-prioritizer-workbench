@@ -5,6 +5,13 @@ from __future__ import annotations
 from fastapi import APIRouter
 from fastapi.templating import Jinja2Templates
 
+from vuln_prioritizer.web.workbench_assets import (
+    assets_page,
+    import_asset_context_form,
+    recalculate_asset_form,
+    update_asset_form,
+)
+from vuln_prioritizer.web.workbench_assets import router as assets_router
 from vuln_prioritizer.web.workbench_common import (
     ATTACK_REVIEW_SOURCES,
     ATTACK_REVIEW_STATUSES,
@@ -29,7 +36,6 @@ from vuln_prioritizer.web.workbench_common import (
     _web_config_diff,
 )
 from vuln_prioritizer.web.workbench_governance import (
-    assets_page,
     coverage_page,
     create_waiver_form,
     delete_waiver_form,
@@ -37,7 +43,6 @@ from vuln_prioritizer.web.workbench_governance import (
     governance,
     import_detection_controls_form,
     technique_detail_page,
-    update_asset_form,
     update_attack_review_form,
     update_detection_control_form,
     update_finding_status_form,
@@ -82,6 +87,7 @@ from vuln_prioritizer.web.workbench_settings import router as settings_router
 templates = Jinja2Templates(directory=str(TEMPLATE_DIR))
 web_router = APIRouter()
 web_router.include_router(projects_router)
+web_router.include_router(assets_router)
 web_router.include_router(governance_router)
 web_router.include_router(settings_router)
 web_router.include_router(reports_router)
@@ -124,12 +130,14 @@ __all__ = [
     "finding_detail",
     "findings",
     "governance",
+    "import_asset_context_form",
     "import_detection_controls_form",
     "index",
     "new_import",
     "new_project",
     "project_settings",
     "revoke_api_token_form",
+    "recalculate_asset_form",
     "rollback_project_config_form",
     "run_executive_report",
     "run_reports",

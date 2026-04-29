@@ -172,6 +172,40 @@ def test_workbench_browser_happy_path_reports_and_responsive_pages(
     page.locator(".metric", has_text="VEX suppressed").get_by_text("1").wait_for()
     _assert_usable_layout(page)
 
+    page.get_by_role("navigation").get_by_role("link", name="Assets").click()
+    page.wait_for_url(re.compile(r".*/assets"))
+    page.get_by_role("heading", name="Asset context", exact=True).wait_for()
+    page.get_by_text("Import asset context").wait_for()
+    page.get_by_text("api-gateway").wait_for()
+    asset_import_file = _write_asset_context_import_file(live_workbench.tmp_path)
+    page.set_input_files('input[name="asset_context_file"]', str(asset_import_file))
+    with page.expect_navigation(wait_until="networkidle"):
+        page.get_by_role("button", name="Import CSV").click()
+    page.get_by_text("asset-ui").wait_for()
+    page.get_by_label("Owner").first.fill("asset-import")
+    page.get_by_label("Service").first.fill("web-checkout")
+    page.get_by_role("button", name="Apply filters").click()
+    page.wait_for_url(re.compile(r".*[?&]owner=asset-import"))
+    page.get_by_text("asset-ui").wait_for()
+    assert page.get_by_text("api-gateway").count() == 0
+    page.goto(f"{live_workbench.base_url}/projects/{project_id}/assets", wait_until="networkidle")
+    api_asset_form = page.locator('form:has(input[name="asset_id"][value="api-gateway"])').first
+    api_asset_form.locator('input[name="owner"]').fill("playwright-owner")
+    api_asset_form.locator('input[name="business_service"]').fill("playwright-service")
+    with page.expect_navigation(wait_until="networkidle"):
+        api_asset_form.get_by_role("button", name="Save").click()
+    page.get_by_text("Re-score needed").wait_for()
+    with page.expect_navigation(wait_until="networkidle"):
+        page.locator('form[action$="/rescore"]').first.get_by_role(
+            "button", name="Recalculate linked findings"
+        ).click()
+    page.get_by_text("Current").first.wait_for()
+    page.screenshot(
+        path=str(ROOT / "docs" / "evidence" / "vpw-063-asset-context-editor.png"),
+        full_page=True,
+    )
+    _assert_usable_layout(page)
+
     page.get_by_role("navigation").get_by_role("link", name="Findings", exact=True).click()
     page.wait_for_url(re.compile(r".*/findings"))
     page.get_by_label("Search").fill("CVE-1999-0001")
@@ -184,13 +218,15 @@ def test_workbench_browser_happy_path_reports_and_responsive_pages(
     page.get_by_label("Search").fill("CVE-2024-3094")
     page.select_option('select[name="priority"]', "Critical")
     page.select_option('select[name="kev"]', "false")
-    page.get_by_label("Owner").fill("platform-team")
-    page.get_by_label("Service").fill("customer-login")
+    page.get_by_label("Owner").fill("playwright-owner")
+    page.get_by_label("Service").fill("playwright-service")
     page.get_by_role("button", name="Apply").click()
     page.wait_for_url(re.compile(r".*[?&]q=CVE-2024-3094"))
     page.get_by_text("Showing 1-1 of 1 findings.").wait_for()
     page.get_by_role("link", name="CVE-2024-3094").click()
     page.get_by_text("Why this priority?").wait_for()
+    page.get_by_role("cell", name="playwright-owner").wait_for()
+    page.get_by_role("cell", name="playwright-service").wait_for()
     page.get_by_text("Waiver lifecycle").wait_for()
     page.get_by_text("Ticket: javascript:alert(1)").wait_for()
     assert page.locator('a[href="javascript:alert(1)"]').count() == 0
@@ -218,7 +254,7 @@ def test_workbench_browser_happy_path_reports_and_responsive_pages(
     page.get_by_role("heading", name="Next 30 Days").wait_for()
     page.get_by_role("heading", name="Evidence, Data Quality and Methodology").wait_for()
     page.locator(".er-ranked-row").first.click()
-    page.locator(".er-live-insight", has_text="CVE-2023-34362").wait_for()
+    page.locator(".er-live-insight", has_text="CVE-").wait_for()
     page.locator(
         '#priority-findings .er-quadrant-scatter .er-dot[data-insight*="CVSS"]'
     ).first.click()
@@ -489,3 +525,18 @@ def _write_waiver_file(tmp_path: Path) -> Path:
         encoding="utf-8",
     )
     return waiver_file
+
+
+def _write_asset_context_import_file(tmp_path: Path) -> Path:
+    asset_context_file = tmp_path / "asset-context-import.csv"
+    asset_context_file.write_text(
+        "\n".join(
+            [
+                "target_kind,target_ref,asset_id,criticality,exposure,environment,owner,business_service",
+                "host,svc/web,asset-ui,high,dmz,prod,asset-import,web-checkout",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    return asset_context_file

@@ -9,6 +9,7 @@ import {
   LayoutDashboard,
   ListChecks,
   LogOut,
+  RefreshCw,
   Settings,
   ShieldCheck,
 } from "lucide-react"
@@ -106,7 +107,23 @@ function apiErrorDetail(body: unknown) {
   if (typeof detail === "string" && detail.trim()) {
     return detail
   }
-  return Array.isArray(detail) ? "validation failed" : null
+  if (Array.isArray(detail)) {
+    const messages = detail
+      .map((item) =>
+        typeof item === "object" && item !== null && "msg" in item
+          ? String((item as { msg?: unknown }).msg)
+          : "",
+      )
+      .filter(Boolean)
+    return messages.length > 0 ? messages.join("; ") : "validation failed"
+  }
+  if (typeof detail === "object" && detail !== null) {
+    const record = detail as Record<string, unknown>
+    return typeof record.message === "string" && record.message.trim()
+      ? record.message
+      : null
+  }
+  return null
 }
 
 function optionalText(value: string | null | undefined) {
@@ -380,8 +397,11 @@ function AssetsPage() {
   const [assets, setAssets] = useState<AssetPublic[]>([])
   const [assetsLoading, setAssetsLoading] = useState(false)
   const [assetsError, setAssetsError] = useState("")
+  const [assetOwnerFilter, setAssetOwnerFilter] = useState("")
+  const [assetServiceFilter, setAssetServiceFilter] = useState("")
   const [assetMessage, setAssetMessage] = useState("")
   const [assetActionLoading, setAssetActionLoading] = useState(false)
+  const [assetContextFile, setAssetContextFile] = useState<File | null>(null)
   const [createForm, setCreateForm] = useState<AssetFormState>(emptyAssetForm)
   const [createError, setCreateError] = useState("")
   const [editForm, setEditForm] = useState<AssetFormState>(emptyAssetForm)
@@ -450,7 +470,9 @@ function AssetsPage() {
     setAssetsError("")
     try {
       const assetPage = await AssetsService.readProjectAssets({
+        owner: assetOwnerFilter.trim() || undefined,
         projectId: selectedProjectId,
+        service: assetServiceFilter.trim() || undefined,
       })
       setAssets(assetPage.data)
       setSelectedAssetId((currentAssetId) => {
@@ -513,7 +535,7 @@ function AssetsPage() {
 
   useEffect(() => {
     void refreshAssets()
-  }, [selectedProjectId])
+  }, [assetOwnerFilter, assetServiceFilter, selectedProjectId])
 
   useEffect(() => {
     let isMounted = true
@@ -633,6 +655,62 @@ function AssetsPage() {
         return
       }
       setAssetsError(apiErrorMessage("Asset update failed", caught))
+    } finally {
+      setAssetActionLoading(false)
+    }
+  }
+
+  async function recalculateAsset(asset: AssetPublic) {
+    setAssetsError("")
+    setAssetMessage("")
+    setAssetActionLoading(true)
+    try {
+      const result = await AssetsService.recalculateAsset({ assetId: asset.id })
+      setAssetMessage(
+        `Recalculated ${result.recalculated_findings} finding(s) for ${asset.name}.`,
+      )
+      await refreshAssets(asset.id)
+    } catch (caught) {
+      if (await handleUnauthorized(caught)) {
+        return
+      }
+      setAssetsError(apiErrorMessage("Asset recalculation failed", caught))
+    } finally {
+      setAssetActionLoading(false)
+    }
+  }
+
+  async function importAssetContext(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    setAssetsError("")
+    setAssetMessage("")
+    if (!selectedProjectId) {
+      setAssetsError("Select a project before importing asset context.")
+      return
+    }
+    if (!assetContextFile) {
+      setAssetsError("Choose an asset context CSV before importing.")
+      return
+    }
+
+    setAssetActionLoading(true)
+    try {
+      const result = await AssetsService.importProjectAssets({
+        projectId: selectedProjectId,
+        formData: {
+          asset_context_file: assetContextFile as unknown as string,
+        },
+      })
+      setAssetContextFile(null)
+      setAssetMessage(
+        `Imported ${result.imported_assets} asset(s); ${result.rescore_needed_findings} finding(s) need recalculation.`,
+      )
+      await refreshAssets(selectedAssetId)
+    } catch (caught) {
+      if (await handleUnauthorized(caught)) {
+        return
+      }
+      setAssetsError(apiErrorMessage("Asset context import failed", caught))
     } finally {
       setAssetActionLoading(false)
     }
@@ -783,6 +861,75 @@ function AssetsPage() {
                       (projectLoading ? "Loading" : "No project selected")}
                   </strong>
                 </div>
+                <label className="project-selector">
+                  <span>Owner</span>
+                  <input
+                    aria-label="Asset owner filter"
+                    onChange={(event) =>
+                      setAssetOwnerFilter(event.target.value)
+                    }
+                    placeholder="Filter owner"
+                    value={assetOwnerFilter}
+                  />
+                </label>
+                <label className="project-selector">
+                  <span>Service</span>
+                  <input
+                    aria-label="Asset service filter"
+                    onChange={(event) =>
+                      setAssetServiceFilter(event.target.value)
+                    }
+                    placeholder="Filter service"
+                    value={assetServiceFilter}
+                  />
+                </label>
+                <button
+                  className="secondary-action"
+                  disabled={!assetOwnerFilter && !assetServiceFilter}
+                  onClick={() => {
+                    setAssetOwnerFilter("")
+                    setAssetServiceFilter("")
+                  }}
+                  type="button"
+                >
+                  Clear Filters
+                </button>
+              </section>
+
+              <section
+                className="project-form-panel"
+                aria-label="Import Asset Context form"
+              >
+                <h3>Import Asset Context</h3>
+                <form
+                  aria-label="Import Asset Context form fields"
+                  className="project-edit-form"
+                  onSubmit={importAssetContext}
+                >
+                  <label>
+                    <span>Asset context CSV</span>
+                    <input
+                      accept=".csv,text/csv"
+                      aria-label="Asset context CSV"
+                      onChange={(event) =>
+                        setAssetContextFile(event.target.files?.[0] ?? null)
+                      }
+                      type="file"
+                    />
+                  </label>
+                  <button
+                    className="primary-action"
+                    disabled={
+                      assetActionLoading ||
+                      projects.length === 0 ||
+                      !assetContextFile
+                    }
+                    type="submit"
+                  >
+                    <FileInput aria-hidden="true" size={16} />
+                    <span>Import Context</span>
+                  </button>
+                </form>
               </section>
 
               <section
@@ -914,6 +1061,19 @@ function AssetsPage() {
                                 >
                                   Edit
                                 </button>
+                                <button
+                                  aria-label={`Recalculate ${asset.name}`}
+                                  className="secondary-action"
+                                  disabled={
+                                    assetActionLoading ||
+                                    (asset.finding_count ?? 0) === 0
+                                  }
+                                  onClick={() => void recalculateAsset(asset)}
+                                  type="button"
+                                >
+                                  <RefreshCw aria-hidden="true" size={16} />
+                                  <span>Recalculate</span>
+                                </button>
                               </div>
                             </td>
                           </tr>
@@ -938,6 +1098,18 @@ function AssetsPage() {
                       type="button"
                     >
                       Edit Asset
+                    </button>
+                    <button
+                      className="secondary-action"
+                      disabled={
+                        assetActionLoading ||
+                        (selectedAsset.finding_count ?? 0) === 0
+                      }
+                      onClick={() => void recalculateAsset(selectedAsset)}
+                      type="button"
+                    >
+                      <RefreshCw aria-hidden="true" size={16} />
+                      <span>Recalculate</span>
                     </button>
                   </div>
                   <dl className="project-meta">

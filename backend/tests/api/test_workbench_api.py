@@ -1231,6 +1231,18 @@ def test_workbench_assets_and_persisted_waivers_update_current_findings(
     assert asset["asset_id"] == "api-gateway"
     assert asset["owner"] == "platform-team"
     assert asset["finding_count"] == 1
+    filtered_assets = client.get(
+        f"/api/projects/{project['id']}/assets",
+        params={"owner": "platform", "service": "customer"},
+    )
+    assert filtered_assets.status_code == 200
+    assert [item["asset_id"] for item in filtered_assets.json()["items"]] == ["api-gateway"]
+    empty_assets = client.get(
+        f"/api/projects/{project['id']}/assets",
+        params={"owner": "does-not-exist"},
+    )
+    assert empty_assets.status_code == 200
+    assert empty_assets.json()["items"] == []
     asset_detail = client.get(f"/api/assets/{asset['id']}")
     assert asset_detail.status_code == 200
     assert asset_detail.json()["asset_id"] == "api-gateway"
@@ -1268,6 +1280,28 @@ def test_workbench_assets_and_persisted_waivers_update_current_findings(
     assert xz_finding["asset"] == "edge-gateway"
     assert xz_finding["owner"] == "platform-risk-review"
     assert xz_finding["service"] == "checkout"
+    finding_detail = client.get(f"/api/findings/{xz_finding['id']}")
+    assert finding_detail.status_code == 200
+    assert any(
+        flag["code"] == "asset_context_rescore_needed"
+        for flag in finding_detail.json()["data_quality_flags"]
+    )
+    rescored_asset = client.post(f"/api/assets/{asset['id']}/rescore")
+    assert rescored_asset.status_code == 200, rescored_asset.text
+    assert rescored_asset.json()["recalculated_findings"] == 1
+    assert rescored_asset.json()["cleared_rescore_flags"] == 1
+    rescored_detail = client.get(f"/api/findings/{xz_finding['id']}")
+    assert rescored_detail.status_code == 200
+    assert not any(
+        flag["code"] == "asset_context_rescore_needed"
+        for flag in rescored_detail.json()["data_quality_flags"]
+    )
+    assert rescored_detail.json()["finding"]["provenance"]["asset_owners"] == [
+        "platform-risk-review"
+    ]
+    assert rescored_detail.json()["finding"]["provenance"]["asset_business_services"] == [
+        "checkout"
+    ]
 
     waiver = client.post(
         f"/api/projects/{project['id']}/waivers",
@@ -1327,6 +1361,58 @@ def test_workbench_assets_and_persisted_waivers_update_current_findings(
     assert refreshed.status_code == 200
     assert refreshed.json()["items"][0]["waiver_id"] is None
     assert refreshed.json()["items"][0]["waived"] is False
+
+
+def test_workbench_asset_context_import_api_filters_and_errors(tmp_path: Path) -> None:
+    client = _client(tmp_path)
+    project = _create_project(client)
+    context_csv = (
+        b"target_kind,target_ref,asset_id,criticality,exposure,environment,owner,business_service\n"
+        b"host,svc/api,asset-api,critical,internet-facing,prod,asset-import,checkout\n"
+        b"host,svc/batch,asset-batch,medium,internal,prod,data-import,batch\n"
+    )
+
+    imported = client.post(
+        f"/api/projects/{project['id']}/assets/import",
+        files={"asset_context_file": ("asset-context.csv", context_csv, "text/csv")},
+    )
+    assert imported.status_code == 200, imported.text
+    payload = imported.json()
+    assert payload["imported_assets"] == 2
+    assert payload["created_assets"] == 2
+    assert payload["updated_assets"] == 0
+
+    owner_filtered = client.get(
+        f"/api/projects/{project['id']}/assets",
+        params={"owner": "asset-import"},
+    )
+    assert owner_filtered.status_code == 200
+    assert [item["asset_id"] for item in owner_filtered.json()["items"]] == ["asset-api"]
+
+    service_filtered = client.get(
+        f"/api/projects/{project['id']}/assets",
+        params={"service": "batch"},
+    )
+    assert service_filtered.status_code == 200
+    assert [item["asset_id"] for item in service_filtered.json()["items"]] == ["asset-batch"]
+
+    missing_file = client.post(f"/api/projects/{project['id']}/assets/import")
+    assert missing_file.status_code == 422
+    assert "Asset context CSV file is required" in missing_file.text
+
+    invalid_csv = client.post(
+        f"/api/projects/{project['id']}/assets/import",
+        files={
+            "asset_context_file": (
+                "asset-context.csv",
+                b"target_kind,target_ref\nhost,x\n",
+                "text/csv",
+            )
+        },
+    )
+    assert invalid_csv.status_code == 422
+    assert "Asset context CSV import failed" in invalid_csv.text
+    assert "asset_id" in invalid_csv.text
 
 
 def test_workbench_detection_controls_coverage_gaps_and_technique_detail(

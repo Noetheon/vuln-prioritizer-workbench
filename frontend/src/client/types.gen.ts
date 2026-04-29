@@ -75,6 +75,23 @@ export type AnalysisRunSummaryPublic = {
 };
 
 /**
+ * Summary returned after importing asset-context CSV rows.
+ */
+export type AssetContextImportPublic = {
+    asset_keys?: Array<(string)>;
+    created_assets?: number;
+    imported_assets?: number;
+    loaded_rows?: number;
+    project_id: string;
+    rescore_needed_findings?: number;
+    skipped_rows?: number;
+    total_rows?: number;
+    unchanged_assets?: number;
+    updated_assets?: number;
+    warnings?: Array<(string)>;
+};
+
+/**
  * Asset creation payload.
  */
 export type AssetCreate = {
@@ -124,6 +141,18 @@ export type AssetPublic = {
 };
 
 /**
+ * Summary returned after recalculating findings for one asset.
+ */
+export type AssetRecalculatePublic = {
+    asset_id: string;
+    asset_key: string;
+    cleared_rescore_flags?: number;
+    operational_scores?: Array<(number)>;
+    recalculated_findings?: number;
+    rescore_needed?: boolean;
+};
+
+/**
  * Paginated asset collection response.
  */
 export type AssetsPublic = {
@@ -145,7 +174,12 @@ export type AssetUpdate = {
     target_ref?: (string | null);
 };
 
+export type Body_assets_import_project_assets = {
+    asset_context_file?: (string | null);
+};
+
 export type Body_imports_import_project_upload = {
+    asset_context_file?: (string | null);
     attack_mapping_file?: (string | null);
     attack_source?: string;
     attack_technique_metadata_file?: (string | null);
@@ -733,8 +767,16 @@ export type AssetsUpdateAssetData = {
 
 export type AssetsUpdateAssetResponse = (AssetPublic);
 
+export type AssetsRecalculateAssetData = {
+    assetId: string;
+};
+
+export type AssetsRecalculateAssetResponse = (AssetRecalculatePublic);
+
 export type AssetsReadProjectAssetsData = {
+    owner?: (string | null);
     projectId: string;
+    service?: (string | null);
 };
 
 export type AssetsReadProjectAssetsResponse = (AssetsPublic);
@@ -745,6 +787,13 @@ export type AssetsCreateProjectAssetData = {
 };
 
 export type AssetsCreateProjectAssetResponse = (AssetPublic);
+
+export type AssetsImportProjectAssetsData = {
+    formData?: Body_assets_import_project_assets;
+    projectId: string;
+};
+
+export type AssetsImportProjectAssetsResponse = (AssetContextImportPublic);
 
 export type FindingsReadFindingData = {
     findingId: string;

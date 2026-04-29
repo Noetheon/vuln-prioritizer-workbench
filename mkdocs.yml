@@ -100,6 +100,7 @@ nav:
       - VPW-060 ATT&CK Navigator Layer: evidence/vpw-060-attack-navigator-layer.md
       - VPW-061 ATT&CK Methodology And Safety: evidence/vpw-061-attack-methodology-safety.md
       - VPW-062 Asset Context Matching: evidence/vpw-062-asset-context-matching.md
+      - VPW-063 Asset Context Editor: evidence/vpw-063-asset-context-editor.md
       - Historical Evidence Archive: evidence.md
       - Current State Audit: evidence/current_state_audit.md
       - V0.3 Submission Checklist: evidence/final_submission_checklist.md

@@ -28,6 +28,8 @@ from app.models import (
     AnalysisRun,
     AnalysisRunPublic,
     AnalysisRunStatus,
+    AssetCriticality,
+    AssetEnvironment,
     AssetExposure,
     FindingAttackContext,
     FindingPriority,
@@ -37,7 +39,9 @@ from app.models.base import get_datetime_utc
 from app.repositories import AssetRepository, FindingRepository, RunRepository
 from app.services import AnalysisService, TemplateAnalysisError, TemplateAnalysisResult
 from vuln_prioritizer.cli_options import AttackSource
-from vuln_prioritizer.models import PrioritizedFinding
+from vuln_prioritizer.inputs._occurrence_support import apply_asset_context
+from vuln_prioritizer.inputs.loader import load_asset_context_file
+from vuln_prioritizer.models import InputOccurrence, PrioritizedFinding
 
 router = APIRouter(tags=["imports"])
 
@@ -76,6 +80,7 @@ async def import_project_upload(
     current_user: CurrentUser,
     input_type: str = Form(...),
     file: UploadFile = File(...),
+    asset_context_file: UploadFile | None = File(None),
     provider_snapshot_file: str | None = Form(None),
     locked_provider_data: bool = Form(False),
     attack_source: str = Form("none"),
@@ -91,6 +96,18 @@ async def import_project_upload(
     stored_filename = _sanitize_filename(original_filename)
     _validate_upload_suffix(stored_filename, input_type=normalized_input_type)
     _validate_mime_hint(file.content_type, input_type=normalized_input_type)
+    asset_context_upload = asset_context_file if _has_optional_upload(asset_context_file) else None
+    asset_context_original_filename = (
+        asset_context_upload.filename if asset_context_upload is not None else None
+    )
+    asset_context_stored_filename: str | None = None
+    if asset_context_upload is not None and asset_context_original_filename is not None:
+        _reject_unsafe_upload_filename(asset_context_original_filename)
+        asset_context_stored_filename = _sanitize_context_filename(
+            asset_context_original_filename,
+            reserved_filename=stored_filename,
+        )
+        _validate_asset_context_upload(asset_context_stored_filename, asset_context_upload)
     provider_snapshot_path = _resolve_template_provider_snapshot_path(
         provider_snapshot_file,
         request=request,
@@ -110,7 +127,15 @@ async def import_project_upload(
     )
 
     upload_bytes = await _read_bounded_upload(file, settings=_template_settings(request))
+    asset_context_bytes = (
+        await _read_bounded_upload(asset_context_upload, settings=_template_settings(request))
+        if asset_context_upload is not None
+        else None
+    )
     upload_sha256 = hashlib.sha256(upload_bytes).hexdigest()
+    asset_context_sha256 = (
+        hashlib.sha256(asset_context_bytes).hexdigest() if asset_context_bytes is not None else None
+    )
     ignored_lines = _ignored_line_count(normalized_input_type, upload_bytes)
     job_id = str(uuid.uuid4())
     job_history = [_job_status_entry("pending")]
@@ -135,6 +160,17 @@ async def import_project_upload(
                 sha256=upload_sha256,
                 path=None,
             ),
+            "asset_context_upload": _optional_upload_summary(
+                input_type="asset-context-csv",
+                original_filename=asset_context_original_filename,
+                stored_filename=asset_context_stored_filename,
+                content_type=asset_context_upload.content_type
+                if asset_context_upload is not None
+                else None,
+                size_bytes=len(asset_context_bytes) if asset_context_bytes is not None else None,
+                sha256=asset_context_sha256,
+                path=None,
+            ),
             "created_findings": 0,
             "updated_findings": 0,
             "ignored_lines": ignored_lines,
@@ -147,6 +183,17 @@ async def import_project_upload(
         run_id=run.id,
         filename=stored_filename,
         content=upload_bytes,
+    )
+    asset_context_path = (
+        _store_upload(
+            request,
+            project_id=project_id,
+            run_id=run.id,
+            filename=asset_context_stored_filename or "asset_context.csv",
+            content=asset_context_bytes,
+        )
+        if asset_context_bytes is not None
+        else None
     )
     run.status = AnalysisRunStatus.RUNNING
     job_history = [*job_history, _job_status_entry("running")]
@@ -161,6 +208,10 @@ async def import_project_upload(
             **run.summary_json["input_upload"],
             "path": str(upload_path),
         },
+        "asset_context_upload": _upload_summary_with_path(
+            run.summary_json.get("asset_context_upload"),
+            path=str(asset_context_path) if asset_context_path is not None else None,
+        ),
     }
     session.flush()
 
@@ -214,10 +265,65 @@ async def import_project_upload(
             },
         ) from exc
 
+    asset_context_summary: dict[str, Any] | None = None
+    if asset_context_path is not None:
+        try:
+            occurrences, asset_context_summary = _apply_template_asset_context(
+                occurrences,
+                asset_context_path=asset_context_path,
+            )
+        except ValueError as exc:
+            asset_context_error = {
+                "message": str(exc),
+                "filename": asset_context_stored_filename,
+                "stage": "asset_context_parse",
+                "error_type": exc.__class__.__name__,
+            }
+            failed_history = [*job_history, _job_status_entry("failed")]
+            failed_run = run_repo.finish_analysis_run(
+                run.id,
+                status=AnalysisRunStatus.FAILED,
+                error_message=str(exc),
+                error_json={
+                    "asset_context_error": asset_context_error,
+                    "created_findings": 0,
+                    "updated_findings": 0,
+                    "ignored_lines": ignored_lines,
+                    "import_job": _job_payload(
+                        job_id=job_id,
+                        status="failed",
+                        status_history=failed_history,
+                    ),
+                },
+                summary_json={
+                    **run.summary_json,
+                    "import_job": _job_payload(
+                        job_id=job_id,
+                        status="failed",
+                        status_history=failed_history,
+                    ),
+                    "asset_context_error": asset_context_error,
+                    "parse_errors": [],
+                    "created_findings": 0,
+                    "updated_findings": 0,
+                    "ignored_lines": ignored_lines,
+                },
+            )
+            session.commit()
+            raise HTTPException(
+                status_code=422,
+                detail={
+                    "message": "Asset context parsing failed.",
+                    "analysis_run_id": str(failed_run.id),
+                    "asset_context_error": asset_context_error,
+                },
+            ) from exc
+
     try:
         analysis_result = AnalysisService(session, _template_settings(request)).analyze_import(
             input_path=upload_path,
             input_type=normalized_input_type,
+            asset_context_file=asset_context_path,
             provider_snapshot_file=provider_snapshot_path,
             locked_provider_data=locked_provider_data,
             attack_source=normalized_attack_source,
@@ -294,6 +400,7 @@ async def import_project_upload(
             ),
             **analysis_result.summary_json,
             **persist_summary,
+            "asset_context": asset_context_summary,
             "ignored_lines": ignored_lines,
             "input_sha256": upload_sha256,
             "parse_errors": [],
@@ -315,6 +422,169 @@ async def _read_bounded_upload(file: UploadFile, *, settings: Settings) -> bytes
             )
         chunks.append(chunk)
     return b"".join(chunks)
+
+
+def _has_optional_upload(file: UploadFile | None) -> bool:
+    return bool(file is not None and file.filename and file.filename.strip())
+
+
+def _validate_asset_context_upload(filename: str, file: UploadFile) -> None:
+    if Path(filename).suffix.lower() != ".csv":
+        raise HTTPException(status_code=422, detail="Asset context file must be a CSV.")
+    normalized = (file.content_type or "").split(";", maxsplit=1)[0].strip().lower()
+    if normalized in {"", "application/octet-stream"}:
+        return
+    if normalized not in {"text/csv", "text/plain", "application/vnd.ms-excel"}:
+        raise HTTPException(
+            status_code=422,
+            detail="Asset context content type must be text/csv.",
+        )
+
+
+def _sanitize_context_filename(filename: str, *, reserved_filename: str) -> str:
+    sanitized = _sanitize_filename(filename)
+    if sanitized == reserved_filename:
+        return f"asset_context_{sanitized}"
+    return sanitized
+
+
+def _optional_upload_summary(
+    *,
+    input_type: str,
+    original_filename: str | None,
+    stored_filename: str | None,
+    content_type: str | None,
+    size_bytes: int | None,
+    sha256: str | None,
+    path: str | None,
+) -> dict[str, Any] | None:
+    if original_filename is None or stored_filename is None or size_bytes is None or sha256 is None:
+        return None
+    return _upload_summary(
+        input_type=input_type,
+        original_filename=original_filename,
+        stored_filename=stored_filename,
+        content_type=content_type,
+        size_bytes=size_bytes,
+        sha256=sha256,
+        path=path,
+    )
+
+
+def _upload_summary_with_path(value: Any, *, path: str | None) -> dict[str, Any] | None:
+    if not isinstance(value, dict):
+        return None
+    return {**value, "path": path}
+
+
+def _apply_template_asset_context(
+    occurrences: list[NormalizedOccurrence],
+    *,
+    asset_context_path: Path,
+) -> tuple[list[NormalizedOccurrence], dict[str, Any]]:
+    catalog, load_diagnostics = load_asset_context_file(
+        asset_context_path,
+        return_diagnostics=True,
+    )
+    input_occurrences = [
+        _input_occurrence_from_template_occurrence(occurrence) for occurrence in occurrences
+    ]
+    enriched_occurrences, match_diagnostics = apply_asset_context(
+        input_occurrences,
+        catalog,
+        return_diagnostics=True,
+    )
+    return (
+        [
+            _template_occurrence_with_asset_context(original, enriched)
+            for original, enriched in zip(occurrences, enriched_occurrences, strict=True)
+        ],
+        {
+            "total_rows": load_diagnostics.total_rows,
+            "loaded_rows": load_diagnostics.loaded_rows,
+            "skipped_rows": load_diagnostics.skipped_rows,
+            "exact_rules": load_diagnostics.exact_rules,
+            "contains_rules": load_diagnostics.contains_rules,
+            "regex_rules": load_diagnostics.regex_rules,
+            "glob_rules": load_diagnostics.glob_rules,
+            "matched_occurrences": match_diagnostics.matched_occurrences,
+            "unmatched_occurrences": match_diagnostics.unmatched_occurrences,
+            "ambiguous_occurrences": match_diagnostics.ambiguous_occurrences,
+            "warnings": [
+                *load_diagnostics.warnings,
+                *match_diagnostics.warnings,
+            ],
+        },
+    )
+
+
+def _input_occurrence_from_template_occurrence(
+    occurrence: NormalizedOccurrence,
+) -> InputOccurrence:
+    evidence = occurrence.raw_evidence
+    fix_versions = [occurrence.fix_version] if occurrence.fix_version else []
+    return InputOccurrence(
+        cve_id=occurrence.cve,
+        source_format=occurrence.source,
+        source_id=_string_evidence(evidence, "source_id"),
+        source_record_id=_string_evidence(evidence, "source_record_id"),
+        component_name=occurrence.component,
+        component_version=occurrence.version,
+        purl=_string_evidence(evidence, "purl"),
+        package_type=_string_evidence(evidence, "package_type"),
+        file_path=_string_evidence(evidence, "file_path"),
+        dependency_path=_string_evidence(evidence, "dependency_path"),
+        fix_versions=fix_versions,
+        raw_severity=(
+            _string_evidence(evidence, "raw_severity") or _string_evidence(evidence, "severity")
+        ),
+        target_kind=_string_evidence(evidence, "target_kind") or "generic",
+        target_ref=_string_evidence(evidence, "target_ref") or occurrence.asset_ref,
+        asset_id=_string_evidence(evidence, "asset_id"),
+        asset_criticality=_string_evidence(evidence, "asset_criticality"),
+        asset_exposure=_string_evidence(evidence, "asset_exposure")
+        or _string_evidence(evidence, "exposure"),
+        asset_environment=_string_evidence(evidence, "asset_environment"),
+        asset_owner=_string_evidence(evidence, "asset_owner")
+        or _string_evidence(evidence, "owner"),
+        asset_business_service=_string_evidence(evidence, "asset_business_service")
+        or _string_evidence(evidence, "business_service"),
+    )
+
+
+def _template_occurrence_with_asset_context(
+    occurrence: NormalizedOccurrence,
+    enriched: InputOccurrence,
+) -> NormalizedOccurrence:
+    evidence = dict(occurrence.raw_evidence)
+    updates: dict[str, Any] = {
+        "target_kind": enriched.target_kind,
+        "target_ref": enriched.target_ref,
+        "asset_id": enriched.asset_id,
+        "asset_criticality": enriched.asset_criticality,
+        "asset_exposure": enriched.asset_exposure,
+        "asset_environment": enriched.asset_environment,
+        "asset_owner": enriched.asset_owner,
+        "asset_business_service": enriched.asset_business_service,
+        "owner": enriched.asset_owner,
+        "business_service": enriched.asset_business_service,
+        "asset_match_rule_id": enriched.asset_match_rule_id,
+        "asset_match_row": enriched.asset_match_row,
+        "asset_match_mode": enriched.asset_match_mode,
+        "asset_match_pattern": enriched.asset_match_pattern,
+        "asset_match_precedence": enriched.asset_match_precedence,
+        "asset_match_candidate_count": enriched.asset_match_candidate_count,
+    }
+    evidence.update({key: value for key, value in updates.items() if value not in {None, ""}})
+    return NormalizedOccurrence(
+        cve=occurrence.cve,
+        component=occurrence.component,
+        version=occurrence.version,
+        asset_ref=enriched.asset_id or occurrence.asset_ref or enriched.target_ref,
+        source=occurrence.source,
+        fix_version=occurrence.fix_version,
+        raw_evidence=evidence,
+    )
 
 
 def _persist_template_occurrences(
@@ -342,12 +612,15 @@ def _persist_template_occurrences(
                 project_id=project_id,
                 asset_key=occurrence.asset_ref,
                 name=occurrence.asset_ref,
+                target_ref=_string_evidence(occurrence.raw_evidence, "target_ref"),
                 owner=_string_evidence(occurrence.raw_evidence, "owner"),
                 business_service=_string_evidence(
                     occurrence.raw_evidence,
                     "business_service",
                 ),
+                environment=_asset_environment(occurrence.raw_evidence),
                 exposure=_asset_exposure(occurrence.raw_evidence),
+                criticality=_asset_criticality(occurrence.raw_evidence),
             )
             if occurrence.asset_ref
             else None
@@ -982,3 +1255,38 @@ def _asset_exposure(evidence: Mapping[str, Any]) -> AssetExposure:
         "unknown": AssetExposure.UNKNOWN,
     }
     return aliases.get(normalized, AssetExposure.UNKNOWN)
+
+
+def _asset_environment(evidence: Mapping[str, Any]) -> AssetEnvironment:
+    raw = _string_evidence(evidence, "asset_environment")
+    if raw is None:
+        return AssetEnvironment.UNKNOWN
+    normalized = raw.strip().lower().replace("_", "-")
+    aliases = {
+        "prod": AssetEnvironment.PRODUCTION,
+        "production": AssetEnvironment.PRODUCTION,
+        "stage": AssetEnvironment.STAGING,
+        "staging": AssetEnvironment.STAGING,
+        "dev": AssetEnvironment.DEVELOPMENT,
+        "development": AssetEnvironment.DEVELOPMENT,
+        "test": AssetEnvironment.TEST,
+        "testing": AssetEnvironment.TEST,
+        "unknown": AssetEnvironment.UNKNOWN,
+    }
+    return aliases.get(normalized, AssetEnvironment.UNKNOWN)
+
+
+def _asset_criticality(evidence: Mapping[str, Any]) -> AssetCriticality:
+    raw = _string_evidence(evidence, "asset_criticality")
+    if raw is None:
+        return AssetCriticality.UNKNOWN
+    normalized = raw.strip().lower().replace("_", "-")
+    aliases = {
+        "critical": AssetCriticality.CRITICAL,
+        "high": AssetCriticality.HIGH,
+        "medium": AssetCriticality.MEDIUM,
+        "med": AssetCriticality.MEDIUM,
+        "low": AssetCriticality.LOW,
+        "unknown": AssetCriticality.UNKNOWN,
+    }
+    return aliases.get(normalized, AssetCriticality.UNKNOWN)

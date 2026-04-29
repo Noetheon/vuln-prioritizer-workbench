@@ -44,6 +44,13 @@ class AssetWaiverRepositoryMixin:
         statement = select(Asset).where(Asset.project_id == project_id).order_by(Asset.asset_id)
         return list(self.session.scalars(statement))
 
+    def get_project_asset_by_asset_id(self, project_id: str, asset_id: str) -> Asset | None:
+        statement = select(Asset).where(
+            Asset.project_id == project_id,
+            Asset.asset_id == asset_id,
+        )
+        return self.session.scalar(statement)
+
     def get_asset(self, asset_id: str) -> Asset | None:
         return self.session.get(Asset, asset_id)
 
