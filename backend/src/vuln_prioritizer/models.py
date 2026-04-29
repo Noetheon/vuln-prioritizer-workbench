@@ -17,9 +17,14 @@ import vuln_prioritizer.models_waivers as _models_waivers
 from vuln_prioritizer.model_base import StrictModel
 
 AttackData = _models_attack.AttackData
+AttackTactic = _models_attack.AttackTactic
 AttackMapping = _models_attack.AttackMapping
+AttackMappingType = _models_attack.AttackMappingType
+AttackReviewStatus = _models_attack.AttackReviewStatus
 AttackSummary = _models_attack.AttackSummary
 AttackTechnique = _models_attack.AttackTechnique
+CveAttackMapping = _models_attack.CveAttackMapping
+FindingAttackContext = _models_attack.FindingAttackContext
 AssetContextRecord = _models_input.AssetContextRecord
 BusinessImpactBlock = _models_decision.BusinessImpactBlock
 ContextPolicyProfile = _models_input.ContextPolicyProfile

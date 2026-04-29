@@ -54,6 +54,9 @@ ATT&CK rules:
 - no heuristic CVE-to-ATT&CK mapping is performed
 - no LLM-generated ATT&CK mapping is performed
 - no live TAXII integration is used in this release
+- curated local mappings require source, confidence, rationale, review status,
+  and a defensive note; they must not include exploit payloads, commands, or
+  step-by-step procedure guidance
 
 ## ATT&CK Data Model
 

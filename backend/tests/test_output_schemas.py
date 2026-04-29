@@ -5,6 +5,8 @@ from pathlib import Path
 from typing import Any
 
 import jsonschema
+import pytest
+import yaml
 from _cli_helpers import (
     install_fake_providers as _install_fake_providers,
 )
@@ -135,6 +137,38 @@ def test_demo_provider_snapshot_matches_schema_and_model() -> None:
     assert snapshot.metadata.source_metadata["epss"]["record_count"] == 7
     assert snapshot.metadata.source_metadata["kev"]["record_count"] == 6
     assert len(snapshot.items) == 7
+
+
+def test_attack_curated_mapping_example_matches_schema() -> None:
+    schema = _load_schema("attack-curated-mapping.schema.json")
+    payload = json.loads(
+        (DOCS_ROOT / "examples" / "example_attack_curated_mapping.json").read_text(encoding="utf-8")
+    )
+    yaml_payload = yaml.safe_load(yaml.safe_dump(payload))
+
+    jsonschema.validate(payload, schema)
+    jsonschema.validate(yaml_payload, schema)
+    assert payload["mapping_objects"][0]["technique_id"] == "T1190"
+    assert payload["mapping_objects"][0]["confidence"] == 0.9
+    assert "commands" in payload["mapping_objects"][0]["comments"]
+
+
+def test_attack_curated_mapping_schema_rejects_unreviewable_mappings() -> None:
+    schema = _load_schema("attack-curated-mapping.schema.json")
+    payload = json.loads(
+        (DOCS_ROOT / "examples" / "example_attack_curated_mapping.json").read_text(encoding="utf-8")
+    )
+
+    for required_field in ("source", "rationale", "confidence", "defensive_note"):
+        invalid = json.loads(json.dumps(payload))
+        invalid["mapping_objects"][0].pop(required_field)
+        with pytest.raises(jsonschema.ValidationError):
+            jsonschema.validate(invalid, schema)
+
+    invalid_technique = json.loads(json.dumps(payload))
+    invalid_technique["mapping_objects"][0]["technique_id"] = "TA0001"
+    with pytest.raises(jsonschema.ValidationError):
+        jsonschema.validate(invalid_technique, schema)
 
 
 def test_example_score_json_documents_vpw_030_operational_score() -> None:

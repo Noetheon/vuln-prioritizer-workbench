@@ -24,15 +24,81 @@ def test_models_facade_reexports_base_model_identity() -> None:
     ("facade_name", "module_name"),
     [
         ("AttackMapping", "AttackMapping"),
+        ("AttackMappingType", "AttackMappingType"),
+        ("AttackReviewStatus", "AttackReviewStatus"),
         ("AttackTechnique", "AttackTechnique"),
+        ("AttackTactic", "AttackTactic"),
         ("AttackSummary", "AttackSummary"),
         ("AttackData", "AttackData"),
+        ("CveAttackMapping", "CveAttackMapping"),
+        ("FindingAttackContext", "FindingAttackContext"),
     ],
 )
 def test_models_facade_reexports_attack_model_identities(
     facade_name: str, module_name: str
 ) -> None:
     assert getattr(models, facade_name) is getattr(models_attack, module_name)
+
+
+def test_vpw055_attack_mapping_models_validate_required_review_fields() -> None:
+    mapping = models.CveAttackMapping(
+        cve_id="CVE-2021-44228",
+        technique_id="T1190",
+        source="CTID Mappings Explorer",
+        confidence=0.9,
+        rationale="Reviewed defensive mapping from CVE impact to ATT&CK context.",
+        defensive_note="Use for triage and detection review only.",
+        tactic_ids=["TA0001"],
+        review_status="reviewed",
+    )
+    context = models.FindingAttackContext(
+        finding_id="finding-1",
+        cve_id="CVE-2021-44228",
+        mapped=True,
+        mappings=[mapping],
+        techniques=[
+            models.AttackTechnique(
+                attack_object_id="T1190",
+                name="Exploit Public-Facing Application",
+                tactics=["initial-access"],
+            )
+        ],
+        tactics=[models.AttackTactic(tactic_id="TA0001", name="Initial Access")],
+        defensive_note="Defensive context only.",
+    )
+
+    assert mapping.technique_id == "T1190"
+    assert context.mapped is True
+
+    with pytest.raises(ValidationError):
+        models.CveAttackMapping(
+            cve_id="CVE-2021-44228",
+            technique_id="TA0001",
+            source="CTID Mappings Explorer",
+            confidence=0.9,
+            rationale="Tactic IDs are not valid technique IDs.",
+            defensive_note="Defensive context only.",
+        )
+
+    with pytest.raises(ValidationError):
+        models.CveAttackMapping(
+            cve_id="CVE-2021-44228",
+            technique_id="T1190",
+            source="",
+            confidence=0.9,
+            rationale="Missing source must fail.",
+            defensive_note="Defensive context only.",
+        )
+
+    with pytest.raises(ValidationError):
+        models.CveAttackMapping(
+            cve_id="CVE-2021-44228",
+            technique_id="T1190",
+            source="CTID Mappings Explorer",
+            confidence=1.2,
+            rationale="Confidence must be normalized.",
+            defensive_note="Defensive context only.",
+        )
 
 
 @pytest.mark.parametrize(
