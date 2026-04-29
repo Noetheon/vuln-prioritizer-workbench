@@ -9,8 +9,9 @@ from fastapi import APIRouter, HTTPException, Query
 
 from app.api.deps import CurrentUser, SessionDep
 from app.api.routes.workbench_access import require_visible_project
-from app.models import Finding, FindingPublic, FindingsPublic
+from app.models import Finding, FindingExplanationPublic, FindingPublic, FindingsPublic
 from app.repositories import FindingRepository
+from app.services import DecisionDataUnavailableError, build_finding_explanation_payload
 
 router = APIRouter(tags=["findings"])
 
@@ -52,3 +53,20 @@ def read_finding(
         raise HTTPException(status_code=404, detail="Finding not found")
     require_visible_project(session, current_user, finding.project_id)
     return finding
+
+
+@router.get("/findings/{finding_id}/explain", response_model=FindingExplanationPublic)
+def explain_finding(
+    finding_id: uuid.UUID,
+    session: SessionDep,
+    current_user: CurrentUser,
+) -> FindingExplanationPublic:
+    """Read the persisted decision explanation for one visible finding."""
+    finding = FindingRepository(session).get_finding(finding_id)
+    if finding is None:
+        raise HTTPException(status_code=404, detail="Finding not found")
+    require_visible_project(session, current_user, finding.project_id)
+    try:
+        return build_finding_explanation_payload(finding)
+    except DecisionDataUnavailableError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc

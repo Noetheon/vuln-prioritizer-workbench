@@ -16,6 +16,11 @@ from app.models.assets import (
     ComponentBase,
 )
 from app.models.auth import Token, TokenPayload
+from app.models.decisions import (
+    FindingExplanationPublic,
+    ProjectCvssOnlyComparisonPublic,
+    ProjectDecisionSummaryPublic,
+)
 from app.models.enums import (
     AnalysisRunStatus,
     AssetCriticality,
@@ -76,6 +81,7 @@ __all__ = [
     "ComponentBase",
     "Finding",
     "FindingBase",
+    "FindingExplanationPublic",
     "FindingOccurrence",
     "FindingOccurrenceBase",
     "FindingPublic",
@@ -87,6 +93,8 @@ __all__ = [
     "Project",
     "ProjectBase",
     "ProjectCreate",
+    "ProjectCvssOnlyComparisonPublic",
+    "ProjectDecisionSummaryPublic",
     "ProjectPublic",
     "ProjectsPublic",
     "ProjectUpdate",
