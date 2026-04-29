@@ -58,6 +58,7 @@ nav:
       - ATT&CK Report: example_attack_report.md
       - ATT&CK Compare: example_attack_compare.md
       - ATT&CK Coverage: example_attack_coverage.md
+      - VPW-054 Template Technical Report: examples/vpw-054-template-technical-report.md
       - PR Comment Body: examples/example_pr_comment.md
       - GitHub Summary Templates: examples/github_action_summary_templates.md
   - Historical Appendix:
@@ -88,6 +89,7 @@ nav:
       - VPW-051 Evidence Bundle: evidence/vpw-051-evidence-bundle.md
       - VPW-052 Evidence Bundle Verification: evidence/vpw-052-evidence-bundle-verification.md
       - VPW-053 Report Downloads: evidence/vpw-053-report-downloads.md
+      - VPW-054 Report Snapshots: evidence/vpw-054-report-snapshots.md
       - Historical Evidence Archive: evidence.md
       - Current State Audit: evidence/current_state_audit.md
       - V0.3 Submission Checklist: evidence/final_submission_checklist.md

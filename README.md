@@ -288,6 +288,13 @@ That command starts the template backend and React shell, verifies
 `/api/v1/workbench/status`, checks the frontend and login route, then tears down
 the stack.
 
+Committed template report demo artifacts are available for review without
+running the Workbench:
+
+- [docs/examples/vpw-054-template-technical-report.md](docs/examples/vpw-054-template-technical-report.md)
+- [docs/examples/vpw-054-template-executive-report.html](docs/examples/vpw-054-template-executive-report.html)
+- [docs/examples/vpw-054-template-analysis-result.v1.json](docs/examples/vpw-054-template-analysis-result.v1.json)
+
 ## Quickstart
 
 ### 1. Fastest Public-Install Analyze Run

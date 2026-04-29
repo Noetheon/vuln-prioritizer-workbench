@@ -71,6 +71,23 @@ CSV_FINDINGS_COLUMNS = [
     "recommended_action",
 ]
 
+VPW054_DEMO_ARTIFACTS = {
+    "markdown": Path("docs/examples/vpw-054-template-technical-report.md"),
+    "html": Path("docs/examples/vpw-054-template-executive-report.html"),
+    "json": Path("docs/examples/vpw-054-template-analysis-result.v1.json"),
+}
+VPW054_HTML_SNAPSHOT = Path("backend/tests/api/snapshots/vpw_054_executive_report.normalized.html")
+VPW054_SECRET_MARKERS = (
+    "super-secret-token",
+    "provider-secret-key",
+    "bearer ",
+    "api_key",
+    "authorization",
+    "/users/",
+    "/tmp/",
+    ".env",
+)
+
 
 def test_vpw049_openapi_exposes_report_format_contract() -> None:
     response = TestClient(app).get("/api/v1/openapi.json")
@@ -868,6 +885,53 @@ def test_vpw050_findings_csv_export_snapshot_is_stable() -> None:
     assert render_findings_csv(payload) == snapshot_path.read_text(encoding="utf-8")
 
 
+def test_vpw054_demo_report_artifacts_match_current_renderers() -> None:
+    payload = _vpw054_demo_payload()
+    repo_root = _repo_root()
+    rendered = {
+        "markdown": render_markdown_report(payload),
+        "html": render_html_executive_report(payload),
+        "json": render_analysis_result_json(payload),
+    }
+
+    for artifact_type, relative_path in VPW054_DEMO_ARTIFACTS.items():
+        artifact_path = repo_root / relative_path
+        assert artifact_path.read_text(encoding="utf-8") == rendered[artifact_type]
+
+    jsonschema.validate(
+        json.loads(rendered["json"]),
+        _load_schema("analysis-result.v1.schema.json"),
+    )
+
+
+def test_vpw054_normalized_html_report_snapshot_is_stable() -> None:
+    payload = _vpw054_demo_payload()
+    snapshot_path = _repo_root() / VPW054_HTML_SNAPSHOT
+
+    assert _normalize_html_snapshot(
+        render_html_executive_report(payload)
+    ) == snapshot_path.read_text(encoding="utf-8")
+
+
+def test_vpw054_demo_report_artifacts_are_linked_and_secret_free() -> None:
+    repo_root = _repo_root()
+    readme = (repo_root / "README.md").read_text(encoding="utf-8")
+    evidence = (repo_root / "docs" / "evidence" / "vpw-054-report-snapshots.md").read_text(
+        encoding="utf-8"
+    )
+    combined_artifacts: list[str] = []
+
+    for relative_path in VPW054_DEMO_ARTIFACTS.values():
+        artifact_link = relative_path.as_posix()
+        assert artifact_link in readme
+        assert artifact_link in evidence
+        combined_artifacts.append((repo_root / relative_path).read_text(encoding="utf-8"))
+
+    combined_text = "\n".join(combined_artifacts).lower()
+    for marker in VPW054_SECRET_MARKERS:
+        assert marker not in combined_text
+
+
 def _configure_report_dir(template_api_env: TemplateApiEnv, tmp_path: Path) -> Path:
     report_dir = (tmp_path / "template-reports").resolve(strict=False)
     active_settings = template_api_env.client.app.state.template_settings
@@ -885,6 +949,11 @@ def _repo_root() -> Path:
 def _load_schema(filename: str) -> dict[str, Any]:
     schema_path = _repo_root() / "docs" / "schemas" / filename
     return json.loads(schema_path.read_text(encoding="utf-8"))
+
+
+def _normalize_html_snapshot(value: str) -> str:
+    lines = [line.rstrip() for line in value.replace("\r\n", "\n").splitlines() if line.strip()]
+    return "\n".join(lines) + "\n"
 
 
 def _replace_zip_member(bundle: bytes, member_path: str, replacement: bytes) -> bytes:
@@ -1054,6 +1123,18 @@ def _vpw050_snapshot_payload() -> MarkdownReportPayload:
         run_started_at=datetime(2026, 4, 29, 11, 0, tzinfo=UTC),
         run_finished_at=datetime(2026, 4, 29, 11, 45, tzinfo=UTC),
         run_errors={},
+    )
+
+
+def _vpw054_demo_payload() -> MarkdownReportPayload:
+    payload = _vpw050_snapshot_payload()
+    return replace(
+        payload,
+        project_id="00000000-0000-4000-8000-000000000054",
+        project_name="VPW-054 Demo Reports",
+        project_description="Committed demo artifacts for VPW-054 report snapshot coverage.",
+        run_id="00000000-0000-4000-8000-000000000540",
+        filename="vpw-054-known-cves.txt",
     )
 
 
