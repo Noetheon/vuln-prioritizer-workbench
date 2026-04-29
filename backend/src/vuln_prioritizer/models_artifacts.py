@@ -58,6 +58,7 @@ class EvidenceBundleManifest(StrictModel):
     source_input_paths: list[str] = Field(default_factory=list)
     source_input_hashes: list[EvidenceBundleInputHash] = Field(default_factory=list)
     provider_snapshot: dict[str, Any] = Field(default_factory=dict)
+    attack_navigator_layer: dict[str, Any] | None = None
     artifact_hashes: dict[str, str] = Field(default_factory=dict)
     findings_count: int = 0
     kev_hits: int = 0

@@ -51,6 +51,12 @@ def create_run_report(
             report = report_service.create_analysis_json_export(run=run, project=project)
         elif payload.format == "csv":
             report = report_service.create_findings_csv_export(run=run, project=project)
+        elif payload.format == "attack-navigator":
+            report = report_service.create_attack_navigator_layer(
+                run=run,
+                project=project,
+                filter_value=payload.attack_filter,
+            )
         elif payload.format == "zip":
             report = report_service.create_evidence_bundle(run=run, project=project)
         else:
