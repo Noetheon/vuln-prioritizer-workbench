@@ -117,6 +117,41 @@ class AnalysisRunsPublic(SQLModel):
     count: int
 
 
+class ImportParseErrorPublic(SQLModel):
+    """Stable parser error item for import status and summary APIs."""
+
+    input_type: str
+    filename: str | None = None
+    message: str
+    error_type: str
+    line: int | None = None
+    field: str | None = None
+    value: str | None = None
+
+
+class AnalysisRunSummaryPublic(SQLModel):
+    """UI-oriented summary for one import or analysis run."""
+
+    id: uuid.UUID
+    project_id: uuid.UUID
+    input_type: str
+    filename: str | None
+    status: AnalysisRunStatus
+    started_at: datetime
+    finished_at: datetime | None
+    created_findings: int = 0
+    updated_findings: int = 0
+    ignored_lines: int = 0
+    occurrence_count: int = 0
+    finding_count: int = 0
+    parse_errors: list[ImportParseErrorPublic] = Field(default_factory=list)
+    import_job: dict[str, Any] = Field(default_factory=dict)
+    input_upload: dict[str, Any] = Field(default_factory=dict)
+    dedup_summary: dict[str, Any] = Field(default_factory=dict)
+    summary_json: dict[str, Any] = Field(default_factory=dict)
+    error_json: dict[str, Any] = Field(default_factory=dict)
+
+
 class FindingOccurrenceBase(SQLModel):
     """Shared finding occurrence fields."""
 

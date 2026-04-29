@@ -77,6 +77,7 @@ async def import_project_upload(
 
     upload_bytes = await _read_bounded_upload(file, settings=_template_settings(request))
     upload_sha256 = hashlib.sha256(upload_bytes).hexdigest()
+    ignored_lines = _ignored_line_count(normalized_input_type, upload_bytes)
     job_id = str(uuid.uuid4())
     job_history = [_job_status_entry("pending")]
     run_repo = RunRepository(session)
@@ -100,6 +101,9 @@ async def import_project_upload(
                 sha256=upload_sha256,
                 path=None,
             ),
+            "created_findings": 0,
+            "updated_findings": 0,
+            "ignored_lines": ignored_lines,
             "parse_errors": [],
         },
     )
@@ -143,6 +147,9 @@ async def import_project_upload(
             error_message=str(exc),
             error_json={
                 "parse_errors": parse_errors,
+                "created_findings": 0,
+                "updated_findings": 0,
+                "ignored_lines": ignored_lines,
                 "import_job": _job_payload(
                     job_id=job_id,
                     status="failed",
@@ -157,6 +164,9 @@ async def import_project_upload(
                     status_history=failed_history,
                 ),
                 "parse_errors": parse_errors,
+                "created_findings": 0,
+                "updated_findings": 0,
+                "ignored_lines": ignored_lines,
             },
         )
         session.commit()
@@ -165,6 +175,7 @@ async def import_project_upload(
             detail={
                 "message": "Import parsing failed.",
                 "analysis_run_id": str(failed_run.id),
+                "ignored_lines": ignored_lines,
                 "parse_errors": parse_errors,
             },
         ) from exc
@@ -186,6 +197,7 @@ async def import_project_upload(
                 status_history=[*job_history, _job_status_entry("succeeded")],
             ),
             **persist_summary,
+            "ignored_lines": ignored_lines,
             "input_sha256": upload_sha256,
             "parse_errors": [],
         },
@@ -314,9 +326,12 @@ def _persist_template_occurrences(
     return {
         "occurrence_count": len(occurrences),
         "finding_count": len(touched_finding_ids),
+        "created_findings": created_count,
+        "updated_findings": reused_count,
         "dedup_summary": {
             "key_version": "vpw019-v1",
             "created_findings": created_count,
+            "updated_findings": reused_count,
             "reused_findings": reused_count,
             "decision_count": len(decisions),
             "decisions": decisions,
@@ -434,15 +449,75 @@ def _parse_errors(
     *,
     filename: str,
     input_type: str,
-) -> list[dict[str, str]]:
+) -> list[dict[str, Any]]:
+    message = str(exc)
+    row_prefix = "generic-occurrence-csv row errors: "
+    messages = (
+        [item.strip() for item in message.removeprefix(row_prefix).split(";") if item.strip()]
+        if message.startswith(row_prefix)
+        else [message]
+    )
     return [
-        {
-            "input_type": input_type,
-            "filename": filename,
-            "message": str(exc),
-            "error_type": exc.__class__.__name__,
-        }
+        _parse_error_payload(
+            item,
+            filename=filename,
+            input_type=input_type,
+            error_type=exc.__class__.__name__,
+        )
+        for item in messages
     ]
+
+
+def _parse_error_payload(
+    message: str,
+    *,
+    filename: str,
+    input_type: str,
+    error_type: str,
+) -> dict[str, Any]:
+    return {
+        "input_type": input_type,
+        "filename": filename,
+        "message": message,
+        "error_type": error_type,
+        "line": _parse_error_line(message),
+        "field": _parse_error_field(message),
+        "value": _parse_error_value(message),
+    }
+
+
+def _parse_error_line(message: str) -> int | None:
+    match = re.search(r"\bline (?P<line>\d+)\b", message)
+    return int(match.group("line")) if match else None
+
+
+def _parse_error_field(message: str) -> str | None:
+    lower_message = message.lower()
+    if "cve_id column" in lower_message:
+        return "cve_id"
+    if "cve identifier" in lower_message:
+        return "cve_id"
+    return None
+
+
+def _parse_error_value(message: str) -> str | None:
+    match = re.search(r"(?P<quote>['\"])(?P<value>.+?)(?P=quote)", message)
+    return match.group("value") if match else None
+
+
+def _ignored_line_count(input_type: str, payload: bytes) -> int:
+    if input_type not in {"cve-list", "generic-occurrence-csv"}:
+        return 0
+    try:
+        text = payload.decode("utf-8")
+    except UnicodeDecodeError:
+        return 0
+    return sum(1 for line in text.splitlines() if _is_ignored_text_line(line))
+
+
+def _is_ignored_text_line(line: str) -> bool:
+    stripped = line.strip()
+    return not stripped or stripped.startswith("#")
 
 
 def _validate_input_type(input_type: str) -> None:

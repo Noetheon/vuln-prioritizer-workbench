@@ -3,7 +3,7 @@
 import type { CancelablePromise } from './core/CancelablePromise';
 import { OpenAPI } from './core/OpenAPI';
 import { request as __request } from './core/request';
-import type { AssetsUpdateAssetData, AssetsUpdateAssetResponse, AssetsReadProjectAssetsData, AssetsReadProjectAssetsResponse, AssetsCreateProjectAssetData, AssetsCreateProjectAssetResponse, FindingsReadFindingData, FindingsReadFindingResponse, FindingsReadProjectFindingsData, FindingsReadProjectFindingsResponse, ImportsImportProjectUploadData, ImportsImportProjectUploadResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, ProjectsReadProjectsResponse, ProjectsCreateProjectData, ProjectsCreateProjectResponse, ProjectsDeleteProjectData, ProjectsDeleteProjectResponse, ProjectsReadProjectData, ProjectsReadProjectResponse, ProjectsUpdateProjectData, ProjectsUpdateProjectResponse, RunsReadProjectRunsData, RunsReadProjectRunsResponse, RunsReadRunData, RunsReadRunResponse, UsersReadUserMeResponse, UtilsHealthCheckResponse, WorkbenchTemplateWorkbenchStatusResponse } from './types.gen';
+import type { AssetsUpdateAssetData, AssetsUpdateAssetResponse, AssetsReadProjectAssetsData, AssetsReadProjectAssetsResponse, AssetsCreateProjectAssetData, AssetsCreateProjectAssetResponse, FindingsReadFindingData, FindingsReadFindingResponse, FindingsReadProjectFindingsData, FindingsReadProjectFindingsResponse, ImportsImportProjectUploadData, ImportsImportProjectUploadResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, ProjectsReadProjectsResponse, ProjectsCreateProjectData, ProjectsCreateProjectResponse, ProjectsDeleteProjectData, ProjectsDeleteProjectResponse, ProjectsReadProjectData, ProjectsReadProjectResponse, ProjectsUpdateProjectData, ProjectsUpdateProjectResponse, RunsReadProjectRunsWithoutTrailingSlashData, RunsReadProjectRunsWithoutTrailingSlashResponse, RunsReadProjectRunsData, RunsReadProjectRunsResponse, RunsReadRunData, RunsReadRunResponse, RunsReadRunSummaryData, RunsReadRunSummaryResponse, UsersReadUserMeResponse, UtilsHealthCheckResponse, WorkbenchTemplateWorkbenchStatusResponse } from './types.gen';
 
 export class AssetsService {
     /**
@@ -299,6 +299,27 @@ export class RunsService {
      * @returns AnalysisRunsPublic Successful Response
      * @throws ApiError
      */
+    public static readProjectRunsWithoutTrailingSlash(data: RunsReadProjectRunsWithoutTrailingSlashData): CancelablePromise<RunsReadProjectRunsWithoutTrailingSlashResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/projects/{project_id}/runs',
+            path: {
+                project_id: data.projectId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+
+    /**
+     * Read Project Runs
+     * List analysis runs for a visible project.
+     * @param data The data for the request.
+     * @param data.projectId
+     * @returns AnalysisRunsPublic Successful Response
+     * @throws ApiError
+     */
     public static readProjectRuns(data: RunsReadProjectRunsData): CancelablePromise<RunsReadProjectRunsResponse> {
         return __request(OpenAPI, {
             method: 'GET',
@@ -324,6 +345,27 @@ export class RunsService {
         return __request(OpenAPI, {
             method: 'GET',
             url: '/api/v1/runs/{run_id}',
+            path: {
+                run_id: data.runId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+
+    /**
+     * Read Run Summary
+     * Read a UI-stable summary for one visible analysis run.
+     * @param data The data for the request.
+     * @param data.runId
+     * @returns AnalysisRunSummaryPublic Successful Response
+     * @throws ApiError
+     */
+    public static readRunSummary(data: RunsReadRunSummaryData): CancelablePromise<RunsReadRunSummaryResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/runs/{run_id}/summary',
             path: {
                 run_id: data.runId
             },

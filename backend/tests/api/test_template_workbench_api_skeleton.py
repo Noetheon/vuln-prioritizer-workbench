@@ -35,13 +35,16 @@ def test_vpw011_openapi_exposes_workbench_domain_routes_without_items() -> None:
         "/api/v1/projects/{project_id}/assets/",
         "/api/v1/assets/{asset_id}",
         "/api/v1/projects/{project_id}/imports",
+        "/api/v1/projects/{project_id}/runs",
         "/api/v1/projects/{project_id}/runs/",
         "/api/v1/runs/{run_id}",
+        "/api/v1/runs/{run_id}/summary",
         "/api/v1/projects/{project_id}/findings/",
         "/api/v1/findings/{finding_id}",
     }
     expected_schemas = {
         "AnalysisRunPublic",
+        "AnalysisRunSummaryPublic",
         "AnalysisRunsPublic",
         "AssetCreate",
         "AssetPublic",
@@ -49,6 +52,7 @@ def test_vpw011_openapi_exposes_workbench_domain_routes_without_items() -> None:
         "AssetUpdate",
         "FindingPublic",
         "FindingsPublic",
+        "ImportParseErrorPublic",
         "ProjectCreate",
         "ProjectPublic",
         "ProjectsPublic",
@@ -87,6 +91,7 @@ def test_vpw011_domain_routes_require_auth(template_api_env: TemplateApiEnv) -> 
         ),
         ("patch", f"/api/v1/assets/{asset_id}", {"json": {"name": "Renamed API"}}),
         ("get", f"/api/v1/projects/{project_id}/runs/", {}),
+        ("get", f"/api/v1/projects/{project_id}/runs", {}),
         (
             "post",
             f"/api/v1/projects/{project_id}/imports",
@@ -96,6 +101,7 @@ def test_vpw011_domain_routes_require_auth(template_api_env: TemplateApiEnv) -> 
             },
         ),
         ("get", f"/api/v1/runs/{run_id}", {}),
+        ("get", f"/api/v1/runs/{run_id}/summary", {}),
         (
             "get",
             f"/api/v1/projects/{project_id}/findings/",
@@ -230,7 +236,7 @@ def test_vpw011_run_list_and_get_use_repository_seeded_graph(
     )
 
     list_response = template_api_env.client.get(
-        f"/api/v1/projects/{project['id']}/runs/",
+        f"/api/v1/projects/{project['id']}/runs",
         headers=headers,
     )
     assert list_response.status_code == 200
@@ -246,6 +252,20 @@ def test_vpw011_run_list_and_get_use_repository_seeded_graph(
     assert detail["id"] == str(seeded["run_id"])
     assert detail["provider_snapshot_id"] == str(seeded["provider_snapshot_id"])
     assert detail["summary_json"] == {"parsed": 2, "findings": 2}
+
+    summary_response = template_api_env.client.get(
+        f"/api/v1/runs/{seeded['run_id']}/summary",
+        headers=headers,
+    )
+    assert summary_response.status_code == 200
+    summary = summary_response.json()
+    assert summary["id"] == str(seeded["run_id"])
+    assert summary["project_id"] == project["id"]
+    assert summary["status"] == "completed"
+    assert summary["created_findings"] == 0
+    assert summary["updated_findings"] == 0
+    assert summary["parse_errors"] == []
+    assert summary["summary_json"] == {"parsed": 2, "findings": 2}
 
 
 def test_vpw011_finding_list_and_get_support_pagination(
@@ -300,6 +320,7 @@ def test_vpw011_404_and_403_are_consistent_for_project_scoped_resources(
         ("get", f"/api/v1/projects/{missing_id}", {}),
         ("patch", f"/api/v1/assets/{missing_id}", {"json": {"name": "Missing Asset"}}),
         ("get", f"/api/v1/runs/{missing_id}", {}),
+        ("get", f"/api/v1/runs/{missing_id}/summary", {}),
         ("get", f"/api/v1/findings/{missing_id}", {}),
         ("get", f"/api/v1/projects/{missing_id}/assets/", {}),
         ("get", f"/api/v1/projects/{missing_id}/runs/", {}),
@@ -309,6 +330,7 @@ def test_vpw011_404_and_403_are_consistent_for_project_scoped_resources(
         ("get", f"/api/v1/projects/{foreign['project_id']}", {}),
         ("patch", f"/api/v1/assets/{foreign['asset_id']}", {"json": {"name": "Foreign Asset"}}),
         ("get", f"/api/v1/runs/{foreign['run_id']}", {}),
+        ("get", f"/api/v1/runs/{foreign['run_id']}/summary", {}),
         ("get", f"/api/v1/findings/{foreign['finding_id']}", {}),
         ("get", f"/api/v1/projects/{foreign['project_id']}/assets/", {}),
         ("get", f"/api/v1/projects/{foreign['project_id']}/runs/", {}),

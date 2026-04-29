@@ -98,6 +98,117 @@ export const AnalysisRunStatusSchema = {
     type: 'string'
 } as const;
 
+export const AnalysisRunSummaryPublicSchema = {
+    description: 'UI-oriented summary for one import or analysis run.',
+    properties: {
+        created_findings: {
+            default: 0,
+            title: 'Created Findings',
+            type: 'integer'
+        },
+        dedup_summary: {
+            additionalProperties: true,
+            title: 'Dedup Summary',
+            type: 'object'
+        },
+        error_json: {
+            additionalProperties: true,
+            title: 'Error Json',
+            type: 'object'
+        },
+        filename: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Filename'
+        },
+        finding_count: {
+            default: 0,
+            title: 'Finding Count',
+            type: 'integer'
+        },
+        finished_at: {
+            anyOf: [
+                {
+                    format: 'date-time',
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Finished At'
+        },
+        id: {
+            format: 'uuid',
+            title: 'Id',
+            type: 'string'
+        },
+        ignored_lines: {
+            default: 0,
+            title: 'Ignored Lines',
+            type: 'integer'
+        },
+        import_job: {
+            additionalProperties: true,
+            title: 'Import Job',
+            type: 'object'
+        },
+        input_type: {
+            title: 'Input Type',
+            type: 'string'
+        },
+        input_upload: {
+            additionalProperties: true,
+            title: 'Input Upload',
+            type: 'object'
+        },
+        occurrence_count: {
+            default: 0,
+            title: 'Occurrence Count',
+            type: 'integer'
+        },
+        parse_errors: {
+            items: {
+                '$ref': '#/components/schemas/ImportParseErrorPublic'
+            },
+            title: 'Parse Errors',
+            type: 'array'
+        },
+        project_id: {
+            format: 'uuid',
+            title: 'Project Id',
+            type: 'string'
+        },
+        started_at: {
+            format: 'date-time',
+            title: 'Started At',
+            type: 'string'
+        },
+        status: {
+            '$ref': '#/components/schemas/AnalysisRunStatus'
+        },
+        summary_json: {
+            additionalProperties: true,
+            title: 'Summary Json',
+            type: 'object'
+        },
+        updated_findings: {
+            default: 0,
+            title: 'Updated Findings',
+            type: 'integer'
+        }
+    },
+    required: ['id', 'project_id', 'input_type', 'filename', 'status', 'started_at', 'finished_at'],
+    title: 'AnalysisRunSummaryPublic',
+    type: 'object'
+} as const;
+
 export const AnalysisRunsPublicSchema = {
     description: 'Paginated analysis run collection response.',
     properties: {
@@ -728,6 +839,71 @@ export const HTTPValidationErrorSchema = {
         }
     },
     title: 'HTTPValidationError',
+    type: 'object'
+} as const;
+
+export const ImportParseErrorPublicSchema = {
+    description: 'Stable parser error item for import status and summary APIs.',
+    properties: {
+        error_type: {
+            title: 'Error Type',
+            type: 'string'
+        },
+        field: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Field'
+        },
+        filename: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Filename'
+        },
+        input_type: {
+            title: 'Input Type',
+            type: 'string'
+        },
+        line: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Line'
+        },
+        message: {
+            title: 'Message',
+            type: 'string'
+        },
+        value: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Value'
+        }
+    },
+    required: ['input_type', 'message', 'error_type'],
+    title: 'ImportParseErrorPublic',
     type: 'object'
 } as const;
 

@@ -78,12 +78,21 @@ outside VPW-011.
 
 Expected operations:
 
-- `GET /api/v1/projects/{project_id}/runs/`: list runs for a visible project.
+- `GET /api/v1/projects/{project_id}/runs`: list runs for a visible project.
+- `GET /api/v1/projects/{project_id}/runs/`: trailing-slash compatible run list.
 - `GET /api/v1/runs/{run_id}`: read one visible run.
+- `GET /api/v1/runs/{run_id}/summary`: read a UI-oriented run summary.
 
 Run payloads expose persisted provenance fields from `AnalysisRun`, including
 `provider_snapshot_id`, `input_type`, `filename`, `status`, timestamps,
 `error_json`, and `summary_json`.
+
+Run summary payloads expose stable UI fields for import progress and errors:
+`created_findings`, `updated_findings`, `ignored_lines`, `occurrence_count`,
+`finding_count`, `parse_errors`, `import_job`, `input_upload`, and
+`dedup_summary`. Parser errors include `input_type`, `filename`, `message`,
+`error_type`, and optional `line`, `field`, and `value` when the importer can
+derive those details.
 
 ## Findings
 
