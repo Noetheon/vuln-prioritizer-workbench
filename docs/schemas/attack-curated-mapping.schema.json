@@ -141,9 +141,13 @@
           "type": "string"
         },
         "confidence": {
-          "type": "number",
-          "minimum": 0,
-          "maximum": 1
+          "type": "string",
+          "enum": [
+            "low",
+            "medium",
+            "high"
+          ],
+          "description": "Reviewer confidence bucket. The loader normalizes this enum internally; numeric confidence values are not accepted by the curated artifact contract."
         },
         "rationale": {
           "type": "string",
@@ -158,6 +162,14 @@
             "rejected",
             "stale"
           ]
+        },
+        "reviewer": {
+          "type": "string",
+          "minLength": 1
+        },
+        "reviewed_at": {
+          "type": "string",
+          "minLength": 1
         },
         "defensive_note": {
           "type": "string",
@@ -175,7 +187,50 @@
           },
           "uniqueItems": true
         }
-      }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "review_status": {
+                "enum": [
+                  "reviewed",
+                  "rejected",
+                  "stale"
+                ]
+              }
+            },
+            "required": [
+              "review_status"
+            ]
+          },
+          "then": {
+            "required": [
+              "reviewer",
+              "reviewed_at"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "confidence": {
+                "const": "high"
+              }
+            },
+            "required": [
+              "confidence"
+            ]
+          },
+          "then": {
+            "properties": {
+              "review_status": {
+                "const": "reviewed"
+              }
+            }
+          }
+        }
+      ]
     }
   }
 }

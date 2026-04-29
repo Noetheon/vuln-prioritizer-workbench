@@ -31,9 +31,11 @@
       "capability_description": "Public-facing application exposure can raise defensive triage urgency when the CVE is present.",
       "source": "CTID Mappings Explorer review",
       "source_url": "https://ctid.mitre.org/projects/mappings-explorer",
-      "confidence": 0.9,
+      "confidence": "high",
       "rationale": "Reviewed mapping links the CVE to defensive initial-access context for exposure and detection review.",
       "review_status": "reviewed",
+      "reviewer": "security-review",
+      "reviewed_at": "2026-04-29",
       "defensive_note": "Use this mapping to prioritize remediation, exposure review, and detection coverage. It is not exploit proof or procedure guidance.",
       "comments": "Safe demo entry with no commands, payloads, or step-by-step procedure content.",
       "references": [

@@ -14,6 +14,7 @@ from vuln_prioritizer.models import AttackData, AttackSummary
 from vuln_prioritizer.providers.attack import AttackProvider
 from vuln_prioritizer.providers.attack_metadata import AttackMetadataProvider
 from vuln_prioritizer.providers.ctid_mappings import CtidMappingsProvider
+from vuln_prioritizer.providers.curated_attack_mappings import CuratedAttackMappingProvider
 
 from .common import AttackSource, exit_input_validation
 
@@ -42,7 +43,10 @@ def validate_attack_inputs(
     attack_technique_metadata_file: Path | None,
 ) -> dict[str, Any]:
     if attack_source == AttackSource.none.value:
-        raise ValueError("ATT&CK utility commands require --attack-source ctid-json or local-csv.")
+        raise ValueError(
+            "ATT&CK utility commands require --attack-source ctid-json, "
+            "local-curated, or local-csv."
+        )
 
     warnings: list[str] = []
     metadata: dict[str, str | None]
@@ -53,6 +57,7 @@ def validate_attack_inputs(
     domain_mismatch = False
     attack_version_mismatch = False
     revoked_or_deprecated_count = 0
+    quality_report: dict[str, Any] | None = None
 
     if attack_source == AttackSource.ctid_json.value:
         mappings_by_cve, mapping_metadata, mapping_warnings = CtidMappingsProvider().load(
@@ -144,6 +149,38 @@ def validate_attack_inputs(
             metadata["metadata_format"] = technique_metadata.get("metadata_format")
             metadata["metadata_source"] = technique_metadata.get("metadata_source")
             metadata["stix_spec_version"] = technique_metadata.get("stix_spec_version")
+    elif attack_source == AttackSource.local_curated.value:
+        bundle = CuratedAttackMappingProvider().load(attack_mapping_file)
+        warnings.extend(bundle.warnings)
+        mapping_count = sum(len(items) for items in bundle.mappings_by_cve.values())
+        unique_cves = len(bundle.mappings_by_cve)
+        technique_count = len(bundle.techniques_by_id)
+        quality_report = bundle.quality_report
+        metadata = {
+            "source": "local-curated",
+            "mapping_file": str(attack_mapping_file),
+            "technique_metadata_file": None,
+            "source_version": bundle.metadata.get("mapping_framework_version")
+            or bundle.metadata.get("mapping_version"),
+            "attack_version": bundle.metadata.get("attack_version"),
+            "domain": bundle.metadata.get("domain"),
+            "mapping_framework": bundle.metadata.get("mapping_framework"),
+            "mapping_framework_version": bundle.metadata.get("mapping_framework_version"),
+            "mapping_file_sha256": bundle.metadata.get("mapping_file_sha256"),
+            "technique_metadata_file_sha256": None,
+            "metadata_format": bundle.metadata.get("metadata_format"),
+            "metadata_source": bundle.metadata.get("metadata_source"),
+            "stix_spec_version": None,
+            "mapping_created_at": bundle.metadata.get("creation_date"),
+            "mapping_updated_at": bundle.metadata.get("last_update"),
+            "mapping_organization": bundle.metadata.get("organization"),
+            "mapping_author": bundle.metadata.get("author"),
+            "mapping_contact": bundle.metadata.get("contact"),
+        }
+        if attack_technique_metadata_file is not None:
+            warnings.append(
+                "ATT&CK technique metadata is ignored when --attack-source local-curated is used."
+            )
     else:
         provider = AttackProvider()
         results, metadata, provider_warnings = provider.inspect_legacy_csv(attack_mapping_file)
@@ -151,7 +188,7 @@ def validate_attack_inputs(
         mapping_count = sum(1 for item in results.values() if item.mapped)
         unique_cves = len(results)
 
-    return {
+    result: dict[str, Any] = {
         "schema_version": "1.2.0",
         "source": metadata["source"],
         "mapping_file": metadata["mapping_file"],
@@ -180,6 +217,13 @@ def validate_attack_inputs(
         "revoked_or_deprecated_count": revoked_or_deprecated_count,
         "warnings": warnings,
     }
+    if quality_report is not None:
+        result["quality_report"] = quality_report
+        result["low_confidence_count"] = quality_report["low_confidence_count"]
+        result["review_status_counts"] = quality_report["review_status_counts"]
+        result["confidence_counts"] = quality_report["confidence_counts"]
+        result["mapping_type_counts"] = quality_report["mapping_type_counts"]
+    return result
 
 
 def render_attack_validation_panel(result: dict[str, Any]) -> Panel:
@@ -202,6 +246,16 @@ def render_attack_validation_panel(result: dict[str, Any]) -> Panel:
         f"ATT&CK version mismatch: {'Yes' if result['attack_version_mismatch'] else 'No'}",
         f"Revoked/deprecated mapped techniques: {result['revoked_or_deprecated_count']}",
     ]
+    if result.get("quality_report") is not None:
+        lines.extend(
+            [
+                f"Low-confidence mappings: {result.get('low_confidence_count', 0)}",
+                "Review status distribution: "
+                + format_distribution(result.get("review_status_counts", {})),
+                "Confidence distribution: "
+                + format_distribution(result.get("confidence_counts", {})),
+            ]
+        )
     return Panel("\n".join(lines), title="ATT&CK Validation")
 
 
@@ -227,9 +281,18 @@ def generate_attack_validation_markdown(result: dict[str, Any]) -> str:
         f"- Domain mismatch: {'Yes' if result['domain_mismatch'] else 'No'}",
         "- ATT&CK version mismatch: " + ("Yes" if result["attack_version_mismatch"] else "No"),
         "- Revoked/deprecated mapped techniques: " + str(result["revoked_or_deprecated_count"]),
-        "",
-        "## Warnings",
     ]
+    if result.get("quality_report") is not None:
+        lines.extend(
+            [
+                f"- Low-confidence mappings: {result.get('low_confidence_count', 0)}",
+                "- Review status distribution: "
+                + format_distribution(result.get("review_status_counts", {})),
+                "- Confidence distribution: "
+                + format_distribution(result.get("confidence_counts", {})),
+            ]
+        )
+    lines.extend(["", "## Warnings"])
     if result["warnings"]:
         lines.extend(f"- {warning}" for warning in result["warnings"])
     else:

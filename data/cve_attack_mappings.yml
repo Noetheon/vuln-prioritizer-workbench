@@ -1,0 +1,123 @@
+metadata:
+  mapping_framework: vuln-prioritizer-curated-attack
+  mapping_framework_version: "1.0"
+  mapping_version: "2026-04-29"
+  attack_version: "16.1"
+  technology_domain: enterprise-attack
+  creation_date: "2026-04-29"
+  last_update: "2026-04-29"
+  organization: Noetheon demo
+  author: reviewed-demo
+  contact: security@example.invalid
+  mapping_types:
+    exploitation: Reviewed defensive mapping from a CVE to initial-access context.
+    impact: Reviewed defensive mapping from a CVE to likely business-impact context.
+    post_exploitation: Reviewed defensive mapping for post-exploitation triage context.
+    mitigation_context: Reviewed mapping used only to guide mitigation review.
+    detection_context: Reviewed mapping used only to guide detection coverage review.
+mapping_objects:
+  - cve_id: CVE-2021-44228
+    technique_id: T1190
+    technique_name: Exploit Public-Facing Application
+    tactic_ids:
+      - TA0001
+    mapping_type: exploitation
+    capability_group: public-facing-application-risk
+    source: CTID Mappings Explorer review
+    source_url: https://ctid.mitre.org/projects/mappings-explorer
+    confidence: high
+    rationale: Reviewed defensive context links public-facing vulnerable application exposure to initial-access triage.
+    review_status: reviewed
+    reviewer: security-review
+    reviewed_at: "2026-04-29"
+    defensive_note: Use this mapping to prioritize patching, exposure review, and detection coverage. It is not exploit proof or procedure guidance.
+    comments: Safe demo entry for defensive triage only.
+    references:
+      - https://ctid.mitre.org/projects/mappings-explorer
+  - cve_id: CVE-2023-34362
+    technique_id: T1190
+    technique_name: Exploit Public-Facing Application
+    tactic_ids:
+      - TA0001
+    mapping_type: exploitation
+    capability_group: managed-file-transfer-risk
+    source: CTID Mappings Explorer review
+    source_url: https://ctid.mitre.org/projects/mappings-explorer
+    confidence: high
+    rationale: Reviewed defensive context links exposed managed file transfer systems to initial-access triage.
+    review_status: reviewed
+    reviewer: security-review
+    reviewed_at: "2026-04-29"
+    defensive_note: Use this mapping for exposure review and remediation sequencing only.
+    comments: Defensive mapping summary without payloads or procedure steps.
+    references:
+      - https://ctid.mitre.org/projects/mappings-explorer
+  - cve_id: CVE-2024-3094
+    technique_id: T1195.002
+    technique_name: Compromise Software Supply Chain
+    tactic_ids:
+      - TA0001
+    mapping_type: exploitation
+    capability_group: supply-chain-risk
+    source: Maintainer review of public advisory context
+    source_url: https://www.cisa.gov/news-events/alerts/2024/03/29/reported-supply-chain-compromise-affecting-xz-utils-data-compression-library-cve-2024-3094
+    confidence: medium
+    rationale: Reviewed defensive context links the CVE to supply-chain exposure review and affected package inventory triage.
+    review_status: reviewed
+    reviewer: security-review
+    reviewed_at: "2026-04-29"
+    defensive_note: Use this mapping to guide inventory review, package remediation, and detection coverage checks only.
+    comments: Defensive context only; no reproduction, payload, or command guidance.
+    references:
+      - https://www.cisa.gov/news-events/alerts/2024/03/29/reported-supply-chain-compromise-affecting-xz-utils-data-compression-library-cve-2024-3094
+  - cve_id: CVE-2022-22965
+    technique_id: T1190
+    technique_name: Exploit Public-Facing Application
+    tactic_ids:
+      - TA0001
+    mapping_type: exploitation
+    capability_group: java-web-application-risk
+    source: CTID Mappings Explorer review
+    source_url: https://ctid.mitre.org/projects/mappings-explorer
+    confidence: high
+    rationale: Reviewed defensive context links vulnerable internet-facing Java application exposure to initial-access triage.
+    review_status: reviewed
+    reviewer: security-review
+    reviewed_at: "2026-04-29"
+    defensive_note: Use this mapping to prioritize remediation and exposure reduction only.
+    comments: Defensive prioritization note with no exploit procedure detail.
+    references:
+      - https://ctid.mitre.org/projects/mappings-explorer
+  - cve_id: CVE-2023-3519
+    technique_id: T1190
+    technique_name: Exploit Public-Facing Application
+    tactic_ids:
+      - TA0001
+    mapping_type: exploitation
+    capability_group: edge-appliance-risk
+    source: CTID Mappings Explorer review
+    source_url: https://ctid.mitre.org/projects/mappings-explorer
+    confidence: medium
+    rationale: Reviewed defensive context links exposed edge appliance findings to initial-access triage and patch sequencing.
+    review_status: reviewed
+    reviewer: security-review
+    reviewed_at: "2026-04-29"
+    defensive_note: Use this mapping for remediation prioritization and monitoring coverage only.
+    comments: Defensive mapping summary without operational attack steps.
+    references:
+      - https://ctid.mitre.org/projects/mappings-explorer
+  - cve_id: CVE-2021-26855
+    technique_id: T1046
+    technique_name: Network Service Discovery
+    tactic_ids:
+      - TA0007
+    mapping_type: detection_context
+    capability_group: exchange-server-review
+    source: Maintainer defensive coverage review
+    confidence: low
+    rationale: Low-confidence defensive context used only to flag related service inventory and monitoring review.
+    review_status: needs_review
+    defensive_note: Treat this mapping as a review queue hint, not as confirmed exploitation behavior.
+    comments: Low-confidence entry intentionally retained to prove quality-report flagging.
+    references:
+      - https://www.cisa.gov/news-events/alerts/2021/03/03/mitigate-microsoft-exchange-server-vulnerabilities

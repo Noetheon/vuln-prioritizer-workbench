@@ -234,10 +234,13 @@ def _determine_attack_relevance(
         return "Unmapped", "No CTID ATT&CK mapping is available for this CVE."
 
     normalized_tactics = {_normalize_tactic_name(tactic) for tactic in attack_tactics}
-    if "exploitation_technique" in mapping_types or "primary_impact" in mapping_types:
+    if any(
+        mapping_type in mapping_types
+        for mapping_type in ("exploitation_technique", "primary_impact", "exploitation", "impact")
+    ):
         return _append_missing_metadata_note(
             "High",
-            "CTID ATT&CK mappings include exploitation or primary impact behavior.",
+            "ATT&CK mappings include reviewed exploitation or impact context.",
             missing_metadata_ids,
         )
     if normalized_tactics.intersection(HIGH_IMPACT_TACTICS):
@@ -246,16 +249,19 @@ def _determine_attack_relevance(
             "Resolved ATT&CK tactics include high-impact adversary behaviors.",
             missing_metadata_ids,
         )
-    if "secondary_impact" in mapping_types:
+    if "secondary_impact" in mapping_types or "post_exploitation" in mapping_types:
         return _append_missing_metadata_note(
             "Medium",
-            "Only secondary impact ATT&CK mappings are available for this CVE.",
+            "Only secondary or post-exploitation ATT&CK mappings are available for this CVE.",
             missing_metadata_ids,
         )
-    if "uncategorized" in mapping_types:
+    if any(
+        mapping_type in mapping_types
+        for mapping_type in ("uncategorized", "mitigation_context", "detection_context")
+    ):
         return _append_missing_metadata_note(
             "Low",
-            "Only uncategorized ATT&CK mappings are available for this CVE.",
+            "Only low-confidence or defensive-context ATT&CK mappings are available for this CVE.",
             missing_metadata_ids,
         )
     return _append_missing_metadata_note(
