@@ -354,6 +354,9 @@ class FindingResponse(StrictModel):
     cve_id: str
     priority: str
     priority_rank: int
+    priority_state: str | None = None
+    risk_score: float | None = None
+    operational_score: int = 0
     operational_rank: int
     status: str
     in_kev: bool

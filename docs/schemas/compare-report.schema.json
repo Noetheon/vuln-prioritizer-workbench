@@ -660,6 +660,26 @@
         "enriched_rank": {
           "type": "integer"
         },
+        "priority_state": {
+          "enum": [
+            "Critical",
+            "High",
+            "Medium",
+            "Low",
+            "Suppressed",
+            "Accepted",
+            "Fixed",
+            null
+          ]
+        },
+        "operational_score": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "operational_score_reasons": {
+          "$ref": "#/$defs/stringArray"
+        },
         "attack_mapped": {
           "type": "boolean"
         },

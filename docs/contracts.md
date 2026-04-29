@@ -166,9 +166,21 @@ Current rule:
 
 - it is derived from `CVSS + EPSS + KEV`
 - ATT&CK is contextual
-- asset context is contextual
+- asset context is contextual for the base priority label and contributes only to the operational queue score
 - defensive context is contextual
-- VEX can suppress a finding from the default visible list, but it does not create a new opaque risk score
+- VEX can suppress a finding from the default visible list and may set `priority_state` to `Suppressed` or `Fixed`
+
+`priority_state` is the effective lifecycle-aware priority enum. Allowed values are
+`Critical`, `High`, `Medium`, `Low`, `Suppressed`, `Accepted`, and `Fixed`.
+Active findings use the same state as `priority_label`; VEX and waiver evidence can
+move the state to a governance value while keeping the base label and drivers
+visible.
+
+`operational_score` is an additive integer from 0 to 100. It is computed from
+explicit contributions for base priority, KEV, EPSS/CVSS thresholds, asset
+exposure, production context, criticality, and active occurrence count, then
+clamped to the 0-100 range. `operational_score_reasons` lists the matched rules
+and clamp result.
 
 ### ATT&CK context
 

@@ -251,6 +251,9 @@ def test_workbench_import_findings_reports_and_evidence(tmp_path: Path) -> None:
     assert [item["operational_rank"] for item in items] == sorted(
         item["operational_rank"] for item in items
     )
+    assert all(item["priority_state"] in {"Critical", "High", "Medium", "Low"} for item in items)
+    assert all(0 <= item["operational_score"] <= 100 for item in items)
+    assert all(item["risk_score"] == float(item["operational_score"]) for item in items)
 
     filtered = client.get(
         f"/api/projects/{project['id']}/findings",
@@ -292,6 +295,8 @@ def test_workbench_import_findings_reports_and_evidence(tmp_path: Path) -> None:
     assert detail.status_code == 200
     detail_payload = detail.json()
     assert detail_payload["finding"]["cve_id"] == "CVE-2021-44228"
+    assert detail_payload["priority_state"] == detail_payload["finding"]["priority_state"]
+    assert detail_payload["operational_score"] == detail_payload["finding"]["operational_score"]
     assert detail_payload["finding"]["provider_evidence"]["nvd"]["cve_id"] == "CVE-2021-44228"
     assert "snapshot_locked" in {flag["code"] for flag in detail_payload["data_quality_flags"]}
     assert detail_payload["data_quality_confidence"] == "high"

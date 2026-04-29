@@ -20,10 +20,12 @@ from vuln_prioritizer.models import (
 )
 from vuln_prioritizer.scoring import (
     build_comparison_reason,
+    build_operational_score,
     build_priority_drivers,
     build_rationale,
     determine_cvss_only_priority,
     determine_priority,
+    determine_priority_state,
 )
 from vuln_prioritizer.services.contextualization import is_suppressed_by_vex, is_under_investigation
 from vuln_prioritizer.services.remediation import RemediationService
@@ -95,7 +97,7 @@ class PrioritizationService:
                     asset_count=provenance.asset_count,
                     suppressed_by_vex=suppressed_by_vex,
                     under_investigation=under_investigation,
-                    priority_label=priority_label,
+                    priority_label=priority_label.value,
                     priority_rank=priority_rank,
                     priority_drivers=build_priority_drivers(nvd, epss, kev, self.policy),
                     rationale=build_rationale(
@@ -170,7 +172,8 @@ class PrioritizationService:
         findings: list[PrioritizedFinding],
     ) -> list[PrioritizedFinding]:
         """Attach deterministic operational work-queue ranks without changing base priority."""
-        ordered = sorted(findings, key=_operational_sort_key)
+        scored_findings = [self._with_operational_score(finding) for finding in findings]
+        ordered = sorted(scored_findings, key=_operational_sort_key)
         rank_by_cve = {finding.cve_id: index for index, finding in enumerate(ordered, start=1)}
         return [
             finding.model_copy(
@@ -179,8 +182,18 @@ class PrioritizationService:
                     "context_rank_reasons": _context_rank_reasons(finding),
                 }
             )
-            for finding in findings
+            for finding in scored_findings
         ]
+
+    def _with_operational_score(self, finding: PrioritizedFinding) -> PrioritizedFinding:
+        score, reasons = build_operational_score(finding, self.policy)
+        return finding.model_copy(
+            update={
+                "priority_state": determine_priority_state(finding).value,
+                "operational_score": score,
+                "operational_score_reasons": reasons,
+            }
+        )
 
     def build_comparison(
         self,
@@ -229,6 +242,9 @@ class PrioritizationService:
                     waiver_ticket_url=finding.waiver_ticket_url,
                     operational_rank=finding.operational_rank,
                     context_rank_reasons=finding.context_rank_reasons,
+                    priority_state=finding.priority_state,
+                    operational_score=finding.operational_score,
+                    operational_score_reasons=finding.operational_score_reasons,
                     defensive_contexts=finding.defensive_contexts,
                     data_quality_flags=finding.data_quality_flags,
                     data_quality_confidence=finding.data_quality_confidence,
@@ -328,6 +344,7 @@ def _descending_numeric(value: float | None) -> tuple[int, float]:
 def _operational_sort_key(finding: PrioritizedFinding) -> tuple:
     return (
         finding.priority_rank,
+        -finding.operational_score,
         _waiver_work_queue_bucket(finding),
         _kev_due_sort_key(finding),
         0 if _is_internet_facing(finding) else 1,

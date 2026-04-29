@@ -45,7 +45,15 @@
             "defensive_context_sources": [],
             "epss": 0.94393,
             "in_kev": true,
+            "operational_score": 98,
+            "operational_score_reasons": [
+              "base Critical priority: +70",
+              "CISA KEV-listed: +15",
+              "critical EPSS/CVSS threshold: +8",
+              "high CVSS threshold: +5"
+            ],
             "priority": "Critical",
+            "priority_state": "Critical",
             "remediation_ecosystem": null,
             "remediation_strategy": "upgrade",
             "sources": [
@@ -98,7 +106,18 @@
             "defensive_context_sources": [],
             "epss": 0.84588,
             "in_kev": false,
+            "operational_score": 100,
+            "operational_score_reasons": [
+              "base Critical priority: +70",
+              "critical EPSS/CVSS threshold: +8",
+              "high CVSS threshold: +5",
+              "internet-facing asset context: +8",
+              "production asset context: +5",
+              "critical asset criticality: +7",
+              "clamped to 100"
+            ],
             "priority": "Critical",
+            "priority_state": "Critical",
             "remediation_ecosystem": "apk",
             "remediation_strategy": "upgrade",
             "sources": [
