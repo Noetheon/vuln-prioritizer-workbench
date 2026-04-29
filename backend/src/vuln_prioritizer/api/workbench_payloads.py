@@ -110,11 +110,42 @@ def _finding_payload(finding: Any, *, include_detail: bool = False) -> dict[str,
     }
     if include_detail:
         payload["finding"] = finding.finding_json
+        payload["kev_detail"] = _finding_kev_detail(finding)
         payload["occurrences"] = [item.evidence_json for item in finding.occurrences]
         payload["status_history"] = [
             _finding_status_history_payload(item) for item in getattr(finding, "status_history", [])
         ]
     return payload
+
+
+def _finding_kev_detail(finding: Any) -> dict[str, Any] | None:
+    raw_finding = finding.finding_json if isinstance(finding.finding_json, dict) else {}
+    evidence = raw_finding.get("provider_evidence")
+    kev = evidence.get("kev") if isinstance(evidence, dict) else None
+    if not isinstance(kev, dict):
+        vulnerability = getattr(finding, "vulnerability", None)
+        provider_json = getattr(vulnerability, "provider_json", None)
+        kev = provider_json.get("kev") if isinstance(provider_json, dict) else None
+    if not isinstance(kev, dict):
+        return None
+
+    allowed_keys = {
+        "cve_id",
+        "in_kev",
+        "vendor_project",
+        "product",
+        "vulnerability_name",
+        "short_description",
+        "date_added",
+        "required_action",
+        "due_date",
+        "known_ransomware_campaign_use",
+        "notes",
+    }
+    detail = {key: kev.get(key) for key in allowed_keys if key in kev}
+    detail.setdefault("cve_id", finding.cve_id)
+    detail.setdefault("in_kev", bool(finding.in_kev))
+    return detail
 
 
 def _finding_status_history_payload(item: Any) -> dict[str, Any]:

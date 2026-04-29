@@ -582,6 +582,7 @@ def data_export_provider_snapshot(
             cache_enabled=True,
             cache_only=cache_only,
             cache_dir=str(cache_dir),
+            source_hashes=_provider_cache_source_hashes(cache, selected_sources),
             offline_kev_file=str(offline_kev_file) if offline_kev_file else None,
             nvd_api_key_env=nvd_api_key_env,
         ),
@@ -600,6 +601,17 @@ def data_export_provider_snapshot(
     write_output(output, generate_provider_snapshot_json(report))
     console.print(f"[green]Wrote provider snapshot output to {output}[/green]")
     print_warnings(warnings)
+
+
+def _provider_cache_source_hashes(
+    cache: FileCache,
+    selected_sources: Sequence[str],
+) -> dict[str, str | None]:
+    return {
+        source: cache.inspect_namespace(source)["namespace_checksum"]
+        for source in selected_sources
+        if source in {"nvd", "epss", "kev"}
+    }
 
 
 def load_cached_provider_records(

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -67,3 +68,26 @@ def test_file_cache_inspect_namespace_reports_valid_expired_and_invalid_document
     assert status["invalid_count"] == 1
     assert status["latest_cached_at"] is not None
     assert status["namespace_checksum"] is not None
+
+
+def test_file_cache_namespace_checksum_matches_sha256_of_cache_documents(
+    tmp_path: Path,
+) -> None:
+    cache = FileCache(tmp_path / "cache", ttl_hours=24)
+    path = cache._path_for("kev", "catalog")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    document = json.dumps(
+        {
+            "key": "catalog",
+            "cached_at": "2026-04-29T00:00:00+00:00",
+            "payload": {"CVE-2026-1001": {"cve_id": "CVE-2026-1001", "in_kev": True}},
+        },
+        sort_keys=True,
+    )
+    path.write_text(document, encoding="utf-8")
+
+    expected = hashlib.sha256()
+    expected.update(path.name.encode("utf-8"))
+    expected.update(document.encode("utf-8"))
+
+    assert cache.inspect_namespace("kev")["namespace_checksum"] == expected.hexdigest()

@@ -15,6 +15,7 @@ from vuln_prioritizer.api.schemas import (
     ProviderSourceStatus,
     ProviderStatusResponse,
     ProviderUpdateJobRequest,
+    ProviderUpdateJobResponse,
 )
 from vuln_prioritizer.cache import FileCache
 from vuln_prioritizer.config import DEFAULT_CACHE_TTL_HOURS
@@ -158,6 +159,7 @@ def _run_provider_snapshot_refresh(
             cache_enabled=True,
             cache_only=payload.cache_only,
             cache_dir=str(settings.provider_cache_dir),
+            source_hashes=_provider_cache_source_hashes(cache, selected_sources),
             nvd_api_key_env=settings.nvd_api_key_env,
         ),
         items=[
@@ -201,6 +203,7 @@ def _run_provider_snapshot_refresh(
         "snapshot_created": True,
         "snapshot_path": str(output_path),
         "snapshot_sha256": content_hash,
+        "source_hashes": report.metadata.source_hashes,
         "selected_sources": selected_sources,
         "requested_cves": len(cve_ids),
         "cache_only": payload.cache_only,
@@ -381,13 +384,32 @@ def _latest_kev_date(records: Any) -> str | None:
     return sorted(values)[-1] if values else None
 
 
-def _provider_status_payload(snapshot: Any, *, settings: WorkbenchSettings) -> dict[str, Any]:
+def _provider_status_payload(
+    snapshot: Any,
+    *,
+    settings: WorkbenchSettings,
+    latest_update_job: Any | None = None,
+) -> dict[str, Any]:
     metadata = snapshot.metadata_json if snapshot is not None else {}
     selected_sources = metadata.get("selected_sources", []) if isinstance(metadata, dict) else []
     locked_provider_data = (
         bool(metadata.get("locked_provider_data")) if isinstance(metadata, dict) else False
     )
     warnings = list(metadata.get("warnings", [])) if isinstance(metadata, dict) else []
+    latest_update_job_payload = (
+        ProviderUpdateJobResponse.model_validate(_provider_update_job_payload(latest_update_job))
+        if latest_update_job is not None
+        else None
+    )
+    latest_update_failed = False
+    if latest_update_job_payload is not None and latest_update_job_payload.status == "failed":
+        latest_update_failed = True
+        failed_detail = (
+            latest_update_job_payload.error_message
+            or latest_update_job_payload.metadata.get("detail")
+            or "Provider refresh failed."
+        )
+        warnings.append(f"Latest provider update failed: {failed_detail}")
     snapshot_status = ProviderSnapshotStatus(
         id=snapshot.id if snapshot is not None else None,
         content_hash=snapshot.content_hash if snapshot is not None else None,
@@ -424,13 +446,27 @@ def _provider_status_payload(snapshot: Any, *, settings: WorkbenchSettings) -> d
     if snapshot is None:
         warnings.append("No provider snapshot has been recorded by a Workbench import yet.")
     return ProviderStatusResponse(
-        status="degraded" if snapshot is None or snapshot_status.missing else "ok",
+        status="degraded"
+        if snapshot is None or snapshot_status.missing or latest_update_failed
+        else "ok",
         snapshot=snapshot_status,
         sources=sources,
+        latest_update_job=latest_update_job_payload,
         cache_dir=str(settings.provider_cache_dir),
         snapshot_dir=str(settings.provider_snapshot_dir),
         warnings=warnings,
     ).model_dump()
+
+
+def _provider_cache_source_hashes(
+    cache: FileCache,
+    selected_sources: list[str],
+) -> dict[str, str | None]:
+    return {
+        source: cache.inspect_namespace(source)["namespace_checksum"]
+        for source in selected_sources
+        if source in {"nvd", "epss", "kev"}
+    }
 
 
 def _provider_update_job_payload(job: Any) -> dict[str, Any]:

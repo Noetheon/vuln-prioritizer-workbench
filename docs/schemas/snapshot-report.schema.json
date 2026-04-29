@@ -1260,6 +1260,9 @@
         "product": {
           "$ref": "#/$defs/nullableString"
         },
+        "vulnerability_name": {
+          "$ref": "#/$defs/nullableString"
+        },
         "short_description": {
           "$ref": "#/$defs/nullableString"
         },

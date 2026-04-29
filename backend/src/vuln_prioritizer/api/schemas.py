@@ -247,6 +247,20 @@ class FindingStatusHistoryResponse(StrictModel):
     created_at: str
 
 
+class KevDetailResponse(StrictModel):
+    cve_id: str
+    in_kev: bool = False
+    vendor_project: str | None = None
+    product: str | None = None
+    vulnerability_name: str | None = None
+    short_description: str | None = None
+    date_added: str | None = None
+    required_action: str | None = None
+    due_date: str | None = None
+    known_ransomware_campaign_use: str | None = None
+    notes: str | None = None
+
+
 class AuditEventResponse(StrictModel):
     id: str
     project_id: str | None = None
@@ -374,6 +388,10 @@ class FindingResponse(StrictModel):
     status_history: list[FindingStatusHistoryResponse] | None = None
 
 
+class FindingDetailResponse(FindingResponse):
+    kev_detail: KevDetailResponse | None = None
+
+
 class FindingsListResponse(StrictModel):
     items: list[FindingResponse] = Field(default_factory=list)
     total: int
@@ -422,6 +440,7 @@ class ProviderStatusResponse(StrictModel):
     status: str
     snapshot: ProviderSnapshotStatus
     sources: list[ProviderSourceStatus] = Field(default_factory=list)
+    latest_update_job: ProviderUpdateJobResponse | None = None
     cache_dir: str
     snapshot_dir: str
     warnings: list[str] = Field(default_factory=list)

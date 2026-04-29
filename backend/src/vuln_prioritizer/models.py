@@ -387,6 +387,7 @@ class ProviderSnapshotMetadata(StrictModel):
     cache_enabled: bool = False
     cache_only: bool = False
     cache_dir: str | None = None
+    source_hashes: dict[str, str | None] = Field(default_factory=dict)
     offline_kev_file: str | None = None
     nvd_api_key_env: str | None = None
 

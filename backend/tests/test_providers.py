@@ -616,6 +616,7 @@ def test_kev_fetch_many_from_offline_json(tmp_path: Path) -> None:
                         "cveID": "CVE-2021-44228",
                         "vendorProject": "Apache",
                         "product": "Log4j",
+                        "vulnerabilityName": "Apache Log4j2 remote code execution vulnerability",
                         "shortDescription": "Apache Log4j2 remote code execution.",
                         "dateAdded": "2021-12-10",
                         "requiredAction": "Patch now",
@@ -637,6 +638,10 @@ def test_kev_fetch_many_from_offline_json(tmp_path: Path) -> None:
 
     assert warnings == []
     assert results["CVE-2021-44228"].in_kev is True
+    assert (
+        results["CVE-2021-44228"].vulnerability_name
+        == "Apache Log4j2 remote code execution vulnerability"
+    )
     assert results["CVE-2021-44228"].short_description == "Apache Log4j2 remote code execution."
     assert results["CVE-2021-44228"].known_ransomware_campaign_use == "Known"
     assert results["CVE-2021-44228"].notes == "Frequently exploited in the wild."
@@ -650,9 +655,11 @@ def test_kev_fetch_many_from_offline_csv_normalizes_aliases_and_skips_invalid_ro
     kev_file.write_text(
         "\n".join(
             [
-                "cveId,vendorProject,product,shortDescription",
-                "CVE-2026-0001,Example Vendor,Example Product,CSV KEV entry",
-                "not-a-cve,Ignored Vendor,Ignored Product,Invalid row",
+                "cveId,vendorProject,product,vulnerability_name,shortDescription,dateAdded,dueDate,requiredAction",
+                "CVE-2026-0001,Example Vendor,Example Product,CSV vulnerability,"
+                "CSV KEV entry,2026-04-29,2026-05-20,Patch CSV asset",
+                "not-a-cve,Ignored Vendor,Ignored Product,Invalid row,"
+                "Invalid row,2026-04-29,2026-05-20,Ignore",
             ]
         )
         + "\n",
@@ -668,8 +675,36 @@ def test_kev_fetch_many_from_offline_csv_normalizes_aliases_and_skips_invalid_ro
     assert warnings == []
     assert results["CVE-2026-0001"].in_kev is True
     assert results["CVE-2026-0001"].vendor_project == "Example Vendor"
+    assert results["CVE-2026-0001"].vulnerability_name == "CSV vulnerability"
     assert results["CVE-2026-0001"].short_description == "CSV KEV entry"
+    assert results["CVE-2026-0001"].date_added == "2026-04-29"
+    assert results["CVE-2026-0001"].due_date == "2026-05-20"
+    assert results["CVE-2026-0001"].required_action == "Patch CSV asset"
     assert results["CVE-2026-0002"].in_kev is False
+
+
+def test_kev_provider_loads_checked_in_offline_fixtures() -> None:
+    provider = KevProvider()
+    json_results, json_warnings = provider.fetch_many(
+        ["CVE-2026-1001"],
+        offline_file=DATA_ROOT / "input_fixtures" / "kev_catalog.json",
+    )
+    csv_results, csv_warnings = provider.fetch_many(
+        ["CVE-2026-1001"],
+        offline_file=DATA_ROOT / "input_fixtures" / "kev_catalog.csv",
+    )
+
+    assert json_warnings == []
+    assert csv_warnings == []
+    assert json_results["CVE-2026-1001"].in_kev is True
+    assert csv_results["CVE-2026-1001"].in_kev is True
+    assert (
+        json_results["CVE-2026-1001"].vulnerability_name
+        == "Example Product command injection vulnerability"
+    )
+    assert csv_results["CVE-2026-1001"].required_action == (
+        "Apply the vendor update or remove affected systems."
+    )
 
 
 def test_kev_refresh_stores_offline_catalog_and_reuses_cache(tmp_path: Path) -> None:
@@ -709,6 +744,43 @@ def test_kev_refresh_stores_offline_catalog_and_reuses_cache(tmp_path: Path) -> 
     assert cached_results["CVE-2026-0003"].product == "Cached Product"
     assert cached_provider.last_diagnostics.cache_hits == 1
     assert cached_provider.last_diagnostics.network_fetches == 0
+
+
+def test_kev_live_catalog_stores_cache_with_namespace_checksum(tmp_path: Path) -> None:
+    class Session:
+        def get(self, url: str, **kwargs):  # noqa: ARG002, ANN003
+            return FakeResponse(
+                {
+                    "vulnerabilities": [
+                        {
+                            "cveID": "CVE-2026-1002",
+                            "vendorProject": "Live Vendor",
+                            "product": "Live Product",
+                            "vulnerabilityName": "Live Product KEV vulnerability",
+                            "dateAdded": "2026-04-29",
+                            "dueDate": "2026-05-20",
+                            "requiredAction": "Apply live update.",
+                        }
+                    ]
+                }
+            )
+
+    cache = FileCache(tmp_path / "cache", ttl_hours=24)
+    provider = KevProvider(session=Session(), cache=cache)
+
+    results, warnings = provider.fetch_many(["CVE-2026-1002"])
+
+    assert warnings == []
+    assert results["CVE-2026-1002"].vulnerability_name == "Live Product KEV vulnerability"
+    status = cache.inspect_namespace("kev")
+    assert status["file_count"] == 1
+    assert status["valid_count"] == 1
+    assert isinstance(status["namespace_checksum"], str)
+    assert len(status["namespace_checksum"]) == 64
+    cached_catalog = cache.get_json("kev", "catalog")
+    assert cached_catalog["CVE-2026-1002"]["vulnerability_name"] == (
+        "Live Product KEV vulnerability"
+    )
 
 
 def test_kev_fetch_many_degrades_for_missing_offline_file(tmp_path: Path) -> None:

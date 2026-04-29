@@ -21,8 +21,11 @@ def project_settings(
     project = repo.get_project(project_id)
     if project is None:
         raise HTTPException(status_code=404, detail="Project not found.")
+    provider_jobs = repo.list_provider_update_jobs()
     provider_status = _provider_status_payload(
-        repo.get_latest_provider_snapshot(), settings=settings
+        repo.get_latest_provider_snapshot(),
+        settings=settings,
+        latest_update_job=provider_jobs[0] if provider_jobs else None,
     )
     config_history = repo.list_project_config_snapshots(project.id, limit=20)
     latest_config = config_history[0] if config_history else None
@@ -57,9 +60,7 @@ def project_settings(
                 "settings": settings,
                 "database_url_display": _redacted_database_url(settings.database_url),
                 "provider_status": provider_status,
-                "provider_jobs": [
-                    _provider_update_job_payload(job) for job in repo.list_provider_update_jobs()
-                ],
+                "provider_jobs": [_provider_update_job_payload(job) for job in provider_jobs],
                 "workbench_jobs": repo.list_workbench_jobs(project_id=project.id, limit=20),
                 "api_tokens": repo.list_api_tokens(),
                 "artifact_retention": repo.get_project_artifact_retention(project.id),
@@ -109,8 +110,11 @@ def create_api_token_form(
         message=f"API token {token.name!r} was created from settings.",
     )
     session.commit()
+    provider_jobs = repo.list_provider_update_jobs()
     provider_status = _provider_status_payload(
-        repo.get_latest_provider_snapshot(), settings=settings
+        repo.get_latest_provider_snapshot(),
+        settings=settings,
+        latest_update_job=provider_jobs[0] if provider_jobs else None,
     )
     config_history = repo.list_project_config_snapshots(project.id, limit=20)
     latest_config = config_history[0] if config_history else None
@@ -125,9 +129,7 @@ def create_api_token_form(
                 "settings": settings,
                 "database_url_display": _redacted_database_url(settings.database_url),
                 "provider_status": provider_status,
-                "provider_jobs": [
-                    _provider_update_job_payload(job) for job in repo.list_provider_update_jobs()
-                ],
+                "provider_jobs": [_provider_update_job_payload(job) for job in provider_jobs],
                 "workbench_jobs": repo.list_workbench_jobs(project_id=project.id, limit=20),
                 "api_tokens": repo.list_api_tokens(),
                 "artifact_retention": repo.get_project_artifact_retention(project.id),

@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 from vuln_prioritizer.api.deps import get_db_session, get_workbench_settings
 from vuln_prioritizer.api.schemas import (
     AnalysisRunResponse,
-    FindingResponse,
+    FindingDetailResponse,
     FindingsListResponse,
     FindingStatusUpdateRequest,
 )
@@ -335,7 +335,7 @@ def list_findings(
     }
 
 
-@router.get("/findings/{finding_id}")
+@router.get("/findings/{finding_id}", response_model=FindingDetailResponse)
 def get_finding(
     finding_id: str,
     session: Annotated[Session, Depends(get_db_session)],
@@ -346,7 +346,7 @@ def get_finding(
     return _finding_payload(finding, include_detail=True)
 
 
-@router.patch("/findings/{finding_id}", response_model=FindingResponse)
+@router.patch("/findings/{finding_id}", response_model=FindingDetailResponse)
 def update_finding_status(
     finding_id: str,
     payload: FindingStatusUpdateRequest,

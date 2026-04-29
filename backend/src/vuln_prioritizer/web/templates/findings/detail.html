@@ -63,6 +63,29 @@
       </tbody>
     </table>
   </div>
+  {% set kev_detail = finding.finding_json.get("provider_evidence", {}).get("kev") if finding.finding_json else {} %}
+  {% if kev_detail and kev_detail.get("in_kev") %}
+    <section class="subsection">
+      <div class="section-head compact">
+        <p class="eyebrow">CISA KEV</p>
+        <h2>Known exploited vulnerability</h2>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <tbody>
+            <tr><th>Vendor / project</th><td>{{ kev_detail.get("vendor_project") or "N.A." }}</td></tr>
+            <tr><th>Product</th><td>{{ kev_detail.get("product") or "N.A." }}</td></tr>
+            <tr><th>Vulnerability</th><td>{{ kev_detail.get("vulnerability_name") or kev_detail.get("short_description") or "N.A." }}</td></tr>
+            <tr><th>Date added</th><td>{{ kev_detail.get("date_added") or "N.A." }}</td></tr>
+            <tr><th>Due date</th><td>{{ kev_detail.get("due_date") or "N.A." }}</td></tr>
+            <tr><th>Required action</th><td>{{ kev_detail.get("required_action") or "N.A." }}</td></tr>
+            <tr><th>Ransomware use</th><td>{{ kev_detail.get("known_ransomware_campaign_use") or "N.A." }}</td></tr>
+            <tr><th>Notes</th><td>{{ kev_detail.get("notes") or "N.A." }}</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  {% endif %}
   <section class="subsection">
     <div class="section-head compact">
       <p class="eyebrow">Lifecycle</p>

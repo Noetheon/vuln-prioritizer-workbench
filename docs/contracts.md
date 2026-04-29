@@ -251,9 +251,15 @@ Current provider service contract:
   `ProviderEnrichmentClient.enrich(cve_ids, **kwargs)` interface
 - provider failures degrade into `ProviderStatus` and data-quality flags before
   optional CI gates decide whether to fail the process
+- KEV provider data includes CISA catalog details such as
+  `vulnerability_name`, `vendor_project`, `product`, `date_added`, `due_date`,
+  and `required_action` when present in JSON, CSV, cache, or locked snapshot
+  sources
 - `ProviderStatus` includes `source`, `last_sync`, `cache_hit`, `cache_miss`,
   cache counters, stale-cache counters, network/failure counters, and
   `data_quality_flags`
+- provider snapshot metadata includes `source_hashes`, a map from selected
+  provider source to the local cache namespace SHA-256 checksum or `null`
 - analysis-style metadata may include `provider_data_quality_flags`, keyed by
   source, when recoverable provider problems such as missing EPSS records,
   stale cache fallback, or provider warnings were observed
