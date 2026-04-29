@@ -49,6 +49,12 @@ Three local ATT&CK modes exist:
 
 The `ctid-json` workflow is the preferred current ATT&CK path.
 
+Detailed ATT&CK methodology, the Tactic/Technique/Procedure boundary, the
+confidence rubric, and the mapping review checklist are documented in
+[`docs/attack-ttp-methodology.md`](attack-ttp-methodology.md). Workbench-specific
+API, UI, report, and evidence behavior is documented in
+[`docs/workbench-attack-methodology.md`](workbench-attack-methodology.md).
+
 ATT&CK rules:
 
 - ATT&CK is optional

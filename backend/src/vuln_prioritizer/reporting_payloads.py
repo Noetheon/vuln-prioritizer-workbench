@@ -118,6 +118,10 @@ def generate_summary_markdown(
         f"- Waiver review due: {metadata.get('waiver_review_due_count', 0)}",
         f"- Expired waivers: {metadata.get('expired_waiver_count', 0)}",
         f"- ATT&CK mapped CVEs: {attack_summary.get('mapped_cves', 0)}",
+        (
+            "- ATT&CK safety: defensive context only; not proof that exploitation occurred "
+            "or procedure guidance."
+        ),
     ]
     input_sources = metadata.get("input_sources", [])
     if input_sources:

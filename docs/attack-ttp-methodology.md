@@ -15,6 +15,23 @@ The preferred source for CVE-to-ATT&CK mapping remains CTID Mappings Explorer
 JSON. Local curated mappings are allowed only when every entry is explicitly
 reviewable.
 
+## Tactic, Technique, And Procedure Boundary
+
+ATT&CK content in this project is intentionally limited to defensive context:
+
+| Layer | Meaning in VPW | Allowed report use | Out of scope |
+| --- | --- | --- | --- |
+| Tactic | The high-level objective category, such as initial access or impact. | Group findings for coverage, ownership, and review sequencing. | Claiming that a real intrusion phase occurred unless KEV or another explicit source says so. |
+| Technique | The ATT&CK behavior category, such as `T1190`. | Show source-backed behavior context, technique metadata, and coverage gaps. | Generating CVE-to-technique links from descriptions, keywords, or LLM output. |
+| Procedure | A specific implementation detail, command, payload, tool invocation, or step sequence. | Summarize only high-level, sourced defensive context when needed. | Payloads, commands, reproduction steps, exploit chains, or operational guidance. |
+
+Reports may say that a CVE maps to a tactic or technique when that mapping is
+present in CTID JSON or a reviewed local artifact. Reports must not say that
+the environment was exploited, that a full attack path is confirmed, or that a
+procedure is actionable unless a cited source such as CISA KEV or a reviewed
+incident source explicitly supports that claim. Even then, VPW keeps the wording
+at defensive triage level.
+
 ## Required Fields
 
 Every curated mapping object must include:
@@ -41,6 +58,54 @@ Reviewer rules are enforced by the loader and schema:
 - `confidence=high` requires `review_status=reviewed`.
 - `confidence=low` remains valid but is highlighted in the mapping quality
   report.
+
+## Confidence And Limitations
+
+Confidence describes the mapping evidence, not the likelihood that a local
+asset was exploited.
+
+| Confidence | Meaning | Required handling |
+| --- | --- | --- |
+| `high` | Source-backed mapping reviewed by a named reviewer. | Must have `review_status=reviewed`, `reviewer`, and `reviewed_at`. |
+| `medium` | Plausible reviewed defensive context with partial source detail. | Must keep source and rationale visible; should be revisited when better CTID or vendor evidence exists. |
+| `low` | Review queue hint or incomplete defensive context. | Must remain visible in quality reports and must not be used as proof of behavior. |
+
+Current limitations:
+
+- ATT&CK context is optional and separate from the CVSS, EPSS, and KEV base
+  priority.
+- CTID JSON is preferred. Local curated mappings are accepted only with source,
+  rationale, confidence, review status, and defensive notes.
+- Unmapped CVEs stay unmapped. The tool does not fill gaps by guessing from CVE
+  text, CWE, vendor names, products, exploit keywords, EPSS rank, or LLM output.
+- Free-text source notes can contain upstream vulnerability descriptions. VPW
+  authored notes and reports must avoid exploit payloads, commands, reproduction
+  steps, and procedure guidance.
+
+## Mapping Review Checklist
+
+Use this checklist for each local curated mapping and for report surfaces that
+display ATT&CK context. The GitHub issue template
+`.github/ISSUE_TEMPLATE/attack_mapping_review.md` mirrors these checks for
+review work.
+
+- Source: CTID JSON or another public defensive source is named, linked where
+  possible, and recorded with version/date/checksum when available.
+- Provenance: mapping file, technique metadata file, reviewer, and review date
+  are captured.
+- Tactic/Technique/Procedure: tactic and technique labels are separated from
+  procedure-level details; procedure guidance is absent.
+- Confidence: confidence is `low`, `medium`, or `high`; high confidence is
+  reviewed; stale/rejected/reviewed entries include reviewer metadata.
+- Rationale: rationale explains defensive triage, detection, mitigation, or
+  management context without claiming local exploitation.
+- Safety: comments, notes, report text, and evidence artifacts contain no
+  payloads, commands, reproduction steps, weaponization instructions, or active
+  probing guidance.
+- Unmapped behavior: absent CTID/local mappings remain explicitly unmapped.
+- Reporting: reports identify ATT&CK as source-backed defensive context and do
+  not claim real exploitation unless KEV or another cited source supports that
+  statement.
 
 ## Schema And Example
 
