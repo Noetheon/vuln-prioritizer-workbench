@@ -10,6 +10,7 @@ from typing import Any
 
 from fastapi.testclient import TestClient
 
+from vuln_prioritizer.api import workbench_providers
 from vuln_prioritizer.api.app import create_app, get_engine
 from vuln_prioritizer.db import (
     ApiToken,
@@ -265,6 +266,12 @@ def test_workbench_import_findings_reports_and_evidence(tmp_path: Path) -> None:
     detail_payload = detail.json()
     assert detail_payload["finding"]["cve_id"] == "CVE-2021-44228"
     assert detail_payload["finding"]["provider_evidence"]["nvd"]["cve_id"] == "CVE-2021-44228"
+    assert detail_payload["kev_detail"]["cve_id"] == "CVE-2021-44228"
+    assert detail_payload["kev_detail"]["in_kev"] is True
+    assert detail_payload["kev_detail"]["vendor_project"] == "Apache"
+    assert detail_payload["kev_detail"]["product"] == "Log4j2"
+    assert detail_payload["kev_detail"]["due_date"] == "2021-12-24"
+    assert "Apply updates" in detail_payload["kev_detail"]["required_action"]
     assert detail_payload["occurrences"][0]["source_format"] == "cve-list"
     assert detail_payload["occurrences"][0]["source_record_id"] == "line:1"
 
@@ -308,6 +315,14 @@ def test_workbench_import_findings_reports_and_evidence(tmp_path: Path) -> None:
             assert {
                 finding["cve_id"] for finding in analysis_payload["findings"]
             } == EXPECTED_SAMPLE_CVES
+            log4shell_report = next(
+                finding
+                for finding in analysis_payload["findings"]
+                if finding["cve_id"] == "CVE-2021-44228"
+            )
+            report_kev = log4shell_report["provider_evidence"]["kev"]
+            assert report_kev["due_date"] == "2021-12-24"
+            assert "Apply updates" in report_kev["required_action"]
         if report_format == "sarif":
             sarif_payload = json.loads(report_download.text)
             assert sarif_payload["runs"][0]["tool"]["driver"]["name"] == (
@@ -1443,7 +1458,12 @@ def test_workbench_api_tokens_config_provider_jobs_and_github_preview(
     assert job_payload["metadata"]["snapshot_created"] is True
     assert job_payload["metadata"]["new_snapshot_id"]
     assert job_payload["metadata"]["new_snapshot_hash"]
+    assert set(job_payload["metadata"]["source_hashes"]) == {"nvd", "epss", "kev"}
+    kev_source_hash = job_payload["metadata"]["source_hashes"]["kev"]
+    assert kev_source_hash is None or len(kev_source_hash) == 64
     assert Path(job_payload["metadata"]["snapshot_path"]).is_file()
+    snapshot_payload = json.loads(Path(job_payload["metadata"]["snapshot_path"]).read_text())
+    assert snapshot_payload["metadata"]["source_hashes"] == job_payload["metadata"]["source_hashes"]
 
     provider_status = client.get("/api/providers/status")
     assert provider_status.status_code == 200
@@ -1451,6 +1471,7 @@ def test_workbench_api_tokens_config_provider_jobs_and_github_preview(
         provider_status.json()["snapshot"]["content_hash"]
         == job_payload["metadata"]["new_snapshot_hash"]
     )
+    assert provider_status.json()["latest_update_job"]["id"] == job_payload["id"]
 
     saved_config = client.post(
         f"/api/projects/{project['id']}/settings/config",
@@ -1763,6 +1784,44 @@ def test_workbench_api_tokens_config_provider_jobs_and_github_preview(
     assert listed_after_revoke.status_code == 200
     token_states = {item["id"]: item["active"] for item in listed_after_revoke.json()["items"]}
     assert token_states[token_payload["id"]] is False
+
+
+def test_workbench_provider_status_surfaces_latest_failed_update(
+    tmp_path: Path,
+    monkeypatch: Any,
+) -> None:
+    client = _client(tmp_path)
+    project = _create_project(client)
+    run = _import_sample(client, project["id"])
+
+    before_status = client.get("/api/providers/status")
+    assert before_status.status_code == 200
+    previous_snapshot_hash = before_status.json()["snapshot"]["content_hash"]
+    assert before_status.json()["snapshot"]["id"] == run["provider_snapshot_id"]
+
+    def fail_provider_records_for_snapshot(*args: Any, **kwargs: Any) -> Any:
+        raise RuntimeError("forced KEV provider failure")
+
+    monkeypatch.setattr(
+        workbench_providers,
+        "_provider_records_for_snapshot",
+        fail_provider_records_for_snapshot,
+    )
+
+    job = client.post("/api/providers/update-jobs", json={"sources": ["kev"]})
+    assert job.status_code == 200, job.text
+    job_payload = job.json()
+    assert job_payload["status"] == "failed"
+    assert job_payload["metadata"]["previous_snapshot_hash"] == previous_snapshot_hash
+
+    provider_status = client.get("/api/providers/status")
+    assert provider_status.status_code == 200
+    status_payload = provider_status.json()
+    assert status_payload["status"] == "degraded"
+    assert status_payload["snapshot"]["content_hash"] == previous_snapshot_hash
+    assert status_payload["latest_update_job"]["id"] == job_payload["id"]
+    assert status_payload["latest_update_job"]["status"] == "failed"
+    assert any("forced KEV provider failure" in warning for warning in status_payload["warnings"])
 
 
 def test_workbench_csv_report_escapes_spreadsheet_formulas(tmp_path: Path) -> None:

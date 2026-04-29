@@ -71,6 +71,19 @@ def test_contracts_schema_list_matches_schema_directory() -> None:
     assert sorted(documented_names) == schema_names
 
 
+def test_kev_enrichment_response_example_matches_model() -> None:
+    payload = json.loads(
+        (DOCS_ROOT / "examples" / "example_kev_enrichment_response.json").read_text(
+            encoding="utf-8"
+        )
+    )
+
+    kev = KevData.model_validate(payload)
+
+    assert kev.in_kev is True
+    assert kev.vulnerability_name == "Example Product command injection vulnerability"
+
+
 def _install_fake_data_update_providers(monkeypatch: Any) -> None:
     def fake_nvd_fetch_many(
         self: NvdProvider,
@@ -119,7 +132,15 @@ def _install_fake_data_update_providers(monkeypatch: Any) -> None:
     ) -> tuple[dict[str, KevData], list[str]]:
         assert refresh is True
         results = {
-            cve_id: KevData(cve_id=cve_id, in_kev=(cve_id == "CVE-2021-44228"))
+            cve_id: KevData(
+                cve_id=cve_id,
+                in_kev=(cve_id == "CVE-2021-44228"),
+                vulnerability_name=(
+                    "Apache Log4j2 remote code execution vulnerability"
+                    if cve_id == "CVE-2021-44228"
+                    else None
+                ),
+            )
             for cve_id in cve_ids
         }
         assert self.cache is not None
@@ -452,3 +473,7 @@ def test_provider_snapshot_json_matches_published_schema(monkeypatch, tmp_path: 
     assert result.exit_code == 0
     payload = json.loads(output_file.read_text(encoding="utf-8"))
     jsonschema.validate(payload, _load_schema("provider-snapshot-report.schema.json"))
+    assert set(payload["metadata"]["source_hashes"]) == {"nvd", "epss", "kev"}
+    assert payload["items"][0]["kev"]["vulnerability_name"] == (
+        "Apache Log4j2 remote code execution vulnerability"
+    )

@@ -65,7 +65,15 @@ def _install_fake_data_update_providers(monkeypatch: Any) -> None:
     ) -> tuple[dict[str, KevData], list[str]]:
         assert refresh is True
         results = {
-            cve_id: KevData(cve_id=cve_id, in_kev=(cve_id == "CVE-2021-44228"))
+            cve_id: KevData(
+                cve_id=cve_id,
+                in_kev=(cve_id == "CVE-2021-44228"),
+                vulnerability_name=(
+                    "Apache Log4j2 remote code execution vulnerability"
+                    if cve_id == "CVE-2021-44228"
+                    else None
+                ),
+            )
             for cve_id in cve_ids
         }
         catalog = {cve_id: item.model_dump() for cve_id, item in results.items()}
@@ -441,10 +449,18 @@ def test_data_export_provider_snapshot_writes_replay_artifact(monkeypatch, tmp_p
     payload = json.loads(output_file.read_text(encoding="utf-8"))
     assert payload["metadata"]["artifact_kind"] == "provider-snapshot"
     assert payload["metadata"]["selected_sources"] == ["nvd", "epss", "kev"]
+    assert set(payload["metadata"]["source_hashes"]) == {"nvd", "epss", "kev"}
+    assert all(
+        isinstance(value, str) and len(value) == 64
+        for value in payload["metadata"]["source_hashes"].values()
+    )
     assert [item["cve_id"] for item in payload["items"]] == ["CVE-2021-44228", "CVE-2024-3094"]
     assert all(item["nvd"] is not None for item in payload["items"])
     assert all(item["epss"] is not None for item in payload["items"])
     assert all(item["kev"] is not None for item in payload["items"])
+    assert payload["items"][0]["kev"]["vulnerability_name"] == (
+        "Apache Log4j2 remote code execution vulnerability"
+    )
 
 
 def test_data_export_provider_snapshot_cache_only_uses_local_cache(
@@ -476,7 +492,13 @@ def test_data_export_provider_snapshot_cache_only_uses_local_cache(
     cache.set_json(
         "kev",
         "catalog",
-        {"CVE-2021-44228": KevData(cve_id="CVE-2021-44228", in_kev=True).model_dump()},
+        {
+            "CVE-2021-44228": KevData(
+                cve_id="CVE-2021-44228",
+                in_kev=True,
+                vulnerability_name="Cached Log4j2 KEV vulnerability",
+            ).model_dump()
+        },
     )
 
     result = runner.invoke(
@@ -498,9 +520,12 @@ def test_data_export_provider_snapshot_cache_only_uses_local_cache(
     payload = json.loads(output_file.read_text(encoding="utf-8"))
     first_item, second_item = payload["items"]
     assert payload["metadata"]["cache_only"] is True
+    assert payload["metadata"]["source_hashes"]["kev"]
+    assert len(payload["metadata"]["source_hashes"]["kev"]) == 64
     assert first_item["nvd"] is not None
     assert first_item["epss"] is not None
     assert first_item["kev"]["in_kev"] is True
+    assert first_item["kev"]["vulnerability_name"] == "Cached Log4j2 KEV vulnerability"
     assert second_item["nvd"] is None
     assert second_item["epss"] is None
     assert second_item["kev"]["in_kev"] is False

@@ -18,6 +18,7 @@ nav:
       - Analysis Run Provider Schema: architecture/analysis-run-provider-schema.md
       - Provider Cache Status Snapshots: architecture/vpw-022-provider-cache-status-snapshots.md
       - EPSS Provider Cache: architecture/vpw-023-epss-provider-cache.md
+      - KEV Provider Cache: architecture/vpw-024-kev-provider-cache.md
       - Template Repository Layer: architecture/template-service-layer.md
       - Template Importer Contract: architecture/vpw-013-importer-contract.md
   - Full Stack Template Migration: full_stack_fastapi_template_migration.md

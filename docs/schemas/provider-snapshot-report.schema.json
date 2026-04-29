@@ -122,6 +122,12 @@
             "product": {
               "$ref": "#/$defs/nullableString"
             },
+            "vulnerability_name": {
+              "$ref": "#/$defs/nullableString"
+            },
+            "short_description": {
+              "$ref": "#/$defs/nullableString"
+            },
             "date_added": {
               "$ref": "#/$defs/nullableString"
             },
@@ -129,6 +135,12 @@
               "$ref": "#/$defs/nullableString"
             },
             "due_date": {
+              "$ref": "#/$defs/nullableString"
+            },
+            "known_ransomware_campaign_use": {
+              "$ref": "#/$defs/nullableString"
+            },
+            "notes": {
               "$ref": "#/$defs/nullableString"
             }
           }
@@ -206,6 +218,7 @@
         "output_path",
         "cache_enabled",
         "cache_dir",
+        "source_hashes",
         "offline_kev_file",
         "nvd_api_key_env"
       ],
@@ -246,6 +259,12 @@
         },
         "cache_dir": {
           "$ref": "#/$defs/nullableString"
+        },
+        "source_hashes": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/nullableString"
+          }
         },
         "offline_kev_file": {
           "$ref": "#/$defs/nullableString"

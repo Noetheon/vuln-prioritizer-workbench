@@ -73,9 +73,11 @@ def dashboard(
     project = repo.get_project(project_id)
     if project is None:
         raise HTTPException(status_code=404, detail="Project not found.")
+    provider_jobs = repo.list_provider_update_jobs()
     provider_status = _provider_status_payload(
         repo.get_latest_provider_snapshot(),
         settings=get_workbench_settings(request),
+        latest_update_job=provider_jobs[0] if provider_jobs else None,
     )
     model = dashboard_model(
         project,

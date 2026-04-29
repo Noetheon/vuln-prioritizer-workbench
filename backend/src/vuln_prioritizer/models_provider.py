@@ -36,6 +36,7 @@ class KevData(StrictModel):
     in_kev: bool = False
     vendor_project: str | None = None
     product: str | None = None
+    vulnerability_name: str | None = None
     short_description: str | None = None
     date_added: str | None = None
     required_action: str | None = None

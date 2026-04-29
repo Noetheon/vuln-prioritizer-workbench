@@ -135,14 +135,33 @@ class KevProvider:
             index[cve_id] = KevData(
                 cve_id=cve_id,
                 in_kev=True,
-                vendor_project=vulnerability.get("vendorProject"),
-                product=vulnerability.get("product"),
-                short_description=vulnerability.get("shortDescription"),
-                date_added=vulnerability.get("dateAdded"),
-                required_action=vulnerability.get("requiredAction"),
-                due_date=vulnerability.get("dueDate"),
-                known_ransomware_campaign_use=vulnerability.get("knownRansomwareCampaignUse"),
-                notes=vulnerability.get("notes"),
+                vendor_project=_first_present(vulnerability, "vendorProject", "vendor_project"),
+                product=_first_present(vulnerability, "product"),
+                vulnerability_name=_first_present(
+                    vulnerability,
+                    "vulnerabilityName",
+                    "vulnerability_name",
+                    "name",
+                ),
+                short_description=_first_present(
+                    vulnerability,
+                    "shortDescription",
+                    "short_description",
+                    "description",
+                ),
+                date_added=_first_present(vulnerability, "dateAdded", "date_added"),
+                required_action=_first_present(
+                    vulnerability,
+                    "requiredAction",
+                    "required_action",
+                ),
+                due_date=_first_present(vulnerability, "dueDate", "due_date"),
+                known_ransomware_campaign_use=_first_present(
+                    vulnerability,
+                    "knownRansomwareCampaignUse",
+                    "known_ransomware_campaign_use",
+                ),
+                notes=_first_present(vulnerability, "notes"),
             )
         return index
 
@@ -162,3 +181,11 @@ class KevProvider:
             "catalog",
             {cve_id: item.model_dump() for cve_id, item in index.items()},
         )
+
+
+def _first_present(vulnerability: dict, *keys: str) -> str | None:
+    for key in keys:
+        value = vulnerability.get(key)
+        if value is not None and str(value).strip():
+            return str(value)
+    return None

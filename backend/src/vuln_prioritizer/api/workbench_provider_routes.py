@@ -30,8 +30,13 @@ def provider_status(
     session: Annotated[Session, Depends(get_db_session)],
     settings: Annotated[WorkbenchSettings, Depends(get_workbench_settings)],
 ) -> dict[str, Any]:
-    snapshot = WorkbenchRepository(session).get_latest_provider_snapshot()
-    return _provider_status_payload(snapshot, settings=settings)
+    repo = WorkbenchRepository(session)
+    jobs = repo.list_provider_update_jobs()
+    return _provider_status_payload(
+        repo.get_latest_provider_snapshot(),
+        settings=settings,
+        latest_update_job=jobs[0] if jobs else None,
+    )
 
 
 @provider_router.get("/providers/update-jobs")

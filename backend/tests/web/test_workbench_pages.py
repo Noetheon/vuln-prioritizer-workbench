@@ -295,11 +295,23 @@ def test_web_import_report_page_and_finding_detail(tmp_path: Path) -> None:
     assert filtered.status_code == 200
     assert "CVE-2024-3094" in filtered.text
     assert "Showing 1-1 of 1 findings." in filtered.text
-    detail_link = BeautifulSoup(findings.text, "html.parser").select_one("td a")
+    findings_soup = BeautifulSoup(findings.text, "html.parser")
+    detail_link = next(
+        (
+            anchor
+            for anchor in findings_soup.select("td a")
+            if anchor.get_text(strip=True) == "CVE-2021-44228"
+        ),
+        None,
+    )
     assert detail_link is not None
     detail = client.get(str(detail_link["href"]))
     assert detail.status_code == 200
     assert "Why this priority?" in detail.text
+    assert "Known exploited vulnerability" in detail.text
+    assert "Log4j2" in detail.text
+    assert "2021-12-24" in detail.text
+    assert "Required action" in detail.text
 
     intelligence = client.get(
         f"/projects/{project_id}/vulnerabilities",

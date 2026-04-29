@@ -189,6 +189,9 @@ The shared provider enrichment contract is documented in
 [VPW-022 Provider Cache, Status and Snapshots](vpw-022-provider-cache-status-snapshots.md).
 The EPSS-specific batch/cache/freshness behavior is documented in
 [VPW-023 EPSS Provider Cache](vpw-023-epss-provider-cache.md).
+The KEV-specific JSON/CSV normalization, fixture, source-hash, and Workbench
+detail behavior is documented in
+[VPW-024 KEV Provider Cache](vpw-024-kev-provider-cache.md).
 
 The current `data` command tree is intentionally small:
 
