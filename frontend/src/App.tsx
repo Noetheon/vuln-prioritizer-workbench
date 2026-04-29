@@ -2,6 +2,7 @@ import { Link, useLocation, useNavigate } from "@tanstack/react-router"
 import {
   Activity,
   AlertTriangle,
+  ArrowLeft,
   BarChart3,
   Database,
   FileArchive,
@@ -23,6 +24,9 @@ import {
   type AnalysisRunSummaryPublic,
   ApiError,
   type AssetExposure,
+  type FindingDetailPublic,
+  type FindingExplanationPublic,
+  type FindingOccurrencePublic,
   type FindingPriority,
   type FindingPublic,
   type FindingStatus,
@@ -117,7 +121,17 @@ type WorkbenchPath = keyof typeof routeDetails
 function normalizeWorkbenchPath(pathname: string): WorkbenchPath {
   const normalized =
     pathname.length > 1 ? pathname.replace(/\/+$/, "") : pathname
+  if (normalized.startsWith("/findings/")) {
+    return "/findings"
+  }
   return normalized in routeDetails ? (normalized as WorkbenchPath) : "/"
+}
+
+function findingIdFromPath(pathname: string) {
+  const normalized =
+    pathname.length > 1 ? pathname.replace(/\/+$/, "") : pathname
+  const match = normalized.match(/^\/findings\/([^/]+)$/)
+  return match ? decodeURIComponent(match[1]) : null
 }
 
 function isActivePath(currentPath: WorkbenchPath, targetPath: WorkbenchPath) {
@@ -528,6 +542,171 @@ function formatEpss(value: number | null | undefined) {
     : `${Math.round(value * 1000) / 10}%`
 }
 
+function formatKev(value: boolean | null | undefined) {
+  return value ? "Yes" : "No"
+}
+
+function arrayRecords(value: unknown): Record<string, unknown>[] {
+  return Array.isArray(value)
+    ? value.filter(
+        (entry): entry is Record<string, unknown> =>
+          typeof entry === "object" && entry !== null,
+      )
+    : []
+}
+
+function joinedValues(values: Array<string | null | undefined>) {
+  const present = values.filter(
+    (value): value is string =>
+      typeof value === "string" && value.trim() !== "",
+  )
+  return present.length > 0 ? present.join(" / ") : "N.A."
+}
+
+function findingOverviewCards(finding: FindingDetailPublic) {
+  return [
+    {
+      detail:
+        finding.epss === null || finding.epss === undefined
+          ? "EPSS provider data missing"
+          : "FIRST EPSS probability",
+      label: "EPSS",
+      value: formatEpss(finding.epss),
+    },
+    {
+      detail:
+        finding.cvss_base_score === null ||
+        finding.cvss_base_score === undefined
+          ? "CVSS provider data missing"
+          : "NVD base score",
+      label: "CVSS",
+      value: formatNullableNumber(finding.cvss_base_score),
+    },
+    {
+      detail: finding.in_kev ? "CISA KEV matched" : "No KEV match recorded",
+      label: "KEV",
+      value: formatKev(finding.in_kev),
+    },
+    {
+      detail: joinedValues([
+        finding.owner,
+        finding.business_service,
+        labelize(finding.exposure),
+      ]),
+      label: "Asset",
+      value: findingAssetLabel(finding),
+    },
+  ]
+}
+
+function findingOccurrenceRows(
+  finding: FindingDetailPublic | null,
+  explanation: FindingExplanationPublic | null,
+): Array<Partial<FindingOccurrencePublic> & Record<string, unknown>> {
+  if (finding?.occurrences?.length) {
+    return finding.occurrences
+  }
+  const explanationPayload = objectRecord(explanation?.explanation)
+  const explanationProvenance = objectRecord(explanationPayload.provenance)
+  const findingProvenance = objectRecord(
+    objectRecord(finding?.explanation_json).provenance,
+  )
+  return arrayRecords(
+    explanationProvenance.occurrences ?? findingProvenance.occurrences,
+  ).map((occurrence, index) => ({
+    ...occurrence,
+    id: stringValue(occurrence.id) ?? `occurrence-${index + 1}`,
+  }))
+}
+
+function findingWhyText(
+  finding: FindingDetailPublic | null,
+  explanation: FindingExplanationPublic | null,
+) {
+  const decisionExplanation = objectRecord(explanation?.decision_explanation)
+  return (
+    stringValue(decisionExplanation.human_readable) ??
+    stringValue(decisionExplanation.summary) ??
+    explanation?.rationale ??
+    finding?.rationale ??
+    "No priority explanation has been recorded for this finding."
+  )
+}
+
+function findingRecommendedAction(
+  finding: FindingDetailPublic | null,
+  explanation: FindingExplanationPublic | null,
+) {
+  const decisionGuidance = objectRecord(explanation?.decision_guidance)
+  return (
+    stringValue(decisionGuidance.recommended_action) ??
+    explanation?.recommended_action ??
+    finding?.recommended_action ??
+    "No recommended action has been recorded."
+  )
+}
+
+function findingReasonRows(explanation: FindingExplanationPublic | null) {
+  const decisionExplanation = objectRecord(explanation?.decision_explanation)
+  const reasons = arrayRecords(decisionExplanation.reasons)
+  return reasons.map((reason, index) => ({
+    detail:
+      stringValue(reason.message) ??
+      stringValue(reason.description) ??
+      stringValue(reason.detail) ??
+      stringValue(reason.value) ??
+      "Matched decision signal",
+    label:
+      stringValue(reason.code) ??
+      stringValue(reason.signal) ??
+      stringValue(reason.source) ??
+      `Reason ${index + 1}`,
+  }))
+}
+
+function findingDataQualityRows(
+  finding: FindingDetailPublic | null,
+  explanation: FindingExplanationPublic | null,
+) {
+  const flags =
+    explanation?.data_quality_flags ??
+    arrayRecords(objectRecord(finding?.data_quality_json).flags)
+  return flags.map((flag, index) => ({
+    code: stringValue(flag.code) ?? "data_quality_flag",
+    key: [flag.source, flag.code, flag.message, index].join(":"),
+    message: stringValue(flag.message) ?? "Data quality flag recorded.",
+    severity: stringValue(flag.severity) ?? "info",
+    source: stringValue(flag.source) ?? "provider",
+  }))
+}
+
+function findingProviderGaps(
+  finding: FindingDetailPublic | null,
+  explanation: FindingExplanationPublic | null,
+) {
+  if (!finding) {
+    return []
+  }
+  const providerEvidence = objectRecord(
+    explanation?.provider_evidence ??
+      objectRecord(finding.explanation_json).provider_evidence,
+  )
+  const gaps: string[] = []
+  if (finding.epss === null || finding.epss === undefined) {
+    gaps.push("EPSS missing")
+  }
+  if (
+    finding.cvss_base_score === null ||
+    finding.cvss_base_score === undefined
+  ) {
+    gaps.push("CVSS missing")
+  }
+  if (Object.keys(providerEvidence).length === 0) {
+    gaps.push("Provider evidence missing")
+  }
+  return gaps
+}
+
 function numericFilterValue(value: string) {
   const trimmed = value.trim()
   if (!trimmed) {
@@ -618,6 +797,9 @@ export function App() {
   const navigate = useNavigate()
   const location = useLocation()
   const currentPath = normalizeWorkbenchPath(location.pathname)
+  const findingDetailId = findingIdFromPath(location.pathname)
+  const isFindingDetail = findingDetailId !== null
+  const isFindingsList = currentPath === "/findings" && !isFindingDetail
   const routeDetail = routeDetails[currentPath]
   const [status, setStatus] = useState<WorkbenchStatus | null>(null)
   const [providerStatus, setProviderStatus] =
@@ -675,6 +857,14 @@ export function App() {
     useState<(typeof findingPageSizes)[number]>(10)
   const [findingOffset, setFindingOffset] = useState(0)
   const [findingReloadKey, setFindingReloadKey] = useState(0)
+  const [findingDetail, setFindingDetail] =
+    useState<FindingDetailPublic | null>(null)
+  const [findingExplanation, setFindingExplanation] =
+    useState<FindingExplanationPublic | null>(null)
+  const [findingDetailLoading, setFindingDetailLoading] = useState(false)
+  const [findingDetailError, setFindingDetailError] = useState("")
+  const [findingExplanationWarning, setFindingExplanationWarning] = useState("")
+  const [findingDetailReloadKey, setFindingDetailReloadKey] = useState(0)
   const selectedProject =
     projects.find((project) => project.id === selectedProjectId) ?? null
   const dashboardLoading = projectListLoading || summaryLoading
@@ -688,6 +878,19 @@ export function App() {
     findingCount === 0 ? 0 : Math.min(findingOffset + 1, findingCount)
   const findingPageEnd = Math.min(findingOffset + findings.length, findingCount)
   const activeFindingFilters = hasActiveFindingFilters(findingFilters)
+  const detailOccurrences = findingOccurrenceRows(
+    findingDetail,
+    findingExplanation,
+  )
+  const detailDataQualityRows = findingDataQualityRows(
+    findingDetail,
+    findingExplanation,
+  )
+  const detailProviderGaps = findingProviderGaps(
+    findingDetail,
+    findingExplanation,
+  )
+  const detailReasonRows = findingReasonRows(findingExplanation)
 
   useEffect(() => {
     let isMounted = true
@@ -913,7 +1116,7 @@ export function App() {
     let isMounted = true
 
     async function loadFindingsPage() {
-      if (currentPath !== "/findings" || !selectedProjectId) {
+      if (!isFindingsList || !selectedProjectId) {
         setFindings([])
         setFindingCount(0)
         setFindingsError("")
@@ -970,7 +1173,6 @@ export function App() {
       isMounted = false
     }
   }, [
-    currentPath,
     findingDirection,
     findingFilters.cvssMax,
     findingFilters.cvssMin,
@@ -985,9 +1187,78 @@ export function App() {
     findingPageSize,
     findingReloadKey,
     findingSort,
+    isFindingsList,
     navigate,
     selectedProjectId,
   ])
+
+  useEffect(() => {
+    let isMounted = true
+
+    async function loadFindingDetail() {
+      if (!findingDetailId) {
+        setFindingDetail(null)
+        setFindingExplanation(null)
+        setFindingDetailError("")
+        setFindingExplanationWarning("")
+        setFindingDetailLoading(false)
+        return
+      }
+
+      setFindingDetailLoading(true)
+      setFindingDetailError("")
+      setFindingExplanationWarning("")
+      try {
+        const detail = await FindingsService.readFinding({
+          findingId: findingDetailId,
+        })
+        let explanation: FindingExplanationPublic | null = null
+        let explanationWarning = ""
+        try {
+          explanation = await FindingsService.explainFinding({
+            findingId: findingDetailId,
+          })
+        } catch (caught) {
+          if (caught instanceof ApiError && caught.status === 422) {
+            explanationWarning = apiErrorMessage(
+              "Priority explanation unavailable",
+              caught,
+            )
+          } else {
+            throw caught
+          }
+        }
+        if (isMounted) {
+          setFindingDetail(detail)
+          setFindingExplanation(explanation)
+          setFindingExplanationWarning(explanationWarning)
+          setSelectedProjectId(detail.project_id)
+        }
+      } catch (caught) {
+        if (caught instanceof ApiError && [401, 403].includes(caught.status)) {
+          clearAccessToken()
+          await navigate({ to: "/login" })
+          return
+        }
+        if (isMounted) {
+          setFindingDetail(null)
+          setFindingExplanation(null)
+          setFindingDetailError(
+            apiErrorMessage("Finding detail unavailable", caught),
+          )
+        }
+      } finally {
+        if (isMounted) {
+          setFindingDetailLoading(false)
+        }
+      }
+    }
+
+    void loadFindingDetail()
+    return () => {
+      isMounted = false
+    }
+  }, [findingDetailId, findingDetailReloadKey, navigate])
 
   async function refreshProjects(preferredProjectId?: string) {
     const projectPage = await ProjectsService.readProjects()
@@ -1085,6 +1356,10 @@ export function App() {
 
   function refreshFindings() {
     setFindingReloadKey((key) => key + 1)
+  }
+
+  function refreshFindingDetail() {
+    setFindingDetailReloadKey((key) => key + 1)
   }
 
   async function createProject(event: FormEvent<HTMLFormElement>) {
@@ -1404,8 +1679,14 @@ export function App() {
           <div className="work-panel">
             <div className="panel-header">
               <div>
-                <h2>{routeDetail.panelTitle}</h2>
-                <span>{routeDetail.panelDetail}</span>
+                <h2>
+                  {isFindingDetail ? "Finding Detail" : routeDetail.panelTitle}
+                </h2>
+                <span>
+                  {isFindingDetail
+                    ? "Overview, source occurrences, and decision rationale"
+                    : routeDetail.panelDetail}
+                </span>
               </div>
               <button
                 className="icon-button"
@@ -1413,15 +1694,19 @@ export function App() {
                 aria-label={
                   currentPath === "/projects"
                     ? "Refresh projects"
-                    : currentPath === "/findings"
-                      ? "Refresh findings"
-                      : "Refresh queue"
+                    : isFindingDetail
+                      ? "Refresh finding detail"
+                      : currentPath === "/findings"
+                        ? "Refresh findings"
+                        : "Refresh queue"
                 }
                 onClick={() => {
                   if (currentPath === "/projects") {
                     void refreshProjects(selectedProjectId)
                   }
-                  if (currentPath === "/findings") {
+                  if (isFindingDetail) {
+                    refreshFindingDetail()
+                  } else if (currentPath === "/findings") {
                     refreshFindings()
                   }
                 }}
@@ -2101,7 +2386,290 @@ export function App() {
                   </section>
                 </section>
               </section>
-            ) : currentPath === "/findings" ? (
+            ) : isFindingDetail ? (
+              <section
+                className="finding-detail-workflow"
+                aria-label="Finding detail"
+              >
+                <div className="finding-detail-backbar">
+                  <Link
+                    className="secondary-action finding-back-link"
+                    to="/findings"
+                  >
+                    <ArrowLeft aria-hidden="true" size={16} />
+                    <span>Back to Findings</span>
+                  </Link>
+                </div>
+
+                {findingDetailError ? (
+                  <p className="dashboard-alert" role="alert">
+                    {findingDetailError}
+                  </p>
+                ) : null}
+                {findingExplanationWarning ? (
+                  <p className="dashboard-alert" role="alert">
+                    {findingExplanationWarning}
+                  </p>
+                ) : null}
+                {findingDetailLoading ? (
+                  <p className="dashboard-state" role="status">
+                    Loading finding detail
+                  </p>
+                ) : null}
+
+                {!findingDetailLoading &&
+                !findingDetailError &&
+                findingDetail ? (
+                  <>
+                    <section
+                      className="finding-detail-header"
+                      aria-label="Finding detail header"
+                    >
+                      <div>
+                        <span>Finding</span>
+                        <h3>{findingDetail.cve_id}</h3>
+                      </div>
+                      <div className="finding-detail-badges">
+                        <span
+                          className={`severity ${
+                            findingDetail.priority ?? "low"
+                          }`}
+                        >
+                          {labelize(findingDetail.priority)}
+                        </span>
+                        <span className="status-pill">
+                          {labelize(findingDetail.status)}
+                        </span>
+                      </div>
+                    </section>
+
+                    <section
+                      className="finding-detail-overview"
+                      aria-label="Finding overview"
+                    >
+                      {findingOverviewCards(findingDetail).map((card) => (
+                        <article
+                          className="finding-overview-card"
+                          key={card.label}
+                        >
+                          <span>{card.label}</span>
+                          <strong>{card.value}</strong>
+                          <small>{card.detail}</small>
+                        </article>
+                      ))}
+                    </section>
+
+                    <section
+                      className="why-priority-panel"
+                      aria-label="Why this priority"
+                    >
+                      <div className="detail-section-heading">
+                        <h3>Why this priority</h3>
+                        <span>
+                          Score {formatNullableNumber(findingDetail.risk_score)}
+                        </span>
+                      </div>
+                      <p>{findingWhyText(findingDetail, findingExplanation)}</p>
+                      <div className="recommendation-callout">
+                        <span>Recommended action</span>
+                        <strong>
+                          {findingRecommendedAction(
+                            findingDetail,
+                            findingExplanation,
+                          )}
+                        </strong>
+                      </div>
+                      {detailReasonRows.length > 0 ? (
+                        <dl
+                          className="reason-list"
+                          aria-label="Matched reasons"
+                        >
+                          {detailReasonRows.map((reason) => (
+                            <div key={`${reason.label}:${reason.detail}`}>
+                              <dt>{labelize(reason.label)}</dt>
+                              <dd>{reason.detail}</dd>
+                            </div>
+                          ))}
+                        </dl>
+                      ) : null}
+                    </section>
+
+                    <section
+                      className="occurrences-panel"
+                      aria-label="Occurrences"
+                    >
+                      <div className="detail-section-heading">
+                        <h3>Occurrences</h3>
+                        <span>{detailOccurrences.length} source row(s)</span>
+                      </div>
+                      {detailOccurrences.length > 0 ? (
+                        <div className="table-wrap occurrences-table-wrap">
+                          <table aria-label="Occurrences table">
+                            <thead>
+                              <tr>
+                                <th>Source</th>
+                                <th>Component</th>
+                                <th>Asset</th>
+                                <th>Owner</th>
+                                <th>Severity</th>
+                                <th>Fix</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {detailOccurrences.map((occurrence, index) => {
+                                const fixVersions =
+                                  Array.isArray(occurrence.fix_versions) &&
+                                  occurrence.fix_versions.length > 0
+                                    ? occurrence.fix_versions.join(", ")
+                                    : stringValue(occurrence.fix_version)
+                                return (
+                                  <tr
+                                    key={
+                                      stringValue(occurrence.id) ??
+                                      `occurrence-${index + 1}`
+                                    }
+                                  >
+                                    <td>
+                                      <span className="finding-primary">
+                                        {optionalText(
+                                          stringValue(
+                                            occurrence.source_format,
+                                          ) ?? stringValue(occurrence.source),
+                                        )}
+                                      </span>
+                                      <small>
+                                        {optionalText(
+                                          stringValue(
+                                            occurrence.source_record_id,
+                                          ) ??
+                                            stringValue(
+                                              occurrence.raw_reference,
+                                            ),
+                                        )}
+                                      </small>
+                                    </td>
+                                    <td>
+                                      <span className="finding-primary">
+                                        {joinedValues([
+                                          stringValue(
+                                            occurrence.component_name,
+                                          ),
+                                          stringValue(
+                                            occurrence.component_version,
+                                          ),
+                                        ])}
+                                      </span>
+                                      <small>
+                                        {optionalText(
+                                          stringValue(occurrence.purl),
+                                        )}
+                                      </small>
+                                    </td>
+                                    <td>
+                                      <span className="finding-primary">
+                                        {optionalText(
+                                          stringValue(occurrence.asset_ref) ??
+                                            stringValue(occurrence.target_ref),
+                                        )}
+                                      </span>
+                                      <small>
+                                        {joinedValues([
+                                          stringValue(occurrence.target_kind),
+                                          labelize(
+                                            stringValue(
+                                              occurrence.asset_exposure,
+                                            ),
+                                          ),
+                                        ])}
+                                      </small>
+                                    </td>
+                                    <td>
+                                      <span className="finding-primary">
+                                        {optionalText(
+                                          stringValue(occurrence.asset_owner),
+                                        )}
+                                      </span>
+                                      <small>
+                                        {optionalText(
+                                          stringValue(
+                                            occurrence.asset_business_service,
+                                          ),
+                                        )}
+                                      </small>
+                                    </td>
+                                    <td>
+                                      {optionalText(
+                                        stringValue(occurrence.raw_severity),
+                                      )}
+                                    </td>
+                                    <td>{optionalText(fixVersions)}</td>
+                                  </tr>
+                                )
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                      ) : (
+                        <p className="detail-empty">
+                          No source occurrences have been recorded for this
+                          finding.
+                        </p>
+                      )}
+                    </section>
+
+                    <section
+                      className="data-quality-panel"
+                      aria-label="Data Quality Flags"
+                    >
+                      <div className="detail-section-heading">
+                        <h3>Data Quality Flags</h3>
+                        <span>
+                          Confidence{" "}
+                          {findingExplanation?.data_quality_confidence ??
+                            stringValue(
+                              objectRecord(findingDetail.data_quality_json)
+                                .confidence,
+                            ) ??
+                            "high"}
+                        </span>
+                      </div>
+                      {detailDataQualityRows.length > 0 ? (
+                        <ul className="data-quality-list">
+                          {detailDataQualityRows.map((flag) => (
+                            <li key={flag.key}>
+                              <strong>{labelize(flag.code)}</strong>
+                              <span>
+                                {flag.source} / {labelize(flag.severity)}
+                              </span>
+                              <p>{flag.message}</p>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="detail-empty">
+                          No data quality flags recorded.
+                        </p>
+                      )}
+                      <section
+                        className="provider-gap-list"
+                        aria-label="Provider data coverage"
+                      >
+                        <span>Provider data coverage</span>
+                        {detailProviderGaps.length > 0 ? (
+                          <ul>
+                            {detailProviderGaps.map((gap) => (
+                              <li key={gap}>{gap}</li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <p>No provider gaps for this finding.</p>
+                        )}
+                      </section>
+                    </section>
+                  </>
+                ) : null}
+              </section>
+            ) : isFindingsList ? (
               <section
                 className="findings-workflow"
                 aria-label="Findings table workflow"
@@ -2482,7 +3050,13 @@ export function App() {
                             </td>
                             <td>{formatNullableNumber(finding.risk_score)}</td>
                             <td>
-                              <strong>{finding.cve_id}</strong>
+                              <Link
+                                className="finding-cve-link"
+                                params={{ findingId: finding.id }}
+                                to="/findings/$findingId"
+                              >
+                                {finding.cve_id}
+                              </Link>
                             </td>
                             <td>
                               <span className="finding-primary">

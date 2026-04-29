@@ -390,6 +390,23 @@ def test_vpw042_findings_list_filters_and_display_fields(
     assert detail["owner"] == "platform"
     assert detail["business_service"] == "payments"
     assert detail["exposure"] == "internet-facing"
+    assert len(detail["occurrences"]) == 1
+    occurrence = detail["occurrences"][0]
+    assert occurrence["source"] == "generic-occurrence-csv"
+    assert occurrence["source_format"] == "generic-occurrence-csv"
+    assert occurrence["source_id"] == DEMO_CVE_LOG4SHELL
+    assert occurrence["source_record_id"] == "row:2"
+    assert occurrence["component_name"] == "log4j-core"
+    assert occurrence["component_version"] == "2.14.1"
+    assert occurrence["purl"] == detail["component_purl"]
+    assert occurrence["fix_versions"] == ["2.17.1", "2.17.2"]
+    assert occurrence["target_kind"] == "container"
+    assert occurrence["target_ref"] == "registry.example.test/payments-api:2026.04.28"
+    assert occurrence["asset_ref"] == "payments-api"
+    assert occurrence["asset_owner"] == "platform"
+    assert occurrence["asset_business_service"] == "payments"
+    assert occurrence["asset_exposure"] == "internet-facing"
+    assert occurrence["raw_severity"] == "CRITICAL"
 
 
 def test_vpw042_findings_sort_direction_and_pagination(
@@ -565,6 +582,37 @@ def _seed_vpw042_findings(
             in_kev=False,
             epss=0.44,
             cvss_base_score=6.1,
+        )
+        run = repositories.RunRepository(session).create_analysis_run(
+            project_id=project_id,
+            input_type="generic-occurrence-csv",
+            filename="occurrences.csv",
+            status=app_models.AnalysisRunStatus.COMPLETED,
+            summary_json={"parsed": 1, "findings": 1},
+        )
+        repositories.RunRepository(session).add_finding_occurrence(
+            finding_id=critical.id,
+            analysis_run_id=run.id,
+            source="generic-occurrence-csv",
+            scanner="trivy",
+            raw_reference="row:2",
+            fix_version="2.17.1",
+            evidence_json={
+                "source_format": "generic-occurrence-csv",
+                "source_id": DEMO_CVE_LOG4SHELL,
+                "source_record_id": "row:2",
+                "component_name": "log4j-core",
+                "component_version": "2.14.1",
+                "purl": critical_component.purl,
+                "fix_versions": ["2.17.1", "2.17.2"],
+                "target_kind": "container",
+                "target_ref": "registry.example.test/payments-api:2026.04.28",
+                "asset_ref": "payments-api",
+                "asset_owner": "platform",
+                "asset_business_service": "payments",
+                "asset_exposure": "internet-facing",
+                "raw_severity": "CRITICAL",
+            },
         )
         critical.last_seen_at = now
         high.last_seen_at = now - timedelta(minutes=5)

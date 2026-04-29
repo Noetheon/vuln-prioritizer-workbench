@@ -4,7 +4,7 @@ const validCveList = Buffer.from("CVE-2021-44228\nCVE-2024-3094\n")
 const validOccurrenceCsv = Buffer.from(
   [
     "cve_id,asset_ref,component,version,purl,severity,owner,business_service,exposure",
-    "CVE-2024-3094,build-host-1,xz,5.6.0,pkg:apk/alpine/xz@5.6.0-r0,CRITICAL,team-platform,payments,public",
+    "CVE-2024-3094,build-host-1,xz,5.6.0,pkg:apk/alpine/xz@5.6.0-r0,CRITICAL,team-platform <img src=x onerror=window.__vpwXss=1>,payments <script>window.__vpwXss=1</script>,public",
     "CVE-2024-4577,web-tier,php-cgi,8.3.7,pkg:deb/debian/php-cgi@8.3.7,HIGH,team-web,checkout,internal",
   ].join("\n"),
 )
@@ -252,6 +252,72 @@ test("template login reaches authenticated Workbench status shell", async ({
   await expect(
     findingsTable.locator(".finding-row.tone-critical").first(),
   ).toBeVisible()
+
+  const xzFindingRow = findingsTable
+    .locator("tbody tr")
+    .filter({ hasText: "build-host-1" })
+  await xzFindingRow.getByRole("link", { name: "CVE-2024-3094" }).click()
+  await expect(page).toHaveURL(/\/findings\/[0-9a-f-]{36}$/)
+  const findingDetail = page.getByRole("region", {
+    exact: true,
+    name: "Finding detail",
+  })
+  await expect(findingDetail).toBeVisible()
+  const detailHeader = page.getByRole("region", {
+    name: "Finding detail header",
+  })
+  await expect(detailHeader).toContainText("CVE-2024-3094")
+  await expect(detailHeader).toContainText("Critical")
+  await expect(detailHeader).toContainText("Open")
+  const findingOverview = page.getByRole("region", {
+    name: "Finding overview",
+  })
+  await expect(findingOverview).toContainText("EPSS")
+  await expect(findingOverview).toContainText("CVSS")
+  await expect(findingOverview).toContainText("10.0")
+  await expect(findingOverview).toContainText("KEV")
+  await expect(findingOverview).toContainText("Asset")
+  await expect(findingOverview).toContainText("build-host-1")
+  const whyPriority = page.getByRole("region", { name: "Why this priority" })
+  await expect(whyPriority).toContainText("Recommended action")
+  await expect(whyPriority).toContainText(/priority|Critical|CVSS|EPSS|KEV/i)
+  const occurrencesTable = page.getByRole("table", {
+    name: "Occurrences table",
+  })
+  await expect(occurrencesTable).toContainText("generic-occurrence-csv")
+  await expect(occurrencesTable).toContainText("xz")
+  await expect(occurrencesTable).toContainText("5.6.0")
+  await expect(occurrencesTable).toContainText("build-host-1")
+  await expect(occurrencesTable).toContainText("team-platform")
+  await expect(occurrencesTable).toContainText("payments")
+  await expect(findingDetail).toContainText(
+    "team-platform <img src=x onerror=window.__vpwXss=1>",
+  )
+  await expect(findingDetail).toContainText(
+    "payments <script>window.__vpwXss=1</script>",
+  )
+  await expect(page.locator('img[src="x"]')).toHaveCount(0)
+  await expect(
+    page.locator("script", { hasText: "window.__vpwXss" }),
+  ).toHaveCount(0)
+  const xssMarker = await page.evaluate(
+    () => (window as Window & { __vpwXss?: number }).__vpwXss ?? null,
+  )
+  expect(xssMarker).toBeNull()
+  const dataQuality = page.getByRole("region", {
+    name: "Data Quality Flags",
+  })
+  await expect(dataQuality).toContainText("Provider data coverage")
+  await expect(dataQuality).toContainText(
+    /Confidence|snapshot|No data quality/i,
+  )
+  await page.screenshot({
+    fullPage: true,
+    path: "../docs/evidence/vpw-043-finding-detail.png",
+  })
+  await page.getByRole("link", { name: "Back to Findings" }).click()
+  await expect(page).toHaveURL(/\/findings$/)
+  await expect(findingsTable).toBeVisible()
 
   await page.getByLabel("Priority filter").selectOption("critical")
   await expect(findingsTable).toContainText("Critical")

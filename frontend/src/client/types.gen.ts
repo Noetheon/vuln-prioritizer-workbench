@@ -160,6 +160,55 @@ export type Body_login_login_access_token = {
 };
 
 /**
+ * Public finding detail response shape.
+ */
+export type FindingDetailPublic = {
+    asset_id: (string | null);
+    asset_key?: (string | null);
+    asset_name?: (string | null);
+    attack_mapped?: boolean;
+    business_service?: (string | null);
+    component_id: (string | null);
+    component_name?: (string | null);
+    component_purl?: (string | null);
+    component_version?: (string | null);
+    created_at: string;
+    cve_id: string;
+    cvss_base_score?: (number | null);
+    data_quality_json?: {
+        [key: string]: unknown;
+    };
+    dedup_key?: string;
+    epss?: (number | null);
+    evidence_json?: {
+        [key: string]: unknown;
+    };
+    explanation_json?: {
+        [key: string]: unknown;
+    };
+    exposure?: (string | null);
+    first_seen_at: string;
+    id: string;
+    in_kev?: boolean;
+    last_seen_at: string;
+    occurrences?: Array<FindingOccurrencePublic>;
+    operational_rank?: number;
+    owner?: (string | null);
+    priority?: FindingPriority;
+    priority_rank?: number;
+    project_id: string;
+    rationale?: (string | null);
+    recommended_action?: (string | null);
+    risk_score?: (number | null);
+    status?: FindingStatus;
+    suppressed_by_vex?: boolean;
+    under_investigation?: boolean;
+    updated_at: string;
+    vulnerability_id: string;
+    waived?: boolean;
+};
+
+/**
  * Structured decision explanation for one persisted finding.
  */
 export type FindingExplanationPublic = {
@@ -189,6 +238,33 @@ export type FindingExplanationPublic = {
     rationale?: (string | null);
     recommended_action?: (string | null);
     risk_score?: (number | null);
+};
+
+/**
+ * Public occurrence row for finding detail views.
+ */
+export type FindingOccurrencePublic = {
+    analysis_run_id: string;
+    asset_business_service?: (string | null);
+    asset_exposure?: (string | null);
+    asset_owner?: (string | null);
+    asset_ref?: (string | null);
+    component_name?: (string | null);
+    component_version?: (string | null);
+    created_at?: (string | null);
+    fix_version?: (string | null);
+    fix_versions?: (Array<(string)> | null);
+    id: string;
+    purl?: (string | null);
+    raw_reference?: (string | null);
+    raw_severity?: (string | null);
+    scanner?: (string | null);
+    source?: (string | null);
+    source_format?: (string | null);
+    source_id?: (string | null);
+    source_record_id?: (string | null);
+    target_kind?: (string | null);
+    target_ref?: (string | null);
 };
 
 /**
@@ -504,7 +580,7 @@ export type FindingsReadFindingData = {
     findingId: string;
 };
 
-export type FindingsReadFindingResponse = (FindingPublic);
+export type FindingsReadFindingResponse = (FindingDetailPublic);
 
 export type FindingsExplainFindingData = {
     findingId: string;
