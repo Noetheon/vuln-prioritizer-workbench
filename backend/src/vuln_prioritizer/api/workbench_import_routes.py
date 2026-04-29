@@ -398,5 +398,20 @@ def explain_finding(
         "priority": finding.priority,
         "rationale": finding.rationale,
         "recommended_action": finding.recommended_action,
+        "data_quality_flags": (
+            finding.explanation_json.get("data_quality_flags", [])
+            if isinstance(finding.explanation_json, dict)
+            else []
+        ),
+        "data_quality_confidence": (
+            finding.explanation_json.get("data_quality_confidence", "high")
+            if isinstance(finding.explanation_json, dict)
+            else "high"
+        ),
+        "provider_evidence": (
+            finding.explanation_json.get("provider_evidence")
+            if isinstance(finding.explanation_json, dict)
+            else None
+        ),
         "explanation": finding.explanation_json,
     }

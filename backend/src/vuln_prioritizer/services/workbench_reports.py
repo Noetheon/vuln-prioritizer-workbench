@@ -148,6 +148,8 @@ def generate_findings_csv(report_payload: dict[str, Any]) -> str:
         "kev",
         "epss",
         "cvss",
+        "data_quality_confidence",
+        "data_quality_flags",
         "component",
         "asset",
         "owner",
@@ -183,6 +185,10 @@ def generate_findings_csv(report_payload: dict[str, Any]) -> str:
                 "kev": "yes" if finding.get("in_kev") else "no",
                 "epss": _csv_safe_cell(finding.get("epss")),
                 "cvss": _csv_safe_cell(finding.get("cvss_base_score")),
+                "data_quality_confidence": _csv_safe_cell(
+                    finding.get("data_quality_confidence") or "high"
+                ),
+                "data_quality_flags": _csv_safe_cell(";".join(_data_quality_flag_codes(finding))),
                 "component": _csv_safe_cell(_first_value(provenance.get("components"))),
                 "asset": _csv_safe_cell(_first_value(provenance.get("asset_ids"))),
                 "owner": _csv_safe_cell(_first_occurrence_value(provenance, "asset_owner")),
@@ -261,6 +267,11 @@ def generate_workbench_sarif(report_payload: dict[str, Any]) -> str:
                     "cvss": finding.get("cvss_base_score"),
                     "epss": finding.get("epss"),
                     "in_kev": bool(finding.get("in_kev")),
+                    "data_quality_flags": _data_quality_flags(finding),
+                    "data_quality_flag_codes": _data_quality_flag_codes(finding),
+                    "data_quality_confidence": str(
+                        finding.get("data_quality_confidence") or "high"
+                    ),
                     "attack_relevance": finding.get("attack_relevance"),
                     "defensive_context_sources": sorted(
                         {
@@ -439,6 +450,22 @@ def _finding_status_label(finding: dict[str, Any]) -> str:
     if finding.get("waived"):
         return "accepted"
     return "open"
+
+
+def _data_quality_flags(finding: dict[str, Any]) -> list[dict[str, Any]]:
+    raw_flags = finding.get("data_quality_flags")
+    if not isinstance(raw_flags, list):
+        return []
+    return [flag for flag in raw_flags if isinstance(flag, dict)]
+
+
+def _data_quality_flag_codes(finding: dict[str, Any]) -> list[str]:
+    codes: list[str] = []
+    for flag in _data_quality_flags(finding):
+        code = flag.get("code")
+        if code and str(code) not in codes:
+            codes.append(str(code))
+    return codes
 
 
 def _vex_statuses_label(provenance: dict[str, Any]) -> str:

@@ -49,6 +49,7 @@ def _analysis_run_payload(run: Any) -> dict[str, Any]:
             "provider_snapshot_id": run.provider_snapshot_id,
             "provider_snapshot_missing": run.provider_snapshot_id is None
             and bool(run.metadata_json.get("locked_provider_data")),
+            "provider_data_quality_flags": run.metadata_json.get("provider_data_quality_flags", {}),
             "attack_enabled": bool(run.metadata_json.get("attack_enabled", False)),
             "attack_mapped_cves": int(attack_summary.get("mapped_cves", 0)),
             "attack_source": str(run.metadata_json.get("attack_source", "none")),
@@ -106,6 +107,9 @@ def _finding_payload(finding: Any, *, include_detail: bool = False) -> dict[str,
         "waiver_ticket_url": finding.waiver_ticket_url,
         "rationale": finding.rationale,
         "recommended_action": finding.recommended_action,
+        "data_quality_flags": _finding_data_quality_flags(finding),
+        "data_quality_confidence": _finding_data_quality_confidence(finding),
+        "provider_evidence": _finding_provider_evidence(finding),
         "defensive_contexts": _finding_defensive_contexts(finding),
     }
     if include_detail:
@@ -116,6 +120,28 @@ def _finding_payload(finding: Any, *, include_detail: bool = False) -> dict[str,
             _finding_status_history_payload(item) for item in getattr(finding, "status_history", [])
         ]
     return payload
+
+
+def _finding_data_quality_flags(finding: Any) -> list[dict[str, Any]]:
+    raw_finding = finding.finding_json if isinstance(finding.finding_json, dict) else {}
+    flags = raw_finding.get("data_quality_flags")
+    return flags if isinstance(flags, list) else []
+
+
+def _finding_data_quality_confidence(finding: Any) -> str:
+    raw_finding = finding.finding_json if isinstance(finding.finding_json, dict) else {}
+    confidence = raw_finding.get("data_quality_confidence")
+    return str(confidence) if confidence else "high"
+
+
+def _finding_provider_evidence(finding: Any) -> dict[str, Any] | None:
+    raw_finding = finding.finding_json if isinstance(finding.finding_json, dict) else {}
+    provider_evidence = raw_finding.get("provider_evidence")
+    if isinstance(provider_evidence, dict):
+        return provider_evidence
+    vulnerability = getattr(finding, "vulnerability", None)
+    provider_json = getattr(vulnerability, "provider_json", None)
+    return provider_json if isinstance(provider_json, dict) else None
 
 
 def _finding_kev_detail(finding: Any) -> dict[str, Any] | None:

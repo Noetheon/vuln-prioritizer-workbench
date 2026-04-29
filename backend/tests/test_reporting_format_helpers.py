@@ -32,6 +32,7 @@ from vuln_prioritizer.reporting_format import (
     comma_or_na,
     escape_pipes,
     format_change,
+    format_data_quality_flags,
     format_filters,
     format_score,
     normalize_whitespace,
@@ -176,6 +177,36 @@ def test_metadata_and_summary_lines_include_optional_workbench_fields() -> None:
     assert "- Critical: 1" in summary
     assert "- Low: 0" in summary
     assert "- Active filters: priority=high" in summary
+
+
+def test_format_data_quality_flags_deduplicates_codes() -> None:
+    finding = PrioritizedFinding(
+        cve_id="CVE-2026-0801",
+        priority_label="Low",
+        priority_rank=4,
+        rationale="Missing enrichment signals keep this finding low.",
+        recommended_action="Review missing data before deferring.",
+        data_quality_flags=[
+            ProviderDataQualityFlag(
+                source="epss",
+                code="epss_missing",
+                message="FIRST EPSS returned no score.",
+            ),
+            ProviderDataQualityFlag(
+                source="epss",
+                code="epss_missing",
+                message="Duplicate source flag.",
+            ),
+            ProviderDataQualityFlag(
+                source="provider_snapshot",
+                code="snapshot_locked",
+                message="Locked replay.",
+                severity="info",
+            ),
+        ],
+    )
+
+    assert format_data_quality_flags(finding) == "epss_missing, snapshot_locked"
 
 
 def test_attack_warning_priority_and_waiver_formatting_helpers() -> None:

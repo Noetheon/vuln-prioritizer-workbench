@@ -316,6 +316,7 @@ class AnalysisRunSummary(StrictModel):
     counts_by_priority: dict[str, int] = Field(default_factory=dict)
     provider_snapshot_id: str | None = None
     provider_snapshot_missing: bool = False
+    provider_data_quality_flags: dict[str, list[dict[str, Any]]] = Field(default_factory=dict)
     attack_enabled: bool = False
     attack_mapped_cves: int = 0
     attack_source: str = "none"
@@ -382,6 +383,9 @@ class FindingResponse(StrictModel):
     waiver_ticket_url: str | None = None
     rationale: str | None = None
     recommended_action: str | None = None
+    data_quality_flags: list[dict[str, Any]] = Field(default_factory=list)
+    data_quality_confidence: str = "high"
+    provider_evidence: dict[str, Any] | None = None
     defensive_contexts: list[dict[str, Any]] = Field(default_factory=list)
     finding: dict[str, Any] | None = None
     occurrences: list[dict[str, Any]] | None = None

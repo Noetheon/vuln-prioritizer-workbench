@@ -28,6 +28,7 @@ from vuln_prioritizer.reporting_format import (
     _format_waiver_status,
     comma_or_na,
     format_change,
+    format_data_quality_flags,
     format_score,
     normalize_whitespace,
     truncate_text,
@@ -129,6 +130,8 @@ def render_findings_table(findings: list[PrioritizedFinding]) -> Table:
     table.add_column("CVSS")
     table.add_column("EPSS")
     table.add_column("KEV")
+    table.add_column("DQ")
+    table.add_column("Confidence")
     table.add_column("ATT&CK")
     table.add_column("Attack Relevance")
     table.add_column("Source")
@@ -149,6 +152,8 @@ def render_findings_table(findings: list[PrioritizedFinding]) -> Table:
             format_score(finding.cvss_base_score, digits=1),
             format_score(finding.epss, digits=3),
             "Yes" if finding.in_kev else "No",
+            truncate_text(format_data_quality_flags(finding), 40),
+            finding.data_quality_confidence,
             _format_attack_indicator(finding.attack_mapped, len(finding.attack_technique_details)),
             finding.attack_relevance,
             ", ".join(finding.provenance.source_formats) or "N.A.",
@@ -171,6 +176,8 @@ def render_compare_table(comparisons: list[ComparisonFinding]) -> Table:
     table.add_column("CVSS")
     table.add_column("EPSS")
     table.add_column("KEV")
+    table.add_column("DQ")
+    table.add_column("Confidence")
     table.add_column("Reason", overflow="fold")
 
     for row in comparisons:
@@ -190,6 +197,8 @@ def render_compare_table(comparisons: list[ComparisonFinding]) -> Table:
             format_score(row.cvss_base_score, digits=1),
             format_score(row.epss, digits=3),
             "Yes" if row.in_kev else "No",
+            truncate_text(format_data_quality_flags(row), 40),
+            row.data_quality_confidence,
             truncate_text(row.change_reason, 100),
         )
 
@@ -370,6 +379,8 @@ def render_explain_view(
     signal_table.add_row("EPSS", format_score(finding.epss, digits=3))
     signal_table.add_row("EPSS Percentile", format_score(finding.epss_percentile, digits=3))
     signal_table.add_row("In KEV", "Yes" if finding.in_kev else "No")
+    signal_table.add_row("Data Quality Flags", format_data_quality_flags(finding))
+    signal_table.add_row("Data Quality Confidence", finding.data_quality_confidence)
     signal_table.add_row("Exploit Status", _format_exploit_status(finding.in_kev))
     signal_table.add_row("Published", nvd.published or "N.A.")
     signal_table.add_row("Last Modified", nvd.last_modified or "N.A.")
@@ -429,6 +440,15 @@ def render_explain_view(
     comparison_panel = Panel(
         normalize_whitespace(comparison.change_reason if comparison is not None else "N.A."),
         title="Comparison",
+    )
+    data_quality_panel = Panel(
+        "\n".join(
+            f"- {flag.code} ({flag.severity}): {flag.message}"
+            for flag in finding.data_quality_flags
+        )
+        if finding.data_quality_flags
+        else "None",
+        title="Data Quality",
     )
     action_panel = Panel(
         normalize_whitespace(finding.recommended_action), title="Recommended Action"
@@ -498,6 +518,7 @@ def render_explain_view(
         rationale_panel,
         attack_panel,
         comparison_panel,
+        data_quality_panel,
         action_panel,
         context_panel,
         applicability_table,

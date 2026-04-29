@@ -260,6 +260,11 @@ Current provider service contract:
   warnings, and degrades to cache or empty records instead of aborting analysis
 - provider failures degrade into `ProviderStatus` and data-quality flags before
   optional CI gates decide whether to fail the process
+- canonical provider data-quality codes are additive and include
+  `nvd_missing`, `nvd_cvss_missing`, `epss_missing`, `epss_outdated`,
+  `kev_unavailable`, `snapshot_locked`, and `provider_error`; legacy generic
+  codes such as `provider_failure`, `provider_missing_data`, `stale_cache`, and
+  `provider_warning` may still be emitted for compatibility
 - NVD records with provider metadata but no CVSS base score/version add an
   `nvd_cvss_missing` data-quality flag with the affected `cve_id`
 - KEV provider data includes CISA catalog details such as
@@ -278,7 +283,10 @@ Current provider service contract:
   `provider/provider-snapshot.json` when a replay snapshot is part of the run
 - analysis-style metadata may include `provider_data_quality_flags`, keyed by
   source, when recoverable provider problems such as missing EPSS records,
-  stale cache fallback, or provider warnings were observed
+  stale cache fallback, or provider warnings were observed; individual
+  findings expose scoped `data_quality_flags` and `data_quality_confidence`
+  (`high`, `medium`, `low`) so missing data cannot silently collapse priority
+  to Low without visible evidence
 - cache contract metadata includes namespace, raw key template, TTL seconds,
   and whether expired cache may be used on provider failure
 - required tests for this contract use fake providers or monkeypatching, not

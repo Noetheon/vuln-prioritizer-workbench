@@ -8,8 +8,14 @@ import typer
 
 from vuln_prioritizer.cli_support import analysis as cli_analysis
 from vuln_prioritizer.cli_support.common import PriorityFilter
-from vuln_prioritizer.models import AnalysisContext, PrioritizedFinding, PriorityPolicy
+from vuln_prioritizer.models import (
+    AnalysisContext,
+    PrioritizedFinding,
+    PriorityPolicy,
+    ProviderDataQualityFlag,
+)
 from vuln_prioritizer.services import analysis as service_analysis
+from vuln_prioritizer.services.analysis_pipeline import attach_provider_data_quality_flags
 
 
 def test_analysis_service_rejects_invalid_policy_thresholds() -> None:
@@ -136,6 +142,134 @@ def test_prepare_saved_explain_builds_result_from_saved_payload(tmp_path: Path) 
 
     assert result.finding.cve_id == "CVE-2024-0001"
     assert result.context.input_path == str(saved)
+
+
+def test_attach_provider_data_quality_flags_scopes_flags_and_confidence() -> None:
+    findings = [
+        PrioritizedFinding(
+            cve_id="CVE-2026-0701",
+            priority_label="Low",
+            priority_rank=4,
+            rationale="Missing enrichment signals keep this finding low.",
+            recommended_action="Review missing data before deferring.",
+        ),
+        PrioritizedFinding(
+            cve_id="CVE-2026-0702",
+            priority_label="Low",
+            priority_rank=4,
+            rationale="No strong exploitation signal.",
+            recommended_action="Track in the normal queue.",
+        ),
+    ]
+
+    enriched = attach_provider_data_quality_flags(
+        findings,
+        {
+            "epss": [
+                ProviderDataQualityFlag(
+                    source="epss",
+                    code="provider_missing_data",
+                    message="epss returned no provider content for 1 requested CVE(s).",
+                ),
+                ProviderDataQualityFlag(
+                    source="epss",
+                    code="epss_missing",
+                    message="FIRST EPSS returned no score for CVE-2026-0701.",
+                    cve_id="CVE-2026-0701",
+                ),
+            ],
+            "provider_snapshot": [
+                ProviderDataQualityFlag(
+                    source="provider_snapshot",
+                    code="snapshot_locked",
+                    message="Provider snapshot replay is locked.",
+                    severity="info",
+                )
+            ],
+        },
+    )
+
+    assert [flag.code for flag in enriched[0].data_quality_flags] == [
+        "epss_missing",
+        "snapshot_locked",
+    ]
+    assert enriched[0].data_quality_confidence == "medium"
+    assert [flag.code for flag in enriched[1].data_quality_flags] == ["snapshot_locked"]
+    assert enriched[1].data_quality_confidence == "high"
+
+
+def test_attach_provider_data_quality_flags_marks_error_confidence_low() -> None:
+    finding = PrioritizedFinding(
+        cve_id="CVE-2026-0703",
+        priority_label="Low",
+        priority_rank=4,
+        rationale="Missing enrichment signals keep this finding low.",
+        recommended_action="Review missing data before deferring.",
+    )
+
+    enriched = attach_provider_data_quality_flags(
+        [finding],
+        {
+            "kev": [
+                ProviderDataQualityFlag(
+                    source="kev",
+                    code="kev_unavailable",
+                    message="CISA KEV catalog was unavailable.",
+                    severity="error",
+                )
+            ]
+        },
+    )
+
+    assert enriched[0].data_quality_confidence == "low"
+    assert [flag.code for flag in enriched[0].data_quality_flags] == ["kev_unavailable"]
+
+
+def test_attach_provider_data_quality_flags_scopes_provider_errors_by_affected_cve() -> None:
+    findings = [
+        PrioritizedFinding(
+            cve_id="CVE-2026-0704",
+            priority_label="Low",
+            priority_rank=4,
+            rationale="Missing enrichment signals keep this finding low.",
+            recommended_action="Review missing data before deferring.",
+        ),
+        PrioritizedFinding(
+            cve_id="CVE-2026-0705",
+            priority_label="High",
+            priority_rank=2,
+            rationale="Provider evidence is complete.",
+            recommended_action="Patch normally.",
+        ),
+    ]
+
+    enriched = attach_provider_data_quality_flags(
+        findings,
+        {
+            "nvd": [
+                ProviderDataQualityFlag(
+                    source="nvd",
+                    code="provider_error",
+                    message="nvd provider returned recoverable errors.",
+                    severity="error",
+                ),
+                ProviderDataQualityFlag(
+                    source="nvd",
+                    code="nvd_missing",
+                    message="NVD returned no provider content for CVE-2026-0704.",
+                    cve_id="CVE-2026-0704",
+                ),
+            ]
+        },
+    )
+
+    assert [flag.code for flag in enriched[0].data_quality_flags] == [
+        "provider_error",
+        "nvd_missing",
+    ]
+    assert enriched[0].data_quality_confidence == "low"
+    assert enriched[1].data_quality_flags == []
+    assert enriched[1].data_quality_confidence == "high"
 
 
 @pytest.mark.parametrize(

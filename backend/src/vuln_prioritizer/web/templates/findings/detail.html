@@ -39,6 +39,16 @@
         <tr><th>Owner</th><td>{{ finding.asset.owner if finding.asset else "N.A." }}</td></tr>
         <tr><th>EPSS</th><td>{{ "%.3f"|format(finding.epss) if finding.epss is not none else "N.A." }}</td></tr>
         <tr><th>CVSS</th><td>{{ "%.1f"|format(finding.cvss_base_score) if finding.cvss_base_score is not none else "N.A." }}</td></tr>
+        <tr><th>Data quality</th><td>
+          {% set dq_flags = finding.finding_json.get("data_quality_flags", []) if finding.finding_json else [] %}
+          {% set dq_confidence = finding.finding_json.get("data_quality_confidence", "high") if finding.finding_json else "high" %}
+          Confidence: {{ dq_confidence }}
+          {% if dq_flags %}
+            · {% for flag in dq_flags %}{{ flag.get("code") }}{% if not loop.last %}, {% endif %}{% endfor %}
+          {% else %}
+            · None
+          {% endif %}
+        </td></tr>
         <tr><th>VEX</th><td>
           {% set vex_statuses = finding.finding_json.get("provenance", {}).get("vex_statuses", {}) if finding.finding_json else {} %}
           {% if vex_statuses %}

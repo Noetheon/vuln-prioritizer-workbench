@@ -288,6 +288,8 @@ def test_web_import_report_page_and_finding_detail(tmp_path: Path) -> None:
     assert findings.status_code == 200
     for cve_id in EXPECTED_SAMPLE_CVES:
         assert cve_id in findings.text
+    assert "Data quality" in findings.text
+    assert "snapshot_locked" in findings.text
     filtered = client.get(
         f"/projects/{project_id}/findings",
         params={"q": "CVE-2024-3094", "kev": "", "sort": "cve"},
@@ -312,6 +314,8 @@ def test_web_import_report_page_and_finding_detail(tmp_path: Path) -> None:
     assert "Log4j2" in detail.text
     assert "2021-12-24" in detail.text
     assert "Required action" in detail.text
+    assert "Data quality" in detail.text
+    assert "snapshot_locked" in detail.text
 
     intelligence = client.get(
         f"/projects/{project_id}/vulnerabilities",

@@ -5,6 +5,7 @@ import json
 import threading
 from pathlib import Path
 
+import pytest
 import requests
 from paths import DATA_ROOT
 
@@ -16,6 +17,8 @@ from vuln_prioritizer.models import (
     KevData,
     NvdData,
     ProviderLookupDiagnostics,
+    ProviderSnapshotMetadata,
+    ProviderSnapshotReport,
 )
 from vuln_prioritizer.providers.attack import AttackProvider
 from vuln_prioritizer.providers.attack_metadata import AttackMetadataProvider
@@ -23,7 +26,7 @@ from vuln_prioritizer.providers.ctid_mappings import CtidMappingsProvider
 from vuln_prioritizer.providers.epss import EpssProvider
 from vuln_prioritizer.providers.kev import KevProvider
 from vuln_prioritizer.providers.nvd import NvdFetchDiagnostics, NvdProvider
-from vuln_prioritizer.services.enrichment import EnrichmentService
+from vuln_prioritizer.services.enrichment import EnrichmentService, _provider_data_quality_flags
 
 
 class FakeResponse:
@@ -542,11 +545,13 @@ def test_enrichment_service_nvd_failure_records_data_quality_flags() -> None:
     assert result.warnings == ["NVD provider failed: invalid NVD cache for <redacted>"]
     assert result.nvd_diagnostics.failures == 1
     assert result.nvd_diagnostics.empty_records == 1
-    assert [flag.code for flag in result.provider_data_quality_flags["nvd"]] == [
+    assert {
         "provider_failure",
         "provider_missing_data",
         "provider_warning",
-    ]
+        "provider_error",
+        "nvd_missing",
+    } <= {flag.code for flag in result.provider_data_quality_flags["nvd"]}
     assert "nvd-secret-value" not in result.model_dump_json()
 
 
@@ -706,14 +711,163 @@ def test_enrichment_service_epss_failure_records_data_quality_flags() -> None:
     assert result.warnings == ["EPSS provider failed: invalid EPSS cache"]
     assert result.epss_diagnostics.failures == 1
     assert result.epss_diagnostics.empty_records == 1
-    assert [flag.code for flag in result.provider_data_quality_flags["epss"]] == [
+    assert {
         "provider_failure",
         "provider_missing_data",
         "provider_warning",
-    ]
+        "provider_error",
+        "epss_missing",
+    } <= {flag.code for flag in result.provider_data_quality_flags["epss"]}
     assert result.provider_data_quality_flags["epss"][1].message == (
         "epss returned no provider content for 1 requested CVE(s)."
     )
+
+
+def test_vpw027_provider_data_quality_flags_include_canonical_codes() -> None:
+    flags_by_source = _provider_data_quality_flags(
+        nvd_results={
+            "CVE-2026-0601": NvdData(cve_id="CVE-2026-0601"),
+            "CVE-2026-0602": NvdData(
+                cve_id="CVE-2026-0602",
+                description="NVD metadata without CVSS.",
+            ),
+        },
+        epss_results={"CVE-2026-0601": EpssData(cve_id="CVE-2026-0601")},
+        provider_snapshot=ProviderSnapshotReport(
+            metadata=ProviderSnapshotMetadata(
+                generated_at="2026-04-29T12:00:00+00:00",
+                selected_sources=["nvd", "epss", "kev"],
+            )
+        ),
+        locked_provider_data=True,
+        nvd=(
+            ProviderLookupDiagnostics(
+                requested=2,
+                failures=1,
+                empty_records=1,
+                degraded=True,
+            ),
+            ["NVD lookup failed"],
+        ),
+        epss=(
+            ProviderLookupDiagnostics(
+                requested=1,
+                content_hits=1,
+                stale_cache_hits=1,
+                degraded=True,
+            ),
+            [],
+        ),
+        kev=(
+            ProviderLookupDiagnostics(
+                requested=1,
+                failures=1,
+                empty_records=1,
+                degraded=True,
+            ),
+            ["KEV catalog load failed"],
+        ),
+    )
+
+    codes = {flag.code for flags in flags_by_source.values() for flag in flags}
+
+    assert {
+        "nvd_missing",
+        "nvd_cvss_missing",
+        "epss_missing",
+        "epss_outdated",
+        "kev_unavailable",
+        "snapshot_locked",
+        "provider_error",
+    } <= codes
+
+
+@pytest.mark.parametrize(
+    ("expected_code", "kwargs"),
+    [
+        (
+            "nvd_missing",
+            {"nvd_results": {"CVE-2026-0601": NvdData(cve_id="CVE-2026-0601")}},
+        ),
+        (
+            "nvd_cvss_missing",
+            {
+                "nvd_results": {
+                    "CVE-2026-0602": NvdData(
+                        cve_id="CVE-2026-0602",
+                        description="NVD metadata without CVSS.",
+                    )
+                }
+            },
+        ),
+        (
+            "epss_missing",
+            {"epss_results": {"CVE-2026-0603": EpssData(cve_id="CVE-2026-0603")}},
+        ),
+        (
+            "epss_outdated",
+            {
+                "epss": (
+                    ProviderLookupDiagnostics(
+                        requested=1,
+                        content_hits=1,
+                        stale_cache_hits=1,
+                        degraded=True,
+                    ),
+                    [],
+                )
+            },
+        ),
+        (
+            "kev_unavailable",
+            {
+                "kev": (
+                    ProviderLookupDiagnostics(
+                        requested=1,
+                        failures=1,
+                        empty_records=1,
+                        degraded=True,
+                    ),
+                    [],
+                )
+            },
+        ),
+        (
+            "snapshot_locked",
+            {
+                "provider_snapshot": ProviderSnapshotReport(
+                    metadata=ProviderSnapshotMetadata(
+                        generated_at="2026-04-29T12:00:00+00:00",
+                        selected_sources=["nvd", "epss", "kev"],
+                    )
+                ),
+                "locked_provider_data": True,
+            },
+        ),
+        (
+            "provider_error",
+            {
+                "nvd": (
+                    ProviderLookupDiagnostics(
+                        requested=1,
+                        failures=1,
+                        empty_records=1,
+                        degraded=True,
+                    ),
+                    [],
+                )
+            },
+        ),
+    ],
+)
+def test_vpw027_provider_data_quality_flags_are_emitted_per_code(
+    expected_code: str,
+    kwargs: dict[str, object],
+) -> None:
+    flags_by_source = _provider_data_quality_flags(**kwargs)
+    codes = {flag.code for flags in flags_by_source.values() for flag in flags}
+
+    assert expected_code in codes
 
 
 def test_epss_fetch_many_parses_batch_payload() -> None:

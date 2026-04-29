@@ -107,6 +107,29 @@ def test_cli_analyze_surfaces_missing_epss_data_quality_flag(
     assert payload["metadata"]["provider_data_quality_flags"]["epss"][0]["message"] == (
         "epss returned no provider content for 4 requested CVE(s)."
     )
+    first_finding = payload["findings"][0]
+    assert "epss_missing" in {flag["code"] for flag in first_finding["data_quality_flags"]}
+    assert first_finding["data_quality_confidence"] == "medium"
+
+    sarif_file = tmp_path / "report.sarif"
+    sarif_result = runner.invoke(
+        app,
+        [
+            "analyze",
+            "--input",
+            str(input_file),
+            "--output",
+            str(sarif_file),
+            "--format",
+            "sarif",
+        ],
+    )
+
+    assert sarif_result.exit_code == 0
+    sarif_payload = json.loads(sarif_file.read_text(encoding="utf-8"))
+    sarif_properties = sarif_payload["runs"][0]["results"][0]["properties"]
+    assert "epss_missing" in sarif_properties["data_quality_flag_codes"]
+    assert sarif_properties["data_quality_confidence"] == "medium"
 
 
 def test_cli_analyze_supports_priority_threshold_filters_and_sorting(

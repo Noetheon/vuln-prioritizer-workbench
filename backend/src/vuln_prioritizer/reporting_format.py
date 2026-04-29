@@ -6,6 +6,7 @@ from vuln_prioritizer.models import (
     AnalysisContext,
     AttackMapping,
     AttackSummary,
+    ComparisonFinding,
     PrioritizedFinding,
     RollupBucket,
     RollupCandidate,
@@ -54,6 +55,17 @@ def comma_or_na(values: list[str]) -> str:
 def format_filters(active_filters: list[str]) -> str:
     """Render filters consistently across Markdown and terminal output."""
     return ", ".join(active_filters) if active_filters else "None"
+
+
+def format_data_quality_flags(finding: PrioritizedFinding | ComparisonFinding) -> str:
+    """Render finding-level provider data-quality flags compactly."""
+    if not finding.data_quality_flags:
+        return "None"
+    codes = []
+    for flag in finding.data_quality_flags:
+        if flag.code not in codes:
+            codes.append(flag.code)
+    return ", ".join(codes)
 
 
 def _run_metadata_lines(context: AnalysisContext) -> list[str]:
