@@ -93,7 +93,7 @@ export const AnalysisRunPublicSchema = {
 
 export const AnalysisRunStatusSchema = {
     description: 'Import or analysis run lifecycle state.',
-    enum: ['pending', 'running', 'completed', 'completed_with_errors', 'failed', 'cancelled'],
+    enum: ['pending', 'running', 'succeeded', 'completed', 'completed_with_errors', 'failed', 'cancelled'],
     title: 'AnalysisRunStatus',
     type: 'string'
 } as const;
@@ -414,6 +414,23 @@ export const AssetsPublicSchema = {
     },
     required: ['data', 'count'],
     title: 'AssetsPublic',
+    type: 'object'
+} as const;
+
+export const Body_imports_import_project_uploadSchema = {
+    properties: {
+        file: {
+            contentMediaType: 'application/octet-stream',
+            title: 'File',
+            type: 'string'
+        },
+        input_type: {
+            title: 'Input Type',
+            type: 'string'
+        }
+    },
+    required: ['input_type', 'file'],
+    title: 'Body_imports-import_project_upload',
     type: 'object'
 } as const;
 

@@ -32,7 +32,7 @@ export type AnalysisRunsPublic = {
 /**
  * Import or analysis run lifecycle state.
  */
-export type AnalysisRunStatus = 'pending' | 'running' | 'completed' | 'completed_with_errors' | 'failed' | 'cancelled';
+export type AnalysisRunStatus = 'pending' | 'running' | 'succeeded' | 'completed' | 'completed_with_errors' | 'failed' | 'cancelled';
 
 /**
  * Asset creation payload.
@@ -101,6 +101,11 @@ export type AssetUpdate = {
     name?: (string | null);
     owner?: (string | null);
     target_ref?: (string | null);
+};
+
+export type Body_imports_import_project_upload = {
+    file: string;
+    input_type: string;
 };
 
 export type Body_login_login_access_token = {
@@ -294,6 +299,13 @@ export type FindingsReadProjectFindingsData = {
 };
 
 export type FindingsReadProjectFindingsResponse = (FindingsPublic);
+
+export type ImportsImportProjectUploadData = {
+    formData: Body_imports_import_project_upload;
+    projectId: string;
+};
+
+export type ImportsImportProjectUploadResponse = (AnalysisRunPublic);
 
 export type LoginLoginAccessTokenData = {
     formData: Body_login_login_access_token;
