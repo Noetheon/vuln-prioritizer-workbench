@@ -50,3 +50,19 @@ the matched drivers and the clamp result when the raw score crosses the 0-100
 range.
 
 Example artifact: `docs/examples/example_score.json`.
+
+## Asset context modifiers
+
+VPW-033 extends the operational score evidence with explicit asset context
+modifiers:
+
+- internet-facing exposure: `+8`
+- production environment: `+5`
+- critical/high/medium asset criticality: `+7` / `+4` / `+2`
+- business service and owner: `+0` routing reasons
+- unknown asset context: `+0`, explicitly not treated as safe
+
+Finding explanations include an `asset.context` reason when context is supplied
+and an `asset.context_unknown` warning note when occurrence context is missing.
+
+Example artifact: `docs/examples/example_asset_context_explanation.json`.

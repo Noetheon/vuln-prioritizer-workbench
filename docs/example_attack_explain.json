@@ -235,9 +235,10 @@
     "changed": false,
     "context_rank_reasons": [
       "KEV due date 2023-06-23",
+      "asset context unknown; validate before scheduling",
       "ATT&CK High"
     ],
-    "context_summary": "Seen in 1 occurrence(s).",
+    "context_summary": "Seen in 1 occurrence(s), asset context unknown.",
     "cve_id": "CVE-2023-34362",
     "cvss_base_score": 9.8,
     "cvss_only_label": "Critical",
@@ -278,14 +279,18 @@
       "base Critical priority: +70",
       "CISA KEV-listed: +15",
       "critical EPSS/CVSS threshold: +8",
-      "high CVSS threshold: +5"
+      "high CVSS threshold: +5",
+      "asset context unknown: +0, not treated as safe"
     ],
     "priority_state": "Critical",
     "provenance": {
       "active_occurrence_count": 1,
       "affected_paths": [],
+      "asset_business_services": [],
       "asset_count": 0,
+      "asset_environments": [],
       "asset_ids": [],
+      "asset_owners": [],
       "components": [],
       "fix_versions": [],
       "highest_asset_criticality": null,
@@ -547,10 +552,11 @@
     ],
     "context_rank_reasons": [
       "KEV due date 2023-06-23",
+      "asset context unknown; validate before scheduling",
       "ATT&CK High"
     ],
-    "context_recommendation": "Review the affected components and assets in context before final remediation scheduling.",
-    "context_summary": "Seen in 1 occurrence(s).",
+    "context_recommendation": "Treat missing asset context as unverified, not safe; validate owner, environment, exposure, and business service before final scheduling.",
+    "context_summary": "Seen in 1 occurrence(s), asset context unknown.",
     "cve_id": "CVE-2023-34362",
     "cvss_base_score": 9.8,
     "cvss_severity": "CRITICAL",
@@ -572,13 +578,19 @@
     "explanation": {
       "cve_id": "CVE-2023-34362",
       "data_quality_confidence": "high",
-      "human_readable": "CVE-2023-34362 is Critical because priority.kev.known_exploited, priority.critical.epss_cvss, priority.high.epss, priority.high.cvss. Recommended action: CISA KEV required action: Apply updates per vendor instructions. Patch or mitigate immediately, validate exposure, strengthen detection coverage, and escalate potential business impact. KEV due date: 2023-06-23. Notes: Provider snapshot replay is locked; live provider lookups are disabled.",
+      "human_readable": "CVE-2023-34362 is Critical because priority.kev.known_exploited, priority.critical.epss_cvss, priority.high.epss, priority.high.cvss. Recommended action: CISA KEV required action: Apply updates per vendor instructions. Patch or mitigate immediately, validate exposure, strengthen detection coverage, and escalate potential business impact. KEV due date: 2023-06-23. Asset context: unknown, not treated as safe. Notes: Provider snapshot replay is locked; live provider lookups are disabled. Asset context is unknown and must be validated; unknown context is not treated as safe.",
       "notes": [
         {
           "code": "data_quality.snapshot_locked",
           "message": "Provider snapshot replay is locked; live provider lookups are disabled.",
           "severity": "info",
           "source": "provider_snapshot"
+        },
+        {
+          "code": "asset.context_unknown",
+          "message": "Asset context is unknown and must be validated; unknown context is not treated as safe.",
+          "severity": "warning",
+          "source": "Asset Context"
         }
       ],
       "operational_score": 98,
@@ -651,7 +663,7 @@
         {
           "code": "operational.score",
           "matched": true,
-          "message": "Operational score reasons: base Critical priority: +70; CISA KEV-listed: +15; critical EPSS/CVSS threshold: +8; high CVSS threshold: +5",
+          "message": "Operational score reasons: base Critical priority: +70; CISA KEV-listed: +15; critical EPSS/CVSS threshold: +8; high CVSS threshold: +5; asset context unknown: +0, not treated as safe",
           "signal": "operational_score",
           "source": "Decision Engine",
           "threshold": "0 <= score <= 100",
@@ -669,7 +681,8 @@
       "base Critical priority: +70",
       "CISA KEV-listed: +15",
       "critical EPSS/CVSS threshold: +8",
-      "high CVSS threshold: +5"
+      "high CVSS threshold: +5",
+      "asset context unknown: +0, not treated as safe"
     ],
     "priority_drivers": [
       "kev",
@@ -685,8 +698,11 @@
     "provenance": {
       "active_occurrence_count": 1,
       "affected_paths": [],
+      "asset_business_services": [],
       "asset_count": 0,
+      "asset_environments": [],
       "asset_ids": [],
+      "asset_owners": [],
       "components": [],
       "fix_versions": [],
       "highest_asset_criticality": null,
@@ -782,7 +798,7 @@
         "vulnerability_status": null
       }
     },
-    "rationale": "CISA KEV lists this CVE as known exploited in the wild. NVD reports CVSS 9.8 (CRITICAL) via CVSS v3.1. FIRST EPSS is 0.943 (percentile 0.999). ATT&CK context (High) maps this CVE to 7 technique(s): T1190, T1059, T1531, T1136, T1005, T1082, T1105. CTID mapping types: exploitation_technique, primary_impact, secondary_impact. CTID ATT&CK mappings include exploitation or primary impact behavior. ATT&CK mapping note: CVE-2023-34362 is a SQL injection vulnerability in a public-facing application. Adversaries have been observed to exploit this vulnerability to install malicious software on a target system, enabling them to discover system settings and information, enumerate the underlying SQL database, retrieve files, create administrator accounts, and delete accounts. Input provenance includes 1 occurrence(s) from cve-list. Seen in 1 occurrence(s).",
+    "rationale": "CISA KEV lists this CVE as known exploited in the wild. NVD reports CVSS 9.8 (CRITICAL) via CVSS v3.1. FIRST EPSS is 0.943 (percentile 0.999). ATT&CK context (High) maps this CVE to 7 technique(s): T1190, T1059, T1531, T1136, T1005, T1082, T1105. CTID mapping types: exploitation_technique, primary_impact, secondary_impact. CTID ATT&CK mappings include exploitation or primary impact behavior. ATT&CK mapping note: CVE-2023-34362 is a SQL injection vulnerability in a public-facing application. Adversaries have been observed to exploit this vulnerability to install malicious software on a target system, enabling them to discover system settings and information, enumerate the underlying SQL database, retrieve files, create administrator accounts, and delete accounts. Input provenance includes 1 occurrence(s) from cve-list. Seen in 1 occurrence(s), asset context unknown.",
     "recommended_action": "CISA KEV required action: Apply updates per vendor instructions. Patch or mitigate immediately, validate exposure, strengthen detection coverage, and escalate potential business impact. KEV due date: 2023-06-23.",
     "remediation": {
       "components": [],

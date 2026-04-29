@@ -116,8 +116,12 @@ operational lifecycle state.
 The `operational_score` is a deterministic 0-100 queueing score. It is built
 from explicit contributions for base priority, KEV, EPSS/CVSS boundary matches,
 asset exposure, production context, asset criticality, and active occurrence
-count, then clamped to the 0-100 range. Every score includes
+count, then clamped to the 0-100 range. Business service and owner are evaluated
+as zero-point routing context so reviewers can see how ownership data affected
+the explanation even when it does not add risk points. Every score includes
 `operational_score_reasons` so the score is reviewable rather than opaque.
+Unknown asset context is represented as neutral unverified context and is not
+treated as safe.
 
 Every generated finding also includes a structured `explanation` object. It
 turns the matched rules into stable reason codes such as
@@ -125,6 +129,10 @@ turns the matched rules into stable reason codes such as
 `priority.low.default`; each reason carries its data source, signal value,
 threshold, and message. Missing provider data and data-quality flags are surfaced
 as notes so reviewers can distinguish a low signal from an unavailable signal.
+When asset context is present, the explanation includes `asset.context` with
+exposure, environment, criticality, service, owner, and mapped asset count. When
+an occurrence has no asset context, the explanation includes an
+`asset.context_unknown` warning note.
 
 ATT&CK is a contextual signal. It enriches explanation, reporting, and management framing without silently changing the base priority.
 

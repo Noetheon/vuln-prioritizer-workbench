@@ -89,6 +89,9 @@ class FindingProvenance(StrictModel):
     asset_ids: list[str] = Field(default_factory=list)
     highest_asset_criticality: str | None = None
     highest_asset_exposure: str | None = None
+    asset_environments: list[str] = Field(default_factory=list)
+    asset_owners: list[str] = Field(default_factory=list)
+    asset_business_services: list[str] = Field(default_factory=list)
     asset_count: int = 0
     vex_statuses: dict[str, int] = Field(default_factory=dict)
     occurrences: list[InputOccurrence] = Field(default_factory=list)
@@ -131,7 +134,23 @@ class ContextPolicyProfile(StrictModel):
             )
         if provenance.highest_asset_exposure:
             summary_parts.append(f"highest exposure {provenance.highest_asset_exposure}")
+        if provenance.asset_environments:
+            summary_parts.append(f"environments {_summarize_values(provenance.asset_environments)}")
+        if provenance.asset_business_services:
+            summary_parts.append(
+                f"business services {_summarize_values(provenance.asset_business_services)}"
+            )
+        if provenance.asset_owners:
+            summary_parts.append(f"owners {_summarize_values(provenance.asset_owners)}")
+        if _asset_context_unknown(provenance):
+            summary_parts.append("asset context unknown")
         summary = ", ".join(summary_parts) + "."
+
+        if _asset_context_unknown(provenance):
+            return summary, (
+                "Treat missing asset context as unverified, not safe; validate owner, "
+                "environment, exposure, and business service before final scheduling."
+            )
 
         if self.narrative_only and not self.enterprise_escalation:
             return summary, (
@@ -146,10 +165,7 @@ class ContextPolicyProfile(StrictModel):
             and provenance.highest_asset_exposure.lower() == "internet-facing"
         ):
             escalation_reasons.append("internet-facing exposure")
-        if self.prod_asset_boost and any(
-            occurrence.asset_environment and occurrence.asset_environment.lower() == "prod"
-            for occurrence in provenance.occurrences
-        ):
+        if self.prod_asset_boost and _has_production_environment(provenance):
             escalation_reasons.append("production environment")
 
         if not escalation_reasons:
@@ -163,6 +179,49 @@ class ContextPolicyProfile(StrictModel):
             + ", ".join(escalation_reasons)
             + "."
         )
+
+
+def _summarize_values(values: list[str], *, limit: int = 3) -> str:
+    if len(values) <= limit:
+        return ", ".join(values)
+    shown = ", ".join(values[:limit])
+    return f"{shown}, +{len(values) - limit} more"
+
+
+def _asset_context_unknown(provenance: FindingProvenance) -> bool:
+    if provenance.occurrence_count == 0:
+        return False
+    if (
+        provenance.asset_ids
+        or provenance.highest_asset_criticality
+        or provenance.highest_asset_exposure
+        or provenance.asset_environments
+        or provenance.asset_owners
+        or provenance.asset_business_services
+    ):
+        return False
+    return not any(
+        occurrence.asset_id
+        or occurrence.asset_criticality
+        or occurrence.asset_exposure
+        or occurrence.asset_environment
+        or occurrence.asset_owner
+        or occurrence.asset_business_service
+        for occurrence in provenance.occurrences
+    )
+
+
+def _has_production_environment(provenance: FindingProvenance) -> bool:
+    if any(
+        environment.lower() in {"prod", "production"}
+        for environment in provenance.asset_environments
+    ):
+        return True
+    return any(
+        occurrence.asset_environment
+        and occurrence.asset_environment.lower() in {"prod", "production"}
+        for occurrence in provenance.occurrences
+    )
 
 
 class VexStatement(StrictModel):
