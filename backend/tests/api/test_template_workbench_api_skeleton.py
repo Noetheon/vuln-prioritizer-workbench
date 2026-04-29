@@ -464,6 +464,134 @@ def test_vpw044_asset_edit_rescore_flag_is_merged_into_explain(
     assert rescore_flag["changed_fields"] == ["criticality"]
 
 
+def test_vpw063_asset_filters_and_recalculate_action_clear_rescore_flag(
+    template_api_env: TemplateApiEnv,
+) -> None:
+    headers = auth_headers(template_api_env.client)
+    project = create_project_via_api(template_api_env.client, headers)
+    seeded = _seed_vpw042_findings(template_api_env, uuid.UUID(project["id"]))
+
+    owner_filtered = template_api_env.client.get(
+        f"/api/v1/projects/{project['id']}/assets/",
+        headers=headers,
+        params={"owner": "platform"},
+    )
+    assert owner_filtered.status_code == 200, owner_filtered.text
+    assert owner_filtered.json()["count"] == 1
+    assert owner_filtered.json()["data"][0]["asset_key"] == "payments-api"
+
+    service_filtered = template_api_env.client.get(
+        f"/api/v1/projects/{project['id']}/assets/",
+        headers=headers,
+        params={"service": "identity"},
+    )
+    assert service_filtered.status_code == 200, service_filtered.text
+    assert service_filtered.json()["count"] == 1
+    assert service_filtered.json()["data"][0]["asset_key"] == "identity-api"
+
+    update_response = template_api_env.client.patch(
+        f"/api/v1/assets/{seeded['critical_asset']}",
+        headers=headers,
+        json={"criticality": "high"},
+    )
+    assert update_response.status_code == 200, update_response.text
+    assert update_response.json()["rescore_needed"] is True
+
+    recalculate_response = template_api_env.client.post(
+        f"/api/v1/assets/{seeded['critical_asset']}/recalculate",
+        headers=headers,
+    )
+    assert recalculate_response.status_code == 200, recalculate_response.text
+    recalculated = recalculate_response.json()
+    assert recalculated["asset_id"] == str(seeded["critical_asset"])
+    assert recalculated["asset_key"] == "payments-api"
+    assert recalculated["recalculated_findings"] == 1
+    assert recalculated["cleared_rescore_flags"] >= 1
+    assert recalculated["operational_scores"]
+    assert recalculated["rescore_needed"] is False
+
+    asset_response = template_api_env.client.get(
+        f"/api/v1/projects/{project['id']}/assets/",
+        headers=headers,
+        params={"owner": "platform"},
+    )
+    assert asset_response.status_code == 200
+    assert asset_response.json()["data"][0]["rescore_needed"] is False
+
+    explain_response = template_api_env.client.get(
+        f"/api/v1/findings/{seeded['critical']}/explain",
+        headers=headers,
+    )
+    assert explain_response.status_code == 200, explain_response.text
+    codes = {flag["code"] for flag in explain_response.json()["data_quality_flags"]}
+    assert "provider_snapshot_stale" in codes
+    assert "asset_context_rescore_needed" not in codes
+
+
+def test_vpw063_asset_context_import_endpoint_upserts_assets_and_marks_rescore(
+    template_api_env: TemplateApiEnv,
+) -> None:
+    headers = auth_headers(template_api_env.client)
+    project = create_project_via_api(template_api_env.client, headers)
+    seeded = _seed_vpw042_findings(template_api_env, uuid.UUID(project["id"]))
+    context_csv = "\n".join(
+        [
+            (
+                "target_kind,target_ref,asset_id,owner,business_service,"
+                "criticality,exposure,environment"
+            ),
+            "container,registry.example.test/payments-api:2026.04.28,payments-api,platform,payments,high,internal,prod",
+            "host,batch-01,batch-worker,data,batch,medium,private,staging",
+            "",
+        ]
+    ).encode()
+
+    response = template_api_env.client.post(
+        f"/api/v1/projects/{project['id']}/assets/import",
+        headers=headers,
+        files={"asset_context_file": ("asset-context.csv", context_csv, "text/csv")},
+    )
+
+    assert response.status_code == 200, response.text
+    payload = response.json()
+    assert payload["project_id"] == project["id"]
+    assert payload["imported_assets"] == 2
+    assert payload["created_assets"] == 1
+    assert payload["updated_assets"] == 1
+    assert payload["unchanged_assets"] == 0
+    assert payload["rescore_needed_findings"] == 1
+    assert payload["asset_keys"] == ["payments-api", "batch-worker"]
+
+    assets = template_api_env.client.get(
+        f"/api/v1/projects/{project['id']}/assets/",
+        headers=headers,
+        params={"owner": "data"},
+    )
+    assert assets.status_code == 200
+    assert assets.json()["data"][0]["asset_key"] == "batch-worker"
+
+    updated = template_api_env.client.get(
+        f"/api/v1/projects/{project['id']}/assets/",
+        headers=headers,
+        params={"owner": "platform"},
+    )
+    assert updated.status_code == 200
+    payments_asset = next(
+        item for item in updated.json()["data"] if item["id"] == str(seeded["critical_asset"])
+    )
+    assert payments_asset["criticality"] == "high"
+    assert payments_asset["exposure"] == "internal"
+    assert payments_asset["rescore_needed"] is True
+
+    explain_response = template_api_env.client.get(
+        f"/api/v1/findings/{seeded['critical']}/explain",
+        headers=headers,
+    )
+    assert explain_response.status_code == 200, explain_response.text
+    codes = {flag["code"] for flag in explain_response.json()["data_quality_flags"]}
+    assert "asset_context_rescore_needed" in codes
+
+
 def test_vpw042_findings_sort_direction_and_pagination(
     template_api_env: TemplateApiEnv,
 ) -> None:

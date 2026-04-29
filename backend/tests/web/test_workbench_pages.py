@@ -474,7 +474,33 @@ def test_web_assets_waivers_and_coverage_pages(tmp_path: Path) -> None:
     assert assets.status_code == 200
     assert "api-gateway" in assets.text
     assert "platform-team" in assets.text
+    assert "Import asset context" in assets.text
+    assert "Owner and service" in assets.text
     asset_token = _csrf_token(assets.text)
+    imported_asset_context = client.post(
+        f"/web/projects/{project['id']}/assets/import",
+        data={"csrf_token": asset_token},
+        files={
+            "asset_context_file": (
+                "asset-context.csv",
+                (
+                    b"target_kind,target_ref,asset_id,criticality,exposure,environment,"
+                    b"owner,business_service\n"
+                    b"host,svc/web,asset-ui,high,dmz,prod,asset-import-ui,web-checkout\n"
+                ),
+                "text/csv",
+            )
+        },
+        follow_redirects=False,
+    )
+    assert imported_asset_context.status_code == 303
+    filtered_assets = client.get(
+        f"/projects/{project['id']}/assets",
+        params={"owner": "asset-import", "service": "web-checkout"},
+    )
+    assert filtered_assets.status_code == 200
+    assert "asset-ui" in filtered_assets.text
+    assert "api-gateway" not in filtered_assets.text
     asset_payload = client.get(f"/api/projects/{project['id']}/assets").json()["items"][0]
     updated_asset = client.post(
         f"/web/assets/{asset_payload['id']}",
@@ -492,6 +518,18 @@ def test_web_assets_waivers_and_coverage_pages(tmp_path: Path) -> None:
     )
     assert updated_asset.status_code == 303
     assert updated_asset.headers["location"] == f"/projects/{project['id']}/assets"
+    assets_after_update = client.get(f"/projects/{project['id']}/assets")
+    assert assets_after_update.status_code == 200
+    assert "Re-score needed" in assets_after_update.text
+    rescore_token = _csrf_token(assets_after_update.text)
+    rescored_asset = client.post(
+        f"/web/assets/{asset_payload['id']}/rescore",
+        data={"csrf_token": rescore_token},
+        follow_redirects=False,
+    )
+    assert rescored_asset.status_code == 303
+    assets_after_rescore = client.get(f"/projects/{project['id']}/assets")
+    assert "Current" in assets_after_rescore.text
 
     waivers = client.get(f"/projects/{project['id']}/waivers")
     assert waivers.status_code == 200
@@ -505,6 +543,11 @@ def test_web_assets_waivers_and_coverage_pages(tmp_path: Path) -> None:
     assert detail.status_code == 200
     assert "Accept residual risk" in detail.text
     assert "Create waiver" in detail.text
+    assert "edge-gateway" in detail.text
+    assert "checkout" in detail.text
+    assert "risk-ui" in detail.text
+    assert "internet-facing" in detail.text
+    assert "critical" in detail.text
     created_waiver = client.post(
         f"/web/projects/{project['id']}/waivers",
         data={
