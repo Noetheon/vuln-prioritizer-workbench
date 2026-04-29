@@ -123,6 +123,9 @@ def _source_statuses(
         "epss": snapshot.epss_date if snapshot is not None else None,
         "kev": snapshot.kev_catalog_version if snapshot is not None else None,
     }
+    metadata = _snapshot_metadata(snapshot)
+    stale_sources = set(_string_list(metadata.get("stale_sources")))
+    cache_age = _cache_age_seconds(snapshot.created_at if snapshot is not None else None)
     details = {
         "nvd": "NVD last modified timestamp from the latest stored snapshot.",
         "epss": "EPSS date from the latest stored snapshot.",
@@ -134,9 +137,11 @@ def _source_statuses(
             name=name,
             selected=name in selected,
             available=values[name] is not None,
+            stale=name in stale_sources,
             value=values[name],
             last_sync=values[name],
             last_error=last_error,
+            cache_age_seconds=cache_age,
             detail=details[name],
         )
         for name in PROVIDER_SOURCES
