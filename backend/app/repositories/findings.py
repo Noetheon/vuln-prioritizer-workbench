@@ -12,6 +12,7 @@ from app.models import (
     Asset,
     Component,
     Finding,
+    FindingAttackContext,
     FindingPriority,
     FindingStatus,
     Vulnerability,
@@ -216,6 +217,16 @@ class FindingRepository:
             select(Finding)
             .where(Finding.project_id == project_id)
             .order_by(col(Finding.operational_rank), col(Finding.priority_rank), Finding.cve_id)
+        )
+        return list(self.session.exec(statement).all())
+
+    def list_project_attack_contexts(self, project_id: uuid.UUID) -> list[FindingAttackContext]:
+        """Return ATT&CK contexts for findings in one project, newest rows first."""
+        statement = (
+            select(FindingAttackContext)
+            .join(Finding, col(FindingAttackContext.finding_id) == col(Finding.id))
+            .where(Finding.project_id == project_id)
+            .order_by(col(FindingAttackContext.created_at).desc())
         )
         return list(self.session.exec(statement).all())
 

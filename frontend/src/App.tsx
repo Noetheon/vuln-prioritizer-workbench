@@ -40,6 +40,8 @@ import {
   type ImportParseErrorPublic,
   ImportsService,
   OpenAPI,
+  type ProjectAttackSummaryPublic,
+  type ProjectAttackTechniqueSummaryPublic,
   type ProjectDecisionSummaryPublic,
   type ProjectPublic,
   ProjectsService,
@@ -425,6 +427,45 @@ function buildSummaryRows(summary: ProjectDecisionSummaryPublic | null) {
       detail: "findings with CVSS base score",
     },
   ]
+}
+
+function attackSummaryRows(summary: ProjectAttackSummaryPublic | null) {
+  return [
+    {
+      label: "Mapped",
+      value: String(summary?.mapped_finding_count ?? 0),
+      detail: `${summary?.mapped_coverage_percent ?? 0}% coverage`,
+    },
+    {
+      label: "Unmapped",
+      value: String(summary?.unmapped_finding_count ?? 0),
+      detail: "findings without reviewed context",
+    },
+    {
+      label: "Low confidence",
+      value: String(summary?.confidence_distribution?.low ?? 0),
+      detail: "visible review signal",
+    },
+  ]
+}
+
+function attackConfidenceSummary(summary: ProjectAttackSummaryPublic | null) {
+  const counts = summary?.confidence_distribution ?? {}
+  return ["high", "medium", "low", "unknown"]
+    .map((key) => `${labelize(key)} ${counts[key] ?? 0}`)
+    .join(" / ")
+}
+
+function attackTechniqueConfidenceLabel(
+  technique: ProjectAttackTechniqueSummaryPublic,
+) {
+  const counts = technique.confidence_counts ?? {}
+  const visible = ["high", "medium", "low", "unknown"]
+    .map((key) => [key, counts[key] ?? 0] as const)
+    .filter(([, count]) => count > 0)
+  return visible.length > 0
+    ? visible.map(([key, count]) => `${labelize(key)} ${count}`).join(" / ")
+    : "Confidence unknown"
 }
 
 function formatProviderFreshness(providerStatus: ProviderStatusPublic | null) {
@@ -1051,8 +1092,12 @@ export function App() {
   const [selectedProjectId, setSelectedProjectId] = useState("")
   const [projectSummary, setProjectSummary] =
     useState<ProjectDecisionSummaryPublic | null>(null)
+  const [projectAttackSummary, setProjectAttackSummary] =
+    useState<ProjectAttackSummaryPublic | null>(null)
   const [projectListLoading, setProjectListLoading] = useState(true)
   const [summaryLoading, setSummaryLoading] = useState(false)
+  const [attackSummaryLoading, setAttackSummaryLoading] = useState(false)
+  const [attackSummaryError, setAttackSummaryError] = useState("")
   const [dashboardError, setDashboardError] = useState("")
   const [createProjectForm, setCreateProjectForm] =
     useState<ProjectFormState>(emptyProjectForm)
@@ -1126,6 +1171,8 @@ export function App() {
     dashboardLoading,
   )
   const summaryRows = buildSummaryRows(projectSummary)
+  const attackRows = attackSummaryRows(projectAttackSummary)
+  const attackTopTechniques = projectAttackSummary?.top_techniques ?? []
   const findingPageStart =
     findingCount === 0 ? 0 : Math.min(findingOffset + 1, findingCount)
   const findingPageEnd = Math.min(findingOffset + findings.length, findingCount)
@@ -1216,6 +1263,7 @@ export function App() {
           )
           if (projectPage.data.length === 0) {
             setProjectSummary(null)
+            setProjectAttackSummary(null)
           }
         }
       } catch (caught) {
@@ -1228,6 +1276,7 @@ export function App() {
           setProjects([])
           setSelectedProjectId("")
           setProjectSummary(null)
+          setProjectAttackSummary(null)
           setDashboardError(apiErrorMessage("Project list unavailable", caught))
         }
       } finally {
@@ -1282,6 +1331,51 @@ export function App() {
     }
 
     void loadProjectSummary()
+    return () => {
+      isMounted = false
+    }
+  }, [navigate, selectedProjectId])
+
+  useEffect(() => {
+    let isMounted = true
+
+    async function loadProjectAttackSummary() {
+      if (!selectedProjectId) {
+        setProjectAttackSummary(null)
+        setAttackSummaryError("")
+        setAttackSummaryLoading(false)
+        return
+      }
+
+      setAttackSummaryLoading(true)
+      setAttackSummaryError("")
+      try {
+        const attackSummary = await ProjectsService.readProjectAttackSummary({
+          projectId: selectedProjectId,
+        })
+        if (isMounted) {
+          setProjectAttackSummary(attackSummary)
+        }
+      } catch (caught) {
+        if (caught instanceof ApiError && [401, 403].includes(caught.status)) {
+          clearAccessToken()
+          await navigate({ to: "/login" })
+          return
+        }
+        if (isMounted) {
+          setProjectAttackSummary(null)
+          setAttackSummaryError(
+            apiErrorMessage("ATT&CK summary unavailable", caught),
+          )
+        }
+      } finally {
+        if (isMounted) {
+          setAttackSummaryLoading(false)
+        }
+      }
+    }
+
+    void loadProjectAttackSummary()
     return () => {
       isMounted = false
     }
@@ -1864,17 +1958,21 @@ export function App() {
 
   async function submitImport(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    const fileInput = event.currentTarget.elements.namedItem("importFile")
+    const formData = new FormData(event.currentTarget)
+    const formFile = formData.get("importFile")
+    const formProjectId = formData.get("importProject")
+    const importProjectId =
+      typeof formProjectId === "string" && formProjectId.trim()
+        ? formProjectId
+        : selectedProjectId
     const selectedFile =
       importWizard.file ??
-      (fileInput instanceof HTMLInputElement
-        ? (fileInput.files?.[0] ?? null)
-        : null)
+      (formFile instanceof File && formFile.size > 0 ? formFile : null)
     setImportError("")
     setImportRun(null)
     setImportRunSummary(null)
     setImportParseErrors([])
-    if (!selectedProjectId) {
+    if (!importProjectId) {
       setImportError("Select or create a project before uploading.")
       return
     }
@@ -1885,8 +1983,9 @@ export function App() {
 
     setImportLoading(true)
     try {
+      setSelectedProjectId(importProjectId)
       const run = await ImportsService.importProjectUpload({
-        projectId: selectedProjectId,
+        projectId: importProjectId,
         formData: {
           file: selectedFile as unknown as string,
           input_type: importWizard.inputType,
@@ -1897,7 +1996,7 @@ export function App() {
       setImportRunSummary(summary)
       setImportParseErrors(summary.parse_errors ?? [])
       setSelectedRunId(run.id)
-      await refreshProjects(selectedProjectId)
+      await refreshProjects(importProjectId)
       await refreshProjectRuns(run.id)
     } catch (caught) {
       setImportError(apiErrorMessage("Import upload failed", caught))
@@ -1914,7 +2013,7 @@ export function App() {
           setImportRunSummary(null)
         }
       }
-      await refreshProjects(selectedProjectId)
+      await refreshProjects(importProjectId)
       await refreshProjectRuns(runId ?? undefined)
     } finally {
       setImportLoading(false)
@@ -2366,6 +2465,7 @@ export function App() {
                     <select
                       aria-label="Import project"
                       disabled={projectListLoading || projects.length === 0}
+                      name="importProject"
                       onChange={(event) =>
                         setSelectedProjectId(event.target.value)
                       }
@@ -4399,15 +4499,89 @@ export function App() {
                 <li key={item}>{item}</li>
               ))}
             </ol>
-            <div className="coverage-block">
-              <BarChart3 aria-hidden="true" size={20} />
-              <div>
-                <strong>ATT&CK coverage</strong>
-                <span>
-                  Top technique gaps remain visible for the next API slice.
-                </span>
+            <section
+              className="attack-summary-widget"
+              aria-label="Top ATT&CK techniques dashboard widget"
+            >
+              <div className="panel-header compact inline-header">
+                <div>
+                  <h2>Top ATT&CK Techniques</h2>
+                  <span>
+                    {projectAttackSummary
+                      ? attackConfidenceSummary(projectAttackSummary)
+                      : "Confidence distribution loading"}
+                  </span>
+                </div>
+                <BarChart3 aria-hidden="true" size={18} />
               </div>
-            </div>
+
+              {attackSummaryError ? (
+                <p className="dashboard-alert" role="alert">
+                  {attackSummaryError}
+                </p>
+              ) : null}
+
+              {attackSummaryLoading ? (
+                <p className="dashboard-state" role="status">
+                  Loading ATT&CK summary
+                </p>
+              ) : null}
+
+              {!attackSummaryLoading &&
+              !attackSummaryError &&
+              (!selectedProject || !projectAttackSummary) ? (
+                <p className="attack-summary-empty">
+                  Select a project to review ATT&CK concentration.
+                </p>
+              ) : null}
+
+              {!attackSummaryLoading &&
+              !attackSummaryError &&
+              projectAttackSummary &&
+              attackTopTechniques.length === 0 ? (
+                <p className="attack-summary-empty">
+                  No reviewed ATT&CK technique mappings are stored for this
+                  project.
+                </p>
+              ) : null}
+
+              {!attackSummaryLoading &&
+              !attackSummaryError &&
+              projectAttackSummary &&
+              attackTopTechniques.length > 0 ? (
+                <>
+                  <dl className="attack-summary-stats">
+                    {attackRows.map((row) => (
+                      <div key={row.label}>
+                        <dt>{row.label}</dt>
+                        <dd>
+                          <strong>{row.value}</strong>
+                          <span>{row.detail}</span>
+                        </dd>
+                      </div>
+                    ))}
+                  </dl>
+                  <ul className="attack-technique-list">
+                    {attackTopTechniques.map((technique) => (
+                      <li key={technique.technique_id}>
+                        <div>
+                          <strong>{technique.technique_id}</strong>
+                          <span>{technique.name ?? "Unnamed technique"}</span>
+                        </div>
+                        <small>
+                          {technique.finding_count} finding
+                          {technique.finding_count === 1 ? "" : "s"} /{" "}
+                          {attackTechniqueConfidenceLabel(technique)}
+                        </small>
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="attack-summary-note">
+                    {projectAttackSummary.defensive_note}
+                  </p>
+                </>
+              ) : null}
+            </section>
           </div>
         </section>
       </main>
