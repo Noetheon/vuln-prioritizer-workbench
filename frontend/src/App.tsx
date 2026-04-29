@@ -20,6 +20,9 @@ import { useEffect, useState } from "react"
 import { clearAccessToken } from "./auth"
 import {
   ApiError,
+  type ProjectDecisionSummaryPublic,
+  type ProjectPublic,
+  ProjectsService,
   type ProviderStatusPublic,
   ProvidersService,
   type UserPublic,
@@ -124,57 +127,152 @@ const settingsSummary = (user: UserPublic | null) => [
   },
 ]
 
-const metrics = [
-  {
-    label: "Critical",
-    value: "12",
-    detail: "KEV or active risk",
-    icon: AlertTriangle,
-  },
-  {
-    label: "Prioritized",
-    value: "148",
-    detail: "ranked findings",
-    icon: Gauge,
-  },
-  { label: "Evidence", value: "7", detail: "bundles ready", icon: FileArchive },
-  {
-    label: "Controls",
-    value: "63%",
-    detail: "coverage mapped",
-    icon: ShieldCheck,
-  },
-]
-
-const findings = [
-  {
-    cve: "CVE-2021-44228",
-    asset: "commerce-api",
-    priority: "Critical",
-    signal: "KEV, EPSS 94%",
-    state: "Needs Review",
-  },
-  {
-    cve: "CVE-2023-34362",
-    asset: "edge-transfer",
-    priority: "High",
-    signal: "ATT&CK mapped",
-    state: "Ready",
-  },
-  {
-    cve: "CVE-2024-3094",
-    asset: "builder-image",
-    priority: "High",
-    signal: "supply-chain",
-    state: "Blocked",
-  },
-]
-
 const timeline = [
   "Provider snapshot locked",
   "Trivy import normalized",
   "Evidence bundle verified",
 ]
+
+function priorityCount(
+  summary: ProjectDecisionSummaryPublic | null,
+  priority: "Critical" | "High" | "Medium" | "Low",
+) {
+  return summary?.counts_by_priority?.[priority] ?? 0
+}
+
+function buildDashboardCards(
+  summary: ProjectDecisionSummaryPublic | null,
+  providerStatus: ProviderStatusPublic | null,
+  loading: boolean,
+) {
+  const providerFreshness = formatProviderFreshness(providerStatus)
+  return [
+    {
+      label: "Critical",
+      value: loading ? "Loading" : String(priorityCount(summary, "Critical")),
+      detail: "critical prioritized findings",
+      icon: AlertTriangle,
+      tone: "critical",
+    },
+    {
+      label: "High",
+      value: loading ? "Loading" : String(priorityCount(summary, "High")),
+      detail: "high priority findings",
+      icon: Gauge,
+      tone: "high",
+    },
+    {
+      label: "KEV",
+      value: loading ? "Loading" : String(summary?.kev_hits ?? 0),
+      detail: "CISA catalog matches",
+      icon: ShieldCheck,
+      tone: "kev",
+    },
+    {
+      label: "Provider Freshness",
+      value: providerFreshness.value,
+      detail: providerFreshness.detail,
+      icon: Database,
+      tone: providerFreshness.tone,
+    },
+    {
+      label: "Latest Runs",
+      value: loading ? "Loading" : formatRunStatus(summary?.latest_run_status),
+      detail: latestRunDetail(summary),
+      icon: Activity,
+      tone: "run",
+    },
+  ]
+}
+
+function buildSummaryRows(summary: ProjectDecisionSummaryPublic | null) {
+  return [
+    {
+      label: "Open findings",
+      value: String(summary?.open_finding_count ?? 0),
+      detail: "open, in review, or remediating",
+    },
+    {
+      label: "Total findings",
+      value: String(summary?.finding_count ?? 0),
+      detail: "persisted findings in project",
+    },
+    {
+      label: "EPSS hits",
+      value: String(summary?.epss_hits ?? 0),
+      detail: "findings with EPSS context",
+    },
+    {
+      label: "Known CVSS",
+      value: String(summary?.cvss_known_count ?? 0),
+      detail: "findings with CVSS base score",
+    },
+  ]
+}
+
+function formatProviderFreshness(providerStatus: ProviderStatusPublic | null) {
+  if (providerStatus === null) {
+    return {
+      value: "Loading",
+      detail: "provider status loading",
+      tone: "run",
+    }
+  }
+  if (providerStatus.status === "ok") {
+    return {
+      value: "Fresh",
+      detail:
+        providerStatus.cache_age_seconds !== null &&
+        providerStatus.cache_age_seconds !== undefined
+          ? `${formatCacheAge(providerStatus.cache_age_seconds)} old`
+          : providerStatus.snapshot_mode,
+      tone: "kev",
+    }
+  }
+  return {
+    value: "Needs sync",
+    detail:
+      providerStatus.last_error ??
+      providerStatus.warnings?.[0] ??
+      "No snapshot recorded",
+    tone: "high",
+  }
+}
+
+function formatRunStatus(
+  status: ProjectDecisionSummaryPublic["latest_run_status"],
+) {
+  return status ? status.replaceAll("_", " ") : "No runs"
+}
+
+function latestRunDetail(summary: ProjectDecisionSummaryPublic | null) {
+  if (!summary?.latest_run_id) {
+    return "import required"
+  }
+  return `run ${summary.latest_run_id.slice(0, 8)}`
+}
+
+function apiErrorMessage(prefix: string, caught: unknown) {
+  if (caught instanceof ApiError) {
+    const detail = apiErrorDetail(caught.body)
+    return `${prefix}: ${detail ?? caught.message ?? `HTTP ${caught.status}`}`
+  }
+  return `${prefix}: unexpected client error`
+}
+
+function apiErrorDetail(body: unknown) {
+  if (typeof body !== "object" || body === null || !("detail" in body)) {
+    return null
+  }
+  const detail = (body as { detail?: unknown }).detail
+  if (typeof detail === "string" && detail.trim()) {
+    return detail
+  }
+  if (Array.isArray(detail)) {
+    return "validation failed"
+  }
+  return null
+}
 
 export function App() {
   const navigate = useNavigate()
@@ -186,6 +284,22 @@ export function App() {
     useState<ProviderStatusPublic | null>(null)
   const [currentUser, setCurrentUser] = useState<UserPublic | null>(null)
   const [statusError, setStatusError] = useState("")
+  const [projects, setProjects] = useState<ProjectPublic[]>([])
+  const [selectedProjectId, setSelectedProjectId] = useState("")
+  const [projectSummary, setProjectSummary] =
+    useState<ProjectDecisionSummaryPublic | null>(null)
+  const [projectListLoading, setProjectListLoading] = useState(true)
+  const [summaryLoading, setSummaryLoading] = useState(false)
+  const [dashboardError, setDashboardError] = useState("")
+  const selectedProject =
+    projects.find((project) => project.id === selectedProjectId) ?? null
+  const dashboardLoading = projectListLoading || summaryLoading
+  const dashboardCards = buildDashboardCards(
+    projectSummary,
+    providerStatus,
+    dashboardLoading,
+  )
+  const summaryRows = buildSummaryRows(projectSummary)
 
   useEffect(() => {
     let isMounted = true
@@ -221,6 +335,94 @@ export function App() {
       isMounted = false
     }
   }, [navigate])
+
+  useEffect(() => {
+    let isMounted = true
+
+    async function loadProjects() {
+      setProjectListLoading(true)
+      setDashboardError("")
+      try {
+        const projectPage = await ProjectsService.readProjects()
+        if (isMounted) {
+          setProjects(projectPage.data)
+          setSelectedProjectId((previousProjectId) =>
+            projectPage.data.some((project) => project.id === previousProjectId)
+              ? previousProjectId
+              : (projectPage.data[0]?.id ?? ""),
+          )
+          if (projectPage.data.length === 0) {
+            setProjectSummary(null)
+          }
+        }
+      } catch (caught) {
+        if (caught instanceof ApiError && [401, 403].includes(caught.status)) {
+          clearAccessToken()
+          await navigate({ to: "/login" })
+          return
+        }
+        if (isMounted) {
+          setProjects([])
+          setSelectedProjectId("")
+          setProjectSummary(null)
+          setDashboardError(apiErrorMessage("Project list unavailable", caught))
+        }
+      } finally {
+        if (isMounted) {
+          setProjectListLoading(false)
+        }
+      }
+    }
+
+    void loadProjects()
+    return () => {
+      isMounted = false
+    }
+  }, [navigate])
+
+  useEffect(() => {
+    let isMounted = true
+
+    async function loadProjectSummary() {
+      if (!selectedProjectId) {
+        setProjectSummary(null)
+        setSummaryLoading(false)
+        return
+      }
+
+      setSummaryLoading(true)
+      setDashboardError("")
+      try {
+        const summary = await ProjectsService.readProjectSummary({
+          projectId: selectedProjectId,
+        })
+        if (isMounted) {
+          setProjectSummary(summary)
+        }
+      } catch (caught) {
+        if (caught instanceof ApiError && [401, 403].includes(caught.status)) {
+          clearAccessToken()
+          await navigate({ to: "/login" })
+          return
+        }
+        if (isMounted) {
+          setProjectSummary(null)
+          setDashboardError(
+            apiErrorMessage("Project summary unavailable", caught),
+          )
+        }
+      } finally {
+        if (isMounted) {
+          setSummaryLoading(false)
+        }
+      }
+    }
+
+    void loadProjectSummary()
+    return () => {
+      isMounted = false
+    }
+  }, [navigate, selectedProjectId])
 
   async function signOut() {
     clearAccessToken()
@@ -319,18 +521,57 @@ export function App() {
           </div>
         </section>
 
-        <section className="metric-grid" aria-label="Risk summary">
-          {metrics.map((metric) => (
-            <article className="metric-card" key={metric.label}>
-              <metric.icon aria-hidden="true" size={20} />
-              <div>
-                <span>{metric.label}</span>
-                <strong>{metric.value}</strong>
-                <small>{metric.detail}</small>
+        {currentPath === "/" ? (
+          <>
+            <section
+              className="dashboard-toolbar"
+              aria-label="Dashboard project context"
+            >
+              <label className="project-selector">
+                <span>Current project</span>
+                <select
+                  aria-label="Current project"
+                  disabled={dashboardLoading || projects.length === 0}
+                  onChange={(event) => setSelectedProjectId(event.target.value)}
+                  value={selectedProjectId}
+                >
+                  {projects.length === 0 ? (
+                    <option value="">No projects</option>
+                  ) : null}
+                  {projects.map((project) => (
+                    <option key={project.id} value={project.id}>
+                      {project.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <div className="project-context">
+                <span>Summary source</span>
+                <strong>
+                  {selectedProject?.name ??
+                    (projectListLoading ? "Loading" : "No project selected")}
+                </strong>
               </div>
-            </article>
-          ))}
-        </section>
+            </section>
+
+            <section className="metric-grid" aria-label="Dashboard summary">
+              {dashboardCards.map((card) => (
+                <article
+                  aria-label={`${card.label} summary card`}
+                  className={`metric-card tone-${card.tone}`}
+                  key={card.label}
+                >
+                  <card.icon aria-hidden="true" size={20} />
+                  <div>
+                    <span>{card.label}</span>
+                    <strong>{card.value}</strong>
+                    <small>{card.detail}</small>
+                  </div>
+                </article>
+              ))}
+            </section>
+          </>
+        ) : null}
 
         {currentPath === "/settings" ? (
           <section className="settings-summary" aria-label="User Settings">
@@ -359,35 +600,83 @@ export function App() {
               </button>
             </div>
 
-            <div className="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>CVE</th>
-                    <th>Asset</th>
-                    <th>Priority</th>
-                    <th>Signal</th>
-                    <th>State</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {findings.map((finding) => (
-                    <tr key={finding.cve}>
-                      <td>{finding.cve}</td>
-                      <td>{finding.asset}</td>
-                      <td>
-                        <span
-                          className={`severity ${finding.priority.toLowerCase()}`}
-                        >
-                          {finding.priority}
-                        </span>
-                      </td>
-                      <td>{finding.signal}</td>
-                      <td>{finding.state}</td>
-                    </tr>
+            <div className="dashboard-panel-body">
+              {dashboardError ? (
+                <p className="dashboard-alert" role="alert">
+                  {dashboardError}
+                </p>
+              ) : null}
+
+              {dashboardLoading ? (
+                <p className="dashboard-state" role="status">
+                  Loading dashboard summary
+                </p>
+              ) : null}
+
+              {!dashboardLoading && !dashboardError && projects.length === 0 ? (
+                <section
+                  className="dashboard-empty"
+                  aria-label="Dashboard empty state"
+                >
+                  <h3>No projects yet</h3>
+                  <p>
+                    Create a project or import a CVE list to populate the
+                    dashboard.
+                  </p>
+                  <div className="empty-actions">
+                    <Link className="primary-action" to="/projects">
+                      Projects
+                    </Link>
+                    <Link className="secondary-action" to="/imports">
+                      Imports
+                    </Link>
+                  </div>
+                </section>
+              ) : null}
+
+              {!dashboardLoading &&
+              !dashboardError &&
+              selectedProject &&
+              projectSummary !== null &&
+              (projectSummary.finding_count ?? 0) === 0 ? (
+                <section
+                  className="dashboard-empty"
+                  aria-label="No findings empty state"
+                >
+                  <h3>No findings in {selectedProject.name}</h3>
+                  <p>
+                    Import scanner, SBOM, or CVE-list data to create findings.
+                  </p>
+                  <div className="empty-actions">
+                    <Link className="primary-action" to="/imports">
+                      Imports
+                    </Link>
+                    <Link className="secondary-action" to="/projects">
+                      Projects
+                    </Link>
+                  </div>
+                </section>
+              ) : null}
+
+              {!dashboardLoading &&
+              !dashboardError &&
+              projectSummary !== null &&
+              (projectSummary.finding_count ?? 0) > 0 ? (
+                <dl
+                  className="summary-list"
+                  aria-label="Project decision summary"
+                >
+                  {summaryRows.map((row) => (
+                    <div key={row.label}>
+                      <dt>{row.label}</dt>
+                      <dd>
+                        <strong>{row.value}</strong>
+                        <span>{row.detail}</span>
+                      </dd>
+                    </div>
                   ))}
-                </tbody>
-              </table>
+                </dl>
+              ) : null}
             </div>
           </div>
 
