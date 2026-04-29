@@ -45,6 +45,67 @@ test("template login reaches authenticated Workbench status shell", async ({
   await expect(providerSources.getByText("NVD", { exact: true })).toBeVisible()
   await expect(providerSources.getByText("EPSS", { exact: true })).toBeVisible()
   await expect(providerSources.getByText("KEV", { exact: true })).toBeVisible()
+  await expect(
+    page.getByRole("region", { name: "Dashboard empty state" }),
+  ).toContainText("No projects yet")
+
+  const accessToken = await page.evaluate(() =>
+    window.localStorage.getItem("access_token"),
+  )
+  expect(accessToken).toBeTruthy()
+  const authHeaders = { Authorization: `Bearer ${accessToken}` }
+  const projectResponse = await page.request.post(
+    "http://127.0.0.1:8000/api/v1/projects/",
+    {
+      data: {
+        description: "Playwright dashboard summary project",
+        name: "VPW Dashboard Project",
+      },
+      headers: authHeaders,
+    },
+  )
+  expect(projectResponse.ok()).toBeTruthy()
+  const project = (await projectResponse.json()) as { id: string; name: string }
+
+  await page.reload()
+  await expect(page.getByLabel("Current project")).toHaveValue(project.id)
+  await expect(
+    page.getByRole("region", { name: "No findings empty state" }),
+  ).toContainText(`No findings in ${project.name}`)
+  await expect(page.getByLabel("Critical summary card")).toContainText("0")
+  await expect(page.getByLabel("Latest Runs summary card")).toContainText(
+    "No runs",
+  )
+
+  const importResponse = await page.request.post(
+    `http://127.0.0.1:8000/api/v1/projects/${project.id}/imports`,
+    {
+      headers: authHeaders,
+      multipart: {
+        file: {
+          buffer: Buffer.from("CVE-2021-44228\nCVE-2024-3094\n"),
+          mimeType: "text/plain",
+          name: "dashboard-cves.txt",
+        },
+        input_type: "cve-list",
+      },
+    },
+  )
+  expect(importResponse.ok()).toBeTruthy()
+
+  await page.reload()
+  await expect(page.getByLabel("Critical summary card")).toContainText("2")
+  await expect(page.getByLabel("High summary card")).toContainText("0")
+  await expect(page.getByLabel("KEV summary card")).toContainText(/[1-9]/)
+  await expect(page.getByLabel("Latest Runs summary card")).toContainText(
+    "succeeded",
+  )
+  await expect(
+    page.getByRole("region", { name: "No findings empty state" }),
+  ).toHaveCount(0)
+  await expect(page.getByLabel("Project decision summary")).toContainText(
+    "Total findings",
+  )
 
   await navigation.getByRole("link", { name: "Projects" }).click()
   await expect(page).toHaveURL(/\/projects$/)
