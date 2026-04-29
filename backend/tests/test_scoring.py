@@ -199,6 +199,115 @@ def test_operational_score_is_explainable_and_clamped() -> None:
     assert "clamped to 100" in reasons
 
 
+def test_asset_context_modifiers_cover_score_rank_and_explanation() -> None:
+    service = PrioritizationService()
+    context_finding = _finding(
+        cve_id="CVE-2024-0101",
+        priority_label="High",
+        priority_rank=2,
+        cvss=8.0,
+        epss=0.05,
+        in_kev=False,
+    ).model_copy(
+        update={
+            "highest_asset_criticality": "critical",
+            "priority_drivers": ["medium-cvss"],
+            "provenance": FindingProvenance(
+                occurrence_count=1,
+                active_occurrence_count=1,
+                highest_asset_criticality="critical",
+                highest_asset_exposure="internet-facing",
+                asset_environments=["prod"],
+                asset_owners=["platform-team"],
+                asset_business_services=["customer-login"],
+                asset_ids=["api-gateway"],
+                asset_count=1,
+                occurrences=[
+                    InputOccurrence(
+                        cve_id="CVE-2024-0101",
+                        asset_id="api-gateway",
+                        asset_criticality="critical",
+                        asset_exposure="internet-facing",
+                        asset_environment="prod",
+                        asset_owner="platform-team",
+                        asset_business_service="customer-login",
+                    )
+                ],
+            ),
+        }
+    )
+    lower_context_finding = _finding(
+        cve_id="CVE-2024-0102",
+        priority_label="High",
+        priority_rank=2,
+        cvss=8.0,
+        epss=0.05,
+        in_kev=False,
+    ).model_copy(
+        update={
+            "priority_drivers": ["medium-cvss"],
+            "provenance": FindingProvenance(occurrence_count=1, active_occurrence_count=1),
+        }
+    )
+
+    ranked = service.assign_operational_ranks([lower_context_finding, context_finding])
+    ordered = service.sort_findings(ranked, sort_by="operational")
+    enriched = ordered[0]
+
+    assert [finding.cve_id for finding in ordered] == ["CVE-2024-0101", "CVE-2024-0102"]
+    assert enriched.priority_label == "High"
+    assert enriched.operational_score == 72
+    assert "internet-facing asset context: +8" in enriched.operational_score_reasons
+    assert "production asset context: +5" in enriched.operational_score_reasons
+    assert "critical asset criticality: +7" in enriched.operational_score_reasons
+    assert "business service customer-login routing context: +0" in (
+        enriched.operational_score_reasons
+    )
+    assert "owner platform-team routing context: +0" in enriched.operational_score_reasons
+    assert "business service customer-login" in enriched.context_rank_reasons
+    assert "owner platform-team" in enriched.context_rank_reasons
+    assert enriched.explanation is not None
+    assert "asset.context" in enriched.explanation.reason_codes
+    assert "Asset context: exposure=internet-facing" in enriched.explanation.human_readable
+    assert "business_service=customer-login" in enriched.explanation.human_readable
+    assert "owner=platform-team" in enriched.explanation.human_readable
+
+
+def test_unknown_asset_context_is_explicitly_unverified_not_safe() -> None:
+    service = PrioritizationService()
+    finding = _finding(
+        cve_id="CVE-2024-0103",
+        priority_label="Medium",
+        priority_rank=3,
+        cvss=7.1,
+        epss=0.05,
+        in_kev=False,
+    ).model_copy(
+        update={
+            "priority_drivers": ["medium-cvss"],
+            "provenance": FindingProvenance(
+                occurrence_count=1,
+                active_occurrence_count=1,
+                occurrences=[
+                    InputOccurrence(
+                        cve_id="CVE-2024-0103",
+                        target_kind="image",
+                        target_ref="ghcr.io/acme/unknown:1.0.0",
+                    )
+                ],
+            ),
+        }
+    )
+
+    scored = service.assign_operational_ranks([finding])[0]
+
+    assert "asset context unknown: +0, not treated as safe" in (scored.operational_score_reasons)
+    assert "asset context unknown; validate before scheduling" in scored.context_rank_reasons
+    assert scored.explanation is not None
+    assert "asset.context_unknown" in {note.code for note in scored.explanation.notes}
+    assert "unknown, not treated as safe" in scored.explanation.human_readable
+
+
 def test_priority_explanation_has_reason_codes_sources_and_thresholds() -> None:
     finding = _finding(
         cve_id="CVE-2024-0001",
