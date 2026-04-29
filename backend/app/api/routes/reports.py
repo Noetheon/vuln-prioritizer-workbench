@@ -27,18 +27,17 @@ def create_run_report(
     session: SessionDep,
     current_user: CurrentUser,
 ) -> ReportPublic:
-    """Create a Markdown technical report for a completed visible analysis run."""
-    if payload.format != "markdown":
-        raise HTTPException(status_code=422, detail="Only markdown reports are supported.")
+    """Create a report artifact for a completed visible analysis run."""
     run = RunRepository(session).get_analysis_run(run_id)
     if run is None:
         raise HTTPException(status_code=404, detail="Analysis run not found")
     project = require_visible_project(session, current_user, run.project_id)
     try:
-        report = ReportService(session, _template_settings(request)).create_markdown_report(
-            run=run,
-            project=project,
-        )
+        report_service = ReportService(session, _template_settings(request))
+        if payload.format == "html":
+            report = report_service.create_html_report(run=run, project=project)
+        else:
+            report = report_service.create_markdown_report(run=run, project=project)
     except ReportGenerationError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     session.commit()
@@ -84,6 +83,7 @@ def download_report(
         media_type=report.content_type,
     )
     response.headers["Cache-Control"] = "no-store"
+    response.headers["X-Content-Type-Options"] = "nosniff"
     return response
 
 

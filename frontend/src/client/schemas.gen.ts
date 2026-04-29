@@ -2430,8 +2430,8 @@ export const ReportCreateSchema = {
     description: 'Request payload for creating a run report.',
     properties: {
         format: {
-            const: 'markdown',
             default: 'markdown',
+            enum: ['markdown', 'html'],
             title: 'Format',
             type: 'string'
         }
