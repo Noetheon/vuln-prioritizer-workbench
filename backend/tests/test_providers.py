@@ -23,6 +23,10 @@ from vuln_prioritizer.models import (
 from vuln_prioritizer.providers.attack import AttackProvider
 from vuln_prioritizer.providers.attack_metadata import AttackMetadataProvider
 from vuln_prioritizer.providers.ctid_mappings import CtidMappingsProvider
+from vuln_prioritizer.providers.curated_attack_mappings import (
+    CuratedAttackMappingProvider,
+    CuratedAttackMappingValidationError,
+)
 from vuln_prioritizer.providers.epss import EpssProvider
 from vuln_prioritizer.providers.kev import KevProvider
 from vuln_prioritizer.providers.nvd import NvdFetchDiagnostics, NvdProvider
@@ -1425,6 +1429,143 @@ def test_attack_provider_ctid_json_enriches_structured_attack_data() -> None:
     assert results["CVE-2023-34362"].techniques[0].name == "Exploit Public-Facing Application"
     assert results["CVE-2024-3094"].mapped is False
     assert results["CVE-2024-3094"].attack_relevance == "Unmapped"
+
+
+def test_curated_attack_mapping_provider_loads_yaml_fixture() -> None:
+    provider = CuratedAttackMappingProvider()
+
+    bundle = provider.load(DATA_ROOT / "cve_attack_mappings.yml")
+
+    assert bundle.quality_report["mapping_count"] == 6
+    assert bundle.quality_report["unique_cves"] == 6
+    assert bundle.quality_report["confidence_counts"] == {"high": 3, "low": 1, "medium": 2}
+    assert bundle.quality_report["low_confidence_count"] == 1
+    assert bundle.mappings_by_cve["CVE-2021-44228"][0].attack_object_id == "T1190"
+    assert bundle.techniques_by_id["T1195.002"].tactics == ["initial-access"]
+    assert any("Low-confidence curated" in warning for warning in bundle.warnings)
+
+
+def test_curated_attack_mapping_provider_rejects_missing_reviewer_for_reviewed(
+    tmp_path: Path,
+) -> None:
+    mapping_file = tmp_path / "curated.yml"
+    mapping_file.write_text(
+        """
+metadata:
+  mapping_framework: vuln-prioritizer-curated-attack
+  mapping_framework_version: "1.0"
+  attack_version: "16.1"
+  technology_domain: enterprise-attack
+  mapping_types:
+    exploitation: reviewed defensive context
+mapping_objects:
+  - cve_id: CVE-2024-0001
+    technique_id: T1190
+    mapping_type: exploitation
+    source: reviewed source
+    confidence: high
+    rationale: defensive rationale
+    review_status: reviewed
+    defensive_note: defensive note only
+""",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(CuratedAttackMappingValidationError, match="reviewer is required"):
+        CuratedAttackMappingProvider().load(mapping_file)
+
+
+def test_curated_attack_mapping_provider_rejects_numeric_confidence(tmp_path: Path) -> None:
+    mapping_file = tmp_path / "curated.yml"
+    mapping_file.write_text(
+        """
+metadata:
+  mapping_framework: vuln-prioritizer-curated-attack
+  mapping_framework_version: "1.0"
+  attack_version: "16.1"
+  technology_domain: enterprise-attack
+  mapping_types:
+    exploitation: reviewed defensive context
+mapping_objects:
+  - cve_id: CVE-2024-0001
+    technique_id: T1190
+    mapping_type: exploitation
+    source: reviewed source
+    confidence: 0.9
+    rationale: defensive rationale
+    review_status: reviewed
+    reviewer: security-review
+    reviewed_at: "2026-04-29"
+    defensive_note: defensive note only
+""",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(CuratedAttackMappingValidationError, match="confidence must be one"):
+        CuratedAttackMappingProvider().load(mapping_file)
+
+
+def test_curated_attack_mapping_provider_rejects_invalid_cve_and_attack_ids(
+    tmp_path: Path,
+) -> None:
+    mapping_file = tmp_path / "curated.yml"
+    mapping_file.write_text(
+        """
+metadata:
+  mapping_framework: vuln-prioritizer-curated-attack
+  mapping_framework_version: "1.0"
+  attack_version: "16.1"
+  technology_domain: enterprise-attack
+  mapping_types:
+    exploitation: reviewed defensive context
+mapping_objects:
+  - cve_id: NOT-A-CVE
+    technique_id: T1190
+    mapping_type: exploitation
+    source: reviewed source
+    confidence: medium
+    rationale: defensive rationale
+    review_status: needs_review
+    defensive_note: defensive note only
+  - cve_id: CVE-2024-0001
+    technique_id: TA0001
+    mapping_type: exploitation
+    source: reviewed source
+    confidence: medium
+    rationale: defensive rationale
+    review_status: needs_review
+    defensive_note: defensive note only
+""",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(CuratedAttackMappingValidationError) as exc_info:
+        CuratedAttackMappingProvider().load(mapping_file)
+
+    message = str(exc_info.value)
+    assert "cve_id must be a valid CVE identifier" in message
+    assert "ATT&CK technique IDs must match" in message
+
+
+def test_attack_provider_local_curated_enriches_structured_attack_data() -> None:
+    provider = AttackProvider()
+
+    results, metadata, warnings = provider.fetch_many(
+        ["CVE-2023-34362", "CVE-2024-3094", "CVE-2024-9999"],
+        enabled=True,
+        source="local-curated",
+        mapping_file=DATA_ROOT / "cve_attack_mappings.yml",
+    )
+
+    assert metadata["source"] == "local-curated"
+    assert metadata["metadata_format"] == "vuln-prioritizer-curated-yml"
+    assert len(metadata["mapping_file_sha256"] or "") == 64
+    assert any("Low-confidence curated" in warning for warning in warnings)
+    assert results["CVE-2023-34362"].mapped is True
+    assert results["CVE-2023-34362"].attack_relevance == "High"
+    assert results["CVE-2023-34362"].attack_techniques == ["T1190"]
+    assert results["CVE-2024-3094"].attack_techniques == ["T1195.002"]
+    assert results["CVE-2024-9999"].mapped is False
 
 
 def test_ctid_provider_rejects_invalid_json(tmp_path: Path) -> None:

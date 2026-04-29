@@ -51,6 +51,7 @@ def test_workbench_attack_source_guardrails_allow_only_reviewable_sources() -> N
         validate_workbench_attack_source("blog")
 
     assert workbench_mapping_source("ctid-mappings-explorer") == "ctid"
+    assert workbench_mapping_source("local-curated") == "local_curated"
     assert workbench_mapping_source("local_curated") == "local_curated"
     assert workbench_mapping_source("manual") == "manual"
     assert workbench_mapping_source("none") == "none"

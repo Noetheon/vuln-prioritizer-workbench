@@ -113,6 +113,24 @@
       "type": "integer",
       "minimum": 0
     },
+    "quality_report": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Present for --attack-source local-curated. Contains mapping quality, review status, confidence, and safety-review counts."
+    },
+    "low_confidence_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "review_status_counts": {
+      "$ref": "#/$defs/countMap"
+    },
+    "confidence_counts": {
+      "$ref": "#/$defs/countMap"
+    },
+    "mapping_type_counts": {
+      "$ref": "#/$defs/countMap"
+    },
     "warnings": {
       "$ref": "#/$defs/stringArray"
     }
@@ -128,6 +146,13 @@
       "type": "array",
       "items": {
         "type": "string"
+      }
+    },
+    "countMap": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "integer",
+        "minimum": 0
       }
     }
   }

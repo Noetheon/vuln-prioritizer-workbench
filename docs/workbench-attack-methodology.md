@@ -26,6 +26,9 @@ Workbench ATT&CK enrichment is evidence-based and deterministic.
   and a defensive note. Free-text comments must stay at defensive triage or
   detection-context level and must not include exploit payloads, commands, or
   step-by-step procedure guidance.
+- Curated local mapping confidence is a `low`, `medium`, or `high` enum. High
+  confidence requires `review_status=reviewed`; reviewed, rejected, and stale
+  entries require `reviewer` and `reviewed_at` metadata.
 
 Analyst annotations are outside the current Workbench contract. If added later, they need separate storage and display from CTID mappings.
 

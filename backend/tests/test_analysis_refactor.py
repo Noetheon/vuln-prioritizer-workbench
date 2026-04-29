@@ -33,6 +33,7 @@ def test_analysis_service_rejects_invalid_policy_thresholds() -> None:
 def test_analysis_service_resolves_attack_option_modes(tmp_path: Path) -> None:
     csv_file = tmp_path / "attack.csv"
     json_file = tmp_path / "attack.json"
+    yaml_file = tmp_path / "attack.yml"
 
     assert service_analysis.resolve_attack_options(
         no_attack=True,
@@ -55,6 +56,13 @@ def test_analysis_service_resolves_attack_option_modes(tmp_path: Path) -> None:
         attack_technique_metadata_file=None,
         offline_attack_file=None,
     ) == (True, "ctid-json", json_file, None)
+    assert service_analysis.resolve_attack_options(
+        no_attack=False,
+        attack_source="none",
+        attack_mapping_file=yaml_file,
+        attack_technique_metadata_file=json_file,
+        offline_attack_file=None,
+    ) == (True, "local-curated", yaml_file, None)
 
 
 def test_analysis_service_filter_helpers_accept_enum_and_string_values() -> None:

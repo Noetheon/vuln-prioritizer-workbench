@@ -8,6 +8,7 @@ from pathlib import Path
 from vuln_prioritizer.attack_sources import (
     ATTACK_SOURCE_CTID_JSON,
     ATTACK_SOURCE_LOCAL_CSV,
+    ATTACK_SOURCE_LOCAL_CURATED,
     ATTACK_SOURCE_NONE,
 )
 from vuln_prioritizer.models import (
@@ -35,6 +36,8 @@ def resolve_attack_options(
         if offline_attack_file is not None:
             return True, ATTACK_SOURCE_LOCAL_CSV, offline_attack_file, None
         if attack_mapping_file is not None:
+            if attack_mapping_file.suffix.lower() in {".yaml", ".yml"}:
+                return True, ATTACK_SOURCE_LOCAL_CURATED, attack_mapping_file, None
             return (
                 True,
                 ATTACK_SOURCE_CTID_JSON,

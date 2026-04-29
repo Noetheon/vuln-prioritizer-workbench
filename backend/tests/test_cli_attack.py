@@ -23,6 +23,7 @@ ATTACK_STIX_FILE = DATA_ROOT / "attack" / "attack_stix_enterprise_16.1_subset.js
 SAMPLE_CVES_MIXED = DATA_ROOT / "sample_cves_mixed.txt"
 SAMPLE_CVES_ATTACK = DATA_ROOT / "sample_cves_attack.txt"
 OPTIONAL_ATTACK_TO_CVE = DATA_ROOT / "optional_attack_to_cve.csv"
+CURATED_ATTACK_MAPPING_FILE = DATA_ROOT / "cve_attack_mappings.yml"
 
 
 def test_cli_analyze_supports_ctid_attack_source(monkeypatch, tmp_path: Path) -> None:
@@ -373,6 +374,105 @@ def test_cli_attack_validate_local_csv_counts_rows_and_marks_legacy_mode(tmp_pat
     assert payload["unique_cves"] == 2
     assert payload["mapping_count"] == 2
     assert any("legacy compatibility mode" in warning for warning in payload["warnings"])
+
+
+def test_cli_attack_validate_local_curated_reports_quality(tmp_path: Path) -> None:
+    output_file = tmp_path / "attack-validate-curated.json"
+
+    result = runner.invoke(
+        app,
+        [
+            "attack",
+            "validate",
+            "--attack-source",
+            "local-curated",
+            "--attack-mapping-file",
+            str(CURATED_ATTACK_MAPPING_FILE),
+            "--output",
+            str(output_file),
+            "--format",
+            "json",
+        ],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(output_file.read_text(encoding="utf-8"))
+    assert payload["source"] == "local-curated"
+    assert payload["mapping_count"] == 6
+    assert payload["unique_cves"] == 6
+    assert payload["quality_report"]["low_confidence_count"] == 1
+    assert payload["confidence_counts"] == {"high": 3, "low": 1, "medium": 2}
+    assert any("Low-confidence curated" in warning for warning in payload["warnings"])
+
+
+def test_cli_attack_validate_local_curated_invalid_file_exits_cleanly(tmp_path: Path) -> None:
+    mapping_file = tmp_path / "curated.yml"
+    mapping_file.write_text(
+        """
+metadata:
+  mapping_framework: vuln-prioritizer-curated-attack
+  mapping_framework_version: "1.0"
+  attack_version: "16.1"
+  technology_domain: enterprise-attack
+  mapping_types:
+    exploitation: reviewed defensive context
+mapping_objects:
+  - cve_id: CVE-2024-0001
+    technique_id: T1190
+    mapping_type: exploitation
+    source: reviewed source
+    confidence: high
+    rationale: defensive rationale
+    review_status: reviewed
+    defensive_note: defensive note only
+""",
+        encoding="utf-8",
+    )
+
+    result = runner.invoke(
+        app,
+        [
+            "attack",
+            "validate",
+            "--attack-source",
+            "local-curated",
+            "--attack-mapping-file",
+            str(mapping_file),
+        ],
+    )
+
+    assert result.exit_code == 2
+    assert "Curated ATT&CK mapping validation failed" in result.stdout
+    assert "reviewer is required" in result.stdout
+
+
+def test_cli_attack_coverage_local_curated_works_offline(tmp_path: Path) -> None:
+    output_file = tmp_path / "coverage-curated.json"
+
+    result = runner.invoke(
+        app,
+        [
+            "attack",
+            "coverage",
+            "--input",
+            str(SAMPLE_CVES_MIXED),
+            "--attack-source",
+            "local-curated",
+            "--attack-mapping-file",
+            str(CURATED_ATTACK_MAPPING_FILE),
+            "--output",
+            str(output_file),
+            "--format",
+            "json",
+        ],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(output_file.read_text(encoding="utf-8"))
+    assert payload["metadata"]["source"] == "local-curated"
+    assert payload["summary"]["mapped_cves"] == 2
+    assert payload["summary"]["unmapped_cves"] == 3
+    assert any("Low-confidence curated" in warning for warning in payload["warnings"])
 
 
 def test_cli_attack_coverage_missing_mapping_file_exits_cleanly(tmp_path: Path) -> None:

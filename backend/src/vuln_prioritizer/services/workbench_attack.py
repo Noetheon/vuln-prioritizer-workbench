@@ -7,6 +7,7 @@ from typing import Any
 
 from vuln_prioritizer.attack_sources import (
     ATTACK_SOURCE_CTID_MAPPINGS_EXPLORER,
+    ATTACK_SOURCE_LOCAL_CURATED,
     ATTACK_SOURCE_NONE,
     WORKBENCH_ALLOWED_MAPPING_SOURCES,
     WORKBENCH_ATTACK_SOURCE_CTID,
@@ -39,6 +40,8 @@ def validate_workbench_attack_source(source: str) -> None:
 def workbench_mapping_source(analysis_attack_source: str) -> str:
     if analysis_attack_source == ATTACK_SOURCE_CTID_MAPPINGS_EXPLORER:
         return WORKBENCH_ATTACK_SOURCE_CTID
+    if analysis_attack_source == ATTACK_SOURCE_LOCAL_CURATED:
+        return WORKBENCH_ATTACK_SOURCE_LOCAL_CURATED
     if analysis_attack_source in {
         WORKBENCH_ATTACK_SOURCE_LOCAL_CURATED,
         WORKBENCH_ATTACK_SOURCE_MANUAL,

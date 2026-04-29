@@ -79,7 +79,9 @@ Published JSON schemas in `docs/schemas/` cover:
 the `input normalize --format json` compatibility alias.
 `attack-curated-mapping.schema.json` is a local ATT&CK mapping artifact schema
 for reviewed JSON or YAML-compatible curated mapping files. It is an input
-contract, not a command output report.
+contract, not a command output report. Its `confidence` field is a `low`,
+`medium`, or `high` enum; the loader emits numeric confidence only internally
+for compatibility with existing enrichment models.
 
 `report html` is a secondary renderer over the analysis JSON contract. It does not define its own independent source model.
 `report evidence-bundle` is a ZIP transport over the analysis JSON contract. Its published machine contract is the `manifest.json` stored inside the bundle.
@@ -211,7 +213,8 @@ ATT&CK fields are optional enrichment.
 
 Current guarantees:
 
-- ATT&CK is local-file sourced only
+- ATT&CK is local-file sourced only through `ctid-json`, reviewed
+  `local-curated`, or legacy `local-csv`
 - no heuristic or LLM-generated CVE-to-ATT&CK mapping is performed
 - `attack_relevance` is a contextual, explainable helper label produced locally by this CLI
 - absence of ATT&CK data is represented as unmapped context, not guessed context

@@ -11,12 +11,14 @@ from vuln_prioritizer.attack_sources import (
     ATTACK_SOURCE_CTID_JSON,
     ATTACK_SOURCE_CTID_MAPPINGS_EXPLORER,
     ATTACK_SOURCE_LOCAL_CSV,
+    ATTACK_SOURCE_LOCAL_CURATED,
     ATTACK_SOURCE_NONE,
     LEGACY_LOCAL_CSV_WARNING,
 )
 from vuln_prioritizer.models import AttackData, AttackTechnique
 from vuln_prioritizer.providers.attack_metadata import AttackMetadataProvider
 from vuln_prioritizer.providers.ctid_mappings import CtidMappingsProvider
+from vuln_prioritizer.providers.curated_attack_mappings import CuratedAttackMappingProvider
 from vuln_prioritizer.utils import normalize_cve_id
 
 SEPARATOR_RE = re.compile(r"[;|]")
@@ -27,6 +29,7 @@ class AttackProvider:
 
     def __init__(self) -> None:
         self.ctid_provider = CtidMappingsProvider()
+        self.curated_provider = CuratedAttackMappingProvider()
         self.metadata_provider = AttackMetadataProvider()
         self.enrichment_service = AttackEnrichmentService()
 
@@ -47,6 +50,8 @@ class AttackProvider:
             candidate = mapping_file or offline_file
             if candidate is not None and candidate.suffix.lower() == ".csv":
                 source = ATTACK_SOURCE_LOCAL_CSV
+            elif candidate is not None and candidate.suffix.lower() in {".yaml", ".yml"}:
+                source = ATTACK_SOURCE_LOCAL_CURATED
             else:
                 source = ATTACK_SOURCE_CTID_JSON
         if source == ATTACK_SOURCE_NONE:
@@ -85,6 +90,9 @@ class AttackProvider:
                 mapping_file=mapping_file,
                 technique_metadata_file=technique_metadata_file,
             )
+
+        if normalized_source == ATTACK_SOURCE_LOCAL_CURATED:
+            return self._load_local_curated(cve_ids, mapping_file=mapping_file)
 
         return (
             {},
@@ -161,6 +169,43 @@ class AttackProvider:
             mapping_contact=mapping_metadata.get("contact"),
         )
         return results, metadata, mapping_warnings + metadata_warnings
+
+    def _load_local_curated(
+        self,
+        cve_ids: list[str],
+        *,
+        mapping_file: Path,
+    ) -> tuple[dict[str, AttackData], dict[str, str | None], list[str]]:
+        bundle = self.curated_provider.load(mapping_file)
+        results = self.enrichment_service.enrich_ctid(
+            cve_ids,
+            mappings_by_cve=bundle.mappings_by_cve,
+            techniques_by_id=bundle.techniques_by_id,
+            source=ATTACK_SOURCE_LOCAL_CURATED,
+            source_version=bundle.metadata.get("mapping_framework_version")
+            or bundle.metadata.get("mapping_version"),
+            attack_version=bundle.metadata.get("attack_version"),
+            domain=bundle.metadata.get("domain"),
+        )
+        metadata = _build_metadata(
+            source=ATTACK_SOURCE_LOCAL_CURATED,
+            mapping_file=mapping_file,
+            source_version=bundle.metadata.get("mapping_framework_version")
+            or bundle.metadata.get("mapping_version"),
+            attack_version=bundle.metadata.get("attack_version"),
+            domain=bundle.metadata.get("domain"),
+            mapping_framework=bundle.metadata.get("mapping_framework"),
+            mapping_framework_version=bundle.metadata.get("mapping_framework_version"),
+            mapping_file_sha256=bundle.metadata.get("mapping_file_sha256"),
+            metadata_format=bundle.metadata.get("metadata_format"),
+            metadata_source=bundle.metadata.get("metadata_source"),
+            mapping_created_at=bundle.metadata.get("creation_date"),
+            mapping_updated_at=bundle.metadata.get("last_update"),
+            mapping_organization=bundle.metadata.get("organization"),
+            mapping_author=bundle.metadata.get("author"),
+            mapping_contact=bundle.metadata.get("contact"),
+        )
+        return results, metadata, bundle.warnings
 
     def _load_legacy_csv(
         self,

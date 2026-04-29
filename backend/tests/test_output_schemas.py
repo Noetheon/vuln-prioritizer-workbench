@@ -149,8 +149,18 @@ def test_attack_curated_mapping_example_matches_schema() -> None:
     jsonschema.validate(payload, schema)
     jsonschema.validate(yaml_payload, schema)
     assert payload["mapping_objects"][0]["technique_id"] == "T1190"
-    assert payload["mapping_objects"][0]["confidence"] == 0.9
-    assert "commands" in payload["mapping_objects"][0]["comments"]
+    assert payload["mapping_objects"][0]["confidence"] == "high"
+    assert payload["mapping_objects"][0]["reviewer"] == "security-review"
+    assert "not exploit proof" in payload["mapping_objects"][0]["defensive_note"]
+
+
+def test_attack_curated_mapping_demo_yaml_matches_schema() -> None:
+    schema = _load_schema("attack-curated-mapping.schema.json")
+    payload = yaml.safe_load((DATA_ROOT / "cve_attack_mappings.yml").read_text(encoding="utf-8"))
+
+    jsonschema.validate(payload, schema)
+    assert len(payload["mapping_objects"]) == 6
+    assert any(item["confidence"] == "low" for item in payload["mapping_objects"])
 
 
 def test_attack_curated_mapping_schema_rejects_unreviewable_mappings() -> None:
@@ -169,6 +179,16 @@ def test_attack_curated_mapping_schema_rejects_unreviewable_mappings() -> None:
     invalid_technique["mapping_objects"][0]["technique_id"] = "TA0001"
     with pytest.raises(jsonschema.ValidationError):
         jsonschema.validate(invalid_technique, schema)
+
+    numeric_confidence = json.loads(json.dumps(payload))
+    numeric_confidence["mapping_objects"][0]["confidence"] = 0.9
+    with pytest.raises(jsonschema.ValidationError):
+        jsonschema.validate(numeric_confidence, schema)
+
+    missing_reviewer = json.loads(json.dumps(payload))
+    missing_reviewer["mapping_objects"][0].pop("reviewer")
+    with pytest.raises(jsonschema.ValidationError):
+        jsonschema.validate(missing_reviewer, schema)
 
 
 def test_example_score_json_documents_vpw_030_operational_score() -> None:
@@ -555,6 +575,31 @@ def test_attack_validation_json_matches_published_schema(tmp_path: Path) -> None
     assert result.exit_code == 0
     payload = json.loads(output_file.read_text(encoding="utf-8"))
     jsonschema.validate(payload, _load_schema("attack-validation-report.schema.json"))
+
+
+def test_attack_validation_local_curated_json_matches_published_schema(tmp_path: Path) -> None:
+    output_file = tmp_path / "attack-validation-curated.json"
+
+    result = runner.invoke(
+        app,
+        [
+            "attack",
+            "validate",
+            "--attack-source",
+            "local-curated",
+            "--attack-mapping-file",
+            str(DATA_ROOT / "cve_attack_mappings.yml"),
+            "--output",
+            str(output_file),
+            "--format",
+            "json",
+        ],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(output_file.read_text(encoding="utf-8"))
+    jsonschema.validate(payload, _load_schema("attack-validation-report.schema.json"))
+    assert payload["quality_report"]["low_confidence_count"] == 1
 
 
 def test_attack_coverage_json_matches_published_schema(tmp_path: Path) -> None:

@@ -69,6 +69,40 @@ def test_attack_enrichment_summary_counts_mapped_and_unmapped_items() -> None:
     assert summary.tactic_distribution == {"initial-access": 1}
 
 
+def test_attack_enrichment_service_marks_curated_context_relevance() -> None:
+    service = AttackEnrichmentService()
+
+    results = service.enrich_ctid(
+        ["CVE-2024-0001", "CVE-2024-0002"],
+        mappings_by_cve={
+            "CVE-2024-0001": [
+                AttackMapping(
+                    capability_id="CVE-2024-0001",
+                    attack_object_id="T1190",
+                    attack_object_name="Exploit Public-Facing Application",
+                    mapping_type="exploitation",
+                )
+            ],
+            "CVE-2024-0002": [
+                AttackMapping(
+                    capability_id="CVE-2024-0002",
+                    attack_object_id="T1046",
+                    attack_object_name="Network Service Discovery",
+                    mapping_type="detection_context",
+                )
+            ],
+        },
+        techniques_by_id={},
+        source="local-curated",
+        source_version="1.0",
+        attack_version="16.1",
+        domain="enterprise-attack",
+    )
+
+    assert results["CVE-2024-0001"].attack_relevance == "High"
+    assert results["CVE-2024-0002"].attack_relevance == "Low"
+
+
 def test_attack_enrichment_surfaces_missing_metadata_in_note_and_rationale() -> None:
     service = AttackEnrichmentService()
 

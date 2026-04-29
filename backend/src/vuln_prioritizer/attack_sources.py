@@ -4,6 +4,7 @@ from __future__ import annotations
 
 ATTACK_SOURCE_NONE = "none"
 ATTACK_SOURCE_LOCAL_CSV = "local-csv"
+ATTACK_SOURCE_LOCAL_CURATED = "local-curated"
 ATTACK_SOURCE_CTID_JSON = "ctid-json"
 ATTACK_SOURCE_CTID_MAPPINGS_EXPLORER = "ctid-mappings-explorer"
 

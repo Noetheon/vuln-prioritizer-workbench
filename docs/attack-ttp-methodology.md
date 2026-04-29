@@ -21,11 +21,11 @@ Every curated mapping object must include:
 
 | Field | Requirement |
 | --- | --- |
-| `capability_id` | CVE identifier such as `CVE-2021-44228`. |
-| `attack_object_id` | ATT&CK technique or sub-technique ID, matching `T####` or `T####.###`. |
+| `cve_id` | CVE identifier such as `CVE-2021-44228`. `capability_id` may be supplied only as a CTID-compatible alias. |
+| `technique_id` | ATT&CK technique or sub-technique ID, matching `T####` or `T####.###`. `attack_object_id` may be supplied only as a CTID-compatible alias. |
 | `mapping_type` | One of `exploitation`, `impact`, `post_exploitation`, `mitigation_context`, or `detection_context`. |
 | `source` | Human-readable source for the mapping. |
-| `confidence` | Numeric value from `0.0` through `1.0`. |
+| `confidence` | Enum bucket: `low`, `medium`, or `high`. Numeric confidence values are rejected by the curated artifact validator. |
 | `rationale` | Defensive reason for the mapping. |
 | `review_status` | One of `unreviewed`, `needs_review`, `reviewed`, `rejected`, or `stale`. |
 | `defensive_note` | Required safety note that frames the mapping as defensive context only. |
@@ -34,13 +34,23 @@ Optional fields such as `capability_description`, `comments`, and `references`
 must remain high-level defensive context. They must not contain exploit payloads,
 reproduction steps, credential-testing guidance, or command sequences.
 
+Reviewer rules are enforced by the loader and schema:
+
+- `review_status=reviewed`, `rejected`, or `stale` requires `reviewer` and
+  `reviewed_at`.
+- `confidence=high` requires `review_status=reviewed`.
+- `confidence=low` remains valid but is highlighted in the mapping quality
+  report.
+
 ## Schema And Example
 
 - Schema: [`docs/schemas/attack-curated-mapping.schema.json`](schemas/attack-curated-mapping.schema.json)
 - Example: [`docs/examples/example_attack_curated_mapping.json`](examples/example_attack_curated_mapping.json)
 
-The schema accepts JSON and YAML-compatible object shapes after parsing. YAML
-files should use the same keys as the JSON example.
+The canonical demo file for the duplicate VPW execution track is
+`data/cve_attack_mappings.yml`. The schema accepts JSON and YAML-compatible
+object shapes after parsing. YAML files should use the same keys as the JSON
+example.
 
 ## Validation
 
@@ -48,9 +58,10 @@ Use the published schema for local artifact checks:
 
 ```bash
 python3 -m pytest -q backend/tests/test_output_schemas.py::test_attack_curated_mapping_example_matches_schema --no-cov
+python3 -m vuln_prioritizer.cli attack validate --attack-source local-curated --attack-mapping-file data/cve_attack_mappings.yml --format json
 ```
 
-The schema rejects missing `source`, `rationale`, or `confidence` fields and
-rejects malformed ATT&CK technique IDs. Free-text safety still requires human
-review; JSON Schema cannot reliably prove that prose contains no offensive
-procedure guidance.
+The schema and loader reject missing `source`, `rationale`, `confidence`,
+reviewer metadata, and malformed ATT&CK technique IDs. Free-text safety still
+requires human review; JSON Schema cannot reliably prove that prose contains no
+offensive procedure guidance.
