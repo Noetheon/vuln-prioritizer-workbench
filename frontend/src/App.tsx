@@ -1,4 +1,4 @@
-import { useNavigate } from "@tanstack/react-router"
+import { Link, useLocation, useNavigate } from "@tanstack/react-router"
 import {
   Activity,
   AlertTriangle,
@@ -6,6 +6,7 @@ import {
   Database,
   FileArchive,
   FileInput,
+  FolderKanban,
   Gauge,
   GitBranch,
   KeyRound,
@@ -27,12 +28,100 @@ import {
   type WorkbenchStatus,
 } from "./client"
 
-const navItems = [
-  { label: "Overview", icon: LayoutDashboard, active: true },
-  { label: "Imports", icon: FileInput, active: false },
-  { label: "Findings", icon: ListChecks, active: false },
-  { label: "Reports", icon: FileArchive, active: false },
-  { label: "Settings", icon: Settings, active: false },
+const workbenchNavigation = [
+  { label: "Dashboard", icon: LayoutDashboard, to: "/" },
+  { label: "Projects", icon: FolderKanban, to: "/projects" },
+  { label: "Imports", icon: FileInput, to: "/imports" },
+  { label: "Findings", icon: ListChecks, to: "/findings" },
+  { label: "Assets", icon: ShieldCheck, to: "/assets" },
+  { label: "Providers", icon: Database, to: "/providers" },
+  { label: "Reports", icon: FileArchive, to: "/reports" },
+  { label: "Settings", icon: Settings, to: "/settings" },
+] as const
+
+const routeDetails: Record<
+  (typeof workbenchNavigation)[number]["to"],
+  {
+    eyebrow: string
+    title: string
+    panelTitle: string
+    panelDetail: string
+  }
+> = {
+  "/": {
+    eyebrow: "VPW Template Migration",
+    title: "Risk Operations",
+    panelTitle: "Priority Queue",
+    panelDetail: "Current project signal review",
+  },
+  "/projects": {
+    eyebrow: "Workbench Projects",
+    title: "Projects",
+    panelTitle: "Project Coverage",
+    panelDetail: "Visible workspaces and decision backlog",
+  },
+  "/imports": {
+    eyebrow: "Workbench Imports",
+    title: "Imports",
+    panelTitle: "Import Queue",
+    panelDetail: "Normalized scanner, SBOM, and CVE-list inputs",
+  },
+  "/findings": {
+    eyebrow: "Workbench Findings",
+    title: "Findings",
+    panelTitle: "Finding Decisions",
+    panelDetail: "Prioritized CVEs awaiting review",
+  },
+  "/assets": {
+    eyebrow: "Workbench Assets",
+    title: "Assets",
+    panelTitle: "Asset Context",
+    panelDetail: "Business and exposure context for ranking",
+  },
+  "/providers": {
+    eyebrow: "Workbench Providers",
+    title: "Providers",
+    panelTitle: "Provider Signals",
+    panelDetail: "NVD, EPSS, KEV, and local snapshot status",
+  },
+  "/reports": {
+    eyebrow: "Workbench Reports",
+    title: "Reports",
+    panelTitle: "Evidence Outputs",
+    panelDetail: "Report and evidence bundle readiness",
+  },
+  "/settings": {
+    eyebrow: "Workbench Settings",
+    title: "Settings",
+    panelTitle: "User Settings",
+    panelDetail: "Current authenticated user and workspace session",
+  },
+}
+
+type WorkbenchPath = keyof typeof routeDetails
+
+function normalizeWorkbenchPath(pathname: string): WorkbenchPath {
+  const normalized =
+    pathname.length > 1 ? pathname.replace(/\/+$/, "") : pathname
+  return normalized in routeDetails ? (normalized as WorkbenchPath) : "/"
+}
+
+function isActivePath(currentPath: WorkbenchPath, targetPath: WorkbenchPath) {
+  return currentPath === targetPath
+}
+
+const currentUserLabel = (user: UserPublic | null) =>
+  user?.email ?? "Local workspace"
+
+const settingsSummary = (user: UserPublic | null) => [
+  {
+    label: "Signed-in user",
+    value: currentUserLabel(user),
+  },
+  {
+    label: "Session",
+    value: user ? "Authenticated" : "Loading",
+  },
 ]
 
 const metrics = [
@@ -89,6 +178,9 @@ const timeline = [
 
 export function App() {
   const navigate = useNavigate()
+  const location = useLocation()
+  const currentPath = normalizeWorkbenchPath(location.pathname)
+  const routeDetail = routeDetails[currentPath]
   const [status, setStatus] = useState<WorkbenchStatus | null>(null)
   const [providerStatus, setProviderStatus] =
     useState<ProviderStatusPublic | null>(null)
@@ -137,7 +229,7 @@ export function App() {
 
   return (
     <div className="app-shell">
-      <aside className="sidebar" aria-label="Workbench navigation">
+      <aside className="sidebar" aria-label="Workbench sidebar">
         <div className="brand">
           <div className="brand-mark" aria-hidden="true">
             VP
@@ -147,29 +239,36 @@ export function App() {
             <span>Workbench</span>
           </div>
         </div>
-        <nav className="nav-list">
-          {navItems.map((item) => (
-            <button
-              className={item.active ? "nav-item active" : "nav-item"}
-              key={item.label}
-              type="button"
+        <nav className="nav-list" aria-label="Workbench navigation">
+          {workbenchNavigation.map((entry) => (
+            <Link
+              aria-current={
+                isActivePath(currentPath, entry.to) ? "page" : undefined
+              }
+              className={
+                isActivePath(currentPath, entry.to)
+                  ? "nav-item active"
+                  : "nav-item"
+              }
+              key={entry.label}
+              to={entry.to}
             >
-              <item.icon aria-hidden="true" size={18} />
-              <span>{item.label}</span>
-            </button>
+              <entry.icon aria-hidden="true" size={18} />
+              <span>{entry.label}</span>
+            </Link>
           ))}
         </nav>
         <div className="sidebar-footer">
           <KeyRound aria-hidden="true" size={18} />
-          <span>{currentUser?.email ?? "Local workspace"}</span>
+          <span>{currentUserLabel(currentUser)}</span>
         </div>
       </aside>
 
       <main className="workspace">
         <header className="topbar">
           <div>
-            <span className="eyebrow">VPW Template Migration</span>
-            <h1>Risk Operations</h1>
+            <span className="eyebrow">{routeDetail.eyebrow}</span>
+            <h1>{routeDetail.title}</h1>
           </div>
           <div
             className="status-strip"
@@ -233,12 +332,23 @@ export function App() {
           ))}
         </section>
 
+        {currentPath === "/settings" ? (
+          <section className="settings-summary" aria-label="User Settings">
+            {settingsSummary(currentUser).map((entry) => (
+              <div key={entry.label}>
+                <span>{entry.label}</span>
+                <strong>{entry.value}</strong>
+              </div>
+            ))}
+          </section>
+        ) : null}
+
         <section className="content-grid">
           <div className="work-panel">
             <div className="panel-header">
               <div>
-                <h2>Priority Queue</h2>
-                <span>Current project signal review</span>
+                <h2>{routeDetail.panelTitle}</h2>
+                <span>{routeDetail.panelDetail}</span>
               </div>
               <button
                 className="icon-button"

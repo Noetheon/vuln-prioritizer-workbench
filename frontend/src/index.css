@@ -87,6 +87,7 @@ input {
   background: transparent;
   color: #d8e0e3;
   cursor: pointer;
+  text-decoration: none;
   text-align: left;
 }
 
@@ -238,6 +239,41 @@ h2 {
   color: #111827;
   font-size: 1.75rem;
   line-height: 1;
+}
+
+.settings-summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1px;
+  overflow: hidden;
+  border: 1px solid #d7e0dd;
+  border-radius: 8px;
+  background: #d7e0dd;
+}
+
+.settings-summary div {
+  min-height: 64px;
+  padding: 14px;
+  background: #ffffff;
+}
+
+.settings-summary span,
+.settings-summary strong {
+  display: block;
+}
+
+.settings-summary span {
+  color: #64748b;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.settings-summary strong {
+  margin-top: 6px;
+  overflow-wrap: anywhere;
+  color: #111827;
+  font-size: 0.98rem;
 }
 
 .content-grid {
@@ -636,6 +672,7 @@ td {
   }
 
   .metric-grid,
+  .settings-summary,
   .content-grid,
   .template-status {
     grid-template-columns: 1fr;
