@@ -144,6 +144,14 @@ Constraints and indexes:
 - index on `(project_id, status)`
 - indexes on `(project_id, asset_id)` and `(project_id, vulnerability_id)`
 
+The import path uses `(project_id, dedup_key)` as the primary duplicate guard.
+The key is deterministic for normalized input occurrences and uses project,
+CVE/source identifier, component identity, and asset reference. PURL is the
+preferred component identity; otherwise the key falls back to component name,
+version, and package type. Missing component or asset context is represented by
+an explicit empty marker so repeated minimal CVE-list imports reuse the same
+finding instead of relying on SQL NULL uniqueness behavior.
+
 ## Persistence Contract
 
 A single project must be able to persist and retrieve a connected graph:
