@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 # ruff: noqa: F403, F405
+from typing import Any
+
 from fastapi import APIRouter
 
 from vuln_prioritizer.web.workbench_common import *
@@ -528,6 +530,7 @@ def finding_detail(
     if project is None:
         raise HTTPException(status_code=404, detail="Project not found.")
     attack_contexts = repo.list_finding_attack_contexts(finding.id)
+    attack_context = attack_contexts[0] if attack_contexts else None
     return templates.TemplateResponse(
         request,
         "findings/detail.html",
@@ -537,11 +540,96 @@ def finding_detail(
             {
                 "project": project,
                 "finding": finding,
-                "attack_context": attack_contexts[0] if attack_contexts else None,
+                "attack_context": attack_context,
+                "attack_context_view": _finding_attack_context_view(attack_context),
                 "csrf_token": settings.csrf_token,
             },
         ),
     )
+
+
+def _finding_attack_context_view(context: Any | None) -> dict[str, Any] | None:
+    if context is None:
+        return None
+    mappings = [item for item in (context.mappings_json or []) if isinstance(item, dict)]
+    techniques = [item for item in (context.techniques_json or []) if isinstance(item, dict)]
+    confidence = _finding_attack_confidence(context, mappings)
+    return {
+        "mapped": bool(context.mapped),
+        "source": context.source,
+        "source_version": context.source_version,
+        "source_hash": context.source_hash,
+        "metadata_hash": context.metadata_hash,
+        "attack_version": context.attack_version,
+        "domain": context.domain,
+        "attack_relevance": context.attack_relevance,
+        "threat_context_rank": context.threat_context_rank,
+        "rationale": context.rationale,
+        "review_status": context.review_status,
+        "confidence": confidence,
+        "low_confidence": confidence == "low",
+        "techniques": techniques,
+        "technique_rows": _finding_attack_technique_rows(
+            techniques,
+            mappings,
+            confidence,
+            context.review_status,
+        ),
+        "tactics": context.tactics_json or [],
+        "mappings": mappings,
+    }
+
+
+def _finding_attack_confidence(context: Any, mappings: list[dict[str, Any]]) -> str | None:
+    labels = {
+        str(item["confidence"]).strip().lower()
+        for item in mappings
+        if str(item.get("confidence") or "").strip().lower() in {"low", "medium", "high"}
+    }
+    if "low" in labels:
+        return "low"
+    if "medium" in labels:
+        return "medium"
+    if "high" in labels:
+        return "high"
+    if not context.mapped:
+        return None
+    if context.source == "ctid":
+        return "high"
+    if context.source in {"local_curated", "manual"}:
+        return "medium"
+    return None
+
+
+def _finding_attack_technique_rows(
+    techniques: list[dict[str, Any]],
+    mappings: list[dict[str, Any]],
+    context_confidence: str | None,
+    context_review_status: str,
+) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for technique in techniques:
+        technique_id = str(technique.get("attack_object_id") or technique.get("technique_id") or "")
+        related = next(
+            (
+                mapping
+                for mapping in mappings
+                if str(mapping.get("attack_object_id") or mapping.get("technique_id") or "")
+                == technique_id
+            ),
+            {},
+        )
+        rows.append(
+            {
+                "attack_object_id": technique_id,
+                "name": technique.get("name") or technique_id or "N.A.",
+                "url": technique.get("url"),
+                "tactics": technique.get("tactics") or [],
+                "confidence": related.get("confidence") or context_confidence or "unknown",
+                "review_status": related.get("review_status") or context_review_status,
+            }
+        )
+    return rows
 
 
 @router.post("/web/findings/{finding_id}/status", response_class=HTMLResponse)
