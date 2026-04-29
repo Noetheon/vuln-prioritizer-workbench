@@ -22,7 +22,7 @@
 | `rollup` | analysis JSON or snapshot JSON | `markdown`, `json` | JSON schema | Aggregates findings by `asset_id` or `asset_business_service`, keeps waiver lifecycle debt visible, and ranks buckets for remediation planning without rerunning enrichment. |
 | `attack validate` | ATT&CK local files | `markdown`, `json` | JSON schema | Validates local mapping and metadata artifacts; `ctid-json` is the preferred workflow. |
 | `attack coverage` | `--input PATH` | `markdown`, `json` | JSON schema | Uses the same input loader for CVE extraction. |
-| `attack navigator-layer` | `--input PATH` | Navigator layer JSON | Navigator JSON, no local schema here | Exports a frequency-based ATT&CK Navigator layer. |
+| `attack navigator-layer` | `--input PATH` | Navigator layer JSON | Navigator JSON, no local schema here | Exports a frequency-based ATT&CK Navigator layer. The template Workbench also exposes `attack-navigator` as a run report artifact. |
 | `data status` | none | `json` | JSON schema | Cache namespace inspection plus optional local ATT&CK metadata validation. |
 | `data update` | optional repeatable `--input PATH` / `--cve` | `json` | JSON schema | Cache refresh for `nvd`, `epss`, and `kev`; `table` remains the default terminal view. |
 | `data verify` | optional repeatable `--input PATH` / `--cve` | `json` | JSON schema | Cache coverage, checksum, and pinned local file verification; `table` remains the default terminal view. |
@@ -31,7 +31,7 @@
 | `db cleanup-artifacts` | Workbench environment settings | terminal status | Workbench report/evidence cleanup side effect | Dry-runs by default; `--delete` removes expired/orphaned managed artifacts. |
 | `web serve` | Workbench environment settings | local HTTP service | FastAPI/OpenAPI + HTML UI | Serves the Workbench app with `--host`, `--port`, and optional `--reload`. |
 | `report html` | analysis JSON | `html` | Consumes analysis JSON contract | No live enrichment during rendering. |
-| `report evidence-bundle` | analysis JSON | `zip` | Manifest schema inside bundle | Packages saved analysis JSON, regenerated HTML, Markdown summary, and optional source input copy. |
+| `report evidence-bundle` | analysis JSON | `zip` | Manifest schema inside bundle | Packages saved analysis JSON, regenerated HTML, Markdown summary, optional source input copy, and optional ATT&CK Navigator layer when mappings exist. |
 | `report verify-evidence-bundle` | evidence ZIP | `json` | JSON schema | Verifies ZIP members against the embedded manifest and reports missing, modified, unexpected, or malformed bundle content. |
 
 ## Input-format matrix

@@ -23,6 +23,7 @@ from app.models import (
     AnalysisRun,
     AnalysisRunStatus,
     Finding,
+    FindingAttackContext,
     FindingOccurrence,
     Project,
     ProviderSnapshot,
@@ -30,6 +31,7 @@ from app.models import (
 )
 from app.models.base import get_datetime_utc
 from app.repositories import ReportRepository
+from app.services.attack import build_attack_navigator_layer_payload
 from vuln_prioritizer.reporting_evidence import (
     verify_evidence_bundle as verify_evidence_bundle_archive,
 )
@@ -39,11 +41,13 @@ REPORT_KIND_EXECUTIVE_HTML = "executive-html"
 REPORT_KIND_ANALYSIS_JSON = "analysis-result-json"
 REPORT_KIND_FINDINGS_CSV = "findings-csv"
 REPORT_KIND_EVIDENCE_BUNDLE = "evidence-bundle"
+REPORT_KIND_ATTACK_NAVIGATOR = "attack-navigator-layer"
 REPORT_FILENAME_TECHNICAL_MARKDOWN = "technical-report.md"
 REPORT_FILENAME_EXECUTIVE_HTML = "executive-report.html"
 REPORT_FILENAME_ANALYSIS_JSON = "analysis-result.v1.json"
 REPORT_FILENAME_FINDINGS_CSV = "findings.csv"
 REPORT_FILENAME_EVIDENCE_BUNDLE = "evidence-bundle.zip"
+REPORT_FILENAME_ATTACK_NAVIGATOR = "attack-navigator-layer.json"
 REPORT_CONTENT_TYPE_MARKDOWN = "text/markdown; charset=utf-8"
 REPORT_CONTENT_TYPE_HTML = "text/html; charset=utf-8"
 REPORT_CONTENT_TYPE_JSON = "application/json; charset=utf-8"
@@ -491,10 +495,62 @@ class ReportService:
             content_type=REPORT_CONTENT_TYPE_CSV,
         )
 
+    def create_attack_navigator_layer(
+        self,
+        *,
+        run: AnalysisRun,
+        project: Project,
+        filter_value: str = "all",
+    ) -> Report:
+        """Generate an ATT&CK Navigator layer JSON report artifact."""
+        payload, findings, generated_at = self._report_payload(run=run, project=project)
+        attack_contexts = self._run_attack_contexts(run)
+        layer = self._attack_navigator_layer(
+            run=run,
+            project=project,
+            findings=findings,
+            attack_contexts=attack_contexts,
+            generated_at=generated_at,
+            filter_value=filter_value,
+            include_empty=True,
+        )
+        if layer is None:
+            raise ReportGenerationError("ATT&CK Navigator layer generation failed.")
+        content = json.dumps(layer, indent=2, sort_keys=True) + "\n"
+        return self._persist_report(
+            run=run,
+            project=project,
+            generated_at=generated_at,
+            finding_count=len(findings),
+            provider_snapshot_id=run.provider_snapshot_id,
+            content=content,
+            kind=REPORT_KIND_ATTACK_NAVIGATOR,
+            report_format="attack-navigator",
+            filename=REPORT_FILENAME_ATTACK_NAVIGATOR,
+            content_type=REPORT_CONTENT_TYPE_JSON,
+            extra_metadata={
+                "attack_filter": filter_value,
+                "navigator_version": layer.get("version"),
+                "technique_count": len(layer.get("techniques", [])),
+            },
+        )
+
     def create_evidence_bundle(self, *, run: AnalysisRun, project: Project) -> Report:
         """Generate a verifiable evidence ZIP bundle and persist its metadata."""
         payload, findings, generated_at = self._report_payload(run=run, project=project)
-        bundle_bytes, manifest = render_evidence_bundle_zip(payload)
+        attack_layer = self._attack_navigator_layer(
+            run=run,
+            project=project,
+            findings=findings,
+            attack_contexts=self._run_attack_contexts(run),
+            generated_at=generated_at,
+            filter_value="all",
+            include_empty=False,
+        )
+        bundle_bytes, manifest = render_evidence_bundle_zip(
+            payload,
+            attack_navigator_layer=attack_layer,
+        )
         return self._persist_binary_report(
             run=run,
             project=project,
@@ -567,6 +623,7 @@ class ReportService:
         report_format: str,
         filename: str,
         content_type: str,
+        extra_metadata: dict[str, Any] | None = None,
     ) -> Report:
         report_id = uuid.uuid4()
         report_path = self._report_path(
@@ -591,6 +648,7 @@ class ReportService:
             report_format=report_format,
             filename=filename,
             content_type=content_type,
+            extra_metadata=extra_metadata,
         )
 
     def _persist_binary_report(
@@ -708,6 +766,39 @@ class ReportService:
         for occurrence in self.session.exec(statement).all():
             occurrences.setdefault(occurrence.finding_id, []).append(occurrence)
         return occurrences
+
+    def _run_attack_contexts(
+        self,
+        run: AnalysisRun,
+    ) -> list[FindingAttackContext]:
+        statement = (
+            select(FindingAttackContext)
+            .where(FindingAttackContext.analysis_run_id == run.id)
+            .order_by(col(FindingAttackContext.created_at).desc())
+        )
+        return list(self.session.exec(statement).all())
+
+    def _attack_navigator_layer(
+        self,
+        *,
+        run: AnalysisRun,
+        project: Project,
+        findings: list[Finding],
+        attack_contexts: list[FindingAttackContext],
+        generated_at: datetime,
+        filter_value: str,
+        include_empty: bool,
+    ) -> dict[str, Any] | None:
+        layer = build_attack_navigator_layer_payload(
+            project_id=project.id,
+            project_name=project.name,
+            run_id=run.id,
+            findings=findings,
+            attack_contexts=attack_contexts,
+            filter_value=filter_value,
+            generated_at=generated_at,
+        )
+        return layer if include_empty or layer.get("techniques") else None
 
     def _report_path(
         self,
@@ -989,7 +1080,11 @@ def render_findings_csv(payload: MarkdownReportPayload) -> str:
     return output.getvalue()
 
 
-def render_evidence_bundle_zip(payload: MarkdownReportPayload) -> tuple[bytes, dict[str, Any]]:
+def render_evidence_bundle_zip(
+    payload: MarkdownReportPayload,
+    *,
+    attack_navigator_layer: dict[str, Any] | None = None,
+) -> tuple[bytes, dict[str, Any]]:
     """Render a deterministic evidence ZIP and return its manifest payload."""
     bundle_payload, payload_redactions = _redacted_bundle_payload(payload)
     analysis_payload = json.loads(render_analysis_result_json(bundle_payload))
@@ -1021,6 +1116,19 @@ def render_evidence_bundle_zip(payload: MarkdownReportPayload) -> tuple[bytes, d
             "provider-snapshot",
         ),
     ]
+    if attack_navigator_layer is not None:
+        redacted_layer, layer_redactions = _redact_bundle_value(
+            attack_navigator_layer,
+            path_prefix="attack_navigator_layer",
+        )
+        provider_redactions.extend(layer_redactions)
+        entries.append(
+            (
+                REPORT_FILENAME_ATTACK_NAVIGATOR,
+                _json_bytes(redacted_layer),
+                REPORT_KIND_ATTACK_NAVIGATOR,
+            )
+        )
     file_entries = [
         _bundle_file_entry(path=path, content=content, kind=kind) for path, content, kind in entries
     ]
@@ -1065,6 +1173,11 @@ def render_evidence_bundle_zip(payload: MarkdownReportPayload) -> tuple[bytes, d
         },
         "files": file_entries,
     }
+    if REPORT_FILENAME_ATTACK_NAVIGATOR in artifact_hashes:
+        manifest["attack_navigator_layer"] = {
+            "bundle_path": REPORT_FILENAME_ATTACK_NAVIGATOR,
+            "sha256": artifact_hashes[REPORT_FILENAME_ATTACK_NAVIGATOR],
+        }
 
     output = BytesIO()
     with zipfile.ZipFile(output, "w", compression=zipfile.ZIP_DEFLATED) as archive:

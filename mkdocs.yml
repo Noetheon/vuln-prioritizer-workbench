@@ -96,6 +96,7 @@ nav:
       - VPW-057 ATT&CK Finding Context: evidence/vpw-057-attack-context-enrichment.md
       - VPW-058 TTP Context Tab: evidence/vpw-058-ttp-context-tab.md
       - VPW-059 ATT&CK Summary Dashboard: evidence/vpw-059-attack-summary-dashboard.md
+      - VPW-060 ATT&CK Navigator Layer: evidence/vpw-060-attack-navigator-layer.md
       - Historical Evidence Archive: evidence.md
       - Current State Audit: evidence/current_state_audit.md
       - V0.3 Submission Checklist: evidence/final_submission_checklist.md
