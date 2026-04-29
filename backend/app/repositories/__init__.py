@@ -3,11 +3,13 @@
 from app.repositories.assets import AssetRepository
 from app.repositories.findings import FindingRepository
 from app.repositories.projects import ProjectRepository
+from app.repositories.reports import ReportRepository
 from app.repositories.runs import RunRepository
 
 __all__ = [
     "AssetRepository",
     "FindingRepository",
     "ProjectRepository",
+    "ReportRepository",
     "RunRepository",
 ]

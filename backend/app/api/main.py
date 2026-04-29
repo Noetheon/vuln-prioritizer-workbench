@@ -11,6 +11,7 @@ from app.api.routes import (
     login,
     projects,
     providers,
+    reports,
     runs,
     users,
     utils,
@@ -23,6 +24,7 @@ api_router.include_router(projects.router)
 api_router.include_router(assets.router)
 api_router.include_router(providers.router)
 api_router.include_router(runs.router)
+api_router.include_router(reports.router)
 api_router.include_router(imports.router)
 api_router.include_router(findings.router)
 api_router.include_router(users.router)
