@@ -54,6 +54,7 @@ def test_template_provider_status_reports_latest_snapshot(
                     "cache_only": True,
                     "requested_cves": 3,
                     "generated_at": "2026-04-28T10:30:00Z",
+                    "stale_sources": ["epss"],
                     "snapshot_dir": "data/provider-snapshots",
                     "cache_dir": "data/provider-cache",
                 },
@@ -88,6 +89,7 @@ def test_template_provider_status_reports_latest_snapshot(
             "cache_only": True,
             "requested_cves": 3,
             "generated_at": "2026-04-28T10:30:00Z",
+            "stale_sources": ["epss"],
             "snapshot_dir": "data/provider-snapshots",
             "cache_dir": "data/provider-cache",
         },
@@ -99,8 +101,11 @@ def test_template_provider_status_reports_latest_snapshot(
     sources = {source["name"]: source for source in payload["sources"]}
     assert sources["nvd"]["selected"] is True
     assert sources["nvd"]["available"] is True
+    assert sources["nvd"]["stale"] is False
+    assert isinstance(sources["nvd"]["cache_age_seconds"], int)
     assert sources["nvd"]["last_sync"] == "2026-04-28T10:15:00Z"
     assert sources["epss"]["value"] == "2026-04-28"
+    assert sources["epss"]["stale"] is True
     assert sources["kev"]["value"] == "2026-04-27"
 
 

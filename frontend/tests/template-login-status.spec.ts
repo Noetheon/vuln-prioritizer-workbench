@@ -134,6 +134,46 @@ test("template login reaches authenticated Workbench status shell", async ({
     "Total findings",
   )
 
+  const providerStatusResponse = await page.request.get(
+    "http://127.0.0.1:8000/api/v1/providers/status",
+    { headers: authHeaders },
+  )
+  expect(providerStatusResponse.ok()).toBeTruthy()
+  const providerStatusPayload = (await providerStatusResponse.json()) as {
+    snapshot: { content_hash?: string | null; id?: string | null }
+    snapshot_mode: string
+    sources?: Array<{ name: string }>
+  }
+  expect(providerStatusPayload.snapshot_mode).not.toBe("missing")
+  expect(providerStatusPayload.snapshot.content_hash).toBeTruthy()
+  expect(providerStatusPayload.sources?.map((source) => source.name)).toEqual(
+    expect.arrayContaining(["nvd", "epss", "kev"]),
+  )
+
+  await navigation.getByRole("link", { name: "Providers" }).click()
+  await expect(page).toHaveURL(/\/providers$/)
+  await expect(page.getByRole("heading", { name: "Providers" })).toBeVisible()
+  const providerStatusPage = page.getByRole("region", {
+    name: "Provider Status page",
+  })
+  await expect(providerStatusPage).toContainText("Snapshot mode")
+  await expect(providerStatusPage).toContainText("Cache age")
+  await expect(providerStatusPage).toContainText("Snapshot ID")
+  const providerCards = page.getByRole("region", { name: "Provider cards" })
+  await expect(providerCards).toContainText("NVD")
+  await expect(providerCards).toContainText("EPSS")
+  await expect(providerCards).toContainText("KEV")
+  await expect(providerStatusPage).toContainText("Provider Snapshot")
+  await expect(providerStatusPage).toContainText(
+    providerStatusPayload.snapshot.content_hash as string,
+  )
+  await expect(providerStatusPage).toContainText("Data Quality")
+  await expect(providerStatusPage).toContainText("stale")
+  await page.screenshot({
+    fullPage: true,
+    path: "../docs/evidence/vpw-045-provider-status.png",
+  })
+
   await navigation.getByRole("link", { name: "Projects" }).click()
   await expect(page).toHaveURL(/\/projects$/)
   await expect(page.getByRole("heading", { name: "Projects" })).toBeVisible()

@@ -1547,6 +1547,152 @@ h2 {
   line-height: 1.4;
 }
 
+.providers-workflow {
+  display: grid;
+  gap: 18px;
+  padding: 18px;
+}
+
+.provider-summary-grid,
+.provider-card-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.provider-card-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.provider-summary-card,
+.provider-card,
+.provider-snapshot-panel,
+.provider-quality-panel {
+  border: 1px solid #d7e0dd;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.provider-summary-card {
+  min-height: 118px;
+  padding: 16px;
+}
+
+.provider-summary-card span,
+.provider-summary-card small {
+  display: block;
+  overflow-wrap: anywhere;
+  color: #64748b;
+}
+
+.provider-summary-card span {
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.provider-summary-card strong {
+  display: block;
+  margin: 8px 0 4px;
+  overflow-wrap: anywhere;
+  color: #111827;
+  font-size: 1.08rem;
+}
+
+.provider-card {
+  display: grid;
+  gap: 12px;
+  min-height: 260px;
+  padding: 16px;
+}
+
+.provider-card.available {
+  border-color: #bbf7d0;
+  background: #fbfffc;
+}
+
+.provider-card.stale {
+  border-color: #fed7aa;
+  background: #fffaf4;
+}
+
+.provider-card.missing {
+  border-color: #e2e8f0;
+  background: #f8fafc;
+}
+
+.provider-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.provider-card-header span {
+  color: #64748b;
+  font-size: 0.76rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.provider-card-header h3 {
+  margin: 4px 0 0;
+  color: #111827;
+}
+
+.provider-card p {
+  margin: 0;
+  color: #475569;
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.provider-card-facts {
+  display: grid;
+  gap: 1px;
+  overflow: hidden;
+  border: 1px solid #edf1ef;
+  border-radius: 8px;
+  background: #edf1ef;
+}
+
+.provider-card-facts div {
+  display: grid;
+  grid-template-columns: 92px minmax(0, 1fr);
+  gap: 10px;
+  min-height: 34px;
+  padding: 8px 10px;
+  background: #ffffff;
+}
+
+.provider-card-facts dt,
+.provider-card-facts dd {
+  margin: 0;
+}
+
+.provider-card-facts dt {
+  color: #64748b;
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.provider-card-facts dd {
+  overflow-wrap: anywhere;
+  color: #1f2937;
+  font-size: 0.86rem;
+}
+
+.source-pill.stale {
+  background: #ffedd5;
+  color: #9a3412;
+}
+
+.provider-snapshot-panel,
+.provider-quality-panel {
+  padding: 18px;
+}
+
 .panel-header {
   display: flex;
   align-items: center;
@@ -1837,6 +1983,8 @@ td {
   .runs-browser,
   .run-facts,
   .run-counts,
+  .provider-summary-grid,
+  .provider-card-grid,
   .summary-list,
   .project-meta,
   .settings-summary,
