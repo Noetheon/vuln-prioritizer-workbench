@@ -134,6 +134,15 @@ exposure, environment, criticality, service, owner, and mapped asset count. When
 an occurrence has no asset context, the explanation includes an
 `asset.context_unknown` warning note.
 
+Each prioritized finding also receives `decision_guidance`. This object is a
+defensive recommendation generator for management reporting: it selects one of
+`Patch`, `Mitigate`, `Monitor`, `Review`, or `Waiver`, assigns a deterministic
+SLA from the effective priority or governance state, builds a business-impact
+paragraph from KEV, EPSS, CVSS, and asset context, and emits a decision
+statement for top findings. Accepted, suppressed, and fixed findings are not
+treated as hidden or done; they receive governance-oriented visibility text and
+review/verification SLA guidance.
+
 ATT&CK is a contextual signal. It enriches explanation, reporting, and management framing without silently changing the base priority.
 
 Presentation notes:

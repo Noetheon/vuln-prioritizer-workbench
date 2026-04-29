@@ -1,0 +1,43 @@
+{
+  "business_impact": {
+    "drivers": [
+      "CISA KEV known-exploited listing",
+      "EPSS 0.910",
+      "CVSS 9.8",
+      "internet-facing exposure",
+      "environment prod",
+      "critical asset criticality",
+      "business service customer-login",
+      "owner platform-team"
+    ],
+    "level": "critical",
+    "text": "Executive attention is warranted because the finding combines urgent security signals with business routing context: CISA KEV known-exploited listing; EPSS 0.910; CVSS 9.8; internet-facing exposure; environment prod; critical asset criticality; business service customer-login; owner platform-team."
+  },
+  "decision_statement": "Top finding #1: Patch decision: patch CVE-2024-0001 by applying validated vendor fixes or package upgrades, then confirm the affected assets are clean. SLA: Emergency - Validate scope and begin remediation or approved mitigation within 24 hours. Business impact: Executive attention is warranted because the finding combines urgent security signals with business routing context: CISA KEV known-exploited listing; EPSS 0.910; CVSS 9.8; internet-facing exposure; environment prod; critical asset criticality; business service customer-login; owner platform-team.",
+  "reason_codes": [
+    "template.patch",
+    "sla.critical.emergency",
+    "impact.critical",
+    "template.patch.fixed_version_evidence",
+    "impact.cisa_kev_known_exploited_listing",
+    "impact.epss_0_910",
+    "impact.cvss_9_8",
+    "impact.internet_facing_exposure",
+    "impact.environment_prod",
+    "impact.critical_asset_criticality",
+    "impact.business_service_customer_login",
+    "impact.owner_platform_team"
+  ],
+  "sla": {
+    "guidance": "Validate scope and begin remediation or approved mitigation within 24 hours.",
+    "label": "Emergency",
+    "priority": "Critical",
+    "source": "default-priority-sla",
+    "target_days": 1,
+    "target_hours": 24
+  },
+  "template": "patch",
+  "template_label": "Patch",
+  "visibility": "Open remediation work remains visible until validation evidence supports closure.",
+  "wording_policy": "defensive_no_exploit_steps"
+}
