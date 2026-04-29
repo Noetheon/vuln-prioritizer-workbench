@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from collections import Counter
 from collections.abc import Mapping
 from dataclasses import dataclass
@@ -21,6 +22,8 @@ class AssetContextMatchDiagnostics:
     matched_occurrences: int
     unmatched_occurrences: int
     exact_matches: int
+    contains_matches: int
+    regex_matches: int
     glob_matches: int
     ambiguous_occurrences: int
     warnings: tuple[str, ...] = ()
@@ -78,6 +81,8 @@ def apply_asset_context(
             matched_occurrences=0,
             unmatched_occurrences=len(occurrences),
             exact_matches=0,
+            contains_matches=0,
+            regex_matches=0,
             glob_matches=0,
             ambiguous_occurrences=0,
         )
@@ -88,6 +93,8 @@ def apply_asset_context(
         matched_occurrences = 0
         unmatched_occurrences = 0
         exact_matches = 0
+        contains_matches = 0
+        regex_matches = 0
         glob_matches = 0
         ambiguous_occurrences = 0
 
@@ -102,6 +109,10 @@ def apply_asset_context(
                 ambiguous_occurrences += 1
             if matched_rule.match_mode == "glob":
                 glob_matches += 1
+            elif matched_rule.match_mode == "regex":
+                regex_matches += 1
+            elif matched_rule.match_mode == "contains":
+                contains_matches += 1
             else:
                 exact_matches += 1
             enriched.append(
@@ -124,6 +135,8 @@ def apply_asset_context(
             matched_occurrences=matched_occurrences,
             unmatched_occurrences=unmatched_occurrences,
             exact_matches=exact_matches,
+            contains_matches=contains_matches,
+            regex_matches=regex_matches,
             glob_matches=glob_matches,
             ambiguous_occurrences=ambiguous_occurrences,
             warnings=tuple(warning_messages),
@@ -150,6 +163,8 @@ def apply_asset_context(
         matched_occurrences=matched_occurrences,
         unmatched_occurrences=unmatched_occurrences,
         exact_matches=matched_occurrences,
+        contains_matches=0,
+        regex_matches=0,
         glob_matches=0,
         ambiguous_occurrences=0,
     )
@@ -196,7 +211,12 @@ def _resolve_asset_context_rule(
 
 def _asset_context_rule_score(rule: Any) -> tuple[int, int, int, int, int]:
     precedence = int(getattr(rule, "precedence", 0) or 0)
-    specificity = 1 if getattr(rule, "match_mode", "exact") == "exact" else 0
+    specificity = {
+        "exact": 3,
+        "regex": 2,
+        "contains": 1,
+        "glob": 0,
+    }.get(getattr(rule, "match_mode", "exact"), 0)
     order = int(getattr(rule, "order", 0) or 0)
     pattern = str(getattr(rule, "target_ref", "") or "")
     return (
@@ -222,6 +242,13 @@ def _asset_context_rule_matches(
         return False
     if match_mode == "glob":
         return fnmatchcase(occurrence.target_ref, rule_ref)
+    if match_mode == "contains":
+        return rule_ref in occurrence.target_ref
+    if match_mode == "regex":
+        try:
+            return re.search(rule_ref, occurrence.target_ref) is not None
+        except re.error:
+            return False
     return occurrence.target_ref == rule_ref
 
 

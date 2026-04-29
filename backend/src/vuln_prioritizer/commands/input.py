@@ -350,6 +350,8 @@ def build_input_validation_report(
             "loaded_rows": asset_diagnostics.loaded_rows,
             "skipped_rows": asset_diagnostics.skipped_rows,
             "exact_rules": asset_diagnostics.exact_rules,
+            "contains_rules": asset_diagnostics.contains_rules,
+            "regex_rules": asset_diagnostics.regex_rules,
             "glob_rules": asset_diagnostics.glob_rules,
             "legacy_schema": asset_diagnostics.legacy_schema,
             "warnings": list(asset_diagnostics.warnings),

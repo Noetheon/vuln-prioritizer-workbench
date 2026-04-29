@@ -79,7 +79,12 @@ What to expect:
 
 ## 3. Add Asset Context Deliberately
 
-Asset context is only useful when the join is exact on `(target_kind, target_ref)`. Start from the checked-in CSV schema, adapt it to your infrastructure targets, then rerun `analyze` with `--asset-context`.
+Asset context is most reliable when the join is exact on
+`(target_kind, target_ref)`, but the CSV also supports `contains`, `regex`, and
+compatibility `glob` rules for normalized infrastructure exports. Start from
+the checked-in schema in [Asset Context CSV](../asset-context-csv.md) or
+`data/input_fixtures/example_asset_context_rules.csv`, adapt it to your
+infrastructure targets, then rerun `analyze` with `--asset-context`.
 
 ```bash
 vuln-prioritizer analyze \

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import csv
 import json
+import re
 from collections.abc import Iterator, Mapping
 from dataclasses import dataclass
 from pathlib import Path
@@ -86,6 +87,8 @@ class AssetContextLoadDiagnostics:
     loaded_rows: int
     skipped_rows: int
     exact_rules: int
+    contains_rules: int
+    regex_rules: int
     glob_rules: int
     legacy_schema: bool
     warnings: tuple[str, ...] = ()
@@ -403,6 +406,8 @@ def load_asset_context_file(
                 loaded_rows=0,
                 skipped_rows=0,
                 exact_rules=0,
+                contains_rules=0,
+                regex_rules=0,
                 glob_rules=0,
                 legacy_schema=True,
             ),
@@ -413,11 +418,13 @@ def load_asset_context_file(
         if not reader.fieldnames:
             raise ValueError("Asset context CSV is missing a header row.")
         fieldnames = {field.strip() for field in reader.fieldnames if field}
-        required = {"target_kind", "target_ref", "asset_id"}
+        required = {"target_kind", "asset_id"}
         missing = required - fieldnames
-        if missing:
+        has_target_ref = "target_ref" in fieldnames or "asset_ref" in fieldnames
+        if missing or not has_target_ref:
             raise ValueError(
-                "Asset context CSV must contain columns: target_kind, target_ref, asset_id."
+                "Asset context CSV must contain columns: target_kind, "
+                "target_ref or asset_ref, asset_id."
             )
 
         optional_schema_fields = {"rule_id", "match_mode", "precedence"}
@@ -425,6 +432,8 @@ def load_asset_context_file(
         records: dict[tuple[str, str], AssetContextRecord] = {}
         rules: list[AssetContextRule] = []
         exact_rule_count = 0
+        contains_rule_count = 0
+        regex_rule_count = 0
         glob_rule_count = 0
         loaded_rows = 0
         total_rows = 0
@@ -437,15 +446,24 @@ def load_asset_context_file(
         for order, row in enumerate(reader, start=1):
             total_rows += 1
             target_kind = (row.get("target_kind") or "").strip().lower()
-            target_ref = (row.get("target_ref") or "").strip()
+            target_ref = (row.get("target_ref") or row.get("asset_ref") or "").strip()
             asset_id = (row.get("asset_id") or "").strip()
             if not target_kind or not target_ref or not asset_id:
                 skipped_rows += 1
                 continue
             loaded_rows += 1
             match_mode = (row.get("match_mode") or "exact").strip().lower()
-            if match_mode not in {"exact", "glob"}:
-                raise ValueError("Asset context CSV match_mode must be either exact or glob.")
+            if match_mode not in {"exact", "contains", "regex", "glob"}:
+                raise ValueError(
+                    "Asset context CSV match_mode must be exact, contains, regex, or glob."
+                )
+            if match_mode == "regex":
+                try:
+                    re.compile(target_ref)
+                except re.error as exc:
+                    raise ValueError(
+                        f"Asset context CSV regex at row {order} is invalid: {exc}."
+                    ) from exc
             precedence_raw = (row.get("precedence") or "").strip()
             if precedence_raw:
                 try:
@@ -503,6 +521,10 @@ def load_asset_context_file(
             )
             if match_mode == "glob":
                 glob_rule_count += 1
+            elif match_mode == "regex":
+                regex_rule_count += 1
+            elif match_mode == "contains":
+                contains_rule_count += 1
             else:
                 exact_rule_count += 1
 
@@ -527,6 +549,8 @@ def load_asset_context_file(
             loaded_rows=loaded_rows,
             skipped_rows=skipped_rows,
             exact_rules=exact_rule_count,
+            contains_rules=contains_rule_count,
+            regex_rules=regex_rule_count,
             glob_rules=glob_rule_count,
             legacy_schema=legacy_schema,
             warnings=tuple(warning_messages),

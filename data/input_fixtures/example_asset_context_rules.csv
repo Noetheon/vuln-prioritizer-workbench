@@ -1,0 +1,7 @@
+rule_id,target_kind,target_ref,asset_ref,asset_id,match_mode,precedence,criticality,exposure,environment,owner,business_service
+host-prod-01,host,app-01.example.internal,,app-01,exact,100,critical,internet-facing,prod,platform-team,customer-login
+host-prod-fleet,host,web-*.example.internal,,web-fleet,glob,40,high,dmz,prod,edge-team,public-web
+repo-payments,repository,,github.com/acme/payments,payments-repo,exact,80,high,internal,prod,payments-team,payments
+image-demo,image,ghcr.io/acme/demo-app:1.0.0 (alpine 3.19),,api-gateway,exact,90,critical,internet-facing,prod,platform-team,customer-login
+svc-regex,host,^svc-[0-9]+\.corp\.example$,,service-fleet,regex,50,medium,internal,staging,service-team,shared-services
+contains-batch,host,batch,,batch-fleet,contains,20,medium,internal,prod,data-team,batch-processing
