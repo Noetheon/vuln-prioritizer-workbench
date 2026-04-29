@@ -3,7 +3,7 @@
 import type { CancelablePromise } from './core/CancelablePromise';
 import { OpenAPI } from './core/OpenAPI';
 import { request as __request } from './core/request';
-import type { AssetsUpdateAssetData, AssetsUpdateAssetResponse, AssetsReadProjectAssetsData, AssetsReadProjectAssetsResponse, AssetsCreateProjectAssetData, AssetsCreateProjectAssetResponse, FindingsReadFindingData, FindingsReadFindingResponse, FindingsReadProjectFindingsData, FindingsReadProjectFindingsResponse, ImportsImportProjectUploadData, ImportsImportProjectUploadResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, ProjectsReadProjectsResponse, ProjectsCreateProjectData, ProjectsCreateProjectResponse, ProjectsDeleteProjectData, ProjectsDeleteProjectResponse, ProjectsReadProjectData, ProjectsReadProjectResponse, ProjectsUpdateProjectData, ProjectsUpdateProjectResponse, ProvidersReadProviderStatusResponse, RunsReadProjectRunsWithoutTrailingSlashData, RunsReadProjectRunsWithoutTrailingSlashResponse, RunsReadProjectRunsData, RunsReadProjectRunsResponse, RunsReadRunData, RunsReadRunResponse, RunsReadRunSummaryData, RunsReadRunSummaryResponse, UsersReadUserMeResponse, UtilsHealthCheckResponse, WorkbenchTemplateWorkbenchStatusResponse } from './types.gen';
+import type { AssetsUpdateAssetData, AssetsUpdateAssetResponse, AssetsReadProjectAssetsData, AssetsReadProjectAssetsResponse, AssetsCreateProjectAssetData, AssetsCreateProjectAssetResponse, FindingsReadFindingData, FindingsReadFindingResponse, FindingsExplainFindingData, FindingsExplainFindingResponse, FindingsReadProjectFindingsData, FindingsReadProjectFindingsResponse, ImportsImportProjectUploadData, ImportsImportProjectUploadResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, ProjectsReadProjectsResponse, ProjectsCreateProjectData, ProjectsCreateProjectResponse, ProjectsDeleteProjectData, ProjectsDeleteProjectResponse, ProjectsReadProjectData, ProjectsReadProjectResponse, ProjectsUpdateProjectData, ProjectsUpdateProjectResponse, ProjectsCompareProjectCvssOnlyData, ProjectsCompareProjectCvssOnlyResponse, ProjectsReadProjectSummaryData, ProjectsReadProjectSummaryResponse, ProvidersReadProviderStatusResponse, RunsReadProjectRunsWithoutTrailingSlashData, RunsReadProjectRunsWithoutTrailingSlashResponse, RunsReadProjectRunsData, RunsReadProjectRunsResponse, RunsReadRunData, RunsReadRunResponse, RunsReadRunSummaryData, RunsReadRunSummaryResponse, UsersReadUserMeResponse, UtilsHealthCheckResponse, WorkbenchTemplateWorkbenchStatusResponse } from './types.gen';
 
 export class AssetsService {
     /**
@@ -89,6 +89,27 @@ export class FindingsService {
         return __request(OpenAPI, {
             method: 'GET',
             url: '/api/v1/findings/{finding_id}',
+            path: {
+                finding_id: data.findingId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+
+    /**
+     * Explain Finding
+     * Read the persisted decision explanation for one visible finding.
+     * @param data The data for the request.
+     * @param data.findingId
+     * @returns FindingExplanationPublic Successful Response
+     * @throws ApiError
+     */
+    public static explainFinding(data: FindingsExplainFindingData): CancelablePromise<FindingsExplainFindingResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/findings/{finding_id}/explain',
             path: {
                 finding_id: data.findingId
             },
@@ -283,6 +304,52 @@ export class ProjectsService {
             },
             body: data.requestBody,
             mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+
+    /**
+     * Compare Project Cvss Only
+     * Compare current enriched priorities with a CVSS-only baseline.
+     * @param data The data for the request.
+     * @param data.projectId
+     * @param data.limit
+     * @returns ProjectCvssOnlyComparisonPublic Successful Response
+     * @throws ApiError
+     */
+    public static compareProjectCvssOnly(data: ProjectsCompareProjectCvssOnlyData): CancelablePromise<ProjectsCompareProjectCvssOnlyResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/projects/{project_id}/compare/cvss-only',
+            path: {
+                project_id: data.projectId
+            },
+            query: {
+                limit: data.limit
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+
+    /**
+     * Read Project Summary
+     * Read a dashboard-oriented decision summary for one visible project.
+     * @param data The data for the request.
+     * @param data.projectId
+     * @returns ProjectDecisionSummaryPublic Successful Response
+     * @throws ApiError
+     */
+    public static readProjectSummary(data: ProjectsReadProjectSummaryData): CancelablePromise<ProjectsReadProjectSummaryResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/projects/{project_id}/summary',
+            path: {
+                project_id: data.projectId
+            },
             errors: {
                 422: 'Validation Error'
             }
