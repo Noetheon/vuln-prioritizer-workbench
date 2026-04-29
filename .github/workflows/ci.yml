@@ -71,3 +71,21 @@ jobs:
 
       - name: Check generated frontend client drift
         run: git diff --exit-code -- frontend/src/client
+
+      - name: Install Playwright browser
+        working-directory: frontend
+        run: npx playwright install --with-deps chromium
+
+      - name: Run frontend Playwright smoke
+        run: npm --prefix frontend run test
+
+      - name: Upload frontend Playwright evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-playwright-evidence
+          path: |
+            docs/evidence/vpw-047-core-workbench-flow.png
+            frontend/test-results
+            frontend/playwright-report
+          if-no-files-found: ignore
