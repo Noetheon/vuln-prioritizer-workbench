@@ -40,6 +40,8 @@ def create_run_report(
             report = report_service.create_analysis_json_export(run=run, project=project)
         elif payload.format == "csv":
             report = report_service.create_findings_csv_export(run=run, project=project)
+        elif payload.format == "zip":
+            report = report_service.create_evidence_bundle(run=run, project=project)
         else:
             report = report_service.create_markdown_report(run=run, project=project)
     except ReportGenerationError as exc:

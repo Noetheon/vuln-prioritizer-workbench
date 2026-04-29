@@ -71,6 +71,24 @@
     "included_input_copy": {
       "type": "boolean"
     },
+    "redaction": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "policy": {
+          "type": "string"
+        },
+        "redacted_keys": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
     "files": {
       "type": "array",
       "items": {

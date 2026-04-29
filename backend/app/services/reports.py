@@ -8,10 +8,11 @@ import html
 import json
 import re
 import uuid
+import zipfile
 from collections import Counter
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import datetime
-from io import StringIO
+from io import BytesIO, StringIO
 from pathlib import Path
 from typing import Any
 
@@ -34,16 +35,22 @@ REPORT_KIND_TECHNICAL_MARKDOWN = "technical-markdown"
 REPORT_KIND_EXECUTIVE_HTML = "executive-html"
 REPORT_KIND_ANALYSIS_JSON = "analysis-result-json"
 REPORT_KIND_FINDINGS_CSV = "findings-csv"
+REPORT_KIND_EVIDENCE_BUNDLE = "evidence-bundle"
 REPORT_FILENAME_TECHNICAL_MARKDOWN = "technical-report.md"
 REPORT_FILENAME_EXECUTIVE_HTML = "executive-report.html"
 REPORT_FILENAME_ANALYSIS_JSON = "analysis-result.v1.json"
 REPORT_FILENAME_FINDINGS_CSV = "findings.csv"
+REPORT_FILENAME_EVIDENCE_BUNDLE = "evidence-bundle.zip"
 REPORT_CONTENT_TYPE_MARKDOWN = "text/markdown; charset=utf-8"
 REPORT_CONTENT_TYPE_HTML = "text/html; charset=utf-8"
 REPORT_CONTENT_TYPE_JSON = "application/json; charset=utf-8"
 REPORT_CONTENT_TYPE_CSV = "text/csv; charset=utf-8"
+REPORT_CONTENT_TYPE_ZIP = "application/zip"
 ANALYSIS_RESULT_SCHEMA = "analysis-result.v1"
 ANALYSIS_RESULT_SCHEMA_VERSION = "1.0.0"
+EVIDENCE_BUNDLE_MANIFEST_SCHEMA_VERSION = "1.1.0"
+DETERMINISTIC_ZIP_TIMESTAMP = (1980, 1, 1, 0, 0, 0)
+DETERMINISTIC_ZIP_FILE_MODE = 0o644 << 16
 REPORT_SUPPORTED_RUN_STATUSES = {
     AnalysisRunStatus.COMPLETED,
     AnalysisRunStatus.COMPLETED_WITH_ERRORS,
@@ -81,6 +88,23 @@ CSV_FINDINGS_COLUMNS = [
     "business_impact",
     "recommended_action",
 ]
+SECRET_REDACTION_KEYS = (
+    "api_key",
+    "authorization",
+    "cookie",
+    "credential",
+    "password",
+    "private_key",
+    "secret",
+    "token",
+)
+LOCAL_PATH_REDACTION_KEYS = (
+    "input_path",
+    "path",
+    "provider_snapshot_file",
+    "source_path",
+    "upload_path",
+)
 EXECUTIVE_REPORT_CSS = """
 :root {
   color-scheme: light;
@@ -460,6 +484,27 @@ class ReportService:
             content_type=REPORT_CONTENT_TYPE_CSV,
         )
 
+    def create_evidence_bundle(self, *, run: AnalysisRun, project: Project) -> Report:
+        """Generate a verifiable evidence ZIP bundle and persist its metadata."""
+        payload, findings, generated_at = self._report_payload(run=run, project=project)
+        bundle_bytes, manifest = render_evidence_bundle_zip(payload)
+        return self._persist_binary_report(
+            run=run,
+            project=project,
+            generated_at=generated_at,
+            finding_count=len(findings),
+            provider_snapshot_id=run.provider_snapshot_id,
+            content=bundle_bytes,
+            kind=REPORT_KIND_EVIDENCE_BUNDLE,
+            report_format="zip",
+            filename=REPORT_FILENAME_EVIDENCE_BUNDLE,
+            content_type=REPORT_CONTENT_TYPE_ZIP,
+            extra_metadata={
+                "manifest": manifest,
+                "manifest_schema_version": EVIDENCE_BUNDLE_MANIFEST_SCHEMA_VERSION,
+            },
+        )
+
     def _report_payload(
         self,
         *,
@@ -526,7 +571,93 @@ class ReportService:
         report_path.parent.mkdir(parents=True, exist_ok=True)
         report_path.write_text(content, encoding="utf-8")
         content_bytes = content.encode("utf-8")
+        return self._create_report_record(
+            report_id=report_id,
+            run=run,
+            project=project,
+            generated_at=generated_at,
+            finding_count=finding_count,
+            provider_snapshot_id=provider_snapshot_id,
+            content_bytes=content_bytes,
+            report_path=report_path,
+            kind=kind,
+            report_format=report_format,
+            filename=filename,
+            content_type=content_type,
+        )
+
+    def _persist_binary_report(
+        self,
+        *,
+        run: AnalysisRun,
+        project: Project,
+        generated_at: datetime,
+        finding_count: int,
+        provider_snapshot_id: uuid.UUID | None,
+        content: bytes,
+        kind: str,
+        report_format: str,
+        filename: str,
+        content_type: str,
+        extra_metadata: dict[str, Any] | None = None,
+    ) -> Report:
+        report_id = uuid.uuid4()
+        report_path = self._report_path(
+            project_id=project.id,
+            run_id=run.id,
+            report_id=report_id,
+            filename=filename,
+        )
+        report_path.parent.mkdir(parents=True, exist_ok=True)
+        report_path.write_bytes(content)
+        return self._create_report_record(
+            report_id=report_id,
+            run=run,
+            project=project,
+            generated_at=generated_at,
+            finding_count=finding_count,
+            provider_snapshot_id=provider_snapshot_id,
+            content_bytes=content,
+            report_path=report_path,
+            kind=kind,
+            report_format=report_format,
+            filename=filename,
+            content_type=content_type,
+            extra_metadata=extra_metadata,
+        )
+
+    def _create_report_record(
+        self,
+        *,
+        report_id: uuid.UUID,
+        run: AnalysisRun,
+        project: Project,
+        generated_at: datetime,
+        finding_count: int,
+        provider_snapshot_id: uuid.UUID | None,
+        content_bytes: bytes,
+        report_path: Path,
+        kind: str,
+        report_format: str,
+        filename: str,
+        content_type: str,
+        extra_metadata: dict[str, Any] | None = None,
+    ) -> Report:
         sha256 = hashlib.sha256(content_bytes).hexdigest()
+        metadata_json = {
+            "generated_at": generated_at.isoformat(),
+            "project_id": str(project.id),
+            "analysis_run_id": str(run.id),
+            "provider_snapshot_id": str(provider_snapshot_id)
+            if provider_snapshot_id is not None
+            else None,
+            "finding_count": finding_count,
+            "format": report_format,
+            "kind": kind,
+            "service": "template-report-service",
+        }
+        if extra_metadata:
+            metadata_json.update(extra_metadata)
         return ReportRepository(self.session).create_report(
             report_id=report_id,
             project_id=project.id,
@@ -538,18 +669,7 @@ class ReportService:
             path=str(report_path),
             sha256=sha256,
             size_bytes=len(content_bytes),
-            metadata_json={
-                "generated_at": generated_at.isoformat(),
-                "project_id": str(project.id),
-                "analysis_run_id": str(run.id),
-                "provider_snapshot_id": str(provider_snapshot_id)
-                if provider_snapshot_id is not None
-                else None,
-                "finding_count": finding_count,
-                "format": report_format,
-                "kind": kind,
-                "service": "template-report-service",
-            },
+            metadata_json=metadata_json,
         )
 
     def _run_findings(self, run: AnalysisRun) -> list[Finding]:
@@ -860,6 +980,304 @@ def render_findings_csv(payload: MarkdownReportPayload) -> str:
             }
         )
     return output.getvalue()
+
+
+def render_evidence_bundle_zip(payload: MarkdownReportPayload) -> tuple[bytes, dict[str, Any]]:
+    """Render a deterministic evidence ZIP and return its manifest payload."""
+    bundle_payload, payload_redactions = _redacted_bundle_payload(payload)
+    analysis_payload = json.loads(render_analysis_result_json(bundle_payload))
+    redacted_analysis, analysis_redactions = _redact_bundle_value(analysis_payload)
+    provider_payload = _analysis_provider_snapshot(bundle_payload.provider_snapshot) or {
+        "available": False
+    }
+    redacted_provider, provider_redactions = _redact_bundle_value(provider_payload)
+
+    entries = [
+        (
+            "analysis.json",
+            _json_bytes(redacted_analysis),
+            "analysis-json",
+        ),
+        (
+            "technical.md",
+            render_markdown_report(bundle_payload).encode("utf-8"),
+            "technical-markdown",
+        ),
+        (
+            "executive.html",
+            render_html_executive_report(bundle_payload).encode("utf-8"),
+            "executive-html",
+        ),
+        (
+            "provider-snapshot.json",
+            _json_bytes(redacted_provider),
+            "provider-snapshot",
+        ),
+    ]
+    file_entries = [
+        _bundle_file_entry(path=path, content=content, kind=kind) for path, content, kind in entries
+    ]
+    artifact_hashes = {entry["path"]: entry["sha256"] for entry in file_entries}
+    input_hashes = _bundle_input_hashes(payload)
+    source_input_paths = [item["path"] for item in input_hashes]
+    manifest: dict[str, Any] = {
+        "schema_version": EVIDENCE_BUNDLE_MANIFEST_SCHEMA_VERSION,
+        "bundle_kind": REPORT_KIND_EVIDENCE_BUNDLE,
+        "generated_at": _iso_datetime(payload.generated_at),
+        "source_analysis_path": "analysis.json",
+        "source_analysis_sha256": artifact_hashes["analysis.json"],
+        "source_input_path": source_input_paths[0] if source_input_paths else None,
+        "source_input_paths": source_input_paths,
+        "source_input_hashes": input_hashes,
+        "provider_snapshot": {
+            "bundle_path": "provider-snapshot.json",
+            "sha256": artifact_hashes["provider-snapshot.json"],
+            "content_hash": bundle_payload.provider_snapshot.content_hash
+            if bundle_payload.provider_snapshot is not None
+            else None,
+            "id": bundle_payload.provider_snapshot.id
+            if bundle_payload.provider_snapshot is not None
+            else None,
+        },
+        "artifact_hashes": artifact_hashes,
+        "findings_count": len(bundle_payload.findings),
+        "kev_hits": sum(1 for finding in bundle_payload.findings if finding.in_kev),
+        "waived_count": sum(
+            1 for finding in bundle_payload.findings if _boolish_signal(finding, "waived")
+        ),
+        "attack_mapped_cves": sum(
+            1 for finding in bundle_payload.findings if _boolish_signal(finding, "attack_mapped")
+        ),
+        "included_input_copy": False,
+        "redaction": {
+            "enabled": True,
+            "policy": "sensitive keys and local path fields are replaced with [REDACTED]",
+            "redacted_keys": sorted(
+                set(payload_redactions + analysis_redactions + provider_redactions)
+            ),
+        },
+        "files": file_entries,
+    }
+
+    output = BytesIO()
+    with zipfile.ZipFile(output, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+        for path, content, _kind in entries:
+            _write_deterministic_zip_member(archive, path, content)
+        _write_deterministic_zip_member(archive, "manifest.json", _json_bytes(manifest))
+    return output.getvalue(), manifest
+
+
+def _json_bytes(payload: Any) -> bytes:
+    return (json.dumps(payload, indent=2, sort_keys=True) + "\n").encode("utf-8")
+
+
+def _bundle_file_entry(*, path: str, content: bytes, kind: str) -> dict[str, Any]:
+    return {
+        "path": path,
+        "kind": kind,
+        "size_bytes": len(content),
+        "sha256": hashlib.sha256(content).hexdigest(),
+    }
+
+
+def _bundle_input_hashes(payload: MarkdownReportPayload) -> list[dict[str, Any]]:
+    upload = _dict_value(payload.summary.get("input_upload"))
+    input_sha256 = upload.get("sha256") or payload.summary.get("input_sha256")
+    if not isinstance(input_sha256, str) or not re.fullmatch(r"[a-f0-9]{64}", input_sha256):
+        return []
+    filename = (
+        upload.get("stored_filename")
+        or upload.get("original_filename")
+        or payload.filename
+        or "uploaded-input"
+    )
+    size_bytes = upload.get("size_bytes")
+    return [
+        {
+            "path": _safe_bundle_filename(filename),
+            "size_bytes": int(size_bytes) if isinstance(size_bytes, int | float) else 0,
+            "sha256": input_sha256,
+        }
+    ]
+
+
+def _safe_bundle_filename(value: object) -> str:
+    filename = Path(str(value)).name.strip() if value is not None else ""
+    return filename or "uploaded-input"
+
+
+def _redacted_bundle_payload(
+    payload: MarkdownReportPayload,
+) -> tuple[MarkdownReportPayload, list[str]]:
+    redactions: list[str] = []
+
+    def redact(value: Any, path: str) -> Any:
+        redacted, paths = _redact_bundle_value(value, path_prefix=path)
+        redactions.extend(paths)
+        return redacted
+
+    provider_snapshot = None
+    if payload.provider_snapshot is not None:
+        provider_snapshot = replace(
+            payload.provider_snapshot,
+            id=redact(payload.provider_snapshot.id, "provider_snapshot.id"),
+            content_hash=redact(
+                payload.provider_snapshot.content_hash,
+                "provider_snapshot.content_hash",
+            ),
+            nvd_last_sync=redact(
+                payload.provider_snapshot.nvd_last_sync,
+                "provider_snapshot.nvd_last_sync",
+            ),
+            epss_date=redact(payload.provider_snapshot.epss_date, "provider_snapshot.epss_date"),
+            kev_catalog_version=redact(
+                payload.provider_snapshot.kev_catalog_version,
+                "provider_snapshot.kev_catalog_version",
+            ),
+            created_at=redact(payload.provider_snapshot.created_at, "provider_snapshot.created_at"),
+            source_hashes=redact(
+                payload.provider_snapshot.source_hashes,
+                "provider_snapshot.source_hashes",
+            ),
+            source_metadata=redact(
+                payload.provider_snapshot.source_metadata,
+                "provider_snapshot.source_metadata",
+            ),
+        )
+
+    findings: list[MarkdownReportFinding] = []
+    for index, finding in enumerate(payload.findings):
+        finding_path = f"findings.{index}"
+        findings.append(
+            replace(
+                finding,
+                cve_id=redact(finding.cve_id, f"{finding_path}.cve_id"),
+                priority=redact(finding.priority, f"{finding_path}.priority"),
+                status=redact(finding.status, f"{finding_path}.status"),
+                asset=redact(finding.asset, f"{finding_path}.asset"),
+                component=redact(finding.component, f"{finding_path}.component"),
+                rationale=redact(finding.rationale, f"{finding_path}.rationale"),
+                recommended_action=redact(
+                    finding.recommended_action,
+                    f"{finding_path}.recommended_action",
+                ),
+                id=redact(finding.id, f"{finding_path}.id"),
+                dedup_key=redact(finding.dedup_key, f"{finding_path}.dedup_key"),
+                asset_key=redact(finding.asset_key, f"{finding_path}.asset_key"),
+                owner=redact(finding.owner, f"{finding_path}.owner"),
+                business_service=redact(
+                    finding.business_service,
+                    f"{finding_path}.business_service",
+                ),
+                environment=redact(finding.environment, f"{finding_path}.environment"),
+                exposure=redact(finding.exposure, f"{finding_path}.exposure"),
+                criticality=redact(finding.criticality, f"{finding_path}.criticality"),
+                component_purl=redact(finding.component_purl, f"{finding_path}.component_purl"),
+                decision_statement=redact(
+                    finding.decision_statement,
+                    f"{finding_path}.decision_statement",
+                ),
+                business_impact=redact(
+                    finding.business_impact,
+                    f"{finding_path}.business_impact",
+                ),
+                decision_sla=redact(finding.decision_sla, f"{finding_path}.decision_sla"),
+                data_quality_flags=redact(
+                    finding.data_quality_flags,
+                    f"{finding_path}.data_quality_flags",
+                ),
+                vulnerability=redact(finding.vulnerability, f"{finding_path}.vulnerability"),
+                explanation=redact(finding.explanation, f"{finding_path}.explanation"),
+                data_quality=redact(finding.data_quality, f"{finding_path}.data_quality"),
+                evidence=redact(finding.evidence, f"{finding_path}.evidence"),
+                occurrences=redact(finding.occurrences, f"{finding_path}.occurrences"),
+            )
+        )
+
+    return (
+        replace(
+            payload,
+            project_name=redact(payload.project_name, "project.name"),
+            project_description=redact(payload.project_description, "project.description"),
+            project_owner_id=redact(payload.project_owner_id, "project.owner_id"),
+            input_type=redact(payload.input_type, "analysis_run.input_type"),
+            filename=redact(payload.filename, "analysis_run.filename"),
+            summary=redact(payload.summary, "analysis_run.summary"),
+            run_error=redact(payload.run_error, "analysis_run.error_message"),
+            run_errors=redact(payload.run_errors, "analysis_run.errors"),
+            findings=findings,
+            provider_snapshot=provider_snapshot,
+        ),
+        redactions,
+    )
+
+
+def _redact_bundle_value(value: Any, *, path_prefix: str = "") -> tuple[Any, list[str]]:
+    redacted_paths: list[str] = []
+
+    def walk(candidate: Any, path: tuple[str, ...]) -> Any:
+        if isinstance(candidate, dict):
+            result: dict[str, Any] = {}
+            for key, child in candidate.items():
+                key_text = str(key)
+                child_path = (*path, key_text)
+                if _should_redact_bundle_key(key_text):
+                    result[key_text] = "[REDACTED]"
+                    redacted_paths.append(".".join(child_path))
+                    continue
+                result[key_text] = walk(child, child_path)
+            return result
+        if isinstance(candidate, list):
+            return [walk(item, (*path, "[]")) for item in candidate]
+        if isinstance(candidate, str) and _should_redact_bundle_string(candidate):
+            redacted_paths.append(".".join(path))
+            return "[REDACTED]"
+        return candidate
+
+    start = tuple(part for part in path_prefix.split(".") if part)
+    return walk(value, start), redacted_paths
+
+
+def _should_redact_bundle_key(key: str) -> bool:
+    normalized = key.strip().lower()
+    if (
+        normalized in LOCAL_PATH_REDACTION_KEYS
+        or normalized.endswith("_path")
+        or normalized.endswith("_dir")
+    ):
+        return True
+    return any(fragment in normalized for fragment in SECRET_REDACTION_KEYS)
+
+
+def _should_redact_bundle_string(value: str) -> bool:
+    stripped = value.strip()
+    if not stripped:
+        return False
+    if stripped.startswith(("/", "~/", "\\\\")) or re.search(
+        r"(^|[\s\"'=])(/Users/|/home/|/private/|/tmp/|/var/folders/|[A-Za-z]:\\)",
+        stripped,
+    ):
+        return True
+    if re.search(r"://[^/\\s:@]+:[^/\\s@]+@", stripped):
+        return True
+    return bool(
+        re.search(
+            r"(?i)(bearer\\s+[a-z0-9._-]+|api[_-]?key|password|private[_-]?key|secret|token)",
+            stripped,
+        )
+    )
+
+
+def _write_deterministic_zip_member(
+    archive: zipfile.ZipFile,
+    path: str,
+    content: bytes,
+) -> None:
+    info = zipfile.ZipInfo(filename=path, date_time=DETERMINISTIC_ZIP_TIMESTAMP)
+    info.compress_type = zipfile.ZIP_DEFLATED
+    info.create_system = 3
+    info.external_attr = DETERMINISTIC_ZIP_FILE_MODE
+    archive.writestr(info, content)
 
 
 def render_html_executive_report(payload: MarkdownReportPayload) -> str:
