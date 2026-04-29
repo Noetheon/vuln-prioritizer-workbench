@@ -150,6 +150,7 @@ class EnrichmentService:
             epss_diagnostics=epss_diagnostics,
             kev_diagnostics=kev_diagnostics,
             provider_data_quality_flags=_provider_data_quality_flags(
+                nvd_results=nvd_results,
                 nvd=(nvd_diagnostics, nvd_warnings),
                 epss=(epss_diagnostics, epss_warnings),
                 kev=(kev_diagnostics, kev_warnings),
@@ -194,8 +195,24 @@ class EnrichmentService:
         live_results: dict[str, NvdData] = {}
         warnings: list[str] = []
         if missing_ids:
-            live_results, warnings = self.nvd.fetch_many(missing_ids)
-            self.last_nvd_diagnostics = self.nvd.last_diagnostics
+            try:
+                live_results, warnings = self.nvd.fetch_many(missing_ids)
+            except Exception as exc:  # noqa: BLE001 - NVD must not abort analysis/import
+                live_results = {cve_id: NvdData(cve_id=cve_id) for cve_id in missing_ids}
+                warnings = [f"NVD provider failed: {_safe_provider_error(exc, provider=self.nvd)}"]
+                self.last_nvd_diagnostics = NvdFetchDiagnostics(
+                    requested=len(missing_ids),
+                    failures=len(missing_ids) or 1,
+                    empty_records=len(missing_ids),
+                    degraded=True,
+                )
+            else:
+                provider_diagnostics = getattr(self.nvd, "last_diagnostics", None)
+                self.last_nvd_diagnostics = (
+                    provider_diagnostics
+                    if isinstance(provider_diagnostics, NvdFetchDiagnostics)
+                    else _build_nvd_fetch_diagnostics(cve_ids, live_results)
+                )
         else:
             self.last_nvd_diagnostics = NvdFetchDiagnostics(
                 requested=len(cve_ids),
@@ -325,6 +342,8 @@ def _snapshot_defensive_contexts(
 
 
 def _provider_data_quality_flags(
+    *,
+    nvd_results: dict[str, NvdData] | None = None,
     **sources: tuple[ProviderLookupDiagnostics, list[str]],
 ) -> dict[str, list[ProviderDataQualityFlag]]:
     flags_by_source: dict[str, list[ProviderDataQualityFlag]] = {}
@@ -336,7 +355,28 @@ def _provider_data_quality_flags(
         )
         if flags:
             flags_by_source[source] = flags
+    missing_cvss_flags = _nvd_missing_cvss_flags(nvd_results or {})
+    if missing_cvss_flags:
+        flags_by_source.setdefault("nvd", []).extend(missing_cvss_flags)
     return flags_by_source
+
+
+def _nvd_missing_cvss_flags(results: dict[str, NvdData]) -> list[ProviderDataQualityFlag]:
+    flags: list[ProviderDataQualityFlag] = []
+    for cve_id, item in results.items():
+        if has_nvd_content(item) and item.cvss_base_score is None and item.cvss_version is None:
+            flags.append(
+                ProviderDataQualityFlag(
+                    source="nvd",
+                    code="nvd_cvss_missing",
+                    message=(
+                        "NVD returned provider metadata without a CVSS base score "
+                        f"or version for {cve_id}."
+                    ),
+                    cve_id=cve_id,
+                )
+            )
+    return flags
 
 
 def _merge_provider_results(
@@ -381,3 +421,28 @@ def _build_fallback_diagnostics(
         content_hits=content_hits,
         empty_records=max(len(cve_ids) - content_hits, 0),
     )
+
+
+def _build_nvd_fetch_diagnostics(
+    cve_ids: list[str],
+    results: dict[str, NvdData],
+) -> NvdFetchDiagnostics:
+    fallback = _build_fallback_diagnostics(cve_ids, results, NvdData)
+    return NvdFetchDiagnostics(
+        requested=fallback.requested,
+        cache_hits=fallback.cache_hits,
+        network_fetches=fallback.network_fetches,
+        failures=fallback.failures,
+        content_hits=fallback.content_hits,
+        empty_records=fallback.empty_records,
+        stale_cache_hits=fallback.stale_cache_hits,
+        degraded=fallback.degraded,
+    )
+
+
+def _safe_provider_error(exc: BaseException, *, provider: object) -> str:
+    message = str(exc)
+    secret = getattr(provider, "api_key", None)
+    if isinstance(secret, str) and secret:
+        message = message.replace(secret, "<redacted>")
+    return message

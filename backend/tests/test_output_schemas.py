@@ -84,6 +84,24 @@ def test_kev_enrichment_response_example_matches_model() -> None:
     assert kev.vulnerability_name == "Example Product command injection vulnerability"
 
 
+def test_nvd_provider_record_example_matches_model() -> None:
+    payload = json.loads(
+        (DOCS_ROOT / "examples" / "example_nvd_provider_record.json").read_text(encoding="utf-8")
+    )
+
+    nvd = NvdData.model_validate(payload)
+
+    assert nvd.cve_id == "CVE-2026-2001"
+    assert nvd.cvss_version == "4.0"
+    assert nvd.cvss_vector.startswith("CVSS:4.0/")
+    assert nvd.reference_tags == {
+        "https://example.invalid/advisory/CVE-2026-2001": [
+            "Vendor Advisory",
+            "Patch",
+        ]
+    }
+
+
 def _install_fake_data_update_providers(monkeypatch: Any) -> None:
     def fake_nvd_fetch_many(
         self: NvdProvider,
