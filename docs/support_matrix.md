@@ -49,6 +49,9 @@
 | `nessus-xml` | `.nessus` | yes | yes | host target, plugin name, service/port label, severity, source record id | Pinned Nessus XML export shape. Only resolvable CVEs are normalized. |
 | `openvas-xml` | pinned OpenVAS-style `.xml` | yes | yes | host target, NVT name, severity, source record id | Prefer explicit `--input-format openvas-xml` in CI. Only resolvable CVEs are normalized. |
 
+Maintainer-facing parser fixture regression coverage is documented in
+[VPW-013 Importer Contract](architecture/vpw-013-importer-contract.md).
+
 ## Feature overlay matrix
 
 | Feature | `analyze` | `compare` | `explain` | Notes |
