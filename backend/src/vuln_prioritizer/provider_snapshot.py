@@ -16,6 +16,28 @@ if TYPE_CHECKING:
     from vuln_prioritizer.models import ProviderSnapshotItem
 
 
+_REQUIRED_PROVIDER_SNAPSHOT_KEYS = {"metadata", "items", "warnings"}
+_REQUIRED_PROVIDER_SNAPSHOT_METADATA_KEYS = {
+    "schema_version",
+    "artifact_kind",
+    "snapshot_format",
+    "generated_at",
+    "input_path",
+    "input_paths",
+    "input_format",
+    "selected_sources",
+    "requested_cves",
+    "output_path",
+    "cache_enabled",
+    "cache_dir",
+    "source_hashes",
+    "source_metadata",
+    "offline_kev_file",
+    "nvd_api_key_env",
+}
+_PROVIDER_SNAPSHOT_FORMAT = "provider-snapshot.v1.json"
+
+
 def generate_provider_snapshot_json(report: ProviderSnapshotReport) -> str:
     """Serialize a provider snapshot report as stable JSON."""
     return json.dumps(report.model_dump(), indent=2, sort_keys=True)
@@ -30,10 +52,44 @@ def load_provider_snapshot(path: Path) -> ProviderSnapshotReport:
     except json.JSONDecodeError as exc:
         raise ValueError(f"{path} is not valid JSON: {exc.msg}.") from exc
 
+    _validate_explicit_provider_snapshot_v1(payload, path=path)
+
     try:
         return ProviderSnapshotReport.model_validate(payload)
     except ValidationError as exc:
         raise ValueError(f"{path} is not a valid provider snapshot: {exc}") from exc
+
+
+def _validate_explicit_provider_snapshot_v1(payload: object, *, path: Path) -> None:
+    if not isinstance(payload, dict):
+        raise ValueError(f"{path} is not a valid provider snapshot: expected a JSON object.")
+
+    missing_top_level = sorted(_REQUIRED_PROVIDER_SNAPSHOT_KEYS - set(payload))
+    if missing_top_level:
+        raise ValueError(
+            f"{path} is not a valid provider snapshot: missing required top-level "
+            f"field(s): {', '.join(missing_top_level)}."
+        )
+
+    metadata = payload.get("metadata")
+    if not isinstance(metadata, dict):
+        raise ValueError(
+            f"{path} is not a valid provider snapshot: metadata must be a JSON object."
+        )
+
+    missing_metadata = sorted(_REQUIRED_PROVIDER_SNAPSHOT_METADATA_KEYS - set(metadata))
+    if missing_metadata:
+        raise ValueError(
+            f"{path} is not a valid provider snapshot: missing required metadata "
+            f"field(s): {', '.join(missing_metadata)}."
+        )
+
+    snapshot_format = metadata.get("snapshot_format")
+    if snapshot_format != _PROVIDER_SNAPSHOT_FORMAT:
+        raise ValueError(
+            f"{path} is not a valid provider snapshot: metadata.snapshot_format must be "
+            f"{_PROVIDER_SNAPSHOT_FORMAT}."
+        )
 
 
 def snapshot_items_by_cve(report: ProviderSnapshotReport) -> dict[str, ProviderSnapshotItem]:

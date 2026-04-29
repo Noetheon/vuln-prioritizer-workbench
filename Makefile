@@ -14,7 +14,7 @@ DEMO_EVIDENCE_ANALYSIS_FILE := build/v1.0-demo-analysis.json
 DEMO_EVIDENCE_BUNDLE_FILE := build/v1.0-demo-evidence-bundle.zip
 DEMO_EVIDENCE_VERIFICATION_FILE := build/v1.0-demo-evidence-bundle-verification.json
 
-.PHONY: install test lint format fix typecheck check benchmark-check playwright-install playwright-check frontend-install frontend-build frontend-lint frontend-generate-client frontend-check docs-check docs-serve actionlint-check workflow-check docker-demo-smoke docker-postgres-migration-smoke dependency-audit demo-sync-check demo-sync-check-temp package package-check package-check-temp pipx-source-smoke release-check demo-report demo-compare demo-explain demo-attack-report demo-attack-compare demo-attack-explain demo-attack-coverage demo-attack-navigator demo-pr-comment demo-results-sarif demo-html-report demo-evidence-analysis demo-evidence-bundle demo-evidence-bundle-check precommit-install
+.PHONY: install test lint format fix typecheck check benchmark-check playwright-install playwright-check frontend-install frontend-build frontend-lint frontend-generate-client frontend-check docs-check docs-serve actionlint-check workflow-check docker-demo-smoke docker-postgres-migration-smoke dependency-audit provider-snapshot-validate provider-testmatrix demo-offline-no-key-proof demo-sync-check demo-sync-check-temp package package-check package-check-temp pipx-source-smoke release-check demo-report demo-compare demo-explain demo-attack-report demo-attack-compare demo-attack-explain demo-attack-coverage demo-attack-navigator demo-pr-comment demo-results-sarif demo-html-report demo-evidence-analysis demo-evidence-bundle demo-evidence-bundle-check precommit-install
 
 install:
 	$(PYTHON) -m pip install -e "$(BACKEND_DIR)[dev]"
@@ -69,6 +69,18 @@ docs-check:
 
 docs-serve:
 	$(PYTHON) -m mkdocs serve
+
+provider-snapshot-validate:
+	$(PYTHON) -m pytest -q $(BACKEND_TESTS)/test_output_schemas.py::test_provider_snapshot_v1_example_matches_schema_and_model $(BACKEND_TESTS)/test_output_schemas.py::test_demo_provider_snapshot_matches_schema_and_model $(BACKEND_TESTS)/test_provider_snapshot_contract.py --no-cov
+	$(PYTHON) -c 'import json, jsonschema; from pathlib import Path; schema = json.loads(Path("docs/schemas/provider-snapshot-report.schema.json").read_text(encoding="utf-8")); paths = ("docs/examples/example_provider_snapshot.v1.json", "data/demo_provider_snapshot.json"); [jsonschema.validate(json.loads(Path(path).read_text(encoding="utf-8")), schema) or print(f"{path}: OK") for path in paths]'
+
+provider-testmatrix:
+	$(PYTHON) -m pytest -q $(BACKEND_TESTS)/test_provider_response_contracts.py $(BACKEND_TESTS)/test_provider_contract.py $(BACKEND_TESTS)/test_provider_snapshot_contract.py $(BACKEND_TESTS)/test_cli_data.py::test_data_export_provider_snapshot_cache_only_uses_local_cache $(BACKEND_TESTS)/test_output_schemas.py::test_demo_provider_snapshot_matches_schema_and_model $(BACKEND_TESTS)/api/test_workbench_api.py::test_online_shop_demo_import_uses_demo_snapshot_without_network_or_keys $(BACKEND_TESTS)/test_evidence_bundle_verification.py --no-cov
+
+demo-offline-no-key-proof:
+	mkdir -p build
+	env -u NVD_API_KEY HTTP_PROXY=http://127.0.0.1:9 HTTPS_PROXY=http://127.0.0.1:9 ALL_PROXY=http://127.0.0.1:9 $(DEMO_ENV) $(PYTHON) -m vuln_prioritizer.cli analyze --input data/sample_cves.txt --output build/vpw-029-demo-offline-no-key-proof.json --format json $(DEMO_PROVIDER_FLAGS)
+	$(PYTHON) -c 'import json; from pathlib import Path; payload = json.loads(Path("build/vpw-029-demo-offline-no-key-proof.json").read_text(encoding="utf-8")); diagnostics = payload["metadata"]["provider_diagnostics"]; assert payload["metadata"]["provider_snapshot_file"] == "data/demo_provider_snapshot.json"; assert payload["metadata"]["locked_provider_data"] is True; assert all(item.get("network_fetches", 0) == 0 for item in diagnostics.values()); print("build/vpw-029-demo-offline-no-key-proof.json: OK")'
 
 actionlint-check:
 	docker run --rm -v "$$(pwd):/repo" -w /repo rhysd/actionlint:1.7.12 -color .github/workflows/*.yml .github/examples/*.yml

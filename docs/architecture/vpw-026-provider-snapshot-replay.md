@@ -17,6 +17,8 @@ Provider snapshots use the additive `provider-snapshot.v1.json` format marker in
 
 A concise example is published at
 [`docs/examples/example_provider_snapshot.v1.json`](../examples/example_provider_snapshot.v1.json).
+The offline Workbench demo snapshot at `data/demo_provider_snapshot.json` must
+also satisfy the same explicit v1 metadata contract.
 
 ## Replay
 
@@ -55,3 +57,11 @@ Evidence bundles include the resolved provider snapshot JSON as
 `provider/provider-snapshot.json` when the analysis metadata references a
 readable snapshot artifact. The manifest records the snapshot ID, hash, original
 path, bundle path, and selected sources.
+
+## VPW-029 Offline Contract Tests
+
+VPW-029 adds versioned provider response fixtures under
+`data/provider_contract_fixtures/v1` and validates the demo snapshot with
+`make provider-snapshot-validate`. The no-key/no-network demo proof is
+`make demo-offline-no-key-proof`, which runs locked snapshot replay and asserts
+that provider diagnostics report `network_fetches = 0`.
