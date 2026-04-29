@@ -523,6 +523,41 @@ export type ProviderUpdateJobPublic = {
 };
 
 /**
+ * Request payload for creating a run report.
+ */
+export type ReportCreate = {
+    format?: "markdown";
+};
+
+/**
+ * Public report metadata without exposing server filesystem paths.
+ */
+export type ReportPublic = {
+    analysis_run_id: string;
+    content_type: string;
+    created_at: string;
+    download_url: string;
+    filename: string;
+    format: string;
+    id: string;
+    kind: string;
+    metadata_json?: {
+        [key: string]: unknown;
+    };
+    project_id: string;
+    sha256: string;
+    size_bytes: number;
+};
+
+/**
+ * Collection response for reports.
+ */
+export type ReportsPublic = {
+    count: number;
+    data: Array<ReportPublic>;
+};
+
+/**
  * OAuth2 bearer token response.
  */
 export type Token = {
@@ -674,6 +709,25 @@ export type ProjectsReadProjectSummaryData = {
 export type ProjectsReadProjectSummaryResponse = (ProjectDecisionSummaryPublic);
 
 export type ProvidersReadProviderStatusResponse = (ProviderStatusPublic);
+
+export type ReportsDownloadReportData = {
+    reportId: string;
+};
+
+export type ReportsDownloadReportResponse = (unknown);
+
+export type ReportsReadRunReportsData = {
+    runId: string;
+};
+
+export type ReportsReadRunReportsResponse = (ReportsPublic);
+
+export type ReportsCreateRunReportData = {
+    requestBody: ReportCreate;
+    runId: string;
+};
+
+export type ReportsCreateRunReportResponse = (ReportPublic);
 
 export type RunsReadProjectRunsWithoutTrailingSlashData = {
     projectId: string;

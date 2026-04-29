@@ -3,7 +3,7 @@
 import type { CancelablePromise } from './core/CancelablePromise';
 import { OpenAPI } from './core/OpenAPI';
 import { request as __request } from './core/request';
-import type { AssetsUpdateAssetData, AssetsUpdateAssetResponse, AssetsReadProjectAssetsData, AssetsReadProjectAssetsResponse, AssetsCreateProjectAssetData, AssetsCreateProjectAssetResponse, FindingsReadFindingData, FindingsReadFindingResponse, FindingsExplainFindingData, FindingsExplainFindingResponse, FindingsReadProjectFindingsData, FindingsReadProjectFindingsResponse, ImportsImportProjectUploadData, ImportsImportProjectUploadResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, ProjectsReadProjectsResponse, ProjectsCreateProjectData, ProjectsCreateProjectResponse, ProjectsDeleteProjectData, ProjectsDeleteProjectResponse, ProjectsReadProjectData, ProjectsReadProjectResponse, ProjectsUpdateProjectData, ProjectsUpdateProjectResponse, ProjectsCompareProjectCvssOnlyData, ProjectsCompareProjectCvssOnlyResponse, ProjectsReadProjectSummaryData, ProjectsReadProjectSummaryResponse, ProvidersReadProviderStatusResponse, RunsReadProjectRunsWithoutTrailingSlashData, RunsReadProjectRunsWithoutTrailingSlashResponse, RunsReadProjectRunsData, RunsReadProjectRunsResponse, RunsReadRunData, RunsReadRunResponse, RunsReadRunSummaryData, RunsReadRunSummaryResponse, UsersReadUserMeResponse, UtilsHealthCheckResponse, WorkbenchTemplateWorkbenchStatusResponse } from './types.gen';
+import type { AssetsUpdateAssetData, AssetsUpdateAssetResponse, AssetsReadProjectAssetsData, AssetsReadProjectAssetsResponse, AssetsCreateProjectAssetData, AssetsCreateProjectAssetResponse, FindingsReadFindingData, FindingsReadFindingResponse, FindingsExplainFindingData, FindingsExplainFindingResponse, FindingsReadProjectFindingsData, FindingsReadProjectFindingsResponse, ImportsImportProjectUploadData, ImportsImportProjectUploadResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, ProjectsReadProjectsResponse, ProjectsCreateProjectData, ProjectsCreateProjectResponse, ProjectsDeleteProjectData, ProjectsDeleteProjectResponse, ProjectsReadProjectData, ProjectsReadProjectResponse, ProjectsUpdateProjectData, ProjectsUpdateProjectResponse, ProjectsCompareProjectCvssOnlyData, ProjectsCompareProjectCvssOnlyResponse, ProjectsReadProjectSummaryData, ProjectsReadProjectSummaryResponse, ProvidersReadProviderStatusResponse, ReportsDownloadReportData, ReportsDownloadReportResponse, ReportsReadRunReportsData, ReportsReadRunReportsResponse, ReportsCreateRunReportData, ReportsCreateRunReportResponse, RunsReadProjectRunsWithoutTrailingSlashData, RunsReadProjectRunsWithoutTrailingSlashResponse, RunsReadProjectRunsData, RunsReadProjectRunsResponse, RunsReadRunData, RunsReadRunResponse, RunsReadRunSummaryData, RunsReadRunSummaryResponse, UsersReadUserMeResponse, UtilsHealthCheckResponse, WorkbenchTemplateWorkbenchStatusResponse } from './types.gen';
 
 export class AssetsService {
     /**
@@ -394,6 +394,74 @@ export class ProvidersService {
         return __request(OpenAPI, {
             method: 'GET',
             url: '/api/v1/providers/status'
+        });
+    }
+}
+
+export class ReportsService {
+    /**
+     * Download Report
+     * Download a visible report after root and checksum validation.
+     * @param data The data for the request.
+     * @param data.reportId
+     * @returns unknown Successful Response
+     * @throws ApiError
+     */
+    public static downloadReport(data: ReportsDownloadReportData): CancelablePromise<ReportsDownloadReportResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/reports/{report_id}/download',
+            path: {
+                report_id: data.reportId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+
+    /**
+     * Read Run Reports
+     * List report metadata for a visible analysis run.
+     * @param data The data for the request.
+     * @param data.runId
+     * @returns ReportsPublic Successful Response
+     * @throws ApiError
+     */
+    public static readRunReports(data: ReportsReadRunReportsData): CancelablePromise<ReportsReadRunReportsResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/runs/{run_id}/reports',
+            path: {
+                run_id: data.runId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+
+    /**
+     * Create Run Report
+     * Create a Markdown technical report for a completed visible analysis run.
+     * @param data The data for the request.
+     * @param data.runId
+     * @param data.requestBody
+     * @returns ReportPublic Successful Response
+     * @throws ApiError
+     */
+    public static createRunReport(data: ReportsCreateRunReportData): CancelablePromise<ReportsCreateRunReportResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/runs/{run_id}/reports',
+            path: {
+                run_id: data.runId
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
         });
     }
 }

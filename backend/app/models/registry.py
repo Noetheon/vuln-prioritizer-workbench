@@ -9,6 +9,7 @@ TABLE_MODEL_MODULES = (
     "app.models.vulnerabilities",
     "app.models.findings",
     "app.models.runs",
+    "app.models.reports",
 )
 
 
