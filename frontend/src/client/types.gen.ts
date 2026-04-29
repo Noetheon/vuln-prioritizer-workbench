@@ -35,6 +35,40 @@ export type AnalysisRunsPublic = {
 export type AnalysisRunStatus = 'pending' | 'running' | 'succeeded' | 'completed' | 'completed_with_errors' | 'failed' | 'cancelled';
 
 /**
+ * UI-oriented summary for one import or analysis run.
+ */
+export type AnalysisRunSummaryPublic = {
+    created_findings?: number;
+    dedup_summary?: {
+        [key: string]: unknown;
+    };
+    error_json?: {
+        [key: string]: unknown;
+    };
+    filename: (string | null);
+    finding_count?: number;
+    finished_at: (string | null);
+    id: string;
+    ignored_lines?: number;
+    import_job?: {
+        [key: string]: unknown;
+    };
+    input_type: string;
+    input_upload?: {
+        [key: string]: unknown;
+    };
+    occurrence_count?: number;
+    parse_errors?: Array<ImportParseErrorPublic>;
+    project_id: string;
+    started_at: string;
+    status: AnalysisRunStatus;
+    summary_json?: {
+        [key: string]: unknown;
+    };
+    updated_findings?: number;
+};
+
+/**
  * Asset creation payload.
  */
 export type AssetCreate = {
@@ -177,6 +211,19 @@ export type FindingStatus = 'open' | 'in_review' | 'remediating' | 'fixed' | 'ac
 
 export type HTTPValidationError = {
     detail?: Array<ValidationError>;
+};
+
+/**
+ * Stable parser error item for import status and summary APIs.
+ */
+export type ImportParseErrorPublic = {
+    error_type: string;
+    field?: (string | null);
+    filename?: (string | null);
+    input_type: string;
+    line?: (number | null);
+    message: string;
+    value?: (string | null);
 };
 
 /**
@@ -342,6 +389,12 @@ export type ProjectsUpdateProjectData = {
 
 export type ProjectsUpdateProjectResponse = (ProjectPublic);
 
+export type RunsReadProjectRunsWithoutTrailingSlashData = {
+    projectId: string;
+};
+
+export type RunsReadProjectRunsWithoutTrailingSlashResponse = (AnalysisRunsPublic);
+
 export type RunsReadProjectRunsData = {
     projectId: string;
 };
@@ -353,6 +406,12 @@ export type RunsReadRunData = {
 };
 
 export type RunsReadRunResponse = (AnalysisRunPublic);
+
+export type RunsReadRunSummaryData = {
+    runId: string;
+};
+
+export type RunsReadRunSummaryResponse = (AnalysisRunSummaryPublic);
 
 export type UsersReadUserMeResponse = (UserPublic);
 

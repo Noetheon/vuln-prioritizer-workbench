@@ -44,6 +44,9 @@ def test_valid_cve_list_upload_creates_analysis_run_and_stores_sha256(
     assert payload["summary_json"]["finding_count"] == 2
     assert payload["summary_json"]["dedup_summary"]["created_findings"] == 2
     assert payload["summary_json"]["dedup_summary"]["reused_findings"] == 0
+    assert payload["summary_json"]["created_findings"] == 2
+    assert payload["summary_json"]["updated_findings"] == 0
+    assert payload["summary_json"]["ignored_lines"] == 0
     assert payload["summary_json"]["input_upload"]["sha256"] == expected_sha256
     assert payload["summary_json"]["input_upload"]["original_filename"] == "Team Scan (prod).txt"
     assert payload["summary_json"]["input_upload"]["stored_filename"] == "Team_Scan__prod_.txt"
@@ -72,6 +75,23 @@ def test_valid_cve_list_upload_creates_analysis_run_and_stores_sha256(
     )
     assert findings.status_code == 200
     assert findings.json()["count"] == 2
+
+    summary = template_api_env.client.get(
+        f"/api/v1/runs/{payload['id']}/summary",
+        headers=headers,
+    )
+    assert summary.status_code == 200
+    summary_payload = summary.json()
+    assert summary_payload["id"] == payload["id"]
+    assert summary_payload["project_id"] == project["id"]
+    assert summary_payload["status"] == "succeeded"
+    assert summary_payload["created_findings"] == 2
+    assert summary_payload["updated_findings"] == 0
+    assert summary_payload["ignored_lines"] == 0
+    assert summary_payload["occurrence_count"] == 2
+    assert summary_payload["finding_count"] == 2
+    assert summary_payload["parse_errors"] == []
+    assert summary_payload["input_upload"]["sha256"] == expected_sha256
 
 
 def test_double_import_deduplicates_findings_and_appends_occurrences(
@@ -121,7 +141,10 @@ def test_double_import_deduplicates_findings_and_appends_occurrences(
     dedup_summary = second_payload["summary_json"]["dedup_summary"]
     assert second_payload["summary_json"]["occurrence_count"] == 2
     assert second_payload["summary_json"]["finding_count"] == 2
+    assert second_payload["summary_json"]["created_findings"] == 0
+    assert second_payload["summary_json"]["updated_findings"] == 2
     assert dedup_summary["created_findings"] == 0
+    assert dedup_summary["updated_findings"] == 2
     assert dedup_summary["reused_findings"] == 2
     assert dedup_summary["decision_count"] == 2
     assert {item["action"] for item in dedup_summary["decisions"]} == {"reused"}
@@ -147,6 +170,19 @@ def test_double_import_deduplicates_findings_and_appends_occurrences(
     )
     assert findings.status_code == 200
     assert findings.json()["count"] == 2
+
+    summary = template_api_env.client.get(
+        f"/api/v1/runs/{second_payload['id']}/summary",
+        headers=headers,
+    )
+    assert summary.status_code == 200
+    summary_payload = summary.json()
+    assert summary_payload["created_findings"] == 0
+    assert summary_payload["updated_findings"] == 2
+    assert summary_payload["occurrence_count"] == 2
+    assert summary_payload["finding_count"] == 2
+    assert summary_payload["dedup_summary"]["reused_findings"] == 2
+    assert {item["action"] for item in summary_payload["dedup_summary"]["decisions"]} == {"reused"}
 
 
 def test_same_cve_on_different_assets_creates_distinct_findings(
@@ -289,8 +325,12 @@ def test_parse_errors_are_structured_and_failed_run_is_persisted(
     detail = response.json()["detail"]
     assert detail["message"] == "Import parsing failed."
     assert detail["analysis_run_id"]
+    assert detail["ignored_lines"] == 0
     assert detail["parse_errors"][0]["input_type"] == "cve-list"
     assert detail["parse_errors"][0]["filename"] == "bad.txt"
+    assert detail["parse_errors"][0]["line"] == 2
+    assert detail["parse_errors"][0]["field"] == "cve_id"
+    assert detail["parse_errors"][0]["value"] == "not-a-cve"
     assert "line 2" in detail["parse_errors"][0]["message"]
     assert "not-a-cve" in detail["parse_errors"][0]["message"]
 
@@ -311,6 +351,45 @@ def test_parse_errors_are_structured_and_failed_run_is_persisted(
     assert payload["summary_json"]["input_upload"]["sha256"] == expected_sha256
     assert Path(payload["summary_json"]["input_upload"]["path"]).is_relative_to(upload_dir)
     assert Path(payload["summary_json"]["input_upload"]["path"]).read_bytes() == content
+
+    summary = template_api_env.client.get(
+        f"/api/v1/runs/{detail['analysis_run_id']}/summary",
+        headers=headers,
+    )
+    assert summary.status_code == 200
+    summary_payload = summary.json()
+    assert summary_payload["status"] == "failed"
+    assert summary_payload["created_findings"] == 0
+    assert summary_payload["updated_findings"] == 0
+    assert summary_payload["ignored_lines"] == 0
+    assert summary_payload["parse_errors"] == detail["parse_errors"]
+
+
+def test_summary_tracks_ignored_cve_list_lines(
+    template_api_env: TemplateApiEnv,
+    tmp_path: Path,
+) -> None:
+    _configure_upload_dir(template_api_env, tmp_path)
+    headers = auth_headers(template_api_env.client)
+    project = create_project_via_api(template_api_env.client, headers)
+    content = b"# comment\n\nCVE-2024-3094\n"
+
+    response = template_api_env.client.post(
+        f"/api/v1/projects/{project['id']}/imports",
+        headers=headers,
+        data={"input_type": "cve-list"},
+        files={"file": ("with-ignored-lines.txt", content, "text/plain")},
+    )
+
+    assert response.status_code == 200, response.text
+    run_id = response.json()["id"]
+    summary = template_api_env.client.get(f"/api/v1/runs/{run_id}/summary", headers=headers)
+    assert summary.status_code == 200
+    summary_payload = summary.json()
+    assert summary_payload["ignored_lines"] == 2
+    assert summary_payload["created_findings"] == 1
+    assert summary_payload["updated_findings"] == 0
+    assert summary_payload["parse_errors"] == []
 
 
 def _configure_upload_dir(

@@ -112,6 +112,24 @@ The run can be saved before any findings exist. This supports creating a durable
 record as soon as an upload/import starts, then appending summary data and
 occurrences after parsing and enrichment complete.
 
+Template import runs expose a stable API summary at
+`GET /api/v1/runs/{run_id}/summary`. The endpoint derives these UI fields from
+`summary_json` and `error_json` without changing the stored schema:
+
+- `created_findings`
+- `updated_findings`
+- `ignored_lines`
+- `occurrence_count`
+- `finding_count`
+- `parse_errors`
+- `import_job`
+- `input_upload`
+- `dedup_summary`
+
+`parse_errors` contain `input_type`, `filename`, `message`, and `error_type`.
+They may also contain a 1-based `line`, logical `field`, and rejected `value`
+when that detail is available from the importer error.
+
 ### `finding_occurrence`
 
 A finding occurrence stores one concrete source row, alert, package match, or

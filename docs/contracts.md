@@ -263,6 +263,9 @@ Workbench API changes are additive:
 - `GET /api/tokens` lists token metadata without token values; `DELETE /api/tokens/{id}` revokes tokens
 - `GET /api/diagnostics` exposes local runtime diagnostics and is token-gated once active tokens exist
 - `POST /api/v1/projects/{project_id}/imports` accepts a JWT-gated template Workbench upload, validates input type, extension, MIME hint, filename, and upload size, persists the uploaded file under the configured import upload root, and records upload SHA-256 plus structured `parse_errors` in the returned `AnalysisRun`
+- `GET /api/v1/projects/{project_id}/runs` and `GET /api/v1/projects/{project_id}/runs/` list visible template Workbench runs
+- `GET /api/v1/runs/{run_id}` returns the raw persisted template Workbench run for a visible project
+- `GET /api/v1/runs/{run_id}/summary` returns a UI-oriented summary with stable `created_findings`, `updated_findings`, `ignored_lines`, `occurrence_count`, `finding_count`, `parse_errors`, `import_job`, `input_upload`, and `dedup_summary` fields
 - `POST /api/projects/{project_id}/imports` accepts single-upload and additive multi-upload imports for all CLI input formats
 - `GET /api/jobs`, `GET /api/jobs/{id}`, `POST /api/jobs`, and `POST /api/jobs/{id}/retry` expose durable local job state for compatible synchronous operations
 - `DELETE /api/reports/{id}` and `DELETE /api/evidence-bundles/{id}` remove managed artifacts after checksum validation
@@ -273,6 +276,19 @@ Workbench API changes are additive:
 - `POST /api/projects/{project_id}/tickets/preview` and `POST /api/projects/{project_id}/tickets/export` support Jira and ServiceNow ticket previews, dry-runs, explicit token environment variables, and idempotency keys without making either system a required dependency
 - project config snapshots can be listed, recursively diffed, exported, and rolled back through settings endpoints
 - `--fail-on-expired-waivers` and `--fail-on-review-due-waivers` are opt-in enforcement hooks
+
+Template import parse errors use this additive shape in `parse_errors`:
+
+- `input_type`: normalized import type such as `cve-list`
+- `filename`: sanitized uploaded filename when available
+- `message`: parser-facing error text suitable for display
+- `error_type`: importer exception class name
+- `line`: 1-based input line number when the parser error includes one
+- `field`: logical field when inferable, for example `cve_id`
+- `value`: rejected value when inferable from the parser message
+
+Consumers should treat `line`, `field`, and `value` as optional and preserve
+unknown additive members.
 
 ### Parser and provider extension SDK
 
