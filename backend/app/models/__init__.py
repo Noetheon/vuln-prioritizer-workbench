@@ -96,6 +96,14 @@ from app.models.runs import (
 )
 from app.models.users import User, UserBase, UserPublic, UsersPublic
 from app.models.vulnerabilities import Vulnerability, VulnerabilityBase
+from app.models.waivers import (
+    Waiver,
+    WaiverBase,
+    WaiverCreate,
+    WaiverPublic,
+    WaiversPublic,
+    WaiverUpdate,
+)
 from app.models.workbench import MigrationStatus, WorkbenchStatus
 
 __all__ = [
@@ -177,6 +185,12 @@ __all__ = [
     "UsersPublic",
     "Vulnerability",
     "VulnerabilityBase",
+    "Waiver",
+    "WaiverBase",
+    "WaiverCreate",
+    "WaiverPublic",
+    "WaiversPublic",
+    "WaiverUpdate",
     "WorkbenchStatus",
     "import_table_models",
 ]

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
 from fastapi import HTTPException
@@ -55,10 +55,18 @@ def _validated_waiver_values(
         finding = repo.get_finding(finding_id)
         if finding is None or finding.project_id != project_id:
             raise HTTPException(status_code=422, detail="finding_id does not belong to project.")
-    expires_on = _validated_date(payload.expires_on, field_name="expires_on", required=True)
+    expires_on = _validated_date(
+        payload.expires_on or payload.expires_at,
+        field_name="expires_on",
+        required=True,
+    )
     if expires_on is None:
         raise HTTPException(status_code=422, detail="expires_on is required.")
-    review_on = _validated_date(payload.review_on, field_name="review_on", required=False)
+    review_on = _validated_date(
+        payload.review_on or payload.review_at,
+        field_name="review_on",
+        required=False,
+    )
     values = {
         "cve_id": cve_id,
         "finding_id": finding_id,
@@ -92,6 +100,19 @@ def _validated_waiver_values(
     ):
         raise HTTPException(status_code=422, detail="At least one waiver scope is required.")
     return values
+
+
+def _expire_waiver(
+    repo: WorkbenchRepository,
+    waiver: Any,
+) -> tuple[Any, dict[str, int]]:
+    expired_on = (_today() - timedelta(days=1)).isoformat()
+    if waiver.review_on is not None and waiver.review_on > expired_on:
+        waiver.review_on = expired_on
+    waiver.expires_on = expired_on
+    repo.session.flush()
+    matched = _sync_project_waivers(repo, waiver.project_id)
+    return waiver, matched
 
 
 def _sync_project_waivers(repo: WorkbenchRepository, project_id: str) -> dict[str, int]:
@@ -217,7 +238,9 @@ def _waiver_payload(waiver: Any, *, matched_findings: int = 0) -> dict[str, Any]
         "owner": waiver.owner,
         "reason": waiver.reason,
         "expires_on": waiver.expires_on,
+        "expires_at": waiver.expires_on,
         "review_on": waiver.review_on,
+        "review_at": waiver.review_on,
         "approval_ref": waiver.approval_ref,
         "ticket_url": waiver.ticket_url,
         "status": status,
