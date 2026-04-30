@@ -3970,8 +3970,48 @@ export const ProviderStatusPublicSchema = {
     type: 'object'
 } as const;
 
+export const ProviderUpdateJobCreateSchema = {
+    description: 'Request body for a deterministic provider update job.',
+    properties: {
+        cache_only: {
+            default: true,
+            title: 'Cache Only',
+            type: 'boolean'
+        },
+        cve_ids: {
+            items: {
+                type: 'string'
+            },
+            title: 'Cve Ids',
+            type: 'array'
+        },
+        max_cves: {
+            anyOf: [
+                {
+                    maximum: 10000,
+                    minimum: 1,
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Max Cves'
+        },
+        sources: {
+            items: {
+                type: 'string'
+            },
+            title: 'Sources',
+            type: 'array'
+        }
+    },
+    title: 'ProviderUpdateJobCreate',
+    type: 'object'
+} as const;
+
 export const ProviderUpdateJobPublicSchema = {
-    description: 'Placeholder shape for future provider update-job status records.',
+    description: 'Provider update-job status record.',
     properties: {
         error_message: {
             anyOf: [
@@ -4029,6 +4069,26 @@ export const ProviderUpdateJobPublicSchema = {
     },
     required: ['id', 'status'],
     title: 'ProviderUpdateJobPublic',
+    type: 'object'
+} as const;
+
+export const ProviderUpdateJobsPublicSchema = {
+    description: 'Provider update-job collection response.',
+    properties: {
+        count: {
+            title: 'Count',
+            type: 'integer'
+        },
+        data: {
+            items: {
+                '$ref': '#/components/schemas/ProviderUpdateJobPublic'
+            },
+            title: 'Data',
+            type: 'array'
+        }
+    },
+    required: ['count'],
+    title: 'ProviderUpdateJobsPublic',
     type: 'object'
 } as const;
 

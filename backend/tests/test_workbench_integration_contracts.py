@@ -25,11 +25,12 @@ def test_compose_uses_template_shell_and_keeps_profiled_legacy_postgres() -> Non
     assert "http://127.0.0.1:5173" in backend["environment"]["BACKEND_CORS_ORIGINS"]
     assert backend["environment"]["IMPORT_UPLOAD_DIR"] == "/app/template-import-uploads"
     assert backend["environment"]["REPORT_DIR"] == "/app/template-reports"
-    assert backend["environment"]["PROVIDER_SNAPSHOT_DIR"] == "/app/examples"
+    assert backend["environment"]["PROVIDER_SNAPSHOT_DIR"] == "/app/provider-snapshots"
     assert backend["environment"]["PROVIDER_CACHE_DIR"] == "/app/template-provider-cache"
     assert backend["environment"]["ATTACK_ARTIFACT_DIR"] == "/app/examples/attack"
     assert "template-import-uploads:/app/template-import-uploads" in backend["volumes"]
     assert "template-reports:/app/template-reports" in backend["volumes"]
+    assert "template-provider-snapshots:/app/provider-snapshots" in backend["volumes"]
     assert "template-provider-cache:/app/template-provider-cache" in backend["volumes"]
     assert "./data:/app/examples:ro" in backend["volumes"]
     assert "/api/v1/workbench/status" in backend["healthcheck"]["test"][3]
@@ -53,6 +54,27 @@ def test_compose_uses_template_shell_and_keeps_profiled_legacy_postgres() -> Non
         workbench_postgres["environment"]["VULN_PRIORITIZER_PROVIDER_SNAPSHOT_DIR"]
         == "/app/provider-snapshots"
     )
+    assert workbench_postgres["environment"]["VULN_PRIORITIZER_ALLOWED_HOSTS"] == (
+        "${VULN_PRIORITIZER_ALLOWED_HOSTS:-127.0.0.1,localhost,workbench-postgres}"
+    )
+
+    scheduler = services["provider-scheduler"]
+    assert scheduler["profiles"] == ["postgres"]
+    assert scheduler["depends_on"]["workbench-postgres"]["condition"] == "service_healthy"
+    assert scheduler["command"] == ["python", "-m", "vuln_prioritizer.provider_scheduler"]
+    assert scheduler["read_only"] is True
+    assert scheduler["cap_drop"] == ["ALL"]
+    assert scheduler["security_opt"] == ["no-new-privileges:true"]
+    scheduler_env = scheduler["environment"]
+    assert scheduler_env["VULN_PRIORITIZER_PROVIDER_UPDATE_BASE_URL"] == (
+        "http://workbench-postgres:8000"
+    )
+    assert scheduler_env["VULN_PRIORITIZER_PROVIDER_UPDATE_INTERVAL_SECONDS"] == (
+        "${VULN_PRIORITIZER_PROVIDER_UPDATE_INTERVAL_SECONDS:-86400}"
+    )
+    assert scheduler_env["VULN_PRIORITIZER_PROVIDER_UPDATE_CACHE_ONLY"] == (
+        "${VULN_PRIORITIZER_PROVIDER_UPDATE_CACHE_ONLY:-true}"
+    )
 
 
 def test_compose_override_exposes_template_shell_and_frontend_ports() -> None:
@@ -61,6 +83,9 @@ def test_compose_override_exposes_template_shell_and_frontend_ports() -> None:
     backend_command = "\n".join(services["backend"]["command"])
 
     assert services["backend"]["ports"] == ["127.0.0.1:8000:8000"]
+    assert "cp -n /app/examples/*provider_snapshot*.json /app/provider-snapshots/" in (
+        backend_command
+    )
     assert "init_db(session)" in backend_command
     assert "app.main:app" in backend_command
     assert services["frontend"]["ports"] == ["127.0.0.1:5173:80"]
@@ -78,6 +103,7 @@ def test_docker_demo_smoke_runs_quickstart_api_import() -> None:
     assert "$(PYTHON) scripts/docker_quickstart_api_smoke.py" in docker_smoke_block
     assert "locked_provider_data" in script
     assert "demo_provider_snapshot.json" in script
+    assert "providers/update-jobs" in script
 
 
 def test_frontend_nginx_serves_security_headers_for_static_and_404_routes() -> None:

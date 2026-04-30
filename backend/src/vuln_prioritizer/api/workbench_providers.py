@@ -4,6 +4,11 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
+import re
+import time
+from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
@@ -37,8 +42,13 @@ from vuln_prioritizer.provider_snapshot import (
 from vuln_prioritizer.providers.epss import EpssProvider
 from vuln_prioritizer.providers.kev import KevProvider
 from vuln_prioritizer.providers.nvd import NvdProvider
+from vuln_prioritizer.security_redaction import redact_error, redact_value
 from vuln_prioritizer.utils import iso_utc_now, normalize_cve_id
 from vuln_prioritizer.workbench_config import WorkbenchSettings
+
+PROVIDER_UPDATE_LOCK_FILE = ".provider-update.lock"
+PROVIDER_UPDATE_LOCK_STALE_SECONDS = 6 * 60 * 60
+SAFE_PROVIDER_SNAPSHOT_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
 
 
 def _create_provider_update_job_record(
@@ -56,14 +66,16 @@ def _create_provider_update_job_record(
         else None,
     }
     try:
-        snapshot, refresh_metadata = _run_provider_snapshot_refresh(
-            repo=repo,
-            settings=settings,
-            payload=payload,
-            latest_snapshot=latest_snapshot,
-        )
+        with _provider_update_lock(settings):
+            snapshot, refresh_metadata = _run_provider_snapshot_refresh(
+                repo=repo,
+                settings=settings,
+                payload=payload,
+                latest_snapshot=latest_snapshot,
+            )
         metadata = {
             "mode": "synchronous-local-snapshot-refresh",
+            "lock_strategy": "provider-snapshot-dir-file",
             **previous_metadata,
             **refresh_metadata,
             "new_snapshot_id": snapshot.id if snapshot is not None else None,
@@ -91,6 +103,56 @@ def _create_provider_update_job_record(
     return job
 
 
+@contextmanager
+def _provider_update_lock(settings: WorkbenchSettings) -> Iterator[Path]:
+    """Acquire a process-safe lock for provider snapshot refresh side effects."""
+    settings.provider_snapshot_dir.mkdir(parents=True, exist_ok=True)
+    lock_path = settings.provider_snapshot_dir / PROVIDER_UPDATE_LOCK_FILE
+    descriptor: int | None = None
+    try:
+        descriptor = _open_provider_update_lock(lock_path)
+        os.write(
+            descriptor,
+            json.dumps(
+                {
+                    "pid": os.getpid(),
+                    "created_at": iso_utc_now(),
+                    "stale_after_seconds": PROVIDER_UPDATE_LOCK_STALE_SECONDS,
+                },
+                sort_keys=True,
+            ).encode("utf-8"),
+        )
+        yield lock_path
+    finally:
+        if descriptor is not None:
+            os.close(descriptor)
+            lock_path.unlink(missing_ok=True)
+
+
+def _open_provider_update_lock(lock_path: Path) -> int:
+    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+    try:
+        return os.open(lock_path, flags, 0o600)
+    except FileExistsError as exc:
+        if _provider_update_lock_is_stale(lock_path):
+            lock_path.unlink(missing_ok=True)
+            try:
+                return os.open(lock_path, flags, 0o600)
+            except FileExistsError:
+                pass
+        raise HTTPException(
+            status_code=409,
+            detail="Provider update already running; retry after the active job finishes.",
+        ) from exc
+
+
+def _provider_update_lock_is_stale(lock_path: Path) -> bool:
+    try:
+        return time.time() - lock_path.stat().st_mtime > PROVIDER_UPDATE_LOCK_STALE_SECONDS
+    except OSError:
+        return False
+
+
 def _run_provider_snapshot_refresh(
     *,
     repo: WorkbenchRepository,
@@ -109,7 +171,10 @@ def _run_provider_snapshot_refresh(
             "warnings": ["No CVEs were available for provider snapshot refresh."],
         }
 
-    baseline_items, baseline_warnings = _load_latest_snapshot_items(latest_snapshot)
+    baseline_items, baseline_warnings = _load_latest_snapshot_items(
+        latest_snapshot,
+        settings=settings,
+    )
     cache = FileCache(settings.provider_cache_dir, DEFAULT_CACHE_TTL_HOURS)
     warnings = list(baseline_warnings)
     source_counts: dict[str, dict[str, int]] = {}
@@ -149,7 +214,8 @@ def _run_provider_snapshot_refresh(
         warnings.extend(source_warnings)
 
     snapshot_id = uuid4().hex
-    output_path = settings.provider_snapshot_dir / f"provider-snapshot-{snapshot_id}.json"
+    output_path = _provider_snapshot_artifact_path(settings=settings, snapshot_id=snapshot_id)
+    output_label = _provider_snapshot_artifact_label(output_path, settings=settings)
     source_hashes = _provider_cache_source_hashes(cache, selected_sources)
     report = ProviderSnapshotReport(
         metadata=ProviderSnapshotMetadata(
@@ -159,10 +225,10 @@ def _run_provider_snapshot_refresh(
             input_format="workbench-current-findings",
             selected_sources=selected_sources,
             requested_cves=len(cve_ids),
-            output_path=str(output_path),
+            output_path=output_label,
             cache_enabled=True,
             cache_only=payload.cache_only,
-            cache_dir=str(settings.provider_cache_dir),
+            cache_dir=None,
             source_hashes=source_hashes,
             source_metadata=_provider_source_metadata(
                 selected_sources=selected_sources,
@@ -194,7 +260,7 @@ def _run_provider_snapshot_refresh(
         metadata_json = report.metadata.model_dump()
         metadata_json.update(
             {
-                "source_path": str(output_path),
+                "source_path": output_label,
                 "item_count": len(report.items),
                 "warnings": warnings,
                 "missing": False,
@@ -211,7 +277,7 @@ def _run_provider_snapshot_refresh(
         )
     return snapshot, {
         "snapshot_created": True,
-        "snapshot_path": str(output_path),
+        "snapshot_path": output_label,
         "snapshot_sha256": content_hash,
         "source_hashes": report.metadata.source_hashes,
         "selected_sources": selected_sources,
@@ -255,6 +321,8 @@ def _provider_update_cve_ids(
 
 def _load_latest_snapshot_items(
     latest_snapshot: Any | None,
+    *,
+    settings: WorkbenchSettings,
 ) -> tuple[dict[str, ProviderSnapshotItem], list[str]]:
     if latest_snapshot is None:
         return {}, []
@@ -266,8 +334,11 @@ def _load_latest_snapshot_items(
     )
     if not isinstance(path_value, str) or not path_value:
         return {}, ["Latest provider snapshot has no readable source artifact path."]
-    path = Path(path_value)
-    if not path.is_file():
+    try:
+        path = _resolve_provider_snapshot_artifact_path(latest_snapshot, settings=settings)
+    except HTTPException as exc:
+        if exc.status_code == 403:
+            return {}, ["Latest provider snapshot artifact path is outside allowed roots."]
         return {}, ["Latest provider snapshot artifact is no longer available on disk."]
     try:
         return snapshot_items_by_cve(load_provider_snapshot(path)), []
@@ -401,11 +472,12 @@ def _provider_status_payload(
     latest_update_job: Any | None = None,
 ) -> dict[str, Any]:
     metadata = snapshot.metadata_json if snapshot is not None else {}
+    response_metadata = _redacted_provider_metadata_for_response(metadata)
     selected_sources = metadata.get("selected_sources", []) if isinstance(metadata, dict) else []
     locked_provider_data = (
         bool(metadata.get("locked_provider_data")) if isinstance(metadata, dict) else False
     )
-    warnings = list(metadata.get("warnings", [])) if isinstance(metadata, dict) else []
+    warnings = list(response_metadata.get("warnings", []))
     latest_update_job_payload = (
         ProviderUpdateJobResponse.model_validate(_provider_update_job_payload(latest_update_job))
         if latest_update_job is not None
@@ -423,10 +495,10 @@ def _provider_status_payload(
     snapshot_status = ProviderSnapshotStatus(
         id=snapshot.id if snapshot is not None else None,
         content_hash=snapshot.content_hash if snapshot is not None else None,
-        generated_at=metadata.get("generated_at") if isinstance(metadata, dict) else None,
+        generated_at=response_metadata.get("generated_at"),
         selected_sources=list(selected_sources),
         requested_cves=int(metadata.get("requested_cves", 0)) if isinstance(metadata, dict) else 0,
-        source_path=metadata.get("source_path") if isinstance(metadata, dict) else None,
+        source_path=response_metadata.get("source_path"),
         locked_provider_data=locked_provider_data,
         missing=snapshot is None or bool(metadata.get("missing", False)),
     )
@@ -510,6 +582,7 @@ def _provider_source_metadata(
 
 def _provider_snapshot_payload(snapshot: Any) -> dict[str, Any]:
     metadata = snapshot.metadata_json if isinstance(snapshot.metadata_json, dict) else {}
+    response_metadata = _redacted_provider_metadata_for_response(metadata)
     return {
         "id": snapshot.id,
         "created_at": snapshot.created_at.isoformat(),
@@ -517,15 +590,18 @@ def _provider_snapshot_payload(snapshot: Any) -> dict[str, Any]:
         "nvd_last_sync": snapshot.nvd_last_sync,
         "epss_date": snapshot.epss_date,
         "kev_catalog_version": snapshot.kev_catalog_version,
-        "snapshot_id": metadata.get("snapshot_id"),
-        "snapshot_format": metadata.get("snapshot_format", "provider-snapshot.v1.json"),
-        "generated_at": metadata.get("generated_at"),
-        "selected_sources": list(metadata.get("selected_sources", [])),
-        "requested_cves": int(metadata.get("requested_cves", 0) or 0),
-        "source_hashes": metadata.get("source_hashes", {}),
-        "source_metadata": metadata.get("source_metadata", {}),
-        "source_path": metadata.get("source_path") or metadata.get("output_path"),
-        "warnings": metadata.get("warnings", []),
+        "snapshot_id": response_metadata.get("snapshot_id"),
+        "snapshot_format": response_metadata.get(
+            "snapshot_format",
+            "provider-snapshot.v1.json",
+        ),
+        "generated_at": response_metadata.get("generated_at"),
+        "selected_sources": list(response_metadata.get("selected_sources", [])),
+        "requested_cves": int(response_metadata.get("requested_cves", 0) or 0),
+        "source_hashes": response_metadata.get("source_hashes", {}),
+        "source_metadata": response_metadata.get("source_metadata", {}),
+        "source_path": response_metadata.get("source_path") or response_metadata.get("output_path"),
+        "warnings": response_metadata.get("warnings", []),
     }
 
 
@@ -540,18 +616,103 @@ def _resolve_provider_snapshot_artifact_path(
     )
     if not isinstance(value, str) or not value.strip():
         raise HTTPException(status_code=404, detail="Provider snapshot artifact path is missing.")
-    path = Path(value).resolve(strict=False)
     allowed_roots = (
         settings.provider_snapshot_dir.resolve(strict=False),
         settings.provider_cache_dir.resolve(strict=False),
     )
-    if not any(path.is_relative_to(root) for root in allowed_roots):
-        raise HTTPException(
-            status_code=403, detail="Provider snapshot artifact path is outside allowed roots."
-        )
-    if not path.is_file():
+    missing_allowed_path = False
+    for path in _provider_snapshot_artifact_path_candidates(value, allowed_roots=allowed_roots):
+        if not any(path.is_relative_to(root) for root in allowed_roots):
+            continue
+        if path.is_file():
+            return path
+        missing_allowed_path = True
+    if missing_allowed_path:
         raise HTTPException(status_code=404, detail="Provider snapshot artifact is not available.")
+    raise HTTPException(
+        status_code=403, detail="Provider snapshot artifact path is outside allowed roots."
+    )
+
+
+def _provider_snapshot_artifact_path_candidates(
+    value: str,
+    *,
+    allowed_roots: tuple[Path, ...],
+) -> list[Path]:
+    raw_path = Path(value)
+    if raw_path.is_absolute():
+        return [raw_path.resolve(strict=False)]
+    return [(root / raw_path).resolve(strict=False) for root in allowed_roots]
+
+
+def _provider_snapshot_artifact_path(
+    *,
+    settings: WorkbenchSettings,
+    snapshot_id: str,
+) -> Path:
+    snapshot_root = settings.provider_snapshot_dir.resolve(strict=False)
+    path = (snapshot_root / f"provider-snapshot-{snapshot_id}.json").resolve(strict=False)
+    if path.parent != snapshot_root:
+        raise HTTPException(
+            status_code=422,
+            detail="Provider snapshot metadata.snapshot_id is not allowed.",
+        )
     return path
+
+
+def _provider_snapshot_artifact_label(
+    path: Path,
+    *,
+    settings: WorkbenchSettings,
+) -> str:
+    snapshot_root = settings.provider_snapshot_dir.resolve(strict=False)
+    resolved_path = path.resolve(strict=False)
+    try:
+        return resolved_path.relative_to(snapshot_root).as_posix()
+    except ValueError:
+        return path.name
+
+
+def _safe_imported_provider_snapshot_id(value: str | None) -> str:
+    if value is None:
+        return uuid4().hex
+    snapshot_id = value.strip()
+    if (
+        not SAFE_PROVIDER_SNAPSHOT_ID_RE.fullmatch(snapshot_id)
+        or ".." in snapshot_id
+        or "/" in snapshot_id
+        or "\\" in snapshot_id
+    ):
+        raise HTTPException(
+            status_code=422,
+            detail="Provider snapshot metadata.snapshot_id is not allowed.",
+        )
+    return snapshot_id
+
+
+def _redacted_provider_metadata_for_response(payload: Any) -> dict[str, Any]:
+    if not isinstance(payload, dict):
+        return {}
+    redacted, _paths = redact_value(payload, redact_paths=True)
+    return redacted if isinstance(redacted, dict) else {}
+
+
+def _redacted_provider_snapshot_report(
+    report: ProviderSnapshotReport,
+    *,
+    snapshot_id: str,
+    output_path: str,
+) -> ProviderSnapshotReport:
+    metadata = report.metadata.model_dump()
+    metadata.update({"snapshot_id": snapshot_id, "output_path": output_path})
+    redacted_metadata, _paths = redact_value(metadata, redact_paths=True)
+    return ProviderSnapshotReport.model_validate(
+        {
+            "metadata": redacted_metadata,
+            "items": [item.model_dump() for item in report.items],
+            "warnings": report.warnings,
+        }
+    )
 
 
 def _persist_imported_provider_snapshot(
@@ -570,17 +731,13 @@ def _persist_imported_provider_snapshot(
             status_code=422, detail=f"Invalid provider snapshot JSON: {exc}"
         ) from exc
 
-    snapshot_id = report.metadata.snapshot_id or uuid4().hex
-    output_path = settings.provider_snapshot_dir / f"provider-snapshot-{snapshot_id}.json"
-    report = report.model_copy(
-        update={
-            "metadata": report.metadata.model_copy(
-                update={
-                    "snapshot_id": snapshot_id,
-                    "output_path": str(output_path),
-                }
-            )
-        }
+    snapshot_id = _safe_imported_provider_snapshot_id(report.metadata.snapshot_id)
+    output_path = _provider_snapshot_artifact_path(settings=settings, snapshot_id=snapshot_id)
+    output_label = _provider_snapshot_artifact_label(output_path, settings=settings)
+    report = _redacted_provider_snapshot_report(
+        report,
+        snapshot_id=snapshot_id,
+        output_path=output_label,
     )
     document = generate_provider_snapshot_json(report).encode("utf-8")
     content_hash = hashlib.sha256(document).hexdigest()
@@ -589,7 +746,7 @@ def _persist_imported_provider_snapshot(
     metadata_json = report.metadata.model_dump()
     metadata_json.update(
         {
-            "source_path": str(output_path),
+            "source_path": output_label,
             "imported_filename": filename,
             "item_count": len(report.items),
             "warnings": report.warnings,
@@ -636,6 +793,6 @@ def _provider_update_job_payload(job: Any) -> dict[str, Any]:
         "requested_sources": list(job.requested_sources_json or []),
         "started_at": job.started_at.isoformat(),
         "finished_at": job.finished_at.isoformat() if job.finished_at else None,
-        "error_message": job.error_message,
-        "metadata": job.metadata_json or {},
+        "error_message": redact_error(job.error_message) if job.error_message else None,
+        "metadata": _redacted_provider_metadata_for_response(job.metadata_json or {}),
     }

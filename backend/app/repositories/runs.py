@@ -19,7 +19,7 @@ from vuln_prioritizer.security_redaction import redact_value
 
 
 def _redacted_json_payload(payload: dict[str, Any]) -> dict[str, Any]:
-    redacted, _paths = redact_value(payload, redact_paths=False)
+    redacted, _paths = redact_value(payload)
     return redacted if isinstance(redacted, dict) else {}
 
 
@@ -186,3 +186,34 @@ class RunRepository:
             .order_by(col(AnalysisRun.started_at).desc())
         )
         return self.session.exec(statement).first()
+
+    def get_latest_provider_update_run(self) -> AnalysisRun | None:
+        """Return the newest provider-update run, regardless of terminal status."""
+        statement = (
+            select(AnalysisRun)
+            .where(AnalysisRun.input_type == "provider_update")
+            .order_by(col(AnalysisRun.started_at).desc())
+        )
+        return self.session.exec(statement).first()
+
+    def get_running_provider_update_run(self) -> AnalysisRun | None:
+        """Return an in-progress provider-update run, if one is active."""
+        statement = (
+            select(AnalysisRun)
+            .where(
+                AnalysisRun.input_type == "provider_update",
+                col(AnalysisRun.status).in_([AnalysisRunStatus.PENDING, AnalysisRunStatus.RUNNING]),
+            )
+            .order_by(col(AnalysisRun.started_at).desc())
+        )
+        return self.session.exec(statement).first()
+
+    def list_provider_update_runs(self, *, limit: int = 50) -> list[AnalysisRun]:
+        """Return provider-update runs newest first."""
+        statement = (
+            select(AnalysisRun)
+            .where(AnalysisRun.input_type == "provider_update")
+            .order_by(col(AnalysisRun.started_at).desc())
+            .limit(limit)
+        )
+        return list(self.session.exec(statement).all())

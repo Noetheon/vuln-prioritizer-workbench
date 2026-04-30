@@ -1,10 +1,23 @@
 from __future__ import annotations
 
 import uuid
+from dataclasses import replace
 from datetime import UTC, datetime
+from pathlib import Path
 
 from sqlmodel import Session
 from utils.template_workbench import TemplateApiEnv, auth_headers
+
+from vuln_prioritizer.models import (
+    KevData,
+    ProviderSnapshotItem,
+    ProviderSnapshotMetadata,
+    ProviderSnapshotReport,
+)
+from vuln_prioritizer.provider_snapshot import (
+    generate_provider_snapshot_json,
+    load_provider_snapshot,
+)
 
 
 def test_template_provider_status_requires_auth(template_api_env: TemplateApiEnv) -> None:
@@ -183,3 +196,192 @@ def test_template_provider_status_surfaces_failed_provider_update(
     assert all(
         source["last_error"] == "forced provider cache failure" for source in payload["sources"]
     )
+
+
+def test_template_provider_update_job_create_list_and_status(
+    template_api_env: TemplateApiEnv,
+    tmp_path: Path,
+) -> None:
+    headers = auth_headers(template_api_env.client)
+    active_settings = template_api_env.client.app.state.template_settings
+    snapshot_dir = tmp_path / "template-provider-snapshots"
+    cache_dir = tmp_path / "template-provider-cache"
+    template_api_env.client.app.state.template_settings = replace(
+        active_settings,
+        PROVIDER_SNAPSHOT_DIR=str(snapshot_dir),
+        PROVIDER_CACHE_DIR=str(cache_dir),
+    )
+    try:
+        create_response = template_api_env.client.post(
+            "/api/v1/providers/update-jobs",
+            headers=headers,
+            json={
+                "sources": ["kev"],
+                "cve_ids": ["CVE-2024-3094"],
+                "cache_only": True,
+                "max_cves": 1,
+            },
+        )
+
+        assert create_response.status_code == 200
+        job = create_response.json()
+        assert job["status"] == "completed"
+        assert job["requested_sources"] == ["kev"]
+        assert job["error_message"] is None
+        assert job["metadata"]["snapshot_created"] is True
+        assert job["metadata"]["requested_cves"] == 1
+        assert job["metadata"]["provider_snapshot_id"]
+        assert list(snapshot_dir.glob("provider-snapshot-*.json"))
+
+        list_response = template_api_env.client.get(
+            "/api/v1/providers/update-jobs",
+            headers=headers,
+        )
+        assert list_response.status_code == 200
+        listed = list_response.json()
+        assert listed["count"] == 1
+        assert listed["data"][0]["id"] == job["id"]
+        assert listed["data"][0]["metadata"]["snapshot_file"] == job["metadata"]["snapshot_file"]
+
+        status_response = template_api_env.client.get(
+            "/api/v1/providers/status",
+            headers=headers,
+        )
+        assert status_response.status_code == 200
+        status_payload = status_response.json()
+        assert status_payload["latest_update_job"]["id"] == job["id"]
+        assert status_payload["latest_update_job"]["status"] == "completed"
+        assert status_payload["snapshot_mode"] == "cache-only"
+        assert status_payload["snapshot"]["selected_sources"] == ["kev"]
+        assert status_payload["snapshot"]["requested_cves"] == 1
+        assert status_payload["last_error"] is None
+    finally:
+        template_api_env.client.app.state.template_settings = active_settings
+
+
+def test_template_provider_update_job_reuses_previous_provider_records(
+    template_api_env: TemplateApiEnv,
+    tmp_path: Path,
+) -> None:
+    headers = auth_headers(template_api_env.client)
+    active_settings = template_api_env.client.app.state.template_settings
+    snapshot_dir = tmp_path / "template-provider-snapshots"
+    cache_dir = tmp_path / "template-provider-cache"
+    snapshot_dir.mkdir(parents=True)
+    baseline_path = snapshot_dir / "baseline-provider-snapshot.json"
+    baseline_report = ProviderSnapshotReport(
+        metadata=ProviderSnapshotMetadata(
+            snapshot_id="baseline-template-provider-data",
+            generated_at="2026-04-30T10:00:00Z",
+            input_paths=[],
+            input_format="template-test",
+            selected_sources=["kev"],
+            requested_cves=1,
+            output_path=baseline_path.name,
+            cache_enabled=True,
+            cache_only=True,
+            cache_dir=None,
+            source_hashes={"kev": "sha256:baseline-kev"},
+            source_metadata={"kev": {"source": "CISA KEV catalog", "record_count": 1}},
+            nvd_api_key_env="NVD_API_KEY",
+        ),
+        items=[
+            ProviderSnapshotItem(
+                cve_id="CVE-2024-3094",
+                kev=KevData(
+                    cve_id="CVE-2024-3094",
+                    in_kev=True,
+                    vulnerability_name="XZ Utils backdoor",
+                    date_added="2026-04-01",
+                ),
+            )
+        ],
+    )
+    baseline_document = generate_provider_snapshot_json(baseline_report)
+    baseline_path.write_text(baseline_document, encoding="utf-8")
+    template_api_env.client.app.state.template_settings = replace(
+        active_settings,
+        PROVIDER_SNAPSHOT_DIR=str(snapshot_dir),
+        PROVIDER_CACHE_DIR=str(cache_dir),
+    )
+    try:
+        with Session(template_api_env.engine) as session:
+            repository = template_api_env.repositories.RunRepository(session)
+            repository.create_provider_snapshot(
+                kev_catalog_version="2026-04-01",
+                content_hash="sha256:baseline-template-provider-data",
+                source_hashes_json={"provider_snapshot": "sha256:baseline-template-provider-data"},
+                source_metadata_json={
+                    "snapshot_file": baseline_path.name,
+                    "selected_sources": ["kev"],
+                    "requested_cves": 1,
+                    "generated_at": "2026-04-30T10:00:00Z",
+                },
+            )
+            session.commit()
+
+        response = template_api_env.client.post(
+            "/api/v1/providers/update-jobs",
+            headers=headers,
+            json={
+                "sources": ["kev"],
+                "cve_ids": ["CVE-2024-3094"],
+                "cache_only": True,
+            },
+        )
+
+        assert response.status_code == 200
+        job = response.json()
+        assert job["status"] == "completed"
+        assert job["metadata"]["source_counts"]["kev"]["records"] == 1
+        assert job["metadata"]["source_counts"]["kev"]["fallback_from_previous_snapshot"] == 1
+        generated_report = load_provider_snapshot(snapshot_dir / job["metadata"]["snapshot_file"])
+        assert generated_report.items[0].kev is not None
+        assert generated_report.items[0].kev.in_kev is True
+        assert generated_report.items[0].kev.date_added == "2026-04-01"
+
+        status_payload = template_api_env.client.get(
+            "/api/v1/providers/status",
+            headers=headers,
+        ).json()
+        assert status_payload["snapshot"]["kev_catalog_version"] == "2026-04-01"
+        assert status_payload["sources"][2]["available"] is True
+    finally:
+        template_api_env.client.app.state.template_settings = active_settings
+
+
+def test_template_provider_update_job_rejects_active_job(
+    template_api_env: TemplateApiEnv,
+    tmp_path: Path,
+) -> None:
+    headers = auth_headers(template_api_env.client)
+    active_settings = template_api_env.client.app.state.template_settings
+    template_api_env.client.app.state.template_settings = replace(
+        active_settings,
+        PROVIDER_SNAPSHOT_DIR=str(tmp_path / "template-provider-snapshots"),
+        PROVIDER_CACHE_DIR=str(tmp_path / "template-provider-cache"),
+    )
+    try:
+        with Session(template_api_env.engine) as session:
+            project = template_api_env.repositories.ProjectRepository(session).create_project(
+                template_api_env.app_models.ProjectCreate(name="Active Provider Job"),
+                owner_id=uuid.UUID("00000000-0000-4000-8000-000000000011"),
+            )
+            template_api_env.repositories.RunRepository(session).create_analysis_run(
+                project_id=project.id,
+                input_type="provider_update",
+                status=template_api_env.app_models.AnalysisRunStatus.RUNNING,
+                summary_json={"requested_sources": ["kev"]},
+            )
+            session.commit()
+
+        response = template_api_env.client.post(
+            "/api/v1/providers/update-jobs",
+            headers=headers,
+            json={"sources": ["kev"], "cve_ids": ["CVE-2024-3094"]},
+        )
+
+        assert response.status_code == 409
+        assert "Provider update already running" in response.json()["detail"]
+    finally:
+        template_api_env.client.app.state.template_settings = active_settings

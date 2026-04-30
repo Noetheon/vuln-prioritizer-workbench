@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from sqlmodel import Field, SQLModel
 
 
@@ -42,8 +42,19 @@ class ProviderSnapshotStatusPublic(SQLModel):
     mode: str = "missing"
 
 
+class ProviderUpdateJobCreate(BaseModel):
+    """Request body for a deterministic provider update job."""
+
+    sources: list[str] = Field(default_factory=lambda: ["nvd", "epss", "kev"])
+    cve_ids: list[str] = Field(default_factory=list)
+    max_cves: int | None = Field(default=None, ge=1, le=10000)
+    cache_only: bool = True
+
+
 class ProviderUpdateJobPublic(BaseModel):
-    """Placeholder shape for future provider update-job status records."""
+    """Provider update-job status record."""
+
+    model_config = ConfigDict(populate_by_name=True)
 
     id: str
     status: str
@@ -52,6 +63,13 @@ class ProviderUpdateJobPublic(BaseModel):
     finished_at: str | None = None
     error_message: str | None = None
     metadata_: dict[str, Any] = Field(default_factory=dict, alias="metadata")
+
+
+class ProviderUpdateJobsPublic(BaseModel):
+    """Provider update-job collection response."""
+
+    data: list[ProviderUpdateJobPublic] = Field(default_factory=list)
+    count: int
 
 
 class ProviderStatusPublic(SQLModel):
