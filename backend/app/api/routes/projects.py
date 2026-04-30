@@ -6,7 +6,7 @@ import uuid
 
 from fastapi import APIRouter, Query, Response
 
-from app.api.deps import CurrentUser, SessionDep
+from app.api.deps import CurrentUser, ScopedReadUser, SessionDep
 from app.api.routes.workbench_access import require_visible_project
 from app.models import (
     Project,
@@ -36,7 +36,7 @@ router = APIRouter(prefix="/projects", tags=["projects"])
 
 
 @router.get("/", response_model=ProjectsPublic)
-def read_projects(session: SessionDep, current_user: CurrentUser) -> ProjectsPublic:
+def read_projects(session: SessionDep, current_user: ScopedReadUser) -> ProjectsPublic:
     """List projects visible to the current user."""
     projects, count = ProjectRepository(session).list_visible_projects(current_user)
     return ProjectsPublic(
@@ -60,7 +60,11 @@ def create_project(
 
 
 @router.get("/{project_id}", response_model=ProjectPublic)
-def read_project(project_id: uuid.UUID, session: SessionDep, current_user: CurrentUser) -> Project:
+def read_project(
+    project_id: uuid.UUID,
+    session: SessionDep,
+    current_user: ScopedReadUser,
+) -> Project:
     """Read a single project if it belongs to the user or the user is superuser."""
     return require_visible_project(session, current_user, project_id)
 
@@ -69,7 +73,7 @@ def read_project(project_id: uuid.UUID, session: SessionDep, current_user: Curre
 def read_project_summary(
     project_id: uuid.UUID,
     session: SessionDep,
-    current_user: CurrentUser,
+    current_user: ScopedReadUser,
 ) -> ProjectDecisionSummaryPublic:
     """Read a dashboard-oriented decision summary for one visible project."""
     require_visible_project(session, current_user, project_id)
@@ -84,7 +88,7 @@ def read_project_summary(
 def read_project_attack_summary(
     project_id: uuid.UUID,
     session: SessionDep,
-    current_user: CurrentUser,
+    current_user: ScopedReadUser,
     limit: int = Query(default=5, ge=1, le=20),
 ) -> ProjectAttackSummaryPublic:
     """Read top ATT&CK techniques, tactics, and confidence distribution."""
@@ -102,7 +106,7 @@ def read_project_attack_summary(
 def read_project_governance_rollups(
     project_id: uuid.UUID,
     session: SessionDep,
-    current_user: CurrentUser,
+    current_user: ScopedReadUser,
     limit: int = Query(default=5, ge=1, le=20),
 ) -> ProjectGovernanceRollupsPublic:
     """Read owner, service, environment, and waiver-debt rollups."""
@@ -121,7 +125,7 @@ def read_project_governance_rollups(
 def compare_project_cvss_only(
     project_id: uuid.UUID,
     session: SessionDep,
-    current_user: CurrentUser,
+    current_user: ScopedReadUser,
     limit: int = Query(default=10, ge=0, le=100),
 ) -> ProjectCvssOnlyComparisonPublic:
     """Compare current enriched priorities with a CVSS-only baseline."""

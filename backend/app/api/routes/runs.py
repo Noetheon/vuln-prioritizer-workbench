@@ -7,7 +7,7 @@ from typing import Any
 
 from fastapi import APIRouter, HTTPException
 
-from app.api.deps import CurrentUser, SessionDep
+from app.api.deps import ScopedReadUser, SessionDep
 from app.api.routes.workbench_access import require_visible_project
 from app.models import (
     AnalysisRun,
@@ -34,7 +34,7 @@ router = APIRouter(tags=["runs"])
 def read_project_runs(
     project_id: uuid.UUID,
     session: SessionDep,
-    current_user: CurrentUser,
+    current_user: ScopedReadUser,
 ) -> AnalysisRunsPublic:
     """List analysis runs for a visible project."""
     require_visible_project(session, current_user, project_id)
@@ -46,7 +46,7 @@ def read_project_runs(
 
 
 @router.get("/runs/{run_id}", response_model=AnalysisRunPublic)
-def read_run(run_id: uuid.UUID, session: SessionDep, current_user: CurrentUser) -> AnalysisRun:
+def read_run(run_id: uuid.UUID, session: SessionDep, current_user: ScopedReadUser) -> AnalysisRun:
     """Read one analysis run if its project is visible."""
     run = RunRepository(session).get_analysis_run(run_id)
     if run is None:
@@ -59,7 +59,7 @@ def read_run(run_id: uuid.UUID, session: SessionDep, current_user: CurrentUser) 
 def read_run_summary(
     run_id: uuid.UUID,
     session: SessionDep,
-    current_user: CurrentUser,
+    current_user: ScopedReadUser,
 ) -> AnalysisRunSummaryPublic:
     """Read a UI-stable summary for one visible analysis run."""
     run = RunRepository(session).get_analysis_run(run_id)

@@ -258,6 +258,171 @@ export const AnalysisRunsPublicSchema = {
     type: 'object'
 } as const;
 
+export const ApiTokenCreateSchema = {
+    description: 'Request payload for creating a scoped service token.',
+    properties: {
+        name: {
+            maxLength: 200,
+            minLength: 1,
+            title: 'Name',
+            type: 'string'
+        },
+        scopes: {
+            items: {
+                enum: ['read', 'import', 'report', 'admin'],
+                type: 'string'
+            },
+            title: 'Scopes',
+            type: 'array'
+        }
+    },
+    required: ['name'],
+    title: 'ApiTokenCreate',
+    type: 'object'
+} as const;
+
+export const ApiTokenCreatePublicSchema = {
+    description: 'Creation response that shows the cleartext token exactly once.',
+    properties: {
+        active: {
+            title: 'Active',
+            type: 'boolean'
+        },
+        created_at: {
+            format: 'date-time',
+            title: 'Created At',
+            type: 'string'
+        },
+        id: {
+            format: 'uuid',
+            title: 'Id',
+            type: 'string'
+        },
+        last_used_at: {
+            anyOf: [
+                {
+                    format: 'date-time',
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Last Used At'
+        },
+        name: {
+            title: 'Name',
+            type: 'string'
+        },
+        revoked_at: {
+            anyOf: [
+                {
+                    format: 'date-time',
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Revoked At'
+        },
+        scopes: {
+            items: {
+                enum: ['read', 'import', 'report', 'admin'],
+                type: 'string'
+            },
+            title: 'Scopes',
+            type: 'array'
+        },
+        token: {
+            title: 'Token',
+            type: 'string'
+        }
+    },
+    required: ['id', 'name', 'scopes', 'active', 'created_at', 'last_used_at', 'revoked_at', 'token'],
+    title: 'ApiTokenCreatePublic',
+    type: 'object'
+} as const;
+
+export const ApiTokenPublicSchema = {
+    description: 'API token metadata returned after creation, listing, and revocation.',
+    properties: {
+        active: {
+            title: 'Active',
+            type: 'boolean'
+        },
+        created_at: {
+            format: 'date-time',
+            title: 'Created At',
+            type: 'string'
+        },
+        id: {
+            format: 'uuid',
+            title: 'Id',
+            type: 'string'
+        },
+        last_used_at: {
+            anyOf: [
+                {
+                    format: 'date-time',
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Last Used At'
+        },
+        name: {
+            title: 'Name',
+            type: 'string'
+        },
+        revoked_at: {
+            anyOf: [
+                {
+                    format: 'date-time',
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Revoked At'
+        },
+        scopes: {
+            items: {
+                enum: ['read', 'import', 'report', 'admin'],
+                type: 'string'
+            },
+            title: 'Scopes',
+            type: 'array'
+        }
+    },
+    required: ['id', 'name', 'scopes', 'active', 'created_at', 'last_used_at', 'revoked_at'],
+    title: 'ApiTokenPublic',
+    type: 'object'
+} as const;
+
+export const ApiTokensPublicSchema = {
+    description: 'Collection response for token metadata.',
+    properties: {
+        count: {
+            title: 'Count',
+            type: 'integer'
+        },
+        data: {
+            items: {
+                '$ref': '#/components/schemas/ApiTokenPublic'
+            },
+            title: 'Data',
+            type: 'array'
+        }
+    },
+    required: ['data', 'count'],
+    title: 'ApiTokensPublic',
+    type: 'object'
+} as const;
+
 export const AssetContextImportPublicSchema = {
     description: 'Summary returned after importing asset-context CSV rows.',
     properties: {

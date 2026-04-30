@@ -224,6 +224,7 @@ def _api_token_payload(token: Any) -> dict[str, Any]:
     return {
         "id": token.id,
         "name": token.name,
+        "scopes": list(token.scopes_json or []),
         "created_at": token.created_at.isoformat(),
         "last_used_at": token.last_used_at.isoformat() if token.last_used_at else None,
         "revoked_at": token.revoked_at.isoformat() if token.revoked_at else None,

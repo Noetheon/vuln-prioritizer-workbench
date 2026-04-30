@@ -652,6 +652,7 @@ class ApiToken(Base):
     id: Mapped[str] = mapped_column(String(32), primary_key=True, default=_uuid)
     name: Mapped[str] = mapped_column(String(200), nullable=False)
     token_hash: Mapped[str] = mapped_column(String(128), nullable=False, unique=True)
+    scopes_json: Mapped[list] = mapped_column(JSON, default=lambda: ["admin"])
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
     last_used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

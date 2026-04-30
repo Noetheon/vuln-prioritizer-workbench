@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import Any
 
 from sqlalchemy import select
@@ -20,8 +21,14 @@ class SecurityAuditRepositoryMixin:
 
     session: Session
 
-    def create_api_token(self, *, name: str, token_hash: str) -> ApiToken:
-        token = ApiToken(name=name, token_hash=token_hash)
+    def create_api_token(
+        self,
+        *,
+        name: str,
+        token_hash: str,
+        scopes: Sequence[str] | None = None,
+    ) -> ApiToken:
+        token = ApiToken(name=name, token_hash=token_hash, scopes_json=list(scopes or ["admin"]))
         self.session.add(token)
         self.session.flush()
         return token

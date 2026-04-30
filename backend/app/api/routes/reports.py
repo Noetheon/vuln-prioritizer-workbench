@@ -9,7 +9,7 @@ from pathlib import Path
 from fastapi import APIRouter, HTTPException, Request
 from starlette.responses import FileResponse
 
-from app.api.deps import CurrentUser, SessionDep
+from app.api.deps import ScopedReportUser, SessionDep
 from app.api.routes.workbench_access import require_visible_project
 from app.core.config import Settings
 from app.models import (
@@ -36,7 +36,7 @@ def create_run_report(
     payload: ReportCreate,
     request: Request,
     session: SessionDep,
-    current_user: CurrentUser,
+    current_user: ScopedReportUser,
 ) -> ReportPublic:
     """Create a report artifact for a completed visible analysis run."""
     run = RunRepository(session).get_analysis_run(run_id)
@@ -75,7 +75,7 @@ def read_run_reports(
     run_id: uuid.UUID,
     request: Request,
     session: SessionDep,
-    current_user: CurrentUser,
+    current_user: ScopedReportUser,
 ) -> ReportsPublic:
     """List report metadata for a visible analysis run."""
     run = RunRepository(session).get_analysis_run(run_id)
@@ -94,7 +94,7 @@ def download_report(
     report_id: uuid.UUID,
     request: Request,
     session: SessionDep,
-    current_user: CurrentUser,
+    current_user: ScopedReportUser,
 ) -> FileResponse:
     """Download a visible report after root and checksum validation."""
     report = ReportRepository(session).get_report(report_id)
@@ -117,7 +117,7 @@ def verify_report(
     report_id: uuid.UUID,
     request: Request,
     session: SessionDep,
-    current_user: CurrentUser,
+    current_user: ScopedReportUser,
 ) -> ReportVerificationPublic:
     """Verify a visible evidence bundle report against its embedded manifest."""
     report = ReportRepository(session).get_report(report_id)

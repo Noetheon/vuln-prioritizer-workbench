@@ -19,6 +19,7 @@ from starlette.responses import Response
 
 from vuln_prioritizer.api.routes import api_router
 from vuln_prioritizer.api.security import api_token_digest
+from vuln_prioritizer.api.token_scopes import token_has_scope
 from vuln_prioritizer.db import create_db_engine, create_session_factory
 from vuln_prioritizer.db.migrations import ensure_database_current
 from vuln_prioritizer.db.repositories import WorkbenchRepository
@@ -95,7 +96,8 @@ async def _security_headers(request: Request, call_next: Any) -> Any:
 
 
 async def _api_token_auth(request: Request, call_next: Any) -> Any:
-    if not _requires_api_token_check(request):
+    required_scope = _required_api_token_scope(request)
+    if required_scope is None:
         return await call_next(request)
     session_factory = getattr(request.app.state, "session_factory", None)
     if session_factory is None:
@@ -127,25 +129,54 @@ async def _api_token_auth(request: Request, call_next: Any) -> Any:
                     details=None,
                 ),
             )
+        if not token_has_scope(list(token.scopes_json or []), required_scope):
+            return JSONResponse(
+                status_code=403,
+                content=_error_payload(
+                    detail=f"API token requires {required_scope} scope.",
+                    code="forbidden",
+                    message=f"API token requires {required_scope} scope.",
+                    details=None,
+                ),
+            )
         repo.mark_api_token_used(token)
         session.commit()
     return await call_next(request)
 
 
-def _requires_api_token_check(request: Request) -> bool:
-    gated_get_paths = {"/api/diagnostics", "/api/tokens", "/api/audit-events", "/api/jobs"}
-    if request.method == "GET" and (
-        request.url.path in gated_get_paths
-        or (
-            request.url.path.startswith("/api/projects/")
-            and request.url.path.endswith("/audit-events")
-        )
-        or request.url.path.startswith("/api/jobs/")
-    ):
-        return True
+def _required_api_token_scope(request: Request) -> str | None:
+    path = request.url.path.rstrip("/")
+    if not path.startswith("/api/"):
+        return None
+    if path in {"/api/health", "/api/version"}:
+        return None
+    if path == "/api/tokens" or path.startswith("/api/tokens/"):
+        return "admin"
+    if request.method == "GET":
+        if _is_legacy_report_scope_get(path):
+            return "report"
+        return "read"
     if request.method not in {"POST", "PUT", "PATCH", "DELETE"}:
-        return False
-    return request.url.path.startswith("/api/")
+        return None
+    if path.endswith("/imports"):
+        return "import"
+    if path.startswith("/api/analysis-runs/") and (
+        path.endswith("/reports") or path.endswith("/evidence-bundle")
+    ):
+        return "report"
+    return "admin"
+
+
+def _is_legacy_report_scope_get(path: str) -> bool:
+    return (
+        (path.startswith("/api/reports/") and path.endswith("/download"))
+        or path.startswith("/api/evidence-bundles/")
+        or (path.startswith("/api/projects/") and "/artifacts" in path)
+        or (
+            path.startswith("/api/analysis-runs/")
+            and (path.endswith("/executive-report") or path.endswith("/attack/navigator-layer"))
+        )
+    )
 
 
 def _request_api_token(request: Request) -> str | None:

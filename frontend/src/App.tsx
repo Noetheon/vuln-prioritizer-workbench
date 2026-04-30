@@ -29,6 +29,10 @@ import {
   type AnalysisRunPublic,
   type AnalysisRunSummaryPublic,
   ApiError,
+  type ApiTokenCreate,
+  type ApiTokenCreatePublic,
+  type ApiTokenPublic,
+  ApiTokensService,
   type AssetExposure,
   type FindingDetailPublic,
   type FindingExplanationPublic,
@@ -174,6 +178,25 @@ const settingsSummary = (user: UserPublic | null) => [
     value: user ? "Authenticated" : "Loading",
   },
 ]
+
+type ApiTokenScope = NonNullable<ApiTokenCreate["scopes"]>[number]
+
+const apiTokenScopeOptions: ApiTokenScope[] = [
+  "read",
+  "import",
+  "report",
+  "admin",
+]
+const defaultApiTokenScopes: ApiTokenScope[] = ["read"]
+
+function canonicalApiTokenScopes(scopes: ApiTokenScope[]) {
+  const selected = new Set(scopes)
+  return apiTokenScopeOptions.filter((scope) => selected.has(scope))
+}
+
+function formatApiTokenScopes(scopes: ApiTokenScope[]) {
+  return scopes.map((scope) => scope.toUpperCase()).join(", ")
+}
 
 type ProjectFormState = {
   name: string
@@ -1402,6 +1425,18 @@ export function App() {
   const [providerStatusError, setProviderStatusError] = useState("")
   const [currentUser, setCurrentUser] = useState<UserPublic | null>(null)
   const [statusError, setStatusError] = useState("")
+  const [apiTokens, setApiTokens] = useState<ApiTokenPublic[]>([])
+  const [apiTokensLoading, setApiTokensLoading] = useState(false)
+  const [apiTokenActionLoading, setApiTokenActionLoading] = useState(false)
+  const [apiTokenError, setApiTokenError] = useState("")
+  const [apiTokenMessage, setApiTokenMessage] = useState("")
+  const [apiTokenName, setApiTokenName] = useState("automation")
+  const [apiTokenScopes, setApiTokenScopes] = useState<ApiTokenScope[]>(
+    defaultApiTokenScopes,
+  )
+  const [createdApiToken, setCreatedApiToken] =
+    useState<ApiTokenCreatePublic | null>(null)
+  const [apiTokensReloadKey, setApiTokensReloadKey] = useState(0)
   const [projects, setProjects] = useState<ProjectPublic[]>([])
   const [selectedProjectId, setSelectedProjectId] = useState("")
   const [projectSummary, setProjectSummary] =
@@ -1534,6 +1569,12 @@ export function App() {
     !reportsLoading
 
   useEffect(() => {
+    if (currentPath !== "/settings") {
+      setCreatedApiToken(null)
+    }
+  }, [currentPath])
+
+  useEffect(() => {
     let isMounted = true
 
     async function loadTemplateState() {
@@ -1622,6 +1663,43 @@ export function App() {
       isMounted = false
     }
   }, [navigate])
+
+  useEffect(() => {
+    let isMounted = true
+
+    async function loadApiTokens() {
+      if (currentPath !== "/settings") {
+        return
+      }
+      setApiTokensLoading(true)
+      setApiTokenError("")
+      try {
+        const response = await ApiTokensService.listApiTokens()
+        if (isMounted) {
+          setApiTokens(response.data)
+        }
+      } catch (caught) {
+        if (caught instanceof ApiError && caught.status === 401) {
+          clearAccessToken()
+          await navigate({ to: "/login" })
+          return
+        }
+        if (isMounted) {
+          setApiTokens([])
+          setApiTokenError(apiErrorMessage("API tokens unavailable", caught))
+        }
+      } finally {
+        if (isMounted) {
+          setApiTokensLoading(false)
+        }
+      }
+    }
+
+    void loadApiTokens()
+    return () => {
+      isMounted = false
+    }
+  }, [apiTokensReloadKey, currentPath, navigate])
 
   useEffect(() => {
     let isMounted = true
@@ -2524,6 +2602,67 @@ export function App() {
       setWaiverActionError(apiErrorMessage("Waiver expire failed", caught))
     } finally {
       setWaiverActionLoading(false)
+    }
+  }
+
+  function toggleApiTokenScope(scope: ApiTokenScope) {
+    setApiTokenScopes((previousScopes) => {
+      const nextScopes = previousScopes.includes(scope)
+        ? previousScopes.filter((item) => item !== scope)
+        : [...previousScopes, scope]
+      return canonicalApiTokenScopes(nextScopes)
+    })
+  }
+
+  async function createApiToken(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    const name = apiTokenName.trim()
+    if (!name) {
+      setApiTokenError("Token name is required.")
+      return
+    }
+    if (apiTokenScopes.length === 0) {
+      setApiTokenError("Select at least one scope.")
+      return
+    }
+
+    setApiTokenActionLoading(true)
+    setApiTokenError("")
+    setApiTokenMessage("")
+    setCreatedApiToken(null)
+    try {
+      const created = await ApiTokensService.createApiToken({
+        requestBody: { name, scopes: apiTokenScopes },
+      })
+      setCreatedApiToken(created)
+      setApiTokenName("automation")
+      setApiTokenScopes(defaultApiTokenScopes)
+      setApiTokenMessage(`Token ${created.name} created.`)
+      setApiTokensReloadKey((key) => key + 1)
+    } catch (caught) {
+      setApiTokenError(apiErrorMessage("API token create failed", caught))
+    } finally {
+      setApiTokenActionLoading(false)
+    }
+  }
+
+  async function revokeApiToken(token: ApiTokenPublic) {
+    setApiTokenActionLoading(true)
+    setApiTokenError("")
+    setApiTokenMessage("")
+    try {
+      const revoked = await ApiTokensService.revokeApiToken({
+        tokenId: token.id,
+      })
+      setCreatedApiToken((created) =>
+        created?.id === revoked.id ? null : created,
+      )
+      setApiTokenMessage(`Token ${revoked.name} revoked.`)
+      setApiTokensReloadKey((key) => key + 1)
+    } catch (caught) {
+      setApiTokenError(apiErrorMessage("API token revoke failed", caught))
+    } finally {
+      setApiTokenActionLoading(false)
     }
   }
 
@@ -5097,6 +5236,156 @@ export function App() {
                       No provider update job has been recorded.
                     </p>
                   )}
+                </section>
+              </section>
+            ) : currentPath === "/settings" ? (
+              <section className="settings-workflow" aria-label="API tokens">
+                <section
+                  className="project-form-panel api-token-form-panel"
+                  aria-label="Create API token"
+                >
+                  <h3>Service Token</h3>
+                  <form onSubmit={createApiToken}>
+                    <label>
+                      <span>Name</span>
+                      <input
+                        maxLength={200}
+                        onChange={(event) =>
+                          setApiTokenName(event.target.value)
+                        }
+                        value={apiTokenName}
+                      />
+                    </label>
+                    <fieldset className="scope-selector">
+                      <legend>Scopes</legend>
+                      <div className="scope-toggle-grid">
+                        {apiTokenScopeOptions.map((scope) => (
+                          <label key={scope}>
+                            <input
+                              checked={apiTokenScopes.includes(scope)}
+                              onChange={() => toggleApiTokenScope(scope)}
+                              type="checkbox"
+                            />
+                            <span>{scope.toUpperCase()}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </fieldset>
+                    <button
+                      className="primary-action"
+                      disabled={apiTokenActionLoading}
+                      type="submit"
+                    >
+                      {apiTokenActionLoading ? "Creating" : "Create Token"}
+                    </button>
+                  </form>
+                </section>
+
+                {createdApiToken ? (
+                  <section
+                    className="created-token-panel"
+                    aria-label="Created API token"
+                  >
+                    <div>
+                      <span>Created token</span>
+                      <strong>{createdApiToken.name}</strong>
+                    </div>
+                    <label>
+                      <span>Token</span>
+                      <input
+                        onFocus={(event) => event.currentTarget.select()}
+                        readOnly
+                        value={createdApiToken.token}
+                      />
+                    </label>
+                    <div>
+                      <span>Scopes</span>
+                      <strong>
+                        {formatApiTokenScopes(createdApiToken.scopes)}
+                      </strong>
+                    </div>
+                  </section>
+                ) : null}
+
+                {apiTokenError ? (
+                  <p className="dashboard-alert" role="alert">
+                    {apiTokenError}
+                  </p>
+                ) : null}
+                {apiTokenMessage ? (
+                  <p className="dashboard-success" role="status">
+                    {apiTokenMessage}
+                  </p>
+                ) : null}
+
+                <section
+                  className="api-token-list-panel"
+                  aria-label="API token list"
+                >
+                  <div className="detail-section-heading">
+                    <div>
+                      <h3>API Tokens</h3>
+                      <span>
+                        {apiTokensLoading
+                          ? "Loading"
+                          : `${apiTokens.length} configured`}
+                      </span>
+                    </div>
+                    <KeyRound aria-hidden="true" size={20} />
+                  </div>
+                  <div className="table-wrap api-token-table-wrap">
+                    <table aria-label="API tokens table">
+                      <thead>
+                        <tr>
+                          <th>Name</th>
+                          <th>Scopes</th>
+                          <th>Created</th>
+                          <th>Last Used</th>
+                          <th>Status</th>
+                          <th>Action</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {apiTokens.length === 0 ? (
+                          <tr>
+                            <td colSpan={6}>
+                              {apiTokensLoading
+                                ? "Loading tokens"
+                                : "No tokens"}
+                            </td>
+                          </tr>
+                        ) : (
+                          apiTokens.map((token) => (
+                            <tr key={token.id}>
+                              <td>{token.name}</td>
+                              <td>{formatApiTokenScopes(token.scopes)}</td>
+                              <td>{formatDateTime(token.created_at)}</td>
+                              <td>
+                                {token.last_used_at
+                                  ? formatDateTime(token.last_used_at)
+                                  : "N.A."}
+                              </td>
+                              <td>{token.active ? "Active" : "Revoked"}</td>
+                              <td>
+                                {token.active ? (
+                                  <button
+                                    className="secondary-action"
+                                    disabled={apiTokenActionLoading}
+                                    onClick={() => void revokeApiToken(token)}
+                                    type="button"
+                                  >
+                                    Revoke
+                                  </button>
+                                ) : (
+                                  "N.A."
+                                )}
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
                 </section>
               </section>
             ) : currentPath === "/reports" ? (

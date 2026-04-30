@@ -7,7 +7,7 @@ from typing import Any
 
 from fastapi import APIRouter, Request
 
-from app.api.deps import CurrentUser, SessionDep
+from app.api.deps import ScopedReadUser, SessionDep
 from app.core.config import settings
 from app.models import (
     AnalysisRun,
@@ -31,7 +31,7 @@ NO_PROVIDER_SNAPSHOT_WARNING = "No provider snapshot has been recorded yet."
 def read_provider_status(
     request: Request,
     session: SessionDep,
-    _current_user: CurrentUser,
+    _current_user: ScopedReadUser,
 ) -> ProviderStatusPublic:
     """Return provider status from the latest stored SQLModel provider snapshot."""
     repository = RunRepository(session)
