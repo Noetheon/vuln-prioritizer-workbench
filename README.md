@@ -659,7 +659,7 @@ Replace `vX.Y.Z` with the release tag or commit SHA you want to consume. `summar
 
 Common analyze/compare/snapshot Action inputs include `waiver-file`, `defensive-context-file`, `hide-waived`, `fail-on-provider-error`, `fail-on-expired-waivers`, `fail-on-review-due-waivers`, `priority`, `kev-only`, `min-cvss`, `min-epss`, `sort-by`, `max-cves`, `provider-snapshot-file`, `locked-provider-data`, `max-provider-age-hours`, `fail-on-stale-provider-data`, `no-cache`, `cache-dir`, `cache-ttl-hours`, `nvd-api-key-env`, `offline-kev-file`, and `offline-attack-file`. `defensive-context-file` passes a local/offline JSON context overlay only; it does not fetch advisory data and does not change base priority scoring. Report modes include `report-html`, `workbench-report`, `report-evidence-bundle`, `verify-evidence-bundle`, and `validate-sarif`; set `validate-sarif: "true"` in analysis/report steps when a SARIF output should fail the job before upload if the local SARIF contract is not met.
 
-See [docs/integrations/reporting_and_ci.md](docs/integrations/reporting_and_ci.md) for the full contract and CI patterns, plus [docs/examples/github_action_summary_templates.md](docs/examples/github_action_summary_templates.md) for compact vs detailed examples.
+See [docs/integrations/reporting_and_ci.md](docs/integrations/reporting_and_ci.md) for the full contract and CI patterns, including the checked-in [Workbench Markdown/JSON artifact workflow](.github/examples/workbench-report-artifacts.yml), plus [docs/examples/github_action_summary_templates.md](docs/examples/github_action_summary_templates.md) for compact vs detailed examples.
 
 ## Development
 

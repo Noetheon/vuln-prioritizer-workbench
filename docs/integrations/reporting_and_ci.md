@@ -23,8 +23,11 @@ Today the CLI supports:
 - `data verify`
 - `data export-provider-snapshot`
 - `report html --input analysis.json --output report.html`
+- `report workbench --input analysis.json --output report.md --format markdown`
+- `report workbench --input analysis.json --output report.json --format json`
 - `report evidence-bundle --input analysis.json --output evidence.zip`
 - `report verify-evidence-bundle --input evidence.zip --format json`
+- `report validate-sarif --input results.sarif --format json`
 - `attack validate|coverage|navigator-layer`
 
 The repository root also exposes a composite GitHub Action via [`action.yml`](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/action.yml).
@@ -294,6 +297,7 @@ Consumer workflow examples:
 - [`.github/examples/code-scanning-sarif.yml`](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/.github/examples/code-scanning-sarif.yml)
 - [`.github/examples/pr-comment-report.yml`](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/.github/examples/pr-comment-report.yml)
 - [`.github/examples/html-report-artifact.yml`](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/.github/examples/html-report-artifact.yml)
+- [`.github/examples/workbench-report-artifacts.yml`](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/.github/examples/workbench-report-artifacts.yml)
 - [GitHub Action summary templates](../examples/github_action_summary_templates.md)
 
 Example output artifacts:
@@ -374,6 +378,40 @@ Detailed HTML artifact flow with a reusable Markdown summary:
     summary-output-path: report-summary.md
     summary-template: detailed
     github-step-summary: "true"
+```
+
+Workbench Markdown and JSON artifact flow with deterministic provider replay:
+
+```yaml
+- name: Generate locked analysis JSON
+  id: analyze
+  uses: Noetheon/vuln-prioritizer-workbench@vX.Y.Z
+  with:
+    mode: analyze
+    input: trivy-results.json
+    input-format: trivy-json
+    output-format: json
+    output-path: analysis.json
+    provider-snapshot-file: provider-snapshot.json
+    locked-provider-data: "true"
+
+- name: Render Workbench Markdown report
+  id: markdown-report
+  uses: Noetheon/vuln-prioritizer-workbench@vX.Y.Z
+  with:
+    mode: workbench-report
+    input: ${{ steps.analyze.outputs.report-path }}
+    output-format: markdown
+    output-path: workbench-report.md
+
+- name: Render Workbench JSON report
+  id: json-report
+  uses: Noetheon/vuln-prioritizer-workbench@vX.Y.Z
+  with:
+    mode: workbench-report
+    input: ${{ steps.analyze.outputs.report-path }}
+    output-format: json
+    output-path: workbench-report.json
 ```
 
 Replace `vX.Y.Z` with the release tag or commit SHA you intend to consume. This document tracks the current `main` branch contract, so do not assume the latest tagged release already includes every example shown here.
