@@ -71,6 +71,8 @@ runner = CliRunner()
 SCHEMA_ROOT = Path(__file__).resolve().parents[2] / "docs" / "schemas"
 ACTION_FILE = Path(__file__).resolve().parents[2] / "action.yml"
 CI_WORKFLOW = Path(__file__).resolve().parents[2] / ".github" / "workflows" / "ci.yml"
+DOCKER_WORKFLOW = Path(__file__).resolve().parents[2] / ".github" / "workflows" / "docker.yml"
+CODEQL_WORKFLOW = Path(__file__).resolve().parents[2] / ".github" / "workflows" / "codeql.yml"
 MAINTENANCE_WORKFLOW = (
     Path(__file__).resolve().parents[2] / ".github" / "workflows" / "maintenance.yml"
 )
@@ -573,6 +575,7 @@ def test_action_contract_exposes_summary_and_config_wiring() -> None:
 def test_ci_workflow_runs_workflow_check_on_supported_python_versions() -> None:
     payload = yaml.safe_load(CI_WORKFLOW.read_text(encoding="utf-8"))
     check_job = payload["jobs"]["check"]
+    frontend_job = payload["jobs"]["frontend"]
     setup_step = next(
         step for step in check_job["steps"] if step.get("uses") == "actions/setup-python@v6"
     )
@@ -585,6 +588,39 @@ def test_ci_workflow_runs_workflow_check_on_supported_python_versions() -> None:
     assert check_job["strategy"]["matrix"]["python-version"] == ["3.11", "3.12"]
     assert setup_step["with"]["python-version"] == "${{ matrix.python-version }}"
     assert gate_step["run"] == "make workflow-check"
+    assert payload["permissions"] == {"contents": "read"}
+    assert any(step.get("name") == "Lint frontend" for step in frontend_job["steps"])
+    frontend_lint_drift_step = next(
+        step for step in frontend_job["steps"] if step.get("name") == "Check frontend lint drift"
+    )
+    client_drift_step = next(
+        step
+        for step in frontend_job["steps"]
+        if step.get("name") == "Check generated frontend client drift"
+    )
+    assert frontend_lint_drift_step["run"] == "git diff --exit-code -- frontend"
+    assert client_drift_step["run"] == "git diff --exit-code -- frontend/src/client"
+
+
+def test_ci_workflow_permissions_are_minimal() -> None:
+    ci = yaml.safe_load(CI_WORKFLOW.read_text(encoding="utf-8"))
+    docker = yaml.safe_load(DOCKER_WORKFLOW.read_text(encoding="utf-8"))
+    codeql = yaml.safe_load(CODEQL_WORKFLOW.read_text(encoding="utf-8"))
+    release = yaml.safe_load(RELEASE_WORKFLOW.read_text(encoding="utf-8"))
+    testpypi = yaml.safe_load(TESTPYPI_WORKFLOW.read_text(encoding="utf-8"))
+
+    assert ci["permissions"] == {"contents": "read"}
+    assert docker["permissions"] == {"contents": "read"}
+    assert testpypi["permissions"] == {"contents": "read"}
+    assert codeql["permissions"] == {
+        "actions": "read",
+        "contents": "read",
+        "security-events": "write",
+    }
+    assert release["permissions"] == {"contents": "read"}
+    assert "permissions" not in release["jobs"]["build-and-release"]
+    assert release["jobs"]["publish-github-release"]["permissions"] == {"contents": "write"}
+    assert release["jobs"]["publish-pypi"]["permissions"] == {"id-token": "write"}
 
 
 def test_maintenance_workflow_runs_weekly_release_check_and_install_smokes() -> None:
@@ -627,18 +663,44 @@ def test_release_workflow_is_tag_bound_and_verifies_pypi_install() -> None:
     payload = yaml.safe_load(RELEASE_WORKFLOW.read_text(encoding="utf-8"))
     jobs = payload["jobs"]
     build_steps = jobs["build-and-release"]["steps"]
+    github_release_job = jobs["publish-github-release"]
     github_release_steps = [
-        step for step in build_steps if step.get("uses") == "softprops/action-gh-release@v3"
+        step
+        for step in github_release_job["steps"]
+        if step.get("uses") == "softprops/action-gh-release@v3"
     ]
 
-    assert github_release_steps
-    assert all(
-        "startsWith(github.ref, 'refs/tags/v')" in step["if"] for step in github_release_steps
+    assert payload["permissions"] == {"contents": "read"}
+    assert jobs["build-and-release"]["outputs"]["release_notes_body_path"] == (
+        "${{ steps.release_notes.outputs.body_path }}"
     )
+    assert github_release_job["needs"] == "build-and-release"
+    assert github_release_job["if"] == "startsWith(github.ref, 'refs/tags/v')"
+    assert github_release_job["permissions"] == {"contents": "write"}
+    assert github_release_steps
     release_gate_step = next(
         step for step in build_steps if step.get("name") == "Run release gate before publishing"
     )
     assert release_gate_step["run"] == "make release-check"
+    checked_in_notes_step = next(
+        step
+        for step in github_release_steps
+        if step.get("name") == "Publish GitHub release from checked-in notes"
+    )
+    generated_notes_step = next(
+        step
+        for step in github_release_steps
+        if step.get("name") == "Publish GitHub release with generated notes"
+    )
+    assert checked_in_notes_step["if"] == (
+        "needs.build-and-release.outputs.release_notes_body_path != ''"
+    )
+    assert checked_in_notes_step["with"]["body_path"] == (
+        "${{ needs.build-and-release.outputs.release_notes_body_path }}"
+    )
+    assert generated_notes_step["if"] == (
+        "needs.build-and-release.outputs.release_notes_body_path == ''"
+    )
 
     tag_install_step = next(
         step for step in build_steps if step.get("name") == "Smoke test source-at-tag install path"

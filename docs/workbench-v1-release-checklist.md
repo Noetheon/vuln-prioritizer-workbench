@@ -140,6 +140,7 @@ make docker-demo-smoke
 
 - [x] Run `make workflow-check` before merge or tagging when Docker and pre-commit tooling are available.
 - [x] Run `make demo-sync-check-temp` before tagging when examples or report outputs changed.
+- [x] Confirm normal CI/TestPyPI workflows use read-only repository permissions by default and that the release workflow scopes `contents: write` only to the job that publishes GitHub Release assets.
 - [x] Confirm release workflow configuration still builds distributions, validates them, creates the GitHub Release from checked-in notes, and only publishes to PyPI when the repository gate allows it.
 - [x] Confirm the tagged release notes file exists under `docs/releases/`.
 - [x] Confirm GitHub Release, tag, package metadata, and docs version all match.

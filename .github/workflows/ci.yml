@@ -5,6 +5,9 @@ on:
   pull_request:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   check:
     runs-on: ubuntu-latest
@@ -62,6 +65,9 @@ jobs:
 
       - name: Lint frontend
         run: make frontend-lint
+
+      - name: Check frontend lint drift
+        run: git diff --exit-code -- frontend
 
       - name: Build frontend
         run: make frontend-build
