@@ -45,10 +45,10 @@ def generate_provider_snapshot_json(report: ProviderSnapshotReport) -> str:
     payload["warnings"] = [redact_text(str(warning)) for warning in payload.get("warnings", [])]
     metadata = payload.get("metadata")
     if isinstance(metadata, dict) and isinstance(metadata.get("source_metadata"), dict):
-        metadata["source_metadata"], _redacted_paths = redact_value(
+        metadata["source_metadata"] = redact_value(
             metadata["source_metadata"],
             redact_paths=False,
-        )
+        )[0]
     return json.dumps(payload, indent=2, sort_keys=True)
 
 

@@ -2,10 +2,9 @@
 
 from __future__ import annotations
 
-import re
 from dataclasses import dataclass
 from pathlib import Path
-from re import Pattern
+from re import Pattern, compile
 from typing import Final
 
 APP_NAME: Final = "vuln-prioritizer"
@@ -14,7 +13,7 @@ DEFAULT_NVD_API_KEY_ENV: Final = "NVD_API_KEY"
 DEFAULT_CACHE_DIR: Final = Path(".cache") / APP_NAME
 DEFAULT_CACHE_TTL_HOURS: Final = 24
 ENV_VAR_NAME_PATTERN: Final = r"^[A-Z_][A-Z0-9_]*$"
-ENV_VAR_NAME_RE: Final[Pattern[str]] = re.compile(ENV_VAR_NAME_PATTERN)
+ENV_VAR_NAME_RE: Final[Pattern[str]] = compile(ENV_VAR_NAME_PATTERN)
 
 NVD_API_URL: Final = "https://services.nvd.nist.gov/rest/json/cves/2.0"
 EPSS_API_URL: Final = "https://api.first.org/data/v1/epss"
