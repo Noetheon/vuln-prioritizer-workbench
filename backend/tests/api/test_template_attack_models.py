@@ -15,12 +15,22 @@ from sqlalchemy.engine import Engine
 from sqlmodel import Session, SQLModel, select
 
 ATTACK_LITE_TABLES = {
+    "attack_stix_mitigation",
+    "attack_stix_snapshot",
+    "attack_stix_tactic",
+    "attack_stix_technique",
+    "attack_stix_technique_mitigation",
     "attack_tactic",
     "attack_technique",
     "cve_attack_mapping",
     "finding_attack_context",
 }
 ATTACK_LITE_EXPORTS = (
+    "AttackStixMitigation",
+    "AttackStixSnapshot",
+    "AttackStixTactic",
+    "AttackStixTechnique",
+    "AttackStixTechniqueMitigation",
     "AttackTactic",
     "AttackTechnique",
     "CveAttackMapping",
@@ -91,6 +101,16 @@ def test_attack_lite_migration_creates_tables_and_foreign_keys(
     assert (("vulnerability_id",), "vulnerability", ("id",)) in foreign_keys["cve_attack_mapping"]
     assert (("finding_id",), "finding", ("id",)) in foreign_keys["finding_attack_context"]
     assert (("analysis_run_id",), "analysis_run", ("id",)) in foreign_keys["finding_attack_context"]
+    assert (("provider_snapshot_id",), "provider_snapshot", ("id",)) in foreign_keys[
+        "attack_stix_snapshot"
+    ]
+    for table in (
+        "attack_stix_tactic",
+        "attack_stix_technique",
+        "attack_stix_mitigation",
+        "attack_stix_technique_mitigation",
+    ):
+        assert (("snapshot_id",), "attack_stix_snapshot", ("id",)) in foreign_keys[table]
 
 
 def test_attack_lite_models_reject_unreviewable_mapping_fields(app_models: Any) -> None:
