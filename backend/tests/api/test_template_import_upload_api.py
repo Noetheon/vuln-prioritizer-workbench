@@ -19,6 +19,7 @@ from app.services import TemplateAnalysisError
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 TRIVY_REPORT = PROJECT_ROOT / "data" / "input_fixtures" / "trivy_report.json"
 OPENVEX = PROJECT_ROOT / "data" / "input_fixtures" / "openvex_statements.json"
+CYCLONEDX_VEX = PROJECT_ROOT / "data" / "input_fixtures" / "cyclonedx_vex.json"
 ATTACK_MAPPING = PROJECT_ROOT / "data" / "attack" / "local_curated_low_confidence_vpw058.yml"
 
 
@@ -596,6 +597,72 @@ def test_import_upload_applies_openvex_sidecar_to_template_findings(
     assert occurrence["vex_match_type"] == "purl"
     assert occurrence["vex_source_format"] == "openvex-json"
     assert occurrence["vex_action_statement"] == "Upgrade completed for the scoped component."
+
+
+def test_import_upload_applies_cyclonedx_vex_sidecar_to_template_findings(
+    template_api_env: TemplateApiEnv,
+    tmp_path: Path,
+) -> None:
+    upload_dir = _configure_upload_dir(template_api_env, tmp_path)
+    headers = auth_headers(template_api_env.client)
+    project = create_project_via_api(template_api_env.client, headers)
+    occurrence_csv = "\n".join(
+        [
+            "cve_id,asset_ref,component,version,purl,severity",
+            (
+                "CVE-2023-34362,moveit-service,moveit-transfer,2023.0.0,"
+                "pkg:pypi/moveit-transfer@2023.0.0,HIGH"
+            ),
+            ("CVE-2024-4577,php-service,php-cgi,8.1.28,pkg:generic/php-cgi@8.1.28,HIGH"),
+            "",
+        ]
+    ).encode()
+    vex_bytes = CYCLONEDX_VEX.read_bytes()
+
+    response = template_api_env.client.post(
+        f"/api/v1/projects/{project['id']}/imports",
+        headers=headers,
+        data={"input_type": "generic-occurrence-csv"},
+        files={
+            "file": ("occurrences.csv", occurrence_csv, "text/csv"),
+            "vex_file": ("cyclonedx-vex.json", vex_bytes, "application/json"),
+        },
+    )
+
+    assert response.status_code == 200, response.text
+    payload = response.json()
+    vex_upload = payload["summary_json"]["vex_upload"]
+    assert vex_upload["input_type"] == "vex-json"
+    assert vex_upload["stored_filename"] == "cyclonedx-vex.json"
+    assert Path(vex_upload["path"]).is_relative_to(upload_dir)
+    assert payload["summary_json"]["vex"]["statement_count"] == 3
+    assert payload["summary_json"]["vex"]["matched_occurrences"] == 2
+    assert payload["summary_json"]["suppressed_by_vex"] == 2
+
+    findings = template_api_env.client.get(
+        f"/api/v1/projects/{project['id']}/findings/",
+        headers=headers,
+    )
+    assert findings.status_code == 200, findings.text
+    by_cve = {finding["cve_id"]: finding for finding in findings.json()["data"]}
+    assert by_cve["CVE-2023-34362"]["status"] == "suppressed"
+    assert by_cve["CVE-2023-34362"]["suppressed_by_vex"] is True
+    assert by_cve["CVE-2023-34362"]["explanation_json"]["provenance"]["vex_statuses"] == {
+        "not_affected": 1
+    }
+    assert by_cve["CVE-2024-4577"]["status"] == "fixed"
+    assert by_cve["CVE-2024-4577"]["explanation_json"]["priority_state"] == "Fixed"
+
+    detail = template_api_env.client.get(
+        f"/api/v1/findings/{by_cve['CVE-2023-34362']['id']}",
+        headers=headers,
+    )
+    assert detail.status_code == 200
+    occurrence = detail.json()["occurrences"][0]
+    assert occurrence["vex_status"] == "not_affected"
+    assert occurrence["vex_match_type"] == "purl"
+    assert occurrence["vex_source_format"] == "cyclonedx-vex-json"
+    assert occurrence["vex_justification"] == "vulnerable_code_not_present"
 
 
 def test_import_upload_rejects_invalid_vex_sidecar_with_clear_error(

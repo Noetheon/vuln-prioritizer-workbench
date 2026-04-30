@@ -263,6 +263,16 @@ Current VEX contract:
 - `suppressed_by_vex` means all known occurrences are suppressed
 - `under_investigation` remains visible
 - OpenVEX product and subcomponent PURLs may be supplied as `@id`, `purl`, or `identifiers.purl`
+- CycloneDX VEX uses `vulnerabilities[].id`, `vulnerabilities[].analysis.state`,
+  and `vulnerabilities[].affects[].ref`; `affects[].ref` must resolve to a
+  component `bom-ref` or be a direct PURL
+- CycloneDX VEX states map as follows: `exploitable` and `affected` become
+  `affected`; `not_affected` and `false_positive` become `not_affected`;
+  `resolved`, `resolved_with_pedigree`, and `fixed` become `fixed`;
+  `in_triage` becomes `under_investigation`
+- unsupported CycloneDX VEX fields such as ratings, advisories, `analysis.detail`,
+  services, dependencies, and non-`affects` scope are ignored for matching but
+  the source document remains stored as upload evidence
 - exact text in `vex_justification` and `vex_action_statement` is informative, not enum-stable
 
 ### Asset context semantics
