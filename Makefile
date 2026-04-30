@@ -128,6 +128,7 @@ docker-demo-smoke:
 		echo "Template Workbench login route check failed." >&2; \
 		exit 1; \
 	fi; \
+	$(PYTHON) scripts/docker_quickstart_api_smoke.py; \
 	echo "Template Workbench Docker smoke passed."
 
 docker-postgres-migration-smoke:
