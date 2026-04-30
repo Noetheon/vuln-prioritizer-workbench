@@ -8,7 +8,7 @@ const lowConfidenceAttackMapping = "local_curated_low_confidence_vpw058.yml"
 const validOccurrenceCsv = Buffer.from(
   [
     "cve_id,asset_ref,component,version,purl,severity,owner,business_service,exposure",
-    "CVE-2024-3094,build-host-1,xz,5.6.0,pkg:apk/alpine/xz@5.6.0-r0,CRITICAL,team-platform <img src=x onerror=window.__vpwXss=1>,payments <script>window.__vpwXss=1</script>,public",
+    "CVE-2024-3094,build-host-1,xz <img src=x onerror=window.__vpwXss=1>,5.6.0,pkg:apk/alpine/xz@5.6.0-r0,CRITICAL,team-platform <img src=x onerror=window.__vpwXss=1>,payments <script>window.__vpwXss=1</script>,public",
     "CVE-2024-4577,web-tier,php-cgi,8.3.7,pkg:deb/debian/php-cgi@8.3.7,HIGH,team-web,checkout,internal",
   ].join("\n"),
 )
@@ -845,7 +845,9 @@ test("template frontend covers core Workbench E2E smoke", async ({ page }) => {
     name: "Occurrences table",
   })
   await expect(occurrencesTable).toContainText("generic-occurrence-csv")
-  await expect(occurrencesTable).toContainText("xz")
+  await expect(occurrencesTable).toContainText(
+    "xz <img src=x onerror=window.__vpwXss=1>",
+  )
   await expect(occurrencesTable).toContainText("5.6.0")
   await expect(occurrencesTable).toContainText("build-host-1")
   await expect(occurrencesTable).toContainText("team-platform")

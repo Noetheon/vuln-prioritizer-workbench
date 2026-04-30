@@ -196,6 +196,10 @@ def test_workbench_import_findings_reports_and_evidence(tmp_path: Path) -> None:
         f"/api/providers/snapshots/{run['provider_snapshot_id']}/download"
     )
     assert snapshot_download.status_code == 200
+    assert snapshot_download.headers["cache-control"] == "no-store"
+    assert snapshot_download.headers["x-content-type-options"] == "nosniff"
+    assert snapshot_download.headers["x-frame-options"] == "DENY"
+    assert "frame-ancestors 'none'" in snapshot_download.headers["content-security-policy"]
     assert hashlib.sha256(snapshot_download.content).hexdigest() == current_snapshot["content_hash"]
     assert snapshot_download.json()["metadata"]["artifact_kind"] == "provider-snapshot"
 
@@ -634,6 +638,9 @@ def test_workbench_imports_provider_snapshot_artifact(tmp_path: Path) -> None:
 
     downloaded = client.get(f"/api/providers/snapshots/{payload['item']['id']}/download")
     assert downloaded.status_code == 200
+    assert downloaded.headers["cache-control"] == "no-store"
+    assert downloaded.headers["x-content-type-options"] == "nosniff"
+    assert "object-src 'none'" in downloaded.headers["content-security-policy"]
     assert hashlib.sha256(downloaded.content).hexdigest() == payload["item"]["content_hash"]
     assert downloaded.json()["metadata"]["snapshot_format"] == "provider-snapshot.v1.json"
 
@@ -1903,6 +1910,9 @@ def test_workbench_api_tokens_config_provider_jobs_and_github_preview(
     )
     assert exported_config.status_code == 200
     assert exported_config.headers["content-disposition"].startswith("attachment;")
+    assert exported_config.headers["cache-control"] == "no-store"
+    assert exported_config.headers["x-content-type-options"] == "nosniff"
+    assert "object-src 'none'" in exported_config.headers["content-security-policy"]
     assert exported_config.json()["commands"]["analyze"]["sort_by"] == "epss"
     rollback = client.post(
         f"/api/projects/{project['id']}/settings/config/{saved_config.json()['id']}/rollback",
