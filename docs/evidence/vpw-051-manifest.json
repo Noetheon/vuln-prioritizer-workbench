@@ -56,13 +56,10 @@
       "findings.0.rationale",
       "findings.0.recommended_action",
       "findings.[].evidence.authorization",
-      "findings.[].evidence.upload_path",
       "provider_snapshot.source_metadata.api_key",
       "provider_snapshot.source_metadata.cache_dir",
       "provider_snapshot.source_metadata.source_path",
-      "source_metadata.api_key",
-      "source_metadata.cache_dir",
-      "source_metadata.source_path"
+      "source_metadata.api_key"
     ]
   },
   "schema_version": "1.1.0",

@@ -8,6 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from vuln_prioritizer.db.models import ProviderSnapshot, ProviderUpdateJob, utc_now
+from vuln_prioritizer.security_redaction import redact_error, redact_value
 
 
 class ProviderSnapshotRepositoryMixin:
@@ -29,7 +30,7 @@ class ProviderSnapshotRepositoryMixin:
             nvd_last_sync=nvd_last_sync,
             epss_date=epss_date,
             kev_catalog_version=kev_catalog_version,
-            metadata_json=metadata_json or {},
+            metadata_json=_redacted_json_payload(metadata_json or {}),
         )
         self.session.add(snapshot)
         self.session.flush()
@@ -58,7 +59,7 @@ class ProviderSnapshotRepositoryMixin:
             if kev_catalog_version is not None:
                 snapshot.kev_catalog_version = kev_catalog_version
             if metadata_json is not None:
-                snapshot.metadata_json = metadata_json
+                snapshot.metadata_json = _redacted_json_payload(metadata_json)
             self.session.flush()
             return snapshot
         return self.create_provider_snapshot(
@@ -88,8 +89,8 @@ class ProviderSnapshotRepositoryMixin:
         job = ProviderUpdateJob(
             status=status,
             requested_sources_json=requested_sources_json,
-            metadata_json=metadata_json or {},
-            error_message=error_message,
+            metadata_json=_redacted_json_payload(metadata_json or {}),
+            error_message=redact_error(error_message) if error_message is not None else None,
             finished_at=utc_now() if status in {"completed", "failed"} else None,
         )
         self.session.add(job)
@@ -99,3 +100,8 @@ class ProviderSnapshotRepositoryMixin:
     def list_provider_update_jobs(self) -> list[ProviderUpdateJob]:
         statement = select(ProviderUpdateJob).order_by(ProviderUpdateJob.started_at.desc())
         return list(self.session.scalars(statement))
+
+
+def _redacted_json_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    redacted, _paths = redact_value(payload, redact_paths=False)
+    return redacted if isinstance(redacted, dict) else {}

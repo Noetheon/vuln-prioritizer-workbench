@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 
+from vuln_prioritizer.security_redaction import redact_text
 from vuln_prioritizer.utils import normalize_cve_id
 
 
@@ -16,7 +17,8 @@ def normalize_cve_or_warn(
     """Normalize a scanner/SBOM CVE field and emit the existing warning on failure."""
     cve_id = normalize_cve_id(raw_value)
     if cve_id is None:
-        warnings.append(f"Ignored non-CVE {source_name} vulnerability identifier: {raw_value!r}")
+        safe_value = redact_text(repr(raw_value))
+        warnings.append(f"Ignored non-CVE {source_name} vulnerability identifier: {safe_value}")
     return cve_id
 
 

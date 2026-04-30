@@ -225,7 +225,37 @@ def test_repository_tracks_jobs_retention_and_detection_evidence() -> None:
         )
         repo.start_workbench_job(job, worker_id="test")
         repo.update_workbench_job_progress(job, progress=40, message="rendering")
-        repo.complete_workbench_job(job, result_json={"report_id": "report-1"})
+        repo.complete_workbench_job(
+            job,
+            result_json={"report_id": "report-1"},
+            message="completed with token=super-secret-token",
+        )
+        secret_job = repo.enqueue_workbench_job(
+            kind="provider_refresh",
+            project_id=project.id,
+            payload_json={"token": "super-secret-token"},
+        )
+        repo.start_workbench_job(secret_job, worker_id="test")
+        repo.fail_workbench_job(
+            secret_job,
+            error_message=(
+                "provider failed with apiKey=super-secret-token and Bearer super-secret-token"
+            ),
+            retryable=False,
+        )
+        provider_update = repo.create_provider_update_job(
+            status="failed",
+            requested_sources_json=["nvd"],
+            metadata_json={"api_key": "super-secret-token"},
+            error_message="provider failed with apiKey=super-secret-token",
+        )
+        provider_snapshot = repo.create_provider_snapshot(
+            content_hash="sha256:secret-provider",
+            metadata_json={
+                "api_key": "super-secret-token",
+                "source_path": "/tmp/provider-snapshot.json",
+            },
+        )
 
         retention = repo.upsert_project_artifact_retention(
             project_id=project.id,
@@ -258,9 +288,25 @@ def test_repository_tracks_jobs_retention_and_detection_evidence() -> None:
     with session_scope(factory) as session:
         repo = WorkbenchRepository(session)
         jobs = repo.list_workbench_jobs(project_id=project.id)
-        assert jobs[0].status == "completed"
-        assert jobs[0].progress == 100
-        assert jobs[0].result_json["report_id"] == "report-1"
+        completed_job = next(item for item in jobs if item.id == job.id)
+        assert completed_job.status == "completed"
+        assert completed_job.progress == 100
+        assert completed_job.result_json["report_id"] == "report-1"
+        assert "super-secret-token" not in str(completed_job.logs_json)
+        failed_jobs = [item for item in jobs if item.status == "failed"]
+        assert failed_jobs
+        failed_job = failed_jobs[0]
+        assert failed_job.payload_json["token"] == "[REDACTED]"
+        assert "super-secret-token" not in failed_job.error_message
+        assert "super-secret-token" not in str(failed_job.logs_json)
+        provider_jobs = repo.list_provider_update_jobs()
+        failed_provider_job = next(item for item in provider_jobs if item.id == provider_update.id)
+        assert failed_provider_job.metadata_json["api_key"] == "[REDACTED]"
+        assert "super-secret-token" not in failed_provider_job.error_message
+        stored_snapshot = repo.get_provider_snapshot_by_hash(provider_snapshot.content_hash)
+        assert stored_snapshot is not None
+        assert stored_snapshot.metadata_json["api_key"] == "[REDACTED]"
+        assert stored_snapshot.metadata_json["source_path"] == "/tmp/provider-snapshot.json"
         assert repo.get_project_artifact_retention(project.id).id == retention.id
         control = repo.get_detection_control(control.id)
         assert control is not None

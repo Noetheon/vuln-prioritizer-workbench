@@ -173,6 +173,18 @@ def test_evidence_bundle_helper_functions_cover_manifest_and_path_edges(
         },
         analysis_path=analysis_file,
     ) == {"id": "snapshot-2", "sha256": "c" * 64, "path": "missing.json"}
+    assert provider_snapshot_manifest_entry(
+        {
+            "provider_snapshot_id": "snapshot-3",
+            "provider_snapshot_hash": "d" * 64,
+            "provider_snapshot_file": r"C:\Users\Alice\provider-snapshot.json",
+        },
+        analysis_path=analysis_file,
+    ) == {
+        "id": "snapshot-3",
+        "sha256": "d" * 64,
+        "path": "provider-snapshot.json",
+    }
 
 
 def test_attack_navigator_layer_from_summary_filters_invalid_distribution_entries() -> None:
@@ -226,6 +238,44 @@ def test_write_evidence_bundle_handles_missing_input_copy_and_navigator_layer(
         names = set(archive.namelist())
         assert "attack-navigator-layer.json" in names
         assert not any(name.startswith("input/") for name in names)
+
+
+def test_write_evidence_bundle_redacts_windows_source_paths_in_manifest(
+    tmp_path: Path,
+) -> None:
+    analysis_file = tmp_path / "analysis.json"
+    output_file = tmp_path / "evidence.zip"
+    payload = {
+        "metadata": {
+            "input_paths": [r"C:\Users\Alice\secret-cves.txt"],
+            "provider_snapshot_file": r"C:\Users\Alice\provider-snapshot.json",
+            "provider_snapshot_hash": "e" * 64,
+            "findings_count": 0,
+            "kev_hits": 0,
+            "waived_count": 0,
+        },
+        "attack_summary": {},
+        "findings": [],
+    }
+    analysis_file.write_text(json.dumps(payload), encoding="utf-8")
+
+    manifest = write_evidence_bundle(
+        analysis_path=analysis_file,
+        output_path=output_file,
+        payload=payload,
+        include_input_copy=True,
+    )
+
+    assert manifest.source_input_paths == ["secret-cves.txt"]
+    assert manifest.source_input_path == "secret-cves.txt"
+    assert manifest.provider_snapshot["path"] == "provider-snapshot.json"
+    with zipfile.ZipFile(output_file) as archive:
+        combined = "\n".join(
+            archive.read(name).decode("utf-8", errors="replace")
+            for name in archive.namelist()
+            if name.endswith(".json")
+        )
+    assert r"C:\Users\Alice" not in combined
 
 
 def test_write_evidence_bundle_is_byte_stable_with_fixed_timestamp(

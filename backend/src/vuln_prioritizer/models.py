@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from enum import StrEnum
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 import vuln_prioritizer.models_artifacts as _models_artifacts
 import vuln_prioritizer.models_attack as _models_attack
@@ -14,6 +14,7 @@ import vuln_prioritizer.models_provider as _models_provider
 import vuln_prioritizer.models_remediation as _models_remediation
 import vuln_prioritizer.models_state as _models_state
 import vuln_prioritizer.models_waivers as _models_waivers
+from vuln_prioritizer.config import validate_env_var_name
 from vuln_prioritizer.model_base import StrictModel
 
 AttackData = _models_attack.AttackData
@@ -464,6 +465,13 @@ class ProviderSnapshotMetadata(StrictModel):
     source_metadata: dict[str, dict[str, str | int | bool | None]] = Field(default_factory=dict)
     offline_kev_file: str | None = None
     nvd_api_key_env: str | None = None
+
+    @field_validator("nvd_api_key_env")
+    @classmethod
+    def _validate_nvd_api_key_env(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        return validate_env_var_name(value, label="NVD API key environment variable name")
 
 
 class ProviderSnapshotItem(StrictModel):

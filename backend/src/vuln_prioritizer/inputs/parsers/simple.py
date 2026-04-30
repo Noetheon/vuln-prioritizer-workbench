@@ -7,6 +7,7 @@ import io
 from pathlib import Path
 
 from vuln_prioritizer.models import InputOccurrence, ParsedInput
+from vuln_prioritizer.security_redaction import redact_text
 from vuln_prioritizer.utils import normalize_cve_id
 
 from .common import (
@@ -73,7 +74,8 @@ def parse_cve_list(path: Path) -> ParsedInput:
     for line_number, raw_value, asset_ref, component, version in rows:
         cve_id = normalize_cve_id(raw_value)
         if cve_id is None:
-            warnings.append(f"Ignored invalid CVE identifier at line {line_number}: {raw_value!r}")
+            safe_value = redact_text(repr(raw_value))
+            warnings.append(f"Ignored invalid CVE identifier at line {line_number}: {safe_value}")
             continue
         key = (cve_id, asset_ref, component, version)
         if key in seen:

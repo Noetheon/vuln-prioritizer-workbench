@@ -19,6 +19,7 @@ from vuln_prioritizer.models import EpssData, KevData, NvdData
 from vuln_prioritizer.providers.epss import EpssProvider
 from vuln_prioritizer.providers.kev import KevProvider
 from vuln_prioritizer.providers.nvd import NvdProvider
+from vuln_prioritizer.reporting_evidence import write_evidence_bundle
 
 
 def test_cli_verify_evidence_bundle_succeeds_for_clean_bundle(
@@ -199,8 +200,8 @@ def test_cli_evidence_bundle_includes_all_multi_input_sources(
         names = set(archive.namelist())
         manifest = json.loads(archive.read("manifest.json"))
 
-    assert manifest["source_input_paths"] == [str(first_input), str(second_input)]
-    assert manifest["source_input_path"] == str(first_input)
+    assert manifest["source_input_paths"] == ["input/001-cves-a.txt", "input/002-cves-b.txt"]
+    assert manifest["source_input_path"] == "input/001-cves-a.txt"
     assert {"input/001-cves-a.txt", "input/002-cves-b.txt"} <= names
 
 
@@ -328,6 +329,63 @@ def test_cli_evidence_bundle_includes_provider_snapshot_and_replays_offline(
         item["path"] == "provider/provider-snapshot.json" and item["kind"] == "provider-snapshot"
         for item in manifest["files"]
     )
+
+
+def test_evidence_bundle_redacts_secret_like_text_in_copied_artifacts(tmp_path: Path) -> None:
+    input_file = tmp_path / "cves.txt"
+    analysis_file = tmp_path / "analysis.json"
+    bundle_file = tmp_path / "evidence.zip"
+    input_file.write_text(
+        "\n".join(
+            [
+                "CVE-2026-0711",
+                "NVD_API_KEY=super-secret-token",
+                "source=/Users/Alice/My Project/secret-cves.txt",
+                r"mirror=C:\Users\Alice\My Project\secret-cves.txt",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    analysis_file.write_text(
+        json.dumps(
+            {
+                "metadata": {
+                    "input_path": str(input_file),
+                    "input_paths": [str(input_file)],
+                    "findings_count": 0,
+                    "kev_hits": 0,
+                    "waived_count": 0,
+                    "token": "super-secret-token",
+                },
+                "findings": [],
+                "warnings": ["Bearer super-secret-token"],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    manifest = write_evidence_bundle(
+        analysis_path=analysis_file,
+        output_path=bundle_file,
+        payload=json.loads(analysis_file.read_text(encoding="utf-8")),
+        include_input_copy=True,
+    )
+
+    with zipfile.ZipFile(bundle_file) as archive:
+        combined = "\n".join(
+            archive.read(name).decode("utf-8", errors="replace")
+            for name in archive.namelist()
+            if name.endswith((".json", ".md", ".html", ".txt"))
+        )
+
+    assert manifest.redaction["enabled"] is True
+    assert "super-secret-token" not in combined
+    assert str(tmp_path) not in combined
+    assert "/Users/Alice" not in combined
+    assert r"C:\Users\Alice" not in combined
+    assert "My Project" not in combined
+    assert "NVD_API_KEY=<redacted>" in combined
+    assert "[REDACTED-PATH]" in combined
 
 
 def _build_evidence_bundle(monkeypatch, tmp_path: Path) -> Path:

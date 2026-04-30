@@ -40,7 +40,8 @@ The current local-first Workbench threat model does not cover:
 | SQLite database | Integrity, local confidentiality, availability | Default persistence is a local single-node SQLite file or Compose volume. |
 | Optional PostgreSQL database | Integrity, local confidentiality, availability | The Compose `postgres` profile exercises the same Workbench schema on a private single-node database. Credentials, volumes, backups, network exposure, and retention are operator responsibilities. |
 | Upload, report, and evidence directories | Confidentiality, integrity, availability | Generated artifacts may include source metadata and should be treated as security-sensitive. |
-| Configuration and secrets | Confidentiality | Environment values such as NVD keys and CSRF tokens must not be displayed in full or written into reports. |
+| Configuration and secrets | Confidentiality | Environment values such as NVD keys and CSRF tokens must not be displayed in full or written into reports. Secret-bearing settings should store names, state, or hashes rather than values whenever possible. |
+| Provider endpoint configuration | Integrity, least privilege | Built-in NVD, FIRST EPSS, and CISA KEV live endpoints are fixed HTTPS public-source constants. Runtime configuration may choose cache, snapshot, or offline-file inputs but must not accept unsafe live provider URL overrides. |
 | Web session, CSRF token, and API tokens | Integrity, confidentiality | The local web UI must reject unintended form submissions and unsafe state changes. API tokens gate mutating API requests after the first active token exists, and only token hashes should be stored. |
 | External ticket-system tokens | Confidentiality, least privilege | GitHub, Jira, and ServiceNow create flows read bearer tokens from explicit environment variable names such as `GITHUB_TOKEN`, `JIRA_API_TOKEN`, or `SERVICENOW_API_TOKEN`; token values must not be stored in the Workbench database, reports, evidence bundles, or audit metadata. |
 | Ticket preview/export records | Integrity, auditability | Preview payloads, duplicate keys, idempotency keys, created external IDs, and ticket URLs support local review and duplicate avoidance without making external ticket systems part of base prioritization. |
@@ -71,7 +72,7 @@ Primary boundaries:
 - API/CLI to database: application code must use structured database access and must not expose raw SQL or table internals as a public contract.
 - Provider cache or snapshot to prioritization: cached and locked data must carry provenance so stale or replayed data is visible.
 - ATT&CK source files to reports: CTID JSON mappings are trusted only as local evidence-backed context, not proof of exploitation.
-- Local Workbench to external providers: live provider calls are optional enrichment paths and must not be required for locked offline replay.
+- Local Workbench to external providers: live provider calls are optional enrichment paths and must not be required for locked offline replay. Built-in provider calls use fixed HTTPS public-source endpoints rather than operator-supplied runtime URLs.
 - Local Workbench to ticket systems: ticket preview is local-only; create/export flows may call GitHub, Jira, or ServiceNow only when a trusted local operator supplies HTTPS destination settings and an explicit token environment variable name.
 
 ## Threats and Mitigations
@@ -89,7 +90,10 @@ Primary boundaries:
 | SQLite corruption or single-node contention | Lost run history or failed imports | Document SQLite as default single-node storage, keep writes short, use migrations, and treat database backup/restore as an operator responsibility. |
 | Optional PostgreSQL profile misconfiguration | Unauthorized database access, persistent data exposure, or unavailable Workbench state | Keep the Compose profile bound to local/private use, avoid committing real credentials, prefer secret injection outside committed files, restrict database network reachability, use migrations consistently, and treat backups, retention, TLS, and role hardening as operator controls beyond the smoke profile. |
 | API token bootstrap misuse | Unauthorized state changes through local API routes | Keep token behavior local-first: a fresh local database has no active tokens for offline demos, the first token is created through `POST /api/tokens`, and mutating `/api/*` routes require `Authorization: Bearer <token>` or `X-API-Token: <token>` after any active token exists. Store only SHA-256 token hashes, update last-used metadata, and do not render token values again after creation. |
-| Secret exposure in UI, logs, reports, or evidence bundles | Credential leakage | Redact API keys and token values, avoid printing full environment contents, and exclude secrets from generated reports and evidence manifests. |
+| Unsafe secret source or environment-variable name | Credential leakage or accidental literal-token use | Read the NVD API key only from the variable name configured by `VULN_PRIORITIZER_NVD_API_KEY_ENV`, defaulting to `NVD_API_KEY`. Environment-variable name settings must match `^[A-Z_][A-Z0-9_]*$` and must never be interpreted as raw secret values. |
+| Template default secrets used outside local/dev | Predictable signing keys or admin credentials in shared environments | Treat template defaults such as `changethis` as local/dev bootstrap placeholders only. Staging and production must reject default `SECRET_KEY`, `FIRST_SUPERUSER_PASSWORD`, and equivalent secret values before serving traffic. Unknown `ENVIRONMENT` values fail closed instead of silently selecting local mode. |
+| Secret exposure in UI, logs, reports, or evidence bundles | Credential leakage | Redact API keys and token values, avoid printing full environment contents, and exclude secrets and local absolute paths from generated reports and evidence manifests. Settings, reports, and log-facing diagnostics should expose only `<set>`, `<not set>`, variable names, counts, hashes, bundle paths, or source labels. |
+| Runtime provider URL override | Provider data tampering, SSRF-style reachability, or non-public-source enrichment | Keep NVD, FIRST EPSS, and CISA KEV provider URLs as fixed HTTPS constants for public sources. Do not add environment variables, request fields, or project settings that override live provider endpoints. Offline fixtures and locked snapshots remain explicit local artifacts, not endpoint substitutes. |
 | Ticket sync posts sensitive finding metadata to the wrong destination | Exposure of CVEs, assets, owners, paths, or remediation detail in an external system | Keep ticket sync local-first and operator-initiated, require HTTPS `base_url` values without embedded credentials for Jira/ServiceNow, reject loopback/private ticket hosts unless explicitly server-allowlisted via `VULN_PRIORITIZER_TICKET_BASE_URL_ALLOWLIST`, require explicit `token_env` names that match environment-variable syntax, validate Jira project keys, use the default ServiceNow `incident` table unless extra tables are server-allowlisted via `VULN_PRIORITIZER_SERVICENOW_TABLE_ALLOWLIST`, and default export requests to `dry_run: true`. |
 | Duplicate or repeated ticket creation | Alert fatigue, duplicate remediation work, or noisy external audit trails | Generate deterministic duplicate keys and idempotency keys, persist created duplicate keys locally, skip duplicates on repeated exports, and send an `Idempotency-Key` header to Jira and ServiceNow create calls. |
 | Ticket token misuse or over-privileged credentials | Unauthorized issue/ticket creation or broader external account compromise | Read tokens only at request time from explicit environment variables such as `GITHUB_TOKEN`, `JIRA_API_TOKEN`, or `SERVICENOW_API_TOKEN`; use narrowly scoped external tokens; do not store token values in the Workbench database; include only counts and non-secret metadata in audit events. |
@@ -105,9 +109,11 @@ Primary boundaries:
 - The operator controls local filesystem permissions for the SQLite database, uploads, reports, provider cache, and evidence bundles. For Postgres, the operator controls credentials, database network reachability, volumes, backups, and retention.
 - Imported files are treated as sensitive security data and are not committed unless they are sanitized fixtures.
 - Live provider calls may fail or be rate-limited. Locked provider snapshots and local caches are expected paths for reproducible demos and audits.
+- Live provider endpoints are fixed HTTPS public-source constants for NVD, FIRST EPSS, and CISA KEV. Operators can select locked snapshots, caches, and offline files for deterministic replay, but not arbitrary provider URLs.
 - ATT&CK context is optional. Missing CTID files or unmapped CVEs must not block base CVE prioritization.
 - Evidence bundles are integrity artifacts, not encrypted archives. Operators are responsible for secure storage and transfer.
 - API tokens are local bootstrap credentials for automation and mutating API requests. They are not an SSO, RBAC, or multi-user session model.
+- NVD, ticket, and other token-bearing integrations use explicit environment variable names that match `^[A-Z_][A-Z0-9_]*$`; token values stay outside committed config and generated evidence.
 - Ticket preview/export is an optional local automation bridge. Preview does not call external systems; create/export calls are operator-triggered, default to dry-run behavior, and require explicit HTTPS destination settings plus token environment variables.
 - Jira and ServiceNow token variable names are request fields, not fixed global configuration. Operators should use explicit names such as `JIRA_API_TOKEN` or `SERVICENOW_API_TOKEN` and provide the corresponding process environment values outside committed files.
 - Documentation examples remain defensive. They should not include exploit code, payloads, PoC links as instructions, or active exploitation workflows.
@@ -139,6 +145,9 @@ The current local-first Workbench is readiness-aligned when:
   parser warnings
 - locked provider snapshot replay is explicit and path-restricted
 - reports and evidence bundles include provider provenance and do not leak configured secrets
+- NVD API key configuration stores only an environment variable name, defaults to `NVD_API_KEY`, validates names with `^[A-Z_][A-Z0-9_]*$`, and redacts any resolved value from settings, reports, and log-facing diagnostics
+- template default secrets are accepted only for local/dev bootstrap and are rejected for staging and production
+- live NVD, FIRST EPSS, and CISA KEV provider URLs are fixed HTTPS public-source constants with no unsafe runtime override path
 - web forms use CSRF protection for state-changing operations
 - API token docs describe the local-first bootstrap behavior, token hash storage, supported headers, and the limit that tokens are not an internet-facing auth model
 - generated HTML escapes imported metadata and local context fields
@@ -164,12 +173,18 @@ The current local-first Workbench is readiness-aligned when:
 | 10k findings API smoke | The legacy API and template API expose paginated findings with limit/offset and sort controls. This is a smoke check, not the final scale architecture. | `backend/tests/api/test_workbench_api.py::test_workbench_findings_api_handles_10k_pagination_smoke` seeds 10,000 legacy findings. `make performance-smoke` runs the VPW-072 template import and pagination smoke with 10,000 findings. |
 | Docker demo smoke | `docker compose -f compose.yml -f compose.override.yml up --build backend frontend` is the supported template-shell readiness path during migration. | `make docker-demo-smoke` starts Compose, polls `http://127.0.0.1:8000/api/v1/workbench/status`, and tears the stack down with `docker compose down -v --remove-orphans`. |
 | Dependency audit | Project dependencies are reviewed from `backend/requirements.txt`, not the caller's incidental global environment. | `make dependency-audit` requires `pip-audit` and runs `python3 -m pip_audit --requirement backend/requirements.txt`; release notes or the release checklist should record the result and any accepted exceptions. |
+| VPW-071 secret and provider hardening | Runtime docs require NVD API keys by environment variable name only, environment variable names matching `^[A-Z_][A-Z0-9_]*$`, local/dev-only template defaults, fixed HTTPS public provider endpoints, and redacted settings/report/log-facing diagnostics. VPW-071 evidence is tracked in `docs/evidence/vpw-071-secret-provider-hardening.md`. | Focused provider/settings/report tests, grep/no-real-key review, `make docs-check`, `make check`, and `make docker-demo-smoke` are the evidence commands to record before marking implementation complete. |
 
 ## Smoke and Audit Evidence
 
 Maintain v1.2 readiness with local, repeatable checks:
 
 - `make check` for formatting, linting, typing, and the Python test suite.
+- Focused VPW-071 tests for NVD API key env-name handling, staging/production
+  default-secret rejection, provider URL immutability, and secret redaction in
+  settings, reports, and diagnostics.
+- Grep/no-real-key review to confirm docs, examples, screenshots, snapshots, and
+  generated artifacts contain placeholders or redacted state only.
 - `make workflow-check` before merge or release branches when Docker and pre-commit tooling are available.
 - `make docker-demo-smoke` for the Compose quickstart path; it starts the template shell, polls `/api/v1/workbench/status`, and removes the demo stack.
 - `make docker-postgres-migration-smoke` for the optional Postgres profile when Docker is available.

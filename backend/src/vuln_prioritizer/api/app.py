@@ -9,6 +9,7 @@ from typing import Any
 
 import uvicorn
 from fastapi import FastAPI, HTTPException, Request
+from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -21,6 +22,7 @@ from vuln_prioritizer.api.security import api_token_digest
 from vuln_prioritizer.db import create_db_engine, create_session_factory
 from vuln_prioritizer.db.migrations import ensure_database_current
 from vuln_prioritizer.db.repositories import WorkbenchRepository
+from vuln_prioritizer.security_redaction import redact_value
 from vuln_prioritizer.web.routes import templates, web_router
 from vuln_prioritizer.workbench_config import (
     WorkbenchSettings,
@@ -232,7 +234,7 @@ async def _validation_error_handler(
 ) -> Response:
     if not isinstance(exc, RequestValidationError):
         return await _unexpected_error_handler(_request, exc)
-    detail = exc.errors()
+    detail, _redacted_paths = redact_value(jsonable_encoder(exc.errors()))
     if _should_render_html_error(_request):
         return _html_error_response(
             _request,

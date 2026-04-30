@@ -37,6 +37,7 @@ from app.services.governance import build_project_governance_rollups_payload
 from vuln_prioritizer.reporting_evidence import (
     verify_evidence_bundle as verify_evidence_bundle_archive,
 )
+from vuln_prioritizer.security_redaction import redact_value
 
 REPORT_KIND_TECHNICAL_MARKDOWN = "technical-markdown"
 REPORT_KIND_EXECUTIVE_HTML = "executive-html"
@@ -867,6 +868,7 @@ class ReportService:
 
 def render_markdown_report(payload: MarkdownReportPayload) -> str:
     """Render a deterministic technical Markdown report from stored analysis data."""
+    payload, _redactions = _redacted_bundle_payload(payload)
     finding_count = len(payload.findings)
     counts = _counts_by_priority(payload.findings)
     lines = [
@@ -1196,6 +1198,7 @@ def _markdown_governance_section(
 
 def render_analysis_result_json(payload: MarkdownReportPayload) -> str:
     """Render the stable machine-readable analysis-result.v1 JSON export."""
+    payload, _redactions = _redacted_bundle_payload(payload)
     result = {
         "schema": ANALYSIS_RESULT_SCHEMA,
         "schema_version": ANALYSIS_RESULT_SCHEMA_VERSION,
@@ -1491,6 +1494,7 @@ def _sarif_fingerprint(*, finding: MarkdownReportFinding, uri: str) -> str:
 
 def render_findings_csv(payload: MarkdownReportPayload) -> str:
     """Render a spreadsheet-safe findings CSV export."""
+    payload, _redactions = _redacted_bundle_payload(payload)
     output = StringIO()
     writer = csv.DictWriter(output, fieldnames=CSV_FINDINGS_COLUMNS, lineterminator="\n")
     writer.writeheader()
@@ -2017,59 +2021,7 @@ def _redacted_bundle_payload(
 
 
 def _redact_bundle_value(value: Any, *, path_prefix: str = "") -> tuple[Any, list[str]]:
-    redacted_paths: list[str] = []
-
-    def walk(candidate: Any, path: tuple[str, ...]) -> Any:
-        if isinstance(candidate, dict):
-            result: dict[str, Any] = {}
-            for key, child in candidate.items():
-                key_text = str(key)
-                child_path = (*path, key_text)
-                if _should_redact_bundle_key(key_text):
-                    result[key_text] = "[REDACTED]"
-                    redacted_paths.append(".".join(child_path))
-                    continue
-                result[key_text] = walk(child, child_path)
-            return result
-        if isinstance(candidate, list):
-            return [walk(item, (*path, "[]")) for item in candidate]
-        if isinstance(candidate, str) and _should_redact_bundle_string(candidate):
-            redacted_paths.append(".".join(path))
-            return "[REDACTED]"
-        return candidate
-
-    start = tuple(part for part in path_prefix.split(".") if part)
-    return walk(value, start), redacted_paths
-
-
-def _should_redact_bundle_key(key: str) -> bool:
-    normalized = key.strip().lower()
-    if (
-        normalized in LOCAL_PATH_REDACTION_KEYS
-        or normalized.endswith("_path")
-        or normalized.endswith("_dir")
-    ):
-        return True
-    return any(fragment in normalized for fragment in SECRET_REDACTION_KEYS)
-
-
-def _should_redact_bundle_string(value: str) -> bool:
-    stripped = value.strip()
-    if not stripped:
-        return False
-    if stripped.startswith(("/", "~/", "\\\\")) or re.search(
-        r"(^|[\s\"'=])(/Users/|/home/|/private/|/tmp/|/var/folders/|[A-Za-z]:\\)",
-        stripped,
-    ):
-        return True
-    if re.search(r"://[^/\\s:@]+:[^/\\s@]+@", stripped):
-        return True
-    return bool(
-        re.search(
-            r"(?i)(bearer\\s+[a-z0-9._-]+|api[_-]?key|password|private[_-]?key|secret|token)",
-            stripped,
-        )
-    )
+    return redact_value(value, path_prefix=path_prefix)
 
 
 def _write_deterministic_zip_member(
@@ -2086,6 +2038,7 @@ def _write_deterministic_zip_member(
 
 def render_html_executive_report(payload: MarkdownReportPayload) -> str:
     """Render a deterministic, escaped executive HTML report."""
+    payload, _redactions = _redacted_bundle_payload(payload)
     finding_count = len(payload.findings)
     counts = _counts_by_priority(payload.findings)
     top_findings = payload.findings[:10]

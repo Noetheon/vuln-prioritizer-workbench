@@ -148,6 +148,10 @@ def test_asset_finding_and_run_repositories_persist_domain_graph(
         epss_date="2026-04-28",
         kev_catalog_version="2026-04-28",
         source_hashes_json={"nvd": "sha256:nvd"},
+        source_metadata_json={
+            "api_key": "super-secret-token",
+            "source_path": "/tmp/template-provider-snapshot.json",
+        },
     )
     same_snapshot = run_repository.get_or_create_provider_snapshot(
         content_hash="sha256:repo-contract",
@@ -177,6 +181,8 @@ def test_asset_finding_and_run_repositories_persist_domain_graph(
     session.commit()
 
     assert same_snapshot.id == snapshot.id
+    assert snapshot.source_metadata_json["api_key"] == "[REDACTED]"
+    assert snapshot.source_metadata_json["source_path"] == "/tmp/template-provider-snapshot.json"
     assert occurrence.finding_id == finding.id
     assert finished.finished_at is not None
     assert finished.summary_json["findings"] == 1

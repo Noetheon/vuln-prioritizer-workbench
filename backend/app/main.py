@@ -5,12 +5,15 @@ from __future__ import annotations
 from collections.abc import Awaitable, Callable
 
 from fastapi import FastAPI, Request
+from fastapi.encoders import jsonable_encoder
+from fastapi.exceptions import RequestValidationError
 from fastapi.routing import APIRoute
 from starlette.middleware.cors import CORSMiddleware
 from starlette.responses import JSONResponse, Response
 
 from app.api.main import api_router
 from app.core.config import Settings, settings
+from vuln_prioritizer.security_redaction import redact_value
 
 SECURITY_HEADERS = {
     "X-Content-Type-Options": "nosniff",
@@ -53,7 +56,15 @@ def create_app(active_settings: Settings | None = None) -> FastAPI:
     app.middleware("http")(_upload_size_guard)
     app.middleware("http")(_security_headers)
     app.include_router(api_router, prefix=selected_settings.API_V1_STR)
+    app.add_exception_handler(RequestValidationError, _validation_error_handler)
     return app
+
+
+async def _validation_error_handler(_request: Request, exc: Exception) -> JSONResponse:
+    if not isinstance(exc, RequestValidationError):
+        return JSONResponse(status_code=500, content={"detail": "Internal server error."})
+    detail, _redacted_paths = redact_value(jsonable_encoder(exc.errors()))
+    return JSONResponse(status_code=422, content={"detail": detail})
 
 
 async def _security_headers(
