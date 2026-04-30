@@ -238,3 +238,5 @@ Important boundary:
 - ATT&CK coverage depends on available CTID mappings
 - demo regeneration still depends on live upstream responses for NVD, EPSS, and KEV
 - ATT&CK context is intentionally not an asset-aware scoring engine
+- VEX status is only applied when a statement matches the occurrence CVE plus component/product or target scope; unmatched or ambiguous real-world product identity still needs human review
+- VEX `justification` and `action_statement` text is preserved as evidence, but it is not treated as a controlled enum beyond the normalized status

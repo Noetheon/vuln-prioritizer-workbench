@@ -55,6 +55,22 @@ def _load_fixture_payload(contract: dict) -> object:
     return json.loads(fixture_path.read_text(encoding="utf-8"))
 
 
+def _openvex_product_id(product: dict) -> str:
+    direct_id = product.get("@id") or product.get("purl")
+    if isinstance(direct_id, str):
+        return direct_id
+
+    identifiers = product.get("identifiers")
+    if isinstance(identifiers, dict) and isinstance(identifiers.get("purl"), str):
+        return identifiers["purl"]
+    if isinstance(identifiers, list):
+        for identifier in identifiers:
+            if isinstance(identifier, dict) and isinstance(identifier.get("purl"), str):
+                return identifier["purl"]
+
+    raise AssertionError(f"OpenVEX product does not expose a PURL: {product!r}")
+
+
 @pytest.mark.parametrize(
     ("format_name", "contract"),
     list(_INPUT_CONTRACTS.items()) + list(_VEX_CONTRACTS.items()),
@@ -139,7 +155,7 @@ def test_vex_fixtures_expose_expected_statuses_and_matches(
         matches = [
             {
                 "cve_id": statement["vulnerability"]["name"],
-                "product_id": statement["products"][0]["@id"],
+                "product_id": _openvex_product_id(statement["products"][0]),
                 "status": statement["status"],
             }
             for statement in payload["statements"]

@@ -76,6 +76,7 @@ def parse_openvex_document(document: dict) -> list[VexStatement]:
         if status is None:
             continue
         for product in _dict_items(statement.get("products")):
+            product_purl = _openvex_purl(product)
             subcomponents = _dict_items(product.get("subcomponents"))
             if not subcomponents:
                 statements.append(
@@ -83,7 +84,7 @@ def parse_openvex_document(document: dict) -> list[VexStatement]:
                         source_format="openvex-json",
                         cve_id=cve_id,
                         status=status,
-                        purl=product.get("@id"),
+                        purl=product_purl,
                         justification=statement.get("justification"),
                         action_statement=statement.get("action_statement"),
                         source_record_id=f"statement:{index}",
@@ -91,7 +92,7 @@ def parse_openvex_document(document: dict) -> list[VexStatement]:
                 )
                 continue
             for subcomponent in subcomponents:
-                subcomponent_purl = subcomponent.get("@id") or subcomponent.get("purl")
+                subcomponent_purl = _openvex_purl(subcomponent)
                 subcomponent_kind = subcomponent.get("kind")
                 statements.append(
                     VexStatement(
@@ -103,7 +104,7 @@ def parse_openvex_document(document: dict) -> list[VexStatement]:
                             or subcomponent.get("component")
                             or (None if subcomponent_kind else subcomponent.get("name"))
                         ),
-                        purl=subcomponent_purl or product.get("@id"),
+                        purl=subcomponent_purl or product_purl,
                         target_kind=subcomponent_kind,
                         target_ref=subcomponent.get("name") or subcomponent_purl,
                         justification=statement.get("justification"),
@@ -450,6 +451,21 @@ def _normalize_vex_status(
         return None
     normalized = str(value).strip().lower().replace("-", "_")
     return status_map.get(normalized)
+
+
+def _openvex_purl(value: dict) -> str | None:
+    candidate = value.get("@id") or value.get("purl")
+    if isinstance(candidate, str) and candidate.strip():
+        return candidate.strip()
+    identifiers = _dict_value(value.get("identifiers"))
+    identifier_purl = identifiers.get("purl")
+    if isinstance(identifier_purl, str) and identifier_purl.strip():
+        return identifier_purl.strip()
+    for identifier in _dict_items(value.get("identifiers")):
+        identifier_purl = identifier.get("purl")
+        if isinstance(identifier_purl, str) and identifier_purl.strip():
+            return identifier_purl.strip()
+    return None
 
 
 def _dict_items(value: object) -> list[dict]:

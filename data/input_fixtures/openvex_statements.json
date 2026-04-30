@@ -39,6 +39,20 @@
         }
       ],
       "status": "under_investigation"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2021-44228"
+      },
+      "products": [
+        {
+          "identifiers": {
+            "purl": "pkg:maven/org.apache.logging.log4j/log4j-core@2.14.1"
+          }
+        }
+      ],
+      "status": "fixed",
+      "action_statement": "Upgrade completed for the scoped component."
     }
   ]
 }

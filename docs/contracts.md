@@ -262,6 +262,7 @@ Current VEX contract:
 - matching is deterministic and ranked by specificity before file order
 - `suppressed_by_vex` means all known occurrences are suppressed
 - `under_investigation` remains visible
+- OpenVEX product and subcomponent PURLs may be supplied as `@id`, `purl`, or `identifiers.purl`
 - exact text in `vex_justification` and `vex_action_statement` is informative, not enum-stable
 
 ### Asset context semantics

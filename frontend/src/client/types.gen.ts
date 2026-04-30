@@ -187,6 +187,7 @@ export type Body_imports_import_project_upload = {
     input_type: string;
     locked_provider_data?: boolean;
     provider_snapshot_file?: (string | null);
+    vex_file?: (string | null);
 };
 
 export type Body_login_login_access_token = {
@@ -357,6 +358,14 @@ export type FindingOccurrencePublic = {
     source_record_id?: (string | null);
     target_kind?: (string | null);
     target_ref?: (string | null);
+    vex_action_statement?: (string | null);
+    vex_candidate_count?: number;
+    vex_justification?: (string | null);
+    vex_match_type?: (string | null);
+    vex_source_format?: (string | null);
+    vex_source_path?: (string | null);
+    vex_source_record_id?: (string | null);
+    vex_status?: (string | null);
 };
 
 /**

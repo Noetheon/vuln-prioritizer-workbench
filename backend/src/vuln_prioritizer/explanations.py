@@ -144,6 +144,10 @@ def _priority_reasons(
     if asset_reason is not None:
         reasons.append(asset_reason)
 
+    vex_reason = _vex_reason(finding)
+    if vex_reason is not None:
+        reasons.append(vex_reason)
+
     if finding.operational_score_reasons:
         reasons.append(
             ExplanationReason(
@@ -158,6 +162,39 @@ def _priority_reasons(
         )
 
     return reasons
+
+
+def _vex_reason(finding: PrioritizedFinding) -> ExplanationReason | None:
+    statuses = finding.provenance.vex_statuses
+    if not statuses:
+        return None
+
+    status_label = ", ".join(f"{status}: {count}" for status, count in sorted(statuses.items()))
+    evidence_parts: list[str] = []
+    for occurrence in finding.provenance.occurrences:
+        if not occurrence.vex_status:
+            continue
+        detail_parts = [f"status={occurrence.vex_status}"]
+        if occurrence.vex_justification:
+            detail_parts.append(f"justification={occurrence.vex_justification}")
+        if occurrence.vex_action_statement:
+            detail_parts.append(f"action={occurrence.vex_action_statement}")
+        if occurrence.vex_match_type:
+            detail_parts.append(f"match={occurrence.vex_match_type}")
+        evidence_parts.append("; ".join(detail_parts))
+
+    message = f"Matched VEX status distribution: {status_label}."
+    if evidence_parts:
+        message += " " + " | ".join(evidence_parts[:3])
+
+    return ExplanationReason(
+        code="governance.vex_status",
+        source="VEX",
+        signal="vex_status",
+        value=status_label,
+        threshold="not_affected/fixed suppress only when every known occurrence is suppressed",
+        message=message,
+    )
 
 
 def _explanation_notes(finding: PrioritizedFinding) -> list[ExplanationNote]:
