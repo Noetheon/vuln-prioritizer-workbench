@@ -1417,6 +1417,53 @@ def test_cli_analyze_show_suppressed_keeps_vex_hidden_findings_visible(
     assert suppressed["provenance"]["vex_statuses"] == {"not_affected": 1}
 
 
+def test_cli_analyze_applies_cyclonedx_vex_by_component_scope(
+    fixture_root,
+    install_fake_providers,
+    runner,
+    tmp_path: Path,
+) -> None:
+    output_file = tmp_path / "cyclonedx-vex-analysis.json"
+    install_fake_providers()
+
+    result = runner.invoke(
+        app,
+        [
+            "analyze",
+            "--input",
+            str(fixture_root / "trivy_report.json"),
+            "--input-format",
+            "trivy-json",
+            "--vex-file",
+            str(fixture_root / "cyclonedx_vex.json"),
+            "--show-suppressed",
+            "--output",
+            str(output_file),
+            "--format",
+            "json",
+        ],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(output_file.read_text(encoding="utf-8"))
+    assert payload["metadata"]["suppressed_by_vex"] == 2
+    assert payload["metadata"]["under_investigation_count"] == 0
+    assert payload["metadata"]["vex_conflict_count"] == 0
+
+    findings = {item["cve_id"]: item for item in payload["findings"]}
+    assert findings["CVE-2024-3094"]["suppressed_by_vex"] is False
+    assert findings["CVE-2024-3094"]["provenance"]["vex_statuses"] == {"affected": 1}
+    assert findings["CVE-2023-34362"]["suppressed_by_vex"] is True
+    assert findings["CVE-2023-34362"]["provenance"]["vex_statuses"] == {"not_affected": 1}
+    assert findings["CVE-2024-4577"]["priority_state"] == "Fixed"
+    assert findings["CVE-2024-4577"]["provenance"]["vex_statuses"] == {"fixed": 1}
+
+    occurrence = findings["CVE-2023-34362"]["provenance"]["occurrences"][0]
+    assert occurrence["vex_source_format"] == "cyclonedx-vex-json"
+    assert occurrence["vex_match_type"] == "purl"
+    assert occurrence["vex_justification"] == "vulnerable_code_not_present"
+
+
 def test_cli_analyze_reports_asset_and_vex_conflicts_with_deterministic_winners(
     install_fake_providers,
     runner,

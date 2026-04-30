@@ -589,7 +589,12 @@ def load_vex_files(
     for file_order, path in enumerate(paths or [], start=1):
         if not path.exists() or not path.is_file():
             raise ValueError(f"VEX file does not exist: {path}")
-        document = json.loads(path.read_text(encoding="utf-8"))
+        try:
+            document = json.loads(path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as exc:
+            raise ValueError(f"VEX JSON parsing failed for {path}: {exc.msg}.") from exc
+        if not isinstance(document, dict):
+            raise ValueError(f"VEX JSON root in {path} must be an object.")
         if isinstance(document, dict) and "statements" in document:
             if not isinstance(document.get("statements"), list):
                 raise ValueError(f"OpenVEX JSON `statements` in {path} must be a list.")
@@ -602,6 +607,7 @@ def load_vex_files(
         ):
             if not isinstance(document.get("vulnerabilities"), list):
                 raise ValueError(f"CycloneDX VEX JSON `vulnerabilities` in {path} must be a list.")
+            warning_messages.extend(_vex_support.cyclonedx_vex_warnings(document))
             file_statements = _vex_support.parse_cyclonedx_vex_document(document)
             total_statements = len(document["vulnerabilities"])
         else:
