@@ -47,6 +47,13 @@ def test_vpw067_governance_rollups_count_owner_service_environment_and_waiver_de
     assert checkout["status_counts"]["accepted"] == 2
     assert checkout["top_cves"] == ["CVE-2026-6701", "CVE-2026-6702"]
 
+    top_asset = payload["top_assets_by_risk"][0]
+    assert top_asset["dimension"] == "asset"
+    assert top_asset["label"] == "payments-api"
+    assert top_asset["finding_count"] == 2
+    assert top_asset["accepted_count"] == 2
+    assert top_asset["suppressed_by_vex_count"] == 1
+
     production = next(item for item in payload["environments"] if item["label"] == "production")
     assert production["finding_count"] == 3
     assert production["expired_waiver_count"] == 1

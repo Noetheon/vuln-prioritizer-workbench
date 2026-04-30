@@ -2255,7 +2255,7 @@ export const FindingsPublicSchema = {
 } as const;
 
 export const GovernanceRollupPublicSchema = {
-    description: 'Aggregated finding risk for one owner, service, or environment.',
+    description: 'Aggregated finding risk for one owner, service, asset, or environment.',
     properties: {
         accepted_count: {
             default: 0,
@@ -2990,8 +2990,15 @@ export const ProjectDecisionSummaryPublicSchema = {
 } as const;
 
 export const ProjectGovernanceRollupsPublicSchema = {
-    description: 'Owner, service, environment, and waiver-debt rollups for one project.',
+    description: 'Owner, service, asset, environment, and waiver-debt rollups for one project.',
     properties: {
+        assets: {
+            items: {
+                '$ref': '#/components/schemas/GovernanceRollupPublic'
+            },
+            title: 'Assets',
+            type: 'array'
+        },
         environments: {
             items: {
                 '$ref': '#/components/schemas/GovernanceRollupPublic'
@@ -3021,6 +3028,13 @@ export const ProjectGovernanceRollupsPublicSchema = {
                 '$ref': '#/components/schemas/GovernanceRollupPublic'
             },
             title: 'Services',
+            type: 'array'
+        },
+        top_assets_by_risk: {
+            items: {
+                '$ref': '#/components/schemas/GovernanceRollupPublic'
+            },
+            title: 'Top Assets By Risk',
             type: 'array'
         },
         top_services_by_risk: {
