@@ -108,6 +108,7 @@ Evidence artifacts make ATT&CK provenance auditable.
 - `analysis.json`: per-finding ATT&CK fields, CTID-backed mappings, source provenance, ATT&CK metadata, and unmapped state.
 - Generated Markdown/HTML/JSON/CSV/SARIF reports: ATT&CK context remains separate from base priority and uses defensive wording.
 - `attack-navigator-layer.json`: optional Navigator layer containing CTID-backed mapped techniques for the run.
+- `governance/detection-coverage.json`: optional evidence-bundle export of operator-supplied detection controls, coverage-gap rollups, and review limitations.
 - Template evidence bundles include `attack-navigator-layer.json` when the run
   has persisted mapped ATT&CK context. The layer comments findings, KEV status,
   confidence, review status, source, and the current `not assessed` coverage
@@ -116,7 +117,7 @@ Evidence artifacts make ATT&CK provenance auditable.
 - `evidence-bundle.zip`: analysis JSON, generated reports, manifest with SHA256 hashes, ATT&CK source provenance, and any Navigator layer generated for the run.
 - Manifest entries checksum every generated artifact, including optional ATT&CK Navigator output.
 
-The bundle does not claim ATT&CK coverage for unmapped CVEs. Unmapped findings remain useful evidence because they document that no CTID mapping was available for the selected source.
+The bundle does not claim ATT&CK coverage for unmapped CVEs, and detection coverage is not proof of security or exploitation. Unmapped findings remain useful evidence because they document that no CTID mapping was available for the selected source.
 
 ## Current Acceptance Checks
 

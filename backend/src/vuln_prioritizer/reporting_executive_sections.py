@@ -246,6 +246,10 @@ def _attack_context_section(model: dict[str, Any]) -> str:
     <h3>Most common techniques in current priority set</h3>
     {_technique_strip_html(attack["technique_strip"])}
   </article>
+  <article class="er-panel er-section-table">
+    <h3>Detection Coverage Gaps</h3>
+    {_detection_coverage_html(attack["detection_coverage"])}
+  </article>
   <div class="er-two-col er-section-table">
     <article class="er-panel">
       <h3>Governance state</h3>
@@ -853,6 +857,46 @@ def _technique_strip_html(rows: list[dict[str, Any]]) -> str:
             for item in rows
         )
         + "</div>"
+    )
+
+
+def _detection_coverage_html(coverage: dict[str, Any]) -> str:
+    summary = coverage.get("summary", {}) if isinstance(coverage, dict) else {}
+    weak_items = coverage.get("weak_items", []) if isinstance(coverage, dict) else []
+    weak_items = [item for item in weak_items if isinstance(item, dict)]
+    metric_html = (
+        '<div class="er-kpi-grid compact">'
+        + _mini_metric("Partial", summary.get("partial", 0))
+        + _mini_metric("No coverage", summary.get("not_covered", 0))
+        + _mini_metric("Unknown", summary.get("unknown", 0))
+        + _mini_metric("Technique rows", coverage.get("total", 0))
+        + "</div>"
+    )
+    if weak_items:
+        rendered_rows = []
+        for item in weak_items:
+            action = _truncate(str(item.get("recommended_action") or "Review coverage."), 180)
+            rendered_rows.append(
+                "<tr>"
+                f"<td><strong>{escape(str(item.get('technique_id', 'N.A.')))}</strong></td>"
+                f"<td>{escape(str(item.get('name') or 'N.A.'))}</td>"
+                f"<td>{escape(str(item.get('coverage_level') or 'unknown'))}</td>"
+                f"<td>{escape(str(item.get('finding_count') or 0))}</td>"
+                f"<td>{escape(str(item.get('owner') or 'Unassigned'))}</td>"
+                f"<td>{escape(action)}</td>"
+                "</tr>"
+            )
+        rows = "".join(rendered_rows)
+        table = (
+            '<div class="er-table-wrap"><table class="er-table er-table-compact">'
+            "<thead><tr><th>Technique</th><th>Name</th><th>Coverage</th>"
+            "<th>Findings</th><th>Owner</th><th>Action</th></tr></thead>"
+            f"<tbody>{rows}</tbody></table></div>"
+        )
+    else:
+        table = '<p class="er-empty">No partial, missing, or unknown coverage rows supplied.</p>'
+    return (
+        metric_html + table + f'<p class="er-muted">{escape(str(coverage.get("note") or ""))}</p>'
     )
 
 
