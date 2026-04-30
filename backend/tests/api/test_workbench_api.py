@@ -684,6 +684,78 @@ def test_workbench_imports_provider_snapshot_artifact(tmp_path: Path) -> None:
     assert invalid.status_code == 422
 
 
+def test_workbench_provider_snapshot_import_rejects_unsafe_snapshot_id(
+    tmp_path: Path,
+) -> None:
+    client, settings = _client_and_settings(tmp_path)
+    payload = json.loads(EXAMPLE_PROVIDER_SNAPSHOT_V1.read_text(encoding="utf-8"))
+    payload["metadata"]["snapshot_id"] = "../../escape"
+
+    response = client.post(
+        "/api/providers/snapshots/import",
+        files={
+            "file": (
+                "provider-snapshot.v1.json",
+                json.dumps(payload).encode("utf-8"),
+                "application/json",
+            )
+        },
+    )
+
+    assert response.status_code == 422
+    assert "metadata.snapshot_id" in response.text
+    assert not (tmp_path / "escape.json").exists()
+    assert not (settings.provider_snapshot_dir.parent / "escape.json").exists()
+
+
+def test_workbench_provider_snapshot_import_redacts_local_paths(
+    tmp_path: Path,
+) -> None:
+    client, settings = _client_and_settings(tmp_path)
+    payload = json.loads(EXAMPLE_PROVIDER_SNAPSHOT_V1.read_text(encoding="utf-8"))
+    payload["metadata"].update(
+        {
+            "snapshot_id": "redacted-path-import",
+            "input_path": str(tmp_path / "private" / "input.txt"),
+            "input_paths": [str(tmp_path / "private" / "input-2.txt")],
+            "cache_dir": str(tmp_path / "private" / "cache"),
+            "offline_kev_file": str(tmp_path / "private" / "kev.json"),
+        }
+    )
+    payload["metadata"]["source_metadata"]["nvd"]["source"] = str(tmp_path / "private" / "nvd.json")
+    payload["warnings"] = [f"loaded provider file from {tmp_path / 'private' / 'snapshot.json'}"]
+
+    imported = client.post(
+        "/api/providers/snapshots/import",
+        files={
+            "file": (
+                "provider-snapshot.v1.json",
+                json.dumps(payload).encode("utf-8"),
+                "application/json",
+            )
+        },
+    )
+
+    assert imported.status_code == 200, imported.text
+    item = imported.json()["item"]
+    assert item["source_path"] == "provider-snapshot-redacted-path-import.json"
+    assert str(tmp_path) not in json.dumps(item)
+    snapshot_file = settings.provider_snapshot_dir / item["source_path"]
+    assert snapshot_file.is_file()
+
+    downloaded = client.get(f"/api/providers/snapshots/{item['id']}/download")
+    assert downloaded.status_code == 200
+    snapshot_payload = downloaded.json()
+    assert str(tmp_path) not in json.dumps(snapshot_payload["metadata"])
+    assert snapshot_payload["metadata"]["output_path"] == item["source_path"]
+    assert snapshot_payload["metadata"]["input_path"] == "[REDACTED]"
+    assert snapshot_payload["metadata"]["input_paths"] == ["[REDACTED]"]
+    assert snapshot_payload["metadata"]["cache_dir"] == "[REDACTED]"
+    assert snapshot_payload["metadata"]["offline_kev_file"] == "[REDACTED]"
+    assert snapshot_payload["metadata"]["source_metadata"]["nvd"]["source"] == "[REDACTED]"
+    assert "[REDACTED-PATH]" in snapshot_payload["warnings"][0]
+
+
 def test_project_artifact_cleanup_is_scoped_and_enforces_disk_cap(tmp_path: Path) -> None:
     client, settings = _client_and_settings(tmp_path)
     first = client.post("/api/projects", json={"name": "first"}).json()
@@ -1789,7 +1861,7 @@ def test_workbench_api_tokens_config_provider_jobs_and_github_preview(
     tmp_path: Path,
     monkeypatch: Any,
 ) -> None:
-    client = _client(tmp_path)
+    client, settings = _client_and_settings(tmp_path)
 
     token_response = client.post("/api/tokens", json={"name": "local automation"})
     assert token_response.status_code == 200, token_response.text
@@ -1879,9 +1951,11 @@ def test_workbench_api_tokens_config_provider_jobs_and_github_preview(
     assert set(job_payload["metadata"]["source_hashes"]) == {"nvd", "epss", "kev"}
     kev_source_hash = job_payload["metadata"]["source_hashes"]["kev"]
     assert kev_source_hash is None or len(kev_source_hash) == 64
-    assert Path(job_payload["metadata"]["snapshot_path"]).is_file()
-    snapshot_payload = json.loads(Path(job_payload["metadata"]["snapshot_path"]).read_text())
-    assert snapshot_payload["metadata"]["source_hashes"] == job_payload["metadata"]["source_hashes"]
+    snapshot_path = job_payload["metadata"]["snapshot_path"]
+    assert snapshot_path.startswith("provider-snapshot-")
+    assert not Path(snapshot_path).is_absolute()
+    assert (settings.provider_snapshot_dir / snapshot_path).is_file()
+    assert str(tmp_path) not in json.dumps(job_payload["metadata"])
 
     assert client.get("/api/providers/status").status_code == 403
     provider_status = client.get("/api/providers/status", headers=headers)
@@ -1900,6 +1974,10 @@ def test_workbench_api_tokens_config_provider_jobs_and_github_preview(
         headers=headers,
     )
     assert authed_snapshot_download.status_code == 200
+    snapshot_payload = authed_snapshot_download.json()
+    assert snapshot_payload["metadata"]["source_hashes"] == job_payload["metadata"]["source_hashes"]
+    assert snapshot_payload["metadata"]["output_path"] == snapshot_path
+    assert str(tmp_path) not in json.dumps(snapshot_payload["metadata"])
 
     saved_config = client.post(
         f"/api/projects/{project['id']}/settings/config",
@@ -2379,8 +2457,10 @@ def test_workbench_provider_status_surfaces_latest_failed_update(
     previous_snapshot_hash = before_status.json()["snapshot"]["content_hash"]
     assert before_status.json()["snapshot"]["id"] == run["provider_snapshot_id"]
 
+    private_provider_path = tmp_path / "private" / "kev-provider.json"
+
     def fail_provider_records_for_snapshot(*args: Any, **kwargs: Any) -> Any:
-        raise RuntimeError("forced KEV provider failure")
+        raise RuntimeError(f"forced KEV provider failure at {private_provider_path}")
 
     monkeypatch.setattr(
         workbench_providers,
@@ -2402,6 +2482,8 @@ def test_workbench_provider_status_surfaces_latest_failed_update(
     assert status_payload["latest_update_job"]["id"] == job_payload["id"]
     assert status_payload["latest_update_job"]["status"] == "failed"
     assert any("forced KEV provider failure" in warning for warning in status_payload["warnings"])
+    assert str(tmp_path) not in json.dumps(status_payload["latest_update_job"])
+    assert "[REDACTED-PATH]" in status_payload["latest_update_job"]["error_message"]
 
 
 def test_workbench_csv_report_escapes_spreadsheet_formulas(tmp_path: Path) -> None:

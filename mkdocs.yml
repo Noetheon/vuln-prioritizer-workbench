@@ -121,6 +121,7 @@ nav:
       - VPW-080 SARIF Export Validation: evidence/vpw-080-sarif-export-validation.md
       - VPW-081 Scoped API Tokens: evidence/vpw-081-api-token-scopes.md
       - VPW-082 GitHub Action Reports: evidence/vpw-082-github-action-reports.md
+      - VPW-083 Postgres Provider Scheduler: evidence/vpw-083-postgres-provider-scheduler.md
       - Historical Evidence Archive: evidence.md
       - Current State Audit: evidence/current_state_audit.md
       - V0.3 Submission Checklist: evidence/final_submission_checklist.md

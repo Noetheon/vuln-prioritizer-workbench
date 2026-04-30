@@ -5,26 +5,79 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from typing import Any
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, HTTPException, Request, status
 
-from app.api.deps import ScopedReadUser, SessionDep
-from app.core.config import settings
+from app.api.deps import ScopedAdminUser, ScopedReadUser, SessionDep
+from app.core.config import Settings, settings
 from app.models import (
     AnalysisRun,
+    AnalysisRunStatus,
     ProviderSnapshot,
     ProviderSnapshotStatusPublic,
     ProviderSourceStatusPublic,
     ProviderStatusPublic,
+    ProviderUpdateJobCreate,
     ProviderUpdateJobPublic,
+    ProviderUpdateJobsPublic,
 )
 from app.models.base import get_datetime_utc
 from app.repositories import RunRepository
+from app.services.provider_updates import (
+    TemplateProviderUpdateConflict,
+    TemplateProviderUpdateValidationError,
+    create_provider_update_job,
+)
 
 router = APIRouter(prefix="/providers", tags=["providers"])
 
 PROVIDER_SOURCES = ("nvd", "epss", "kev")
 ATTACK_STIX_SOURCE = "attack_stix"
 NO_PROVIDER_SNAPSHOT_WARNING = "No provider snapshot has been recorded yet."
+
+
+@router.get("/update-jobs", response_model=ProviderUpdateJobsPublic)
+def list_provider_update_jobs(
+    session: SessionDep,
+    _current_user: ScopedReadUser,
+) -> ProviderUpdateJobsPublic:
+    """Return provider update jobs newest first."""
+    jobs = [
+        job
+        for run in RunRepository(session).list_provider_update_runs()
+        if (job := _provider_update_job(run)) is not None
+    ]
+    return ProviderUpdateJobsPublic(data=jobs, count=len(jobs))
+
+
+@router.post("/update-jobs", response_model=ProviderUpdateJobPublic)
+def create_template_provider_update_job(
+    request: Request,
+    session: SessionDep,
+    payload: ProviderUpdateJobCreate,
+    current_user: ScopedAdminUser,
+) -> ProviderUpdateJobPublic:
+    """Synchronously create a cache-friendly provider snapshot refresh job."""
+    try:
+        run = create_provider_update_job(
+            session,
+            settings=_request_settings(request),
+            payload=payload,
+            owner_id=current_user.id,
+        )
+    except TemplateProviderUpdateValidationError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
+        ) from exc
+    except TemplateProviderUpdateConflict as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+
+    session.commit()
+    session.refresh(run)
+    job = _provider_update_job(run)
+    if job is None:  # Defensive; the service always returns a provider_update run.
+        raise HTTPException(status_code=500, detail="Provider update job could not be read.")
+    return job
 
 
 @router.get("/status", response_model=ProviderStatusPublic)
@@ -36,10 +89,10 @@ def read_provider_status(
     """Return provider status from the latest stored SQLModel provider snapshot."""
     repository = RunRepository(session)
     snapshot = repository.get_latest_provider_snapshot()
-    failed_update_run = repository.get_latest_failed_provider_update_run()
+    latest_update_run = repository.get_latest_provider_update_run()
     return _provider_status_payload(
         snapshot,
-        failed_update_run=failed_update_run,
+        latest_update_run=latest_update_run,
         active_settings=_request_settings(request),
     )
 
@@ -47,12 +100,12 @@ def read_provider_status(
 def _provider_status_payload(
     snapshot: ProviderSnapshot | None,
     *,
-    failed_update_run: AnalysisRun | None,
+    latest_update_run: AnalysisRun | None,
     active_settings: object,
 ) -> ProviderStatusPublic:
     metadata = _snapshot_metadata(snapshot)
     warnings = _string_list(metadata.get("warnings"))
-    failed_update_error = _failed_update_error(failed_update_run)
+    failed_update_error = _failed_update_error(latest_update_run)
     last_error = failed_update_error or _last_error(metadata)
     snapshot_status = _snapshot_status(snapshot, metadata)
     if snapshot is None:
@@ -65,7 +118,7 @@ def _provider_status_payload(
         status="degraded" if degraded else "ok",
         snapshot=snapshot_status,
         sources=_source_statuses(snapshot, snapshot_status.selected_sources, last_error=last_error),
-        latest_update_job=_provider_update_job(failed_update_run),
+        latest_update_job=_provider_update_job(latest_update_run),
         cache_dir=(
             _string_or_none(metadata.get("cache_dir"))
             or _settings_path(active_settings, "provider_cache_dir", "PROVIDER_CACHE_DIR")
@@ -263,6 +316,8 @@ def _last_error(metadata: dict[str, Any]) -> str | None:
 def _failed_update_error(run: AnalysisRun | None) -> str | None:
     if run is None:
         return None
+    if run.status != AnalysisRunStatus.FAILED:
+        return None
     if run.error_message:
         return run.error_message
     error_json = _dict_value(run.error_json)
@@ -293,7 +348,7 @@ def _settings_path(active_settings: object, *names: str) -> str | None:
     return None
 
 
-def _request_settings(request: Request) -> object:
+def _request_settings(request: Request) -> Settings:
     return getattr(request.app.state, "template_settings", settings)
 
 
