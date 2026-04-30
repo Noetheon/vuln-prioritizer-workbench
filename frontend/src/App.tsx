@@ -221,6 +221,7 @@ type TemplateReportFormat =
   | "csv"
   | "zip"
   | "attack-navigator"
+  | "sarif"
 
 const reportActionCards: Array<{
   actionLabel: string
@@ -280,6 +281,16 @@ const reportActionCards: Array<{
     reportFormat: "attack-navigator",
     stage: "VPW-060",
     title: "ATT&CK Navigator Layer",
+  },
+  {
+    actionLabel: "Export SARIF",
+    detail:
+      "SARIF 2.1.0 results for GitHub code scanning and CI security evidence workflows.",
+    format: "SARIF",
+    icon: FileJson,
+    reportFormat: "sarif",
+    stage: "VPW-080",
+    title: "SARIF Results",
   },
   {
     actionLabel: "Build Evidence Bundle",
@@ -1255,6 +1266,9 @@ function reportFormatLabel(format: string) {
   }
   if (format === "attack-navigator") {
     return "ATT&CK Navigator"
+  }
+  if (format === "sarif") {
+    return "SARIF"
   }
   return format.toUpperCase()
 }
@@ -5098,10 +5112,10 @@ export function App() {
                     <span>Report generation</span>
                     <h3>Generate and download reports for the selected run</h3>
                     <p>
-                      Create Markdown, HTML, JSON, CSV, ATT&CK Navigator, and
-                      evidence ZIP artifacts from completed template analysis
-                      runs. History rows stay linked to backend downloads and
-                      checksum-backed metadata.
+                      Create Markdown, HTML, JSON, CSV, ATT&CK Navigator, SARIF,
+                      and evidence ZIP artifacts from completed template
+                      analysis runs. History rows stay linked to backend
+                      downloads and checksum-backed metadata.
                     </p>
                   </div>
                   <dl className="report-readiness-facts">
@@ -5266,7 +5280,7 @@ export function App() {
                       <li className="report-history-row empty">
                         <span>No generated reports yet</span>
                         <span>
-                          Markdown / HTML / JSON / CSV / Navigator / ZIP
+                          Markdown / HTML / JSON / CSV / Navigator / SARIF / ZIP
                         </span>
                         <span>
                           {reportsLoading ? "Loading" : "Ready for VPW-053"}

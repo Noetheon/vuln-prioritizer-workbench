@@ -13,6 +13,7 @@ from vuln_prioritizer.services.workbench_reports import (
     _finding_status_label,
     _first_occurrence_value,
     _vex_statuses_label,
+    generate_workbench_sarif,
 )
 
 
@@ -173,7 +174,18 @@ def test_cli_report_workbench_sarif_and_validation(
     assert report_result.exit_code == 0
     sarif_payload = json.loads(sarif_file.read_text(encoding="utf-8"))
     assert sarif_payload["version"] == "2.1.0"
-    assert sarif_payload["runs"][0]["tool"]["driver"]["name"] == "vuln-prioritizer-workbench"
+    assert validate_sarif_payload(sarif_payload) == []
+    run = sarif_payload["runs"][0]
+    assert run["tool"]["driver"]["name"] == "vuln-prioritizer-workbench"
+    rules = {rule["id"]: rule for rule in run["tool"]["driver"]["rules"]}
+    log4shell = next(
+        result for result in run["results"] if result["properties"]["cve"] == "CVE-2021-44228"
+    )
+    assert log4shell["ruleId"] == "vuln-prioritizer/cve-2021-44228"
+    assert log4shell["properties"]["references"] == [
+        "https://nvd.nist.gov/vuln/detail/CVE-2021-44228"
+    ]
+    assert rules[log4shell["ruleId"]]["properties"]["security-severity"] == "10.0"
 
     validation_result = runner.invoke(
         app,
@@ -265,6 +277,18 @@ def test_cli_report_validate_sarif_rejects_invalid_document(runner, tmp_path: Pa
     assert "Validation result: failed" in table_result.stdout
 
 
+def test_checked_in_sarif_example_validates() -> None:
+    example = Path(__file__).resolve().parents[3] / "docs/examples/example_results.sarif"
+    payload = json.loads(example.read_text(encoding="utf-8"))
+
+    assert validate_sarif_payload(payload) == []
+    assert payload["runs"][0]["tool"]["driver"]["rules"]
+    assert all(
+        result["ruleId"] == f"vuln-prioritizer/{result['properties']['cve'].lower()}"
+        for result in payload["runs"][0]["results"]
+    )
+
+
 def test_sarif_validation_requires_declared_rules_and_fingerprints() -> None:
     payload = {
         "version": "2.1.0",
@@ -281,6 +305,10 @@ def test_sarif_validation_requires_declared_rules_and_fingerprints() -> None:
                         "locations": [
                             {"physicalLocation": {"artifactLocation": {"uri": "sbom.json"}}}
                         ],
+                        "properties": {
+                            "cve": "CVE-2024-0001",
+                            "references": ["not-a-url"],
+                        },
                     },
                     "not-a-result",
                 ],
@@ -291,7 +319,85 @@ def test_sarif_validation_requires_declared_rules_and_fingerprints() -> None:
     errors = validate_sarif_payload(payload)
 
     assert any("partialFingerprints" in error for error in errors)
+    assert any("properties.references.0" in error and "HTTP(S)" in error for error in errors)
     assert any("is not declared in tool.driver.rules" in error for error in errors)
+
+
+def test_sarif_validation_allows_foreign_tool_properties_without_cve() -> None:
+    payload = {
+        "version": "2.1.0",
+        "runs": [
+            {
+                "tool": {"driver": {"name": "other-tool", "rules": [{"id": "other-rule"}]}},
+                "results": [
+                    {
+                        "ruleId": "other-rule",
+                        "level": "warning",
+                        "message": {"text": "Other SARIF finding"},
+                        "locations": [
+                            {"physicalLocation": {"artifactLocation": {"uri": "src/app.py"}}}
+                        ],
+                        "partialFingerprints": {"other/v1": "stable"},
+                    }
+                ],
+            }
+        ],
+    }
+
+    assert validate_sarif_payload(payload) == []
+
+
+def test_workbench_sarif_validates_with_no_findings() -> None:
+    payload = {
+        "metadata": {"schema_version": "1.1.0", "input_path": "empty.csv"},
+        "findings": [],
+    }
+
+    sarif_payload = json.loads(generate_workbench_sarif(payload))
+
+    assert sarif_payload["runs"][0]["tool"]["driver"]["rules"] == []
+    assert sarif_payload["runs"][0]["results"] == []
+    assert validate_sarif_payload(sarif_payload) == []
+
+
+def test_workbench_sarif_filters_non_http_references() -> None:
+    payload = {
+        "metadata": {"schema_version": "1.1.0", "input_path": "findings.csv"},
+        "findings": [
+            {
+                "cve_id": "CVE-2024-0001",
+                "priority_label": "High",
+                "cvss_base_score": 7.5,
+                "provider_evidence": {
+                    "nvd": {
+                        "references": [
+                            "GHSA-0000",
+                            "https://vendor.example/advisory",
+                            "https://vendor.example/advisory",
+                        ]
+                    }
+                },
+                "defensive_contexts": [
+                    {
+                        "source": "osv",
+                        "url": "OSV-2024-0001",
+                        "references": ["https://osv.dev/vulnerability/OSV-2024-0001"],
+                    }
+                ],
+                "provenance": {"affected_paths": ["requirements.txt"]},
+            }
+        ],
+    }
+
+    sarif_payload = json.loads(generate_workbench_sarif(payload))
+    references = sarif_payload["runs"][0]["results"][0]["properties"]["references"]
+
+    assert references == [
+        "https://nvd.nist.gov/vuln/detail/CVE-2024-0001",
+        "https://vendor.example/advisory",
+        "https://osv.dev/vulnerability/OSV-2024-0001",
+    ]
+    assert validate_sarif_payload(sarif_payload) == []
 
 
 def test_workbench_report_lifecycle_overlay_uses_id_and_stable_identity() -> None:

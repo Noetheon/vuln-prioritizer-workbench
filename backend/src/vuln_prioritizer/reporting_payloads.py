@@ -490,6 +490,7 @@ def generate_sarif_report(
         "Low": "note",
     }
     results: list[dict[str, Any]] = []
+    rules_by_id: dict[str, dict[str, Any]] = {}
     for finding in findings:
         artifact_uri = (
             finding.provenance.affected_paths[0]
@@ -500,9 +501,20 @@ def generate_sarif_report(
             f"{finding.cve_id}: {finding.priority_label} priority "
             "based on CVSS/EPSS/KEV with contextual enrichment."
         )
+        references = _sarif_reference_urls(
+            finding.cve_id,
+            nvd_references=(
+                finding.provider_evidence.nvd.references
+                if finding.provider_evidence is not None
+                else []
+            ),
+            defensive_contexts=finding.defensive_contexts,
+        )
+        rule_id = _sarif_rule_id(finding.cve_id)
+        rules_by_id.setdefault(rule_id, _sarif_rule(finding, references=references))
         results.append(
             {
-                "ruleId": f"vuln-prioritizer/{finding.priority_label.lower()}",
+                "ruleId": rule_id,
                 "level": level_map.get(finding.priority_label, "note"),
                 "message": {"text": message},
                 "properties": {
@@ -529,6 +541,8 @@ def generate_sarif_report(
                     ],
                     "data_quality_flag_codes": [flag.code for flag in finding.data_quality_flags],
                     "data_quality_confidence": finding.data_quality_confidence,
+                    "references": references,
+                    "cve_url": references[0],
                     "attack_relevance": finding.attack_relevance,
                     "defensive_context_sources": sorted(
                         {context_item.source for context_item in finding.defensive_contexts}
@@ -581,7 +595,7 @@ def generate_sarif_report(
                     "driver": {
                         "name": "vuln-prioritizer",
                         "version": context.schema_version,
-                        "rules": _sarif_rules(),
+                        "rules": list(rules_by_id.values()),
                     }
                 },
                 "results": results,
@@ -591,37 +605,85 @@ def generate_sarif_report(
     return json.dumps(payload, indent=2, sort_keys=True)
 
 
-def _sarif_rules() -> list[dict[str, Any]]:
-    rules = []
-    for priority, level in (
-        ("critical", "Critical"),
-        ("high", "High"),
-        ("medium", "Medium"),
-        ("low", "Low"),
-    ):
-        rules.append(
-            {
-                "id": f"vuln-prioritizer/{priority}",
-                "name": f"{level} prioritized vulnerability",
-                "shortDescription": {"text": f"{level} vulnerability prioritization result."},
-                "fullDescription": {
-                    "text": (
-                        "Known CVE prioritized from CVSS, EPSS, and CISA KEV with "
-                        "optional contextual layers such as asset context, VEX, waivers, "
-                        "remediation, and ATT&CK mapping provenance."
-                    )
-                },
-                "help": {
-                    "text": (
-                        "Review the CVE, provider evidence, affected component or asset, "
-                        "and recommended remediation action. This tool prioritizes supplied "
-                        "findings and does not scan systems."
-                    )
-                },
-                "properties": {"priority": level},
-            }
-        )
-    return rules
+def _sarif_rule_id(cve_id: str) -> str:
+    return f"vuln-prioritizer/{cve_id.lower()}"
+
+
+def _sarif_rule(finding: PrioritizedFinding, *, references: list[str]) -> dict[str, Any]:
+    level_map = {
+        "Critical": "error",
+        "High": "error",
+        "Medium": "warning",
+        "Low": "note",
+    }
+    priority = finding.priority_label
+    return {
+        "id": _sarif_rule_id(finding.cve_id),
+        "name": f"{finding.cve_id} prioritized vulnerability",
+        "shortDescription": {"text": f"{finding.cve_id}: {priority} priority."},
+        "fullDescription": {
+            "text": (
+                "Known CVE prioritized from CVSS, EPSS, and CISA KEV with "
+                "optional contextual layers such as asset context, VEX, waivers, "
+                "remediation, and ATT&CK mapping provenance."
+            )
+        },
+        "defaultConfiguration": {"level": level_map.get(priority, "note")},
+        "helpUri": references[0],
+        "help": {
+            "text": (
+                "Review the CVE, provider evidence, affected component or asset, "
+                "and recommended remediation action. This tool prioritizes supplied "
+                "findings and does not scan systems."
+            )
+        },
+        "properties": {
+            "cve": finding.cve_id,
+            "priority": priority,
+            "precision": "very-high",
+            "security-severity": _sarif_security_severity(finding),
+            "tags": ["security", "external/cve", f"priority/{priority.lower()}"],
+            "references": references,
+        },
+    }
+
+
+def _sarif_security_severity(finding: PrioritizedFinding) -> str:
+    if finding.cvss_base_score is not None:
+        return f"{min(max(finding.cvss_base_score, 0.0), 10.0):.1f}"
+    return {
+        "Critical": "9.0",
+        "High": "7.0",
+        "Medium": "5.0",
+        "Low": "3.0",
+    }.get(finding.priority_label, "0.0")
+
+
+def _sarif_reference_urls(
+    cve_id: str,
+    *,
+    nvd_references: list[str],
+    defensive_contexts: list[Any],
+) -> list[str]:
+    urls = [f"https://nvd.nist.gov/vuln/detail/{cve_id}"]
+    urls.extend(nvd_references)
+    for context in defensive_contexts:
+        url = getattr(context, "url", None)
+        if url:
+            urls.append(str(url))
+        urls.extend(str(reference) for reference in getattr(context, "references", []) if reference)
+    return _dedupe_strings(urls)
+
+
+def _dedupe_strings(values: list[str]) -> list[str]:
+    seen: set[str] = set()
+    deduped: list[str] = []
+    for value in values:
+        normalized = str(value).strip()
+        if normalized.startswith(("http://", "https://")) and normalized not in seen:
+            seen.add(normalized)
+            deduped.append(normalized)
+    return deduped
 
 
 def _sarif_fingerprint(finding: PrioritizedFinding, artifact_uri: str | None) -> str:

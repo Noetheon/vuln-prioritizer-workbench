@@ -25,6 +25,7 @@ from app.services.reports import (
     render_findings_csv,
     render_html_executive_report,
     render_markdown_report,
+    render_sarif_report,
     verify_evidence_bundle_zip,
 )
 
@@ -51,5 +52,6 @@ __all__ = [
     "render_findings_csv",
     "render_html_executive_report",
     "render_markdown_report",
+    "render_sarif_report",
     "verify_evidence_bundle_zip",
 ]

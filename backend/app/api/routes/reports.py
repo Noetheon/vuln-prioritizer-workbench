@@ -57,6 +57,8 @@ def create_run_report(
                 project=project,
                 filter_value=payload.attack_filter,
             )
+        elif payload.format == "sarif":
+            report = report_service.create_sarif_report(run=run, project=project)
         elif payload.format == "zip":
             report = report_service.create_evidence_bundle(run=run, project=project)
         else:

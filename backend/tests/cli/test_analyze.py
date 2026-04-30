@@ -23,6 +23,7 @@ from vuln_prioritizer.providers.attack import AttackProvider
 from vuln_prioritizer.providers.epss import EpssProvider
 from vuln_prioritizer.providers.kev import KevProvider
 from vuln_prioritizer.providers.nvd import NvdProvider
+from vuln_prioritizer.sarif_validation import validate_sarif_payload
 from vuln_prioritizer.services.analysis import stale_provider_sources
 
 
@@ -1091,8 +1092,22 @@ def test_cli_analyze_sarif_export_and_fail_on(
     assert output_file.exists()
     payload = json.loads(output_file.read_text(encoding="utf-8"))
     assert payload["version"] == "2.1.0"
-    assert payload["runs"][0]["tool"]["driver"]["name"] == "vuln-prioritizer"
-    assert len(payload["runs"][0]["results"]) == 4
+    assert validate_sarif_payload(payload) == []
+    run = payload["runs"][0]
+    assert run["tool"]["driver"]["name"] == "vuln-prioritizer"
+    assert len(run["results"]) == 4
+    rules = {rule["id"]: rule for rule in run["tool"]["driver"]["rules"]}
+    log4shell = next(
+        result for result in run["results"] if result["properties"]["cve"] == "CVE-2021-44228"
+    )
+    assert log4shell["ruleId"] == "vuln-prioritizer/cve-2021-44228"
+    assert log4shell["properties"]["references"] == [
+        "https://nvd.nist.gov/vuln/detail/CVE-2021-44228"
+    ]
+    rule = rules[log4shell["ruleId"]]
+    assert rule["helpUri"] == "https://nvd.nist.gov/vuln/detail/CVE-2021-44228"
+    assert rule["defaultConfiguration"]["level"] == "error"
+    assert rule["properties"]["security-severity"] == "10.0"
 
 
 def test_cli_analyze_supports_nessus_auto_detection(

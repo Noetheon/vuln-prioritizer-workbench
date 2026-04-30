@@ -41,6 +41,7 @@ from app.services import (
     render_html_executive_report,
     render_markdown_report,
 )
+from vuln_prioritizer.sarif_validation import validate_sarif_payload
 
 CSV_FINDINGS_COLUMNS = [
     "cve_id",
@@ -112,6 +113,7 @@ def test_vpw049_openapi_exposes_report_format_contract() -> None:
         "csv",
         "zip",
         "attack-navigator",
+        "sarif",
     ]
     assert report_create["attack_filter"]["enum"] == [
         "all",
@@ -386,6 +388,78 @@ def test_vpw050_findings_csv_export_create_downloads_stable_columns(
     assert rows[0]["decision_sla"] == "Emergency / 24h"
     assert rows[0]["decision_statement"].startswith("Decision Statement:")
     assert rows[1]["data_quality_flags"] == "missing_asset_owner - Owner missing <img>"
+
+
+def test_vpw080_sarif_report_create_downloads_valid_results(
+    template_api_env: TemplateApiEnv,
+    tmp_path: Path,
+) -> None:
+    report_dir = _configure_report_dir(template_api_env, tmp_path)
+    headers = auth_headers(template_api_env.client)
+    project = create_project_via_api(template_api_env.client, headers)
+    run_id = _seed_reportable_run(template_api_env, uuid.UUID(project["id"]))
+
+    response = template_api_env.client.post(
+        f"/api/v1/runs/{run_id}/reports",
+        headers=headers,
+        json={"format": "sarif"},
+    )
+
+    assert response.status_code == 200, response.text
+    payload = response.json()
+    assert payload["format"] == "sarif"
+    assert payload["kind"] == "sarif-results"
+    assert payload["filename"] == "results.sarif"
+    assert payload["content_type"] == "application/sarif+json; charset=utf-8"
+    assert payload["metadata_json"]["sarif_version"] == "2.1.0"
+    assert payload["metadata_json"]["rule_count"] == 2
+    assert payload["metadata_json"]["result_count"] == 2
+
+    with Session(template_api_env.engine) as session:
+        report = session.get(template_api_env.app_models.Report, uuid.UUID(payload["id"]))
+        assert report is not None
+        assert Path(report.path).resolve(strict=True).is_relative_to(report_dir)
+        assert report.path.endswith("results.sarif")
+
+    download = template_api_env.client.get(payload["download_url"], headers=headers)
+
+    assert download.status_code == 200
+    assert download.headers["cache-control"] == "no-store"
+    assert download.headers["x-content-type-options"] == "nosniff"
+    assert "results.sarif" in download.headers["content-disposition"]
+    assert download.headers["content-type"].startswith("application/sarif+json")
+    assert hashlib.sha256(download.content).hexdigest() == payload["sha256"]
+
+    sarif = download.json()
+    assert validate_sarif_payload(sarif) == []
+    assert sarif["version"] == "2.1.0"
+    assert sarif["$schema"] == "https://json.schemastore.org/sarif-2.1.0.json"
+    run = sarif["runs"][0]
+    rules = run["tool"]["driver"]["rules"]
+    results = run["results"]
+    assert run["tool"]["driver"]["name"] == "vuln-prioritizer-workbench"
+    assert [rule["id"] for rule in rules] == [
+        "vuln-prioritizer/cve-2024-3094",
+        "vuln-prioritizer/cve-2021-44228",
+    ]
+    assert [result["ruleId"] for result in results] == [rule["id"] for rule in rules]
+    assert [result["level"] for result in results] == ["error", "error"]
+    assert [rule["defaultConfiguration"]["level"] for rule in rules] == ["error", "error"]
+    assert [rule["properties"]["security-severity"] for rule in rules] == ["10.0", "10.0"]
+
+    first = results[0]
+    assert first["properties"]["cve"] == DEMO_CVE_XZ
+    assert first["properties"]["references"][0] == f"https://nvd.nist.gov/vuln/detail/{DEMO_CVE_XZ}"
+    assert all(
+        reference.startswith(("http://", "https://"))
+        for result in results
+        for reference in result["properties"]["references"]
+    )
+    assert first["partialFingerprints"]["vuln-prioritizer-workbench/v1"]
+    assert (
+        first["partialFingerprints"]["vuln-prioritizer-workbench/v1"]
+        != results[1]["partialFingerprints"]["vuln-prioritizer-workbench/v1"]
+    )
 
 
 def test_vpw060_attack_navigator_report_create_downloads_filtered_layer(

@@ -15,7 +15,9 @@ from app.models.base import get_datetime_utc
 class ReportCreate(SQLModel):
     """Request payload for creating a run report."""
 
-    format: Literal["markdown", "html", "json", "csv", "zip", "attack-navigator"] = "markdown"
+    format: Literal["markdown", "html", "json", "csv", "zip", "attack-navigator", "sarif"] = (
+        "markdown"
+    )
     attack_filter: Literal["all", "critical-high", "kev", "no-coverage"] = "all"
 
 
