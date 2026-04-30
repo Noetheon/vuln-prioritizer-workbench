@@ -71,6 +71,7 @@ ALLOWED_UPLOAD_MIME_HINTS = {
     "openvas-xml": {"application/xml", "text/xml"},
 }
 SAFE_ATTACK_FILENAME_RE = re.compile(r"^[A-Za-z0-9._-]+$")
+SAFE_SNAPSHOT_FILENAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*[.]json$")
 
 
 @router.post("/projects/{project_id}/imports", response_model=AnalysisRunPublic)
@@ -138,16 +139,32 @@ async def import_project_upload(
         attack_metadata_path=attack_metadata_path,
     )
 
-    upload_bytes = await _read_bounded_upload(file, settings=_template_settings(request))
+    active_settings = _template_settings(request)
+    upload_bytes = await _read_bounded_upload(file, settings=active_settings)
+    remaining_upload_bytes = active_settings.max_upload_bytes - len(upload_bytes)
     asset_context_bytes = (
-        await _read_bounded_upload(asset_context_upload, settings=_template_settings(request))
+        await _read_bounded_upload(
+            asset_context_upload,
+            settings=active_settings,
+            max_bytes=remaining_upload_bytes,
+        )
         if asset_context_upload is not None
         else None
     )
+    if asset_context_bytes is not None:
+        remaining_upload_bytes -= len(asset_context_bytes)
     vex_bytes = (
-        await _read_bounded_upload(vex_upload, settings=_template_settings(request))
+        await _read_bounded_upload(
+            vex_upload,
+            settings=active_settings,
+            max_bytes=remaining_upload_bytes,
+        )
         if vex_upload is not None
         else None
+    )
+    _validate_aggregate_upload_size(
+        settings=active_settings,
+        payloads=[upload_bytes, asset_context_bytes, vex_bytes],
     )
     upload_sha256 = hashlib.sha256(upload_bytes).hexdigest()
     asset_context_sha256 = (
@@ -271,7 +288,7 @@ async def import_project_upload(
         failed_run = run_repo.finish_analysis_run(
             run.id,
             status=AnalysisRunStatus.FAILED,
-            error_message=str(exc),
+            error_message=_sanitize_parser_error_message(str(exc)),
             error_json={
                 "parse_errors": parse_errors,
                 "created_findings": 0,
@@ -315,8 +332,9 @@ async def import_project_upload(
                 asset_context_path=asset_context_path,
             )
         except ValueError as exc:
+            error_message = _sanitize_parser_error_message(str(exc))
             asset_context_error = {
-                "message": str(exc),
+                "message": error_message,
                 "filename": asset_context_stored_filename,
                 "stage": "asset_context_parse",
                 "error_type": exc.__class__.__name__,
@@ -325,7 +343,7 @@ async def import_project_upload(
             failed_run = run_repo.finish_analysis_run(
                 run.id,
                 status=AnalysisRunStatus.FAILED,
-                error_message=str(exc),
+                error_message=error_message,
                 error_json={
                     "asset_context_error": asset_context_error,
                     "created_findings": 0,
@@ -369,8 +387,9 @@ async def import_project_upload(
                 vex_path=vex_path,
             )
         except ValueError as exc:
+            error_message = _sanitize_parser_error_message(str(exc))
             vex_error = {
-                "message": str(exc),
+                "message": error_message,
                 "filename": vex_stored_filename,
                 "stage": "vex_parse",
                 "error_type": exc.__class__.__name__,
@@ -379,7 +398,7 @@ async def import_project_upload(
             failed_run = run_repo.finish_analysis_run(
                 run.id,
                 status=AnalysisRunStatus.FAILED,
-                error_message=str(exc),
+                error_message=error_message,
                 error_json={
                     "vex_error": vex_error,
                     "created_findings": 0,
@@ -428,14 +447,15 @@ async def import_project_upload(
             vex_files=[vex_path] if vex_path is not None else [],
         )
     except TemplateAnalysisError as exc:
+        analysis_error_message = _sanitize_parser_error_message(str(exc))
         failed_history = [*job_history, _job_status_entry("failed")]
         failed_run = run_repo.finish_analysis_run(
             run.id,
             status=AnalysisRunStatus.FAILED,
-            error_message=str(exc),
+            error_message=analysis_error_message,
             error_json={
                 "analysis_error": {
-                    "message": str(exc),
+                    "message": analysis_error_message,
                     "stage": "enrich_score_explain",
                     "error_type": exc.__class__.__name__,
                 },
@@ -456,7 +476,7 @@ async def import_project_upload(
                     status_history=failed_history,
                 ),
                 "analysis_error": {
-                    "message": str(exc),
+                    "message": analysis_error_message,
                     "stage": "enrich_score_explain",
                     "error_type": exc.__class__.__name__,
                 },
@@ -508,18 +528,40 @@ async def import_project_upload(
     return finished_run
 
 
-async def _read_bounded_upload(file: UploadFile, *, settings: Settings) -> bytes:
+async def _read_bounded_upload(
+    file: UploadFile,
+    *,
+    settings: Settings,
+    max_bytes: int | None = None,
+) -> bytes:
+    limit = (
+        settings.max_upload_bytes
+        if max_bytes is None
+        else min(settings.max_upload_bytes, max_bytes)
+    )
     total = 0
     chunks: list[bytes] = []
     while chunk := await file.read(1024 * 1024):
         total += len(chunk)
-        if total > settings.max_upload_bytes:
+        if total > limit:
             raise HTTPException(
                 status_code=413,
                 detail="Upload exceeds configured limit.",
             )
         chunks.append(chunk)
     return b"".join(chunks)
+
+
+def _validate_aggregate_upload_size(
+    *,
+    settings: Settings,
+    payloads: list[bytes | None],
+) -> None:
+    if sum(len(payload) for payload in payloads if payload is not None) > settings.max_upload_bytes:
+        raise HTTPException(
+            status_code=413,
+            detail="Upload exceeds configured limit.",
+        )
 
 
 def _has_optional_upload(file: UploadFile | None) -> bool:
@@ -724,7 +766,9 @@ def _template_occurrence_with_vex(
         "vex_match_type": enriched.vex_match_type,
         "vex_source_format": enriched.vex_source_format,
         "vex_source_record_id": enriched.vex_source_record_id,
-        "vex_source_path": enriched.vex_source_path,
+        "vex_source_path": Path(enriched.vex_source_path).name
+        if enriched.vex_source_path
+        else None,
         "vex_candidate_count": enriched.vex_candidate_count,
     }
     evidence.update({key: value for key, value in updates.items() if value not in {None, ""}})
@@ -1163,13 +1207,18 @@ def _resolve_template_provider_snapshot_path(
     value = provider_snapshot_file.strip() if provider_snapshot_file else ""
     if not value:
         return None
-    if "/" in value or "\\" in value or Path(value).name != value:
+    if (
+        not SAFE_SNAPSHOT_FILENAME_RE.fullmatch(value)
+        or "/" in value
+        or "\\" in value
+        or Path(value).name != value
+    ):
         raise HTTPException(status_code=422, detail="Provider snapshot path is not allowed.")
     snapshot_root = _template_settings(request).provider_snapshot_dir_path.resolve(strict=False)
     candidate = (snapshot_root / value).resolve(strict=False)
     if not candidate.is_relative_to(snapshot_root):
         raise HTTPException(status_code=422, detail="Provider snapshot path is not allowed.")
-    if not candidate.exists():
+    if not candidate.exists() or not candidate.is_file():
         raise HTTPException(status_code=422, detail="Provider snapshot file does not exist.")
     return candidate
 
@@ -1304,7 +1353,7 @@ def _parse_errors(
     filename: str,
     input_type: str,
 ) -> list[dict[str, Any]]:
-    message = str(exc)
+    message = _sanitize_parser_error_message(str(exc))
     row_prefix = "generic-occurrence-csv row errors: "
     messages = (
         [item.strip() for item in message.removeprefix(row_prefix).split(";") if item.strip()]
@@ -1357,6 +1406,13 @@ def _parse_error_field(message: str) -> str | None:
 def _parse_error_value(message: str) -> str | None:
     match = re.search(r"(?P<quote>['\"])(?P<value>.+?)(?P=quote)", message)
     return match.group("value") if match else None
+
+
+def _sanitize_parser_error_message(message: str) -> str:
+    """Remove local filesystem paths from parser-facing error text."""
+    unix_path = r"(?:/(?:Users|home|private|tmp|var|Volumes)/[^\s`'\"<>:;,)]*)"
+    windows_path = r"(?:[A-Za-z]:\\[^\s`'\"<>:;,)]*)"
+    return re.sub(f"{unix_path}|{windows_path}", "uploaded file", message)
 
 
 def _ignored_line_count(input_type: str, payload: bytes) -> int:

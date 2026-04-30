@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -54,6 +55,10 @@ SUPPORTED_WORKBENCH_INPUT_FORMATS = {
     InputFormat.nessus_xml.value,
     InputFormat.openvas_xml.value,
 }
+SENSITIVE_ERROR_PATH_RE = re.compile(
+    r"(?:/(?:Users|home|private|tmp|var|Volumes)/[^\s`'\"<>:;,)]*)"
+    r"|(?:[A-Za-z]:\\[^\s`'\"<>:;,)]*)"
+)
 
 
 class WorkbenchAnalysisError(RuntimeError):
@@ -200,9 +205,10 @@ def run_workbench_import(
                 original_filenames=original_filenames,
                 input_formats=input_formats,
             )
+            message = _sanitize_parser_error_message(str(exc))
             _mark_analysis_run_failed(repo, run, exc, parse_errors=parse_errors)
             raise WorkbenchAnalysisError(
-                str(exc),
+                message,
                 parse_errors=parse_errors,
                 analysis_run_id=run.id,
             ) from exc
@@ -235,8 +241,9 @@ def run_workbench_import(
     except WorkbenchAnalysisError:
         raise
     except Exception as exc:
+        message = _sanitize_parser_error_message(str(exc))
         _mark_analysis_run_failed(repo, run, exc, parse_errors=[])
-        raise WorkbenchAnalysisError(str(exc), analysis_run_id=run.id) from exc
+        raise WorkbenchAnalysisError(message, analysis_run_id=run.id) from exc
     session.flush()
     return WorkbenchImportResult(run=run, payload=payload)
 
@@ -312,7 +319,7 @@ def _input_parse_errors(
     original_filenames: list[str],
     input_formats: list[str],
 ) -> list[dict[str, Any]]:
-    message = str(exc)
+    message = _sanitize_parser_error_message(str(exc))
     return [
         {
             "input_format": input_format,
@@ -340,13 +347,18 @@ def _mark_analysis_run_failed(
     repo.finish_analysis_run(
         run.id,
         status="failed",
-        error_message=str(exc),
+        error_message=_sanitize_parser_error_message(str(exc)),
         metadata_json={
             **run.metadata_json,
             "parse_errors": parse_errors,
             "lifecycle_status": "failed",
         },
     )
+
+
+def _sanitize_parser_error_message(message: str) -> str:
+    """Remove local filesystem paths from parser-facing error text."""
+    return SENSITIVE_ERROR_PATH_RE.sub("uploaded file", message)
 
 
 def _effective_workbench_input_type(input_formats: list[str]) -> str:

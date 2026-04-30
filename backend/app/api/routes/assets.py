@@ -7,11 +7,11 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Any
 
-from fastapi import APIRouter, File, HTTPException, Query, UploadFile
+from fastapi import APIRouter, File, HTTPException, Query, Request, UploadFile
 
 from app.api.deps import CurrentUser, SessionDep
 from app.api.routes.workbench_access import require_visible_project
-from app.core.config import settings
+from app.core.config import Settings
 from app.models import (
     Asset,
     AssetContextImportPublic,
@@ -78,6 +78,7 @@ def create_project_asset(
 async def import_project_assets(
     *,
     project_id: uuid.UUID,
+    request: Request,
     session: SessionDep,
     current_user: CurrentUser,
     asset_context_file: UploadFile | None = File(None),
@@ -87,8 +88,9 @@ async def import_project_assets(
     if asset_context_file is None or not asset_context_file.filename:
         raise HTTPException(status_code=422, detail="Asset context CSV file is required.")
     _validate_asset_context_upload(asset_context_file)
-    content = await asset_context_file.read(settings.max_upload_bytes + 1)
-    if len(content) > settings.max_upload_bytes:
+    active_settings = _template_settings(request)
+    content = await asset_context_file.read(active_settings.max_upload_bytes + 1)
+    if len(content) > active_settings.max_upload_bytes:
         raise HTTPException(status_code=413, detail="Upload exceeds configured limit.")
     if not content:
         raise HTTPException(status_code=422, detail="Asset context CSV file is required.")
@@ -188,6 +190,7 @@ def _finding_rescore_needed(finding: Any) -> bool:
 
 
 def _validate_asset_context_upload(file: UploadFile) -> None:
+    _reject_unsafe_upload_filename(file.filename or "")
     if Path(file.filename or "").suffix.lower() != ".csv":
         raise HTTPException(status_code=422, detail="Asset context file must be a CSV.")
     normalized = (file.content_type or "").split(";", maxsplit=1)[0].strip().lower()
@@ -198,3 +201,17 @@ def _validate_asset_context_upload(file: UploadFile) -> None:
             status_code=422,
             detail="Asset context content type must be text/csv.",
         )
+
+
+def _reject_unsafe_upload_filename(filename: str) -> None:
+    if "/" in filename or "\\" in filename or Path(filename).name != filename:
+        raise HTTPException(status_code=422, detail="Upload filename is not allowed.")
+    if any(ord(character) < 32 for character in filename):
+        raise HTTPException(status_code=422, detail="Upload filename is not allowed.")
+
+
+def _template_settings(request: Request) -> Settings:
+    candidate = getattr(request.app.state, "template_settings", None)
+    if isinstance(candidate, Settings):
+        return candidate
+    raise HTTPException(status_code=500, detail="Template settings are not configured.")

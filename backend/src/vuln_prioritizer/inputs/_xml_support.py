@@ -3,13 +3,16 @@
 from __future__ import annotations
 
 import re
-import xml.etree.ElementTree as ET
 from pathlib import Path
+from xml.etree.ElementTree import Element, ParseError
+
+from defusedxml import ElementTree as DefusedET  # type: ignore[import-untyped]
+from defusedxml.common import DefusedXmlException  # type: ignore[import-untyped]
 
 from vuln_prioritizer.utils import normalize_cve_id
 
 
-def load_xml_root(path: Path) -> ET.Element:
+def load_xml_root(path: Path) -> Element:
     raw = path.read_bytes()
     uppercase = raw.upper()
     if b"<!DOCTYPE" in uppercase or b"<!ENTITY" in uppercase:
@@ -17,18 +20,20 @@ def load_xml_root(path: Path) -> ET.Element:
             "XML input contains a DOCTYPE or ENTITY declaration, which is not supported."
         )
     try:
-        return ET.fromstring(raw)
-    except ET.ParseError as exc:
-        raise ValueError(f"XML input is not valid XML: {path}") from exc
+        return DefusedET.fromstring(raw)
+    except DefusedXmlException as exc:
+        raise ValueError("XML input contains unsupported XML declarations.") from exc
+    except ParseError as exc:
+        raise ValueError("XML input is not valid XML.") from exc
 
 
-def looks_like_nessus_document(root: ET.Element) -> bool:
+def looks_like_nessus_document(root: Element) -> bool:
     if xml_local_name(root.tag) in {"nessusclientdata_v2", "nessusclientdata"}:
         return True
     return xml_has_descendant(root, "reporthost")
 
 
-def looks_like_openvas_document(root: ET.Element) -> bool:
+def looks_like_openvas_document(root: Element) -> bool:
     return xml_has_descendant(root, "result") and xml_has_descendant(root, "nvt")
 
 
@@ -38,14 +43,14 @@ def xml_local_name(tag: str) -> str:
     return tag.lower()
 
 
-def xml_child(element: ET.Element, name: str) -> ET.Element | None:
+def xml_child(element: Element, name: str) -> Element | None:
     for child in element:
         if xml_local_name(child.tag) == name.lower():
             return child
     return None
 
 
-def xml_child_text(element: ET.Element, name: str) -> str | None:
+def xml_child_text(element: Element, name: str) -> str | None:
     child = xml_child(element, name)
     if child is None or child.text is None:
         return None
@@ -53,17 +58,17 @@ def xml_child_text(element: ET.Element, name: str) -> str | None:
     return text or None
 
 
-def xml_descendants(root: ET.Element, name: str) -> list[ET.Element]:
+def xml_descendants(root: Element, name: str) -> list[Element]:
     expected_name = name.lower()
     return [element for element in root.iter() if xml_local_name(element.tag) == expected_name]
 
 
-def xml_has_descendant(root: ET.Element, name: str) -> bool:
+def xml_has_descendant(root: Element, name: str) -> bool:
     expected_name = name.lower()
     return any(xml_local_name(element.tag) == expected_name for element in root.iter())
 
 
-def nessus_target_ref(report_host: ET.Element, host_index: int) -> str:
+def nessus_target_ref(report_host: Element, host_index: int) -> str:
     host_properties = xml_child(report_host, "hostproperties")
     if host_properties is not None:
         preferred_names = ("host-fqdn", "host-ip", "host_dns", "netbios-name")
@@ -87,7 +92,7 @@ def nessus_target_ref(report_host: ET.Element, host_index: int) -> str:
     return f"nessus-host-{host_index}"
 
 
-def nessus_cve_tokens(report_item: ET.Element) -> list[str]:
+def nessus_cve_tokens(report_item: Element) -> list[str]:
     tokens: list[str] = []
     for child in report_item:
         if xml_local_name(child.tag) != "cve" or child.text is None:
@@ -96,7 +101,7 @@ def nessus_cve_tokens(report_item: ET.Element) -> list[str]:
     return deduplicate_preserving_order(tokens)
 
 
-def openvas_cve_tokens(result: ET.Element) -> list[str]:
+def openvas_cve_tokens(result: Element) -> list[str]:
     tokens: list[str] = []
     nvt = xml_child(result, "nvt")
     if nvt is not None:
@@ -150,7 +155,7 @@ def deduplicate_preserving_order(values: list[str]) -> list[str]:
     return result
 
 
-def nessus_service_label(report_item: ET.Element) -> str | None:
+def nessus_service_label(report_item: Element) -> str | None:
     svc_name = (report_item.attrib.get("svc_name") or "").strip()
     port = (report_item.attrib.get("port") or "").strip()
     protocol = (report_item.attrib.get("protocol") or "").strip()
@@ -160,7 +165,7 @@ def nessus_service_label(report_item: ET.Element) -> str | None:
     return "/".join(parts)
 
 
-def nessus_severity(report_item: ET.Element) -> str | None:
+def nessus_severity(report_item: Element) -> str | None:
     risk_factor = xml_child_text(report_item, "risk_factor")
     if risk_factor:
         return risk_factor

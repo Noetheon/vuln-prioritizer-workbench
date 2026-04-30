@@ -135,8 +135,9 @@ def test_input_loader_rejects_invalid_xml_with_explicit_format(tmp_path: Path) -
     xml_file.write_text("<NessusClientData_v2><Report>", encoding="utf-8")
 
     loader = loader_module.InputLoader()
-    with pytest.raises(ValueError, match="XML input is not valid XML"):
+    with pytest.raises(ValueError, match="XML input is not valid XML") as exc_info:
         loader.load(path=xml_file, input_format="nessus-xml")
+    assert str(tmp_path) not in str(exc_info.value)
 
 
 def test_json_parser_rejects_wrong_top_level_type_before_parser_access(tmp_path: Path) -> None:
