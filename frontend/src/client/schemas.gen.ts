@@ -2419,6 +2419,343 @@ export const FindingsPublicSchema = {
     type: 'object'
 } as const;
 
+export const GitHubIssueExportCreateSchema = {
+    description: 'Request payload for dry-run or explicit GitHub issue creation.',
+    properties: {
+        dry_run: {
+            default: true,
+            title: 'Dry Run',
+            type: 'boolean'
+        },
+        finding_ids: {
+            items: {
+                format: 'uuid',
+                type: 'string'
+            },
+            maxItems: 100,
+            title: 'Finding Ids',
+            type: 'array'
+        },
+        include_evidence_refs: {
+            default: true,
+            title: 'Include Evidence Refs',
+            type: 'boolean'
+        },
+        label_prefix: {
+            default: 'vuln-prioritizer',
+            maxLength: 80,
+            minLength: 1,
+            title: 'Label Prefix',
+            type: 'string'
+        },
+        limit: {
+            default: 20,
+            maximum: 100,
+            minimum: 1,
+            title: 'Limit',
+            type: 'integer'
+        },
+        milestone: {
+            anyOf: [
+                {
+                    minimum: 1,
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Milestone'
+        },
+        priority: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/FindingPriority'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
+        repository: {
+            maxLength: 200,
+            minLength: 3,
+            title: 'Repository',
+            type: 'string'
+        },
+        token_env: {
+            anyOf: [
+                {
+                    maxLength: 100,
+                    minLength: 1,
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Token Env'
+        }
+    },
+    required: ['repository'],
+    title: 'GitHubIssueExportCreate',
+    type: 'object'
+} as const;
+
+export const GitHubIssueExportPublicSchema = {
+    description: 'Collection response for GitHub issue export attempts.',
+    properties: {
+        count: {
+            title: 'Count',
+            type: 'integer'
+        },
+        created_count: {
+            default: 0,
+            title: 'Created Count',
+            type: 'integer'
+        },
+        data: {
+            items: {
+                '$ref': '#/components/schemas/GitHubIssueExportRecord'
+            },
+            title: 'Data',
+            type: 'array'
+        },
+        dry_run: {
+            title: 'Dry Run',
+            type: 'boolean'
+        },
+        skipped_count: {
+            default: 0,
+            title: 'Skipped Count',
+            type: 'integer'
+        }
+    },
+    required: ['dry_run', 'count'],
+    title: 'GitHubIssueExportPublic',
+    type: 'object'
+} as const;
+
+export const GitHubIssueExportRecordSchema = {
+    description: 'GitHub issue export result for one prepared issue.',
+    properties: {
+        body: {
+            title: 'Body',
+            type: 'string'
+        },
+        cve_id: {
+            title: 'Cve Id',
+            type: 'string'
+        },
+        duplicate_key: {
+            title: 'Duplicate Key',
+            type: 'string'
+        },
+        evidence_refs: {
+            items: {
+                type: 'string'
+            },
+            title: 'Evidence Refs',
+            type: 'array'
+        },
+        finding_id: {
+            format: 'uuid',
+            title: 'Finding Id',
+            type: 'string'
+        },
+        issue_number: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Issue Number'
+        },
+        issue_url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Issue Url'
+        },
+        labels: {
+            items: {
+                type: 'string'
+            },
+            title: 'Labels',
+            type: 'array'
+        },
+        milestone: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Milestone'
+        },
+        status: {
+            enum: ['preview', 'created', 'skipped_duplicate'],
+            title: 'Status',
+            type: 'string'
+        },
+        title: {
+            title: 'Title',
+            type: 'string'
+        }
+    },
+    required: ['finding_id', 'cve_id', 'title', 'body', 'duplicate_key', 'status'],
+    title: 'GitHubIssueExportRecord',
+    type: 'object'
+} as const;
+
+export const GitHubIssuePreviewCreateSchema = {
+    description: 'Request payload for preparing GitHub issue markdown.',
+    properties: {
+        finding_ids: {
+            items: {
+                format: 'uuid',
+                type: 'string'
+            },
+            maxItems: 100,
+            title: 'Finding Ids',
+            type: 'array'
+        },
+        include_evidence_refs: {
+            default: true,
+            title: 'Include Evidence Refs',
+            type: 'boolean'
+        },
+        label_prefix: {
+            default: 'vuln-prioritizer',
+            maxLength: 80,
+            minLength: 1,
+            title: 'Label Prefix',
+            type: 'string'
+        },
+        limit: {
+            default: 20,
+            maximum: 100,
+            minimum: 1,
+            title: 'Limit',
+            type: 'integer'
+        },
+        milestone: {
+            anyOf: [
+                {
+                    minimum: 1,
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Milestone'
+        },
+        priority: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/FindingPriority'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        }
+    },
+    title: 'GitHubIssuePreviewCreate',
+    type: 'object'
+} as const;
+
+export const GitHubIssuePreviewPublicSchema = {
+    description: 'Collection response for GitHub issue previews.',
+    properties: {
+        count: {
+            title: 'Count',
+            type: 'integer'
+        },
+        data: {
+            items: {
+                '$ref': '#/components/schemas/GitHubIssuePreviewRecord'
+            },
+            title: 'Data',
+            type: 'array'
+        },
+        dry_run: {
+            default: true,
+            title: 'Dry Run',
+            type: 'boolean'
+        }
+    },
+    required: ['count'],
+    title: 'GitHubIssuePreviewPublic',
+    type: 'object'
+} as const;
+
+export const GitHubIssuePreviewRecordSchema = {
+    description: 'Prepared GitHub issue markdown for one Workbench finding.',
+    properties: {
+        body: {
+            title: 'Body',
+            type: 'string'
+        },
+        cve_id: {
+            title: 'Cve Id',
+            type: 'string'
+        },
+        duplicate_key: {
+            title: 'Duplicate Key',
+            type: 'string'
+        },
+        evidence_refs: {
+            items: {
+                type: 'string'
+            },
+            title: 'Evidence Refs',
+            type: 'array'
+        },
+        finding_id: {
+            format: 'uuid',
+            title: 'Finding Id',
+            type: 'string'
+        },
+        labels: {
+            items: {
+                type: 'string'
+            },
+            title: 'Labels',
+            type: 'array'
+        },
+        milestone: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Milestone'
+        },
+        title: {
+            title: 'Title',
+            type: 'string'
+        }
+    },
+    required: ['finding_id', 'cve_id', 'title', 'body', 'duplicate_key'],
+    title: 'GitHubIssuePreviewRecord',
+    type: 'object'
+} as const;
+
 export const GovernanceRollupPublicSchema = {
     description: 'Aggregated finding risk for one owner, service, asset, or environment.',
     properties: {
