@@ -167,7 +167,8 @@
             "governance-rollups",
             "governance-waivers",
             "governance-vex-summary",
-            "governance-asset-context"
+            "governance-asset-context",
+            "governance-detection-coverage"
           ]
         },
         "sha256": {

@@ -14,6 +14,7 @@ from pydantic import ValidationError
 
 from vuln_prioritizer.models import (
     EvidenceBundleFile,
+    EvidenceBundleGovernanceArtifact,
     EvidenceBundleInputHash,
     EvidenceBundleManifest,
     EvidenceBundleVerificationItem,
@@ -30,6 +31,8 @@ from vuln_prioritizer.utils import iso_utc_now
 
 DETERMINISTIC_ZIP_TIMESTAMP = (1980, 1, 1, 0, 0, 0)
 DETERMINISTIC_ZIP_FILE_MODE = 0o644 << 16
+DETECTION_COVERAGE_BUNDLE_PATH = "governance/detection-coverage.json"
+DETECTION_COVERAGE_BUNDLE_KIND = "governance-detection-coverage"
 
 
 def verify_evidence_bundle(
@@ -250,6 +253,16 @@ def write_evidence_bundle(
                 "attack-navigator-layer",
             )
         )
+    governance_artifacts: list[EvidenceBundleGovernanceArtifact] = []
+    detection_coverage = detection_coverage_export(redacted_payload)
+    if detection_coverage is not None:
+        bundle_entries.append(
+            (
+                DETECTION_COVERAGE_BUNDLE_PATH,
+                json.dumps(detection_coverage, indent=2, sort_keys=True).encode("utf-8"),
+                DETECTION_COVERAGE_BUNDLE_KIND,
+            )
+        )
     provider_snapshot_bundle_path = None
     provider_snapshot_path = resolve_analysis_input_path(
         metadata.get("provider_snapshot_file") if isinstance(metadata, dict) else None,
@@ -318,6 +331,14 @@ def write_evidence_bundle(
         for path, content, kind in bundle_entries
     ]
     artifact_hashes = {entry.path: entry.sha256 for entry in file_entries}
+    if DETECTION_COVERAGE_BUNDLE_PATH in artifact_hashes:
+        governance_artifacts.append(
+            EvidenceBundleGovernanceArtifact(
+                bundle_path=DETECTION_COVERAGE_BUNDLE_PATH,
+                kind=DETECTION_COVERAGE_BUNDLE_KIND,
+                sha256=artifact_hashes[DETECTION_COVERAGE_BUNDLE_PATH],
+            )
+        )
     source_input_paths = [
         input_manifest_paths.get(resolved_input, safe_source_path_label(resolved_input))
         if (resolved_input := resolve_analysis_input_path(reported_path, analysis_path)) is not None
@@ -344,6 +365,7 @@ def write_evidence_bundle(
             bundle_path=provider_snapshot_bundle_path,
             bundle_sha256=artifact_hashes.get(provider_snapshot_bundle_path or ""),
         ),
+        governance_artifacts=governance_artifacts,
         artifact_hashes=artifact_hashes,
         findings_count=int(metadata.get("findings_count", 0)),
         kev_hits=int(metadata.get("kev_hits", 0)),
@@ -371,6 +393,49 @@ def write_evidence_bundle(
             generate_evidence_bundle_manifest_json(manifest).encode("utf-8"),
         )
     return manifest
+
+
+def detection_coverage_export(payload: dict[str, Any]) -> dict[str, Any] | None:
+    coverage = payload.get("detection_coverage")
+    if not isinstance(coverage, dict):
+        return None
+    items = [item for item in coverage.get("items", []) if isinstance(item, dict)]
+    controls = [item for item in coverage.get("controls", []) if isinstance(item, dict)]
+    summary = coverage.get("summary")
+    if not isinstance(summary, dict):
+        summary = {}
+    if not items and not controls:
+        return None
+    metadata = payload.get("metadata")
+    metadata = metadata if isinstance(metadata, dict) else {}
+    return {
+        "schema": "detection-coverage.v1",
+        "schema_version": "1.0.0",
+        "generated_at": iso_utc_now(),
+        "project_id": metadata.get("project_id"),
+        "run_id": metadata.get("analysis_run_id") or metadata.get("run_id"),
+        "summary": detection_coverage_summary_counts(summary),
+        "items": items,
+        "controls": controls,
+        "limitations": [
+            (
+                "Detection coverage is operator-supplied defensive review evidence; it is "
+                "not proof that exploitation did or did not occur."
+            ),
+            (
+                "Partial, missing, and unknown coverage identify review gaps that still need "
+                "SOC validation or compensating-control documentation."
+            ),
+        ],
+    }
+
+
+def detection_coverage_summary_counts(summary: dict[Any, Any]) -> dict[str, int]:
+    return {
+        str(key): int(value)
+        for key, value in sorted(summary.items(), key=lambda item: str(item[0]))
+        if str(key).strip() and isinstance(value, int | float)
+    }
 
 
 def redacted_file_bytes(path: Path) -> tuple[bytes, bool]:

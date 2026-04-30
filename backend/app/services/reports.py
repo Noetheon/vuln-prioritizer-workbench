@@ -50,6 +50,7 @@ REPORT_KIND_GOVERNANCE_ROLLUPS = "governance-rollups"
 REPORT_KIND_GOVERNANCE_WAIVERS = "governance-waivers"
 REPORT_KIND_GOVERNANCE_VEX = "governance-vex-summary"
 REPORT_KIND_GOVERNANCE_ASSET_CONTEXT = "governance-asset-context"
+REPORT_KIND_GOVERNANCE_DETECTION_COVERAGE = "governance-detection-coverage"
 REPORT_FILENAME_TECHNICAL_MARKDOWN = "technical-report.md"
 REPORT_FILENAME_EXECUTIVE_HTML = "executive-report.html"
 REPORT_FILENAME_ANALYSIS_JSON = "analysis-result.v1.json"
@@ -61,6 +62,7 @@ REPORT_FILENAME_GOVERNANCE_ROLLUPS = "governance/rollups.json"
 REPORT_FILENAME_GOVERNANCE_WAIVERS = "governance/waivers.json"
 REPORT_FILENAME_GOVERNANCE_VEX = "governance/vex-summary.json"
 REPORT_FILENAME_GOVERNANCE_ASSET_CONTEXT = "governance/asset-context.json"
+REPORT_FILENAME_GOVERNANCE_DETECTION_COVERAGE = "governance/detection-coverage.json"
 REPORT_CONTENT_TYPE_MARKDOWN = "text/markdown; charset=utf-8"
 REPORT_CONTENT_TYPE_HTML = "text/html; charset=utf-8"
 REPORT_CONTENT_TYPE_JSON = "application/json; charset=utf-8"
@@ -425,6 +427,7 @@ class MarkdownReportPayload:
     findings: list[MarkdownReportFinding]
     provider_snapshot: MarkdownProviderSnapshot | None
     governance_rollups: dict[str, Any] = field(default_factory=dict)
+    detection_coverage: dict[str, Any] = field(default_factory=dict)
     project_description: str | None = None
     project_owner_id: str | None = None
     project_created_at: datetime | None = None
@@ -893,6 +896,8 @@ def render_markdown_report(payload: MarkdownReportPayload) -> str:
     ]
     if payload.governance_rollups:
         lines.extend(_markdown_governance_section(payload.governance_rollups, payload.findings))
+    if payload.detection_coverage:
+        lines.extend(_markdown_detection_coverage_section(payload.detection_coverage))
     lines.extend(
         [
             "",
@@ -1196,6 +1201,56 @@ def _markdown_governance_section(
     return lines
 
 
+def _markdown_detection_coverage_section(detection_coverage: dict[str, Any]) -> list[str]:
+    summary = _dict_value(detection_coverage.get("summary"))
+    weak_items = [
+        item
+        for item in _dict_list(detection_coverage.get("items"))
+        if str(item.get("coverage_level")) in {"partial", "not_covered", "unknown"}
+    ][:5]
+    lines = [
+        "",
+        "## Detection Coverage",
+        "",
+        "| Field | Value |",
+        "| --- | --- |",
+        f"| Covered | {_safe_cell(summary.get('covered', 0))} |",
+        f"| Partial | {_safe_cell(summary.get('partial', 0))} |",
+        f"| Not Covered | {_safe_cell(summary.get('not_covered', 0))} |",
+        f"| Unknown | {_safe_cell(summary.get('unknown', 0))} |",
+        "",
+        (
+            "Detection coverage is operator-supplied defensive review evidence; "
+            "it is not proof of security or exploitation."
+        ),
+    ]
+    if weak_items:
+        lines.extend(
+            [
+                "",
+                "### Coverage Gaps",
+                "",
+                "| Technique | Coverage | Findings | Owner | Action |",
+                "| --- | --- | --- | --- | --- |",
+            ]
+        )
+        for item in weak_items:
+            lines.append(
+                "| "
+                + " | ".join(
+                    [
+                        _safe_cell(item.get("technique_id")),
+                        _safe_cell(item.get("coverage_level")),
+                        _safe_cell(item.get("finding_count", 0)),
+                        _safe_cell(item.get("owner") or "Unassigned"),
+                        _safe_cell(item.get("recommended_action")),
+                    ]
+                )
+                + " |"
+            )
+    return lines
+
+
 def render_analysis_result_json(payload: MarkdownReportPayload) -> str:
     """Render the stable machine-readable analysis-result.v1 JSON export."""
     payload, _redactions = _redacted_bundle_payload(payload)
@@ -1239,6 +1294,8 @@ def render_analysis_result_json(payload: MarkdownReportPayload) -> str:
     }
     if payload.governance_rollups:
         result["governance_rollups"] = payload.governance_rollups
+    if payload.detection_coverage:
+        result["detection_coverage"] = payload.detection_coverage
     return json.dumps(result, indent=2, sort_keys=True) + "\n"
 
 
@@ -1738,30 +1795,43 @@ def _safe_bundle_filename(value: object) -> str:
 def _governance_bundle_entries(
     payload: MarkdownReportPayload,
 ) -> list[tuple[str, bytes, str]]:
-    if not payload.governance_rollups:
+    if not payload.governance_rollups and not payload.detection_coverage:
         return []
-    artifacts = [
-        (
-            REPORT_FILENAME_GOVERNANCE_ROLLUPS,
-            _governance_rollups_export(payload),
-            REPORT_KIND_GOVERNANCE_ROLLUPS,
-        ),
-        (
-            REPORT_FILENAME_GOVERNANCE_WAIVERS,
-            _governance_waivers_export(payload),
-            REPORT_KIND_GOVERNANCE_WAIVERS,
-        ),
-        (
-            REPORT_FILENAME_GOVERNANCE_VEX,
-            _governance_vex_export(payload),
-            REPORT_KIND_GOVERNANCE_VEX,
-        ),
-        (
-            REPORT_FILENAME_GOVERNANCE_ASSET_CONTEXT,
-            _governance_asset_context_export(payload),
-            REPORT_KIND_GOVERNANCE_ASSET_CONTEXT,
-        ),
-    ]
+    artifacts = []
+    if payload.governance_rollups:
+        artifacts.extend(
+            [
+                (
+                    REPORT_FILENAME_GOVERNANCE_ROLLUPS,
+                    _governance_rollups_export(payload),
+                    REPORT_KIND_GOVERNANCE_ROLLUPS,
+                ),
+                (
+                    REPORT_FILENAME_GOVERNANCE_WAIVERS,
+                    _governance_waivers_export(payload),
+                    REPORT_KIND_GOVERNANCE_WAIVERS,
+                ),
+                (
+                    REPORT_FILENAME_GOVERNANCE_VEX,
+                    _governance_vex_export(payload),
+                    REPORT_KIND_GOVERNANCE_VEX,
+                ),
+                (
+                    REPORT_FILENAME_GOVERNANCE_ASSET_CONTEXT,
+                    _governance_asset_context_export(payload),
+                    REPORT_KIND_GOVERNANCE_ASSET_CONTEXT,
+                ),
+            ]
+        )
+    detection_coverage = _governance_detection_coverage_export(payload)
+    if detection_coverage is not None:
+        artifacts.append(
+            (
+                REPORT_FILENAME_GOVERNANCE_DETECTION_COVERAGE,
+                detection_coverage,
+                REPORT_KIND_GOVERNANCE_DETECTION_COVERAGE,
+            )
+        )
     return [(path, _json_bytes(content), kind) for path, content, kind in artifacts]
 
 
@@ -1825,6 +1895,38 @@ def _governance_asset_context_export(payload: MarkdownReportPayload) -> dict[str
         "top_assets_by_risk": _dict_list(payload.governance_rollups.get("top_assets_by_risk")),
         "environments": _dict_list(payload.governance_rollups.get("environments")),
         "assets": _asset_context_rows(payload.findings),
+    }
+
+
+def _governance_detection_coverage_export(
+    payload: MarkdownReportPayload,
+) -> dict[str, Any] | None:
+    if not payload.detection_coverage:
+        return None
+    summary = _dict_value(payload.detection_coverage.get("summary"))
+    items = _dict_list(payload.detection_coverage.get("items"))
+    controls = _dict_list(payload.detection_coverage.get("controls"))
+    if not items and not controls:
+        return None
+    return {
+        "schema": "detection-coverage.v1",
+        "schema_version": "1.0.0",
+        "generated_at": _iso_datetime(payload.generated_at),
+        "project_id": payload.project_id,
+        "run_id": payload.run_id,
+        "summary": summary,
+        "items": items,
+        "controls": controls,
+        "limitations": [
+            (
+                "Detection coverage is operator-supplied defensive review evidence; it is "
+                "not proof that exploitation did or did not occur."
+            ),
+            (
+                "Partial, missing, and unknown coverage identify review gaps that still need "
+                "SOC validation or compensating-control documentation."
+            ),
+        ],
     }
 
 
@@ -2013,6 +2115,7 @@ def _redacted_bundle_payload(
             run_error=redact(payload.run_error, "analysis_run.error_message"),
             run_errors=redact(payload.run_errors, "analysis_run.errors"),
             governance_rollups=redact(payload.governance_rollups, "governance_rollups"),
+            detection_coverage=redact(payload.detection_coverage, "detection_coverage"),
             findings=findings,
             provider_snapshot=provider_snapshot,
         ),
