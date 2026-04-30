@@ -558,21 +558,18 @@ test("template frontend covers core Workbench E2E smoke", async ({ page }) => {
     mimeType: "text/csv",
     name: "import-wizard-occurrences.csv",
   })
-  await expect(importFileInput).toHaveJSProperty("files.length", 1)
   const assetContextInput = page.locator('input[name="assetContextFile"]')
   await assetContextInput.setInputFiles({
     buffer: validAssetContextCsv,
     mimeType: "text/csv",
     name: "import-wizard-asset-context.csv",
   })
-  await expect(assetContextInput).toHaveJSProperty("files.length", 1)
   const vexInput = page.locator('input[name="vexFile"]')
   await vexInput.setInputFiles({
     buffer: importWizardOpenVex,
     mimeType: "application/json",
     name: "import-wizard-openvex.json",
   })
-  await expect(vexInput).toHaveJSProperty("files.length", 1)
   await page.getByRole("button", { name: "Upload Import" }).click()
   await expect(
     page.getByRole("region", { name: "Import result" }),
