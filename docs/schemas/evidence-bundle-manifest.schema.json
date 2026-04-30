@@ -49,6 +49,12 @@
       "type": "object",
       "additionalProperties": true
     },
+    "governance_artifacts": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/governanceArtifact"
+      }
+    },
     "attack_navigator_layer": {
       "type": ["object", "null"],
       "additionalProperties": true,
@@ -140,6 +146,29 @@
         },
         "size_bytes": {
           "type": "integer"
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      }
+    },
+    "governanceArtifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["bundle_path", "kind", "sha256"],
+      "properties": {
+        "bundle_path": {
+          "type": "string",
+          "pattern": "^governance/.+\\.json$"
+        },
+        "kind": {
+          "enum": [
+            "governance-rollups",
+            "governance-waivers",
+            "governance-vex-summary",
+            "governance-asset-context"
+          ]
         },
         "sha256": {
           "type": "string",

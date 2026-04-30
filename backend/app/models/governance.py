@@ -7,7 +7,7 @@ from sqlmodel import Field, SQLModel
 
 
 class GovernanceRollupPublic(SQLModel):
-    """Aggregated finding risk for one owner, service, or environment."""
+    """Aggregated finding risk for one owner, service, asset, or environment."""
 
     dimension: str
     label: str
@@ -68,12 +68,14 @@ class GovernanceWaiverDebtPublic(SQLModel):
 
 
 class ProjectGovernanceRollupsPublic(SQLModel):
-    """Owner, service, environment, and waiver-debt rollups for one project."""
+    """Owner, service, asset, environment, and waiver-debt rollups for one project."""
 
     project_id: uuid.UUID
     generated_at: datetime
     owners: list[GovernanceRollupPublic] = Field(default_factory=list)
     services: list[GovernanceRollupPublic] = Field(default_factory=list)
+    assets: list[GovernanceRollupPublic] = Field(default_factory=list)
     environments: list[GovernanceRollupPublic] = Field(default_factory=list)
     top_services_by_risk: list[GovernanceRollupPublic] = Field(default_factory=list)
+    top_assets_by_risk: list[GovernanceRollupPublic] = Field(default_factory=list)
     waiver_debt: GovernanceWaiverDebtPublic = Field(default_factory=GovernanceWaiverDebtPublic)

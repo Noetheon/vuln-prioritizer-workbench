@@ -10,6 +10,7 @@ import re
 import uuid
 import zipfile
 from collections import Counter
+from collections.abc import Sequence
 from dataclasses import dataclass, field, replace
 from datetime import datetime
 from io import BytesIO, StringIO
@@ -43,12 +44,20 @@ REPORT_KIND_ANALYSIS_JSON = "analysis-result-json"
 REPORT_KIND_FINDINGS_CSV = "findings-csv"
 REPORT_KIND_EVIDENCE_BUNDLE = "evidence-bundle"
 REPORT_KIND_ATTACK_NAVIGATOR = "attack-navigator-layer"
+REPORT_KIND_GOVERNANCE_ROLLUPS = "governance-rollups"
+REPORT_KIND_GOVERNANCE_WAIVERS = "governance-waivers"
+REPORT_KIND_GOVERNANCE_VEX = "governance-vex-summary"
+REPORT_KIND_GOVERNANCE_ASSET_CONTEXT = "governance-asset-context"
 REPORT_FILENAME_TECHNICAL_MARKDOWN = "technical-report.md"
 REPORT_FILENAME_EXECUTIVE_HTML = "executive-report.html"
 REPORT_FILENAME_ANALYSIS_JSON = "analysis-result.v1.json"
 REPORT_FILENAME_FINDINGS_CSV = "findings.csv"
 REPORT_FILENAME_EVIDENCE_BUNDLE = "evidence-bundle.zip"
 REPORT_FILENAME_ATTACK_NAVIGATOR = "attack-navigator-layer.json"
+REPORT_FILENAME_GOVERNANCE_ROLLUPS = "governance/rollups.json"
+REPORT_FILENAME_GOVERNANCE_WAIVERS = "governance/waivers.json"
+REPORT_FILENAME_GOVERNANCE_VEX = "governance/vex-summary.json"
+REPORT_FILENAME_GOVERNANCE_ASSET_CONTEXT = "governance/asset-context.json"
 REPORT_CONTENT_TYPE_MARKDOWN = "text/markdown; charset=utf-8"
 REPORT_CONTENT_TYPE_HTML = "text/html; charset=utf-8"
 REPORT_CONTENT_TYPE_JSON = "application/json; charset=utf-8"
@@ -853,7 +862,7 @@ def render_markdown_report(payload: MarkdownReportPayload) -> str:
         f"| Low | {counts['Low']} |",
     ]
     if payload.governance_rollups:
-        lines.extend(_markdown_governance_section(payload.governance_rollups))
+        lines.extend(_markdown_governance_section(payload.governance_rollups, payload.findings))
     lines.extend(
         [
             "",
@@ -990,9 +999,17 @@ def render_markdown_report(payload: MarkdownReportPayload) -> str:
     return "\n".join(lines).rstrip() + "\n"
 
 
-def _markdown_governance_section(governance_rollups: dict[str, Any]) -> list[str]:
+def _markdown_governance_section(
+    governance_rollups: dict[str, Any],
+    findings: list[MarkdownReportFinding],
+) -> list[str]:
     services = _dict_list(governance_rollups.get("top_services_by_risk"))[:5]
+    assets = _dict_list(governance_rollups.get("top_assets_by_risk"))[:5]
+    owners = _dict_list(governance_rollups.get("owners"))[:5]
+    environments = _dict_list(governance_rollups.get("environments"))[:5]
     waiver_debt = _dict_value(governance_rollups.get("waiver_debt"))
+    waiver_items = _dict_list(waiver_debt.get("items"))[:5]
+    vex_summary = _governance_vex_summary(findings)
     lines = [
         "",
         "## Governance Rollups",
@@ -1000,41 +1017,152 @@ def _markdown_governance_section(governance_rollups: dict[str, Any]) -> list[str
         "| Field | Value |",
         "| --- | --- |",
         f"| Waivers | {_safe_cell(waiver_debt.get('waiver_count', 0))} |",
+        f"| Active Waivers | {_safe_cell(waiver_debt.get('active_count', 0))} |",
         f"| Expired Waivers | {_safe_cell(waiver_debt.get('expired_count', 0))} |",
         f"| Review Due Waivers | {_safe_cell(waiver_debt.get('review_due_count', 0))} |",
+        f"| Expiring Soon Waivers | {_safe_cell(waiver_debt.get('expiring_soon_count', 0))} |",
         f"| Accepted Findings | {_safe_cell(waiver_debt.get('accepted_finding_count', 0))} |",
+        f"| VEX Suppressed Findings | {_safe_cell(vex_summary['suppressed_by_vex_count'])} |",
+        f"| VEX Under Investigation | {_safe_cell(vex_summary['under_investigation_count'])} |",
         "",
         "### Top Services by Risk",
         "",
     ]
     if not services:
         lines.append("No service rollups are available for this analysis run.")
-        return lines
+    else:
+        lines.extend(
+            [
+                "| Service | Findings | Critical | High | Risk Score | Waiver Debt |",
+                "| --- | --- | --- | --- | --- | --- |",
+            ]
+        )
+        for service in services:
+            waiver_debt_count = int(service.get("expired_waiver_count") or 0) + int(
+                service.get("review_due_waiver_count") or 0
+            )
+            lines.append(
+                "| "
+                + " | ".join(
+                    [
+                        _safe_cell(service.get("label")),
+                        _safe_cell(service.get("finding_count", 0)),
+                        _safe_cell(service.get("critical_count", 0)),
+                        _safe_cell(service.get("high_count", 0)),
+                        _safe_cell(_format_number(service.get("risk_score_total"))),
+                        _safe_cell(waiver_debt_count),
+                    ]
+                )
+                + " |"
+            )
+    lines.extend(
+        [
+            "",
+            "### Top Assets by Risk",
+            "",
+        ]
+    )
+    if not assets:
+        lines.append("No asset rollups are available for this analysis run.")
+    else:
+        lines.extend(
+            [
+                "| Asset | Findings | Critical | High | Risk Score | Accepted | VEX Suppressed |",
+                "| --- | --- | --- | --- | --- | --- | --- |",
+            ]
+        )
+        for asset in assets:
+            lines.append(
+                "| "
+                + " | ".join(
+                    [
+                        _safe_cell(asset.get("label")),
+                        _safe_cell(asset.get("finding_count", 0)),
+                        _safe_cell(asset.get("critical_count", 0)),
+                        _safe_cell(asset.get("high_count", 0)),
+                        _safe_cell(_format_number(asset.get("risk_score_total"))),
+                        _safe_cell(asset.get("accepted_count", 0)),
+                        _safe_cell(asset.get("suppressed_by_vex_count", 0)),
+                    ]
+                )
+                + " |"
+            )
+    lines.extend(
+        [
+            "",
+            "### Accepted Risk and Expiring Waivers",
+            "",
+        ]
+    )
+    if waiver_items:
+        lines.extend(
+            [
+                "| Scope | Owner | Status | Expires | Review | Matched Findings |",
+                "| --- | --- | --- | --- | --- | --- |",
+            ]
+        )
+        for item in waiver_items:
+            lines.append(
+                "| "
+                + " | ".join(
+                    [
+                        _safe_cell(item.get("scope")),
+                        _safe_cell(item.get("owner")),
+                        _safe_cell(item.get("status")),
+                        _safe_cell(item.get("expires_at")),
+                        _safe_cell(item.get("review_at")),
+                        _safe_cell(item.get("matched_findings", 0)),
+                    ]
+                )
+                + " |"
+            )
+    else:
+        lines.append("No accepted-risk waiver debt is currently recorded for this run.")
 
     lines.extend(
         [
-            "| Service | Findings | Critical | High | Risk Score | Waiver Debt |",
-            "| --- | --- | --- | --- | --- | --- |",
+            "",
+            "### Owner and Environment Rollups",
+            "",
+            "| Dimension | Label | Findings | Critical | High | Accepted | Waiver Debt |",
+            "| --- | --- | --- | --- | --- | --- | --- |",
         ]
     )
-    for service in services:
-        waiver_debt_count = int(service.get("expired_waiver_count") or 0) + int(
-            service.get("review_due_waiver_count") or 0
-        )
-        lines.append(
-            "| "
-            + " | ".join(
-                [
-                    _safe_cell(service.get("label")),
-                    _safe_cell(service.get("finding_count", 0)),
-                    _safe_cell(service.get("critical_count", 0)),
-                    _safe_cell(service.get("high_count", 0)),
-                    _safe_cell(_format_number(service.get("risk_score_total"))),
-                    _safe_cell(waiver_debt_count),
-                ]
+    for dimension, rows in (("Owner", owners), ("Environment", environments)):
+        for row in rows:
+            waiver_debt_count = int(row.get("expired_waiver_count") or 0) + int(
+                row.get("review_due_waiver_count") or 0
             )
-            + " |"
-        )
+            lines.append(
+                "| "
+                + " | ".join(
+                    [
+                        _safe_cell(dimension),
+                        _safe_cell(row.get("label")),
+                        _safe_cell(row.get("finding_count", 0)),
+                        _safe_cell(row.get("critical_count", 0)),
+                        _safe_cell(row.get("high_count", 0)),
+                        _safe_cell(row.get("accepted_count", 0)),
+                        _safe_cell(waiver_debt_count),
+                    ]
+                )
+                + " |"
+            )
+    if not owners and not environments:
+        lines.append("| Owner | Unassigned | 0 | 0 | 0 | 0 | 0 |")
+
+    lines.extend(
+        [
+            "",
+            "### VEX Summary",
+            "",
+            "| Field | Value |",
+            "| --- | --- |",
+            f"| Suppressed by VEX | {_safe_cell(vex_summary['suppressed_by_vex_count'])} |",
+            f"| Under Investigation | {_safe_cell(vex_summary['under_investigation_count'])} |",
+            f"| Fixed | {_safe_cell(vex_summary['fixed_count'])} |",
+        ]
+    )
     return lines
 
 
@@ -1183,6 +1311,8 @@ def render_evidence_bundle_zip(
             "provider-snapshot",
         ),
     ]
+    governance_entries = _governance_bundle_entries(bundle_payload)
+    entries.extend(governance_entries)
     if attack_navigator_layer is not None:
         redacted_layer, layer_redactions = _redact_bundle_value(
             attack_navigator_layer,
@@ -1240,6 +1370,15 @@ def render_evidence_bundle_zip(
         },
         "files": file_entries,
     }
+    if governance_entries:
+        manifest["governance_artifacts"] = [
+            {
+                "bundle_path": path,
+                "kind": kind,
+                "sha256": artifact_hashes[path],
+            }
+            for path, _content, kind in governance_entries
+        ]
     if REPORT_FILENAME_ATTACK_NAVIGATOR in artifact_hashes:
         manifest["attack_navigator_layer"] = {
             "bundle_path": REPORT_FILENAME_ATTACK_NAVIGATOR,
@@ -1312,6 +1451,184 @@ def _bundle_input_hashes(payload: MarkdownReportPayload) -> list[dict[str, Any]]
 def _safe_bundle_filename(value: object) -> str:
     filename = Path(str(value)).name.strip() if value is not None else ""
     return filename or "uploaded-input"
+
+
+def _governance_bundle_entries(
+    payload: MarkdownReportPayload,
+) -> list[tuple[str, bytes, str]]:
+    if not payload.governance_rollups:
+        return []
+    artifacts = [
+        (
+            REPORT_FILENAME_GOVERNANCE_ROLLUPS,
+            _governance_rollups_export(payload),
+            REPORT_KIND_GOVERNANCE_ROLLUPS,
+        ),
+        (
+            REPORT_FILENAME_GOVERNANCE_WAIVERS,
+            _governance_waivers_export(payload),
+            REPORT_KIND_GOVERNANCE_WAIVERS,
+        ),
+        (
+            REPORT_FILENAME_GOVERNANCE_VEX,
+            _governance_vex_export(payload),
+            REPORT_KIND_GOVERNANCE_VEX,
+        ),
+        (
+            REPORT_FILENAME_GOVERNANCE_ASSET_CONTEXT,
+            _governance_asset_context_export(payload),
+            REPORT_KIND_GOVERNANCE_ASSET_CONTEXT,
+        ),
+    ]
+    return [(path, _json_bytes(content), kind) for path, content, kind in artifacts]
+
+
+def _governance_rollups_export(payload: MarkdownReportPayload) -> dict[str, Any]:
+    return {
+        "schema": "governance-rollups.v1",
+        "schema_version": "1.0.0",
+        "generated_at": _iso_datetime(payload.generated_at),
+        "project_id": payload.project_id,
+        "run_id": payload.run_id,
+        "rollups": payload.governance_rollups,
+    }
+
+
+def _governance_waivers_export(payload: MarkdownReportPayload) -> dict[str, Any]:
+    waiver_debt = _dict_value(payload.governance_rollups.get("waiver_debt"))
+    accepted_findings = [
+        _governance_finding_row(finding)
+        for finding in payload.findings
+        if _boolish_signal(finding, "waived") or finding.status.lower().endswith("accepted")
+    ]
+    return {
+        "schema": "governance-waivers.v1",
+        "schema_version": "1.0.0",
+        "generated_at": _iso_datetime(payload.generated_at),
+        "project_id": payload.project_id,
+        "run_id": payload.run_id,
+        "waiver_debt": waiver_debt,
+        "accepted_findings": accepted_findings,
+    }
+
+
+def _governance_vex_export(payload: MarkdownReportPayload) -> dict[str, Any]:
+    vex_findings = [
+        _governance_finding_row(finding)
+        for finding in payload.findings
+        if _boolish_signal(finding, "suppressed_by_vex")
+        or _boolish_signal(finding, "under_investigation")
+        or _vex_statuses_label(finding)
+    ]
+    return {
+        "schema": "governance-vex-summary.v1",
+        "schema_version": "1.0.0",
+        "generated_at": _iso_datetime(payload.generated_at),
+        "project_id": payload.project_id,
+        "run_id": payload.run_id,
+        "summary": _governance_vex_summary(payload.findings),
+        "findings": vex_findings,
+    }
+
+
+def _governance_asset_context_export(payload: MarkdownReportPayload) -> dict[str, Any]:
+    return {
+        "schema": "governance-asset-context.v1",
+        "schema_version": "1.0.0",
+        "generated_at": _iso_datetime(payload.generated_at),
+        "project_id": payload.project_id,
+        "run_id": payload.run_id,
+        "owners": _dict_list(payload.governance_rollups.get("owners")),
+        "services": _dict_list(payload.governance_rollups.get("services")),
+        "top_assets_by_risk": _dict_list(payload.governance_rollups.get("top_assets_by_risk")),
+        "environments": _dict_list(payload.governance_rollups.get("environments")),
+        "assets": _asset_context_rows(payload.findings),
+    }
+
+
+def _asset_context_rows(findings: list[MarkdownReportFinding]) -> list[dict[str, Any]]:
+    grouped: dict[str, list[MarkdownReportFinding]] = {}
+    for finding in findings:
+        label = finding.asset_key or finding.asset or "Unassigned"
+        grouped.setdefault(label, []).append(finding)
+    rows: list[dict[str, Any]] = []
+    for label, items in grouped.items():
+        first = items[0]
+        rows.append(
+            {
+                "asset_key": first.asset_key,
+                "label": label,
+                "owner": first.owner,
+                "business_service": first.business_service,
+                "environment": first.environment,
+                "exposure": first.exposure,
+                "criticality": first.criticality,
+                "finding_count": len(items),
+                "accepted_count": sum(
+                    1
+                    for finding in items
+                    if _boolish_signal(finding, "waived")
+                    or finding.status.lower().endswith("accepted")
+                ),
+                "suppressed_by_vex_count": sum(
+                    1 for finding in items if _boolish_signal(finding, "suppressed_by_vex")
+                ),
+                "top_cves": [finding.cve_id for finding in items[:5]],
+            }
+        )
+    rows.sort(
+        key=lambda item: (
+            -int(item["finding_count"]),
+            str(item["business_service"] or ""),
+            str(item["label"]),
+        )
+    )
+    return rows
+
+
+def _governance_finding_row(finding: MarkdownReportFinding) -> dict[str, Any]:
+    waiver = _dict_value(finding.explanation.get("waiver"))
+    return {
+        "id": finding.id,
+        "cve_id": finding.cve_id,
+        "priority": _priority_label(finding.priority),
+        "status": finding.status,
+        "risk_score": finding.risk_score,
+        "asset": finding.asset,
+        "asset_key": finding.asset_key,
+        "owner": finding.owner,
+        "business_service": finding.business_service,
+        "environment": finding.environment,
+        "waived": _boolish_signal(finding, "waived"),
+        "waiver_status": _string_from_mapping(waiver, "waiver_status")
+        or _string_from_mapping(finding.explanation, "waiver_status"),
+        "waiver_owner": _string_from_mapping(waiver, "waiver_owner")
+        or _string_from_mapping(finding.explanation, "waiver_owner"),
+        "waiver_expires_on": _string_from_mapping(waiver, "waiver_expires_on")
+        or _string_from_mapping(finding.explanation, "waiver_expires_on"),
+        "waiver_review_on": _string_from_mapping(waiver, "waiver_review_on")
+        or _string_from_mapping(finding.explanation, "waiver_review_on"),
+        "suppressed_by_vex": _boolish_signal(finding, "suppressed_by_vex"),
+        "under_investigation": _boolish_signal(finding, "under_investigation"),
+        "vex_statuses": _vex_statuses_label(finding),
+        "decision_statement": finding.decision_statement,
+    }
+
+
+def _governance_vex_summary(findings: list[MarkdownReportFinding]) -> dict[str, Any]:
+    status_counts: Counter[str] = Counter()
+    for finding in findings:
+        status_counts.update(_vex_status_counts_from_explanation(finding.explanation))
+    return {
+        "suppressed_by_vex_count": sum(
+            1 for finding in findings if _boolish_signal(finding, "suppressed_by_vex")
+        ),
+        "under_investigation_count": sum(
+            1 for finding in findings if _boolish_signal(finding, "under_investigation")
+        ),
+        "fixed_count": sum(1 for finding in findings if finding.status.lower().endswith("fixed")),
+        "status_counts": dict(sorted(status_counts.items())),
+    }
 
 
 def _redacted_bundle_payload(
@@ -1519,7 +1836,7 @@ def render_html_executive_report(payload: MarkdownReportPayload) -> str:
     if not recommendations:
         recommendations = "<li>No remediation recommendations are available for this run.</li>"
     governance_section = (
-        f"{_html_governance_rollups(payload.governance_rollups)}\n\n"
+        f"{_html_governance_rollups(payload.governance_rollups, payload.findings)}\n\n"
         if payload.governance_rollups
         else ""
     )
@@ -1622,35 +1939,76 @@ def _html_metric(label: str, value: object) -> str:
     )
 
 
-def _html_governance_rollups(governance_rollups: dict[str, Any]) -> str:
+def _html_governance_rollups(
+    governance_rollups: dict[str, Any],
+    findings: list[MarkdownReportFinding],
+) -> str:
     services = _dict_list(governance_rollups.get("top_services_by_risk"))[:5]
+    assets = _dict_list(governance_rollups.get("top_assets_by_risk"))[:5]
     waiver_debt = _dict_value(governance_rollups.get("waiver_debt"))
-    rows = "\n".join(_html_service_rollup_row(service) for service in services)
-    if not rows:
-        rows = (
+    waiver_items = _dict_list(waiver_debt.get("items"))[:5]
+    vex_summary = _governance_vex_summary(findings)
+    service_rows = "\n".join(_html_service_rollup_row(service) for service in services)
+    if not service_rows:
+        service_rows = (
             '<tr><td colspan="6" class="empty-state">'
             "No service rollups are available for this analysis run.</td></tr>"
+        )
+    asset_rows = "\n".join(_html_asset_rollup_row(asset) for asset in assets)
+    if not asset_rows:
+        asset_rows = (
+            '<tr><td colspan="7" class="empty-state">'
+            "No asset rollups are available for this analysis run.</td></tr>"
+        )
+    waiver_rows = "\n".join(_html_waiver_debt_row(item) for item in waiver_items)
+    if not waiver_rows:
+        waiver_rows = (
+            '<tr><td colspan="6" class="empty-state">'
+            "No accepted-risk waiver debt is currently recorded for this run.</td></tr>"
         )
     return (
         '    <section aria-labelledby="governance-rollups">\n'
         '      <div class="section-heading">\n'
         '        <p class="eyebrow">Governance</p>\n'
-        '        <h2 id="governance-rollups">Service Risk and Waiver Debt</h2>\n'
+        '        <h2 id="governance-rollups">Service Risk, Accepted Risk, and VEX</h2>\n'
         "      </div>\n"
         '      <div class="metric-grid">\n'
         f"        {_html_metric('Waivers', waiver_debt.get('waiver_count', 0))}\n"
         f"        {_html_metric('Expired', waiver_debt.get('expired_count', 0))}\n"
         f"        {_html_metric('Review Due', waiver_debt.get('review_due_count', 0))}\n"
+        f"        {_html_metric('Expiring Soon', waiver_debt.get('expiring_soon_count', 0))}\n"
         "        "
         f"{_html_metric('Accepted Findings', waiver_debt.get('accepted_finding_count', 0))}\n"
+        f"        {_html_metric('VEX Suppressed', vex_summary['suppressed_by_vex_count'])}\n"
         "      </div>\n"
+        "      <h3>Service Rollup</h3>\n"
         '      <div class="table-wrap">\n'
         "        <table>\n"
         "          <thead>\n"
         "            <tr><th>Service</th><th>Findings</th><th>Critical</th><th>High</th>"
         "<th>Risk Score</th><th>Waiver Debt</th></tr>\n"
         "          </thead>\n"
-        f"          <tbody>\n{rows}\n          </tbody>\n"
+        f"          <tbody>\n{service_rows}\n          </tbody>\n"
+        "        </table>\n"
+        "      </div>\n"
+        "      <h3>Asset Rollup</h3>\n"
+        '      <div class="table-wrap">\n'
+        "        <table>\n"
+        "          <thead>\n"
+        "            <tr><th>Asset</th><th>Findings</th><th>Critical</th><th>High</th>"
+        "<th>Risk Score</th><th>Accepted</th><th>VEX Suppressed</th></tr>\n"
+        "          </thead>\n"
+        f"          <tbody>\n{asset_rows}\n          </tbody>\n"
+        "        </table>\n"
+        "      </div>\n"
+        "      <h3>Accepted Risk and Expiring Waivers</h3>\n"
+        '      <div class="table-wrap">\n'
+        "        <table>\n"
+        "          <thead>\n"
+        "            <tr><th>Scope</th><th>Owner</th><th>Status</th><th>Expires</th>"
+        "<th>Review</th><th>Matched</th></tr>\n"
+        "          </thead>\n"
+        f"          <tbody>\n{waiver_rows}\n          </tbody>\n"
         "        </table>\n"
         "      </div>\n"
         "    </section>"
@@ -1669,6 +2027,33 @@ def _html_service_rollup_row(service: dict[str, Any]) -> str:
         f"<td>{_safe_html(service.get('high_count', 0))}</td>"
         f"<td>{_safe_html(_format_number(service.get('risk_score_total')))}</td>"
         f"<td>{_safe_html(waiver_debt_count)}</td>"
+        "</tr>"
+    )
+
+
+def _html_asset_rollup_row(asset: dict[str, Any]) -> str:
+    return (
+        "            <tr>"
+        f"<td>{_safe_html(asset.get('label'))}</td>"
+        f"<td>{_safe_html(asset.get('finding_count', 0))}</td>"
+        f"<td>{_safe_html(asset.get('critical_count', 0))}</td>"
+        f"<td>{_safe_html(asset.get('high_count', 0))}</td>"
+        f"<td>{_safe_html(_format_number(asset.get('risk_score_total')))}</td>"
+        f"<td>{_safe_html(asset.get('accepted_count', 0))}</td>"
+        f"<td>{_safe_html(asset.get('suppressed_by_vex_count', 0))}</td>"
+        "</tr>"
+    )
+
+
+def _html_waiver_debt_row(item: dict[str, Any]) -> str:
+    return (
+        "            <tr>"
+        f"<td>{_safe_html(item.get('scope'))}</td>"
+        f"<td>{_safe_html(item.get('owner'))}</td>"
+        f"<td>{_safe_html(item.get('status'))}</td>"
+        f"<td>{_safe_html(item.get('expires_at'))}</td>"
+        f"<td>{_safe_html(item.get('review_at'))}</td>"
+        f"<td>{_safe_html(item.get('matched_findings', 0))}</td>"
         "</tr>"
     )
 
@@ -1848,6 +2233,12 @@ def _finding_payload(
     occurrences: list[FindingOccurrence],
 ) -> MarkdownReportFinding:
     decision_guidance = _decision_guidance(finding)
+    explanation = _dict_value(finding.explanation_json)
+    base_decision_statement = _decision_text(
+        decision_guidance,
+        "decision_statement",
+        fallback=finding.recommended_action,
+    )
     return MarkdownReportFinding(
         id=str(finding.id),
         dedup_key=finding.dedup_key,
@@ -1876,15 +2267,15 @@ def _finding_payload(
         vulnerability=_vulnerability_payload(finding),
         rationale=finding.rationale,
         recommended_action=finding.recommended_action,
-        explanation=_dict_value(finding.explanation_json),
+        explanation=explanation,
         data_quality=_dict_value(finding.data_quality_json),
         evidence=_dict_value(finding.evidence_json),
         occurrences=[_occurrence_payload(occurrence) for occurrence in occurrences],
         data_quality_confidence=_data_quality_confidence(finding),
-        decision_statement=_decision_text(
-            decision_guidance,
-            "decision_statement",
-            fallback=finding.recommended_action,
+        decision_statement=_governance_decision_statement(
+            finding=finding,
+            explanation=explanation,
+            base_statement=base_decision_statement,
         ),
         business_impact=_decision_text(decision_guidance, "business_impact"),
         decision_sla=_decision_sla(decision_guidance),
@@ -1894,6 +2285,67 @@ def _finding_payload(
         created_at=finding.created_at,
         updated_at=finding.updated_at,
     )
+
+
+def _governance_decision_statement(
+    *,
+    finding: Finding,
+    explanation: dict[str, Any],
+    base_statement: str | None,
+) -> str | None:
+    statement = base_statement
+    additions: list[str] = []
+    waiver = _dict_value(explanation.get("waiver"))
+    waiver_status = _string_from_mapping(waiver, "waiver_status") or _string_from_mapping(
+        explanation, "waiver_status"
+    )
+    if finding.waived or waiver_status:
+        additions.append(
+            "Accepted-risk governance remains visible"
+            + _governance_detail_clause(
+                (
+                    (
+                        "owner",
+                        _string_from_mapping(waiver, "waiver_owner")
+                        or _string_from_mapping(explanation, "waiver_owner"),
+                    ),
+                    ("status", waiver_status),
+                    (
+                        "review",
+                        _string_from_mapping(waiver, "waiver_review_on")
+                        or _string_from_mapping(explanation, "waiver_review_on"),
+                    ),
+                    (
+                        "expires",
+                        _string_from_mapping(waiver, "waiver_expires_on")
+                        or _string_from_mapping(explanation, "waiver_expires_on"),
+                    ),
+                )
+            )
+            + "."
+        )
+    if finding.suppressed_by_vex or finding.under_investigation:
+        vex_statuses = _vex_statuses_label_from_explanation(explanation)
+        additions.append(
+            "VEX governance applies"
+            + _governance_detail_clause(
+                (
+                    ("status", vex_statuses),
+                    ("source", _string_from_mapping(explanation, "vex_source_format")),
+                    ("record", _string_from_mapping(explanation, "vex_source_record_id")),
+                )
+            )
+            + "."
+        )
+    if not additions:
+        return statement
+    prefix = statement.rstrip() if statement else "Decision Statement: review finding governance."
+    return f"{prefix} {' '.join(additions)}"
+
+
+def _governance_detail_clause(items: Sequence[tuple[str, str | None]]) -> str:
+    details = [f"{label} {value}" for label, value in items if value]
+    return f" ({'; '.join(details)})" if details else ""
 
 
 def _provider_snapshot_payload(
@@ -2092,6 +2544,11 @@ def _decision_guidance_from_payload(finding: MarkdownReportFinding) -> dict[str,
     return dict(value) if isinstance(value, dict) else {}
 
 
+def _string_from_mapping(mapping: dict[str, Any], key: str) -> str | None:
+    value = mapping.get(key)
+    return value if isinstance(value, str) and value.strip() else None
+
+
 def _boolish_signal(finding: MarkdownReportFinding, key: str) -> bool:
     if hasattr(finding, key):
         return bool(getattr(finding, key))
@@ -2116,10 +2573,35 @@ def _dict_list(value: Any) -> list[dict[str, Any]]:
 
 
 def _vex_statuses_label(finding: MarkdownReportFinding) -> str:
-    statuses = finding.explanation.get("vex_statuses")
-    if isinstance(statuses, dict):
-        return ";".join(f"{status}:{count}" for status, count in sorted(statuses.items()))
+    return _vex_statuses_label_from_explanation(finding.explanation)
+
+
+def _vex_statuses_label_from_explanation(explanation: dict[str, Any]) -> str:
+    status_counts = _vex_status_counts_from_explanation(explanation)
+    if status_counts:
+        return ";".join(f"{status}:{count}" for status, count in sorted(status_counts.items()))
     return ""
+
+
+def _vex_status_counts_from_explanation(explanation: dict[str, Any]) -> Counter[str]:
+    status_counts: Counter[str] = Counter()
+    for record in (explanation, _dict_value(explanation.get("provenance"))):
+        statuses = record.get("vex_statuses")
+        if isinstance(statuses, dict) and statuses:
+            for status, count in statuses.items():
+                status_text = str(status).strip()
+                if not status_text:
+                    continue
+                if isinstance(count, int | float):
+                    status_counts[status_text] += int(count)
+                elif count:
+                    status_counts[status_text] += 1
+            return status_counts
+        status = record.get("vex_status")
+        if isinstance(status, str) and status.strip():
+            status_counts[status.strip()] += 1
+            return status_counts
+    return status_counts
 
 
 def _format_number(value: float | None) -> str:
