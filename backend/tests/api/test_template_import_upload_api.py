@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import uuid
 from dataclasses import replace
 from pathlib import Path
@@ -69,8 +70,9 @@ def test_valid_cve_list_upload_creates_analysis_run_and_stores_sha256(
     assert payload["summary_json"]["input_upload"]["sha256"] == expected_sha256
     assert payload["summary_json"]["input_upload"]["original_filename"] == "Team Scan (prod).txt"
     assert payload["summary_json"]["input_upload"]["stored_filename"] == "Team_Scan__prod_.txt"
-    assert payload["summary_json"]["input_upload"]["path"].startswith(str(upload_dir))
-    assert Path(payload["summary_json"]["input_upload"]["path"]).read_bytes() == content
+    stored_path = Path(payload["summary_json"]["input_upload"]["path"])
+    assert stored_path == upload_dir / project["id"] / payload["id"] / "Team_Scan__prod_.txt"
+    assert stored_path.read_bytes() == content
     assert payload["summary_json"]["import_job"]["status"] == "succeeded"
     assert [item["status"] for item in payload["summary_json"]["import_job"]["status_history"]] == [
         "pending",
@@ -596,7 +598,9 @@ def test_import_upload_applies_openvex_sidecar_to_template_findings(
     assert occurrence["vex_status"] == "fixed"
     assert occurrence["vex_match_type"] == "purl"
     assert occurrence["vex_source_format"] == "openvex-json"
+    assert occurrence["vex_source_path"] == "openvex.json"
     assert occurrence["vex_action_statement"] == "Upgrade completed for the scoped component."
+    _assert_no_sensitive_path_leak(occurrence, tmp_path, upload_dir)
 
 
 def test_import_upload_applies_cyclonedx_vex_sidecar_to_template_findings(
@@ -669,7 +673,7 @@ def test_import_upload_rejects_invalid_vex_sidecar_with_clear_error(
     template_api_env: TemplateApiEnv,
     tmp_path: Path,
 ) -> None:
-    _configure_upload_dir(template_api_env, tmp_path)
+    upload_dir = _configure_upload_dir(template_api_env, tmp_path)
     headers = auth_headers(template_api_env.client)
     project = create_project_via_api(template_api_env.client, headers)
 
@@ -693,6 +697,8 @@ def test_import_upload_rejects_invalid_vex_sidecar_with_clear_error(
     assert detail["analysis_run_id"]
     assert detail["vex_error"]["stage"] == "vex_parse"
     assert "OpenVEX JSON `statements`" in detail["vex_error"]["message"]
+    assert "uploaded file" in detail["vex_error"]["message"]
+    _assert_no_sensitive_path_leak(detail["vex_error"], tmp_path, upload_dir)
 
     run = template_api_env.client.get(
         f"/api/v1/runs/{detail['analysis_run_id']}",
@@ -702,6 +708,8 @@ def test_import_upload_rejects_invalid_vex_sidecar_with_clear_error(
     run_payload = run.json()
     assert run_payload["status"] == "failed"
     assert run_payload["summary_json"]["vex_error"]["stage"] == "vex_parse"
+    _assert_no_sensitive_path_leak(run_payload["error_json"]["vex_error"], tmp_path, upload_dir)
+    _assert_no_sensitive_path_leak(run_payload["summary_json"]["vex_error"], tmp_path, upload_dir)
     assert run_payload["summary_json"]["created_findings"] == 0
     assert run_payload["summary_json"]["updated_findings"] == 0
 
@@ -717,7 +725,7 @@ def test_import_upload_rejects_invalid_asset_context_sidecar_with_clear_error(
     template_api_env: TemplateApiEnv,
     tmp_path: Path,
 ) -> None:
-    _configure_upload_dir(template_api_env, tmp_path)
+    upload_dir = _configure_upload_dir(template_api_env, tmp_path)
     headers = auth_headers(template_api_env.client)
     project = create_project_via_api(template_api_env.client, headers)
 
@@ -745,6 +753,7 @@ def test_import_upload_rejects_invalid_asset_context_sidecar_with_clear_error(
     assert detail["analysis_run_id"]
     assert detail["asset_context_error"]["stage"] == "asset_context_parse"
     assert "asset_id" in detail["asset_context_error"]["message"]
+    _assert_no_sensitive_path_leak(detail["asset_context_error"], tmp_path, upload_dir)
 
     run = template_api_env.client.get(
         f"/api/v1/runs/{detail['analysis_run_id']}",
@@ -754,6 +763,16 @@ def test_import_upload_rejects_invalid_asset_context_sidecar_with_clear_error(
     run_payload = run.json()
     assert run_payload["status"] == "failed"
     assert run_payload["summary_json"]["asset_context_error"]["stage"] == ("asset_context_parse")
+    _assert_no_sensitive_path_leak(
+        run_payload["error_json"]["asset_context_error"],
+        tmp_path,
+        upload_dir,
+    )
+    _assert_no_sensitive_path_leak(
+        run_payload["summary_json"]["asset_context_error"],
+        tmp_path,
+        upload_dir,
+    )
     assert run_payload["summary_json"]["created_findings"] == 0
     assert run_payload["summary_json"]["updated_findings"] == 0
 
@@ -770,12 +789,12 @@ def test_analysis_failure_persists_failed_run_without_partial_findings(
     template_api_env: TemplateApiEnv,
     tmp_path: Path,
 ) -> None:
-    _configure_upload_dir(template_api_env, tmp_path)
+    upload_dir = _configure_upload_dir(template_api_env, tmp_path)
     headers = auth_headers(template_api_env.client)
     project = create_project_via_api(template_api_env.client, headers)
 
     def _fail_analysis(*args: object, **kwargs: object) -> object:
-        raise TemplateAnalysisError("scoring failed")
+        raise TemplateAnalysisError(f"scoring failed for {upload_dir / 'private.json'}")
 
     monkeypatch.setattr(
         "app.api.routes.imports.AnalysisService.analyze_import",
@@ -794,6 +813,8 @@ def test_analysis_failure_persists_failed_run_without_partial_findings(
     assert detail["message"] == "Import analysis failed."
     assert detail["analysis_error"]["stage"] == "enrich_score_explain"
     assert "scoring failed" in detail["analysis_error"]["message"]
+    assert "uploaded file" in detail["analysis_error"]["message"]
+    _assert_no_sensitive_path_leak(detail["analysis_error"], tmp_path, upload_dir)
 
     run = template_api_env.client.get(
         f"/api/v1/runs/{detail['analysis_run_id']}",
@@ -803,6 +824,16 @@ def test_analysis_failure_persists_failed_run_without_partial_findings(
     run_payload = run.json()
     assert run_payload["status"] == "failed"
     assert run_payload["summary_json"]["analysis_error"]["stage"] == "enrich_score_explain"
+    _assert_no_sensitive_path_leak(
+        run_payload["summary_json"]["analysis_error"],
+        tmp_path,
+        upload_dir,
+    )
+    _assert_no_sensitive_path_leak(
+        run_payload["error_json"]["analysis_error"],
+        tmp_path,
+        upload_dir,
+    )
     assert run_payload["summary_json"]["created_findings"] == 0
     assert run_payload["summary_json"]["updated_findings"] == 0
 
@@ -910,6 +941,35 @@ def test_upload_rejects_oversized_file_without_persisting_run_or_file(
     assert not upload_dir.exists()
 
 
+def test_upload_rejects_aggregate_primary_and_sidecar_size_before_persisting(
+    template_api_env: TemplateApiEnv,
+    tmp_path: Path,
+) -> None:
+    upload_dir = _configure_upload_dir(template_api_env, tmp_path, max_upload_mb=1)
+    headers = auth_headers(template_api_env.client)
+    project = create_project_via_api(template_api_env.client, headers)
+    max_bytes = 1024 * 1024
+
+    response = template_api_env.client.post(
+        f"/api/v1/projects/{project['id']}/imports",
+        headers=headers,
+        data={"input_type": "cve-list"},
+        files={
+            "file": ("sample.txt", b"A" * (max_bytes // 2), "text/plain"),
+            "asset_context_file": (
+                "asset-context.csv",
+                b"B" * ((max_bytes // 2) + 1),
+                "text/csv",
+            ),
+        },
+    )
+
+    assert response.status_code == 413
+    assert "Upload exceeds configured limit" in response.text
+    assert _run_count(template_api_env, uuid.UUID(project["id"])) == 0
+    assert not upload_dir.exists()
+
+
 def test_upload_rejects_path_traversal_filename(
     template_api_env: TemplateApiEnv,
     tmp_path: Path,
@@ -930,6 +990,117 @@ def test_upload_rejects_path_traversal_filename(
     assert "Upload filename is not allowed" in response.text
     assert _run_count(template_api_env, uuid.UUID(project["id"])) == 0
     assert not outside.exists()
+    assert not upload_dir.exists()
+
+
+@pytest.mark.parametrize(
+    ("field_name", "filename", "content_type", "expected_detail"),
+    [
+        (
+            "asset_context_file",
+            "../asset-context.csv",
+            "text/csv",
+            "Upload filename is not allowed",
+        ),
+        ("vex_file", "..\\openvex.json", "application/json", "Upload filename is not allowed"),
+        ("asset_context_file", "asset-context.txt", "text/csv", "Asset context file must be a CSV"),
+        (
+            "asset_context_file",
+            "asset-context.csv",
+            "application/json",
+            "Asset context content type must be text/csv",
+        ),
+        ("vex_file", "openvex.txt", "application/json", "VEX file must be a JSON document"),
+        (
+            "vex_file",
+            "openvex.json",
+            "text/plain",
+            "VEX content type must be application/json",
+        ),
+    ],
+)
+def test_upload_rejects_unsafe_or_unsupported_sidecar_uploads(
+    template_api_env: TemplateApiEnv,
+    tmp_path: Path,
+    field_name: str,
+    filename: str,
+    content_type: str,
+    expected_detail: str,
+) -> None:
+    upload_dir = _configure_upload_dir(template_api_env, tmp_path)
+    headers = auth_headers(template_api_env.client)
+    project = create_project_via_api(template_api_env.client, headers)
+
+    response = template_api_env.client.post(
+        f"/api/v1/projects/{project['id']}/imports",
+        headers=headers,
+        data={"input_type": "cve-list"},
+        files={
+            "file": ("sample.txt", b"CVE-2024-3094\n", "text/plain"),
+            field_name: (filename, b"{}", content_type),
+        },
+    )
+
+    assert response.status_code == 422
+    assert expected_detail in response.text
+    assert _run_count(template_api_env, uuid.UUID(project["id"])) == 0
+    assert not upload_dir.exists()
+
+
+@pytest.mark.parametrize(
+    ("form_data", "expected_detail"),
+    [
+        (
+            {
+                "provider_snapshot_file": "/tmp/private-snapshot.json",
+                "locked_provider_data": "true",
+            },
+            "Provider snapshot path is not allowed",
+        ),
+        (
+            {
+                "provider_snapshot_file": "../demo_provider_snapshot.json",
+                "locked_provider_data": "true",
+            },
+            "Provider snapshot path is not allowed",
+        ),
+        (
+            {
+                "provider_snapshot_file": "demo_provider_snapshot.txt",
+                "locked_provider_data": "true",
+            },
+            "Provider snapshot path is not allowed",
+        ),
+        (
+            {"provider_snapshot_file": "missing.json", "locked_provider_data": "true"},
+            "Provider snapshot file does not exist",
+        ),
+        (
+            {"attack_mapping_file": "../mapping.json"},
+            "ATT&CK artifact path is not allowed",
+        ),
+    ],
+)
+def test_upload_rejects_untrusted_provider_and_attack_artifact_paths(
+    template_api_env: TemplateApiEnv,
+    tmp_path: Path,
+    form_data: dict[str, str],
+    expected_detail: str,
+) -> None:
+    upload_dir = _configure_upload_dir(template_api_env, tmp_path)
+    headers = auth_headers(template_api_env.client)
+    project = create_project_via_api(template_api_env.client, headers)
+
+    response = template_api_env.client.post(
+        f"/api/v1/projects/{project['id']}/imports",
+        headers=headers,
+        data={"input_type": "cve-list", **form_data},
+        files={"file": ("sample.txt", b"CVE-2024-3094\n", "text/plain")},
+    )
+
+    assert response.status_code == 422
+    assert expected_detail in response.text
+    assert _run_count(template_api_env, uuid.UUID(project["id"])) == 0
     assert not upload_dir.exists()
 
 
@@ -962,6 +1133,7 @@ def test_parse_errors_are_structured_and_failed_run_is_persisted(
     assert detail["parse_errors"][0]["value"] == "not-a-cve"
     assert "line 2" in detail["parse_errors"][0]["message"]
     assert "not-a-cve" in detail["parse_errors"][0]["message"]
+    _assert_no_sensitive_path_leak(detail["parse_errors"], tmp_path, upload_dir)
 
     run = template_api_env.client.get(
         f"/api/v1/runs/{detail['analysis_run_id']}",
@@ -977,6 +1149,8 @@ def test_parse_errors_are_structured_and_failed_run_is_persisted(
     ]
     assert payload["error_json"]["parse_errors"] == detail["parse_errors"]
     assert payload["summary_json"]["parse_errors"] == detail["parse_errors"]
+    _assert_no_sensitive_path_leak(payload["error_json"]["parse_errors"], tmp_path, upload_dir)
+    _assert_no_sensitive_path_leak(payload["summary_json"]["parse_errors"], tmp_path, upload_dir)
     assert payload["summary_json"]["input_upload"]["sha256"] == expected_sha256
     assert Path(payload["summary_json"]["input_upload"]["path"]).is_relative_to(upload_dir)
     assert Path(payload["summary_json"]["input_upload"]["path"]).read_bytes() == content
@@ -992,6 +1166,105 @@ def test_parse_errors_are_structured_and_failed_run_is_persisted(
     assert summary_payload["updated_findings"] == 0
     assert summary_payload["ignored_lines"] == 0
     assert summary_payload["parse_errors"] == detail["parse_errors"]
+
+
+def test_xml_parse_errors_redact_local_upload_paths(
+    template_api_env: TemplateApiEnv,
+    tmp_path: Path,
+) -> None:
+    upload_dir = _configure_upload_dir(template_api_env, tmp_path)
+    headers = auth_headers(template_api_env.client)
+    project = create_project_via_api(template_api_env.client, headers)
+
+    response = template_api_env.client.post(
+        f"/api/v1/projects/{project['id']}/imports",
+        headers=headers,
+        data={"input_type": "nessus-xml"},
+        files={
+            "file": (
+                "broken.nessus",
+                b"<NessusClientData_v2><Report>",
+                "application/xml",
+            ),
+        },
+    )
+
+    assert response.status_code == 422
+    detail = response.json()["detail"]
+    assert detail["message"] == "Import parsing failed."
+    assert detail["parse_errors"][0]["filename"] == "broken.nessus"
+    assert detail["parse_errors"][0]["input_type"] == "nessus-xml"
+    _assert_no_sensitive_path_leak(detail["parse_errors"], tmp_path, upload_dir)
+
+    run = template_api_env.client.get(
+        f"/api/v1/runs/{detail['analysis_run_id']}",
+        headers=headers,
+    )
+    assert run.status_code == 200
+    run_payload = run.json()
+    assert run_payload["status"] == "failed"
+    assert run_payload["error_json"]["parse_errors"] == detail["parse_errors"]
+    assert run_payload["summary_json"]["parse_errors"] == detail["parse_errors"]
+    _assert_no_sensitive_path_leak(run_payload["error_json"]["parse_errors"], tmp_path, upload_dir)
+    _assert_no_sensitive_path_leak(
+        run_payload["summary_json"]["parse_errors"], tmp_path, upload_dir
+    )
+
+
+@pytest.mark.parametrize(
+    ("filename", "content_type", "content", "expected_status", "expected_detail"),
+    [
+        (
+            "../assets.csv",
+            "text/csv",
+            b"target_kind,target_ref,asset_id\n",
+            422,
+            "Upload filename is not allowed",
+        ),
+        (
+            "assets.txt",
+            "text/csv",
+            b"target_kind,target_ref,asset_id\n",
+            422,
+            "Asset context file must be a CSV",
+        ),
+        (
+            "assets.csv",
+            "application/json",
+            b"target_kind,target_ref,asset_id\n",
+            422,
+            "Asset context content type must be text/csv",
+        ),
+        (
+            "assets.csv",
+            "text/csv",
+            b"A" * ((1024 * 1024) + 1),
+            413,
+            "Upload exceeds configured limit",
+        ),
+    ],
+)
+def test_asset_context_import_rejects_unsafe_uploads(
+    template_api_env: TemplateApiEnv,
+    tmp_path: Path,
+    filename: str,
+    content_type: str,
+    content: bytes,
+    expected_status: int,
+    expected_detail: str,
+) -> None:
+    _configure_upload_dir(template_api_env, tmp_path, max_upload_mb=1)
+    headers = auth_headers(template_api_env.client)
+    project = create_project_via_api(template_api_env.client, headers)
+
+    response = template_api_env.client.post(
+        f"/api/v1/projects/{project['id']}/assets/import",
+        headers=headers,
+        files={"asset_context_file": (filename, content, content_type)},
+    )
+
+    assert response.status_code == expected_status
+    assert expected_detail in response.text
 
 
 def test_summary_tracks_ignored_cve_list_lines(
@@ -1037,6 +1310,21 @@ def _configure_upload_dir(
         MAX_UPLOAD_MB=max_upload_mb,
     )
     return upload_dir.resolve(strict=False)
+
+
+def _assert_no_sensitive_path_leak(payload: object, *paths: Path) -> None:
+    text = json.dumps(payload, sort_keys=True)
+    forbidden_fragments = [
+        "/Users/",
+        "/private/",
+        "/tmp/",
+        "/var/",
+        "\\Users\\",
+    ]
+    for path in paths:
+        forbidden_fragments.append(str(path))
+    for fragment in forbidden_fragments:
+        assert fragment not in text
 
 
 def _run_count(template_api_env: TemplateApiEnv, project_id: uuid.UUID) -> int:

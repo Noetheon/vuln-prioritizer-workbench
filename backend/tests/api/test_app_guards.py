@@ -11,6 +11,8 @@ from fastapi.exceptions import RequestValidationError
 from starlette.requests import Request
 from starlette.responses import PlainTextResponse
 
+from app import main as template_app_module
+from app.core.config import Settings as TemplateSettings
 from vuln_prioritizer.api import app as app_module
 from vuln_prioritizer.api import routes as api_routes
 from vuln_prioritizer.workbench_config import WorkbenchSettings
@@ -31,6 +33,44 @@ def test_upload_size_guard_rejects_oversized_import_upload() -> None:
 
         assert response.status_code == 413
         assert json.loads(response.body)["detail"] == "Upload exceeds configured limit."
+
+    asyncio.run(_exercise())
+
+
+def test_template_upload_size_guard_rejects_oversized_import_and_asset_uploads() -> None:
+    async def _exercise() -> None:
+        import_request = _template_request(
+            path="/api/v1/projects/project-1/imports",
+            method="POST",
+            content_length=str((1 * 1024 * 1024) + (64 * 1024) + 1),
+        )
+        asset_request = _template_request(
+            path="/api/v1/projects/project-1/assets/import",
+            method="POST",
+            content_length=str((1 * 1024 * 1024) + (64 * 1024) + 1),
+        )
+        non_upload_request = _template_request(
+            path="/api/v1/projects/project-1/assets/",
+            method="POST",
+            content_length=str((1 * 1024 * 1024) + (64 * 1024) + 1),
+        )
+
+        import_response = await template_app_module._upload_size_guard(  # noqa: SLF001
+            import_request,
+            _ok_response,
+        )
+        asset_response = await template_app_module._upload_size_guard(  # noqa: SLF001
+            asset_request,
+            _ok_response,
+        )
+        non_upload_response = await template_app_module._upload_size_guard(  # noqa: SLF001
+            non_upload_request,
+            _ok_response,
+        )
+
+        assert import_response.status_code == 413
+        assert asset_response.status_code == 413
+        assert non_upload_response.status_code == 200
 
     asyncio.run(_exercise())
 
@@ -228,6 +268,33 @@ def _request(
         headers.append((b"content-length", content_length.encode("ascii")))
     app = FastAPI()
     app.state.workbench_settings = WorkbenchSettings(max_upload_mb=1)
+    return Request(
+        {
+            "type": "http",
+            "method": method,
+            "path": path,
+            "headers": headers,
+            "query_string": b"",
+            "scheme": "http",
+            "server": ("testserver", 80),
+            "client": ("testclient", 50000),
+            "app": app,
+        },
+        receive=_empty_receive,
+    )
+
+
+def _template_request(
+    *,
+    path: str,
+    method: str = "GET",
+    content_length: str | None = None,
+) -> Request:
+    headers = []
+    if content_length is not None:
+        headers.append((b"content-length", content_length.encode("ascii")))
+    app = FastAPI()
+    app.state.template_settings = TemplateSettings(MAX_UPLOAD_MB=1)
     return Request(
         {
             "type": "http",

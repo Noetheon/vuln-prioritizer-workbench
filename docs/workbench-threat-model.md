@@ -1,6 +1,6 @@
 # Workbench Threat Model and Readiness
 
-Status: current local-first Workbench threat model. Last reviewed: 2026-04-25.
+Status: current local-first Workbench threat model. Last reviewed: 2026-04-30.
 
 This page defines the defensive threat model and operational readiness assumptions for the local Workbench. It keeps the same product boundaries as the rest of the project: `vuln-prioritizer` prioritizes known CVEs and existing findings. It is not a scanner, exploit tool, proof-of-concept generator, or general-purpose vulnerability-management platform.
 
@@ -78,7 +78,7 @@ Primary boundaries:
 
 | Threat | Impact | Mitigations and readiness expectation |
 | --- | --- | --- |
-| Malicious or malformed import file | Parser failure, resource exhaustion, misleading findings | Enforce input-format validation, upload size limits, structured parsers, safe XML parsing, and clear parse warnings. Do not execute content from imports. |
+| Malicious or malformed import file | Parser failure, resource exhaustion, misleading findings | Enforce input-format validation, upload size limits, suffix/MIME allowlists, structured parsers, safe XML parsing, path-redacted parser errors, and clear parse warnings. Do not execute content from imports. |
 | Path traversal in uploads, snapshots, or report downloads | Unauthorized local file read/write | Resolve configured directories server-side, reject arbitrary snapshot paths in Workbench forms, generate server-owned artifact names, and avoid reflecting user-supplied paths into downloads. |
 | Cross-site request forgery against local Workbench forms | Unauthorized imports, report generation, or state changes | Require CSRF token validation for state-changing web forms and keep the token local to the process or configured environment. |
 | Stored or reflected HTML/script from imported metadata | Browser compromise, misleading reports | Escape all user-controlled values in Jinja2 templates and generated HTML. Treat scanner fields, asset names, owners, paths, and descriptions as untrusted text. |
@@ -134,7 +134,9 @@ The current local-first Workbench is readiness-aligned when:
 
 - scope text in README, architecture docs, and Workbench docs consistently says known-CVE prioritizer, not scanner
 - Workbench runtime docs identify SQLite as the default single-node persistence model and the Postgres profile as optional/private
-- imports have size limits, format validation, and parser warnings
+- imports have size limits, suffix/MIME allowlists, traversal-safe filenames,
+  project/run isolation, path-redacted parser errors, safe XML handling, and
+  parser warnings
 - locked provider snapshot replay is explicit and path-restricted
 - reports and evidence bundles include provider provenance and do not leak configured secrets
 - web forms use CSRF protection for state-changing operations
@@ -151,7 +153,7 @@ The current local-first Workbench is readiness-aligned when:
 | Control | Code evidence | Test or smoke evidence |
 | --- | --- | --- |
 | Security headers | `backend/src/vuln_prioritizer/api/app.py` installs `_security_headers` for `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Cross-Origin-Opener-Policy`, `Permissions-Policy`, and a restrictive CSP. | `backend/tests/api/test_workbench_api.py::test_workbench_health_and_project_crud` asserts `nosniff`, `DENY`, and `object-src 'none'` on `/api/health`. |
-| Upload filename and path validation | `backend/src/vuln_prioritizer/api/routes.py` rejects unsafe upload filenames, sanitizes stored names, restricts extensions per Workbench input/context type, stores uploads under UUID-owned directories, and restricts provider/ATT&CK artifact names to configured roots. | `backend/tests/api/test_workbench_api.py::test_workbench_rejects_unsupported_and_oversized_uploads` covers traversal filenames and oversized uploads; `test_workbench_rejects_untrusted_provider_snapshot_path` covers snapshot path rejection. |
+| Template and legacy import upload hardening | Template FastAPI imports in `backend/app/api/routes/imports.py`, asset-context imports in `backend/app/api/routes/assets.py`, and older Workbench imports in `backend/src/vuln_prioritizer/api/routes.py` are size bounded, suffix/MIME allowlisted, traversal-safe, and isolated under configured upload roots by project/run or equivalent UUID-owned directories. Parser errors returned to clients are path-redacted. Nessus/OpenVAS XML handling uses defused XML handling and rejects DOCTYPE, ENTITY, and XXE-style constructs before parsing. VPW-069 evidence is tracked in `docs/evidence/vpw-069-upload-security-hardening.md`. | `backend/tests/api/test_template_import_upload_api.py`, `backend/tests/api/test_app_guards.py`, focused older Workbench upload tests, XML input-loader contract tests, `make check`, `make dependency-audit`, and `make docker-demo-smoke` passed for VPW-069. |
 | Report and evidence artifact downloads | `backend/src/vuln_prioritizer/services/workbench_reports.py` writes run artifacts under the configured report directory; `backend/src/vuln_prioritizer/api/routes.py` resolves downloads back under that root, verifies SHA-256, returns attachment downloads, and disables caching. | `backend/tests/api/test_workbench_api.py::test_workbench_import_findings_reports_and_evidence` verifies JSON, Markdown, HTML, CSV, SARIF, evidence ZIP, manifest hashes, and verification URLs; `test_workbench_downloads_reject_tampered_artifact_paths` covers outside-root and checksum-tamper rejection. |
 | CSV report formula handling | `backend/src/vuln_prioritizer/services/workbench_reports.py` prefixes formula-like CSV cells before writing Workbench findings reports. | `backend/tests/api/test_workbench_api.py::test_workbench_csv_report_escapes_spreadsheet_formulas` covers component, owner, and service cells that begin with spreadsheet formula characters. |
 | API token bootstrap | `backend/src/vuln_prioritizer/api/routes.py` creates one-time token values and stores SHA-256 hashes; `backend/src/vuln_prioritizer/api/app.py` gates mutating `/api/*` requests once any active token exists and accepts `Authorization: Bearer` or `X-API-Token`. | `backend/tests/api/test_workbench_api.py::test_workbench_api_tokens_config_provider_jobs_and_github_preview` verifies hash storage, blocked unauthenticated mutations after token creation, bad-token rejection, accepted token use, and `last_used_at` updates. |
