@@ -30,8 +30,9 @@ from app.models import (
     Report,
 )
 from app.models.base import get_datetime_utc
-from app.repositories import ReportRepository
+from app.repositories import ReportRepository, WaiverRepository
 from app.services.attack import build_attack_navigator_layer_payload
+from app.services.governance import build_project_governance_rollups_payload
 from vuln_prioritizer.reporting_evidence import (
     verify_evidence_bundle as verify_evidence_bundle_archive,
 )
@@ -410,6 +411,7 @@ class MarkdownReportPayload:
     summary: dict[str, Any]
     findings: list[MarkdownReportFinding]
     provider_snapshot: MarkdownProviderSnapshot | None
+    governance_rollups: dict[str, Any] = field(default_factory=dict)
     project_description: str | None = None
     project_owner_id: str | None = None
     project_created_at: datetime | None = None
@@ -582,6 +584,20 @@ class ReportService:
         generated_at = get_datetime_utc()
         findings = self._run_findings(run)
         run_occurrences = self._run_occurrences_by_finding(run)
+        report_findings = [
+            _finding_payload(
+                finding,
+                occurrences=run_occurrences.get(finding.id, []),
+            )
+            for finding in findings
+        ]
+        waiver_repository = WaiverRepository(self.session)
+        governance_rollups = build_project_governance_rollups_payload(
+            project_id=project.id,
+            findings=findings,
+            waivers=waiver_repository.list_project_waivers(project.id),
+            waiver_repository=waiver_repository,
+        )
         payload = MarkdownReportPayload(
             generated_at=generated_at,
             project_id=str(project.id),
@@ -591,14 +607,9 @@ class ReportService:
             input_type=run.input_type,
             filename=run.filename,
             summary=dict(run.summary_json or {}),
-            findings=[
-                _finding_payload(
-                    finding,
-                    occurrences=run_occurrences.get(finding.id, []),
-                )
-                for finding in findings
-            ],
+            findings=report_findings,
             provider_snapshot=_provider_snapshot_payload(run.provider_snapshot),
+            governance_rollups=governance_rollups.model_dump(mode="json"),
             project_description=project.description,
             project_owner_id=str(project.owner_id),
             project_created_at=project.created_at,
@@ -840,10 +851,16 @@ def render_markdown_report(payload: MarkdownReportPayload) -> str:
         f"| High | {counts['High']} |",
         f"| Medium | {counts['Medium']} |",
         f"| Low | {counts['Low']} |",
-        "",
-        "## Top Findings",
-        "",
     ]
+    if payload.governance_rollups:
+        lines.extend(_markdown_governance_section(payload.governance_rollups))
+    lines.extend(
+        [
+            "",
+            "## Top Findings",
+            "",
+        ]
+    )
     if payload.findings:
         lines.extend(
             [
@@ -973,6 +990,54 @@ def render_markdown_report(payload: MarkdownReportPayload) -> str:
     return "\n".join(lines).rstrip() + "\n"
 
 
+def _markdown_governance_section(governance_rollups: dict[str, Any]) -> list[str]:
+    services = _dict_list(governance_rollups.get("top_services_by_risk"))[:5]
+    waiver_debt = _dict_value(governance_rollups.get("waiver_debt"))
+    lines = [
+        "",
+        "## Governance Rollups",
+        "",
+        "| Field | Value |",
+        "| --- | --- |",
+        f"| Waivers | {_safe_cell(waiver_debt.get('waiver_count', 0))} |",
+        f"| Expired Waivers | {_safe_cell(waiver_debt.get('expired_count', 0))} |",
+        f"| Review Due Waivers | {_safe_cell(waiver_debt.get('review_due_count', 0))} |",
+        f"| Accepted Findings | {_safe_cell(waiver_debt.get('accepted_finding_count', 0))} |",
+        "",
+        "### Top Services by Risk",
+        "",
+    ]
+    if not services:
+        lines.append("No service rollups are available for this analysis run.")
+        return lines
+
+    lines.extend(
+        [
+            "| Service | Findings | Critical | High | Risk Score | Waiver Debt |",
+            "| --- | --- | --- | --- | --- | --- |",
+        ]
+    )
+    for service in services:
+        waiver_debt_count = int(service.get("expired_waiver_count") or 0) + int(
+            service.get("review_due_waiver_count") or 0
+        )
+        lines.append(
+            "| "
+            + " | ".join(
+                [
+                    _safe_cell(service.get("label")),
+                    _safe_cell(service.get("finding_count", 0)),
+                    _safe_cell(service.get("critical_count", 0)),
+                    _safe_cell(service.get("high_count", 0)),
+                    _safe_cell(_format_number(service.get("risk_score_total"))),
+                    _safe_cell(waiver_debt_count),
+                ]
+            )
+            + " |"
+        )
+    return lines
+
+
 def render_analysis_result_json(payload: MarkdownReportPayload) -> str:
     """Render the stable machine-readable analysis-result.v1 JSON export."""
     result = {
@@ -1013,6 +1078,8 @@ def render_analysis_result_json(payload: MarkdownReportPayload) -> str:
             if finding.explanation
         },
     }
+    if payload.governance_rollups:
+        result["governance_rollups"] = payload.governance_rollups
     return json.dumps(result, indent=2, sort_keys=True) + "\n"
 
 
@@ -1346,6 +1413,7 @@ def _redacted_bundle_payload(
             summary=redact(payload.summary, "analysis_run.summary"),
             run_error=redact(payload.run_error, "analysis_run.error_message"),
             run_errors=redact(payload.run_errors, "analysis_run.errors"),
+            governance_rollups=redact(payload.governance_rollups, "governance_rollups"),
             findings=findings,
             provider_snapshot=provider_snapshot,
         ),
@@ -1450,6 +1518,11 @@ def render_html_executive_report(payload: MarkdownReportPayload) -> str:
     recommendations = "\n".join(_html_recommendation_item(finding) for finding in top_findings[:5])
     if not recommendations:
         recommendations = "<li>No remediation recommendations are available for this run.</li>"
+    governance_section = (
+        f"{_html_governance_rollups(payload.governance_rollups)}\n\n"
+        if payload.governance_rollups
+        else ""
+    )
 
     return (
         "<!doctype html>\n"
@@ -1493,6 +1566,7 @@ def render_html_executive_report(payload: MarkdownReportPayload) -> str:
         "</p>\n"
         "    </section>\n"
         "\n"
+        f"{governance_section}"
         '    <section aria-labelledby="business-impact">\n'
         '      <div class="section-heading">\n'
         '        <p class="eyebrow">Impact</p>\n'
@@ -1545,6 +1619,57 @@ def _html_metric(label: str, value: object) -> str:
         f"<span>{_safe_html(label)}</span>"
         f"<strong>{_safe_html(value)}</strong>"
         "</div>"
+    )
+
+
+def _html_governance_rollups(governance_rollups: dict[str, Any]) -> str:
+    services = _dict_list(governance_rollups.get("top_services_by_risk"))[:5]
+    waiver_debt = _dict_value(governance_rollups.get("waiver_debt"))
+    rows = "\n".join(_html_service_rollup_row(service) for service in services)
+    if not rows:
+        rows = (
+            '<tr><td colspan="6" class="empty-state">'
+            "No service rollups are available for this analysis run.</td></tr>"
+        )
+    return (
+        '    <section aria-labelledby="governance-rollups">\n'
+        '      <div class="section-heading">\n'
+        '        <p class="eyebrow">Governance</p>\n'
+        '        <h2 id="governance-rollups">Service Risk and Waiver Debt</h2>\n'
+        "      </div>\n"
+        '      <div class="metric-grid">\n'
+        f"        {_html_metric('Waivers', waiver_debt.get('waiver_count', 0))}\n"
+        f"        {_html_metric('Expired', waiver_debt.get('expired_count', 0))}\n"
+        f"        {_html_metric('Review Due', waiver_debt.get('review_due_count', 0))}\n"
+        "        "
+        f"{_html_metric('Accepted Findings', waiver_debt.get('accepted_finding_count', 0))}\n"
+        "      </div>\n"
+        '      <div class="table-wrap">\n'
+        "        <table>\n"
+        "          <thead>\n"
+        "            <tr><th>Service</th><th>Findings</th><th>Critical</th><th>High</th>"
+        "<th>Risk Score</th><th>Waiver Debt</th></tr>\n"
+        "          </thead>\n"
+        f"          <tbody>\n{rows}\n          </tbody>\n"
+        "        </table>\n"
+        "      </div>\n"
+        "    </section>"
+    )
+
+
+def _html_service_rollup_row(service: dict[str, Any]) -> str:
+    waiver_debt_count = int(service.get("expired_waiver_count") or 0) + int(
+        service.get("review_due_waiver_count") or 0
+    )
+    return (
+        "            <tr>"
+        f"<td>{_safe_html(service.get('label'))}</td>"
+        f"<td>{_safe_html(service.get('finding_count', 0))}</td>"
+        f"<td>{_safe_html(service.get('critical_count', 0))}</td>"
+        f"<td>{_safe_html(service.get('high_count', 0))}</td>"
+        f"<td>{_safe_html(_format_number(service.get('risk_score_total')))}</td>"
+        f"<td>{_safe_html(waiver_debt_count)}</td>"
+        "</tr>"
     )
 
 
@@ -1982,6 +2107,12 @@ def _boolish_signal(finding: MarkdownReportFinding, key: str) -> bool:
 def _list_value(mapping: dict[str, Any], key: str) -> list[Any]:
     value = mapping.get(key)
     return value if isinstance(value, list) else []
+
+
+def _dict_list(value: Any) -> list[dict[str, Any]]:
+    if not isinstance(value, list):
+        return []
+    return [dict(item) for item in value if isinstance(item, dict)]
 
 
 def _vex_statuses_label(finding: MarkdownReportFinding) -> str:

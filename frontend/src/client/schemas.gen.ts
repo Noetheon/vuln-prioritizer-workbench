@@ -2254,6 +2254,312 @@ export const FindingsPublicSchema = {
     type: 'object'
 } as const;
 
+export const GovernanceRollupPublicSchema = {
+    description: 'Aggregated finding risk for one owner, service, or environment.',
+    properties: {
+        accepted_count: {
+            default: 0,
+            title: 'Accepted Count',
+            type: 'integer'
+        },
+        attack_mapped_count: {
+            default: 0,
+            title: 'Attack Mapped Count',
+            type: 'integer'
+        },
+        critical_count: {
+            default: 0,
+            title: 'Critical Count',
+            type: 'integer'
+        },
+        dimension: {
+            title: 'Dimension',
+            type: 'string'
+        },
+        expired_waiver_count: {
+            default: 0,
+            title: 'Expired Waiver Count',
+            type: 'integer'
+        },
+        finding_count: {
+            default: 0,
+            title: 'Finding Count',
+            type: 'integer'
+        },
+        fixed_count: {
+            default: 0,
+            title: 'Fixed Count',
+            type: 'integer'
+        },
+        high_count: {
+            default: 0,
+            title: 'High Count',
+            type: 'integer'
+        },
+        highest_priority: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Highest Priority'
+        },
+        kev_count: {
+            default: 0,
+            title: 'Kev Count',
+            type: 'integer'
+        },
+        label: {
+            title: 'Label',
+            type: 'string'
+        },
+        open_count: {
+            default: 0,
+            title: 'Open Count',
+            type: 'integer'
+        },
+        priority_counts: {
+            additionalProperties: {
+                type: 'integer'
+            },
+            title: 'Priority Counts',
+            type: 'object'
+        },
+        review_due_waiver_count: {
+            default: 0,
+            title: 'Review Due Waiver Count',
+            type: 'integer'
+        },
+        risk_score_max: {
+            anyOf: [
+                {
+                    type: 'number'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Risk Score Max'
+        },
+        risk_score_total: {
+            default: 0,
+            title: 'Risk Score Total',
+            type: 'number'
+        },
+        status_counts: {
+            additionalProperties: {
+                type: 'integer'
+            },
+            title: 'Status Counts',
+            type: 'object'
+        },
+        suppressed_by_vex_count: {
+            default: 0,
+            title: 'Suppressed By Vex Count',
+            type: 'integer'
+        },
+        suppressed_count: {
+            default: 0,
+            title: 'Suppressed Count',
+            type: 'integer'
+        },
+        top_cves: {
+            items: {
+                type: 'string'
+            },
+            title: 'Top Cves',
+            type: 'array'
+        },
+        under_investigation_count: {
+            default: 0,
+            title: 'Under Investigation Count',
+            type: 'integer'
+        },
+        waived_count: {
+            default: 0,
+            title: 'Waived Count',
+            type: 'integer'
+        }
+    },
+    required: ['dimension', 'label'],
+    title: 'GovernanceRollupPublic',
+    type: 'object'
+} as const;
+
+export const GovernanceWaiverDebtEntryPublicSchema = {
+    description: 'One waiver lifecycle row in the aggregate debt view.',
+    properties: {
+        asset_key: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Asset Key'
+        },
+        cve_id: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Cve Id'
+        },
+        days_remaining: {
+            title: 'Days Remaining',
+            type: 'integer'
+        },
+        expires_at: {
+            format: 'date',
+            title: 'Expires At',
+            type: 'string'
+        },
+        finding_id: {
+            anyOf: [
+                {
+                    format: 'uuid',
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Finding Id'
+        },
+        id: {
+            format: 'uuid',
+            title: 'Id',
+            type: 'string'
+        },
+        matched_findings: {
+            default: 0,
+            title: 'Matched Findings',
+            type: 'integer'
+        },
+        owner: {
+            title: 'Owner',
+            type: 'string'
+        },
+        review_at: {
+            anyOf: [
+                {
+                    format: 'date',
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Review At'
+        },
+        scope: {
+            title: 'Scope',
+            type: 'string'
+        },
+        service: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Service'
+        },
+        status: {
+            title: 'Status',
+            type: 'string'
+        }
+    },
+    required: ['id', 'owner', 'scope', 'status', 'days_remaining', 'expires_at'],
+    title: 'GovernanceWaiverDebtEntryPublic',
+    type: 'object'
+} as const;
+
+export const GovernanceWaiverDebtPublicSchema = {
+    description: 'Project-level accepted-risk lifecycle debt summary.',
+    properties: {
+        accepted_finding_count: {
+            default: 0,
+            title: 'Accepted Finding Count',
+            type: 'integer'
+        },
+        active_count: {
+            default: 0,
+            title: 'Active Count',
+            type: 'integer'
+        },
+        expired_count: {
+            default: 0,
+            title: 'Expired Count',
+            type: 'integer'
+        },
+        expired_finding_count: {
+            default: 0,
+            title: 'Expired Finding Count',
+            type: 'integer'
+        },
+        expiring_soon_count: {
+            default: 0,
+            title: 'Expiring Soon Count',
+            type: 'integer'
+        },
+        items: {
+            items: {
+                '$ref': '#/components/schemas/GovernanceWaiverDebtEntryPublic'
+            },
+            title: 'Items',
+            type: 'array'
+        },
+        matched_finding_count: {
+            default: 0,
+            title: 'Matched Finding Count',
+            type: 'integer'
+        },
+        owner_counts: {
+            additionalProperties: {
+                type: 'integer'
+            },
+            title: 'Owner Counts',
+            type: 'object'
+        },
+        review_due_count: {
+            default: 0,
+            title: 'Review Due Count',
+            type: 'integer'
+        },
+        review_due_finding_count: {
+            default: 0,
+            title: 'Review Due Finding Count',
+            type: 'integer'
+        },
+        service_counts: {
+            additionalProperties: {
+                type: 'integer'
+            },
+            title: 'Service Counts',
+            type: 'object'
+        },
+        waiver_count: {
+            default: 0,
+            title: 'Waiver Count',
+            type: 'integer'
+        }
+    },
+    title: 'GovernanceWaiverDebtPublic',
+    type: 'object'
+} as const;
+
 export const HTTPValidationErrorSchema = {
     properties: {
         detail: {
@@ -2680,6 +2986,56 @@ export const ProjectDecisionSummaryPublicSchema = {
     },
     required: ['project_id'],
     title: 'ProjectDecisionSummaryPublic',
+    type: 'object'
+} as const;
+
+export const ProjectGovernanceRollupsPublicSchema = {
+    description: 'Owner, service, environment, and waiver-debt rollups for one project.',
+    properties: {
+        environments: {
+            items: {
+                '$ref': '#/components/schemas/GovernanceRollupPublic'
+            },
+            title: 'Environments',
+            type: 'array'
+        },
+        generated_at: {
+            format: 'date-time',
+            title: 'Generated At',
+            type: 'string'
+        },
+        owners: {
+            items: {
+                '$ref': '#/components/schemas/GovernanceRollupPublic'
+            },
+            title: 'Owners',
+            type: 'array'
+        },
+        project_id: {
+            format: 'uuid',
+            title: 'Project Id',
+            type: 'string'
+        },
+        services: {
+            items: {
+                '$ref': '#/components/schemas/GovernanceRollupPublic'
+            },
+            title: 'Services',
+            type: 'array'
+        },
+        top_services_by_risk: {
+            items: {
+                '$ref': '#/components/schemas/GovernanceRollupPublic'
+            },
+            title: 'Top Services By Risk',
+            type: 'array'
+        },
+        waiver_debt: {
+            '$ref': '#/components/schemas/GovernanceWaiverDebtPublic'
+        }
+    },
+    required: ['project_id', 'generated_at'],
+    title: 'ProjectGovernanceRollupsPublic',
     type: 'object'
 } as const;
 
