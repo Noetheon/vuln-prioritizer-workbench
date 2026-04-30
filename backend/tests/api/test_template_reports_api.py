@@ -212,6 +212,8 @@ def test_vpw049_html_report_create_downloads_executive_report(
     assert download.status_code == 200
     assert download.headers["cache-control"] == "no-store"
     assert download.headers["x-content-type-options"] == "nosniff"
+    assert download.headers["x-frame-options"] == "DENY"
+    assert "frame-ancestors 'none'" in download.headers["content-security-policy"]
     assert "attachment" in download.headers["content-disposition"]
     assert "executive-report.html" in download.headers["content-disposition"]
     assert download.headers["content-type"].startswith("text/html")
@@ -234,6 +236,50 @@ def test_vpw049_html_report_create_downloads_executive_report(
     assert 'href="javascript:' not in body.lower()
     assert "&lt;script&gt;alert(1)&lt;/script&gt;" in body
     assert "&lt;img src=x onerror=alert(1)&gt;" in body
+
+
+def test_vpw070_html_report_escapes_malicious_external_text() -> None:
+    payload = _vpw050_snapshot_payload()
+    malicious_finding = replace(
+        payload.findings[0],
+        asset='Payments <img src=x onerror="window.__vpwXss=1"> API',
+        component="xz <script>window.__vpwXss=1</script>",
+        decision_statement="Decision <svg onload=window.__vpwXss=1> statement",
+        business_impact='Impact <img src=x onerror="window.__vpwXss=1">',
+        recommended_action="Patch <script>window.__vpwXss=1</script> now.",
+    )
+    assert payload.provider_snapshot is not None
+    provider_snapshot = replace(
+        payload.provider_snapshot,
+        source_hashes={
+            "provider <script>window.__vpwXss=1</script>": "sha256:vpw070",
+        },
+        source_metadata={
+            **payload.provider_snapshot.source_metadata,
+            "selected_sources": ["nvd", "<img src=x onerror=window.__vpwXss=1>"],
+            "validation_error": 'provider <svg onload="window.__vpwXss=1">',
+        },
+    )
+
+    body = render_html_executive_report(
+        replace(
+            payload,
+            project_name="VPW-070 <script>window.__vpwXss=1</script>",
+            filename='known-cves"><img src=x onerror=window.__vpwXss=1>.txt',
+            findings=[malicious_finding, *payload.findings[1:]],
+            provider_snapshot=provider_snapshot,
+        )
+    )
+
+    lowered = body.lower()
+    assert "<script" not in lowered
+    assert "<img" not in lowered
+    assert "<svg" not in lowered
+    assert 'href="javascript:' not in lowered
+    assert "&lt;script&gt;window.__vpwXss=1&lt;/script&gt;" in body
+    assert "&lt;img src=x onerror=&quot;window.__vpwXss=1&quot;&gt;" in body
+    assert "provider &lt;svg onload=&quot;window.__vpwXss=1&quot;&gt;" in body
+    assert "Source Hash: provider &lt;script&gt;window.__vpwXss=1&lt;/script&gt;" in body
 
 
 def test_vpw050_analysis_json_export_create_downloads_schema_valid_result(
