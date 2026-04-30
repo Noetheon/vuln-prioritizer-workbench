@@ -52,6 +52,9 @@
 
 Maintainer-facing parser fixture regression coverage is documented in
 [VPW-013 Importer Contract](architecture/vpw-013-importer-contract.md).
+Contributor-facing parser and provider extension rules are documented in the
+[Extension Strategy](extension_strategy.md); extensions are reviewed static
+repository changes, not runtime plugin discovery.
 
 ## Feature overlay matrix
 

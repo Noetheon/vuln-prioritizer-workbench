@@ -96,6 +96,14 @@ Codex-authored changes should follow the repository roadmap issue scope:
 - For security-sensitive changes, state the boundary checked and the remaining
   deployment risk.
 
+## Parser And Provider Extensions
+
+New parser and provider contributions use the reviewed static extension
+strategy in [docs/extension_strategy.md](docs/extension_strategy.md). Do not add
+runtime plugin discovery, remote code loading, scanner execution, arbitrary
+provider endpoint overrides, or live-network-only CI tests. Include sanitized
+fixtures, focused tests, docs, and support-matrix updates with the contribution.
+
 ## Security Checklist
 
 Before opening or merging a change, verify that it does not:
