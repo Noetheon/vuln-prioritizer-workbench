@@ -1615,6 +1615,43 @@ def test_workbench_detection_controls_coverage_gaps_and_technique_detail(
     assert controls_only_detail.json()["coverage"]["control_count"] == 1
     assert controls_only_detail.json()["coverage"]["finding_count"] == 0
 
+    bundle = client.post(f"/api/analysis-runs/{response.json()['id']}/evidence-bundle")
+    assert bundle.status_code == 200, bundle.text
+    bundle_download = client.get(bundle.json()["download_url"])
+    assert bundle_download.status_code == 200
+    with zipfile.ZipFile(io.BytesIO(bundle_download.content)) as archive:
+        assert "governance/detection-coverage.json" in archive.namelist()
+        detection_coverage_bytes = archive.read("governance/detection-coverage.json")
+        detection_coverage = json.loads(detection_coverage_bytes)
+        manifest = json.loads(archive.read("manifest.json"))
+        summary_markdown = archive.read("summary.md").decode("utf-8")
+        report_html = archive.read("report.html").decode("utf-8")
+        manifest_files = {item["path"]: item for item in manifest["files"]}
+
+    assert detection_coverage["schema"] == "detection-coverage.v1"
+    assert detection_coverage["summary"]["partial"] == 1
+    assert detection_coverage["summary"]["not_covered"] == 1
+    assert "operator-supplied defensive review evidence" in detection_coverage["limitations"][0]
+    detection_items = {item["technique_id"]: item for item in detection_coverage["items"]}
+    assert detection_items["T1190"]["coverage_level"] == "partial"
+    assert detection_items["T1190"]["owner"] == "secops"
+    assert detection_items["T9999"]["coverage_level"] == "not_covered"
+    assert {
+        "bundle_path": "governance/detection-coverage.json",
+        "kind": "governance-detection-coverage",
+        "sha256": manifest["artifact_hashes"]["governance/detection-coverage.json"],
+    } in manifest["governance_artifacts"]
+    assert (
+        manifest_files["governance/detection-coverage.json"]["sha256"]
+        == hashlib.sha256(detection_coverage_bytes).hexdigest()
+    )
+    assert "## Detection Coverage" in summary_markdown
+    assert "Detection Coverage Gaps" in report_html
+
+    verification = client.get(bundle.json()["verify_url"])
+    assert verification.status_code == 200
+    assert verification.json()["summary"]["ok"] is True
+
 
 def test_workbench_new_api_error_paths_and_detection_import_validation(
     tmp_path: Path,

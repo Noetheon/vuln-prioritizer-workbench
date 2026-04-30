@@ -43,6 +43,9 @@
     "governance_rollups": {
       "$ref": "#/$defs/governanceRollups"
     },
+    "detection_coverage": {
+      "$ref": "#/$defs/detectionCoverage"
+    },
     "findings": {
       "type": "array",
       "items": {
@@ -547,6 +550,158 @@
           "$ref": "#/$defs/nullableUuid"
         }
       }
+    },
+    "detectionCoverage": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "summary": {
+          "$ref": "#/$defs/integerCountMap"
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/detectionCoverageItem"
+          }
+        },
+        "controls": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/detectionControl"
+          }
+        },
+        "note": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "limitations": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "detectionCoverageItem": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "technique_id": {
+          "type": "string",
+          "pattern": "^T[0-9]{4}(\\.[0-9]{3})?$"
+        },
+        "name": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "tactic_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "finding_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "critical_finding_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "kev_finding_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "coverage_level": {
+          "$ref": "#/$defs/detectionCoverageLevel"
+        },
+        "control_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "owner": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "evidence_refs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "recommended_action": {
+          "$ref": "#/$defs/nullableString"
+        }
+      }
+    },
+    "detectionControl": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "project_id": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "control_id": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "name": {
+          "type": "string"
+        },
+        "technique_id": {
+          "type": "string",
+          "pattern": "^T[0-9]{4}(\\.[0-9]{3})?$"
+        },
+        "technique_name": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "source_type": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "coverage_level": {
+          "$ref": "#/$defs/detectionCoverageLevel"
+        },
+        "environment": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "owner": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "evidence_ref": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "evidence_refs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "review_status": {
+          "type": "string"
+        },
+        "history_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "attachment_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "notes": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "last_verified_at": {
+          "$ref": "#/$defs/nullableString"
+        }
+      }
+    },
+    "detectionCoverageLevel": {
+      "enum": [
+        "covered",
+        "partial",
+        "not_covered",
+        "unknown",
+        "not_applicable"
+      ]
     },
     "finding": {
       "type": "object",

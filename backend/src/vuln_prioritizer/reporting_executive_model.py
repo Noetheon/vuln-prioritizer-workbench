@@ -61,6 +61,7 @@ def build_executive_report_model(
     risk_drivers = _risk_driver_model(findings, attack_summary)
     business_exposure = _business_exposure_model(findings)
     attack = _attack_model(metadata, attack_summary, findings)
+    attack["detection_coverage"] = _detection_coverage_model(report_payload)
     remediation = _remediation_model(findings)
     evidence = _evidence_model(
         metadata,
@@ -549,6 +550,43 @@ def _attack_model(
             "ATT&CK context is enabled and shown as adversary behavior context only."
             if enabled
             else "ATT&CK context was not supplied for this run."
+        ),
+    }
+
+
+def _detection_coverage_model(report_payload: dict[str, Any]) -> dict[str, Any]:
+    coverage = _dict_value(report_payload.get("detection_coverage"))
+    summary = _dict_value(coverage.get("summary"))
+    items = [item for item in coverage.get("items", []) if isinstance(item, dict)]
+    weak_statuses = {"partial", "not_covered", "unknown"}
+    weak_items = [item for item in items if _text(item.get("coverage_level")) in weak_statuses]
+    status_order = {"not_covered": 0, "unknown": 1, "partial": 2, "covered": 3}
+    weak_items.sort(
+        key=lambda item: (
+            status_order.get(_text(item.get("coverage_level")), 9),
+            -_int_value(item.get("critical_finding_count")),
+            -_int_value(item.get("kev_finding_count")),
+            -_int_value(item.get("finding_count")),
+            _text(item.get("technique_id")),
+        )
+    )
+    return {
+        "summary": {
+            "covered": _int_value(summary.get("covered")),
+            "partial": _int_value(summary.get("partial")),
+            "not_covered": _int_value(summary.get("not_covered")),
+            "unknown": _int_value(summary.get("unknown")),
+            "not_applicable": _int_value(summary.get("not_applicable")),
+        },
+        "total": len(items),
+        "weak_total": len(weak_items),
+        "weak_items": weak_items[:8],
+        "note": _text(
+            coverage.get("note"),
+            default=(
+                "Detection coverage is operator-supplied defensive review evidence, "
+                "not proof of security or exploitation."
+            ),
         ),
     }
 

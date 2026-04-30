@@ -12,6 +12,10 @@ from uuid import uuid4
 
 from sqlalchemy.orm import Session
 
+from vuln_prioritizer.api.workbench_detection import (
+    _coverage_gap_payload,
+    _detection_control_payload,
+)
 from vuln_prioritizer.db.models import EvidenceBundle, Report
 from vuln_prioritizer.db.repositories import WorkbenchRepository
 from vuln_prioritizer.reporter import generate_html_report
@@ -38,7 +42,12 @@ def create_run_report(
     run = repo.get_analysis_run(analysis_run_id)
     if run is None:
         raise WorkbenchReportError(f"Analysis run not found: {analysis_run_id}.")
-    payload = _analysis_payload_with_current_lifecycle(repo, run.summary_json, run.project_id)
+    payload = _analysis_payload_with_current_lifecycle(
+        repo,
+        run.summary_json,
+        project_id=run.project_id,
+        analysis_run_id=run.id,
+    )
     run_dir = _run_report_dir(settings, run.id)
 
     if report_format == "json":
@@ -90,7 +99,12 @@ def create_run_evidence_bundle(
     if run is None:
         raise WorkbenchReportError(f"Analysis run not found: {analysis_run_id}.")
 
-    payload = _analysis_payload_with_current_lifecycle(repo, run.summary_json, run.project_id)
+    payload = _analysis_payload_with_current_lifecycle(
+        repo,
+        run.summary_json,
+        project_id=run.project_id,
+        analysis_run_id=run.id,
+    )
     run_dir = _run_report_dir(settings, run.id)
     analysis_path = _unique_run_artifact_path(run_dir, "evidence-analysis", "json")
     analysis_path.parent.mkdir(parents=True, exist_ok=True)
@@ -457,6 +471,7 @@ def _analysis_payload_with_current_lifecycle(
     repo: WorkbenchRepository,
     value: object,
     project_id: str,
+    analysis_run_id: str,
 ) -> dict[str, Any]:
     payload = json.loads(json.dumps(_analysis_payload(value)))
     findings = payload.get("findings")
@@ -467,6 +482,7 @@ def _analysis_payload_with_current_lifecycle(
     current_by_identity = {
         _finding_identity_from_model(finding): finding for finding in current_findings
     }
+    run_current_findings_by_id = {}
     for finding_payload in findings:
         if not isinstance(finding_payload, dict):
             continue
@@ -476,6 +492,7 @@ def _analysis_payload_with_current_lifecycle(
             current = current_by_identity.get(_finding_identity_from_payload(finding_payload))
         if current is None:
             continue
+        run_current_findings_by_id[current.id] = current
         finding_payload["status"] = current.status
         finding_payload["status_history"] = [
             {
@@ -489,6 +506,23 @@ def _analysis_payload_with_current_lifecycle(
             }
             for item in current.status_history
         ]
+    detection_controls = repo.list_project_detection_controls(project_id)
+    detection_coverage = _coverage_gap_payload(
+        repo.list_run_attack_contexts(analysis_run_id),
+        detection_controls,
+        list(run_current_findings_by_id.values()),
+    )
+    if detection_coverage["items"] or detection_controls:
+        payload["detection_coverage"] = {
+            "summary": detection_coverage["summary"],
+            "items": detection_coverage["items"],
+            "controls": [_detection_control_payload(control) for control in detection_controls],
+            "note": (
+                "Detection coverage is operator-supplied defensive review context; "
+                "finding counts are scoped to this analysis run and are not proof of "
+                "security or exploitation."
+            ),
+        }
     return payload
 
 

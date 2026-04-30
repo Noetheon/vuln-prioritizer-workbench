@@ -402,6 +402,26 @@ def test_workbench_sarif_filters_non_http_references() -> None:
 
 def test_workbench_report_lifecycle_overlay_uses_id_and_stable_identity() -> None:
     class FakeRepo:
+        def list_run_attack_contexts(self, analysis_run_id: str) -> list[SimpleNamespace]:
+            assert analysis_run_id == "run-1"
+            return [
+                SimpleNamespace(
+                    finding_id="finding-1",
+                    mapped=True,
+                    techniques_json=[
+                        {
+                            "technique_id": "T1190",
+                            "name": "Exploit Public-Facing Application",
+                            "tactic_ids": ["TA0001"],
+                        }
+                    ],
+                )
+            ]
+
+        def list_project_detection_controls(self, project_id: str) -> list[SimpleNamespace]:
+            assert project_id == "project-1"
+            return []
+
         def list_project_findings(self, project_id: str) -> list[SimpleNamespace]:
             assert project_id == "project-1"
             return [
@@ -411,6 +431,8 @@ def test_workbench_report_lifecycle_overlay_uses_id_and_stable_identity() -> Non
                     component=None,
                     asset=None,
                     status="fixed",
+                    priority="critical",
+                    in_kev=True,
                     status_history=[
                         SimpleNamespace(
                             id="history-1",
@@ -429,6 +451,18 @@ def test_workbench_report_lifecycle_overlay_uses_id_and_stable_identity() -> Non
                     component=SimpleNamespace(name="openssl", version="3.0.0"),
                     asset=SimpleNamespace(asset_id="asset-api"),
                     status="accepted",
+                    priority="medium",
+                    in_kev=False,
+                    status_history=[],
+                ),
+                SimpleNamespace(
+                    id="finding-3",
+                    cve_id="CVE-2024-9999",
+                    component=None,
+                    asset=None,
+                    status="open",
+                    priority="critical",
+                    in_kev=True,
                     status_history=[],
                 ),
             ]
@@ -455,18 +489,29 @@ def test_workbench_report_lifecycle_overlay_uses_id_and_stable_identity() -> Non
         ],
     }
 
-    overlaid = _analysis_payload_with_current_lifecycle(FakeRepo(), payload, "project-1")  # type: ignore[arg-type]
+    overlaid = _analysis_payload_with_current_lifecycle(  # type: ignore[arg-type]
+        FakeRepo(),
+        payload,
+        "project-1",
+        "run-1",
+    )
 
     assert overlaid["findings"][0]["status"] == "fixed"
     assert overlaid["findings"][0]["status_history"][0]["new_status"] == "fixed"
     assert overlaid["findings"][1]["status"] == "accepted"
     assert overlaid["findings"][3]["status"] == "open"
+    assert overlaid["detection_coverage"]["items"][0]["technique_id"] == "T1190"
+    assert overlaid["detection_coverage"]["items"][0]["finding_count"] == 1
+    assert overlaid["detection_coverage"]["items"][0]["critical_finding_count"] == 1
+    assert overlaid["detection_coverage"]["items"][0]["kev_finding_count"] == 1
+    assert "scoped to this analysis run" in overlaid["detection_coverage"]["note"]
     assert payload["findings"][0]["status"] == "open"
     assert (
         _analysis_payload_with_current_lifecycle(
             FakeRepo(),  # type: ignore[arg-type]
             {"metadata": {}, "findings": "invalid"},
             "project-1",
+            "run-1",
         )["findings"]
         == "invalid"
     )
