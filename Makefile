@@ -14,7 +14,7 @@ DEMO_EVIDENCE_ANALYSIS_FILE := build/v1.0-demo-analysis.json
 DEMO_EVIDENCE_BUNDLE_FILE := build/v1.0-demo-evidence-bundle.zip
 DEMO_EVIDENCE_VERIFICATION_FILE := build/v1.0-demo-evidence-bundle-verification.json
 
-.PHONY: install test lint format fix typecheck check benchmark-check playwright-install playwright-check frontend-install frontend-build frontend-lint frontend-generate-client frontend-check docs-check docs-serve actionlint-check workflow-check docker-demo-smoke docker-postgres-migration-smoke dependency-audit provider-snapshot-validate provider-testmatrix demo-offline-no-key-proof demo-sync-check demo-sync-check-temp package package-check package-check-temp pipx-source-smoke release-check demo-report demo-compare demo-explain demo-attack-report demo-attack-compare demo-attack-explain demo-attack-coverage demo-attack-navigator demo-pr-comment demo-results-sarif demo-html-report demo-evidence-analysis demo-evidence-bundle demo-evidence-bundle-check precommit-install
+.PHONY: install test lint format fix typecheck check benchmark-check performance-smoke playwright-install playwright-check frontend-install frontend-build frontend-lint frontend-generate-client frontend-check docs-check docs-serve actionlint-check workflow-check docker-demo-smoke docker-postgres-migration-smoke dependency-audit provider-snapshot-validate provider-testmatrix demo-offline-no-key-proof demo-sync-check demo-sync-check-temp package package-check package-check-temp pipx-source-smoke release-check demo-report demo-compare demo-explain demo-attack-report demo-attack-compare demo-attack-explain demo-attack-coverage demo-attack-navigator demo-pr-comment demo-results-sarif demo-html-report demo-evidence-analysis demo-evidence-bundle demo-evidence-bundle-check precommit-install
 
 install:
 	$(PYTHON) -m pip install -e "$(BACKEND_DIR)[dev]"
@@ -43,6 +43,9 @@ check:
 
 benchmark-check:
 	$(PYTHON) -m pytest -q $(BACKEND_TESTS)/test_benchmark_regressions.py $(BACKEND_TESTS)/test_snapshot_diff_regressions.py $(BACKEND_TESTS)/test_rollup_regressions.py --no-cov
+
+performance-smoke:
+	VPW_PERFORMANCE_SMOKE=1 VPW_PERFORMANCE_SMOKE_OUTPUT=build/vpw-072-performance-smoke.json $(PYTHON) -m pytest -q $(BACKEND_TESTS)/performance/test_vpw072_performance_smoke.py --no-cov
 
 playwright-install:
 	$(PYTHON) -m playwright install chromium
@@ -128,6 +131,7 @@ docker-demo-smoke:
 		echo "Template Workbench login route check failed." >&2; \
 		exit 1; \
 	fi; \
+	$(PYTHON) scripts/docker_quickstart_api_smoke.py; \
 	echo "Template Workbench Docker smoke passed."
 
 docker-postgres-migration-smoke:

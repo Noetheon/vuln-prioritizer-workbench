@@ -423,11 +423,20 @@ def test_workbench_import_findings_reports_and_evidence(tmp_path: Path) -> None:
             assert sarif_payload["runs"][0]["tool"]["driver"]["name"] == (
                 "vuln-prioritizer-workbench"
             )
+            sarif_rules = {
+                rule["id"]: rule for rule in sarif_payload["runs"][0]["tool"]["driver"]["rules"]
+            }
             log4shell_sarif = next(
                 result
                 for result in sarif_payload["runs"][0]["results"]
                 if result["properties"]["cve"] == "CVE-2021-44228"
             )
+            assert log4shell_sarif["ruleId"] == "vuln-prioritizer/cve-2021-44228"
+            assert (
+                "https://nvd.nist.gov/vuln/detail/CVE-2021-44228"
+                in log4shell_sarif["properties"]["references"]
+            )
+            assert sarif_rules[log4shell_sarif["ruleId"]]["properties"]["security-severity"]
             assert "snapshot_locked" in log4shell_sarif["properties"]["data_quality_flag_codes"]
             assert log4shell_sarif["properties"]["data_quality_confidence"] == "high"
         if report_format == "csv":
@@ -814,6 +823,8 @@ def test_workbench_finding_lifecycle_audit_and_exports(tmp_path: Path) -> None:
         if item["properties"]["cve"] == "CVE-2021-44228"
     )
     assert result["properties"]["status"] == "in_review"
+    assert result["properties"]["references"]
+    assert result["ruleId"] == "vuln-prioritizer/cve-2021-44228"
     assert result["partialFingerprints"]["vuln-prioritizer-workbench/v1"]
     assert sarif_payload["runs"][0]["tool"]["driver"]["rules"]
 

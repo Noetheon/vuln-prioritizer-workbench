@@ -162,14 +162,61 @@ Then set `NVD_API_KEY` in `.env` if you want authenticated NVD access.
 
 ### Docker / Compose Workbench
 
-Run the template-aligned Workbench shell and React frontend locally:
+Run the template-aligned Workbench shell and React frontend locally from a
+fresh repository checkout:
 
 ```bash
+cp .env.example .env
 docker compose -f compose.yml -f compose.override.yml up --build backend frontend
 ```
 
-Then open `http://127.0.0.1:5173` for the React shell or call the template
-backend status endpoint:
+The checked-in `.env.example` is already suitable for this local quickstart.
+`NVD_API_KEY` can stay empty because the demo import path uses the checked-in
+locked provider snapshot. Do not reuse the placeholder `SECRET_KEY` or
+`FIRST_SUPERUSER_PASSWORD` outside a local workstation.
+
+Then open these local URLs:
+
+- React Workbench shell: `http://127.0.0.1:5173`
+- Template backend status: `http://127.0.0.1:8000/api/v1/workbench/status`
+- Template utility health check:
+  `http://127.0.0.1:8000/api/v1/utils/health-check/`
+
+The local template login uses `.env` defaults:
+
+- email: `admin@example.com`
+- password: `changethis`
+
+After login, create a project and import `data/sample_cves.txt` as `CVE list`.
+Use provider snapshot `demo_provider_snapshot.json` with locked provider data
+enabled. The Compose backend mounts `./data` read-only at `/app/examples`, so
+the import can replay provider data without live API keys.
+
+Equivalent API demo import after login:
+
+```bash
+TOKEN="$(
+  curl -sS -X POST http://127.0.0.1:8000/api/v1/login/access-token \
+    -H 'Content-Type: application/x-www-form-urlencoded' \
+    --data 'username=admin@example.com&password=changethis' \
+  | python3 -c 'import json, sys; print(json.load(sys.stdin)["access_token"])'
+)"
+PROJECT_ID="$(
+  curl -sS -X POST http://127.0.0.1:8000/api/v1/projects/ \
+    -H "Authorization: Bearer ${TOKEN}" \
+    -H 'Content-Type: application/json' \
+    --data '{"name":"online-shop-demo","description":"Local Docker quickstart demo"}' \
+  | python3 -c 'import json, sys; print(json.load(sys.stdin)["id"])'
+)"
+curl -sS -X POST "http://127.0.0.1:8000/api/v1/projects/${PROJECT_ID}/imports" \
+  -H "Authorization: Bearer ${TOKEN}" \
+  -F input_type=cve-list \
+  -F provider_snapshot_file=demo_provider_snapshot.json \
+  -F locked_provider_data=true \
+  -F file=@data/sample_cves.txt
+```
+
+For a quick status check:
 
 ```bash
 curl http://127.0.0.1:8000/api/v1/workbench/status
@@ -192,6 +239,11 @@ make docker-postgres-migration-smoke
 That starts `db` and the profiled `workbench-postgres` service, serves the
 legacy Workbench on `http://127.0.0.1:8001`, and tears down the profile volumes
 after the health check.
+
+Adminer and Mailcatcher/Mailpit are not enabled in the current local Compose
+stack. The `.env.example` keeps SMTP placeholders for template parity, but
+email delivery is not part of the local quickstart. Add database or email
+debugging services only as an explicit deployment/dev-tooling change.
 
 The backend image still contains the CLI and legacy Workbench command for
 profiled migration checks. You can initialize a profiled legacy database
@@ -325,6 +377,11 @@ running the Workbench:
 - [docs/examples/vpw-054-template-analysis-result.v1.json](docs/examples/vpw-054-template-analysis-result.v1.json)
 
 ## Quickstart
+
+For a complete external-user documentation path across install, Docker,
+Workbench demo, architecture, data model, imports, providers, scoring, reports,
+ATT&CK, security, and known limitations, start with
+[docs/user_documentation.md](docs/user_documentation.md).
 
 ### 1. Fastest Public-Install Analyze Run
 
@@ -520,9 +577,13 @@ vuln-prioritizer --no-config analyze --input cves.txt
 
 Start here for public CLI usage and the local Workbench app path:
 
+- [docs/user_documentation.md](docs/user_documentation.md)
 - [docs/use_cases.md](docs/use_cases.md)
 - [docs/playbooks.md](docs/playbooks.md)
 - [docs/support_matrix.md](docs/support_matrix.md)
+- [docs/architecture/index.md](docs/architecture/index.md)
+- [docs/architecture/core-workbench-schema.md](docs/architecture/core-workbench-schema.md)
+- [docs/architecture/analysis-run-provider-schema.md](docs/architecture/analysis-run-provider-schema.md)
 - [docs/benchmarking.md](docs/benchmarking.md)
 - [docs/contracts.md](docs/contracts.md)
 - [docs/methodology.md](docs/methodology.md)

@@ -109,6 +109,40 @@ def test_template_provider_status_reports_latest_snapshot(
     assert sources["kev"]["value"] == "2026-04-27"
 
 
+def test_template_provider_status_does_not_treat_null_source_hash_as_available(
+    template_api_env: TemplateApiEnv,
+) -> None:
+    headers = auth_headers(template_api_env.client)
+    with Session(template_api_env.engine) as session:
+        session.add(
+            template_api_env.app_models.ProviderSnapshot(
+                id=uuid.uuid4(),
+                created_at=datetime(2026, 4, 28, 10, 0, tzinfo=UTC),
+                content_hash="sha256:null-source-hashes",
+                source_hashes_json={
+                    "nvd": None,
+                    "epss": None,
+                    "kev": None,
+                    "attack_stix": None,
+                },
+                source_metadata_json={
+                    "selected_sources": ["nvd", "epss", "kev", "attack_stix"],
+                    "generated_at": "2026-04-28T10:30:00Z",
+                },
+            )
+        )
+        session.commit()
+
+    response = template_api_env.client.get("/api/v1/providers/status", headers=headers)
+
+    assert response.status_code == 200
+    sources = {source["name"]: source for source in response.json()["sources"]}
+    assert sources["nvd"]["available"] is False
+    assert sources["epss"]["available"] is False
+    assert sources["kev"]["available"] is False
+    assert sources["attack_stix"]["available"] is False
+
+
 def test_template_provider_status_surfaces_failed_provider_update(
     template_api_env: TemplateApiEnv,
 ) -> None:

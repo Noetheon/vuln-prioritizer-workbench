@@ -11,6 +11,7 @@ The site includes the `v1.1.0` release notes, Workbench milestone evidence, and 
 - [Release notes: v1.1.0](releases/v1.1.0.md)
 - [Release notes: Workbench v1.0.0](releases/workbench-v1.0.0.md)
 - [Workbench v1.0 release checklist](workbench-v1-release-checklist.md)
+- [External user documentation guide](user_documentation.md)
 - [Example HTML report](examples/example_report.html)
 - [Template report demo artifacts](evidence/vpw-054-report-snapshots.md)
 - [Operational use cases](use_cases.md)
@@ -26,6 +27,10 @@ The site includes the `v1.1.0` release notes, Workbench milestone evidence, and 
 - runs a local Workbench with API, browser UI, SQLite-backed imports, reports, evidence bundles, governance context, and ATT&CK coverage views
 
 ## Quickstart
+
+For a complete external-user path across install, Docker, Workbench demo,
+architecture, scoring, providers, reports, ATT&CK, security, and known
+limitations, start with the [User Documentation Guide](user_documentation.md).
 
 - Works after a public install: examples that use files you create or already have locally, such as `cves.txt`, `trivy-results.json`, `analysis.json`, or `report.html`.
 - Requires local ATT&CK data files: examples that use `--attack-mapping-file` and `--attack-technique-metadata-file`.
@@ -66,22 +71,34 @@ If you are working from a repository checkout, the checked-in demo ATT&CK files 
 Workbench v1.0 from a repository checkout:
 
 ```bash
+cp .env.example .env
 docker compose -f compose.yml -f compose.override.yml up --build backend frontend
 curl http://127.0.0.1:8000/api/v1/workbench/status
 ```
 
-During the FastAPI template migration, Compose starts the template backend shell and React frontend. The legacy web/API Workbench remains local-first and focused on CVE lists, `generic-occurrence-csv`, Trivy JSON, and Grype JSON imports. Use the CLI for the full automation/input matrix.
+Open `http://127.0.0.1:5173`, sign in with the local `.env.example` defaults,
+create a project, and import `data/sample_cves.txt` with
+`demo_provider_snapshot.json` plus locked provider data enabled. This path works
+without live provider API keys.
+
+During the FastAPI template migration, Compose starts the template backend shell
+and React frontend. The legacy web/API Workbench remains local-first and now
+uses the same import-format matrix documented in [support_matrix.md](support_matrix.md)
+for single-upload and multi-upload flows.
 
 ## Documentation Structure
 
+- Start with [user_documentation.md](user_documentation.md) when you need the full external-user path.
 - Start with [concept.md](concept.md) for positioning and scope.
 - Read [methodology.md](methodology.md) for scoring, ATT&CK, Asset Context, and VEX semantics.
 - Use [support_matrix.md](support_matrix.md) and [contracts.md](contracts.md) for stable consumer-facing surfaces.
+- Use [architecture/index.md](architecture/index.md), [architecture/core-workbench-schema.md](architecture/core-workbench-schema.md), and [architecture/analysis-run-provider-schema.md](architecture/analysis-run-provider-schema.md) for architecture and data-model details.
 - Use [asset-context-csv.md](asset-context-csv.md) for the local asset-context CSV schema, match modes, precedence, and re-score semantics.
 - Use [playbooks.md](playbooks.md) when you want the shortest role-oriented path for CI scans, SBOM triage, or infrastructure scan triage.
 - Use [integrations/reporting_and_ci.md](integrations/reporting_and_ci.md) for SARIF, GitHub Action, HTML, and local workflow guidance.
 - Use [workbench-threat-model.md](workbench-threat-model.md) for Workbench security boundaries, residual risk, and release readiness checks.
 - Use [workbench-offline-demo.md](workbench-offline-demo.md) for the locked-provider Workbench demo and v1.0 release evidence path.
+- Use [user_documentation.md#known-limitations](user_documentation.md#known-limitations) for the consolidated external-user limitations list.
 - Use [roadmap.md](roadmap.md) for shipped scope and deliberate non-goals.
 - Use [release_operations.md](release_operations.md) for maintainer-only release, GitHub Release recovery, and PyPI/TestPyPI operations.
 - Use [community_repository_setup.md](community_repository_setup.md) for maintainer-facing public repo topics, labels, and triage defaults.

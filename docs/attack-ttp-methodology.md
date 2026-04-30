@@ -117,6 +117,18 @@ The canonical demo file for the duplicate VPW execution track is
 object shapes after parsing. YAML files should use the same keys as the JSON
 example.
 
+## ATT&CK STIX Snapshot Catalog
+
+The Workbench can persist a pinned Enterprise ATT&CK STIX 2.1 bundle as a
+versioned local catalog. The catalog stores tactics, techniques, mitigations,
+mitigation relationships, `attack_version`, domain, STIX spec version, bundle
+SHA256, object counts, and revoked/deprecated state.
+
+This catalog is reference data only. It validates that CTID or curated mapping
+technique IDs exist in a known ATT&CK version and exposes the snapshot version
+through provider status metadata. It does not create CVE-to-technique mappings
+and it does not download live ATT&CK content during CI.
+
 ## Validation
 
 Use the published schema for local artifact checks:

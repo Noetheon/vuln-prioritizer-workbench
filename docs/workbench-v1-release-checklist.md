@@ -16,6 +16,7 @@ The Workbench v1.0 milestone evidence is preserved here, but the current package
 - Post-release security and CodeQL hygiene through `50c3620fba76c343c8aadd3564b926937579f01b` left `main` green for CI, CodeQL, and Docker with zero open code-scanning alerts.
 - `python3 -m pip check` is not used as release evidence in the shared user-site environment because unrelated globally installed packages conflict with each other outside this project.
 - Public package tag and GitHub Release object: `v1.1.0` published from `23199ef85fb9ac08b9bb0e301b2aadbf3377f791`.
+- Duplicate VPW-072 performance smoke evidence: `make performance-smoke` passed on 2026-04-30 with 10,000 findings, import `1.1442s`, tail page `0.2420s`, and peak RSS delta `208.594 MiB`.
 
 ## GitHub Tracker Mapping
 
@@ -49,7 +50,23 @@ curl http://127.0.0.1:8000/api/v1/workbench/status
 - [x] Confirm `/api/v1/workbench/status` returns an OK status from the running container.
 - [x] Confirm the React shell opens at `http://127.0.0.1:5173`.
 - [x] Confirm the stack can be stopped and restarted without manual database repair.
+- [x] VPW-075 fresh validation confirms the Docker quickstart also supports
+  browser login, project creation, locked provider snapshot import, and
+  non-empty findings without live API keys.
 - [x] Record the smoke-gate result, date, commit, and relevant environment notes in the release evidence.
+
+## Performance Smoke
+
+- [x] Run the optional VPW-072 scale smoke before release hardening closeout:
+
+```bash
+make performance-smoke
+```
+
+- [x] Confirm 10,000 synthetic findings are imported with locked provider data.
+- [x] Confirm the high-offset findings page returns 100 stable items.
+- [x] Archive the machine-readable result under `docs/evidence/vpw-072-performance-smoke.json`.
+- [x] Document MVP thresholds and known limits in `docs/benchmarking.md`.
 
 ## Demo Evidence Bundle
 
@@ -140,6 +157,7 @@ make docker-demo-smoke
 
 - [x] Run `make workflow-check` before merge or tagging when Docker and pre-commit tooling are available.
 - [x] Run `make demo-sync-check-temp` before tagging when examples or report outputs changed.
+- [x] Confirm normal CI/TestPyPI workflows use read-only repository permissions by default and that the release workflow scopes `contents: write` only to the job that publishes GitHub Release assets.
 - [x] Confirm release workflow configuration still builds distributions, validates them, creates the GitHub Release from checked-in notes, and only publishes to PyPI when the repository gate allows it.
 - [x] Confirm the tagged release notes file exists under `docs/releases/`.
 - [x] Confirm GitHub Release, tag, package metadata, and docs version all match.

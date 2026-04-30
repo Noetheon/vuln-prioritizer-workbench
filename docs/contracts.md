@@ -41,6 +41,7 @@ The following outputs are the current documented machine interfaces:
 - `rollup --format json`
 - `analyze --format sarif`
 - `analyze --summary-output <path>`
+- `report workbench --input <analysis-json> --format sarif`
 - `report html --input <analysis-json>`
 - `report evidence-bundle --input <analysis-json>`
 - `report verify-evidence-bundle --input <evidence-zip> --format json`
@@ -403,7 +404,7 @@ Workbench API changes are additive:
 - `GET /api/v1/projects/{project_id}/summary` returns a dashboard-oriented decision summary with finding counts, priority/status buckets, provider-signal hit counts, latest run status, and latest run summary
 - `GET /api/v1/projects/{project_id}/compare/cvss-only` returns the CVSS-only baseline comparison for stored template findings, using the same methodology payload as the core decision engine
 - `GET /api/v1/providers/status` returns an authenticated template adapter provider-status envelope for the React status card, including `status`, `snapshot`, `sources`, `latest_update_job`, `cache_dir`, `snapshot_dir`, `warnings`, `last_sync`, `last_error`, `cache_age_seconds`, and `snapshot_mode`; the legacy `GET /api/providers/status` route still exists with its current behavior during migration
-- `POST /api/v1/runs/{run_id}/reports` accepts `markdown`, `html`, `json`, `csv`, `zip`, and `attack-navigator` for completed visible template runs. JSON exports use `analysis-result.v1.json` with `project`, `analysis_run`, `provider_snapshot`, `findings`, and `explanations`. CSV exports use `findings.csv` with stable spreadsheet-safe finding columns. `attack-navigator` exports `attack-navigator-layer.json` with Navigator v4.5-compatible `techniques`, `techniqueID`, risk score, comments, and metadata; `attack_filter` accepts `all`, `critical-high`, `kev`, and the `no-coverage` placeholder. ZIP exports use `evidence-bundle.zip` with `manifest.json`, `analysis.json`, `technical.md`, `executive.html`, `provider-snapshot.json`, optional `attack-navigator-layer.json`, optional `governance/rollups.json`, `governance/waivers.json`, `governance/vex-summary.json`, and `governance/asset-context.json`, per-file SHA-256 entries, input hashes when available, and redaction of sensitive/local-path fields.
+- `POST /api/v1/runs/{run_id}/reports` accepts `markdown`, `html`, `json`, `csv`, `zip`, `attack-navigator`, and `sarif` for completed visible template runs. JSON exports use `analysis-result.v1.json` with `project`, `analysis_run`, `provider_snapshot`, `findings`, and `explanations`. CSV exports use `findings.csv` with stable spreadsheet-safe finding columns. SARIF exports use `results.sarif` with SARIF 2.1.0, CVE-addressable rule/result IDs, priority/CVSS-derived levels and `security-severity`, stable fingerprints, and HTTP(S) references including the canonical NVD CVE URL. `attack-navigator` exports `attack-navigator-layer.json` with Navigator v4.5-compatible `techniques`, `techniqueID`, risk score, comments, and metadata; `attack_filter` accepts `all`, `critical-high`, `kev`, and the `no-coverage` placeholder. ZIP exports use `evidence-bundle.zip` with `manifest.json`, `analysis.json`, `technical.md`, `executive.html`, `provider-snapshot.json`, optional `attack-navigator-layer.json`, optional `governance/rollups.json`, `governance/waivers.json`, `governance/vex-summary.json`, and `governance/asset-context.json`, per-file SHA-256 entries, input hashes when available, and redaction of sensitive/local-path fields.
 - `POST /api/v1/reports/{report_id}/verify` verifies a visible template `evidence-bundle.zip` report without extracting ZIP members. It validates the stored artifact path and report SHA-256 before returning the same `metadata`, `summary`, and `items` shape as `report verify-evidence-bundle --format json`; non-bundle reports return 422.
 - `POST /api/projects/{project_id}/imports` accepts single-upload and additive multi-upload imports for all CLI input formats
 - `GET /api/jobs`, `GET /api/jobs/{id}`, `POST /api/jobs`, and `POST /api/jobs/{id}/retry` expose durable local job state for compatible synchronous operations
@@ -487,6 +488,7 @@ The public combinations currently intended for use are:
 - `data update`: `table`, `json`
 - `data verify`: `table`, `json`
 - `data export-provider-snapshot`: JSON file output
+- `report workbench`: `json`, `markdown`, `html`, `csv`, `sarif`
 - `report html`: HTML file output
 - `report evidence-bundle`: ZIP file output containing `analysis.json`, `report.html`, `summary.md`, `manifest.json`, and optional `governance/rollups.json`, `governance/waivers.json`, `governance/vex-summary.json`, and `governance/asset-context.json`
 - `report verify-evidence-bundle`: `table` and `json`
@@ -495,7 +497,10 @@ The public combinations currently intended for use are:
 Important boundary:
 
 - `table` is a terminal view and must not be combined with `--output`
-- `sarif` is a documented export only for `analyze`
+- `sarif` is a documented export for `analyze` and saved analysis JSON rendered
+  through `report workbench`
+- Template Workbench report creation also exposes SARIF as `results.sarif`
+  through `POST /api/v1/runs/{run_id}/reports`
 - `analyze --summary-output` is a Markdown sidecar derived from the same in-memory analysis payload and does not replace the JSON contract
 
 ### Runtime config

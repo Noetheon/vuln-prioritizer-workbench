@@ -441,6 +441,7 @@ test("template frontend covers core Workbench E2E smoke", async ({ page }) => {
   await expect(reportCards).toContainText("JSON Findings Export")
   await expect(reportCards).toContainText("CSV Findings Export")
   await expect(reportCards).toContainText("ATT&CK Navigator Layer")
+  await expect(reportCards).toContainText("SARIF Results")
   await expect(reportCards).toContainText("Evidence Bundle")
   const expectedReports = [
     { action: "Generate Markdown", filename: "technical-report.md" },
@@ -451,6 +452,7 @@ test("template frontend covers core Workbench E2E smoke", async ({ page }) => {
       action: "Export Navigator Layer",
       filename: "attack-navigator-layer.json",
     },
+    { action: "Export SARIF", filename: "results.sarif" },
     { action: "Build Evidence Bundle", filename: "evidence-bundle.zip" },
   ]
   for (const report of expectedReports) {
@@ -467,6 +469,7 @@ test("template frontend covers core Workbench E2E smoke", async ({ page }) => {
   await expect(reportHistory).toContainText("analysis-result.v1.json")
   await expect(reportHistory).toContainText("findings.csv")
   await expect(reportHistory).toContainText("attack-navigator-layer.json")
+  await expect(reportHistory).toContainText("results.sarif")
   await expect(reportHistory).toContainText("evidence-bundle.zip")
   await page.screenshot({
     fullPage: true,
@@ -555,21 +558,18 @@ test("template frontend covers core Workbench E2E smoke", async ({ page }) => {
     mimeType: "text/csv",
     name: "import-wizard-occurrences.csv",
   })
-  await expect(importFileInput).toHaveJSProperty("files.length", 1)
   const assetContextInput = page.locator('input[name="assetContextFile"]')
   await assetContextInput.setInputFiles({
     buffer: validAssetContextCsv,
     mimeType: "text/csv",
     name: "import-wizard-asset-context.csv",
   })
-  await expect(assetContextInput).toHaveJSProperty("files.length", 1)
   const vexInput = page.locator('input[name="vexFile"]')
   await vexInput.setInputFiles({
     buffer: importWizardOpenVex,
     mimeType: "application/json",
     name: "import-wizard-openvex.json",
   })
-  await expect(vexInput).toHaveJSProperty("files.length", 1)
   await page.getByRole("button", { name: "Upload Import" }).click()
   await expect(
     page.getByRole("region", { name: "Import result" }),

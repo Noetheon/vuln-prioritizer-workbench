@@ -22,7 +22,7 @@
 | `rollup` | analysis JSON or snapshot JSON | `markdown`, `json` | JSON schema | Aggregates findings by `asset_id` or `asset_business_service`, keeps waiver lifecycle debt visible, and ranks buckets for remediation planning without rerunning enrichment. |
 | `attack validate` | ATT&CK local files | `markdown`, `json` | JSON schema | Validates local mapping and metadata artifacts; `ctid-json` is the preferred workflow. |
 | `attack coverage` | `--input PATH` | `markdown`, `json` | JSON schema | Uses the same input loader for CVE extraction. |
-| `attack navigator-layer` | `--input PATH` | Navigator layer JSON | Navigator JSON, no local schema here | Exports a frequency-based ATT&CK Navigator layer. The template Workbench also exposes `attack-navigator` as a run report artifact. |
+| `attack navigator-layer` | `--input PATH` | Navigator layer JSON | Navigator JSON, no local schema here | Exports a frequency-based ATT&CK Navigator layer. The template Workbench also exposes `attack-navigator` and `sarif` as run report artifacts. |
 | `data status` | none | `json` | JSON schema | Cache namespace inspection plus optional local ATT&CK metadata validation. |
 | `data update` | optional repeatable `--input PATH` / `--cve` | `json` | JSON schema | Cache refresh for `nvd`, `epss`, and `kev`; `table` remains the default terminal view. |
 | `data verify` | optional repeatable `--input PATH` / `--cve` | `json` | JSON schema | Cache coverage, checksum, and pinned local file verification; `table` remains the default terminal view. |
@@ -30,6 +30,7 @@
 | `db init` | Workbench environment settings | terminal status | Workbench schema/migration side effect | Initializes the Workbench SQLite database named by `VULN_PRIORITIZER_DB_URL`. |
 | `db cleanup-artifacts` | Workbench environment settings | terminal status | Workbench report/evidence cleanup side effect | Dry-runs by default; `--delete` removes expired/orphaned managed artifacts. |
 | `web serve` | Workbench environment settings | local HTTP service | FastAPI/OpenAPI + HTML UI | Serves the Workbench app with `--host`, `--port`, and optional `--reload`. |
+| `report workbench` | analysis JSON | `json`, `markdown`, `html`, `csv`, `sarif` | Saved analysis JSON contract + SARIF 2.1.0 | No live enrichment during rendering. SARIF results use CVE-addressable rules and references. |
 | `report html` | analysis JSON | `html` | Consumes analysis JSON contract | No live enrichment during rendering. |
 | `report evidence-bundle` | analysis JSON | `zip` | Manifest schema inside bundle | Packages saved analysis JSON, regenerated HTML, Markdown summary, optional source input copy, and optional ATT&CK Navigator layer when mappings exist. |
 | `report verify-evidence-bundle` | evidence ZIP | `json` | JSON schema | Verifies ZIP members against the embedded manifest and reports missing, modified, unexpected, or malformed bundle content. |
@@ -93,7 +94,8 @@ Without a matching target, the explain flow still works, but asset-context and V
 - Prefer `report evidence-bundle` when a review board or release gate needs a reproducible offline artifact set from a saved analysis run.
 - Prefer `report verify-evidence-bundle` before shipping or archiving an evidence ZIP outside the repository or CI workspace.
 - `report html` expects an analysis JSON export, not compare JSON or explain JSON.
-- `sarif` is part of the documented contract only for `analyze`.
+- `sarif` is part of the documented contract for `analyze`, `report workbench`,
+  and template Workbench run reports.
 - `data status`, `data update`, `data verify`, and `data export-provider-snapshot` publish JSON contracts; their Rich table layout remains human-facing where applicable.
 - The optional SQLite state store is separate from the existing file cache and does not change `analyze`, `snapshot`, or `report` output semantics.
 - The Workbench SQLite database is a separate application store controlled by `VULN_PRIORITIZER_DB_URL`; it does not replace the CLI state store or provider cache.
