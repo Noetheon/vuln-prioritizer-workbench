@@ -11,6 +11,7 @@ Pin the action to a release tag or commit SHA in consumer repositories. The exam
 - [code-scanning-sarif.yml](./code-scanning-sarif.yml)
 - [pr-comment-report.yml](./pr-comment-report.yml)
 - [html-report-artifact.yml](./html-report-artifact.yml)
+- [workbench-report-artifacts.yml](./workbench-report-artifacts.yml)
 
 ## Current Contracts
 
@@ -20,6 +21,8 @@ The action and examples assume the current repository provides:
 - `analyze --format sarif`
 - deterministic `--fail-on` exit codes
 - `report html --input analysis.json --output report.html`
+- `report workbench --input analysis.json --format markdown|json`
+- `report validate-sarif --input results.sarif --format json`
 - a composite GitHub Action at repository root (`action.yml`)
 
 ## Integration Notes
@@ -29,3 +32,4 @@ The action and examples assume the current repository provides:
 - The action installs `vuln-prioritizer` from the action checkout and runs the local CLI entrypoint.
 - In `mode: analyze`, `input` and `input-format` support newline-delimited values for merged multi-source runs.
 - Consumers can pass `provider-snapshot-file` and `locked-provider-data` when they want deterministic provider replay in the action wrapper.
+- The Workbench report artifact example intentionally uses a local provider snapshot path and no `secrets.*` values so the default integration can run without live provider credentials.

@@ -1,0 +1,58 @@
+name: Example Consumer Workflow - Workbench Report Artifacts
+
+on:
+  workflow_dispatch:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  reports:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Generate locked analysis JSON
+        id: analyze
+        uses: Noetheon/vuln-prioritizer-workbench@vX.Y.Z
+        with:
+          mode: analyze
+          input: trivy-results.json
+          input-format: trivy-json
+          output-format: json
+          output-path: analysis.json
+          provider-snapshot-file: provider-snapshot.json
+          locked-provider-data: "true"
+          summary-output-path: summary.md
+          summary-template: compact
+          github-step-summary: "true"
+
+      - name: Render Workbench Markdown report
+        id: markdown-report
+        uses: Noetheon/vuln-prioritizer-workbench@vX.Y.Z
+        with:
+          mode: workbench-report
+          input: ${{ steps.analyze.outputs.report-path }}
+          output-format: markdown
+          output-path: workbench-report.md
+
+      - name: Render Workbench JSON report
+        id: json-report
+        uses: Noetheon/vuln-prioritizer-workbench@vX.Y.Z
+        with:
+          mode: workbench-report
+          input: ${{ steps.analyze.outputs.report-path }}
+          output-format: json
+          output-path: workbench-report.json
+
+      - name: Upload report artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: vuln-prioritization-workbench-reports
+          path: |
+            ${{ steps.markdown-report.outputs.report-path }}
+            ${{ steps.json-report.outputs.report-path }}
+            ${{ steps.analyze.outputs.summary-path }}

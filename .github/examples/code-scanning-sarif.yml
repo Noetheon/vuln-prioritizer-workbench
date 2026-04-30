@@ -23,6 +23,7 @@ jobs:
           output-path: results.sarif
           summary-template: compact
           github-step-summary: "true"
+          validate-sarif: "true"
           asset-context: assets.csv
           vex-files: |
             openvex.json

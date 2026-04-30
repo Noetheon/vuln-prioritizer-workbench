@@ -88,6 +88,7 @@ The examples here stay current:
 - [SARIF example workflow](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/.github/examples/code-scanning-sarif.yml)
 - [PR comment example workflow](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/.github/examples/pr-comment-report.yml)
 - [HTML artifact example workflow](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/.github/examples/html-report-artifact.yml)
+- [Workbench Markdown/JSON artifact workflow](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/.github/examples/workbench-report-artifacts.yml)
 
 ## Suggested operator sequence
 
