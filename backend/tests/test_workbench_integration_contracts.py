@@ -5,6 +5,15 @@ from pathlib import Path
 import yaml
 
 
+def test_backend_dockerfile_prepares_template_quickstart_runtime_dirs() -> None:
+    dockerfile = Path("backend/Dockerfile").read_text(encoding="utf-8")
+
+    assert "/app/template-import-uploads" in dockerfile
+    assert "/app/template-reports" in dockerfile
+    assert "/app/template-provider-cache" in dockerfile
+    assert "chown -R workbench:workbench /app" in dockerfile
+
+
 def test_compose_uses_template_shell_and_keeps_profiled_legacy_postgres() -> None:
     compose = yaml.safe_load(Path("compose.yml").read_text(encoding="utf-8"))
     services = compose["services"]
@@ -13,6 +22,16 @@ def test_compose_uses_template_shell_and_keeps_profiled_legacy_postgres() -> Non
     assert "profiles" not in backend
     assert backend["depends_on"]["db"]["condition"] == "service_healthy"
     assert backend["environment"]["PROJECT_NAME"].startswith("${PROJECT_NAME:-Vuln Prioritizer")
+    assert "http://127.0.0.1:5173" in backend["environment"]["BACKEND_CORS_ORIGINS"]
+    assert backend["environment"]["IMPORT_UPLOAD_DIR"] == "/app/template-import-uploads"
+    assert backend["environment"]["REPORT_DIR"] == "/app/template-reports"
+    assert backend["environment"]["PROVIDER_SNAPSHOT_DIR"] == "/app/examples"
+    assert backend["environment"]["PROVIDER_CACHE_DIR"] == "/app/template-provider-cache"
+    assert backend["environment"]["ATTACK_ARTIFACT_DIR"] == "/app/examples/attack"
+    assert "template-import-uploads:/app/template-import-uploads" in backend["volumes"]
+    assert "template-reports:/app/template-reports" in backend["volumes"]
+    assert "template-provider-cache:/app/template-provider-cache" in backend["volumes"]
+    assert "./data:/app/examples:ro" in backend["volumes"]
     assert "/api/v1/workbench/status" in backend["healthcheck"]["test"][3]
 
     frontend = services["frontend"]
@@ -39,11 +58,26 @@ def test_compose_uses_template_shell_and_keeps_profiled_legacy_postgres() -> Non
 def test_compose_override_exposes_template_shell_and_frontend_ports() -> None:
     override = yaml.safe_load(Path("compose.override.yml").read_text(encoding="utf-8"))
     services = override["services"]
+    backend_command = "\n".join(services["backend"]["command"])
 
     assert services["backend"]["ports"] == ["127.0.0.1:8000:8000"]
-    assert "app.main:app" in services["backend"]["command"]
+    assert "init_db(session)" in backend_command
+    assert "app.main:app" in backend_command
     assert services["frontend"]["ports"] == ["127.0.0.1:5173:80"]
     assert services["workbench-postgres"]["ports"] == ["127.0.0.1:8001:8000"]
+
+
+def test_docker_demo_smoke_runs_quickstart_api_import() -> None:
+    makefile = Path("Makefile").read_text(encoding="utf-8")
+    script = Path("scripts/docker_quickstart_api_smoke.py").read_text(encoding="utf-8")
+
+    docker_smoke_block = makefile.split("docker-demo-smoke:", 1)[1].split(
+        "docker-postgres-migration-smoke:",
+        1,
+    )[0]
+    assert "$(PYTHON) scripts/docker_quickstart_api_smoke.py" in docker_smoke_block
+    assert "locked_provider_data" in script
+    assert "demo_provider_snapshot.json" in script
 
 
 def test_frontend_nginx_serves_security_headers_for_static_and_404_routes() -> None:

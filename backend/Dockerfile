@@ -14,7 +14,15 @@ COPY backend/src ./backend/src
 RUN python -m pip install --upgrade pip \
     && python -m pip install ./backend \
     && adduser --disabled-password --gecos "" --uid 10001 workbench \
-    && mkdir -p /app/data /app/uploads /app/reports /app/provider-snapshots /app/.cache/vuln-prioritizer \
+    && mkdir -p \
+        /app/data \
+        /app/uploads \
+        /app/reports \
+        /app/provider-snapshots \
+        /app/template-import-uploads \
+        /app/template-reports \
+        /app/template-provider-cache \
+        /app/.cache/vuln-prioritizer \
     && chown -R workbench:workbench /app
 
 USER workbench

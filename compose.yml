@@ -37,13 +37,24 @@ services:
       ENVIRONMENT: ${ENVIRONMENT:-local}
       DOMAIN: ${DOMAIN:-localhost}
       FRONTEND_HOST: ${FRONTEND_HOST:-http://localhost:5173}
+      BACKEND_CORS_ORIGINS: ${BACKEND_CORS_ORIGINS:-http://localhost,http://localhost:5173,http://127.0.0.1:5173}
       POSTGRES_SERVER: db
       POSTGRES_PORT: ${POSTGRES_PORT:-5432}
       POSTGRES_DB: ${POSTGRES_DB:-workbench}
       POSTGRES_USER: ${POSTGRES_USER:-workbench}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-workbench}
+      IMPORT_UPLOAD_DIR: /app/template-import-uploads
+      REPORT_DIR: /app/template-reports
+      PROVIDER_SNAPSHOT_DIR: /app/examples
+      PROVIDER_CACHE_DIR: /app/template-provider-cache
+      ATTACK_ARTIFACT_DIR: /app/examples/attack
       NVD_API_KEY: ${NVD_API_KEY:-}
       VULN_PRIORITIZER_NVD_API_KEY_ENV: ${VULN_PRIORITIZER_NVD_API_KEY_ENV:-NVD_API_KEY}
+    volumes:
+      - template-import-uploads:/app/template-import-uploads
+      - template-reports:/app/template-reports
+      - template-provider-cache:/app/template-provider-cache
+      - ./data:/app/examples:ro
     healthcheck:
       test:
         [
@@ -126,6 +137,9 @@ services:
 
 volumes:
   app-db-data:
+  template-import-uploads:
+  template-reports:
+  template-provider-cache:
   workbench-postgres-uploads:
   workbench-postgres-reports:
   workbench-postgres-provider-snapshots:

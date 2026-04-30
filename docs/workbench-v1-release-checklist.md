@@ -49,6 +49,9 @@ curl http://127.0.0.1:8000/api/v1/workbench/status
 - [x] Confirm `/api/v1/workbench/status` returns an OK status from the running container.
 - [x] Confirm the React shell opens at `http://127.0.0.1:5173`.
 - [x] Confirm the stack can be stopped and restarted without manual database repair.
+- [x] VPW-075 fresh validation confirms the Docker quickstart also supports
+  browser login, project creation, locked provider snapshot import, and
+  non-empty findings without live API keys.
 - [x] Record the smoke-gate result, date, commit, and relevant environment notes in the release evidence.
 
 ## Demo Evidence Bundle

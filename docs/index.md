@@ -71,9 +71,15 @@ If you are working from a repository checkout, the checked-in demo ATT&CK files 
 Workbench v1.0 from a repository checkout:
 
 ```bash
+cp .env.example .env
 docker compose -f compose.yml -f compose.override.yml up --build backend frontend
 curl http://127.0.0.1:8000/api/v1/workbench/status
 ```
+
+Open `http://127.0.0.1:5173`, sign in with the local `.env.example` defaults,
+create a project, and import `data/sample_cves.txt` with
+`demo_provider_snapshot.json` plus locked provider data enabled. This path works
+without live provider API keys.
 
 During the FastAPI template migration, Compose starts the template backend shell
 and React frontend. The legacy web/API Workbench remains local-first and now
