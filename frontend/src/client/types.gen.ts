@@ -764,12 +764,12 @@ export type ProviderUpdateJobPublic = {
  */
 export type ReportCreate = {
     attack_filter?: 'all' | 'critical-high' | 'kev' | 'no-coverage';
-    format?: 'markdown' | 'html' | 'json' | 'csv' | 'zip' | 'attack-navigator';
+    format?: 'markdown' | 'html' | 'json' | 'csv' | 'zip' | 'attack-navigator' | 'sarif';
 };
 
 export type attack_filter = 'all' | 'critical-high' | 'kev' | 'no-coverage';
 
-export type format = 'markdown' | 'html' | 'json' | 'csv' | 'zip' | 'attack-navigator';
+export type format = 'markdown' | 'html' | 'json' | 'csv' | 'zip' | 'attack-navigator' | 'sarif';
 
 /**
  * Public report metadata without exposing server filesystem paths.

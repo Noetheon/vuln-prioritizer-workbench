@@ -3541,7 +3541,7 @@ export const ReportCreateSchema = {
         },
         format: {
             default: 'markdown',
-            enum: ['markdown', 'html', 'json', 'csv', 'zip', 'attack-navigator'],
+            enum: ['markdown', 'html', 'json', 'csv', 'zip', 'attack-navigator', 'sarif'],
             title: 'Format',
             type: 'string'
         }

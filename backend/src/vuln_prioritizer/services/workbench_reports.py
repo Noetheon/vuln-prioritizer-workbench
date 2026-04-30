@@ -247,6 +247,7 @@ def generate_workbench_sarif(report_payload: dict[str, Any]) -> str:
         metadata.get("input_path") or metadata.get("input_format") or "workbench-input"
     )
     results: list[dict[str, Any]] = []
+    rules_by_id: dict[str, dict[str, Any]] = {}
     for finding in report_payload.get("findings", []):
         if not isinstance(finding, dict):
             continue
@@ -261,9 +262,15 @@ def generate_workbench_sarif(report_payload: dict[str, Any]) -> str:
             item for item in finding.get("defensive_contexts", []) if isinstance(item, dict)
         ]
         decision_guidance = _decision_guidance(finding)
+        references = _workbench_sarif_reference_urls(cve_id, finding, defensive_contexts)
+        rule_id = _workbench_sarif_rule_id(cve_id)
+        rules_by_id.setdefault(
+            rule_id,
+            _workbench_sarif_rule(cve_id, priority, finding, references=references),
+        )
         results.append(
             {
-                "ruleId": f"vuln-prioritizer/{priority.lower()}",
+                "ruleId": rule_id,
                 "level": level_map.get(priority, "note"),
                 "message": {
                     "text": (
@@ -282,6 +289,8 @@ def generate_workbench_sarif(report_payload: dict[str, Any]) -> str:
                     "data_quality_confidence": str(
                         finding.get("data_quality_confidence") or "high"
                     ),
+                    "references": references,
+                    "cve_url": references[0],
                     "attack_relevance": finding.get("attack_relevance"),
                     "defensive_context_sources": sorted(
                         {
@@ -319,7 +328,7 @@ def generate_workbench_sarif(report_payload: dict[str, Any]) -> str:
                     "driver": {
                         "name": "vuln-prioritizer-workbench",
                         "version": str(metadata.get("schema_version") or "1.1.0"),
-                        "rules": _workbench_sarif_rules(),
+                        "rules": list(rules_by_id.values()),
                     }
                 },
                 "results": results,
@@ -329,22 +338,91 @@ def generate_workbench_sarif(report_payload: dict[str, Any]) -> str:
     return json.dumps(payload, indent=2, sort_keys=True)
 
 
-def _workbench_sarif_rules() -> list[dict[str, Any]]:
-    return [
-        {
-            "id": f"vuln-prioritizer/{priority.lower()}",
-            "name": f"{priority} prioritized vulnerability",
-            "shortDescription": {"text": f"{priority} Workbench prioritization result."},
-            "fullDescription": {
-                "text": (
-                    "Known CVE prioritized from CVSS, EPSS, and CISA KEV with explicit "
-                    "Workbench context for assets, VEX, waivers, remediation, and ATT&CK."
-                )
-            },
-            "properties": {"priority": priority},
-        }
-        for priority in ("Critical", "High", "Medium", "Low")
-    ]
+def _workbench_sarif_rule_id(cve_id: str) -> str:
+    return f"vuln-prioritizer/{cve_id.lower()}"
+
+
+def _workbench_sarif_rule(
+    cve_id: str,
+    priority: str,
+    finding: dict[str, Any],
+    *,
+    references: list[str],
+) -> dict[str, Any]:
+    level_map = {
+        "Critical": "error",
+        "High": "error",
+        "Medium": "warning",
+        "Low": "note",
+    }
+    return {
+        "id": _workbench_sarif_rule_id(cve_id),
+        "name": f"{cve_id} prioritized vulnerability",
+        "shortDescription": {"text": f"{cve_id}: {priority} Workbench priority."},
+        "fullDescription": {
+            "text": (
+                "Known CVE prioritized from CVSS, EPSS, and CISA KEV with explicit "
+                "Workbench context for assets, VEX, waivers, remediation, and ATT&CK."
+            )
+        },
+        "defaultConfiguration": {"level": level_map.get(priority, "note")},
+        "helpUri": references[0],
+        "properties": {
+            "cve": cve_id,
+            "priority": priority,
+            "precision": "very-high",
+            "security-severity": _workbench_sarif_security_severity(priority, finding),
+            "tags": ["security", "external/cve", f"priority/{priority.lower()}"],
+            "references": references,
+        },
+    }
+
+
+def _workbench_sarif_security_severity(priority: str, finding: dict[str, Any]) -> str:
+    cvss_score = finding.get("cvss_base_score")
+    if isinstance(cvss_score, int | float):
+        return f"{min(max(float(cvss_score), 0.0), 10.0):.1f}"
+    return {
+        "Critical": "9.0",
+        "High": "7.0",
+        "Medium": "5.0",
+        "Low": "3.0",
+    }.get(priority, "0.0")
+
+
+def _workbench_sarif_reference_urls(
+    cve_id: str,
+    finding: dict[str, Any],
+    defensive_contexts: list[dict[str, Any]],
+) -> list[str]:
+    urls = [f"https://nvd.nist.gov/vuln/detail/{cve_id}"]
+    raw_provider_evidence = finding.get("provider_evidence")
+    provider_evidence: dict[str, Any] = (
+        raw_provider_evidence if isinstance(raw_provider_evidence, dict) else {}
+    )
+    raw_nvd_evidence = provider_evidence.get("nvd")
+    nvd_evidence: dict[str, Any] = raw_nvd_evidence if isinstance(raw_nvd_evidence, dict) else {}
+    references = nvd_evidence.get("references")
+    if isinstance(references, list):
+        urls.extend(str(reference) for reference in references if reference)
+    for context in defensive_contexts:
+        if context.get("url"):
+            urls.append(str(context["url"]))
+        context_references = context.get("references")
+        if isinstance(context_references, list):
+            urls.extend(str(reference) for reference in context_references if reference)
+    return _dedupe_strings(urls)
+
+
+def _dedupe_strings(values: list[str]) -> list[str]:
+    seen: set[str] = set()
+    deduped: list[str] = []
+    for value in values:
+        normalized = str(value).strip()
+        if normalized.startswith(("http://", "https://")) and normalized not in seen:
+            seen.add(normalized)
+            deduped.append(normalized)
+    return deduped
 
 
 def _workbench_sarif_fingerprint(
