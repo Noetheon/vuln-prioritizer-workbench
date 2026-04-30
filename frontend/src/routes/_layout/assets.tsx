@@ -14,8 +14,6 @@ import {
   ShieldCheck,
 } from "lucide-react"
 import { type FormEvent, useEffect, useMemo, useState } from "react"
-
-import { clearAccessToken } from "../../auth"
 import {
   ApiError,
   type AssetCreate,
@@ -35,7 +33,8 @@ import {
   UsersService,
   WorkbenchService,
   type WorkbenchStatus,
-} from "../../client"
+} from "../../api-client"
+import { clearAccessToken } from "../../auth"
 
 const navigation = [
   { label: "Dashboard", icon: LayoutDashboard, to: "/" },
@@ -471,7 +470,7 @@ function AssetsPage() {
     try {
       const assetPage = await AssetsService.readProjectAssets({
         owner: assetOwnerFilter.trim() || undefined,
-        projectId: selectedProjectId,
+        project_id: selectedProjectId,
         service: assetServiceFilter.trim() || undefined,
       })
       setAssets(assetPage.data)
@@ -551,10 +550,10 @@ function AssetsPage() {
       setAssetFindingsError("")
       try {
         const page = await FindingsService.readProjectFindings({
-          assetId: selectedAsset.id,
+          asset_id: selectedAsset.id,
           limit: 200,
           offset: 0,
-          projectId: selectedProjectId,
+          project_id: selectedProjectId,
           sort: "operational",
         })
         if (isMounted) {
@@ -603,8 +602,8 @@ function AssetsPage() {
     setAssetActionLoading(true)
     try {
       const asset = await AssetsService.createProjectAsset({
-        projectId: selectedProjectId,
-        requestBody: assetRequestBody(createForm),
+        project_id: selectedProjectId,
+        assetCreate: assetRequestBody(createForm),
       })
       setCreateForm(emptyAssetForm)
       setAssetMessage(`Asset ${asset.name} created.`)
@@ -644,8 +643,8 @@ function AssetsPage() {
     setAssetActionLoading(true)
     try {
       const asset = await AssetsService.updateAsset({
-        assetId: editingAssetId,
-        requestBody: assetUpdateBody(editForm),
+        asset_id: editingAssetId,
+        assetUpdate: assetUpdateBody(editForm),
       })
       setEditingAssetId("")
       setAssetMessage(`Asset ${asset.name} updated.`)
@@ -665,7 +664,9 @@ function AssetsPage() {
     setAssetMessage("")
     setAssetActionLoading(true)
     try {
-      const result = await AssetsService.recalculateAsset({ assetId: asset.id })
+      const result = await AssetsService.recalculateAsset({
+        asset_id: asset.id,
+      })
       setAssetMessage(
         `Recalculated ${result.recalculated_findings} finding(s) for ${asset.name}.`,
       )
@@ -696,9 +697,9 @@ function AssetsPage() {
     setAssetActionLoading(true)
     try {
       const result = await AssetsService.importProjectAssets({
-        projectId: selectedProjectId,
-        formData: {
-          asset_context_file: assetContextFile as unknown as string,
+        project_id: selectedProjectId,
+        bodyAssetsImportProjectAssets: {
+          asset_context_file: assetContextFile,
         },
       })
       setAssetContextFile(null)

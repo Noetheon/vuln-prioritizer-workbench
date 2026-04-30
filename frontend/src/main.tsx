@@ -7,8 +7,8 @@ import {
 import { createRouter, RouterProvider } from "@tanstack/react-router"
 import { StrictMode } from "react"
 import { createRoot } from "react-dom/client"
+import { ApiError, OpenAPI } from "./api-client"
 import { clearAccessToken, getAccessToken } from "./auth"
-import { ApiError, OpenAPI } from "./client"
 import "./index.css"
 import { routeTree } from "./routeTree.gen"
 

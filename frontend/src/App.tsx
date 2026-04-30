@@ -24,7 +24,6 @@ import {
   Table2,
 } from "lucide-react"
 import { type FormEvent, useEffect, useState } from "react"
-import { clearAccessToken, getAccessToken } from "./auth"
 import {
   type AnalysisRunPublic,
   type AnalysisRunSummaryPublic,
@@ -64,7 +63,8 @@ import {
   WaiversService,
   WorkbenchService,
   type WorkbenchStatus,
-} from "./client"
+} from "./api-client"
+import { clearAccessToken, getAccessToken } from "./auth"
 
 const workbenchNavigation = [
   { label: "Dashboard", icon: LayoutDashboard, to: "/" },
@@ -343,9 +343,7 @@ const defaultImportWizardState: ImportWizardState = {
 
 type ImportUploadFormData = Parameters<
   typeof ImportsService.importProjectUpload
->[0]["formData"] & {
-  vex_file?: string | null
-}
+>[0]["bodyImportsImportProjectUpload"]
 
 type FindingsSort = NonNullable<FindingsReadProjectFindingsData["sort"]>
 type FindingsDirection = NonNullable<
@@ -1715,7 +1713,7 @@ export function App() {
       setDashboardError("")
       try {
         const summary = await ProjectsService.readProjectSummary({
-          projectId: selectedProjectId,
+          project_id: selectedProjectId,
         })
         if (isMounted) {
           setProjectSummary(summary)
@@ -1760,7 +1758,7 @@ export function App() {
       setAttackSummaryError("")
       try {
         const attackSummary = await ProjectsService.readProjectAttackSummary({
-          projectId: selectedProjectId,
+          project_id: selectedProjectId,
         })
         if (isMounted) {
           setProjectAttackSummary(attackSummary)
@@ -1805,7 +1803,7 @@ export function App() {
       setGovernanceError("")
       try {
         const rollups = await ProjectsService.readProjectGovernanceRollups({
-          projectId: selectedProjectId,
+          project_id: selectedProjectId,
           limit: 5,
         })
         if (isMounted) {
@@ -1855,7 +1853,7 @@ export function App() {
       setRunsError("")
       try {
         const runPage = await RunsService.readProjectRuns({
-          projectId: selectedProjectId,
+          project_id: selectedProjectId,
         })
         if (isMounted) {
           setProjectRuns(runPage.data)
@@ -1904,7 +1902,7 @@ export function App() {
       setReportsError("")
       try {
         const reportPage = await ReportsService.readRunReports({
-          runId: selectedRunId,
+          run_id: selectedRunId,
         })
         if (isMounted) {
           setReports(reportPage.data)
@@ -1948,8 +1946,8 @@ export function App() {
       setRunDetailError("")
       try {
         const [run, summary] = await Promise.all([
-          RunsService.readRun({ runId: selectedRunId }),
-          RunsService.readRunSummary({ runId: selectedRunId }),
+          RunsService.readRun({ run_id: selectedRunId }),
+          RunsService.readRunSummary({ run_id: selectedRunId }),
         ])
         if (isMounted) {
           setSelectedRun(run)
@@ -1994,7 +1992,7 @@ export function App() {
       setWaiversError("")
       try {
         const page = await WaiversService.readProjectWaivers({
-          projectId: selectedProjectId,
+          project_id: selectedProjectId,
         })
         if (isMounted) {
           setWaivers(page.data)
@@ -2038,11 +2036,11 @@ export function App() {
       setFindingsError("")
       try {
         const page = await FindingsService.readProjectFindings({
-          cvssMax: numericFilterValue(findingFilters.cvssMax),
-          cvssMin: numericFilterValue(findingFilters.cvssMin),
+          cvss_max: numericFilterValue(findingFilters.cvssMax),
+          cvss_min: numericFilterValue(findingFilters.cvssMin),
           direction: findingDirection,
-          epssMax: numericFilterValue(findingFilters.epssMax),
-          epssMin: numericFilterValue(findingFilters.epssMin),
+          epss_max: numericFilterValue(findingFilters.epssMax),
+          epss_min: numericFilterValue(findingFilters.epssMin),
           exposure: findingFilters.exposure || undefined,
           kev:
             findingFilters.kev === ""
@@ -2050,10 +2048,10 @@ export function App() {
               : findingFilters.kev === "true",
           limit: findingPageSize,
           offset: findingOffset,
-          assetId: findingAssetId || undefined,
-          ownerService: findingFilters.ownerService.trim() || undefined,
+          asset_id: findingAssetId || undefined,
+          owner_service: findingFilters.ownerService.trim() || undefined,
           priority: findingFilters.priority || undefined,
-          projectId: selectedProjectId,
+          project_id: selectedProjectId,
           sort: findingSort,
           status: findingFilters.status || undefined,
         })
@@ -2126,13 +2124,13 @@ export function App() {
       setFindingExplanationWarning("")
       try {
         const detail = await FindingsService.readFinding({
-          findingId: findingDetailId,
+          finding_id: findingDetailId,
         })
         let explanation: FindingExplanationPublic | null = null
         let explanationWarning = ""
         try {
           explanation = await FindingsService.explainFinding({
-            findingId: findingDetailId,
+            finding_id: findingDetailId,
           })
         } catch (caught) {
           if (caught instanceof ApiError && caught.status === 422) {
@@ -2228,7 +2226,7 @@ export function App() {
     setRunsError("")
     try {
       const runPage = await RunsService.readProjectRuns({
-        projectId: selectedProjectId,
+        project_id: selectedProjectId,
       })
       setProjectRuns(runPage.data)
       setSelectedRunId((currentRunId) => {
@@ -2317,8 +2315,8 @@ export function App() {
     setActiveReportFormat(format)
     try {
       const report = await ReportsService.createRunReport({
-        runId: selectedRunId,
-        requestBody: { format },
+        run_id: selectedRunId,
+        reportCreate: { format },
       })
       setReports((currentReports) => [report, ...currentReports])
       setReportActionMessage(
@@ -2351,7 +2349,7 @@ export function App() {
     setReportActionMessage("")
     try {
       const verification = await ReportsService.verifyReport({
-        reportId: report.id,
+        report_id: report.id,
       })
       const summary = objectRecord(verification.summary)
       setReportActionMessage(
@@ -2380,7 +2378,7 @@ export function App() {
     setProjectActionLoading(true)
     try {
       const project = await ProjectsService.createProject({
-        requestBody: projectRequestBody(createProjectForm),
+        projectCreate: projectRequestBody(createProjectForm),
       })
       setCreateProjectForm(emptyProjectForm)
       setProjectActionMessage(`Project ${project.name} created.`)
@@ -2419,8 +2417,8 @@ export function App() {
     setProjectActionLoading(true)
     try {
       const project = await ProjectsService.updateProject({
-        projectId: editProjectId,
-        requestBody: projectRequestBody(editProjectForm),
+        project_id: editProjectId,
+        projectUpdate: projectRequestBody(editProjectForm),
       })
       setEditProjectId("")
       setProjectActionMessage(`Project ${project.name} updated.`)
@@ -2442,7 +2440,7 @@ export function App() {
     setProjectActionError("")
     setProjectActionMessage("")
     try {
-      await ProjectsService.deleteProject({ projectId: project.id })
+      await ProjectsService.deleteProject({ project_id: project.id })
       setDeleteConfirmed(false)
       setEditProjectId("")
       setProjectActionMessage(`Project ${project.name} deleted.`)
@@ -2495,23 +2493,23 @@ export function App() {
       const uploadFormData: ImportUploadFormData = {
         ...(selectedAssetContextFile
           ? {
-              asset_context_file: selectedAssetContextFile as unknown as string,
+              asset_context_file: selectedAssetContextFile,
             }
           : {}),
         ...(selectedVexFile
           ? {
-              vex_file: selectedVexFile as unknown as string,
+              vex_file: selectedVexFile,
             }
           : {}),
-        file: selectedFile as unknown as string,
+        file: selectedFile,
         input_type: importWizard.inputType,
       }
       const run = await ImportsService.importProjectUpload({
-        projectId: importProjectId,
-        formData: uploadFormData,
+        project_id: importProjectId,
+        bodyImportsImportProjectUpload: uploadFormData,
       })
       setImportRun(run)
-      const summary = await RunsService.readRunSummary({ runId: run.id })
+      const summary = await RunsService.readRunSummary({ run_id: run.id })
       setImportRunSummary(summary)
       setImportParseErrors(summary.parse_errors ?? [])
       setSelectedRunId(run.id)
@@ -2525,7 +2523,7 @@ export function App() {
       if (runId) {
         setSelectedRunId(runId)
         try {
-          const summary = await RunsService.readRunSummary({ runId })
+          const summary = await RunsService.readRunSummary({ run_id: runId })
           setImportRunSummary(summary)
           setImportParseErrors(summary.parse_errors ?? parseErrors)
         } catch {
@@ -2567,8 +2565,8 @@ export function App() {
     setWaiverActionLoading(true)
     try {
       const waiver = await WaiversService.createProjectWaiver({
-        projectId: selectedProjectId,
-        requestBody: waiverRequestBody(waiverForm),
+        project_id: selectedProjectId,
+        waiverCreate: waiverRequestBody(waiverForm),
       })
       setWaiverForm(waiverFormDefaults())
       setWaiverActionMessage(
@@ -2590,7 +2588,7 @@ export function App() {
     setWaiverActionLoading(true)
     try {
       const expired = await WaiversService.expireWaiver({
-        waiverId: waiver.id,
+        waiver_id: waiver.id,
       })
       setWaiverActionMessage(
         `Waiver for ${waiverScopeLabel(expired)} is now expired.`,
@@ -2632,7 +2630,7 @@ export function App() {
     setCreatedApiToken(null)
     try {
       const created = await ApiTokensService.createApiToken({
-        requestBody: { name, scopes: apiTokenScopes },
+        apiTokenCreate: { name, scopes: apiTokenScopes },
       })
       setCreatedApiToken(created)
       setApiTokenName("automation")
@@ -2652,7 +2650,7 @@ export function App() {
     setApiTokenMessage("")
     try {
       const revoked = await ApiTokensService.revokeApiToken({
-        tokenId: token.id,
+        token_id: token.id,
       })
       setCreatedApiToken((created) =>
         created?.id === revoked.id ? null : created,

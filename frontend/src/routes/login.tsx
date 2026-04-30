@@ -1,13 +1,13 @@
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router"
 import { type FormEvent, useEffect, useState } from "react"
-import { isLoggedIn, setAccessToken } from "../auth"
 import {
   ApiError,
   LoginService,
   UtilsService,
   WorkbenchService,
   type WorkbenchStatus,
-} from "../client"
+} from "../api-client"
+import { isLoggedIn, setAccessToken } from "../auth"
 
 export const Route = createFileRoute("/login")({
   beforeLoad: () => {
@@ -60,7 +60,7 @@ function LoginPage() {
 
     try {
       const token = await LoginService.loginAccessToken({
-        formData: {
+        bodyLoginLoginAccessToken: {
           username: email,
           password,
         },

@@ -4,21 +4,34 @@ export default defineConfig({
   input: "./openapi.json",
   output: "./src/client",
   plugins: [
-    "legacy/axios",
+    {
+      name: "@hey-api/client-fetch",
+      throwOnError: true,
+    },
+    "@hey-api/typescript",
     {
       name: "@hey-api/sdk",
-      asClass: true,
-      operationId: true,
-      classNameBuilder: "{{name}}Service",
-      methodNameBuilder: (operation) => {
-        let name = operation.name
-        const service = operation.service
+      paramsStructure: "flat",
+      responseStyle: "data",
+      throwOnError: true,
+      operations: {
+        strategy: "byTags",
+        containerName: "{{name}}Service",
+        methods: "static",
+        nesting: (operation) => {
+          let name = operation.operationId ?? operation.id
 
-        if (service && name.toLowerCase().startsWith(service.toLowerCase())) {
-          name = name.slice(service.length)
-        }
+          for (const tag of operation.tags ?? []) {
+            const prefix = `${tag}-`
+            if (name.startsWith(prefix)) {
+              name = name.slice(prefix.length)
+              break
+            }
+          }
 
-        return name.charAt(0).toLowerCase() + name.slice(1)
+          return [name]
+        },
+        methodName: { casing: "camelCase" },
       },
     },
     {
