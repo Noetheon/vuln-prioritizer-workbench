@@ -1,0 +1,81 @@
+{
+  "items": [
+    {
+      "actual_sha256": "1d0073b2025def2581892b26b33036b3bcaff196355f490914fc10d14f86a8c1",
+      "actual_size_bytes": 92969,
+      "detail": "Archive member matches the manifest checksum.",
+      "expected_sha256": "1d0073b2025def2581892b26b33036b3bcaff196355f490914fc10d14f86a8c1",
+      "expected_size_bytes": 92969,
+      "kind": "analysis-json",
+      "path": "analysis.json",
+      "status": "ok"
+    },
+    {
+      "actual_sha256": "7dd81e81df2034beb08ddba2699d806eaf7797892fb6b6e7185975d729994b7a",
+      "actual_size_bytes": 100721,
+      "detail": "Archive member matches the manifest checksum.",
+      "expected_sha256": "7dd81e81df2034beb08ddba2699d806eaf7797892fb6b6e7185975d729994b7a",
+      "expected_size_bytes": 100721,
+      "kind": "html-report",
+      "path": "report.html",
+      "status": "ok"
+    },
+    {
+      "actual_sha256": "206e3e9d10e426f7f6fd413ce6c988a3b0b8de2a060d50f0e75f78b09977202b",
+      "actual_size_bytes": 3950,
+      "detail": "Archive member matches the manifest checksum.",
+      "expected_sha256": "206e3e9d10e426f7f6fd413ce6c988a3b0b8de2a060d50f0e75f78b09977202b",
+      "expected_size_bytes": 3950,
+      "kind": "markdown-summary",
+      "path": "summary.md",
+      "status": "ok"
+    },
+    {
+      "actual_sha256": "18d94bbe54e47b27c10db18eeaade92b4ceddd3ab08b2370625f08c866f9d331",
+      "actual_size_bytes": 1825,
+      "detail": "Archive member matches the manifest checksum.",
+      "expected_sha256": "18d94bbe54e47b27c10db18eeaade92b4ceddd3ab08b2370625f08c866f9d331",
+      "expected_size_bytes": 1825,
+      "kind": "attack-navigator-layer",
+      "path": "attack-navigator-layer.json",
+      "status": "ok"
+    },
+    {
+      "actual_sha256": "d94b51defd676be1b852612d82d7f70aa213f1995af67a717c1ca6afb6c48f0c",
+      "actual_size_bytes": 60530,
+      "detail": "Archive member matches the manifest checksum.",
+      "expected_sha256": "d94b51defd676be1b852612d82d7f70aa213f1995af67a717c1ca6afb6c48f0c",
+      "expected_size_bytes": 60530,
+      "kind": "provider-snapshot",
+      "path": "provider/provider-snapshot.json",
+      "status": "ok"
+    },
+    {
+      "actual_sha256": "24d65249ea6f77b56c7870df3dd98bc8120294b886e226117c40b22e4825a81d",
+      "actual_size_bytes": 2188,
+      "detail": "Archive member matches the manifest checksum.",
+      "expected_sha256": "24d65249ea6f77b56c7870df3dd98bc8120294b886e226117c40b22e4825a81d",
+      "expected_size_bytes": 2188,
+      "kind": "source-input",
+      "path": "input/trivy_report.json",
+      "status": "ok"
+    }
+  ],
+  "metadata": {
+    "bundle_kind": "evidence-bundle",
+    "bundle_path": "build/v1.0-demo-evidence-bundle.zip",
+    "generated_at": "2026-04-21T12:00:00+00:00",
+    "manifest_schema_version": "1.1.0",
+    "schema_version": "1.2.0"
+  },
+  "summary": {
+    "expected_files": 6,
+    "manifest_errors": 0,
+    "missing_files": 0,
+    "modified_files": 0,
+    "ok": true,
+    "total_members": 7,
+    "unexpected_files": 0,
+    "verified_files": 6
+  }
+}

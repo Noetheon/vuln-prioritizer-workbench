@@ -6,7 +6,7 @@ Workbench `v1.0.0` is the first release-ready Workbench milestone on top of the 
 
 These notes are Workbench milestone notes. The current package tree is versioned `1.1.0`, so a public package tag cut from `main` must use `v1.1.0` and the matching [v1.1.0 release notes](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/v1.1.0/docs/releases/v1.1.0.md).
 
-## Included Scope
+## Features
 
 - Local-first FastAPI and Jinja2 Workbench with SQLite default storage.
 - Project, import, findings, vulnerability-intelligence, settings, governance, reports, and evidence views.
@@ -17,6 +17,20 @@ These notes are Workbench milestone notes. The current package tree is versioned
 - Asset context, VEX, and waiver upload visibility with owner/service/governance rollups.
 - JSON, Markdown, HTML, CSV, Navigator layer, and evidence bundle artifacts.
 - Hardened local runtime defaults for host headers, upload paths, artifact downloads, security headers, secret redaction, and dependency audit checks.
+
+## Non-Goals
+
+- The Workbench is not a vulnerability scanner and does not probe, exploit, or validate live targets.
+- Public-internet hosting, SaaS multi-tenancy, and organization-wide deployment hardening are outside this release scope.
+- Heuristic, fuzzy, or AI-generated CVE-to-ATT&CK mapping is not a supported source of record.
+- Evidence bundles are release and audit integrity artifacts, not encrypted vaults or detached-signature packages.
+
+## Known Limitations
+
+- The default deployment model is local-first and single-node.
+- Repeatable release demos require the checked-in provider snapshot path; live provider feeds can drift after the release run.
+- ATT&CK context is defensive and source-backed only; unmapped CVEs remain visibly unmapped.
+- Imported vulnerability files can contain sensitive hostnames, package paths, image names, service names, owners, and environment labels, so demo and release evidence must avoid customer exports.
 
 ## Release Evidence
 
