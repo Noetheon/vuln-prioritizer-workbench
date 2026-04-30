@@ -75,6 +75,49 @@ export type AnalysisRunSummaryPublic = {
 };
 
 /**
+ * Request payload for creating a scoped service token.
+ */
+export type ApiTokenCreate = {
+    name: string;
+    scopes?: Array<('read' | 'import' | 'report' | 'admin')>;
+};
+
+/**
+ * Creation response that shows the cleartext token exactly once.
+ */
+export type ApiTokenCreatePublic = {
+    active: boolean;
+    created_at: string;
+    id: string;
+    last_used_at: (string | null);
+    name: string;
+    revoked_at: (string | null);
+    scopes: Array<('read' | 'import' | 'report' | 'admin')>;
+    token: string;
+};
+
+/**
+ * API token metadata returned after creation, listing, and revocation.
+ */
+export type ApiTokenPublic = {
+    active: boolean;
+    created_at: string;
+    id: string;
+    last_used_at: (string | null);
+    name: string;
+    revoked_at: (string | null);
+    scopes: Array<('read' | 'import' | 'report' | 'admin')>;
+};
+
+/**
+ * Collection response for token metadata.
+ */
+export type ApiTokensPublic = {
+    count: number;
+    data: Array<ApiTokenPublic>;
+};
+
+/**
  * Summary returned after importing asset-context CSV rows.
  */
 export type AssetContextImportPublic = {
@@ -924,6 +967,20 @@ export type WorkbenchStatus = {
     migration: MigrationStatus;
     status: string;
 };
+
+export type ApiTokensListApiTokensResponse = (ApiTokensPublic);
+
+export type ApiTokensCreateApiTokenData = {
+    requestBody: ApiTokenCreate;
+};
+
+export type ApiTokensCreateApiTokenResponse = (ApiTokenCreatePublic);
+
+export type ApiTokensRevokeApiTokenData = {
+    tokenId: string;
+};
+
+export type ApiTokensRevokeApiTokenResponse = (ApiTokenPublic);
 
 export type AssetsUpdateAssetData = {
     assetId: string;

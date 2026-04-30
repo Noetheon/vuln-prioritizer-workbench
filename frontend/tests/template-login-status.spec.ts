@@ -944,3 +944,40 @@ test("template frontend covers core Workbench E2E smoke", async ({ page }) => {
   await expect(page).toHaveURL(/\/login$/)
   await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible()
 })
+
+test("template settings clears one-time API token when leaving settings", async ({
+  page,
+}) => {
+  const testRunSuffix = Date.now().toString(36)
+
+  await page.goto("/login")
+  await page.getByLabel("Email").fill("admin@example.com")
+  await page.getByLabel("Password").fill("changethis")
+  await page.getByRole("button", { name: "Sign in" }).click()
+  await expect(page).toHaveURL(/\/$/)
+
+  await page.goto("/settings")
+  await expect(
+    page.getByRole("heading", { name: "Service Token" }),
+  ).toBeVisible()
+  await page.getByLabel("Name").fill(`automation-${testRunSuffix}`)
+  await page.getByLabel("IMPORT").check()
+  await page.getByLabel("REPORT").check()
+  await page.getByRole("button", { name: "Create Token" }).click()
+
+  const createdTokenPanel = page.getByRole("region", {
+    name: "Created API token",
+  })
+  await expect(createdTokenPanel).toBeVisible()
+  await expect(createdTokenPanel.getByLabel("Token")).toHaveValue(/^vpr_/)
+  await expect(createdTokenPanel).toContainText("READ, IMPORT, REPORT")
+
+  await page.getByRole("link", { name: "Dashboard" }).click()
+  await page.getByRole("link", { name: "Settings" }).click()
+
+  await expect(createdTokenPanel).toHaveCount(0)
+  await expect(page.getByRole("textbox", { name: "Token" })).toHaveCount(0)
+  await expect(
+    page.getByRole("table", { name: "API tokens table" }),
+  ).toContainText("READ, IMPORT, REPORT")
+})

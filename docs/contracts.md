@@ -391,8 +391,10 @@ Workbench API changes are additive:
 
 - `PATCH /api/findings/{finding_id}` updates finding lifecycle status and records `FindingStatusHistory`
 - `GET /api/projects/{project_id}/audit-events` and `GET /api/audit-events` expose audit records
-- `GET /api/tokens` lists token metadata without token values; `DELETE /api/tokens/{id}` revokes tokens
+- `POST /api/tokens` creates legacy local API tokens with `read`, `import`, `report`, and `admin` scopes; `GET /api/tokens` lists token metadata without token values; `DELETE /api/tokens/{id}` revokes tokens
 - `GET /api/diagnostics` exposes local runtime diagnostics and is token-gated once active tokens exist
+- `POST /api/v1/api-tokens/`, `GET /api/v1/api-tokens/`, and `DELETE /api/v1/api-tokens/{token_id}` manage template scoped service tokens; the create response is the only response that includes the cleartext token
+- template service-token scopes are enforced by dependency: `read` covers project/run/finding/provider reads, `import` covers `/api/v1/projects/{project_id}/imports`, `report` covers report creation/download/verification, and `admin` covers token lifecycle and satisfies all scoped dependencies
 - `POST /api/v1/projects/{project_id}/imports` accepts a JWT-gated template Workbench upload, validates input type, extension, MIME hint, filename, and upload size, persists the uploaded file under the configured import upload root, and records upload SHA-256 plus structured `parse_errors` in the returned `AnalysisRun`
 - template imports optionally accept `provider_snapshot_file` and `locked_provider_data` form fields; when no explicit snapshot is supplied, local deterministic demo snapshot replay may be used if the configured snapshot exists
 - template imports run the shared parse/enrich/score/explain engine before findings are persisted; stored findings include the effective priority, priority rank, risk score, operational rank, KEV/EPSS/CVSS signals, lifecycle flags, rationale, recommended action, and structured `explanation_json`

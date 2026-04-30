@@ -67,6 +67,14 @@
         </label>
       {% endif %}
       <label>Name<input required name="name" maxlength="200" placeholder="automation"></label>
+      <fieldset>
+        <legend>Scopes</legend>
+        <div class="checkbox-grid">
+          {% for scope in api_token_scopes %}
+            <label><input type="checkbox" name="scopes" value="{{ scope }}" {% if scope == "read" %}checked{% endif %}> {{ scope }}</label>
+          {% endfor %}
+        </div>
+      </fieldset>
       <button class="button primary" type="submit">Create token</button>
     </form>
     <aside class="panel">
@@ -77,6 +85,7 @@
           <thead>
             <tr>
               <th>Name</th>
+              <th>Scopes</th>
               <th>Created</th>
               <th>Last used</th>
               <th>Status</th>
@@ -87,6 +96,7 @@
             {% for token in api_tokens %}
               <tr>
                 <td>{{ token.name }}</td>
+                <td>{{ (token.scopes_json or [])|join(", ") }}</td>
                 <td>{{ token.created_at }}</td>
                 <td>{{ token.last_used_at or "N.A." }}</td>
                 <td>{{ "Revoked" if token.revoked_at else "Active" }}</td>
@@ -102,7 +112,7 @@
                 </td>
               </tr>
             {% else %}
-              <tr><td colspan="5" class="empty">No API tokens created.</td></tr>
+              <tr><td colspan="6" class="empty">No API tokens created.</td></tr>
             {% endfor %}
           </tbody>
         </table>

@@ -5,6 +5,7 @@ from __future__ import annotations
 from fastapi import APIRouter
 
 from app.api.routes import (
+    api_tokens,
     assets,
     findings,
     imports,
@@ -21,6 +22,7 @@ from app.api.routes import (
 
 api_router = APIRouter()
 api_router.include_router(login.router)
+api_router.include_router(api_tokens.router)
 api_router.include_router(projects.router)
 api_router.include_router(assets.router)
 api_router.include_router(providers.router)

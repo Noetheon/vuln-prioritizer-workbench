@@ -5,6 +5,7 @@ from __future__ import annotations
 # ruff: noqa: F403, F405
 from fastapi import APIRouter
 
+from vuln_prioritizer.api.token_scopes import API_TOKEN_SCOPES, normalize_api_token_scopes
 from vuln_prioritizer.web.workbench_common import *
 
 router = APIRouter()
@@ -63,6 +64,7 @@ def project_settings(
                 "provider_jobs": [_provider_update_job_payload(job) for job in provider_jobs],
                 "workbench_jobs": repo.list_workbench_jobs(project_id=project.id, limit=20),
                 "api_tokens": repo.list_api_tokens(),
+                "api_token_scopes": API_TOKEN_SCOPES,
                 "artifact_retention": repo.get_project_artifact_retention(project.id),
                 "config_history": config_history,
                 "latest_config": latest_config,
@@ -90,6 +92,7 @@ def create_api_token_form(
     session: Annotated[Session, Depends(get_db_session)],
     settings: Annotated[WorkbenchSettings, Depends(get_workbench_settings)],
     name: Annotated[str, Form()],
+    scopes: Annotated[list[str] | None, Form()] = None,
     csrf_token: Annotated[str, Form()] = "",
 ) -> HTMLResponse:
     _check_csrf(csrf_token, settings)
@@ -100,8 +103,16 @@ def create_api_token_form(
     token_name = name.strip()
     if not token_name:
         raise HTTPException(status_code=422, detail="Token name is required.")
+    try:
+        token_scopes = normalize_api_token_scopes(scopes, default=["read"])
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     token_value = WEB_API_TOKEN_PREFIX + secrets.token_urlsafe(32)
-    token = repo.create_api_token(name=token_name, token_hash=api_token_digest(token_value))
+    token = repo.create_api_token(
+        name=token_name,
+        token_hash=api_token_digest(token_value),
+        scopes=token_scopes,
+    )
     repo.create_audit_event(
         event_type="api_token.created",
         target_type="api_token",
@@ -132,6 +143,7 @@ def create_api_token_form(
                 "provider_jobs": [_provider_update_job_payload(job) for job in provider_jobs],
                 "workbench_jobs": repo.list_workbench_jobs(project_id=project.id, limit=20),
                 "api_tokens": repo.list_api_tokens(),
+                "api_token_scopes": API_TOKEN_SCOPES,
                 "artifact_retention": repo.get_project_artifact_retention(project.id),
                 "config_history": config_history,
                 "latest_config": latest_config,

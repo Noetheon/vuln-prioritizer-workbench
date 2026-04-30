@@ -15,7 +15,7 @@ from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
 from sqlalchemy import insert
 from sqlmodel import Session, col, select
 
-from app.api.deps import CurrentUser, SessionDep
+from app.api.deps import ScopedImportUser, SessionDep
 from app.api.routes.workbench_access import require_visible_project
 from app.core.config import Settings
 from app.importers import (
@@ -85,7 +85,7 @@ async def import_project_upload(
     project_id: uuid.UUID,
     request: Request,
     session: SessionDep,
-    current_user: CurrentUser,
+    current_user: ScopedImportUser,
     input_type: str = Form(...),
     file: UploadFile = File(...),
     asset_context_file: UploadFile | None = File(None),

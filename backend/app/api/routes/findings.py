@@ -8,7 +8,7 @@ from typing import Literal
 from fastapi import APIRouter, HTTPException, Query
 from sqlmodel import Session, col, select
 
-from app.api.deps import CurrentUser, SessionDep
+from app.api.deps import ScopedReadUser, SessionDep
 from app.api.routes.workbench_access import require_visible_project
 from app.models import (
     AssetExposure,
@@ -49,7 +49,7 @@ FindingsSortDirection = Literal["asc", "desc"]
 def read_project_findings(
     project_id: uuid.UUID,
     session: SessionDep,
-    current_user: CurrentUser,
+    current_user: ScopedReadUser,
     limit: int = Query(default=100, ge=1, le=500),
     offset: int = Query(default=0, ge=0),
     sort: FindingsSort = Query(default="operational"),
@@ -98,7 +98,7 @@ def read_project_findings(
 def read_finding(
     finding_id: uuid.UUID,
     session: SessionDep,
-    current_user: CurrentUser,
+    current_user: ScopedReadUser,
 ) -> FindingDetailPublic:
     """Read one finding if its project is visible."""
     finding = FindingRepository(session).get_finding(finding_id)
@@ -512,7 +512,7 @@ def _int_evidence(evidence: dict[str, object], key: str) -> int:
 def explain_finding(
     finding_id: uuid.UUID,
     session: SessionDep,
-    current_user: CurrentUser,
+    current_user: ScopedReadUser,
 ) -> FindingExplanationPublic:
     """Read the persisted decision explanation for one visible finding."""
     finding = FindingRepository(session).get_finding(finding_id)
