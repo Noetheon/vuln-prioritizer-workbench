@@ -48,6 +48,7 @@ class AssetRepository:
         environment: AssetEnvironment | str = AssetEnvironment.UNKNOWN,
         exposure: AssetExposure | str = AssetExposure.UNKNOWN,
         criticality: AssetCriticality | str = AssetCriticality.UNKNOWN,
+        flush: bool = True,
     ) -> Asset:
         """Create or update a project-scoped asset by business dedup key."""
         statement = select(Asset).where(
@@ -67,7 +68,8 @@ class AssetRepository:
         asset.environment = AssetEnvironment(environment)
         asset.exposure = AssetExposure(exposure)
         asset.criticality = AssetCriticality(criticality)
-        self.session.flush()
+        if flush:
+            self.session.flush()
         return asset
 
     def create_asset(self, *, project_id: uuid.UUID, asset_in: AssetCreate) -> Asset:

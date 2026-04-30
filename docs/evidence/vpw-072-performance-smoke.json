@@ -1,0 +1,39 @@
+{
+  "environment": {
+    "platform": "macOS-26.4.1-arm64-arm-64bit",
+    "python": "3.11.2"
+  },
+  "generated_at": "2026-04-30T13:03:12.863452+00:00",
+  "measurements": {
+    "baseline_max_rss_mib": 117.234,
+    "fixture_bytes": 918920,
+    "fixture_seconds": 0.0046,
+    "import_seconds": 1.1442,
+    "peak_rss_delta_mib": 208.594,
+    "peak_rss_mib": 325.828,
+    "tail_page_repeat_seconds": 0.2518,
+    "tail_page_seconds": 0.242,
+    "total_seconds": 1.6425
+  },
+  "result": {
+    "analysis_run_status": "succeeded",
+    "created_findings": 10000,
+    "dedup_decision_count": 10000,
+    "finding_count": 10000,
+    "import_status_code": 200,
+    "locked_provider_data": true,
+    "occurrence_count": 10000,
+    "tail_page_count": 10000,
+    "tail_page_items": 100,
+    "tail_page_stable": true,
+    "tail_page_status_code": 200,
+    "updated_findings": 0
+  },
+  "thresholds": {
+    "import_seconds": 60.0,
+    "peak_rss_delta_mib": 512.0,
+    "row_count": 10000,
+    "tail_page_seconds": 1.0
+  },
+  "vpw_id": "VPW-072"
+}

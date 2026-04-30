@@ -76,6 +76,34 @@ For `rollup`, the remediation fixture locks down:
 - multi-bucket findings that legitimately contribute to more than one service
 - structured top-candidate output per bucket
 
+## VPW-072 10k Performance Smoke
+
+`make performance-smoke` runs the optional VPW-072 scale smoke. It is separate
+from `make check` so the default developer loop stays fast, but it is available
+for release hardening and regression checks.
+
+The smoke generates 10,000 synthetic `generic-occurrence-csv` rows, imports them
+through the template Workbench API with locked provider data, verifies that
+10,000 findings are persisted, and checks that a high-offset findings page is
+stable across repeated requests.
+
+Default MVP thresholds:
+
+- import: 60 seconds or less
+- tail-page query: 1 second or less
+- process RSS delta: 512 MiB or less
+
+The latest VPW-072 evidence is stored in:
+
+- `docs/evidence/vpw-072-performance-smoke.md`
+- `docs/evidence/vpw-072-performance-smoke.json`
+
+Known limits: this smoke uses local SQLite and FastAPI `TestClient`. It is not a
+Postgres or concurrent-user benchmark. The large all-new bulk path stores compact
+score/explain JSON per finding to avoid duplicating full provider payloads across
+thousands of repeated occurrences; normalized provider details remain on
+vulnerability records.
+
 ## Edge-Case Policy
 
 Every major input family must include at least one checked-in edge-case fixture.

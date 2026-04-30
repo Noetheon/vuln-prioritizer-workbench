@@ -139,6 +139,7 @@ class RunRepository:
         raw_reference: str | None = None,
         fix_version: str | None = None,
         evidence_json: dict[str, Any] | None = None,
+        flush: bool = True,
     ) -> FindingOccurrence:
         """Attach source evidence for a finding produced by a run."""
         occurrence = FindingOccurrence(
@@ -151,7 +152,8 @@ class RunRepository:
             evidence_json=evidence_json or {},
         )
         self.session.add(occurrence)
-        self.session.flush()
+        if flush:
+            self.session.flush()
         return occurrence
 
     def list_analysis_runs(self, project_id: uuid.UUID) -> list[AnalysisRun]:

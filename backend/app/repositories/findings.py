@@ -34,6 +34,7 @@ class FindingRepository:
         purl: str | None = None,
         ecosystem: str | None = None,
         package_type: str | None = None,
+        flush: bool = True,
     ) -> Component:
         """Create or update a shared component identity."""
         if purl:
@@ -55,7 +56,8 @@ class FindingRepository:
             component.ecosystem = ecosystem
 
         component.package_type = package_type
-        self.session.flush()
+        if flush:
+            self.session.flush()
         return component
 
     def upsert_vulnerability(
@@ -72,6 +74,7 @@ class FindingRepository:
         published_at: str | None = None,
         modified_at: str | None = None,
         provider_json: dict[str, Any] | None = None,
+        flush: bool = True,
     ) -> Vulnerability:
         """Create or update a CVE/provider record by CVE id."""
         statement = select(Vulnerability).where(Vulnerability.cve_id == cve_id)
@@ -90,7 +93,8 @@ class FindingRepository:
         vulnerability.published_at = published_at
         vulnerability.modified_at = modified_at
         vulnerability.provider_json = provider_json or {}
-        self.session.flush()
+        if flush:
+            self.session.flush()
         return vulnerability
 
     def create_or_update_finding(
@@ -119,14 +123,18 @@ class FindingRepository:
         explanation_json: dict[str, Any] | None = None,
         data_quality_json: dict[str, Any] | None = None,
         evidence_json: dict[str, Any] | None = None,
+        existing_finding: Finding | None = None,
+        lookup_existing: bool = True,
+        flush: bool = True,
     ) -> Finding:
         """Create or update a finding by project/vulnerability/component/asset identity."""
-        finding = (
-            self.get_project_finding_by_dedup_key(project_id=project_id, dedup_key=dedup_key)
-            if dedup_key is not None
-            else None
-        )
-        if finding is None:
+        finding = existing_finding
+        if finding is None and lookup_existing and dedup_key is not None:
+            finding = self.get_project_finding_by_dedup_key(
+                project_id=project_id,
+                dedup_key=dedup_key,
+            )
+        if finding is None and lookup_existing:
             finding = self.get_project_finding_by_identity(
                 project_id=project_id,
                 vulnerability_id=vulnerability_id,
@@ -168,7 +176,8 @@ class FindingRepository:
         finding.data_quality_json = data_quality_json or {}
         finding.evidence_json = evidence_json or {}
         finding.last_seen_at = get_datetime_utc()
-        self.session.flush()
+        if flush:
+            self.session.flush()
         return finding
 
     def get_project_finding_by_dedup_key(
@@ -310,6 +319,7 @@ class FindingRepository:
             field.desc() if direction == "desc" else field.asc() for field in order_fields[sort]
         ]
         order_by.append(col(Finding.cve_id).asc())
+        order_by.append(col(Finding.id).asc())
         statement = (
             select(Finding)
             .outerjoin(Asset, col(Finding.asset_id) == col(Asset.id))

@@ -90,6 +90,7 @@ markers = [
   "browser_e2e: real browser Workbench tests driven by Playwright.",
   "e2e: end-to-end CLI entrypoint tests that may spawn subprocesses.",
   "live_network: allow real network access through requests in this test.",
+  "performance: optional performance and scale smoke tests; enable explicitly.",
 ]
 
 [tool.coverage.run]
