@@ -122,8 +122,6 @@ def parse_cyclonedx_vex_document(document: dict) -> list[VexStatement]:
         for component in _dict_items(document.get("components"))
         if component.get("bom-ref")
     }
-    metadata = _dict_value(document.get("metadata"))
-    root_component = _dict_value(metadata.get("component"))
     statements: list[VexStatement] = []
     for index, vulnerability in enumerate(_dict_items(document.get("vulnerabilities")), start=1):
         cve_id = normalize_cve_id(vulnerability.get("id"))
@@ -139,7 +137,12 @@ def parse_cyclonedx_vex_document(document: dict) -> list[VexStatement]:
             continue
         action_statement = _first_string(analysis.get("response"))
         for affect in _dict_items(vulnerability.get("affects")):
-            component = components.get(affect.get("ref"), {})
+            affect_ref = _first_string(affect.get("ref"))
+            component = components.get(affect_ref, {}) if affect_ref else {}
+            fallback_purl = affect_ref if affect_ref and affect_ref.startswith("pkg:") else None
+            purl = component.get("purl") or fallback_purl
+            if not purl and not component.get("name"):
+                continue
             statements.append(
                 VexStatement(
                     source_format="cyclonedx-vex-json",
@@ -147,15 +150,60 @@ def parse_cyclonedx_vex_document(document: dict) -> list[VexStatement]:
                     status=status,
                     component_name=component.get("name"),
                     component_version=component.get("version"),
-                    purl=component.get("purl"),
-                    target_kind="repository",
-                    target_ref=root_component.get("name"),
+                    purl=purl,
                     justification=analysis.get("justification"),
                     action_statement=action_statement,
                     source_record_id=f"vulnerability:{index}",
                 )
             )
     return statements
+
+
+def cyclonedx_vex_warnings(document: dict) -> list[str]:
+    """Return non-fatal CycloneDX VEX statement validation warnings."""
+    components = {
+        component.get("bom-ref"): component
+        for component in _dict_items(document.get("components"))
+        if component.get("bom-ref")
+    }
+    warnings: list[str] = []
+    for vulnerability_index, vulnerability in enumerate(
+        _dict_items(document.get("vulnerabilities")),
+        start=1,
+    ):
+        path = f"CycloneDX VEX vulnerabilities[{vulnerability_index}]"
+        if normalize_cve_id(vulnerability.get("id")) is None:
+            warnings.append(f"{path} skipped: missing or invalid CVE id.")
+
+        analysis = _dict_value(vulnerability.get("analysis"))
+        raw_state = analysis.get("state")
+        if _normalize_vex_status(raw_state, status_map=CYCLONEDX_STATE_MAP) is None:
+            warnings.append(f"{path} skipped: unsupported analysis.state {raw_state!r}.")
+
+        affects = vulnerability.get("affects")
+        if not isinstance(affects, list):
+            warnings.append(f"{path} skipped: affects must be a list.")
+            continue
+        if not affects:
+            warnings.append(f"{path} skipped: affects must contain at least one ref.")
+            continue
+
+        for affect_index, affect in enumerate(affects, start=1):
+            affect_path = f"{path}.affects[{affect_index}]"
+            if not isinstance(affect, dict):
+                warnings.append(f"{affect_path} skipped: affect must be an object.")
+                continue
+            affect_ref = _first_string(affect.get("ref"))
+            if affect_ref is None:
+                warnings.append(f"{affect_path} skipped: missing ref.")
+                continue
+            component = components.get(affect_ref)
+            if component is None and not affect_ref.startswith("pkg:"):
+                warnings.append(
+                    f"{affect_path} skipped: unresolved bom-ref {affect_ref!r}; "
+                    "only resolvable component refs or PURL refs are applied."
+                )
+    return warnings
 
 
 @overload

@@ -3,6 +3,7 @@ import { expect, test } from "@playwright/test"
 
 const validCveList = Buffer.from("CVE-2021-44228\nCVE-2024-3094\n")
 const trivyReport = readFileSync("../data/input_fixtures/trivy_report.json")
+const cyclonedxVex = readFileSync("../data/input_fixtures/cyclonedx_vex.json")
 const lowConfidenceAttackMapping = "local_curated_low_confidence_vpw058.yml"
 const validOccurrenceCsv = Buffer.from(
   [
@@ -39,6 +40,12 @@ const invalidOccurrenceCsv = Buffer.from(
   [
     "cve_id,asset_ref,component_name,component_version,purl,scanner,fix_version,severity,owner,business_service,exposure",
     "not-a-cve,build-host-1,xz,5.6.0,pkg:apk/alpine/xz@5.6.0-r0,trivy,5.6.1-r2,CRITICAL,team-platform,payments,public",
+  ].join("\n"),
+)
+const cyclonedxVexOccurrenceCsv = Buffer.from(
+  [
+    "cve_id,asset_ref,component,version,purl,severity",
+    "CVE-2023-34362,moveit-service,moveit-transfer,2023.0.0,pkg:pypi/moveit-transfer@2023.0.0,HIGH",
   ].join("\n"),
 )
 test("template finding detail renders TTP Context tab", async ({ page }) => {
@@ -157,6 +164,92 @@ test("template finding detail renders TTP Context tab", async ({ page }) => {
     "Workbench does not infer tactics or techniques",
   )
   await expect(emptyPanel).toContainText("Defensive context only")
+})
+test("template frontend renders CycloneDX VEX occurrence evidence", async ({
+  page,
+}) => {
+  test.setTimeout(60_000)
+  const testRunSuffix = Date.now().toString(36)
+  const projectName = `VPW CycloneDX VEX ${testRunSuffix}`
+
+  await page.goto("/login")
+  await page.getByLabel("Email").fill("admin@example.com")
+  await page.getByLabel("Password").fill("changethis")
+  await page.getByRole("button", { name: "Sign in" }).click()
+  await expect(page).toHaveURL(/\/$/)
+
+  const accessToken = await page.evaluate(() =>
+    window.localStorage.getItem("access_token"),
+  )
+  expect(accessToken).toBeTruthy()
+  const authHeaders = { Authorization: `Bearer ${accessToken}` }
+  const projectResponse = await page.request.post(
+    "http://127.0.0.1:8000/api/v1/projects/",
+    {
+      data: {
+        description: "Playwright CycloneDX VEX project",
+        name: projectName,
+      },
+      headers: authHeaders,
+    },
+  )
+  expect(projectResponse.ok()).toBeTruthy()
+  const project = (await projectResponse.json()) as { id: string }
+
+  const importResponse = await page.request.post(
+    `http://127.0.0.1:8000/api/v1/projects/${project.id}/imports`,
+    {
+      headers: authHeaders,
+      multipart: {
+        file: {
+          buffer: cyclonedxVexOccurrenceCsv,
+          mimeType: "text/csv",
+          name: "cyclonedx-vex-occurrence.csv",
+        },
+        input_type: "generic-occurrence-csv",
+        vex_file: {
+          buffer: cyclonedxVex,
+          mimeType: "application/json",
+          name: "cyclonedx-vex.json",
+        },
+      },
+    },
+  )
+  expect(importResponse.ok()).toBeTruthy()
+
+  const findingsResponse = await page.request.get(
+    `http://127.0.0.1:8000/api/v1/projects/${project.id}/findings/?sort=cve`,
+    { headers: authHeaders },
+  )
+  expect(findingsResponse.ok()).toBeTruthy()
+  const findingsPayload = (await findingsResponse.json()) as {
+    data: Array<{
+      cve_id: string
+      id: string
+      status?: string
+      suppressed_by_vex?: boolean
+    }>
+  }
+  const suppressed = findingsPayload.data.find(
+    (finding) => finding.cve_id === "CVE-2023-34362",
+  )
+  expect(suppressed).toBeTruthy()
+  if (!suppressed) {
+    throw new Error("Expected CycloneDX VEX-suppressed finding.")
+  }
+  expect(suppressed.suppressed_by_vex).toBe(true)
+  expect(suppressed.status).toBe("suppressed")
+  await page.goto(`/findings/${suppressed.id}`)
+  const occurrencesTable = page.getByRole("table", {
+    name: "Occurrences table",
+  })
+  await expect(occurrencesTable).toContainText("Not Affected")
+  await expect(occurrencesTable).toContainText("vulnerable_code_not_present")
+  await expect(occurrencesTable).toContainText("purl")
+  await page.screenshot({
+    fullPage: true,
+    path: "../docs/evidence/vpw-066-cyclonedx-vex-parser.png",
+  })
 })
 test("template frontend covers core Workbench E2E smoke", async ({ page }) => {
   test.setTimeout(60_000)

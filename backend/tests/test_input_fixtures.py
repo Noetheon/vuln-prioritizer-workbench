@@ -11,6 +11,16 @@ from _input_fixture_contracts import PROJECT_ROOT, load_input_fixture_contracts
 
 _CVE_PATTERN = re.compile(r"CVE-\d{4}-\d{4,7}")
 _GHSA_PATTERN = re.compile(r"GHSA-[a-z0-9-]+", re.IGNORECASE)
+_CYCLONEDX_STATE_MAP = {
+    "affected": "affected",
+    "exploitable": "affected",
+    "false_positive": "not_affected",
+    "fixed": "fixed",
+    "in_triage": "under_investigation",
+    "not_affected": "not_affected",
+    "resolved": "fixed",
+    "resolved_with_pedigree": "fixed",
+}
 
 _CONTRACTS = load_input_fixture_contracts()
 _INPUT_CONTRACTS = _CONTRACTS["inputs"]
@@ -161,12 +171,14 @@ def test_vex_fixtures_expose_expected_statuses_and_matches(
             for statement in payload["statements"]
         ]
     else:
-        statuses = sorted({item["analysis"]["state"] for item in payload["vulnerabilities"]})
+        statuses = sorted(
+            {_CYCLONEDX_STATE_MAP[item["analysis"]["state"]] for item in payload["vulnerabilities"]}
+        )
         matches = [
             {
                 "cve_id": item["id"],
                 "product_id": item["affects"][0]["ref"],
-                "status": item["analysis"]["state"],
+                "status": _CYCLONEDX_STATE_MAP[item["analysis"]["state"]],
             }
             for item in payload["vulnerabilities"]
         ]

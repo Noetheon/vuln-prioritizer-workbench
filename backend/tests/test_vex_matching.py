@@ -187,27 +187,67 @@ def test_vex_parsers_tolerate_null_collections_and_nested_fields() -> None:
         )
         == []
     )
-    assert parse_cyclonedx_vex_document(
+    assert (
+        parse_cyclonedx_vex_document(
+            {
+                "metadata": None,
+                "components": None,
+                "vulnerabilities": [
+                    {
+                        "id": "CVE-2024-1234",
+                        "analysis": {"state": "in_triage"},
+                        "affects": [{"ref": "missing-component"}],
+                    }
+                ],
+            }
+        )
+        == []
+    )
+
+
+def test_cyclonedx_vex_uses_component_or_purl_scope_without_repository_fallback() -> None:
+    statements = parse_cyclonedx_vex_document(
         {
-            "metadata": None,
-            "components": None,
+            "bomFormat": "CycloneDX",
+            "metadata": {"component": {"name": "demo-app"}},
+            "components": [
+                {
+                    "bom-ref": "component-ref",
+                    "name": "libfoo",
+                    "version": "1.2.3",
+                    "purl": "pkg:generic/libfoo@1.2.3",
+                }
+            ],
             "vulnerabilities": [
                 {
                     "id": "CVE-2024-1234",
-                    "analysis": {"state": "in_triage"},
-                    "affects": [{"ref": "missing-component"}],
+                    "analysis": {"state": "resolved"},
+                    "affects": [
+                        {"ref": "component-ref"},
+                        {"ref": "pkg:generic/libbar@2.0.0"},
+                        {"ref": "missing-component-ref"},
+                    ],
                 }
             ],
         }
-    ) == [
-        VexStatement(
-            source_format="cyclonedx-vex-json",
-            cve_id="CVE-2024-1234",
-            status="under_investigation",
-            target_kind="repository",
-            source_record_id="vulnerability:1",
-        )
-    ]
+    )
+    occurrence = _occurrence().model_copy(update={"target_kind": "image", "target_ref": "scan"})
+    purl_only_occurrence = _occurrence().model_copy(
+        update={
+            "component_name": "libbar",
+            "component_version": "2.0.0",
+            "purl": "pkg:generic/libbar@2.0.0",
+            "target_kind": "image",
+            "target_ref": "scan",
+        }
+    )
+
+    assert len(statements) == 2
+    assert statements[0].target_kind is None
+    assert statements[0].purl == "pkg:generic/libfoo@1.2.3"
+    assert statements[1].purl == "pkg:generic/libbar@2.0.0"
+    assert match_vex_statement_details(occurrence, statements).specificity == "purl"
+    assert match_vex_statement_details(purl_only_occurrence, statements).specificity == "purl"
 
 
 def test_ranked_vex_matching_uses_earlier_statement_when_specificity_ties() -> None:

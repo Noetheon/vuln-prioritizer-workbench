@@ -239,4 +239,5 @@ Important boundary:
 - demo regeneration still depends on live upstream responses for NVD, EPSS, and KEV
 - ATT&CK context is intentionally not an asset-aware scoring engine
 - VEX status is only applied when a statement matches the occurrence CVE plus component/product or target scope; unmatched or ambiguous real-world product identity still needs human review
+- CycloneDX VEX does not infer applicability from the BOM root component, services, dependencies, ratings, or advisory metadata; only `affects[].ref` component/PURL scope is considered
 - VEX `justification` and `action_statement` text is preserved as evidence, but it is not treated as a controlled enum beyond the normalized status

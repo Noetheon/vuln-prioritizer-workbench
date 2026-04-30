@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib
+import json
 from collections.abc import Mapping
 from pathlib import Path
 
@@ -404,3 +405,73 @@ def test_vex_loader_rejects_wrong_statement_container_type(tmp_path: Path) -> No
 
     with pytest.raises(ValueError, match="OpenVEX JSON `statements`"):
         loader_module.load_vex_files([vex_file])
+
+
+def test_vex_loader_rejects_wrong_cyclonedx_vulnerabilities_container(
+    tmp_path: Path,
+) -> None:
+    loader_module = _load_loader_module()
+    vex_file = tmp_path / "cyclonedx-vex.json"
+    vex_file.write_text(
+        '{"bomFormat": "CycloneDX", "vulnerabilities": {}}',
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="CycloneDX VEX JSON `vulnerabilities`"):
+        loader_module.load_vex_files([vex_file])
+
+
+def test_vex_loader_reports_cyclonedx_statement_skip_reasons(tmp_path: Path) -> None:
+    loader_module = _load_loader_module()
+    vex_file = tmp_path / "cyclonedx-vex.json"
+    vex_file.write_text(
+        json.dumps(
+            {
+                "bomFormat": "CycloneDX",
+                "components": [],
+                "vulnerabilities": [
+                    {
+                        "id": "CVE-2024-1234",
+                        "analysis": {"state": "resolved"},
+                        "affects": [{"ref": "missing-component"}],
+                    },
+                    {
+                        "id": "CVE-2024-5678",
+                        "analysis": {"state": "unknown-state"},
+                        "affects": [{"ref": "pkg:generic/libfoo@1.2.3"}],
+                    },
+                    {
+                        "id": "CVE-2024-9999",
+                        "analysis": {"state": "in_triage"},
+                        "affects": {},
+                    },
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    statements, diagnostics = loader_module.load_vex_files(
+        [vex_file],
+        return_diagnostics=True,
+    )
+
+    assert statements == []
+    assert diagnostics.skipped_statements == 3
+    warning_text = "\n".join(diagnostics.warnings)
+    assert "unresolved bom-ref 'missing-component'" in warning_text
+    assert "unsupported analysis.state 'unknown-state'" in warning_text
+    assert "affects must be a list" in warning_text
+
+
+def test_vex_loader_rejects_malformed_json_and_non_object_roots(tmp_path: Path) -> None:
+    loader_module = _load_loader_module()
+    malformed = tmp_path / "malformed.json"
+    malformed.write_text("{", encoding="utf-8")
+    non_object = tmp_path / "array.json"
+    non_object.write_text("[]", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="VEX JSON parsing failed"):
+        loader_module.load_vex_files([malformed])
+    with pytest.raises(ValueError, match="VEX JSON root"):
+        loader_module.load_vex_files([non_object])

@@ -190,7 +190,7 @@ async def import_project_upload(
                 path=None,
             ),
             "vex_upload": _optional_upload_summary(
-                input_type="openvex-json",
+                input_type="vex-json",
                 original_filename=vex_original_filename,
                 stored_filename=vex_stored_filename,
                 content_type=vex_upload.content_type if vex_upload is not None else None,
