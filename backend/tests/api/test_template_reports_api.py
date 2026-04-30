@@ -159,6 +159,8 @@ def test_vpw048_markdown_report_create_downloads_for_completed_run(
     assert "# Technical Vulnerability Report" in body
     assert "## Summary" in body
     assert "## Top Findings" in body
+    assert "## Governance Rollups" in body
+    assert "### Top Services by Risk" in body
     assert "## Reasons" in body
     assert "## Data Quality" in body
     assert "## Provider Snapshot" in body
@@ -216,6 +218,7 @@ def test_vpw049_html_report_create_downloads_executive_report(
     body = download.text
     assert "<!doctype html>" in body
     assert "Executive Summary" in body
+    assert "Service Risk and Waiver Debt" in body
     assert "Business Impact" in body
     assert "Top Risks" in body
     assert "Recommendations" in body
@@ -276,6 +279,8 @@ def test_vpw050_analysis_json_export_create_downloads_schema_valid_result(
     assert body["project"]["id"] == project["id"]
     assert body["analysis_run"]["id"] == str(run_id)
     assert body["provider_snapshot"]["content_hash"] == "sha256:vpw048-snapshot"
+    assert body["governance_rollups"]["top_services_by_risk"][0]["label"] == "Unassigned"
+    assert body["governance_rollups"]["top_services_by_risk"][0]["finding_count"] == 2
     assert [finding["cve_id"] for finding in body["findings"]] == [
         DEMO_CVE_XZ,
         DEMO_CVE_LOG4SHELL,
@@ -537,13 +542,20 @@ def test_vpw051_evidence_bundle_zip_create_downloads_manifest_integrity(
             "technical.md",
         ]
         manifest = json.loads(archive.read("manifest.json"))
+        analysis = json.loads(archive.read("analysis.json"))
+        technical_report = archive.read("technical.md").decode("utf-8")
+        executive_report = archive.read("executive.html").decode("utf-8")
         jsonschema.validate(manifest, _load_schema("evidence-bundle-manifest.schema.json"))
+        jsonschema.validate(analysis, _load_schema("analysis-result.v1.schema.json"))
         assert manifest["bundle_kind"] == "evidence-bundle"
         assert manifest["source_analysis_path"] == "analysis.json"
         assert manifest["source_input_hashes"] == [input_metadata]
         assert manifest["included_input_copy"] is False
         assert manifest["provider_snapshot"]["bundle_path"] == "provider-snapshot.json"
         assert manifest["redaction"]["enabled"] is True
+        assert analysis["governance_rollups"]["top_services_by_risk"][0]["label"] == "Unassigned"
+        assert "Governance Rollups" in technical_report
+        assert "Service Risk and Waiver Debt" in executive_report
         assert "manifest.json" not in {item["path"] for item in manifest["files"]}
         for item in manifest["files"]:
             content = archive.read(item["path"])

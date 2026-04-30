@@ -44,6 +44,7 @@ import {
   type ProjectAttackSummaryPublic,
   type ProjectAttackTechniqueSummaryPublic,
   type ProjectDecisionSummaryPublic,
+  type ProjectGovernanceRollupsPublic,
   type ProjectPublic,
   ProjectsService,
   type ProviderSourceStatusPublic,
@@ -545,6 +546,57 @@ function attackTechniqueConfidenceLabel(
   return visible.length > 0
     ? visible.map(([key, count]) => `${labelize(key)} ${count}`).join(" / ")
     : "Confidence unknown"
+}
+
+function governanceServiceRows(rollups: ProjectGovernanceRollupsPublic | null) {
+  return rollups?.top_services_by_risk ?? []
+}
+
+function waiverDebtRows(rollups: ProjectGovernanceRollupsPublic | null) {
+  return rollups?.waiver_debt?.items ?? []
+}
+
+function waiverDebtSummaryRows(rollups: ProjectGovernanceRollupsPublic | null) {
+  const debt = rollups?.waiver_debt
+  return [
+    {
+      label: "Expired",
+      value: String(debt?.expired_count ?? 0),
+      detail: "past expiry",
+    },
+    {
+      label: "Review due",
+      value: String(debt?.review_due_count ?? 0),
+      detail: "needs owner review",
+    },
+    {
+      label: "Expiring soon",
+      value: String(debt?.expiring_soon_count ?? 0),
+      detail: "within 14 days",
+    },
+    {
+      label: "Accepted findings",
+      value: String(debt?.accepted_finding_count ?? 0),
+      detail: "currently accepted",
+    },
+  ]
+}
+
+function serviceWaiverDebtCount(
+  service: NonNullable<
+    ProjectGovernanceRollupsPublic["top_services_by_risk"]
+  >[number],
+) {
+  return (
+    (service.expired_waiver_count ?? 0) + (service.review_due_waiver_count ?? 0)
+  )
+}
+
+function formatRollupScore(value: number | null | undefined) {
+  if (value === null || value === undefined) {
+    return "0"
+  }
+  return Number.isInteger(value) ? String(value) : value.toFixed(1)
 }
 
 function formatProviderFreshness(providerStatus: ProviderStatusPublic | null) {
@@ -1342,10 +1394,14 @@ export function App() {
     useState<ProjectDecisionSummaryPublic | null>(null)
   const [projectAttackSummary, setProjectAttackSummary] =
     useState<ProjectAttackSummaryPublic | null>(null)
+  const [projectGovernanceRollups, setProjectGovernanceRollups] =
+    useState<ProjectGovernanceRollupsPublic | null>(null)
   const [projectListLoading, setProjectListLoading] = useState(true)
   const [summaryLoading, setSummaryLoading] = useState(false)
   const [attackSummaryLoading, setAttackSummaryLoading] = useState(false)
   const [attackSummaryError, setAttackSummaryError] = useState("")
+  const [governanceLoading, setGovernanceLoading] = useState(false)
+  const [governanceError, setGovernanceError] = useState("")
   const [dashboardError, setDashboardError] = useState("")
   const [createProjectForm, setCreateProjectForm] =
     useState<ProjectFormState>(emptyProjectForm)
@@ -1430,6 +1486,9 @@ export function App() {
   const summaryRows = buildSummaryRows(projectSummary)
   const attackRows = attackSummaryRows(projectAttackSummary)
   const attackTopTechniques = projectAttackSummary?.top_techniques ?? []
+  const topServiceRows = governanceServiceRows(projectGovernanceRollups)
+  const waiverDebtSummary = waiverDebtSummaryRows(projectGovernanceRollups)
+  const waiverDebtItems = waiverDebtRows(projectGovernanceRollups)
   const findingPageStart =
     findingCount === 0 ? 0 : Math.min(findingOffset + 1, findingCount)
   const findingPageEnd = Math.min(findingOffset + findings.length, findingCount)
@@ -1592,7 +1651,7 @@ export function App() {
     return () => {
       isMounted = false
     }
-  }, [navigate, selectedProjectId])
+  }, [navigate, selectedProjectId, waiverReloadKey])
 
   useEffect(() => {
     let isMounted = true
@@ -1638,6 +1697,52 @@ export function App() {
       isMounted = false
     }
   }, [navigate, selectedProjectId])
+
+  useEffect(() => {
+    let isMounted = true
+
+    async function loadProjectGovernanceRollups() {
+      if (!selectedProjectId) {
+        setProjectGovernanceRollups(null)
+        setGovernanceError("")
+        setGovernanceLoading(false)
+        return
+      }
+
+      setGovernanceLoading(true)
+      setGovernanceError("")
+      try {
+        const rollups = await ProjectsService.readProjectGovernanceRollups({
+          projectId: selectedProjectId,
+          limit: 5,
+        })
+        if (isMounted) {
+          setProjectGovernanceRollups(rollups)
+        }
+      } catch (caught) {
+        if (caught instanceof ApiError && [401, 403].includes(caught.status)) {
+          clearAccessToken()
+          await navigate({ to: "/login" })
+          return
+        }
+        if (isMounted) {
+          setProjectGovernanceRollups(null)
+          setGovernanceError(
+            apiErrorMessage("Governance rollups unavailable", caught),
+          )
+        }
+      } finally {
+        if (isMounted) {
+          setGovernanceLoading(false)
+        }
+      }
+    }
+
+    void loadProjectGovernanceRollups()
+    return () => {
+      isMounted = false
+    }
+  }, [navigate, selectedProjectId, waiverReloadKey])
 
   useEffect(() => {
     let isMounted = true
@@ -3379,11 +3484,13 @@ export function App() {
                   <div>
                     <span>Accepted findings</span>
                     <strong>
-                      {waivers.reduce(
-                        (total, waiver) =>
-                          total + (waiver.matched_findings ?? 0),
-                        0,
-                      )}
+                      {projectGovernanceRollups?.waiver_debt
+                        ?.accepted_finding_count ??
+                        waivers.reduce(
+                          (total, waiver) =>
+                            total + (waiver.matched_findings ?? 0),
+                          0,
+                        )}
                     </strong>
                   </div>
                 </section>
@@ -3403,6 +3510,67 @@ export function App() {
                     {waiverActionMessage}
                   </p>
                 ) : null}
+
+                <section
+                  className="waiver-debt-section"
+                  aria-label="Waiver Debt"
+                >
+                  <div className="detail-section-heading">
+                    <h3>Waiver Debt</h3>
+                    <span>Expired, review-due, and expiring accepted risk</span>
+                  </div>
+                  {governanceError ? (
+                    <p className="dashboard-alert" role="alert">
+                      {governanceError}
+                    </p>
+                  ) : null}
+                  {governanceLoading ? (
+                    <p className="dashboard-state" role="status">
+                      Loading waiver debt
+                    </p>
+                  ) : null}
+                  <dl className="governance-debt-grid">
+                    {waiverDebtSummary.map((row) => (
+                      <div key={row.label}>
+                        <dt>{row.label}</dt>
+                        <dd>
+                          <strong>{row.value}</strong>
+                          <span>{row.detail}</span>
+                        </dd>
+                      </div>
+                    ))}
+                  </dl>
+                  {!governanceLoading &&
+                  !governanceError &&
+                  waiverDebtItems.length === 0 ? (
+                    <p className="attack-summary-empty">
+                      No waiver debt is currently recorded for this project.
+                    </p>
+                  ) : null}
+                  {waiverDebtItems.length > 0 ? (
+                    <ul className="waiver-debt-items">
+                      {waiverDebtItems.map((item) => (
+                        <li key={item.id}>
+                          <div>
+                            <strong>{item.scope}</strong>
+                            <span
+                              className={`waiver-status ${waiverStatusTone(
+                                item.status,
+                              )}`}
+                            >
+                              {labelize(item.status)}
+                            </span>
+                          </div>
+                          <small>
+                            Owner {item.owner} / Matched{" "}
+                            {item.matched_findings ?? 0} / Expires{" "}
+                            {item.expires_at} / Days {item.days_remaining}
+                          </small>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
+                </section>
 
                 <section
                   className="waiver-create-panel"
@@ -5225,6 +5393,58 @@ export function App() {
                       </div>
                     ))}
                   </dl>
+                ) : null}
+
+                {governanceError ? (
+                  <p className="dashboard-alert" role="alert">
+                    {governanceError}
+                  </p>
+                ) : null}
+
+                {governanceLoading ? (
+                  <p className="dashboard-state" role="status">
+                    Loading governance rollups
+                  </p>
+                ) : null}
+
+                {!governanceLoading &&
+                !governanceError &&
+                selectedProject &&
+                projectGovernanceRollups ? (
+                  <section
+                    className="governance-summary-widget"
+                    aria-label="Top Services by Risk"
+                  >
+                    <div className="detail-section-heading">
+                      <h3>Top Services by Risk</h3>
+                      <span>Owner, service, and waiver debt concentration</span>
+                    </div>
+                    {topServiceRows.length === 0 ? (
+                      <p className="attack-summary-empty">
+                        No service rollups are available for this project.
+                      </p>
+                    ) : (
+                      <ul className="governance-service-list">
+                        {topServiceRows.map((service) => (
+                          <li key={service.label}>
+                            <div>
+                              <strong>{service.label}</strong>
+                              <span>
+                                {service.finding_count ?? 0} finding
+                                {service.finding_count === 1 ? "" : "s"}
+                              </span>
+                            </div>
+                            <small>
+                              Critical {service.critical_count ?? 0} / High{" "}
+                              {service.high_count ?? 0} / Score{" "}
+                              {formatRollupScore(service.risk_score_total)} /
+                              Waiver debt {serviceWaiverDebtCount(service)}
+                            </small>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </section>
                 ) : null}
               </div>
             )}

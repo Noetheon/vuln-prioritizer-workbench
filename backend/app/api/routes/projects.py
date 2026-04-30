@@ -14,14 +14,21 @@ from app.models import (
     ProjectCreate,
     ProjectCvssOnlyComparisonPublic,
     ProjectDecisionSummaryPublic,
+    ProjectGovernanceRollupsPublic,
     ProjectPublic,
     ProjectsPublic,
     ProjectUpdate,
 )
-from app.repositories import FindingRepository, ProjectRepository, RunRepository
+from app.repositories import (
+    FindingRepository,
+    ProjectRepository,
+    RunRepository,
+    WaiverRepository,
+)
 from app.services import (
     build_cvss_only_comparison_payload,
     build_project_attack_summary_payload,
+    build_project_governance_rollups_payload,
     build_project_summary_payload,
 )
 
@@ -88,6 +95,25 @@ def read_project_attack_summary(
         findings=finding_repo.list_project_findings(project_id),
         attack_contexts=finding_repo.list_project_attack_contexts(project_id),
         top_limit=limit,
+    )
+
+
+@router.get("/{project_id}/governance/rollups/", response_model=ProjectGovernanceRollupsPublic)
+def read_project_governance_rollups(
+    project_id: uuid.UUID,
+    session: SessionDep,
+    current_user: CurrentUser,
+    limit: int = Query(default=5, ge=1, le=20),
+) -> ProjectGovernanceRollupsPublic:
+    """Read owner, service, environment, and waiver-debt rollups."""
+    require_visible_project(session, current_user, project_id)
+    waiver_repository = WaiverRepository(session)
+    return build_project_governance_rollups_payload(
+        project_id=project_id,
+        findings=FindingRepository(session).list_project_findings(project_id),
+        waivers=waiver_repository.list_project_waivers(project_id),
+        waiver_repository=waiver_repository,
+        limit=limit,
     )
 
 

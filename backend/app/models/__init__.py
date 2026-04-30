@@ -59,6 +59,12 @@ from app.models.findings import (
     FindingPublic,
     FindingsPublic,
 )
+from app.models.governance import (
+    GovernanceRollupPublic,
+    GovernanceWaiverDebtEntryPublic,
+    GovernanceWaiverDebtPublic,
+    ProjectGovernanceRollupsPublic,
+)
 from app.models.projects import (
     Project,
     ProjectBase,
@@ -152,6 +158,9 @@ __all__ = [
     "FindingPriority",
     "FindingStatus",
     "FindingsPublic",
+    "GovernanceRollupPublic",
+    "GovernanceWaiverDebtEntryPublic",
+    "GovernanceWaiverDebtPublic",
     "ImportParseErrorPublic",
     "MigrationStatus",
     "Project",
@@ -162,6 +171,7 @@ __all__ = [
     "ProjectCreate",
     "ProjectCvssOnlyComparisonPublic",
     "ProjectDecisionSummaryPublic",
+    "ProjectGovernanceRollupsPublic",
     "ProjectPublic",
     "ProjectsPublic",
     "ProjectUpdate",

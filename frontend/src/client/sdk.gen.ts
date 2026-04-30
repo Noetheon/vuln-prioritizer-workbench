@@ -3,7 +3,7 @@
 import type { CancelablePromise } from './core/CancelablePromise';
 import { OpenAPI } from './core/OpenAPI';
 import { request as __request } from './core/request';
-import type { AssetsUpdateAssetData, AssetsUpdateAssetResponse, AssetsRecalculateAssetData, AssetsRecalculateAssetResponse, AssetsReadProjectAssetsData, AssetsReadProjectAssetsResponse, AssetsCreateProjectAssetData, AssetsCreateProjectAssetResponse, AssetsImportProjectAssetsData, AssetsImportProjectAssetsResponse, FindingsReadFindingData, FindingsReadFindingResponse, FindingsExplainFindingData, FindingsExplainFindingResponse, FindingsReadProjectFindingsData, FindingsReadProjectFindingsResponse, ImportsImportProjectUploadData, ImportsImportProjectUploadResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, ProjectsReadProjectsResponse, ProjectsCreateProjectData, ProjectsCreateProjectResponse, ProjectsDeleteProjectData, ProjectsDeleteProjectResponse, ProjectsReadProjectData, ProjectsReadProjectResponse, ProjectsUpdateProjectData, ProjectsUpdateProjectResponse, ProjectsReadProjectAttackSummaryData, ProjectsReadProjectAttackSummaryResponse, ProjectsCompareProjectCvssOnlyData, ProjectsCompareProjectCvssOnlyResponse, ProjectsReadProjectSummaryData, ProjectsReadProjectSummaryResponse, ProvidersReadProviderStatusResponse, ReportsDownloadReportData, ReportsDownloadReportResponse, ReportsVerifyReportData, ReportsVerifyReportResponse, ReportsReadRunReportsData, ReportsReadRunReportsResponse, ReportsCreateRunReportData, ReportsCreateRunReportResponse, RunsReadProjectRunsWithoutTrailingSlashData, RunsReadProjectRunsWithoutTrailingSlashResponse, RunsReadProjectRunsData, RunsReadProjectRunsResponse, RunsReadRunData, RunsReadRunResponse, RunsReadRunSummaryData, RunsReadRunSummaryResponse, UsersReadUserMeResponse, UtilsHealthCheckResponse, WaiversReadProjectWaiversData, WaiversReadProjectWaiversResponse, WaiversCreateProjectWaiverData, WaiversCreateProjectWaiverResponse, WaiversUpdateWaiverData, WaiversUpdateWaiverResponse, WaiversExpireWaiverData, WaiversExpireWaiverResponse, WorkbenchTemplateWorkbenchStatusResponse } from './types.gen';
+import type { AssetsUpdateAssetData, AssetsUpdateAssetResponse, AssetsRecalculateAssetData, AssetsRecalculateAssetResponse, AssetsReadProjectAssetsData, AssetsReadProjectAssetsResponse, AssetsCreateProjectAssetData, AssetsCreateProjectAssetResponse, AssetsImportProjectAssetsData, AssetsImportProjectAssetsResponse, FindingsReadFindingData, FindingsReadFindingResponse, FindingsExplainFindingData, FindingsExplainFindingResponse, FindingsReadProjectFindingsData, FindingsReadProjectFindingsResponse, ImportsImportProjectUploadData, ImportsImportProjectUploadResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, ProjectsReadProjectsResponse, ProjectsCreateProjectData, ProjectsCreateProjectResponse, ProjectsDeleteProjectData, ProjectsDeleteProjectResponse, ProjectsReadProjectData, ProjectsReadProjectResponse, ProjectsUpdateProjectData, ProjectsUpdateProjectResponse, ProjectsReadProjectAttackSummaryData, ProjectsReadProjectAttackSummaryResponse, ProjectsCompareProjectCvssOnlyData, ProjectsCompareProjectCvssOnlyResponse, ProjectsReadProjectGovernanceRollupsData, ProjectsReadProjectGovernanceRollupsResponse, ProjectsReadProjectSummaryData, ProjectsReadProjectSummaryResponse, ProvidersReadProviderStatusResponse, ReportsDownloadReportData, ReportsDownloadReportResponse, ReportsVerifyReportData, ReportsVerifyReportResponse, ReportsReadRunReportsData, ReportsReadRunReportsResponse, ReportsCreateRunReportData, ReportsCreateRunReportResponse, RunsReadProjectRunsWithoutTrailingSlashData, RunsReadProjectRunsWithoutTrailingSlashResponse, RunsReadProjectRunsData, RunsReadProjectRunsResponse, RunsReadRunData, RunsReadRunResponse, RunsReadRunSummaryData, RunsReadRunSummaryResponse, UsersReadUserMeResponse, UtilsHealthCheckResponse, WaiversReadProjectWaiversData, WaiversReadProjectWaiversResponse, WaiversCreateProjectWaiverData, WaiversCreateProjectWaiverResponse, WaiversUpdateWaiverData, WaiversUpdateWaiverResponse, WaiversExpireWaiverData, WaiversExpireWaiverResponse, WorkbenchTemplateWorkbenchStatusResponse } from './types.gen';
 
 export class AssetsService {
     /**
@@ -425,6 +425,31 @@ export class ProjectsService {
         return __request(OpenAPI, {
             method: 'GET',
             url: '/api/v1/projects/{project_id}/compare/cvss-only',
+            path: {
+                project_id: data.projectId
+            },
+            query: {
+                limit: data.limit
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+
+    /**
+     * Read Project Governance Rollups
+     * Read owner, service, environment, and waiver-debt rollups.
+     * @param data The data for the request.
+     * @param data.projectId
+     * @param data.limit
+     * @returns ProjectGovernanceRollupsPublic Successful Response
+     * @throws ApiError
+     */
+    public static readProjectGovernanceRollups(data: ProjectsReadProjectGovernanceRollupsData): CancelablePromise<ProjectsReadProjectGovernanceRollupsResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/projects/{project_id}/governance/rollups/',
             path: {
                 project_id: data.projectId
             },

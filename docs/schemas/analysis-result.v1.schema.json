@@ -40,6 +40,9 @@
         }
       ]
     },
+    "governance_rollups": {
+      "$ref": "#/$defs/governanceRollups"
+    },
     "findings": {
       "type": "array",
       "items": {
@@ -72,6 +75,10 @@
       "type": "string",
       "format": "date-time"
     },
+    "date": {
+      "type": "string",
+      "format": "date"
+    },
     "nullableDateTime": {
       "anyOf": [
         {
@@ -97,6 +104,13 @@
     "jsonObject": {
       "type": "object",
       "additionalProperties": true
+    },
+    "integerCountMap": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "integer",
+        "minimum": 0
+      }
     },
     "project": {
       "type": "object",
@@ -215,6 +229,307 @@
         },
         "source_metadata": {
           "$ref": "#/$defs/jsonObject"
+        }
+      }
+    },
+    "governanceRollups": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "project_id",
+        "generated_at",
+        "owners",
+        "services",
+        "environments",
+        "top_services_by_risk",
+        "waiver_debt"
+      ],
+      "properties": {
+        "project_id": {
+          "$ref": "#/$defs/uuid"
+        },
+        "generated_at": {
+          "$ref": "#/$defs/dateTime"
+        },
+        "owners": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/governanceRollup"
+          }
+        },
+        "services": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/governanceRollup"
+          }
+        },
+        "environments": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/governanceRollup"
+          }
+        },
+        "top_services_by_risk": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/governanceRollup"
+          }
+        },
+        "waiver_debt": {
+          "$ref": "#/$defs/governanceWaiverDebt"
+        }
+      }
+    },
+    "governanceRollup": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "dimension",
+        "label",
+        "finding_count",
+        "open_count",
+        "accepted_count",
+        "fixed_count",
+        "suppressed_count",
+        "critical_count",
+        "high_count",
+        "kev_count",
+        "attack_mapped_count",
+        "suppressed_by_vex_count",
+        "under_investigation_count",
+        "waived_count",
+        "expired_waiver_count",
+        "review_due_waiver_count",
+        "risk_score_total",
+        "risk_score_max",
+        "highest_priority",
+        "priority_counts",
+        "status_counts",
+        "top_cves"
+      ],
+      "properties": {
+        "dimension": {
+          "enum": [
+            "owner",
+            "service",
+            "environment"
+          ]
+        },
+        "label": {
+          "type": "string"
+        },
+        "finding_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "open_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "accepted_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "fixed_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "suppressed_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "critical_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "high_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "kev_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "attack_mapped_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "suppressed_by_vex_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "under_investigation_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "waived_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "expired_waiver_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "review_due_waiver_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "risk_score_total": {
+          "type": "number"
+        },
+        "risk_score_max": {
+          "$ref": "#/$defs/nullableNumber"
+        },
+        "highest_priority": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "priority_counts": {
+          "$ref": "#/$defs/integerCountMap"
+        },
+        "status_counts": {
+          "$ref": "#/$defs/integerCountMap"
+        },
+        "top_cves": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "governanceWaiverDebt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "waiver_count",
+        "active_count",
+        "review_due_count",
+        "expired_count",
+        "expiring_soon_count",
+        "matched_finding_count",
+        "accepted_finding_count",
+        "expired_finding_count",
+        "review_due_finding_count",
+        "owner_counts",
+        "service_counts",
+        "items"
+      ],
+      "properties": {
+        "waiver_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "active_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "review_due_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "expired_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "expiring_soon_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "matched_finding_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "accepted_finding_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "expired_finding_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "review_due_finding_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "owner_counts": {
+          "$ref": "#/$defs/integerCountMap"
+        },
+        "service_counts": {
+          "$ref": "#/$defs/integerCountMap"
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/governanceWaiverDebtEntry"
+          }
+        }
+      }
+    },
+    "governanceWaiverDebtEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "owner",
+        "scope",
+        "status",
+        "days_remaining",
+        "expires_at",
+        "review_at",
+        "matched_findings",
+        "cve_id",
+        "service",
+        "asset_key",
+        "finding_id"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/uuid"
+        },
+        "owner": {
+          "type": "string"
+        },
+        "scope": {
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "active",
+            "review_due",
+            "expired"
+          ]
+        },
+        "days_remaining": {
+          "type": "integer"
+        },
+        "expires_at": {
+          "$ref": "#/$defs/date"
+        },
+        "review_at": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/date"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "matched_findings": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "cve_id": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "service": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "asset_key": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "finding_id": {
+          "$ref": "#/$defs/nullableUuid"
         }
       }
     },

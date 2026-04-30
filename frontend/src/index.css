@@ -1044,6 +1044,118 @@ h2 {
   padding: 16px;
 }
 
+.waiver-debt-section,
+.governance-summary-widget {
+  display: grid;
+  gap: 14px;
+  border: 1px solid #edf1ef;
+  border-radius: 8px;
+  padding: 16px;
+  background: #ffffff;
+}
+
+.governance-summary-widget {
+  margin-top: 14px;
+}
+
+.governance-debt-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1px;
+  margin: 0;
+  overflow: hidden;
+  border: 1px solid #edf1ef;
+  border-radius: 8px;
+  background: #edf1ef;
+}
+
+.governance-debt-grid div {
+  display: grid;
+  gap: 5px;
+  min-height: 76px;
+  padding: 10px;
+  background: #ffffff;
+}
+
+.governance-debt-grid dt,
+.governance-debt-grid dd {
+  margin: 0;
+}
+
+.governance-debt-grid dt {
+  color: #64748b;
+  font-size: 0.72rem;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.governance-debt-grid dd strong,
+.governance-debt-grid dd span {
+  display: block;
+}
+
+.governance-debt-grid dd strong {
+  color: #111827;
+  font-size: 1.18rem;
+  line-height: 1;
+}
+
+.governance-debt-grid dd span {
+  margin-top: 3px;
+  color: #64748b;
+  font-size: 0.76rem;
+  line-height: 1.25;
+}
+
+.governance-service-list,
+.waiver-debt-items {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.governance-service-list li,
+.waiver-debt-items li {
+  display: grid;
+  gap: 8px;
+  border: 1px solid #d7e0dd;
+  border-radius: 8px;
+  padding: 11px;
+  background: #f8fafc;
+}
+
+.governance-service-list div,
+.waiver-debt-items div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.governance-service-list strong,
+.waiver-debt-items strong {
+  overflow-wrap: anywhere;
+  color: #0f766e;
+  font-size: 0.95rem;
+}
+
+.governance-service-list span,
+.waiver-debt-items span:not(.waiver-status) {
+  color: #111827;
+  font-size: 0.84rem;
+  font-weight: 750;
+  text-align: right;
+}
+
+.governance-service-list small,
+.waiver-debt-items small {
+  color: #64748b;
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
 .waiver-form {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -2256,9 +2368,14 @@ h2 {
   border-bottom: 1px solid #edf1ef;
 }
 
+.panel-header > div {
+  min-width: 0;
+}
+
 .panel-header span {
   display: block;
   margin-top: 4px;
+  overflow-wrap: anywhere;
   color: #64748b;
   font-size: 0.9rem;
 }
@@ -2662,6 +2779,7 @@ td {
   .report-card-grid,
   .report-readiness-facts,
   .report-history-row,
+  .governance-debt-grid,
   .waiver-toolbar,
   .waiver-form,
   .summary-list,

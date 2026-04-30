@@ -437,6 +437,78 @@ export type FindingsPublic = {
  */
 export type FindingStatus = 'open' | 'in_review' | 'remediating' | 'fixed' | 'accepted' | 'suppressed';
 
+/**
+ * Aggregated finding risk for one owner, service, or environment.
+ */
+export type GovernanceRollupPublic = {
+    accepted_count?: number;
+    attack_mapped_count?: number;
+    critical_count?: number;
+    dimension: string;
+    expired_waiver_count?: number;
+    finding_count?: number;
+    fixed_count?: number;
+    high_count?: number;
+    highest_priority?: (string | null);
+    kev_count?: number;
+    label: string;
+    open_count?: number;
+    priority_counts?: {
+        [key: string]: (number);
+    };
+    review_due_waiver_count?: number;
+    risk_score_max?: (number | null);
+    risk_score_total?: number;
+    status_counts?: {
+        [key: string]: (number);
+    };
+    suppressed_by_vex_count?: number;
+    suppressed_count?: number;
+    top_cves?: Array<(string)>;
+    under_investigation_count?: number;
+    waived_count?: number;
+};
+
+/**
+ * One waiver lifecycle row in the aggregate debt view.
+ */
+export type GovernanceWaiverDebtEntryPublic = {
+    asset_key?: (string | null);
+    cve_id?: (string | null);
+    days_remaining: number;
+    expires_at: string;
+    finding_id?: (string | null);
+    id: string;
+    matched_findings?: number;
+    owner: string;
+    review_at?: (string | null);
+    scope: string;
+    service?: (string | null);
+    status: string;
+};
+
+/**
+ * Project-level accepted-risk lifecycle debt summary.
+ */
+export type GovernanceWaiverDebtPublic = {
+    accepted_finding_count?: number;
+    active_count?: number;
+    expired_count?: number;
+    expired_finding_count?: number;
+    expiring_soon_count?: number;
+    items?: Array<GovernanceWaiverDebtEntryPublic>;
+    matched_finding_count?: number;
+    owner_counts?: {
+        [key: string]: (number);
+    };
+    review_due_count?: number;
+    review_due_finding_count?: number;
+    service_counts?: {
+        [key: string]: (number);
+    };
+    waiver_count?: number;
+};
+
 export type HTTPValidationError = {
     detail?: Array<ValidationError>;
 };
@@ -570,6 +642,19 @@ export type ProjectDecisionSummaryPublic = {
     open_finding_count?: number;
     project_id: string;
     provider_degraded?: boolean;
+};
+
+/**
+ * Owner, service, environment, and waiver-debt rollups for one project.
+ */
+export type ProjectGovernanceRollupsPublic = {
+    environments?: Array<GovernanceRollupPublic>;
+    generated_at: string;
+    owners?: Array<GovernanceRollupPublic>;
+    project_id: string;
+    services?: Array<GovernanceRollupPublic>;
+    top_services_by_risk?: Array<GovernanceRollupPublic>;
+    waiver_debt?: GovernanceWaiverDebtPublic;
 };
 
 /**
@@ -962,6 +1047,13 @@ export type ProjectsCompareProjectCvssOnlyData = {
 };
 
 export type ProjectsCompareProjectCvssOnlyResponse = (ProjectCvssOnlyComparisonPublic);
+
+export type ProjectsReadProjectGovernanceRollupsData = {
+    limit?: number;
+    projectId: string;
+};
+
+export type ProjectsReadProjectGovernanceRollupsResponse = (ProjectGovernanceRollupsPublic);
 
 export type ProjectsReadProjectSummaryData = {
     projectId: string;

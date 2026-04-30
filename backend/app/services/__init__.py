@@ -12,6 +12,7 @@ from app.services.decisions import (
     build_finding_explanation_payload,
     build_project_summary_payload,
 )
+from app.services.governance import build_project_governance_rollups_payload
 from app.services.reports import (
     MarkdownProviderSnapshot,
     MarkdownReportFinding,
@@ -43,6 +44,7 @@ __all__ = [
     "build_project_attack_summary_payload",
     "build_cvss_only_comparison_payload",
     "build_finding_explanation_payload",
+    "build_project_governance_rollups_payload",
     "build_project_summary_payload",
     "render_analysis_result_json",
     "render_evidence_bundle_zip",

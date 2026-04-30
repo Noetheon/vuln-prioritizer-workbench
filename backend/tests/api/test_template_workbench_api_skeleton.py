@@ -52,6 +52,7 @@ def test_vpw011_openapi_exposes_workbench_domain_routes_without_items() -> None:
         "/api/v1/waivers/{waiver_id}",
         "/api/v1/waivers/{waiver_id}/expire",
         "/api/v1/projects/{project_id}/summary",
+        "/api/v1/projects/{project_id}/governance/rollups/",
         "/api/v1/projects/{project_id}/compare/cvss-only",
     }
     expected_schemas = {
@@ -65,10 +66,14 @@ def test_vpw011_openapi_exposes_workbench_domain_routes_without_items() -> None:
         "FindingPublic",
         "FindingExplanationPublic",
         "FindingsPublic",
+        "GovernanceRollupPublic",
+        "GovernanceWaiverDebtEntryPublic",
+        "GovernanceWaiverDebtPublic",
         "ImportParseErrorPublic",
         "ProjectCreate",
         "ProjectCvssOnlyComparisonPublic",
         "ProjectDecisionSummaryPublic",
+        "ProjectGovernanceRollupsPublic",
         "ProjectPublic",
         "ProjectsPublic",
         "ProjectUpdate",
@@ -165,6 +170,7 @@ def test_vpw011_domain_routes_require_auth(template_api_env: TemplateApiEnv) -> 
         ),
         ("post", f"/api/v1/waivers/{finding_id}/expire", {}),
         ("get", f"/api/v1/projects/{project_id}/summary", {}),
+        ("get", f"/api/v1/projects/{project_id}/governance/rollups/", {}),
         ("get", f"/api/v1/projects/{project_id}/compare/cvss-only", {}),
     )
 
