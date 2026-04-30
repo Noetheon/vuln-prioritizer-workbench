@@ -79,6 +79,15 @@ from app.models.findings import (
     FindingPublic,
     FindingsPublic,
 )
+from app.models.github_issues import (
+    GitHubIssueExport,
+    GitHubIssueExportCreate,
+    GitHubIssueExportPublic,
+    GitHubIssueExportRecord,
+    GitHubIssuePreviewCreate,
+    GitHubIssuePreviewPublic,
+    GitHubIssuePreviewRecord,
+)
 from app.models.governance import (
     GovernanceRollupPublic,
     GovernanceWaiverDebtEntryPublic,
@@ -199,6 +208,13 @@ __all__ = [
     "GovernanceRollupPublic",
     "GovernanceWaiverDebtEntryPublic",
     "GovernanceWaiverDebtPublic",
+    "GitHubIssueExport",
+    "GitHubIssueExportCreate",
+    "GitHubIssueExportPublic",
+    "GitHubIssueExportRecord",
+    "GitHubIssuePreviewCreate",
+    "GitHubIssuePreviewPublic",
+    "GitHubIssuePreviewRecord",
     "ImportParseErrorPublic",
     "MigrationStatus",
     "Project",
