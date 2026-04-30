@@ -77,7 +77,7 @@ export const AnalysisRunPublicSchema = {
             type: 'string'
         },
         status: {
-            '$ref': '#/components/schemas/AnalysisRunStatus',
+            $ref: '#/components/schemas/AnalysisRunStatus',
             default: 'pending'
         },
         summary_json: {
@@ -86,14 +86,27 @@ export const AnalysisRunPublicSchema = {
             type: 'object'
         }
     },
-    required: ['input_type', 'id', 'project_id', 'provider_snapshot_id'],
+    required: [
+        'input_type',
+        'id',
+        'project_id',
+        'provider_snapshot_id'
+    ],
     title: 'AnalysisRunPublic',
     type: 'object'
 } as const;
 
 export const AnalysisRunStatusSchema = {
     description: 'Import or analysis run lifecycle state.',
-    enum: ['pending', 'running', 'succeeded', 'completed', 'completed_with_errors', 'failed', 'cancelled'],
+    enum: [
+        'pending',
+        'running',
+        'succeeded',
+        'completed',
+        'completed_with_errors',
+        'failed',
+        'cancelled'
+    ],
     title: 'AnalysisRunStatus',
     type: 'string'
 } as const;
@@ -187,7 +200,7 @@ export const AnalysisRunSummaryPublicSchema = {
         },
         parse_errors: {
             items: {
-                '$ref': '#/components/schemas/ImportParseErrorPublic'
+                $ref: '#/components/schemas/ImportParseErrorPublic'
             },
             title: 'Parse Errors',
             type: 'array'
@@ -220,7 +233,7 @@ export const AnalysisRunSummaryPublicSchema = {
             type: 'string'
         },
         status: {
-            '$ref': '#/components/schemas/AnalysisRunStatus'
+            $ref: '#/components/schemas/AnalysisRunStatus'
         },
         summary_json: {
             additionalProperties: true,
@@ -233,7 +246,15 @@ export const AnalysisRunSummaryPublicSchema = {
             type: 'integer'
         }
     },
-    required: ['id', 'project_id', 'input_type', 'filename', 'status', 'started_at', 'finished_at'],
+    required: [
+        'id',
+        'project_id',
+        'input_type',
+        'filename',
+        'status',
+        'started_at',
+        'finished_at'
+    ],
     title: 'AnalysisRunSummaryPublic',
     type: 'object'
 } as const;
@@ -247,13 +268,16 @@ export const AnalysisRunsPublicSchema = {
         },
         data: {
             items: {
-                '$ref': '#/components/schemas/AnalysisRunPublic'
+                $ref: '#/components/schemas/AnalysisRunPublic'
             },
             title: 'Data',
             type: 'array'
         }
     },
-    required: ['data', 'count'],
+    required: [
+        'data',
+        'count'
+    ],
     title: 'AnalysisRunsPublic',
     type: 'object'
 } as const;
@@ -269,14 +293,21 @@ export const ApiTokenCreateSchema = {
         },
         scopes: {
             items: {
-                enum: ['read', 'import', 'report', 'admin'],
+                enum: [
+                    'read',
+                    'import',
+                    'report',
+                    'admin'
+                ],
                 type: 'string'
             },
             title: 'Scopes',
             type: 'array'
         }
     },
-    required: ['name'],
+    required: [
+        'name'
+    ],
     title: 'ApiTokenCreate',
     type: 'object'
 } as const;
@@ -328,7 +359,12 @@ export const ApiTokenCreatePublicSchema = {
         },
         scopes: {
             items: {
-                enum: ['read', 'import', 'report', 'admin'],
+                enum: [
+                    'read',
+                    'import',
+                    'report',
+                    'admin'
+                ],
                 type: 'string'
             },
             title: 'Scopes',
@@ -339,7 +375,16 @@ export const ApiTokenCreatePublicSchema = {
             type: 'string'
         }
     },
-    required: ['id', 'name', 'scopes', 'active', 'created_at', 'last_used_at', 'revoked_at', 'token'],
+    required: [
+        'id',
+        'name',
+        'scopes',
+        'active',
+        'created_at',
+        'last_used_at',
+        'revoked_at',
+        'token'
+    ],
     title: 'ApiTokenCreatePublic',
     type: 'object'
 } as const;
@@ -391,14 +436,27 @@ export const ApiTokenPublicSchema = {
         },
         scopes: {
             items: {
-                enum: ['read', 'import', 'report', 'admin'],
+                enum: [
+                    'read',
+                    'import',
+                    'report',
+                    'admin'
+                ],
                 type: 'string'
             },
             title: 'Scopes',
             type: 'array'
         }
     },
-    required: ['id', 'name', 'scopes', 'active', 'created_at', 'last_used_at', 'revoked_at'],
+    required: [
+        'id',
+        'name',
+        'scopes',
+        'active',
+        'created_at',
+        'last_used_at',
+        'revoked_at'
+    ],
     title: 'ApiTokenPublic',
     type: 'object'
 } as const;
@@ -412,13 +470,16 @@ export const ApiTokensPublicSchema = {
         },
         data: {
             items: {
-                '$ref': '#/components/schemas/ApiTokenPublic'
+                $ref: '#/components/schemas/ApiTokenPublic'
             },
             title: 'Data',
             type: 'array'
         }
     },
-    required: ['data', 'count'],
+    required: [
+        'data',
+        'count'
+    ],
     title: 'ApiTokensPublic',
     type: 'object'
 } as const;
@@ -486,7 +547,9 @@ export const AssetContextImportPublicSchema = {
             type: 'array'
         }
     },
-    required: ['project_id'],
+    required: [
+        'project_id'
+    ],
     title: 'AssetContextImportPublic',
     type: 'object'
 } as const;
@@ -513,15 +576,15 @@ export const AssetCreateSchema = {
             title: 'Business Service'
         },
         criticality: {
-            '$ref': '#/components/schemas/AssetCriticality',
+            $ref: '#/components/schemas/AssetCriticality',
             default: 'unknown'
         },
         environment: {
-            '$ref': '#/components/schemas/AssetEnvironment',
+            $ref: '#/components/schemas/AssetEnvironment',
             default: 'unknown'
         },
         exposure: {
-            '$ref': '#/components/schemas/AssetExposure',
+            $ref: '#/components/schemas/AssetExposure',
             default: 'unknown'
         },
         name: {
@@ -555,28 +618,48 @@ export const AssetCreateSchema = {
             title: 'Target Ref'
         }
     },
-    required: ['asset_key', 'name'],
+    required: [
+        'asset_key',
+        'name'
+    ],
     title: 'AssetCreate',
     type: 'object'
 } as const;
 
 export const AssetCriticalitySchema = {
     description: 'Business criticality for an affected asset.',
-    enum: ['critical', 'high', 'medium', 'low', 'unknown'],
+    enum: [
+        'critical',
+        'high',
+        'medium',
+        'low',
+        'unknown'
+    ],
     title: 'AssetCriticality',
     type: 'string'
 } as const;
 
 export const AssetEnvironmentSchema = {
     description: 'Deployment environment for an affected asset.',
-    enum: ['production', 'staging', 'development', 'test', 'unknown'],
+    enum: [
+        'production',
+        'staging',
+        'development',
+        'test',
+        'unknown'
+    ],
     title: 'AssetEnvironment',
     type: 'string'
 } as const;
 
 export const AssetExposureSchema = {
     description: 'Exposure level for an affected asset.',
-    enum: ['internet-facing', 'internal', 'private', 'unknown'],
+    enum: [
+        'internet-facing',
+        'internal',
+        'private',
+        'unknown'
+    ],
     title: 'AssetExposure',
     type: 'string'
 } as const;
@@ -608,15 +691,15 @@ export const AssetPublicSchema = {
             type: 'string'
         },
         criticality: {
-            '$ref': '#/components/schemas/AssetCriticality',
+            $ref: '#/components/schemas/AssetCriticality',
             default: 'unknown'
         },
         environment: {
-            '$ref': '#/components/schemas/AssetEnvironment',
+            $ref: '#/components/schemas/AssetEnvironment',
             default: 'unknown'
         },
         exposure: {
-            '$ref': '#/components/schemas/AssetExposure',
+            $ref: '#/components/schemas/AssetExposure',
             default: 'unknown'
         },
         finding_count: {
@@ -675,7 +758,14 @@ export const AssetPublicSchema = {
             type: 'string'
         }
     },
-    required: ['asset_key', 'name', 'id', 'project_id', 'created_at', 'updated_at'],
+    required: [
+        'asset_key',
+        'name',
+        'id',
+        'project_id',
+        'created_at',
+        'updated_at'
+    ],
     title: 'AssetPublic',
     type: 'object'
 } as const;
@@ -715,7 +805,10 @@ export const AssetRecalculatePublicSchema = {
             type: 'boolean'
         }
     },
-    required: ['asset_id', 'asset_key'],
+    required: [
+        'asset_id',
+        'asset_key'
+    ],
     title: 'AssetRecalculatePublic',
     type: 'object'
 } as const;
@@ -751,7 +844,7 @@ export const AssetUpdateSchema = {
         criticality: {
             anyOf: [
                 {
-                    '$ref': '#/components/schemas/AssetCriticality'
+                    $ref: '#/components/schemas/AssetCriticality'
                 },
                 {
                     type: 'null'
@@ -761,7 +854,7 @@ export const AssetUpdateSchema = {
         environment: {
             anyOf: [
                 {
-                    '$ref': '#/components/schemas/AssetEnvironment'
+                    $ref: '#/components/schemas/AssetEnvironment'
                 },
                 {
                     type: 'null'
@@ -771,7 +864,7 @@ export const AssetUpdateSchema = {
         exposure: {
             anyOf: [
                 {
-                    '$ref': '#/components/schemas/AssetExposure'
+                    $ref: '#/components/schemas/AssetExposure'
                 },
                 {
                     type: 'null'
@@ -829,13 +922,16 @@ export const AssetsPublicSchema = {
         },
         data: {
             items: {
-                '$ref': '#/components/schemas/AssetPublic'
+                $ref: '#/components/schemas/AssetPublic'
             },
             title: 'Data',
             type: 'array'
         }
     },
-    required: ['data', 'count'],
+    required: [
+        'data',
+        'count'
+    ],
     title: 'AssetsPublic',
     type: 'object'
 } as const;
@@ -938,7 +1034,10 @@ export const Body_imports_import_project_uploadSchema = {
             title: 'Vex File'
         }
     },
-    required: ['input_type', 'file'],
+    required: [
+        'input_type',
+        'file'
+    ],
     title: 'Body_imports-import_project_upload',
     type: 'object'
 } as const;
@@ -995,7 +1094,10 @@ export const Body_login_login_access_tokenSchema = {
             type: 'string'
         }
     },
-    required: ['username', 'password'],
+    required: [
+        'username',
+        'password'
+    ],
     title: 'Body_login-login_access_token',
     type: 'object'
 } as const;
@@ -1042,7 +1144,7 @@ export const FindingAttackContextDetailPublicSchema = {
         },
         mappings: {
             items: {
-                '$ref': '#/components/schemas/FindingAttackMappingDetailPublic'
+                $ref: '#/components/schemas/FindingAttackMappingDetailPublic'
             },
             title: 'Mappings',
             type: 'array'
@@ -1084,7 +1186,7 @@ export const FindingAttackContextDetailPublicSchema = {
         },
         techniques: {
             items: {
-                '$ref': '#/components/schemas/FindingAttackTechniqueDetailPublic'
+                $ref: '#/components/schemas/FindingAttackTechniqueDetailPublic'
             },
             title: 'Techniques',
             type: 'array'
@@ -1193,7 +1295,9 @@ export const FindingAttackMappingDetailPublicSchema = {
             title: 'Technique Name'
         }
     },
-    required: ['technique_id'],
+    required: [
+        'technique_id'
+    ],
     title: 'FindingAttackMappingDetailPublic',
     type: 'object'
 } as const;
@@ -1290,7 +1394,9 @@ export const FindingAttackTechniqueDetailPublicSchema = {
             title: 'Url'
         }
     },
-    required: ['technique_id'],
+    required: [
+        'technique_id'
+    ],
     title: 'FindingAttackTechniqueDetailPublic',
     type: 'object'
 } as const;
@@ -1368,7 +1474,7 @@ export const FindingDetailPublicSchema = {
         attack_context: {
             anyOf: [
                 {
-                    '$ref': '#/components/schemas/FindingAttackContextDetailPublic'
+                    $ref: '#/components/schemas/FindingAttackContextDetailPublic'
                 },
                 {
                     type: 'null'
@@ -1522,7 +1628,7 @@ export const FindingDetailPublicSchema = {
         },
         occurrences: {
             items: {
-                '$ref': '#/components/schemas/FindingOccurrencePublic'
+                $ref: '#/components/schemas/FindingOccurrencePublic'
             },
             title: 'Occurrences',
             type: 'array'
@@ -1544,7 +1650,7 @@ export const FindingDetailPublicSchema = {
             title: 'Owner'
         },
         priority: {
-            '$ref': '#/components/schemas/FindingPriority',
+            $ref: '#/components/schemas/FindingPriority',
             default: 'medium'
         },
         priority_rank: {
@@ -1591,7 +1697,7 @@ export const FindingDetailPublicSchema = {
             title: 'Risk Score'
         },
         status: {
-            '$ref': '#/components/schemas/FindingStatus',
+            $ref: '#/components/schemas/FindingStatus',
             default: 'open'
         },
         suppressed_by_vex: {
@@ -1620,7 +1726,18 @@ export const FindingDetailPublicSchema = {
             type: 'boolean'
         }
     },
-    required: ['cve_id', 'id', 'project_id', 'vulnerability_id', 'component_id', 'asset_id', 'first_seen_at', 'last_seen_at', 'created_at', 'updated_at'],
+    required: [
+        'cve_id',
+        'id',
+        'project_id',
+        'vulnerability_id',
+        'component_id',
+        'asset_id',
+        'first_seen_at',
+        'last_seen_at',
+        'created_at',
+        'updated_at'
+    ],
     title: 'FindingDetailPublic',
     type: 'object'
 } as const;
@@ -1685,7 +1802,7 @@ export const FindingExplanationPublicSchema = {
             type: 'integer'
         },
         priority: {
-            '$ref': '#/components/schemas/FindingPriority'
+            $ref: '#/components/schemas/FindingPriority'
         },
         priority_rank: {
             title: 'Priority Rank',
@@ -1753,7 +1870,13 @@ export const FindingExplanationPublicSchema = {
             title: 'Risk Score'
         }
     },
-    required: ['finding_id', 'project_id', 'cve_id', 'priority', 'priority_rank'],
+    required: [
+        'finding_id',
+        'project_id',
+        'cve_id',
+        'priority',
+        'priority_rank'
+    ],
     title: 'FindingExplanationPublic',
     type: 'object'
 } as const;
@@ -2067,14 +2190,22 @@ export const FindingOccurrencePublicSchema = {
             title: 'Vex Status'
         }
     },
-    required: ['id', 'analysis_run_id'],
+    required: [
+        'id',
+        'analysis_run_id'
+    ],
     title: 'FindingOccurrencePublic',
     type: 'object'
 } as const;
 
 export const FindingPrioritySchema = {
     description: 'Rule-based finding priority label.',
-    enum: ['critical', 'high', 'medium', 'low'],
+    enum: [
+        'critical',
+        'high',
+        'medium',
+        'low'
+    ],
     title: 'FindingPriority',
     type: 'string'
 } as const;
@@ -2311,7 +2442,7 @@ export const FindingPublicSchema = {
             title: 'Owner'
         },
         priority: {
-            '$ref': '#/components/schemas/FindingPriority',
+            $ref: '#/components/schemas/FindingPriority',
             default: 'medium'
         },
         priority_rank: {
@@ -2358,7 +2489,7 @@ export const FindingPublicSchema = {
             title: 'Risk Score'
         },
         status: {
-            '$ref': '#/components/schemas/FindingStatus',
+            $ref: '#/components/schemas/FindingStatus',
             default: 'open'
         },
         suppressed_by_vex: {
@@ -2387,14 +2518,32 @@ export const FindingPublicSchema = {
             type: 'boolean'
         }
     },
-    required: ['cve_id', 'id', 'project_id', 'vulnerability_id', 'component_id', 'asset_id', 'first_seen_at', 'last_seen_at', 'created_at', 'updated_at'],
+    required: [
+        'cve_id',
+        'id',
+        'project_id',
+        'vulnerability_id',
+        'component_id',
+        'asset_id',
+        'first_seen_at',
+        'last_seen_at',
+        'created_at',
+        'updated_at'
+    ],
     title: 'FindingPublic',
     type: 'object'
 } as const;
 
 export const FindingStatusSchema = {
     description: 'Finding lifecycle state.',
-    enum: ['open', 'in_review', 'remediating', 'fixed', 'accepted', 'suppressed'],
+    enum: [
+        'open',
+        'in_review',
+        'remediating',
+        'fixed',
+        'accepted',
+        'suppressed'
+    ],
     title: 'FindingStatus',
     type: 'string'
 } as const;
@@ -2408,13 +2557,16 @@ export const FindingsPublicSchema = {
         },
         data: {
             items: {
-                '$ref': '#/components/schemas/FindingPublic'
+                $ref: '#/components/schemas/FindingPublic'
             },
             title: 'Data',
             type: 'array'
         }
     },
-    required: ['data', 'count'],
+    required: [
+        'data',
+        'count'
+    ],
     title: 'FindingsPublic',
     type: 'object'
 } as const;
@@ -2470,7 +2622,7 @@ export const GitHubIssueExportCreateSchema = {
         priority: {
             anyOf: [
                 {
-                    '$ref': '#/components/schemas/FindingPriority'
+                    $ref: '#/components/schemas/FindingPriority'
                 },
                 {
                     type: 'null'
@@ -2497,7 +2649,9 @@ export const GitHubIssueExportCreateSchema = {
             title: 'Token Env'
         }
     },
-    required: ['repository'],
+    required: [
+        'repository'
+    ],
     title: 'GitHubIssueExportCreate',
     type: 'object'
 } as const;
@@ -2516,7 +2670,7 @@ export const GitHubIssueExportPublicSchema = {
         },
         data: {
             items: {
-                '$ref': '#/components/schemas/GitHubIssueExportRecord'
+                $ref: '#/components/schemas/GitHubIssueExportRecord'
             },
             title: 'Data',
             type: 'array'
@@ -2531,7 +2685,10 @@ export const GitHubIssueExportPublicSchema = {
             type: 'integer'
         }
     },
-    required: ['dry_run', 'count'],
+    required: [
+        'dry_run',
+        'count'
+    ],
     title: 'GitHubIssueExportPublic',
     type: 'object'
 } as const;
@@ -2604,7 +2761,11 @@ export const GitHubIssueExportRecordSchema = {
             title: 'Milestone'
         },
         status: {
-            enum: ['preview', 'created', 'skipped_duplicate'],
+            enum: [
+                'preview',
+                'created',
+                'skipped_duplicate'
+            ],
             title: 'Status',
             type: 'string'
         },
@@ -2613,7 +2774,14 @@ export const GitHubIssueExportRecordSchema = {
             type: 'string'
         }
     },
-    required: ['finding_id', 'cve_id', 'title', 'body', 'duplicate_key', 'status'],
+    required: [
+        'finding_id',
+        'cve_id',
+        'title',
+        'body',
+        'duplicate_key',
+        'status'
+    ],
     title: 'GitHubIssueExportRecord',
     type: 'object'
 } as const;
@@ -2664,7 +2832,7 @@ export const GitHubIssuePreviewCreateSchema = {
         priority: {
             anyOf: [
                 {
-                    '$ref': '#/components/schemas/FindingPriority'
+                    $ref: '#/components/schemas/FindingPriority'
                 },
                 {
                     type: 'null'
@@ -2685,7 +2853,7 @@ export const GitHubIssuePreviewPublicSchema = {
         },
         data: {
             items: {
-                '$ref': '#/components/schemas/GitHubIssuePreviewRecord'
+                $ref: '#/components/schemas/GitHubIssuePreviewRecord'
             },
             title: 'Data',
             type: 'array'
@@ -2696,7 +2864,9 @@ export const GitHubIssuePreviewPublicSchema = {
             type: 'boolean'
         }
     },
-    required: ['count'],
+    required: [
+        'count'
+    ],
     title: 'GitHubIssuePreviewPublic',
     type: 'object'
 } as const;
@@ -2751,7 +2921,13 @@ export const GitHubIssuePreviewRecordSchema = {
             type: 'string'
         }
     },
-    required: ['finding_id', 'cve_id', 'title', 'body', 'duplicate_key'],
+    required: [
+        'finding_id',
+        'cve_id',
+        'title',
+        'body',
+        'duplicate_key'
+    ],
     title: 'GitHubIssuePreviewRecord',
     type: 'object'
 } as const;
@@ -2886,7 +3062,10 @@ export const GovernanceRollupPublicSchema = {
             type: 'integer'
         }
     },
-    required: ['dimension', 'label'],
+    required: [
+        'dimension',
+        'label'
+    ],
     title: 'GovernanceRollupPublic',
     type: 'object'
 } as const;
@@ -2983,7 +3162,14 @@ export const GovernanceWaiverDebtEntryPublicSchema = {
             type: 'string'
         }
     },
-    required: ['id', 'owner', 'scope', 'status', 'days_remaining', 'expires_at'],
+    required: [
+        'id',
+        'owner',
+        'scope',
+        'status',
+        'days_remaining',
+        'expires_at'
+    ],
     title: 'GovernanceWaiverDebtEntryPublic',
     type: 'object'
 } as const;
@@ -3018,7 +3204,7 @@ export const GovernanceWaiverDebtPublicSchema = {
         },
         items: {
             items: {
-                '$ref': '#/components/schemas/GovernanceWaiverDebtEntryPublic'
+                $ref: '#/components/schemas/GovernanceWaiverDebtEntryPublic'
             },
             title: 'Items',
             type: 'array'
@@ -3066,7 +3252,7 @@ export const HTTPValidationErrorSchema = {
     properties: {
         detail: {
             items: {
-                '$ref': '#/components/schemas/ValidationError'
+                $ref: '#/components/schemas/ValidationError'
             },
             title: 'Detail',
             type: 'array'
@@ -3136,7 +3322,11 @@ export const ImportParseErrorPublicSchema = {
             title: 'Value'
         }
     },
-    required: ['input_type', 'message', 'error_type'],
+    required: [
+        'input_type',
+        'message',
+        'error_type'
+    ],
     title: 'ImportParseErrorPublic',
     type: 'object'
 } as const;
@@ -3153,7 +3343,10 @@ export const MigrationStatusSchema = {
             type: 'string'
         }
     },
-    required: ['phase', 'legacy_workbench_mounted'],
+    required: [
+        'phase',
+        'legacy_workbench_mounted'
+    ],
     title: 'MigrationStatus',
     type: 'object'
 } as const;
@@ -3209,14 +3402,14 @@ export const ProjectAttackSummaryPublicSchema = {
         },
         top_tactics: {
             items: {
-                '$ref': '#/components/schemas/ProjectAttackTacticSummaryPublic'
+                $ref: '#/components/schemas/ProjectAttackTacticSummaryPublic'
             },
             title: 'Top Tactics',
             type: 'array'
         },
         top_techniques: {
             items: {
-                '$ref': '#/components/schemas/ProjectAttackTechniqueSummaryPublic'
+                $ref: '#/components/schemas/ProjectAttackTechniqueSummaryPublic'
             },
             title: 'Top Techniques',
             type: 'array'
@@ -3227,7 +3420,9 @@ export const ProjectAttackSummaryPublicSchema = {
             type: 'integer'
         }
     },
-    required: ['project_id'],
+    required: [
+        'project_id'
+    ],
     title: 'ProjectAttackSummaryPublic',
     type: 'object'
 } as const;
@@ -3255,7 +3450,9 @@ export const ProjectAttackTacticSummaryPublicSchema = {
             type: 'integer'
         }
     },
-    required: ['tactic'],
+    required: [
+        'tactic'
+    ],
     title: 'ProjectAttackTacticSummaryPublic',
     type: 'object'
 } as const;
@@ -3322,7 +3519,9 @@ export const ProjectAttackTechniqueSummaryPublicSchema = {
             type: 'string'
         }
     },
-    required: ['technique_id'],
+    required: [
+        'technique_id'
+    ],
     title: 'ProjectAttackTechniqueSummaryPublic',
     type: 'object'
 } as const;
@@ -3349,7 +3548,9 @@ export const ProjectCreateSchema = {
             type: 'string'
         }
     },
-    required: ['name'],
+    required: [
+        'name'
+    ],
     title: 'ProjectCreate',
     type: 'object'
 } as const;
@@ -3401,7 +3602,12 @@ export const ProjectCvssOnlyComparisonPublicSchema = {
             type: 'array'
         }
     },
-    required: ['project_id', 'methodology', 'summary', 'counts'],
+    required: [
+        'project_id',
+        'methodology',
+        'summary',
+        'counts'
+    ],
     title: 'ProjectCvssOnlyComparisonPublic',
     type: 'object'
 } as const;
@@ -3458,7 +3664,7 @@ export const ProjectDecisionSummaryPublicSchema = {
         latest_run_status: {
             anyOf: [
                 {
-                    '$ref': '#/components/schemas/AnalysisRunStatus'
+                    $ref: '#/components/schemas/AnalysisRunStatus'
                 },
                 {
                     type: 'null'
@@ -3486,7 +3692,9 @@ export const ProjectDecisionSummaryPublicSchema = {
             type: 'boolean'
         }
     },
-    required: ['project_id'],
+    required: [
+        'project_id'
+    ],
     title: 'ProjectDecisionSummaryPublic',
     type: 'object'
 } as const;
@@ -3496,14 +3704,14 @@ export const ProjectGovernanceRollupsPublicSchema = {
     properties: {
         assets: {
             items: {
-                '$ref': '#/components/schemas/GovernanceRollupPublic'
+                $ref: '#/components/schemas/GovernanceRollupPublic'
             },
             title: 'Assets',
             type: 'array'
         },
         environments: {
             items: {
-                '$ref': '#/components/schemas/GovernanceRollupPublic'
+                $ref: '#/components/schemas/GovernanceRollupPublic'
             },
             title: 'Environments',
             type: 'array'
@@ -3515,7 +3723,7 @@ export const ProjectGovernanceRollupsPublicSchema = {
         },
         owners: {
             items: {
-                '$ref': '#/components/schemas/GovernanceRollupPublic'
+                $ref: '#/components/schemas/GovernanceRollupPublic'
             },
             title: 'Owners',
             type: 'array'
@@ -3527,30 +3735,33 @@ export const ProjectGovernanceRollupsPublicSchema = {
         },
         services: {
             items: {
-                '$ref': '#/components/schemas/GovernanceRollupPublic'
+                $ref: '#/components/schemas/GovernanceRollupPublic'
             },
             title: 'Services',
             type: 'array'
         },
         top_assets_by_risk: {
             items: {
-                '$ref': '#/components/schemas/GovernanceRollupPublic'
+                $ref: '#/components/schemas/GovernanceRollupPublic'
             },
             title: 'Top Assets By Risk',
             type: 'array'
         },
         top_services_by_risk: {
             items: {
-                '$ref': '#/components/schemas/GovernanceRollupPublic'
+                $ref: '#/components/schemas/GovernanceRollupPublic'
             },
             title: 'Top Services By Risk',
             type: 'array'
         },
         waiver_debt: {
-            '$ref': '#/components/schemas/GovernanceWaiverDebtPublic'
+            $ref: '#/components/schemas/GovernanceWaiverDebtPublic'
         }
     },
-    required: ['project_id', 'generated_at'],
+    required: [
+        'project_id',
+        'generated_at'
+    ],
     title: 'ProjectGovernanceRollupsPublic',
     type: 'object'
 } as const;
@@ -3597,7 +3808,13 @@ export const ProjectPublicSchema = {
             type: 'string'
         }
     },
-    required: ['name', 'id', 'owner_id', 'created_at', 'updated_at'],
+    required: [
+        'name',
+        'id',
+        'owner_id',
+        'created_at',
+        'updated_at'
+    ],
     title: 'ProjectPublic',
     type: 'object'
 } as const;
@@ -3644,13 +3861,16 @@ export const ProjectsPublicSchema = {
         },
         data: {
             items: {
-                '$ref': '#/components/schemas/ProjectPublic'
+                $ref: '#/components/schemas/ProjectPublic'
             },
             title: 'Data',
             type: 'array'
         }
     },
-    required: ['data', 'count'],
+    required: [
+        'data',
+        'count'
+    ],
     title: 'ProjectsPublic',
     type: 'object'
 } as const;
@@ -3866,7 +4086,9 @@ export const ProviderSourceStatusPublicSchema = {
             title: 'Value'
         }
     },
-    required: ['name'],
+    required: [
+        'name'
+    ],
     title: 'ProviderSourceStatusPublic',
     type: 'object'
 } as const;
@@ -3921,7 +4143,7 @@ export const ProviderStatusPublicSchema = {
         latest_update_job: {
             anyOf: [
                 {
-                    '$ref': '#/components/schemas/ProviderUpdateJobPublic'
+                    $ref: '#/components/schemas/ProviderUpdateJobPublic'
                 },
                 {
                     type: 'null'
@@ -3929,7 +4151,7 @@ export const ProviderStatusPublicSchema = {
             ]
         },
         snapshot: {
-            '$ref': '#/components/schemas/ProviderSnapshotStatusPublic'
+            $ref: '#/components/schemas/ProviderSnapshotStatusPublic'
         },
         snapshot_dir: {
             anyOf: [
@@ -3948,7 +4170,7 @@ export const ProviderStatusPublicSchema = {
         },
         sources: {
             items: {
-                '$ref': '#/components/schemas/ProviderSourceStatusPublic'
+                $ref: '#/components/schemas/ProviderSourceStatusPublic'
             },
             title: 'Sources',
             type: 'array'
@@ -3965,7 +4187,11 @@ export const ProviderStatusPublicSchema = {
             type: 'array'
         }
     },
-    required: ['status', 'snapshot', 'snapshot_mode'],
+    required: [
+        'status',
+        'snapshot',
+        'snapshot_mode'
+    ],
     title: 'ProviderStatusPublic',
     type: 'object'
 } as const;
@@ -4067,7 +4293,10 @@ export const ProviderUpdateJobPublicSchema = {
             type: 'string'
         }
     },
-    required: ['id', 'status'],
+    required: [
+        'id',
+        'status'
+    ],
     title: 'ProviderUpdateJobPublic',
     type: 'object'
 } as const;
@@ -4081,13 +4310,15 @@ export const ProviderUpdateJobsPublicSchema = {
         },
         data: {
             items: {
-                '$ref': '#/components/schemas/ProviderUpdateJobPublic'
+                $ref: '#/components/schemas/ProviderUpdateJobPublic'
             },
             title: 'Data',
             type: 'array'
         }
     },
-    required: ['count'],
+    required: [
+        'count'
+    ],
     title: 'ProviderUpdateJobsPublic',
     type: 'object'
 } as const;
@@ -4097,13 +4328,26 @@ export const ReportCreateSchema = {
     properties: {
         attack_filter: {
             default: 'all',
-            enum: ['all', 'critical-high', 'kev', 'no-coverage'],
+            enum: [
+                'all',
+                'critical-high',
+                'kev',
+                'no-coverage'
+            ],
             title: 'Attack Filter',
             type: 'string'
         },
         format: {
             default: 'markdown',
-            enum: ['markdown', 'html', 'json', 'csv', 'zip', 'attack-navigator', 'sarif'],
+            enum: [
+                'markdown',
+                'html',
+                'json',
+                'csv',
+                'zip',
+                'attack-navigator',
+                'sarif'
+            ],
             title: 'Format',
             type: 'string'
         }
@@ -4175,7 +4419,19 @@ export const ReportPublicSchema = {
             type: 'integer'
         }
     },
-    required: ['kind', 'format', 'filename', 'content_type', 'sha256', 'size_bytes', 'id', 'project_id', 'analysis_run_id', 'created_at', 'download_url'],
+    required: [
+        'kind',
+        'format',
+        'filename',
+        'content_type',
+        'sha256',
+        'size_bytes',
+        'id',
+        'project_id',
+        'analysis_run_id',
+        'created_at',
+        'download_url'
+    ],
     title: 'ReportPublic',
     type: 'object'
 } as const;
@@ -4215,13 +4471,16 @@ export const ReportsPublicSchema = {
         },
         data: {
             items: {
-                '$ref': '#/components/schemas/ReportPublic'
+                $ref: '#/components/schemas/ReportPublic'
             },
             title: 'Data',
             type: 'array'
         }
     },
-    required: ['data', 'count'],
+    required: [
+        'data',
+        'count'
+    ],
     title: 'ReportsPublic',
     type: 'object'
 } as const;
@@ -4239,7 +4498,9 @@ export const TokenSchema = {
             type: 'string'
         }
     },
-    required: ['access_token'],
+    required: [
+        'access_token'
+    ],
     title: 'Token',
     type: 'object'
 } as const;
@@ -4284,7 +4545,11 @@ export const UserPublicSchema = {
             type: 'boolean'
         }
     },
-    required: ['email', 'id', 'created_at'],
+    required: [
+        'email',
+        'id',
+        'created_at'
+    ],
     title: 'UserPublic',
     type: 'object'
 } as const;
@@ -4321,7 +4586,11 @@ export const ValidationErrorSchema = {
             type: 'string'
         }
     },
-    required: ['loc', 'msg', 'type'],
+    required: [
+        'loc',
+        'msg',
+        'type'
+    ],
     title: 'ValidationError',
     type: 'object'
 } as const;
@@ -4621,16 +4890,22 @@ export const WaiverPublicSchema = {
             type: 'string'
         }
     },
-    required: ['owner', 'reason', 'expires_at', 'id', 'project_id', 'created_at', 'updated_at', 'status'],
+    required: [
+        'owner',
+        'reason',
+        'expires_at',
+        'id',
+        'project_id',
+        'created_at',
+        'updated_at',
+        'status'
+    ],
     title: 'WaiverPublic',
     type: 'object'
 } as const;
 
 export const WaiverUpdateSchema = {
-    description: `Update payload for a waiver.
-
-Updates replace the waiver scope and governance fields so clients can move a
-waiver from one scope to another with one request.`,
+    description: 'Update payload for a waiver.\n\nUpdates replace the waiver scope and governance fields so clients can move a\nwaiver from one scope to another with one request.',
     properties: {
         approval_ref: {
             anyOf: [
@@ -4777,13 +5052,16 @@ export const WaiversPublicSchema = {
         },
         data: {
             items: {
-                '$ref': '#/components/schemas/WaiverPublic'
+                $ref: '#/components/schemas/WaiverPublic'
             },
             title: 'Data',
             type: 'array'
         }
     },
-    required: ['data', 'count'],
+    required: [
+        'data',
+        'count'
+    ],
     title: 'WaiversPublic',
     type: 'object'
 } as const;
@@ -4808,14 +5086,21 @@ export const WorkbenchStatusSchema = {
             type: 'string'
         },
         migration: {
-            '$ref': '#/components/schemas/MigrationStatus'
+            $ref: '#/components/schemas/MigrationStatus'
         },
         status: {
             title: 'Status',
             type: 'string'
         }
     },
-    required: ['status', 'app', 'core_package', 'core_version', 'legacy_api_prefix', 'migration'],
+    required: [
+        'status',
+        'app',
+        'core_package',
+        'core_version',
+        'legacy_api_prefix',
+        'migration'
+    ],
     title: 'WorkbenchStatus',
     type: 'object'
 } as const;
