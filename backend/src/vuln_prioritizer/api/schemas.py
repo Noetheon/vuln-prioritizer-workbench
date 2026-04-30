@@ -6,9 +6,14 @@ from typing import Any, Literal
 
 from pydantic import Field
 
+from vuln_prioritizer.api.token_scopes import ApiTokenScope
 from vuln_prioritizer.models import StrictModel
 
 ProviderSourceName = Literal["nvd", "epss", "kev"]
+
+
+def _default_admin_api_token_scopes() -> list[ApiTokenScope]:
+    return ["admin"]
 
 
 def _default_provider_sources() -> list[ProviderSourceName]:
@@ -70,6 +75,7 @@ class WaiverRequest(StrictModel):
 
 class ApiTokenCreateRequest(StrictModel):
     name: str
+    scopes: list[ApiTokenScope] = Field(default_factory=_default_admin_api_token_scopes)
 
 
 class FindingStatusUpdateRequest(StrictModel):
@@ -259,6 +265,7 @@ class WaiverResponse(StrictModel):
 class ApiTokenCreateResponse(StrictModel):
     id: str
     name: str
+    scopes: list[ApiTokenScope]
     token: str
     created_at: str
 
@@ -266,6 +273,7 @@ class ApiTokenCreateResponse(StrictModel):
 class ApiTokenResponse(StrictModel):
     id: str
     name: str
+    scopes: list[ApiTokenScope]
     created_at: str
     last_used_at: str | None = None
     revoked_at: str | None = None

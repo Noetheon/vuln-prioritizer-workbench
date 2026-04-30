@@ -1846,13 +1846,23 @@ def test_workbench_api_tokens_config_provider_jobs_and_github_preview(
     snapshot_payload = json.loads(Path(job_payload["metadata"]["snapshot_path"]).read_text())
     assert snapshot_payload["metadata"]["source_hashes"] == job_payload["metadata"]["source_hashes"]
 
-    provider_status = client.get("/api/providers/status")
+    assert client.get("/api/providers/status").status_code == 403
+    provider_status = client.get("/api/providers/status", headers=headers)
     assert provider_status.status_code == 200
     assert (
         provider_status.json()["snapshot"]["content_hash"]
         == job_payload["metadata"]["new_snapshot_hash"]
     )
     assert provider_status.json()["latest_update_job"]["id"] == job_payload["id"]
+    snapshot_download = client.get(
+        f"/api/providers/snapshots/{job_payload['metadata']['new_snapshot_id']}/download"
+    )
+    assert snapshot_download.status_code == 403
+    authed_snapshot_download = client.get(
+        f"/api/providers/snapshots/{job_payload['metadata']['new_snapshot_id']}/download",
+        headers=headers,
+    )
+    assert authed_snapshot_download.status_code == 200
 
     saved_config = client.post(
         f"/api/projects/{project['id']}/settings/config",
@@ -1875,7 +1885,11 @@ def test_workbench_api_tokens_config_provider_jobs_and_github_preview(
     )
     assert invalid_config.status_code == 422
 
-    loaded_config = client.get(f"/api/projects/{project['id']}/settings/config")
+    assert client.get(f"/api/projects/{project['id']}/settings/config").status_code == 403
+    loaded_config = client.get(
+        f"/api/projects/{project['id']}/settings/config",
+        headers=headers,
+    )
     assert loaded_config.status_code == 200
     assert loaded_config.json()["item"]["id"] == saved_config.json()["id"]
 
@@ -2168,6 +2182,136 @@ def test_workbench_api_tokens_config_provider_jobs_and_github_preview(
     assert listed_after_revoke.status_code == 200
     token_states = {item["id"]: item["active"] for item in listed_after_revoke.json()["items"]}
     assert token_states[token_payload["id"]] is False
+
+
+def test_workbench_api_tokens_enforce_scopes_for_import_report_and_admin(tmp_path: Path) -> None:
+    client = _client(tmp_path)
+
+    admin_token = client.post(
+        "/api/tokens",
+        json={"name": "admin automation", "scopes": ["admin"]},
+    )
+    assert admin_token.status_code == 200, admin_token.text
+    admin_headers = {"X-API-Token": admin_token.json()["token"]}
+
+    project_response = client.post(
+        "/api/projects",
+        json={"name": "scoped-token-project"},
+        headers=admin_headers,
+    )
+    assert project_response.status_code == 200, project_response.text
+    project = project_response.json()
+
+    read_token = client.post(
+        "/api/tokens",
+        json={"name": "reader", "scopes": ["read"]},
+        headers=admin_headers,
+    )
+    import_token = client.post(
+        "/api/tokens",
+        json={"name": "importer", "scopes": ["import"]},
+        headers=admin_headers,
+    )
+    report_token = client.post(
+        "/api/tokens",
+        json={"name": "reporter", "scopes": ["report"]},
+        headers=admin_headers,
+    )
+    assert read_token.status_code == 200, read_token.text
+    assert import_token.status_code == 200, import_token.text
+    assert report_token.status_code == 200, report_token.text
+
+    read_headers = {"X-API-Token": read_token.json()["token"]}
+    import_headers = {"X-API-Token": import_token.json()["token"]}
+    report_headers = {"X-API-Token": report_token.json()["token"]}
+
+    assert client.get("/api/diagnostics", headers=read_headers).status_code == 200
+    assert client.get("/api/tokens", headers=read_headers).status_code == 403
+    assert (
+        client.post(
+            "/api/projects", json={"name": "reader-write-denied"}, headers=read_headers
+        ).status_code
+        == 403
+    )
+
+    read_import = client.post(
+        f"/api/projects/{project['id']}/imports",
+        data={
+            "input_format": "cve-list",
+            "provider_snapshot_file": DEMO_PROVIDER_SNAPSHOT.name,
+            "locked_provider_data": "true",
+        },
+        files={"file": ("sample.txt", SAMPLE_CVES.read_bytes(), "text/plain")},
+        headers=read_headers,
+    )
+    assert read_import.status_code == 403
+
+    imported = client.post(
+        f"/api/projects/{project['id']}/imports",
+        data={
+            "input_format": "cve-list",
+            "provider_snapshot_file": DEMO_PROVIDER_SNAPSHOT.name,
+            "locked_provider_data": "true",
+        },
+        files={"file": ("sample.txt", SAMPLE_CVES.read_bytes(), "text/plain")},
+        headers=import_headers,
+    )
+    assert imported.status_code == 200, imported.text
+
+    import_report = client.post(
+        f"/api/analysis-runs/{imported.json()['id']}/reports",
+        json={"format": "json"},
+        headers=import_headers,
+    )
+    assert import_report.status_code == 403
+    report = client.post(
+        f"/api/analysis-runs/{imported.json()['id']}/reports",
+        json={"format": "json"},
+        headers=report_headers,
+    )
+    assert report.status_code == 200, report.text
+    report_download_url = f"/api/reports/{report.json()['id']}/download"
+    assert client.get(report_download_url).status_code == 403
+    assert client.get(report_download_url, headers=read_headers).status_code == 403
+    report_download = client.get(report_download_url, headers=report_headers)
+    assert report_download.status_code == 200, report_download.text
+
+    read_bundle = client.post(
+        f"/api/analysis-runs/{imported.json()['id']}/evidence-bundle",
+        headers=read_headers,
+    )
+    assert read_bundle.status_code == 403
+    bundle = client.post(
+        f"/api/analysis-runs/{imported.json()['id']}/evidence-bundle",
+        headers=report_headers,
+    )
+    assert bundle.status_code == 200, bundle.text
+    assert client.get(bundle.json()["verify_url"]).status_code == 403
+    bundle_verification = client.get(bundle.json()["verify_url"], headers=report_headers)
+    assert bundle_verification.status_code == 200, bundle_verification.text
+    assert bundle_verification.json()["summary"]["ok"] is True
+
+    listed = client.get("/api/tokens", headers=admin_headers)
+    assert listed.status_code == 200, listed.text
+    token_rows = {item["name"]: item for item in listed.json()["items"]}
+    assert token_rows["importer"]["scopes"] == ["import"]
+    assert token_rows["reporter"]["last_used_at"] is not None
+    assert "token" not in token_rows["importer"]
+
+    revoke = client.delete(f"/api/tokens/{import_token.json()['id']}", headers=admin_headers)
+    assert revoke.status_code == 200, revoke.text
+    assert revoke.json()["active"] is False
+    revoked_import = client.post(
+        f"/api/projects/{project['id']}/imports",
+        data={
+            "input_format": "cve-list",
+            "provider_snapshot_file": DEMO_PROVIDER_SNAPSHOT.name,
+            "locked_provider_data": "true",
+        },
+        files={"file": ("sample.txt", SAMPLE_CVES.read_bytes(), "text/plain")},
+        headers=import_headers,
+    )
+    assert revoked_import.status_code == 403
 
 
 def test_workbench_provider_status_surfaces_latest_failed_update(

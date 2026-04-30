@@ -13,7 +13,7 @@ from sqlalchemy.engine import Engine
 from vuln_prioritizer.db.base import target_metadata
 
 INITIAL_REVISION = "0001_workbench_mvp"
-CURRENT_REVISION = "0007_jobs_retention"
+CURRENT_REVISION = "0008_api_token_scopes"
 LEGACY_REVISION_IDS = {
     "0003_workbench_governance_context": "0003_workbench_governance",
     "0005_workbench_governance_detection_integrations": "0005_workbench_integrations",
@@ -88,6 +88,7 @@ WORKBENCH_P1_TABLES: Sequence[str] = (
     "workbench_jobs",
     "project_artifact_retention",
 )
+WORKBENCH_API_TOKEN_SCOPE_COLUMNS: Sequence[str] = ("scopes_json",)
 
 
 def get_target_metadata() -> MetaData:
@@ -133,11 +134,18 @@ def ensure_database_current(database_url: str) -> None:
                     if "github_issue_exports" not in tables:
                         target_revision = "0004_workbench_attack_provenance"
                     elif set(WORKBENCH_LIFECYCLE_TABLES).issubset(tables):
-                        target_revision = (
-                            CURRENT_REVISION
-                            if set(WORKBENCH_P1_TABLES).issubset(tables)
-                            else "0006_workbench_lifecycle_audit"
-                        )
+                        target_revision = "0006_workbench_lifecycle_audit"
+                        if set(WORKBENCH_P1_TABLES).issubset(tables):
+                            api_token_columns = {
+                                column["name"] for column in inspector.get_columns("api_tokens")
+                            }
+                            target_revision = (
+                                CURRENT_REVISION
+                                if set(WORKBENCH_API_TOKEN_SCOPE_COLUMNS).issubset(
+                                    api_token_columns
+                                )
+                                else "0007_jobs_retention"
+                            )
                     else:
                         target_revision = "0005_workbench_integrations"
         command.stamp(config, target_revision)

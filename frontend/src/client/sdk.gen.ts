@@ -3,7 +3,63 @@
 import type { CancelablePromise } from './core/CancelablePromise';
 import { OpenAPI } from './core/OpenAPI';
 import { request as __request } from './core/request';
-import type { AssetsUpdateAssetData, AssetsUpdateAssetResponse, AssetsRecalculateAssetData, AssetsRecalculateAssetResponse, AssetsReadProjectAssetsData, AssetsReadProjectAssetsResponse, AssetsCreateProjectAssetData, AssetsCreateProjectAssetResponse, AssetsImportProjectAssetsData, AssetsImportProjectAssetsResponse, FindingsReadFindingData, FindingsReadFindingResponse, FindingsExplainFindingData, FindingsExplainFindingResponse, FindingsReadProjectFindingsData, FindingsReadProjectFindingsResponse, ImportsImportProjectUploadData, ImportsImportProjectUploadResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, ProjectsReadProjectsResponse, ProjectsCreateProjectData, ProjectsCreateProjectResponse, ProjectsDeleteProjectData, ProjectsDeleteProjectResponse, ProjectsReadProjectData, ProjectsReadProjectResponse, ProjectsUpdateProjectData, ProjectsUpdateProjectResponse, ProjectsReadProjectAttackSummaryData, ProjectsReadProjectAttackSummaryResponse, ProjectsCompareProjectCvssOnlyData, ProjectsCompareProjectCvssOnlyResponse, ProjectsReadProjectGovernanceRollupsData, ProjectsReadProjectGovernanceRollupsResponse, ProjectsReadProjectSummaryData, ProjectsReadProjectSummaryResponse, ProvidersReadProviderStatusResponse, ReportsDownloadReportData, ReportsDownloadReportResponse, ReportsVerifyReportData, ReportsVerifyReportResponse, ReportsReadRunReportsData, ReportsReadRunReportsResponse, ReportsCreateRunReportData, ReportsCreateRunReportResponse, RunsReadProjectRunsWithoutTrailingSlashData, RunsReadProjectRunsWithoutTrailingSlashResponse, RunsReadProjectRunsData, RunsReadProjectRunsResponse, RunsReadRunData, RunsReadRunResponse, RunsReadRunSummaryData, RunsReadRunSummaryResponse, UsersReadUserMeResponse, UtilsHealthCheckResponse, WaiversReadProjectWaiversData, WaiversReadProjectWaiversResponse, WaiversCreateProjectWaiverData, WaiversCreateProjectWaiverResponse, WaiversUpdateWaiverData, WaiversUpdateWaiverResponse, WaiversExpireWaiverData, WaiversExpireWaiverResponse, WorkbenchTemplateWorkbenchStatusResponse } from './types.gen';
+import type { ApiTokensListApiTokensResponse, ApiTokensCreateApiTokenData, ApiTokensCreateApiTokenResponse, ApiTokensRevokeApiTokenData, ApiTokensRevokeApiTokenResponse, AssetsUpdateAssetData, AssetsUpdateAssetResponse, AssetsRecalculateAssetData, AssetsRecalculateAssetResponse, AssetsReadProjectAssetsData, AssetsReadProjectAssetsResponse, AssetsCreateProjectAssetData, AssetsCreateProjectAssetResponse, AssetsImportProjectAssetsData, AssetsImportProjectAssetsResponse, FindingsReadFindingData, FindingsReadFindingResponse, FindingsExplainFindingData, FindingsExplainFindingResponse, FindingsReadProjectFindingsData, FindingsReadProjectFindingsResponse, ImportsImportProjectUploadData, ImportsImportProjectUploadResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, ProjectsReadProjectsResponse, ProjectsCreateProjectData, ProjectsCreateProjectResponse, ProjectsDeleteProjectData, ProjectsDeleteProjectResponse, ProjectsReadProjectData, ProjectsReadProjectResponse, ProjectsUpdateProjectData, ProjectsUpdateProjectResponse, ProjectsReadProjectAttackSummaryData, ProjectsReadProjectAttackSummaryResponse, ProjectsCompareProjectCvssOnlyData, ProjectsCompareProjectCvssOnlyResponse, ProjectsReadProjectGovernanceRollupsData, ProjectsReadProjectGovernanceRollupsResponse, ProjectsReadProjectSummaryData, ProjectsReadProjectSummaryResponse, ProvidersReadProviderStatusResponse, ReportsDownloadReportData, ReportsDownloadReportResponse, ReportsVerifyReportData, ReportsVerifyReportResponse, ReportsReadRunReportsData, ReportsReadRunReportsResponse, ReportsCreateRunReportData, ReportsCreateRunReportResponse, RunsReadProjectRunsWithoutTrailingSlashData, RunsReadProjectRunsWithoutTrailingSlashResponse, RunsReadProjectRunsData, RunsReadProjectRunsResponse, RunsReadRunData, RunsReadRunResponse, RunsReadRunSummaryData, RunsReadRunSummaryResponse, UsersReadUserMeResponse, UtilsHealthCheckResponse, WaiversReadProjectWaiversData, WaiversReadProjectWaiversResponse, WaiversCreateProjectWaiverData, WaiversCreateProjectWaiverResponse, WaiversUpdateWaiverData, WaiversUpdateWaiverResponse, WaiversExpireWaiverData, WaiversExpireWaiverResponse, WorkbenchTemplateWorkbenchStatusResponse } from './types.gen';
+
+export class ApiTokensService {
+    /**
+     * List Api Tokens
+     * List token metadata without exposing token secrets or hashes.
+     * @returns ApiTokensPublic Successful Response
+     * @throws ApiError
+     */
+    public static listApiTokens(): CancelablePromise<ApiTokensListApiTokensResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/api-tokens/'
+        });
+    }
+
+    /**
+     * Create Api Token
+     * Create a scoped service token and return its secret value once.
+     * @param data The data for the request.
+     * @param data.requestBody
+     * @returns ApiTokenCreatePublic Successful Response
+     * @throws ApiError
+     */
+    public static createApiToken(data: ApiTokensCreateApiTokenData): CancelablePromise<ApiTokensCreateApiTokenResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/api-tokens/',
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+
+    /**
+     * Revoke Api Token
+     * Revoke a service token so it can no longer authorize API requests.
+     * @param data The data for the request.
+     * @param data.tokenId
+     * @returns ApiTokenPublic Successful Response
+     * @throws ApiError
+     */
+    public static revokeApiToken(data: ApiTokensRevokeApiTokenData): CancelablePromise<ApiTokensRevokeApiTokenResponse> {
+        return __request(OpenAPI, {
+            method: 'DELETE',
+            url: '/api/v1/api-tokens/{token_id}',
+            path: {
+                token_id: data.tokenId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+}
 
 export class AssetsService {
     /**

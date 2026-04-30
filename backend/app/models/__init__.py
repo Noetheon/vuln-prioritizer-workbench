@@ -5,6 +5,15 @@ use ``from app.models import User, ProjectPublic`` while table definitions live
 in focused modules.
 """
 
+from app.models.api_tokens import (
+    API_TOKEN_SCOPES,
+    ApiToken,
+    ApiTokenCreate,
+    ApiTokenCreatePublic,
+    ApiTokenPublic,
+    ApiTokenScope,
+    ApiTokensPublic,
+)
 from app.models.assets import (
     Asset,
     AssetBase,
@@ -130,6 +139,13 @@ __all__ = [
     "AnalysisRunSummaryPublic",
     "AnalysisRunsPublic",
     "AnalysisRunStatus",
+    "API_TOKEN_SCOPES",
+    "ApiToken",
+    "ApiTokenCreate",
+    "ApiTokenCreatePublic",
+    "ApiTokenPublic",
+    "ApiTokenScope",
+    "ApiTokensPublic",
     "Asset",
     "AssetBase",
     "AssetContextImportPublic",

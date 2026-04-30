@@ -15,6 +15,7 @@ from vuln_prioritizer.api.schemas import (
     ApiTokenCreateResponse,
     ApiTokenResponse,
 )
+from vuln_prioritizer.api.token_scopes import normalize_api_token_scopes
 from vuln_prioritizer.api.workbench_payloads import (
     _api_token_payload,
 )
@@ -107,10 +108,15 @@ def create_api_token(
     name = payload.name.strip()
     if not name:
         raise HTTPException(status_code=422, detail="Token name is required.")
+    try:
+        scopes = normalize_api_token_scopes(payload.scopes, default=["admin"])
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     token_value = API_TOKEN_PREFIX + secrets.token_urlsafe(32)
     token = WorkbenchRepository(session).create_api_token(
         name=name,
         token_hash=_api_token_hash(token_value),
+        scopes=scopes,
     )
     WorkbenchRepository(session).create_audit_event(
         event_type="api_token.created",
@@ -123,6 +129,7 @@ def create_api_token(
     return {
         "id": token.id,
         "name": token.name,
+        "scopes": scopes,
         "token": token_value,
         "created_at": token.created_at.isoformat(),
     }

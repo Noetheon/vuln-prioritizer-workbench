@@ -216,6 +216,12 @@ curl -sS -X POST "http://127.0.0.1:8000/api/v1/projects/${PROJECT_ID}/imports" \
   -F file=@data/sample_cves.txt
 ```
 
+Scoped service tokens for CI/CD are managed after login through `/settings` or
+`/api/v1/api-tokens/`. The template API stores only PBKDF2-SHA256 token hashes,
+shows the cleartext token only in the create response, and supports `read`,
+`import`, `report`, and `admin` scopes. A service token can call import and
+report endpoints only when it has the matching scope or `admin`.
+
 For a quick status check:
 
 ```bash
@@ -315,9 +321,10 @@ For locked Workbench replay, submit only the snapshot filename, for example
 
 Legacy Workbench API token behavior is intentionally local-first. A fresh local database has no active
 tokens, so mutating `/api/*` requests remain open for the offline demo. Create the first token with
-`POST /api/tokens`; after any active token exists, `POST`, `PUT`, `PATCH`, and `DELETE` requests under
-`/api/` require `Authorization: Bearer <token>` or `X-API-Token: <token>`. Only SHA-256 token hashes
-are stored.
+`POST /api/tokens`; after any active token exists, mutating `/api/` requests require
+`Authorization: Bearer <token>` or `X-API-Token: <token>`. Legacy tokens now carry the same
+`read`, `import`, `report`, and `admin` scopes. Existing upgraded tokens are treated as `admin`;
+new legacy tokens default to `admin` unless scopes are supplied. Only SHA-256 token hashes are stored.
 
 The template-aligned Workbench shell currently has a configured-superuser JWT
 login smoke path. DB-backed template users, RBAC, and final project membership

@@ -9,7 +9,7 @@ from typing import Any
 
 from fastapi import APIRouter, File, HTTPException, Query, Request, UploadFile
 
-from app.api.deps import CurrentUser, SessionDep
+from app.api.deps import CurrentUser, ScopedReadUser, SessionDep
 from app.api.routes.workbench_access import require_visible_project
 from app.core.config import Settings
 from app.models import (
@@ -41,7 +41,7 @@ ASSET_CONTEXT_FIELDS = {
 def read_project_assets(
     project_id: uuid.UUID,
     session: SessionDep,
-    current_user: CurrentUser,
+    current_user: ScopedReadUser,
     owner: str | None = Query(default=None, max_length=200),
     service: str | None = Query(default=None, max_length=200),
 ) -> AssetsPublic:
