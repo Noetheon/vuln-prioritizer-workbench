@@ -169,6 +169,14 @@ class FindingOccurrencePublic(SQLModel):
     asset_business_service: str | None = None
     asset_exposure: str | None = None
     raw_severity: str | None = None
+    vex_status: str | None = None
+    vex_justification: str | None = None
+    vex_action_statement: str | None = None
+    vex_match_type: str | None = None
+    vex_source_format: str | None = None
+    vex_source_record_id: str | None = None
+    vex_source_path: str | None = None
+    vex_candidate_count: int = 0
     created_at: datetime | None = None
 
 
