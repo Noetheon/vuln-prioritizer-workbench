@@ -44,6 +44,12 @@ def attack_validate(
     attack_technique_metadata_file: Path | None = typer.Option(
         None, "--attack-technique-metadata-file", dir_okay=False
     ),
+    comparison_mapping_file: Path | None = typer.Option(
+        None,
+        "--comparison-mapping-file",
+        dir_okay=False,
+        help="Optional local-curated mapping file to compare against CTID JSON.",
+    ),
     output: Path | None = typer.Option(None, "--output", dir_okay=False),
     format: ReportOutputFormat = output_format_option(
         ReportOutputFormat.table, REPORT_OUTPUT_FORMATS
@@ -61,6 +67,7 @@ def attack_validate(
         attack_source=attack_source.value,
         attack_mapping_file=attack_mapping_file,
         attack_technique_metadata_file=attack_technique_metadata_file,
+        comparison_mapping_file=comparison_mapping_file,
     )
 
     json_payload = json.dumps(result, indent=2, sort_keys=True)

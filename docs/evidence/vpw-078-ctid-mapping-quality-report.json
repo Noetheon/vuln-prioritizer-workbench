@@ -1,0 +1,138 @@
+{
+  "attack_version": "16.1",
+  "attack_version_mismatch": false,
+  "confidence_counts": {
+    "high": 27
+  },
+  "domain": "enterprise",
+  "domain_mismatch": false,
+  "low_confidence_count": 0,
+  "mapping_author": null,
+  "mapping_contact": null,
+  "mapping_count": 27,
+  "mapping_created_at": "07/28/2025",
+  "mapping_file": "data/attack/ctid_kev_enterprise_2025-07-28_attack-16.1_subset.json",
+  "mapping_file_sha256": "f604e08bd6370c2356a60c01963a9bc5c88f92fac0b2ee20102c0159d4a2c865",
+  "mapping_framework": "kev",
+  "mapping_framework_version": "07/28/2025",
+  "mapping_organization": null,
+  "mapping_type_counts": {
+    "exploitation_technique": 4,
+    "primary_impact": 5,
+    "secondary_impact": 18
+  },
+  "mapping_updated_at": "08/28/2025",
+  "metadata_format": "vuln-prioritizer-technique-json",
+  "metadata_source": "local-technique-metadata",
+  "missing_metadata_ids": [],
+  "quality_report": {
+    "comparison_file": "data/cve_attack_mappings.yml",
+    "comparison_file_sha256": "f8bee8c9ba0bac70c7d5fbd32d0f482a897d67aac6a7d7d048c9844761a96004",
+    "comparison_source": "local-curated",
+    "confidence_counts": {
+      "high": 27
+    },
+    "conflict_count": 2,
+    "conflict_policy": "ctid-json and local-curated sources are explicit alternatives; mappings are not silently merged. Divergent duplicate CTID contexts are surfaced here.",
+    "conflicts": [
+      {
+        "contexts": [
+          {
+            "capability_group": "priv_escalation",
+            "mapping_type": "primary_impact"
+          },
+          {
+            "capability_group": "priv_escalation",
+            "mapping_type": "secondary_impact"
+          }
+        ],
+        "cve_id": "CVE-2020-1472",
+        "technique_id": "T1087.002"
+      },
+      {
+        "contexts": [
+          {
+            "capability_group": "priv_escalation",
+            "mapping_type": "exploitation_technique"
+          },
+          {
+            "capability_group": "priv_escalation",
+            "mapping_type": "secondary_impact"
+          }
+        ],
+        "cve_id": "CVE-2020-1472",
+        "technique_id": "T1133"
+      }
+    ],
+    "local_ctid_conflict_count": 1,
+    "local_ctid_conflicts": [
+      {
+        "ctid_mapping_types": [
+          "exploitation_technique",
+          "primary_impact",
+          "secondary_impact"
+        ],
+        "ctid_only_techniques": [
+          "T1005",
+          "T1059",
+          "T1082",
+          "T1105",
+          "T1136",
+          "T1531"
+        ],
+        "cve_id": "CVE-2023-34362",
+        "local_mapping_types": [
+          "exploitation"
+        ],
+        "local_only_techniques": [],
+        "shared_techniques": [
+          "T1190"
+        ]
+      }
+    ],
+    "low_confidence_count": 0,
+    "mapping_count": 27,
+    "mapping_created_at": "07/28/2025",
+    "mapping_file": "data/attack/ctid_kev_enterprise_2025-07-28_attack-16.1_subset.json",
+    "mapping_file_sha256": "f604e08bd6370c2356a60c01963a9bc5c88f92fac0b2ee20102c0159d4a2c865",
+    "mapping_framework": "kev",
+    "mapping_framework_version": "07/28/2025",
+    "mapping_type_counts": {
+      "exploitation_technique": 4,
+      "primary_impact": 5,
+      "secondary_impact": 18
+    },
+    "mapping_updated_at": "08/28/2025",
+    "review_status_counts": {
+      "reviewed": 27
+    },
+    "safety_review": {
+      "heuristic_or_llm_sources_rejected": true,
+      "source_backed_ctid_context": true,
+      "unmapped_cves_remain_unmapped": true
+    },
+    "schema_version": "1.0.0",
+    "source": "ctid-mappings-explorer",
+    "source_counts": {
+      "ctid-mappings-explorer": 27
+    },
+    "unique_cves": 3,
+    "unique_techniques": 22
+  },
+  "review_status_counts": {
+    "reviewed": 27
+  },
+  "revoked_or_deprecated_count": 0,
+  "schema_version": "1.2.0",
+  "source": "ctid-mappings-explorer",
+  "source_version": "07/28/2025",
+  "stix_spec_version": null,
+  "technique_count": 22,
+  "technique_metadata_file": "data/attack/attack_techniques_enterprise_16.1_subset.json",
+  "technique_metadata_file_sha256": "486d0aa3aacf5c86cf5b8f9dd597210bcfd9d36cbd1331c1c303865dbd6c5c78",
+  "unique_cves": 3,
+  "warnings": [
+    "Low-confidence curated ATT&CK mapping marked for review: CVE-2021-26855 / T1046.",
+    "Curated ATT&CK mapping is not fully reviewed: CVE-2021-26855 / T1046 has status needs_review."
+  ]
+}

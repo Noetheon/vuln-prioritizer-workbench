@@ -331,6 +331,95 @@ def test_cli_attack_validate_json_reports_stix_and_hash_provenance(tmp_path: Pat
     assert payload["mapping_created_at"] == "07/28/2025"
     assert payload["mapping_updated_at"] == "08/28/2025"
     assert payload["revoked_or_deprecated_count"] == 1
+    assert payload["quality_report"]["source_counts"] == {"ctid-mappings-explorer": 2}
+    assert payload["quality_report"]["confidence_counts"] == {"high": 2}
+    assert payload["quality_report"]["review_status_counts"] == {"reviewed": 2}
+    assert payload["quality_report"]["conflict_count"] == 0
+
+
+def test_cli_attack_validate_ctid_json_reports_quality_for_fixture(tmp_path: Path) -> None:
+    output_file = tmp_path / "ctid-quality.json"
+
+    result = runner.invoke(
+        app,
+        [
+            "attack",
+            "validate",
+            "--attack-source",
+            "ctid-json",
+            "--attack-mapping-file",
+            str(ATTACK_MAPPING_FILE),
+            "--attack-technique-metadata-file",
+            str(ATTACK_METADATA_FILE),
+            "--output",
+            str(output_file),
+            "--format",
+            "json",
+        ],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(output_file.read_text(encoding="utf-8"))
+    assert payload["source"] == "ctid-mappings-explorer"
+    assert (
+        payload["mapping_file_sha256"]
+        == hashlib.sha256(ATTACK_MAPPING_FILE.read_bytes()).hexdigest()
+    )
+    assert payload["quality_report"]["mapping_count"] == 27
+    assert payload["quality_report"]["unique_cves"] == 3
+    assert payload["quality_report"]["source_counts"] == {"ctid-mappings-explorer": 27}
+    assert payload["quality_report"]["confidence_counts"] == {"high": 27}
+    assert payload["quality_report"]["review_status_counts"] == {"reviewed": 27}
+    assert payload["quality_report"]["mapping_type_counts"] == {
+        "exploitation_technique": 4,
+        "primary_impact": 5,
+        "secondary_impact": 18,
+    }
+    assert payload["quality_report"]["conflict_count"] == 2
+    assert payload["quality_report"]["conflicts"][0]["cve_id"] == "CVE-2020-1472"
+
+
+def test_cli_attack_validate_ctid_json_compares_local_curated_mapping(
+    tmp_path: Path,
+) -> None:
+    output_file = tmp_path / "ctid-local-comparison.json"
+
+    result = runner.invoke(
+        app,
+        [
+            "attack",
+            "validate",
+            "--attack-source",
+            "ctid-json",
+            "--attack-mapping-file",
+            str(ATTACK_MAPPING_FILE),
+            "--attack-technique-metadata-file",
+            str(ATTACK_METADATA_FILE),
+            "--comparison-mapping-file",
+            str(CURATED_ATTACK_MAPPING_FILE),
+            "--output",
+            str(output_file),
+            "--format",
+            "json",
+        ],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(output_file.read_text(encoding="utf-8"))
+    quality_report = payload["quality_report"]
+    assert quality_report["comparison_source"] == "local-curated"
+    assert quality_report["comparison_file"] == str(CURATED_ATTACK_MAPPING_FILE)
+    assert quality_report["local_ctid_conflict_count"] == 1
+    assert quality_report["local_ctid_conflicts"][0]["cve_id"] == "CVE-2023-34362"
+    assert quality_report["local_ctid_conflicts"][0]["shared_techniques"] == ["T1190"]
+    assert quality_report["local_ctid_conflicts"][0]["ctid_only_techniques"] == [
+        "T1005",
+        "T1059",
+        "T1082",
+        "T1105",
+        "T1136",
+        "T1531",
+    ]
 
 
 def test_cli_attack_validate_missing_mapping_file_exits_cleanly(tmp_path: Path) -> None:
