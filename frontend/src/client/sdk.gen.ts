@@ -3,7 +3,7 @@
 import type { CancelablePromise } from './core/CancelablePromise';
 import { OpenAPI } from './core/OpenAPI';
 import { request as __request } from './core/request';
-import type { ApiTokensListApiTokensResponse, ApiTokensCreateApiTokenData, ApiTokensCreateApiTokenResponse, ApiTokensRevokeApiTokenData, ApiTokensRevokeApiTokenResponse, AssetsUpdateAssetData, AssetsUpdateAssetResponse, AssetsRecalculateAssetData, AssetsRecalculateAssetResponse, AssetsReadProjectAssetsData, AssetsReadProjectAssetsResponse, AssetsCreateProjectAssetData, AssetsCreateProjectAssetResponse, AssetsImportProjectAssetsData, AssetsImportProjectAssetsResponse, FindingsReadFindingData, FindingsReadFindingResponse, FindingsExplainFindingData, FindingsExplainFindingResponse, FindingsReadProjectFindingsData, FindingsReadProjectFindingsResponse, ImportsImportProjectUploadData, ImportsImportProjectUploadResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, ProjectsReadProjectsResponse, ProjectsCreateProjectData, ProjectsCreateProjectResponse, ProjectsDeleteProjectData, ProjectsDeleteProjectResponse, ProjectsReadProjectData, ProjectsReadProjectResponse, ProjectsUpdateProjectData, ProjectsUpdateProjectResponse, ProjectsReadProjectAttackSummaryData, ProjectsReadProjectAttackSummaryResponse, ProjectsCompareProjectCvssOnlyData, ProjectsCompareProjectCvssOnlyResponse, ProjectsReadProjectGovernanceRollupsData, ProjectsReadProjectGovernanceRollupsResponse, ProjectsReadProjectSummaryData, ProjectsReadProjectSummaryResponse, ProvidersReadProviderStatusResponse, ReportsDownloadReportData, ReportsDownloadReportResponse, ReportsVerifyReportData, ReportsVerifyReportResponse, ReportsReadRunReportsData, ReportsReadRunReportsResponse, ReportsCreateRunReportData, ReportsCreateRunReportResponse, RunsReadProjectRunsWithoutTrailingSlashData, RunsReadProjectRunsWithoutTrailingSlashResponse, RunsReadProjectRunsData, RunsReadProjectRunsResponse, RunsReadRunData, RunsReadRunResponse, RunsReadRunSummaryData, RunsReadRunSummaryResponse, UsersReadUserMeResponse, UtilsHealthCheckResponse, WaiversReadProjectWaiversData, WaiversReadProjectWaiversResponse, WaiversCreateProjectWaiverData, WaiversCreateProjectWaiverResponse, WaiversUpdateWaiverData, WaiversUpdateWaiverResponse, WaiversExpireWaiverData, WaiversExpireWaiverResponse, WorkbenchTemplateWorkbenchStatusResponse } from './types.gen';
+import type { ApiTokensListApiTokensResponse, ApiTokensCreateApiTokenData, ApiTokensCreateApiTokenResponse, ApiTokensRevokeApiTokenData, ApiTokensRevokeApiTokenResponse, AssetsUpdateAssetData, AssetsUpdateAssetResponse, AssetsRecalculateAssetData, AssetsRecalculateAssetResponse, AssetsReadProjectAssetsData, AssetsReadProjectAssetsResponse, AssetsCreateProjectAssetData, AssetsCreateProjectAssetResponse, AssetsImportProjectAssetsData, AssetsImportProjectAssetsResponse, FindingsReadFindingData, FindingsReadFindingResponse, FindingsExplainFindingData, FindingsExplainFindingResponse, FindingsReadProjectFindingsData, FindingsReadProjectFindingsResponse, ImportsImportProjectUploadData, ImportsImportProjectUploadResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, ProjectsReadProjectsResponse, ProjectsCreateProjectData, ProjectsCreateProjectResponse, ProjectsDeleteProjectData, ProjectsDeleteProjectResponse, ProjectsReadProjectData, ProjectsReadProjectResponse, ProjectsUpdateProjectData, ProjectsUpdateProjectResponse, ProjectsReadProjectAttackSummaryData, ProjectsReadProjectAttackSummaryResponse, ProjectsCompareProjectCvssOnlyData, ProjectsCompareProjectCvssOnlyResponse, ProjectsReadProjectGovernanceRollupsData, ProjectsReadProjectGovernanceRollupsResponse, ProjectsReadProjectSummaryData, ProjectsReadProjectSummaryResponse, ProvidersReadProviderStatusResponse, ProvidersListProviderUpdateJobsResponse, ProvidersCreateTemplateProviderUpdateJobData, ProvidersCreateTemplateProviderUpdateJobResponse, ReportsDownloadReportData, ReportsDownloadReportResponse, ReportsVerifyReportData, ReportsVerifyReportResponse, ReportsReadRunReportsData, ReportsReadRunReportsResponse, ReportsCreateRunReportData, ReportsCreateRunReportResponse, RunsReadProjectRunsWithoutTrailingSlashData, RunsReadProjectRunsWithoutTrailingSlashResponse, RunsReadProjectRunsData, RunsReadProjectRunsResponse, RunsReadRunData, RunsReadRunResponse, RunsReadRunSummaryData, RunsReadRunSummaryResponse, UsersReadUserMeResponse, UtilsHealthCheckResponse, WaiversReadProjectWaiversData, WaiversReadProjectWaiversResponse, WaiversCreateProjectWaiverData, WaiversCreateProjectWaiverResponse, WaiversUpdateWaiverData, WaiversUpdateWaiverResponse, WaiversExpireWaiverData, WaiversExpireWaiverResponse, WorkbenchTemplateWorkbenchStatusResponse } from './types.gen';
 
 export class ApiTokensService {
     /**
@@ -551,6 +551,39 @@ export class ProvidersService {
         return __request(OpenAPI, {
             method: 'GET',
             url: '/api/v1/providers/status'
+        });
+    }
+
+    /**
+     * List Provider Update Jobs
+     * Return provider update jobs newest first.
+     * @returns ProviderUpdateJobsPublic Successful Response
+     * @throws ApiError
+     */
+    public static listProviderUpdateJobs(): CancelablePromise<ProvidersListProviderUpdateJobsResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/providers/update-jobs'
+        });
+    }
+
+    /**
+     * Create Template Provider Update Job
+     * Synchronously create a cache-friendly provider snapshot refresh job.
+     * @param data The data for the request.
+     * @param data.requestBody
+     * @returns ProviderUpdateJobPublic Successful Response
+     * @throws ApiError
+     */
+    public static createTemplateProviderUpdateJob(data: ProvidersCreateTemplateProviderUpdateJobData): CancelablePromise<ProvidersCreateTemplateProviderUpdateJobResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/providers/update-jobs',
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
         });
     }
 }

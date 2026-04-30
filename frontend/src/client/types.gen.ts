@@ -788,7 +788,17 @@ export type ProviderStatusPublic = {
 };
 
 /**
- * Placeholder shape for future provider update-job status records.
+ * Request body for a deterministic provider update job.
+ */
+export type ProviderUpdateJobCreate = {
+    cache_only?: boolean;
+    cve_ids?: Array<(string)>;
+    max_cves?: (number | null);
+    sources?: Array<(string)>;
+};
+
+/**
+ * Provider update-job status record.
  */
 export type ProviderUpdateJobPublic = {
     error_message?: (string | null);
@@ -800,6 +810,14 @@ export type ProviderUpdateJobPublic = {
     requested_sources?: Array<(string)>;
     started_at?: (string | null);
     status: string;
+};
+
+/**
+ * Provider update-job collection response.
+ */
+export type ProviderUpdateJobsPublic = {
+    count: number;
+    data?: Array<ProviderUpdateJobPublic>;
 };
 
 /**
@@ -1121,6 +1139,14 @@ export type ProjectsReadProjectSummaryData = {
 export type ProjectsReadProjectSummaryResponse = (ProjectDecisionSummaryPublic);
 
 export type ProvidersReadProviderStatusResponse = (ProviderStatusPublic);
+
+export type ProvidersListProviderUpdateJobsResponse = (ProviderUpdateJobsPublic);
+
+export type ProvidersCreateTemplateProviderUpdateJobData = {
+    requestBody: ProviderUpdateJobCreate;
+};
+
+export type ProvidersCreateTemplateProviderUpdateJobResponse = (ProviderUpdateJobPublic);
 
 export type ReportsDownloadReportData = {
     reportId: string;
