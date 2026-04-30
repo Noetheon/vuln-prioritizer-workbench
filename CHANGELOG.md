@@ -7,7 +7,9 @@ and this project aims to follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
-- No notable changes yet.
+### Added
+
+- VPW-076 release-story evidence that links v1.0 release notes, changelog, demo evidence bundle verification, screenshots, roadmap state, 15-minute technical/CISO storyline, and backup plan.
 
 ## [1.1.0] - 2026-04-25
 
