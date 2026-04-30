@@ -7,6 +7,7 @@ import {
   Database,
   Download,
   FileArchive,
+  FileCheck2,
   FileInput,
   FileJson,
   FileText,
@@ -53,6 +54,9 @@ import {
   RunsService,
   type UserPublic,
   UsersService,
+  type WaiverCreate,
+  type WaiverPublic,
+  WaiversService,
   WorkbenchService,
   type WorkbenchStatus,
 } from "./client"
@@ -62,6 +66,7 @@ const workbenchNavigation = [
   { label: "Projects", icon: FolderKanban, to: "/projects" },
   { label: "Imports", icon: FileInput, to: "/imports" },
   { label: "Findings", icon: ListChecks, to: "/findings" },
+  { label: "Waivers", icon: FileCheck2, to: "/waivers" },
   { label: "Assets", icon: ShieldCheck, to: "/assets" },
   { label: "Providers", icon: Database, to: "/providers" },
   { label: "Reports", icon: FileArchive, to: "/reports" },
@@ -100,6 +105,12 @@ const routeDetails: Record<
     title: "Findings",
     panelTitle: "Finding Decisions",
     panelDetail: "Prioritized CVEs awaiting review",
+  },
+  "/waivers": {
+    eyebrow: "Risk Acceptance",
+    title: "Waivers",
+    panelTitle: "Waiver Register",
+    panelDetail: "Scoped accepted-risk decisions and lifecycle review",
   },
   "/assets": {
     eyebrow: "Workbench Assets",
@@ -328,6 +339,48 @@ const findingPageSizes = [1, 10, 25, 50] as const
 
 type FindingDetailTab = "overview" | "ttp"
 type FindingAttackContext = NonNullable<FindingDetailPublic["attack_context"]>
+
+type WaiverFormState = {
+  findingId: string
+  cveId: string
+  assetId: string
+  assetKey: string
+  service: string
+  owner: string
+  reason: string
+  expiresAt: string
+  reviewAt: string
+  approvalRef: string
+  ticketUrl: string
+}
+
+type FindingWaiverEvidence = {
+  approvalRef: string | null
+  daysRemaining: string | null
+  expiresOn: string | null
+  id: string | null
+  matchedScope: string | null
+  owner: string | null
+  reason: string | null
+  reviewOn: string | null
+  scope: string | null
+  status: string | null
+  ticketUrl: string | null
+}
+
+const emptyWaiverForm: WaiverFormState = {
+  approvalRef: "",
+  assetId: "",
+  assetKey: "",
+  cveId: "",
+  expiresAt: "",
+  findingId: "",
+  owner: "",
+  reason: "",
+  reviewAt: "",
+  service: "",
+  ticketUrl: "",
+}
 
 const findingPriorityOptions: FindingPriority[] = [
   "critical",
@@ -683,6 +736,144 @@ function labelize(value: string | null | undefined) {
     .replaceAll("_", " ")
     .replaceAll("-", " ")
     .replace(/\b\w/g, (match) => match.toUpperCase())
+}
+
+function dateValueFromOffset(days: number) {
+  const date = new Date()
+  date.setDate(date.getDate() + days)
+  return date.toISOString().slice(0, 10)
+}
+
+function waiverFormDefaults(): WaiverFormState {
+  return {
+    ...emptyWaiverForm,
+    expiresAt: dateValueFromOffset(30),
+    reviewAt: dateValueFromOffset(14),
+  }
+}
+
+function nullableTrimmed(value: string) {
+  const trimmed = value.trim()
+  return trimmed ? trimmed : null
+}
+
+function validateWaiverForm(form: WaiverFormState) {
+  if (
+    !form.findingId.trim() &&
+    !form.cveId.trim() &&
+    !form.assetId.trim() &&
+    !form.assetKey.trim() &&
+    !form.service.trim()
+  ) {
+    return "At least one waiver scope is required."
+  }
+  if (!form.owner.trim()) {
+    return "Owner is required."
+  }
+  if (!form.reason.trim()) {
+    return "Reason is required."
+  }
+  if (!form.expiresAt.trim()) {
+    return "Expires date is required."
+  }
+  return ""
+}
+
+function waiverRequestBody(form: WaiverFormState): WaiverCreate {
+  return {
+    approval_ref: nullableTrimmed(form.approvalRef),
+    asset_id: nullableTrimmed(form.assetId),
+    asset_key: nullableTrimmed(form.assetKey),
+    cve_id: nullableTrimmed(form.cveId),
+    expires_at: nullableTrimmed(form.expiresAt),
+    finding_id: nullableTrimmed(form.findingId),
+    owner: nullableTrimmed(form.owner),
+    reason: nullableTrimmed(form.reason),
+    review_at: nullableTrimmed(form.reviewAt),
+    service: nullableTrimmed(form.service),
+    ticket_url: nullableTrimmed(form.ticketUrl),
+  }
+}
+
+function waiverScopeLabel(waiver: WaiverPublic) {
+  return joinedValues([
+    waiver.finding_id ? `Finding ${waiver.finding_id.slice(0, 8)}` : null,
+    waiver.cve_id ? `CVE ${waiver.cve_id}` : null,
+    waiver.asset_id ? `Asset ID ${waiver.asset_id}` : null,
+    waiver.asset_key ? `Asset ${waiver.asset_key}` : null,
+    waiver.service ? `Service ${waiver.service}` : null,
+  ])
+}
+
+function waiverStatusTone(status: string | null | undefined) {
+  if (status === "active") {
+    return "active"
+  }
+  if (status === "review_due") {
+    return "review-due"
+  }
+  if (status === "expired") {
+    return "expired"
+  }
+  return "inactive"
+}
+
+function findingWaiverEvidence(
+  finding: FindingDetailPublic | null,
+): FindingWaiverEvidence | null {
+  if (!finding?.waived) {
+    return null
+  }
+  const explanation = objectRecord(finding.explanation_json)
+  const evidence = objectRecord(finding.evidence_json)
+  const nested = {
+    ...objectRecord(evidence.waiver),
+    ...objectRecord(explanation.waiver),
+  }
+  const record = {
+    ...evidence,
+    ...explanation,
+    ...nested,
+  }
+  const status = stringValue(record.waiver_status)
+  const id = stringValue(record.waiver_id)
+  const reason = stringValue(record.waiver_reason)
+  const owner = stringValue(record.waiver_owner)
+  const expiresOn = stringValue(record.waiver_expires_on)
+  const reviewOn = stringValue(record.waiver_review_on)
+  const scope = stringValue(record.waiver_scope)
+  const matchedScope = stringValue(record.waiver_matched_scope)
+  const approvalRef = stringValue(record.waiver_approval_ref)
+  const ticketUrl = stringValue(record.waiver_ticket_url)
+  const daysRemaining =
+    typeof record.waiver_days_remaining === "number"
+      ? String(record.waiver_days_remaining)
+      : stringValue(record.waiver_days_remaining)
+  if (
+    !id &&
+    !status &&
+    !reason &&
+    !owner &&
+    !expiresOn &&
+    !scope &&
+    !approvalRef &&
+    !ticketUrl
+  ) {
+    return null
+  }
+  return {
+    approvalRef,
+    daysRemaining,
+    expiresOn,
+    id,
+    matchedScope,
+    owner,
+    reason,
+    reviewOn,
+    scope,
+    status,
+    ticketUrl,
+  }
 }
 
 function formatNullableNumber(value: number | null | undefined) {
@@ -1113,6 +1304,7 @@ export function App() {
   const findingDetailId = findingIdFromPath(location.pathname)
   const isFindingDetail = findingDetailId !== null
   const isFindingsList = currentPath === "/findings" && !isFindingDetail
+  const isWaiversPage = currentPath === "/waivers"
   const findingSearchParams = new URLSearchParams(location.search)
   const findingAssetId = isFindingsList
     ? findingSearchParams.get("assetId")
@@ -1202,6 +1394,15 @@ export function App() {
   const [findingDetailReloadKey, setFindingDetailReloadKey] = useState(0)
   const [findingDetailTab, setFindingDetailTab] =
     useState<FindingDetailTab>("overview")
+  const [waivers, setWaivers] = useState<WaiverPublic[]>([])
+  const [waiversLoading, setWaiversLoading] = useState(false)
+  const [waiversError, setWaiversError] = useState("")
+  const [waiverActionError, setWaiverActionError] = useState("")
+  const [waiverActionMessage, setWaiverActionMessage] = useState("")
+  const [waiverActionLoading, setWaiverActionLoading] = useState(false)
+  const [waiverReloadKey, setWaiverReloadKey] = useState(0)
+  const [waiverForm, setWaiverForm] =
+    useState<WaiverFormState>(waiverFormDefaults)
   const selectedProject =
     projects.find((project) => project.id === selectedProjectId) ?? null
   const dashboardLoading = projectListLoading || summaryLoading
@@ -1234,6 +1435,7 @@ export function App() {
   const detailAttackContext = findingDetail?.attack_context ?? null
   const detailAttackTechniques = attackTechniqueRows(detailAttackContext)
   const detailAttackEmpty = attackContextEmptyState(detailAttackContext)
+  const detailWaiverEvidence = findingWaiverEvidence(findingDetail)
   const selectedReportRun =
     projectRuns.find((run) => run.id === selectedRunId) ?? null
   const reportActionsEnabled =
@@ -1563,6 +1765,49 @@ export function App() {
       isMounted = false
     }
   }, [currentPath, navigate, selectedRunId])
+
+  useEffect(() => {
+    let isMounted = true
+
+    async function loadProjectWaivers() {
+      if (!isWaiversPage || !selectedProjectId) {
+        setWaivers([])
+        setWaiversError("")
+        setWaiversLoading(false)
+        return
+      }
+
+      setWaiversLoading(true)
+      setWaiversError("")
+      try {
+        const page = await WaiversService.readProjectWaivers({
+          projectId: selectedProjectId,
+        })
+        if (isMounted) {
+          setWaivers(page.data)
+        }
+      } catch (caught) {
+        if (caught instanceof ApiError && [401, 403].includes(caught.status)) {
+          clearAccessToken()
+          await navigate({ to: "/login" })
+          return
+        }
+        if (isMounted) {
+          setWaivers([])
+          setWaiversError(apiErrorMessage("Waivers unavailable", caught))
+        }
+      } finally {
+        if (isMounted) {
+          setWaiversLoading(false)
+        }
+      }
+    }
+
+    void loadProjectWaivers()
+    return () => {
+      isMounted = false
+    }
+  }, [isWaiversPage, navigate, selectedProjectId, waiverReloadKey])
 
   useEffect(() => {
     let isMounted = true
@@ -2072,6 +2317,72 @@ export function App() {
     }
   }
 
+  function refreshWaivers() {
+    setWaiverReloadKey((key) => key + 1)
+  }
+
+  function updateWaiverFormField(field: keyof WaiverFormState, value: string) {
+    setWaiverForm((form) => ({
+      ...form,
+      [field]: value,
+    }))
+  }
+
+  async function createWaiver(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    setWaiverActionError("")
+    setWaiverActionMessage("")
+    const validationError = validateWaiverForm(waiverForm)
+    if (validationError) {
+      setWaiverActionError(validationError)
+      return
+    }
+    if (!selectedProjectId) {
+      setWaiverActionError("Select a project before creating a waiver.")
+      return
+    }
+
+    setWaiverActionLoading(true)
+    try {
+      const waiver = await WaiversService.createProjectWaiver({
+        projectId: selectedProjectId,
+        requestBody: waiverRequestBody(waiverForm),
+      })
+      setWaiverForm(waiverFormDefaults())
+      setWaiverActionMessage(
+        `Accepted risk waiver created for ${waiverScopeLabel(waiver)}.`,
+      )
+      refreshWaivers()
+      refreshFindings()
+      setFindingDetailReloadKey((key) => key + 1)
+    } catch (caught) {
+      setWaiverActionError(apiErrorMessage("Waiver create failed", caught))
+    } finally {
+      setWaiverActionLoading(false)
+    }
+  }
+
+  async function expireWaiver(waiver: WaiverPublic) {
+    setWaiverActionError("")
+    setWaiverActionMessage("")
+    setWaiverActionLoading(true)
+    try {
+      const expired = await WaiversService.expireWaiver({
+        waiverId: waiver.id,
+      })
+      setWaiverActionMessage(
+        `Waiver for ${waiverScopeLabel(expired)} is now expired.`,
+      )
+      refreshWaivers()
+      refreshFindings()
+      setFindingDetailReloadKey((key) => key + 1)
+    } catch (caught) {
+      setWaiverActionError(apiErrorMessage("Waiver expire failed", caught))
+    } finally {
+      setWaiverActionLoading(false)
+    }
+  }
+
   async function signOut() {
     clearAccessToken()
     await navigate({ to: "/login" })
@@ -2235,6 +2546,7 @@ export function App() {
         <section
           className={
             currentPath === "/findings" ||
+            currentPath === "/waivers" ||
             currentPath === "/providers" ||
             currentPath === "/reports"
               ? "content-grid wide-workspace"
@@ -2263,11 +2575,13 @@ export function App() {
                       ? "Refresh finding detail"
                       : currentPath === "/findings"
                         ? "Refresh findings"
-                        : currentPath === "/providers"
-                          ? "Refresh provider status"
-                          : currentPath === "/reports"
-                            ? "Refresh reports"
-                            : "Refresh queue"
+                        : currentPath === "/waivers"
+                          ? "Refresh waivers"
+                          : currentPath === "/providers"
+                            ? "Refresh provider status"
+                            : currentPath === "/reports"
+                              ? "Refresh reports"
+                              : "Refresh queue"
                 }
                 onClick={() => {
                   if (currentPath === "/projects") {
@@ -2277,6 +2591,8 @@ export function App() {
                     refreshFindingDetail()
                   } else if (currentPath === "/findings") {
                     refreshFindings()
+                  } else if (currentPath === "/waivers") {
+                    refreshWaivers()
                   } else if (currentPath === "/providers") {
                     void refreshProviderStatus()
                   } else if (currentPath === "/reports") {
@@ -2980,6 +3296,308 @@ export function App() {
                   </section>
                 </section>
               </section>
+            ) : isWaiversPage ? (
+              <section
+                className="waivers-workflow"
+                aria-label="Waivers workspace"
+              >
+                <section
+                  className="waiver-toolbar"
+                  aria-label="Waiver project context"
+                >
+                  <label>
+                    <span>Project</span>
+                    <select
+                      aria-label="Waivers project"
+                      disabled={projectListLoading || projects.length === 0}
+                      onChange={(event) =>
+                        setSelectedProjectId(event.target.value)
+                      }
+                      value={selectedProjectId}
+                    >
+                      {projects.length === 0 ? (
+                        <option value="">No projects</option>
+                      ) : null}
+                      {projects.map((project) => (
+                        <option key={project.id} value={project.id}>
+                          {project.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <div>
+                    <span>Register</span>
+                    <strong>{selectedProject?.name ?? "No project"}</strong>
+                  </div>
+                  <div>
+                    <span>Open waivers</span>
+                    <strong>{waivers.length}</strong>
+                  </div>
+                  <div>
+                    <span>Accepted findings</span>
+                    <strong>
+                      {waivers.reduce(
+                        (total, waiver) =>
+                          total + (waiver.matched_findings ?? 0),
+                        0,
+                      )}
+                    </strong>
+                  </div>
+                </section>
+
+                {waiversError ? (
+                  <p className="dashboard-alert" role="alert">
+                    {waiversError}
+                  </p>
+                ) : null}
+                {waiverActionError ? (
+                  <p className="dashboard-alert" role="alert">
+                    {waiverActionError}
+                  </p>
+                ) : null}
+                {waiverActionMessage ? (
+                  <p className="dashboard-success" role="status">
+                    {waiverActionMessage}
+                  </p>
+                ) : null}
+
+                <section
+                  className="waiver-create-panel"
+                  aria-label="Create waiver"
+                >
+                  <div className="detail-section-heading">
+                    <h3>Create waiver</h3>
+                    <span>Scope to finding, CVE, asset, or service</span>
+                  </div>
+                  <form className="waiver-form" onSubmit={createWaiver}>
+                    <label>
+                      <span>CVE ID</span>
+                      <input
+                        aria-label="Waiver CVE ID"
+                        onChange={(event) =>
+                          updateWaiverFormField("cveId", event.target.value)
+                        }
+                        placeholder="CVE-2024-3094"
+                        value={waiverForm.cveId}
+                      />
+                    </label>
+                    <label>
+                      <span>Finding ID</span>
+                      <input
+                        aria-label="Waiver finding ID"
+                        onChange={(event) =>
+                          updateWaiverFormField("findingId", event.target.value)
+                        }
+                        placeholder="Optional UUID"
+                        value={waiverForm.findingId}
+                      />
+                    </label>
+                    <label>
+                      <span>Asset ID</span>
+                      <input
+                        aria-label="Waiver asset ID"
+                        onChange={(event) =>
+                          updateWaiverFormField("assetId", event.target.value)
+                        }
+                        placeholder="Optional UUID"
+                        value={waiverForm.assetId}
+                      />
+                    </label>
+                    <label>
+                      <span>Asset key</span>
+                      <input
+                        aria-label="Waiver asset key"
+                        onChange={(event) =>
+                          updateWaiverFormField("assetKey", event.target.value)
+                        }
+                        placeholder="payments-api"
+                        value={waiverForm.assetKey}
+                      />
+                    </label>
+                    <label>
+                      <span>Service</span>
+                      <input
+                        aria-label="Waiver service"
+                        onChange={(event) =>
+                          updateWaiverFormField("service", event.target.value)
+                        }
+                        placeholder="checkout"
+                        value={waiverForm.service}
+                      />
+                    </label>
+                    <label>
+                      <span>Owner</span>
+                      <input
+                        aria-label="Waiver owner"
+                        onChange={(event) =>
+                          updateWaiverFormField("owner", event.target.value)
+                        }
+                        placeholder="risk-owner"
+                        value={waiverForm.owner}
+                      />
+                    </label>
+                    <label className="wide-field">
+                      <span>Reason</span>
+                      <textarea
+                        aria-label="Waiver reason"
+                        onChange={(event) =>
+                          updateWaiverFormField("reason", event.target.value)
+                        }
+                        rows={3}
+                        value={waiverForm.reason}
+                      />
+                    </label>
+                    <label>
+                      <span>Expires</span>
+                      <input
+                        aria-label="Waiver expires at"
+                        onChange={(event) =>
+                          updateWaiverFormField("expiresAt", event.target.value)
+                        }
+                        type="date"
+                        value={waiverForm.expiresAt}
+                      />
+                    </label>
+                    <label>
+                      <span>Review</span>
+                      <input
+                        aria-label="Waiver review at"
+                        onChange={(event) =>
+                          updateWaiverFormField("reviewAt", event.target.value)
+                        }
+                        type="date"
+                        value={waiverForm.reviewAt}
+                      />
+                    </label>
+                    <label>
+                      <span>Approval</span>
+                      <input
+                        aria-label="Waiver approval reference"
+                        onChange={(event) =>
+                          updateWaiverFormField(
+                            "approvalRef",
+                            event.target.value,
+                          )
+                        }
+                        placeholder="CAB-064"
+                        value={waiverForm.approvalRef}
+                      />
+                    </label>
+                    <label>
+                      <span>Ticket URL</span>
+                      <input
+                        aria-label="Waiver ticket URL"
+                        onChange={(event) =>
+                          updateWaiverFormField("ticketUrl", event.target.value)
+                        }
+                        placeholder="https://tracker.example/..."
+                        value={waiverForm.ticketUrl}
+                      />
+                    </label>
+                    <button
+                      className="primary-action"
+                      disabled={
+                        waiverActionLoading ||
+                        projectListLoading ||
+                        projects.length === 0
+                      }
+                      type="submit"
+                    >
+                      Create waiver
+                    </button>
+                  </form>
+                </section>
+
+                <section
+                  className="waiver-register"
+                  aria-label="Risk acceptance register"
+                >
+                  <div className="detail-section-heading">
+                    <h3>Risk acceptance register</h3>
+                    <span>
+                      Accepted risk remains visible after create and expiry.
+                    </span>
+                  </div>
+                  {waiversLoading ? (
+                    <p className="dashboard-state" role="status">
+                      Loading waivers
+                    </p>
+                  ) : null}
+                  {!waiversLoading && waivers.length === 0 ? (
+                    <section
+                      className="dashboard-empty"
+                      aria-label="No waivers empty state"
+                    >
+                      <h3>No waivers yet</h3>
+                      <p>
+                        Create a waiver to mark accepted risk without deleting
+                        or hiding the finding.
+                      </p>
+                    </section>
+                  ) : null}
+                  {waivers.length > 0 ? (
+                    <div className="table-wrap">
+                      <table aria-label="Waivers table">
+                        <thead>
+                          <tr>
+                            <th>Scope</th>
+                            <th>Owner</th>
+                            <th>Status</th>
+                            <th>Expires</th>
+                            <th>Review</th>
+                            <th>Matched</th>
+                            <th>Approval</th>
+                            <th>Action</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {waivers.map((waiver) => (
+                            <tr key={waiver.id}>
+                              <td>
+                                <span className="finding-primary">
+                                  {waiverScopeLabel(waiver)}
+                                </span>
+                                <small>{waiver.reason}</small>
+                              </td>
+                              <td>{waiver.owner}</td>
+                              <td>
+                                <span
+                                  className={`waiver-status ${waiverStatusTone(
+                                    waiver.status,
+                                  )}`}
+                                >
+                                  {labelize(waiver.status)}
+                                </span>
+                              </td>
+                              <td>{waiver.expires_at}</td>
+                              <td>{waiver.review_at ?? "N.A."}</td>
+                              <td>{waiver.matched_findings ?? 0}</td>
+                              <td>
+                                {waiver.approval_ref ??
+                                  waiver.ticket_url ??
+                                  "N.A."}
+                              </td>
+                              <td>
+                                <button
+                                  className="secondary-action"
+                                  disabled={
+                                    waiverActionLoading ||
+                                    waiver.status === "expired"
+                                  }
+                                  onClick={() => void expireWaiver(waiver)}
+                                  type="button"
+                                >
+                                  Expire
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : null}
+                </section>
+              </section>
             ) : isFindingDetail ? (
               <section
                 className="finding-detail-workflow"
@@ -3091,6 +3709,63 @@ export function App() {
                         role="tabpanel"
                         aria-labelledby="finding-overview-tab"
                       >
+                        {detailWaiverEvidence ? (
+                          <section
+                            className="accepted-risk-panel"
+                            aria-label="Accepted risk"
+                          >
+                            <div className="detail-section-heading">
+                              <h3>Accepted risk</h3>
+                              <span>
+                                {labelize(detailWaiverEvidence.status)}
+                              </span>
+                            </div>
+                            <dl className="project-meta">
+                              <div>
+                                <dt>Owner</dt>
+                                <dd>
+                                  {optionalText(detailWaiverEvidence.owner)}
+                                </dd>
+                              </div>
+                              <div>
+                                <dt>Reason</dt>
+                                <dd>
+                                  {optionalText(detailWaiverEvidence.reason)}
+                                </dd>
+                              </div>
+                              <div>
+                                <dt>Expires</dt>
+                                <dd>
+                                  {optionalText(detailWaiverEvidence.expiresOn)}
+                                </dd>
+                              </div>
+                              <div>
+                                <dt>Review</dt>
+                                <dd>
+                                  {optionalText(detailWaiverEvidence.reviewOn)}
+                                </dd>
+                              </div>
+                              <div>
+                                <dt>Scope</dt>
+                                <dd>
+                                  {optionalText(
+                                    detailWaiverEvidence.matchedScope ??
+                                      detailWaiverEvidence.scope,
+                                  )}
+                                </dd>
+                              </div>
+                              <div>
+                                <dt>Approval</dt>
+                                <dd>
+                                  {optionalText(
+                                    detailWaiverEvidence.approvalRef,
+                                  )}
+                                </dd>
+                              </div>
+                            </dl>
+                          </section>
+                        ) : null}
+
                         <section
                           className="why-priority-panel"
                           aria-label="Why this priority"

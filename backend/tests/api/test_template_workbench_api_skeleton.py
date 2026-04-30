@@ -48,6 +48,9 @@ def test_vpw011_openapi_exposes_workbench_domain_routes_without_items() -> None:
         "/api/v1/projects/{project_id}/findings/",
         "/api/v1/findings/{finding_id}",
         "/api/v1/findings/{finding_id}/explain",
+        "/api/v1/projects/{project_id}/waivers/",
+        "/api/v1/waivers/{waiver_id}",
+        "/api/v1/waivers/{waiver_id}/expire",
         "/api/v1/projects/{project_id}/summary",
         "/api/v1/projects/{project_id}/compare/cvss-only",
     }
@@ -75,6 +78,10 @@ def test_vpw011_openapi_exposes_workbench_domain_routes_without_items() -> None:
         "ReportCreate",
         "ReportPublic",
         "ReportsPublic",
+        "WaiverCreate",
+        "WaiverPublic",
+        "WaiversPublic",
+        "WaiverUpdate",
     }
     assert expected_paths.issubset(paths)
 
@@ -131,6 +138,32 @@ def test_vpw011_domain_routes_require_auth(template_api_env: TemplateApiEnv) -> 
         ),
         ("get", f"/api/v1/findings/{finding_id}", {}),
         ("get", f"/api/v1/findings/{finding_id}/explain", {}),
+        ("get", f"/api/v1/projects/{project_id}/waivers/", {}),
+        (
+            "post",
+            f"/api/v1/projects/{project_id}/waivers/",
+            {
+                "json": {
+                    "cve_id": "CVE-2024-3094",
+                    "owner": "risk",
+                    "reason": "Auth check.",
+                    "expires_at": "2099-12-31",
+                }
+            },
+        ),
+        (
+            "patch",
+            f"/api/v1/waivers/{finding_id}",
+            {
+                "json": {
+                    "cve_id": "CVE-2024-3094",
+                    "owner": "risk",
+                    "reason": "Auth check.",
+                    "expires_at": "2099-12-31",
+                }
+            },
+        ),
+        ("post", f"/api/v1/waivers/{finding_id}/expire", {}),
         ("get", f"/api/v1/projects/{project_id}/summary", {}),
         ("get", f"/api/v1/projects/{project_id}/compare/cvss-only", {}),
     )

@@ -60,8 +60,10 @@ class WaiverRequest(StrictModel):
     service: str | None = None
     owner: str
     reason: str
-    expires_on: str
+    expires_on: str | None = None
+    expires_at: str | None = None
     review_on: str | None = None
+    review_at: str | None = None
     approval_ref: str | None = None
     ticket_url: str | None = None
 
@@ -242,7 +244,9 @@ class WaiverResponse(StrictModel):
     owner: str
     reason: str
     expires_on: str
+    expires_at: str
     review_on: str | None = None
+    review_at: str | None = None
     approval_ref: str | None = None
     ticket_url: str | None = None
     status: str

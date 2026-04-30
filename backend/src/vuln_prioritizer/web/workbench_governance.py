@@ -184,6 +184,32 @@ def update_waiver_form(
     return RedirectResponse(_project_path(waiver.project_id, "waivers"), status_code=303)
 
 
+@router.post("/web/waivers/{waiver_id}/expire", response_class=HTMLResponse)
+def expire_waiver_form(
+    waiver_id: str,
+    session: Annotated[Session, Depends(get_db_session)],
+    settings: Annotated[WorkbenchSettings, Depends(get_workbench_settings)],
+    csrf_token: Annotated[str, Form()] = "",
+) -> RedirectResponse:
+    _check_csrf(csrf_token, settings)
+    repo = WorkbenchRepository(session)
+    waiver = repo.get_waiver(waiver_id)
+    if waiver is None:
+        raise HTTPException(status_code=404, detail="Waiver not found.")
+    expired, matched = _expire_waiver(repo, waiver)
+    repo.create_audit_event(
+        project_id=expired.project_id,
+        event_type="waiver.expired",
+        target_type="waiver",
+        target_id=expired.id,
+        actor=expired.owner,
+        message="Waiver was expired from web form.",
+        metadata_json={"matched_findings": matched.get(expired.id, 0)},
+    )
+    session.commit()
+    return RedirectResponse(_project_path(expired.project_id, "waivers"), status_code=303)
+
+
 @router.post("/web/waivers/{waiver_id}/delete", response_class=HTMLResponse)
 def delete_waiver_form(
     waiver_id: str,

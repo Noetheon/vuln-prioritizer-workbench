@@ -1352,6 +1352,20 @@ def test_workbench_assets_and_persisted_waivers_update_current_findings(
     assert listed.status_code == 200
     assert listed.json()["items"][0]["matched_findings"] == 1
 
+    expired_waiver = client.post(f"/api/waivers/{waiver_payload['id']}/expire")
+    assert expired_waiver.status_code == 200, expired_waiver.text
+    expired_payload = expired_waiver.json()
+    assert expired_payload["status"] == "expired"
+    assert expired_payload["expires_at"] == expired_payload["expires_on"]
+    expired_finding = client.get(
+        f"/api/projects/{project['id']}/findings",
+        params={"q": "CVE-2024-3094"},
+    )
+    assert expired_finding.status_code == 200
+    expired_item = expired_finding.json()["items"][0]
+    assert expired_item["waiver_status"] == "expired"
+    assert expired_item["waived"] is False
+
     deleted = client.delete(f"/api/waivers/{waiver_payload['id']}")
     assert deleted.status_code == 200
     refreshed = client.get(
@@ -1361,6 +1375,30 @@ def test_workbench_assets_and_persisted_waivers_update_current_findings(
     assert refreshed.status_code == 200
     assert refreshed.json()["items"][0]["waiver_id"] is None
     assert refreshed.json()["items"][0]["waived"] is False
+
+    scoped_waivers = (
+        {"finding_id": xz_finding["id"], "owner": "risk-finding"},
+        {"cve_id": "CVE-2024-3094", "owner": "risk-cve"},
+        {"asset_id": "edge-gateway", "owner": "risk-asset"},
+        {"service": "checkout", "owner": "risk-service"},
+    )
+    for scope in scoped_waivers:
+        scoped = client.post(
+            f"/api/projects/{project['id']}/waivers",
+            json={
+                **scope,
+                "reason": f"Scoped waiver validation for {next(iter(scope))}.",
+                "expires_at": "2099-12-31",
+                "review_at": "2099-12-01",
+                "approval_ref": "CAB-SCOPE",
+            },
+        )
+        assert scoped.status_code == 200, scoped.text
+        scoped_payload = scoped.json()
+        assert scoped_payload["status"] == "active"
+        assert scoped_payload["matched_findings"] == 1
+        deleted_scoped = client.delete(f"/api/waivers/{scoped_payload['id']}")
+        assert deleted_scoped.status_code == 200
 
 
 def test_workbench_asset_context_import_api_filters_and_errors(tmp_path: Path) -> None:
@@ -1626,6 +1664,17 @@ def test_workbench_new_api_error_paths_and_detection_import_validation(
         },
     )
     assert bad_cve.status_code == 422
+
+    missing_expiry = client.post(
+        f"/api/projects/{project['id']}/waivers",
+        json={
+            "cve_id": "CVE-2024-3094",
+            "owner": "risk",
+            "reason": "Missing required expiry.",
+        },
+    )
+    assert missing_expiry.status_code == 422
+    assert "expires_on is required" in missing_expiry.text
 
     bad_finding = client.post(
         f"/api/projects/{project['id']}/waivers",

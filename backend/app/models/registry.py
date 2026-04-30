@@ -11,6 +11,7 @@ TABLE_MODEL_MODULES = (
     "app.models.runs",
     "app.models.reports",
     "app.models.attack",
+    "app.models.waivers",
 )
 
 

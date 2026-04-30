@@ -55,6 +55,7 @@ class Project(ProjectBase, table=True):
         back_populates="project",
         cascade_delete=True,
     )
+    waivers: list["Waiver"] = Relationship(back_populates="project", cascade_delete=True)  # type: ignore[name-defined]  # noqa: F821
 
 
 class ProjectPublic(ProjectBase):

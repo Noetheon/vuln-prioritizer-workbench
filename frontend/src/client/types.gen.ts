@@ -749,6 +749,75 @@ export type ValidationError = {
 };
 
 /**
+ * Create payload for a project waiver.
+ */
+export type WaiverCreate = {
+    approval_ref?: (string | null);
+    asset_id?: (string | null);
+    asset_key?: (string | null);
+    cve_id?: (string | null);
+    expires_at?: (string | null);
+    finding_id?: (string | null);
+    owner?: (string | null);
+    reason?: (string | null);
+    review_at?: (string | null);
+    service?: (string | null);
+    ticket_url?: (string | null);
+};
+
+/**
+ * Public waiver response with derived lifecycle and match context.
+ */
+export type WaiverPublic = {
+    approval_ref?: (string | null);
+    asset_id?: (string | null);
+    asset_key?: (string | null);
+    created_at: string;
+    cve_id?: (string | null);
+    days_remaining?: (number | null);
+    expires_at: string;
+    finding_id?: (string | null);
+    id: string;
+    matched_findings?: number;
+    owner: string;
+    project_id: string;
+    reason: string;
+    review_at?: (string | null);
+    service?: (string | null);
+    status: string;
+    ticket_url?: (string | null);
+    updated_at: string;
+};
+
+/**
+ * Collection response for project waivers.
+ */
+export type WaiversPublic = {
+    count: number;
+    data: Array<WaiverPublic>;
+};
+
+/**
+ * Update payload for a waiver.
+ *
+ * Updates replace the waiver scope and governance fields so clients can move a
+ * waiver from one scope to another with one request.
+ */
+export type WaiverUpdate = {
+    approval_ref?: (string | null);
+    asset_id?: (string | null);
+    asset_key?: (string | null);
+    cve_id?: (string | null);
+    expires_at?: (string | null);
+    finding_id?: (string | null);
+    owner?: (string | null);
+    reason?: (string | null);
+    review_at?: (string | null);
+    service?: (string | null);
+    ticket_url?: (string | null);
+};
+
+/**
  * Status response returned by the template Workbench adapter.
  */
 export type WorkbenchStatus = {
@@ -945,5 +1014,31 @@ export type RunsReadRunSummaryResponse = (AnalysisRunSummaryPublic);
 export type UsersReadUserMeResponse = (UserPublic);
 
 export type UtilsHealthCheckResponse = (boolean);
+
+export type WaiversReadProjectWaiversData = {
+    projectId: string;
+};
+
+export type WaiversReadProjectWaiversResponse = (WaiversPublic);
+
+export type WaiversCreateProjectWaiverData = {
+    projectId: string;
+    requestBody: WaiverCreate;
+};
+
+export type WaiversCreateProjectWaiverResponse = (WaiverPublic);
+
+export type WaiversUpdateWaiverData = {
+    requestBody: WaiverUpdate;
+    waiverId: string;
+};
+
+export type WaiversUpdateWaiverResponse = (WaiverPublic);
+
+export type WaiversExpireWaiverData = {
+    waiverId: string;
+};
+
+export type WaiversExpireWaiverResponse = (WaiverPublic);
 
 export type WorkbenchTemplateWorkbenchStatusResponse = (WorkbenchStatus);

@@ -3,7 +3,7 @@
 import type { CancelablePromise } from './core/CancelablePromise';
 import { OpenAPI } from './core/OpenAPI';
 import { request as __request } from './core/request';
-import type { AssetsUpdateAssetData, AssetsUpdateAssetResponse, AssetsRecalculateAssetData, AssetsRecalculateAssetResponse, AssetsReadProjectAssetsData, AssetsReadProjectAssetsResponse, AssetsCreateProjectAssetData, AssetsCreateProjectAssetResponse, AssetsImportProjectAssetsData, AssetsImportProjectAssetsResponse, FindingsReadFindingData, FindingsReadFindingResponse, FindingsExplainFindingData, FindingsExplainFindingResponse, FindingsReadProjectFindingsData, FindingsReadProjectFindingsResponse, ImportsImportProjectUploadData, ImportsImportProjectUploadResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, ProjectsReadProjectsResponse, ProjectsCreateProjectData, ProjectsCreateProjectResponse, ProjectsDeleteProjectData, ProjectsDeleteProjectResponse, ProjectsReadProjectData, ProjectsReadProjectResponse, ProjectsUpdateProjectData, ProjectsUpdateProjectResponse, ProjectsReadProjectAttackSummaryData, ProjectsReadProjectAttackSummaryResponse, ProjectsCompareProjectCvssOnlyData, ProjectsCompareProjectCvssOnlyResponse, ProjectsReadProjectSummaryData, ProjectsReadProjectSummaryResponse, ProvidersReadProviderStatusResponse, ReportsDownloadReportData, ReportsDownloadReportResponse, ReportsVerifyReportData, ReportsVerifyReportResponse, ReportsReadRunReportsData, ReportsReadRunReportsResponse, ReportsCreateRunReportData, ReportsCreateRunReportResponse, RunsReadProjectRunsWithoutTrailingSlashData, RunsReadProjectRunsWithoutTrailingSlashResponse, RunsReadProjectRunsData, RunsReadProjectRunsResponse, RunsReadRunData, RunsReadRunResponse, RunsReadRunSummaryData, RunsReadRunSummaryResponse, UsersReadUserMeResponse, UtilsHealthCheckResponse, WorkbenchTemplateWorkbenchStatusResponse } from './types.gen';
+import type { AssetsUpdateAssetData, AssetsUpdateAssetResponse, AssetsRecalculateAssetData, AssetsRecalculateAssetResponse, AssetsReadProjectAssetsData, AssetsReadProjectAssetsResponse, AssetsCreateProjectAssetData, AssetsCreateProjectAssetResponse, AssetsImportProjectAssetsData, AssetsImportProjectAssetsResponse, FindingsReadFindingData, FindingsReadFindingResponse, FindingsExplainFindingData, FindingsExplainFindingResponse, FindingsReadProjectFindingsData, FindingsReadProjectFindingsResponse, ImportsImportProjectUploadData, ImportsImportProjectUploadResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, ProjectsReadProjectsResponse, ProjectsCreateProjectData, ProjectsCreateProjectResponse, ProjectsDeleteProjectData, ProjectsDeleteProjectResponse, ProjectsReadProjectData, ProjectsReadProjectResponse, ProjectsUpdateProjectData, ProjectsUpdateProjectResponse, ProjectsReadProjectAttackSummaryData, ProjectsReadProjectAttackSummaryResponse, ProjectsCompareProjectCvssOnlyData, ProjectsCompareProjectCvssOnlyResponse, ProjectsReadProjectSummaryData, ProjectsReadProjectSummaryResponse, ProvidersReadProviderStatusResponse, ReportsDownloadReportData, ReportsDownloadReportResponse, ReportsVerifyReportData, ReportsVerifyReportResponse, ReportsReadRunReportsData, ReportsReadRunReportsResponse, ReportsCreateRunReportData, ReportsCreateRunReportResponse, RunsReadProjectRunsWithoutTrailingSlashData, RunsReadProjectRunsWithoutTrailingSlashResponse, RunsReadProjectRunsData, RunsReadProjectRunsResponse, RunsReadRunData, RunsReadRunResponse, RunsReadRunSummaryData, RunsReadRunSummaryResponse, UsersReadUserMeResponse, UtilsHealthCheckResponse, WaiversReadProjectWaiversData, WaiversReadProjectWaiversResponse, WaiversCreateProjectWaiverData, WaiversCreateProjectWaiverResponse, WaiversUpdateWaiverData, WaiversUpdateWaiverResponse, WaiversExpireWaiverData, WaiversExpireWaiverResponse, WorkbenchTemplateWorkbenchStatusResponse } from './types.gen';
 
 export class AssetsService {
     /**
@@ -675,6 +675,98 @@ export class UtilsService {
         return __request(OpenAPI, {
             method: 'GET',
             url: '/api/v1/utils/health-check/'
+        });
+    }
+}
+
+export class WaiversService {
+    /**
+     * Read Project Waivers
+     * List visible project waivers.
+     * @param data The data for the request.
+     * @param data.projectId
+     * @returns WaiversPublic Successful Response
+     * @throws ApiError
+     */
+    public static readProjectWaivers(data: WaiversReadProjectWaiversData): CancelablePromise<WaiversReadProjectWaiversResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/projects/{project_id}/waivers/',
+            path: {
+                project_id: data.projectId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+
+    /**
+     * Create Project Waiver
+     * Create a scoped risk acceptance for a visible project.
+     * @param data The data for the request.
+     * @param data.projectId
+     * @param data.requestBody
+     * @returns WaiverPublic Successful Response
+     * @throws ApiError
+     */
+    public static createProjectWaiver(data: WaiversCreateProjectWaiverData): CancelablePromise<WaiversCreateProjectWaiverResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/projects/{project_id}/waivers/',
+            path: {
+                project_id: data.projectId
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+
+    /**
+     * Update Waiver
+     * Update a waiver's scope, owner, reason, approval, and lifecycle dates.
+     * @param data The data for the request.
+     * @param data.waiverId
+     * @param data.requestBody
+     * @returns WaiverPublic Successful Response
+     * @throws ApiError
+     */
+    public static updateWaiver(data: WaiversUpdateWaiverData): CancelablePromise<WaiversUpdateWaiverResponse> {
+        return __request(OpenAPI, {
+            method: 'PATCH',
+            url: '/api/v1/waivers/{waiver_id}',
+            path: {
+                waiver_id: data.waiverId
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+
+    /**
+     * Expire Waiver
+     * Expire a waiver and resynchronize visible accepted-risk state.
+     * @param data The data for the request.
+     * @param data.waiverId
+     * @returns WaiverPublic Successful Response
+     * @throws ApiError
+     */
+    public static expireWaiver(data: WaiversExpireWaiverData): CancelablePromise<WaiversExpireWaiverResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/waivers/{waiver_id}/expire',
+            path: {
+                waiver_id: data.waiverId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
         });
     }
 }
