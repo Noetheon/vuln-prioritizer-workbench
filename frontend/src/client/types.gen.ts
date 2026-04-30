@@ -438,7 +438,7 @@ export type FindingsPublic = {
 export type FindingStatus = 'open' | 'in_review' | 'remediating' | 'fixed' | 'accepted' | 'suppressed';
 
 /**
- * Aggregated finding risk for one owner, service, or environment.
+ * Aggregated finding risk for one owner, service, asset, or environment.
  */
 export type GovernanceRollupPublic = {
     accepted_count?: number;
@@ -645,14 +645,16 @@ export type ProjectDecisionSummaryPublic = {
 };
 
 /**
- * Owner, service, environment, and waiver-debt rollups for one project.
+ * Owner, service, asset, environment, and waiver-debt rollups for one project.
  */
 export type ProjectGovernanceRollupsPublic = {
+    assets?: Array<GovernanceRollupPublic>;
     environments?: Array<GovernanceRollupPublic>;
     generated_at: string;
     owners?: Array<GovernanceRollupPublic>;
     project_id: string;
     services?: Array<GovernanceRollupPublic>;
+    top_assets_by_risk?: Array<GovernanceRollupPublic>;
     top_services_by_risk?: Array<GovernanceRollupPublic>;
     waiver_debt?: GovernanceWaiverDebtPublic;
 };

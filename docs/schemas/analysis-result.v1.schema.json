@@ -240,8 +240,10 @@
         "generated_at",
         "owners",
         "services",
+        "assets",
         "environments",
         "top_services_by_risk",
+        "top_assets_by_risk",
         "waiver_debt"
       ],
       "properties": {
@@ -263,6 +265,12 @@
             "$ref": "#/$defs/governanceRollup"
           }
         },
+        "assets": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/governanceRollup"
+          }
+        },
         "environments": {
           "type": "array",
           "items": {
@@ -270,6 +278,12 @@
           }
         },
         "top_services_by_risk": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/governanceRollup"
+          }
+        },
+        "top_assets_by_risk": {
           "type": "array",
           "items": {
             "$ref": "#/$defs/governanceRollup"
@@ -312,6 +326,7 @@
           "enum": [
             "owner",
             "service",
+            "asset",
             "environment"
           ]
         },

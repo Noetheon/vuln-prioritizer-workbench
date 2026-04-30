@@ -35,7 +35,7 @@ def build_project_governance_rollups_payload(
     waiver_repository: WaiverRepository | None = None,
     limit: int = 5,
 ) -> ProjectGovernanceRollupsPublic:
-    """Build owner, service, environment, and waiver-debt rollups for a project."""
+    """Build owner, service, asset, environment, and waiver-debt rollups for a project."""
     bounded_limit = max(1, min(limit, 50))
     owner_rollups = _rollups_for_dimension(
         findings,
@@ -49,6 +49,12 @@ def build_project_governance_rollups_payload(
         label_for_finding=_service_label,
         limit=bounded_limit,
     )
+    asset_rollups = _rollups_for_dimension(
+        findings,
+        dimension="asset",
+        label_for_finding=_asset_label,
+        limit=bounded_limit,
+    )
     environment_rollups = _rollups_for_dimension(
         findings,
         dimension="environment",
@@ -60,8 +66,10 @@ def build_project_governance_rollups_payload(
         generated_at=get_datetime_utc(),
         owners=owner_rollups,
         services=service_rollups,
+        assets=asset_rollups,
         environments=environment_rollups,
         top_services_by_risk=service_rollups[:bounded_limit],
+        top_assets_by_risk=asset_rollups[:bounded_limit],
         waiver_debt=_waiver_debt_summary(
             findings=findings,
             waivers=list(waivers or []),
@@ -233,6 +241,18 @@ def _service_label(finding: Finding) -> str:
             finding,
             ("business_service", "service", "asset_business_service", "waiver_service"),
         )
+        or UNKNOWN_LABEL
+    )
+
+
+def _asset_label(finding: Finding) -> str:
+    asset = getattr(finding, "asset", None)
+    asset_key = getattr(asset, "asset_key", None)
+    asset_name = getattr(asset, "name", None)
+    return _clean_label(
+        asset_key
+        or asset_name
+        or _record_string(finding, ("asset_key", "asset_ref", "target_ref"))
         or UNKNOWN_LABEL
     )
 

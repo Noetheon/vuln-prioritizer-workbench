@@ -48,6 +48,12 @@ class EvidenceBundleInputHash(StrictModel):
     sha256: str
 
 
+class EvidenceBundleGovernanceArtifact(StrictModel):
+    bundle_path: str
+    kind: str
+    sha256: str
+
+
 class EvidenceBundleManifest(StrictModel):
     schema_version: str = "1.1.0"
     bundle_kind: str = "evidence-bundle"
@@ -58,6 +64,7 @@ class EvidenceBundleManifest(StrictModel):
     source_input_paths: list[str] = Field(default_factory=list)
     source_input_hashes: list[EvidenceBundleInputHash] = Field(default_factory=list)
     provider_snapshot: dict[str, Any] = Field(default_factory=dict)
+    governance_artifacts: list[EvidenceBundleGovernanceArtifact] = Field(default_factory=list)
     attack_navigator_layer: dict[str, Any] | None = None
     artifact_hashes: dict[str, str] = Field(default_factory=dict)
     findings_count: int = 0

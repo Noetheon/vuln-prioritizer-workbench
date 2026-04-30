@@ -35,6 +35,7 @@ DoctorCheck = _models_artifacts.DoctorCheck
 DoctorReport = _models_artifacts.DoctorReport
 DoctorSummary = _models_artifacts.DoctorSummary
 EvidenceBundleFile = _models_artifacts.EvidenceBundleFile
+EvidenceBundleGovernanceArtifact = _models_artifacts.EvidenceBundleGovernanceArtifact
 EvidenceBundleInputHash = _models_artifacts.EvidenceBundleInputHash
 EvidenceBundleManifest = _models_artifacts.EvidenceBundleManifest
 EvidenceBundleVerificationItem = _models_artifacts.EvidenceBundleVerificationItem

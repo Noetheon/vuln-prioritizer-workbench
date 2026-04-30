@@ -119,7 +119,7 @@ Primary payload keys by command:
 - `attack validate`: validation counts and warning arrays
 - `attack coverage`: `items`, plus ATT&CK coverage `summary`
 - `rollup`: `buckets`
-- `report evidence-bundle`: `manifest.json` with `files`
+- `report evidence-bundle`: `manifest.json` with `files` and optional `governance_artifacts`
 - `report verify-evidence-bundle`: `items`, plus `summary`
 
 ### Schema versioning
@@ -372,6 +372,18 @@ Current defensive-context contract:
 - `defensive_contexts` on findings and provider snapshot items contains the local overlay records used for review and locked replay
 - defensive context does not change `priority_label`, `priority_rank`, operational rank, or base scoring
 
+### Evidence bundle governance artifacts
+
+Current evidence-bundle governance additions:
+
+- governance bundle members are additive ZIP members under `governance/`
+- supported member paths are `governance/rollups.json`, `governance/waivers.json`, `governance/vex-summary.json`, and `governance/asset-context.json`
+- these members are included only when the corresponding governance source payload is available
+- `manifest.json` may include an additive `governance_artifacts` array
+- each `governance_artifacts[]` item contains `bundle_path`, `kind`, and `sha256`
+- `bundle_path` is the ZIP member path, `kind` identifies the governance artifact type, and `sha256` is the checksum of that member content
+- consumers should verify governance artifacts against their manifest SHA-256 entries and ignore unknown future governance artifact kinds
+
 ### Workbench API additions
 
 Workbench API changes are additive:
@@ -391,7 +403,7 @@ Workbench API changes are additive:
 - `GET /api/v1/projects/{project_id}/summary` returns a dashboard-oriented decision summary with finding counts, priority/status buckets, provider-signal hit counts, latest run status, and latest run summary
 - `GET /api/v1/projects/{project_id}/compare/cvss-only` returns the CVSS-only baseline comparison for stored template findings, using the same methodology payload as the core decision engine
 - `GET /api/v1/providers/status` returns an authenticated template adapter provider-status envelope for the React status card, including `status`, `snapshot`, `sources`, `latest_update_job`, `cache_dir`, `snapshot_dir`, `warnings`, `last_sync`, `last_error`, `cache_age_seconds`, and `snapshot_mode`; the legacy `GET /api/providers/status` route still exists with its current behavior during migration
-- `POST /api/v1/runs/{run_id}/reports` accepts `markdown`, `html`, `json`, `csv`, `zip`, and `attack-navigator` for completed visible template runs. JSON exports use `analysis-result.v1.json` with `project`, `analysis_run`, `provider_snapshot`, `findings`, and `explanations`. CSV exports use `findings.csv` with stable spreadsheet-safe finding columns. `attack-navigator` exports `attack-navigator-layer.json` with Navigator v4.5-compatible `techniques`, `techniqueID`, risk score, comments, and metadata; `attack_filter` accepts `all`, `critical-high`, `kev`, and the `no-coverage` placeholder. ZIP exports use `evidence-bundle.zip` with `manifest.json`, `analysis.json`, `technical.md`, `executive.html`, `provider-snapshot.json`, optional `attack-navigator-layer.json`, per-file SHA-256 entries, input hashes when available, and redaction of sensitive/local-path fields.
+- `POST /api/v1/runs/{run_id}/reports` accepts `markdown`, `html`, `json`, `csv`, `zip`, and `attack-navigator` for completed visible template runs. JSON exports use `analysis-result.v1.json` with `project`, `analysis_run`, `provider_snapshot`, `findings`, and `explanations`. CSV exports use `findings.csv` with stable spreadsheet-safe finding columns. `attack-navigator` exports `attack-navigator-layer.json` with Navigator v4.5-compatible `techniques`, `techniqueID`, risk score, comments, and metadata; `attack_filter` accepts `all`, `critical-high`, `kev`, and the `no-coverage` placeholder. ZIP exports use `evidence-bundle.zip` with `manifest.json`, `analysis.json`, `technical.md`, `executive.html`, `provider-snapshot.json`, optional `attack-navigator-layer.json`, optional `governance/rollups.json`, `governance/waivers.json`, `governance/vex-summary.json`, and `governance/asset-context.json`, per-file SHA-256 entries, input hashes when available, and redaction of sensitive/local-path fields.
 - `POST /api/v1/reports/{report_id}/verify` verifies a visible template `evidence-bundle.zip` report without extracting ZIP members. It validates the stored artifact path and report SHA-256 before returning the same `metadata`, `summary`, and `items` shape as `report verify-evidence-bundle --format json`; non-bundle reports return 422.
 - `POST /api/projects/{project_id}/imports` accepts single-upload and additive multi-upload imports for all CLI input formats
 - `GET /api/jobs`, `GET /api/jobs/{id}`, `POST /api/jobs`, and `POST /api/jobs/{id}/retry` expose durable local job state for compatible synchronous operations
@@ -476,7 +488,7 @@ The public combinations currently intended for use are:
 - `data verify`: `table`, `json`
 - `data export-provider-snapshot`: JSON file output
 - `report html`: HTML file output
-- `report evidence-bundle`: ZIP file output containing `analysis.json`, `report.html`, `summary.md`, and `manifest.json`
+- `report evidence-bundle`: ZIP file output containing `analysis.json`, `report.html`, `summary.md`, `manifest.json`, and optional `governance/rollups.json`, `governance/waivers.json`, `governance/vex-summary.json`, and `governance/asset-context.json`
 - `report verify-evidence-bundle`: `table` and `json`
 - `report validate-sarif`: `table` and `json`
 
