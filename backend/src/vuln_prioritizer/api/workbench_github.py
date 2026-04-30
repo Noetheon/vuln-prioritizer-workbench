@@ -16,8 +16,13 @@ GITHUB_REPOSITORY_RE = re.compile(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")
 ENV_NAME_RE = re.compile(r"^[A-Z_][A-Z0-9_]*$")
 
 
-def _github_export_token(token_env: str) -> str:
-    env_name = token_env.strip()
+def _github_export_token(token_env: str | None) -> str:
+    env_name = (token_env or "").strip()
+    if not env_name:
+        raise HTTPException(
+            status_code=422,
+            detail="token_env is required when dry_run is false.",
+        )
     if not ENV_NAME_RE.fullmatch(env_name):
         raise HTTPException(
             status_code=422,
@@ -65,6 +70,7 @@ def _create_github_issue(
             },
             json=issue_payload,
             timeout=10,
+            allow_redirects=False,
         )
     except requests.RequestException as exc:
         raise HTTPException(status_code=502, detail="GitHub issue creation failed.") from exc

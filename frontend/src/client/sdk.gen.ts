@@ -3,7 +3,7 @@
 import type { CancelablePromise } from './core/CancelablePromise';
 import { OpenAPI } from './core/OpenAPI';
 import { request as __request } from './core/request';
-import type { ApiTokensListApiTokensResponse, ApiTokensCreateApiTokenData, ApiTokensCreateApiTokenResponse, ApiTokensRevokeApiTokenData, ApiTokensRevokeApiTokenResponse, AssetsUpdateAssetData, AssetsUpdateAssetResponse, AssetsRecalculateAssetData, AssetsRecalculateAssetResponse, AssetsReadProjectAssetsData, AssetsReadProjectAssetsResponse, AssetsCreateProjectAssetData, AssetsCreateProjectAssetResponse, AssetsImportProjectAssetsData, AssetsImportProjectAssetsResponse, FindingsReadFindingData, FindingsReadFindingResponse, FindingsExplainFindingData, FindingsExplainFindingResponse, FindingsReadProjectFindingsData, FindingsReadProjectFindingsResponse, ImportsImportProjectUploadData, ImportsImportProjectUploadResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, ProjectsReadProjectsResponse, ProjectsCreateProjectData, ProjectsCreateProjectResponse, ProjectsDeleteProjectData, ProjectsDeleteProjectResponse, ProjectsReadProjectData, ProjectsReadProjectResponse, ProjectsUpdateProjectData, ProjectsUpdateProjectResponse, ProjectsReadProjectAttackSummaryData, ProjectsReadProjectAttackSummaryResponse, ProjectsCompareProjectCvssOnlyData, ProjectsCompareProjectCvssOnlyResponse, ProjectsReadProjectGovernanceRollupsData, ProjectsReadProjectGovernanceRollupsResponse, ProjectsReadProjectSummaryData, ProjectsReadProjectSummaryResponse, ProvidersReadProviderStatusResponse, ReportsDownloadReportData, ReportsDownloadReportResponse, ReportsVerifyReportData, ReportsVerifyReportResponse, ReportsReadRunReportsData, ReportsReadRunReportsResponse, ReportsCreateRunReportData, ReportsCreateRunReportResponse, RunsReadProjectRunsWithoutTrailingSlashData, RunsReadProjectRunsWithoutTrailingSlashResponse, RunsReadProjectRunsData, RunsReadProjectRunsResponse, RunsReadRunData, RunsReadRunResponse, RunsReadRunSummaryData, RunsReadRunSummaryResponse, UsersReadUserMeResponse, UtilsHealthCheckResponse, WaiversReadProjectWaiversData, WaiversReadProjectWaiversResponse, WaiversCreateProjectWaiverData, WaiversCreateProjectWaiverResponse, WaiversUpdateWaiverData, WaiversUpdateWaiverResponse, WaiversExpireWaiverData, WaiversExpireWaiverResponse, WorkbenchTemplateWorkbenchStatusResponse } from './types.gen';
+import type { ApiTokensListApiTokensResponse, ApiTokensCreateApiTokenData, ApiTokensCreateApiTokenResponse, ApiTokensRevokeApiTokenData, ApiTokensRevokeApiTokenResponse, AssetsUpdateAssetData, AssetsUpdateAssetResponse, AssetsRecalculateAssetData, AssetsRecalculateAssetResponse, AssetsReadProjectAssetsData, AssetsReadProjectAssetsResponse, AssetsCreateProjectAssetData, AssetsCreateProjectAssetResponse, AssetsImportProjectAssetsData, AssetsImportProjectAssetsResponse, FindingsReadFindingData, FindingsReadFindingResponse, FindingsExplainFindingData, FindingsExplainFindingResponse, FindingsReadProjectFindingsData, FindingsReadProjectFindingsResponse, GithubIssuesExportProjectGithubIssuesData, GithubIssuesExportProjectGithubIssuesResponse, GithubIssuesPreviewProjectGithubIssuesData, GithubIssuesPreviewProjectGithubIssuesResponse, ImportsImportProjectUploadData, ImportsImportProjectUploadResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, ProjectsReadProjectsResponse, ProjectsCreateProjectData, ProjectsCreateProjectResponse, ProjectsDeleteProjectData, ProjectsDeleteProjectResponse, ProjectsReadProjectData, ProjectsReadProjectResponse, ProjectsUpdateProjectData, ProjectsUpdateProjectResponse, ProjectsReadProjectAttackSummaryData, ProjectsReadProjectAttackSummaryResponse, ProjectsCompareProjectCvssOnlyData, ProjectsCompareProjectCvssOnlyResponse, ProjectsReadProjectGovernanceRollupsData, ProjectsReadProjectGovernanceRollupsResponse, ProjectsReadProjectSummaryData, ProjectsReadProjectSummaryResponse, ProvidersReadProviderStatusResponse, ReportsDownloadReportData, ReportsDownloadReportResponse, ReportsVerifyReportData, ReportsVerifyReportResponse, ReportsReadRunReportsData, ReportsReadRunReportsResponse, ReportsCreateRunReportData, ReportsCreateRunReportResponse, RunsReadProjectRunsWithoutTrailingSlashData, RunsReadProjectRunsWithoutTrailingSlashResponse, RunsReadProjectRunsData, RunsReadProjectRunsResponse, RunsReadRunData, RunsReadRunResponse, RunsReadRunSummaryData, RunsReadRunSummaryResponse, UsersReadUserMeResponse, UtilsHealthCheckResponse, WaiversReadProjectWaiversData, WaiversReadProjectWaiversResponse, WaiversCreateProjectWaiverData, WaiversCreateProjectWaiverResponse, WaiversUpdateWaiverData, WaiversUpdateWaiverResponse, WaiversExpireWaiverData, WaiversExpireWaiverResponse, WorkbenchTemplateWorkbenchStatusResponse } from './types.gen';
 
 export class ApiTokensService {
     /**
@@ -275,6 +275,56 @@ export class FindingsService {
                 cvss_min: data.cvssMin,
                 cvss_max: data.cvssMax
             },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+}
+
+export class GithubIssuesService {
+    /**
+     * Export Project Github Issues
+     * Dry-run or explicitly create GitHub issues for selected visible findings.
+     * @param data The data for the request.
+     * @param data.projectId
+     * @param data.requestBody
+     * @returns GitHubIssueExportPublic Successful Response
+     * @throws ApiError
+     */
+    public static exportProjectGithubIssues(data: GithubIssuesExportProjectGithubIssuesData): CancelablePromise<GithubIssuesExportProjectGithubIssuesResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/projects/{project_id}/github/issues/export',
+            path: {
+                project_id: data.projectId
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+
+    /**
+     * Preview Project Github Issues
+     * Prepare GitHub issue markdown for selected or top-ranked visible findings.
+     * @param data The data for the request.
+     * @param data.projectId
+     * @param data.requestBody
+     * @returns GitHubIssuePreviewPublic Successful Response
+     * @throws ApiError
+     */
+    public static previewProjectGithubIssues(data: GithubIssuesPreviewProjectGithubIssuesData): CancelablePromise<GithubIssuesPreviewProjectGithubIssuesResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/projects/{project_id}/github/issues/preview',
+            path: {
+                project_id: data.projectId
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
             errors: {
                 422: 'Validation Error'
             }

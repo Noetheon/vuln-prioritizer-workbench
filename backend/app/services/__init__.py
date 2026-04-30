@@ -12,6 +12,12 @@ from app.services.decisions import (
     build_finding_explanation_payload,
     build_project_summary_payload,
 )
+from app.services.github_issues import (
+    build_github_issue_preview_items,
+    create_github_issue,
+    github_export_token,
+    github_repository_path,
+)
 from app.services.governance import build_project_governance_rollups_payload
 from app.services.reports import (
     MarkdownProviderSnapshot,
@@ -45,8 +51,12 @@ __all__ = [
     "build_project_attack_summary_payload",
     "build_cvss_only_comparison_payload",
     "build_finding_explanation_payload",
+    "build_github_issue_preview_items",
     "build_project_governance_rollups_payload",
     "build_project_summary_payload",
+    "create_github_issue",
+    "github_export_token",
+    "github_repository_path",
     "render_analysis_result_json",
     "render_evidence_bundle_zip",
     "render_findings_csv",

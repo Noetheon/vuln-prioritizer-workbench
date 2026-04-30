@@ -481,6 +481,86 @@ export type FindingsPublic = {
 export type FindingStatus = 'open' | 'in_review' | 'remediating' | 'fixed' | 'accepted' | 'suppressed';
 
 /**
+ * Request payload for dry-run or explicit GitHub issue creation.
+ */
+export type GitHubIssueExportCreate = {
+    dry_run?: boolean;
+    finding_ids?: Array<(string)>;
+    include_evidence_refs?: boolean;
+    label_prefix?: string;
+    limit?: number;
+    milestone?: (number | null);
+    priority?: (FindingPriority | null);
+    repository: string;
+    token_env?: (string | null);
+};
+
+/**
+ * Collection response for GitHub issue export attempts.
+ */
+export type GitHubIssueExportPublic = {
+    count: number;
+    created_count?: number;
+    data?: Array<GitHubIssueExportRecord>;
+    dry_run: boolean;
+    skipped_count?: number;
+};
+
+/**
+ * GitHub issue export result for one prepared issue.
+ */
+export type GitHubIssueExportRecord = {
+    body: string;
+    cve_id: string;
+    duplicate_key: string;
+    evidence_refs?: Array<(string)>;
+    finding_id: string;
+    issue_number?: (number | null);
+    issue_url?: (string | null);
+    labels?: Array<(string)>;
+    milestone?: (number | null);
+    status: 'preview' | 'created' | 'skipped_duplicate';
+    title: string;
+};
+
+export type status = 'preview' | 'created' | 'skipped_duplicate';
+
+/**
+ * Request payload for preparing GitHub issue markdown.
+ */
+export type GitHubIssuePreviewCreate = {
+    finding_ids?: Array<(string)>;
+    include_evidence_refs?: boolean;
+    label_prefix?: string;
+    limit?: number;
+    milestone?: (number | null);
+    priority?: (FindingPriority | null);
+};
+
+/**
+ * Collection response for GitHub issue previews.
+ */
+export type GitHubIssuePreviewPublic = {
+    count: number;
+    data?: Array<GitHubIssuePreviewRecord>;
+    dry_run?: boolean;
+};
+
+/**
+ * Prepared GitHub issue markdown for one Workbench finding.
+ */
+export type GitHubIssuePreviewRecord = {
+    body: string;
+    cve_id: string;
+    duplicate_key: string;
+    evidence_refs?: Array<(string)>;
+    finding_id: string;
+    labels?: Array<(string)>;
+    milestone?: (number | null);
+    title: string;
+};
+
+/**
  * Aggregated finding risk for one owner, service, asset, or environment.
  */
 export type GovernanceRollupPublic = {
@@ -1050,6 +1130,20 @@ export type FindingsReadProjectFindingsData = {
 };
 
 export type FindingsReadProjectFindingsResponse = (FindingsPublic);
+
+export type GithubIssuesExportProjectGithubIssuesData = {
+    projectId: string;
+    requestBody: GitHubIssueExportCreate;
+};
+
+export type GithubIssuesExportProjectGithubIssuesResponse = (GitHubIssueExportPublic);
+
+export type GithubIssuesPreviewProjectGithubIssuesData = {
+    projectId: string;
+    requestBody: GitHubIssuePreviewCreate;
+};
+
+export type GithubIssuesPreviewProjectGithubIssuesResponse = (GitHubIssuePreviewPublic);
 
 export type ImportsImportProjectUploadData = {
     formData: Body_imports_import_project_upload;
