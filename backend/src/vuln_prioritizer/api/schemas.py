@@ -109,7 +109,7 @@ class GitHubIssuePreviewRequest(StrictModel):
 
 class GitHubIssueExportRequest(GitHubIssuePreviewRequest):
     repository: str
-    token_env: str = "GITHUB_TOKEN"
+    token_env: str | None = None
     dry_run: bool = True
 
 

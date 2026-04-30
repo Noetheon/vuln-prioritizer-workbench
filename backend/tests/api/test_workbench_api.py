@@ -1990,8 +1990,21 @@ def test_workbench_api_tokens_config_provider_jobs_and_github_preview(
         posted_payloads.append(kwargs["json"])
         return FakeGitHubResponse()
 
-    monkeypatch.setenv("GITHUB_TOKEN", "ghp_test")
     monkeypatch.setattr("vuln_prioritizer.api.workbench_github.requests.post", fake_post)
+    implicit_token_export = client.post(
+        f"/api/projects/{project['id']}/github/issues/export",
+        json={
+            "repository": "acme/workbench-triage",
+            "limit": 1,
+            "priority": "Critical",
+            "dry_run": False,
+        },
+        headers=headers,
+    )
+    assert implicit_token_export.status_code == 422
+    assert "token_env is required when dry_run is false" in implicit_token_export.text
+
+    monkeypatch.setenv("VPW_GITHUB_TOKEN", "ghp_test")
     exported = client.post(
         f"/api/projects/{project['id']}/github/issues/export",
         json={
@@ -1999,6 +2012,7 @@ def test_workbench_api_tokens_config_provider_jobs_and_github_preview(
             "limit": 1,
             "priority": "Critical",
             "dry_run": False,
+            "token_env": "VPW_GITHUB_TOKEN",
         },
         headers=headers,
     )
@@ -2016,6 +2030,7 @@ def test_workbench_api_tokens_config_provider_jobs_and_github_preview(
             "limit": 1,
             "priority": "Critical",
             "dry_run": False,
+            "token_env": "VPW_GITHUB_TOKEN",
         },
         headers=headers,
     )
