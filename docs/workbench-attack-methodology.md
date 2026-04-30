@@ -14,7 +14,14 @@ Workbench ATT&CK context uses CTID Mappings Explorer JSON as the canonical sourc
 - CTID JSON is the only canonical source for Workbench CVE-to-ATT&CK mapping decisions.
 - Local CSV mapping remains legacy CLI compatibility and is not the Workbench source of record.
 - Imported technique metadata enriches names, tactics, URLs, STIX spec/version metadata, and deprecation state; it does not create new CVE mappings.
-- Pinned ATT&CK STIX bundles are technique metadata snapshots only. They are not CVE-to-technique mapping sources.
+- Pinned ATT&CK STIX bundles are versioned catalog snapshots for tactics,
+  techniques, mitigations, and mitigation relationships. They are not
+  CVE-to-technique mapping sources.
+- ATT&CK STIX snapshot imports persist `attack_version`, normalized domain,
+  STIX spec version, bundle SHA256, object counts, revoked/deprecated state, and
+  ProviderSnapshot metadata. Mapping validation can check CTID or curated
+  technique IDs against the imported catalog, but it still does not infer new
+  mappings.
 - CTID-enabled imports record source provenance in run and finding context: source kind, source path, source checksum, ATT&CK version/domain metadata when available, and mapped-CVE counts.
 - CVEs absent from the selected CTID source are stored as unmapped. Enabling `ctid-json` without the required mapping file fails import validation instead of falling back to inferred mappings.
 

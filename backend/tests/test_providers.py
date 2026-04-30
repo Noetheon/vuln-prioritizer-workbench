@@ -22,6 +22,7 @@ from vuln_prioritizer.models import (
 )
 from vuln_prioritizer.providers.attack import AttackProvider
 from vuln_prioritizer.providers.attack_metadata import AttackMetadataProvider
+from vuln_prioritizer.providers.attack_stix import AttackStixProvider
 from vuln_prioritizer.providers.ctid_mappings import CtidMappingsProvider
 from vuln_prioritizer.providers.curated_attack_mappings import (
     CuratedAttackMappingProvider,
@@ -1394,6 +1395,39 @@ def test_attack_metadata_provider_loads_stix_bundle_fixture() -> None:
     assert results["T1190"].tactics == ["initial-access"]
     assert results["T9999"].revoked is True
     assert results["T9999"].deprecated is True
+
+
+def test_attack_stix_provider_loads_versioned_snapshot_catalog() -> None:
+    fixture = DATA_ROOT / "attack" / "attack_stix_enterprise_16.1_subset.json"
+    payload = json.loads(fixture.read_text(encoding="utf-8"))
+
+    snapshot = AttackStixProvider().load_snapshot_payload(
+        payload,
+        source_path=fixture,
+        raw_content=fixture.read_bytes(),
+    )
+
+    assert snapshot.warnings == []
+    assert snapshot.metadata["attack_version"] == "16.1"
+    assert snapshot.metadata["domain"] == "enterprise"
+    assert snapshot.metadata["stix_spec_version"] == "2.1"
+    assert snapshot.object_counts == {
+        "attack-pattern": 3,
+        "course-of-action": 2,
+        "relationship": 1,
+        "x-mitre-collection": 1,
+        "x-mitre-tactic": 2,
+    }
+    assert snapshot.tactics["TA0001"].short_name == "initial-access"
+    assert snapshot.techniques["T1190"].tactic_ids == ["TA0001"]
+    assert snapshot.techniques["T1190"].tactic_short_names == ["initial-access"]
+    assert snapshot.techniques["T9999"].revoked is True
+    assert snapshot.techniques["T9999"].deprecated is True
+    assert snapshot.mitigations["M1051"].name == "Update Software"
+    assert snapshot.mitigations["T9998"].name == "Deprecated Legacy Mitigation"
+    assert snapshot.mitigations["T9998"].deprecated is True
+    assert snapshot.mitigation_relationships[0].mitigation_id == "M1051"
+    assert snapshot.mitigation_relationships[0].technique_id == "T1190"
 
 
 def test_attack_provider_ctid_json_enriches_structured_attack_data() -> None:

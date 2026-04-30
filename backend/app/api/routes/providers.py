@@ -23,6 +23,7 @@ from app.repositories import RunRepository
 router = APIRouter(prefix="/providers", tags=["providers"])
 
 PROVIDER_SOURCES = ("nvd", "epss", "kev")
+ATTACK_STIX_SOURCE = "attack_stix"
 NO_PROVIDER_SNAPSHOT_WARNING = "No provider snapshot has been recorded yet."
 
 
@@ -124,27 +125,35 @@ def _source_statuses(
         "kev": snapshot.kev_catalog_version if snapshot is not None else None,
     }
     metadata = _snapshot_metadata(snapshot)
+    source_hashes = _dict_value(snapshot.source_hashes_json) if snapshot is not None else {}
+    source_names = _source_names(selected_sources, source_hashes)
+    values[ATTACK_STIX_SOURCE] = _string_or_none(metadata.get("attack_version"))
     stale_sources = set(_string_list(metadata.get("stale_sources")))
     cache_age = _cache_age_seconds(snapshot.created_at if snapshot is not None else None)
     details = {
         "nvd": "NVD last modified timestamp from the latest stored snapshot.",
         "epss": "EPSS date from the latest stored snapshot.",
         "kev": "Latest KEV date_added value from the latest stored snapshot.",
+        ATTACK_STIX_SOURCE: "ATT&CK STIX attack_version from the latest stored snapshot.",
     }
     selected = set(selected_sources)
     return [
         ProviderSourceStatusPublic(
             name=name,
             selected=name in selected,
-            available=values[name] is not None,
+            available=_source_available(name, values=values, source_hashes=source_hashes),
             stale=name in stale_sources,
-            value=values[name],
-            last_sync=values[name],
+            value=values.get(name),
+            last_sync=(
+                _string_or_none(metadata.get("generated_at"))
+                if name == ATTACK_STIX_SOURCE
+                else values.get(name)
+            ),
             last_error=last_error,
             cache_age_seconds=cache_age,
-            detail=details[name],
+            detail=details.get(name, f"{name} status from the latest stored snapshot."),
         )
-        for name in PROVIDER_SOURCES
+        for name in source_names
     ]
 
 
@@ -190,6 +199,23 @@ def _ordered_sources(values: dict[str, Any]) -> list[str]:
     known_sources = [source for source in PROVIDER_SOURCES if source in values]
     extra_sources = sorted(source for source in values if source not in PROVIDER_SOURCES)
     return [*known_sources, *extra_sources]
+
+
+def _source_names(selected_sources: list[str], source_hashes: dict[str, Any]) -> list[str]:
+    source_names = list(PROVIDER_SOURCES)
+    for source in [*_ordered_sources(source_hashes), *selected_sources]:
+        if source not in source_names:
+            source_names.append(source)
+    return source_names
+
+
+def _source_available(
+    name: str,
+    *,
+    values: dict[str, str | None],
+    source_hashes: dict[str, Any],
+) -> bool:
+    return values.get(name) is not None or _string_or_none(source_hashes.get(name)) is not None
 
 
 def _snapshot_metadata(snapshot: ProviderSnapshot | None) -> dict[str, Any]:
