@@ -120,7 +120,32 @@ vuln-prioritizer analyze \
   --fail-on high
 ```
 
-GitHub Code Scanning accepts SARIF 2.1.0 uploads. The current reporter emits SARIF `2.1.0` and is suitable for upload via `github/codeql-action/upload-sarif`.
+GitHub Code Scanning accepts SARIF 2.1.0 uploads. The current reporter emits
+SARIF `2.1.0` and is suitable for upload via
+`github/codeql-action/upload-sarif`.
+
+Current mapping:
+
+- Each result uses a CVE-addressable `ruleId` such as
+  `vuln-prioritizer/cve-2024-3094`.
+- Each result declares `properties.cve`, `properties.references`, `cve_url`,
+  priority, EPSS/CVSS/KEV flags, data-quality flags, and governance context.
+- Each declared rule includes `defaultConfiguration.level`,
+  `properties.security-severity`, priority tags, and `helpUri` pointing to the
+  primary CVE reference.
+- `report validate-sarif` checks the local upload contract before CI upload:
+  SARIF `2.1.0`, declared rules, result locations, fingerprints, CVE metadata,
+  and references. This is a deterministic local gate, not a replacement for the
+  final GitHub Code Scanning upload response.
+
+Limitations:
+
+- SARIF output prioritizes already-supplied CVEs; it is not a source-code,
+  container, host, or exploit scanner.
+- The local validator intentionally enforces the project contract plus a compact
+  SARIF shape rather than vendoring the complete external SARIF schema.
+- GitHub may still reject uploads for repository policy, permissions, duplicate
+  category handling, or platform-specific constraints outside this local check.
 
 ### PR Comment Reporting
 
@@ -192,6 +217,9 @@ The verifier:
 Current Workbench contract:
 
 - `POST /api/analysis-runs/{run_id}/reports` creates a run artifact in one of the supported Workbench formats: `json`, `markdown`, `html`, `csv`, or `sarif`.
+- `POST /api/v1/runs/{run_id}/reports` creates the same template Workbench
+  report family for completed visible template runs, including SARIF as
+  `results.sarif`.
 - `GET /api/reports/{report_id}/download` downloads the server-owned artifact after path and checksum validation.
 - The Workbench web UI exposes the same report creation flow from `/analysis-runs/{run_id}/reports`.
 - CSV report cells that could be interpreted as spreadsheet formulas are escaped before output.
