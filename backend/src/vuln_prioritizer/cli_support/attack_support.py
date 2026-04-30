@@ -24,12 +24,14 @@ def validate_attack_inputs_or_exit(
     attack_source: str,
     attack_mapping_file: Path,
     attack_technique_metadata_file: Path | None,
+    comparison_mapping_file: Path | None = None,
 ) -> dict[str, Any]:
     try:
         return validate_attack_inputs(
             attack_source=attack_source,
             attack_mapping_file=attack_mapping_file,
             attack_technique_metadata_file=attack_technique_metadata_file,
+            comparison_mapping_file=comparison_mapping_file,
         )
     except (OSError, ValidationError, ValueError) as exc:
         exit_input_validation(str(exc))
@@ -41,6 +43,7 @@ def validate_attack_inputs(
     attack_source: str,
     attack_mapping_file: Path,
     attack_technique_metadata_file: Path | None,
+    comparison_mapping_file: Path | None = None,
 ) -> dict[str, Any]:
     if attack_source == AttackSource.none.value:
         raise ValueError(
@@ -60,8 +63,28 @@ def validate_attack_inputs(
     quality_report: dict[str, Any] | None = None
 
     if attack_source == AttackSource.ctid_json.value:
-        mappings_by_cve, mapping_metadata, mapping_warnings = CtidMappingsProvider().load(
+        ctid_provider = CtidMappingsProvider()
+        mappings_by_cve, mapping_metadata, mapping_warnings = ctid_provider.load(
             attack_mapping_file
+        )
+        comparison_mappings_by_cve = None
+        comparison_metadata = None
+        if comparison_mapping_file is not None:
+            comparison_bundle = CuratedAttackMappingProvider().load(comparison_mapping_file)
+            comparison_mappings_by_cve = comparison_bundle.mappings_by_cve
+            comparison_metadata = comparison_bundle.metadata
+            warnings.extend(comparison_bundle.warnings)
+        quality_report = ctid_provider.build_quality_report(
+            mappings_by_cve,
+            mapping_metadata,
+            comparison_mappings_by_cve=comparison_mappings_by_cve,
+            comparison_source=(
+                comparison_metadata.get("metadata_source") if comparison_metadata else None
+            ),
+            comparison_file=str(comparison_mapping_file) if comparison_mapping_file else None,
+            comparison_file_sha256=(
+                comparison_metadata.get("mapping_file_sha256") if comparison_metadata else None
+            ),
         )
         warnings.extend(mapping_warnings)
         mapping_count = sum(len(items) for items in mappings_by_cve.values())
@@ -152,6 +175,8 @@ def validate_attack_inputs(
     elif attack_source == AttackSource.local_curated.value:
         bundle = CuratedAttackMappingProvider().load(attack_mapping_file)
         warnings.extend(bundle.warnings)
+        if comparison_mapping_file is not None:
+            warnings.append("Comparison mapping file is only used when --attack-source ctid-json.")
         mapping_count = sum(len(items) for items in bundle.mappings_by_cve.values())
         unique_cves = len(bundle.mappings_by_cve)
         technique_count = len(bundle.techniques_by_id)

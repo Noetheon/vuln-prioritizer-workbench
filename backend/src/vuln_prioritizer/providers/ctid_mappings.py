@@ -4,10 +4,19 @@ from __future__ import annotations
 
 import hashlib
 import json
+from collections import Counter
 from pathlib import Path
+from typing import Final
 
-from vuln_prioritizer.models import AttackMapping
+from vuln_prioritizer.attack_sources import ATTACK_SOURCE_CTID_MAPPINGS_EXPLORER
+from vuln_prioritizer.models import AttackConfidence, AttackMapping, AttackReviewStatus
 from vuln_prioritizer.utils import normalize_cve_id
+
+CTID_MAPPING_CONFIDENCE: Final[AttackConfidence] = "high"
+CTID_MAPPING_REVIEW_STATUS: Final[AttackReviewStatus] = "reviewed"
+CTID_MAPPING_DEFENSIVE_NOTE: Final = (
+    "Source-backed CTID Mappings Explorer mapping; use as defensive ATT&CK context only."
+)
 
 
 class CtidMappingsProvider:
@@ -98,6 +107,10 @@ class CtidMappingsProvider:
                         raw_object.get("capability_description")
                     ),
                     comments=_normalize_optional_string(raw_object.get("comments")),
+                    source=ATTACK_SOURCE_CTID_MAPPINGS_EXPLORER,
+                    confidence=CTID_MAPPING_CONFIDENCE,
+                    review_status=CTID_MAPPING_REVIEW_STATUS,
+                    defensive_note=CTID_MAPPING_DEFENSIVE_NOTE,
                     references=_normalize_references(raw_object.get("references")),
                 )
             )
@@ -119,6 +132,134 @@ class CtidMappingsProvider:
             "contact": _normalize_optional_string(metadata.get("contact")),
         }
         return grouped, normalized_metadata, warnings
+
+    def build_quality_report(
+        self,
+        mappings_by_cve: dict[str, list[AttackMapping]],
+        metadata: dict[str, str | None],
+        *,
+        comparison_mappings_by_cve: dict[str, list[AttackMapping]] | None = None,
+        comparison_source: str | None = None,
+        comparison_file: str | None = None,
+        comparison_file_sha256: str | None = None,
+    ) -> dict[str, object]:
+        """Build a deterministic CTID mapping quality/provenance summary."""
+        mappings = [mapping for items in mappings_by_cve.values() for mapping in items]
+        conflict_rows = _find_ctid_mapping_conflicts(mappings_by_cve)
+        local_ctid_conflicts = _find_local_ctid_conflicts(
+            mappings_by_cve,
+            comparison_mappings_by_cve or {},
+        )
+        confidence_counts = Counter(mapping.confidence or "unknown" for mapping in mappings)
+        review_status_counts = Counter(
+            mapping.review_status or "unreviewed" for mapping in mappings
+        )
+
+        return {
+            "schema_version": "1.0.0",
+            "source": ATTACK_SOURCE_CTID_MAPPINGS_EXPLORER,
+            "mapping_file": metadata.get("mapping_file"),
+            "mapping_file_sha256": metadata.get("mapping_file_sha256"),
+            "mapping_framework": metadata.get("mapping_framework"),
+            "mapping_framework_version": metadata.get("mapping_framework_version"),
+            "mapping_created_at": metadata.get("creation_date"),
+            "mapping_updated_at": metadata.get("last_update"),
+            "mapping_count": len(mappings),
+            "unique_cves": len(mappings_by_cve),
+            "unique_techniques": len({mapping.attack_object_id for mapping in mappings}),
+            "source_counts": dict(
+                sorted(Counter(mapping.source or "unknown" for mapping in mappings).items())
+            ),
+            "confidence_counts": dict(sorted(confidence_counts.items())),
+            "review_status_counts": dict(sorted(review_status_counts.items())),
+            "mapping_type_counts": dict(
+                sorted(Counter(mapping.mapping_type or "unknown" for mapping in mappings).items())
+            ),
+            "low_confidence_count": confidence_counts.get("low", 0),
+            "conflict_count": len(conflict_rows),
+            "conflicts": conflict_rows,
+            "conflict_policy": (
+                "ctid-json and local-curated sources are explicit alternatives; mappings are "
+                "not silently merged. Divergent duplicate CTID contexts are surfaced here."
+            ),
+            "comparison_source": comparison_source,
+            "comparison_file": comparison_file,
+            "comparison_file_sha256": comparison_file_sha256,
+            "local_ctid_conflict_count": len(local_ctid_conflicts),
+            "local_ctid_conflicts": local_ctid_conflicts,
+            "safety_review": {
+                "source_backed_ctid_context": True,
+                "heuristic_or_llm_sources_rejected": True,
+                "unmapped_cves_remain_unmapped": True,
+            },
+        }
+
+
+def _find_ctid_mapping_conflicts(
+    mappings_by_cve: dict[str, list[AttackMapping]],
+) -> list[dict[str, object]]:
+    conflicts: list[dict[str, object]] = []
+    for cve_id, mappings in sorted(mappings_by_cve.items()):
+        contexts_by_technique: dict[str, set[tuple[str, str]]] = {}
+        for mapping in mappings:
+            contexts_by_technique.setdefault(mapping.attack_object_id, set()).add(
+                (
+                    mapping.mapping_type or "unknown",
+                    mapping.capability_group or "unknown",
+                )
+            )
+
+        for technique_id, contexts in sorted(contexts_by_technique.items()):
+            if len(contexts) <= 1:
+                continue
+            conflicts.append(
+                {
+                    "cve_id": cve_id,
+                    "technique_id": technique_id,
+                    "contexts": [
+                        {
+                            "mapping_type": mapping_type,
+                            "capability_group": capability_group,
+                        }
+                        for mapping_type, capability_group in sorted(contexts)
+                    ],
+                }
+            )
+    return conflicts
+
+
+def _find_local_ctid_conflicts(
+    ctid_mappings_by_cve: dict[str, list[AttackMapping]],
+    local_mappings_by_cve: dict[str, list[AttackMapping]],
+) -> list[dict[str, object]]:
+    conflicts: list[dict[str, object]] = []
+    for cve_id in sorted(set(ctid_mappings_by_cve).intersection(local_mappings_by_cve)):
+        ctid_mappings = ctid_mappings_by_cve[cve_id]
+        local_mappings = local_mappings_by_cve[cve_id]
+        ctid_techniques = {mapping.attack_object_id for mapping in ctid_mappings}
+        local_techniques = {mapping.attack_object_id for mapping in local_mappings}
+        shared_techniques = ctid_techniques.intersection(local_techniques)
+        ctid_types = _mapping_type_set(ctid_mappings)
+        local_types = _mapping_type_set(local_mappings)
+
+        if ctid_techniques == local_techniques and ctid_types == local_types:
+            continue
+
+        conflicts.append(
+            {
+                "cve_id": cve_id,
+                "shared_techniques": sorted(shared_techniques),
+                "ctid_only_techniques": sorted(ctid_techniques - local_techniques),
+                "local_only_techniques": sorted(local_techniques - ctid_techniques),
+                "ctid_mapping_types": sorted(ctid_types),
+                "local_mapping_types": sorted(local_types),
+            }
+        )
+    return conflicts
+
+
+def _mapping_type_set(mappings: list[AttackMapping]) -> set[str]:
+    return {mapping.mapping_type or "unknown" for mapping in mappings}
 
 
 def _normalize_optional_string(value: object) -> str | None:

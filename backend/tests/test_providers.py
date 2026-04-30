@@ -1476,6 +1476,49 @@ def test_ctid_provider_loads_official_subset_fixture() -> None:
     assert metadata["domain"] == "enterprise"
     assert len(results["CVE-2023-34362"]) == 7
     assert results["CVE-2023-34362"][0].mapping_type == "exploitation_technique"
+    assert results["CVE-2023-34362"][0].source == "ctid-mappings-explorer"
+    assert results["CVE-2023-34362"][0].confidence == "high"
+    assert results["CVE-2023-34362"][0].review_status == "reviewed"
+    assert results["CVE-2023-34362"][0].defensive_note
+
+    quality_report = provider.build_quality_report(results, metadata)
+    assert quality_report["mapping_count"] == 27
+    assert quality_report["unique_cves"] == 3
+    assert quality_report["unique_techniques"] == 22
+    assert quality_report["source_counts"] == {"ctid-mappings-explorer": 27}
+    assert quality_report["confidence_counts"] == {"high": 27}
+    assert quality_report["review_status_counts"] == {"reviewed": 27}
+    assert quality_report["mapping_type_counts"] == {
+        "exploitation_technique": 4,
+        "primary_impact": 5,
+        "secondary_impact": 18,
+    }
+    assert quality_report["conflict_count"] == 2
+    assert quality_report["conflicts"][0]["cve_id"] == "CVE-2020-1472"
+
+    local_bundle = CuratedAttackMappingProvider().load(DATA_ROOT / "cve_attack_mappings.yml")
+    comparison_report = provider.build_quality_report(
+        results,
+        metadata,
+        comparison_mappings_by_cve=local_bundle.mappings_by_cve,
+        comparison_source=local_bundle.metadata["metadata_source"],
+        comparison_file=local_bundle.metadata["mapping_file"],
+        comparison_file_sha256=local_bundle.metadata["mapping_file_sha256"],
+    )
+    assert comparison_report["comparison_source"] == "local-curated"
+    assert comparison_report["local_ctid_conflict_count"] == 1
+    assert comparison_report["local_ctid_conflicts"][0] == {
+        "cve_id": "CVE-2023-34362",
+        "shared_techniques": ["T1190"],
+        "ctid_only_techniques": ["T1005", "T1059", "T1082", "T1105", "T1136", "T1531"],
+        "local_only_techniques": [],
+        "ctid_mapping_types": [
+            "exploitation_technique",
+            "primary_impact",
+            "secondary_impact",
+        ],
+        "local_mapping_types": ["exploitation"],
+    }
 
 
 def test_attack_metadata_provider_loads_subset_fixture() -> None:
@@ -1571,6 +1614,9 @@ def test_attack_provider_ctid_json_enriches_structured_attack_data() -> None:
     assert metadata["mapping_updated_at"] == "08/28/2025"
     assert results["CVE-2023-34362"].mapped is True
     assert results["CVE-2023-34362"].attack_relevance == "High"
+    assert results["CVE-2023-34362"].mappings[0].source == "ctid-mappings-explorer"
+    assert results["CVE-2023-34362"].mappings[0].confidence == "high"
+    assert results["CVE-2023-34362"].mappings[0].review_status == "reviewed"
     assert results["CVE-2023-34362"].mapping_types == [
         "exploitation_technique",
         "primary_impact",

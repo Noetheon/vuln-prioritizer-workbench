@@ -116,7 +116,7 @@
     "quality_report": {
       "type": "object",
       "additionalProperties": true,
-      "description": "Present for --attack-source local-curated. Contains mapping quality, review status, confidence, and safety-review counts."
+      "description": "Present for --attack-source ctid-json and local-curated. Contains mapping quality, review status, confidence, conflict, and safety-review counts."
     },
     "low_confidence_count": {
       "type": "integer",
