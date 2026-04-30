@@ -111,6 +111,7 @@ nav:
       - VPW-070 HTML Rendering and Security Headers: evidence/vpw-070-html-security-xss.md
       - VPW-073 User Documentation: evidence/vpw-073-user-documentation.md
       - VPW-074 CI Gates: evidence/vpw-074-ci-gates.md
+      - VPW-075 Docker Compose Quickstart: evidence/vpw-075-docker-compose-quickstart.md
       - Historical Evidence Archive: evidence.md
       - Current State Audit: evidence/current_state_audit.md
       - V0.3 Submission Checklist: evidence/final_submission_checklist.md
