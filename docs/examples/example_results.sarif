@@ -85,6 +85,7 @@
               "priority.high.cvss",
               "priority.medium.cvss",
               "priority.medium.epss",
+              "governance.vex_status",
               "operational.score"
             ],
             "in_kev": true,
@@ -187,6 +188,7 @@
               "priority.medium.cvss",
               "priority.medium.epss",
               "asset.context",
+              "governance.vex_status",
               "operational.score"
             ],
             "in_kev": false,

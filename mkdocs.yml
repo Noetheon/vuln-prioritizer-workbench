@@ -6,6 +6,7 @@ theme:
   name: mkdocs
 nav:
   - Home: index.md
+  - User Documentation Guide: user_documentation.md
   - Concept: concept.md
   - Executive Summary: executive_summary.md
   - Methodology: methodology.md
@@ -108,6 +109,7 @@ nav:
       - VPW-068 Governance Reports and Evidence Bundle: evidence/vpw-068-governance-report-evidence-bundle.md
       - VPW-069 Upload Security Hardening: evidence/vpw-069-upload-security-hardening.md
       - VPW-070 HTML Rendering and Security Headers: evidence/vpw-070-html-security-xss.md
+      - VPW-073 User Documentation: evidence/vpw-073-user-documentation.md
       - Historical Evidence Archive: evidence.md
       - Current State Audit: evidence/current_state_audit.md
       - V0.3 Submission Checklist: evidence/final_submission_checklist.md

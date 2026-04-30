@@ -297,6 +297,11 @@ running the Workbench:
 
 ## Quickstart
 
+For a complete external-user documentation path across install, Docker,
+Workbench demo, architecture, data model, imports, providers, scoring, reports,
+ATT&CK, security, and known limitations, start with
+[docs/user_documentation.md](docs/user_documentation.md).
+
 ### 1. Fastest Public-Install Analyze Run
 
 ```bash
@@ -491,9 +496,13 @@ vuln-prioritizer --no-config analyze --input cves.txt
 
 Start here for public CLI usage and the local Workbench app path:
 
+- [docs/user_documentation.md](docs/user_documentation.md)
 - [docs/use_cases.md](docs/use_cases.md)
 - [docs/playbooks.md](docs/playbooks.md)
 - [docs/support_matrix.md](docs/support_matrix.md)
+- [docs/architecture/index.md](docs/architecture/index.md)
+- [docs/architecture/core-workbench-schema.md](docs/architecture/core-workbench-schema.md)
+- [docs/architecture/analysis-run-provider-schema.md](docs/architecture/analysis-run-provider-schema.md)
 - [docs/benchmarking.md](docs/benchmarking.md)
 - [docs/contracts.md](docs/contracts.md)
 - [docs/methodology.md](docs/methodology.md)
