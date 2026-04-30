@@ -27,6 +27,7 @@ from vuln_prioritizer.api.workbench_uploads import (
 )
 from vuln_prioritizer.api.workbench_waivers import (
     _count_matching_waiver_findings,
+    _expire_waiver,
     _sync_project_waivers,
     _validated_waiver_values,
     _waiver_payload,
@@ -38,6 +39,7 @@ __all__ = [
     "_coverage_gap_payload",
     "_create_provider_update_job_record",
     "_detection_control_payload",
+    "_expire_waiver",
     "_filter_findings",
     "_parse_detection_control_rows",
     "_provider_status_payload",

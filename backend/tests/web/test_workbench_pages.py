@@ -587,6 +587,16 @@ def test_web_assets_waivers_and_coverage_pages(tmp_path: Path) -> None:
     waivers = client.get(f"/projects/{project['id']}/waivers")
     assert "risk-ui-reviewed" in waivers.text
     assert "active" in waivers.text
+    assert "Expire" in waivers.text
+    waiver_expire = client.post(
+        f"/web/waivers/{waiver_payload['id']}/expire",
+        data={"csrf_token": waiver_token},
+        follow_redirects=False,
+    )
+    assert waiver_expire.status_code == 303
+    waivers = client.get(f"/projects/{project['id']}/waivers")
+    assert "expired" in waivers.text
+    assert "badge expired" in waivers.text
 
     coverage = client.get(f"/projects/{project['id']}/coverage")
     assert coverage.status_code == 200

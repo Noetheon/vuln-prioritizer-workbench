@@ -30,6 +30,7 @@ from vuln_prioritizer.api.workbench_uploads import (
 )
 from vuln_prioritizer.api.workbench_waivers import (
     _count_matching_waiver_findings,
+    _expire_waiver,
     _strip_or_none,
     _sync_project_waivers,
     _validated_waiver_values,
@@ -367,6 +368,29 @@ def update_project_waiver(
     )
     session.commit()
     return _waiver_payload(updated, matched_findings=matched.get(updated.id, 0))
+
+
+@router.post("/waivers/{waiver_id}/expire", response_model=WaiverResponse)
+def expire_project_waiver(
+    waiver_id: str,
+    session: Annotated[Session, Depends(get_db_session)],
+) -> dict[str, Any]:
+    repo = WorkbenchRepository(session)
+    waiver = repo.get_waiver(waiver_id)
+    if waiver is None:
+        raise HTTPException(status_code=404, detail="Waiver not found.")
+    expired, matched = _expire_waiver(repo, waiver)
+    repo.create_audit_event(
+        project_id=expired.project_id,
+        event_type="waiver.expired",
+        target_type="waiver",
+        target_id=expired.id,
+        actor=expired.owner,
+        message="Waiver was expired.",
+        metadata_json={"matched_findings": matched.get(expired.id, 0)},
+    )
+    session.commit()
+    return _waiver_payload(expired, matched_findings=matched.get(expired.id, 0))
 
 
 @router.delete("/waivers/{waiver_id}")

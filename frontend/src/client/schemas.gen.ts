@@ -3300,6 +3300,468 @@ export const ValidationErrorSchema = {
     type: 'object'
 } as const;
 
+export const WaiverCreateSchema = {
+    description: 'Create payload for a project waiver.',
+    properties: {
+        approval_ref: {
+            anyOf: [
+                {
+                    maxLength: 300,
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Approval Ref'
+        },
+        asset_id: {
+            anyOf: [
+                {
+                    format: 'uuid',
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Asset Id'
+        },
+        asset_key: {
+            anyOf: [
+                {
+                    maxLength: 200,
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Asset Key'
+        },
+        cve_id: {
+            anyOf: [
+                {
+                    maxLength: 64,
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Cve Id'
+        },
+        expires_at: {
+            anyOf: [
+                {
+                    format: 'date',
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Expires At'
+        },
+        finding_id: {
+            anyOf: [
+                {
+                    format: 'uuid',
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Finding Id'
+        },
+        owner: {
+            anyOf: [
+                {
+                    maxLength: 200,
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Owner'
+        },
+        reason: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Reason'
+        },
+        review_at: {
+            anyOf: [
+                {
+                    format: 'date',
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Review At'
+        },
+        service: {
+            anyOf: [
+                {
+                    maxLength: 200,
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Service'
+        },
+        ticket_url: {
+            anyOf: [
+                {
+                    maxLength: 1000,
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Ticket Url'
+        }
+    },
+    title: 'WaiverCreate',
+    type: 'object'
+} as const;
+
+export const WaiverPublicSchema = {
+    description: 'Public waiver response with derived lifecycle and match context.',
+    properties: {
+        approval_ref: {
+            anyOf: [
+                {
+                    maxLength: 300,
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Approval Ref'
+        },
+        asset_id: {
+            anyOf: [
+                {
+                    format: 'uuid',
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Asset Id'
+        },
+        asset_key: {
+            anyOf: [
+                {
+                    maxLength: 200,
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Asset Key'
+        },
+        created_at: {
+            format: 'date-time',
+            title: 'Created At',
+            type: 'string'
+        },
+        cve_id: {
+            anyOf: [
+                {
+                    maxLength: 64,
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Cve Id'
+        },
+        days_remaining: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Days Remaining'
+        },
+        expires_at: {
+            format: 'date',
+            title: 'Expires At',
+            type: 'string'
+        },
+        finding_id: {
+            anyOf: [
+                {
+                    format: 'uuid',
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Finding Id'
+        },
+        id: {
+            format: 'uuid',
+            title: 'Id',
+            type: 'string'
+        },
+        matched_findings: {
+            default: 0,
+            title: 'Matched Findings',
+            type: 'integer'
+        },
+        owner: {
+            maxLength: 200,
+            minLength: 1,
+            title: 'Owner',
+            type: 'string'
+        },
+        project_id: {
+            format: 'uuid',
+            title: 'Project Id',
+            type: 'string'
+        },
+        reason: {
+            minLength: 1,
+            title: 'Reason',
+            type: 'string'
+        },
+        review_at: {
+            anyOf: [
+                {
+                    format: 'date',
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Review At'
+        },
+        service: {
+            anyOf: [
+                {
+                    maxLength: 200,
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Service'
+        },
+        status: {
+            title: 'Status',
+            type: 'string'
+        },
+        ticket_url: {
+            anyOf: [
+                {
+                    maxLength: 1000,
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Ticket Url'
+        },
+        updated_at: {
+            format: 'date-time',
+            title: 'Updated At',
+            type: 'string'
+        }
+    },
+    required: ['owner', 'reason', 'expires_at', 'id', 'project_id', 'created_at', 'updated_at', 'status'],
+    title: 'WaiverPublic',
+    type: 'object'
+} as const;
+
+export const WaiverUpdateSchema = {
+    description: `Update payload for a waiver.
+
+Updates replace the waiver scope and governance fields so clients can move a
+waiver from one scope to another with one request.`,
+    properties: {
+        approval_ref: {
+            anyOf: [
+                {
+                    maxLength: 300,
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Approval Ref'
+        },
+        asset_id: {
+            anyOf: [
+                {
+                    format: 'uuid',
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Asset Id'
+        },
+        asset_key: {
+            anyOf: [
+                {
+                    maxLength: 200,
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Asset Key'
+        },
+        cve_id: {
+            anyOf: [
+                {
+                    maxLength: 64,
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Cve Id'
+        },
+        expires_at: {
+            anyOf: [
+                {
+                    format: 'date',
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Expires At'
+        },
+        finding_id: {
+            anyOf: [
+                {
+                    format: 'uuid',
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Finding Id'
+        },
+        owner: {
+            anyOf: [
+                {
+                    maxLength: 200,
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Owner'
+        },
+        reason: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Reason'
+        },
+        review_at: {
+            anyOf: [
+                {
+                    format: 'date',
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Review At'
+        },
+        service: {
+            anyOf: [
+                {
+                    maxLength: 200,
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Service'
+        },
+        ticket_url: {
+            anyOf: [
+                {
+                    maxLength: 1000,
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Ticket Url'
+        }
+    },
+    title: 'WaiverUpdate',
+    type: 'object'
+} as const;
+
+export const WaiversPublicSchema = {
+    description: 'Collection response for project waivers.',
+    properties: {
+        count: {
+            title: 'Count',
+            type: 'integer'
+        },
+        data: {
+            items: {
+                '$ref': '#/components/schemas/WaiverPublic'
+            },
+            title: 'Data',
+            type: 'array'
+        }
+    },
+    required: ['data', 'count'],
+    title: 'WaiversPublic',
+    type: 'object'
+} as const;
+
 export const WorkbenchStatusSchema = {
     description: 'Status response returned by the template Workbench adapter.',
     properties: {

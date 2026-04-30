@@ -982,6 +982,116 @@ h2 {
   padding: 18px;
 }
 
+.waivers-workflow {
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+}
+
+.waiver-toolbar,
+.waiver-create-panel,
+.waiver-register,
+.accepted-risk-panel {
+  border: 1px solid #edf1ef;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.waiver-toolbar {
+  display: grid;
+  grid-template-columns: minmax(240px, 1.2fr) repeat(3, minmax(140px, 0.6fr));
+  gap: 12px;
+  align-items: end;
+  padding: 16px;
+}
+
+.waiver-toolbar label,
+.waiver-toolbar div {
+  display: grid;
+  gap: 7px;
+}
+
+.waiver-toolbar span,
+.waiver-form span {
+  color: #64748b;
+  font-size: 0.74rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.waiver-toolbar strong {
+  overflow-wrap: anywhere;
+  color: #111827;
+}
+
+.waiver-toolbar select,
+.waiver-form input,
+.waiver-form textarea {
+  width: 100%;
+  border: 1px solid #cad6d3;
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: #ffffff;
+  color: #111827;
+  font: inherit;
+}
+
+.waiver-create-panel,
+.waiver-register,
+.accepted-risk-panel {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+}
+
+.waiver-form {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  align-items: end;
+}
+
+.waiver-form label {
+  display: grid;
+  gap: 7px;
+}
+
+.waiver-form .wide-field {
+  grid-column: span 2;
+}
+
+.waiver-status {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  border-radius: 8px;
+  padding: 0 8px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.waiver-status.active {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.waiver-status.review-due {
+  background: #ffedd5;
+  color: #9a3412;
+}
+
+.waiver-status.expired {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.waiver-status.inactive {
+  background: #e2e8f0;
+  color: #475569;
+}
+
 .finding-detail-backbar {
   display: flex;
   justify-content: flex-start;
@@ -2552,12 +2662,18 @@ td {
   .report-card-grid,
   .report-readiness-facts,
   .report-history-row,
+  .waiver-toolbar,
+  .waiver-form,
   .summary-list,
   .project-meta,
   .settings-summary,
   .content-grid,
   .template-status {
     grid-template-columns: 1fr;
+  }
+
+  .waiver-form .wide-field {
+    grid-column: auto;
   }
 
   .dashboard-toolbar {
