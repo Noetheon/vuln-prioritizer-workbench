@@ -204,6 +204,20 @@ def test_workbench_settings_environment_and_path_helpers(
     assert sqlite_path_from_url("postgresql://localhost/workbench") is None
 
 
+@pytest.mark.parametrize(
+    "unsafe_name",
+    ["lowercase_key", "1NVD_API_KEY", "NVD-API-KEY", "NVD API KEY", ""],
+)
+def test_workbench_settings_rejects_unsafe_nvd_api_key_env_override(
+    monkeypatch: pytest.MonkeyPatch,
+    unsafe_name: str,
+) -> None:
+    monkeypatch.setenv("VULN_PRIORITIZER_NVD_API_KEY_ENV", unsafe_name)
+
+    with pytest.raises(ValueError, match="VULN_PRIORITIZER_NVD_API_KEY_ENV must match"):
+        load_workbench_settings()
+
+
 def test_workbench_settings_invalid_env_values_fall_back(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib
 
+import pytest
 from fastapi.routing import APIRoute
 from fastapi.testclient import TestClient
 
@@ -90,6 +91,8 @@ def test_template_backend_settings_load_product_env_defaults(monkeypatch) -> Non
     monkeypatch.setenv("ENVIRONMENT", "staging")
     monkeypatch.setenv("API_V1_STR", "/api/custom")
     monkeypatch.setenv("LEGACY_API_PREFIX", "/legacy-api")
+    monkeypatch.setenv("SECRET_KEY", "template-shell-secret")
+    monkeypatch.setenv("FIRST_SUPERUSER_PASSWORD", "template-shell-password")
 
     selected_settings = load_settings()
 
@@ -98,19 +101,47 @@ def test_template_backend_settings_load_product_env_defaults(monkeypatch) -> Non
         PROJECT_NAME="VPW Env Shell",
         ENVIRONMENT="staging",
         LEGACY_API_PREFIX="/legacy-api",
-        SECRET_KEY="changethis",
+        SECRET_KEY="template-shell-secret",
         ACCESS_TOKEN_EXPIRE_MINUTES=60 * 24 * 8,
         FIRST_SUPERUSER="admin@example.com",
-        FIRST_SUPERUSER_PASSWORD="changethis",
+        FIRST_SUPERUSER_PASSWORD="template-shell-password",
         FRONTEND_HOST="http://localhost:5173",
         BACKEND_CORS_ORIGINS=(),
     )
 
 
-def test_template_backend_settings_fall_back_for_unknown_environment(monkeypatch) -> None:
+@pytest.mark.parametrize("environment", ["staging", "production"])
+def test_template_backend_settings_reject_non_local_default_secrets(
+    environment: str,
+) -> None:
+    with pytest.raises(ValueError, match="SECRET_KEY, FIRST_SUPERUSER_PASSWORD"):
+        Settings(ENVIRONMENT=environment)
+
+
+def test_template_backend_load_settings_rejects_non_local_default_secret_env(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("ENVIRONMENT", "production")
+    monkeypatch.delenv("SECRET_KEY", raising=False)
+    monkeypatch.delenv("FIRST_SUPERUSER_PASSWORD", raising=False)
+
+    with pytest.raises(ValueError, match="SECRET_KEY, FIRST_SUPERUSER_PASSWORD"):
+        load_settings()
+
+
+def test_template_backend_settings_reject_unknown_environment(monkeypatch) -> None:
     monkeypatch.setenv("ENVIRONMENT", "qa")
 
-    assert load_settings().ENVIRONMENT == "local"
+    with pytest.raises(ValueError, match="ENVIRONMENT must be one of"):
+        load_settings()
+
+
+def test_template_backend_settings_trim_environment_before_validation(monkeypatch) -> None:
+    monkeypatch.setenv("ENVIRONMENT", " production ")
+    monkeypatch.setenv("SECRET_KEY", "template-shell-secret")
+    monkeypatch.setenv("FIRST_SUPERUSER_PASSWORD", "template-shell-password")
+
+    assert load_settings().ENVIRONMENT == "production"
 
 
 def test_template_backend_settings_parse_cors_origins() -> None:

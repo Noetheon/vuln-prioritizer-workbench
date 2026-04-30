@@ -10,6 +10,8 @@ from urllib.parse import quote_plus
 
 EnvironmentName = Literal["local", "staging", "production"]
 VALID_ENVIRONMENTS: set[str] = {"local", "staging", "production"}
+DEFAULT_TEMPLATE_SECRET = "changethis"
+INSECURE_TEMPLATE_SECRET_VALUES = {"", DEFAULT_TEMPLATE_SECRET}
 
 
 @dataclass(frozen=True)
@@ -33,6 +35,11 @@ class Settings:
     PROVIDER_CACHE_DIR: str = "data/template-provider-cache"
     ATTACK_ARTIFACT_DIR: str = "data/attack"
     MAX_UPLOAD_MB: int = 25
+
+    def __post_init__(self) -> None:
+        """Reject template placeholder secrets outside local development."""
+        _validate_environment_name(self.ENVIRONMENT)
+        _validate_non_local_secret_defaults(self)
 
     @property
     def all_cors_origins(self) -> tuple[str, ...]:
@@ -98,22 +105,21 @@ def build_database_uri() -> str:
 
 def load_settings() -> Settings:
     """Load the minimal template-shell settings from environment variables."""
-    raw_environment = environ.get("ENVIRONMENT", "local")
-    environment = cast(
-        EnvironmentName,
-        raw_environment if raw_environment in VALID_ENVIRONMENTS else "local",
-    )
+    environment = _validate_environment_name(environ.get("ENVIRONMENT", "local"))
     return Settings(
         API_V1_STR=environ.get("API_V1_STR", "/api/v1"),
         PROJECT_NAME=environ.get("PROJECT_NAME", "Vuln Prioritizer Workbench"),
         ENVIRONMENT=environment,
         LEGACY_API_PREFIX=environ.get("LEGACY_API_PREFIX", "/api"),
-        SECRET_KEY=environ.get("SECRET_KEY", "changethis"),
+        SECRET_KEY=environ.get("SECRET_KEY", DEFAULT_TEMPLATE_SECRET),
         ACCESS_TOKEN_EXPIRE_MINUTES=int(
             environ.get("ACCESS_TOKEN_EXPIRE_MINUTES", str(60 * 24 * 8))
         ),
         FIRST_SUPERUSER=environ.get("FIRST_SUPERUSER", "admin@example.com"),
-        FIRST_SUPERUSER_PASSWORD=environ.get("FIRST_SUPERUSER_PASSWORD", "changethis"),
+        FIRST_SUPERUSER_PASSWORD=environ.get(
+            "FIRST_SUPERUSER_PASSWORD",
+            DEFAULT_TEMPLATE_SECRET,
+        ),
         FRONTEND_HOST=environ.get("FRONTEND_HOST", "http://localhost:5173"),
         BACKEND_CORS_ORIGINS=parse_cors_origins(environ.get("BACKEND_CORS_ORIGINS", "")),
         SQLALCHEMY_DATABASE_URI=build_database_uri(),
@@ -135,6 +141,38 @@ def _positive_int_from_env(name: str, default: int) -> int:
     except ValueError:
         return default
     return parsed if parsed > 0 else default
+
+
+def _is_insecure_template_secret(value: str) -> bool:
+    return value.strip().lower() in INSECURE_TEMPLATE_SECRET_VALUES
+
+
+def _validate_environment_name(value: str) -> EnvironmentName:
+    environment = value.strip().lower()
+    if environment not in VALID_ENVIRONMENTS:
+        allowed = ", ".join(sorted(VALID_ENVIRONMENTS))
+        raise ValueError(f"ENVIRONMENT must be one of: {allowed}.")
+    return cast(EnvironmentName, environment)
+
+
+def _validate_non_local_secret_defaults(settings: Settings) -> None:
+    if settings.ENVIRONMENT == "local":
+        return
+
+    insecure_fields = [
+        name
+        for name, value in (
+            ("SECRET_KEY", settings.SECRET_KEY),
+            ("FIRST_SUPERUSER_PASSWORD", settings.FIRST_SUPERUSER_PASSWORD),
+        )
+        if _is_insecure_template_secret(value)
+    ]
+    if insecure_fields:
+        fields = ", ".join(insecure_fields)
+        raise ValueError(
+            f"{fields} must be set to non-default secret values when "
+            f"ENVIRONMENT={settings.ENVIRONMENT}."
+        )
 
 
 settings = load_settings()

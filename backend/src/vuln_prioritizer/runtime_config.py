@@ -6,11 +6,18 @@ from pathlib import Path
 from typing import Any
 
 import yaml
-from pydantic import AliasChoices, Field, ValidationError
+from pydantic import AliasChoices, Field, ValidationError, field_validator
 
+from vuln_prioritizer.config import validate_env_var_name
 from vuln_prioritizer.models import StrictModel
 
 CONFIG_FILENAME = "vuln-prioritizer.yml"
+
+
+def _validate_optional_env_var_name(value: str | None) -> str | None:
+    if value is None:
+        return None
+    return validate_env_var_name(value, label="NVD API key environment variable name")
 
 
 class CommonDefaults(StrictModel):
@@ -41,6 +48,11 @@ class CommonDefaults(StrictModel):
     medium_epss_threshold: float | None = None
     medium_cvss_threshold: float | None = None
     max_cves: int | None = None
+
+    @field_validator("nvd_api_key_env")
+    @classmethod
+    def _validate_nvd_api_key_env(cls, value: str | None) -> str | None:
+        return _validate_optional_env_var_name(value)
 
 
 class AnalyzeDefaults(StrictModel):
@@ -87,6 +99,11 @@ class DoctorDefaults(StrictModel):
     format: str | None = None
     live: bool | None = None
     nvd_api_key_env: str | None = None
+
+    @field_validator("nvd_api_key_env")
+    @classmethod
+    def _validate_nvd_api_key_env(cls, value: str | None) -> str | None:
+        return _validate_optional_env_var_name(value)
 
 
 class SnapshotCreateDefaults(StrictModel):
@@ -173,6 +190,11 @@ class DataUpdateDefaults(StrictModel):
     format: str | None = None
     quiet: bool | None = None
 
+    @field_validator("nvd_api_key_env")
+    @classmethod
+    def _validate_nvd_api_key_env(cls, value: str | None) -> str | None:
+        return _validate_optional_env_var_name(value)
+
 
 class DataVerifyDefaults(StrictModel):
     input_format: str | None = None
@@ -195,6 +217,11 @@ class DataExportProviderSnapshotDefaults(StrictModel):
     offline_kev_file: str | None = None
     nvd_api_key_env: str | None = None
     cache_only: bool | None = None
+
+    @field_validator("nvd_api_key_env")
+    @classmethod
+    def _validate_nvd_api_key_env(cls, value: str | None) -> str | None:
+        return _validate_optional_env_var_name(value)
 
 
 class DataDefaults(StrictModel):

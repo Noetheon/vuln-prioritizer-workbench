@@ -7,6 +7,7 @@ import typer
 from vuln_prioritizer.cli_support.common import console
 from vuln_prioritizer.db.migrations import upgrade_database
 from vuln_prioritizer.db.session import create_db_engine, create_session_factory
+from vuln_prioritizer.security_redaction import redacted_database_url
 from vuln_prioritizer.services.workbench_artifacts import cleanup_project_artifacts
 from vuln_prioritizer.workbench_config import (
     ensure_workbench_directories,
@@ -23,7 +24,10 @@ def db_init() -> None:
     if sqlite_path is not None:
         sqlite_path.parent.mkdir(parents=True, exist_ok=True)
     upgrade_database(settings.database_url)
-    console.print(f"[green]Initialized Workbench database at {settings.database_url}[/green]")
+    console.print(
+        "[green]Initialized Workbench database at "
+        f"{redacted_database_url(settings.database_url)}[/green]"
+    )
 
 
 def db_cleanup_artifacts(

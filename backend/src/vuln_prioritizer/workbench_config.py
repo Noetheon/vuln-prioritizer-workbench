@@ -7,7 +7,11 @@ import secrets
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from vuln_prioritizer.config import DEFAULT_CACHE_DIR, DEFAULT_NVD_API_KEY_ENV
+from vuln_prioritizer.config import (
+    DEFAULT_CACHE_DIR,
+    DEFAULT_NVD_API_KEY_ENV,
+    validate_env_var_name,
+)
 
 DEFAULT_WORKBENCH_DB_URL = "sqlite:///./data/workbench.db"
 DEFAULT_UPLOAD_DIR = Path("data") / "uploads"
@@ -58,7 +62,10 @@ def load_workbench_settings() -> WorkbenchSettings:
             "VULN_PRIORITIZER_MAX_UPLOAD_MB",
             DEFAULT_MAX_UPLOAD_MB,
         ),
-        nvd_api_key_env=os.getenv("VULN_PRIORITIZER_NVD_API_KEY_ENV", DEFAULT_NVD_API_KEY_ENV),
+        nvd_api_key_env=_env_var_name_from_env(
+            "VULN_PRIORITIZER_NVD_API_KEY_ENV",
+            DEFAULT_NVD_API_KEY_ENV,
+        ),
         csrf_token=os.getenv("VULN_PRIORITIZER_CSRF_TOKEN") or secrets.token_urlsafe(32),
         allowed_hosts=_csv_tuple_from_env(
             "VULN_PRIORITIZER_ALLOWED_HOSTS",
@@ -95,6 +102,13 @@ def _positive_int_from_env(name: str, default: int) -> int:
     except ValueError:
         return default
     return parsed if parsed > 0 else default
+
+
+def _env_var_name_from_env(name: str, default: str) -> str:
+    raw_value = os.getenv(name)
+    if raw_value is None:
+        return default
+    return validate_env_var_name(raw_value, label=name)
 
 
 def _csv_tuple_from_env(name: str, default: tuple[str, ...]) -> tuple[str, ...]:

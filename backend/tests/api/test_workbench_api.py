@@ -475,8 +475,9 @@ def test_workbench_import_findings_reports_and_evidence(tmp_path: Path) -> None:
         assert manifest["source_input_hashes"][0]["path"].endswith("sample.txt")
         assert (
             manifest["provider_snapshot"]["sha256"]
-            == analysis_payload["metadata"]["provider_snapshot_hash"]
+            == manifest["artifact_hashes"]["provider/provider-snapshot.json"]
         )
+        assert analysis_payload["metadata"]["provider_snapshot_hash"]
         assert manifest["provider_snapshot"]["bundle_path"] == "provider/provider-snapshot.json"
         manifest_files = {item["path"]: item for item in manifest["files"]}
         for artifact_name in [

@@ -19,8 +19,10 @@ from vuln_prioritizer.config import (
     HTTP_MAX_RETRIES,
     HTTP_TIMEOUT_SECONDS,
     NVD_API_URL,
+    validate_env_var_name,
 )
 from vuln_prioritizer.models import NvdData
+from vuln_prioritizer.security_redaction import redact_text
 from vuln_prioritizer.utils import safe_float
 
 DEFAULT_NVD_MAX_CONCURRENCY: Final = 4
@@ -68,6 +70,7 @@ class NvdProvider:
         session: requests.Session | None = None,
         cache: FileCache | None = None,
     ) -> NvdProvider:
+        validate_env_var_name(api_key_env, label="NVD API key environment variable name")
         api_key = os.getenv(api_key_env)
         return cls(
             session=session,
@@ -336,11 +339,7 @@ def _retry_delay(response: requests.Response | None, attempt: int) -> float:
 
 
 def _sanitize_error_message(message: str, *, secrets: Sequence[str | None]) -> str:
-    redacted = message
-    for secret in secrets:
-        if secret:
-            redacted = redacted.replace(secret, "<redacted>")
-    return redacted
+    return redact_text(message, extra_secrets=secrets)
 
 
 def has_nvd_content(item: NvdData) -> bool:

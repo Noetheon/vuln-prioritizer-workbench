@@ -13,6 +13,7 @@ from app.importers.contracts import (
     InputPayload,
     NormalizedOccurrence,
 )
+from vuln_prioritizer.security_redaction import redact_text
 
 CVE_LIST_INPUT_TYPE = "cve-list"
 _CVE_PATTERN = re.compile(r"^CVE-\d{4}-\d{4,}$", re.IGNORECASE)
@@ -152,7 +153,8 @@ def _append_unique(
 def _normalize_cve(value: str, *, line_number: int) -> str:
     candidate = value.strip().upper()
     if not _CVE_PATTERN.fullmatch(candidate):
-        raise ImporterParseError(f"Invalid CVE identifier at line {line_number}: {value!r}")
+        safe_value = redact_text(repr(value))
+        raise ImporterParseError(f"Invalid CVE identifier at line {line_number}: {safe_value}")
     return candidate
 
 
