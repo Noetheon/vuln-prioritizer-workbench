@@ -15,6 +15,18 @@ The preferred source for CVE-to-ATT&CK mapping remains CTID Mappings Explorer
 JSON. Local curated mappings are allowed only when every entry is explicitly
 reviewable.
 
+For imported CTID Mappings Explorer JSON, VPW normalizes each mapping to
+`source=ctid-mappings-explorer`, `confidence=high`, and
+`review_status=reviewed` because the local artifact is an explicit CTID source
+snapshot. The `attack validate` quality report still keeps source, confidence,
+review status, mapping-type counts, and duplicate-context conflicts visible so a
+reviewer can audit what the imported CTID file contributed.
+
+When reviewers need a local-vs-CTID comparison, `attack validate` accepts
+`--comparison-mapping-file` with a local curated mapping file while
+`--attack-source ctid-json` is selected. The resulting quality report emits
+`local_ctid_conflicts[]` instead of merging or overriding either source.
+
 ## Tactic, Technique, And Procedure Boundary
 
 ATT&CK content in this project is intentionally limited to defensive context:
@@ -76,6 +88,9 @@ Current limitations:
   priority.
 - CTID JSON is preferred. Local curated mappings are accepted only with source,
   rationale, confidence, review status, and defensive notes.
+- CTID JSON and local curated mappings are explicit alternative sources. They
+  are not silently merged; if a local override workflow is added later, it must
+  keep local-vs-CTID conflicts visible in evidence.
 - Unmapped CVEs stay unmapped. The tool does not fill gaps by guessing from CVE
   text, CWE, vendor names, products, exploit keywords, EPSS rank, or LLM output.
 - Free-text source notes can contain upstream vulnerability descriptions. VPW
