@@ -797,6 +797,91 @@ def test_vpw068_reports_and_evidence_bundle_export_governance_context() -> None:
     assert asset_context["top_assets_by_risk"][0]["label"] == "payments-api"
 
 
+def test_vpw079_template_evidence_bundle_includes_detection_coverage_export() -> None:
+    payload = replace(
+        _vpw068_governance_payload(),
+        detection_coverage={
+            "summary": {
+                "covered": 0,
+                "partial": 1,
+                "not_covered": 1,
+                "unknown": 0,
+                "not_applicable": 0,
+            },
+            "items": [
+                {
+                    "technique_id": "T1190",
+                    "name": "Exploit Public-Facing Application",
+                    "tactic_ids": ["TA0001"],
+                    "finding_count": 2,
+                    "critical_finding_count": 1,
+                    "kev_finding_count": 1,
+                    "coverage_level": "partial",
+                    "control_count": 1,
+                    "owner": "secops",
+                    "evidence_refs": ["siem-rule-123"],
+                    "recommended_action": (
+                        "Review partial coverage and add compensating telemetry or analytics."
+                    ),
+                },
+                {
+                    "technique_id": "T1059",
+                    "name": "Command and Scripting Interpreter",
+                    "tactic_ids": ["TA0002"],
+                    "finding_count": 1,
+                    "critical_finding_count": 0,
+                    "kev_finding_count": 0,
+                    "coverage_level": "not_covered",
+                    "control_count": 0,
+                    "owner": None,
+                    "evidence_refs": [],
+                    "recommended_action": (
+                        "Prioritize defensive coverage or document compensating controls."
+                    ),
+                },
+            ],
+            "controls": [
+                {
+                    "control_id": "edge-waf",
+                    "name": "WAF exploit-public-app rule",
+                    "technique_id": "T1190",
+                    "coverage_level": "partial",
+                    "owner": "secops",
+                    "evidence_ref": "siem-rule-123",
+                }
+            ],
+        },
+    )
+
+    markdown = render_markdown_report(payload)
+    assert "## Detection Coverage" in markdown
+    assert "| Partial | 1 |" in markdown
+    analysis = json.loads(render_analysis_result_json(payload))
+    jsonschema.validate(analysis, _load_schema("analysis-result.v1.schema.json"))
+    assert analysis["detection_coverage"]["summary"]["not_covered"] == 1
+
+    bundle, manifest = render_evidence_bundle_zip(payload)
+    jsonschema.validate(manifest, _load_schema("evidence-bundle-manifest.schema.json"))
+    with zipfile.ZipFile(BytesIO(bundle)) as archive:
+        assert "governance/detection-coverage.json" in archive.namelist()
+        detection_bytes = archive.read("governance/detection-coverage.json")
+        detection_coverage = json.loads(detection_bytes)
+
+    assert detection_coverage["schema"] == "detection-coverage.v1"
+    assert detection_coverage["summary"]["partial"] == 1
+    assert detection_coverage["items"][0]["coverage_level"] == "partial"
+    assert "not proof" in detection_coverage["limitations"][0]
+    assert {
+        "bundle_path": "governance/detection-coverage.json",
+        "kind": "governance-detection-coverage",
+        "sha256": manifest["artifact_hashes"]["governance/detection-coverage.json"],
+    } in manifest["governance_artifacts"]
+    assert (
+        manifest["artifact_hashes"]["governance/detection-coverage.json"]
+        == hashlib.sha256(detection_bytes).hexdigest()
+    )
+
+
 def test_vpw060_evidence_bundle_includes_attack_navigator_layer_when_mapped(
     template_api_env: TemplateApiEnv,
     tmp_path: Path,

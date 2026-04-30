@@ -32,6 +32,9 @@ work.
 - The composite GitHub Action mirrors `analyze`, `compare`, `explain`, `doctor`, input validation, snapshot, rollup, provider verification, ATT&CK validation/coverage, reporting, evidence, SARIF validation, and provider freshness gates as additive inputs.
 - Local quality gates now start enforcing coverage with `--cov-fail-under=90`, and temp-copy package/demo checks are available for read-only validation.
 - Docker and Compose provide a local runtime bootstrap for the Workbench while keeping the CLI core available in the same image.
+- Parser and provider contributions are governed by the static local
+  [extension strategy](./extension_strategy.md), including fixture requirements,
+  contributor checklist, and a compiled example stub.
 
 ## Current Workbench App Direction
 
@@ -157,6 +160,7 @@ Status: published as `v1.1.0`; current `main` contains post-release documentatio
 The repository contains example integration and output materials for the shipped surface:
 
 - [docs/integrations/reporting_and_ci.md](./integrations/reporting_and_ci.md)
+- [docs/extension_strategy.md](./extension_strategy.md)
 - [docs/examples/example_pr_comment.md](./examples/example_pr_comment.md)
 - [docs/examples/example_results.sarif](./examples/example_results.sarif)
 - [docs/examples/example_report.html](./examples/example_report.html)

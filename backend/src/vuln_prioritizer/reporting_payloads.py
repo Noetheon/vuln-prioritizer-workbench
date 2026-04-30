@@ -164,6 +164,9 @@ def generate_summary_markdown(
     governance_lines = _governance_summary_lines(metadata, findings)
     if governance_lines:
         lines.extend(["", "## Governance", *governance_lines])
+    detection_lines = _detection_coverage_summary_lines(report_payload.get("detection_coverage"))
+    if detection_lines:
+        lines.extend(["", "## Detection Coverage", *detection_lines])
     comparison_lines = _baseline_comparison_summary_lines(report_payload)
     if comparison_lines:
         lines.extend(["", "## CVSS-only Baseline Comparison", *comparison_lines])
@@ -274,6 +277,41 @@ def _governance_summary_lines(metadata: dict[str, Any], findings: list[Any]) -> 
         lines.append("- Top owners: " + _counter_preview(owners))
     if services:
         lines.append("- Top services: " + _counter_preview(services))
+    return lines
+
+
+def _detection_coverage_summary_lines(value: object) -> list[str]:
+    if not isinstance(value, dict):
+        return []
+    raw_summary = value.get("summary")
+    summary: dict[str, Any] = raw_summary if isinstance(raw_summary, dict) else {}
+    items = [item for item in value.get("items", []) if isinstance(item, dict)]
+    weak_items = [
+        item
+        for item in items
+        if str(item.get("coverage_level")) in {"partial", "not_covered", "unknown"}
+    ]
+    if not items and not weak_items:
+        return []
+    lines = [
+        f"- Covered techniques: {int(summary.get('covered', 0) or 0)}",
+        f"- Partial coverage: {int(summary.get('partial', 0) or 0)}",
+        f"- No coverage: {int(summary.get('not_covered', 0) or 0)}",
+        f"- Unknown coverage: {int(summary.get('unknown', 0) or 0)}",
+        (
+            "- Safety note: detection coverage is operator-supplied defensive review "
+            "evidence, not proof of security or exploitation."
+        ),
+    ]
+    if weak_items:
+        lines.extend(["", "### Coverage Gaps"])
+        for item in weak_items[:5]:
+            lines.append(
+                "- "
+                + f"{item.get('technique_id', 'N.A.')} "
+                + f"({item.get('coverage_level', 'unknown')}): "
+                + normalize_whitespace(str(item.get("recommended_action", "Review coverage.")))
+            )
     return lines
 
 

@@ -369,10 +369,14 @@ cache-only provider refresh every 86400 seconds, and accepts these environment v
 | `VULN_PRIORITIZER_PROVIDER_UPDATE_API_TOKEN` | empty | Optional local Workbench API token used when API tokens have been enabled. |
 
 Provider update jobs use a provider-snapshot-directory lock file to reject overlapping refreshes
-with HTTP 409 instead of racing snapshot writes. GitHub issue export starts with
-`POST /api/projects/{project_id}/github/issues/preview` and can create issues through
-`POST /api/projects/{project_id}/github/issues/export` when `dry_run` is false, a repository is
-provided, and the selected token environment variable is configured.
+with HTTP 409 instead of racing snapshot writes.
+
+GitHub issue export starts with the template API
+`POST /api/v1/projects/{project_id}/github/issues/preview`. The request can pass explicit
+`finding_ids` to generate reviewed issue markdown with priority, rationale, remediation, and
+evidence references. Issue creation requires
+`POST /api/v1/projects/{project_id}/github/issues/export` with `dry_run: false`, a repository, and
+an explicit configured token environment variable.
 
 Current local Workbench limitations:
 

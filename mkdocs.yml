@@ -26,6 +26,7 @@ nav:
       - Provider Status API Card: architecture/vpw-028-provider-status-api-card.md
       - Template Repository Layer: architecture/template-service-layer.md
       - Template Importer Contract: architecture/vpw-013-importer-contract.md
+      - Parser and Provider Extension Strategy: extension_strategy.md
   - Full Stack Template Migration: full_stack_fastapi_template_migration.md
   - VPW Template Execution Sequence: vpw_template_execution_sequence.md
   - Use Cases: use_cases.md
