@@ -110,6 +110,7 @@ nav:
       - VPW-069 Upload Security Hardening: evidence/vpw-069-upload-security-hardening.md
       - VPW-070 HTML Rendering and Security Headers: evidence/vpw-070-html-security-xss.md
       - VPW-073 User Documentation: evidence/vpw-073-user-documentation.md
+      - VPW-074 CI Gates: evidence/vpw-074-ci-gates.md
       - Historical Evidence Archive: evidence.md
       - Current State Audit: evidence/current_state_audit.md
       - V0.3 Submission Checklist: evidence/final_submission_checklist.md
