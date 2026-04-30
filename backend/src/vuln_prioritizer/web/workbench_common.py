@@ -50,6 +50,7 @@ from vuln_prioritizer.attack_sources import ATTACK_SOURCE_NONE, WORKBENCH_ALLOWE
 from vuln_prioritizer.db.repositories import WorkbenchRepository
 from vuln_prioritizer.reporting_executive import render_executive_report_html
 from vuln_prioritizer.runtime_config import RuntimeConfigDocument
+from vuln_prioritizer.security_redaction import redacted_database_url
 from vuln_prioritizer.services.workbench_analysis import (
     WorkbenchAnalysisError,
     run_workbench_import,
@@ -161,7 +162,7 @@ def _redacted_database_url(database_url: str) -> str:
     try:
         return make_url(database_url).render_as_string(hide_password=True)
     except Exception:
-        return "<set>"
+        return redacted_database_url(database_url)
 
 
 def _safe_uuid_path_value(value: str) -> str:

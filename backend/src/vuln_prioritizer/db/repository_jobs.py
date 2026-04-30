@@ -8,6 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from vuln_prioritizer.db.models import ProjectArtifactRetention, WorkbenchJob, utc_now
+from vuln_prioritizer.security_redaction import redact_error, redact_value
 
 
 class WorkbenchJobRepositoryMixin:
@@ -38,7 +39,7 @@ class WorkbenchJobRepositoryMixin:
             project_id=project_id,
             target_type=target_type,
             target_id=target_id,
-            payload_json=payload_json or {},
+            payload_json=_redacted_json_payload(payload_json or {}),
             idempotency_key=idempotency_key,
             priority=priority,
             max_attempts=max_attempts,
@@ -92,7 +93,7 @@ class WorkbenchJobRepositoryMixin:
         job.heartbeat_at = utc_now()
         logs = _job_logs(job)
         if message:
-            logs.append(_job_log_entry(message, progress=job.progress))
+            logs.append(_job_log_entry(redact_error(message), progress=job.progress))
         job.logs_json = logs
         self.session.flush()
         return job
@@ -106,12 +107,12 @@ class WorkbenchJobRepositoryMixin:
     ) -> WorkbenchJob:
         job.status = "completed"
         job.progress = 100
-        job.result_json = result_json or {}
+        job.result_json = _redacted_json_payload(result_json or {})
         job.finished_at = utc_now()
         job.heartbeat_at = job.finished_at
         job.lease_owner = None
         job.lease_expires_at = None
-        job.logs_json = [*_job_logs(job), _job_log_entry(message, progress=100)]
+        job.logs_json = [*_job_logs(job), _job_log_entry(redact_error(message), progress=100)]
         self.session.flush()
         return job
 
@@ -123,12 +124,13 @@ class WorkbenchJobRepositoryMixin:
         retryable: bool = True,
     ) -> WorkbenchJob:
         job.status = "queued" if retryable and job.attempts < job.max_attempts else "failed"
-        job.error_message = error_message
+        safe_error = redact_error(error_message)
+        job.error_message = safe_error
         job.finished_at = utc_now() if job.status == "failed" else None
         job.heartbeat_at = utc_now()
         job.lease_owner = None
         job.lease_expires_at = None
-        job.logs_json = [*_job_logs(job), _job_log_entry(error_message, progress=job.progress)]
+        job.logs_json = [*_job_logs(job), _job_log_entry(safe_error, progress=job.progress)]
         self.session.flush()
         return job
 
@@ -176,3 +178,8 @@ def _job_logs(job: WorkbenchJob) -> list[dict[str, Any]]:
 
 def _job_log_entry(message: str, *, progress: int) -> dict[str, Any]:
     return {"created_at": utc_now().isoformat(), "message": message, "progress": progress}
+
+
+def _redacted_json_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    redacted, _paths = redact_value(payload, redact_paths=False)
+    return redacted if isinstance(redacted, dict) else {}

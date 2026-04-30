@@ -126,6 +126,85 @@ def test_load_runtime_config_resolves_relative_paths_and_builds_default_map(
     assert default_map["data"]["export-provider-snapshot"]["cache_only"] is True
 
 
+def test_load_runtime_config_accepts_valid_nvd_api_key_env_fields(
+    tmp_path: Path,
+) -> None:
+    config_file = tmp_path / CONFIG_FILENAME
+    config_file.write_text(
+        "\n".join(
+            [
+                "version: 1",
+                "defaults:",
+                "  nvd_api_key_env: VPW_NVD_API_KEY_1",
+                "commands:",
+                "  doctor:",
+                "    nvd_api_key_env: NVD_API_KEY_BACKUP",
+                "  data:",
+                "    update:",
+                "      nvd_api_key_env: DATA_NVD_API_KEY",
+                "    export-provider-snapshot:",
+                "      nvd_api_key_env: EXPORT_NVD_API_KEY",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    loaded = load_runtime_config(config_file)
+
+    assert loaded.document.defaults.nvd_api_key_env == "VPW_NVD_API_KEY_1"
+    assert loaded.document.commands.doctor.nvd_api_key_env == "NVD_API_KEY_BACKUP"
+    assert loaded.document.commands.data.update.nvd_api_key_env == "DATA_NVD_API_KEY"
+    assert (
+        loaded.document.commands.data.export_provider_snapshot.nvd_api_key_env
+        == "EXPORT_NVD_API_KEY"
+    )
+
+
+@pytest.mark.parametrize(
+    "config_lines",
+    [
+        [
+            "version: 1",
+            "defaults:",
+            "  nvd_api_key_env: bad-name",
+        ],
+        [
+            "version: 1",
+            "commands:",
+            "  doctor:",
+            "    nvd_api_key_env: bad-name",
+        ],
+        [
+            "version: 1",
+            "commands:",
+            "  data:",
+            "    update:",
+            "      nvd_api_key_env: bad-name",
+        ],
+        [
+            "version: 1",
+            "commands:",
+            "  data:",
+            "    export-provider-snapshot:",
+            "      nvd_api_key_env: bad-name",
+        ],
+    ],
+)
+def test_load_runtime_config_rejects_unsafe_nvd_api_key_env_fields(
+    tmp_path: Path,
+    config_lines: list[str],
+) -> None:
+    config_file = tmp_path / CONFIG_FILENAME
+    config_file.write_text("\n".join(config_lines) + "\n", encoding="utf-8")
+
+    with pytest.raises(
+        ValueError,
+        match="NVD API key environment variable name must match",
+    ):
+        load_runtime_config(config_file)
+
+
 def test_load_runtime_config_rejects_invalid_yaml(tmp_path: Path) -> None:
     config_file = tmp_path / CONFIG_FILENAME
     config_file.write_text("version: [broken\n", encoding="utf-8")

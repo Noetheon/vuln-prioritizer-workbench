@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from pathlib import Path
+from re import Pattern
 from typing import Final
 
 APP_NAME: Final = "vuln-prioritizer"
@@ -11,6 +13,8 @@ DEFAULT_OUTPUT_FORMAT: Final = "markdown"
 DEFAULT_NVD_API_KEY_ENV: Final = "NVD_API_KEY"
 DEFAULT_CACHE_DIR: Final = Path(".cache") / APP_NAME
 DEFAULT_CACHE_TTL_HOURS: Final = 24
+ENV_VAR_NAME_PATTERN: Final = r"^[A-Z_][A-Z0-9_]*$"
+ENV_VAR_NAME_RE: Final[Pattern[str]] = re.compile(ENV_VAR_NAME_PATTERN)
 
 NVD_API_URL: Final = "https://services.nvd.nist.gov/rest/json/cves/2.0"
 EPSS_API_URL: Final = "https://api.first.org/data/v1/epss"
@@ -80,3 +84,20 @@ class ProviderConfig:
     nvd_api_key_env: str = DEFAULT_NVD_API_KEY_ENV
     timeout_seconds: int = HTTP_TIMEOUT_SECONDS
     max_retries: int = HTTP_MAX_RETRIES
+
+    def __post_init__(self) -> None:
+        validate_env_var_name(
+            self.nvd_api_key_env,
+            label="NVD API key environment variable name",
+        )
+
+
+def validate_env_var_name(
+    value: str,
+    *,
+    label: str = "environment variable name",
+) -> str:
+    """Validate an environment variable name used to resolve secret values."""
+    if not ENV_VAR_NAME_RE.fullmatch(value):
+        raise ValueError(f"{label} must match {ENV_VAR_NAME_PATTERN}.")
+    return value

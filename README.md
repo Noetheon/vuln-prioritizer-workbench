@@ -235,6 +235,28 @@ Workbench runtime environment:
 | `VULN_PRIORITIZER_CSRF_TOKEN` | random per process when unset | Optional fixed local form token for repeatable demos. |
 | `VULN_PRIORITIZER_ALLOWED_HOSTS` | local: `127.0.0.1,localhost,testserver`; profiled Compose migration smoke: `127.0.0.1,localhost` | Comma-separated Host header allowlist for the local Workbench. |
 
+Secret and provider hardening contract:
+
+- The optional NVD API key is read only from the environment variable named by
+  `VULN_PRIORITIZER_NVD_API_KEY_ENV`, which defaults to `NVD_API_KEY`. Store and
+  display the variable name only, never the key value.
+- Environment-variable name settings must match `^[A-Z_][A-Z0-9_]*$`. Invalid
+  names are configuration errors and must not be treated as literal secret
+  values.
+- Template placeholder secrets such as `changethis` are local/dev bootstrap
+  defaults only. Staging and production deployments must reject default template
+  secrets for `SECRET_KEY`, `FIRST_SUPERUSER_PASSWORD`, and equivalent
+  credential settings. Unknown `ENVIRONMENT` values fail closed instead of
+  falling back to local mode.
+- Built-in live provider endpoints for NVD, FIRST EPSS, and CISA KEV are fixed
+  HTTPS public-source constants. Runtime settings may choose cache directories,
+  locked snapshots, or offline files, but must not provide an unsafe live
+  provider URL override.
+- Settings pages, reports, evidence bundles, manifests, logs, and diagnostic
+  payloads must redact secret values and local absolute paths, exposing only
+  non-secret state such as `<set>`, `<not set>`, variable names, counts, hashes,
+  bundle paths, or source labels.
+
 For locked Workbench replay, submit only the snapshot filename, for example
 `demo_provider_snapshot.json`. The app resolves it from
 `VULN_PRIORITIZER_PROVIDER_SNAPSHOT_DIR` or the provider cache and rejects arbitrary paths.
@@ -269,7 +291,14 @@ Current local Workbench limitations:
 - The project still does not scan systems, patch software, or generate heuristic/AI CVE-to-ATT&CK mappings.
 - Do not expose the local Workbench on the public internet without a separate hardening review covering TLS/proxying, backup/restore, audit retention, role design, token handling, and the threat model.
 
-Current Workbench readiness and shared-deployment prerequisites are tracked in [docs/workbench-threat-model.md](docs/workbench-threat-model.md). The historical implementation plan remains available in [docs/workbench-masterplan.md](docs/workbench-masterplan.md), and [docs/roadmap.md](docs/roadmap.md) tracks the shipped CLI plus local Workbench release line.
+Current Workbench readiness and shared-deployment prerequisites are tracked in
+[docs/workbench-threat-model.md](docs/workbench-threat-model.md). VPW-071
+secret/provider hardening evidence is tracked in
+[docs/evidence/vpw-071-secret-provider-hardening.md](docs/evidence/vpw-071-secret-provider-hardening.md).
+The historical implementation plan remains available in
+[docs/workbench-masterplan.md](docs/workbench-masterplan.md), and
+[docs/roadmap.md](docs/roadmap.md) tracks the shipped CLI plus local Workbench
+release line.
 
 ## Demo
 

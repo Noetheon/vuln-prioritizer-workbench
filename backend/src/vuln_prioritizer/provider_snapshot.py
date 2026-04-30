@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING
 from pydantic import ValidationError
 
 from vuln_prioritizer.models import ProviderSnapshotReport
+from vuln_prioritizer.security_redaction import redact_text, redact_value
 
 if TYPE_CHECKING:
     from pydantic import BaseModel
@@ -40,7 +41,15 @@ _PROVIDER_SNAPSHOT_FORMAT = "provider-snapshot.v1.json"
 
 def generate_provider_snapshot_json(report: ProviderSnapshotReport) -> str:
     """Serialize a provider snapshot report as stable JSON."""
-    return json.dumps(report.model_dump(), indent=2, sort_keys=True)
+    payload = report.model_dump()
+    payload["warnings"] = [redact_text(str(warning)) for warning in payload.get("warnings", [])]
+    metadata = payload.get("metadata")
+    if isinstance(metadata, dict) and isinstance(metadata.get("source_metadata"), dict):
+        metadata["source_metadata"], _redacted_paths = redact_value(
+            metadata["source_metadata"],
+            redact_paths=False,
+        )
+    return json.dumps(payload, indent=2, sort_keys=True)
 
 
 def load_provider_snapshot(path: Path) -> ProviderSnapshotReport:

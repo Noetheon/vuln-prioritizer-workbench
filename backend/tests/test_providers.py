@@ -4,13 +4,20 @@ import hashlib
 import json
 import threading
 from pathlib import Path
+from urllib.parse import urlparse
 
 import pytest
 import requests
 from paths import DATA_ROOT
 
 from vuln_prioritizer.cache import FileCache
-from vuln_prioritizer.config import KEV_FEED_URL
+from vuln_prioritizer.config import (
+    EPSS_API_URL,
+    KEV_FEED_URL,
+    KEV_MIRROR_URL,
+    NVD_API_URL,
+    ProviderConfig,
+)
 from vuln_prioritizer.models import (
     AttackData,
     EpssData,
@@ -52,6 +59,115 @@ class FakeResponse:
             error = requests.HTTPError(f"{self.status_code} error")
             error.response = self
             raise error
+
+
+def test_provider_endpoint_constants_are_https_and_pinned_to_public_hosts() -> None:
+    expected_endpoints = {
+        NVD_API_URL: ("services.nvd.nist.gov", "/rest/json/cves/2.0"),
+        EPSS_API_URL: ("api.first.org", "/data/v1/epss"),
+        KEV_FEED_URL: (
+            "www.cisa.gov",
+            "/sites/default/files/feeds/known_exploited_vulnerabilities.json",
+        ),
+        KEV_MIRROR_URL: (
+            "raw.githubusercontent.com",
+            "/cisagov/kev-data/develop/known_exploited_vulnerabilities.json",
+        ),
+    }
+
+    for endpoint, (expected_host, expected_path) in expected_endpoints.items():
+        parsed = urlparse(endpoint)
+        assert parsed.scheme == "https"
+        assert parsed.hostname == expected_host
+        assert parsed.path == expected_path
+
+    assert not any("url" in name.lower() for name in ProviderConfig.__dataclass_fields__)
+
+
+@pytest.mark.parametrize(
+    "unsafe_name",
+    ["lowercase_key", "1NVD_API_KEY", "NVD-API-KEY", "NVD API KEY", ""],
+)
+def test_provider_config_rejects_unsafe_nvd_api_key_env_names(unsafe_name: str) -> None:
+    with pytest.raises(ValueError, match="NVD API key environment variable name must match"):
+        ProviderConfig(nvd_api_key_env=unsafe_name)
+
+    with pytest.raises(ValueError, match="NVD API key environment variable name must match"):
+        NvdProvider.from_env(api_key_env=unsafe_name)
+
+
+def test_provider_requests_ignore_endpoint_environment_overrides(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    for name in (
+        "NVD_API_URL",
+        "EPSS_API_URL",
+        "KEV_FEED_URL",
+        "KEV_MIRROR_URL",
+        "VULN_PRIORITIZER_NVD_API_URL",
+        "VULN_PRIORITIZER_EPSS_API_URL",
+        "VULN_PRIORITIZER_KEV_FEED_URL",
+        "VULN_PRIORITIZER_KEV_MIRROR_URL",
+    ):
+        monkeypatch.setenv(name, "http://127.0.0.1/unsafe")
+
+    class RecordingSession:
+        def __init__(self, payload: dict) -> None:
+            self.payload = payload
+            self.urls: list[str] = []
+
+        def get(self, url: str, *args, **kwargs):  # noqa: ANN002, ANN003
+            self.urls.append(url)
+            return FakeResponse(self.payload)
+
+    nvd_session = RecordingSession({"vulnerabilities": []})
+    epss_session = RecordingSession({"data": []})
+    kev_session = RecordingSession({"vulnerabilities": []})
+
+    NvdProvider(session=nvd_session).fetch_many(["CVE-2026-0710"])
+    EpssProvider(session=epss_session).fetch_many(["CVE-2026-0710"])
+    KevProvider(session=kev_session).fetch_many(["CVE-2026-0710"])
+
+    assert nvd_session.urls == [NVD_API_URL]
+    assert epss_session.urls == [EPSS_API_URL]
+    assert kev_session.urls == [KEV_FEED_URL]
+
+
+def test_kev_provider_fallback_uses_pinned_https_mirror() -> None:
+    class FallbackSession:
+        def __init__(self) -> None:
+            self.urls: list[str] = []
+
+        def get(self, url: str, *args, **kwargs):  # noqa: ANN002, ANN003
+            self.urls.append(url)
+            if url == KEV_FEED_URL:
+                raise requests.RequestException("primary feed unavailable")
+            return FakeResponse({"vulnerabilities": []})
+
+    session = FallbackSession()
+
+    KevProvider(session=session).fetch_many(["CVE-2026-0711"])
+
+    assert session.urls == [KEV_FEED_URL, KEV_MIRROR_URL]
+
+
+@pytest.mark.parametrize(
+    "unsafe_url",
+    [
+        "http://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json",
+        "https://user:pass@www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json",
+        "https://localhost/kev.json",
+        "https://127.0.0.1/kev.json",
+        "https://10.0.0.5/kev.json",
+        f"{KEV_FEED_URL}?override=true",
+    ],
+)
+def test_kev_provider_rejects_unsafe_endpoint_overrides(unsafe_url: str) -> None:
+    with pytest.raises(ValueError, match="must use a pinned HTTPS public provider endpoint"):
+        KevProvider(feed_url=unsafe_url)
+
+    with pytest.raises(ValueError, match="must use a pinned HTTPS public provider endpoint"):
+        KevProvider(mirror_url=unsafe_url)
 
 
 def test_nvd_parse_payload_prefers_v40_and_collects_metadata() -> None:

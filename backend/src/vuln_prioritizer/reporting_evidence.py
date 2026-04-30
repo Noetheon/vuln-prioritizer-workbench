@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import ntpath
 import zipfile
 from collections.abc import Callable
 from pathlib import Path
@@ -24,6 +25,7 @@ from vuln_prioritizer.reporter import (
     generate_html_report,
     generate_summary_markdown,
 )
+from vuln_prioritizer.security_redaction import redact_text, redact_value
 from vuln_prioritizer.utils import iso_utc_now
 
 DETERMINISTIC_ZIP_TIMESTAMP = (1980, 1, 1, 0, 0, 0)
@@ -226,10 +228,18 @@ def write_evidence_bundle(
 ) -> EvidenceBundleManifest:
     metadata = payload.get("metadata", {})
     attack_summary = payload.get("attack_summary", {})
+    redacted_payload, redaction_paths = redact_value(payload)
+    if not isinstance(redacted_payload, dict):
+        redacted_payload = {}
+    redacted_analysis_bytes = json.dumps(redacted_payload, indent=2, sort_keys=True).encode("utf-8")
     bundle_entries: list[tuple[str, bytes, str]] = [
-        ("analysis.json", analysis_path.read_bytes(), "analysis-json"),
-        ("report.html", generate_html_report(payload).encode("utf-8"), "html-report"),
-        ("summary.md", generate_summary_markdown(payload).encode("utf-8"), "markdown-summary"),
+        ("analysis.json", redacted_analysis_bytes, "analysis-json"),
+        ("report.html", generate_html_report(redacted_payload).encode("utf-8"), "html-report"),
+        (
+            "summary.md",
+            generate_summary_markdown(redacted_payload).encode("utf-8"),
+            "markdown-summary",
+        ),
     ]
     navigator_layer = attack_navigator_layer_from_summary(attack_summary)
     if navigator_layer is not None:
@@ -247,10 +257,15 @@ def write_evidence_bundle(
     )
     if provider_snapshot_path is not None:
         provider_snapshot_bundle_path = "provider/provider-snapshot.json"
+        provider_snapshot_bytes, provider_snapshot_redacted = redacted_file_bytes(
+            provider_snapshot_path
+        )
+        if provider_snapshot_redacted:
+            redaction_paths.append(provider_snapshot_bundle_path)
         bundle_entries.append(
             (
                 provider_snapshot_bundle_path,
-                provider_snapshot_path.read_bytes(),
+                provider_snapshot_bytes,
                 "provider-snapshot",
             )
         )
@@ -270,21 +285,27 @@ def write_evidence_bundle(
         if (resolved_input := resolve_analysis_input_path(reported_path, analysis_path)) is not None
     ]
     included_input_copy = False
+    input_manifest_paths: dict[Path, str] = {}
     if include_input_copy:
         if resolved_inputs:
             multiple_inputs = len(reported_input_paths) > 1
             for index, resolved_input in enumerate(resolved_inputs, start=1):
+                bundle_path = source_input_bundle_path(
+                    resolved_input,
+                    index=index,
+                    multiple=multiple_inputs,
+                )
+                input_bytes, input_redacted = redacted_file_bytes(resolved_input)
+                if input_redacted:
+                    redaction_paths.append(bundle_path)
                 bundle_entries.append(
                     (
-                        source_input_bundle_path(
-                            resolved_input,
-                            index=index,
-                            multiple=multiple_inputs,
-                        ),
-                        resolved_input.read_bytes(),
+                        bundle_path,
+                        input_bytes,
                         "source-input",
                     )
                 )
+                input_manifest_paths[resolved_input] = bundle_path
             included_input_copy = True
         elif reported_input_paths and warning_callback is not None:
             warning_callback(
@@ -296,25 +317,47 @@ def write_evidence_bundle(
         bundle_file_entry(path=path, content=content, kind=kind)
         for path, content, kind in bundle_entries
     ]
-    input_hashes = [input_hash_entry(path) for path in resolved_inputs]
+    artifact_hashes = {entry.path: entry.sha256 for entry in file_entries}
+    source_input_paths = [
+        input_manifest_paths.get(resolved_input, safe_source_path_label(resolved_input))
+        if (resolved_input := resolve_analysis_input_path(reported_path, analysis_path)) is not None
+        else safe_source_path_label(reported_path)
+        for reported_path in reported_input_paths
+    ]
+    input_hashes = [
+        input_hash_entry(
+            path,
+            manifest_path=input_manifest_paths.get(path, safe_source_path_label(path)),
+        )
+        for path in resolved_inputs
+    ]
     manifest = EvidenceBundleManifest(
         generated_at=iso_utc_now(),
-        source_analysis_path=str(analysis_path),
+        source_analysis_path="analysis.json",
         source_analysis_sha256=hashlib.sha256(analysis_path.read_bytes()).hexdigest(),
-        source_input_path=reported_input_paths[0] if reported_input_paths else None,
-        source_input_paths=reported_input_paths,
+        source_input_path=source_input_paths[0] if source_input_paths else None,
+        source_input_paths=source_input_paths,
         source_input_hashes=input_hashes,
         provider_snapshot=provider_snapshot_manifest_entry(
             metadata,
             analysis_path=analysis_path,
             bundle_path=provider_snapshot_bundle_path,
+            bundle_sha256=artifact_hashes.get(provider_snapshot_bundle_path or ""),
         ),
-        artifact_hashes={entry.path: entry.sha256 for entry in file_entries},
+        artifact_hashes=artifact_hashes,
         findings_count=int(metadata.get("findings_count", 0)),
         kev_hits=int(metadata.get("kev_hits", 0)),
         waived_count=int(metadata.get("waived_count", 0)),
         attack_mapped_cves=int(attack_summary.get("mapped_cves", 0)),
         included_input_copy=included_input_copy,
+        redaction={
+            "enabled": True,
+            "policy": (
+                "sensitive keys, local paths, and secret-shaped text are redacted "
+                "in copied artifacts and manifest source references"
+            ),
+            "redacted_keys": sorted(set(redaction_paths)),
+        },
         files=file_entries,
     )
 
@@ -328,6 +371,23 @@ def write_evidence_bundle(
             generate_evidence_bundle_manifest_json(manifest).encode("utf-8"),
         )
     return manifest
+
+
+def redacted_file_bytes(path: Path) -> tuple[bytes, bool]:
+    """Return file bytes with text secrets redacted when content is UTF-8 or JSON."""
+    raw = path.read_bytes()
+    try:
+        text = raw.decode("utf-8")
+    except UnicodeDecodeError:
+        return raw, False
+    try:
+        payload = json.loads(text)
+    except json.JSONDecodeError:
+        redacted_text = redact_text(text)
+        return redacted_text.encode("utf-8"), redacted_text != text
+    redacted_payload, redaction_paths = redact_value(payload)
+    redacted_text = json.dumps(redacted_payload, indent=2, sort_keys=True)
+    return redacted_text.encode("utf-8"), bool(redaction_paths)
 
 
 def write_deterministic_zip_member(
@@ -409,10 +469,14 @@ def source_input_bundle_path(resolved_input: Path, *, index: int, multiple: bool
     return f"input/{resolved_input.name}"
 
 
-def input_hash_entry(path: Path) -> EvidenceBundleInputHash:
+def input_hash_entry(
+    path: Path,
+    *,
+    manifest_path: str | None = None,
+) -> EvidenceBundleInputHash:
     content = path.read_bytes()
     return EvidenceBundleInputHash(
-        path=str(path),
+        path=manifest_path or safe_source_path_label(path),
         size_bytes=len(content),
         sha256=hashlib.sha256(content).hexdigest(),
     )
@@ -423,6 +487,7 @@ def provider_snapshot_manifest_entry(
     *,
     analysis_path: Path,
     bundle_path: str | None = None,
+    bundle_sha256: str | None = None,
 ) -> dict[str, Any]:
     if not isinstance(metadata, dict):
         return {}
@@ -434,12 +499,24 @@ def provider_snapshot_manifest_entry(
             snapshot_hash = hashlib.sha256(resolved_snapshot.read_bytes()).hexdigest()
     entry = {
         "id": metadata.get("provider_snapshot_id"),
-        "sha256": snapshot_hash,
-        "path": snapshot_path,
+        "sha256": bundle_sha256 or snapshot_hash,
+        "path": safe_source_path_label(snapshot_path) if snapshot_path else None,
         "bundle_path": bundle_path,
         "sources": metadata.get("provider_snapshot_sources", []),
     }
     return {key: value for key, value in entry.items() if value not in (None, "", [])}
+
+
+def safe_source_path_label(value: object) -> str:
+    """Return a manifest-safe source label without local directory disclosure."""
+    if isinstance(value, Path):
+        text = str(value)
+    elif isinstance(value, str):
+        text = value
+    else:
+        text = ""
+    name = ntpath.basename(text.strip().rstrip("/\\"))
+    return name or "[REDACTED-PATH]"
 
 
 def resolve_analysis_input_path(reported_path: object, analysis_path: Path) -> Path | None:

@@ -11,7 +11,10 @@ import requests
 from vuln_prioritizer.cache import FileCache
 from vuln_prioritizer.config import HTTP_TIMEOUT_SECONDS, KEV_FEED_URL, KEV_MIRROR_URL
 from vuln_prioritizer.models import KevData, ProviderLookupDiagnostics
+from vuln_prioritizer.security_redaction import redact_error
 from vuln_prioritizer.utils import normalize_cve_id
+
+_ALLOWED_KEV_URLS = {KEV_FEED_URL, KEV_MIRROR_URL}
 
 
 class KevProvider:
@@ -25,6 +28,8 @@ class KevProvider:
         mirror_url: str = KEV_MIRROR_URL,
         cache: FileCache | None = None,
     ) -> None:
+        _validate_kev_url(feed_url, label="KEV feed URL")
+        _validate_kev_url(mirror_url, label="KEV mirror URL")
         self.session = session or requests.Session()
         self.timeout_seconds = timeout_seconds
         self.feed_url = feed_url
@@ -53,11 +58,13 @@ class KevProvider:
             except Exception:  # noqa: BLE001 - invalid stale cache is not recoverable
                 stale = None
             if stale is not None:
-                warnings.append(f"KEV catalog load failed; using expired cached catalog: {exc}")
+                warnings.append(
+                    f"KEV catalog load failed; using expired cached catalog: {redact_error(exc)}"
+                )
                 index = stale
                 self._last_catalog_mode = "stale-cache"
             else:
-                warnings.append(f"KEV catalog load failed: {exc}")
+                warnings.append(f"KEV catalog load failed: {redact_error(exc)}")
                 index = {}
                 self._last_catalog_mode = "failed"
 
@@ -189,3 +196,8 @@ def _first_present(vulnerability: dict, *keys: str) -> str | None:
         if value is not None and str(value).strip():
             return str(value)
     return None
+
+
+def _validate_kev_url(value: str, *, label: str) -> None:
+    if value not in _ALLOWED_KEV_URLS:
+        raise ValueError(f"{label} must use a pinned HTTPS public provider endpoint.")

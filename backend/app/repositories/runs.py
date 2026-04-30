@@ -15,6 +15,12 @@ from app.models import (
     ProviderSnapshot,
 )
 from app.models.base import get_datetime_utc
+from vuln_prioritizer.security_redaction import redact_value
+
+
+def _redacted_json_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    redacted, _paths = redact_value(payload, redact_paths=False)
+    return redacted if isinstance(redacted, dict) else {}
 
 
 class RunRepository:
@@ -40,7 +46,7 @@ class RunRepository:
             kev_catalog_version=kev_catalog_version,
             content_hash=content_hash,
             source_hashes_json=source_hashes_json or {},
-            source_metadata_json=source_metadata_json or {},
+            source_metadata_json=_redacted_json_payload(source_metadata_json or {}),
         )
         self.session.add(snapshot)
         self.session.flush()
