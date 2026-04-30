@@ -479,6 +479,7 @@
       ],
       "expected_statuses": [
         "affected",
+        "fixed",
         "not_affected",
         "under_investigation"
       ],
@@ -497,6 +498,11 @@
           "cve_id": "CVE-2024-4577",
           "product_id": "pkg:generic/php-cgi@8.1.28",
           "status": "under_investigation"
+        },
+        {
+          "cve_id": "CVE-2021-44228",
+          "product_id": "pkg:maven/org.apache.logging.log4j/log4j-core@2.14.1",
+          "status": "fixed"
         }
       ]
     },

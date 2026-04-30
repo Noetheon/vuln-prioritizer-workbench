@@ -296,12 +296,20 @@ type ImportWizardState = {
   assetContextFile: File | null
   file: File | null
   inputType: ImportFormat
+  vexFile: File | null
 }
 
 const defaultImportWizardState: ImportWizardState = {
   assetContextFile: null,
   file: null,
   inputType: "cve-list",
+  vexFile: null,
+}
+
+type ImportUploadFormData = Parameters<
+  typeof ImportsService.importProjectUpload
+>[0]["formData"] & {
+  vex_file?: string | null
 }
 
 type FindingsSort = NonNullable<FindingsReadProjectFindingsData["sort"]>
@@ -611,6 +619,14 @@ function apiErrorDetail(body: unknown) {
     const record = detail as Record<string, unknown>
     const assetContextError = objectRecord(record.asset_context_error)
     const analysisError = objectRecord(record.analysis_error)
+    const vexError = objectRecord(record.vex_error)
+    const vexErrorMessage = stringValue(vexError.message)
+    if (vexErrorMessage) {
+      const detailMessage = stringValue(record.message)
+      return detailMessage
+        ? `${detailMessage} ${vexErrorMessage}`
+        : vexErrorMessage
+    }
     return (
       stringValue(record.message) ??
       stringValue(assetContextError.message) ??
@@ -2246,6 +2262,7 @@ export function App() {
     const formData = new FormData(event.currentTarget)
     const formFile = formData.get("importFile")
     const formAssetContextFile = formData.get("assetContextFile")
+    const formVexFile = formData.get("vexFile")
     const formProjectId = formData.get("importProject")
     const importProjectId =
       typeof formProjectId === "string" && formProjectId.trim()
@@ -2259,6 +2276,9 @@ export function App() {
       (formAssetContextFile instanceof File && formAssetContextFile.size > 0
         ? formAssetContextFile
         : null)
+    const selectedVexFile =
+      importWizard.vexFile ??
+      (formVexFile instanceof File && formVexFile.size > 0 ? formVexFile : null)
     setImportError("")
     setImportRun(null)
     setImportRunSummary(null)
@@ -2275,18 +2295,23 @@ export function App() {
     setImportLoading(true)
     try {
       setSelectedProjectId(importProjectId)
+      const uploadFormData: ImportUploadFormData = {
+        ...(selectedAssetContextFile
+          ? {
+              asset_context_file: selectedAssetContextFile as unknown as string,
+            }
+          : {}),
+        ...(selectedVexFile
+          ? {
+              vex_file: selectedVexFile as unknown as string,
+            }
+          : {}),
+        file: selectedFile as unknown as string,
+        input_type: importWizard.inputType,
+      }
       const run = await ImportsService.importProjectUpload({
         projectId: importProjectId,
-        formData: {
-          ...(selectedAssetContextFile
-            ? {
-                asset_context_file:
-                  selectedAssetContextFile as unknown as string,
-              }
-            : {}),
-          file: selectedFile as unknown as string,
-          input_type: importWizard.inputType,
-        },
+        formData: uploadFormData,
       })
       setImportRun(run)
       const summary = await RunsService.readRunSummary({ runId: run.id })
@@ -2898,6 +2923,21 @@ export function App() {
                       type="file"
                     />
                   </label>
+                  <label>
+                    <span>OpenVEX/VEX JSON</span>
+                    <input
+                      accept=".json,application/json"
+                      aria-label="OpenVEX/VEX JSON"
+                      name="vexFile"
+                      onChange={(event) =>
+                        setImportWizard((state) => ({
+                          ...state,
+                          vexFile: event.target.files?.[0] ?? null,
+                        }))
+                      }
+                      type="file"
+                    />
+                  </label>
                   <button
                     className="primary-action"
                     disabled={importLoading || projects.length === 0}
@@ -2933,6 +2973,9 @@ export function App() {
                     <li>
                       Optional asset context uploads must be CSV files with
                       target and asset_id columns.
+                    </li>
+                    <li>
+                      Optional OpenVEX/VEX sidecars must be JSON documents.
                     </li>
                     <li>Filename/path traversal is rejected before storage.</li>
                     <li>
@@ -3825,6 +3868,7 @@ export function App() {
                                     <th>Owner</th>
                                     <th>Severity</th>
                                     <th>Fix</th>
+                                    <th>VEX</th>
                                   </tr>
                                 </thead>
                                 <tbody>
@@ -3930,6 +3974,32 @@ export function App() {
                                             )}
                                           </td>
                                           <td>{optionalText(fixVersions)}</td>
+                                          <td>
+                                            <span className="finding-primary">
+                                              {optionalText(
+                                                labelize(
+                                                  stringValue(
+                                                    occurrence.vex_status,
+                                                  ),
+                                                ),
+                                              )}
+                                            </span>
+                                            <small>
+                                              {optionalText(
+                                                joinedValues([
+                                                  stringValue(
+                                                    occurrence.vex_justification,
+                                                  ),
+                                                  stringValue(
+                                                    occurrence.vex_action_statement,
+                                                  ),
+                                                  stringValue(
+                                                    occurrence.vex_match_type,
+                                                  ),
+                                                ]),
+                                              )}
+                                            </small>
+                                          </td>
                                         </tr>
                                       )
                                     },

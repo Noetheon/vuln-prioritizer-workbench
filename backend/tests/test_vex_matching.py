@@ -330,3 +330,67 @@ def test_openvex_subcomponent_id_is_available_for_purl_matching() -> None:
     assert match is not None
     assert match.specificity == "purl"
     assert match.statement.status == "not_affected"
+
+
+def test_openvex_product_identifiers_purl_is_available_for_matching() -> None:
+    statements = parse_openvex_document(
+        {
+            "statements": [
+                {
+                    "vulnerability": {"name": "CVE-2024-1234"},
+                    "status": "fixed",
+                    "products": [
+                        {
+                            "identifiers": {
+                                "purl": "pkg:generic/libfoo@1.2.3",
+                            }
+                        }
+                    ],
+                    "action_statement": "Upgrade path has completed.",
+                }
+            ]
+        }
+    )
+    occurrence = _occurrence()
+
+    match = match_vex_statement_details(occurrence, statements)
+
+    assert match is not None
+    assert match.specificity == "purl"
+    assert match.statement.status == "fixed"
+    assert match.statement.action_statement == "Upgrade path has completed."
+
+
+def test_openvex_subcomponent_identifiers_purl_is_available_for_matching() -> None:
+    statements = parse_openvex_document(
+        {
+            "statements": [
+                {
+                    "vulnerability": {"name": "CVE-2024-1234"},
+                    "status": "under_investigation",
+                    "products": [
+                        {
+                            "@id": "pkg:oci/acme/app@sha256:abc",
+                            "subcomponents": [
+                                {
+                                    "identifiers": [
+                                        {
+                                            "purl": "pkg:generic/libfoo@1.2.3",
+                                        }
+                                    ]
+                                }
+                            ],
+                        }
+                    ],
+                }
+            ]
+        }
+    )
+    occurrence = _occurrence()
+
+    match = match_vex_statement_details(occurrence, statements)
+
+    assert match is not None
+    assert match.specificity == "purl"
+    assert match.statement.status == "under_investigation"
+    assert match.statement.purl == "pkg:generic/libfoo@1.2.3"

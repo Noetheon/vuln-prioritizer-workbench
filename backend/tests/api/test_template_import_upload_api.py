@@ -18,6 +18,7 @@ from app.services import TemplateAnalysisError
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 TRIVY_REPORT = PROJECT_ROOT / "data" / "input_fixtures" / "trivy_report.json"
+OPENVEX = PROJECT_ROOT / "data" / "input_fixtures" / "openvex_statements.json"
 ATTACK_MAPPING = PROJECT_ROOT / "data" / "attack" / "local_curated_low_confidence_vpw058.yml"
 
 
@@ -526,6 +527,123 @@ def test_import_upload_applies_asset_context_sidecar_to_template_findings(
     assert occurrence["asset_owner"] == "team-platform"
     assert occurrence["asset_business_service"] == "payments"
     assert occurrence["asset_exposure"] == "internet-facing"
+
+
+def test_import_upload_applies_openvex_sidecar_to_template_findings(
+    template_api_env: TemplateApiEnv,
+    tmp_path: Path,
+) -> None:
+    upload_dir = _configure_upload_dir(template_api_env, tmp_path)
+    headers = auth_headers(template_api_env.client)
+    project = create_project_via_api(template_api_env.client, headers)
+    occurrence_csv = "\n".join(
+        [
+            "cve_id,asset_ref,component,version,purl,severity",
+            (
+                "CVE-2021-44228,log4j-service,log4j-core,2.14.1,"
+                "pkg:maven/org.apache.logging.log4j/log4j-core@2.14.1,CRITICAL"
+            ),
+            "",
+        ]
+    ).encode()
+    vex_bytes = OPENVEX.read_bytes()
+    expected_vex_sha256 = hashlib.sha256(vex_bytes).hexdigest()
+
+    response = template_api_env.client.post(
+        f"/api/v1/projects/{project['id']}/imports",
+        headers=headers,
+        data={"input_type": "generic-occurrence-csv"},
+        files={
+            "file": ("occurrences.csv", occurrence_csv, "text/csv"),
+            "vex_file": ("openvex.json", vex_bytes, "application/json"),
+        },
+    )
+
+    assert response.status_code == 200, response.text
+    payload = response.json()
+    vex_upload = payload["summary_json"]["vex_upload"]
+    assert vex_upload["sha256"] == expected_vex_sha256
+    assert vex_upload["stored_filename"] == "openvex.json"
+    assert Path(vex_upload["path"]).is_relative_to(upload_dir)
+    assert Path(vex_upload["path"]).read_bytes() == vex_bytes
+    assert payload["summary_json"]["vex"]["statement_count"] == 4
+    assert payload["summary_json"]["vex"]["matched_occurrences"] == 1
+    assert payload["summary_json"]["suppressed_by_vex"] == 1
+    assert payload["summary_json"]["vex_conflict_count"] == 0
+
+    findings = template_api_env.client.get(
+        f"/api/v1/projects/{project['id']}/findings/",
+        headers=headers,
+    )
+    assert findings.status_code == 200, findings.text
+    finding = findings.json()["data"][0]
+    assert finding["status"] == "fixed"
+    assert finding["suppressed_by_vex"] is True
+    assert finding["explanation_json"]["priority_state"] == "Fixed"
+    assert finding["explanation_json"]["provenance"]["vex_statuses"] == {"fixed": 1}
+    vex_reason = next(
+        reason
+        for reason in finding["explanation_json"]["explanation"]["reasons"]
+        if reason["code"] == "governance.vex_status"
+    )
+    assert "fixed: 1" in vex_reason["message"]
+    assert "Upgrade completed for the scoped component." in vex_reason["message"]
+
+    detail = template_api_env.client.get(f"/api/v1/findings/{finding['id']}", headers=headers)
+    assert detail.status_code == 200
+    occurrence = detail.json()["occurrences"][0]
+    assert occurrence["vex_status"] == "fixed"
+    assert occurrence["vex_match_type"] == "purl"
+    assert occurrence["vex_source_format"] == "openvex-json"
+    assert occurrence["vex_action_statement"] == "Upgrade completed for the scoped component."
+
+
+def test_import_upload_rejects_invalid_vex_sidecar_with_clear_error(
+    template_api_env: TemplateApiEnv,
+    tmp_path: Path,
+) -> None:
+    _configure_upload_dir(template_api_env, tmp_path)
+    headers = auth_headers(template_api_env.client)
+    project = create_project_via_api(template_api_env.client, headers)
+
+    response = template_api_env.client.post(
+        f"/api/v1/projects/{project['id']}/imports",
+        headers=headers,
+        data={"input_type": "generic-occurrence-csv"},
+        files={
+            "file": (
+                "occurrences.csv",
+                b"cve_id,asset_ref\nCVE-2024-3094,web-tier\n",
+                "text/csv",
+            ),
+            "vex_file": ("bad-openvex.json", b'{"statements": {}}', "application/json"),
+        },
+    )
+
+    assert response.status_code == 422, response.text
+    detail = response.json()["detail"]
+    assert detail["message"] == "VEX parsing failed."
+    assert detail["analysis_run_id"]
+    assert detail["vex_error"]["stage"] == "vex_parse"
+    assert "OpenVEX JSON `statements`" in detail["vex_error"]["message"]
+
+    run = template_api_env.client.get(
+        f"/api/v1/runs/{detail['analysis_run_id']}",
+        headers=headers,
+    )
+    assert run.status_code == 200
+    run_payload = run.json()
+    assert run_payload["status"] == "failed"
+    assert run_payload["summary_json"]["vex_error"]["stage"] == "vex_parse"
+    assert run_payload["summary_json"]["created_findings"] == 0
+    assert run_payload["summary_json"]["updated_findings"] == 0
+
+    findings = template_api_env.client.get(
+        f"/api/v1/projects/{project['id']}/findings/",
+        headers=headers,
+    )
+    assert findings.status_code == 200
+    assert findings.json()["count"] == 0
 
 
 def test_import_upload_rejects_invalid_asset_context_sidecar_with_clear_error(

@@ -17,6 +17,24 @@ const validAssetContextCsv = Buffer.from(
     "generic,ui-sidecar,ui-sidecar-asset,team-sidecar,inventory-sidecar,high,internal,staging",
   ].join("\n"),
 )
+const importWizardOpenVex = Buffer.from(
+  JSON.stringify({
+    statements: [
+      {
+        justification: "vulnerable_code_not_present",
+        products: [
+          {
+            identifiers: {
+              purl: "pkg:apk/alpine/xz@5.6.0-r0?arch=x86_64",
+            },
+          },
+        ],
+        status: "not_affected",
+        vulnerability: { name: "CVE-2024-3094" },
+      },
+    ],
+  }),
+)
 const invalidOccurrenceCsv = Buffer.from(
   [
     "cve_id,asset_ref,component_name,component_version,purl,scanner,fix_version,severity,owner,business_service,exposure",
@@ -435,7 +453,12 @@ test("template frontend covers core Workbench E2E smoke", async ({ page }) => {
   await page.getByLabel("Input type").selectOption("generic-occurrence-csv")
   const importFileInput = page.locator('input[name="importFile"]')
   await importFileInput.setInputFiles({
-    buffer: Buffer.from("cve_id,asset_ref\nCVE-2024-3094,ui-sidecar\n"),
+    buffer: Buffer.from(
+      [
+        "cve_id,asset_ref,component,version,purl",
+        "CVE-2024-3094,ui-sidecar,xz,5.6.0-r0,pkg:apk/alpine/xz@5.6.0-r0?arch=x86_64",
+      ].join("\n"),
+    ),
     mimeType: "text/csv",
     name: "import-wizard-occurrences.csv",
   })
@@ -447,6 +470,13 @@ test("template frontend covers core Workbench E2E smoke", async ({ page }) => {
     name: "import-wizard-asset-context.csv",
   })
   await expect(assetContextInput).toHaveJSProperty("files.length", 1)
+  const vexInput = page.locator('input[name="vexFile"]')
+  await vexInput.setInputFiles({
+    buffer: importWizardOpenVex,
+    mimeType: "application/json",
+    name: "import-wizard-openvex.json",
+  })
+  await expect(vexInput).toHaveJSProperty("files.length", 1)
   await page.getByRole("button", { name: "Upload Import" }).click()
   await expect(
     page.getByRole("region", { name: "Import result" }),
@@ -458,6 +488,41 @@ test("template frontend covers core Workbench E2E smoke", async ({ page }) => {
   await expect(runDetail).toContainText("Run Detail")
   await expect(runDetail).toContainText("Created")
   await expect(runDetail).toContainText("Provider snapshot")
+  const importWizardFindingsResponse = await page.request.get(
+    `http://127.0.0.1:8000/api/v1/projects/${project.id}/findings/?sort=cve`,
+    { headers: authHeaders },
+  )
+  expect(importWizardFindingsResponse.ok()).toBeTruthy()
+  const importWizardFindingsPayload =
+    (await importWizardFindingsResponse.json()) as {
+      data: Array<{
+        cve_id: string
+        id: string
+        status?: string
+        suppressed_by_vex?: boolean
+      }>
+    }
+  const vexSuppressedFinding = importWizardFindingsPayload.data.find(
+    (finding) =>
+      finding.cve_id === "CVE-2024-3094" && finding.suppressed_by_vex,
+  )
+  expect(vexSuppressedFinding).toBeTruthy()
+  if (!vexSuppressedFinding) {
+    throw new Error("Expected VEX-suppressed import wizard finding.")
+  }
+  expect(vexSuppressedFinding?.suppressed_by_vex).toBe(true)
+  expect(vexSuppressedFinding?.status).toBe("suppressed")
+  await page.goto(`/findings/${vexSuppressedFinding.id}`)
+  await expect(
+    page.getByRole("table", { name: "Occurrences table" }),
+  ).toContainText("Not Affected")
+  await expect(
+    page.getByRole("table", { name: "Occurrences table" }),
+  ).toContainText("vulnerable_code_not_present")
+  await page.screenshot({
+    fullPage: true,
+    path: "../docs/evidence/vpw-065-openvex-status-application.png",
+  })
 
   const occurrenceImport = await page.request.post(
     `http://127.0.0.1:8000/api/v1/projects/${project.id}/imports`,

@@ -759,6 +759,18 @@ export const Body_imports_import_project_uploadSchema = {
                 }
             ],
             title: 'Provider Snapshot File'
+        },
+        vex_file: {
+            anyOf: [
+                {
+                    contentMediaType: 'application/octet-stream',
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Vex File'
         }
     },
     required: ['input_type', 'file'],
@@ -1806,6 +1818,88 @@ export const FindingOccurrencePublicSchema = {
                 }
             ],
             title: 'Target Ref'
+        },
+        vex_action_statement: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Vex Action Statement'
+        },
+        vex_candidate_count: {
+            default: 0,
+            title: 'Vex Candidate Count',
+            type: 'integer'
+        },
+        vex_justification: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Vex Justification'
+        },
+        vex_match_type: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Vex Match Type'
+        },
+        vex_source_format: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Vex Source Format'
+        },
+        vex_source_path: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Vex Source Path'
+        },
+        vex_source_record_id: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Vex Source Record Id'
+        },
+        vex_status: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Vex Status'
         }
     },
     required: ['id', 'analysis_run_id'],

@@ -463,6 +463,14 @@ def _finding_occurrence_public(
         ),
         raw_severity=_string_evidence(evidence, "raw_severity")
         or _string_evidence(evidence, "severity"),
+        vex_status=_string_evidence(evidence, "vex_status"),
+        vex_justification=_string_evidence(evidence, "vex_justification"),
+        vex_action_statement=_string_evidence(evidence, "vex_action_statement"),
+        vex_match_type=_string_evidence(evidence, "vex_match_type"),
+        vex_source_format=_string_evidence(evidence, "vex_source_format"),
+        vex_source_record_id=_string_evidence(evidence, "vex_source_record_id"),
+        vex_source_path=_string_evidence(evidence, "vex_source_path"),
+        vex_candidate_count=_int_evidence(evidence, "vex_candidate_count"),
         created_at=getattr(occurrence, "created_at", None),
     )
 
@@ -484,6 +492,20 @@ def _string_list_evidence(evidence: dict[str, object], key: str) -> list[str] | 
         stripped = value.strip()
         return [stripped] if stripped else None
     return None
+
+
+def _int_evidence(evidence: dict[str, object], key: str) -> int:
+    value = evidence.get(key)
+    if isinstance(value, bool):
+        return 0
+    if isinstance(value, int):
+        return value
+    if isinstance(value, str):
+        try:
+            return int(value.strip())
+        except ValueError:
+            return 0
+    return 0
 
 
 @router.get("/findings/{finding_id}/explain", response_model=FindingExplanationPublic)

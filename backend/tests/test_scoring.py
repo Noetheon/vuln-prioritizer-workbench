@@ -367,6 +367,48 @@ def test_priority_explanation_notes_missing_cvss_and_epss_data() -> None:
     assert "FIRST EPSS data is unavailable" in explanation.human_readable
 
 
+def test_priority_explanation_includes_vex_status_reason_details() -> None:
+    finding = _finding(
+        cve_id="CVE-2024-0003",
+        priority_label="High",
+        priority_rank=2,
+        cvss=8.0,
+        epss=0.50,
+        in_kev=False,
+    ).model_copy(
+        update={
+            "suppressed_by_vex": True,
+            "priority_state": "Suppressed",
+            "provenance": FindingProvenance(
+                occurrence_count=1,
+                active_occurrence_count=0,
+                suppressed_occurrence_count=1,
+                vex_statuses={"not_affected": 1},
+                occurrences=[
+                    InputOccurrence(
+                        cve_id="CVE-2024-0003",
+                        purl="pkg:generic/demo@1.0.0",
+                        vex_status="not_affected",
+                        vex_justification="vulnerable_code_not_present",
+                        vex_action_statement="No runtime path loads the component.",
+                        vex_match_type="purl",
+                    )
+                ],
+            ),
+        }
+    )
+
+    explanation = build_priority_explanation(finding, PriorityPolicy())
+
+    vex_reason = next(
+        reason for reason in explanation.reasons if reason.code == "governance.vex_status"
+    )
+    assert vex_reason.source == "VEX"
+    assert vex_reason.value == "not_affected: 1"
+    assert "vulnerable_code_not_present" in vex_reason.message
+    assert "No runtime path loads the component" in vex_reason.message
+
+
 def test_priority_state_maps_suppressed_fixed_and_accepted_findings() -> None:
     suppressed = _finding(
         cve_id="CVE-2024-0001",

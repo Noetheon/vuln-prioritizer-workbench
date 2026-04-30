@@ -78,6 +78,9 @@ class TemplateAnalysisResult:
                 self.context.provider_data_quality_flags
             ),
             "warnings": list(self.context.warnings),
+            "suppressed_by_vex": self.context.suppressed_by_vex,
+            "under_investigation_count": self.context.under_investigation_count,
+            "vex_conflict_count": self.context.vex_conflict_count,
         }
 
 
@@ -99,6 +102,7 @@ class AnalysisService:
         attack_source: AttackSource | str = AttackSource.none,
         attack_mapping_file: Path | None = None,
         attack_technique_metadata_file: Path | None = None,
+        vex_files: list[Path] | None = None,
     ) -> TemplateAnalysisResult:
         """Run parse/enrich/score/explain for one uploaded template import."""
         snapshot_path = provider_snapshot_file or self.default_provider_snapshot_file()
@@ -128,7 +132,7 @@ class AnalysisService:
             asset_context=asset_context_file,
             target_kind="generic",
             target_ref=None,
-            vex_files=[],
+            vex_files=vex_files or [],
             show_suppressed=True,
             hide_waived=False,
             fail_on_provider_error=False,

@@ -40,7 +40,8 @@ from app.repositories import AssetRepository, FindingRepository, RunRepository
 from app.services import AnalysisService, TemplateAnalysisError, TemplateAnalysisResult
 from vuln_prioritizer.cli_options import AttackSource
 from vuln_prioritizer.inputs._occurrence_support import apply_asset_context
-from vuln_prioritizer.inputs.loader import load_asset_context_file
+from vuln_prioritizer.inputs._vex_support import apply_vex_statements
+from vuln_prioritizer.inputs.loader import load_asset_context_file, load_vex_files
 from vuln_prioritizer.models import InputOccurrence, PrioritizedFinding
 
 router = APIRouter(tags=["imports"])
@@ -81,6 +82,7 @@ async def import_project_upload(
     input_type: str = Form(...),
     file: UploadFile = File(...),
     asset_context_file: UploadFile | None = File(None),
+    vex_file: UploadFile | None = File(None),
     provider_snapshot_file: str | None = Form(None),
     locked_provider_data: bool = Form(False),
     attack_source: str = Form("none"),
@@ -108,6 +110,16 @@ async def import_project_upload(
             reserved_filename=stored_filename,
         )
         _validate_asset_context_upload(asset_context_stored_filename, asset_context_upload)
+    vex_upload = vex_file if _has_optional_upload(vex_file) else None
+    vex_original_filename = vex_upload.filename if vex_upload is not None else None
+    vex_stored_filename: str | None = None
+    if vex_upload is not None and vex_original_filename is not None:
+        _reject_unsafe_upload_filename(vex_original_filename)
+        vex_stored_filename = _sanitize_vex_filename(
+            vex_original_filename,
+            reserved_filenames={stored_filename, asset_context_stored_filename},
+        )
+        _validate_vex_upload(vex_stored_filename, vex_upload)
     provider_snapshot_path = _resolve_template_provider_snapshot_path(
         provider_snapshot_file,
         request=request,
@@ -132,10 +144,16 @@ async def import_project_upload(
         if asset_context_upload is not None
         else None
     )
+    vex_bytes = (
+        await _read_bounded_upload(vex_upload, settings=_template_settings(request))
+        if vex_upload is not None
+        else None
+    )
     upload_sha256 = hashlib.sha256(upload_bytes).hexdigest()
     asset_context_sha256 = (
         hashlib.sha256(asset_context_bytes).hexdigest() if asset_context_bytes is not None else None
     )
+    vex_sha256 = hashlib.sha256(vex_bytes).hexdigest() if vex_bytes is not None else None
     ignored_lines = _ignored_line_count(normalized_input_type, upload_bytes)
     job_id = str(uuid.uuid4())
     job_history = [_job_status_entry("pending")]
@@ -171,6 +189,15 @@ async def import_project_upload(
                 sha256=asset_context_sha256,
                 path=None,
             ),
+            "vex_upload": _optional_upload_summary(
+                input_type="openvex-json",
+                original_filename=vex_original_filename,
+                stored_filename=vex_stored_filename,
+                content_type=vex_upload.content_type if vex_upload is not None else None,
+                size_bytes=len(vex_bytes) if vex_bytes is not None else None,
+                sha256=vex_sha256,
+                path=None,
+            ),
             "created_findings": 0,
             "updated_findings": 0,
             "ignored_lines": ignored_lines,
@@ -195,6 +222,17 @@ async def import_project_upload(
         if asset_context_bytes is not None
         else None
     )
+    vex_path = (
+        _store_upload(
+            request,
+            project_id=project_id,
+            run_id=run.id,
+            filename=vex_stored_filename or "openvex.json",
+            content=vex_bytes,
+        )
+        if vex_bytes is not None
+        else None
+    )
     run.status = AnalysisRunStatus.RUNNING
     job_history = [*job_history, _job_status_entry("running")]
     run.summary_json = {
@@ -211,6 +249,10 @@ async def import_project_upload(
         "asset_context_upload": _upload_summary_with_path(
             run.summary_json.get("asset_context_upload"),
             path=str(asset_context_path) if asset_context_path is not None else None,
+        ),
+        "vex_upload": _upload_summary_with_path(
+            run.summary_json.get("vex_upload"),
+            path=str(vex_path) if vex_path is not None else None,
         ),
     }
     session.flush()
@@ -319,6 +361,60 @@ async def import_project_upload(
                 },
             ) from exc
 
+    vex_summary: dict[str, Any] | None = None
+    if vex_path is not None:
+        try:
+            occurrences, vex_summary = _apply_template_vex(
+                occurrences,
+                vex_path=vex_path,
+            )
+        except ValueError as exc:
+            vex_error = {
+                "message": str(exc),
+                "filename": vex_stored_filename,
+                "stage": "vex_parse",
+                "error_type": exc.__class__.__name__,
+            }
+            failed_history = [*job_history, _job_status_entry("failed")]
+            failed_run = run_repo.finish_analysis_run(
+                run.id,
+                status=AnalysisRunStatus.FAILED,
+                error_message=str(exc),
+                error_json={
+                    "vex_error": vex_error,
+                    "created_findings": 0,
+                    "updated_findings": 0,
+                    "ignored_lines": ignored_lines,
+                    "import_job": _job_payload(
+                        job_id=job_id,
+                        status="failed",
+                        status_history=failed_history,
+                    ),
+                },
+                summary_json={
+                    **run.summary_json,
+                    "import_job": _job_payload(
+                        job_id=job_id,
+                        status="failed",
+                        status_history=failed_history,
+                    ),
+                    "vex_error": vex_error,
+                    "parse_errors": [],
+                    "created_findings": 0,
+                    "updated_findings": 0,
+                    "ignored_lines": ignored_lines,
+                },
+            )
+            session.commit()
+            raise HTTPException(
+                status_code=422,
+                detail={
+                    "message": "VEX parsing failed.",
+                    "analysis_run_id": str(failed_run.id),
+                    "vex_error": vex_error,
+                },
+            ) from exc
+
     try:
         analysis_result = AnalysisService(session, _template_settings(request)).analyze_import(
             input_path=upload_path,
@@ -329,6 +425,7 @@ async def import_project_upload(
             attack_source=normalized_attack_source,
             attack_mapping_file=attack_mapping_path,
             attack_technique_metadata_file=attack_metadata_path,
+            vex_files=[vex_path] if vex_path is not None else [],
         )
     except TemplateAnalysisError as exc:
         failed_history = [*job_history, _job_status_entry("failed")]
@@ -401,6 +498,7 @@ async def import_project_upload(
             **analysis_result.summary_json,
             **persist_summary,
             "asset_context": asset_context_summary,
+            "vex": vex_summary,
             "ignored_lines": ignored_lines,
             "input_sha256": upload_sha256,
             "parse_errors": [],
@@ -441,10 +539,34 @@ def _validate_asset_context_upload(filename: str, file: UploadFile) -> None:
         )
 
 
+def _validate_vex_upload(filename: str, file: UploadFile) -> None:
+    if Path(filename).suffix.lower() != ".json":
+        raise HTTPException(status_code=422, detail="VEX file must be a JSON document.")
+    normalized = (file.content_type or "").split(";", maxsplit=1)[0].strip().lower()
+    if normalized in {"", "application/octet-stream"}:
+        return
+    if normalized not in {"application/json", "text/json"}:
+        raise HTTPException(
+            status_code=422,
+            detail="VEX content type must be application/json.",
+        )
+
+
 def _sanitize_context_filename(filename: str, *, reserved_filename: str) -> str:
     sanitized = _sanitize_filename(filename)
     if sanitized == reserved_filename:
         return f"asset_context_{sanitized}"
+    return sanitized
+
+
+def _sanitize_vex_filename(
+    filename: str,
+    *,
+    reserved_filenames: set[str | None],
+) -> str:
+    sanitized = _sanitize_filename(filename)
+    if sanitized in {value for value in reserved_filenames if value}:
+        return f"vex_{sanitized}"
     return sanitized
 
 
@@ -518,6 +640,44 @@ def _apply_template_asset_context(
     )
 
 
+def _apply_template_vex(
+    occurrences: list[NormalizedOccurrence],
+    *,
+    vex_path: Path,
+) -> tuple[list[NormalizedOccurrence], dict[str, Any]]:
+    statements, load_diagnostics = load_vex_files(
+        [vex_path],
+        return_diagnostics=True,
+    )
+    input_occurrences = [
+        _input_occurrence_from_template_occurrence(occurrence) for occurrence in occurrences
+    ]
+    enriched_occurrences, match_diagnostics = apply_vex_statements(
+        input_occurrences,
+        statements,
+        return_diagnostics=True,
+    )
+    return (
+        [
+            _template_occurrence_with_vex(original, enriched)
+            for original, enriched in zip(occurrences, enriched_occurrences, strict=True)
+        ],
+        {
+            "file_count": load_diagnostics.file_count,
+            "statement_count": load_diagnostics.statement_count,
+            "skipped_statements": load_diagnostics.skipped_statements,
+            "matched_occurrences": match_diagnostics.matched_occurrences,
+            "unmatched_occurrences": match_diagnostics.unmatched_occurrences,
+            "ambiguous_occurrences": match_diagnostics.ambiguous_occurrences,
+            "conflict_occurrences": match_diagnostics.conflict_occurrences,
+            "warnings": [
+                *load_diagnostics.warnings,
+                *match_diagnostics.warnings,
+            ],
+        },
+    )
+
+
 def _input_occurrence_from_template_occurrence(
     occurrence: NormalizedOccurrence,
 ) -> InputOccurrence:
@@ -549,6 +709,33 @@ def _input_occurrence_from_template_occurrence(
         or _string_evidence(evidence, "owner"),
         asset_business_service=_string_evidence(evidence, "asset_business_service")
         or _string_evidence(evidence, "business_service"),
+    )
+
+
+def _template_occurrence_with_vex(
+    occurrence: NormalizedOccurrence,
+    enriched: InputOccurrence,
+) -> NormalizedOccurrence:
+    evidence = dict(occurrence.raw_evidence)
+    updates: dict[str, Any] = {
+        "vex_status": enriched.vex_status,
+        "vex_justification": enriched.vex_justification,
+        "vex_action_statement": enriched.vex_action_statement,
+        "vex_match_type": enriched.vex_match_type,
+        "vex_source_format": enriched.vex_source_format,
+        "vex_source_record_id": enriched.vex_source_record_id,
+        "vex_source_path": enriched.vex_source_path,
+        "vex_candidate_count": enriched.vex_candidate_count,
+    }
+    evidence.update({key: value for key, value in updates.items() if value not in {None, ""}})
+    return NormalizedOccurrence(
+        cve=occurrence.cve,
+        component=occurrence.component,
+        version=occurrence.version,
+        asset_ref=occurrence.asset_ref,
+        source=occurrence.source,
+        fix_version=occurrence.fix_version,
+        raw_evidence=evidence,
     )
 
 
@@ -924,6 +1111,8 @@ def _decision_priority(decision: PrioritizedFinding) -> FindingPriority:
 
 
 def _decision_status(decision: PrioritizedFinding) -> FindingStatus:
+    if decision.priority_state == "Fixed":
+        return FindingStatus.FIXED
     if decision.suppressed_by_vex:
         return FindingStatus.SUPPRESSED
     if decision.waived:
