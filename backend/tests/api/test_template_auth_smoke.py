@@ -113,5 +113,34 @@ def test_template_auth_smoke_keeps_workbench_status_available() -> None:
     assert response.json()["status"] == "ok"
 
 
+def test_template_api_responses_include_security_headers() -> None:
+    client = _client()
+
+    ok = client.get("/api/v1/workbench/status")
+    not_found = client.get("/api/v1/does-not-exist")
+    invalid_login = client.post(
+        "/api/v1/login/access-token",
+        data={"username": settings.FIRST_SUPERUSER, "password": "wrong-password"},
+    )
+
+    assert ok.status_code == 200
+    assert not_found.status_code == 404
+    assert invalid_login.status_code == 400
+    for response in (ok, not_found, invalid_login):
+        _assert_security_headers(response.headers)
+
+
 def _without_generated_fields(payload: dict[str, Any]) -> dict[str, Any]:
     return {key: value for key, value in payload.items() if key not in {"id", "created_at"}}
+
+
+def _assert_security_headers(headers: Any) -> None:
+    assert headers["x-content-type-options"] == "nosniff"
+    assert headers["x-frame-options"] == "DENY"
+    assert headers["referrer-policy"] == "same-origin"
+    assert headers["cross-origin-opener-policy"] == "same-origin"
+    assert "microphone=()" in headers["permissions-policy"]
+    csp = headers["content-security-policy"]
+    assert "default-src 'self'" in csp
+    assert "object-src 'none'" in csp
+    assert "frame-ancestors 'none'" in csp

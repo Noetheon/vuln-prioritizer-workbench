@@ -109,6 +109,8 @@ def export_project_config_snapshot(
     response.headers["Content-Disposition"] = (
         f'attachment; filename="vuln-prioritizer-config-{snapshot.id}.json"'
     )
+    response.headers["Cache-Control"] = "no-store"
+    response.headers["X-Content-Type-Options"] = "nosniff"
     return response
 
 

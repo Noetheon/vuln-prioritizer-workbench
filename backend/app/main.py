@@ -12,6 +12,19 @@ from starlette.responses import JSONResponse, Response
 from app.api.main import api_router
 from app.core.config import Settings, settings
 
+SECURITY_HEADERS = {
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "DENY",
+    "Referrer-Policy": "same-origin",
+    "Cross-Origin-Opener-Policy": "same-origin",
+    "Permissions-Policy": "camera=(), microphone=(), geolocation=(), payment=(), usb=()",
+    "Content-Security-Policy": (
+        "default-src 'self'; base-uri 'none'; object-src 'none'; "
+        "script-src 'self'; style-src 'self'; img-src 'self' data:; "
+        "connect-src 'self'; frame-ancestors 'none'"
+    ),
+}
+
 
 def custom_generate_unique_id(route: APIRoute) -> str:
     """Use the official template operation-id convention for generated clients."""
@@ -38,8 +51,19 @@ def create_app(active_settings: Settings | None = None) -> FastAPI:
             allow_headers=["*"],
         )
     app.middleware("http")(_upload_size_guard)
+    app.middleware("http")(_security_headers)
     app.include_router(api_router, prefix=selected_settings.API_V1_STR)
     return app
+
+
+async def _security_headers(
+    request: Request,
+    call_next: Callable[[Request], Awaitable[Response]],
+) -> Response:
+    response = await call_next(request)
+    for header, value in SECURITY_HEADERS.items():
+        response.headers.setdefault(header, value)
+    return response
 
 
 async def _upload_size_guard(

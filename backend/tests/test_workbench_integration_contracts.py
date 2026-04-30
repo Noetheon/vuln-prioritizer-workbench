@@ -44,3 +44,26 @@ def test_compose_override_exposes_template_shell_and_frontend_ports() -> None:
     assert "app.main:app" in services["backend"]["command"]
     assert services["frontend"]["ports"] == ["127.0.0.1:5173:80"]
     assert services["workbench-postgres"]["ports"] == ["127.0.0.1:8001:8000"]
+
+
+def test_frontend_nginx_serves_security_headers_for_static_and_404_routes() -> None:
+    nginx_conf = Path("frontend/nginx.conf").read_text(encoding="utf-8")
+    blocked_routes = Path("frontend/nginx-backend-not-found.conf").read_text(encoding="utf-8")
+
+    assert "add_header Content-Security-Policy" in nginx_conf
+    assert "always;" in nginx_conf
+    assert "default-src 'self'" in nginx_conf
+    assert "object-src 'none'" in nginx_conf
+    assert "frame-ancestors 'none'" in nginx_conf
+    assert "connect-src 'self' http://localhost:8000 http://127.0.0.1:8000" in nginx_conf
+    assert 'add_header X-Content-Type-Options "nosniff" always;' in nginx_conf
+    assert 'add_header X-Frame-Options "DENY" always;' in nginx_conf
+    assert 'add_header Referrer-Policy "same-origin" always;' in nginx_conf
+    assert 'add_header Cross-Origin-Opener-Policy "same-origin" always;' in nginx_conf
+    assert (
+        'add_header Permissions-Policy "camera=(), microphone=(), geolocation=(), '
+        'payment=(), usb=()" always;'
+    ) in nginx_conf
+    assert "include /etc/nginx/extra-conf.d/*.conf;" in nginx_conf
+    assert "location /api" in blocked_routes
+    assert "return 404;" in blocked_routes

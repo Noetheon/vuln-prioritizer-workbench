@@ -80,11 +80,14 @@ def download_provider_snapshot(
 ) -> FileResponse:
     snapshot = _get_provider_snapshot_or_404(session, snapshot_id)
     path = _resolve_provider_snapshot_artifact_path(snapshot, settings=settings)
-    return FileResponse(
+    response = FileResponse(
         path,
         media_type="application/json",
         filename=f"provider-snapshot-{snapshot.id}.json",
     )
+    response.headers["Cache-Control"] = "no-store"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    return response
 
 
 @provider_router.post(

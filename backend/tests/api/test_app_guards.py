@@ -9,7 +9,7 @@ import pytest
 from fastapi import FastAPI, HTTPException
 from fastapi.exceptions import RequestValidationError
 from starlette.requests import Request
-from starlette.responses import PlainTextResponse
+from starlette.responses import PlainTextResponse, Response
 
 from app import main as template_app_module
 from app.core.config import Settings as TemplateSettings
@@ -71,6 +71,37 @@ def test_template_upload_size_guard_rejects_oversized_import_and_asset_uploads()
         assert import_response.status_code == 413
         assert asset_response.status_code == 413
         assert non_upload_response.status_code == 200
+
+    asyncio.run(_exercise())
+
+
+def test_template_security_headers_wrap_success_and_guard_rejections() -> None:
+    async def _exercise() -> None:
+        success = await template_app_module._security_headers(  # noqa: SLF001
+            _template_request(path="/api/v1/workbench/status"),
+            _ok_response,
+        )
+        oversized_request = _template_request(
+            path="/api/v1/projects/project-1/imports",
+            method="POST",
+            content_length=str((1 * 1024 * 1024) + (64 * 1024) + 1),
+        )
+
+        async def guarded_response(request: Request) -> Response:
+            return await template_app_module._upload_size_guard(  # noqa: SLF001
+                request,
+                _ok_response,
+            )
+
+        rejected = await template_app_module._security_headers(  # noqa: SLF001
+            oversized_request,
+            guarded_response,
+        )
+
+        assert success.status_code == 200
+        assert rejected.status_code == 413
+        _assert_template_security_headers(success)
+        _assert_template_security_headers(rejected)
 
     asyncio.run(_exercise())
 
@@ -251,6 +282,18 @@ def test_artifact_resolution_rejects_symlinks_outside_allowed_roots(tmp_path: Pa
 
 async def _ok_response(_request: Request) -> PlainTextResponse:
     return PlainTextResponse("ok")
+
+
+def _assert_template_security_headers(response: Response) -> None:
+    assert response.headers["x-content-type-options"] == "nosniff"
+    assert response.headers["x-frame-options"] == "DENY"
+    assert response.headers["referrer-policy"] == "same-origin"
+    assert response.headers["cross-origin-opener-policy"] == "same-origin"
+    assert "geolocation=()" in response.headers["permissions-policy"]
+    csp = response.headers["content-security-policy"]
+    assert "default-src 'self'" in csp
+    assert "object-src 'none'" in csp
+    assert "frame-ancestors 'none'" in csp
 
 
 async def _empty_receive() -> dict[str, object]:
