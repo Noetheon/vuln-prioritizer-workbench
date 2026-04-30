@@ -230,12 +230,16 @@ curl http://127.0.0.1:8000/api/v1/workbench/status
 
 Maintainers can run the same Compose readiness path through
 `make docker-demo-smoke`, which starts the backend and frontend, polls
-`/api/v1/workbench/status`, and tears the stack down after the check.
+`/api/v1/workbench/status`, verifies a locked provider-data import, triggers a
+cache-only provider update through `/api/v1/providers/update-jobs`, and tears
+the stack down after the check.
 
 The default Compose stack now follows the FastAPI Full Stack Template shape:
 `db`, `backend`, and `frontend`. The backend service intentionally serves the
 new template shell (`app.main:app`) and does not claim the legacy Jinja2
-Workbench as migrated. To smoke-test the legacy Workbench against the optional
+Workbench as migrated. Template provider update snapshots are written to the
+`template-provider-snapshots` volume at `/app/provider-snapshots`, while
+`/app/examples` stays a read-only demo-data mount. To smoke-test the legacy Workbench against the optional
 Postgres profile and the same Alembic migration path, run:
 
 ```bash
@@ -335,9 +339,37 @@ Workbench project settings can be saved as config-as-code through
 `vuln-prioritizer.yml` schema as the CLI runtime config, rejects unknown keys, and keeps backward
 defaults when no project snapshot exists.
 
-Provider update jobs are available at `POST /api/providers/update-jobs` and from the Settings page.
+Provider update jobs are available in both Workbench surfaces:
+
+- Template API: `POST /api/v1/providers/update-jobs` and
+  `GET /api/v1/providers/update-jobs`, authenticated with the configured user
+  JWT or an `admin` API token.
+- Legacy local Workbench: `POST /api/providers/update-jobs` and the Settings
+  page.
+
 They are synchronous local jobs intended for cron or other trusted local schedulers; failures are
-recorded without replacing the previous provider snapshot. GitHub issue export starts with
+recorded without replacing the previous provider snapshot, and overlapping refreshes return
+HTTP 409. The optional Compose `postgres` profile also includes a disabled-by-default
+`provider-scheduler` service. Start it only when you want the local Workbench to submit periodic
+provider update jobs:
+
+```bash
+docker compose -f compose.yml -f compose.override.yml --profile postgres up -d db workbench-postgres provider-scheduler
+```
+
+The scheduler posts to `http://workbench-postgres:8000/api/providers/update-jobs`, defaults to
+cache-only provider refresh every 86400 seconds, and accepts these environment variables:
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `VULN_PRIORITIZER_PROVIDER_UPDATE_INTERVAL_SECONDS` | `86400` | Delay between scheduled provider update submissions. |
+| `VULN_PRIORITIZER_PROVIDER_UPDATE_SOURCES` | `nvd,epss,kev` | Comma-separated provider source list. |
+| `VULN_PRIORITIZER_PROVIDER_UPDATE_CACHE_ONLY` | `true` | Keep the scheduled job offline/cache-only by default; set to `false` only when live provider egress is intended. |
+| `VULN_PRIORITIZER_PROVIDER_UPDATE_MAX_CVES` | empty | Optional cap for each scheduled refresh. |
+| `VULN_PRIORITIZER_PROVIDER_UPDATE_API_TOKEN` | empty | Optional local Workbench API token used when API tokens have been enabled. |
+
+Provider update jobs use a provider-snapshot-directory lock file to reject overlapping refreshes
+with HTTP 409 instead of racing snapshot writes. GitHub issue export starts with
 `POST /api/projects/{project_id}/github/issues/preview` and can create issues through
 `POST /api/projects/{project_id}/github/issues/export` when `dry_run` is false, a repository is
 provided, and the selected token environment variable is configured.

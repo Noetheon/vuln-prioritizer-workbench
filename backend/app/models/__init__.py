@@ -97,7 +97,9 @@ from app.models.providers import (
     ProviderSnapshotStatusPublic,
     ProviderSourceStatusPublic,
     ProviderStatusPublic,
+    ProviderUpdateJobCreate,
     ProviderUpdateJobPublic,
+    ProviderUpdateJobsPublic,
 )
 from app.models.registry import import_table_models
 from app.models.reports import (
@@ -218,7 +220,9 @@ __all__ = [
     "ProviderSnapshotStatusPublic",
     "ProviderSourceStatusPublic",
     "ProviderStatusPublic",
+    "ProviderUpdateJobCreate",
     "ProviderUpdateJobPublic",
+    "ProviderUpdateJobsPublic",
     "Report",
     "ReportBase",
     "ReportCreate",

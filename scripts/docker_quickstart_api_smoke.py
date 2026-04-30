@@ -20,6 +20,8 @@ def main() -> None:
     project_id = _create_project(token)
     run = _import_demo(token, project_id)
     findings = _get_findings(token, project_id)
+    provider_job = _trigger_provider_update(token)
+    provider_status = _get_provider_status(token)
 
     summary = run.get("summary_json") or {}
     if run.get("status") not in {"succeeded", "completed"}:
@@ -29,17 +31,27 @@ def main() -> None:
     if summary.get("locked_provider_data") is not True:
         raise RuntimeError("Demo import did not use locked provider data.")
     if not str(summary.get("provider_snapshot_file", "")).endswith(
-        "/app/examples/demo_provider_snapshot.json"
+        "/app/provider-snapshots/demo_provider_snapshot.json"
     ):
         raise RuntimeError(
             "Demo import did not use the Compose-mounted provider snapshot: "
             f"{summary.get('provider_snapshot_file')!r}"
         )
+    if provider_job.get("status") not in {"succeeded", "completed"}:
+        raise RuntimeError(f"Provider update job did not complete: {provider_job!r}")
+    if provider_status.get("latest_update_job", {}).get("id") != provider_job.get("id"):
+        raise RuntimeError("Provider status did not surface the latest update job.")
+    if provider_status.get("snapshot", {}).get("mode") != "cache-only":
+        raise RuntimeError(
+            "Provider update did not produce a cache-only snapshot: "
+            f"{provider_status.get('snapshot')!r}"
+        )
 
     print(
         "Template Workbench demo import passed: "
         f"project_id={project_id} run_id={run['id']} findings={len(findings)} "
-        f"locked_provider_data={summary['locked_provider_data']}"
+        f"locked_provider_data={summary['locked_provider_data']} "
+        f"provider_job_id={provider_job['id']}"
     )
 
 
@@ -105,6 +117,32 @@ def _get_findings(token: str, project_id: str) -> list[dict[str, object]]:
     if not isinstance(findings, list):
         raise RuntimeError("Findings API did not return a data list.")
     return findings
+
+
+def _trigger_provider_update(token: str) -> dict[str, object]:
+    payload = json.dumps(
+        {
+            "sources": ["kev"],
+            "cve_ids": ["CVE-2024-3094"],
+            "cache_only": True,
+            "max_cves": 1,
+        }
+    ).encode()
+    return _request(
+        f"{BASE_URL}/providers/update-jobs",
+        data=payload,
+        headers={
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json",
+        },
+    )
+
+
+def _get_provider_status(token: str) -> dict[str, object]:
+    return _request(
+        f"{BASE_URL}/providers/status",
+        headers={"Authorization": f"Bearer {token}"},
+    )
 
 
 def _request(

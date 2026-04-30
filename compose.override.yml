@@ -10,6 +10,7 @@ services:
       - sh
       - -c
       - |
+        cp -n /app/examples/*provider_snapshot*.json /app/provider-snapshots/ 2>/dev/null || true
         python - <<'PY'
         from sqlmodel import Session
 

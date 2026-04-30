@@ -182,7 +182,7 @@ def test_asset_finding_and_run_repositories_persist_domain_graph(
 
     assert same_snapshot.id == snapshot.id
     assert snapshot.source_metadata_json["api_key"] == "[REDACTED]"
-    assert snapshot.source_metadata_json["source_path"] == "/tmp/template-provider-snapshot.json"
+    assert snapshot.source_metadata_json["source_path"] == "[REDACTED]"
     assert occurrence.finding_id == finding.id
     assert finished.finished_at is not None
     assert finished.summary_json["findings"] == 1
