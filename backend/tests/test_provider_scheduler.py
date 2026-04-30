@@ -28,9 +28,9 @@ def test_provider_update_lock_rejects_concurrent_refresh(tmp_path) -> None:
 
     with _provider_update_lock(settings):
         assert (settings.provider_snapshot_dir / PROVIDER_UPDATE_LOCK_FILE).is_file()
+        nested_lock = _provider_update_lock(settings)
         with pytest.raises(HTTPException) as exc_info:
-            with _provider_update_lock(settings):
-                raise AssertionError("nested provider update lock should not be acquired")
+            nested_lock.__enter__()
 
     assert exc_info.value.status_code == 409
     assert "already running" in str(exc_info.value.detail)
