@@ -1656,6 +1656,26 @@ function attackConfidenceLabel(value: string | null | undefined) {
   return value ? labelize(value) : "Unknown"
 }
 
+function attackSourceLabel(
+  source: string | null | undefined,
+  context: FindingAttackContext | null,
+) {
+  const references = (context?.mappings ?? []).flatMap(
+    (mapping) => mapping.references ?? [],
+  )
+  if (
+    references.some((reference) =>
+      reference.toLowerCase().includes("local curated demo mapping"),
+    )
+  ) {
+    return "Local curated demo mapping"
+  }
+  if (source === "local-curated") {
+    return "Local curated mapping"
+  }
+  return source ?? null
+}
+
 function attackCoverageStatusLabel(context: FindingAttackContext | null) {
   const note = (stringValue(context?.defensive_note) ?? "").toLowerCase()
   if (!note) {
@@ -2160,8 +2180,10 @@ export function App() {
   const detailAttackTechniqueName =
     detailAttackPrimaryTechnique?.name ?? "Technique"
   const detailAttackTechniqueLabel = `${detailAttackTechniqueId} ${detailAttackTechniqueName}`
-  const detailAttackSource =
-    detailAttackPrimaryTechnique?.source ?? detailAttackContext?.source
+  const detailAttackSource = attackSourceLabel(
+    detailAttackPrimaryTechnique?.source ?? detailAttackContext?.source,
+    detailAttackContext,
+  )
   const detailAttackRationale =
     detailAttackPrimaryTechnique?.rationale ?? detailAttackContext?.rationale
   const detailAttackEmpty = attackContextEmptyState(detailAttackContext)
@@ -4389,7 +4411,7 @@ export function App() {
                                 <CardTitle>TTP Context</CardTitle>
                               </div>
                               <Badge variant="outline">
-                                {detailAttackContext?.source
+                                {detailAttackSource
                                   ?.toLowerCase()
                                   .includes("demo")
                                   ? "Curated demo mapping"
@@ -4648,7 +4670,10 @@ export function App() {
                                                   </TableCell>
                                                   <TableCell>
                                                     {optionalText(
-                                                      technique.source,
+                                                      attackSourceLabel(
+                                                        technique.source,
+                                                        detailAttackContext,
+                                                      ),
                                                     )}
                                                   </TableCell>
                                                   <TableCell>
