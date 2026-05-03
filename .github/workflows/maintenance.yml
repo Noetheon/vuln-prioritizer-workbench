@@ -5,6 +5,12 @@ on:
     - cron: "23 4 * * 1"
   workflow_dispatch:
 
+# Weekly/manual maintenance can be expensive; cancel an older copy when the
+# same workflow is re-run for the same ref.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
@@ -38,6 +44,7 @@ jobs:
         with:
           name: maintenance-release-check-debug
           if-no-files-found: ignore
+          retention-days: 3
           path: |
             ${{ runner.temp }}/workflow-artifacts/**
             docs/example*.json
@@ -99,6 +106,7 @@ jobs:
         with:
           name: maintenance-install-smoke-debug-${{ matrix.os }}-${{ matrix.install-path }}
           if-no-files-found: ignore
+          retention-days: 3
           path: |
             ${{ runner.temp }}/workflow-artifacts/**
             docs/example*.json

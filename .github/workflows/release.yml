@@ -6,6 +6,12 @@ on:
       - "v*"
   workflow_dispatch:
 
+# Release runs are scoped by ref, so a new tag does not cancel another tag.
+# Re-running the same ref cancels stale work before publishing artifacts.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
@@ -90,6 +96,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: release-dist
+          retention-days: 3
           path: dist/*
 
       - name: Upload release debug artifacts on failure
@@ -98,6 +105,7 @@ jobs:
         with:
           name: release-debug-artifacts
           if-no-files-found: ignore
+          retention-days: 3
           path: |
             ${{ runner.temp }}/workflow-artifacts/**
             docs/example*.json
@@ -199,6 +207,7 @@ jobs:
         with:
           name: verify-pypi-debug-artifacts
           if-no-files-found: ignore
+          retention-days: 3
           path: |
             ${{ runner.temp }}/workflow-artifacts/**
             docs/example*.json

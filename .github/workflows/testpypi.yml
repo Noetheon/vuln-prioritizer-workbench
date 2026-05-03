@@ -3,6 +3,12 @@ name: TestPyPI Publish
 on:
   workflow_dispatch:
 
+# Manual TestPyPI runs can be repeated while debugging packaging. Keep only the
+# newest run for the same ref.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
@@ -54,6 +60,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: release-dist
+          retention-days: 3
           path: dist/*
 
       - name: Upload TestPyPI build debug artifacts on failure
@@ -62,6 +69,7 @@ jobs:
         with:
           name: testpypi-build-debug-artifacts
           if-no-files-found: ignore
+          retention-days: 3
           path: |
             ${{ runner.temp }}/workflow-artifacts/**
             docs/example*.json
@@ -149,6 +157,7 @@ jobs:
         with:
           name: verify-testpypi-debug-artifacts
           if-no-files-found: ignore
+          retention-days: 3
           path: |
             ${{ runner.temp }}/workflow-artifacts/**
             docs/example*.json

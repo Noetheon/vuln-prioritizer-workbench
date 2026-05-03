@@ -2,8 +2,18 @@ name: CI
 
 on:
   push:
+    branches:
+      - main
   pull_request:
+    branches:
+      - main
   workflow_dispatch:
+
+# Cancel superseded commits on the same PR or branch so stale CI does not
+# continue consuming runner minutes after a newer push arrives.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -102,6 +112,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: vpw-082-action-smoke-reports
+          retention-days: 3
           path: |
             build/vpw-082-action-smoke/analysis.json
             build/vpw-082-action-smoke/summary.md
@@ -155,13 +166,19 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: Run frontend Playwright smoke
+        if: github.event_name == 'pull_request'
+        run: npm --prefix frontend run test -- tests/ui-smoke.spec.ts
+
+      - name: Run full frontend Playwright suite
+        if: github.event_name != 'pull_request'
         run: npm --prefix frontend run test
 
-      - name: Upload frontend Playwright evidence
-        if: always()
+      - name: Upload frontend Playwright failure evidence
+        if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: frontend-playwright-evidence
+          retention-days: 3
           path: |
             docs/evidence/vpw-047-core-workbench-flow.png
             frontend/test-results
