@@ -12,10 +12,13 @@ export type VpwGridProps = {
   columns?: 1 | 2 | 3 | 4
 }
 
-export type VpwPanelProps = {
+export type VpwPanelProps = ComponentPropsWithoutRef<"div"> & {
   children: ReactNode
-  className?: string
   padded?: boolean
+}
+
+export type VpwSurfaceProps = ComponentPropsWithoutRef<"div"> & {
+  children: ReactNode
 }
 
 const gridClass: Record<NonNullable<VpwGridProps["columns"]>, string> = {
@@ -45,9 +48,79 @@ export function VpwPanel({
   children,
   className,
   padded = true,
+  ...props
 }: VpwPanelProps) {
   return (
-    <div className={cn("vpw-panel", padded && "p-5", className)}>
+    <div className={cn("vpw-panel", padded && "p-5", className)} {...props}>
+      {children}
+    </div>
+  )
+}
+
+export function VpwSurface({ children, className, ...props }: VpwSurfaceProps) {
+  return (
+    <VpwPanel
+      className={cn("flex flex-col gap-6 py-6", className)}
+      padded={false}
+      {...props}
+    >
+      {children}
+    </VpwPanel>
+  )
+}
+
+export function VpwSurfaceHeader({
+  children,
+  className,
+  ...props
+}: VpwSurfaceProps) {
+  return (
+    <div className={cn("flex flex-col gap-1.5 px-6", className)} {...props}>
+      {children}
+    </div>
+  )
+}
+
+export function VpwSurfaceTitle({
+  children,
+  className,
+  ...props
+}: VpwSurfaceProps) {
+  return (
+    <div
+      className={cn(
+        "font-semibold leading-none text-[var(--vpw-text-primary)]",
+        className,
+      )}
+      {...props}
+    >
+      {children}
+    </div>
+  )
+}
+
+export function VpwSurfaceDescription({
+  children,
+  className,
+  ...props
+}: VpwSurfaceProps) {
+  return (
+    <div
+      className={cn("text-sm text-[var(--vpw-text-secondary)]", className)}
+      {...props}
+    >
+      {children}
+    </div>
+  )
+}
+
+export function VpwSurfaceBody({
+  children,
+  className,
+  ...props
+}: VpwSurfaceProps) {
+  return (
+    <div className={cn("px-6", className)} {...props}>
       {children}
     </div>
   )

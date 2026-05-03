@@ -5,6 +5,7 @@ import inspect
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+REPO_ROOT = ROOT.parent
 SRC_ROOT = ROOT / "src" / "vuln_prioritizer"
 
 
@@ -285,6 +286,177 @@ def test_service_modules_do_not_import_cli_adapter_modules() -> None:
         assert not {
             module for module in imports if module.startswith("vuln_prioritizer.cli_support")
         }, path
+
+
+def test_template_backend_does_not_import_legacy_workbench_layers() -> None:
+    backend_app_root = ROOT / "app"
+    blocked_prefixes = (
+        "vuln_prioritizer.api",
+        "vuln_prioritizer.db",
+        "vuln_prioritizer.web",
+        "vuln_prioritizer.services.workbench_",
+    )
+
+    violations = {
+        str(path.relative_to(ROOT)): sorted(
+            module
+            for module in _imported_modules(str(path.relative_to(ROOT)))
+            if module.startswith(blocked_prefixes)
+        )
+        for path in sorted(backend_app_root.rglob("*.py"))
+    }
+    violations = {path: modules for path, modules in violations.items() if modules}
+
+    assert violations == {}
+
+
+def test_template_report_contracts_are_split_from_renderer_facade() -> None:
+    imports = _imported_modules("app/services/reports.py")
+    source = (ROOT / "app/services/reports.py").read_text(encoding="utf-8")
+    contracts_source = (ROOT / "app/services/report_contracts.py").read_text(encoding="utf-8")
+    models_source = (ROOT / "app/services/report_models.py").read_text(encoding="utf-8")
+    renderers_source = (ROOT / "app/services/report_renderers.py").read_text(encoding="utf-8")
+
+    assert "app.services.report_contracts" in imports
+    assert "app.services.report_models" in imports
+    assert "app.services.report_renderers" in imports
+    assert "CSV_FINDINGS_COLUMNS = [" not in source
+    assert "EXECUTIVE_REPORT_CSS = " not in source
+    assert "def render_markdown_report" not in source
+    assert "def render_evidence_bundle_zip" not in source
+    assert "class MarkdownReportPayload" not in source
+    assert "CSV_FINDINGS_COLUMNS = [" in contracts_source
+    assert "REPORT_FILENAME_EVIDENCE_BUNDLE" in contracts_source
+    assert "class MarkdownReportPayload" in models_source
+    assert "EXECUTIVE_REPORT_CSS = " in renderers_source
+    assert "def render_evidence_bundle_zip" in renderers_source
+
+
+def test_template_import_validation_and_storage_are_split_from_route_facade() -> None:
+    imports = _imported_modules("app/api/routes/imports.py")
+    source = (ROOT / "app/api/routes/imports.py").read_text(encoding="utf-8")
+    upload_source = (ROOT / "app/services/import_uploads.py").read_text(encoding="utf-8")
+    artifact_source = (ROOT / "app/services/import_artifacts.py").read_text(encoding="utf-8")
+
+    assert "app.services.import_uploads" in imports
+    assert "app.services.import_artifacts" in imports
+    assert "ALLOWED_UPLOAD_SUFFIXES = " not in source
+    assert "def _read_bounded_upload" not in source
+    assert "def _store_upload" not in source
+    assert "def _resolve_template_provider_snapshot_path" not in source
+    assert "ALLOWED_UPLOAD_SUFFIXES = " in upload_source
+    assert "def store_upload" in upload_source
+    assert "def resolve_template_provider_snapshot_path" in artifact_source
+    assert "def validate_attack_import_options" in artifact_source
+
+
+def test_frontend_routes_use_workbench_route_containers_instead_of_app_facade() -> None:
+    route_files = sorted((REPO_ROOT / "frontend/src/routes/_layout").glob("*.tsx"))
+    active_route_files = [path for path in route_files if path.name != "assets.tsx"]
+    app_facade = REPO_ROOT / "frontend/src/App.tsx"
+
+    assert not app_facade.exists()
+    assert active_route_files
+    for path in active_route_files:
+        source = path.read_text(encoding="utf-8")
+
+        assert "../../App" not in source, path
+        assert "workbench/routes/" in source, path
+
+
+def test_workbench_route_containers_use_explicit_shell_routes() -> None:
+    route_files = sorted((REPO_ROOT / "frontend/src/workbench/routes").glob("*Route.tsx"))
+
+    assert route_files
+    for path in route_files:
+        source = path.read_text(encoding="utf-8")
+
+        assert "WorkbenchRouteApp" not in source, path
+        assert "WorkbenchShell" in source, path
+        assert "routePath=" in source, path
+
+    findings_route = (REPO_ROOT / "frontend/src/workbench/routes/FindingsRoute.tsx").read_text(
+        encoding="utf-8"
+    )
+    finding_detail_route = (
+        REPO_ROOT / "frontend/src/workbench/routes/FindingDetailRoute.tsx"
+    ).read_text(encoding="utf-8")
+    assert "Outlet" in findings_route
+    assert "findingDetailId=" not in findings_route
+    assert "findingDetailId=" in finding_detail_route
+
+
+def test_workbench_shell_lazy_loads_heavy_product_surfaces() -> None:
+    source = (REPO_ROOT / "frontend/src/workbench/WorkbenchShell.tsx").read_text(encoding="utf-8")
+
+    assert "lazy(() =>" in source
+    assert 'import("../components/findings/RemediationQueue")' in source
+    assert 'import("../components/dashboard/RiskOperationsDashboard")' in source
+    assert 'import("../components/reports/EvidenceCenter")' in source
+    assert 'from "../components/findings"' not in source
+    assert 'from "../components/imports"' not in source
+    assert 'from "../components/projects"' not in source
+
+
+def test_findings_queue_uses_vpw_product_surfaces() -> None:
+    source = (REPO_ROOT / "frontend/src/components/findings/RemediationQueue.tsx").read_text(
+        encoding="utf-8"
+    )
+
+    assert "@/components/vpw" in source
+    assert "VpwMetricCard" in source
+    assert "VpwEmptyState" in source
+    assert "VpwStatusBanner" in source
+    assert "@/components/ui/card" not in source
+    assert "@/components/ui/badge" not in source
+    assert "bg-gradient-to-br" not in source
+    assert "rounded-2xl" not in source
+
+
+def test_dashboard_and_finding_detail_use_vpw_surfaces() -> None:
+    checked_paths = [
+        REPO_ROOT / "frontend/src/components/dashboard/RiskOperationsDashboard.tsx",
+        REPO_ROOT / "frontend/src/components/dashboard/TopRemediationQueue.tsx",
+        REPO_ROOT / "frontend/src/components/dashboard/ProviderFreshnessPanel.tsx",
+        REPO_ROOT / "frontend/src/components/risk/MetricCard.tsx",
+        REPO_ROOT / "frontend/src/workbench/WorkbenchShell.tsx",
+    ]
+
+    for path in checked_paths:
+        source = path.read_text(encoding="utf-8")
+
+        assert "components/ui/card" not in source, path
+
+    assert "VpwSurface" in checked_paths[0].read_text(encoding="utf-8")
+    assert "VpwPanel" in checked_paths[1].read_text(encoding="utf-8")
+    assert "VpwPanel" in checked_paths[2].read_text(encoding="utf-8")
+    assert "VpwSurface" in checked_paths[3].read_text(encoding="utf-8")
+    assert "VpwSurface" in checked_paths[4].read_text(encoding="utf-8")
+    dashboard_source = checked_paths[0].read_text(encoding="utf-8")
+    assert "rounded-2xl" not in dashboard_source
+    assert "bg-gradient-to-br" not in dashboard_source
+    assert "bg-linear-to-br" not in dashboard_source
+    assert "bg-slate-900" not in dashboard_source
+
+
+def test_frontend_css_drops_unused_pre_vpw_shell_classes() -> None:
+    source = (REPO_ROOT / "frontend/src/index.css").read_text(encoding="utf-8")
+
+    removed_selectors = {
+        ".app-shell",
+        ".dashboard-empty",
+        ".dashboard-hero",
+        ".dashboard-provider-badge",
+        ".data-services-summary",
+        ".metric-grid",
+        ".nav-item",
+        ".nav-list",
+        ".project-context",
+        ".sidebar-footer",
+        ".status-strip",
+    }
+
+    assert {selector for selector in removed_selectors if selector in source} == set()
 
 
 def test_provider_modules_do_not_import_service_layer_modules() -> None:

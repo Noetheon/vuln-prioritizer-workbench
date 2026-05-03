@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router"
 
-import { App } from "../../App"
+import { ImportsRoute } from "../../workbench/routes/ImportsRoute"
 
 export const Route = createFileRoute("/_layout/imports")({
-  component: App,
+  component: ImportsRoute,
 })

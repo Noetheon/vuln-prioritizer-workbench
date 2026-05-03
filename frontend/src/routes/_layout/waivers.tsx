@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router"
 
-import { App } from "../../App"
+import { WaiversRoute } from "../../workbench/routes/WaiversRoute"
 
 export const Route = createFileRoute("/_layout/waivers")({
-  component: App,
+  component: WaiversRoute,
 })

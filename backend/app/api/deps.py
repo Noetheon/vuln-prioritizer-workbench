@@ -17,7 +17,7 @@ from app.core.db import engine, ensure_configured_superuser
 from app.models import ApiToken, ApiTokenScope, TokenPayload, User
 from app.models.api_tokens import scope_set
 from app.repositories import ApiTokenRepository
-from vuln_prioritizer.api.security import api_token_digest
+from vuln_prioritizer.security_tokens import api_token_digest
 
 reusable_oauth2 = OAuth2PasswordBearer(tokenUrl=f"{settings.API_V1_STR}/login/access-token")
 

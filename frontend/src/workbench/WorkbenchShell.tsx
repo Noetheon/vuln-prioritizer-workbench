@@ -10,7 +10,7 @@ import {
   Globe,
   ShieldCheck,
 } from "lucide-react"
-import { type FormEvent, useEffect, useState } from "react"
+import { type FormEvent, lazy, Suspense, useEffect, useState } from "react"
 import {
   type AnalysisRunPublic,
   type AnalysisRunSummaryPublic,
@@ -46,24 +46,21 @@ import {
   WaiversService,
   WorkbenchService,
   type WorkbenchStatus,
-} from "./api-client"
-import { clearAccessToken, getAccessToken } from "./auth"
-import { ProductAppShell } from "./components/app/AppShell"
+} from "../api-client"
+import { clearAccessToken, getAccessToken } from "../auth"
+import {
+  ProductAppShell,
+  type WorkbenchPath,
+} from "../components/app/AppShell"
 import {
   FindingsByPriorityChart,
   RiskTrendChart,
   TopServicesByRiskChart,
-} from "./components/charts"
+} from "../components/charts"
 import {
   ProviderFreshnessPanel,
-  RiskOperationsDashboard,
   TopRemediationQueue,
-} from "./components/dashboard"
-import { RemediationQueue } from "./components/findings"
-import { ImportsWorkbench } from "./components/imports"
-import { ProjectsWorkbench } from "./components/projects"
-import { ProvidersWorkbench } from "./components/providers"
-import { EvidenceCenter } from "./components/reports"
+} from "../components/dashboard"
 import {
   CvssBadge,
   EpssBadge,
@@ -71,24 +68,16 @@ import {
   KevBadge,
   PriorityBadge,
   RiskScore,
-} from "./components/risk"
-import { SettingsWorkbench } from "./components/settings"
+} from "../components/risk"
 import {
   type DataQualityNoticeItem,
   EmptyState,
   ErrorState,
   LoadingSkeleton,
-} from "./components/states"
-import { Badge } from "./components/ui/badge"
-import { Button } from "./components/ui/button"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "./components/ui/card"
-import { Skeleton } from "./components/ui/skeleton"
+} from "../components/states"
+import { Badge } from "../components/ui/badge"
+import { Button } from "../components/ui/button"
+import { Skeleton } from "../components/ui/skeleton"
 import {
   Table,
   TableBody,
@@ -96,9 +85,15 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "./components/ui/table"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "./components/ui/tabs"
-import { WaiversWorkbench } from "./components/waivers"
+} from "../components/ui/table"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs"
+import {
+  VpwSurface,
+  VpwSurfaceBody,
+  VpwSurfaceDescription,
+  VpwSurfaceHeader,
+  VpwSurfaceTitle,
+} from "../components/vpw"
 import {
   type ApiTokenScope,
   apiTokenScopeOptions,
@@ -119,7 +114,7 @@ import {
   type ProjectFormState,
   type TemplateReportFormat,
   evidenceTimeline as timeline,
-} from "./lib/app-defaults"
+} from "../lib/app-defaults"
 import {
   analysisRunIdFromError,
   apiErrorDetail,
@@ -129,38 +124,34 @@ import {
   objectRecord,
   parseErrorsFromError,
   stringValue,
-} from "./lib/app-errors"
-import {
-  findingIdFromPath,
-  normalizeWorkbenchPath,
-  routeDetails,
-} from "./lib/app-route-config"
+} from "../lib/app-errors"
+import { routeDetails } from "../lib/app-route-config"
 import {
   type EpssBucketCounts,
   epssBucketChartData,
   findingsByPriorityChartData,
   runActivityTrendData,
   topServicesByRiskChartData,
-} from "./lib/chart-data"
+} from "../lib/chart-data"
 import {
   DEMO_FINDING_ATTACK_CONTEXTS,
   DEMO_FINDINGS,
   DEMO_PROJECT,
-} from "./lib/demo-data"
+} from "../lib/demo-data"
 import {
   formatCacheAge,
   formatProviderFreshness,
   providerDataQualityNotes,
   providerSnapshotSummary,
-} from "./lib/provider-format"
+} from "../lib/provider-format"
 import {
   formatEpss,
   formatKev,
   formatNullableNumber,
   runStatusLabel,
-} from "./lib/risk-format"
-import { formatLabel as labelize, optionalText } from "./lib/ui-copy"
-import { cn } from "./lib/utils"
+} from "../lib/risk-format"
+import { formatLabel as labelize, optionalText } from "../lib/ui-copy"
+import { cn } from "../lib/utils"
 import {
   type FindingWaiverEvidence,
   findingWaiverEvidence,
@@ -169,7 +160,48 @@ import {
   waiverFormDefaults,
   waiverRequestBody,
   waiverScopeLabel,
-} from "./lib/waiver-view"
+} from "../lib/waiver-view"
+
+const RiskOperationsDashboard = lazy(() =>
+  import("../components/dashboard/RiskOperationsDashboard").then((module) => ({
+    default: module.RiskOperationsDashboard,
+  })),
+)
+const RemediationQueue = lazy(() =>
+  import("../components/findings/RemediationQueue").then((module) => ({
+    default: module.RemediationQueue,
+  })),
+)
+const ImportsWorkbench = lazy(() =>
+  import("../components/imports/ImportsWorkbench").then((module) => ({
+    default: module.ImportsWorkbench,
+  })),
+)
+const ProjectsWorkbench = lazy(() =>
+  import("../components/projects/ProjectsWorkbench").then((module) => ({
+    default: module.ProjectsWorkbench,
+  })),
+)
+const ProvidersWorkbench = lazy(() =>
+  import("../components/providers/ProvidersWorkbench").then((module) => ({
+    default: module.ProvidersWorkbench,
+  })),
+)
+const EvidenceCenter = lazy(() =>
+  import("../components/reports/EvidenceCenter").then((module) => ({
+    default: module.EvidenceCenter,
+  })),
+)
+const SettingsWorkbench = lazy(() =>
+  import("../components/settings/SettingsWorkbench").then((module) => ({
+    default: module.SettingsWorkbench,
+  })),
+)
+const WaiversWorkbench = lazy(() =>
+  import("../components/waivers/WaiversWorkbench").then((module) => ({
+    default: module.WaiversWorkbench,
+  })),
+)
 
 type FindingAttackContext = NonNullable<FindingDetailPublic["attack_context"]>
 
@@ -1399,11 +1431,18 @@ function _providerDataQualityNoticeItems(
   ]
 }
 
-export function App() {
+type WorkbenchShellProps = {
+  findingDetailId?: string | null
+  routePath: WorkbenchPath
+}
+
+export function WorkbenchShell({
+  findingDetailId = null,
+  routePath,
+}: WorkbenchShellProps) {
   const navigate = useNavigate()
   const location = useLocation()
-  const currentPath = normalizeWorkbenchPath(location.pathname)
-  const findingDetailId = findingIdFromPath(location.pathname)
+  const currentPath = routePath
   const isFindingDetail = findingDetailId !== null
   const isDashboard = currentPath === "/"
   const isFindingsList = currentPath === "/findings" && !isFindingDetail
@@ -3013,1133 +3052,815 @@ export function App() {
       statusError={statusError}
       title={routeDetail.title}
     >
-      {currentPath === "/" ? (
-        <RiskOperationsDashboard
-          projects={projects}
-          selectedProject={selectedProject}
-          selectedProjectId={selectedProjectId}
-          onProjectChange={setSelectedProjectId}
-          projectListLoading={projectListLoading}
-          projectSummary={projectSummary}
-          summaryLoading={summaryLoading}
-          providerStatus={providerStatus}
-          providerStatusLoading={providerStatusLoading}
-          providerStatusError={providerStatusError || statusError}
-          signalCounts={dashboardSignalCounts}
-          signalLoading={dashboardSignalLoading}
-          signalError={dashboardSignalError}
-          findings={dashboardFindings}
-          findingsLoading={dashboardFindingsLoading}
-          findingsError={dashboardFindingsError}
-          epssBuckets={epssBucketItems}
-          projectRuns={projectRuns}
-          runsLoading={runsLoading}
-          topServiceRows={topServiceChartRows}
-          topServiceSource={topServiceSource}
-          governanceLoading={governanceLoading}
-          governanceError={governanceError}
-          onRefresh={() => {
-            void refreshProjects(selectedProjectId)
-            refreshFindings()
-          }}
-        />
-      ) : null}
-
-      {isFindingsList ? (
-        <section
-          aria-label="Findings Remediation Queue"
-          className="mx-auto w-full max-w-screen-2xl px-4 py-6 sm:px-6"
-        >
-          <RemediationQueue
-            activeFindingFilters={activeFindingFilters}
-            findingAssetId={findingAssetId}
-            findingAssetKey={findingAssetKey}
-            findingCount={findingCount}
-            findingDirection={findingDirection}
-            findingFilters={findingFilters}
-            findingOffset={findingOffset}
-            findingPageSize={findingPageSize}
-            findingSort={findingSort}
-            findings={findings}
-            findingsError={findingsError}
-            findingsLoading={findingsLoading}
-            onClearFilters={clearFindingFilters}
-            onDirectionChange={updateFindingDirection}
-            onFilterChange={updateFindingFilter}
-            onPageNext={() =>
-              setFindingOffset((offset) => offset + findingPageSize)
-            }
-            onPagePrev={() =>
-              setFindingOffset((offset) =>
-                Math.max(0, offset - findingPageSize),
-              )
-            }
-            onPageSizeChange={(size) => {
-              const s = findingPageSizes.includes(
-                size as (typeof findingPageSizes)[number],
-              )
-                ? (size as (typeof findingPageSizes)[number])
-                : 10
-              setFindingOffset(0)
-              setFindingPageSize(s)
-            }}
-            onProjectChange={(id) => {
-              setFindingOffset(0)
-              setSelectedProjectId(id)
-            }}
-            onSortChange={updateFindingSort}
-            projectListLoading={projectListLoading}
-            projectSummary={projectSummary}
+      <Suspense fallback={<LoadingSkeleton label="Loading Workbench route" />}>
+        {currentPath === "/" ? (
+          <RiskOperationsDashboard
             projects={projects}
             selectedProject={selectedProject}
             selectedProjectId={selectedProjectId}
+            onProjectChange={setSelectedProjectId}
+            projectListLoading={projectListLoading}
+            projectSummary={projectSummary}
+            summaryLoading={summaryLoading}
+            providerStatus={providerStatus}
+            providerStatusLoading={providerStatusLoading}
+            providerStatusError={providerStatusError || statusError}
+            signalCounts={dashboardSignalCounts}
+            signalLoading={dashboardSignalLoading}
+            signalError={dashboardSignalError}
+            findings={dashboardFindings}
+            findingsLoading={dashboardFindingsLoading}
+            findingsError={dashboardFindingsError}
+            epssBuckets={epssBucketItems}
+            projectRuns={projectRuns}
+            runsLoading={runsLoading}
+            topServiceRows={topServiceChartRows}
+            topServiceSource={topServiceSource}
+            governanceLoading={governanceLoading}
+            governanceError={governanceError}
+            onRefresh={() => {
+              void refreshProjects(selectedProjectId)
+              refreshFindings()
+            }}
           />
-        </section>
-      ) : null}
+        ) : null}
 
-      {currentPath !== "/" && !isFindingsList && (
-        <section
-          className={
-            isFindingDetail
-              ? "mx-auto w-full max-w-[2040px] px-4 py-6 sm:px-6 lg:px-8 xl:px-10 2xl:px-12"
-              : currentPath === "/findings" ||
-                  currentPath === "/waivers" ||
-                  currentPath === "/providers" ||
-                  currentPath === "/settings" ||
-                  currentPath === "/projects" ||
-                  currentPath === "/imports" ||
-                  currentPath === "/reports"
-                ? "mx-auto w-full max-w-screen-2xl px-4 sm:px-6 py-6"
-                : "mx-auto w-full max-w-5xl px-4 sm:px-6 py-6"
-          }
-        >
-          <div className="flex flex-col gap-6">
-            {!isFindingsList &&
-              !isFindingDetail &&
-              currentPath !== "/projects" &&
-              currentPath !== "/imports" &&
-              currentPath !== "/reports" &&
-              currentPath !== "/settings" &&
-              currentPath !== "/providers" && (
-                <div className="flex items-start justify-between gap-4 pb-4 border-b">
-                  <div>
-                    <h2 className="text-xl font-bold tracking-tight text-foreground">
-                      {isFindingDetail
-                        ? "Finding Detail"
-                        : routeDetail.panelTitle}
-                    </h2>
-                    <p className="mt-0.5 text-sm text-muted-foreground">
-                      {isFindingDetail
-                        ? "Overview, source occurrences, and decision rationale"
-                        : routeDetail.panelDetail}
-                    </p>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    type="button"
-                    aria-label={
-                      isFindingDetail
-                        ? "Refresh finding detail"
-                        : currentPath === "/waivers"
-                          ? "Refresh waivers"
-                          : "Refresh queue"
-                    }
-                    onClick={() => {
-                      if (isFindingDetail) {
-                        refreshFindingDetail()
-                      } else if (currentPath === "/waivers") {
-                        refreshWaivers()
-                      }
-                    }}
-                  >
-                    <Activity aria-hidden="true" size={18} />
-                  </Button>
-                </div>
-              )}
+        {isFindingsList ? (
+          <section
+            aria-label="Findings Remediation Queue"
+            className="mx-auto w-full max-w-screen-2xl px-4 py-6 sm:px-6"
+          >
+            <RemediationQueue
+              activeFindingFilters={activeFindingFilters}
+              findingAssetId={findingAssetId}
+              findingAssetKey={findingAssetKey}
+              findingCount={findingCount}
+              findingDirection={findingDirection}
+              findingFilters={findingFilters}
+              findingOffset={findingOffset}
+              findingPageSize={findingPageSize}
+              findingSort={findingSort}
+              findings={findings}
+              findingsError={findingsError}
+              findingsLoading={findingsLoading}
+              onClearFilters={clearFindingFilters}
+              onDirectionChange={updateFindingDirection}
+              onFilterChange={updateFindingFilter}
+              onPageNext={() =>
+                setFindingOffset((offset) => offset + findingPageSize)
+              }
+              onPagePrev={() =>
+                setFindingOffset((offset) =>
+                  Math.max(0, offset - findingPageSize),
+                )
+              }
+              onPageSizeChange={(size) => {
+                const s = findingPageSizes.includes(
+                  size as (typeof findingPageSizes)[number],
+                )
+                  ? (size as (typeof findingPageSizes)[number])
+                  : 10
+                setFindingOffset(0)
+                setFindingPageSize(s)
+              }}
+              onProjectChange={(id) => {
+                setFindingOffset(0)
+                setSelectedProjectId(id)
+              }}
+              onSortChange={updateFindingSort}
+              projectListLoading={projectListLoading}
+              projectSummary={projectSummary}
+              projects={projects}
+              selectedProject={selectedProject}
+              selectedProjectId={selectedProjectId}
+            />
+          </section>
+        ) : null}
 
-            {currentPath === "/projects" ? (
-              <ProjectsWorkbench
-                createProjectError={createProjectError}
-                createProjectForm={createProjectForm}
-                deleteConfirmed={deleteConfirmed}
-                editProjectForm={editProjectForm}
-                editProjectId={editProjectId}
-                onCancelEditProject={() => setEditProjectId("")}
-                onCreateProject={createProject}
-                onCreateProjectDescriptionChange={(description) =>
-                  setCreateProjectForm((form) => ({
-                    ...form,
-                    description,
-                  }))
-                }
-                onCreateProjectNameChange={(name) =>
-                  setCreateProjectForm((form) => ({
-                    ...form,
-                    name,
-                  }))
-                }
-                onDeleteConfirmedChange={setDeleteConfirmed}
-                onDeleteProject={(project) => void deleteProject(project)}
-                onEditProjectDescriptionChange={(description) =>
-                  setEditProjectForm((form) => ({
-                    ...form,
-                    description,
-                  }))
-                }
-                onEditProjectNameChange={(name) =>
-                  setEditProjectForm((form) => ({
-                    ...form,
-                    name,
-                  }))
-                }
-                onRefreshProjects={() =>
-                  void refreshProjects(selectedProjectId)
-                }
-                onSaveProject={saveProject}
-                onSelectProject={(projectId) => {
-                  setSelectedProjectId(projectId)
-                  setDeleteConfirmed(false)
-                  setEditProjectId("")
-                }}
-                onStartEditProject={startEditProject}
-                projectActionError={projectActionError}
-                projectActionLoading={projectActionLoading}
-                projectActionMessage={projectActionMessage}
-                projectListLoading={projectListLoading}
-                projectSummary={projectSummary}
-                projectSummaryById={projectSummaryById}
-                projects={projects}
-                selectedProject={selectedProject}
-                selectedProjectId={selectedProjectId}
-              />
-            ) : currentPath === "/imports" ? (
-              <ImportsWorkbench
-                importError={importError}
-                importLoading={importLoading}
-                importParseErrors={importParseErrors}
-                importRun={importRun}
-                importRunSummary={importRunSummary}
-                importWizard={importWizard}
-                onAssetContextFileChange={(file) =>
-                  setImportWizard((state) => ({
-                    ...state,
-                    assetContextFile: file,
-                  }))
-                }
-                onFileChange={(file) =>
-                  setImportWizard((state) => ({ ...state, file }))
-                }
-                onInputTypeChange={(value) =>
-                  setImportWizard((state) => ({
-                    ...state,
-                    inputType: value as ImportFormat,
-                  }))
-                }
-                onProjectChange={setSelectedProjectId}
-                onRefreshRuns={() => void refreshProjectRuns(selectedRunId)}
-                onSelectRun={setSelectedRunId}
-                onSubmit={submitImport}
-                onVexFileChange={(file) =>
-                  setImportWizard((state) => ({ ...state, vexFile: file }))
-                }
-                projectListLoading={projectListLoading}
-                projectRuns={projectRuns}
-                projects={projects}
-                providerStatus={providerStatus}
-                runDetailError={runDetailError}
-                runDetailLoading={runDetailLoading}
-                runsError={runsError}
-                runsLoading={runsLoading}
-                selectedProject={selectedProject}
-                selectedProjectId={selectedProjectId}
-                selectedRun={selectedRun}
-                selectedRunId={selectedRunId}
-                selectedRunSummary={selectedRunSummary}
-                supportedFormats={mvpImportFormats}
-              />
-            ) : isWaiversPage ? (
-              <WaiversWorkbench
-                onCreateWaiver={createWaiver}
-                onExpireWaiver={(waiver) => void expireWaiver(waiver)}
-                onFieldChange={updateWaiverFormField}
-                onProjectChange={setSelectedProjectId}
-                onRefreshWaivers={refreshWaivers}
-                projectListLoading={projectListLoading}
-                projectSummary={projectSummary}
-                projects={projects}
-                selectedProject={selectedProject}
-                selectedProjectId={selectedProjectId}
-                waiverActionError={waiverActionError}
-                waiverActionLoading={waiverActionLoading}
-                waiverActionMessage={waiverActionMessage}
-                waiverDebtItems={waiverDebtItems}
-                waiverDebtSummary={waiverDebtSummary}
-                waiverForm={waiverForm}
-                waivers={waivers}
-                waiversError={waiversError || governanceError}
-                waiversLoading={waiversLoading || governanceLoading}
-              />
-            ) : isFindingDetail ? (
-              <section
-                className="finding-decision-workflow"
-                aria-label="Finding priority decision"
-              >
-                <div className="finding-detail-backbar">
-                  <Button variant="outline" size="sm" asChild>
-                    <Link to="/findings">
-                      <ArrowLeft aria-hidden="true" size={16} />
-                      <span>Back to Findings</span>
-                    </Link>
-                  </Button>
-                </div>
-
-                {findingDetailError ? (
-                  <p
-                    className="text-sm text-destructive rounded-md border border-destructive/20 bg-destructive/10 px-3 py-2"
-                    role="alert"
-                  >
-                    {findingDetailError}
-                  </p>
-                ) : null}
-                {findingExplanationWarning ? (
-                  <p
-                    className="text-sm text-destructive rounded-md border border-destructive/20 bg-destructive/10 px-3 py-2"
-                    role="alert"
-                  >
-                    {findingExplanationWarning}
-                  </p>
-                ) : null}
-                {findingDetailLoading ? (
-                  <section
-                    aria-label="Loading finding detail"
-                    className="finding-decision-loading"
-                    role="status"
-                  >
-                    <Skeleton className="h-8 w-40" />
-                    <Skeleton className="h-36 w-full" />
-                    <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
-                      <Skeleton className="h-24 w-full" />
-                      <Skeleton className="h-24 w-full" />
-                      <Skeleton className="h-24 w-full" />
-                      <Skeleton className="h-24 w-full" />
+        {currentPath !== "/" && !isFindingsList && (
+          <section
+            className={
+              isFindingDetail
+                ? "mx-auto w-full max-w-[2040px] px-4 py-6 sm:px-6 lg:px-8 xl:px-10 2xl:px-12"
+                : currentPath === "/findings" ||
+                    currentPath === "/waivers" ||
+                    currentPath === "/providers" ||
+                    currentPath === "/settings" ||
+                    currentPath === "/projects" ||
+                    currentPath === "/imports" ||
+                    currentPath === "/reports"
+                  ? "mx-auto w-full max-w-screen-2xl px-4 sm:px-6 py-6"
+                  : "mx-auto w-full max-w-5xl px-4 sm:px-6 py-6"
+            }
+          >
+            <div className="flex flex-col gap-6">
+              {!isFindingsList &&
+                !isFindingDetail &&
+                currentPath !== "/projects" &&
+                currentPath !== "/imports" &&
+                currentPath !== "/reports" &&
+                currentPath !== "/settings" &&
+                currentPath !== "/providers" && (
+                  <div className="flex items-start justify-between gap-4 pb-4 border-b">
+                    <div>
+                      <h2 className="text-xl font-bold tracking-tight text-foreground">
+                        {isFindingDetail
+                          ? "Finding Detail"
+                          : routeDetail.panelTitle}
+                      </h2>
+                      <p className="mt-0.5 text-sm text-muted-foreground">
+                        {isFindingDetail
+                          ? "Overview, source occurrences, and decision rationale"
+                          : routeDetail.panelDetail}
+                      </p>
                     </div>
-                  </section>
-                ) : null}
-
-                {!findingDetailLoading &&
-                !findingDetailError &&
-                findingDetail ? (
-                  <>
-                    {isDemoFindingDetail ? (
-                      <section
-                        aria-label="Demo Preview"
-                        className="finding-demo-preview"
-                      >
-                        <Badge className="border-amber-200 bg-amber-50 text-amber-800">
-                          Demo Preview
-                        </Badge>
-                        <span>
-                          Sample evidence for the decision workflow. Not real
-                          production data.
-                        </span>
-                      </section>
-                    ) : null}
-
-                    <section
-                      className="finding-decision-hero"
-                      aria-label="Finding decision hero"
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      type="button"
+                      aria-label={
+                        isFindingDetail
+                          ? "Refresh finding detail"
+                          : currentPath === "/waivers"
+                            ? "Refresh waivers"
+                            : "Refresh queue"
+                      }
+                      onClick={() => {
+                        if (isFindingDetail) {
+                          refreshFindingDetail()
+                        } else if (currentPath === "/waivers") {
+                          refreshWaivers()
+                        }
+                      }}
                     >
-                      <div className="finding-decision-hero-copy">
-                        <Badge className="finding-decision-kicker">
-                          Why this priority?
-                        </Badge>
-                        <h2>{findingDetail.cve_id}</h2>
-                        <p>
-                          {findingWhyText(findingDetail, findingExplanation)}
-                        </p>
-                        <div className="finding-decision-badges">
-                          <PriorityBadge priority={findingDetail.priority} />
-                          <FindingStatusBadge status={findingDetail.status} />
-                          <KevBadge matched={findingDetail.in_kev} />
-                        </div>
+                      <Activity aria-hidden="true" size={18} />
+                    </Button>
+                  </div>
+                )}
+
+              {currentPath === "/projects" ? (
+                <ProjectsWorkbench
+                  createProjectError={createProjectError}
+                  createProjectForm={createProjectForm}
+                  deleteConfirmed={deleteConfirmed}
+                  editProjectForm={editProjectForm}
+                  editProjectId={editProjectId}
+                  onCancelEditProject={() => setEditProjectId("")}
+                  onCreateProject={createProject}
+                  onCreateProjectDescriptionChange={(description) =>
+                    setCreateProjectForm((form) => ({
+                      ...form,
+                      description,
+                    }))
+                  }
+                  onCreateProjectNameChange={(name) =>
+                    setCreateProjectForm((form) => ({
+                      ...form,
+                      name,
+                    }))
+                  }
+                  onDeleteConfirmedChange={setDeleteConfirmed}
+                  onDeleteProject={(project) => void deleteProject(project)}
+                  onEditProjectDescriptionChange={(description) =>
+                    setEditProjectForm((form) => ({
+                      ...form,
+                      description,
+                    }))
+                  }
+                  onEditProjectNameChange={(name) =>
+                    setEditProjectForm((form) => ({
+                      ...form,
+                      name,
+                    }))
+                  }
+                  onRefreshProjects={() =>
+                    void refreshProjects(selectedProjectId)
+                  }
+                  onSaveProject={saveProject}
+                  onSelectProject={(projectId) => {
+                    setSelectedProjectId(projectId)
+                    setDeleteConfirmed(false)
+                    setEditProjectId("")
+                  }}
+                  onStartEditProject={startEditProject}
+                  projectActionError={projectActionError}
+                  projectActionLoading={projectActionLoading}
+                  projectActionMessage={projectActionMessage}
+                  projectListLoading={projectListLoading}
+                  projectSummary={projectSummary}
+                  projectSummaryById={projectSummaryById}
+                  projects={projects}
+                  selectedProject={selectedProject}
+                  selectedProjectId={selectedProjectId}
+                />
+              ) : currentPath === "/imports" ? (
+                <ImportsWorkbench
+                  importError={importError}
+                  importLoading={importLoading}
+                  importParseErrors={importParseErrors}
+                  importRun={importRun}
+                  importRunSummary={importRunSummary}
+                  importWizard={importWizard}
+                  onAssetContextFileChange={(file) =>
+                    setImportWizard((state) => ({
+                      ...state,
+                      assetContextFile: file,
+                    }))
+                  }
+                  onFileChange={(file) =>
+                    setImportWizard((state) => ({ ...state, file }))
+                  }
+                  onInputTypeChange={(value) =>
+                    setImportWizard((state) => ({
+                      ...state,
+                      inputType: value as ImportFormat,
+                    }))
+                  }
+                  onProjectChange={setSelectedProjectId}
+                  onRefreshRuns={() => void refreshProjectRuns(selectedRunId)}
+                  onSelectRun={setSelectedRunId}
+                  onSubmit={submitImport}
+                  onVexFileChange={(file) =>
+                    setImportWizard((state) => ({ ...state, vexFile: file }))
+                  }
+                  projectListLoading={projectListLoading}
+                  projectRuns={projectRuns}
+                  projects={projects}
+                  providerStatus={providerStatus}
+                  runDetailError={runDetailError}
+                  runDetailLoading={runDetailLoading}
+                  runsError={runsError}
+                  runsLoading={runsLoading}
+                  selectedProject={selectedProject}
+                  selectedProjectId={selectedProjectId}
+                  selectedRun={selectedRun}
+                  selectedRunId={selectedRunId}
+                  selectedRunSummary={selectedRunSummary}
+                  supportedFormats={mvpImportFormats}
+                />
+              ) : isWaiversPage ? (
+                <WaiversWorkbench
+                  onCreateWaiver={createWaiver}
+                  onExpireWaiver={(waiver) => void expireWaiver(waiver)}
+                  onFieldChange={updateWaiverFormField}
+                  onProjectChange={setSelectedProjectId}
+                  onRefreshWaivers={refreshWaivers}
+                  projectListLoading={projectListLoading}
+                  projectSummary={projectSummary}
+                  projects={projects}
+                  selectedProject={selectedProject}
+                  selectedProjectId={selectedProjectId}
+                  waiverActionError={waiverActionError}
+                  waiverActionLoading={waiverActionLoading}
+                  waiverActionMessage={waiverActionMessage}
+                  waiverDebtItems={waiverDebtItems}
+                  waiverDebtSummary={waiverDebtSummary}
+                  waiverForm={waiverForm}
+                  waivers={waivers}
+                  waiversError={waiversError || governanceError}
+                  waiversLoading={waiversLoading || governanceLoading}
+                />
+              ) : isFindingDetail ? (
+                <section
+                  className="finding-decision-workflow"
+                  aria-label="Finding priority decision"
+                >
+                  <div className="finding-detail-backbar">
+                    <Button variant="outline" size="sm" asChild>
+                      <Link to="/findings">
+                        <ArrowLeft aria-hidden="true" size={16} />
+                        <span>Back to Findings</span>
+                      </Link>
+                    </Button>
+                  </div>
+
+                  {findingDetailError ? (
+                    <p
+                      className="text-sm text-destructive rounded-md border border-destructive/20 bg-destructive/10 px-3 py-2"
+                      role="alert"
+                    >
+                      {findingDetailError}
+                    </p>
+                  ) : null}
+                  {findingExplanationWarning ? (
+                    <p
+                      className="text-sm text-destructive rounded-md border border-destructive/20 bg-destructive/10 px-3 py-2"
+                      role="alert"
+                    >
+                      {findingExplanationWarning}
+                    </p>
+                  ) : null}
+                  {findingDetailLoading ? (
+                    <section
+                      aria-label="Loading finding detail"
+                      className="finding-decision-loading"
+                      role="status"
+                    >
+                      <Skeleton className="h-8 w-40" />
+                      <Skeleton className="h-36 w-full" />
+                      <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+                        <Skeleton className="h-24 w-full" />
+                        <Skeleton className="h-24 w-full" />
+                        <Skeleton className="h-24 w-full" />
+                        <Skeleton className="h-24 w-full" />
                       </div>
-                      <ul
-                        className="finding-decision-hero-metrics"
-                        aria-label="Risk indicators"
+                    </section>
+                  ) : null}
+
+                  {!findingDetailLoading &&
+                  !findingDetailError &&
+                  findingDetail ? (
+                    <>
+                      {isDemoFindingDetail ? (
+                        <section
+                          aria-label="Demo Preview"
+                          className="finding-demo-preview"
+                        >
+                          <Badge className="border-amber-200 bg-amber-50 text-amber-800">
+                            Demo Preview
+                          </Badge>
+                          <span>
+                            Sample evidence for the decision workflow. Not real
+                            production data.
+                          </span>
+                        </section>
+                      ) : null}
+
+                      <section
+                        className="finding-decision-hero"
+                        aria-label="Finding decision hero"
                       >
-                        <li className="finding-hero-metric-primary">
-                          <span>Risk Score</span>
-                          <strong>
-                            {formatNullableNumber(findingDetail.risk_score)}
-                          </strong>
-                          <small>Operational remediation priority</small>
-                        </li>
-                        <li>
-                          <span>EPSS</span>
-                          <EpssBadge value={findingDetail.epss} />
-                          <small>Exploit probability signal</small>
-                        </li>
-                        <li>
-                          <span>CVSS</span>
-                          <CvssBadge value={findingDetail.cvss_base_score} />
-                          <small>Impact severity signal</small>
-                        </li>
-                        <li className="finding-hero-metric-decision">
-                          <span>Decision</span>
-                          <RiskScore value={findingDetail.risk_score} />
-                          <small>
-                            {findingSlaLabel(findingDetail.priority)} SLA
-                          </small>
-                        </li>
-                      </ul>
-                    </section>
-
-                    <section
-                      className="finding-decision-fact-grid"
-                      aria-label="Finding scope"
-                    >
-                      <Card>
-                        <CardHeader>
-                          <CardDescription>Component</CardDescription>
-                          <CardTitle
-                            title={findingComponentDetailLabel(findingDetail)}
-                          >
-                            {findingComponentDetailLabel(findingDetail)}
-                          </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <p title={optionalText(findingDetail.component_purl)}>
-                            {optionalText(findingDetail.component_purl)}
-                          </p>
-                        </CardContent>
-                      </Card>
-                      <Card>
-                        <CardHeader>
-                          <CardDescription>Asset / Service</CardDescription>
-                          <CardTitle
-                            title={findingAssetServiceDetailLabel(
-                              findingDetail,
-                            )}
-                          >
-                            {findingAssetServiceDetailLabel(findingDetail)}
-                          </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <p>{labelize(findingDetail.exposure)}</p>
-                        </CardContent>
-                      </Card>
-                      <Card>
-                        <CardHeader>
-                          <CardDescription>Owner</CardDescription>
-                          <CardTitle>
-                            {findingOwnerDetailLabel(
-                              findingDetail,
-                              detailOccurrences,
-                            )}
-                          </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <p>{labelize(findingDetail.asset_environment)}</p>
-                        </CardContent>
-                      </Card>
-                      <Card className="finding-recommendation-card">
-                        <CardHeader>
-                          <CardDescription>
-                            Primary recommendation
-                          </CardDescription>
-                          <CardTitle>
-                            {findingRecommendedAction(
-                              findingDetail,
-                              findingExplanation,
-                            )}
-                          </CardTitle>
-                        </CardHeader>
-                      </Card>
-                    </section>
-
-                    <section
-                      className="finding-decision-main-grid"
-                      aria-label="Risk to decision"
-                    >
-                      <Card className="finding-decision-card finding-analysis-card">
-                        <CardHeader>
-                          <div className="finding-card-heading">
-                            <div>
-                              <CardDescription>
-                                Risk to Decision
-                              </CardDescription>
-                              <CardTitle>Why this priority?</CardTitle>
-                            </div>
-                            <Badge variant="outline">
-                              Score{" "}
-                              {formatNullableNumber(findingDetail.risk_score)}
-                            </Badge>
-                          </div>
-                        </CardHeader>
-                        <CardContent>
-                          <p className="finding-decision-lead">
+                        <div className="finding-decision-hero-copy">
+                          <Badge className="finding-decision-kicker">
+                            Why this priority?
+                          </Badge>
+                          <h2>{findingDetail.cve_id}</h2>
+                          <p>
                             {findingWhyText(findingDetail, findingExplanation)}
                           </p>
-                          <ol
-                            aria-label="Risk to decision chain"
-                            className="finding-decision-chain"
-                          >
-                            <li>Finding</li>
-                            <li>Priority</li>
-                            <li>Evidence</li>
-                            <li>Decision</li>
-                          </ol>
-                          <dl className="finding-decision-reasons">
-                            {detailDecisionReasons.map((reason) => (
-                              <div
-                                data-tone={reason.tone}
-                                key={`${reason.label}:${reason.detail}`}
-                              >
-                                <dt>{reason.label}</dt>
-                                <dd>{reason.detail}</dd>
-                              </div>
-                            ))}
-                          </dl>
-                          {detailReasonRows.length > 0 ? (
-                            <div className="finding-provider-reasons">
-                              <span>Provider explanation</span>
-                              <dl>
-                                {detailReasonRows.map((reason) => (
-                                  <div key={`${reason.label}:${reason.detail}`}>
-                                    <dt>{labelize(reason.label)}</dt>
-                                    <dd>{reason.detail}</dd>
-                                  </div>
-                                ))}
-                              </dl>
-                            </div>
-                          ) : null}
-                        </CardContent>
-                      </Card>
-
-                      <Card className="finding-decision-card finding-action-card">
-                        <CardHeader>
-                          <CardDescription>Remediation</CardDescription>
-                          <CardTitle>Decision plan</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <dl className="finding-decision-definition-list">
-                            <div>
-                              <dt>Recommended action</dt>
-                              <dd>
-                                {findingRecommendedAction(
-                                  findingDetail,
-                                  findingExplanation,
-                                )}
-                              </dd>
-                            </div>
-                            <div>
-                              <dt>SLA</dt>
-                              <dd>{findingSlaLabel(findingDetail.priority)}</dd>
-                            </div>
-                            <div>
-                              <dt>Owner</dt>
-                              <dd>
-                                {findingOwnerDetailLabel(
-                                  findingDetail,
-                                  detailOccurrences,
-                                )}
-                              </dd>
-                            </div>
-                            <div>
-                              <dt>Next step</dt>
-                              <dd>{findingNextStepLabel(findingDetail)}</dd>
-                            </div>
-                            <div>
-                              <dt>Risk acceptance option</dt>
-                              <dd>
-                                {detailWaiverEvidence
-                                  ? `${optionalText(detailWaiverEvidence.status)} — ${optionalText(detailWaiverEvidence.reason)}`
-                                  : "Available only with owner, expiry, approval reference, and compensating evidence."}
-                              </dd>
-                            </div>
-                          </dl>
-                          <div className="finding-decision-actions">
-                            <Button
-                              onClick={() =>
-                                setFindingDetailReloadKey((value) => value + 1)
-                              }
-                              size="sm"
-                              type="button"
-                              variant="outline"
-                            >
-                              Refresh evidence
-                            </Button>
+                          <div className="finding-decision-badges">
+                            <PriorityBadge priority={findingDetail.priority} />
+                            <FindingStatusBadge status={findingDetail.status} />
+                            <KevBadge matched={findingDetail.in_kev} />
                           </div>
-                        </CardContent>
-                      </Card>
-                    </section>
-
-                    <Tabs
-                      className="finding-detail-tabs-shell"
-                      value={findingDetailTab}
-                      onValueChange={(v) =>
-                        setFindingDetailTab(v as FindingDetailTab)
-                      }
-                    >
-                      <div className="finding-tabs-toolbar">
-                        <div className="finding-tabs-heading">
-                          <span>Decision evidence</span>
-                          <strong>Evidence, TTP context, and lifecycle</strong>
-                          <p>
-                            Provider-backed facts used to explain and defend the
-                            priority decision.
-                          </p>
                         </div>
-                        <TabsList className="finding-detail-tabs-list">
-                          <TabsTrigger value="evidence">Evidence</TabsTrigger>
-                          <TabsTrigger value="ttp">TTP Context</TabsTrigger>
-                          <TabsTrigger value="history">History</TabsTrigger>
-                        </TabsList>
-                      </div>
-
-                      <TabsContent
-                        className="finding-detail-tab-panel"
-                        value="evidence"
-                      >
-                        <section
-                          className="finding-evidence-tab-layout"
-                          aria-label="Evidence workspace"
+                        <ul
+                          className="finding-decision-hero-metrics"
+                          aria-label="Risk indicators"
                         >
-                          <section
-                            className="finding-evidence-grid"
-                            aria-label="Evidence summary"
-                          >
-                            {detailEvidenceRows.map((row, index) => (
-                              <Card
-                                className={cn(
-                                  "finding-evidence-summary-card",
-                                  index === 0
-                                    ? "finding-evidence-summary-card-primary"
-                                    : undefined,
-                                )}
-                                key={row.label}
-                              >
-                                <CardHeader>
-                                  <CardDescription>{row.label}</CardDescription>
-                                  <CardTitle>{row.value}</CardTitle>
-                                </CardHeader>
-                                <CardContent>
-                                  <p>{row.detail}</p>
-                                </CardContent>
-                              </Card>
-                            ))}
-                          </section>
+                          <li className="finding-hero-metric-primary">
+                            <span>Risk Score</span>
+                            <strong>
+                              {formatNullableNumber(findingDetail.risk_score)}
+                            </strong>
+                            <small>Operational remediation priority</small>
+                          </li>
+                          <li>
+                            <span>EPSS</span>
+                            <EpssBadge value={findingDetail.epss} />
+                            <small>Exploit probability signal</small>
+                          </li>
+                          <li>
+                            <span>CVSS</span>
+                            <CvssBadge value={findingDetail.cvss_base_score} />
+                            <small>Impact severity signal</small>
+                          </li>
+                          <li className="finding-hero-metric-decision">
+                            <span>Decision</span>
+                            <RiskScore value={findingDetail.risk_score} />
+                            <small>
+                              {findingSlaLabel(findingDetail.priority)} SLA
+                            </small>
+                          </li>
+                        </ul>
+                      </section>
 
-                          <section
-                            className="finding-evidence-detail-grid"
-                            aria-label="Evidence detail"
-                          >
-                            <Card
-                              aria-label="Scanner occurrences"
-                              className="finding-tab-card finding-occurrences-card"
-                            >
-                              <CardHeader>
-                                <div className="finding-card-heading">
-                                  <div>
-                                    <CardDescription>
-                                      Scanner evidence
-                                    </CardDescription>
-                                    <CardTitle>Occurrences</CardTitle>
-                                  </div>
-                                  <Badge variant="outline">
-                                    {detailOccurrences.length} source row(s)
-                                  </Badge>
-                                </div>
-                              </CardHeader>
-                              <CardContent>
-                                {detailOccurrences.length > 0 ? (
-                                  <div className="finding-detail-table-wrap">
-                                    <Table aria-label="Occurrences table">
-                                      <TableHeader>
-                                        <TableRow>
-                                          <TableHead>Source</TableHead>
-                                          <TableHead>Component</TableHead>
-                                          <TableHead>Asset / Owner</TableHead>
-                                          <TableHead>Evidence</TableHead>
-                                          <TableHead>Fix / VEX</TableHead>
-                                        </TableRow>
-                                      </TableHeader>
-                                      <TableBody>
-                                        {detailOccurrences.map(
-                                          (occurrence, index) => {
-                                            const fixVersions =
-                                              Array.isArray(
-                                                occurrence.fix_versions,
-                                              ) &&
-                                              occurrence.fix_versions.length > 0
-                                                ? occurrence.fix_versions.join(
-                                                    ", ",
-                                                  )
-                                                : stringValue(
-                                                    occurrence.fix_version,
-                                                  )
-                                            return (
-                                              <TableRow
-                                                key={
-                                                  stringValue(occurrence.id) ??
-                                                  `occurrence-${index + 1}`
-                                                }
-                                              >
-                                                <TableCell>
-                                                  <span className="font-medium">
-                                                    {optionalText(
-                                                      stringValue(
-                                                        occurrence.source_format,
-                                                      ) ??
-                                                        stringValue(
-                                                          occurrence.source,
-                                                        ),
-                                                    )}
-                                                  </span>
-                                                  <small>
-                                                    {optionalText(
-                                                      stringValue(
-                                                        occurrence.source_record_id,
-                                                      ) ??
-                                                        stringValue(
-                                                          occurrence.raw_reference,
-                                                        ),
-                                                    )}
-                                                  </small>
-                                                </TableCell>
-                                                <TableCell>
-                                                  <span className="font-medium">
-                                                    {joinedValues([
-                                                      stringValue(
-                                                        occurrence.component_name,
-                                                      ),
-                                                      stringValue(
-                                                        occurrence.component_version,
-                                                      ),
-                                                    ])}
-                                                  </span>
-                                                  <small>
-                                                    {optionalText(
-                                                      stringValue(
-                                                        occurrence.purl,
-                                                      ),
-                                                    )}
-                                                  </small>
-                                                </TableCell>
-                                                <TableCell>
-                                                  <span className="font-medium">
-                                                    {optionalText(
-                                                      stringValue(
-                                                        occurrence.asset_ref,
-                                                      ) ??
-                                                        stringValue(
-                                                          occurrence.target_ref,
-                                                        ),
-                                                    )}
-                                                  </span>
-                                                  <small>
-                                                    {joinedValues([
-                                                      stringValue(
-                                                        occurrence.asset_owner,
-                                                      ),
-                                                      stringValue(
-                                                        occurrence.asset_business_service,
-                                                      ),
-                                                      labelize(
-                                                        stringValue(
-                                                          occurrence.asset_exposure,
-                                                        ),
-                                                      ),
-                                                    ])}
-                                                  </small>
-                                                </TableCell>
-                                                <TableCell>
-                                                  <span className="font-medium">
-                                                    {optionalText(
-                                                      stringValue(
-                                                        occurrence.scanner,
-                                                      ),
-                                                    )}
-                                                  </span>
-                                                  <small>
-                                                    {optionalText(
-                                                      stringValue(
-                                                        occurrence.raw_severity,
-                                                      ),
-                                                    )}
-                                                  </small>
-                                                </TableCell>
-                                                <TableCell>
-                                                  <span className="font-medium">
-                                                    {optionalText(fixVersions)}
-                                                  </span>
-                                                  <small>
-                                                    {optionalText(
-                                                      stringValue(
-                                                        occurrence.vex_status,
-                                                      )
-                                                        ? labelize(
-                                                            stringValue(
-                                                              occurrence.vex_status,
-                                                            ),
-                                                          )
-                                                        : stringValue(
-                                                            occurrence.vex_justification,
-                                                          ),
-                                                    )}
-                                                  </small>
-                                                </TableCell>
-                                              </TableRow>
-                                            )
-                                          },
-                                        )}
-                                      </TableBody>
-                                    </Table>
-                                  </div>
-                                ) : (
-                                  <p className="text-sm text-muted-foreground">
-                                    No source occurrences have been recorded for
-                                    this finding.
-                                  </p>
-                                )}
-                              </CardContent>
-                            </Card>
-
-                            <Card
-                              aria-label="Data quality notes"
-                              className="finding-tab-card finding-data-quality-card"
-                            >
-                              <CardHeader>
-                                <CardDescription>Provider data</CardDescription>
-                                <CardTitle>Data quality notes</CardTitle>
-                              </CardHeader>
-                              <CardContent>
-                                {detailDataQualityRows.length > 0 ? (
-                                  <ul className="finding-data-quality-list">
-                                    {detailDataQualityRows.map((flag) => (
-                                      <li key={flag.key}>
-                                        <strong>{labelize(flag.code)}</strong>
-                                        <span>
-                                          {flag.source} /{" "}
-                                          {labelize(flag.severity)}
-                                        </span>
-                                        <p>{flag.message}</p>
-                                      </li>
-                                    ))}
-                                  </ul>
-                                ) : (
-                                  <p className="text-sm text-muted-foreground">
-                                    No data quality flags recorded.
-                                  </p>
-                                )}
-                              </CardContent>
-                            </Card>
-                          </section>
-                        </section>
-                      </TabsContent>
-
-                      <TabsContent
-                        className="finding-detail-tab-panel"
-                        value="ttp"
+                      <section
+                        className="finding-decision-fact-grid"
+                        aria-label="Finding scope"
                       >
-                        <Card
-                          aria-label="TTP Context"
-                          className="finding-tab-card finding-ttp-card"
-                        >
-                          <CardHeader>
+                        <VpwSurface>
+                          <VpwSurfaceHeader>
+                            <VpwSurfaceDescription>
+                              Component
+                            </VpwSurfaceDescription>
+                            <VpwSurfaceTitle
+                              title={findingComponentDetailLabel(findingDetail)}
+                            >
+                              {findingComponentDetailLabel(findingDetail)}
+                            </VpwSurfaceTitle>
+                          </VpwSurfaceHeader>
+                          <VpwSurfaceBody>
+                            <p
+                              title={optionalText(findingDetail.component_purl)}
+                            >
+                              {optionalText(findingDetail.component_purl)}
+                            </p>
+                          </VpwSurfaceBody>
+                        </VpwSurface>
+                        <VpwSurface>
+                          <VpwSurfaceHeader>
+                            <VpwSurfaceDescription>
+                              Asset / Service
+                            </VpwSurfaceDescription>
+                            <VpwSurfaceTitle
+                              title={findingAssetServiceDetailLabel(
+                                findingDetail,
+                              )}
+                            >
+                              {findingAssetServiceDetailLabel(findingDetail)}
+                            </VpwSurfaceTitle>
+                          </VpwSurfaceHeader>
+                          <VpwSurfaceBody>
+                            <p>{labelize(findingDetail.exposure)}</p>
+                          </VpwSurfaceBody>
+                        </VpwSurface>
+                        <VpwSurface>
+                          <VpwSurfaceHeader>
+                            <VpwSurfaceDescription>Owner</VpwSurfaceDescription>
+                            <VpwSurfaceTitle>
+                              {findingOwnerDetailLabel(
+                                findingDetail,
+                                detailOccurrences,
+                              )}
+                            </VpwSurfaceTitle>
+                          </VpwSurfaceHeader>
+                          <VpwSurfaceBody>
+                            <p>{labelize(findingDetail.asset_environment)}</p>
+                          </VpwSurfaceBody>
+                        </VpwSurface>
+                        <VpwSurface className="finding-recommendation-card">
+                          <VpwSurfaceHeader>
+                            <VpwSurfaceDescription>
+                              Primary recommendation
+                            </VpwSurfaceDescription>
+                            <VpwSurfaceTitle>
+                              {findingRecommendedAction(
+                                findingDetail,
+                                findingExplanation,
+                              )}
+                            </VpwSurfaceTitle>
+                          </VpwSurfaceHeader>
+                        </VpwSurface>
+                      </section>
+
+                      <section
+                        className="finding-decision-main-grid"
+                        aria-label="Risk to decision"
+                      >
+                        <VpwSurface className="finding-decision-card finding-analysis-card">
+                          <VpwSurfaceHeader>
                             <div className="finding-card-heading">
                               <div>
-                                <CardDescription>ATT&amp;CK</CardDescription>
-                                <CardTitle>TTP Context</CardTitle>
+                                <VpwSurfaceDescription>
+                                  Risk to Decision
+                                </VpwSurfaceDescription>
+                                <VpwSurfaceTitle>
+                                  Why this priority?
+                                </VpwSurfaceTitle>
                               </div>
                               <Badge variant="outline">
-                                {detailAttackSource
-                                  ?.toLowerCase()
-                                  .includes("demo")
-                                  ? "Curated demo mapping"
-                                  : detailAttackContext?.mapped
-                                    ? "Mapped context"
-                                    : "No approved mapping"}
+                                Score{" "}
+                                {formatNullableNumber(findingDetail.risk_score)}
                               </Badge>
                             </div>
-                          </CardHeader>
-                          <CardContent>
-                            {detailAttackEmpty ? (
-                              <section
-                                aria-label="TTP context empty state"
-                                className="finding-empty-panel"
-                              >
-                                <div className="finding-empty-panel-heading">
-                                  <Badge variant="outline">
-                                    Defensive context
-                                  </Badge>
-                                  <strong>
-                                    No approved ATT&amp;CK mapping is stored for
-                                    this finding.
-                                  </strong>
+                          </VpwSurfaceHeader>
+                          <VpwSurfaceBody>
+                            <p className="finding-decision-lead">
+                              {findingWhyText(
+                                findingDetail,
+                                findingExplanation,
+                              )}
+                            </p>
+                            <ol
+                              aria-label="Risk to decision chain"
+                              className="finding-decision-chain"
+                            >
+                              <li>Finding</li>
+                              <li>Priority</li>
+                              <li>Evidence</li>
+                              <li>Decision</li>
+                            </ol>
+                            <dl className="finding-decision-reasons">
+                              {detailDecisionReasons.map((reason) => (
+                                <div
+                                  data-tone={reason.tone}
+                                  key={`${reason.label}:${reason.detail}`}
+                                >
+                                  <dt>{reason.label}</dt>
+                                  <dd>{reason.detail}</dd>
                                 </div>
-                                <p>
-                                  Workbench does not infer tactics or techniques
-                                  for unmapped CVEs. Add a reviewed CTID or
-                                  curated local mapping before using ATT&amp;CK
-                                  context in queue decisions.
-                                </p>
-                              </section>
-                            ) : (
-                              <>
-                                <section
-                                  className="finding-ttp-context-hero finding-ttp-context-hero-simple"
-                                  aria-label="Threat informed context"
-                                >
-                                  <div className="finding-ttp-main-copy">
-                                    <span>Threat informed context</span>
-                                    <h3>{detailAttackTechniqueLabel}</h3>
-                                    <p>
-                                      This mapping explains why the finding is
-                                      treated as an internet-facing Initial
-                                      Access risk. It supports remediation
-                                      priority and detection coverage review,
-                                      but does not prove exploitation.
-                                    </p>
-                                  </div>
-                                  <dl className="finding-ttp-main-facts">
-                                    <div>
-                                      <dt>Tactic</dt>
-                                      <dd>{detailAttackTacticLabel}</dd>
+                              ))}
+                            </dl>
+                            {detailReasonRows.length > 0 ? (
+                              <div className="finding-provider-reasons">
+                                <span>Provider explanation</span>
+                                <dl>
+                                  {detailReasonRows.map((reason) => (
+                                    <div
+                                      key={`${reason.label}:${reason.detail}`}
+                                    >
+                                      <dt>{labelize(reason.label)}</dt>
+                                      <dd>{reason.detail}</dd>
                                     </div>
-                                    <div>
-                                      <dt>Confidence</dt>
-                                      <dd>
-                                        <Badge
-                                          className={cn(
-                                            detailAttackContext?.confidence ===
-                                              "high"
-                                              ? "bg-green-100 text-green-700 border-green-200"
-                                              : detailAttackContext?.confidence ===
-                                                  "low"
-                                                ? "bg-red-100 text-red-700 border-red-200"
-                                                : "bg-yellow-100 text-yellow-700 border-yellow-200",
-                                          )}
-                                        >
-                                          {attackConfidenceLabel(
-                                            detailAttackContext?.confidence,
-                                          )}
-                                        </Badge>
-                                      </dd>
-                                    </div>
-                                    <div>
-                                      <dt>Source</dt>
-                                      <dd>
-                                        {optionalText(detailAttackSource)}
-                                      </dd>
-                                    </div>
-                                    <div>
-                                      <dt>Coverage</dt>
-                                      <dd>{detailAttackCoverageStatus}</dd>
-                                    </div>
-                                  </dl>
-                                </section>
+                                  ))}
+                                </dl>
+                              </div>
+                            ) : null}
+                          </VpwSurfaceBody>
+                        </VpwSurface>
 
-                                <ol
-                                  className="finding-ttp-chain finding-ttp-chain-compact"
-                                  aria-label="Attack chain and decision flow"
-                                >
-                                  <li data-tone="signal">
-                                    <span className="finding-ttp-chain-index">
-                                      1
-                                    </span>
-                                    <div>
-                                      <small>CVE signal</small>
-                                      <strong>High priority signal</strong>
-                                    </div>
-                                  </li>
-                                  <li data-tone="exposure">
-                                    <span className="finding-ttp-chain-index">
-                                      2
-                                    </span>
-                                    <div>
-                                      <small>Internet-facing asset</small>
-                                      <strong>Internet facing asset</strong>
-                                    </div>
-                                  </li>
-                                  <li data-tone="technique">
-                                    <span className="finding-ttp-chain-index">
-                                      3
-                                    </span>
-                                    <div>
-                                      <small>ATT&amp;CK technique</small>
-                                      <strong>{detailAttackTechniqueId}</strong>
-                                    </div>
-                                  </li>
-                                  <li data-tone="coverage">
-                                    <span className="finding-ttp-chain-index">
-                                      4
-                                    </span>
-                                    <div>
-                                      <small>Detection gap</small>
-                                      <strong>
-                                        {detailAttackCoverageStatus}
-                                      </strong>
-                                    </div>
-                                  </li>
-                                  <li data-tone="decision">
-                                    <span className="finding-ttp-chain-index">
-                                      5
-                                    </span>
-                                    <div>
-                                      <small>Remediation priority</small>
-                                      <strong>Emergency remediation</strong>
-                                    </div>
-                                  </li>
-                                </ol>
+                        <VpwSurface className="finding-decision-card finding-action-card">
+                          <VpwSurfaceHeader>
+                            <VpwSurfaceDescription>
+                              Remediation
+                            </VpwSurfaceDescription>
+                            <VpwSurfaceTitle>Decision plan</VpwSurfaceTitle>
+                          </VpwSurfaceHeader>
+                          <VpwSurfaceBody>
+                            <dl className="finding-decision-definition-list">
+                              <div>
+                                <dt>Recommended action</dt>
+                                <dd>
+                                  {findingRecommendedAction(
+                                    findingDetail,
+                                    findingExplanation,
+                                  )}
+                                </dd>
+                              </div>
+                              <div>
+                                <dt>SLA</dt>
+                                <dd>
+                                  {findingSlaLabel(findingDetail.priority)}
+                                </dd>
+                              </div>
+                              <div>
+                                <dt>Owner</dt>
+                                <dd>
+                                  {findingOwnerDetailLabel(
+                                    findingDetail,
+                                    detailOccurrences,
+                                  )}
+                                </dd>
+                              </div>
+                              <div>
+                                <dt>Next step</dt>
+                                <dd>{findingNextStepLabel(findingDetail)}</dd>
+                              </div>
+                              <div>
+                                <dt>Risk acceptance option</dt>
+                                <dd>
+                                  {detailWaiverEvidence
+                                    ? `${optionalText(detailWaiverEvidence.status)} — ${optionalText(detailWaiverEvidence.reason)}`
+                                    : "Available only with owner, expiry, approval reference, and compensating evidence."}
+                                </dd>
+                              </div>
+                            </dl>
+                            <div className="finding-decision-actions">
+                              <Button
+                                onClick={() =>
+                                  setFindingDetailReloadKey(
+                                    (value) => value + 1,
+                                  )
+                                }
+                                size="sm"
+                                type="button"
+                                variant="outline"
+                              >
+                                Refresh evidence
+                              </Button>
+                            </div>
+                          </VpwSurfaceBody>
+                        </VpwSurface>
+                      </section>
 
-                                <section
-                                  className="finding-ttp-decision-grid finding-ttp-decision-grid-simple"
-                                  aria-label="Threat informed decision context"
-                                >
-                                  <article className="finding-ttp-narrative-card">
-                                    <span>Why this matters</span>
-                                    <strong>Decision support</strong>
-                                    <ul className="finding-ttp-meaning-list">
-                                      <li>
-                                        Frames the CVE as an Initial Access
-                                        risk.
-                                      </li>
-                                      <li>
-                                        Explains why internet exposure raises
-                                        urgency.
-                                      </li>
-                                      <li>
-                                        Connects remediation priority with
-                                        detection review.
-                                      </li>
-                                      <li>
-                                        Keeps the boundary clear: no proof of
-                                        exploitation.
-                                      </li>
-                                    </ul>
-                                  </article>
-                                  <article className="finding-ttp-narrative-card finding-ttp-actions-card">
-                                    <span>Recommended defensive actions</span>
-                                    <strong>
-                                      Close exposure and validate coverage
-                                    </strong>
-                                    <ul className="finding-ttp-checklist">
-                                      {(detailAttackActionItems.length > 0
-                                        ? detailAttackActionItems
-                                        : [
-                                            "Patch or mitigate the vulnerable service.",
-                                            "Restrict exposure while remediation is in progress.",
-                                            "Validate web, proxy, WAF, EDR and application telemetry.",
-                                            "Document detection coverage and residual risk.",
-                                          ]
-                                      ).map((item) => (
-                                        <li key={item}>{item}</li>
-                                      ))}
-                                    </ul>
-                                  </article>
-                                </section>
+                      <Tabs
+                        className="finding-detail-tabs-shell"
+                        value={findingDetailTab}
+                        onValueChange={(v) =>
+                          setFindingDetailTab(v as FindingDetailTab)
+                        }
+                      >
+                        <div className="finding-tabs-toolbar">
+                          <div className="finding-tabs-heading">
+                            <span>Decision evidence</span>
+                            <strong>
+                              Evidence, TTP context, and lifecycle
+                            </strong>
+                            <p>
+                              Provider-backed facts used to explain and defend
+                              the priority decision.
+                            </p>
+                          </div>
+                          <TabsList className="finding-detail-tabs-list">
+                            <TabsTrigger value="evidence">Evidence</TabsTrigger>
+                            <TabsTrigger value="ttp">TTP Context</TabsTrigger>
+                            <TabsTrigger value="history">History</TabsTrigger>
+                          </TabsList>
+                        </div>
 
-                                <details className="finding-ttp-technical-evidence finding-ttp-technical-details">
-                                  <summary className="finding-ttp-technical-heading">
+                        <TabsContent
+                          className="finding-detail-tab-panel"
+                          value="evidence"
+                        >
+                          <section
+                            className="finding-evidence-tab-layout"
+                            aria-label="Evidence workspace"
+                          >
+                            <section
+                              className="finding-evidence-grid"
+                              aria-label="Evidence summary"
+                            >
+                              {detailEvidenceRows.map((row, index) => (
+                                <VpwSurface
+                                  className={cn(
+                                    "finding-evidence-summary-card",
+                                    index === 0
+                                      ? "finding-evidence-summary-card-primary"
+                                      : undefined,
+                                  )}
+                                  key={row.label}
+                                >
+                                  <VpwSurfaceHeader>
+                                    <VpwSurfaceDescription>
+                                      {row.label}
+                                    </VpwSurfaceDescription>
+                                    <VpwSurfaceTitle>
+                                      {row.value}
+                                    </VpwSurfaceTitle>
+                                  </VpwSurfaceHeader>
+                                  <VpwSurfaceBody>
+                                    <p>{row.detail}</p>
+                                  </VpwSurfaceBody>
+                                </VpwSurface>
+                              ))}
+                            </section>
+
+                            <section
+                              className="finding-evidence-detail-grid"
+                              aria-label="Evidence detail"
+                            >
+                              <VpwSurface
+                                aria-label="Scanner occurrences"
+                                className="finding-tab-card finding-occurrences-card"
+                              >
+                                <VpwSurfaceHeader>
+                                  <div className="finding-card-heading">
                                     <div>
-                                      <span>Secondary evidence</span>
-                                      <strong>Technical mapping details</strong>
+                                      <VpwSurfaceDescription>
+                                        Scanner evidence
+                                      </VpwSurfaceDescription>
+                                      <VpwSurfaceTitle>
+                                        Occurrences
+                                      </VpwSurfaceTitle>
                                     </div>
                                     <Badge variant="outline">
-                                      Source, confidence, rationale
+                                      {detailOccurrences.length} source row(s)
                                     </Badge>
-                                  </summary>
-
-                                  <div className="finding-ttp-technical-body">
-                                    <p>{optionalText(detailAttackRationale)}</p>
+                                  </div>
+                                </VpwSurfaceHeader>
+                                <VpwSurfaceBody>
+                                  {detailOccurrences.length > 0 ? (
                                     <div className="finding-detail-table-wrap">
-                                      <Table aria-label="TTP Context techniques">
+                                      <Table aria-label="Occurrences table">
                                         <TableHeader>
                                           <TableRow>
-                                            <TableHead>Technique</TableHead>
-                                            <TableHead>Tactic</TableHead>
-                                            <TableHead>Confidence</TableHead>
                                             <TableHead>Source</TableHead>
-                                            <TableHead>Rationale</TableHead>
-                                            <TableHead>
-                                              Defensive actions
-                                            </TableHead>
+                                            <TableHead>Component</TableHead>
+                                            <TableHead>Asset / Owner</TableHead>
+                                            <TableHead>Evidence</TableHead>
+                                            <TableHead>Fix / VEX</TableHead>
                                           </TableRow>
                                         </TableHeader>
                                         <TableBody>
-                                          {detailAttackTechniques.map(
-                                            (technique) => {
-                                              const actionItems =
-                                                defensiveActionItems(
-                                                  technique.defensive_note,
-                                                )
+                                          {detailOccurrences.map(
+                                            (occurrence, index) => {
+                                              const fixVersions =
+                                                Array.isArray(
+                                                  occurrence.fix_versions,
+                                                ) &&
+                                                occurrence.fix_versions.length >
+                                                  0
+                                                  ? occurrence.fix_versions.join(
+                                                      ", ",
+                                                    )
+                                                  : stringValue(
+                                                      occurrence.fix_version,
+                                                    )
                                               return (
                                                 <TableRow
-                                                  key={technique.technique_id}
+                                                  key={
+                                                    stringValue(
+                                                      occurrence.id,
+                                                    ) ??
+                                                    `occurrence-${index + 1}`
+                                                  }
                                                 >
                                                   <TableCell>
                                                     <span className="font-medium">
-                                                      {technique.technique_id}
+                                                      {optionalText(
+                                                        stringValue(
+                                                          occurrence.source_format,
+                                                        ) ??
+                                                          stringValue(
+                                                            occurrence.source,
+                                                          ),
+                                                      )}
                                                     </span>
                                                     <small>
                                                       {optionalText(
-                                                        technique.name,
+                                                        stringValue(
+                                                          occurrence.source_record_id,
+                                                        ) ??
+                                                          stringValue(
+                                                            occurrence.raw_reference,
+                                                          ),
                                                       )}
                                                     </small>
                                                   </TableCell>
                                                   <TableCell>
-                                                    {attackTacticsLabel(
-                                                      technique.tactics,
-                                                    )}
-                                                  </TableCell>
-                                                  <TableCell>
-                                                    <Badge
-                                                      className={cn(
-                                                        technique.confidence ===
-                                                          "high"
-                                                          ? "bg-green-100 text-green-700 border-green-200"
-                                                          : technique.confidence ===
-                                                              "low"
-                                                            ? "bg-red-100 text-red-700 border-red-200"
-                                                            : "bg-yellow-100 text-yellow-700 border-yellow-200",
+                                                    <span className="font-medium">
+                                                      {joinedValues([
+                                                        stringValue(
+                                                          occurrence.component_name,
+                                                        ),
+                                                        stringValue(
+                                                          occurrence.component_version,
+                                                        ),
+                                                      ])}
+                                                    </span>
+                                                    <small>
+                                                      {optionalText(
+                                                        stringValue(
+                                                          occurrence.purl,
+                                                        ),
                                                       )}
-                                                    >
-                                                      {attackConfidenceLabel(
-                                                        technique.confidence,
-                                                      )}
-                                                    </Badge>
+                                                    </small>
                                                   </TableCell>
                                                   <TableCell>
-                                                    {optionalText(
-                                                      attackSourceLabel(
-                                                        technique.source,
-                                                        detailAttackContext,
-                                                      ),
-                                                    )}
-                                                  </TableCell>
-                                                  <TableCell>
-                                                    {optionalText(
-                                                      technique.rationale,
-                                                    )}
-                                                  </TableCell>
-                                                  <TableCell>
-                                                    {actionItems.length > 1 ? (
-                                                      <ul className="finding-ttp-actions-list">
-                                                        {actionItems.map(
-                                                          (item) => (
-                                                            <li key={item}>
-                                                              {item}
-                                                            </li>
+                                                    <span className="font-medium">
+                                                      {optionalText(
+                                                        stringValue(
+                                                          occurrence.asset_ref,
+                                                        ) ??
+                                                          stringValue(
+                                                            occurrence.target_ref,
                                                           ),
-                                                        )}
-                                                      </ul>
-                                                    ) : (
-                                                      optionalText(
-                                                        technique.defensive_note,
-                                                      )
-                                                    )}
+                                                      )}
+                                                    </span>
+                                                    <small>
+                                                      {joinedValues([
+                                                        stringValue(
+                                                          occurrence.asset_owner,
+                                                        ),
+                                                        stringValue(
+                                                          occurrence.asset_business_service,
+                                                        ),
+                                                        labelize(
+                                                          stringValue(
+                                                            occurrence.asset_exposure,
+                                                          ),
+                                                        ),
+                                                      ])}
+                                                    </small>
+                                                  </TableCell>
+                                                  <TableCell>
+                                                    <span className="font-medium">
+                                                      {optionalText(
+                                                        stringValue(
+                                                          occurrence.scanner,
+                                                        ),
+                                                      )}
+                                                    </span>
+                                                    <small>
+                                                      {optionalText(
+                                                        stringValue(
+                                                          occurrence.raw_severity,
+                                                        ),
+                                                      )}
+                                                    </small>
+                                                  </TableCell>
+                                                  <TableCell>
+                                                    <span className="font-medium">
+                                                      {optionalText(
+                                                        fixVersions,
+                                                      )}
+                                                    </span>
+                                                    <small>
+                                                      {optionalText(
+                                                        stringValue(
+                                                          occurrence.vex_status,
+                                                        )
+                                                          ? labelize(
+                                                              stringValue(
+                                                                occurrence.vex_status,
+                                                              ),
+                                                            )
+                                                          : stringValue(
+                                                              occurrence.vex_justification,
+                                                            ),
+                                                      )}
+                                                    </small>
                                                   </TableCell>
                                                 </TableRow>
                                               )
@@ -4148,264 +3869,935 @@ export function App() {
                                         </TableBody>
                                       </Table>
                                     </div>
-                                  </div>
-                                </details>
-                              </>
-                            )}
-                            {detailAttackEmpty ? (
-                              <section
-                                className="finding-detection-note"
-                                aria-label="Detection coverage"
-                              >
-                                <span>Detection coverage</span>
-                                <p>
-                                  {optionalText(
-                                    detailAttackContext?.defensive_note ??
-                                      "Coverage controls are not connected to this finding yet. Record detection and mitigation evidence when available.",
+                                  ) : (
+                                    <p className="text-sm text-muted-foreground">
+                                      No source occurrences have been recorded
+                                      for this finding.
+                                    </p>
                                   )}
-                                </p>
-                              </section>
-                            ) : null}
-                            <p className="finding-defensive-note">
-                              Defensive context only. No exploit steps,
-                              payloads, PoC guidance, active probing, or
-                              offensive procedure instructions.
-                            </p>
-                          </CardContent>
-                        </Card>
-                      </TabsContent>
+                                </VpwSurfaceBody>
+                              </VpwSurface>
 
-                      <TabsContent
-                        className="finding-detail-tab-panel"
-                        value="history"
-                      >
-                        <section
-                          className="finding-history-timeline"
-                          aria-label="Finding history"
+                              <VpwSurface
+                                aria-label="Data quality notes"
+                                className="finding-tab-card finding-data-quality-card"
+                              >
+                                <VpwSurfaceHeader>
+                                  <VpwSurfaceDescription>
+                                    Provider data
+                                  </VpwSurfaceDescription>
+                                  <VpwSurfaceTitle>
+                                    Data quality notes
+                                  </VpwSurfaceTitle>
+                                </VpwSurfaceHeader>
+                                <VpwSurfaceBody>
+                                  {detailDataQualityRows.length > 0 ? (
+                                    <ul className="finding-data-quality-list">
+                                      {detailDataQualityRows.map((flag) => (
+                                        <li key={flag.key}>
+                                          <strong>{labelize(flag.code)}</strong>
+                                          <span>
+                                            {flag.source} /{" "}
+                                            {labelize(flag.severity)}
+                                          </span>
+                                          <p>{flag.message}</p>
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  ) : (
+                                    <p className="text-sm text-muted-foreground">
+                                      No data quality flags recorded.
+                                    </p>
+                                  )}
+                                </VpwSurfaceBody>
+                              </VpwSurface>
+                            </section>
+                          </section>
+                        </TabsContent>
+
+                        <TabsContent
+                          className="finding-detail-tab-panel"
+                          value="ttp"
                         >
-                          {detailHistoryRows.map((row, index) => (
-                            <Card
-                              className="finding-tab-card finding-history-event"
-                              key={row.label}
-                            >
-                              <CardHeader>
-                                <span className="finding-history-step">
-                                  {index + 1}
-                                </span>
-                                <div>
-                                  <CardDescription>{row.label}</CardDescription>
-                                  <CardTitle>{row.value}</CardTitle>
-                                </div>
-                              </CardHeader>
-                              <CardContent>
-                                <p>{row.detail}</p>
-                              </CardContent>
-                            </Card>
-                          ))}
-                        </section>
-                        {detailWaiverEvidence ? (
-                          <Card
-                            aria-label="Accepted risk"
-                            className="finding-tab-card finding-accepted-risk-card"
+                          <VpwSurface
+                            aria-label="TTP Context"
+                            className="finding-tab-card finding-ttp-card"
                           >
-                            <CardHeader>
-                              <CardDescription>Risk acceptance</CardDescription>
-                              <CardTitle>Accepted risk</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                              <dl className="finding-decision-definition-list compact">
+                            <VpwSurfaceHeader>
+                              <div className="finding-card-heading">
                                 <div>
-                                  <dt>Owner</dt>
-                                  <dd>
-                                    {optionalText(detailWaiverEvidence.owner)}
-                                  </dd>
+                                  <VpwSurfaceDescription>
+                                    ATT&amp;CK
+                                  </VpwSurfaceDescription>
+                                  <VpwSurfaceTitle>TTP Context</VpwSurfaceTitle>
                                 </div>
-                                <div>
-                                  <dt>Reason</dt>
-                                  <dd>
-                                    {optionalText(detailWaiverEvidence.reason)}
-                                  </dd>
-                                </div>
-                                <div>
-                                  <dt>Expires</dt>
-                                  <dd>
+                                <Badge variant="outline">
+                                  {detailAttackSource
+                                    ?.toLowerCase()
+                                    .includes("demo")
+                                    ? "Curated demo mapping"
+                                    : detailAttackContext?.mapped
+                                      ? "Mapped context"
+                                      : "No approved mapping"}
+                                </Badge>
+                              </div>
+                            </VpwSurfaceHeader>
+                            <VpwSurfaceBody>
+                              {detailAttackEmpty ? (
+                                <section
+                                  aria-label="TTP context empty state"
+                                  className="finding-empty-panel"
+                                >
+                                  <div className="finding-empty-panel-heading">
+                                    <Badge variant="outline">
+                                      Defensive context
+                                    </Badge>
+                                    <strong>
+                                      No approved ATT&amp;CK mapping is stored
+                                      for this finding.
+                                    </strong>
+                                  </div>
+                                  <p>
+                                    Workbench does not infer tactics or
+                                    techniques for unmapped CVEs. Add a reviewed
+                                    CTID or curated local mapping before using
+                                    ATT&amp;CK context in queue decisions.
+                                  </p>
+                                </section>
+                              ) : (
+                                <>
+                                  <section
+                                    className="finding-ttp-context-hero finding-ttp-context-hero-simple"
+                                    aria-label="Threat informed context"
+                                  >
+                                    <div className="finding-ttp-main-copy">
+                                      <span>Threat informed context</span>
+                                      <h3>{detailAttackTechniqueLabel}</h3>
+                                      <p>
+                                        This mapping explains why the finding is
+                                        treated as an internet-facing Initial
+                                        Access risk. It supports remediation
+                                        priority and detection coverage review,
+                                        but does not prove exploitation.
+                                      </p>
+                                    </div>
+                                    <dl className="finding-ttp-main-facts">
+                                      <div>
+                                        <dt>Tactic</dt>
+                                        <dd>{detailAttackTacticLabel}</dd>
+                                      </div>
+                                      <div>
+                                        <dt>Confidence</dt>
+                                        <dd>
+                                          <Badge
+                                            className={cn(
+                                              detailAttackContext?.confidence ===
+                                                "high"
+                                                ? "bg-green-100 text-green-700 border-green-200"
+                                                : detailAttackContext?.confidence ===
+                                                    "low"
+                                                  ? "bg-red-100 text-red-700 border-red-200"
+                                                  : "bg-yellow-100 text-yellow-700 border-yellow-200",
+                                            )}
+                                          >
+                                            {attackConfidenceLabel(
+                                              detailAttackContext?.confidence,
+                                            )}
+                                          </Badge>
+                                        </dd>
+                                      </div>
+                                      <div>
+                                        <dt>Source</dt>
+                                        <dd>
+                                          {optionalText(detailAttackSource)}
+                                        </dd>
+                                      </div>
+                                      <div>
+                                        <dt>Coverage</dt>
+                                        <dd>{detailAttackCoverageStatus}</dd>
+                                      </div>
+                                    </dl>
+                                  </section>
+
+                                  <ol
+                                    className="finding-ttp-chain finding-ttp-chain-compact"
+                                    aria-label="Attack chain and decision flow"
+                                  >
+                                    <li data-tone="signal">
+                                      <span className="finding-ttp-chain-index">
+                                        1
+                                      </span>
+                                      <div>
+                                        <small>CVE signal</small>
+                                        <strong>High priority signal</strong>
+                                      </div>
+                                    </li>
+                                    <li data-tone="exposure">
+                                      <span className="finding-ttp-chain-index">
+                                        2
+                                      </span>
+                                      <div>
+                                        <small>Internet-facing asset</small>
+                                        <strong>Internet facing asset</strong>
+                                      </div>
+                                    </li>
+                                    <li data-tone="technique">
+                                      <span className="finding-ttp-chain-index">
+                                        3
+                                      </span>
+                                      <div>
+                                        <small>ATT&amp;CK technique</small>
+                                        <strong>
+                                          {detailAttackTechniqueId}
+                                        </strong>
+                                      </div>
+                                    </li>
+                                    <li data-tone="coverage">
+                                      <span className="finding-ttp-chain-index">
+                                        4
+                                      </span>
+                                      <div>
+                                        <small>Detection gap</small>
+                                        <strong>
+                                          {detailAttackCoverageStatus}
+                                        </strong>
+                                      </div>
+                                    </li>
+                                    <li data-tone="decision">
+                                      <span className="finding-ttp-chain-index">
+                                        5
+                                      </span>
+                                      <div>
+                                        <small>Remediation priority</small>
+                                        <strong>Emergency remediation</strong>
+                                      </div>
+                                    </li>
+                                  </ol>
+
+                                  <section
+                                    className="finding-ttp-decision-grid finding-ttp-decision-grid-simple"
+                                    aria-label="Threat informed decision context"
+                                  >
+                                    <article className="finding-ttp-narrative-card">
+                                      <span>Why this matters</span>
+                                      <strong>Decision support</strong>
+                                      <ul className="finding-ttp-meaning-list">
+                                        <li>
+                                          Frames the CVE as an Initial Access
+                                          risk.
+                                        </li>
+                                        <li>
+                                          Explains why internet exposure raises
+                                          urgency.
+                                        </li>
+                                        <li>
+                                          Connects remediation priority with
+                                          detection review.
+                                        </li>
+                                        <li>
+                                          Keeps the boundary clear: no proof of
+                                          exploitation.
+                                        </li>
+                                      </ul>
+                                    </article>
+                                    <article className="finding-ttp-narrative-card finding-ttp-actions-card">
+                                      <span>Recommended defensive actions</span>
+                                      <strong>
+                                        Close exposure and validate coverage
+                                      </strong>
+                                      <ul className="finding-ttp-checklist">
+                                        {(detailAttackActionItems.length > 0
+                                          ? detailAttackActionItems
+                                          : [
+                                              "Patch or mitigate the vulnerable service.",
+                                              "Restrict exposure while remediation is in progress.",
+                                              "Validate web, proxy, WAF, EDR and application telemetry.",
+                                              "Document detection coverage and residual risk.",
+                                            ]
+                                        ).map((item) => (
+                                          <li key={item}>{item}</li>
+                                        ))}
+                                      </ul>
+                                    </article>
+                                  </section>
+
+                                  <details className="finding-ttp-technical-evidence finding-ttp-technical-details">
+                                    <summary className="finding-ttp-technical-heading">
+                                      <div>
+                                        <span>Secondary evidence</span>
+                                        <strong>
+                                          Technical mapping details
+                                        </strong>
+                                      </div>
+                                      <Badge variant="outline">
+                                        Source, confidence, rationale
+                                      </Badge>
+                                    </summary>
+
+                                    <div className="finding-ttp-technical-body">
+                                      <p>
+                                        {optionalText(detailAttackRationale)}
+                                      </p>
+                                      <div className="finding-detail-table-wrap">
+                                        <Table aria-label="TTP Context techniques">
+                                          <TableHeader>
+                                            <TableRow>
+                                              <TableHead>Technique</TableHead>
+                                              <TableHead>Tactic</TableHead>
+                                              <TableHead>Confidence</TableHead>
+                                              <TableHead>Source</TableHead>
+                                              <TableHead>Rationale</TableHead>
+                                              <TableHead>
+                                                Defensive actions
+                                              </TableHead>
+                                            </TableRow>
+                                          </TableHeader>
+                                          <TableBody>
+                                            {detailAttackTechniques.map(
+                                              (technique) => {
+                                                const actionItems =
+                                                  defensiveActionItems(
+                                                    technique.defensive_note,
+                                                  )
+                                                return (
+                                                  <TableRow
+                                                    key={technique.technique_id}
+                                                  >
+                                                    <TableCell>
+                                                      <span className="font-medium">
+                                                        {technique.technique_id}
+                                                      </span>
+                                                      <small>
+                                                        {optionalText(
+                                                          technique.name,
+                                                        )}
+                                                      </small>
+                                                    </TableCell>
+                                                    <TableCell>
+                                                      {attackTacticsLabel(
+                                                        technique.tactics,
+                                                      )}
+                                                    </TableCell>
+                                                    <TableCell>
+                                                      <Badge
+                                                        className={cn(
+                                                          technique.confidence ===
+                                                            "high"
+                                                            ? "bg-green-100 text-green-700 border-green-200"
+                                                            : technique.confidence ===
+                                                                "low"
+                                                              ? "bg-red-100 text-red-700 border-red-200"
+                                                              : "bg-yellow-100 text-yellow-700 border-yellow-200",
+                                                        )}
+                                                      >
+                                                        {attackConfidenceLabel(
+                                                          technique.confidence,
+                                                        )}
+                                                      </Badge>
+                                                    </TableCell>
+                                                    <TableCell>
+                                                      {optionalText(
+                                                        attackSourceLabel(
+                                                          technique.source,
+                                                          detailAttackContext,
+                                                        ),
+                                                      )}
+                                                    </TableCell>
+                                                    <TableCell>
+                                                      {optionalText(
+                                                        technique.rationale,
+                                                      )}
+                                                    </TableCell>
+                                                    <TableCell>
+                                                      {actionItems.length >
+                                                      1 ? (
+                                                        <ul className="finding-ttp-actions-list">
+                                                          {actionItems.map(
+                                                            (item) => (
+                                                              <li key={item}>
+                                                                {item}
+                                                              </li>
+                                                            ),
+                                                          )}
+                                                        </ul>
+                                                      ) : (
+                                                        optionalText(
+                                                          technique.defensive_note,
+                                                        )
+                                                      )}
+                                                    </TableCell>
+                                                  </TableRow>
+                                                )
+                                              },
+                                            )}
+                                          </TableBody>
+                                        </Table>
+                                      </div>
+                                    </div>
+                                  </details>
+                                </>
+                              )}
+                              {detailAttackEmpty ? (
+                                <section
+                                  className="finding-detection-note"
+                                  aria-label="Detection coverage"
+                                >
+                                  <span>Detection coverage</span>
+                                  <p>
                                     {optionalText(
-                                      detailWaiverEvidence.expiresOn,
+                                      detailAttackContext?.defensive_note ??
+                                        "Coverage controls are not connected to this finding yet. Record detection and mitigation evidence when available.",
                                     )}
-                                  </dd>
-                                </div>
-                                <div>
-                                  <dt>Review</dt>
-                                  <dd>
-                                    {optionalText(
-                                      detailWaiverEvidence.reviewOn,
-                                    )}
-                                  </dd>
-                                </div>
-                                <div>
-                                  <dt>Scope</dt>
-                                  <dd>
-                                    {optionalText(
-                                      detailWaiverEvidence.matchedScope ??
-                                        detailWaiverEvidence.scope,
-                                    )}
-                                  </dd>
-                                </div>
-                                <div>
-                                  <dt>Approval</dt>
-                                  <dd>
-                                    {optionalText(
-                                      detailWaiverEvidence.approvalRef,
-                                    )}
-                                  </dd>
-                                </div>
-                              </dl>
-                            </CardContent>
-                          </Card>
-                        ) : null}
-                      </TabsContent>
-                    </Tabs>
-                  </>
-                ) : null}
-              </section>
-            ) : currentPath === "/providers" ? (
-              <ProvidersWorkbench
-                onRefreshProviderStatus={() => void refreshProviderStatus()}
-                providerStatus={providerStatus}
-                providerStatusError={providerStatusError}
-                providerStatusLoading={providerStatusLoading}
-              />
-            ) : currentPath === "/settings" ? (
-              <SettingsWorkbench
-                apiTokenActionLoading={apiTokenActionLoading}
-                apiTokenError={apiTokenError}
-                apiTokenMessage={apiTokenMessage}
-                apiTokenName={apiTokenName}
-                apiTokenScopeOptions={apiTokenScopeOptions}
-                apiTokenScopes={apiTokenScopes}
-                apiTokens={apiTokens}
-                apiTokensLoading={apiTokensLoading}
-                createdApiToken={createdApiToken}
-                currentUser={currentUser}
-                onApiTokenNameChange={setApiTokenName}
-                onCreateApiToken={createApiToken}
-                onRevokeApiToken={revokeApiToken}
-                onToggleApiTokenScope={toggleApiTokenScope}
-                providerStatus={providerStatus}
-                providerStatusError={providerStatusError}
-                providerStatusLoading={providerStatusLoading}
-                status={status}
-                statusError={statusError}
-              />
-            ) : currentPath === "/reports" ? (
-              <EvidenceCenter
-                activeReportFormat={activeReportFormat}
-                onCreateReport={createReport}
-                onDownloadReport={downloadReport}
-                onRunIdChange={setSelectedRunId}
-                onVerifyReport={verifyEvidenceReport}
-                projectRuns={projectRuns}
-                projectSummary={projectSummary}
-                providerStatus={providerStatus}
-                reportActionError={reportActionError}
-                reportActionMessage={reportActionMessage}
-                reportActionsEnabled={reportActionsEnabled}
-                reports={reports}
-                reportsError={reportsError}
-                reportsLoading={reportsLoading}
-                runDetailError={runDetailError}
-                runsError={runsError}
-                runsLoading={runsLoading}
-                selectedProject={selectedProject}
-                selectedReportRun={selectedReportRun}
-                selectedRunId={selectedRunId}
-                selectedRunSummary={selectedRunSummary}
-              />
-            ) : (
-              <div className="dashboard-panel-body">
-                {dashboardError ? (
-                  <ErrorState message={dashboardError} />
-                ) : null}
+                                  </p>
+                                </section>
+                              ) : null}
+                              <p className="finding-defensive-note">
+                                Defensive context only. No exploit steps,
+                                payloads, PoC guidance, active probing, or
+                                offensive procedure instructions.
+                              </p>
+                            </VpwSurfaceBody>
+                          </VpwSurface>
+                        </TabsContent>
 
-                {dashboardLoading ? (
-                  <LoadingSkeleton label="Loading dashboard summary" />
-                ) : null}
-
-                {!dashboardLoading &&
-                !dashboardError &&
-                projects.length === 0 ? (
-                  <EmptyState
-                    action={
-                      <div className="flex gap-2">
-                        <Button asChild>
-                          <Link to="/projects">Projects</Link>
-                        </Button>
-                        <Button variant="outline" asChild>
-                          <Link to="/imports">Imports</Link>
-                        </Button>
-                      </div>
-                    }
-                    ariaLabel="Dashboard empty state"
-                    detail="Create a project or import a CVE list to populate the dashboard."
-                    title="No projects yet"
-                  />
-                ) : null}
-
-                {!dashboardLoading &&
-                !dashboardError &&
-                selectedProject &&
-                projectSummary !== null &&
-                (projectSummary.finding_count ?? 0) === 0 ? (
-                  <EmptyState
-                    action={
-                      <div className="flex gap-2">
-                        <Button asChild>
-                          <Link to="/imports">Imports</Link>
-                        </Button>
-                        <Button variant="outline" asChild>
-                          <Link to="/projects">Projects</Link>
-                        </Button>
-                      </div>
-                    }
-                    ariaLabel="No findings empty state"
-                    detail="Import scanner, SBOM, or CVE-list data to create findings."
-                    title={`No findings in ${selectedProject.name}`}
-                  />
-                ) : null}
-
-                {!dashboardLoading && !dashboardError && projects.length > 0 ? (
-                  <div className="dashboard-cockpit-grid">
-                    <div className="dashboard-main-stack">
-                      {selectedProject &&
-                      projectSummary !== null &&
-                      (projectSummary.finding_count ?? 0) > 0 ? (
-                        <TopRemediationQueue
-                          error={dashboardFindingsError}
-                          findings={dashboardFindings}
-                          loading={dashboardFindingsLoading}
-                          projectName={selectedProject.name}
-                        />
-                      ) : null}
-
-                      <section
-                        className="dashboard-chart-grid"
-                        aria-label="Dashboard chart previews"
-                      >
-                        <FindingsByPriorityChart items={priorityChartItems} />
-                        <TopServicesByRiskChart
-                          items={topServiceChartItems}
-                          source={topServiceSource}
-                        />
-                        <RiskTrendChart items={runActivityItems} />
-                      </section>
-
-                      {projectSummary !== null &&
-                      (projectSummary.finding_count ?? 0) > 0 ? (
-                        <dl
-                          className="summary-list"
-                          aria-label="Project decision summary"
+                        <TabsContent
+                          className="finding-detail-tab-panel"
+                          value="history"
                         >
-                          {summaryRows.map((row) => (
+                          <section
+                            className="finding-history-timeline"
+                            aria-label="Finding history"
+                          >
+                            {detailHistoryRows.map((row, index) => (
+                              <VpwSurface
+                                className="finding-tab-card finding-history-event"
+                                key={row.label}
+                              >
+                                <VpwSurfaceHeader>
+                                  <span className="finding-history-step">
+                                    {index + 1}
+                                  </span>
+                                  <div>
+                                    <VpwSurfaceDescription>
+                                      {row.label}
+                                    </VpwSurfaceDescription>
+                                    <VpwSurfaceTitle>
+                                      {row.value}
+                                    </VpwSurfaceTitle>
+                                  </div>
+                                </VpwSurfaceHeader>
+                                <VpwSurfaceBody>
+                                  <p>{row.detail}</p>
+                                </VpwSurfaceBody>
+                              </VpwSurface>
+                            ))}
+                          </section>
+                          {detailWaiverEvidence ? (
+                            <VpwSurface
+                              aria-label="Accepted risk"
+                              className="finding-tab-card finding-accepted-risk-card"
+                            >
+                              <VpwSurfaceHeader>
+                                <VpwSurfaceDescription>
+                                  Risk acceptance
+                                </VpwSurfaceDescription>
+                                <VpwSurfaceTitle>Accepted risk</VpwSurfaceTitle>
+                              </VpwSurfaceHeader>
+                              <VpwSurfaceBody>
+                                <dl className="finding-decision-definition-list compact">
+                                  <div>
+                                    <dt>Owner</dt>
+                                    <dd>
+                                      {optionalText(detailWaiverEvidence.owner)}
+                                    </dd>
+                                  </div>
+                                  <div>
+                                    <dt>Reason</dt>
+                                    <dd>
+                                      {optionalText(
+                                        detailWaiverEvidence.reason,
+                                      )}
+                                    </dd>
+                                  </div>
+                                  <div>
+                                    <dt>Expires</dt>
+                                    <dd>
+                                      {optionalText(
+                                        detailWaiverEvidence.expiresOn,
+                                      )}
+                                    </dd>
+                                  </div>
+                                  <div>
+                                    <dt>Review</dt>
+                                    <dd>
+                                      {optionalText(
+                                        detailWaiverEvidence.reviewOn,
+                                      )}
+                                    </dd>
+                                  </div>
+                                  <div>
+                                    <dt>Scope</dt>
+                                    <dd>
+                                      {optionalText(
+                                        detailWaiverEvidence.matchedScope ??
+                                          detailWaiverEvidence.scope,
+                                      )}
+                                    </dd>
+                                  </div>
+                                  <div>
+                                    <dt>Approval</dt>
+                                    <dd>
+                                      {optionalText(
+                                        detailWaiverEvidence.approvalRef,
+                                      )}
+                                    </dd>
+                                  </div>
+                                </dl>
+                              </VpwSurfaceBody>
+                            </VpwSurface>
+                          ) : null}
+                        </TabsContent>
+                      </Tabs>
+                    </>
+                  ) : null}
+                </section>
+              ) : currentPath === "/providers" ? (
+                <ProvidersWorkbench
+                  onRefreshProviderStatus={() => void refreshProviderStatus()}
+                  providerStatus={providerStatus}
+                  providerStatusError={providerStatusError}
+                  providerStatusLoading={providerStatusLoading}
+                />
+              ) : currentPath === "/settings" ? (
+                <SettingsWorkbench
+                  apiTokenActionLoading={apiTokenActionLoading}
+                  apiTokenError={apiTokenError}
+                  apiTokenMessage={apiTokenMessage}
+                  apiTokenName={apiTokenName}
+                  apiTokenScopeOptions={apiTokenScopeOptions}
+                  apiTokenScopes={apiTokenScopes}
+                  apiTokens={apiTokens}
+                  apiTokensLoading={apiTokensLoading}
+                  createdApiToken={createdApiToken}
+                  currentUser={currentUser}
+                  onApiTokenNameChange={setApiTokenName}
+                  onCreateApiToken={createApiToken}
+                  onRevokeApiToken={revokeApiToken}
+                  onToggleApiTokenScope={toggleApiTokenScope}
+                  providerStatus={providerStatus}
+                  providerStatusError={providerStatusError}
+                  providerStatusLoading={providerStatusLoading}
+                  status={status}
+                  statusError={statusError}
+                />
+              ) : currentPath === "/reports" ? (
+                <EvidenceCenter
+                  activeReportFormat={activeReportFormat}
+                  onCreateReport={createReport}
+                  onDownloadReport={downloadReport}
+                  onRunIdChange={setSelectedRunId}
+                  onVerifyReport={verifyEvidenceReport}
+                  projectRuns={projectRuns}
+                  projectSummary={projectSummary}
+                  providerStatus={providerStatus}
+                  reportActionError={reportActionError}
+                  reportActionMessage={reportActionMessage}
+                  reportActionsEnabled={reportActionsEnabled}
+                  reports={reports}
+                  reportsError={reportsError}
+                  reportsLoading={reportsLoading}
+                  runDetailError={runDetailError}
+                  runsError={runsError}
+                  runsLoading={runsLoading}
+                  selectedProject={selectedProject}
+                  selectedReportRun={selectedReportRun}
+                  selectedRunId={selectedRunId}
+                  selectedRunSummary={selectedRunSummary}
+                />
+              ) : (
+                <div className="dashboard-panel-body">
+                  {dashboardError ? (
+                    <ErrorState message={dashboardError} />
+                  ) : null}
+
+                  {dashboardLoading ? (
+                    <LoadingSkeleton label="Loading dashboard summary" />
+                  ) : null}
+
+                  {!dashboardLoading &&
+                  !dashboardError &&
+                  projects.length === 0 ? (
+                    <EmptyState
+                      action={
+                        <div className="flex gap-2">
+                          <Button asChild>
+                            <Link to="/projects">Projects</Link>
+                          </Button>
+                          <Button variant="outline" asChild>
+                            <Link to="/imports">Imports</Link>
+                          </Button>
+                        </div>
+                      }
+                      ariaLabel="Dashboard empty state"
+                      detail="Create a project or import a CVE list to populate the dashboard."
+                      title="No projects yet"
+                    />
+                  ) : null}
+
+                  {!dashboardLoading &&
+                  !dashboardError &&
+                  selectedProject &&
+                  projectSummary !== null &&
+                  (projectSummary.finding_count ?? 0) === 0 ? (
+                    <EmptyState
+                      action={
+                        <div className="flex gap-2">
+                          <Button asChild>
+                            <Link to="/imports">Imports</Link>
+                          </Button>
+                          <Button variant="outline" asChild>
+                            <Link to="/projects">Projects</Link>
+                          </Button>
+                        </div>
+                      }
+                      ariaLabel="No findings empty state"
+                      detail="Import scanner, SBOM, or CVE-list data to create findings."
+                      title={`No findings in ${selectedProject.name}`}
+                    />
+                  ) : null}
+
+                  {!dashboardLoading &&
+                  !dashboardError &&
+                  projects.length > 0 ? (
+                    <div className="dashboard-cockpit-grid">
+                      <div className="dashboard-main-stack">
+                        {selectedProject &&
+                        projectSummary !== null &&
+                        (projectSummary.finding_count ?? 0) > 0 ? (
+                          <TopRemediationQueue
+                            error={dashboardFindingsError}
+                            findings={dashboardFindings}
+                            loading={dashboardFindingsLoading}
+                            projectName={selectedProject.name}
+                          />
+                        ) : null}
+
+                        <section
+                          className="dashboard-chart-grid"
+                          aria-label="Dashboard chart previews"
+                        >
+                          <FindingsByPriorityChart items={priorityChartItems} />
+                          <TopServicesByRiskChart
+                            items={topServiceChartItems}
+                            source={topServiceSource}
+                          />
+                          <RiskTrendChart items={runActivityItems} />
+                        </section>
+
+                        {projectSummary !== null &&
+                        (projectSummary.finding_count ?? 0) > 0 ? (
+                          <dl
+                            className="summary-list"
+                            aria-label="Project decision summary"
+                          >
+                            {summaryRows.map((row) => (
+                              <div key={row.label}>
+                                <dt>{row.label}</dt>
+                                <dd>
+                                  <strong>{row.value}</strong>
+                                  <span>{row.detail}</span>
+                                </dd>
+                              </div>
+                            ))}
+                          </dl>
+                        ) : null}
+
+                        {governanceError ? (
+                          <ErrorState message={governanceError} />
+                        ) : null}
+
+                        {governanceLoading ? (
+                          <LoadingSkeleton label="Loading governance rollups" />
+                        ) : null}
+
+                        {!governanceLoading &&
+                        !governanceError &&
+                        selectedProject &&
+                        projectGovernanceRollups ? (
+                          <section
+                            className="governance-summary-widget"
+                            aria-label="Top Services by Risk"
+                          >
+                            <div className="flex items-center justify-between mb-4">
+                              <h3 className="font-semibold">
+                                {topServiceSource === "assets"
+                                  ? "Top Assets by Risk"
+                                  : "Top Services by Risk"}
+                              </h3>
+                              <span className="text-sm text-muted-foreground">
+                                {topServiceSource === "assets"
+                                  ? "Assets and waiver debt concentration"
+                                  : "Owner, service, and waiver debt concentration"}
+                              </span>
+                            </div>
+                            {topServiceChartRows.length === 0 ? (
+                              <p className="attack-summary-empty">
+                                No service or asset rollups are available for
+                                this project. Import findings with service or
+                                asset context and rerun analysis to enable risk
+                                ranking.
+                              </p>
+                            ) : (
+                              <ul className="governance-service-list">
+                                {topServiceChartRows.map((service) => (
+                                  <li key={service.label}>
+                                    <div>
+                                      <strong>{service.label}</strong>
+                                      <span>
+                                        {service.finding_count ?? 0} finding
+                                        {service.finding_count === 1 ? "" : "s"}
+                                      </span>
+                                    </div>
+                                    <small>
+                                      Highest{" "}
+                                      {service.highest_priority ?? "Unreviewed"}{" "}
+                                      / Critical {service.critical_count ?? 0} /
+                                      High {service.high_count ?? 0} / Score{" "}
+                                      {formatRollupScore(
+                                        service.risk_score_total,
+                                      )}{" "}
+                                      / Waiver debt{" "}
+                                      {serviceWaiverDebtCount(service)}
+                                    </small>
+                                  </li>
+                                ))}
+                              </ul>
+                            )}
+                          </section>
+                        ) : null}
+                      </div>
+
+                      <aside
+                        className="dashboard-side-stack"
+                        aria-label="Dashboard evidence panels"
+                      >
+                        <ProviderFreshnessPanel
+                          providerStatus={providerStatus}
+                          statusError={providerStatusError || statusError}
+                        />
+
+                        <section
+                          className="dashboard-readiness-card"
+                          aria-label="Evidence Readiness"
+                        >
+                          <div className="dashboard-panel-heading">
+                            <div>
+                              <span>Report Inputs</span>
+                              <h3>Evidence Readiness</h3>
+                              <p>Latest run context for report generation.</p>
+                            </div>
+                            <Button variant="outline" size="sm" asChild>
+                              <Link to="/reports">Reports</Link>
+                            </Button>
+                          </div>
+
+                          {runsError ? (
+                            <ErrorState message={runsError} />
+                          ) : null}
+
+                          <dl className="dashboard-readiness-facts">
+                            <div>
+                              <dt>Latest run</dt>
+                              <dd>
+                                {runsLoading
+                                  ? "Loading"
+                                  : latestProjectRun
+                                    ? runStatusLabel(latestProjectRun.status)
+                                    : "No runs"}
+                              </dd>
+                            </div>
+                            <div>
+                              <dt>Run started</dt>
+                              <dd>
+                                {latestProjectRun?.started_at
+                                  ? formatDateTime(latestProjectRun.started_at)
+                                  : "N.A."}
+                              </dd>
+                            </div>
+                            <div>
+                              <dt>Findings</dt>
+                              <dd>{projectSummary?.finding_count ?? 0}</dd>
+                            </div>
+                            <div>
+                              <dt>Reports</dt>
+                              <dd>
+                                {latestProjectRun
+                                  ? "Ready for generation"
+                                  : "Import data first"}
+                              </dd>
+                            </div>
+                          </dl>
+                        </section>
+                      </aside>
+                    </div>
+                  ) : null}
+                </div>
+              )}
+            </div>
+
+            {!isFindingsList &&
+              !isFindingDetail &&
+              currentPath !== "/reports" &&
+              currentPath !== "/settings" &&
+              currentPath !== "/providers" && (
+                <div className="side-panel">
+                  <section aria-label="Provider Status">
+                    <div className="panel-header compact inline-header">
+                      <div>
+                        <h2>Provider Status</h2>
+                        <span>{providerSnapshotSummary(providerStatus)}</span>
+                      </div>
+                      <Database aria-hidden="true" size={18} />
+                    </div>
+
+                    <div
+                      className={`provider-state ${
+                        providerStatus?.status === "ok" ? "ok" : "degraded"
+                      }`}
+                    >
+                      <span>{providerStatus?.status ?? "loading"}</span>
+                      <strong>
+                        {providerStatus?.snapshot_mode ?? "missing"}
+                      </strong>
+                    </div>
+
+                    <dl className="provider-facts">
+                      <div>
+                        <dt>Snapshot mode</dt>
+                        <dd>{providerStatus?.snapshot_mode ?? "missing"}</dd>
+                      </div>
+                      <div>
+                        <dt>Last sync</dt>
+                        <dd>{providerStatus?.last_sync ?? "N.A."}</dd>
+                      </div>
+                      <div>
+                        <dt>Cache age</dt>
+                        <dd>
+                          {formatCacheAge(providerStatus?.cache_age_seconds)}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>Last error</dt>
+                        <dd>
+                          {providerStatus?.last_error ??
+                            (statusError || "None")}
+                        </dd>
+                      </div>
+                    </dl>
+
+                    <ul
+                      className="provider-sources"
+                      aria-label="Provider sources"
+                    >
+                      {(providerStatus?.sources ?? fallbackProviderSources).map(
+                        (source) => (
+                          <li className="provider-source" key={source.name}>
+                            <div>
+                              <strong>{source.name.toUpperCase()}</strong>
+                              <span>{source.value ?? "N.A."}</span>
+                            </div>
+                            <Badge
+                              className={
+                                source.available
+                                  ? "bg-green-100 text-green-700 border-green-200"
+                                  : "bg-red-100 text-red-700 border-red-200"
+                              }
+                            >
+                              {source.available ? "available" : "missing"}
+                            </Badge>
+                          </li>
+                        ),
+                      )}
+                    </ul>
+
+                    {(providerStatus?.warnings ?? []).map((warning) => (
+                      <p className="provider-warning" key={warning}>
+                        {warning}
+                      </p>
+                    ))}
+                  </section>
+
+                  <div className="panel-header compact">
+                    <div>
+                      <h2>Evidence Flow</h2>
+                      <span>Latest workspace events</span>
+                    </div>
+                    <GitBranch aria-hidden="true" size={18} />
+                  </div>
+                  <ol className="timeline">
+                    {timeline.map((item) => (
+                      <li key={item}>{item}</li>
+                    ))}
+                  </ol>
+                  <section
+                    className="attack-summary-widget"
+                    aria-label="Top ATT&CK techniques dashboard widget"
+                  >
+                    <div className="panel-header compact inline-header">
+                      <div>
+                        <h2>Top ATT&CK Techniques</h2>
+                        <span>
+                          {projectAttackSummary
+                            ? attackConfidenceSummary(projectAttackSummary)
+                            : "Confidence distribution loading"}
+                        </span>
+                      </div>
+                      <BarChart3 aria-hidden="true" size={18} />
+                    </div>
+
+                    {attackSummaryError ? (
+                      <p
+                        className="text-sm text-destructive rounded-md border border-destructive/20 bg-destructive/10 px-3 py-2"
+                        role="alert"
+                      >
+                        {attackSummaryError}
+                      </p>
+                    ) : null}
+
+                    {attackSummaryLoading ? (
+                      <p
+                        className="text-sm text-muted-foreground"
+                        role="status"
+                      >
+                        Loading ATT&CK summary
+                      </p>
+                    ) : null}
+
+                    {!attackSummaryLoading &&
+                    !attackSummaryError &&
+                    (!selectedProject || !projectAttackSummary) ? (
+                      <p className="attack-summary-empty">
+                        Select a project to review ATT&CK concentration.
+                      </p>
+                    ) : null}
+
+                    {!attackSummaryLoading &&
+                    !attackSummaryError &&
+                    projectAttackSummary &&
+                    attackTopTechniques.length === 0 ? (
+                      <p className="attack-summary-empty">
+                        No reviewed ATT&CK technique mappings are stored for
+                        this project.
+                      </p>
+                    ) : null}
+
+                    {!attackSummaryLoading &&
+                    !attackSummaryError &&
+                    projectAttackSummary &&
+                    attackTopTechniques.length > 0 ? (
+                      <>
+                        <dl className="attack-summary-stats">
+                          {attackRows.map((row) => (
                             <div key={row.label}>
                               <dt>{row.label}</dt>
                               <dd>
@@ -4415,323 +4807,34 @@ export function App() {
                             </div>
                           ))}
                         </dl>
-                      ) : null}
-
-                      {governanceError ? (
-                        <ErrorState message={governanceError} />
-                      ) : null}
-
-                      {governanceLoading ? (
-                        <LoadingSkeleton label="Loading governance rollups" />
-                      ) : null}
-
-                      {!governanceLoading &&
-                      !governanceError &&
-                      selectedProject &&
-                      projectGovernanceRollups ? (
-                        <section
-                          className="governance-summary-widget"
-                          aria-label="Top Services by Risk"
-                        >
-                          <div className="flex items-center justify-between mb-4">
-                            <h3 className="font-semibold">
-                              {topServiceSource === "assets"
-                                ? "Top Assets by Risk"
-                                : "Top Services by Risk"}
-                            </h3>
-                            <span className="text-sm text-muted-foreground">
-                              {topServiceSource === "assets"
-                                ? "Assets and waiver debt concentration"
-                                : "Owner, service, and waiver debt concentration"}
-                            </span>
-                          </div>
-                          {topServiceChartRows.length === 0 ? (
-                            <p className="attack-summary-empty">
-                              No service or asset rollups are available for this
-                              project. Import findings with service or asset
-                              context and rerun analysis to enable risk ranking.
-                            </p>
-                          ) : (
-                            <ul className="governance-service-list">
-                              {topServiceChartRows.map((service) => (
-                                <li key={service.label}>
-                                  <div>
-                                    <strong>{service.label}</strong>
-                                    <span>
-                                      {service.finding_count ?? 0} finding
-                                      {service.finding_count === 1 ? "" : "s"}
-                                    </span>
-                                  </div>
-                                  <small>
-                                    Highest{" "}
-                                    {service.highest_priority ?? "Unreviewed"} /{" "}
-                                    Critical {service.critical_count ?? 0} /
-                                    High {service.high_count ?? 0} / Score{" "}
-                                    {formatRollupScore(
-                                      service.risk_score_total,
-                                    )}{" "}
-                                    / Waiver debt{" "}
-                                    {serviceWaiverDebtCount(service)}
-                                  </small>
-                                </li>
-                              ))}
-                            </ul>
-                          )}
-                        </section>
-                      ) : null}
-                    </div>
-
-                    <aside
-                      className="dashboard-side-stack"
-                      aria-label="Dashboard evidence panels"
-                    >
-                      <ProviderFreshnessPanel
-                        providerStatus={providerStatus}
-                        statusError={providerStatusError || statusError}
-                      />
-
-                      <section
-                        className="dashboard-readiness-card"
-                        aria-label="Evidence Readiness"
-                      >
-                        <div className="dashboard-panel-heading">
-                          <div>
-                            <span>Report Inputs</span>
-                            <h3>Evidence Readiness</h3>
-                            <p>Latest run context for report generation.</p>
-                          </div>
-                          <Button variant="outline" size="sm" asChild>
-                            <Link to="/reports">Reports</Link>
-                          </Button>
-                        </div>
-
-                        {runsError ? <ErrorState message={runsError} /> : null}
-
-                        <dl className="dashboard-readiness-facts">
-                          <div>
-                            <dt>Latest run</dt>
-                            <dd>
-                              {runsLoading
-                                ? "Loading"
-                                : latestProjectRun
-                                  ? runStatusLabel(latestProjectRun.status)
-                                  : "No runs"}
-                            </dd>
-                          </div>
-                          <div>
-                            <dt>Run started</dt>
-                            <dd>
-                              {latestProjectRun?.started_at
-                                ? formatDateTime(latestProjectRun.started_at)
-                                : "N.A."}
-                            </dd>
-                          </div>
-                          <div>
-                            <dt>Findings</dt>
-                            <dd>{projectSummary?.finding_count ?? 0}</dd>
-                          </div>
-                          <div>
-                            <dt>Reports</dt>
-                            <dd>
-                              {latestProjectRun
-                                ? "Ready for generation"
-                                : "Import data first"}
-                            </dd>
-                          </div>
-                        </dl>
-                      </section>
-                    </aside>
-                  </div>
-                ) : null}
-              </div>
-            )}
-          </div>
-
-          {!isFindingsList &&
-            !isFindingDetail &&
-            currentPath !== "/reports" &&
-            currentPath !== "/settings" &&
-            currentPath !== "/providers" && (
-              <div className="side-panel">
-                <section aria-label="Provider Status">
-                  <div className="panel-header compact inline-header">
-                    <div>
-                      <h2>Provider Status</h2>
-                      <span>{providerSnapshotSummary(providerStatus)}</span>
-                    </div>
-                    <Database aria-hidden="true" size={18} />
-                  </div>
-
-                  <div
-                    className={`provider-state ${
-                      providerStatus?.status === "ok" ? "ok" : "degraded"
-                    }`}
-                  >
-                    <span>{providerStatus?.status ?? "loading"}</span>
-                    <strong>
-                      {providerStatus?.snapshot_mode ?? "missing"}
-                    </strong>
-                  </div>
-
-                  <dl className="provider-facts">
-                    <div>
-                      <dt>Snapshot mode</dt>
-                      <dd>{providerStatus?.snapshot_mode ?? "missing"}</dd>
-                    </div>
-                    <div>
-                      <dt>Last sync</dt>
-                      <dd>{providerStatus?.last_sync ?? "N.A."}</dd>
-                    </div>
-                    <div>
-                      <dt>Cache age</dt>
-                      <dd>
-                        {formatCacheAge(providerStatus?.cache_age_seconds)}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt>Last error</dt>
-                      <dd>
-                        {providerStatus?.last_error ?? (statusError || "None")}
-                      </dd>
-                    </div>
-                  </dl>
-
-                  <ul
-                    className="provider-sources"
-                    aria-label="Provider sources"
-                  >
-                    {(providerStatus?.sources ?? fallbackProviderSources).map(
-                      (source) => (
-                        <li className="provider-source" key={source.name}>
-                          <div>
-                            <strong>{source.name.toUpperCase()}</strong>
-                            <span>{source.value ?? "N.A."}</span>
-                          </div>
-                          <Badge
-                            className={
-                              source.available
-                                ? "bg-green-100 text-green-700 border-green-200"
-                                : "bg-red-100 text-red-700 border-red-200"
-                            }
-                          >
-                            {source.available ? "available" : "missing"}
-                          </Badge>
-                        </li>
-                      ),
-                    )}
-                  </ul>
-
-                  {(providerStatus?.warnings ?? []).map((warning) => (
-                    <p className="provider-warning" key={warning}>
-                      {warning}
-                    </p>
-                  ))}
-                </section>
-
-                <div className="panel-header compact">
-                  <div>
-                    <h2>Evidence Flow</h2>
-                    <span>Latest workspace events</span>
-                  </div>
-                  <GitBranch aria-hidden="true" size={18} />
+                        <ul className="attack-technique-list">
+                          {attackTopTechniques.map((technique) => (
+                            <li key={technique.technique_id}>
+                              <div>
+                                <strong>{technique.technique_id}</strong>
+                                <span>
+                                  {technique.name ?? "Unnamed technique"}
+                                </span>
+                              </div>
+                              <small>
+                                {technique.finding_count} finding
+                                {technique.finding_count === 1 ? "" : "s"} /{" "}
+                                {attackTechniqueConfidenceLabel(technique)}
+                              </small>
+                            </li>
+                          ))}
+                        </ul>
+                        <p className="attack-summary-note">
+                          {projectAttackSummary.defensive_note}
+                        </p>
+                      </>
+                    ) : null}
+                  </section>
                 </div>
-                <ol className="timeline">
-                  {timeline.map((item) => (
-                    <li key={item}>{item}</li>
-                  ))}
-                </ol>
-                <section
-                  className="attack-summary-widget"
-                  aria-label="Top ATT&CK techniques dashboard widget"
-                >
-                  <div className="panel-header compact inline-header">
-                    <div>
-                      <h2>Top ATT&CK Techniques</h2>
-                      <span>
-                        {projectAttackSummary
-                          ? attackConfidenceSummary(projectAttackSummary)
-                          : "Confidence distribution loading"}
-                      </span>
-                    </div>
-                    <BarChart3 aria-hidden="true" size={18} />
-                  </div>
-
-                  {attackSummaryError ? (
-                    <p
-                      className="text-sm text-destructive rounded-md border border-destructive/20 bg-destructive/10 px-3 py-2"
-                      role="alert"
-                    >
-                      {attackSummaryError}
-                    </p>
-                  ) : null}
-
-                  {attackSummaryLoading ? (
-                    <p className="text-sm text-muted-foreground" role="status">
-                      Loading ATT&CK summary
-                    </p>
-                  ) : null}
-
-                  {!attackSummaryLoading &&
-                  !attackSummaryError &&
-                  (!selectedProject || !projectAttackSummary) ? (
-                    <p className="attack-summary-empty">
-                      Select a project to review ATT&CK concentration.
-                    </p>
-                  ) : null}
-
-                  {!attackSummaryLoading &&
-                  !attackSummaryError &&
-                  projectAttackSummary &&
-                  attackTopTechniques.length === 0 ? (
-                    <p className="attack-summary-empty">
-                      No reviewed ATT&CK technique mappings are stored for this
-                      project.
-                    </p>
-                  ) : null}
-
-                  {!attackSummaryLoading &&
-                  !attackSummaryError &&
-                  projectAttackSummary &&
-                  attackTopTechniques.length > 0 ? (
-                    <>
-                      <dl className="attack-summary-stats">
-                        {attackRows.map((row) => (
-                          <div key={row.label}>
-                            <dt>{row.label}</dt>
-                            <dd>
-                              <strong>{row.value}</strong>
-                              <span>{row.detail}</span>
-                            </dd>
-                          </div>
-                        ))}
-                      </dl>
-                      <ul className="attack-technique-list">
-                        {attackTopTechniques.map((technique) => (
-                          <li key={technique.technique_id}>
-                            <div>
-                              <strong>{technique.technique_id}</strong>
-                              <span>
-                                {technique.name ?? "Unnamed technique"}
-                              </span>
-                            </div>
-                            <small>
-                              {technique.finding_count} finding
-                              {technique.finding_count === 1 ? "" : "s"} /{" "}
-                              {attackTechniqueConfidenceLabel(technique)}
-                            </small>
-                          </li>
-                        ))}
-                      </ul>
-                      <p className="attack-summary-note">
-                        {projectAttackSummary.defensive_note}
-                      </p>
-                    </>
-                  ) : null}
-                </section>
-              </div>
-            )}
-        </section>
-      )}
+              )}
+          </section>
+        )}
+      </Suspense>
     </ProductAppShell>
   )
 }

@@ -1,6 +1,6 @@
 import type { LucideIcon } from "lucide-react"
 import type { ReactNode } from "react"
-import { Card, CardContent } from "@/components/ui/card"
+import { VpwSurface, VpwSurfaceBody } from "@/components/vpw"
 import { cn } from "@/lib/utils"
 
 type MetricCardProps = {
@@ -41,7 +41,7 @@ export function MetricCard({
   className,
 }: MetricCardProps) {
   return (
-    <Card
+    <VpwSurface
       aria-label={`${label} summary card`}
       className={cn(
         "border-l-4 transition-all hover:shadow-[var(--vpw-shadow-2)]",
@@ -49,7 +49,7 @@ export function MetricCard({
         className,
       )}
     >
-      <CardContent className="p-3">
+      <VpwSurfaceBody className="p-3">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
             <p className="vpw-label truncate text-[11px]">{label}</p>
@@ -69,7 +69,7 @@ export function MetricCard({
             <Icon size={18} />
           </div>
         </div>
-      </CardContent>
-    </Card>
+      </VpwSurfaceBody>
+    </VpwSurface>
   )
 }

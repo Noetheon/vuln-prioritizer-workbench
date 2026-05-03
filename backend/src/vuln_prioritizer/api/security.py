@@ -1,18 +1,11 @@
-"""Security helpers shared by Workbench API middleware and routes."""
+"""Compatibility imports for legacy Workbench API security helpers."""
 
 from __future__ import annotations
 
-import hashlib
+from vuln_prioritizer.security_tokens import (
+    API_TOKEN_HASH_ITERATIONS,
+    API_TOKEN_HASH_SALT,
+    api_token_digest,
+)
 
-API_TOKEN_HASH_ITERATIONS = 210_000
-API_TOKEN_HASH_SALT = b"vuln-prioritizer-workbench-api-token-v1"
-
-
-def api_token_digest(token_value: str) -> str:
-    """Return the deterministic stored digest for a high-entropy API token."""
-    return hashlib.pbkdf2_hmac(
-        "sha256",
-        token_value.encode("utf-8"),
-        API_TOKEN_HASH_SALT,
-        API_TOKEN_HASH_ITERATIONS,
-    ).hex()
+__all__ = ["API_TOKEN_HASH_ITERATIONS", "API_TOKEN_HASH_SALT", "api_token_digest"]

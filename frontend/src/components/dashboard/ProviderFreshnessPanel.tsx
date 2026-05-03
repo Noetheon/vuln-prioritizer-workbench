@@ -12,6 +12,7 @@ import {
   providerSourceState,
 } from "../../lib/provider-format"
 import { DataQualityNotice, type DataQualityNoticeItem } from "../states"
+import { VpwPanel } from "../vpw"
 
 type ProviderFreshnessPanelProps = {
   providerStatus: ProviderStatusPublic | null
@@ -59,9 +60,10 @@ export function ProviderFreshnessPanel({
   const qualityItems = providerQualityItems(providerStatus, statusError)
 
   return (
-    <section
+    <VpwPanel
       className="provider-freshness-panel"
       aria-label="Provider Freshness"
+      role="region"
     >
       <div className="dashboard-panel-heading">
         <div>
@@ -110,6 +112,6 @@ export function ProviderFreshnessPanel({
       </ul>
 
       <DataQualityNotice items={qualityItems} />
-    </section>
+    </VpwPanel>
   )
 }

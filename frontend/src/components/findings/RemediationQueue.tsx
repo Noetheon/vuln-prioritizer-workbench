@@ -1,4 +1,3 @@
-import { useState } from "react"
 import { Link } from "@tanstack/react-router"
 import {
   AlertTriangle,
@@ -14,18 +13,25 @@ import {
   Upload,
   X,
 } from "lucide-react"
+import { useState } from "react"
 import type {
   AssetExposure,
   FindingPriority,
   FindingPublic,
   FindingStatus,
+  FindingsReadProjectFindingsData,
   ProjectDecisionSummaryPublic,
   ProjectPublic,
 } from "@/api-client"
-import type { FindingsReadProjectFindingsData } from "@/api-client"
-import { Badge } from "@/components/ui/badge"
+import {
+  CvssBadge,
+  EpssBadge,
+  FindingStatusBadge,
+  KevBadge,
+  PriorityBadge,
+  RiskScore,
+} from "@/components/risk"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
 import {
   Dialog,
   DialogContent,
@@ -53,17 +59,20 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import {
-  CvssBadge,
-  EpssBadge,
-  FindingStatusBadge,
-  KevBadge,
-  PriorityBadge,
-  RiskScore,
-} from "@/components/risk"
-import { EmptyState, ErrorState, LoadingSkeleton } from "@/components/states"
+  VpwBadge,
+  VpwDemoBanner,
+  VpwEmptyState,
+  VpwGrid,
+  VpwMetricCard,
+  VpwPanel,
+  VpwSection,
+  VpwSectionHeader,
+  VpwSkeletonStack,
+  VpwStatusBanner,
+} from "@/components/vpw"
 import { DEMO_FINDINGS, DEMO_PROJECT, DEMO_SUMMARY } from "@/lib/demo-data"
-import { cn } from "@/lib/utils"
 import { formatLabel as labelize, optionalText } from "@/lib/ui-copy"
+import { cn } from "@/lib/utils"
 
 // ---------------------------------------------------------------------------
 // Types
@@ -283,8 +292,12 @@ function compareRank(
   rank: Record<string, number>,
   direction: FindingsDirection,
 ) {
-  const aRank = a ? (rank[a] ?? Number.MAX_SAFE_INTEGER) : Number.MAX_SAFE_INTEGER
-  const bRank = b ? (rank[b] ?? Number.MAX_SAFE_INTEGER) : Number.MAX_SAFE_INTEGER
+  const aRank = a
+    ? (rank[a] ?? Number.MAX_SAFE_INTEGER)
+    : Number.MAX_SAFE_INTEGER
+  const bRank = b
+    ? (rank[b] ?? Number.MAX_SAFE_INTEGER)
+    : Number.MAX_SAFE_INTEGER
   const compared = aRank - bRank
   return direction === "asc" ? compared : -compared
 }
@@ -387,31 +400,24 @@ function advancedFilterCount(filters: FindingFilters) {
 
 function DemoBanner() {
   return (
-    <div
-      className="flex items-center gap-2 rounded-lg border border-amber-400/40 bg-amber-500/10 px-4 py-2.5 text-sm text-amber-700 dark:text-amber-300"
-      role="status"
-    >
-      <AlertTriangle aria-hidden="true" className="shrink-0" size={15} />
-      <span>
-        <strong className="font-semibold">Demo preview</strong> — showing sample
-        findings. Connect a real project to see live data.
-      </span>
-    </div>
+    <VpwDemoBanner>
+      <strong className="font-semibold">Demo preview</strong> - showing sample
+      findings. Connect a real project to see live data.
+    </VpwDemoBanner>
   )
 }
 
 type SummaryChipProps = {
   label: string
   value: number | string
-  colorClass?: string
+  tone?: "critical" | "warning" | "info" | "support"
 }
 
-function SummaryChip({ label, value, colorClass }: SummaryChipProps) {
+function SummaryChip({ label, value, tone = "info" }: SummaryChipProps) {
   return (
-    <div className="flex items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-medium text-white/90 backdrop-blur-sm">
-      <span className={cn("font-bold", colorClass)}>{value}</span>
-      <span className="text-white/60">{label}</span>
-    </div>
+    <VpwBadge tone={tone}>
+      {label}: <span className="font-bold">{value}</span>
+    </VpwBadge>
   )
 }
 
@@ -639,7 +645,13 @@ function SortHeader({
   )
 }
 
-function StaticHeader({ align = "left", label }: { align?: "left" | "right"; label: string }) {
+function StaticHeader({
+  align = "left",
+  label,
+}: {
+  align?: "left" | "right"
+  label: string
+}) {
   return (
     <th>
       <span
@@ -704,15 +716,15 @@ export function RemediationQueue({
   const hasError = !isDemo && Boolean(findingsError)
 
   const criticalCount =
-    displaySummary?.counts_by_priority?.["critical"] ??
-    displaySummary?.counts_by_priority?.["Critical"] ??
+    displaySummary?.counts_by_priority?.critical ??
+    displaySummary?.counts_by_priority?.Critical ??
     0
   const highCount =
-    displaySummary?.counts_by_priority?.["high"] ??
-    displaySummary?.counts_by_priority?.["High"] ??
+    displaySummary?.counts_by_priority?.high ??
+    displaySummary?.counts_by_priority?.High ??
     0
   const kevCount = displaySummary?.kev_hits ?? 0
-  const openCount = displaySummary?.counts_by_status?.["open"] ?? 0
+  const openCount = displaySummary?.counts_by_status?.open ?? 0
 
   const pageStart = isDemo
     ? 1
@@ -758,77 +770,90 @@ export function RemediationQueue({
         {isDemo ? <DemoBanner /> : null}
 
         {/* ── Hero ─────────────────────────────────────────────────── */}
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-6 shadow-lg">
-          <div className="absolute inset-0 bg-gradient-to-r from-red-500/5 via-transparent to-teal-500/5 pointer-events-none" />
-          <div className="relative flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-            <div className="flex flex-col gap-2">
-              <span className="inline-flex w-fit items-center gap-1.5 rounded-full border border-amber-400/30 bg-amber-500/10 px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wider text-amber-400">
-                <AlertTriangle aria-hidden="true" size={11} />
-                Remediation Queue
-              </span>
-              <h1 className="text-2xl font-bold tracking-tight text-white">
-                Findings
-              </h1>
-              <p className="text-sm text-slate-400">
-                {displayProject?.name
+        <VpwSection>
+          <VpwPanel className="space-y-5 bg-[var(--vpw-bg-card)]">
+            <VpwSectionHeader
+              actions={
+                <>
+                  <Button asChild size="sm" variant="outline">
+                    <Link to="/reports">
+                      <FileDown
+                        aria-hidden="true"
+                        className="mr-1.5"
+                        size={14}
+                      />
+                      Generate evidence
+                    </Link>
+                  </Button>
+                  <Button asChild size="sm">
+                    <Link to="/imports">
+                      <Upload aria-hidden="true" className="mr-1.5" size={14} />
+                      Import findings
+                    </Link>
+                  </Button>
+                </>
+              }
+              description={
+                displayProject?.name
                   ? `Prioritized remediation queue for ${displayProject.name}`
-                  : "Prioritized remediation queue for the selected project"}
-              </p>
-              <div className="flex flex-wrap gap-2 mt-1">
-                <SummaryChip
-                  label="Critical"
-                  value={criticalCount}
-                  colorClass="text-red-400"
-                />
-                <SummaryChip
-                  label="High"
-                  value={highCount}
-                  colorClass="text-amber-400"
-                />
-                <SummaryChip
-                  label="KEV"
-                  value={kevCount}
-                  colorClass="text-rose-400"
-                />
-                <SummaryChip
-                  label="Open"
-                  value={openCount}
-                  colorClass="text-sky-400"
-                />
-              </div>
+                  : "Prioritized remediation queue for the selected project"
+              }
+              eyebrow="Remediation Queue"
+              title="Findings"
+            />
+            <VpwGrid columns={4}>
+              <VpwMetricCard
+                description="highest urgency"
+                icon={<AlertTriangle aria-hidden="true" className="h-4 w-4" />}
+                label="Critical"
+                tone="critical"
+                value={criticalCount}
+              />
+              <VpwMetricCard
+                description="near-term action"
+                icon={<ArrowUp aria-hidden="true" className="h-4 w-4" />}
+                label="High"
+                tone="warning"
+                value={highCount}
+              />
+              <VpwMetricCard
+                description="known exploited"
+                icon={<AlertTriangle aria-hidden="true" className="h-4 w-4" />}
+                label="KEV"
+                tone="support"
+                value={kevCount}
+              />
+              <VpwMetricCard
+                description="open lifecycle"
+                icon={<Eye aria-hidden="true" className="h-4 w-4" />}
+                label="Open"
+                tone="info"
+                value={openCount}
+              />
+            </VpwGrid>
+            <div className="flex flex-wrap gap-2">
+              <SummaryChip
+                label="Critical"
+                tone="critical"
+                value={criticalCount}
+              />
+              <SummaryChip label="High" tone="warning" value={highCount} />
+              <SummaryChip label="KEV" tone="support" value={kevCount} />
+              <SummaryChip label="Open" tone="info" value={openCount} />
             </div>
-            <div className="flex gap-2 shrink-0">
-              <Button
-                asChild
-                className="border-white/20 bg-white/10 text-white hover:bg-white/20"
-                size="sm"
-                variant="outline"
-              >
-                <Link to="/reports">
-                  <FileDown aria-hidden="true" className="mr-1.5" size={14} />
-                  Generate evidence
-                </Link>
-              </Button>
-              <Button asChild size="sm">
-                <Link to="/imports">
-                  <Upload aria-hidden="true" className="mr-1.5" size={14} />
-                  Import findings
-                </Link>
-              </Button>
-            </div>
-          </div>
-        </div>
+          </VpwPanel>
+        </VpwSection>
 
         {/* ── Filter bar ───────────────────────────────────────────── */}
-        <Card
+        <VpwPanel
           aria-label="Findings filters"
           className="findings-filter-card py-0 shadow-sm"
           role="region"
         >
-          <CardContent className="px-4 py-3">
+          <div className="px-4 py-3">
             <div className="flex flex-wrap items-center gap-2">
               {!isDemo ? (
-                <label className="flex min-w-44 flex-col gap-1">
+                <div className="flex min-w-44 flex-col gap-1">
                   <span className="text-[11px] font-semibold uppercase text-muted-foreground">
                     Project
                   </span>
@@ -839,7 +864,10 @@ export function RemediationQueue({
                     }}
                     value={selectedProjectId}
                   >
-                    <SelectTrigger className="h-9 w-48 text-sm">
+                    <SelectTrigger
+                      aria-label="Project"
+                      className="h-9 w-48 text-sm"
+                    >
                       <SelectValue placeholder="No projects" />
                     </SelectTrigger>
                     <SelectContent>
@@ -850,7 +878,7 @@ export function RemediationQueue({
                       ))}
                     </SelectContent>
                   </Select>
-                </label>
+                </div>
               ) : null}
 
               {findingAssetId ? (
@@ -870,7 +898,10 @@ export function RemediationQueue({
                 </div>
               ) : null}
 
-              <label className="flex min-w-56 flex-1 flex-col gap-1">
+              <label
+                className="flex min-w-56 flex-1 flex-col gap-1"
+                htmlFor="queue-search"
+              >
                 <span className="text-[11px] font-semibold uppercase text-muted-foreground">
                   Owner / Service
                 </span>
@@ -885,7 +916,7 @@ export function RemediationQueue({
                 />
               </label>
 
-              <label className="flex flex-col gap-1">
+              <div className="flex flex-col gap-1">
                 <span className="text-[11px] font-semibold uppercase text-muted-foreground">
                   Priority
                 </span>
@@ -898,7 +929,10 @@ export function RemediationQueue({
                   }
                   value={findingFilters.priority || "__all"}
                 >
-                  <SelectTrigger className="h-9 w-32 text-sm">
+                  <SelectTrigger
+                    aria-label="Priority"
+                    className="h-9 w-32 text-sm"
+                  >
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -910,9 +944,9 @@ export function RemediationQueue({
                     ))}
                   </SelectContent>
                 </Select>
-              </label>
+              </div>
 
-              <label className="flex flex-col gap-1">
+              <div className="flex flex-col gap-1">
                 <span className="text-[11px] font-semibold uppercase text-muted-foreground">
                   Status
                 </span>
@@ -925,7 +959,10 @@ export function RemediationQueue({
                   }
                   value={findingFilters.status || "__all"}
                 >
-                  <SelectTrigger className="h-9 w-36 text-sm">
+                  <SelectTrigger
+                    aria-label="Status"
+                    className="h-9 w-36 text-sm"
+                  >
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -937,7 +974,7 @@ export function RemediationQueue({
                     ))}
                   </SelectContent>
                 </Select>
-              </label>
+              </div>
 
               <div className="ml-auto flex items-end gap-2 self-end">
                 <Button
@@ -951,9 +988,9 @@ export function RemediationQueue({
                   <ListFilter aria-hidden="true" size={14} />
                   Signals
                   {signalFilterCount > 0 ? (
-                    <Badge className="ml-1 h-4 min-w-4 px-1 py-0 text-[10px]">
+                    <VpwBadge className="ml-1 h-4 min-w-4 px-1 py-0 text-[10px]">
                       {signalFilterCount}
-                    </Badge>
+                    </VpwBadge>
                   ) : null}
                 </Button>
 
@@ -973,7 +1010,7 @@ export function RemediationQueue({
 
             {showAdvancedFilters ? (
               <div className="mt-3 flex flex-wrap items-end gap-2 border-t pt-3">
-                <label className="flex flex-col gap-1">
+                <div className="flex flex-col gap-1">
                   <span className="text-[11px] font-semibold uppercase text-muted-foreground">
                     KEV
                   </span>
@@ -986,7 +1023,10 @@ export function RemediationQueue({
                     }
                     value={findingFilters.kev || "__all"}
                   >
-                    <SelectTrigger className="h-9 w-28 text-sm">
+                    <SelectTrigger
+                      aria-label="KEV"
+                      className="h-9 w-28 text-sm"
+                    >
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -995,9 +1035,9 @@ export function RemediationQueue({
                       <SelectItem value="false">Not KEV</SelectItem>
                     </SelectContent>
                   </Select>
-                </label>
+                </div>
 
-                <label className="flex flex-col gap-1">
+                <div className="flex flex-col gap-1">
                   <span className="text-[11px] font-semibold uppercase text-muted-foreground">
                     Exposure
                   </span>
@@ -1010,7 +1050,10 @@ export function RemediationQueue({
                     }
                     value={findingFilters.exposure || "__all"}
                   >
-                    <SelectTrigger className="h-9 w-40 text-sm">
+                    <SelectTrigger
+                      aria-label="Exposure"
+                      className="h-9 w-40 text-sm"
+                    >
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -1022,7 +1065,7 @@ export function RemediationQueue({
                       ))}
                     </SelectContent>
                   </Select>
-                </label>
+                </div>
 
                 <div className="flex flex-col gap-1">
                   <span className="text-[11px] font-semibold uppercase text-muted-foreground">
@@ -1099,22 +1142,30 @@ export function RemediationQueue({
                 </div>
               </div>
             ) : null}
-          </CardContent>
-        </Card>
+          </div>
+        </VpwPanel>
 
         {/* ── States ───────────────────────────────────────────────── */}
-        {hasError ? <ErrorState message={findingsError} /> : null}
-        {isLoading ? <LoadingSkeleton label="Loading findings" /> : null}
+        {hasError ? (
+          <VpwStatusBanner title="Findings unavailable" tone="critical">
+            {findingsError}
+          </VpwStatusBanner>
+        ) : null}
+        {isLoading ? (
+          <VpwPanel>
+            <VpwSkeletonStack rows={6} />
+          </VpwPanel>
+        ) : null}
 
         {!isLoading && !hasError && !isDemo && projects.length === 0 ? (
-          <EmptyState
+          <VpwEmptyState
             action={
               <Button asChild>
                 <Link to="/projects">Create a project</Link>
               </Button>
             }
             ariaLabel="No projects empty state"
-            detail="Create a project before reviewing findings."
+            description="Create a project before reviewing findings."
             title="No projects yet"
           />
         ) : null}
@@ -1125,14 +1176,14 @@ export function RemediationQueue({
         selectedProject &&
         displayFindings.length === 0 &&
         !activeFindingFilters ? (
-          <EmptyState
+          <VpwEmptyState
             action={
               <Button asChild>
                 <Link to="/imports">Import data</Link>
               </Button>
             }
             ariaLabel="No findings empty state"
-            detail="Import scanner, SBOM, or CVE-list data to create findings."
+            description="Import scanner, SBOM, or CVE-list data to create findings."
             title={`No findings in ${selectedProject.name}`}
           />
         ) : null}
@@ -1141,14 +1192,14 @@ export function RemediationQueue({
         !hasError &&
         displayFindings.length === 0 &&
         activeFindingFilters ? (
-          <EmptyState
+          <VpwEmptyState
             action={
               <Button onClick={onClearFilters} type="button" variant="outline">
                 Clear filters
               </Button>
             }
             ariaLabel="No filter matches"
-            detail="Try broadening the server-side query."
+            description="Try broadening the server-side query."
             title="No findings match these filters"
           />
         ) : null}
@@ -1177,7 +1228,10 @@ export function RemediationQueue({
                       onValueChange={(v) => onPageSizeChange(Number(v))}
                       value={String(findingPageSize)}
                     >
-                      <SelectTrigger className="h-8 w-16 text-xs">
+                      <SelectTrigger
+                        aria-label="Rows"
+                        className="h-8 w-16 text-xs"
+                      >
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -1299,7 +1353,6 @@ export function RemediationQueue({
                           <div className="remediation-status-cell">
                             <FindingStatusBadge status={finding.status} />
                             <span
-                              aria-label={`Last seen ${formatDateTime(finding.last_seen_at)}`}
                               className="remediation-subtext"
                               title={`Last seen ${formatDateTime(finding.last_seen_at)}`}
                             >
@@ -1308,10 +1361,7 @@ export function RemediationQueue({
                           </div>
                         </td>
                         <td>
-                          <div
-                            aria-label={`Risk signals for ${finding.cve_id}`}
-                            className="remediation-signal-stack"
-                          >
+                          <div className="remediation-signal-stack">
                             <span className="remediation-signal-item">
                               <span>EPSS</span>
                               <strong>
