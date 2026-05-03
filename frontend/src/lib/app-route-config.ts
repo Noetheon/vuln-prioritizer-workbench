@@ -65,19 +65,3 @@ export const routeDetails: Record<
     panelDetail: "Current authenticated user and workspace session",
   },
 }
-
-export function normalizeWorkbenchPath(pathname: string): WorkbenchPath {
-  const normalized =
-    pathname.length > 1 ? pathname.replace(/\/+$/, "") : pathname
-  if (normalized.startsWith("/findings/")) {
-    return "/findings"
-  }
-  return normalized in routeDetails ? (normalized as WorkbenchPath) : "/"
-}
-
-export function findingIdFromPath(pathname: string) {
-  const normalized =
-    pathname.length > 1 ? pathname.replace(/\/+$/, "") : pathname
-  const match = normalized.match(/^\/findings\/([^/]+)$/)
-  return match ? decodeURIComponent(match[1]) : null
-}
