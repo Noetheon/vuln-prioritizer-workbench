@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils"
 
 export type VpwEmptyStateProps = {
   title: string
+  ariaLabel?: string
   description?: string
   action?: ReactNode
   className?: string
@@ -13,13 +14,17 @@ export type VpwEmptyStateProps = {
 
 export function VpwEmptyState({
   action,
+  ariaLabel,
   className,
   description,
   icon,
   title,
 }: VpwEmptyStateProps) {
   return (
-    <div className={cn("vpw-empty-state", className)}>
+    <section
+      aria-label={ariaLabel}
+      className={cn("vpw-empty-state", className)}
+    >
       <div className="mx-auto flex max-w-md flex-col items-center">
         <div className="mb-4 rounded-[var(--vpw-radius-lg)] bg-[var(--vpw-bg-panel)] p-3 text-[var(--vpw-text-muted)]">
           {icon ?? <Search className="h-5 w-5" aria-hidden="true" />}
@@ -34,6 +39,6 @@ export function VpwEmptyState({
         ) : null}
         {action ? <div className="mt-5">{action}</div> : null}
       </div>
-    </div>
+    </section>
   )
 }

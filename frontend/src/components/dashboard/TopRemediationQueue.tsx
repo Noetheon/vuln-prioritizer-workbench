@@ -5,6 +5,7 @@ import type { FindingPublic } from "../../api-client"
 import { optionalText } from "../../lib/ui-copy"
 import { PriorityBadge, RiskScore } from "../risk"
 import { EmptyState, ErrorState, LoadingSkeleton } from "../states"
+import { VpwPanel } from "../vpw"
 
 type TopRemediationQueueProps = {
   error: string
@@ -54,9 +55,10 @@ export function TopRemediationQueue({
   projectName,
 }: TopRemediationQueueProps) {
   return (
-    <section
+    <VpwPanel
       className="top-remediation-panel"
       aria-label="Top Remediation Queue"
+      role="region"
     >
       <div className="dashboard-panel-heading">
         <div>
@@ -164,6 +166,6 @@ export function TopRemediationQueue({
           </table>
         </div>
       ) : null}
-    </section>
+    </VpwPanel>
   )
 }

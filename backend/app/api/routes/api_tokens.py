@@ -16,7 +16,7 @@ from app.models import (
 )
 from app.models.api_tokens import api_token_create_public, api_token_public
 from app.repositories import ApiTokenRepository
-from vuln_prioritizer.api.security import api_token_digest
+from vuln_prioritizer.security_tokens import api_token_digest
 
 router = APIRouter(prefix="/api-tokens", tags=["api-tokens"])
 

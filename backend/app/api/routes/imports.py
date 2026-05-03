@@ -5,7 +5,6 @@ from __future__ import annotations
 import hashlib
 import json
 import re
-import shutil
 import uuid
 from collections.abc import Mapping
 from pathlib import Path
@@ -17,13 +16,7 @@ from sqlmodel import Session, col, select
 
 from app.api.deps import ScopedImportUser, SessionDep
 from app.api.routes.workbench_access import require_visible_project
-from app.core.config import Settings
-from app.importers import (
-    ImporterParseError,
-    ImporterValidationError,
-    UnsupportedInputTypeError,
-    build_importer_registry,
-)
+from app.importers import ImporterParseError, ImporterValidationError, build_importer_registry
 from app.importers.contracts import NormalizedOccurrence
 from app.models import (
     AnalysisRun,
@@ -43,7 +36,75 @@ from app.models import (
 from app.models.base import get_datetime_utc
 from app.repositories import AssetRepository, FindingRepository, RunRepository
 from app.services import AnalysisService, TemplateAnalysisError, TemplateAnalysisResult
-from vuln_prioritizer.cli_options import AttackSource
+from app.services.import_artifacts import (
+    resolve_template_attack_artifact_path as _resolve_template_attack_artifact_path,
+)
+from app.services.import_artifacts import (
+    resolve_template_provider_snapshot_path as _resolve_template_provider_snapshot_path,
+)
+from app.services.import_artifacts import (
+    validate_attack_import_options as _validate_attack_import_options,
+)
+from app.services.import_uploads import (
+    has_optional_upload as _has_optional_upload,
+)
+from app.services.import_uploads import (
+    ignored_line_count as _ignored_line_count,
+)
+from app.services.import_uploads import (
+    normalize_input_type as _normalize_input_type,
+)
+from app.services.import_uploads import (
+    optional_upload_summary as _optional_upload_summary,
+)
+from app.services.import_uploads import (
+    read_bounded_upload as _read_bounded_upload,
+)
+from app.services.import_uploads import (
+    reject_unsafe_upload_filename as _reject_unsafe_upload_filename,
+)
+from app.services.import_uploads import (
+    sanitize_context_filename as _sanitize_context_filename,
+)
+from app.services.import_uploads import (
+    sanitize_filename as _sanitize_filename,
+)
+from app.services.import_uploads import (
+    sanitize_parser_error_message as _sanitize_parser_error_message,
+)
+from app.services.import_uploads import (
+    sanitize_vex_filename as _sanitize_vex_filename,
+)
+from app.services.import_uploads import (
+    store_upload as _store_upload,
+)
+from app.services.import_uploads import (
+    template_settings as _template_settings,
+)
+from app.services.import_uploads import (
+    upload_summary as _upload_summary,
+)
+from app.services.import_uploads import (
+    upload_summary_with_path as _upload_summary_with_path,
+)
+from app.services.import_uploads import (
+    validate_aggregate_upload_size as _validate_aggregate_upload_size,
+)
+from app.services.import_uploads import (
+    validate_asset_context_upload as _validate_asset_context_upload,
+)
+from app.services.import_uploads import (
+    validate_input_type as _validate_input_type,
+)
+from app.services.import_uploads import (
+    validate_mime_hint as _validate_mime_hint,
+)
+from app.services.import_uploads import (
+    validate_upload_suffix as _validate_upload_suffix,
+)
+from app.services.import_uploads import (
+    validate_vex_upload as _validate_vex_upload,
+)
 from vuln_prioritizer.inputs._occurrence_support import apply_asset_context
 from vuln_prioritizer.inputs._vex_support import apply_vex_statements
 from vuln_prioritizer.inputs.loader import load_asset_context_file, load_vex_files
@@ -51,32 +112,6 @@ from vuln_prioritizer.models import InputOccurrence, PrioritizedFinding
 
 router = APIRouter(tags=["imports"])
 
-ALLOWED_UPLOAD_SUFFIXES = {
-    "cve-list": {".txt", ".csv"},
-    "generic-occurrence-csv": {".csv"},
-    "trivy-json": {".json"},
-    "grype-json": {".json"},
-    "cyclonedx-json": {".json"},
-    "spdx-json": {".json"},
-    "dependency-check-json": {".json"},
-    "github-alerts-json": {".json"},
-    "nessus-xml": {".nessus", ".xml"},
-    "openvas-xml": {".xml"},
-}
-ALLOWED_UPLOAD_MIME_HINTS = {
-    "cve-list": {"text/plain", "text/csv", "application/vnd.ms-excel"},
-    "generic-occurrence-csv": {"text/csv", "text/plain", "application/vnd.ms-excel"},
-    "trivy-json": {"application/json", "text/json"},
-    "grype-json": {"application/json", "text/json"},
-    "cyclonedx-json": {"application/json", "text/json"},
-    "spdx-json": {"application/json", "text/json"},
-    "dependency-check-json": {"application/json", "text/json"},
-    "github-alerts-json": {"application/json", "text/json"},
-    "nessus-xml": {"application/xml", "text/xml"},
-    "openvas-xml": {"application/xml", "text/xml"},
-}
-SAFE_ATTACK_FILENAME_RE = re.compile(r"^[A-Za-z0-9._-]+$")
-SAFE_SNAPSHOT_FILENAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*[.]json$")
 DEDUP_DECISION_SAMPLE_LIMIT = 500
 
 
@@ -532,119 +567,6 @@ async def import_project_upload(
     )
     session.commit()
     return finished_run
-
-
-async def _read_bounded_upload(
-    file: UploadFile,
-    *,
-    settings: Settings,
-    max_bytes: int | None = None,
-) -> bytes:
-    limit = (
-        settings.max_upload_bytes
-        if max_bytes is None
-        else min(settings.max_upload_bytes, max_bytes)
-    )
-    total = 0
-    chunks: list[bytes] = []
-    while chunk := await file.read(1024 * 1024):
-        total += len(chunk)
-        if total > limit:
-            raise HTTPException(
-                status_code=413,
-                detail="Upload exceeds configured limit.",
-            )
-        chunks.append(chunk)
-    return b"".join(chunks)
-
-
-def _validate_aggregate_upload_size(
-    *,
-    settings: Settings,
-    payloads: list[bytes | None],
-) -> None:
-    if sum(len(payload) for payload in payloads if payload is not None) > settings.max_upload_bytes:
-        raise HTTPException(
-            status_code=413,
-            detail="Upload exceeds configured limit.",
-        )
-
-
-def _has_optional_upload(file: UploadFile | None) -> bool:
-    return bool(file is not None and file.filename and file.filename.strip())
-
-
-def _validate_asset_context_upload(filename: str, file: UploadFile) -> None:
-    if Path(filename).suffix.lower() != ".csv":
-        raise HTTPException(status_code=422, detail="Asset context file must be a CSV.")
-    normalized = (file.content_type or "").split(";", maxsplit=1)[0].strip().lower()
-    if normalized in {"", "application/octet-stream"}:
-        return
-    if normalized not in {"text/csv", "text/plain", "application/vnd.ms-excel"}:
-        raise HTTPException(
-            status_code=422,
-            detail="Asset context content type must be text/csv.",
-        )
-
-
-def _validate_vex_upload(filename: str, file: UploadFile) -> None:
-    if Path(filename).suffix.lower() != ".json":
-        raise HTTPException(status_code=422, detail="VEX file must be a JSON document.")
-    normalized = (file.content_type or "").split(";", maxsplit=1)[0].strip().lower()
-    if normalized in {"", "application/octet-stream"}:
-        return
-    if normalized not in {"application/json", "text/json"}:
-        raise HTTPException(
-            status_code=422,
-            detail="VEX content type must be application/json.",
-        )
-
-
-def _sanitize_context_filename(filename: str, *, reserved_filename: str) -> str:
-    sanitized = _sanitize_filename(filename)
-    if sanitized == reserved_filename:
-        return f"asset_context_{sanitized}"
-    return sanitized
-
-
-def _sanitize_vex_filename(
-    filename: str,
-    *,
-    reserved_filenames: set[str | None],
-) -> str:
-    sanitized = _sanitize_filename(filename)
-    if sanitized in {value for value in reserved_filenames if value}:
-        return f"vex_{sanitized}"
-    return sanitized
-
-
-def _optional_upload_summary(
-    *,
-    input_type: str,
-    original_filename: str | None,
-    stored_filename: str | None,
-    content_type: str | None,
-    size_bytes: int | None,
-    sha256: str | None,
-    path: str | None,
-) -> dict[str, Any] | None:
-    if original_filename is None or stored_filename is None or size_bytes is None or sha256 is None:
-        return None
-    return _upload_summary(
-        input_type=input_type,
-        original_filename=original_filename,
-        stored_filename=stored_filename,
-        content_type=content_type,
-        size_bytes=size_bytes,
-        sha256=sha256,
-        path=path,
-    )
-
-
-def _upload_summary_with_path(value: Any, *, path: str | None) -> dict[str, Any] | None:
-    if not isinstance(value, dict):
-        return None
-    return {**value, "path": path}
 
 
 def _apply_template_asset_context(
@@ -1620,132 +1542,6 @@ def _decision_data_quality_json(decision: PrioritizedFinding) -> dict[str, Any]:
     }
 
 
-def _resolve_template_provider_snapshot_path(
-    provider_snapshot_file: str | None,
-    *,
-    request: Request,
-) -> Path | None:
-    value = provider_snapshot_file.strip() if provider_snapshot_file else ""
-    if not value:
-        return None
-    if (
-        not SAFE_SNAPSHOT_FILENAME_RE.fullmatch(value)
-        or "/" in value
-        or "\\" in value
-        or Path(value).name != value
-    ):
-        raise HTTPException(status_code=422, detail="Provider snapshot path is not allowed.")
-    snapshot_root = _template_settings(request).provider_snapshot_dir_path.resolve(strict=False)
-    candidate = (snapshot_root / value).resolve(strict=False)
-    if not candidate.is_relative_to(snapshot_root):
-        raise HTTPException(status_code=422, detail="Provider snapshot path is not allowed.")
-    if not candidate.exists() or not candidate.is_file():
-        raise HTTPException(status_code=422, detail="Provider snapshot file does not exist.")
-    return candidate
-
-
-def _resolve_template_attack_artifact_path(
-    value: str | None,
-    *,
-    request: Request,
-) -> Path | None:
-    filename = value.strip() if value else ""
-    if not filename:
-        return None
-    if (
-        not SAFE_ATTACK_FILENAME_RE.fullmatch(filename)
-        or "/" in filename
-        or "\\" in filename
-        or Path(filename).name != filename
-    ):
-        raise HTTPException(status_code=422, detail="ATT&CK artifact path is not allowed.")
-    artifact_root = _template_settings(request).attack_artifact_dir_path.resolve(strict=False)
-    candidate = (artifact_root / filename).resolve(strict=False)
-    if not candidate.is_relative_to(artifact_root):
-        raise HTTPException(status_code=422, detail="ATT&CK artifact path is not allowed.")
-    if not candidate.exists() or not candidate.is_file():
-        raise HTTPException(status_code=422, detail="ATT&CK artifact file does not exist.")
-    return candidate
-
-
-def _validate_attack_import_options(
-    *,
-    attack_source: str,
-    attack_mapping_path: Path | None,
-    attack_metadata_path: Path | None,
-) -> AttackSource:
-    raw_source = attack_source.strip() if attack_source else "none"
-    try:
-        normalized_source = AttackSource(raw_source)
-    except ValueError as exc:
-        raise HTTPException(
-            status_code=422,
-            detail=f"Unsupported ATT&CK source: {raw_source}.",
-        ) from exc
-    if normalized_source == AttackSource.none:
-        if attack_mapping_path is not None or attack_metadata_path is not None:
-            raise HTTPException(
-                status_code=422,
-                detail="ATT&CK mapping files require attack_source=ctid-json.",
-            )
-        return normalized_source
-    if normalized_source not in {AttackSource.ctid_json, AttackSource.local_curated}:
-        raise HTTPException(
-            status_code=422,
-            detail="Template Workbench ATT&CK imports only support ctid-json or local-curated.",
-        )
-    if attack_mapping_path is None:
-        raise HTTPException(
-            status_code=422,
-            detail="ATT&CK imports require a mapping file.",
-        )
-    return normalized_source
-
-
-def _store_upload(
-    request: Request,
-    *,
-    project_id: uuid.UUID,
-    run_id: uuid.UUID,
-    filename: str,
-    content: bytes,
-) -> Path:
-    upload_root = _template_settings(request).import_upload_dir_path.resolve(strict=False)
-    target_dir = upload_root / str(project_id) / str(run_id)
-    target_dir.mkdir(parents=True, exist_ok=True)
-    target_path = (target_dir / filename).resolve(strict=False)
-    if not target_path.is_relative_to(upload_root):
-        raise HTTPException(status_code=422, detail="Upload path is not allowed.")
-    try:
-        with target_path.open("wb") as output:
-            output.write(content)
-    except Exception:
-        shutil.rmtree(target_dir, ignore_errors=True)
-        raise
-    return target_path
-
-
-def _upload_summary(
-    *,
-    input_type: str,
-    original_filename: str,
-    stored_filename: str,
-    content_type: str | None,
-    size_bytes: int,
-    sha256: str,
-    path: str | None,
-) -> dict[str, Any]:
-    return {
-        "input_type": input_type,
-        "original_filename": original_filename,
-        "stored_filename": stored_filename,
-        "content_type": content_type,
-        "size_bytes": size_bytes,
-        "sha256": sha256,
-        "path": path,
-    }
-
-
 def _job_payload(
     *,
     job_id: str,
@@ -1827,78 +1623,6 @@ def _parse_error_field(message: str) -> str | None:
 def _parse_error_value(message: str) -> str | None:
     match = re.search(r"(?P<quote>['\"])(?P<value>.+?)(?P=quote)", message)
     return match.group("value") if match else None
-
-
-def _sanitize_parser_error_message(message: str) -> str:
-    """Remove local filesystem paths from parser-facing error text."""
-    unix_path = r"(?:/(?:Users|home|private|tmp|var|Volumes)/[^\s`'\"<>:;,)]*)"
-    windows_path = r"(?:[A-Za-z]:\\[^\s`'\"<>:;,)]*)"
-    return re.sub(f"{unix_path}|{windows_path}", "uploaded file", message)
-
-
-def _ignored_line_count(input_type: str, payload: bytes) -> int:
-    if input_type not in {"cve-list", "generic-occurrence-csv"}:
-        return 0
-    try:
-        text = payload.decode("utf-8")
-    except UnicodeDecodeError:
-        return 0
-    return sum(1 for line in text.splitlines() if _is_ignored_text_line(line))
-
-
-def _is_ignored_text_line(line: str) -> bool:
-    stripped = line.strip()
-    return not stripped or stripped.startswith("#")
-
-
-def _validate_input_type(input_type: str) -> None:
-    try:
-        build_importer_registry().get(input_type)
-    except UnsupportedInputTypeError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
-
-
-def _validate_upload_suffix(filename: str, *, input_type: str) -> None:
-    suffix = Path(filename).suffix.lower()
-    if suffix not in ALLOWED_UPLOAD_SUFFIXES.get(input_type, set()):
-        raise HTTPException(status_code=422, detail="File extension does not match input type.")
-
-
-def _validate_mime_hint(content_type: str | None, *, input_type: str) -> None:
-    normalized = (content_type or "").split(";", maxsplit=1)[0].strip().lower()
-    if normalized in {"", "application/octet-stream"}:
-        return
-    if normalized not in ALLOWED_UPLOAD_MIME_HINTS.get(input_type, set()):
-        raise HTTPException(
-            status_code=422, detail="Upload content type does not match input type."
-        )
-
-
-def _reject_unsafe_upload_filename(filename: str) -> None:
-    if "/" in filename or "\\" in filename or Path(filename).name != filename:
-        raise HTTPException(status_code=422, detail="Upload filename is not allowed.")
-    if any(ord(character) < 32 for character in filename):
-        raise HTTPException(status_code=422, detail="Upload filename is not allowed.")
-
-
-def _sanitize_filename(filename: str) -> str:
-    name = Path(filename).name.strip() or "upload"
-    sanitized = re.sub(r"[^A-Za-z0-9._-]", "_", name)
-    return sanitized or "upload"
-
-
-def _normalize_input_type(input_type: str) -> str:
-    normalized = input_type.strip().lower()
-    if not normalized:
-        raise HTTPException(status_code=422, detail="input_type is required.")
-    return normalized
-
-
-def _template_settings(request: Request) -> Settings:
-    candidate = getattr(request.app.state, "template_settings", None)
-    if isinstance(candidate, Settings):
-        return candidate
-    raise HTTPException(status_code=500, detail="Template settings are not configured.")
 
 
 def _string_evidence(evidence: Mapping[str, Any], key: str) -> str | None:
