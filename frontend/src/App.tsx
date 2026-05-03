@@ -5,21 +5,12 @@ import {
   ArrowLeft,
   BarChart3,
   Database,
-  Download,
   FileArchive,
-  FileCheck2,
-  FileInput,
   FileJson,
   FileText,
-  FolderKanban,
   Gauge,
   GitBranch,
-  History,
-  KeyRound,
-  LayoutDashboard,
-  ListChecks,
-  LogOut,
-  Settings,
+  Globe,
   ShieldCheck,
   Table2,
 } from "lucide-react"
@@ -55,6 +46,7 @@ import {
   ProvidersService,
   type ReportPublic,
   ReportsService,
+  type ReportVerificationPublic,
   RunsService,
   type UserPublic,
   UsersService,
@@ -65,21 +57,86 @@ import {
   type WorkbenchStatus,
 } from "./api-client"
 import { clearAccessToken, getAccessToken } from "./auth"
-
-const workbenchNavigation = [
-  { label: "Dashboard", icon: LayoutDashboard, to: "/" },
-  { label: "Projects", icon: FolderKanban, to: "/projects" },
-  { label: "Imports", icon: FileInput, to: "/imports" },
-  { label: "Findings", icon: ListChecks, to: "/findings" },
-  { label: "Waivers", icon: FileCheck2, to: "/waivers" },
-  { label: "Assets", icon: ShieldCheck, to: "/assets" },
-  { label: "Providers", icon: Database, to: "/providers" },
-  { label: "Reports", icon: FileArchive, to: "/reports" },
-  { label: "Settings", icon: Settings, to: "/settings" },
-] as const
+import { ProductAppShell, type WorkbenchPath } from "./components/app/AppShell"
+import {
+  FindingsByPriorityChart,
+  RiskTrendChart,
+  TopServicesByRiskChart,
+} from "./components/charts"
+import {
+  ProviderFreshnessPanel,
+  RiskOperationsDashboard,
+  TopRemediationQueue,
+} from "./components/dashboard"
+import { RemediationQueue } from "./components/findings"
+import { ImportsWorkbench } from "./components/imports"
+import { ProjectsWorkbench } from "./components/projects"
+import { ProvidersWorkbench } from "./components/providers"
+import { EvidenceCenter } from "./components/reports"
+import {
+  CvssBadge,
+  EpssBadge,
+  FindingStatusBadge,
+  KevBadge,
+  PriorityBadge,
+  RiskScore,
+} from "./components/risk"
+import { SettingsWorkbench } from "./components/settings"
+import {
+  type DataQualityNoticeItem,
+  EmptyState,
+  ErrorState,
+  LoadingSkeleton,
+} from "./components/states"
+import { Badge } from "./components/ui/badge"
+import { Button } from "./components/ui/button"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "./components/ui/card"
+import { Skeleton } from "./components/ui/skeleton"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "./components/ui/table"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "./components/ui/tabs"
+import { WaiversWorkbench } from "./components/waivers"
+import {
+  type EpssBucketCounts,
+  epssBucketChartData,
+  findingsByPriorityChartData,
+  runActivityTrendData,
+  topServicesByRiskChartData,
+} from "./lib/chart-data"
+import {
+  DEMO_FINDING_ATTACK_CONTEXTS,
+  DEMO_FINDINGS,
+  DEMO_PROJECT,
+} from "./lib/demo-data"
+import {
+  formatCacheAge,
+  formatProviderFreshness,
+  providerDataQualityNotes,
+  providerSnapshotSummary,
+} from "./lib/provider-format"
+import {
+  formatEpss,
+  formatKev,
+  formatNullableNumber,
+  runStatusLabel,
+} from "./lib/risk-format"
+import { formatLabel as labelize, optionalText } from "./lib/ui-copy"
+import { cn } from "./lib/utils"
 
 const routeDetails: Record<
-  (typeof workbenchNavigation)[number]["to"],
+  WorkbenchPath,
   {
     eyebrow: string
     title: string
@@ -88,7 +145,7 @@ const routeDetails: Record<
   }
 > = {
   "/": {
-    eyebrow: "VPW Template Migration",
+    eyebrow: "Security Operations",
     title: "Risk Operations",
     panelTitle: "Priority Queue",
     panelDetail: "Current project signal review",
@@ -96,8 +153,9 @@ const routeDetails: Record<
   "/projects": {
     eyebrow: "Workbench Projects",
     title: "Projects",
-    panelTitle: "Project Coverage",
-    panelDetail: "Visible workspaces and decision backlog",
+    panelTitle: "Projects",
+    panelDetail:
+      "Manage workbench projects, imported findings, runs, and evidence readiness.",
   },
   "/imports": {
     eyebrow: "Workbench Imports",
@@ -108,8 +166,8 @@ const routeDetails: Record<
   "/findings": {
     eyebrow: "Workbench Findings",
     title: "Findings",
-    panelTitle: "Finding Decisions",
-    panelDetail: "Prioritized CVEs awaiting review",
+    panelTitle: "Remediation Queue",
+    panelDetail: "Prioritized remediation worklist",
   },
   "/waivers": {
     eyebrow: "Risk Acceptance",
@@ -130,8 +188,8 @@ const routeDetails: Record<
     panelDetail: "NVD, EPSS, KEV, and local snapshot status",
   },
   "/reports": {
-    eyebrow: "Workbench Reports",
-    title: "Reports",
+    eyebrow: "Evidence Center",
+    title: "Evidence Center",
     panelTitle: "Evidence Outputs",
     panelDetail: "Report and evidence bundle readiness",
   },
@@ -142,8 +200,6 @@ const routeDetails: Record<
     panelDetail: "Current authenticated user and workspace session",
   },
 }
-
-type WorkbenchPath = keyof typeof routeDetails
 
 function normalizeWorkbenchPath(pathname: string): WorkbenchPath {
   const normalized =
@@ -161,24 +217,6 @@ function findingIdFromPath(pathname: string) {
   return match ? decodeURIComponent(match[1]) : null
 }
 
-function isActivePath(currentPath: WorkbenchPath, targetPath: WorkbenchPath) {
-  return currentPath === targetPath
-}
-
-const currentUserLabel = (user: UserPublic | null) =>
-  user?.email ?? "Local workspace"
-
-const settingsSummary = (user: UserPublic | null) => [
-  {
-    label: "Signed-in user",
-    value: currentUserLabel(user),
-  },
-  {
-    label: "Session",
-    value: user ? "Authenticated" : "Loading",
-  },
-]
-
 type ApiTokenScope = NonNullable<ApiTokenCreate["scopes"]>[number]
 
 const apiTokenScopeOptions: ApiTokenScope[] = [
@@ -192,10 +230,6 @@ const defaultApiTokenScopes: ApiTokenScope[] = ["read"]
 function canonicalApiTokenScopes(scopes: ApiTokenScope[]) {
   const selected = new Set(scopes)
   return apiTokenScopeOptions.filter((scope) => selected.has(scope))
-}
-
-function formatApiTokenScopes(scopes: ApiTokenScope[]) {
-  return scopes.map((scope) => scope.toUpperCase()).join(", ")
 }
 
 type ProjectFormState = {
@@ -246,13 +280,12 @@ type TemplateReportFormat =
   | "attack-navigator"
   | "sarif"
 
-const reportActionCards: Array<{
+const _reportActionCards: Array<{
   actionLabel: string
   detail: string
   format: string
   icon: typeof FileText
   reportFormat: TemplateReportFormat
-  stage: string
   title: string
 }> = [
   {
@@ -262,7 +295,6 @@ const reportActionCards: Array<{
     format: "Markdown",
     icon: FileText,
     reportFormat: "markdown",
-    stage: "VPW-048",
     title: "Markdown Technical Report",
   },
   {
@@ -272,7 +304,6 @@ const reportActionCards: Array<{
     format: "HTML",
     icon: FileArchive,
     reportFormat: "html",
-    stage: "VPW-049",
     title: "HTML Executive Report",
   },
   {
@@ -282,7 +313,6 @@ const reportActionCards: Array<{
     format: "JSON",
     icon: FileJson,
     reportFormat: "json",
-    stage: "VPW-050",
     title: "JSON Findings Export",
   },
   {
@@ -292,7 +322,6 @@ const reportActionCards: Array<{
     format: "CSV",
     icon: Table2,
     reportFormat: "csv",
-    stage: "VPW-050",
     title: "CSV Findings Export",
   },
   {
@@ -302,7 +331,6 @@ const reportActionCards: Array<{
     format: "Navigator JSON",
     icon: GitBranch,
     reportFormat: "attack-navigator",
-    stage: "VPW-060",
     title: "ATT&CK Navigator Layer",
   },
   {
@@ -312,7 +340,6 @@ const reportActionCards: Array<{
     format: "SARIF",
     icon: FileJson,
     reportFormat: "sarif",
-    stage: "VPW-080",
     title: "SARIF Results",
   },
   {
@@ -322,7 +349,6 @@ const reportActionCards: Array<{
     format: "Evidence ZIP",
     icon: FileArchive,
     reportFormat: "zip",
-    stage: "VPW-051",
     title: "Evidence Bundle",
   },
 ]
@@ -378,8 +404,20 @@ const defaultFindingFilters: FindingFilters = {
 
 const findingPageSizes = [1, 10, 25, 50] as const
 
-type FindingDetailTab = "overview" | "ttp"
+type FindingDetailTab = "evidence" | "ttp" | "history"
 type FindingAttackContext = NonNullable<FindingDetailPublic["attack_context"]>
+
+type FindingDecisionReason = {
+  detail: string
+  label: string
+  tone: "critical" | "warning" | "info" | "positive"
+}
+
+type FindingDetailRow = {
+  detail?: string
+  label: string
+  value: string
+}
 
 type WaiverFormState = {
   findingId: string
@@ -423,14 +461,14 @@ const emptyWaiverForm: WaiverFormState = {
   ticketUrl: "",
 }
 
-const findingPriorityOptions: FindingPriority[] = [
+const _findingPriorityOptions: FindingPriority[] = [
   "critical",
   "high",
   "medium",
   "low",
 ]
 
-const findingStatusOptions: FindingStatus[] = [
+const _findingStatusOptions: FindingStatus[] = [
   "open",
   "in_review",
   "remediating",
@@ -439,14 +477,14 @@ const findingStatusOptions: FindingStatus[] = [
   "suppressed",
 ]
 
-const findingExposureOptions: AssetExposure[] = [
+const _findingExposureOptions: AssetExposure[] = [
   "internet-facing",
   "internal",
   "private",
   "unknown",
 ]
 
-const findingSortOptions: { label: string; value: FindingsSort }[] = [
+const _findingSortOptions: { label: string; value: FindingsSort }[] = [
   { label: "Operational", value: "operational" },
   { label: "Priority", value: "priority" },
   { label: "Score", value: "score" },
@@ -464,39 +502,60 @@ const timeline = [
   "Evidence bundle verified",
 ]
 
-function priorityCount(
+function _priorityCount(
   summary: ProjectDecisionSummaryPublic | null,
   priority: "Critical" | "High" | "Medium" | "Low",
 ) {
   return summary?.counts_by_priority?.[priority] ?? 0
 }
 
+type DashboardSignalCounts = {
+  highEpss: number
+  internetFacingCriticals: number
+  epssBuckets: EpssBucketCounts
+}
+
 function buildDashboardCards(
   summary: ProjectDecisionSummaryPublic | null,
   providerStatus: ProviderStatusPublic | null,
   loading: boolean,
+  signalCountsLoading: boolean,
+  signalCounts: DashboardSignalCounts,
 ) {
   const providerFreshness = formatProviderFreshness(providerStatus)
   return [
     {
-      label: "Critical",
-      value: loading ? "Loading" : String(priorityCount(summary, "Critical")),
-      detail: "critical prioritized findings",
+      label: "Critical Open",
+      value: loading ? "Loading" : String(summary?.open_finding_count ?? 0),
+      detail: "open, in review, or remediating",
       icon: AlertTriangle,
       tone: "critical",
     },
     {
-      label: "High",
-      value: loading ? "Loading" : String(priorityCount(summary, "High")),
-      detail: "high priority findings",
+      label: "KEV Exposed",
+      value: loading ? "Loading" : String(summary?.kev_hits ?? 0),
+      detail: "CISA KEV matches",
+      icon: ShieldCheck,
+      tone: "kev",
+    },
+    {
+      label: "High EPSS",
+      value:
+        loading || signalCountsLoading
+          ? "Loading"
+          : String(signalCounts.highEpss),
+      detail: "high-confidence EPSS findings (≥70%)",
       icon: Gauge,
       tone: "high",
     },
     {
-      label: "KEV",
-      value: loading ? "Loading" : String(summary?.kev_hits ?? 0),
-      detail: "CISA catalog matches",
-      icon: ShieldCheck,
+      label: "Internet-facing Criticals",
+      value:
+        loading || signalCountsLoading
+          ? "Loading"
+          : String(signalCounts.internetFacingCriticals),
+      detail: "critical findings with internet-facing exposure",
+      icon: Globe,
       tone: "kev",
     },
     {
@@ -507,8 +566,8 @@ function buildDashboardCards(
       tone: providerFreshness.tone,
     },
     {
-      label: "Latest Runs",
-      value: loading ? "Loading" : formatRunStatus(summary?.latest_run_status),
+      label: "Latest Analysis",
+      value: latestAnalysisValue(summary),
       detail: latestRunDetail(summary),
       icon: Activity,
       tone: "run",
@@ -581,7 +640,11 @@ function attackTechniqueConfidenceLabel(
 }
 
 function governanceServiceRows(rollups: ProjectGovernanceRollupsPublic | null) {
-  return rollups?.top_services_by_risk ?? []
+  const services = rollups?.top_services_by_risk ?? []
+  if (services.length > 0) {
+    return { rows: services, source: "services" as const }
+  }
+  return { rows: rollups?.top_assets_by_risk ?? [], source: "assets" as const }
 }
 
 function waiverDebtRows(rollups: ProjectGovernanceRollupsPublic | null) {
@@ -631,36 +694,7 @@ function formatRollupScore(value: number | null | undefined) {
   return Number.isInteger(value) ? String(value) : value.toFixed(1)
 }
 
-function formatProviderFreshness(providerStatus: ProviderStatusPublic | null) {
-  if (providerStatus === null) {
-    return {
-      value: "Loading",
-      detail: "provider status loading",
-      tone: "run",
-    }
-  }
-  if (providerStatus.status === "ok") {
-    return {
-      value: "Fresh",
-      detail:
-        providerStatus.cache_age_seconds !== null &&
-        providerStatus.cache_age_seconds !== undefined
-          ? `${formatCacheAge(providerStatus.cache_age_seconds)} old`
-          : providerStatus.snapshot_mode,
-      tone: "kev",
-    }
-  }
-  return {
-    value: "Needs sync",
-    detail:
-      providerStatus.last_error ??
-      providerStatus.warnings?.[0] ??
-      "No snapshot recorded",
-    tone: "high",
-  }
-}
-
-function formatRunStatus(
+function _formatRunStatus(
   status: ProjectDecisionSummaryPublic["latest_run_status"],
 ) {
   return status ? status.replaceAll("_", " ") : "No runs"
@@ -671,6 +705,22 @@ function latestRunDetail(summary: ProjectDecisionSummaryPublic | null) {
     return "import required"
   }
   return `run ${summary.latest_run_id.slice(0, 8)}`
+}
+
+function latestAnalysisValue(summary: ProjectDecisionSummaryPublic | null) {
+  if (!summary?.latest_run_id) {
+    return "No run yet"
+  }
+  return latestRunStatusLabel(summary)
+}
+
+function latestRunStatusLabel(
+  summary: ProjectDecisionSummaryPublic | null,
+): string {
+  if (!summary?.latest_run_status) {
+    return "Complete"
+  }
+  return runStatusLabel(summary.latest_run_status)
 }
 
 function apiErrorMessage(prefix: string, caught: unknown) {
@@ -761,28 +811,11 @@ function isImportParseError(value: unknown): value is ImportParseErrorPublic {
   )
 }
 
-function importAccept(inputType: ImportFormat) {
+function _importAccept(inputType: ImportFormat) {
   return mvpImportFormats.find((format) => format.value === inputType)?.accept
 }
 
-function runStatusLabel(status: AnalysisRunPublic["status"]) {
-  return status ? status.replaceAll("_", " ") : "pending"
-}
-
-function runStatusTone(status: AnalysisRunPublic["status"]) {
-  if (status === "succeeded" || status === "completed") {
-    return "succeeded"
-  }
-  if (status === "failed" || status === "cancelled") {
-    return "failed"
-  }
-  if (status === "completed_with_errors") {
-    return "warning"
-  }
-  return "pending"
-}
-
-function runFileLabel(run: {
+function _runFileLabel(run: {
   filename?: string | null
   input_type: string
   input_upload?: Record<string, unknown>
@@ -795,7 +828,7 @@ function runFileLabel(run: {
   return run.filename ?? uploadFilename ?? `${run.input_type} upload`
 }
 
-function failedRunCause(
+function _failedRunCause(
   run: AnalysisRunPublic | null,
   summary: AnalysisRunSummaryPublic | null,
 ) {
@@ -822,20 +855,6 @@ function objectRecord(value: unknown): Record<string, unknown> {
 
 function stringValue(value: unknown) {
   return typeof value === "string" && value.trim() ? value : null
-}
-
-function optionalText(value: string | null | undefined) {
-  return value?.trim() ? value : "N.A."
-}
-
-function labelize(value: string | null | undefined) {
-  if (!value) {
-    return "N.A."
-  }
-  return value
-    .replaceAll("_", " ")
-    .replaceAll("-", " ")
-    .replace(/\b\w/g, (match) => match.toUpperCase())
 }
 
 function dateValueFromOffset(days: number) {
@@ -905,19 +924,6 @@ function waiverScopeLabel(waiver: WaiverPublic) {
   ])
 }
 
-function waiverStatusTone(status: string | null | undefined) {
-  if (status === "active") {
-    return "active"
-  }
-  if (status === "review_due") {
-    return "review-due"
-  }
-  if (status === "expired") {
-    return "expired"
-  }
-  return "inactive"
-}
-
 function findingWaiverEvidence(
   finding: FindingDetailPublic | null,
 ): FindingWaiverEvidence | null {
@@ -976,20 +982,6 @@ function findingWaiverEvidence(
   }
 }
 
-function formatNullableNumber(value: number | null | undefined) {
-  return value === null || value === undefined ? "N.A." : value.toFixed(1)
-}
-
-function formatEpss(value: number | null | undefined) {
-  return value === null || value === undefined
-    ? "N.A."
-    : `${Math.round(value * 1000) / 10}%`
-}
-
-function formatKev(value: boolean | null | undefined) {
-  return value ? "Yes" : "No"
-}
-
 function arrayRecords(value: unknown): Record<string, unknown>[] {
   return Array.isArray(value)
     ? value.filter(
@@ -1007,7 +999,74 @@ function joinedValues(values: Array<string | null | undefined>) {
   return present.length > 0 ? present.join(" / ") : "N.A."
 }
 
-function findingOverviewCards(finding: FindingDetailPublic) {
+const decisionReasonCopy: Record<string, { label: string; detail: string }> = {
+  "asset.context": {
+    detail: "Asset context influences operational priority.",
+    label: "Asset context",
+  },
+  "asset.context_unknown": {
+    detail:
+      "Asset context is missing and must be validated before final scheduling.",
+    label: "Asset context unknown",
+  },
+  "operational.score": {
+    detail: "Combined signals determine the operational remediation score.",
+    label: "Operational score",
+  },
+  "priority.critical.epss_cvss": {
+    detail: "EPSS and CVSS together indicate critical remediation urgency.",
+    label: "Critical EPSS and CVSS",
+  },
+  "priority.high.cvss": {
+    detail: "CVSS indicates high impact severity.",
+    label: "High CVSS",
+  },
+  "priority.high.epss": {
+    detail: "EPSS indicates elevated exploitation probability.",
+    label: "High EPSS",
+  },
+  "priority.kev.known_exploited": {
+    detail: "Known exploited vulnerability signal is present.",
+    label: "Known exploited vulnerability",
+  },
+  "priority.medium.cvss": {
+    detail: "CVSS contributes meaningful impact severity.",
+    label: "Medium CVSS signal",
+  },
+  "priority.medium.epss": {
+    detail: "EPSS contributes exploitation probability context.",
+    label: "Medium EPSS signal",
+  },
+}
+
+function humanizeDecisionReasonText(value: string | null | undefined) {
+  if (!value) {
+    return value
+  }
+  return Object.entries(decisionReasonCopy).reduce(
+    (text, [code, copy]) =>
+      text.replaceAll(code, copy.detail.replace(/\.$/, "")),
+    value,
+  )
+}
+
+function decisionReasonLabel(value: string | null | undefined) {
+  if (!value) {
+    return "Reason"
+  }
+  return decisionReasonCopy[value]?.label ?? labelize(value)
+}
+
+function decisionReasonDetail(
+  code: string | null | undefined,
+  detail: string | null | undefined,
+) {
+  return (
+    humanizeDecisionReasonText(detail) ?? decisionReasonCopy[code ?? ""]?.detail
+  )
+}
+
+function _findingOverviewCards(finding: FindingDetailPublic) {
   return [
     {
       detail:
@@ -1071,12 +1130,15 @@ function findingWhyText(
   explanation: FindingExplanationPublic | null,
 ) {
   const decisionExplanation = objectRecord(explanation?.decision_explanation)
+  const fallback = "No priority explanation has been recorded for this finding."
   return (
-    stringValue(decisionExplanation.human_readable) ??
-    stringValue(decisionExplanation.summary) ??
-    explanation?.rationale ??
-    finding?.rationale ??
-    "No priority explanation has been recorded for this finding."
+    humanizeDecisionReasonText(
+      stringValue(decisionExplanation.human_readable) ??
+        stringValue(decisionExplanation.summary) ??
+        explanation?.rationale ??
+        finding?.rationale ??
+        fallback,
+    ) ?? fallback
   )
 }
 
@@ -1093,22 +1155,197 @@ function findingRecommendedAction(
   )
 }
 
+function findingComponentDetailLabel(finding: FindingDetailPublic | null) {
+  if (!finding) {
+    return "N.A."
+  }
+  const name = optionalText(finding.component_name)
+  return finding.component_version
+    ? `${name} ${finding.component_version}`
+    : name
+}
+
+function findingAssetServiceDetailLabel(finding: FindingDetailPublic | null) {
+  if (!finding) {
+    return "N.A."
+  }
+  return joinedValues([
+    finding.business_service,
+    finding.asset_name,
+    finding.asset_key,
+    finding.asset_target_ref,
+  ])
+}
+
+function findingOwnerDetailLabel(
+  finding: FindingDetailPublic | null,
+  occurrences: Array<
+    Partial<FindingOccurrencePublic> & Record<string, unknown>
+  >,
+) {
+  return (
+    finding?.owner ?? stringValue(occurrences[0]?.asset_owner) ?? "Unassigned"
+  )
+}
+
+function findingSlaLabel(priority: FindingPriority | undefined) {
+  switch (priority) {
+    case "critical":
+      return "24 hours"
+    case "high":
+      return "7 days"
+    case "medium":
+      return "30 days"
+    case "low":
+      return "90 days"
+    default:
+      return "Define during triage"
+  }
+}
+
+function findingNextStepLabel(finding: FindingDetailPublic | null) {
+  switch (finding?.status) {
+    case "open":
+      return "Assign remediation work and start fix validation."
+    case "in_review":
+      return "Complete technical review and confirm the remediation path."
+    case "remediating":
+      return "Verify the fix, then update evidence and status."
+    case "fixed":
+      return "Confirm scanner closure and keep evidence for reporting."
+    case "accepted":
+      return "Track accepted risk until the next review date."
+    case "suppressed":
+      return "Verify the VEX or suppression scope still applies."
+    default:
+      return "Confirm ownership and record the next remediation step."
+  }
+}
+
+function isInternetFacingExposure(value: string | null | undefined) {
+  return value ? value.toLowerCase().includes("internet") : false
+}
+
+function isProductionEnvironment(value: string | null | undefined) {
+  return value ? /\bprod(uction)?\b/i.test(value.replaceAll("_", " ")) : false
+}
+
+function findingDecisionReasonRows(
+  finding: FindingDetailPublic | null,
+  explanation: FindingExplanationPublic | null,
+  attackContext: FindingAttackContext | null,
+) {
+  const rows: FindingDecisionReason[] = []
+
+  if (finding?.in_kev) {
+    rows.push({
+      detail:
+        "CISA KEV is recorded for this CVE, so exploitation is a confirmed prioritization signal.",
+      label: "CISA KEV listed",
+      tone: "critical",
+    })
+  }
+
+  if (finding?.epss !== null && finding?.epss !== undefined) {
+    rows.push({
+      detail:
+        finding.epss >= 0.7
+          ? `${formatEpss(finding.epss)} EPSS indicates elevated exploitation probability.`
+          : `${formatEpss(finding.epss)} EPSS is recorded for the decision model.`,
+      label: finding.epss >= 0.7 ? "High EPSS" : "EPSS recorded",
+      tone: finding.epss >= 0.7 ? "warning" : "info",
+    })
+  }
+
+  if (
+    finding?.cvss_base_score !== null &&
+    finding?.cvss_base_score !== undefined
+  ) {
+    rows.push({
+      detail:
+        finding.cvss_base_score >= 9
+          ? `CVSS ${formatNullableNumber(finding.cvss_base_score)} is critical impact severity.`
+          : `CVSS ${formatNullableNumber(finding.cvss_base_score)} contributes to the risk score.`,
+      label: finding.cvss_base_score >= 9 ? "Critical CVSS" : "CVSS recorded",
+      tone: finding.cvss_base_score >= 9 ? "critical" : "info",
+    })
+  }
+
+  if (isInternetFacingExposure(finding?.exposure)) {
+    rows.push({
+      detail: `${finding ? findingAssetLabel(finding) : "Asset"} is marked ${labelize(finding?.exposure)}, increasing remediation urgency.`,
+      label: "Internet-facing asset",
+      tone: "critical",
+    })
+  }
+
+  if (isProductionEnvironment(finding?.asset_environment)) {
+    rows.push({
+      detail: `Environment is marked ${labelize(finding?.asset_environment)}, so operational exposure is higher.`,
+      label: "Production service",
+      tone: "warning",
+    })
+  }
+
+  if (!attackContextEmptyState(attackContext)) {
+    rows.push({
+      detail: `${attackTechniqueRows(attackContext).length} reviewed ATT&CK technique mapping(s) are available for defensive context.`,
+      label: "ATT&CK / TTP context",
+      tone: "warning",
+    })
+  }
+
+  const defensiveNote = stringValue(attackContext?.defensive_note)
+  if (defensiveNote && /gap|missing|coverage|detect/i.test(defensiveNote)) {
+    rows.push({
+      detail: defensiveNote,
+      label: "Detection coverage gap",
+      tone: "warning",
+    })
+  }
+
+  const recommendedAction = findingRecommendedAction(finding, explanation)
+  if (recommendedAction !== "No recommended action has been recorded.") {
+    rows.push({
+      detail: recommendedAction,
+      label: "Fix or mitigation",
+      tone: "positive",
+    })
+  }
+
+  if (rows.length === 0) {
+    rows.push({
+      detail: findingWhyText(finding, explanation),
+      label: "Decision rationale",
+      tone: "info",
+    })
+  }
+
+  return rows
+}
+
 function findingReasonRows(explanation: FindingExplanationPublic | null) {
   const decisionExplanation = objectRecord(explanation?.decision_explanation)
   const reasons = arrayRecords(decisionExplanation.reasons)
-  return reasons.map((reason, index) => ({
-    detail:
-      stringValue(reason.message) ??
-      stringValue(reason.description) ??
-      stringValue(reason.detail) ??
-      stringValue(reason.value) ??
-      "Matched decision signal",
-    label:
+  return reasons.map((reason, index) => {
+    const code =
       stringValue(reason.code) ??
       stringValue(reason.signal) ??
-      stringValue(reason.source) ??
-      `Reason ${index + 1}`,
-  }))
+      stringValue(reason.source)
+    const detail =
+      decisionReasonDetail(
+        code,
+        stringValue(reason.message) ??
+          stringValue(reason.description) ??
+          stringValue(reason.detail) ??
+          stringValue(reason.value) ??
+          null,
+      ) ?? "Matched decision signal"
+    return {
+      detail,
+      label: code ? decisionReasonLabel(code) : `Reason ${index + 1}`,
+    }
+  })
 }
 
 function findingDataQualityRows(
@@ -1154,6 +1391,242 @@ function findingProviderGaps(
   return gaps
 }
 
+function findingEvidenceRows(
+  finding: FindingDetailPublic | null,
+  explanation: FindingExplanationPublic | null,
+  occurrences: Array<
+    Partial<FindingOccurrencePublic> & Record<string, unknown>
+  >,
+  dataQualityRows: ReturnType<typeof findingDataQualityRows>,
+  providerGaps: string[],
+): FindingDetailRow[] {
+  const firstOccurrence = occurrences[0]
+  const providerEvidence = objectRecord(
+    explanation?.provider_evidence ??
+      objectRecord(finding?.explanation_json).provider_evidence,
+  )
+  const evidence = objectRecord(finding?.evidence_json)
+  const providerSignalLabels = [
+    finding?.epss !== null && finding?.epss !== undefined ? "EPSS" : null,
+    finding?.cvss_base_score !== null && finding?.cvss_base_score !== undefined
+      ? "CVSS"
+      : null,
+    finding?.in_kev ? "CISA KEV" : null,
+  ].filter((label): label is string => Boolean(label))
+  const providerKeys = Object.keys(providerEvidence)
+  const artifactRef =
+    stringValue(evidence.report_artifact) ??
+    stringValue(evidence.report_reference) ??
+    stringValue(evidence.artifact_reference) ??
+    stringValue(firstOccurrence?.vex_source_path)
+
+  return [
+    {
+      detail:
+        providerGaps.length > 0
+          ? `Gaps: ${providerGaps.join(", ")}`
+          : "No provider gaps recorded for the stored finding signals.",
+      label: "Provider snapshot",
+      value:
+        providerKeys.length > 0
+          ? `${providerKeys.length} provider evidence field(s) recorded`
+          : providerSignalLabels.length > 0
+            ? providerSignalLabels.join(", ")
+            : "No provider snapshot recorded",
+    },
+    {
+      detail: optionalText(
+        stringValue(firstOccurrence?.source_record_id) ??
+          stringValue(firstOccurrence?.raw_reference) ??
+          stringValue(firstOccurrence?.source_id),
+      ),
+      label: "Input source",
+      value: optionalText(
+        stringValue(firstOccurrence?.source_format) ??
+          stringValue(firstOccurrence?.source) ??
+          stringValue(evidence.input_source),
+      ),
+    },
+    {
+      detail: optionalText(stringValue(firstOccurrence?.raw_severity)),
+      label: "Scanner evidence",
+      value: optionalText(
+        stringValue(firstOccurrence?.scanner) ??
+          stringValue(evidence.scanner) ??
+          stringValue(evidence.tool),
+      ),
+    },
+    {
+      detail:
+        dataQualityRows.length > 0
+          ? dataQualityRows.map((row) => labelize(row.code)).join(", ")
+          : "No data quality flags recorded.",
+      label: "Data quality notes",
+      value:
+        explanation?.data_quality_confidence ??
+        stringValue(objectRecord(finding?.data_quality_json).confidence) ??
+        "Recorded",
+    },
+    {
+      detail:
+        "Report or evidence bundle reference when supplied by input data.",
+      label: "Report / artifact references",
+      value: optionalText(artifactRef),
+    },
+  ]
+}
+
+function findingHistoryRows(
+  finding: FindingDetailPublic | null,
+  occurrences: Array<
+    Partial<FindingOccurrencePublic> & Record<string, unknown>
+  >,
+  waiverEvidence: FindingWaiverEvidence | null,
+): FindingDetailRow[] {
+  const vexStatus =
+    occurrences
+      .map((occurrence) => stringValue(occurrence.vex_status))
+      .find(Boolean) ?? null
+  const vexDetail =
+    occurrences
+      .map((occurrence) =>
+        joinedValues([
+          stringValue(occurrence.vex_justification),
+          stringValue(occurrence.vex_action_statement),
+          stringValue(occurrence.vex_match_type),
+        ]),
+      )
+      .find((value) => value !== "N.A.") ?? null
+
+  return [
+    {
+      detail: "Initial source occurrence recorded by Workbench.",
+      label: "First seen",
+      value: finding?.first_seen_at
+        ? formatDateTime(finding.first_seen_at)
+        : "N.A.",
+    },
+    {
+      detail: "Most recent source occurrence recorded by Workbench.",
+      label: "Last seen",
+      value: finding?.last_seen_at
+        ? formatDateTime(finding.last_seen_at)
+        : "N.A.",
+    },
+    {
+      detail: finding?.updated_at
+        ? `Last updated ${formatDateTime(finding.updated_at)}`
+        : "No status update timestamp recorded.",
+      label: "Status changes",
+      value: labelize(finding?.status),
+    },
+    {
+      detail:
+        waiverEvidence?.reason ??
+        vexDetail ??
+        "No waiver or VEX state recorded for this finding.",
+      label: "Waiver / VEX state",
+      value: finding?.waived
+        ? `Waived${waiverEvidence?.status ? ` (${labelize(waiverEvidence.status)})` : ""}`
+        : finding?.suppressed_by_vex
+          ? "Suppressed by VEX"
+          : vexStatus
+            ? labelize(vexStatus)
+            : "Not accepted",
+    },
+  ]
+}
+
+function demoFindingDetailForId(findingId: string) {
+  const demoFinding = DEMO_FINDINGS.find((finding) => finding.id === findingId)
+  if (!demoFinding) {
+    return null
+  }
+  const createdAt = demoFinding.created_at ?? "2025-04-01T00:00:00Z"
+  const lastSeenAt = demoFinding.last_seen_at ?? createdAt
+  return {
+    ...demoFinding,
+    asset_id: demoFinding.asset_id ?? null,
+    component_id: demoFinding.component_id ?? null,
+    created_at: createdAt,
+    data_quality_json: {
+      confidence: "Demo Preview",
+      flags: [
+        {
+          code: "demo_preview",
+          message:
+            "Sample finding detail used only when no real project data is available.",
+          severity: "info",
+          source: "demo",
+        },
+      ],
+    },
+    evidence_json: {
+      input_source: "Demo Preview sample queue",
+      scanner: "Demo import",
+    },
+    first_seen_at: demoFinding.first_seen_at ?? createdAt,
+    last_seen_at: lastSeenAt,
+    attack_context: DEMO_FINDING_ATTACK_CONTEXTS[demoFinding.id] ?? null,
+    occurrences: [
+      {
+        analysis_run_id: "demo-run-0001",
+        asset_business_service: demoFinding.business_service,
+        asset_exposure: demoFinding.exposure,
+        asset_owner: demoFinding.owner,
+        asset_ref:
+          demoFinding.asset_name ??
+          demoFinding.asset_key ??
+          demoFinding.business_service,
+        component_name: demoFinding.component_name,
+        component_version: demoFinding.component_version,
+        created_at: createdAt,
+        fix_version: stringValue(demoFinding.recommended_action),
+        id: `${demoFinding.id}-occurrence-1`,
+        purl: demoFinding.component_purl,
+        raw_severity: labelize(demoFinding.priority),
+        scanner: "Demo import",
+        source: "Demo Preview",
+        source_format: "Sample finding",
+        source_record_id: demoFinding.cve_id,
+        target_kind: "service",
+        target_ref: demoFinding.business_service,
+      },
+    ],
+    project_id: DEMO_PROJECT.id,
+    updated_at: demoFinding.updated_at ?? lastSeenAt,
+    vulnerability_id: demoFinding.vulnerability_id ?? demoFinding.cve_id,
+  } as FindingDetailPublic
+}
+
+function demoFindingExplanationForDetail(
+  finding: FindingDetailPublic,
+): FindingExplanationPublic {
+  return {
+    cve_id: finding.cve_id,
+    data_quality_confidence: "Demo Preview",
+    decision_explanation: {
+      human_readable: findingWhyText(finding, null),
+    },
+    decision_guidance: {
+      recommended_action: findingRecommendedAction(finding, null),
+    },
+    finding_id: finding.id,
+    priority: finding.priority ?? "medium",
+    priority_rank: finding.priority_rank ?? 0,
+    project_id: finding.project_id,
+    provider_evidence: {
+      demo_preview: true,
+      epss: finding.epss,
+      cvss_base_score: finding.cvss_base_score,
+      in_kev: finding.in_kev,
+    },
+    rationale: finding.rationale,
+    recommended_action: finding.recommended_action,
+    risk_score: finding.risk_score,
+  }
+}
+
 function attackTechniqueRows(context: FindingAttackContext | null) {
   if (!context) {
     return []
@@ -1183,8 +1656,25 @@ function attackConfidenceLabel(value: string | null | undefined) {
   return value ? labelize(value) : "Unknown"
 }
 
-function attackReviewLabel(value: string | null | undefined) {
-  return value ? labelize(value) : "Unreviewed"
+function attackCoverageStatusLabel(context: FindingAttackContext | null) {
+  const note = (stringValue(context?.defensive_note) ?? "").toLowerCase()
+  if (!note) {
+    return "Not recorded"
+  }
+  if (/partial|unknown/.test(note)) {
+    return "Partial / unknown"
+  }
+  if (/gap|missing|validate|coverage|detect/.test(note)) {
+    return "Needs validation"
+  }
+  return "Recorded"
+}
+
+function defensiveActionItems(value: string | null | undefined) {
+  return (value ?? "")
+    .split(/\n+/)
+    .map((item) => item.trim())
+    .filter(Boolean)
 }
 
 function attackContextEmptyState(context: FindingAttackContext | null) {
@@ -1208,7 +1698,7 @@ function hasActiveFindingFilters(filters: FindingFilters) {
   return Object.values(filters).some((value) => value.trim() !== "")
 }
 
-function findingComponentLabel(finding: FindingPublic) {
+function _findingComponentLabel(finding: FindingPublic) {
   const name = optionalText(finding.component_name)
   return finding.component_version
     ? `${name} ${finding.component_version}`
@@ -1224,13 +1714,7 @@ function findingAssetLabel(finding: FindingPublic) {
   )
 }
 
-function findingPriorityTone(finding: FindingPublic) {
-  return finding.priority === "critical" || finding.priority === "high"
-    ? finding.priority
-    : "standard"
-}
-
-function metadataRows(value: unknown) {
+function _metadataRows(value: unknown) {
   return Object.entries(objectRecord(value)).filter(
     ([key, entryValue]) =>
       !key.toLowerCase().includes("path") &&
@@ -1240,11 +1724,68 @@ function metadataRows(value: unknown) {
   )
 }
 
-function jsonPreview(value: unknown) {
+function _scalarRows(value: unknown) {
+  return Object.entries(objectRecord(value)).filter(
+    ([, entryValue]) =>
+      entryValue !== null &&
+      entryValue !== undefined &&
+      typeof entryValue !== "object",
+  )
+}
+
+function _jsonPreview(value: unknown) {
   const record = objectRecord(value)
   return Object.keys(record).length > 0
     ? JSON.stringify(record, null, 2)
     : "No error JSON recorded."
+}
+
+function _shortText(value: string | null | undefined, max = 16) {
+  return value && value.length > max ? `${value.slice(0, max)}…` : (value ?? "")
+}
+
+function _displayValue(value: unknown, fallback = "N.A.") {
+  if (value === null || value === undefined) {
+    return fallback
+  }
+  if (typeof value === "string") {
+    return value.trim() ? value : fallback
+  }
+  if (typeof value === "number" || typeof value === "boolean") {
+    return String(value)
+  }
+  if (Array.isArray(value)) {
+    return value.length > 0 ? value.join(", ") : fallback
+  }
+  if (typeof value === "object") {
+    return JSON.stringify(value)
+  }
+  return String(value)
+}
+
+async function _copyValue(value: string) {
+  if (!value || !window.navigator?.clipboard?.writeText) {
+    return
+  }
+  try {
+    await window.navigator.clipboard.writeText(value)
+  } catch {
+    return
+  }
+}
+
+function _formatManifestFieldName(field: string) {
+  return labelize(field.replace(/_/g, " "))
+}
+
+function _verificationItems(verification: ReportVerificationPublic | null) {
+  return Array.isArray(verification?.items) ? verification.items : []
+}
+
+function _verificationSummaryRows(
+  verification: ReportVerificationPublic | null,
+) {
+  return Object.entries(objectRecord(verification?.summary))
 }
 
 function validateProjectForm(form: ProjectFormState) {
@@ -1294,7 +1835,7 @@ function reportFormatLabel(format: string) {
   return format.toUpperCase()
 }
 
-function reportSizeLabel(sizeBytes: number) {
+function _reportSizeLabel(sizeBytes: number) {
   if (sizeBytes < 1024) {
     return `${sizeBytes} B`
   }
@@ -1345,25 +1886,7 @@ async function downloadReportArtifact(report: ReportPublic) {
   URL.revokeObjectURL(objectUrl)
 }
 
-function providerSourceLabel(source: ProviderSourceStatusPublic) {
-  return source.name.toUpperCase()
-}
-
-function providerSourceState(source: ProviderSourceStatusPublic) {
-  if (source.stale) {
-    return "stale"
-  }
-  return source.available ? "available" : "missing"
-}
-
-function providerSourceDetail(source: ProviderSourceStatusPublic) {
-  if (source.last_error) {
-    return source.last_error
-  }
-  return source.detail ?? "No provider detail recorded."
-}
-
-function providerSnapshotId(providerStatus: ProviderStatusPublic | null) {
+function _providerSnapshotId(providerStatus: ProviderStatusPublic | null) {
   const metadata = objectRecord(providerStatus?.snapshot.source_metadata)
   return (
     stringValue(metadata.snapshot_id) ??
@@ -1372,12 +1895,12 @@ function providerSnapshotId(providerStatus: ProviderStatusPublic | null) {
   )
 }
 
-function providerSelectedSources(providerStatus: ProviderStatusPublic | null) {
+function _providerSelectedSources(providerStatus: ProviderStatusPublic | null) {
   const selected = providerStatus?.snapshot.selected_sources ?? []
   return selected.length > 0 ? selected.join(", ") : "No sources selected"
 }
 
-function providerSourceHashes(providerStatus: ProviderStatusPublic | null) {
+function _providerSourceHashes(providerStatus: ProviderStatusPublic | null) {
   const hashes = providerStatus?.snapshot.source_hashes ?? {}
   const values = Object.entries(hashes).map(([source, hash]) =>
     typeof hash === "string" && hash.trim()
@@ -1387,17 +1910,30 @@ function providerSourceHashes(providerStatus: ProviderStatusPublic | null) {
   return values.length > 0 ? values.join(" | ") : "No source hashes recorded"
 }
 
-function providerDataQualityNotes(providerStatus: ProviderStatusPublic | null) {
-  const notes = [
-    "Status is based on the latest stored provider snapshot.",
-    "Missing, stale, or failed provider evidence is shown as degraded data quality.",
+function _providerDataQualityNoticeItems(
+  providerStatus: ProviderStatusPublic | null,
+): DataQualityNoticeItem[] {
+  return [
+    ...providerDataQualityNotes(providerStatus).map((note) => ({
+      detail: "Data quality note",
+      label: "Provider evidence",
+      message: note,
+    })),
+    ...(providerStatus?.warnings ?? []).map((warning) => ({
+      detail: "Degraded evidence",
+      label: "Warning",
+      message: warning,
+    })),
+    ...(providerStatus?.last_error
+      ? [
+          {
+            detail: "Provider update failure",
+            label: "Last Error",
+            message: providerStatus.last_error,
+          },
+        ]
+      : []),
   ]
-  if (providerStatus?.snapshot.locked_provider_data) {
-    notes.push(
-      "Locked replay is active; live provider lookups are not used for this snapshot.",
-    )
-  }
-  return notes
 }
 
 export function App() {
@@ -1406,6 +1942,7 @@ export function App() {
   const currentPath = normalizeWorkbenchPath(location.pathname)
   const findingDetailId = findingIdFromPath(location.pathname)
   const isFindingDetail = findingDetailId !== null
+  const isDashboard = currentPath === "/"
   const isFindingsList = currentPath === "/findings" && !isFindingDetail
   const isWaiversPage = currentPath === "/waivers"
   const findingSearchParams = new URLSearchParams(location.search)
@@ -1439,6 +1976,9 @@ export function App() {
   const [selectedProjectId, setSelectedProjectId] = useState("")
   const [projectSummary, setProjectSummary] =
     useState<ProjectDecisionSummaryPublic | null>(null)
+  const [projectSummaryById, setProjectSummaryById] = useState<
+    Record<string, ProjectDecisionSummaryPublic>
+  >({})
   const [projectAttackSummary, setProjectAttackSummary] =
     useState<ProjectAttackSummaryPublic | null>(null)
   const [projectGovernanceRollups, setProjectGovernanceRollups] =
@@ -1483,6 +2023,11 @@ export function App() {
   const [reports, setReports] = useState<ReportPublic[]>([])
   const [reportsLoading, setReportsLoading] = useState(false)
   const [reportsError, setReportsError] = useState("")
+  const [_verificationReport, setVerificationReport] =
+    useState<ReportVerificationPublic | null>(null)
+  const [_verificationReportTarget, setVerificationReportTarget] =
+    useState<ReportPublic | null>(null)
+  const [_verificationLoading, setVerificationLoading] = useState(false)
   const [reportActionMessage, setReportActionMessage] = useState("")
   const [reportActionError, setReportActionError] = useState("")
   const [activeReportFormat, setActiveReportFormat] = useState<
@@ -1493,6 +2038,25 @@ export function App() {
   const [findingCount, setFindingCount] = useState(0)
   const [findingsLoading, setFindingsLoading] = useState(false)
   const [findingsError, setFindingsError] = useState("")
+  const [dashboardFindings, setDashboardFindings] = useState<FindingPublic[]>(
+    [],
+  )
+  const [dashboardFindingsLoading, setDashboardFindingsLoading] =
+    useState(false)
+  const [dashboardFindingsError, setDashboardFindingsError] = useState("")
+  const [dashboardSignalCounts, setDashboardSignalCounts] =
+    useState<DashboardSignalCounts>({
+      highEpss: 0,
+      internetFacingCriticals: 0,
+      epssBuckets: {
+        low: 0,
+        medium: 0,
+        high: 0,
+        critical: 0,
+      },
+    })
+  const [dashboardSignalLoading, setDashboardSignalLoading] = useState(false)
+  const [dashboardSignalError, setDashboardSignalError] = useState("")
   const [findingFilters, setFindingFilters] = useState<FindingFilters>(
     defaultFindingFilters,
   )
@@ -1512,7 +2076,7 @@ export function App() {
   const [findingExplanationWarning, setFindingExplanationWarning] = useState("")
   const [findingDetailReloadKey, setFindingDetailReloadKey] = useState(0)
   const [findingDetailTab, setFindingDetailTab] =
-    useState<FindingDetailTab>("overview")
+    useState<FindingDetailTab>("evidence")
   const [waivers, setWaivers] = useState<WaiverPublic[]>([])
   const [waiversLoading, setWaiversLoading] = useState(false)
   const [waiversError, setWaiversError] = useState("")
@@ -1524,21 +2088,47 @@ export function App() {
     useState<WaiverFormState>(waiverFormDefaults)
   const selectedProject =
     projects.find((project) => project.id === selectedProjectId) ?? null
+  const _selectedProjectSummary = selectedProjectId
+    ? (projectSummaryById[selectedProjectId] ?? null)
+    : null
+  const _selectProjectForContext = (projectId: string) => {
+    setSelectedProjectId(projectId)
+    setDeleteConfirmed(false)
+    setEditProjectId("")
+  }
   const dashboardLoading = projectListLoading || summaryLoading
-  const dashboardCards = buildDashboardCards(
+  const _dashboardCards = buildDashboardCards(
     projectSummary,
     providerStatus,
     dashboardLoading,
+    dashboardSignalLoading || dashboardSignalError !== "",
+    dashboardSignalCounts,
   )
+  const _providerFreshness = formatProviderFreshness(providerStatus)
+  const _isDashboardProviderStale =
+    !dashboardLoading &&
+    providerStatus !== null &&
+    (providerStatus.status !== "ok" ||
+      projectSummary?.provider_degraded === true)
   const summaryRows = buildSummaryRows(projectSummary)
   const attackRows = attackSummaryRows(projectAttackSummary)
   const attackTopTechniques = projectAttackSummary?.top_techniques ?? []
   const topServiceRows = governanceServiceRows(projectGovernanceRollups)
+  const topServiceChartRows = topServiceRows.rows
+  const topServiceSource = topServiceRows.source
+  const priorityChartItems = findingsByPriorityChartData(projectSummary)
+  const topServiceChartItems = topServicesByRiskChartData(topServiceChartRows)
+  const runActivityItems = runActivityTrendData(projectRuns)
+  const epssBucketItems = epssBucketChartData(dashboardSignalCounts.epssBuckets)
+  const latestProjectRun = projectRuns[0] ?? null
   const waiverDebtSummary = waiverDebtSummaryRows(projectGovernanceRollups)
   const waiverDebtItems = waiverDebtRows(projectGovernanceRollups)
-  const findingPageStart =
+  const _findingPageStart =
     findingCount === 0 ? 0 : Math.min(findingOffset + 1, findingCount)
-  const findingPageEnd = Math.min(findingOffset + findings.length, findingCount)
+  const _findingPageEnd = Math.min(
+    findingOffset + findings.length,
+    findingCount,
+  )
   const activeFindingFilters =
     hasActiveFindingFilters(findingFilters) || Boolean(findingAssetId)
   const detailOccurrences = findingOccurrenceRows(
@@ -1556,8 +2146,48 @@ export function App() {
   const detailReasonRows = findingReasonRows(findingExplanation)
   const detailAttackContext = findingDetail?.attack_context ?? null
   const detailAttackTechniques = attackTechniqueRows(detailAttackContext)
+  const detailAttackPrimaryTechnique = detailAttackTechniques[0] ?? null
+  const detailAttackActionItems = defensiveActionItems(
+    detailAttackPrimaryTechnique?.defensive_note,
+  )
+  const detailAttackCoverageStatus =
+    attackCoverageStatusLabel(detailAttackContext)
+  const detailAttackTacticLabel = attackTacticsLabel(
+    detailAttackPrimaryTechnique?.tactics ?? detailAttackContext?.tactics,
+  )
+  const detailAttackTechniqueId =
+    detailAttackPrimaryTechnique?.technique_id ?? "Technique"
+  const detailAttackTechniqueName =
+    detailAttackPrimaryTechnique?.name ?? "Technique"
+  const detailAttackTechniqueLabel = `${detailAttackTechniqueId} ${detailAttackTechniqueName}`
+  const detailAttackSource =
+    detailAttackPrimaryTechnique?.source ?? detailAttackContext?.source
+  const detailAttackRationale =
+    detailAttackPrimaryTechnique?.rationale ?? detailAttackContext?.rationale
   const detailAttackEmpty = attackContextEmptyState(detailAttackContext)
   const detailWaiverEvidence = findingWaiverEvidence(findingDetail)
+  const detailDecisionReasons = findingDecisionReasonRows(
+    findingDetail,
+    findingExplanation,
+    detailAttackContext,
+  )
+  const detailEvidenceRows = findingEvidenceRows(
+    findingDetail,
+    findingExplanation,
+    detailOccurrences,
+    detailDataQualityRows,
+    detailProviderGaps,
+  )
+  const detailHistoryRows = findingHistoryRows(
+    findingDetail,
+    detailOccurrences,
+    detailWaiverEvidence,
+  )
+  const isDemoFindingDetail = Boolean(
+    findingDetail &&
+      (findingDetail.project_id === DEMO_PROJECT.id ||
+        findingDetail.id.startsWith("demo-")),
+  )
   const selectedReportRun =
     projectRuns.find((run) => run.id === selectedRunId) ?? null
   const reportActionsEnabled =
@@ -1598,7 +2228,7 @@ export function App() {
           return
         }
         if (isMounted) {
-          setStatusError("Backend adapter unavailable")
+          setStatusError("Data services unavailable")
           setProviderStatusError(
             apiErrorMessage("Provider status unavailable", caught),
           )
@@ -1661,6 +2291,38 @@ export function App() {
       isMounted = false
     }
   }, [navigate])
+
+  useEffect(() => {
+    let isMounted = true
+
+    async function loadProjectSummaries() {
+      if (projects.length === 0) {
+        setProjectSummaryById({})
+        return
+      }
+      const entries = await Promise.allSettled(
+        projects.map((project) =>
+          ProjectsService.readProjectSummary({ project_id: project.id }),
+        ),
+      )
+      if (!isMounted) {
+        return
+      }
+      const summaryMap: Record<string, ProjectDecisionSummaryPublic> = {}
+      entries.forEach((entry, index) => {
+        if (entry.status !== "fulfilled") {
+          return
+        }
+        summaryMap[projects[index].id] = entry.value
+      })
+      setProjectSummaryById(summaryMap)
+    }
+
+    void loadProjectSummaries()
+    return () => {
+      isMounted = false
+    }
+  }, [projects])
 
   useEffect(() => {
     let isMounted = true
@@ -1839,7 +2501,7 @@ export function App() {
 
     async function loadProjectRuns() {
       if (
-        !["/imports", "/reports"].includes(currentPath) ||
+        !["/", "/imports", "/reports"].includes(currentPath) ||
         !selectedProjectId
       ) {
         setProjectRuns([])
@@ -1895,11 +2557,15 @@ export function App() {
         setReports([])
         setReportsError("")
         setReportsLoading(false)
+        setVerificationReport(null)
+        setVerificationReportTarget(null)
         return
       }
 
       setReportsLoading(true)
       setReportsError("")
+      setVerificationReport(null)
+      setVerificationReportTarget(null)
       try {
         const reportPage = await ReportsService.readRunReports({
           run_id: selectedRunId,
@@ -2103,7 +2769,186 @@ export function App() {
   ])
 
   useEffect(() => {
-    setFindingDetailTab("overview")
+    let isMounted = true
+
+    async function loadDashboardFindings() {
+      if (!isDashboard || !selectedProjectId) {
+        setDashboardFindings([])
+        setDashboardFindingsError("")
+        setDashboardFindingsLoading(false)
+        return
+      }
+
+      setDashboardFindingsLoading(true)
+      setDashboardFindingsError("")
+      try {
+        const page = await FindingsService.readProjectFindings({
+          direction: "asc",
+          limit: 5,
+          offset: 0,
+          project_id: selectedProjectId,
+          sort: "operational",
+        })
+        if (isMounted) {
+          setDashboardFindings(page.data)
+        }
+      } catch (caught) {
+        if (caught instanceof ApiError && [401, 403].includes(caught.status)) {
+          clearAccessToken()
+          await navigate({ to: "/login" })
+          return
+        }
+        if (isMounted) {
+          setDashboardFindings([])
+          setDashboardFindingsError(
+            apiErrorMessage("Remediation queue unavailable", caught),
+          )
+        }
+      } finally {
+        if (isMounted) {
+          setDashboardFindingsLoading(false)
+        }
+      }
+    }
+
+    void loadDashboardFindings()
+    return () => {
+      isMounted = false
+    }
+  }, [findingReloadKey, isDashboard, navigate, selectedProjectId])
+
+  useEffect(() => {
+    let isMounted = true
+
+    async function loadDashboardSignals() {
+      if (!isDashboard || !selectedProjectId) {
+        setDashboardSignalCounts({
+          highEpss: 0,
+          internetFacingCriticals: 0,
+          epssBuckets: {
+            low: 0,
+            medium: 0,
+            high: 0,
+            critical: 0,
+          },
+        })
+        setDashboardSignalError("")
+        setDashboardSignalLoading(false)
+        return
+      }
+
+      setDashboardSignalLoading(true)
+      setDashboardSignalError("")
+      try {
+        const [
+          highEpssPage,
+          internetFacingCriticalPage,
+          epssLowPage,
+          epssMediumPage,
+          epssHighPage,
+          epssCriticalPage,
+        ] = await Promise.all([
+          FindingsService.readProjectFindings({
+            direction: "desc",
+            epss_min: 0.7,
+            limit: 1,
+            offset: 0,
+            project_id: selectedProjectId,
+            sort: "operational",
+          }),
+          FindingsService.readProjectFindings({
+            direction: "desc",
+            exposure: "internet-facing",
+            limit: 1,
+            offset: 0,
+            priority: "critical",
+            project_id: selectedProjectId,
+            sort: "operational",
+          }),
+          FindingsService.readProjectFindings({
+            direction: "desc",
+            epss_max: 0.25,
+            epss_min: 0,
+            limit: 1,
+            offset: 0,
+            project_id: selectedProjectId,
+            sort: "operational",
+          }),
+          FindingsService.readProjectFindings({
+            direction: "desc",
+            epss_max: 0.5,
+            epss_min: 0.25,
+            limit: 1,
+            offset: 0,
+            project_id: selectedProjectId,
+            sort: "operational",
+          }),
+          FindingsService.readProjectFindings({
+            direction: "desc",
+            epss_max: 0.7,
+            epss_min: 0.5,
+            limit: 1,
+            offset: 0,
+            project_id: selectedProjectId,
+            sort: "operational",
+          }),
+          FindingsService.readProjectFindings({
+            direction: "desc",
+            epss_min: 0.7,
+            limit: 1,
+            offset: 0,
+            project_id: selectedProjectId,
+            sort: "operational",
+          }),
+        ])
+        if (isMounted) {
+          setDashboardSignalCounts({
+            highEpss: highEpssPage.count ?? 0,
+            internetFacingCriticals: internetFacingCriticalPage.count ?? 0,
+            epssBuckets: {
+              low: epssLowPage.count ?? 0,
+              medium: epssMediumPage.count ?? 0,
+              high: epssHighPage.count ?? 0,
+              critical: epssCriticalPage.count ?? 0,
+            },
+          })
+        }
+      } catch (caught) {
+        if (caught instanceof ApiError && [401, 403].includes(caught.status)) {
+          clearAccessToken()
+          await navigate({ to: "/login" })
+          return
+        }
+        if (isMounted) {
+          setDashboardSignalError(
+            apiErrorMessage("Signal counts unavailable", caught),
+          )
+          setDashboardSignalCounts({
+            highEpss: 0,
+            internetFacingCriticals: 0,
+            epssBuckets: {
+              low: 0,
+              medium: 0,
+              high: 0,
+              critical: 0,
+            },
+          })
+        }
+      } finally {
+        if (isMounted) {
+          setDashboardSignalLoading(false)
+        }
+      }
+    }
+
+    void loadDashboardSignals()
+    return () => {
+      isMounted = false
+    }
+  }, [findingReloadKey, isDashboard, navigate, selectedProjectId])
+
+  useEffect(() => {
+    setFindingDetailTab("evidence")
   }, [findingDetailId])
 
   useEffect(() => {
@@ -2122,6 +2967,15 @@ export function App() {
       setFindingDetailLoading(true)
       setFindingDetailError("")
       setFindingExplanationWarning("")
+      const demoDetail = demoFindingDetailForId(findingDetailId)
+      if (demoDetail) {
+        if (isMounted) {
+          setFindingDetail(demoDetail)
+          setFindingExplanation(demoFindingExplanationForDetail(demoDetail))
+          setFindingDetailLoading(false)
+        }
+        return
+      }
       try {
         const detail = await FindingsService.readFinding({
           finding_id: findingDetailId,
@@ -2173,6 +3027,17 @@ export function App() {
       isMounted = false
     }
   }, [findingDetailId, findingDetailReloadKey, navigate])
+
+  function selectProject(projectId: string) {
+    setSelectedProjectId(projectId)
+    setDeleteConfirmed(false)
+    setEditProjectId("")
+  }
+
+  function _openProjectRoute(projectId: string, destination: string) {
+    selectProject(projectId)
+    void navigate({ to: destination })
+  }
 
   async function refreshProjects(preferredProjectId?: string) {
     const projectPage = await ProjectsService.readProjects()
@@ -2281,7 +3146,7 @@ export function App() {
     setFindingDirection(direction)
   }
 
-  function updateFindingPageSize(size: number) {
+  function _updateFindingPageSize(size: number) {
     const supportedSize = findingPageSizes.includes(
       size as (typeof findingPageSizes)[number],
     )
@@ -2299,7 +3164,7 @@ export function App() {
     setFindingDetailReloadKey((key) => key + 1)
   }
 
-  function refreshReports() {
+  function _refreshReports() {
     setReportsReloadKey((key) => key + 1)
   }
 
@@ -2345,12 +3210,16 @@ export function App() {
   }
 
   async function verifyEvidenceReport(report: ReportPublic) {
+    setVerificationLoading(true)
+    setVerificationReport(null)
+    setVerificationReportTarget(report)
     setReportActionError("")
     setReportActionMessage("")
     try {
       const verification = await ReportsService.verifyReport({
         report_id: report.id,
       })
+      setVerificationReport(verification)
       const summary = objectRecord(verification.summary)
       setReportActionMessage(
         summary.ok
@@ -2361,6 +3230,10 @@ export function App() {
       setReportActionError(
         apiErrorMessage("Evidence verification failed", caught),
       )
+      setVerificationReport(null)
+      setVerificationReportTarget(null)
+    } finally {
+      setVerificationLoading(false)
     }
   }
 
@@ -2664,2992 +3537,1350 @@ export function App() {
     }
   }
 
-  async function signOut() {
-    clearAccessToken()
-    await navigate({ to: "/login" })
-  }
-
   return (
-    <div className="app-shell">
-      <aside className="sidebar" aria-label="Workbench sidebar">
-        <div className="brand">
-          <div className="brand-mark" aria-hidden="true">
-            VP
-          </div>
-          <div>
-            <strong>Vuln Prioritizer</strong>
-            <span>Workbench</span>
-          </div>
-        </div>
-        <nav className="nav-list" aria-label="Workbench navigation">
-          {workbenchNavigation.map((entry) => (
-            <Link
-              aria-current={
-                isActivePath(currentPath, entry.to) ? "page" : undefined
-              }
-              className={
-                isActivePath(currentPath, entry.to)
-                  ? "nav-item active"
-                  : "nav-item"
-              }
-              key={entry.label}
-              to={entry.to}
-            >
-              <entry.icon aria-hidden="true" size={18} />
-              <span>{entry.label}</span>
-            </Link>
-          ))}
-        </nav>
-        <div className="sidebar-footer">
-          <KeyRound aria-hidden="true" size={18} />
-          <span>{currentUserLabel(currentUser)}</span>
-        </div>
-      </aside>
+    <ProductAppShell
+      activePath={currentPath}
+      currentUser={currentUser}
+      eyebrow={routeDetail.eyebrow}
+      hideStatusStrip={currentPath === "/" || isFindingsList || isFindingDetail}
+      providerStatus={providerStatus}
+      status={status}
+      statusError={statusError}
+      title={routeDetail.title}
+    >
+      {currentPath === "/" ? (
+        <RiskOperationsDashboard
+          projects={projects}
+          selectedProject={selectedProject}
+          selectedProjectId={selectedProjectId}
+          onProjectChange={setSelectedProjectId}
+          projectListLoading={projectListLoading}
+          projectSummary={projectSummary}
+          summaryLoading={summaryLoading}
+          providerStatus={providerStatus}
+          providerStatusLoading={providerStatusLoading}
+          providerStatusError={providerStatusError || statusError}
+          signalCounts={dashboardSignalCounts}
+          signalLoading={dashboardSignalLoading}
+          signalError={dashboardSignalError}
+          findings={dashboardFindings}
+          findingsLoading={dashboardFindingsLoading}
+          findingsError={dashboardFindingsError}
+          epssBuckets={epssBucketItems}
+          projectRuns={projectRuns}
+          runsLoading={runsLoading}
+          topServiceRows={topServiceChartRows}
+          topServiceSource={topServiceSource}
+          governanceLoading={governanceLoading}
+          governanceError={governanceError}
+          onRefresh={() => {
+            void refreshProjects(selectedProjectId)
+            refreshFindings()
+          }}
+        />
+      ) : null}
 
-      <main className="workspace">
-        <header className="topbar">
-          <div>
-            <span className="eyebrow">{routeDetail.eyebrow}</span>
-            <h1>{routeDetail.title}</h1>
-          </div>
-          <div
-            className="status-strip"
-            role="status"
-            aria-label="Workspace health"
-          >
-            <span className="status-dot" aria-hidden="true" />
-            <span>
-              {status?.status === "ok" ? "Backend adapter online" : statusError}
-            </span>
-          </div>
-          <button
-            className="icon-button"
-            type="button"
-            aria-label="Sign out"
-            onClick={signOut}
-          >
-            <LogOut aria-hidden="true" size={18} />
-          </button>
-        </header>
-
+      {isFindingsList ? (
         <section
-          className="template-status"
-          aria-label="Template backend status"
+          aria-label="Findings Remediation Queue"
+          className="mx-auto w-full max-w-screen-2xl px-4 py-6 sm:px-6"
         >
-          <div>
-            <span>Application</span>
-            <strong>{status?.app ?? "Vuln Prioritizer Workbench"}</strong>
-          </div>
-          <div>
-            <span>Core</span>
-            <strong>
-              {status?.core_package ?? "vuln_prioritizer"}{" "}
-              {status?.core_version ?? ""}
-            </strong>
-          </div>
-          <div>
-            <span>Migration</span>
-            <strong>{status?.migration.phase ?? "loading"}</strong>
-          </div>
-          <div>
-            <span>Legacy mount</span>
-            <strong>
-              {status?.migration.legacy_workbench_mounted
-                ? "enabled"
-                : "disabled"}
-            </strong>
-          </div>
+          <RemediationQueue
+            activeFindingFilters={activeFindingFilters}
+            findingAssetId={findingAssetId}
+            findingAssetKey={findingAssetKey}
+            findingCount={findingCount}
+            findingDirection={findingDirection}
+            findingFilters={findingFilters}
+            findingOffset={findingOffset}
+            findingPageSize={findingPageSize}
+            findingSort={findingSort}
+            findings={findings}
+            findingsError={findingsError}
+            findingsLoading={findingsLoading}
+            onClearFilters={clearFindingFilters}
+            onDirectionChange={updateFindingDirection}
+            onFilterChange={updateFindingFilter}
+            onPageNext={() =>
+              setFindingOffset((offset) => offset + findingPageSize)
+            }
+            onPagePrev={() =>
+              setFindingOffset((offset) =>
+                Math.max(0, offset - findingPageSize),
+              )
+            }
+            onPageSizeChange={(size) => {
+              const s = findingPageSizes.includes(
+                size as (typeof findingPageSizes)[number],
+              )
+                ? (size as (typeof findingPageSizes)[number])
+                : 10
+              setFindingOffset(0)
+              setFindingPageSize(s)
+            }}
+            onProjectChange={(id) => {
+              setFindingOffset(0)
+              setSelectedProjectId(id)
+            }}
+            onSortChange={updateFindingSort}
+            projectListLoading={projectListLoading}
+            projectSummary={projectSummary}
+            projects={projects}
+            selectedProject={selectedProject}
+            selectedProjectId={selectedProjectId}
+          />
         </section>
+      ) : null}
 
-        {currentPath === "/" ? (
-          <>
-            <section
-              className="dashboard-toolbar"
-              aria-label="Dashboard project context"
-            >
-              <label className="project-selector">
-                <span>Current project</span>
-                <select
-                  aria-label="Current project"
-                  disabled={dashboardLoading || projects.length === 0}
-                  onChange={(event) => setSelectedProjectId(event.target.value)}
-                  value={selectedProjectId}
-                >
-                  {projects.length === 0 ? (
-                    <option value="">No projects</option>
-                  ) : null}
-                  {projects.map((project) => (
-                    <option key={project.id} value={project.id}>
-                      {project.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <div className="project-context">
-                <span>Summary source</span>
-                <strong>
-                  {selectedProject?.name ??
-                    (projectListLoading ? "Loading" : "No project selected")}
-                </strong>
-              </div>
-            </section>
-
-            <section className="metric-grid" aria-label="Dashboard summary">
-              {dashboardCards.map((card) => (
-                <article
-                  aria-label={`${card.label} summary card`}
-                  className={`metric-card tone-${card.tone}`}
-                  key={card.label}
-                >
-                  <card.icon aria-hidden="true" size={20} />
-                  <div>
-                    <span>{card.label}</span>
-                    <strong>{card.value}</strong>
-                    <small>{card.detail}</small>
-                  </div>
-                </article>
-              ))}
-            </section>
-          </>
-        ) : null}
-
-        {currentPath === "/settings" ? (
-          <section className="settings-summary" aria-label="User Settings">
-            {settingsSummary(currentUser).map((entry) => (
-              <div key={entry.label}>
-                <span>{entry.label}</span>
-                <strong>{entry.value}</strong>
-              </div>
-            ))}
-          </section>
-        ) : null}
-
+      {currentPath !== "/" && !isFindingsList && (
         <section
           className={
-            currentPath === "/findings" ||
-            currentPath === "/waivers" ||
-            currentPath === "/providers" ||
-            currentPath === "/reports"
-              ? "content-grid wide-workspace"
-              : "content-grid"
+            isFindingDetail
+              ? "mx-auto w-full max-w-[2040px] px-4 py-6 sm:px-6 lg:px-8 xl:px-10 2xl:px-12"
+              : currentPath === "/findings" ||
+                  currentPath === "/waivers" ||
+                  currentPath === "/providers" ||
+                  currentPath === "/settings" ||
+                  currentPath === "/projects" ||
+                  currentPath === "/imports" ||
+                  currentPath === "/reports"
+                ? "mx-auto w-full max-w-screen-2xl px-4 sm:px-6 py-6"
+                : "mx-auto w-full max-w-5xl px-4 sm:px-6 py-6"
           }
         >
-          <div className="work-panel">
-            <div className="panel-header">
-              <div>
-                <h2>
-                  {isFindingDetail ? "Finding Detail" : routeDetail.panelTitle}
-                </h2>
-                <span>
-                  {isFindingDetail
-                    ? "Overview, source occurrences, and decision rationale"
-                    : routeDetail.panelDetail}
-                </span>
-              </div>
-              <button
-                className="icon-button"
-                type="button"
-                aria-label={
-                  currentPath === "/projects"
-                    ? "Refresh projects"
-                    : isFindingDetail
-                      ? "Refresh finding detail"
-                      : currentPath === "/findings"
-                        ? "Refresh findings"
+          <div className="flex flex-col gap-6">
+            {!isFindingsList &&
+              !isFindingDetail &&
+              currentPath !== "/projects" &&
+              currentPath !== "/imports" &&
+              currentPath !== "/reports" &&
+              currentPath !== "/settings" &&
+              currentPath !== "/providers" && (
+                <div className="flex items-start justify-between gap-4 pb-4 border-b">
+                  <div>
+                    <h2 className="text-xl font-bold tracking-tight text-foreground">
+                      {isFindingDetail
+                        ? "Finding Detail"
+                        : routeDetail.panelTitle}
+                    </h2>
+                    <p className="mt-0.5 text-sm text-muted-foreground">
+                      {isFindingDetail
+                        ? "Overview, source occurrences, and decision rationale"
+                        : routeDetail.panelDetail}
+                    </p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    type="button"
+                    aria-label={
+                      isFindingDetail
+                        ? "Refresh finding detail"
                         : currentPath === "/waivers"
                           ? "Refresh waivers"
-                          : currentPath === "/providers"
-                            ? "Refresh provider status"
-                            : currentPath === "/reports"
-                              ? "Refresh reports"
-                              : "Refresh queue"
-                }
-                onClick={() => {
-                  if (currentPath === "/projects") {
-                    void refreshProjects(selectedProjectId)
-                  }
-                  if (isFindingDetail) {
-                    refreshFindingDetail()
-                  } else if (currentPath === "/findings") {
-                    refreshFindings()
-                  } else if (currentPath === "/waivers") {
-                    refreshWaivers()
-                  } else if (currentPath === "/providers") {
-                    void refreshProviderStatus()
-                  } else if (currentPath === "/reports") {
-                    void refreshProjectRuns(selectedRunId)
-                    refreshReports()
-                  }
-                }}
-              >
-                <Activity aria-hidden="true" size={18} />
-              </button>
-            </div>
+                          : "Refresh queue"
+                    }
+                    onClick={() => {
+                      if (isFindingDetail) {
+                        refreshFindingDetail()
+                      } else if (currentPath === "/waivers") {
+                        refreshWaivers()
+                      }
+                    }}
+                  >
+                    <Activity aria-hidden="true" size={18} />
+                  </Button>
+                </div>
+              )}
 
             {currentPath === "/projects" ? (
-              <section
-                className="projects-workflow"
-                aria-label="Projects workflow"
-              >
-                <section
-                  className="project-form-panel"
-                  aria-label="Create Project form"
-                >
-                  <h3>Create Project</h3>
-                  <form onSubmit={createProject}>
-                    <label>
-                      <span>Project name</span>
-                      <input
-                        maxLength={255}
-                        onChange={(event) =>
-                          setCreateProjectForm((form) => ({
-                            ...form,
-                            name: event.target.value,
-                          }))
-                        }
-                        value={createProjectForm.name}
-                      />
-                    </label>
-                    <label>
-                      <span>Description</span>
-                      <textarea
-                        maxLength={4096}
-                        onChange={(event) =>
-                          setCreateProjectForm((form) => ({
-                            ...form,
-                            description: event.target.value,
-                          }))
-                        }
-                        rows={3}
-                        value={createProjectForm.description}
-                      />
-                    </label>
-                    {createProjectError ? (
-                      <p className="form-error">{createProjectError}</p>
-                    ) : null}
-                    <button
-                      className="primary-action"
-                      disabled={projectActionLoading}
-                      type="submit"
-                    >
-                      Create Project
-                    </button>
-                  </form>
-                </section>
-
-                {projectActionError ? (
-                  <p className="dashboard-alert" role="alert">
-                    {projectActionError}
-                  </p>
-                ) : null}
-                {projectActionMessage ? (
-                  <p className="dashboard-state" role="status">
-                    {projectActionMessage}
-                  </p>
-                ) : null}
-
-                <section
-                  className="project-list-panel"
-                  aria-label="Projects list"
-                >
-                  {projectListLoading ? (
-                    <p className="dashboard-state" role="status">
-                      Loading projects
-                    </p>
-                  ) : null}
-                  {!projectListLoading && projects.length === 0 ? (
-                    <section
-                      className="dashboard-empty"
-                      aria-label="Projects empty state"
-                    >
-                      <h3>No projects yet</h3>
-                      <p>
-                        Create the first project to start importing CVEs and
-                        findings.
-                      </p>
-                    </section>
-                  ) : null}
-                  {projects.length > 0 ? (
-                    <ul className="project-list">
-                      {projects.map((project) => (
-                        <li key={project.id}>
-                          <button
-                            aria-current={
-                              project.id === selectedProjectId
-                                ? "true"
-                                : undefined
-                            }
-                            className={
-                              project.id === selectedProjectId
-                                ? "project-list-item active"
-                                : "project-list-item"
-                            }
-                            onClick={() => {
-                              setSelectedProjectId(project.id)
-                              setDeleteConfirmed(false)
-                              setEditProjectId("")
-                            }}
-                            type="button"
-                          >
-                            <strong>{project.name}</strong>
-                            <span>
-                              {project.description || "No description"}
-                            </span>
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : null}
-                </section>
-
-                {selectedProject ? (
-                  <section
-                    className="project-detail"
-                    aria-label="Project detail"
-                  >
-                    <div className="project-detail-header">
-                      <div>
-                        <span>Selected project</span>
-                        <h3>{selectedProject.name}</h3>
-                        <p>{selectedProject.description || "No description"}</p>
-                      </div>
-                      <button
-                        className="secondary-action"
-                        onClick={() => startEditProject(selectedProject)}
-                        type="button"
-                      >
-                        Edit
-                      </button>
-                    </div>
-                    <dl className="project-meta">
-                      <div>
-                        <dt>Created</dt>
-                        <dd>{formatDateTime(selectedProject.created_at)}</dd>
-                      </div>
-                      <div>
-                        <dt>Updated</dt>
-                        <dd>{formatDateTime(selectedProject.updated_at)}</dd>
-                      </div>
-                    </dl>
-
-                    {editProjectId === selectedProject.id ? (
-                      <form
-                        className="project-edit-form"
-                        onSubmit={saveProject}
-                      >
-                        <label>
-                          <span>Edit project name</span>
-                          <input
-                            maxLength={255}
-                            onChange={(event) =>
-                              setEditProjectForm((form) => ({
-                                ...form,
-                                name: event.target.value,
-                              }))
-                            }
-                            value={editProjectForm.name}
-                          />
-                        </label>
-                        <label>
-                          <span>Edit description</span>
-                          <textarea
-                            maxLength={4096}
-                            onChange={(event) =>
-                              setEditProjectForm((form) => ({
-                                ...form,
-                                description: event.target.value,
-                              }))
-                            }
-                            rows={3}
-                            value={editProjectForm.description}
-                          />
-                        </label>
-                        <div className="project-actions">
-                          <button
-                            className="primary-action"
-                            disabled={projectActionLoading}
-                            type="submit"
-                          >
-                            Save Project
-                          </button>
-                          <button
-                            className="secondary-action"
-                            onClick={() => setEditProjectId("")}
-                            type="button"
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      </form>
-                    ) : null}
-
-                    <div className="delete-confirmation">
-                      <label>
-                        <input
-                          checked={deleteConfirmed}
-                          onChange={(event) =>
-                            setDeleteConfirmed(event.target.checked)
-                          }
-                          type="checkbox"
-                        />
-                        <span>Confirm deletion for this project</span>
-                      </label>
-                      <button
-                        className="danger-action"
-                        disabled={projectActionLoading || !deleteConfirmed}
-                        onClick={() => void deleteProject(selectedProject)}
-                        type="button"
-                      >
-                        Delete Project
-                      </button>
-                    </div>
-                  </section>
-                ) : null}
-              </section>
+              <ProjectsWorkbench
+                createProjectError={createProjectError}
+                createProjectForm={createProjectForm}
+                deleteConfirmed={deleteConfirmed}
+                editProjectForm={editProjectForm}
+                editProjectId={editProjectId}
+                onCancelEditProject={() => setEditProjectId("")}
+                onCreateProject={createProject}
+                onCreateProjectDescriptionChange={(description) =>
+                  setCreateProjectForm((form) => ({
+                    ...form,
+                    description,
+                  }))
+                }
+                onCreateProjectNameChange={(name) =>
+                  setCreateProjectForm((form) => ({
+                    ...form,
+                    name,
+                  }))
+                }
+                onDeleteConfirmedChange={setDeleteConfirmed}
+                onDeleteProject={(project) => void deleteProject(project)}
+                onEditProjectDescriptionChange={(description) =>
+                  setEditProjectForm((form) => ({
+                    ...form,
+                    description,
+                  }))
+                }
+                onEditProjectNameChange={(name) =>
+                  setEditProjectForm((form) => ({
+                    ...form,
+                    name,
+                  }))
+                }
+                onRefreshProjects={() =>
+                  void refreshProjects(selectedProjectId)
+                }
+                onSaveProject={saveProject}
+                onSelectProject={(projectId) => {
+                  setSelectedProjectId(projectId)
+                  setDeleteConfirmed(false)
+                  setEditProjectId("")
+                }}
+                onStartEditProject={startEditProject}
+                projectActionError={projectActionError}
+                projectActionLoading={projectActionLoading}
+                projectActionMessage={projectActionMessage}
+                projectListLoading={projectListLoading}
+                projectSummary={projectSummary}
+                projectSummaryById={projectSummaryById}
+                projects={projects}
+                selectedProject={selectedProject}
+                selectedProjectId={selectedProjectId}
+              />
             ) : currentPath === "/imports" ? (
-              <section className="import-wizard" aria-label="Import wizard">
-                <form className="import-form" onSubmit={submitImport}>
-                  <label>
-                    <span>Project</span>
-                    <select
-                      aria-label="Import project"
-                      disabled={projectListLoading || projects.length === 0}
-                      name="importProject"
-                      onChange={(event) =>
-                        setSelectedProjectId(event.target.value)
-                      }
-                      value={selectedProjectId}
-                    >
-                      {projects.length === 0 ? (
-                        <option value="">No projects</option>
-                      ) : null}
-                      {projects.map((project) => (
-                        <option key={project.id} value={project.id}>
-                          {project.name}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label>
-                    <span>Input type</span>
-                    <select
-                      aria-label="Input type"
-                      onChange={(event) =>
-                        setImportWizard((state) => ({
-                          ...state,
-                          inputType: event.target.value as ImportFormat,
-                        }))
-                      }
-                      value={importWizard.inputType}
-                    >
-                      {mvpImportFormats.map((format) => (
-                        <option key={format.value} value={format.value}>
-                          {format.label}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label>
-                    <span>Import file</span>
-                    <input
-                      accept={importAccept(importWizard.inputType)}
-                      aria-label="Import file"
-                      name="importFile"
-                      onChange={(event) =>
-                        setImportWizard((state) => ({
-                          ...state,
-                          file: event.target.files?.[0] ?? null,
-                        }))
-                      }
-                      type="file"
-                    />
-                  </label>
-                  <label>
-                    <span>Asset context CSV</span>
-                    <input
-                      accept=".csv,text/csv"
-                      aria-label="Asset context CSV"
-                      name="assetContextFile"
-                      onChange={(event) =>
-                        setImportWizard((state) => ({
-                          ...state,
-                          assetContextFile: event.target.files?.[0] ?? null,
-                        }))
-                      }
-                      type="file"
-                    />
-                  </label>
-                  <label>
-                    <span>OpenVEX/VEX JSON</span>
-                    <input
-                      accept=".json,application/json"
-                      aria-label="OpenVEX/VEX JSON"
-                      name="vexFile"
-                      onChange={(event) =>
-                        setImportWizard((state) => ({
-                          ...state,
-                          vexFile: event.target.files?.[0] ?? null,
-                        }))
-                      }
-                      type="file"
-                    />
-                  </label>
-                  <button
-                    className="primary-action"
-                    disabled={importLoading || projects.length === 0}
-                    type="submit"
-                  >
-                    {importLoading ? "Uploading" : "Upload Import"}
-                  </button>
-                </form>
-
-                <section
-                  className="format-list"
-                  aria-label="Supported MVP formats"
-                >
-                  {mvpImportFormats.map((format) => (
-                    <article key={format.value}>
-                      <strong>{format.label}</strong>
-                      <span>{format.value}</span>
-                      <p>{format.detail}</p>
-                    </article>
-                  ))}
-                </section>
-
-                <section
-                  className="security-notes"
-                  aria-label="Upload security notes"
-                >
-                  <h3>Upload Security Notes</h3>
-                  <ul>
-                    <li>Files are parsed locally by the Workbench backend.</li>
-                    <li>
-                      Uploads must match the selected format and extension.
-                    </li>
-                    <li>
-                      Optional asset context uploads must be CSV files with
-                      target and asset_id columns.
-                    </li>
-                    <li>
-                      Optional OpenVEX/VEX sidecars must be JSON documents.
-                    </li>
-                    <li>Filename/path traversal is rejected before storage.</li>
-                    <li>
-                      The import wizard does not run scanners or network probes.
-                    </li>
-                  </ul>
-                </section>
-
-                {importError ? (
-                  <p className="dashboard-alert" role="alert">
-                    {importError}
-                  </p>
-                ) : null}
-                {importLoading ? (
-                  <p className="dashboard-state" role="status">
-                    Uploading and parsing import file
-                  </p>
-                ) : null}
-
-                {projects.length === 0 && !projectListLoading ? (
-                  <section
-                    className="dashboard-empty"
-                    aria-label="Import empty state"
-                  >
-                    <h3>No project available</h3>
-                    <p>Create a project before uploading import files.</p>
-                    <Link className="primary-action" to="/projects">
-                      Projects
-                    </Link>
-                  </section>
-                ) : null}
-
-                {importRunSummary ? (
-                  <section className="import-result" aria-label="Import result">
-                    <div>
-                      <span>Run status</span>
-                      <strong>{runStatusLabel(importRunSummary.status)}</strong>
-                    </div>
-                    <div>
-                      <span>Created findings</span>
-                      <strong>{importRunSummary.created_findings ?? 0}</strong>
-                    </div>
-                    <div>
-                      <span>Updated findings</span>
-                      <strong>{importRunSummary.updated_findings ?? 0}</strong>
-                    </div>
-                    <div>
-                      <span>Ignored lines</span>
-                      <strong>{importRunSummary.ignored_lines ?? 0}</strong>
-                    </div>
-                  </section>
-                ) : importRun ? (
-                  <section className="import-result" aria-label="Import result">
-                    <div>
-                      <span>Run status</span>
-                      <strong>{runStatusLabel(importRun.status)}</strong>
-                    </div>
-                    <div>
-                      <span>Run id</span>
-                      <strong>{importRun.id.slice(0, 8)}</strong>
-                    </div>
-                  </section>
-                ) : null}
-
-                {importParseErrors.length > 0 ? (
-                  <section className="parse-errors" aria-label="Parser errors">
-                    <h3>Parser errors</h3>
-                    <table>
-                      <thead>
-                        <tr>
-                          <th>Line</th>
-                          <th>Field</th>
-                          <th>Value</th>
-                          <th>Message</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {importParseErrors.map((error) => (
-                          <tr
-                            key={[
-                              error.filename,
-                              error.line,
-                              error.field,
-                              error.value,
-                              error.message,
-                            ].join(":")}
-                          >
-                            <td>{error.line ?? "N.A."}</td>
-                            <td>{error.field ?? "N.A."}</td>
-                            <td>{error.value ?? "N.A."}</td>
-                            <td>{error.message}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </section>
-                ) : null}
-
-                <section className="runs-browser" aria-label="Import runs">
-                  <div className="runs-list-panel">
-                    <div className="runs-section-header">
-                      <div>
-                        <h3>Historical Runs</h3>
-                        <span>
-                          {selectedProject
-                            ? selectedProject.name
-                            : "No project selected"}
-                        </span>
-                      </div>
-                      <button
-                        className="secondary-action"
-                        disabled={runsLoading || !selectedProjectId}
-                        onClick={() => void refreshProjectRuns(selectedRunId)}
-                        type="button"
-                      >
-                        Refresh
-                      </button>
-                    </div>
-                    {runsError ? (
-                      <p className="dashboard-alert" role="alert">
-                        {runsError}
-                      </p>
-                    ) : null}
-                    {runsLoading ? (
-                      <p className="dashboard-state" role="status">
-                        Loading import runs
-                      </p>
-                    ) : null}
-                    {!runsLoading && projectRuns.length === 0 ? (
-                      <section
-                        className="dashboard-empty compact-empty"
-                        aria-label="Runs empty state"
-                      >
-                        <h3>No import runs yet</h3>
-                        <p>Upload a supported file to create run history.</p>
-                      </section>
-                    ) : null}
-                    {projectRuns.length > 0 ? (
-                      <ul className="runs-list">
-                        {projectRuns.map((run) => (
-                          <li key={run.id}>
-                            <button
-                              aria-current={
-                                selectedRunId === run.id ? "true" : undefined
-                              }
-                              className={
-                                selectedRunId === run.id
-                                  ? "run-list-item active"
-                                  : "run-list-item"
-                              }
-                              onClick={() => setSelectedRunId(run.id)}
-                              type="button"
-                            >
-                              <span
-                                className={`run-status ${runStatusTone(
-                                  run.status,
-                                )}`}
-                              >
-                                {runStatusLabel(run.status)}
-                              </span>
-                              <strong>{runFileLabel(run)}</strong>
-                              <span>{run.input_type}</span>
-                              <small>
-                                {formatDateTime(run.started_at ?? "")}
-                              </small>
-                            </button>
-                          </li>
-                        ))}
-                      </ul>
-                    ) : null}
-                  </div>
-
-                  <section className="run-detail-panel" aria-label="Run detail">
-                    <div className="runs-section-header">
-                      <div>
-                        <h3>Run Detail</h3>
-                        <span>
-                          {selectedRunId
-                            ? selectedRunId.slice(0, 8)
-                            : "No run selected"}
-                        </span>
-                      </div>
-                      <Link className="secondary-action" to="/findings">
-                        Findings
-                      </Link>
-                    </div>
-                    {runDetailError ? (
-                      <p className="dashboard-alert" role="alert">
-                        {runDetailError}
-                      </p>
-                    ) : null}
-                    {runDetailLoading ? (
-                      <p className="dashboard-state" role="status">
-                        Loading run detail
-                      </p>
-                    ) : null}
-                    {!runDetailLoading && !selectedRunId ? (
-                      <section
-                        className="dashboard-empty compact-empty"
-                        aria-label="No run selected"
-                      >
-                        <h3>No run selected</h3>
-                        <p>
-                          Select a historical import run to inspect details.
-                        </p>
-                      </section>
-                    ) : null}
-                    {selectedRun && selectedRunSummary ? (
-                      <>
-                        <dl className="run-facts">
-                          <div>
-                            <dt>Status</dt>
-                            <dd>
-                              <span
-                                className={`run-status ${runStatusTone(
-                                  selectedRunSummary.status,
-                                )}`}
-                              >
-                                {runStatusLabel(selectedRunSummary.status)}
-                              </span>
-                            </dd>
-                          </div>
-                          <div>
-                            <dt>Input type</dt>
-                            <dd>{selectedRunSummary.input_type}</dd>
-                          </div>
-                          <div>
-                            <dt>Filename</dt>
-                            <dd>{runFileLabel(selectedRunSummary)}</dd>
-                          </div>
-                          <div>
-                            <dt>Started</dt>
-                            <dd>
-                              {formatDateTime(selectedRunSummary.started_at)}
-                            </dd>
-                          </div>
-                          <div>
-                            <dt>Finished</dt>
-                            <dd>
-                              {selectedRunSummary.finished_at
-                                ? formatDateTime(selectedRunSummary.finished_at)
-                                : "N.A."}
-                            </dd>
-                          </div>
-                          <div>
-                            <dt>Provider snapshot</dt>
-                            <dd>
-                              {selectedRunSummary.provider_snapshot_id ??
-                                "N.A."}
-                            </dd>
-                          </div>
-                        </dl>
-
-                        <section className="run-counts" aria-label="Run counts">
-                          <div>
-                            <span>Created</span>
-                            <strong>
-                              {selectedRunSummary.created_findings ?? 0}
-                            </strong>
-                          </div>
-                          <div>
-                            <span>Updated</span>
-                            <strong>
-                              {selectedRunSummary.updated_findings ?? 0}
-                            </strong>
-                          </div>
-                          <div>
-                            <span>Findings</span>
-                            <strong>
-                              {selectedRunSummary.finding_count ?? 0}
-                            </strong>
-                          </div>
-                          <div>
-                            <span>Ignored</span>
-                            <strong>
-                              {selectedRunSummary.ignored_lines ?? 0}
-                            </strong>
-                          </div>
-                        </section>
-
-                        {selectedRunSummary.status === "failed" ? (
-                          <section
-                            className="failure-cause"
-                            aria-label="Run failure cause"
-                          >
-                            <h4>Failure Cause</h4>
-                            <p>
-                              {failedRunCause(selectedRun, selectedRunSummary)}
-                            </p>
-                            <pre>
-                              {jsonPreview(selectedRunSummary.error_json)}
-                            </pre>
-                          </section>
-                        ) : null}
-
-                        <section
-                          className="upload-metadata"
-                          aria-label="Upload metadata"
-                        >
-                          <h4>Upload Metadata</h4>
-                          {metadataRows(selectedRunSummary.input_upload)
-                            .length > 0 ? (
-                            <dl>
-                              {metadataRows(
-                                selectedRunSummary.input_upload,
-                              ).map(([key, value]) => (
-                                <div key={key}>
-                                  <dt>{key}</dt>
-                                  <dd>{String(value)}</dd>
-                                </div>
-                              ))}
-                            </dl>
-                          ) : (
-                            <p>No upload metadata recorded.</p>
-                          )}
-                        </section>
-
-                        <section
-                          className="parse-errors"
-                          aria-label="Run parser errors"
-                        >
-                          <h3>Parse Errors</h3>
-                          {(selectedRunSummary.parse_errors ?? []).length >
-                          0 ? (
-                            <table>
-                              <thead>
-                                <tr>
-                                  <th>Line</th>
-                                  <th>Field</th>
-                                  <th>Value</th>
-                                  <th>Message</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {(selectedRunSummary.parse_errors ?? []).map(
-                                  (error) => (
-                                    <tr
-                                      key={[
-                                        error.filename,
-                                        error.line,
-                                        error.field,
-                                        error.value,
-                                        error.message,
-                                      ].join(":")}
-                                    >
-                                      <td>{error.line ?? "N.A."}</td>
-                                      <td>{error.field ?? "N.A."}</td>
-                                      <td>{error.value ?? "N.A."}</td>
-                                      <td>{error.message}</td>
-                                    </tr>
-                                  ),
-                                )}
-                              </tbody>
-                            </table>
-                          ) : (
-                            <p>No parser errors recorded.</p>
-                          )}
-                        </section>
-                      </>
-                    ) : null}
-                  </section>
-                </section>
-              </section>
+              <ImportsWorkbench
+                importError={importError}
+                importLoading={importLoading}
+                importParseErrors={importParseErrors}
+                importRun={importRun}
+                importRunSummary={importRunSummary}
+                importWizard={importWizard}
+                onAssetContextFileChange={(file) =>
+                  setImportWizard((state) => ({
+                    ...state,
+                    assetContextFile: file,
+                  }))
+                }
+                onFileChange={(file) =>
+                  setImportWizard((state) => ({ ...state, file }))
+                }
+                onInputTypeChange={(value) =>
+                  setImportWizard((state) => ({
+                    ...state,
+                    inputType: value as ImportFormat,
+                  }))
+                }
+                onProjectChange={setSelectedProjectId}
+                onRefreshRuns={() => void refreshProjectRuns(selectedRunId)}
+                onSelectRun={setSelectedRunId}
+                onSubmit={submitImport}
+                onVexFileChange={(file) =>
+                  setImportWizard((state) => ({ ...state, vexFile: file }))
+                }
+                projectListLoading={projectListLoading}
+                projectRuns={projectRuns}
+                projects={projects}
+                providerStatus={providerStatus}
+                runDetailError={runDetailError}
+                runDetailLoading={runDetailLoading}
+                runsError={runsError}
+                runsLoading={runsLoading}
+                selectedProject={selectedProject}
+                selectedProjectId={selectedProjectId}
+                selectedRun={selectedRun}
+                selectedRunId={selectedRunId}
+                selectedRunSummary={selectedRunSummary}
+                supportedFormats={mvpImportFormats}
+              />
             ) : isWaiversPage ? (
-              <section
-                className="waivers-workflow"
-                aria-label="Waivers workspace"
-              >
-                <section
-                  className="waiver-toolbar"
-                  aria-label="Waiver project context"
-                >
-                  <label>
-                    <span>Project</span>
-                    <select
-                      aria-label="Waivers project"
-                      disabled={projectListLoading || projects.length === 0}
-                      onChange={(event) =>
-                        setSelectedProjectId(event.target.value)
-                      }
-                      value={selectedProjectId}
-                    >
-                      {projects.length === 0 ? (
-                        <option value="">No projects</option>
-                      ) : null}
-                      {projects.map((project) => (
-                        <option key={project.id} value={project.id}>
-                          {project.name}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <div>
-                    <span>Register</span>
-                    <strong>{selectedProject?.name ?? "No project"}</strong>
-                  </div>
-                  <div>
-                    <span>Open waivers</span>
-                    <strong>{waivers.length}</strong>
-                  </div>
-                  <div>
-                    <span>Accepted findings</span>
-                    <strong>
-                      {projectGovernanceRollups?.waiver_debt
-                        ?.accepted_finding_count ??
-                        waivers.reduce(
-                          (total, waiver) =>
-                            total + (waiver.matched_findings ?? 0),
-                          0,
-                        )}
-                    </strong>
-                  </div>
-                </section>
-
-                {waiversError ? (
-                  <p className="dashboard-alert" role="alert">
-                    {waiversError}
-                  </p>
-                ) : null}
-                {waiverActionError ? (
-                  <p className="dashboard-alert" role="alert">
-                    {waiverActionError}
-                  </p>
-                ) : null}
-                {waiverActionMessage ? (
-                  <p className="dashboard-success" role="status">
-                    {waiverActionMessage}
-                  </p>
-                ) : null}
-
-                <section
-                  className="waiver-debt-section"
-                  aria-label="Waiver Debt"
-                >
-                  <div className="detail-section-heading">
-                    <h3>Waiver Debt</h3>
-                    <span>Expired, review-due, and expiring accepted risk</span>
-                  </div>
-                  {governanceError ? (
-                    <p className="dashboard-alert" role="alert">
-                      {governanceError}
-                    </p>
-                  ) : null}
-                  {governanceLoading ? (
-                    <p className="dashboard-state" role="status">
-                      Loading waiver debt
-                    </p>
-                  ) : null}
-                  <dl className="governance-debt-grid">
-                    {waiverDebtSummary.map((row) => (
-                      <div key={row.label}>
-                        <dt>{row.label}</dt>
-                        <dd>
-                          <strong>{row.value}</strong>
-                          <span>{row.detail}</span>
-                        </dd>
-                      </div>
-                    ))}
-                  </dl>
-                  {!governanceLoading &&
-                  !governanceError &&
-                  waiverDebtItems.length === 0 ? (
-                    <p className="attack-summary-empty">
-                      No waiver debt is currently recorded for this project.
-                    </p>
-                  ) : null}
-                  {waiverDebtItems.length > 0 ? (
-                    <ul className="waiver-debt-items">
-                      {waiverDebtItems.map((item) => (
-                        <li key={item.id}>
-                          <div>
-                            <strong>{item.scope}</strong>
-                            <span
-                              className={`waiver-status ${waiverStatusTone(
-                                item.status,
-                              )}`}
-                            >
-                              {labelize(item.status)}
-                            </span>
-                          </div>
-                          <small>
-                            Owner {item.owner} / Matched{" "}
-                            {item.matched_findings ?? 0} / Expires{" "}
-                            {item.expires_at} / Days {item.days_remaining}
-                          </small>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : null}
-                </section>
-
-                <section
-                  className="waiver-create-panel"
-                  aria-label="Create waiver"
-                >
-                  <div className="detail-section-heading">
-                    <h3>Create waiver</h3>
-                    <span>Scope to finding, CVE, asset, or service</span>
-                  </div>
-                  <form className="waiver-form" onSubmit={createWaiver}>
-                    <label>
-                      <span>CVE ID</span>
-                      <input
-                        aria-label="Waiver CVE ID"
-                        onChange={(event) =>
-                          updateWaiverFormField("cveId", event.target.value)
-                        }
-                        placeholder="CVE-2024-3094"
-                        value={waiverForm.cveId}
-                      />
-                    </label>
-                    <label>
-                      <span>Finding ID</span>
-                      <input
-                        aria-label="Waiver finding ID"
-                        onChange={(event) =>
-                          updateWaiverFormField("findingId", event.target.value)
-                        }
-                        placeholder="Optional UUID"
-                        value={waiverForm.findingId}
-                      />
-                    </label>
-                    <label>
-                      <span>Asset ID</span>
-                      <input
-                        aria-label="Waiver asset ID"
-                        onChange={(event) =>
-                          updateWaiverFormField("assetId", event.target.value)
-                        }
-                        placeholder="Optional UUID"
-                        value={waiverForm.assetId}
-                      />
-                    </label>
-                    <label>
-                      <span>Asset key</span>
-                      <input
-                        aria-label="Waiver asset key"
-                        onChange={(event) =>
-                          updateWaiverFormField("assetKey", event.target.value)
-                        }
-                        placeholder="payments-api"
-                        value={waiverForm.assetKey}
-                      />
-                    </label>
-                    <label>
-                      <span>Service</span>
-                      <input
-                        aria-label="Waiver service"
-                        onChange={(event) =>
-                          updateWaiverFormField("service", event.target.value)
-                        }
-                        placeholder="checkout"
-                        value={waiverForm.service}
-                      />
-                    </label>
-                    <label>
-                      <span>Owner</span>
-                      <input
-                        aria-label="Waiver owner"
-                        onChange={(event) =>
-                          updateWaiverFormField("owner", event.target.value)
-                        }
-                        placeholder="risk-owner"
-                        value={waiverForm.owner}
-                      />
-                    </label>
-                    <label className="wide-field">
-                      <span>Reason</span>
-                      <textarea
-                        aria-label="Waiver reason"
-                        onChange={(event) =>
-                          updateWaiverFormField("reason", event.target.value)
-                        }
-                        rows={3}
-                        value={waiverForm.reason}
-                      />
-                    </label>
-                    <label>
-                      <span>Expires</span>
-                      <input
-                        aria-label="Waiver expires at"
-                        onChange={(event) =>
-                          updateWaiverFormField("expiresAt", event.target.value)
-                        }
-                        type="date"
-                        value={waiverForm.expiresAt}
-                      />
-                    </label>
-                    <label>
-                      <span>Review</span>
-                      <input
-                        aria-label="Waiver review at"
-                        onChange={(event) =>
-                          updateWaiverFormField("reviewAt", event.target.value)
-                        }
-                        type="date"
-                        value={waiverForm.reviewAt}
-                      />
-                    </label>
-                    <label>
-                      <span>Approval</span>
-                      <input
-                        aria-label="Waiver approval reference"
-                        onChange={(event) =>
-                          updateWaiverFormField(
-                            "approvalRef",
-                            event.target.value,
-                          )
-                        }
-                        placeholder="CAB-064"
-                        value={waiverForm.approvalRef}
-                      />
-                    </label>
-                    <label>
-                      <span>Ticket URL</span>
-                      <input
-                        aria-label="Waiver ticket URL"
-                        onChange={(event) =>
-                          updateWaiverFormField("ticketUrl", event.target.value)
-                        }
-                        placeholder="https://tracker.example/..."
-                        value={waiverForm.ticketUrl}
-                      />
-                    </label>
-                    <button
-                      className="primary-action"
-                      disabled={
-                        waiverActionLoading ||
-                        projectListLoading ||
-                        projects.length === 0
-                      }
-                      type="submit"
-                    >
-                      Create waiver
-                    </button>
-                  </form>
-                </section>
-
-                <section
-                  className="waiver-register"
-                  aria-label="Risk acceptance register"
-                >
-                  <div className="detail-section-heading">
-                    <h3>Risk acceptance register</h3>
-                    <span>
-                      Accepted risk remains visible after create and expiry.
-                    </span>
-                  </div>
-                  {waiversLoading ? (
-                    <p className="dashboard-state" role="status">
-                      Loading waivers
-                    </p>
-                  ) : null}
-                  {!waiversLoading && waivers.length === 0 ? (
-                    <section
-                      className="dashboard-empty"
-                      aria-label="No waivers empty state"
-                    >
-                      <h3>No waivers yet</h3>
-                      <p>
-                        Create a waiver to mark accepted risk without deleting
-                        or hiding the finding.
-                      </p>
-                    </section>
-                  ) : null}
-                  {waivers.length > 0 ? (
-                    <div className="table-wrap">
-                      <table aria-label="Waivers table">
-                        <thead>
-                          <tr>
-                            <th>Scope</th>
-                            <th>Owner</th>
-                            <th>Status</th>
-                            <th>Expires</th>
-                            <th>Review</th>
-                            <th>Matched</th>
-                            <th>Approval</th>
-                            <th>Action</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {waivers.map((waiver) => (
-                            <tr key={waiver.id}>
-                              <td>
-                                <span className="finding-primary">
-                                  {waiverScopeLabel(waiver)}
-                                </span>
-                                <small>{waiver.reason}</small>
-                              </td>
-                              <td>{waiver.owner}</td>
-                              <td>
-                                <span
-                                  className={`waiver-status ${waiverStatusTone(
-                                    waiver.status,
-                                  )}`}
-                                >
-                                  {labelize(waiver.status)}
-                                </span>
-                              </td>
-                              <td>{waiver.expires_at}</td>
-                              <td>{waiver.review_at ?? "N.A."}</td>
-                              <td>{waiver.matched_findings ?? 0}</td>
-                              <td>
-                                {waiver.approval_ref ??
-                                  waiver.ticket_url ??
-                                  "N.A."}
-                              </td>
-                              <td>
-                                <button
-                                  className="secondary-action"
-                                  disabled={
-                                    waiverActionLoading ||
-                                    waiver.status === "expired"
-                                  }
-                                  onClick={() => void expireWaiver(waiver)}
-                                  type="button"
-                                >
-                                  Expire
-                                </button>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  ) : null}
-                </section>
-              </section>
+              <WaiversWorkbench
+                onCreateWaiver={createWaiver}
+                onExpireWaiver={(waiver) => void expireWaiver(waiver)}
+                onFieldChange={updateWaiverFormField}
+                onProjectChange={setSelectedProjectId}
+                onRefreshWaivers={refreshWaivers}
+                projectListLoading={projectListLoading}
+                projectSummary={projectSummary}
+                projects={projects}
+                selectedProject={selectedProject}
+                selectedProjectId={selectedProjectId}
+                waiverActionError={waiverActionError}
+                waiverActionLoading={waiverActionLoading}
+                waiverActionMessage={waiverActionMessage}
+                waiverDebtItems={waiverDebtItems}
+                waiverDebtSummary={waiverDebtSummary}
+                waiverForm={waiverForm}
+                waivers={waivers}
+                waiversError={waiversError || governanceError}
+                waiversLoading={waiversLoading || governanceLoading}
+              />
             ) : isFindingDetail ? (
               <section
-                className="finding-detail-workflow"
-                aria-label="Finding detail"
+                className="finding-decision-workflow"
+                aria-label="Finding priority decision"
               >
                 <div className="finding-detail-backbar">
-                  <Link
-                    className="secondary-action finding-back-link"
-                    to="/findings"
-                  >
-                    <ArrowLeft aria-hidden="true" size={16} />
-                    <span>Back to Findings</span>
-                  </Link>
+                  <Button variant="outline" size="sm" asChild>
+                    <Link to="/findings">
+                      <ArrowLeft aria-hidden="true" size={16} />
+                      <span>Back to Findings</span>
+                    </Link>
+                  </Button>
                 </div>
 
                 {findingDetailError ? (
-                  <p className="dashboard-alert" role="alert">
+                  <p
+                    className="text-sm text-destructive rounded-md border border-destructive/20 bg-destructive/10 px-3 py-2"
+                    role="alert"
+                  >
                     {findingDetailError}
                   </p>
                 ) : null}
                 {findingExplanationWarning ? (
-                  <p className="dashboard-alert" role="alert">
+                  <p
+                    className="text-sm text-destructive rounded-md border border-destructive/20 bg-destructive/10 px-3 py-2"
+                    role="alert"
+                  >
                     {findingExplanationWarning}
                   </p>
                 ) : null}
                 {findingDetailLoading ? (
-                  <p className="dashboard-state" role="status">
-                    Loading finding detail
-                  </p>
+                  <section
+                    aria-label="Loading finding detail"
+                    className="finding-decision-loading"
+                    role="status"
+                  >
+                    <Skeleton className="h-8 w-40" />
+                    <Skeleton className="h-36 w-full" />
+                    <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+                      <Skeleton className="h-24 w-full" />
+                      <Skeleton className="h-24 w-full" />
+                      <Skeleton className="h-24 w-full" />
+                      <Skeleton className="h-24 w-full" />
+                    </div>
+                  </section>
                 ) : null}
 
                 {!findingDetailLoading &&
                 !findingDetailError &&
                 findingDetail ? (
                   <>
+                    {isDemoFindingDetail ? (
+                      <section
+                        aria-label="Demo Preview"
+                        className="finding-demo-preview"
+                      >
+                        <Badge className="border-amber-200 bg-amber-50 text-amber-800">
+                          Demo Preview
+                        </Badge>
+                        <span>
+                          Sample evidence for the decision workflow. Not real
+                          production data.
+                        </span>
+                      </section>
+                    ) : null}
+
                     <section
-                      className="finding-detail-header"
-                      aria-label="Finding detail header"
+                      className="finding-decision-hero"
+                      aria-label="Finding decision hero"
                     >
-                      <div>
-                        <span>Finding</span>
-                        <h3>{findingDetail.cve_id}</h3>
+                      <div className="finding-decision-hero-copy">
+                        <Badge className="finding-decision-kicker">
+                          Why this priority?
+                        </Badge>
+                        <h2>{findingDetail.cve_id}</h2>
+                        <p>
+                          {findingWhyText(findingDetail, findingExplanation)}
+                        </p>
+                        <div className="finding-decision-badges">
+                          <PriorityBadge priority={findingDetail.priority} />
+                          <FindingStatusBadge status={findingDetail.status} />
+                          <KevBadge matched={findingDetail.in_kev} />
+                        </div>
                       </div>
-                      <div className="finding-detail-badges">
-                        <span
-                          className={`severity ${
-                            findingDetail.priority ?? "low"
-                          }`}
-                        >
-                          {labelize(findingDetail.priority)}
-                        </span>
-                        <span className="status-pill">
-                          {labelize(findingDetail.status)}
-                        </span>
-                      </div>
+                      <ul
+                        className="finding-decision-hero-metrics"
+                        aria-label="Risk indicators"
+                      >
+                        <li className="finding-hero-metric-primary">
+                          <span>Risk Score</span>
+                          <strong>
+                            {formatNullableNumber(findingDetail.risk_score)}
+                          </strong>
+                          <small>Operational remediation priority</small>
+                        </li>
+                        <li>
+                          <span>EPSS</span>
+                          <EpssBadge value={findingDetail.epss} />
+                          <small>Exploit probability signal</small>
+                        </li>
+                        <li>
+                          <span>CVSS</span>
+                          <CvssBadge value={findingDetail.cvss_base_score} />
+                          <small>Impact severity signal</small>
+                        </li>
+                        <li className="finding-hero-metric-decision">
+                          <span>Decision</span>
+                          <RiskScore value={findingDetail.risk_score} />
+                          <small>
+                            {findingSlaLabel(findingDetail.priority)} SLA
+                          </small>
+                        </li>
+                      </ul>
                     </section>
 
                     <section
-                      className="finding-detail-overview"
-                      aria-label="Finding overview"
+                      className="finding-decision-fact-grid"
+                      aria-label="Finding scope"
                     >
-                      {findingOverviewCards(findingDetail).map((card) => (
-                        <article
-                          className="finding-overview-card"
-                          key={card.label}
-                        >
-                          <span>{card.label}</span>
-                          <strong>{card.value}</strong>
-                          <small>{card.detail}</small>
-                        </article>
-                      ))}
-                    </section>
-
-                    <div
-                      className="finding-detail-tabs"
-                      role="tablist"
-                      aria-label="Finding detail tabs"
-                    >
-                      <button
-                        aria-controls="finding-overview-panel"
-                        aria-selected={findingDetailTab === "overview"}
-                        className={
-                          findingDetailTab === "overview" ? "active" : ""
-                        }
-                        id="finding-overview-tab"
-                        onClick={() => setFindingDetailTab("overview")}
-                        role="tab"
-                        type="button"
-                      >
-                        Overview
-                      </button>
-                      <button
-                        aria-controls="finding-ttp-panel"
-                        aria-selected={findingDetailTab === "ttp"}
-                        className={findingDetailTab === "ttp" ? "active" : ""}
-                        id="finding-ttp-tab"
-                        onClick={() => setFindingDetailTab("ttp")}
-                        role="tab"
-                        type="button"
-                      >
-                        TTP Context
-                      </button>
-                    </div>
-
-                    {findingDetailTab === "overview" ? (
-                      <div
-                        className="finding-detail-tab-panel"
-                        id="finding-overview-panel"
-                        role="tabpanel"
-                        aria-labelledby="finding-overview-tab"
-                      >
-                        {detailWaiverEvidence ? (
-                          <section
-                            className="accepted-risk-panel"
-                            aria-label="Accepted risk"
+                      <Card>
+                        <CardHeader>
+                          <CardDescription>Component</CardDescription>
+                          <CardTitle
+                            title={findingComponentDetailLabel(findingDetail)}
                           >
-                            <div className="detail-section-heading">
-                              <h3>Accepted risk</h3>
-                              <span>
-                                {labelize(detailWaiverEvidence.status)}
-                              </span>
-                            </div>
-                            <dl className="project-meta">
-                              <div>
-                                <dt>Owner</dt>
-                                <dd>
-                                  {optionalText(detailWaiverEvidence.owner)}
-                                </dd>
-                              </div>
-                              <div>
-                                <dt>Reason</dt>
-                                <dd>
-                                  {optionalText(detailWaiverEvidence.reason)}
-                                </dd>
-                              </div>
-                              <div>
-                                <dt>Expires</dt>
-                                <dd>
-                                  {optionalText(detailWaiverEvidence.expiresOn)}
-                                </dd>
-                              </div>
-                              <div>
-                                <dt>Review</dt>
-                                <dd>
-                                  {optionalText(detailWaiverEvidence.reviewOn)}
-                                </dd>
-                              </div>
-                              <div>
-                                <dt>Scope</dt>
-                                <dd>
-                                  {optionalText(
-                                    detailWaiverEvidence.matchedScope ??
-                                      detailWaiverEvidence.scope,
-                                  )}
-                                </dd>
-                              </div>
-                              <div>
-                                <dt>Approval</dt>
-                                <dd>
-                                  {optionalText(
-                                    detailWaiverEvidence.approvalRef,
-                                  )}
-                                </dd>
-                              </div>
-                            </dl>
-                          </section>
-                        ) : null}
+                            {findingComponentDetailLabel(findingDetail)}
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <p title={optionalText(findingDetail.component_purl)}>
+                            {optionalText(findingDetail.component_purl)}
+                          </p>
+                        </CardContent>
+                      </Card>
+                      <Card>
+                        <CardHeader>
+                          <CardDescription>Asset / Service</CardDescription>
+                          <CardTitle
+                            title={findingAssetServiceDetailLabel(
+                              findingDetail,
+                            )}
+                          >
+                            {findingAssetServiceDetailLabel(findingDetail)}
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <p>{labelize(findingDetail.exposure)}</p>
+                        </CardContent>
+                      </Card>
+                      <Card>
+                        <CardHeader>
+                          <CardDescription>Owner</CardDescription>
+                          <CardTitle>
+                            {findingOwnerDetailLabel(
+                              findingDetail,
+                              detailOccurrences,
+                            )}
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <p>{labelize(findingDetail.asset_environment)}</p>
+                        </CardContent>
+                      </Card>
+                      <Card className="finding-recommendation-card">
+                        <CardHeader>
+                          <CardDescription>
+                            Primary recommendation
+                          </CardDescription>
+                          <CardTitle>
+                            {findingRecommendedAction(
+                              findingDetail,
+                              findingExplanation,
+                            )}
+                          </CardTitle>
+                        </CardHeader>
+                      </Card>
+                    </section>
 
-                        <section
-                          className="why-priority-panel"
-                          aria-label="Why this priority"
-                        >
-                          <div className="detail-section-heading">
-                            <h3>Why this priority</h3>
-                            <span>
+                    <section
+                      className="finding-decision-main-grid"
+                      aria-label="Risk to decision"
+                    >
+                      <Card className="finding-decision-card finding-analysis-card">
+                        <CardHeader>
+                          <div className="finding-card-heading">
+                            <div>
+                              <CardDescription>
+                                Risk to Decision
+                              </CardDescription>
+                              <CardTitle>Why this priority?</CardTitle>
+                            </div>
+                            <Badge variant="outline">
                               Score{" "}
                               {formatNullableNumber(findingDetail.risk_score)}
-                            </span>
+                            </Badge>
                           </div>
-                          <p>
+                        </CardHeader>
+                        <CardContent>
+                          <p className="finding-decision-lead">
                             {findingWhyText(findingDetail, findingExplanation)}
                           </p>
-                          <div className="recommendation-callout">
-                            <span>Recommended action</span>
-                            <strong>
-                              {findingRecommendedAction(
-                                findingDetail,
-                                findingExplanation,
-                              )}
-                            </strong>
-                          </div>
+                          <ol
+                            aria-label="Risk to decision chain"
+                            className="finding-decision-chain"
+                          >
+                            <li>Finding</li>
+                            <li>Priority</li>
+                            <li>Evidence</li>
+                            <li>Decision</li>
+                          </ol>
+                          <dl className="finding-decision-reasons">
+                            {detailDecisionReasons.map((reason) => (
+                              <div
+                                data-tone={reason.tone}
+                                key={`${reason.label}:${reason.detail}`}
+                              >
+                                <dt>{reason.label}</dt>
+                                <dd>{reason.detail}</dd>
+                              </div>
+                            ))}
+                          </dl>
                           {detailReasonRows.length > 0 ? (
-                            <dl
-                              className="reason-list"
-                              aria-label="Matched reasons"
-                            >
-                              {detailReasonRows.map((reason) => (
-                                <div key={`${reason.label}:${reason.detail}`}>
-                                  <dt>{labelize(reason.label)}</dt>
-                                  <dd>{reason.detail}</dd>
-                                </div>
-                              ))}
-                            </dl>
-                          ) : null}
-                        </section>
-
-                        <section
-                          className="occurrences-panel"
-                          aria-label="Occurrences"
-                        >
-                          <div className="detail-section-heading">
-                            <h3>Occurrences</h3>
-                            <span>
-                              {detailOccurrences.length} source row(s)
-                            </span>
-                          </div>
-                          {detailOccurrences.length > 0 ? (
-                            <div className="table-wrap occurrences-table-wrap">
-                              <table aria-label="Occurrences table">
-                                <thead>
-                                  <tr>
-                                    <th>Source</th>
-                                    <th>Component</th>
-                                    <th>Asset</th>
-                                    <th>Owner</th>
-                                    <th>Severity</th>
-                                    <th>Fix</th>
-                                    <th>VEX</th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {detailOccurrences.map(
-                                    (occurrence, index) => {
-                                      const fixVersions =
-                                        Array.isArray(
-                                          occurrence.fix_versions,
-                                        ) && occurrence.fix_versions.length > 0
-                                          ? occurrence.fix_versions.join(", ")
-                                          : stringValue(occurrence.fix_version)
-                                      return (
-                                        <tr
-                                          key={
-                                            stringValue(occurrence.id) ??
-                                            `occurrence-${index + 1}`
-                                          }
-                                        >
-                                          <td>
-                                            <span className="finding-primary">
-                                              {optionalText(
-                                                stringValue(
-                                                  occurrence.source_format,
-                                                ) ??
-                                                  stringValue(
-                                                    occurrence.source,
-                                                  ),
-                                              )}
-                                            </span>
-                                            <small>
-                                              {optionalText(
-                                                stringValue(
-                                                  occurrence.source_record_id,
-                                                ) ??
-                                                  stringValue(
-                                                    occurrence.raw_reference,
-                                                  ),
-                                              )}
-                                            </small>
-                                          </td>
-                                          <td>
-                                            <span className="finding-primary">
-                                              {joinedValues([
-                                                stringValue(
-                                                  occurrence.component_name,
-                                                ),
-                                                stringValue(
-                                                  occurrence.component_version,
-                                                ),
-                                              ])}
-                                            </span>
-                                            <small>
-                                              {optionalText(
-                                                stringValue(occurrence.purl),
-                                              )}
-                                            </small>
-                                          </td>
-                                          <td>
-                                            <span className="finding-primary">
-                                              {optionalText(
-                                                stringValue(
-                                                  occurrence.asset_ref,
-                                                ) ??
-                                                  stringValue(
-                                                    occurrence.target_ref,
-                                                  ),
-                                              )}
-                                            </span>
-                                            <small>
-                                              {joinedValues([
-                                                stringValue(
-                                                  occurrence.target_kind,
-                                                ),
-                                                labelize(
-                                                  stringValue(
-                                                    occurrence.asset_exposure,
-                                                  ),
-                                                ),
-                                              ])}
-                                            </small>
-                                          </td>
-                                          <td>
-                                            <span className="finding-primary">
-                                              {optionalText(
-                                                stringValue(
-                                                  occurrence.asset_owner,
-                                                ),
-                                              )}
-                                            </span>
-                                            <small>
-                                              {optionalText(
-                                                stringValue(
-                                                  occurrence.asset_business_service,
-                                                ),
-                                              )}
-                                            </small>
-                                          </td>
-                                          <td>
-                                            {optionalText(
-                                              stringValue(
-                                                occurrence.raw_severity,
-                                              ),
-                                            )}
-                                          </td>
-                                          <td>{optionalText(fixVersions)}</td>
-                                          <td>
-                                            <span className="finding-primary">
-                                              {optionalText(
-                                                labelize(
-                                                  stringValue(
-                                                    occurrence.vex_status,
-                                                  ),
-                                                ),
-                                              )}
-                                            </span>
-                                            <small>
-                                              {optionalText(
-                                                joinedValues([
-                                                  stringValue(
-                                                    occurrence.vex_justification,
-                                                  ),
-                                                  stringValue(
-                                                    occurrence.vex_action_statement,
-                                                  ),
-                                                  stringValue(
-                                                    occurrence.vex_match_type,
-                                                  ),
-                                                ]),
-                                              )}
-                                            </small>
-                                          </td>
-                                        </tr>
-                                      )
-                                    },
-                                  )}
-                                </tbody>
-                              </table>
-                            </div>
-                          ) : (
-                            <p className="detail-empty">
-                              No source occurrences have been recorded for this
-                              finding.
-                            </p>
-                          )}
-                        </section>
-
-                        <section
-                          className="data-quality-panel"
-                          aria-label="Data Quality Flags"
-                        >
-                          <div className="detail-section-heading">
-                            <h3>Data Quality Flags</h3>
-                            <span>
-                              Confidence{" "}
-                              {findingExplanation?.data_quality_confidence ??
-                                stringValue(
-                                  objectRecord(findingDetail.data_quality_json)
-                                    .confidence,
-                                ) ??
-                                "high"}
-                            </span>
-                          </div>
-                          {detailDataQualityRows.length > 0 ? (
-                            <ul className="data-quality-list">
-                              {detailDataQualityRows.map((flag) => (
-                                <li key={flag.key}>
-                                  <strong>{labelize(flag.code)}</strong>
-                                  <span>
-                                    {flag.source} / {labelize(flag.severity)}
-                                  </span>
-                                  <p>{flag.message}</p>
-                                </li>
-                              ))}
-                            </ul>
-                          ) : (
-                            <p className="detail-empty">
-                              No data quality flags recorded.
-                            </p>
-                          )}
-                          <section
-                            className="provider-gap-list"
-                            aria-label="Provider data coverage"
-                          >
-                            <span>Provider data coverage</span>
-                            {detailProviderGaps.length > 0 ? (
-                              <ul>
-                                {detailProviderGaps.map((gap) => (
-                                  <li key={gap}>{gap}</li>
+                            <div className="finding-provider-reasons">
+                              <span>Provider explanation</span>
+                              <dl>
+                                {detailReasonRows.map((reason) => (
+                                  <div key={`${reason.label}:${reason.detail}`}>
+                                    <dt>{labelize(reason.label)}</dt>
+                                    <dd>{reason.detail}</dd>
+                                  </div>
                                 ))}
-                              </ul>
-                            ) : (
-                              <p>No provider gaps for this finding.</p>
-                            )}
+                              </dl>
+                            </div>
+                          ) : null}
+                        </CardContent>
+                      </Card>
+
+                      <Card className="finding-decision-card finding-action-card">
+                        <CardHeader>
+                          <CardDescription>Remediation</CardDescription>
+                          <CardTitle>Decision plan</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <dl className="finding-decision-definition-list">
+                            <div>
+                              <dt>Recommended action</dt>
+                              <dd>
+                                {findingRecommendedAction(
+                                  findingDetail,
+                                  findingExplanation,
+                                )}
+                              </dd>
+                            </div>
+                            <div>
+                              <dt>SLA</dt>
+                              <dd>{findingSlaLabel(findingDetail.priority)}</dd>
+                            </div>
+                            <div>
+                              <dt>Owner</dt>
+                              <dd>
+                                {findingOwnerDetailLabel(
+                                  findingDetail,
+                                  detailOccurrences,
+                                )}
+                              </dd>
+                            </div>
+                            <div>
+                              <dt>Next step</dt>
+                              <dd>{findingNextStepLabel(findingDetail)}</dd>
+                            </div>
+                            <div>
+                              <dt>Risk acceptance option</dt>
+                              <dd>
+                                {detailWaiverEvidence
+                                  ? `${optionalText(detailWaiverEvidence.status)} — ${optionalText(detailWaiverEvidence.reason)}`
+                                  : "Available only with owner, expiry, approval reference, and compensating evidence."}
+                              </dd>
+                            </div>
+                          </dl>
+                          <div className="finding-decision-actions">
+                            <Button
+                              onClick={() =>
+                                setFindingDetailReloadKey((value) => value + 1)
+                              }
+                              size="sm"
+                              type="button"
+                              variant="outline"
+                            >
+                              Refresh evidence
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </section>
+
+                    <Tabs
+                      className="finding-detail-tabs-shell"
+                      value={findingDetailTab}
+                      onValueChange={(v) =>
+                        setFindingDetailTab(v as FindingDetailTab)
+                      }
+                    >
+                      <div className="finding-tabs-toolbar">
+                        <div className="finding-tabs-heading">
+                          <span>Decision evidence</span>
+                          <strong>Evidence, TTP context, and lifecycle</strong>
+                          <p>
+                            Provider-backed facts used to explain and defend the
+                            priority decision.
+                          </p>
+                        </div>
+                        <TabsList className="finding-detail-tabs-list">
+                          <TabsTrigger value="evidence">Evidence</TabsTrigger>
+                          <TabsTrigger value="ttp">TTP Context</TabsTrigger>
+                          <TabsTrigger value="history">History</TabsTrigger>
+                        </TabsList>
+                      </div>
+
+                      <TabsContent
+                        className="finding-detail-tab-panel"
+                        value="evidence"
+                      >
+                        <section
+                          className="finding-evidence-tab-layout"
+                          aria-label="Evidence workspace"
+                        >
+                          <section
+                            className="finding-evidence-grid"
+                            aria-label="Evidence summary"
+                          >
+                            {detailEvidenceRows.map((row, index) => (
+                              <Card
+                                className={cn(
+                                  "finding-evidence-summary-card",
+                                  index === 0
+                                    ? "finding-evidence-summary-card-primary"
+                                    : undefined,
+                                )}
+                                key={row.label}
+                              >
+                                <CardHeader>
+                                  <CardDescription>{row.label}</CardDescription>
+                                  <CardTitle>{row.value}</CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                  <p>{row.detail}</p>
+                                </CardContent>
+                              </Card>
+                            ))}
+                          </section>
+
+                          <section
+                            className="finding-evidence-detail-grid"
+                            aria-label="Evidence detail"
+                          >
+                            <Card
+                              aria-label="Scanner occurrences"
+                              className="finding-tab-card finding-occurrences-card"
+                            >
+                              <CardHeader>
+                                <div className="finding-card-heading">
+                                  <div>
+                                    <CardDescription>
+                                      Scanner evidence
+                                    </CardDescription>
+                                    <CardTitle>Occurrences</CardTitle>
+                                  </div>
+                                  <Badge variant="outline">
+                                    {detailOccurrences.length} source row(s)
+                                  </Badge>
+                                </div>
+                              </CardHeader>
+                              <CardContent>
+                                {detailOccurrences.length > 0 ? (
+                                  <div className="finding-detail-table-wrap">
+                                    <Table aria-label="Occurrences table">
+                                      <TableHeader>
+                                        <TableRow>
+                                          <TableHead>Source</TableHead>
+                                          <TableHead>Component</TableHead>
+                                          <TableHead>Asset / Owner</TableHead>
+                                          <TableHead>Evidence</TableHead>
+                                          <TableHead>Fix / VEX</TableHead>
+                                        </TableRow>
+                                      </TableHeader>
+                                      <TableBody>
+                                        {detailOccurrences.map(
+                                          (occurrence, index) => {
+                                            const fixVersions =
+                                              Array.isArray(
+                                                occurrence.fix_versions,
+                                              ) &&
+                                              occurrence.fix_versions.length > 0
+                                                ? occurrence.fix_versions.join(
+                                                    ", ",
+                                                  )
+                                                : stringValue(
+                                                    occurrence.fix_version,
+                                                  )
+                                            return (
+                                              <TableRow
+                                                key={
+                                                  stringValue(occurrence.id) ??
+                                                  `occurrence-${index + 1}`
+                                                }
+                                              >
+                                                <TableCell>
+                                                  <span className="font-medium">
+                                                    {optionalText(
+                                                      stringValue(
+                                                        occurrence.source_format,
+                                                      ) ??
+                                                        stringValue(
+                                                          occurrence.source,
+                                                        ),
+                                                    )}
+                                                  </span>
+                                                  <small>
+                                                    {optionalText(
+                                                      stringValue(
+                                                        occurrence.source_record_id,
+                                                      ) ??
+                                                        stringValue(
+                                                          occurrence.raw_reference,
+                                                        ),
+                                                    )}
+                                                  </small>
+                                                </TableCell>
+                                                <TableCell>
+                                                  <span className="font-medium">
+                                                    {joinedValues([
+                                                      stringValue(
+                                                        occurrence.component_name,
+                                                      ),
+                                                      stringValue(
+                                                        occurrence.component_version,
+                                                      ),
+                                                    ])}
+                                                  </span>
+                                                  <small>
+                                                    {optionalText(
+                                                      stringValue(
+                                                        occurrence.purl,
+                                                      ),
+                                                    )}
+                                                  </small>
+                                                </TableCell>
+                                                <TableCell>
+                                                  <span className="font-medium">
+                                                    {optionalText(
+                                                      stringValue(
+                                                        occurrence.asset_ref,
+                                                      ) ??
+                                                        stringValue(
+                                                          occurrence.target_ref,
+                                                        ),
+                                                    )}
+                                                  </span>
+                                                  <small>
+                                                    {joinedValues([
+                                                      stringValue(
+                                                        occurrence.asset_owner,
+                                                      ),
+                                                      stringValue(
+                                                        occurrence.asset_business_service,
+                                                      ),
+                                                      labelize(
+                                                        stringValue(
+                                                          occurrence.asset_exposure,
+                                                        ),
+                                                      ),
+                                                    ])}
+                                                  </small>
+                                                </TableCell>
+                                                <TableCell>
+                                                  <span className="font-medium">
+                                                    {optionalText(
+                                                      stringValue(
+                                                        occurrence.scanner,
+                                                      ),
+                                                    )}
+                                                  </span>
+                                                  <small>
+                                                    {optionalText(
+                                                      stringValue(
+                                                        occurrence.raw_severity,
+                                                      ),
+                                                    )}
+                                                  </small>
+                                                </TableCell>
+                                                <TableCell>
+                                                  <span className="font-medium">
+                                                    {optionalText(fixVersions)}
+                                                  </span>
+                                                  <small>
+                                                    {optionalText(
+                                                      stringValue(
+                                                        occurrence.vex_status,
+                                                      )
+                                                        ? labelize(
+                                                            stringValue(
+                                                              occurrence.vex_status,
+                                                            ),
+                                                          )
+                                                        : stringValue(
+                                                            occurrence.vex_justification,
+                                                          ),
+                                                    )}
+                                                  </small>
+                                                </TableCell>
+                                              </TableRow>
+                                            )
+                                          },
+                                        )}
+                                      </TableBody>
+                                    </Table>
+                                  </div>
+                                ) : (
+                                  <p className="text-sm text-muted-foreground">
+                                    No source occurrences have been recorded for
+                                    this finding.
+                                  </p>
+                                )}
+                              </CardContent>
+                            </Card>
+
+                            <Card
+                              aria-label="Data quality notes"
+                              className="finding-tab-card finding-data-quality-card"
+                            >
+                              <CardHeader>
+                                <CardDescription>Provider data</CardDescription>
+                                <CardTitle>Data quality notes</CardTitle>
+                              </CardHeader>
+                              <CardContent>
+                                {detailDataQualityRows.length > 0 ? (
+                                  <ul className="finding-data-quality-list">
+                                    {detailDataQualityRows.map((flag) => (
+                                      <li key={flag.key}>
+                                        <strong>{labelize(flag.code)}</strong>
+                                        <span>
+                                          {flag.source} /{" "}
+                                          {labelize(flag.severity)}
+                                        </span>
+                                        <p>{flag.message}</p>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                ) : (
+                                  <p className="text-sm text-muted-foreground">
+                                    No data quality flags recorded.
+                                  </p>
+                                )}
+                              </CardContent>
+                            </Card>
                           </section>
                         </section>
-                      </div>
-                    ) : (
-                      <section
-                        className="ttp-context-panel"
-                        id="finding-ttp-panel"
-                        role="tabpanel"
-                        aria-labelledby="finding-ttp-tab"
-                        aria-label="TTP Context"
-                      >
-                        <div className="detail-section-heading">
-                          <h3>ATT&amp;CK threat context</h3>
-                          <span>
-                            {detailAttackContext?.mapped
-                              ? "Mapped context"
-                              : "No approved mapping"}
-                          </span>
-                        </div>
-                        {detailAttackEmpty ? (
-                          <section
-                            className="ttp-empty-state"
-                            aria-label="TTP context empty state"
-                          >
-                            <strong>
-                              No approved ATT&amp;CK mapping is stored for this
-                              finding.
-                            </strong>
-                            <p>
-                              Workbench does not infer tactics or techniques for
-                              unmapped CVEs. Add a reviewed CTID or local
-                              curated mapping before using ATT&amp;CK context in
-                              queue decisions.
-                            </p>
-                          </section>
-                        ) : (
-                          <>
-                            <section
-                              className="ttp-summary-grid"
-                              aria-label="TTP context summary"
-                            >
-                              <article>
-                                <span>Source</span>
-                                <strong>
-                                  {detailAttackContext?.source ?? "none"}
-                                </strong>
-                              </article>
-                              <article>
-                                <span>Confidence</span>
-                                <strong
-                                  className={`ttp-confidence ${
-                                    detailAttackContext?.confidence ?? "unknown"
-                                  }`}
-                                >
-                                  {attackConfidenceLabel(
-                                    detailAttackContext?.confidence,
-                                  )}
-                                </strong>
-                                {detailAttackContext?.low_confidence ? (
-                                  <small>
-                                    Review required before using this context
-                                    for queue decisions.
-                                  </small>
-                                ) : null}
-                              </article>
-                              <article>
-                                <span>Review</span>
-                                <strong>
-                                  {attackReviewLabel(
-                                    detailAttackContext?.review_status,
-                                  )}
-                                </strong>
-                              </article>
-                              <article>
-                                <span>Relevance</span>
-                                <strong>
-                                  {detailAttackContext?.attack_relevance ??
-                                    "Mapped"}
-                                </strong>
-                              </article>
-                            </section>
+                      </TabsContent>
 
-                            <div className="table-wrap ttp-table-wrap">
-                              <table aria-label="TTP Context techniques">
-                                <thead>
-                                  <tr>
-                                    <th>Technique</th>
-                                    <th>Tactics</th>
-                                    <th>Confidence</th>
-                                    <th>Review</th>
-                                    <th>Rationale</th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {detailAttackTechniques.map((technique) => (
-                                    <tr key={technique.technique_id}>
-                                      <td>
-                                        <span className="finding-primary">
-                                          {technique.technique_id}
-                                        </span>
-                                        <small>
-                                          {optionalText(technique.name)}
-                                        </small>
-                                      </td>
-                                      <td>
-                                        {attackTacticsLabel(technique.tactics)}
-                                      </td>
-                                      <td>
-                                        <span
-                                          className={`ttp-confidence ${
-                                            technique.confidence ?? "unknown"
-                                          }`}
+                      <TabsContent
+                        className="finding-detail-tab-panel"
+                        value="ttp"
+                      >
+                        <Card
+                          aria-label="TTP Context"
+                          className="finding-tab-card finding-ttp-card"
+                        >
+                          <CardHeader>
+                            <div className="finding-card-heading">
+                              <div>
+                                <CardDescription>ATT&amp;CK</CardDescription>
+                                <CardTitle>TTP Context</CardTitle>
+                              </div>
+                              <Badge variant="outline">
+                                {detailAttackContext?.source
+                                  ?.toLowerCase()
+                                  .includes("demo")
+                                  ? "Curated demo mapping"
+                                  : detailAttackContext?.mapped
+                                    ? "Mapped context"
+                                    : "No approved mapping"}
+                              </Badge>
+                            </div>
+                          </CardHeader>
+                          <CardContent>
+                            {detailAttackEmpty ? (
+                              <section
+                                aria-label="TTP context empty state"
+                                className="finding-empty-panel"
+                              >
+                                <div className="finding-empty-panel-heading">
+                                  <Badge variant="outline">
+                                    Defensive context
+                                  </Badge>
+                                  <strong>
+                                    No approved ATT&amp;CK mapping is stored for
+                                    this finding.
+                                  </strong>
+                                </div>
+                                <p>
+                                  Workbench does not infer tactics or techniques
+                                  for unmapped CVEs. Add a reviewed CTID or
+                                  curated local mapping before using ATT&amp;CK
+                                  context in queue decisions.
+                                </p>
+                              </section>
+                            ) : (
+                              <>
+                                <section
+                                  className="finding-ttp-context-hero finding-ttp-context-hero-simple"
+                                  aria-label="Threat informed context"
+                                >
+                                  <div className="finding-ttp-main-copy">
+                                    <span>Threat informed context</span>
+                                    <h3>{detailAttackTechniqueLabel}</h3>
+                                    <p>
+                                      This mapping explains why the finding is
+                                      treated as an internet-facing Initial
+                                      Access risk. It supports remediation
+                                      priority and detection coverage review,
+                                      but does not prove exploitation.
+                                    </p>
+                                  </div>
+                                  <dl className="finding-ttp-main-facts">
+                                    <div>
+                                      <dt>Tactic</dt>
+                                      <dd>{detailAttackTacticLabel}</dd>
+                                    </div>
+                                    <div>
+                                      <dt>Confidence</dt>
+                                      <dd>
+                                        <Badge
+                                          className={cn(
+                                            detailAttackContext?.confidence ===
+                                              "high"
+                                              ? "bg-green-100 text-green-700 border-green-200"
+                                              : detailAttackContext?.confidence ===
+                                                  "low"
+                                                ? "bg-red-100 text-red-700 border-red-200"
+                                                : "bg-yellow-100 text-yellow-700 border-yellow-200",
+                                          )}
                                         >
                                           {attackConfidenceLabel(
-                                            technique.confidence,
+                                            detailAttackContext?.confidence,
                                           )}
-                                        </span>
-                                      </td>
-                                      <td>
-                                        {attackReviewLabel(
-                                          technique.review_status,
-                                        )}
-                                      </td>
-                                      <td>
-                                        {optionalText(technique.rationale)}
-                                      </td>
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
-                            </div>
-                          </>
-                        )}
+                                        </Badge>
+                                      </dd>
+                                    </div>
+                                    <div>
+                                      <dt>Source</dt>
+                                      <dd>
+                                        {optionalText(detailAttackSource)}
+                                      </dd>
+                                    </div>
+                                    <div>
+                                      <dt>Coverage</dt>
+                                      <dd>{detailAttackCoverageStatus}</dd>
+                                    </div>
+                                  </dl>
+                                </section>
+
+                                <ol
+                                  className="finding-ttp-chain finding-ttp-chain-compact"
+                                  aria-label="Attack chain and decision flow"
+                                >
+                                  <li data-tone="signal">
+                                    <span className="finding-ttp-chain-index">
+                                      1
+                                    </span>
+                                    <div>
+                                      <small>CVE signal</small>
+                                      <strong>High priority signal</strong>
+                                    </div>
+                                  </li>
+                                  <li data-tone="exposure">
+                                    <span className="finding-ttp-chain-index">
+                                      2
+                                    </span>
+                                    <div>
+                                      <small>Internet-facing asset</small>
+                                      <strong>Internet facing asset</strong>
+                                    </div>
+                                  </li>
+                                  <li data-tone="technique">
+                                    <span className="finding-ttp-chain-index">
+                                      3
+                                    </span>
+                                    <div>
+                                      <small>ATT&amp;CK technique</small>
+                                      <strong>{detailAttackTechniqueId}</strong>
+                                    </div>
+                                  </li>
+                                  <li data-tone="coverage">
+                                    <span className="finding-ttp-chain-index">
+                                      4
+                                    </span>
+                                    <div>
+                                      <small>Detection gap</small>
+                                      <strong>
+                                        {detailAttackCoverageStatus}
+                                      </strong>
+                                    </div>
+                                  </li>
+                                  <li data-tone="decision">
+                                    <span className="finding-ttp-chain-index">
+                                      5
+                                    </span>
+                                    <div>
+                                      <small>Remediation priority</small>
+                                      <strong>Emergency remediation</strong>
+                                    </div>
+                                  </li>
+                                </ol>
+
+                                <section
+                                  className="finding-ttp-decision-grid finding-ttp-decision-grid-simple"
+                                  aria-label="Threat informed decision context"
+                                >
+                                  <article className="finding-ttp-narrative-card">
+                                    <span>Why this matters</span>
+                                    <strong>Decision support</strong>
+                                    <ul className="finding-ttp-meaning-list">
+                                      <li>
+                                        Frames the CVE as an Initial Access
+                                        risk.
+                                      </li>
+                                      <li>
+                                        Explains why internet exposure raises
+                                        urgency.
+                                      </li>
+                                      <li>
+                                        Connects remediation priority with
+                                        detection review.
+                                      </li>
+                                      <li>
+                                        Keeps the boundary clear: no proof of
+                                        exploitation.
+                                      </li>
+                                    </ul>
+                                  </article>
+                                  <article className="finding-ttp-narrative-card finding-ttp-actions-card">
+                                    <span>Recommended defensive actions</span>
+                                    <strong>
+                                      Close exposure and validate coverage
+                                    </strong>
+                                    <ul className="finding-ttp-checklist">
+                                      {(detailAttackActionItems.length > 0
+                                        ? detailAttackActionItems
+                                        : [
+                                            "Patch or mitigate the vulnerable service.",
+                                            "Restrict exposure while remediation is in progress.",
+                                            "Validate web, proxy, WAF, EDR and application telemetry.",
+                                            "Document detection coverage and residual risk.",
+                                          ]
+                                      ).map((item) => (
+                                        <li key={item}>{item}</li>
+                                      ))}
+                                    </ul>
+                                  </article>
+                                </section>
+
+                                <details className="finding-ttp-technical-evidence finding-ttp-technical-details">
+                                  <summary className="finding-ttp-technical-heading">
+                                    <div>
+                                      <span>Secondary evidence</span>
+                                      <strong>Technical mapping details</strong>
+                                    </div>
+                                    <Badge variant="outline">
+                                      Source, confidence, rationale
+                                    </Badge>
+                                  </summary>
+
+                                  <div className="finding-ttp-technical-body">
+                                    <p>{optionalText(detailAttackRationale)}</p>
+                                    <div className="finding-detail-table-wrap">
+                                      <Table aria-label="TTP Context techniques">
+                                        <TableHeader>
+                                          <TableRow>
+                                            <TableHead>Technique</TableHead>
+                                            <TableHead>Tactic</TableHead>
+                                            <TableHead>Confidence</TableHead>
+                                            <TableHead>Source</TableHead>
+                                            <TableHead>Rationale</TableHead>
+                                            <TableHead>
+                                              Defensive actions
+                                            </TableHead>
+                                          </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                          {detailAttackTechniques.map(
+                                            (technique) => {
+                                              const actionItems =
+                                                defensiveActionItems(
+                                                  technique.defensive_note,
+                                                )
+                                              return (
+                                                <TableRow
+                                                  key={technique.technique_id}
+                                                >
+                                                  <TableCell>
+                                                    <span className="font-medium">
+                                                      {technique.technique_id}
+                                                    </span>
+                                                    <small>
+                                                      {optionalText(
+                                                        technique.name,
+                                                      )}
+                                                    </small>
+                                                  </TableCell>
+                                                  <TableCell>
+                                                    {attackTacticsLabel(
+                                                      technique.tactics,
+                                                    )}
+                                                  </TableCell>
+                                                  <TableCell>
+                                                    <Badge
+                                                      className={cn(
+                                                        technique.confidence ===
+                                                          "high"
+                                                          ? "bg-green-100 text-green-700 border-green-200"
+                                                          : technique.confidence ===
+                                                              "low"
+                                                            ? "bg-red-100 text-red-700 border-red-200"
+                                                            : "bg-yellow-100 text-yellow-700 border-yellow-200",
+                                                      )}
+                                                    >
+                                                      {attackConfidenceLabel(
+                                                        technique.confidence,
+                                                      )}
+                                                    </Badge>
+                                                  </TableCell>
+                                                  <TableCell>
+                                                    {optionalText(
+                                                      technique.source,
+                                                    )}
+                                                  </TableCell>
+                                                  <TableCell>
+                                                    {optionalText(
+                                                      technique.rationale,
+                                                    )}
+                                                  </TableCell>
+                                                  <TableCell>
+                                                    {actionItems.length > 1 ? (
+                                                      <ul className="finding-ttp-actions-list">
+                                                        {actionItems.map(
+                                                          (item) => (
+                                                            <li key={item}>
+                                                              {item}
+                                                            </li>
+                                                          ),
+                                                        )}
+                                                      </ul>
+                                                    ) : (
+                                                      optionalText(
+                                                        technique.defensive_note,
+                                                      )
+                                                    )}
+                                                  </TableCell>
+                                                </TableRow>
+                                              )
+                                            },
+                                          )}
+                                        </TableBody>
+                                      </Table>
+                                    </div>
+                                  </div>
+                                </details>
+                              </>
+                            )}
+                            {detailAttackEmpty ? (
+                              <section
+                                className="finding-detection-note"
+                                aria-label="Detection coverage"
+                              >
+                                <span>Detection coverage</span>
+                                <p>
+                                  {optionalText(
+                                    detailAttackContext?.defensive_note ??
+                                      "Coverage controls are not connected to this finding yet. Record detection and mitigation evidence when available.",
+                                  )}
+                                </p>
+                              </section>
+                            ) : null}
+                            <p className="finding-defensive-note">
+                              Defensive context only. No exploit steps,
+                              payloads, PoC guidance, active probing, or
+                              offensive procedure instructions.
+                            </p>
+                          </CardContent>
+                        </Card>
+                      </TabsContent>
+
+                      <TabsContent
+                        className="finding-detail-tab-panel"
+                        value="history"
+                      >
                         <section
-                          className="ttp-detection-placeholder"
-                          aria-label="Detection coverage"
+                          className="finding-history-timeline"
+                          aria-label="Finding history"
                         >
-                          <span>Detection coverage</span>
-                          <p>
-                            Coverage controls are not connected to this finding
-                            yet. Use this placeholder to record future detection
-                            and mitigation evidence.
-                          </p>
+                          {detailHistoryRows.map((row, index) => (
+                            <Card
+                              className="finding-tab-card finding-history-event"
+                              key={row.label}
+                            >
+                              <CardHeader>
+                                <span className="finding-history-step">
+                                  {index + 1}
+                                </span>
+                                <div>
+                                  <CardDescription>{row.label}</CardDescription>
+                                  <CardTitle>{row.value}</CardTitle>
+                                </div>
+                              </CardHeader>
+                              <CardContent>
+                                <p>{row.detail}</p>
+                              </CardContent>
+                            </Card>
+                          ))}
                         </section>
-                        <p className="ttp-safety-note">
-                          Defensive context only: this tab does not provide
-                          exploit steps, payloads, PoC guidance, active probing,
-                          or offensive procedure instructions.
-                        </p>
-                      </section>
-                    )}
+                        {detailWaiverEvidence ? (
+                          <Card
+                            aria-label="Accepted risk"
+                            className="finding-tab-card finding-accepted-risk-card"
+                          >
+                            <CardHeader>
+                              <CardDescription>Risk acceptance</CardDescription>
+                              <CardTitle>Accepted risk</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                              <dl className="finding-decision-definition-list compact">
+                                <div>
+                                  <dt>Owner</dt>
+                                  <dd>
+                                    {optionalText(detailWaiverEvidence.owner)}
+                                  </dd>
+                                </div>
+                                <div>
+                                  <dt>Reason</dt>
+                                  <dd>
+                                    {optionalText(detailWaiverEvidence.reason)}
+                                  </dd>
+                                </div>
+                                <div>
+                                  <dt>Expires</dt>
+                                  <dd>
+                                    {optionalText(
+                                      detailWaiverEvidence.expiresOn,
+                                    )}
+                                  </dd>
+                                </div>
+                                <div>
+                                  <dt>Review</dt>
+                                  <dd>
+                                    {optionalText(
+                                      detailWaiverEvidence.reviewOn,
+                                    )}
+                                  </dd>
+                                </div>
+                                <div>
+                                  <dt>Scope</dt>
+                                  <dd>
+                                    {optionalText(
+                                      detailWaiverEvidence.matchedScope ??
+                                        detailWaiverEvidence.scope,
+                                    )}
+                                  </dd>
+                                </div>
+                                <div>
+                                  <dt>Approval</dt>
+                                  <dd>
+                                    {optionalText(
+                                      detailWaiverEvidence.approvalRef,
+                                    )}
+                                  </dd>
+                                </div>
+                              </dl>
+                            </CardContent>
+                          </Card>
+                        ) : null}
+                      </TabsContent>
+                    </Tabs>
                   </>
                 ) : null}
               </section>
-            ) : isFindingsList ? (
-              <section
-                className="findings-workflow"
-                aria-label="Findings table workflow"
-              >
-                <section
-                  className="findings-controls"
-                  aria-label="Findings filters"
-                >
-                  <label>
-                    <span>Project</span>
-                    <select
-                      aria-label="Findings project"
-                      disabled={projectListLoading || projects.length === 0}
-                      onChange={(event) => {
-                        setFindingOffset(0)
-                        setSelectedProjectId(event.target.value)
-                      }}
-                      value={selectedProjectId}
-                    >
-                      {projects.length === 0 ? (
-                        <option value="">No projects</option>
-                      ) : null}
-                      {projects.map((project) => (
-                        <option key={project.id} value={project.id}>
-                          {project.name}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  {findingAssetId ? (
-                    <section
-                      className="project-context"
-                      aria-label="Asset finding filter"
-                    >
-                      <span>Asset filter</span>
-                      <strong>{findingAssetKey ?? findingAssetId}</strong>
-                      <button
-                        className="secondary-action"
-                        onClick={() => clearFindingFilters()}
-                        type="button"
-                      >
-                        Clear Asset
-                      </button>
-                    </section>
-                  ) : null}
-                  <label>
-                    <span>Priority</span>
-                    <select
-                      aria-label="Priority filter"
-                      onChange={(event) =>
-                        updateFindingFilter(
-                          "priority",
-                          event.target.value as FindingFilters["priority"],
-                        )
-                      }
-                      value={findingFilters.priority}
-                    >
-                      <option value="">Any priority</option>
-                      {findingPriorityOptions.map((priority) => (
-                        <option key={priority} value={priority}>
-                          {labelize(priority)}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label>
-                    <span>Status</span>
-                    <select
-                      aria-label="Status filter"
-                      onChange={(event) =>
-                        updateFindingFilter(
-                          "status",
-                          event.target.value as FindingFilters["status"],
-                        )
-                      }
-                      value={findingFilters.status}
-                    >
-                      <option value="">Any status</option>
-                      {findingStatusOptions.map((status) => (
-                        <option key={status} value={status}>
-                          {labelize(status)}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label>
-                    <span>KEV</span>
-                    <select
-                      aria-label="KEV filter"
-                      onChange={(event) =>
-                        updateFindingFilter(
-                          "kev",
-                          event.target.value as KevFilter,
-                        )
-                      }
-                      value={findingFilters.kev}
-                    >
-                      <option value="">Any KEV</option>
-                      <option value="true">KEV only</option>
-                      <option value="false">Not KEV</option>
-                    </select>
-                  </label>
-                  <label>
-                    <span>Owner or service</span>
-                    <input
-                      aria-label="Owner service filter"
-                      onChange={(event) =>
-                        updateFindingFilter("ownerService", event.target.value)
-                      }
-                      placeholder="platform or payments"
-                      value={findingFilters.ownerService}
-                    />
-                  </label>
-                  <label>
-                    <span>Exposure</span>
-                    <select
-                      aria-label="Exposure filter"
-                      onChange={(event) =>
-                        updateFindingFilter(
-                          "exposure",
-                          event.target.value as FindingFilters["exposure"],
-                        )
-                      }
-                      value={findingFilters.exposure}
-                    >
-                      <option value="">Any exposure</option>
-                      {findingExposureOptions.map((exposure) => (
-                        <option key={exposure} value={exposure}>
-                          {labelize(exposure)}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label>
-                    <span>EPSS min</span>
-                    <input
-                      aria-label="EPSS min filter"
-                      inputMode="decimal"
-                      max="1"
-                      min="0"
-                      onChange={(event) =>
-                        updateFindingFilter("epssMin", event.target.value)
-                      }
-                      placeholder="0.40"
-                      step="0.01"
-                      type="number"
-                      value={findingFilters.epssMin}
-                    />
-                  </label>
-                  <label>
-                    <span>EPSS max</span>
-                    <input
-                      aria-label="EPSS max filter"
-                      inputMode="decimal"
-                      max="1"
-                      min="0"
-                      onChange={(event) =>
-                        updateFindingFilter("epssMax", event.target.value)
-                      }
-                      placeholder="0.95"
-                      step="0.01"
-                      type="number"
-                      value={findingFilters.epssMax}
-                    />
-                  </label>
-                  <label>
-                    <span>CVSS min</span>
-                    <input
-                      aria-label="CVSS min filter"
-                      inputMode="decimal"
-                      max="10"
-                      min="0"
-                      onChange={(event) =>
-                        updateFindingFilter("cvssMin", event.target.value)
-                      }
-                      placeholder="7.0"
-                      step="0.1"
-                      type="number"
-                      value={findingFilters.cvssMin}
-                    />
-                  </label>
-                  <label>
-                    <span>CVSS max</span>
-                    <input
-                      aria-label="CVSS max filter"
-                      inputMode="decimal"
-                      max="10"
-                      min="0"
-                      onChange={(event) =>
-                        updateFindingFilter("cvssMax", event.target.value)
-                      }
-                      placeholder="10.0"
-                      step="0.1"
-                      type="number"
-                      value={findingFilters.cvssMax}
-                    />
-                  </label>
-                  <button
-                    className="secondary-action"
-                    disabled={!activeFindingFilters}
-                    onClick={clearFindingFilters}
-                    type="button"
-                  >
-                    Clear Filters
-                  </button>
-                </section>
-
-                <section
-                  className="findings-sortbar"
-                  aria-label="Findings sorting"
-                >
-                  <label>
-                    <span>Sort</span>
-                    <select
-                      aria-label="Sort findings"
-                      onChange={(event) =>
-                        updateFindingSort(event.target.value as FindingsSort)
-                      }
-                      value={findingSort}
-                    >
-                      {findingSortOptions.map((option) => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label>
-                    <span>Direction</span>
-                    <select
-                      aria-label="Sort direction"
-                      onChange={(event) =>
-                        updateFindingDirection(
-                          event.target.value as FindingsDirection,
-                        )
-                      }
-                      value={findingDirection}
-                    >
-                      <option value="asc">Ascending</option>
-                      <option value="desc">Descending</option>
-                    </select>
-                  </label>
-                  <label>
-                    <span>Page size</span>
-                    <select
-                      aria-label="Findings page size"
-                      onChange={(event) =>
-                        updateFindingPageSize(Number(event.target.value))
-                      }
-                      value={findingPageSize}
-                    >
-                      {findingPageSizes.map((size) => (
-                        <option key={size} value={size}>
-                          {size}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <div className="findings-page-summary" aria-live="polite">
-                    <span>Showing</span>
-                    <strong>
-                      {findingPageStart}-{findingPageEnd} of {findingCount}
-                    </strong>
-                  </div>
-                  <div className="findings-page-actions">
-                    <button
-                      className="secondary-action"
-                      disabled={findingsLoading || findingOffset === 0}
-                      onClick={() =>
-                        setFindingOffset((offset) =>
-                          Math.max(0, offset - findingPageSize),
-                        )
-                      }
-                      type="button"
-                    >
-                      Previous
-                    </button>
-                    <button
-                      className="secondary-action"
-                      disabled={
-                        findingsLoading ||
-                        findingOffset + findingPageSize >= findingCount
-                      }
-                      onClick={() =>
-                        setFindingOffset((offset) => offset + findingPageSize)
-                      }
-                      type="button"
-                    >
-                      Next
-                    </button>
-                  </div>
-                </section>
-
-                {findingsError ? (
-                  <p className="dashboard-alert" role="alert">
-                    {findingsError}
-                  </p>
-                ) : null}
-                {findingsLoading ? (
-                  <p className="dashboard-state" role="status">
-                    Loading findings
-                  </p>
-                ) : null}
-
-                {!findingsLoading && !findingsError && projects.length === 0 ? (
-                  <section
-                    className="dashboard-empty"
-                    aria-label="Findings no project empty state"
-                  >
-                    <h3>No projects yet</h3>
-                    <p>Create a project before reviewing findings.</p>
-                    <Link className="primary-action" to="/projects">
-                      Projects
-                    </Link>
-                  </section>
-                ) : null}
-
-                {!findingsLoading &&
-                !findingsError &&
-                selectedProject &&
-                findings.length === 0 &&
-                !activeFindingFilters ? (
-                  <section
-                    className="dashboard-empty"
-                    aria-label="Findings empty state"
-                  >
-                    <h3>No findings in {selectedProject.name}</h3>
-                    <p>
-                      Import scanner, SBOM, or CVE-list data to create findings.
-                    </p>
-                    <Link className="primary-action" to="/imports">
-                      Imports
-                    </Link>
-                  </section>
-                ) : null}
-
-                {!findingsLoading &&
-                !findingsError &&
-                selectedProject &&
-                findings.length === 0 &&
-                activeFindingFilters ? (
-                  <section
-                    className="dashboard-empty"
-                    aria-label="Findings filter empty state"
-                  >
-                    <h3>No findings match these filters</h3>
-                    <p>
-                      Clear or adjust filters to broaden the server-side query.
-                    </p>
-                    <button
-                      className="secondary-action"
-                      onClick={clearFindingFilters}
-                      type="button"
-                    >
-                      Clear Filters
-                    </button>
-                  </section>
-                ) : null}
-
-                {findings.length > 0 ? (
-                  <div className="table-wrap findings-table-wrap">
-                    <table aria-label="Findings table">
-                      <thead>
-                        <tr>
-                          <th>Priority</th>
-                          <th>Score</th>
-                          <th>CVE</th>
-                          <th>Component</th>
-                          <th>Asset</th>
-                          <th>Owner</th>
-                          <th>EPSS</th>
-                          <th>CVSS</th>
-                          <th>KEV</th>
-                          <th>Status</th>
-                          <th>Last Seen</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {findings.map((finding) => (
-                          <tr
-                            className={`finding-row tone-${findingPriorityTone(
-                              finding,
-                            )}`}
-                            key={finding.id}
-                          >
-                            <td>
-                              <span
-                                className={`severity ${
-                                  finding.priority ?? "low"
-                                }`}
-                              >
-                                {labelize(finding.priority)}
-                              </span>
-                            </td>
-                            <td>{formatNullableNumber(finding.risk_score)}</td>
-                            <td>
-                              <Link
-                                className="finding-cve-link"
-                                params={{ findingId: finding.id }}
-                                to="/findings/$findingId"
-                              >
-                                {finding.cve_id}
-                              </Link>
-                            </td>
-                            <td>
-                              <span className="finding-primary">
-                                {findingComponentLabel(finding)}
-                              </span>
-                              <small>
-                                {optionalText(finding.component_purl)}
-                              </small>
-                            </td>
-                            <td>
-                              <span className="finding-primary">
-                                {findingAssetLabel(finding)}
-                              </span>
-                              <small>{labelize(finding.exposure)}</small>
-                            </td>
-                            <td>
-                              <span className="finding-primary">
-                                {optionalText(finding.owner)}
-                              </span>
-                              <small>
-                                {optionalText(finding.business_service)}
-                              </small>
-                            </td>
-                            <td>{formatEpss(finding.epss)}</td>
-                            <td>
-                              {formatNullableNumber(finding.cvss_base_score)}
-                            </td>
-                            <td>
-                              <span
-                                className={
-                                  finding.in_kev
-                                    ? "kev-pill matched"
-                                    : "kev-pill"
-                                }
-                              >
-                                {finding.in_kev ? "Yes" : "No"}
-                              </span>
-                            </td>
-                            <td>{labelize(finding.status)}</td>
-                            <td>{formatDateTime(finding.last_seen_at)}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                ) : null}
-              </section>
             ) : currentPath === "/providers" ? (
-              <section
-                className="providers-workflow"
-                aria-label="Provider Status page"
-              >
-                {providerStatusError ? (
-                  <p className="dashboard-alert" role="alert">
-                    {providerStatusError}
-                  </p>
-                ) : null}
-                {providerStatusLoading ? (
-                  <p className="dashboard-state" role="status">
-                    Loading provider status
-                  </p>
-                ) : null}
-
-                <section
-                  className="provider-summary-grid"
-                  aria-label="Provider status summary"
-                >
-                  <article className="provider-summary-card">
-                    <span>Status</span>
-                    <strong>{providerStatus?.status ?? "loading"}</strong>
-                    <small>
-                      {providerStatus?.last_error ??
-                        providerStatus?.warnings?.[0] ??
-                        "Latest provider evidence is usable."}
-                    </small>
-                  </article>
-                  <article className="provider-summary-card">
-                    <span>Snapshot mode</span>
-                    <strong>
-                      {providerStatus?.snapshot_mode ?? "missing"}
-                    </strong>
-                    <small>
-                      {providerStatus?.snapshot.locked_provider_data
-                        ? "Locked replay evidence"
-                        : "Stored provider evidence"}
-                    </small>
-                  </article>
-                  <article className="provider-summary-card">
-                    <span>Last sync</span>
-                    <strong>{providerStatus?.last_sync ?? "N.A."}</strong>
-                    <small>
-                      Cache age{" "}
-                      {formatCacheAge(providerStatus?.cache_age_seconds)}
-                    </small>
-                  </article>
-                  <article className="provider-summary-card">
-                    <span>Snapshot ID</span>
-                    <strong>{providerSnapshotId(providerStatus)}</strong>
-                    <small>
-                      {providerStatus?.snapshot.content_hash ??
-                        "No content hash recorded"}
-                    </small>
-                  </article>
-                </section>
-
-                <section
-                  className="provider-card-grid"
-                  aria-label="Provider cards"
-                >
-                  {(providerStatus?.sources ?? fallbackProviderSources).map(
-                    (source) => (
-                      <article
-                        aria-label={`${providerSourceLabel(source)} provider card`}
-                        className={`provider-card ${providerSourceState(source)}`}
-                        key={source.name}
-                        title={providerSourceDetail(source)}
-                      >
-                        <div className="provider-card-header">
-                          <div>
-                            <span>Provider</span>
-                            <h3>{providerSourceLabel(source)}</h3>
-                          </div>
-                          <span
-                            className={`source-pill ${providerSourceState(source)}`}
-                          >
-                            {providerSourceState(source)}
-                          </span>
-                        </div>
-                        <dl className="provider-card-facts">
-                          <div>
-                            <dt>Selected</dt>
-                            <dd>{source.selected ? "Yes" : "No"}</dd>
-                          </div>
-                          <div>
-                            <dt>Value</dt>
-                            <dd>{source.value ?? "N.A."}</dd>
-                          </div>
-                          <div>
-                            <dt>Last sync</dt>
-                            <dd>{source.last_sync ?? "N.A."}</dd>
-                          </div>
-                          <div>
-                            <dt>Cache age</dt>
-                            <dd>{formatCacheAge(source.cache_age_seconds)}</dd>
-                          </div>
-                        </dl>
-                        <p>{providerSourceDetail(source)}</p>
-                      </article>
-                    ),
-                  )}
-                </section>
-
-                <section
-                  className="provider-snapshot-panel"
-                  aria-label="Provider snapshot evidence"
-                >
-                  <div className="detail-section-heading">
-                    <h3>Provider Snapshot</h3>
-                    <span>{providerStatus?.snapshot.mode ?? "missing"}</span>
-                  </div>
-                  <dl className="project-meta">
-                    <div>
-                      <dt>Snapshot ID</dt>
-                      <dd>{providerSnapshotId(providerStatus)}</dd>
-                    </div>
-                    <div>
-                      <dt>Content hash</dt>
-                      <dd>
-                        {providerStatus?.snapshot.content_hash ??
-                          "No content hash recorded"}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt>Generated</dt>
-                      <dd>
-                        {providerStatus?.snapshot.generated_at ??
-                          providerStatus?.snapshot.created_at ??
-                          "N.A."}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt>Requested CVEs</dt>
-                      <dd>{providerStatus?.snapshot.requested_cves ?? 0}</dd>
-                    </div>
-                    <div>
-                      <dt>Selected sources</dt>
-                      <dd>{providerSelectedSources(providerStatus)}</dd>
-                    </div>
-                    <div>
-                      <dt>Source path</dt>
-                      <dd>{providerStatus?.snapshot.source_path ?? "N.A."}</dd>
-                    </div>
-                    <div>
-                      <dt>Cache dir</dt>
-                      <dd>{providerStatus?.cache_dir ?? "N.A."}</dd>
-                    </div>
-                    <div>
-                      <dt>Snapshot dir</dt>
-                      <dd>{providerStatus?.snapshot_dir ?? "N.A."}</dd>
-                    </div>
-                    <div>
-                      <dt>Source hashes</dt>
-                      <dd>{providerSourceHashes(providerStatus)}</dd>
-                    </div>
-                  </dl>
-                </section>
-
-                <section
-                  className="provider-quality-panel"
-                  aria-label="Provider data quality"
-                >
-                  <div className="detail-section-heading">
-                    <h3>Data Quality</h3>
-                    <span>Provider freshness and degraded evidence</span>
-                  </div>
-                  <ul className="data-quality-list">
-                    {providerDataQualityNotes(providerStatus).map((note) => (
-                      <li key={note}>
-                        <strong>Provider evidence</strong>
-                        <span>Data quality note</span>
-                        <p>{note}</p>
-                      </li>
-                    ))}
-                    {(providerStatus?.warnings ?? []).map((warning) => (
-                      <li key={warning}>
-                        <strong>Warning</strong>
-                        <span>Degraded evidence</span>
-                        <p>{warning}</p>
-                      </li>
-                    ))}
-                    {providerStatus?.last_error ? (
-                      <li>
-                        <strong>Last Error</strong>
-                        <span>Provider update failure</span>
-                        <p>{providerStatus.last_error}</p>
-                      </li>
-                    ) : null}
-                  </ul>
-                </section>
-
-                <section
-                  className="provider-snapshot-panel"
-                  aria-label="Latest provider update job"
-                >
-                  <div className="detail-section-heading">
-                    <h3>Latest Update Job</h3>
-                    <span>
-                      {providerStatus?.latest_update_job?.status ?? "none"}
-                    </span>
-                  </div>
-                  {providerStatus?.latest_update_job ? (
-                    <dl className="project-meta">
-                      <div>
-                        <dt>Job ID</dt>
-                        <dd>{providerStatus.latest_update_job.id}</dd>
-                      </div>
-                      <div>
-                        <dt>Status</dt>
-                        <dd>{providerStatus.latest_update_job.status}</dd>
-                      </div>
-                      <div>
-                        <dt>Requested sources</dt>
-                        <dd>
-                          {providerStatus.latest_update_job.requested_sources?.join(
-                            ", ",
-                          ) ?? "N.A."}
-                        </dd>
-                      </div>
-                      <div>
-                        <dt>Started</dt>
-                        <dd>
-                          {providerStatus.latest_update_job.started_at ??
-                            "N.A."}
-                        </dd>
-                      </div>
-                      <div>
-                        <dt>Finished</dt>
-                        <dd>
-                          {providerStatus.latest_update_job.finished_at ??
-                            "N.A."}
-                        </dd>
-                      </div>
-                      <div>
-                        <dt>Error</dt>
-                        <dd>
-                          {providerStatus.latest_update_job.error_message ??
-                            "None"}
-                        </dd>
-                      </div>
-                    </dl>
-                  ) : (
-                    <p className="detail-empty">
-                      No provider update job has been recorded.
-                    </p>
-                  )}
-                </section>
-              </section>
+              <ProvidersWorkbench
+                onRefreshProviderStatus={() => void refreshProviderStatus()}
+                providerStatus={providerStatus}
+                providerStatusError={providerStatusError}
+                providerStatusLoading={providerStatusLoading}
+              />
             ) : currentPath === "/settings" ? (
-              <section className="settings-workflow" aria-label="API tokens">
-                <section
-                  className="project-form-panel api-token-form-panel"
-                  aria-label="Create API token"
-                >
-                  <h3>Service Token</h3>
-                  <form onSubmit={createApiToken}>
-                    <label>
-                      <span>Name</span>
-                      <input
-                        maxLength={200}
-                        onChange={(event) =>
-                          setApiTokenName(event.target.value)
-                        }
-                        value={apiTokenName}
-                      />
-                    </label>
-                    <fieldset className="scope-selector">
-                      <legend>Scopes</legend>
-                      <div className="scope-toggle-grid">
-                        {apiTokenScopeOptions.map((scope) => (
-                          <label key={scope}>
-                            <input
-                              checked={apiTokenScopes.includes(scope)}
-                              onChange={() => toggleApiTokenScope(scope)}
-                              type="checkbox"
-                            />
-                            <span>{scope.toUpperCase()}</span>
-                          </label>
-                        ))}
-                      </div>
-                    </fieldset>
-                    <button
-                      className="primary-action"
-                      disabled={apiTokenActionLoading}
-                      type="submit"
-                    >
-                      {apiTokenActionLoading ? "Creating" : "Create Token"}
-                    </button>
-                  </form>
-                </section>
-
-                {createdApiToken ? (
-                  <section
-                    className="created-token-panel"
-                    aria-label="Created API token"
-                  >
-                    <div>
-                      <span>Created token</span>
-                      <strong>{createdApiToken.name}</strong>
-                    </div>
-                    <label>
-                      <span>Token</span>
-                      <input
-                        onFocus={(event) => event.currentTarget.select()}
-                        readOnly
-                        value={createdApiToken.token}
-                      />
-                    </label>
-                    <div>
-                      <span>Scopes</span>
-                      <strong>
-                        {formatApiTokenScopes(createdApiToken.scopes)}
-                      </strong>
-                    </div>
-                  </section>
-                ) : null}
-
-                {apiTokenError ? (
-                  <p className="dashboard-alert" role="alert">
-                    {apiTokenError}
-                  </p>
-                ) : null}
-                {apiTokenMessage ? (
-                  <p className="dashboard-success" role="status">
-                    {apiTokenMessage}
-                  </p>
-                ) : null}
-
-                <section
-                  className="api-token-list-panel"
-                  aria-label="API token list"
-                >
-                  <div className="detail-section-heading">
-                    <div>
-                      <h3>API Tokens</h3>
-                      <span>
-                        {apiTokensLoading
-                          ? "Loading"
-                          : `${apiTokens.length} configured`}
-                      </span>
-                    </div>
-                    <KeyRound aria-hidden="true" size={20} />
-                  </div>
-                  <div className="table-wrap api-token-table-wrap">
-                    <table aria-label="API tokens table">
-                      <thead>
-                        <tr>
-                          <th>Name</th>
-                          <th>Scopes</th>
-                          <th>Created</th>
-                          <th>Last Used</th>
-                          <th>Status</th>
-                          <th>Action</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {apiTokens.length === 0 ? (
-                          <tr>
-                            <td colSpan={6}>
-                              {apiTokensLoading
-                                ? "Loading tokens"
-                                : "No tokens"}
-                            </td>
-                          </tr>
-                        ) : (
-                          apiTokens.map((token) => (
-                            <tr key={token.id}>
-                              <td>{token.name}</td>
-                              <td>{formatApiTokenScopes(token.scopes)}</td>
-                              <td>{formatDateTime(token.created_at)}</td>
-                              <td>
-                                {token.last_used_at
-                                  ? formatDateTime(token.last_used_at)
-                                  : "N.A."}
-                              </td>
-                              <td>{token.active ? "Active" : "Revoked"}</td>
-                              <td>
-                                {token.active ? (
-                                  <button
-                                    className="secondary-action"
-                                    disabled={apiTokenActionLoading}
-                                    onClick={() => void revokeApiToken(token)}
-                                    type="button"
-                                  >
-                                    Revoke
-                                  </button>
-                                ) : (
-                                  "N.A."
-                                )}
-                              </td>
-                            </tr>
-                          ))
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                </section>
-              </section>
+              <SettingsWorkbench
+                apiTokenActionLoading={apiTokenActionLoading}
+                apiTokenError={apiTokenError}
+                apiTokenMessage={apiTokenMessage}
+                apiTokenName={apiTokenName}
+                apiTokenScopeOptions={apiTokenScopeOptions}
+                apiTokenScopes={apiTokenScopes}
+                apiTokens={apiTokens}
+                apiTokensLoading={apiTokensLoading}
+                createdApiToken={createdApiToken}
+                currentUser={currentUser}
+                onApiTokenNameChange={setApiTokenName}
+                onCreateApiToken={createApiToken}
+                onRevokeApiToken={revokeApiToken}
+                onToggleApiTokenScope={toggleApiTokenScope}
+                providerStatus={providerStatus}
+                providerStatusError={providerStatusError}
+                providerStatusLoading={providerStatusLoading}
+                status={status}
+                statusError={statusError}
+              />
             ) : currentPath === "/reports" ? (
-              <section
-                className="reports-workflow"
-                aria-label="Reports workspace"
-              >
-                <section
-                  className="reports-readiness-panel"
-                  aria-label="Reports readiness"
-                >
-                  <div>
-                    <span>Report generation</span>
-                    <h3>Generate and download reports for the selected run</h3>
-                    <p>
-                      Create Markdown, HTML, JSON, CSV, ATT&CK Navigator, SARIF,
-                      and evidence ZIP artifacts from completed template
-                      analysis runs. History rows stay linked to backend
-                      downloads and checksum-backed metadata.
-                    </p>
-                  </div>
-                  <dl className="report-readiness-facts">
-                    <div>
-                      <dt>Project</dt>
-                      <dd>{selectedProject?.name ?? "No project selected"}</dd>
-                    </div>
-                    <div>
-                      <dt>Run</dt>
-                      <dd>
-                        {selectedReportRun
-                          ? `${runStatusLabel(selectedReportRun.status)} / ${runFileLabel(selectedReportRun)}`
-                          : runsLoading
-                            ? "Loading runs"
-                            : "No reportable run"}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt>Findings</dt>
-                      <dd>
-                        {selectedRunSummary?.finding_count ??
-                          projectSummary?.finding_count ??
-                          0}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt>Activation</dt>
-                      <dd>
-                        {reportActionsEnabled
-                          ? "Ready"
-                          : "Select completed run"}
-                      </dd>
-                    </div>
-                  </dl>
-                </section>
-
-                <section
-                  className="report-run-panel"
-                  aria-label="Report run selection"
-                >
-                  <label>
-                    <span>Analysis run</span>
-                    <select
-                      aria-label="Report analysis run"
-                      disabled={runsLoading || projectRuns.length === 0}
-                      onChange={(event) => setSelectedRunId(event.target.value)}
-                      value={selectedRunId}
-                    >
-                      {projectRuns.length === 0 ? (
-                        <option value="">No runs available</option>
-                      ) : null}
-                      {projectRuns.map((run) => (
-                        <option key={run.id} value={run.id}>
-                          {`${runStatusLabel(run.status)} - ${runFileLabel(run)} - ${run.id.slice(0, 8)}`}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <div>
-                    <span>Report history</span>
-                    <strong>
-                      {reportsLoading
-                        ? "Loading"
-                        : `${reports.length} artifacts`}
-                    </strong>
-                  </div>
-                  <div>
-                    <span>Latest status</span>
-                    <strong>
-                      {selectedReportRun
-                        ? runStatusLabel(selectedReportRun.status)
-                        : "N.A."}
-                    </strong>
-                  </div>
-                </section>
-
-                {runsError ? (
-                  <p className="dashboard-alert" role="alert">
-                    {runsError}
-                  </p>
-                ) : null}
-                {runDetailError ? (
-                  <p className="dashboard-alert" role="alert">
-                    {runDetailError}
-                  </p>
-                ) : null}
-                {reportsError ? (
-                  <p className="dashboard-alert" role="alert">
-                    {reportsError}
-                  </p>
-                ) : null}
-                {reportActionError ? (
-                  <p className="dashboard-alert" role="alert">
-                    {reportActionError}
-                  </p>
-                ) : null}
-                {reportActionMessage ? (
-                  <p className="dashboard-success" role="status">
-                    {reportActionMessage}
-                  </p>
-                ) : null}
-
-                <section
-                  className="report-card-grid"
-                  aria-label="Report export cards"
-                >
-                  {reportActionCards.map((card) => (
-                    <article className="report-action-card" key={card.title}>
-                      <div className="report-card-header">
-                        <card.icon aria-hidden="true" size={22} />
-                        <div>
-                          <span>{card.format}</span>
-                          <h3>{card.title}</h3>
-                        </div>
-                      </div>
-                      <p>{card.detail}</p>
-                      <div className="report-card-footer">
-                        <span className="report-stage-pill">{card.stage}</span>
-                        <button
-                          className="report-placeholder-button"
-                          disabled={
-                            !reportActionsEnabled ||
-                            activeReportFormat === card.reportFormat
-                          }
-                          onClick={() => void createReport(card.reportFormat)}
-                          type="button"
-                        >
-                          <Download aria-hidden="true" size={16} />
-                          <span>
-                            {activeReportFormat === card.reportFormat
-                              ? "Generating"
-                              : card.actionLabel}
-                          </span>
-                        </button>
-                      </div>
-                    </article>
-                  ))}
-                </section>
-
-                <section
-                  className="report-history-panel"
-                  aria-label="Reports history"
-                >
-                  <div className="detail-section-heading">
-                    <div>
-                      <h3>Report History</h3>
-                      <span>Prepared artifact list</span>
-                    </div>
-                    <History aria-hidden="true" size={20} />
-                  </div>
-                  <ul
-                    className="report-history-list"
-                    aria-label="Report history list"
-                  >
-                    <li className="report-history-row heading">
-                      <span>Artifact</span>
-                      <span>Format</span>
-                      <span>Status</span>
-                      <span>Download</span>
-                    </li>
-                    {reports.length === 0 ? (
-                      <li className="report-history-row empty">
-                        <span>No generated reports yet</span>
-                        <span>
-                          Markdown / HTML / JSON / CSV / Navigator / SARIF / ZIP
-                        </span>
-                        <span>
-                          {reportsLoading ? "Loading" : "Ready for VPW-053"}
-                        </span>
-                        <span>Generate first</span>
-                      </li>
-                    ) : (
-                      reports.map((report) => (
-                        <li className="report-history-row" key={report.id}>
-                          <span>
-                            <strong>{report.filename}</strong>
-                            <small>
-                              {report.sha256.slice(0, 12)} /{" "}
-                              {reportSizeLabel(report.size_bytes)}
-                            </small>
-                          </span>
-                          <span>{reportFormatLabel(report.format)}</span>
-                          <span>{formatDateTime(report.created_at)}</span>
-                          <span className="report-history-actions">
-                            {report.format === "zip" ? (
-                              <button
-                                className="icon-button"
-                                type="button"
-                                aria-label={`Verify ${report.filename}`}
-                                onClick={() =>
-                                  void verifyEvidenceReport(report)
-                                }
-                              >
-                                <ShieldCheck aria-hidden="true" size={16} />
-                              </button>
-                            ) : null}
-                            <button
-                              className="report-download-button"
-                              type="button"
-                              aria-label={`Download ${report.filename}`}
-                              onClick={() => void downloadReport(report)}
-                            >
-                              <Download aria-hidden="true" size={16} />
-                              <span>Download</span>
-                            </button>
-                          </span>
-                        </li>
-                      ))
-                    )}
-                  </ul>
-                </section>
-              </section>
+              <EvidenceCenter
+                activeReportFormat={activeReportFormat}
+                onCreateReport={createReport}
+                onDownloadReport={downloadReport}
+                onRunIdChange={setSelectedRunId}
+                onVerifyReport={verifyEvidenceReport}
+                projectRuns={projectRuns}
+                projectSummary={projectSummary}
+                providerStatus={providerStatus}
+                reportActionError={reportActionError}
+                reportActionMessage={reportActionMessage}
+                reportActionsEnabled={reportActionsEnabled}
+                reports={reports}
+                reportsError={reportsError}
+                reportsLoading={reportsLoading}
+                runDetailError={runDetailError}
+                runsError={runsError}
+                runsLoading={runsLoading}
+                selectedProject={selectedProject}
+                selectedReportRun={selectedReportRun}
+                selectedRunId={selectedRunId}
+                selectedRunSummary={selectedRunSummary}
+              />
             ) : (
               <div className="dashboard-panel-body">
                 {dashboardError ? (
-                  <p className="dashboard-alert" role="alert">
-                    {dashboardError}
-                  </p>
+                  <ErrorState message={dashboardError} />
                 ) : null}
 
                 {dashboardLoading ? (
-                  <p className="dashboard-state" role="status">
-                    Loading dashboard summary
-                  </p>
+                  <LoadingSkeleton label="Loading dashboard summary" />
                 ) : null}
 
                 {!dashboardLoading &&
                 !dashboardError &&
                 projects.length === 0 ? (
-                  <section
-                    className="dashboard-empty"
-                    aria-label="Dashboard empty state"
-                  >
-                    <h3>No projects yet</h3>
-                    <p>
-                      Create a project or import a CVE list to populate the
-                      dashboard.
-                    </p>
-                    <div className="empty-actions">
-                      <Link className="primary-action" to="/projects">
-                        Projects
-                      </Link>
-                      <Link className="secondary-action" to="/imports">
-                        Imports
-                      </Link>
-                    </div>
-                  </section>
+                  <EmptyState
+                    action={
+                      <div className="flex gap-2">
+                        <Button asChild>
+                          <Link to="/projects">Projects</Link>
+                        </Button>
+                        <Button variant="outline" asChild>
+                          <Link to="/imports">Imports</Link>
+                        </Button>
+                      </div>
+                    }
+                    ariaLabel="Dashboard empty state"
+                    detail="Create a project or import a CVE list to populate the dashboard."
+                    title="No projects yet"
+                  />
                 ) : null}
 
                 {!dashboardLoading &&
@@ -5657,274 +4888,383 @@ export function App() {
                 selectedProject &&
                 projectSummary !== null &&
                 (projectSummary.finding_count ?? 0) === 0 ? (
-                  <section
-                    className="dashboard-empty"
-                    aria-label="No findings empty state"
-                  >
-                    <h3>No findings in {selectedProject.name}</h3>
-                    <p>
-                      Import scanner, SBOM, or CVE-list data to create findings.
-                    </p>
-                    <div className="empty-actions">
-                      <Link className="primary-action" to="/imports">
-                        Imports
-                      </Link>
-                      <Link className="secondary-action" to="/projects">
-                        Projects
-                      </Link>
-                    </div>
-                  </section>
-                ) : null}
-
-                {!dashboardLoading &&
-                !dashboardError &&
-                projectSummary !== null &&
-                (projectSummary.finding_count ?? 0) > 0 ? (
-                  <dl
-                    className="summary-list"
-                    aria-label="Project decision summary"
-                  >
-                    {summaryRows.map((row) => (
-                      <div key={row.label}>
-                        <dt>{row.label}</dt>
-                        <dd>
-                          <strong>{row.value}</strong>
-                          <span>{row.detail}</span>
-                        </dd>
+                  <EmptyState
+                    action={
+                      <div className="flex gap-2">
+                        <Button asChild>
+                          <Link to="/imports">Imports</Link>
+                        </Button>
+                        <Button variant="outline" asChild>
+                          <Link to="/projects">Projects</Link>
+                        </Button>
                       </div>
-                    ))}
-                  </dl>
+                    }
+                    ariaLabel="No findings empty state"
+                    detail="Import scanner, SBOM, or CVE-list data to create findings."
+                    title={`No findings in ${selectedProject.name}`}
+                  />
                 ) : null}
 
-                {governanceError ? (
-                  <p className="dashboard-alert" role="alert">
-                    {governanceError}
-                  </p>
-                ) : null}
+                {!dashboardLoading && !dashboardError && projects.length > 0 ? (
+                  <div className="dashboard-cockpit-grid">
+                    <div className="dashboard-main-stack">
+                      {selectedProject &&
+                      projectSummary !== null &&
+                      (projectSummary.finding_count ?? 0) > 0 ? (
+                        <TopRemediationQueue
+                          error={dashboardFindingsError}
+                          findings={dashboardFindings}
+                          loading={dashboardFindingsLoading}
+                          projectName={selectedProject.name}
+                        />
+                      ) : null}
 
-                {governanceLoading ? (
-                  <p className="dashboard-state" role="status">
-                    Loading governance rollups
-                  </p>
-                ) : null}
+                      <section
+                        className="dashboard-chart-grid"
+                        aria-label="Dashboard chart previews"
+                      >
+                        <FindingsByPriorityChart items={priorityChartItems} />
+                        <TopServicesByRiskChart
+                          items={topServiceChartItems}
+                          source={topServiceSource}
+                        />
+                        <RiskTrendChart items={runActivityItems} />
+                      </section>
 
-                {!governanceLoading &&
-                !governanceError &&
-                selectedProject &&
-                projectGovernanceRollups ? (
-                  <section
-                    className="governance-summary-widget"
-                    aria-label="Top Services by Risk"
-                  >
-                    <div className="detail-section-heading">
-                      <h3>Top Services by Risk</h3>
-                      <span>Owner, service, and waiver debt concentration</span>
-                    </div>
-                    {topServiceRows.length === 0 ? (
-                      <p className="attack-summary-empty">
-                        No service rollups are available for this project.
-                      </p>
-                    ) : (
-                      <ul className="governance-service-list">
-                        {topServiceRows.map((service) => (
-                          <li key={service.label}>
-                            <div>
-                              <strong>{service.label}</strong>
-                              <span>
-                                {service.finding_count ?? 0} finding
-                                {service.finding_count === 1 ? "" : "s"}
-                              </span>
+                      {projectSummary !== null &&
+                      (projectSummary.finding_count ?? 0) > 0 ? (
+                        <dl
+                          className="summary-list"
+                          aria-label="Project decision summary"
+                        >
+                          {summaryRows.map((row) => (
+                            <div key={row.label}>
+                              <dt>{row.label}</dt>
+                              <dd>
+                                <strong>{row.value}</strong>
+                                <span>{row.detail}</span>
+                              </dd>
                             </div>
-                            <small>
-                              Critical {service.critical_count ?? 0} / High{" "}
-                              {service.high_count ?? 0} / Score{" "}
-                              {formatRollupScore(service.risk_score_total)} /
-                              Waiver debt {serviceWaiverDebtCount(service)}
-                            </small>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </section>
+                          ))}
+                        </dl>
+                      ) : null}
+
+                      {governanceError ? (
+                        <ErrorState message={governanceError} />
+                      ) : null}
+
+                      {governanceLoading ? (
+                        <LoadingSkeleton label="Loading governance rollups" />
+                      ) : null}
+
+                      {!governanceLoading &&
+                      !governanceError &&
+                      selectedProject &&
+                      projectGovernanceRollups ? (
+                        <section
+                          className="governance-summary-widget"
+                          aria-label="Top Services by Risk"
+                        >
+                          <div className="flex items-center justify-between mb-4">
+                            <h3 className="font-semibold">
+                              {topServiceSource === "assets"
+                                ? "Top Assets by Risk"
+                                : "Top Services by Risk"}
+                            </h3>
+                            <span className="text-sm text-muted-foreground">
+                              {topServiceSource === "assets"
+                                ? "Assets and waiver debt concentration"
+                                : "Owner, service, and waiver debt concentration"}
+                            </span>
+                          </div>
+                          {topServiceChartRows.length === 0 ? (
+                            <p className="attack-summary-empty">
+                              No service or asset rollups are available for this
+                              project. Import findings with service or asset
+                              context and rerun analysis to enable risk ranking.
+                            </p>
+                          ) : (
+                            <ul className="governance-service-list">
+                              {topServiceChartRows.map((service) => (
+                                <li key={service.label}>
+                                  <div>
+                                    <strong>{service.label}</strong>
+                                    <span>
+                                      {service.finding_count ?? 0} finding
+                                      {service.finding_count === 1 ? "" : "s"}
+                                    </span>
+                                  </div>
+                                  <small>
+                                    Highest{" "}
+                                    {service.highest_priority ?? "Unreviewed"} /{" "}
+                                    Critical {service.critical_count ?? 0} /
+                                    High {service.high_count ?? 0} / Score{" "}
+                                    {formatRollupScore(
+                                      service.risk_score_total,
+                                    )}{" "}
+                                    / Waiver debt{" "}
+                                    {serviceWaiverDebtCount(service)}
+                                  </small>
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                        </section>
+                      ) : null}
+                    </div>
+
+                    <aside
+                      className="dashboard-side-stack"
+                      aria-label="Dashboard evidence panels"
+                    >
+                      <ProviderFreshnessPanel
+                        providerStatus={providerStatus}
+                        statusError={providerStatusError || statusError}
+                      />
+
+                      <section
+                        className="dashboard-readiness-card"
+                        aria-label="Evidence Readiness"
+                      >
+                        <div className="dashboard-panel-heading">
+                          <div>
+                            <span>Report Inputs</span>
+                            <h3>Evidence Readiness</h3>
+                            <p>Latest run context for report generation.</p>
+                          </div>
+                          <Button variant="outline" size="sm" asChild>
+                            <Link to="/reports">Reports</Link>
+                          </Button>
+                        </div>
+
+                        {runsError ? <ErrorState message={runsError} /> : null}
+
+                        <dl className="dashboard-readiness-facts">
+                          <div>
+                            <dt>Latest run</dt>
+                            <dd>
+                              {runsLoading
+                                ? "Loading"
+                                : latestProjectRun
+                                  ? runStatusLabel(latestProjectRun.status)
+                                  : "No runs"}
+                            </dd>
+                          </div>
+                          <div>
+                            <dt>Run started</dt>
+                            <dd>
+                              {latestProjectRun?.started_at
+                                ? formatDateTime(latestProjectRun.started_at)
+                                : "N.A."}
+                            </dd>
+                          </div>
+                          <div>
+                            <dt>Findings</dt>
+                            <dd>{projectSummary?.finding_count ?? 0}</dd>
+                          </div>
+                          <div>
+                            <dt>Reports</dt>
+                            <dd>
+                              {latestProjectRun
+                                ? "Ready for generation"
+                                : "Import data first"}
+                            </dd>
+                          </div>
+                        </dl>
+                      </section>
+                    </aside>
+                  </div>
                 ) : null}
               </div>
             )}
           </div>
 
-          <div className="side-panel">
-            <section
-              className="provider-status-section"
-              aria-label="Provider Status"
-            >
-              <div className="panel-header compact inline-header">
-                <div>
-                  <h2>Provider Status</h2>
-                  <span>
-                    {providerStatus?.snapshot.content_hash ??
-                      "No snapshot recorded"}
-                  </span>
-                </div>
-                <Database aria-hidden="true" size={18} />
-              </div>
+          {!isFindingsList &&
+            !isFindingDetail &&
+            currentPath !== "/reports" &&
+            currentPath !== "/settings" &&
+            currentPath !== "/providers" && (
+              <div className="side-panel">
+                <section aria-label="Provider Status">
+                  <div className="panel-header compact inline-header">
+                    <div>
+                      <h2>Provider Status</h2>
+                      <span>{providerSnapshotSummary(providerStatus)}</span>
+                    </div>
+                    <Database aria-hidden="true" size={18} />
+                  </div>
 
-              <div
-                className={`provider-state ${
-                  providerStatus?.status === "ok" ? "ok" : "degraded"
-                }`}
-              >
-                <span>{providerStatus?.status ?? "loading"}</span>
-                <strong>{providerStatus?.snapshot_mode ?? "missing"}</strong>
-              </div>
+                  <div
+                    className={`provider-state ${
+                      providerStatus?.status === "ok" ? "ok" : "degraded"
+                    }`}
+                  >
+                    <span>{providerStatus?.status ?? "loading"}</span>
+                    <strong>
+                      {providerStatus?.snapshot_mode ?? "missing"}
+                    </strong>
+                  </div>
 
-              <dl className="provider-facts">
-                <div>
-                  <dt>Snapshot mode</dt>
-                  <dd>{providerStatus?.snapshot_mode ?? "missing"}</dd>
-                </div>
-                <div>
-                  <dt>Last sync</dt>
-                  <dd>{providerStatus?.last_sync ?? "N.A."}</dd>
-                </div>
-                <div>
-                  <dt>Cache age</dt>
-                  <dd>{formatCacheAge(providerStatus?.cache_age_seconds)}</dd>
-                </div>
-                <div>
-                  <dt>Last error</dt>
-                  <dd>
-                    {providerStatus?.last_error ?? (statusError || "None")}
-                  </dd>
-                </div>
-              </dl>
-
-              <ul className="provider-sources" aria-label="Provider sources">
-                {(providerStatus?.sources ?? fallbackProviderSources).map(
-                  (source) => (
-                    <li className="provider-source" key={source.name}>
-                      <div>
-                        <strong>{source.name.toUpperCase()}</strong>
-                        <span>{source.value ?? "N.A."}</span>
-                      </div>
-                      <span
-                        className={
-                          source.available
-                            ? "source-pill available"
-                            : "source-pill"
-                        }
-                      >
-                        {source.available ? "available" : "missing"}
-                      </span>
-                    </li>
-                  ),
-                )}
-              </ul>
-
-              {(providerStatus?.warnings ?? []).map((warning) => (
-                <p className="provider-warning" key={warning}>
-                  {warning}
-                </p>
-              ))}
-            </section>
-
-            <div className="panel-header compact">
-              <div>
-                <h2>Evidence Flow</h2>
-                <span>Latest workspace events</span>
-              </div>
-              <GitBranch aria-hidden="true" size={18} />
-            </div>
-            <ol className="timeline">
-              {timeline.map((item) => (
-                <li key={item}>{item}</li>
-              ))}
-            </ol>
-            <section
-              className="attack-summary-widget"
-              aria-label="Top ATT&CK techniques dashboard widget"
-            >
-              <div className="panel-header compact inline-header">
-                <div>
-                  <h2>Top ATT&CK Techniques</h2>
-                  <span>
-                    {projectAttackSummary
-                      ? attackConfidenceSummary(projectAttackSummary)
-                      : "Confidence distribution loading"}
-                  </span>
-                </div>
-                <BarChart3 aria-hidden="true" size={18} />
-              </div>
-
-              {attackSummaryError ? (
-                <p className="dashboard-alert" role="alert">
-                  {attackSummaryError}
-                </p>
-              ) : null}
-
-              {attackSummaryLoading ? (
-                <p className="dashboard-state" role="status">
-                  Loading ATT&CK summary
-                </p>
-              ) : null}
-
-              {!attackSummaryLoading &&
-              !attackSummaryError &&
-              (!selectedProject || !projectAttackSummary) ? (
-                <p className="attack-summary-empty">
-                  Select a project to review ATT&CK concentration.
-                </p>
-              ) : null}
-
-              {!attackSummaryLoading &&
-              !attackSummaryError &&
-              projectAttackSummary &&
-              attackTopTechniques.length === 0 ? (
-                <p className="attack-summary-empty">
-                  No reviewed ATT&CK technique mappings are stored for this
-                  project.
-                </p>
-              ) : null}
-
-              {!attackSummaryLoading &&
-              !attackSummaryError &&
-              projectAttackSummary &&
-              attackTopTechniques.length > 0 ? (
-                <>
-                  <dl className="attack-summary-stats">
-                    {attackRows.map((row) => (
-                      <div key={row.label}>
-                        <dt>{row.label}</dt>
-                        <dd>
-                          <strong>{row.value}</strong>
-                          <span>{row.detail}</span>
-                        </dd>
-                      </div>
-                    ))}
+                  <dl className="provider-facts">
+                    <div>
+                      <dt>Snapshot mode</dt>
+                      <dd>{providerStatus?.snapshot_mode ?? "missing"}</dd>
+                    </div>
+                    <div>
+                      <dt>Last sync</dt>
+                      <dd>{providerStatus?.last_sync ?? "N.A."}</dd>
+                    </div>
+                    <div>
+                      <dt>Cache age</dt>
+                      <dd>
+                        {formatCacheAge(providerStatus?.cache_age_seconds)}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>Last error</dt>
+                      <dd>
+                        {providerStatus?.last_error ?? (statusError || "None")}
+                      </dd>
+                    </div>
                   </dl>
-                  <ul className="attack-technique-list">
-                    {attackTopTechniques.map((technique) => (
-                      <li key={technique.technique_id}>
-                        <div>
-                          <strong>{technique.technique_id}</strong>
-                          <span>{technique.name ?? "Unnamed technique"}</span>
-                        </div>
-                        <small>
-                          {technique.finding_count} finding
-                          {technique.finding_count === 1 ? "" : "s"} /{" "}
-                          {attackTechniqueConfidenceLabel(technique)}
-                        </small>
-                      </li>
-                    ))}
+
+                  <ul
+                    className="provider-sources"
+                    aria-label="Provider sources"
+                  >
+                    {(providerStatus?.sources ?? fallbackProviderSources).map(
+                      (source) => (
+                        <li className="provider-source" key={source.name}>
+                          <div>
+                            <strong>{source.name.toUpperCase()}</strong>
+                            <span>{source.value ?? "N.A."}</span>
+                          </div>
+                          <Badge
+                            className={
+                              source.available
+                                ? "bg-green-100 text-green-700 border-green-200"
+                                : "bg-red-100 text-red-700 border-red-200"
+                            }
+                          >
+                            {source.available ? "available" : "missing"}
+                          </Badge>
+                        </li>
+                      ),
+                    )}
                   </ul>
-                  <p className="attack-summary-note">
-                    {projectAttackSummary.defensive_note}
-                  </p>
-                </>
-              ) : null}
-            </section>
-          </div>
+
+                  {(providerStatus?.warnings ?? []).map((warning) => (
+                    <p className="provider-warning" key={warning}>
+                      {warning}
+                    </p>
+                  ))}
+                </section>
+
+                <div className="panel-header compact">
+                  <div>
+                    <h2>Evidence Flow</h2>
+                    <span>Latest workspace events</span>
+                  </div>
+                  <GitBranch aria-hidden="true" size={18} />
+                </div>
+                <ol className="timeline">
+                  {timeline.map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ol>
+                <section
+                  className="attack-summary-widget"
+                  aria-label="Top ATT&CK techniques dashboard widget"
+                >
+                  <div className="panel-header compact inline-header">
+                    <div>
+                      <h2>Top ATT&CK Techniques</h2>
+                      <span>
+                        {projectAttackSummary
+                          ? attackConfidenceSummary(projectAttackSummary)
+                          : "Confidence distribution loading"}
+                      </span>
+                    </div>
+                    <BarChart3 aria-hidden="true" size={18} />
+                  </div>
+
+                  {attackSummaryError ? (
+                    <p
+                      className="text-sm text-destructive rounded-md border border-destructive/20 bg-destructive/10 px-3 py-2"
+                      role="alert"
+                    >
+                      {attackSummaryError}
+                    </p>
+                  ) : null}
+
+                  {attackSummaryLoading ? (
+                    <p className="text-sm text-muted-foreground" role="status">
+                      Loading ATT&CK summary
+                    </p>
+                  ) : null}
+
+                  {!attackSummaryLoading &&
+                  !attackSummaryError &&
+                  (!selectedProject || !projectAttackSummary) ? (
+                    <p className="attack-summary-empty">
+                      Select a project to review ATT&CK concentration.
+                    </p>
+                  ) : null}
+
+                  {!attackSummaryLoading &&
+                  !attackSummaryError &&
+                  projectAttackSummary &&
+                  attackTopTechniques.length === 0 ? (
+                    <p className="attack-summary-empty">
+                      No reviewed ATT&CK technique mappings are stored for this
+                      project.
+                    </p>
+                  ) : null}
+
+                  {!attackSummaryLoading &&
+                  !attackSummaryError &&
+                  projectAttackSummary &&
+                  attackTopTechniques.length > 0 ? (
+                    <>
+                      <dl className="attack-summary-stats">
+                        {attackRows.map((row) => (
+                          <div key={row.label}>
+                            <dt>{row.label}</dt>
+                            <dd>
+                              <strong>{row.value}</strong>
+                              <span>{row.detail}</span>
+                            </dd>
+                          </div>
+                        ))}
+                      </dl>
+                      <ul className="attack-technique-list">
+                        {attackTopTechniques.map((technique) => (
+                          <li key={technique.technique_id}>
+                            <div>
+                              <strong>{technique.technique_id}</strong>
+                              <span>
+                                {technique.name ?? "Unnamed technique"}
+                              </span>
+                            </div>
+                            <small>
+                              {technique.finding_count} finding
+                              {technique.finding_count === 1 ? "" : "s"} /{" "}
+                              {attackTechniqueConfidenceLabel(technique)}
+                            </small>
+                          </li>
+                        ))}
+                      </ul>
+                      <p className="attack-summary-note">
+                        {projectAttackSummary.defensive_note}
+                      </p>
+                    </>
+                  ) : null}
+                </section>
+              </div>
+            )}
         </section>
-      </main>
-    </div>
+      )}
+    </ProductAppShell>
   )
 }
 
@@ -5933,19 +5273,3 @@ const fallbackProviderSources: ProviderSourceStatusPublic[] = [
   { name: "epss", available: false, value: null },
   { name: "kev", available: false, value: null },
 ]
-
-function formatCacheAge(seconds: number | null | undefined): string {
-  if (seconds === null || seconds === undefined) {
-    return "N.A."
-  }
-  if (seconds < 60) {
-    return `${seconds}s`
-  }
-  if (seconds < 3600) {
-    return `${Math.floor(seconds / 60)}m`
-  }
-  if (seconds < 86400) {
-    return `${Math.floor(seconds / 3600)}h`
-  }
-  return `${Math.floor(seconds / 86400)}d`
-}

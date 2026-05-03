@@ -1,0 +1,1440 @@
+import { useState } from "react"
+import { Link } from "@tanstack/react-router"
+import {
+  AlertTriangle,
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
+  ChevronLeft,
+  ChevronRight,
+  Eye,
+  FileDown,
+  Filter,
+  ListFilter,
+  Upload,
+  X,
+} from "lucide-react"
+import type {
+  AssetExposure,
+  FindingPriority,
+  FindingPublic,
+  FindingStatus,
+  ProjectDecisionSummaryPublic,
+  ProjectPublic,
+} from "@/api-client"
+import type { FindingsReadProjectFindingsData } from "@/api-client"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent } from "@/components/ui/card"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
+import {
+  CvssBadge,
+  EpssBadge,
+  FindingStatusBadge,
+  KevBadge,
+  PriorityBadge,
+  RiskScore,
+} from "@/components/risk"
+import { EmptyState, ErrorState, LoadingSkeleton } from "@/components/states"
+import { DEMO_FINDINGS, DEMO_PROJECT, DEMO_SUMMARY } from "@/lib/demo-data"
+import { cn } from "@/lib/utils"
+import { formatLabel as labelize, optionalText } from "@/lib/ui-copy"
+
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
+
+type FindingsSort = NonNullable<FindingsReadProjectFindingsData["sort"]>
+type FindingsDirection = NonNullable<
+  FindingsReadProjectFindingsData["direction"]
+>
+type QueueSort = FindingsSort | "component" | "owner"
+
+type KevFilter = "" | "true" | "false"
+
+type FindingFilters = {
+  cvssMax: string
+  cvssMin: string
+  epssMax: string
+  epssMin: string
+  exposure: "" | AssetExposure
+  kev: KevFilter
+  ownerService: string
+  priority: "" | FindingPriority
+  status: "" | FindingStatus
+}
+
+export type RemediationQueueProps = {
+  findings: FindingPublic[]
+  findingsLoading: boolean
+  findingsError: string
+  findingCount: number
+  findingOffset: number
+  findingPageSize: number
+  findingSort: FindingsSort
+  findingDirection: FindingsDirection
+  findingFilters: FindingFilters
+  activeFindingFilters: boolean
+  findingAssetId: string | null
+  findingAssetKey: string | null
+  selectedProject: ProjectPublic | null
+  projects: ProjectPublic[]
+  projectListLoading: boolean
+  selectedProjectId: string
+  projectSummary: ProjectDecisionSummaryPublic | null
+  onFilterChange: <K extends keyof FindingFilters>(
+    key: K,
+    value: FindingFilters[K],
+  ) => void
+  onClearFilters: () => void
+  onSortChange: (sort: FindingsSort) => void
+  onDirectionChange: (direction: FindingsDirection) => void
+  onPageNext: () => void
+  onPagePrev: () => void
+  onPageSizeChange: (size: number) => void
+  onProjectChange: (id: string) => void
+}
+
+// ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
+
+const priorityOptions: FindingPriority[] = ["critical", "high", "medium", "low"]
+const statusOptions: FindingStatus[] = [
+  "open",
+  "in_review",
+  "remediating",
+  "fixed",
+  "accepted",
+  "suppressed",
+]
+const exposureOptions: AssetExposure[] = [
+  "internet-facing",
+  "internal",
+  "private",
+  "unknown",
+]
+const pageSizeOptions = [10, 25, 50] as const
+
+const apiSortValues: readonly FindingsSort[] = [
+  "operational",
+  "priority",
+  "score",
+  "cve",
+  "status",
+  "epss",
+  "cvss",
+  "kev",
+  "last_seen",
+]
+
+const defaultSortDirections: Record<QueueSort, FindingsDirection> = {
+  operational: "asc",
+  priority: "asc",
+  score: "desc",
+  cve: "asc",
+  component: "asc",
+  owner: "asc",
+  status: "asc",
+  epss: "desc",
+  cvss: "desc",
+  kev: "desc",
+  last_seen: "desc",
+}
+
+const prioritySortRank: Record<string, number> = {
+  critical: 0,
+  high: 1,
+  medium: 2,
+  low: 3,
+}
+
+const statusSortRank: Record<string, number> = {
+  open: 0,
+  in_review: 1,
+  remediating: 2,
+  fixed: 3,
+  accepted: 4,
+  suppressed: 5,
+}
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function componentLabel(f: FindingPublic) {
+  const name = optionalText(f.component_name)
+  return f.component_version ? `${name} ${f.component_version}` : name
+}
+
+function serviceLabel(f: FindingPublic) {
+  return f.business_service ?? f.component_purl ?? "Service not linked"
+}
+
+function assetLabel(f: FindingPublic) {
+  return f.asset_name ?? f.asset_key ?? f.business_service ?? "N.A."
+}
+
+function ownerLabel(f: FindingPublic) {
+  return f.owner ?? f.business_service ?? "Unassigned"
+}
+
+function isApiSort(sort: QueueSort): sort is FindingsSort {
+  return (apiSortValues as readonly string[]).includes(sort)
+}
+
+function findingWhyNow(f: FindingPublic) {
+  return (
+    optionalText(f.rationale) ??
+    optionalText(f.recommended_action) ??
+    "No priority rationale has been recorded yet."
+  )
+}
+
+function formatDateTime(value: string | null | undefined) {
+  if (!value) return "N.A."
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) {
+    return "N.A."
+  }
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(date)
+}
+
+function formatShortDate(value: string | null | undefined) {
+  if (!value) return "N.A."
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) {
+    return "N.A."
+  }
+  return new Intl.DateTimeFormat(undefined, {
+    day: "2-digit",
+    month: "2-digit",
+    year: "2-digit",
+  }).format(date)
+}
+
+function dateSortValue(value: string | null | undefined) {
+  if (!value) return null
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? null : date.getTime()
+}
+
+function compareNullableNumber(
+  a: number | null | undefined,
+  b: number | null | undefined,
+  direction: FindingsDirection,
+) {
+  const aMissing = a == null
+  const bMissing = b == null
+  if (aMissing && bMissing) return 0
+  if (aMissing) return 1
+  if (bMissing) return -1
+  return direction === "asc" ? a - b : b - a
+}
+
+function compareText(
+  a: string | null | undefined,
+  b: string | null | undefined,
+  direction: FindingsDirection,
+) {
+  const aValue = a?.trim()
+  const bValue = b?.trim()
+  if (!aValue && !bValue) return 0
+  if (!aValue) return 1
+  if (!bValue) return -1
+  const compared = aValue.localeCompare(bValue, undefined, {
+    numeric: true,
+    sensitivity: "base",
+  })
+  return direction === "asc" ? compared : -compared
+}
+
+function compareRank(
+  a: string | null | undefined,
+  b: string | null | undefined,
+  rank: Record<string, number>,
+  direction: FindingsDirection,
+) {
+  const aRank = a ? (rank[a] ?? Number.MAX_SAFE_INTEGER) : Number.MAX_SAFE_INTEGER
+  const bRank = b ? (rank[b] ?? Number.MAX_SAFE_INTEGER) : Number.MAX_SAFE_INTEGER
+  const compared = aRank - bRank
+  return direction === "asc" ? compared : -compared
+}
+
+function sortDisplayFindings(
+  findings: FindingPublic[],
+  sort: QueueSort,
+  direction: FindingsDirection,
+) {
+  if (sort === "operational") return findings
+
+  return [...findings].sort((a, b) => {
+    let compared = 0
+    switch (sort) {
+      case "priority":
+        compared = compareRank(
+          a.priority,
+          b.priority,
+          prioritySortRank,
+          direction,
+        )
+        break
+      case "score":
+        compared = compareNullableNumber(a.risk_score, b.risk_score, direction)
+        break
+      case "cve":
+        compared = compareText(a.cve_id, b.cve_id, direction)
+        break
+      case "component":
+        compared =
+          compareText(componentLabel(a), componentLabel(b), direction) ||
+          compareText(serviceLabel(a), serviceLabel(b), direction)
+        break
+      case "owner":
+        compared = compareText(ownerLabel(a), ownerLabel(b), direction)
+        break
+      case "status":
+        compared = compareRank(a.status, b.status, statusSortRank, direction)
+        break
+      case "epss":
+        compared = compareNullableNumber(a.epss, b.epss, direction)
+        break
+      case "cvss":
+        compared = compareNullableNumber(
+          a.cvss_base_score,
+          b.cvss_base_score,
+          direction,
+        )
+        break
+      case "kev":
+        compared = compareNullableNumber(
+          a.in_kev ? 1 : 0,
+          b.in_kev ? 1 : 0,
+          direction,
+        )
+        break
+      case "last_seen":
+        compared = compareNullableNumber(
+          dateSortValue(a.last_seen_at),
+          dateSortValue(b.last_seen_at),
+          direction,
+        )
+        break
+      default:
+        compared = 0
+    }
+    return compared || compareText(a.cve_id, b.cve_id, "asc")
+  })
+}
+
+function riskScoreColor(score: number | null | undefined) {
+  if (score == null) return "text-muted-foreground"
+  if (score >= 8) return "text-red-500 font-bold tabular-nums"
+  if (score >= 6) return "text-amber-500 font-semibold tabular-nums"
+  if (score >= 4) return "text-yellow-600 tabular-nums"
+  return "text-muted-foreground tabular-nums"
+}
+
+function activeFilterCount(filters: FindingFilters, hasAssetId: boolean) {
+  const fromFilters = Object.values(filters).filter(
+    (v) => v.trim() !== "",
+  ).length
+  return fromFilters + (hasAssetId ? 1 : 0)
+}
+
+function advancedFilterCount(filters: FindingFilters) {
+  return [
+    filters.cvssMax,
+    filters.cvssMin,
+    filters.epssMax,
+    filters.epssMin,
+    filters.exposure,
+    filters.kev,
+  ].filter((v) => v.trim() !== "").length
+}
+
+// ---------------------------------------------------------------------------
+// Sub-components
+// ---------------------------------------------------------------------------
+
+function DemoBanner() {
+  return (
+    <div
+      className="flex items-center gap-2 rounded-lg border border-amber-400/40 bg-amber-500/10 px-4 py-2.5 text-sm text-amber-700 dark:text-amber-300"
+      role="status"
+    >
+      <AlertTriangle aria-hidden="true" className="shrink-0" size={15} />
+      <span>
+        <strong className="font-semibold">Demo preview</strong> — showing sample
+        findings. Connect a real project to see live data.
+      </span>
+    </div>
+  )
+}
+
+type SummaryChipProps = {
+  label: string
+  value: number | string
+  colorClass?: string
+}
+
+function SummaryChip({ label, value, colorClass }: SummaryChipProps) {
+  return (
+    <div className="flex items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-medium text-white/90 backdrop-blur-sm">
+      <span className={cn("font-bold", colorClass)}>{value}</span>
+      <span className="text-white/60">{label}</span>
+    </div>
+  )
+}
+
+type WhyDialogProps = {
+  finding: FindingPublic | null
+  open: boolean
+  onClose: () => void
+}
+
+function WhyDialog({ finding, open, onClose }: WhyDialogProps) {
+  if (!finding) return null
+  return (
+    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <PriorityBadge priority={finding.priority} />
+            <span className="font-mono text-sm">{finding.cve_id}</span>
+          </DialogTitle>
+        </DialogHeader>
+        <div className="flex flex-col gap-4 text-sm">
+          {finding.rationale ? (
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">
+                Why now
+              </p>
+              <p className="leading-relaxed">{finding.rationale}</p>
+            </div>
+          ) : (
+            <p className="text-muted-foreground">
+              No rationale recorded for this finding.
+            </p>
+          )}
+          {finding.recommended_action ? (
+            <div className="rounded-md border border-teal-500/30 bg-teal-500/10 p-3">
+              <p className="text-xs font-semibold uppercase tracking-wider text-teal-700 dark:text-teal-400 mb-1">
+                Recommended action
+              </p>
+              <p className="leading-relaxed">{finding.recommended_action}</p>
+            </div>
+          ) : null}
+          <dl className="grid grid-cols-3 gap-3 rounded-md border bg-muted/40 p-3 text-xs">
+            <div>
+              <dt className="text-muted-foreground">Risk Score</dt>
+              <dd
+                className={cn(
+                  "font-bold text-sm",
+                  riskScoreColor(finding.risk_score),
+                )}
+              >
+                {finding.risk_score?.toFixed(1) ?? "N.A."}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-muted-foreground">EPSS</dt>
+              <dd className="font-semibold text-sm">
+                <EpssBadge value={finding.epss} />
+              </dd>
+            </div>
+            <div>
+              <dt className="text-muted-foreground">KEV</dt>
+              <dd className="font-semibold text-sm">
+                <KevBadge matched={finding.in_kev} />
+              </dd>
+            </div>
+          </dl>
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+type QuickViewSheetProps = {
+  finding: FindingPublic | null
+  open: boolean
+  onClose: () => void
+}
+
+function QuickViewSheet({ finding, open, onClose }: QuickViewSheetProps) {
+  if (!finding) return null
+  return (
+    <Sheet open={open} onOpenChange={(v) => !v && onClose()}>
+      <SheetContent className="w-96 overflow-y-auto">
+        <SheetHeader>
+          <SheetTitle className="font-mono text-base">
+            {finding.cve_id}
+          </SheetTitle>
+        </SheetHeader>
+        <div className="flex flex-col gap-5 mt-6 text-sm">
+          <div className="flex flex-wrap gap-2">
+            <PriorityBadge priority={finding.priority} />
+            <FindingStatusBadge status={finding.status} />
+            <KevBadge matched={finding.in_kev} />
+          </div>
+
+          <dl className="grid grid-cols-2 gap-3">
+            {[
+              {
+                label: "Risk Score",
+                value: finding.risk_score?.toFixed(1) ?? "N.A.",
+              },
+              { label: "EPSS", value: <EpssBadge value={finding.epss} /> },
+              {
+                label: "CVSS",
+                value: <CvssBadge value={finding.cvss_base_score} />,
+              },
+              { label: "Exposure", value: labelize(finding.exposure) },
+              { label: "Owner", value: optionalText(finding.owner) },
+              {
+                label: "Service",
+                value: optionalText(finding.business_service),
+              },
+            ].map(({ label, value }) => (
+              <div key={label}>
+                <dt className="text-xs text-muted-foreground">{label}</dt>
+                <dd className="font-medium mt-0.5">{value}</dd>
+              </div>
+            ))}
+          </dl>
+
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">
+              Component
+            </p>
+            <p className="font-medium">{componentLabel(finding)}</p>
+            {finding.component_purl ? (
+              <p className="text-xs text-muted-foreground mt-0.5 break-all">
+                {finding.component_purl}
+              </p>
+            ) : null}
+          </div>
+
+          {finding.rationale ? (
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">
+                Rationale
+              </p>
+              <p className="leading-relaxed text-sm">{finding.rationale}</p>
+            </div>
+          ) : null}
+
+          {finding.recommended_action ? (
+            <div className="rounded-md border border-teal-500/30 bg-teal-500/10 p-3">
+              <p className="text-xs font-semibold uppercase tracking-wider text-teal-700 dark:text-teal-400 mb-1">
+                Recommended action
+              </p>
+              <p className="leading-relaxed text-sm">
+                {finding.recommended_action}
+              </p>
+            </div>
+          ) : null}
+
+          <div className="pt-2 border-t">
+            <Button asChild className="w-full" size="sm" variant="outline">
+              <Link
+                params={{ findingId: finding.id }}
+                to="/findings/$findingId"
+              >
+                Open full detail
+              </Link>
+            </Button>
+          </div>
+        </div>
+      </SheetContent>
+    </Sheet>
+  )
+}
+
+type SortHeaderProps = {
+  currentDirection: FindingsDirection
+  currentSort: QueueSort
+  label: string
+  onSort: (sort: QueueSort) => void
+  sort: QueueSort
+}
+
+function SortHeader({
+  currentDirection,
+  currentSort,
+  label,
+  onSort,
+  sort,
+}: SortHeaderProps) {
+  const active = currentSort === sort
+  const nextDirection: FindingsDirection = active
+    ? currentDirection === "asc"
+      ? "desc"
+      : "asc"
+    : defaultSortDirections[sort]
+  const Icon = active
+    ? currentDirection === "asc"
+      ? ArrowUp
+      : ArrowDown
+    : ArrowUpDown
+
+  return (
+    <th
+      aria-sort={
+        active
+          ? currentDirection === "asc"
+            ? "ascending"
+            : "descending"
+          : undefined
+      }
+    >
+      <button
+        aria-label={`Sort by ${label} (${active ? `${currentDirection} active` : `${nextDirection} first`})`}
+        className={cn(
+          "-ml-1 inline-flex h-7 items-center gap-1 rounded-md px-1.5 text-[0.72rem] font-extrabold uppercase text-inherit transition hover:bg-slate-100 hover:text-slate-900",
+          active ? "text-teal-700" : "text-slate-500",
+        )}
+        onClick={() => onSort(sort)}
+        type="button"
+      >
+        <Icon
+          aria-hidden="true"
+          className={cn(
+            "size-3.5 shrink-0",
+            active ? "opacity-100" : "opacity-50",
+          )}
+        />
+        <span className="text-left leading-tight">{label}</span>
+      </button>
+    </th>
+  )
+}
+
+function StaticHeader({ align = "left", label }: { align?: "left" | "right"; label: string }) {
+  return (
+    <th>
+      <span
+        className={cn(
+          "inline-flex h-7 items-center text-[0.72rem] font-extrabold uppercase text-slate-500",
+          align === "right" ? "justify-end" : "justify-start",
+        )}
+      >
+        {label}
+      </span>
+    </th>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Main component
+// ---------------------------------------------------------------------------
+
+export function RemediationQueue({
+  findings,
+  findingsLoading,
+  findingsError,
+  findingCount,
+  findingOffset,
+  findingPageSize,
+  findingSort,
+  findingDirection,
+  findingFilters,
+  activeFindingFilters,
+  findingAssetId,
+  findingAssetKey,
+  selectedProject,
+  projects,
+  projectListLoading,
+  selectedProjectId,
+  projectSummary,
+  onFilterChange,
+  onClearFilters,
+  onSortChange,
+  onDirectionChange,
+  onPageNext,
+  onPagePrev,
+  onPageSizeChange,
+  onProjectChange,
+}: RemediationQueueProps) {
+  const [whyFinding, setWhyFinding] = useState<FindingPublic | null>(null)
+  const [sheetFinding, setSheetFinding] = useState<FindingPublic | null>(null)
+  const [whyOpen, setWhyOpen] = useState(false)
+  const [sheetOpen, setSheetOpen] = useState(false)
+  const [advancedFiltersOpen, setAdvancedFiltersOpen] = useState(false)
+  const [queueSort, setQueueSort] = useState<QueueSort>(findingSort)
+
+  const isDemo = projects.length === 0 && !projectListLoading
+  const sourceFindings = isDemo ? DEMO_FINDINGS : findings
+  const displayFindings =
+    isDemo || !isApiSort(queueSort)
+      ? sortDisplayFindings(sourceFindings, queueSort, findingDirection)
+      : sourceFindings
+  const displaySummary = isDemo ? DEMO_SUMMARY : projectSummary
+  const displayProject = isDemo ? DEMO_PROJECT : selectedProject
+  const isLoading = !isDemo && findingsLoading
+  const hasError = !isDemo && Boolean(findingsError)
+
+  const criticalCount =
+    displaySummary?.counts_by_priority?.["critical"] ??
+    displaySummary?.counts_by_priority?.["Critical"] ??
+    0
+  const highCount =
+    displaySummary?.counts_by_priority?.["high"] ??
+    displaySummary?.counts_by_priority?.["High"] ??
+    0
+  const kevCount = displaySummary?.kev_hits ?? 0
+  const openCount = displaySummary?.counts_by_status?.["open"] ?? 0
+
+  const pageStart = isDemo
+    ? 1
+    : findingCount === 0
+      ? 0
+      : Math.min(findingOffset + 1, findingCount)
+  const pageEnd = isDemo
+    ? displayFindings.length
+    : Math.min(findingOffset + findings.length, findingCount)
+  const totalCount = isDemo ? displayFindings.length : findingCount
+
+  const filterCount = activeFilterCount(findingFilters, Boolean(findingAssetId))
+  const signalFilterCount = advancedFilterCount(findingFilters)
+  const showAdvancedFilters = advancedFiltersOpen || signalFilterCount > 0
+
+  function openWhy(finding: FindingPublic) {
+    setWhyFinding(finding)
+    setWhyOpen(true)
+  }
+  function openSheet(finding: FindingPublic) {
+    setSheetFinding(finding)
+    setSheetOpen(true)
+  }
+
+  function updateColumnSort(sort: QueueSort) {
+    const nextDirection =
+      queueSort === sort
+        ? findingDirection === "asc"
+          ? "desc"
+          : "asc"
+        : defaultSortDirections[sort]
+    setQueueSort(sort)
+    if (isApiSort(sort)) {
+      onSortChange(sort)
+    }
+    onDirectionChange(nextDirection)
+  }
+
+  return (
+    <TooltipProvider>
+      <div className="findings-remediation-layout flex flex-col gap-5">
+        {/* Demo banner */}
+        {isDemo ? <DemoBanner /> : null}
+
+        {/* ── Hero ─────────────────────────────────────────────────── */}
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-6 shadow-lg">
+          <div className="absolute inset-0 bg-gradient-to-r from-red-500/5 via-transparent to-teal-500/5 pointer-events-none" />
+          <div className="relative flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div className="flex flex-col gap-2">
+              <span className="inline-flex w-fit items-center gap-1.5 rounded-full border border-amber-400/30 bg-amber-500/10 px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wider text-amber-400">
+                <AlertTriangle aria-hidden="true" size={11} />
+                Remediation Queue
+              </span>
+              <h1 className="text-2xl font-bold tracking-tight text-white">
+                Findings
+              </h1>
+              <p className="text-sm text-slate-400">
+                {displayProject?.name
+                  ? `Prioritized remediation queue for ${displayProject.name}`
+                  : "Prioritized remediation queue for the selected project"}
+              </p>
+              <div className="flex flex-wrap gap-2 mt-1">
+                <SummaryChip
+                  label="Critical"
+                  value={criticalCount}
+                  colorClass="text-red-400"
+                />
+                <SummaryChip
+                  label="High"
+                  value={highCount}
+                  colorClass="text-amber-400"
+                />
+                <SummaryChip
+                  label="KEV"
+                  value={kevCount}
+                  colorClass="text-rose-400"
+                />
+                <SummaryChip
+                  label="Open"
+                  value={openCount}
+                  colorClass="text-sky-400"
+                />
+              </div>
+            </div>
+            <div className="flex gap-2 shrink-0">
+              <Button
+                asChild
+                className="border-white/20 bg-white/10 text-white hover:bg-white/20"
+                size="sm"
+                variant="outline"
+              >
+                <Link to="/reports">
+                  <FileDown aria-hidden="true" className="mr-1.5" size={14} />
+                  Generate evidence
+                </Link>
+              </Button>
+              <Button asChild size="sm">
+                <Link to="/imports">
+                  <Upload aria-hidden="true" className="mr-1.5" size={14} />
+                  Import findings
+                </Link>
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        {/* ── Filter bar ───────────────────────────────────────────── */}
+        <Card
+          aria-label="Findings filters"
+          className="findings-filter-card py-0 shadow-sm"
+          role="region"
+        >
+          <CardContent className="px-4 py-3">
+            <div className="flex flex-wrap items-center gap-2">
+              {!isDemo ? (
+                <label className="flex min-w-44 flex-col gap-1">
+                  <span className="text-[11px] font-semibold uppercase text-muted-foreground">
+                    Project
+                  </span>
+                  <Select
+                    disabled={projectListLoading || projects.length === 0}
+                    onValueChange={(v) => {
+                      onProjectChange(v)
+                    }}
+                    value={selectedProjectId}
+                  >
+                    <SelectTrigger className="h-9 w-48 text-sm">
+                      <SelectValue placeholder="No projects" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {projects.map((p) => (
+                        <SelectItem key={p.id} value={p.id}>
+                          {p.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </label>
+              ) : null}
+
+              {findingAssetId ? (
+                <div className="inline-flex h-9 items-center gap-1.5 rounded-md border bg-muted px-2 text-xs font-medium">
+                  <span>Asset</span>
+                  <strong>{findingAssetKey ?? findingAssetId}</strong>
+                  <Button
+                    aria-label="Clear asset filter"
+                    className="ml-1 size-6"
+                    onClick={onClearFilters}
+                    size="icon"
+                    type="button"
+                    variant="ghost"
+                  >
+                    <X aria-hidden="true" size={12} />
+                  </Button>
+                </div>
+              ) : null}
+
+              <label className="flex min-w-56 flex-1 flex-col gap-1">
+                <span className="text-[11px] font-semibold uppercase text-muted-foreground">
+                  Owner / Service
+                </span>
+                <Input
+                  className="h-9 text-sm"
+                  id="queue-search"
+                  onChange={(e) =>
+                    onFilterChange("ownerService", e.target.value)
+                  }
+                  placeholder="payments, infra-team"
+                  value={findingFilters.ownerService}
+                />
+              </label>
+
+              <label className="flex flex-col gap-1">
+                <span className="text-[11px] font-semibold uppercase text-muted-foreground">
+                  Priority
+                </span>
+                <Select
+                  onValueChange={(v) =>
+                    onFilterChange(
+                      "priority",
+                      v === "__all" ? "" : (v as FindingPriority),
+                    )
+                  }
+                  value={findingFilters.priority || "__all"}
+                >
+                  <SelectTrigger className="h-9 w-32 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__all">All</SelectItem>
+                    {priorityOptions.map((p) => (
+                      <SelectItem key={p} value={p}>
+                        {labelize(p)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </label>
+
+              <label className="flex flex-col gap-1">
+                <span className="text-[11px] font-semibold uppercase text-muted-foreground">
+                  Status
+                </span>
+                <Select
+                  onValueChange={(v) =>
+                    onFilterChange(
+                      "status",
+                      v === "__all" ? "" : (v as FindingStatus),
+                    )
+                  }
+                  value={findingFilters.status || "__all"}
+                >
+                  <SelectTrigger className="h-9 w-36 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__all">All</SelectItem>
+                    {statusOptions.map((s) => (
+                      <SelectItem key={s} value={s}>
+                        {labelize(s)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </label>
+
+              <div className="ml-auto flex items-end gap-2 self-end">
+                <Button
+                  aria-expanded={showAdvancedFilters}
+                  className="h-9"
+                  onClick={() => setAdvancedFiltersOpen((open) => !open)}
+                  size="sm"
+                  type="button"
+                  variant={showAdvancedFilters ? "secondary" : "outline"}
+                >
+                  <ListFilter aria-hidden="true" size={14} />
+                  Signals
+                  {signalFilterCount > 0 ? (
+                    <Badge className="ml-1 h-4 min-w-4 px-1 py-0 text-[10px]">
+                      {signalFilterCount}
+                    </Badge>
+                  ) : null}
+                </Button>
+
+                <Button
+                  className="h-9"
+                  disabled={!activeFindingFilters && filterCount === 0}
+                  onClick={onClearFilters}
+                  size="sm"
+                  type="button"
+                  variant="ghost"
+                >
+                  <Filter aria-hidden="true" size={14} />
+                  Reset
+                </Button>
+              </div>
+            </div>
+
+            {showAdvancedFilters ? (
+              <div className="mt-3 flex flex-wrap items-end gap-2 border-t pt-3">
+                <label className="flex flex-col gap-1">
+                  <span className="text-[11px] font-semibold uppercase text-muted-foreground">
+                    KEV
+                  </span>
+                  <Select
+                    onValueChange={(v) =>
+                      onFilterChange(
+                        "kev",
+                        v === "__all" ? "" : (v as KevFilter),
+                      )
+                    }
+                    value={findingFilters.kev || "__all"}
+                  >
+                    <SelectTrigger className="h-9 w-28 text-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__all">Any</SelectItem>
+                      <SelectItem value="true">KEV</SelectItem>
+                      <SelectItem value="false">Not KEV</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </label>
+
+                <label className="flex flex-col gap-1">
+                  <span className="text-[11px] font-semibold uppercase text-muted-foreground">
+                    Exposure
+                  </span>
+                  <Select
+                    onValueChange={(v) =>
+                      onFilterChange(
+                        "exposure",
+                        v === "__all" ? "" : (v as AssetExposure),
+                      )
+                    }
+                    value={findingFilters.exposure || "__all"}
+                  >
+                    <SelectTrigger className="h-9 w-40 text-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__all">Any</SelectItem>
+                      {exposureOptions.map((e) => (
+                        <SelectItem key={e} value={e}>
+                          {labelize(e)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </label>
+
+                <div className="flex flex-col gap-1">
+                  <span className="text-[11px] font-semibold uppercase text-muted-foreground">
+                    EPSS
+                  </span>
+                  <div className="flex items-center gap-1">
+                    <Input
+                      aria-label="EPSS min"
+                      className="h-9 w-20 text-sm"
+                      inputMode="decimal"
+                      max="1"
+                      min="0"
+                      onChange={(e) =>
+                        onFilterChange("epssMin", e.target.value)
+                      }
+                      placeholder="Min"
+                      step="0.01"
+                      type="number"
+                      value={findingFilters.epssMin}
+                    />
+                    <span className="text-xs text-muted-foreground">to</span>
+                    <Input
+                      aria-label="EPSS max"
+                      className="h-9 w-20 text-sm"
+                      inputMode="decimal"
+                      max="1"
+                      min="0"
+                      onChange={(e) =>
+                        onFilterChange("epssMax", e.target.value)
+                      }
+                      placeholder="Max"
+                      step="0.01"
+                      type="number"
+                      value={findingFilters.epssMax}
+                    />
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <span className="text-[11px] font-semibold uppercase text-muted-foreground">
+                    CVSS
+                  </span>
+                  <div className="flex items-center gap-1">
+                    <Input
+                      aria-label="CVSS min"
+                      className="h-9 w-20 text-sm"
+                      inputMode="decimal"
+                      max="10"
+                      min="0"
+                      onChange={(e) =>
+                        onFilterChange("cvssMin", e.target.value)
+                      }
+                      placeholder="Min"
+                      step="0.1"
+                      type="number"
+                      value={findingFilters.cvssMin}
+                    />
+                    <span className="text-xs text-muted-foreground">to</span>
+                    <Input
+                      aria-label="CVSS max"
+                      className="h-9 w-20 text-sm"
+                      inputMode="decimal"
+                      max="10"
+                      min="0"
+                      onChange={(e) =>
+                        onFilterChange("cvssMax", e.target.value)
+                      }
+                      placeholder="Max"
+                      step="0.1"
+                      type="number"
+                      value={findingFilters.cvssMax}
+                    />
+                  </div>
+                </div>
+              </div>
+            ) : null}
+          </CardContent>
+        </Card>
+
+        {/* ── States ───────────────────────────────────────────────── */}
+        {hasError ? <ErrorState message={findingsError} /> : null}
+        {isLoading ? <LoadingSkeleton label="Loading findings" /> : null}
+
+        {!isLoading && !hasError && !isDemo && projects.length === 0 ? (
+          <EmptyState
+            action={
+              <Button asChild>
+                <Link to="/projects">Create a project</Link>
+              </Button>
+            }
+            ariaLabel="No projects empty state"
+            detail="Create a project before reviewing findings."
+            title="No projects yet"
+          />
+        ) : null}
+
+        {!isLoading &&
+        !hasError &&
+        !isDemo &&
+        selectedProject &&
+        displayFindings.length === 0 &&
+        !activeFindingFilters ? (
+          <EmptyState
+            action={
+              <Button asChild>
+                <Link to="/imports">Import data</Link>
+              </Button>
+            }
+            ariaLabel="No findings empty state"
+            detail="Import scanner, SBOM, or CVE-list data to create findings."
+            title={`No findings in ${selectedProject.name}`}
+          />
+        ) : null}
+
+        {!isLoading &&
+        !hasError &&
+        displayFindings.length === 0 &&
+        activeFindingFilters ? (
+          <EmptyState
+            action={
+              <Button onClick={onClearFilters} type="button" variant="outline">
+                Clear filters
+              </Button>
+            }
+            ariaLabel="No filter matches"
+            detail="Try broadening the server-side query."
+            title="No findings match these filters"
+          />
+        ) : null}
+
+        {/* ── Table ────────────────────────────────────────────────── */}
+        {displayFindings.length > 0 ? (
+          <div className="flex flex-col gap-3">
+            <section
+              aria-label="Findings remediation queue"
+              className="top-remediation-panel findings-queue-panel"
+            >
+              <div className="dashboard-panel-heading">
+                <div>
+                  <span>Remediation Focus</span>
+                  <h3>Remediation Queue</h3>
+                  <p>
+                    {totalCount} prioritized finding
+                    {totalCount === 1 ? "" : "s"} for{" "}
+                    {displayProject?.name ?? "the selected project"}.
+                  </p>
+                </div>
+                {!isDemo ? (
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <span>Rows</span>
+                    <Select
+                      onValueChange={(v) => onPageSizeChange(Number(v))}
+                      value={String(findingPageSize)}
+                    >
+                      <SelectTrigger className="h-8 w-16 text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {pageSizeOptions.map((s) => (
+                          <SelectItem key={s} value={String(s)}>
+                            {s}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                ) : null}
+              </div>
+
+              <div className="remediation-table-wrap findings-remediation-table-wrap">
+                <table
+                  aria-label="Findings remediation queue"
+                  className="remediation-table findings-remediation-table"
+                >
+                  <thead>
+                    <tr>
+                      <SortHeader
+                        currentDirection={findingDirection}
+                        currentSort={queueSort}
+                        label="Priority"
+                        onSort={updateColumnSort}
+                        sort="priority"
+                      />
+                      <SortHeader
+                        currentDirection={findingDirection}
+                        currentSort={queueSort}
+                        label="Score"
+                        onSort={updateColumnSort}
+                        sort="score"
+                      />
+                      <SortHeader
+                        currentDirection={findingDirection}
+                        currentSort={queueSort}
+                        label="CVE"
+                        onSort={updateColumnSort}
+                        sort="cve"
+                      />
+                      <SortHeader
+                        currentDirection={findingDirection}
+                        currentSort={queueSort}
+                        label="Component / Service"
+                        onSort={updateColumnSort}
+                        sort="component"
+                      />
+                      <SortHeader
+                        currentDirection={findingDirection}
+                        currentSort={queueSort}
+                        label="Owner"
+                        onSort={updateColumnSort}
+                        sort="owner"
+                      />
+                      <SortHeader
+                        currentDirection={findingDirection}
+                        currentSort={queueSort}
+                        label="Status"
+                        onSort={updateColumnSort}
+                        sort="status"
+                      />
+                      <SortHeader
+                        currentDirection={findingDirection}
+                        currentSort={queueSort}
+                        label="Signals"
+                        onSort={updateColumnSort}
+                        sort="epss"
+                      />
+                      <StaticHeader label="Why now" />
+                      <StaticHeader align="right" label="View" />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {displayFindings.map((finding) => (
+                      <tr key={finding.id}>
+                        <td>
+                          <PriorityBadge priority={finding.priority} />
+                        </td>
+                        <td>
+                          <RiskScore value={finding.risk_score} />
+                        </td>
+                        <td>
+                          <Link
+                            className="finding-cve-link"
+                            params={{ findingId: finding.id }}
+                            title={`Open finding ${finding.cve_id}`}
+                            to="/findings/$findingId"
+                          >
+                            {finding.cve_id}
+                          </Link>
+                          {finding.attack_mapped ? (
+                            <span className="remediation-subtext">
+                              ATT&amp;CK mapped
+                            </span>
+                          ) : null}
+                        </td>
+                        <td className="remediation-component-cell">
+                          <strong title={componentLabel(finding)}>
+                            {componentLabel(finding)}
+                          </strong>
+                          <span
+                            className="remediation-subtext"
+                            title={`${serviceLabel(finding)} / ${assetLabel(finding)}`}
+                          >
+                            {serviceLabel(finding)} / {assetLabel(finding)}
+                          </span>
+                        </td>
+                        <td>
+                          <strong>{ownerLabel(finding)}</strong>
+                          {finding.exposure ? (
+                            <span className="remediation-subtext">
+                              {labelize(finding.exposure)}
+                            </span>
+                          ) : null}
+                        </td>
+                        <td>
+                          <div className="remediation-status-cell">
+                            <FindingStatusBadge status={finding.status} />
+                            <span
+                              aria-label={`Last seen ${formatDateTime(finding.last_seen_at)}`}
+                              className="remediation-subtext"
+                              title={`Last seen ${formatDateTime(finding.last_seen_at)}`}
+                            >
+                              {formatShortDate(finding.last_seen_at)}
+                            </span>
+                          </div>
+                        </td>
+                        <td>
+                          <div
+                            aria-label={`Risk signals for ${finding.cve_id}`}
+                            className="remediation-signal-stack"
+                          >
+                            <span className="remediation-signal-item">
+                              <span>EPSS</span>
+                              <strong>
+                                <EpssBadge value={finding.epss} />
+                              </strong>
+                            </span>
+                            <span className="remediation-signal-item">
+                              <span>CVSS</span>
+                              <strong>
+                                <CvssBadge value={finding.cvss_base_score} />
+                              </strong>
+                            </span>
+                            <KevBadge matched={finding.in_kev} />
+                          </div>
+                        </td>
+                        <td>
+                          <span className="remediation-why-now">
+                            {findingWhyNow(finding)}
+                          </span>
+                          <button
+                            className="remediation-why-action"
+                            onClick={() => openWhy(finding)}
+                            type="button"
+                          >
+                            Why now
+                          </button>
+                        </td>
+                        <td>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                aria-label={`Quick view ${finding.cve_id}`}
+                                className="finding-view-action"
+                                onClick={() => openSheet(finding)}
+                                type="button"
+                                variant="ghost"
+                              >
+                                <Eye aria-hidden="true" size={16} />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent side="left">
+                              Quick view
+                            </TooltipContent>
+                          </Tooltip>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+
+            {/* Pagination */}
+            {!isDemo ? (
+              <div className="flex flex-wrap items-center justify-between gap-3 px-1">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <span aria-live="polite">
+                    Showing{" "}
+                    <strong className="font-semibold text-foreground">
+                      {pageStart}–{pageEnd}
+                    </strong>{" "}
+                    of{" "}
+                    <strong className="font-semibold text-foreground">
+                      {totalCount}
+                    </strong>
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <Button
+                    className="h-7"
+                    disabled={findingsLoading || findingOffset === 0}
+                    onClick={onPagePrev}
+                    size="sm"
+                    type="button"
+                    variant="outline"
+                  >
+                    <ChevronLeft
+                      aria-hidden="true"
+                      className="mr-1"
+                      size={13}
+                    />
+                    Previous
+                  </Button>
+                  <Button
+                    className="h-7"
+                    disabled={
+                      findingsLoading ||
+                      findingOffset + findingPageSize >= findingCount
+                    }
+                    onClick={onPageNext}
+                    size="sm"
+                    type="button"
+                    variant="outline"
+                  >
+                    Next
+                    <ChevronRight
+                      aria-hidden="true"
+                      className="ml-1"
+                      size={13}
+                    />
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <p className="text-xs text-center text-muted-foreground">
+                Demo preview — {displayFindings.length} sample findings shown
+              </p>
+            )}
+          </div>
+        ) : null}
+
+        {/* ── Dialogs ──────────────────────────────────────────────── */}
+        <WhyDialog
+          finding={whyFinding}
+          onClose={() => setWhyOpen(false)}
+          open={whyOpen}
+        />
+        <QuickViewSheet
+          finding={sheetFinding}
+          onClose={() => setSheetOpen(false)}
+          open={sheetOpen}
+        />
+      </div>
+    </TooltipProvider>
+  )
+}
