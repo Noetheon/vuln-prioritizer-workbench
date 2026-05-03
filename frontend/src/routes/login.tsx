@@ -5,7 +5,6 @@ import {
   LoginService,
   UtilsService,
   WorkbenchService,
-  type WorkbenchStatus,
 } from "../api-client"
 import { isLoggedIn, setAccessToken } from "../auth"
 
@@ -23,7 +22,6 @@ function LoginPage() {
   const [email, setEmail] = useState("admin@example.com")
   const [password, setPassword] = useState("changethis")
   const [backendReady, setBackendReady] = useState(false)
-  const [status, setStatus] = useState<WorkbenchStatus | null>(null)
   const [error, setError] = useState("")
   const [isSubmitting, setSubmitting] = useState(false)
 
@@ -32,13 +30,12 @@ function LoginPage() {
 
     async function loadStatus() {
       try {
-        const [health, workbenchStatus] = await Promise.all([
+        const [health] = await Promise.all([
           UtilsService.healthCheck(),
           WorkbenchService.templateWorkbenchStatus(),
         ])
         if (isMounted) {
           setBackendReady(health)
-          setStatus(workbenchStatus)
         }
       } catch {
         if (isMounted) {
@@ -71,7 +68,7 @@ function LoginPage() {
       const message =
         caught instanceof ApiError && caught.status === 400
           ? "Email or password is incorrect."
-          : "Backend login is unavailable."
+          : "Sign-in service is unavailable."
       setError(message)
     } finally {
       setSubmitting(false)
@@ -92,7 +89,7 @@ function LoginPage() {
         </div>
 
         <div className="login-copy">
-          <span className="eyebrow">FastAPI Template</span>
+          <span className="eyebrow">Risk Operations</span>
           <h1 id="login-title">Sign in</h1>
         </div>
 
@@ -132,8 +129,8 @@ function LoginPage() {
         <div className="login-status" role="status">
           <span className={backendReady ? "status-dot" : "status-dot muted"} />
           <span>
-            {status?.app ?? "Vuln Prioritizer Workbench"} ·{" "}
-            {backendReady ? "backend ready" : "backend offline"}
+            Workbench API ·{" "}
+            {backendReady ? "data services ready" : "data services offline"}
           </span>
         </div>
       </section>

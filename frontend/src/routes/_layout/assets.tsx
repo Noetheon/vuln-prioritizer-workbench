@@ -1,17 +1,14 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router"
 import {
   Activity,
+  BriefcaseBusiness,
   Database,
-  FileArchive,
   FileInput,
-  FolderKanban,
-  KeyRound,
-  LayoutDashboard,
-  ListChecks,
-  LogOut,
+  Globe2,
   RefreshCw,
-  Settings,
+  Server,
   ShieldCheck,
+  Users,
 } from "lucide-react"
 import { type FormEvent, useEffect, useMemo, useState } from "react"
 import {
@@ -35,17 +32,44 @@ import {
   type WorkbenchStatus,
 } from "../../api-client"
 import { clearAccessToken } from "../../auth"
-
-const navigation = [
-  { label: "Dashboard", icon: LayoutDashboard, to: "/" },
-  { label: "Projects", icon: FolderKanban, to: "/projects" },
-  { label: "Imports", icon: FileInput, to: "/imports" },
-  { label: "Findings", icon: ListChecks, to: "/findings" },
-  { label: "Assets", icon: ShieldCheck, to: "/assets" },
-  { label: "Providers", icon: Database, to: "/providers" },
-  { label: "Reports", icon: FileArchive, to: "/reports" },
-  { label: "Settings", icon: Settings, to: "/settings" },
-] as const
+import { ProductAppShell } from "../../components/app/AppShell"
+import { Button } from "../../components/ui/button"
+import { Input } from "../../components/ui/input"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../../components/ui/select"
+import {
+  VpwAssetContextCard,
+  VpwBadge,
+  type VpwBadgeTone,
+  VpwDataTable,
+  type VpwDataTableColumn,
+  VpwEmptyState,
+  VpwField,
+  VpwFilterBar,
+  VpwGrid,
+  VpwKeyValueList,
+  VpwMetricCard,
+  VpwPageContainer,
+  VpwPanel,
+  VpwProgress,
+  VpwSection,
+  VpwSectionHeader,
+  VpwSelectionCard,
+  VpwSkeletonStack,
+  VpwStatusBanner,
+  VpwToolbar,
+  VpwToolbarGroup,
+} from "../../components/vpw"
+import {
+  providerSnapshotHealth,
+  providerSnapshotSummary,
+} from "../../lib/provider-format"
+import { formatLabel as labelize, optionalText } from "../../lib/ui-copy"
 
 const criticalityOptions: AssetCriticality[] = [
   "critical",
@@ -125,21 +149,10 @@ function apiErrorDetail(body: unknown) {
   return null
 }
 
-function optionalText(value: string | null | undefined) {
-  return value?.trim() ? value : "N.A."
-}
-
-function labelize(value: string | null | undefined) {
+function formatDateTime(value: string | null | undefined) {
   if (!value) {
     return "N.A."
   }
-  return value
-    .replaceAll("_", " ")
-    .replaceAll("-", " ")
-    .replace(/\b\w/g, (match) => match.toUpperCase())
-}
-
-function formatDateTime(value: string) {
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) {
     return "N.A."
@@ -148,10 +161,6 @@ function formatDateTime(value: string) {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(date)
-}
-
-function currentUserLabel(user: UserPublic | null) {
-  return user?.email ?? "Local workspace"
 }
 
 function assetFormFromAsset(asset: AssetPublic): AssetFormState {
@@ -233,6 +242,190 @@ function assetFindingsHref(asset: AssetPublic) {
   return `/findings?${params.toString()}`
 }
 
+function criticalityTone(
+  value: AssetCriticality | string | null | undefined,
+): VpwBadgeTone {
+  switch (String(value ?? "").toLowerCase()) {
+    case "critical":
+      return "critical"
+    case "high":
+      return "warning"
+    case "medium":
+      return "info"
+    case "low":
+      return "success"
+    default:
+      return "neutral"
+  }
+}
+
+function exposureTone(
+  value: AssetExposure | string | null | undefined,
+): VpwBadgeTone {
+  switch (String(value ?? "").toLowerCase()) {
+    case "internet-facing":
+      return "warning"
+    case "internal":
+      return "info"
+    case "private":
+      return "success"
+    default:
+      return "neutral"
+  }
+}
+
+function environmentTone(
+  value: AssetEnvironment | string | null | undefined,
+): VpwBadgeTone {
+  switch (String(value ?? "").toLowerCase()) {
+    case "production":
+      return "warning"
+    case "staging":
+    case "test":
+      return "info"
+    case "development":
+      return "support"
+    default:
+      return "neutral"
+  }
+}
+
+function findingPriorityTone(value: string | null | undefined): VpwBadgeTone {
+  switch (String(value ?? "").toLowerCase()) {
+    case "critical":
+      return "critical"
+    case "high":
+      return "warning"
+    case "medium":
+      return "info"
+    case "low":
+      return "success"
+    default:
+      return "neutral"
+  }
+}
+
+function findingStatusTone(value: string | null | undefined): VpwBadgeTone {
+  switch (String(value ?? "").toLowerCase()) {
+    case "resolved":
+    case "accepted":
+    case "false_positive":
+      return "success"
+    case "in_progress":
+    case "triaged":
+      return "info"
+    case "deferred":
+      return "warning"
+    default:
+      return "neutral"
+  }
+}
+
+function assetScoreTone(asset: AssetPublic): VpwBadgeTone {
+  return asset.rescore_needed ? "warning" : "success"
+}
+
+function scoreStatusLabel(asset: AssetPublic) {
+  return asset.rescore_needed ? "Re-score needed" : "Current"
+}
+
+function highestFindingPriority(findings: readonly FindingPublic[]) {
+  const order = ["critical", "high", "medium", "low"]
+  const priorities = findings
+    .map((finding) => String(finding.priority ?? "").toLowerCase())
+    .filter(Boolean)
+  const highest = order.find((priority) => priorities.includes(priority))
+  return highest ? labelize(highest) : "N.A."
+}
+
+type AssetSummary = {
+  criticalServices: number
+  internetFacing: number
+  linkedFindings: number
+  ownerCoverage: number
+  production: number
+  total: number
+}
+
+function summarizeAssets(assets: readonly AssetPublic[]): AssetSummary {
+  const total = assets.length
+  const ownerCount = assets.filter((asset) => asset.owner?.trim()).length
+  const criticalServices = new Set(
+    assets
+      .filter((asset) =>
+        ["critical", "high"].includes(String(asset.criticality ?? "")),
+      )
+      .map((asset) => asset.business_service || asset.name || asset.asset_key),
+  ).size
+
+  return {
+    criticalServices,
+    internetFacing: assets.filter(
+      (asset) => asset.exposure === "internet-facing",
+    ).length,
+    linkedFindings: assets.reduce(
+      (totalFindings, asset) => totalFindings + (asset.finding_count ?? 0),
+      0,
+    ),
+    ownerCoverage: total > 0 ? Math.round((ownerCount / total) * 100) : 0,
+    production: assets.filter((asset) => asset.environment === "production")
+      .length,
+    total,
+  }
+}
+
+type ServiceRollup = {
+  assetCount: number
+  criticalAssets: number
+  exposure: string
+  findings: number
+  id: string
+  label: string
+  owner: string
+}
+
+function buildServiceRollups(assets: readonly AssetPublic[]): ServiceRollup[] {
+  const rollups = new Map<string, ServiceRollup>()
+
+  for (const asset of assets) {
+    const label = asset.business_service || "Unassigned service"
+    const existing = rollups.get(label) ?? {
+      assetCount: 0,
+      criticalAssets: 0,
+      exposure: "unknown",
+      findings: 0,
+      id: label,
+      label,
+      owner: "N.A.",
+    }
+
+    existing.assetCount += 1
+    existing.findings += asset.finding_count ?? 0
+    if (["critical", "high"].includes(String(asset.criticality ?? ""))) {
+      existing.criticalAssets += 1
+    }
+    if (asset.owner && existing.owner === "N.A.") {
+      existing.owner = asset.owner
+    }
+    if (asset.exposure === "internet-facing") {
+      existing.exposure = "internet-facing"
+    } else if (
+      existing.exposure === "unknown" &&
+      asset.exposure &&
+      asset.exposure !== "unknown"
+    ) {
+      existing.exposure = asset.exposure
+    }
+
+    rollups.set(label, existing)
+  }
+
+  return [...rollups.values()].sort((left, right) => {
+    const riskDelta = right.criticalAssets - left.criticalAssets
+    return riskDelta !== 0 ? riskDelta : right.findings - left.findings
+  })
+}
+
 function AssetForm({
   buttonLabel,
   disabled,
@@ -250,135 +443,166 @@ function AssetForm({
   onChange: (form: AssetFormState) => void
   onSubmit: (event: FormEvent<HTMLFormElement>) => void
 }) {
+  const isEdit = formLabel.includes("Edit")
+  const fieldPrefix = isEdit ? "edit-asset" : "create-asset"
+
   return (
-    <form
-      aria-label={formLabel}
-      className="project-edit-form"
-      onSubmit={onSubmit}
-    >
-      <label>
-        <span>Asset key</span>
-        <input
-          aria-label={
-            formLabel.includes("Edit") ? "Edit asset key" : "Asset key"
-          }
-          maxLength={255}
-          onChange={(event) =>
-            onChange({ ...form, asset_key: event.target.value })
-          }
-          value={form.asset_key}
-        />
-      </label>
-      <label>
-        <span>Asset name</span>
-        <input
-          aria-label={
-            formLabel.includes("Edit") ? "Edit asset name" : "Asset name"
-          }
-          maxLength={255}
-          onChange={(event) => onChange({ ...form, name: event.target.value })}
-          value={form.name}
-        />
-      </label>
-      <label>
-        <span>Owner</span>
-        <input
-          aria-label={formLabel.includes("Edit") ? "Edit owner" : "Owner"}
-          maxLength={255}
-          onChange={(event) => onChange({ ...form, owner: event.target.value })}
-          value={form.owner}
-        />
-      </label>
-      <label>
-        <span>Business service</span>
-        <input
-          aria-label={
-            formLabel.includes("Edit")
-              ? "Edit business service"
-              : "Business service"
-          }
-          maxLength={255}
-          onChange={(event) =>
-            onChange({ ...form, business_service: event.target.value })
-          }
-          value={form.business_service}
-        />
-      </label>
-      <label>
-        <span>Target ref</span>
-        <input
-          aria-label={
-            formLabel.includes("Edit") ? "Edit target ref" : "Target ref"
-          }
-          maxLength={512}
-          onChange={(event) =>
-            onChange({ ...form, target_ref: event.target.value })
-          }
-          value={form.target_ref}
-        />
-      </label>
-      <label>
-        <span>Criticality</span>
-        <select
-          aria-label={
-            formLabel.includes("Edit") ? "Edit criticality" : "Criticality"
-          }
-          onChange={(event) =>
-            onChange({
-              ...form,
-              criticality: event.target.value as AssetCriticality,
-            })
-          }
-          value={form.criticality}
+    <form aria-label={formLabel} className="space-y-4" onSubmit={onSubmit}>
+      <VpwGrid columns={2}>
+        <VpwField
+          htmlFor={`${fieldPrefix}-asset-key`}
+          label="Asset key"
+          required
         >
-          {criticalityOptions.map((option) => (
-            <option key={option} value={option}>
-              {labelize(option)}
-            </option>
-          ))}
-        </select>
-      </label>
-      <label>
-        <span>Environment</span>
-        <select
-          aria-label={
-            formLabel.includes("Edit") ? "Edit environment" : "Environment"
-          }
-          onChange={(event) =>
-            onChange({
-              ...form,
-              environment: event.target.value as AssetEnvironment,
-            })
-          }
-          value={form.environment}
+          <Input
+            aria-label={isEdit ? "Edit asset key" : "Asset key"}
+            id={`${fieldPrefix}-asset-key`}
+            maxLength={255}
+            onChange={(event) =>
+              onChange({ ...form, asset_key: event.target.value })
+            }
+            placeholder="app-prod-01"
+            value={form.asset_key}
+          />
+        </VpwField>
+        <VpwField
+          htmlFor={`${fieldPrefix}-asset-name`}
+          label="Asset name"
+          required
         >
-          {environmentOptions.map((option) => (
-            <option key={option} value={option}>
-              {labelize(option)}
-            </option>
-          ))}
-        </select>
-      </label>
-      <label>
-        <span>Exposure</span>
-        <select
-          aria-label={formLabel.includes("Edit") ? "Edit exposure" : "Exposure"}
-          onChange={(event) =>
-            onChange({ ...form, exposure: event.target.value as AssetExposure })
-          }
-          value={form.exposure}
+          <Input
+            aria-label={isEdit ? "Edit asset name" : "Asset name"}
+            id={`${fieldPrefix}-asset-name`}
+            maxLength={255}
+            onChange={(event) =>
+              onChange({ ...form, name: event.target.value })
+            }
+            placeholder="Payments API"
+            value={form.name}
+          />
+        </VpwField>
+        <VpwField htmlFor={`${fieldPrefix}-owner`} label="Owner">
+          <Input
+            aria-label={isEdit ? "Edit owner" : "Owner"}
+            id={`${fieldPrefix}-owner`}
+            maxLength={255}
+            onChange={(event) =>
+              onChange({ ...form, owner: event.target.value })
+            }
+            placeholder="Platform security"
+            value={form.owner}
+          />
+        </VpwField>
+        <VpwField
+          htmlFor={`${fieldPrefix}-business-service`}
+          label="Business service"
         >
-          {exposureOptions.map((option) => (
-            <option key={option} value={option}>
-              {labelize(option)}
-            </option>
-          ))}
-        </select>
-      </label>
-      {error ? <p className="form-error">{error}</p> : null}
-      <button className="primary-action" disabled={disabled} type="submit">
+          <Input
+            aria-label={isEdit ? "Edit business service" : "Business service"}
+            id={`${fieldPrefix}-business-service`}
+            maxLength={255}
+            onChange={(event) =>
+              onChange({ ...form, business_service: event.target.value })
+            }
+            placeholder="Checkout"
+            value={form.business_service}
+          />
+        </VpwField>
+        <VpwField
+          className="lg:col-span-2"
+          htmlFor={`${fieldPrefix}-target-ref`}
+          label="Target ref"
+        >
+          <Input
+            aria-label={isEdit ? "Edit target ref" : "Target ref"}
+            id={`${fieldPrefix}-target-ref`}
+            maxLength={512}
+            onChange={(event) =>
+              onChange({ ...form, target_ref: event.target.value })
+            }
+            placeholder="image:registry.example.com/payments-api"
+            value={form.target_ref}
+          />
+        </VpwField>
+        <VpwField label="Criticality">
+          <Select
+            onValueChange={(value) =>
+              onChange({
+                ...form,
+                criticality: value as AssetCriticality,
+              })
+            }
+            value={form.criticality}
+          >
+            <SelectTrigger
+              aria-label={isEdit ? "Edit criticality" : "Criticality"}
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {criticalityOptions.map((option) => (
+                <SelectItem key={option} value={option}>
+                  {labelize(option)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </VpwField>
+        <VpwField label="Environment">
+          <Select
+            onValueChange={(value) =>
+              onChange({
+                ...form,
+                environment: value as AssetEnvironment,
+              })
+            }
+            value={form.environment}
+          >
+            <SelectTrigger
+              aria-label={isEdit ? "Edit environment" : "Environment"}
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {environmentOptions.map((option) => (
+                <SelectItem key={option} value={option}>
+                  {labelize(option)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </VpwField>
+        <VpwField label="Exposure">
+          <Select
+            onValueChange={(value) =>
+              onChange({
+                ...form,
+                exposure: value as AssetExposure,
+              })
+            }
+            value={form.exposure}
+          >
+            <SelectTrigger aria-label={isEdit ? "Edit exposure" : "Exposure"}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {exposureOptions.map((option) => (
+                <SelectItem key={option} value={option}>
+                  {labelize(option)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </VpwField>
+      </VpwGrid>
+      {error ? (
+        <VpwStatusBanner title="Asset form needs attention" tone="critical">
+          {error}
+        </VpwStatusBanner>
+      ) : null}
+      <Button disabled={disabled} type="submit">
         {buttonLabel}
-      </button>
+      </Button>
     </form>
   )
 }
@@ -520,7 +744,7 @@ function AssetsPage() {
           return
         }
         if (isMounted) {
-          setStatusError("Backend adapter unavailable")
+          setStatusError("Data services unavailable")
         }
       }
     }
@@ -717,442 +941,616 @@ function AssetsPage() {
     }
   }
 
-  async function signOut() {
-    clearAccessToken()
-    await navigate({ to: "/login" })
-  }
+  const assetSummary = summarizeAssets(assets)
+  const serviceRollups = buildServiceRollups(assets)
+  const selectedHighestPriority = highestFindingPriority(assetFindings)
+  const activeProjectLabel =
+    selectedProject?.name ?? (projectLoading ? "Loading" : "No project")
+  const projectSelectDisabled = projectLoading || projects.length === 0
+
+  const assetColumns: readonly VpwDataTableColumn<AssetPublic>[] = [
+    {
+      cell: (asset) => (
+        <Button
+          aria-current={selectedAssetId === asset.id ? "true" : undefined}
+          className="h-auto justify-start px-2 py-1 text-left"
+          onClick={() => setSelectedAssetId(asset.id)}
+          type="button"
+          variant="ghost"
+        >
+          <span className="grid min-w-44 gap-0.5">
+            <span className="font-semibold text-[var(--vpw-text-primary)]">
+              {asset.name}
+            </span>
+            <span className="font-mono text-xs text-[var(--vpw-text-muted)]">
+              {asset.target_ref ?? asset.asset_key}
+            </span>
+          </span>
+        </Button>
+      ),
+      header: "Asset / target ref",
+      id: "asset",
+    },
+    {
+      cell: (asset) => optionalText(asset.business_service),
+      header: "Service",
+      id: "service",
+    },
+    {
+      cell: (asset) => optionalText(asset.owner),
+      header: "Owner",
+      id: "owner",
+    },
+    {
+      cell: (asset) => (
+        <VpwBadge tone={environmentTone(asset.environment)}>
+          {labelize(asset.environment)}
+        </VpwBadge>
+      ),
+      header: "Environment",
+      id: "environment",
+    },
+    {
+      cell: (asset) => (
+        <VpwBadge tone={exposureTone(asset.exposure)}>
+          {labelize(asset.exposure)}
+        </VpwBadge>
+      ),
+      header: "Exposure",
+      id: "exposure",
+    },
+    {
+      cell: (asset) => (
+        <VpwBadge tone={criticalityTone(asset.criticality)}>
+          {labelize(asset.criticality)}
+        </VpwBadge>
+      ),
+      header: "Criticality",
+      id: "criticality",
+    },
+    {
+      cell: (asset) => asset.finding_count ?? 0,
+      header: "Findings",
+      id: "findings",
+    },
+    {
+      cell: (asset) => {
+        const value =
+          asset.id === selectedAssetId
+            ? selectedHighestPriority
+            : asset.finding_count
+              ? "Linked"
+              : "None"
+        return <VpwBadge tone={findingPriorityTone(value)}>{value}</VpwBadge>
+      },
+      header: "Highest priority",
+      id: "highest-priority",
+    },
+    {
+      cell: (asset) => (
+        <VpwBadge tone={assetScoreTone(asset)}>
+          {scoreStatusLabel(asset)}
+        </VpwBadge>
+      ),
+      header: "Score state",
+      id: "score-state",
+    },
+    {
+      cell: (asset) => formatDateTime(asset.updated_at),
+      header: "Updated",
+      id: "updated",
+    },
+    {
+      cell: (asset) => (
+        <div className="flex min-w-52 flex-wrap gap-2">
+          <Button asChild size="sm" variant="outline">
+            <a href={assetFindingsHref(asset)}>Findings</a>
+          </Button>
+          <Button
+            onClick={() => {
+              setSelectedAssetId(asset.id)
+              startEditAsset(asset)
+            }}
+            size="sm"
+            type="button"
+            variant="outline"
+          >
+            Edit
+          </Button>
+          <Button
+            aria-label={`Recalculate ${asset.name}`}
+            disabled={assetActionLoading || (asset.finding_count ?? 0) === 0}
+            onClick={() => void recalculateAsset(asset)}
+            size="sm"
+            type="button"
+            variant="outline"
+          >
+            <RefreshCw aria-hidden="true" />
+            Recalculate
+          </Button>
+        </div>
+      ),
+      header: "Actions",
+      id: "actions",
+    },
+  ]
+
+  const findingColumns: readonly VpwDataTableColumn<FindingPublic>[] = [
+    {
+      cell: (finding) => (
+        <VpwBadge tone={findingPriorityTone(finding.priority)}>
+          {labelize(finding.priority)}
+        </VpwBadge>
+      ),
+      header: "Priority",
+      id: "priority",
+    },
+    {
+      cell: (finding) => (
+        <Link
+          className="font-mono text-sm font-semibold text-[var(--vpw-blue)] hover:underline"
+          params={{ findingId: finding.id }}
+          to="/findings/$findingId"
+        >
+          {finding.cve_id}
+        </Link>
+      ),
+      header: "CVE",
+      id: "cve",
+    },
+    {
+      cell: (finding) => optionalText(finding.component_name),
+      header: "Component",
+      id: "component",
+    },
+    {
+      cell: (finding) => findingAssetLabel(finding),
+      header: "Asset",
+      id: "asset",
+    },
+    {
+      cell: (finding) => (
+        <VpwBadge tone={findingStatusTone(finding.status)}>
+          {labelize(finding.status)}
+        </VpwBadge>
+      ),
+      header: "Status",
+      id: "status",
+    },
+  ]
 
   return (
-    <div className="app-shell">
-      <aside className="sidebar" aria-label="Workbench sidebar">
-        <div className="brand">
-          <div className="brand-mark" aria-hidden="true">
-            VP
-          </div>
-          <div>
-            <strong>Vuln Prioritizer</strong>
-            <span>Workbench</span>
-          </div>
-        </div>
-        <nav className="nav-list" aria-label="Workbench navigation">
-          {navigation.map((entry) => (
-            <Link
-              aria-current={entry.to === "/assets" ? "page" : undefined}
-              className={
-                entry.to === "/assets" ? "nav-item active" : "nav-item"
-              }
-              key={entry.label}
-              to={entry.to}
+    <ProductAppShell
+      activePath="/assets"
+      currentUser={currentUser}
+      eyebrow="Workbench Assets"
+      providerStatus={providerStatus}
+      status={status}
+      statusError={statusError}
+      title="Assets"
+    >
+      <VpwPageContainer className="space-y-6">
+        <VpwSection>
+          <VpwPanel className="space-y-5 p-5">
+            <VpwSectionHeader
+              description="Manage asset, service, exposure and owner context for risk-based prioritization."
+              eyebrow="Asset exposure"
+              title="Assets"
+            />
+            <VpwToolbar label="Asset actions">
+              <VpwToolbarGroup>
+                <Button asChild>
+                  <a href="#asset-context-import">
+                    <FileInput aria-hidden="true" />
+                    Import context
+                  </a>
+                </Button>
+                <Button asChild variant="outline">
+                  <Link to="/findings">View findings</Link>
+                </Button>
+                <Button
+                  aria-label="Refresh assets"
+                  disabled={assetsLoading}
+                  onClick={() => void refreshAssets(selectedAssetId)}
+                  type="button"
+                  variant="outline"
+                >
+                  <Activity aria-hidden="true" />
+                  Refresh
+                </Button>
+              </VpwToolbarGroup>
+            </VpwToolbar>
+            <VpwToolbar className="overflow-hidden" label="Asset page context">
+              <VpwToolbarGroup className="min-w-0">
+                <VpwBadge
+                  className="max-w-full whitespace-normal text-left [overflow-wrap:anywhere]"
+                  tone="info"
+                >
+                  Active project: {activeProjectLabel}
+                </VpwBadge>
+                <VpwBadge tone="neutral">Assets: {assetSummary.total}</VpwBadge>
+                <VpwBadge tone="warning">
+                  Internet-facing: {assetSummary.internetFacing}
+                </VpwBadge>
+                <VpwBadge tone="critical">
+                  Critical services: {assetSummary.criticalServices}
+                </VpwBadge>
+                <VpwBadge tone="support">
+                  Owner coverage: {assetSummary.ownerCoverage}%
+                </VpwBadge>
+              </VpwToolbarGroup>
+            </VpwToolbar>
+            <VpwStatusBanner
+              title="Provider snapshot"
+              tone={providerStatus?.status === "ok" ? "success" : "warning"}
             >
-              <entry.icon aria-hidden="true" size={18} />
-              <span>{entry.label}</span>
-            </Link>
-          ))}
-        </nav>
-        <div className="sidebar-footer">
-          <KeyRound aria-hidden="true" size={18} />
-          <span>{currentUserLabel(currentUser)}</span>
-        </div>
-      </aside>
+              {providerSnapshotSummary(providerStatus)} -{" "}
+              {providerSnapshotHealth(providerStatus)} - snapshot mode{" "}
+              {providerStatus?.snapshot_mode ?? "missing"}.
+            </VpwStatusBanner>
+          </VpwPanel>
+        </VpwSection>
 
-      <main className="workspace">
-        <header className="topbar">
-          <div>
-            <span className="eyebrow">Workbench Assets</span>
-            <h1>Assets</h1>
-          </div>
-          <div
-            className="status-strip"
-            role="status"
-            aria-label="Workspace health"
-          >
-            <span className="status-dot" aria-hidden="true" />
-            <span>
-              {status?.status === "ok" ? "Backend adapter online" : statusError}
-            </span>
-          </div>
-          <button
-            aria-label="Sign out"
-            className="icon-button"
-            onClick={signOut}
-            type="button"
-          >
-            <LogOut aria-hidden="true" size={18} />
-          </button>
-        </header>
+        {assetsError ? (
+          <VpwStatusBanner title="Asset action failed" tone="critical">
+            {assetsError}
+          </VpwStatusBanner>
+        ) : null}
+        {assetMessage ? (
+          <VpwStatusBanner title="Asset context updated" tone="success">
+            {assetMessage}
+          </VpwStatusBanner>
+        ) : null}
+        {projectLoading || assetsLoading ? (
+          <VpwStatusBanner title="Loading asset context" tone="info">
+            Refreshing project assets and linked finding counts.
+          </VpwStatusBanner>
+        ) : null}
 
-        <section
-          className="template-status"
-          aria-label="Template backend status"
-        >
-          <div>
-            <span>Application</span>
-            <strong>{status?.app ?? "Vuln Prioritizer Workbench"}</strong>
-          </div>
-          <div>
-            <span>Core</span>
-            <strong>
-              {status?.core_package ?? "vuln_prioritizer"}{" "}
-              {status?.core_version ?? ""}
-            </strong>
-          </div>
-          <div>
-            <span>Migration</span>
-            <strong>{status?.migration.phase ?? "loading"}</strong>
-          </div>
-          <div>
-            <span>Legacy mount</span>
-            <strong>
-              {status?.migration.legacy_workbench_mounted
-                ? "enabled"
-                : "disabled"}
-            </strong>
-          </div>
-        </section>
+        <VpwGrid columns={1} className="lg:grid-cols-2 xl:grid-cols-4">
+          <VpwMetricCard
+            description="Assets and target references in scope"
+            icon={<Server aria-hidden="true" />}
+            label="Total assets"
+            value={assetSummary.total}
+          />
+          <VpwMetricCard
+            description="Assets with external exposure"
+            icon={<Globe2 aria-hidden="true" />}
+            label="Internet-facing"
+            tone="warning"
+            value={assetSummary.internetFacing}
+          />
+          <VpwMetricCard
+            description="Production environment context"
+            icon={<ShieldCheck aria-hidden="true" />}
+            label="Production assets"
+            tone="info"
+            value={assetSummary.production}
+          />
+          <VpwMetricCard
+            description={`${assetSummary.ownerCoverage}% of assets have an owner`}
+            icon={<Users aria-hidden="true" />}
+            label="Owner coverage"
+            tone="support"
+            value={`${assetSummary.ownerCoverage}%`}
+          />
+        </VpwGrid>
 
-        <section className="content-grid wide-workspace">
-          <div className="work-panel">
-            <div className="panel-header">
-              <div>
-                <h2>Asset Context</h2>
-                <span>Business and exposure context for ranking</span>
-              </div>
-              <button
-                aria-label="Refresh assets"
-                className="icon-button"
-                disabled={assetsLoading}
+        <VpwGrid columns={2}>
+          <div id="asset-context-import">
+            <VpwPanel className="space-y-4 p-5">
+              <VpwSectionHeader
+                description="Upload CSV context to update asset ownership, service, environment, exposure and criticality."
+                eyebrow="Context intake"
+                title="Import asset context"
+              />
+              <form
+                aria-label="Import Asset Context form fields"
+                className="space-y-4"
+                onSubmit={importAssetContext}
+              >
+                <VpwField
+                  description="Accepted columns include target ref, target kind, asset id, owner, business service, environment, exposure and criticality."
+                  htmlFor="asset-context-csv"
+                  label="Asset context CSV"
+                >
+                  <Input
+                    accept=".csv,text/csv"
+                    aria-label="Asset context CSV"
+                    id="asset-context-csv"
+                    onChange={(event) =>
+                      setAssetContextFile(event.target.files?.[0] ?? null)
+                    }
+                    type="file"
+                  />
+                </VpwField>
+                <Button
+                  disabled={
+                    assetActionLoading ||
+                    projects.length === 0 ||
+                    !assetContextFile
+                  }
+                  type="submit"
+                >
+                  <FileInput aria-hidden="true" />
+                  Upload context
+                </Button>
+              </form>
+              <VpwKeyValueList
+                columns={2}
+                items={[
+                  {
+                    label: "Selected file",
+                    value: assetContextFile?.name ?? "None selected",
+                  },
+                  {
+                    label: "Target project",
+                    value: activeProjectLabel,
+                  },
+                ]}
+              />
+            </VpwPanel>
+          </div>
+
+          <VpwPanel className="space-y-4 p-5">
+            <VpwSectionHeader
+              description="Create a single asset context record when a CSV import is not needed."
+              eyebrow="Manual context"
+              title="Create asset"
+            />
+            <AssetForm
+              buttonLabel="Create Asset"
+              disabled={assetActionLoading || projects.length === 0}
+              error={createError}
+              form={createForm}
+              formLabel="Create Asset form fields"
+              onChange={setCreateForm}
+              onSubmit={createAsset}
+            />
+          </VpwPanel>
+        </VpwGrid>
+
+        <VpwSection>
+          <VpwSectionHeader
+            actions={
+              <Button
+                disabled={projectSelectDisabled}
                 onClick={() => void refreshAssets(selectedAssetId)}
                 type="button"
+                variant="outline"
               >
-                <Activity aria-hidden="true" size={18} />
-              </button>
-            </div>
+                <RefreshCw aria-hidden="true" />
+                Refresh
+              </Button>
+            }
+            description="Filter project assets by service and owner, then inspect the context that changes prioritization."
+            eyebrow="In-scope assets"
+            title="Asset inventory"
+          />
+          <VpwFilterBar
+            actions={
+              <Button
+                disabled={!assetOwnerFilter && !assetServiceFilter}
+                onClick={() => {
+                  setAssetOwnerFilter("")
+                  setAssetServiceFilter("")
+                }}
+                type="button"
+                variant="outline"
+              >
+                Clear filters
+              </Button>
+            }
+            onSearchChange={setAssetServiceFilter}
+            searchLabel="Asset service filter"
+            searchPlaceholder="Filter by service"
+            searchValue={assetServiceFilter}
+          >
+            <VpwField className="min-w-52" label="Owner">
+              <Input
+                aria-label="Asset owner filter"
+                onChange={(event) => setAssetOwnerFilter(event.target.value)}
+                placeholder="Filter owner"
+                value={assetOwnerFilter}
+              />
+            </VpwField>
+            <VpwField className="min-w-64" label="Project">
+              <Select
+                disabled={projectSelectDisabled}
+                onValueChange={(projectId) => {
+                  setSelectedProjectId(projectId)
+                  setEditingAssetId("")
+                  setAssetMessage("")
+                }}
+                value={selectedProjectId}
+              >
+                <SelectTrigger aria-label="Assets project">
+                  <SelectValue placeholder="Select project" />
+                </SelectTrigger>
+                <SelectContent>
+                  {projects.map((project) => (
+                    <SelectItem key={project.id} value={project.id}>
+                      {project.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </VpwField>
+          </VpwFilterBar>
 
-            <section className="projects-workflow" aria-label="Assets workflow">
-              <section
-                className="dashboard-toolbar"
-                aria-label="Assets project context"
-              >
-                <label className="project-selector">
-                  <span>Project</span>
-                  <select
-                    aria-label="Assets project"
-                    disabled={projectLoading || projects.length === 0}
-                    onChange={(event) => {
-                      setSelectedProjectId(event.target.value)
-                      setEditingAssetId("")
-                      setAssetMessage("")
-                    }}
-                    value={selectedProjectId}
-                  >
-                    {projects.length === 0 ? (
-                      <option value="">No projects</option>
-                    ) : null}
-                    {projects.map((project) => (
-                      <option key={project.id} value={project.id}>
-                        {project.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <div className="project-context">
-                  <span>Selected project</span>
-                  <strong>
-                    {selectedProject?.name ??
-                      (projectLoading ? "Loading" : "No project selected")}
-                  </strong>
-                </div>
-                <label className="project-selector">
-                  <span>Owner</span>
-                  <input
-                    aria-label="Asset owner filter"
-                    onChange={(event) =>
-                      setAssetOwnerFilter(event.target.value)
-                    }
-                    placeholder="Filter owner"
-                    value={assetOwnerFilter}
-                  />
-                </label>
-                <label className="project-selector">
-                  <span>Service</span>
-                  <input
-                    aria-label="Asset service filter"
-                    onChange={(event) =>
-                      setAssetServiceFilter(event.target.value)
-                    }
-                    placeholder="Filter service"
-                    value={assetServiceFilter}
-                  />
-                </label>
-                <button
-                  className="secondary-action"
-                  disabled={!assetOwnerFilter && !assetServiceFilter}
-                  onClick={() => {
-                    setAssetOwnerFilter("")
-                    setAssetServiceFilter("")
-                  }}
-                  type="button"
-                >
-                  Clear Filters
-                </button>
-              </section>
+          {projects.length === 0 && !projectLoading ? (
+            <VpwEmptyState
+              action={
+                <Button asChild>
+                  <Link to="/projects">Create project</Link>
+                </Button>
+              }
+              icon={<BriefcaseBusiness aria-hidden="true" />}
+              title="No projects yet"
+              description="Create a project before managing asset context."
+            />
+          ) : null}
 
-              <section
-                className="project-form-panel"
-                aria-label="Import Asset Context form"
-              >
-                <h3>Import Asset Context</h3>
-                <form
-                  aria-label="Import Asset Context form fields"
-                  className="project-edit-form"
-                  onSubmit={importAssetContext}
+          {!assetsLoading && selectedProject && assets.length === 0 ? (
+            <VpwEmptyState
+              action={
+                <Button asChild variant="outline">
+                  <a href="#asset-context-import">Import asset context</a>
+                </Button>
+              }
+              icon={<Server aria-hidden="true" />}
+              title="No asset context yet"
+              description="Import asset context to improve prioritization and ownership."
+            />
+          ) : null}
+
+          {assetsLoading ? (
+            <VpwPanel className="p-5">
+              <VpwSkeletonStack rows={6} />
+            </VpwPanel>
+          ) : null}
+
+          {assets.length > 0 ? (
+            <VpwDataTable
+              caption="Assets table"
+              columns={assetColumns}
+              data={assets}
+              density="compact"
+              getRowKey={(asset) => asset.id}
+            />
+          ) : null}
+        </VpwSection>
+
+        {serviceRollups.length > 0 ? (
+          <VpwSection>
+            <VpwSectionHeader
+              description="Rollup by business service and owner for faster exposure review."
+              eyebrow="Service exposure"
+              title="Service and owner rollup"
+            />
+            <VpwGrid columns={1} className="lg:grid-cols-2 xl:grid-cols-4">
+              {serviceRollups.slice(0, 8).map((rollup) => (
+                <VpwSelectionCard
+                  key={rollup.id}
+                  meta={`${rollup.assetCount} assets - ${rollup.findings} findings`}
+                  onClick={() => setAssetServiceFilter(rollup.label)}
+                  title={rollup.label}
                 >
-                  <label>
-                    <span>Asset context CSV</span>
-                    <input
-                      accept=".csv,text/csv"
-                      aria-label="Asset context CSV"
-                      onChange={(event) =>
-                        setAssetContextFile(event.target.files?.[0] ?? null)
-                      }
-                      type="file"
+                  <div className="space-y-3">
+                    <div className="flex flex-wrap gap-2">
+                      <VpwBadge tone="support">{rollup.owner}</VpwBadge>
+                      <VpwBadge tone={exposureTone(rollup.exposure)}>
+                        {labelize(rollup.exposure)}
+                      </VpwBadge>
+                      <VpwBadge
+                        tone={rollup.criticalAssets > 0 ? "warning" : "success"}
+                      >
+                        {rollup.criticalAssets} critical/high
+                      </VpwBadge>
+                    </div>
+                    <VpwProgress
+                      label="Evidence readiness"
+                      tone={rollup.findings > 0 ? "info" : "neutral"}
+                      value={rollup.findings > 0 ? 66 : 20}
                     />
-                  </label>
-                  <button
-                    className="primary-action"
+                  </div>
+                </VpwSelectionCard>
+              ))}
+            </VpwGrid>
+          </VpwSection>
+        ) : null}
+
+        {selectedAsset ? (
+          <VpwSection>
+            <VpwSectionHeader
+              actions={
+                <VpwToolbarGroup>
+                  <Button
+                    onClick={() => startEditAsset(selectedAsset)}
+                    type="button"
+                    variant="outline"
+                  >
+                    Edit context
+                  </Button>
+                  <Button
                     disabled={
                       assetActionLoading ||
-                      projects.length === 0 ||
-                      !assetContextFile
+                      (selectedAsset.finding_count ?? 0) === 0
                     }
-                    type="submit"
+                    onClick={() => void recalculateAsset(selectedAsset)}
+                    type="button"
+                    variant="outline"
                   >
-                    <FileInput aria-hidden="true" size={16} />
-                    <span>Import Context</span>
-                  </button>
-                </form>
-              </section>
-
-              <section
-                className="project-form-panel"
-                aria-label="Create Asset form"
-              >
-                <h3>Create Asset</h3>
-                <AssetForm
-                  buttonLabel="Create Asset"
-                  disabled={assetActionLoading || projects.length === 0}
-                  error={createError}
-                  form={createForm}
-                  formLabel="Create Asset form fields"
-                  onChange={setCreateForm}
-                  onSubmit={createAsset}
+                    <RefreshCw aria-hidden="true" />
+                    Recalculate
+                  </Button>
+                  <Button asChild variant="outline">
+                    <a href={assetFindingsHref(selectedAsset)}>View findings</a>
+                  </Button>
+                </VpwToolbarGroup>
+              }
+              description="Selected asset context and linked findings for the active project."
+              eyebrow="Asset detail"
+              title={selectedAsset.name}
+            />
+            <VpwGrid columns={2}>
+              <div className="space-y-4">
+                <VpwAssetContextCard
+                  asset={selectedAsset.asset_key}
+                  businessService={optionalText(selectedAsset.business_service)}
+                  criticality={labelize(selectedAsset.criticality)}
+                  exposure={labelize(selectedAsset.exposure)}
+                  owner={optionalText(selectedAsset.owner)}
                 />
-              </section>
+                <VpwPanel className="space-y-4 p-5">
+                  <VpwSectionHeader
+                    eyebrow="Metadata"
+                    title="Prioritization context"
+                    description="These fields are used by the Workbench backend when linked findings are recalculated."
+                  />
+                  <VpwKeyValueList
+                    columns={2}
+                    items={[
+                      {
+                        label: "Target ref",
+                        value: optionalText(selectedAsset.target_ref),
+                      },
+                      {
+                        label: "Findings linked",
+                        value: selectedAsset.finding_count ?? 0,
+                      },
+                      {
+                        label: "Highest priority",
+                        value: selectedHighestPriority,
+                        tone: findingPriorityTone(selectedHighestPriority),
+                      },
+                      {
+                        label: "Score state",
+                        value: scoreStatusLabel(selectedAsset),
+                        tone: assetScoreTone(selectedAsset),
+                      },
+                      {
+                        label: "Updated",
+                        value: formatDateTime(selectedAsset.updated_at),
+                      },
+                      {
+                        label: "Created",
+                        value: formatDateTime(selectedAsset.created_at),
+                      },
+                    ]}
+                  />
+                </VpwPanel>
+              </div>
 
-              {assetsError ? (
-                <p className="dashboard-alert" role="alert">
-                  {assetsError}
-                </p>
-              ) : null}
-              {assetMessage ? (
-                <p className="dashboard-state" role="status">
-                  {assetMessage}
-                </p>
-              ) : null}
-              {assetsLoading ? (
-                <p className="dashboard-state" role="status">
-                  Loading assets
-                </p>
-              ) : null}
-
-              {projects.length === 0 && !projectLoading ? (
-                <section
-                  className="dashboard-empty"
-                  aria-label="Assets no project empty state"
-                >
-                  <h3>No projects yet</h3>
-                  <p>Create a project before managing assets.</p>
-                  <Link className="primary-action" to="/projects">
-                    Projects
-                  </Link>
-                </section>
-              ) : null}
-
-              {!assetsLoading && selectedProject && assets.length === 0 ? (
-                <section
-                  className="dashboard-empty"
-                  aria-label="Assets empty state"
-                >
-                  <h3>No assets in {selectedProject.name}</h3>
-                  <p>
-                    Add the first asset to attach owner, service, and exposure
-                    context.
-                  </p>
-                </section>
-              ) : null}
-
-              {assets.length > 0 ? (
-                <section
-                  className="project-list-panel"
-                  aria-label="Assets list"
-                >
-                  <div className="table-wrap findings-table-wrap">
-                    <table aria-label="Assets table">
-                      <thead>
-                        <tr>
-                          <th>Asset</th>
-                          <th>Owner</th>
-                          <th>Service</th>
-                          <th>Criticality</th>
-                          <th>Environment</th>
-                          <th>Exposure</th>
-                          <th>Findings</th>
-                          <th>Status</th>
-                          <th>Updated</th>
-                          <th>Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {assets.map((asset) => (
-                          <tr key={asset.id}>
-                            <td>
-                              <button
-                                aria-current={
-                                  selectedAssetId === asset.id
-                                    ? "true"
-                                    : undefined
-                                }
-                                className="project-list-item"
-                                onClick={() => setSelectedAssetId(asset.id)}
-                                type="button"
-                              >
-                                <strong>{asset.name}</strong>
-                                <span>{asset.asset_key}</span>
-                              </button>
-                            </td>
-                            <td>{optionalText(asset.owner)}</td>
-                            <td>{optionalText(asset.business_service)}</td>
-                            <td>{labelize(asset.criticality)}</td>
-                            <td>{labelize(asset.environment)}</td>
-                            <td>{labelize(asset.exposure)}</td>
-                            <td>{asset.finding_count ?? 0}</td>
-                            <td>
-                              <span className="status-pill">
-                                {asset.rescore_needed
-                                  ? "Re-score needed"
-                                  : "Current"}
-                              </span>
-                            </td>
-                            <td>{formatDateTime(asset.updated_at)}</td>
-                            <td>
-                              <div className="empty-actions">
-                                <a
-                                  className="secondary-action"
-                                  href={assetFindingsHref(asset)}
-                                >
-                                  Findings
-                                </a>
-                                <button
-                                  className="secondary-action"
-                                  onClick={() => {
-                                    setSelectedAssetId(asset.id)
-                                    startEditAsset(asset)
-                                  }}
-                                  type="button"
-                                >
-                                  Edit
-                                </button>
-                                <button
-                                  aria-label={`Recalculate ${asset.name}`}
-                                  className="secondary-action"
-                                  disabled={
-                                    assetActionLoading ||
-                                    (asset.finding_count ?? 0) === 0
-                                  }
-                                  onClick={() => void recalculateAsset(asset)}
-                                  type="button"
-                                >
-                                  <RefreshCw aria-hidden="true" size={16} />
-                                  <span>Recalculate</span>
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </section>
-              ) : null}
-
-              {selectedAsset ? (
-                <section className="project-detail" aria-label="Asset detail">
-                  <div className="project-detail-header">
-                    <div>
-                      <span>Selected asset</span>
-                      <h3>{selectedAsset.name}</h3>
-                      <p>{selectedAsset.asset_key}</p>
-                    </div>
-                    <button
-                      className="secondary-action"
-                      onClick={() => startEditAsset(selectedAsset)}
-                      type="button"
-                    >
-                      Edit Asset
-                    </button>
-                    <button
-                      className="secondary-action"
-                      disabled={
-                        assetActionLoading ||
-                        (selectedAsset.finding_count ?? 0) === 0
-                      }
-                      onClick={() => void recalculateAsset(selectedAsset)}
-                      type="button"
-                    >
-                      <RefreshCw aria-hidden="true" size={16} />
-                      <span>Recalculate</span>
-                    </button>
-                  </div>
-                  <dl className="project-meta">
-                    <div>
-                      <dt>Findings</dt>
-                      <dd>{selectedAsset.finding_count ?? 0}</dd>
-                    </div>
-                    <div>
-                      <dt>Score status</dt>
-                      <dd>
-                        {selectedAsset.rescore_needed
-                          ? "Re-score needed"
-                          : "Current"}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt>Owner</dt>
-                      <dd>{optionalText(selectedAsset.owner)}</dd>
-                    </div>
-                    <div>
-                      <dt>Business service</dt>
-                      <dd>{optionalText(selectedAsset.business_service)}</dd>
-                    </div>
-                    <div>
-                      <dt>Target ref</dt>
-                      <dd>{optionalText(selectedAsset.target_ref)}</dd>
-                    </div>
-                    <div>
-                      <dt>Criticality</dt>
-                      <dd>{labelize(selectedAsset.criticality)}</dd>
-                    </div>
-                    <div>
-                      <dt>Environment</dt>
-                      <dd>{labelize(selectedAsset.environment)}</dd>
-                    </div>
-                    <div>
-                      <dt>Exposure</dt>
-                      <dd>{labelize(selectedAsset.exposure)}</dd>
-                    </div>
-                  </dl>
-
-                  {editingAssetId === selectedAsset.id ? (
+              <VpwPanel className="space-y-4 p-5">
+                {editingAssetId === selectedAsset.id ? (
+                  <>
+                    <VpwSectionHeader
+                      description="Update asset owner, service, exposure, environment and criticality."
+                      eyebrow="Edit context"
+                      title="Edit selected asset"
+                    />
                     <AssetForm
                       buttonLabel="Save Asset"
                       disabled={assetActionLoading}
@@ -1162,135 +1560,73 @@ function AssetsPage() {
                       onChange={setEditForm}
                       onSubmit={saveAsset}
                     />
-                  ) : null}
+                  </>
+                ) : (
+                  <>
+                    <VpwSectionHeader
+                      description="Open edit mode to update the selected asset context."
+                      eyebrow="Context editor"
+                      title="Asset editor"
+                      actions={
+                        <Button
+                          onClick={() => startEditAsset(selectedAsset)}
+                          type="button"
+                          variant="outline"
+                        >
+                          Edit context
+                        </Button>
+                      }
+                    />
+                    <VpwStatusBanner title="Context ready" tone="info">
+                      Asset edits and recalculation use the existing Workbench
+                      asset APIs.
+                    </VpwStatusBanner>
+                  </>
+                )}
+              </VpwPanel>
+            </VpwGrid>
 
-                  <section
-                    className="runs-browser"
-                    aria-label="Findings for selected asset"
-                  >
-                    <div className="runs-section-header">
-                      <div>
-                        <h3>Findings for Asset</h3>
-                        <span>{selectedAsset.name}</span>
-                      </div>
-                      <a
-                        className="secondary-action"
-                        href={assetFindingsHref(selectedAsset)}
-                      >
-                        Findings
-                      </a>
-                    </div>
-                    {assetFindingsError ? (
-                      <p className="dashboard-alert" role="alert">
-                        {assetFindingsError}
-                      </p>
-                    ) : null}
-                    {assetFindingsLoading ? (
-                      <p className="dashboard-state" role="status">
-                        Loading asset findings
-                      </p>
-                    ) : null}
-                    {!assetFindingsLoading && assetFindings.length === 0 ? (
-                      <section
-                        className="dashboard-empty compact-empty"
-                        aria-label="Asset findings empty state"
-                      >
-                        <h3>No findings for {selectedAsset.name}</h3>
-                        <p>
-                          Import occurrence data that references this asset.
-                        </p>
-                      </section>
-                    ) : null}
-                    {assetFindings.length > 0 ? (
-                      <div className="table-wrap findings-table-wrap">
-                        <table aria-label="Asset findings table">
-                          <thead>
-                            <tr>
-                              <th>Priority</th>
-                              <th>CVE</th>
-                              <th>Component</th>
-                              <th>Asset</th>
-                              <th>Status</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {assetFindings.map((finding) => (
-                              <tr key={finding.id}>
-                                <td>
-                                  <span
-                                    className={`severity ${finding.priority ?? "low"}`}
-                                  >
-                                    {labelize(finding.priority)}
-                                  </span>
-                                </td>
-                                <td>
-                                  <Link
-                                    className="finding-cve-link"
-                                    params={{ findingId: finding.id }}
-                                    to="/findings/$findingId"
-                                  >
-                                    {finding.cve_id}
-                                  </Link>
-                                </td>
-                                <td>{optionalText(finding.component_name)}</td>
-                                <td>{findingAssetLabel(finding)}</td>
-                                <td>{labelize(finding.status)}</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    ) : null}
-                  </section>
-                </section>
+            <VpwPanel className="space-y-4 p-5">
+              <VpwSectionHeader
+                actions={
+                  <Button asChild variant="outline">
+                    <a href={assetFindingsHref(selectedAsset)}>Open findings</a>
+                  </Button>
+                }
+                description="Findings returned by the existing project findings API for this asset."
+                eyebrow="Linked findings"
+                title="Findings for asset"
+              />
+              {assetFindingsError ? (
+                <VpwStatusBanner
+                  title="Asset findings unavailable"
+                  tone="critical"
+                >
+                  {assetFindingsError}
+                </VpwStatusBanner>
               ) : null}
-            </section>
-          </div>
-
-          <div className="side-panel">
-            <section
-              className="provider-status-section"
-              aria-label="Provider Status"
-            >
-              <div className="panel-header compact inline-header">
-                <div>
-                  <h2>Provider Status</h2>
-                  <span>
-                    {providerStatus?.snapshot.content_hash ??
-                      "No snapshot recorded"}
-                  </span>
-                </div>
-                <Database aria-hidden="true" size={18} />
-              </div>
-              <div
-                className={`provider-state ${
-                  providerStatus?.status === "ok" ? "ok" : "degraded"
-                }`}
-              >
-                <span>{providerStatus?.status ?? "loading"}</span>
-                <strong>{providerStatus?.snapshot_mode ?? "missing"}</strong>
-              </div>
-              <dl className="provider-facts">
-                <div>
-                  <dt>Snapshot mode</dt>
-                  <dd>{providerStatus?.snapshot_mode ?? "missing"}</dd>
-                </div>
-                <div>
-                  <dt>Last sync</dt>
-                  <dd>{providerStatus?.last_sync ?? "N.A."}</dd>
-                </div>
-                <div>
-                  <dt>Last error</dt>
-                  <dd>
-                    {providerStatus?.last_error ?? (statusError || "None")}
-                  </dd>
-                </div>
-              </dl>
-            </section>
-          </div>
-        </section>
-      </main>
-    </div>
+              {assetFindingsLoading ? <VpwSkeletonStack rows={4} /> : null}
+              {!assetFindingsLoading && assetFindings.length === 0 ? (
+                <VpwEmptyState
+                  icon={<Database aria-hidden="true" />}
+                  title={`No findings for ${selectedAsset.name}`}
+                  description="Import occurrence data that references this asset."
+                />
+              ) : null}
+              {assetFindings.length > 0 ? (
+                <VpwDataTable
+                  caption="Asset findings table"
+                  columns={findingColumns}
+                  data={assetFindings}
+                  density="compact"
+                  getRowKey={(finding) => finding.id}
+                />
+              ) : null}
+            </VpwPanel>
+          </VpwSection>
+        ) : null}
+      </VpwPageContainer>
+    </ProductAppShell>
   )
 }
 

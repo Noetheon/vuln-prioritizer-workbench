@@ -34,6 +34,7 @@ __pycache__/
 .coverage.*
 coverage.xml
 htmlcov/
+test-results/
 
 # Local application caches
 .cache/
@@ -41,6 +42,8 @@ Library/
 /data/*.db
 /data/*.sqlite
 /data/*.sqlite3
+data/template-import-uploads/
+backend/template.db
 
 # Build and packaging artifacts
 build/
@@ -59,6 +62,8 @@ pip-wheel-metadata/
 # Tool-specific lock or state files
 .tox/
 .nox/
+*.log
+frontend/screenshot*.mjs
 
 # IDE and editor settings
 .idea/
@@ -69,6 +74,8 @@ pip-wheel-metadata/
 
 # Local agent / Codex state
 .codex/
+.codex-pet-runs/
+.playwright-cli/
 .playwright-mcp/
 .agents/
 .claude/

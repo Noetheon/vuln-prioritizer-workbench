@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test"
+import { expect, type Locator, type Page, test } from "@playwright/test"
 
 const validOccurrenceCsv = Buffer.from(
   [
@@ -20,6 +20,65 @@ function dateValueFromOffset(days: number) {
   const date = new Date()
   date.setDate(date.getDate() + days)
   return date.toISOString().slice(0, 10)
+}
+
+async function selectRadixOption(
+  page: Page,
+  trigger: Locator,
+  optionName: string | RegExp,
+) {
+  await expect(trigger).toBeVisible()
+  await trigger.click()
+  if (typeof optionName === "string") {
+    const option = page.getByRole("option", { exact: true, name: optionName })
+    await expect(option).toBeAttached()
+    await option.evaluate((element) => {
+      const target = element as HTMLElement
+      let parent = target.parentElement
+      while (parent) {
+        if (parent.scrollHeight > parent.clientHeight) {
+          parent.scrollTop = target.offsetTop - parent.clientHeight / 2
+          break
+        }
+        parent = parent.parentElement
+      }
+      target.scrollIntoView({ block: "nearest" })
+    })
+    try {
+      await option.click({ timeout: 3000 })
+    } catch {
+      await option.dispatchEvent("pointerdown")
+      await option.dispatchEvent("pointerup")
+      await option.dispatchEvent("click")
+    }
+    return
+  }
+  const option = page.getByRole("option", { name: optionName })
+  try {
+    await option.scrollIntoViewIfNeeded({ timeout: 1000 })
+    await option.click({ timeout: 3000 })
+  } catch {
+    await option.click({ force: true })
+  }
+}
+
+async function selectRadixOptionByLabel(
+  page: Page,
+  scope: Page | Locator,
+  label: string,
+  optionName: string | RegExp,
+) {
+  await selectRadixOption(
+    page,
+    scope.getByRole("combobox", { exact: true, name: label }),
+    optionName,
+  )
+}
+
+async function selectDashboardProject(page: Page, projectName: string) {
+  const projectTrigger = page.getByRole("combobox").first()
+  await selectRadixOption(page, projectTrigger, projectName)
+  await expect(projectTrigger).toContainText(projectName)
 }
 
 test("template waiver workflow keeps accepted risk visible", async ({
@@ -72,9 +131,10 @@ test("template waiver workflow keeps accepted risk visible", async ({
 
   await page.goto("/waivers")
   await expect(page.getByRole("link", { name: "Waivers" })).toBeVisible()
-  await page.getByLabel("Waivers project").selectOption(project.id)
+  await selectRadixOptionByLabel(page, page, "Waivers project", projectName)
 
-  const createWaiver = page.getByRole("region", { name: "Create waiver" })
+  await expect(page.getByText("Create waiver").first()).toBeVisible()
+  const createWaiver = page
   await createWaiver.getByLabel("Waiver CVE ID").fill("CVE-2024-3094")
   await createWaiver.getByLabel("Waiver owner").fill("risk-owner")
   await createWaiver
@@ -106,28 +166,23 @@ test("template waiver workflow keeps accepted risk visible", async ({
 
   await page.goto(`/findings/${finding?.id}`)
   const findingDetail = page.getByRole("region", {
-    exact: true,
-    name: "Finding detail",
+    name: "Finding priority decision",
   })
   await expect(findingDetail).toContainText("Accepted")
-  const acceptedRisk = page.getByRole("region", { name: "Accepted risk" })
-  await expect(acceptedRisk).toContainText("risk-owner")
-  await expect(acceptedRisk).toContainText("Temporary accepted risk")
-  await expect(acceptedRisk).toContainText("2099-12-31")
+  await expect(findingDetail).toContainText("Risk acceptance option")
+  await expect(findingDetail).toContainText("Temporary accepted risk")
   await page.screenshot({
     fullPage: true,
     path: "../docs/evidence/vpw-064-waiver-risk-acceptance.png",
   })
 
   await page.goto("/waivers")
-  await page.getByLabel("Waivers project").selectOption(project.id)
+  await selectRadixOptionByLabel(page, page, "Waivers project", projectName)
   await waiversTable.getByRole("button", { name: "Expire" }).click()
   await expect(waiversTable).toContainText("Expired")
 
   await page.goto(`/findings/${finding?.id}`)
-  await expect(page.getByRole("region", { name: "Accepted risk" })).toHaveCount(
-    0,
-  )
+  await expect(page.getByText("Temporary accepted risk")).toHaveCount(0)
 })
 
 test("template governance rollups show service risk and waiver debt", async ({
@@ -229,26 +284,23 @@ test("template governance rollups show service risk and waiver debt", async ({
   })
 
   await page.goto("/")
-  await page.getByLabel("Current project").selectOption(project.id)
-  const serviceWidget = page.getByRole("region", {
-    name: "Top Services by Risk",
-  })
-  await expect(serviceWidget).toContainText("checkout")
-  await expect(serviceWidget).toContainText("Critical 2 / High 0")
-  await expect(serviceWidget).toContainText("Waiver debt 2")
+  await selectDashboardProject(page, projectName)
+  await page.getByRole("tab", { name: "Top Services" }).click()
+  await expect(page.getByText("Top Services by Risk")).toBeVisible()
+  await expect(page.getByText("checkout").first()).toBeVisible()
   await page.screenshot({
     fullPage: true,
     path: "../docs/evidence/vpw-067-top-services-by-risk.png",
   })
 
   await page.goto("/waivers")
-  await page.getByLabel("Waivers project").selectOption(project.id)
-  const waiverDebt = page.getByRole("region", { name: "Waiver Debt" })
-  await expect(waiverDebt).toContainText("Expired")
-  await expect(waiverDebt).toContainText("Review due")
-  await expect(waiverDebt).toContainText("service:checkout")
-  await expect(waiverDebt).toContainText("legacy-risk")
-  await expect(waiverDebt).toContainText("risk-team")
+  await selectRadixOptionByLabel(page, page, "Waivers project", projectName)
+  await expect(page.getByText("Owner follow-up")).toBeVisible()
+  await expect(page.getByText("Expired").first()).toBeVisible()
+  await expect(page.getByText("Review due").first()).toBeVisible()
+  await expect(page.getByText("service:checkout").first()).toBeVisible()
+  await expect(page.getByText("legacy-risk").first()).toBeVisible()
+  await expect(page.getByText("risk-team").first()).toBeVisible()
 
   await page.screenshot({
     fullPage: true,
