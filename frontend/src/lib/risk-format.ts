@@ -15,12 +15,6 @@ export function findingPriorityLabel(
   return formatLabel(priority)
 }
 
-export function findingPriorityClass(
-  priority: FindingPriority | null | undefined,
-) {
-  return priority ?? "low"
-}
-
 export function findingPriorityTone(
   priority: FindingPriority | null | undefined,
 ): FindingPriorityTone {
@@ -43,44 +37,8 @@ export function formatEpss(value: number | null | undefined) {
     : `${Math.round(value * 1000) / 10}%`
 }
 
-export function epssThresholdLabel(value: number | null | undefined) {
-  if (value === null || value === undefined) {
-    return "Missing"
-  }
-  if (value >= 0.7) {
-    return "Very high"
-  }
-  if (value >= 0.4) {
-    return "High"
-  }
-  if (value >= 0.1) {
-    return "Elevated"
-  }
-  return "Low"
-}
-
-export function cvssSeverityLabel(value: number | null | undefined) {
-  if (value === null || value === undefined) {
-    return "Missing"
-  }
-  if (value >= 9) {
-    return "Critical"
-  }
-  if (value >= 7) {
-    return "High"
-  }
-  if (value >= 4) {
-    return "Medium"
-  }
-  return "Low"
-}
-
 export function formatKev(value: boolean | null | undefined) {
   return value ? "Yes" : "No"
-}
-
-export function kevBadgeClass(value: boolean | null | undefined) {
-  return value ? "kev-pill matched" : "kev-pill"
 }
 
 export function runStatusLabel(status: AnalysisRunPublic["status"]) {
