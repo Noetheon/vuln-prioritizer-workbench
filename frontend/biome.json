@@ -22,5 +22,10 @@
       "quoteStyle": "double",
       "semicolons": "asNeeded"
     }
+  },
+  "css": {
+    "parser": {
+      "tailwindDirectives": true
+    }
   }
 }
