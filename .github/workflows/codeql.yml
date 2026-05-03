@@ -11,6 +11,12 @@ on:
     - cron: "17 4 * * 1"
   workflow_dispatch:
 
+# Cancel superseded CodeQL runs for the same PR/branch while keeping the
+# weekly and manual security analysis entry points intact.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 permissions:
   actions: read
   contents: read
