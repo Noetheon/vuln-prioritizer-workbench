@@ -53,7 +53,7 @@ If `pip-audit` is unavailable or advisory data cannot be reached, record that as
 | Docker demo smoke | `make docker-demo-smoke` output showing `/api/v1/workbench/status` returns `{"status":"ok"}` before teardown. |
 | Dependency audit | `make dependency-audit` result, or a documented exception when `pip-audit` or advisory data is unavailable. |
 | Demo evidence bundle | `make demo-evidence-bundle-check` output plus `build/v1.0-demo-evidence-bundle-verification.json` showing `ok=true`. |
-| Provider test matrix | `make provider-testmatrix` plus `docs/evidence/vpw-029-provider-testmatrix.md`. |
+| Provider test matrix | `make provider-testmatrix` plus `archive/vpw-evidence/vpw-029-provider-testmatrix.md`. |
 | Offline/no-key proof | `make demo-offline-no-key-proof` output plus `build/vpw-029-demo-offline-no-key-proof.json` showing locked replay and provider `network_fetches=0`. |
 
 ## Updating the Demo Provider Snapshot

@@ -13,7 +13,7 @@ The site includes the `v1.1.0` release notes, Workbench milestone evidence, and 
 - [Workbench v1.0 release checklist](workbench-v1-release-checklist.md)
 - [External user documentation guide](user_documentation.md)
 - [Example HTML report](examples/example_report.html)
-- [Template report demo artifacts](evidence/vpw-054-report-snapshots.md)
+- [Template report demo artifacts](examples/vpw-054-template-technical-report.md)
 - [Operational use cases](use_cases.md)
 - [Operator playbooks](playbooks.md)
 
