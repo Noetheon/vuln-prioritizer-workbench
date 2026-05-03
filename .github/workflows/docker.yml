@@ -2,24 +2,76 @@ name: Docker
 
 on:
   push:
+    branches:
+      - main
   pull_request:
+    branches:
+      - main
   workflow_dispatch:
+
+# Keep only the newest Docker smoke run for each PR/branch. Docker builds are
+# the most expensive check in this repo, so stale runs should stop quickly.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
 
 jobs:
-  compose-smoke:
+  changes:
     runs-on: ubuntu-latest
+    outputs:
+      run-docker: ${{ steps.scope.outputs.run-docker }}
 
     steps:
       - name: Check out repository
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Decide whether Docker smoke is needed
+        id: scope
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${{ github.event_name }}" != "pull_request" ]]; then
+            echo "run-docker=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          base_sha="${{ github.event.pull_request.base.sha }}"
+          changed_files="$(git diff --name-only "$base_sha"...HEAD)"
+          printf '%s\n' "$changed_files"
+
+          # Docs/evidence-only PRs still get a successful Docker workflow, but
+          # skip the expensive compose build because runtime behavior cannot
+          # change from those paths.
+          if printf '%s\n' "$changed_files" | grep -Ev '^(docs/|.*\.md$)' >/dev/null; then
+            echo "run-docker=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run-docker=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  compose-smoke:
+    runs-on: ubuntu-latest
+    needs: changes
+
+    steps:
+      - name: Skip Docker smoke for docs/evidence-only PR
+        if: needs.changes.outputs.run-docker != 'true'
+        run: echo "No runtime-impacting files changed; Docker compose smoke skipped."
+
+      - name: Check out repository
+        if: needs.changes.outputs.run-docker == 'true'
+        uses: actions/checkout@v6
 
       - name: Build and start Workbench
+        if: needs.changes.outputs.run-docker == 'true'
         run: docker compose -f compose.yml -f compose.override.yml up -d --build backend frontend
 
       - name: Wait for health endpoint
+        if: needs.changes.outputs.run-docker == 'true'
         run: |
           curl --retry 20 --retry-delay 2 --retry-connrefused --retry-all-errors --fail \
             http://127.0.0.1:8000/api/v1/workbench/status
@@ -27,6 +79,7 @@ jobs:
             http://127.0.0.1:8000/api/v1/utils/health-check/
 
       - name: Wait for frontend shell
+        if: needs.changes.outputs.run-docker == 'true'
         run: |
           curl --retry 20 --retry-delay 2 --retry-connrefused --retry-all-errors --fail \
             http://127.0.0.1:5173/
@@ -34,12 +87,13 @@ jobs:
             http://127.0.0.1:5173/login
 
       - name: Show service status
+        if: needs.changes.outputs.run-docker == 'true'
         run: docker compose -f compose.yml -f compose.override.yml ps
 
       - name: Show service logs on failure
-        if: failure()
+        if: failure() && needs.changes.outputs.run-docker == 'true'
         run: docker compose -f compose.yml -f compose.override.yml logs --no-color
 
       - name: Stop Workbench
-        if: always()
+        if: always() && needs.changes.outputs.run-docker == 'true'
         run: docker compose -f compose.yml -f compose.override.yml down -v --remove-orphans
