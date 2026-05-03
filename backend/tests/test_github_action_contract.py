@@ -10,7 +10,7 @@ EXAMPLES_README = EXAMPLES_DIR / "README.md"
 INTEGRATION_DOC = REPO_ROOT / "docs" / "integrations" / "reporting_and_ci.md"
 README_FILE = REPO_ROOT / "README.md"
 MKDOCS_FILE = REPO_ROOT / "mkdocs.yml"
-VPW_082_EVIDENCE = REPO_ROOT / "docs" / "evidence" / "vpw-082-github-action-reports.md"
+VPW_082_EVIDENCE = REPO_ROOT / "archive" / "vpw-evidence" / "vpw-082-github-action-reports.md"
 SARIF_EXAMPLE = EXAMPLES_DIR / "code-scanning-sarif.yml"
 WORKBENCH_REPORT_EXAMPLE = EXAMPLES_DIR / "workbench-report-artifacts.yml"
 
@@ -287,4 +287,4 @@ def test_vpw082_docs_and_evidence_link_the_action_report_flow() -> None:
     assert "workbench-report-artifacts.yml" in readme
     assert "action-smoke" in evidence
     assert "no `secrets.*`" in evidence
-    assert "evidence/vpw-082-github-action-reports.md" in mkdocs
+    assert "Historical Evidence Archive: evidence.md" in mkdocs

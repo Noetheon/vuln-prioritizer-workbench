@@ -95,8 +95,8 @@ Default MVP thresholds:
 
 The latest VPW-072 evidence is stored in:
 
-- `docs/evidence/vpw-072-performance-smoke.md`
-- `docs/evidence/vpw-072-performance-smoke.json`
+- `archive/vpw-evidence/vpw-072-performance-smoke.md`
+- `archive/vpw-evidence/vpw-072-performance-smoke.json`
 
 Known limits: this smoke uses local SQLite and FastAPI `TestClient`. It is not a
 Postgres or concurrent-user benchmark. The large all-new bulk path stores compact

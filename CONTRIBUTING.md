@@ -55,6 +55,12 @@ This adds:
 - `python3 -m build backend --outdir dist`
 - `python3 -m twine check dist/*`
 
+Use `make clean-local` to remove ignored local caches, logs, build outputs,
+coverage files, generated docs sites, and `.DS_Store` files without deleting
+`.env`, local databases, `node_modules`, or Playwright browser downloads. Use
+`make clean-deps` when you intentionally want to remove dependency-heavy
+directories too.
+
 ## Branching And Pull Requests
 
 - Use focused branches, normally under `codex/` for Codex-authored work.
