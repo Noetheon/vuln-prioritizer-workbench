@@ -1,0 +1,37 @@
+metadata:
+  mapping_framework: vuln-prioritizer-curated-attack
+  mapping_framework_version: "1.0"
+  mapping_version: "2026-05-03-demo"
+  attack_version: "16.1"
+  technology_domain: enterprise-attack
+  creation_date: "2026-05-03"
+  last_update: "2026-05-03"
+  organization: Noetheon demo
+  author: reviewed-demo
+  contact: security@example.invalid
+  mapping_types:
+    exploitation: Reviewed defensive mapping from a CVE to initial-access context.
+    detection_context: Reviewed mapping used only to guide detection coverage review.
+mapping_objects:
+  - cve_id: CVE-2024-4577
+    technique_id: T1190
+    technique_name: Exploit Public-Facing Application
+    tactic_ids:
+      - TA0001
+    mapping_type: exploitation
+    capability_group: public-facing-web-application-risk
+    capability_description: Defensive demo mapping for internet-facing vulnerable service prioritization.
+    source: Local curated demo mapping
+    confidence: high
+    rationale: The mapping is used for defensive prioritization and detection planning for an internet-facing vulnerable service. It does not prove exploitation.
+    review_status: reviewed
+    reviewer: security-review
+    reviewed_at: "2026-05-03"
+    defensive_note: |-
+      Patch or mitigate the affected service.
+      Restrict exposure while remediation is in progress.
+      Validate web, proxy, WAF, EDR and application telemetry.
+      Document detection coverage and residual risk.
+    comments: Defensive demo mapping only. It contains no exploit steps, payloads, proof-of-concept guidance, active probing, or offensive procedure instructions.
+    references:
+      - Local curated demo mapping
