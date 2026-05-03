@@ -5,32 +5,24 @@ import {
   ArrowLeft,
   BarChart3,
   Database,
-  FileArchive,
-  FileJson,
-  FileText,
   Gauge,
   GitBranch,
   Globe,
   ShieldCheck,
-  Table2,
 } from "lucide-react"
 import { type FormEvent, useEffect, useState } from "react"
 import {
   type AnalysisRunPublic,
   type AnalysisRunSummaryPublic,
   ApiError,
-  type ApiTokenCreate,
   type ApiTokenCreatePublic,
   type ApiTokenPublic,
   ApiTokensService,
-  type AssetExposure,
   type FindingDetailPublic,
   type FindingExplanationPublic,
   type FindingOccurrencePublic,
   type FindingPriority,
   type FindingPublic,
-  type FindingStatus,
-  type FindingsReadProjectFindingsData,
   FindingsService,
   type ImportParseErrorPublic,
   ImportsService,
@@ -50,14 +42,13 @@ import {
   RunsService,
   type UserPublic,
   UsersService,
-  type WaiverCreate,
   type WaiverPublic,
   WaiversService,
   WorkbenchService,
   type WorkbenchStatus,
 } from "./api-client"
 import { clearAccessToken, getAccessToken } from "./auth"
-import { ProductAppShell, type WorkbenchPath } from "./components/app/AppShell"
+import { ProductAppShell } from "./components/app/AppShell"
 import {
   FindingsByPriorityChart,
   RiskTrendChart,
@@ -109,6 +100,42 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./components/ui/tabs"
 import { WaiversWorkbench } from "./components/waivers"
 import {
+  type ApiTokenScope,
+  apiTokenScopeOptions,
+  canonicalApiTokenScopes,
+  defaultApiTokenScopes,
+  defaultFindingFilters,
+  defaultImportWizardState,
+  emptyProjectForm,
+  type FindingDetailTab,
+  type FindingFilters,
+  type FindingsDirection,
+  type FindingsSort,
+  findingPageSizes,
+  type ImportFormat,
+  type ImportUploadFormData,
+  type ImportWizardState,
+  mvpImportFormats,
+  type ProjectFormState,
+  type TemplateReportFormat,
+  evidenceTimeline as timeline,
+} from "./lib/app-defaults"
+import {
+  analysisRunIdFromError,
+  apiErrorDetail,
+  apiErrorMessage,
+  arrayRecords,
+  joinedValues,
+  objectRecord,
+  parseErrorsFromError,
+  stringValue,
+} from "./lib/app-errors"
+import {
+  findingIdFromPath,
+  normalizeWorkbenchPath,
+  routeDetails,
+} from "./lib/app-route-config"
+import {
   type EpssBucketCounts,
   epssBucketChartData,
   findingsByPriorityChartData,
@@ -134,277 +161,16 @@ import {
 } from "./lib/risk-format"
 import { formatLabel as labelize, optionalText } from "./lib/ui-copy"
 import { cn } from "./lib/utils"
+import {
+  type FindingWaiverEvidence,
+  findingWaiverEvidence,
+  validateWaiverForm,
+  type WaiverFormState,
+  waiverFormDefaults,
+  waiverRequestBody,
+  waiverScopeLabel,
+} from "./lib/waiver-view"
 
-const routeDetails: Record<
-  WorkbenchPath,
-  {
-    eyebrow: string
-    title: string
-    panelTitle: string
-    panelDetail: string
-  }
-> = {
-  "/": {
-    eyebrow: "Security Operations",
-    title: "Risk Operations",
-    panelTitle: "Priority Queue",
-    panelDetail: "Current project signal review",
-  },
-  "/projects": {
-    eyebrow: "Workbench Projects",
-    title: "Projects",
-    panelTitle: "Projects",
-    panelDetail:
-      "Manage workbench projects, imported findings, runs, and evidence readiness.",
-  },
-  "/imports": {
-    eyebrow: "Workbench Imports",
-    title: "Imports",
-    panelTitle: "Import Queue",
-    panelDetail: "Normalized scanner, SBOM, and CVE-list inputs",
-  },
-  "/findings": {
-    eyebrow: "Workbench Findings",
-    title: "Findings",
-    panelTitle: "Remediation Queue",
-    panelDetail: "Prioritized remediation worklist",
-  },
-  "/waivers": {
-    eyebrow: "Risk Acceptance",
-    title: "Waivers",
-    panelTitle: "Waiver Register",
-    panelDetail: "Scoped accepted-risk decisions and lifecycle review",
-  },
-  "/assets": {
-    eyebrow: "Workbench Assets",
-    title: "Assets",
-    panelTitle: "Asset Context",
-    panelDetail: "Business and exposure context for ranking",
-  },
-  "/providers": {
-    eyebrow: "Workbench Providers",
-    title: "Providers",
-    panelTitle: "Provider Signals",
-    panelDetail: "NVD, EPSS, KEV, and local snapshot status",
-  },
-  "/reports": {
-    eyebrow: "Evidence Center",
-    title: "Evidence Center",
-    panelTitle: "Evidence Outputs",
-    panelDetail: "Report and evidence bundle readiness",
-  },
-  "/settings": {
-    eyebrow: "Workbench Settings",
-    title: "Settings",
-    panelTitle: "User Settings",
-    panelDetail: "Current authenticated user and workspace session",
-  },
-}
-
-function normalizeWorkbenchPath(pathname: string): WorkbenchPath {
-  const normalized =
-    pathname.length > 1 ? pathname.replace(/\/+$/, "") : pathname
-  if (normalized.startsWith("/findings/")) {
-    return "/findings"
-  }
-  return normalized in routeDetails ? (normalized as WorkbenchPath) : "/"
-}
-
-function findingIdFromPath(pathname: string) {
-  const normalized =
-    pathname.length > 1 ? pathname.replace(/\/+$/, "") : pathname
-  const match = normalized.match(/^\/findings\/([^/]+)$/)
-  return match ? decodeURIComponent(match[1]) : null
-}
-
-type ApiTokenScope = NonNullable<ApiTokenCreate["scopes"]>[number]
-
-const apiTokenScopeOptions: ApiTokenScope[] = [
-  "read",
-  "import",
-  "report",
-  "admin",
-]
-const defaultApiTokenScopes: ApiTokenScope[] = ["read"]
-
-function canonicalApiTokenScopes(scopes: ApiTokenScope[]) {
-  const selected = new Set(scopes)
-  return apiTokenScopeOptions.filter((scope) => selected.has(scope))
-}
-
-type ProjectFormState = {
-  name: string
-  description: string
-}
-
-const emptyProjectForm: ProjectFormState = {
-  name: "",
-  description: "",
-}
-
-const mvpImportFormats = [
-  {
-    label: "CVE list",
-    value: "cve-list",
-    accept: ".txt,.csv,text/plain,text/csv",
-    detail: "Plain text or CSV with one CVE identifier per line.",
-  },
-  {
-    label: "Generic occurrence CSV",
-    value: "generic-occurrence-csv",
-    accept: ".csv,text/csv",
-    detail: "CSV with cve_id and optional asset/component context columns.",
-  },
-  {
-    label: "Trivy JSON",
-    value: "trivy-json",
-    accept: ".json,application/json",
-    detail: "Trivy vulnerability export in JSON format.",
-  },
-  {
-    label: "Grype JSON",
-    value: "grype-json",
-    accept: ".json,application/json",
-    detail: "Grype vulnerability export in JSON format.",
-  },
-] as const
-
-type ImportFormat = (typeof mvpImportFormats)[number]["value"]
-
-type TemplateReportFormat =
-  | "markdown"
-  | "html"
-  | "json"
-  | "csv"
-  | "zip"
-  | "attack-navigator"
-  | "sarif"
-
-const _reportActionCards: Array<{
-  actionLabel: string
-  detail: string
-  format: string
-  icon: typeof FileText
-  reportFormat: TemplateReportFormat
-  title: string
-}> = [
-  {
-    actionLabel: "Generate Markdown",
-    detail:
-      "Technical report for analyst handoff, pull requests, and audit notes.",
-    format: "Markdown",
-    icon: FileText,
-    reportFormat: "markdown",
-    title: "Markdown Technical Report",
-  },
-  {
-    actionLabel: "Generate HTML",
-    detail:
-      "Executive browser report with priority summary, evidence links, and safe rendering.",
-    format: "HTML",
-    icon: FileArchive,
-    reportFormat: "html",
-    title: "HTML Executive Report",
-  },
-  {
-    actionLabel: "Export JSON",
-    detail:
-      "Machine-readable findings and analysis data for automation and downstream systems.",
-    format: "JSON",
-    icon: FileJson,
-    reportFormat: "json",
-    title: "JSON Findings Export",
-  },
-  {
-    actionLabel: "Export CSV",
-    detail:
-      "Spreadsheet-friendly findings table for triage, filtering, and stakeholder review.",
-    format: "CSV",
-    icon: Table2,
-    reportFormat: "csv",
-    title: "CSV Findings Export",
-  },
-  {
-    actionLabel: "Export Navigator Layer",
-    detail:
-      "MITRE ATT&CK Navigator JSON with mapped techniques, risk scores, KEV notes, and coverage placeholders.",
-    format: "Navigator JSON",
-    icon: GitBranch,
-    reportFormat: "attack-navigator",
-    title: "ATT&CK Navigator Layer",
-  },
-  {
-    actionLabel: "Export SARIF",
-    detail:
-      "SARIF 2.1.0 results for GitHub code scanning and CI security evidence workflows.",
-    format: "SARIF",
-    icon: FileJson,
-    reportFormat: "sarif",
-    title: "SARIF Results",
-  },
-  {
-    actionLabel: "Build Evidence Bundle",
-    detail:
-      "ZIP package with reports, manifest, source artifacts, and SHA256 checksums.",
-    format: "Evidence ZIP",
-    icon: FileArchive,
-    reportFormat: "zip",
-    title: "Evidence Bundle",
-  },
-]
-
-type ImportWizardState = {
-  assetContextFile: File | null
-  file: File | null
-  inputType: ImportFormat
-  vexFile: File | null
-}
-
-const defaultImportWizardState: ImportWizardState = {
-  assetContextFile: null,
-  file: null,
-  inputType: "cve-list",
-  vexFile: null,
-}
-
-type ImportUploadFormData = Parameters<
-  typeof ImportsService.importProjectUpload
->[0]["bodyImportsImportProjectUpload"]
-
-type FindingsSort = NonNullable<FindingsReadProjectFindingsData["sort"]>
-type FindingsDirection = NonNullable<
-  FindingsReadProjectFindingsData["direction"]
->
-
-type KevFilter = "" | "true" | "false"
-
-type FindingFilters = {
-  cvssMax: string
-  cvssMin: string
-  epssMax: string
-  epssMin: string
-  exposure: "" | AssetExposure
-  kev: KevFilter
-  ownerService: string
-  priority: "" | FindingPriority
-  status: "" | FindingStatus
-}
-
-const defaultFindingFilters: FindingFilters = {
-  cvssMax: "",
-  cvssMin: "",
-  epssMax: "",
-  epssMin: "",
-  exposure: "",
-  kev: "",
-  ownerService: "",
-  priority: "",
-  status: "",
-}
-
-const findingPageSizes = [1, 10, 25, 50] as const
-
-type FindingDetailTab = "evidence" | "ttp" | "history"
 type FindingAttackContext = NonNullable<FindingDetailPublic["attack_context"]>
 
 type FindingDecisionReason = {
@@ -418,89 +184,6 @@ type FindingDetailRow = {
   label: string
   value: string
 }
-
-type WaiverFormState = {
-  findingId: string
-  cveId: string
-  assetId: string
-  assetKey: string
-  service: string
-  owner: string
-  reason: string
-  expiresAt: string
-  reviewAt: string
-  approvalRef: string
-  ticketUrl: string
-}
-
-type FindingWaiverEvidence = {
-  approvalRef: string | null
-  daysRemaining: string | null
-  expiresOn: string | null
-  id: string | null
-  matchedScope: string | null
-  owner: string | null
-  reason: string | null
-  reviewOn: string | null
-  scope: string | null
-  status: string | null
-  ticketUrl: string | null
-}
-
-const emptyWaiverForm: WaiverFormState = {
-  approvalRef: "",
-  assetId: "",
-  assetKey: "",
-  cveId: "",
-  expiresAt: "",
-  findingId: "",
-  owner: "",
-  reason: "",
-  reviewAt: "",
-  service: "",
-  ticketUrl: "",
-}
-
-const _findingPriorityOptions: FindingPriority[] = [
-  "critical",
-  "high",
-  "medium",
-  "low",
-]
-
-const _findingStatusOptions: FindingStatus[] = [
-  "open",
-  "in_review",
-  "remediating",
-  "fixed",
-  "accepted",
-  "suppressed",
-]
-
-const _findingExposureOptions: AssetExposure[] = [
-  "internet-facing",
-  "internal",
-  "private",
-  "unknown",
-]
-
-const _findingSortOptions: { label: string; value: FindingsSort }[] = [
-  { label: "Operational", value: "operational" },
-  { label: "Priority", value: "priority" },
-  { label: "Score", value: "score" },
-  { label: "CVE", value: "cve" },
-  { label: "Status", value: "status" },
-  { label: "EPSS", value: "epss" },
-  { label: "CVSS", value: "cvss" },
-  { label: "KEV", value: "kev" },
-  { label: "Last Seen", value: "last_seen" },
-]
-
-const timeline = [
-  "Provider snapshot locked",
-  "Trivy import normalized",
-  "Evidence bundle verified",
-]
 
 function _priorityCount(
   summary: ProjectDecisionSummaryPublic | null,
@@ -723,94 +406,6 @@ function latestRunStatusLabel(
   return runStatusLabel(summary.latest_run_status)
 }
 
-function apiErrorMessage(prefix: string, caught: unknown) {
-  if (caught instanceof ApiError) {
-    const detail = apiErrorDetail(caught.body)
-    return `${prefix}: ${detail ?? caught.message ?? `HTTP ${caught.status}`}`
-  }
-  return `${prefix}: unexpected client error`
-}
-
-function apiErrorDetail(body: unknown) {
-  if (typeof body !== "object" || body === null || !("detail" in body)) {
-    return null
-  }
-  const detail = (body as { detail?: unknown }).detail
-  if (typeof detail === "string" && detail.trim()) {
-    return detail
-  }
-  if (Array.isArray(detail)) {
-    const messages = detail
-      .map((item) =>
-        typeof item === "object" && item !== null && "msg" in item
-          ? String((item as { msg?: unknown }).msg)
-          : "",
-      )
-      .filter(Boolean)
-    return messages.length > 0 ? messages.join("; ") : "validation failed"
-  }
-  if (typeof detail === "object" && detail !== null) {
-    const record = detail as Record<string, unknown>
-    const assetContextError = objectRecord(record.asset_context_error)
-    const analysisError = objectRecord(record.analysis_error)
-    const vexError = objectRecord(record.vex_error)
-    const vexErrorMessage = stringValue(vexError.message)
-    if (vexErrorMessage) {
-      const detailMessage = stringValue(record.message)
-      return detailMessage
-        ? `${detailMessage} ${vexErrorMessage}`
-        : vexErrorMessage
-    }
-    return (
-      stringValue(record.message) ??
-      stringValue(assetContextError.message) ??
-      stringValue(analysisError.message) ??
-      stringValue(record.error) ??
-      null
-    )
-  }
-  return null
-}
-
-function analysisRunIdFromError(caught: unknown) {
-  if (!(caught instanceof ApiError)) {
-    return null
-  }
-  const detail = errorDetailObject(caught.body)
-  const analysisRunId = detail?.analysis_run_id
-  return typeof analysisRunId === "string" ? analysisRunId : null
-}
-
-function parseErrorsFromError(caught: unknown) {
-  if (!(caught instanceof ApiError)) {
-    return []
-  }
-  const detail = errorDetailObject(caught.body)
-  const parseErrors = detail?.parse_errors
-  return Array.isArray(parseErrors)
-    ? parseErrors.filter(isImportParseError)
-    : []
-}
-
-function errorDetailObject(body: unknown) {
-  if (typeof body !== "object" || body === null || !("detail" in body)) {
-    return null
-  }
-  const detail = (body as { detail?: unknown }).detail
-  return typeof detail === "object" && detail !== null
-    ? (detail as Record<string, unknown>)
-    : null
-}
-
-function isImportParseError(value: unknown): value is ImportParseErrorPublic {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    "message" in value &&
-    typeof (value as { message?: unknown }).message === "string"
-  )
-}
-
 function _importAccept(inputType: ImportFormat) {
   return mvpImportFormats.find((format) => format.value === inputType)?.accept
 }
@@ -845,158 +440,6 @@ function _failedRunCause(
     stringValue(analysisError.message) ??
     "No failure detail available."
   )
-}
-
-function objectRecord(value: unknown): Record<string, unknown> {
-  return typeof value === "object" && value !== null
-    ? (value as Record<string, unknown>)
-    : {}
-}
-
-function stringValue(value: unknown) {
-  return typeof value === "string" && value.trim() ? value : null
-}
-
-function dateValueFromOffset(days: number) {
-  const date = new Date()
-  date.setDate(date.getDate() + days)
-  return date.toISOString().slice(0, 10)
-}
-
-function waiverFormDefaults(): WaiverFormState {
-  return {
-    ...emptyWaiverForm,
-    expiresAt: dateValueFromOffset(30),
-    reviewAt: dateValueFromOffset(14),
-  }
-}
-
-function nullableTrimmed(value: string) {
-  const trimmed = value.trim()
-  return trimmed ? trimmed : null
-}
-
-function validateWaiverForm(form: WaiverFormState) {
-  if (
-    !form.findingId.trim() &&
-    !form.cveId.trim() &&
-    !form.assetId.trim() &&
-    !form.assetKey.trim() &&
-    !form.service.trim()
-  ) {
-    return "At least one waiver scope is required."
-  }
-  if (!form.owner.trim()) {
-    return "Owner is required."
-  }
-  if (!form.reason.trim()) {
-    return "Reason is required."
-  }
-  if (!form.expiresAt.trim()) {
-    return "Expires date is required."
-  }
-  return ""
-}
-
-function waiverRequestBody(form: WaiverFormState): WaiverCreate {
-  return {
-    approval_ref: nullableTrimmed(form.approvalRef),
-    asset_id: nullableTrimmed(form.assetId),
-    asset_key: nullableTrimmed(form.assetKey),
-    cve_id: nullableTrimmed(form.cveId),
-    expires_at: nullableTrimmed(form.expiresAt),
-    finding_id: nullableTrimmed(form.findingId),
-    owner: nullableTrimmed(form.owner),
-    reason: nullableTrimmed(form.reason),
-    review_at: nullableTrimmed(form.reviewAt),
-    service: nullableTrimmed(form.service),
-    ticket_url: nullableTrimmed(form.ticketUrl),
-  }
-}
-
-function waiverScopeLabel(waiver: WaiverPublic) {
-  return joinedValues([
-    waiver.finding_id ? `Finding ${waiver.finding_id.slice(0, 8)}` : null,
-    waiver.cve_id ? `CVE ${waiver.cve_id}` : null,
-    waiver.asset_id ? `Asset ID ${waiver.asset_id}` : null,
-    waiver.asset_key ? `Asset ${waiver.asset_key}` : null,
-    waiver.service ? `Service ${waiver.service}` : null,
-  ])
-}
-
-function findingWaiverEvidence(
-  finding: FindingDetailPublic | null,
-): FindingWaiverEvidence | null {
-  if (!finding?.waived) {
-    return null
-  }
-  const explanation = objectRecord(finding.explanation_json)
-  const evidence = objectRecord(finding.evidence_json)
-  const nested = {
-    ...objectRecord(evidence.waiver),
-    ...objectRecord(explanation.waiver),
-  }
-  const record = {
-    ...evidence,
-    ...explanation,
-    ...nested,
-  }
-  const status = stringValue(record.waiver_status)
-  const id = stringValue(record.waiver_id)
-  const reason = stringValue(record.waiver_reason)
-  const owner = stringValue(record.waiver_owner)
-  const expiresOn = stringValue(record.waiver_expires_on)
-  const reviewOn = stringValue(record.waiver_review_on)
-  const scope = stringValue(record.waiver_scope)
-  const matchedScope = stringValue(record.waiver_matched_scope)
-  const approvalRef = stringValue(record.waiver_approval_ref)
-  const ticketUrl = stringValue(record.waiver_ticket_url)
-  const daysRemaining =
-    typeof record.waiver_days_remaining === "number"
-      ? String(record.waiver_days_remaining)
-      : stringValue(record.waiver_days_remaining)
-  if (
-    !id &&
-    !status &&
-    !reason &&
-    !owner &&
-    !expiresOn &&
-    !scope &&
-    !approvalRef &&
-    !ticketUrl
-  ) {
-    return null
-  }
-  return {
-    approvalRef,
-    daysRemaining,
-    expiresOn,
-    id,
-    matchedScope,
-    owner,
-    reason,
-    reviewOn,
-    scope,
-    status,
-    ticketUrl,
-  }
-}
-
-function arrayRecords(value: unknown): Record<string, unknown>[] {
-  return Array.isArray(value)
-    ? value.filter(
-        (entry): entry is Record<string, unknown> =>
-          typeof entry === "object" && entry !== null,
-      )
-    : []
-}
-
-function joinedValues(values: Array<string | null | undefined>) {
-  const present = values.filter(
-    (value): value is string =>
-      typeof value === "string" && value.trim() !== "",
-  )
-  return present.length > 0 ? present.join(" / ") : "N.A."
 }
 
 const decisionReasonCopy: Record<string, { label: string; detail: string }> = {
