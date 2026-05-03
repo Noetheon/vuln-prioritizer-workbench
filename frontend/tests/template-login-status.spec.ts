@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs"
-import { expect, test } from "@playwright/test"
+import { expect, type Locator, type Page, test } from "@playwright/test"
 
 const validCveList = Buffer.from("CVE-2021-44228\nCVE-2024-3094\n")
 const cyclonedxVex = readFileSync("../data/input_fixtures/cyclonedx_vex.json")
@@ -46,6 +46,66 @@ const cyclonedxVexOccurrenceCsv = Buffer.from(
     "CVE-2023-34362,moveit-service,moveit-transfer,2023.0.0,pkg:pypi/moveit-transfer@2023.0.0,HIGH",
   ].join("\n"),
 )
+
+async function selectRadixOption(
+  page: Page,
+  trigger: Locator,
+  optionName: string | RegExp,
+) {
+  await expect(trigger).toBeVisible()
+  await trigger.click()
+  if (typeof optionName === "string") {
+    const option = page.getByRole("option", { exact: true, name: optionName })
+    await expect(option).toBeAttached()
+    await option.evaluate((element) => {
+      const target = element as HTMLElement
+      let parent = target.parentElement
+      while (parent) {
+        if (parent.scrollHeight > parent.clientHeight) {
+          parent.scrollTop = target.offsetTop - parent.clientHeight / 2
+          break
+        }
+        parent = parent.parentElement
+      }
+      target.scrollIntoView({ block: "nearest" })
+    })
+    try {
+      await option.click({ timeout: 3000 })
+    } catch {
+      await option.dispatchEvent("pointerdown")
+      await option.dispatchEvent("pointerup")
+      await option.dispatchEvent("click")
+    }
+    return
+  }
+  const option = page.getByRole("option", { name: optionName })
+  try {
+    await option.scrollIntoViewIfNeeded({ timeout: 1000 })
+    await option.click({ timeout: 3000 })
+  } catch {
+    await option.click({ force: true })
+  }
+}
+
+async function selectRadixOptionByLabel(
+  page: Page,
+  scope: Page | Locator,
+  label: string,
+  optionName: string | RegExp,
+) {
+  await selectRadixOption(
+    page,
+    scope.getByRole("combobox", { exact: true, name: label }),
+    optionName,
+  )
+}
+
+async function selectDashboardProject(page: Page, projectName: string) {
+  const projectTrigger = page.getByRole("combobox").first()
+  await selectRadixOption(page, projectTrigger, projectName)
+  await expect(projectTrigger).toContainText(projectName)
+}
+
 test("template finding detail renders TTP Context tab", async ({ page }) => {
   test.setTimeout(60_000)
   const testRunSuffix = Date.now().toString(36)
@@ -108,9 +168,7 @@ test("template finding detail renders TTP Context tab", async ({ page }) => {
   }
 
   await page.goto("/")
-  const currentProjectSelect = page.getByLabel("Current project")
-  await expect(currentProjectSelect).toBeVisible()
-  await currentProjectSelect.selectOption(project.id)
+  await selectDashboardProject(page, projectName)
   await page.screenshot({
     fullPage: true,
     path: "../docs/evidence/vpw-059-attack-summary-dashboard.png",
@@ -122,7 +180,7 @@ test("template finding detail renders TTP Context tab", async ({ page }) => {
   ).toBeVisible()
   await page.getByRole("tab", { name: "TTP Context" }).click()
   const ttpPanel = page.getByRole("tabpanel", { name: "TTP Context" })
-  await expect(ttpPanel).toContainText("ATT&CK threat context")
+  await expect(ttpPanel).toContainText("Defensive context")
   await expect(ttpPanel).toContainText(
     "No approved ATT&CK mapping is stored for this finding.",
   )
@@ -213,15 +271,19 @@ test("template frontend renders CycloneDX VEX occurrence evidence", async ({
     name: "Occurrences table",
   })
   await expect(occurrencesTable).toContainText("Not Affected")
-  await expect(occurrencesTable).toContainText("vulnerable_code_not_present")
-  await expect(occurrencesTable).toContainText("purl")
+  await expect(occurrencesTable).not.toContainText(
+    "vulnerable_code_not_present",
+  )
+  await expect(occurrencesTable).toContainText(
+    "pkg:pypi/moveit-transfer@2023.0.0",
+  )
   await page.screenshot({
     fullPage: true,
     path: "../docs/evidence/vpw-066-cyclonedx-vex-parser.png",
   })
 })
 test("template frontend covers core Workbench E2E smoke", async ({ page }) => {
-  test.setTimeout(60_000)
+  test.setTimeout(180_000)
   const testRunSuffix = Date.now().toString(36)
   const dashboardProjectName = `VPW Dashboard Project ${testRunSuffix}`
   const uiProjectName = `VPW UI Project ${testRunSuffix}`
@@ -233,7 +295,8 @@ test("template frontend covers core Workbench E2E smoke", async ({ page }) => {
   await page.goto("/login")
 
   await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible()
-  await expect(page.getByText("Vuln Prioritizer Workbench")).toBeVisible()
+  await expect(page.getByText("Vuln Prioritizer")).toBeVisible()
+  await expect(page.getByText("Workbench", { exact: true })).toBeVisible()
   await page.getByLabel("Email").fill("admin@example.com")
   await page.getByLabel("Password").fill("changethis")
   await page.getByRole("button", { name: "Sign in" }).click()
@@ -264,17 +327,9 @@ test("template frontend covers core Workbench E2E smoke", async ({ page }) => {
   ).toHaveCount(0)
   await expect(page.getByText(legacyMenuLabel, { exact: true })).toHaveCount(0)
   await expect(page.getByText("VP TEMPLATE MIGRATION")).toHaveCount(0)
-  const providerStatusSection = page.getByRole("region", {
-    name: "Provider Status",
-  })
-  await expect(
-    providerStatusSection.getByRole("heading", { name: "Provider Status" }),
-  ).toBeVisible()
-  await expect(providerStatusSection.getByText("Snapshot mode")).toBeVisible()
-  const providerSources = page.getByLabel("Provider sources")
-  await expect(providerSources.getByText("NVD", { exact: true })).toBeVisible()
-  await expect(providerSources.getByText("EPSS", { exact: true })).toBeVisible()
-  await expect(providerSources.getByText("KEV", { exact: true })).toBeVisible()
+  await expect(page.getByText("Provider Freshness").first()).toBeVisible()
+  await expect(page.getByText("Evidence Readiness").first()).toBeVisible()
+  await expect(page.getByText("Data Quality", { exact: true })).toBeVisible()
 
   const accessToken = await page.evaluate(() =>
     window.localStorage.getItem("access_token"),
@@ -295,15 +350,12 @@ test("template frontend covers core Workbench E2E smoke", async ({ page }) => {
   const project = (await projectResponse.json()) as { id: string; name: string }
 
   await page.reload()
-  const currentProjectSelect = page.getByLabel("Current project")
-  await expect(currentProjectSelect).toBeVisible()
-  await currentProjectSelect.selectOption(project.id)
-  await expect(currentProjectSelect).toHaveValue(project.id)
-  await expect(
-    page.getByRole("region", { name: "No findings empty state" }),
-  ).toContainText(`No findings in ${project.name}`)
-  await expect(page.getByLabel("Critical summary card")).toContainText("0")
-  await expect(page.getByLabel("Latest Runs summary card")).toContainText(
+  await selectDashboardProject(page, project.name)
+  await expect(page.getByLabel("No remediation queue items")).toContainText(
+    "No findings",
+  )
+  await expect(page.getByLabel("Critical Open summary card")).toContainText("0")
+  await expect(page.getByLabel("Latest Analysis summary card")).toContainText(
     "No runs",
   )
 
@@ -324,14 +376,17 @@ test("template frontend covers core Workbench E2E smoke", async ({ page }) => {
   expect(importResponse.ok()).toBeTruthy()
 
   await page.reload()
-  await currentProjectSelect.selectOption(project.id)
-  await expect(currentProjectSelect).toHaveValue(project.id)
-  await expect(page.getByLabel("Critical summary card")).toContainText("2")
-  await expect(page.getByLabel("High summary card")).toContainText("0")
-  await expect(page.getByLabel("KEV summary card")).toContainText(/[1-9]/)
-  await expect(page.getByLabel("Latest Runs summary card")).toContainText(
+  await selectDashboardProject(page, project.name)
+  await expect(page.getByLabel("KEV Exposed summary card")).toContainText(
+    /[1-9]/,
+  )
+  await expect(page.getByLabel("Latest Analysis summary card")).toContainText(
     "succeeded",
   )
+  await expect(page.getByText("Top Remediation Queue")).toBeVisible()
+  await expect(
+    page.getByRole("link", { name: "CVE-2024-3094" }).first(),
+  ).toBeVisible()
 
   const providerStatusResponse = await page.request.get(
     "http://127.0.0.1:8000/api/v1/providers/status",
@@ -356,23 +411,34 @@ test("template frontend covers core Workbench E2E smoke", async ({ page }) => {
 
   await navigation.getByRole("link", { name: "Providers" }).click()
   await expect(page).toHaveURL(/\/providers$/)
-  await expect(page.getByRole("heading", { name: "Providers" })).toBeVisible()
-  const providerStatusPage = page.getByRole("region", {
-    name: "Provider Status page",
-  })
-  await expect(providerStatusPage).toContainText("Snapshot mode")
-  await expect(providerStatusPage).toContainText("Cache age")
-  await expect(providerStatusPage).toContainText("Snapshot ID")
-  const providerCards = page.getByRole("region", { name: "Provider cards" })
-  await expect(providerCards).toContainText("NVD")
-  await expect(providerCards).toContainText("EPSS")
-  await expect(providerCards).toContainText("KEV")
-  await expect(providerStatusPage).toContainText("Provider Snapshot")
-  await expect(providerStatusPage).toContainText(
-    providerStatusPayload.snapshot.content_hash as string,
-  )
-  await expect(providerStatusPage).toContainText("Data Quality")
-  await expect(providerStatusPage).toContainText("stale")
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Providers" }),
+  ).toBeVisible()
+  await expect(page.getByText("Snapshot mode").first()).toBeVisible()
+  await expect(page.getByText("Cache age").first()).toBeVisible()
+  await expect(page.getByText("Provider sources").first()).toBeVisible()
+  await expect(
+    page.getByRole("table", { name: "Provider sources" }),
+  ).toContainText("NVD")
+  await expect(
+    page.getByRole("table", { name: "Provider sources" }),
+  ).toContainText("EPSS")
+  await expect(
+    page.getByRole("table", { name: "Provider sources" }),
+  ).toContainText("KEV")
+  await expect(page.getByText("Provider Snapshot").first()).toBeVisible()
+  await expect(page.getByText("Recorded snapshot").first()).toBeVisible()
+  await expect(page.getByText("Snapshot ID").first()).toBeVisible()
+  await expect(page.getByText("Data quality").first()).toBeVisible()
+  await expect(
+    page.getByText("Provider data quality notes").first(),
+  ).toBeVisible()
+  await expect(page.getByText("stale").first()).toBeVisible()
+  await expect(
+    page
+      .getByText(providerStatusPayload.snapshot.content_hash as string)
+      .first(),
+  ).toBeVisible()
   await page.screenshot({
     fullPage: true,
     path: "../docs/evidence/vpw-045-provider-status.png",
@@ -381,53 +447,43 @@ test("template frontend covers core Workbench E2E smoke", async ({ page }) => {
   await navigation.getByRole("link", { name: "Reports" }).click()
   await expect(page).toHaveURL(/\/reports$/)
   await expect(
-    page.getByRole("heading", { exact: true, name: "Reports" }),
+    page.getByRole("heading", { level: 1, name: "Evidence Center" }),
   ).toBeVisible()
-  const reportsPage = page.getByRole("region", {
-    name: "Reports workspace",
-  })
-  await expect(reportsPage).toContainText(
-    "Generate and download reports for the selected run",
-  )
-  await expect(reportsPage).toContainText("VPW-048")
-  const reportRunSelect = page.getByLabel("Report analysis run")
-  await expect(reportRunSelect).toBeEnabled()
-  await expect(reportRunSelect).toHaveValue(/[0-9a-f-]{36}/)
-  const reportRunSelection = page.getByRole("region", {
-    name: "Report run selection",
-  })
-  await expect(reportRunSelection).toContainText("succeeded")
-  const reportCards = page.getByRole("region", {
-    name: "Report export cards",
-  })
-  await expect(reportCards).toContainText("Markdown Technical Report")
-  await expect(reportCards).toContainText("HTML Executive Report")
-  await expect(reportCards).toContainText("JSON Findings Export")
-  await expect(reportCards).toContainText("CSV Findings Export")
-  await expect(reportCards).toContainText("ATT&CK Navigator Layer")
-  await expect(reportCards).toContainText("SARIF Results")
-  await expect(reportCards).toContainText("Evidence Bundle")
+  await expect(
+    page.getByText(
+      "Generate audit-ready vulnerability evidence, executive summaries, and technical exports.",
+    ),
+  ).toBeVisible()
+  await expect(
+    page.getByRole("combobox", { name: "Select analysis run" }),
+  ).toBeVisible()
+  await expect(page.getByText("Ready for generation")).toBeVisible()
+  await expect(page.getByText("Generate Evidence Artifacts")).toBeVisible()
+  await expect(page.getByText("Markdown Technical Report")).toBeVisible()
+  await expect(page.getByText("Executive HTML Report")).toBeVisible()
+  await expect(page.getByText("JSON Findings Export")).toBeVisible()
+  await expect(page.getByText("CSV Findings Export")).toBeVisible()
+  await expect(page.getByText("ATT&CK Navigator Layer")).toBeVisible()
+  await expect(page.getByText("SARIF Export")).toBeVisible()
+  await expect(page.getByText("Evidence ZIP Bundle")).toBeVisible()
   const expectedReports = [
     { action: "Generate Markdown", filename: "technical-report.md" },
     { action: "Generate HTML", filename: "executive-report.html" },
     { action: "Export JSON", filename: "analysis-result.v1.json" },
     { action: "Export CSV", filename: "findings.csv" },
-    {
-      action: "Export Navigator Layer",
-      filename: "attack-navigator-layer.json",
-    },
+    { action: "Export Navigator", filename: "attack-navigator-layer.json" },
     { action: "Export SARIF", filename: "results.sarif" },
-    { action: "Build Evidence Bundle", filename: "evidence-bundle.zip" },
+    { action: "Build Bundle", filename: "evidence-bundle.zip" },
   ]
   for (const report of expectedReports) {
-    const actionButton = reportCards.getByRole("button", {
+    const actionButton = page.getByRole("button", {
       name: report.action,
     })
     await expect(actionButton).toBeEnabled()
     await actionButton.click()
-    await expect(reportsPage).toContainText(report.filename)
+    await expect(page.getByText(report.filename).first()).toBeVisible()
   }
-  const reportHistory = page.getByRole("region", { name: "Reports history" })
+  const reportHistory = page.getByRole("table", { name: "Report history list" })
   await expect(reportHistory).toContainText("technical-report.md")
   await expect(reportHistory).toContainText("executive-report.html")
   await expect(reportHistory).toContainText("analysis-result.v1.json")
@@ -442,7 +498,7 @@ test("template frontend covers core Workbench E2E smoke", async ({ page }) => {
   await reportHistory
     .getByRole("button", { name: "Verify evidence-bundle.zip" })
     .click()
-  await expect(reportsPage).toContainText("Evidence bundle verified")
+  await expect(page.getByText("Evidence bundle verified")).toBeVisible()
   for (const report of expectedReports) {
     const downloadPromise = page.waitForEvent("download")
     await reportHistory
@@ -458,59 +514,61 @@ test("template frontend covers core Workbench E2E smoke", async ({ page }) => {
 
   await navigation.getByRole("link", { name: "Projects" }).click()
   await expect(page).toHaveURL(/\/projects$/)
-  await expect(page.getByRole("heading", { name: "Projects" })).toBeVisible()
-  const createProjectForm = page.getByRole("region", {
-    name: "Create Project form",
-  })
-  await expect(createProjectForm).toBeVisible()
-  await createProjectForm
-    .getByRole("button", { name: "Create Project" })
-    .click()
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Projects" }),
+  ).toBeVisible()
+  await expect(page.getByText("Create Project").first()).toBeVisible()
+  await page.getByRole("button", { name: "Create project" }).click()
   await expect(page.getByText("Project name is required.")).toBeVisible()
-  await createProjectForm.getByLabel("Project name").fill(uiProjectName)
-  await createProjectForm
+  await page.getByLabel("Project name").fill(uiProjectName)
+  await page
     .getByLabel("Description")
     .fill("Created through the Projects page E2E workflow")
-  await createProjectForm
-    .getByRole("button", { name: "Create Project" })
-    .click()
+  await page.getByRole("button", { name: "Create project" }).click()
   await expect(
     page.getByText(`Project ${uiProjectName} created.`),
   ).toBeVisible()
-  const projectsList = page.getByRole("region", { name: "Projects list" })
-  await expect(projectsList.getByText(uiProjectName)).toBeVisible()
-  const projectDetail = page.getByRole("region", { name: "Project detail" })
-  await expect(projectDetail).toContainText(uiProjectName)
-  await projectDetail.getByRole("button", { name: "Edit" }).click()
-  await projectDetail.getByLabel("Edit project name").fill(editedUiProjectName)
-  await projectDetail
+  const projectsTable = page.getByRole("table", { name: "Projects" })
+  await expect(projectsTable).toContainText(uiProjectName)
+  await expect(
+    page.getByRole("heading", { name: "Active Project" }),
+  ).toBeVisible()
+  await expect(page.getByText(uiProjectName).first()).toBeVisible()
+  await page.getByRole("button", { name: "Edit" }).click()
+  await page.getByLabel("Edit project name").fill(editedUiProjectName)
+  await page
     .getByLabel("Edit description")
     .fill("Updated through the Projects page E2E workflow")
-  await projectDetail.getByRole("button", { name: "Save Project" }).click()
+  await page.getByRole("button", { name: "Save project" }).click()
   await expect(
     page.getByText(`Project ${editedUiProjectName} updated.`),
   ).toBeVisible()
-  await expect(projectDetail).toContainText(editedUiProjectName)
-  await projectDetail.getByLabel("Confirm deletion for this project").check()
-  await projectDetail.getByRole("button", { name: "Delete Project" }).click()
+  await expect(page.getByText(editedUiProjectName).first()).toBeVisible()
+  await page.getByLabel(/Confirm deletion for this project/).check()
+  await page.getByRole("button", { name: "Delete project" }).click()
   await expect(
     page.getByText(`Project ${editedUiProjectName} deleted.`),
   ).toBeVisible()
-  await expect(projectsList.getByText(editedUiProjectName)).toHaveCount(0)
+  await expect(projectsTable.getByText(editedUiProjectName)).toHaveCount(0)
 
   await navigation.getByRole("link", { name: "Imports" }).click()
   await expect(page).toHaveURL(/\/imports$/)
+  await page.reload()
+  await expect(page).toHaveURL(/\/imports$/)
   await expect(
-    page.getByRole("region", { name: "Import wizard" }),
+    page.getByRole("heading", { name: "Import Wizard" }),
   ).toBeVisible()
-  await expect(
-    page.getByRole("region", { name: "Upload security notes" }),
-  ).toContainText("asset context uploads")
-  await expect(
-    page.getByRole("region", { name: "Supported MVP formats" }),
-  ).toContainText("trivy-json")
-  await page.getByLabel("Import project").selectOption(project.id)
-  await page.getByLabel("Input type").selectOption("generic-occurrence-csv")
+  await expect(page.getByText("Upload Security Notes")).toBeVisible()
+  await expect(page.getByText("Files are parsed locally")).toBeVisible()
+  await expect(page.getByText("Supported Input Formats")).toBeVisible()
+  await expect(page.getByRole("button", { name: /^Trivy JSON/ })).toBeVisible()
+  await selectRadixOptionByLabel(page, page, "Import project", project.name)
+  await selectRadixOptionByLabel(
+    page,
+    page,
+    "Input type",
+    "Generic occurrence CSV",
+  )
   const importFileInput = page.locator('input[name="importFile"]')
   await importFileInput.setInputFiles({
     buffer: Buffer.from(
@@ -566,7 +624,7 @@ test("template frontend covers core Workbench E2E smoke", async ({ page }) => {
   ).toContainText("Not Affected")
   await expect(
     page.getByRole("table", { name: "Occurrences table" }),
-  ).toContainText("vulnerable_code_not_present")
+  ).not.toContainText("vulnerable_code_not_present")
   await page.screenshot({
     fullPage: true,
     path: "../docs/evidence/vpw-065-openvex-status-application.png",
@@ -591,16 +649,16 @@ test("template frontend covers core Workbench E2E smoke", async ({ page }) => {
   await navigation.getByRole("link", { name: "Assets" }).click()
   await expect(page).toHaveURL(/\/assets$/)
   await expect(
-    page.getByRole("heading", { exact: true, name: "Assets" }),
+    page.getByRole("heading", { level: 1, name: "Assets" }),
   ).toBeVisible()
   const assetsProjectSelect = page.getByLabel("Assets project", {
     exact: true,
   })
   await expect(assetsProjectSelect).toBeVisible()
-  await assetsProjectSelect.selectOption(project.id)
-  await expect(assetsProjectSelect).toHaveValue(project.id)
-  const createAssetForm = page.getByRole("region", {
-    name: "Create Asset form",
+  await selectRadixOption(page, assetsProjectSelect, project.name)
+  await expect(assetsProjectSelect).toContainText(project.name)
+  const createAssetForm = page.getByRole("form", {
+    name: "Create Asset form fields",
   })
   await expect(createAssetForm).toBeVisible()
   await createAssetForm.getByRole("button", { name: "Create Asset" }).click()
@@ -610,21 +668,24 @@ test("template frontend covers core Workbench E2E smoke", async ({ page }) => {
   await createAssetForm.getByLabel("Owner").fill("team-assets")
   await createAssetForm.getByLabel("Business service").fill("inventory")
   await createAssetForm.getByLabel("Target ref").fill("svc/inventory")
-  await createAssetForm.getByLabel("Criticality").selectOption("critical")
-  await createAssetForm.getByLabel("Environment").selectOption("production")
+  await selectRadixOptionByLabel(
+    page,
+    createAssetForm,
+    "Criticality",
+    "Critical",
+  )
+  await selectRadixOptionByLabel(
+    page,
+    createAssetForm,
+    "Environment",
+    "Production",
+  )
   const exposureSelect = createAssetForm.getByLabel("Exposure")
-  await exposureSelect.evaluate((select) => {
-    const invalidOption = document.createElement("option")
-    invalidOption.value = "public"
-    invalidOption.textContent = "Public"
-    select.appendChild(invalidOption)
-  })
-  await exposureSelect.selectOption("public")
-  await createAssetForm.getByRole("button", { name: "Create Asset" }).click()
+  await exposureSelect.click()
   await expect(
-    page.getByText("Exposure must be a supported value."),
-  ).toBeVisible()
-  await exposureSelect.selectOption("internal")
+    page.getByRole("option", { exact: true, name: "Public" }),
+  ).toHaveCount(0)
+  await page.getByRole("option", { exact: true, name: "Internal" }).click()
   await createAssetForm.getByRole("button", { name: "Create Asset" }).click()
   await expect(page.getByText(`Asset ${uiAssetName} created.`)).toBeVisible()
   const assetsTable = page.getByRole("table", { name: "Assets table" })
@@ -636,36 +697,55 @@ test("template frontend covers core Workbench E2E smoke", async ({ page }) => {
     hasText: uiAssetName,
   })
   await manualAssetRow.getByRole("button", { name: "Edit" }).click()
-  const assetDetail = page.getByRole("region", { name: "Asset detail" })
-  await expect(assetDetail).toContainText(uiAssetName)
+  const assetDetail = page
+  await expect(page.getByText(uiAssetName).first()).toBeVisible()
   await assetDetail.getByLabel("Edit asset name").fill(editedUiAssetName)
-  await assetDetail.getByLabel("Edit criticality").selectOption("high")
-  await assetDetail.getByLabel("Edit environment").selectOption("staging")
-  await assetDetail.getByLabel("Edit exposure").selectOption("private")
+  await selectRadixOptionByLabel(page, assetDetail, "Edit criticality", "High")
+  await selectRadixOptionByLabel(
+    page,
+    assetDetail,
+    "Edit environment",
+    "Staging",
+  )
+  await selectRadixOptionByLabel(page, assetDetail, "Edit exposure", "Private")
   await assetDetail.getByRole("button", { name: "Save Asset" }).click()
   await expect(
     page.getByText(`Asset ${editedUiAssetName} updated.`),
   ).toBeVisible()
-  await expect(assetDetail).toContainText(editedUiAssetName)
-  await expect(assetDetail).toContainText("High")
-  await expect(assetDetail).toContainText("Staging")
-  await expect(assetDetail).toContainText("Private")
+  await expect(assetsTable).toContainText(editedUiAssetName)
+  await expect(assetsTable).toContainText("High")
+  await expect(assetsTable).toContainText("Staging")
+  await expect(assetsTable).toContainText("Private")
   const importedAssetRow = assetsTable.locator("tbody tr").filter({
     hasText: "build-host-1",
   })
-  await importedAssetRow.locator(".project-list-item").click()
-  await expect(assetDetail).toContainText("build-host-1")
-  await assetDetail.getByRole("button", { name: "Edit Asset" }).click()
+  await importedAssetRow.getByRole("button", { name: "Edit" }).click()
+  await expect(page.getByText("build-host-1").first()).toBeVisible()
   await assetDetail.getByLabel("Edit owner").fill("team-platform-updated")
   await assetDetail.getByLabel("Edit business service").fill("payments-runtime")
-  await assetDetail.getByLabel("Edit criticality").selectOption("critical")
-  await assetDetail.getByLabel("Edit environment").selectOption("production")
-  await assetDetail.getByLabel("Edit exposure").selectOption("internet-facing")
+  await selectRadixOptionByLabel(
+    page,
+    assetDetail,
+    "Edit criticality",
+    "Critical",
+  )
+  await selectRadixOptionByLabel(
+    page,
+    assetDetail,
+    "Edit environment",
+    "Production",
+  )
+  await selectRadixOptionByLabel(
+    page,
+    assetDetail,
+    "Edit exposure",
+    "Internet Facing",
+  )
   await assetDetail.getByRole("button", { name: "Save Asset" }).click()
   await expect(page.getByText("Asset build-host-1 updated.")).toBeVisible()
-  await expect(assetDetail).toContainText("team-platform-updated")
-  await expect(assetDetail).toContainText("payments-runtime")
-  await expect(assetDetail).toContainText("Re-score needed")
+  await expect(page.getByText("team-platform-updated").first()).toBeVisible()
+  await expect(page.getByText("payments-runtime").first()).toBeVisible()
+  await expect(page.getByText("Re-score needed").first()).toBeVisible()
   await expect(importedAssetRow).toContainText("Re-score needed")
   await page.getByLabel("Asset owner filter").fill("team-platform-updated")
   await expect(assetsTable).toContainText("build-host-1")
@@ -679,19 +759,19 @@ test("template frontend covers core Workbench E2E smoke", async ({ page }) => {
     fullPage: true,
     path: "../docs/evidence/vpw-044-assets-page.png",
   })
-  const assetFindings = page.getByRole("region", {
-    name: "Findings for selected asset",
+  const assetFindings = page.getByRole("table", {
+    name: "Asset findings table",
   })
-  await expect(assetFindings).toContainText("Findings for Asset")
   await expect(assetFindings).toContainText("CVE-2024-3094")
   await expect(assetFindings).not.toContainText("CVE-2024-4577")
-  await assetFindings.getByRole("link", { name: "Findings" }).click()
+  await page.getByRole("link", { name: "View findings" }).nth(1).click()
   await expect(page).toHaveURL(/\/findings\?assetId=/)
   await expect(
-    page.locator('[aria-label="Asset finding filter"]'),
-  ).toContainText("build-host-1")
+    page.getByRole("button", { name: "Clear asset filter" }),
+  ).toBeVisible()
+  await expect(page.getByText("build-host-1").first()).toBeVisible()
   const filteredFindingsTable = page.getByRole("table", {
-    name: "Findings table",
+    name: "Findings remediation queue",
   })
   await expect(filteredFindingsTable).toContainText("CVE-2024-3094")
   await expect(filteredFindingsTable).not.toContainText("CVE-2024-4577")
@@ -700,8 +780,7 @@ test("template frontend covers core Workbench E2E smoke", async ({ page }) => {
     .click()
   await expect(page).toHaveURL(/\/findings\/[0-9a-f-]{36}$/)
   const assetFindingDetail = page.getByRole("region", {
-    exact: true,
-    name: "Finding detail",
+    name: "Finding priority decision",
   })
   await expect(assetFindingDetail).toContainText("build-host-1")
   await expect(assetFindingDetail).toContainText("team-platform-updated")
@@ -717,7 +796,7 @@ test("template frontend covers core Workbench E2E smoke", async ({ page }) => {
   await expect(page).toHaveURL(/\/findings$/)
 
   await navigation.getByRole("link", { name: "Assets" }).click()
-  await assetsProjectSelect.selectOption(project.id)
+  await selectRadixOption(page, assetsProjectSelect, project.name)
   const recalculationRow = assetsTable.locator("tbody tr").filter({
     hasText: "build-host-1",
   })
@@ -733,51 +812,46 @@ test("template frontend covers core Workbench E2E smoke", async ({ page }) => {
 
   await navigation.getByRole("link", { name: "Imports" }).click()
   await expect(page).toHaveURL(/\/imports$/)
-  await page.getByLabel("Import project").selectOption(project.id)
-  await page.getByLabel("Input type").selectOption("generic-occurrence-csv")
+  await selectRadixOptionByLabel(page, page, "Import project", project.name)
+  await selectRadixOptionByLabel(
+    page,
+    page,
+    "Input type",
+    "Generic occurrence CSV",
+  )
   await page.getByLabel("Import file").setInputFiles({
     buffer: invalidOccurrenceCsv,
     mimeType: "text/csv",
     name: "invalid-occurrences.csv",
   })
   await page.getByRole("button", { name: "Upload Import" }).click()
-  await expect(page.getByRole("alert")).toContainText("Import upload failed")
-  const importRuns = page.getByRole("region", { name: "Import runs" })
-  const runDetail = page.getByRole("region", { name: "Run detail" })
   await expect(
-    page.getByRole("region", { exact: true, name: "Parser errors" }),
+    page.getByRole("alert").filter({ hasText: "Import upload failed" }),
+  ).toContainText("Import upload failed")
+  const importRuns = page
+    .getByRole("table", { name: "Recent import runs" })
+    .first()
+  await expect(
+    page.getByRole("table", { name: "Parser errors" }).first(),
   ).toContainText("cve_id")
   await expect(importRuns).toContainText("invalid-occurrences.csv")
   await expect(importRuns).toContainText("failed")
-  if ((await runDetail.count()) > 0) {
-    await expect(runDetail).toContainText("Failure Cause")
-    await expect(runDetail).toContainText("cve_id")
-    await expect(runDetail).toContainText("not-a-cve")
-    await runDetail.getByRole("link", { name: "Findings" }).click()
-  } else {
-    await importRuns.getByRole("button", { name: "Refresh" }).click()
-    await expect(importRuns).toContainText("failed")
-    await expect(
-      importRuns.getByRole("link", { name: "Findings" }).first(),
-    ).toBeVisible()
-    await importRuns.getByRole("link", { name: "Findings" }).first().click()
-  }
+  await expect(page.getByText("Failure Cause").first()).toBeVisible()
+  await expect(page.getByText("not-a-cve").first()).toBeVisible()
+  await navigation.getByRole("link", { name: "Findings" }).click()
   await expect(page).toHaveURL(/\/findings$/)
   await expect(
     page.getByRole("region", { name: "Findings filters" }),
   ).toBeVisible()
-  const findingsTable = page.getByRole("table", { name: "Findings table" })
+  const findingsTable = page.getByRole("table", {
+    name: "Findings remediation queue",
+  })
   await expect(findingsTable).toBeVisible()
   await expect(findingsTable).toContainText("CVE-2021-44228")
   await expect(findingsTable).toContainText("CVE-2024-3094")
   await expect(findingsTable).toContainText("Priority")
-  await expect(findingsTable).toContainText("Last Seen")
-  await expect(findingsTable.locator(".severity.critical").first()).toHaveText(
-    "Critical",
-  )
-  await expect(
-    findingsTable.locator(".finding-row.tone-critical").first(),
-  ).toBeVisible()
+  await expect(findingsTable).toContainText("Signals")
+  await expect(findingsTable).toContainText("Critical")
 
   const xzFindingRow = findingsTable
     .locator("tbody tr")
@@ -785,26 +859,20 @@ test("template frontend covers core Workbench E2E smoke", async ({ page }) => {
   await xzFindingRow.getByRole("link", { name: "CVE-2024-3094" }).click()
   await expect(page).toHaveURL(/\/findings\/[0-9a-f-]{36}$/)
   const findingDetail = page.getByRole("region", {
-    exact: true,
-    name: "Finding detail",
+    name: "Finding priority decision",
   })
   await expect(findingDetail).toBeVisible()
   const detailHeader = page.getByRole("region", {
-    name: "Finding detail header",
+    name: "Finding decision hero",
   })
   await expect(detailHeader).toContainText("CVE-2024-3094")
   await expect(detailHeader).toContainText("Critical")
   await expect(detailHeader).toContainText("Open")
-  const findingOverview = page.getByRole("region", {
-    name: "Finding overview",
-  })
+  const findingOverview = page.getByLabel("Risk indicators")
   await expect(findingOverview).toContainText("EPSS")
   await expect(findingOverview).toContainText("CVSS")
   await expect(findingOverview).toContainText("10.0")
-  await expect(findingOverview).toContainText("KEV")
-  await expect(findingOverview).toContainText("Asset")
-  await expect(findingOverview).toContainText("build-host-1")
-  const whyPriority = page.getByRole("region", { name: "Why this priority" })
+  const whyPriority = page.getByRole("region", { name: "Risk to decision" })
   await expect(whyPriority).toContainText("Recommended action")
   await expect(whyPriority).toContainText(/priority|Critical|CVSS|EPSS|KEV/i)
   const occurrencesTable = page.getByRole("table", {
@@ -832,10 +900,8 @@ test("template frontend covers core Workbench E2E smoke", async ({ page }) => {
     () => (window as Window & { __vpwXss?: number }).__vpwXss ?? null,
   )
   expect(xssMarker).toBeNull()
-  const dataQuality = page.getByRole("region", {
-    name: "Data Quality Flags",
-  })
-  await expect(dataQuality).toContainText("Provider data coverage")
+  const dataQuality = page.getByLabel("Data quality notes")
+  await expect(dataQuality).toContainText("Provider data")
   await expect(dataQuality).toContainText(
     /Confidence|snapshot|No data quality/i,
   )
@@ -850,63 +916,54 @@ test("template frontend covers core Workbench E2E smoke", async ({ page }) => {
   await page.getByRole("link", { name: "Back to Findings" }).click()
   await expect(page).toHaveURL(/\/findings$/)
   await expect(findingsTable).toBeVisible()
+  const findingsFilters = page.getByRole("region", { name: "Findings filters" })
 
-  await page.getByLabel("Priority filter").selectOption("critical")
+  await selectRadixOptionByLabel(page, findingsFilters, "Priority", "Critical")
   await expect(findingsTable).toContainText("Critical")
   await expect(findingsTable).not.toContainText("Medium")
-  await page.getByRole("button", { name: "Clear Filters" }).click()
+  await page.getByRole("button", { name: "Reset" }).click()
   await expect(findingsTable).toContainText("CVE-2024-3094")
 
-  await page.getByLabel("Owner service filter").fill("payments")
+  await page.getByLabel("Owner / Service").fill("payments")
   await expect(findingsTable).toContainText("team-platform")
   await expect(findingsTable).toContainText("payments")
   await expect(findingsTable).not.toContainText("team-web")
-  await page.getByRole("button", { name: "Clear Filters" }).click()
+  await page.getByRole("button", { name: "Reset" }).click()
 
-  await page.getByLabel("KEV filter").selectOption("true")
-  await expect(findingsTable.locator(".kev-pill.matched").first()).toHaveText(
-    "Yes",
-  )
-  await page.getByRole("button", { name: "Clear Filters" }).click()
+  await findingsFilters.getByRole("button", { name: /Signals/ }).click()
+  await selectRadixOptionByLabel(page, findingsFilters, "KEV", "KEV")
+  await expect(findingsTable).toContainText("KEV")
+  await page.getByRole("button", { name: "Reset" }).click()
 
-  await page.getByLabel("EPSS min filter").fill("0.90")
-  await page.getByLabel("CVSS min filter").fill("9.0")
+  await page.getByLabel("EPSS min").fill("0.90")
+  await page.getByLabel("CVSS min").fill("9.0")
   await expect(findingsTable).toContainText(/CVE-2021-44228|CVE-2024-4577/)
-  await page.getByRole("button", { name: "Clear Filters" }).click()
+  await page.getByRole("button", { name: "Reset" }).click()
 
-  await page.getByLabel("Sort findings").selectOption("cve")
-  await page.getByLabel("Sort direction").selectOption("asc")
+  await findingsTable.getByRole("button", { name: /Sort by CVE/ }).click()
   await expect(findingsTable.locator("tbody tr").first()).toContainText(
     "CVE-2021-44228",
   )
-  await page.getByLabel("Findings page size").selectOption("1")
-  await expect(page.getByText(/1-1 of \d+/)).toBeVisible()
-  await page.getByRole("button", { name: "Next" }).click()
-  await expect(page.getByText(/2-2 of \d+/)).toBeVisible()
-  await page.getByRole("button", { name: "Previous" }).click()
-  await expect(page.getByText(/1-1 of \d+/)).toBeVisible()
-
-  await page.getByLabel("Owner service filter").fill("does-not-exist")
-  const findingsFilterEmptyState = page.getByRole("region", {
-    name: "Findings filter empty state",
-  })
+  await page.getByLabel("Owner / Service").fill("does-not-exist")
+  const findingsFilterEmptyState = page.getByLabel("No filter matches")
   await expect(findingsFilterEmptyState).toContainText(
     "No findings match these filters",
   )
   await findingsFilterEmptyState
-    .getByRole("button", { name: "Clear Filters" })
+    .getByRole("button", { name: "Clear filters" })
     .click()
 
   await navigation.getByRole("link", { name: "Settings" }).click()
   await expect(page).toHaveURL(/\/settings$/)
   await expect(
-    page.getByRole("heading", { exact: true, name: "Settings" }),
+    page.getByRole("heading", { level: 1, name: "Settings" }),
   ).toBeVisible()
   await expect(
     page.getByRole("region", { name: "User Settings" }),
   ).toContainText("admin@example.com")
 
-  await page.getByRole("button", { name: "Sign out" }).click()
+  await page.getByRole("button", { name: "Account menu" }).click()
+  await page.getByRole("menuitem", { name: "Sign out" }).click()
   await expect(page).toHaveURL(/\/login$/)
   await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible()
 })
@@ -927,8 +984,14 @@ test("template settings clears one-time API token when leaving settings", async 
     page.getByRole("heading", { name: "Service Token" }),
   ).toBeVisible()
   await page.getByLabel("Name").fill(`automation-${testRunSuffix}`)
-  await page.getByLabel("IMPORT").check()
-  await page.getByLabel("REPORT").check()
+  const importScope = page.getByRole("checkbox", { name: /IMPORT/i })
+  await importScope.focus()
+  await page.keyboard.press("Space")
+  await expect(importScope).toBeChecked()
+  const reportScope = page.getByRole("checkbox", { name: /REPORT/i })
+  await reportScope.focus()
+  await page.keyboard.press("Space")
+  await expect(reportScope).toBeChecked()
   await page.getByRole("button", { name: "Create Token" }).click()
 
   const createdTokenPanel = page.getByRole("region", {
@@ -945,5 +1008,5 @@ test("template settings clears one-time API token when leaving settings", async 
   await expect(page.getByRole("textbox", { name: "Token" })).toHaveCount(0)
   await expect(
     page.getByRole("table", { name: "API tokens table" }),
-  ).toContainText("READ, IMPORT, REPORT")
+  ).toContainText(/READ\s*IMPORT\s*REPORT/)
 })

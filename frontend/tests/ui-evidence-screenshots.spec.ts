@@ -69,7 +69,7 @@ test("evidence: ui-31 dark-mode screenshots", async ({ page }) => {
     "/imports",
     async () => {
       await expect(
-        page.getByRole("region", { name: "Import wizard" }),
+        page.getByRole("heading", { name: "Import Wizard" }),
       ).toBeVisible({ timeout: 15_000 })
     },
     "ui-31-imports-dark-1440.png",
@@ -80,7 +80,7 @@ test("evidence: ui-31 dark-mode screenshots", async ({ page }) => {
     "/reports",
     async () => {
       await expect(
-        page.getByRole("region", { name: "Reports workspace" }),
+        page.getByRole("heading", { level: 1, name: "Evidence Center" }),
       ).toBeVisible({ timeout: 15_000 })
     },
     "ui-31-evidence-center-dark-1440.png",
@@ -123,7 +123,7 @@ test("evidence: ui-32 responsive screenshots (tablet/mobile)", async ({
     "/imports",
     async () => {
       await expect(
-        page.getByRole("region", { name: "Import wizard" }),
+        page.getByRole("heading", { name: "Import Wizard" }),
       ).toBeVisible({ timeout: 15_000 })
     },
     "ui-32-imports-mobile-390.png",
@@ -134,7 +134,7 @@ test("evidence: ui-32 responsive screenshots (tablet/mobile)", async ({
     "/reports",
     async () => {
       await expect(
-        page.getByRole("region", { name: "Reports workspace" }),
+        page.getByRole("heading", { level: 1, name: "Evidence Center" }),
       ).toBeVisible({ timeout: 15_000 })
     },
     "ui-32-evidence-center-mobile-390.png",
