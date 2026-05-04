@@ -59,6 +59,7 @@ import {
   demoFindingDetailForId,
   demoFindingExplanationForDetail,
 } from "../components/finding-detail/finding-detail-model"
+import { useFindingsRouteState } from "../components/findings/useFindingsRouteState"
 import {
   type DataQualityNoticeItem,
   EmptyState,
@@ -72,14 +73,9 @@ import {
   apiTokenScopeOptions,
   canonicalApiTokenScopes,
   defaultApiTokenScopes,
-  defaultFindingFilters,
   defaultImportWizardState,
   emptyProjectForm,
   type FindingDetailTab,
-  type FindingFilters,
-  type FindingsDirection,
-  type FindingsSort,
-  findingPageSizes,
   type ImportFormat,
   type ImportUploadFormData,
   type ImportWizardState,
@@ -432,10 +428,6 @@ function numericFilterValue(value: string) {
   return Number.isFinite(parsed) ? parsed : undefined
 }
 
-function hasActiveFindingFilters(filters: FindingFilters) {
-  return Object.values(filters).some((value) => value.trim() !== "")
-}
-
 function _metadataRows(value: unknown) {
   return Object.entries(objectRecord(value)).filter(
     ([key, entryValue]) =>
@@ -786,15 +778,27 @@ export function WorkbenchShell({
     })
   const [dashboardSignalLoading, setDashboardSignalLoading] = useState(false)
   const [dashboardSignalError, setDashboardSignalError] = useState("")
-  const [findingFilters, setFindingFilters] = useState<FindingFilters>(
-    defaultFindingFilters,
-  )
-  const [findingSort, setFindingSort] = useState<FindingsSort>("operational")
-  const [findingDirection, setFindingDirection] =
-    useState<FindingsDirection>("asc")
-  const [findingPageSize, setFindingPageSize] =
-    useState<(typeof findingPageSizes)[number]>(10)
-  const [findingOffset, setFindingOffset] = useState(0)
+  const {
+    activeFindingFilters,
+    clearFindingFilters,
+    findingDirection,
+    findingFilters,
+    findingOffset,
+    findingPageSize,
+    findingSort,
+    nextFindingPage,
+    previousFindingPage,
+    resetFindingOffset,
+    updateFindingDirection,
+    updateFindingFilter,
+    updateFindingPageSize,
+    updateFindingSort,
+  } = useFindingsRouteState({
+    hasAssetFilter: Boolean(findingAssetId),
+    onClearAssetFilter: () => {
+      void navigate({ to: "/findings" })
+    },
+  })
   const [findingReloadKey, setFindingReloadKey] = useState(0)
   const [findingDetail, setFindingDetail] =
     useState<FindingDetailPublic | null>(null)
@@ -858,8 +862,6 @@ export function WorkbenchShell({
     findingOffset + findings.length,
     findingCount,
   )
-  const activeFindingFilters =
-    hasActiveFindingFilters(findingFilters) || Boolean(findingAssetId)
   const selectedReportRun =
     projectRuns.find((run) => run.id === selectedRunId) ?? null
   const reportActionsEnabled =
@@ -1792,42 +1794,6 @@ export function WorkbenchShell({
     }
   }
 
-  function updateFindingFilter<Key extends keyof FindingFilters>(
-    key: Key,
-    value: FindingFilters[Key],
-  ) {
-    setFindingOffset(0)
-    setFindingFilters((filters) => ({ ...filters, [key]: value }))
-  }
-
-  function clearFindingFilters() {
-    setFindingOffset(0)
-    setFindingFilters(defaultFindingFilters)
-    if (findingAssetId) {
-      void navigate({ to: "/findings" })
-    }
-  }
-
-  function updateFindingSort(sort: FindingsSort) {
-    setFindingOffset(0)
-    setFindingSort(sort)
-  }
-
-  function updateFindingDirection(direction: FindingsDirection) {
-    setFindingOffset(0)
-    setFindingDirection(direction)
-  }
-
-  function _updateFindingPageSize(size: number) {
-    const supportedSize = findingPageSizes.includes(
-      size as (typeof findingPageSizes)[number],
-    )
-      ? (size as (typeof findingPageSizes)[number])
-      : 10
-    setFindingOffset(0)
-    setFindingPageSize(supportedSize)
-  }
-
   function refreshFindings() {
     setFindingReloadKey((key) => key + 1)
   }
@@ -2274,25 +2240,11 @@ export function WorkbenchShell({
               onClearFilters={clearFindingFilters}
               onDirectionChange={updateFindingDirection}
               onFilterChange={updateFindingFilter}
-              onPageNext={() =>
-                setFindingOffset((offset) => offset + findingPageSize)
-              }
-              onPagePrev={() =>
-                setFindingOffset((offset) =>
-                  Math.max(0, offset - findingPageSize),
-                )
-              }
-              onPageSizeChange={(size) => {
-                const s = findingPageSizes.includes(
-                  size as (typeof findingPageSizes)[number],
-                )
-                  ? (size as (typeof findingPageSizes)[number])
-                  : 10
-                setFindingOffset(0)
-                setFindingPageSize(s)
-              }}
+              onPageNext={nextFindingPage}
+              onPagePrev={previousFindingPage}
+              onPageSizeChange={updateFindingPageSize}
               onProjectChange={(id) => {
-                setFindingOffset(0)
+                resetFindingOffset()
                 setSelectedProjectId(id)
               }}
               onSortChange={updateFindingSort}
