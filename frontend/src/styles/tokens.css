@@ -1,0 +1,109 @@
+@theme inline {
+  --color-vpw-app: var(--vpw-bg-app);
+  --color-vpw-page: var(--vpw-bg-page);
+  --color-vpw-card: var(--vpw-bg-card);
+  --color-vpw-panel: var(--vpw-bg-panel);
+  --color-vpw-info: var(--vpw-bg-info);
+  --color-vpw-success-surface: var(--vpw-bg-success);
+  --color-vpw-warning-surface: var(--vpw-bg-warning);
+  --color-vpw-critical-surface: var(--vpw-bg-critical);
+  --color-vpw-navy: var(--vpw-navy);
+  --color-vpw-primary: var(--vpw-blue);
+  --color-vpw-teal: var(--vpw-teal);
+  --color-vpw-success: var(--vpw-green);
+  --color-vpw-warning: var(--vpw-amber);
+  --color-vpw-critical: var(--vpw-red);
+  --color-vpw-support: var(--vpw-violet);
+  --color-vpw-text-primary: var(--vpw-text-primary);
+  --color-vpw-text-secondary: var(--vpw-text-secondary);
+  --color-vpw-text-muted: var(--vpw-text-muted);
+  --color-vpw-border: var(--vpw-border-default);
+  --color-vpw-border-subtle: var(--vpw-border-subtle);
+  --color-vpw-border-strong: var(--vpw-border-strong);
+  --radius-vpw-sm: var(--vpw-radius-sm);
+  --radius-vpw-md: var(--vpw-radius-md);
+  --radius-vpw-lg: var(--vpw-radius-lg);
+  --radius-vpw-xl: var(--vpw-radius-xl);
+  --radius-vpw-pill: var(--vpw-radius-pill);
+  --shadow-vpw-1: var(--vpw-shadow-1);
+  --shadow-vpw-2: var(--vpw-shadow-2);
+  --shadow-vpw-3: var(--vpw-shadow-3);
+}
+
+:root {
+  /* shadcn CSS variables */
+  --background: 220 42.9% 98.6%;
+  --foreground: 218.8 48.4% 8.4%;
+  --card: 0 0% 100%;
+  --card-foreground: 218.8 48.4% 8.4%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 218.8 48.4% 8.4%;
+  --primary: 221.2 83.2% 53.3%;
+  --primary-foreground: 210 40% 98%;
+  --secondary: 210 40% 98%;
+  --secondary-foreground: 218.8 48.4% 8.4%;
+  --muted: 210 40% 98%;
+  --muted-foreground: 215.3 19.3% 34.5%;
+  --accent: 214.3 100% 96.7%;
+  --accent-foreground: 221.2 83.2% 53.3%;
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 210 40% 98%;
+  --border: 220 13% 91%;
+  --input: 220 13% 91%;
+  --ring: 217.2 91.2% 59.8%;
+  --radius: 0.5rem;
+
+  /* VPW design-system tokens */
+  --vpw-bg-app: #fafbfd;
+  --vpw-bg-page: #ffffff;
+  --vpw-bg-card: #ffffff;
+  --vpw-bg-panel: #f8fafc;
+  --vpw-bg-info: #eff6ff;
+  --vpw-bg-success: #ecfdf5;
+  --vpw-bg-warning: #fffbeb;
+  --vpw-bg-critical: #fef2f2;
+
+  --vpw-text-primary: #0b1220;
+  --vpw-text-secondary: #4b5563;
+  --vpw-text-muted: #64748b;
+  --vpw-border-default: #e5e7eb;
+  --vpw-border-subtle: #eef2f7;
+  --vpw-border-strong: #d1d5db;
+  --vpw-focus-ring: #3b82f6;
+
+  --vpw-blue: #2563eb;
+  --vpw-teal: #14b8a6;
+  --vpw-green: #22c55e;
+  --vpw-amber: #f59e0b;
+  --vpw-red: #ef4444;
+  --vpw-violet: #6366f1;
+  --vpw-navy: #0b1020;
+
+  --vpw-radius-sm: 4px;
+  --vpw-radius-md: 8px;
+  --vpw-radius-lg: 12px;
+  --vpw-radius-xl: 16px;
+  --vpw-radius-pill: 9999px;
+  --vpw-shadow-0: none;
+  --vpw-shadow-1: 0 1px 2px rgba(2, 6, 23, 0.04);
+  --vpw-shadow-2: 0 4px 12px rgba(2, 6, 23, 0.06);
+  --vpw-shadow-3: 0 12px 24px rgba(2, 6, 23, 0.08);
+  --vpw-container-max: 1600px;
+  --vpw-container-padding: 1rem;
+
+  /* Legacy compatibility */
+  color: var(--vpw-text-primary);
+  background: var(--vpw-bg-app);
+  font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+/* Tailwind v4 uses currentColor for bare `border` — default to the shadcn border token */
+*,
+*::before,
+*::after {
+  border-color: hsl(var(--border));
+}
