@@ -36,9 +36,9 @@ import {
 } from "@/components/vpw"
 import { formatCacheAge, providerSnapshotSummary } from "@/lib/provider-format"
 
-type ApiTokenScope = NonNullable<ApiTokenCreate["scopes"]>[number]
+export type ApiTokenScope = NonNullable<ApiTokenCreate["scopes"]>[number]
 
-type SettingsWorkbenchProps = {
+export type SettingsWorkbenchProps = {
   apiTokenActionLoading: boolean
   apiTokenError: string
   apiTokenMessage: string
