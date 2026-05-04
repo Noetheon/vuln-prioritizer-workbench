@@ -49,6 +49,11 @@ expensive work:
 
 When the PR is marked ready, normal ready-PR checks run.
 
+The required PR workflows explicitly listen for the `ready_for_review` activity.
+That makes GitHub start a fresh ready-state check run when a draft PR becomes
+ready. Rerunning an older draft workflow is not equivalent because GitHub
+reuses the original draft event payload for that rerun.
+
 ## Documentation and archive changes
 
 Documentation, archive, Markdown-only, and workflow-only PRs keep required check
