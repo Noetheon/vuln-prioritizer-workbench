@@ -97,6 +97,23 @@ Current limitations:
   authored notes and reports must avoid exploit payloads, commands, reproduction
   steps, and procedure guidance.
 
+## Current Workbench Demo Proof
+
+The current Workbench demo intentionally shows both mapped and unmapped TTP
+states.
+
+- Unmapped CVEs remain explicitly unmapped. VPW does not fill gaps from CVE
+  descriptions, vendor names, products, exploit keywords, EPSS rank, or LLM
+  output.
+- The curated demo proof for `CVE-2024-4577` is used only to show how a reviewed
+  mapping appears in the TTP Context UI. The mapped state can show technique,
+  tactic, confidence, source, detection coverage, and safety wording.
+- The archived demo proof is indexed in
+  `archive/vpw-evidence/final-demo-flow/attack-demo-mapping-summary.md`.
+
+The mapped demo state is defensive context for prioritization and detection
+planning. It does not prove that a local environment was exploited.
+
 ## Mapping Review Checklist
 
 Use this checklist for each local curated mapping and for report surfaces that

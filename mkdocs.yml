@@ -9,6 +9,12 @@ nav:
   - User Documentation Guide: user_documentation.md
   - Concept: concept.md
   - Executive Summary: executive_summary.md
+  - Current Product State:
+      - Product Architecture: architecture.md
+      - Scoring Methodology: scoring-methodology.md
+      - ATT&CK/TTP Methodology: attack-ttp-methodology.md
+      - Reports and Evidence: reports-and-evidence.md
+      - Demo Readiness: demo-readiness.md
   - Methodology: methodology.md
   - Benchmarking: benchmarking.md
   - Architecture:
@@ -37,7 +43,6 @@ nav:
       - Infrastructure Scan Triage: playbooks/infrastructure_scan_triage.md
   - Contracts: contracts.md
   - Asset Context CSV: asset-context-csv.md
-  - ATT&CK Curated Mapping Schema: attack-ttp-methodology.md
   - Support Matrix: support_matrix.md
   - Integrations: integrations/reporting_and_ci.md
   - Gap Analysis: reference_cve_prioritizer_gap_analysis.md
