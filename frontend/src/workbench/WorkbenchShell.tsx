@@ -192,9 +192,9 @@ const EvidenceCenter = lazy(() =>
     default: module.EvidenceCenter,
   })),
 )
-const SettingsWorkbench = lazy(() =>
-  import("../components/settings/SettingsWorkbench").then((module) => ({
-    default: module.SettingsWorkbench,
+const SettingsRouteContainer = lazy(() =>
+  import("../components/settings/SettingsRouteContainer").then((module) => ({
+    default: module.SettingsRouteContainer,
   })),
 )
 const WaiversWorkbench = lazy(() =>
@@ -4369,7 +4369,7 @@ export function WorkbenchShell({
                   providerStatusLoading={providerStatusLoading}
                 />
               ) : currentPath === "/settings" ? (
-                <SettingsWorkbench
+                <SettingsRouteContainer
                   apiTokenActionLoading={apiTokenActionLoading}
                   apiTokenError={apiTokenError}
                   apiTokenMessage={apiTokenMessage}
