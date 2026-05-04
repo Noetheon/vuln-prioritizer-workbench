@@ -414,25 +414,37 @@ def test_findings_queue_uses_vpw_product_surfaces() -> None:
 
 
 def test_dashboard_and_finding_detail_use_vpw_surfaces() -> None:
-    checked_paths = [
+    dashboard_paths = [
         REPO_ROOT / "frontend/src/components/dashboard/RiskOperationsDashboard.tsx",
         REPO_ROOT / "frontend/src/components/dashboard/TopRemediationQueue.tsx",
         REPO_ROOT / "frontend/src/components/dashboard/ProviderFreshnessPanel.tsx",
         REPO_ROOT / "frontend/src/components/risk/MetricCard.tsx",
-        REPO_ROOT / "frontend/src/workbench/WorkbenchShell.tsx",
+    ]
+    finding_detail_paths = [
+        REPO_ROOT / "frontend/src/components/finding-detail/FindingDetailRoute.tsx",
+        REPO_ROOT / "frontend/src/components/finding-detail/FindingDetailHero.tsx",
+        REPO_ROOT / "frontend/src/components/finding-detail/WhyPriorityPanel.tsx",
+        REPO_ROOT / "frontend/src/components/finding-detail/FindingEvidenceTab.tsx",
+        REPO_ROOT / "frontend/src/components/finding-detail/FindingTtpContextTab.tsx",
+        REPO_ROOT / "frontend/src/components/finding-detail/FindingHistoryTab.tsx",
     ]
 
-    for path in checked_paths:
+    for path in dashboard_paths + finding_detail_paths:
         source = path.read_text(encoding="utf-8")
 
         assert "components/ui/card" not in source, path
 
-    assert "VpwSurface" in checked_paths[0].read_text(encoding="utf-8")
-    assert "VpwPanel" in checked_paths[1].read_text(encoding="utf-8")
-    assert "VpwPanel" in checked_paths[2].read_text(encoding="utf-8")
-    assert "VpwSurface" in checked_paths[3].read_text(encoding="utf-8")
-    assert "VpwSurface" in checked_paths[4].read_text(encoding="utf-8")
-    dashboard_source = checked_paths[0].read_text(encoding="utf-8")
+    assert "VpwSurface" in dashboard_paths[0].read_text(encoding="utf-8")
+    assert "VpwPanel" in dashboard_paths[1].read_text(encoding="utf-8")
+    assert "VpwPanel" in dashboard_paths[2].read_text(encoding="utf-8")
+    assert "VpwSurface" in dashboard_paths[3].read_text(encoding="utf-8")
+    assert "VpwStatusBanner" in finding_detail_paths[0].read_text(encoding="utf-8")
+    assert "VpwSurface" in finding_detail_paths[1].read_text(encoding="utf-8")
+    assert "VpwKeyValueList" in finding_detail_paths[2].read_text(encoding="utf-8")
+    assert "VpwDataTable" in finding_detail_paths[3].read_text(encoding="utf-8")
+    assert "VpwDataTable" in finding_detail_paths[4].read_text(encoding="utf-8")
+    assert "VpwTimeline" in finding_detail_paths[5].read_text(encoding="utf-8")
+    dashboard_source = dashboard_paths[0].read_text(encoding="utf-8")
     assert "rounded-2xl" not in dashboard_source
     assert "bg-gradient-to-br" not in dashboard_source
     assert "bg-linear-to-br" not in dashboard_source
