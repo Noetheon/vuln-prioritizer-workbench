@@ -15,6 +15,14 @@ nav:
       - ATT&CK/TTP Methodology: attack-ttp-methodology.md
       - Reports and Evidence: reports-and-evidence.md
       - Demo Readiness: demo-readiness.md
+  - Submission Package:
+      - Overview: submission/README.md
+      - Concept: submission/concept.md
+      - Executive Summary: submission/executive-summary.md
+      - Technical Documentation: submission/technical-documentation.md
+      - Evidence Sheet: submission/evidence-sheet.md
+      - Demo Script: submission/demo-script.md
+      - Reviewer Checklist: submission/reviewer-checklist.md
   - Methodology: methodology.md
   - Benchmarking: benchmarking.md
   - Architecture:
