@@ -182,9 +182,9 @@ const ProjectsWorkbench = lazy(() =>
     default: module.ProjectsWorkbench,
   })),
 )
-const ProvidersWorkbench = lazy(() =>
-  import("../components/providers/ProvidersWorkbench").then((module) => ({
-    default: module.ProvidersWorkbench,
+const ProvidersRouteContainer = lazy(() =>
+  import("../components/providers/ProvidersRouteContainer").then((module) => ({
+    default: module.ProvidersRouteContainer,
   })),
 )
 const EvidenceCenter = lazy(() =>
@@ -4362,8 +4362,8 @@ export function WorkbenchShell({
                   ) : null}
                 </section>
               ) : currentPath === "/providers" ? (
-                <ProvidersWorkbench
-                  onRefreshProviderStatus={() => void refreshProviderStatus()}
+                <ProvidersRouteContainer
+                  onRefreshProviderStatus={refreshProviderStatus}
                   providerStatus={providerStatus}
                   providerStatusError={providerStatusError}
                   providerStatusLoading={providerStatusLoading}
