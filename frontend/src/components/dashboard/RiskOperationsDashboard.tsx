@@ -6,10 +6,12 @@ import {
   ShieldAlert,
   TrendingUp,
 } from "lucide-react"
-import { useMemo, useState } from "react"
+import { lazy, Suspense, useMemo, useState } from "react"
+import { Skeleton } from "@/components/ui/skeleton"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import {
   VpwSurface,
+  VpwSurfaceBody,
   VpwSurfaceDescription,
   VpwSurfaceHeader,
   VpwSurfaceTitle,
@@ -36,7 +38,6 @@ import { DashboardHero } from "./DashboardHero"
 import { DashboardMetricGrid } from "./DashboardMetricGrid"
 import { DashboardRemediationSection } from "./DashboardRemediationSection"
 import { DashboardSidePanel } from "./DashboardSidePanel"
-import { DashboardSignalOverview } from "./DashboardSignalOverview"
 import {
   latestRunFacts,
   latestRunLabel,
@@ -45,6 +46,41 @@ import {
   type QueueFilterState,
   type RiskOperationsDashboardProps,
 } from "./dashboard-model"
+
+const DashboardSignalOverview = lazy(() =>
+  import("./DashboardSignalOverview").then((module) => ({
+    default: module.DashboardSignalOverview,
+  })),
+)
+
+function DashboardSignalOverviewFallback() {
+  return (
+    <VpwSurface aria-label="Signal Overview loading" className="gap-4 py-4">
+      <VpwSurfaceHeader>
+        <VpwSurfaceTitle>Signal Overview</VpwSurfaceTitle>
+        <VpwSurfaceDescription>
+          Signal concentration, service risk, and trend direction for executive
+          review.
+        </VpwSurfaceDescription>
+      </VpwSurfaceHeader>
+      <VpwSurfaceBody>
+        <div
+          aria-label="Loading Signal Overview charts"
+          className="space-y-4"
+          role="status"
+        >
+          <div className="flex flex-wrap gap-2">
+            <Skeleton className="h-8 w-36" />
+            <Skeleton className="h-8 w-32" />
+            <Skeleton className="h-8 w-28" />
+            <Skeleton className="h-8 w-24" />
+          </div>
+          <Skeleton className="h-64 w-full" />
+        </div>
+      </VpwSurfaceBody>
+    </VpwSurface>
+  )
+}
 
 export function RiskOperationsDashboard({
   dashboardError,
@@ -299,23 +335,25 @@ export function RiskOperationsDashboard({
         <div className="grid gap-4 lg:grid-cols-[1fr_196px]">
           <div className="min-w-0 space-y-4">
             <DashboardMetricGrid cards={freshnessCard} isLoading={isLoading} />
-            <DashboardSignalOverview
-              epssItems={epssItems}
-              governanceLoading={governanceLoading}
-              onRunRangeChange={(value: DashboardRunRange) =>
-                setFilters((current) => ({
-                  ...current,
-                  selectedRunRange: value,
-                }))
-              }
-              priorityItems={priorityItems}
-              runsLoading={runsLoading}
-              selectedRunRange={filters.selectedRunRange}
-              serviceItems={serviceItems}
-              summaryLoading={summaryLoading}
-              topServiceSource={topServiceSource}
-              trendItems={trendItems}
-            />
+            <Suspense fallback={<DashboardSignalOverviewFallback />}>
+              <DashboardSignalOverview
+                epssItems={epssItems}
+                governanceLoading={governanceLoading}
+                onRunRangeChange={(value: DashboardRunRange) =>
+                  setFilters((current) => ({
+                    ...current,
+                    selectedRunRange: value,
+                  }))
+                }
+                priorityItems={priorityItems}
+                runsLoading={runsLoading}
+                selectedRunRange={filters.selectedRunRange}
+                serviceItems={serviceItems}
+                summaryLoading={summaryLoading}
+                topServiceSource={topServiceSource}
+                trendItems={trendItems}
+              />
+            </Suspense>
             <DashboardRemediationSection
               findingsError={findingsError}
               findingsLoading={findingsLoading}
