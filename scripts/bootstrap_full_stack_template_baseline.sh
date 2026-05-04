@@ -13,7 +13,7 @@ rm -rf "$target_dir"
 git clone --depth 1 --branch "$template_ref" "$template_url" "$target_dir"
 
 template_sha="$(git -C "$target_dir" rev-parse HEAD)"
-evidence_dir="docs/evidence"
+evidence_dir="${VPW_EVIDENCE_DIR:-build/evidence}"
 mkdir -p "$evidence_dir"
 
 cat > "$evidence_dir/full_stack_fastapi_template_baseline.md" <<EOF

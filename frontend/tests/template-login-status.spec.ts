@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs"
 import { expect, type Locator, type Page, test } from "@playwright/test"
+import { evidenceScreenshotPath } from "./evidence-paths"
 
 const validCveList = Buffer.from("CVE-2021-44228\nCVE-2024-3094\n")
 const cyclonedxVex = readFileSync("../data/input_fixtures/cyclonedx_vex.json")
@@ -171,7 +172,7 @@ test("template finding detail renders TTP Context tab", async ({ page }) => {
   await selectDashboardProject(page, projectName)
   await page.screenshot({
     fullPage: true,
-    path: "../docs/evidence/vpw-059-attack-summary-dashboard.png",
+    path: evidenceScreenshotPath("vpw-059-attack-summary-dashboard.png"),
   })
 
   await page.goto(`/findings/${finding.id}`)
@@ -189,7 +190,7 @@ test("template finding detail renders TTP Context tab", async ({ page }) => {
   )
   await page.screenshot({
     fullPage: true,
-    path: "../docs/evidence/vpw-058-ttp-context-tab.png",
+    path: evidenceScreenshotPath("vpw-058-ttp-context-tab.png"),
   })
 })
 test("template frontend renders CycloneDX VEX occurrence evidence", async ({
@@ -279,7 +280,7 @@ test("template frontend renders CycloneDX VEX occurrence evidence", async ({
   )
   await page.screenshot({
     fullPage: true,
-    path: "../docs/evidence/vpw-066-cyclonedx-vex-parser.png",
+    path: evidenceScreenshotPath("vpw-066-cyclonedx-vex-parser.png"),
   })
 })
 test("template frontend covers core Workbench E2E smoke", async ({ page }) => {
@@ -441,7 +442,7 @@ test("template frontend covers core Workbench E2E smoke", async ({ page }) => {
   ).toBeVisible()
   await page.screenshot({
     fullPage: true,
-    path: "../docs/evidence/vpw-045-provider-status.png",
+    path: evidenceScreenshotPath("vpw-045-provider-status.png"),
   })
 
   await navigation.getByRole("link", { name: "Reports" }).click()
@@ -493,7 +494,7 @@ test("template frontend covers core Workbench E2E smoke", async ({ page }) => {
   await expect(reportHistory).toContainText("evidence-bundle.zip")
   await page.screenshot({
     fullPage: true,
-    path: "../docs/evidence/vpw-060-attack-navigator-layer.png",
+    path: evidenceScreenshotPath("vpw-060-attack-navigator-layer.png"),
   })
   await reportHistory
     .getByRole("button", { name: "Verify evidence-bundle.zip" })
@@ -509,7 +510,7 @@ test("template frontend covers core Workbench E2E smoke", async ({ page }) => {
   }
   await page.screenshot({
     fullPage: true,
-    path: "../docs/evidence/vpw-053-report-downloads.png",
+    path: evidenceScreenshotPath("vpw-053-report-downloads.png"),
   })
 
   await navigation.getByRole("link", { name: "Projects" }).click()
@@ -627,7 +628,7 @@ test("template frontend covers core Workbench E2E smoke", async ({ page }) => {
   ).not.toContainText("vulnerable_code_not_present")
   await page.screenshot({
     fullPage: true,
-    path: "../docs/evidence/vpw-065-openvex-status-application.png",
+    path: evidenceScreenshotPath("vpw-065-openvex-status-application.png"),
   })
 
   const occurrenceImport = await page.request.post(
@@ -757,7 +758,7 @@ test("template frontend covers core Workbench E2E smoke", async ({ page }) => {
   await expect(page.getByLabel("Asset service filter")).toHaveValue("")
   await page.screenshot({
     fullPage: true,
-    path: "../docs/evidence/vpw-044-assets-page.png",
+    path: evidenceScreenshotPath("vpw-044-assets-page.png"),
   })
   const assetFindings = page.getByRole("table", {
     name: "Asset findings table",
@@ -790,7 +791,7 @@ test("template frontend covers core Workbench E2E smoke", async ({ page }) => {
   await expect(assetFindingDetail).toContainText("Asset Context Rescore Needed")
   await page.screenshot({
     fullPage: true,
-    path: "../docs/evidence/vpw-044-finding-context.png",
+    path: evidenceScreenshotPath("vpw-044-finding-context.png"),
   })
   await page.getByRole("link", { name: "Back to Findings" }).click()
   await expect(page).toHaveURL(/\/findings$/)
@@ -807,7 +808,7 @@ test("template frontend covers core Workbench E2E smoke", async ({ page }) => {
   await expect(recalculationRow).toContainText("Current")
   await page.screenshot({
     fullPage: true,
-    path: "../docs/evidence/vpw-063-asset-recalculate.png",
+    path: evidenceScreenshotPath("vpw-063-asset-recalculate.png"),
   })
 
   await navigation.getByRole("link", { name: "Imports" }).click()
@@ -907,11 +908,11 @@ test("template frontend covers core Workbench E2E smoke", async ({ page }) => {
   )
   await page.screenshot({
     fullPage: true,
-    path: "../docs/evidence/vpw-047-core-workbench-flow.png",
+    path: evidenceScreenshotPath("vpw-047-core-workbench-flow.png"),
   })
   await page.screenshot({
     fullPage: true,
-    path: "../docs/evidence/vpw-043-finding-detail.png",
+    path: evidenceScreenshotPath("vpw-043-finding-detail.png"),
   })
   await page.getByRole("link", { name: "Back to Findings" }).click()
   await expect(page).toHaveURL(/\/findings$/)

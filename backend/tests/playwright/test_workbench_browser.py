@@ -38,6 +38,16 @@ pytestmark = [
 ]
 
 
+def _evidence_screenshot_path(filename: str) -> Path:
+    base_dir = (
+        ROOT / "archive" / "vpw-evidence"
+        if os.getenv("VPW_UPDATE_DOCS_EVIDENCE") == "1"
+        else ROOT / "frontend" / "test-results" / "evidence"
+    )
+    base_dir.mkdir(parents=True, exist_ok=True)
+    return base_dir / filename
+
+
 @dataclass(frozen=True)
 class LiveWorkbench:
     base_url: str
@@ -201,7 +211,7 @@ def test_workbench_browser_happy_path_reports_and_responsive_pages(
         ).click()
     page.get_by_text("Current").first.wait_for()
     page.screenshot(
-        path=str(ROOT / "docs" / "evidence" / "vpw-063-asset-context-editor.png"),
+        path=str(_evidence_screenshot_path("vpw-063-asset-context-editor.png")),
         full_page=True,
     )
     _assert_usable_layout(page)

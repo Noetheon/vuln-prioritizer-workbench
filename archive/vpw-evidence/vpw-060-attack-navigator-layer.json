@@ -1,0 +1,123 @@
+{
+  "description": "Defensive Navigator layer generated from persisted Workbench ATT&CK context for analysis run 00000000-0000-4000-8000-000000000061. Filter: all. Unmapped findings are omitted rather than inferred.",
+  "domain": "enterprise-attack",
+  "gradient": {
+    "colors": [
+      "#dfe7fd",
+      "#ffd166",
+      "#c1121f"
+    ],
+    "maxValue": 94.2,
+    "minValue": 0
+  },
+  "legendItems": [
+    {
+      "color": "#ffd166",
+      "label": "Mapped technique"
+    },
+    {
+      "color": "#c1121f",
+      "label": "Highest risk technique"
+    }
+  ],
+  "metadata": [
+    {
+      "name": "Project",
+      "value": "VPW-060 Snapshot"
+    },
+    {
+      "name": "Project ID",
+      "value": "00000000-0000-4000-8000-000000000060"
+    },
+    {
+      "name": "Analysis run",
+      "value": "00000000-0000-4000-8000-000000000061"
+    },
+    {
+      "name": "Filter",
+      "value": "all"
+    },
+    {
+      "name": "Findings considered",
+      "value": "2"
+    },
+    {
+      "name": "Mapped findings included",
+      "value": "1"
+    },
+    {
+      "name": "Unmapped findings omitted",
+      "value": "1"
+    },
+    {
+      "name": "Coverage model",
+      "value": "not assessed placeholder"
+    },
+    {
+      "name": "Generated at",
+      "value": "2026-04-29T12:00:00+00:00"
+    }
+  ],
+  "name": "VPW-060 Snapshot ATT&CK Navigator (all)",
+  "selectTechniquesAcrossTactics": true,
+  "showTacticRowBackground": true,
+  "techniques": [
+    {
+      "comment": "Findings: CVE-2021-44228. KEV: 1 finding(s). Coverage: not assessed; placeholder until detection coverage is configured. Confidence: low:1. Review: needs_review:1.",
+      "enabled": true,
+      "metadata": [
+        {
+          "name": "Technique name",
+          "value": "Exploit Public-Facing Application"
+        },
+        {
+          "name": "Findings",
+          "value": "CVE-2021-44228"
+        },
+        {
+          "name": "Finding count",
+          "value": "1"
+        },
+        {
+          "name": "KEV findings",
+          "value": "CVE-2021-44228"
+        },
+        {
+          "name": "Priorities",
+          "value": "high:1"
+        },
+        {
+          "name": "Confidence",
+          "value": "low:1"
+        },
+        {
+          "name": "Review status",
+          "value": "needs_review:1"
+        },
+        {
+          "name": "Source",
+          "value": "local-curated:1"
+        },
+        {
+          "name": "Coverage",
+          "value": "not assessed"
+        },
+        {
+          "name": "Risk score total",
+          "value": "94.2"
+        },
+        {
+          "name": "Highest risk score",
+          "value": "94.2"
+        },
+        {
+          "name": "Tactics",
+          "value": "initial-access"
+        }
+      ],
+      "score": 94.2,
+      "techniqueID": "T1190"
+    }
+  ],
+  "version": "4.5"
+}
