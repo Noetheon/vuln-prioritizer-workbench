@@ -7,7 +7,6 @@ from typing import Any
 import yaml
 from paths import REPO_ROOT
 
-DOCS_ROOT = REPO_ROOT / "docs"
 MKDOCS_FILE = REPO_ROOT / "mkdocs.yml"
 ARCHIVE_ROOT = REPO_ROOT / "archive"
 TEXT_SUFFIXES = {
@@ -25,6 +24,22 @@ TEXT_SUFFIXES = {
     ".yml",
 }
 MEDIA_SUFFIXES = {".gif", ".jpeg", ".jpg", ".png", ".svg", ".webp"}
+CANONICAL_EVIDENCE_CONTRACT_ARTIFACTS = {
+    Path("docs/evidence/vpw-050-analysis-result.v1.json"),
+    Path("docs/evidence/vpw-050-findings.csv"),
+    Path("docs/evidence/vpw-051-analysis.json"),
+    Path("docs/evidence/vpw-051-manifest.json"),
+    Path("docs/evidence/vpw-052-positive-verification.json"),
+    Path("docs/evidence/vpw-052-tampered-verification.json"),
+    Path("docs/evidence/vpw-054-report-snapshots.md"),
+    Path("docs/evidence/vpw-060-attack-navigator-layer.json"),
+}
+# docs/evidence is intentionally kept only for contract artifacts validated by
+# backend report tests. Public and historical evidence belongs in
+# archive/vpw-evidence so broad evidence sprawl cannot return unnoticed.
+NON_PUBLIC_CONTRACT_MARKDOWN = {
+    path for path in CANONICAL_EVIDENCE_CONTRACT_ARTIFACTS if path.suffix.lower() == ".md"
+}
 
 
 def _git_ls_files(*patterns: str) -> list[Path]:
@@ -69,7 +84,11 @@ def _tracked_text_corpus() -> str:
 def test_mkdocs_nav_includes_all_public_markdown_pages() -> None:
     mkdocs_config = yaml.safe_load(MKDOCS_FILE.read_text(encoding="utf-8"))
     nav_pages = _nav_markdown_pages(mkdocs_config["nav"])
-    docs_pages = {path for path in _git_ls_files("docs") if path.suffix.lower() == ".md"}
+    docs_pages = {
+        path
+        for path in _git_ls_files("docs")
+        if path.suffix.lower() == ".md" and path not in NON_PUBLIC_CONTRACT_MARKDOWN
+    }
 
     assert docs_pages - nav_pages == set()
 
@@ -139,8 +158,17 @@ def test_tracked_tree_excludes_local_artifacts() -> None:
     assert violations == []
 
 
-def test_archives_have_entrypoints_and_public_evidence_tree_is_removed() -> None:
-    assert not (DOCS_ROOT / "evidence").exists()
+def test_archives_have_entrypoints_and_public_evidence_tree_is_limited() -> None:
+    evidence_files = set(_git_ls_files("docs/evidence"))
+    nested_evidence_files = {
+        path for path in evidence_files if len(path.relative_to(Path("docs/evidence")).parts) > 1
+    }
+    media_artifacts = {path for path in evidence_files if path.suffix.lower() in MEDIA_SUFFIXES}
+
+    assert evidence_files == CANONICAL_EVIDENCE_CONTRACT_ARTIFACTS
+    assert nested_evidence_files == set()
+    assert media_artifacts == set()
+
     assert (ARCHIVE_ROOT / "README.md").is_file()
     assert (ARCHIVE_ROOT / "vpw-evidence" / "README.md").is_file()
     assert (ARCHIVE_ROOT / "vpw-evidence" / "MANIFEST.md").is_file()
