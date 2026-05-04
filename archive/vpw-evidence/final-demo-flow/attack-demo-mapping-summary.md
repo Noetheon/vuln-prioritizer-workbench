@@ -25,7 +25,7 @@ This follow-up adds one local curated demo mapping fixture for the final demo fl
 
 ## Evidence
 
-- Screenshot: `docs/evidence/final-demo-flow/06-ttp-context-mapped-demo.png`
+- Screenshot: `archive/vpw-evidence/final-demo-flow/06-ttp-context-mapped-demo.png`
 - Mapping fixture: `data/attack/local_curated_demo_mappings.yml`
 
 ## Safety Notes

@@ -1,6 +1,6 @@
 # Presentation Evidence Pack
 
-This folder is an index for the final Vuln Prioritizer Workbench evidence set. It does not duplicate large screenshots; it points to the canonical proof files already committed under `docs/evidence/final-demo-flow/` and `docs/evidence/vpw-design-system-foundation/`.
+This folder is an index for the final Vuln Prioritizer Workbench evidence set. It does not duplicate large screenshots; it points to the archived proof files already committed under `archive/vpw-evidence/final-demo-flow/` and `archive/vpw-evidence/vpw-design-system-foundation/`.
 
 ## What Was Built
 
