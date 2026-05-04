@@ -1,9 +1,7 @@
 import { Link } from "@tanstack/react-router"
 import {
   AlertTriangle,
-  ArrowDown,
   ArrowUp,
-  ArrowUpDown,
   ChevronLeft,
   ChevronRight,
   Eye,
@@ -29,7 +27,6 @@ import {
   FindingStatusBadge,
   KevBadge,
   PriorityBadge,
-  RiskScore,
 } from "@/components/risk"
 import { Button } from "@/components/ui/button"
 import {
@@ -52,12 +49,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
+import { TooltipProvider } from "@/components/ui/tooltip"
 import {
   VpwBadge,
   VpwDemoBanner,
@@ -73,6 +65,7 @@ import {
 import { DEMO_FINDINGS, DEMO_PROJECT, DEMO_SUMMARY } from "@/lib/demo-data"
 import { formatLabel as labelize, optionalText } from "@/lib/ui-copy"
 import { cn } from "@/lib/utils"
+import { FindingsDataTable, type QueueSort } from "./FindingsDataTable"
 
 // ---------------------------------------------------------------------------
 // Types
@@ -82,7 +75,6 @@ type FindingsSort = NonNullable<FindingsReadProjectFindingsData["sort"]>
 type FindingsDirection = NonNullable<
   FindingsReadProjectFindingsData["direction"]
 >
-type QueueSort = FindingsSort | "component" | "owner"
 
 type KevFilter = "" | "true" | "false"
 
@@ -196,6 +188,10 @@ const statusSortRank: Record<string, number> = {
 // Helpers
 // ---------------------------------------------------------------------------
 
+function isApiSort(sort: QueueSort): sort is FindingsSort {
+  return (apiSortValues as readonly string[]).includes(sort)
+}
+
 function componentLabel(f: FindingPublic) {
   const name = optionalText(f.component_name)
   return f.component_version ? `${name} ${f.component_version}` : name
@@ -205,16 +201,8 @@ function serviceLabel(f: FindingPublic) {
   return f.business_service ?? f.component_purl ?? "Service not linked"
 }
 
-function assetLabel(f: FindingPublic) {
-  return f.asset_name ?? f.asset_key ?? f.business_service ?? "N.A."
-}
-
 function ownerLabel(f: FindingPublic) {
   return f.owner ?? f.business_service ?? "Unassigned"
-}
-
-function isApiSort(sort: QueueSort): sort is FindingsSort {
-  return (apiSortValues as readonly string[]).includes(sort)
 }
 
 function findingWhyNow(f: FindingPublic) {
@@ -223,31 +211,6 @@ function findingWhyNow(f: FindingPublic) {
     optionalText(f.recommended_action) ??
     "No priority rationale has been recorded yet."
   )
-}
-
-function formatDateTime(value: string | null | undefined) {
-  if (!value) return "N.A."
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) {
-    return "N.A."
-  }
-  return new Intl.DateTimeFormat(undefined, {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(date)
-}
-
-function formatShortDate(value: string | null | undefined) {
-  if (!value) return "N.A."
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) {
-    return "N.A."
-  }
-  return new Intl.DateTimeFormat(undefined, {
-    day: "2-digit",
-    month: "2-digit",
-    year: "2-digit",
-  }).format(date)
 }
 
 function dateSortValue(value: string | null | undefined) {
@@ -583,86 +546,6 @@ function QuickViewSheet({ finding, open, onClose }: QuickViewSheetProps) {
         </div>
       </SheetContent>
     </Sheet>
-  )
-}
-
-type SortHeaderProps = {
-  currentDirection: FindingsDirection
-  currentSort: QueueSort
-  label: string
-  onSort: (sort: QueueSort) => void
-  sort: QueueSort
-}
-
-function SortHeader({
-  currentDirection,
-  currentSort,
-  label,
-  onSort,
-  sort,
-}: SortHeaderProps) {
-  const active = currentSort === sort
-  const nextDirection: FindingsDirection = active
-    ? currentDirection === "asc"
-      ? "desc"
-      : "asc"
-    : defaultSortDirections[sort]
-  const Icon = active
-    ? currentDirection === "asc"
-      ? ArrowUp
-      : ArrowDown
-    : ArrowUpDown
-
-  return (
-    <th
-      aria-sort={
-        active
-          ? currentDirection === "asc"
-            ? "ascending"
-            : "descending"
-          : undefined
-      }
-    >
-      <button
-        aria-label={`Sort by ${label} (${active ? `${currentDirection} active` : `${nextDirection} first`})`}
-        className={cn(
-          "-ml-1 inline-flex h-7 items-center gap-1 rounded-md px-1.5 text-[0.72rem] font-extrabold uppercase text-inherit transition hover:bg-slate-100 hover:text-slate-900",
-          active ? "text-teal-700" : "text-slate-500",
-        )}
-        onClick={() => onSort(sort)}
-        type="button"
-      >
-        <Icon
-          aria-hidden="true"
-          className={cn(
-            "size-3.5 shrink-0",
-            active ? "opacity-100" : "opacity-50",
-          )}
-        />
-        <span className="text-left leading-tight">{label}</span>
-      </button>
-    </th>
-  )
-}
-
-function StaticHeader({
-  align = "left",
-  label,
-}: {
-  align?: "left" | "right"
-  label: string
-}) {
-  return (
-    <th>
-      <span
-        className={cn(
-          "inline-flex h-7 items-center text-[0.72rem] font-extrabold uppercase text-slate-500",
-          align === "right" ? "justify-end" : "justify-start",
-        )}
-      >
-        {label}
-      </span>
-    </th>
   )
 }
 
@@ -1246,172 +1129,14 @@ export function RemediationQueue({
                 ) : null}
               </div>
 
-              <div className="remediation-table-wrap findings-remediation-table-wrap">
-                <table
-                  aria-label="Findings remediation queue"
-                  className="remediation-table findings-remediation-table"
-                >
-                  <thead>
-                    <tr>
-                      <SortHeader
-                        currentDirection={findingDirection}
-                        currentSort={queueSort}
-                        label="Priority"
-                        onSort={updateColumnSort}
-                        sort="priority"
-                      />
-                      <SortHeader
-                        currentDirection={findingDirection}
-                        currentSort={queueSort}
-                        label="Score"
-                        onSort={updateColumnSort}
-                        sort="score"
-                      />
-                      <SortHeader
-                        currentDirection={findingDirection}
-                        currentSort={queueSort}
-                        label="CVE"
-                        onSort={updateColumnSort}
-                        sort="cve"
-                      />
-                      <SortHeader
-                        currentDirection={findingDirection}
-                        currentSort={queueSort}
-                        label="Component / Service"
-                        onSort={updateColumnSort}
-                        sort="component"
-                      />
-                      <SortHeader
-                        currentDirection={findingDirection}
-                        currentSort={queueSort}
-                        label="Owner"
-                        onSort={updateColumnSort}
-                        sort="owner"
-                      />
-                      <SortHeader
-                        currentDirection={findingDirection}
-                        currentSort={queueSort}
-                        label="Status"
-                        onSort={updateColumnSort}
-                        sort="status"
-                      />
-                      <SortHeader
-                        currentDirection={findingDirection}
-                        currentSort={queueSort}
-                        label="Signals"
-                        onSort={updateColumnSort}
-                        sort="epss"
-                      />
-                      <StaticHeader label="Why now" />
-                      <StaticHeader align="right" label="View" />
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {displayFindings.map((finding) => (
-                      <tr key={finding.id}>
-                        <td>
-                          <PriorityBadge priority={finding.priority} />
-                        </td>
-                        <td>
-                          <RiskScore value={finding.risk_score} />
-                        </td>
-                        <td>
-                          <Link
-                            className="finding-cve-link"
-                            params={{ findingId: finding.id }}
-                            title={`Open finding ${finding.cve_id}`}
-                            to="/findings/$findingId"
-                          >
-                            {finding.cve_id}
-                          </Link>
-                          {finding.attack_mapped ? (
-                            <span className="remediation-subtext">
-                              ATT&amp;CK mapped
-                            </span>
-                          ) : null}
-                        </td>
-                        <td className="remediation-component-cell">
-                          <strong title={componentLabel(finding)}>
-                            {componentLabel(finding)}
-                          </strong>
-                          <span
-                            className="remediation-subtext"
-                            title={`${serviceLabel(finding)} / ${assetLabel(finding)}`}
-                          >
-                            {serviceLabel(finding)} / {assetLabel(finding)}
-                          </span>
-                        </td>
-                        <td>
-                          <strong>{ownerLabel(finding)}</strong>
-                          {finding.exposure ? (
-                            <span className="remediation-subtext">
-                              {labelize(finding.exposure)}
-                            </span>
-                          ) : null}
-                        </td>
-                        <td>
-                          <div className="remediation-status-cell">
-                            <FindingStatusBadge status={finding.status} />
-                            <span
-                              className="remediation-subtext"
-                              title={`Last seen ${formatDateTime(finding.last_seen_at)}`}
-                            >
-                              {formatShortDate(finding.last_seen_at)}
-                            </span>
-                          </div>
-                        </td>
-                        <td>
-                          <div className="remediation-signal-stack">
-                            <span className="remediation-signal-item">
-                              <span>EPSS</span>
-                              <strong>
-                                <EpssBadge value={finding.epss} />
-                              </strong>
-                            </span>
-                            <span className="remediation-signal-item">
-                              <span>CVSS</span>
-                              <strong>
-                                <CvssBadge value={finding.cvss_base_score} />
-                              </strong>
-                            </span>
-                            <KevBadge matched={finding.in_kev} />
-                          </div>
-                        </td>
-                        <td>
-                          <span className="remediation-why-now">
-                            {findingWhyNow(finding)}
-                          </span>
-                          <button
-                            className="remediation-why-action"
-                            onClick={() => openWhy(finding)}
-                            type="button"
-                          >
-                            Why now
-                          </button>
-                        </td>
-                        <td>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                aria-label={`Quick view ${finding.cve_id}`}
-                                className="finding-view-action"
-                                onClick={() => openSheet(finding)}
-                                type="button"
-                                variant="ghost"
-                              >
-                                <Eye aria-hidden="true" size={16} />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent side="left">
-                              Quick view
-                            </TooltipContent>
-                          </Tooltip>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <FindingsDataTable
+                findingDirection={findingDirection}
+                findings={displayFindings}
+                onOpenSheet={openSheet}
+                onOpenWhy={openWhy}
+                onSort={updateColumnSort}
+                queueSort={queueSort}
+              />
             </section>
 
             {/* Pagination */}
