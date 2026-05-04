@@ -1,4 +1,5 @@
 import { expect, type Locator, type Page, test } from "@playwright/test"
+import { evidenceScreenshotPath } from "./evidence-paths"
 
 const validOccurrenceCsv = Buffer.from(
   [
@@ -173,7 +174,7 @@ test("template waiver workflow keeps accepted risk visible", async ({
   await expect(findingDetail).toContainText("Temporary accepted risk")
   await page.screenshot({
     fullPage: true,
-    path: "../docs/evidence/vpw-064-waiver-risk-acceptance.png",
+    path: evidenceScreenshotPath("vpw-064-waiver-risk-acceptance.png"),
   })
 
   await page.goto("/waivers")
@@ -290,7 +291,7 @@ test("template governance rollups show service risk and waiver debt", async ({
   await expect(page.getByText("checkout").first()).toBeVisible()
   await page.screenshot({
     fullPage: true,
-    path: "../docs/evidence/vpw-067-top-services-by-risk.png",
+    path: evidenceScreenshotPath("vpw-067-top-services-by-risk.png"),
   })
 
   await page.goto("/waivers")
@@ -304,6 +305,6 @@ test("template governance rollups show service risk and waiver debt", async ({
 
   await page.screenshot({
     fullPage: true,
-    path: "../docs/evidence/vpw-067-governance-rollups-waiver-debt.png",
+    path: evidenceScreenshotPath("vpw-067-governance-rollups-waiver-debt.png"),
   })
 })

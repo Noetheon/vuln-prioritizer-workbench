@@ -38,7 +38,7 @@ work.
 
 ## Current Workbench App Direction
 
-Status: roadmap slices through Workbench v1.2 are implemented on `main`; the original implementation plan is preserved as a historical planning artifact in [docs/workbench-masterplan.md](./workbench-masterplan.md).
+Status: roadmap slices through Workbench v1.2 are implemented on `main`; the original implementation plan is preserved as a historical planning artifact in `archive/historical-planning/workbench-masterplan.md`.
 
 The current Workbench exposes the existing CLI/core behavior as a local-first, self-hosted vulnerability prioritization application. The CLI remains supported for automation and CI; the Workbench adds API, database-backed imports, a browser UI, local project worklists, and report workflows around the same transparent prioritization model.
 

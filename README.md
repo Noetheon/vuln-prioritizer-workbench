@@ -389,9 +389,9 @@ Current local Workbench limitations:
 Current Workbench readiness and shared-deployment prerequisites are tracked in
 [docs/workbench-threat-model.md](docs/workbench-threat-model.md). VPW-071
 secret/provider hardening evidence is tracked in
-[docs/evidence/vpw-071-secret-provider-hardening.md](docs/evidence/vpw-071-secret-provider-hardening.md).
+[archive/vpw-evidence/vpw-071-secret-provider-hardening.md](archive/vpw-evidence/vpw-071-secret-provider-hardening.md).
 The historical implementation plan remains available in
-[docs/workbench-masterplan.md](docs/workbench-masterplan.md), and
+[archive/historical-planning/workbench-masterplan.md](archive/historical-planning/workbench-masterplan.md), and
 [docs/roadmap.md](docs/roadmap.md) tracks the shipped CLI plus local Workbench
 release line.
 
@@ -635,7 +635,7 @@ Start here for public CLI usage and the local Workbench app path:
 - [docs/releases/v1.1.0.md](docs/releases/v1.1.0.md)
 - [docs/roadmap.md](docs/roadmap.md)
 - [ROADMAP.md](ROADMAP.md)
-- Historical Workbench masterplan: [docs/workbench-masterplan.md](docs/workbench-masterplan.md)
+- Historical Workbench masterplan: [archive/historical-planning/workbench-masterplan.md](archive/historical-planning/workbench-masterplan.md)
 
 Maintainer / repo-checkout workflows:
 
@@ -710,9 +710,13 @@ make playwright-check
 make release-check
 make demo-sync-check-temp
 make package-check-temp
+make clean-local
+make clean-deps
 ```
 
 Use `make playwright-check` for real-browser Workbench coverage; run `make playwright-install` once on a development machine before the first Playwright run. If you change docs, examples, or report artifacts, run `make release-check` so the committed example outputs stay in sync. Use the `*-temp` targets when you want the same demo or package validation in a temporary copy without mutating checked-in docs artifacts or `dist/`.
+
+`make clean-local` removes local caches, logs, coverage, build outputs, generated sites, and `.DS_Store` files while preserving `.env`, local databases, and dependency directories. `make clean-deps` extends that cleanup to dependency-heavy directories such as `node_modules` and the checked-out Playwright browser cache.
 
 Pull request readiness:
 

@@ -44,10 +44,10 @@ jobs:
           changed_files="$(git diff --name-only "$base_sha"...HEAD)"
           printf '%s\n' "$changed_files"
 
-          # Docs/evidence-only PRs still get a successful Docker workflow, but
+          # Docs/archive-only PRs still get a successful Docker workflow, but
           # skip the expensive compose build because runtime behavior cannot
           # change from those paths.
-          if printf '%s\n' "$changed_files" | grep -Ev '^(docs/|.*\.md$)' >/dev/null; then
+          if printf '%s\n' "$changed_files" | grep -Ev '^(docs/|archive/|.*\.md$)' >/dev/null; then
             echo "run-docker=true" >> "$GITHUB_OUTPUT"
           else
             echo "run-docker=false" >> "$GITHUB_OUTPUT"
@@ -58,7 +58,7 @@ jobs:
     needs: changes
 
     steps:
-      - name: Skip Docker smoke for docs/evidence-only PR
+      - name: Skip Docker smoke for docs/archive-only PR
         if: needs.changes.outputs.run-docker != 'true'
         run: echo "No runtime-impacting files changed; Docker compose smoke skipped."
 

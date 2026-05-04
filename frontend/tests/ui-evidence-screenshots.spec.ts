@@ -1,16 +1,5 @@
-import { mkdirSync } from "node:fs"
-import path from "node:path"
 import { expect, type Page, test } from "@playwright/test"
-
-const screenshotDir = path.join(
-  process.cwd(),
-  "..",
-  "docs",
-  "ui-productization",
-  "screenshots",
-)
-
-mkdirSync(screenshotDir, { recursive: true })
+import { evidenceScreenshotPath } from "./evidence-paths"
 
 async function login(page: Page) {
   await page.goto("/login")
@@ -30,7 +19,7 @@ async function captureRoute(
   await selectorAssertion()
   await page.screenshot({
     fullPage: true,
-    path: path.join(screenshotDir, fileName),
+    path: evidenceScreenshotPath("ui-productization", "screenshots", fileName),
   })
 }
 

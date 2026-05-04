@@ -180,7 +180,7 @@ jobs:
           name: frontend-playwright-evidence
           retention-days: 3
           path: |
-            docs/evidence/vpw-047-core-workbench-flow.png
+            frontend/test-results/evidence
             frontend/test-results
             frontend/playwright-report
           if-no-files-found: ignore

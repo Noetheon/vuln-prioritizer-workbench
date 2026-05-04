@@ -17,7 +17,7 @@ The Workbench v1.0 milestone evidence is preserved here, but the current package
 - `python3 -m pip check` is not used as release evidence in the shared user-site environment because unrelated globally installed packages conflict with each other outside this project.
 - Public package tag and GitHub Release object: `v1.1.0` published from `23199ef85fb9ac08b9bb0e301b2aadbf3377f791`.
 - Duplicate VPW-072 performance smoke evidence: `make performance-smoke` passed on 2026-04-30 with 10,000 findings, import `1.1442s`, tail page `0.2420s`, and peak RSS delta `208.594 MiB`.
-- Duplicate VPW-076 release-story closeout evidence is collected in `docs/evidence/vpw-076-release-story.md`.
+- Duplicate VPW-076 release-story closeout evidence is archived in `archive/vpw-evidence/vpw-076-release-story.md`.
 
 ## GitHub Tracker Mapping
 
@@ -66,7 +66,7 @@ make performance-smoke
 
 - [x] Confirm 10,000 synthetic findings are imported with locked provider data.
 - [x] Confirm the high-offset findings page returns 100 stable items.
-- [x] Archive the machine-readable result under `docs/evidence/vpw-072-performance-smoke.json`.
+- [x] Archive the machine-readable result under `archive/vpw-evidence/vpw-072-performance-smoke.json`.
 - [x] Document MVP thresholds and known limits in `docs/benchmarking.md`.
 
 ## Demo Evidence Bundle

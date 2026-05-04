@@ -21,7 +21,7 @@ ATTACK_DEMO_ARTIFACTS = (
     "docs/example_attack_compare.md",
     "docs/example_attack_explain.json",
     "docs/examples/example_report.html",
-    "docs/evidence/vpw-060-attack-navigator-layer.json",
+    "archive/vpw-evidence/vpw-060-attack-navigator-layer.json",
 )
 
 FORBIDDEN_PROCEDURE_PATTERNS = {

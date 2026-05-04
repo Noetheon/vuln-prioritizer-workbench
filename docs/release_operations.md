@@ -152,6 +152,35 @@ printf 'CVE-2021-44228\n' > smoke-cves.txt
 vuln-prioritizer analyze --input smoke-cves.txt --format json --output smoke.json
 ```
 
+## CI Cost Policy
+
+The repository keeps PR safety checks active while reducing duplicate and
+long-running GitHub Actions work.
+
+Pull requests to `main` run the Python workflow gate, local action smoke,
+frontend lint/build/client drift checks, Playwright smoke coverage, Docker
+workflow status, and CodeQL where configured. Docs/archive-only PRs still get a
+successful Docker workflow, but the expensive Docker compose build is skipped
+after the workflow confirms that only non-runtime paths changed.
+
+Pushes to `main` run the post-merge version of the same CI workflows. The
+frontend job runs the full Playwright suite on `main`, while PRs run the smoke
+spec for faster feedback. Manual `workflow_dispatch` remains available for full
+validation of CI, Docker, maintenance, release, and TestPyPI paths.
+
+The main cost controls are:
+
+- stale workflow runs are cancelled after newer pushes;
+- feature-branch push workflows are not duplicated when a PR already validates
+  the same commit;
+- full Playwright runs on `main` and manual CI, while PRs use smoke coverage;
+- Docker compose is skipped for docs/archive-only changes;
+- failure/debug artifacts use short retention windows.
+
+The tradeoff is that full Playwright regressions may be discovered after merge
+instead of during every PR. The PR smoke suite still covers core route
+rendering, and runtime-impacting paths continue to run Docker.
+
 ## Failure Modes To Check First
 
 If the PyPI publish job fails, check these before anything else:

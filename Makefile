@@ -14,7 +14,7 @@ DEMO_EVIDENCE_ANALYSIS_FILE := build/v1.0-demo-analysis.json
 DEMO_EVIDENCE_BUNDLE_FILE := build/v1.0-demo-evidence-bundle.zip
 DEMO_EVIDENCE_VERIFICATION_FILE := build/v1.0-demo-evidence-bundle-verification.json
 
-.PHONY: install test lint format fix typecheck check benchmark-check performance-smoke playwright-install playwright-check frontend-install frontend-build frontend-lint frontend-generate-client frontend-check docs-check docs-serve actionlint-check workflow-check docker-demo-smoke docker-postgres-migration-smoke dependency-audit provider-snapshot-validate provider-testmatrix demo-offline-no-key-proof demo-sync-check demo-sync-check-temp package package-check package-check-temp pipx-source-smoke release-check demo-report demo-compare demo-explain demo-attack-report demo-attack-compare demo-attack-explain demo-attack-coverage demo-attack-navigator demo-pr-comment demo-results-sarif demo-html-report demo-evidence-analysis demo-evidence-bundle demo-evidence-bundle-check precommit-install
+.PHONY: install test lint format fix typecheck check benchmark-check performance-smoke playwright-install playwright-check frontend-install frontend-build frontend-lint frontend-generate-client frontend-check docs-check docs-serve actionlint-check workflow-check docker-demo-smoke docker-postgres-migration-smoke dependency-audit clean-local clean-deps provider-snapshot-validate provider-testmatrix demo-offline-no-key-proof demo-sync-check demo-sync-check-temp package package-check package-check-temp pipx-source-smoke release-check demo-report demo-compare demo-explain demo-attack-report demo-attack-compare demo-attack-explain demo-attack-coverage demo-attack-navigator demo-pr-comment demo-results-sarif demo-html-report demo-evidence-analysis demo-evidence-bundle demo-evidence-bundle-check precommit-install
 
 install:
 	$(PYTHON) -m pip install -e "$(BACKEND_DIR)[dev]"
@@ -153,6 +153,18 @@ dependency-audit:
 		exit 1; \
 	}
 	$(PYTHON) -m pip_audit --requirement $(BACKEND_DIR)/requirements.txt
+
+clean-local:
+	find . -name .DS_Store -not -path './.git/*' -delete
+	rm -rf .cache .mypy_cache .pytest_cache .ruff_cache .playwright-cli .playwright-mcp
+	rm -rf backend/.mypy_cache backend/.pytest_cache backend/.ruff_cache
+	rm -rf build dist site htmlcov test-results frontend/test-results frontend/playwright-report frontend/dist
+	rm -rf .coverage .coverage.* coverage.xml backend-uvicorn.log frontend-vite.log
+	find . -name __pycache__ -type d -not -path './.git/*' -prune -exec rm -rf {} +
+	find . -name '*.py[co]' -not -path './.git/*' -delete
+
+clean-deps: clean-local
+	rm -rf node_modules frontend/node_modules Library/Caches/ms-playwright
 
 demo-sync-check:
 	@before="$$(mktemp)"; after="$$(mktemp)"; \

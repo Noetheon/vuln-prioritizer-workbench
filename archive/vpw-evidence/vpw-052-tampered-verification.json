@@ -1,0 +1,61 @@
+{
+  "items": [
+    {
+      "actual_sha256": "9d5cd9c11beb3eaf59b581c277b21099a079c49ebab59ec5d5a3ce9dea7dde27",
+      "actual_size_bytes": 7722,
+      "detail": "Archive member does not match the manifest: sha256 mismatch.",
+      "expected_sha256": "ca8e805a2e43d7751863fb276552f61f385c5afaa5af1b4015c6f08e53ceaa39",
+      "expected_size_bytes": 7722,
+      "kind": "analysis-json",
+      "path": "analysis.json",
+      "status": "modified"
+    },
+    {
+      "actual_sha256": "997cdc9b938916a44711bc247ddf977af1e79bfb902cda10a6a59a5074307da5",
+      "actual_size_bytes": 1670,
+      "detail": "Archive member matches the manifest checksum.",
+      "expected_sha256": "997cdc9b938916a44711bc247ddf977af1e79bfb902cda10a6a59a5074307da5",
+      "expected_size_bytes": 1670,
+      "kind": "technical-markdown",
+      "path": "technical.md",
+      "status": "ok"
+    },
+    {
+      "actual_sha256": "e1a6b17fb472f11b6f7b83b78bebdf1b93c55573221e5922627a9b25df4d3f18",
+      "actual_size_bytes": 7698,
+      "detail": "Archive member matches the manifest checksum.",
+      "expected_sha256": "e1a6b17fb472f11b6f7b83b78bebdf1b93c55573221e5922627a9b25df4d3f18",
+      "expected_size_bytes": 7698,
+      "kind": "executive-html",
+      "path": "executive.html",
+      "status": "ok"
+    },
+    {
+      "actual_sha256": "f5dab115122d78f3ac437386b83f2b5341e2694f0db909ca8cac111cdb57fea0",
+      "actual_size_bytes": 548,
+      "detail": "Archive member matches the manifest checksum.",
+      "expected_sha256": "f5dab115122d78f3ac437386b83f2b5341e2694f0db909ca8cac111cdb57fea0",
+      "expected_size_bytes": 548,
+      "kind": "provider-snapshot",
+      "path": "provider-snapshot.json",
+      "status": "ok"
+    }
+  ],
+  "metadata": {
+    "bundle_kind": "evidence-bundle",
+    "bundle_path": "build/vpw-052-evidence/tampered-evidence-bundle.zip",
+    "generated_at": "2026-04-29T16:56:33+00:00",
+    "manifest_schema_version": "1.1.0",
+    "schema_version": "1.2.0"
+  },
+  "summary": {
+    "expected_files": 4,
+    "manifest_errors": 0,
+    "missing_files": 0,
+    "modified_files": 1,
+    "ok": false,
+    "total_members": 5,
+    "unexpected_files": 0,
+    "verified_files": 3
+  }
+}
