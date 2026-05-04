@@ -12,6 +12,11 @@ The site includes the `v1.1.0` release notes, Workbench milestone evidence, and 
 - [Release notes: Workbench v1.0.0](releases/workbench-v1.0.0.md)
 - [Workbench v1.0 release checklist](workbench-v1-release-checklist.md)
 - [External user documentation guide](user_documentation.md)
+- [Current product architecture](architecture.md)
+- [Scoring methodology](scoring-methodology.md)
+- [ATT&CK/TTP methodology](attack-ttp-methodology.md)
+- [Reports and evidence](reports-and-evidence.md)
+- [Demo readiness](demo-readiness.md)
 - [Example HTML report](examples/example_report.html)
 - [Template report demo artifacts](examples/vpw-054-template-technical-report.md)
 - [Operational use cases](use_cases.md)
@@ -91,6 +96,11 @@ for single-upload and multi-upload flows.
 - Start with [user_documentation.md](user_documentation.md) when you need the full external-user path.
 - Start with [concept.md](concept.md) for positioning and scope.
 - Read [methodology.md](methodology.md) for scoring, ATT&CK, Asset Context, and VEX semantics.
+- Read [architecture.md](architecture.md) for the current FastAPI/React route architecture, generated client boundary, VPW design-system role, and shared state ownership.
+- Read [scoring-methodology.md](scoring-methodology.md) for the rule-based CVSS, EPSS, KEV, lifecycle, provider freshness, asset-context, and waiver methodology.
+- Read [attack-ttp-methodology.md](attack-ttp-methodology.md) for curated ATT&CK/TTP mapping rules, no-inference boundaries, and the current mapped demo proof.
+- Read [reports-and-evidence.md](reports-and-evidence.md) for Evidence Center formats, ZIP bundle verification, canonical contract artifacts, and archive layout.
+- Read [demo-readiness.md](demo-readiness.md) for the Project -> Import -> Findings -> Finding Detail -> TTP Context -> Waivers -> Evidence Center demo flow.
 - Use [support_matrix.md](support_matrix.md) and [contracts.md](contracts.md) for stable consumer-facing surfaces.
 - Use [architecture/index.md](architecture/index.md), [architecture/core-workbench-schema.md](architecture/core-workbench-schema.md), and [architecture/analysis-run-provider-schema.md](architecture/analysis-run-provider-schema.md) for architecture and data-model details.
 - Use [asset-context-csv.md](asset-context-csv.md) for the local asset-context CSV schema, match modes, precedence, and re-score semantics.
