@@ -26,6 +26,7 @@ jobs:
   analyze:
     name: Analyze Python
     runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
 
     steps:
       - name: Check out repository

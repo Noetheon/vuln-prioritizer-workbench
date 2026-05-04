@@ -23,6 +23,10 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
+      # Branch protection currently requires both matrix check contexts. Pull
+      # requests run the full workflow gate only on the primary Python version;
+      # the secondary PR context exits successfully after a clear skip message.
+      # Pushes to main and manual runs keep the full supported matrix.
       matrix:
         python-version: ["3.11", "3.12"]
 
@@ -30,7 +34,16 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v6
 
+      - name: Skip expensive Python gate for draft PR
+        if: github.event_name == 'pull_request' && github.event.pull_request.draft
+        run: echo "Draft pull request; skipping expensive Python workflow gate."
+
+      - name: Skip secondary Python PR version
+        if: github.event_name == 'pull_request' && !github.event.pull_request.draft && matrix.python-version != '3.12'
+        run: echo "Pull request Python gate runs on 3.12 only; full matrix runs on main and manual dispatch."
+
       - name: Set up Python
+        if: github.event_name != 'pull_request' || (!github.event.pull_request.draft && matrix.python-version == '3.12')
         uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
@@ -41,13 +54,16 @@ jobs:
             .pre-commit-config.yaml
 
       - name: Install project and dev dependencies
+        if: github.event_name != 'pull_request' || (!github.event.pull_request.draft && matrix.python-version == '3.12')
         run: python -m pip install -e "backend[dev]"
 
       - name: Run local-equivalent workflow gate
+        if: github.event_name != 'pull_request' || (!github.event.pull_request.draft && matrix.python-version == '3.12')
         run: make workflow-check
 
   action-smoke:
     runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
 
     steps:
       - name: Check out repository
@@ -125,8 +141,42 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Decide whether frontend gate is needed
+        id: frontend-scope
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${{ github.event_name }}" != "pull_request" ]]; then
+            echo "run-frontend=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if [[ "${{ github.event.pull_request.draft }}" == "true" ]]; then
+            echo "Draft pull request; skipping expensive frontend gate."
+            echo "run-frontend=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          base_sha="${{ github.event.pull_request.base.sha }}"
+          changed_files="$(git diff --name-only "$base_sha"...HEAD)"
+          printf '%s\n' "$changed_files"
+
+          if printf '%s\n' "$changed_files" | grep -Ev '^($|docs/|archive/|\.github/|.*\.md$)' >/dev/null; then
+            echo "run-frontend=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Documentation, archive, or workflow-only PR; skipping expensive frontend gate."
+            echo "run-frontend=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Skip frontend gate
+        if: steps.frontend-scope.outputs.run-frontend != 'true'
+        run: echo "Frontend gate skipped; no frontend/runtime-impacting files changed."
 
       - name: Set up Python
+        if: steps.frontend-scope.outputs.run-frontend == 'true'
         uses: actions/setup-python@v6
         with:
           python-version: "3.12"
@@ -136,41 +186,50 @@ jobs:
             backend/pyproject.toml
 
       - name: Set up Node
+        if: steps.frontend-scope.outputs.run-frontend == 'true'
         uses: actions/setup-node@v6
         with:
           node-version: "22"
 
       - name: Install backend package
+        if: steps.frontend-scope.outputs.run-frontend == 'true'
         run: python -m pip install -e "backend[dev]"
 
       - name: Install frontend dependencies
+        if: steps.frontend-scope.outputs.run-frontend == 'true'
         run: npm --prefix frontend install --no-package-lock
 
       - name: Lint frontend
+        if: steps.frontend-scope.outputs.run-frontend == 'true'
         run: make frontend-lint
 
       - name: Check frontend lint drift
+        if: steps.frontend-scope.outputs.run-frontend == 'true'
         run: git diff --exit-code -- frontend
 
       - name: Build frontend
+        if: steps.frontend-scope.outputs.run-frontend == 'true'
         run: make frontend-build
 
       - name: Regenerate frontend client
+        if: steps.frontend-scope.outputs.run-frontend == 'true'
         run: make frontend-generate-client
 
       - name: Check generated frontend client drift
+        if: steps.frontend-scope.outputs.run-frontend == 'true'
         run: git diff --exit-code -- frontend/src/client
 
       - name: Install Playwright browser
+        if: steps.frontend-scope.outputs.run-frontend == 'true'
         working-directory: frontend
         run: npx playwright install --with-deps chromium
 
       - name: Run frontend Playwright smoke
-        if: github.event_name == 'pull_request'
+        if: steps.frontend-scope.outputs.run-frontend == 'true' && github.event_name == 'pull_request'
         run: npm --prefix frontend run test -- tests/ui-smoke.spec.ts
 
       - name: Run full frontend Playwright suite
-        if: github.event_name != 'pull_request'
+        if: steps.frontend-scope.outputs.run-frontend == 'true' && github.event_name != 'pull_request'
         run: npm --prefix frontend run test
 
       - name: Upload frontend Playwright failure evidence

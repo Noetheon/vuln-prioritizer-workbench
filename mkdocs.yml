@@ -42,6 +42,7 @@ nav:
   - Integrations: integrations/reporting_and_ci.md
   - Gap Analysis: reference_cve_prioritizer_gap_analysis.md
   - Community Setup: community_repository_setup.md
+  - CI Cost Optimization: ci-cost-optimization.md
   - Release Operations: release_operations.md
   - Roadmap: roadmap.md
   - Workbench History:

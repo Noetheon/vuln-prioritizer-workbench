@@ -40,16 +40,33 @@ jobs:
             exit 0
           fi
 
+          if [[ "${{ github.event.pull_request.draft }}" == "true" ]]; then
+            echo "Draft pull request; Docker compose smoke skipped."
+            echo "run-docker=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
           base_sha="${{ github.event.pull_request.base.sha }}"
           changed_files="$(git diff --name-only "$base_sha"...HEAD)"
           printf '%s\n' "$changed_files"
 
-          # Docs/archive-only PRs still get a successful Docker workflow, but
-          # skip the expensive compose build because runtime behavior cannot
-          # change from those paths.
-          if printf '%s\n' "$changed_files" | grep -Ev '^(docs/|archive/|.*\.md$)' >/dev/null; then
+          # The compose smoke remains a required check, so it runs as a job and
+          # skips internally unless a PR touches runtime/build inputs. Frontend
+          # route, component, and CSS changes are covered by the CI frontend
+          # job and do not need a Docker rebuild on every PR.
+          run_docker=false
+          while IFS= read -r path; do
+            case "$path" in
+              backend/*|compose*.yml|backend/Dockerfile|frontend/Dockerfile|frontend/Dockerfile.playwright|docker/*|pyproject.toml|backend/pyproject.toml|backend/requirements.txt|uv.lock|scripts/start*|package.json|bun.lock|frontend/package.json|frontend/nginx.conf|frontend/nginx-backend-not-found.conf|frontend/vite.config.*|frontend/tsconfig*.json)
+                run_docker=true
+                ;;
+            esac
+          done <<< "$changed_files"
+
+          if [[ "$run_docker" == "true" ]]; then
             echo "run-docker=true" >> "$GITHUB_OUTPUT"
           else
+            echo "No runtime-impacting Docker inputs changed; compose smoke skipped."
             echo "run-docker=false" >> "$GITHUB_OUTPUT"
           fi
 
@@ -58,7 +75,7 @@ jobs:
     needs: changes
 
     steps:
-      - name: Skip Docker smoke for docs/archive-only PR
+      - name: Skip Docker smoke for non-runtime PR
         if: needs.changes.outputs.run-docker != 'true'
         run: echo "No runtime-impacting files changed; Docker compose smoke skipped."
 
