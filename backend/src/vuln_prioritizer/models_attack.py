@@ -56,6 +56,21 @@ def _validate_attack_tactic_id(value: str) -> str:
     return normalized
 
 
+def require_attack_non_empty_text(value: str, field_name: str) -> str:
+    """Normalize and validate required ATT&CK text fields."""
+    return _require_non_empty(value, field_name)
+
+
+def validate_attack_technique_id(value: str) -> str:
+    """Normalize and validate an ATT&CK technique or sub-technique ID."""
+    return _validate_attack_technique_id(value)
+
+
+def validate_attack_tactic_id(value: str) -> str:
+    """Normalize and validate an ATT&CK tactic ID."""
+    return _validate_attack_tactic_id(value)
+
+
 class AttackTactic(StrictModel):
     tactic_id: str
     name: str
@@ -67,12 +82,12 @@ class AttackTactic(StrictModel):
     @field_validator("tactic_id")
     @classmethod
     def validate_tactic_id(cls, value: str) -> str:
-        return _validate_attack_tactic_id(value)
+        return validate_attack_tactic_id(value)
 
     @field_validator("name")
     @classmethod
     def validate_name(cls, value: str) -> str:
-        return _require_non_empty(value, "name")
+        return require_attack_non_empty_text(value, "name")
 
 
 class AttackMapping(StrictModel):
@@ -103,12 +118,12 @@ class AttackTechnique(StrictModel):
     @field_validator("attack_object_id")
     @classmethod
     def validate_attack_object_id(cls, value: str) -> str:
-        return _validate_attack_technique_id(value)
+        return validate_attack_technique_id(value)
 
     @field_validator("name")
     @classmethod
     def validate_name(cls, value: str) -> str:
-        return _require_non_empty(value, "name")
+        return require_attack_non_empty_text(value, "name")
 
 
 class CveAttackMapping(StrictModel):
@@ -129,18 +144,18 @@ class CveAttackMapping(StrictModel):
     @field_validator("technique_id")
     @classmethod
     def validate_technique_id(cls, value: str) -> str:
-        return _validate_attack_technique_id(value)
+        return validate_attack_technique_id(value)
 
     @field_validator("source", "rationale", "defensive_note")
     @classmethod
     def validate_required_text(cls, value: str, info: object) -> str:
         field_name = getattr(info, "field_name", "value")
-        return _require_non_empty(value, str(field_name))
+        return require_attack_non_empty_text(value, str(field_name))
 
     @model_validator(mode="after")
     def validate_tactics(self) -> CveAttackMapping:
         for tactic_id in self.tactic_ids:
-            _validate_attack_tactic_id(tactic_id)
+            validate_attack_tactic_id(tactic_id)
         return self
 
 

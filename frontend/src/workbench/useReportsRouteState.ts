@@ -17,6 +17,7 @@ import {
   objectRecord,
 } from "../lib/app-errors"
 import { isReportableRunStatus, reportFormatLabel } from "../lib/report-format"
+import { reportDownloadRequest } from "./report-download"
 
 type UseReportsRouteStateOptions = {
   currentPath: WorkbenchPath
@@ -25,19 +26,9 @@ type UseReportsRouteStateOptions = {
   selectedRunId: string
 }
 
-function reportDownloadUrl(report: ReportPublic) {
-  if (report.download_url.startsWith("http")) {
-    return report.download_url
-  }
-  const base = OpenAPI.BASE.replace(/\/+$/, "")
-  return `${base}${report.download_url}`
-}
-
 async function downloadReportArtifact(report: ReportPublic) {
-  const token = getAccessToken()
-  const response = await fetch(reportDownloadUrl(report), {
-    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-  })
+  const request = reportDownloadRequest(report, getAccessToken(), OpenAPI.BASE)
+  const response = await fetch(request.url, { headers: request.headers })
   if (!response.ok) {
     let detail = ""
     try {
