@@ -8,10 +8,10 @@ These notes are Workbench milestone notes. The current package tree is versioned
 
 ## Features
 
-- Local-first FastAPI and Jinja2 Workbench with SQLite default storage.
+- Local-first FastAPI Workbench with active `backend/app` runtime boundaries.
 - Project, import, findings, vulnerability-intelligence, settings, governance, reports, and evidence views.
 - Workbench import support for CVE lists, generic occurrence CSV, Trivy JSON, and Grype JSON.
-- Provider snapshot persistence and `/api/providers/status` freshness visibility.
+- Provider snapshot persistence and `/api/v1/providers/status` freshness visibility.
 - Optional ATT&CK context from local `ctid-json` files with review/rationale/confidence fields.
 - Findings API pagination, filtering, sorting, and 10k pagination smoke coverage.
 - Asset context, VEX, and waiver upload visibility with owner/service/governance rollups.

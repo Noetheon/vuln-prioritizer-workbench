@@ -18,6 +18,7 @@ from app import models as app_models
 from app.services import TemplateAnalysisError
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
+SAMPLE_CVES = PROJECT_ROOT / "data" / "sample_cves.txt"
 TRIVY_REPORT = PROJECT_ROOT / "data" / "input_fixtures" / "trivy_report.json"
 OPENVEX = PROJECT_ROOT / "data" / "input_fixtures" / "openvex_statements.json"
 CYCLONEDX_VEX = PROJECT_ROOT / "data" / "input_fixtures" / "cyclonedx_vex.json"
@@ -125,6 +126,49 @@ def test_valid_cve_list_upload_creates_analysis_run_and_stores_sha256(
     assert summary_payload["kev_hits"] == payload["summary_json"]["kev_hits"]
     assert summary_payload["parse_errors"] == []
     assert summary_payload["input_upload"]["sha256"] == expected_sha256
+
+
+def test_template_import_uses_demo_snapshot_without_network_or_keys(
+    monkeypatch: pytest.MonkeyPatch,
+    template_api_env: TemplateApiEnv,
+    tmp_path: Path,
+) -> None:
+    _configure_upload_dir(template_api_env, tmp_path)
+    for env_name in ("NVD_API_KEY", "FIRST_API_KEY"):
+        monkeypatch.delenv(env_name, raising=False)
+    for proxy_name in ("HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY"):
+        monkeypatch.setenv(proxy_name, "http://127.0.0.1:9")
+    headers = auth_headers(template_api_env.client)
+    project = create_project_via_api(template_api_env.client, headers)
+
+    response = template_api_env.client.post(
+        f"/api/v1/projects/{project['id']}/imports",
+        headers=headers,
+        data={
+            "input_type": "cve-list",
+            "provider_snapshot_file": "demo_provider_snapshot.json",
+            "locked_provider_data": "true",
+        },
+        files={"file": ("sample_cves.txt", SAMPLE_CVES.read_bytes(), "text/plain")},
+    )
+
+    assert response.status_code == 200, response.text
+    payload = response.json()
+    summary = payload["summary_json"]
+    assert payload["status"] == "succeeded"
+    assert summary["locked_provider_data"] is True
+    assert summary["provider_snapshot_file"].endswith("data/demo_provider_snapshot.json")
+    assert summary["provider_snapshot_id"] == payload["provider_snapshot_id"]
+    assert summary["finding_count"] > 0
+    assert summary["kev_hits"] > 0
+    with Session(template_api_env.engine) as session:
+        snapshot = session.get(
+            app_models.ProviderSnapshot,
+            uuid.UUID(payload["provider_snapshot_id"]),
+        )
+        assert snapshot is not None
+        assert snapshot.content_hash
+        assert set(snapshot.source_hashes_json) == {"provider_snapshot"}
 
 
 def test_attack_import_exposes_template_finding_ttp_context(

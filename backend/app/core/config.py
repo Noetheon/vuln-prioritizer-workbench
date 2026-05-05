@@ -21,7 +21,6 @@ class Settings:
     API_V1_STR: str = "/api/v1"
     PROJECT_NAME: str = "Vuln Prioritizer Workbench"
     ENVIRONMENT: EnvironmentName = "local"
-    LEGACY_API_PREFIX: str = "/api"
     SECRET_KEY: str = "changethis"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 8
     FIRST_SUPERUSER: str = "admin@example.com"
@@ -110,7 +109,6 @@ def load_settings() -> Settings:
         API_V1_STR=environ.get("API_V1_STR", "/api/v1"),
         PROJECT_NAME=environ.get("PROJECT_NAME", "Vuln Prioritizer Workbench"),
         ENVIRONMENT=environment,
-        LEGACY_API_PREFIX=environ.get("LEGACY_API_PREFIX", "/api"),
         SECRET_KEY=environ.get("SECRET_KEY", DEFAULT_TEMPLATE_SECRET),
         ACCESS_TOKEN_EXPIRE_MINUTES=int(
             environ.get("ACCESS_TOKEN_EXPIRE_MINUTES", str(60 * 24 * 8))

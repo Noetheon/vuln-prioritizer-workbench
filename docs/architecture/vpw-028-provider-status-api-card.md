@@ -2,11 +2,11 @@
 
 VPW-028 defines the template-stack provider status read contract used by the
 React Workbench status card. It does not replace provider enrichment,
-snapshot replay, update jobs, or the legacy Workbench provider routes.
+snapshot replay, or update jobs.
 
 ## Route
 
-The template adapter exposes:
+The active backend exposes:
 
 ```http
 GET /api/v1/providers/status
@@ -16,10 +16,6 @@ Authorization: Bearer <template JWT>
 The route is authenticated through the template API dependency used by the
 other `/api/v1` Workbench routes. Anonymous requests must not receive provider
 runtime paths, cache evidence, or update-job details.
-
-The legacy Workbench route `GET /api/providers/status` remains
-compatibility-only with its current response and authentication behavior. React
-template code must use `/api/v1/providers/status`.
 
 ## Response Contract
 
@@ -70,7 +66,5 @@ It should render:
 - latest update-job id and status when present
 
 Closure evidence for implementation should include an authenticated API
-contract check, generated-client or typed-fetch usage against
-`/api/v1/providers/status`, and React test or screenshot coverage for both
-usable and degraded payloads. The React card should not call the legacy
-`/api/providers/status` route directly.
+contract check, generated-client usage against `/api/v1/providers/status`, and
+React test or screenshot coverage for both usable and degraded payloads.

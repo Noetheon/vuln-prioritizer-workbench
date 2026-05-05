@@ -20,11 +20,7 @@ def test_template_backend_status_uses_versioned_api_namespace() -> None:
     assert payload["status"] == "ok"
     assert payload["app"] == "Vuln Prioritizer Workbench"
     assert payload["core_package"] == "vuln_prioritizer"
-    assert payload["legacy_api_prefix"] == "/api"
-    assert payload["migration"] == {
-        "phase": "template-backend-adapter",
-        "legacy_workbench_mounted": False,
-    }
+    assert set(payload) == {"status", "app", "core_package", "core_version"}
 
 
 def test_template_backend_openapi_uses_template_operation_ids() -> None:
@@ -76,7 +72,6 @@ def test_template_backend_can_be_configured_without_legacy_workbench_side_effect
         API_V1_STR="/api/v1",
         PROJECT_NAME="VPW Template Adapter",
         ENVIRONMENT="local",
-        LEGACY_API_PREFIX="/api",
     )
     selected_app = create_app(selected_settings)
     client = TestClient(selected_app)
@@ -90,7 +85,6 @@ def test_template_backend_settings_load_product_env_defaults(monkeypatch) -> Non
     monkeypatch.setenv("PROJECT_NAME", "VPW Env Shell")
     monkeypatch.setenv("ENVIRONMENT", "staging")
     monkeypatch.setenv("API_V1_STR", "/api/custom")
-    monkeypatch.setenv("LEGACY_API_PREFIX", "/legacy-api")
     monkeypatch.setenv("SECRET_KEY", "template-shell-secret")
     monkeypatch.setenv("FIRST_SUPERUSER_PASSWORD", "template-shell-password")
 
@@ -100,7 +94,6 @@ def test_template_backend_settings_load_product_env_defaults(monkeypatch) -> Non
         API_V1_STR="/api/custom",
         PROJECT_NAME="VPW Env Shell",
         ENVIRONMENT="staging",
-        LEGACY_API_PREFIX="/legacy-api",
         SECRET_KEY="template-shell-secret",
         ACCESS_TOKEN_EXPIRE_MINUTES=60 * 24 * 8,
         FIRST_SUPERUSER="admin@example.com",

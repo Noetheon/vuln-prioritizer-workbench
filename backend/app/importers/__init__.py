@@ -13,9 +13,9 @@ from app.importers.generic_occurrence_csv import (
     GENERIC_OCCURRENCE_CSV_INPUT_TYPE,
     GenericOccurrenceCsvImporter,
 )
-from app.importers.legacy import (
+from app.importers.offline_loader import (
     DEFAULT_IMPORT_INPUT_TYPES,
-    LegacyInputLoaderImporter,
+    OfflineInputLoaderImporter,
     default_importers,
 )
 from app.importers.registry import (
@@ -38,8 +38,8 @@ __all__ = [
     "ImporterRegistry",
     "ImporterValidationError",
     "InputPayload",
-    "LegacyInputLoaderImporter",
     "NormalizedOccurrence",
+    "OfflineInputLoaderImporter",
     "UnsupportedInputTypeError",
     "build_importer_registry",
     "default_importers",

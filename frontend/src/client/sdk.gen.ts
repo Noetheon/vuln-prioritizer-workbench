@@ -900,7 +900,7 @@ export class WorkbenchService {
     /**
      * Template Workbench Status
      *
-     * Return template-shell status without initializing the legacy Workbench DB.
+     * Return active Workbench backend status.
      */
     public static templateWorkbenchStatus<ThrowOnError extends boolean = true>(options?: Options<never, ThrowOnError>) {
         return (options?.client ?? client).get<GetApiV1WorkbenchStatusResponses, unknown, ThrowOnError, 'data'>({

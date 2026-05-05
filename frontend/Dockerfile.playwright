@@ -3,9 +3,9 @@ FROM mcr.microsoft.com/playwright:v1.59.1-noble
 WORKDIR /app
 
 COPY package.json bun.lock /app/
-COPY frontend/package.json /app/frontend/
+COPY frontend/package.json frontend/package-lock.json /app/frontend/
 
-RUN npm --prefix frontend install --no-package-lock
+RUN npm --prefix frontend ci
 
 COPY frontend /app/frontend
 

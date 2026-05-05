@@ -1,36 +1,36 @@
 # Submission Package
 
-Dieses Paket fasst den aktuellen Stand des Vuln Prioritizer Workbench (VPW)
-fuer die Abgabe als Applied Security Project zusammen. Es verweist auf die
-bestehende Produktdokumentation und auf archivierte Evidenz, statt Screenshots
-oder Artefakte zu duplizieren.
+This package summarizes the current state of Vuln Prioritizer Workbench (VPW)
+for the Applied Security Project submission. It links to the existing product
+documentation and archived evidence instead of duplicating screenshots or large
+artifacts.
 
-## Worum es geht
+## Purpose
 
-VPW ist ein lokaler, selbst gehosteter Workbench fuer die Priorisierung bereits
-bekannter CVEs aus vorhandenen Inputs wie CVE-Listen, Scanner-Exports, SBOMs,
-VEX-Dokumenten und Asset-Kontext. Das Projekt ist kein Scanner, kein
-Exploit-Framework und keine automatische Angriffserkennung.
+VPW is a local, self-hosted workbench for prioritizing already-known CVEs from
+existing inputs such as CVE lists, scanner exports, SBOMs, VEX documents, and
+asset context. The project is not a scanner, exploit framework, or automatic
+intrusion-detection system.
 
-Der Sicherheitswert liegt in der nachvollziehbaren Kette:
+The security value is the traceable decision chain:
 
 ```text
-Technischer Befund -> Threat-Signal -> Asset-Kontext -> Business Impact
-  -> Massnahme -> Prioritaet -> Evidenz -> Entscheidung
+Technical finding -> threat signal -> asset context -> business impact
+  -> action -> priority -> evidence -> decision
 ```
 
-## Inhalt des Pakets
+## Package Contents
 
-| Dokument | Zweck |
+| Document | Purpose |
 | --- | --- |
-| [Concept](concept.md) | Problem, Zielgruppe, Scope, Nicht-Ziele und Sicherheitsnutzen. |
-| [Executive Summary](executive-summary.md) | Management-orientierte Risk-to-Decision-Erklaerung. |
-| [Technical Documentation](technical-documentation.md) | Architektur, Datenfluss, Imports, Scoring, ATT&CK, Waivers, Reports und Tests. |
-| [Evidence Sheet](evidence-sheet.md) | Mapping von Claims auf Evidenzdateien und Produktdokumentation. |
-| [Demo Script](demo-script.md) | Schritt-fuer-Schritt-Demo mit Fallback, Limitierungen und Sprechtext. |
-| [Reviewer Checklist](reviewer-checklist.md) | Pruefpunkte fuer Reviewer vor Abnahme oder Praesentation. |
+| [Concept](concept.md) | Problem, audience, scope, non-goals, and security value. |
+| [Executive Summary](executive-summary.md) | Management-oriented risk-to-decision summary. |
+| [Technical Documentation](technical-documentation.md) | Architecture, data flow, imports, scoring, ATT&CK, waivers, reports, and tests. |
+| [Evidence Sheet](evidence-sheet.md) | Mapping from claims to evidence files and product documentation. |
+| [Demo Script](demo-script.md) | Step-by-step demo flow with fallback, limitations, and speaking notes. |
+| [Reviewer Checklist](reviewer-checklist.md) | Review checkpoints before acceptance or presentation. |
 
-## Wichtige Produktdokumente
+## Key Product Documents
 
 - [Product Architecture](../architecture.md)
 - [Scoring Methodology](../scoring-methodology.md)
@@ -40,7 +40,7 @@ Technischer Befund -> Threat-Signal -> Asset-Kontext -> Business Impact
 - [CI Cost Optimization](../ci-cost-optimization.md)
 - [Security Policy](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/SECURITY.md)
 
-## Wichtige Evidenz-Einstiege
+## Key Evidence Entrypoints
 
 - [Final Demo Flow](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/archive/vpw-evidence/final-demo-flow/demo-flow-summary.md)
 - [Curated ATT&CK Demo Mapping](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/archive/vpw-evidence/final-demo-flow/attack-demo-mapping-summary.md)
@@ -48,9 +48,9 @@ Technischer Befund -> Threat-Signal -> Asset-Kontext -> Business Impact
 - [Presentation Evidence Index](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/archive/vpw-evidence/presentation-pack/evidence-index.md)
 - [Historical Evidence Manifest](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/archive/vpw-evidence/MANIFEST.md)
 
-## Bewertungsgrenze
+## Evaluation Boundary
 
-Die Dokumentation beschreibt den implementierten Workbench-Stand. Sie behauptet
-nicht, dass VPW Systeme scannt, Exploits ausfuehrt, automatische ATT&CK-
-Inferenzen erzeugt oder lokale Kompromittierung beweist. Priorisierung und
-ATT&CK-Kontext bleiben transparent, regelbasiert und defensiv.
+The documentation describes the implemented Workbench state. It does not claim
+that VPW scans systems, runs exploits, generates automatic ATT&CK inferences, or
+proves local compromise. Prioritization and ATT&CK context remain transparent,
+rule-based, and defensive.

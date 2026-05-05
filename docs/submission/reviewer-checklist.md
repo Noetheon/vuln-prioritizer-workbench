@@ -1,65 +1,65 @@
 # Reviewer Checklist
 
-Diese Checkliste hilft, die finale Abgabe schnell und reproduzierbar zu pruefen.
+This checklist helps reviewers assess the final submission quickly and
+reproducibly.
 
 ## Build, Tests, Docs
 
-- [ ] Frontend Build laeuft: `npm --prefix frontend run build`
-- [ ] Frontend Lint laeuft: `npm --prefix frontend run lint`
-- [ ] Frontend Unit Tests laufen: `npm --prefix frontend run test:unit`
-- [ ] UI-Smoke laeuft: `npm --prefix frontend run test -- tests/ui-smoke.spec.ts`
-- [ ] Backend Report Contracts laufen:
+- [ ] Frontend build passes: `npm --prefix frontend run build`
+- [ ] Frontend lint passes: `npm --prefix frontend run lint`
+- [ ] Frontend unit tests pass: `npm --prefix frontend run test:unit`
+- [ ] UI smoke passes: `npm --prefix frontend run test -- tests/ui-smoke.spec.ts`
+- [ ] Backend report contracts pass:
       `python3 -m pytest -q backend/tests/api/test_template_reports_api.py --no-cov`
-- [ ] Backend Smoke Subset laeuft.
-- [ ] Docs Hygiene laeuft:
+- [ ] Backend smoke subset passes.
+- [ ] Docs hygiene passes:
       `python3 -m pytest -q backend/tests/test_docs_hygiene.py --no-cov`
-- [ ] MkDocs baut erfolgreich: `python3 -m mkdocs build --clean`
-- [ ] `make docs-check` laeuft.
+- [ ] MkDocs builds successfully: `python3 -m mkdocs build --clean`
+- [ ] `make docs-check` passes.
 
-## Scope und Integritaet
+## Scope And Integrity
 
-- [ ] Keine manuellen Edits in `frontend/src/client/**`.
-- [ ] Keine manuellen Edits in `frontend/src/api-client.ts`.
-- [ ] Keine ungewollten Backend-Implementierungs-Aenderungen.
-- [ ] Keine Aenderungen an `data/attack/**`.
-- [ ] Keine Aenderungen an den Contract-Artefakten unter `docs/evidence/`.
-- [ ] Keine Screenshots oder grossen Artefakte im Submission-PR.
+- [ ] No manual edits in `frontend/src/client/**`.
+- [ ] No manual edits in `frontend/src/api-client.ts`.
+- [ ] No unintended backend implementation changes.
+- [ ] No changes to `data/attack/**`.
+- [ ] No changes to contract artifacts under `docs/evidence/`.
+- [ ] No screenshots or large artifacts in the submission PR.
 
-## Produktclaims
+## Product Claims
 
-- [ ] VPW wird als Priorisierung bekannter CVEs beschrieben, nicht als Scanner.
-- [ ] Scoring wird als transparent und regelbasiert beschrieben.
-- [ ] Keine ML-/AI-Blackbox-Claims.
-- [ ] CVSS, EPSS, KEV, Asset-Kontext, Provider-Freshness, VEX und Waivers sind
-      als sichtbare Signale dokumentiert.
-- [ ] Evidence Center, Reports, Manifest und Checksummen sind dokumentiert.
+- [ ] VPW is described as prioritization for known CVEs, not as a scanner.
+- [ ] Scoring is described as transparent and rule-based.
+- [ ] No ML/AI black-box claims.
+- [ ] CVSS, EPSS, KEV, asset context, provider freshness, VEX, and waivers are
+      documented as visible signals.
+- [ ] Evidence Center, reports, manifest, and checksums are documented.
 
 ## ATT&CK/TTP Safety
 
-- [ ] Unmapped CVEs bleiben unmapped.
-- [ ] Keine heuristische oder LLM-basierte ATT&CK-Inferenz wird behauptet.
-- [ ] Curated Mapping wird als defensiver Kontext beschrieben.
-- [ ] Kein Exploit-, Payload-, PoC- oder aktives Probing-Material enthalten.
-- [ ] Mapped TTP Context wird nicht als lokale Ausnutzung interpretiert.
+- [ ] Unmapped CVEs remain unmapped.
+- [ ] No heuristic or LLM-based ATT&CK inference is claimed.
+- [ ] Curated mapping is described as defensive context.
+- [ ] No exploit, payload, PoC, or active probing material is included.
+- [ ] Mapped TTP context is not interpreted as local exploitation.
 
-## Evidence und Demo
+## Evidence And Demo
 
-- [ ] Final Demo Flow ist verlinkt.
-- [ ] Presentation Pack ist verlinkt.
-- [ ] Design-System-Evidenz ist verlinkt.
-- [ ] Contract-Artefakte unter `docs/evidence/` sind verlinkt.
-- [ ] Fallback-Demo ohne Live-System ist moeglich.
+- [ ] Final Demo Flow is linked.
+- [ ] Presentation Pack is linked.
+- [ ] Design-system evidence is linked.
+- [ ] Contract artifacts under `docs/evidence/` are linked.
+- [ ] Fallback demo without a live system is possible.
 
-## Limitierungen
+## Limitations
 
-- [ ] Demo-Daten sind als Beispiel-/Evidenzdaten erkennbar.
-- [ ] Public Deployment Hardening bleibt als spaeteres Thema markiert.
-- [ ] Detection Coverage wird nicht als Wirksamkeitsbeweis ueberhoeht.
-- [ ] Waivers werden als Governance-Kontext, nicht als Risikoloeschung,
-      beschrieben.
+- [ ] Demo data is clearly marked as sample/evidence data.
+- [ ] Public deployment hardening remains marked as a later topic.
+- [ ] Detection coverage is not overstated as proof of effectiveness.
+- [ ] Waivers are described as governance context, not as risk deletion.
 
-## Review-Ergebnis
+## Review Result
 
-Wenn alle Punkte erfuellt sind, kann das Projekt fuer die aktuelle Phase als
-implementation-complete und submission-ready bewertet werden. Weitere
-Engineering-Refactorings sollten erst nach der Abgabe priorisiert werden.
+If all points are satisfied, the project can be assessed as
+implementation-complete and submission-ready for the current phase. Additional
+engineering refactors should be prioritized after the submission.

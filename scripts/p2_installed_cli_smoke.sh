@@ -66,6 +66,8 @@ payload = {
     "metadata": {
         "schema_version": "1.2.0",
         "artifact_kind": "provider-snapshot",
+        "snapshot_format": "provider-snapshot.v1.json",
+        "snapshot_id": "p2-installed-cli-smoke",
         "generated_at": "2026-04-22T12:00:00Z",
         "input_path": "github_alerts_export.json",
         "input_paths": ["github_alerts_export.json"],
@@ -74,7 +76,18 @@ payload = {
         "requested_cves": 1,
         "output_path": str(snapshot_path),
         "cache_enabled": False,
+        "cache_only": False,
         "cache_dir": None,
+        "source_hashes": {
+            "nvd": "sha256:p2-installed-cli-smoke-nvd",
+            "epss": "sha256:p2-installed-cli-smoke-epss",
+            "kev": "sha256:p2-installed-cli-smoke-kev"
+        },
+        "source_metadata": {
+            "nvd": {"source": "installed CLI smoke fixture", "record_count": 1},
+            "epss": {"source": "installed CLI smoke fixture", "record_count": 1},
+            "kev": {"source": "installed CLI smoke fixture", "record_count": 1}
+        },
         "offline_kev_file": None,
         "nvd_api_key_env": None,
     },

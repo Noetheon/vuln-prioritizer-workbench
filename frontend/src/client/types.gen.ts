@@ -1800,22 +1800,6 @@ export type ImportParseErrorPublic = {
 };
 
 /**
- * MigrationStatus
- *
- * Template migration state for the Workbench adapter.
- */
-export type MigrationStatus = {
-    /**
-     * Legacy Workbench Mounted
-     */
-    legacy_workbench_mounted: boolean;
-    /**
-     * Phase
-     */
-    phase: string;
-};
-
-/**
  * ProjectAttackSummaryPublic
  *
  * Project-level ATT&CK summary for the React dashboard widget.
@@ -2809,7 +2793,7 @@ export type WaiversPublic = {
 /**
  * WorkbenchStatus
  *
- * Status response returned by the template Workbench adapter.
+ * Status response returned by the active Workbench runtime.
  */
 export type WorkbenchStatus = {
     /**
@@ -2824,11 +2808,6 @@ export type WorkbenchStatus = {
      * Core Version
      */
     core_version: string;
-    /**
-     * Legacy Api Prefix
-     */
-    legacy_api_prefix: string;
-    migration: MigrationStatus;
     /**
      * Status
      */

@@ -20,7 +20,7 @@ Workbench surface:
   client boundary. Product code imports the generated services and types, but
   generated files are not manually edited.
 - `backend/src/vuln_prioritizer/**`: retained CLI and domain implementation
-  used by maintainer workflows and compatibility surfaces.
+  used by maintainer workflows and shared analysis/reporting helpers.
 
 The frontend and backend communicate through the generated API client. UI
 component structure, route extraction, CSS organization, and VPW design-system
@@ -38,22 +38,13 @@ are not manually edited.
 implementation. The active template backend may import neutral, framework-light
 domain helpers from this package, such as input normalization, provider clients,
 scoring, report/evidence helpers, redaction, and token hashing. Reusable logic
-needed by both runtimes should move into these neutral modules.
+needed by the CLI and browser runtime must live in these neutral modules.
 
-The older `vuln_prioritizer.api`, `vuln_prioritizer.web`,
-`vuln_prioritizer.db`, `vuln_prioritizer.services.workbench_*`,
-`vuln_prioritizer.provider_scheduler`, and `vuln_prioritizer.workbench_config`
-layers are legacy Workbench runtime surfaces. They are kept for compatibility
-tests, historical reference, and the profiled legacy Postgres compatibility
-smoke path in `compose.legacy.yml`, but they are not the active browser
-deployment runtime. `backend/app` must not import those layers directly or
-transitively.
-
-Legacy API token bootstrap behavior is therefore local-only compatibility
-behavior. A fresh legacy database can allow first-token setup before active token
-gating; that behavior must not be reachable through the active `backend/app`
-runtime. New shared logic should be extracted into neutral domain/core modules
-rather than imported from the legacy API, web, or DB runtime packages.
+The old Workbench runtime packages, runtime database package, provider
+scheduler, and `web`/`db` CLI entrypoints have been removed. The active
+repository no longer ships a second FastAPI Workbench stack. `backend/app` must
+not import removed runtime module names directly or transitively, and new shared
+logic must not be added under runtime-specific packages.
 
 ## Frontend Route Ownership
 

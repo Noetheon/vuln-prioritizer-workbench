@@ -3,7 +3,6 @@ BACKEND_DIR := backend
 BACKEND_SRC := $(BACKEND_DIR)/src
 BACKEND_TESTS := $(BACKEND_DIR)/tests
 COMPOSE := docker compose -f compose.yml -f compose.override.yml
-LEGACY_COMPOSE := docker compose -f compose.yml -f compose.legacy.yml
 
 ATTACK_MAPPING_FILE := data/attack/ctid_kev_enterprise_2025-07-28_attack-16.1_subset.json
 ATTACK_METADATA_FILE := data/attack/attack_techniques_enterprise_16.1_subset.json
@@ -15,7 +14,7 @@ DEMO_EVIDENCE_ANALYSIS_FILE := build/v1.0-demo-analysis.json
 DEMO_EVIDENCE_BUNDLE_FILE := build/v1.0-demo-evidence-bundle.zip
 DEMO_EVIDENCE_VERIFICATION_FILE := build/v1.0-demo-evidence-bundle-verification.json
 
-.PHONY: install test lint format fix typecheck check benchmark-check performance-smoke playwright-install playwright-check frontend-install frontend-build frontend-lint frontend-generate-client frontend-check docs-check docs-serve actionlint-check workflow-check docker-demo-smoke docker-postgres-migration-smoke dependency-audit clean-local clean-deps provider-snapshot-validate provider-testmatrix demo-offline-no-key-proof demo-sync-check demo-sync-check-temp package package-check package-check-temp pipx-source-smoke release-check demo-report demo-compare demo-explain demo-attack-report demo-attack-compare demo-attack-explain demo-attack-coverage demo-attack-navigator demo-pr-comment demo-results-sarif demo-html-report demo-evidence-analysis demo-evidence-bundle demo-evidence-bundle-check precommit-install
+.PHONY: install test lint format fix typecheck check benchmark-check performance-smoke playwright-install playwright-check frontend-install frontend-build frontend-lint frontend-generate-client frontend-audit frontend-check docs-check docs-serve actionlint-check workflow-check docker-demo-smoke dependency-audit clean-local clean-deps provider-snapshot-validate provider-testmatrix demo-offline-no-key-proof demo-sync-check demo-sync-check-temp package package-check package-check-temp pipx-source-smoke release-check demo-report demo-compare demo-explain demo-attack-report demo-attack-compare demo-attack-explain demo-attack-coverage demo-attack-navigator demo-pr-comment demo-results-sarif demo-html-report demo-evidence-analysis demo-evidence-bundle demo-evidence-bundle-check precommit-install
 
 install:
 	$(PYTHON) -m pip install -e "$(BACKEND_DIR)[dev]"
@@ -48,14 +47,14 @@ benchmark-check:
 performance-smoke:
 	VPW_PERFORMANCE_SMOKE=1 VPW_PERFORMANCE_SMOKE_OUTPUT=build/vpw-072-performance-smoke.json $(PYTHON) -m pytest -q $(BACKEND_TESTS)/performance/test_vpw072_performance_smoke.py --no-cov
 
-playwright-install:
-	$(PYTHON) -m playwright install chromium
+playwright-install: frontend-install
+	npm --prefix frontend exec playwright install chromium
 
-playwright-check:
-	VULN_PRIORITIZER_RUN_PLAYWRIGHT=1 $(PYTHON) -m pytest -q $(BACKEND_TESTS)/playwright --no-cov
+playwright-check: frontend-install
+	npm --prefix frontend run test -- tests/ui-smoke.spec.ts
 
 frontend-install:
-	npm --prefix frontend install --no-package-lock
+	npm --prefix frontend ci
 
 frontend-build:
 	npm --prefix frontend run build
@@ -66,7 +65,10 @@ frontend-lint:
 frontend-generate-client:
 	bash scripts/generate-client.sh
 
-frontend-check: frontend-lint frontend-build frontend-generate-client
+frontend-audit:
+	npm --prefix frontend audit --omit=dev
+
+frontend-check: frontend-install frontend-lint frontend-build frontend-generate-client
 
 docs-check:
 	$(PYTHON) -m mkdocs build --clean
@@ -79,7 +81,7 @@ provider-snapshot-validate:
 	$(PYTHON) -c 'import json, jsonschema; from pathlib import Path; schema = json.loads(Path("docs/schemas/provider-snapshot-report.schema.json").read_text(encoding="utf-8")); paths = ("docs/examples/example_provider_snapshot.v1.json", "data/demo_provider_snapshot.json"); [jsonschema.validate(json.loads(Path(path).read_text(encoding="utf-8")), schema) or print(f"{path}: OK") for path in paths]'
 
 provider-testmatrix:
-	$(PYTHON) -m pytest -q $(BACKEND_TESTS)/test_provider_response_contracts.py $(BACKEND_TESTS)/test_provider_contract.py $(BACKEND_TESTS)/test_provider_snapshot_contract.py $(BACKEND_TESTS)/test_cli_data.py::test_data_export_provider_snapshot_cache_only_uses_local_cache $(BACKEND_TESTS)/test_output_schemas.py::test_demo_provider_snapshot_matches_schema_and_model $(BACKEND_TESTS)/api/test_workbench_api.py::test_online_shop_demo_import_uses_demo_snapshot_without_network_or_keys $(BACKEND_TESTS)/test_evidence_bundle_verification.py --no-cov
+	$(PYTHON) -m pytest -q $(BACKEND_TESTS)/test_provider_response_contracts.py $(BACKEND_TESTS)/test_provider_contract.py $(BACKEND_TESTS)/test_provider_snapshot_contract.py $(BACKEND_TESTS)/test_cli_data.py::test_data_export_provider_snapshot_cache_only_uses_local_cache $(BACKEND_TESTS)/test_output_schemas.py::test_demo_provider_snapshot_matches_schema_and_model $(BACKEND_TESTS)/api/test_template_import_upload_api.py::test_template_import_uses_demo_snapshot_without_network_or_keys $(BACKEND_TESTS)/test_evidence_bundle_verification.py --no-cov
 
 demo-offline-no-key-proof:
 	mkdir -p build
@@ -135,25 +137,13 @@ docker-demo-smoke:
 	$(PYTHON) scripts/docker_quickstart_api_smoke.py; \
 	echo "Template Workbench Docker smoke passed."
 
-docker-postgres-migration-smoke:
-	@set -e; \
-	$(LEGACY_COMPOSE) --profile legacy-postgres up -d --build db workbench-postgres; \
-	trap '$(LEGACY_COMPOSE) --profile legacy-postgres down -v --remove-orphans' EXIT; \
-	for attempt in $$(seq 1 30); do \
-		if $(PYTHON) -c "import urllib.request; print(urllib.request.urlopen('http://127.0.0.1:8001/api/health', timeout=2).read().decode())" 2>/dev/null; then \
-			exit 0; \
-		fi; \
-		sleep 2; \
-	done; \
-	echo "Postgres Workbench health check failed." >&2; \
-	exit 1
-
 dependency-audit:
 	@$(PYTHON) -c "import pip_audit" >/dev/null 2>&1 || { \
 		echo "Install pip-audit first: python3 -m pip install pip-audit" >&2; \
 		exit 1; \
 	}
 	$(PYTHON) -m pip_audit --requirement $(BACKEND_DIR)/requirements.txt
+	$(MAKE) frontend-audit
 
 clean-local:
 	find . -name .DS_Store -not -path './.git/*' -delete
@@ -220,6 +210,9 @@ pipx-source-smoke:
 
 release-check:
 	$(MAKE) workflow-check
+	$(MAKE) frontend-check
+	$(MAKE) dependency-audit
+	$(MAKE) docker-demo-smoke
 	$(MAKE) pipx-source-smoke
 	$(MAKE) demo-sync-check
 

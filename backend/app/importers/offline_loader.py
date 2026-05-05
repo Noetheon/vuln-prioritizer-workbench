@@ -1,4 +1,4 @@
-"""Adapters from the existing local input loader into the template importer contract."""
+"""Adapters from the offline CLI input loader into the active importer contract."""
 
 from __future__ import annotations
 
@@ -47,7 +47,7 @@ _DEFAULT_SUFFIX_BY_INPUT_TYPE = {
 
 
 @dataclass(frozen=True, slots=True)
-class LegacyInputLoaderImporter:
+class OfflineInputLoaderImporter:
     """Importer backed by the existing offline input-normalization loader."""
 
     input_type: str
@@ -59,7 +59,7 @@ class LegacyInputLoaderImporter:
         filename: str | None = None,
     ) -> list[NormalizedOccurrence]:
         if self.input_type not in DEFAULT_IMPORT_INPUT_TYPES:
-            raise ImporterValidationError(f"Unsupported legacy input type: {self.input_type!r}")
+            raise ImporterValidationError(f"Unsupported input type: {self.input_type!r}")
         path_suffix = _payload_suffix(input_type=self.input_type, filename=filename)
         with TemporaryDirectory(prefix="vpw-import-") as temp_dir:
             input_path = Path(temp_dir) / f"input{path_suffix}"
@@ -75,8 +75,8 @@ class LegacyInputLoaderImporter:
 
 def default_importers() -> tuple[Importer, ...]:
     """Return importers for the currently supported local Workbench input types."""
-    legacy_importers = tuple(
-        LegacyInputLoaderImporter(input_type)
+    offline_loader_importers = tuple(
+        OfflineInputLoaderImporter(input_type)
         for input_type in DEFAULT_IMPORT_INPUT_TYPES
         if input_type
         not in {
@@ -84,7 +84,7 @@ def default_importers() -> tuple[Importer, ...]:
             InputFormat.generic_occurrence_csv.value,
         }
     )
-    return (CveListImporter(), GenericOccurrenceCsvImporter(), *legacy_importers)
+    return (CveListImporter(), GenericOccurrenceCsvImporter(), *offline_loader_importers)
 
 
 def _write_payload(path: Path, payload: InputPayload) -> None:

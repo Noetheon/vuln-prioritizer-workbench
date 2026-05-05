@@ -3,8 +3,8 @@
 ## Decision
 
 The Workbench migration should restart from the official
-`fastapi/full-stack-fastapi-template` baseline instead of continuing to reshape the
-current FastAPI/Jinja2/SQLAlchemy app in place.
+`fastapi/full-stack-fastapi-template` baseline instead of continuing to reshape
+the previous second Workbench runtime in place.
 
 The current repository remains valuable as the domain engine. The migration target
 is a template-based full-stack application that reuses the existing
@@ -56,8 +56,8 @@ The existing `vuln_prioritizer` code now lives under the backend workspace as
 while the template app is introduced. A later cleanup can split it into a
 separate `packages/vuln-prioritizer-core` package if that proves useful.
 
-Backend integration should call the core package through service boundaries
-instead of importing old Jinja2/SQLAlchemy Workbench modules.
+Backend integration calls the core package through service boundaries and the
+active `backend/app` runtime.
 
 ## Import Boundaries
 
@@ -73,16 +73,9 @@ Safe core modules to reuse:
 - `vuln_prioritizer.services.attack_enrichment`
 - framework-neutral report payload and formatting helpers
 
-Do not directly reuse these as the new template backend:
-
-- `vuln_prioritizer.api.*`
-- `vuln_prioritizer.web.*`
-- `vuln_prioritizer.db.*`
-- `vuln_prioritizer.services.workbench_*`
-- old Jinja2 templates and static Workbench assets
-
-Those modules can be used as reference code while the new template backend and
-React frontend are built.
+Runtime-specific web/API/database packages are not part of the retained core.
+New shared logic should be extracted into the neutral modules above before it is
+used by both the CLI and active backend.
 
 ## Branch Strategy
 
@@ -109,7 +102,7 @@ in small reviewable PRs.
 - Keep the current `main` branch intact until the template branch passes baseline
   checks.
 - One roadmap issue per PR unless a dependency group is explicitly documented.
-- Treat existing Jinja2/SQLAlchemy features as source material, not as automatic
+- Treat historical implementation notes as source material, not as automatic
   completion evidence.
 - Preserve the non-scanner scope: the product prioritizes known CVEs from supplied
   inputs and does not discover vulnerabilities.
@@ -132,12 +125,11 @@ in small reviewable PRs.
    `compose.override.yml`, and `compose.traefik.yml`, preserving safe local
    development paths.
 5. Frontend source scaffold: add the template React frontend and generated
-   OpenAPI client tooling. Keep the Jinja Workbench only as a temporary reference
-   until feature parity is proven.
+   OpenAPI client tooling.
 
 The SQLModel/JWT/domain replacement work from `VPW-006` onward should start after
 the template baseline and backend workspace are stable. It is real roadmap work,
-not something to fake by pointing at the old SQLAlchemy/Jinja implementation.
+not something to fake by pointing at historical implementation notes.
 
 ## Current Implementation Progress
 
@@ -146,13 +138,11 @@ not something to fake by pointing at the old SQLAlchemy/Jinja implementation.
 - `codex/fsft-02-template-backend-adapter` introduces the first template-shaped
   `backend/app` entrypoint with a versioned `/api/v1/workbench/status` adapter
   and a React/Vite frontend workspace scaffold. It intentionally does not mount
-  or claim completion of the legacy Jinja2 and SQLAlchemy Workbench stack, nor
-  does it claim template JWT, SQLModel, or Items replacement work.
+  or claim template JWT, SQLModel, or Items replacement work.
 - `codex/fsft-03-compose-env` moves the default Compose entrypoint to
   template-style `compose.yml`, `compose.override.yml`, and
   `compose.traefik.yml`, starts the template backend shell plus React frontend,
-  and keeps the legacy Workbench only as a profiled Postgres migration smoke
-  service.
+  for the active backend and frontend.
 - `codex/fsft-04-template-login-smoke` adds the first real template-shaped
   login path: `/api/v1/login/access-token`, `/api/v1/login/test-token`,
   `/api/v1/users/me`, `/api/v1/utils/health-check/`, CORS for the React
@@ -169,8 +159,7 @@ not something to fake by pointing at the old SQLAlchemy/Jinja implementation.
   `/api/v1/projects` create/list/read routes, generated TypeScript client
   updates, and a separate template Alembic migration path under
   `backend/app/alembic`. This replaces the official template's demo `Item`
-  pattern with Workbench `Project` ownership instead of reusing the legacy
-  SQLAlchemy/Jinja Workbench stack.
+  pattern with Workbench `Project` ownership.
 - `codex/fsft-09-model-modularization` splits the template backend models into
   a focused `backend/app/models/` package while keeping `app.models` as the
   stable public import surface. Alembic now calls `import_table_models()` before

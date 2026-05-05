@@ -322,12 +322,8 @@ test("template frontend covers core Workbench E2E smoke", async ({ page }) => {
   ]) {
     await expect(navigation.getByRole("link", { name: label })).toBeVisible()
   }
-  const legacyMenuLabel = ["It", "ems"].join("")
-  await expect(
-    navigation.getByRole("link", { name: legacyMenuLabel }),
-  ).toHaveCount(0)
-  await expect(page.getByText(legacyMenuLabel, { exact: true })).toHaveCount(0)
-  await expect(page.getByText("VP TEMPLATE MIGRATION")).toHaveCount(0)
+  await expect(navigation.getByRole("link", { name: "Items" })).toHaveCount(0)
+  await expect(page.getByText("Items", { exact: true })).toHaveCount(0)
   await expect(page.getByText("Provider Freshness").first()).toBeVisible()
   await expect(page.getByText("Evidence Readiness").first()).toBeVisible()
   await expect(page.getByText("Data Quality", { exact: true })).toBeVisible()

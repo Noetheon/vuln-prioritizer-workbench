@@ -17,20 +17,16 @@ make provider-testmatrix
 make demo-offline-no-key-proof
 python3 -m pytest -q backend/tests/api/test_template_auth_smoke.py backend/tests/api/test_template_import_upload_api.py backend/tests/api/test_template_reports_api.py --no-cov
 make docker-demo-smoke
-make docker-postgres-migration-smoke
 make dependency-audit
 make demo-evidence-bundle-check
 docker compose -f compose.yml -f compose.override.yml up --build backend frontend
 ```
 
 Open `http://127.0.0.1:5173` and create the project `online-shop-demo`.
-The browser demo uses the active template backend in `backend/app`; the legacy
-Workbench runtime remains compatibility-only and is not the demo deployment
-path.
-`make docker-postgres-migration-smoke` uses `compose.legacy.yml` only for the
-retained legacy Postgres compatibility path.
+The browser demo uses the active backend in `backend/app` and the generated
+`/api/v1` React client.
 
-If `pip-audit` is unavailable or advisory data cannot be reached, record that as a release-checklist exception instead of treating the offline browser demo itself as failed.
+If `pip-audit`, npm, or advisory data is unavailable, record that as a release-checklist exception instead of treating the offline browser demo itself as failed.
 
 ## Demo Steps
 
@@ -56,7 +52,7 @@ If `pip-audit` is unavailable or advisory data cannot be reached, record that as
 | Report/evidence downloads | `tests/api/test_template_reports_api.py`; browser evidence should show report links and Evidence ZIP verification. |
 | 10k findings API smoke | `make performance-smoke` runs the active template import and pagination smoke with 10,000 findings. |
 | Docker demo smoke | `make docker-demo-smoke` output showing `/api/v1/workbench/status` returns `{"status":"ok"}` before teardown. |
-| Dependency audit | `make dependency-audit` result, or a documented exception when `pip-audit` or advisory data is unavailable. |
+| Dependency audit | `make dependency-audit` result for backend requirements and frontend production dependencies, or a documented exception when audit tooling or advisory data is unavailable. |
 | Demo evidence bundle | `make demo-evidence-bundle-check` output plus `build/v1.0-demo-evidence-bundle-verification.json` showing `ok=true`. |
 | Provider test matrix | `make provider-testmatrix` plus `archive/vpw-evidence/vpw-029-provider-testmatrix.md`. |
 | Offline/no-key proof | `make demo-offline-no-key-proof` output plus `build/vpw-029-demo-offline-no-key-proof.json` showing locked replay and provider `network_fetches=0`. |

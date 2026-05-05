@@ -70,5 +70,5 @@ paste command output summary here
 - [ ] README and changelog were updated if user-visible behavior changed
 - [ ] SECURITY/threat model/deployment docs were updated if a security boundary
       changed
-- [ ] old Jinja2/SQLAlchemy Workbench behavior is not used as automatic closure
-      evidence for template React/JWT/SQLModel work
+- [ ] removed Workbench runtime behavior is not used as automatic closure
+      evidence for active React/JWT/SQLModel work

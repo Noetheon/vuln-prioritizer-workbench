@@ -23,7 +23,6 @@ PUBLIC_MODEL_NAMES = (
     "Project",
     "ProjectPublic",
     "ProjectsPublic",
-    "MigrationStatus",
     "WorkbenchStatus",
 )
 

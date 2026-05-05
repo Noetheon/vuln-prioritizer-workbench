@@ -1,67 +1,63 @@
 # Executive Summary
 
-## Kurzfassung
+## Summary
 
-Vuln Prioritizer Workbench hilft Security-Teams, aus vorhandenen
-Schwachstellenlisten eine nachvollziehbare Entscheidungsgrundlage zu machen. Das
-Produkt priorisiert bekannte CVEs mit transparenten Regeln und fuegt
-Threat-Signale, Asset-Kontext, Waivers und Evidenz hinzu.
+Vuln Prioritizer Workbench helps security teams turn existing vulnerability
+lists into traceable decision material. The product prioritizes known CVEs with
+transparent rules and adds threat signals, asset context, waivers, and evidence.
 
-VPW ist kein Scanner und kein Exploit-Tool. Es beantwortet nicht: "Wo kann ich
-einbrechen?" Es beantwortet: "Welche bekannten Findings sollten wir warum,
-fuer welchen Service, mit welcher Evidenz und welcher Entscheidung zuerst
-behandeln?"
+VPW is not a scanner or exploit tool. It does not answer: "Where can I break
+in?" It answers: "Which known findings should we handle first, why, for which
+service, with which evidence, and with which decision?"
 
-## Risk-to-Decision-Kette
+## Risk-to-Decision Chain
 
-| Schritt | Frage | VPW-Beitrag |
+| Step | Question | VPW Contribution |
 | --- | --- | --- |
-| Technical Finding | Welche CVE oder Occurrence liegt vor? | Import und Normalisierung vorhandener Findings. |
-| Threat Signal | Wie dringend wirkt das technische Risiko? | CVSS, EPSS, KEV und Provider-Freshness. |
-| Asset Context | Welcher Service, Owner oder Exposure ist betroffen? | Asset-Kontext, Umgebung, Kritikalitaet und Service-Rollups. |
-| Business Impact | Warum ist das fuer den Betrieb relevant? | Service-, Owner-, Exposure- und Governance-Sicht. |
-| Measure | Was ist der naechste Schritt? | Remediation, Review, Waiver, VEX-Kontext oder weitere Datenerhebung. |
-| Priority | Warum jetzt? | Menschlich lesbare Prioritaetsgruende statt Blackbox-Score. |
-| Evidence | Wie belegen wir die Entscheidung? | Reports, CSV/JSON/SARIF, Evidence ZIP Bundle, Manifest, Checksummen. |
-| CISO Decision | Was kann entschieden werden? | Akzeptieren, eskalieren, priorisieren, delegieren oder nachfordern. |
+| Technical Finding | Which CVE or occurrence is present? | Import and normalization of existing findings. |
+| Threat Signal | How urgent is the technical risk? | CVSS, EPSS, KEV, and provider freshness. |
+| Asset Context | Which service, owner, or exposure is affected? | Asset context, environment, criticality, and service rollups. |
+| Business Impact | Why is this relevant to operations? | Service, owner, exposure, and governance view. |
+| Measure | What is the next step? | Remediation, review, waiver, VEX context, or additional data collection. |
+| Priority | Why now? | Human-readable priority rationale instead of a black-box score. |
+| Evidence | How do we support the decision? | Reports, CSV/JSON/SARIF, evidence ZIP bundle, manifest, and checksums. |
+| CISO Decision | What can be decided? | Accept, escalate, prioritize, delegate, or request more information. |
 
-## Warum das wichtig ist
+## Why This Matters
 
-CVSS allein reicht fuer operative Entscheidungen selten aus. Ein CVE mit
-mittlerer technischer Severity kann durch hohe EPSS, KEV-Status oder
-internet-facing Asset-Kontext dringender sein als ein isoliertes hohes CVSS-
-Finding. Umgekehrt muessen Waiver, VEX und fehlende Daten sichtbar bleiben, ohne
-Risiko still zu verstecken.
+CVSS alone is rarely enough for operational decisions. A CVE with medium
+technical severity can become more urgent than an isolated high-CVSS finding
+because of high EPSS, KEV status, or internet-facing asset context. Conversely,
+waivers, VEX, and missing data must remain visible without silently hiding risk.
 
-VPW macht diese Gruende sichtbar und pruefbar.
+VPW makes those reasons visible and verifiable.
 
-## Was die Demo zeigt
+## What The Demo Shows
 
-Die Demo fuehrt durch:
+The demo walks through:
 
-1. Projektkontext
-2. Import vorhandener CVE-/Scanner-/SBOM-/Kontextdaten
+1. Project context
+2. Import of existing CVE, scanner, SBOM, and context data
 3. Findings Queue
-4. Finding Detail mit "Why this priority"
-5. TTP Context mit no-inference und curated mapping proof
-6. Waiver- und Governance-Sicht
+4. Finding Detail with "Why this priority"
+5. TTP Context with no-inference and curated mapping proof
+6. Waiver and governance view
 7. Evidence Center
-8. Evidence Bundle mit Manifest und Checksummen
+8. Evidence bundle with manifest and checksums
 
-Die Demo beweist einen defensiven Priorisierungs- und Evidenzworkflow. Sie
-beweist keine lokale Ausnutzung und enthaelt keine Exploit-Anleitung.
+The demo proves a defensive prioritization and evidence workflow. It does not
+prove local exploitation and contains no exploit instructions.
 
-## Management-Nutzen
+## Management Value
 
-- bessere Reihenfolge fuer Remediation
-- weniger Diskussion ueber "warum diese CVE zuerst?"
-- sichtbarer Umgang mit Ausnahmen und akzeptiertem Risiko
-- pruefbare Reports fuer Audit, Review und Fuehrungskreise
-- klare Limitierungen statt Ueberversprechen
+- better remediation ordering
+- less debate about "why this CVE first?"
+- visible handling of exceptions and accepted risk
+- verifiable reports for audit, review, and leadership forums
+- clear limitations instead of overpromising
 
-## Entscheidungsgrenzen
+## Decision Boundaries
 
-VPW ist ein Entscheidungsunterstuetzungssystem. Finale Massnahmen bleiben
-menschengefuehrt: Security Leadership, Service Owner und Engineering muessen
-Business-Kontext, Change-Fenster, technische Abhaengigkeiten und akzeptiertes
-Risiko bewerten.
+VPW is a decision-support system. Final actions remain human-led: security
+leadership, service owners, and engineering must evaluate business context,
+change windows, technical dependencies, and accepted risk.

@@ -1,21 +1,21 @@
-# Technische Dokumentation
+# Technical Documentation
 
-## Systemueberblick
+## System Overview
 
-VPW besteht aus einem FastAPI-Backend, einem React/Vite/TanStack-Router-
-Frontend und einem generierten API-Client. Die aktive Workbench ist local-first
-und selbst gehostet. Die CLI- und Domain-Implementierung bleibt fuer
-Automatisierung, kompatible Reports und Maintainer-Workflows erhalten.
+VPW consists of a FastAPI backend, a React/Vite/TanStack Router frontend, and a
+generated API client. The active Workbench is local-first and self-hosted. The
+CLI and domain implementation remain available for automation, compatible
+reports, and maintainer workflows.
 
-| Bereich | Implementierung |
+| Area | Implementation |
 | --- | --- |
-| Backend | FastAPI, Auth/Session, SQL-Modelle, Services, Repositories, Alembic. |
+| Backend | FastAPI, auth/session, SQL models, services, repositories, Alembic. |
 | Frontend | React, Vite, TypeScript, TanStack Router, VPW Design System. |
-| API-Grenze | `frontend/src/client/**` und `frontend/src/api-client.ts` sind generiert. |
-| Produktlogik | Komponenten importieren Services/Typen aus dem generierten Client, editieren ihn aber nicht manuell. |
-| Evidenz | Reports, Evidence ZIP Bundle, Manifest, Checksummen und Contract-Artefakte. |
+| API Boundary | `frontend/src/client/**` and `frontend/src/api-client.ts` are generated. |
+| Product Logic | Components import services/types from the generated client but do not edit it manually. |
+| Evidence | Reports, evidence ZIP bundle, manifest, checksums, and contract artifacts. |
 
-Weitere Details stehen in [Product Architecture](../architecture.md).
+Further details are available in [Product Architecture](../architecture.md).
 
 ## Backend Runtime Boundary
 
@@ -24,136 +24,127 @@ Playwright backend startup, and OpenAPI client generation use `app.main:app` or
 `app.main.app`. The browser calls the generated `/api/v1` client under
 `frontend/src/client/**` and `frontend/src/api-client.ts`.
 
-`backend/src/vuln_prioritizer/**` bleibt erhalten fuer CLI, Domain-Logik,
-Reports und Kompatibilitaetspruefungen. Neutrale Module wie Input-Normalisierung,
-Provider, Scoring, Reporting, Redaction und Token-Hashing duerfen gemeinsam
-genutzt werden.
+`backend/src/vuln_prioritizer/**` remains available for CLI, domain logic, and
+reports. Neutral modules such as input normalization, providers, scoring,
+reporting, redaction, and token hashing may be shared.
 
-Die aelteren `vuln_prioritizer.api`, `vuln_prioritizer.web`,
-`vuln_prioritizer.db`, `vuln_prioritizer.services.workbench_*`,
-`vuln_prioritizer.provider_scheduler` und `vuln_prioritizer.workbench_config`
-Module sind Legacy-Workbench-Runtime-Surfaces. Sie sind nicht der aktive
-Browser-Deployment-Runtime und duerfen nicht direkt oder transitiv nach
-`backend/app` importiert werden. Die bootstrap-offene Legacy-Token-Erstellung ist
-Kompatibilitaetsverhalten fuer lokale Legacy-Pfade und darf nicht ueber
-`backend/app` erreichbar sein.
+The old second Workbench runtime with its own FastAPI stack, Workbench database
+package, scheduler, and `web`/`db` CLI entrypoints has been removed. The active
+repository runtime is now unambiguously `backend/app`. New shared logic belongs
+in neutral CLI/domain modules, not runtime-specific packages.
 
-## Frontend-Struktur
+## Frontend Structure
 
-TanStack-Routen sind weitgehend duenne Einstiegspunkte. Route- oder Feature-
-Module besitzen die sichtbaren Oberflaechen:
+TanStack routes are mostly thin entrypoints. Route or feature modules own the
+visible surfaces:
 
 - Dashboard: `frontend/src/components/dashboard/`
 - Findings: `frontend/src/components/findings/`
-- Finding Detail und TTP Context: `frontend/src/components/finding-detail/`
+- Finding Detail and TTP Context: `frontend/src/components/finding-detail/`
 - Assets: `frontend/src/components/assets/`
-- Providers und Settings: typed route containers
+- Providers and Settings: typed route containers
 - Reports / Evidence Center: `frontend/src/components/reports/EvidenceCenter.tsx`
 
-`WorkbenchShell` bleibt die zentrale Composition Root fuer globale
-Session-, Projekt-, Provider- und route-uebergreifende Statusdaten. Diese
-Zustaendigkeit ist bewusst nicht komplett ausgelagert, damit Auth, Projektwahl,
-API-Timing und Provider-Freshness konsistent bleiben.
+`WorkbenchShell` remains the central composition root for global session,
+project, provider, and cross-route status data. That responsibility is
+intentionally not fully extracted so auth, project selection, API timing, and
+provider freshness stay consistent.
 
-## Datenfluss
+## Data Flow
 
 ```text
-Upload oder vorhandene CVE-Evidenz
-  -> Backend-Import und Normalisierung
-  -> Provider-/Snapshot-Kontext
-  -> Findings und Prioritaetsgruende
-  -> Frontend Queue und Finding Detail
-  -> Waiver, Asset- und ATT&CK-Kontext
-  -> Reports und Evidence Bundle
+Upload or existing CVE evidence
+  -> backend import and normalization
+  -> provider/snapshot context
+  -> findings and priority rationale
+  -> frontend queue and Finding Detail
+  -> waiver, asset, and ATT&CK context
+  -> reports and evidence bundle
 ```
 
-Das Frontend erzeugt keine Reportinhalte eigenstaendig und umgeht keine
-Backend-Checks. Downloads, Report-Erzeugung und Bundle-Verifikation laufen ueber
-die Workbench-API.
+The frontend does not create report contents by itself and does not bypass
+backend checks. Downloads, report generation, and bundle verification run
+through the Workbench API.
 
-## Provider und Imports
+## Providers And Imports
 
-VPW nutzt bekannte defensive Quellen und lokale Snapshots:
+VPW uses known defensive sources and local snapshots:
 
-- NVD/CVSS als technische Severity-Basis
-- FIRST EPSS als Wahrscheinlichkeits-Signal
-- CISA KEV als Known-Exploited-Signal
-- optionale lokale ATT&CK-/CTID-Mappings
-- lokale Provider-Snapshots fuer reproduzierbare Demo- und Testlaeufe
+- NVD/CVSS as the technical severity baseline
+- FIRST EPSS as a probability signal
+- CISA KEV as the known-exploited signal
+- optional local ATT&CK/CTID mappings
+- local provider snapshots for reproducible demo and test runs
 
-Unterstuetzte Inputs umfassen CVE-Listen, Scanner-/SBOM-Exports,
-Generic-Occurrence-CSV, VEX und Asset-Kontext. Der Workbench scannt keine
-Systeme und entdeckt keine Assets aktiv.
+Supported inputs include CVE lists, scanner/SBOM exports, generic occurrence
+CSV, VEX, and asset context. The Workbench does not scan systems or actively
+discover assets.
 
-## Findings und Scoring
+## Findings And Scoring
 
-Das Scoring ist transparent und regelbasiert:
+Scoring is transparent and rule-based:
 
-- Critical: KEV oder hohe EPSS/CVSS-Kombination
-- High/Medium/Low nach EPSS- und CVSS-Schwellen
-- Asset-, Lifecycle-, Waiver-, Provider- und VEX-Kontext werden sichtbar
-  ergaenzt
-- menschlich lesbare Prioritaetsgruende werden im UI und in Reports angezeigt
+- Critical: KEV or a high EPSS/CVSS combination
+- High/Medium/Low according to EPSS and CVSS thresholds
+- Asset, lifecycle, waiver, provider, and VEX context are visibly added
+- Human-readable priority rationale appears in the UI and reports
 
 Details: [Scoring Methodology](../scoring-methodology.md).
 
-## ATT&CK/TTP-Kontext
+## ATT&CK/TTP Context
 
-ATT&CK ist defensiver Kontext, kein Exploit-Beweis:
+ATT&CK is defensive context, not exploit proof:
 
-- CVEs ohne explizite Mapping-Quelle bleiben unmapped.
-- VPW inferiert keine Taktiken oder Techniken aus CVE-Text, Produktnamen,
-  EPSS-Rang oder LLM-Ausgaben.
-- Curated Mappings benoetigen Source, Confidence, Rationale, Review-Status und
-  Safety-Wording.
-- Die Demo-Mapping-Evidenz fuer `CVE-2024-4577` zeigt nur, wie ein reviewed
-  defensiver Mapping-Kontext dargestellt wird.
+- CVEs without an explicit mapping source remain unmapped.
+- VPW does not infer tactics or techniques from CVE text, product names, EPSS
+  rank, or LLM output.
+- Curated mappings require source, confidence, rationale, review status, and
+  safety wording.
+- The demo mapping evidence for `CVE-2024-4577` only shows how reviewed
+  defensive mapping context is displayed.
 
 Details: [ATT&CK/TTP Methodology](../attack-ttp-methodology.md).
 
-## Waivers und Governance
+## Waivers And Governance
 
-Waivers modellieren akzeptierte Risiken mit Scope, Owner, Ablauf, Review-Datum
-und sichtbarer Debt. Ein Waiver loescht ein Finding nicht. Er macht die
-Entscheidung pruefbar und kann in Governance-Rollups, Reports und Evidence
-Bundles auftauchen.
+Waivers model accepted risk with scope, owner, expiration, review date, and
+visible debt. A waiver does not delete a finding. It makes the decision
+verifiable and can appear in governance rollups, reports, and evidence bundles.
 
-## Reports und Evidence
+## Reports And Evidence
 
-Das Evidence Center erzeugt und verwaltet:
+The Evidence Center creates and manages:
 
-- HTML- und Markdown-Reports
-- JSON- und CSV-Exports
+- HTML and Markdown reports
+- JSON and CSV exports
 - SARIF
-- ATT&CK Navigator Layer, wenn Mapping-Kontext existiert
-- Evidence ZIP Bundle mit Manifest und SHA256-Checksummen
+- ATT&CK Navigator layer when mapping context exists
+- Evidence ZIP bundle with manifest and SHA256 checksums
 
-Die kanonischen Contract-Artefakte bleiben bewusst klein unter `docs/evidence/`.
-Historische Screenshots und Meilensteinbelege liegen unter
+The canonical contract artifacts intentionally remain small under
+`docs/evidence/`. Historical screenshots and milestone evidence live under
 `archive/vpw-evidence/`.
 
 Details: [Reports and Evidence](../reports-and-evidence.md).
 
-## CI, Tests und Hygiene
+## CI, Tests, And Hygiene
 
-Der aktuelle Stand hat gruene Validierung fuer:
+The current state has passing validation for:
 
-- Frontend Build, Lint, Unit Tests und Playwright-Smoke/Full-Suite
-- Backend Report-Contract-Tests
-- Backend API/Core-Smoke-Subset
-- Docs Hygiene, MkDocs Build und `make docs-check`
-- CI-Workflows mit reduzierten Kosten fuer Draft-, Docs- und Scope-spezifische
-  PRs
+- frontend build, lint, unit tests, and Playwright smoke/full suite
+- backend report contract tests
+- backend API/core smoke subset
+- docs hygiene, MkDocs build, and `make docs-check`
+- CI workflows with reduced cost for draft, docs-only, and scope-specific PRs
 
-Die CI-Kostenstrategie ist dokumentiert in
-[CI Cost Optimization](../ci-cost-optimization.md).
+The CI cost strategy is documented in [CI Cost Optimization](../ci-cost-optimization.md).
 
-## Grenzen
+## Boundaries
 
-- Public-Internet-Deployment erfordert zusaetzliche Hardening-Dokumentation und
-  Betriebsreview.
-- Demo-Daten sind Beispiel- und Evidenzdaten, keine Kundendaten.
-- ATT&CK-Mappings sind optional und source-backed; fehlende Mappings bleiben
-  sichtbar.
-- Detection Coverage ist defensiver Review-Kontext, kein Nachweis realer
-  Wirksamkeit gegen einen Angriff.
+- Public internet deployment requires additional hardening documentation and
+  operational review.
+- Demo data is sample/evidence data, not customer data.
+- ATT&CK mappings are optional and source-backed; missing mappings remain
+  visible.
+- Detection coverage is defensive review context, not proof of real-world
+  effectiveness against an attack.
