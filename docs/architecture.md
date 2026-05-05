@@ -26,6 +26,33 @@ The frontend and backend communicate through the generated API client. UI
 component structure, route extraction, CSS organization, and VPW design-system
 implementation details are intentionally outside the backend/API contract.
 
+## Backend Runtime Boundary
+
+The active browser Workbench runtime is `backend/app`. Docker, the local Compose
+quickstart, Playwright backend startup, and OpenAPI client generation must point
+to `app.main:app` or import `app.main.app`. The generated browser API boundary is
+`frontend/src/client/**` plus `frontend/src/api-client.ts`; generated client files
+are not manually edited.
+
+`backend/src/vuln_prioritizer/**` remains the retained CLI and domain
+implementation. The active template backend may import neutral, framework-light
+domain helpers from this package, such as input normalization, provider clients,
+scoring, report/evidence helpers, redaction, and token hashing. Reusable logic
+needed by both runtimes should move into these neutral modules.
+
+The older `vuln_prioritizer.api`, `vuln_prioritizer.web`,
+`vuln_prioritizer.db`, and `vuln_prioritizer.services.workbench_*` layers are
+legacy Workbench runtime surfaces. They are kept for compatibility tests,
+historical reference, and the profiled legacy Postgres migration smoke path, but
+they are not the active browser deployment runtime. `backend/app` must not import
+those layers directly or transitively.
+
+Legacy API token bootstrap behavior is therefore local-only compatibility
+behavior. A fresh legacy database can allow first-token setup before active token
+gating; that behavior must not be reachable through the active `backend/app`
+runtime. New shared logic should be extracted into neutral domain/core modules
+rather than imported from the legacy API, web, or DB runtime packages.
+
 ## Frontend Route Ownership
 
 TanStack Router file routes remain small entrypoints. Most product rendering is
@@ -39,7 +66,7 @@ owned by route-level Workbench components:
 | Findings | `components/findings/RemediationQueue.tsx` | Uses `useFindingsRouteState` for filters/sort/pagination and `FindingsDataTable` for the table surface. |
 | Finding Detail | `components/finding-detail/FindingDetailRoute.tsx` | Hero, priority explanation, evidence, TTP Context, and history are extracted from `WorkbenchShell`. |
 | Waivers | `components/waivers/WaiversWorkbench.tsx` | VPW-based waiver register and governance workflow; handlers remain shell-owned. |
-| Assets | `routes/_layout/assets.tsx` | Largest remaining route-local implementation; already uses VPW primitives but still owns route state directly. |
+| Assets | `routes/_layout/assets.tsx` + `components/assets/*` | Thin route wrapper; Assets module owns route state, filters, forms, table, service rollup, and linked findings panel. |
 | Providers | `components/providers/ProvidersRouteContainer.tsx` | Typed container over `ProvidersWorkbench`; provider status remains shared state. |
 | Reports | `components/reports/EvidenceCenter.tsx` | Evidence Center for report generation, download, verification, and bundle metadata. |
 | Settings | `components/settings/SettingsRouteContainer.tsx` | Typed wrapper over `SettingsWorkbench`; token/session data remains shell-owned. |
