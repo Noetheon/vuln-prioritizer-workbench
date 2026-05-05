@@ -20,7 +20,7 @@ router = APIRouter(tags=["login"])
 def login_access_token(
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
 ) -> Token:
-    """OAuth2 compatible token login for the configured active-runtime user."""
+    """OAuth2 compatible token login for the configured template-shell user."""
     if (
         form_data.username != settings.FIRST_SUPERUSER
         or form_data.password != settings.FIRST_SUPERUSER_PASSWORD

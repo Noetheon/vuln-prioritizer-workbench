@@ -68,7 +68,7 @@ owned by route-level Workbench components:
 | Findings | `components/findings/RemediationQueue.tsx` | Uses `useFindingsRouteState` for filters/sort/pagination and `FindingsDataTable` for the table surface. |
 | Finding Detail | `components/finding-detail/FindingDetailRoute.tsx` | Hero, priority explanation, evidence, TTP Context, and history are extracted from `WorkbenchShell`. |
 | Waivers | `components/waivers/WaiversWorkbench.tsx` | VPW-based waiver register and governance workflow; handlers remain shell-owned. |
-| Assets | `routes/_layout/assets.tsx` + `components/assets/*` | Thin route wrapper; Assets module owns route state, filters, forms, table, service rollup, and linked findings panel. |
+| Assets | `routes/_layout/assets.tsx` + `components/assets/*` | Thin route wrapper; Assets module owns route state, filters, forms, asset table, service rollup, linked findings panel, and helpers. |
 | Providers | `components/providers/ProvidersRouteContainer.tsx` | Typed container over `ProvidersWorkbench`; provider status remains shared state. |
 | Reports | `components/reports/EvidenceCenter.tsx` | Evidence Center for report generation, download, verification, and bundle metadata. |
 | Settings | `components/settings/SettingsRouteContainer.tsx` | Typed wrapper over `SettingsWorkbench`; token/session data remains shell-owned. |
