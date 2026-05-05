@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import re
 import uuid
 from datetime import datetime
 from typing import Any
@@ -12,41 +11,24 @@ from sqlalchemy import JSON, Column, DateTime, Float, Index, String, Text, Uniqu
 from sqlmodel import Field, SQLModel
 
 from app.models.base import get_datetime_utc
+from vuln_prioritizer.models_attack import (
+    ATTACK_MAPPING_TYPES as CORE_ATTACK_MAPPING_TYPES,
+)
+from vuln_prioritizer.models_attack import (
+    ATTACK_REVIEW_STATUSES as CORE_ATTACK_REVIEW_STATUSES,
+)
+from vuln_prioritizer.models_attack import (
+    require_attack_non_empty_text,
+    validate_attack_tactic_id,
+    validate_attack_technique_id,
+)
 
-ATTACK_TECHNIQUE_ID_PATTERN = r"^T\d{4}(?:\.\d{3})?$"
-ATTACK_TACTIC_ID_PATTERN = r"^TA\d{4}$"
-ATTACK_REVIEW_STATUSES = {"unreviewed", "needs_review", "reviewed", "rejected", "stale"}
-ATTACK_MAPPING_TYPES = {
-    "exploitation",
-    "impact",
-    "post_exploitation",
-    "mitigation_context",
-    "detection_context",
-}
+ATTACK_REVIEW_STATUSES = set(CORE_ATTACK_REVIEW_STATUSES)
+ATTACK_MAPPING_TYPES = set(CORE_ATTACK_MAPPING_TYPES)
 
-_TECHNIQUE_ID_RE = re.compile(ATTACK_TECHNIQUE_ID_PATTERN)
-_TACTIC_ID_RE = re.compile(ATTACK_TACTIC_ID_PATTERN)
-
-
-def _require_non_empty(value: str, field_name: str) -> str:
-    normalized = value.strip()
-    if not normalized:
-        raise ValueError(f"{field_name} is required.")
-    return normalized
-
-
-def _validate_technique_id(value: str) -> str:
-    normalized = value.strip()
-    if not _TECHNIQUE_ID_RE.fullmatch(normalized):
-        raise ValueError("ATT&CK technique IDs must match T#### or T####.###.")
-    return normalized
-
-
-def _validate_tactic_id(value: str) -> str:
-    normalized = value.strip()
-    if not _TACTIC_ID_RE.fullmatch(normalized):
-        raise ValueError("ATT&CK tactic IDs must match TA####.")
-    return normalized
+_require_non_empty = require_attack_non_empty_text
+_validate_technique_id = validate_attack_technique_id
+_validate_tactic_id = validate_attack_tactic_id
 
 
 class AttackTacticBase(SQLModel):

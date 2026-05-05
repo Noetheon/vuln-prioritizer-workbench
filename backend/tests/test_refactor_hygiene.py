@@ -160,10 +160,12 @@ def test_template_report_contracts_are_split_from_renderer_facade() -> None:
     contracts_source = (ROOT / "app/services/report_contracts.py").read_text(encoding="utf-8")
     models_source = (ROOT / "app/services/report_models.py").read_text(encoding="utf-8")
     renderers_source = (ROOT / "app/services/report_renderers.py").read_text(encoding="utf-8")
+    sarif_source = (ROOT / "app/services/report_sarif.py").read_text(encoding="utf-8")
 
     assert "app.services.report_contracts" in imports
     assert "app.services.report_models" in imports
     assert "app.services.report_renderers" in imports
+    assert "app.services.report_sarif" in imports
     assert "CSV_FINDINGS_COLUMNS = [" not in source
     assert "EXECUTIVE_REPORT_CSS = " not in source
     assert "def render_markdown_report" not in source
@@ -174,6 +176,8 @@ def test_template_report_contracts_are_split_from_renderer_facade() -> None:
     assert "class MarkdownReportPayload" in models_source
     assert "EXECUTIVE_REPORT_CSS = " in renderers_source
     assert "def render_evidence_bundle_zip" in renderers_source
+    assert "def render_sarif_report" not in renderers_source
+    assert "def render_sarif_report" in sarif_source
 
 
 def test_template_import_validation_and_storage_are_split_from_route_facade() -> None:
@@ -249,15 +253,21 @@ def test_workbench_reports_route_state_is_split_from_shell() -> None:
     reports_state_source = (REPO_ROOT / "frontend/src/workbench/useReportsRouteState.ts").read_text(
         encoding="utf-8"
     )
+    report_download_source = (REPO_ROOT / "frontend/src/workbench/report-download.ts").read_text(
+        encoding="utf-8"
+    )
 
     assert 'import { useReportsRouteState } from "./useReportsRouteState"' in shell_source
     assert "ReportsService" not in shell_source
     assert "function reportDownloadUrl" not in shell_source
+    assert "download_url" not in shell_source
     assert "function downloadReportArtifact" not in shell_source
     assert "useReportsRouteState({" in shell_source
     assert "ReportsService" in reports_state_source
-    assert "function reportDownloadUrl" in reports_state_source
+    assert "reportDownloadRequest" in reports_state_source
     assert "function downloadReportArtifact" in reports_state_source
+    assert "function reportDownloadPath" in report_download_source
+    assert "download_url" not in report_download_source
 
 
 def test_findings_queue_uses_vpw_product_surfaces() -> None:

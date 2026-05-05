@@ -142,6 +142,12 @@ make release-check
 
 `make release-check` remains the stricter maintainer sweep because it also regenerates the checked-in demo artifacts before packaging.
 
+For release-readiness evidence that also verifies the demo evidence bundle:
+
+```bash
+make release-readiness-check
+```
+
 To validate only the generated distribution artifacts and package metadata:
 
 ```bash
