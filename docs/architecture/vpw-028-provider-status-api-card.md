@@ -17,9 +17,9 @@ The route is authenticated through the template API dependency used by the
 other `/api/v1` Workbench routes. Anonymous requests must not receive provider
 runtime paths, cache evidence, or update-job details.
 
-The legacy Workbench route `GET /api/providers/status` still exists during the
-migration and keeps its current response and authentication behavior. New React
-template code should use `/api/v1/providers/status`.
+The legacy Workbench route `GET /api/providers/status` remains
+compatibility-only with its current response and authentication behavior. React
+template code must use `/api/v1/providers/status`.
 
 ## Response Contract
 

@@ -1,1 +1,1 @@
-"""Template-aligned backend application shell for the Workbench migration."""
+"""Template-aligned backend application shell for the active Workbench runtime."""

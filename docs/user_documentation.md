@@ -47,20 +47,19 @@ make install
 make provider-snapshot-validate
 make demo-offline-no-key-proof
 make demo-evidence-bundle-check
-vuln-prioritizer web serve --host 127.0.0.1 --port 8000
+docker compose -f compose.yml -f compose.override.yml up --build backend frontend
 ```
 
-Then open `http://127.0.0.1:8000`, create a local project, and follow the
+Then open `http://127.0.0.1:5173`, create a local project, and follow the
 step-by-step [Workbench offline demo runbook](workbench-offline-demo.md). That
 runbook covers import, locked provider replay, findings review, provider
 freshness, reports, evidence bundles, screenshot capture, fallback artifacts,
 and no-secret rules.
 
-The Compose smoke path validates the current template-aligned backend/frontend
-shell:
+The active browser Workbench uses the template backend under `backend/app` and
+the generated `/api/v1` browser client:
 
 ```bash
-docker compose -f compose.yml -f compose.override.yml up --build backend frontend
 curl http://127.0.0.1:8000/api/v1/workbench/status
 ```
 
@@ -70,8 +69,9 @@ Maintainers can run the same readiness path with:
 make docker-demo-smoke
 ```
 
-The optional Postgres profile is a private migration smoke path, not a managed
-production deployment:
+The optional Postgres smoke target uses `compose.legacy.yml` for the retained
+legacy compatibility runtime. It is a private compatibility check, not the
+active browser runtime and not a managed production deployment:
 
 ```bash
 make docker-postgres-migration-smoke

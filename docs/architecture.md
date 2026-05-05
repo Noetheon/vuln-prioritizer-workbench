@@ -41,11 +41,13 @@ scoring, report/evidence helpers, redaction, and token hashing. Reusable logic
 needed by both runtimes should move into these neutral modules.
 
 The older `vuln_prioritizer.api`, `vuln_prioritizer.web`,
-`vuln_prioritizer.db`, and `vuln_prioritizer.services.workbench_*` layers are
-legacy Workbench runtime surfaces. They are kept for compatibility tests,
-historical reference, and the profiled legacy Postgres migration smoke path, but
-they are not the active browser deployment runtime. `backend/app` must not import
-those layers directly or transitively.
+`vuln_prioritizer.db`, `vuln_prioritizer.services.workbench_*`,
+`vuln_prioritizer.provider_scheduler`, and `vuln_prioritizer.workbench_config`
+layers are legacy Workbench runtime surfaces. They are kept for compatibility
+tests, historical reference, and the profiled legacy Postgres compatibility
+smoke path in `compose.legacy.yml`, but they are not the active browser
+deployment runtime. `backend/app` must not import those layers directly or
+transitively.
 
 Legacy API token bootstrap behavior is therefore local-only compatibility
 behavior. A fresh legacy database can allow first-token setup before active token

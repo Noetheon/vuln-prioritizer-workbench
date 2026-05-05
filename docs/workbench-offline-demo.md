@@ -15,15 +15,20 @@ make install
 make provider-snapshot-validate
 make provider-testmatrix
 make demo-offline-no-key-proof
-python3 -m pytest -q backend/tests/api/test_workbench_api.py backend/tests/web/test_workbench_pages.py --no-cov
+python3 -m pytest -q backend/tests/api/test_template_auth_smoke.py backend/tests/api/test_template_import_upload_api.py backend/tests/api/test_template_reports_api.py --no-cov
 make docker-demo-smoke
 make docker-postgres-migration-smoke
 make dependency-audit
 make demo-evidence-bundle-check
-vuln-prioritizer web serve --host 127.0.0.1 --port 8000
+docker compose -f compose.yml -f compose.override.yml up --build backend frontend
 ```
 
-Open `http://127.0.0.1:8000` and create the project `online-shop-demo`.
+Open `http://127.0.0.1:5173` and create the project `online-shop-demo`.
+The browser demo uses the active template backend in `backend/app`; the legacy
+Workbench runtime remains compatibility-only and is not the demo deployment
+path.
+`make docker-postgres-migration-smoke` uses `compose.legacy.yml` only for the
+retained legacy Postgres compatibility path.
 
 If `pip-audit` is unavailable or advisory data cannot be reached, record that as a release-checklist exception instead of treating the offline browser demo itself as failed.
 
@@ -46,10 +51,10 @@ If `pip-audit` is unavailable or advisory data cannot be reached, record that as
 
 | Check | Evidence to capture |
 | --- | --- |
-| Security headers | `tests/api/test_workbench_api.py::test_workbench_health_and_project_crud` and an optional `curl -I http://127.0.0.1:8000/api/health` capture showing `nosniff`, `DENY`, and CSP. |
-| Upload filename/path validation | `tests/api/test_workbench_api.py::test_workbench_rejects_unsupported_and_oversized_uploads` plus `test_workbench_rejects_untrusted_provider_snapshot_path`. |
-| Report/evidence downloads | `tests/api/test_workbench_api.py::test_workbench_import_findings_reports_and_evidence` and `test_workbench_downloads_reject_tampered_artifact_paths`; browser evidence should show report links and Evidence ZIP verification. |
-| 10k findings API smoke | `tests/api/test_workbench_api.py::test_workbench_findings_api_handles_10k_pagination_smoke`. |
+| Security headers | `tests/api/test_template_auth_smoke.py` and an optional `curl -I http://127.0.0.1:8000/api/v1/utils/health-check/` capture showing `nosniff`, `DENY`, and CSP. |
+| Upload filename/path validation | `tests/api/test_template_import_upload_api.py` covers active `/api/v1` upload size, suffix, MIME, path, and provider snapshot validation. |
+| Report/evidence downloads | `tests/api/test_template_reports_api.py`; browser evidence should show report links and Evidence ZIP verification. |
+| 10k findings API smoke | `make performance-smoke` runs the active template import and pagination smoke with 10,000 findings. |
 | Docker demo smoke | `make docker-demo-smoke` output showing `/api/v1/workbench/status` returns `{"status":"ok"}` before teardown. |
 | Dependency audit | `make dependency-audit` result, or a documented exception when `pip-audit` or advisory data is unavailable. |
 | Demo evidence bundle | `make demo-evidence-bundle-check` output plus `build/v1.0-demo-evidence-bundle-verification.json` showing `ok=true`. |

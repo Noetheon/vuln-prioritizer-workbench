@@ -3,6 +3,7 @@ BACKEND_DIR := backend
 BACKEND_SRC := $(BACKEND_DIR)/src
 BACKEND_TESTS := $(BACKEND_DIR)/tests
 COMPOSE := docker compose -f compose.yml -f compose.override.yml
+LEGACY_COMPOSE := docker compose -f compose.yml -f compose.legacy.yml
 
 ATTACK_MAPPING_FILE := data/attack/ctid_kev_enterprise_2025-07-28_attack-16.1_subset.json
 ATTACK_METADATA_FILE := data/attack/attack_techniques_enterprise_16.1_subset.json
@@ -136,8 +137,8 @@ docker-demo-smoke:
 
 docker-postgres-migration-smoke:
 	@set -e; \
-	$(COMPOSE) --profile postgres up -d --build db workbench-postgres; \
-	trap '$(COMPOSE) --profile postgres down -v --remove-orphans' EXIT; \
+	$(LEGACY_COMPOSE) --profile legacy-postgres up -d --build db workbench-postgres; \
+	trap '$(LEGACY_COMPOSE) --profile legacy-postgres down -v --remove-orphans' EXIT; \
 	for attempt in $$(seq 1 30); do \
 		if $(PYTHON) -c "import urllib.request; print(urllib.request.urlopen('http://127.0.0.1:8001/api/health', timeout=2).read().decode())" 2>/dev/null; then \
 			exit 0; \

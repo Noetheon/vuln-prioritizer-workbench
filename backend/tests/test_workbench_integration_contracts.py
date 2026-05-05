@@ -14,7 +14,7 @@ def test_backend_dockerfile_prepares_template_quickstart_runtime_dirs() -> None:
     assert "chown -R workbench:workbench /app" in dockerfile
 
 
-def test_compose_uses_template_shell_and_keeps_profiled_legacy_postgres() -> None:
+def test_compose_uses_template_shell_without_legacy_runtime_services() -> None:
     compose = yaml.safe_load(Path("compose.yml").read_text(encoding="utf-8"))
     services = compose["services"]
 
@@ -43,8 +43,16 @@ def test_compose_uses_template_shell_and_keeps_profiled_legacy_postgres() -> Non
     assert db["environment"]["POSTGRES_DB"] == "${POSTGRES_DB:-workbench}"
     assert db["healthcheck"]["test"][0] == "CMD-SHELL"
 
+    assert "workbench-postgres" not in services
+    assert "provider-scheduler" not in services
+
+
+def test_legacy_compose_keeps_profiled_postgres_compatibility_runtime() -> None:
+    legacy_compose = yaml.safe_load(Path("compose.legacy.yml").read_text(encoding="utf-8"))
+    services = legacy_compose["services"]
+
     workbench_postgres = services["workbench-postgres"]
-    assert workbench_postgres["profiles"] == ["postgres"]
+    assert workbench_postgres["profiles"] == ["legacy-postgres"]
     assert workbench_postgres["depends_on"]["db"]["condition"] == "service_healthy"
     assert (
         workbench_postgres["environment"]["VULN_PRIORITIZER_DB_URL"]
@@ -57,9 +65,10 @@ def test_compose_uses_template_shell_and_keeps_profiled_legacy_postgres() -> Non
     assert workbench_postgres["environment"]["VULN_PRIORITIZER_ALLOWED_HOSTS"] == (
         "${VULN_PRIORITIZER_ALLOWED_HOSTS:-127.0.0.1,localhost,workbench-postgres}"
     )
+    assert workbench_postgres["ports"] == ["127.0.0.1:8001:8000"]
 
     scheduler = services["provider-scheduler"]
-    assert scheduler["profiles"] == ["postgres"]
+    assert scheduler["profiles"] == ["legacy-postgres"]
     assert scheduler["depends_on"]["workbench-postgres"]["condition"] == "service_healthy"
     assert scheduler["command"] == ["python", "-m", "vuln_prioritizer.provider_scheduler"]
     assert scheduler["read_only"] is True
@@ -89,7 +98,7 @@ def test_compose_override_exposes_template_shell_and_frontend_ports() -> None:
     assert "init_db(session)" in backend_command
     assert "app.main:app" in backend_command
     assert services["frontend"]["ports"] == ["127.0.0.1:5173:80"]
-    assert services["workbench-postgres"]["ports"] == ["127.0.0.1:8001:8000"]
+    assert "workbench-postgres" not in services
 
 
 def test_docker_demo_smoke_runs_quickstart_api_import() -> None:
