@@ -15,6 +15,11 @@ from utils.template_workbench import (
 )
 
 from app import models as app_models
+from app.domain.import_asset_context import (
+    canonicalize_asset_criticality_value,
+    canonicalize_asset_environment_value,
+    canonicalize_asset_exposure_value,
+)
 from app.services import TemplateAnalysisError
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
@@ -23,6 +28,15 @@ TRIVY_REPORT = PROJECT_ROOT / "data" / "input_fixtures" / "trivy_report.json"
 OPENVEX = PROJECT_ROOT / "data" / "input_fixtures" / "openvex_statements.json"
 CYCLONEDX_VEX = PROJECT_ROOT / "data" / "input_fixtures" / "cyclonedx_vex.json"
 ATTACK_MAPPING = PROJECT_ROOT / "data" / "attack" / "local_curated_low_confidence_vpw058.yml"
+
+
+def test_import_asset_context_adapter_reuses_core_alias_canonicalization() -> None:
+    assert canonicalize_asset_exposure_value("private") == "internal"
+    assert canonicalize_asset_exposure_value("internal") == "internal"
+    assert canonicalize_asset_environment_value("qa") == "test"
+    assert canonicalize_asset_environment_value("test") == "test"
+    assert canonicalize_asset_criticality_value("crit") == "critical"
+    assert canonicalize_asset_criticality_value("critical") == "critical"
 
 
 def test_valid_cve_list_upload_creates_analysis_run_and_stores_sha256(
@@ -574,6 +588,62 @@ def test_import_upload_applies_asset_context_sidecar_to_template_findings(
     assert occurrence["asset_owner"] == "team-platform"
     assert occurrence["asset_business_service"] == "payments"
     assert occurrence["asset_exposure"] == "internet-facing"
+
+
+def test_generic_import_persists_core_canonical_asset_context_aliases(
+    template_api_env: TemplateApiEnv,
+    tmp_path: Path,
+) -> None:
+    _configure_upload_dir(template_api_env, tmp_path)
+    headers = auth_headers(template_api_env.client)
+    project = create_project_via_api(template_api_env.client, headers)
+    project_id = uuid.UUID(project["id"])
+    occurrence_csv = "\n".join(
+        [
+            ("cve_id,asset_ref,component,version,purl,severity,criticality,exposure,environment"),
+            (
+                "CVE-2024-3094,build-host-1,xz,5.6.0,"
+                "pkg:apk/alpine/xz@5.6.0-r0,CRITICAL,crit,private,qa"
+            ),
+            "",
+        ]
+    ).encode()
+
+    response = template_api_env.client.post(
+        f"/api/v1/projects/{project['id']}/imports",
+        headers=headers,
+        data={"input_type": "generic-occurrence-csv"},
+        files={"file": ("asset-aliases.csv", occurrence_csv, "text/csv")},
+    )
+
+    assert response.status_code == 200, response.text
+    findings = template_api_env.client.get(
+        f"/api/v1/projects/{project['id']}/findings/",
+        headers=headers,
+    )
+    assert findings.status_code == 200, findings.text
+    finding = findings.json()["data"][0]
+    assert finding["asset_key"] == "build-host-1"
+    assert finding["asset_environment"] == "test"
+    assert finding["asset_criticality"] == "critical"
+    assert finding["exposure"] == "internal"
+
+    detail = template_api_env.client.get(f"/api/v1/findings/{finding['id']}", headers=headers)
+    assert detail.status_code == 200, detail.text
+    explanation = detail.json()["explanation_json"]
+    assert explanation["highest_asset_criticality"] == "critical"
+    assert explanation["provenance"]["highest_asset_exposure"] == "internal"
+    assert explanation["provenance"]["asset_environments"] == ["test"]
+    occurrence = detail.json()["occurrences"][0]
+    assert occurrence["asset_exposure"] == "internal"
+
+    with Session(template_api_env.engine) as session:
+        asset = session.exec(
+            select(app_models.Asset).where(app_models.Asset.project_id == project_id)
+        ).one()
+        assert asset.environment == app_models.AssetEnvironment.TEST
+        assert asset.exposure == app_models.AssetExposure.INTERNAL
+        assert asset.criticality == app_models.AssetCriticality.CRITICAL
 
 
 def test_import_upload_applies_openvex_sidecar_to_template_findings(

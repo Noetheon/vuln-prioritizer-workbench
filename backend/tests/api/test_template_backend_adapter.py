@@ -6,7 +6,7 @@ import pytest
 from fastapi.routing import APIRoute
 from fastapi.testclient import TestClient
 
-from app.core.config import Settings, load_settings, parse_cors_origins
+from app.core.config import Settings, load_settings, parse_allowed_hosts, parse_cors_origins
 from app.main import app, create_app, custom_generate_unique_id
 
 
@@ -41,6 +41,30 @@ def test_template_backend_openapi_uses_template_operation_ids() -> None:
     assert payload["paths"]["/api/v1/utils/health-check/"]["get"]["operationId"] == (
         "utils-health_check"
     )
+
+
+def test_template_backend_rejects_invalid_host_header() -> None:
+    client = TestClient(app)
+
+    response = client.get(
+        "/api/v1/workbench/status",
+        headers={"host": "evil.example"},
+    )
+
+    assert response.status_code == 400
+    assert response.text == "Invalid host header"
+
+
+@pytest.mark.parametrize("host", ["testserver", "localhost", "127.0.0.1"])
+def test_template_backend_allows_local_and_testclient_hosts(host: str) -> None:
+    client = TestClient(app)
+
+    response = client.get(
+        "/api/v1/workbench/status",
+        headers={"host": host},
+    )
+
+    assert response.status_code == 200
 
 
 def test_template_backend_health_check_matches_template_utility_route() -> None:
@@ -122,6 +146,11 @@ def test_template_backend_load_settings_rejects_non_local_default_secret_env(
         load_settings()
 
 
+def test_template_backend_settings_reject_local_default_secrets_with_public_hosts() -> None:
+    with pytest.raises(ValueError, match="non-local ALLOWED_HOSTS"):
+        Settings(ENVIRONMENT="local", ALLOWED_HOSTS=("localhost", "workbench.example.com"))
+
+
 def test_template_backend_settings_reject_unknown_environment(monkeypatch) -> None:
     monkeypatch.setenv("ENVIRONMENT", "qa")
 
@@ -151,6 +180,85 @@ def test_template_backend_settings_parse_cors_origins() -> None:
         "http://localhost:5173",
         "http://127.0.0.1:5173",
     )
+
+
+def test_template_backend_settings_parse_allowed_hosts() -> None:
+    assert parse_allowed_hosts(" Localhost, 127.0.0.1, TESTSERVER ") == (
+        "localhost",
+        "127.0.0.1",
+        "testserver",
+    )
+    selected_settings = Settings(
+        ALLOWED_HOSTS=("localhost", "localhost", "api.localhost"),
+    )
+
+    assert selected_settings.ALLOWED_HOSTS == ("localhost", "api.localhost")
+
+
+@pytest.mark.parametrize(
+    "allowed_hosts",
+    [
+        ("http://localhost",),
+        ("localhost:8000",),
+        ("::1",),
+        ("*",),
+        (),
+    ],
+)
+def test_template_backend_settings_reject_malformed_allowed_hosts(
+    allowed_hosts: tuple[str, ...],
+) -> None:
+    with pytest.raises(ValueError, match="ALLOWED_HOSTS"):
+        Settings(ALLOWED_HOSTS=allowed_hosts)
+
+
+def test_template_backend_hides_docs_and_openapi_outside_local_by_default() -> None:
+    selected_app = create_app(
+        Settings(
+            ENVIRONMENT="production",
+            SECRET_KEY="template-shell-secret",
+            FIRST_SUPERUSER_PASSWORD="template-shell-password",
+            ALLOWED_HOSTS=("workbench.example.com",),
+        )
+    )
+    client = TestClient(selected_app)
+
+    assert client.get("/docs", headers={"host": "workbench.example.com"}).status_code == 404
+    assert (
+        client.get(
+            "/api/v1/openapi.json",
+            headers={"host": "workbench.example.com"},
+        ).status_code
+        == 404
+    )
+    assert (
+        client.get(
+            "/api/v1/workbench/status",
+            headers={"host": "workbench.example.com"},
+        ).status_code
+        == 200
+    )
+
+
+def test_template_backend_can_explicitly_expose_openapi_for_client_generation() -> None:
+    selected_app = create_app(
+        Settings(
+            ENVIRONMENT="production",
+            SECRET_KEY="template-shell-secret",
+            FIRST_SUPERUSER_PASSWORD="template-shell-password",
+            ALLOWED_HOSTS=("workbench.example.com",),
+            API_DOCS_ENABLED=True,
+        )
+    )
+    client = TestClient(selected_app)
+
+    response = client.get(
+        "/api/v1/openapi.json",
+        headers={"host": "workbench.example.com"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["info"]["title"] == "Vuln Prioritizer Workbench"
 
 
 def test_template_backend_adapter_does_not_import_legacy_web_or_db_stack() -> None:

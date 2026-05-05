@@ -157,6 +157,7 @@ def test_template_backend_import_graph_does_not_reach_legacy_runtime() -> None:
 def test_default_compose_services_start_only_active_backend_runtime() -> None:
     compose = yaml.safe_load((REPO_ROOT / "compose.yml").read_text(encoding="utf-8"))
     services = compose["services"]
+    backend_environment = services["backend"]["environment"]
 
     legacy_starters = {
         name: _as_text(service)
@@ -168,7 +169,36 @@ def test_default_compose_services_start_only_active_backend_runtime() -> None:
     assert "frontend" in services
     assert "workbench-postgres" not in services
     assert "provider-scheduler" not in services
+    assert backend_environment["ALLOWED_HOSTS"] == (
+        "${ALLOWED_HOSTS:-localhost,127.0.0.1,testserver,backend}"
+    )
+    assert backend_environment["API_DOCS_ENABLED"] == "${API_DOCS_ENABLED:-}"
+    assert backend_environment["SECRET_KEY"] == "${SECRET_KEY:-changethis}"
+    assert backend_environment["FIRST_SUPERUSER_PASSWORD"] == (
+        "${FIRST_SUPERUSER_PASSWORD:-changethis}"
+    )
     assert legacy_starters == {}
+
+
+def test_traefik_dashboard_route_is_opt_in_and_ip_limited() -> None:
+    compose = yaml.safe_load((REPO_ROOT / "compose.traefik.yml").read_text(encoding="utf-8"))
+    labels = compose["services"]["traefik"]["labels"]
+
+    assert "traefik.enable=${TRAEFIK_DASHBOARD_ENABLED:-false}" in labels
+    assert (
+        "traefik.http.middlewares.traefik-dashboard-ipallowlist.ipallowlist.sourcerange="
+        "${TRAEFIK_DASHBOARD_IP_ALLOWLIST:-127.0.0.1/32}"
+    ) in labels
+    assert (
+        "traefik.http.routers.traefik-dashboard-https.middlewares=traefik-dashboard-ipallowlist"
+    ) in labels
+
+
+def test_env_example_does_not_pin_api_docs_on_for_shared_deployments() -> None:
+    env_example = _read_repo_text(".env.example")
+
+    assert "API_DOCS_ENABLED=true" not in env_example
+    assert "\nAPI_DOCS_ENABLED=\n" in env_example
 
 
 def test_active_runtime_entrypoints_use_template_backend_app() -> None:

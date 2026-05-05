@@ -9,6 +9,7 @@ from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.routing import APIRoute
 from starlette.middleware.cors import CORSMiddleware
+from starlette.middleware.trustedhost import TrustedHostMiddleware
 from starlette.responses import JSONResponse, Response
 
 from app.api.main import api_router
@@ -39,12 +40,23 @@ def custom_generate_unique_id(route: APIRoute) -> str:
 def create_app(active_settings: Settings | None = None) -> FastAPI:
     """Create the active Workbench backend runtime."""
     selected_settings = active_settings or settings
+    openapi_url = (
+        f"{selected_settings.API_V1_STR}/openapi.json"
+        if selected_settings.api_docs_enabled
+        else None
+    )
     app = FastAPI(
         title=selected_settings.PROJECT_NAME,
-        openapi_url=f"{selected_settings.API_V1_STR}/openapi.json",
+        openapi_url=openapi_url,
+        docs_url="/docs" if selected_settings.api_docs_enabled else None,
+        redoc_url="/redoc" if selected_settings.api_docs_enabled else None,
         generate_unique_id_function=custom_generate_unique_id,
     )
     app.state.template_settings = selected_settings
+    app.add_middleware(
+        TrustedHostMiddleware,
+        allowed_hosts=list(selected_settings.ALLOWED_HOSTS),
+    )
     if selected_settings.all_cors_origins:
         app.add_middleware(
             CORSMiddleware,

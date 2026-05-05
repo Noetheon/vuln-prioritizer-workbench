@@ -35,9 +35,14 @@ services:
     environment:
       PROJECT_NAME: ${PROJECT_NAME:-Vuln Prioritizer Workbench}
       ENVIRONMENT: ${ENVIRONMENT:-local}
+      SECRET_KEY: ${SECRET_KEY:-changethis}
+      FIRST_SUPERUSER: ${FIRST_SUPERUSER:-admin@example.com}
+      FIRST_SUPERUSER_PASSWORD: ${FIRST_SUPERUSER_PASSWORD:-changethis}
       DOMAIN: ${DOMAIN:-localhost}
       FRONTEND_HOST: ${FRONTEND_HOST:-http://localhost:5173}
       BACKEND_CORS_ORIGINS: ${BACKEND_CORS_ORIGINS:-http://localhost,http://localhost:5173,http://127.0.0.1:5173}
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS:-localhost,127.0.0.1,testserver,backend}
+      API_DOCS_ENABLED: ${API_DOCS_ENABLED:-}
       POSTGRES_SERVER: db
       POSTGRES_PORT: ${POSTGRES_PORT:-5432}
       POSTGRES_DB: ${POSTGRES_DB:-workbench}

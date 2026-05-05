@@ -16,6 +16,26 @@ from sqlmodel import Session, col, select
 
 from app.api.deps import ScopedImportUser, SessionDep
 from app.api.routes.workbench_access import require_visible_project
+from app.domain.import_asset_context import (
+    asset_criticality_from_evidence as _asset_criticality,
+)
+from app.domain.import_asset_context import (
+    asset_environment_from_evidence as _asset_environment,
+)
+from app.domain.import_asset_context import asset_exposure_from_evidence as _asset_exposure
+from app.domain.import_asset_context import (
+    canonicalize_occurrence_asset_context as _canonicalize_occurrence_asset_context,
+)
+from app.domain.import_asset_context import (
+    input_occurrence_from_template_occurrence as _input_occurrence_from_template_occurrence,
+)
+from app.domain.import_asset_context import string_evidence as _string_evidence
+from app.domain.import_asset_context import (
+    template_occurrence_with_asset_context as _template_occurrence_with_asset_context,
+)
+from app.domain.import_asset_context import (
+    template_occurrence_with_vex as _template_occurrence_with_vex,
+)
 from app.importers import ImporterParseError, ImporterValidationError, build_importer_registry
 from app.importers.contracts import NormalizedOccurrence
 from app.models import (
@@ -23,9 +43,6 @@ from app.models import (
     AnalysisRunPublic,
     AnalysisRunStatus,
     Asset,
-    AssetCriticality,
-    AssetEnvironment,
-    AssetExposure,
     Finding,
     FindingAttackContext,
     FindingOccurrence,
@@ -108,7 +125,7 @@ from app.services.import_uploads import (
 from vuln_prioritizer.inputs._occurrence_support import apply_asset_context
 from vuln_prioritizer.inputs._vex_support import apply_vex_statements
 from vuln_prioritizer.inputs.loader import load_asset_context_file, load_vex_files
-from vuln_prioritizer.models import InputOccurrence, PrioritizedFinding
+from vuln_prioritizer.models import PrioritizedFinding
 
 router = APIRouter(tags=["imports"])
 
@@ -321,6 +338,7 @@ async def import_project_upload(
             upload_bytes,
             filename=stored_filename,
         )
+        occurrences = [_canonicalize_occurrence_asset_context(item) for item in occurrences]
     except (ImporterParseError, ImporterValidationError) as exc:
         parse_errors = _parse_errors(
             exc, filename=stored_filename, input_type=normalized_input_type
@@ -645,104 +663,6 @@ def _apply_template_vex(
                 *match_diagnostics.warnings,
             ],
         },
-    )
-
-
-def _input_occurrence_from_template_occurrence(
-    occurrence: NormalizedOccurrence,
-) -> InputOccurrence:
-    evidence = occurrence.raw_evidence
-    fix_versions = [occurrence.fix_version] if occurrence.fix_version else []
-    return InputOccurrence(
-        cve_id=occurrence.cve,
-        source_format=occurrence.source,
-        source_id=_string_evidence(evidence, "source_id"),
-        source_record_id=_string_evidence(evidence, "source_record_id"),
-        component_name=occurrence.component,
-        component_version=occurrence.version,
-        purl=_string_evidence(evidence, "purl"),
-        package_type=_string_evidence(evidence, "package_type"),
-        file_path=_string_evidence(evidence, "file_path"),
-        dependency_path=_string_evidence(evidence, "dependency_path"),
-        fix_versions=fix_versions,
-        raw_severity=(
-            _string_evidence(evidence, "raw_severity") or _string_evidence(evidence, "severity")
-        ),
-        target_kind=_string_evidence(evidence, "target_kind") or "generic",
-        target_ref=_string_evidence(evidence, "target_ref") or occurrence.asset_ref,
-        asset_id=_string_evidence(evidence, "asset_id"),
-        asset_criticality=_string_evidence(evidence, "asset_criticality"),
-        asset_exposure=_string_evidence(evidence, "asset_exposure")
-        or _string_evidence(evidence, "exposure"),
-        asset_environment=_string_evidence(evidence, "asset_environment"),
-        asset_owner=_string_evidence(evidence, "asset_owner")
-        or _string_evidence(evidence, "owner"),
-        asset_business_service=_string_evidence(evidence, "asset_business_service")
-        or _string_evidence(evidence, "business_service"),
-    )
-
-
-def _template_occurrence_with_vex(
-    occurrence: NormalizedOccurrence,
-    enriched: InputOccurrence,
-) -> NormalizedOccurrence:
-    evidence = dict(occurrence.raw_evidence)
-    updates: dict[str, Any] = {
-        "vex_status": enriched.vex_status,
-        "vex_justification": enriched.vex_justification,
-        "vex_action_statement": enriched.vex_action_statement,
-        "vex_match_type": enriched.vex_match_type,
-        "vex_source_format": enriched.vex_source_format,
-        "vex_source_record_id": enriched.vex_source_record_id,
-        "vex_source_path": Path(enriched.vex_source_path).name
-        if enriched.vex_source_path
-        else None,
-        "vex_candidate_count": enriched.vex_candidate_count,
-    }
-    evidence.update({key: value for key, value in updates.items() if value not in {None, ""}})
-    return NormalizedOccurrence(
-        cve=occurrence.cve,
-        component=occurrence.component,
-        version=occurrence.version,
-        asset_ref=occurrence.asset_ref,
-        source=occurrence.source,
-        fix_version=occurrence.fix_version,
-        raw_evidence=evidence,
-    )
-
-
-def _template_occurrence_with_asset_context(
-    occurrence: NormalizedOccurrence,
-    enriched: InputOccurrence,
-) -> NormalizedOccurrence:
-    evidence = dict(occurrence.raw_evidence)
-    updates: dict[str, Any] = {
-        "target_kind": enriched.target_kind,
-        "target_ref": enriched.target_ref,
-        "asset_id": enriched.asset_id,
-        "asset_criticality": enriched.asset_criticality,
-        "asset_exposure": enriched.asset_exposure,
-        "asset_environment": enriched.asset_environment,
-        "asset_owner": enriched.asset_owner,
-        "asset_business_service": enriched.asset_business_service,
-        "owner": enriched.asset_owner,
-        "business_service": enriched.asset_business_service,
-        "asset_match_rule_id": enriched.asset_match_rule_id,
-        "asset_match_row": enriched.asset_match_row,
-        "asset_match_mode": enriched.asset_match_mode,
-        "asset_match_pattern": enriched.asset_match_pattern,
-        "asset_match_precedence": enriched.asset_match_precedence,
-        "asset_match_candidate_count": enriched.asset_match_candidate_count,
-    }
-    evidence.update({key: value for key, value in updates.items() if value not in {None, ""}})
-    return NormalizedOccurrence(
-        cve=occurrence.cve,
-        component=occurrence.component,
-        version=occurrence.version,
-        asset_ref=enriched.asset_id or occurrence.asset_ref or enriched.target_ref,
-        source=occurrence.source,
-        fix_version=occurrence.fix_version,
-        raw_evidence=evidence,
     )
 
 
@@ -1623,60 +1543,3 @@ def _parse_error_field(message: str) -> str | None:
 def _parse_error_value(message: str) -> str | None:
     match = re.search(r"(?P<quote>['\"])(?P<value>.+?)(?P=quote)", message)
     return match.group("value") if match else None
-
-
-def _string_evidence(evidence: Mapping[str, Any], key: str) -> str | None:
-    value = evidence.get(key)
-    return str(value) if value else None
-
-
-def _asset_exposure(evidence: Mapping[str, Any]) -> AssetExposure:
-    raw = _string_evidence(evidence, "asset_exposure")
-    if raw is None:
-        return AssetExposure.UNKNOWN
-    normalized = raw.strip().lower().replace("_", "-")
-    aliases = {
-        "external": AssetExposure.INTERNET_FACING,
-        "internet": AssetExposure.INTERNET_FACING,
-        "internet-facing": AssetExposure.INTERNET_FACING,
-        "public": AssetExposure.INTERNET_FACING,
-        "internal": AssetExposure.INTERNAL,
-        "private": AssetExposure.PRIVATE,
-        "unknown": AssetExposure.UNKNOWN,
-    }
-    return aliases.get(normalized, AssetExposure.UNKNOWN)
-
-
-def _asset_environment(evidence: Mapping[str, Any]) -> AssetEnvironment:
-    raw = _string_evidence(evidence, "asset_environment")
-    if raw is None:
-        return AssetEnvironment.UNKNOWN
-    normalized = raw.strip().lower().replace("_", "-")
-    aliases = {
-        "prod": AssetEnvironment.PRODUCTION,
-        "production": AssetEnvironment.PRODUCTION,
-        "stage": AssetEnvironment.STAGING,
-        "staging": AssetEnvironment.STAGING,
-        "dev": AssetEnvironment.DEVELOPMENT,
-        "development": AssetEnvironment.DEVELOPMENT,
-        "test": AssetEnvironment.TEST,
-        "testing": AssetEnvironment.TEST,
-        "unknown": AssetEnvironment.UNKNOWN,
-    }
-    return aliases.get(normalized, AssetEnvironment.UNKNOWN)
-
-
-def _asset_criticality(evidence: Mapping[str, Any]) -> AssetCriticality:
-    raw = _string_evidence(evidence, "asset_criticality")
-    if raw is None:
-        return AssetCriticality.UNKNOWN
-    normalized = raw.strip().lower().replace("_", "-")
-    aliases = {
-        "critical": AssetCriticality.CRITICAL,
-        "high": AssetCriticality.HIGH,
-        "medium": AssetCriticality.MEDIUM,
-        "med": AssetCriticality.MEDIUM,
-        "low": AssetCriticality.LOW,
-        "unknown": AssetCriticality.UNKNOWN,
-    }
-    return aliases.get(normalized, AssetCriticality.UNKNOWN)

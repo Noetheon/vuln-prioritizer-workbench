@@ -10,7 +10,7 @@
     "preview": "vite preview --host 127.0.0.1",
     "generate-client": "openapi-ts",
     "test": "playwright test",
-    "test:unit": "node --test --experimental-strip-types tests/chart-data.test.ts",
+    "test:unit": "node --test --experimental-strip-types tests/chart-data.test.ts tests/report-download.test.ts",
     "test:ui": "playwright test --ui"
   },
   "dependencies": {

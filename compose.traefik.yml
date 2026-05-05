@@ -6,7 +6,7 @@ services:
       - "80:80"
       - "443:443"
     labels:
-      - traefik.enable=true
+      - traefik.enable=${TRAEFIK_DASHBOARD_ENABLED:-false}
       - traefik.http.services.traefik-dashboard.loadbalancer.server.port=8080
       - traefik.http.routers.traefik-dashboard-http.entrypoints=http
       - traefik.http.routers.traefik-dashboard-http.rule=Host(`traefik.${DOMAIN:-localhost}`)
@@ -15,8 +15,10 @@ services:
       - traefik.http.routers.traefik-dashboard-https.tls=true
       - traefik.http.routers.traefik-dashboard-https.tls.certresolver=le
       - traefik.http.routers.traefik-dashboard-https.service=api@internal
+      - traefik.http.routers.traefik-dashboard-https.middlewares=traefik-dashboard-ipallowlist
       - traefik.http.middlewares.https-redirect.redirectscheme.scheme=https
       - traefik.http.middlewares.https-redirect.redirectscheme.permanent=true
+      - traefik.http.middlewares.traefik-dashboard-ipallowlist.ipallowlist.sourcerange=${TRAEFIK_DASHBOARD_IP_ALLOWLIST:-127.0.0.1/32}
       - traefik.http.routers.traefik-dashboard-http.middlewares=https-redirect
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro

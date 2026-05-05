@@ -64,8 +64,8 @@ from app.services.report_renderers import (
     render_findings_csv,
     render_html_executive_report,
     render_markdown_report,
-    render_sarif_report,
 )
+from app.services.report_sarif import render_sarif_report
 
 MarkdownProviderSnapshot = _report_models.MarkdownProviderSnapshot
 MarkdownReportFinding = _report_models.MarkdownReportFinding

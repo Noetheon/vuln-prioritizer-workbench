@@ -2,6 +2,7 @@ import { defineConfig, devices } from "@playwright/test"
 
 export default defineConfig({
   testDir: "./tests",
+  testMatch: /.*\.spec\.ts/,
   timeout: 30_000,
   workers: 1,
   expect: {
@@ -28,7 +29,13 @@ export default defineConfig({
   projects: [
     {
       name: "chromium",
+      testIgnore: /.*responsive-shell\.spec\.ts/,
       use: { ...devices["Desktop Chrome"] },
+    },
+    {
+      name: "mobile-chromium",
+      testMatch: /.*responsive-shell\.spec\.ts/,
+      use: { ...devices["Pixel 5"] },
     },
   ],
 })

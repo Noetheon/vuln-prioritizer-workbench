@@ -1,5 +1,31 @@
 import { Link, useNavigate } from "@tanstack/react-router"
-import { useEffect, useState, type ReactNode } from "react"
+import {
+  Database,
+  FileArchive,
+  FileCheck2,
+  FileInput,
+  FolderKanban,
+  LayoutDashboard,
+  ListChecks,
+  LogOut,
+  type LucideIcon,
+  Menu,
+  Settings,
+  ShieldCheck,
+  Sidebar,
+} from "lucide-react"
+import { type ReactNode, useEffect, useState } from "react"
+import type {
+  ProviderStatusPublic,
+  UserPublic,
+  WorkbenchStatus,
+} from "../../api-client"
+import { clearAccessToken } from "../../auth"
+import {
+  dataServicesSummary,
+  workspaceHealthLabel,
+} from "../../lib/provider-format"
+import { cn } from "../../lib/utils"
 import { Button } from "../ui/button"
 import {
   DropdownMenu,
@@ -18,36 +44,19 @@ import {
   SelectValue,
 } from "../ui/select"
 import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "../ui/sheet"
+import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "../ui/tooltip"
-import {
-  Database,
-  FileArchive,
-  FileCheck2,
-  FileInput,
-  FolderKanban,
-  LayoutDashboard,
-  ListChecks,
-  LogOut,
-  Sidebar,
-  type LucideIcon,
-  Settings,
-  ShieldCheck,
-} from "lucide-react"
-import type {
-  ProviderStatusPublic,
-  UserPublic,
-  WorkbenchStatus,
-} from "../../api-client"
-import { clearAccessToken } from "../../auth"
-import {
-  dataServicesSummary,
-  workspaceHealthLabel,
-} from "../../lib/provider-format"
-import { cn } from "../../lib/utils"
 
 export type WorkbenchPath =
   | "/"
@@ -145,6 +154,7 @@ export function AppShell({
   statusItems,
   title,
 }: AppShellProps) {
+  const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
     if (typeof window === "undefined") return false
     return window.localStorage.getItem(sidebarStorageKey) === "true"
@@ -161,12 +171,12 @@ export function AppShell({
 
   return (
     <TooltipProvider>
-      <div className="flex h-screen overflow-hidden bg-[var(--vpw-bg-app)]">
+      <div className="flex min-h-dvh overflow-x-hidden bg-[var(--vpw-bg-app)] lg:h-screen lg:overflow-hidden">
         {/* ── Sidebar ── */}
         <aside
           aria-label="Workbench sidebar"
           className={cn(
-            "relative flex shrink-0 flex-col border-r border-slate-800/80 bg-[var(--vpw-navy)] transition-[width] duration-200 ease-out",
+            "relative hidden shrink-0 flex-col border-r border-slate-800/80 bg-[var(--vpw-navy)] transition-[width] duration-200 ease-out lg:flex",
             sidebarCollapsed ? "w-[72px]" : "w-[248px]",
           )}
         >
@@ -344,25 +354,110 @@ export function AppShell({
         </aside>
 
         {/* ── Main area ── */}
-        <main className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        <main className="flex min-h-dvh min-w-0 flex-1 flex-col lg:min-h-0 lg:overflow-hidden">
           {/* Topbar */}
-          <header className="flex h-14 shrink-0 items-center justify-between gap-4 border-b border-[var(--vpw-border-default)] bg-[var(--vpw-bg-page)] px-6">
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
-                {eyebrow}
-              </p>
-              <h1 className="text-base font-bold leading-tight text-slate-900">
-                {title}
-              </h1>
+          <header className="flex min-h-14 shrink-0 items-center justify-between gap-3 border-b border-[var(--vpw-border-default)] bg-[var(--vpw-bg-page)] px-4 py-3 lg:h-14 lg:px-6 lg:py-0">
+            <div className="flex min-w-0 items-center gap-3">
+              <Sheet open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
+                <SheetTrigger asChild>
+                  <Button
+                    aria-label="Open navigation"
+                    className="size-9 border-[var(--vpw-border-default)] text-[var(--vpw-text-secondary)] lg:hidden"
+                    size="icon"
+                    type="button"
+                    variant="outline"
+                  >
+                    <Menu aria-hidden="true" size={18} />
+                  </Button>
+                </SheetTrigger>
+                <SheetContent
+                  className="flex w-[min(22rem,calc(100vw-2rem))] flex-col overflow-y-auto bg-[var(--vpw-navy)] p-0 text-white"
+                  side="left"
+                >
+                  <SheetHeader className="border-b border-slate-800/80 px-4 py-4 text-left">
+                    <div className="flex items-center gap-3">
+                      <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-amber-500 text-xs font-extrabold text-slate-950">
+                        VP
+                      </div>
+                      <div className="min-w-0">
+                        <SheetTitle className="truncate text-sm font-semibold text-white">
+                          Vuln Prioritizer
+                        </SheetTitle>
+                        <SheetDescription className="truncate text-xs text-slate-400">
+                          Workbench
+                        </SheetDescription>
+                      </div>
+                    </div>
+                  </SheetHeader>
+                  <nav
+                    aria-label="Workbench mobile navigation"
+                    className="flex-1 p-2"
+                  >
+                    <ul className="flex flex-col gap-1">
+                      {navigation.map((entry) => {
+                        const isActive = activePath === entry.to
+                        return (
+                          <li key={entry.label}>
+                            <Link
+                              aria-current={isActive ? "page" : undefined}
+                              className={cn(
+                                "flex min-h-11 items-center gap-3 rounded-md px-3 text-sm font-medium transition-colors",
+                                isActive
+                                  ? "bg-white/10 text-white"
+                                  : "text-slate-300 hover:bg-white/5 hover:text-white",
+                              )}
+                              onClick={() => setMobileNavOpen(false)}
+                              to={entry.to}
+                            >
+                              <entry.icon
+                                aria-hidden="true"
+                                className="shrink-0"
+                                size={17}
+                              />
+                              <span className="truncate">{entry.label}</span>
+                            </Link>
+                          </li>
+                        )
+                      })}
+                    </ul>
+                  </nav>
+                  <div className="flex shrink-0 items-center gap-2 border-t border-slate-800/80 p-3">
+                    <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-slate-700 text-xs font-semibold text-slate-300">
+                      {currentUserLabel.charAt(0).toUpperCase()}
+                    </span>
+                    <span className="min-w-0 flex-1 truncate text-left text-xs text-slate-300">
+                      {currentUserLabel}
+                    </span>
+                    <Button
+                      aria-label="Sign out"
+                      className="size-9 shrink-0 text-slate-300 hover:bg-white/5 hover:text-white"
+                      onClick={() => void onSignOut()}
+                      size="icon"
+                      type="button"
+                      variant="ghost"
+                    >
+                      <LogOut aria-hidden="true" size={15} />
+                    </Button>
+                  </div>
+                </SheetContent>
+              </Sheet>
+              <div className="min-w-0">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                  {eyebrow}
+                </p>
+                <h1 className="truncate text-base font-bold leading-tight text-slate-900">
+                  {title}
+                </h1>
+              </div>
             </div>
-            <div className="flex items-center gap-1.5">
+            <div className="flex min-w-0 shrink-0 items-center gap-1.5">
               <div
                 className={cn(
                   "size-2 rounded-full",
                   isHealthy ? "bg-green-500" : "bg-amber-500",
                 )}
               />
-              <span className="whitespace-nowrap text-sm text-slate-600">
+              <span className="max-w-[8.5rem] truncate text-sm text-slate-600 sm:max-w-none">
                 {healthLabel}
               </span>
             </div>
@@ -370,28 +465,30 @@ export function AppShell({
 
           {/* Status strip */}
           {!hideStatusStrip && statusItems.length > 0 && (
-            <div className="flex shrink-0 items-stretch border-b border-[var(--vpw-border-subtle)] bg-white/80">
-              {statusItems.map((item, index) => (
-                <div
-                  className={cn(
-                    "flex flex-col justify-center px-6 py-2",
-                    index > 0 && "border-l border-slate-100",
-                  )}
-                  key={typeof item.label === "string" ? item.label : index}
-                >
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                    {item.label}
-                  </span>
-                  <span className="mt-0.5 text-sm font-semibold text-slate-800">
-                    {item.value}
-                  </span>
-                </div>
-              ))}
+            <div className="shrink-0 overflow-x-auto border-b border-[var(--vpw-border-subtle)] bg-white/80">
+              <div className="flex min-w-max items-stretch lg:min-w-0">
+                {statusItems.map((item, index) => (
+                  <div
+                    className={cn(
+                      "flex min-w-36 flex-col justify-center px-4 py-2 lg:min-w-0 lg:px-6",
+                      index > 0 && "border-l border-slate-100",
+                    )}
+                    key={typeof item.label === "string" ? item.label : index}
+                  >
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                      {item.label}
+                    </span>
+                    <span className="mt-0.5 truncate text-sm font-semibold text-slate-800">
+                      {item.value}
+                    </span>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 
           {/* Scrollable content */}
-          <div className="flex-1 overflow-y-auto">
+          <div className="min-w-0 flex-1 lg:overflow-y-auto">
             <div className="vpw-page-container py-6">{children}</div>
           </div>
         </main>
