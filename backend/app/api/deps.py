@@ -1,4 +1,4 @@
-"""Template-style dependency helpers for the migration backend shell."""
+"""Template-style dependency helpers for the active backend runtime."""
 
 from __future__ import annotations
 
@@ -34,7 +34,7 @@ SessionDep = Annotated[Session, Depends(get_db)]
 
 
 def _current_user_from_jwt(session: Session, token: str) -> User:
-    """Validate a JWT and resolve the configured template-shell user."""
+    """Validate a JWT and resolve the configured active-runtime user."""
     try:
         payload = security.decode_access_token(token)
         token_data = TokenPayload(**payload)
@@ -53,7 +53,7 @@ def _current_user_from_jwt(session: Session, token: str) -> User:
 
 
 def get_current_user(session: SessionDep, token: TokenDep) -> User:
-    """Require a configured-user JWT for template UI/session routes."""
+    """Require a configured-user JWT for active UI/session routes."""
     return _current_user_from_jwt(session, token)
 
 

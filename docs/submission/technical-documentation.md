@@ -17,6 +17,27 @@ Automatisierung, kompatible Reports und Maintainer-Workflows erhalten.
 
 Weitere Details stehen in [Product Architecture](../architecture.md).
 
+## Backend Runtime Boundary
+
+`backend/app` is the active browser Workbench runtime. Docker, Compose,
+Playwright backend startup, and OpenAPI client generation use `app.main:app` or
+`app.main.app`. The browser calls the generated `/api/v1` client under
+`frontend/src/client/**` and `frontend/src/api-client.ts`.
+
+`backend/src/vuln_prioritizer/**` bleibt erhalten fuer CLI, Domain-Logik,
+Reports und Kompatibilitaetspruefungen. Neutrale Module wie Input-Normalisierung,
+Provider, Scoring, Reporting, Redaction und Token-Hashing duerfen gemeinsam
+genutzt werden.
+
+Die aelteren `vuln_prioritizer.api`, `vuln_prioritizer.web`,
+`vuln_prioritizer.db`, `vuln_prioritizer.services.workbench_*`,
+`vuln_prioritizer.provider_scheduler` und `vuln_prioritizer.workbench_config`
+Module sind Legacy-Workbench-Runtime-Surfaces. Sie sind nicht der aktive
+Browser-Deployment-Runtime und duerfen nicht direkt oder transitiv nach
+`backend/app` importiert werden. Die bootstrap-offene Legacy-Token-Erstellung ist
+Kompatibilitaetsverhalten fuer lokale Legacy-Pfade und darf nicht ueber
+`backend/app` erreichbar sein.
+
 ## Frontend-Struktur
 
 TanStack-Routen sind weitgehend duenne Einstiegspunkte. Route- oder Feature-

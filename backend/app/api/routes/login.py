@@ -1,4 +1,4 @@
-"""Minimal template login routes for the migration backend shell."""
+"""Minimal template login routes for the active backend runtime."""
 
 from __future__ import annotations
 
