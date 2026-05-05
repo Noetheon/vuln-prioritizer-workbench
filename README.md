@@ -177,6 +177,10 @@ README:
 - [Presentation evidence index](archive/vpw-evidence/presentation-pack/evidence-index.md)
 - [Presentation pack overview](archive/vpw-evidence/presentation-pack/README.md)
 - [Historical evidence archive](archive/vpw-evidence/MANIFEST.md)
+- [Example technical report artifact](docs/examples/vpw-054-template-technical-report.md)
+- [Example executive report artifact](docs/examples/vpw-054-template-executive-report.html)
+- [Example analysis result artifact](docs/examples/vpw-054-template-analysis-result.v1.json)
+- [GitHub Actions report artifact workflow](.github/examples/workbench-report-artifacts.yml)
 
 Canonical report/evidence contract artifacts remain under `docs/evidence/` and
 are described in [Reports and Evidence](docs/reports-and-evidence.md).
