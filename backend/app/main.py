@@ -37,7 +37,7 @@ def custom_generate_unique_id(route: APIRoute) -> str:
 
 
 def create_app(active_settings: Settings | None = None) -> FastAPI:
-    """Create the active backend runtime without legacy Workbench side effects."""
+    """Create the active Workbench backend runtime."""
     selected_settings = active_settings or settings
     app = FastAPI(
         title=selected_settings.PROJECT_NAME,

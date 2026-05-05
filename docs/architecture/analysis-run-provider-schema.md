@@ -16,9 +16,7 @@ The SQLModel tables are singular and owned by the template backend:
 - `finding_occurrence`
 - `provider_snapshot`
 
-The legacy `vuln_prioritizer.db.models` tables remain useful behavioral
-reference points, but template code should use `app.models` exports and
-`app/alembic` migrations.
+Template code uses `app.models` exports and `app/alembic` migrations.
 
 ## Model Exports
 

@@ -27,9 +27,6 @@
 | `data update` | optional repeatable `--input PATH` / `--cve` | `json` | JSON schema | Cache refresh for `nvd`, `epss`, and `kev`; `table` remains the default terminal view. |
 | `data verify` | optional repeatable `--input PATH` / `--cve` | `json` | JSON schema | Cache coverage, checksum, and pinned local file verification; `table` remains the default terminal view. |
 | `data export-provider-snapshot` | repeatable `--input PATH` and/or `--cve` | `json` | JSON schema | Exports replayable provider data for `nvd`, `epss`, and `kev` so later analysis can run in fallback or locked snapshot mode. |
-| `db init` | Workbench environment settings | terminal status | Workbench schema/migration side effect | Initializes the Workbench SQLite database named by `VULN_PRIORITIZER_DB_URL`. |
-| `db cleanup-artifacts` | Workbench environment settings | terminal status | Workbench report/evidence cleanup side effect | Dry-runs by default; `--delete` removes expired/orphaned managed artifacts. |
-| `web serve` | Workbench environment settings | local HTTP service | FastAPI/OpenAPI + HTML UI | Serves the Workbench app with `--host`, `--port`, and optional `--reload`. |
 | `report workbench` | analysis JSON | `json`, `markdown`, `html`, `csv`, `sarif` | Saved analysis JSON contract + SARIF 2.1.0 | No live enrichment during rendering. SARIF results use CVE-addressable rules and references. |
 | `report html` | analysis JSON | `html` | Consumes analysis JSON contract | No live enrichment during rendering. |
 | `report evidence-bundle` | analysis JSON | `zip` | Manifest schema inside bundle | Packages saved analysis JSON, regenerated HTML, Markdown summary, optional source input copy, and optional ATT&CK Navigator layer when mappings exist. |
@@ -101,10 +98,7 @@ Without a matching target, the explain flow still works, but asset-context and V
   and template Workbench run reports.
 - `data status`, `data update`, `data verify`, and `data export-provider-snapshot` publish JSON contracts; their Rich table layout remains human-facing where applicable.
 - The optional SQLite state store is separate from the existing file cache and does not change `analyze`, `snapshot`, or `report` output semantics.
-- The Workbench SQLite database is a separate application store controlled by `VULN_PRIORITIZER_DB_URL`; it does not replace the CLI state store or provider cache.
 - Workbench imports now accept the same input-format matrix as the CLI for single-upload and multi-upload import flows.
-- Workbench reports and evidence bundles overlay current finding lifecycle status/history from the DB when artifacts are generated.
-- Workbench imports, provider refreshes, reports, and evidence bundles record durable local job state while keeping existing synchronous endpoints compatible.
 - Workbench artifact retention, cleanup, detection-control history/attachments, config export/defaults, and ATT&CK review queue APIs are additive local Workbench surfaces.
 - Workbench ticket sync supports GitHub issues plus Jira and ServiceNow preview/export flows with dry-run defaults, idempotency keys, and explicit token environment variables.
 - Parser/provider SDK definitions are static local contracts and do not discover entry points or load remote code.

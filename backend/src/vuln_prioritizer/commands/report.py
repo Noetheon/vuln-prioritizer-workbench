@@ -30,11 +30,11 @@ from vuln_prioritizer.reporter import (
     write_output,
 )
 from vuln_prioritizer.reporting_payloads import generate_summary_markdown
-from vuln_prioritizer.sarif_validation import validate_sarif_file
-from vuln_prioritizer.services.workbench_reports import (
+from vuln_prioritizer.reporting_workbench import (
     generate_findings_csv,
     generate_workbench_sarif,
 )
+from vuln_prioritizer.sarif_validation import validate_sarif_file
 
 WORKBENCH_REPORT_FORMATS = {"json", "markdown", "html", "csv", "sarif"}
 

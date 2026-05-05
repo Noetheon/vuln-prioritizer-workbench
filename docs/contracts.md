@@ -204,9 +204,9 @@ the recommended action. Missing CVSS or EPSS data is represented as a note rathe
 than hidden inside the narrative. Asset context appears as an explicit
 `asset.context` reason when exposure, environment, criticality, service, or owner
 data is present; unknown occurrence context appears as an `asset.context_unknown`
-warning note. The Workbench `/api/findings/{id}/explain`
-endpoint also exposes this object as `decision_explanation` while retaining the
-legacy raw finding payload under `explanation`.
+warning note. The Workbench `/api/v1/findings/{finding_id}/explain`
+endpoint exposes this object as `decision_explanation` while retaining the raw
+finding payload under `explanation`.
 
 ### ATT&CK context
 
@@ -387,12 +387,8 @@ Current evidence-bundle governance additions:
 
 ### Workbench API additions
 
-Workbench API changes are additive:
+Workbench API changes are versioned under the active `/api/v1` backend:
 
-- `PATCH /api/findings/{finding_id}` updates finding lifecycle status and records `FindingStatusHistory`
-- `GET /api/projects/{project_id}/audit-events` and `GET /api/audit-events` expose audit records
-- `POST /api/tokens` creates legacy local API tokens with `read`, `import`, `report`, and `admin` scopes; `GET /api/tokens` lists token metadata without token values; `DELETE /api/tokens/{id}` revokes tokens
-- `GET /api/diagnostics` exposes local runtime diagnostics and is token-gated once active tokens exist
 - `POST /api/v1/api-tokens/`, `GET /api/v1/api-tokens/`, and `DELETE /api/v1/api-tokens/{token_id}` manage template scoped service tokens; the create response is the only response that includes the cleartext token
 - template service-token scopes are enforced by dependency: `read` covers project/run/finding/provider reads, `import` covers `/api/v1/projects/{project_id}/imports`, `report` covers report creation/download/verification, and `admin` covers token lifecycle and satisfies all scoped dependencies
 - `POST /api/v1/projects/{project_id}/imports` accepts a JWT-gated template Workbench upload, validates input type, extension, MIME hint, filename, and upload size, persists the uploaded file under the configured import upload root, and records upload SHA-256 plus structured `parse_errors` in the returned `AnalysisRun`
@@ -405,19 +401,11 @@ Workbench API changes are additive:
 - `GET /api/v1/findings/{finding_id}/explain` returns the stored decision explanation for a visible template finding, including decision guidance, provider evidence, data-quality fields, rationale, and recommended action; it returns 422 when the finding exists but no decision explanation has been persisted yet
 - `GET /api/v1/projects/{project_id}/summary` returns a dashboard-oriented decision summary with finding counts, priority/status buckets, provider-signal hit counts, latest run status, and latest run summary
 - `GET /api/v1/projects/{project_id}/compare/cvss-only` returns the CVSS-only baseline comparison for stored template findings, using the same methodology payload as the core decision engine
-- `GET /api/v1/providers/status` returns an authenticated template adapter provider-status envelope for the React status card, including `status`, `snapshot`, `sources`, `latest_update_job`, `cache_dir`, `snapshot_dir`, `warnings`, `last_sync`, `last_error`, `cache_age_seconds`, and `snapshot_mode`; the legacy `GET /api/providers/status` route remains compatibility-only with its current behavior and is not the active browser Workbench route
+- `GET /api/v1/providers/status` returns an authenticated provider-status envelope for the React status card, including `status`, `snapshot`, `sources`, `latest_update_job`, `cache_dir`, `snapshot_dir`, `warnings`, `last_sync`, `last_error`, `cache_age_seconds`, and `snapshot_mode`
 - `POST /api/v1/runs/{run_id}/reports` accepts `markdown`, `html`, `json`, `csv`, `zip`, `attack-navigator`, and `sarif` for completed visible template runs. JSON exports use `analysis-result.v1.json` with `project`, `analysis_run`, `provider_snapshot`, `findings`, `explanations`, optional `governance_rollups`, and optional `detection_coverage`. CSV exports use `findings.csv` with stable spreadsheet-safe finding columns. SARIF exports use `results.sarif` with SARIF 2.1.0, CVE-addressable rule/result IDs, priority/CVSS-derived levels and `security-severity`, stable fingerprints, and HTTP(S) references including the canonical NVD CVE URL. `attack-navigator` exports `attack-navigator-layer.json` with Navigator v4.5-compatible `techniques`, `techniqueID`, risk score, comments, and metadata; `attack_filter` accepts `all`, `critical-high`, `kev`, and the `no-coverage` placeholder. ZIP exports use `evidence-bundle.zip` with `manifest.json`, `analysis.json`, `technical.md`, `executive.html`, `provider-snapshot.json`, optional `attack-navigator-layer.json`, optional `governance/rollups.json`, `governance/waivers.json`, `governance/vex-summary.json`, `governance/asset-context.json`, and `governance/detection-coverage.json`, per-file SHA-256 entries, input hashes when available, and redaction of sensitive/local-path fields.
 - `POST /api/v1/reports/{report_id}/verify` verifies a visible template `evidence-bundle.zip` report without extracting ZIP members. It validates the stored artifact path and report SHA-256 before returning the same `metadata`, `summary`, and `items` shape as `report verify-evidence-bundle --format json`; non-bundle reports return 422.
 - `POST /api/v1/projects/{project_id}/github/issues/preview` prepares GitHub issue markdown for selected `finding_ids` or the top-ranked visible findings. Each item includes `finding_id`, `cve_id`, title, labels, milestone, duplicate key, evidence references, and a redacted Markdown body with priority, rationale, remediation, and Workbench/NVD evidence links. `POST /api/v1/projects/{project_id}/github/issues/export` defaults to `dry_run: true`; real creation requires `dry_run: false`, `repository: "owner/name"`, and an explicit token environment variable. Created duplicate keys are persisted per project/repository so repeated exports return `skipped_duplicate`.
-- `POST /api/projects/{project_id}/imports` accepts single-upload and additive multi-upload imports for all CLI input formats
-- `GET /api/jobs`, `GET /api/jobs/{id}`, `POST /api/jobs`, and `POST /api/jobs/{id}/retry` expose durable local job state for compatible synchronous operations
-- `DELETE /api/reports/{id}` and `DELETE /api/evidence-bundles/{id}` remove managed artifacts after checksum validation
-- `GET/PATCH /api/projects/{project_id}/artifacts/retention` and `POST /api/projects/{project_id}/artifacts/cleanup` manage report/evidence retention and cleanup
-- detection controls support API CRUD, review status, history, and bounded evidence attachments in addition to CSV/YAML import
-- `GET /api/findings/{finding_id}` includes the latest stored `attack_context`; `GET /api/findings/{finding_id}/ttps`, `GET /api/projects/{project_id}/attack/review-queue`, and `PATCH /api/findings/{finding_id}/ttps/review` expose review workflow for existing local/CTID ATT&CK context only
 - Workbench import summaries may include `defensive_context_sources` and `defensive_context_hits`, and finding/detail/report payloads may include per-finding `defensive_contexts` copied from local defensive context uploads
-- `POST /api/projects/{project_id}/tickets/preview` and `POST /api/projects/{project_id}/tickets/export` support Jira and ServiceNow ticket previews, dry-runs, explicit token environment variables, and idempotency keys without making either system a required dependency
-- project config snapshots can be listed, recursively diffed, exported, and rolled back through settings endpoints
 - `--fail-on-expired-waivers` and `--fail-on-review-due-waivers` are opt-in enforcement hooks
 
 Template import parse errors use this additive shape in `parse_errors`:

@@ -80,6 +80,11 @@ RELEASE_WORKFLOW = Path(__file__).resolve().parents[2] / ".github" / "workflows"
 TESTPYPI_WORKFLOW = Path(__file__).resolve().parents[2] / ".github" / "workflows" / "testpypi.yml"
 MAKEFILE = Path(__file__).resolve().parents[2] / "Makefile"
 README_FILE = Path(__file__).resolve().parents[2] / "README.md"
+FRONTEND_PACKAGE_LOCK = Path(__file__).resolve().parents[2] / "frontend" / "package-lock.json"
+FRONTEND_DOCKERFILE = Path(__file__).resolve().parents[2] / "frontend" / "Dockerfile"
+FRONTEND_PLAYWRIGHT_DOCKERFILE = (
+    Path(__file__).resolve().parents[2] / "frontend" / "Dockerfile.playwright"
+)
 CI_DOCS_FILE = Path(__file__).resolve().parents[2] / "docs" / "integrations" / "reporting_and_ci.md"
 EXAMPLES_README = Path(__file__).resolve().parents[2] / ".github" / "examples" / "README.md"
 PIPX_SOURCE_SMOKE = Path(__file__).resolve().parents[2] / "scripts" / "p1_pipx_source_smoke.sh"
@@ -89,6 +94,14 @@ P2_INSTALLED_SMOKE = Path(__file__).resolve().parents[2] / "scripts" / "p2_insta
 
 def _load_schema(name: str) -> dict:
     return json.loads((SCHEMA_ROOT / name).read_text(encoding="utf-8"))
+
+
+def _assert_node_setup_for_frontend_lockfile(steps: list[dict]) -> None:
+    setup_node = next(step for step in steps if step.get("uses") == "actions/setup-node@v6")
+
+    assert setup_node["with"]["node-version"] == "22"
+    assert setup_node["with"]["cache"] == "npm"
+    assert setup_node["with"]["cache-dependency-path"] == "frontend/package-lock.json"
 
 
 def _sample_finding() -> PrioritizedFinding:
@@ -576,6 +589,7 @@ def test_ci_workflow_runs_workflow_check_on_supported_python_versions() -> None:
     payload = yaml.safe_load(CI_WORKFLOW.read_text(encoding="utf-8"))
     check_job = payload["jobs"]["check"]
     frontend_job = payload["jobs"]["frontend"]
+    frontend_steps = frontend_job["steps"]
     setup_step = next(
         step for step in check_job["steps"] if step.get("uses") == "actions/setup-python@v6"
     )
@@ -589,17 +603,59 @@ def test_ci_workflow_runs_workflow_check_on_supported_python_versions() -> None:
     assert setup_step["with"]["python-version"] == "${{ matrix.python-version }}"
     assert gate_step["run"] == "make workflow-check"
     assert payload["permissions"] == {"contents": "read"}
-    assert any(step.get("name") == "Lint frontend" for step in frontend_job["steps"])
+    _assert_node_setup_for_frontend_lockfile(frontend_steps)
+    install_step = next(
+        step for step in frontend_steps if step.get("name") == "Install frontend dependencies"
+    )
+    assert install_step["run"] == "make frontend-install"
+    assert any(step.get("name") == "Lint frontend" for step in frontend_steps)
     frontend_lint_drift_step = next(
-        step for step in frontend_job["steps"] if step.get("name") == "Check frontend lint drift"
+        step for step in frontend_steps if step.get("name") == "Check frontend lint drift"
     )
     client_drift_step = next(
         step
-        for step in frontend_job["steps"]
+        for step in frontend_steps
         if step.get("name") == "Check generated frontend client drift"
     )
     assert frontend_lint_drift_step["run"] == "git diff --exit-code -- frontend"
     assert client_drift_step["run"] == "git diff --exit-code -- frontend/src/client"
+
+
+def test_frontend_dependency_audit_uses_reproducible_npm_lockfile() -> None:
+    makefile = MAKEFILE.read_text(encoding="utf-8")
+    lockfile = json.loads(FRONTEND_PACKAGE_LOCK.read_text(encoding="utf-8"))
+
+    frontend_install_block = makefile.split("frontend-install:", 1)[1].split(
+        "frontend-build:",
+        1,
+    )[0]
+    frontend_audit_block = makefile.split("frontend-audit:", 1)[1].split(
+        "frontend-check:",
+        1,
+    )[0]
+    dependency_audit_block = makefile.split("dependency-audit:", 1)[1].split(
+        "clean-local:",
+        1,
+    )[0]
+
+    assert lockfile["lockfileVersion"] >= 3
+    assert '"node_modules/@vitejs/plugin-react-swc"' in FRONTEND_PACKAGE_LOCK.read_text(
+        encoding="utf-8"
+    )
+    assert "npm --prefix frontend ci" in frontend_install_block
+    assert "npm --prefix frontend install" not in frontend_install_block
+    assert "npm --prefix frontend audit --omit=dev" in frontend_audit_block
+    assert "$(MAKE) frontend-audit" in dependency_audit_block
+
+
+def test_frontend_container_builds_use_reproducible_npm_lockfile() -> None:
+    for dockerfile in (FRONTEND_DOCKERFILE, FRONTEND_PLAYWRIGHT_DOCKERFILE):
+        content = dockerfile.read_text(encoding="utf-8")
+
+        assert "frontend/package-lock.json" in content
+        assert "npm --prefix frontend ci" in content
+        assert "--no-package-lock" not in content
+        assert "npm --prefix frontend install" not in content
 
 
 def test_ci_workflow_permissions_are_minimal() -> None:
@@ -633,6 +689,7 @@ def test_maintenance_workflow_runs_weekly_release_check_and_install_smokes() -> 
     assert "workflow_dispatch" in triggers
     assert triggers["schedule"][0]["cron"]
     assert release_job["runs-on"] == "ubuntu-latest"
+    _assert_node_setup_for_frontend_lockfile(release_job["steps"])
     release_gate = next(
         step
         for step in release_job["steps"]
@@ -671,6 +728,7 @@ def test_release_workflow_is_tag_bound_and_verifies_pypi_install() -> None:
     ]
 
     assert payload["permissions"] == {"contents": "read"}
+    _assert_node_setup_for_frontend_lockfile(build_steps)
     assert jobs["build-and-release"]["outputs"]["release_notes_body_path"] == (
         "${{ steps.release_notes.outputs.body_path }}"
     )
@@ -762,6 +820,9 @@ def test_release_check_keeps_demo_sync_manual_and_deterministic() -> None:
     assert "$(MAKE) demo-sync-check" not in workflow_block
     assert "demo-sync-check:" in makefile
     release_block = makefile.split("release-check:", 1)[1]
+    assert "$(MAKE) frontend-check" in release_block
+    assert "$(MAKE) dependency-audit" in release_block
+    assert "$(MAKE) docker-demo-smoke" in release_block
     assert "$(MAKE) pipx-source-smoke" in release_block
     assert "$(MAKE) demo-sync-check" in release_block
     assert "VULN_PRIORITIZER_FIXED_NOW" in makefile
@@ -789,6 +850,7 @@ def test_testpypi_workflow_exposes_version_output_and_hosted_index_verification(
         == "${{ steps.package_version.outputs.version }}"
     )
     build_steps = jobs["build"]["steps"]
+    _assert_node_setup_for_frontend_lockfile(build_steps)
     release_gate_step = next(
         step for step in build_steps if step.get("name") == "Run release-equivalent local checks"
     )
@@ -853,3 +915,11 @@ def test_installed_smokes_can_preserve_debug_outputs() -> None:
 
     assert 'TMP_DIR="${VULN_PRIORITIZER_SMOKE_OUTPUT_DIR:-}"' in p1_script
     assert 'TMP_DIR="${VULN_PRIORITIZER_SMOKE_OUTPUT_DIR:-}"' in p2_script
+
+
+def test_p2_installed_smoke_uses_current_provider_snapshot_contract() -> None:
+    script = P2_INSTALLED_SMOKE.read_text(encoding="utf-8")
+
+    assert '"snapshot_format": "provider-snapshot.v1.json"' in script
+    assert '"source_hashes": {' in script
+    assert '"source_metadata": {' in script

@@ -68,8 +68,9 @@ that the template backend can import.
 
 Rules:
 
-- Do not move old Jinja2 web routes.
-- Do not move old SQLAlchemy repository code as the new persistence layer.
+- Do not reintroduce runtime-specific web routes outside `backend/app`.
+- Do not reintroduce a second repository/database layer as the new persistence
+  layer.
 - Preserve CLI behavior through a compatibility package or thin CLI wrapper.
 - Add import-boundary tests before wiring API routes.
 

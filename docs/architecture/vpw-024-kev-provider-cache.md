@@ -16,4 +16,4 @@ Provider snapshot metadata includes `source_hashes` keyed by selected provider s
 
 Workbench finding detail responses include a typed `kev_detail` object for detail views while retaining the existing raw `finding.provider_evidence.kev` payload. The HTML finding detail page renders the same KEV metadata so required action and due dates are visible during triage.
 
-Provider refresh failures do not replace the last valid snapshot. The latest provider update job remains visible in `/api/providers/status`; failed latest jobs degrade the status response and add an explicit warning while preserving the previous snapshot identity.
+Provider refresh failures do not replace the last valid snapshot. The latest provider update job remains visible in `/api/v1/providers/status`; failed latest jobs degrade the status response and add an explicit warning while preserving the previous snapshot identity.

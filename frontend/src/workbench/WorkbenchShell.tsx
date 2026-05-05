@@ -9,7 +9,14 @@ import {
   Globe,
   ShieldCheck,
 } from "lucide-react"
-import { type FormEvent, lazy, Suspense, useEffect, useState } from "react"
+import {
+  type FormEvent,
+  lazy,
+  Suspense,
+  useCallback,
+  useEffect,
+  useState,
+} from "react"
 import {
   type AnalysisRunPublic,
   type AnalysisRunSummaryPublic,
@@ -23,7 +30,6 @@ import {
   FindingsService,
   type ImportParseErrorPublic,
   ImportsService,
-  OpenAPI,
   type ProjectAttackSummaryPublic,
   type ProjectAttackTechniqueSummaryPublic,
   type ProjectDecisionSummaryPublic,
@@ -33,9 +39,6 @@ import {
   type ProviderSourceStatusPublic,
   type ProviderStatusPublic,
   ProvidersService,
-  type ReportPublic,
-  ReportsService,
-  type ReportVerificationPublic,
   RunsService,
   type UserPublic,
   UsersService,
@@ -44,7 +47,7 @@ import {
   WorkbenchService,
   type WorkbenchStatus,
 } from "../api-client"
-import { clearAccessToken, getAccessToken } from "../auth"
+import { clearAccessToken } from "../auth"
 import { ProductAppShell, type WorkbenchPath } from "../components/app/AppShell"
 import {
   FindingsByPriorityChart,
@@ -81,12 +84,10 @@ import {
   type ImportWizardState,
   mvpImportFormats,
   type ProjectFormState,
-  type TemplateReportFormat,
   evidenceTimeline as timeline,
 } from "../lib/app-defaults"
 import {
   analysisRunIdFromError,
-  apiErrorDetail,
   apiErrorMessage,
   objectRecord,
   parseErrorsFromError,
@@ -115,6 +116,7 @@ import {
   waiverRequestBody,
   waiverScopeLabel,
 } from "../lib/waiver-view"
+import { useReportsRouteState } from "./useReportsRouteState"
 
 const RiskOperationsDashboard = lazy(() =>
   import("../components/dashboard/RiskOperationsDashboard").then((module) => ({
@@ -492,16 +494,6 @@ function _formatManifestFieldName(field: string) {
   return labelize(field.replace(/_/g, " "))
 }
 
-function _verificationItems(verification: ReportVerificationPublic | null) {
-  return Array.isArray(verification?.items) ? verification.items : []
-}
-
-function _verificationSummaryRows(
-  verification: ReportVerificationPublic | null,
-) {
-  return Object.entries(objectRecord(verification?.summary))
-}
-
 function validateProjectForm(form: ProjectFormState) {
   const name = form.name.trim()
   const description = form.description.trim()
@@ -534,70 +526,6 @@ function formatDateTime(value: string) {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(date)
-}
-
-function reportFormatLabel(format: string) {
-  if (format === "zip") {
-    return "Evidence ZIP"
-  }
-  if (format === "attack-navigator") {
-    return "ATT&CK Navigator"
-  }
-  if (format === "sarif") {
-    return "SARIF"
-  }
-  return format.toUpperCase()
-}
-
-function _reportSizeLabel(sizeBytes: number) {
-  if (sizeBytes < 1024) {
-    return `${sizeBytes} B`
-  }
-  if (sizeBytes < 1024 * 1024) {
-    return `${(sizeBytes / 1024).toFixed(1)} KB`
-  }
-  return `${(sizeBytes / (1024 * 1024)).toFixed(1)} MB`
-}
-
-function isReportableRun(run: AnalysisRunPublic | null) {
-  return (
-    run?.status === "succeeded" ||
-    run?.status === "completed" ||
-    run?.status === "completed_with_errors"
-  )
-}
-
-function reportDownloadUrl(report: ReportPublic) {
-  if (report.download_url.startsWith("http")) {
-    return report.download_url
-  }
-  const base = OpenAPI.BASE.replace(/\/+$/, "")
-  return `${base}${report.download_url}`
-}
-
-async function downloadReportArtifact(report: ReportPublic) {
-  const token = getAccessToken()
-  const response = await fetch(reportDownloadUrl(report), {
-    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-  })
-  if (!response.ok) {
-    let detail = ""
-    try {
-      detail = apiErrorDetail(await response.json()) ?? ""
-    } catch {
-      detail = ""
-    }
-    throw new Error(detail || `HTTP ${response.status}`)
-  }
-  const blob = await response.blob()
-  const objectUrl = URL.createObjectURL(blob)
-  const anchor = document.createElement("a")
-  anchor.href = objectUrl
-  anchor.download = report.filename
-  document.body.append(anchor)
-  anchor.click()
-  anchor.remove()
-  URL.revokeObjectURL(objectUrl)
 }
 
 function _providerSnapshotId(providerStatus: ProviderStatusPublic | null) {
@@ -741,20 +669,29 @@ export function WorkbenchShell({
     useState<AnalysisRunSummaryPublic | null>(null)
   const [runDetailLoading, setRunDetailLoading] = useState(false)
   const [runDetailError, setRunDetailError] = useState("")
-  const [reports, setReports] = useState<ReportPublic[]>([])
-  const [reportsLoading, setReportsLoading] = useState(false)
-  const [reportsError, setReportsError] = useState("")
-  const [_verificationReport, setVerificationReport] =
-    useState<ReportVerificationPublic | null>(null)
-  const [_verificationReportTarget, setVerificationReportTarget] =
-    useState<ReportPublic | null>(null)
-  const [_verificationLoading, setVerificationLoading] = useState(false)
-  const [reportActionMessage, setReportActionMessage] = useState("")
-  const [reportActionError, setReportActionError] = useState("")
-  const [activeReportFormat, setActiveReportFormat] = useState<
-    TemplateReportFormat | ""
-  >("")
-  const [reportsReloadKey, setReportsReloadKey] = useState(0)
+  const selectedReportRun =
+    projectRuns.find((run) => run.id === selectedRunId) ?? null
+  const handleAuthExpired = useCallback(async () => {
+    clearAccessToken()
+    await navigate({ to: "/login" })
+  }, [navigate])
+  const {
+    activeReportFormat,
+    createReport,
+    downloadReport,
+    reportActionError,
+    reportActionMessage,
+    reportActionsEnabled,
+    reports,
+    reportsError,
+    reportsLoading,
+    verifyEvidenceReport,
+  } = useReportsRouteState({
+    currentPath,
+    onAuthExpired: handleAuthExpired,
+    selectedReportRun,
+    selectedRunId,
+  })
   const [findings, setFindings] = useState<FindingPublic[]>([])
   const [findingCount, setFindingCount] = useState(0)
   const [findingsLoading, setFindingsLoading] = useState(false)
@@ -862,14 +799,6 @@ export function WorkbenchShell({
     findingOffset + findings.length,
     findingCount,
   )
-  const selectedReportRun =
-    projectRuns.find((run) => run.id === selectedRunId) ?? null
-  const reportActionsEnabled =
-    currentPath === "/reports" &&
-    Boolean(selectedReportRun) &&
-    isReportableRun(selectedReportRun) &&
-    !reportsLoading
-
   useEffect(() => {
     if (currentPath !== "/settings") {
       setCreatedApiToken(null)
@@ -1222,53 +1151,6 @@ export function WorkbenchShell({
       isMounted = false
     }
   }, [currentPath, navigate, selectedProjectId])
-
-  useEffect(() => {
-    let isMounted = true
-
-    async function loadRunReports() {
-      if (currentPath !== "/reports" || !selectedRunId) {
-        setReports([])
-        setReportsError("")
-        setReportsLoading(false)
-        setVerificationReport(null)
-        setVerificationReportTarget(null)
-        return
-      }
-
-      setReportsLoading(true)
-      setReportsError("")
-      setVerificationReport(null)
-      setVerificationReportTarget(null)
-      try {
-        const reportPage = await ReportsService.readRunReports({
-          run_id: selectedRunId,
-        })
-        if (isMounted) {
-          setReports(reportPage.data)
-        }
-      } catch (caught) {
-        if (caught instanceof ApiError && [401, 403].includes(caught.status)) {
-          clearAccessToken()
-          await navigate({ to: "/login" })
-          return
-        }
-        if (isMounted) {
-          setReports([])
-          setReportsError(apiErrorMessage("Report history unavailable", caught))
-        }
-      } finally {
-        if (isMounted) {
-          setReportsLoading(false)
-        }
-      }
-    }
-
-    void loadRunReports()
-    return () => {
-      isMounted = false
-    }
-  }, [currentPath, navigate, reportsReloadKey, selectedRunId])
 
   useEffect(() => {
     let isMounted = true
@@ -1800,79 +1682,6 @@ export function WorkbenchShell({
 
   function refreshFindingDetail() {
     setFindingDetailReloadKey((key) => key + 1)
-  }
-
-  function _refreshReports() {
-    setReportsReloadKey((key) => key + 1)
-  }
-
-  async function createReport(format: TemplateReportFormat) {
-    if (!selectedRunId) {
-      setReportActionError(
-        "Select a completed analysis run before generating reports.",
-      )
-      return
-    }
-    setReportActionError("")
-    setReportActionMessage("")
-    setActiveReportFormat(format)
-    try {
-      const report = await ReportsService.createRunReport({
-        run_id: selectedRunId,
-        reportCreate: { format },
-      })
-      setReports((currentReports) => [report, ...currentReports])
-      setReportActionMessage(
-        `${reportFormatLabel(report.format)} report generated as ${report.filename}.`,
-      )
-    } catch (caught) {
-      setReportActionError(apiErrorMessage("Report generation failed", caught))
-    } finally {
-      setActiveReportFormat("")
-    }
-  }
-
-  async function downloadReport(report: ReportPublic) {
-    setReportActionError("")
-    setReportActionMessage("")
-    try {
-      await downloadReportArtifact(report)
-      setReportActionMessage(`Download started for ${report.filename}.`)
-    } catch (caught) {
-      setReportActionError(
-        caught instanceof Error
-          ? `Report download failed: ${caught.message}`
-          : "Report download failed: unexpected client error",
-      )
-    }
-  }
-
-  async function verifyEvidenceReport(report: ReportPublic) {
-    setVerificationLoading(true)
-    setVerificationReport(null)
-    setVerificationReportTarget(report)
-    setReportActionError("")
-    setReportActionMessage("")
-    try {
-      const verification = await ReportsService.verifyReport({
-        report_id: report.id,
-      })
-      setVerificationReport(verification)
-      const summary = objectRecord(verification.summary)
-      setReportActionMessage(
-        summary.ok
-          ? `Evidence bundle verified: ${summary.verified_files ?? 0} files matched.`
-          : `Evidence bundle verification failed: ${summary.modified_files ?? 0} modified, ${summary.missing_files ?? 0} missing.`,
-      )
-    } catch (caught) {
-      setReportActionError(
-        apiErrorMessage("Evidence verification failed", caught),
-      )
-      setVerificationReport(null)
-      setVerificationReportTarget(null)
-    } finally {
-      setVerificationLoading(false)
-    }
   }
 
   async function createProject(event: FormEvent<HTMLFormElement>) {

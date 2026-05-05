@@ -91,7 +91,6 @@
   --vpw-container-max: 1600px;
   --vpw-container-padding: 1rem;
 
-  /* Legacy compatibility */
   color: var(--vpw-text-primary);
   background: var(--vpw-bg-app);
   font-family:

@@ -54,22 +54,18 @@ The Workbench exposes ATT&CK context separately through fields such as `attack_m
 
 ## Current API Surface
 
-The current Workbench API preserves project, import, finding, report, and evidence endpoints while adding ATT&CK context through stable response fields and dedicated ATT&CK endpoints.
+The current Workbench API preserves project, import, finding, report, and evidence endpoints while adding ATT&CK context through stable `/api/v1` response fields and report artifacts.
 
-- `POST /api/projects/{project_id}/imports` accepts `attack_source=ctid-json`, `attack_mapping_file`, and `attack_technique_metadata_file` values rooted in the configured ATT&CK artifact directory.
-- `GET /api/analysis-runs/{run_id}` and `GET /api/runs/{run_id}/summary` include ATT&CK summary fields such as `attack_enabled`, `attack_mapped_cves`, `attack_source`, `attack_version`, `attack_domain`, `attack_mapping_file_sha256`, `attack_technique_metadata_file_sha256`, `attack_metadata_format`, and `attack_stix_spec_version`.
-- `GET /api/projects/{project_id}/findings` includes per-finding `attack_mapped` and `threat_context_rank` while keeping base priority fields separate.
-- `GET /api/findings/{finding_id}` returns the base finding detail and the same high-level ATT&CK flags. Full CTID-backed TTP context lives at `GET /api/findings/{finding_id}/ttps`.
-- `GET /api/findings/{finding_id}/ttps` returns source provenance, source and metadata hashes, ATT&CK version/domain, `attack_relevance`, `threat_context_rank`, review status, tactics, techniques, and mapping payloads for the finding.
-- `GET /api/projects/{project_id}/attack/top-techniques` returns project-level technique rollups from persisted finding ATT&CK context.
-- `GET /api/analysis-runs/{run_id}/attack/navigator-layer` returns a Navigator layer from CTID-backed mapped techniques for the run.
-- Template report creation supports `POST /api/v1/runs/{run_id}/reports`
+- `POST /api/v1/projects/{project_id}/imports` accepts `attack_source=ctid-json`, `attack_mapping_file`, and `attack_technique_metadata_file` values rooted in the configured ATT&CK artifact directory.
+- `GET /api/v1/runs/{run_id}` and `GET /api/v1/runs/{run_id}/summary` include ATT&CK summary fields such as `attack_enabled`, `attack_mapped_cves`, `attack_source`, `attack_version`, `attack_domain`, `attack_mapping_file_sha256`, `attack_technique_metadata_file_sha256`, `attack_metadata_format`, and `attack_stix_spec_version`.
+- `GET /api/v1/projects/{project_id}/findings` includes per-finding `attack_mapped` and `threat_context_rank` while keeping base priority fields separate.
+- `GET /api/v1/findings/{finding_id}` returns the base finding detail and stored ATT&CK context.
+- `GET /api/v1/projects/{project_id}/attack/summary` returns project-level tactic and technique rollups from persisted finding ATT&CK context.
+- Report creation supports `POST /api/v1/runs/{run_id}/reports`
   with `format=attack-navigator` and `attack_filter` set to `all`,
   `critical-high`, `kev`, or `no-coverage`. The generated artifact downloads
   through the same checksum-validated report download endpoint as other report
   formats.
-- `POST /api/projects/{project_id}/detection-controls/import` and `GET /api/projects/{project_id}/detection-controls` manage defensive detection-control coverage records.
-- `GET /api/projects/{project_id}/attack/coverage-gaps`, `GET /api/projects/{project_id}/attack/coverage-gap-navigator-layer`, and `GET /api/projects/{project_id}/attack/techniques/{technique_id}` expose coverage gaps and technique detail without describing offensive procedures.
 - Report and evidence endpoints preserve ATT&CK context in generated artifacts without weakening download path and checksum validation.
 
 ## Current UI and Report Surface

@@ -63,18 +63,10 @@ the generated `/api/v1` browser client:
 curl http://127.0.0.1:8000/api/v1/workbench/status
 ```
 
-Maintainers can run the same readiness path with:
+Maintainers can run the same active-runtime readiness path with:
 
 ```bash
 make docker-demo-smoke
-```
-
-The optional Postgres smoke target uses `compose.legacy.yml` for the retained
-legacy compatibility runtime. It is a private compatibility check, not the
-active browser runtime and not a managed production deployment:
-
-```bash
-make docker-postgres-migration-smoke
 ```
 
 ## Documentation Map
@@ -84,13 +76,13 @@ make docker-postgres-migration-smoke
 | Product scope and non-goals | [concept.md](concept.md), [README](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/README.md) | Known-CVE prioritization, local-first Workbench scope, and explicit non-scanner boundaries. |
 | Quickstart and Docker | [README](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/README.md), [Workbench offline demo](workbench-offline-demo.md) | Public install, CLI examples, Compose smoke, local Workbench commands, and demo fixtures. |
 | Architecture | [Architecture overview](architecture/index.md) | CLI layers, Workbench surface, input normalization, provider enrichment, prioritization, reporting, cache, and contract boundaries. |
-| Data model and contracts | [Contracts](contracts.md), [Core Workbench schema](architecture/core-workbench-schema.md), [Analysis run provider schema](architecture/analysis-run-provider-schema.md) | JSON envelopes, schema versions, Workbench DB model, analysis runs, provider evidence, and additive compatibility rules. |
+| Data model and contracts | [Contracts](contracts.md), [Core Workbench schema](architecture/core-workbench-schema.md), [Analysis run provider schema](architecture/analysis-run-provider-schema.md) | JSON envelopes, schema versions, active Workbench models, analysis runs, provider evidence, and API rules. |
 | Import formats | [Support matrix](support_matrix.md), [CVE list import](cve-list-import.md), [Generic occurrence CSV](generic-occurrence-csv-import.md), [Trivy JSON import](trivy-json-import.md), [Grype JSON import](grype-json-import.md) | Supported file formats, preserved provenance, parser safety boundaries, and CI guidance. |
 | Providers and replay | [Provider cache and snapshots](architecture/vpw-022-provider-cache-status-snapshots.md), [Provider snapshot replay](architecture/vpw-026-provider-snapshot-replay.md), [Provider data quality flags](architecture/vpw-027-provider-data-quality-flags.md) | NVD, EPSS, KEV, cache state, locked snapshots, confidence/freshness flags, and replay behavior. |
 | Scoring and explanation | [Methodology](methodology.md), [Contracts](contracts.md) | Base priority from CVSS, EPSS, and KEV; operational score; decision guidance; comparison and explain semantics. |
 | Reports and evidence | [Support matrix](support_matrix.md), [Contracts](contracts.md), [Evidence archive](evidence.md) | Markdown, JSON, SARIF, HTML, CSV, evidence ZIP manifests, verification, and governance artifacts. |
 | ATT&CK boundaries | [ATT&CK/TTP methodology](attack-ttp-methodology.md), [Workbench ATT&CK methodology](workbench-attack-methodology.md), [Methodology](methodology.md) | CTID/local mapping sources, confidence, no heuristic mappings, tactic/technique/procedure boundary, and report wording rules. |
-| Security and deployment limits | [Workbench threat model](workbench-threat-model.md), [Release checklist](workbench-v1-release-checklist.md) | Local-first assumptions, upload/download controls, secret redaction, token bootstrap, public-exposure blockers, Docker and dependency evidence. |
+| Security and deployment limits | [Workbench threat model](workbench-threat-model.md), [Release checklist](workbench-v1-release-checklist.md) | Local-first assumptions, upload/download controls, secret redaction, public-exposure blockers, Docker and dependency evidence. |
 | CI and integrations | [Reporting and CI integrations](integrations/reporting_and_ci.md), [GitHub summary templates](examples/github_action_summary_templates.md) | GitHub Action usage, SARIF validation, summaries, evidence bundles, fail gates, and report artifacts. |
 | Current release status | [v1.1.0 release notes](releases/v1.1.0.md), [Roadmap](roadmap.md) | Current package line, Workbench milestone evidence, shipped surfaces, and deliberate future scope. |
 

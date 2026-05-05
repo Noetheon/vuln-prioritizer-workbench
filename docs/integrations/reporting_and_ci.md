@@ -219,11 +219,10 @@ The verifier:
 
 Current Workbench contract:
 
-- `POST /api/analysis-runs/{run_id}/reports` creates a run artifact in one of the supported Workbench formats: `json`, `markdown`, `html`, `csv`, or `sarif`.
-- `POST /api/v1/runs/{run_id}/reports` creates the same template Workbench
+- `POST /api/v1/runs/{run_id}/reports` creates the Workbench
   report family for completed visible template runs, including SARIF as
   `results.sarif`.
-- `GET /api/reports/{report_id}/download` downloads the server-owned artifact after path and checksum validation.
+- `GET /api/v1/reports/{report_id}/download` downloads the server-owned artifact after path and checksum validation.
 - The Workbench web UI exposes the same report creation flow from `/analysis-runs/{run_id}/reports`.
 - CSV report cells that could be interpreted as spreadsheet formulas are escaped before output.
 
@@ -263,23 +262,14 @@ When `github-step-summary: true`, the action appends the rendered Markdown summa
 
 ### Workbench Automation APIs
 
-Workbench project settings can be versioned externally and posted through
-`POST /api/projects/{project_id}/settings/config`. The API validates the same
-`vuln-prioritizer.yml` runtime config schema used by the CLI, stores an immutable project snapshot,
-and leaves backward-compatible defaults in effect when no snapshot exists.
-Config snapshot history is available through
-`GET /api/projects/{project_id}/settings/config/history`; snapshots can be diffed and rolled back
-through the corresponding `diff` and `rollback` endpoints.
+Finding lifecycle status can be updated with
+`PATCH /api/v1/waivers/{waiver_id}` and related active `/api/v1` finding,
+asset, and waiver routes. Status and governance context appear in detailed
+finding payloads and generated JSON, CSV, HTML, SARIF, and evidence-bundle
+artifacts.
 
-Finding lifecycle status can be updated with `PATCH /api/findings/{finding_id}`. Status changes are
-recorded in `FindingStatusHistory`, appear in detailed finding payloads, and are overlaid into newly
-generated JSON, CSV, HTML, SARIF, and evidence-bundle artifacts.
-
-Audit events are available project-wide through `GET /api/projects/{project_id}/audit-events` and
-globally through `GET /api/audit-events`. Diagnostics live at `GET /api/diagnostics`; token and
-diagnostics reads are token-gated once active API tokens exist.
-
-Provider update jobs are created through `POST /api/providers/update-jobs` or the Settings page.
+Provider update jobs are created through `POST /api/v1/providers/update-jobs`
+or the Settings page.
 They are synchronous local jobs designed to be called by a trusted scheduler such as cron. Each job
 records requested sources, completion status, snapshot hashes, warnings, and failure detail without
 corrupting the previous provider snapshot on error.
@@ -442,7 +432,7 @@ For a release-oriented local sweep that also regenerates the published example a
 make release-check
 ```
 
-That gate regenerates the Markdown comment body, SARIF sample, HTML report example, and the broader demo artifacts before rerunning docs, hygiene, and packaging checks.
+That gate runs the workflow-equivalent Python checks, frontend install/lint/build/client generation, backend and frontend dependency audits, Docker demo smoke, package checks, pipx smoke, and checked-in demo artifact drift checks.
 `make benchmark-check` is the narrower local regression sweep for the checked-in fixture benchmark cases.
 
 These `make` targets assume a checkout of this repository.

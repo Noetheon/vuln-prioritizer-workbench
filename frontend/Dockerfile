@@ -3,9 +3,9 @@ FROM node:22-alpine AS build-stage
 WORKDIR /app
 
 COPY package.json bun.lock /app/
-COPY frontend/package.json /app/frontend/
+COPY frontend/package.json frontend/package-lock.json /app/frontend/
 
-RUN npm --prefix frontend install --no-package-lock
+RUN npm --prefix frontend ci
 
 COPY frontend /app/frontend
 

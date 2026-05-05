@@ -1,20 +1,17 @@
 from __future__ import annotations
 
 import json
-from datetime import UTC, datetime
 from pathlib import Path
-from types import SimpleNamespace
 
 from vuln_prioritizer.cli import app
-from vuln_prioritizer.sarif_validation import validate_sarif_payload
-from vuln_prioritizer.services.workbench_reports import (
-    _analysis_payload_with_current_lifecycle,
+from vuln_prioritizer.reporting_workbench import (
     _csv_safe_cell,
     _finding_status_label,
     _first_occurrence_value,
     _vex_statuses_label,
     generate_workbench_sarif,
 )
+from vuln_prioritizer.sarif_validation import validate_sarif_payload
 
 
 def test_cli_report_html_renders_from_analysis_json(
@@ -398,123 +395,6 @@ def test_workbench_sarif_filters_non_http_references() -> None:
         "https://osv.dev/vulnerability/OSV-2024-0001",
     ]
     assert validate_sarif_payload(sarif_payload) == []
-
-
-def test_workbench_report_lifecycle_overlay_uses_id_and_stable_identity() -> None:
-    class FakeRepo:
-        def list_run_attack_contexts(self, analysis_run_id: str) -> list[SimpleNamespace]:
-            assert analysis_run_id == "run-1"
-            return [
-                SimpleNamespace(
-                    finding_id="finding-1",
-                    mapped=True,
-                    techniques_json=[
-                        {
-                            "technique_id": "T1190",
-                            "name": "Exploit Public-Facing Application",
-                            "tactic_ids": ["TA0001"],
-                        }
-                    ],
-                )
-            ]
-
-        def list_project_detection_controls(self, project_id: str) -> list[SimpleNamespace]:
-            assert project_id == "project-1"
-            return []
-
-        def list_project_findings(self, project_id: str) -> list[SimpleNamespace]:
-            assert project_id == "project-1"
-            return [
-                SimpleNamespace(
-                    id="finding-1",
-                    cve_id="CVE-2024-0001",
-                    component=None,
-                    asset=None,
-                    status="fixed",
-                    priority="critical",
-                    in_kev=True,
-                    status_history=[
-                        SimpleNamespace(
-                            id="history-1",
-                            finding_id="finding-1",
-                            previous_status="open",
-                            new_status="fixed",
-                            actor="tester",
-                            reason="patched",
-                            created_at=datetime(2026, 4, 25, tzinfo=UTC),
-                        )
-                    ],
-                ),
-                SimpleNamespace(
-                    id="finding-2",
-                    cve_id="CVE-2024-0002",
-                    component=SimpleNamespace(name="openssl", version="3.0.0"),
-                    asset=SimpleNamespace(asset_id="asset-api"),
-                    status="accepted",
-                    priority="medium",
-                    in_kev=False,
-                    status_history=[],
-                ),
-                SimpleNamespace(
-                    id="finding-3",
-                    cve_id="CVE-2024-9999",
-                    component=None,
-                    asset=None,
-                    status="open",
-                    priority="critical",
-                    in_kev=True,
-                    status_history=[],
-                ),
-            ]
-
-    payload = {
-        "metadata": {"schema_version": "1.1.0"},
-        "findings": [
-            {"cve_id": "CVE-2024-0001", "workbench_finding_id": "finding-1", "status": "open"},
-            {
-                "cve_id": "CVE-2024-0002",
-                "status": "open",
-                "provenance": {
-                    "occurrences": [
-                        {
-                            "component_name": "openssl",
-                            "component_version": "3.0.0",
-                            "asset_id": "asset-api",
-                        }
-                    ]
-                },
-            },
-            "not-a-finding",
-            {"cve_id": "CVE-2024-0003", "status": "open"},
-        ],
-    }
-
-    overlaid = _analysis_payload_with_current_lifecycle(  # type: ignore[arg-type]
-        FakeRepo(),
-        payload,
-        "project-1",
-        "run-1",
-    )
-
-    assert overlaid["findings"][0]["status"] == "fixed"
-    assert overlaid["findings"][0]["status_history"][0]["new_status"] == "fixed"
-    assert overlaid["findings"][1]["status"] == "accepted"
-    assert overlaid["findings"][3]["status"] == "open"
-    assert overlaid["detection_coverage"]["items"][0]["technique_id"] == "T1190"
-    assert overlaid["detection_coverage"]["items"][0]["finding_count"] == 1
-    assert overlaid["detection_coverage"]["items"][0]["critical_finding_count"] == 1
-    assert overlaid["detection_coverage"]["items"][0]["kev_finding_count"] == 1
-    assert "scoped to this analysis run" in overlaid["detection_coverage"]["note"]
-    assert payload["findings"][0]["status"] == "open"
-    assert (
-        _analysis_payload_with_current_lifecycle(
-            FakeRepo(),  # type: ignore[arg-type]
-            {"metadata": {}, "findings": "invalid"},
-            "project-1",
-            "run-1",
-        )["findings"]
-        == "invalid"
-    )
 
 
 def test_workbench_report_private_format_helpers_handle_edge_cases() -> None:

@@ -15,9 +15,7 @@ The SQLModel tables are singular and owned by the template backend:
 - `vulnerability`
 - `finding`
 
-The legacy `vuln_prioritizer.db.models` tables remain a reference for behavior,
-but VPW template code should use `app.models` exports and `app/alembic`
-migrations.
+Workbench template code uses `app.models` exports and `app/alembic` migrations.
 
 ## Model Exports
 

@@ -3331,26 +3331,6 @@ export const ImportParseErrorPublicSchema = {
     type: 'object'
 } as const;
 
-export const MigrationStatusSchema = {
-    description: 'Template migration state for the Workbench adapter.',
-    properties: {
-        legacy_workbench_mounted: {
-            title: 'Legacy Workbench Mounted',
-            type: 'boolean'
-        },
-        phase: {
-            title: 'Phase',
-            type: 'string'
-        }
-    },
-    required: [
-        'phase',
-        'legacy_workbench_mounted'
-    ],
-    title: 'MigrationStatus',
-    type: 'object'
-} as const;
-
 export const ProjectAttackSummaryPublicSchema = {
     description: 'Project-level ATT&CK summary for the React dashboard widget.',
     properties: {
@@ -5067,7 +5047,7 @@ export const WaiversPublicSchema = {
 } as const;
 
 export const WorkbenchStatusSchema = {
-    description: 'Status response returned by the template Workbench adapter.',
+    description: 'Status response returned by the active Workbench runtime.',
     properties: {
         app: {
             title: 'App',
@@ -5081,13 +5061,6 @@ export const WorkbenchStatusSchema = {
             title: 'Core Version',
             type: 'string'
         },
-        legacy_api_prefix: {
-            title: 'Legacy Api Prefix',
-            type: 'string'
-        },
-        migration: {
-            $ref: '#/components/schemas/MigrationStatus'
-        },
         status: {
             title: 'Status',
             type: 'string'
@@ -5097,9 +5070,7 @@ export const WorkbenchStatusSchema = {
         'status',
         'app',
         'core_package',
-        'core_version',
-        'legacy_api_prefix',
-        'migration'
+        'core_version'
     ],
     title: 'WorkbenchStatus',
     type: 'object'

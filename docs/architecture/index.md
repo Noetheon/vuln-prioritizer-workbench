@@ -55,19 +55,26 @@ Current public command groups:
 - `data update`
 - `data verify`
 - `data export-provider-snapshot`
-- `db init`
+- `report workbench`
 - `report html`
 - `report evidence-bundle`
 - `report verify-evidence-bundle`
-- `web serve`
 
 The command layer owns flag parsing, validation, cache wiring, and output-mode dispatch. The public command tree is part of the CLI surface; the private command/support modules are implementation detail and do not widen the architecture boundary. Parser-specific logic remains below this layer apart from compatibility routing.
 
 ### Workbench surface
 
-The Workbench app is an additive FastAPI/Jinja2 layer over the existing core. `db init` loads the Workbench environment settings and initializes the SQLite schema. `web serve` starts the ASGI application with `--host`, `--port`, and optional `--reload`.
+The active Workbench app is the FastAPI backend in `backend/app` plus the
+React/Vite/TanStack frontend in `frontend`. Docker Compose, Playwright startup,
+and generated OpenAPI client creation point to `app.main:app`.
 
-Workbench runtime state is controlled by environment variables for database URL, upload directory, report directory, trusted provider snapshot directory, provider cache directory, upload size, NVD API-key environment name, and the local CSRF token. The Docker Compose path uses named volumes for writable runtime state, keeps provider snapshots writable for refresh jobs, and mounts checked-in demo data read-only so startup can seed locked demo snapshots without making fixture data mutable.
+Workbench runtime state is controlled by active backend environment variables
+for database URL, upload directory, report directory, trusted provider snapshot
+directory, provider cache directory, upload size, and NVD API-key environment
+name. The Docker Compose path uses named volumes for writable runtime state,
+keeps provider snapshots writable for refresh jobs, and mounts checked-in demo
+data read-only so startup can seed locked demo snapshots without making fixture
+data mutable.
 
 The current web/API import path uses the same local input-format matrix as the CLI for single-upload and multi-upload imports: CVE lists, generic occurrence CSV, Trivy JSON, Grype JSON, Dependency-Check JSON, GitHub alerts JSON, CycloneDX JSON, SPDX JSON, Nessus XML, and OpenVAS XML. XML support remains safe local parsing of exported findings only; the Workbench does not scan systems.
 

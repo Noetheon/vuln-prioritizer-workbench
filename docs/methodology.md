@@ -178,7 +178,7 @@ The `compare` command still uses:
 - `Enriched`: the default CVSS/EPSS/KEV model above
 
 Workbench project comparison exposes the same baseline through
-`GET /api/projects/{project_id}/baseline-comparison`. The comparison reports
+`GET /api/v1/projects/{project_id}/compare/cvss-only`. The comparison reports
 counts per priority, up/down/unchanged rows, and top changes with old/new rank
 and the reason for the shift.
 

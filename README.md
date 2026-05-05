@@ -90,9 +90,8 @@ for decisions.
   `frontend/src/api-client.ts`; these are generated artifacts and are not
   manually edited.
 - CLI/domain layer: retained under `backend/src/vuln_prioritizer/**` for
-  automation, reporting, neutral domain helpers, and compatibility workflows.
-  Legacy Workbench runtime modules under that package are not the active browser
-  deployment runtime.
+  automation, reporting, and neutral domain helpers shared with the active
+  backend.
 
 See [Product Architecture](docs/architecture.md) for route ownership,
 WorkbenchShell responsibilities, shared provider/status state, and explicit

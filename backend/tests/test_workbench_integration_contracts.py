@@ -47,45 +47,6 @@ def test_compose_uses_template_shell_without_legacy_runtime_services() -> None:
     assert "provider-scheduler" not in services
 
 
-def test_legacy_compose_keeps_profiled_postgres_compatibility_runtime() -> None:
-    legacy_compose = yaml.safe_load(Path("compose.legacy.yml").read_text(encoding="utf-8"))
-    services = legacy_compose["services"]
-
-    workbench_postgres = services["workbench-postgres"]
-    assert workbench_postgres["profiles"] == ["legacy-postgres"]
-    assert workbench_postgres["depends_on"]["db"]["condition"] == "service_healthy"
-    assert (
-        workbench_postgres["environment"]["VULN_PRIORITIZER_DB_URL"]
-        == "postgresql+psycopg://${POSTGRES_USER:-workbench}:${POSTGRES_PASSWORD:-workbench}@db:5432/${POSTGRES_DB:-workbench}"
-    )
-    assert (
-        workbench_postgres["environment"]["VULN_PRIORITIZER_PROVIDER_SNAPSHOT_DIR"]
-        == "/app/provider-snapshots"
-    )
-    assert workbench_postgres["environment"]["VULN_PRIORITIZER_ALLOWED_HOSTS"] == (
-        "${VULN_PRIORITIZER_ALLOWED_HOSTS:-127.0.0.1,localhost,workbench-postgres}"
-    )
-    assert workbench_postgres["ports"] == ["127.0.0.1:8001:8000"]
-
-    scheduler = services["provider-scheduler"]
-    assert scheduler["profiles"] == ["legacy-postgres"]
-    assert scheduler["depends_on"]["workbench-postgres"]["condition"] == "service_healthy"
-    assert scheduler["command"] == ["python", "-m", "vuln_prioritizer.provider_scheduler"]
-    assert scheduler["read_only"] is True
-    assert scheduler["cap_drop"] == ["ALL"]
-    assert scheduler["security_opt"] == ["no-new-privileges:true"]
-    scheduler_env = scheduler["environment"]
-    assert scheduler_env["VULN_PRIORITIZER_PROVIDER_UPDATE_BASE_URL"] == (
-        "http://workbench-postgres:8000"
-    )
-    assert scheduler_env["VULN_PRIORITIZER_PROVIDER_UPDATE_INTERVAL_SECONDS"] == (
-        "${VULN_PRIORITIZER_PROVIDER_UPDATE_INTERVAL_SECONDS:-86400}"
-    )
-    assert scheduler_env["VULN_PRIORITIZER_PROVIDER_UPDATE_CACHE_ONLY"] == (
-        "${VULN_PRIORITIZER_PROVIDER_UPDATE_CACHE_ONLY:-true}"
-    )
-
-
 def test_compose_override_exposes_template_shell_and_frontend_ports() -> None:
     override = yaml.safe_load(Path("compose.override.yml").read_text(encoding="utf-8"))
     services = override["services"]
@@ -105,10 +66,7 @@ def test_docker_demo_smoke_runs_quickstart_api_import() -> None:
     makefile = Path("Makefile").read_text(encoding="utf-8")
     script = Path("scripts/docker_quickstart_api_smoke.py").read_text(encoding="utf-8")
 
-    docker_smoke_block = makefile.split("docker-demo-smoke:", 1)[1].split(
-        "docker-postgres-migration-smoke:",
-        1,
-    )[0]
+    docker_smoke_block = makefile.split("docker-demo-smoke:", 1)[1].split("dependency-audit:", 1)[0]
     assert "$(PYTHON) scripts/docker_quickstart_api_smoke.py" in docker_smoke_block
     assert "locked_provider_data" in script
     assert "demo_provider_snapshot.json" in script
