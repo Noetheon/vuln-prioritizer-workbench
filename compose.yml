@@ -81,96 +81,9 @@ services:
       backend:
         condition: service_healthy
 
-  workbench-postgres:
-    image: ${DOCKER_IMAGE_BACKEND:-vuln-prioritizer-workbench-backend}:${TAG:-local}
-    profiles:
-      - postgres
-    restart: "no"
-    build:
-      context: .
-      dockerfile: backend/Dockerfile
-    depends_on:
-      db:
-        condition: service_healthy
-    read_only: true
-    cap_drop:
-      - ALL
-    security_opt:
-      - no-new-privileges:true
-    tmpfs:
-      - /tmp
-    volumes:
-      - workbench-postgres-uploads:/app/uploads
-      - workbench-postgres-reports:/app/reports
-      - workbench-postgres-provider-snapshots:/app/provider-snapshots
-      - workbench-postgres-cache:/app/.cache/vuln-prioritizer
-      - ./data:/app/examples:ro
-    command:
-      [
-        "sh",
-        "-c",
-        "cp -n /app/examples/*.json /app/provider-snapshots/ 2>/dev/null || true; exec vuln-prioritizer web serve --host 0.0.0.0 --port 8000",
-      ]
-    environment:
-      PYTHONDONTWRITEBYTECODE: "1"
-      NVD_API_KEY: ${NVD_API_KEY:-}
-      VULN_PRIORITIZER_DB_URL: postgresql+psycopg://${POSTGRES_USER:-workbench}:${POSTGRES_PASSWORD:-workbench}@db:5432/${POSTGRES_DB:-workbench}
-      VULN_PRIORITIZER_UPLOAD_DIR: /app/uploads
-      VULN_PRIORITIZER_REPORT_DIR: /app/reports
-      VULN_PRIORITIZER_PROVIDER_SNAPSHOT_DIR: /app/provider-snapshots
-      VULN_PRIORITIZER_ATTACK_ARTIFACT_DIR: /app/examples/attack
-      VULN_PRIORITIZER_CACHE_DIR: /app/.cache/vuln-prioritizer
-      VULN_PRIORITIZER_MAX_UPLOAD_MB: ${VULN_PRIORITIZER_MAX_UPLOAD_MB:-25}
-      VULN_PRIORITIZER_NVD_API_KEY_ENV: ${VULN_PRIORITIZER_NVD_API_KEY_ENV:-NVD_API_KEY}
-      VULN_PRIORITIZER_CSRF_TOKEN: ${VULN_PRIORITIZER_CSRF_TOKEN:-}
-      VULN_PRIORITIZER_ALLOWED_HOSTS: ${VULN_PRIORITIZER_ALLOWED_HOSTS:-127.0.0.1,localhost,workbench-postgres}
-    healthcheck:
-      test:
-        [
-          "CMD",
-          "python",
-          "-c",
-          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=2)",
-        ]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  provider-scheduler:
-    image: ${DOCKER_IMAGE_BACKEND:-vuln-prioritizer-workbench-backend}:${TAG:-local}
-    profiles:
-      - postgres
-    restart: unless-stopped
-    build:
-      context: .
-      dockerfile: backend/Dockerfile
-    depends_on:
-      workbench-postgres:
-        condition: service_healthy
-    read_only: true
-    cap_drop:
-      - ALL
-    security_opt:
-      - no-new-privileges:true
-    tmpfs:
-      - /tmp
-    command: ["python", "-m", "vuln_prioritizer.provider_scheduler"]
-    environment:
-      PYTHONDONTWRITEBYTECODE: "1"
-      VULN_PRIORITIZER_PROVIDER_UPDATE_BASE_URL: http://workbench-postgres:8000
-      VULN_PRIORITIZER_PROVIDER_UPDATE_INTERVAL_SECONDS: ${VULN_PRIORITIZER_PROVIDER_UPDATE_INTERVAL_SECONDS:-86400}
-      VULN_PRIORITIZER_PROVIDER_UPDATE_SOURCES: ${VULN_PRIORITIZER_PROVIDER_UPDATE_SOURCES:-nvd,epss,kev}
-      VULN_PRIORITIZER_PROVIDER_UPDATE_MAX_CVES: ${VULN_PRIORITIZER_PROVIDER_UPDATE_MAX_CVES:-}
-      VULN_PRIORITIZER_PROVIDER_UPDATE_CACHE_ONLY: ${VULN_PRIORITIZER_PROVIDER_UPDATE_CACHE_ONLY:-true}
-      VULN_PRIORITIZER_PROVIDER_UPDATE_API_TOKEN: ${VULN_PRIORITIZER_PROVIDER_UPDATE_API_TOKEN:-}
-
 volumes:
   app-db-data:
   template-import-uploads:
   template-reports:
   template-provider-snapshots:
   template-provider-cache:
-  workbench-postgres-uploads:
-  workbench-postgres-reports:
-  workbench-postgres-provider-snapshots:
-  workbench-postgres-cache:

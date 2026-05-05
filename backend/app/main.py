@@ -1,4 +1,4 @@
-"""Template-aligned FastAPI entrypoint for the Workbench migration."""
+"""Template-aligned FastAPI entrypoint for the active Workbench runtime."""
 
 from __future__ import annotations
 
@@ -37,7 +37,7 @@ def custom_generate_unique_id(route: APIRoute) -> str:
 
 
 def create_app(active_settings: Settings | None = None) -> FastAPI:
-    """Create the template-aligned backend shell without legacy side effects."""
+    """Create the active backend runtime without legacy Workbench side effects."""
     selected_settings = active_settings or settings
     app = FastAPI(
         title=selected_settings.PROJECT_NAME,

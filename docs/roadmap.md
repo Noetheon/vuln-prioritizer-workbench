@@ -52,15 +52,15 @@ Current Workbench scope:
 - Assets, waivers, VEX, detection controls, coverage gaps, ATT&CK Navigator exports, and technique detail views.
 - Local API-token gating, optional PostgreSQL profile, provider snapshot refresh, durable local job records, artifact retention, ATT&CK review queue, GitHub/Jira/ServiceNow ticket previews and exports, config-as-code settings, SARIF validation, and CI/CD docs.
 
-The current template-migration Compose stack runs the backend shell on
-`127.0.0.1:8000` and the React frontend shell on `127.0.0.1:5173`; the CLI
-remains available through the installed `vuln-prioritizer` command and in the
-backend image.
+The current active Compose stack runs the `backend/app` FastAPI runtime on
+`127.0.0.1:8000` and the React frontend on `127.0.0.1:5173`; the CLI remains
+available through the installed `vuln-prioritizer` command and in the backend
+image.
 
 Current local Workbench limits:
 
 - Local-first single-node runtime, not a hardened public internet deployment.
-- The legacy Workbench remains local-first. The Compose default now includes a PostgreSQL service for template parity, while the optional profiled legacy Workbench service remains a migration smoke path. Local API tokens are an automation control rather than a full public-internet auth model. A separate async worker process, SSO, organization-wide ticket sync policy, and multi-workspace support remain outside the current local-first scope.
+- The retained legacy Workbench runtime remains local-first and compatibility-only. Active Compose uses `backend/app`; the optional profiled legacy Workbench service lives in `compose.legacy.yml` for migration smoke coverage. Local API tokens are an automation control rather than a full public-internet auth model. A separate async worker process, SSO, organization-wide ticket sync policy, and multi-workspace support remain outside the current local-first scope.
 - Web/API import path supports the same local input-format matrix as the CLI for single-file and multi-file imports.
 - No vulnerability scanning, AI autopatching, or heuristic/AI CVE-to-ATT&CK mapping.
 

@@ -38,10 +38,6 @@ services:
     ports:
       - "127.0.0.1:5173:80"
 
-  workbench-postgres:
-    ports:
-      - "127.0.0.1:8001:8000"
-
   playwright:
     build:
       context: .

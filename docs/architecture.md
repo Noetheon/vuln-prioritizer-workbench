@@ -41,11 +41,13 @@ scoring, report/evidence helpers, redaction, and token hashing. Reusable logic
 needed by both runtimes should move into these neutral modules.
 
 The older `vuln_prioritizer.api`, `vuln_prioritizer.web`,
-`vuln_prioritizer.db`, and `vuln_prioritizer.services.workbench_*` layers are
-legacy Workbench runtime surfaces. They are kept for compatibility tests,
-historical reference, and the profiled legacy Postgres migration smoke path, but
-they are not the active browser deployment runtime. `backend/app` must not import
-those layers directly or transitively.
+`vuln_prioritizer.db`, `vuln_prioritizer.services.workbench_*`,
+`vuln_prioritizer.provider_scheduler`, and `vuln_prioritizer.workbench_config`
+layers are legacy Workbench runtime surfaces. They are kept for compatibility
+tests, historical reference, and the profiled legacy Postgres compatibility
+smoke path in `compose.legacy.yml`, but they are not the active browser
+deployment runtime. `backend/app` must not import those layers directly or
+transitively.
 
 Legacy API token bootstrap behavior is therefore local-only compatibility
 behavior. A fresh legacy database can allow first-token setup before active token
@@ -66,7 +68,7 @@ owned by route-level Workbench components:
 | Findings | `components/findings/RemediationQueue.tsx` | Uses `useFindingsRouteState` for filters/sort/pagination and `FindingsDataTable` for the table surface. |
 | Finding Detail | `components/finding-detail/FindingDetailRoute.tsx` | Hero, priority explanation, evidence, TTP Context, and history are extracted from `WorkbenchShell`. |
 | Waivers | `components/waivers/WaiversWorkbench.tsx` | VPW-based waiver register and governance workflow; handlers remain shell-owned. |
-| Assets | `routes/_layout/assets.tsx` + `components/assets/*` | Thin route wrapper; Assets module owns route state, filters, forms, table, service rollup, and linked findings panel. |
+| Assets | `routes/_layout/assets.tsx` + `components/assets/*` | Thin route wrapper; Assets module owns route state, filters, forms, asset table, service rollup, linked findings panel, and helpers. |
 | Providers | `components/providers/ProvidersRouteContainer.tsx` | Typed container over `ProvidersWorkbench`; provider status remains shared state. |
 | Reports | `components/reports/EvidenceCenter.tsx` | Evidence Center for report generation, download, verification, and bundle metadata. |
 | Settings | `components/settings/SettingsRouteContainer.tsx` | Typed wrapper over `SettingsWorkbench`; token/session data remains shell-owned. |

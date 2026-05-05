@@ -1,4 +1,4 @@
-"""Database helpers for the template-aligned backend shell."""
+"""Database helpers for the active template-aligned backend runtime."""
 
 from __future__ import annotations
 
@@ -37,7 +37,7 @@ def init_db(session: Session) -> None:
 
 
 def ensure_configured_superuser(session: Session) -> User:
-    """Create or return the configured superuser used by the migration shell."""
+    """Create or return the configured superuser used by the active runtime."""
     statement = select(User).where(User.email == settings.FIRST_SUPERUSER)
     user = session.exec(statement).first()
     if user:

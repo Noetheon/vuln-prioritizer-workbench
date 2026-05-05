@@ -1,4 +1,4 @@
-"""Template-style JWT helpers for the migration backend shell."""
+"""Template-style JWT helpers for the active backend runtime."""
 
 from __future__ import annotations
 
@@ -15,7 +15,7 @@ ALGORITHM = "HS256"
 
 
 class TokenDecodeError(ValueError):
-    """Raised when a template-shell JWT cannot be validated."""
+    """Raised when an active-runtime JWT cannot be validated."""
 
 
 def _base64url_encode(payload: bytes) -> str:
@@ -28,7 +28,7 @@ def _base64url_decode(payload: str) -> bytes:
 
 
 def create_access_token(subject: str | Any, expires_delta: timedelta | None = None) -> str:
-    """Create a signed JWT for the configured template-shell subject."""
+    """Create a signed JWT for the configured active-runtime subject."""
     expire = datetime.now(UTC) + (
         expires_delta or timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     )
@@ -49,7 +49,7 @@ def create_access_token(subject: str | Any, expires_delta: timedelta | None = No
 
 
 def decode_access_token(token: str) -> dict[str, Any]:
-    """Decode and validate a HS256 JWT created by the template shell."""
+    """Decode and validate a HS256 JWT created by the active runtime."""
     try:
         header_segment, claims_segment, signature_segment = token.split(".")
         signing_input = f"{header_segment}.{claims_segment}"

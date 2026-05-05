@@ -82,15 +82,17 @@ for decisions.
 
 ## Architecture At A Glance
 
-- Backend: FastAPI, auth/session support, API routes, services, repositories,
-  models, and Alembic migrations.
+- Active backend runtime: `backend/app` FastAPI, auth/session support,
+  `/api/v1` routes, services, repositories, models, and Alembic migrations.
 - Frontend: React, Vite, TypeScript, TanStack Router, and VPW design-system
   components.
 - API boundary: generated client files under `frontend/src/client/**` and
   `frontend/src/api-client.ts`; these are generated artifacts and are not
   manually edited.
 - CLI/domain layer: retained under `backend/src/vuln_prioritizer/**` for
-  automation, reporting, and compatibility workflows.
+  automation, reporting, neutral domain helpers, and compatibility workflows.
+  Legacy Workbench runtime modules under that package are not the active browser
+  deployment runtime.
 
 See [Product Architecture](docs/architecture.md) for route ownership,
 WorkbenchShell responsibilities, shared provider/status state, and explicit
