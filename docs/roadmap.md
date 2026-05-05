@@ -16,13 +16,12 @@ integration slices.
 
 Strict DoD evidence remains required for every VPW issue: scoped PR, commands
 run, artifacts or screenshots where relevant, residual risks, and follow-up
-links. Existing Jinja2/SQLAlchemy Workbench behavior is supporting reference
-material, not automatic completion evidence for template React/JWT/SQLModel
-work.
+links. Current completion evidence comes from the active React/JWT/SQLModel
+Workbench runtime and CLI/domain tests.
 
 ## Current Release Surface
 
-- `v1.1.0` provides `analyze`, `compare`, `explain`, `doctor`, `snapshot create`, `snapshot diff`, `rollup`, `input validate`, `input inspect`, `input normalize`, `state`, `data`, `db init`, `web serve`, `report html`, `report evidence-bundle`, `report verify-evidence-bundle`, and ATT&CK utility commands.
+- `v1.1.0` provides `analyze`, `compare`, `explain`, `doctor`, `snapshot create`, `snapshot diff`, `rollup`, `input validate`, `input inspect`, `input normalize`, `state`, `data`, `report html`, `report workbench`, `report evidence-bundle`, `report verify-evidence-bundle`, and ATT&CK utility commands.
 - `analyze` and `compare` support existing scanner/SBOM JSON export formats. Output support is command-specific; `analyze` provides Markdown, JSON, SARIF, table output, direct HTML sidecars, and Markdown summary sidecars for CI-friendly workflows.
 - Waiver files, evidence bundles, and fixture-benchmark regressions extend the operational governance surface without changing the transparent base score.
 - Runtime config discovery via `vuln-prioritizer.yml` is available for the main operational commands.
@@ -50,7 +49,8 @@ Current Workbench scope:
 - Findings table and detail views that expose priority, evidence, owner/service context, and "why this priority?" explanations.
 - Dashboard and report flows for Markdown, HTML, JSON, and evidence bundles.
 - Assets, waivers, VEX, detection controls, coverage gaps, ATT&CK Navigator exports, and technique detail views.
-- Local API-token gating, optional PostgreSQL profile, provider snapshot refresh, durable local job records, artifact retention, ATT&CK review queue, GitHub/Jira/ServiceNow ticket previews and exports, config-as-code settings, SARIF validation, and CI/CD docs.
+- Local JWT/service-token gating, provider snapshot refresh, report artifacts,
+  ATT&CK context, GitHub issue preview/export, SARIF validation, and CI/CD docs.
 
 The current active Compose stack runs the `backend/app` FastAPI runtime on
 `127.0.0.1:8000` and the React frontend on `127.0.0.1:5173`; the CLI remains
@@ -60,7 +60,10 @@ image.
 Current local Workbench limits:
 
 - Local-first single-node runtime, not a hardened public internet deployment.
-- The retained legacy Workbench runtime remains local-first and compatibility-only. Active Compose uses `backend/app`; the optional profiled legacy Workbench service lives in `compose.legacy.yml` for migration smoke coverage. Local API tokens are an automation control rather than a full public-internet auth model. A separate async worker process, SSO, organization-wide ticket sync policy, and multi-workspace support remain outside the current local-first scope.
+- Active Compose uses `backend/app`. Local service tokens are an automation
+  control rather than a full public-internet auth model. A separate async worker
+  process, SSO, organization-wide ticket sync policy, and multi-workspace
+  support remain outside the current local-first scope.
 - Web/API import path supports the same local input-format matrix as the CLI for single-file and multi-file imports.
 - No vulnerability scanning, AI autopatching, or heuristic/AI CVE-to-ATT&CK mapping.
 

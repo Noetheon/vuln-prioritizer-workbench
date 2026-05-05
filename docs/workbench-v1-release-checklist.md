@@ -125,14 +125,14 @@ Sanitization requirements:
 
 ## Dependency Audit
 
-- [x] Run the dependency audit against the repository dependency file:
+- [x] Run the dependency audit against backend requirements and frontend production dependencies:
 
 ```bash
 make dependency-audit
 ```
 
 - [x] Record the exact command output in the release evidence folder.
-- [x] If `pip-audit` or advisory data is unavailable, record the failure as a release exception with date, environment, and retry decision.
+- [x] If `pip-audit`, npm, or advisory data is unavailable, record the failure as a release exception with date, environment, and retry decision.
 - [x] Review any reported advisories and record the disposition: fixed, accepted with rationale, not applicable, or blocked release.
 - [x] Confirm no dependency-audit exception is hidden from release notes.
 
@@ -200,7 +200,7 @@ The v1.0 release must keep these boundaries visible in docs, UI copy, examples, 
 | Compose quickstart | `make docker-demo-smoke`; GitHub Docker workflow green on `main` | Codex technical validation | 2026-04-25 |
 | Screenshot set | `docs/examples/media/workbench-*.png` | Codex technical validation | 2026-04-25 |
 | Evidence bundle verification | `make demo-evidence-bundle-check`; hashes recorded in Workbench and v1.1 release notes | Codex technical validation | 2026-04-25 |
-| Dependency audit | `make dependency-audit`; no known vulnerabilities reported for `backend/requirements.txt` | Codex technical validation | 2026-04-25 |
+| Dependency audit | `make dependency-audit`; current gate covers `backend/requirements.txt` and `frontend/package-lock.json` production dependencies | Codex technical validation | 2026-04-25 |
 | Release gates | `make release-check`; GitHub CI/CodeQL/Docker green on `main` | Codex technical validation | 2026-04-25 |
 | Changelog and release notes | `CHANGELOG.md`, `docs/releases/workbench-v1.0.0.md`, `docs/releases/v1.1.0.md` | Codex technical validation | 2026-04-25 |
 | Product guardrails review | Docs preserve no-scanner, no-exploit, no-heuristic-ATT&CK boundaries | Codex technical validation | 2026-04-25 |

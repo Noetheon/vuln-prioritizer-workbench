@@ -141,7 +141,7 @@ from app.models.waivers import (
     WaiversPublic,
     WaiverUpdate,
 )
-from app.models.workbench import MigrationStatus, WorkbenchStatus
+from app.models.workbench import WorkbenchStatus
 
 __all__ = [
     "AnalysisRun",
@@ -218,7 +218,6 @@ __all__ = [
     "GitHubIssuePreviewPublic",
     "GitHubIssuePreviewRecord",
     "ImportParseErrorPublic",
-    "MigrationStatus",
     "Project",
     "ProjectAttackSummaryPublic",
     "ProjectAttackTacticSummaryPublic",

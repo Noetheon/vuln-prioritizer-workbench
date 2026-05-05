@@ -12,7 +12,7 @@ from app.importers.contracts import (
     InputPayload,
     NormalizedOccurrence,
 )
-from app.importers.legacy import default_importers
+from app.importers.offline_loader import default_importers
 
 
 class UnsupportedInputTypeError(ImporterError, LookupError):

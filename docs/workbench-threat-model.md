@@ -11,16 +11,12 @@ The current local-first Workbench threat model covers:
 - active browser Workbench use through the template backend in `backend/app` and
   the React frontend
 - retained local CLI and domain flows under `backend/src/vuln_prioritizer/**`
-- profiled legacy Workbench runtime compatibility surfaces; the legacy
-  Workbench runtime is compatibility-only and is not the active deployment path
 - import of existing CVE lists and selected scanner export files
 - provider enrichment from NVD, FIRST EPSS, CISA KEV, local caches, and locked provider snapshots
 - optional ATT&CK context from local CTID Mappings Explorer JSON and local technique metadata
-- SQLite-backed single-node Workbench state by default
-- optional single-node PostgreSQL profile for private compatibility and
-  deployment smoke checks
-- JWT login plus scoped service tokens for active `/api/v1` routes, and
-  compatibility-only legacy API token bootstrap for retained `/api/*` routes
+- database-backed single-node Workbench state through SQLite in local developer
+  runs or PostgreSQL in the Compose quickstart
+- JWT login plus scoped service tokens for active `/api/v1` routes
 - local-first GitHub issue export and Jira/ServiceNow ticket preview/create flows
 - generated JSON, Markdown, HTML, CSV, SARIF, and evidence bundle artifacts
 
@@ -42,12 +38,11 @@ The current local-first Workbench threat model does not cover:
 | Provider enrichment data | Integrity, freshness transparency | NVD, EPSS, KEV, local cache, and locked snapshot data must remain distinguishable in outputs. |
 | ATT&CK mapping data | Integrity, source provenance | `ctid-json` is canonical for Workbench ATT&CK mappings. Technique metadata may enrich labels but must not create mappings. |
 | Asset context, VEX, and waivers | Integrity, auditability | These records influence explanation, applicability, or suppression and need explicit rationale. |
-| SQLite database | Integrity, local confidentiality, availability | Default persistence is a local single-node SQLite file or Compose volume. |
-| Optional PostgreSQL database | Integrity, local confidentiality, availability | The Compose `postgres` profile exercises the same Workbench schema on a private single-node database. Credentials, volumes, backups, network exposure, and retention are operator responsibilities. |
+| Workbench database | Integrity, local confidentiality, availability | Local developer runs may use SQLite; the Compose quickstart uses PostgreSQL for the active `backend/app` schema. Credentials, volumes, backups, network exposure, and retention are operator responsibilities. |
 | Upload, report, and evidence directories | Confidentiality, integrity, availability | Generated artifacts may include source metadata and should be treated as security-sensitive. |
 | Configuration and secrets | Confidentiality | Environment values such as NVD keys and CSRF tokens must not be displayed in full or written into reports. Secret-bearing settings should store names, state, or hashes rather than values whenever possible. |
 | Provider endpoint configuration | Integrity, least privilege | Built-in NVD, FIRST EPSS, and CISA KEV live endpoints are fixed HTTPS public-source constants. Runtime configuration may choose cache, snapshot, or offline-file inputs but must not accept unsafe live provider URL overrides. |
-| Web session, CSRF token, and API tokens | Integrity, confidentiality | The local web UI must reject unintended form submissions and unsafe state changes. API tokens gate mutating API requests after the first active token exists, scoped service tokens limit automation to `read`, `import`, `report`, or `admin`, and only token hashes should be stored. |
+| Web session and API tokens | Integrity, confidentiality | JWT login protects browser sessions. Scoped service tokens limit automation to `read`, `import`, `report`, or `admin`, and only token hashes should be stored. |
 | External ticket-system tokens | Confidentiality, least privilege | GitHub, Jira, and ServiceNow create flows read bearer tokens from explicit environment variable names such as `GITHUB_TOKEN`, `JIRA_API_TOKEN`, or `SERVICENOW_API_TOKEN`; token values must not be stored in the Workbench database, reports, evidence bundles, or audit metadata. |
 | Ticket preview/export records | Integrity, auditability | Preview payloads, duplicate keys, idempotency keys, created external IDs, and ticket URLs support local review and duplicate avoidance without making external ticket systems part of base prioritization. |
 | Documentation and examples | Integrity | Examples should remain defensive and avoid exploit details. |
@@ -86,15 +81,15 @@ Primary boundaries:
 | --- | --- | --- |
 | Malicious or malformed import file | Parser failure, resource exhaustion, misleading findings | Enforce input-format validation, upload size limits, suffix/MIME allowlists, structured parsers, safe XML parsing, path-redacted parser errors, and clear parse warnings. Do not execute content from imports. |
 | Path traversal in uploads, snapshots, or report downloads | Unauthorized local file read/write | Resolve configured directories server-side, reject arbitrary snapshot paths in Workbench forms, generate server-owned artifact names, and avoid reflecting user-supplied paths into downloads. |
-| Cross-site request forgery against local Workbench forms | Unauthorized imports, report generation, or state changes | Require CSRF token validation for state-changing web forms and keep the token local to the process or configured environment. |
-| Stored or reflected HTML/script from imported metadata | Browser compromise, misleading reports | Escape all user-controlled values in React text nodes, Jinja2 templates, and generated HTML. Treat scanner fields, asset names, component names, owners, paths, provider metadata, and descriptions as untrusted text. Keep template API and production frontend responses on the local-first security-header baseline with CSP, frame blocking, `nosniff`, and referrer restrictions. |
+| Cross-site request forgery or confused browser session | Unauthorized imports, report generation, or state changes | Keep active routes under JWT-authenticated `/api/v1`, use same-origin browser defaults, and validate every mutating request server-side. |
+| Stored or reflected HTML/script from imported metadata | Browser compromise, misleading reports | Escape all user-controlled values in React text nodes and generated HTML. Treat scanner fields, asset names, component names, owners, paths, provider metadata, and descriptions as untrusted text. Keep template API and production frontend responses on the local-first security-header baseline with CSP, frame blocking, `nosniff`, and referrer restrictions. |
 | Provider data tampering or stale cache use | Incorrect prioritization or misleading evidence | Show provider source, cache status, timestamps, checksums where available, and locked snapshot provenance. Keep offline replay explicit. |
 | ATT&CK mapping drift or speculative mappings | Misleading threat context | Use `ctid-json` as canonical for Workbench mappings, preserve source checksum/provenance, leave absent CVEs unmapped, and reject heuristic, fuzzy, or LLM-generated mappings as source of record. |
 | Confusing ATT&CK context with exploit proof | Overstated risk or unsafe operational decisions | Label ATT&CK as defensive context. Do not include exploit instructions, payloads, PoC steps, or claims that a mapping proves active exploitation. |
 | Hidden scoring changes from context layers | Loss of trust in priority decisions | Keep base priority transparent from CVSS, EPSS, and KEV. Present ATT&CK, asset context, VEX, and waivers as separate rationale or applicability layers. |
 | SQLite corruption or single-node contention | Lost run history or failed imports | Document SQLite as default single-node storage, keep writes short, use migrations, and treat database backup/restore as an operator responsibility. |
-| Optional PostgreSQL profile misconfiguration | Unauthorized database access, persistent data exposure, or unavailable Workbench state | Keep the Compose profile bound to local/private use, avoid committing real credentials, prefer secret injection outside committed files, restrict database network reachability, use migrations consistently, and treat backups, retention, TLS, and role hardening as operator controls beyond the smoke profile. |
-| API token bootstrap misuse | Unauthorized state changes through local API routes | Keep token behavior local-first and runtime-specific. Active `/api/v1` browser and service-token routes run through `backend/app`, require JWT login before service-token creation, and enforce `read`, `import`, `report`, or `admin` scopes. The older bootstrap-open legacy behavior applies only to compatibility `/api/*` routes in the retained legacy runtime: a fresh legacy database has no active legacy tokens, the first legacy token is created through `POST /api/tokens`, and mutating legacy routes require `Authorization: Bearer <token>` or `X-API-Token: <token>` after any active token exists. Store only token hashes, update last-used metadata, and do not render token values again after creation. |
+| PostgreSQL misconfiguration | Unauthorized database access, persistent data exposure, or unavailable Workbench state | Keep the Compose database bound to local/private use, avoid committing real credentials, prefer secret injection outside committed files, restrict database network reachability, use migrations consistently, and treat backups, retention, TLS, and role hardening as operator controls. |
+| API token misuse | Unauthorized state changes through local API routes | Active `/api/v1` browser and service-token routes run through `backend/app`, require JWT login before service-token creation, and enforce `read`, `import`, `report`, or `admin` scopes. Store only token hashes, update last-used metadata, and do not render token values again after creation. |
 | Unsafe secret source or environment-variable name | Credential leakage or accidental literal-token use | Read the NVD API key only from the variable name configured by `VULN_PRIORITIZER_NVD_API_KEY_ENV`, defaulting to `NVD_API_KEY`. Environment-variable name settings must match `^[A-Z_][A-Z0-9_]*$` and must never be interpreted as raw secret values. |
 | Template default secrets used outside local/dev | Predictable signing keys or admin credentials in shared environments | Treat template defaults such as `changethis` as local/dev bootstrap placeholders only. Staging and production must reject default `SECRET_KEY`, `FIRST_SUPERUSER_PASSWORD`, and equivalent secret values before serving traffic. Unknown `ENVIRONMENT` values fail closed instead of silently selecting local mode. |
 | Secret exposure in UI, logs, reports, or evidence bundles | Credential leakage | Redact API keys and token values, avoid printing full environment contents, and exclude secrets and local absolute paths from generated reports and evidence manifests. Settings, reports, and log-facing diagnostics should expose only `<set>`, `<not set>`, variable names, counts, hashes, bundle paths, or source labels. |
@@ -109,7 +104,10 @@ Primary boundaries:
 ## Operational Assumptions
 
 - The operator runs the Workbench on a trusted workstation, local VM, CI runner, or private single-node host.
-- The default database is SQLite. The optional Postgres Compose profile is for private single-node smoke testing or operator-managed deployments; clustered deployments, background workers, and multi-tenant state separation are not part of the current local-first scope.
+- The default developer database can be SQLite. The Compose quickstart uses a
+  private single-node PostgreSQL service; clustered deployments, background
+  workers, and multi-tenant state separation are not part of the current
+  local-first scope.
 - The Workbench is not exposed directly to the public internet.
 - The operator controls local filesystem permissions for the SQLite database, uploads, reports, provider cache, and evidence bundles. For Postgres, the operator controls credentials, database network reachability, volumes, backups, and retention.
 - Imported files are treated as sensitive security data and are not committed unless they are sanitized fixtures.
@@ -117,9 +115,8 @@ Primary boundaries:
 - Live provider endpoints are fixed HTTPS public-source constants for NVD, FIRST EPSS, and CISA KEV. Operators can select locked snapshots, caches, and offline files for deterministic replay, but not arbitrary provider URLs.
 - ATT&CK context is optional. Missing CTID files or unmapped CVEs must not block base CVE prioritization.
 - Evidence bundles are integrity artifacts, not encrypted archives. Operators are responsible for secure storage and transfer.
-- API tokens are local automation credentials for scoped active `/api/v1` service
-  calls and compatibility-only legacy `/api/*` calls. They are not an SSO,
-  RBAC, or multi-user session model.
+- API tokens are local automation credentials for scoped active `/api/v1`
+  service calls. They are not an SSO, RBAC, or multi-user session model.
 - NVD, ticket, and other token-bearing integrations use explicit environment variable names that match `^[A-Z_][A-Z0-9_]*$`; token values stay outside committed config and generated evidence.
 - Ticket preview/export and GitHub issue export are optional local automation bridges. Preview does not call external systems; create/export calls are operator-triggered, default to dry-run behavior, and require explicit destination settings plus token environment variables.
 - Jira and ServiceNow token variable names are request fields, not fixed global configuration. Operators should use explicit names such as `JIRA_API_TOKEN` or `SERVICENOW_API_TOKEN` and provide the corresponding process environment values outside committed files.
@@ -129,7 +126,7 @@ Primary boundaries:
 
 Shared or internet-exposed Workbench deployment is not supported by the current local-first threat model. Before positioning the Workbench that way, the project needs a new reviewed threat-model version and these controls as product requirements:
 
-- authentication that is stronger than local API-token bootstrap and covers browser sessions, automation, token rotation, and recovery
+- authentication stronger than local template defaults that covers browser sessions, automation, token rotation, and recovery
 - authorization and RBAC for project-level access, mutable actions, token administration, reports, evidence bundles, and provider jobs
 - project isolation rules for database queries, filesystem artifacts, uploads, provider snapshots, report downloads, evidence bundles, and cleanup tasks
 - TLS termination and reverse-proxy guidance, including trusted host configuration, secure cookies, forwarded headers, request-size limits, and log redaction
@@ -146,7 +143,8 @@ These prerequisites are intentionally listed as blockers rather than implied sup
 The current local-first Workbench is readiness-aligned when:
 
 - scope text in README, architecture docs, and Workbench docs consistently says known-CVE prioritizer, not scanner
-- Workbench runtime docs identify SQLite as the default single-node persistence model and the Postgres profile as optional/private
+- Workbench runtime docs identify the active `backend/app` database boundary and
+  the local/private Compose database assumptions
 - imports have size limits, suffix/MIME allowlists, traversal-safe filenames,
   project/run isolation, path-redacted parser errors, safe XML handling, and
   parser warnings
@@ -155,10 +153,9 @@ The current local-first Workbench is readiness-aligned when:
 - NVD API key configuration stores only an environment variable name, defaults to `NVD_API_KEY`, validates names with `^[A-Z_][A-Z0-9_]*$`, and redacts any resolved value from settings, reports, and log-facing diagnostics
 - template default secrets are accepted only for local/dev bootstrap and are rejected for staging and production
 - live NVD, FIRST EPSS, and CISA KEV provider URLs are fixed HTTPS public-source constants with no unsafe runtime override path
-- web forms use CSRF protection for state-changing operations
-- API token docs describe active `/api/v1` scoped service tokens, legacy
-  compatibility bootstrap behavior, token hash storage, supported headers, and
-  the limit that tokens are not an internet-facing auth model
+- API token docs describe active `/api/v1` scoped service tokens, token hash
+  storage, supported headers, and the limit that tokens are not an
+  internet-facing auth model
 - generated HTML escapes imported metadata and local context fields
 - template API responses and production frontend static responses include the
   local-first security-header baseline with CSP, `nosniff`, frame blocking,
@@ -173,15 +170,14 @@ The current local-first Workbench is readiness-aligned when:
 
 | Control | Code evidence | Test or smoke evidence |
 | --- | --- | --- |
-| Security headers and safe HTML rendering | Active template runtime code in `backend/app/main.py` installs security-header middleware for `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Cross-Origin-Opener-Policy`, `Permissions-Policy`, and a restrictive local-first CSP. `frontend/nginx.conf` serves the production React bundle with the same baseline and local template API origins in `connect-src`. `backend/app/services/reports.py` escapes generated executive HTML report fields with `_safe_html`. The retained legacy compatibility runtime in `backend/src/vuln_prioritizer/api/app.py` keeps the same header baseline for explicit compatibility checks. VPW-070 evidence is archived in `archive/vpw-evidence/vpw-070-html-security-xss.md`. | `backend/tests/api/test_template_auth_smoke.py`, `backend/tests/api/test_template_reports_api.py::test_vpw070_html_report_escapes_malicious_external_text`, `backend/tests/test_workbench_integration_contracts.py`, `backend/tests/api/test_app_guards.py`, and legacy export checks in `backend/tests/api/test_workbench_api.py` cover header and escaping regressions. |
-| Template and legacy import upload hardening | Active template FastAPI imports in `backend/app/api/routes/imports.py` and asset-context imports in `backend/app/api/routes/assets.py` are size bounded, suffix/MIME allowlisted, traversal-safe, and isolated under configured upload roots by project/run. Older compatibility Workbench imports in `backend/src/vuln_prioritizer/api/routes.py` keep equivalent local safeguards for retained legacy tests. Parser errors returned to clients are path-redacted. Nessus/OpenVAS XML handling uses defused XML handling and rejects DOCTYPE, ENTITY, and XXE-style constructs before parsing. VPW-069 evidence is archived in `archive/vpw-evidence/vpw-069-upload-security-hardening.md`. | `backend/tests/api/test_template_import_upload_api.py`, `backend/tests/api/test_app_guards.py`, focused older Workbench upload tests, XML input-loader contract tests, `make check`, `make dependency-audit`, and `make docker-demo-smoke` passed for VPW-069. |
-| Report and evidence artifact downloads | `backend/src/vuln_prioritizer/services/workbench_reports.py` writes run artifacts under the configured report directory; `backend/src/vuln_prioritizer/api/routes.py` resolves downloads back under that root, verifies SHA-256, returns attachment downloads, and disables caching. | `backend/tests/api/test_workbench_api.py::test_workbench_import_findings_reports_and_evidence` verifies JSON, Markdown, HTML, CSV, SARIF, evidence ZIP, manifest hashes, and verification URLs; `test_workbench_downloads_reject_tampered_artifact_paths` covers outside-root and checksum-tamper rejection. |
-| CSV report formula handling | `backend/src/vuln_prioritizer/services/workbench_reports.py` prefixes formula-like CSV cells before writing Workbench findings reports. | `backend/tests/api/test_workbench_api.py::test_workbench_csv_report_escapes_spreadsheet_formulas` covers component, owner, and service cells that begin with spreadsheet formula characters. |
-| API token bootstrap and scopes | Template token routes in `backend/app/api/routes/api_tokens.py` create one-time token values after JWT login, store PBKDF2-SHA256 hashes, and expose only metadata after creation. Template auth dependencies in `backend/app/api/deps.py` enforce `read`, `import`, `report`, and `admin` scopes. Legacy token creation stores the same neutral digest and `backend/src/vuln_prioritizer/api/app.py` gates compatibility `/api/*` routes by scope once active tokens exist; that bootstrap-open compatibility behavior is not reachable from `backend/app`. | `backend/tests/api/test_template_api_tokens.py` verifies template hash storage, one-time display, scoped import/report/admin behavior, `last_used_at`, and revoked-token rejection. `backend/tests/api/test_workbench_api.py::test_workbench_api_tokens_enforce_scopes_for_import_report_and_admin` verifies the legacy compatibility scope boundary. `backend/tests/test_backend_runtime_boundary.py` verifies the active import graph does not reach legacy auth modules. |
-| Optional Postgres profile and provider refresh | `compose.yml` starts the template backend and frontend by default, gives the template backend a writable `template-provider-snapshots` volume, and does not define legacy runtime services. The retained `workbench-postgres` service and optional `provider-scheduler` live in `compose.legacy.yml` under the `legacy-postgres` profile with a private `127.0.0.1:8001` bind for legacy compatibility and Alembic smoke coverage. | `tests/test_workbench_integration_contracts.py` checks the active Compose boundary and legacy profile contract; `make docker-demo-smoke` exercises the template import plus provider update path, and `make docker-postgres-migration-smoke` exercises the explicit legacy profile and Alembic path when Docker is available. |
-| 10k findings API smoke | The legacy API and template API expose paginated findings with limit/offset and sort controls. This is a smoke check, not the final scale architecture. | `backend/tests/api/test_workbench_api.py::test_workbench_findings_api_handles_10k_pagination_smoke` seeds 10,000 legacy findings. `make performance-smoke` runs the VPW-072 template import and pagination smoke with 10,000 findings. |
+| Security headers and safe HTML rendering | Active runtime code in `backend/app/main.py` installs security-header middleware for `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Cross-Origin-Opener-Policy`, `Permissions-Policy`, and a restrictive local-first CSP. `frontend/nginx.conf` serves the production React bundle with the same baseline and local API origins in `connect-src`. `backend/app/services/reports.py` escapes generated executive HTML report fields with `_safe_html`. VPW-070 evidence is archived in `archive/vpw-evidence/vpw-070-html-security-xss.md`. | `backend/tests/api/test_template_auth_smoke.py`, `backend/tests/api/test_template_reports_api.py::test_vpw070_html_report_escapes_malicious_external_text`, and `backend/tests/test_workbench_integration_contracts.py` cover header and escaping regressions. |
+| Import upload hardening | Active FastAPI imports in `backend/app/api/routes/imports.py` and asset-context imports in `backend/app/api/routes/assets.py` are size bounded, suffix/MIME allowlisted, traversal-safe, and isolated under configured upload roots by project/run. Parser errors returned to clients are path-redacted. Nessus/OpenVAS XML handling uses defused XML handling and rejects DOCTYPE, ENTITY, and XXE-style constructs before parsing. VPW-069 evidence is archived in `archive/vpw-evidence/vpw-069-upload-security-hardening.md`. | `backend/tests/api/test_template_import_upload_api.py`, XML input-loader contract tests, `make check`, `make dependency-audit`, and `make docker-demo-smoke` passed for VPW-069. |
+| Report and evidence artifact downloads | `backend/app/services/reports.py`, `backend/app/services/report_renderers.py`, and related report services write run artifacts under the configured report directory. Active report routes resolve downloads back under that root, verify stored artifacts, return attachment downloads, and verify evidence bundles without extracting unsafe members. | `backend/tests/api/test_template_reports_api.py` verifies JSON, Markdown, HTML, CSV, SARIF, evidence ZIP, manifest hashes, verification URLs, outside-root rejection, checksum handling, and formula-safe CSV output. |
+| API token scopes | Template token routes in `backend/app/api/routes/api_tokens.py` create one-time token values after JWT login, store PBKDF2-SHA256 hashes, and expose only metadata after creation. Template auth dependencies in `backend/app/api/deps.py` enforce `read`, `import`, `report`, and `admin` scopes. | `backend/tests/api/test_template_api_tokens.py` verifies template hash storage, one-time display, scoped import/report/admin behavior, `last_used_at`, and revoked-token rejection. `backend/tests/test_backend_runtime_boundary.py` verifies the active import graph does not reach removed runtime modules. |
+| Compose database and provider refresh | `compose.yml` starts the active backend and frontend by default, gives the backend writable provider snapshot/cache volumes, and does not define a second Workbench runtime. | `tests/test_workbench_integration_contracts.py` checks the active Compose boundary; `make docker-demo-smoke` exercises the active import plus provider update path when Docker is available. |
+| 10k findings API smoke | The active API exposes paginated findings with limit/offset and sort controls. This is a smoke check, not the final scale architecture. | `make performance-smoke` runs the VPW-072 template import and pagination smoke with 10,000 findings. |
 | Docker demo smoke | `docker compose -f compose.yml -f compose.override.yml up --build backend frontend` is the supported active Workbench readiness path. | `make docker-demo-smoke` starts Compose, polls `http://127.0.0.1:8000/api/v1/workbench/status`, and tears the stack down with `docker compose down -v --remove-orphans`. |
-| Dependency audit | Project dependencies are reviewed from `backend/requirements.txt`, not the caller's incidental global environment. | `make dependency-audit` requires `pip-audit` and runs `python3 -m pip_audit --requirement backend/requirements.txt`; release notes or the release checklist should record the result and any accepted exceptions. |
+| Dependency audit | Backend dependencies are reviewed from `backend/requirements.txt`, and frontend production dependencies are reviewed from the committed npm lockfile. | `make dependency-audit` requires `pip-audit`, runs `python3 -m pip_audit --requirement backend/requirements.txt`, and runs `npm --prefix frontend audit --omit=dev`; release notes or the release checklist should record the result and any accepted exceptions. |
 | VPW-071 secret and provider hardening | Runtime docs require NVD API keys by environment variable name only, environment variable names matching `^[A-Z_][A-Z0-9_]*$`, local/dev-only template defaults, fixed HTTPS public provider endpoints, and redacted settings/report/log-facing diagnostics. VPW-071 evidence is archived in `archive/vpw-evidence/vpw-071-secret-provider-hardening.md`. | Focused provider/settings/report tests, grep/no-real-key review, `make docs-check`, `make check`, and `make docker-demo-smoke` are the evidence commands to record before marking implementation complete. |
 
 ## Smoke and Audit Evidence
@@ -196,9 +192,8 @@ Maintain v1.2 readiness with local, repeatable checks:
   generated artifacts contain placeholders or redacted state only.
 - `make workflow-check` before merge or release branches when Docker and pre-commit tooling are available.
 - `make docker-demo-smoke` for the Compose quickstart path; it starts the template shell, polls `/api/v1/workbench/status`, verifies a locked provider-data import, triggers `/api/v1/providers/update-jobs`, and removes the demo stack.
-- `make docker-postgres-migration-smoke` for the optional Postgres profile when Docker is available.
 - `make demo-sync-check-temp` before release when output changes affect checked-in examples, reports, SARIF, HTML, or evidence artifacts.
-- `make dependency-audit` for maintainer dependency review when `pip-audit` is installed and advisory data is reachable.
+- `make dependency-audit` for maintainer dependency review when `pip-audit`, npm, and advisory data are reachable.
 
 Dependency audit results, accepted exceptions, and Docker smoke evidence should be recorded in release notes or the release checklist for the milestone being shipped. Tests and demos must stay fixture-based and must not depend on live provider availability.
 

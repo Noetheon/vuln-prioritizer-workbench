@@ -26,11 +26,6 @@ async function routeWorkbenchShell(page: Page) {
         status: "ok",
         core_package: "vuln_prioritizer",
         core_version: "demo",
-        legacy_api_prefix: "/api",
-        migration: {
-          phase: "ready",
-          legacy_workbench_mounted: false,
-        },
       }),
     }),
   )

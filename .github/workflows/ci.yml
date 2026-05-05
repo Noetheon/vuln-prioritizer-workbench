@@ -195,6 +195,8 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
 
       - name: Install backend package
         if: steps.frontend-scope.outputs.run-frontend == 'true'
@@ -202,7 +204,7 @@ jobs:
 
       - name: Install frontend dependencies
         if: steps.frontend-scope.outputs.run-frontend == 'true'
-        run: npm --prefix frontend install --no-package-lock
+        run: make frontend-install
 
       - name: Lint frontend
         if: steps.frontend-scope.outputs.run-frontend == 'true'

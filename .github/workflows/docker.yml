@@ -62,7 +62,7 @@ jobs:
           run_docker=false
           while IFS= read -r path; do
             case "$path" in
-              backend/*|compose*.yml|frontend/Dockerfile*|docker/*|pyproject.toml|uv.lock|scripts/start*|package.json|bun.lock|frontend/package.json|frontend/nginx.conf|frontend/nginx-backend-not-found.conf|frontend/vite.config.*|frontend/tsconfig*.json)
+              backend/*|compose*.yml|frontend/Dockerfile*|docker/*|pyproject.toml|uv.lock|scripts/start*|package.json|bun.lock|frontend/package.json|frontend/package-lock.json|frontend/nginx.conf|frontend/nginx-backend-not-found.conf|frontend/vite.config.*|frontend/tsconfig*.json)
                 run_docker=true
                 ;;
             esac

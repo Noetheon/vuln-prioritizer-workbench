@@ -11,7 +11,18 @@ BACKEND_ROOT = Path(__file__).resolve().parents[1]
 REPO_ROOT = BACKEND_ROOT.parent
 APP_ROOT = BACKEND_ROOT / "app"
 SRC_ROOT = BACKEND_ROOT / "src"
+SRC_PACKAGE_ROOT = SRC_ROOT / "vuln_prioritizer"
 
+REMOVED_LEGACY_RUNTIME_PATHS = (
+    SRC_PACKAGE_ROOT / "api",
+    SRC_PACKAGE_ROOT / "web",
+    SRC_PACKAGE_ROOT / "db",
+    SRC_PACKAGE_ROOT / "provider_scheduler.py",
+    SRC_PACKAGE_ROOT / "workbench_config.py",
+    SRC_PACKAGE_ROOT / "commands" / "db.py",
+    SRC_PACKAGE_ROOT / "commands" / "web.py",
+    REPO_ROOT / "compose.legacy.yml",
+)
 LEGACY_RUNTIME_PREFIXES = (
     "vuln_prioritizer.api",
     "vuln_prioritizer.web",
@@ -24,6 +35,8 @@ LEGACY_RUNTIME_STARTERS = (
     "vuln-prioritizer web serve",
     "vuln_prioritizer.api.app",
     "vuln_prioritizer.provider_scheduler",
+    "docker-postgres-migration-smoke",
+    "compose.legacy.yml",
 )
 
 
@@ -39,7 +52,7 @@ def _module_name(path: Path) -> str:
 
 
 def _module_paths() -> dict[str, Path]:
-    paths = sorted(APP_ROOT.rglob("*.py")) + sorted((SRC_ROOT / "vuln_prioritizer").rglob("*.py"))
+    paths = sorted(APP_ROOT.rglob("*.py")) + sorted(SRC_PACKAGE_ROOT.rglob("*.py"))
     return {_module_name(path): path for path in paths}
 
 
@@ -119,15 +132,16 @@ def _as_text(value: Any) -> str:
     return str(value)
 
 
-def _makefile_target_body(target: str) -> str:
-    lines = (REPO_ROOT / "Makefile").read_text(encoding="utf-8").splitlines()
-    start = next(index for index, line in enumerate(lines) if line == f"{target}:")
-    body: list[str] = []
-    for line in lines[start + 1 :]:
-        if line and not line.startswith(("\t", " ")) and ":" in line:
-            break
-        body.append(line)
-    return "\n".join(body)
+def _read_repo_text(path: str) -> str:
+    return (REPO_ROOT / path).read_text(encoding="utf-8")
+
+
+def test_legacy_workbench_runtime_source_is_removed() -> None:
+    remaining_paths = [path for path in REMOVED_LEGACY_RUNTIME_PATHS if path.exists()]
+    remaining_workbench_services = sorted(SRC_PACKAGE_ROOT.glob("services/workbench_*.py"))
+
+    assert remaining_paths == []
+    assert remaining_workbench_services == []
 
 
 def test_template_backend_import_graph_does_not_reach_legacy_runtime() -> None:
@@ -140,33 +154,21 @@ def test_template_backend_import_graph_does_not_reach_legacy_runtime() -> None:
     assert legacy_runtime_modules == []
 
 
-def test_active_compose_services_do_not_start_legacy_workbench_runtime() -> None:
+def test_default_compose_services_start_only_active_backend_runtime() -> None:
     compose = yaml.safe_load((REPO_ROOT / "compose.yml").read_text(encoding="utf-8"))
-    legacy_compose = yaml.safe_load((REPO_ROOT / "compose.legacy.yml").read_text(encoding="utf-8"))
     services = compose["services"]
-    legacy_services = legacy_compose["services"]
 
-    default_legacy_starters = {
+    legacy_starters = {
         name: _as_text(service)
         for name, service in services.items()
         if any(marker in _as_text(service) for marker in LEGACY_RUNTIME_STARTERS)
     }
 
-    active_compose_legacy_services = {"workbench-postgres", "provider-scheduler"} & set(services)
-    unprofiled_legacy_compatibility_starters = {
-        name: _as_text(service)
-        for name, service in legacy_services.items()
-        if any(marker in _as_text(service) for marker in LEGACY_RUNTIME_STARTERS)
-        and "profiles" not in service
-    }
-
-    assert default_legacy_starters == {}
-    assert active_compose_legacy_services == set()
-    assert unprofiled_legacy_compatibility_starters == {}
-    assert legacy_services["workbench-postgres"]["profiles"] == ["legacy-postgres"]
-    assert "vuln-prioritizer web serve" in _as_text(legacy_services["workbench-postgres"])
-    assert legacy_services["provider-scheduler"]["profiles"] == ["legacy-postgres"]
-    assert "vuln_prioritizer.provider_scheduler" in _as_text(legacy_services["provider-scheduler"])
+    assert "backend" in services
+    assert "frontend" in services
+    assert "workbench-postgres" not in services
+    assert "provider-scheduler" not in services
+    assert legacy_starters == {}
 
 
 def test_active_runtime_entrypoints_use_template_backend_app() -> None:
@@ -187,7 +189,7 @@ def test_active_runtime_entrypoints_use_template_backend_app() -> None:
         assert marker not in playwright_backend
 
 
-def test_generated_browser_api_client_is_built_from_template_backend_app() -> None:
+def test_generated_browser_api_client_is_built_from_active_backend_app() -> None:
     generate_client = (REPO_ROOT / "scripts/generate-client.sh").read_text(encoding="utf-8")
 
     assert "from app.main import app" in generate_client
@@ -195,55 +197,61 @@ def test_generated_browser_api_client_is_built_from_template_backend_app() -> No
     assert "vuln_prioritizer.api" not in generate_client
 
 
-def test_makefile_keeps_legacy_runtime_out_of_default_docker_smoke() -> None:
-    docker_demo_smoke = _makefile_target_body("docker-demo-smoke")
-    postgres_migration_smoke = _makefile_target_body("docker-postgres-migration-smoke")
+def test_makefile_has_no_legacy_runtime_smoke_or_compose_path() -> None:
+    makefile = _read_repo_text("Makefile")
+    docker_demo_smoke = makefile.split("docker-demo-smoke:", 1)[1].split(
+        "dependency-audit:",
+        1,
+    )[0]
 
-    assert "--profile postgres" not in docker_demo_smoke
+    assert "LEGACY_COMPOSE" not in makefile
+    assert "docker-postgres-migration-smoke" not in makefile
+    assert "api/test_workbench_api.py" not in makefile
+    assert "$(BACKEND_TESTS)/playwright" not in makefile
+    assert "npm --prefix frontend run test -- tests/ui-smoke.spec.ts" in makefile
     assert "--profile legacy-postgres" not in docker_demo_smoke
     assert "workbench-postgres" not in docker_demo_smoke
     assert not any(marker in docker_demo_smoke for marker in LEGACY_RUNTIME_STARTERS)
 
-    assert "LEGACY_COMPOSE" in (REPO_ROOT / "Makefile").read_text(encoding="utf-8")
-    assert "--profile legacy-postgres" in postgres_migration_smoke
-    assert "workbench-postgres" in postgres_migration_smoke
+
+def test_cli_does_not_register_removed_workbench_db_or_web_commands() -> None:
+    cli_source = _read_repo_text("backend/src/vuln_prioritizer/cli.py")
+
+    assert "commands.db" not in cli_source
+    assert "commands.web" not in cli_source
+    assert "add_typer(db_app" not in cli_source
+    assert "add_typer(web_app" not in cli_source
 
 
-def test_runtime_boundary_docs_mark_legacy_workbench_as_compatibility_only() -> None:
-    architecture = (REPO_ROOT / "docs/architecture.md").read_text(encoding="utf-8")
-    technical = (REPO_ROOT / "docs/submission/technical-documentation.md").read_text(
-        encoding="utf-8"
-    )
-    threat_model = (REPO_ROOT / "docs/workbench-threat-model.md").read_text(encoding="utf-8")
-    demo_docs = "\n".join(
+def test_active_status_contract_has_no_migration_or_legacy_fields() -> None:
+    models_source = _read_repo_text("backend/app/models/workbench.py")
+    route_source = _read_repo_text("backend/app/api/routes/workbench.py")
+    settings_source = _read_repo_text("backend/app/core/config.py")
+
+    combined = "\n".join([models_source, route_source, settings_source])
+    assert "MigrationStatus" not in combined
+    assert "legacy_api_prefix" not in combined
+    assert "legacy_workbench_mounted" not in combined
+    assert "LEGACY_API_PREFIX" not in combined
+
+
+def test_runtime_boundary_docs_do_not_advertise_removed_legacy_runtime() -> None:
+    docs = "\n".join(
         [
-            (REPO_ROOT / "docs/user_documentation.md").read_text(encoding="utf-8"),
-            (REPO_ROOT / "docs/workbench-offline-demo.md").read_text(encoding="utf-8"),
+            _read_repo_text("README.md"),
+            _read_repo_text("docs/architecture.md"),
+            _read_repo_text("docs/submission/technical-documentation.md"),
+            _read_repo_text("docs/workbench-threat-model.md"),
+            _read_repo_text("docs/user_documentation.md"),
+            _read_repo_text("docs/workbench-offline-demo.md"),
+            _read_repo_text("docs/support_matrix.md"),
         ]
     )
 
-    assert "The active browser Workbench runtime is `backend/app`." in architecture
-    assert "`backend/app` is the active browser Workbench runtime." in technical
-    assert "Workbench runtime is compatibility-only" in threat_model
-    assert "legacy self-hosted FastAPI/Jinja2 Workbench command" not in threat_model
-    assert "template-aligned Workbench shell during migration" not in threat_model
-    assert "vuln-prioritizer web serve" not in demo_docs
-
-
-def test_template_backend_uses_neutral_token_hashing_helper() -> None:
-    app_imports = {
-        str(path.relative_to(BACKEND_ROOT)): _raw_imports(path)
-        for path in sorted(APP_ROOT.rglob("*.py"))
-    }
-
-    legacy_api_security_imports = {
-        path: sorted(module for module in imports if module.startswith("vuln_prioritizer.api"))
-        for path, imports in app_imports.items()
-    }
-    legacy_api_security_imports = {
-        path: modules for path, modules in legacy_api_security_imports.items() if modules
-    }
-
-    assert legacy_api_security_imports == {}
-    assert "vuln_prioritizer.security_tokens" in app_imports["app/api/deps.py"]
-    assert "vuln_prioritizer.security_tokens" in app_imports["app/api/routes/api_tokens.py"]
+    assert "`backend/app` is the active browser Workbench runtime." in docs
+    assert "compose.legacy.yml" not in docs
+    assert "docker-postgres-migration-smoke" not in docs
+    assert "vuln-prioritizer web serve" not in docs
+    assert "db init" not in docs
+    assert "web serve" not in docs
+    assert "bootstrap-open" not in docs.lower()

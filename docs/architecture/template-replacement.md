@@ -74,27 +74,16 @@ commit 13652b51ea0acca7dfe243ac25e2bbdc066f3c4f
 
 ## Workbench Replacement Inventory
 
-The current repository already has a mature local-first Workbench implementation
-under `backend/src/vuln_prioritizer`. Those modules are reference material and
-domain source material, not modules to mount directly into the new template app.
+The retained `backend/src/vuln_prioritizer` package is CLI and domain source
+material. Active Workbench persistence, routes, and UI live under `backend/app`
+and `frontend`.
 
-| Workbench concept | Current reference paths | Migration use |
+| Workbench concept | Current implementation paths | Migration use |
 | --- | --- | --- |
-| Project | `backend/src/vuln_prioritizer/db/models.py`, `backend/src/vuln_prioritizer/db/repository_projects.py`, `backend/src/vuln_prioritizer/api/workbench_project_routes.py`, `backend/src/vuln_prioritizer/web/workbench_projects.py` | Use as behavior reference for `Project` SQLModel, API, and UI flows. Do not import old SQLAlchemy/Jinja modules into `backend/app`. |
-| Finding | `backend/src/vuln_prioritizer/db/models.py`, `backend/src/vuln_prioritizer/db/repository_findings.py`, `backend/src/vuln_prioritizer/api/workbench_import_routes.py`, `backend/src/vuln_prioritizer/api/workbench_findings.py`, `backend/src/vuln_prioritizer/web/workbench_governance.py` | Use as behavior reference for finding persistence, list/detail, governance, and explanation flows. |
-| Analysis run and occurrence provenance | `backend/src/vuln_prioritizer/db/models.py`, `backend/src/vuln_prioritizer/services/workbench_analysis.py`, `backend/src/vuln_prioritizer/services/workbench_import.py` | Rebuild behind template SQLModel/Alembic boundaries while reusing core parser and prioritization services. |
+| Project | `backend/app/models/projects.py`, `backend/app/repositories/projects.py`, `backend/app/api/routes/projects.py`, `frontend/src/components/projects/` | Active SQLModel, API, and UI flow. |
+| Finding | `backend/app/models/findings.py`, `backend/app/repositories/findings.py`, `backend/app/api/routes/findings.py`, `frontend/src/components/findings/` | Active finding persistence, list/detail, governance, and explanation flow. |
+| Analysis run and occurrence provenance | `backend/app/models/runs.py`, `backend/app/repositories/runs.py`, `backend/app/api/routes/imports.py`, `backend/app/api/routes/runs.py` | Active run provenance and import boundary while reusing core parser and prioritization services. |
 | Core parsing and prioritization | `backend/src/vuln_prioritizer/inputs/*`, `backend/src/vuln_prioritizer/providers/*`, `backend/src/vuln_prioritizer/services/prioritization.py`, `backend/src/vuln_prioritizer/services/contextualization.py` | Safe to call through adapter/service boundaries because these modules are framework-neutral domain logic. |
-
-The legacy SQLAlchemy migration path under
-`backend/src/vuln_prioritizer/db/alembic/versions/` is historical schema truth
-for the old Workbench only. The template-native SQLModel migration path must be
-introduced under the template backend and verified separately.
-
-The legacy API JSON mapping reference is
-`backend/src/vuln_prioritizer/api/workbench_payloads.py`, with request and
-response schemas in `backend/src/vuln_prioritizer/api/schemas.py`. These files
-are useful to preserve external behavior, but they should not be mounted
-directly into `backend/app`.
 
 ## Template Shell Boundary
 
@@ -105,17 +94,9 @@ the `/api/v1/workbench/status` adapter from
 
 The template shell may import framework-neutral core modules such as
 `vuln_prioritizer.__version__`, parser services, providers, prioritization, and
-contextualization helpers. It must not import these legacy Workbench layers as
-runtime implementation:
-
-- `vuln_prioritizer.api.*`
-- `vuln_prioritizer.web.*`
-- `vuln_prioritizer.db.*`
-- `vuln_prioritizer.services.workbench_*`
-
-Those modules initialize legacy routes, persistence, static assets, templates,
-or old Workbench services. Mounting them inside the template app would fake the
-replacement and make later SQLModel/Alembic work harder to verify.
+contextualization helpers. It must not introduce a second web/API/database
+runtime alongside `backend/app`; shared behavior belongs in neutral core modules
+or active `backend/app` services.
 
 ## Replacement Mapping
 
@@ -145,8 +126,8 @@ replacement and make later SQLModel/Alembic work harder to verify.
 - TanStack Router route tree must be regenerated when replacing `/items`.
 - Frontend navigation, loading skeletons, empty states, and Playwright tests must
   move together to avoid visible template leftovers.
-- Existing Jinja2/SQLAlchemy Workbench routes can guide behavior but are not
-  closure evidence for template SQLModel/React issues.
+- Historical implementation notes can guide behavior but are not closure
+  evidence for active SQLModel/React issues.
 
 ## Follow-up Issues
 
@@ -165,9 +146,9 @@ replacement and make later SQLModel/Alembic work harder to verify.
   prioritization.
 - Mapping `owner_id` directly to finding ownership would confuse system user,
   project owner, asset owner, and risk owner.
-- Copying old SQLAlchemy/Jinja modules into the template app would mix
-  architectures and make later SQLModel/Alembic migration harder.
-- Closing implementation issues based on old Workbench behavior would recreate
+- Introducing another runtime into the template app would mix architectures and
+  make SQLModel/Alembic verification harder.
+- Closing implementation issues based on removed Workbench behavior would recreate
   the same false completion problem this duplicate VPW cycle is meant to avoid.
 - Generated client and route-tree drift can break frontend builds if backend and
   frontend changes are not landed together.
