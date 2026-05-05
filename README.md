@@ -1,739 +1,243 @@
-# vuln-prioritizer
+# Vuln Prioritizer Workbench
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Status: v1.1.0](https://img.shields.io/badge/status-v1.1.0-brightgreen)](./CHANGELOG.md)
-[![Quality: local-first](https://img.shields.io/badge/quality-local--first-informational)](#development)
+[![Quality: local-first](https://img.shields.io/badge/quality-local--first-informational)](#safety-boundaries)
 
-`vuln-prioritizer` is a Python CLI and self-hosted Workbench for prioritizing known CVEs. It accepts plain CVE lists plus existing scanner and SBOM exports, enriches them with `NVD + EPSS + CISA KEV`, and adds optional ATT&CK, defensive-context, asset-context, VEX, waiver, and evidence layers without turning the priority model into a black box.
+Vuln Prioritizer Workbench is a local-first CLI and self-hosted Workbench for
+prioritizing known CVEs from existing evidence. It accepts CVE lists, scanner
+exports, SBOM outputs, VEX statements, and asset context, then explains priority
+with transparent signals such as CVSS, EPSS, CISA KEV, provider freshness,
+asset context, waivers, and reviewed defensive ATT&CK/TTP mappings.
 
-![HTML report preview](docs/examples/media/html-report-preview.png)
+The project is built for vulnerability management, security engineering,
+reviewers, and leadership audiences that need a defensible path from technical
+finding to decision evidence.
 
-Workbench demo screenshots:
+## Problem
 
-![Workbench dashboard](docs/examples/media/workbench-dashboard.png)
-![Workbench findings](docs/examples/media/workbench-findings.png)
-![Workbench finding detail with ATT&CK TTP context](docs/examples/media/workbench-finding-detail-ttp.png)
-![Workbench reports and evidence](docs/examples/media/workbench-reports-evidence.png)
+Security teams often have more known vulnerabilities than they can remediate
+immediately. A CVSS-only list does not explain which findings affect exposed
+services, which are known exploited, which have accepted-risk decisions, or
+which decision artifacts can be reviewed later.
 
-README media maintenance checklist for future releases:
-
-- Capture screenshots from the locked offline demo path in [docs/workbench-offline-demo.md](docs/workbench-offline-demo.md), not from customer data or live provider-only runs.
-- Keep screenshot paths repository-relative, and keep or update README links in the same change.
-- Crop to the Workbench or report UI only; do not include shell history, API keys, cookies, private home-directory paths, browser profiles, or environment variable values.
-- Show secret-bearing settings only in their redacted `<set>` or `<not set>` state.
-- Commit generated screenshot replacements only as part of a release evidence or docs refresh change.
-
-## Problem And Goal
-
-Security teams often start with a long list of CVEs from scanners, SBOM tools,
-advisory exports, or issue trackers. Raw CVSS scores alone do not explain what
-should be fixed first, which systems are exposed, which findings are already
-covered by VEX/waivers, or which decisions need evidence.
-
-`vuln-prioritizer` turns existing CVE evidence into an explainable
-risk-to-decision workflow:
+VPW turns existing vulnerability evidence into a repeatable decision workflow:
 
 ```text
-existing findings or SBOM exports
-  -> normalized CVE occurrences
-  -> CVSS, EPSS, KEV, optional ATT&CK, asset, VEX, waiver, and provider context
-  -> transparent priority and rationale
-  -> reports, CI gates, evidence bundles, and Workbench decision queues
+existing CVE evidence
+  -> normalized findings
+  -> CVSS, EPSS, KEV, provider, asset, VEX, waiver, and ATT&CK context
+  -> explainable priority
+  -> reports, evidence bundles, and reviewer-ready decisions
 ```
 
-The goal is not to discover vulnerabilities. The goal is to help operators make
-defensible decisions from vulnerability evidence they already have.
+## What It Is
 
-## Why Use It
+- a CLI plus FastAPI/React Workbench for known CVE prioritization
+- a local-first, self-hosted reviewer and operator tool
+- a transparent rule-based scoring workflow
+- a Workbench for projects, imports, findings, finding detail, TTP context,
+  waivers, assets, providers, settings, reports, and evidence bundles
+- a report and evidence generator with manifest and checksum verification
+- a repository with archived demo proof and submission documentation
 
-- Transparent, rule-based prioritization instead of opaque scoring.
-- Local-first workflows with saved JSON, HTML reports, snapshots, optional SQLite-backed history views, rollups, and evidence bundles.
-- Optional ATT&CK context from local CTID/MITRE data, not heuristic CVE-to-ATT&CK guesses.
-- CI-friendly outputs including Markdown summaries, SARIF, GitHub Action support, and policy gates.
-- Explicit support for local defensive context, VEX, asset context, waivers, and reproducible review artifacts.
-- Waiver lifecycle visibility with active, review-due, and expired states instead of silent long-lived exceptions.
-- A Docker/Compose path that runs the current template-aligned Workbench shell
-  while keeping the CLI core available in the same image.
+## What It Is Not
 
-## What It Can Do
+- not a vulnerability scanner
+- not an exploit framework, PoC generator, or active probing tool
+- not a credential tester or attack simulator
+- not an autopatcher
+- not a hosted SaaS product
+- not ML or AI black-box scoring
+- not automatic ATT&CK inference
 
-Core commands:
+Unmapped CVEs remain unmapped. ATT&CK/TTP context is defensive and
+source-backed; it does not prove local exploitation.
 
-- `analyze`: prioritize findings from CVE lists, scanner exports, or SBOM exports
-- `compare`: show how enriched prioritization differs from CVSS-only
-- `explain`: explain a single CVE decision in detail
-- `doctor`: validate local setup, config, cache, files, and optional live source reachability
-- `snapshot create|diff`: capture a run and compare before/after states
-- `state init|import-snapshot|history|waivers|top-services|trends|service-history`: persist snapshots in an optional local SQLite store and inspect history, waiver debt, repeated services, or service trends
-- `rollup`: aggregate saved analysis or snapshots by asset or service
-- `input validate`: locally validate CVE lists, scanner/SBOM export files, asset context, and VEX before enrichment
-- `input inspect` / `input normalize`: emit normalized occurrences from supported inputs without provider lookup
-- `attack validate|coverage|navigator-layer`: validate and use local ATT&CK mappings
-- `report html|evidence-bundle|verify-evidence-bundle`: render HTML, build reproducible ZIP evidence packages, or verify bundle integrity
-- `data status|update|verify|export-provider-snapshot`: inspect cache state, maintain local provider data, and export replayable provider snapshots
-- `db init`: initialize the Workbench SQLite database
-- `web serve`: run the FastAPI/Jinja2 Workbench web application
+## Core Workflow
 
-Supported inputs:
-
-- `cve-list`
-- `generic-occurrence-csv`
-- `trivy-json`
-- `grype-json`
-- `cyclonedx-json`
-- `spdx-json`
-- `dependency-check-json`
-- `github-alerts-json`
-- `nessus-xml`
-- `openvas-xml`
-
-Supported outputs vary by command. The main `analyze` command supports:
-
-- terminal table
-- `markdown`
-- `json`
-- `sarif`
-- direct HTML sidecars via `--html-output`
-- Markdown executive summaries via `--summary-output`
-
-Other commands expose the formats that fit their contract. For example, `report html` writes HTML from saved analysis JSON, evidence bundle commands write or verify ZIP bundles, and helper commands such as `doctor`, `snapshot`, `rollup`, `state`, `attack`, and `data` expose command-specific Markdown, JSON, or table output where supported.
-
-## Scope Boundaries
-
-This project is:
-
-- a CLI and local Workbench for known CVEs and existing findings
-- local-first and reproducibility-oriented
-- explicit about data provenance and scoring rules
-- designed for vulnerability management, security triage, and evidence generation
-
-This project is not:
-
-- a scanner
-- an exploit framework, PoC generator, or active probing tool
-- a SIEM
-- a ticketing system
-- an autopatcher or autonomous remediation agent
-- a replacement for heavier vulnerability-management platforms
-- a live TAXII harvester
-- a heuristic or LLM-based ATT&CK mapper
-
-It does not perform credential testing, network scanning, exploitation,
-payload generation, attack simulation, or heuristic CVE-to-ATT&CK mapping.
-ATT&CK support is defensive and evidence-based: use reviewed local mappings and
-technique metadata only.
-
-## Installation
-
-### Recommended: `pipx`
-
-```bash
-pipx install git+https://github.com/Noetheon/vuln-prioritizer-workbench.git@vX.Y.Z#subdirectory=backend
-vuln-prioritizer --help
+```text
+Project -> Import -> Findings -> Finding Detail -> TTP Context
+  -> Waivers -> Evidence Center -> Evidence Bundle
 ```
 
-Replace `vX.Y.Z` with the GitHub release tag you intend to consume. This README tracks the current `main` branch, so a tagged public release can legitimately expose a smaller surface than the tip of `main`. The latest public release is currently `v1.1.0`.
+The Workbench supports the same core story documented in the
+[demo readiness guide](docs/demo-readiness.md): import existing evidence,
+review a prioritized remediation queue, inspect why a finding matters, keep
+ATT&CK boundaries explicit, record governance context, and generate evidence
+for decisions.
 
-The repository is PyPI-ready, but the verified public install path is currently the GitHub tag install above. That is a source-at-tag install path, not a GitHub Release asset install path. Public PyPI/TestPyPI publication is wired and documented, but explicitly gated until the repository's trusted-publisher configuration is enabled. When PyPI goes live, the release workflows verify hosted-index installation automatically after publish; until then, the GitHub tag install remains the supported public path and the release workflow also verifies the same source-at-tag install contract on tag pushes.
+## Key Features
 
-### Example Scope
+- Import CVE lists, scanner/SBOM outputs, VEX, and asset context.
+- Enrich findings with CVSS, EPSS, CISA KEV, and provider freshness.
+- Add asset owner, service, exposure, environment, and criticality context.
+- Track lifecycle state, waivers, accepted risk, review dates, and waiver debt.
+- Show human-readable "Why this priority" explanations.
+- Display ATT&CK/TTP context only from reviewed or explicit mapping sources.
+- Generate HTML, Markdown, JSON, CSV, SARIF, ATT&CK Navigator, and Evidence ZIP
+  artifacts where supported.
+- Verify Evidence ZIP contents with manifest and SHA256 checksums.
+- Keep current product, methodology, demo, and submission docs in MkDocs.
 
-- Works after `pipx install` alone: commands that use files you create yourself or already have in your own workspace, such as `cves.txt`, `trivy-results.json`, `analysis.json`, and `report.html`.
-- Needs extra local data files: ATT&CK examples require files that you pass via `--attack-mapping-file` and `--attack-technique-metadata-file`.
-- Repo checkout only: examples that reference `data/...`, `docs/...`, or `make ...`. In this repository those paths refer to checked-in fixtures, checked-in docs artifacts, or maintainer targets.
+## Architecture At A Glance
 
-### Local Development Install
+- Backend: FastAPI, auth/session support, API routes, services, repositories,
+  models, and Alembic migrations.
+- Frontend: React, Vite, TypeScript, TanStack Router, and VPW design-system
+  components.
+- API boundary: generated client files under `frontend/src/client/**` and
+  `frontend/src/api-client.ts`; these are generated artifacts and are not
+  manually edited.
+- CLI/domain layer: retained under `backend/src/vuln_prioritizer/**` for
+  automation, reporting, and compatibility workflows.
 
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r backend/requirements.txt
-pip install -e "backend[dev]"
-```
+See [Product Architecture](docs/architecture.md) for route ownership,
+WorkbenchShell responsibilities, shared provider/status state, and explicit
+non-contracts.
 
-Optional:
+## Quickstart: Local Workbench
 
-```bash
-cp .env.example .env
-```
-
-Then set `NVD_API_KEY` in `.env` if you want authenticated NVD access.
-
-### Docker / Compose Workbench
-
-Run the template-aligned Workbench shell and React frontend locally from a
-fresh repository checkout:
+From a fresh repository checkout:
 
 ```bash
 cp .env.example .env
 docker compose -f compose.yml -f compose.override.yml up --build backend frontend
 ```
 
-The checked-in `.env.example` is already suitable for this local quickstart.
-`NVD_API_KEY` can stay empty because the demo import path uses the checked-in
-locked provider snapshot. Do not reuse the placeholder `SECRET_KEY` or
-`FIRST_SUPERUSER_PASSWORD` outside a local workstation.
+Open:
 
-Then open these local URLs:
+- Workbench frontend: `http://127.0.0.1:5173`
+- Backend health: `http://127.0.0.1:8000/api/v1/utils/health-check/`
 
-- React Workbench shell: `http://127.0.0.1:5173`
-- Template backend status: `http://127.0.0.1:8000/api/v1/workbench/status`
-- Template utility health check:
-  `http://127.0.0.1:8000/api/v1/utils/health-check/`
-
-The local template login uses `.env` defaults:
+Local demo login defaults from `.env.example`:
 
 - email: `admin@example.com`
 - password: `changethis`
 
-After login, create a project and import `data/sample_cves.txt` as `CVE list`.
-Use provider snapshot `demo_provider_snapshot.json` with locked provider data
-enabled. The Compose backend mounts `./data` read-only at `/app/examples`, so
-the import can replay provider data without live API keys.
+Suggested demo path:
 
-Equivalent API demo import after login:
+1. Create or select a project.
+2. Import `data/sample_cves.txt` as a CVE list.
+3. Use `demo_provider_snapshot.json` with locked provider data enabled.
+4. Review Findings, Finding Detail, TTP Context, Waivers, and Evidence Center.
 
-```bash
-TOKEN="$(
-  curl -sS -X POST http://127.0.0.1:8000/api/v1/login/access-token \
-    -H 'Content-Type: application/x-www-form-urlencoded' \
-    --data 'username=admin@example.com&password=changethis' \
-  | python3 -c 'import json, sys; print(json.load(sys.stdin)["access_token"])'
-)"
-PROJECT_ID="$(
-  curl -sS -X POST http://127.0.0.1:8000/api/v1/projects/ \
-    -H "Authorization: Bearer ${TOKEN}" \
-    -H 'Content-Type: application/json' \
-    --data '{"name":"online-shop-demo","description":"Local Docker quickstart demo"}' \
-  | python3 -c 'import json, sys; print(json.load(sys.stdin)["id"])'
-)"
-curl -sS -X POST "http://127.0.0.1:8000/api/v1/projects/${PROJECT_ID}/imports" \
-  -H "Authorization: Bearer ${TOKEN}" \
-  -F input_type=cve-list \
-  -F provider_snapshot_file=demo_provider_snapshot.json \
-  -F locked_provider_data=true \
-  -F file=@data/sample_cves.txt
-```
+The demo path uses local checked-in fixtures and provider replay. Do not reuse
+placeholder `.env.example` secrets outside a local workstation.
 
-Scoped service tokens for CI/CD are managed after login through `/settings` or
-`/api/v1/api-tokens/`. The template API stores only PBKDF2-SHA256 token hashes,
-shows the cleartext token only in the create response, and supports `read`,
-`import`, `report`, and `admin` scopes. A service token can call import and
-report endpoints only when it has the matching scope or `admin`.
+## Quickstart: CLI
 
-For a quick status check:
+Install from a tagged source checkout with `pipx`:
 
 ```bash
-curl http://127.0.0.1:8000/api/v1/workbench/status
+pipx install git+https://github.com/Noetheon/vuln-prioritizer-workbench.git@vX.Y.Z#subdirectory=backend
+vuln-prioritizer --help
 ```
 
-Maintainers can run the same Compose readiness path through
-`make docker-demo-smoke`, which starts the backend and frontend, polls
-`/api/v1/workbench/status`, verifies a locked provider-data import, triggers a
-cache-only provider update through `/api/v1/providers/update-jobs`, and tears
-the stack down after the check.
-
-The default Compose stack now follows the FastAPI Full Stack Template shape:
-`db`, `backend`, and `frontend`. The backend service intentionally serves the
-new template shell (`app.main:app`) and does not claim the legacy Jinja2
-Workbench as migrated. Template provider update snapshots are written to the
-`template-provider-snapshots` volume at `/app/provider-snapshots`, while
-`/app/examples` stays a read-only demo-data mount. To smoke-test the legacy Workbench against the optional
-Postgres profile and the same Alembic migration path, run:
-
-```bash
-make docker-postgres-migration-smoke
-```
-
-That starts `db` and the profiled `workbench-postgres` service, serves the
-legacy Workbench on `http://127.0.0.1:8001`, and tears down the profile volumes
-after the health check.
-
-Adminer and Mailcatcher/Mailpit are not enabled in the current local Compose
-stack. The `.env.example` keeps SMTP placeholders for template parity, but
-email delivery is not part of the local quickstart. Add database or email
-debugging services only as an explicit deployment/dev-tooling change.
-
-The backend image still contains the CLI and legacy Workbench command for
-profiled migration checks. You can initialize a profiled legacy database
-explicitly with:
-
-```bash
-docker compose -f compose.yml -f compose.override.yml --profile postgres run --rm workbench-postgres vuln-prioritizer db init
-```
-
-The CLI remains available in the same image:
-
-```bash
-docker build -f backend/Dockerfile -t vuln-prioritizer-workbench-backend:local .
-docker run --rm vuln-prioritizer-workbench-backend:local vuln-prioritizer --help
-```
-
-Equivalent local Workbench commands after a normal Python install:
-
-```bash
-export VULN_PRIORITIZER_DB_URL=sqlite:///./data/workbench.db
-export VULN_PRIORITIZER_UPLOAD_DIR=./data/uploads
-export VULN_PRIORITIZER_REPORT_DIR=./data/reports
-export VULN_PRIORITIZER_PROVIDER_SNAPSHOT_DIR=./data
-export VULN_PRIORITIZER_CACHE_DIR=./.cache/vuln-prioritizer
-vuln-prioritizer db init
-vuln-prioritizer web serve --host 127.0.0.1 --port 8000
-```
-
-Workbench runtime environment:
-
-| Variable | Default / Compose value | Purpose |
-| --- | --- | --- |
-| `NVD_API_KEY` | empty | Optional authenticated NVD access. |
-| `VULN_PRIORITIZER_NVD_API_KEY_ENV` | `NVD_API_KEY` | Name of the environment variable read for the NVD key. |
-| `VULN_PRIORITIZER_DB_URL` | local: `sqlite:///./data/workbench.db`; profiled Compose migration smoke: `postgresql+psycopg://...@db:5432/workbench` | Legacy Workbench database URL. |
-| `VULN_PRIORITIZER_UPLOAD_DIR` | local: `data/uploads`; Compose: `/app/uploads` | Uploaded source files. |
-| `VULN_PRIORITIZER_REPORT_DIR` | local: `data/reports`; Compose: `/app/reports` | Generated reports and evidence bundles. |
-| `VULN_PRIORITIZER_PROVIDER_SNAPSHOT_DIR` | local: `data`; Compose: `/app/provider-snapshots` | Trusted directory for locked provider snapshot replay and generated provider update snapshots. |
-| `VULN_PRIORITIZER_CACHE_DIR` | local: `.cache/vuln-prioritizer`; Compose: `/app/.cache/vuln-prioritizer` | Provider cache used by Workbench analysis. |
-| `VULN_PRIORITIZER_MAX_UPLOAD_MB` | `25` | Upload size limit per import. |
-| `VULN_PRIORITIZER_CSRF_TOKEN` | random per process when unset | Optional fixed local form token for repeatable demos. |
-| `VULN_PRIORITIZER_ALLOWED_HOSTS` | local: `127.0.0.1,localhost,testserver`; profiled Compose migration smoke: `127.0.0.1,localhost` | Comma-separated Host header allowlist for the local Workbench. |
-
-Secret and provider hardening contract:
-
-- The optional NVD API key is read only from the environment variable named by
-  `VULN_PRIORITIZER_NVD_API_KEY_ENV`, which defaults to `NVD_API_KEY`. Store and
-  display the variable name only, never the key value.
-- Environment-variable name settings must match `^[A-Z_][A-Z0-9_]*$`. Invalid
-  names are configuration errors and must not be treated as literal secret
-  values.
-- Template placeholder secrets such as `changethis` are local/dev bootstrap
-  defaults only. Staging and production deployments must reject default template
-  secrets for `SECRET_KEY`, `FIRST_SUPERUSER_PASSWORD`, and equivalent
-  credential settings. Unknown `ENVIRONMENT` values fail closed instead of
-  falling back to local mode.
-- Built-in live provider endpoints for NVD, FIRST EPSS, and CISA KEV are fixed
-  HTTPS public-source constants. Runtime settings may choose cache directories,
-  locked snapshots, or offline files, but must not provide an unsafe live
-  provider URL override.
-- Settings pages, reports, evidence bundles, manifests, logs, and diagnostic
-  payloads must redact secret values and local absolute paths, exposing only
-  non-secret state such as `<set>`, `<not set>`, variable names, counts, hashes,
-  bundle paths, or source labels.
-
-For locked Workbench replay, submit only the snapshot filename, for example
-`demo_provider_snapshot.json`. The app resolves it from
-`VULN_PRIORITIZER_PROVIDER_SNAPSHOT_DIR` or the provider cache and rejects arbitrary paths.
-
-Legacy Workbench API token behavior is intentionally local-first. A fresh local database has no active
-tokens, so mutating `/api/*` requests remain open for the offline demo. Create the first token with
-`POST /api/tokens`; after any active token exists, mutating `/api/` requests require
-`Authorization: Bearer <token>` or `X-API-Token: <token>`. Legacy tokens now carry the same
-`read`, `import`, `report`, and `admin` scopes. Existing upgraded tokens are treated as `admin`;
-new legacy tokens default to `admin` unless scopes are supplied. Only SHA-256 token hashes are stored.
-
-The template-aligned Workbench shell currently has a configured-superuser JWT
-login smoke path. DB-backed template users, RBAC, and final project membership
-rules are separate migration work.
-
-Workbench project settings can be saved as config-as-code through
-`POST /api/projects/{project_id}/settings/config`. The payload uses the same
-`vuln-prioritizer.yml` schema as the CLI runtime config, rejects unknown keys, and keeps backward
-defaults when no project snapshot exists.
-
-Provider update jobs are available in both Workbench surfaces:
-
-- Template API: `POST /api/v1/providers/update-jobs` and
-  `GET /api/v1/providers/update-jobs`, authenticated with the configured user
-  JWT or an `admin` API token.
-- Legacy local Workbench: `POST /api/providers/update-jobs` and the Settings
-  page.
-
-They are synchronous local jobs intended for cron or other trusted local schedulers; failures are
-recorded without replacing the previous provider snapshot, and overlapping refreshes return
-HTTP 409. The optional Compose `postgres` profile also includes a disabled-by-default
-`provider-scheduler` service. Start it only when you want the local Workbench to submit periodic
-provider update jobs:
-
-```bash
-docker compose -f compose.yml -f compose.override.yml --profile postgres up -d db workbench-postgres provider-scheduler
-```
-
-The scheduler posts to `http://workbench-postgres:8000/api/providers/update-jobs`, defaults to
-cache-only provider refresh every 86400 seconds, and accepts these environment variables:
-
-| Variable | Default | Purpose |
-| --- | --- | --- |
-| `VULN_PRIORITIZER_PROVIDER_UPDATE_INTERVAL_SECONDS` | `86400` | Delay between scheduled provider update submissions. |
-| `VULN_PRIORITIZER_PROVIDER_UPDATE_SOURCES` | `nvd,epss,kev` | Comma-separated provider source list. |
-| `VULN_PRIORITIZER_PROVIDER_UPDATE_CACHE_ONLY` | `true` | Keep the scheduled job offline/cache-only by default; set to `false` only when live provider egress is intended. |
-| `VULN_PRIORITIZER_PROVIDER_UPDATE_MAX_CVES` | empty | Optional cap for each scheduled refresh. |
-| `VULN_PRIORITIZER_PROVIDER_UPDATE_API_TOKEN` | empty | Optional local Workbench API token used when API tokens have been enabled. |
-
-Provider update jobs use a provider-snapshot-directory lock file to reject overlapping refreshes
-with HTTP 409 instead of racing snapshot writes.
-
-GitHub issue export starts with the template API
-`POST /api/v1/projects/{project_id}/github/issues/preview`. The request can pass explicit
-`finding_ids` to generate reviewed issue markdown with priority, rationale, remediation, and
-evidence references. Issue creation requires
-`POST /api/v1/projects/{project_id}/github/issues/export` with `dry_run: false`, a repository, and
-an explicit configured token environment variable.
-
-Current local Workbench limitations:
-
-- The Compose path is local-first and single-node. It is not hardened for internet exposure.
-- The Workbench UI/API supports the same input-format matrix as the CLI for local single-file and multi-file imports.
-- SQLite remains the default Workbench runtime; the Compose Postgres profile is an optional migration smoke path. The Workbench records durable job state for local imports, provider refreshes, reports, and evidence bundles, but a separate async worker process, SSO, organization-wide ticket sync policy, and multi-workspace tenancy remain outside the current local-first scope.
-- The project still does not scan systems, patch software, or generate heuristic/AI CVE-to-ATT&CK mappings.
-- Do not expose the local Workbench on the public internet without a separate hardening review covering TLS/proxying, backup/restore, audit retention, role design, token handling, and the threat model.
-
-Current Workbench readiness and shared-deployment prerequisites are tracked in
-[docs/workbench-threat-model.md](docs/workbench-threat-model.md). VPW-071
-secret/provider hardening evidence is tracked in
-[archive/vpw-evidence/vpw-071-secret-provider-hardening.md](archive/vpw-evidence/vpw-071-secret-provider-hardening.md).
-The historical implementation plan remains available in
-[archive/historical-planning/workbench-masterplan.md](archive/historical-planning/workbench-masterplan.md), and
-[docs/roadmap.md](docs/roadmap.md) tracks the shipped CLI plus local Workbench
-release line.
-
-## Demo
-
-For a local browser demo, use the checked-in offline runbook:
-[docs/workbench-offline-demo.md](docs/workbench-offline-demo.md). It uses
-repository fixtures and locked provider replay so screenshots and evidence can
-be reproduced without customer data or live-only provider behavior.
-
-For a template-migration smoke demo, run:
-
-```bash
-make docker-demo-smoke
-```
-
-That command starts the template backend and React shell, verifies
-`/api/v1/workbench/status`, checks the frontend and login route, then tears down
-the stack.
-
-Committed template report demo artifacts are available for review without
-running the Workbench:
-
-- [docs/examples/vpw-054-template-technical-report.md](docs/examples/vpw-054-template-technical-report.md)
-- [docs/examples/vpw-054-template-executive-report.html](docs/examples/vpw-054-template-executive-report.html)
-- [docs/examples/vpw-054-template-analysis-result.v1.json](docs/examples/vpw-054-template-analysis-result.v1.json)
-
-## Quickstart
-
-For a complete external-user documentation path across install, Docker,
-Workbench demo, architecture, data model, imports, providers, scoring, reports,
-ATT&CK, security, and known limitations, start with
-[docs/user_documentation.md](docs/user_documentation.md).
-
-### 1. Fastest Public-Install Analyze Run
+Minimal analysis:
 
 ```bash
 printf 'CVE-2021-44228\nCVE-2024-3094\n' > cves.txt
 vuln-prioritizer analyze --input cves.txt --format markdown --output report.md
 ```
 
-### 2. Public-Install Analyze from Your Own Existing Scan Export
+For full CLI usage, scanner/SBOM input formats, SARIF, reports, and GitHub
+Action patterns, start with the [User Documentation Guide](docs/user_documentation.md)
+and [Reporting and CI Integration](docs/integrations/reporting_and_ci.md).
+
+## Documentation
+
+Public docs:
+
+- [Documentation home](docs/index.md)
+- [User Documentation Guide](docs/user_documentation.md)
+- [Product Architecture](docs/architecture.md)
+- [Scoring Methodology](docs/scoring-methodology.md)
+- [ATT&CK/TTP Methodology](docs/attack-ttp-methodology.md)
+- [Reports and Evidence](docs/reports-and-evidence.md)
+- [Demo Readiness](docs/demo-readiness.md)
+- [Contracts](docs/contracts.md)
+- [Support Matrix](docs/support_matrix.md)
+- [Workbench Threat Model](docs/workbench-threat-model.md)
+
+Submission and reviewer docs:
+
+- [Submission Package](docs/submission/README.md)
+- [Submission Evidence Sheet](docs/submission/evidence-sheet.md)
+- [Submission Demo Script](docs/submission/demo-script.md)
+- [Reviewer Checklist](docs/submission/reviewer-checklist.md)
+
+## Evidence And Demo Proof
+
+The final demo and reviewer evidence are linked rather than duplicated in the
+README:
+
+- [Final demo flow summary](archive/vpw-evidence/final-demo-flow/demo-flow-summary.md)
+- [Curated ATT&CK demo mapping summary](archive/vpw-evidence/final-demo-flow/attack-demo-mapping-summary.md)
+- [Presentation evidence index](archive/vpw-evidence/presentation-pack/evidence-index.md)
+- [Presentation pack overview](archive/vpw-evidence/presentation-pack/README.md)
+- [Historical evidence archive](archive/vpw-evidence/MANIFEST.md)
+- [Example technical report artifact](docs/examples/vpw-054-template-technical-report.md)
+- [Example executive report artifact](docs/examples/vpw-054-template-executive-report.html)
+- [Example analysis result artifact](docs/examples/vpw-054-template-analysis-result.v1.json)
+- [GitHub Actions report artifact workflow](.github/examples/workbench-report-artifacts.yml)
+
+Canonical report/evidence contract artifacts remain under `docs/evidence/` and
+are described in [Reports and Evidence](docs/reports-and-evidence.md).
+
+## Safety Boundaries
+
+VPW is defensive prioritization software. It does not:
+
+- scan networks or discover assets
+- exploit systems
+- generate payloads, PoCs, or reproduction steps
+- perform active probing or credential testing
+- claim automatic exploitation detection
+- infer ATT&CK tactics or techniques from CVE text, product names, EPSS rank, or
+  LLM output
+- claim ML-derived risk
+
+Curated ATT&CK demo mappings are defensive context only. A mapped technique helps
+with triage and detection review; it is not proof that a local environment was
+compromised.
+
+## Development And Validation
+
+Useful local checks:
 
 ```bash
-vuln-prioritizer analyze \
-  --input trivy-results.json \
-  --input-format trivy-json \
-  --format json \
-  --output analysis.json \
-  --summary-output summary.md \
-  --html-output report.html
+npm --prefix frontend run build
+npm --prefix frontend run lint
+npm --prefix frontend run test:unit
+npm --prefix frontend run test -- tests/ui-smoke.spec.ts
+
+python3 -m pytest -q backend/tests/api/test_template_reports_api.py --no-cov
+python3 -m pytest -q backend/tests/test_docs_hygiene.py --no-cov
+python3 -m mkdocs build --clean
+make docs-check
 ```
 
-### 3. Public-Install Snapshot Diff and Service Rollup
-
-```bash
-vuln-prioritizer snapshot create \
-  --input trivy-results.json \
-  --input-format trivy-json \
-  --output after.json
-
-vuln-prioritizer snapshot diff \
-  --before before.json \
-  --after after.json \
-  --format markdown
-
-vuln-prioritizer rollup \
-  --input after.json \
-  --by service \
-  --format markdown
-```
-
-### 4. Public-Install Evidence Bundle Integrity Verification
-
-```bash
-vuln-prioritizer report evidence-bundle \
-  --input analysis.json \
-  --output evidence.zip
-
-vuln-prioritizer report verify-evidence-bundle \
-  --input evidence.zip \
-  --format json \
-  --output evidence-verification.json
-```
-
-### 5. ATT&CK-Aware Analyze with Your Own Local Mapping Files
-
-ATT&CK/TTP context in this project is defensive context for risk explanation,
-detection coverage, mitigation discussion, and prioritization. It is not
-exploit proof, attack-chain guidance, or evidence that a CVE is actively being
-used against your environment.
-
-```bash
-vuln-prioritizer analyze \
-  --input cves.txt \
-  --format markdown \
-  --output attack-report.md \
-  --attack-source ctid-json \
-  --attack-mapping-file ./attack-mapping.json \
-  --attack-technique-metadata-file ./attack-techniques.json
-```
-
-Those ATT&CK files are not bundled by a `pipx` install. If you are working from a repository checkout, the checked-in demo inputs live under `data/attack/`.
-
-### 6. Optional Local Defensive Context Overlay
-
-```bash
-vuln-prioritizer analyze \
-  --input trivy-results.json \
-  --input-format trivy-json \
-  --defensive-context-file ./defensive-context.json \
-  --format json \
-  --output analysis.json
-```
-
-`--defensive-context-file` is a local/offline JSON overlay for OSV, GHSA, Vulnrichment, or SSVC evidence you already have. It is not a live advisory fetch path, and it does not affect the base priority scoring from CVSS, EPSS, and KEV.
-
-### 7. Optional Local SQLite State Store
-
-```bash
-vuln-prioritizer state init --db build/state.db
-
-vuln-prioritizer state import-snapshot \
-  --db build/state.db \
-  --input after.json
-
-vuln-prioritizer state top-services \
-  --db build/state.db \
-  --days 30 \
-  --format json \
-  --output state-top-services.json
-
-vuln-prioritizer state trends --db build/state.db --format json
-vuln-prioritizer state service-history --db build/state.db --service payments
-```
-
-### 8. Reproducible Provider Snapshot Replay
-
-```bash
-vuln-prioritizer data export-provider-snapshot \
-  --input cves.txt \
-  --output provider-snapshot.json
-
-vuln-prioritizer analyze \
-  --input cves.txt \
-  --provider-snapshot-file provider-snapshot.json \
-  --locked-provider-data \
-  --format json \
-  --output analysis.json
-```
-
-Use `--cache-only` on `data export-provider-snapshot` when local smoke tests must avoid live provider refreshes.
-
-### 9. Maintainer Demo Evidence Bundle
-
-From a repository checkout, maintainers can reproduce the Workbench v1.0 demo evidence bundle without live provider calls:
-
-```bash
-make demo-evidence-bundle-check
-```
-
-The target uses checked-in fixtures, `data/demo_provider_snapshot.json`, locked provider replay, and the fixed demo timestamp configured in the `Makefile`. It writes:
-
-- `build/v1.0-demo-analysis.json`
-- `build/v1.0-demo-evidence-bundle.zip`
-- `build/v1.0-demo-evidence-bundle-verification.json`
-
-To verify an already generated bundle from the checkout, run the same CLI contract directly:
-
-```bash
-PYTHONPATH=backend/src VULN_PRIORITIZER_FIXED_NOW=2026-04-21T12:00:00+00:00 \
-  python3 -m vuln_prioritizer.cli report verify-evidence-bundle \
-  --input build/v1.0-demo-evidence-bundle.zip \
-  --output build/v1.0-demo-evidence-bundle-verification.json \
-  --format json
-```
-
-Record release evidence with repository-relative paths only. Archive the command output, `git rev-parse HEAD`, the verification JSON where `summary.ok` is `true`, and SHA-256 values for the three generated files:
-
-```bash
-shasum -a 256 \
-  build/v1.0-demo-analysis.json \
-  build/v1.0-demo-evidence-bundle.zip \
-  build/v1.0-demo-evidence-bundle-verification.json
-```
-
-Do not record machine-specific absolute paths, `.env` contents, API keys, tokens, cookies, or private scan exports in public release evidence.
-
-## Runtime Config
-
-`v1.1.0` adds first-class runtime config via `vuln-prioritizer.yml`.
-
-The optional SQLite state store is intentionally separate: it is local-only, opt-in, and does not change `analyze`, `report`, `snapshot`, or evidence semantics.
-
-Example:
-
-```yaml
-defaults:
-  policy_profile: enterprise
-  # Add ATT&CK defaults only if you keep local mapping files yourself.
-  # attack_source: ctid-json
-  # attack_mapping_file: ./attack-mapping.json
-  # attack_technique_metadata_file: ./attack-techniques.json
-
-commands:
-  analyze:
-    format: json
-  attack:
-    validate:
-      attack_mapping_file: ./attack-mapping.json
-      attack_technique_metadata_file: ./attack-techniques.json
-  data:
-    export-provider-snapshot:
-      cache_only: true
-```
-
-Use it with auto-discovery or explicitly:
-
-```bash
-vuln-prioritizer analyze --input cves.txt
-vuln-prioritizer --config vuln-prioritizer.yml analyze --input trivy-results.json --input-format trivy-json
-vuln-prioritizer --no-config analyze --input cves.txt
-```
-
-## Public Docs
-
-Start here for public CLI usage and the local Workbench app path:
-
-- [docs/user_documentation.md](docs/user_documentation.md)
-- [docs/use_cases.md](docs/use_cases.md)
-- [docs/playbooks.md](docs/playbooks.md)
-- [docs/support_matrix.md](docs/support_matrix.md)
-- [docs/architecture/index.md](docs/architecture/index.md)
-- [docs/architecture/core-workbench-schema.md](docs/architecture/core-workbench-schema.md)
-- [docs/architecture/analysis-run-provider-schema.md](docs/architecture/analysis-run-provider-schema.md)
-- [docs/benchmarking.md](docs/benchmarking.md)
-- [docs/contracts.md](docs/contracts.md)
-- [docs/methodology.md](docs/methodology.md)
-- [docs/evidence.md](docs/evidence.md)
-- [docs/integrations/reporting_and_ci.md](docs/integrations/reporting_and_ci.md)
-- [docs/releases/v1.1.0.md](docs/releases/v1.1.0.md)
-- [docs/roadmap.md](docs/roadmap.md)
-- [ROADMAP.md](ROADMAP.md)
-- Historical Workbench masterplan: [archive/historical-planning/workbench-masterplan.md](archive/historical-planning/workbench-masterplan.md)
-
-Maintainer / repo-checkout workflows:
-
-- [docs/release_operations.md](docs/release_operations.md)
-
-## Community And Support
-
-- Usage questions and workflow help: GitHub Discussions
-- Reproducible bugs and scoped feature requests: GitHub Issues
-- Security reports: GitHub private vulnerability reporting, with [SECURITY.md](SECURITY.md) as the fallback route
-- Contribution rules and local validation: [CONTRIBUTING.md](CONTRIBUTING.md)
-- Support routing: [SUPPORT.md](SUPPORT.md)
-
-Reference material:
-
-- [docs/roadmap.md](docs/roadmap.md)
-- [docs/reference_cve_prioritizer_gap_analysis.md](docs/reference_cve_prioritizer_gap_analysis.md)
-
-## GitHub Action
-
-The repository includes a composite GitHub Action for `analyze`, `compare`, `explain`, `doctor`, input validation, snapshots, rollups, provider-data verification, ATT&CK validation/coverage, static report rendering, Workbench-style report artifacts, evidence bundles, and SARIF validation.
-
-Use it after `actions/checkout`, because scan exports, SBOMs, or other analysis input files live in the consumer repository, not in the action repository.
-In `mode: analyze`, `input` and `input-format` accept newline-delimited values so one action step can merge multiple sources. The action also passes through the CLI's waiver, filter, sort, cache, provider replay, and fail-gate flags for deterministic CI runs.
-
-```yaml
-- uses: actions/checkout@v6
-
-- name: Prioritize vulnerabilities
-  uses: Noetheon/vuln-prioritizer-workbench@vX.Y.Z
-  with:
-    mode: analyze
-    input: |
-      trivy-results.json
-      github-alerts-export.json
-    input-format: |
-      trivy-json
-      github-alerts-json
-    output-format: json
-    output-path: analysis.json
-    summary-output-path: summary.md
-    summary-template: compact
-    html-output-path: report.html
-    github-step-summary: "true"
-    defensive-context-file: defensive-context.json
-    waiver-file: waivers.yml
-    hide-waived: "true"
-    fail-on: critical
-    fail-on-expired-waivers: "true"
-    max-provider-age-hours: "48"
-    fail-on-stale-provider-data: "true"
-    sort-by: operational
-    max-cves: "250"
-```
-
-Replace `vX.Y.Z` with the release tag or commit SHA you want to consume. `summary-template` is backward-compatible and defaults to `detailed`. Set it to `compact` for GitHub step summaries or PR comments, or keep `detailed` when you want the full executive summary artifact. If a workflow only needs `$GITHUB_STEP_SUMMARY`, the action can now generate a summary without requiring an explicit `summary-output-path`.
-
-Common analyze/compare/snapshot Action inputs include `waiver-file`, `defensive-context-file`, `hide-waived`, `fail-on-provider-error`, `fail-on-expired-waivers`, `fail-on-review-due-waivers`, `priority`, `kev-only`, `min-cvss`, `min-epss`, `sort-by`, `max-cves`, `provider-snapshot-file`, `locked-provider-data`, `max-provider-age-hours`, `fail-on-stale-provider-data`, `no-cache`, `cache-dir`, `cache-ttl-hours`, `nvd-api-key-env`, `offline-kev-file`, and `offline-attack-file`. `defensive-context-file` passes a local/offline JSON context overlay only; it does not fetch advisory data and does not change base priority scoring. Report modes include `report-html`, `workbench-report`, `report-evidence-bundle`, `verify-evidence-bundle`, and `validate-sarif`; set `validate-sarif: "true"` in analysis/report steps when a SARIF output should fail the job before upload if the local SARIF contract is not met.
-
-See [docs/integrations/reporting_and_ci.md](docs/integrations/reporting_and_ci.md) for the full contract and CI patterns, including the checked-in [Workbench Markdown/JSON artifact workflow](.github/examples/workbench-report-artifacts.yml), plus [docs/examples/github_action_summary_templates.md](docs/examples/github_action_summary_templates.md) for compact vs detailed examples.
-
-## Development
-
-Useful local gates:
-
-```bash
-python3 -m pytest -q
-make check
-make benchmark-check
-make playwright-install
-make playwright-check
-make release-check
-make demo-sync-check-temp
-make package-check-temp
-make clean-local
-make clean-deps
-```
-
-Use `make playwright-check` for real-browser Workbench coverage; run `make playwright-install` once on a development machine before the first Playwright run. If you change docs, examples, or report artifacts, run `make release-check` so the committed example outputs stay in sync. Use the `*-temp` targets when you want the same demo or package validation in a temporary copy without mutating checked-in docs artifacts or `dist/`.
-
-`make clean-local` removes local caches, logs, coverage, build outputs, generated sites, and `.DS_Store` files while preserving `.env`, local databases, and dependency directories. `make clean-deps` extends that cleanup to dependency-heavy directories such as `node_modules` and the checked-out Playwright browser cache.
-
-Pull request readiness:
-
-- State whether the change affects CLI, Workbench, Docker, docs, release, or packaging behavior.
-- Include the local checks you ran. For docs-only changes, `make docs-check` plus targeted CLI help checks is usually enough; broader behavior changes should use `make check` or `make release-check`.
-- Keep public examples aligned with the supported install path, the local Workbench limitations above, and the no-scanner/no-heuristic-ATT&CK scope boundary.
+For broader contributor guidance, see [CONTRIBUTING.md](CONTRIBUTING.md).
+Security reporting and deployment-scope caveats are in [SECURITY.md](SECURITY.md).
 
 ## Project Status
 
-Current release line:
+Implementation is complete for the current phase. The current repository state
+includes the VPW design system, route integrations, ATT&CK demo mapping proof,
+presentation evidence pack, product documentation, CI cost optimization, route
+extractions, CSS organization, Dashboard chart lazy loading, Assets extraction,
+and the final submission package.
 
-- current package line `v1.1.0`
-- Workbench local app, advanced ATT&CK, governance, reporting, and integration surfaces implemented on `main`
-- GitHub tag install path is available for `v1.1.0`
-- GitHub Release is published for `v1.1.0` with source and wheel distribution assets
-- PyPI and TestPyPI workflows prepared, but live publishing remains explicitly gated until trusted-publisher setup is enabled
+Remaining follow-ups are documentation or presentation oriented:
 
-## License
+- refresh README screenshots later if new current-state images are desired
+- expand public deployment hardening docs before any internet-facing deployment
+- continue engineering refactors only if a concrete maintenance need appears
 
-[MIT](LICENSE)
+## License, Security, And Contributing
+
+- License: [MIT](LICENSE)
+- Security policy: [SECURITY.md](SECURITY.md)
+- Contributing: [CONTRIBUTING.md](CONTRIBUTING.md)
+- Support: [SUPPORT.md](SUPPORT.md)

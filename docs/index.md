@@ -1,26 +1,29 @@
 # vuln-prioritizer
 
-`vuln-prioritizer` is a local-first CLI and self-hosted Workbench for prioritizing known CVEs with transparent scoring from `CVSS + EPSS + KEV`, plus optional ATT&CK, asset-context, and VEX-aware explanation layers.
+`vuln-prioritizer` is a local-first CLI and self-hosted Workbench for
+prioritizing known CVEs with transparent scoring from `CVSS + EPSS + KEV`, plus
+optional ATT&CK, asset-context, VEX, waiver, report, and evidence layers.
 
-## Public Docs Slice
+## Public Docs
 
-The site includes the `v1.1.0` release notes, Workbench milestone evidence, and committed media preview assets.
+Start here when reviewing the current Workbench implementation, methodology, or
+submission material.
 
 ![Documentation grid preview](media/grid.png)
 
-- [Release notes: v1.1.0](releases/v1.1.0.md)
-- [Release notes: Workbench v1.0.0](releases/workbench-v1.0.0.md)
-- [Workbench v1.0 release checklist](workbench-v1-release-checklist.md)
 - [External user documentation guide](user_documentation.md)
 - [Current product architecture](architecture.md)
 - [Scoring methodology](scoring-methodology.md)
 - [ATT&CK/TTP methodology](attack-ttp-methodology.md)
 - [Reports and evidence](reports-and-evidence.md)
 - [Demo readiness](demo-readiness.md)
-- [Example HTML report](examples/example_report.html)
-- [Template report demo artifacts](examples/vpw-054-template-technical-report.md)
+- [Submission package](submission/README.md)
+- [Submission evidence sheet](submission/evidence-sheet.md)
+- [Reviewer checklist](submission/reviewer-checklist.md)
 - [Operational use cases](use_cases.md)
 - [Operator playbooks](playbooks.md)
+- [Contracts](contracts.md)
+- [Support matrix](support_matrix.md)
 
 ## What It Does
 
@@ -29,7 +32,8 @@ The site includes the `v1.1.0` release notes, Workbench milestone evidence, and 
 - adds CTID/MITRE ATT&CK context without heuristic CVE-to-ATT&CK guesses
 - renders terminal, Markdown, JSON, SARIF, and static HTML outputs
 - supports local cache inspection and refresh workflows for reproducibility
-- runs a local Workbench with API, browser UI, SQLite-backed imports, reports, evidence bundles, governance context, and ATT&CK coverage views
+- runs a local Workbench with API, browser UI, imports, reports, evidence
+  bundles, governance context, and ATT&CK coverage views
 
 ## Quickstart
 
@@ -73,7 +77,7 @@ vuln-prioritizer analyze \
 The documented default ATT&CK workflow is `ctid-json`. The older `local-csv` mode remains available only as a compatibility fallback.
 If you are working from a repository checkout, the checked-in demo ATT&CK files live under `data/attack/`; they are not installed by `pipx`.
 
-Workbench v1.0 from a repository checkout:
+Local Workbench from a repository checkout:
 
 ```bash
 cp .env.example .env
@@ -86,15 +90,16 @@ create a project, and import `data/sample_cves.txt` with
 `demo_provider_snapshot.json` plus locked provider data enabled. This path works
 without live provider API keys.
 
-During the FastAPI template migration, Compose starts the template backend shell
-and React frontend. The legacy web/API Workbench remains local-first and now
-uses the same import-format matrix documented in [support_matrix.md](support_matrix.md)
-for single-upload and multi-upload flows.
+The Compose path starts the current FastAPI backend and React frontend. The
+Workbench remains local-first and uses the import-format matrix documented in
+[support_matrix.md](support_matrix.md) for supported inputs.
 
 ## Documentation Structure
 
 - Start with [user_documentation.md](user_documentation.md) when you need the full external-user path.
 - Start with [concept.md](concept.md) for positioning and scope.
+- Use [submission/README.md](submission/README.md) for the final Applied
+  Security Project submission package.
 - Read [methodology.md](methodology.md) for scoring, ATT&CK, Asset Context, and VEX semantics.
 - Read [architecture.md](architecture.md) for the current FastAPI/React route architecture, generated client boundary, VPW design-system role, and shared state ownership.
 - Read [scoring-methodology.md](scoring-methodology.md) for the rule-based CVSS, EPSS, KEV, lifecycle, provider freshness, asset-context, and waiver methodology.
@@ -107,7 +112,10 @@ for single-upload and multi-upload flows.
 - Use [playbooks.md](playbooks.md) when you want the shortest role-oriented path for CI scans, SBOM triage, or infrastructure scan triage.
 - Use [integrations/reporting_and_ci.md](integrations/reporting_and_ci.md) for SARIF, GitHub Action, HTML, and local workflow guidance.
 - Use [workbench-threat-model.md](workbench-threat-model.md) for Workbench security boundaries, residual risk, and release readiness checks.
-- Use [workbench-offline-demo.md](workbench-offline-demo.md) for the locked-provider Workbench demo and v1.0 release evidence path.
+- Use [workbench-offline-demo.md](workbench-offline-demo.md) only when you need
+  the older locked-provider demo runbook.
+- Use [submission/evidence-sheet.md](submission/evidence-sheet.md) for the
+  final claim-to-evidence map.
 - Use [user_documentation.md#known-limitations](user_documentation.md#known-limitations) for the consolidated external-user limitations list.
 - Use [roadmap.md](roadmap.md) for shipped scope and deliberate non-goals.
 - Use [release_operations.md](release_operations.md) for maintainer-only release, GitHub Release recovery, and PyPI/TestPyPI operations.
