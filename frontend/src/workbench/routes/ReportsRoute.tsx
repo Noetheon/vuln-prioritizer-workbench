@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react"
 import { EvidenceCenter } from "../../components/reports/EvidenceCenter"
 import { apiErrorMessage } from "../../lib/app-errors"
-import { WorkbenchShell } from "../WorkbenchShell"
 import { useWorkbenchContext } from "../WorkbenchContext"
 import {
   useProjectRunsQuery,
@@ -71,15 +70,14 @@ function ReportsRouteContent() {
         selectedReportRun={selectedReportRun}
         selectedRunId={selectedRunId}
         selectedRunSummary={runDetailQuery.data?.summary ?? null}
+        verificationLoading={reportsState.verificationLoading}
+        verificationReport={reportsState.verificationReport}
+        verificationReportTarget={reportsState.verificationReportTarget}
       />
     </section>
   )
 }
 
 export function ReportsRoute() {
-  return (
-    <WorkbenchShell routePath="/reports">
-      <ReportsRouteContent />
-    </WorkbenchShell>
-  )
+  return <ReportsRouteContent />
 }

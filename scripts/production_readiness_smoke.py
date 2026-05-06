@@ -21,7 +21,7 @@ PASSWORD = os.environ.get("VPW_PRODUCTION_SMOKE_PASSWORD", "production-smoke-adm
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SAMPLE_CVES = REPO_ROOT / "data" / "sample_cves.txt"
 PRIVATE_PATH_PATTERN = re.compile(
-    r"(/Users/|/private/|/tmp/|/app/template-|[A-Za-z]:\\\\)",
+    r"(/Users/|/private/|/tmp/|/app/(?:template|workbench)-|[A-Za-z]:\\\\)",
     re.IGNORECASE,
 )
 

@@ -3,7 +3,6 @@ import type { FindingsReadProjectFindingsData } from "../../api-client"
 import { RemediationQueue } from "../../components/findings/RemediationQueue"
 import { useFindingsRouteState } from "../../components/findings/useFindingsRouteState"
 import { apiErrorMessage } from "../../lib/app-errors"
-import { WorkbenchShell } from "../WorkbenchShell"
 import { useWorkbenchContext } from "../WorkbenchContext"
 import { numericFilterValue } from "../route-utils"
 import {
@@ -121,9 +120,5 @@ export function FindingsRoute() {
     return <Outlet />
   }
 
-  return (
-    <WorkbenchShell routePath="/findings">
-      <FindingsRouteContainer />
-    </WorkbenchShell>
-  )
+  return <FindingsRouteContainer />
 }

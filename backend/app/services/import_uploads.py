@@ -1,4 +1,4 @@
-"""Upload validation and storage helpers for template Workbench imports."""
+"""Upload validation and storage helpers for Workbench imports."""
 
 from __future__ import annotations
 
@@ -10,6 +10,7 @@ from typing import Any
 
 from fastapi import HTTPException, Request, UploadFile
 
+from app.core.app_state import workbench_settings as _request_workbench_settings
 from app.core.config import Settings
 from app.importers import UnsupportedInputTypeError, build_importer_registry
 
@@ -39,11 +40,13 @@ ALLOWED_UPLOAD_MIME_HINTS = {
 }
 
 
+def workbench_settings(request: Request) -> Settings:
+    return _request_workbench_settings(request)
+
+
 def template_settings(request: Request) -> Settings:
-    candidate = getattr(request.app.state, "template_settings", None)
-    if isinstance(candidate, Settings):
-        return candidate
-    raise HTTPException(status_code=500, detail="Template settings are not configured.")
+    """Backward-compatible alias for older local tests and scripts."""
+    return workbench_settings(request)
 
 
 async def read_bounded_upload(
@@ -177,7 +180,7 @@ def store_upload(
     filename: str,
     content: bytes,
 ) -> Path:
-    upload_root = template_settings(request).import_upload_dir_path.resolve(strict=False)
+    upload_root = workbench_settings(request).import_upload_dir_path.resolve(strict=False)
     target_dir = upload_root / str(project_id) / str(run_id)
     target_dir.mkdir(parents=True, exist_ok=True)
     target_path = (target_dir / filename).resolve(strict=False)

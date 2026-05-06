@@ -66,14 +66,21 @@ RATE_LIMIT_ENABLED=true
 API_RATE_LIMIT_PER_MINUTE=600
 LOGIN_RATE_LIMIT_PER_MINUTE=60
 TOKEN_FAILURE_RATE_LIMIT_PER_MINUTE=60
+TRUSTED_PROXY_CIDRS=
 ```
+
+Set `TRUSTED_PROXY_CIDRS` only to the network ranges of reverse proxies that
+are the sole public entrypoint. When configured, rate-limit buckets use the
+first `X-Forwarded-For` address only for requests received from those trusted
+proxy CIDRs. Leave it blank when the backend is reachable directly.
 
 Browser JWTs include a persisted session ID. `/api/v1/login/logout` revokes the
 current session, and revoked or expired sessions are rejected before a user is
 returned to API routes.
 
 For horizontally scaled deployments, replace the in-process limiter with a
-shared store before increasing replica count.
+shared store before increasing replica count; the built-in limiter is still
+per-process even when trusted proxy parsing is enabled.
 
 ## Audit And Retention
 
@@ -113,8 +120,8 @@ running retention cleanup.
 SQLite:
 
 ```bash
-SQLITE_DATABASE_PATH=template.db \
-WORKBENCH_ARTIFACT_PATHS="data/template-import-uploads data/template-reports data/template-provider-cache data/provider-snapshots" \
+SQLITE_DATABASE_PATH=workbench.db \
+WORKBENCH_ARTIFACT_PATHS="data/workbench-import-uploads data/workbench-reports data/workbench-provider-cache data/provider-snapshots" \
 scripts/workbench-backup.sh
 ```
 
@@ -140,10 +147,11 @@ container, so the default stack does not need to publish Postgres on the host.
 container, including the import-upload, report, provider-snapshot, and
 provider-cache Compose volumes.
 
-Some historical artifact directory names are retained as storage-path
-compatibility names for the active `backend/app` runtime. They do not indicate a
-separate template-era Workbench runtime, and API responses expose managed
-artifact IDs or relative references rather than container filesystem paths.
+The backup script also includes historical `data/template-*` artifact
+directories when they still contain data and no explicit artifact path list is
+provided. They are compatibility paths for existing self-hosted installs, not a
+separate template-era Workbench runtime. API responses expose managed artifact
+IDs or relative references rather than container filesystem paths.
 
 The script writes a timestamped directory under `./backups` unless `BACKUP_DIR`
 is set. Artifact paths are packed into `artifacts.tar`.
@@ -155,7 +163,7 @@ Restore into an empty or intentionally replaced environment.
 SQLite:
 
 ```bash
-SQLITE_DATABASE_PATH=template.db scripts/workbench-restore.sh backups/<backup-dir>
+SQLITE_DATABASE_PATH=workbench.db scripts/workbench-restore.sh backups/<backup-dir>
 alembic -c backend/alembic.ini upgrade head
 ```
 

@@ -373,6 +373,9 @@ def test_workbench_sarif_filters_non_http_references() -> None:
                             "GHSA-0000",
                             "https://vendor.example/advisory",
                             "https://vendor.example/advisory",
+                            "https://github.com/example/CVE-2024-0001-poc",
+                            "https://github.com/rapid7/metasploit-framework/pull/1",
+                            "https://github.com/vendor/package/security/advisories/GHSA-0000",
                         ]
                     }
                 },
@@ -394,6 +397,7 @@ def test_workbench_sarif_filters_non_http_references() -> None:
     assert references == [
         "https://nvd.nist.gov/vuln/detail/CVE-2024-0001",
         "https://vendor.example/advisory",
+        "https://github.com/vendor/package/security/advisories/GHSA-0000",
         "https://osv.dev/vulnerability/OSV-2024-0001",
     ]
     assert validate_sarif_payload(sarif_payload) == []

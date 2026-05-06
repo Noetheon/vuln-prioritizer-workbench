@@ -1,4 +1,4 @@
-"""Project routes for the template-aligned Workbench domain shell."""
+"""Project routes for the Workbench domain shell."""
 
 from __future__ import annotations
 
@@ -6,8 +6,9 @@ import uuid
 
 from fastapi import APIRouter, Query, Request, Response
 
-from app.api.deps import CurrentUser, ScopedReadUser, SessionDep
+from app.api.deps import ScopedAdminTokenOrUser, ScopedReadUser, ScopedWriteUser, SessionDep
 from app.api.routes.workbench_access import require_visible_project
+from app.core.app_state import workbench_settings
 from app.models import (
     Project,
     ProjectAttackSummaryPublic,
@@ -33,7 +34,6 @@ from app.services import (
 )
 from app.services.artifact_cleanup import cleanup_project_artifacts
 from app.services.audit import record_audit_event
-from app.services.import_uploads import template_settings as _template_settings
 
 router = APIRouter(prefix="/projects", tags=["projects"])
 
@@ -52,7 +52,7 @@ def read_projects(session: SessionDep, current_user: ScopedReadUser) -> Projects
 def create_project(
     *,
     session: SessionDep,
-    current_user: CurrentUser,
+    current_user: ScopedAdminTokenOrUser,
     project_in: ProjectCreate,
 ) -> Project:
     """Create a Project owned by the current user."""
@@ -154,7 +154,7 @@ def update_project(
     *,
     project_id: uuid.UUID,
     session: SessionDep,
-    current_user: CurrentUser,
+    current_user: ScopedWriteUser,
     project_in: ProjectUpdate,
 ) -> Project:
     """Update a project if it belongs to the user or the user is superuser."""
@@ -180,13 +180,13 @@ def delete_project(
     request: Request,
     project_id: uuid.UUID,
     session: SessionDep,
-    current_user: CurrentUser,
+    current_user: ScopedAdminTokenOrUser,
 ) -> Response:
     """Delete a project if it belongs to the user or the user is superuser."""
     repository = ProjectRepository(session)
     project = require_visible_project(session, current_user, project_id)
     cleanup_result = cleanup_project_artifacts(
-        settings=_template_settings(request),
+        settings=workbench_settings(request),
         project_id=project.id,
     )
     record_audit_event(

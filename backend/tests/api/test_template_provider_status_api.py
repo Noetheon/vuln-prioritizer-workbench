@@ -202,7 +202,7 @@ def test_template_provider_status_redacts_production_paths_and_cache_details(
     template_api_env: TemplateApiEnv,
     tmp_path: Path,
 ) -> None:
-    active_settings = template_api_env.client.app.state.template_settings
+    active_settings = template_api_env.client.app.state.workbench_settings
     private_snapshot = tmp_path / "private" / "provider-snapshot.json"
     private_cache = tmp_path / "private" / "cache"
     with Session(template_api_env.engine) as session:
@@ -232,7 +232,7 @@ def test_template_provider_status_redacts_production_paths_and_cache_details(
         )
         session.commit()
 
-    template_api_env.client.app.state.template_settings = replace(
+    template_api_env.client.app.state.workbench_settings = replace(
         active_settings,
         ENVIRONMENT="production",
         SECRET_KEY="template-shell-secret",
@@ -258,7 +258,7 @@ def test_template_provider_status_redacts_production_paths_and_cache_details(
             },
         )
     finally:
-        template_api_env.client.app.state.template_settings = active_settings
+        template_api_env.client.app.state.workbench_settings = active_settings
 
     assert response.status_code == 200
     payload = response.json()
@@ -283,10 +283,10 @@ def test_template_provider_update_job_create_list_and_status(
     tmp_path: Path,
 ) -> None:
     headers = auth_headers(template_api_env.client)
-    active_settings = template_api_env.client.app.state.template_settings
+    active_settings = template_api_env.client.app.state.workbench_settings
     snapshot_dir = tmp_path / "template-provider-snapshots"
     cache_dir = tmp_path / "template-provider-cache"
-    template_api_env.client.app.state.template_settings = replace(
+    template_api_env.client.app.state.workbench_settings = replace(
         active_settings,
         PROVIDER_SNAPSHOT_DIR=str(snapshot_dir),
         PROVIDER_CACHE_DIR=str(cache_dir),
@@ -306,8 +306,10 @@ def test_template_provider_update_job_create_list_and_status(
         assert create_response.status_code == 200
         job = create_response.json()
         assert job["status"] == "completed"
+        assert job["execution_mode"] == "request"
         assert job["requested_sources"] == ["kev"]
         assert job["error_message"] is None
+        assert job["metadata"]["execution_mode"] == "request"
         assert job["metadata"]["snapshot_created"] is True
         assert job["metadata"]["requested_cves"] == 1
         assert job["metadata"]["provider_snapshot_id"]
@@ -317,7 +319,7 @@ def test_template_provider_update_job_create_list_and_status(
         assert snapshot_report.metadata.snapshot_format == "provider-snapshot.v1.json"
         assert snapshot_report.metadata.cache_only is True
         assert snapshot_report.metadata.selected_sources == ["kev"]
-        assert snapshot_report.metadata.input_format == "template-workbench-current-findings"
+        assert snapshot_report.metadata.input_format == "workbench-current-findings"
 
         list_response = template_api_env.client.get(
             "/api/v1/providers/update-jobs",
@@ -337,6 +339,7 @@ def test_template_provider_update_job_create_list_and_status(
         status_payload = status_response.json()
         assert status_payload["latest_update_job"]["id"] == job["id"]
         assert status_payload["latest_update_job"]["status"] == "completed"
+        assert status_payload["latest_update_job"]["execution_mode"] == "request"
         assert status_payload["snapshot_mode"] == "cache-only"
         assert status_payload["snapshot"]["selected_sources"] == ["kev"]
         assert status_payload["snapshot"]["requested_cves"] == 1
@@ -344,11 +347,11 @@ def test_template_provider_update_job_create_list_and_status(
             "provider-snapshot.v1.json"
         )
         assert status_payload["snapshot"]["source_metadata"]["input_format"] == (
-            "template-workbench-current-findings"
+            "workbench-current-findings"
         )
         assert status_payload["last_error"] is None
     finally:
-        template_api_env.client.app.state.template_settings = active_settings
+        template_api_env.client.app.state.workbench_settings = active_settings
 
 
 def test_template_provider_update_job_reuses_previous_provider_records(
@@ -356,7 +359,7 @@ def test_template_provider_update_job_reuses_previous_provider_records(
     tmp_path: Path,
 ) -> None:
     headers = auth_headers(template_api_env.client)
-    active_settings = template_api_env.client.app.state.template_settings
+    active_settings = template_api_env.client.app.state.workbench_settings
     snapshot_dir = tmp_path / "template-provider-snapshots"
     cache_dir = tmp_path / "template-provider-cache"
     snapshot_dir.mkdir(parents=True)
@@ -391,7 +394,7 @@ def test_template_provider_update_job_reuses_previous_provider_records(
     )
     baseline_document = generate_provider_snapshot_json(baseline_report)
     baseline_path.write_text(baseline_document, encoding="utf-8")
-    template_api_env.client.app.state.template_settings = replace(
+    template_api_env.client.app.state.workbench_settings = replace(
         active_settings,
         PROVIDER_SNAPSHOT_DIR=str(snapshot_dir),
         PROVIDER_CACHE_DIR=str(cache_dir),
@@ -439,7 +442,50 @@ def test_template_provider_update_job_reuses_previous_provider_records(
         assert status_payload["snapshot"]["kev_catalog_version"] == "2026-04-01"
         assert status_payload["sources"][2]["available"] is True
     finally:
-        template_api_env.client.app.state.template_settings = active_settings
+        template_api_env.client.app.state.workbench_settings = active_settings
+
+
+def test_template_provider_update_job_audits_failed_synchronous_run(
+    template_api_env: TemplateApiEnv,
+    tmp_path: Path,
+) -> None:
+    headers = auth_headers(template_api_env.client)
+    active_settings = template_api_env.client.app.state.workbench_settings
+    snapshot_file = tmp_path / "provider-snapshots-as-file"
+    snapshot_file.write_text("not a directory", encoding="utf-8")
+    template_api_env.client.app.state.workbench_settings = replace(
+        active_settings,
+        PROVIDER_SNAPSHOT_DIR=str(snapshot_file),
+        PROVIDER_CACHE_DIR=str(tmp_path / "template-provider-cache"),
+    )
+    try:
+        response = template_api_env.client.post(
+            "/api/v1/providers/update-jobs",
+            headers=headers,
+            json={
+                "sources": ["kev"],
+                "cve_ids": ["CVE-2024-3094"],
+                "cache_only": True,
+            },
+        )
+
+        assert response.status_code == 200, response.text
+        job = response.json()
+        assert job["status"] == "failed"
+        assert job["error_message"]
+
+        audit_response = template_api_env.client.get("/api/v1/audit/events", headers=headers)
+        assert audit_response.status_code == 200, audit_response.text
+        audit_event = next(
+            item
+            for item in audit_response.json()["data"]
+            if item["action"] == "provider.update_job.create"
+        )
+        assert audit_event["status"] == "failure"
+        assert audit_event["resource_id"] == job["id"]
+        assert audit_event["detail"]["status"] == "failed"
+    finally:
+        template_api_env.client.app.state.workbench_settings = active_settings
 
 
 def test_template_provider_update_job_rejects_active_job(
@@ -447,8 +493,8 @@ def test_template_provider_update_job_rejects_active_job(
     tmp_path: Path,
 ) -> None:
     headers = auth_headers(template_api_env.client)
-    active_settings = template_api_env.client.app.state.template_settings
-    template_api_env.client.app.state.template_settings = replace(
+    active_settings = template_api_env.client.app.state.workbench_settings
+    template_api_env.client.app.state.workbench_settings = replace(
         active_settings,
         PROVIDER_SNAPSHOT_DIR=str(tmp_path / "template-provider-snapshots"),
         PROVIDER_CACHE_DIR=str(tmp_path / "template-provider-cache"),
@@ -477,4 +523,4 @@ def test_template_provider_update_job_rejects_active_job(
         assert response.json()["code"] == "conflict"
         assert "Provider update already running" in response.json()["detail"]
     finally:
-        template_api_env.client.app.state.template_settings = active_settings
+        template_api_env.client.app.state.workbench_settings = active_settings

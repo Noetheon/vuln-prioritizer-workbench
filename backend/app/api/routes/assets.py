@@ -9,9 +9,9 @@ from typing import Any
 
 from fastapi import APIRouter, File, HTTPException, Query, Request, UploadFile
 
-from app.api.deps import CurrentUser, ScopedReadUser, SessionDep
+from app.api.deps import ScopedReadUser, ScopedWriteUser, SessionDep
 from app.api.routes.workbench_access import require_visible_project
-from app.core.config import Settings
+from app.core.app_state import workbench_settings
 from app.models import (
     Asset,
     AssetContextImportPublic,
@@ -64,7 +64,7 @@ def create_project_asset(
     *,
     project_id: uuid.UUID,
     session: SessionDep,
-    current_user: CurrentUser,
+    current_user: ScopedWriteUser,
     asset_in: AssetCreate,
 ) -> AssetPublic:
     """Create or upsert an asset for a visible project."""
@@ -90,7 +90,7 @@ async def import_project_assets(
     project_id: uuid.UUID,
     request: Request,
     session: SessionDep,
-    current_user: CurrentUser,
+    current_user: ScopedWriteUser,
     asset_context_file: UploadFile | None = File(None),
 ) -> AssetContextImportPublic:
     """Import asset-context CSV rows into editable assets for a visible project."""
@@ -98,7 +98,7 @@ async def import_project_assets(
     if asset_context_file is None or not asset_context_file.filename:
         raise HTTPException(status_code=422, detail="Asset context CSV file is required.")
     _validate_asset_context_upload(asset_context_file)
-    active_settings = _template_settings(request)
+    active_settings = workbench_settings(request)
     content = await asset_context_file.read(active_settings.max_upload_bytes + 1)
     if len(content) > active_settings.max_upload_bytes:
         raise HTTPException(status_code=413, detail="Upload exceeds configured limit.")
@@ -137,7 +137,7 @@ def update_asset(
     *,
     asset_id: uuid.UUID,
     session: SessionDep,
-    current_user: CurrentUser,
+    current_user: ScopedWriteUser,
     asset_in: AssetUpdate,
 ) -> AssetPublic:
     """Update an asset if its project is visible."""
@@ -176,7 +176,7 @@ def recalculate_asset(
     *,
     asset_id: uuid.UUID,
     session: SessionDep,
-    current_user: CurrentUser,
+    current_user: ScopedWriteUser,
 ) -> AssetRecalculatePublic:
     """Recalculate linked finding scores for a visible asset."""
     repository = AssetRepository(session)
@@ -244,10 +244,3 @@ def _reject_unsafe_upload_filename(filename: str) -> None:
         raise HTTPException(status_code=422, detail="Upload filename is not allowed.")
     if any(ord(character) < 32 for character in filename):
         raise HTTPException(status_code=422, detail="Upload filename is not allowed.")
-
-
-def _template_settings(request: Request) -> Settings:
-    candidate = getattr(request.app.state, "template_settings", None)
-    if isinstance(candidate, Settings):
-        return candidate
-    raise HTTPException(status_code=500, detail="Template settings are not configured.")

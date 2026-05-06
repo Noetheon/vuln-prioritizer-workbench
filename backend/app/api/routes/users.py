@@ -148,7 +148,7 @@ def _validate_new_password(new_password: str) -> None:
     if new_password.strip().lower() in INSECURE_USER_PASSWORDS:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="Password must not use the default template secret.",
+            detail="Password must not use the default Workbench secret.",
         )
 
 

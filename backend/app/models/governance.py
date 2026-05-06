@@ -1,4 +1,4 @@
-"""Governance rollup response models for the template Workbench."""
+"""Governance rollup response models for the Workbench."""
 
 import uuid
 from datetime import date, datetime

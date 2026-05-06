@@ -1,4 +1,4 @@
-"""GitHub issue markdown and export helpers for template Workbench findings."""
+"""GitHub issue markdown and export helpers for Workbench findings."""
 
 from __future__ import annotations
 

@@ -202,7 +202,7 @@ export type ApiTokenCreate = {
     /**
      * Scopes
      */
-    scopes?: Array<'read' | 'import' | 'report' | 'admin'>;
+    scopes?: Array<'read' | 'write' | 'import' | 'report' | 'admin'>;
 };
 
 /**
@@ -242,7 +242,7 @@ export type ApiTokenCreatePublic = {
     /**
      * Scopes
      */
-    scopes: Array<'read' | 'import' | 'report' | 'admin'>;
+    scopes: Array<'read' | 'write' | 'import' | 'report' | 'admin'>;
     /**
      * Token
      */
@@ -286,7 +286,7 @@ export type ApiTokenPublic = {
     /**
      * Scopes
      */
-    scopes: Array<'read' | 'import' | 'report' | 'admin'>;
+    scopes: Array<'read' | 'write' | 'import' | 'report' | 'admin'>;
 };
 
 /**
@@ -850,7 +850,7 @@ export type FindingAttackMappingDetailPublic = {
 /**
  * FindingAttackTechniqueDetailPublic
  *
- * ATT&CK technique row rendered by the template Workbench detail tab.
+ * ATT&CK technique row rendered by the Workbench detail tab.
  */
 export type FindingAttackTechniqueDetailPublic = {
     /**
@@ -2080,7 +2080,7 @@ export type ProjectCreate = {
 /**
  * ProjectCvssOnlyComparisonPublic
  *
- * CVSS-only baseline comparison for stored template findings.
+ * CVSS-only baseline comparison for stored Workbench findings.
  */
 export type ProjectCvssOnlyComparisonPublic = {
     /**
@@ -2404,7 +2404,7 @@ export type ProviderSourceStatusPublic = {
 /**
  * ProviderStatusPublic
  *
- * Provider status response for the template backend shell.
+ * Provider status response for the Workbench backend shell.
  */
 export type ProviderStatusPublic = {
     /**
@@ -2481,6 +2481,10 @@ export type ProviderUpdateJobPublic = {
      * Error Message
      */
     error_message?: string | null;
+    /**
+     * Execution Mode
+     */
+    execution_mode?: string;
     /**
      * Finished At
      */
@@ -2692,7 +2696,7 @@ export type UserPasswordReset = {
 /**
  * UserPublic
  *
- * Public user shape exposed by template auth routes.
+ * Public user shape exposed by Workbench auth routes.
  */
 export type UserPublic = {
     /**
@@ -3632,7 +3636,7 @@ export type GetApiV1ProjectsByProjectIdFindingsData = {
         /**
          * Sort
          */
-        sort?: 'operational' | 'priority' | 'score' | 'cve' | 'status' | 'epss' | 'cvss' | 'kev' | 'last_seen';
+        sort?: 'operational' | 'priority' | 'score' | 'cve' | 'status' | 'epss' | 'cvss' | 'kev' | 'last_seen' | 'component' | 'owner';
         /**
          * Direction
          */

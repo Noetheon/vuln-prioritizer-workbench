@@ -196,7 +196,7 @@ class FindingAttackMappingDetailPublic(SQLModel):
 
 
 class FindingAttackTechniqueDetailPublic(SQLModel):
-    """ATT&CK technique row rendered by the template Workbench detail tab."""
+    """ATT&CK technique row rendered by the Workbench detail tab."""
 
     technique_id: str
     name: str | None = None

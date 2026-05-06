@@ -1,4 +1,4 @@
-"""Template utility routes for backend readiness checks."""
+"""Workbench utility routes for backend readiness checks."""
 
 from __future__ import annotations
 
@@ -9,5 +9,5 @@ router = APIRouter(prefix="/utils", tags=["utils"])
 
 @router.get("/health-check/")
 async def health_check() -> bool:
-    """Return whether the template backend shell is reachable."""
+    """Return whether the Workbench backend shell is reachable."""
     return True

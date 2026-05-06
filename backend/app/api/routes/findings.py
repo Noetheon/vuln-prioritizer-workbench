@@ -42,6 +42,8 @@ FindingsSort = Literal[
     "cvss",
     "kev",
     "last_seen",
+    "component",
+    "owner",
 ]
 FindingsSortDirection = Literal["asc", "desc"]
 

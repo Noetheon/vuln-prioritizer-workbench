@@ -7,13 +7,13 @@ from pathlib import Path
 from typing import Any
 
 from app.domain.import_asset_context import (
-    input_occurrence_from_template_occurrence as _input_occurrence_from_template_occurrence,
+    input_occurrence_from_workbench_occurrence as _input_occurrence_from_workbench_occurrence,
 )
 from app.domain.import_asset_context import (
-    template_occurrence_with_asset_context as _template_occurrence_with_asset_context,
+    workbench_occurrence_with_asset_context as _workbench_occurrence_with_asset_context,
 )
 from app.domain.import_asset_context import (
-    template_occurrence_with_vex as _template_occurrence_with_vex,
+    workbench_occurrence_with_vex as _workbench_occurrence_with_vex,
 )
 from app.importers.contracts import NormalizedOccurrence
 from app.services.import_uploads import (
@@ -24,7 +24,7 @@ from vuln_prioritizer.inputs._vex_support import apply_vex_statements
 from vuln_prioritizer.inputs.loader import load_asset_context_file, load_vex_files
 
 
-def _apply_template_asset_context(
+def _apply_workbench_asset_context(
     occurrences: list[NormalizedOccurrence],
     *,
     asset_context_path: Path,
@@ -34,7 +34,7 @@ def _apply_template_asset_context(
         return_diagnostics=True,
     )
     input_occurrences = [
-        _input_occurrence_from_template_occurrence(occurrence) for occurrence in occurrences
+        _input_occurrence_from_workbench_occurrence(occurrence) for occurrence in occurrences
     ]
     enriched_occurrences, match_diagnostics = apply_asset_context(
         input_occurrences,
@@ -43,7 +43,7 @@ def _apply_template_asset_context(
     )
     return (
         [
-            _template_occurrence_with_asset_context(original, enriched)
+            _workbench_occurrence_with_asset_context(original, enriched)
             for original, enriched in zip(occurrences, enriched_occurrences, strict=True)
         ],
         {
@@ -65,7 +65,7 @@ def _apply_template_asset_context(
     )
 
 
-def _apply_template_vex(
+def _apply_workbench_vex(
     occurrences: list[NormalizedOccurrence],
     *,
     vex_path: Path,
@@ -75,7 +75,7 @@ def _apply_template_vex(
         return_diagnostics=True,
     )
     input_occurrences = [
-        _input_occurrence_from_template_occurrence(occurrence) for occurrence in occurrences
+        _input_occurrence_from_workbench_occurrence(occurrence) for occurrence in occurrences
     ]
     enriched_occurrences, match_diagnostics = apply_vex_statements(
         input_occurrences,
@@ -84,7 +84,7 @@ def _apply_template_vex(
     )
     return (
         [
-            _template_occurrence_with_vex(original, enriched)
+            _workbench_occurrence_with_vex(original, enriched)
             for original, enriched in zip(occurrences, enriched_occurrences, strict=True)
         ],
         {

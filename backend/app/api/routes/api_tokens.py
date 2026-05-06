@@ -1,4 +1,4 @@
-"""Scoped API token routes for template Workbench automation."""
+"""Scoped API token routes for Workbench automation."""
 
 from __future__ import annotations
 

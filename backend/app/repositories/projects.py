@@ -1,4 +1,4 @@
-"""Project repository for template Workbench persistence."""
+"""Project repository for Workbench persistence."""
 
 from __future__ import annotations
 

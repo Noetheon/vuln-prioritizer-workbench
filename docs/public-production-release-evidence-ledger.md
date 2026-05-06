@@ -25,6 +25,9 @@ linked from an issue or PR.
 - The frontend generated OpenAPI client is `frontend/src/client/**`.
 - `frontend/src/api-client.ts` is a manual wrapper over the generated client,
   not generated output.
+- `uv.lock` is the reproducible Python resolution artifact.
+- `backend/requirements.lock.txt` is the hash-pinned Python audit input exported
+  from `uv.lock`.
 - `frontend/package-lock.json` is the audited frontend lockfile.
 - The root `bun.lock` is retained for Bun-compatible convenience scripts, not
   as the release audit source.
@@ -33,7 +36,7 @@ linked from an issue or PR.
 
 | Target | Purpose | Evidence |
 | --- | --- | --- |
-| `make dependency-audit` | Backend and frontend dependency audit | `pip-audit` on `backend/requirements.txt`; npm audit on `frontend/package-lock.json` |
+| `make dependency-audit` | Backend and frontend dependency audit | Python lock hygiene plus `pip-audit` on `backend/requirements.lock.txt`; npm audit on `frontend/package-lock.json` |
 | `make package-check` | Build, package-content, and metadata validation | `dist/*`, `twine check`, `build/package-contents.json` |
 | `make pipx-source-smoke` | Source-at-tag install path compatibility | pipx smoke output and generated smoke artifacts |
 | `make api-client-drift-check` | OpenAPI/generated-client compatibility | `scripts/generate-client.sh`; clean `frontend/src/client` diff |
@@ -60,13 +63,13 @@ shell history.
 
 | Issue | Current docs/CI/package evidence target | Residual risk until closure |
 | --- | --- | --- |
-| [#326](https://github.com/Noetheon/vuln-prioritizer-workbench/issues/326) | Dependency policy, `make dependency-audit`, npm audit, PR #287 disposition | No fully pinned Python production lockfile is committed. |
+| [#326](https://github.com/Noetheon/vuln-prioritizer-workbench/issues/326) | Dependency policy, `uv.lock`, `backend/requirements.lock.txt`, `make dependency-audit`, npm audit, PR #287 disposition | Release owners still need candidate-specific audit output and artifact hashes before closeout. |
 | [#327](https://github.com/Noetheon/vuln-prioritizer-workbench/issues/327) | README, `SECURITY.md`, threat model, deployment runbook, release ledger | Public-production readiness remains gated by PP5 scorecard #350. |
 | [#339](https://github.com/Noetheon/vuln-prioritizer-workbench/issues/339) | Current issue-template labels, Dependabot labels, strict evidence language | GitHub labels/milestones still require live repository review before closeout. |
 | [#340](https://github.com/Noetheon/vuln-prioritizer-workbench/issues/340) | Package policy, package-content check, `make package-check` | Future PyPI wording must keep the CLI-plus-Workbench package story explicit. |
 | [#341](https://github.com/Noetheon/vuln-prioritizer-workbench/issues/341) | Current-state roadmap docs and historical migration notes | Historical template pages must not be used as active acceptance evidence. |
 | [#342](https://github.com/Noetheon/vuln-prioritizer-workbench/issues/342) | Generated-client ownership docs and `make api-client-drift-check` | API changes still need backend/API tests owned by implementation PRs. |
-| [#343](https://github.com/Noetheon/vuln-prioritizer-workbench/issues/343) | Workbench naming in active scripts/gates and backend/app references | Storage paths with `template-*` names remain compatibility paths until a code-level migration is approved. |
+| [#343](https://github.com/Noetheon/vuln-prioritizer-workbench/issues/343) | Active runtime state keys, API operation IDs, provider update metadata, import-stage helper names, and default artifact paths use Workbench naming. | A small app-state compatibility alias and legacy Docker volume-name defaults remain so existing self-hosted data is not orphaned. |
 | [#344](https://github.com/Noetheon/vuln-prioritizer-workbench/issues/344) | `docs/evidence/` boundary and docs hygiene test | Large or historical artifacts must stay linked or archived, not duplicated in docs. |
 | [#345](https://github.com/Noetheon/vuln-prioritizer-workbench/issues/345) | This release evidence ledger and release checklist updates | Ledger records targets; it does not replace command output from the release candidate. |
 | [#346](https://github.com/Noetheon/vuln-prioritizer-workbench/issues/346) | `compose.production-smoke.yml`, `scripts/production_readiness_smoke.py`, and `make docker-production-smoke` | Production proof still depends on the command output from the exact release candidate. |
@@ -76,7 +79,7 @@ shell history.
 | [#380](https://github.com/Noetheon/vuln-prioritizer-workbench/issues/380) | CI frontend PR gate runs lint, build, unit tests, generated-client drift, and bounded Playwright smoke/responsive/accessibility specs for frontend/API/runtime changes. | Fresh workflow evidence is still required for docs-only, frontend-only, and API-client-impacting PR examples. |
 | [#381](https://github.com/Noetheon/vuln-prioritizer-workbench/issues/381) | Docker PR gate runs `make docker-demo-smoke` for runtime inputs and prints compose status/logs on failure. | Fresh workflow evidence is still required for backend/Compose and docs-only PR examples. |
 | [#382](https://github.com/Noetheon/vuln-prioritizer-workbench/issues/382) | Tag release workflow runs `make release-readiness-check`, uploads release-readiness evidence, and attaches SHA-256 artifact hashes to GitHub Releases. | A tag-specific workflow run is required before claiming candidate evidence. |
-| [#383](https://github.com/Noetheon/vuln-prioritizer-workbench/issues/383) | `backend/requirements.txt` is the authoritative bounded Python audit input; `scripts/check_release_evidence_hygiene.py` fails drift against `backend/pyproject.toml`; `make dependency-audit` audits that source. | No separate fully pinned Python production lockfile exists unless a future issue intentionally adds one. |
+| [#383](https://github.com/Noetheon/vuln-prioritizer-workbench/issues/383) | `backend/requirements.txt` is the bounded Python policy input; `uv.lock` records the resolver state; `backend/requirements.lock.txt` is exported with pins and hashes; `make dependency-audit` audits that lock. | Fresh lock refresh and audit output are still required for each exact release candidate. |
 | [#384](https://github.com/Noetheon/vuln-prioritizer-workbench/issues/384) | `make docs-check` runs the release-evidence hygiene script before MkDocs to catch stale public-production, CLI-only, and historical-template closure wording in active release docs. | The script is intentionally narrow; broader wording cleanup still needs human review during release evidence comments. |
 | [#385](https://github.com/Noetheon/vuln-prioritizer-workbench/issues/385) | This ledger now requires commit/tag, command, result, artifact or CI URL, residual risk, owner, and follow-up fields for candidate evidence. | Build-local artifacts under `build/` are checked only when present in generated release workflow evidence. |
 | [#386](https://github.com/Noetheon/vuln-prioritizer-workbench/issues/386) | PR template and release operations docs require release-readiness ownership, skip rationale, non-readiness wording, and required-context documentation. | Branch protection itself must be confirmed in GitHub repository settings by a maintainer. |

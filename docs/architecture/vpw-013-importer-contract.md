@@ -120,7 +120,7 @@ The API/service boundary maps these domain exceptions to HTTP responses, run
 error state, and user-facing messages. Importers should not raise
 `HTTPException` or know about response status codes.
 
-For template import uploads, parse and validation failures are stored on the
+For Workbench import uploads, parse and validation failures are stored on the
 `AnalysisRun` as structured `parse_errors` and returned from
 `GET /api/v1/runs/{run_id}/summary`. Each parse error includes `input_type`,
 `filename`, `message`, `error_type`, and optional `line`, `field`, and `value`

@@ -19,7 +19,7 @@ backup_compose_database() {
 }
 
 if [ -n "${SQLITE_DATABASE_PATH:-}" ]; then
-  cp "$SQLITE_DATABASE_PATH" "$BACKUP_DIR/template.db"
+  cp "$SQLITE_DATABASE_PATH" "$BACKUP_DIR/workbench.db"
 elif [ -n "${DATABASE_URL:-}" ]; then
   pg_dump --format=custom --file="$BACKUP_DIR/workbench.dump" "$DATABASE_URL"
 elif [ "${WORKBENCH_DATABASE_MODE:-host}" = "compose" ]; then
@@ -37,7 +37,7 @@ else
 fi
 
 backup_host_artifacts() {
-  for path in ${WORKBENCH_ARTIFACT_PATHS:-data/template-import-uploads data/template-reports data/template-provider-cache data/provider-snapshots}; do
+  for path in ${WORKBENCH_ARTIFACT_PATHS:-data/workbench-import-uploads data/workbench-reports data/workbench-provider-cache data/provider-snapshots data/template-import-uploads data/template-reports data/template-provider-cache}; do
     if [ -e "$path" ]; then
       tar -C "$(dirname "$path")" -rf "$BACKUP_DIR/artifacts.tar" "$(basename "$path")"
     fi
@@ -54,7 +54,7 @@ backup_compose_artifacts() {
     exit 2
   fi
   docker exec "$container" sh -c \
-    "tar -C /app -cf - template-import-uploads template-reports provider-snapshots template-provider-cache" \
+    'set --; for path in workbench-import-uploads workbench-reports provider-snapshots workbench-provider-cache template-import-uploads template-reports template-provider-cache; do [ -e "/app/$path" ] && set -- "$@" "$path"; done; if [ "$#" -gt 0 ]; then tar -C /app -cf - "$@"; else tar -C /tmp -cf - --files-from /dev/null; fi' \
     > "$BACKUP_DIR/artifacts.tar"
 }
 

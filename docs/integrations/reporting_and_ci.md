@@ -220,7 +220,7 @@ The verifier:
 Current Workbench contract:
 
 - `POST /api/v1/runs/{run_id}/reports` creates the Workbench
-  report family for completed visible template runs, including SARIF as
+  report family for completed visible Workbench runs, including SARIF as
   `results.sarif`.
 - `GET /api/v1/reports/{report_id}/download` downloads the server-owned artifact after path and checksum validation.
 - The Workbench web UI exposes the same report creation flow from `/analysis-runs/{run_id}/reports`.

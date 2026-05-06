@@ -282,7 +282,7 @@ export class FindingsService {
         project_id: string;
         limit?: number;
         offset?: number;
-        sort?: 'operational' | 'priority' | 'score' | 'cve' | 'status' | 'epss' | 'cvss' | 'kev' | 'last_seen';
+        sort?: 'operational' | 'priority' | 'score' | 'cve' | 'status' | 'epss' | 'cvss' | 'kev' | 'last_seen' | 'component' | 'owner';
         direction?: 'asc' | 'desc';
         priority?: FindingPriority | null;
         status?: FindingStatus | null;
@@ -330,7 +330,7 @@ export class LoginService {
     /**
      * Login Access Token
      *
-     * OAuth2 compatible token login for the configured template-shell user.
+     * OAuth2 compatible token login for the configured Workbench user.
      */
     public static loginAccessToken<ThrowOnError extends boolean = true>(parameters: {
         bodyLoginLoginAccessToken: BodyLoginLoginAccessToken;
@@ -820,11 +820,11 @@ export class ProvidersService {
     }
 
     /**
-     * Create Template Provider Update Job
+     * Create Provider Update Job
      *
      * Synchronously create a cache-friendly provider snapshot refresh job.
      */
-    public static createTemplateProviderUpdateJob<ThrowOnError extends boolean = true>(parameters: {
+    public static createProviderUpdateJob<ThrowOnError extends boolean = true>(parameters: {
         providerUpdateJobCreate: ProviderUpdateJobCreate;
     }, options?: Options<never, ThrowOnError>) {
         const params = buildClientParams([parameters], [{ args: [{ key: 'providerUpdateJobCreate', map: 'body' }] }]);
@@ -1026,7 +1026,7 @@ export class UtilsService {
     /**
      * Health Check
      *
-     * Return whether the template backend shell is reachable.
+     * Return whether the Workbench backend shell is reachable.
      */
     public static healthCheck<ThrowOnError extends boolean = true>(options?: Options<never, ThrowOnError>) {
         return (options?.client ?? client).get<GetApiV1UtilsHealthCheckResponses, unknown, ThrowOnError, 'data'>({
@@ -1039,11 +1039,11 @@ export class UtilsService {
 
 export class WorkbenchService {
     /**
-     * Template Workbench Health
+     * Workbench Health
      *
      * Return minimal unauthenticated liveness for browser and proxy checks.
      */
-    public static templateWorkbenchHealth<ThrowOnError extends boolean = true>(options?: Options<never, ThrowOnError>) {
+    public static workbenchHealth<ThrowOnError extends boolean = true>(options?: Options<never, ThrowOnError>) {
         return (options?.client ?? client).get<GetApiV1WorkbenchHealthResponses, unknown, ThrowOnError, 'data'>({
             responseStyle: 'data',
             url: '/api/v1/workbench/health',
@@ -1052,11 +1052,11 @@ export class WorkbenchService {
     }
 
     /**
-     * Template Workbench Status
+     * Workbench Status
      *
      * Return authenticated active Workbench readiness and version status.
      */
-    public static templateWorkbenchStatus<ThrowOnError extends boolean = true>(options?: Options<never, ThrowOnError>) {
+    public static workbenchStatus<ThrowOnError extends boolean = true>(options?: Options<never, ThrowOnError>) {
         return (options?.client ?? client).get<GetApiV1WorkbenchStatusResponses, unknown, ThrowOnError, 'data'>({
             responseStyle: 'data',
             security: [{ scheme: 'bearer', type: 'http' }],

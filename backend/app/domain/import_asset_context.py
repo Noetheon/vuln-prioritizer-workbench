@@ -53,7 +53,7 @@ def canonicalize_occurrence_asset_context(
     )
 
 
-def input_occurrence_from_template_occurrence(
+def input_occurrence_from_workbench_occurrence(
     occurrence: NormalizedOccurrence,
 ) -> InputOccurrence:
     """Map a Workbench importer occurrence back to the core occurrence model."""
@@ -86,7 +86,7 @@ def input_occurrence_from_template_occurrence(
     )
 
 
-def template_occurrence_with_asset_context(
+def workbench_occurrence_with_asset_context(
     occurrence: NormalizedOccurrence,
     enriched: InputOccurrence,
 ) -> NormalizedOccurrence:
@@ -122,7 +122,7 @@ def template_occurrence_with_asset_context(
     )
 
 
-def template_occurrence_with_vex(
+def workbench_occurrence_with_vex(
     occurrence: NormalizedOccurrence,
     enriched: InputOccurrence,
 ) -> NormalizedOccurrence:

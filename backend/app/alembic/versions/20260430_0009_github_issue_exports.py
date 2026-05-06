@@ -1,4 +1,4 @@
-"""add template github issue export idempotency
+"""add Workbench GitHub issue export idempotency
 
 Revision ID: 20260430_0009
 Revises: 20260430_0008

@@ -48,6 +48,7 @@ services:
       API_RATE_LIMIT_PER_MINUTE: ${API_RATE_LIMIT_PER_MINUTE:-600}
       LOGIN_RATE_LIMIT_PER_MINUTE: ${LOGIN_RATE_LIMIT_PER_MINUTE:-60}
       TOKEN_FAILURE_RATE_LIMIT_PER_MINUTE: ${TOKEN_FAILURE_RATE_LIMIT_PER_MINUTE:-60}
+      TRUSTED_PROXY_CIDRS: ${TRUSTED_PROXY_CIDRS:-}
       AUDIT_RETENTION_DAYS: ${AUDIT_RETENTION_DAYS:-365}
       SESSION_RETENTION_DAYS: ${SESSION_RETENTION_DAYS:-30}
       REVOKED_API_TOKEN_RETENTION_DAYS: ${REVOKED_API_TOKEN_RETENTION_DAYS:-365}
@@ -57,19 +58,19 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-workbench}
       POSTGRES_USER: ${POSTGRES_USER:-workbench}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-workbench}
-      IMPORT_UPLOAD_DIR: /app/template-import-uploads
-      REPORT_DIR: /app/template-reports
+      IMPORT_UPLOAD_DIR: /app/workbench-import-uploads
+      REPORT_DIR: /app/workbench-reports
       PROVIDER_SNAPSHOT_DIR: /app/provider-snapshots
-      PROVIDER_CACHE_DIR: /app/template-provider-cache
+      PROVIDER_CACHE_DIR: /app/workbench-provider-cache
       ATTACK_ARTIFACT_DIR: /app/examples/attack
       DEMO_PROVIDER_SNAPSHOT_ENABLED: ${DEMO_PROVIDER_SNAPSHOT_ENABLED:-false}
       NVD_API_KEY: ${NVD_API_KEY:-}
       VULN_PRIORITIZER_NVD_API_KEY_ENV: ${VULN_PRIORITIZER_NVD_API_KEY_ENV:-NVD_API_KEY}
     volumes:
-      - template-import-uploads:/app/template-import-uploads
-      - template-reports:/app/template-reports
-      - template-provider-snapshots:/app/provider-snapshots
-      - template-provider-cache:/app/template-provider-cache
+      - workbench-import-uploads:/app/workbench-import-uploads
+      - workbench-reports:/app/workbench-reports
+      - workbench-provider-snapshots:/app/provider-snapshots
+      - workbench-provider-cache:/app/workbench-provider-cache
       - ./data:/app/examples:ro
     labels:
       - traefik.enable=${TRAEFIK_APP_ENABLED:-false}
@@ -122,7 +123,11 @@ services:
 
 volumes:
   app-db-data:
-  template-import-uploads:
-  template-reports:
-  template-provider-snapshots:
-  template-provider-cache:
+  workbench-import-uploads:
+    name: ${WORKBENCH_IMPORT_UPLOADS_VOLUME:-template-import-uploads}
+  workbench-reports:
+    name: ${WORKBENCH_REPORTS_VOLUME:-template-reports}
+  workbench-provider-snapshots:
+    name: ${WORKBENCH_PROVIDER_SNAPSHOTS_VOLUME:-template-provider-snapshots}
+  workbench-provider-cache:
+    name: ${WORKBENCH_PROVIDER_CACHE_VOLUME:-template-provider-cache}

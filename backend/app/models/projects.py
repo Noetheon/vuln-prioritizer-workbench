@@ -1,4 +1,4 @@
-"""Project domain models for the template-aligned Workbench."""
+"""Project domain models for the Workbench."""
 
 import uuid
 from datetime import datetime

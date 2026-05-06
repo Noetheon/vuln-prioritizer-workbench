@@ -1,4 +1,4 @@
-"""Persisted waiver/risk-acceptance repository for the template Workbench."""
+"""Persisted waiver/risk-acceptance repository for the Workbench."""
 
 from __future__ import annotations
 
@@ -69,7 +69,7 @@ class WaiverRepository:
         matched_counts: dict[uuid.UUID, int] = {waiver.id: 0 for waiver in waivers}
 
         for finding in findings:
-            self._clear_template_waiver_state(finding)
+            self._clear_workbench_waiver_state(finding)
 
         for finding in findings:
             matches = [waiver for waiver in waivers if _waiver_matches_finding(waiver, finding)]
@@ -99,11 +99,11 @@ class WaiverRepository:
         )
         return list(self.session.exec(statement).all())
 
-    def _clear_template_waiver_state(self, finding: Finding) -> None:
+    def _clear_workbench_waiver_state(self, finding: Finding) -> None:
         explanation = dict(finding.explanation_json or {})
         evidence = dict(finding.evidence_json or {})
         waiver_record = _object_value(explanation.get("waiver"))
-        if waiver_record.get("source") != "template-api":
+        if waiver_record.get("source") not in {"workbench-api", "template-api"}:
             return
 
         for key in (
@@ -138,7 +138,7 @@ class WaiverRepository:
         explanation = dict(finding.explanation_json or {})
         evidence = dict(finding.evidence_json or {})
         waiver_payload = {
-            "source": "template-api",
+            "source": "workbench-api",
             "waiver_id": str(waiver.id),
             "waiver_status": status,
             "waiver_reason": waiver.reason,

@@ -1,4 +1,4 @@
-"""Scoped service-token models for the template Workbench API."""
+"""Scoped service-token models for the Workbench API."""
 
 import uuid
 from datetime import datetime
@@ -10,8 +10,14 @@ from sqlmodel import Field, SQLModel
 
 from app.models.base import get_datetime_utc
 
-ApiTokenScope = Literal["read", "import", "report", "admin"]
-API_TOKEN_SCOPES: tuple[ApiTokenScope, ...] = ("read", "import", "report", "admin")
+ApiTokenScope = Literal["read", "write", "import", "report", "admin"]
+API_TOKEN_SCOPES: tuple[ApiTokenScope, ...] = (
+    "read",
+    "write",
+    "import",
+    "report",
+    "admin",
+)
 
 
 def normalize_api_token_scopes(scopes: list[str] | tuple[str, ...]) -> list[ApiTokenScope]:

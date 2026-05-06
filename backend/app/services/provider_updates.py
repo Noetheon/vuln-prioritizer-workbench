@@ -1,4 +1,4 @@
-"""Template provider update-job orchestration."""
+"""Provider update-job orchestration."""
 
 from __future__ import annotations
 
@@ -48,17 +48,21 @@ from vuln_prioritizer.utils import iso_utc_now, normalize_cve_id
 
 PROVIDER_UPDATE_INPUT_TYPE = "provider_update"
 PROVIDER_UPDATE_PROJECT_NAME = "Provider Updates"
-PROVIDER_UPDATE_LOCK_FILE = ".template-provider-update.lock"
+PROVIDER_UPDATE_LOCK_FILE = ".workbench-provider-update.lock"
 PROVIDER_UPDATE_LOCK_STALE_SECONDS = 6 * 60 * 60
 VALID_PROVIDER_SOURCES = ("nvd", "epss", "kev")
 
 
-class TemplateProviderUpdateConflict(RuntimeError):
+class ProviderUpdateConflict(RuntimeError):
     """Raised when a provider update is already active."""
 
 
-class TemplateProviderUpdateValidationError(ValueError):
+class ProviderUpdateValidationError(ValueError):
     """Raised when a provider update request is invalid."""
+
+
+TemplateProviderUpdateConflict = ProviderUpdateConflict
+TemplateProviderUpdateValidationError = ProviderUpdateValidationError
 
 
 def create_provider_update_job(
@@ -71,7 +75,7 @@ def create_provider_update_job(
     """Create and synchronously execute a deterministic cache-friendly update job."""
     repository = RunRepository(session)
     if repository.get_running_provider_update_run() is not None:
-        raise TemplateProviderUpdateConflict(
+        raise ProviderUpdateConflict(
             "Provider update already running; retry after the active job finishes."
         )
 
@@ -86,14 +90,15 @@ def create_provider_update_job(
             "requested_sources": selected_sources,
             "requested_cves": len(cve_ids),
             "cache_only": payload.cache_only,
-            "mode": "template-provider-update",
+            "execution_mode": "request",
+            "mode": "workbench-provider-update",
         },
     )
 
     try:
         with _provider_update_lock(settings.provider_snapshot_dir_path):
             if _other_running_update(repository, run.id) is not None:
-                raise TemplateProviderUpdateConflict(
+                raise ProviderUpdateConflict(
                     "Provider update already running; retry after the active job finishes."
                 )
             snapshot, metadata = _write_provider_snapshot(
@@ -103,13 +108,14 @@ def create_provider_update_job(
                 cve_ids=cve_ids,
                 cache_only=payload.cache_only,
             )
-    except TemplateProviderUpdateConflict:
+    except ProviderUpdateConflict:
         raise
     except Exception as exc:
         failed_metadata = {
             "requested_sources": selected_sources,
             "requested_cves": len(cve_ids),
             "cache_only": payload.cache_only,
+            "execution_mode": "request",
             "snapshot_created": False,
             "detail": "Provider refresh failed before replacing or mutating existing snapshots.",
         }
@@ -127,6 +133,7 @@ def create_provider_update_job(
         "requested_sources": selected_sources,
         "requested_cves": len(cve_ids),
         "cache_only": payload.cache_only,
+        "execution_mode": "request",
         "provider_snapshot_id": str(snapshot.id),
     }
     run.provider_snapshot_id = snapshot.id
@@ -149,11 +156,11 @@ def _normalize_sources(raw_sources: list[str]) -> list[str]:
         if source not in selected_sources:
             selected_sources.append(source)
     if invalid_sources:
-        raise TemplateProviderUpdateValidationError(
+        raise ProviderUpdateValidationError(
             "Invalid provider source(s): " + ", ".join(invalid_sources)
         )
     if not selected_sources:
-        raise TemplateProviderUpdateValidationError("At least one provider source is required.")
+        raise ProviderUpdateValidationError("At least one provider source is required.")
     return selected_sources
 
 
@@ -171,7 +178,7 @@ def _provider_update_cve_ids(
         elif normalized not in explicit_cves:
             explicit_cves.append(normalized)
     if invalid_cves:
-        raise TemplateProviderUpdateValidationError("Invalid CVE id(s): " + ", ".join(invalid_cves))
+        raise ProviderUpdateValidationError("Invalid CVE id(s): " + ", ".join(invalid_cves))
 
     if explicit_cves:
         cve_ids = explicit_cves
@@ -266,7 +273,7 @@ def _write_provider_snapshot(
             snapshot_id=snapshot_id,
             generated_at=generated_at,
             input_paths=[],
-            input_format="template-workbench-current-findings",
+            input_format="workbench-current-findings",
             selected_sources=selected_sources,
             requested_cves=len(cve_ids),
             output_path=output_label,
@@ -307,7 +314,7 @@ def _write_provider_snapshot(
             "item_count": len(report.items),
             "warnings": report.warnings,
             "missing": False,
-            "generated_by": "template-provider-update-job",
+            "generated_by": "workbench-provider-update-job",
             "snapshot_mode": "cache-only" if cache_only else "snapshot",
         }
     )
@@ -320,7 +327,7 @@ def _write_provider_snapshot(
         source_metadata_json=metadata_json,
     )
     return snapshot, {
-        "mode": "template-provider-update",
+        "mode": "workbench-provider-update",
         "snapshot_created": True,
         "snapshot_file": output_label,
         "snapshot_sha256": content_hash,
@@ -554,7 +561,7 @@ def _open_provider_update_lock(lock_path: Path) -> int:
                 return os.open(lock_path, flags, 0o600)
             except FileExistsError:
                 pass
-        raise TemplateProviderUpdateConflict(
+        raise ProviderUpdateConflict(
             "Provider update already running; retry after the active job finishes."
         ) from exc
 

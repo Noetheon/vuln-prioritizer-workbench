@@ -1,4 +1,4 @@
-"""CVE list TXT/CSV importer for the template Workbench import boundary."""
+"""CVE list TXT/CSV importer for the Workbench import boundary."""
 
 from __future__ import annotations
 

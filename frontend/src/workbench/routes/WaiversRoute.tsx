@@ -10,7 +10,6 @@ import {
   waiverRequestBody,
   waiverScopeLabel,
 } from "../../lib/waiver-view"
-import { WorkbenchShell } from "../WorkbenchShell"
 import { useWorkbenchContext } from "../WorkbenchContext"
 import {
   waiverDebtRows,
@@ -162,9 +161,5 @@ function WaiversRouteContent() {
 }
 
 export function WaiversRoute() {
-  return (
-    <WorkbenchShell routePath="/waivers">
-      <WaiversRouteContent />
-    </WorkbenchShell>
-  )
+  return <WaiversRouteContent />
 }

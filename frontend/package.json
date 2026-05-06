@@ -11,7 +11,7 @@
     "preview": "vite preview --host 127.0.0.1",
     "generate-client": "openapi-ts",
     "test": "playwright test",
-    "test:unit": "node --test --experimental-strip-types tests/auth.test.ts tests/chart-data.test.ts tests/report-download.test.ts tests/runtime-config.test.ts tests/workbench-query-keys.test.ts tests/route-organization.test.ts",
+    "test:unit": "node --test --experimental-strip-types tests/auth.test.ts tests/chart-data.test.ts tests/imports-workbench-model.test.ts tests/report-download.test.ts tests/runtime-config.test.ts tests/workbench-query-keys.test.ts tests/route-organization.test.ts tests/reporting-state.test.ts",
     "test:pr-frontend": "npm run test:unit && playwright test tests/ui-smoke.spec.ts tests/accessibility.spec.ts tests/responsive-shell.spec.ts",
     "test:ui": "playwright test --ui"
   },

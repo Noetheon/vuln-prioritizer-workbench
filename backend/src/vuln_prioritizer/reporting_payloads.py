@@ -35,6 +35,7 @@ from vuln_prioritizer.models import (
     StateWaiverReport,
 )
 from vuln_prioritizer.reporting_format import _priority_display_label, normalize_whitespace
+from vuln_prioritizer.sarif_references import dedupe_defensive_http_urls
 from vuln_prioritizer.services.baseline_comparison import (
     build_cvss_baseline_comparison_payload,
 )
@@ -714,14 +715,7 @@ def _sarif_reference_urls(
 
 
 def _dedupe_strings(values: list[str]) -> list[str]:
-    seen: set[str] = set()
-    deduped: list[str] = []
-    for value in values:
-        normalized = str(value).strip()
-        if normalized.startswith(("http://", "https://")) and normalized not in seen:
-            seen.add(normalized)
-            deduped.append(normalized)
-    return deduped
+    return dedupe_defensive_http_urls(values)
 
 
 def _sarif_fingerprint(finding: PrioritizedFinding, artifact_uri: str | None) -> str:

@@ -29,9 +29,17 @@ permissions:
 
 jobs:
   analyze:
-    name: Analyze Python
+    name: Analyze ${{ matrix.display_name }}
     runs-on: ubuntu-latest
     if: github.event_name != 'pull_request' || !github.event.pull_request.draft
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - language: python
+            display_name: Python
+          - language: javascript-typescript
+            display_name: JavaScript/TypeScript
 
     steps:
       - name: Check out repository
@@ -50,7 +58,7 @@ jobs:
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v4
         with:
-          languages: python
+          languages: ${{ matrix.language }}
           queries: security-and-quality
 
       - name: Install project and dev dependencies

@@ -2,17 +2,12 @@ import {
   AlertTriangle,
   Clock,
   Download,
-  FileArchive,
-  FileJson,
   FileText,
-  GitBranch,
   Globe,
   History,
   Layers,
   ShieldCheck,
-  Table2,
 } from "lucide-react"
-import type { ComponentType } from "react"
 import type {
   AnalysisRunPublic,
   AnalysisRunSummaryPublic,
@@ -20,6 +15,7 @@ import type {
   ProjectPublic,
   ProviderStatusPublic,
   ReportPublic,
+  ReportVerificationPublic,
 } from "@/api-client"
 import { Button } from "@/components/ui/button"
 import {
@@ -49,13 +45,11 @@ import {
   VpwGrid,
   VpwKeyValueList,
   VpwMetricCard,
-  type VpwMetricTone,
   VpwPageContainer,
   VpwPanel,
   VpwSection,
   VpwSectionHeader,
   VpwStatusBanner,
-  type VpwStatusBannerTone,
   VpwToolbar,
   VpwToolbarGroup,
 } from "@/components/vpw"
@@ -73,7 +67,18 @@ import {
   reportSizeLabel,
 } from "@/lib/report-format"
 import { DEMO_MODE_ENABLED } from "@/lib/runtime-config"
-import { runStatusLabel, runStatusTone } from "@/lib/risk-format"
+import { runStatusLabel } from "@/lib/risk-format"
+import {
+  ARTIFACT_CARDS,
+  priorityCount,
+  reportFormatTone,
+  runBadgeTone,
+  runFileLabel,
+  runMetricTone,
+  statusBannerTone,
+  summaryOpenFindings,
+  verificationSummary,
+} from "./evidence-center-model"
 
 export type EvidenceCenterProps = {
   selectedProject: ProjectPublic | null
@@ -90,6 +95,9 @@ export type EvidenceCenterProps = {
   reportsError: string
   projectSummary: ProjectDecisionSummaryPublic | null
   providerStatus: ProviderStatusPublic | null
+  verificationReport: ReportVerificationPublic | null
+  verificationReportTarget: ReportPublic | null
+  verificationLoading: boolean
   reportActionsEnabled: boolean
   activeReportFormat: string
   reportActionError: string
@@ -97,139 +105,6 @@ export type EvidenceCenterProps = {
   onCreateReport: (format: ReportFormat) => Promise<void>
   onDownloadReport: (report: ReportPublic) => Promise<void>
   onVerifyReport: (report: ReportPublic) => Promise<void>
-}
-
-type ArtifactCard = {
-  actionLabel: string
-  audience: string
-  description: string
-  format: string
-  icon: ComponentType<{
-    size?: number
-    className?: string
-    "aria-hidden"?: boolean | "true" | "false"
-  }>
-  reportFormat: ReportFormat
-  title: string
-}
-
-const ARTIFACT_CARDS: ArtifactCard[] = [
-  {
-    actionLabel: "Generate HTML",
-    audience: "CISO",
-    description:
-      "Executive browser report with priority summary and evidence links.",
-    format: "HTML",
-    icon: FileText,
-    reportFormat: "html",
-    title: "Executive HTML Report",
-  },
-  {
-    actionLabel: "Generate Markdown",
-    audience: "Engineering",
-    description: "Technical report for analyst handoff, PRs, and audit notes.",
-    format: "Markdown",
-    icon: FileText,
-    reportFormat: "markdown",
-    title: "Markdown Technical Report",
-  },
-  {
-    actionLabel: "Export JSON",
-    audience: "Automation",
-    description:
-      "Machine-readable findings and analysis data for downstream systems.",
-    format: "JSON",
-    icon: FileJson,
-    reportFormat: "json",
-    title: "JSON Findings Export",
-  },
-  {
-    actionLabel: "Export CSV",
-    audience: "Audit",
-    description:
-      "Spreadsheet-friendly findings table for triage and stakeholder review.",
-    format: "CSV",
-    icon: Table2,
-    reportFormat: "csv",
-    title: "CSV Findings Export",
-  },
-  {
-    actionLabel: "Export Navigator",
-    audience: "Security engineering",
-    description:
-      "ATT&CK Navigator JSON with mapped techniques and risk scores.",
-    format: "Navigator JSON",
-    icon: GitBranch,
-    reportFormat: "attack-navigator",
-    title: "ATT&CK Navigator Layer",
-  },
-  {
-    actionLabel: "Export SARIF",
-    audience: "CI",
-    description:
-      "SARIF 2.1.0 results for GitHub code scanning and CI evidence workflows.",
-    format: "SARIF",
-    icon: FileJson,
-    reportFormat: "sarif",
-    title: "SARIF Export",
-  },
-  {
-    actionLabel: "Build Bundle",
-    audience: "Evidence",
-    description:
-      "ZIP with all reports, manifest, source artifacts, and SHA256 checksums.",
-    format: "Evidence ZIP",
-    icon: FileArchive,
-    reportFormat: "zip",
-    title: "Evidence ZIP Bundle",
-  },
-]
-
-function runFileLabel(run: AnalysisRunPublic): string {
-  const summaryJson = run.summary_json as Record<string, unknown> | undefined
-  const inputUpload = summaryJson?.input_upload as
-    | Record<string, unknown>
-    | undefined
-  const uploadFilename =
-    typeof inputUpload?.filename === "string" ? inputUpload.filename : null
-  return run.filename ?? uploadFilename ?? `${run.input_type} upload`
-}
-
-function priorityCount(
-  summary: ProjectDecisionSummaryPublic | null,
-  key: "critical" | "high",
-): number {
-  return (summary?.counts_by_priority?.[key] ??
-    summary?.counts_by_priority?.[key.charAt(0).toUpperCase() + key.slice(1)] ??
-    0) as number
-}
-
-function runBadgeTone(status: AnalysisRunPublic["status"]): VpwBadgeTone {
-  const tone = runStatusTone(status)
-  if (tone === "succeeded") return "success"
-  if (tone === "failed") return "critical"
-  if (tone === "warning") return "warning"
-  return "neutral"
-}
-
-function runMetricTone(
-  run: AnalysisRunPublic | null,
-  isDemo: boolean,
-): VpwMetricTone {
-  if (isDemo) return "success"
-  if (!run) return "neutral"
-  return runBadgeTone(run.status)
-}
-
-function reportFormatTone(format: string): VpwBadgeTone {
-  if (format === "zip") return "success"
-  if (format === "html" || format === "markdown") return "info"
-  if (format === "attack-navigator" || format === "sarif") return "support"
-  return "neutral"
-}
-
-function statusBannerTone(message: string): VpwStatusBannerTone {
-  return message ? "success" : "info"
 }
 
 type RunContextProps = {
@@ -356,6 +231,7 @@ function RunContext({
 
 type SummaryProps = {
   projectSummary: ProjectDecisionSummaryPublic | null
+  selectedRunSummary: AnalysisRunSummaryPublic | null
   reports: ReportPublic[]
   selectedReportRun: AnalysisRunPublic | null
   providerStatus: ProviderStatusPublic | null
@@ -370,8 +246,11 @@ function EvidenceSummary({
   reports,
   reportsLoading,
   selectedReportRun,
+  selectedRunSummary,
 }: SummaryProps) {
-  const effectiveSummary = isDemo ? DEMO_SUMMARY : projectSummary
+  const effectiveSummary = isDemo
+    ? DEMO_SUMMARY
+    : selectedRunSummary ?? projectSummary
   const effectiveRun = isDemo ? DEMO_RUNS[0] : selectedReportRun
   const effectiveReports = isDemo ? DEMO_REPORTS : reports
   const critical = priorityCount(effectiveSummary, "critical")
@@ -400,7 +279,7 @@ function EvidenceSummary({
                 : "No run selected"
           }
           icon={<Clock aria-hidden="true" className="h-4 w-4" />}
-          label="Latest run"
+          label="Selected run"
           tone={runMetricTone(effectiveRun, isDemo)}
           value={
             isDemo
@@ -534,6 +413,9 @@ type HistoryProps = {
   reports: ReportPublic[]
   reportsLoading: boolean
   isDemo: boolean
+  verificationReport: ReportVerificationPublic | null
+  verificationReportTarget: ReportPublic | null
+  verificationLoading: boolean
   onDownload: (report: ReportPublic) => void
   onVerify: (report: ReportPublic) => void
 }
@@ -544,8 +426,13 @@ function ReportHistory({
   onVerify,
   reports,
   reportsLoading,
+  verificationLoading,
+  verificationReport,
+  verificationReportTarget,
 }: HistoryProps) {
   const rows = isDemo ? DEMO_REPORTS : reports
+  const verifiedTargetId = verificationReportTarget?.id ?? ""
+  const verifiedSummary = verificationSummary(verificationReport)
   const columns: VpwDataTableColumn<ReportPublic>[] = [
     {
       id: "artifact",
@@ -612,11 +499,42 @@ function ReportHistory({
     {
       id: "status",
       header: "Status",
-      cell: (report) => (
-        <VpwBadge tone={isDemo ? "warning" : "success"}>
-          {isDemo ? "Demo" : report.format === "zip" ? "Bundle" : "Generated"}
-        </VpwBadge>
-      ),
+      cell: (report) => {
+        const isVerificationTarget = verifiedTargetId === report.id
+        const verificationOk = isVerificationTarget && verifiedSummary.ok === true
+        const verificationFailed = Boolean(
+          isVerificationTarget && verificationReport && verifiedSummary.ok !== true,
+        )
+        const verificationInProgress =
+          isVerificationTarget && verificationLoading
+        return (
+          <VpwBadge
+            tone={
+              isDemo
+                ? "warning"
+                : verificationFailed
+                  ? "critical"
+                  : verificationOk
+                    ? "success"
+                    : verificationInProgress
+                      ? "info"
+                      : "success"
+            }
+          >
+            {isDemo
+              ? "Demo"
+              : verificationInProgress
+                ? "Verifying"
+                : verificationOk
+                  ? "Verified"
+                  : verificationFailed
+                    ? "Verify failed"
+                    : report.format === "zip"
+                      ? "Bundle"
+                      : "Generated"}
+          </VpwBadge>
+        )
+      },
     },
     {
       id: "actions",
@@ -628,6 +546,9 @@ function ReportHistory({
           {report.format === "zip" && !isDemo ? (
             <Button
               aria-label={`Verify ${report.filename}`}
+              disabled={
+                verificationLoading && verificationReportTarget?.id === report.id
+              }
               onClick={() => onVerify(report)}
               size="icon"
               type="button"
@@ -711,6 +632,9 @@ type ManifestProps = {
   reports: ReportPublic[]
   providerStatus: ProviderStatusPublic | null
   isDemo: boolean
+  verificationReport: ReportVerificationPublic | null
+  verificationReportTarget: ReportPublic | null
+  verificationLoading: boolean
   onDownload: (report: ReportPublic) => void
 }
 
@@ -721,6 +645,9 @@ function ManifestPreview({
   reports,
   selectedProject,
   selectedReportRun,
+  verificationLoading,
+  verificationReport,
+  verificationReportTarget,
 }: ManifestProps) {
   const project = isDemo ? DEMO_PROJECT : selectedProject
   const run = isDemo ? DEMO_RUNS[0] : selectedReportRun
@@ -734,11 +661,25 @@ function ManifestPreview({
     : zipReport?.sha256
       ? zipReport.sha256
       : "Not generated yet"
+  const matchesVerifiedBundle =
+    Boolean(zipReport) && verificationReportTarget?.id === zipReport?.id
+  const verifiedSummary = matchesVerifiedBundle
+    ? verificationSummary(verificationReport)
+    : {}
+  const verifiedFiles = Number(verifiedSummary.verified_files ?? 0)
+  const modifiedFiles = Number(verifiedSummary.modified_files ?? 0)
+  const missingFiles = Number(verifiedSummary.missing_files ?? 0)
   const verificationStatus = isDemo
     ? "Demo preview"
-    : zipReport
-      ? "Ready for verification"
-      : "Not generated yet"
+    : matchesVerifiedBundle && verificationLoading
+      ? "Verification running"
+      : matchesVerifiedBundle && verificationReport && verifiedSummary.ok === true
+        ? `Verified - ${verifiedFiles} files matched`
+        : matchesVerifiedBundle && verificationReport
+          ? `Verification failed - ${modifiedFiles} modified, ${missingFiles} missing`
+          : zipReport
+            ? "Ready for verification"
+            : "Not generated yet"
 
   return (
     <VpwEvidenceManifestCard
@@ -775,6 +716,7 @@ function ManifestPreview({
 
 type DecisionProps = {
   projectSummary: ProjectDecisionSummaryPublic | null
+  selectedRunSummary: AnalysisRunSummaryPublic | null
   selectedReportRun: AnalysisRunPublic | null
   isDemo: boolean
 }
@@ -783,13 +725,16 @@ function ExecutiveDecision({
   isDemo,
   projectSummary,
   selectedReportRun,
+  selectedRunSummary,
 }: DecisionProps) {
-  const effectiveSummary = isDemo ? DEMO_SUMMARY : projectSummary
+  const effectiveSummary = isDemo
+    ? DEMO_SUMMARY
+    : selectedRunSummary ?? projectSummary
   const critical = priorityCount(effectiveSummary, "critical")
   const high = priorityCount(effectiveSummary, "high")
   const kevHits = effectiveSummary?.kev_hits ?? 0
   const totalFindings = effectiveSummary?.finding_count ?? 0
-  const openFindings = effectiveSummary?.open_finding_count ?? 0
+  const openFindings = summaryOpenFindings(effectiveSummary)
   const problem =
     totalFindings > 0
       ? `${critical + high} critical/high findings across ${totalFindings} total; ${kevHits} are known-exploited KEV entries.`
@@ -888,8 +833,10 @@ export function EvidenceCenter({
   selectedReportRun,
   selectedRunId,
   selectedRunSummary,
+  verificationLoading,
+  verificationReport,
+  verificationReportTarget,
 }: EvidenceCenterProps) {
-  void selectedRunSummary
   const isDemo = DEMO_MODE_ENABLED && !selectedProject
   const combinedError = [
     runsError,
@@ -920,6 +867,7 @@ export function EvidenceCenter({
         reports={reports}
         reportsLoading={reportsLoading}
         selectedReportRun={selectedReportRun}
+        selectedRunSummary={selectedRunSummary}
       />
 
       <ActionStatus error={combinedError} message={reportActionMessage} />
@@ -943,6 +891,9 @@ export function EvidenceCenter({
             onVerify={onVerifyReport}
             reports={reports}
             reportsLoading={reportsLoading}
+            verificationLoading={verificationLoading}
+            verificationReport={verificationReport}
+            verificationReportTarget={verificationReportTarget}
           />
           <ManifestPreview
             isDemo={isDemo}
@@ -951,6 +902,9 @@ export function EvidenceCenter({
             reports={reports}
             selectedProject={selectedProject}
             selectedReportRun={selectedReportRun}
+            verificationLoading={verificationLoading}
+            verificationReport={verificationReport}
+            verificationReportTarget={verificationReportTarget}
           />
         </div>
       </VpwSection>
@@ -960,13 +914,14 @@ export function EvidenceCenter({
           actions={
             isDemo ? <VpwBadge tone="warning">Demo language</VpwBadge> : null
           }
-          description="Decision-ready wording derived from the selected project summary."
+          description="Decision-ready wording derived from the selected run summary."
           title="Executive Decision"
         />
         <ExecutiveDecision
           isDemo={isDemo}
           projectSummary={projectSummary}
           selectedReportRun={selectedReportRun}
+          selectedRunSummary={selectedRunSummary}
         />
       </VpwSection>
 

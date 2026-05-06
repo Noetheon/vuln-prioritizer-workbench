@@ -1,0 +1,33 @@
+import assert from "node:assert/strict"
+import { readFileSync } from "node:fs"
+import test from "node:test"
+
+const evidenceCenterFile = new URL(
+  "../src/components/reports/EvidenceCenter.tsx",
+  import.meta.url,
+)
+const reportsStateFile = new URL(
+  "../src/workbench/useReportsRouteState.ts",
+  import.meta.url,
+)
+
+function text(url: URL) {
+  return readFileSync(url, "utf8")
+}
+
+test("Evidence Center consumes selected run summaries and verification state", () => {
+  const source = text(evidenceCenterFile)
+
+  assert.doesNotMatch(source, /void selectedRunSummary/)
+  assert.match(source, /selectedRunSummary \?\? projectSummary/)
+  assert.match(source, /verificationReportTarget/)
+  assert.match(source, /verificationStatus/)
+})
+
+test("reports route state exposes evidence verification results to the UI", () => {
+  const source = text(reportsStateFile)
+
+  assert.match(source, /verificationReport,/)
+  assert.match(source, /verificationReportTarget,/)
+  assert.match(source, /verificationLoading,/)
+})

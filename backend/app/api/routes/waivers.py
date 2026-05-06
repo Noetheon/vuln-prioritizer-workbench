@@ -1,4 +1,4 @@
-"""Waiver and risk-acceptance API routes for the template Workbench."""
+"""Waiver and risk-acceptance API routes for the Workbench."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ import uuid
 from fastapi import APIRouter, HTTPException
 from sqlmodel import Session
 
-from app.api.deps import CurrentUser, SessionDep
+from app.api.deps import ScopedReadUser, ScopedWriteUser, SessionDep
 from app.api.routes.workbench_access import require_visible_project
 from app.models import Waiver, WaiverCreate, WaiverPublic, WaiversPublic, WaiverUpdate
 from app.repositories import AssetRepository, FindingRepository, WaiverRepository
@@ -20,7 +20,7 @@ router = APIRouter(tags=["waivers"])
 def read_project_waivers(
     project_id: uuid.UUID,
     session: SessionDep,
-    current_user: CurrentUser,
+    current_user: ScopedReadUser,
 ) -> WaiversPublic:
     """List visible project waivers."""
     require_visible_project(session, current_user, project_id)
@@ -37,7 +37,7 @@ def create_project_waiver(
     *,
     project_id: uuid.UUID,
     session: SessionDep,
-    current_user: CurrentUser,
+    current_user: ScopedWriteUser,
     waiver_in: WaiverCreate,
 ) -> WaiverPublic:
     """Create a scoped risk acceptance for a visible project."""
@@ -65,7 +65,7 @@ def update_waiver(
     *,
     waiver_id: uuid.UUID,
     session: SessionDep,
-    current_user: CurrentUser,
+    current_user: ScopedWriteUser,
     waiver_in: WaiverUpdate,
 ) -> WaiverPublic:
     """Update a waiver's scope, owner, reason, approval, and lifecycle dates."""
@@ -95,7 +95,7 @@ def update_waiver(
 def expire_waiver(
     waiver_id: uuid.UUID,
     session: SessionDep,
-    current_user: CurrentUser,
+    current_user: ScopedWriteUser,
 ) -> WaiverPublic:
     """Expire a waiver and resynchronize visible accepted-risk state."""
     repository = WaiverRepository(session)

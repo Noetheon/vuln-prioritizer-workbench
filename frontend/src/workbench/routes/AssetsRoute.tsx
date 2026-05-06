@@ -28,7 +28,6 @@ import {
   summarizeAssets,
   validateAssetForm,
 } from "../../components/assets/asset-model"
-import { WorkbenchShell } from "../WorkbenchShell"
 import { useWorkbenchContext } from "../WorkbenchContext"
 import {
   useAssetFindingsQuery,
@@ -361,9 +360,5 @@ function AssetsRouteContainer() {
 }
 
 export function AssetsRoute() {
-  return (
-    <WorkbenchShell routePath="/assets">
-      <AssetsRouteContainer />
-    </WorkbenchShell>
-  )
+  return <AssetsRouteContainer />
 }

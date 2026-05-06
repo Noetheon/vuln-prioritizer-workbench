@@ -1,6 +1,8 @@
 export {
   ImportsWorkbench,
-  type ImportsWorkbenchProps,
-  type ImportWizardStateLike,
-  type SupportedImportFormat,
 } from "./ImportsWorkbench"
+export type {
+  ImportsWorkbenchProps,
+  ImportWizardStateLike,
+  SupportedImportFormat,
+} from "./imports-workbench-model"

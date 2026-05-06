@@ -307,6 +307,7 @@ export const ApiTokenCreateSchema = {
             items: {
                 enum: [
                     'read',
+                    'write',
                     'import',
                     'report',
                     'admin'
@@ -385,6 +386,7 @@ export const ApiTokenCreatePublicSchema = {
             items: {
                 enum: [
                     'read',
+                    'write',
                     'import',
                     'report',
                     'admin'
@@ -475,6 +477,7 @@ export const ApiTokenPublicSchema = {
             items: {
                 enum: [
                     'read',
+                    'write',
                     'import',
                     'report',
                     'admin'
@@ -1546,7 +1549,7 @@ export const FindingAttackMappingDetailPublicSchema = {
 } as const;
 
 export const FindingAttackTechniqueDetailPublicSchema = {
-    description: 'ATT&CK technique row rendered by the template Workbench detail tab.',
+    description: 'ATT&CK technique row rendered by the Workbench detail tab.',
     properties: {
         confidence: {
             anyOf: [
@@ -3779,7 +3782,7 @@ export const ProjectCreateSchema = {
 } as const;
 
 export const ProjectCvssOnlyComparisonPublicSchema = {
-    description: 'CVSS-only baseline comparison for stored template findings.',
+    description: 'CVSS-only baseline comparison for stored Workbench findings.',
     properties: {
         comparisons: {
             items: {
@@ -4317,7 +4320,7 @@ export const ProviderSourceStatusPublicSchema = {
 } as const;
 
 export const ProviderStatusPublicSchema = {
-    description: 'Provider status response for the template backend shell.',
+    description: 'Provider status response for the Workbench backend shell.',
     properties: {
         cache_age_seconds: {
             anyOf: [
@@ -4472,6 +4475,11 @@ export const ProviderUpdateJobPublicSchema = {
                 }
             ],
             title: 'Error Message'
+        },
+        execution_mode: {
+            default: 'request',
+            title: 'Execution Mode',
+            type: 'string'
         },
         finished_at: {
             anyOf: [
@@ -4781,7 +4789,7 @@ export const UserPasswordResetSchema = {
 } as const;
 
 export const UserPublicSchema = {
-    description: 'Public user shape exposed by template auth routes.',
+    description: 'Public user shape exposed by Workbench auth routes.',
     properties: {
         created_at: {
             format: 'date-time',

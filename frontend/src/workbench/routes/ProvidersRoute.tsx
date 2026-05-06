@@ -1,5 +1,4 @@
 import { ProvidersRouteContainer } from "../../components/providers/ProvidersRouteContainer"
-import { WorkbenchShell } from "../WorkbenchShell"
 import { useWorkbenchContext } from "../WorkbenchContext"
 
 function ProvidersRouteContent() {
@@ -23,9 +22,5 @@ function ProvidersRouteContent() {
 }
 
 export function ProvidersRoute() {
-  return (
-    <WorkbenchShell routePath="/providers">
-      <ProvidersRouteContent />
-    </WorkbenchShell>
-  )
+  return <ProvidersRouteContent />
 }

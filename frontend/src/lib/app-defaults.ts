@@ -20,6 +20,7 @@ export type ApiTokenScope = NonNullable<ApiTokenCreate["scopes"]>[number]
 
 export const apiTokenScopeOptions: ApiTokenScope[] = [
   "read",
+  "write",
   "import",
   "report",
   "admin",

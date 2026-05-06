@@ -1,4 +1,4 @@
-"""Report metadata repository for template Workbench persistence."""
+"""Report metadata repository for Workbench persistence."""
 
 from __future__ import annotations
 

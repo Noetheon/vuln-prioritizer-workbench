@@ -8,7 +8,8 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlmodel import Session, SQLModel
 
 from app.api.deps import ScopedReadUser, SessionDep
-from app.core.config import Settings, settings
+from app.core.app_state import workbench_settings
+from app.core.config import Settings
 from app.core.migration_bootstrap import ALEMBIC_HEAD
 from app.models import WorkbenchHealth, WorkbenchStatus
 from vuln_prioritizer import __version__
@@ -23,13 +24,13 @@ REQUIRED_ALEMBIC_TABLE = "alembic_version"
 
 
 @router.get("/health", response_model=WorkbenchHealth)
-def template_workbench_health() -> WorkbenchHealth:
+def workbench_health() -> WorkbenchHealth:
     """Return minimal unauthenticated liveness for browser and proxy checks."""
     return WorkbenchHealth(status="ok")
 
 
 @router.get("/status")
-def template_workbench_status(
+def workbench_status(
     request: Request,
     session: SessionDep,
     _current_user: ScopedReadUser,
@@ -48,10 +49,7 @@ def template_workbench_status(
 
 
 def _request_settings(request: Request) -> Settings:
-    active_settings = getattr(request.app.state, "template_settings", settings)
-    if isinstance(active_settings, Settings):
-        return active_settings
-    return settings
+    return workbench_settings(request, required=False)
 
 
 def _database_readiness(session: Session) -> tuple[str, str]:

@@ -1,4 +1,4 @@
-"""add template report metadata table
+"""add Workbench report metadata table
 
 Revision ID: 20260429_0004
 Revises: 20260428_0003

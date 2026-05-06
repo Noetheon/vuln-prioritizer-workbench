@@ -1,1 +1,1 @@
-"""API router package for the template-aligned backend shell."""
+"""API router package for the Workbench backend shell."""

@@ -1,4 +1,4 @@
-"""Provider status DTOs for the template Workbench API."""
+"""Provider status DTOs for the Workbench API."""
 
 from __future__ import annotations
 
@@ -58,6 +58,7 @@ class ProviderUpdateJobPublic(BaseModel):
 
     id: str
     status: str
+    execution_mode: str = "request"
     requested_sources: list[str] = Field(default_factory=list)
     started_at: str | None = None
     finished_at: str | None = None
@@ -73,7 +74,7 @@ class ProviderUpdateJobsPublic(BaseModel):
 
 
 class ProviderStatusPublic(SQLModel):
-    """Provider status response for the template backend shell."""
+    """Provider status response for the Workbench backend shell."""
 
     status: str
     snapshot: ProviderSnapshotStatusPublic

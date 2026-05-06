@@ -1,4 +1,4 @@
-"""GitHub issue export models for the template Workbench API."""
+"""GitHub issue export models for the Workbench API."""
 
 from __future__ import annotations
 

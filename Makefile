@@ -2,6 +2,7 @@ PYTHON ?= python3
 BACKEND_DIR := backend
 BACKEND_SRC := $(BACKEND_DIR)/src
 BACKEND_TESTS := $(BACKEND_DIR)/tests
+PYTHON_AUDIT_LOCK := $(BACKEND_DIR)/requirements.lock.txt
 COMPOSE := docker compose -f compose.yml -f compose.override.yml
 PRODUCTION_SMOKE_COMPOSE := docker compose -f compose.yml -f compose.production-smoke.yml
 
@@ -15,7 +16,7 @@ DEMO_EVIDENCE_ANALYSIS_FILE := build/v1.0-demo-analysis.json
 DEMO_EVIDENCE_BUNDLE_FILE := build/v1.0-demo-evidence-bundle.zip
 DEMO_EVIDENCE_VERIFICATION_FILE := build/v1.0-demo-evidence-bundle-verification.json
 
-.PHONY: install test lint format fix typecheck check benchmark-check performance-smoke playwright-install playwright-check frontend-install frontend-build frontend-lint frontend-test-unit frontend-generate-client api-client-drift-check frontend-audit frontend-check release-evidence-hygiene-check docs-check docs-serve actionlint-check workflow-check docker-demo-smoke docker-production-smoke dependency-audit clean-local clean-deps provider-snapshot-validate provider-testmatrix demo-offline-no-key-proof demo-sync-check demo-sync-check-temp package package-contents-check package-check package-check-temp pipx-source-smoke release-check release-readiness-check demo-report demo-compare demo-explain demo-attack-report demo-attack-compare demo-attack-explain demo-attack-coverage demo-attack-navigator demo-pr-comment demo-results-sarif demo-html-report demo-evidence-analysis demo-evidence-bundle demo-evidence-bundle-check precommit-install
+.PHONY: install test lint format fix typecheck check benchmark-check performance-smoke playwright-install playwright-check frontend-install frontend-build frontend-lint frontend-test-unit frontend-generate-client api-client-drift-check frontend-audit frontend-check python-lock-check release-evidence-hygiene-check docs-check docs-serve actionlint-check workflow-check docker-demo-smoke docker-production-smoke dependency-audit clean-local clean-deps provider-snapshot-validate provider-testmatrix demo-offline-no-key-proof demo-sync-check demo-sync-check-temp package package-contents-check package-check package-check-temp pipx-source-smoke release-check release-readiness-check demo-report demo-compare demo-explain demo-attack-report demo-attack-compare demo-attack-explain demo-attack-coverage demo-attack-navigator demo-pr-comment demo-results-sarif demo-html-report demo-evidence-analysis demo-evidence-bundle demo-evidence-bundle-check precommit-install
 
 install:
 	$(PYTHON) -m pip install -e "$(BACKEND_DIR)[dev]"
@@ -78,6 +79,9 @@ frontend-audit:
 frontend-check: frontend-install frontend-lint frontend-build frontend-test-unit frontend-generate-client
 
 release-evidence-hygiene-check:
+	$(PYTHON) scripts/check_release_evidence_hygiene.py
+
+python-lock-check:
 	$(PYTHON) scripts/check_release_evidence_hygiene.py
 
 docs-check: release-evidence-hygiene-check
@@ -168,13 +172,12 @@ docker-production-smoke:
 	$(PYTHON) scripts/production_readiness_smoke.py; \
 	echo "Workbench production-like Docker smoke passed."
 
-dependency-audit:
+dependency-audit: python-lock-check
 	@$(PYTHON) -c "import pip_audit" >/dev/null 2>&1 || { \
 		echo "Install pip-audit first: python3 -m pip install pip-audit" >&2; \
 		exit 1; \
 	}
-	$(MAKE) release-evidence-hygiene-check
-	$(PYTHON) -m pip_audit --requirement $(BACKEND_DIR)/requirements.txt
+	$(PYTHON) -m pip_audit --requirement $(PYTHON_AUDIT_LOCK)
 	$(MAKE) frontend-audit
 
 clean-local:

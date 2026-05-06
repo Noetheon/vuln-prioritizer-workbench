@@ -22,23 +22,23 @@ from app.models import (
 from app.repositories import RunRepository
 from app.services import AnalysisService, TemplateAnalysisError
 from app.services.import_artifacts import (
-    resolve_template_attack_artifact_path as _resolve_template_attack_artifact_path,
+    resolve_workbench_attack_artifact_path as _resolve_workbench_attack_artifact_path,
 )
 from app.services.import_artifacts import (
-    resolve_template_provider_snapshot_path as _resolve_template_provider_snapshot_path,
+    resolve_workbench_provider_snapshot_path as _resolve_workbench_provider_snapshot_path,
 )
 from app.services.import_artifacts import (
     validate_attack_import_options as _validate_attack_import_options,
 )
 from app.services.import_execution_context import (
-    _apply_template_asset_context,
-    _apply_template_vex,
+    _apply_workbench_asset_context,
+    _apply_workbench_vex,
     _parse_errors,
 )
 from app.services.import_execution_failures import (
     raise_analysis_failure as _raise_analysis_failure,
 )
-from app.services.import_execution_persistence import _persist_template_occurrences
+from app.services.import_execution_persistence import _persist_workbench_occurrences
 from app.services.import_execution_summary import (
     _job_payload,
     _job_status_entry,
@@ -78,9 +78,6 @@ from app.services.import_uploads import (
     store_upload as _store_upload,
 )
 from app.services.import_uploads import (
-    template_settings as _template_settings,
-)
-from app.services.import_uploads import (
     upload_storage_ref as _upload_storage_ref,
 )
 from app.services.import_uploads import (
@@ -106,6 +103,9 @@ from app.services.import_uploads import (
 )
 from app.services.import_uploads import (
     validate_vex_upload as _validate_vex_upload,
+)
+from app.services.import_uploads import (
+    workbench_settings as _workbench_settings,
 )
 
 
@@ -156,15 +156,15 @@ async def execute_project_import_upload(
             reserved_filenames={stored_filename, asset_context_stored_filename},
         )
         _validate_vex_upload(vex_stored_filename, vex_upload)
-    provider_snapshot_path = _resolve_template_provider_snapshot_path(
+    provider_snapshot_path = _resolve_workbench_provider_snapshot_path(
         provider_snapshot_file,
         request=request,
     )
-    attack_mapping_path = _resolve_template_attack_artifact_path(
+    attack_mapping_path = _resolve_workbench_attack_artifact_path(
         attack_mapping_file,
         request=request,
     )
-    attack_metadata_path = _resolve_template_attack_artifact_path(
+    attack_metadata_path = _resolve_workbench_attack_artifact_path(
         attack_technique_metadata_file,
         request=request,
     )
@@ -174,7 +174,7 @@ async def execute_project_import_upload(
         attack_metadata_path=attack_metadata_path,
     )
 
-    active_settings = _template_settings(request)
+    active_settings = _workbench_settings(request)
     upload_bytes = await _read_bounded_upload(file, settings=active_settings)
     remaining_upload_bytes = active_settings.max_upload_bytes - len(upload_bytes)
     asset_context_bytes = (
@@ -396,7 +396,7 @@ async def execute_project_import_upload(
     asset_context_summary: dict[str, Any] | None = None
     if asset_context_path is not None:
         try:
-            occurrences, asset_context_summary = _apply_template_asset_context(
+            occurrences, asset_context_summary = _apply_workbench_asset_context(
                 occurrences,
                 asset_context_path=asset_context_path,
             )
@@ -460,7 +460,7 @@ async def execute_project_import_upload(
     vex_summary: dict[str, Any] | None = None
     if vex_path is not None:
         try:
-            occurrences, vex_summary = _apply_template_vex(
+            occurrences, vex_summary = _apply_workbench_vex(
                 occurrences,
                 vex_path=vex_path,
             )
@@ -522,7 +522,7 @@ async def execute_project_import_upload(
             ) from exc
 
     try:
-        analysis_result = AnalysisService(session, _template_settings(request)).analyze_import(
+        analysis_result = AnalysisService(session, _workbench_settings(request)).analyze_import(
             input_path=upload_path,
             input_type=normalized_input_type,
             asset_context_file=asset_context_path,
@@ -547,7 +547,7 @@ async def execute_project_import_upload(
             exc=exc,
         )
 
-    persist_summary = _persist_template_occurrences(
+    persist_summary = _persist_workbench_occurrences(
         session=session,
         project_id=project_id,
         run_id=run.id,

@@ -1146,6 +1146,19 @@ def test_vpw048_report_auth_project_visibility_and_invalid_run_state(
         )
         assert response.status_code == 422
         assert "completed" in response.json()["detail"]
+    with Session(restricted_template_api_env.engine) as session:
+        failure_events = session.exec(
+            select(restricted_template_api_env.app_models.AuditEvent).where(
+                restricted_template_api_env.app_models.AuditEvent.action == "report.create",
+                restricted_template_api_env.app_models.AuditEvent.status == "failure",
+            )
+        ).all()
+    assert {event.resource_id for event in failure_events} == {
+        str(pending_run_id),
+        str(failed_run_id),
+    }
+    assert {event.resource_type for event in failure_events} == {"analysis_run"}
+    assert all(event.detail_json["format"] == "markdown" for event in failure_events)
 
 
 def test_vpw048_download_rejects_path_escape_and_checksum_mismatch(
@@ -1409,8 +1422,8 @@ def _technique_metadata(technique: dict[str, Any], key: str) -> str | None:
 
 def _configure_report_dir(template_api_env: TemplateApiEnv, tmp_path: Path) -> Path:
     report_dir = (tmp_path / "template-reports").resolve(strict=False)
-    active_settings = template_api_env.client.app.state.template_settings
-    template_api_env.client.app.state.template_settings = replace(
+    active_settings = template_api_env.client.app.state.workbench_settings
+    template_api_env.client.app.state.workbench_settings = replace(
         active_settings,
         REPORT_DIR=str(report_dir),
     )
@@ -1734,7 +1747,7 @@ def _vpw051_snapshot_payload() -> MarkdownReportPayload:
 def _vpw068_governance_payload() -> MarkdownReportPayload:
     payload = _vpw050_snapshot_payload()
     waiver = {
-        "source": "template-api",
+        "source": "workbench-api",
         "waiver_id": "00000000-0000-4000-8000-000000000681",
         "waiver_status": "review_due",
         "waiver_owner": "risk-team",

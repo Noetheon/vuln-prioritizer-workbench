@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib
+from pathlib import Path
 
 import pytest
 from fastapi.routing import APIRoute
@@ -14,6 +15,7 @@ from app.api.routes.workbench import _database_readiness
 from app.core import security
 from app.core.config import (
     Settings,
+    build_database_uri,
     load_settings,
     parse_allowed_hosts,
     parse_cors_origins,
@@ -39,8 +41,8 @@ def test_template_backend_status_uses_versioned_api_namespace(tmp_path) -> None:
     selected_app = create_app(
         Settings(SQLALCHEMY_DATABASE_URI=f"sqlite:///{tmp_path / 'status-template.db'}")
     )
-    SQLModel.metadata.create_all(selected_app.state.template_engine)
-    _stamp_alembic_head(selected_app.state.template_engine)
+    SQLModel.metadata.create_all(selected_app.state.workbench_engine)
+    _stamp_alembic_head(selected_app.state.workbench_engine)
     client = TestClient(selected_app)
 
     response = client.get("/api/v1/workbench/status", headers=_auth_headers(client))
@@ -71,10 +73,10 @@ def test_template_backend_openapi_uses_template_operation_ids() -> None:
     payload = response.json()
     assert payload["info"]["title"] == "Vuln Prioritizer Workbench"
     assert payload["paths"]["/api/v1/workbench/health"]["get"]["operationId"] == (
-        "workbench-template_workbench_health"
+        "workbench-workbench_health"
     )
     assert payload["paths"]["/api/v1/workbench/status"]["get"]["operationId"] == (
-        "workbench-template_workbench_status"
+        "workbench-workbench_status"
     )
     assert payload["paths"]["/api/v1/login/access-token"]["post"]["operationId"] == (
         "login-login_access_token"
@@ -175,6 +177,7 @@ def test_template_backend_can_be_configured_without_legacy_workbench_side_effect
     selected_app = create_app(selected_settings)
     client = TestClient(selected_app)
 
+    assert selected_app.state.workbench_settings == selected_settings
     assert selected_app.state.template_settings == selected_settings
     assert client.get("/api/health").status_code == 404
     assert client.get("/api/v1/workbench/health").json()["status"] == "ok"
@@ -193,8 +196,8 @@ def test_template_backend_create_app_uses_isolated_settings_db_auth_and_csrf(
         SQLALCHEMY_DATABASE_URI=f"sqlite:///{tmp_path / 'selected-template.db'}",
     )
     selected_app = create_app(selected_settings)
-    SQLModel.metadata.create_all(selected_app.state.template_engine)
-    _stamp_alembic_head(selected_app.state.template_engine)
+    SQLModel.metadata.create_all(selected_app.state.workbench_engine)
+    _stamp_alembic_head(selected_app.state.workbench_engine)
     client = TestClient(selected_app)
 
     global_credentials = client.post(
@@ -255,7 +258,11 @@ def test_template_backend_readiness_fails_closed_for_partial_schema() -> None:
         engine.dispose()
 
 
-def test_template_backend_settings_load_product_env_defaults(monkeypatch) -> None:
+def test_template_backend_settings_load_product_env_defaults(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.chdir(tmp_path)
     monkeypatch.setenv("PROJECT_NAME", "VPW Env Shell")
     monkeypatch.setenv("ENVIRONMENT", "staging")
     monkeypatch.setenv("API_V1_STR", "/api/custom")
@@ -276,6 +283,61 @@ def test_template_backend_settings_load_product_env_defaults(monkeypatch) -> Non
         FRONTEND_HOST="https://workbench.example.com",
         BACKEND_CORS_ORIGINS=(),
     )
+
+
+def test_workbench_settings_use_workbench_storage_defaults(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    for name in (
+        "SQLALCHEMY_DATABASE_URI",
+        "DATABASE_URL",
+        "POSTGRES_SERVER",
+        "IMPORT_UPLOAD_DIR",
+        "REPORT_DIR",
+        "PROVIDER_CACHE_DIR",
+    ):
+        monkeypatch.delenv(name, raising=False)
+
+    selected_settings = load_settings()
+
+    assert build_database_uri() == "sqlite:///./workbench.db"
+    assert selected_settings.SQLALCHEMY_DATABASE_URI == "sqlite:///./workbench.db"
+    assert selected_settings.IMPORT_UPLOAD_DIR == "data/workbench-import-uploads"
+    assert selected_settings.REPORT_DIR == "data/workbench-reports"
+    assert selected_settings.PROVIDER_CACHE_DIR == "data/workbench-provider-cache"
+
+
+def test_workbench_settings_keep_legacy_storage_when_existing_local_data_is_present(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    for name in (
+        "SQLALCHEMY_DATABASE_URI",
+        "DATABASE_URL",
+        "POSTGRES_SERVER",
+        "IMPORT_UPLOAD_DIR",
+        "REPORT_DIR",
+        "PROVIDER_CACHE_DIR",
+    ):
+        monkeypatch.delenv(name, raising=False)
+    (tmp_path / "template.db").write_text("", encoding="utf-8")
+    for legacy_dir in (
+        tmp_path / "data" / "template-import-uploads",
+        tmp_path / "data" / "template-reports",
+        tmp_path / "data" / "template-provider-cache",
+    ):
+        legacy_dir.mkdir(parents=True)
+        (legacy_dir / ".keep").write_text("legacy data\n", encoding="utf-8")
+
+    selected_settings = load_settings()
+
+    assert selected_settings.SQLALCHEMY_DATABASE_URI == "sqlite:///./template.db"
+    assert selected_settings.IMPORT_UPLOAD_DIR == "data/template-import-uploads"
+    assert selected_settings.REPORT_DIR == "data/template-reports"
+    assert selected_settings.PROVIDER_CACHE_DIR == "data/template-provider-cache"
 
 
 @pytest.mark.parametrize("environment", ["staging", "production"])

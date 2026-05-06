@@ -10,10 +10,10 @@ The active backend exposes:
 
 ```http
 GET /api/v1/providers/status
-Authorization: Bearer <template JWT>
+Authorization: Bearer <Workbench JWT>
 ```
 
-The route is authenticated through the template API dependency used by the
+The route is authenticated through the Workbench API dependency used by the
 other `/api/v1` Workbench routes. Anonymous requests must not receive provider
 runtime paths, cache evidence, or update-job details.
 

@@ -1,4 +1,4 @@
-"""Persisted waiver and risk acceptance models for the template Workbench."""
+"""Persisted waiver and risk acceptance models for the Workbench."""
 
 import uuid
 from datetime import date, datetime

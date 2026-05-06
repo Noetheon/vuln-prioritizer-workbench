@@ -1,17 +1,15 @@
-"""Report rendering and export helpers for the template Workbench."""
+"""Report rendering and export helpers for the Workbench."""
 
 from __future__ import annotations
 
 import csv
 import hashlib
-import html
 import json
 import re
 import zipfile
 from collections import Counter
 from collections.abc import Sequence
 from dataclasses import replace
-from datetime import datetime
 from io import BytesIO, StringIO
 from pathlib import Path
 from typing import Any
@@ -24,7 +22,6 @@ from app.services.report_contracts import (
     DETERMINISTIC_ZIP_FILE_MODE,
     DETERMINISTIC_ZIP_TIMESTAMP,
     EVIDENCE_BUNDLE_MANIFEST_SCHEMA_VERSION,
-    MARKDOWN_SPECIAL_CHARS,
     PRIORITY_LABELS,
     REPORT_FILENAME_ATTACK_NAVIGATOR,
     REPORT_FILENAME_GOVERNANCE_ASSET_CONTEXT,
@@ -39,6 +36,30 @@ from app.services.report_contracts import (
     REPORT_KIND_GOVERNANCE_ROLLUPS,
     REPORT_KIND_GOVERNANCE_VEX,
     REPORT_KIND_GOVERNANCE_WAIVERS,
+)
+from app.services.report_formatting import (
+    csv_safe_cell as _csv_safe_cell,
+)
+from app.services.report_formatting import (
+    dict_value as _dict_value,
+)
+from app.services.report_formatting import (
+    format_number as _format_number,
+)
+from app.services.report_formatting import (
+    iso_datetime as _iso_datetime,
+)
+from app.services.report_formatting import (
+    metadata_bool as _metadata_bool,
+)
+from app.services.report_formatting import (
+    metadata_list as _metadata_list,
+)
+from app.services.report_formatting import (
+    safe_cell as _safe_cell,
+)
+from app.services.report_formatting import (
+    safe_html as _safe_html,
 )
 from app.services.report_models import (
     MarkdownProviderSnapshot,
@@ -1987,40 +2008,6 @@ def _priority_label(value: str) -> str:
     }.get(normalized, "Low")
 
 
-def _safe_cell(value: object | None) -> str:
-    return _safe_inline(value).replace("|", "\\|")
-
-
-def _safe_inline(value: object | None) -> str:
-    if value is None:
-        return "N/A"
-    text = str(value).strip()
-    if not text:
-        return "N/A"
-    text = re.sub(r"\s+", " ", text)
-    escaped = html.escape(text, quote=True)
-    return "".join(
-        f"\\{character}" if character in MARKDOWN_SPECIAL_CHARS else character
-        for character in escaped
-    )
-
-
-def _safe_html(value: object | None) -> str:
-    if value is None:
-        return "N/A"
-    text = str(value).strip()
-    if not text:
-        return "N/A"
-    return html.escape(re.sub(r"\s+", " ", text), quote=True)
-
-
-def _csv_safe_cell(value: object | None) -> str:
-    text = "" if value is None else str(value)
-    if text.startswith(("\t", "\r", "\n")) or text.lstrip().startswith(("=", "+", "-", "@")):
-        return "'" + text
-    return text
-
-
 def _decision_guidance_from_payload(finding: MarkdownReportFinding) -> dict[str, Any]:
     value = finding.explanation.get("decision_guidance")
     return dict(value) if isinstance(value, dict) else {}
@@ -2084,34 +2071,3 @@ def _vex_status_counts_from_explanation(explanation: dict[str, Any]) -> Counter[
             status_counts[status.strip()] += 1
             return status_counts
     return status_counts
-
-
-def _format_number(value: float | None) -> str:
-    if value is None:
-        return "N/A"
-    number = float(value)
-    if number.is_integer():
-        return str(int(number))
-    return f"{number:.3f}".rstrip("0").rstrip(".")
-
-
-def _iso_datetime(value: datetime) -> str:
-    return value.isoformat().replace("+00:00", "Z")
-
-
-def _metadata_bool(metadata: dict[str, Any], key: str) -> str:
-    if key not in metadata:
-        return "N/A"
-    return "Yes" if bool(metadata[key]) else "No"
-
-
-def _metadata_list(metadata: dict[str, Any], key: str) -> str:
-    value = metadata.get(key)
-    if isinstance(value, list):
-        items = [str(item) for item in value if item]
-        return ", ".join(items) if items else "N/A"
-    return str(value) if value else "N/A"
-
-
-def _dict_value(value: Any) -> dict[str, Any]:
-    return dict(value) if isinstance(value, dict) else {}

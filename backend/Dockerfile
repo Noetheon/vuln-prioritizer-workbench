@@ -19,9 +19,9 @@ RUN python -m pip install --upgrade pip \
         /app/uploads \
         /app/reports \
         /app/provider-snapshots \
-        /app/template-import-uploads \
-        /app/template-reports \
-        /app/template-provider-cache \
+        /app/workbench-import-uploads \
+        /app/workbench-reports \
+        /app/workbench-provider-cache \
         /app/.cache/vuln-prioritizer \
     && chown -R workbench:workbench /app
 
@@ -29,10 +29,10 @@ USER workbench
 WORKDIR /app/backend
 
 ENV SQLALCHEMY_DATABASE_URI=sqlite:////app/data/workbench.db \
-    IMPORT_UPLOAD_DIR=/app/template-import-uploads \
-    REPORT_DIR=/app/template-reports \
+    IMPORT_UPLOAD_DIR=/app/workbench-import-uploads \
+    REPORT_DIR=/app/workbench-reports \
     PROVIDER_SNAPSHOT_DIR=/app/provider-snapshots \
-    PROVIDER_CACHE_DIR=/app/template-provider-cache \
+    PROVIDER_CACHE_DIR=/app/workbench-provider-cache \
     ATTACK_ARTIFACT_DIR=/app/examples/attack \
     DEMO_PROVIDER_SNAPSHOT_ENABLED=false \
     RATE_LIMIT_ENABLED=true \

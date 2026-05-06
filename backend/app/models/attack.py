@@ -1,4 +1,4 @@
-"""ATT&CK Lite domain models for the template backend."""
+"""ATT&CK Lite domain models for the Workbench backend."""
 
 from __future__ import annotations
 

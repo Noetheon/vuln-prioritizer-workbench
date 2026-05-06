@@ -20,7 +20,6 @@ import {
   type ImportWizardState,
   mvpImportFormats,
 } from "../../lib/app-defaults"
-import { WorkbenchShell } from "../WorkbenchShell"
 import { useWorkbenchContext } from "../WorkbenchContext"
 import {
   useProjectRunsQuery,
@@ -238,9 +237,5 @@ function ImportsRouteContainer() {
 }
 
 export function ImportsRoute() {
-  return (
-    <WorkbenchShell routePath="/imports">
-      <ImportsRouteContainer />
-    </WorkbenchShell>
-  )
+  return <ImportsRouteContainer />
 }
