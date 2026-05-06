@@ -3,6 +3,7 @@ import { readFileSync, readdirSync } from "node:fs"
 import test from "node:test"
 
 const routesDir = new URL("../src/routes/_layout/", import.meta.url)
+const authenticatedLayoutFile = new URL("../src/routes/_layout.tsx", import.meta.url)
 const workbenchRoutesDir = new URL("../src/workbench/routes/", import.meta.url)
 const appShellFile = new URL("../src/components/app/AppShell.tsx", import.meta.url)
 const routeDetailsFile = new URL(
@@ -84,4 +85,20 @@ test("WorkbenchPath, navigation, route details, and route adapters stay in sync"
   assert.deepEqual(navigationPaths, workbenchPaths)
   assert.deepEqual(routeDetailPaths, workbenchPaths)
   assert.deepEqual(adapterPaths, workbenchPaths)
+})
+
+test("Workbench shell is mounted once at the authenticated layout boundary", () => {
+  const layoutSource = text(authenticatedLayoutFile)
+  assert.match(layoutSource, /<WorkbenchShell>\s*<Outlet \/>/s)
+
+  for (const file of readdirSync(workbenchRoutesDir).filter((item) =>
+    item.endsWith(".tsx"),
+  )) {
+    const source = text(new URL(file, workbenchRoutesDir))
+    assert.doesNotMatch(
+      source,
+      /WorkbenchShell/,
+      `${file} should rely on the authenticated layout shell`,
+    )
+  }
 })

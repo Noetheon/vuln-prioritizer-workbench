@@ -1,4 +1,4 @@
-"""add project scope to template api tokens
+"""add project scope to Workbench API tokens
 
 Revision ID: 20260505_0010
 Revises: 20260430_0009

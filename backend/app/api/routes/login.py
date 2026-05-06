@@ -1,4 +1,4 @@
-"""Minimal template login routes for the active backend runtime."""
+"""Login routes for the active Workbench runtime."""
 
 from __future__ import annotations
 
@@ -11,9 +11,10 @@ from fastapi.security import OAuth2PasswordRequestForm
 
 from app.api.deps import CurrentUser, SessionDep
 from app.core import security
-from app.core.config import Settings, settings
+from app.core.app_state import workbench_settings
+from app.core.config import Settings
 from app.core.db import ensure_configured_superuser
-from app.core.rate_limit import InMemoryRateLimiter
+from app.core.rate_limit import InMemoryRateLimiter, rate_limit_client_host
 from app.models import Token, User, UserPublic
 from app.repositories import AuthSessionRepository
 from app.services.audit import record_audit_event
@@ -28,7 +29,7 @@ def login_access_token(
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
     session: SessionDep,
 ) -> Token:
-    """OAuth2 compatible token login for the configured template-shell user."""
+    """OAuth2 compatible token login for the configured Workbench user."""
     _enforce_login_rate_limit(request, form_data.username)
     active_settings = _request_settings(request)
     user = ensure_configured_superuser(session, active_settings=active_settings)
@@ -103,7 +104,7 @@ def _enforce_login_rate_limit(request: Request, username: str) -> None:
         return
     if not isinstance(limiter, InMemoryRateLimiter):
         return
-    client_host = request.client.host if request.client else "unknown"
+    client_host = rate_limit_client_host(request, active_settings)
     normalized_username = username.strip().lower() or "unknown"
     decision = limiter.check(
         f"login-user:{client_host}:{normalized_username}",
@@ -195,7 +196,4 @@ def _session_cookie_secure(request: Request) -> bool:
 
 
 def _request_settings(request: Request) -> Settings:
-    active_settings = getattr(request.app.state, "template_settings", settings)
-    if isinstance(active_settings, Settings):
-        return active_settings
-    return settings
+    return workbench_settings(request, required=False)

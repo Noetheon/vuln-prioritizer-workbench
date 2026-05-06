@@ -1,4 +1,4 @@
-"""Decision API helpers for persisted template Workbench findings."""
+"""Decision API helpers for persisted Workbench findings."""
 
 from __future__ import annotations
 
@@ -101,17 +101,17 @@ def build_cvss_only_comparison_payload(
     findings: Sequence[Finding],
     top_change_limit: int,
 ) -> ProjectCvssOnlyComparisonPublic:
-    """Build a typed CVSS-only comparison response for template API clients."""
+    """Build a typed CVSS-only comparison response for Workbench API clients."""
     payload = build_cvss_baseline_comparison_payload(
-        [prioritized_finding_from_template(finding) for finding in findings],
+        [prioritized_finding_from_workbench(finding) for finding in findings],
         project_id=str(project_id),
         top_change_limit=top_change_limit,
     )
     return ProjectCvssOnlyComparisonPublic.model_validate(payload)
 
 
-def prioritized_finding_from_template(finding: Finding) -> PrioritizedFinding:
-    """Convert a stored template finding back to the core decision model."""
+def prioritized_finding_from_workbench(finding: Finding) -> PrioritizedFinding:
+    """Convert a stored Workbench finding back to the core decision model."""
     explanation_json = _dict_value(finding.explanation_json)
     if explanation_json.get("cve_id") == finding.cve_id:
         try:
@@ -134,7 +134,7 @@ def prioritized_finding_from_template(finding: Finding) -> PrioritizedFinding:
         priority_state=_priority_label(str(finding.priority)),
         operational_rank=finding.operational_rank,
         operational_score=int(finding.risk_score or 0),
-        rationale=finding.rationale or "Stored template finding without raw rationale payload.",
+        rationale=finding.rationale or "Stored Workbench finding without raw rationale payload.",
         recommended_action=finding.recommended_action or "Review the finding with the asset owner.",
     )
 

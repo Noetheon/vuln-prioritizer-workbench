@@ -30,15 +30,13 @@ They also must not reintroduce removed legacy Workbench runtime packages under
 ## Coverage Boundary
 
 The current backend pytest coverage gate in `backend/pyproject.toml` measures
-`vuln_prioritizer` and keeps the CLI/core package at the release threshold. The
-Workbench app under `backend/app` is intentionally shipped in the same
-distribution and is tested by the API suites, but it is not yet included in the
-same coverage measurement.
+both `vuln_prioritizer` and the active FastAPI Workbench package under
+`backend/app`. This keeps the CLI/core package and shipped API runtime inside the
+same enforced release threshold.
 
-Recommended follow-up, owned by the coverage-config maintainer: either add
-`--cov=app` to the enforced backend coverage command with an agreed threshold,
-or document and enforce a separate Workbench app coverage gate. Do not treat
-package inclusion of `app*` as coverage proof by itself.
+Recommended follow-up, owned by the coverage-config maintainer: keep the
+coverage command aligned with the package boundary when modules move. Do not
+treat package inclusion of `app*` as coverage proof by itself.
 
 ## Python Dependencies
 
@@ -46,22 +44,34 @@ Python dependency metadata is owned by `backend/pyproject.toml`. Direct runtime
 requirements use bounded ranges so the package can receive compatible security
 updates without a source release for every transitive patch.
 
-`backend/requirements.txt` is the authoritative Python audit input for the
-repository release gate. It is intentionally a bounded audit input, not a
-production environment freeze: every direct runtime dependency and every
-`[project.optional-dependencies].dev` maintainer dependency from
-`backend/pyproject.toml` must appear there with the same bounded policy shape.
-Package metadata remains bounded so compatible security updates can still land
-without a source release for every transitive patch.
+`backend/requirements.txt` is the authoritative bounded Python audit policy
+input. It is intentionally not a production environment freeze: every direct
+runtime dependency and every `[project.optional-dependencies].dev` maintainer
+dependency from `backend/pyproject.toml` must appear there with the same bounded
+policy shape. Package metadata remains bounded so compatible security updates
+can still land without a source release for every transitive patch.
+
+The reproducible Python resolution artifact is the root `uv.lock`. The release
+dependency-audit input is `backend/requirements.lock.txt`, exported from
+`uv.lock` with exact pins and hashes. Keep both committed together when Python
+dependency metadata changes.
 
 Regenerate or refresh the audit input by reconciling the union of
 `project.dependencies` and `project.optional-dependencies.dev` from
 `backend/pyproject.toml` into `backend/requirements.txt`, preserving bounded
-ranges rather than hard pins unless a future issue explicitly chooses a frozen
-lockfile. The drift check is enforced by:
+ranges rather than hard pins. Then refresh the lock artifacts:
 
 ```bash
-python3 scripts/check_release_evidence_hygiene.py
+uv lock --python 3.11
+uv export --format requirements.txt --all-packages --all-extras \
+  --no-emit-project --no-emit-workspace --locked \
+  --python 3.11 --output-file backend/requirements.lock.txt --no-progress
+```
+
+The drift and lock checks are enforced by:
+
+```bash
+make python-lock-check
 ```
 
 Current audit command:
@@ -70,12 +80,10 @@ Current audit command:
 make dependency-audit
 ```
 
-`make dependency-audit` first runs the drift check above, then audits
-`backend/requirements.txt` with `pip-audit`, and finally audits
-`frontend/package-lock.json` through npm. The repository does not currently
-publish a separate fully pinned Python production lockfile. Release evidence
-must state this explicitly if a release owner requires byte-for-byte environment
-reproduction beyond the package artifacts and checked-in dependency bounds.
+`make dependency-audit` first runs the drift and lock checks above, then audits
+`backend/requirements.lock.txt` with `pip-audit`, and finally audits
+`frontend/package-lock.json` through npm. Release evidence must refresh and
+record these exact lock artifacts for the candidate being handed off.
 
 ## Frontend Dependencies
 
@@ -92,6 +100,20 @@ The root `bun.lock` is intentional because the root workspace keeps
 Bun-compatible convenience scripts in `package.json`. It is not the audited
 frontend install source. Do not use Bun lock updates as release evidence unless
 a future issue changes the frontend package-manager policy.
+
+## Container Images
+
+The checked-in Dockerfiles use named upstream image tags so maintainers can
+receive compatible base-image security updates during local-first development.
+That is not byte-for-byte production pinning. Release owners who need pinned
+container provenance must record the resolved image digests for the backend,
+frontend, and compose stack used by the release candidate.
+
+The Docker workflow currently smoke-tests the built Workbench stack. It is not a
+container vulnerability scan, signature, or SBOM attestation gate. Public
+production release evidence must either add an image scan/signing job for the
+candidate images or explicitly record the external scanning/signing evidence
+that was run for those exact digests.
 
 ## Dependabot Labels
 

@@ -1,4 +1,4 @@
-"""Public model aggregator for the template-aligned backend app.
+"""Public model aggregator for the Workbench backend app.
 
 Keep imports from this package stable. API routes and tests should continue to
 use ``from app.models import User, ProjectPublic`` while table definitions live

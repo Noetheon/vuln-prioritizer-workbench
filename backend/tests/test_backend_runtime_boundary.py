@@ -180,6 +180,7 @@ def test_default_compose_services_start_only_active_backend_runtime() -> None:
     assert backend_environment["LOGIN_RATE_LIMIT_PER_MINUTE"] == (
         "${LOGIN_RATE_LIMIT_PER_MINUTE:-60}"
     )
+    assert backend_environment["TRUSTED_PROXY_CIDRS"] == "${TRUSTED_PROXY_CIDRS:-}"
     assert backend_environment["SECRET_KEY"] == "${SECRET_KEY:-changethis}"
     assert backend_environment["FIRST_SUPERUSER_PASSWORD"] == (
         "${FIRST_SUPERUSER_PASSWORD:-changethis}"
@@ -232,6 +233,7 @@ def test_env_example_does_not_pin_api_docs_on_for_shared_deployments() -> None:
     assert "API_DOCS_ENABLED=true" not in env_example
     assert "\nAPI_DOCS_ENABLED=\n" in env_example
     assert "\nRATE_LIMIT_ENABLED=true\n" in env_example
+    assert "\nTRUSTED_PROXY_CIDRS=\n" in env_example
     assert "\nTRAEFIK_APP_ENABLED=false\n" in env_example
     assert "\nMAX_UPLOAD_MB=25\n" in env_example
 
@@ -260,7 +262,7 @@ def test_backup_restore_scripts_support_database_url_and_compose_artifacts() -> 
     assert "docker compose ps -q backend" in backup
     assert "docker compose ps -q backend" in restore
     assert (
-        "template-import-uploads template-reports provider-snapshots template-provider-cache"
+        "workbench-import-uploads workbench-reports provider-snapshots workbench-provider-cache"
         in backup
     )
 
@@ -340,6 +342,30 @@ def test_active_status_contract_has_no_migration_or_legacy_fields() -> None:
     assert "legacy_api_prefix" not in combined
     assert "legacy_workbench_mounted" not in combined
     assert "LEGACY_API_PREFIX" not in combined
+
+
+def test_active_runtime_state_uses_workbench_names() -> None:
+    app_state_source = _read_repo_text("backend/app/core/app_state.py")
+    active_sources = {
+        "backend/app/main.py": _read_repo_text("backend/app/main.py"),
+        "backend/app/api/deps.py": _read_repo_text("backend/app/api/deps.py"),
+        "backend/app/api/routes/login.py": _read_repo_text("backend/app/api/routes/login.py"),
+        "backend/app/api/routes/providers.py": _read_repo_text(
+            "backend/app/api/routes/providers.py"
+        ),
+        "backend/app/api/routes/reports.py": _read_repo_text("backend/app/api/routes/reports.py"),
+        "backend/app/services/import_execution.py": _read_repo_text(
+            "backend/app/services/import_execution.py"
+        ),
+    }
+
+    assert "WORKBENCH_SETTINGS_STATE_KEY" in app_state_source
+    assert "LEGACY_SETTINGS_STATE_KEY" in app_state_source
+    assert all('"template_settings"' not in source for source in active_sources.values())
+    assert all("template-provider-update" not in source for source in active_sources.values())
+    assert all(
+        "template-workbench-current-findings" not in source for source in active_sources.values()
+    )
 
 
 def test_runtime_boundary_docs_do_not_advertise_removed_legacy_runtime() -> None:

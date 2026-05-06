@@ -1,4 +1,4 @@
-"""Stable report artifact contract constants for the template Workbench."""
+"""Stable report artifact contract constants for the Workbench."""
 
 from __future__ import annotations
 

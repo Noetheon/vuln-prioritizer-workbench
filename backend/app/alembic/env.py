@@ -1,4 +1,4 @@
-"""Alembic environment for the template-aligned backend app."""
+"""Alembic environment for the Workbench backend app."""
 
 from __future__ import annotations
 
@@ -21,7 +21,7 @@ target_metadata = SQLModel.metadata
 
 
 def get_url() -> str:
-    """Return an Alembic URL override or the active template settings URL."""
+    """Return an Alembic URL override or the active Workbench settings URL."""
     configured_url = config.get_main_option("sqlalchemy.url")
     if configured_url:
         return configured_url

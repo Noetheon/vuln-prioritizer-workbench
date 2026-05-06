@@ -16,7 +16,11 @@ from app.core.rate_limit import InMemoryRateLimiter
 from app.main import app, create_app
 
 
-def _client(active_app: Any = app) -> TestClient:
+def _client(
+    active_app: Any = app,
+    *,
+    client_addr: tuple[str, int] = ("testclient", 50000),
+) -> TestClient:
     from app.api.deps import get_db
 
     active_app.dependency_overrides.clear()
@@ -39,7 +43,7 @@ def _client(active_app: Any = app) -> TestClient:
             yield session
 
     active_app.dependency_overrides[get_db] = override_get_db
-    return TestClient(active_app)
+    return TestClient(active_app, client=client_addr)
 
 
 def _login_response(client: TestClient, *, password: str | None = None) -> Any:
@@ -350,6 +354,43 @@ def test_template_login_rate_limit_blocks_repeated_attempts() -> None:
 
     assert [attempt.status_code for attempt in attempts] == [400, 400, 429]
     assert attempts[-1].headers["retry-after"]
+
+
+def test_template_rate_limit_uses_forwarded_client_only_from_trusted_proxy() -> None:
+    selected_settings = Settings(
+        LOGIN_RATE_LIMIT_PER_MINUTE=1,
+        TRUSTED_PROXY_CIDRS=("10.0.0.0/8",),
+    )
+    trusted_proxy_app = create_app(selected_settings)
+    trusted_proxy_client = _client(trusted_proxy_app, client_addr=("10.1.2.3", 50000))
+
+    trusted_attempts = [
+        trusted_proxy_client.post(
+            "/api/v1/login/access-token",
+            headers={"X-Forwarded-For": forwarded_for},
+            data={"username": settings.FIRST_SUPERUSER, "password": "wrong-password"},
+        )
+        for forwarded_for in (
+            "198.51.100.1",
+            "198.51.100.1",
+            "198.51.100.2",
+        )
+    ]
+
+    assert [attempt.status_code for attempt in trusted_attempts] == [400, 429, 400]
+
+    untrusted_proxy_app = create_app(selected_settings)
+    untrusted_proxy_client = _client(untrusted_proxy_app, client_addr=("192.0.2.10", 50000))
+    untrusted_attempts = [
+        untrusted_proxy_client.post(
+            "/api/v1/login/access-token",
+            headers={"X-Forwarded-For": forwarded_for},
+            data={"username": settings.FIRST_SUPERUSER, "password": "wrong-password"},
+        )
+        for forwarded_for in ("198.51.100.3", "198.51.100.4")
+    ]
+
+    assert [attempt.status_code for attempt in untrusted_attempts] == [400, 429]
 
 
 def test_template_audit_events_capture_login_lifecycle() -> None:

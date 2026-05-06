@@ -16,7 +16,7 @@ def test_retention_cleanup_deletes_old_operational_records(
 ) -> None:
     old_timestamp = get_datetime_utc() - timedelta(days=45)
     active_settings = replace(
-        template_api_env.client.app.state.template_settings,
+        template_api_env.client.app.state.workbench_settings,
         AUDIT_RETENTION_DAYS=30,
         SESSION_RETENTION_DAYS=30,
         REVOKED_API_TOKEN_RETENTION_DAYS=30,

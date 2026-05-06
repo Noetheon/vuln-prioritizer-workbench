@@ -1,4 +1,4 @@
-"""add template waiver risk acceptance models
+"""add Workbench waiver risk acceptance models
 
 Revision ID: 20260430_0006
 Revises: 20260429_0005

@@ -1,1 +1,1 @@
-"""Core configuration for the template-aligned backend shell."""
+"""Core configuration for the Workbench backend shell."""

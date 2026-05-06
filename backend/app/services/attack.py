@@ -1,4 +1,4 @@
-"""ATT&CK dashboard summary helpers for the template Workbench."""
+"""ATT&CK dashboard summary helpers for the Workbench."""
 
 from __future__ import annotations
 

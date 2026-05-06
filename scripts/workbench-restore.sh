@@ -21,7 +21,9 @@ restore_compose_database() {
     < "$BACKUP_DIR/workbench.dump"
 }
 
-if [ -n "${SQLITE_DATABASE_PATH:-}" ] && [ -f "$BACKUP_DIR/template.db" ]; then
+if [ -n "${SQLITE_DATABASE_PATH:-}" ] && [ -f "$BACKUP_DIR/workbench.db" ]; then
+  cp "$BACKUP_DIR/workbench.db" "$SQLITE_DATABASE_PATH"
+elif [ -n "${SQLITE_DATABASE_PATH:-}" ] && [ -f "$BACKUP_DIR/template.db" ]; then
   cp "$BACKUP_DIR/template.db" "$SQLITE_DATABASE_PATH"
 elif [ -n "${DATABASE_URL:-}" ] && [ -f "$BACKUP_DIR/workbench.dump" ]; then
   pg_restore --clean --if-exists --dbname="$DATABASE_URL" "$BACKUP_DIR/workbench.dump"

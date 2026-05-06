@@ -1,4 +1,4 @@
-"""Governance rollups for the template Workbench."""
+"""Governance rollups for the Workbench."""
 
 from __future__ import annotations
 

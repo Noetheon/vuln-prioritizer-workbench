@@ -1,4 +1,4 @@
-"""Authentication DTOs for the template shell."""
+"""Authentication DTOs for the Workbench shell."""
 
 from sqlmodel import SQLModel
 
@@ -12,7 +12,7 @@ class Token(SQLModel):
 
 
 class TokenPayload(SQLModel):
-    """JWT payload accepted by the template shell."""
+    """JWT payload accepted by the Workbench shell."""
 
     sub: str | None = None
     jti: str | None = None

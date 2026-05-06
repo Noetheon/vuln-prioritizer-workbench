@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ast
+import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -174,13 +175,16 @@ def test_template_report_contracts_are_split_from_renderer_facade() -> None:
     source = (ROOT / "app/services/reports.py").read_text(encoding="utf-8")
     contracts_source = (ROOT / "app/services/report_contracts.py").read_text(encoding="utf-8")
     models_source = (ROOT / "app/services/report_models.py").read_text(encoding="utf-8")
+    formatting_source = (ROOT / "app/services/report_formatting.py").read_text(encoding="utf-8")
     renderers_source = (ROOT / "app/services/report_renderers.py").read_text(encoding="utf-8")
+    renderers_imports = _imported_modules("app/services/report_renderers.py")
     sarif_source = (ROOT / "app/services/report_sarif.py").read_text(encoding="utf-8")
 
     assert "app.services.report_contracts" in imports
     assert "app.services.report_models" in imports
     assert "app.services.report_renderers" in imports
     assert "app.services.report_sarif" in imports
+    assert "app.services.report_formatting" in renderers_imports
     assert "CSV_FINDINGS_COLUMNS = [" not in source
     assert "EXECUTIVE_REPORT_CSS = " not in source
     assert "def render_markdown_report" not in source
@@ -189,10 +193,36 @@ def test_template_report_contracts_are_split_from_renderer_facade() -> None:
     assert "CSV_FINDINGS_COLUMNS = [" in contracts_source
     assert "REPORT_FILENAME_EVIDENCE_BUNDLE" in contracts_source
     assert "class MarkdownReportPayload" in models_source
+    assert "def safe_cell" in formatting_source
+    assert "def csv_safe_cell" in formatting_source
     assert "EXECUTIVE_REPORT_CSS = " in renderers_source
     assert "def render_evidence_bundle_zip" in renderers_source
     assert "def render_sarif_report" not in renderers_source
     assert "def render_sarif_report" in sarif_source
+
+
+def test_report_artifact_validation_is_split_from_route_facade() -> None:
+    route_source = (ROOT / "app/api/routes/reports.py").read_text(encoding="utf-8")
+    artifact_source = (ROOT / "app/services/report_artifacts.py").read_text(encoding="utf-8")
+
+    assert "app.services.report_artifacts" in route_source
+    assert "hashlib" not in route_source
+    assert "redact_public_payload" not in route_source
+    assert "def validated_report_path" not in route_source
+    assert "def validated_report_path" in artifact_source
+    assert "class ReportArtifactChecksumError" in artifact_source
+
+
+def test_provider_status_projection_is_split_from_route_facade() -> None:
+    route_source = (ROOT / "app/api/routes/providers.py").read_text(encoding="utf-8")
+    status_source = (ROOT / "app/services/provider_status.py").read_text(encoding="utf-8")
+
+    assert "app.services.provider_status" in route_source
+    assert "redact_public_payload" not in route_source
+    assert "production_safe_settings" not in route_source
+    assert "def _snapshot_status" not in route_source
+    assert "def provider_status_payload" in status_source
+    assert "def provider_update_job_public" in status_source
 
 
 def test_template_import_validation_and_storage_are_split_from_route_facade() -> None:
@@ -213,7 +243,7 @@ def test_template_import_validation_and_storage_are_split_from_route_facade() ->
     assert "app.services.import_artifacts" in execution_source
     assert "ALLOWED_UPLOAD_SUFFIXES = " in upload_source
     assert "def store_upload" in upload_source
-    assert "def resolve_template_provider_snapshot_path" in artifact_source
+    assert "def resolve_workbench_provider_snapshot_path" in artifact_source
     assert "def validate_attack_import_options" in artifact_source
 
 
@@ -231,16 +261,19 @@ def test_frontend_routes_use_workbench_route_containers_instead_of_app_facade() 
         assert "workbench/routes/" in source, path
 
 
-def test_workbench_route_containers_use_explicit_shell_routes() -> None:
+def test_workbench_shell_mounts_once_at_authenticated_layout() -> None:
+    layout_source = (REPO_ROOT / "frontend/src/routes/_layout.tsx").read_text(encoding="utf-8")
     route_files = sorted((REPO_ROOT / "frontend/src/workbench/routes").glob("*Route.tsx"))
 
+    assert "WorkbenchShell" in layout_source
+    assert "<Outlet />" in layout_source
     assert route_files
     for path in route_files:
         source = path.read_text(encoding="utf-8")
 
         assert "WorkbenchRouteApp" not in source, path
-        assert "WorkbenchShell" in source, path
-        assert "routePath=" in source, path
+        assert "WorkbenchShell" not in source, path
+        assert "routePath=" not in source, path
 
     findings_route = (REPO_ROOT / "frontend/src/workbench/routes/FindingsRoute.tsx").read_text(
         encoding="utf-8"
@@ -302,6 +335,23 @@ def test_workbench_reports_route_state_is_split_from_shell() -> None:
     assert "function downloadReportArtifact" in reports_state_source
     assert "function reportDownloadPath" in report_download_source
     assert "download_url" not in report_download_source
+
+
+def test_imports_workbench_model_helpers_are_split_from_component() -> None:
+    component_source = (
+        REPO_ROOT / "frontend/src/components/imports/ImportsWorkbench.tsx"
+    ).read_text(encoding="utf-8")
+    model_source = (
+        REPO_ROOT / "frontend/src/components/imports/imports-workbench-model.ts"
+    ).read_text(encoding="utf-8")
+
+    assert "./imports-workbench-model" in component_source
+    assert "export type ImportsWorkbenchProps" not in component_source
+    assert "function failedRunCause" not in component_source
+    assert "function uploadProgress" not in component_source
+    assert "export type ImportsWorkbenchProps" in model_source
+    assert "export function failedRunCause" in model_source
+    assert "export function uploadProgress" in model_source
 
 
 def test_findings_queue_uses_vpw_product_surfaces() -> None:
@@ -472,9 +522,23 @@ def test_models_facade_reexports_focused_model_modules() -> None:
 def test_dependency_audit_requirements_include_dev_gate_tools() -> None:
     requirements = (ROOT / "requirements.txt").read_text(encoding="utf-8").splitlines()
     package_names = {line.split(">", 1)[0].split("[", 1)[0] for line in requirements if line}
+    audit_lock = (ROOT / "requirements.lock.txt").read_text(encoding="utf-8")
+    uv_lock = (REPO_ROOT / "uv.lock").read_text(encoding="utf-8")
+    pinned_package_names = {
+        match.group(1).replace("_", "-").lower()
+        for match in re.finditer(r"^([A-Za-z0-9_.-]+)==", audit_lock, flags=re.MULTILINE)
+    }
 
     assert {"mkdocs", "pytest-cov"}.issubset(package_names)
     assert "playwright" not in package_names
+    assert all("==" not in line and "--hash" not in line for line in requirements)
+    assert 'name = "vuln-prioritizer"' in uv_lock
+    assert 'name = "vuln-prioritizer-workbench-workspace"' in uv_lock
+    assert 'name = "pip-audit"' in uv_lock
+    assert "autogenerated by uv" in audit_lock
+    assert "--locked" in audit_lock
+    assert "--hash=sha256:" in audit_lock
+    assert {"mkdocs", "pip-audit", "pytest-cov"}.issubset(pinned_package_names)
 
 
 def test_sdist_manifest_excludes_partial_test_tree() -> None:
@@ -517,12 +581,12 @@ def test_import_execution_is_split_into_stage_services_with_guardrails() -> None
     assert "app.services.import_execution_failures" in source
     assert "app.services.import_execution_persistence" in source
     assert "app.services.import_execution_summary" in source
-    assert "def _apply_template_asset_context" in context_source
-    assert "def _apply_template_vex" in context_source
+    assert "def _apply_workbench_asset_context" in context_source
+    assert "def _apply_workbench_vex" in context_source
     assert "def _parse_error_payload" in context_source
     assert "def raise_analysis_failure" in failure_source
-    assert "def _persist_template_occurrences" in persistence_source
-    assert "def _persist_template_occurrences_bulk_insert" in persistence_source
+    assert "def _persist_workbench_occurrences" in persistence_source
+    assert "def _persist_workbench_occurrences_bulk_insert" in persistence_source
     assert "def _job_payload" in summary_source
     assert "def _record_import_audit" in summary_source
     assert len(source.splitlines()) <= 700

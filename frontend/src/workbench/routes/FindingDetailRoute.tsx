@@ -4,7 +4,6 @@ import { useEffect, useState } from "react"
 import { FindingDetailRoute as FindingDetailPanel } from "../../components/finding-detail/FindingDetailRoute"
 import { apiErrorMessage } from "../../lib/app-errors"
 import type { FindingDetailTab } from "../../lib/app-defaults"
-import { WorkbenchShell } from "../WorkbenchShell"
 import { useWorkbenchContext } from "../WorkbenchContext"
 import { useFindingDetailQuery } from "../useWorkbenchQueries"
 import { workbenchQueryKeys } from "../workbench-query-keys"
@@ -56,9 +55,5 @@ function FindingDetailRouteContainer({ findingId }: { findingId: string }) {
 export function FindingDetailRoute() {
   const { findingId } = useParams({ from: "/_layout/findings/$findingId" })
 
-  return (
-    <WorkbenchShell routePath="/findings">
-      <FindingDetailRouteContainer findingId={findingId} />
-    </WorkbenchShell>
-  )
+  return <FindingDetailRouteContainer findingId={findingId} />
 }

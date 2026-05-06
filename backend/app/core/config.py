@@ -1,8 +1,9 @@
-"""Minimal template-style settings used before the full auth stack lands."""
+"""Minimal Workbench settings used before the full auth stack lands."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from ipaddress import ip_network
 from os import environ
 from pathlib import Path
 from typing import Literal, cast
@@ -10,17 +11,25 @@ from urllib.parse import quote_plus, urlparse
 
 EnvironmentName = Literal["local", "staging", "production"]
 VALID_ENVIRONMENTS: set[str] = {"local", "staging", "production"}
-DEFAULT_TEMPLATE_SECRET = "changethis"
-INSECURE_TEMPLATE_SECRET_VALUES = {"", DEFAULT_TEMPLATE_SECRET}
+DEFAULT_WORKBENCH_SECRET = "changethis"
+INSECURE_WORKBENCH_SECRET_VALUES = {"", DEFAULT_WORKBENCH_SECRET}
 DEFAULT_ALLOWED_HOSTS = ("localhost", "127.0.0.1", "testserver", "backend")
 LOCAL_ONLY_ALLOWED_HOSTS = {"localhost", "127.0.0.1", "testserver", "backend"}
 TRUE_VALUES = {"1", "true", "yes", "on"}
 FALSE_VALUES = {"0", "false", "no", "off"}
+DEFAULT_SQLITE_DATABASE_URI = "sqlite:///./workbench.db"
+LEGACY_SQLITE_DATABASE_URI = "sqlite:///./template.db"
+DEFAULT_IMPORT_UPLOAD_DIR = "data/workbench-import-uploads"
+LEGACY_IMPORT_UPLOAD_DIR = "data/template-import-uploads"
+DEFAULT_REPORT_DIR = "data/workbench-reports"
+LEGACY_REPORT_DIR = "data/template-reports"
+DEFAULT_PROVIDER_CACHE_DIR = "data/workbench-provider-cache"
+LEGACY_PROVIDER_CACHE_DIR = "data/template-provider-cache"
 
 
 @dataclass(frozen=True)
 class Settings:
-    """Settings shape aligned with the official template naming conventions."""
+    """Settings shape aligned with the Workbench environment conventions."""
 
     API_V1_STR: str = "/api/v1"
     PROJECT_NAME: str = "Vuln Prioritizer Workbench"
@@ -31,11 +40,11 @@ class Settings:
     FIRST_SUPERUSER_PASSWORD: str = "changethis"
     FRONTEND_HOST: str = "http://localhost:5173"
     BACKEND_CORS_ORIGINS: tuple[str, ...] = field(default_factory=tuple)
-    SQLALCHEMY_DATABASE_URI: str = "sqlite:///./template.db"
-    IMPORT_UPLOAD_DIR: str = "data/template-import-uploads"
-    REPORT_DIR: str = "data/template-reports"
+    SQLALCHEMY_DATABASE_URI: str = DEFAULT_SQLITE_DATABASE_URI
+    IMPORT_UPLOAD_DIR: str = DEFAULT_IMPORT_UPLOAD_DIR
+    REPORT_DIR: str = DEFAULT_REPORT_DIR
     PROVIDER_SNAPSHOT_DIR: str = "data"
-    PROVIDER_CACHE_DIR: str = "data/template-provider-cache"
+    PROVIDER_CACHE_DIR: str = DEFAULT_PROVIDER_CACHE_DIR
     ATTACK_ARTIFACT_DIR: str = "data/attack"
     DEMO_PROVIDER_SNAPSHOT_ENABLED: bool = False
     MAX_UPLOAD_MB: int = 25
@@ -43,6 +52,7 @@ class Settings:
     API_RATE_LIMIT_PER_MINUTE: int = 600
     LOGIN_RATE_LIMIT_PER_MINUTE: int = 60
     TOKEN_FAILURE_RATE_LIMIT_PER_MINUTE: int = 60
+    TRUSTED_PROXY_CIDRS: tuple[str, ...] = field(default_factory=tuple)
     AUDIT_RETENTION_DAYS: int = 365
     SESSION_RETENTION_DAYS: int = 30
     REVOKED_API_TOKEN_RETENTION_DAYS: int = 365
@@ -53,8 +63,10 @@ class Settings:
         """Reject unsafe deployment settings before the app serves traffic."""
         environment = _validate_environment_name(self.ENVIRONMENT)
         allowed_hosts = _validate_allowed_hosts(self.ALLOWED_HOSTS)
+        trusted_proxy_cidrs = _validate_trusted_proxy_cidrs(self.TRUSTED_PROXY_CIDRS)
         object.__setattr__(self, "ENVIRONMENT", environment)
         object.__setattr__(self, "ALLOWED_HOSTS", allowed_hosts)
+        object.__setattr__(self, "TRUSTED_PROXY_CIDRS", trusted_proxy_cidrs)
         _validate_secret_defaults(self)
         frontend_host, cors_origins = _validate_cors_origins(
             self.FRONTEND_HOST,
@@ -82,27 +94,27 @@ class Settings:
 
     @property
     def import_upload_dir_path(self) -> Path:
-        """Return the configured template import upload root."""
+        """Return the configured Workbench import upload root."""
         return Path(self.IMPORT_UPLOAD_DIR)
 
     @property
     def report_dir_path(self) -> Path:
-        """Return the configured template report artifact root."""
+        """Return the configured Workbench report artifact root."""
         return Path(self.REPORT_DIR)
 
     @property
     def provider_snapshot_dir_path(self) -> Path:
-        """Return the configured provider snapshot root for template imports."""
+        """Return the configured provider snapshot root for Workbench imports."""
         return Path(self.PROVIDER_SNAPSHOT_DIR)
 
     @property
     def provider_cache_dir_path(self) -> Path:
-        """Return the configured provider cache root for template imports."""
+        """Return the configured provider cache root for Workbench imports."""
         return Path(self.PROVIDER_CACHE_DIR)
 
     @property
     def attack_artifact_dir_path(self) -> Path:
-        """Return the configured ATT&CK artifact root for template imports."""
+        """Return the configured ATT&CK artifact root for Workbench imports."""
         return Path(self.ATTACK_ARTIFACT_DIR)
 
     @property
@@ -112,7 +124,7 @@ class Settings:
 
 
 def parse_cors_origins(raw_origins: str) -> tuple[str, ...]:
-    """Parse comma-separated CORS origins using the template env var name."""
+    """Parse comma-separated CORS origins using the Workbench env var name."""
     return tuple(origin.strip().rstrip("/") for origin in raw_origins.split(",") if origin.strip())
 
 
@@ -121,8 +133,13 @@ def parse_allowed_hosts(raw_hosts: str) -> tuple[str, ...]:
     return tuple(host.strip().lower() for host in raw_hosts.split(",") if host.strip())
 
 
+def parse_trusted_proxy_cidrs(raw_cidrs: str) -> tuple[str, ...]:
+    """Parse comma-separated trusted reverse-proxy CIDRs."""
+    return tuple(cidr.strip() for cidr in raw_cidrs.split(",") if cidr.strip())
+
+
 def build_database_uri() -> str:
-    """Build the template-style database URL from explicit or Postgres env vars."""
+    """Build the Workbench database URL from explicit or Postgres env vars."""
     explicit_uri = environ.get("SQLALCHEMY_DATABASE_URI") or environ.get("DATABASE_URL")
     if explicit_uri:
         return explicit_uri
@@ -135,33 +152,41 @@ def build_database_uri() -> str:
         db = quote_plus(environ.get("POSTGRES_DB", "app"))
         return f"postgresql+psycopg://{user}:{password}@{postgres_server}:{port}/{db}"
 
-    return "sqlite:///./template.db"
+    return _default_sqlite_database_uri()
 
 
 def load_settings() -> Settings:
-    """Load the minimal template-shell settings from environment variables."""
+    """Load the minimal Workbench settings from environment variables."""
     environment = _validate_environment_name(environ.get("ENVIRONMENT", "local"))
     allowed_hosts = _allowed_hosts_from_env()
     return Settings(
         API_V1_STR=environ.get("API_V1_STR", "/api/v1"),
         PROJECT_NAME=environ.get("PROJECT_NAME", "Vuln Prioritizer Workbench"),
         ENVIRONMENT=environment,
-        SECRET_KEY=environ.get("SECRET_KEY", DEFAULT_TEMPLATE_SECRET),
+        SECRET_KEY=environ.get("SECRET_KEY", DEFAULT_WORKBENCH_SECRET),
         ACCESS_TOKEN_EXPIRE_MINUTES=int(
             environ.get("ACCESS_TOKEN_EXPIRE_MINUTES", str(60 * 24 * 8))
         ),
         FIRST_SUPERUSER=environ.get("FIRST_SUPERUSER", "admin@example.com"),
         FIRST_SUPERUSER_PASSWORD=environ.get(
             "FIRST_SUPERUSER_PASSWORD",
-            DEFAULT_TEMPLATE_SECRET,
+            DEFAULT_WORKBENCH_SECRET,
         ),
         FRONTEND_HOST=environ.get("FRONTEND_HOST", "http://localhost:5173"),
         BACKEND_CORS_ORIGINS=parse_cors_origins(environ.get("BACKEND_CORS_ORIGINS", "")),
         SQLALCHEMY_DATABASE_URI=build_database_uri(),
-        IMPORT_UPLOAD_DIR=environ.get("IMPORT_UPLOAD_DIR", "data/template-import-uploads"),
-        REPORT_DIR=environ.get("REPORT_DIR", "data/template-reports"),
+        IMPORT_UPLOAD_DIR=_storage_path_from_env(
+            "IMPORT_UPLOAD_DIR",
+            DEFAULT_IMPORT_UPLOAD_DIR,
+            LEGACY_IMPORT_UPLOAD_DIR,
+        ),
+        REPORT_DIR=_storage_path_from_env("REPORT_DIR", DEFAULT_REPORT_DIR, LEGACY_REPORT_DIR),
         PROVIDER_SNAPSHOT_DIR=environ.get("PROVIDER_SNAPSHOT_DIR", "data"),
-        PROVIDER_CACHE_DIR=environ.get("PROVIDER_CACHE_DIR", "data/template-provider-cache"),
+        PROVIDER_CACHE_DIR=_storage_path_from_env(
+            "PROVIDER_CACHE_DIR",
+            DEFAULT_PROVIDER_CACHE_DIR,
+            LEGACY_PROVIDER_CACHE_DIR,
+        ),
         ATTACK_ARTIFACT_DIR=environ.get("ATTACK_ARTIFACT_DIR", "data/attack"),
         DEMO_PROVIDER_SNAPSHOT_ENABLED=_bool_from_env(
             "DEMO_PROVIDER_SNAPSHOT_ENABLED",
@@ -175,6 +200,7 @@ def load_settings() -> Settings:
             "TOKEN_FAILURE_RATE_LIMIT_PER_MINUTE",
             60,
         ),
+        TRUSTED_PROXY_CIDRS=parse_trusted_proxy_cidrs(environ.get("TRUSTED_PROXY_CIDRS", "")),
         AUDIT_RETENTION_DAYS=_positive_int_from_env("AUDIT_RETENTION_DAYS", 365),
         SESSION_RETENTION_DAYS=_positive_int_from_env("SESSION_RETENTION_DAYS", 30),
         REVOKED_API_TOKEN_RETENTION_DAYS=_positive_int_from_env(
@@ -195,6 +221,31 @@ def _positive_int_from_env(name: str, default: int) -> int:
     except ValueError:
         return default
     return parsed if parsed > 0 else default
+
+
+def _default_sqlite_database_uri() -> str:
+    legacy_path = Path("template.db")
+    default_path = Path("workbench.db")
+    if legacy_path.exists() and not default_path.exists():
+        return LEGACY_SQLITE_DATABASE_URI
+    return DEFAULT_SQLITE_DATABASE_URI
+
+
+def _storage_path_from_env(name: str, default_path: str, legacy_path: str) -> str:
+    configured_path = environ.get(name)
+    if configured_path:
+        return configured_path
+    legacy_root = Path(legacy_path)
+    default_root = Path(default_path)
+    if not default_root.exists() and _path_contains_data(legacy_root):
+        return legacy_path
+    return default_path
+
+
+def _path_contains_data(path: Path) -> bool:
+    if not path.exists() or not path.is_dir():
+        return False
+    return any(path.iterdir())
 
 
 def _optional_bool_from_env(name: str) -> bool | None:
@@ -223,8 +274,8 @@ def _allowed_hosts_from_env() -> tuple[str, ...]:
     return parse_allowed_hosts(raw_hosts)
 
 
-def _is_insecure_template_secret(value: str) -> bool:
-    return value.strip().lower() in INSECURE_TEMPLATE_SECRET_VALUES
+def _is_insecure_workbench_secret(value: str) -> bool:
+    return value.strip().lower() in INSECURE_WORKBENCH_SECRET_VALUES
 
 
 def _validate_environment_name(value: str) -> EnvironmentName:
@@ -258,8 +309,24 @@ def _validate_allowed_hosts(hosts: tuple[str, ...]) -> tuple[str, ...]:
     return tuple(deduped)
 
 
+def _validate_trusted_proxy_cidrs(cidrs: tuple[str, ...]) -> tuple[str, ...]:
+    normalized: list[str] = []
+    for raw_cidr in cidrs:
+        cidr = raw_cidr.strip()
+        if not cidr:
+            continue
+        try:
+            network = ip_network(cidr, strict=False)
+        except ValueError as exc:
+            raise ValueError(f"TRUSTED_PROXY_CIDRS contains an invalid CIDR: {cidr}.") from exc
+        rendered = str(network)
+        if rendered not in normalized:
+            normalized.append(rendered)
+    return tuple(normalized)
+
+
 def _validate_secret_defaults(settings: Settings) -> None:
-    if not _settings_use_insecure_template_secret(settings):
+    if not _settings_use_insecure_workbench_secret(settings):
         return
 
     if settings.ENVIRONMENT == "local" and _allowed_hosts_are_local_only(settings.ALLOWED_HOSTS):
@@ -306,7 +373,7 @@ def _validate_cors_origin(origin: str, environment: EnvironmentName) -> None:
             raise ValueError("Non-local CORS origins must not use localhost.")
 
 
-def _settings_use_insecure_template_secret(settings: Settings) -> bool:
+def _settings_use_insecure_workbench_secret(settings: Settings) -> bool:
     return bool(_insecure_secret_fields(settings))
 
 
@@ -317,7 +384,7 @@ def _insecure_secret_fields(settings: Settings) -> list[str]:
             ("SECRET_KEY", settings.SECRET_KEY),
             ("FIRST_SUPERUSER_PASSWORD", settings.FIRST_SUPERUSER_PASSWORD),
         )
-        if _is_insecure_template_secret(value)
+        if _is_insecure_workbench_secret(value)
     ]
     return insecure_fields
 

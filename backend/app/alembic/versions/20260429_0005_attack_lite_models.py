@@ -1,4 +1,4 @@
-"""add template attack lite models
+"""add Workbench ATT&CK Lite models
 
 Revision ID: 20260429_0005
 Revises: 20260429_0004

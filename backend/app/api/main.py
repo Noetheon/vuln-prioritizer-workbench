@@ -1,4 +1,4 @@
-"""Versioned API router for the template-aligned backend shell."""
+"""Versioned API router for the Workbench backend shell."""
 
 from __future__ import annotations
 

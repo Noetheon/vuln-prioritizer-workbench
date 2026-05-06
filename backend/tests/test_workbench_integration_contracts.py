@@ -5,19 +5,19 @@ from pathlib import Path
 import yaml
 
 
-def test_backend_dockerfile_prepares_template_quickstart_runtime_dirs() -> None:
+def test_backend_dockerfile_prepares_workbench_quickstart_runtime_dirs() -> None:
     dockerfile = Path("backend/Dockerfile").read_text(encoding="utf-8")
 
-    assert "/app/template-import-uploads" in dockerfile
-    assert "/app/template-reports" in dockerfile
-    assert "/app/template-provider-cache" in dockerfile
+    assert "/app/workbench-import-uploads" in dockerfile
+    assert "/app/workbench-reports" in dockerfile
+    assert "/app/workbench-provider-cache" in dockerfile
     assert "backend/alembic.ini" in dockerfile
     assert "python -m app.core.migration_bootstrap" in dockerfile
     assert "alembic -c /app/backend/alembic.ini upgrade head" in dockerfile
     assert "chown -R workbench:workbench /app" in dockerfile
 
 
-def test_compose_uses_template_shell_without_legacy_runtime_services() -> None:
+def test_compose_uses_workbench_shell_without_legacy_runtime_services() -> None:
     compose = yaml.safe_load(Path("compose.yml").read_text(encoding="utf-8"))
     services = compose["services"]
 
@@ -26,20 +26,32 @@ def test_compose_uses_template_shell_without_legacy_runtime_services() -> None:
     assert backend["depends_on"]["db"]["condition"] == "service_healthy"
     assert backend["environment"]["PROJECT_NAME"].startswith("${PROJECT_NAME:-Vuln Prioritizer")
     assert "http://127.0.0.1:5173" in backend["environment"]["BACKEND_CORS_ORIGINS"]
-    assert backend["environment"]["IMPORT_UPLOAD_DIR"] == "/app/template-import-uploads"
-    assert backend["environment"]["REPORT_DIR"] == "/app/template-reports"
+    assert backend["environment"]["IMPORT_UPLOAD_DIR"] == "/app/workbench-import-uploads"
+    assert backend["environment"]["REPORT_DIR"] == "/app/workbench-reports"
     assert backend["environment"]["PROVIDER_SNAPSHOT_DIR"] == "/app/provider-snapshots"
-    assert backend["environment"]["PROVIDER_CACHE_DIR"] == "/app/template-provider-cache"
+    assert backend["environment"]["PROVIDER_CACHE_DIR"] == "/app/workbench-provider-cache"
     assert backend["environment"]["ATTACK_ARTIFACT_DIR"] == "/app/examples/attack"
     assert backend["environment"]["DEMO_PROVIDER_SNAPSHOT_ENABLED"] == (
         "${DEMO_PROVIDER_SNAPSHOT_ENABLED:-false}"
     )
-    assert "template-import-uploads:/app/template-import-uploads" in backend["volumes"]
-    assert "template-reports:/app/template-reports" in backend["volumes"]
-    assert "template-provider-snapshots:/app/provider-snapshots" in backend["volumes"]
-    assert "template-provider-cache:/app/template-provider-cache" in backend["volumes"]
+    assert "workbench-import-uploads:/app/workbench-import-uploads" in backend["volumes"]
+    assert "workbench-reports:/app/workbench-reports" in backend["volumes"]
+    assert "workbench-provider-snapshots:/app/provider-snapshots" in backend["volumes"]
+    assert "workbench-provider-cache:/app/workbench-provider-cache" in backend["volumes"]
     assert "./data:/app/examples:ro" in backend["volumes"]
     assert "/api/v1/utils/health-check/" in backend["healthcheck"]["test"][3]
+    assert compose["volumes"]["workbench-import-uploads"]["name"] == (
+        "${WORKBENCH_IMPORT_UPLOADS_VOLUME:-template-import-uploads}"
+    )
+    assert compose["volumes"]["workbench-reports"]["name"] == (
+        "${WORKBENCH_REPORTS_VOLUME:-template-reports}"
+    )
+    assert compose["volumes"]["workbench-provider-snapshots"]["name"] == (
+        "${WORKBENCH_PROVIDER_SNAPSHOTS_VOLUME:-template-provider-snapshots}"
+    )
+    assert compose["volumes"]["workbench-provider-cache"]["name"] == (
+        "${WORKBENCH_PROVIDER_CACHE_VOLUME:-template-provider-cache}"
+    )
 
     frontend = services["frontend"]
     assert "profiles" not in frontend

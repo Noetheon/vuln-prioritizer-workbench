@@ -50,9 +50,9 @@ If `pip-audit`, npm, or advisory data is unavailable, record that as a release-c
 | Security headers | `tests/api/test_template_auth_smoke.py` and an optional `curl -I http://127.0.0.1:8000/api/v1/utils/health-check/` capture showing `nosniff`, `DENY`, and CSP. |
 | Upload filename/path validation | `tests/api/test_template_import_upload_api.py` covers active `/api/v1` upload size, suffix, MIME, path, and provider snapshot validation. |
 | Report/evidence downloads | `tests/api/test_template_reports_api.py`; browser evidence should show report links and Evidence ZIP verification. |
-| 10k findings API smoke | `make performance-smoke` runs the active template import and pagination smoke with 10,000 findings. |
+| 10k findings API smoke | `make performance-smoke` runs the active Workbench import and pagination smoke with 10,000 findings. |
 | Docker demo smoke | `make docker-demo-smoke` output showing `/api/v1/utils/health-check/` succeeds before the authenticated import/provider smoke and teardown. |
-| Dependency audit | `make dependency-audit` result for backend requirements and frontend production dependencies, or a documented exception when audit tooling or advisory data is unavailable. |
+| Dependency audit | `make dependency-audit` result for the backend Python lock and frontend production dependencies, or a documented exception when audit tooling or advisory data is unavailable. |
 | Demo evidence bundle | `make demo-evidence-bundle-check` output plus `build/v1.0-demo-evidence-bundle-verification.json` showing `ok=true`. |
 | Provider test matrix | `make provider-testmatrix` plus `archive/vpw-evidence/vpw-029-provider-testmatrix.md`. |
 | Offline/no-key proof | `make demo-offline-no-key-proof` output plus `build/vpw-029-demo-offline-no-key-proof.json` showing locked replay and provider `network_fetches=0`. |

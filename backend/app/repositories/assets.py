@@ -1,4 +1,4 @@
-"""Asset repository for template Workbench persistence."""
+"""Asset repository for Workbench persistence."""
 
 from __future__ import annotations
 
@@ -407,7 +407,7 @@ def _finding_as_prioritized(finding: Finding) -> PrioritizedFinding:
         priority_state=_priority_label(str(finding.priority)),
         operational_rank=finding.operational_rank,
         operational_score=int(finding.risk_score or 0),
-        rationale=finding.rationale or "Stored template finding without raw rationale payload.",
+        rationale=finding.rationale or "Stored Workbench finding without raw rationale payload.",
         recommended_action=finding.recommended_action or "Review the finding with the asset owner.",
         provenance=_provenance_from_finding(finding),
     )
@@ -432,7 +432,7 @@ def _with_current_asset_context(finding: PrioritizedFinding, asset: Asset) -> Pr
         occurrences = [
             InputOccurrence(
                 cve_id=finding.cve_id,
-                source_format="template-asset-context",
+                source_format="workbench-asset-context",
                 target_ref=target_ref,
                 asset_id=asset.asset_key,
                 asset_criticality=asset.criticality,
@@ -474,7 +474,7 @@ def _provenance_from_finding(finding: Finding) -> FindingProvenance:
     target_ref = asset.target_ref or asset.asset_key
     occurrence = InputOccurrence(
         cve_id=finding.cve_id,
-        source_format="template-asset-context",
+        source_format="workbench-asset-context",
         target_ref=target_ref,
         asset_id=asset.asset_key,
         asset_criticality=asset.criticality,
@@ -486,7 +486,7 @@ def _provenance_from_finding(finding: Finding) -> FindingProvenance:
     return FindingProvenance(
         occurrence_count=1,
         active_occurrence_count=1,
-        source_formats=["template-asset-context"],
+        source_formats=["workbench-asset-context"],
         targets=_value_list(target_ref),
         asset_ids=_value_list(asset.asset_key),
         highest_asset_criticality=asset.criticality,

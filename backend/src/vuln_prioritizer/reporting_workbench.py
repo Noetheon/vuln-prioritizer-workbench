@@ -8,6 +8,8 @@ import json
 from io import StringIO
 from typing import Any
 
+from vuln_prioritizer.sarif_references import dedupe_defensive_http_urls
+
 
 def generate_findings_csv(report_payload: dict[str, Any]) -> str:
     """Render a spreadsheet-safe CSV export for Workbench findings."""
@@ -286,14 +288,7 @@ def _workbench_sarif_reference_urls(
 
 
 def _dedupe_strings(values: list[str]) -> list[str]:
-    seen: set[str] = set()
-    deduped: list[str] = []
-    for value in values:
-        normalized = str(value).strip()
-        if normalized.startswith(("http://", "https://")) and normalized not in seen:
-            seen.add(normalized)
-            deduped.append(normalized)
-    return deduped
+    return dedupe_defensive_http_urls(values)
 
 
 def _workbench_sarif_fingerprint(

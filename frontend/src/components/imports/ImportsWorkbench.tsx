@@ -1,13 +1,6 @@
 import { Link } from "@tanstack/react-router"
 import { CheckCircle2, History, PackageCheck, Upload } from "lucide-react"
-import type { FormEventHandler } from "react"
-import type {
-  AnalysisRunPublic,
-  AnalysisRunSummaryPublic,
-  ImportParseErrorPublic,
-  ProjectPublic,
-  ProviderStatusPublic,
-} from "@/api-client"
+import type { AnalysisRunPublic, ImportParseErrorPublic } from "@/api-client"
 import { Button } from "@/components/ui/button"
 import {
   Select,
@@ -18,7 +11,6 @@ import {
 } from "@/components/ui/select"
 import {
   VpwBadge,
-  type VpwBadgeTone,
   VpwDataTable,
   type VpwDataTableColumn,
   VpwDemoBanner,
@@ -41,157 +33,20 @@ import {
 } from "@/components/vpw"
 import { formatProviderFreshness } from "@/lib/provider-format"
 import { DEMO_MODE_ENABLED } from "@/lib/runtime-config"
-import { runStatusLabel, runStatusTone } from "@/lib/risk-format"
-
-export type SupportedImportFormat = {
-  label: string
-  value: string
-  accept: string
-  detail: string
-}
-
-export type ImportWizardStateLike = {
-  assetContextFile: File | null
-  file: File | null
-  inputType: string
-  vexFile: File | null
-}
-
-export type ImportsWorkbenchProps = {
-  importError: string
-  importLoading: boolean
-  importParseErrors: ImportParseErrorPublic[]
-  importRun: AnalysisRunPublic | null
-  importRunSummary: AnalysisRunSummaryPublic | null
-  importWizard: ImportWizardStateLike
-  onAssetContextFileChange: (file: File | null) => void
-  onFileChange: (file: File | null) => void
-  onInputTypeChange: (value: string) => void
-  onProjectChange: (projectId: string) => void
-  onRefreshRuns: () => void
-  onSelectRun: (runId: string) => void
-  onSubmit: FormEventHandler<HTMLFormElement>
-  onVexFileChange: (file: File | null) => void
-  projectListLoading: boolean
-  projectRuns: AnalysisRunPublic[]
-  projects: ProjectPublic[]
-  providerStatus: ProviderStatusPublic | null
-  runDetailError: string
-  runDetailLoading: boolean
-  runsError: string
-  runsLoading: boolean
-  selectedProject: ProjectPublic | null
-  selectedProjectId: string
-  selectedRun: AnalysisRunPublic | null
-  selectedRunId: string
-  selectedRunSummary: AnalysisRunSummaryPublic | null
-  supportedFormats: readonly SupportedImportFormat[]
-}
-
-function formatDateTime(value: string | null | undefined) {
-  if (!value) return "N.A."
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return "N.A."
-  return new Intl.DateTimeFormat(undefined, {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(date)
-}
-
-function objectRecord(value: unknown): Record<string, unknown> {
-  return typeof value === "object" && value !== null
-    ? (value as Record<string, unknown>)
-    : {}
-}
-
-function stringValue(value: unknown) {
-  return typeof value === "string" && value.trim() ? value : null
-}
-
-function runFileLabel(run: {
-  filename?: string | null
-  input_type: string
-  input_upload?: Record<string, unknown>
-  summary_json?: Record<string, unknown>
-}) {
-  const upload = objectRecord(
-    run.input_upload ?? run.summary_json?.input_upload,
-  )
-  const uploadFilename = stringValue(upload.filename)
-  return run.filename ?? uploadFilename ?? `${run.input_type} upload`
-}
-
-function metadataRows(value: unknown) {
-  return Object.entries(objectRecord(value)).filter(
-    ([key, entryValue]) =>
-      !key.toLowerCase().includes("path") &&
-      entryValue !== null &&
-      entryValue !== undefined &&
-      typeof entryValue !== "object",
-  )
-}
-
-function jsonPreview(value: unknown) {
-  const record = objectRecord(value)
-  return Object.keys(record).length > 0
-    ? JSON.stringify(record, null, 2)
-    : "No error JSON recorded."
-}
-
-function failedRunCause(
-  run: AnalysisRunPublic | null,
-  summary: AnalysisRunSummaryPublic | null,
-) {
-  if (!run && !summary) return "No failure detail available."
-  const errorJson = objectRecord(summary?.error_json ?? run?.error_json)
-  const analysisError = objectRecord(errorJson.analysis_error)
-  return (
-    run?.error_message ??
-    stringValue(errorJson.message) ??
-    stringValue(errorJson.error) ??
-    stringValue(errorJson.last_error) ??
-    stringValue(analysisError.message) ??
-    "No failure detail available."
-  )
-}
-
-function runTone(status: AnalysisRunPublic["status"]): VpwBadgeTone {
-  const tone = runStatusTone(status)
-  if (tone === "succeeded") return "success"
-  if (tone === "failed") return "critical"
-  if (tone === "warning") return "warning"
-  return "neutral"
-}
-
-function formatExpectedFields(value: string) {
-  if (value === "cve-list") return "One CVE per line"
-  if (value === "generic-occurrence-csv") {
-    return "cve_id plus optional asset/component columns"
-  }
-  if (value === "trivy-json") return "Trivy Results[].Vulnerabilities"
-  if (value === "grype-json") return "Grype matches[] vulnerability data"
-  return "Supported Workbench import fields"
-}
-
-function formatDisplayType(value: string) {
-  return value.replaceAll("-", " ")
-}
-
-function selectedFormat(
-  formats: readonly SupportedImportFormat[],
-  inputType: string,
-) {
-  return formats.find((format) => format.value === inputType) ?? formats[0]
-}
-
-function uploadProgress(wizard: ImportWizardStateLike) {
-  let value = 20
-  if (wizard.inputType) value += 20
-  if (wizard.file) value += 30
-  if (wizard.assetContextFile) value += 15
-  if (wizard.vexFile) value += 15
-  return Math.min(value, 100)
-}
+import { runStatusLabel } from "@/lib/risk-format"
+import {
+  failedRunCause,
+  formatDateTime,
+  formatDisplayType,
+  formatExpectedFields,
+  jsonPreview,
+  metadataRows,
+  runFileLabel,
+  runTone,
+  selectedFormat,
+  type ImportsWorkbenchProps,
+  uploadProgress,
+} from "./imports-workbench-model"
 
 function ImportHero({
   importWizard,

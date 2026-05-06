@@ -43,7 +43,7 @@ Expected values:
 
 - `pending`: run was created but processing has not started
 - `running`: parser or enrichment work is active
-- `succeeded`: template import route finished successfully and produced persisted run evidence
+- `succeeded`: Workbench import route finished successfully and produced persisted run evidence
 - `completed`: run finished successfully
 - `completed_with_errors`: run produced usable output but retained recoverable
   errors or degraded provider evidence
@@ -110,7 +110,7 @@ The run can be saved before any findings exist. This supports creating a durable
 record as soon as an upload/import starts, then appending summary data and
 occurrences after parsing and enrichment complete.
 
-Template import runs expose a stable API summary at
+Workbench import runs expose a stable API summary at
 `GET /api/v1/runs/{run_id}/summary`. The endpoint derives these UI fields from
 `summary_json` and `error_json` without changing the stored schema:
 

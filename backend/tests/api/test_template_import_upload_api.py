@@ -93,6 +93,7 @@ def test_valid_cve_list_upload_creates_analysis_run_and_stores_sha256(
     assert stored_path == upload_dir / project["id"] / payload["id"] / "Team_Scan__prod_.txt"
     assert stored_path.read_bytes() == content
     assert payload["summary_json"]["import_job"]["status"] == "succeeded"
+    assert payload["summary_json"]["import_job"]["execution_mode"] == "request"
     assert [item["status"] for item in payload["summary_json"]["import_job"]["status_history"]] == [
         "pending",
         "running",
@@ -108,6 +109,16 @@ def test_valid_cve_list_upload_creates_analysis_run_and_stores_sha256(
     assert runs.json()["count"] == 1
     assert runs.json()["data"][0]["id"] == payload["id"]
     assert runs.json()["data"][0]["status"] == "succeeded"
+    with Session(template_api_env.engine) as session:
+        import_event = session.exec(
+            select(app_models.AuditEvent).where(
+                app_models.AuditEvent.action == "import.run",
+                app_models.AuditEvent.resource_id == payload["id"],
+            )
+        ).one()
+    assert import_event.status == "success"
+    assert import_event.project_id == uuid.UUID(project["id"])
+    assert import_event.detail_json == {"stage": "succeeded", "input_type": "cve-list"}
 
     findings = template_api_env.client.get(
         f"/api/v1/projects/{project['id']}/findings/",
@@ -1380,6 +1391,16 @@ def test_parse_errors_are_structured_and_failed_run_is_persisted(
     assert summary_payload["updated_findings"] == 0
     assert summary_payload["ignored_lines"] == 0
     assert summary_payload["parse_errors"] == detail["parse_errors"]
+    with Session(template_api_env.engine) as session:
+        import_event = session.exec(
+            select(app_models.AuditEvent).where(
+                app_models.AuditEvent.action == "import.run",
+                app_models.AuditEvent.resource_id == detail["analysis_run_id"],
+            )
+        ).one()
+    assert import_event.status == "failure"
+    assert import_event.project_id == uuid.UUID(project["id"])
+    assert import_event.detail_json == {"stage": "parse", "input_type": "cve-list"}
 
 
 def test_xml_parse_errors_redact_local_upload_paths(
@@ -1515,8 +1536,8 @@ def _configure_upload_dir(
     max_upload_mb: int = 25,
 ) -> Path:
     upload_dir = tmp_path / "template-import-uploads"
-    active_settings = template_api_env.client.app.state.template_settings
-    template_api_env.client.app.state.template_settings = replace(
+    active_settings = template_api_env.client.app.state.workbench_settings
+    template_api_env.client.app.state.workbench_settings = replace(
         active_settings,
         IMPORT_UPLOAD_DIR=str(upload_dir),
         PROVIDER_SNAPSHOT_DIR=str(PROJECT_ROOT / "data"),

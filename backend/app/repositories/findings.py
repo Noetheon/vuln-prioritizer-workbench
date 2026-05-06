@@ -1,4 +1,4 @@
-"""Finding repository for template Workbench persistence."""
+"""Finding repository for Workbench persistence."""
 
 from __future__ import annotations
 
@@ -271,6 +271,13 @@ class FindingRepository:
             "cvss": (col(Finding.cvss_base_score), col(Finding.priority_rank)),
             "kev": (col(Finding.in_kev), col(Finding.priority_rank)),
             "last_seen": (col(Finding.last_seen_at), col(Finding.priority_rank)),
+            "component": (
+                col(Component.name),
+                col(Component.version),
+                col(Asset.business_service),
+                col(Asset.asset_key),
+            ),
+            "owner": (col(Asset.owner), col(Asset.business_service), col(Asset.asset_key)),
         }
         if sort not in order_fields:
             raise ValueError(f"Unsupported findings sort field: {sort}.")
@@ -323,6 +330,7 @@ class FindingRepository:
         statement = (
             select(Finding)
             .outerjoin(Asset, col(Finding.asset_id) == col(Asset.id))
+            .outerjoin(Component, col(Finding.component_id) == col(Component.id))
             .where(*filters)
             .order_by(*order_by)
             .offset(offset)
