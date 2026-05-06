@@ -171,7 +171,9 @@ class AnalysisService:
         )
 
     def default_provider_snapshot_file(self) -> Path | None:
-        """Return the local demo snapshot used for deterministic template imports."""
+        """Return the local demo snapshot only when demo replay is explicitly enabled."""
+        if not self.settings.DEMO_PROVIDER_SNAPSHOT_ENABLED:
+            return None
         candidate = self.settings.provider_snapshot_dir_path / DEFAULT_TEMPLATE_PROVIDER_SNAPSHOT
         if candidate.exists():
             return candidate

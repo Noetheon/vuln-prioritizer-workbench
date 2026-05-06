@@ -11,6 +11,8 @@ TABLE_MODEL_MODULES = (
     "app.models.runs",
     "app.models.reports",
     "app.models.api_tokens",
+    "app.models.sessions",
+    "app.models.audit",
     "app.models.github_issues",
     "app.models.attack",
     "app.models.waivers",

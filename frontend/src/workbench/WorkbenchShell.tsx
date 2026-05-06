@@ -164,11 +164,36 @@ const WaiversWorkbench = lazy(() =>
   })),
 )
 
-function _priorityCount(
-  summary: ProjectDecisionSummaryPublic | null,
-  priority: "Critical" | "High" | "Medium" | "Low",
-) {
-  return summary?.counts_by_priority?.[priority] ?? 0
+const SELECTED_PROJECT_STORAGE_KEY = "vpw.selectedProjectId"
+
+type SelectedProjectIdUpdate =
+  | string
+  | ((previousProjectId: string) => string)
+
+function readStoredSelectedProjectId() {
+  if (typeof window === "undefined") {
+    return ""
+  }
+  try {
+    return window.localStorage.getItem(SELECTED_PROJECT_STORAGE_KEY) ?? ""
+  } catch {
+    return ""
+  }
+}
+
+function persistSelectedProjectId(projectId: string) {
+  if (typeof window === "undefined") {
+    return
+  }
+  try {
+    if (projectId) {
+      window.localStorage.setItem(SELECTED_PROJECT_STORAGE_KEY, projectId)
+    } else {
+      window.localStorage.removeItem(SELECTED_PROJECT_STORAGE_KEY)
+    }
+  } catch {
+    // Storage can be blocked in private or embedded browser contexts.
+  }
 }
 
 type DashboardSignalCounts = {
@@ -618,11 +643,29 @@ export function WorkbenchShell({
   const [apiTokenScopes, setApiTokenScopes] = useState<ApiTokenScope[]>(
     defaultApiTokenScopes,
   )
+  const [apiTokenProjectId, setApiTokenProjectId] = useState("")
   const [createdApiToken, setCreatedApiToken] =
     useState<ApiTokenCreatePublic | null>(null)
   const [apiTokensReloadKey, setApiTokensReloadKey] = useState(0)
   const [projects, setProjects] = useState<ProjectPublic[]>([])
-  const [selectedProjectId, setSelectedProjectId] = useState("")
+  const [selectedProjectId, setSelectedProjectIdState] = useState(
+    readStoredSelectedProjectId,
+  )
+  const setSelectedProjectId = useCallback(
+    (update: SelectedProjectIdUpdate) => {
+      if (typeof update === "function") {
+        setSelectedProjectIdState((previousProjectId) => {
+          const nextProjectId = update(previousProjectId)
+          persistSelectedProjectId(nextProjectId)
+          return nextProjectId
+        })
+        return
+      }
+      persistSelectedProjectId(update)
+      setSelectedProjectIdState(update)
+    },
+    [],
+  )
   const [projectSummary, setProjectSummary] =
     useState<ProjectDecisionSummaryPublic | null>(null)
   const [projectSummaryById, setProjectSummaryById] = useState<
@@ -963,6 +1006,22 @@ export function WorkbenchShell({
       isMounted = false
     }
   }, [apiTokensReloadKey, currentPath, navigate])
+
+  useEffect(() => {
+    if (apiTokenScopes.includes("admin")) {
+      setApiTokenProjectId("")
+      return
+    }
+    setApiTokenProjectId((previousProjectId) => {
+      if (projects.some((project) => project.id === previousProjectId)) {
+        return previousProjectId
+      }
+      if (projects.some((project) => project.id === selectedProjectId)) {
+        return selectedProjectId
+      }
+      return projects[0]?.id ?? ""
+    })
+  }, [apiTokenScopes, projects, selectedProjectId])
 
   useEffect(() => {
     let isMounted = true
@@ -1943,6 +2002,12 @@ export function WorkbenchShell({
       setApiTokenError("Select at least one scope.")
       return
     }
+    const adminToken = apiTokenScopes.includes("admin")
+    const scopedProjectId = adminToken ? null : apiTokenProjectId
+    if (!adminToken && !scopedProjectId) {
+      setApiTokenError("Select a project scope for this token.")
+      return
+    }
 
     setApiTokenActionLoading(true)
     setApiTokenError("")
@@ -1950,7 +2015,11 @@ export function WorkbenchShell({
     setCreatedApiToken(null)
     try {
       const created = await ApiTokensService.createApiToken({
-        apiTokenCreate: { name, scopes: apiTokenScopes },
+        apiTokenCreate: {
+          name,
+          project_id: scopedProjectId,
+          scopes: apiTokenScopes,
+        },
       })
       setCreatedApiToken(created)
       setApiTokenName("automation")
@@ -2273,6 +2342,8 @@ export function WorkbenchShell({
                   apiTokenError={apiTokenError}
                   apiTokenMessage={apiTokenMessage}
                   apiTokenName={apiTokenName}
+                  apiTokenProjectId={apiTokenProjectId}
+                  apiTokenProjectOptions={projects}
                   apiTokenScopeOptions={apiTokenScopeOptions}
                   apiTokenScopes={apiTokenScopes}
                   apiTokens={apiTokens}
@@ -2280,6 +2351,7 @@ export function WorkbenchShell({
                   createdApiToken={createdApiToken}
                   currentUser={currentUser}
                   onApiTokenNameChange={setApiTokenName}
+                  onApiTokenProjectChange={setApiTokenProjectId}
                   onCreateApiToken={createApiToken}
                   onRevokeApiToken={revokeApiToken}
                   onToggleApiTokenScope={toggleApiTokenScope}

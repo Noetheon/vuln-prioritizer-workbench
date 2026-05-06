@@ -54,6 +54,13 @@ from app.models.attack import (
     ProjectAttackTacticSummaryPublic,
     ProjectAttackTechniqueSummaryPublic,
 )
+from app.models.audit import (
+    AuditEvent,
+    AuditEventBase,
+    AuditEventPublic,
+    AuditEventsPublic,
+    AuditEventStatus,
+)
 from app.models.auth import Token, TokenPayload
 from app.models.decisions import (
     FindingExplanationPublic,
@@ -131,6 +138,12 @@ from app.models.runs import (
     ProviderSnapshot,
     ProviderSnapshotBase,
 )
+from app.models.sessions import (
+    AuthSession,
+    AuthSessionBase,
+    AuthSessionPublic,
+    AuthSessionsPublic,
+)
 from app.models.users import User, UserBase, UserPublic, UsersPublic
 from app.models.vulnerabilities import Vulnerability, VulnerabilityBase
 from app.models.waivers import (
@@ -157,6 +170,11 @@ __all__ = [
     "ApiTokenPublic",
     "ApiTokenScope",
     "ApiTokensPublic",
+    "AuditEvent",
+    "AuditEventBase",
+    "AuditEventPublic",
+    "AuditEventsPublic",
+    "AuditEventStatus",
     "Asset",
     "AssetBase",
     "AssetContextImportPublic",
@@ -244,6 +262,10 @@ __all__ = [
     "ReportPublic",
     "ReportVerificationPublic",
     "ReportsPublic",
+    "AuthSession",
+    "AuthSessionBase",
+    "AuthSessionPublic",
+    "AuthSessionsPublic",
     "Token",
     "TokenPayload",
     "User",

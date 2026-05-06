@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import uuid
 
-from fastapi import APIRouter, Query, Response
+from fastapi import APIRouter, Query, Request, Response
 
 from app.api.deps import CurrentUser, ScopedReadUser, SessionDep
 from app.api.routes.workbench_access import require_visible_project
@@ -31,6 +31,9 @@ from app.services import (
     build_project_governance_rollups_payload,
     build_project_summary_payload,
 )
+from app.services.artifact_cleanup import cleanup_project_artifacts
+from app.services.audit import record_audit_event
+from app.services.import_uploads import template_settings as _template_settings
 
 router = APIRouter(prefix="/projects", tags=["projects"])
 
@@ -54,6 +57,15 @@ def create_project(
 ) -> Project:
     """Create a Project owned by the current user."""
     project = ProjectRepository(session).create_project(project_in, owner_id=current_user.id)
+    record_audit_event(
+        session,
+        action="project.create",
+        resource_type="project",
+        resource_id=project.id,
+        actor=current_user,
+        project_id=project.id,
+        detail={"name": project.name},
+    )
     session.commit()
     session.refresh(project)
     return project
@@ -149,6 +161,15 @@ def update_project(
     repository = ProjectRepository(session)
     project = require_visible_project(session, current_user, project_id)
     updated = repository.update_project(project, project_in)
+    record_audit_event(
+        session,
+        action="project.update",
+        resource_type="project",
+        resource_id=updated.id,
+        actor=current_user,
+        project_id=updated.id,
+        detail=project_in.model_dump(exclude_unset=True),
+    )
     session.commit()
     session.refresh(updated)
     return updated
@@ -156,11 +177,30 @@ def update_project(
 
 @router.delete("/{project_id}", status_code=204)
 def delete_project(
-    project_id: uuid.UUID, session: SessionDep, current_user: CurrentUser
+    request: Request,
+    project_id: uuid.UUID,
+    session: SessionDep,
+    current_user: CurrentUser,
 ) -> Response:
     """Delete a project if it belongs to the user or the user is superuser."""
     repository = ProjectRepository(session)
     project = require_visible_project(session, current_user, project_id)
+    cleanup_result = cleanup_project_artifacts(
+        settings=_template_settings(request),
+        project_id=project.id,
+    )
+    record_audit_event(
+        session,
+        action="project.delete",
+        resource_type="project",
+        resource_id=project.id,
+        actor=current_user,
+        detail={
+            "name": project.name,
+            "removed_artifact_paths": list(cleanup_result.removed_paths),
+            "missing_artifact_paths": list(cleanup_result.missing_paths),
+        },
+    )
     repository.delete_project(project)
     session.commit()
     return Response(status_code=204)

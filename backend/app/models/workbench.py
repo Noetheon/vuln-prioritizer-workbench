@@ -10,3 +10,5 @@ class WorkbenchStatus(SQLModel):
     app: str
     core_package: str
     core_version: str
+    database_status: str
+    schema_status: str

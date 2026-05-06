@@ -63,6 +63,7 @@ nav:
       - Offline Demo Runbook: workbench-offline-demo.md
       - ATT&CK Methodology: workbench-attack-methodology.md
       - Threat Model and Readiness: workbench-threat-model.md
+      - Public Deployment Runbook: workbench-public-deployment.md
   - Examples:
       - CVE List Import: cve-list-import.md
       - Generic Occurrence CSV Import: generic-occurrence-csv-import.md
@@ -77,6 +78,8 @@ nav:
       - PR Comment Body: examples/example_pr_comment.md
       - GitHub Summary Templates: examples/github_action_summary_templates.md
   - Historical Evidence Archive: evidence.md
+  - Evidence:
+      - VPW-054 Report Snapshots: evidence/vpw-054-report-snapshots.md
   - Releases:
       - Workbench v1.0.0: releases/workbench-v1.0.0.md
       - v1.1.0: releases/v1.1.0.md

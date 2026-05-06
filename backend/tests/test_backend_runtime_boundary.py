@@ -158,6 +158,7 @@ def test_default_compose_services_start_only_active_backend_runtime() -> None:
     compose = yaml.safe_load((REPO_ROOT / "compose.yml").read_text(encoding="utf-8"))
     services = compose["services"]
     backend_environment = services["backend"]["environment"]
+    backend_healthcheck = _as_text(services["backend"]["healthcheck"])
 
     legacy_starters = {
         name: _as_text(service)
@@ -173,11 +174,42 @@ def test_default_compose_services_start_only_active_backend_runtime() -> None:
         "${ALLOWED_HOSTS:-localhost,127.0.0.1,testserver,backend}"
     )
     assert backend_environment["API_DOCS_ENABLED"] == "${API_DOCS_ENABLED:-}"
+    assert backend_environment["SQLALCHEMY_DATABASE_URI"] == ""
+    assert backend_environment["RATE_LIMIT_ENABLED"] == "${RATE_LIMIT_ENABLED:-true}"
+    assert backend_environment["MAX_UPLOAD_MB"] == "${MAX_UPLOAD_MB:-25}"
+    assert backend_environment["LOGIN_RATE_LIMIT_PER_MINUTE"] == (
+        "${LOGIN_RATE_LIMIT_PER_MINUTE:-60}"
+    )
     assert backend_environment["SECRET_KEY"] == "${SECRET_KEY:-changethis}"
     assert backend_environment["FIRST_SUPERUSER_PASSWORD"] == (
         "${FIRST_SUPERUSER_PASSWORD:-changethis}"
     )
+    assert backend_environment["DEMO_PROVIDER_SNAPSHOT_ENABLED"] == (
+        "${DEMO_PROVIDER_SNAPSHOT_ENABLED:-false}"
+    )
+    assert "database_status'] == 'ready'" in backend_healthcheck
+    assert "schema_status'] == 'ready'" in backend_healthcheck
+    assert "headers={'Host': host}" in backend_healthcheck
     assert legacy_starters == {}
+
+
+def test_compose_public_app_routes_are_opt_in_and_https_only() -> None:
+    compose = yaml.safe_load((REPO_ROOT / "compose.yml").read_text(encoding="utf-8"))
+    backend_labels = compose["services"]["backend"]["labels"]
+    frontend_labels = compose["services"]["frontend"]["labels"]
+
+    assert "traefik.enable=${TRAEFIK_APP_ENABLED:-false}" in backend_labels
+    assert "traefik.enable=${TRAEFIK_APP_ENABLED:-false}" in frontend_labels
+    backend_redirect = "traefik.http.routers.workbench-backend-http.middlewares=https-redirect"
+    frontend_redirect = "traefik.http.routers.workbench-frontend-http.middlewares=https-redirect"
+    assert backend_redirect in backend_labels
+    assert frontend_redirect in frontend_labels
+    assert "traefik.http.middlewares.https-redirect.redirectscheme.scheme=https" in backend_labels
+    assert "traefik.http.middlewares.https-redirect.redirectscheme.permanent=true" in backend_labels
+    assert (
+        "traefik.http.middlewares.workbench-upload-limit.buffering.maxRequestBodyBytes="
+        "${TRAEFIK_MAX_REQUEST_BODY_BYTES:-26214400}"
+    ) in backend_labels
 
 
 def test_traefik_dashboard_route_is_opt_in_and_ip_limited() -> None:
@@ -199,6 +231,37 @@ def test_env_example_does_not_pin_api_docs_on_for_shared_deployments() -> None:
 
     assert "API_DOCS_ENABLED=true" not in env_example
     assert "\nAPI_DOCS_ENABLED=\n" in env_example
+    assert "\nRATE_LIMIT_ENABLED=true\n" in env_example
+    assert "\nTRAEFIK_APP_ENABLED=false\n" in env_example
+    assert "\nMAX_UPLOAD_MB=25\n" in env_example
+
+
+def test_public_deployment_runbook_documents_backup_retention_and_tls() -> None:
+    runbook = _read_repo_text("docs/workbench-public-deployment.md")
+
+    assert "scripts/workbench-backup.sh" in runbook
+    assert "scripts/workbench-restore.sh" in runbook
+    assert "WORKBENCH_ARTIFACT_MODE=compose" in runbook
+    assert "/app/template-import-uploads" in runbook
+    assert "python -m app.core.retention --dry-run" in runbook
+    assert "TRAEFIK_APP_ENABLED=true" in runbook
+    assert "BACKEND_CORS_ORIGINS=https://workbench.example.com" in runbook
+
+
+def test_backup_restore_scripts_support_database_url_and_compose_artifacts() -> None:
+    backup = _read_repo_text("scripts/workbench-backup.sh")
+    restore = _read_repo_text("scripts/workbench-restore.sh")
+
+    assert 'pg_dump --format=custom --file="$BACKUP_DIR/workbench.dump" "$DATABASE_URL"' in backup
+    assert 'pg_restore --clean --if-exists --dbname="$DATABASE_URL"' in restore
+    assert "WORKBENCH_ARTIFACT_MODE:-host" in backup
+    assert "WORKBENCH_ARTIFACT_MODE:-host" in restore
+    assert "docker compose ps -q backend" in backup
+    assert "docker compose ps -q backend" in restore
+    assert (
+        "template-import-uploads template-reports provider-snapshots template-provider-cache"
+        in backup
+    )
 
 
 def test_active_runtime_entrypoints_use_template_backend_app() -> None:
@@ -210,7 +273,17 @@ def test_active_runtime_entrypoints_use_template_backend_app() -> None:
 
     override_backend_command = _as_text(override["services"]["backend"]["command"])
 
-    assert 'CMD ["uvicorn", "app.main:app"' in dockerfile
+    assert "alembic -c /app/backend/alembic.ini upgrade head" in dockerfile
+    assert "python -m app.core.migration_bootstrap" in dockerfile
+    assert "exec uvicorn app.main:app" in dockerfile
+    assert "set -e" in override_backend_command
+    assert "python -m app.core.migration_bootstrap" in override_backend_command
+    assert "alembic -c /app/backend/alembic.ini upgrade head" in override_backend_command
+    assert "python3 -m app.core.migration_bootstrap" in playwright_backend
+    assert "python3 -m alembic -c backend/alembic.ini upgrade head" in playwright_backend
+    assert "RATE_LIMIT_ENABLED=false" in playwright_backend
+    assert "init_db" not in override_backend_command
+    assert "init_db" not in playwright_backend
     assert "app.main:app" in override_backend_command
     assert "uvicorn app.main:app" in playwright_backend
     for marker in LEGACY_RUNTIME_STARTERS:
@@ -238,7 +311,7 @@ def test_makefile_has_no_legacy_runtime_smoke_or_compose_path() -> None:
     assert "docker-postgres-migration-smoke" not in makefile
     assert "api/test_workbench_api.py" not in makefile
     assert "$(BACKEND_TESTS)/playwright" not in makefile
-    assert "npm --prefix frontend run test -- tests/ui-smoke.spec.ts" in makefile
+    assert "cd frontend && npm run test -- tests/ui-smoke.spec.ts" in makefile
     assert "--profile legacy-postgres" not in docker_demo_smoke
     assert "workbench-postgres" not in docker_demo_smoke
     assert not any(marker in docker_demo_smoke for marker in LEGACY_RUNTIME_STARTERS)

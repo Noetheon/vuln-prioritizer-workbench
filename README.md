@@ -208,10 +208,10 @@ compromised.
 Useful local checks:
 
 ```bash
-npm --prefix frontend run build
-npm --prefix frontend run lint
-npm --prefix frontend run test:unit
-npm --prefix frontend run test -- tests/ui-smoke.spec.ts
+cd frontend && npm run build
+cd frontend && npm run lint
+cd frontend && npm run test:unit
+cd frontend && npm run test -- tests/ui-smoke.spec.ts
 
 python3 -m pytest -q backend/tests/api/test_template_reports_api.py --no-cov
 python3 -m pytest -q backend/tests/test_docs_hygiene.py --no-cov

@@ -196,6 +196,10 @@ export type ApiTokenCreate = {
      */
     name: string;
     /**
+     * Project Id
+     */
+    project_id?: string | null;
+    /**
      * Scopes
      */
     scopes?: Array<'read' | 'import' | 'report' | 'admin'>;
@@ -227,6 +231,10 @@ export type ApiTokenCreatePublic = {
      * Name
      */
     name: string;
+    /**
+     * Project Id
+     */
+    project_id: string | null;
     /**
      * Revoked At
      */
@@ -267,6 +275,10 @@ export type ApiTokenPublic = {
      * Name
      */
     name: string;
+    /**
+     * Project Id
+     */
+    project_id: string | null;
     /**
      * Revoked At
      */
@@ -529,6 +541,124 @@ export type AssetsPublic = {
      * Data
      */
     data: Array<AssetPublic>;
+};
+
+/**
+ * AuditEventPublic
+ *
+ * Audit event shape exposed to administrators.
+ */
+export type AuditEventPublic = {
+    /**
+     * Action
+     */
+    action: string;
+    /**
+     * Actor User Id
+     */
+    actor_user_id: string | null;
+    /**
+     * Api Token Id
+     */
+    api_token_id: string | null;
+    /**
+     * Created At
+     */
+    created_at: string;
+    /**
+     * Detail
+     */
+    detail: {
+        [key: string]: unknown;
+    };
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Project Id
+     */
+    project_id: string | null;
+    /**
+     * Resource Id
+     */
+    resource_id: string | null;
+    /**
+     * Resource Type
+     */
+    resource_type: string;
+    /**
+     * Status
+     */
+    status: string;
+};
+
+/**
+ * AuditEventsPublic
+ *
+ * Paginated audit event collection.
+ */
+export type AuditEventsPublic = {
+    /**
+     * Count
+     */
+    count: number;
+    /**
+     * Data
+     */
+    data: Array<AuditEventPublic>;
+};
+
+/**
+ * AuthSessionPublic
+ *
+ * Session metadata returned by administrative endpoints.
+ */
+export type AuthSessionPublic = {
+    /**
+     * Active
+     */
+    active: boolean;
+    /**
+     * Created At
+     */
+    created_at: string;
+    /**
+     * Expires At
+     */
+    expires_at: string;
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Last Seen At
+     */
+    last_seen_at: string | null;
+    /**
+     * Revoked At
+     */
+    revoked_at: string | null;
+    /**
+     * User Id
+     */
+    user_id: string;
+};
+
+/**
+ * AuthSessionsPublic
+ *
+ * Collection response for session metadata.
+ */
+export type AuthSessionsPublic = {
+    /**
+     * Count
+     */
+    count: number;
+    /**
+     * Data
+     */
+    data: Array<AuthSessionPublic>;
 };
 
 /**
@@ -2809,6 +2939,14 @@ export type WorkbenchStatus = {
      */
     core_version: string;
     /**
+     * Database Status
+     */
+    database_status: string;
+    /**
+     * Schema Status
+     */
+    schema_status: string;
+    /**
      * Status
      */
     status: string;
@@ -2945,6 +3083,74 @@ export type PostApiV1AssetsByAssetIdRecalculateResponses = {
 
 export type PostApiV1AssetsByAssetIdRecalculateResponse = PostApiV1AssetsByAssetIdRecalculateResponses[keyof PostApiV1AssetsByAssetIdRecalculateResponses];
 
+export type GetApiV1AuditEventsData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Project Id
+         */
+        project_id?: string | null;
+        /**
+         * Limit
+         */
+        limit?: number;
+        /**
+         * Offset
+         */
+        offset?: number;
+    };
+    url: '/api/v1/audit/events';
+};
+
+export type GetApiV1AuditEventsErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type GetApiV1AuditEventsError = GetApiV1AuditEventsErrors[keyof GetApiV1AuditEventsErrors];
+
+export type GetApiV1AuditEventsResponses = {
+    /**
+     * Successful Response
+     */
+    200: AuditEventsPublic;
+};
+
+export type GetApiV1AuditEventsResponse = GetApiV1AuditEventsResponses[keyof GetApiV1AuditEventsResponses];
+
+export type GetApiV1AuditSessionsData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Limit
+         */
+        limit?: number;
+    };
+    url: '/api/v1/audit/sessions';
+};
+
+export type GetApiV1AuditSessionsErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type GetApiV1AuditSessionsError = GetApiV1AuditSessionsErrors[keyof GetApiV1AuditSessionsErrors];
+
+export type GetApiV1AuditSessionsResponses = {
+    /**
+     * Successful Response
+     */
+    200: AuthSessionsPublic;
+};
+
+export type GetApiV1AuditSessionsResponse = GetApiV1AuditSessionsResponses[keyof GetApiV1AuditSessionsResponses];
+
 export type GetApiV1FindingsByFindingIdData = {
     body?: never;
     path: {
@@ -3029,6 +3235,22 @@ export type PostApiV1LoginAccessTokenResponses = {
 };
 
 export type PostApiV1LoginAccessTokenResponse = PostApiV1LoginAccessTokenResponses[keyof PostApiV1LoginAccessTokenResponses];
+
+export type PostApiV1LoginLogoutData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/login/logout';
+};
+
+export type PostApiV1LoginLogoutResponses = {
+    /**
+     * Successful Response
+     */
+    200: UserPublic;
+};
+
+export type PostApiV1LoginLogoutResponse = PostApiV1LoginLogoutResponses[keyof PostApiV1LoginLogoutResponses];
 
 export type PostApiV1LoginTestTokenData = {
     body?: never;

@@ -26,6 +26,7 @@ from app.services import (
     ReportVerificationError,
     verify_evidence_bundle_zip,
 )
+from app.services.audit import record_audit_event
 
 router = APIRouter(tags=["reports"])
 
@@ -65,6 +66,15 @@ def create_run_report(
             report = report_service.create_markdown_report(run=run, project=project)
     except ReportGenerationError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+    record_audit_event(
+        session,
+        action="report.create",
+        resource_type="report",
+        resource_id=report.id,
+        actor=current_user,
+        project_id=report.project_id,
+        detail={"format": report.format, "kind": report.kind, "run_id": str(run.id)},
+    )
     session.commit()
     session.refresh(report)
     return _report_public(report, request)
@@ -102,6 +112,16 @@ def download_report(
         raise HTTPException(status_code=404, detail="Report not found")
     require_visible_project(session, current_user, report.project_id)
     report_path = _validated_report_path(report, _template_settings(request))
+    record_audit_event(
+        session,
+        action="report.download",
+        resource_type="report",
+        resource_id=report.id,
+        actor=current_user,
+        project_id=report.project_id,
+        detail={"format": report.format, "kind": report.kind},
+    )
+    session.commit()
     response = FileResponse(
         report_path,
         filename=report.filename,
@@ -131,7 +151,28 @@ def verify_report(
     try:
         result = verify_evidence_bundle_zip(report_path, display_path=report.filename)
     except ReportVerificationError as exc:
+        record_audit_event(
+            session,
+            action="report.verify",
+            resource_type="report",
+            resource_id=report.id,
+            status="failure",
+            actor=current_user,
+            project_id=report.project_id,
+            detail={"error": str(exc)},
+        )
+        session.commit()
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+    record_audit_event(
+        session,
+        action="report.verify",
+        resource_type="report",
+        resource_id=report.id,
+        actor=current_user,
+        project_id=report.project_id,
+        detail={"format": report.format, "kind": report.kind},
+    )
+    session.commit()
     return ReportVerificationPublic(**result)
 
 

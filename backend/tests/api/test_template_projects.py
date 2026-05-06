@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import uuid
 from collections.abc import Generator
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
@@ -11,8 +12,10 @@ from alembic.config import Config
 from fastapi.testclient import TestClient
 from sqlalchemy import inspect
 from sqlalchemy.pool import StaticPool
+from utils.template_workbench import TemplateApiEnv, auth_headers, create_project_via_api
 
 from app.core.config import settings
+from app.core.rate_limit import InMemoryRateLimiter
 from app.main import app
 
 _SUPERUSER_ID = uuid.UUID("00000000-0000-4000-8000-000000000001")
@@ -37,7 +40,7 @@ def test_template_project_migration_creates_user_project_tables_without_item(
     inspector = inspect(engine)
     tables = set(inspector.get_table_names())
 
-    assert {"user", "project"}.issubset(tables)
+    assert {"user", "project", "auth_session", "audit_event"}.issubset(tables)
     assert "item" not in tables
 
     project_columns = {column["name"] for column in inspector.get_columns("project")}
@@ -84,6 +87,38 @@ def test_authenticated_superuser_can_create_list_and_read_projects() -> None:
         assert read_response.json() == created
     finally:
         cleanup()
+
+
+def test_project_delete_removes_managed_artifact_trees_and_writes_audit(
+    template_api_env: TemplateApiEnv,
+    tmp_path: Path,
+) -> None:
+    client = template_api_env.client
+    active_settings = client.app.state.template_settings
+    upload_root = tmp_path / "uploads"
+    report_root = tmp_path / "reports"
+    client.app.state.template_settings = replace(
+        active_settings,
+        IMPORT_UPLOAD_DIR=str(upload_root),
+        REPORT_DIR=str(report_root),
+    )
+    headers = auth_headers(client)
+    project = create_project_via_api(client, headers)
+    project_id = project["id"]
+    (upload_root / project_id / "run").mkdir(parents=True)
+    (upload_root / project_id / "run" / "input.txt").write_text("CVE-2024-3094\n")
+    (report_root / project_id / "run" / "report").mkdir(parents=True)
+    (report_root / project_id / "run" / "report" / "report.md").write_text("report")
+
+    response = client.delete(f"/api/v1/projects/{project_id}", headers=headers)
+    events = client.get("/api/v1/audit/events", headers=headers).json()["data"]
+
+    assert response.status_code == 204
+    assert not (upload_root / project_id).exists()
+    assert not (report_root / project_id).exists()
+    delete_event = next(item for item in events if item["action"] == "project.delete")
+    assert delete_event["resource_id"] == project_id
+    assert len(delete_event["detail"]["removed_artifact_paths"]) == 2
 
 
 def test_template_project_openapi_exposes_projects_without_items() -> None:
@@ -133,6 +168,7 @@ def _client_with_temp_database() -> tuple[TestClient, Any]:
             yield session
 
     app.dependency_overrides[get_db] = override_get_db
+    app.state.rate_limiter = InMemoryRateLimiter()
 
     def cleanup() -> None:
         app.dependency_overrides.pop(get_db, None)

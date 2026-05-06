@@ -390,9 +390,14 @@ Current evidence-bundle governance additions:
 Workbench API changes are versioned under the active `/api/v1` backend:
 
 - `POST /api/v1/api-tokens/`, `GET /api/v1/api-tokens/`, and `DELETE /api/v1/api-tokens/{token_id}` manage template scoped service tokens; the create response is the only response that includes the cleartext token
+- non-admin template service tokens require `project_id` and are limited to that project; `admin` tokens are global and must not carry `project_id`
 - template service-token scopes are enforced by dependency: `read` covers project/run/finding/provider reads, `import` covers `/api/v1/projects/{project_id}/imports`, `report` covers report creation/download/verification, and `admin` covers token lifecycle and satisfies all scoped dependencies
+- browser JWTs include a persisted session identifier; `/api/v1/login/logout` revokes the active session, and API dependencies reject revoked or expired sessions before returning a user
+- `/api/v1/audit/events` lists redacted audit events for administrators, and `/api/v1/audit/sessions` lists browser session metadata without JWT IDs, token hashes, or cleartext secrets
+- configured rate limits return HTTP 429 with `Retry-After` for excessive API, login, or invalid bearer-token attempts
+- `python -m app.core.retention --dry-run` previews configured audit/session/revoked-token cleanup, while `python -m app.core.retention` applies cleanup and writes a retention audit event
 - `POST /api/v1/projects/{project_id}/imports` accepts a JWT-gated template Workbench upload, validates input type, extension, MIME hint, filename, and upload size, persists the uploaded file under the configured import upload root, and records upload SHA-256 plus structured `parse_errors` in the returned `AnalysisRun`
-- template imports optionally accept `provider_snapshot_file` and `locked_provider_data` form fields; when no explicit snapshot is supplied, local deterministic demo snapshot replay may be used if the configured snapshot exists
+- template imports optionally accept `provider_snapshot_file` and `locked_provider_data` form fields; when no explicit snapshot is supplied, local deterministic demo snapshot replay is used only when `DEMO_PROVIDER_SNAPSHOT_ENABLED=true` and the configured snapshot exists
 - template imports run the shared parse/enrich/score/explain engine before findings are persisted; stored findings include the effective priority, priority rank, risk score, operational rank, KEV/EPSS/CVSS signals, lifecycle flags, rationale, recommended action, and structured `explanation_json`
 - template import analysis failures after the upload run is created mark the run `failed`, add `summary_json.analysis_error` and `error_json.analysis_error`, and do not expose partially persisted findings as successful imports
 - `GET /api/v1/projects/{project_id}/runs` and `GET /api/v1/projects/{project_id}/runs/` list visible template Workbench runs

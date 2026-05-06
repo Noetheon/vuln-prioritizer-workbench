@@ -9,8 +9,8 @@ The browser app talks to the active FastAPI backend through the generated
 ## Local Commands
 
 ```bash
-npm --prefix frontend ci
-npm --prefix frontend run build
+cd frontend && npm ci --workspaces=false
+cd frontend && npm run build
 bash scripts/generate-client.sh
 ```
 

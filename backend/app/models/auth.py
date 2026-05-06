@@ -14,3 +14,4 @@ class TokenPayload(SQLModel):
     """JWT payload accepted by the template shell."""
 
     sub: str | None = None
+    jti: str | None = None

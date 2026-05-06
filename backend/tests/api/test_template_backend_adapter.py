@@ -20,7 +20,16 @@ def test_template_backend_status_uses_versioned_api_namespace() -> None:
     assert payload["status"] == "ok"
     assert payload["app"] == "Vuln Prioritizer Workbench"
     assert payload["core_package"] == "vuln_prioritizer"
-    assert set(payload) == {"status", "app", "core_package", "core_version"}
+    assert payload["database_status"] == "ready"
+    assert payload["schema_status"] in {"ready", "not_ready"}
+    assert set(payload) == {
+        "status",
+        "app",
+        "core_package",
+        "core_version",
+        "database_status",
+        "schema_status",
+    }
 
 
 def test_template_backend_openapi_uses_template_operation_ids() -> None:
@@ -111,6 +120,7 @@ def test_template_backend_settings_load_product_env_defaults(monkeypatch) -> Non
     monkeypatch.setenv("API_V1_STR", "/api/custom")
     monkeypatch.setenv("SECRET_KEY", "template-shell-secret")
     monkeypatch.setenv("FIRST_SUPERUSER_PASSWORD", "template-shell-password")
+    monkeypatch.setenv("FRONTEND_HOST", "https://workbench.example.com")
 
     selected_settings = load_settings()
 
@@ -122,7 +132,7 @@ def test_template_backend_settings_load_product_env_defaults(monkeypatch) -> Non
         ACCESS_TOKEN_EXPIRE_MINUTES=60 * 24 * 8,
         FIRST_SUPERUSER="admin@example.com",
         FIRST_SUPERUSER_PASSWORD="template-shell-password",
-        FRONTEND_HOST="http://localhost:5173",
+        FRONTEND_HOST="https://workbench.example.com",
         BACKEND_CORS_ORIGINS=(),
     )
 
@@ -162,6 +172,7 @@ def test_template_backend_settings_trim_environment_before_validation(monkeypatc
     monkeypatch.setenv("ENVIRONMENT", " production ")
     monkeypatch.setenv("SECRET_KEY", "template-shell-secret")
     monkeypatch.setenv("FIRST_SUPERUSER_PASSWORD", "template-shell-password")
+    monkeypatch.setenv("FRONTEND_HOST", "https://workbench.example.com")
 
     assert load_settings().ENVIRONMENT == "production"
 
@@ -179,6 +190,47 @@ def test_template_backend_settings_parse_cors_origins() -> None:
     assert selected_settings.all_cors_origins == (
         "http://localhost:5173",
         "http://127.0.0.1:5173",
+    )
+
+
+@pytest.mark.parametrize(
+    "frontend_host, origins, message",
+    [
+        ("https://workbench.example.com", ("*",), "exact origins"),
+        ("http://workbench.example.com", (), "https"),
+        ("https://localhost", (), "localhost"),
+        ("https://workbench.example.com/path", (), "entries must be origins"),
+    ],
+)
+def test_template_backend_rejects_unsafe_non_local_cors(
+    frontend_host: str,
+    origins: tuple[str, ...],
+    message: str,
+) -> None:
+    with pytest.raises(ValueError, match=message):
+        Settings(
+            ENVIRONMENT="production",
+            SECRET_KEY="template-shell-secret",
+            FIRST_SUPERUSER_PASSWORD="template-shell-password",
+            FRONTEND_HOST=frontend_host,
+            BACKEND_CORS_ORIGINS=origins,
+            ALLOWED_HOSTS=("workbench.example.com",),
+        )
+
+
+def test_template_backend_accepts_exact_https_non_local_cors() -> None:
+    selected_settings = Settings(
+        ENVIRONMENT="production",
+        SECRET_KEY="template-shell-secret",
+        FIRST_SUPERUSER_PASSWORD="template-shell-password",
+        FRONTEND_HOST="https://workbench.example.com",
+        BACKEND_CORS_ORIGINS=("https://api.workbench.example.com",),
+        ALLOWED_HOSTS=("workbench.example.com",),
+    )
+
+    assert selected_settings.all_cors_origins == (
+        "https://api.workbench.example.com",
+        "https://workbench.example.com",
     )
 
 
@@ -218,6 +270,7 @@ def test_template_backend_hides_docs_and_openapi_outside_local_by_default() -> N
             ENVIRONMENT="production",
             SECRET_KEY="template-shell-secret",
             FIRST_SUPERUSER_PASSWORD="template-shell-password",
+            FRONTEND_HOST="https://workbench.example.com",
             ALLOWED_HOSTS=("workbench.example.com",),
         )
     )
@@ -246,6 +299,7 @@ def test_template_backend_can_explicitly_expose_openapi_for_client_generation() 
             ENVIRONMENT="production",
             SECRET_KEY="template-shell-secret",
             FIRST_SUPERUSER_PASSWORD="template-shell-password",
+            FRONTEND_HOST="https://workbench.example.com",
             ALLOWED_HOSTS=("workbench.example.com",),
             API_DOCS_ENABLED=True,
         )

@@ -4,12 +4,18 @@ import importlib
 import inspect
 import uuid
 from collections.abc import Iterator
+from pathlib import Path
 from typing import Any
 
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.pool import StaticPool
 from sqlmodel import Session, SQLModel
+
+from app.core.config import Settings
+from app.services import AnalysisService
+
+PROJECT_ROOT = Path(__file__).resolve().parents[3]
 
 
 @pytest.fixture()
@@ -45,6 +51,25 @@ def test_project_routes_delegate_domain_persistence_to_repository() -> None:
     assert "select(" not in source
     assert "func.count" not in source
     assert "session.add" not in source
+
+
+def test_analysis_service_uses_demo_snapshot_only_when_enabled(session: Session) -> None:
+    disabled = AnalysisService(
+        session,
+        Settings(PROVIDER_SNAPSHOT_DIR=str(PROJECT_ROOT / "data")),
+    )
+    enabled = AnalysisService(
+        session,
+        Settings(
+            PROVIDER_SNAPSHOT_DIR=str(PROJECT_ROOT / "data"),
+            DEMO_PROVIDER_SNAPSHOT_ENABLED=True,
+        ),
+    )
+
+    assert disabled.default_provider_snapshot_file() is None
+    assert enabled.default_provider_snapshot_file() == PROJECT_ROOT / "data" / (
+        "demo_provider_snapshot.json"
+    )
 
 
 def test_project_repository_scopes_visibility_and_leaves_commit_to_caller(

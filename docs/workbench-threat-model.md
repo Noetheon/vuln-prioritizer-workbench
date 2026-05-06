@@ -127,7 +127,15 @@ Primary boundaries:
 
 ## Shared Deployment Prerequisites
 
-Shared or internet-exposed Workbench deployment is not supported by the current local-first threat model. Before positioning the Workbench that way, the project needs a new reviewed threat-model version and these controls as product requirements:
+Shared or internet-exposed Workbench deployment is only acceptable after the
+public-deployment controls in
+[Workbench Public Deployment Runbook](./workbench-public-deployment.md) are
+configured and verified. The current implementation provides baseline controls
+for scoped tokens, revocable browser sessions, audit events, retention cleanup,
+strict CORS validation, migration readiness, and backup/restore runbooks. Before
+positioning the Workbench as a broader SaaS or multi-tenant service, the project
+still needs a new reviewed threat-model version and these controls as product
+requirements:
 
 - authentication stronger than local template defaults that covers browser sessions, automation, token rotation, and recovery
 - explicit `ALLOWED_HOSTS`, non-default `SECRET_KEY` and `FIRST_SUPERUSER_PASSWORD`, and disabled or access-controlled `API_DOCS_ENABLED`
@@ -182,7 +190,7 @@ The current local-first Workbench is readiness-aligned when:
 | Compose database and provider refresh | `compose.yml` starts the active backend and frontend by default, gives the backend writable provider snapshot/cache volumes, and does not define a second Workbench runtime. | `tests/test_workbench_integration_contracts.py` checks the active Compose boundary; `make docker-demo-smoke` exercises the active import plus provider update path when Docker is available. |
 | 10k findings API smoke | The active API exposes paginated findings with limit/offset and sort controls. This is a smoke check, not the final scale architecture. | `make performance-smoke` runs the VPW-072 template import and pagination smoke with 10,000 findings. |
 | Docker demo smoke | `docker compose -f compose.yml -f compose.override.yml up --build backend frontend` is the supported active Workbench readiness path. | `make docker-demo-smoke` starts Compose, polls `http://127.0.0.1:8000/api/v1/workbench/status`, and tears the stack down with `docker compose down -v --remove-orphans`. |
-| Dependency audit | Backend dependencies are reviewed from `backend/requirements.txt`, and frontend production dependencies are reviewed from the committed npm lockfile. | `make dependency-audit` requires `pip-audit`, runs `python3 -m pip_audit --requirement backend/requirements.txt`, and runs `npm --prefix frontend audit --omit=dev`; release notes or the release checklist should record the result and any accepted exceptions. |
+| Dependency audit | Backend dependencies are reviewed from `backend/requirements.txt`, and frontend production dependencies are reviewed from the committed npm lockfile. | `make dependency-audit` requires `pip-audit`, runs `python3 -m pip_audit --requirement backend/requirements.txt`, and runs `cd frontend && npm --workspaces=false audit --omit=dev`; release notes or the release checklist should record the result and any accepted exceptions. |
 | VPW-071 secret and provider hardening | Runtime docs require NVD API keys by environment variable name only, environment variable names matching `^[A-Z_][A-Z0-9_]*$`, local/dev-only template defaults, fixed HTTPS public provider endpoints, and redacted settings/report/log-facing diagnostics. VPW-071 evidence is archived in `archive/vpw-evidence/vpw-071-secret-provider-hardening.md`. | Focused provider/settings/report tests, grep/no-real-key review, `make docs-check`, `make check`, and `make docker-demo-smoke` are the evidence commands to record before marking implementation complete. |
 
 ## Smoke and Audit Evidence

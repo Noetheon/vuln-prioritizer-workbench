@@ -18,12 +18,25 @@ export type EpssBucketCounts = {
   critical: number
 }
 
-const priorityOrder: Array<{ key: string; label: string; tone: string }> = [
+export type PriorityBucket = "Critical" | "High" | "Medium" | "Low"
+
+const priorityOrder: Array<{
+  key: PriorityBucket
+  label: PriorityBucket
+  tone: string
+}> = [
   { key: "Critical", label: "Critical", tone: "critical" },
   { key: "High", label: "High", tone: "high" },
   { key: "Medium", label: "Medium", tone: "medium" },
   { key: "Low", label: "Low", tone: "low" },
 ]
+
+const priorityKeyAliases: Record<PriorityBucket, string[]> = {
+  Critical: ["Critical", "critical"],
+  High: ["High", "high"],
+  Medium: ["Medium", "medium"],
+  Low: ["Low", "low"],
+}
 
 const lifecyclePriorityOrder: Array<{
   key: string
@@ -40,7 +53,7 @@ export function findingsByPriorityChartData(
   const priorityItems = priorityOrder.map((priority) => ({
     label: priority.label,
     tone: priority.tone,
-    value: summary?.counts_by_priority?.[priority.key] ?? 0,
+    value: priorityCount(summary, priority.key),
   }))
   const lifecycleItems = lifecyclePriorityOrder
     .map((status) => ({
@@ -51,6 +64,23 @@ export function findingsByPriorityChartData(
     }))
     .filter((item) => item.value > 0)
   return [...priorityItems, ...lifecycleItems]
+}
+
+export function priorityCount(
+  summary: ProjectDecisionSummaryPublic | null,
+  priority: PriorityBucket,
+): number {
+  const counts = summary?.counts_by_priority
+  if (!counts) {
+    return 0
+  }
+  for (const key of priorityKeyAliases[priority]) {
+    const value = counts[key]
+    if (typeof value === "number") {
+      return value
+    }
+  }
+  return 0
 }
 
 export function topServicesByRiskChartData(

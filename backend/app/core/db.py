@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import uuid
 
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, SQLModel, create_engine, select
 
 from app.core.config import settings
@@ -51,6 +52,13 @@ def ensure_configured_superuser(session: Session) -> User:
         hashed_password="configured-superuser-password-placeholder",
     )
     session.add(user)
-    session.commit()
+    try:
+        session.commit()
+    except IntegrityError:
+        session.rollback()
+        existing = session.exec(statement).first()
+        if existing:
+            return existing
+        raise
     session.refresh(user)
     return user

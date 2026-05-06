@@ -6,6 +6,7 @@ import base64
 import hashlib
 import hmac
 import json
+import secrets
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
@@ -27,13 +28,36 @@ def _base64url_decode(payload: str) -> bytes:
     return base64.urlsafe_b64decode(f"{payload}{padding}")
 
 
-def create_access_token(subject: str | Any, expires_delta: timedelta | None = None) -> str:
-    """Create a signed JWT for the configured active-runtime subject."""
-    expire = datetime.now(UTC) + (
+def access_token_expires_at(expires_delta: timedelta | None = None) -> datetime:
+    """Return the expiry timestamp used for a new access token."""
+    return datetime.now(UTC) + (
         expires_delta or timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     )
+
+
+def new_token_jti() -> str:
+    """Return a random JWT ID suitable for revocable session tracking."""
+    return secrets.token_urlsafe(32)
+
+
+def token_jti_digest(jti: str) -> str:
+    """Return a stable digest for storing JWT IDs without token material."""
+    return hashlib.sha256(jti.encode("utf-8")).hexdigest()
+
+
+def create_access_token(
+    subject: str | Any,
+    expires_delta: timedelta | None = None,
+    *,
+    jti: str | None = None,
+    expires_at: datetime | None = None,
+) -> str:
+    """Create a signed JWT for the configured active-runtime subject."""
+    expire = expires_at or access_token_expires_at(expires_delta)
     header = {"alg": ALGORITHM, "typ": "JWT"}
     claims = {"exp": int(expire.timestamp()), "sub": str(subject)}
+    if jti is not None:
+        claims["jti"] = jti
     signing_input = ".".join(
         [
             _base64url_encode(json.dumps(header, separators=(",", ":")).encode("utf-8")),

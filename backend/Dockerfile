@@ -7,7 +7,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 WORKDIR /app
 
 COPY README.md LICENSE ./
-COPY backend/pyproject.toml backend/requirements.txt backend/MANIFEST.in backend/README.md ./backend/
+COPY backend/pyproject.toml backend/requirements.txt backend/MANIFEST.in backend/README.md backend/alembic.ini ./backend/
 COPY backend/app ./backend/app
 COPY backend/src ./backend/src
 
@@ -28,13 +28,22 @@ RUN python -m pip install --upgrade pip \
 USER workbench
 WORKDIR /app/backend
 
-ENV VULN_PRIORITIZER_DB_URL=sqlite:////app/data/workbench.db \
-    VULN_PRIORITIZER_UPLOAD_DIR=/app/uploads \
-    VULN_PRIORITIZER_REPORT_DIR=/app/reports \
-    VULN_PRIORITIZER_PROVIDER_SNAPSHOT_DIR=/app/provider-snapshots \
-    VULN_PRIORITIZER_CACHE_DIR=/app/.cache/vuln-prioritizer \
-    VULN_PRIORITIZER_MAX_UPLOAD_MB=25
+ENV SQLALCHEMY_DATABASE_URI=sqlite:////app/data/workbench.db \
+    IMPORT_UPLOAD_DIR=/app/template-import-uploads \
+    REPORT_DIR=/app/template-reports \
+    PROVIDER_SNAPSHOT_DIR=/app/provider-snapshots \
+    PROVIDER_CACHE_DIR=/app/template-provider-cache \
+    ATTACK_ARTIFACT_DIR=/app/examples/attack \
+    DEMO_PROVIDER_SNAPSHOT_ENABLED=false \
+    RATE_LIMIT_ENABLED=true \
+    API_RATE_LIMIT_PER_MINUTE=600 \
+    LOGIN_RATE_LIMIT_PER_MINUTE=60 \
+    TOKEN_FAILURE_RATE_LIMIT_PER_MINUTE=60 \
+    AUDIT_RETENTION_DAYS=365 \
+    SESSION_RETENTION_DAYS=30 \
+    REVOKED_API_TOKEN_RETENTION_DAYS=365 \
+    MAX_UPLOAD_MB=25
 
 EXPOSE 8000
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["sh", "-c", "python -m app.core.migration_bootstrap && alembic -c /app/backend/alembic.ini upgrade head && exec uvicorn app.main:app --host 0.0.0.0 --port 8000"]

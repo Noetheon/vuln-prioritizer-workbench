@@ -81,6 +81,7 @@ TESTPYPI_WORKFLOW = Path(__file__).resolve().parents[2] / ".github" / "workflows
 MAKEFILE = Path(__file__).resolve().parents[2] / "Makefile"
 README_FILE = Path(__file__).resolve().parents[2] / "README.md"
 FRONTEND_PACKAGE_LOCK = Path(__file__).resolve().parents[2] / "frontend" / "package-lock.json"
+FRONTEND_PACKAGE = Path(__file__).resolve().parents[2] / "frontend" / "package.json"
 FRONTEND_DOCKERFILE = Path(__file__).resolve().parents[2] / "frontend" / "Dockerfile"
 FRONTEND_PLAYWRIGHT_DOCKERFILE = (
     Path(__file__).resolve().parents[2] / "frontend" / "Dockerfile.playwright"
@@ -623,6 +624,7 @@ def test_ci_workflow_runs_workflow_check_on_supported_python_versions() -> None:
 
 def test_frontend_dependency_audit_uses_reproducible_npm_lockfile() -> None:
     makefile = MAKEFILE.read_text(encoding="utf-8")
+    frontend_package = json.loads(FRONTEND_PACKAGE.read_text(encoding="utf-8"))
     lockfile = json.loads(FRONTEND_PACKAGE_LOCK.read_text(encoding="utf-8"))
 
     frontend_install_block = makefile.split("frontend-install:", 1)[1].split(
@@ -639,13 +641,16 @@ def test_frontend_dependency_audit_uses_reproducible_npm_lockfile() -> None:
     )[0]
 
     assert lockfile["lockfileVersion"] >= 3
-    assert '"node_modules/@vitejs/plugin-react-swc"' in FRONTEND_PACKAGE_LOCK.read_text(
-        encoding="utf-8"
-    )
-    assert "npm --prefix frontend ci" in frontend_install_block
-    assert "npm --prefix frontend install" not in frontend_install_block
-    assert "npm --prefix frontend audit --omit=dev" in frontend_audit_block
+    lockfile_text = FRONTEND_PACKAGE_LOCK.read_text(encoding="utf-8")
+    assert '"node_modules/@vitejs/plugin-react"' in lockfile_text
+    assert "plugin-react-swc" not in lockfile_text
+    assert "cd frontend && npm ci --workspaces=false" in frontend_install_block
+    assert "npm --prefix frontend ci" not in frontend_install_block
+    assert "npm install" not in frontend_install_block
+    assert "cd frontend && npm --workspaces=false audit --omit=dev" in frontend_audit_block
     assert "$(MAKE) frontend-audit" in dependency_audit_block
+    assert "--write" not in frontend_package["scripts"]["lint"]
+    assert "--unsafe" not in frontend_package["scripts"]["lint"]
 
 
 def test_frontend_container_builds_use_reproducible_npm_lockfile() -> None:
@@ -653,9 +658,10 @@ def test_frontend_container_builds_use_reproducible_npm_lockfile() -> None:
         content = dockerfile.read_text(encoding="utf-8")
 
         assert "frontend/package-lock.json" in content
-        assert "npm --prefix frontend ci" in content
+        assert "WORKDIR /app/frontend" in content
+        assert "npm ci --workspaces=false" in content
         assert "--no-package-lock" not in content
-        assert "npm --prefix frontend install" not in content
+        assert "npm install" not in content
 
 
 def test_ci_workflow_permissions_are_minimal() -> None:
@@ -821,11 +827,19 @@ def test_release_check_keeps_demo_sync_manual_and_deterministic() -> None:
     assert "demo-sync-check:" in makefile
     release_block = makefile.split("release-check:", 1)[1]
     assert "$(MAKE) frontend-check" in release_block
+    assert "frontend-test-unit:" in makefile
+    assert (
+        "frontend-check: frontend-install frontend-lint frontend-build "
+        "frontend-test-unit frontend-generate-client" in makefile
+    )
     assert "$(MAKE) dependency-audit" in release_block
     assert "$(MAKE) docker-demo-smoke" in release_block
     assert "$(MAKE) pipx-source-smoke" in release_block
     assert "$(MAKE) demo-sync-check" in release_block
-    assert "release-readiness-check: release-check demo-evidence-bundle-check" in makefile
+    assert (
+        "release-readiness-check: release-check demo-evidence-bundle-check playwright-check"
+        in makefile
+    )
     assert "VULN_PRIORITIZER_FIXED_NOW" in makefile
     assert "git diff --binary -- docs" in makefile
     assert 'cmp -s "$$before" "$$after"' in makefile

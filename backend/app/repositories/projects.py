@@ -7,6 +7,7 @@ import uuid
 from sqlmodel import Session, col, func, select
 
 from app.models import Project, ProjectCreate, ProjectUpdate, User
+from app.models.api_tokens import api_token_project_id, api_token_scopes
 from app.models.base import get_datetime_utc
 
 
@@ -20,7 +21,14 @@ class ProjectRepository:
         """Return projects visible to a user plus the matching total count."""
         count_statement = select(func.count()).select_from(Project)
         statement = select(Project).order_by(col(Project.created_at).desc())
-        if not user.is_superuser:
+        service_token_scopes = api_token_scopes(user)
+        if service_token_scopes is not None and "admin" not in service_token_scopes:
+            scoped_project_id = api_token_project_id(user)
+            if scoped_project_id is None:
+                return [], 0
+            count_statement = count_statement.where(Project.id == scoped_project_id)
+            statement = statement.where(Project.id == scoped_project_id)
+        elif not user.is_superuser:
             count_statement = count_statement.where(Project.owner_id == user.id)
             statement = statement.where(Project.owner_id == user.id)
 

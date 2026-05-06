@@ -9,14 +9,16 @@ from sqlalchemy.pool import StaticPool
 from sqlmodel import Session, SQLModel, create_engine
 
 from app.core import security
-from app.core.config import settings
-from app.main import app
+from app.core.config import Settings, settings
+from app.core.rate_limit import InMemoryRateLimiter
+from app.main import app, create_app
 
 
-def _client() -> TestClient:
+def _client(active_app: Any = app) -> TestClient:
     from app.api.deps import get_db
 
-    app.dependency_overrides.clear()
+    active_app.dependency_overrides.clear()
+    active_app.state.rate_limiter = InMemoryRateLimiter()
     engine = create_engine(
         "sqlite://",
         connect_args={"check_same_thread": False},
@@ -28,8 +30,8 @@ def _client() -> TestClient:
         with Session(engine) as session:
             yield session
 
-    app.dependency_overrides[get_db] = override_get_db
-    return TestClient(app)
+    active_app.dependency_overrides[get_db] = override_get_db
+    return TestClient(active_app)
 
 
 def _login(client: TestClient) -> str:
@@ -53,6 +55,7 @@ def test_template_login_access_token_accepts_configured_superuser() -> None:
 
     decoded = security.decode_access_token(token)
     assert decoded["sub"] == settings.FIRST_SUPERUSER
+    assert decoded["jti"]
 
 
 def test_template_login_access_token_rejects_wrong_password() -> None:
@@ -91,6 +94,47 @@ def test_template_token_routes_return_current_configured_user() -> None:
     assert user_me.json()["created_at"] == test_token.json()["created_at"]
 
 
+def test_template_logout_revokes_browser_session() -> None:
+    client = _client()
+    token = _login(client)
+    headers = {"Authorization": f"Bearer {token}"}
+
+    logout = client.post("/api/v1/login/logout", headers=headers)
+    after_logout = client.get("/api/v1/users/me", headers=headers)
+
+    assert logout.status_code == 200
+    assert after_logout.status_code == 403
+    assert after_logout.json()["detail"] == "Session is expired or revoked"
+
+
+def test_template_login_rate_limit_blocks_repeated_attempts() -> None:
+    selected_app = create_app(Settings(LOGIN_RATE_LIMIT_PER_MINUTE=2))
+    client = _client(selected_app)
+
+    attempts = [
+        client.post(
+            "/api/v1/login/access-token",
+            data={"username": settings.FIRST_SUPERUSER, "password": "wrong-password"},
+        )
+        for _ in range(3)
+    ]
+
+    assert [attempt.status_code for attempt in attempts] == [400, 400, 429]
+    assert attempts[-1].headers["retry-after"]
+
+
+def test_template_audit_events_capture_login_lifecycle() -> None:
+    client = _client()
+    token = _login(client)
+    headers = {"Authorization": f"Bearer {token}"}
+
+    response = client.get("/api/v1/audit/events", headers=headers)
+
+    assert response.status_code == 200
+    actions = [item["action"] for item in response.json()["data"]]
+    assert "login.success" in actions
+
+
 def test_template_token_routes_reject_missing_or_invalid_token() -> None:
     client = _client()
 
@@ -110,7 +154,10 @@ def test_template_auth_smoke_keeps_workbench_status_available() -> None:
     response = client.get("/api/v1/workbench/status")
 
     assert response.status_code == 200
-    assert response.json()["status"] == "ok"
+    payload = response.json()
+    assert payload["status"] == "ok"
+    assert payload["database_status"] == "ready"
+    assert payload["schema_status"] == "ready"
 
 
 def test_template_api_responses_include_security_headers() -> None:

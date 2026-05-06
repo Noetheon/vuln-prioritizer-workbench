@@ -291,6 +291,18 @@ export const ApiTokenCreateSchema = {
             title: 'Name',
             type: 'string'
         },
+        project_id: {
+            anyOf: [
+                {
+                    format: 'uuid',
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Project Id'
+        },
         scopes: {
             items: {
                 enum: [
@@ -345,6 +357,18 @@ export const ApiTokenCreatePublicSchema = {
             title: 'Name',
             type: 'string'
         },
+        project_id: {
+            anyOf: [
+                {
+                    format: 'uuid',
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Project Id'
+        },
         revoked_at: {
             anyOf: [
                 {
@@ -378,6 +402,7 @@ export const ApiTokenCreatePublicSchema = {
     required: [
         'id',
         'name',
+        'project_id',
         'scopes',
         'active',
         'created_at',
@@ -422,6 +447,18 @@ export const ApiTokenPublicSchema = {
             title: 'Name',
             type: 'string'
         },
+        project_id: {
+            anyOf: [
+                {
+                    format: 'uuid',
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Project Id'
+        },
         revoked_at: {
             anyOf: [
                 {
@@ -451,6 +488,7 @@ export const ApiTokenPublicSchema = {
     required: [
         'id',
         'name',
+        'project_id',
         'scopes',
         'active',
         'created_at',
@@ -933,6 +971,211 @@ export const AssetsPublicSchema = {
         'count'
     ],
     title: 'AssetsPublic',
+    type: 'object'
+} as const;
+
+export const AuditEventPublicSchema = {
+    description: 'Audit event shape exposed to administrators.',
+    properties: {
+        action: {
+            title: 'Action',
+            type: 'string'
+        },
+        actor_user_id: {
+            anyOf: [
+                {
+                    format: 'uuid',
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Actor User Id'
+        },
+        api_token_id: {
+            anyOf: [
+                {
+                    format: 'uuid',
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Api Token Id'
+        },
+        created_at: {
+            format: 'date-time',
+            title: 'Created At',
+            type: 'string'
+        },
+        detail: {
+            additionalProperties: true,
+            title: 'Detail',
+            type: 'object'
+        },
+        id: {
+            format: 'uuid',
+            title: 'Id',
+            type: 'string'
+        },
+        project_id: {
+            anyOf: [
+                {
+                    format: 'uuid',
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Project Id'
+        },
+        resource_id: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Resource Id'
+        },
+        resource_type: {
+            title: 'Resource Type',
+            type: 'string'
+        },
+        status: {
+            title: 'Status',
+            type: 'string'
+        }
+    },
+    required: [
+        'id',
+        'action',
+        'resource_type',
+        'resource_id',
+        'status',
+        'actor_user_id',
+        'project_id',
+        'api_token_id',
+        'detail',
+        'created_at'
+    ],
+    title: 'AuditEventPublic',
+    type: 'object'
+} as const;
+
+export const AuditEventsPublicSchema = {
+    description: 'Paginated audit event collection.',
+    properties: {
+        count: {
+            title: 'Count',
+            type: 'integer'
+        },
+        data: {
+            items: {
+                $ref: '#/components/schemas/AuditEventPublic'
+            },
+            title: 'Data',
+            type: 'array'
+        }
+    },
+    required: [
+        'data',
+        'count'
+    ],
+    title: 'AuditEventsPublic',
+    type: 'object'
+} as const;
+
+export const AuthSessionPublicSchema = {
+    description: 'Session metadata returned by administrative endpoints.',
+    properties: {
+        active: {
+            title: 'Active',
+            type: 'boolean'
+        },
+        created_at: {
+            format: 'date-time',
+            title: 'Created At',
+            type: 'string'
+        },
+        expires_at: {
+            format: 'date-time',
+            title: 'Expires At',
+            type: 'string'
+        },
+        id: {
+            format: 'uuid',
+            title: 'Id',
+            type: 'string'
+        },
+        last_seen_at: {
+            anyOf: [
+                {
+                    format: 'date-time',
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Last Seen At'
+        },
+        revoked_at: {
+            anyOf: [
+                {
+                    format: 'date-time',
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Revoked At'
+        },
+        user_id: {
+            format: 'uuid',
+            title: 'User Id',
+            type: 'string'
+        }
+    },
+    required: [
+        'id',
+        'user_id',
+        'active',
+        'created_at',
+        'expires_at',
+        'last_seen_at',
+        'revoked_at'
+    ],
+    title: 'AuthSessionPublic',
+    type: 'object'
+} as const;
+
+export const AuthSessionsPublicSchema = {
+    description: 'Collection response for session metadata.',
+    properties: {
+        count: {
+            title: 'Count',
+            type: 'integer'
+        },
+        data: {
+            items: {
+                $ref: '#/components/schemas/AuthSessionPublic'
+            },
+            title: 'Data',
+            type: 'array'
+        }
+    },
+    required: [
+        'data',
+        'count'
+    ],
+    title: 'AuthSessionsPublic',
     type: 'object'
 } as const;
 
@@ -5061,6 +5304,14 @@ export const WorkbenchStatusSchema = {
             title: 'Core Version',
             type: 'string'
         },
+        database_status: {
+            title: 'Database Status',
+            type: 'string'
+        },
+        schema_status: {
+            title: 'Schema Status',
+            type: 'string'
+        },
         status: {
             title: 'Status',
             type: 'string'
@@ -5070,7 +5321,9 @@ export const WorkbenchStatusSchema = {
         'status',
         'app',
         'core_package',
-        'core_version'
+        'core_version',
+        'database_status',
+        'schema_status'
     ],
     title: 'WorkbenchStatus',
     type: 'object'

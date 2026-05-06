@@ -14,6 +14,7 @@ from starlette.responses import JSONResponse, Response
 
 from app.api.main import api_router
 from app.core.config import Settings, settings
+from app.core.rate_limit import InMemoryRateLimiter, rate_limit_key
 from vuln_prioritizer.security_redaction import redact_value
 
 SECURITY_HEADERS = {
@@ -53,6 +54,7 @@ def create_app(active_settings: Settings | None = None) -> FastAPI:
         generate_unique_id_function=custom_generate_unique_id,
     )
     app.state.template_settings = selected_settings
+    app.state.rate_limiter = InMemoryRateLimiter()
     app.add_middleware(
         TrustedHostMiddleware,
         allowed_hosts=list(selected_settings.ALLOWED_HOSTS),
@@ -62,9 +64,10 @@ def create_app(active_settings: Settings | None = None) -> FastAPI:
             CORSMiddleware,
             allow_origins=list(selected_settings.all_cors_origins),
             allow_credentials=True,
-            allow_methods=["*"],
-            allow_headers=["*"],
+            allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+            allow_headers=["Authorization", "Content-Type", "Accept"],
         )
+    app.middleware("http")(_rate_limit_guard)
     app.middleware("http")(_upload_size_guard)
     app.middleware("http")(_security_headers)
     app.include_router(api_router, prefix=selected_settings.API_V1_STR)
@@ -87,6 +90,26 @@ async def _security_headers(
     for header, value in SECURITY_HEADERS.items():
         response.headers.setdefault(header, value)
     return response
+
+
+async def _rate_limit_guard(
+    request: Request,
+    call_next: Callable[[Request], Awaitable[Response]],
+) -> Response:
+    active_settings = getattr(request.app.state, "template_settings", settings)
+    if isinstance(active_settings, Settings):
+        key_and_limit = rate_limit_key(request, active_settings)
+        limiter = getattr(request.app.state, "rate_limiter", None)
+        if key_and_limit is not None and isinstance(limiter, InMemoryRateLimiter):
+            key, limit = key_and_limit
+            decision = limiter.check(key, limit=limit)
+            if not decision.allowed:
+                return JSONResponse(
+                    status_code=429,
+                    content={"detail": "Too many requests."},
+                    headers={"Retry-After": str(decision.retry_after_seconds)},
+                )
+    return await call_next(request)
 
 
 async def _upload_size_guard(

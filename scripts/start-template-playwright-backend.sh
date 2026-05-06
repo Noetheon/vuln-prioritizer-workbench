@@ -19,16 +19,11 @@ else
 fi
 export SQLALCHEMY_DATABASE_URI="sqlite:///$db_path"
 export REPORT_DIR="$report_dir"
+export PROVIDER_SNAPSHOT_DIR="$repo_root/data"
+export DEMO_PROVIDER_SNAPSHOT_ENABLED=true
+export RATE_LIMIT_ENABLED=false
 
-python3 - <<'PY'
-from sqlmodel import Session
-
-from app.core.db import engine, init_db
-from app.models import import_table_models
-
-import_table_models()
-with Session(engine) as session:
-    init_db(session)
-PY
+python3 -m app.core.migration_bootstrap
+python3 -m alembic -c backend/alembic.ini upgrade head
 
 exec python3 -m uvicorn app.main:app --host 127.0.0.1 --port 8000

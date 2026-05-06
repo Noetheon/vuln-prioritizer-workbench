@@ -19,6 +19,7 @@ import {
 import {
   epssBucketChartData,
   findingsByPriorityChartData,
+  priorityCount,
   runActivityTrendData,
   topServicesByRiskChartData,
 } from "@/lib/chart-data"
@@ -198,7 +199,7 @@ export function RiskOperationsDashboard({
         value:
           (!isDemoMode && summaryLoading) || effectiveSummary === null
             ? "—"
-            : String(effectiveSummary?.counts_by_priority?.critical ?? 0),
+            : String(priorityCount(effectiveSummary, "Critical")),
       },
       {
         detail: "Known CISA KEV findings in scope",
@@ -228,7 +229,7 @@ export function RiskOperationsDashboard({
         value:
           (!isDemoMode && summaryLoading) || effectiveSummary === null
             ? "—"
-            : String(effectiveSummary?.counts_by_priority?.high ?? 0),
+            : String(priorityCount(effectiveSummary, "High")),
       },
       {
         detail: freshness.detail,

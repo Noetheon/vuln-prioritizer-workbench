@@ -23,6 +23,7 @@ from app.services import (
     github_export_token,
     github_repository_path,
 )
+from app.services.audit import record_audit_event
 
 router = APIRouter(tags=["github-issues"])
 
@@ -137,6 +138,20 @@ def export_project_github_issues(
                 )
             )
         batch_keys.add(item.duplicate_key)
+    record_audit_event(
+        session,
+        action="github_issue.export",
+        resource_type="github_issue_export",
+        actor=current_user,
+        project_id=project_id,
+        detail={
+            "repository": payload.repository,
+            "dry_run": payload.dry_run,
+            "created_count": created_count,
+            "skipped_count": skipped_count,
+            "count": len(data),
+        },
+    )
     session.commit()
     return GitHubIssueExportPublic(
         dry_run=payload.dry_run,
