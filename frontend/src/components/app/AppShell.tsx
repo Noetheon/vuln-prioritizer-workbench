@@ -172,7 +172,7 @@ export function AppShell({
 
   return (
     <TooltipProvider>
-      <div className="flex min-h-dvh overflow-x-hidden bg-[var(--vpw-bg-app)] lg:h-screen lg:overflow-hidden">
+      <div className="flex min-h-dvh overflow-x-hidden bg-[var(--vpw-bg-app)]">
         {/* ── Sidebar ── */}
         <aside
           aria-label="Workbench sidebar"
@@ -201,7 +201,7 @@ export function AppShell({
                 <p className="truncate text-sm font-semibold text-white">
                   Vuln Prioritizer
                 </p>
-                <p className="truncate text-xs text-slate-500">Workbench</p>
+                <p className="truncate text-xs text-slate-300">Workbench</p>
               </div>
             ) : null}
             {!sidebarCollapsed ? (
@@ -355,7 +355,7 @@ export function AppShell({
         </aside>
 
         {/* ── Main area ── */}
-        <main className="flex min-h-dvh min-w-0 flex-1 flex-col lg:min-h-0 lg:overflow-hidden">
+        <main className="flex min-h-dvh min-w-0 flex-1 flex-col">
           {/* Topbar */}
           <header className="flex min-h-14 shrink-0 items-center justify-between gap-3 border-b border-[var(--vpw-border-default)] bg-[var(--vpw-bg-page)] px-4 py-3 lg:h-14 lg:px-6 lg:py-0">
             <div className="flex min-w-0 items-center gap-3">
@@ -443,7 +443,7 @@ export function AppShell({
                 </SheetContent>
               </Sheet>
               <div className="min-w-0">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-600">
                   {eyebrow}
                 </p>
                 <h1 className="truncate text-base font-bold leading-tight text-slate-900">
@@ -476,7 +476,7 @@ export function AppShell({
                     )}
                     key={typeof item.label === "string" ? item.label : index}
                   >
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-600">
                       {item.label}
                     </span>
                     <span className="mt-0.5 truncate text-sm font-semibold text-slate-800">
@@ -489,9 +489,12 @@ export function AppShell({
           )}
 
           {/* Scrollable content */}
-          <div className="min-w-0 flex-1 lg:overflow-y-auto">
+          <section
+            aria-label="Workbench page content"
+            className="min-w-0 flex-1"
+          >
             <div className="vpw-page-container py-6">{children}</div>
-          </div>
+          </section>
         </main>
       </div>
     </TooltipProvider>
@@ -558,7 +561,7 @@ export function AppSidebar({
         </div>
         <div>
           <p className="text-sm font-semibold text-white">Vuln Prioritizer</p>
-          <p className="text-xs text-slate-500">Workbench</p>
+          <p className="text-xs text-slate-300">Workbench</p>
         </div>
       </div>
       <nav aria-label="Workbench navigation" className="flex-1 p-2">
@@ -618,7 +621,7 @@ export function AppTopbar({
   return (
     <header className="flex h-14 shrink-0 items-center justify-between gap-4 border-b border-slate-200 bg-white px-6">
       <div>
-        <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+        <p className="text-[10px] font-bold uppercase tracking-widest text-slate-600">
           {eyebrow}
         </p>
         <h1 className="text-base font-bold leading-tight text-slate-900">
@@ -653,7 +656,7 @@ export function AppTopbar({
 export function PageHeader({ eyebrow, title }: PageHeaderProps) {
   return (
     <div>
-      <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+      <p className="text-[10px] font-bold uppercase tracking-widest text-slate-600">
         {eyebrow}
       </p>
       <h1 className="text-base font-bold leading-tight text-slate-900">
@@ -705,7 +708,7 @@ export function StatusSummary({
           )}
           key={typeof item.label === "string" ? item.label : index}
         >
-          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-600">
             {item.label}
           </span>
           <span className="mt-0.5 text-sm font-semibold text-slate-800">

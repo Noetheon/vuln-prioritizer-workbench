@@ -83,7 +83,10 @@ export function DashboardHero({
             }}
             value={isDemoMode ? DEMO_PROJECT_ID : selectedProjectId || "none"}
           >
-            <SelectTrigger className="w-44 border-white/20 bg-white/10 text-white hover:bg-white/20 focus:ring-white/30">
+            <SelectTrigger
+              aria-label="Dashboard project"
+              className="w-44 border-white/20 bg-white/10 text-white hover:bg-white/20 focus:ring-white/30"
+            >
               <SelectValue placeholder="Select project" />
             </SelectTrigger>
             <SelectContent>

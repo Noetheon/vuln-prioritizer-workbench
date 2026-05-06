@@ -91,6 +91,87 @@ def test_template_login_verifies_db_stored_password_hash(template_api_env: Any) 
     assert db_password.status_code == 200
 
 
+def test_template_user_password_lifecycle_is_db_backed_and_audited(
+    template_api_env: Any,
+) -> None:
+    client = template_api_env.client
+    rotated_password = "rotated-admin-password-321"
+    reset_password = "reset-admin-password-321"
+
+    initial_token = str(_login_response(client).json()["access_token"])
+    rotate = client.post(
+        "/api/v1/users/me/password",
+        headers={"Authorization": f"Bearer {initial_token}"},
+        json={
+            "current_password": settings.FIRST_SUPERUSER_PASSWORD,
+            "new_password": rotated_password,
+        },
+    )
+    assert rotate.status_code == 200, rotate.text
+
+    old_password = client.post(
+        "/api/v1/login/access-token",
+        data={
+            "username": settings.FIRST_SUPERUSER,
+            "password": settings.FIRST_SUPERUSER_PASSWORD,
+        },
+    )
+    rotated_login = _login_response(client, password=rotated_password)
+    rotated_token = str(rotated_login.json()["access_token"])
+
+    assert old_password.status_code == 400
+    with Session(template_api_env.engine) as db_session:
+        statement = select(template_api_env.app_models.User).where(
+            template_api_env.app_models.User.email == settings.FIRST_SUPERUSER
+        )
+        user = db_session.exec(statement).one()
+        assert user.hashed_password != rotated_password
+        assert security.verify_password(rotated_password, user.hashed_password)
+
+    reset = client.post(
+        f"/api/v1/users/{rotate.json()['id']}/password-reset",
+        headers={"Authorization": f"Bearer {rotated_token}"},
+        json={"new_password": reset_password},
+    )
+    assert reset.status_code == 200, reset.text
+    assert (
+        client.post(
+            "/api/v1/login/access-token",
+            data={"username": settings.FIRST_SUPERUSER, "password": rotated_password},
+        ).status_code
+        == 400
+    )
+    reset_token = str(_login_response(client, password=reset_password).json()["access_token"])
+
+    insecure_reset = client.post(
+        f"/api/v1/users/{rotate.json()['id']}/password-reset",
+        headers={"Authorization": f"Bearer {reset_token}"},
+        json={"new_password": "changethis"},
+    )
+    assert insecure_reset.status_code == 422
+
+    deactivate = client.post(
+        f"/api/v1/users/{rotate.json()['id']}/deactivate",
+        headers={"Authorization": f"Bearer {reset_token}"},
+    )
+    after_deactivate = client.get(
+        "/api/v1/users/me",
+        headers={"Authorization": f"Bearer {reset_token}"},
+    )
+
+    assert deactivate.status_code == 200, deactivate.text
+    assert deactivate.json()["is_active"] is False
+    assert after_deactivate.status_code == 403
+    with Session(template_api_env.engine) as db_session:
+        audit_actions = [
+            event.action
+            for event in db_session.exec(select(template_api_env.app_models.AuditEvent)).all()
+        ]
+    assert "user.password.rotate" in audit_actions
+    assert "user.password.reset" in audit_actions
+    assert "user.deactivate" in audit_actions
+
+
 def test_template_login_sets_session_and_csrf_cookies() -> None:
     client = _client()
 
@@ -255,13 +336,21 @@ def test_template_token_routes_reject_missing_or_invalid_token() -> None:
     assert invalid.status_code == 403
 
 
-def test_template_auth_smoke_keeps_workbench_status_available() -> None:
+def test_template_auth_smoke_splits_public_health_and_authenticated_readiness() -> None:
     client = _client()
 
-    response = client.get("/api/v1/workbench/status")
+    health = client.get("/api/v1/utils/health-check/")
+    unauthenticated_status = client.get("/api/v1/workbench/status")
+    authenticated_status = client.get(
+        "/api/v1/workbench/status",
+        headers={"Authorization": f"Bearer {_login(client)}"},
+    )
 
-    assert response.status_code == 200
-    payload = response.json()
+    assert health.status_code == 200
+    assert health.json() is True
+    assert unauthenticated_status.status_code == 401
+    assert authenticated_status.status_code == 200
+    payload = authenticated_status.json()
     assert payload["status"] == "ok"
     assert payload["database_status"] == "ready"
     assert payload["schema_status"] == "ready"
@@ -270,7 +359,7 @@ def test_template_auth_smoke_keeps_workbench_status_available() -> None:
 def test_template_api_responses_include_security_headers() -> None:
     client = _client()
 
-    ok = client.get("/api/v1/workbench/status")
+    ok = client.get("/api/v1/workbench/health")
     not_found = client.get("/api/v1/does-not-exist")
     invalid_login = client.post(
         "/api/v1/login/access-token",

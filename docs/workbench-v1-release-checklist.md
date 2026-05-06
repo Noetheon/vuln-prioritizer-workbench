@@ -50,10 +50,10 @@ final public-production scorecard.
 
 ```bash
 docker compose -f compose.yml -f compose.override.yml up --build backend frontend
-curl http://127.0.0.1:8000/api/v1/workbench/status
+curl http://127.0.0.1:8000/api/v1/workbench/health
 ```
 
-- [x] Confirm `/api/v1/workbench/status` returns an OK status from the running container.
+- [x] Confirm `/api/v1/workbench/health` returns an OK status from the running container.
 - [x] Confirm the React shell opens at `http://127.0.0.1:5173`.
 - [x] Confirm the stack can be stopped and restarted without manual database repair.
 - [x] VPW-075 fresh validation confirms the Docker quickstart also supports

@@ -139,6 +139,21 @@ def test_template_backend_does_not_import_legacy_workbench_layers() -> None:
     assert violations == {}
 
 
+def test_import_upload_route_delegates_to_application_service() -> None:
+    route_source = (ROOT / "app/api/routes/imports.py").read_text(encoding="utf-8")
+    service_source = (ROOT / "app/services/import_execution.py").read_text(encoding="utf-8")
+    route_imports = _imported_modules("app/api/routes/imports.py")
+
+    assert len(route_source.splitlines()) <= 80
+    assert "app.services.import_execution" in route_imports
+    assert "AnalysisService" not in route_source
+    assert "build_importer_registry" not in route_source
+    assert "RunRepository" not in route_source
+    assert "def execute_project_import_upload" in service_source
+    assert "AnalysisService" in service_source
+    assert "build_importer_registry" in service_source
+
+
 def test_legacy_workbench_runtime_modules_are_removed() -> None:
     removed_paths = [
         SRC_ROOT / "api",
@@ -183,15 +198,19 @@ def test_template_report_contracts_are_split_from_renderer_facade() -> None:
 def test_template_import_validation_and_storage_are_split_from_route_facade() -> None:
     imports = _imported_modules("app/api/routes/imports.py")
     source = (ROOT / "app/api/routes/imports.py").read_text(encoding="utf-8")
+    execution_source = (ROOT / "app/services/import_execution.py").read_text(encoding="utf-8")
     upload_source = (ROOT / "app/services/import_uploads.py").read_text(encoding="utf-8")
     artifact_source = (ROOT / "app/services/import_artifacts.py").read_text(encoding="utf-8")
 
-    assert "app.services.import_uploads" in imports
-    assert "app.services.import_artifacts" in imports
+    assert "app.services.import_execution" in imports
+    assert "app.services.import_uploads" not in imports
+    assert "app.services.import_artifacts" not in imports
     assert "ALLOWED_UPLOAD_SUFFIXES = " not in source
     assert "def _read_bounded_upload" not in source
     assert "def _store_upload" not in source
     assert "def _resolve_template_provider_snapshot_path" not in source
+    assert "app.services.import_uploads" in execution_source
+    assert "app.services.import_artifacts" in execution_source
     assert "ALLOWED_UPLOAD_SUFFIXES = " in upload_source
     assert "def store_upload" in upload_source
     assert "def resolve_template_provider_snapshot_path" in artifact_source
@@ -231,16 +250,27 @@ def test_workbench_route_containers_use_explicit_shell_routes() -> None:
     ).read_text(encoding="utf-8")
     assert "Outlet" in findings_route
     assert "findingDetailId=" not in findings_route
-    assert "findingDetailId=" in finding_detail_route
+    assert "findingId=" in finding_detail_route
 
 
-def test_workbench_shell_lazy_loads_heavy_product_surfaces() -> None:
+def test_workbench_shell_is_frame_only_and_routes_own_product_surfaces() -> None:
     source = (REPO_ROOT / "frontend/src/workbench/WorkbenchShell.tsx").read_text(encoding="utf-8")
+    route_sources = "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in (REPO_ROOT / "frontend/src/workbench/routes").glob("*Route.tsx")
+    )
 
-    assert "lazy(() =>" in source
-    assert 'import("../components/findings/RemediationQueue")' in source
-    assert 'import("../components/dashboard/RiskOperationsDashboard")' in source
-    assert 'import("../components/reports/EvidenceCenter")' in source
+    assert "lazy(() =>" not in source
+    assert "ProductAppShell" in source
+    assert "WorkbenchProvider" in source
+    assert "ProjectsService" not in source
+    assert "ImportsService" not in source
+    assert "ReportsService" not in source
+    assert "WaiversService" not in source
+    assert "ApiTokensService" not in source
+    assert 'from "../../components/findings/RemediationQueue"' in route_sources
+    assert 'from "../../components/dashboard/RiskOperationsDashboard"' in route_sources
+    assert 'from "../../components/reports/EvidenceCenter"' in route_sources
     assert 'from "../components/findings"' not in source
     assert 'from "../components/imports"' not in source
     assert 'from "../components/projects"' not in source
@@ -257,12 +287,16 @@ def test_workbench_reports_route_state_is_split_from_shell() -> None:
         encoding="utf-8"
     )
 
-    assert 'import { useReportsRouteState } from "./useReportsRouteState"' in shell_source
+    reports_route_source = (REPO_ROOT / "frontend/src/workbench/routes/ReportsRoute.tsx").read_text(
+        encoding="utf-8"
+    )
+
+    assert 'import { useReportsRouteState } from "../useReportsRouteState"' in reports_route_source
     assert "ReportsService" not in shell_source
     assert "function reportDownloadUrl" not in shell_source
     assert "download_url" not in shell_source
     assert "function downloadReportArtifact" not in shell_source
-    assert "useReportsRouteState({" in shell_source
+    assert "useReportsRouteState({" in reports_route_source
     assert "ReportsService" in reports_state_source
     assert "reportDownloadRequest" in reports_state_source
     assert "function downloadReportArtifact" in reports_state_source

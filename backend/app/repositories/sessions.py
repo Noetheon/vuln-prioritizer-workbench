@@ -58,6 +58,21 @@ class AuthSessionRepository:
         self.session.flush()
         return auth_session
 
+    def revoke_user_sessions(self, user_id: uuid.UUID) -> int:
+        """Revoke all active sessions for one user and return the affected count."""
+        now = get_datetime_utc()
+        statement = select(AuthSession).where(
+            AuthSession.user_id == user_id,
+            col(AuthSession.revoked_at).is_(None),
+            col(AuthSession.expires_at) > now,
+        )
+        records = list(self.session.exec(statement).all())
+        for record in records:
+            record.revoked_at = now
+            self.session.add(record)
+        self.session.flush()
+        return len(records)
+
     def list_auth_sessions(self, *, limit: int = 100) -> list[AuthSession]:
         """Return recent sessions without exposing token material."""
         statement = select(AuthSession).order_by(col(AuthSession.created_at).desc()).limit(limit)

@@ -60,7 +60,7 @@ The active browser Workbench uses the backend runtime under `backend/app` and
 the generated `/api/v1` browser client:
 
 ```bash
-curl http://127.0.0.1:8000/api/v1/workbench/status
+curl http://127.0.0.1:8000/api/v1/workbench/health
 ```
 
 Maintainers can run the same active-runtime readiness path with:

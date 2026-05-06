@@ -187,8 +187,8 @@ def test_default_compose_services_start_only_active_backend_runtime() -> None:
     assert backend_environment["DEMO_PROVIDER_SNAPSHOT_ENABLED"] == (
         "${DEMO_PROVIDER_SNAPSHOT_ENABLED:-false}"
     )
-    assert "database_status'] == 'ready'" in backend_healthcheck
-    assert "schema_status'] == 'ready'" in backend_healthcheck
+    assert "/api/v1/utils/health-check/" in backend_healthcheck
+    assert "assert data is True" in backend_healthcheck
     assert "headers={'Host': host}" in backend_healthcheck
     assert legacy_starters == {}
 
@@ -312,7 +312,10 @@ def test_makefile_has_no_legacy_runtime_smoke_or_compose_path() -> None:
     assert "docker-postgres-migration-smoke" not in makefile
     assert "api/test_workbench_api.py" not in makefile
     assert "$(BACKEND_TESTS)/playwright" not in makefile
-    assert "cd frontend && npm run test -- tests/ui-smoke.spec.ts" in makefile
+    assert (
+        "cd frontend && npm run test -- tests/ui-smoke.spec.ts "
+        "tests/responsive-shell.spec.ts tests/accessibility.spec.ts" in makefile
+    )
     assert "--profile legacy-postgres" not in docker_demo_smoke
     assert "workbench-postgres" not in docker_demo_smoke
     assert not any(marker in docker_demo_smoke for marker in LEGACY_RUNTIME_STARTERS)

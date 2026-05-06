@@ -5,8 +5,9 @@ import {
   UsersService,
   WorkbenchService,
 } from "../api-client"
+import { workbenchQueryKeys } from "./workbench-query-keys"
 
-export const workbenchBootstrapQueryKey = ["workbench", "bootstrap"] as const
+export const workbenchBootstrapQueryKey = workbenchQueryKeys.bootstrap()
 
 export async function loadWorkbenchBootstrap() {
   const [status, providerStatus, currentUser] = await Promise.all([

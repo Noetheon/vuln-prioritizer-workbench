@@ -39,7 +39,7 @@ def test_compose_uses_template_shell_without_legacy_runtime_services() -> None:
     assert "template-provider-snapshots:/app/provider-snapshots" in backend["volumes"]
     assert "template-provider-cache:/app/template-provider-cache" in backend["volumes"]
     assert "./data:/app/examples:ro" in backend["volumes"]
-    assert "/api/v1/workbench/status" in backend["healthcheck"]["test"][3]
+    assert "/api/v1/utils/health-check/" in backend["healthcheck"]["test"][3]
 
     frontend = services["frontend"]
     assert "profiles" not in frontend
@@ -81,6 +81,42 @@ def test_docker_demo_smoke_runs_quickstart_api_import() -> None:
     assert "locked_provider_data" in script
     assert "demo_provider_snapshot.json" in script
     assert "providers/update-jobs" in script
+
+
+def test_ci_compose_smoke_uses_public_health_not_auth_readiness() -> None:
+    workflow = Path(".github/workflows/docker.yml").read_text(encoding="utf-8")
+    health_block = workflow.split("- name: Wait for health endpoint", 1)[1].split(
+        "- name: Wait for frontend shell",
+        1,
+    )[0]
+
+    assert "/api/v1/workbench/health" in health_block
+    assert "/api/v1/utils/health-check/" in health_block
+    assert "/api/v1/workbench/status" not in health_block
+
+
+def test_production_smoke_overlay_uses_same_origin_public_contract() -> None:
+    compose = yaml.safe_load(Path("compose.production-smoke.yml").read_text(encoding="utf-8"))
+    makefile = Path("Makefile").read_text(encoding="utf-8")
+    script = Path("scripts/production_readiness_smoke.py").read_text(encoding="utf-8")
+
+    backend_env = compose["services"]["backend"]["environment"]
+    frontend_args = compose["services"]["frontend"]["build"]["args"]
+
+    assert backend_env["ENVIRONMENT"] == "production"
+    assert backend_env["FIRST_SUPERUSER_PASSWORD"] != "changethis"
+    assert backend_env["API_DOCS_ENABLED"] == "false"
+    assert backend_env["FRONTEND_HOST"] == "https://workbench.example.test"
+    assert backend_env["BACKEND_CORS_ORIGINS"] == "https://workbench.example.test"
+    assert backend_env["ALLOWED_HOSTS"] == "workbench.example.test,api.workbench.example.test"
+    assert frontend_args["VITE_API_URL"] == ""
+    assert compose["services"]["frontend"]["ports"] == ["127.0.0.1:5180:80"]
+    assert "docker-production-smoke:" in makefile
+    assert "$(PYTHON) scripts/production_readiness_smoke.py" in makefile
+    assert "connect-src 'self'" in script
+    assert "/api/v1/workbench/health" in script
+    assert "/api/v1/workbench/status" in script
+    assert "X-CSRF-Token" in script
 
 
 def test_frontend_nginx_serves_security_headers_and_same_origin_api_proxy() -> None:

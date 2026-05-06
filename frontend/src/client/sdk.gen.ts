@@ -2,7 +2,7 @@
 
 import { buildClientParams, type Client, formDataBodySerializer, type Options as Options2, type TDataShape, urlSearchParamsBodySerializer } from './client';
 import { client } from './client.gen';
-import type { ApiTokenCreate, AssetCreate, AssetExposure, AssetUpdate, BodyAssetsImportProjectAssets, BodyImportsImportProjectUpload, BodyLoginLoginAccessToken, DeleteApiV1ApiTokensByTokenIdErrors, DeleteApiV1ApiTokensByTokenIdResponses, DeleteApiV1ProjectsByProjectIdErrors, DeleteApiV1ProjectsByProjectIdResponses, FindingPriority, FindingStatus, GetApiV1ApiTokensResponses, GetApiV1AuditEventsErrors, GetApiV1AuditEventsResponses, GetApiV1AuditSessionsErrors, GetApiV1AuditSessionsResponses, GetApiV1FindingsByFindingIdErrors, GetApiV1FindingsByFindingIdExplainErrors, GetApiV1FindingsByFindingIdExplainResponses, GetApiV1FindingsByFindingIdResponses, GetApiV1ProjectsByProjectIdAssetsErrors, GetApiV1ProjectsByProjectIdAssetsResponses, GetApiV1ProjectsByProjectIdAttackSummaryErrors, GetApiV1ProjectsByProjectIdAttackSummaryResponses, GetApiV1ProjectsByProjectIdCompareCvssOnlyErrors, GetApiV1ProjectsByProjectIdCompareCvssOnlyResponses, GetApiV1ProjectsByProjectIdErrors, GetApiV1ProjectsByProjectIdFindingsErrors, GetApiV1ProjectsByProjectIdFindingsResponses, GetApiV1ProjectsByProjectIdGovernanceRollupsErrors, GetApiV1ProjectsByProjectIdGovernanceRollupsResponses, GetApiV1ProjectsByProjectIdResponses, GetApiV1ProjectsByProjectIdRuns2Errors, GetApiV1ProjectsByProjectIdRuns2Responses, GetApiV1ProjectsByProjectIdRunsErrors, GetApiV1ProjectsByProjectIdRunsResponses, GetApiV1ProjectsByProjectIdSummaryErrors, GetApiV1ProjectsByProjectIdSummaryResponses, GetApiV1ProjectsByProjectIdWaiversErrors, GetApiV1ProjectsByProjectIdWaiversResponses, GetApiV1ProjectsResponses, GetApiV1ProvidersStatusResponses, GetApiV1ProvidersUpdateJobsResponses, GetApiV1ReportsByReportIdDownloadErrors, GetApiV1ReportsByReportIdDownloadResponses, GetApiV1RunsByRunIdErrors, GetApiV1RunsByRunIdReportsErrors, GetApiV1RunsByRunIdReportsResponses, GetApiV1RunsByRunIdResponses, GetApiV1RunsByRunIdSummaryErrors, GetApiV1RunsByRunIdSummaryResponses, GetApiV1UsersMeResponses, GetApiV1UtilsHealthCheckResponses, GetApiV1WorkbenchStatusResponses, GitHubIssueExportCreate, GitHubIssuePreviewCreate, PatchApiV1AssetsByAssetIdErrors, PatchApiV1AssetsByAssetIdResponses, PatchApiV1ProjectsByProjectIdErrors, PatchApiV1ProjectsByProjectIdResponses, PatchApiV1WaiversByWaiverIdErrors, PatchApiV1WaiversByWaiverIdResponses, PostApiV1ApiTokensErrors, PostApiV1ApiTokensResponses, PostApiV1AssetsByAssetIdRecalculateErrors, PostApiV1AssetsByAssetIdRecalculateResponses, PostApiV1LoginAccessTokenErrors, PostApiV1LoginAccessTokenResponses, PostApiV1LoginLogoutResponses, PostApiV1LoginTestTokenResponses, PostApiV1ProjectsByProjectIdAssetsErrors, PostApiV1ProjectsByProjectIdAssetsImportErrors, PostApiV1ProjectsByProjectIdAssetsImportResponses, PostApiV1ProjectsByProjectIdAssetsResponses, PostApiV1ProjectsByProjectIdGithubIssuesExportErrors, PostApiV1ProjectsByProjectIdGithubIssuesExportResponses, PostApiV1ProjectsByProjectIdGithubIssuesPreviewErrors, PostApiV1ProjectsByProjectIdGithubIssuesPreviewResponses, PostApiV1ProjectsByProjectIdImportsErrors, PostApiV1ProjectsByProjectIdImportsResponses, PostApiV1ProjectsByProjectIdWaiversErrors, PostApiV1ProjectsByProjectIdWaiversResponses, PostApiV1ProjectsErrors, PostApiV1ProjectsResponses, PostApiV1ProvidersUpdateJobsErrors, PostApiV1ProvidersUpdateJobsResponses, PostApiV1ReportsByReportIdVerifyErrors, PostApiV1ReportsByReportIdVerifyResponses, PostApiV1RunsByRunIdReportsErrors, PostApiV1RunsByRunIdReportsResponses, PostApiV1WaiversByWaiverIdExpireErrors, PostApiV1WaiversByWaiverIdExpireResponses, ProjectCreate, ProjectUpdate, ProviderUpdateJobCreate, ReportCreate, WaiverCreate, WaiverUpdate } from './types.gen';
+import type { ApiTokenCreate, AssetCreate, AssetExposure, AssetUpdate, BodyAssetsImportProjectAssets, BodyImportsImportProjectUpload, BodyLoginLoginAccessToken, DeleteApiV1ApiTokensByTokenIdErrors, DeleteApiV1ApiTokensByTokenIdResponses, DeleteApiV1ProjectsByProjectIdErrors, DeleteApiV1ProjectsByProjectIdResponses, FindingPriority, FindingStatus, GetApiV1ApiTokensResponses, GetApiV1AuditEventsErrors, GetApiV1AuditEventsResponses, GetApiV1AuditSessionsErrors, GetApiV1AuditSessionsResponses, GetApiV1FindingsByFindingIdErrors, GetApiV1FindingsByFindingIdExplainErrors, GetApiV1FindingsByFindingIdExplainResponses, GetApiV1FindingsByFindingIdResponses, GetApiV1ProjectsByProjectIdAssetsErrors, GetApiV1ProjectsByProjectIdAssetsResponses, GetApiV1ProjectsByProjectIdAttackSummaryErrors, GetApiV1ProjectsByProjectIdAttackSummaryResponses, GetApiV1ProjectsByProjectIdCompareCvssOnlyErrors, GetApiV1ProjectsByProjectIdCompareCvssOnlyResponses, GetApiV1ProjectsByProjectIdErrors, GetApiV1ProjectsByProjectIdFindingsErrors, GetApiV1ProjectsByProjectIdFindingsResponses, GetApiV1ProjectsByProjectIdGovernanceRollupsErrors, GetApiV1ProjectsByProjectIdGovernanceRollupsResponses, GetApiV1ProjectsByProjectIdResponses, GetApiV1ProjectsByProjectIdRuns2Errors, GetApiV1ProjectsByProjectIdRuns2Responses, GetApiV1ProjectsByProjectIdRunsErrors, GetApiV1ProjectsByProjectIdRunsResponses, GetApiV1ProjectsByProjectIdSummaryErrors, GetApiV1ProjectsByProjectIdSummaryResponses, GetApiV1ProjectsByProjectIdWaiversErrors, GetApiV1ProjectsByProjectIdWaiversResponses, GetApiV1ProjectsResponses, GetApiV1ProvidersStatusResponses, GetApiV1ProvidersUpdateJobsResponses, GetApiV1ReportsByReportIdDownloadErrors, GetApiV1ReportsByReportIdDownloadResponses, GetApiV1RunsByRunIdErrors, GetApiV1RunsByRunIdReportsErrors, GetApiV1RunsByRunIdReportsResponses, GetApiV1RunsByRunIdResponses, GetApiV1RunsByRunIdSummaryErrors, GetApiV1RunsByRunIdSummaryResponses, GetApiV1UsersMeResponses, GetApiV1UtilsHealthCheckResponses, GetApiV1WorkbenchHealthResponses, GetApiV1WorkbenchStatusResponses, GitHubIssueExportCreate, GitHubIssuePreviewCreate, PatchApiV1AssetsByAssetIdErrors, PatchApiV1AssetsByAssetIdResponses, PatchApiV1ProjectsByProjectIdErrors, PatchApiV1ProjectsByProjectIdResponses, PatchApiV1WaiversByWaiverIdErrors, PatchApiV1WaiversByWaiverIdResponses, PostApiV1ApiTokensErrors, PostApiV1ApiTokensResponses, PostApiV1AssetsByAssetIdRecalculateErrors, PostApiV1AssetsByAssetIdRecalculateResponses, PostApiV1LoginAccessTokenErrors, PostApiV1LoginAccessTokenResponses, PostApiV1LoginLogoutResponses, PostApiV1LoginTestTokenResponses, PostApiV1ProjectsByProjectIdAssetsErrors, PostApiV1ProjectsByProjectIdAssetsImportErrors, PostApiV1ProjectsByProjectIdAssetsImportResponses, PostApiV1ProjectsByProjectIdAssetsResponses, PostApiV1ProjectsByProjectIdGithubIssuesExportErrors, PostApiV1ProjectsByProjectIdGithubIssuesExportResponses, PostApiV1ProjectsByProjectIdGithubIssuesPreviewErrors, PostApiV1ProjectsByProjectIdGithubIssuesPreviewResponses, PostApiV1ProjectsByProjectIdImportsErrors, PostApiV1ProjectsByProjectIdImportsResponses, PostApiV1ProjectsByProjectIdWaiversErrors, PostApiV1ProjectsByProjectIdWaiversResponses, PostApiV1ProjectsErrors, PostApiV1ProjectsResponses, PostApiV1ProvidersUpdateJobsErrors, PostApiV1ProvidersUpdateJobsResponses, PostApiV1ReportsByReportIdVerifyErrors, PostApiV1ReportsByReportIdVerifyResponses, PostApiV1RunsByRunIdReportsErrors, PostApiV1RunsByRunIdReportsResponses, PostApiV1UsersByUserIdActivateErrors, PostApiV1UsersByUserIdActivateResponses, PostApiV1UsersByUserIdDeactivateErrors, PostApiV1UsersByUserIdDeactivateResponses, PostApiV1UsersByUserIdPasswordResetErrors, PostApiV1UsersByUserIdPasswordResetResponses, PostApiV1UsersMePasswordErrors, PostApiV1UsersMePasswordResponses, PostApiV1WaiversByWaiverIdExpireErrors, PostApiV1WaiversByWaiverIdExpireResponses, ProjectCreate, ProjectUpdate, ProviderUpdateJobCreate, ReportCreate, UserPasswordChange, UserPasswordReset, WaiverCreate, WaiverUpdate } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -607,7 +607,7 @@ export class ImportsService {
     /**
      * Import Project Upload
      *
-     * Securely upload, normalize, and persist one Workbench import file.
+     * Accept one upload request and delegate import execution to the service layer.
      */
     public static importProjectUpload<ThrowOnError extends boolean = true>(parameters: {
         project_id: string;
@@ -937,6 +937,89 @@ export class UsersService {
             ...options
         });
     }
+
+    /**
+     * Rotate Current User Password
+     *
+     * Rotate the current user's persisted password hash and revoke sessions.
+     */
+    public static rotateCurrentUserPassword<ThrowOnError extends boolean = true>(parameters: {
+        userPasswordChange: UserPasswordChange;
+    }, options?: Options<never, ThrowOnError>) {
+        const params = buildClientParams([parameters], [{ args: [{ key: 'userPasswordChange', map: 'body' }] }]);
+        return (options?.client ?? client).post<PostApiV1UsersMePasswordResponses, PostApiV1UsersMePasswordErrors, ThrowOnError, 'data'>({
+            responseStyle: 'data',
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/api/v1/users/me/password',
+            ...options,
+            ...params,
+            headers: {
+                'Content-Type': 'application/json',
+                ...options?.headers,
+                ...params.headers
+            }
+        });
+    }
+
+    /**
+     * Activate User
+     *
+     * Reactivate a persisted user account.
+     */
+    public static activateUser<ThrowOnError extends boolean = true>(parameters: {
+        user_id: string;
+    }, options?: Options<never, ThrowOnError>) {
+        const params = buildClientParams([parameters], [{ args: [{ in: 'path', key: 'user_id' }] }]);
+        return (options?.client ?? client).post<PostApiV1UsersByUserIdActivateResponses, PostApiV1UsersByUserIdActivateErrors, ThrowOnError, 'data'>({
+            responseStyle: 'data',
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/api/v1/users/{user_id}/activate',
+            ...options,
+            ...params
+        });
+    }
+
+    /**
+     * Deactivate User
+     *
+     * Deactivate a user and revoke every active session for that account.
+     */
+    public static deactivateUser<ThrowOnError extends boolean = true>(parameters: {
+        user_id: string;
+    }, options?: Options<never, ThrowOnError>) {
+        const params = buildClientParams([parameters], [{ args: [{ in: 'path', key: 'user_id' }] }]);
+        return (options?.client ?? client).post<PostApiV1UsersByUserIdDeactivateResponses, PostApiV1UsersByUserIdDeactivateErrors, ThrowOnError, 'data'>({
+            responseStyle: 'data',
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/api/v1/users/{user_id}/deactivate',
+            ...options,
+            ...params
+        });
+    }
+
+    /**
+     * Reset User Password
+     *
+     * Reset a user's persisted password hash and revoke that user's sessions.
+     */
+    public static resetUserPassword<ThrowOnError extends boolean = true>(parameters: {
+        user_id: string;
+        userPasswordReset: UserPasswordReset;
+    }, options?: Options<never, ThrowOnError>) {
+        const params = buildClientParams([parameters], [{ args: [{ in: 'path', key: 'user_id' }, { key: 'userPasswordReset', map: 'body' }] }]);
+        return (options?.client ?? client).post<PostApiV1UsersByUserIdPasswordResetResponses, PostApiV1UsersByUserIdPasswordResetErrors, ThrowOnError, 'data'>({
+            responseStyle: 'data',
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/api/v1/users/{user_id}/password-reset',
+            ...options,
+            ...params,
+            headers: {
+                'Content-Type': 'application/json',
+                ...options?.headers,
+                ...params.headers
+            }
+        });
+    }
 }
 
 export class UtilsService {
@@ -956,13 +1039,27 @@ export class UtilsService {
 
 export class WorkbenchService {
     /**
+     * Template Workbench Health
+     *
+     * Return minimal unauthenticated liveness for browser and proxy checks.
+     */
+    public static templateWorkbenchHealth<ThrowOnError extends boolean = true>(options?: Options<never, ThrowOnError>) {
+        return (options?.client ?? client).get<GetApiV1WorkbenchHealthResponses, unknown, ThrowOnError, 'data'>({
+            responseStyle: 'data',
+            url: '/api/v1/workbench/health',
+            ...options
+        });
+    }
+
+    /**
      * Template Workbench Status
      *
-     * Return active Workbench backend status.
+     * Return authenticated active Workbench readiness and version status.
      */
     public static templateWorkbenchStatus<ThrowOnError extends boolean = true>(options?: Options<never, ThrowOnError>) {
         return (options?.client ?? client).get<GetApiV1WorkbenchStatusResponses, unknown, ThrowOnError, 'data'>({
             responseStyle: 'data',
+            security: [{ scheme: 'bearer', type: 'http' }],
             url: '/api/v1/workbench/status',
             ...options
         });

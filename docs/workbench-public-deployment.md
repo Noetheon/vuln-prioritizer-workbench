@@ -17,9 +17,9 @@ SECRET_KEY=<long random value>
 FIRST_SUPERUSER_PASSWORD=<long random value>
 DOMAIN=workbench.example.com
 FRONTEND_HOST=https://workbench.example.com
-VITE_API_URL=https://api.workbench.example.com
+VITE_API_URL=
 BACKEND_CORS_ORIGINS=https://workbench.example.com
-ALLOWED_HOSTS=api.workbench.example.com,workbench.example.com
+ALLOWED_HOSTS=workbench.example.com,api.workbench.example.com
 API_DOCS_ENABLED=false
 TRAEFIK_APP_ENABLED=true
 TRAEFIK_DASHBOARD_ENABLED=false
@@ -29,13 +29,22 @@ Production and staging reject wildcard CORS, localhost CORS, non-HTTPS CORS, and
 origin values that include paths. Keep `ALLOWED_HOSTS` exact and do not include
 ports or schemes.
 
+The public browser default is same-origin API routing: leave `VITE_API_URL`
+empty so the built frontend calls `/api/v1/...` through the frontend reverse
+proxy. A split API domain such as `https://api.workbench.example.com` is a
+separate deployment variant and must update CSP `connect-src`, CORS,
+`ALLOWED_HOSTS`, cookie domain/path, and CSRF verification together before it is
+approved for public browser traffic.
+
 ## Reverse Proxy And TLS
 
 `compose.traefik.yml` provides the public reverse proxy. App routing is opt-in
 with `TRAEFIK_APP_ENABLED=true`.
 
 - Frontend route: `https://${DOMAIN}`.
-- Backend route: `https://api.${DOMAIN}`.
+- Browser API route: same-origin `https://${DOMAIN}/api/...`.
+- Optional direct API route for automation: `https://api.${DOMAIN}` only when
+  its CSP/CORS/cookie/CSRF contract is reviewed as a split-domain deployment.
 - HTTP is redirected to HTTPS.
 - Traefik terminates TLS through the configured ACME resolver.
 - Backend upload requests are bounded by
@@ -173,11 +182,13 @@ After restore, verify:
 ```bash
 python -m app.core.migration_bootstrap
 alembic -c backend/alembic.ini upgrade head
-python -c "import urllib.request; print(urllib.request.urlopen('https://api.${DOMAIN}/api/v1/workbench/status', timeout=5).read().decode())"
+python -c "import urllib.request; print(urllib.request.urlopen('https://${DOMAIN}/api/v1/workbench/health', timeout=5).read().decode())"
 ```
 
-The status response should report `database_status=ready` and
-`schema_status=ready`.
+The public health response should only report a minimal OK status. Verify
+`/api/v1/workbench/status` with an authenticated admin session or automation API
+token before promoting the restored environment; that auth-gated status response
+should report `database_status=ready` and `schema_status=ready`.
 
 ## Release Evidence
 
@@ -189,6 +200,7 @@ the release evidence ledger or linked issue evidence:
 - `make dependency-audit`
 - `make api-client-drift-check`
 - `make docker-demo-smoke`
+- `make docker-production-smoke`
 - `make playwright-check`
 - header captures for the public frontend and API routes
 - residual-risk decision with owner and follow-up issue for every exception

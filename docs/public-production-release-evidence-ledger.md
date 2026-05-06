@@ -40,8 +40,9 @@ linked from an issue or PR.
 | `make docs-check` | Public documentation build | clean MkDocs build |
 | `make demo-evidence-bundle-check` | Evidence bundle integrity | `build/v1.0-demo-evidence-bundle-verification.json` |
 | `make docker-demo-smoke` | Compose runtime smoke | backend/frontend health plus import/provider smoke |
-| `make playwright-check` | Browser smoke path | frontend Playwright test results |
-| `make release-readiness-check` | Full local readiness handoff | release gate, client drift, evidence bundle, and Playwright smoke |
+| `make docker-production-smoke` | Production-like same-origin smoke | production env, non-default secrets, CSP, cookies, CSRF, health/status split, import, report download, logout |
+| `make playwright-check` | Browser smoke and accessibility path | frontend Playwright smoke, responsive shell, and Axe no serious/critical violations |
+| `make release-readiness-check` | Full local readiness handoff | release gate, client drift, evidence bundle, Playwright/A11y, and production-like Docker smoke |
 
 ## Issue Ledger
 
@@ -56,12 +57,21 @@ linked from an issue or PR.
 | [#343](https://github.com/Noetheon/vuln-prioritizer-workbench/issues/343) | Workbench naming in active scripts/gates and backend/app references | Storage paths with `template-*` names remain compatibility paths until a code-level migration is approved. |
 | [#344](https://github.com/Noetheon/vuln-prioritizer-workbench/issues/344) | `docs/evidence/` boundary and docs hygiene test | Large or historical artifacts must stay linked or archived, not duplicated in docs. |
 | [#345](https://github.com/Noetheon/vuln-prioritizer-workbench/issues/345) | This release evidence ledger and release checklist updates | Ledger records targets; it does not replace command output from the release candidate. |
-| [#346](https://github.com/Noetheon/vuln-prioritizer-workbench/issues/346) | Docker/Playwright readiness target references | Production-like smoke implementation and header captures are owned by runtime workers. |
+| [#346](https://github.com/Noetheon/vuln-prioritizer-workbench/issues/346) | `compose.production-smoke.yml`, `scripts/production_readiness_smoke.py`, and `make docker-production-smoke` | Production proof still depends on the command output from the exact release candidate. |
 | [#347](https://github.com/Noetheon/vuln-prioritizer-workbench/issues/347) | Client drift target in `release-readiness-check` | API error-envelope/auth contract assertions must remain covered by API tests. |
 | [#349](https://github.com/Noetheon/vuln-prioritizer-workbench/issues/349) | Full quality-gate command list and residual-risk section | Any exception needs owner, rationale, and a follow-up issue before closure. |
 | [#350](https://github.com/Noetheon/vuln-prioritizer-workbench/issues/350) | Final scorecard target and PP5 acceptance boundary | If any category is below target, #350 stays open with blockers. |
 
 ## Residual Risk Decision Format
+
+## Final Scorecard Evidence Boundary
+
+Issue [#350](https://github.com/Noetheon/vuln-prioritizer-workbench/issues/350)
+owns the final 10/10 closure decision. The scorecard must link command output
+or CI artifacts for security/auth, backend/API correctness, frontend
+architecture/testability, package/docs/release coherence, and production
+certification. If any P1/P2 closure audit finding remains unproven, the score is
+not final and the issue stays open or names the follow-up owner.
 
 Use this format in the final PP5 issue or PR evidence comment:
 
