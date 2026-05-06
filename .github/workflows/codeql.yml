@@ -29,15 +29,17 @@ permissions:
 
 jobs:
   analyze:
-    name: Analyze ${{ matrix.language }}
+    name: Analyze ${{ matrix.display_name }}
     runs-on: ubuntu-latest
     if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     strategy:
       fail-fast: false
       matrix:
-        language:
-          - python
-          - javascript-typescript
+        include:
+          - language: python
+            display_name: Python
+          - language: javascript-typescript
+            display_name: JavaScript/TypeScript
 
     steps:
       - name: Check out repository
