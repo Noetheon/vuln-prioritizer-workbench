@@ -495,7 +495,7 @@ Important boundary:
 - `table` is a terminal view and must not be combined with `--output`
 - `sarif` is a documented export for `analyze` and saved analysis JSON rendered
   through `report workbench`
-- Template Workbench report creation also exposes SARIF as `results.sarif`
+- Workbench report creation also exposes SARIF as `results.sarif`
   through `POST /api/v1/runs/{run_id}/reports`
 - `analyze --summary-output` is a Markdown sidecar derived from the same in-memory analysis payload and does not replace the JSON contract
 

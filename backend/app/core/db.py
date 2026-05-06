@@ -7,6 +7,7 @@ import uuid
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, SQLModel, create_engine, select
 
+from app.core import security
 from app.core.config import settings
 from app.models import User
 
@@ -42,6 +43,10 @@ def ensure_configured_superuser(session: Session) -> User:
     statement = select(User).where(User.email == settings.FIRST_SUPERUSER)
     user = session.exec(statement).first()
     if user:
+        if security.password_hash_needs_bootstrap(user.hashed_password):
+            user.hashed_password = security.get_password_hash(settings.FIRST_SUPERUSER_PASSWORD)
+            session.add(user)
+            session.flush()
         return user
 
     user = User(
@@ -49,7 +54,7 @@ def ensure_configured_superuser(session: Session) -> User:
         email=settings.FIRST_SUPERUSER,
         is_active=True,
         is_superuser=True,
-        hashed_password="configured-superuser-password-placeholder",
+        hashed_password=security.get_password_hash(settings.FIRST_SUPERUSER_PASSWORD),
     )
     session.add(user)
     try:

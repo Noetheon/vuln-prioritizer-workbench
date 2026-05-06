@@ -6,12 +6,12 @@
   "scripts": {
     "dev": "vite --host 127.0.0.1",
     "build": "tsc -p tsconfig.build.json && vite build",
-    "lint": "biome check --no-errors-on-unmatched --files-ignore-unknown=true index.html src/auth.ts src/main.tsx src/index.css src/routes vite.config.ts openapi-ts.config.ts playwright.config.ts tests package.json tsconfig.json tsconfig.build.json tsconfig.node.json components.json",
-    "lint:fix": "biome check --write --unsafe --no-errors-on-unmatched --files-ignore-unknown=true index.html src/auth.ts src/main.tsx src/index.css src/routes vite.config.ts openapi-ts.config.ts playwright.config.ts tests package.json tsconfig.json tsconfig.build.json tsconfig.node.json components.json",
+    "lint": "biome lint --no-errors-on-unmatched --files-ignore-unknown=true index.html src tests vite.config.ts openapi-ts.config.ts playwright.config.ts package.json tsconfig.json tsconfig.build.json tsconfig.node.json components.json",
+    "lint:fix": "biome lint --write --unsafe --no-errors-on-unmatched --files-ignore-unknown=true index.html src tests vite.config.ts openapi-ts.config.ts playwright.config.ts package.json tsconfig.json tsconfig.build.json tsconfig.node.json components.json",
     "preview": "vite preview --host 127.0.0.1",
     "generate-client": "openapi-ts",
     "test": "playwright test",
-    "test:unit": "node --test --experimental-strip-types tests/chart-data.test.ts tests/report-download.test.ts",
+    "test:unit": "node --test --experimental-strip-types tests/auth.test.ts tests/chart-data.test.ts tests/report-download.test.ts tests/runtime-config.test.ts",
     "test:ui": "playwright test --ui"
   },
   "dependencies": {

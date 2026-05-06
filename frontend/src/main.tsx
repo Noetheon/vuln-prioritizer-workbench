@@ -10,9 +10,10 @@ import { createRoot } from "react-dom/client"
 import { ApiError, OpenAPI } from "./api-client"
 import { clearAccessToken, getAccessToken } from "./auth"
 import "./index.css"
+import { API_BASE_URL } from "./lib/runtime-config"
 import { routeTree } from "./routeTree.gen"
 
-OpenAPI.BASE = import.meta.env.VITE_API_URL ?? ""
+OpenAPI.BASE = API_BASE_URL
 OpenAPI.TOKEN = async () => getAccessToken()
 
 const handleApiError = (error: Error) => {

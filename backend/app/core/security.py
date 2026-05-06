@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import base64
+import binascii
 import hashlib
 import hmac
 import json
@@ -13,6 +14,18 @@ from typing import Any
 from app.core.config import settings
 
 ALGORITHM = "HS256"
+PASSWORD_HASH_ALGORITHM = "pbkdf2_sha256"
+PASSWORD_HASH_ITERATIONS = 600_000
+PASSWORD_SALT_BYTES = 16
+LEGACY_CONFIGURED_PASSWORD_PLACEHOLDERS = frozenset(
+    {
+        "configured-superuser",
+        "configured-superuser-password-placeholder",
+    }
+)
+SESSION_COOKIE_NAME = "vpw_session"
+CSRF_COOKIE_NAME = "vpw_csrf"
+CSRF_HEADER_NAME = "x-csrf-token"
 
 
 class TokenDecodeError(ValueError):
@@ -26,6 +39,51 @@ def _base64url_encode(payload: bytes) -> str:
 def _base64url_decode(payload: str) -> bytes:
     padding = "=" * (-len(payload) % 4)
     return base64.urlsafe_b64decode(f"{payload}{padding}")
+
+
+def get_password_hash(password: str) -> str:
+    """Hash a password with stdlib PBKDF2-HMAC-SHA256."""
+    salt = secrets.token_bytes(PASSWORD_SALT_BYTES)
+    digest = hashlib.pbkdf2_hmac(
+        "sha256",
+        password.encode("utf-8"),
+        salt,
+        PASSWORD_HASH_ITERATIONS,
+    )
+    return "$".join(
+        [
+            PASSWORD_HASH_ALGORITHM,
+            str(PASSWORD_HASH_ITERATIONS),
+            _base64url_encode(salt),
+            _base64url_encode(digest),
+        ]
+    )
+
+
+def verify_password(password: str, hashed_password: str) -> bool:
+    """Verify a password against the persisted stdlib PBKDF2 hash."""
+    try:
+        algorithm, iterations_raw, salt_raw, digest_raw = hashed_password.split("$", 3)
+        if algorithm != PASSWORD_HASH_ALGORITHM:
+            return False
+        iterations = int(iterations_raw)
+        if iterations <= 0:
+            return False
+        expected_digest = _base64url_decode(digest_raw)
+        actual_digest = hashlib.pbkdf2_hmac(
+            "sha256",
+            password.encode("utf-8"),
+            _base64url_decode(salt_raw),
+            iterations,
+        )
+    except (ValueError, binascii.Error):
+        return False
+    return hmac.compare_digest(actual_digest, expected_digest)
+
+
+def password_hash_needs_bootstrap(hashed_password: str) -> bool:
+    """Return whether a configured user's placeholder hash should be replaced."""
+    return hashed_password in LEGACY_CONFIGURED_PASSWORD_PLACEHOLDERS
 
 
 def access_token_expires_at(expires_delta: timedelta | None = None) -> datetime:
@@ -43,6 +101,37 @@ def new_token_jti() -> str:
 def token_jti_digest(jti: str) -> str:
     """Return a stable digest for storing JWT IDs without token material."""
     return hashlib.sha256(jti.encode("utf-8")).hexdigest()
+
+
+def create_csrf_token(jti: str) -> str:
+    """Create a signed CSRF token bound to one JWT ID."""
+    nonce = secrets.token_urlsafe(32)
+    signature = _csrf_signature(jti, nonce)
+    return f"{nonce}.{_base64url_encode(signature)}"
+
+
+def verify_csrf_token(jti: str, token: str) -> bool:
+    """Validate a signed CSRF token for one JWT ID."""
+    try:
+        nonce, signature_raw = token.split(".", 1)
+    except ValueError:
+        return False
+    if not nonce or not signature_raw:
+        return False
+    try:
+        actual_signature = _base64url_decode(signature_raw)
+    except (ValueError, binascii.Error):
+        return False
+    expected_signature = _csrf_signature(jti, nonce)
+    return hmac.compare_digest(actual_signature, expected_signature)
+
+
+def _csrf_signature(jti: str, nonce: str) -> bytes:
+    return hmac.new(
+        settings.SECRET_KEY.encode("utf-8"),
+        f"csrf:{jti}:{nonce}".encode(),
+        hashlib.sha256,
+    ).digest()
 
 
 def create_access_token(
@@ -97,5 +186,5 @@ def decode_access_token(token: str) -> dict[str, Any]:
         if datetime.now(UTC).timestamp() >= expires_at:
             raise TokenDecodeError("Expired token")
         return dict(claims)
-    except (ValueError, json.JSONDecodeError) as exc:
+    except (ValueError, json.JSONDecodeError, binascii.Error) as exc:
         raise TokenDecodeError("Could not decode token") from exc

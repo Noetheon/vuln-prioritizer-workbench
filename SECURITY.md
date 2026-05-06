@@ -7,10 +7,10 @@ Workbench for known CVEs and imported findings. It is not a scanning engine,
 exploit framework, or asset discovery platform.
 
 The Workbench is local-first and self-hosted by default. Treat it as a trusted
-single-workspace operator tool unless a specific deployment hardening review has
-covered TLS/proxy configuration, backup and restore, audit retention, token
-handling, role boundaries, upload/download storage, and the published threat
-model.
+single-workspace operator tool unless the public deployment runbook, threat
+model, release evidence ledger, and PP5 scorecard all cover the target
+deployment's TLS/proxy configuration, backup and restore, audit retention, token
+handling, role boundaries, upload/download storage, and residual risks.
 
 The project does not accept changes that turn the tool into an exploit runner,
 PoC generator, credential tester, active network probe, attack simulator,
@@ -70,5 +70,7 @@ Include, when possible:
 - Optional ATT&CK support must stay offline-mapping-based unless the project explicitly adopts a reviewed live approach.
 - XML, SBOM, scanner, and advisory inputs are treated as local exported evidence
   files. The tool must not scan remote systems to create those files.
-- Public internet deployment is out of scope until the threat model and
-  operational hardening documents explicitly say otherwise.
+- Public internet deployment remains gated by the threat model, public
+  deployment runbook, release evidence ledger, and PP5 scorecard. Do not claim
+  public-production readiness from local quickstart or package-release evidence
+  alone.

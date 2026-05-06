@@ -102,6 +102,9 @@ Workbench remains local-first and uses the import-format matrix documented in
   Security Project submission package.
 - Read [methodology.md](methodology.md) for scoring, ATT&CK, Asset Context, and VEX semantics.
 - Read [architecture.md](architecture.md) for the current FastAPI/React route architecture, generated client boundary, VPW design-system role, and shared state ownership.
+- Read [dependency-and-package-policy.md](dependency-and-package-policy.md) for
+  backend package contents, frontend lockfile ownership, Dependabot labels, and
+  dependency-audit policy.
 - Read [scoring-methodology.md](scoring-methodology.md) for the rule-based CVSS, EPSS, KEV, lifecycle, provider freshness, asset-context, and waiver methodology.
 - Read [attack-ttp-methodology.md](attack-ttp-methodology.md) for curated ATT&CK/TTP mapping rules, no-inference boundaries, and the current mapped demo proof.
 - Read [reports-and-evidence.md](reports-and-evidence.md) for Evidence Center formats, ZIP bundle verification, canonical contract artifacts, and archive layout.
@@ -119,6 +122,9 @@ Workbench remains local-first and uses the import-format matrix documented in
 - Use [user_documentation.md#known-limitations](user_documentation.md#known-limitations) for the consolidated external-user limitations list.
 - Use [roadmap.md](roadmap.md) for shipped scope and deliberate non-goals.
 - Use [release_operations.md](release_operations.md) for maintainer-only release, GitHub Release recovery, and PyPI/TestPyPI operations.
+- Use [public-production-release-evidence-ledger.md](public-production-release-evidence-ledger.md)
+  for PP4/PP5 release-readiness targets, evidence boundaries, and residual-risk
+  tracking.
 - Use [community_repository_setup.md](community_repository_setup.md) for maintainer-facing public repo topics, labels, and triage defaults.
 - Use [releases/v1.1.0.md](releases/v1.1.0.md) for the current package release.
 

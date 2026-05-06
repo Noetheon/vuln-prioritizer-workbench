@@ -30,12 +30,16 @@ def main() -> None:
         raise RuntimeError("Demo import returned no findings.")
     if summary.get("locked_provider_data") is not True:
         raise RuntimeError("Demo import did not use locked provider data.")
-    if not str(summary.get("provider_snapshot_file", "")).endswith(
-        "/app/provider-snapshots/demo_provider_snapshot.json"
-    ):
+    provider_snapshot_ref = str(summary.get("provider_snapshot_file", ""))
+    provider_snapshot_ref_normalized = provider_snapshot_ref.replace("\\", "/")
+    if provider_snapshot_ref_normalized.startswith("/") or ":/" in provider_snapshot_ref_normalized:
+        raise RuntimeError(
+            f"Demo import leaked an absolute provider snapshot path: {provider_snapshot_ref!r}"
+        )
+    if not provider_snapshot_ref_normalized.endswith("demo_provider_snapshot.json"):
         raise RuntimeError(
             "Demo import did not use the Compose-mounted provider snapshot: "
-            f"{summary.get('provider_snapshot_file')!r}"
+            f"{provider_snapshot_ref!r}"
         )
     if provider_job.get("status") not in {"succeeded", "completed"}:
         raise RuntimeError(f"Provider update job did not complete: {provider_job!r}")
@@ -48,7 +52,7 @@ def main() -> None:
         )
 
     print(
-        "Template Workbench demo import passed: "
+        "Workbench demo import passed: "
         f"project_id={project_id} run_id={run['id']} findings={len(findings)} "
         f"locked_provider_data={summary['locked_provider_data']} "
         f"provider_job_id={provider_job['id']}"

@@ -1,10 +1,11 @@
 # Vuln Prioritizer Workbench Roadmap
 
 This top-level roadmap summarizes the current delivery direction. Detailed
-release-line history remains in [docs/roadmap.md](docs/roadmap.md). The active
-template-first execution plan is tracked in
+release-line history remains in [docs/roadmap.md](docs/roadmap.md). Historical
+template migration planning is preserved in
 [docs/vpw_template_execution_sequence.md](docs/vpw_template_execution_sequence.md)
-and [docs/full_stack_fastapi_template_migration.md](docs/full_stack_fastapi_template_migration.md).
+and [docs/full_stack_fastapi_template_migration.md](docs/full_stack_fastapi_template_migration.md);
+those pages are reference material, not active acceptance evidence.
 
 ## Product Direction
 
@@ -20,45 +21,39 @@ CVE-to-ATT&CK mappings with heuristics or AI.
 
 ## Current Execution Track
 
-The current VPW cycle rebuilds the Workbench on the official
-`fastapi/full-stack-fastapi-template` shape without discarding the existing
-CLI/core domain value.
+The current VPW cycle hardens the implemented `backend/app` Workbench, retained
+CLI/core package, React frontend, generated-client boundary, docs, packaging,
+and release gates for public-production review.
 
-1. Baseline and governance: prove the official template baseline, product
-   identity, auth smoke, governance docs, issue templates, milestones, and
-   strict evidence flow.
-2. Backend domain foundation: replace template demo Items with Workbench
-   Projects, Findings, Assets, Components, Vulnerabilities, Analysis Runs,
-   Provider Snapshots, and SQLModel/Alembic persistence.
-3. Core package extraction: keep parser, provider, scoring, reporting, ATT&CK,
-   VEX, and governance logic framework-neutral so the template backend can call
-   it through service boundaries.
-4. Import MVP: persist imported scanner/SBOM/advisory data as findings and
-   occurrences with provenance.
-5. Enrichment and prioritization: attach provider context, risk reasons,
-   operational ranking, waivers, and explanations.
-6. React Workbench workflow: replace demo frontend pages with dashboard,
-   projects, imports, findings, detail, reports, providers, settings, and
-   browser-tested user flows.
-7. Evidence, reporting, ATT&CK, asset, VEX, governance, deployment, release, and
-   integration hardening: land each capability with tests and evidence before
-   closure.
+1. Security/auth/deployment baseline: document and verify the implemented
+   session, token, upload/report, CSP/routing, health/readiness, dependency, and
+   public deployment controls.
+2. Migration/package/docs coherence: keep issue templates, package boundaries,
+   generated-client ownership, archive boundaries, and current-state docs
+   aligned with the implemented runtime.
+3. Public-production release evidence: collect package contents, source-tag
+   install smoke, docs build, client drift, evidence bundle verification, Docker
+   smoke, and residual-risk decisions in the release evidence ledger.
+4. PP5 certification: run the final quality gate and close the 10/10 scorecard
+   only when every category has current evidence and no unresolved P1/P2 blocker.
 
 ## Roadmap Guardrails
 
 - Keep one roadmap issue per PR unless a dependency group is explicitly stated.
 - Close issues only after fresh evidence is posted: changed scope, commands run,
   artifacts, residual risk, and follow-up links.
-- Treat the old FastAPI/Jinja2/SQLAlchemy Workbench as reference material, not
-  automatic completion evidence for template React/JWT/SQLModel work.
-- Preserve the local-first posture until public/shared deployment hardening is
-  explicitly implemented and documented.
+- Treat historical template-era and removed-runtime notes as reference material,
+  not automatic completion evidence for current `backend/app` work.
+- Preserve the local-first posture until public-production deployment hardening
+  and PP5 evidence explicitly support a stronger claim.
 - Keep ATT&CK defensive and evidence-based. Do not infer mappings.
 
 ## Key References
 
-- [VPW Template Execution Sequence](docs/vpw_template_execution_sequence.md)
-- [Full Stack FastAPI Template Migration Plan](docs/full_stack_fastapi_template_migration.md)
+- [Public-Production Release Evidence Ledger](docs/public-production-release-evidence-ledger.md)
+- [Dependency and Package Policy](docs/dependency-and-package-policy.md)
+- [VPW Template Execution Sequence](docs/vpw_template_execution_sequence.md) (historical)
+- [Full Stack FastAPI Template Migration Plan](docs/full_stack_fastapi_template_migration.md) (historical)
 - [Template Replacement Strategy](docs/architecture/template-replacement.md)
 - [Workbench Threat Model](docs/workbench-threat-model.md)
 - [Current Release Roadmap](docs/roadmap.md)

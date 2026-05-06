@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs"
 import { expect, type Locator, type Page, test } from "@playwright/test"
+import { authHeaders, login, testUserEmail } from "./auth-helpers"
 import { evidenceScreenshotPath } from "./evidence-paths"
 
 const validCveList = Buffer.from("CVE-2021-44228\nCVE-2024-3094\n")
@@ -112,17 +113,8 @@ test("template finding detail renders TTP Context tab", async ({ page }) => {
   const testRunSuffix = Date.now().toString(36)
   const projectName = `VPW TTP Context ${testRunSuffix}`
 
-  await page.goto("/login")
-  await page.getByLabel("Email").fill("admin@example.com")
-  await page.getByLabel("Password").fill("changethis")
-  await page.getByRole("button", { name: "Sign in" }).click()
-  await expect(page).toHaveURL(/\/$/)
-
-  const accessToken = await page.evaluate(() =>
-    window.localStorage.getItem("access_token"),
-  )
-  expect(accessToken).toBeTruthy()
-  const authHeaders = { Authorization: `Bearer ${accessToken}` }
+  const accessToken = await login(page)
+  const headers = authHeaders(accessToken)
   const projectResponse = await page.request.post(
     "http://127.0.0.1:8000/api/v1/projects/",
     {
@@ -130,7 +122,7 @@ test("template finding detail renders TTP Context tab", async ({ page }) => {
         description: "Playwright TTP Context project",
         name: projectName,
       },
-      headers: authHeaders,
+      headers,
     },
   )
   expect(projectResponse.ok()).toBeTruthy()
@@ -139,7 +131,7 @@ test("template finding detail renders TTP Context tab", async ({ page }) => {
   const importResponse = await page.request.post(
     `http://127.0.0.1:8000/api/v1/projects/${project.id}/imports`,
     {
-      headers: authHeaders,
+      headers,
       multipart: {
         file: {
           buffer: validCveList,
@@ -154,7 +146,7 @@ test("template finding detail renders TTP Context tab", async ({ page }) => {
 
   const findingsResponse = await page.request.get(
     `http://127.0.0.1:8000/api/v1/projects/${project.id}/findings/?sort=cve`,
-    { headers: authHeaders },
+    { headers },
   )
   expect(findingsResponse.ok()).toBeTruthy()
   const findingsPayload = (await findingsResponse.json()) as {
@@ -200,17 +192,8 @@ test("template frontend renders CycloneDX VEX occurrence evidence", async ({
   const testRunSuffix = Date.now().toString(36)
   const projectName = `VPW CycloneDX VEX ${testRunSuffix}`
 
-  await page.goto("/login")
-  await page.getByLabel("Email").fill("admin@example.com")
-  await page.getByLabel("Password").fill("changethis")
-  await page.getByRole("button", { name: "Sign in" }).click()
-  await expect(page).toHaveURL(/\/$/)
-
-  const accessToken = await page.evaluate(() =>
-    window.localStorage.getItem("access_token"),
-  )
-  expect(accessToken).toBeTruthy()
-  const authHeaders = { Authorization: `Bearer ${accessToken}` }
+  const accessToken = await login(page)
+  const headers = authHeaders(accessToken)
   const projectResponse = await page.request.post(
     "http://127.0.0.1:8000/api/v1/projects/",
     {
@@ -218,7 +201,7 @@ test("template frontend renders CycloneDX VEX occurrence evidence", async ({
         description: "Playwright CycloneDX VEX project",
         name: projectName,
       },
-      headers: authHeaders,
+      headers,
     },
   )
   expect(projectResponse.ok()).toBeTruthy()
@@ -227,7 +210,7 @@ test("template frontend renders CycloneDX VEX occurrence evidence", async ({
   const importResponse = await page.request.post(
     `http://127.0.0.1:8000/api/v1/projects/${project.id}/imports`,
     {
-      headers: authHeaders,
+      headers,
       multipart: {
         file: {
           buffer: cyclonedxVexOccurrenceCsv,
@@ -247,7 +230,7 @@ test("template frontend renders CycloneDX VEX occurrence evidence", async ({
 
   const findingsResponse = await page.request.get(
     `http://127.0.0.1:8000/api/v1/projects/${project.id}/findings/?sort=cve`,
-    { headers: authHeaders },
+    { headers },
   )
   expect(findingsResponse.ok()).toBeTruthy()
   const findingsPayload = (await findingsResponse.json()) as {
@@ -294,19 +277,16 @@ test("template frontend covers core Workbench E2E smoke", async ({ page }) => {
   const editedUiAssetName = `Playwright Asset Edited ${testRunSuffix}`
 
   await page.goto("/login")
-
   await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible()
   await expect(page.getByText("Vuln Prioritizer")).toBeVisible()
   await expect(page.getByText("Workbench", { exact: true })).toBeVisible()
-  await page.getByLabel("Email").fill("admin@example.com")
-  await page.getByLabel("Password").fill("changethis")
-  await page.getByRole("button", { name: "Sign in" }).click()
 
+  const accessToken = await login(page)
   await expect(page).toHaveURL(/\/$/)
   await expect(
     page.getByRole("heading", { name: "Risk Operations" }),
   ).toBeVisible()
-  await expect(page.getByText("admin@example.com")).toBeVisible()
+  await expect(page.getByText(testUserEmail)).toBeVisible()
   const navigation = page.getByRole("navigation", {
     name: "Workbench navigation",
   })
@@ -328,11 +308,7 @@ test("template frontend covers core Workbench E2E smoke", async ({ page }) => {
   await expect(page.getByText("Evidence Readiness").first()).toBeVisible()
   await expect(page.getByText("Data Quality", { exact: true })).toBeVisible()
 
-  const accessToken = await page.evaluate(() =>
-    window.localStorage.getItem("access_token"),
-  )
-  expect(accessToken).toBeTruthy()
-  const authHeaders = { Authorization: `Bearer ${accessToken}` }
+  const headers = authHeaders(accessToken)
   const projectResponse = await page.request.post(
     "http://127.0.0.1:8000/api/v1/projects/",
     {
@@ -340,7 +316,7 @@ test("template frontend covers core Workbench E2E smoke", async ({ page }) => {
         description: "Playwright dashboard summary project",
         name: dashboardProjectName,
       },
-      headers: authHeaders,
+      headers,
     },
   )
   expect(projectResponse.ok()).toBeTruthy()
@@ -359,7 +335,7 @@ test("template frontend covers core Workbench E2E smoke", async ({ page }) => {
   const importResponse = await page.request.post(
     `http://127.0.0.1:8000/api/v1/projects/${project.id}/imports`,
     {
-      headers: authHeaders,
+      headers,
       multipart: {
         file: {
           buffer: validCveList,
@@ -387,7 +363,7 @@ test("template frontend covers core Workbench E2E smoke", async ({ page }) => {
 
   const providerStatusResponse = await page.request.get(
     "http://127.0.0.1:8000/api/v1/providers/status",
-    { headers: authHeaders },
+    { headers },
   )
   expect(providerStatusResponse.ok()).toBeTruthy()
   const providerStatusPayload = (await providerStatusResponse.json()) as {
@@ -593,7 +569,7 @@ test("template frontend covers core Workbench E2E smoke", async ({ page }) => {
   await page.waitForTimeout(1000)
   const importWizardFindingsResponse = await page.request.get(
     `http://127.0.0.1:8000/api/v1/projects/${project.id}/findings/?sort=cve`,
-    { headers: authHeaders },
+    { headers },
   )
   expect(importWizardFindingsResponse.ok()).toBeTruthy()
   const importWizardFindingsPayload =
@@ -630,7 +606,7 @@ test("template frontend covers core Workbench E2E smoke", async ({ page }) => {
   const occurrenceImport = await page.request.post(
     `http://127.0.0.1:8000/api/v1/projects/${project.id}/imports`,
     {
-      headers: authHeaders,
+      headers,
       multipart: {
         file: {
           buffer: validOccurrenceCsv,
@@ -957,7 +933,7 @@ test("template frontend covers core Workbench E2E smoke", async ({ page }) => {
   ).toBeVisible()
   await expect(
     page.getByRole("region", { name: "User Settings" }),
-  ).toContainText("admin@example.com")
+  ).toContainText(testUserEmail)
 
   await page.getByRole("button", { name: "Account menu" }).click()
   await page.getByRole("menuitem", { name: "Sign out" }).click()
@@ -970,11 +946,7 @@ test("template settings clears one-time API token when leaving settings", async 
 }) => {
   const testRunSuffix = Date.now().toString(36)
 
-  await page.goto("/login")
-  await page.getByLabel("Email").fill("admin@example.com")
-  await page.getByLabel("Password").fill("changethis")
-  await page.getByRole("button", { name: "Sign in" }).click()
-  await expect(page).toHaveURL(/\/$/)
+  await login(page)
 
   await page.goto("/settings")
   await expect(

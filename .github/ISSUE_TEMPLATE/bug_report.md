@@ -18,8 +18,8 @@ affected?
 ## Affected Surface
 
 - [ ] CLI
-- [ ] Template backend API
-- [ ] Legacy Workbench API/UI
+- [ ] Workbench backend API
+- [ ] Active Workbench UI/API
 - [ ] React frontend
 - [ ] Docker/Compose
 - [ ] Docs/release/packaging
@@ -70,6 +70,8 @@ What should have happened instead?
 - [ ] Commands run and results are posted before closure.
 - [ ] No secrets, customer scanner exports, tokens, cookies, or private paths are
       included in public evidence.
+- [ ] Public-production readiness is not claimed unless PP5 release-readiness
+      evidence and the final scorecard issue support it.
 
 ## Evidence
 

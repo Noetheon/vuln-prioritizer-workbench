@@ -9,7 +9,8 @@ files. It does not duplicate screenshots.
 | --- | --- |
 | VPW is a workbench for known CVEs, not a scanner. | [README](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/README.md), [Security Policy](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/SECURITY.md), [Architecture](../architecture.md) |
 | The architecture uses FastAPI, React/Vite/TanStack Router, and a generated API client. | [Product Architecture](../architecture.md) |
-| The generated client remains the contract boundary. | [Product Architecture](../architecture.md) |
+| The generated client remains the contract boundary, and `api-client.ts` is manual wrapper source. | [Product Architecture](../architecture.md) |
+| The backend package intentionally ships both CLI/core and active Workbench app code. | [Dependency and Package Policy](../dependency-and-package-policy.md) |
 | Prioritization is transparent and rule-based, not ML/AI-based. | [Scoring Methodology](../scoring-methodology.md) |
 | CVSS, EPSS, KEV, asset context, provider freshness, lifecycle, VEX, and waivers are visible. | [Scoring Methodology](../scoring-methodology.md), [Technical Documentation](technical-documentation.md) |
 | ATT&CK/TTP is defensive context and does not prove exploitation. | [ATT&CK/TTP Methodology](../attack-ttp-methodology.md), [Curated Mapping Summary](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/archive/vpw-evidence/final-demo-flow/attack-demo-mapping-summary.md) |

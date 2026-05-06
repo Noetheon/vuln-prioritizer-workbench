@@ -18,6 +18,8 @@ normal `docs/` navigation.
 
 - Current roadmap: [docs/roadmap.md](./roadmap.md)
 - Release notes: [docs/releases/](./releases/v1.1.0.md)
+- Public-production release evidence ledger:
+  [docs/public-production-release-evidence-ledger.md](./public-production-release-evidence-ledger.md)
 - Report and evidence contracts: [docs/contracts.md](./contracts.md)
 - Support matrix: [docs/support_matrix.md](./support_matrix.md)
 - Release operations: [docs/release_operations.md](./release_operations.md)

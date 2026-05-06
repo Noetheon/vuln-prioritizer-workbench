@@ -3,6 +3,10 @@
 This runbook covers the additional controls required before exposing the
 Workbench beyond a local or private single-workspace environment.
 
+Status: deployment-control runbook, not final certification. Public-production
+readiness remains gated by the PP5 scorecard and the
+[Public-Production Release Evidence Ledger](./public-production-release-evidence-ledger.md).
+
 ## Required Environment
 
 Use non-default secrets and exact public origins:
@@ -124,9 +128,13 @@ scripts/workbench-backup.sh
 `WORKBENCH_DATABASE_MODE=compose` runs `pg_dump` inside the Compose `db`
 container, so the default stack does not need to publish Postgres on the host.
 `WORKBENCH_ARTIFACT_MODE=compose` copies artifacts from the running backend
-container, including the Compose volumes mounted at `/app/template-import-uploads`,
-`/app/template-reports`, `/app/provider-snapshots`, and
-`/app/template-provider-cache`.
+container, including the import-upload, report, provider-snapshot, and
+provider-cache Compose volumes.
+
+Some historical artifact directory names are retained as storage-path
+compatibility names for the active `backend/app` runtime. They do not indicate a
+separate template-era Workbench runtime, and API responses expose managed
+artifact IDs or relative references rather than container filesystem paths.
 
 The script writes a timestamped directory under `./backups` unless `BACKUP_DIR`
 is set. Artifact paths are packed into `artifacts.tar`.
@@ -170,3 +178,21 @@ python -c "import urllib.request; print(urllib.request.urlopen('https://api.${DO
 
 The status response should report `database_status=ready` and
 `schema_status=ready`.
+
+## Release Evidence
+
+Before a public-production release claim, record these public-safe results in
+the release evidence ledger or linked issue evidence:
+
+- `make release-readiness-check`
+- `make package-check`
+- `make dependency-audit`
+- `make api-client-drift-check`
+- `make docker-demo-smoke`
+- `make playwright-check`
+- header captures for the public frontend and API routes
+- residual-risk decision with owner and follow-up issue for every exception
+
+Do not include secrets, token values, cookies, customer exports, private
+absolute paths, shell history, or unredacted environment dumps in public
+evidence.

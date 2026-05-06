@@ -1,5 +1,6 @@
 /**
- * Demo preview data – displayed only when no real project is connected.
+ * Demo preview data - displayed only when explicit local demo mode is enabled
+ * and no real project is connected.
  *
  * This module is CLEARLY LABELED in the UI and never silently replaces live
  * production API data. It exists solely so the Dashboard is evaluable during

@@ -39,7 +39,13 @@ export function RiskTrendChart({ items }: RiskTrendChartProps) {
       title="Run Activity"
     >
       <figure className="trend-chart" aria-label="Run activity trend">
-        <svg role="img" viewBox="0 0 100 100" preserveAspectRatio="none">
+        <svg
+          aria-labelledby="run-activity-trend-title"
+          role="img"
+          viewBox="0 0 100 100"
+          preserveAspectRatio="none"
+        >
+          <title id="run-activity-trend-title">Run activity trend</title>
           <path className="trend-line" d={path} />
           {points.map((point) => (
             <circle

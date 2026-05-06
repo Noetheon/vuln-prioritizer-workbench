@@ -42,7 +42,8 @@ Describe the smallest safe change.
 
 ## Safety Checklist
 
-- [ ] No public internet readiness is claimed without explicit hardening docs.
+- [ ] No public-production readiness is claimed without explicit threat-model,
+      deployment, release-readiness, and PP5 scorecard evidence.
 - [ ] No secrets, token values, cookies, API keys, customer exports, or private
       paths are exposed.
 - [ ] No scanner, exploit, PoC, active probing, credential testing, or
