@@ -25,7 +25,7 @@ import {
   workbenchBootstrapQueryKey,
 } from "./useWorkbenchBootstrapQuery"
 import { useProjectsQuery } from "./useWorkbenchQueries"
-import { workbenchQueryKeys } from "./workbench-query-keys"
+import { invalidateWorkbenchProjectQueries } from "./workbench-query-keys"
 
 const SELECTED_PROJECT_STORAGE_KEY = "vpw.selectedProjectId"
 
@@ -129,15 +129,7 @@ export function WorkbenchProvider({ children }: { children: ReactNode }) {
       if (preferredProjectId) {
         setSelectedProjectId(preferredProjectId)
       }
-      await queryClient.invalidateQueries({
-        queryKey: workbenchQueryKeys.projects(),
-      })
-      await queryClient.invalidateQueries({
-        queryKey: ["workbench", "project-summaries"],
-      })
-      await queryClient.invalidateQueries({
-        queryKey: ["workbench", "project-summary"],
-      })
+      await invalidateWorkbenchProjectQueries(queryClient)
     },
     [queryClient, setSelectedProjectId],
   )

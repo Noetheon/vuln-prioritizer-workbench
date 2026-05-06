@@ -80,7 +80,7 @@ exclude = ["tests*"]
 vuln_prioritizer = ["py.typed"]
 
 [tool.pytest.ini_options]
-addopts = "-ra --cov=vuln_prioritizer --cov-report=term-missing --cov-fail-under=90"
+addopts = "-ra --cov=app --cov=vuln_prioritizer --cov-report=term-missing --cov-fail-under=90"
 testpaths = ["tests"]
 pythonpath = [".", "src"]
 markers = [
@@ -114,3 +114,9 @@ warn_unreachable = true
 no_implicit_optional = true
 check_untyped_defs = true
 disallow_untyped_defs = true
+
+[tool.coverage.run]
+omit = [
+  "app/alembic/env.py",
+  "app/alembic/versions/*.py",
+]

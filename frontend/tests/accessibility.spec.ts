@@ -73,6 +73,7 @@ test("core authenticated routes have no serious accessibility violations", async
     ["/projects", "projects"],
     ["/imports", "imports"],
     ["/findings", "findings"],
+    ["/assets", "assets"],
     ["/reports", "reports"],
     ["/providers", "providers"],
     ["/settings", "settings"],

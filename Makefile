@@ -15,7 +15,7 @@ DEMO_EVIDENCE_ANALYSIS_FILE := build/v1.0-demo-analysis.json
 DEMO_EVIDENCE_BUNDLE_FILE := build/v1.0-demo-evidence-bundle.zip
 DEMO_EVIDENCE_VERIFICATION_FILE := build/v1.0-demo-evidence-bundle-verification.json
 
-.PHONY: install test lint format fix typecheck check benchmark-check performance-smoke playwright-install playwright-check frontend-install frontend-build frontend-lint frontend-test-unit frontend-generate-client api-client-drift-check frontend-audit frontend-check docs-check docs-serve actionlint-check workflow-check docker-demo-smoke docker-production-smoke dependency-audit clean-local clean-deps provider-snapshot-validate provider-testmatrix demo-offline-no-key-proof demo-sync-check demo-sync-check-temp package package-contents-check package-check package-check-temp pipx-source-smoke release-check release-readiness-check demo-report demo-compare demo-explain demo-attack-report demo-attack-compare demo-attack-explain demo-attack-coverage demo-attack-navigator demo-pr-comment demo-results-sarif demo-html-report demo-evidence-analysis demo-evidence-bundle demo-evidence-bundle-check precommit-install
+.PHONY: install test lint format fix typecheck check benchmark-check performance-smoke playwright-install playwright-check frontend-install frontend-build frontend-lint frontend-test-unit frontend-generate-client api-client-drift-check frontend-audit frontend-check release-evidence-hygiene-check docs-check docs-serve actionlint-check workflow-check docker-demo-smoke docker-production-smoke dependency-audit clean-local clean-deps provider-snapshot-validate provider-testmatrix demo-offline-no-key-proof demo-sync-check demo-sync-check-temp package package-contents-check package-check package-check-temp pipx-source-smoke release-check release-readiness-check demo-report demo-compare demo-explain demo-attack-report demo-attack-compare demo-attack-explain demo-attack-coverage demo-attack-navigator demo-pr-comment demo-results-sarif demo-html-report demo-evidence-analysis demo-evidence-bundle demo-evidence-bundle-check precommit-install
 
 install:
 	$(PYTHON) -m pip install -e "$(BACKEND_DIR)[dev]"
@@ -77,7 +77,10 @@ frontend-audit:
 
 frontend-check: frontend-install frontend-lint frontend-build frontend-test-unit frontend-generate-client
 
-docs-check:
+release-evidence-hygiene-check:
+	$(PYTHON) scripts/check_release_evidence_hygiene.py
+
+docs-check: release-evidence-hygiene-check
 	$(PYTHON) -m mkdocs build --clean
 
 docs-serve:
@@ -107,8 +110,9 @@ workflow-check:
 
 docker-demo-smoke:
 	@set -e; \
+	on_exit() { status=$$?; if [ "$$status" != "0" ]; then $(COMPOSE) ps || true; $(COMPOSE) logs --no-color || true; fi; $(COMPOSE) down -v --remove-orphans; exit "$$status"; }; \
+	trap on_exit EXIT; \
 	$(COMPOSE) up -d --build backend frontend; \
-	trap '$(COMPOSE) down -v --remove-orphans' EXIT; \
 	backend_ready=0; \
 		for attempt in $$(seq 1 30); do \
 			if $(PYTHON) -c "import json, urllib.request; data=json.load(urllib.request.urlopen('http://127.0.0.1:8000/api/v1/utils/health-check/', timeout=2)); assert data is True; print(data)" 2>/dev/null; then \
@@ -146,8 +150,9 @@ docker-demo-smoke:
 
 docker-production-smoke:
 	@set -e; \
+	on_exit() { status=$$?; if [ "$$status" != "0" ]; then $(PRODUCTION_SMOKE_COMPOSE) ps || true; $(PRODUCTION_SMOKE_COMPOSE) logs --no-color || true; fi; $(PRODUCTION_SMOKE_COMPOSE) down -v --remove-orphans; exit "$$status"; }; \
+	trap on_exit EXIT; \
 	$(PRODUCTION_SMOKE_COMPOSE) up -d --build backend frontend; \
-	trap '$(PRODUCTION_SMOKE_COMPOSE) down -v --remove-orphans' EXIT; \
 	frontend_ready=0; \
 	for attempt in $$(seq 1 45); do \
 		if $(PYTHON) -c "import urllib.request; req=urllib.request.Request('http://127.0.0.1:5180/', headers={'Host': 'workbench.example.test'}); print(urllib.request.urlopen(req, timeout=2).status)" 2>/dev/null; then \
@@ -168,6 +173,7 @@ dependency-audit:
 		echo "Install pip-audit first: python3 -m pip install pip-audit" >&2; \
 		exit 1; \
 	}
+	$(MAKE) release-evidence-hygiene-check
 	$(PYTHON) -m pip_audit --requirement $(BACKEND_DIR)/requirements.txt
 	$(MAKE) frontend-audit
 

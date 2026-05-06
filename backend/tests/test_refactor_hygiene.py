@@ -493,5 +493,21 @@ def test_backend_package_boundary_intentionally_ships_workbench_app() -> None:
     assert 'include = ["vuln_prioritizer*", "app*"]' in pyproject
     assert "app/main.py" in package_check
     assert "vuln_prioritizer/cli.py" in package_check
+    assert "FORBIDDEN_WHEEL_PREFIXES" in package_check
+    assert "vuln_prioritizer/api/" in package_check
+    assert "vuln_prioritizer/db/" in package_check
+    assert "vuln_prioritizer/web/" in package_check
     assert "package-contents-check: package" in makefile
     assert "package-check: package-contents-check" in makefile
+
+
+def test_import_execution_has_characterization_guardrail_before_deeper_split() -> None:
+    source = (ROOT / "app/services/import_execution.py").read_text(encoding="utf-8")
+
+    assert "def execute_project_import_upload" in source
+    assert "def _apply_template_asset_context" in source
+    assert "def _apply_template_vex" in source
+    assert "def _persist_template_occurrences" in source
+    assert "def _job_payload" in source
+    assert "def _parse_error_payload" in source
+    assert len(source.splitlines()) <= 1800

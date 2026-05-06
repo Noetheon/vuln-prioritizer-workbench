@@ -100,7 +100,7 @@ inputs:
     required: false
     default: "false"
   attack-source:
-    description: Optional ATT&CK source for analyze mode; none, local-csv, or ctid-json
+    description: Optional ATT&CK source for analyze, compare, snapshot, attack-validate, and attack-coverage modes; none, local-csv, local-curated, or ctid-json
     required: false
     default: none
   attack-mapping-file:
@@ -172,7 +172,7 @@ inputs:
     required: false
     default: ""
   rollup-by:
-    description: rollup mode only; aggregate by asset, service, owner, priority, or status
+    description: rollup mode only; aggregate by asset, service, owner, exposure, environment, or component
     required: false
     default: asset
   rollup-top:

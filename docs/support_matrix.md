@@ -2,6 +2,11 @@
 
 ## Command matrix
 
+The GitHub composite Action is checked against the CLI through
+`backend/tests/test_github_action_contract.py`. That test writes the local
+machine-readable parity artifact `build/cli-action-parity.json` and fails if an
+advertised Action mode no longer maps to a CLI command.
+
 | Command | Primary input | Supported file outputs | Current machine contract | Notes |
 | --- | --- | --- | --- | --- |
 | `analyze` | repeatable `--input PATH` | `markdown`, `json`, `sarif`, `html` sidecar via `--html-output` | JSON schema + SARIF 2.1.0 | `table` is terminal-only. Direct HTML is additive and does not replace the JSON contract. Optional local defensive context, waiver lifecycle gates, and provider freshness gates are available for CI. |
@@ -34,18 +39,22 @@
 
 ## Input-format matrix
 
-| `--input-format` | Auto-detect | `analyze` / `compare` | `attack coverage` / `navigator-layer` | Normalized provenance currently preserved | Notes |
-| --- | --- | --- | --- | --- | --- |
-| `cve-list` | `.txt`, `.csv` | yes | yes | `cve_id`, optional `asset_ref`, `component`, `version`, source line/row | Plain TXT and minimal CSV CVE lists; see [CVE List Import](cve-list-import.md). |
-| `generic-occurrence-csv` | CSV with `cve`/`cve_id` plus optional component, version, PURL, fix, target, asset, owner, service, severity columns | yes | yes | component, version, purl, fix versions, target, asset context, owner, service | Additive manual-occurrence format for normalized backlog and spreadsheet exports; see [Generic Occurrence CSV Import](generic-occurrence-csv-import.md). |
-| `trivy-json` | JSON with `Results` | yes | yes | component, version, purl, package type, path, fix versions, target image, source ID | Default target kind is `image`; see [Trivy JSON Import](trivy-json-import.md). |
-| `grype-json` | JSON with `matches` | yes | yes | component, version, purl, package type, path, fix versions, target image, source ID | Keeps the first artifact location as current path evidence; see [Grype JSON Import](grype-json-import.md). |
-| `cyclonedx-json` | JSON with `bomFormat=CycloneDX` and vulnerabilities | yes | yes | component refs, purl, versions, dependency context when present | Used for SBOM+vuln exports, not plain BOMs without vulnerabilities. |
-| `spdx-json` | JSON with `spdxVersion` | yes | yes | package names, versions, file names when available | Current support is JSON only. |
-| `dependency-check-json` | JSON with `scanInfo` and `dependencies` | yes | yes | dependency path, package/file names, severity, fix/version hints where present | Current support is JSON only. |
-| `github-alerts-json` | JSON array or alert-like object | yes | yes | advisory source, package context when present | Contract assumes a pinned JSON export shape, not arbitrary API responses. |
-| `nessus-xml` | `.nessus` | yes | yes | host target, plugin name, service/port label, severity, source record id | Pinned Nessus XML export shape. Only resolvable CVEs are normalized. |
-| `openvas-xml` | pinned OpenVAS-style `.xml` | yes | yes | host target, NVT name, severity, source record id | Prefer explicit `--input-format openvas-xml` in CI. Only resolvable CVEs are normalized. |
+Workbench imports require an explicit `input_type`; CLI `auto` remains a CLI
+convenience and is not a persisted Workbench upload type. The Workbench importer
+registry otherwise matches the concrete `InputFormat` values.
+
+| `--input-format` | Auto-detect | `analyze` / `compare` | Workbench import | `attack coverage` / `navigator-layer` | Normalized provenance currently preserved | Notes |
+| --- | --- | --- | --- | --- | --- | --- |
+| `cve-list` | `.txt`, `.csv` | yes | yes | yes | `cve_id`, optional `asset_ref`, `component`, `version`, source line/row | Plain TXT and minimal CSV CVE lists; see [CVE List Import](cve-list-import.md). |
+| `generic-occurrence-csv` | CSV with `cve`/`cve_id` plus optional component, version, PURL, fix, target, asset, owner, service, severity columns | yes | yes | yes | component, version, purl, fix versions, target, asset context, owner, service | Additive manual-occurrence format for normalized backlog and spreadsheet exports; see [Generic Occurrence CSV Import](generic-occurrence-csv-import.md). |
+| `trivy-json` | JSON with `Results` | yes | yes | yes | component, version, purl, package type, path, fix versions, target image, source ID | Default target kind is `image`; see [Trivy JSON Import](trivy-json-import.md). |
+| `grype-json` | JSON with `matches` | yes | yes | yes | component, version, purl, package type, path, fix versions, target image, source ID | Keeps the first artifact location as current path evidence; see [Grype JSON Import](grype-json-import.md). |
+| `cyclonedx-json` | JSON with `bomFormat=CycloneDX` and vulnerabilities | yes | yes | yes | component refs, purl, versions, dependency context when present | Used for SBOM+vuln exports, not plain BOMs without vulnerabilities. |
+| `spdx-json` | JSON with `spdxVersion` | yes | yes | yes | package names, versions, file names when available | Current support is JSON only. |
+| `dependency-check-json` | JSON with `scanInfo` and `dependencies` | yes | yes | yes | dependency path, package/file names, severity, fix/version hints where present | Current support is JSON only. |
+| `github-alerts-json` | JSON array or alert-like object | yes | yes | yes | advisory source, package context when present | Contract assumes a pinned JSON export shape, not arbitrary API responses. |
+| `nessus-xml` | `.nessus` | yes | yes | yes | host target, plugin name, service/port label, severity, source record id | Pinned Nessus XML export shape. Only resolvable CVEs are normalized. |
+| `openvas-xml` | pinned OpenVAS-style `.xml` | yes | yes | yes | host target, NVT name, severity, source record id | Prefer explicit `--input-format openvas-xml` in CI. Only resolvable CVEs are normalized. |
 
 Maintainer-facing parser fixture regression coverage is documented in
 [VPW-013 Importer Contract](architecture/vpw-013-importer-contract.md).
@@ -95,8 +104,15 @@ Without a matching target, the explain flow still works, but asset-context and V
 - Prefer `report verify-evidence-bundle` before shipping or archiving an evidence ZIP outside the repository or CI workspace.
 - `report html` expects an analysis JSON export, not compare JSON or explain JSON.
 - `sarif` is part of the documented contract for `analyze`, `report workbench`,
-  and Workbench run reports.
+  and Workbench run reports. CLI `report workbench --format csv` and Workbench
+  CSV reports are locked to the same header contract by parity tests; both SARIF
+  surfaces use the same local validator before upload or download evidence.
 - `data status`, `data update`, `data verify`, and `data export-provider-snapshot` publish JSON contracts; their Rich table layout remains human-facing where applicable.
+- `data export-provider-snapshot`, Workbench provider update jobs, snapshot replay,
+  and `/api/v1/providers/status` share the `provider-snapshot.v1.json`
+  metadata vocabulary. Workbench status redacts local cache/snapshot paths in
+  production-safe mode while retaining selected sources, cache-only mode,
+  requested CVE counts, hashes, and source metadata.
 - The optional SQLite state store is separate from the existing file cache and does not change `analyze`, `snapshot`, or `report` output semantics.
 - Workbench imports now accept the same input-format matrix as the CLI for single-upload and multi-upload import flows.
 - Workbench artifact retention, cleanup, detection-control history/attachments, config export/defaults, and ATT&CK review queue APIs are additive local Workbench surfaces.

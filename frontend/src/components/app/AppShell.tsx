@@ -38,13 +38,6 @@ import {
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu"
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "../ui/select"
-import {
   Sheet,
   SheetContent,
   SheetDescription,
@@ -86,37 +79,15 @@ type PageHeaderProps = {
   title: string
 }
 
-type ProviderHealthIndicatorProps = {
-  label: string
-}
-
-type AppTopbarProps = PageHeaderProps & {
-  healthLabel: string
-  onSignOut: () => Promise<void> | void
-}
-
-type AppSidebarProps = {
+type AppShellProps = PageHeaderProps & {
   activePath: WorkbenchPath
+  children: ReactNode
   currentUserLabel: string
+  healthLabel: string
+  hideStatusStrip?: boolean
   navigation: readonly NavigationEntry[]
   onSignOut: () => Promise<void> | void
-}
-
-type AppShellProps = AppTopbarProps &
-  AppSidebarProps & {
-    children: ReactNode
-    statusItems: readonly StatusSummaryItem[]
-    hideStatusStrip?: boolean
-  }
-
-type ProjectSelectorProps = {
-  ariaLabel?: string
-  disabled?: boolean
-  emptyLabel?: string
-  label: string
-  onChange: (projectId: string) => void
-  projects: readonly { id: string; name: string }[]
-  value: string
+  statusItems: readonly StatusSummaryItem[]
 }
 
 type ProductAppShellProps = PageHeaderProps & {
@@ -539,219 +510,6 @@ export function ProductAppShell({
     >
       {children}
     </AppShell>
-  )
-}
-
-export function AppSidebar({
-  activePath,
-  currentUserLabel,
-  navigation,
-  onSignOut,
-}: AppSidebarProps) {
-  const isActive = (path: WorkbenchPath) => activePath === path
-
-  return (
-    <aside
-      aria-label="Workbench sidebar"
-      className="flex w-62 shrink-0 flex-col bg-slate-950 border-r border-slate-800/80"
-    >
-      <div className="flex h-14 shrink-0 items-center gap-3 border-b border-slate-800/80 px-4">
-        <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-amber-500 text-xs font-extrabold text-slate-950">
-          VP
-        </div>
-        <div>
-          <p className="text-sm font-semibold text-white">Vuln Prioritizer</p>
-          <p className="text-xs text-slate-300">Workbench</p>
-        </div>
-      </div>
-      <nav aria-label="Workbench navigation" className="flex-1 p-2">
-        <ul className="space-y-0.5">
-          {navigation.map((entry) => (
-            <li key={entry.label}>
-              <Link
-                aria-current={isActive(entry.to) ? "page" : undefined}
-                className={cn(
-                  "flex items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-                  isActive(entry.to)
-                    ? "bg-white/10 text-white"
-                    : "text-slate-400 hover:bg-white/5 hover:text-slate-200",
-                )}
-                to={entry.to}
-              >
-                <entry.icon aria-hidden="true" size={16} />
-                {entry.label}
-              </Link>
-            </li>
-          ))}
-        </ul>
-      </nav>
-      <div className="shrink-0 flex items-center gap-2 border-t border-slate-800/80 p-3">
-        <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-slate-700 text-xs font-semibold text-slate-300">
-          {currentUserLabel.charAt(0).toUpperCase()}
-        </div>
-        <span className="flex-1 truncate text-xs text-slate-400">
-          {currentUserLabel}
-        </span>
-        <Button
-          aria-label="Sign out"
-          className="size-7 shrink-0 text-slate-500 hover:bg-white/5 hover:text-slate-300"
-          onClick={onSignOut}
-          size="icon"
-          type="button"
-          variant="ghost"
-        >
-          <LogOut aria-hidden="true" size={14} />
-        </Button>
-      </div>
-    </aside>
-  )
-}
-
-export function AppTopbar({
-  eyebrow,
-  healthLabel,
-  onSignOut,
-  title,
-}: AppTopbarProps) {
-  const isHealthy =
-    !healthLabel.toLowerCase().includes("unavailable") &&
-    !healthLabel.toLowerCase().includes("error") &&
-    !healthLabel.toLowerCase().includes("degraded")
-
-  return (
-    <header className="flex h-14 shrink-0 items-center justify-between gap-4 border-b border-slate-200 bg-white px-6">
-      <div>
-        <p className="text-[10px] font-bold uppercase tracking-widest text-slate-600">
-          {eyebrow}
-        </p>
-        <h1 className="text-base font-bold leading-tight text-slate-900">
-          {title}
-        </h1>
-      </div>
-      <div className="flex items-center gap-3">
-        <div className="flex items-center gap-1.5">
-          <div
-            className={cn(
-              "size-2 rounded-full",
-              isHealthy ? "bg-green-500" : "bg-amber-500",
-            )}
-          />
-          <span className="text-sm text-slate-600">{healthLabel}</span>
-        </div>
-        <Button
-          aria-label="Sign out"
-          className="size-8 border-slate-200 text-slate-400 hover:bg-slate-50 hover:text-slate-700"
-          onClick={onSignOut}
-          size="icon"
-          type="button"
-          variant="outline"
-        >
-          <LogOut aria-hidden="true" size={15} />
-        </Button>
-      </div>
-    </header>
-  )
-}
-
-export function PageHeader({ eyebrow, title }: PageHeaderProps) {
-  return (
-    <div>
-      <p className="text-[10px] font-bold uppercase tracking-widest text-slate-600">
-        {eyebrow}
-      </p>
-      <h1 className="text-base font-bold leading-tight text-slate-900">
-        {title}
-      </h1>
-    </div>
-  )
-}
-
-export function ProviderHealthIndicator({
-  label,
-}: ProviderHealthIndicatorProps) {
-  const isHealthy =
-    !label.toLowerCase().includes("unavailable") &&
-    !label.toLowerCase().includes("error")
-  return (
-    <div
-      aria-label="Workspace health"
-      className="flex items-center gap-1.5"
-      role="status"
-    >
-      <div
-        className={cn(
-          "size-2 rounded-full",
-          isHealthy ? "bg-green-500" : "bg-amber-500",
-        )}
-      />
-      <span className="text-sm text-slate-600">{label}</span>
-    </div>
-  )
-}
-
-export function StatusSummary({
-  items,
-}: {
-  items: readonly StatusSummaryItem[]
-}) {
-  if (items.length === 0) return null
-  return (
-    <section
-      aria-label="Data services summary"
-      className="flex shrink-0 items-stretch border-b border-slate-100 bg-white/80"
-    >
-      {items.map((item, index) => (
-        <div
-          className={cn(
-            "flex flex-col justify-center px-6 py-2",
-            index > 0 && "border-l border-slate-100",
-          )}
-          key={typeof item.label === "string" ? item.label : index}
-        >
-          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-600">
-            {item.label}
-          </span>
-          <span className="mt-0.5 text-sm font-semibold text-slate-800">
-            {item.value}
-          </span>
-        </div>
-      ))}
-    </section>
-  )
-}
-
-export function ProjectSelector({
-  ariaLabel,
-  disabled = false,
-  emptyLabel = "No projects",
-  label,
-  onChange,
-  projects,
-  value,
-}: ProjectSelectorProps) {
-  return (
-    <div className="flex items-center gap-2">
-      <span className="text-xs font-medium text-muted-foreground">{label}</span>
-      <Select
-        disabled={disabled || projects.length === 0}
-        onValueChange={onChange}
-        value={value}
-      >
-        <SelectTrigger
-          aria-label={ariaLabel ?? label}
-          className="h-8 w-44 text-xs"
-        >
-          <SelectValue placeholder={emptyLabel} />
-        </SelectTrigger>
-        <SelectContent>
-          {projects.map((project) => (
-            <SelectItem key={project.id} value={project.id}>
-              {project.name}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    </div>
   )
 }
 

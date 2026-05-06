@@ -86,10 +86,15 @@ def password_hash_needs_bootstrap(hashed_password: str) -> bool:
     return hashed_password in LEGACY_CONFIGURED_PASSWORD_PLACEHOLDERS
 
 
-def access_token_expires_at(expires_delta: timedelta | None = None) -> datetime:
+def access_token_expires_at(
+    expires_delta: timedelta | None = None,
+    *,
+    access_token_expire_minutes: int | None = None,
+) -> datetime:
     """Return the expiry timestamp used for a new access token."""
     return datetime.now(UTC) + (
-        expires_delta or timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+        expires_delta
+        or timedelta(minutes=access_token_expire_minutes or settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     )
 
 
@@ -103,14 +108,14 @@ def token_jti_digest(jti: str) -> str:
     return hashlib.sha256(jti.encode("utf-8")).hexdigest()
 
 
-def create_csrf_token(jti: str) -> str:
+def create_csrf_token(jti: str, *, secret_key: str | None = None) -> str:
     """Create a signed CSRF token bound to one JWT ID."""
     nonce = secrets.token_urlsafe(32)
-    signature = _csrf_signature(jti, nonce)
+    signature = _csrf_signature(jti, nonce, secret_key=secret_key)
     return f"{nonce}.{_base64url_encode(signature)}"
 
 
-def verify_csrf_token(jti: str, token: str) -> bool:
+def verify_csrf_token(jti: str, token: str, *, secret_key: str | None = None) -> bool:
     """Validate a signed CSRF token for one JWT ID."""
     try:
         nonce, signature_raw = token.split(".", 1)
@@ -122,13 +127,13 @@ def verify_csrf_token(jti: str, token: str) -> bool:
         actual_signature = _base64url_decode(signature_raw)
     except (ValueError, binascii.Error):
         return False
-    expected_signature = _csrf_signature(jti, nonce)
+    expected_signature = _csrf_signature(jti, nonce, secret_key=secret_key)
     return hmac.compare_digest(actual_signature, expected_signature)
 
 
-def _csrf_signature(jti: str, nonce: str) -> bytes:
+def _csrf_signature(jti: str, nonce: str, *, secret_key: str | None = None) -> bytes:
     return hmac.new(
-        settings.SECRET_KEY.encode("utf-8"),
+        (secret_key or settings.SECRET_KEY).encode("utf-8"),
         f"csrf:{jti}:{nonce}".encode(),
         hashlib.sha256,
     ).digest()
@@ -140,9 +145,14 @@ def create_access_token(
     *,
     jti: str | None = None,
     expires_at: datetime | None = None,
+    secret_key: str | None = None,
+    access_token_expire_minutes: int | None = None,
 ) -> str:
     """Create a signed JWT for the configured active-runtime subject."""
-    expire = expires_at or access_token_expires_at(expires_delta)
+    expire = expires_at or access_token_expires_at(
+        expires_delta,
+        access_token_expire_minutes=access_token_expire_minutes,
+    )
     header = {"alg": ALGORITHM, "typ": "JWT"}
     claims = {"exp": int(expire.timestamp()), "sub": str(subject)}
     if jti is not None:
@@ -154,20 +164,20 @@ def create_access_token(
         ]
     )
     signature = hmac.new(
-        settings.SECRET_KEY.encode("utf-8"),
+        (secret_key or settings.SECRET_KEY).encode("utf-8"),
         signing_input.encode("ascii"),
         hashlib.sha256,
     ).digest()
     return f"{signing_input}.{_base64url_encode(signature)}"
 
 
-def decode_access_token(token: str) -> dict[str, Any]:
+def decode_access_token(token: str, *, secret_key: str | None = None) -> dict[str, Any]:
     """Decode and validate a HS256 JWT created by the active runtime."""
     try:
         header_segment, claims_segment, signature_segment = token.split(".")
         signing_input = f"{header_segment}.{claims_segment}"
         expected_signature = hmac.new(
-            settings.SECRET_KEY.encode("utf-8"),
+            (secret_key or settings.SECRET_KEY).encode("utf-8"),
             signing_input.encode("ascii"),
             hashlib.sha256,
         ).digest()

@@ -20,6 +20,7 @@ from app.api.errors import (
 )
 from app.api.main import api_router
 from app.core.config import Settings, settings
+from app.core.db import create_db_engine
 from app.core.rate_limit import InMemoryRateLimiter, rate_limit_key
 
 SECURITY_HEADERS = {
@@ -59,6 +60,7 @@ def create_app(active_settings: Settings | None = None) -> FastAPI:
         generate_unique_id_function=custom_generate_unique_id,
     )
     app.state.template_settings = selected_settings
+    app.state.template_engine = create_db_engine(selected_settings)
     app.state.rate_limiter = InMemoryRateLimiter()
     app.add_middleware(
         TrustedHostMiddleware,

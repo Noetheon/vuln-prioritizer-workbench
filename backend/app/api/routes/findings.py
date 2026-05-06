@@ -28,6 +28,7 @@ from app.models import (
 )
 from app.repositories import FindingRepository
 from app.services import DecisionDataUnavailableError, build_finding_explanation_payload
+from vuln_prioritizer.security_redaction import redact_value
 
 router = APIRouter(tags=["findings"])
 
@@ -112,6 +113,9 @@ def _finding_public(finding: Finding) -> FindingPublic:
     """Return a finding DTO with display context needed by the Workbench table."""
     return FindingPublic.model_validate(finding).model_copy(
         update={
+            "explanation_json": _redacted_finding_json(finding.explanation_json),
+            "data_quality_json": _redacted_finding_json(finding.data_quality_json),
+            "evidence_json": _redacted_finding_json(finding.evidence_json),
             "component_name": finding.component.name if finding.component else None,
             "component_version": finding.component.version if finding.component else None,
             "component_purl": finding.component.purl if finding.component else None,
@@ -125,6 +129,11 @@ def _finding_public(finding: Finding) -> FindingPublic:
             "exposure": finding.asset.exposure if finding.asset else None,
         }
     )
+
+
+def _redacted_finding_json(value: dict[str, object] | None) -> dict[str, object]:
+    redacted, _paths = redact_value(value or {})
+    return redacted if isinstance(redacted, dict) else {}
 
 
 def _finding_detail_public(finding: Finding) -> FindingDetailPublic:
@@ -410,7 +419,7 @@ def _finding_occurrence_public(
     finding: Finding,
 ) -> FindingOccurrencePublic:
     """Return a conservative occurrence DTO from persisted columns and raw evidence."""
-    evidence = occurrence.evidence_json or {}
+    evidence = _redacted_finding_json(occurrence.evidence_json)
     return FindingOccurrencePublic(
         id=occurrence.id,
         analysis_run_id=occurrence.analysis_run_id,
