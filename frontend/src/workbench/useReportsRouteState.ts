@@ -1,3 +1,4 @@
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useEffect, useState } from "react"
 
 import {
@@ -18,6 +19,7 @@ import {
 } from "../lib/app-errors"
 import { isReportableRunStatus, reportFormatLabel } from "../lib/report-format"
 import { reportDownloadRequest } from "./report-download"
+import { workbenchQueryKeys } from "./workbench-query-keys"
 
 type UseReportsRouteStateOptions = {
   currentPath: WorkbenchPath
@@ -58,9 +60,7 @@ export function useReportsRouteState({
   selectedReportRun,
   selectedRunId,
 }: UseReportsRouteStateOptions) {
-  const [reports, setReports] = useState<ReportPublic[]>([])
-  const [reportsLoading, setReportsLoading] = useState(false)
-  const [reportsError, setReportsError] = useState("")
+  const queryClient = useQueryClient()
   const [_verificationReport, setVerificationReport] =
     useState<ReportVerificationPublic | null>(null)
   const [_verificationReportTarget, setVerificationReportTarget] =
@@ -71,7 +71,34 @@ export function useReportsRouteState({
   const [activeReportFormat, setActiveReportFormat] = useState<
     TemplateReportFormat | ""
   >("")
-  const [reportsReloadKey, setReportsReloadKey] = useState(0)
+  const reportsQuery = useQuery({
+    enabled: currentPath === "/reports" && Boolean(selectedRunId),
+    queryFn: () => ReportsService.readRunReports({ run_id: selectedRunId }),
+    queryKey: workbenchQueryKeys.reports(selectedRunId),
+    retry: false,
+    staleTime: 15_000,
+  })
+  const createReportMutation = useMutation({
+    mutationFn: (format: TemplateReportFormat) =>
+      ReportsService.createRunReport({
+        run_id: selectedRunId,
+        reportCreate: { format },
+      }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: workbenchQueryKeys.reports(selectedRunId),
+      })
+    },
+  })
+  const verifyReportMutation = useMutation({
+    mutationFn: (report: ReportPublic) =>
+      ReportsService.verifyReport({ report_id: report.id }),
+  })
+  const reports = reportsQuery.data?.data ?? []
+  const reportsLoading = reportsQuery.isLoading || reportsQuery.isFetching
+  const reportsError = reportsQuery.isError
+    ? apiErrorMessage("Report history unavailable", reportsQuery.error)
+    : ""
   const reportActionsEnabled =
     currentPath === "/reports" &&
     Boolean(selectedReportRun) &&
@@ -79,54 +106,28 @@ export function useReportsRouteState({
     !reportsLoading
 
   useEffect(() => {
-    let isMounted = true
-    void reportsReloadKey
-
-    async function loadRunReports() {
-      if (currentPath !== "/reports" || !selectedRunId) {
-        setReports([])
-        setReportsError("")
-        setReportsLoading(false)
-        setVerificationReport(null)
-        setVerificationReportTarget(null)
-        return
-      }
-
-      setReportsLoading(true)
-      setReportsError("")
+    if (currentPath === "/reports" && selectedRunId) {
       setVerificationReport(null)
       setVerificationReportTarget(null)
-      try {
-        const reportPage = await ReportsService.readRunReports({
-          run_id: selectedRunId,
-        })
-        if (isMounted) {
-          setReports(reportPage.data)
-        }
-      } catch (caught) {
-        if (caught instanceof ApiError && [401, 403].includes(caught.status)) {
-          await onAuthExpired()
-          return
-        }
-        if (isMounted) {
-          setReports([])
-          setReportsError(apiErrorMessage("Report history unavailable", caught))
-        }
-      } finally {
-        if (isMounted) {
-          setReportsLoading(false)
-        }
-      }
+      return
     }
+    setVerificationReport(null)
+    setVerificationReportTarget(null)
+  }, [currentPath, selectedRunId])
 
-    void loadRunReports()
-    return () => {
-      isMounted = false
+  useEffect(() => {
+    if (
+      reportsQuery.error instanceof ApiError &&
+      [401, 403].includes(reportsQuery.error.status)
+    ) {
+      void onAuthExpired()
     }
-  }, [currentPath, onAuthExpired, reportsReloadKey, selectedRunId])
+  }, [onAuthExpired, reportsQuery.error])
 
   function refreshReports() {
-    setReportsReloadKey((key) => key + 1)
+    void queryClient.invalidateQueries({
+      queryKey: workbenchQueryKeys.reports(selectedRunId),
+    })
   }
 
   async function createReport(format: TemplateReportFormat) {
@@ -140,11 +141,7 @@ export function useReportsRouteState({
     setReportActionMessage("")
     setActiveReportFormat(format)
     try {
-      const report = await ReportsService.createRunReport({
-        run_id: selectedRunId,
-        reportCreate: { format },
-      })
-      setReports((currentReports) => [report, ...currentReports])
+      const report = await createReportMutation.mutateAsync(format)
       setReportActionMessage(
         `${reportFormatLabel(report.format)} report generated as ${report.filename}.`,
       )
@@ -177,9 +174,7 @@ export function useReportsRouteState({
     setReportActionError("")
     setReportActionMessage("")
     try {
-      const verification = await ReportsService.verifyReport({
-        report_id: report.id,
-      })
+      const verification = await verifyReportMutation.mutateAsync(report)
       setVerificationReport(verification)
       const summary = objectRecord(verification.summary)
       setReportActionMessage(

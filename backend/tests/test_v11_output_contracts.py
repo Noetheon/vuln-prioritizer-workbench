@@ -840,7 +840,7 @@ def test_release_check_keeps_demo_sync_manual_and_deterministic() -> None:
     assert "git diff --exit-code -- frontend/src/client" in makefile
     assert (
         "release-readiness-check: release-check api-client-drift-check "
-        "demo-evidence-bundle-check playwright-check" in makefile
+        "demo-evidence-bundle-check playwright-check docker-production-smoke" in makefile
     )
     assert "VULN_PRIORITIZER_FIXED_NOW" in makefile
     assert "git diff --binary -- docs" in makefile

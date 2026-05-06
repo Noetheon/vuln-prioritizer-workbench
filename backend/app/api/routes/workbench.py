@@ -7,9 +7,9 @@ from sqlalchemy import inspect, text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlmodel import Session
 
-from app.api.deps import SessionDep
+from app.api.deps import ScopedReadUser, SessionDep
 from app.core.config import Settings, settings
-from app.models import WorkbenchStatus
+from app.models import WorkbenchHealth, WorkbenchStatus
 from vuln_prioritizer import __version__
 
 router = APIRouter(prefix="/workbench", tags=["workbench"])
@@ -27,9 +27,19 @@ REQUIRED_SCHEMA_TABLES = frozenset(
 REQUIRED_API_TOKEN_COLUMNS = frozenset({"id", "project_id", "token_hash"})
 
 
+@router.get("/health", response_model=WorkbenchHealth)
+def template_workbench_health() -> WorkbenchHealth:
+    """Return minimal unauthenticated liveness for browser and proxy checks."""
+    return WorkbenchHealth(status="ok")
+
+
 @router.get("/status")
-def template_workbench_status(request: Request, session: SessionDep) -> WorkbenchStatus:
-    """Return active Workbench backend status."""
+def template_workbench_status(
+    request: Request,
+    session: SessionDep,
+    _current_user: ScopedReadUser,
+) -> WorkbenchStatus:
+    """Return authenticated active Workbench readiness and version status."""
     active_settings = _request_settings(request)
     database, schema = _database_readiness(session)
     return WorkbenchStatus(

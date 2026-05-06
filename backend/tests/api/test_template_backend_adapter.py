@@ -6,14 +6,32 @@ import pytest
 from fastapi.routing import APIRoute
 from fastapi.testclient import TestClient
 
-from app.core.config import Settings, load_settings, parse_allowed_hosts, parse_cors_origins
+from app.core.config import (
+    Settings,
+    load_settings,
+    parse_allowed_hosts,
+    parse_cors_origins,
+    settings,
+)
 from app.main import app, create_app, custom_generate_unique_id
+
+
+def _auth_headers(client: TestClient) -> dict[str, str]:
+    response = client.post(
+        "/api/v1/login/access-token",
+        data={
+            "username": settings.FIRST_SUPERUSER,
+            "password": settings.FIRST_SUPERUSER_PASSWORD,
+        },
+    )
+    assert response.status_code == 200, response.text
+    return {"Authorization": f"Bearer {response.json()['access_token']}"}
 
 
 def test_template_backend_status_uses_versioned_api_namespace() -> None:
     client = TestClient(app)
 
-    response = client.get("/api/v1/workbench/status")
+    response = client.get("/api/v1/workbench/status", headers=_auth_headers(client))
 
     assert response.status_code == 200
     payload = response.json()
@@ -40,6 +58,9 @@ def test_template_backend_openapi_uses_template_operation_ids() -> None:
     assert response.status_code == 200
     payload = response.json()
     assert payload["info"]["title"] == "Vuln Prioritizer Workbench"
+    assert payload["paths"]["/api/v1/workbench/health"]["get"]["operationId"] == (
+        "workbench-template_workbench_health"
+    )
     assert payload["paths"]["/api/v1/workbench/status"]["get"]["operationId"] == (
         "workbench-template_workbench_status"
     )
@@ -56,7 +77,7 @@ def test_template_backend_rejects_invalid_host_header() -> None:
     client = TestClient(app)
 
     response = client.get(
-        "/api/v1/workbench/status",
+        "/api/v1/workbench/health",
         headers={"host": "evil.example"},
     )
 
@@ -69,7 +90,7 @@ def test_template_backend_allows_local_and_testclient_hosts(host: str) -> None:
     client = TestClient(app)
 
     response = client.get(
-        "/api/v1/workbench/status",
+        "/api/v1/workbench/health",
         headers={"host": host},
     )
 
@@ -144,7 +165,7 @@ def test_template_backend_can_be_configured_without_legacy_workbench_side_effect
 
     assert selected_app.state.template_settings == selected_settings
     assert client.get("/api/health").status_code == 404
-    assert client.get("/api/v1/workbench/status").json()["app"] == "VPW Template Adapter"
+    assert client.get("/api/v1/workbench/health").json()["status"] == "ok"
 
 
 def test_template_backend_settings_load_product_env_defaults(monkeypatch) -> None:
@@ -319,10 +340,17 @@ def test_template_backend_hides_docs_and_openapi_outside_local_by_default() -> N
     )
     assert (
         client.get(
-            "/api/v1/workbench/status",
+            "/api/v1/workbench/health",
             headers={"host": "workbench.example.com"},
         ).status_code
         == 200
+    )
+    assert (
+        client.get(
+            "/api/v1/workbench/status",
+            headers={"host": "workbench.example.com"},
+        ).status_code
+        == 401
     )
 
 

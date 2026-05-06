@@ -144,7 +144,14 @@ from app.models.sessions import (
     AuthSessionPublic,
     AuthSessionsPublic,
 )
-from app.models.users import User, UserBase, UserPublic, UsersPublic
+from app.models.users import (
+    User,
+    UserBase,
+    UserPasswordChange,
+    UserPasswordReset,
+    UserPublic,
+    UsersPublic,
+)
 from app.models.vulnerabilities import Vulnerability, VulnerabilityBase
 from app.models.waivers import (
     Waiver,
@@ -154,7 +161,7 @@ from app.models.waivers import (
     WaiversPublic,
     WaiverUpdate,
 )
-from app.models.workbench import WorkbenchStatus
+from app.models.workbench import WorkbenchHealth, WorkbenchStatus
 
 __all__ = [
     "AnalysisRun",
@@ -270,6 +277,8 @@ __all__ = [
     "TokenPayload",
     "User",
     "UserBase",
+    "UserPasswordChange",
+    "UserPasswordReset",
     "UserPublic",
     "UsersPublic",
     "Vulnerability",
@@ -280,6 +289,7 @@ __all__ = [
     "WaiverPublic",
     "WaiversPublic",
     "WaiverUpdate",
+    "WorkbenchHealth",
     "WorkbenchStatus",
     "import_table_models",
 ]

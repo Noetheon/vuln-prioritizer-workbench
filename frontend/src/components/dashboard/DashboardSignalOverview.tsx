@@ -236,7 +236,7 @@ export function DashboardSignalOverview({
             <ChartCard
               action={
                 <Select onValueChange={onRunRangeChange} value={selectedRunRange}>
-                  <SelectTrigger className="w-36">
+                  <SelectTrigger aria-label="Risk trend range" className="w-36">
                     <SelectValue placeholder="Range" />
                   </SelectTrigger>
                   <SelectContent>

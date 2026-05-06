@@ -3,9 +3,9 @@ import { withCsrfHeader } from "./auth"
 
 export * from "./client"
 export { client } from "./client/client.gen"
-export type FindingsReadProjectFindingsData = NonNullable<
-  import("./client").GetApiV1ProjectsByProjectIdFindingsData["query"]
->
+export type FindingsReadProjectFindingsData = Parameters<
+  typeof import("./client").FindingsService.readProjectFindings
+>[0]
 
 type TokenProvider =
   | string

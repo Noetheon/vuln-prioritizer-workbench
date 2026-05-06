@@ -3,6 +3,7 @@ BACKEND_DIR := backend
 BACKEND_SRC := $(BACKEND_DIR)/src
 BACKEND_TESTS := $(BACKEND_DIR)/tests
 COMPOSE := docker compose -f compose.yml -f compose.override.yml
+PRODUCTION_SMOKE_COMPOSE := docker compose -f compose.yml -f compose.production-smoke.yml
 
 ATTACK_MAPPING_FILE := data/attack/ctid_kev_enterprise_2025-07-28_attack-16.1_subset.json
 ATTACK_METADATA_FILE := data/attack/attack_techniques_enterprise_16.1_subset.json
@@ -14,7 +15,7 @@ DEMO_EVIDENCE_ANALYSIS_FILE := build/v1.0-demo-analysis.json
 DEMO_EVIDENCE_BUNDLE_FILE := build/v1.0-demo-evidence-bundle.zip
 DEMO_EVIDENCE_VERIFICATION_FILE := build/v1.0-demo-evidence-bundle-verification.json
 
-.PHONY: install test lint format fix typecheck check benchmark-check performance-smoke playwright-install playwright-check frontend-install frontend-build frontend-lint frontend-test-unit frontend-generate-client api-client-drift-check frontend-audit frontend-check docs-check docs-serve actionlint-check workflow-check docker-demo-smoke dependency-audit clean-local clean-deps provider-snapshot-validate provider-testmatrix demo-offline-no-key-proof demo-sync-check demo-sync-check-temp package package-contents-check package-check package-check-temp pipx-source-smoke release-check release-readiness-check demo-report demo-compare demo-explain demo-attack-report demo-attack-compare demo-attack-explain demo-attack-coverage demo-attack-navigator demo-pr-comment demo-results-sarif demo-html-report demo-evidence-analysis demo-evidence-bundle demo-evidence-bundle-check precommit-install
+.PHONY: install test lint format fix typecheck check benchmark-check performance-smoke playwright-install playwright-check frontend-install frontend-build frontend-lint frontend-test-unit frontend-generate-client api-client-drift-check frontend-audit frontend-check docs-check docs-serve actionlint-check workflow-check docker-demo-smoke docker-production-smoke dependency-audit clean-local clean-deps provider-snapshot-validate provider-testmatrix demo-offline-no-key-proof demo-sync-check demo-sync-check-temp package package-contents-check package-check package-check-temp pipx-source-smoke release-check release-readiness-check demo-report demo-compare demo-explain demo-attack-report demo-attack-compare demo-attack-explain demo-attack-coverage demo-attack-navigator demo-pr-comment demo-results-sarif demo-html-report demo-evidence-analysis demo-evidence-bundle demo-evidence-bundle-check precommit-install
 
 install:
 	$(PYTHON) -m pip install -e "$(BACKEND_DIR)[dev]"
@@ -51,7 +52,7 @@ playwright-install: frontend-install
 	cd frontend && npm --workspaces=false exec playwright install chromium
 
 playwright-check: frontend-install
-	cd frontend && npm run test -- tests/ui-smoke.spec.ts tests/responsive-shell.spec.ts
+	cd frontend && npm run test -- tests/ui-smoke.spec.ts tests/responsive-shell.spec.ts tests/accessibility.spec.ts
 
 frontend-install:
 	cd frontend && npm ci --workspaces=false
@@ -109,11 +110,11 @@ docker-demo-smoke:
 	$(COMPOSE) up -d --build backend frontend; \
 	trap '$(COMPOSE) down -v --remove-orphans' EXIT; \
 	backend_ready=0; \
-	for attempt in $$(seq 1 30); do \
-		if $(PYTHON) -c "import json, urllib.request; data=json.load(urllib.request.urlopen('http://127.0.0.1:8000/api/v1/workbench/status', timeout=2)); assert data['database_status'] == 'ready' and data['schema_status'] == 'ready'; print(data)" 2>/dev/null; then \
-			backend_ready=1; \
-			break; \
-		fi; \
+		for attempt in $$(seq 1 30); do \
+			if $(PYTHON) -c "import json, urllib.request; data=json.load(urllib.request.urlopen('http://127.0.0.1:8000/api/v1/utils/health-check/', timeout=2)); assert data is True; print(data)" 2>/dev/null; then \
+				backend_ready=1; \
+				break; \
+			fi; \
 		sleep 2; \
 	done; \
 	if [ "$$backend_ready" != "1" ]; then \
@@ -142,6 +143,25 @@ docker-demo-smoke:
 	fi; \
 	$(PYTHON) scripts/docker_quickstart_api_smoke.py; \
 	echo "Workbench Docker smoke passed."
+
+docker-production-smoke:
+	@set -e; \
+	$(PRODUCTION_SMOKE_COMPOSE) up -d --build backend frontend; \
+	trap '$(PRODUCTION_SMOKE_COMPOSE) down -v --remove-orphans' EXIT; \
+	frontend_ready=0; \
+	for attempt in $$(seq 1 45); do \
+		if $(PYTHON) -c "import urllib.request; req=urllib.request.Request('http://127.0.0.1:5180/', headers={'Host': 'workbench.example.test'}); print(urllib.request.urlopen(req, timeout=2).status)" 2>/dev/null; then \
+			frontend_ready=1; \
+			break; \
+		fi; \
+		sleep 2; \
+	done; \
+	if [ "$$frontend_ready" != "1" ]; then \
+		echo "Production-like Workbench frontend did not become ready." >&2; \
+		exit 1; \
+	fi; \
+	$(PYTHON) scripts/production_readiness_smoke.py; \
+	echo "Workbench production-like Docker smoke passed."
 
 dependency-audit:
 	@$(PYTHON) -c "import pip_audit" >/dev/null 2>&1 || { \
@@ -225,7 +245,7 @@ release-check:
 	$(MAKE) pipx-source-smoke
 	$(MAKE) demo-sync-check
 
-release-readiness-check: release-check api-client-drift-check demo-evidence-bundle-check playwright-check
+release-readiness-check: release-check api-client-drift-check demo-evidence-bundle-check playwright-check docker-production-smoke
 
 demo-report:
 	$(DEMO_ENV) $(PYTHON) -m vuln_prioritizer.cli analyze --input data/sample_cves.txt --output docs/example_report.md --format markdown $(DEMO_PROVIDER_FLAGS)
