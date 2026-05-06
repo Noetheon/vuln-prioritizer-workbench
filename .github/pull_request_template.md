@@ -29,6 +29,8 @@
 - [ ] migration/test evidence for DB changes
 - [ ] browser/Playwright evidence for UI changes
 - [ ] Docker/Compose smoke evidence for runtime/deployment changes
+- [ ] `make release-readiness-check` for release candidates, public-production
+      handoff, or changes to release/CI evidence gates
 - [ ] additional local validation, if applicable
 
 Commands and results:
@@ -43,6 +45,27 @@ paste command output summary here
   artifacts:
 - residual risk:
 - follow-up issues:
+
+## Release Readiness Ownership
+
+- [ ] not applicable
+- [ ] mandatory release-readiness gate passed and evidence is linked below
+- [ ] skipped with owner, rationale, residual risk, follow-up issue, and
+      non-readiness wording below
+
+Release-readiness evidence comment:
+
+```text
+Command:
+Commit/tag:
+Result:
+Artifact or CI URL:
+SHA-256 artifact list:
+Residual risk:
+Owner:
+Follow-up:
+Decision wording:
+```
 
 ## Definition Of Done
 

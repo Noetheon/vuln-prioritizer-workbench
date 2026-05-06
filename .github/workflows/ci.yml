@@ -169,10 +169,25 @@ jobs:
           changed_files="$(git diff --name-only "$base_sha"...HEAD)"
           printf '%s\n' "$changed_files"
 
-          if printf '%s\n' "$changed_files" | grep -Ev '^($|docs/|archive/|\.github/|.*\.md$)' >/dev/null; then
+          run_frontend=false
+          while IFS= read -r path; do
+            case "$path" in
+              frontend/*|backend/app/*|backend/src/*)
+                run_frontend=true
+                ;;
+              backend/pyproject.toml|pyproject.toml|Makefile)
+                run_frontend=true
+                ;;
+              scripts/generate-client.sh|.github/workflows/ci.yml)
+                run_frontend=true
+                ;;
+            esac
+          done <<< "$changed_files"
+
+          if [[ "$run_frontend" == "true" ]]; then
             echo "run-frontend=true" >> "$GITHUB_OUTPUT"
           else
-            echo "Documentation, archive, or workflow-only PR; skipping expensive frontend gate."
+            echo "No frontend/API/runtime-impacting files changed; skipping expensive frontend gate."
             echo "run-frontend=false" >> "$GITHUB_OUTPUT"
           fi
 
@@ -226,14 +241,18 @@ jobs:
         if: steps.frontend-scope.outputs.run-frontend == 'true'
         run: git diff --exit-code -- frontend/src/client
 
+      - name: Run frontend unit tests
+        if: steps.frontend-scope.outputs.run-frontend == 'true'
+        run: make frontend-test-unit
+
       - name: Install Playwright browser
         if: steps.frontend-scope.outputs.run-frontend == 'true'
         working-directory: frontend
         run: npx playwright install --with-deps chromium
 
-      - name: Run frontend Playwright smoke
+      - name: Run frontend Playwright representative PR gate
         if: steps.frontend-scope.outputs.run-frontend == 'true' && github.event_name == 'pull_request'
-        run: npm --prefix frontend run test -- tests/ui-smoke.spec.ts
+        run: npm --prefix frontend run test -- tests/ui-smoke.spec.ts tests/responsive-shell.spec.ts tests/accessibility.spec.ts
 
       - name: Run full frontend Playwright suite
         if: steps.frontend-scope.outputs.run-frontend == 'true' && github.event_name != 'pull_request'
@@ -247,6 +266,6 @@ jobs:
           retention-days: 3
           path: |
             frontend/test-results/evidence
-            frontend/test-results
+            frontend/test-results/**
             frontend/playwright-report
           if-no-files-found: ignore

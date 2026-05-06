@@ -12,6 +12,18 @@ async function expectNoPageOverflow(page: Page) {
   )
 }
 
+const authenticatedRoutes = [
+  "/",
+  "/projects",
+  "/imports",
+  "/findings",
+  "/assets",
+  "/waivers",
+  "/reports",
+  "/providers",
+  "/settings",
+] as const
+
 test("mobile shell exposes drawer navigation without page-width overflow", async ({
   page,
 }) => {
@@ -31,14 +43,24 @@ test("mobile shell exposes drawer navigation without page-width overflow", async
   await expectNoPageOverflow(page)
 })
 
-test("mobile reports and settings keep content within the viewport", async ({
+test("authenticated routes keep content within desktop, tablet, and mobile viewports", async ({
   page,
 }) => {
+  test.setTimeout(120_000)
   await login(page)
 
-  for (const route of ["/reports", "/settings"]) {
-    await page.goto(route)
-    await expect(page.getByRole("main")).toBeVisible()
-    await expectNoPageOverflow(page)
+  for (const viewport of [
+    { height: 900, width: 1440 },
+    { height: 1024, width: 768 },
+    { height: 844, width: 390 },
+  ]) {
+    await page.setViewportSize(viewport)
+    for (const route of authenticatedRoutes) {
+      await page.goto(route)
+      await expect(page.getByRole("main")).toBeVisible()
+      await page.keyboard.press("Tab")
+      await expect(page.locator(":focus")).toBeVisible()
+      await expectNoPageOverflow(page)
+    }
   }
 })

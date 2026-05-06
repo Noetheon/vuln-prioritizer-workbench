@@ -24,9 +24,11 @@ async function routeWorkbenchShell(page: Page) {
       contentType: "application/json",
       body: JSON.stringify({
         app: "Vuln Prioritizer Workbench",
-        status: "ok",
+        status: "ready",
         core_package: "vuln_prioritizer",
         core_version: "demo",
+        database_status: "ready",
+        schema_status: "ready",
       }),
     }),
   )

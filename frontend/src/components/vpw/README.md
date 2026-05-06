@@ -4,6 +4,14 @@ These components install the shared Vuln Prioritizer Workbench product patterns 
 
 Use them when refactoring routes in later passes so Dashboard, Findings, Finding Detail, and Evidence Center share the same containers, cards, badges, tables, and product states.
 
+Use VPW wrappers for reusable Workbench structure: page containers, sections,
+panels, metric cards, status/empty states, badges, toolbars, tables, and
+evidence cards. Use route-local Tailwind for one-off alignment, spacing around a
+specific form, or layout that is not shared across routes. If the same
+route-local pattern is needed by a second route, promote it into a VPW component
+or a documented domain CSS owner instead of adding selectors to
+`workbench-fallback.css`.
+
 Installed VPW product components:
 
 - `VpwAppFrame`

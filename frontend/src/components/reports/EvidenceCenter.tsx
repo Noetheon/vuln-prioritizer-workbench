@@ -671,7 +671,7 @@ function ReportHistory({
   }
 
   return (
-    <VpwPanel className="min-h-80 p-0">
+    <VpwPanel className="min-h-80 min-w-0 overflow-hidden p-0">
       <div className="border-b border-[var(--vpw-border-subtle)] p-5">
         <div className="flex items-center justify-between gap-4">
           <div>
@@ -688,6 +688,7 @@ function ReportHistory({
       </div>
       <VpwDataTable
         caption="Report history list"
+        className="overflow-x-auto"
         columns={columns}
         data={rows}
         density="compact"

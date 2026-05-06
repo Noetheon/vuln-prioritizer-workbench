@@ -17,6 +17,16 @@ REQUIRED_SDIST_SUFFIXES = (
     "src/vuln_prioritizer/cli.py",
     "pyproject.toml",
 )
+FORBIDDEN_WHEEL_PREFIXES = (
+    "vuln_prioritizer/api/",
+    "vuln_prioritizer/db/",
+    "vuln_prioritizer/web/",
+)
+FORBIDDEN_SDIST_PARTS = (
+    "/src/vuln_prioritizer/api/",
+    "/src/vuln_prioritizer/db/",
+    "/src/vuln_prioritizer/web/",
+)
 
 
 def _single(path: Path, pattern: str) -> Path:
@@ -56,6 +66,24 @@ def _assert_no_tests(entries: list[str], artifact: str) -> None:
         raise SystemExit(f"{artifact} unexpectedly includes tests: {test_entries[:10]}")
 
 
+def _assert_no_legacy_workbench_modules(entries: list[str], artifact: str) -> None:
+    if artifact.endswith(".whl"):
+        legacy_entries = [
+            entry
+            for entry in entries
+            if any(entry.startswith(prefix) for prefix in FORBIDDEN_WHEEL_PREFIXES)
+        ]
+    else:
+        legacy_entries = [
+            entry for entry in entries if any(part in entry for part in FORBIDDEN_SDIST_PARTS)
+        ]
+    if legacy_entries:
+        raise SystemExit(
+            f"{artifact} unexpectedly includes removed legacy Workbench modules: "
+            f"{legacy_entries[:10]}"
+        )
+
+
 def main() -> None:
     dist_dir = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("dist")
     wheel = _single(dist_dir, "*.whl")
@@ -68,6 +96,8 @@ def main() -> None:
     _assert_suffixes(sdist_entries, REQUIRED_SDIST_SUFFIXES, sdist.name)
     _assert_no_tests(wheel_entries, wheel.name)
     _assert_no_tests(sdist_entries, sdist.name)
+    _assert_no_legacy_workbench_modules(wheel_entries, wheel.name)
+    _assert_no_legacy_workbench_modules(sdist_entries, sdist.name)
 
     report = {
         "boundary": (
@@ -77,11 +107,13 @@ def main() -> None:
         "wheel": {
             "path": wheel.as_posix(),
             "entry_count": len(wheel_entries),
+            "forbidden_legacy_prefixes": list(FORBIDDEN_WHEEL_PREFIXES),
             "required_suffixes": list(REQUIRED_WHEEL_SUFFIXES),
         },
         "sdist": {
             "path": sdist.as_posix(),
             "entry_count": len(sdist_entries),
+            "forbidden_legacy_parts": list(FORBIDDEN_SDIST_PARTS),
             "required_suffixes": list(REQUIRED_SDIST_SUFFIXES),
         },
     }

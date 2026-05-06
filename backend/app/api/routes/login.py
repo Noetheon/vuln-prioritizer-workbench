@@ -30,7 +30,8 @@ def login_access_token(
 ) -> Token:
     """OAuth2 compatible token login for the configured template-shell user."""
     _enforce_login_rate_limit(request, form_data.username)
-    user = ensure_configured_superuser(session)
+    active_settings = _request_settings(request)
+    user = ensure_configured_superuser(session, active_settings=active_settings)
     if not _credentials_are_valid(user, form_data.username, form_data.password):
         record_audit_event(
             session,
@@ -41,8 +42,18 @@ def login_access_token(
         )
         session.commit()
         raise HTTPException(status_code=400, detail="Incorrect email or password")
+    if not user.is_active:
+        record_audit_event(
+            session,
+            action="login.failure",
+            resource_type="auth_session",
+            status="failure",
+            detail={"username": form_data.username, "reason": "inactive_user"},
+        )
+        session.commit()
+        raise HTTPException(status_code=400, detail="Incorrect email or password")
 
-    access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token_expires = timedelta(minutes=active_settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     expires_at = security.access_token_expires_at(access_token_expires)
     jti = security.new_token_jti()
     auth_session = AuthSessionRepository(session).create_auth_session(
@@ -63,8 +74,9 @@ def login_access_token(
         expires_delta=access_token_expires,
         expires_at=expires_at,
         jti=jti,
+        secret_key=active_settings.SECRET_KEY,
     )
-    csrf_token = security.create_csrf_token(jti)
+    csrf_token = security.create_csrf_token(jti, secret_key=active_settings.SECRET_KEY)
     _set_session_cookies(
         request,
         response,
@@ -85,9 +97,9 @@ def test_token(current_user: CurrentUser) -> User:
 
 
 def _enforce_login_rate_limit(request: Request, username: str) -> None:
-    active_settings = getattr(request.app.state, "template_settings", settings)
+    active_settings = _request_settings(request)
     limiter = getattr(request.app.state, "rate_limiter", None)
-    if not isinstance(active_settings, Settings) or not active_settings.RATE_LIMIT_ENABLED:
+    if not active_settings.RATE_LIMIT_ENABLED:
         return
     if not isinstance(limiter, InMemoryRateLimiter):
         return
@@ -176,7 +188,14 @@ def _clear_session_cookies(response: Response) -> None:
 
 
 def _session_cookie_secure(request: Request) -> bool:
-    active_settings = getattr(request.app.state, "template_settings", settings)
-    if isinstance(active_settings, Settings) and active_settings.ENVIRONMENT != "local":
+    active_settings = _request_settings(request)
+    if active_settings.ENVIRONMENT != "local":
         return True
     return request.url.scheme == "https"
+
+
+def _request_settings(request: Request) -> Settings:
+    active_settings = getattr(request.app.state, "template_settings", settings)
+    if isinstance(active_settings, Settings):
+        return active_settings
+    return settings

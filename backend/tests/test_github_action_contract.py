@@ -1,7 +1,11 @@
 from __future__ import annotations
 
+import json
+
 import yaml
 from paths import REPO_ROOT
+
+from vuln_prioritizer.cli_options import AttackSource, InputFormat, RollupBy
 
 ACTION_FILE = REPO_ROOT / "action.yml"
 CI_WORKFLOW = REPO_ROOT / ".github" / "workflows" / "ci.yml"
@@ -13,6 +17,94 @@ MKDOCS_FILE = REPO_ROOT / "mkdocs.yml"
 VPW_082_EVIDENCE = REPO_ROOT / "archive" / "vpw-evidence" / "vpw-082-github-action-reports.md"
 SARIF_EXAMPLE = EXAMPLES_DIR / "code-scanning-sarif.yml"
 WORKBENCH_REPORT_EXAMPLE = EXAMPLES_DIR / "workbench-report-artifacts.yml"
+PARITY_ARTIFACT = REPO_ROOT / "build" / "cli-action-parity.json"
+
+ACTION_MODE_PARITY = {
+    "analyze": {
+        "command": "analyze",
+        "formats": ["markdown", "json", "sarif", "table"],
+        "inputs": ["input", "input-format"],
+    },
+    "compare": {
+        "command": "compare",
+        "formats": ["markdown", "json", "sarif", "table"],
+        "inputs": ["input", "input-format"],
+    },
+    "explain": {
+        "command": "explain",
+        "formats": ["markdown", "json", "table"],
+        "inputs": ["input", "cve"],
+    },
+    "doctor": {"command": "doctor", "formats": ["json"], "inputs": []},
+    "input-validate": {
+        "command": "input validate",
+        "formats": ["json"],
+        "inputs": ["input", "input-format"],
+    },
+    "input-inspect": {
+        "command": 'input "$input_command"',
+        "formats": ["json"],
+        "inputs": ["input", "input-format"],
+    },
+    "input-normalize": {
+        "command": 'input "$input_command"',
+        "formats": ["json"],
+        "inputs": ["input", "input-format"],
+    },
+    "snapshot": {
+        "command": "snapshot create",
+        "formats": ["markdown", "json"],
+        "inputs": ["input", "input-format"],
+    },
+    "rollup": {"command": "rollup", "formats": ["markdown", "json"], "inputs": ["input"]},
+    "data-status": {"command": "data status", "formats": ["json"], "inputs": []},
+    "data-update": {
+        "command": "data update",
+        "formats": ["json"],
+        "inputs": ["input", "input-format", "cve"],
+    },
+    "data-verify": {
+        "command": "data verify",
+        "formats": ["json"],
+        "inputs": ["input", "input-format", "cve"],
+    },
+    "data-export-provider-snapshot": {
+        "command": "data export-provider-snapshot",
+        "formats": ["json"],
+        "inputs": ["input", "input-format", "cve"],
+    },
+    "attack-validate": {
+        "command": "attack validate",
+        "formats": ["markdown", "json"],
+        "inputs": ["attack-mapping-file"],
+    },
+    "attack-coverage": {
+        "command": "attack coverage",
+        "formats": ["markdown", "json"],
+        "inputs": ["input", "input-format", "attack-mapping-file"],
+    },
+    "report-html": {"command": "report html", "formats": ["html"], "inputs": ["input"]},
+    "workbench-report": {
+        "command": "report workbench",
+        "formats": ["json", "markdown", "html", "csv", "sarif"],
+        "inputs": ["input"],
+    },
+    "report-evidence-bundle": {
+        "command": "report evidence-bundle",
+        "formats": ["zip"],
+        "inputs": ["input"],
+    },
+    "verify-evidence-bundle": {
+        "command": "report verify-evidence-bundle",
+        "formats": ["json"],
+        "inputs": ["input"],
+    },
+    "validate-sarif": {
+        "command": "report validate-sarif",
+        "formats": ["json"],
+        "inputs": ["input"],
+    },
+}
 
 
 def _load_action_definition() -> dict[str, object]:
@@ -50,9 +142,15 @@ def test_action_exposes_p1_analyze_inputs() -> None:
     )
     assert "validate-sarif mode" in inputs["output-path"]["description"]
     assert "validate-sarif mode" in action["outputs"]["sarif-validation-path"]["description"]
-    assert "generic-occurrence-csv" in inputs["input-format"]["description"]
+    assert all(
+        input_format.value in inputs["input-format"]["description"] for input_format in InputFormat
+    )
     assert "newline-delimited list aligned with input" in inputs["input-format"]["description"]
     assert "workbench-report mode" in inputs["output-format"]["description"]
+    assert all(source.value in inputs["attack-source"]["description"] for source in AttackSource)
+    assert all(value.value in inputs["rollup-by"]["description"] for value in RollupBy)
+    assert "priority" not in inputs["rollup-by"]["description"]
+    assert "status" not in inputs["rollup-by"]["description"]
     assert inputs["locked-provider-data"]["default"] == "false"
     assert inputs["validate-sarif"]["default"] == "false"
     assert inputs["fail-on-stale-provider-data"]["default"] == "false"
@@ -110,6 +208,41 @@ def test_action_run_step_supports_multiline_inputs_and_snapshot_replay() -> None
     assert '"$mode" == "validate-sarif"' in script
     assert "report validate-sarif" in script
     assert 'sarif_validation_path="$INPUT_OUTPUT_PATH"' in script
+
+
+def test_cli_action_parity_matrix_is_machine_checked() -> None:
+    action = _load_action_definition()
+    inputs = action["inputs"]
+    mode_description = inputs["mode"]["description"]
+    run_step = action["runs"]["steps"][-1]
+    script = run_step["run"]
+
+    assert sorted(ACTION_MODE_PARITY) == sorted(
+        token.strip()
+        for token in mode_description.replace(" or ", ", ").split(",")
+        if token.strip()
+    )
+
+    for mode, contract in ACTION_MODE_PARITY.items():
+        assert f'"$mode" == "{mode}"' in script or mode == "analyze"
+        assert contract["command"] in script
+        for input_name in contract["inputs"]:
+            assert input_name in inputs or input_name in {"attack-mapping-file"}
+
+    parity_artifact = {
+        "artifact_kind": "cli-action-parity",
+        "modes": ACTION_MODE_PARITY,
+        "input_formats": [input_format.value for input_format in InputFormat],
+        "attack_sources": [source.value for source in AttackSource],
+        "rollup_by": [value.value for value in RollupBy],
+    }
+    PARITY_ARTIFACT.parent.mkdir(parents=True, exist_ok=True)
+    PARITY_ARTIFACT.write_text(
+        json.dumps(parity_artifact, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
+    assert PARITY_ARTIFACT.is_file()
 
 
 def test_action_run_step_wires_step_summary_outputs_and_report_html_mode() -> None:

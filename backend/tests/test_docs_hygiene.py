@@ -173,3 +173,9 @@ def test_archives_have_entrypoints_and_public_evidence_tree_is_limited() -> None
     assert (ARCHIVE_ROOT / "vpw-evidence" / "README.md").is_file()
     assert (ARCHIVE_ROOT / "vpw-evidence" / "MANIFEST.md").is_file()
     assert (ARCHIVE_ROOT / "historical-planning" / "README.md").is_file()
+
+    archive_readme = (ARCHIVE_ROOT / "README.md").read_text(encoding="utf-8")
+    assert "`build/`" in archive_readme
+    assert "`docs/evidence/`" in archive_readme
+    assert "`archive/vpw-evidence/`" in archive_readme
+    assert "`make clean-local`" in archive_readme

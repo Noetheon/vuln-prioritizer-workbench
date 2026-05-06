@@ -67,6 +67,20 @@ test("evidence: ui-31 dark-mode screenshots", async ({ page }) => {
     },
     "ui-31-evidence-center-dark-1440.png",
   )
+
+  await captureRoute(
+    page,
+    "/assets",
+    async () => {
+      await expect(
+        page.getByRole("heading", { level: 1, name: "Assets" }),
+      ).toBeVisible({ timeout: 15_000 })
+      await expect(
+        page.getByRole("heading", { level: 2, name: "Assets" }).first(),
+      ).toBeVisible({ timeout: 15_000 })
+    },
+    "ui-31-assets-dark-1440.png",
+  )
 })
 
 test("evidence: ui-32 responsive screenshots (tablet/mobile)", async ({
@@ -120,5 +134,41 @@ test("evidence: ui-32 responsive screenshots (tablet/mobile)", async ({
       ).toBeVisible({ timeout: 15_000 })
     },
     "ui-32-evidence-center-mobile-390.png",
+  )
+
+  await page.setViewportSize({ height: 900, width: 1440 })
+  await captureRoute(
+    page,
+    "/assets",
+    async () => {
+      await expect(
+        page.getByRole("heading", { level: 1, name: "Assets" }),
+      ).toBeVisible({ timeout: 15_000 })
+    },
+    "ui-32-assets-desktop-1440.png",
+  )
+
+  await page.setViewportSize({ height: 1024, width: 768 })
+  await captureRoute(
+    page,
+    "/assets",
+    async () => {
+      await expect(
+        page.getByRole("heading", { level: 1, name: "Assets" }),
+      ).toBeVisible({ timeout: 15_000 })
+    },
+    "ui-32-assets-tablet-768.png",
+  )
+
+  await page.setViewportSize({ height: 844, width: 390 })
+  await captureRoute(
+    page,
+    "/assets",
+    async () => {
+      await expect(
+        page.getByRole("heading", { level: 1, name: "Assets" }),
+      ).toBeVisible({ timeout: 15_000 })
+    },
+    "ui-32-assets-mobile-390.png",
   )
 })

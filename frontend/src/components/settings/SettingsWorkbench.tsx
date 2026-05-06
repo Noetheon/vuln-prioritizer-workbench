@@ -540,7 +540,7 @@ export function SettingsWorkbench({
                 {
                   label: "Backend status",
                   value: status?.status ?? "Not reported",
-                  tone: status?.status === "ok" ? "success" : "neutral",
+                  tone: status?.status === "ready" ? "success" : "neutral",
                 },
                 {
                   label: "Provider health",

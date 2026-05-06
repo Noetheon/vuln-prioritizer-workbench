@@ -10,11 +10,13 @@ from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import text
 from sqlalchemy.engine import Engine
 from sqlalchemy.pool import StaticPool
 from sqlmodel import Session, SQLModel, create_engine
 
 from app.core.config import settings
+from app.core.migration_bootstrap import ALEMBIC_HEAD
 from app.core.rate_limit import InMemoryRateLimiter
 from app.main import app
 from utils.workbench_factories import (
@@ -173,6 +175,7 @@ def create_template_api_env(
         poolclass=StaticPool,
     )
     SQLModel.metadata.create_all(engine)
+    stamp_test_alembic_head(engine)
 
     with Session(engine) as session:
         seed_configured_user(
@@ -192,6 +195,16 @@ def create_template_api_env(
         engine.dispose()
 
     return TemplateApiEnv(TestClient(app), engine, app_models, repositories), cleanup
+
+
+def stamp_test_alembic_head(engine: Engine) -> None:
+    """Mark create_all test databases as schema-current for readiness tests."""
+    with engine.begin() as connection:
+        connection.execute(text("CREATE TABLE alembic_version (version_num VARCHAR(32) NOT NULL)"))
+        connection.execute(
+            text("INSERT INTO alembic_version (version_num) VALUES (:version_num)"),
+            {"version_num": ALEMBIC_HEAD},
+        )
 
 
 def seed_configured_user(session: Session, app_models: Any, *, is_superuser: bool = True) -> Any:

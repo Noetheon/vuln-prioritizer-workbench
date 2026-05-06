@@ -1,3 +1,18 @@
+/*
+ * Compatibility-only Workbench selectors.
+ *
+ * Ownership:
+ * - provider-* supports the provider route until it is fully expressed with
+ *   VPW components or route-local Tailwind.
+ * - panel-header, side-panel, inline-header, and timeline support legacy
+ *   dashboard/findings layout fragments that predate VPW wrappers.
+ * - attack-* supports ATT&CK summary widgets shared by dashboard/detail views.
+ *
+ * New product UI should use VPW components, domain CSS, or route-local
+ * Tailwind. Do not add permanent route styling here without documenting the
+ * compatibility owner above.
+ */
+
 .side-panel {
   border: 1px solid #d7e0dd;
   border-radius: 8px;

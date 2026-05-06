@@ -5,7 +5,13 @@ import importlib
 import pytest
 from fastapi.routing import APIRoute
 from fastapi.testclient import TestClient
+from sqlalchemy import text
+from sqlalchemy.engine import Engine
+from sqlalchemy.pool import StaticPool
+from sqlmodel import Session, SQLModel, create_engine
 
+from app.api.routes.workbench import _database_readiness
+from app.core import security
 from app.core.config import (
     Settings,
     load_settings,
@@ -13,6 +19,7 @@ from app.core.config import (
     parse_cors_origins,
     settings,
 )
+from app.core.migration_bootstrap import ALEMBIC_HEAD
 from app.main import app, create_app, custom_generate_unique_id
 
 
@@ -28,18 +35,23 @@ def _auth_headers(client: TestClient) -> dict[str, str]:
     return {"Authorization": f"Bearer {response.json()['access_token']}"}
 
 
-def test_template_backend_status_uses_versioned_api_namespace() -> None:
-    client = TestClient(app)
+def test_template_backend_status_uses_versioned_api_namespace(tmp_path) -> None:
+    selected_app = create_app(
+        Settings(SQLALCHEMY_DATABASE_URI=f"sqlite:///{tmp_path / 'status-template.db'}")
+    )
+    SQLModel.metadata.create_all(selected_app.state.template_engine)
+    _stamp_alembic_head(selected_app.state.template_engine)
+    client = TestClient(selected_app)
 
     response = client.get("/api/v1/workbench/status", headers=_auth_headers(client))
 
     assert response.status_code == 200
     payload = response.json()
-    assert payload["status"] == "ok"
+    assert payload["status"] == "ready"
     assert payload["app"] == "Vuln Prioritizer Workbench"
     assert payload["core_package"] == "vuln_prioritizer"
     assert payload["database_status"] == "ready"
-    assert payload["schema_status"] in {"ready", "not_ready"}
+    assert payload["schema_status"] == "ready"
     assert set(payload) == {
         "status",
         "app",
@@ -166,6 +178,81 @@ def test_template_backend_can_be_configured_without_legacy_workbench_side_effect
     assert selected_app.state.template_settings == selected_settings
     assert client.get("/api/health").status_code == 404
     assert client.get("/api/v1/workbench/health").json()["status"] == "ok"
+
+
+def test_template_backend_create_app_uses_isolated_settings_db_auth_and_csrf(
+    tmp_path,
+) -> None:
+    selected_settings = Settings(
+        API_V1_STR="/api/v1",
+        PROJECT_NAME="Isolated VPW Adapter",
+        ENVIRONMENT="local",
+        SECRET_KEY="selected-template-secret",
+        FIRST_SUPERUSER="selected-admin@example.test",
+        FIRST_SUPERUSER_PASSWORD="selected-admin-password",
+        SQLALCHEMY_DATABASE_URI=f"sqlite:///{tmp_path / 'selected-template.db'}",
+    )
+    selected_app = create_app(selected_settings)
+    SQLModel.metadata.create_all(selected_app.state.template_engine)
+    _stamp_alembic_head(selected_app.state.template_engine)
+    client = TestClient(selected_app)
+
+    global_credentials = client.post(
+        "/api/v1/login/access-token",
+        data={
+            "username": settings.FIRST_SUPERUSER,
+            "password": settings.FIRST_SUPERUSER_PASSWORD,
+        },
+    )
+    selected_credentials = client.post(
+        "/api/v1/login/access-token",
+        data={
+            "username": selected_settings.FIRST_SUPERUSER,
+            "password": selected_settings.FIRST_SUPERUSER_PASSWORD,
+        },
+    )
+
+    assert global_credentials.status_code == 400
+    assert selected_credentials.status_code == 200, selected_credentials.text
+    payload = selected_credentials.json()
+    with pytest.raises(security.TokenDecodeError):
+        security.decode_access_token(payload["access_token"])
+    decoded = security.decode_access_token(
+        payload["access_token"],
+        secret_key=selected_settings.SECRET_KEY,
+    )
+    assert decoded["sub"] == selected_settings.FIRST_SUPERUSER
+    assert security.verify_csrf_token(
+        decoded["jti"],
+        payload["csrf_token"],
+        secret_key=selected_settings.SECRET_KEY,
+    )
+    assert not security.verify_csrf_token(decoded["jti"], payload["csrf_token"])
+
+    logout = client.post(
+        "/api/v1/login/logout",
+        headers={"x-csrf-token": payload["csrf_token"]},
+    )
+    assert logout.status_code == 200, logout.text
+
+
+def test_template_backend_readiness_fails_closed_for_partial_schema() -> None:
+    engine = create_engine(
+        "sqlite://",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    SQLModel.metadata.create_all(engine)
+    _stamp_alembic_head(engine)
+    try:
+        with Session(engine) as session:
+            assert _database_readiness(session) == ("ready", "ready")
+        with engine.begin() as connection:
+            connection.execute(text("DROP TABLE finding"))
+        with Session(engine) as session:
+            assert _database_readiness(session) == ("ready", "not_ready")
+    finally:
+        engine.dispose()
 
 
 def test_template_backend_settings_load_product_env_defaults(monkeypatch) -> None:
@@ -374,6 +461,15 @@ def test_template_backend_can_explicitly_expose_openapi_for_client_generation() 
 
     assert response.status_code == 200
     assert response.json()["info"]["title"] == "Vuln Prioritizer Workbench"
+
+
+def _stamp_alembic_head(engine: Engine) -> None:
+    with engine.begin() as connection:
+        connection.execute(text("CREATE TABLE alembic_version (version_num VARCHAR(32) NOT NULL)"))
+        connection.execute(
+            text("INSERT INTO alembic_version (version_num) VALUES (:version_num)"),
+            {"version_num": ALEMBIC_HEAD},
+        )
 
 
 def test_template_backend_adapter_does_not_import_legacy_web_or_db_stack() -> None:

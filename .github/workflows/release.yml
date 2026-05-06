@@ -57,14 +57,35 @@ jobs:
             exit 1
           fi
 
-      - name: Run release gate before publishing
-        run: make release-check
+      - name: Run release-readiness gate before publishing
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/workflow-artifacts/release-readiness"
+          {
+            echo "repository=${GITHUB_REPOSITORY}"
+            echo "commit_sha=${GITHUB_SHA}"
+            echo "ref=${GITHUB_REF_NAME}"
+            echo "command=make release-readiness-check"
+          } | tee "$RUNNER_TEMP/workflow-artifacts/release-readiness/release-readiness-metadata.txt"
+          make release-readiness-check 2>&1 | tee "$RUNNER_TEMP/workflow-artifacts/release-readiness/release-readiness-check.log"
 
       - name: Build source and wheel distributions
-        run: python -m build backend --outdir dist
+        run: rm -rf dist && python -m build backend --outdir dist
 
       - name: Validate built distributions
         run: python -m twine check dist/*
+
+      - name: Record release artifact hashes
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/workflow-artifacts/release-readiness"
+          shasum -a 256 dist/* | tee "$RUNNER_TEMP/workflow-artifacts/release-readiness/dist-sha256.txt"
+          if [[ -f build/v1.0-demo-evidence-bundle-verification.json ]]; then
+            cp build/v1.0-demo-evidence-bundle-verification.json \
+              "$RUNNER_TEMP/workflow-artifacts/release-readiness/evidence-bundle-verification.json"
+          fi
 
       - name: Smoke test built wheel
         shell: bash
@@ -106,6 +127,13 @@ jobs:
           retention-days: 3
           path: dist/*
 
+      - name: Upload release-readiness evidence
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-readiness-evidence
+          retention-days: 14
+          path: ${{ runner.temp }}/workflow-artifacts/release-readiness/**
+
       - name: Upload release debug artifacts on failure
         if: failure()
         uses: actions/upload-artifact@v7
@@ -135,19 +163,29 @@ jobs:
           name: release-dist
           path: dist
 
+      - name: Download release-readiness evidence
+        uses: actions/download-artifact@v8
+        with:
+          name: release-readiness-evidence
+          path: release-readiness-evidence
+
       - name: Publish GitHub release from checked-in notes
         if: needs.build-and-release.outputs.release_notes_body_path != ''
         uses: softprops/action-gh-release@v3
         with:
           body_path: ${{ needs.build-and-release.outputs.release_notes_body_path }}
-          files: dist/*
+          files: |
+            dist/*
+            release-readiness-evidence/dist-sha256.txt
 
       - name: Publish GitHub release with generated notes
         if: needs.build-and-release.outputs.release_notes_body_path == ''
         uses: softprops/action-gh-release@v3
         with:
           generate_release_notes: true
-          files: dist/*
+          files: |
+            dist/*
+            release-readiness-evidence/dist-sha256.txt
 
   publish-pypi:
     needs: build-and-release

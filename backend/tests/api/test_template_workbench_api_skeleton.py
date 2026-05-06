@@ -369,6 +369,66 @@ def test_vpw011_finding_list_and_get_support_pagination(
     assert detail["in_kev"] is True
 
 
+def test_vpw011_finding_public_payloads_redact_raw_json_fields(
+    template_api_env: TemplateApiEnv,
+) -> None:
+    headers = auth_headers(template_api_env.client)
+    project = create_project_via_api(template_api_env.client, headers)
+    seeded = seed_finding_pair(
+        template_api_env.engine,
+        template_api_env.app_models,
+        template_api_env.repositories,
+        project_id=uuid.UUID(project["id"]),
+    )
+    finding_id = seeded["finding_ids"][0]
+    with Session(template_api_env.engine) as session:
+        finding = session.get(template_api_env.app_models.Finding, finding_id)
+        assert finding is not None
+        finding.explanation_json = {
+            "explanation": {"reasons": ["safe public reason"]},
+            "source_path": "/Users/alice/private/import.csv",
+            "nested": {"password": "super-secret-password"},
+        }
+        finding.data_quality_json = {
+            "confidence": "high",
+            "flags": [{"path": "/tmp/provider-cache.json"}],
+        }
+        finding.evidence_json = {
+            "authorization": "Bearer imported-secret-token",
+            "source_metadata": {"api_key": "nvd-secret-key"},
+        }
+        session.add(finding)
+        session.commit()
+
+    list_response = template_api_env.client.get(
+        f"/api/v1/projects/{project['id']}/findings/",
+        headers=headers,
+    )
+    detail_response = template_api_env.client.get(
+        f"/api/v1/findings/{finding_id}",
+        headers=headers,
+    )
+
+    assert list_response.status_code == 200, list_response.text
+    assert detail_response.status_code == 200, detail_response.text
+    for response in (list_response, detail_response):
+        payload_text = response.text
+        assert "/Users/alice" not in payload_text
+        assert "/tmp/provider-cache.json" not in payload_text
+        assert "super-secret-password" not in payload_text
+        assert "imported-secret-token" not in payload_text
+        assert "nvd-secret-key" not in payload_text
+
+    public_finding = next(
+        item for item in list_response.json()["data"] if item["id"] == str(finding_id)
+    )
+    assert public_finding["explanation_json"]["source_path"] == "[REDACTED]"
+    assert public_finding["explanation_json"]["nested"]["password"] == "[REDACTED]"
+    assert public_finding["data_quality_json"]["flags"][0]["path"] == "[REDACTED]"
+    assert public_finding["evidence_json"]["authorization"] == "[REDACTED]"
+    assert public_finding["evidence_json"]["source_metadata"]["api_key"] == "[REDACTED]"
+
+
 def test_vpw042_findings_list_filters_and_display_fields(
     template_api_env: TemplateApiEnv,
 ) -> None:
