@@ -202,7 +202,6 @@ def test_template_provider_status_redacts_production_paths_and_cache_details(
     template_api_env: TemplateApiEnv,
     tmp_path: Path,
 ) -> None:
-    headers = auth_headers(template_api_env.client)
     active_settings = template_api_env.client.app.state.template_settings
     private_snapshot = tmp_path / "private" / "provider-snapshot.json"
     private_cache = tmp_path / "private" / "cache"
@@ -244,7 +243,20 @@ def test_template_provider_status_redacts_production_paths_and_cache_details(
         PROVIDER_SNAPSHOT_DIR=str(private_snapshot.parent),
     )
     try:
-        response = template_api_env.client.get("/api/v1/providers/status", headers=headers)
+        credentials = template_api_env.client.post(
+            "/api/v1/login/access-token",
+            data={
+                "username": active_settings.FIRST_SUPERUSER,
+                "password": "template-shell-password",
+            },
+        )
+        assert credentials.status_code == 200, credentials.text
+        response = template_api_env.client.get(
+            "/api/v1/providers/status",
+            headers={
+                "Authorization": f"Bearer {credentials.json()['access_token']}",
+            },
+        )
     finally:
         template_api_env.client.app.state.template_settings = active_settings
 
@@ -299,7 +311,13 @@ def test_template_provider_update_job_create_list_and_status(
         assert job["metadata"]["snapshot_created"] is True
         assert job["metadata"]["requested_cves"] == 1
         assert job["metadata"]["provider_snapshot_id"]
-        assert list(snapshot_dir.glob("provider-snapshot-*.json"))
+        snapshot_files = list(snapshot_dir.glob("provider-snapshot-*.json"))
+        assert snapshot_files
+        snapshot_report = load_provider_snapshot(snapshot_files[0])
+        assert snapshot_report.metadata.snapshot_format == "provider-snapshot.v1.json"
+        assert snapshot_report.metadata.cache_only is True
+        assert snapshot_report.metadata.selected_sources == ["kev"]
+        assert snapshot_report.metadata.input_format == "template-workbench-current-findings"
 
         list_response = template_api_env.client.get(
             "/api/v1/providers/update-jobs",
@@ -322,6 +340,12 @@ def test_template_provider_update_job_create_list_and_status(
         assert status_payload["snapshot_mode"] == "cache-only"
         assert status_payload["snapshot"]["selected_sources"] == ["kev"]
         assert status_payload["snapshot"]["requested_cves"] == 1
+        assert status_payload["snapshot"]["source_metadata"]["snapshot_format"] == (
+            "provider-snapshot.v1.json"
+        )
+        assert status_payload["snapshot"]["source_metadata"]["input_format"] == (
+            "template-workbench-current-findings"
+        )
         assert status_payload["last_error"] is None
     finally:
         template_api_env.client.app.state.template_settings = active_settings

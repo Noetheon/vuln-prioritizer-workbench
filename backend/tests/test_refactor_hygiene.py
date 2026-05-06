@@ -493,5 +493,40 @@ def test_backend_package_boundary_intentionally_ships_workbench_app() -> None:
     assert 'include = ["vuln_prioritizer*", "app*"]' in pyproject
     assert "app/main.py" in package_check
     assert "vuln_prioritizer/cli.py" in package_check
+    assert "FORBIDDEN_WHEEL_PREFIXES" in package_check
+    assert "vuln_prioritizer/api/" in package_check
+    assert "vuln_prioritizer/db/" in package_check
+    assert "vuln_prioritizer/web/" in package_check
     assert "package-contents-check: package" in makefile
     assert "package-check: package-contents-check" in makefile
+
+
+def test_import_execution_is_split_into_stage_services_with_guardrails() -> None:
+    source = (ROOT / "app/services/import_execution.py").read_text(encoding="utf-8")
+    context_source = (ROOT / "app/services/import_execution_context.py").read_text(encoding="utf-8")
+    failure_source = (ROOT / "app/services/import_execution_failures.py").read_text(
+        encoding="utf-8"
+    )
+    persistence_source = (ROOT / "app/services/import_execution_persistence.py").read_text(
+        encoding="utf-8"
+    )
+    summary_source = (ROOT / "app/services/import_execution_summary.py").read_text(encoding="utf-8")
+
+    assert "def execute_project_import_upload" in source
+    assert "app.services.import_execution_context" in source
+    assert "app.services.import_execution_failures" in source
+    assert "app.services.import_execution_persistence" in source
+    assert "app.services.import_execution_summary" in source
+    assert "def _apply_template_asset_context" in context_source
+    assert "def _apply_template_vex" in context_source
+    assert "def _parse_error_payload" in context_source
+    assert "def raise_analysis_failure" in failure_source
+    assert "def _persist_template_occurrences" in persistence_source
+    assert "def _persist_template_occurrences_bulk_insert" in persistence_source
+    assert "def _job_payload" in summary_source
+    assert "def _record_import_audit" in summary_source
+    assert len(source.splitlines()) <= 700
+    assert len(context_source.splitlines()) <= 220
+    assert len(failure_source.splitlines()) <= 140
+    assert len(persistence_source.splitlines()) <= 1000
+    assert len(summary_source.splitlines()) <= 100

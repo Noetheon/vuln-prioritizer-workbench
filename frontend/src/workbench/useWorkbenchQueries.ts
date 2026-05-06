@@ -3,6 +3,8 @@ import { useQuery } from "@tanstack/react-query"
 import {
   type AnalysisRunPublic,
   type AnalysisRunSummaryPublic,
+  type AssetPublic,
+  AssetsService,
   type FindingDetailPublic,
   type FindingExplanationPublic,
   type FindingPublic,
@@ -19,6 +21,7 @@ import {
   demoFindingDetailForId,
   demoFindingExplanationForDetail,
 } from "../components/finding-detail/finding-detail-model"
+import { matchesAsset } from "../components/assets/asset-model"
 import type { EpssBucketCounts } from "../lib/chart-data"
 import { DEMO_MODE_ENABLED } from "../lib/runtime-config"
 import { workbenchQueryKeys } from "./workbench-query-keys"
@@ -130,6 +133,62 @@ export function useProjectRunsQuery(projectId: string, enabled: boolean) {
     queryKey: workbenchQueryKeys.projectRuns(projectId),
     retry: false,
     staleTime: 15_000,
+  })
+}
+
+export function useProjectAssetsQuery({
+  owner,
+  projectId,
+  service,
+}: {
+  owner: string
+  projectId: string
+  service: string
+}) {
+  const ownerFilter = owner.trim()
+  const serviceFilter = service.trim()
+  return useQuery({
+    enabled: Boolean(projectId),
+    queryFn: () =>
+      AssetsService.readProjectAssets({
+        owner: ownerFilter || undefined,
+        project_id: projectId,
+        service: serviceFilter || undefined,
+      }),
+    queryKey: workbenchQueryKeys.assets(projectId, {
+      owner: ownerFilter,
+      service: serviceFilter,
+    }),
+    retry: false,
+    staleTime: 10_000,
+  })
+}
+
+export function useAssetFindingsQuery({
+  asset,
+  projectId,
+}: {
+  asset: AssetPublic | null
+  projectId: string
+}) {
+  return useQuery({
+    enabled: Boolean(projectId && asset),
+    queryFn: async () => {
+      if (!asset) {
+        return [] as FindingPublic[]
+      }
+      const page = await FindingsService.readProjectFindings({
+        asset_id: asset.id,
+        limit: 200,
+        offset: 0,
+        project_id: projectId,
+        sort: "operational",
+      })
+      return page.data.filter((finding) => matchesAsset(finding, asset))
+    },
+    queryKey: workbenchQueryKeys.assetFindings(projectId, asset?.id ?? null),
+    retry: false,
+    staleTime: 10_000,
   })
 }
 

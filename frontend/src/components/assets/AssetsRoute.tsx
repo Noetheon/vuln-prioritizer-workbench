@@ -1,7 +1,13 @@
 import { Link } from "@tanstack/react-router"
 import { Activity, FileInput } from "lucide-react"
+import type { Dispatch, FormEvent, SetStateAction } from "react"
 
-import { ProductAppShell } from "../app/AppShell"
+import type {
+  AssetPublic,
+  FindingPublic,
+  ProjectPublic,
+  ProviderStatusPublic,
+} from "../../api-client"
 import { Button } from "../ui/button"
 import {
   VpwBadge,
@@ -23,22 +29,56 @@ import { AssetLinkedFindingsPanel } from "./AssetLinkedFindingsPanel"
 import { AssetServiceRollup } from "./AssetServiceRollup"
 import { AssetSummaryCards } from "./AssetSummaryCards"
 import { AssetTable } from "./AssetTable"
-import { useAssetsRouteState } from "./useAssetsRouteState"
+import type { AssetFormState, AssetSummary, ServiceRollup } from "./asset-model"
 
-export function AssetsRoute() {
-  const state = useAssetsRouteState()
+export type AssetsWorkbenchProps = {
+  activeProjectLabel: string
+  assetActionLoading: boolean
+  assetContextFile: File | null
+  assetFindings: FindingPublic[]
+  assetFindingsError: string
+  assetFindingsLoading: boolean
+  assetMessage: string
+  assetOwnerFilter: string
+  assets: AssetPublic[]
+  assetsError: string
+  assetsLoading: boolean
+  assetServiceFilter: string
+  assetSummary: AssetSummary
+  clearAssetFilters: () => void
+  createAsset: (event: FormEvent<HTMLFormElement>) => Promise<void>
+  createError: string
+  createForm: AssetFormState
+  editError: string
+  editForm: AssetFormState
+  editingAssetId: string
+  importAssetContext: (event: FormEvent<HTMLFormElement>) => Promise<void>
+  projectLoading: boolean
+  projects: ProjectPublic[]
+  projectSelectDisabled: boolean
+  providerStatus: ProviderStatusPublic | null
+  recalculateAsset: (asset: AssetPublic) => Promise<void>
+  refreshAssets: (preferredAssetId?: string) => Promise<void>
+  saveAsset: (event: FormEvent<HTMLFormElement>) => Promise<void>
+  selectProject: (projectId: string) => void
+  selectedAsset: AssetPublic | null
+  selectedAssetId: string
+  selectedHighestPriority: string
+  selectedProject: ProjectPublic | null
+  selectedProjectId: string
+  serviceRollups: ServiceRollup[]
+  setAssetContextFile: Dispatch<SetStateAction<File | null>>
+  setAssetOwnerFilter: Dispatch<SetStateAction<string>>
+  setAssetServiceFilter: Dispatch<SetStateAction<string>>
+  setCreateForm: Dispatch<SetStateAction<AssetFormState>>
+  setEditForm: Dispatch<SetStateAction<AssetFormState>>
+  setSelectedAssetId: Dispatch<SetStateAction<string>>
+  startEditAsset: (asset: AssetPublic) => void
+}
 
+export function AssetsWorkbench(state: AssetsWorkbenchProps) {
   return (
-    <ProductAppShell
-      activePath="/assets"
-      currentUser={state.currentUser}
-      eyebrow="Workbench Assets"
-      providerStatus={state.providerStatus}
-      status={state.status}
-      statusError={state.statusError}
-      title="Assets"
-    >
-      <VpwPageContainer className="space-y-6">
+    <VpwPageContainer className="space-y-6">
         <VpwSection>
           <VpwPanel className="space-y-5 p-5">
             <VpwSectionHeader
@@ -185,7 +225,6 @@ export function AssetsRoute() {
             startEditAsset={state.startEditAsset}
           />
         ) : null}
-      </VpwPageContainer>
-    </ProductAppShell>
+    </VpwPageContainer>
   )
 }

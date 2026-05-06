@@ -1,1 +1,1 @@
-export { AssetsRoute } from "./AssetsRoute"
+export { AssetsWorkbench, type AssetsWorkbenchProps } from "./AssetsRoute"

@@ -3,12 +3,14 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from app.services.report_contracts import CSV_FINDINGS_COLUMNS
 from vuln_prioritizer.cli import app
 from vuln_prioritizer.reporting_workbench import (
     _csv_safe_cell,
     _finding_status_label,
     _first_occurrence_value,
     _vex_statuses_label,
+    generate_findings_csv,
     generate_workbench_sarif,
 )
 from vuln_prioritizer.sarif_validation import validate_sarif_payload
@@ -408,6 +410,17 @@ def test_workbench_report_private_format_helpers_handle_edge_cases() -> None:
     assert _vex_statuses_label({"vex_statuses": {"fixed": 1, "affected": 2}}) == (
         "affected:2;fixed:1"
     )
+
+
+def test_cli_workbench_csv_header_matches_api_report_contract() -> None:
+    payload = {
+        "metadata": {"schema_version": "1.1.0", "input_path": "empty.csv"},
+        "findings": [],
+    }
+
+    header = generate_findings_csv(payload).splitlines()[0].split(",")
+
+    assert header == CSV_FINDINGS_COLUMNS
 
 
 def test_cli_report_validate_sarif_rejects_json_array(runner, tmp_path: Path) -> None:

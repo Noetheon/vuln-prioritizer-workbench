@@ -4,6 +4,7 @@ from dataclasses import replace
 from pathlib import Path
 from uuid import UUID
 
+import pytest
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 from utils.template_workbench import (
@@ -184,6 +185,23 @@ def test_template_api_token_creation_requires_project_scope_for_non_admin_tokens
     assert "project_id" in missing_project.text
     assert admin_with_project.status_code == 422
     assert "Admin API tokens must not be project-scoped" in admin_with_project.text
+
+
+def test_template_malformed_bearer_token_does_not_run_api_token_digest(
+    template_api_env: TemplateApiEnv,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fail_digest(_raw_token: str) -> str:
+        raise AssertionError("malformed bearer token reached API-token PBKDF2 digest")
+
+    monkeypatch.setattr("app.api.deps.api_token_digest", fail_digest)
+
+    response = template_api_env.client.get(
+        "/api/v1/projects/",
+        headers={"Authorization": "Bearer not-a-valid-token"},
+    )
+
+    assert response.status_code == 403
 
 
 def _create_token(

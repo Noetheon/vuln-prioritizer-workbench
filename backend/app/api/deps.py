@@ -13,7 +13,7 @@ from pydantic import ValidationError
 from sqlmodel import Session
 
 from app.core import security
-from app.core.config import settings
+from app.core.config import Settings, settings
 from app.core.db import engine, ensure_configured_superuser
 from app.core.rate_limit import InMemoryRateLimiter
 from app.models import ApiToken, ApiTokenScope, TokenPayload, User
@@ -29,11 +29,18 @@ reusable_oauth2 = OAuth2PasswordBearer(
 TokenDep = Annotated[str | None, Depends(reusable_oauth2)]
 AuthTokenSource = Literal["bearer", "cookie"]
 UNSAFE_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
+SERVICE_TOKEN_PREFIX = "vpr_"
+SERVICE_TOKEN_MIN_LENGTH = 40
+SERVICE_TOKEN_MAX_LENGTH = 128
+SERVICE_TOKEN_ALLOWED_CHARS = frozenset(
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"
+)
 
 
-def get_db() -> Generator[Session, None, None]:
+def get_db(request: Request) -> Generator[Session, None, None]:
     """Yield a SQLModel session for template-backed API routes."""
-    with Session(engine) as session:
+    selected_engine = getattr(request.app.state, "template_engine", engine)
+    with Session(selected_engine) as session:
         yield session
 
 
@@ -44,12 +51,17 @@ def _current_user_from_jwt(
     session: Session,
     token: str,
     *,
+    active_settings: Settings | None = None,
     request: Request | None = None,
     token_source: AuthTokenSource = "bearer",
 ) -> User:
     """Validate a JWT and resolve the configured active-runtime user."""
+    selected_settings = active_settings or settings
     try:
-        payload = security.decode_access_token(token)
+        payload = security.decode_access_token(
+            token,
+            secret_key=selected_settings.SECRET_KEY,
+        )
         token_data = TokenPayload(**payload)
     except (security.TokenDecodeError, ValidationError) as exc:
         raise HTTPException(
@@ -57,7 +69,7 @@ def _current_user_from_jwt(
             detail="Could not validate credentials",
         ) from exc
 
-    if token_data.sub != settings.FIRST_SUPERUSER:
+    if token_data.sub != selected_settings.FIRST_SUPERUSER:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
     if token_data.jti is None:
         raise HTTPException(
@@ -74,14 +86,14 @@ def _current_user_from_jwt(
             detail="Session is expired or revoked",
         )
     if request is not None and token_source == "cookie":
-        _enforce_cookie_csrf(request, token_data.jti)
+        _enforce_cookie_csrf(request, token_data.jti, active_settings=selected_settings)
     auth_session_repo.mark_auth_session_seen(auth_session)
     session.commit()
     if request is not None:
         request.state.auth_token = token
         request.state.auth_token_source = token_source
         request.state.auth_jti = token_data.jti
-    user = ensure_configured_superuser(session)
+    user = ensure_configured_superuser(session, active_settings=selected_settings)
     if not user.is_active:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Inactive user")
     return user
@@ -93,6 +105,7 @@ def get_current_user(request: Request, session: SessionDep, token: TokenDep) -> 
     return _current_user_from_jwt(
         session,
         raw_token,
+        active_settings=_request_settings(request),
         request=request,
         token_source=token_source,
     )
@@ -113,15 +126,20 @@ def require_api_scope(required_scope: ApiTokenScope) -> Callable[..., User]:
 
     def dependency(request: Request, session: SessionDep, token: TokenDep) -> User:
         raw_token, token_source = _resolve_request_token(request, token)
+        active_settings = _request_settings(request)
         try:
             user = _current_user_from_jwt(
                 session,
                 raw_token,
+                active_settings=active_settings,
                 request=request,
                 token_source=token_source,
             )
         except HTTPException as jwt_error:
             if token_source != "bearer":
+                raise jwt_error
+            if not _looks_like_service_token(raw_token):
+                _enforce_token_failure_rate_limit(request, raw_token)
                 raise jwt_error
             token_record = _active_service_token(session, raw_token)
             if token_record is None:
@@ -136,7 +154,10 @@ def require_api_scope(required_scope: ApiTokenScope) -> Callable[..., User]:
             repo = ApiTokenRepository(session)
             repo.mark_api_token_used(token_record)
             session.commit()
-            principal = ensure_configured_superuser(session)
+            principal = ensure_configured_superuser(
+                session,
+                active_settings=active_settings,
+            )
             attach_api_token_context(
                 principal,
                 token_id=token_record.id,
@@ -152,6 +173,11 @@ def require_api_scope(required_scope: ApiTokenScope) -> Callable[..., User]:
         return user
 
     return dependency
+
+
+def _request_settings(request: Request) -> Settings:
+    candidate = getattr(request.app.state, "template_settings", settings)
+    return candidate if isinstance(candidate, Settings) else settings
 
 
 def _resolve_request_token(
@@ -170,7 +196,12 @@ def _resolve_request_token(
     )
 
 
-def _enforce_cookie_csrf(request: Request, jti: str) -> None:
+def _enforce_cookie_csrf(
+    request: Request,
+    jti: str,
+    *,
+    active_settings: Settings,
+) -> None:
     if request.method.upper() not in UNSAFE_METHODS:
         return
     header_token = request.headers.get(security.CSRF_HEADER_NAME)
@@ -179,7 +210,11 @@ def _enforce_cookie_csrf(request: Request, jti: str) -> None:
         not header_token
         or not cookie_token
         or not secrets.compare_digest(header_token, cookie_token)
-        or not security.verify_csrf_token(jti, header_token)
+        or not security.verify_csrf_token(
+            jti,
+            header_token,
+            secret_key=active_settings.SECRET_KEY,
+        )
     ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -190,7 +225,11 @@ def _enforce_cookie_csrf(request: Request, jti: str) -> None:
 def _enforce_token_failure_rate_limit(request: Request, raw_token: str) -> None:
     active_settings = getattr(request.app.state, "template_settings", settings)
     limiter = getattr(request.app.state, "rate_limiter", None)
-    if not active_settings.RATE_LIMIT_ENABLED or not isinstance(limiter, InMemoryRateLimiter):
+    if (
+        not isinstance(active_settings, Settings)
+        or not active_settings.RATE_LIMIT_ENABLED
+        or not isinstance(limiter, InMemoryRateLimiter)
+    ):
         return
     client_host = request.client.host if request.client else "unknown"
     token_hint = sha256(raw_token.encode("utf-8")).hexdigest()[:16]
@@ -204,6 +243,15 @@ def _enforce_token_failure_rate_limit(request: Request, raw_token: str) -> None:
             detail="Too many requests.",
             headers={"Retry-After": str(decision.retry_after_seconds)},
         )
+
+
+def _looks_like_service_token(raw_token: str) -> bool:
+    if not raw_token.startswith(SERVICE_TOKEN_PREFIX):
+        return False
+    if not SERVICE_TOKEN_MIN_LENGTH <= len(raw_token) <= SERVICE_TOKEN_MAX_LENGTH:
+        return False
+    token_body = raw_token[len(SERVICE_TOKEN_PREFIX) :]
+    return bool(token_body) and all(char in SERVICE_TOKEN_ALLOWED_CHARS for char in token_body)
 
 
 def _active_service_token(session: Session, raw_token: str) -> ApiToken | None:

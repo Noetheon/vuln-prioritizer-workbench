@@ -11,6 +11,22 @@ from vuln_prioritizer.provider_snapshot import (
     load_provider_snapshot,
 )
 
+SHARED_PROVIDER_SNAPSHOT_METADATA_FIELDS = {
+    "artifact_kind",
+    "cache_enabled",
+    "cache_only",
+    "generated_at",
+    "input_format",
+    "input_paths",
+    "requested_cves",
+    "schema_version",
+    "selected_sources",
+    "snapshot_format",
+    "snapshot_id",
+    "source_hashes",
+    "source_metadata",
+}
+
 
 def test_provider_snapshot_missing_required_v1_fields_fails_clearly(tmp_path: Path) -> None:
     snapshot_file = tmp_path / "provider-snapshot.json"
@@ -99,3 +115,54 @@ def test_provider_snapshot_json_redacts_warnings_without_hiding_env_name() -> No
     assert payload["metadata"]["source_metadata"]["nvd"]["api_key"] == "[REDACTED]"
     assert "real-secret-value" not in json.dumps(payload)
     assert "apiKey=<redacted>" in payload["warnings"][0]
+
+
+def test_provider_snapshot_metadata_contract_covers_cli_and_workbench_exports() -> None:
+    cli_report = ProviderSnapshotReport(
+        metadata=ProviderSnapshotMetadata(
+            snapshot_id="cli-snapshot",
+            generated_at="2026-04-30T00:00:00+00:00",
+            input_paths=["cves.txt"],
+            input_format="cve-list",
+            selected_sources=["nvd", "epss", "kev"],
+            requested_cves=2,
+            output_path="provider-snapshot.json",
+            cache_enabled=True,
+            cache_only=False,
+            cache_dir=".cache/vuln-prioritizer",
+            source_hashes={"nvd": "sha256:nvd", "epss": "sha256:epss", "kev": "sha256:kev"},
+            source_metadata={
+                "nvd": {"record_count": 2, "cache_only": False},
+                "epss": {"record_count": 2, "cache_only": False},
+                "kev": {"record_count": 2, "cache_only": False},
+            },
+            nvd_api_key_env="NVD_API_KEY",
+        ),
+    )
+    workbench_report = ProviderSnapshotReport(
+        metadata=ProviderSnapshotMetadata(
+            snapshot_id="workbench-snapshot",
+            generated_at="2026-04-30T00:00:00+00:00",
+            input_paths=[],
+            input_format="template-workbench-current-findings",
+            selected_sources=["kev"],
+            requested_cves=1,
+            output_path="provider-snapshot-workbench.json",
+            cache_enabled=True,
+            cache_only=True,
+            cache_dir=None,
+            source_hashes={"kev": "sha256:kev"},
+            source_metadata={"kev": {"record_count": 1, "cache_only": True}},
+            nvd_api_key_env="NVD_API_KEY",
+        ),
+    )
+
+    cli_payload = json.loads(generate_provider_snapshot_json(cli_report))
+    workbench_payload = json.loads(generate_provider_snapshot_json(workbench_report))
+
+    assert SHARED_PROVIDER_SNAPSHOT_METADATA_FIELDS.issubset(cli_payload["metadata"])
+    assert SHARED_PROVIDER_SNAPSHOT_METADATA_FIELDS.issubset(workbench_payload["metadata"])
+    assert cli_payload["metadata"]["snapshot_format"] == "provider-snapshot.v1.json"
+    assert workbench_payload["metadata"]["snapshot_format"] == "provider-snapshot.v1.json"
+    assert cli_payload["metadata"]["cache_only"] is False
+    assert workbench_payload["metadata"]["cache_only"] is True

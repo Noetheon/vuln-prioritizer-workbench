@@ -5,11 +5,13 @@ from collections.abc import Generator
 from typing import Any
 
 from fastapi.testclient import TestClient
+from sqlalchemy import text
 from sqlalchemy.pool import StaticPool
 from sqlmodel import Session, SQLModel, create_engine, select
 
 from app.core import security
 from app.core.config import Settings, settings
+from app.core.migration_bootstrap import ALEMBIC_HEAD
 from app.core.rate_limit import InMemoryRateLimiter
 from app.main import app, create_app
 
@@ -25,6 +27,12 @@ def _client(active_app: Any = app) -> TestClient:
         poolclass=StaticPool,
     )
     SQLModel.metadata.create_all(engine)
+    with engine.begin() as connection:
+        connection.execute(text("CREATE TABLE alembic_version (version_num VARCHAR(32) NOT NULL)"))
+        connection.execute(
+            text("INSERT INTO alembic_version (version_num) VALUES (:version_num)"),
+            {"version_num": ALEMBIC_HEAD},
+        )
 
     def override_get_db() -> Generator[Session, None, None]:
         with Session(engine) as session:
@@ -89,6 +97,39 @@ def test_template_login_verifies_db_stored_password_hash(template_api_env: Any) 
 
     assert env_password.status_code == 400
     assert db_password.status_code == 200
+
+
+def test_template_login_rejects_inactive_user_before_session_creation(
+    template_api_env: Any,
+) -> None:
+    client = template_api_env.client
+    with Session(template_api_env.engine) as db_session:
+        user = db_session.exec(
+            select(template_api_env.app_models.User).where(
+                template_api_env.app_models.User.email == settings.FIRST_SUPERUSER
+            )
+        ).one()
+        user.hashed_password = security.get_password_hash(settings.FIRST_SUPERUSER_PASSWORD)
+        user.is_active = False
+        db_session.add(user)
+        db_session.commit()
+
+    response = client.post(
+        "/api/v1/login/access-token",
+        data={
+            "username": settings.FIRST_SUPERUSER,
+            "password": settings.FIRST_SUPERUSER_PASSWORD,
+        },
+    )
+
+    assert response.status_code == 400
+    assert "set-cookie" not in response.headers
+    with Session(template_api_env.engine) as db_session:
+        sessions = db_session.exec(select(template_api_env.app_models.AuthSession)).all()
+        audits = db_session.exec(select(template_api_env.app_models.AuditEvent)).all()
+    assert sessions == []
+    assert [event.action for event in audits] == ["login.failure"]
+    assert audits[0].detail_json["reason"] == "inactive_user"
 
 
 def test_template_user_password_lifecycle_is_db_backed_and_audited(
@@ -351,7 +392,7 @@ def test_template_auth_smoke_splits_public_health_and_authenticated_readiness() 
     assert unauthenticated_status.status_code == 401
     assert authenticated_status.status_code == 200
     payload = authenticated_status.json()
-    assert payload["status"] == "ok"
+    assert payload["status"] == "ready"
     assert payload["database_status"] == "ready"
     assert payload["schema_status"] == "ready"
 

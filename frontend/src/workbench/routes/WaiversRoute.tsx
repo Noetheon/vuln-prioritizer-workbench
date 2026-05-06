@@ -21,7 +21,7 @@ import {
   useProjectSummaryQuery,
   useWaiversQuery,
 } from "../useWorkbenchQueries"
-import { workbenchQueryKeys } from "../workbench-query-keys"
+import { invalidateProjectScopedWorkbenchQueries } from "../workbench-query-keys"
 
 function WaiversRouteContent() {
   const queryClient = useQueryClient()
@@ -62,29 +62,7 @@ function WaiversRouteContent() {
     if (!selectedProjectId) {
       return
     }
-    void queryClient.invalidateQueries({
-      queryKey: workbenchQueryKeys.waivers(selectedProjectId),
-    })
-    void queryClient.invalidateQueries({
-      queryKey: workbenchQueryKeys.projectGovernanceRollups(selectedProjectId),
-    })
-    void queryClient.invalidateQueries({
-      queryKey: workbenchQueryKeys.projectSummary(selectedProjectId),
-    })
-  }
-
-  function refreshFindings() {
-    void queryClient.invalidateQueries({
-      queryKey: ["workbench", "findings"],
-    })
-    if (selectedProjectId) {
-      void queryClient.invalidateQueries({
-        queryKey: workbenchQueryKeys.dashboardFindings(selectedProjectId),
-      })
-      void queryClient.invalidateQueries({
-        queryKey: workbenchQueryKeys.dashboardSignalCounts(selectedProjectId),
-      })
-    }
+    void invalidateProjectScopedWorkbenchQueries(queryClient, selectedProjectId)
   }
 
   function updateWaiverFormField(field: keyof WaiverFormState, value: string) {
@@ -118,7 +96,6 @@ function WaiversRouteContent() {
         `Accepted risk waiver created for ${waiverScopeLabel(waiver)}.`,
       )
       refreshWaivers()
-      refreshFindings()
     } catch (caught) {
       setWaiverActionError(apiErrorMessage("Waiver create failed", caught))
     }
@@ -133,7 +110,6 @@ function WaiversRouteContent() {
         `Waiver for ${waiverScopeLabel(expired)} is now expired.`,
       )
       refreshWaivers()
-      refreshFindings()
     } catch (caught) {
       setWaiverActionError(apiErrorMessage("Waiver expire failed", caught))
     }

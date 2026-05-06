@@ -124,7 +124,7 @@ export function workspaceHealthLabel(
   status: WorkbenchStatus | null,
   statusError: string,
 ) {
-  if (status?.status === "ok") {
+  if (status?.status === "ready") {
     return "Data services healthy"
   }
   return statusError || "Data services unavailable"
@@ -134,7 +134,7 @@ export function workbenchApiHealth(status: WorkbenchStatus | null) {
   if (status === null) {
     return "Checking"
   }
-  return status.status === "ok" ? "Ready" : "Unavailable"
+  return status.status === "ready" ? "Ready" : "Unavailable"
 }
 
 export function evidenceReadiness(
@@ -153,7 +153,7 @@ export function dataServicesSummary(
   return [
     {
       label: "Data services",
-      value: status?.status === "ok" ? "Healthy" : "Unavailable",
+      value: status?.status === "ready" ? "Healthy" : "Unavailable",
     },
     {
       label: "Workbench API",

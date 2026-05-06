@@ -9,7 +9,7 @@ dependencies = []
 members = ["backend"]
 
 [tool.pytest.ini_options]
-addopts = "-ra --cov=vuln_prioritizer --cov-report=term-missing --cov-fail-under=90"
+addopts = "-ra --cov=app --cov=vuln_prioritizer --cov-report=term-missing --cov-fail-under=90"
 testpaths = ["backend/tests"]
 pythonpath = ["backend", "backend/src"]
 markers = [
@@ -36,6 +36,8 @@ disallow_untyped_defs = true
 
 [tool.coverage.run]
 omit = [
+  "backend/app/alembic/env.py",
+  "backend/app/alembic/versions/*.py",
   "backend/src/vuln_prioritizer/db/alembic/env.py",
   "backend/src/vuln_prioritizer/db/alembic/versions/*.py",
 ]

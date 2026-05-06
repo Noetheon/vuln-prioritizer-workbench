@@ -26,7 +26,10 @@ import {
   useProjectRunsQuery,
   useRunDetailQuery,
 } from "../useWorkbenchQueries"
-import { workbenchQueryKeys } from "../workbench-query-keys"
+import {
+  invalidateProjectScopedWorkbenchQueries,
+  workbenchQueryKeys,
+} from "../workbench-query-keys"
 
 function ImportsRouteContainer() {
   const queryClient = useQueryClient()
@@ -89,26 +92,6 @@ function ImportsRouteContainer() {
     if (preferredRunId) {
       await queryClient.invalidateQueries({
         queryKey: workbenchQueryKeys.runDetail(preferredRunId),
-      })
-    }
-  }
-
-  function refreshFindings() {
-    void queryClient.invalidateQueries({
-      queryKey: ["workbench", "findings"],
-    })
-    if (selectedProjectId) {
-      void queryClient.invalidateQueries({
-        queryKey: workbenchQueryKeys.dashboardFindings(selectedProjectId),
-      })
-      void queryClient.invalidateQueries({
-        queryKey: workbenchQueryKeys.dashboardSignalCounts(selectedProjectId),
-      })
-      void queryClient.invalidateQueries({
-        queryKey: workbenchQueryKeys.projectSummary(selectedProjectId),
-      })
-      void queryClient.invalidateQueries({
-        queryKey: workbenchQueryKeys.projectGovernanceRollups(selectedProjectId),
       })
     }
   }
@@ -176,7 +159,7 @@ function ImportsRouteContainer() {
       setSelectedRunId(run.id)
       await refreshProjects(importProjectId)
       await refreshProjectRuns(run.id)
-      refreshFindings()
+      await invalidateProjectScopedWorkbenchQueries(queryClient, importProjectId)
     } catch (caught) {
       setImportError(apiErrorMessage("Import upload failed", caught))
       const runId = analysisRunIdFromError(caught)
@@ -194,7 +177,7 @@ function ImportsRouteContainer() {
       }
       await refreshProjects(importProjectId)
       await refreshProjectRuns(runId ?? undefined)
-      refreshFindings()
+      await invalidateProjectScopedWorkbenchQueries(queryClient, importProjectId)
     }
   }
 

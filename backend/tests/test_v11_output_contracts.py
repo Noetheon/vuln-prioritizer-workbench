@@ -743,9 +743,12 @@ def test_release_workflow_is_tag_bound_and_verifies_pypi_install() -> None:
     assert github_release_job["permissions"] == {"contents": "write"}
     assert github_release_steps
     release_gate_step = next(
-        step for step in build_steps if step.get("name") == "Run release gate before publishing"
+        step
+        for step in build_steps
+        if step.get("name") == "Run release-readiness gate before publishing"
     )
-    assert release_gate_step["run"] == "make release-check"
+    assert "make release-readiness-check" in release_gate_step["run"]
+    assert "release-readiness-check.log" in release_gate_step["run"]
     checked_in_notes_step = next(
         step
         for step in github_release_steps

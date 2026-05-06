@@ -44,6 +44,18 @@ linked from an issue or PR.
 | `make playwright-check` | Browser smoke and accessibility path | frontend Playwright smoke, responsive shell, and Axe no serious/critical violations |
 | `make release-readiness-check` | Full local readiness handoff | release gate, client drift, evidence bundle, Playwright/A11y, and production-like Docker smoke |
 
+## Release Candidate Ledger
+
+Every release candidate entry must include the exact command, commit or tag,
+result, artifact path or CI URL, residual risk, owner, and follow-up. Public
+entries may link CI artifacts or checked-in public-safe evidence. They must not
+paste secrets, tokens, cookies, customer exports, private absolute paths, or
+shell history.
+
+| Candidate | Commit/Tag | Command | Result | Artifact or CI URL | Residual risk | Owner | Follow-up |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| PP6 dry-run gate design | working tree before next tag | `python3 scripts/check_release_evidence_hygiene.py`; `make docs-check`; tag workflow runs `make release-readiness-check` | Local hygiene check and docs build required before handoff; full production-like smoke evidence is produced by the tag workflow before publishing. | `docs/evidence/vpw-052-positive-verification.json`; `release-readiness-evidence` workflow artifact on tag runs | Tag-specific Docker logs and artifact hashes exist only after the release workflow runs for the exact candidate. | Release owner | [#382](https://github.com/Noetheon/vuln-prioritizer-workbench/issues/382), [#385](https://github.com/Noetheon/vuln-prioritizer-workbench/issues/385), [#386](https://github.com/Noetheon/vuln-prioritizer-workbench/issues/386) |
+
 ## Issue Ledger
 
 | Issue | Current docs/CI/package evidence target | Residual risk until closure |
@@ -61,6 +73,35 @@ linked from an issue or PR.
 | [#347](https://github.com/Noetheon/vuln-prioritizer-workbench/issues/347) | Client drift target in `release-readiness-check` | API error-envelope/auth contract assertions must remain covered by API tests. |
 | [#349](https://github.com/Noetheon/vuln-prioritizer-workbench/issues/349) | Full quality-gate command list and residual-risk section | Any exception needs owner, rationale, and a follow-up issue before closure. |
 | [#350](https://github.com/Noetheon/vuln-prioritizer-workbench/issues/350) | Final scorecard target and PP5 acceptance boundary | If any category is below target, #350 stays open with blockers. |
+| [#380](https://github.com/Noetheon/vuln-prioritizer-workbench/issues/380) | CI frontend PR gate runs lint, build, unit tests, generated-client drift, and bounded Playwright smoke/responsive/accessibility specs for frontend/API/runtime changes. | Fresh workflow evidence is still required for docs-only, frontend-only, and API-client-impacting PR examples. |
+| [#381](https://github.com/Noetheon/vuln-prioritizer-workbench/issues/381) | Docker PR gate runs `make docker-demo-smoke` for runtime inputs and prints compose status/logs on failure. | Fresh workflow evidence is still required for backend/Compose and docs-only PR examples. |
+| [#382](https://github.com/Noetheon/vuln-prioritizer-workbench/issues/382) | Tag release workflow runs `make release-readiness-check`, uploads release-readiness evidence, and attaches SHA-256 artifact hashes to GitHub Releases. | A tag-specific workflow run is required before claiming candidate evidence. |
+| [#383](https://github.com/Noetheon/vuln-prioritizer-workbench/issues/383) | `backend/requirements.txt` is the authoritative bounded Python audit input; `scripts/check_release_evidence_hygiene.py` fails drift against `backend/pyproject.toml`; `make dependency-audit` audits that source. | No separate fully pinned Python production lockfile exists unless a future issue intentionally adds one. |
+| [#384](https://github.com/Noetheon/vuln-prioritizer-workbench/issues/384) | `make docs-check` runs the release-evidence hygiene script before MkDocs to catch stale public-production, CLI-only, and historical-template closure wording in active release docs. | The script is intentionally narrow; broader wording cleanup still needs human review during release evidence comments. |
+| [#385](https://github.com/Noetheon/vuln-prioritizer-workbench/issues/385) | This ledger now requires commit/tag, command, result, artifact or CI URL, residual risk, owner, and follow-up fields for candidate evidence. | Build-local artifacts under `build/` are checked only when present in generated release workflow evidence. |
+| [#386](https://github.com/Noetheon/vuln-prioritizer-workbench/issues/386) | PR template and release operations docs require release-readiness ownership, skip rationale, non-readiness wording, and required-context documentation. | Branch protection itself must be confirmed in GitHub repository settings by a maintainer. |
+| [#387](https://github.com/Noetheon/vuln-prioritizer-workbench/issues/387) | Live issue list evidence captured on 2026-05-06 shows PP6 issues #379-#387 assigned to milestone `PP6 CI/Release Evidence Hardening` with `status:strict-dod`. | Labels and milestones can change after this ledger entry; closeout still needs fresh `gh issue list` output. |
+
+## PP6 Milestone Hygiene Snapshot
+
+Captured on 2026-05-06 with:
+
+```bash
+gh issue list --milestone "PP6 CI/Release Evidence Hardening" \
+  --json number,title,labels,milestone,state --limit 100
+```
+
+| Issue | State | Required hygiene observed |
+| --- | --- | --- |
+| #379 | Open | milestone assigned; `type:epic`; `area:ci`; `type:release`; `status:strict-dod` |
+| #380 | Open | milestone assigned; frontend/UI/CI labels; `priority:p0`; `status:strict-dod` |
+| #381 | Open | milestone assigned; backend/frontend/CI labels; `priority:p0`; `status:strict-dod` |
+| #382 | Open | milestone assigned; release/security/CI labels; `priority:p0`; `status:strict-dod` |
+| #383 | Open | milestone assigned; dependency/python/security labels; `priority:p1`; `status:strict-dod` |
+| #384 | Open | milestone assigned; docs/data-quality labels; `priority:p1`; `status:strict-dod` |
+| #385 | Open | milestone assigned; docs/release/report labels; `priority:p1`; `status:strict-dod` |
+| #386 | Open | milestone assigned; release/docs/CI labels; `priority:p0`; `status:strict-dod` |
+| #387 | Open | milestone assigned; CI task labels; `priority:p1`; `status:strict-dod` |
 
 ## Residual Risk Decision Format
 
