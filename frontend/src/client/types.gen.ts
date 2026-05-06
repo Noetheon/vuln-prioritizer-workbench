@@ -2662,6 +2662,34 @@ export type Token = {
 };
 
 /**
+ * UserPasswordChange
+ *
+ * Payload for rotating the current user's password.
+ */
+export type UserPasswordChange = {
+    /**
+     * Current Password
+     */
+    current_password: string;
+    /**
+     * New Password
+     */
+    new_password: string;
+};
+
+/**
+ * UserPasswordReset
+ *
+ * Admin payload for resetting a persisted user password.
+ */
+export type UserPasswordReset = {
+    /**
+     * New Password
+     */
+    new_password: string;
+};
+
+/**
  * UserPublic
  *
  * Public user shape exposed by template auth routes.
@@ -2922,6 +2950,18 @@ export type WaiversPublic = {
      * Data
      */
     data: Array<WaiverPublic>;
+};
+
+/**
+ * WorkbenchHealth
+ *
+ * Minimal unauthenticated health response.
+ */
+export type WorkbenchHealth = {
+    /**
+     * Status
+     */
+    status: string;
 };
 
 /**
@@ -4193,6 +4233,121 @@ export type GetApiV1UsersMeResponses = {
 
 export type GetApiV1UsersMeResponse = GetApiV1UsersMeResponses[keyof GetApiV1UsersMeResponses];
 
+export type PostApiV1UsersMePasswordData = {
+    body: UserPasswordChange;
+    path?: never;
+    query?: never;
+    url: '/api/v1/users/me/password';
+};
+
+export type PostApiV1UsersMePasswordErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type PostApiV1UsersMePasswordError = PostApiV1UsersMePasswordErrors[keyof PostApiV1UsersMePasswordErrors];
+
+export type PostApiV1UsersMePasswordResponses = {
+    /**
+     * Successful Response
+     */
+    200: UserPublic;
+};
+
+export type PostApiV1UsersMePasswordResponse = PostApiV1UsersMePasswordResponses[keyof PostApiV1UsersMePasswordResponses];
+
+export type PostApiV1UsersByUserIdActivateData = {
+    body?: never;
+    path: {
+        /**
+         * User Id
+         */
+        user_id: string;
+    };
+    query?: never;
+    url: '/api/v1/users/{user_id}/activate';
+};
+
+export type PostApiV1UsersByUserIdActivateErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type PostApiV1UsersByUserIdActivateError = PostApiV1UsersByUserIdActivateErrors[keyof PostApiV1UsersByUserIdActivateErrors];
+
+export type PostApiV1UsersByUserIdActivateResponses = {
+    /**
+     * Successful Response
+     */
+    200: UserPublic;
+};
+
+export type PostApiV1UsersByUserIdActivateResponse = PostApiV1UsersByUserIdActivateResponses[keyof PostApiV1UsersByUserIdActivateResponses];
+
+export type PostApiV1UsersByUserIdDeactivateData = {
+    body?: never;
+    path: {
+        /**
+         * User Id
+         */
+        user_id: string;
+    };
+    query?: never;
+    url: '/api/v1/users/{user_id}/deactivate';
+};
+
+export type PostApiV1UsersByUserIdDeactivateErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type PostApiV1UsersByUserIdDeactivateError = PostApiV1UsersByUserIdDeactivateErrors[keyof PostApiV1UsersByUserIdDeactivateErrors];
+
+export type PostApiV1UsersByUserIdDeactivateResponses = {
+    /**
+     * Successful Response
+     */
+    200: UserPublic;
+};
+
+export type PostApiV1UsersByUserIdDeactivateResponse = PostApiV1UsersByUserIdDeactivateResponses[keyof PostApiV1UsersByUserIdDeactivateResponses];
+
+export type PostApiV1UsersByUserIdPasswordResetData = {
+    body: UserPasswordReset;
+    path: {
+        /**
+         * User Id
+         */
+        user_id: string;
+    };
+    query?: never;
+    url: '/api/v1/users/{user_id}/password-reset';
+};
+
+export type PostApiV1UsersByUserIdPasswordResetErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type PostApiV1UsersByUserIdPasswordResetError = PostApiV1UsersByUserIdPasswordResetErrors[keyof PostApiV1UsersByUserIdPasswordResetErrors];
+
+export type PostApiV1UsersByUserIdPasswordResetResponses = {
+    /**
+     * Successful Response
+     */
+    200: UserPublic;
+};
+
+export type PostApiV1UsersByUserIdPasswordResetResponse = PostApiV1UsersByUserIdPasswordResetResponses[keyof PostApiV1UsersByUserIdPasswordResetResponses];
+
 export type GetApiV1UtilsHealthCheckData = {
     body?: never;
     path?: never;
@@ -4270,6 +4425,22 @@ export type PostApiV1WaiversByWaiverIdExpireResponses = {
 };
 
 export type PostApiV1WaiversByWaiverIdExpireResponse = PostApiV1WaiversByWaiverIdExpireResponses[keyof PostApiV1WaiversByWaiverIdExpireResponses];
+
+export type GetApiV1WorkbenchHealthData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/workbench/health';
+};
+
+export type GetApiV1WorkbenchHealthResponses = {
+    /**
+     * Successful Response
+     */
+    200: WorkbenchHealth;
+};
+
+export type GetApiV1WorkbenchHealthResponse = GetApiV1WorkbenchHealthResponses[keyof GetApiV1WorkbenchHealthResponses];
 
 export type GetApiV1WorkbenchStatusData = {
     body?: never;

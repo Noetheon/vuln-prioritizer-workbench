@@ -4739,6 +4739,47 @@ export const TokenSchema = {
     type: 'object'
 } as const;
 
+export const UserPasswordChangeSchema = {
+    description: 'Payload for rotating the current user\'s password.',
+    properties: {
+        current_password: {
+            maxLength: 255,
+            minLength: 1,
+            title: 'Current Password',
+            type: 'string'
+        },
+        new_password: {
+            maxLength: 255,
+            minLength: 12,
+            title: 'New Password',
+            type: 'string'
+        }
+    },
+    required: [
+        'current_password',
+        'new_password'
+    ],
+    title: 'UserPasswordChange',
+    type: 'object'
+} as const;
+
+export const UserPasswordResetSchema = {
+    description: 'Admin payload for resetting a persisted user password.',
+    properties: {
+        new_password: {
+            maxLength: 255,
+            minLength: 12,
+            title: 'New Password',
+            type: 'string'
+        }
+    },
+    required: [
+        'new_password'
+    ],
+    title: 'UserPasswordReset',
+    type: 'object'
+} as const;
+
 export const UserPublicSchema = {
     description: 'Public user shape exposed by template auth routes.',
     properties: {
@@ -5297,6 +5338,21 @@ export const WaiversPublicSchema = {
         'count'
     ],
     title: 'WaiversPublic',
+    type: 'object'
+} as const;
+
+export const WorkbenchHealthSchema = {
+    description: 'Minimal unauthenticated health response.',
+    properties: {
+        status: {
+            title: 'Status',
+            type: 'string'
+        }
+    },
+    required: [
+        'status'
+    ],
+    title: 'WorkbenchHealth',
     type: 'object'
 } as const;
 

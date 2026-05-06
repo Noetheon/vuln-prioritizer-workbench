@@ -82,7 +82,7 @@ Local Workbench from a repository checkout:
 ```bash
 cp .env.example .env
 docker compose -f compose.yml -f compose.override.yml up --build backend frontend
-curl http://127.0.0.1:8000/api/v1/workbench/status
+curl http://127.0.0.1:8000/api/v1/workbench/health
 ```
 
 Open `http://127.0.0.1:5173`, sign in with the local `.env.example` defaults,

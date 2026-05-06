@@ -172,9 +172,9 @@ npm --prefix frontend run dev -- --host 127.0.0.1 --port 5173
 curl -fsS http://127.0.0.1:5173/
 curl -fsS http://127.0.0.1:5173/src/main.tsx
 npm --prefix frontend exec -- playwright screenshot \
-  --viewport-size=1440,1000 http://127.0.0.1:5173 /tmp/vpw-frontend-shell.png
+  --viewport-size=1440,1000 http://127.0.0.1:5173 <tmp>/vpw-frontend-shell.png
 npm --prefix frontend exec -- playwright screenshot \
-  --viewport-size=390,844 http://127.0.0.1:5173 /tmp/vpw-frontend-shell-mobile.png
+  --viewport-size=390,844 http://127.0.0.1:5173 <tmp>/vpw-frontend-shell-mobile.png
 ```
 
 Results:
@@ -192,8 +192,8 @@ Results:
 - `make docs-check`, `docker compose config`, `make actionlint-check`, and
   `make typecheck` passed.
 - Frontend dev server served the React shell at `http://127.0.0.1:5173/`.
-- Playwright screenshots were captured at `/tmp/vpw-frontend-shell.png` and
-  `/tmp/vpw-frontend-shell-mobile.png`.
+- Playwright screenshots were captured at `<tmp>/vpw-frontend-shell.png` and
+  `<tmp>/vpw-frontend-shell-mobile.png`.
 
 Residual risks:
 
@@ -310,7 +310,7 @@ make package-check
 make docker-demo-smoke
 make docker-postgres-migration-smoke
 git diff --check
-# Captured /tmp/vpw-fsft04-login.png and /tmp/vpw-fsft04-dashboard.png
+# Captured <tmp>/vpw-fsft04-login.png and <tmp>/vpw-fsft04-dashboard.png
 # with Playwright against local uvicorn plus Vite dev servers.
 ```
 
@@ -333,8 +333,8 @@ Results:
   `/api/v1/utils/health-check/`, the frontend root, and `/login`.
 - `make docker-postgres-migration-smoke` passed and kept the profiled legacy
   Workbench Postgres health endpoint green.
-- Local screenshot artifacts were captured at `/tmp/vpw-fsft04-login.png` and
-  `/tmp/vpw-fsft04-dashboard.png`.
+- Local screenshot artifacts were captured at `<tmp>/vpw-fsft04-login.png` and
+  `<tmp>/vpw-fsft04-dashboard.png`.
 
 Residual risks:
 

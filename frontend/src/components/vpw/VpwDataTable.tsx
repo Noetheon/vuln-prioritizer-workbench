@@ -42,7 +42,10 @@ export function VpwDataTable<TData>({
   }
 
   return (
-    <div className={cn("vpw-table-wrap", className)}>
+    <section
+      aria-label={caption ?? "Data table"}
+      className={cn("vpw-table-wrap", className)}
+    >
       <table className={cn("vpw-table", densityClass[density])}>
         {caption ? <caption className="sr-only">{caption}</caption> : null}
         <thead>
@@ -83,6 +86,6 @@ export function VpwDataTable<TData>({
           )}
         </tbody>
       </table>
-    </div>
+    </section>
   )
 }

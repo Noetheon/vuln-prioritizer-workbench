@@ -1,0 +1,34 @@
+services:
+  db:
+    restart: "no"
+
+  backend:
+    restart: "no"
+    environment:
+      ENVIRONMENT: production
+      SECRET_KEY: production-smoke-secret-key-change-in-real-deployments
+      FIRST_SUPERUSER_PASSWORD: production-smoke-admin-password
+      DOMAIN: workbench.example.test
+      FRONTEND_HOST: https://workbench.example.test
+      BACKEND_CORS_ORIGINS: https://workbench.example.test
+      ALLOWED_HOSTS: workbench.example.test,api.workbench.example.test
+      API_DOCS_ENABLED: "false"
+      DEMO_PROVIDER_SNAPSHOT_ENABLED: "true"
+    command:
+      - sh
+      - -c
+      - |
+        set -e
+        cp -n /app/examples/*provider_snapshot*.json /app/provider-snapshots/ 2>/dev/null || true
+        python -m app.core.migration_bootstrap
+        alembic -c /app/backend/alembic.ini upgrade head
+        exec uvicorn app.main:app --host 0.0.0.0 --port 8000
+
+  frontend:
+    restart: "no"
+    ports:
+      - "127.0.0.1:5180:80"
+    build:
+      args:
+        VITE_API_URL: ""
+        NODE_ENV: production

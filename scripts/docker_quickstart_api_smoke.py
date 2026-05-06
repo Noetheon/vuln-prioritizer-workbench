@@ -17,6 +17,7 @@ SAMPLE_CVES = REPO_ROOT / "data" / "sample_cves.txt"
 
 def main() -> None:
     token = _login()
+    workbench_status = _get_workbench_status(token)
     project_id = _create_project(token)
     run = _import_demo(token, project_id)
     findings = _get_findings(token, project_id)
@@ -28,6 +29,10 @@ def main() -> None:
         raise RuntimeError(f"Demo import did not complete: {run.get('status')!r}")
     if not findings:
         raise RuntimeError("Demo import returned no findings.")
+    if workbench_status.get("database_status") != "ready":
+        raise RuntimeError(f"Database readiness failed: {workbench_status!r}")
+    if workbench_status.get("schema_status") != "ready":
+        raise RuntimeError(f"Schema readiness failed: {workbench_status!r}")
     if summary.get("locked_provider_data") is not True:
         raise RuntimeError("Demo import did not use locked provider data.")
     provider_snapshot_ref = str(summary.get("provider_snapshot_file", ""))
@@ -69,6 +74,13 @@ def _login() -> str:
         headers={"Content-Type": "application/x-www-form-urlencoded"},
     )
     return str(response["access_token"])
+
+
+def _get_workbench_status(token: str) -> dict[str, object]:
+    return _request(
+        f"{BASE_URL}/workbench/status",
+        headers={"Authorization": f"Bearer {token}"},
+    )
 
 
 def _create_project(token: str) -> str:

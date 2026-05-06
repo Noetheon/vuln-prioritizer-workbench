@@ -89,11 +89,17 @@
   }
 
   .vpw-table-wrap {
-    overflow-x: auto;
+    overflow-x: visible;
     border: 1px solid var(--vpw-border-default);
     border-radius: var(--vpw-radius-xl);
     background: var(--vpw-bg-card);
     box-shadow: var(--vpw-shadow-1);
+  }
+
+  @media (width < 768px) {
+    .vpw-table-wrap {
+      overflow-x: auto;
+    }
   }
 
   .vpw-table {

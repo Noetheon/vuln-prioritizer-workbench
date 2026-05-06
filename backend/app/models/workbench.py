@@ -12,3 +12,9 @@ class WorkbenchStatus(SQLModel):
     core_version: str
     database_status: str
     schema_status: str
+
+
+class WorkbenchHealth(SQLModel):
+    """Minimal unauthenticated health response."""
+
+    status: str

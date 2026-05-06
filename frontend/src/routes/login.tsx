@@ -1,11 +1,6 @@
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router"
 import { type FormEvent, useEffect, useState } from "react"
-import {
-  ApiError,
-  LoginService,
-  UtilsService,
-  WorkbenchService,
-} from "../api-client"
+import { ApiError, LoginService, UtilsService } from "../api-client"
 import { isLoggedIn, setAccessToken } from "../auth"
 
 export const Route = createFileRoute("/login")({
@@ -30,10 +25,7 @@ function LoginPage() {
 
     async function loadStatus() {
       try {
-        const [health] = await Promise.all([
-          UtilsService.healthCheck(),
-          WorkbenchService.templateWorkbenchStatus(),
-        ])
+        const health = await UtilsService.healthCheck()
         if (isMounted) {
           setBackendReady(health)
         }

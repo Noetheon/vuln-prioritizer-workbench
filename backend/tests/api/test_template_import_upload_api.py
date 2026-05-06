@@ -919,7 +919,7 @@ def test_analysis_failure_persists_failed_run_without_partial_findings(
         raise TemplateAnalysisError(f"scoring failed for {upload_dir / 'private.json'}")
 
     monkeypatch.setattr(
-        "app.api.routes.imports.AnalysisService.analyze_import",
+        "app.services.import_execution.AnalysisService.analyze_import",
         _fail_analysis,
     )
 
@@ -997,8 +997,14 @@ def test_same_cve_on_different_assets_creates_distinct_findings(
     payload = response.json()
     assert payload["summary_json"]["finding_count"] == 2
     assert payload["summary_json"]["analysis_semantics"] == {
-        "analysis_decision_scope": "cve",
+        "analysis_decision_scope": "cve_baseline_with_occurrence_overlays",
         "persistence_scope": "asset_component_occurrence",
+        "occurrence_overlay_fields": [
+            "asset_context",
+            "component_identity",
+            "source_identity",
+            "vex_status",
+        ],
         "finding_dedup_key_version": "vpw019-v1",
         "cve_count": 1,
         "occurrence_count": 2,
@@ -1014,6 +1020,78 @@ def test_same_cve_on_different_assets_creates_distinct_findings(
     assert len(findings) == 2
     assert occurrence_count == 2
     assert len({finding.dedup_key for finding in findings}) == 2
+
+
+def test_same_cve_vex_status_remains_occurrence_scoped(
+    template_api_env: TemplateApiEnv,
+    tmp_path: Path,
+) -> None:
+    _configure_upload_dir(template_api_env, tmp_path)
+    headers = auth_headers(template_api_env.client)
+    project = create_project_via_api(template_api_env.client, headers)
+    content = "\n".join(
+        [
+            "cve_id,asset_ref,component,version,purl,severity",
+            (
+                "CVE-2021-44228,log4j-fixed,log4j-core,2.14.1,"
+                "pkg:maven/org.apache.logging.log4j/log4j-core@2.14.1,CRITICAL"
+            ),
+            (
+                "CVE-2021-44228,log4j-open,log4j-core,2.13.0,"
+                "pkg:maven/org.apache.logging.log4j/log4j-core@2.13.0,CRITICAL"
+            ),
+            "",
+        ]
+    ).encode()
+    vex = json.dumps(
+        {
+            "statements": [
+                {
+                    "action_statement": "Upgrade completed for the scoped component.",
+                    "products": [
+                        {
+                            "identifiers": {
+                                "purl": "pkg:maven/org.apache.logging.log4j/log4j-core@2.14.1",
+                            },
+                        },
+                    ],
+                    "status": "fixed",
+                    "vulnerability": {"name": "CVE-2021-44228"},
+                }
+            ]
+        }
+    ).encode()
+
+    response = template_api_env.client.post(
+        f"/api/v1/projects/{project['id']}/imports",
+        headers=headers,
+        data={"input_type": "generic-occurrence-csv"},
+        files={
+            "file": ("same-cve-vex.csv", content, "text/csv"),
+            "vex_file": ("same-cve-vex.json", vex, "application/json"),
+        },
+    )
+
+    assert response.status_code == 200, response.text
+    findings = template_api_env.client.get(
+        f"/api/v1/projects/{project['id']}/findings/",
+        headers=headers,
+    )
+    assert findings.status_code == 200, findings.text
+    by_asset = {item["asset_key"]: item for item in findings.json()["data"]}
+
+    assert by_asset["log4j-fixed"]["status"] == "fixed"
+    assert by_asset["log4j-fixed"]["suppressed_by_vex"] is True
+    assert by_asset["log4j-fixed"]["explanation_json"]["provenance"]["vex_statuses"] == {"fixed": 1}
+    assert by_asset["log4j-fixed"]["explanation_json"]["occurrence_scope"]["asset_ref"] == (
+        "log4j-fixed"
+    )
+    assert by_asset["log4j-open"]["status"] == "open"
+    assert by_asset["log4j-open"]["suppressed_by_vex"] is False
+    assert by_asset["log4j-open"]["explanation_json"]["provenance"]["vex_statuses"] == {}
+    assert by_asset["log4j-open"]["explanation_json"]["occurrence_scope"]["asset_ref"] == (
+        "log4j-open"
+    )
 
 
 @pytest.mark.parametrize(

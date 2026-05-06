@@ -91,7 +91,7 @@ services:
           "CMD",
           "python",
           "-c",
-          "import json, os, urllib.request; domain=os.environ.get('DOMAIN', 'localhost'); host='localhost' if domain in {'localhost', '127.0.0.1'} else f'api.{domain}'; req=urllib.request.Request('http://127.0.0.1:8000/api/v1/workbench/status', headers={'Host': host}); data=json.load(urllib.request.urlopen(req, timeout=2)); assert data['database_status'] == 'ready' and data['schema_status'] == 'ready'",
+          "import json, os, urllib.request; domain=os.environ.get('DOMAIN', 'localhost'); host='localhost' if domain in {'localhost', '127.0.0.1'} else f'api.{domain}'; req=urllib.request.Request('http://127.0.0.1:8000/api/v1/utils/health-check/', headers={'Host': host}); data=json.load(urllib.request.urlopen(req, timeout=2)); assert data is True",
         ]
       interval: 10s
       timeout: 5s
@@ -104,7 +104,7 @@ services:
       context: .
       dockerfile: frontend/Dockerfile
       args:
-        VITE_API_URL: ${VITE_API_URL:-http://localhost:8000}
+        VITE_API_URL: ${VITE_API_URL:-}
         NODE_ENV: ${NODE_ENV:-production}
     depends_on:
       backend:

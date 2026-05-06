@@ -40,6 +40,19 @@ class UserPublic(UserBase):
     created_at: datetime
 
 
+class UserPasswordChange(SQLModel):
+    """Payload for rotating the current user's password."""
+
+    current_password: str = Field(min_length=1, max_length=255)
+    new_password: str = Field(min_length=12, max_length=255)
+
+
+class UserPasswordReset(SQLModel):
+    """Admin payload for resetting a persisted user password."""
+
+    new_password: str = Field(min_length=12, max_length=255)
+
+
 class UsersPublic(SQLModel):
     """Paginated user collection shape reserved for template parity."""
 
