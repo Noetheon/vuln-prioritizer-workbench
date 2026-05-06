@@ -83,6 +83,18 @@ def test_docker_demo_smoke_runs_quickstart_api_import() -> None:
     assert "providers/update-jobs" in script
 
 
+def test_ci_compose_smoke_uses_public_health_not_auth_readiness() -> None:
+    workflow = Path(".github/workflows/docker.yml").read_text(encoding="utf-8")
+    health_block = workflow.split("- name: Wait for health endpoint", 1)[1].split(
+        "- name: Wait for frontend shell",
+        1,
+    )[0]
+
+    assert "/api/v1/workbench/health" in health_block
+    assert "/api/v1/utils/health-check/" in health_block
+    assert "/api/v1/workbench/status" not in health_block
+
+
 def test_production_smoke_overlay_uses_same_origin_public_contract() -> None:
     compose = yaml.safe_load(Path("compose.production-smoke.yml").read_text(encoding="utf-8"))
     makefile = Path("Makefile").read_text(encoding="utf-8")
