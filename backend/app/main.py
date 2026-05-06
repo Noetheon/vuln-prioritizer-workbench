@@ -5,17 +5,22 @@ from __future__ import annotations
 from collections.abc import Awaitable, Callable
 
 from fastapi import FastAPI, Request
-from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.routing import APIRoute
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.cors import CORSMiddleware
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 from starlette.responses import JSONResponse, Response
 
+from app.api.errors import (
+    error_response_content,
+    http_exception_handler,
+    unhandled_exception_handler,
+    validation_error_handler,
+)
 from app.api.main import api_router
 from app.core.config import Settings, settings
 from app.core.rate_limit import InMemoryRateLimiter, rate_limit_key
-from vuln_prioritizer.security_redaction import redact_value
 
 SECURITY_HEADERS = {
     "X-Content-Type-Options": "nosniff",
@@ -65,21 +70,16 @@ def create_app(active_settings: Settings | None = None) -> FastAPI:
             allow_origins=list(selected_settings.all_cors_origins),
             allow_credentials=True,
             allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-            allow_headers=["Authorization", "Content-Type", "Accept"],
+            allow_headers=["Authorization", "Content-Type", "Accept", "X-CSRF-Token"],
         )
     app.middleware("http")(_rate_limit_guard)
     app.middleware("http")(_upload_size_guard)
     app.middleware("http")(_security_headers)
     app.include_router(api_router, prefix=selected_settings.API_V1_STR)
-    app.add_exception_handler(RequestValidationError, _validation_error_handler)
+    app.add_exception_handler(StarletteHTTPException, http_exception_handler)
+    app.add_exception_handler(RequestValidationError, validation_error_handler)
+    app.add_exception_handler(Exception, unhandled_exception_handler)
     return app
-
-
-async def _validation_error_handler(_request: Request, exc: Exception) -> JSONResponse:
-    if not isinstance(exc, RequestValidationError):
-        return JSONResponse(status_code=500, content={"detail": "Internal server error."})
-    detail, _redacted_paths = redact_value(jsonable_encoder(exc.errors()))
-    return JSONResponse(status_code=422, content={"detail": detail})
 
 
 async def _security_headers(
@@ -106,7 +106,11 @@ async def _rate_limit_guard(
             if not decision.allowed:
                 return JSONResponse(
                     status_code=429,
-                    content={"detail": "Too many requests."},
+                    content=error_response_content(
+                        status_code=429,
+                        detail="Too many requests.",
+                        request=request,
+                    ),
                     headers={"Retry-After": str(decision.retry_after_seconds)},
                 )
     return await call_next(request)
@@ -129,7 +133,11 @@ async def _upload_size_guard(
                 if content_length > active_settings.max_upload_bytes + multipart_overhead:
                     return JSONResponse(
                         status_code=413,
-                        content={"detail": "Upload exceeds configured limit."},
+                        content=error_response_content(
+                            status_code=413,
+                            detail="Upload exceeds configured limit.",
+                            request=request,
+                        ),
                     )
     return await call_next(request)
 

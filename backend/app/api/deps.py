@@ -5,7 +5,7 @@ from __future__ import annotations
 import secrets
 from collections.abc import Callable, Generator
 from hashlib import sha256
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordBearer
@@ -21,9 +21,14 @@ from app.models.api_tokens import attach_api_token_context, scope_set
 from app.repositories import ApiTokenRepository, AuthSessionRepository
 from vuln_prioritizer.security_tokens import api_token_digest
 
-reusable_oauth2 = OAuth2PasswordBearer(tokenUrl=f"{settings.API_V1_STR}/login/access-token")
+reusable_oauth2 = OAuth2PasswordBearer(
+    tokenUrl=f"{settings.API_V1_STR}/login/access-token",
+    auto_error=False,
+)
 
-TokenDep = Annotated[str, Depends(reusable_oauth2)]
+TokenDep = Annotated[str | None, Depends(reusable_oauth2)]
+AuthTokenSource = Literal["bearer", "cookie"]
+UNSAFE_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
 
 
 def get_db() -> Generator[Session, None, None]:
@@ -35,7 +40,13 @@ def get_db() -> Generator[Session, None, None]:
 SessionDep = Annotated[Session, Depends(get_db)]
 
 
-def _current_user_from_jwt(session: Session, token: str) -> User:
+def _current_user_from_jwt(
+    session: Session,
+    token: str,
+    *,
+    request: Request | None = None,
+    token_source: AuthTokenSource = "bearer",
+) -> User:
     """Validate a JWT and resolve the configured active-runtime user."""
     try:
         payload = security.decode_access_token(token)
@@ -62,17 +73,29 @@ def _current_user_from_jwt(session: Session, token: str) -> User:
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Session is expired or revoked",
         )
+    if request is not None and token_source == "cookie":
+        _enforce_cookie_csrf(request, token_data.jti)
     auth_session_repo.mark_auth_session_seen(auth_session)
     session.commit()
+    if request is not None:
+        request.state.auth_token = token
+        request.state.auth_token_source = token_source
+        request.state.auth_jti = token_data.jti
     user = ensure_configured_superuser(session)
     if not user.is_active:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Inactive user")
     return user
 
 
-def get_current_user(session: SessionDep, token: TokenDep) -> User:
+def get_current_user(request: Request, session: SessionDep, token: TokenDep) -> User:
     """Require a configured-user JWT for active UI/session routes."""
-    return _current_user_from_jwt(session, token)
+    raw_token, token_source = _resolve_request_token(request, token)
+    return _current_user_from_jwt(
+        session,
+        raw_token,
+        request=request,
+        token_source=token_source,
+    )
 
 
 CurrentUser = Annotated[User, Depends(get_current_user)]
@@ -89,12 +112,20 @@ def require_api_scope(required_scope: ApiTokenScope) -> Callable[..., User]:
     """Accept a user JWT or a service token with the requested scope."""
 
     def dependency(request: Request, session: SessionDep, token: TokenDep) -> User:
+        raw_token, token_source = _resolve_request_token(request, token)
         try:
-            user = _current_user_from_jwt(session, token)
+            user = _current_user_from_jwt(
+                session,
+                raw_token,
+                request=request,
+                token_source=token_source,
+            )
         except HTTPException as jwt_error:
-            token_record = _active_service_token(session, token)
+            if token_source != "bearer":
+                raise jwt_error
+            token_record = _active_service_token(session, raw_token)
             if token_record is None:
-                _enforce_token_failure_rate_limit(request, token)
+                _enforce_token_failure_rate_limit(request, raw_token)
                 raise jwt_error
             scopes = scope_set(token_record)
             if required_scope not in scopes and "admin" not in scopes:
@@ -121,6 +152,39 @@ def require_api_scope(required_scope: ApiTokenScope) -> Callable[..., User]:
         return user
 
     return dependency
+
+
+def _resolve_request_token(
+    request: Request,
+    bearer_token: str | None,
+) -> tuple[str, AuthTokenSource]:
+    if bearer_token:
+        return bearer_token, "bearer"
+    cookie_token = request.cookies.get(security.SESSION_COOKIE_NAME)
+    if cookie_token:
+        return cookie_token, "cookie"
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Not authenticated",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+
+
+def _enforce_cookie_csrf(request: Request, jti: str) -> None:
+    if request.method.upper() not in UNSAFE_METHODS:
+        return
+    header_token = request.headers.get(security.CSRF_HEADER_NAME)
+    cookie_token = request.cookies.get(security.CSRF_COOKIE_NAME)
+    if (
+        not header_token
+        or not cookie_token
+        or not secrets.compare_digest(header_token, cookie_token)
+        or not security.verify_csrf_token(jti, header_token)
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="CSRF token missing or invalid",
+        )
 
 
 def _enforce_token_failure_rate_limit(request: Request, raw_token: str) -> None:

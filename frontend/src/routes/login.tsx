@@ -19,8 +19,8 @@ export const Route = createFileRoute("/login")({
 
 function LoginPage() {
   const navigate = useNavigate()
-  const [email, setEmail] = useState("admin@example.com")
-  const [password, setPassword] = useState("changethis")
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
   const [backendReady, setBackendReady] = useState(false)
   const [error, setError] = useState("")
   const [isSubmitting, setSubmitting] = useState(false)
@@ -62,7 +62,9 @@ function LoginPage() {
           password,
         },
       })
-      setAccessToken(token.access_token)
+      setAccessToken(
+        typeof token.access_token === "string" ? token.access_token : "",
+      )
       await navigate({ to: "/" })
     } catch (caught) {
       const message =

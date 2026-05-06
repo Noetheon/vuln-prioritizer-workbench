@@ -85,6 +85,39 @@ def test_template_backend_health_check_matches_template_utility_route() -> None:
     assert response.json() is True
 
 
+def test_template_backend_http_errors_include_stable_envelope() -> None:
+    client = TestClient(app)
+
+    response = client.get("/api/v1/items/")
+
+    assert response.status_code == 404
+    payload = response.json()
+    assert payload["code"] == "not_found"
+    assert payload["message"] == "Not Found"
+    assert payload["details"] == {}
+    assert payload["detail"] == "Not Found"
+
+
+def test_template_backend_validation_errors_include_redacted_envelope() -> None:
+    selected_app = create_app(Settings(ENVIRONMENT="local"))
+
+    @selected_app.get("/debug/{item_id}")
+    def _debug_item(item_id: int) -> dict[str, int]:
+        return {"item_id": item_id}
+
+    client = TestClient(selected_app)
+
+    response = client.get("/debug/not-a-number")
+
+    assert response.status_code == 422
+    payload = response.json()
+    assert payload["code"] == "request_validation_failed"
+    assert payload["message"] == "Request validation failed."
+    assert "errors" in payload["details"]
+    assert "/Users/" not in response.text
+    assert "token" not in response.text.lower()
+
+
 def test_template_backend_allows_configured_frontend_cors_origin() -> None:
     client = TestClient(app)
 

@@ -156,7 +156,17 @@ def optional_upload_summary(
 def upload_summary_with_path(value: Any, *, path: str | None) -> dict[str, Any] | None:
     if not isinstance(value, dict):
         return None
-    return {**value, "path": path}
+    return {**value, "path": path, "storage_ref": path}
+
+
+def upload_storage_ref(
+    *,
+    project_id: uuid.UUID,
+    run_id: uuid.UUID,
+    filename: str,
+) -> str:
+    """Return the public managed upload reference without exposing server roots."""
+    return f"{project_id}/{run_id}/{sanitize_filename(filename)}"
 
 
 def store_upload(
@@ -200,6 +210,7 @@ def upload_summary(
         "size_bytes": size_bytes,
         "sha256": sha256,
         "path": path,
+        "storage_ref": path,
     }
 
 

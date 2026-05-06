@@ -1,14 +1,6 @@
 import { Link } from "@tanstack/react-router"
-import {
-  AlertTriangle,
-  CheckCircle2,
-  FileJson,
-  FileText,
-  History,
-  PackageCheck,
-  Upload,
-} from "lucide-react"
-import type { FormEventHandler, ReactNode } from "react"
+import { CheckCircle2, History, PackageCheck, Upload } from "lucide-react"
+import type { FormEventHandler } from "react"
 import type {
   AnalysisRunPublic,
   AnalysisRunSummaryPublic,
@@ -48,6 +40,7 @@ import {
   VpwToolbarGroup,
 } from "@/components/vpw"
 import { formatProviderFreshness } from "@/lib/provider-format"
+import { DEMO_MODE_ENABLED } from "@/lib/runtime-config"
 import { runStatusLabel, runStatusTone } from "@/lib/risk-format"
 
 export type SupportedImportFormat = {
@@ -121,7 +114,9 @@ function runFileLabel(run: {
   input_upload?: Record<string, unknown>
   summary_json?: Record<string, unknown>
 }) {
-  const upload = objectRecord(run.input_upload ?? run.summary_json?.input_upload)
+  const upload = objectRecord(
+    run.input_upload ?? run.summary_json?.input_upload,
+  )
   const uploadFilename = stringValue(upload.filename)
   return run.filename ?? uploadFilename ?? `${run.input_type} upload`
 }
@@ -210,7 +205,7 @@ function ImportHero({
   const providerSummary = providerStatus
     ? formatProviderFreshness(providerStatus)
     : null
-  const isDemo = !selectedProject
+  const isDemo = DEMO_MODE_ENABLED && !selectedProject
 
   return (
     <VpwSection>
@@ -314,7 +309,8 @@ function ImportWizard({
     },
     {
       title: "Validate and import",
-      description: "The backend validates format, parses input, and records run evidence.",
+      description:
+        "The backend validates format, parses input, and records run evidence.",
       status: importLoading ? "Running" : "Ready",
       statusTone: importLoading ? "info" : "neutral",
     },
@@ -489,7 +485,8 @@ function ImportWizard({
               {
                 label: "Unsupported formats",
                 value: "Rejected",
-                description: "Uploads must match the selected format and extension.",
+                description:
+                  "Uploads must match the selected format and extension.",
                 tone: "warning",
               },
               {
@@ -502,7 +499,8 @@ function ImportWizard({
               {
                 label: "Network activity",
                 value: "No scanning",
-                description: "The import wizard does not run probes or scanners.",
+                description:
+                  "The import wizard does not run probes or scanners.",
                 tone: "success",
               },
             ]}
@@ -550,10 +548,12 @@ function SupportedFormats({
           title="OpenVEX / VEX sidecar"
         >
           <div className="space-y-2">
-            <p>Optional VEX JSON sidecar attached to occurrence or SBOM imports.</p>
+            <p>
+              Optional VEX JSON sidecar attached to occurrence or SBOM imports.
+            </p>
             <p className="text-xs">
-              Expected: OpenVEX statements or CycloneDX VEX vulnerability
-              status data.
+              Expected: OpenVEX statements or CycloneDX VEX vulnerability status
+              data.
             </p>
           </div>
         </VpwSelectionCard>
@@ -575,7 +575,9 @@ function ImportResult({
   return (
     <VpwSection>
       <VpwSectionHeader
-        actions={<VpwBadge tone={runTone(status)}>{runStatusLabel(status)}</VpwBadge>}
+        actions={
+          <VpwBadge tone={runTone(status)}>{runStatusLabel(status)}</VpwBadge>
+        }
         description="Latest completed import result from the current session."
         title="Import Result"
       />
@@ -620,11 +622,7 @@ function ImportResult({
   )
 }
 
-function ParserErrors({
-  errors,
-}: {
-  errors: ImportParseErrorPublic[]
-}) {
+function ParserErrors({ errors }: { errors: ImportParseErrorPublic[] }) {
   if (errors.length === 0) return null
 
   const columns: VpwDataTableColumn<ImportParseErrorPublic>[] = [
@@ -646,7 +644,9 @@ function ParserErrors({
         columns={columns}
         data={errors}
         getRowKey={(error, index) =>
-          [error.filename, error.line, error.field, error.value, index].join(":")
+          [error.filename, error.line, error.field, error.value, index].join(
+            ":",
+          )
         }
       />
     </VpwSection>
@@ -697,12 +697,18 @@ function RecentImports({
     {
       id: "type",
       header: "Input type",
-      cell: (run) => <VpwBadge tone="info">{formatDisplayType(run.input_type)}</VpwBadge>,
+      cell: (run) => (
+        <VpwBadge tone="info">{formatDisplayType(run.input_type)}</VpwBadge>
+      ),
     },
     {
       id: "status",
       header: "Status",
-      cell: (run) => <VpwBadge tone={runTone(run.status)}>{runStatusLabel(run.status)}</VpwBadge>,
+      cell: (run) => (
+        <VpwBadge tone={runTone(run.status)}>
+          {runStatusLabel(run.status)}
+        </VpwBadge>
+      ),
     },
     {
       id: "findings",

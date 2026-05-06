@@ -83,7 +83,7 @@ def test_docker_demo_smoke_runs_quickstart_api_import() -> None:
     assert "providers/update-jobs" in script
 
 
-def test_frontend_nginx_serves_security_headers_for_static_and_404_routes() -> None:
+def test_frontend_nginx_serves_security_headers_and_same_origin_api_proxy() -> None:
     nginx_conf = Path("frontend/nginx.conf").read_text(encoding="utf-8")
     blocked_routes = Path("frontend/nginx-backend-not-found.conf").read_text(encoding="utf-8")
 
@@ -92,7 +92,9 @@ def test_frontend_nginx_serves_security_headers_for_static_and_404_routes() -> N
     assert "default-src 'self'" in nginx_conf
     assert "object-src 'none'" in nginx_conf
     assert "frame-ancestors 'none'" in nginx_conf
-    assert "connect-src 'self' http://localhost:8000 http://127.0.0.1:8000" in nginx_conf
+    assert "connect-src 'self';" in nginx_conf
+    assert "http://localhost:8000" not in nginx_conf
+    assert "http://127.0.0.1:8000" not in nginx_conf
     assert 'add_header X-Content-Type-Options "nosniff" always;' in nginx_conf
     assert 'add_header X-Frame-Options "DENY" always;' in nginx_conf
     assert 'add_header Referrer-Policy "same-origin" always;' in nginx_conf
@@ -103,4 +105,6 @@ def test_frontend_nginx_serves_security_headers_for_static_and_404_routes() -> N
     ) in nginx_conf
     assert "include /etc/nginx/extra-conf.d/*.conf;" in nginx_conf
     assert "location /api" in blocked_routes
+    assert "proxy_pass http://backend:8000;" in blocked_routes
+    assert "location /docs" in blocked_routes
     assert "return 404;" in blocked_routes

@@ -11,6 +11,7 @@ nav:
   - Executive Summary: executive_summary.md
   - Current Product State:
       - Product Architecture: architecture.md
+      - Dependency and Package Policy: dependency-and-package-policy.md
       - Scoring Methodology: scoring-methodology.md
       - ATT&CK/TTP Methodology: attack-ttp-methodology.md
       - Reports and Evidence: reports-and-evidence.md
@@ -41,8 +42,8 @@ nav:
       - Template Repository Layer: architecture/template-service-layer.md
       - Template Importer Contract: architecture/vpw-013-importer-contract.md
       - Parser and Provider Extension Strategy: extension_strategy.md
-  - Full Stack Template Migration: full_stack_fastapi_template_migration.md
-  - VPW Template Execution Sequence: vpw_template_execution_sequence.md
+  - Historical Full Stack Template Migration: full_stack_fastapi_template_migration.md
+  - Historical VPW Template Execution Sequence: vpw_template_execution_sequence.md
   - Use Cases: use_cases.md
   - Playbooks:
       - Overview: playbooks.md
@@ -57,6 +58,7 @@ nav:
   - Community Setup: community_repository_setup.md
   - CI Cost Optimization: ci-cost-optimization.md
   - Release Operations: release_operations.md
+  - Public-Production Release Evidence Ledger: public-production-release-evidence-ledger.md
   - Roadmap: roadmap.md
   - Workbench History:
       - v1.0 Release Checklist: workbench-v1-release-checklist.md

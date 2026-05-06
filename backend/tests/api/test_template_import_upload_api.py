@@ -85,7 +85,11 @@ def test_valid_cve_list_upload_creates_analysis_run_and_stores_sha256(
     assert payload["summary_json"]["input_upload"]["sha256"] == expected_sha256
     assert payload["summary_json"]["input_upload"]["original_filename"] == "Team Scan (prod).txt"
     assert payload["summary_json"]["input_upload"]["stored_filename"] == "Team_Scan__prod_.txt"
-    stored_path = Path(payload["summary_json"]["input_upload"]["path"])
+    stored_ref = payload["summary_json"]["input_upload"]["path"]
+    assert stored_ref == f"{project['id']}/{payload['id']}/Team_Scan__prod_.txt"
+    assert payload["summary_json"]["input_upload"]["storage_ref"] == stored_ref
+    assert not Path(stored_ref).is_absolute()
+    stored_path = upload_dir / stored_ref
     assert stored_path == upload_dir / project["id"] / payload["id"] / "Team_Scan__prod_.txt"
     assert stored_path.read_bytes() == content
     assert payload["summary_json"]["import_job"]["status"] == "succeeded"
@@ -171,7 +175,7 @@ def test_template_import_uses_demo_snapshot_without_network_or_keys(
     summary = payload["summary_json"]
     assert payload["status"] == "succeeded"
     assert summary["locked_provider_data"] is True
-    assert summary["provider_snapshot_file"].endswith("data/demo_provider_snapshot.json")
+    assert summary["provider_snapshot_file"] == "demo_provider_snapshot.json"
     assert summary["provider_snapshot_id"] == payload["provider_snapshot_id"]
     assert summary["finding_count"] > 0
     assert summary["kev_hits"] > 0
@@ -301,7 +305,7 @@ def test_decision_api_endpoints_expose_explain_summary_and_cvss_comparison(
     template_api_env: TemplateApiEnv,
     tmp_path: Path,
 ) -> None:
-    upload_dir = _configure_upload_dir(template_api_env, tmp_path)
+    _configure_upload_dir(template_api_env, tmp_path)
     headers = auth_headers(template_api_env.client)
     project = create_project_via_api(template_api_env.client, headers)
     content = b"CVE-2021-44228\nCVE-2024-3094\n"
@@ -314,7 +318,7 @@ def test_decision_api_endpoints_expose_explain_summary_and_cvss_comparison(
     )
     assert import_response.status_code == 200
     run_payload = import_response.json()
-    assert Path(run_payload["summary_json"]["input_upload"]["path"]).is_relative_to(upload_dir)
+    assert not Path(run_payload["summary_json"]["input_upload"]["path"]).is_absolute()
 
     findings_response = template_api_env.client.get(
         f"/api/v1/projects/{project['id']}/findings/",
@@ -550,8 +554,8 @@ def test_import_upload_applies_asset_context_sidecar_to_template_findings(
     sidecar_upload = payload["summary_json"]["asset_context_upload"]
     assert sidecar_upload["sha256"] == expected_sidecar_sha256
     assert sidecar_upload["stored_filename"] == "asset-context.csv"
-    assert Path(sidecar_upload["path"]).is_relative_to(upload_dir)
-    assert Path(sidecar_upload["path"]).read_bytes() == asset_context_csv
+    assert not Path(sidecar_upload["path"]).is_absolute()
+    assert (upload_dir / sidecar_upload["path"]).read_bytes() == asset_context_csv
     assert payload["summary_json"]["asset_context"]["loaded_rows"] == 1
     assert payload["summary_json"]["asset_context"]["matched_occurrences"] == 1
     assert payload["summary_json"]["dedup_summary"]["decisions"][0]["asset_ref"] == "asset-web-1"
@@ -681,8 +685,8 @@ def test_import_upload_applies_openvex_sidecar_to_template_findings(
     vex_upload = payload["summary_json"]["vex_upload"]
     assert vex_upload["sha256"] == expected_vex_sha256
     assert vex_upload["stored_filename"] == "openvex.json"
-    assert Path(vex_upload["path"]).is_relative_to(upload_dir)
-    assert Path(vex_upload["path"]).read_bytes() == vex_bytes
+    assert not Path(vex_upload["path"]).is_absolute()
+    assert (upload_dir / vex_upload["path"]).read_bytes() == vex_bytes
     assert payload["summary_json"]["vex"]["statement_count"] == 4
     assert payload["summary_json"]["vex"]["matched_occurrences"] == 1
     assert payload["summary_json"]["suppressed_by_vex"] == 1
@@ -721,7 +725,7 @@ def test_import_upload_applies_cyclonedx_vex_sidecar_to_template_findings(
     template_api_env: TemplateApiEnv,
     tmp_path: Path,
 ) -> None:
-    upload_dir = _configure_upload_dir(template_api_env, tmp_path)
+    _configure_upload_dir(template_api_env, tmp_path)
     headers = auth_headers(template_api_env.client)
     project = create_project_via_api(template_api_env.client, headers)
     occurrence_csv = "\n".join(
@@ -752,7 +756,7 @@ def test_import_upload_applies_cyclonedx_vex_sidecar_to_template_findings(
     vex_upload = payload["summary_json"]["vex_upload"]
     assert vex_upload["input_type"] == "vex-json"
     assert vex_upload["stored_filename"] == "cyclonedx-vex.json"
-    assert Path(vex_upload["path"]).is_relative_to(upload_dir)
+    assert not Path(vex_upload["path"]).is_absolute()
     assert payload["summary_json"]["vex"]["statement_count"] == 3
     assert payload["summary_json"]["vex"]["matched_occurrences"] == 2
     assert payload["summary_json"]["suppressed_by_vex"] == 2
@@ -806,6 +810,8 @@ def test_import_upload_rejects_invalid_vex_sidecar_with_clear_error(
     )
 
     assert response.status_code == 422, response.text
+    assert response.json()["code"] == "import_vex_parse_failed"
+    assert response.json()["details"]["analysis_run_id"]
     detail = response.json()["detail"]
     assert detail["message"] == "VEX parsing failed."
     assert detail["analysis_run_id"]
@@ -862,6 +868,8 @@ def test_import_upload_rejects_invalid_asset_context_sidecar_with_clear_error(
     )
 
     assert response.status_code == 422, response.text
+    assert response.json()["code"] == "import_asset_context_parse_failed"
+    assert response.json()["details"]["analysis_run_id"]
     detail = response.json()["detail"]
     assert detail["message"] == "Asset context parsing failed."
     assert detail["analysis_run_id"]
@@ -923,6 +931,8 @@ def test_analysis_failure_persists_failed_run_without_partial_findings(
     )
 
     assert response.status_code == 422
+    assert response.json()["code"] == "import_analysis_failed"
+    assert response.json()["details"]["analysis_run_id"]
     detail = response.json()["detail"]
     assert detail["message"] == "Import analysis failed."
     assert detail["analysis_error"]["stage"] == "enrich_score_explain"
@@ -986,6 +996,15 @@ def test_same_cve_on_different_assets_creates_distinct_findings(
     assert response.status_code == 200, response.text
     payload = response.json()
     assert payload["summary_json"]["finding_count"] == 2
+    assert payload["summary_json"]["analysis_semantics"] == {
+        "analysis_decision_scope": "cve",
+        "persistence_scope": "asset_component_occurrence",
+        "finding_dedup_key_version": "vpw019-v1",
+        "cve_count": 1,
+        "occurrence_count": 2,
+        "finding_count": 2,
+        "same_cve_can_create_distinct_asset_findings": True,
+    }
     assert payload["summary_json"]["dedup_summary"]["created_findings"] == 2
     assert {
         item["asset_ref"] for item in payload["summary_json"]["dedup_summary"]["decisions"]
@@ -1050,6 +1069,7 @@ def test_upload_rejects_oversized_file_without_persisting_run_or_file(
     )
 
     assert response.status_code == 413
+    assert response.json()["code"] == "upload_too_large"
     assert "Upload exceeds configured limit" in response.text
     assert _run_count(template_api_env, uuid.UUID(project["id"])) == 0
     assert not upload_dir.exists()
@@ -1236,6 +1256,7 @@ def test_parse_errors_are_structured_and_failed_run_is_persisted(
     )
 
     assert response.status_code == 422
+    assert response.json()["code"] == "import_parse_failed"
     detail = response.json()["detail"]
     assert detail["message"] == "Import parsing failed."
     assert detail["analysis_run_id"]
@@ -1266,8 +1287,9 @@ def test_parse_errors_are_structured_and_failed_run_is_persisted(
     _assert_no_sensitive_path_leak(payload["error_json"]["parse_errors"], tmp_path, upload_dir)
     _assert_no_sensitive_path_leak(payload["summary_json"]["parse_errors"], tmp_path, upload_dir)
     assert payload["summary_json"]["input_upload"]["sha256"] == expected_sha256
-    assert Path(payload["summary_json"]["input_upload"]["path"]).is_relative_to(upload_dir)
-    assert Path(payload["summary_json"]["input_upload"]["path"]).read_bytes() == content
+    upload_ref = payload["summary_json"]["input_upload"]["path"]
+    assert not Path(upload_ref).is_absolute()
+    assert (upload_dir / upload_ref).read_bytes() == content
 
     summary = template_api_env.client.get(
         f"/api/v1/runs/{detail['analysis_run_id']}/summary",

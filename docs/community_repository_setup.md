@@ -61,7 +61,8 @@ Avoid adding adjacent-but-misleading topics such as `scanner`, `siem`, `edr`, or
 
 ## Recommended Label Taxonomy
 
-Keep the label set small. The goal is routing and contributor clarity, not process theater.
+Keep the label set current with the GitHub repository taxonomy. The goal is
+routing and contributor clarity, not process theater.
 
 ### Core Type Labels
 
@@ -70,8 +71,10 @@ These should exist before opening the repo to wider contribution:
 | Label | Use when | Notes |
 | --- | --- | --- |
 | `bug` | behavior is incorrect, regressed, or broken | Already used by the bug issue template. |
-| `enhancement` | a scoped product improvement is requested | Already used by the feature request template. |
-| `documentation` | the main work is docs, examples, or guidance | Good candidate for low-risk external contributions. |
+| `type:feature` | a scoped product improvement is requested | Used by the feature request template. |
+| `type:docs` | the main work is docs, examples, or guidance | Good candidate for low-risk external contributions. |
+| `type:task` | engineering work without standalone user-facing value | Useful for roadmap and release-readiness tracking. |
+| `type:security` | security hardening, threat modeling, or secure defaults | Public disclosures still use `SECURITY.md`, not public issue details. |
 | `maintenance` | dependency, CI, release, packaging, or cleanup work | Use for repo upkeep that is not user-facing behavior. |
 
 ### Community Labels
@@ -83,28 +86,41 @@ These help contributors self-select:
 | `good first issue` | a newcomer can complete the work with clear file pointers and a local verification path | Do not use for provider, scoring, or ATT&CK design work unless the change is tightly bounded. |
 | `help wanted` | maintainers actively want outside help and expect to review a contribution | Remove it if the issue is blocked or already assigned. |
 
-### Minimal Triage Labels
+### Status Labels
 
-Add only the few status labels that reduce back-and-forth:
+Use `status:*` labels for tracker state:
 
 | Label | Use when | Notes |
 | --- | --- | --- |
-| `needs-repro` | a bug report is missing a concrete command, input shape, or output evidence | Prefer this over long clarification threads. |
-| `needs-decision` | the issue is valid, but a maintainer scope or product decision is still needed | Useful for roadmap-bound feature requests. |
-| `blocked` | work depends on an upstream change, external data issue, or another issue/PR | Remove it as soon as the blocker clears. |
+| `status:needs-revalidation` | reopened or duplicated work needs fresh evidence | Do not close from historical notes alone. |
+| `status:needs-review` | implementation or decision evidence needs review | Use after a PR or evidence comment is ready. |
+| `status:needs-tests` | implementation exists but test coverage is incomplete | Keep the issue open with a named test target. |
+| `status:needs-docs` | implementation exists but documentation is incomplete | Link the required docs path. |
+| `status:blocked` | work depends on an upstream change, external data issue, or another issue/PR | Remove it as soon as the blocker clears. |
+| `status:strict-dod` | explicit Definition of Done and evidence are required before closure | Use for public-production, release, and roadmap closeout work. |
+| `status:template-gap` | full-stack-template assumptions still need implementation or an approved decision | Use only where exact template alignment is still the issue. |
 | `duplicate` | another open or closed issue already tracks the same work | Close with a link to the canonical issue. |
 
 ### Area Labels
 
-This repository already uses a small `area:*` set. Keep that convention instead of introducing a second, competing scope taxonomy:
+This repository uses a scoped `area:*` set. Keep that convention instead of
+introducing a second, competing scope taxonomy:
 
-- `area:benchmarking`
-- `area:workflow`
-- `area:governance`
-- `area:release`
+- `area:core`
+- `area:parser`
+- `area:api`
+- `area:provider`
+- `area:ui`
+- `area:attack`
+- `area:report`
 - `area:docs`
+- `area:governance`
+- `area:ci`
+- `area:security`
 
-Do not create a public `security` issue label for vulnerability disclosures. Public issues should be rerouted to `SECURITY.md` instead of encouraging security reports in the issue tracker.
+Do not use public issue labels as a substitute for private vulnerability
+reporting. Public issues should be rerouted to `SECURITY.md` when they contain
+vulnerability disclosure detail.
 
 ### Automation Labels
 
@@ -115,6 +131,7 @@ If dependency automation is enabled, keep the bot-facing label set small and exp
 | `dependencies` | a PR updates one or more project dependencies | Use for both Python package updates and workflow/action bumps. |
 | `python` | a dependency or packaging change is Python-specific | Useful for pip / build / tooling updates. |
 | `github-actions` | a change only affects GitHub Actions workflows or referenced actions | Useful for workflow dependency bumps and runner-related maintenance. |
+| `type:frontend` plus `area:ui` | a dependency change affects the frontend npm workspace | Use for Dependabot npm updates; do not use the stale `frontend` label. |
 
 These are not a second issue-triage taxonomy. They mainly exist so Dependabot or maintainers can label automation PRs without overloading the public issue tracker.
 

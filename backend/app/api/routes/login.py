@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
+import secrets
 from datetime import timedelta
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fastapi.security import OAuth2PasswordRequestForm
 
-from app.api.deps import CurrentUser, SessionDep, TokenDep
+from app.api.deps import CurrentUser, SessionDep
 from app.core import security
 from app.core.config import Settings, settings
 from app.core.db import ensure_configured_superuser
@@ -23,15 +24,14 @@ router = APIRouter(tags=["login"])
 @router.post("/login/access-token")
 def login_access_token(
     request: Request,
+    response: Response,
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
     session: SessionDep,
 ) -> Token:
     """OAuth2 compatible token login for the configured template-shell user."""
     _enforce_login_rate_limit(request, form_data.username)
-    if (
-        form_data.username != settings.FIRST_SUPERUSER
-        or form_data.password != settings.FIRST_SUPERUSER_PASSWORD
-    ):
+    user = ensure_configured_superuser(session)
+    if not _credentials_are_valid(user, form_data.username, form_data.password):
         record_audit_event(
             session,
             action="login.failure",
@@ -45,7 +45,6 @@ def login_access_token(
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     expires_at = security.access_token_expires_at(access_token_expires)
     jti = security.new_token_jti()
-    user = ensure_configured_superuser(session)
     auth_session = AuthSessionRepository(session).create_auth_session(
         user_id=user.id,
         jti_hash=security.token_jti_digest(jti),
@@ -59,13 +58,23 @@ def login_access_token(
         actor=user,
     )
     session.commit()
+    access_token = security.create_access_token(
+        user.email,
+        expires_delta=access_token_expires,
+        expires_at=expires_at,
+        jti=jti,
+    )
+    csrf_token = security.create_csrf_token(jti)
+    _set_session_cookies(
+        request,
+        response,
+        access_token=access_token,
+        csrf_token=csrf_token,
+        max_age_seconds=int(access_token_expires.total_seconds()),
+    )
     return Token(
-        access_token=security.create_access_token(
-            settings.FIRST_SUPERUSER,
-            expires_delta=access_token_expires,
-            expires_at=expires_at,
-            jti=jti,
-        )
+        access_token=access_token,
+        csrf_token=csrf_token,
     )
 
 
@@ -98,13 +107,13 @@ def _enforce_login_rate_limit(request: Request, username: str) -> None:
 
 @router.post("/login/logout", response_model=UserPublic)
 def logout_current_token(
+    request: Request,
+    response: Response,
     session: SessionDep,
-    token: TokenDep,
     current_user: CurrentUser,
 ) -> User:
     """Revoke the active browser session token."""
-    payload = security.decode_access_token(token)
-    jti = payload.get("jti")
+    jti = getattr(request.state, "auth_jti", None)
     if isinstance(jti, str):
         auth_session = AuthSessionRepository(session).get_active_auth_session_by_hash(
             security.token_jti_digest(jti)
@@ -119,4 +128,55 @@ def logout_current_token(
                 actor=current_user,
             )
             session.commit()
+    _clear_session_cookies(response)
     return current_user
+
+
+def _credentials_are_valid(user: User, username: str, password: str) -> bool:
+    normalized_username = username.strip().lower()
+    normalized_email = user.email.strip().lower()
+    return secrets.compare_digest(
+        normalized_username.encode(),
+        normalized_email.encode(),
+    ) and security.verify_password(password, user.hashed_password)
+
+
+def _set_session_cookies(
+    request: Request,
+    response: Response,
+    *,
+    access_token: str,
+    csrf_token: str,
+    max_age_seconds: int,
+) -> None:
+    cookie_secure = _session_cookie_secure(request)
+    response.set_cookie(
+        security.SESSION_COOKIE_NAME,
+        access_token,
+        max_age=max_age_seconds,
+        path="/",
+        httponly=True,
+        secure=cookie_secure,
+        samesite="lax",
+    )
+    response.set_cookie(
+        security.CSRF_COOKIE_NAME,
+        csrf_token,
+        max_age=max_age_seconds,
+        path="/",
+        httponly=False,
+        secure=cookie_secure,
+        samesite="lax",
+    )
+
+
+def _clear_session_cookies(response: Response) -> None:
+    response.delete_cookie(security.SESSION_COOKIE_NAME, path="/")
+    response.delete_cookie(security.CSRF_COOKIE_NAME, path="/")
+
+
+def _session_cookie_secure(request: Request) -> bool:
+    active_settings = getattr(request.app.state, "template_settings", settings)
+    if isinstance(active_settings, Settings) and active_settings.ENVIRONMENT != "local":
+        return True
+    return request.url.scheme == "https"

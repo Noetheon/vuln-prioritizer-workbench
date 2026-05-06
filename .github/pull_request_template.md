@@ -12,9 +12,10 @@
 ## Scope
 
 - [ ] CLI/core
-- [ ] Template backend API
+- [ ] Workbench backend API
 - [ ] DB/migrations
 - [ ] Generated OpenAPI client
+- [ ] Manual frontend API wrapper
 - [ ] React frontend
 - [ ] Docker/Compose
 - [ ] Docs/governance/security
@@ -62,13 +63,14 @@ paste command output summary here
       exposed in code, logs, screenshots, reports, or docs
 - [ ] upload limits, rooted artifact paths, safe parsing, CSRF-sensitive forms,
       security headers, and token hashing are not weakened
-- [ ] public/shared Workbench readiness is not claimed without threat-model and
-      deployment-hardening updates
+- [ ] public-production Workbench readiness is not claimed before the PP5
+      scorecard closes with threat-model, deployment, release, and residual-risk
+      evidence
 
 ## Docs / Release Notes
 
 - [ ] README and changelog were updated if user-visible behavior changed
 - [ ] SECURITY/threat model/deployment docs were updated if a security boundary
       changed
-- [ ] removed Workbench runtime behavior is not used as automatic closure
-      evidence for active React/JWT/SQLModel work
+- [ ] historical template-era or removed Workbench runtime behavior is not used
+      as automatic closure evidence for active `backend/app` work

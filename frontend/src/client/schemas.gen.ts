@@ -4715,6 +4715,17 @@ export const TokenSchema = {
             title: 'Access Token',
             type: 'string'
         },
+        csrf_token: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Csrf Token'
+        },
         token_type: {
             default: 'bearer',
             title: 'Token Type',

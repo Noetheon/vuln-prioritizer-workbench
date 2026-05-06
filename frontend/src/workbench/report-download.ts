@@ -13,16 +13,22 @@ export function reportDownloadUrl(
   return normalizedBaseUrl ? `${normalizedBaseUrl}${path}` : path
 }
 
-export function reportDownloadHeaders(token: string): HeadersInit | undefined {
-  return token ? { Authorization: `Bearer ${token}` } : undefined
+export function reportDownloadHeaders(token = ""): HeadersInit | undefined {
+  if (token) {
+    const headers = new Headers()
+    headers.set("Authorization", `Bearer ${token}`)
+    return headers
+  }
+  return undefined
 }
 
 export function reportDownloadRequest(
   report: Pick<ReportPublic, "id">,
-  token: string,
+  token = "",
   baseUrl = "",
 ) {
   return {
+    credentials: "include" as const,
     headers: reportDownloadHeaders(token),
     url: reportDownloadUrl(report, baseUrl),
   }

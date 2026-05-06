@@ -56,7 +56,7 @@ runbook covers import, locked provider replay, findings review, provider
 freshness, reports, evidence bundles, screenshot capture, fallback artifacts,
 and no-secret rules.
 
-The active browser Workbench uses the template backend under `backend/app` and
+The active browser Workbench uses the backend runtime under `backend/app` and
 the generated `/api/v1` browser client:
 
 ```bash

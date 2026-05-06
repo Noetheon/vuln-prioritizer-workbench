@@ -18,6 +18,7 @@ from vuln_prioritizer.config import DEFAULT_CACHE_TTL_HOURS
 from vuln_prioritizer.inputs.loader import InputSpec
 from vuln_prioritizer.models import AnalysisContext, PrioritizedFinding, PriorityPolicy
 from vuln_prioritizer.provider_snapshot import load_provider_snapshot
+from vuln_prioritizer.security_redaction import redact_value
 from vuln_prioritizer.services.analysis import (
     AnalysisInputError,
     AnalysisNoFindingsError,
@@ -48,7 +49,7 @@ class TemplateAnalysisResult:
     @property
     def summary_json(self) -> dict[str, Any]:
         """Return run-summary fields that prove enrichment, scoring, and explanation."""
-        return {
+        summary = {
             "analysis_service": {
                 "pipeline": "parse-persist-enrich-score-explain",
                 "engine": "vuln_prioritizer.prepare_analysis",
@@ -57,7 +58,7 @@ class TemplateAnalysisResult:
             if self.provider_snapshot_id is not None
             else None,
             "provider_snapshot_hash": self.provider_snapshot_hash,
-            "provider_snapshot_file": self.provider_snapshot_file,
+            "provider_snapshot_file": _public_path_label(self.provider_snapshot_file),
             "locked_provider_data": self.locked_provider_data,
             "findings_count": self.context.findings_count,
             "counts_by_priority": _counts_by_priority(self.context.counts_by_priority),
@@ -68,9 +69,11 @@ class TemplateAnalysisResult:
             "attack_enabled": self.context.attack_enabled,
             "attack_source": self.context.attack_source,
             "attack_mapped_cves": self.context.attack_hits,
-            "attack_mapping_file": self.context.attack_mapping_file,
+            "attack_mapping_file": _public_path_label(self.context.attack_mapping_file),
             "attack_mapping_file_sha256": self.context.attack_mapping_file_sha256,
-            "attack_technique_metadata_file": self.context.attack_technique_metadata_file,
+            "attack_technique_metadata_file": _public_path_label(
+                self.context.attack_technique_metadata_file
+            ),
             "attack_technique_metadata_file_sha256": (
                 self.context.attack_technique_metadata_file_sha256
             ),
@@ -82,6 +85,8 @@ class TemplateAnalysisResult:
             "under_investigation_count": self.context.under_investigation_count,
             "vex_conflict_count": self.context.vex_conflict_count,
         }
+        redacted, _paths = redact_value(summary)
+        return redacted if isinstance(redacted, dict) else summary
 
 
 class AnalysisService:
@@ -258,6 +263,12 @@ class AnalysisService:
 
 def _file_sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _public_path_label(value: str | Path | None) -> str | None:
+    if value is None:
+        return None
+    return Path(value).name
 
 
 def _counts_by_priority(raw_counts: dict[str, int]) -> dict[str, int]:

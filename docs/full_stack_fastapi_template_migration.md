@@ -1,14 +1,19 @@
 # Full Stack FastAPI Template Migration Plan
 
-## Decision
+Status: historical migration plan and current-state reference. The active
+Workbench runtime is now `backend/app`; this document is retained to explain why
+the migration happened and which boundaries must stay preserved. Do not use this
+page by itself as completion evidence for reopened roadmap issues.
 
-The Workbench migration should restart from the official
+## Historical Decision
+
+The Workbench migration restarted from the official
 `fastapi/full-stack-fastapi-template` baseline instead of continuing to reshape
 the previous second Workbench runtime in place.
 
-The current repository remains valuable as the domain engine. The migration target
-is a template-based full-stack application that reuses the existing
-`vuln_prioritizer` CLI/core logic behind a new backend and frontend.
+The retained repository domain engine remains valuable. The implemented runtime
+now reuses the existing `vuln_prioritizer` CLI/core logic through the active
+`backend/app` backend and React frontend.
 
 ## Why This Direction
 
@@ -24,9 +29,10 @@ bundles, but not the actual template shape:
 - no SQLModel domain model layer
 - no generated frontend client workflow on `main`
 
-Trying to mutate that tree directly would mix two application architectures. The
-cleaner path is to preserve the domain code and build the Workbench shell from
-the template. Current implementation progress is tracked below.
+Trying to mutate that tree directly would have mixed two application
+architectures. The cleaner path was to preserve the domain code and build the
+Workbench shell from the template. The current implementation state is tracked
+below.
 
 ## Target Architecture
 
@@ -77,9 +83,9 @@ Runtime-specific web/API/database packages are not part of the retained core.
 New shared logic should be extracted into the neutral modules above before it is
 used by both the CLI and active backend.
 
-## Branch Strategy
+## Historical Branch Strategy
 
-Use stacked PRs from clean `main`.
+The migration used stacked PRs from clean `main`.
 
 - `template/full-stack-fastapi-template-13652b5`: pinned local reference branch
   for the official template snapshot
@@ -97,10 +103,8 @@ Do not merge the official template history into `main` as one giant
 unrelated-history merge. Keep the template snapshot reproducible and move the app
 in small reviewable PRs.
 
-## Migration Rules
+## Migration Rules Preserved As Current Guardrails
 
-- Keep the current `main` branch intact until the template branch passes baseline
-  checks.
 - One roadmap issue per PR unless a dependency group is explicitly documented.
 - Treat historical implementation notes as source material, not as automatic
   completion evidence.
@@ -111,7 +115,7 @@ in small reviewable PRs.
 - Keep provider tests offline and fixture-based.
 - Do not regress CLI/core contracts while moving code.
 
-## First Implementation PRs
+## Historical First Implementation PRs
 
 1. `VPW-001`: create a template baseline branch from the official template and
    record baseline evidence.

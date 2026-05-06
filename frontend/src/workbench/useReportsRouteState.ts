@@ -28,7 +28,10 @@ type UseReportsRouteStateOptions = {
 
 async function downloadReportArtifact(report: ReportPublic) {
   const request = reportDownloadRequest(report, getAccessToken(), OpenAPI.BASE)
-  const response = await fetch(request.url, { headers: request.headers })
+  const response = await fetch(request.url, {
+    credentials: request.credentials,
+    headers: request.headers,
+  })
   if (!response.ok) {
     let detail = ""
     try {
@@ -77,6 +80,7 @@ export function useReportsRouteState({
 
   useEffect(() => {
     let isMounted = true
+    void reportsReloadKey
 
     async function loadRunReports() {
       if (currentPath !== "/reports" || !selectedRunId) {

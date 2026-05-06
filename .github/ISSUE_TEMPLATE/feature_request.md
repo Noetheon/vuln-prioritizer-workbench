@@ -23,7 +23,7 @@ Describe the smallest useful version of the feature.
 Target surface:
 
 - [ ] CLI/core
-- [ ] Template backend API
+- [ ] Workbench backend API
 - [ ] SQLModel/Alembic persistence
 - [ ] React frontend
 - [ ] Import/parser
@@ -38,7 +38,7 @@ Target surface:
       probing, credential testing, autopatching, or offensive guidance
 - [ ] this does not require heuristic or LLM-generated CVE-to-ATT&CK mapping
 - [ ] this does not claim public/shared Workbench readiness without explicit
-      threat-model and deployment-hardening work
+      threat-model, deployment, release-readiness, and residual-risk evidence
 
 ## Tests
 
@@ -60,6 +60,8 @@ What simpler approaches were considered?
 - [ ] Tests or evidence artifacts are named before implementation.
 - [ ] API, DB, generated-client, UI, docs, and security impacts are identified.
 - [ ] Residual risk and follow-up work are documented.
+- [ ] Public-production readiness is not claimed unless PP5 release-readiness
+      evidence and the final scorecard issue support it.
 
 ## Evidence
 

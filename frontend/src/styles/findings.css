@@ -84,12 +84,14 @@
   gap: 10px;
 }
 
+/* biome-ignore lint/style/noDescendingSpecificity: service-list selectors target a separate finding summary block. */
 .governance-service-list strong {
   overflow-wrap: anywhere;
   color: #0f766e;
   font-size: 0.95rem;
 }
 
+/* biome-ignore lint/style/noDescendingSpecificity: service-list selectors target a separate finding summary block. */
 .governance-service-list span {
   color: #111827;
   font-size: 0.84rem;

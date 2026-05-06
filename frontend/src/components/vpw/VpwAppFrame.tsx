@@ -33,7 +33,7 @@ export function VpwAppFrame({
   navItems,
   statusItems = [],
   title,
-  userLabel = "admin@example.com",
+  userLabel = "Workbench user",
 }: VpwAppFrameProps) {
   return (
     <div className="grid min-h-[34rem] overflow-hidden rounded-[var(--vpw-radius-xl)] border border-[var(--vpw-border-default)] bg-[var(--vpw-bg-app)] shadow-[var(--vpw-shadow-3)] lg:grid-cols-[248px_1fr]">

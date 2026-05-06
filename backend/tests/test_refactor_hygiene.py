@@ -447,3 +447,17 @@ def test_sdist_manifest_excludes_partial_test_tree() -> None:
     manifest = (ROOT / "MANIFEST.in").read_text(encoding="utf-8")
 
     assert "prune tests" in manifest
+
+
+def test_backend_package_boundary_intentionally_ships_workbench_app() -> None:
+    pyproject = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
+    package_check = (ROOT.parent / "scripts" / "check_package_contents.py").read_text(
+        encoding="utf-8"
+    )
+    makefile = (ROOT.parent / "Makefile").read_text(encoding="utf-8")
+
+    assert 'include = ["vuln_prioritizer*", "app*"]' in pyproject
+    assert "app/main.py" in package_check
+    assert "vuln_prioritizer/cli.py" in package_check
+    assert "package-contents-check: package" in makefile
+    assert "package-check: package-contents-check" in makefile

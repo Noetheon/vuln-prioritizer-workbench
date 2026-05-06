@@ -18,12 +18,12 @@ The extension policy is intentionally conservative:
 
 There are two parser-facing contracts:
 
-- Template Workbench upload importers implement
+- Workbench upload importers implement
   `app.importers.contracts.Importer`.
 - CLI/input-loader extensions use
   `vuln_prioritizer.inputs.sdk.InputParserDefinition`.
 
-Template Workbench importers must expose:
+Workbench importers must expose:
 
 - `input_type`: a stable, lowercase Workbench input type
 - `parse(payload, *, filename=None)`: deterministic parsing from bytes or text

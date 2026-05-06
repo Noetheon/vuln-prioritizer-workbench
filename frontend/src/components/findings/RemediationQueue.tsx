@@ -63,6 +63,7 @@ import {
   VpwStatusBanner,
 } from "@/components/vpw"
 import { DEMO_FINDINGS, DEMO_PROJECT, DEMO_SUMMARY } from "@/lib/demo-data"
+import { DEMO_MODE_ENABLED } from "@/lib/runtime-config"
 import { formatLabel as labelize, optionalText } from "@/lib/ui-copy"
 import { cn } from "@/lib/utils"
 import { FindingsDataTable, type QueueSort } from "./FindingsDataTable"
@@ -203,14 +204,6 @@ function serviceLabel(f: FindingPublic) {
 
 function ownerLabel(f: FindingPublic) {
   return f.owner ?? f.business_service ?? "Unassigned"
-}
-
-function findingWhyNow(f: FindingPublic) {
-  return (
-    optionalText(f.rationale) ??
-    optionalText(f.recommended_action) ??
-    "No priority rationale has been recorded yet."
-  )
 }
 
 function dateSortValue(value: string | null | undefined) {
@@ -587,7 +580,8 @@ export function RemediationQueue({
   const [advancedFiltersOpen, setAdvancedFiltersOpen] = useState(false)
   const [queueSort, setQueueSort] = useState<QueueSort>(findingSort)
 
-  const isDemo = projects.length === 0 && !projectListLoading
+  const isDemo =
+    DEMO_MODE_ENABLED && projects.length === 0 && !projectListLoading
   const sourceFindings = isDemo ? DEMO_FINDINGS : findings
   const displayFindings =
     isDemo || !isApiSort(queueSort)

@@ -2,13 +2,10 @@ import { Link } from "@tanstack/react-router"
 import {
   AlertTriangle,
   CalendarClock,
-  CheckCircle2,
   ClipboardCheck,
   FileCheck2,
   RefreshCw,
-  ShieldAlert,
   ShieldCheck,
-  UserCheck,
 } from "lucide-react"
 import type { FormEventHandler } from "react"
 import type {
@@ -187,7 +184,9 @@ function reviewQueue(
         id: item.id,
         owner: item.owner,
         reason: `${statusLabel(item.status)} waiver affecting ${item.matched_findings ?? 0} finding(s).`,
-        reviewDate: item.review_at ? formatDate(item.review_at) : formatDate(item.expires_at),
+        reviewDate: item.review_at
+          ? formatDate(item.review_at)
+          : formatDate(item.expires_at),
         scope: debtScopeLabel(item),
         status: statusLabel(item.status),
         statusTone: statusTone(item.status),
@@ -196,13 +195,18 @@ function reviewQueue(
 
   return waivers
     .slice()
-    .sort((left, right) => (left.days_remaining ?? 9999) - (right.days_remaining ?? 9999))
+    .sort(
+      (left, right) =>
+        (left.days_remaining ?? 9999) - (right.days_remaining ?? 9999),
+    )
     .slice(0, 4)
     .map((waiver) => ({
       id: waiver.id,
       owner: waiver.owner,
       reason: waiver.reason,
-      reviewDate: waiver.review_at ? formatDate(waiver.review_at) : formatDate(waiver.expires_at),
+      reviewDate: waiver.review_at
+        ? formatDate(waiver.review_at)
+        : formatDate(waiver.expires_at),
       scope: waiverScopeLabel(waiver),
       status: statusLabel(waiver.status),
       statusTone: statusTone(waiver.status),
@@ -223,31 +227,36 @@ function timelineItems({
   return [
     {
       title: "Created",
-      description: "Risk acceptance starts only after scope, owner, reason and expiry are recorded.",
+      description:
+        "Risk acceptance starts only after scope, owner, reason and expiry are recorded.",
       meta: "Required",
       tone: "success",
     },
     {
       title: "Approved",
-      description: "Approval references or ticket URLs make accepted risk auditable in reports.",
+      description:
+        "Approval references or ticket URLs make accepted risk auditable in reports.",
       meta: `${acceptedFindings} accepted finding(s)`,
       tone: "success",
     },
     {
       title: "Review due",
-      description: "Owner review keeps accepted risk visible before it becomes stale.",
+      description:
+        "Owner review keeps accepted risk visible before it becomes stale.",
       meta: `${reviewDue} due`,
       tone: Number(reviewDue) > 0 ? "warning" : "neutral",
     },
     {
       title: "Expiring",
-      description: "Waivers close to expiry should be remediated, renewed, or explicitly re-approved.",
+      description:
+        "Waivers close to expiry should be remediated, renewed, or explicitly re-approved.",
       meta: `${expiringSoon} soon`,
       tone: Number(expiringSoon) > 0 ? "warning" : "neutral",
     },
     {
       title: "Expired",
-      description: "Expired accepted risk should return to normal remediation pressure.",
+      description:
+        "Expired accepted risk should return to normal remediation pressure.",
       meta: `${expired} expired`,
       tone: Number(expired) > 0 ? "critical" : "neutral",
     },
@@ -275,7 +284,9 @@ export function WaiversWorkbench({
   waiversError,
   waiversLoading,
 }: WaiversWorkbenchProps) {
-  const activeWaivers = waivers.filter((waiver) => waiver.status === "active").length
+  const activeWaivers = waivers.filter(
+    (waiver) => waiver.status === "active",
+  ).length
   const expiringSoon = summaryValue(waiverDebtSummary, "Expiring soon")
   const expired = summaryValue(waiverDebtSummary, "Expired")
   const reviewDue = summaryValue(waiverDebtSummary, "Review due")
@@ -296,7 +307,9 @@ export function WaiversWorkbench({
             {waiver.cve_id ?? "Scoped waiver"}
           </strong>
           <span className="font-mono text-xs text-[var(--vpw-text-muted)]">
-            {waiver.finding_id ? `Finding ${shortId(waiver.finding_id)}` : `Waiver ${shortId(waiver.id)}`}
+            {waiver.finding_id
+              ? `Finding ${shortId(waiver.finding_id)}`
+              : `Waiver ${shortId(waiver.id)}`}
           </span>
         </div>
       ),
@@ -330,7 +343,9 @@ export function WaiversWorkbench({
       className: "w-[9%]",
       headerClassName: "w-[9%]",
       cell: (waiver) => (
-        <VpwBadge tone={statusTone(waiver.status)}>{statusLabel(waiver.status)}</VpwBadge>
+        <VpwBadge tone={statusTone(waiver.status)}>
+          {statusLabel(waiver.status)}
+        </VpwBadge>
       ),
     },
     {
@@ -370,7 +385,10 @@ export function WaiversWorkbench({
         <div className="flex flex-wrap gap-2">
           {waiver.finding_id ? (
             <Button asChild size="sm" variant="outline">
-              <Link to="/findings/$findingId" params={{ findingId: waiver.finding_id }}>
+              <Link
+                to="/findings/$findingId"
+                params={{ findingId: waiver.finding_id }}
+              >
                 View finding
               </Link>
             </Button>
@@ -447,7 +465,9 @@ export function WaiversWorkbench({
               <VpwBadge tone={Number(expired) > 0 ? "critical" : "neutral"}>
                 Expired: {expired}
               </VpwBadge>
-              <VpwBadge tone={projectSummary?.latest_run_id ? "success" : "neutral"}>
+              <VpwBadge
+                tone={projectSummary?.latest_run_id ? "success" : "neutral"}
+              >
                 Evidence {projectSummary?.latest_run_id ? "ready" : "pending"}
               </VpwBadge>
             </VpwToolbarGroup>
@@ -678,22 +698,47 @@ export function WaiversWorkbench({
             eyebrow="Safety rules"
             title="Governance guidance"
           />
-          <VpwStatusBanner title="Owner, reason and expiry are required" tone="warning">
-            Waivers should document why risk is accepted and when it must be revisited.
+          <VpwStatusBanner
+            title="Owner, reason and expiry are required"
+            tone="warning"
+          >
+            Waivers should document why risk is accepted and when it must be
+            revisited.
           </VpwStatusBanner>
           <VpwStatusBanner title="Accepted risk stays visible" tone="info">
-            Reports should continue to show accepted findings instead of hiding them silently.
+            Reports should continue to show accepted findings instead of hiding
+            them silently.
           </VpwStatusBanner>
-          <VpwStatusBanner title="Critical findings still need review" tone="critical">
-            A waiver is an explicit decision record, not a remediation replacement.
+          <VpwStatusBanner
+            title="Critical findings still need review"
+            tone="critical"
+          >
+            A waiver is an explicit decision record, not a remediation
+            replacement.
           </VpwStatusBanner>
           <VpwKeyValueList
             columns={2}
             items={[
-              { label: "Active project", value: selectedProject?.name ?? "No project" },
-              { label: "Latest run", value: projectSummary?.latest_run_id ? shortId(projectSummary.latest_run_id) : "No run yet" },
-              { label: "Evidence completeness", value: `${completeness}%`, tone: completeness >= 80 ? "success" : "warning" },
-              { label: "Review due", value: reviewDue, tone: Number(reviewDue) > 0 ? "warning" : "neutral" },
+              {
+                label: "Active project",
+                value: selectedProject?.name ?? "No project",
+              },
+              {
+                label: "Latest run",
+                value: projectSummary?.latest_run_id
+                  ? shortId(projectSummary.latest_run_id)
+                  : "No run yet",
+              },
+              {
+                label: "Evidence completeness",
+                value: `${completeness}%`,
+                tone: completeness >= 80 ? "success" : "warning",
+              },
+              {
+                label: "Review due",
+                value: reviewDue,
+                tone: Number(reviewDue) > 0 ? "warning" : "neutral",
+              },
             ]}
           />
           <VpwProgress
@@ -707,7 +752,12 @@ export function WaiversWorkbench({
       <VpwSection>
         <VpwSectionHeader
           actions={
-            <Button onClick={onRefreshWaivers} size="sm" type="button" variant="outline">
+            <Button
+              onClick={onRefreshWaivers}
+              size="sm"
+              type="button"
+              variant="outline"
+            >
               <RefreshCw aria-hidden="true" className="h-4 w-4" />
               Refresh
             </Button>

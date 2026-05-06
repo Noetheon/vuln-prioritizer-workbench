@@ -33,6 +33,7 @@ import {
   DEMO_TOP_SERVICES,
 } from "@/lib/demo-data"
 import { formatProviderFreshness } from "@/lib/provider-format"
+import { DEMO_MODE_ENABLED } from "@/lib/runtime-config"
 import { ErrorState } from "../states"
 import { DashboardDemoBanner, DashboardSetupEmptyState } from "./DashboardEmptyState"
 import { DashboardHero } from "./DashboardHero"
@@ -115,10 +116,11 @@ export function RiskOperationsDashboard({
     selectedRunRange: "10",
   })
 
-  // ── Demo preview mode ────────────────────────────────────────────────────
-  // Active only when no real project is connected. A labeled banner is shown.
   const isDemoMode =
-    !projectListLoading && projects.length === 0 && !dashboardError
+    DEMO_MODE_ENABLED &&
+    !projectListLoading &&
+    projects.length === 0 &&
+    !dashboardError
 
   const effectiveProjects = isDemoMode ? [DEMO_PROJECT] : projects
   const effectiveSelectedProject = isDemoMode ? DEMO_PROJECT : selectedProject

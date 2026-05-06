@@ -4,15 +4,15 @@ This roadmap records the release line implemented from the ATT&CK-focused `v0.3.
 
 The product remains a CLI and local Workbench for prioritizing known CVEs and imported findings. It is not a scanner and does not use heuristic or AI-generated CVE-to-ATT&CK mappings.
 
-## Current VPW Template Roadmap
+## Current VPW Public-Production Track
 
-The active duplicate VPW cycle is now tracked as a template-first execution
-track, summarized in the repository-root `ROADMAP.md`. It starts with
-FastAPI Full Stack Template baseline and governance work, then replaces demo
-Items with Workbench Projects and Findings, rebuilds import/enrichment/scoring
-APIs behind SQLModel/Alembic, and finally restores the React Workbench workflow,
-evidence, reporting, ATT&CK, asset, VEX, governance, deployment, release, and
-integration slices.
+The active duplicate VPW cycle is now tracked as a public-production remediation
+track, summarized in the repository-root `ROADMAP.md`. It starts from the
+implemented `backend/app` FastAPI runtime, retained CLI/core package, React
+frontend, generated-client boundary, and release automation. Current work aligns
+security/deployment docs, package and dependency policy, issue-template
+taxonomy, evidence/archive boundaries, generated-client ownership, release
+readiness gates, and the final PP5 scorecard.
 
 Strict DoD evidence remains required for every VPW issue: scoped PR, commands
 run, artifacts or screenshots where relevant, residual risks, and follow-up

@@ -1,17 +1,5 @@
-import { expect, type Page, test } from "@playwright/test"
-
-async function login(page: Page): Promise<string> {
-  await page.goto("/login")
-  await page.getByLabel("Email").fill("admin@example.com")
-  await page.getByLabel("Password").fill("changethis")
-  await page.getByRole("button", { name: "Sign in" }).click()
-  await expect(page).toHaveURL(/\/$/)
-  const accessToken = await page.evaluate(() =>
-    window.localStorage.getItem("access_token"),
-  )
-  expect(accessToken).toBeTruthy()
-  return accessToken ?? ""
-}
+import { expect, test } from "@playwright/test"
+import { authHeaders, login } from "./auth-helpers"
 
 test("smoke: dashboard renders", async ({ page }) => {
   test.setTimeout(30_000)
@@ -77,7 +65,7 @@ test("smoke: sign out revokes the active session", async ({ page }) => {
   const response = await page.request.get(
     "http://127.0.0.1:8000/api/v1/users/me",
     {
-      headers: { Authorization: `Bearer ${accessToken}` },
+      headers: authHeaders(accessToken),
     },
   )
   expect(response.status()).toBe(403)

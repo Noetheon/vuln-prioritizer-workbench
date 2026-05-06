@@ -1,4 +1,5 @@
 import { Link, useLocation, useNavigate } from "@tanstack/react-router"
+import { useQueryClient } from "@tanstack/react-query"
 import {
   Activity,
   AlertTriangle,
@@ -38,14 +39,9 @@ import {
   ProjectsService,
   type ProviderSourceStatusPublic,
   type ProviderStatusPublic,
-  ProvidersService,
   RunsService,
-  type UserPublic,
-  UsersService,
   type WaiverPublic,
   WaiversService,
-  WorkbenchService,
-  type WorkbenchStatus,
 } from "../api-client"
 import { clearAccessToken } from "../auth"
 import { ProductAppShell, type WorkbenchPath } from "../components/app/AppShell"
@@ -116,7 +112,12 @@ import {
   waiverRequestBody,
   waiverScopeLabel,
 } from "../lib/waiver-view"
+import { DEMO_MODE_ENABLED } from "../lib/runtime-config"
 import { useReportsRouteState } from "./useReportsRouteState"
+import {
+  useWorkbenchBootstrapQuery,
+  workbenchBootstrapQueryKey,
+} from "./useWorkbenchBootstrapQuery"
 
 const RiskOperationsDashboard = lazy(() =>
   import("../components/dashboard/RiskOperationsDashboard").then((module) => ({
@@ -166,9 +167,7 @@ const WaiversWorkbench = lazy(() =>
 
 const SELECTED_PROJECT_STORAGE_KEY = "vpw.selectedProjectId"
 
-type SelectedProjectIdUpdate =
-  | string
-  | ((previousProjectId: string) => string)
+type SelectedProjectIdUpdate = string | ((previousProjectId: string) => string)
 
 function readStoredSelectedProjectId() {
   if (typeof window === "undefined") {
@@ -627,13 +626,22 @@ export function WorkbenchShell({
     ? findingSearchParams.get("assetKey")
     : null
   const routeDetail = routeDetails[currentPath]
-  const [status, setStatus] = useState<WorkbenchStatus | null>(null)
-  const [providerStatus, setProviderStatus] =
-    useState<ProviderStatusPublic | null>(null)
-  const [providerStatusLoading, setProviderStatusLoading] = useState(true)
-  const [providerStatusError, setProviderStatusError] = useState("")
-  const [currentUser, setCurrentUser] = useState<UserPublic | null>(null)
-  const [statusError, setStatusError] = useState("")
+  const queryClient = useQueryClient()
+  const handleAuthExpired = useCallback(async () => {
+    clearAccessToken()
+    await navigate({ to: "/login" })
+  }, [navigate])
+  const bootstrapQuery = useWorkbenchBootstrapQuery()
+  const bootstrapError = bootstrapQuery.error
+  const status = bootstrapQuery.data?.status ?? null
+  const providerStatus = bootstrapQuery.data?.providerStatus ?? null
+  const currentUser = bootstrapQuery.data?.currentUser ?? null
+  const providerStatusLoading =
+    bootstrapQuery.isLoading || bootstrapQuery.isFetching
+  const statusError = bootstrapQuery.isError ? "Data services unavailable" : ""
+  const providerStatusError = bootstrapQuery.isError
+    ? apiErrorMessage("Provider status unavailable", bootstrapError)
+    : ""
   const [apiTokens, setApiTokens] = useState<ApiTokenPublic[]>([])
   const [apiTokensLoading, setApiTokensLoading] = useState(false)
   const [apiTokenActionLoading, setApiTokenActionLoading] = useState(false)
@@ -714,10 +722,6 @@ export function WorkbenchShell({
   const [runDetailError, setRunDetailError] = useState("")
   const selectedReportRun =
     projectRuns.find((run) => run.id === selectedRunId) ?? null
-  const handleAuthExpired = useCallback(async () => {
-    clearAccessToken()
-    await navigate({ to: "/login" })
-  }, [navigate])
   const {
     activeReportFormat,
     createReport,
@@ -849,48 +853,13 @@ export function WorkbenchShell({
   }, [currentPath])
 
   useEffect(() => {
-    let isMounted = true
-
-    async function loadTemplateState() {
-      setProviderStatusLoading(true)
-      try {
-        const [workbenchStatus, providerStatusResponse, user] =
-          await Promise.all([
-            WorkbenchService.templateWorkbenchStatus(),
-            ProvidersService.readProviderStatus(),
-            UsersService.readUserMe(),
-          ])
-        if (isMounted) {
-          setStatus(workbenchStatus)
-          setProviderStatus(providerStatusResponse)
-          setCurrentUser(user)
-          setStatusError("")
-          setProviderStatusError("")
-        }
-      } catch (caught) {
-        if (caught instanceof ApiError && [401, 403].includes(caught.status)) {
-          clearAccessToken()
-          await navigate({ to: "/login" })
-          return
-        }
-        if (isMounted) {
-          setStatusError("Data services unavailable")
-          setProviderStatusError(
-            apiErrorMessage("Provider status unavailable", caught),
-          )
-        }
-      } finally {
-        if (isMounted) {
-          setProviderStatusLoading(false)
-        }
-      }
+    if (
+      bootstrapError instanceof ApiError &&
+      [401, 403].includes(bootstrapError.status)
+    ) {
+      void handleAuthExpired()
     }
-
-    void loadTemplateState()
-    return () => {
-      isMounted = false
-    }
-  }, [navigate])
+  }, [bootstrapError, handleAuthExpired])
 
   useEffect(() => {
     let isMounted = true
@@ -936,7 +905,7 @@ export function WorkbenchShell({
     return () => {
       isMounted = false
     }
-  }, [navigate])
+  }, [navigate, setSelectedProjectId])
 
   useEffect(() => {
     let isMounted = true
@@ -972,6 +941,7 @@ export function WorkbenchShell({
 
   useEffect(() => {
     let isMounted = true
+    void apiTokensReloadKey
 
     async function loadApiTokens() {
       if (currentPath !== "/settings") {
@@ -1025,6 +995,7 @@ export function WorkbenchShell({
 
   useEffect(() => {
     let isMounted = true
+    void waiverReloadKey
 
     async function loadProjectSummary() {
       if (!selectedProjectId) {
@@ -1114,6 +1085,7 @@ export function WorkbenchShell({
 
   useEffect(() => {
     let isMounted = true
+    void waiverReloadKey
 
     async function loadProjectGovernanceRollups() {
       if (!selectedProjectId) {
@@ -1260,6 +1232,7 @@ export function WorkbenchShell({
 
   useEffect(() => {
     let isMounted = true
+    void waiverReloadKey
 
     async function loadProjectWaivers() {
       if (!isWaiversPage || !selectedProjectId) {
@@ -1303,6 +1276,7 @@ export function WorkbenchShell({
 
   useEffect(() => {
     let isMounted = true
+    void findingReloadKey
 
     async function loadFindingsPage() {
       if (!isFindingsList || !selectedProjectId) {
@@ -1385,6 +1359,7 @@ export function WorkbenchShell({
 
   useEffect(() => {
     let isMounted = true
+    void findingReloadKey
 
     async function loadDashboardFindings() {
       if (!isDashboard || !selectedProjectId) {
@@ -1434,6 +1409,7 @@ export function WorkbenchShell({
 
   useEffect(() => {
     let isMounted = true
+    void findingReloadKey
 
     async function loadDashboardSignals() {
       if (!isDashboard || !selectedProjectId) {
@@ -1563,11 +1539,9 @@ export function WorkbenchShell({
   }, [findingReloadKey, isDashboard, navigate, selectedProjectId])
 
   useEffect(() => {
-    setFindingDetailTab("evidence")
-  }, [findingDetailId])
-
-  useEffect(() => {
     let isMounted = true
+    void findingDetailReloadKey
+    setFindingDetailTab("evidence")
 
     async function loadFindingDetail() {
       if (!findingDetailId) {
@@ -1582,7 +1556,9 @@ export function WorkbenchShell({
       setFindingDetailLoading(true)
       setFindingDetailError("")
       setFindingExplanationWarning("")
-      const demoDetail = demoFindingDetailForId(findingDetailId)
+      const demoDetail = DEMO_MODE_ENABLED
+        ? demoFindingDetailForId(findingDetailId)
+        : null
       if (demoDetail) {
         if (isMounted) {
           setFindingDetail(demoDetail)
@@ -1641,7 +1617,7 @@ export function WorkbenchShell({
     return () => {
       isMounted = false
     }
-  }, [findingDetailId, findingDetailReloadKey, navigate])
+  }, [findingDetailId, findingDetailReloadKey, navigate, setSelectedProjectId])
 
   function selectProject(projectId: string) {
     setSelectedProjectId(projectId)
@@ -1677,23 +1653,9 @@ export function WorkbenchShell({
   }
 
   async function refreshProviderStatus() {
-    setProviderStatusLoading(true)
-    setProviderStatusError("")
-    try {
-      const statusResponse = await ProvidersService.readProviderStatus()
-      setProviderStatus(statusResponse)
-    } catch (caught) {
-      if (caught instanceof ApiError && [401, 403].includes(caught.status)) {
-        clearAccessToken()
-        await navigate({ to: "/login" })
-        return
-      }
-      setProviderStatusError(
-        apiErrorMessage("Provider status unavailable", caught),
-      )
-    } finally {
-      setProviderStatusLoading(false)
-    }
+    await queryClient.invalidateQueries({
+      queryKey: workbenchBootstrapQueryKey,
+    })
   }
 
   async function refreshProjectRuns(preferredRunId?: string) {

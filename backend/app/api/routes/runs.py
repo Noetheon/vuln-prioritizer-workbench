@@ -8,6 +8,7 @@ from typing import Any
 from fastapi import APIRouter, HTTPException
 
 from app.api.deps import ScopedReadUser, SessionDep
+from app.api.errors import redact_public_payload
 from app.api.routes.workbench_access import require_visible_project
 from app.models import (
     AnalysisRun,
@@ -40,19 +41,23 @@ def read_project_runs(
     require_visible_project(session, current_user, project_id)
     runs = RunRepository(session).list_analysis_runs(project_id)
     return AnalysisRunsPublic(
-        data=[AnalysisRunPublic.model_validate(run) for run in runs],
+        data=[_analysis_run_public(run) for run in runs],
         count=len(runs),
     )
 
 
 @router.get("/runs/{run_id}", response_model=AnalysisRunPublic)
-def read_run(run_id: uuid.UUID, session: SessionDep, current_user: ScopedReadUser) -> AnalysisRun:
+def read_run(
+    run_id: uuid.UUID,
+    session: SessionDep,
+    current_user: ScopedReadUser,
+) -> AnalysisRunPublic:
     """Read one analysis run if its project is visible."""
     run = RunRepository(session).get_analysis_run(run_id)
     if run is None:
         raise HTTPException(status_code=404, detail="Analysis run not found")
     require_visible_project(session, current_user, run.project_id)
-    return run
+    return _analysis_run_public(run)
 
 
 @router.get("/runs/{run_id}/summary", response_model=AnalysisRunSummaryPublic)
@@ -70,8 +75,8 @@ def read_run_summary(
 
 
 def _analysis_run_summary(run: AnalysisRun) -> AnalysisRunSummaryPublic:
-    summary_json = dict(run.summary_json or {})
-    error_json = dict(run.error_json or {})
+    summary_json = _dict_value(redact_public_payload(run.summary_json or {}))
+    error_json = _dict_value(redact_public_payload(run.error_json or {}))
     dedup_summary = _dict_value(summary_json.get("dedup_summary"))
     parse_errors = _parse_errors(summary_json, error_json)
     return AnalysisRunSummaryPublic(
@@ -104,6 +109,17 @@ def _analysis_run_summary(run: AnalysisRun) -> AnalysisRunSummaryPublic:
         dedup_summary=dedup_summary,
         summary_json=summary_json,
         error_json=error_json,
+    )
+
+
+def _analysis_run_public(run: AnalysisRun) -> AnalysisRunPublic:
+    public = AnalysisRunPublic.model_validate(run)
+    return public.model_copy(
+        update={
+            "summary_json": _dict_value(redact_public_payload(run.summary_json or {})),
+            "error_json": _dict_value(redact_public_payload(run.error_json or {})),
+            "error_message": redact_public_payload(run.error_message),
+        }
     )
 
 

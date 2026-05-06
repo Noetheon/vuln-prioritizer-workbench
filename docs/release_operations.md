@@ -42,13 +42,23 @@ Use this path for normal releases:
 make release-check
 ```
 
-3. Create or update the checked-in release notes file:
+3. For public-production readiness handoff, run and record the broader gate:
+
+```bash
+make release-readiness-check
+```
+
+This adds generated-client drift, demo evidence-bundle verification, and
+Playwright smoke evidence to the normal release gate. It does not by itself
+close the PP5 scorecard.
+
+4. Create or update the checked-in release notes file:
 
 ```text
 docs/releases/vX.Y.Z.md
 ```
 
-4. Tag the release:
+5. Tag the release:
 
 ```bash
 git tag -a vX.Y.Z -m "vX.Y.Z"
@@ -56,9 +66,9 @@ git push origin main
 git push origin vX.Y.Z
 ```
 
-5. Confirm that the GitHub Release workflow completed successfully.
-6. If PyPI publishing is enabled for the repository, verify that the package appeared on PyPI.
-7. Confirm that the workflow's hosted-index install verification step completed successfully.
+6. Confirm that the GitHub Release workflow completed successfully.
+7. If PyPI publishing is enabled for the repository, verify that the package appeared on PyPI.
+8. Confirm that the workflow's hosted-index install verification step completed successfully.
 
 ## Restoring a Missing GitHub Release Object
 
@@ -196,4 +206,6 @@ If the PyPI publish job fails, check these before anything else:
 
 - Keep this document in sync with [`release.yml`](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/.github/workflows/release.yml).
 - Keep the public install wording in [`README.md`](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/README.md) aligned with the real supported install path.
+- Keep the package story aligned with [Dependency and Package Policy](./dependency-and-package-policy.md): the backend distribution intentionally ships both the CLI/core package and active `backend/app` Workbench runtime.
+- Keep public-production release evidence aligned with [Public-Production Release Evidence Ledger](./public-production-release-evidence-ledger.md).
 - If PyPI goes live, update the README and release docs immediately so GitHub-tag install is no longer described as the only verified public path.

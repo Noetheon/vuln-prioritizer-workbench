@@ -93,8 +93,7 @@
   gap: 4px;
 }
 
-.chart-card-header h3,
-.chart-card-header span {
+.chart-card-header h3 {
   margin: 0;
 }
 
@@ -103,7 +102,9 @@
   font-size: 1rem;
 }
 
+/* biome-ignore lint/style/noDescendingSpecificity: selector targets an unrelated chart-card block. */
 .chart-card-header span {
+  margin: 0;
   color: #64748b;
   font-size: 0.86rem;
   line-height: 1.4;
@@ -293,12 +294,14 @@
   gap: 12px;
 }
 
+/* biome-ignore lint/style/noDescendingSpecificity: panel-heading selectors target unrelated dashboard blocks. */
 .dashboard-panel-heading span,
 .dashboard-panel-heading h3,
 .dashboard-panel-heading p {
   margin: 0;
 }
 
+/* biome-ignore lint/style/noDescendingSpecificity: panel-heading selectors target unrelated dashboard blocks. */
 .dashboard-panel-heading span {
   color: #64748b;
   font-size: 0.74rem;
@@ -492,11 +495,13 @@
   background: #fff7ed;
 }
 
+/* biome-ignore lint/style/noDescendingSpecificity: selector targets an unrelated provider-source block. */
 .dashboard-provider-source strong {
   color: #334155;
   font-size: 0.78rem;
 }
 
+/* biome-ignore lint/style/noDescendingSpecificity: selector targets an unrelated provider-source block. */
 .dashboard-provider-source span {
   overflow-wrap: anywhere;
   color: #64748b;

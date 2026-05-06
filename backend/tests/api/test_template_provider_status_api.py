@@ -198,6 +198,74 @@ def test_template_provider_status_surfaces_failed_provider_update(
     )
 
 
+def test_template_provider_status_redacts_production_paths_and_cache_details(
+    template_api_env: TemplateApiEnv,
+    tmp_path: Path,
+) -> None:
+    headers = auth_headers(template_api_env.client)
+    active_settings = template_api_env.client.app.state.template_settings
+    private_snapshot = tmp_path / "private" / "provider-snapshot.json"
+    private_cache = tmp_path / "private" / "cache"
+    with Session(template_api_env.engine) as session:
+        session.add(
+            template_api_env.app_models.ProviderSnapshot(
+                id=uuid.uuid4(),
+                created_at=datetime(2026, 4, 28, 10, 0, tzinfo=UTC),
+                content_hash="sha256:provider-production-redaction",
+                nvd_last_sync="2026-04-28T10:15:00Z",
+                source_hashes_json={"nvd": "sha256:nvd-cache-namespace"},
+                source_metadata_json={
+                    "selected_sources": ["nvd"],
+                    "generated_at": "2026-04-28T10:30:00Z",
+                    "cache_dir": str(private_cache),
+                    "snapshot_dir": str(private_snapshot.parent),
+                    "source_path": str(private_snapshot),
+                    "warnings": [f"using cache from {private_cache}"],
+                    "source_metadata": {
+                        "nvd": {
+                            "source": "NVD CVE API 2.0",
+                            "record_count": 1,
+                            "cache_namespace_hash": "sha256:nvd-cache-namespace",
+                        }
+                    },
+                },
+            )
+        )
+        session.commit()
+
+    template_api_env.client.app.state.template_settings = replace(
+        active_settings,
+        ENVIRONMENT="production",
+        SECRET_KEY="template-shell-secret",
+        FIRST_SUPERUSER_PASSWORD="template-shell-password",
+        FRONTEND_HOST="https://workbench.example.com",
+        ALLOWED_HOSTS=("workbench.example.com",),
+        PROVIDER_CACHE_DIR=str(private_cache),
+        PROVIDER_SNAPSHOT_DIR=str(private_snapshot.parent),
+    )
+    try:
+        response = template_api_env.client.get("/api/v1/providers/status", headers=headers)
+    finally:
+        template_api_env.client.app.state.template_settings = active_settings
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["status"] == "ok"
+    assert payload["cache_dir"] is None
+    assert payload["snapshot_dir"] is None
+    assert payload["snapshot"]["source_path"] is None
+    assert payload["snapshot"]["source_hashes"] == {}
+    assert "cache_dir" not in payload["snapshot"]["source_metadata"]
+    assert "snapshot_dir" not in payload["snapshot"]["source_metadata"]
+    assert "source_path" not in payload["snapshot"]["source_metadata"]
+    assert payload["snapshot"]["source_metadata"]["source_metadata"]["nvd"] == {
+        "source": "NVD CVE API 2.0",
+        "record_count": 1,
+    }
+    assert str(tmp_path) not in response.text
+    assert "cache_namespace_hash" not in response.text
+
+
 def test_template_provider_update_job_create_list_and_status(
     template_api_env: TemplateApiEnv,
     tmp_path: Path,
@@ -382,6 +450,7 @@ def test_template_provider_update_job_rejects_active_job(
         )
 
         assert response.status_code == 409
+        assert response.json()["code"] == "conflict"
         assert "Provider update already running" in response.json()["detail"]
     finally:
         template_api_env.client.app.state.template_settings = active_settings

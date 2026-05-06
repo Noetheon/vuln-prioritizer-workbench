@@ -86,12 +86,15 @@ for decisions.
   `/api/v1` routes, services, repositories, models, and Alembic migrations.
 - Frontend: React, Vite, TypeScript, TanStack Router, and VPW design-system
   components.
-- API boundary: generated client files under `frontend/src/client/**` and
-  `frontend/src/api-client.ts`; these are generated artifacts and are not
-  manually edited.
+- API boundary: generated client files under `frontend/src/client/**`; the
+  `frontend/src/api-client.ts` wrapper is manual integration code over that
+  generated client.
 - CLI/domain layer: retained under `backend/src/vuln_prioritizer/**` for
   automation, reporting, and neutral domain helpers shared with the active
   backend.
+- Python package boundary: the backend distribution intentionally ships both
+  the CLI/core package and the active Workbench FastAPI app under `app/*`; it is
+  not a CLI-only package.
 
 See [Product Architecture](docs/architecture.md) for route ownership,
 WorkbenchShell responsibilities, shared provider/status state, and explicit
@@ -153,6 +156,7 @@ Public docs:
 - [Documentation home](docs/index.md)
 - [User Documentation Guide](docs/user_documentation.md)
 - [Product Architecture](docs/architecture.md)
+- [Dependency and Package Policy](docs/dependency-and-package-policy.md)
 - [Scoring Methodology](docs/scoring-methodology.md)
 - [ATT&CK/TTP Methodology](docs/attack-ttp-methodology.md)
 - [Reports and Evidence](docs/reports-and-evidence.md)
@@ -160,6 +164,7 @@ Public docs:
 - [Contracts](docs/contracts.md)
 - [Support Matrix](docs/support_matrix.md)
 - [Workbench Threat Model](docs/workbench-threat-model.md)
+- [Public-Production Release Evidence Ledger](docs/public-production-release-evidence-ledger.md)
 
 Submission and reviewer docs:
 
@@ -217,6 +222,8 @@ python3 -m pytest -q backend/tests/api/test_template_reports_api.py --no-cov
 python3 -m pytest -q backend/tests/test_docs_hygiene.py --no-cov
 python3 -m mkdocs build --clean
 make docs-check
+make package-check
+make api-client-drift-check
 ```
 
 For broader contributor guidance, see [CONTRIBUTING.md](CONTRIBUTING.md).
@@ -224,17 +231,15 @@ Security reporting and deployment-scope caveats are in [SECURITY.md](SECURITY.md
 
 ## Project Status
 
-Implementation is complete for the current phase. The current repository state
-includes the VPW design system, route integrations, ATT&CK demo mapping proof,
-presentation evidence pack, product documentation, CI cost optimization, route
-extractions, CSS organization, Dashboard chart lazy loading, Assets extraction,
-and the final submission package.
+The current repository state includes the active `backend/app` Workbench
+runtime, React frontend, retained CLI/domain package, VPW design system,
+evidence/reporting surfaces, public docs, CI cost controls, and package release
+automation.
 
-Remaining follow-ups are documentation or presentation oriented:
-
-- refresh README screenshots later if new current-state images are desired
-- expand public deployment hardening docs before any internet-facing deployment
-- continue engineering refactors only if a concrete maintenance need appears
+Public-production readiness is still tracked as explicit PP5 evidence work.
+Do not treat this README, the local Workbench quickstart, or local release gates
+as a final internet-facing certification until the public-production scorecard
+issue closes with evidence.
 
 ## License, Security, And Contributing
 

@@ -1,9 +1,15 @@
 # VPW Template Execution Sequence
 
-This file maps the reopened duplicate VPW roadmap to a safer template-first
-execution order. The reopened GitHub issues remain authoritative. This document is
-the engineering sequence for working through them without repeating the previous
-false closeout.
+Status: historical execution sequence and current-state reference. The active
+runtime is now `backend/app`; current public-production readiness work is tracked
+through the root `ROADMAP.md` and
+[Public-Production Release Evidence Ledger](public-production-release-evidence-ledger.md).
+This file should not be used as standalone closure evidence for reopened issues.
+
+This file mapped the reopened duplicate VPW roadmap to a safer template-first
+execution order. The reopened GitHub issues remain authoritative. This document
+is retained to explain sequencing and guardrails without repeating previous false
+closeout patterns.
 
 ## Phase 0: Baseline And Governance
 

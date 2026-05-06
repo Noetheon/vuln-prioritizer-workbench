@@ -11,8 +11,9 @@ reports, and maintainer workflows.
 | --- | --- |
 | Backend | FastAPI, auth/session, SQL models, services, repositories, Alembic. |
 | Frontend | React, Vite, TypeScript, TanStack Router, VPW Design System. |
-| API Boundary | `frontend/src/client/**` and `frontend/src/api-client.ts` are generated. |
-| Product Logic | Components import services/types from the generated client but do not edit it manually. |
+| API Boundary | `frontend/src/client/**` is generated from OpenAPI. |
+| Product Logic | `frontend/src/api-client.ts` is manual wrapper code; components import services/types from the generated client but do not edit generated files manually. |
+| Package Boundary | The backend distribution intentionally ships both `app/**` and `src/vuln_prioritizer/**`. |
 | Evidence | Reports, evidence ZIP bundle, manifest, checksums, and contract artifacts. |
 
 Further details are available in [Product Architecture](../architecture.md).
@@ -22,7 +23,8 @@ Further details are available in [Product Architecture](../architecture.md).
 `backend/app` is the active browser Workbench runtime. Docker, Compose,
 Playwright backend startup, and OpenAPI client generation use `app.main:app` or
 `app.main.app`. The browser calls the generated `/api/v1` client under
-`frontend/src/client/**` and `frontend/src/api-client.ts`.
+`frontend/src/client/**` through manual frontend integration code such as
+`frontend/src/api-client.ts`.
 
 `backend/src/vuln_prioritizer/**` remains available for CLI, domain logic, and
 reports. Neutral modules such as input normalization, providers, scoring,

@@ -8,7 +8,7 @@ This page defines the defensive threat model and operational readiness assumptio
 
 The current local-first Workbench threat model covers:
 
-- active browser Workbench use through the template backend in `backend/app` and
+- active browser Workbench use through the backend runtime in `backend/app` and
   the React frontend
 - retained local CLI and domain flows under `backend/src/vuln_prioritizer/**`
 - import of existing CVE lists and selected scanner export files
@@ -102,7 +102,7 @@ Primary boundaries:
 | Ticket token misuse or over-privileged credentials | Unauthorized issue/ticket creation or broader external account compromise | Read tokens only at request time from explicit environment variables such as `GITHUB_TOKEN`, `JIRA_API_TOKEN`, or `SERVICENOW_API_TOKEN`; use narrowly scoped external tokens; do not store token values in the Workbench database; include only counts and non-secret metadata in audit events. |
 | Oversized reports or evidence bundles | Disk exhaustion, slow UI, failed downloads | Enforce upload limits, keep generated artifacts in configured report directories, document cleanup responsibility, and surface generation errors. |
 | Supply-chain or dependency compromise | Compromised runtime or generated artifacts | Prefer pinned release installs, local checks, virtual environments, and reproducible docs/build commands. Do not load remote code through ATT&CK metadata or provider data. |
-| Internet-exposed Workbench deployment | Unauthorized access to imports, reports, and local state | Treat the current Workbench as local-first and not hardened for public exposure. API tokens are a local automation guard, not a complete internet-facing authentication, authorization, TLS, session, or multi-user isolation model. |
+| Internet-exposed Workbench deployment | Unauthorized access to imports, reports, and local state | Treat the current Workbench as local-first and not certified for public-production exposure until PP5 evidence closes. API tokens are a local automation guard, not a complete internet-facing authentication, authorization, TLS, session, or multi-user isolation model. |
 
 ## Operational Assumptions
 
@@ -127,6 +127,12 @@ Primary boundaries:
 
 ## Shared Deployment Prerequisites
 
+Public-production readiness is not certified by this page alone. The final
+acceptance boundary is the PP5 scorecard tracked in
+[Public-Production Release Evidence Ledger](./public-production-release-evidence-ledger.md).
+Until that scorecard closes, the controls below are prerequisites and evidence
+targets, not a blanket production-readiness claim.
+
 Shared or internet-exposed Workbench deployment is only acceptable after the
 public-deployment controls in
 [Workbench Public Deployment Runbook](./workbench-public-deployment.md) are
@@ -149,7 +155,10 @@ requirements:
 - operational monitoring for job failures, stale provider data, failed migrations, artifact-integrity failures, and storage pressure
 - documented incident response for leaked API tokens, exposed reports, tampered evidence bundles, and compromised provider snapshot directories
 
-These prerequisites are intentionally listed as blockers rather than implied support. API tokens remain a local automation control, not a complete shared-deployment auth model.
+These prerequisites are intentionally listed as blockers rather than implied
+support. API tokens remain a local automation control, not a complete
+shared-deployment auth model unless the final PP5 evidence explicitly accepts
+that boundary.
 
 ## Readiness Checklist
 
@@ -204,7 +213,7 @@ Maintain v1.2 readiness with local, repeatable checks:
 - Grep/no-real-key review to confirm docs, examples, screenshots, snapshots, and
   generated artifacts contain placeholders or redacted state only.
 - `make workflow-check` before merge or release branches when Docker and pre-commit tooling are available.
-- `make docker-demo-smoke` for the Compose quickstart path; it starts the template shell, polls `/api/v1/workbench/status`, verifies a locked provider-data import, triggers `/api/v1/providers/update-jobs`, and removes the demo stack.
+- `make docker-demo-smoke` for the Compose quickstart path; it starts the Workbench stack, polls `/api/v1/workbench/status`, verifies a locked provider-data import, triggers `/api/v1/providers/update-jobs`, and removes the demo stack.
 - `make demo-sync-check-temp` before release when output changes affect checked-in examples, reports, SARIF, HTML, or evidence artifacts.
 - `make release-readiness-check` before release handoff when the local release gate and demo evidence bundle verification should be recorded together.
 - `make dependency-audit` for maintainer dependency review when `pip-audit`, npm, and advisory data are reachable.

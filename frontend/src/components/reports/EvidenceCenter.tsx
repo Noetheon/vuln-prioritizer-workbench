@@ -1,6 +1,5 @@
 import {
   AlertTriangle,
-  CheckCircle2,
   Clock,
   Download,
   FileArchive,
@@ -12,9 +11,8 @@ import {
   Layers,
   ShieldCheck,
   Table2,
-  XCircle,
 } from "lucide-react"
-import type { ComponentType, ReactNode } from "react"
+import type { ComponentType } from "react"
 import type {
   AnalysisRunPublic,
   AnalysisRunSummaryPublic,
@@ -74,6 +72,7 @@ import {
   reportFormatLabel,
   reportSizeLabel,
 } from "@/lib/report-format"
+import { DEMO_MODE_ENABLED } from "@/lib/runtime-config"
 import { runStatusLabel, runStatusTone } from "@/lib/risk-format"
 
 export type EvidenceCenterProps = {
@@ -201,9 +200,7 @@ function priorityCount(
   key: "critical" | "high",
 ): number {
   return (summary?.counts_by_priority?.[key] ??
-    summary?.counts_by_priority?.[
-      key.charAt(0).toUpperCase() + key.slice(1)
-    ] ??
+    summary?.counts_by_priority?.[key.charAt(0).toUpperCase() + key.slice(1)] ??
     0) as number
 }
 
@@ -274,7 +271,9 @@ function RunContext({
   return (
     <VpwSection>
       <VpwSectionHeader
-        actions={isDemo ? <VpwBadge tone="warning">Demo preview</VpwBadge> : null}
+        actions={
+          isDemo ? <VpwBadge tone="warning">Demo preview</VpwBadge> : null
+        }
         description="Generate audit-ready vulnerability evidence, executive summaries, and technical exports."
         eyebrow="Reports"
         title="Evidence Center"
@@ -302,9 +301,7 @@ function RunContext({
               <VpwBadge
                 tone={
                   isDemo || selectedReportRun
-                    ? runBadgeTone(
-                        (selectedReportRun ?? DEMO_RUNS[0]).status,
-                      )
+                    ? runBadgeTone((selectedReportRun ?? DEMO_RUNS[0]).status)
                     : "neutral"
                 }
               >
@@ -458,13 +455,7 @@ function EvidenceSummary({
   )
 }
 
-function ActionStatus({
-  error,
-  message,
-}: {
-  error: string
-  message: string
-}) {
+function ActionStatus({ error, message }: { error: string; message: string }) {
   if (!error && !message) return null
 
   return (
@@ -475,7 +466,10 @@ function ActionStatus({
         </VpwStatusBanner>
       ) : null}
       {message ? (
-        <VpwStatusBanner title="Report action complete" tone={statusBannerTone(message)}>
+        <VpwStatusBanner
+          title="Report action complete"
+          tone={statusBannerTone(message)}
+        >
           {message}
         </VpwStatusBanner>
       ) : null}
@@ -500,7 +494,9 @@ function ArtifactSection({
     <VpwSection>
       <VpwSectionHeader
         actions={
-          isDemo ? <VpwBadge tone="warning">Generation disabled</VpwBadge> : null
+          isDemo ? (
+            <VpwBadge tone="warning">Generation disabled</VpwBadge>
+          ) : null
         }
         description={
           reportActionsEnabled
@@ -761,7 +757,9 @@ function ManifestPreview({
         path: report.filename,
       }))}
       generatedAt={
-        zipReport ? formatReportDateTime(zipReport.created_at) : "Not generated yet"
+        zipReport
+          ? formatReportDateTime(zipReport.created_at)
+          : "Not generated yet"
       }
       onDownload={
         !isDemo && zipReport ? () => onDownload(zipReport) : undefined
@@ -803,8 +801,7 @@ function ExecutiveDecision({
     critical + high > 0
       ? "Patch critical findings within 48 hours and high-severity findings within 7 days. Prioritize KEV entries first."
       : "Maintain the standard remediation cadence and re-run after the next deployment cycle."
-  const priority =
-    critical > 0 ? "Immediate" : high > 0 ? "High" : "Routine"
+  const priority = critical > 0 ? "Immediate" : high > 0 ? "High" : "Routine"
   const priorityTone: VpwBadgeTone =
     critical > 0 ? "critical" : high > 0 ? "warning" : "success"
   const decisionStatement = isDemo
@@ -892,7 +889,7 @@ export function EvidenceCenter({
   selectedRunSummary,
 }: EvidenceCenterProps) {
   void selectedRunSummary
-  const isDemo = !selectedProject
+  const isDemo = DEMO_MODE_ENABLED && !selectedProject
   const combinedError = [
     runsError,
     runDetailError,

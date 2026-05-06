@@ -8,6 +8,7 @@ from typing import Any
 from fastapi import APIRouter, HTTPException, Request, status
 
 from app.api.deps import ScopedAdminUser, ScopedReadUser, SessionDep
+from app.api.errors import production_safe_settings, redact_public_payload
 from app.core.config import Settings, settings
 from app.models import (
     AnalysisRun,
@@ -38,14 +39,16 @@ NO_PROVIDER_SNAPSHOT_WARNING = "No provider snapshot has been recorded yet."
 
 @router.get("/update-jobs", response_model=ProviderUpdateJobsPublic)
 def list_provider_update_jobs(
+    request: Request,
     session: SessionDep,
     _current_user: ScopedReadUser,
 ) -> ProviderUpdateJobsPublic:
     """Return provider update jobs newest first."""
+    production_safe = production_safe_settings(_request_settings(request))
     jobs = [
         job
         for run in RunRepository(session).list_provider_update_runs()
-        if (job := _provider_update_job(run)) is not None
+        if (job := _provider_update_job(run, production_safe=production_safe)) is not None
     ]
     return ProviderUpdateJobsPublic(data=jobs, count=len(jobs))
 
@@ -83,7 +86,10 @@ def create_template_provider_update_job(
     )
     session.commit()
     session.refresh(run)
-    job = _provider_update_job(run)
+    job = _provider_update_job(
+        run,
+        production_safe=production_safe_settings(_request_settings(request)),
+    )
     if job is None:  # Defensive; the service always returns a provider_update run.
         raise HTTPException(status_code=500, detail="Provider update job could not be read.")
     return job
@@ -113,30 +119,51 @@ def _provider_status_payload(
     active_settings: object,
 ) -> ProviderStatusPublic:
     metadata = _snapshot_metadata(snapshot)
-    warnings = _string_list(metadata.get("warnings"))
+    production_safe = production_safe_settings(active_settings)
+    public_metadata = _provider_public_metadata(metadata, production_safe=production_safe)
+    warnings = [_public_text(item) for item in _string_list(metadata.get("warnings"))]
     failed_update_error = _failed_update_error(latest_update_run)
-    last_error = failed_update_error or _last_error(metadata)
+    raw_last_error = failed_update_error or _last_error(metadata)
+    last_error = _public_text(raw_last_error) if raw_last_error is not None else None
     snapshot_status = _snapshot_status(snapshot, metadata)
     if snapshot is None:
         warnings.append(NO_PROVIDER_SNAPSHOT_WARNING)
     if failed_update_error is not None:
-        warnings.append(f"Latest provider update failed: {failed_update_error}")
+        warnings.append(f"Latest provider update failed: {_public_text(failed_update_error)}")
 
-    degraded = snapshot_status.missing or last_error is not None
+    degraded = snapshot_status.missing or raw_last_error is not None
     return ProviderStatusPublic(
         status="degraded" if degraded else "ok",
-        snapshot=snapshot_status,
-        sources=_source_statuses(snapshot, snapshot_status.selected_sources, last_error=last_error),
-        latest_update_job=_provider_update_job(latest_update_run),
-        cache_dir=(
-            _string_or_none(metadata.get("cache_dir"))
-            or _settings_path(active_settings, "provider_cache_dir", "PROVIDER_CACHE_DIR")
+        snapshot=_snapshot_status(
+            snapshot,
+            metadata,
+            public_metadata=public_metadata,
+            production_safe=production_safe,
         ),
-        snapshot_dir=_string_or_none(metadata.get("snapshot_dir"))
-        or _settings_path(
-            active_settings,
-            "provider_snapshot_dir",
-            "PROVIDER_SNAPSHOT_DIR",
+        sources=_source_statuses(snapshot, snapshot_status.selected_sources, last_error=last_error),
+        latest_update_job=_provider_update_job(
+            latest_update_run,
+            production_safe=production_safe,
+        ),
+        cache_dir=(
+            None
+            if production_safe
+            else _public_path(
+                _string_or_none(public_metadata.get("cache_dir"))
+                or _settings_path(active_settings, "provider_cache_dir", "PROVIDER_CACHE_DIR")
+            )
+        ),
+        snapshot_dir=(
+            None
+            if production_safe
+            else _public_path(
+                _string_or_none(public_metadata.get("snapshot_dir"))
+                or _settings_path(
+                    active_settings,
+                    "provider_snapshot_dir",
+                    "PROVIDER_SNAPSHOT_DIR",
+                )
+            )
         ),
         warnings=warnings,
         last_sync=_last_sync(snapshot, metadata),
@@ -149,6 +176,9 @@ def _provider_status_payload(
 def _snapshot_status(
     snapshot: ProviderSnapshot | None,
     metadata: dict[str, Any],
+    *,
+    public_metadata: dict[str, Any] | None = None,
+    production_safe: bool = False,
 ) -> ProviderSnapshotStatusPublic:
     if snapshot is None:
         return ProviderSnapshotStatusPublic()
@@ -156,6 +186,10 @@ def _snapshot_status(
     source_hashes = _dict_value(snapshot.source_hashes_json)
     selected_sources = _selected_sources(snapshot, metadata, source_hashes)
     snapshot_mode = _snapshot_mode(snapshot, metadata)
+    safe_metadata = public_metadata or _provider_public_metadata(
+        metadata,
+        production_safe=production_safe,
+    )
     return ProviderSnapshotStatusPublic(
         id=str(snapshot.id),
         created_at=_iso_datetime(snapshot.created_at),
@@ -166,9 +200,9 @@ def _snapshot_status(
         generated_at=_string_or_none(metadata.get("generated_at")),
         selected_sources=selected_sources,
         requested_cves=_int_value(metadata.get("requested_cves")),
-        source_hashes=source_hashes,
-        source_metadata=metadata,
-        source_path=_source_path(metadata),
+        source_hashes={} if production_safe else _dict_value(redact_public_payload(source_hashes)),
+        source_metadata=safe_metadata,
+        source_path=None if production_safe else _source_path(safe_metadata),
         locked_provider_data=_bool_value(metadata.get("locked_provider_data")),
         missing=_bool_value(metadata.get("missing"), default=False),
         mode=snapshot_mode,
@@ -219,10 +253,15 @@ def _source_statuses(
     ]
 
 
-def _provider_update_job(run: AnalysisRun | None) -> ProviderUpdateJobPublic | None:
+def _provider_update_job(
+    run: AnalysisRun | None,
+    *,
+    production_safe: bool = False,
+) -> ProviderUpdateJobPublic | None:
     if run is None:
         return None
     metadata = _dict_value(run.summary_json) or _dict_value(run.error_json)
+    public_metadata = _provider_public_metadata(metadata, production_safe=production_safe)
     return ProviderUpdateJobPublic(
         id=str(run.id),
         status=str(run.status),
@@ -231,8 +270,8 @@ def _provider_update_job(run: AnalysisRun | None) -> ProviderUpdateJobPublic | N
         ),
         started_at=_iso_datetime(run.started_at),
         finished_at=_iso_datetime(run.finished_at),
-        error_message=_failed_update_error(run),
-        metadata_=metadata,
+        error_message=_public_text(_failed_update_error(run)),
+        metadata_=public_metadata,
     )
 
 
@@ -407,3 +446,61 @@ def _aware_datetime(value: datetime) -> datetime:
     if value.tzinfo is None:
         return value.replace(tzinfo=UTC)
     return value
+
+
+def _provider_public_metadata(
+    metadata: dict[str, Any],
+    *,
+    production_safe: bool,
+) -> dict[str, Any]:
+    redacted = redact_public_payload(metadata)
+    public = dict(redacted) if isinstance(redacted, dict) else {}
+    if not production_safe:
+        return public
+
+    for key in (
+        "cache_dir",
+        "input_path",
+        "input_paths",
+        "output_path",
+        "provider_cache_dir",
+        "snapshot_dir",
+        "snapshot_file",
+        "snapshot_path",
+        "source_path",
+    ):
+        public.pop(key, None)
+    source_metadata = public.get("source_metadata")
+    if isinstance(source_metadata, dict):
+        public["source_metadata"] = _production_source_metadata(source_metadata)
+    return public
+
+
+def _production_source_metadata(value: dict[str, Any]) -> dict[str, Any]:
+    allowed_keys = {
+        "cache_only",
+        "fallback_from_previous_snapshot",
+        "fetched_count",
+        "missing_count",
+        "record_count",
+        "source",
+    }
+    public: dict[str, Any] = {}
+    for source, metadata in value.items():
+        if isinstance(metadata, dict):
+            public[source] = {key: item for key, item in metadata.items() if key in allowed_keys}
+    return public
+
+
+def _public_text(value: str | None) -> str | None:
+    if value is None:
+        return None
+    redacted = redact_public_payload(value)
+    return redacted if isinstance(redacted, str) else None
+
+
+def _public_path(value: str | None) -> str | None:
+    if value is None:
+        return None
+    redacted = redact_public_payload(value)
+    return redacted if isinstance(redacted, str) else None
