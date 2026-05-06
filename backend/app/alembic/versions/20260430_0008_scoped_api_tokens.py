@@ -1,4 +1,4 @@
-"""add scoped template api tokens
+"""add scoped Workbench API tokens
 
 Revision ID: 20260430_0008
 Revises: 20260430_0007

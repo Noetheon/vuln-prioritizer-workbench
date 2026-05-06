@@ -7,6 +7,7 @@ import json
 import re
 import uuid
 from collections.abc import Mapping
+from copy import deepcopy
 from typing import Any
 
 from sqlalchemy import insert
@@ -38,7 +39,7 @@ from vuln_prioritizer.models import PrioritizedFinding
 DEDUP_DECISION_SAMPLE_LIMIT = 500
 
 
-def _persist_template_occurrences(
+def _persist_workbench_occurrences(
     *,
     session: Session,
     project_id: uuid.UUID,
@@ -46,7 +47,7 @@ def _persist_template_occurrences(
     occurrences: list[NormalizedOccurrence],
     analysis_result: TemplateAnalysisResult,
 ) -> dict[str, Any]:
-    bulk_summary = _persist_template_occurrences_bulk_insert(
+    bulk_summary = _persist_workbench_occurrences_bulk_insert(
         session=session,
         project_id=project_id,
         run_id=run_id,
@@ -79,7 +80,12 @@ def _persist_template_occurrences(
     with session.no_autoflush:
         for index, occurrence in enumerate(occurrences, start=1):
             decision = _decision_for_occurrence(analysis_result, occurrence)
-            decision_payload = _decision_payload_for_occurrence(decision, occurrence)
+            occurrence_scope = _occurrence_scope_payload(occurrence)
+            decision_payload = _decision_payload_for_occurrence(
+                decision,
+                occurrence,
+                occurrence_scope=occurrence_scope,
+            )
             data_quality_payload = data_quality_by_cve.get(occurrence.cve)
             if data_quality_payload is None:
                 data_quality_payload = _decision_data_quality_json(decision)
@@ -176,6 +182,8 @@ def _persist_template_occurrences(
                         analysis_result,
                         decision,
                         occurrence,
+                        priority_state=decision_payload.get("priority_state"),
+                        occurrence_scope=occurrence_scope,
                     ),
                     "dedup": {
                         "key": dedup_key,
@@ -193,7 +201,7 @@ def _persist_template_occurrences(
                 analysis_result,
                 decision,
             ):
-                _persist_template_finding_attack_context(
+                _persist_workbench_finding_attack_context(
                     session=session,
                     run_id=run_id,
                     finding_id=finding.id,
@@ -254,7 +262,7 @@ def _persist_template_occurrences(
     }
 
 
-def _persist_template_occurrences_bulk_insert(
+def _persist_workbench_occurrences_bulk_insert(
     *,
     session: Session,
     project_id: uuid.UUID,
@@ -368,6 +376,7 @@ def _persist_template_occurrences_bulk_insert(
         session.execute(insert(Vulnerability), vulnerability_rows)
 
     data_quality_by_cve: dict[str, dict[str, Any]] = {}
+    compact_payload_by_cve: dict[str, dict[str, Any]] = {}
     finding_batch: list[dict[str, Any]] = []
     occurrence_batch: list[dict[str, Any]] = []
     decisions: list[dict[str, Any]] = []
@@ -377,10 +386,17 @@ def _persist_template_occurrences_bulk_insert(
         start=1,
     ):
         decision = analysis_result.findings_by_cve[occurrence.cve]
+        compact_payload = compact_payload_by_cve.get(occurrence.cve)
+        if compact_payload is None:
+            compact_payload = _compact_decision_payload(decision)
+            compact_payload_by_cve[occurrence.cve] = compact_payload
+        occurrence_scope = _occurrence_scope_payload(occurrence)
         decision_payload = _decision_payload_for_occurrence(
             decision,
             occurrence,
             compact=True,
+            base_payload=compact_payload,
+            occurrence_scope=occurrence_scope,
         )
         data_quality_payload = data_quality_by_cve.get(occurrence.cve)
         if data_quality_payload is None:
@@ -425,6 +441,8 @@ def _persist_template_occurrences_bulk_insert(
                         analysis_result,
                         decision,
                         occurrence,
+                        priority_state=decision_payload.get("priority_state"),
+                        occurrence_scope=occurrence_scope,
                     ),
                     "dedup": {
                         "key": dedup_key,
@@ -537,27 +555,26 @@ def _decision_payload_for_occurrence(
     occurrence: NormalizedOccurrence,
     *,
     compact: bool = False,
+    base_payload: dict[str, Any] | None = None,
+    occurrence_scope: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    payload = _compact_decision_payload(decision) if compact else decision.model_dump()
-    occurrence_scope = _occurrence_scope_payload(occurrence)
+    if base_payload is not None:
+        payload = deepcopy(base_payload)
+    else:
+        payload = _compact_decision_payload(decision) if compact else decision.model_dump()
+    occurrence_scope = occurrence_scope or _occurrence_scope_payload(occurrence)
     payload["occurrence_scope"] = occurrence_scope
     payload["suppressed_by_vex"] = _suppressed_by_vex_for_occurrence(decision, occurrence)
-    status = _finding_status_for_occurrence(decision, occurrence)
-    if status == FindingStatus.FIXED:
-        payload["priority_state"] = "Fixed"
-    elif status == FindingStatus.SUPPRESSED:
-        payload["priority_state"] = "Suppressed"
-    elif decision.suppressed_by_vex and _occurrence_vex_status(occurrence) is None:
-        payload["priority_state"] = "Open"
-
+    payload["priority_state"] = _priority_state_for_occurrence(
+        decision,
+        occurrence,
+        base_priority_state=payload.get("priority_state"),
+    )
     provenance = payload.get("provenance")
     if isinstance(provenance, dict):
         provenance["occurrence_scope"] = occurrence_scope
         vex_status = _occurrence_vex_status(occurrence)
-        if vex_status:
-            provenance["vex_statuses"] = {vex_status: 1}
-        else:
-            provenance["vex_statuses"] = {}
+        provenance["vex_statuses"] = {vex_status: 1} if vex_status else {}
     return payload
 
 
@@ -565,20 +582,41 @@ def _analysis_evidence_for_occurrence(
     analysis_result: TemplateAnalysisResult,
     decision: PrioritizedFinding,
     occurrence: NormalizedOccurrence,
+    *,
+    priority_state: str | None = None,
+    occurrence_scope: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
+    occurrence_scope = occurrence_scope or _occurrence_scope_payload(occurrence)
     return {
         "decision_scope": "cve_baseline_with_occurrence_overlays",
-        "priority_state": _decision_payload_for_occurrence(decision, occurrence).get(
-            "priority_state"
+        "priority_state": priority_state
+        or _priority_state_for_occurrence(
+            decision,
+            occurrence,
+            base_priority_state=decision.priority_state,
         ),
         "operational_score": decision.operational_score,
         "provider_snapshot_id": str(analysis_result.provider_snapshot_id)
         if analysis_result.provider_snapshot_id is not None
         else None,
         "provider_snapshot_hash": analysis_result.provider_snapshot_hash,
-        "occurrence_scope": _occurrence_scope_payload(occurrence),
+        "occurrence_scope": occurrence_scope,
         "occurrence_vex_status": _occurrence_vex_status(occurrence),
     }
+
+
+def _priority_state_for_occurrence(
+    decision: PrioritizedFinding,
+    occurrence: NormalizedOccurrence,
+    *,
+    base_priority_state: str | None,
+) -> str | None:
+    status = _finding_status_for_occurrence(decision, occurrence)
+    if status in {FindingStatus.FIXED, FindingStatus.SUPPRESSED}:
+        return status.value.title()
+    if decision.suppressed_by_vex and _occurrence_vex_status(occurrence) is None:
+        return "Open"
+    return base_priority_state
 
 
 def _occurrence_scope_payload(occurrence: NormalizedOccurrence) -> dict[str, Any]:
@@ -723,7 +761,7 @@ def _chunks_any(values: list[dict[str, Any]], *, size: int) -> list[list[dict[st
     return [values[index : index + size] for index in range(0, len(values), size)]
 
 
-def _persist_template_finding_attack_context(
+def _persist_workbench_finding_attack_context(
     *,
     session: Session,
     run_id: uuid.UUID,

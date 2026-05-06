@@ -1,4 +1,4 @@
-"""GitHub issue export routes for template Workbench findings."""
+"""GitHub issue export routes for Workbench findings."""
 
 from __future__ import annotations
 

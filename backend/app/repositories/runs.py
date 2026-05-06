@@ -1,4 +1,4 @@
-"""Run repository for template Workbench persistence."""
+"""Run repository for Workbench persistence."""
 
 from __future__ import annotations
 
@@ -176,7 +176,7 @@ class RunRepository:
         return self.session.get(AnalysisRun, run_id)
 
     def get_latest_failed_provider_update_run(self) -> AnalysisRun | None:
-        """Return the newest failed provider-update run, if the template shell recorded one."""
+        """Return the newest failed provider-update run, if the Workbench shell recorded one."""
         statement = (
             select(AnalysisRun)
             .where(

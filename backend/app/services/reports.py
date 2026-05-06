@@ -99,7 +99,7 @@ REPORT_SUPPORTED_RUN_STATUSES = {
 
 
 class ReportService:
-    """Generate and persist report artifacts for template analysis runs."""
+    """Generate and persist report artifacts for Workbench analysis runs."""
 
     def __init__(self, session: Session, settings: Settings) -> None:
         self.session = session
@@ -431,7 +431,7 @@ class ReportService:
             "finding_count": finding_count,
             "format": report_format,
             "kind": kind,
-            "service": "template-report-service",
+            "service": "workbench-report-service",
         }
         if extra_metadata:
             metadata_json.update(extra_metadata)

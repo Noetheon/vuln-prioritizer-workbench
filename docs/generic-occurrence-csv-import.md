@@ -27,7 +27,7 @@ CVE-2022-22965,checkout-api,spring-webmvc,5.3.17,pkg:maven/org.springframework/s
 | `component_name` | no | Affected component or package name. `component` is accepted as an alias. |
 | `component_version` | no | Installed or affected version. `version` and `installed_version` are accepted as aliases. |
 | `purl` | no | Package URL for package-level matching and evidence. |
-| `scanner` | no | Source scanner or export name. The template importer preserves it in raw evidence; the legacy CLI parser treats it as accepted metadata. |
+| `scanner` | no | Source scanner or export name. The Workbench importer preserves it in raw evidence; the legacy CLI parser treats it as accepted metadata. |
 | `fix_version` | no | Fixed version. `fix_versions` and `fixed_versions` are accepted; multiple versions can be separated with commas or `|`. |
 | `severity` | no | Raw source severity. Preserved as source-provided severity context, not as a replacement for CVSS, EPSS, KEV, or policy scoring. `raw_severity` is accepted as an alias. |
 | `owner` | no | Asset or service owner. `asset_owner` is accepted as an alias. |
@@ -70,7 +70,7 @@ will have less local context to match against.
 
 ## Unknown Columns
 
-Unknown columns are not treated as fatal errors. The template importer stores
+Unknown columns are not treated as fatal errors. The Workbench importer stores
 non-empty unknown values under `raw_evidence["unknown_columns"]`. The legacy CLI
 loader emits a warning naming unknown columns because its occurrence model has
 no raw evidence bag.

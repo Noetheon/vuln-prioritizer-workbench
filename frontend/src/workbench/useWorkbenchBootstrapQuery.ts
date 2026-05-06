@@ -11,7 +11,7 @@ export const workbenchBootstrapQueryKey = workbenchQueryKeys.bootstrap()
 
 export async function loadWorkbenchBootstrap() {
   const [status, providerStatus, currentUser] = await Promise.all([
-    WorkbenchService.templateWorkbenchStatus(),
+    WorkbenchService.workbenchStatus(),
     ProvidersService.readProviderStatus(),
     UsersService.readUserMe(),
   ])

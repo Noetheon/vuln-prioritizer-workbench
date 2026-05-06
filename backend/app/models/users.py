@@ -1,4 +1,4 @@
-"""User models for the template-aligned backend app."""
+"""User models for the Workbench backend app."""
 
 import uuid
 from datetime import datetime
@@ -10,7 +10,7 @@ from app.models.base import get_datetime_utc
 
 
 class UserBase(SQLModel):
-    """Shared user fields from the official template's account model."""
+    """Shared user fields from the upstream account model."""
 
     email: str = Field(index=True, max_length=255)
     is_active: bool = True
@@ -34,7 +34,7 @@ class User(UserBase, table=True):
 
 
 class UserPublic(UserBase):
-    """Public user shape exposed by template auth routes."""
+    """Public user shape exposed by Workbench auth routes."""
 
     id: uuid.UUID
     created_at: datetime
@@ -54,7 +54,7 @@ class UserPasswordReset(SQLModel):
 
 
 class UsersPublic(SQLModel):
-    """Paginated user collection shape reserved for template parity."""
+    """Paginated user collection shape reserved for upstream parity."""
 
     data: list[UserPublic]
     count: int

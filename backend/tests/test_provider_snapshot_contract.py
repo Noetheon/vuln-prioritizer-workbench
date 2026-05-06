@@ -144,7 +144,7 @@ def test_provider_snapshot_metadata_contract_covers_cli_and_workbench_exports() 
             snapshot_id="workbench-snapshot",
             generated_at="2026-04-30T00:00:00+00:00",
             input_paths=[],
-            input_format="template-workbench-current-findings",
+            input_format="workbench-current-findings",
             selected_sources=["kev"],
             requested_cves=1,
             output_path="provider-snapshot-workbench.json",

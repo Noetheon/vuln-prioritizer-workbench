@@ -8,6 +8,7 @@ from typing import Any
 
 from app.services.report_contracts import ANALYSIS_RESULT_SCHEMA_VERSION
 from app.services.report_models import MarkdownReportFinding, MarkdownReportPayload
+from vuln_prioritizer.sarif_references import dedupe_defensive_http_urls
 
 
 def render_sarif_report(payload: MarkdownReportPayload) -> dict[str, Any]:
@@ -194,15 +195,7 @@ def _http_references_from_mapping(mapping: dict[str, Any]) -> list[str]:
 
 
 def _dedupe_http_urls(values: list[str]) -> list[str]:
-    seen: set[str] = set()
-    deduped: list[str] = []
-    for value in values:
-        normalized = value.strip()
-        if not normalized.startswith(("http://", "https://")) or normalized in seen:
-            continue
-        seen.add(normalized)
-        deduped.append(normalized)
-    return deduped
+    return dedupe_defensive_http_urls(values)
 
 
 def _sarif_location_uri(finding: MarkdownReportFinding) -> str:

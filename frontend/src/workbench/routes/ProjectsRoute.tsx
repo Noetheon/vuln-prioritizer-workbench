@@ -8,7 +8,6 @@ import {
 import { ProjectsWorkbench } from "../../components/projects/ProjectsWorkbench"
 import { apiErrorMessage } from "../../lib/app-errors"
 import { emptyProjectForm, type ProjectFormState } from "../../lib/app-defaults"
-import { WorkbenchShell } from "../WorkbenchShell"
 import { useWorkbenchContext } from "../WorkbenchContext"
 import {
   projectRequestBody,
@@ -207,9 +206,5 @@ function ProjectsRouteContainer() {
 }
 
 export function ProjectsRoute() {
-  return (
-    <WorkbenchShell routePath="/projects">
-      <ProjectsRouteContainer />
-    </WorkbenchShell>
-  )
+  return <ProjectsRouteContainer />
 }

@@ -1,4 +1,4 @@
-"""Template-style dependency helpers for the active backend runtime."""
+"""Dependency helpers for the active Workbench runtime."""
 
 from __future__ import annotations
 
@@ -13,9 +13,10 @@ from pydantic import ValidationError
 from sqlmodel import Session
 
 from app.core import security
+from app.core.app_state import workbench_engine, workbench_settings
 from app.core.config import Settings, settings
-from app.core.db import engine, ensure_configured_superuser
-from app.core.rate_limit import InMemoryRateLimiter
+from app.core.db import ensure_configured_superuser
+from app.core.rate_limit import InMemoryRateLimiter, rate_limit_client_host
 from app.models import ApiToken, ApiTokenScope, TokenPayload, User
 from app.models.api_tokens import attach_api_token_context, scope_set
 from app.repositories import ApiTokenRepository, AuthSessionRepository
@@ -38,9 +39,8 @@ SERVICE_TOKEN_ALLOWED_CHARS = frozenset(
 
 
 def get_db(request: Request) -> Generator[Session, None, None]:
-    """Yield a SQLModel session for template-backed API routes."""
-    selected_engine = getattr(request.app.state, "template_engine", engine)
-    with Session(selected_engine) as session:
+    """Yield a SQLModel session for active API routes."""
+    with Session(workbench_engine(request)) as session:
         yield session
 
 
@@ -121,8 +121,17 @@ def get_current_active_superuser(current_user: CurrentUser) -> User:
     return current_user
 
 
-def require_api_scope(required_scope: ApiTokenScope) -> Callable[..., User]:
+def require_api_scope(
+    required_scope: ApiTokenScope,
+    *,
+    require_superuser_for_jwt: bool | None = None,
+) -> Callable[..., User]:
     """Accept a user JWT or a service token with the requested scope."""
+    jwt_needs_superuser = (
+        required_scope == "admin"
+        if require_superuser_for_jwt is None
+        else require_superuser_for_jwt
+    )
 
     def dependency(request: Request, session: SessionDep, token: TokenDep) -> User:
         raw_token, token_source = _resolve_request_token(request, token)
@@ -165,7 +174,7 @@ def require_api_scope(required_scope: ApiTokenScope) -> Callable[..., User]:
                 scopes=scopes,
             )
             return principal
-        if required_scope == "admin" and not user.is_superuser:
+        if jwt_needs_superuser and not user.is_superuser:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Not enough privileges",
@@ -176,8 +185,7 @@ def require_api_scope(required_scope: ApiTokenScope) -> Callable[..., User]:
 
 
 def _request_settings(request: Request) -> Settings:
-    candidate = getattr(request.app.state, "template_settings", settings)
-    return candidate if isinstance(candidate, Settings) else settings
+    return workbench_settings(request, required=False)
 
 
 def _resolve_request_token(
@@ -223,7 +231,7 @@ def _enforce_cookie_csrf(
 
 
 def _enforce_token_failure_rate_limit(request: Request, raw_token: str) -> None:
-    active_settings = getattr(request.app.state, "template_settings", settings)
+    active_settings = workbench_settings(request, required=False)
     limiter = getattr(request.app.state, "rate_limiter", None)
     if (
         not isinstance(active_settings, Settings)
@@ -231,7 +239,7 @@ def _enforce_token_failure_rate_limit(request: Request, raw_token: str) -> None:
         or not isinstance(limiter, InMemoryRateLimiter)
     ):
         return
-    client_host = request.client.host if request.client else "unknown"
+    client_host = rate_limit_client_host(request, active_settings)
     token_hint = sha256(raw_token.encode("utf-8")).hexdigest()[:16]
     decision = limiter.check(
         f"token-failure:{client_host}:{token_hint}",
@@ -265,6 +273,11 @@ def _active_service_token(session: Session, raw_token: str) -> ApiToken | None:
 
 
 ScopedReadUser = Annotated[User, Depends(require_api_scope("read"))]
+ScopedWriteUser = Annotated[User, Depends(require_api_scope("write"))]
 ScopedImportUser = Annotated[User, Depends(require_api_scope("import"))]
 ScopedReportUser = Annotated[User, Depends(require_api_scope("report"))]
+ScopedAdminTokenOrUser = Annotated[
+    User,
+    Depends(require_api_scope("admin", require_superuser_for_jwt=False)),
+]
 ScopedAdminUser = Annotated[User, Depends(require_api_scope("admin"))]

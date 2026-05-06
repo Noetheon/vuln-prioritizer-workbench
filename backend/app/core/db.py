@@ -1,4 +1,4 @@
-"""Database helpers for the active template-aligned backend runtime."""
+"""Database helpers for the active Workbench backend runtime."""
 
 from __future__ import annotations
 

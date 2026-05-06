@@ -155,8 +155,8 @@ def test_vpw072_template_import_10k_occurrences_performance_smoke(
 
 
 def _configure_template_runtime(template_api_env: TemplateApiEnv, tmp_path: Path) -> None:
-    active_settings = template_api_env.client.app.state.template_settings
-    template_api_env.client.app.state.template_settings = replace(
+    active_settings = template_api_env.client.app.state.workbench_settings
+    template_api_env.client.app.state.workbench_settings = replace(
         active_settings,
         IMPORT_UPLOAD_DIR=str(tmp_path / "template-import-uploads"),
         PROVIDER_SNAPSHOT_DIR=str(PROJECT_ROOT / "data"),

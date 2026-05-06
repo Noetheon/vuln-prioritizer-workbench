@@ -732,6 +732,24 @@ def test_vpw042_findings_sort_direction_and_pagination(
         headers,
         {"sort": "last_seen", "direction": "desc"},
     ) == [DEMO_CVE_LOG4SHELL, "CVE-2022-22965", "CVE-2024-4577"]
+    assert _finding_cves(
+        template_api_env,
+        project,
+        headers,
+        {"sort": "component", "direction": "asc"},
+    ) == [DEMO_CVE_LOG4SHELL, "CVE-2024-4577", "CVE-2022-22965"]
+    assert _finding_cves(
+        template_api_env,
+        project,
+        headers,
+        {"sort": "owner", "direction": "asc"},
+    ) == ["CVE-2022-22965", DEMO_CVE_LOG4SHELL, "CVE-2024-4577"]
+    assert _finding_cves(
+        template_api_env,
+        project,
+        headers,
+        {"sort": "owner", "direction": "desc"},
+    ) == ["CVE-2024-4577", DEMO_CVE_LOG4SHELL, "CVE-2022-22965"]
 
 
 def _finding_cves(

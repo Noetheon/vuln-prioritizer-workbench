@@ -44,6 +44,7 @@ def _job_payload(
     return {
         "id": job_id,
         "status": status,
+        "execution_mode": "request",
         "updated_at": timestamp,
         "status_history": status_history,
     }

@@ -61,11 +61,11 @@ export function useReportsRouteState({
   selectedRunId,
 }: UseReportsRouteStateOptions) {
   const queryClient = useQueryClient()
-  const [_verificationReport, setVerificationReport] =
+  const [verificationReport, setVerificationReport] =
     useState<ReportVerificationPublic | null>(null)
-  const [_verificationReportTarget, setVerificationReportTarget] =
+  const [verificationReportTarget, setVerificationReportTarget] =
     useState<ReportPublic | null>(null)
-  const [_verificationLoading, setVerificationLoading] = useState(false)
+  const [verificationLoading, setVerificationLoading] = useState(false)
   const [reportActionMessage, setReportActionMessage] = useState("")
   const [reportActionError, setReportActionError] = useState("")
   const [activeReportFormat, setActiveReportFormat] = useState<
@@ -109,10 +109,12 @@ export function useReportsRouteState({
     if (currentPath === "/reports" && selectedRunId) {
       setVerificationReport(null)
       setVerificationReportTarget(null)
+      setVerificationLoading(false)
       return
     }
     setVerificationReport(null)
     setVerificationReportTarget(null)
+    setVerificationLoading(false)
   }, [currentPath, selectedRunId])
 
   useEffect(() => {
@@ -204,6 +206,9 @@ export function useReportsRouteState({
     reports,
     reportsError,
     reportsLoading,
+    verificationLoading,
+    verificationReport,
+    verificationReportTarget,
     verifyEvidenceReport,
   }
 }

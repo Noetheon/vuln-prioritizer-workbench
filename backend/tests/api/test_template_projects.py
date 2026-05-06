@@ -94,10 +94,10 @@ def test_project_delete_removes_managed_artifact_trees_and_writes_audit(
     tmp_path: Path,
 ) -> None:
     client = template_api_env.client
-    active_settings = client.app.state.template_settings
+    active_settings = client.app.state.workbench_settings
     upload_root = tmp_path / "uploads"
     report_root = tmp_path / "reports"
-    client.app.state.template_settings = replace(
+    client.app.state.workbench_settings = replace(
         active_settings,
         IMPORT_UPLOAD_DIR=str(upload_root),
         REPORT_DIR=str(report_root),

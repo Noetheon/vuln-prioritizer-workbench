@@ -1,4 +1,4 @@
-"""Template-aligned FastAPI entrypoint for the active Workbench runtime."""
+"""FastAPI entrypoint for the active Workbench runtime."""
 
 from __future__ import annotations
 
@@ -19,6 +19,7 @@ from app.api.errors import (
     validation_error_handler,
 )
 from app.api.main import api_router
+from app.core.app_state import configure_workbench_state, workbench_settings
 from app.core.config import Settings, settings
 from app.core.db import create_db_engine
 from app.core.rate_limit import InMemoryRateLimiter, rate_limit_key
@@ -38,7 +39,7 @@ SECURITY_HEADERS = {
 
 
 def custom_generate_unique_id(route: APIRoute) -> str:
-    """Use the official template operation-id convention for generated clients."""
+    """Use stable tag-prefixed operation IDs for generated clients."""
     if route.tags:
         return f"{route.tags[0]}-{route.name}"
     return route.name
@@ -59,8 +60,11 @@ def create_app(active_settings: Settings | None = None) -> FastAPI:
         redoc_url="/redoc" if selected_settings.api_docs_enabled else None,
         generate_unique_id_function=custom_generate_unique_id,
     )
-    app.state.template_settings = selected_settings
-    app.state.template_engine = create_db_engine(selected_settings)
+    configure_workbench_state(
+        app,
+        active_settings=selected_settings,
+        active_engine=create_db_engine(selected_settings),
+    )
     app.state.rate_limiter = InMemoryRateLimiter()
     app.add_middleware(
         TrustedHostMiddleware,
@@ -98,23 +102,22 @@ async def _rate_limit_guard(
     request: Request,
     call_next: Callable[[Request], Awaitable[Response]],
 ) -> Response:
-    active_settings = getattr(request.app.state, "template_settings", settings)
-    if isinstance(active_settings, Settings):
-        key_and_limit = rate_limit_key(request, active_settings)
-        limiter = getattr(request.app.state, "rate_limiter", None)
-        if key_and_limit is not None and isinstance(limiter, InMemoryRateLimiter):
-            key, limit = key_and_limit
-            decision = limiter.check(key, limit=limit)
-            if not decision.allowed:
-                return JSONResponse(
+    active_settings = workbench_settings(request, required=False)
+    key_and_limit = rate_limit_key(request, active_settings)
+    limiter = getattr(request.app.state, "rate_limiter", None)
+    if key_and_limit is not None and isinstance(limiter, InMemoryRateLimiter):
+        key, limit = key_and_limit
+        decision = limiter.check(key, limit=limit)
+        if not decision.allowed:
+            return JSONResponse(
+                status_code=429,
+                content=error_response_content(
                     status_code=429,
-                    content=error_response_content(
-                        status_code=429,
-                        detail="Too many requests.",
-                        request=request,
-                    ),
-                    headers={"Retry-After": str(decision.retry_after_seconds)},
-                )
+                    detail="Too many requests.",
+                    request=request,
+                ),
+                headers={"Retry-After": str(decision.retry_after_seconds)},
+            )
     return await call_next(request)
 
 
@@ -122,29 +125,28 @@ async def _upload_size_guard(
     request: Request,
     call_next: Callable[[Request], Awaitable[Response]],
 ) -> Response:
-    if request.method == "POST" and _is_template_upload_path(request.url.path):
+    if request.method == "POST" and _is_workbench_upload_path(request.url.path):
         raw_content_length = request.headers.get("content-length")
         if raw_content_length is not None:
             try:
                 content_length = int(raw_content_length)
             except ValueError:
                 content_length = 0
-            active_settings = getattr(request.app.state, "template_settings", None)
-            if isinstance(active_settings, Settings):
-                multipart_overhead = 64 * 1024
-                if content_length > active_settings.max_upload_bytes + multipart_overhead:
-                    return JSONResponse(
+            active_settings = workbench_settings(request, required=False)
+            multipart_overhead = 64 * 1024
+            if content_length > active_settings.max_upload_bytes + multipart_overhead:
+                return JSONResponse(
+                    status_code=413,
+                    content=error_response_content(
                         status_code=413,
-                        content=error_response_content(
-                            status_code=413,
-                            detail="Upload exceeds configured limit.",
-                            request=request,
-                        ),
-                    )
+                        detail="Upload exceeds configured limit.",
+                        request=request,
+                    ),
+                )
     return await call_next(request)
 
 
-def _is_template_upload_path(path: str) -> bool:
+def _is_workbench_upload_path(path: str) -> bool:
     return path.startswith("/api/v1/projects/") and (
         path.endswith("/imports") or path.endswith("/assets/import")
     )

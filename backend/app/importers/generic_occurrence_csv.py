@@ -1,4 +1,4 @@
-"""Generic occurrence CSV importer for the template Workbench import boundary."""
+"""Generic occurrence CSV importer for the Workbench import boundary."""
 
 from __future__ import annotations
 

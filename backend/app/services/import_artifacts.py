@@ -1,4 +1,4 @@
-"""Managed artifact resolution for template Workbench imports."""
+"""Managed artifact resolution for Workbench imports."""
 
 from __future__ import annotations
 
@@ -7,14 +7,14 @@ from pathlib import Path
 
 from fastapi import HTTPException, Request
 
-from app.services.import_uploads import template_settings
+from app.services.import_uploads import workbench_settings
 from vuln_prioritizer.cli_options import AttackSource
 
 SAFE_ATTACK_FILENAME_RE = re.compile(r"^[A-Za-z0-9._-]+$")
 SAFE_SNAPSHOT_FILENAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*[.]json$")
 
 
-def resolve_template_provider_snapshot_path(
+def resolve_workbench_provider_snapshot_path(
     provider_snapshot_file: str | None,
     *,
     request: Request,
@@ -29,7 +29,7 @@ def resolve_template_provider_snapshot_path(
         or Path(value).name != value
     ):
         raise HTTPException(status_code=422, detail="Provider snapshot path is not allowed.")
-    snapshot_root = template_settings(request).provider_snapshot_dir_path.resolve(strict=False)
+    snapshot_root = workbench_settings(request).provider_snapshot_dir_path.resolve(strict=False)
     candidate = (snapshot_root / value).resolve(strict=False)
     if not candidate.is_relative_to(snapshot_root):
         raise HTTPException(status_code=422, detail="Provider snapshot path is not allowed.")
@@ -38,7 +38,7 @@ def resolve_template_provider_snapshot_path(
     return candidate
 
 
-def resolve_template_attack_artifact_path(
+def resolve_workbench_attack_artifact_path(
     value: str | None,
     *,
     request: Request,
@@ -53,7 +53,7 @@ def resolve_template_attack_artifact_path(
         or Path(filename).name != filename
     ):
         raise HTTPException(status_code=422, detail="ATT&CK artifact path is not allowed.")
-    artifact_root = template_settings(request).attack_artifact_dir_path.resolve(strict=False)
+    artifact_root = workbench_settings(request).attack_artifact_dir_path.resolve(strict=False)
     candidate = (artifact_root / filename).resolve(strict=False)
     if not candidate.is_relative_to(artifact_root):
         raise HTTPException(status_code=422, detail="ATT&CK artifact path is not allowed.")
@@ -86,7 +86,7 @@ def validate_attack_import_options(
     if normalized_source not in {AttackSource.ctid_json, AttackSource.local_curated}:
         raise HTTPException(
             status_code=422,
-            detail="Template Workbench ATT&CK imports only support ctid-json or local-curated.",
+            detail="Workbench ATT&CK imports only support ctid-json or local-curated.",
         )
     if attack_mapping_path is None:
         raise HTTPException(
@@ -94,3 +94,7 @@ def validate_attack_import_options(
             detail="ATT&CK imports require a mapping file.",
         )
     return normalized_source
+
+
+resolve_template_provider_snapshot_path = resolve_workbench_provider_snapshot_path
+resolve_template_attack_artifact_path = resolve_workbench_attack_artifact_path

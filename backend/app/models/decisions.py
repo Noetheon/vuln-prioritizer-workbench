@@ -1,4 +1,4 @@
-"""Decision API response models for template Workbench routes."""
+"""Decision API response models for Workbench routes."""
 
 from __future__ import annotations
 
@@ -49,7 +49,7 @@ class ProjectDecisionSummaryPublic(SQLModel):
 
 
 class ProjectCvssOnlyComparisonPublic(SQLModel):
-    """CVSS-only baseline comparison for stored template findings."""
+    """CVSS-only baseline comparison for stored Workbench findings."""
 
     project_id: uuid.UUID
     methodology: dict[str, Any]

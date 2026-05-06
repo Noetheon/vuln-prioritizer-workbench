@@ -32,12 +32,12 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 
 
 class TemplateAnalysisError(RuntimeError):
-    """Raised when a template import cannot complete decision analysis."""
+    """Raised when a Workbench import cannot complete decision analysis."""
 
 
 @dataclass(frozen=True, slots=True)
 class TemplateAnalysisResult:
-    """Decision state produced for a template import before persistence."""
+    """Decision state produced for a Workbench import before persistence."""
 
     findings_by_cve: dict[str, PrioritizedFinding]
     context: AnalysisContext
@@ -90,7 +90,7 @@ class TemplateAnalysisResult:
 
 
 class AnalysisService:
-    """Coordinate template import decision analysis through the shared core pipeline."""
+    """Coordinate Workbench import decision analysis through the shared core pipeline."""
 
     def __init__(self, session: Session, settings: Settings) -> None:
         self.session = session
@@ -109,7 +109,7 @@ class AnalysisService:
         attack_technique_metadata_file: Path | None = None,
         vex_files: list[Path] | None = None,
     ) -> TemplateAnalysisResult:
-        """Run parse/enrich/score/explain for one uploaded template import."""
+        """Run parse/enrich/score/explain for one uploaded Workbench import."""
         snapshot_path = provider_snapshot_file or self.default_provider_snapshot_file()
         use_locked_snapshot = locked_provider_data or snapshot_path is not None
         normalized_attack_source = AttackSource(attack_source)
@@ -197,7 +197,7 @@ class AnalysisService:
         *,
         locked_provider_data: bool,
     ) -> uuid.UUID | None:
-        """Persist provider snapshot metadata in the template SQLModel database."""
+        """Persist provider snapshot metadata in the Workbench SQLModel database."""
         if snapshot_path is None:
             return None
         content_hash = _file_sha256(snapshot_path)

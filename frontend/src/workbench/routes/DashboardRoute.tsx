@@ -2,7 +2,6 @@ import { useQueryClient } from "@tanstack/react-query"
 import { RiskOperationsDashboard } from "../../components/dashboard/RiskOperationsDashboard"
 import { apiErrorMessage } from "../../lib/app-errors"
 import { epssBucketChartData } from "../../lib/chart-data"
-import { WorkbenchShell } from "../WorkbenchShell"
 import { useWorkbenchContext } from "../WorkbenchContext"
 import { governanceServiceRows } from "../route-utils"
 import {
@@ -128,9 +127,5 @@ function DashboardRouteContainer() {
 }
 
 export function DashboardRoute() {
-  return (
-    <WorkbenchShell routePath="/">
-      <DashboardRouteContainer />
-    </WorkbenchShell>
-  )
+  return <DashboardRouteContainer />
 }
