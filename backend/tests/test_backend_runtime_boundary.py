@@ -242,7 +242,8 @@ def test_public_deployment_runbook_documents_backup_retention_and_tls() -> None:
     assert "scripts/workbench-backup.sh" in runbook
     assert "scripts/workbench-restore.sh" in runbook
     assert "WORKBENCH_ARTIFACT_MODE=compose" in runbook
-    assert "/app/template-import-uploads" in runbook
+    assert "import-upload, report, provider-snapshot, and\nprovider-cache" in runbook
+    assert "/app/template-import-uploads" not in runbook
     assert "python -m app.core.retention --dry-run" in runbook
     assert "TRAEFIK_APP_ENABLED=true" in runbook
     assert "BACKEND_CORS_ORIGINS=https://workbench.example.com" in runbook

@@ -5,11 +5,13 @@ from __future__ import annotations
 import hashlib
 import uuid
 from pathlib import Path
+from typing import Any
 
 from fastapi import APIRouter, HTTPException, Request
 from starlette.responses import FileResponse
 
 from app.api.deps import ScopedReportUser, SessionDep
+from app.api.errors import redact_public_payload
 from app.api.routes.workbench_access import require_visible_project
 from app.core.config import Settings
 from app.models import (
@@ -188,7 +190,7 @@ def _report_public(report: Report, request: Request) -> ReportPublic:
         content_type=report.content_type,
         sha256=report.sha256,
         size_bytes=report.size_bytes,
-        metadata_json=report.metadata_json,
+        metadata_json=_dict_value(redact_public_payload(report.metadata_json or {})),
         created_at=report.created_at,
         download_url=f"{settings.API_V1_STR}/reports/{report.id}/download",
     )
@@ -215,3 +217,7 @@ def _template_settings(request: Request) -> Settings:
     if isinstance(candidate, Settings):
         return candidate
     raise HTTPException(status_code=500, detail="Template settings are not configured.")
+
+
+def _dict_value(value: object) -> dict[str, Any]:
+    return dict(value) if isinstance(value, dict) else {}

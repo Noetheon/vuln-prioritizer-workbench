@@ -1,4 +1,5 @@
 import { client } from "./client/client.gen"
+import { withCsrfHeader } from "./auth"
 
 export * from "./client"
 export { client } from "./client/client.gen"
@@ -24,6 +25,16 @@ export class ApiError extends Error {
 }
 
 let hasErrorInterceptor = false
+let hasRequestInterceptor = false
+
+function installRequestInterceptor() {
+  if (hasRequestInterceptor) {
+    return
+  }
+
+  client.interceptors.request.use((request) => withCsrfHeader(request))
+  hasRequestInterceptor = true
+}
 
 function installErrorInterceptor() {
   if (hasErrorInterceptor) {
@@ -43,8 +54,10 @@ function installErrorInterceptor() {
 }
 
 function configureClient(config: Parameters<typeof client.setConfig>[0]) {
+  installRequestInterceptor()
   installErrorInterceptor()
   client.setConfig({
+    credentials: "include",
     responseStyle: "data",
     throwOnError: true,
     ...config,

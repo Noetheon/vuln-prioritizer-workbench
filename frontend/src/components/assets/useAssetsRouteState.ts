@@ -1,5 +1,11 @@
 import { useNavigate } from "@tanstack/react-router"
-import { type FormEvent, useEffect, useMemo, useState } from "react"
+import {
+  type FormEvent,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react"
 
 import {
   ApiError,
@@ -67,84 +73,100 @@ export function useAssetsRouteState() {
     [assets, selectedAssetId],
   )
 
-  async function handleUnauthorized(caught: unknown) {
-    if (caught instanceof ApiError && [401, 403].includes(caught.status)) {
-      clearAccessToken()
-      await navigate({ to: "/login" })
-      return true
-    }
-    return false
-  }
+  const handleUnauthorized = useCallback(
+    async function handleUnauthorized(caught: unknown) {
+      if (caught instanceof ApiError && [401, 403].includes(caught.status)) {
+        clearAccessToken()
+        await navigate({ to: "/login" })
+        return true
+      }
+      return false
+    },
+    [navigate],
+  )
 
-  async function refreshProjects(preferredProjectId?: string) {
-    setProjectLoading(true)
-    try {
-      const projectPage = await ProjectsService.readProjects()
-      setProjects(projectPage.data)
-      setSelectedProjectId((currentProjectId) => {
-        if (
-          preferredProjectId &&
-          projectPage.data.some((project) => project.id === preferredProjectId)
-        ) {
-          return preferredProjectId
+  const refreshProjects = useCallback(
+    async function refreshProjects(preferredProjectId?: string) {
+      setProjectLoading(true)
+      try {
+        const projectPage = await ProjectsService.readProjects()
+        setProjects(projectPage.data)
+        setSelectedProjectId((currentProjectId) => {
+          if (
+            preferredProjectId &&
+            projectPage.data.some(
+              (project) => project.id === preferredProjectId,
+            )
+          ) {
+            return preferredProjectId
+          }
+          if (
+            projectPage.data.some((project) => project.id === currentProjectId)
+          ) {
+            return currentProjectId
+          }
+          return projectPage.data[0]?.id ?? ""
+        })
+      } catch (caught) {
+        if (await handleUnauthorized(caught)) {
+          return
         }
-        if (
-          projectPage.data.some((project) => project.id === currentProjectId)
-        ) {
-          return currentProjectId
-        }
-        return projectPage.data[0]?.id ?? ""
-      })
-    } catch (caught) {
-      if (await handleUnauthorized(caught)) {
+        setProjects([])
+        setSelectedProjectId("")
+        setAssetsError(apiErrorMessage("Project list unavailable", caught))
+      } finally {
+        setProjectLoading(false)
+      }
+    },
+    [handleUnauthorized],
+  )
+
+  const refreshAssets = useCallback(
+    async function refreshAssets(preferredAssetId?: string) {
+      if (!selectedProjectId) {
+        setAssets([])
+        setSelectedAssetId("")
         return
       }
-      setProjects([])
-      setSelectedProjectId("")
-      setAssetsError(apiErrorMessage("Project list unavailable", caught))
-    } finally {
-      setProjectLoading(false)
-    }
-  }
-
-  async function refreshAssets(preferredAssetId?: string) {
-    if (!selectedProjectId) {
-      setAssets([])
-      setSelectedAssetId("")
-      return
-    }
-    setAssetsLoading(true)
-    setAssetsError("")
-    try {
-      const assetPage = await AssetsService.readProjectAssets({
-        owner: assetOwnerFilter.trim() || undefined,
-        project_id: selectedProjectId,
-        service: assetServiceFilter.trim() || undefined,
-      })
-      setAssets(assetPage.data)
-      setSelectedAssetId((currentAssetId) => {
-        if (
-          preferredAssetId &&
-          assetPage.data.some((asset) => asset.id === preferredAssetId)
-        ) {
-          return preferredAssetId
+      setAssetsLoading(true)
+      setAssetsError("")
+      try {
+        const assetPage = await AssetsService.readProjectAssets({
+          owner: assetOwnerFilter.trim() || undefined,
+          project_id: selectedProjectId,
+          service: assetServiceFilter.trim() || undefined,
+        })
+        setAssets(assetPage.data)
+        setSelectedAssetId((currentAssetId) => {
+          if (
+            preferredAssetId &&
+            assetPage.data.some((asset) => asset.id === preferredAssetId)
+          ) {
+            return preferredAssetId
+          }
+          if (assetPage.data.some((asset) => asset.id === currentAssetId)) {
+            return currentAssetId
+          }
+          return assetPage.data[0]?.id ?? ""
+        })
+      } catch (caught) {
+        if (await handleUnauthorized(caught)) {
+          return
         }
-        if (assetPage.data.some((asset) => asset.id === currentAssetId)) {
-          return currentAssetId
-        }
-        return assetPage.data[0]?.id ?? ""
-      })
-    } catch (caught) {
-      if (await handleUnauthorized(caught)) {
-        return
+        setAssets([])
+        setSelectedAssetId("")
+        setAssetsError(apiErrorMessage("Assets unavailable", caught))
+      } finally {
+        setAssetsLoading(false)
       }
-      setAssets([])
-      setSelectedAssetId("")
-      setAssetsError(apiErrorMessage("Assets unavailable", caught))
-    } finally {
-      setAssetsLoading(false)
-    }
-  }
+    },
+    [
+      assetOwnerFilter,
+      assetServiceFilter,
+      handleUnauthorized,
+      selectedProjectId,
+    ],
+  )
 
   useEffect(() => {
     let isMounted = true
@@ -178,11 +200,11 @@ export function useAssetsRouteState() {
     return () => {
       isMounted = false
     }
-  }, [])
+  }, [handleUnauthorized, refreshProjects])
 
   useEffect(() => {
     void refreshAssets()
-  }, [assetOwnerFilter, assetServiceFilter, selectedProjectId])
+  }, [refreshAssets])
 
   useEffect(() => {
     let isMounted = true
@@ -230,7 +252,7 @@ export function useAssetsRouteState() {
     return () => {
       isMounted = false
     }
-  }, [selectedAsset, selectedProjectId])
+  }, [handleUnauthorized, selectedAsset, selectedProjectId])
 
   async function createAsset(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()

@@ -16,11 +16,15 @@ Workbench surface:
   repositories, auth/session support, and Alembic migrations.
 - `frontend/`: React, Vite, TanStack Router, TypeScript, and the generated API
   client consumed by the browser app.
-- `frontend/src/client/**` and `frontend/src/api-client.ts`: generated API
-  client boundary. Product code imports the generated services and types, but
-  generated files are not manually edited.
+- `frontend/src/client/**`: generated OpenAPI client. Generated files are not
+  manually edited.
+- `frontend/src/api-client.ts`: manual wrapper and integration layer over the
+  generated client.
 - `backend/src/vuln_prioritizer/**`: retained CLI and domain implementation
   used by maintainer workflows and shared analysis/reporting helpers.
+- Python package boundary: `backend/pyproject.toml` intentionally includes both
+  `vuln_prioritizer*` and `app*`, so the backend distribution ships the CLI/core
+  package and the active Workbench FastAPI app.
 
 The frontend and backend communicate through the generated API client. UI
 component structure, route extraction, CSS organization, and VPW design-system
@@ -31,11 +35,10 @@ implementation details are intentionally outside the backend/API contract.
 The active browser Workbench runtime is `backend/app`. Docker, the local Compose
 quickstart, Playwright backend startup, and OpenAPI client generation must point
 to `app.main:app` or import `app.main.app`. The generated browser API boundary is
-`frontend/src/client/**` plus `frontend/src/api-client.ts`; generated client files
-are not manually edited.
+`frontend/src/client/**`; `frontend/src/api-client.ts` is manual wrapper code.
 
 `backend/src/vuln_prioritizer/**` remains the retained CLI and domain
-implementation. The active template backend may import neutral, framework-light
+implementation. The active Workbench backend may import neutral, framework-light
 domain helpers from this package, such as input normalization, provider clients,
 scoring, report/evidence helpers, redaction, and token hashing. Reusable logic
 needed by the CLI and browser runtime must live in these neutral modules.
@@ -63,7 +66,7 @@ owned by route-level Workbench components:
 | Providers | `components/providers/ProvidersRouteContainer.tsx` | Typed container over `ProvidersWorkbench`; provider status remains shared state. |
 | Reports | `components/reports/EvidenceCenter.tsx` | Evidence Center for report generation, download, verification, and bundle metadata. |
 | Settings | `components/settings/SettingsRouteContainer.tsx` | Typed wrapper over `SettingsWorkbench`; token/session data remains shell-owned. |
-| Login | `routes/login.tsx` | Standalone login route using local template auth defaults and API status. |
+| Login | `routes/login.tsx` | Standalone login route using local auth defaults and API status. |
 
 ## WorkbenchShell Role
 

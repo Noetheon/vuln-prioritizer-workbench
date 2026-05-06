@@ -2652,6 +2652,10 @@ export type Token = {
      */
     access_token: string;
     /**
+     * Csrf Token
+     */
+    csrf_token?: string | null;
+    /**
      * Token Type
      */
     token_type?: string;

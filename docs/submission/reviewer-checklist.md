@@ -19,8 +19,9 @@ reproducibly.
 
 ## Scope And Integrity
 
-- [ ] No manual edits in `frontend/src/client/**`.
-- [ ] No manual edits in `frontend/src/api-client.ts`.
+- [ ] No manual edits in generated files under `frontend/src/client/**`.
+- [ ] Any `frontend/src/api-client.ts` changes are reviewed as manual wrapper
+      source, not generated-client drift.
 - [ ] No unintended backend implementation changes.
 - [ ] No changes to `data/attack/**`.
 - [ ] No changes to contract artifacts under `docs/evidence/`.
@@ -54,7 +55,8 @@ reproducibly.
 ## Limitations
 
 - [ ] Demo data is clearly marked as sample/evidence data.
-- [ ] Public deployment hardening remains marked as a later topic.
+- [ ] Public-production readiness is not claimed unless PP5 evidence and the
+      final scorecard support it.
 - [ ] Detection coverage is not overstated as proof of effectiveness.
 - [ ] Waivers are described as governance context, not as risk deletion.
 

@@ -4,8 +4,10 @@ set -euo pipefail
 repo_root="$(git rev-parse --show-toplevel)"
 cd "$repo_root"
 
-db_path="${TEMPLATE_PLAYWRIGHT_DB:-$repo_root/build/frontend-playwright-template.db}"
-report_dir="${TEMPLATE_PLAYWRIGHT_REPORT_DIR:-$repo_root/build/frontend-playwright-template-reports}"
+# Compatibility entrypoint for existing Playwright config. Prefer
+# scripts/start-workbench-playwright-backend.sh in new docs and tooling.
+db_path="${WORKBENCH_PLAYWRIGHT_DB:-${TEMPLATE_PLAYWRIGHT_DB:-$repo_root/build/frontend-playwright-workbench.db}}"
+report_dir="${WORKBENCH_PLAYWRIGHT_REPORT_DIR:-${TEMPLATE_PLAYWRIGHT_REPORT_DIR:-$repo_root/build/frontend-playwright-workbench-reports}}"
 mkdir -p "$(dirname "$db_path")"
 mkdir -p "$report_dir"
 rm -f "$db_path"

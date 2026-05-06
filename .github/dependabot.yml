@@ -34,7 +34,8 @@ updates:
     labels:
       - "maintenance"
       - "dependencies"
-      - "frontend"
+      - "type:frontend"
+      - "area:ui"
     groups:
       frontend-dependencies:
         patterns:

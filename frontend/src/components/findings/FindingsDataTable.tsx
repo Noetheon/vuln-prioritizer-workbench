@@ -1,10 +1,5 @@
 import { Link } from "@tanstack/react-router"
-import {
-  ArrowDown,
-  ArrowUp,
-  ArrowUpDown,
-  Eye,
-} from "lucide-react"
+import { ArrowDown, ArrowUp, ArrowUpDown, Eye } from "lucide-react"
 import type {
   FindingPublic,
   FindingsReadProjectFindingsData,
@@ -23,9 +18,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import {
-  type ReactNode,
-} from "react"
+import type { ReactNode } from "react"
 import { formatLabel as labelize, optionalText } from "@/lib/ui-copy"
 import { cn } from "@/lib/utils"
 
@@ -51,15 +44,24 @@ const defaultSortDirections: Record<QueueSort, FindingsDirection> = {
 
 function componentLabel(finding: FindingPublic) {
   const name = optionalText(finding.component_name)
-  return finding.component_version ? `${name} ${finding.component_version}` : name
+  return finding.component_version
+    ? `${name} ${finding.component_version}`
+    : name
 }
 
 function serviceLabel(finding: FindingPublic) {
-  return finding.business_service ?? finding.component_purl ?? "Service not linked"
+  return (
+    finding.business_service ?? finding.component_purl ?? "Service not linked"
+  )
 }
 
 function assetLabel(finding: FindingPublic) {
-  return finding.asset_name ?? finding.asset_key ?? finding.business_service ?? "N.A."
+  return (
+    finding.asset_name ??
+    finding.asset_key ??
+    finding.business_service ??
+    "N.A."
+  )
 }
 
 function ownerLabel(finding: FindingPublic) {

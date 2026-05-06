@@ -6,6 +6,11 @@ Use this checklist before tagging or publishing a Workbench-capable package rele
 
 The Workbench v1.0 milestone evidence is preserved here, but the current package tree is versioned `1.1.0`. A tag cut from this tree must therefore be `v1.1.0`; the release workflow rejects tags that do not match `pyproject.toml`.
 
+For public-production remediation and PP5 certification, use
+[Public-Production Release Evidence Ledger](public-production-release-evidence-ledger.md).
+This historical checklist remains useful release context, but it is not the
+final public-production scorecard.
+
 ## Current Closeout Evidence
 
 - Historical implementation baseline before the first docs closeout: `f5db33f58aa14eba23daa47b38def71b243466a3`.
@@ -144,6 +149,13 @@ make dependency-audit
 make release-check
 ```
 
+- [ ] For public-production readiness handoff, run the broader gate and record
+  the result with residual risk:
+
+```bash
+make release-readiness-check
+```
+
 - [x] Run the documentation gate:
 
 ```bash
@@ -185,7 +197,8 @@ The v1.0 release must keep these boundaries visible in docs, UI copy, examples, 
 
 ## Residual Risks to State
 
-- [x] The Workbench is local-first and is not hardened for public internet exposure.
+- [x] The Workbench v1.0 evidence was local-first; public-production certification
+  requires the separate PP5 evidence ledger and scorecard.
 - [x] SSO, multi-user isolation, audit logging, and ticket sync remain outside the v1.0 local Workbench scope unless explicitly shipped; the later local API-token gate is documented as a v1.2 automation control, not a full internet-facing auth model.
 - [x] SQLite backup, retention, filesystem permissions, and local disk protection remain operator responsibilities.
 - [x] Evidence bundles provide integrity checks but not encryption.

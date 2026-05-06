@@ -1,13 +1,6 @@
 import { expect, type Page, test } from "@playwright/test"
+import { login } from "./auth-helpers"
 import { evidenceScreenshotPath } from "./evidence-paths"
-
-async function login(page: Page) {
-  await page.goto("/login")
-  await page.getByLabel("Email").fill("admin@example.com")
-  await page.getByLabel("Password").fill("changethis")
-  await page.getByRole("button", { name: "Sign in" }).click()
-  await expect(page).toHaveURL(/\/$/)
-}
 
 async function captureRoute(
   page: Page,

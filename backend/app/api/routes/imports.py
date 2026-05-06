@@ -101,6 +101,9 @@ from app.services.import_uploads import (
     template_settings as _template_settings,
 )
 from app.services.import_uploads import (
+    upload_storage_ref as _upload_storage_ref,
+)
+from app.services.import_uploads import (
     upload_summary as _upload_summary,
 )
 from app.services.import_uploads import (
@@ -312,6 +315,29 @@ async def import_project_upload(
     )
     run.status = AnalysisRunStatus.RUNNING
     job_history = [*job_history, _job_status_entry("running")]
+    upload_ref = _upload_storage_ref(
+        project_id=project_id,
+        run_id=run.id,
+        filename=stored_filename,
+    )
+    asset_context_ref = (
+        _upload_storage_ref(
+            project_id=project_id,
+            run_id=run.id,
+            filename=asset_context_stored_filename or "asset_context.csv",
+        )
+        if asset_context_path is not None
+        else None
+    )
+    vex_ref = (
+        _upload_storage_ref(
+            project_id=project_id,
+            run_id=run.id,
+            filename=vex_stored_filename or "openvex.json",
+        )
+        if vex_path is not None
+        else None
+    )
     run.summary_json = {
         **run.summary_json,
         "import_job": _job_payload(
@@ -321,15 +347,16 @@ async def import_project_upload(
         ),
         "input_upload": {
             **run.summary_json["input_upload"],
-            "path": str(upload_path),
+            "path": upload_ref,
+            "storage_ref": upload_ref,
         },
         "asset_context_upload": _upload_summary_with_path(
             run.summary_json.get("asset_context_upload"),
-            path=str(asset_context_path) if asset_context_path is not None else None,
+            path=asset_context_ref,
         ),
         "vex_upload": _upload_summary_with_path(
             run.summary_json.get("vex_upload"),
-            path=str(vex_path) if vex_path is not None else None,
+            path=vex_ref,
         ),
     }
     session.flush()
@@ -941,6 +968,10 @@ def _persist_template_occurrences(
         "finding_count": len(touched_finding_ids),
         "created_findings": created_count,
         "updated_findings": reused_count,
+        "analysis_semantics": _analysis_semantics_summary(
+            occurrences=occurrences,
+            finding_count=len(touched_finding_ids),
+        ),
         "dedup_summary": {
             "key_version": "vpw019-v1",
             "created_findings": created_count,
@@ -1186,6 +1217,10 @@ def _persist_template_occurrences_bulk_insert(
         "finding_count": len(touched_finding_ids),
         "created_findings": len(touched_finding_ids),
         "updated_findings": 0,
+        "analysis_semantics": _analysis_semantics_summary(
+            occurrences=occurrences,
+            finding_count=len(touched_finding_ids),
+        ),
         "dedup_summary": {
             "key_version": "vpw019-v1",
             "created_findings": len(touched_finding_ids),
@@ -1204,6 +1239,22 @@ def _attack_context_enabled(
     decision: PrioritizedFinding,
 ) -> bool:
     return analysis_result.context.attack_source != "none" or decision.attack_context.mapped
+
+
+def _analysis_semantics_summary(
+    *,
+    occurrences: list[NormalizedOccurrence],
+    finding_count: int,
+) -> dict[str, Any]:
+    return {
+        "analysis_decision_scope": "cve",
+        "persistence_scope": "asset_component_occurrence",
+        "finding_dedup_key_version": "vpw019-v1",
+        "cve_count": len({occurrence.cve for occurrence in occurrences}),
+        "occurrence_count": len(occurrences),
+        "finding_count": finding_count,
+        "same_cve_can_create_distinct_asset_findings": True,
+    }
 
 
 def _compact_decision_payload(decision: PrioritizedFinding) -> dict[str, Any]:

@@ -2,27 +2,55 @@ import path from "node:path"
 import tailwindcss from "@tailwindcss/vite"
 import { tanstackRouter } from "@tanstack/router-plugin/vite"
 import react from "@vitejs/plugin-react"
-import { defineConfig } from "vite"
+import { defineConfig, loadEnv } from "vite"
 
-export default defineConfig({
-  resolve: {
-    alias: {
-      "@": path.resolve(__dirname, "./src"),
+function normalizedApiUrl(value: string | undefined) {
+  const trimmed = value?.trim().replace(/\/+$/, "") ?? ""
+  if (!trimmed || trimmed === "/") {
+    return ""
+  }
+  try {
+    const url = new URL(trimmed)
+    return url.origin
+  } catch {
+    return ""
+  }
+}
+
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), "")
+  const isProductionBuild =
+    mode === "production" || process.env.NODE_ENV === "production"
+  const configuredApiUrl = normalizedApiUrl(env.VITE_API_URL)
+  const bundledApiUrl = isProductionBuild ? "" : configuredApiUrl
+  const demoMode =
+    !isProductionBuild && env.VITE_DEMO_MODE?.trim().toLowerCase() === "true"
+
+  return {
+    define: {
+      __VPW_API_URL__: JSON.stringify(bundledApiUrl),
+      __VPW_DEMO_MODE__: JSON.stringify(demoMode),
+      __VPW_LEGACY_SESSION_TOKEN_STORAGE__: JSON.stringify(!isProductionBuild),
     },
-  },
-  server: {
-    host: "127.0.0.1",
-    port: 5173,
-    proxy: {
-      "/api": "http://127.0.0.1:8000",
+    resolve: {
+      alias: {
+        "@": path.resolve(__dirname, "./src"),
+      },
     },
-  },
-  plugins: [
-    tanstackRouter({
-      autoCodeSplitting: true,
-      target: "react",
-    }),
-    tailwindcss(),
-    react(),
-  ],
+    server: {
+      host: "127.0.0.1",
+      port: 5173,
+      proxy: {
+        "/api": "http://127.0.0.1:8000",
+      },
+    },
+    plugins: [
+      tanstackRouter({
+        autoCodeSplitting: true,
+        target: "react",
+      }),
+      tailwindcss(),
+      react(),
+    ],
+  }
 })

@@ -1,4 +1,5 @@
 import { expect, type Locator, type Page, test } from "@playwright/test"
+import { authHeaders, login } from "./auth-helpers"
 import { evidenceScreenshotPath } from "./evidence-paths"
 
 const validOccurrenceCsv = Buffer.from(
@@ -89,17 +90,8 @@ test("template waiver workflow keeps accepted risk visible", async ({
   const testRunSuffix = Date.now().toString(36)
   const projectName = `VPW Waiver Project ${testRunSuffix}`
 
-  await page.goto("/login")
-  await page.getByLabel("Email").fill("admin@example.com")
-  await page.getByLabel("Password").fill("changethis")
-  await page.getByRole("button", { name: "Sign in" }).click()
-  await expect(page).toHaveURL(/\/$/)
-
-  const accessToken = await page.evaluate(() =>
-    window.localStorage.getItem("access_token"),
-  )
-  expect(accessToken).toBeTruthy()
-  const authHeaders = { Authorization: `Bearer ${accessToken}` }
+  const accessToken = await login(page)
+  const headers = authHeaders(accessToken)
 
   const projectResponse = await page.request.post(
     "http://127.0.0.1:8000/api/v1/projects/",
@@ -108,7 +100,7 @@ test("template waiver workflow keeps accepted risk visible", async ({
         description: "Playwright waiver project",
         name: projectName,
       },
-      headers: authHeaders,
+      headers,
     },
   )
   expect(projectResponse.ok()).toBeTruthy()
@@ -117,7 +109,7 @@ test("template waiver workflow keeps accepted risk visible", async ({
   const importResponse = await page.request.post(
     `http://127.0.0.1:8000/api/v1/projects/${project.id}/imports`,
     {
-      headers: authHeaders,
+      headers,
       multipart: {
         file: {
           buffer: validOccurrenceCsv,
@@ -154,7 +146,7 @@ test("template waiver workflow keeps accepted risk visible", async ({
 
   const findingsResponse = await page.request.get(
     `http://127.0.0.1:8000/api/v1/projects/${project.id}/findings/?sort=cve`,
-    { headers: authHeaders },
+    { headers },
   )
   expect(findingsResponse.ok()).toBeTruthy()
   const findingsPayload = (await findingsResponse.json()) as {
@@ -193,17 +185,8 @@ test("template governance rollups show service risk and waiver debt", async ({
   const testRunSuffix = Date.now().toString(36)
   const projectName = `VPW Governance Project ${testRunSuffix}`
 
-  await page.goto("/login")
-  await page.getByLabel("Email").fill("admin@example.com")
-  await page.getByLabel("Password").fill("changethis")
-  await page.getByRole("button", { name: "Sign in" }).click()
-  await expect(page).toHaveURL(/\/$/)
-
-  const accessToken = await page.evaluate(() =>
-    window.localStorage.getItem("access_token"),
-  )
-  expect(accessToken).toBeTruthy()
-  const authHeaders = { Authorization: `Bearer ${accessToken}` }
+  const accessToken = await login(page)
+  const headers = authHeaders(accessToken)
 
   const projectResponse = await page.request.post(
     "http://127.0.0.1:8000/api/v1/projects/",
@@ -212,7 +195,7 @@ test("template governance rollups show service risk and waiver debt", async ({
         description: "Playwright governance rollup project",
         name: projectName,
       },
-      headers: authHeaders,
+      headers,
     },
   )
   expect(projectResponse.ok()).toBeTruthy()
@@ -221,7 +204,7 @@ test("template governance rollups show service risk and waiver debt", async ({
   const importResponse = await page.request.post(
     `http://127.0.0.1:8000/api/v1/projects/${project.id}/imports`,
     {
-      headers: authHeaders,
+      headers,
       multipart: {
         file: {
           buffer: governanceOccurrenceCsv,
@@ -245,7 +228,7 @@ test("template governance rollups show service risk and waiver debt", async ({
         review_at: dateValueFromOffset(0),
         service: "checkout",
       },
-      headers: authHeaders,
+      headers,
     },
   )
   expect(reviewDueWaiver.ok(), await reviewDueWaiver.text()).toBeTruthy()
@@ -261,14 +244,14 @@ test("template governance rollups show service risk and waiver debt", async ({
         reason: "Expired identity waiver for VPW-067 debt evidence.",
         review_at: dateValueFromOffset(-2),
       },
-      headers: authHeaders,
+      headers,
     },
   )
   expect(expiredWaiver.ok(), await expiredWaiver.text()).toBeTruthy()
 
   const rollupsResponse = await page.request.get(
     `http://127.0.0.1:8000/api/v1/projects/${project.id}/governance/rollups/`,
-    { headers: authHeaders },
+    { headers },
   )
   expect(rollupsResponse.ok()).toBeTruthy()
   const rollups = (await rollupsResponse.json()) as {

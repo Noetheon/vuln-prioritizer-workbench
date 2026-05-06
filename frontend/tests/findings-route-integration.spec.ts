@@ -2,7 +2,8 @@ import { expect, type Page, test } from "@playwright/test"
 
 async function routeWorkbenchShell(page: Page) {
   await page.addInitScript(() => {
-    window.localStorage.setItem("access_token", "demo-token")
+    // biome-ignore lint/suspicious/noDocumentCookie: Playwright sets a mock readable CSRF cookie before app boot.
+    document.cookie = "vpw_csrf_token=mock-csrf; Path=/; SameSite=Strict"
   })
 
   await page.route("**/api/v1/users/me", (route) =>
@@ -68,13 +69,13 @@ async function routeWorkbenchShell(page: Page) {
   )
 }
 
-test("findings route renders only the polished remediation queue", async ({
+test("findings route renders the empty live queue without demo data", async ({
   page,
 }) => {
   await routeWorkbenchShell(page)
   await page.goto("/findings")
 
-  await expect(page.getByText("Demo preview").first()).toBeVisible()
+  await expect(page.getByText("Demo preview")).toHaveCount(0)
   await expect(
     page.getByRole("region", { name: "Findings filters" }),
   ).toBeVisible()
@@ -83,62 +84,14 @@ test("findings route renders only the polished remediation queue", async ({
   await expect(page.getByText("Provider Status")).toHaveCount(0)
   await expect(page.getByText("Evidence Flow")).toHaveCount(0)
 
-  const queue = page.getByRole("table", {
-    name: "Findings remediation queue",
-  })
-  await expect(queue).toBeVisible()
-
-  for (const column of [
-    /Priority/i,
-    /Score/i,
-    /CVE/i,
-    "Component / Service",
-    "Owner",
-    /Status/i,
-    /Signals/i,
-    "Why now",
-    "View",
-  ]) {
-    await expect(
-      queue.getByRole("columnheader", { name: column }),
-    ).toBeVisible()
-  }
+  await expect(page.getByText("No projects yet")).toBeVisible()
+  await expect(
+    page.getByRole("table", { name: "Findings remediation queue" }),
+  ).toHaveCount(0)
 
   await expect(
     page.getByRole("combobox", { name: "Sort direction" }),
   ).toHaveCount(0)
-  await expect(
-    page.getByRole("button", { name: /Sort by Score/i }),
-  ).toBeVisible()
-  await page.getByRole("button", { name: /Sort by Score/i }).click()
-  await expect(
-    queue.getByRole("columnheader", { name: /Sort by Score/i }),
-  ).toHaveAttribute("aria-sort", "descending")
-  await page.getByRole("button", { name: /Sort by Score/i }).click()
-  await expect(
-    queue.getByRole("columnheader", { name: /Sort by Score/i }),
-  ).toHaveAttribute("aria-sort", "ascending")
-
-  await expect(queue.getByText("EPSS").first()).toBeVisible()
-  await expect(queue.getByText("CVSS").first()).toBeVisible()
-  await expect(
-    page.getByRole("button", { name: /Quick view CVE-2024-3400/i }),
-  ).toBeVisible()
-
-  const tableWrapBefore = await page
-    .locator(".remediation-table-wrap")
-    .boundingBox()
-  const tableBox = await queue.boundingBox()
-  const actionBox = await page
-    .getByRole("button", { name: /Quick view CVE-2024-3400/i })
-    .boundingBox()
-  expect(tableBox).not.toBeNull()
-  expect(actionBox).not.toBeNull()
-  if (tableBox && actionBox) {
-    expect(actionBox.x + actionBox.width).toBeLessThanOrEqual(
-      tableBox.x + tableBox.width + 1,
-    )
-  }
 
   const sidebar = page.getByLabel("Workbench sidebar")
   await expect(sidebar).toHaveCSS("width", "248px")
@@ -156,12 +109,23 @@ test("findings route renders only the polished remediation queue", async ({
       .getByRole("navigation", { name: "Workbench navigation" })
       .getByText("Dashboard"),
   ).toHaveCount(0)
-  const tableWrapAfter = await page
-    .locator(".remediation-table-wrap")
-    .boundingBox()
-  expect(tableWrapBefore).not.toBeNull()
-  expect(tableWrapAfter).not.toBeNull()
-  if (tableWrapBefore && tableWrapAfter) {
-    expect(tableWrapAfter.width).toBeGreaterThan(tableWrapBefore.width + 100)
-  }
+})
+
+test("finding detail API errors do not fall back to demo findings", async ({
+  page,
+}) => {
+  await routeWorkbenchShell(page)
+  await page.route("**/api/v1/findings/demo-f1", (route) =>
+    route.fulfill({
+      contentType: "application/json",
+      status: 404,
+      body: JSON.stringify({ detail: "Finding not found" }),
+    }),
+  )
+
+  await page.goto("/findings/demo-f1")
+
+  await expect(page.getByText("Finding detail unavailable")).toBeVisible()
+  await expect(page.getByText("Demo preview")).toHaveCount(0)
+  await expect(page.getByText("CVE-2024-3094")).toHaveCount(0)
 })
