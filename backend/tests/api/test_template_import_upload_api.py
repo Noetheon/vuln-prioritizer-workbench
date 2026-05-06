@@ -1421,6 +1421,7 @@ def _configure_upload_dir(
         IMPORT_UPLOAD_DIR=str(upload_dir),
         PROVIDER_SNAPSHOT_DIR=str(PROJECT_ROOT / "data"),
         ATTACK_ARTIFACT_DIR=str(PROJECT_ROOT / "data" / "attack"),
+        DEMO_PROVIDER_SNAPSHOT_ENABLED=True,
         MAX_UPLOAD_MB=max_upload_mb,
     )
     return upload_dir.resolve(strict=False)

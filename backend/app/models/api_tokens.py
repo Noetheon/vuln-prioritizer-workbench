@@ -2,9 +2,9 @@
 
 import uuid
 from datetime import datetime
-from typing import Literal
+from typing import Literal, Self
 
-from pydantic import field_validator
+from pydantic import field_validator, model_validator
 from sqlalchemy import JSON, Column, DateTime, Index, String
 from sqlmodel import Field, SQLModel
 
@@ -31,6 +31,7 @@ class ApiTokenCreate(SQLModel):
 
     name: str = Field(min_length=1, max_length=200)
     scopes: list[ApiTokenScope] = Field(default_factory=lambda: ["read"])
+    project_id: uuid.UUID | None = None
 
     @field_validator("name")
     @classmethod
@@ -45,12 +46,30 @@ class ApiTokenCreate(SQLModel):
     def validate_scopes(cls, value: list[str]) -> list[ApiTokenScope]:
         return normalize_api_token_scopes(value)
 
+    @model_validator(mode="after")
+    def validate_project_scope(self) -> Self:
+        scope_names = set(self.scopes)
+        if "admin" in scope_names:
+            if self.project_id is not None:
+                raise ValueError("Admin API tokens must not be project-scoped.")
+            return self
+        if self.project_id is None:
+            raise ValueError("Non-admin API tokens require a project_id.")
+        return self
+
 
 class ApiTokenBase(SQLModel):
     """Shared persisted token metadata."""
 
     name: str = Field(min_length=1, max_length=200)
     token_hash: str = Field(sa_column=Column(String(128), nullable=False, unique=True))
+    project_id: uuid.UUID | None = Field(
+        default=None,
+        foreign_key="project.id",
+        index=True,
+        nullable=True,
+        ondelete="CASCADE",
+    )
     scopes_json: list[str] = Field(
         default_factory=lambda: ["read"],
         sa_column=Column(JSON, nullable=False),
@@ -90,6 +109,7 @@ class ApiTokenPublic(SQLModel):
 
     id: uuid.UUID
     name: str
+    project_id: uuid.UUID | None
     scopes: list[ApiTokenScope]
     active: bool
     created_at: datetime
@@ -115,6 +135,7 @@ def api_token_public(token: ApiToken) -> ApiTokenPublic:
     return ApiTokenPublic(
         id=token.id,
         name=token.name,
+        project_id=token.project_id,
         scopes=token.scopes,
         active=token.revoked_at is None,
         created_at=token.created_at,
@@ -143,3 +164,41 @@ def scope_set(token: ApiToken | None) -> set[str]:
         return set(token.scopes)
     except ValueError:
         return set()
+
+
+API_TOKEN_PROJECT_ID_ATTR = "_vpw_api_token_project_id"
+API_TOKEN_SCOPES_ATTR = "_vpw_api_token_scopes"
+API_TOKEN_ID_ATTR = "_vpw_api_token_id"
+
+
+def attach_api_token_context(
+    principal: object,
+    *,
+    token_id: uuid.UUID,
+    project_id: uuid.UUID | None,
+    scopes: set[str],
+) -> None:
+    """Attach service-token authorization context to a resolved user principal."""
+    object.__setattr__(principal, API_TOKEN_ID_ATTR, token_id)
+    object.__setattr__(principal, API_TOKEN_PROJECT_ID_ATTR, project_id)
+    object.__setattr__(principal, API_TOKEN_SCOPES_ATTR, set(scopes))
+
+
+def api_token_project_id(principal: object) -> uuid.UUID | None:
+    """Return the service token's project scope when the principal came from a token."""
+    value = getattr(principal, API_TOKEN_PROJECT_ID_ATTR, None)
+    return value if isinstance(value, uuid.UUID) else None
+
+
+def api_token_id(principal: object) -> uuid.UUID | None:
+    """Return the service token ID when the principal came from a token."""
+    value = getattr(principal, API_TOKEN_ID_ATTR, None)
+    return value if isinstance(value, uuid.UUID) else None
+
+
+def api_token_scopes(principal: object) -> set[str] | None:
+    """Return service token scopes, or None when the principal came from a JWT."""
+    value = getattr(principal, API_TOKEN_SCOPES_ATTR, None)
+    if value is None:
+        return None
+    return {str(scope) for scope in value}

@@ -1,20 +1,19 @@
 FROM node:22-alpine AS build-stage
 
-WORKDIR /app
+WORKDIR /app/frontend
 
-COPY package.json bun.lock /app/
-COPY frontend/package.json frontend/package-lock.json /app/frontend/
+COPY frontend/package.json frontend/package-lock.json ./
 
-RUN npm --prefix frontend ci
+RUN npm ci --workspaces=false
 
-COPY frontend /app/frontend
+COPY frontend ./
 
 ARG VITE_API_URL=http://localhost:8000
 ARG NODE_ENV=production
 ENV VITE_API_URL=$VITE_API_URL
 ENV NODE_ENV=$NODE_ENV
 
-RUN npm --prefix frontend run build
+RUN npm run build
 
 FROM nginx:1.27-alpine
 

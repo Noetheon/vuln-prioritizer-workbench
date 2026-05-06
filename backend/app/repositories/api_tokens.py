@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import uuid
+from datetime import datetime
 
 from sqlmodel import Session, col, select
 
@@ -23,10 +24,12 @@ class ApiTokenRepository:
         name: str,
         token_hash: str,
         scopes: list[ApiTokenScope],
+        project_id: uuid.UUID | None,
     ) -> ApiToken:
         token = ApiToken(
             name=name,
             token_hash=token_hash,
+            project_id=project_id,
             scopes_json=scopes_payload(scopes),
         )
         self.session.add(token)
@@ -57,3 +60,15 @@ class ApiTokenRepository:
         self.session.add(token)
         self.session.flush()
         return token
+
+    def delete_revoked_api_tokens(self, *, before: datetime) -> int:
+        """Delete revoked API-token metadata older than the retention cutoff."""
+        statement = select(ApiToken).where(
+            col(ApiToken.revoked_at).is_not(None),
+            col(ApiToken.revoked_at) < before,
+        )
+        tokens = list(self.session.exec(statement).all())
+        for token in tokens:
+            self.session.delete(token)
+        self.session.flush()
+        return len(tokens)

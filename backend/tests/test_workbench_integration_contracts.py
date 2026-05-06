@@ -11,6 +11,9 @@ def test_backend_dockerfile_prepares_template_quickstart_runtime_dirs() -> None:
     assert "/app/template-import-uploads" in dockerfile
     assert "/app/template-reports" in dockerfile
     assert "/app/template-provider-cache" in dockerfile
+    assert "backend/alembic.ini" in dockerfile
+    assert "python -m app.core.migration_bootstrap" in dockerfile
+    assert "alembic -c /app/backend/alembic.ini upgrade head" in dockerfile
     assert "chown -R workbench:workbench /app" in dockerfile
 
 
@@ -28,6 +31,9 @@ def test_compose_uses_template_shell_without_legacy_runtime_services() -> None:
     assert backend["environment"]["PROVIDER_SNAPSHOT_DIR"] == "/app/provider-snapshots"
     assert backend["environment"]["PROVIDER_CACHE_DIR"] == "/app/template-provider-cache"
     assert backend["environment"]["ATTACK_ARTIFACT_DIR"] == "/app/examples/attack"
+    assert backend["environment"]["DEMO_PROVIDER_SNAPSHOT_ENABLED"] == (
+        "${DEMO_PROVIDER_SNAPSHOT_ENABLED:-false}"
+    )
     assert "template-import-uploads:/app/template-import-uploads" in backend["volumes"]
     assert "template-reports:/app/template-reports" in backend["volumes"]
     assert "template-provider-snapshots:/app/provider-snapshots" in backend["volumes"]
@@ -56,8 +62,12 @@ def test_compose_override_exposes_template_shell_and_frontend_ports() -> None:
     assert "cp -n /app/examples/*provider_snapshot*.json /app/provider-snapshots/" in (
         backend_command
     )
-    assert "init_db(session)" in backend_command
+    assert "alembic -c /app/backend/alembic.ini upgrade head" in backend_command
+    assert "python -m app.core.migration_bootstrap" in backend_command
+    assert "init_db(session)" not in backend_command
+    assert "create_all" not in backend_command
     assert "app.main:app" in backend_command
+    assert services["backend"]["environment"]["DEMO_PROVIDER_SNAPSHOT_ENABLED"] == "true"
     assert services["frontend"]["ports"] == ["127.0.0.1:5173:80"]
     assert "workbench-postgres" not in services
 

@@ -11,6 +11,7 @@ from app.api.deps import CurrentUser, SessionDep
 from app.api.routes.workbench_access import require_visible_project
 from app.models import Waiver, WaiverCreate, WaiverPublic, WaiversPublic, WaiverUpdate
 from app.repositories import AssetRepository, FindingRepository, WaiverRepository
+from app.services.audit import record_audit_event
 
 router = APIRouter(tags=["waivers"])
 
@@ -45,6 +46,15 @@ def create_project_waiver(
     repository = WaiverRepository(session)
     waiver = repository.create_project_waiver(project_id=project_id, waiver_in=waiver_in)
     repository.sync_project_waivers(project_id)
+    record_audit_event(
+        session,
+        action="waiver.create",
+        resource_type="waiver",
+        resource_id=waiver.id,
+        actor=current_user,
+        project_id=project_id,
+        detail={"cve_id": waiver.cve_id, "owner": waiver.owner},
+    )
     session.commit()
     session.refresh(waiver)
     return _waiver_public(repository, waiver)
@@ -67,6 +77,15 @@ def update_waiver(
     _validate_project_scope(session, project_id=waiver.project_id, waiver_in=waiver_in)
     updated = repository.update_waiver(waiver, waiver_in)
     repository.sync_project_waivers(updated.project_id)
+    record_audit_event(
+        session,
+        action="waiver.update",
+        resource_type="waiver",
+        resource_id=updated.id,
+        actor=current_user,
+        project_id=updated.project_id,
+        detail=waiver_in.model_dump(exclude_unset=True, mode="json"),
+    )
     session.commit()
     session.refresh(updated)
     return _waiver_public(repository, updated)
@@ -86,6 +105,15 @@ def expire_waiver(
     require_visible_project(session, current_user, waiver.project_id)
     expired = repository.expire_waiver(waiver)
     repository.sync_project_waivers(expired.project_id)
+    record_audit_event(
+        session,
+        action="waiver.expire",
+        resource_type="waiver",
+        resource_id=expired.id,
+        actor=current_user,
+        project_id=expired.project_id,
+        detail={"cve_id": expired.cve_id, "owner": expired.owner},
+    )
     session.commit()
     session.refresh(expired)
     return _waiver_public(repository, expired)

@@ -207,8 +207,20 @@ def test_template_github_issue_export_uses_report_scope(
         template_api_env.repositories,
         project_id=UUID(project["id"]),
     )
-    report_token = _create_token(client, jwt_headers, name="report-github", scopes=["report"])
-    read_token = _create_token(client, jwt_headers, name="read-github", scopes=["read"])
+    report_token = _create_token(
+        client,
+        jwt_headers,
+        name="report-github",
+        scopes=["report"],
+        project_id=project["id"],
+    )
+    read_token = _create_token(
+        client,
+        jwt_headers,
+        name="read-github",
+        scopes=["read"],
+        project_id=project["id"],
+    )
 
     allowed = client.post(
         f"/api/v1/projects/{project['id']}/github/issues/preview",
@@ -233,11 +245,12 @@ def _create_token(
     *,
     name: str,
     scopes: list[str],
+    project_id: str,
 ) -> dict[str, object]:
     response = client.post(
         "/api/v1/api-tokens/",
         headers=headers,
-        json={"name": name, "scopes": scopes},
+        json={"name": name, "scopes": scopes, "project_id": project_id},
     )
     assert response.status_code == 200, response.text
     return response.json()

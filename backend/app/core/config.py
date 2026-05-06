@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from os import environ
 from pathlib import Path
 from typing import Literal, cast
-from urllib.parse import quote_plus
+from urllib.parse import quote_plus, urlparse
 
 EnvironmentName = Literal["local", "staging", "production"]
 VALID_ENVIRONMENTS: set[str] = {"local", "staging", "production"}
@@ -37,7 +37,15 @@ class Settings:
     PROVIDER_SNAPSHOT_DIR: str = "data"
     PROVIDER_CACHE_DIR: str = "data/template-provider-cache"
     ATTACK_ARTIFACT_DIR: str = "data/attack"
+    DEMO_PROVIDER_SNAPSHOT_ENABLED: bool = False
     MAX_UPLOAD_MB: int = 25
+    RATE_LIMIT_ENABLED: bool = True
+    API_RATE_LIMIT_PER_MINUTE: int = 600
+    LOGIN_RATE_LIMIT_PER_MINUTE: int = 60
+    TOKEN_FAILURE_RATE_LIMIT_PER_MINUTE: int = 60
+    AUDIT_RETENTION_DAYS: int = 365
+    SESSION_RETENTION_DAYS: int = 30
+    REVOKED_API_TOKEN_RETENTION_DAYS: int = 365
     ALLOWED_HOSTS: tuple[str, ...] = field(default_factory=lambda: DEFAULT_ALLOWED_HOSTS)
     API_DOCS_ENABLED: bool | None = None
 
@@ -48,6 +56,13 @@ class Settings:
         object.__setattr__(self, "ENVIRONMENT", environment)
         object.__setattr__(self, "ALLOWED_HOSTS", allowed_hosts)
         _validate_secret_defaults(self)
+        frontend_host, cors_origins = _validate_cors_origins(
+            self.FRONTEND_HOST,
+            self.BACKEND_CORS_ORIGINS,
+            environment,
+        )
+        object.__setattr__(self, "FRONTEND_HOST", frontend_host)
+        object.__setattr__(self, "BACKEND_CORS_ORIGINS", cors_origins)
 
     @property
     def all_cors_origins(self) -> tuple[str, ...]:
@@ -148,7 +163,24 @@ def load_settings() -> Settings:
         PROVIDER_SNAPSHOT_DIR=environ.get("PROVIDER_SNAPSHOT_DIR", "data"),
         PROVIDER_CACHE_DIR=environ.get("PROVIDER_CACHE_DIR", "data/template-provider-cache"),
         ATTACK_ARTIFACT_DIR=environ.get("ATTACK_ARTIFACT_DIR", "data/attack"),
+        DEMO_PROVIDER_SNAPSHOT_ENABLED=_bool_from_env(
+            "DEMO_PROVIDER_SNAPSHOT_ENABLED",
+            False,
+        ),
         MAX_UPLOAD_MB=_positive_int_from_env("MAX_UPLOAD_MB", 25),
+        RATE_LIMIT_ENABLED=_bool_from_env("RATE_LIMIT_ENABLED", True),
+        API_RATE_LIMIT_PER_MINUTE=_positive_int_from_env("API_RATE_LIMIT_PER_MINUTE", 600),
+        LOGIN_RATE_LIMIT_PER_MINUTE=_positive_int_from_env("LOGIN_RATE_LIMIT_PER_MINUTE", 60),
+        TOKEN_FAILURE_RATE_LIMIT_PER_MINUTE=_positive_int_from_env(
+            "TOKEN_FAILURE_RATE_LIMIT_PER_MINUTE",
+            60,
+        ),
+        AUDIT_RETENTION_DAYS=_positive_int_from_env("AUDIT_RETENTION_DAYS", 365),
+        SESSION_RETENTION_DAYS=_positive_int_from_env("SESSION_RETENTION_DAYS", 30),
+        REVOKED_API_TOKEN_RETENTION_DAYS=_positive_int_from_env(
+            "REVOKED_API_TOKEN_RETENTION_DAYS",
+            365,
+        ),
         ALLOWED_HOSTS=allowed_hosts,
         API_DOCS_ENABLED=_optional_bool_from_env("API_DOCS_ENABLED"),
     )
@@ -175,6 +207,11 @@ def _optional_bool_from_env(name: str) -> bool | None:
     if normalized in FALSE_VALUES:
         return False
     raise ValueError(f"{name} must be true or false.")
+
+
+def _bool_from_env(name: str, default: bool) -> bool:
+    parsed = _optional_bool_from_env(name)
+    return default if parsed is None else parsed
 
 
 def _allowed_hosts_from_env() -> tuple[str, ...]:
@@ -240,6 +277,33 @@ def _validate_secret_defaults(settings: Settings) -> None:
         f"{fields} must be set to non-default secret values when "
         f"ENVIRONMENT={settings.ENVIRONMENT}."
     )
+
+
+def _validate_cors_origins(
+    frontend_host: str,
+    origins: tuple[str, ...],
+    environment: EnvironmentName,
+) -> tuple[str, tuple[str, ...]]:
+    normalized_frontend = frontend_host.rstrip("/")
+    normalized_origins = tuple(origin.rstrip("/") for origin in origins if origin)
+    for origin in (*normalized_origins, normalized_frontend):
+        if origin:
+            _validate_cors_origin(origin, environment)
+    return normalized_frontend, normalized_origins
+
+
+def _validate_cors_origin(origin: str, environment: EnvironmentName) -> None:
+    if origin == "*" or "*" in origin:
+        raise ValueError("BACKEND_CORS_ORIGINS and FRONTEND_HOST must use exact origins.")
+    parsed = urlparse(origin)
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc or parsed.path not in {"", "/"}:
+        raise ValueError("BACKEND_CORS_ORIGINS and FRONTEND_HOST entries must be origins.")
+    hostname = (parsed.hostname or "").lower()
+    if environment in {"staging", "production"}:
+        if parsed.scheme != "https":
+            raise ValueError("Non-local CORS origins must use https.")
+        if hostname in {"localhost", "127.0.0.1"} or hostname.endswith(".localhost"):
+            raise ValueError("Non-local CORS origins must not use localhost.")
 
 
 def _settings_use_insecure_template_secret(settings: Settings) -> bool:
