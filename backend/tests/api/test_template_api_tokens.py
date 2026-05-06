@@ -14,6 +14,8 @@ from utils.template_workbench import (
 
 from app import models as app_models
 
+PROJECT_ROOT = Path(__file__).resolve().parents[3]
+
 
 def test_template_scoped_service_tokens_gate_import_report_admin_and_revoke(
     template_api_env: TemplateApiEnv,
@@ -23,12 +25,31 @@ def test_template_scoped_service_tokens_gate_import_report_admin_and_revoke(
     client = template_api_env.client
     jwt_headers = auth_headers(client)
     project = create_project_via_api(client, jwt_headers)
+    other_project = create_project_via_api(client, jwt_headers, name="Other Project")
 
     admin_token = _create_token(client, jwt_headers, name="token-admin", scopes=["admin"])
     admin_headers = _bearer_headers(admin_token["token"])
-    read_token = _create_token(client, admin_headers, name="token-read", scopes=["read"])
-    import_token = _create_token(client, admin_headers, name="token-import", scopes=["import"])
-    report_token = _create_token(client, admin_headers, name="token-report", scopes=["report"])
+    read_token = _create_token(
+        client,
+        admin_headers,
+        name="token-read",
+        scopes=["read"],
+        project_id=project["id"],
+    )
+    import_token = _create_token(
+        client,
+        admin_headers,
+        name="token-import",
+        scopes=["import"],
+        project_id=project["id"],
+    )
+    report_token = _create_token(
+        client,
+        admin_headers,
+        name="token-report",
+        scopes=["report"],
+        project_id=project["id"],
+    )
 
     with Session(template_api_env.engine) as session:
         token_record = session.get(app_models.ApiToken, UUID(str(import_token["id"])))
@@ -36,6 +57,7 @@ def test_template_scoped_service_tokens_gate_import_report_admin_and_revoke(
         assert token_record.token_hash != import_token["token"]
         assert len(token_record.token_hash) == 64
         assert token_record.scopes == ["import"]
+        assert token_record.project_id == UUID(project["id"])
 
     listed = client.get("/api/v1/api-tokens/", headers=admin_headers)
     assert listed.status_code == 200, listed.text
@@ -49,13 +71,33 @@ def test_template_scoped_service_tokens_gate_import_report_admin_and_revoke(
         ("import",),
         ("report",),
     }
+    assert (
+        next(item for item in listed_payload["data"] if item["id"] == admin_token["id"])[
+            "project_id"
+        ]
+        is None
+    )
+    assert (
+        next(item for item in listed_payload["data"] if item["id"] == read_token["id"])[
+            "project_id"
+        ]
+        == project["id"]
+    )
 
     read_projects = client.get("/api/v1/projects/", headers=_bearer_headers(read_token["token"]))
     assert read_projects.status_code == 200, read_projects.text
+    assert read_projects.json()["count"] == 1
+    assert read_projects.json()["data"][0]["id"] == project["id"]
 
     read_import = _upload_cve_list(client, project["id"], token=read_token["token"])
     assert read_import.status_code == 403
     assert "import scope" in read_import.text
+
+    cross_project_import = _upload_cve_list(
+        client, other_project["id"], token=import_token["token"]
+    )
+    assert cross_project_import.status_code == 403
+    assert "not scoped to this project" in cross_project_import.text
 
     imported = _upload_cve_list(client, project["id"], token=import_token["token"])
     assert imported.status_code == 200, imported.text
@@ -120,23 +162,52 @@ def test_template_api_token_creation_rejects_empty_or_unknown_scopes(
     assert unknown.status_code == 422
 
 
+def test_template_api_token_creation_requires_project_scope_for_non_admin_tokens(
+    template_api_env: TemplateApiEnv,
+) -> None:
+    client = template_api_env.client
+    headers = auth_headers(client)
+    project = create_project_via_api(client, headers)
+
+    missing_project = client.post(
+        "/api/v1/api-tokens/",
+        headers=headers,
+        json={"name": "read-global", "scopes": ["read"]},
+    )
+    admin_with_project = client.post(
+        "/api/v1/api-tokens/",
+        headers=headers,
+        json={"name": "admin-project", "scopes": ["admin"], "project_id": project["id"]},
+    )
+
+    assert missing_project.status_code == 422
+    assert "project_id" in missing_project.text
+    assert admin_with_project.status_code == 422
+    assert "Admin API tokens must not be project-scoped" in admin_with_project.text
+
+
 def _create_token(
     client: TestClient,
     headers: dict[str, str],
     *,
     name: str,
     scopes: list[str],
+    project_id: str | None = None,
 ) -> dict[str, object]:
+    body: dict[str, object] = {"name": name, "scopes": scopes}
+    if project_id is not None:
+        body["project_id"] = project_id
     response = client.post(
         "/api/v1/api-tokens/",
         headers=headers,
-        json={"name": name, "scopes": scopes},
+        json=body,
     )
     assert response.status_code == 200, response.text
     payload = response.json()
     assert payload["token"].startswith("vpr_")
     assert payload["token"] not in payload["id"]
     assert payload["scopes"] == scopes
+    assert payload["project_id"] == project_id
     return payload
 
 
@@ -159,4 +230,6 @@ def _configure_template_dirs(template_api_env: TemplateApiEnv, tmp_path: Path) -
         active_settings,
         IMPORT_UPLOAD_DIR=str((tmp_path / "template-uploads").resolve(strict=False)),
         REPORT_DIR=str((tmp_path / "template-reports").resolve(strict=False)),
+        PROVIDER_SNAPSHOT_DIR=str(PROJECT_ROOT / "data"),
+        DEMO_PROVIDER_SNAPSHOT_ENABLED=True,
     )

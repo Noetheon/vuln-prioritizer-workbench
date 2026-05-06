@@ -6,12 +6,20 @@ import type {
   ApiTokenCreate,
   ApiTokenCreatePublic,
   ApiTokenPublic,
+  ProjectPublic,
   ProviderStatusPublic,
   UserPublic,
   WorkbenchStatus,
 } from "@/api-client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import {
   VpwBadge,
   type VpwBadgeTone,
@@ -43,6 +51,8 @@ export type SettingsWorkbenchProps = {
   apiTokenError: string
   apiTokenMessage: string
   apiTokenName: string
+  apiTokenProjectId: string
+  apiTokenProjectOptions: readonly ProjectPublic[]
   apiTokenScopeOptions: readonly ApiTokenScope[]
   apiTokenScopes: readonly ApiTokenScope[]
   apiTokens: readonly ApiTokenPublic[]
@@ -55,6 +65,7 @@ export type SettingsWorkbenchProps = {
   status: WorkbenchStatus | null
   statusError: string
   onApiTokenNameChange: (value: string) => void
+  onApiTokenProjectChange: (value: string) => void
   onCreateApiToken: (event: FormEvent<HTMLFormElement>) => void | Promise<void>
   onRevokeApiToken: (token: ApiTokenPublic) => void | Promise<void>
   onToggleApiTokenScope: (scope: ApiTokenScope) => void
@@ -86,6 +97,16 @@ function formatScopes(scopes: readonly ApiTokenScope[]) {
   return scopes.length > 0
     ? scopes.map((scope) => scope.toUpperCase()).join(", ")
     : "No scopes"
+}
+
+function projectScopeLabel(
+  projectId: string | null | undefined,
+  projects: readonly ProjectPublic[],
+) {
+  if (!projectId) {
+    return "Global"
+  }
+  return projects.find((project) => project.id === projectId)?.name ?? projectId
 }
 
 function userLabel(user: UserPublic | null) {
@@ -176,6 +197,8 @@ function safeDiagnosticsCode({
       backendStatus: status?.status ?? "unavailable",
       corePackage: status?.core_package ?? "unavailable",
       coreVersion: status?.core_version ?? "unavailable",
+      databaseStatus: status?.database_status ?? "unavailable",
+      schemaStatus: status?.schema_status ?? "unavailable",
       providerStatus: providerStatus?.status ?? "unavailable",
       providerSnapshotMode: providerStatus?.snapshot_mode ?? "unavailable",
       providerSourceCount: providerStatus?.sources?.length ?? 0,
@@ -246,6 +269,8 @@ export function SettingsWorkbench({
   apiTokenError,
   apiTokenMessage,
   apiTokenName,
+  apiTokenProjectId,
+  apiTokenProjectOptions,
   apiTokenScopeOptions,
   apiTokenScopes,
   apiTokens,
@@ -258,6 +283,7 @@ export function SettingsWorkbench({
   status,
   statusError,
   onApiTokenNameChange,
+  onApiTokenProjectChange,
   onCreateApiToken,
   onRevokeApiToken,
   onToggleApiTokenScope,
@@ -270,6 +296,7 @@ export function SettingsWorkbench({
     statusError,
   )
   const providerRows = providerConfigRows(providerStatus)
+  const tokenHasAdminScope = apiTokenScopes.includes("admin")
 
   const tokenColumns: VpwDataTableColumn<ApiTokenPublic>[] = [
     {
@@ -298,6 +325,11 @@ export function SettingsWorkbench({
           ))}
         </div>
       ),
+    },
+    {
+      id: "project",
+      header: "Project",
+      cell: (token) => projectScopeLabel(token.project_id, apiTokenProjectOptions),
     },
     {
       id: "created",
@@ -604,7 +636,41 @@ export function SettingsWorkbench({
                 </div>
               </VpwField>
 
-              <Button disabled={apiTokenActionLoading} type="submit">
+              <VpwField
+                description={
+                  tokenHasAdminScope
+                    ? "Admin tokens are global."
+                    : "Required project boundary for service tokens."
+                }
+                htmlFor="api-token-project"
+                label="Project scope"
+                required={!tokenHasAdminScope}
+              >
+                <Select
+                  disabled={tokenHasAdminScope || apiTokenProjectOptions.length === 0}
+                  onValueChange={onApiTokenProjectChange}
+                  value={apiTokenProjectId}
+                >
+                  <SelectTrigger id="api-token-project">
+                    <SelectValue placeholder="Select project" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {apiTokenProjectOptions.map((project) => (
+                      <SelectItem key={project.id} value={project.id}>
+                        {project.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </VpwField>
+
+              <Button
+                disabled={
+                  apiTokenActionLoading ||
+                  (!tokenHasAdminScope && apiTokenProjectOptions.length === 0)
+                }
+                type="submit"
+              >
                 {apiTokenActionLoading ? "Creating" : "Create Token"}
               </Button>
             </form>

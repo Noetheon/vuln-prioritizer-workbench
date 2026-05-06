@@ -22,6 +22,7 @@ from app.models import (
     AssetUpdate,
 )
 from app.repositories import AssetRepository
+from app.services.audit import record_audit_event
 from vuln_prioritizer.inputs.loader import load_asset_context_file
 
 router = APIRouter(tags=["assets"])
@@ -69,6 +70,15 @@ def create_project_asset(
     """Create or upsert an asset for a visible project."""
     require_visible_project(session, current_user, project_id)
     asset = AssetRepository(session).create_asset(project_id=project_id, asset_in=asset_in)
+    record_audit_event(
+        session,
+        action="asset.create",
+        resource_type="asset",
+        resource_id=asset.id,
+        actor=current_user,
+        project_id=project_id,
+        detail={"asset_key": asset.asset_key, "name": asset.name},
+    )
     session.commit()
     session.refresh(asset)
     return _asset_public(asset)
@@ -110,6 +120,14 @@ async def import_project_assets(
         project_id=project_id,
         catalog=catalog,
     )
+    record_audit_event(
+        session,
+        action="asset.import",
+        resource_type="asset",
+        actor=current_user,
+        project_id=project_id,
+        detail=dict(result),
+    )
     session.commit()
     return AssetContextImportPublic.model_validate(result)
 
@@ -139,6 +157,15 @@ def update_asset(
             asset_id=updated.id,
             changed_fields=changed_fields,
         )
+    record_audit_event(
+        session,
+        action="asset.update",
+        resource_type="asset",
+        resource_id=updated.id,
+        actor=current_user,
+        project_id=updated.project_id,
+        detail={"changed_fields": changed_fields},
+    )
     session.commit()
     session.refresh(updated)
     return _asset_public(updated)
@@ -158,6 +185,15 @@ def recalculate_asset(
         raise HTTPException(status_code=404, detail="Asset not found")
     require_visible_project(session, current_user, asset.project_id)
     result = repository.recalculate_asset_findings(asset)
+    record_audit_event(
+        session,
+        action="asset.recalculate",
+        resource_type="asset",
+        resource_id=asset.id,
+        actor=current_user,
+        project_id=asset.project_id,
+        detail=dict(result),
+    )
     session.commit()
     session.refresh(asset)
     return AssetRecalculatePublic.model_validate(result)

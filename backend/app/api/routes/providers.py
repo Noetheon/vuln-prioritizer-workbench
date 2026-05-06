@@ -22,6 +22,7 @@ from app.models import (
 )
 from app.models.base import get_datetime_utc
 from app.repositories import RunRepository
+from app.services.audit import record_audit_event
 from app.services.provider_updates import (
     TemplateProviderUpdateConflict,
     TemplateProviderUpdateValidationError,
@@ -72,6 +73,14 @@ def create_template_provider_update_job(
     except TemplateProviderUpdateConflict as exc:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
 
+    record_audit_event(
+        session,
+        action="provider.update_job.create",
+        resource_type="analysis_run",
+        resource_id=run.id,
+        actor=current_user,
+        detail={"sources": list(payload.sources), "status": str(run.status)},
+    )
     session.commit()
     session.refresh(run)
     job = _provider_update_job(run)

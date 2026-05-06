@@ -8,7 +8,7 @@ import re
 import uuid
 from collections.abc import Mapping
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
 from sqlalchemy import insert
@@ -48,11 +48,13 @@ from app.models import (
     FindingOccurrence,
     FindingPriority,
     FindingStatus,
+    User,
     Vulnerability,
 )
 from app.models.base import get_datetime_utc
 from app.repositories import AssetRepository, FindingRepository, RunRepository
 from app.services import AnalysisService, TemplateAnalysisError, TemplateAnalysisResult
+from app.services.audit import record_audit_event
 from app.services.import_artifacts import (
     resolve_template_attack_artifact_path as _resolve_template_attack_artifact_path,
 )
@@ -372,6 +374,15 @@ async def import_project_upload(
                 "ignored_lines": ignored_lines,
             },
         )
+        _record_import_audit(
+            session,
+            current_user=current_user,
+            project_id=project_id,
+            run_id=failed_run.id,
+            status="failure",
+            stage="parse",
+            input_type=normalized_input_type,
+        )
         session.commit()
         raise HTTPException(
             status_code=422,
@@ -428,6 +439,15 @@ async def import_project_upload(
                     "ignored_lines": ignored_lines,
                 },
             )
+            _record_import_audit(
+                session,
+                current_user=current_user,
+                project_id=project_id,
+                run_id=failed_run.id,
+                status="failure",
+                stage="asset_context_parse",
+                input_type=normalized_input_type,
+            )
             session.commit()
             raise HTTPException(
                 status_code=422,
@@ -482,6 +502,15 @@ async def import_project_upload(
                     "updated_findings": 0,
                     "ignored_lines": ignored_lines,
                 },
+            )
+            _record_import_audit(
+                session,
+                current_user=current_user,
+                project_id=project_id,
+                run_id=failed_run.id,
+                status="failure",
+                stage="vex_parse",
+                input_type=normalized_input_type,
             )
             session.commit()
             raise HTTPException(
@@ -545,6 +574,15 @@ async def import_project_upload(
                 "ignored_lines": ignored_lines,
             },
         )
+        _record_import_audit(
+            session,
+            current_user=current_user,
+            project_id=project_id,
+            run_id=failed_run.id,
+            status="failure",
+            stage="analysis",
+            input_type=normalized_input_type,
+        )
         session.commit()
         raise HTTPException(
             status_code=422,
@@ -583,8 +621,39 @@ async def import_project_upload(
             "parse_errors": [],
         },
     )
+    _record_import_audit(
+        session,
+        current_user=current_user,
+        project_id=project_id,
+        run_id=finished_run.id,
+        status="success",
+        stage="succeeded",
+        input_type=normalized_input_type,
+    )
     session.commit()
     return finished_run
+
+
+def _record_import_audit(
+    session: Session,
+    *,
+    current_user: User,
+    project_id: uuid.UUID,
+    run_id: uuid.UUID,
+    status: Literal["success", "failure"],
+    stage: str,
+    input_type: str,
+) -> None:
+    record_audit_event(
+        session,
+        action="import.run",
+        resource_type="analysis_run",
+        resource_id=run_id,
+        status=status,
+        actor=current_user,
+        project_id=project_id,
+        detail={"stage": stage, "input_type": input_type},
+    )
 
 
 def _apply_template_asset_context(

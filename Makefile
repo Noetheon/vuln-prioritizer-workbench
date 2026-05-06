@@ -14,7 +14,7 @@ DEMO_EVIDENCE_ANALYSIS_FILE := build/v1.0-demo-analysis.json
 DEMO_EVIDENCE_BUNDLE_FILE := build/v1.0-demo-evidence-bundle.zip
 DEMO_EVIDENCE_VERIFICATION_FILE := build/v1.0-demo-evidence-bundle-verification.json
 
-.PHONY: install test lint format fix typecheck check benchmark-check performance-smoke playwright-install playwright-check frontend-install frontend-build frontend-lint frontend-generate-client frontend-audit frontend-check docs-check docs-serve actionlint-check workflow-check docker-demo-smoke dependency-audit clean-local clean-deps provider-snapshot-validate provider-testmatrix demo-offline-no-key-proof demo-sync-check demo-sync-check-temp package package-check package-check-temp pipx-source-smoke release-check release-readiness-check demo-report demo-compare demo-explain demo-attack-report demo-attack-compare demo-attack-explain demo-attack-coverage demo-attack-navigator demo-pr-comment demo-results-sarif demo-html-report demo-evidence-analysis demo-evidence-bundle demo-evidence-bundle-check precommit-install
+.PHONY: install test lint format fix typecheck check benchmark-check performance-smoke playwright-install playwright-check frontend-install frontend-build frontend-lint frontend-test-unit frontend-generate-client frontend-audit frontend-check docs-check docs-serve actionlint-check workflow-check docker-demo-smoke dependency-audit clean-local clean-deps provider-snapshot-validate provider-testmatrix demo-offline-no-key-proof demo-sync-check demo-sync-check-temp package package-check package-check-temp pipx-source-smoke release-check release-readiness-check demo-report demo-compare demo-explain demo-attack-report demo-attack-compare demo-attack-explain demo-attack-coverage demo-attack-navigator demo-pr-comment demo-results-sarif demo-html-report demo-evidence-analysis demo-evidence-bundle demo-evidence-bundle-check precommit-install
 
 install:
 	$(PYTHON) -m pip install -e "$(BACKEND_DIR)[dev]"
@@ -48,27 +48,30 @@ performance-smoke:
 	VPW_PERFORMANCE_SMOKE=1 VPW_PERFORMANCE_SMOKE_OUTPUT=build/vpw-072-performance-smoke.json $(PYTHON) -m pytest -q $(BACKEND_TESTS)/performance/test_vpw072_performance_smoke.py --no-cov
 
 playwright-install: frontend-install
-	npm --prefix frontend exec playwright install chromium
+	cd frontend && npm --workspaces=false exec playwright install chromium
 
 playwright-check: frontend-install
-	npm --prefix frontend run test -- tests/ui-smoke.spec.ts tests/responsive-shell.spec.ts
+	cd frontend && npm run test -- tests/ui-smoke.spec.ts tests/responsive-shell.spec.ts
 
 frontend-install:
-	npm --prefix frontend ci
+	cd frontend && npm ci --workspaces=false
 
 frontend-build:
-	npm --prefix frontend run build
+	cd frontend && npm run build
 
 frontend-lint:
-	npm --prefix frontend run lint
+	cd frontend && npm run lint
+
+frontend-test-unit:
+	cd frontend && npm run test:unit
 
 frontend-generate-client:
 	bash scripts/generate-client.sh
 
 frontend-audit:
-	npm --prefix frontend audit --omit=dev
+	cd frontend && npm --workspaces=false audit --omit=dev
 
-frontend-check: frontend-install frontend-lint frontend-build frontend-generate-client
+frontend-check: frontend-install frontend-lint frontend-build frontend-test-unit frontend-generate-client
 
 docs-check:
 	$(PYTHON) -m mkdocs build --clean
@@ -104,7 +107,7 @@ docker-demo-smoke:
 	trap '$(COMPOSE) down -v --remove-orphans' EXIT; \
 	backend_ready=0; \
 	for attempt in $$(seq 1 30); do \
-		if $(PYTHON) -c "import urllib.request; print(urllib.request.urlopen('http://127.0.0.1:8000/api/v1/workbench/status', timeout=2).read().decode())" 2>/dev/null; then \
+		if $(PYTHON) -c "import json, urllib.request; data=json.load(urllib.request.urlopen('http://127.0.0.1:8000/api/v1/workbench/status', timeout=2)); assert data['database_status'] == 'ready' and data['schema_status'] == 'ready'; print(data)" 2>/dev/null; then \
 			backend_ready=1; \
 			break; \
 		fi; \
@@ -216,7 +219,7 @@ release-check:
 	$(MAKE) pipx-source-smoke
 	$(MAKE) demo-sync-check
 
-release-readiness-check: release-check demo-evidence-bundle-check
+release-readiness-check: release-check demo-evidence-bundle-check playwright-check
 
 demo-report:
 	$(DEMO_ENV) $(PYTHON) -m vuln_prioritizer.cli analyze --input data/sample_cves.txt --output docs/example_report.md --format markdown $(DEMO_PROVIDER_FLAGS)

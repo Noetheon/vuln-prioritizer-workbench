@@ -43,6 +43,15 @@ services:
       BACKEND_CORS_ORIGINS: ${BACKEND_CORS_ORIGINS:-http://localhost,http://localhost:5173,http://127.0.0.1:5173}
       ALLOWED_HOSTS: ${ALLOWED_HOSTS:-localhost,127.0.0.1,testserver,backend}
       API_DOCS_ENABLED: ${API_DOCS_ENABLED:-}
+      SQLALCHEMY_DATABASE_URI: ""
+      RATE_LIMIT_ENABLED: ${RATE_LIMIT_ENABLED:-true}
+      API_RATE_LIMIT_PER_MINUTE: ${API_RATE_LIMIT_PER_MINUTE:-600}
+      LOGIN_RATE_LIMIT_PER_MINUTE: ${LOGIN_RATE_LIMIT_PER_MINUTE:-60}
+      TOKEN_FAILURE_RATE_LIMIT_PER_MINUTE: ${TOKEN_FAILURE_RATE_LIMIT_PER_MINUTE:-60}
+      AUDIT_RETENTION_DAYS: ${AUDIT_RETENTION_DAYS:-365}
+      SESSION_RETENTION_DAYS: ${SESSION_RETENTION_DAYS:-30}
+      REVOKED_API_TOKEN_RETENTION_DAYS: ${REVOKED_API_TOKEN_RETENTION_DAYS:-365}
+      MAX_UPLOAD_MB: ${MAX_UPLOAD_MB:-25}
       POSTGRES_SERVER: db
       POSTGRES_PORT: ${POSTGRES_PORT:-5432}
       POSTGRES_DB: ${POSTGRES_DB:-workbench}
@@ -53,6 +62,7 @@ services:
       PROVIDER_SNAPSHOT_DIR: /app/provider-snapshots
       PROVIDER_CACHE_DIR: /app/template-provider-cache
       ATTACK_ARTIFACT_DIR: /app/examples/attack
+      DEMO_PROVIDER_SNAPSHOT_ENABLED: ${DEMO_PROVIDER_SNAPSHOT_ENABLED:-false}
       NVD_API_KEY: ${NVD_API_KEY:-}
       VULN_PRIORITIZER_NVD_API_KEY_ENV: ${VULN_PRIORITIZER_NVD_API_KEY_ENV:-NVD_API_KEY}
     volumes:
@@ -61,13 +71,27 @@ services:
       - template-provider-snapshots:/app/provider-snapshots
       - template-provider-cache:/app/template-provider-cache
       - ./data:/app/examples:ro
+    labels:
+      - traefik.enable=${TRAEFIK_APP_ENABLED:-false}
+      - traefik.http.services.workbench-backend.loadbalancer.server.port=8000
+      - traefik.http.routers.workbench-backend-http.entrypoints=http
+      - traefik.http.routers.workbench-backend-http.rule=Host(`api.${DOMAIN:-localhost}`)
+      - traefik.http.routers.workbench-backend-http.middlewares=https-redirect
+      - traefik.http.middlewares.https-redirect.redirectscheme.scheme=https
+      - traefik.http.middlewares.https-redirect.redirectscheme.permanent=true
+      - traefik.http.routers.workbench-backend-https.entrypoints=https
+      - traefik.http.routers.workbench-backend-https.rule=Host(`api.${DOMAIN:-localhost}`)
+      - traefik.http.routers.workbench-backend-https.tls=true
+      - traefik.http.routers.workbench-backend-https.tls.certresolver=le
+      - traefik.http.routers.workbench-backend-https.middlewares=workbench-upload-limit
+      - traefik.http.middlewares.workbench-upload-limit.buffering.maxRequestBodyBytes=${TRAEFIK_MAX_REQUEST_BODY_BYTES:-26214400}
     healthcheck:
       test:
         [
           "CMD",
           "python",
           "-c",
-          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/workbench/status', timeout=2)",
+          "import json, os, urllib.request; domain=os.environ.get('DOMAIN', 'localhost'); host='localhost' if domain in {'localhost', '127.0.0.1'} else f'api.{domain}'; req=urllib.request.Request('http://127.0.0.1:8000/api/v1/workbench/status', headers={'Host': host}); data=json.load(urllib.request.urlopen(req, timeout=2)); assert data['database_status'] == 'ready' and data['schema_status'] == 'ready'",
         ]
       interval: 10s
       timeout: 5s
@@ -85,6 +109,16 @@ services:
     depends_on:
       backend:
         condition: service_healthy
+    labels:
+      - traefik.enable=${TRAEFIK_APP_ENABLED:-false}
+      - traefik.http.services.workbench-frontend.loadbalancer.server.port=80
+      - traefik.http.routers.workbench-frontend-http.entrypoints=http
+      - traefik.http.routers.workbench-frontend-http.rule=Host(`${DOMAIN:-localhost}`)
+      - traefik.http.routers.workbench-frontend-http.middlewares=https-redirect
+      - traefik.http.routers.workbench-frontend-https.entrypoints=https
+      - traefik.http.routers.workbench-frontend-https.rule=Host(`${DOMAIN:-localhost}`)
+      - traefik.http.routers.workbench-frontend-https.tls=true
+      - traefik.http.routers.workbench-frontend-https.tls.certresolver=le
 
 volumes:
   app-db-data:

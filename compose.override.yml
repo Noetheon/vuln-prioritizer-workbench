@@ -6,21 +6,16 @@ services:
     restart: "no"
     ports:
       - "127.0.0.1:8000:8000"
+    environment:
+      DEMO_PROVIDER_SNAPSHOT_ENABLED: "true"
     command:
       - sh
       - -c
       - |
+        set -e
         cp -n /app/examples/*provider_snapshot*.json /app/provider-snapshots/ 2>/dev/null || true
-        python - <<'PY'
-        from sqlmodel import Session
-
-        from app.core.db import engine, init_db
-        from app.models import import_table_models
-
-        import_table_models()
-        with Session(engine) as session:
-            init_db(session)
-        PY
+        python -m app.core.migration_bootstrap
+        alembic -c /app/backend/alembic.ini upgrade head
         exec uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
     develop:
       watch:

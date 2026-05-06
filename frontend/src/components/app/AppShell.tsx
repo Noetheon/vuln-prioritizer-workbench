@@ -15,10 +15,11 @@ import {
   Sidebar,
 } from "lucide-react"
 import { type ReactNode, useEffect, useState } from "react"
-import type {
-  ProviderStatusPublic,
-  UserPublic,
-  WorkbenchStatus,
+import {
+  LoginService,
+  type ProviderStatusPublic,
+  type UserPublic,
+  type WorkbenchStatus,
 } from "../../api-client"
 import { clearAccessToken } from "../../auth"
 import {
@@ -511,8 +512,14 @@ export function ProductAppShell({
   const navigate = useNavigate()
 
   async function signOut() {
-    clearAccessToken()
-    await navigate({ to: "/login" })
+    try {
+      await LoginService.logoutCurrentToken()
+    } catch {
+      // Local logout should complete even if the server session already expired.
+    } finally {
+      clearAccessToken()
+      await navigate({ to: "/login" })
+    }
   }
 
   return (

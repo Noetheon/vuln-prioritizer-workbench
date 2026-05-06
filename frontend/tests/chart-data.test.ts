@@ -3,6 +3,7 @@ import test from "node:test"
 
 import {
   findingsByPriorityChartData,
+  priorityCount,
   topServicesByRiskChartData,
 } from "../src/lib/chart-data.ts"
 
@@ -69,6 +70,27 @@ test("returns zero-value priority buckets for null summary", () => {
     { label: "Medium", tone: "medium", value: 0 },
     { label: "Low", tone: "low", value: 0 },
   ])
+})
+
+test("normalizes API priority casing for dashboard counts", () => {
+  const summary = {
+    counts_by_priority: {
+      critical: 3,
+      High: 2,
+    },
+  } as SummaryFixture
+
+  assert.equal(priorityCount(summary, "Critical"), 3)
+  assert.equal(priorityCount(summary, "High"), 2)
+  assert.deepEqual(
+    findingsByPriorityChartData(summary)
+      .slice(0, 2)
+      .map((item) => [item.label, item.value]),
+    [
+      ["Critical", 3],
+      ["High", 2],
+    ],
+  )
 })
 
 test("adds highest priority to top service rollup detail", () => {

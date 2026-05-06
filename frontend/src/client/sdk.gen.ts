@@ -2,7 +2,7 @@
 
 import { buildClientParams, type Client, formDataBodySerializer, type Options as Options2, type TDataShape, urlSearchParamsBodySerializer } from './client';
 import { client } from './client.gen';
-import type { ApiTokenCreate, AssetCreate, AssetExposure, AssetUpdate, BodyAssetsImportProjectAssets, BodyImportsImportProjectUpload, BodyLoginLoginAccessToken, DeleteApiV1ApiTokensByTokenIdErrors, DeleteApiV1ApiTokensByTokenIdResponses, DeleteApiV1ProjectsByProjectIdErrors, DeleteApiV1ProjectsByProjectIdResponses, FindingPriority, FindingStatus, GetApiV1ApiTokensResponses, GetApiV1FindingsByFindingIdErrors, GetApiV1FindingsByFindingIdExplainErrors, GetApiV1FindingsByFindingIdExplainResponses, GetApiV1FindingsByFindingIdResponses, GetApiV1ProjectsByProjectIdAssetsErrors, GetApiV1ProjectsByProjectIdAssetsResponses, GetApiV1ProjectsByProjectIdAttackSummaryErrors, GetApiV1ProjectsByProjectIdAttackSummaryResponses, GetApiV1ProjectsByProjectIdCompareCvssOnlyErrors, GetApiV1ProjectsByProjectIdCompareCvssOnlyResponses, GetApiV1ProjectsByProjectIdErrors, GetApiV1ProjectsByProjectIdFindingsErrors, GetApiV1ProjectsByProjectIdFindingsResponses, GetApiV1ProjectsByProjectIdGovernanceRollupsErrors, GetApiV1ProjectsByProjectIdGovernanceRollupsResponses, GetApiV1ProjectsByProjectIdResponses, GetApiV1ProjectsByProjectIdRuns2Errors, GetApiV1ProjectsByProjectIdRuns2Responses, GetApiV1ProjectsByProjectIdRunsErrors, GetApiV1ProjectsByProjectIdRunsResponses, GetApiV1ProjectsByProjectIdSummaryErrors, GetApiV1ProjectsByProjectIdSummaryResponses, GetApiV1ProjectsByProjectIdWaiversErrors, GetApiV1ProjectsByProjectIdWaiversResponses, GetApiV1ProjectsResponses, GetApiV1ProvidersStatusResponses, GetApiV1ProvidersUpdateJobsResponses, GetApiV1ReportsByReportIdDownloadErrors, GetApiV1ReportsByReportIdDownloadResponses, GetApiV1RunsByRunIdErrors, GetApiV1RunsByRunIdReportsErrors, GetApiV1RunsByRunIdReportsResponses, GetApiV1RunsByRunIdResponses, GetApiV1RunsByRunIdSummaryErrors, GetApiV1RunsByRunIdSummaryResponses, GetApiV1UsersMeResponses, GetApiV1UtilsHealthCheckResponses, GetApiV1WorkbenchStatusResponses, GitHubIssueExportCreate, GitHubIssuePreviewCreate, PatchApiV1AssetsByAssetIdErrors, PatchApiV1AssetsByAssetIdResponses, PatchApiV1ProjectsByProjectIdErrors, PatchApiV1ProjectsByProjectIdResponses, PatchApiV1WaiversByWaiverIdErrors, PatchApiV1WaiversByWaiverIdResponses, PostApiV1ApiTokensErrors, PostApiV1ApiTokensResponses, PostApiV1AssetsByAssetIdRecalculateErrors, PostApiV1AssetsByAssetIdRecalculateResponses, PostApiV1LoginAccessTokenErrors, PostApiV1LoginAccessTokenResponses, PostApiV1LoginTestTokenResponses, PostApiV1ProjectsByProjectIdAssetsErrors, PostApiV1ProjectsByProjectIdAssetsImportErrors, PostApiV1ProjectsByProjectIdAssetsImportResponses, PostApiV1ProjectsByProjectIdAssetsResponses, PostApiV1ProjectsByProjectIdGithubIssuesExportErrors, PostApiV1ProjectsByProjectIdGithubIssuesExportResponses, PostApiV1ProjectsByProjectIdGithubIssuesPreviewErrors, PostApiV1ProjectsByProjectIdGithubIssuesPreviewResponses, PostApiV1ProjectsByProjectIdImportsErrors, PostApiV1ProjectsByProjectIdImportsResponses, PostApiV1ProjectsByProjectIdWaiversErrors, PostApiV1ProjectsByProjectIdWaiversResponses, PostApiV1ProjectsErrors, PostApiV1ProjectsResponses, PostApiV1ProvidersUpdateJobsErrors, PostApiV1ProvidersUpdateJobsResponses, PostApiV1ReportsByReportIdVerifyErrors, PostApiV1ReportsByReportIdVerifyResponses, PostApiV1RunsByRunIdReportsErrors, PostApiV1RunsByRunIdReportsResponses, PostApiV1WaiversByWaiverIdExpireErrors, PostApiV1WaiversByWaiverIdExpireResponses, ProjectCreate, ProjectUpdate, ProviderUpdateJobCreate, ReportCreate, WaiverCreate, WaiverUpdate } from './types.gen';
+import type { ApiTokenCreate, AssetCreate, AssetExposure, AssetUpdate, BodyAssetsImportProjectAssets, BodyImportsImportProjectUpload, BodyLoginLoginAccessToken, DeleteApiV1ApiTokensByTokenIdErrors, DeleteApiV1ApiTokensByTokenIdResponses, DeleteApiV1ProjectsByProjectIdErrors, DeleteApiV1ProjectsByProjectIdResponses, FindingPriority, FindingStatus, GetApiV1ApiTokensResponses, GetApiV1AuditEventsErrors, GetApiV1AuditEventsResponses, GetApiV1AuditSessionsErrors, GetApiV1AuditSessionsResponses, GetApiV1FindingsByFindingIdErrors, GetApiV1FindingsByFindingIdExplainErrors, GetApiV1FindingsByFindingIdExplainResponses, GetApiV1FindingsByFindingIdResponses, GetApiV1ProjectsByProjectIdAssetsErrors, GetApiV1ProjectsByProjectIdAssetsResponses, GetApiV1ProjectsByProjectIdAttackSummaryErrors, GetApiV1ProjectsByProjectIdAttackSummaryResponses, GetApiV1ProjectsByProjectIdCompareCvssOnlyErrors, GetApiV1ProjectsByProjectIdCompareCvssOnlyResponses, GetApiV1ProjectsByProjectIdErrors, GetApiV1ProjectsByProjectIdFindingsErrors, GetApiV1ProjectsByProjectIdFindingsResponses, GetApiV1ProjectsByProjectIdGovernanceRollupsErrors, GetApiV1ProjectsByProjectIdGovernanceRollupsResponses, GetApiV1ProjectsByProjectIdResponses, GetApiV1ProjectsByProjectIdRuns2Errors, GetApiV1ProjectsByProjectIdRuns2Responses, GetApiV1ProjectsByProjectIdRunsErrors, GetApiV1ProjectsByProjectIdRunsResponses, GetApiV1ProjectsByProjectIdSummaryErrors, GetApiV1ProjectsByProjectIdSummaryResponses, GetApiV1ProjectsByProjectIdWaiversErrors, GetApiV1ProjectsByProjectIdWaiversResponses, GetApiV1ProjectsResponses, GetApiV1ProvidersStatusResponses, GetApiV1ProvidersUpdateJobsResponses, GetApiV1ReportsByReportIdDownloadErrors, GetApiV1ReportsByReportIdDownloadResponses, GetApiV1RunsByRunIdErrors, GetApiV1RunsByRunIdReportsErrors, GetApiV1RunsByRunIdReportsResponses, GetApiV1RunsByRunIdResponses, GetApiV1RunsByRunIdSummaryErrors, GetApiV1RunsByRunIdSummaryResponses, GetApiV1UsersMeResponses, GetApiV1UtilsHealthCheckResponses, GetApiV1WorkbenchStatusResponses, GitHubIssueExportCreate, GitHubIssuePreviewCreate, PatchApiV1AssetsByAssetIdErrors, PatchApiV1AssetsByAssetIdResponses, PatchApiV1ProjectsByProjectIdErrors, PatchApiV1ProjectsByProjectIdResponses, PatchApiV1WaiversByWaiverIdErrors, PatchApiV1WaiversByWaiverIdResponses, PostApiV1ApiTokensErrors, PostApiV1ApiTokensResponses, PostApiV1AssetsByAssetIdRecalculateErrors, PostApiV1AssetsByAssetIdRecalculateResponses, PostApiV1LoginAccessTokenErrors, PostApiV1LoginAccessTokenResponses, PostApiV1LoginLogoutResponses, PostApiV1LoginTestTokenResponses, PostApiV1ProjectsByProjectIdAssetsErrors, PostApiV1ProjectsByProjectIdAssetsImportErrors, PostApiV1ProjectsByProjectIdAssetsImportResponses, PostApiV1ProjectsByProjectIdAssetsResponses, PostApiV1ProjectsByProjectIdGithubIssuesExportErrors, PostApiV1ProjectsByProjectIdGithubIssuesExportResponses, PostApiV1ProjectsByProjectIdGithubIssuesPreviewErrors, PostApiV1ProjectsByProjectIdGithubIssuesPreviewResponses, PostApiV1ProjectsByProjectIdImportsErrors, PostApiV1ProjectsByProjectIdImportsResponses, PostApiV1ProjectsByProjectIdWaiversErrors, PostApiV1ProjectsByProjectIdWaiversResponses, PostApiV1ProjectsErrors, PostApiV1ProjectsResponses, PostApiV1ProvidersUpdateJobsErrors, PostApiV1ProvidersUpdateJobsResponses, PostApiV1ReportsByReportIdVerifyErrors, PostApiV1ReportsByReportIdVerifyResponses, PostApiV1RunsByRunIdReportsErrors, PostApiV1RunsByRunIdReportsResponses, PostApiV1WaiversByWaiverIdExpireErrors, PostApiV1WaiversByWaiverIdExpireResponses, ProjectCreate, ProjectUpdate, ProviderUpdateJobCreate, ReportCreate, WaiverCreate, WaiverUpdate } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -192,6 +192,50 @@ export class AssetsService {
     }
 }
 
+export class AuditService {
+    /**
+     * List Audit Events
+     *
+     * List recent audit events for administrators.
+     */
+    public static listAuditEvents<ThrowOnError extends boolean = true>(parameters?: {
+        project_id?: string | null;
+        limit?: number;
+        offset?: number;
+    }, options?: Options<never, ThrowOnError>) {
+        const params = buildClientParams([parameters], [{ args: [
+                    { in: 'query', key: 'project_id' },
+                    { in: 'query', key: 'limit' },
+                    { in: 'query', key: 'offset' }
+                ] }]);
+        return (options?.client ?? client).get<GetApiV1AuditEventsResponses, GetApiV1AuditEventsErrors, ThrowOnError, 'data'>({
+            responseStyle: 'data',
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/api/v1/audit/events',
+            ...options,
+            ...params
+        });
+    }
+
+    /**
+     * List Auth Sessions
+     *
+     * List recent browser sessions without token material.
+     */
+    public static listAuthSessions<ThrowOnError extends boolean = true>(parameters?: {
+        limit?: number;
+    }, options?: Options<never, ThrowOnError>) {
+        const params = buildClientParams([parameters], [{ args: [{ in: 'query', key: 'limit' }] }]);
+        return (options?.client ?? client).get<GetApiV1AuditSessionsResponses, GetApiV1AuditSessionsErrors, ThrowOnError, 'data'>({
+            responseStyle: 'data',
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/api/v1/audit/sessions',
+            ...options,
+            ...params
+        });
+    }
+}
+
 export class FindingsService {
     /**
      * Read Finding
@@ -303,6 +347,20 @@ export class LoginService {
                 ...options?.headers,
                 ...params.headers
             }
+        });
+    }
+
+    /**
+     * Logout Current Token
+     *
+     * Revoke the active browser session token.
+     */
+    public static logoutCurrentToken<ThrowOnError extends boolean = true>(options?: Options<never, ThrowOnError>) {
+        return (options?.client ?? client).post<PostApiV1LoginLogoutResponses, unknown, ThrowOnError, 'data'>({
+            responseStyle: 'data',
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/api/v1/login/logout',
+            ...options
         });
     }
 

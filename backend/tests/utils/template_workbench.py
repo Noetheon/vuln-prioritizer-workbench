@@ -15,6 +15,7 @@ from sqlalchemy.pool import StaticPool
 from sqlmodel import Session, SQLModel, create_engine
 
 from app.core.config import settings
+from app.core.rate_limit import InMemoryRateLimiter
 from app.main import app
 from utils.workbench_factories import (
     template_analysis_run as build_analysis_run_model,
@@ -162,6 +163,7 @@ def create_template_api_env(
     from app.api import deps
 
     app.dependency_overrides.clear()
+    app.state.rate_limiter = InMemoryRateLimiter()
     app_models = importlib.import_module("app.models")
     app_models.import_table_models()
     repositories = importlib.import_module("app.repositories")
@@ -629,12 +631,17 @@ def current_user(client: TestClient, headers: dict[str, str]) -> dict[str, Any]:
     return response.json()
 
 
-def create_project_via_api(client: TestClient, headers: dict[str, str]) -> dict[str, Any]:
+def create_project_via_api(
+    client: TestClient,
+    headers: dict[str, str],
+    *,
+    name: str = "Workbench API Contract",
+) -> dict[str, Any]:
     """Create a project through the API for route-level tests."""
     response = client.post(
         "/api/v1/projects/",
         headers=headers,
-        json={"name": "Workbench API Contract", "description": None},
+        json={"name": name, "description": None},
     )
     assert response.status_code == 200
     return response.json()
