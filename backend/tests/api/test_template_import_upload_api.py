@@ -524,6 +524,61 @@ def test_double_import_deduplicates_findings_and_appends_occurrences(
     )
 
 
+def test_same_batch_duplicate_bulk_import_reuses_finding_and_appends_occurrences(
+    template_api_env: TemplateApiEnv,
+    tmp_path: Path,
+) -> None:
+    _configure_upload_dir(template_api_env, tmp_path)
+    headers = auth_headers(template_api_env.client)
+    project = create_project_via_api(template_api_env.client, headers)
+    project_id = uuid.UUID(project["id"])
+    duplicate_rows = [
+        "CVE-2024-3094,duplicate-host,CRITICAL,team-platform,payments,public" for _ in range(1000)
+    ]
+    content = "\n".join(
+        [
+            "cve_id,asset_ref,severity,owner,business_service,exposure",
+            *duplicate_rows,
+            "",
+        ]
+    ).encode()
+
+    response = template_api_env.client.post(
+        f"/api/v1/projects/{project['id']}/imports",
+        headers=headers,
+        data={"input_type": "generic-occurrence-csv"},
+        files={"file": ("duplicate-occurrences.csv", content, "text/csv")},
+    )
+
+    assert response.status_code == 200, response.text
+    payload = response.json()
+    dedup_summary = payload["summary_json"]["dedup_summary"]
+    assert payload["summary_json"]["occurrence_count"] == 1000
+    assert payload["summary_json"]["finding_count"] == 1
+    assert payload["summary_json"]["created_findings"] == 1
+    assert payload["summary_json"]["updated_findings"] == 999
+    assert dedup_summary["created_findings"] == 1
+    assert dedup_summary["updated_findings"] == 999
+    assert dedup_summary["reused_findings"] == 999
+    assert dedup_summary["decision_count"] == 1000
+    assert dedup_summary["omitted_decisions"] == 500
+    assert {item["action"] for item in dedup_summary["decisions"]} == {
+        "created",
+        "reused",
+    }
+    assert len({item["dedup_key"] for item in dedup_summary["decisions"]}) == 1
+
+    findings, occurrence_count = _finding_state(template_api_env, project_id)
+    assert len(findings) == 1
+    assert occurrence_count == 1000
+    assert findings[0].cve_id == "CVE-2024-3094"
+    assert findings[0].asset_id is not None
+    with Session(template_api_env.engine) as session:
+        asset = session.get(app_models.Asset, findings[0].asset_id)
+    assert asset is not None
+    assert asset.asset_key == "duplicate-host"
+
+
 def test_import_upload_applies_asset_context_sidecar_to_template_findings(
     template_api_env: TemplateApiEnv,
     tmp_path: Path,
