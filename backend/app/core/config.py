@@ -12,7 +12,22 @@ from urllib.parse import quote_plus, urlparse
 EnvironmentName = Literal["local", "staging", "production"]
 VALID_ENVIRONMENTS: set[str] = {"local", "staging", "production"}
 DEFAULT_WORKBENCH_SECRET = "changethis"
-INSECURE_WORKBENCH_SECRET_VALUES = {"", DEFAULT_WORKBENCH_SECRET}
+LOCAL_WORKBENCH_SECRET_PLACEHOLDER = "local-workbench-dev-secret"
+LOCAL_WORKBENCH_PASSWORD_PLACEHOLDER = "local-workbench-dev-password"
+LOCAL_WORKBENCH_POSTGRES_PASSWORD_PLACEHOLDER = "local-workbench-dev-postgres-password"
+INSECURE_WORKBENCH_SECRET_VALUES = {
+    "",
+    DEFAULT_WORKBENCH_SECRET,
+    LOCAL_WORKBENCH_SECRET_PLACEHOLDER,
+    LOCAL_WORKBENCH_PASSWORD_PLACEHOLDER,
+}
+INSECURE_POSTGRES_PASSWORD_VALUES = {
+    "",
+    "postgres",
+    "workbench",
+    DEFAULT_WORKBENCH_SECRET,
+    LOCAL_WORKBENCH_POSTGRES_PASSWORD_PLACEHOLDER,
+}
 DEFAULT_ALLOWED_HOSTS = ("localhost", "127.0.0.1", "testserver", "backend")
 LOCAL_ONLY_ALLOWED_HOSTS = {"localhost", "127.0.0.1", "testserver", "backend"}
 TRUE_VALUES = {"1", "true", "yes", "on"}
@@ -147,7 +162,9 @@ def build_database_uri() -> str:
     postgres_server = environ.get("POSTGRES_SERVER")
     if postgres_server:
         user = quote_plus(environ.get("POSTGRES_USER", "postgres"))
-        password = quote_plus(environ.get("POSTGRES_PASSWORD", "postgres"))
+        raw_password = environ.get("POSTGRES_PASSWORD", "postgres")
+        _validate_postgres_password_default(raw_password)
+        password = quote_plus(raw_password)
         port = environ.get("POSTGRES_PORT", "5432")
         db = quote_plus(environ.get("POSTGRES_DB", "app"))
         return f"postgresql+psycopg://{user}:{password}@{postgres_server}:{port}/{db}"
@@ -276,6 +293,16 @@ def _allowed_hosts_from_env() -> tuple[str, ...]:
 
 def _is_insecure_workbench_secret(value: str) -> bool:
     return value.strip().lower() in INSECURE_WORKBENCH_SECRET_VALUES
+
+
+def _validate_postgres_password_default(value: str) -> None:
+    environment = _validate_environment_name(environ.get("ENVIRONMENT", "local"))
+    if environment == "local":
+        return
+    if value.strip().lower() in INSECURE_POSTGRES_PASSWORD_VALUES:
+        raise ValueError(
+            f"POSTGRES_PASSWORD must be set to a non-default value when ENVIRONMENT={environment}."
+        )
 
 
 def _validate_environment_name(value: str) -> EnvironmentName:

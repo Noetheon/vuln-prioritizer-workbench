@@ -117,7 +117,7 @@ Open:
 Local demo login defaults from `.env.example`:
 
 - email: `admin@example.com`
-- password: `changethis`
+- password: `local-workbench-dev-password`
 
 Suggested demo path:
 

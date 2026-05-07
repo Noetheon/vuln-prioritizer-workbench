@@ -359,6 +359,36 @@ def test_template_backend_load_settings_rejects_non_local_default_secret_env(
         load_settings()
 
 
+@pytest.mark.parametrize("password", ["", "postgres", "workbench", "changethis"])
+def test_template_backend_load_settings_rejects_non_local_default_postgres_password(
+    monkeypatch: pytest.MonkeyPatch,
+    password: str,
+) -> None:
+    monkeypatch.setenv("ENVIRONMENT", "production")
+    monkeypatch.setenv("POSTGRES_SERVER", "db")
+    monkeypatch.setenv("POSTGRES_PASSWORD", password)
+    monkeypatch.setenv("SECRET_KEY", "production-secret-key")
+    monkeypatch.setenv("FIRST_SUPERUSER_PASSWORD", "production-admin-password")
+
+    with pytest.raises(ValueError, match="POSTGRES_PASSWORD must be set"):
+        load_settings()
+
+
+def test_template_backend_build_database_uri_accepts_non_default_postgres_password(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("ENVIRONMENT", "production")
+    monkeypatch.setenv("POSTGRES_SERVER", "db")
+    monkeypatch.setenv("POSTGRES_PORT", "5432")
+    monkeypatch.setenv("POSTGRES_DB", "workbench")
+    monkeypatch.setenv("POSTGRES_USER", "workbench")
+    monkeypatch.setenv("POSTGRES_PASSWORD", "non-default-production-password")
+
+    assert build_database_uri() == (
+        "postgresql+psycopg://workbench:non-default-production-password@db:5432/workbench"
+    )
+
+
 def test_template_backend_settings_reject_local_default_secrets_with_public_hosts() -> None:
     with pytest.raises(ValueError, match="non-local ALLOWED_HOSTS"):
         Settings(ENVIRONMENT="local", ALLOWED_HOSTS=("localhost", "workbench.example.com"))

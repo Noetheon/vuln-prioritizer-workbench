@@ -40,17 +40,24 @@ def test_compose_uses_workbench_shell_without_legacy_runtime_services() -> None:
     assert "workbench-provider-cache:/app/workbench-provider-cache" in backend["volumes"]
     assert "./data:/app/examples:ro" in backend["volumes"]
     assert "/api/v1/utils/health-check/" in backend["healthcheck"]["test"][3]
+    assert backend["environment"]["SECRET_KEY"].startswith("${SECRET_KEY:?Set SECRET_KEY")
+    assert backend["environment"]["FIRST_SUPERUSER_PASSWORD"].startswith(
+        "${FIRST_SUPERUSER_PASSWORD:?Set FIRST_SUPERUSER_PASSWORD"
+    )
+    assert backend["environment"]["POSTGRES_PASSWORD"].startswith(
+        "${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD"
+    )
     assert compose["volumes"]["workbench-import-uploads"]["name"] == (
-        "${WORKBENCH_IMPORT_UPLOADS_VOLUME:-template-import-uploads}"
+        "${WORKBENCH_IMPORT_UPLOADS_VOLUME:-workbench-import-uploads}"
     )
     assert compose["volumes"]["workbench-reports"]["name"] == (
-        "${WORKBENCH_REPORTS_VOLUME:-template-reports}"
+        "${WORKBENCH_REPORTS_VOLUME:-workbench-reports}"
     )
     assert compose["volumes"]["workbench-provider-snapshots"]["name"] == (
-        "${WORKBENCH_PROVIDER_SNAPSHOTS_VOLUME:-template-provider-snapshots}"
+        "${WORKBENCH_PROVIDER_SNAPSHOTS_VOLUME:-workbench-provider-snapshots}"
     )
     assert compose["volumes"]["workbench-provider-cache"]["name"] == (
-        "${WORKBENCH_PROVIDER_CACHE_VOLUME:-template-provider-cache}"
+        "${WORKBENCH_PROVIDER_CACHE_VOLUME:-workbench-provider-cache}"
     )
 
     frontend = services["frontend"]
@@ -59,6 +66,9 @@ def test_compose_uses_workbench_shell_without_legacy_runtime_services() -> None:
 
     db = services["db"]
     assert db["environment"]["POSTGRES_DB"] == "${POSTGRES_DB:-workbench}"
+    assert db["environment"]["POSTGRES_PASSWORD"].startswith(
+        "${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD"
+    )
     assert db["healthcheck"]["test"][0] == "CMD-SHELL"
 
     assert "workbench-postgres" not in services
@@ -90,6 +100,11 @@ def test_docker_demo_smoke_runs_quickstart_api_import() -> None:
 
     docker_smoke_block = makefile.split("docker-demo-smoke:", 1)[1].split("dependency-audit:", 1)[0]
     assert "$(PYTHON) scripts/docker_quickstart_api_smoke.py" in docker_smoke_block
+    assert 'export FIRST_SUPERUSER_PASSWORD="$(DOCKER_DEMO_FIRST_SUPERUSER_PASSWORD)"' in (
+        docker_smoke_block
+    )
+    assert 'export POSTGRES_PASSWORD="$(DOCKER_DEMO_POSTGRES_PASSWORD)"' in docker_smoke_block
+    assert '"local-workbench-dev-password"' in script
     assert "locked_provider_data" in script
     assert "demo_provider_snapshot.json" in script
     assert "providers/update-jobs" in script
@@ -115,7 +130,11 @@ def test_production_smoke_overlay_uses_same_origin_public_contract() -> None:
     frontend_args = compose["services"]["frontend"]["build"]["args"]
 
     assert backend_env["ENVIRONMENT"] == "production"
-    assert backend_env["FIRST_SUPERUSER_PASSWORD"] != "changethis"
+    assert backend_env["SECRET_KEY"].startswith("${SECRET_KEY:?Set SECRET_KEY")
+    assert backend_env["FIRST_SUPERUSER_PASSWORD"].startswith(
+        "${FIRST_SUPERUSER_PASSWORD:?Set FIRST_SUPERUSER_PASSWORD"
+    )
+    assert backend_env["POSTGRES_PASSWORD"].startswith("${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD")
     assert backend_env["API_DOCS_ENABLED"] == "false"
     assert backend_env["FRONTEND_HOST"] == "https://workbench.example.test"
     assert backend_env["BACKEND_CORS_ORIGINS"] == "https://workbench.example.test"

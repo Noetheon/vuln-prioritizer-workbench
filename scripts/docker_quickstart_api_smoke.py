@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import mimetypes
+import os
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -65,8 +66,9 @@ def main() -> None:
 
 
 def _login() -> str:
+    password = os.environ.get("FIRST_SUPERUSER_PASSWORD", "local-workbench-dev-password")
     payload = urllib.parse.urlencode(
-        {"username": "admin@example.com", "password": "changethis"}
+        {"username": "admin@example.com", "password": password}
     ).encode()
     response = _request(
         f"{BASE_URL}/login/access-token",

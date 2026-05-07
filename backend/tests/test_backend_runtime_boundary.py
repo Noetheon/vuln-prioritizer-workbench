@@ -176,6 +176,7 @@ def test_import_service_modules_do_not_import_http_or_route_boundaries() -> None
 def test_default_compose_services_start_only_active_backend_runtime() -> None:
     compose = yaml.safe_load((REPO_ROOT / "compose.yml").read_text(encoding="utf-8"))
     services = compose["services"]
+    volumes = compose["volumes"]
     backend_environment = services["backend"]["environment"]
     backend_healthcheck = _as_text(services["backend"]["healthcheck"])
 
@@ -196,17 +197,34 @@ def test_default_compose_services_start_only_active_backend_runtime() -> None:
     assert backend_environment["SQLALCHEMY_DATABASE_URI"] == ""
     assert backend_environment["RATE_LIMIT_ENABLED"] == "${RATE_LIMIT_ENABLED:-true}"
     assert backend_environment["MAX_UPLOAD_MB"] == "${MAX_UPLOAD_MB:-25}"
+    assert backend_environment["POSTGRES_PASSWORD"].startswith(
+        "${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD"
+    )
     assert backend_environment["LOGIN_RATE_LIMIT_PER_MINUTE"] == (
         "${LOGIN_RATE_LIMIT_PER_MINUTE:-60}"
     )
     assert backend_environment["TRUSTED_PROXY_CIDRS"] == "${TRUSTED_PROXY_CIDRS:-}"
-    assert backend_environment["SECRET_KEY"] == "${SECRET_KEY:-changethis}"
-    assert backend_environment["FIRST_SUPERUSER_PASSWORD"] == (
-        "${FIRST_SUPERUSER_PASSWORD:-changethis}"
+    assert backend_environment["SECRET_KEY"].startswith("${SECRET_KEY:?Set SECRET_KEY")
+    assert backend_environment["FIRST_SUPERUSER_PASSWORD"].startswith(
+        "${FIRST_SUPERUSER_PASSWORD:?Set FIRST_SUPERUSER_PASSWORD"
     )
     assert backend_environment["DEMO_PROVIDER_SNAPSHOT_ENABLED"] == (
         "${DEMO_PROVIDER_SNAPSHOT_ENABLED:-false}"
     )
+    assert volumes["app-db-data"]["name"] == "${WORKBENCH_DB_VOLUME:-workbench-db-data}"
+    assert volumes["workbench-import-uploads"]["name"] == (
+        "${WORKBENCH_IMPORT_UPLOADS_VOLUME:-workbench-import-uploads}"
+    )
+    assert volumes["workbench-reports"]["name"] == (
+        "${WORKBENCH_REPORTS_VOLUME:-workbench-reports}"
+    )
+    assert volumes["workbench-provider-snapshots"]["name"] == (
+        "${WORKBENCH_PROVIDER_SNAPSHOTS_VOLUME:-workbench-provider-snapshots}"
+    )
+    assert volumes["workbench-provider-cache"]["name"] == (
+        "${WORKBENCH_PROVIDER_CACHE_VOLUME:-workbench-provider-cache}"
+    )
+    assert "template-" not in _as_text(volumes)
     assert "/api/v1/utils/health-check/" in backend_healthcheck
     assert "assert data is True" in backend_healthcheck
     assert "headers={'Host': host}" in backend_healthcheck
@@ -255,6 +273,14 @@ def test_env_example_does_not_pin_api_docs_on_for_shared_deployments() -> None:
     assert "\nTRUSTED_PROXY_CIDRS=\n" in env_example
     assert "\nTRAEFIK_APP_ENABLED=false\n" in env_example
     assert "\nMAX_UPLOAD_MB=25\n" in env_example
+    assert "\nSECRET_KEY=local-workbench-dev-secret\n" in env_example
+    assert "\nFIRST_SUPERUSER_PASSWORD=local-workbench-dev-password\n" in env_example
+    assert "\nPOSTGRES_PASSWORD=local-workbench-dev-postgres-password\n" in env_example
+    assert "\nWORKBENCH_DB_VOLUME=workbench-db-data\n" in env_example
+    assert "\nWORKBENCH_IMPORT_UPLOADS_VOLUME=workbench-import-uploads\n" in env_example
+    assert "\nWORKBENCH_REPORTS_VOLUME=workbench-reports\n" in env_example
+    assert "\nWORKBENCH_PROVIDER_SNAPSHOTS_VOLUME=workbench-provider-snapshots\n" in env_example
+    assert "\nWORKBENCH_PROVIDER_CACHE_VOLUME=workbench-provider-cache\n" in env_example
 
 
 def test_public_deployment_runbook_documents_backup_retention_and_tls() -> None:
@@ -263,6 +289,9 @@ def test_public_deployment_runbook_documents_backup_retention_and_tls() -> None:
     assert "scripts/workbench-backup.sh" in runbook
     assert "scripts/workbench-restore.sh" in runbook
     assert "WORKBENCH_ARTIFACT_MODE=compose" in runbook
+    assert "WORKBENCH_IMPORT_UPLOADS_VOLUME=workbench-import-uploads" in runbook
+    assert "WORKBENCH_IMPORT_UPLOADS_VOLUME=template-import-uploads" in runbook
+    assert "POSTGRES_PASSWORD=<long random value>" in runbook
     assert "import-upload, report, provider-snapshot, and\nprovider-cache" in runbook
     assert "/app/template-import-uploads" not in runbook
     assert "python -m app.core.retention --dry-run" in runbook
@@ -276,6 +305,8 @@ def test_backup_restore_scripts_support_database_url_and_compose_artifacts() -> 
 
     assert 'pg_dump --format=custom --file="$BACKUP_DIR/workbench.dump" "$DATABASE_URL"' in backup
     assert 'pg_restore --clean --if-exists --dbname="$DATABASE_URL"' in restore
+    assert "POSTGRES_PASSWORD must be set in the Compose db container." in backup
+    assert "POSTGRES_PASSWORD must be set in the Compose db container." in restore
     assert "WORKBENCH_ARTIFACT_MODE:-host" in backup
     assert "WORKBENCH_ARTIFACT_MODE:-host" in restore
     assert "docker compose ps -q backend" in backup

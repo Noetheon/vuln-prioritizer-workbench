@@ -12,7 +12,7 @@ services:
       PGDATA: /var/lib/postgresql/data/pgdata
       POSTGRES_DB: ${POSTGRES_DB:-workbench}
       POSTGRES_USER: ${POSTGRES_USER:-workbench}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-workbench}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD before running Compose. For local-only quickstart, copy .env.example to .env.}
     volumes:
       - app-db-data:/var/lib/postgresql/data/pgdata
 
@@ -35,9 +35,9 @@ services:
     environment:
       PROJECT_NAME: ${PROJECT_NAME:-Vuln Prioritizer Workbench}
       ENVIRONMENT: ${ENVIRONMENT:-local}
-      SECRET_KEY: ${SECRET_KEY:-changethis}
+      SECRET_KEY: ${SECRET_KEY:?Set SECRET_KEY before running Compose. For local-only quickstart, copy .env.example to .env.}
       FIRST_SUPERUSER: ${FIRST_SUPERUSER:-admin@example.com}
-      FIRST_SUPERUSER_PASSWORD: ${FIRST_SUPERUSER_PASSWORD:-changethis}
+      FIRST_SUPERUSER_PASSWORD: ${FIRST_SUPERUSER_PASSWORD:?Set FIRST_SUPERUSER_PASSWORD before running Compose. For local-only quickstart, copy .env.example to .env.}
       DOMAIN: ${DOMAIN:-localhost}
       FRONTEND_HOST: ${FRONTEND_HOST:-http://localhost:5173}
       BACKEND_CORS_ORIGINS: ${BACKEND_CORS_ORIGINS:-http://localhost,http://localhost:5173,http://127.0.0.1:5173}
@@ -57,7 +57,7 @@ services:
       POSTGRES_PORT: ${POSTGRES_PORT:-5432}
       POSTGRES_DB: ${POSTGRES_DB:-workbench}
       POSTGRES_USER: ${POSTGRES_USER:-workbench}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-workbench}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD before running Compose. For local-only quickstart, copy .env.example to .env.}
       IMPORT_UPLOAD_DIR: /app/workbench-import-uploads
       REPORT_DIR: /app/workbench-reports
       PROVIDER_SNAPSHOT_DIR: /app/provider-snapshots
@@ -123,11 +123,12 @@ services:
 
 volumes:
   app-db-data:
+    name: ${WORKBENCH_DB_VOLUME:-workbench-db-data}
   workbench-import-uploads:
-    name: ${WORKBENCH_IMPORT_UPLOADS_VOLUME:-template-import-uploads}
+    name: ${WORKBENCH_IMPORT_UPLOADS_VOLUME:-workbench-import-uploads}
   workbench-reports:
-    name: ${WORKBENCH_REPORTS_VOLUME:-template-reports}
+    name: ${WORKBENCH_REPORTS_VOLUME:-workbench-reports}
   workbench-provider-snapshots:
-    name: ${WORKBENCH_PROVIDER_SNAPSHOTS_VOLUME:-template-provider-snapshots}
+    name: ${WORKBENCH_PROVIDER_SNAPSHOTS_VOLUME:-workbench-provider-snapshots}
   workbench-provider-cache:
-    name: ${WORKBENCH_PROVIDER_CACHE_VOLUME:-template-provider-cache}
+    name: ${WORKBENCH_PROVIDER_CACHE_VOLUME:-workbench-provider-cache}

@@ -1,13 +1,16 @@
 services:
   db:
     restart: "no"
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD for production smoke.}
 
   backend:
     restart: "no"
     environment:
       ENVIRONMENT: production
-      SECRET_KEY: production-smoke-secret-key-change-in-real-deployments
-      FIRST_SUPERUSER_PASSWORD: production-smoke-admin-password
+      SECRET_KEY: ${SECRET_KEY:?Set SECRET_KEY for production smoke.}
+      FIRST_SUPERUSER_PASSWORD: ${FIRST_SUPERUSER_PASSWORD:?Set FIRST_SUPERUSER_PASSWORD for production smoke.}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD for production smoke.}
       DOMAIN: workbench.example.test
       FRONTEND_HOST: https://workbench.example.test
       BACKEND_CORS_ORIGINS: https://workbench.example.test
