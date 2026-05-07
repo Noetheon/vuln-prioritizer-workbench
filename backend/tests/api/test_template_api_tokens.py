@@ -6,7 +6,7 @@ from uuid import UUID
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlmodel import Session
+from sqlmodel import Session, select
 from utils.template_workbench import (
     TemplateApiEnv,
     auth_headers,
@@ -266,6 +266,132 @@ def test_template_scoped_service_tokens_gate_import_report_admin_and_revoke(
         headers=_bearer_headers(read_token["token"]),
     )
     assert read_list_tokens.status_code == 403
+
+
+def test_template_service_tokens_fail_closed_for_inactive_configured_user(
+    template_api_env: TemplateApiEnv,
+    tmp_path: Path,
+) -> None:
+    _configure_template_dirs(template_api_env, tmp_path)
+    client = template_api_env.client
+    jwt_headers = auth_headers(client)
+    project = create_project_via_api(client, jwt_headers)
+
+    imported = client.post(
+        f"/api/v1/projects/{project['id']}/imports",
+        headers=jwt_headers,
+        data={"input_type": "cve-list"},
+        files={"file": ("known-cves.txt", b"CVE-2024-3094\n", "text/plain")},
+    )
+    assert imported.status_code == 200, imported.text
+    run_id = imported.json()["id"]
+
+    service_tokens = {
+        "read": _create_token(
+            client,
+            jwt_headers,
+            name="inactive-read",
+            scopes=["read"],
+            project_id=project["id"],
+        ),
+        "write": _create_token(
+            client,
+            jwt_headers,
+            name="inactive-write",
+            scopes=["write"],
+            project_id=project["id"],
+        ),
+        "import": _create_token(
+            client,
+            jwt_headers,
+            name="inactive-import",
+            scopes=["import"],
+            project_id=project["id"],
+        ),
+        "report": _create_token(
+            client,
+            jwt_headers,
+            name="inactive-report",
+            scopes=["report"],
+            project_id=project["id"],
+        ),
+        "admin": _create_token(
+            client,
+            jwt_headers,
+            name="inactive-admin",
+            scopes=["admin"],
+        ),
+    }
+
+    with Session(template_api_env.engine) as session:
+        active_settings = template_api_env.client.app.state.workbench_settings
+        user = session.exec(
+            select(app_models.User).where(app_models.User.email == active_settings.FIRST_SUPERUSER)
+        ).one()
+        user.is_active = False
+        session.add(user)
+        session.commit()
+
+    responses = {
+        "read": client.get(
+            "/api/v1/projects/",
+            headers=_bearer_headers(str(service_tokens["read"]["token"])),
+        ),
+        "write": client.patch(
+            f"/api/v1/projects/{project['id']}",
+            headers=_bearer_headers(str(service_tokens["write"]["token"])),
+            json={"description": "inactive service token must not mutate"},
+        ),
+        "import": _upload_cve_list(
+            client,
+            project["id"],
+            token=str(service_tokens["import"]["token"]),
+        ),
+        "report": client.post(
+            f"/api/v1/runs/{run_id}/reports",
+            headers=_bearer_headers(str(service_tokens["report"]["token"])),
+            json={"format": "json"},
+        ),
+        "admin": client.get(
+            "/api/v1/api-tokens/",
+            headers=_bearer_headers(str(service_tokens["admin"]["token"])),
+        ),
+    }
+
+    for scope, response in responses.items():
+        assert response.status_code == 403, (scope, response.text)
+        assert "Inactive user" in response.text
+        assert str(service_tokens[scope]["token"]) not in response.text
+
+    with Session(template_api_env.engine) as session:
+        token_records = session.exec(select(app_models.ApiToken)).all()
+        inactive_token_ids = {UUID(str(token["id"])) for token in service_tokens.values()}
+        inactive_records = [token for token in token_records if token.id in inactive_token_ids]
+        failure_events = session.exec(
+            select(app_models.AuditEvent).where(
+                app_models.AuditEvent.action == "api_token.auth.failure"
+            )
+        ).all()
+
+    assert {record.name for record in inactive_records} == {
+        "inactive-read",
+        "inactive-write",
+        "inactive-import",
+        "inactive-report",
+        "inactive-admin",
+    }
+    assert all(record.last_used_at is None for record in inactive_records)
+    assert len(failure_events) == len(service_tokens)
+    assert {event.resource_id for event in failure_events} == {
+        str(token["id"]) for token in service_tokens.values()
+    }
+    assert {event.status for event in failure_events} == {"failure"}
+    assert all(event.detail_json["reason"] == "inactive_user" for event in failure_events)
+    assert all(
+        str(token["token"]) not in str(event.detail_json)
+        for token in service_tokens.values()
+        for event in failure_events
+    )
 
 
 def test_template_api_token_creation_rejects_empty_or_unknown_scopes(

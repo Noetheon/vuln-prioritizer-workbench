@@ -20,6 +20,7 @@ from app.core.rate_limit import InMemoryRateLimiter, rate_limit_client_host
 from app.models import ApiToken, ApiTokenScope, TokenPayload, User
 from app.models.api_tokens import attach_api_token_context, scope_set
 from app.repositories import ApiTokenRepository, AuthSessionRepository
+from app.services.audit import record_audit_event
 from vuln_prioritizer.security_tokens import api_token_digest
 
 reusable_oauth2 = OAuth2PasswordBearer(
@@ -160,9 +161,6 @@ def require_api_scope(
                     status_code=status.HTTP_403_FORBIDDEN,
                     detail=f"API token requires {required_scope} scope.",
                 )
-            repo = ApiTokenRepository(session)
-            repo.mark_api_token_used(token_record)
-            session.commit()
             principal = ensure_configured_superuser(
                 session,
                 active_settings=active_settings,
@@ -173,6 +171,25 @@ def require_api_scope(
                 project_id=token_record.project_id,
                 scopes=scopes,
             )
+            if not principal.is_active:
+                record_audit_event(
+                    session,
+                    action="api_token.auth.failure",
+                    resource_type="api_token",
+                    resource_id=token_record.id,
+                    status="failure",
+                    actor=principal,
+                    project_id=token_record.project_id,
+                    detail={"reason": "inactive_user", "scopes": sorted(scopes)},
+                )
+                session.commit()
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Inactive user",
+                )
+            repo = ApiTokenRepository(session)
+            repo.mark_api_token_used(token_record)
+            session.commit()
             return principal
         if jwt_needs_superuser and not user.is_superuser:
             raise HTTPException(
