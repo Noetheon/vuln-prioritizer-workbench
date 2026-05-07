@@ -424,8 +424,13 @@ export function FindingsDataTable({
   ]
 
   return (
-    <div className="vpw-table-wrap remediation-table-wrap shadow-none">
-      <table className="vpw-table min-w-[1240px] table-fixed [&_td]:py-3 [&_th]:py-3">
+    <section
+      aria-label="Findings table scroll region"
+      className="vpw-table-wrap remediation-table-wrap shadow-none"
+      // biome-ignore lint/a11y/noNoninteractiveTabindex: The table overflow container must be keyboard-focusable for horizontal scroll access.
+      tabIndex={0}
+    >
+      <table className="vpw-table table-fixed [&_td]:py-3 [&_th]:py-3">
         <caption className="sr-only">Findings remediation queue</caption>
         <thead>
           <tr>
@@ -459,6 +464,6 @@ export function FindingsDataTable({
           ))}
         </tbody>
       </table>
-    </div>
+    </section>
   )
 }

@@ -1,6 +1,7 @@
 @layer components {
   .vpw-page-container {
     width: 100%;
+    min-width: 0;
     max-width: var(--vpw-container-max);
     margin-inline: auto;
     padding-inline: var(--vpw-container-padding);
@@ -89,17 +90,21 @@
   }
 
   .vpw-table-wrap {
-    overflow-x: visible;
+    max-width: 100%;
+    min-width: 0;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    scrollbar-gutter: stable;
     border: 1px solid var(--vpw-border-default);
     border-radius: var(--vpw-radius-xl);
     background: var(--vpw-bg-card);
     box-shadow: var(--vpw-shadow-1);
+    -webkit-overflow-scrolling: touch;
   }
 
-  @media (width < 768px) {
-    .vpw-table-wrap {
-      overflow-x: auto;
-    }
+  .vpw-table-wrap:focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--vpw-teal) 70%, white);
+    outline-offset: 3px;
   }
 
   .vpw-table {

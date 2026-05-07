@@ -1,75 +1,5 @@
-import { expect, type Page, test } from "@playwright/test"
-
-async function routeWorkbenchShell(page: Page) {
-  await page.addInitScript(() => {
-    // biome-ignore lint/suspicious/noDocumentCookie: Playwright sets a mock readable CSRF cookie before app boot.
-    document.cookie = "vpw_csrf_token=mock-csrf; Path=/; SameSite=Strict"
-  })
-
-  await page.route("**/api/v1/users/me", (route) =>
-    route.fulfill({
-      contentType: "application/json",
-      body: JSON.stringify({
-        id: "demo-user",
-        email: "admin@example.com",
-        full_name: "Admin",
-        is_active: true,
-        is_superuser: true,
-        created_at: "2025-01-01T00:00:00Z",
-      }),
-    }),
-  )
-  await page.route("**/api/v1/workbench/status", (route) =>
-    route.fulfill({
-      contentType: "application/json",
-      body: JSON.stringify({
-        app: "Vuln Prioritizer Workbench",
-        status: "ready",
-        core_package: "vuln_prioritizer",
-        core_version: "demo",
-        database_status: "ready",
-        schema_status: "ready",
-      }),
-    }),
-  )
-  await page.route("**/api/v1/providers/status", (route) =>
-    route.fulfill({
-      contentType: "application/json",
-      body: JSON.stringify({
-        status: "ok",
-        snapshot_mode: "demo",
-        cache_age_seconds: 0,
-        last_sync: "2025-04-30T10:00:00Z",
-        warnings: [],
-        snapshot: {
-          id: "demo",
-          mode: "demo",
-          missing: false,
-          selected_sources: ["epss", "kev"],
-        },
-        sources: [],
-      }),
-    }),
-  )
-  await page.route("**/api/v1/utils/health-check/", (route) =>
-    route.fulfill({
-      contentType: "application/json",
-      body: JSON.stringify({ status: "ok" }),
-    }),
-  )
-  await page.route("**/api/v1/projects/", (route) =>
-    route.fulfill({
-      contentType: "application/json",
-      body: JSON.stringify({ data: [], count: 0 }),
-    }),
-  )
-  await page.route("**/api/v1/projects/?*", (route) =>
-    route.fulfill({
-      contentType: "application/json",
-      body: JSON.stringify({ data: [], count: 0 }),
-    }),
-  )
-}
+import { expect, test } from "@playwright/test"
+import { mockFinding, mockProject, routeWorkbenchShell } from "./workbench-route-mocks"
 
 test("findings route renders the empty live queue without demo data", async ({
   page,
@@ -130,4 +60,47 @@ test("finding detail API errors do not fall back to demo findings", async ({
   await expect(page.getByText("Finding detail unavailable")).toBeVisible()
   await expect(page.getByText("Demo preview")).toHaveCount(0)
   await expect(page.getByText("CVE-2024-3094")).toHaveCount(0)
+})
+
+test("findings table owns horizontal scroll without page overflow", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 768, height: 1024 })
+  await routeWorkbenchShell(page, {
+    findings: [mockFinding],
+    projects: [mockProject],
+  })
+
+  await page.goto("/findings")
+
+  await expect(
+    page.getByRole("table", { name: "Findings remediation queue" }),
+  ).toContainText("CVE-2024-3094")
+  const scrollRegion = page.getByRole("region", {
+    name: "Findings table scroll region",
+  })
+  const metrics = await scrollRegion.evaluate((region) => {
+    const documentElement = document.documentElement
+    region.scrollLeft = region.scrollWidth
+    return {
+      bodyScrollWidth: document.body.scrollWidth,
+      documentScrollWidth: documentElement.scrollWidth,
+      regionClientWidth: region.clientWidth,
+      regionScrollLeft: region.scrollLeft,
+      regionScrollWidth: region.scrollWidth,
+      viewportWidth: documentElement.clientWidth,
+    }
+  })
+
+  expect(metrics.bodyScrollWidth).toBeLessThanOrEqual(
+    metrics.viewportWidth + 1,
+  )
+  expect(metrics.documentScrollWidth).toBeLessThanOrEqual(
+    metrics.viewportWidth + 1,
+  )
+  expect(metrics.regionClientWidth).toBeLessThanOrEqual(
+    metrics.viewportWidth + 1,
+  )
+  expect(metrics.regionScrollWidth).toBeGreaterThan(metrics.regionClientWidth)
+  expect(metrics.regionScrollLeft).toBeGreaterThan(0)
 })
