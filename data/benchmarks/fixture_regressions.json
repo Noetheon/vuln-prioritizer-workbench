@@ -2,6 +2,11 @@
   "schema_version": "1.0.0",
   "families": [
     {
+      "id": "manual-input",
+      "description": "Manual CVE and normalized occurrence inputs.",
+      "required_edge_signal": "duplicate-normalization"
+    },
+    {
       "id": "scanner-json",
       "description": "Scanner and alert exports expressed as JSON documents.",
       "required_edge_signal": "non-cve-or-duplicate-warning"
@@ -18,6 +23,59 @@
     }
   ],
   "cases": [
+    {
+      "name": "plain_cve_list_triage",
+      "family": "manual-input",
+      "scenario": "Plain CVE list triage with duplicate suppression.",
+      "input": "data/input_fixtures/parser_matrix/cve-list/positive.txt",
+      "input_format": "cve-list",
+      "fixture_origin": "synthetic-sanitized-fixture",
+      "edge_case": true,
+      "edge_signals": [
+        "duplicate-normalization"
+      ],
+      "extra_args": [],
+      "expected_findings_count": 2,
+      "expected_filtered_out_count": 0,
+      "expected_occurrences_count": 2,
+      "expected_source_stats": {
+        "cve-list": 2
+      },
+      "expected_counts_by_priority": {
+        "High": 2
+      },
+      "expected_cves": [
+        "CVE-2024-3094",
+        "CVE-2023-44487"
+      ],
+      "expected_warning_substrings": []
+    },
+    {
+      "name": "generic_occurrence_csv_triage",
+      "family": "manual-input",
+      "scenario": "Normalized occurrence CSV triage with component, target, severity, and fix-version evidence.",
+      "input": "data/input_fixtures/parser_matrix/generic-occurrence-csv/positive.csv",
+      "input_format": "generic-occurrence-csv",
+      "fixture_origin": "synthetic-sanitized-fixture",
+      "edge_case": false,
+      "edge_signals": [],
+      "extra_args": [],
+      "expected_findings_count": 2,
+      "expected_filtered_out_count": 0,
+      "expected_occurrences_count": 2,
+      "expected_source_stats": {
+        "generic-occurrence-csv": 2
+      },
+      "expected_counts_by_priority": {
+        "Critical": 1,
+        "High": 1
+      },
+      "expected_cves": [
+        "CVE-2024-4577",
+        "CVE-2024-3094"
+      ],
+      "expected_warning_substrings": []
+    },
     {
       "name": "trivy_ci_triage",
       "family": "scanner-json",

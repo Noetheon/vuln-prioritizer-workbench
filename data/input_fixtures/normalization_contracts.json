@@ -1,5 +1,98 @@
 {
   "inputs": {
+    "cve-list": {
+      "fixture": "data/input_fixtures/parser_matrix/cve-list/positive.txt",
+      "fixture_format": "text",
+      "top_level_kind": "line-list",
+      "expected_total_rows": 3,
+      "expected_occurrence_count": 2,
+      "expected_unique_cves": [
+        "CVE-2024-3094",
+        "CVE-2023-44487"
+      ],
+      "expected_non_cve_ids": [],
+      "expected_occurrences": [
+        {
+          "cve_id": "CVE-2024-3094",
+          "source_format": "cve-list",
+          "component_name": null,
+          "component_version": null,
+          "purl": null,
+          "package_type": null,
+          "file_path": null,
+          "dependency_path": null,
+          "fix_versions": [],
+          "raw_severity": null
+        },
+        {
+          "cve_id": "CVE-2023-44487",
+          "source_format": "cve-list",
+          "component_name": null,
+          "component_version": null,
+          "purl": null,
+          "package_type": null,
+          "file_path": null,
+          "dependency_path": null,
+          "fix_versions": [],
+          "raw_severity": null
+        }
+      ]
+    },
+    "generic-occurrence-csv": {
+      "fixture": "data/input_fixtures/parser_matrix/generic-occurrence-csv/positive.csv",
+      "fixture_format": "csv",
+      "top_level_kind": "csv",
+      "raw_header_keys": [
+        "asset_ref",
+        "business_service",
+        "component_name",
+        "component_version",
+        "cve_id",
+        "fix_version",
+        "owner",
+        "purl",
+        "scanner",
+        "severity",
+        "target_kind"
+      ],
+      "expected_total_rows": 2,
+      "expected_occurrence_count": 2,
+      "expected_unique_cves": [
+        "CVE-2024-3094",
+        "CVE-2024-4577"
+      ],
+      "expected_non_cve_ids": [],
+      "expected_occurrences": [
+        {
+          "cve_id": "CVE-2024-3094",
+          "source_format": "generic-occurrence-csv",
+          "component_name": "xz",
+          "component_version": "5.6.0-r0",
+          "purl": "pkg:apk/alpine/xz@5.6.0-r0",
+          "package_type": null,
+          "file_path": null,
+          "dependency_path": null,
+          "fix_versions": [
+            "5.6.1-r2"
+          ],
+          "raw_severity": "CRITICAL"
+        },
+        {
+          "cve_id": "CVE-2024-4577",
+          "source_format": "generic-occurrence-csv",
+          "component_name": "php-cgi",
+          "component_version": "8.3.7",
+          "purl": "pkg:generic/php-cgi@8.3.7",
+          "package_type": null,
+          "file_path": null,
+          "dependency_path": null,
+          "fix_versions": [
+            "8.3.8"
+          ],
+          "raw_severity": "HIGH"
+        }
+      ]
+    },
     "trivy-json": {
       "fixture": "data/input_fixtures/trivy_report.json",
       "top_level_kind": "object",

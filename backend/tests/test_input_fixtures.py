@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import csv
 import json
 import re
 import xml.etree.ElementTree as ET
@@ -62,6 +63,11 @@ def _load_fixture_payload(contract: dict) -> object:
     fixture_format = contract.get("fixture_format", "json")
     if fixture_format == "xml":
         return ET.fromstring(fixture_path.read_bytes())
+    if fixture_format == "text":
+        return fixture_path.read_text(encoding="utf-8")
+    if fixture_format == "csv":
+        with fixture_path.open("r", encoding="utf-8", newline="") as handle:
+            return list(csv.DictReader(handle))
     return json.loads(fixture_path.read_text(encoding="utf-8"))
 
 
@@ -93,6 +99,12 @@ def test_fixture_files_exist_and_parse(format_name: str, contract: dict) -> None
         assert isinstance(payload, dict)
     elif contract["top_level_kind"] == "list":
         assert isinstance(payload, list)
+    elif contract["top_level_kind"] == "line-list":
+        assert isinstance(payload, str)
+        assert payload.strip()
+    elif contract["top_level_kind"] == "csv":
+        assert isinstance(payload, list)
+        assert payload
     else:
         assert isinstance(payload, ET.Element)
 
@@ -132,6 +144,13 @@ def test_input_fixtures_expose_expected_ids_and_shape(
     elif contract["top_level_kind"] == "list":
         assert payload, f"{format_name} fixture must not be empty"
         assert set(contract["raw_item_keys"]).issubset(payload[0])
+        strings = list(_collect_strings(payload))
+    elif contract["top_level_kind"] == "line-list":
+        assert isinstance(payload, str)
+        strings = list(_collect_strings(payload))
+    elif contract["top_level_kind"] == "csv":
+        assert payload, f"{format_name} fixture must not be empty"
+        assert set(contract["raw_header_keys"]).issubset(payload[0])
         strings = list(_collect_strings(payload))
     else:
         assert _xml_local_name(payload.tag) == contract["raw_top_level_tag"]

@@ -65,28 +65,35 @@ Registry behavior:
 Workbench input types. Passing an explicit iterable builds a scoped registry for
 tests or future plugin-free extension points.
 
-## Parser Fixture Test Matrix
+## Shared Normalization Fixture Contract
 
-VPW-021 adds a maintainer-facing regression matrix for the MVP Workbench import
-formats. The matrix is test evidence for deterministic parser/importer behavior;
-it is not a runtime API and does not change the upload, database, or OpenAPI
-contracts.
+The shared positive parser contract lives in
+`data/input_fixtures/normalization_contracts.json`. It is test evidence for
+deterministic API importer and CLI/input-loader normalization; it is not a
+runtime API and does not change the upload, database, or OpenAPI contracts.
 
-Fixtures live under `data/input_fixtures/parser_matrix/`. Each MVP format owns a
-positive fixture, a negative fixture, and a shared normalized occurrence
-snapshot in `expected_normalized_occurrences.json`.
+Each input fixture in the manifest records the raw shape, expected total rows,
+expected occurrence count, unique CVE order, skipped non-CVE advisory IDs, and
+the normalized occurrence fields shared by the Workbench API importer and the
+CLI/core `InputLoader`.
 
-| Input type | Positive fixture | Negative fixture | Snapshot coverage |
-| --- | --- | --- | --- |
-| `cve-list` | `cve-list/positive.txt` | `cve-list/negative.txt` | Uppercase normalization, duplicate suppression, source line evidence |
-| `generic-occurrence-csv` | `generic-occurrence-csv/positive.csv` | `generic-occurrence-csv/negative.csv` | Asset, component, fix version, severity, owner, service, and target evidence |
-| `trivy-json` | `trivy-json/positive.json` | `trivy-json/negative.json` | OS and library occurrences, GHSA-to-CVE alias handling, source metadata |
-| `grype-json` | `grype-json/positive.json` | `grype-json/negative.json` | Match normalization, related CVE handling, package and target evidence |
+| Input type | Positive fixture | Normalization coverage |
+| --- | --- | --- |
+| `cve-list` | `parser_matrix/cve-list/positive.txt` | Uppercase normalization and duplicate suppression |
+| `generic-occurrence-csv` | `parser_matrix/generic-occurrence-csv/positive.csv` | Component, version, PURL, fix version, severity, and target evidence |
+| Scanner, SBOM, GitHub alert, Nessus, and OpenVAS formats | format-specific fixtures under `data/input_fixtures/` | Source metadata, package fields, affected paths, fix versions, raw severity, non-CVE advisory filtering, and CVE order |
 
-`backend/tests/api/test_template_parser_fixture_matrix.py` loads these fixtures
-through `build_importer_registry()`, compares normalized occurrences to the
-checked-in JSON snapshot, and verifies that each negative fixture fails offline
-with `ImporterParseError`.
+`backend/tests/api/test_template_parser_fixture_matrix.py` loads every manifest
+fixture through `build_importer_registry()` and compares normalized occurrences
+to the same projection asserted by the CLI/core
+`backend/tests/test_input_loader_contracts.py` tests.
+
+Workbench parse-error fixtures live under `data/input_fixtures/parser_matrix/`.
+They cover fail-closed API upload behavior, not positive normalization
+snapshots. `cve-list` and `generic-occurrence-csv` intentionally differ from the
+legacy CLI on mixed invalid rows: the Workbench importer raises
+`ImporterParseError`, while the CLI/input-loader keeps compatibility by warning
+and skipping invalid rows.
 
 Maintenance rules:
 
@@ -94,17 +101,14 @@ Maintenance rules:
   and customer data
 - do not call scanners, provider APIs, or network services from parser fixture
   tests
-- treat snapshot changes as parser contract changes that need review
+- treat `normalization_contracts.json` changes as parser contract changes that
+  need review
 - keep parse-error and persistence behavior in API/service tests instead of
   mixing it into pure parser fixture tests
-- when adding a new Workbench import type, add positive and negative parser
-  fixtures, extend the snapshot, update this matrix, and cover upload
-  suffix/MIME handling separately if the HTTP boundary changes
-
-The broader CLI/input-loader fixture manifest remains
-`data/input_fixtures/normalization_contracts.json`; VPW-021 is the Workbench
-MVP importer matrix for `cve-list`, `generic-occurrence-csv`, `trivy-json`, and
-`grype-json`.
+- when adding a new Workbench import type, add the positive fixture to
+  `normalization_contracts.json`, add a negative parser fixture when the API
+  failure semantics need coverage, and cover upload suffix/MIME handling
+  separately if the HTTP boundary changes
 
 ## Domain Exceptions
 
