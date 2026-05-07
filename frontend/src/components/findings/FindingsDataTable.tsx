@@ -21,6 +21,7 @@ import {
 import type { ReactNode } from "react"
 import { formatLabel as labelize, optionalText } from "@/lib/ui-copy"
 import { cn } from "@/lib/utils"
+import type { FindingsUrlSearch } from "./findings-search-state"
 
 type FindingsSort = NonNullable<FindingsReadProjectFindingsData["sort"]>
 type FindingsDirection = NonNullable<
@@ -182,6 +183,7 @@ function StaticHeader({
 type FindingsDataTableProps = {
   findings: readonly FindingPublic[]
   findingDirection: FindingsDirection
+  findingSearch: FindingsUrlSearch
   onOpenSheet: (finding: FindingPublic) => void
   onOpenWhy: (finding: FindingPublic) => void
   onSort: (sort: QueueSort) => void
@@ -200,6 +202,7 @@ type FindingsDataTableColumn = {
 export function FindingsDataTable({
   findings,
   findingDirection,
+  findingSearch,
   onOpenSheet,
   onOpenWhy,
   onSort,
@@ -255,6 +258,7 @@ export function FindingsDataTable({
           <Link
             className="finding-cve-link"
             params={{ findingId: finding.id }}
+            search={findingSearch}
             title={`Open finding ${finding.cve_id}`}
             to="/findings/$findingId"
           >

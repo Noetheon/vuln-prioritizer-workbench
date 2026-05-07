@@ -5,6 +5,7 @@ import type {
   FindingDetailPublic,
   FindingExplanationPublic,
 } from "@/api-client"
+import type { FindingsUrlSearch } from "@/components/findings/findings-search-state"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { VpwSkeletonStack, VpwStatusBanner } from "@/components/vpw"
@@ -32,6 +33,7 @@ export type FindingDetailRouteProps = {
   explanation: FindingExplanationPublic | null
   explanationWarning: string
   finding: FindingDetailPublic | null
+  findingsBackSearch: FindingsUrlSearch
   loading: boolean
   tab: FindingDetailTab
   onRefresh: () => void
@@ -43,6 +45,7 @@ export function FindingDetailRoute({
   explanation,
   explanationWarning,
   finding,
+  findingsBackSearch,
   loading,
   onRefresh,
   onTabChange,
@@ -75,7 +78,7 @@ export function FindingDetailRoute({
     >
       <div className="finding-detail-backbar">
         <Button variant="outline" size="sm" asChild>
-          <Link to="/findings">
+          <Link search={findingsBackSearch} to="/findings">
             <ArrowLeft aria-hidden="true" size={16} />
             <span>Back to Findings</span>
           </Link>
