@@ -48,24 +48,24 @@ type DashboardSignalOverviewProps = {
 
 function priorityFill(tone: ChartDatum["tone"]) {
   return tone === "critical"
-    ? "#ef4444"
+    ? "var(--vpw-red)"
     : tone === "high"
-      ? "#f97316"
+      ? "var(--vpw-amber)"
       : tone === "medium"
-        ? "#f59e0b"
+        ? "var(--vpw-amber)"
         : tone === "low"
-          ? "#22c55e"
-          : "#64748b"
+          ? "var(--vpw-green)"
+          : "var(--vpw-text-muted)"
 }
 
 function epssFill(tone: ChartDatum["tone"]) {
   return tone === "critical"
-    ? "#ef4444"
+    ? "var(--vpw-red)"
     : tone === "high"
-      ? "#f97316"
+      ? "var(--vpw-amber)"
       : tone === "medium"
-        ? "#f59e0b"
-        : "#22c55e"
+        ? "var(--vpw-amber)"
+        : "var(--vpw-green)"
 }
 
 export function DashboardSignalOverview({
@@ -225,7 +225,11 @@ export function DashboardSignalOverview({
                     <XAxis dataKey="label" tick={{ fontSize: 12 }} />
                     <YAxis tick={{ fontSize: 12 }} />
                     <RechartsTooltip />
-                    <Bar dataKey="value" fill="#0d9488" radius={[4, 4, 0, 0]} />
+                    <Bar
+                      dataKey="value"
+                      fill="var(--vpw-teal)"
+                      radius={[4, 4, 0, 0]}
+                    />
                   </BarChart>
                 </ResponsiveContainer>
               )}
@@ -279,7 +283,7 @@ export function DashboardSignalOverview({
                     <Line
                       dataKey="value"
                       dot={{ r: 3 }}
-                      stroke="#6366f1"
+                      stroke="var(--vpw-violet)"
                       strokeWidth={2}
                       type="monotone"
                     />

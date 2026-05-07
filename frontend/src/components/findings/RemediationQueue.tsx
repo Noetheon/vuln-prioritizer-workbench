@@ -187,12 +187,9 @@ function WhyDialog({ finding, open, onClose }: WhyDialogProps) {
             </p>
           )}
           {finding.recommended_action ? (
-            <div className="rounded-md border border-[#99f6e4] bg-[#ccfbf1] p-3 text-[#134e4a]">
-              <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-[#115e59]">
-                Recommended action
-              </p>
-              <p className="leading-relaxed">{finding.recommended_action}</p>
-            </div>
+            <VpwStatusBanner title="Recommended action" tone="success">
+              {finding.recommended_action}
+            </VpwStatusBanner>
           ) : null}
           <dl className="grid grid-cols-3 gap-3 rounded-md border border-[var(--vpw-border-default)] bg-[var(--vpw-bg-card)] p-3 text-xs text-[var(--vpw-text-primary)]">
             <div>

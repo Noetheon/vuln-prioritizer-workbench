@@ -1,10 +1,10 @@
 .governance-summary-widget {
   display: grid;
   gap: 14px;
-  border: 1px solid #edf1ef;
+  border: 1px solid var(--vpw-border-subtle);
   border-radius: 8px;
   padding: 16px;
-  background: #ffffff;
+  background: var(--vpw-bg-card);
 }
 
 .governance-summary-widget {
@@ -17,9 +17,9 @@
   gap: 1px;
   margin: 0;
   overflow: hidden;
-  border: 1px solid #edf1ef;
+  border: 1px solid var(--vpw-border-subtle);
   border-radius: 8px;
-  background: #edf1ef;
+  background: var(--vpw-border-subtle);
 }
 
 .governance-debt-grid div {
@@ -27,7 +27,7 @@
   gap: 5px;
   min-height: 76px;
   padding: 10px;
-  background: #ffffff;
+  background: var(--vpw-bg-card);
 }
 
 .governance-debt-grid dt,
@@ -36,7 +36,7 @@
 }
 
 .governance-debt-grid dt {
-  color: #64748b;
+  color: var(--vpw-text-muted);
   font-size: 0.72rem;
   font-weight: 850;
   text-transform: uppercase;
@@ -48,14 +48,14 @@
 }
 
 .governance-debt-grid dd strong {
-  color: #111827;
+  color: var(--vpw-text-primary);
   font-size: 1.18rem;
   line-height: 1;
 }
 
 .governance-debt-grid dd span {
   margin-top: 3px;
-  color: #64748b;
+  color: var(--vpw-text-muted);
   font-size: 0.76rem;
   line-height: 1.25;
 }
@@ -71,10 +71,10 @@
 .governance-service-list li {
   display: grid;
   gap: 8px;
-  border: 1px solid #d7e0dd;
+  border: 1px solid var(--vpw-border-default);
   border-radius: 8px;
   padding: 11px;
-  background: #f8fafc;
+  background: var(--vpw-bg-panel);
 }
 
 .governance-service-list div {
@@ -87,20 +87,20 @@
 /* biome-ignore lint/style/noDescendingSpecificity: service-list selectors target a separate finding summary block. */
 .governance-service-list strong {
   overflow-wrap: anywhere;
-  color: #0f766e;
+  color: var(--vpw-teal);
   font-size: 0.95rem;
 }
 
 /* biome-ignore lint/style/noDescendingSpecificity: service-list selectors target a separate finding summary block. */
 .governance-service-list span {
-  color: #111827;
+  color: var(--vpw-text-primary);
   font-size: 0.84rem;
   font-weight: 750;
   text-align: right;
 }
 
 .governance-service-list small {
-  color: #64748b;
+  color: var(--vpw-text-muted);
   font-size: 0.82rem;
   line-height: 1.4;
 }
@@ -113,15 +113,15 @@
 
 .remediation-table th,
 .remediation-table td {
-  border-bottom: 1px solid #edf1ef;
+  border-bottom: 1px solid var(--vpw-border-subtle);
   padding: 10px 12px;
   text-align: left;
   vertical-align: top;
 }
 
 .remediation-table th {
-  background: #f8fafc;
-  color: #64748b;
+  background: var(--vpw-bg-panel);
+  color: var(--vpw-text-muted);
   font-size: 0.72rem;
   font-weight: 800;
   text-transform: uppercase;
@@ -132,7 +132,7 @@
 }
 
 .remediation-table td {
-  color: #111827;
+  color: var(--vpw-text-primary);
   font-size: 0.88rem;
 }
 

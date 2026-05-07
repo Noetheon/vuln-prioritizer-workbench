@@ -25,7 +25,7 @@ input:focus-visible,
 select:focus-visible,
 textarea:focus-visible,
 [tabindex]:focus-visible {
-  outline: 3px solid #0f766e;
+  outline: 3px solid var(--vpw-teal);
   outline-offset: 2px;
   border-radius: 4px;
 }
@@ -43,8 +43,8 @@ textarea:focus-visible,
   height: 42px;
   place-items: center;
   border-radius: 8px;
-  background: #f0b429;
-  color: #1b1f23;
+  background: var(--vpw-amber);
+  color: var(--vpw-text-primary);
   font-weight: 800;
 }
 
@@ -55,12 +55,12 @@ textarea:focus-visible,
 
 .brand span {
   margin-top: 2px;
-  color: #475569;
+  color: var(--vpw-text-secondary);
   font-size: 0.84rem;
 }
 
 .eyebrow {
-  color: #6b7280;
+  color: var(--vpw-text-muted);
   font-size: 0.82rem;
   font-weight: 700;
   text-transform: uppercase;
@@ -70,7 +70,7 @@ textarea:focus-visible,
   h1,
   h2 {
     margin: 0;
-    color: #111827;
+    color: var(--vpw-text-primary);
     letter-spacing: 0;
   }
 
@@ -89,9 +89,9 @@ textarea:focus-visible,
   width: 9px;
   height: 9px;
   border-radius: 50%;
-  background: #2f9e44;
+  background: var(--vpw-green);
 }
 
 .status-dot.muted {
-  background: #c2410c;
+  background: var(--vpw-red);
 }
