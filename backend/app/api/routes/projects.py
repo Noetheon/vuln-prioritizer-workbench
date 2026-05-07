@@ -14,6 +14,7 @@ from app.models import (
     ProjectAttackSummaryPublic,
     ProjectCreate,
     ProjectCvssOnlyComparisonPublic,
+    ProjectDashboardPublic,
     ProjectDecisionSummaryPublic,
     ProjectGovernanceRollupsPublic,
     ProjectPublic,
@@ -29,6 +30,7 @@ from app.repositories import (
 from app.services import (
     build_cvss_only_comparison_payload,
     build_project_attack_summary_payload,
+    build_project_dashboard_payload,
     build_project_governance_rollups_payload,
     build_project_summary_payload,
 )
@@ -93,6 +95,26 @@ def read_project_summary(
         project_id=project_id,
         findings=FindingRepository(session).list_project_findings(project_id),
         runs=RunRepository(session).list_analysis_runs(project_id),
+    )
+
+
+@router.get("/{project_id}/dashboard", response_model=ProjectDashboardPublic)
+def read_project_dashboard(
+    project_id: uuid.UUID,
+    session: SessionDep,
+    current_user: ScopedReadUser,
+) -> ProjectDashboardPublic:
+    """Read the one-call aggregate payload for the project dashboard."""
+    require_visible_project(session, current_user, project_id)
+    finding_repository = FindingRepository(session)
+    run_repository = RunRepository(session)
+    waiver_repository = WaiverRepository(session)
+    return build_project_dashboard_payload(
+        project_id=project_id,
+        findings=finding_repository.list_project_findings(project_id),
+        runs=run_repository.list_analysis_runs(project_id),
+        waivers=waiver_repository.list_project_waivers(project_id),
+        waiver_repository=waiver_repository,
     )
 
 

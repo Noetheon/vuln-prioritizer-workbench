@@ -156,22 +156,68 @@ export async function routeWorkbenchShell(
     }),
   )
   for (const project of projects) {
+    const projectSummary = {
+      counts_by_priority: { critical: findings.length },
+      counts_by_status: { open: findings.length },
+      cvss_known_count: findings.length,
+      epss_hits: findings.filter((finding) => finding.epss > 0).length,
+      finding_count: findings.length,
+      kev_hits: findings.filter((finding) => finding.in_kev).length,
+      latest_run_id: null,
+      latest_run_status: null,
+      latest_run_summary: {},
+      open_finding_count: findings.length,
+      project_id: project.id,
+      provider_degraded: false,
+    }
     await page.route(`**/api/v1/projects/${project.id}/summary`, (route) =>
       route.fulfill({
         contentType: "application/json",
+        body: JSON.stringify(projectSummary),
+      }),
+    )
+    await page.route(`**/api/v1/projects/${project.id}/dashboard`, (route) =>
+      route.fulfill({
+        contentType: "application/json",
         body: JSON.stringify({
-          counts_by_priority: { critical: findings.length },
-          counts_by_status: { open: findings.length },
-          cvss_known_count: findings.length,
-          epss_hits: findings.filter((finding) => finding.epss > 0).length,
-          finding_count: findings.length,
-          kev_hits: findings.filter((finding) => finding.in_kev).length,
-          latest_run_id: null,
-          latest_run_status: null,
-          latest_run_summary: {},
-          open_finding_count: findings.length,
+          findings: {
+            remediation_queue: { data: findings, count: findings.length },
+            signal_counts: {
+              high_epss: findings.filter((finding) => finding.epss >= 0.7).length,
+              internet_facing_criticals: findings.filter(
+                (finding) =>
+                  finding.priority === "critical" &&
+                  finding.exposure === "internet_facing",
+              ).length,
+              epss_buckets: {
+                low: findings.filter(
+                  (finding) => finding.epss >= 0 && finding.epss <= 0.25,
+                ).length,
+                medium: findings.filter(
+                  (finding) => finding.epss >= 0.25 && finding.epss <= 0.5,
+                ).length,
+                high: findings.filter(
+                  (finding) => finding.epss >= 0.5 && finding.epss <= 0.7,
+                ).length,
+                critical: findings.filter((finding) => finding.epss >= 0.7)
+                  .length,
+              },
+            },
+          },
+          generated_at: "2025-01-02T00:00:00Z",
+          governance: {
+            assets: [],
+            environments: [],
+            generated_at: "2025-01-02T00:00:00Z",
+            owners: [],
+            project_id: project.id,
+            services: [],
+            top_assets_by_risk: [],
+            top_services_by_risk: [],
+          },
           project_id: project.id,
-          provider_degraded: false,
+          runs: { data: [], count: 0 },
+          summary: projectSummary,
         }),
       }),
     )

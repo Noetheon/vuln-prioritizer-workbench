@@ -6,6 +6,10 @@ from app.services.attack import (
     build_attack_navigator_layer_payload,
     build_project_attack_summary_payload,
 )
+from app.services.dashboard import (
+    build_project_dashboard_payload,
+    dashboard_signal_counts,
+)
 from app.services.decisions import (
     DecisionDataUnavailableError,
     build_cvss_only_comparison_payload,
@@ -50,10 +54,12 @@ __all__ = [
     "build_attack_navigator_layer_payload",
     "build_project_attack_summary_payload",
     "build_cvss_only_comparison_payload",
+    "build_project_dashboard_payload",
     "build_finding_explanation_payload",
     "build_github_issue_preview_items",
     "build_project_governance_rollups_payload",
     "build_project_summary_payload",
+    "dashboard_signal_counts",
     "create_github_issue",
     "github_export_token",
     "github_repository_path",

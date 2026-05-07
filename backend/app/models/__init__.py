@@ -62,6 +62,12 @@ from app.models.audit import (
     AuditEventStatus,
 )
 from app.models.auth import Token, TokenPayload
+from app.models.dashboard import (
+    DashboardEpssBucketsPublic,
+    DashboardSignalCountsPublic,
+    ProjectDashboardFindingsPublic,
+    ProjectDashboardPublic,
+)
 from app.models.decisions import (
     FindingExplanationPublic,
     ProjectCvssOnlyComparisonPublic,
@@ -215,6 +221,8 @@ __all__ = [
     "CveAttackMapping",
     "CveAttackMappingBase",
     "CveAttackMappingPublic",
+    "DashboardEpssBucketsPublic",
+    "DashboardSignalCountsPublic",
     "Finding",
     "FindingAttackContext",
     "FindingAttackContextBase",
@@ -250,6 +258,8 @@ __all__ = [
     "ProjectBase",
     "ProjectCreate",
     "ProjectCvssOnlyComparisonPublic",
+    "ProjectDashboardFindingsPublic",
+    "ProjectDashboardPublic",
     "ProjectDecisionSummaryPublic",
     "ProjectGovernanceRollupsPublic",
     "ProjectPublic",

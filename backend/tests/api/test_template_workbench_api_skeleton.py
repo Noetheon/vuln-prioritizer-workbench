@@ -52,6 +52,7 @@ def test_vpw011_openapi_exposes_workbench_domain_routes_without_items() -> None:
         "/api/v1/waivers/{waiver_id}",
         "/api/v1/waivers/{waiver_id}/expire",
         "/api/v1/projects/{project_id}/summary",
+        "/api/v1/projects/{project_id}/dashboard",
         "/api/v1/projects/{project_id}/governance/rollups/",
         "/api/v1/projects/{project_id}/compare/cvss-only",
     }
@@ -63,6 +64,8 @@ def test_vpw011_openapi_exposes_workbench_domain_routes_without_items() -> None:
         "AssetPublic",
         "AssetsPublic",
         "AssetUpdate",
+        "DashboardEpssBucketsPublic",
+        "DashboardSignalCountsPublic",
         "FindingPublic",
         "FindingExplanationPublic",
         "FindingsPublic",
@@ -72,6 +75,8 @@ def test_vpw011_openapi_exposes_workbench_domain_routes_without_items() -> None:
         "ImportParseErrorPublic",
         "ProjectCreate",
         "ProjectCvssOnlyComparisonPublic",
+        "ProjectDashboardFindingsPublic",
+        "ProjectDashboardPublic",
         "ProjectDecisionSummaryPublic",
         "ProjectGovernanceRollupsPublic",
         "ProjectPublic",
@@ -170,6 +175,7 @@ def test_vpw011_domain_routes_require_auth(template_api_env: TemplateApiEnv) -> 
         ),
         ("post", f"/api/v1/waivers/{finding_id}/expire", {}),
         ("get", f"/api/v1/projects/{project_id}/summary", {}),
+        ("get", f"/api/v1/projects/{project_id}/dashboard", {}),
         ("get", f"/api/v1/projects/{project_id}/governance/rollups/", {}),
         ("get", f"/api/v1/projects/{project_id}/compare/cvss-only", {}),
     )
@@ -1023,6 +1029,53 @@ def test_vpw036_project_decision_endpoints_handle_empty_projects(
     assert comparison_payload["comparisons"] == []
 
 
+def test_vpw202_project_dashboard_aggregate_replaces_dashboard_query_fanout(
+    template_api_env: TemplateApiEnv,
+) -> None:
+    headers = auth_headers(template_api_env.client)
+    project = create_project_via_api(template_api_env.client, headers)
+    _seed_vpw042_findings(template_api_env, uuid.UUID(project["id"]))
+
+    response = template_api_env.client.get(
+        f"/api/v1/projects/{project['id']}/dashboard",
+        headers=headers,
+    )
+
+    assert response.status_code == 200, response.text
+    payload = response.json()
+    assert payload["project_id"] == project["id"]
+    assert payload["summary"]["finding_count"] == 3
+    assert payload["summary"]["open_finding_count"] == 1
+    assert payload["summary"]["counts_by_priority"] == {
+        "Critical": 1,
+        "High": 1,
+        "Medium": 1,
+        "Low": 0,
+    }
+    assert payload["runs"]["count"] == 1
+    assert payload["runs"]["data"][0]["summary_json"] == {"parsed": 1, "findings": 1}
+    assert payload["findings"]["remediation_queue"]["count"] == 3
+    assert [item["cve_id"] for item in payload["findings"]["remediation_queue"]["data"]] == [
+        DEMO_CVE_LOG4SHELL,
+        "CVE-2022-22965",
+        "CVE-2024-4577",
+    ]
+    assert payload["findings"]["remediation_queue"]["data"][0]["component_name"] == "log4j-core"
+    assert payload["findings"]["remediation_queue"]["data"][0]["asset_key"] == "payments-api"
+    assert payload["findings"]["signal_counts"] == {
+        "high_epss": 1,
+        "internet_facing_criticals": 1,
+        "epss_buckets": {
+            "low": 1,
+            "medium": 1,
+            "high": 0,
+            "critical": 1,
+        },
+    }
+    assert payload["governance"]["project_id"] == project["id"]
+    assert payload["governance"]["services"][0]["label"] == "payments"
+
+
 def test_vpw011_404_and_403_are_consistent_for_project_scoped_resources(
     restricted_template_api_env: TemplateApiEnv,
 ) -> None:
@@ -1048,6 +1101,7 @@ def test_vpw011_404_and_403_are_consistent_for_project_scoped_resources(
         ("get", f"/api/v1/projects/{missing_id}/runs/", {}),
         ("get", f"/api/v1/projects/{missing_id}/findings/", {}),
         ("get", f"/api/v1/projects/{missing_id}/summary", {}),
+        ("get", f"/api/v1/projects/{missing_id}/dashboard", {}),
         ("get", f"/api/v1/projects/{missing_id}/attack/summary", {}),
         ("get", f"/api/v1/projects/{missing_id}/compare/cvss-only", {}),
     )
@@ -1064,6 +1118,7 @@ def test_vpw011_404_and_403_are_consistent_for_project_scoped_resources(
         ("get", f"/api/v1/projects/{foreign['project_id']}/runs/", {}),
         ("get", f"/api/v1/projects/{foreign['project_id']}/findings/", {}),
         ("get", f"/api/v1/projects/{foreign['project_id']}/summary", {}),
+        ("get", f"/api/v1/projects/{foreign['project_id']}/dashboard", {}),
         ("get", f"/api/v1/projects/{foreign['project_id']}/attack/summary", {}),
         ("get", f"/api/v1/projects/{foreign['project_id']}/compare/cvss-only", {}),
     )

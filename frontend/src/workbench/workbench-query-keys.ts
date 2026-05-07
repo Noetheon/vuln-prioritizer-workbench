@@ -24,10 +24,8 @@ export const workbenchQueryKeys = {
   assetsRoot: (projectId: string) =>
     [...workbenchQueryKeys.all, "assets", projectId] as const,
   bootstrap: () => [...workbenchQueryKeys.all, "bootstrap"] as const,
-  dashboardFindings: (projectId: string) =>
-    [...workbenchQueryKeys.all, "dashboard-findings", projectId] as const,
-  dashboardSignalCounts: (projectId: string) =>
-    [...workbenchQueryKeys.all, "dashboard-signals", projectId] as const,
+  projectDashboard: (projectId: string) =>
+    [...workbenchQueryKeys.all, "project-dashboard", projectId] as const,
   findingDetail: (findingId: string | null) =>
     [...workbenchQueryKeys.all, "finding-detail", findingId ?? "none"] as const,
   findingsRoot: () => [...workbenchQueryKeys.all, "findings"] as const,
@@ -86,6 +84,9 @@ export async function invalidateProjectScopedWorkbenchQueries(
       queryKey: workbenchQueryKeys.projectSummary(projectId),
     }),
     queryClient.invalidateQueries({
+      queryKey: workbenchQueryKeys.projectDashboard(projectId),
+    }),
+    queryClient.invalidateQueries({
       queryKey: workbenchQueryKeys.projectSummariesRoot(),
     }),
     queryClient.invalidateQueries({
@@ -93,12 +94,6 @@ export async function invalidateProjectScopedWorkbenchQueries(
     }),
     queryClient.invalidateQueries({
       queryKey: workbenchQueryKeys.findingsRoot(),
-    }),
-    queryClient.invalidateQueries({
-      queryKey: workbenchQueryKeys.dashboardFindings(projectId),
-    }),
-    queryClient.invalidateQueries({
-      queryKey: workbenchQueryKeys.dashboardSignalCounts(projectId),
     }),
     queryClient.invalidateQueries({
       queryKey: workbenchQueryKeys.projectGovernanceRollups(projectId),
