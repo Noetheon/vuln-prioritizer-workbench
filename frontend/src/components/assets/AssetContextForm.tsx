@@ -32,6 +32,7 @@ import type {
 import { formatLabel as labelize } from "../../lib/ui-copy"
 
 export function AssetForm({
+  busy = false,
   buttonLabel,
   disabled,
   error,
@@ -40,6 +41,7 @@ export function AssetForm({
   onChange,
   onSubmit,
 }: {
+  busy?: boolean
   buttonLabel: string
   disabled: boolean
   error: string
@@ -205,7 +207,7 @@ export function AssetForm({
           {error}
         </VpwStatusBanner>
       ) : null}
-      <Button disabled={disabled} type="submit">
+      <Button aria-busy={busy} disabled={disabled} type="submit">
         {buttonLabel}
       </Button>
     </form>
@@ -265,6 +267,7 @@ export function AssetContextForms({
               />
             </VpwField>
             <Button
+              aria-busy={assetActionLoading}
               disabled={
                 assetActionLoading || projectCount === 0 || !assetContextFile
               }
@@ -297,6 +300,7 @@ export function AssetContextForms({
           title="Create asset"
         />
         <AssetForm
+          busy={assetActionLoading}
           buttonLabel="Create Asset"
           disabled={assetActionLoading || projectCount === 0}
           error={createError}

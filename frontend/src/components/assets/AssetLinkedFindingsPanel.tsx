@@ -118,6 +118,7 @@ export function AssetLinkedFindingsPanel({
               Edit context
             </Button>
             <Button
+              aria-busy={assetActionLoading}
               disabled={
                 assetActionLoading || (selectedAsset.finding_count ?? 0) === 0
               }
@@ -195,6 +196,7 @@ export function AssetLinkedFindingsPanel({
                 title="Edit selected asset"
               />
               <AssetForm
+                busy={assetActionLoading}
                 buttonLabel="Save Asset"
                 disabled={assetActionLoading}
                 error={editError}

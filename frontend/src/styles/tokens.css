@@ -62,13 +62,19 @@
   --vpw-bg-success: #ecfdf5;
   --vpw-bg-warning: #fffbeb;
   --vpw-bg-critical: #fef2f2;
+  --vpw-bg-disabled: #e2e8f0;
+  --vpw-bg-busy: #e0f2fe;
 
   --vpw-text-primary: #0b1220;
   --vpw-text-secondary: #4b5563;
   --vpw-text-muted: #64748b;
+  --vpw-text-disabled: #334155;
+  --vpw-text-busy: #075985;
   --vpw-border-default: #e5e7eb;
   --vpw-border-subtle: #eef2f7;
   --vpw-border-strong: #d1d5db;
+  --vpw-border-disabled: #94a3b8;
+  --vpw-border-busy: #38bdf8;
   --vpw-focus-ring: #3b82f6;
 
   --vpw-blue: #2563eb;

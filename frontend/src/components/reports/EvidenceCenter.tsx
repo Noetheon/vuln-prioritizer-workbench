@@ -394,6 +394,7 @@ function ArtifactSection({
             <VpwEvidenceArtifactCard
               actionLabel={isActive ? "Generating..." : card.actionLabel}
               audience={card.audience}
+              busy={isActive}
               description={card.description}
               disabled={!reportActionsEnabled || isActive}
               format={card.format}
@@ -546,6 +547,9 @@ function ReportHistory({
           {report.format === "zip" && !isDemo ? (
             <Button
               aria-label={`Verify ${report.filename}`}
+              aria-busy={
+                verificationLoading && verificationReportTarget?.id === report.id
+              }
               disabled={
                 verificationLoading && verificationReportTarget?.id === report.id
               }
