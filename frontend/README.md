@@ -25,3 +25,14 @@ git diff --exit-code -- frontend/src/client
 The official template uses Bun. This repository keeps Bun-compatible scripts in
 `package.json`, but the audited local and Docker fallback uses npm with the
 checked-in `frontend/package-lock.json`.
+
+## Dependency Audit Notes
+
+`npx --yes depcheck frontend` is the dependency drift check for this workspace.
+The local `.depcheckrc` allowlists the Tailwind CSS entrypoints because they are
+resolved through `frontend/src/index.css`, not TypeScript imports. The same
+config ignores the local-only `screenshot-polish.mjs` scratch script when it is
+present in a developer checkout; it is not tracked or used by CI.
+
+The generated OpenAPI client uses browser-native `FormData`; it does not require
+the npm `form-data` package.

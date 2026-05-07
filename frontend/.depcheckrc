@@ -1,0 +1,5 @@
+ignores:
+  - tailwindcss
+  - tw-animate-css
+ignore-patterns:
+  - screenshot-polish.mjs
