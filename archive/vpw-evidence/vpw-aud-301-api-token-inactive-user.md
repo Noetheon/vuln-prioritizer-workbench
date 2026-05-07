@@ -52,8 +52,8 @@ make docs-check
 ```
 
 Result: release evidence hygiene passed and MkDocs built successfully. MkDocs
-reported that this evidence file is not included in the public nav, which is
-expected for repo-local evidence artifacts under `docs/evidence`.
+builds the public documentation tree while this audit evidence remains archived
+outside `docs/evidence`.
 
 ## Evidence Hygiene
 
