@@ -395,6 +395,7 @@ export function WaiversWorkbench({
           ) : null}
           {waiver.status !== "expired" ? (
             <Button
+              aria-busy={waiverActionLoading}
               disabled={waiverActionLoading}
               onClick={() => onExpireWaiver(waiver)}
               size="sm"
@@ -675,6 +676,7 @@ export function WaiversWorkbench({
               </VpwGrid>
               <div className="flex flex-wrap gap-2">
                 <Button
+                  aria-busy={waiverActionLoading}
                   disabled={
                     waiverActionLoading ||
                     projectListLoading ||

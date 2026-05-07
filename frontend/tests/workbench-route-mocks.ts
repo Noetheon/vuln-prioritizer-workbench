@@ -42,6 +42,7 @@ type RouteWorkbenchShellOptions = {
   findings?: MockFinding[]
   findingsDelayMs?: number
   onFindingsRequest?: (url: URL) => void
+  providerStatusDelayMs?: number
   projects?: MockProject[]
 }
 
@@ -91,6 +92,7 @@ export async function routeWorkbenchShell(
   const findings = options.findings ?? []
   const findingsDelayMs = options.findingsDelayMs ?? 0
   const onFindingsRequest = options.onFindingsRequest
+  const providerStatusDelayMs = options.providerStatusDelayMs ?? 0
   await page.addInitScript(() => {
     // biome-ignore lint/suspicious/noDocumentCookie: Playwright sets a mock readable CSRF cookie before app boot.
     document.cookie = "vpw_csrf_token=mock-csrf; Path=/; SameSite=Strict"
@@ -122,8 +124,11 @@ export async function routeWorkbenchShell(
       }),
     }),
   )
-  await page.route("**/api/v1/providers/status", (route) =>
-    route.fulfill({
+  await page.route("**/api/v1/providers/status", async (route) => {
+    if (providerStatusDelayMs > 0) {
+      await new Promise((resolve) => setTimeout(resolve, providerStatusDelayMs))
+    }
+    return route.fulfill({
       contentType: "application/json",
       body: JSON.stringify({
         status: "ok",
@@ -139,8 +144,8 @@ export async function routeWorkbenchShell(
         },
         sources: [],
       }),
-    }),
-  )
+    })
+  })
   await page.route("**/api/v1/utils/health-check/", (route) =>
     route.fulfill({
       contentType: "application/json",

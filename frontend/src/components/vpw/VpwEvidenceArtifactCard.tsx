@@ -14,6 +14,7 @@ export type VpwEvidenceArtifactCardProps = {
   description: string
   actionLabel: string
   actionType?: "button" | "submit" | "reset"
+  busy?: boolean
   className?: string
   disabled?: boolean
   icon?: ReactNode
@@ -24,6 +25,7 @@ export function VpwEvidenceArtifactCard({
   actionLabel,
   actionType = "button",
   audience,
+  busy = false,
   className,
   description,
   disabled = false,
@@ -53,6 +55,7 @@ export function VpwEvidenceArtifactCard({
           {description}
         </p>
         <Button
+          aria-busy={busy}
           className="mt-auto w-full"
           disabled={disabled}
           onClick={onAction}

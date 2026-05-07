@@ -358,6 +358,7 @@ export function SettingsWorkbench({
       cell: (token) =>
         token.active ? (
           <Button
+            aria-busy={apiTokenActionLoading}
             disabled={apiTokenActionLoading}
             onClick={() => void onRevokeApiToken(token)}
             size="sm"
@@ -665,6 +666,7 @@ export function SettingsWorkbench({
               </VpwField>
 
               <Button
+                aria-busy={apiTokenActionLoading}
                 disabled={
                   apiTokenActionLoading ||
                   (!tokenHasAdminScope && apiTokenProjectOptions.length === 0)
