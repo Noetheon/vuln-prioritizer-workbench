@@ -292,6 +292,13 @@ top-ranked findings. Use `POST /api/v1/projects/{project_id}/github/issues/expor
 variable name to create issues. Created
 duplicate keys are persisted per repository so repeated exports skip already-created Workbench
 issues. Preview and dry-run requests do not require the external GitHub token.
+Workbench records redacted audit events for preview, dry-run, duplicate skip, create summaries,
+token setup failures, GitHub upstream failures, and network failures. Audit details include
+counts, repository, failure kind, HTTP/upstream status, and the failed finding/CVE when available;
+they do not include token values, `Authorization` headers, raw issue Markdown bodies, upstream
+response bodies, cookies, or private local paths. If GitHub creation fails after a local
+reservation was opened, Workbench removes that empty reservation before committing the failure
+audit so a retry can attempt the same finding again.
 
 ## Example Workflows
 
