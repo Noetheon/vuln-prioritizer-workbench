@@ -283,6 +283,8 @@ def _persist_workbench_occurrences_bulk_insert(
 
     dedup_parts_by_index = [_dedup_key_parts(project_id, occurrence) for occurrence in occurrences]
     dedup_keys = [_finding_dedup_key(parts) for parts in dedup_parts_by_index]
+    if len(set(dedup_keys)) != len(dedup_keys):
+        return None
     if _existing_findings_by_dedup_key(
         session=session,
         project_id=project_id,
