@@ -61,6 +61,7 @@ import {
   VpwSkeletonStack,
   VpwStatusBanner,
 } from "@/components/vpw"
+import type { FindingsUrlSearch } from "./findings-search-state"
 import { DEMO_FINDINGS, DEMO_PROJECT, DEMO_SUMMARY } from "@/lib/demo-data"
 import { DEMO_MODE_ENABLED } from "@/lib/runtime-config"
 import { formatLabel as labelize, optionalText } from "@/lib/ui-copy"
@@ -106,12 +107,17 @@ export type RemediationQueueProps = {
   projectListLoading: boolean
   selectedProjectId: string
   projectSummary: ProjectDecisionSummaryPublic | null
+  findingSearch: FindingsUrlSearch
+  onClearAssetFilter: () => void
   onFilterChange: <K extends keyof FindingFilters>(
     key: K,
     value: FindingFilters[K],
   ) => void
   onClearFilters: () => void
-  onSortChange: (sort: FindingsSort) => void
+  onSortDirectionChange: (
+    sort: FindingsSort,
+    direction: FindingsDirection,
+  ) => void
   onDirectionChange: (direction: FindingsDirection) => void
   onPageNext: () => void
   onPagePrev: () => void
@@ -217,11 +223,17 @@ function WhyDialog({ finding, open, onClose }: WhyDialogProps) {
 
 type QuickViewSheetProps = {
   finding: FindingPublic | null
+  findingSearch: FindingsUrlSearch
   open: boolean
   onClose: () => void
 }
 
-function QuickViewSheet({ finding, open, onClose }: QuickViewSheetProps) {
+function QuickViewSheet({
+  finding,
+  findingSearch,
+  open,
+  onClose,
+}: QuickViewSheetProps) {
   if (!finding) return null
   return (
     <Sheet open={open} onOpenChange={(v) => !v && onClose()}>
@@ -299,6 +311,7 @@ function QuickViewSheet({ finding, open, onClose }: QuickViewSheetProps) {
             <Button asChild className="w-full" size="sm" variant="outline">
               <Link
                 params={{ findingId: finding.id }}
+                search={findingSearch}
                 to="/findings/$findingId"
               >
                 Open full detail
@@ -333,9 +346,11 @@ export function RemediationQueue({
   projectListLoading,
   selectedProjectId,
   projectSummary,
+  findingSearch,
+  onClearAssetFilter,
   onFilterChange,
   onClearFilters,
-  onSortChange,
+  onSortDirectionChange,
   onDirectionChange,
   onPageNext,
   onPagePrev,
@@ -347,7 +362,7 @@ export function RemediationQueue({
   const [whyOpen, setWhyOpen] = useState(false)
   const [sheetOpen, setSheetOpen] = useState(false)
   const [advancedFiltersOpen, setAdvancedFiltersOpen] = useState(false)
-  const [queueSort, setQueueSort] = useState<QueueSort>(findingSort)
+  const queueSort: QueueSort = findingSort
 
   const isDemo =
     DEMO_MODE_ENABLED && projects.length === 0 && !projectListLoading
@@ -401,9 +416,9 @@ export function RemediationQueue({
           ? "desc"
           : "asc"
         : defaultSortDirections[sort]
-    setQueueSort(sort)
     if (isApiSort(sort)) {
-      onSortChange(sort)
+      onSortDirectionChange(sort, nextDirection)
+      return
     }
     onDirectionChange(nextDirection)
   }
@@ -533,7 +548,7 @@ export function RemediationQueue({
                   <Button
                     aria-label="Clear asset filter"
                     className="ml-1 size-6"
-                    onClick={onClearFilters}
+                    onClick={onClearAssetFilter}
                     size="icon"
                     type="button"
                     variant="ghost"
@@ -893,6 +908,7 @@ export function RemediationQueue({
 
               <FindingsDataTable
                 findingDirection={findingDirection}
+                findingSearch={findingSearch}
                 findings={displayFindings}
                 onOpenSheet={openSheet}
                 onOpenWhy={openWhy}
@@ -968,6 +984,7 @@ export function RemediationQueue({
         />
         <QuickViewSheet
           finding={sheetFinding}
+          findingSearch={findingSearch}
           onClose={() => setSheetOpen(false)}
           open={sheetOpen}
         />

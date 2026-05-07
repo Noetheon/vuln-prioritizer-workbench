@@ -1,16 +1,22 @@
-import { useParams } from "@tanstack/react-router"
+import { useLocation, useParams } from "@tanstack/react-router"
 import { useQueryClient } from "@tanstack/react-query"
 import { useEffect, useState } from "react"
 import { FindingDetailRoute as FindingDetailPanel } from "../../components/finding-detail/FindingDetailRoute"
 import { apiErrorMessage } from "../../lib/app-errors"
 import type { FindingDetailTab } from "../../lib/app-defaults"
+import {
+  findingsSearchToUrlSearch,
+  parseFindingsSearch,
+} from "../../components/findings/findings-search-state"
 import { useWorkbenchContext } from "../WorkbenchContext"
 import { useFindingDetailQuery } from "../useWorkbenchQueries"
 import { workbenchQueryKeys } from "../workbench-query-keys"
 
 function FindingDetailRouteContainer({ findingId }: { findingId: string }) {
   const queryClient = useQueryClient()
+  const location = useLocation()
   const { setSelectedProjectId } = useWorkbenchContext()
+  const findingsSearch = parseFindingsSearch(location.searchStr)
   const findingDetailQuery = useFindingDetailQuery(findingId)
   const [findingDetailTab, setFindingDetailTab] =
     useState<FindingDetailTab>("evidence")
@@ -43,6 +49,7 @@ function FindingDetailRouteContainer({ findingId }: { findingId: string }) {
         explanation={findingDetailQuery.data?.explanation ?? null}
         explanationWarning={findingDetailQuery.data?.explanationWarning ?? ""}
         finding={findingDetail}
+        findingsBackSearch={findingsSearchToUrlSearch(findingsSearch)}
         loading={findingDetailQuery.isLoading || findingDetailQuery.isFetching}
         onRefresh={refreshFindingDetail}
         onTabChange={setFindingDetailTab}

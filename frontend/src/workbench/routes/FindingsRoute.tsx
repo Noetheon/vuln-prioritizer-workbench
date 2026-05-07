@@ -1,10 +1,16 @@
 import { Outlet, useLocation, useNavigate } from "@tanstack/react-router"
-import type { FindingsReadProjectFindingsData } from "../../api-client"
+import { useEffect } from "react"
 import { RemediationQueue } from "../../components/findings/RemediationQueue"
 import { useFindingsRouteState } from "../../components/findings/useFindingsRouteState"
 import { apiErrorMessage } from "../../lib/app-errors"
 import { useWorkbenchContext } from "../WorkbenchContext"
-import { numericFilterValue } from "../route-utils"
+import {
+  cleanFindingsSearchQueryString,
+  findingsSearchToApiParams,
+  findingsSearchToUrlSearch,
+  parseFindingsSearch,
+  type FindingsSearchState,
+} from "../../components/findings/findings-search-state"
 import {
   useFindingsQuery,
   useProjectSummaryQuery,
@@ -20,11 +26,32 @@ function FindingsRouteContainer() {
     selectedProjectId,
     setSelectedProjectId,
   } = useWorkbenchContext()
-  const findingSearchParams = new URLSearchParams(location.search)
-  const findingAssetId = findingSearchParams.get("assetId")
-  const findingAssetKey = findingSearchParams.get("assetKey")
+  const findingsSearch = parseFindingsSearch(location.searchStr)
+  const cleanedSearch = cleanFindingsSearchQueryString(location.searchStr)
+  const currentSearch = location.searchStr.startsWith("?")
+    ? location.searchStr.slice(1)
+    : location.searchStr
+
+  function updateFindingsSearch(nextSearch: FindingsSearchState) {
+    void navigate({
+      search: findingsSearchToUrlSearch(nextSearch),
+      to: "/findings",
+    })
+  }
+
+  useEffect(() => {
+    if (currentSearch === cleanedSearch) {
+      return
+    }
+    const nextUrl = `${location.pathname}${cleanedSearch ? `?${cleanedSearch}` : ""}${
+      location.hash ? `#${location.hash}` : ""
+    }`
+    window.history.replaceState(window.history.state, "", nextUrl)
+  }, [cleanedSearch, currentSearch, location.hash, location.pathname])
+
   const {
     activeFindingFilters,
+    clearFindingAssetFilter,
     clearFindingFilters,
     findingDirection,
     findingFilters,
@@ -37,32 +64,16 @@ function FindingsRouteContainer() {
     updateFindingDirection,
     updateFindingFilter,
     updateFindingPageSize,
-    updateFindingSort,
+    updateFindingSortDirection,
   } = useFindingsRouteState({
-    hasAssetFilter: Boolean(findingAssetId),
-    onClearAssetFilter: () => {
-      void navigate({ to: "/findings" })
-    },
+    onSearchChange: updateFindingsSearch,
+    search: findingsSearch,
   })
   const projectSummaryQuery = useProjectSummaryQuery(selectedProjectId)
-  const findingsQueryParams: FindingsReadProjectFindingsData = {
-    asset_id: findingAssetId || undefined,
-    cvss_max: numericFilterValue(findingFilters.cvssMax),
-    cvss_min: numericFilterValue(findingFilters.cvssMin),
-    direction: findingDirection,
-    epss_max: numericFilterValue(findingFilters.epssMax),
-    epss_min: numericFilterValue(findingFilters.epssMin),
-    exposure: findingFilters.exposure || undefined,
-    kev:
-      findingFilters.kev === "" ? undefined : findingFilters.kev === "true",
-    limit: findingPageSize,
-    offset: findingOffset,
-    owner_service: findingFilters.ownerService.trim() || undefined,
-    priority: findingFilters.priority || undefined,
-    project_id: selectedProjectId,
-    sort: findingSort,
-    status: findingFilters.status || undefined,
-  }
+  const findingsQueryParams = findingsSearchToApiParams(
+    findingsSearch,
+    selectedProjectId,
+  )
   const findingsQuery = useFindingsQuery(
     findingsQueryParams,
     Boolean(selectedProjectId),
@@ -77,8 +88,8 @@ function FindingsRouteContainer() {
     >
       <RemediationQueue
         activeFindingFilters={activeFindingFilters}
-        findingAssetId={findingAssetId}
-        findingAssetKey={findingAssetKey}
+        findingAssetId={findingsSearch.assetId || null}
+        findingAssetKey={findingsSearch.assetKey || null}
         findingCount={findingCount}
         findingDirection={findingDirection}
         findingFilters={findingFilters}
@@ -92,6 +103,8 @@ function FindingsRouteContainer() {
             : ""
         }
         findingsLoading={findingsQuery.isLoading || findingsQuery.isFetching}
+        findingSearch={findingsSearchToUrlSearch(findingsSearch)}
+        onClearAssetFilter={clearFindingAssetFilter}
         onClearFilters={clearFindingFilters}
         onDirectionChange={updateFindingDirection}
         onFilterChange={updateFindingFilter}
@@ -102,7 +115,7 @@ function FindingsRouteContainer() {
           resetFindingOffset()
           setSelectedProjectId(id)
         }}
-        onSortChange={updateFindingSort}
+        onSortDirectionChange={updateFindingSortDirection}
         projectListLoading={projectListLoading}
         projectSummary={projectSummaryQuery.data ?? null}
         projects={projects}

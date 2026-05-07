@@ -1,95 +1,105 @@
-import { useState } from "react"
-
-import {
-  defaultFindingFilters,
-  type FindingFilters,
-  type FindingsDirection,
-  type FindingsSort,
-  findingPageSizes,
+import type {
+  FindingFilters,
+  FindingsDirection,
+  FindingsSort,
 } from "@/lib/app-defaults"
+import {
+  clearFindingsFilters,
+  findingsSearchHasActiveFilters,
+  findingsSearchToFilters,
+  type FindingsSearchState,
+  updateFindingsSearch,
+} from "./findings-search-state"
 
 export type UseFindingsRouteStateOptions = {
-  hasAssetFilter: boolean
-  onClearAssetFilter: () => void
-}
-
-function hasActiveFindingFilters(filters: FindingFilters) {
-  return Object.values(filters).some((value) => value.trim() !== "")
-}
-
-function supportedFindingPageSize(size: number) {
-  return findingPageSizes.includes(size as (typeof findingPageSizes)[number])
-    ? (size as (typeof findingPageSizes)[number])
-    : 10
+  onSearchChange: (nextSearch: FindingsSearchState) => void
+  search: FindingsSearchState
 }
 
 export function useFindingsRouteState({
-  hasAssetFilter,
-  onClearAssetFilter,
+  onSearchChange,
+  search,
 }: UseFindingsRouteStateOptions) {
-  const [findingFilters, setFindingFilters] = useState<FindingFilters>(
-    defaultFindingFilters,
-  )
-  const [findingSort, setFindingSort] = useState<FindingsSort>("operational")
-  const [findingDirection, setFindingDirection] =
-    useState<FindingsDirection>("asc")
-  const [findingPageSize, setFindingPageSize] =
-    useState<(typeof findingPageSizes)[number]>(10)
-  const [findingOffset, setFindingOffset] = useState(0)
-  const activeFindingFilters =
-    hasActiveFindingFilters(findingFilters) || hasAssetFilter
+  const findingFilters = findingsSearchToFilters(search)
 
   function updateFindingFilter<Key extends keyof FindingFilters>(
     key: Key,
     value: FindingFilters[Key],
   ) {
-    setFindingOffset(0)
-    setFindingFilters((filters) => ({ ...filters, [key]: value }))
+    onSearchChange(updateFindingsSearch(search, { [key]: value }))
   }
 
   function clearFindingFilters() {
-    setFindingOffset(0)
-    setFindingFilters(defaultFindingFilters)
-    if (hasAssetFilter) {
-      onClearAssetFilter()
-    }
+    onSearchChange(clearFindingsFilters(search))
+  }
+
+  function clearFindingAssetFilter() {
+    onSearchChange(
+      updateFindingsSearch(search, {
+        assetId: "",
+        assetKey: "",
+      }),
+    )
   }
 
   function updateFindingSort(sort: FindingsSort) {
-    setFindingOffset(0)
-    setFindingSort(sort)
+    onSearchChange(updateFindingsSearch(search, { sort }))
   }
 
   function updateFindingDirection(direction: FindingsDirection) {
-    setFindingOffset(0)
-    setFindingDirection(direction)
+    onSearchChange(updateFindingsSearch(search, { direction }))
+  }
+
+  function updateFindingSortDirection(
+    sort: FindingsSort,
+    direction: FindingsDirection,
+  ) {
+    onSearchChange(updateFindingsSearch(search, { direction, sort }))
   }
 
   function updateFindingPageSize(size: number) {
-    setFindingOffset(0)
-    setFindingPageSize(supportedFindingPageSize(size))
+    onSearchChange(
+      updateFindingsSearch(search, {
+        limit: size as FindingsSearchState["limit"],
+      }),
+    )
   }
 
   function nextFindingPage() {
-    setFindingOffset((offset) => offset + findingPageSize)
+    onSearchChange(
+      updateFindingsSearch(
+        search,
+        { offset: search.offset + search.limit },
+        { resetOffset: false },
+      ),
+    )
   }
 
   function previousFindingPage() {
-    setFindingOffset((offset) => Math.max(0, offset - findingPageSize))
+    onSearchChange(
+      updateFindingsSearch(
+        search,
+        { offset: Math.max(0, search.offset - search.limit) },
+        { resetOffset: false },
+      ),
+    )
   }
 
   function resetFindingOffset() {
-    setFindingOffset(0)
+    onSearchChange(
+      updateFindingsSearch(search, { offset: 0 }, { resetOffset: false }),
+    )
   }
 
   return {
-    activeFindingFilters,
+    activeFindingFilters: findingsSearchHasActiveFilters(search),
+    clearFindingAssetFilter,
     clearFindingFilters,
-    findingDirection,
+    findingDirection: search.direction,
     findingFilters,
-    findingOffset,
-    findingPageSize,
-    findingSort,
+    findingOffset: search.offset,
+    findingPageSize: search.limit,
+    findingSort: search.sort,
     nextFindingPage,
     previousFindingPage,
     resetFindingOffset,
@@ -97,6 +107,7 @@ export function useFindingsRouteState({
     updateFindingFilter,
     updateFindingPageSize,
     updateFindingSort,
+    updateFindingSortDirection,
   }
 }
 
