@@ -39,11 +39,14 @@ _SECRET_TEXT_PATTERNS = (
     re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----"),
 )
 _LOCAL_PATH_PATTERN = re.compile(
-    r"(^|[\s\"'=])(/Users/|/home/|/private/|/tmp/|/var/folders/|[A-Za-z]:\\)"
+    r"(^|[\s\"'=])"
+    r"(/Users/|/home/|/app/|/workspace/|/workspaces/|/srv/|/opt/|/private/|/tmp/|"
+    r"/var/|/etc/|/root/|/mnt/|[A-Za-z]:\\)"
 )
 _LOCAL_PATH_TEXT_PATTERN = re.compile(
     r"(?P<prefix>^|[\s\"'=])"
-    r"(?P<path>(?:~[/\\]|/Users/|/home/|/private/|/tmp/|/var/folders/|[A-Za-z]:\\)"
+    r"(?P<path>(?:~[/\\]|/Users/|/home/|/app/|/workspace/|/workspaces/|/srv/|/opt/|"
+    r"/private/|/tmp/|/var/|/etc/|/root/|/mnt/|[A-Za-z]:\\)"
     r"[^\r\n\"'<>;,)]*)"
 )
 _URL_CREDENTIAL_PATTERN = re.compile(r"://[^/\s:@]+:[^/\s@]+@")
