@@ -41,7 +41,8 @@ ALLOWED_UPLOAD_MIME_HINTS = {
 class ReadableUpload(Protocol):
     """Async readable upload-like stream used at the HTTP boundary."""
 
-    async def read(self, size: int = -1) -> bytes: ...
+    async def read(self, size: int = -1) -> bytes:
+        raise NotImplementedError
 
 
 async def read_bounded_upload(
