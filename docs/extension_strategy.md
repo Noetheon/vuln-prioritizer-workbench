@@ -78,7 +78,8 @@ Parser fixtures:
 
 - positive fixture with at least one valid CVE occurrence
 - negative fixture proving malformed input fails locally
-- expected normalized occurrence snapshot or focused assertion test
+- `data/input_fixtures/normalization_contracts.json` coverage or a focused
+  assertion test when the format is intentionally outside the shared manifest
 - no secrets, customer data, credentials, absolute local paths, or private URLs
 - upload suffix/MIME tests when the HTTP boundary changes
 
