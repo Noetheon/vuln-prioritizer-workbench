@@ -135,3 +135,8 @@
   color: #111827;
   font-size: 0.88rem;
 }
+
+.findings-queue-panel .remediation-table-wrap .vpw-table {
+  width: max(100%, 1240px);
+  min-width: 1240px;
+}

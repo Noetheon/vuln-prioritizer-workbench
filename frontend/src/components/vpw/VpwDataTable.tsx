@@ -45,6 +45,8 @@ export function VpwDataTable<TData>({
     <section
       aria-label={caption ?? "Data table"}
       className={cn("vpw-table-wrap", className)}
+      // biome-ignore lint/a11y/noNoninteractiveTabindex: Data table wrappers can scroll horizontally and need keyboard access.
+      tabIndex={0}
     >
       <table className={cn("vpw-table", densityClass[density])}>
         {caption ? <caption className="sr-only">{caption}</caption> : null}
