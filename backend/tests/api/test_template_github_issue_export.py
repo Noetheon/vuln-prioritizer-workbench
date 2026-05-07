@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import json
 from typing import Any
 from uuid import UUID
 
 import pytest
+import requests
 from fastapi.testclient import TestClient
-from sqlmodel import Session
+from sqlmodel import Session, select
 from utils.template_workbench import (
     TemplateApiEnv,
     auth_headers,
@@ -86,6 +88,15 @@ def test_template_github_issue_preview_selected_findings_markdown_redacts_secret
     assert "/Users/alice/private/sbom.json" not in body
     assert "[REDACTED-PATH]" in body
     assert "vuln-prioritizer duplicate_key" in body
+    audit_events = _audit_payloads(template_api_env, action="github_issue.preview")
+    assert audit_events[-1]["status"] == "success"
+    assert audit_events[-1]["detail"]["count"] == 2
+    assert audit_events[-1]["detail"]["requested_finding_count"] == 2
+    serialized_audit = json.dumps(audit_events[-1]["detail"], sort_keys=True)
+    assert "ghp_secretshouldnotleak" not in serialized_audit
+    assert "ghp_hiddenvalue" not in serialized_audit
+    assert "/Users/alice/private/sbom.json" not in serialized_audit
+    assert "body" not in audit_events[-1]["detail"]
 
 
 def test_template_github_issue_export_requires_explicit_token_and_skips_duplicates(
@@ -193,6 +204,252 @@ def test_template_github_issue_export_requires_explicit_token_and_skips_duplicat
     assert duplicate_payload["skipped_count"] == 1
     assert duplicate_payload["data"][0]["status"] == "skipped_duplicate"
     assert len(posted_payloads) == 1
+    audit_events = _audit_payloads(template_api_env, action="github_issue.export")
+    failure_kinds = {
+        event["detail"].get("failure_kind")
+        for event in audit_events
+        if event["status"] == "failure"
+    }
+    assert {"token_env_required", "token_not_configured"}.issubset(failure_kinds)
+    dry_run_event = next(
+        event for event in audit_events if event["detail"]["status_counts"] == {"preview": 1}
+    )
+    assert dry_run_event["status"] == "success"
+    assert dry_run_event["detail"]["dry_run"] is True
+    created_event = next(event for event in audit_events if event["detail"]["created_count"] == 1)
+    assert created_event["detail"]["status_counts"] == {"created": 1}
+    duplicate_event = next(event for event in audit_events if event["detail"]["skipped_count"] == 1)
+    assert duplicate_event["detail"]["status_counts"] == {"skipped_duplicate": 1}
+    serialized_audit = json.dumps(audit_events, sort_keys=True)
+    assert "ghp_test_value" not in serialized_audit
+    assert "Bearer" not in serialized_audit
+    assert "body" not in serialized_audit
+
+
+def test_template_github_issue_export_audits_partial_network_failure_and_retry(
+    template_api_env: TemplateApiEnv,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client = template_api_env.client
+    headers = auth_headers(client)
+    project = create_project_via_api(client, headers)
+    seeded = seed_finding_pair(
+        template_api_env.engine,
+        template_api_env.app_models,
+        template_api_env.repositories,
+        project_id=UUID(project["id"]),
+    )
+    first_id, second_id = seeded["finding_ids"]
+
+    class FakeGitHubResponse:
+        status_code = 201
+
+        def __init__(self, number: int) -> None:
+            self.number = number
+
+        def json(self) -> dict[str, Any]:
+            return {
+                "html_url": f"https://github.com/acme/workbench-triage/issues/{self.number}",
+                "number": self.number,
+            }
+
+    post_attempts = 0
+
+    def flaky_post(*args: Any, **kwargs: Any) -> FakeGitHubResponse:
+        nonlocal post_attempts
+        post_attempts += 1
+        assert kwargs["headers"]["Authorization"] == "Bearer ghp_test_value"
+        if post_attempts == 1:
+            return FakeGitHubResponse(42)
+        raise requests.Timeout("ghp_shouldnotleak from /Users/alice/private/sbom.json")
+
+    monkeypatch.setenv("VPW_GITHUB_TOKEN", "ghp_test_value")
+    monkeypatch.setattr("app.services.github_issues.requests.post", flaky_post)
+
+    failed = client.post(
+        f"/api/v1/projects/{project['id']}/github/issues/export",
+        headers=headers,
+        json={
+            "repository": "acme/workbench-triage",
+            "finding_ids": [str(first_id), str(second_id)],
+            "dry_run": False,
+            "token_env": "VPW_GITHUB_TOKEN",
+        },
+    )
+    assert failed.status_code == 502
+    assert post_attempts == 2
+    with Session(template_api_env.engine) as session:
+        exports = session.exec(select(app_models.GitHubIssueExport)).all()
+    assert len(exports) == 1
+    assert exports[0].finding_id == first_id
+    assert exports[0].issue_url is not None
+    assert exports[0].issue_url.endswith("/issues/42")
+
+    failure_event = next(
+        event
+        for event in reversed(_audit_payloads(template_api_env, action="github_issue.export"))
+        if event["status"] == "failure" and event["detail"].get("failure_kind") == "network_error"
+    )
+    assert failure_event["detail"]["created_count"] == 1
+    assert failure_event["detail"]["failed_count"] == 1
+    assert failure_event["detail"]["failed_finding_id"] == str(second_id)
+    assert failure_event["detail"]["http_status_code"] == 502
+    serialized_failure = json.dumps(failure_event, sort_keys=True)
+    assert "ghp_test_value" not in serialized_failure
+    assert "ghp_shouldnotleak" not in serialized_failure
+    assert "/Users/alice/private/sbom.json" not in serialized_failure
+    assert "body" not in serialized_failure
+
+    def retry_post(*args: Any, **kwargs: Any) -> FakeGitHubResponse:
+        nonlocal post_attempts
+        post_attempts += 1
+        return FakeGitHubResponse(43)
+
+    monkeypatch.setattr("app.services.github_issues.requests.post", retry_post)
+    retry = client.post(
+        f"/api/v1/projects/{project['id']}/github/issues/export",
+        headers=headers,
+        json={
+            "repository": "acme/workbench-triage",
+            "finding_ids": [str(second_id)],
+            "dry_run": False,
+            "token_env": "VPW_GITHUB_TOKEN",
+        },
+    )
+    assert retry.status_code == 200, retry.text
+    assert retry.json()["created_count"] == 1
+    assert post_attempts == 3
+    with Session(template_api_env.engine) as session:
+        exports = session.exec(select(app_models.GitHubIssueExport)).all()
+    assert len(exports) == 2
+    assert all(export.issue_url for export in exports)
+    assert all(export.issue_number for export in exports)
+
+
+def test_template_github_issue_export_audits_upstream_status_failure(
+    template_api_env: TemplateApiEnv,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client = template_api_env.client
+    headers = auth_headers(client)
+    project = create_project_via_api(client, headers)
+    seeded = seed_finding_pair(
+        template_api_env.engine,
+        template_api_env.app_models,
+        template_api_env.repositories,
+        project_id=UUID(project["id"]),
+    )
+    selected_id = seeded["finding_ids"][0]
+
+    class FakeGitHubResponse:
+        status_code = 503
+
+        def json(self) -> dict[str, Any]:
+            return {"message": "ghp_shouldnotleak"}
+
+    def fake_post(*args: Any, **kwargs: Any) -> FakeGitHubResponse:
+        return FakeGitHubResponse()
+
+    monkeypatch.setenv("VPW_GITHUB_TOKEN", "ghp_test_value")
+    monkeypatch.setattr("app.services.github_issues.requests.post", fake_post)
+
+    response = client.post(
+        f"/api/v1/projects/{project['id']}/github/issues/export",
+        headers=headers,
+        json={
+            "repository": "acme/workbench-triage",
+            "finding_ids": [str(selected_id)],
+            "dry_run": False,
+            "token_env": "VPW_GITHUB_TOKEN",
+        },
+    )
+
+    assert response.status_code == 502
+    failure_event = next(
+        event
+        for event in reversed(_audit_payloads(template_api_env, action="github_issue.export"))
+        if event["status"] == "failure" and event["detail"].get("failure_kind") == "upstream_status"
+    )
+    assert failure_event["detail"]["upstream_status_code"] == 503
+    assert failure_event["detail"]["failed_finding_id"] == str(selected_id)
+    serialized_failure = json.dumps(failure_event, sort_keys=True)
+    assert "ghp_test_value" not in serialized_failure
+    assert "ghp_shouldnotleak" not in serialized_failure
+    with Session(template_api_env.engine) as session:
+        exports = session.exec(select(app_models.GitHubIssueExport)).all()
+    assert exports == []
+
+
+def test_template_github_issue_export_retries_past_stale_empty_reservation(
+    template_api_env: TemplateApiEnv,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client = template_api_env.client
+    headers = auth_headers(client)
+    project = create_project_via_api(client, headers)
+    seeded = seed_finding_pair(
+        template_api_env.engine,
+        template_api_env.app_models,
+        template_api_env.repositories,
+        project_id=UUID(project["id"]),
+    )
+    selected_id = seeded["finding_ids"][0]
+    preview = client.post(
+        f"/api/v1/projects/{project['id']}/github/issues/preview",
+        headers=headers,
+        json={"finding_ids": [str(selected_id)]},
+    )
+    assert preview.status_code == 200, preview.text
+    preview_item = preview.json()["data"][0]
+    with Session(template_api_env.engine) as session:
+        session.add(
+            app_models.GitHubIssueExport(
+                project_id=UUID(project["id"]),
+                finding_id=selected_id,
+                repository="acme/workbench-triage",
+                duplicate_key=preview_item["duplicate_key"],
+                title=preview_item["title"],
+                issue_url=None,
+                issue_number=None,
+            )
+        )
+        session.commit()
+
+    class FakeGitHubResponse:
+        status_code = 201
+
+        def json(self) -> dict[str, Any]:
+            return {"html_url": "https://github.com/acme/workbench-triage/issues/77", "number": 77}
+
+    def fake_post(*args: Any, **kwargs: Any) -> FakeGitHubResponse:
+        return FakeGitHubResponse()
+
+    monkeypatch.setenv("VPW_GITHUB_TOKEN", "ghp_test_value")
+    monkeypatch.setattr("app.services.github_issues.requests.post", fake_post)
+
+    response = client.post(
+        f"/api/v1/projects/{project['id']}/github/issues/export",
+        headers=headers,
+        json={
+            "repository": "acme/workbench-triage",
+            "finding_ids": [str(selected_id)],
+            "dry_run": False,
+            "token_env": "VPW_GITHUB_TOKEN",
+        },
+    )
+
+    assert response.status_code == 200, response.text
+    assert response.json()["created_count"] == 1
+    with Session(template_api_env.engine) as session:
+        exports = session.exec(select(app_models.GitHubIssueExport)).all()
+    assert len(exports) == 1
+    assert exports[0].issue_url == "https://github.com/acme/workbench-triage/issues/77"
+    created_event = next(
+        event
+        for event in reversed(_audit_payloads(template_api_env, action="github_issue.export"))
+        if event["status"] == "success" and event["detail"]["created_count"] == 1
+    )
+    assert created_event["detail"]["stale_reservation_count"] == 1
 
 
 def test_template_github_issue_export_uses_report_scope(
@@ -258,3 +515,17 @@ def _create_token(
 
 def _bearer_headers(token: str) -> dict[str, str]:
     return {"Authorization": f"Bearer {token}"}
+
+
+def _audit_payloads(
+    template_api_env: TemplateApiEnv,
+    *,
+    action: str,
+) -> list[dict[str, Any]]:
+    with Session(template_api_env.engine) as session:
+        events = session.exec(
+            select(app_models.AuditEvent)
+            .where(app_models.AuditEvent.action == action)
+            .order_by(app_models.AuditEvent.created_at)
+        ).all()
+    return [{"status": event.status, "detail": dict(event.detail_json or {})} for event in events]
