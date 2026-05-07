@@ -154,6 +154,25 @@ def test_template_backend_import_graph_does_not_reach_legacy_runtime() -> None:
     assert legacy_runtime_modules == []
 
 
+def test_import_service_modules_do_not_import_http_or_route_boundaries() -> None:
+    violations: dict[str, list[str]] = {}
+    blocked_prefixes = ("fastapi", "starlette", "app.api")
+
+    for path in sorted((APP_ROOT / "services").glob("import*.py")):
+        imports = sorted(
+            imported
+            for imported in _raw_imports(path)
+            if any(
+                imported == prefix or imported.startswith(f"{prefix}.")
+                for prefix in blocked_prefixes
+            )
+        )
+        if imports:
+            violations[str(path.relative_to(BACKEND_ROOT))] = imports
+
+    assert violations == {}
+
+
 def test_default_compose_services_start_only_active_backend_runtime() -> None:
     compose = yaml.safe_load((REPO_ROOT / "compose.yml").read_text(encoding="utf-8"))
     services = compose["services"]

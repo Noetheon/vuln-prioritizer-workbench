@@ -5,11 +5,11 @@ from __future__ import annotations
 import uuid
 from typing import NoReturn
 
-from fastapi import HTTPException
 from sqlmodel import Session
 
 from app.models import AnalysisRun, AnalysisRunStatus, User
 from app.repositories import RunRepository
+from app.services.import_errors import ImportServiceError
 from app.services.import_execution_summary import (
     _job_payload,
     _job_status_entry,
@@ -79,7 +79,7 @@ def raise_analysis_failure(
         input_type=input_type,
     )
     session.commit()
-    raise HTTPException(
+    raise ImportServiceError(
         status_code=422,
         detail={
             "message": "Import analysis failed.",
