@@ -9,8 +9,7 @@ panels, metric cards, status/empty states, badges, toolbars, tables, and
 evidence cards. Use route-local Tailwind for one-off alignment, spacing around a
 specific form, or layout that is not shared across routes. If the same
 route-local pattern is needed by a second route, promote it into a VPW component
-or a documented domain CSS owner instead of adding selectors to
-`workbench-fallback.css`.
+or a documented domain CSS owner instead of adding a fallback stylesheet.
 
 Installed VPW product components:
 

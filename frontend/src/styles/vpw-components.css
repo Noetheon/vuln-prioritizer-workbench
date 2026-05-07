@@ -91,9 +91,9 @@
   }
 
   .vpw-badge.vpw-badge-critical {
-    border-color: #fecaca;
-    background: #fee2e2;
-    color: #7f1d1d;
+    border-color: color-mix(in srgb, var(--vpw-red) 30%, var(--vpw-bg-card));
+    background: color-mix(in srgb, var(--vpw-red) 12%, var(--vpw-bg-card));
+    color: color-mix(in srgb, var(--vpw-red) 70%, var(--vpw-text-primary));
   }
 
   .vpw-badge-support {
