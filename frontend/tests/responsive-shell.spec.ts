@@ -72,6 +72,14 @@ async function expectFindingsTableScrollContainment(
       `vpw-aud-201-findings-${viewport.width}.png`,
     ),
   })
+  await page.screenshot({
+    fullPage: true,
+    path: evidenceScreenshotPath(
+      "ui-productization",
+      "screenshots",
+      `vpw-aud-204-findings-table-scroll-${viewport.width}.png`,
+    ),
+  })
 }
 
 const authenticatedRoutes = [

@@ -20,6 +20,13 @@
     border-radius: var(--vpw-radius-xl);
   }
 
+  .vpw-dialog-content,
+  .vpw-sheet-content {
+    isolation: isolate;
+    background: var(--vpw-bg-card);
+    color: var(--vpw-text-primary);
+  }
+
   .vpw-label {
     color: var(--vpw-text-muted);
     font-size: 0.75rem;
@@ -81,6 +88,12 @@
     border-color: color-mix(in srgb, var(--vpw-red) 28%, var(--vpw-bg-card));
     background: var(--vpw-bg-critical);
     color: color-mix(in srgb, var(--vpw-red) 65%, var(--vpw-text-primary));
+  }
+
+  .vpw-badge.vpw-badge-critical {
+    border-color: #fecaca;
+    background: #fee2e2;
+    color: #7f1d1d;
   }
 
   .vpw-badge-support {

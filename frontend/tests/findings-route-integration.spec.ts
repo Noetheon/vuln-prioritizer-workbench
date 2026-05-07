@@ -1,5 +1,13 @@
-import { expect, test } from "@playwright/test"
+import { expect, type Page, test } from "@playwright/test"
+import { evidenceScreenshotPath } from "./evidence-paths"
 import { mockFinding, mockProject, routeWorkbenchShell } from "./workbench-route-mocks"
+
+async function captureAuditScreenshot(page: Page, fileName: string) {
+  await page.screenshot({
+    fullPage: true,
+    path: evidenceScreenshotPath("ui-productization", "screenshots", fileName),
+  })
+}
 
 test("findings route renders the empty live queue without demo data", async ({
   page,
@@ -214,6 +222,110 @@ test("findings controls update canonical URLs and preserve detail back context",
   await expect(page).toHaveURL(/priority=critical/)
   await expect(page).toHaveURL(/sort=score/)
   await expect(page).toHaveURL(/offset=10/)
+})
+
+test("findings detail, quick-view sheet, why dialog, and scroll evidence are covered", async ({
+  page,
+}) => {
+  const cvePattern = new RegExp(mockFinding.cve_id)
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await routeWorkbenchShell(page, {
+    findings: [mockFinding],
+    projects: [mockProject],
+  })
+
+  await page.goto("/findings?priority=critical&sort=score&direction=desc")
+
+  const scrollRegion = page.getByRole("region", {
+    name: "Findings table scroll region",
+  })
+  await expect(scrollRegion).toBeVisible()
+  const scrollMetrics = await scrollRegion.evaluate((region) => {
+    region.scrollLeft = region.scrollWidth
+    return {
+      clientWidth: region.clientWidth,
+      scrollLeft: region.scrollLeft,
+      scrollWidth: region.scrollWidth,
+    }
+  })
+  expect(scrollMetrics.scrollWidth).toBeGreaterThan(scrollMetrics.clientWidth)
+  expect(scrollMetrics.scrollLeft).toBeGreaterThan(0)
+  await captureAuditScreenshot(
+    page,
+    "vpw-aud-204-findings-table-scroll-1440.png",
+  )
+
+  await page.getByRole("button", { name: "Why now" }).click()
+  const whyDialog = page.getByRole("dialog", { name: cvePattern })
+  await expect(whyDialog).toBeVisible()
+  await expect(whyDialog).toContainText("Recommended action")
+  await expect(whyDialog).toContainText("Patch xz.")
+  await captureAuditScreenshot(page, "vpw-aud-204-why-dialog-1440.png")
+  await page.keyboard.press("Escape")
+  await expect(whyDialog).toHaveCount(0)
+
+  await page
+    .getByRole("button", { name: `Quick view ${mockFinding.cve_id}` })
+    .click()
+  const quickViewSheet = page.getByRole("dialog", { name: cvePattern })
+  await expect(quickViewSheet).toBeVisible()
+  await expect(quickViewSheet).toContainText("Risk Score")
+  await expect(quickViewSheet).toContainText("Open full detail")
+  await captureAuditScreenshot(page, "vpw-aud-204-quick-view-sheet-1440.png")
+
+  await quickViewSheet.getByRole("link", { name: "Open full detail" }).click()
+  await expect(page).toHaveURL(/\/findings\/finding-1\?/)
+  await expect(page).toHaveURL(/priority=critical/)
+  await expect(
+    page.getByRole("region", { name: "Finding priority decision" }),
+  ).toBeVisible()
+  await expect(page.getByRole("heading", { name: cvePattern })).toBeVisible()
+  await expect(page.getByRole("region", { name: "Risk to decision" })).toBeVisible()
+
+  await page.getByRole("tab", { name: "TTP Context" }).click()
+  await expect(
+    page.getByRole("region", { name: "TTP context empty state" }),
+  ).toBeVisible()
+
+  await page.getByRole("tab", { name: "History" }).click()
+  await expect(page.getByRole("region", { name: "Finding history" })).toBeVisible()
+  await captureAuditScreenshot(page, "vpw-aud-204-finding-detail-1440.png")
+
+  await page.getByRole("link", { name: "Back to Findings" }).click()
+  await expect(page).toHaveURL(/\/findings\?/)
+  await expect(page).toHaveURL(/sort=score/)
+  await expect(page).toHaveURL(/priority=critical/)
+})
+
+test("findings loading and disabled control semantics are observable", async ({
+  page,
+}) => {
+  await routeWorkbenchShell(page, {
+    findings: [mockFinding],
+    findingsDelayMs: 500,
+    projects: [mockProject],
+  })
+
+  await page.goto("/findings")
+
+  const loadingRegion = page.getByRole("status", { name: "Loading findings" })
+  await expect(loadingRegion).toBeVisible()
+  await expect(loadingRegion).toHaveAttribute("aria-busy", "true")
+  await expect(page.locator(".findings-remediation-layout")).toHaveAttribute(
+    "aria-busy",
+    "true",
+  )
+
+  await expect(
+    page.getByRole("table", { name: "Findings remediation queue" }),
+  ).toBeVisible()
+  await expect(page.locator(".findings-remediation-layout")).toHaveAttribute(
+    "aria-busy",
+    "false",
+  )
+  await expect(page.getByRole("button", { name: "Reset" })).toBeDisabled()
+  await expect(page.getByRole("button", { name: "Previous" })).toBeDisabled()
+  await expect(page.getByRole("button", { name: "Next" })).toBeDisabled()
 })
 
 test("invalid findings URL params are normalized before API requests", async ({

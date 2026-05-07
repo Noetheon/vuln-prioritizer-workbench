@@ -31,6 +31,7 @@ import { Button } from "@/components/ui/button"
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
@@ -45,6 +46,7 @@ import {
 import {
   Sheet,
   SheetContent,
+  SheetDescription,
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet"
@@ -65,7 +67,6 @@ import type { FindingsUrlSearch } from "./findings-search-state"
 import { DEMO_FINDINGS, DEMO_PROJECT, DEMO_SUMMARY } from "@/lib/demo-data"
 import { DEMO_MODE_ENABLED } from "@/lib/runtime-config"
 import { formatLabel as labelize, optionalText } from "@/lib/ui-copy"
-import { cn } from "@/lib/utils"
 import { FindingsDataTable, type QueueSort } from "./FindingsDataTable"
 import {
   activeFilterCount,
@@ -79,7 +80,6 @@ import {
   isApiSort,
   pageSizeOptions,
   priorityOptions,
-  riskScoreColor,
   sortDisplayFindings,
   statusOptions,
   type KevFilter,
@@ -162,54 +162,55 @@ function WhyDialog({ finding, open, onClose }: WhyDialogProps) {
   if (!finding) return null
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-lg text-[var(--vpw-text-primary)]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <PriorityBadge priority={finding.priority} />
             <span className="font-mono text-sm">{finding.cve_id}</span>
           </DialogTitle>
+          <DialogDescription className="sr-only">
+            Priority rationale, risk signals, and recommended remediation
+            action for {finding.cve_id}.
+          </DialogDescription>
         </DialogHeader>
         <div className="flex flex-col gap-4 text-sm">
           {finding.rationale ? (
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">
+              <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-[var(--vpw-text-secondary)]">
                 Why now
               </p>
               <p className="leading-relaxed">{finding.rationale}</p>
             </div>
           ) : (
-            <p className="text-muted-foreground">
+            <p className="text-[var(--vpw-text-secondary)]">
               No rationale recorded for this finding.
             </p>
           )}
           {finding.recommended_action ? (
-            <div className="rounded-md border border-teal-500/30 bg-teal-500/10 p-3">
-              <p className="text-xs font-semibold uppercase tracking-wider text-teal-700 dark:text-teal-400 mb-1">
+            <div className="rounded-md border border-[#99f6e4] bg-[#ccfbf1] p-3 text-[#134e4a]">
+              <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-[#115e59]">
                 Recommended action
               </p>
               <p className="leading-relaxed">{finding.recommended_action}</p>
             </div>
           ) : null}
-          <dl className="grid grid-cols-3 gap-3 rounded-md border bg-muted/40 p-3 text-xs">
+          <dl className="grid grid-cols-3 gap-3 rounded-md border border-[var(--vpw-border-default)] bg-[var(--vpw-bg-card)] p-3 text-xs text-[var(--vpw-text-primary)]">
             <div>
-              <dt className="text-muted-foreground">Risk Score</dt>
+              <dt className="text-[var(--vpw-text-secondary)]">Risk Score</dt>
               <dd
-                className={cn(
-                  "font-bold text-sm",
-                  riskScoreColor(finding.risk_score),
-                )}
+                className="font-bold text-sm text-[var(--vpw-text-primary)]"
               >
                 {finding.risk_score?.toFixed(1) ?? "N.A."}
               </dd>
             </div>
             <div>
-              <dt className="text-muted-foreground">EPSS</dt>
+              <dt className="text-[var(--vpw-text-secondary)]">EPSS</dt>
               <dd className="font-semibold text-sm">
                 <EpssBadge value={finding.epss} />
               </dd>
             </div>
             <div>
-              <dt className="text-muted-foreground">KEV</dt>
+              <dt className="text-[var(--vpw-text-secondary)]">KEV</dt>
               <dd className="font-semibold text-sm">
                 <KevBadge matched={finding.in_kev} />
               </dd>
@@ -242,6 +243,10 @@ function QuickViewSheet({
           <SheetTitle className="font-mono text-base">
             {finding.cve_id}
           </SheetTitle>
+          <SheetDescription className="sr-only">
+            Condensed remediation details and full finding detail link for{" "}
+            {finding.cve_id}.
+          </SheetDescription>
         </SheetHeader>
         <div className="flex flex-col gap-5 mt-6 text-sm">
           <div className="flex flex-wrap gap-2">
@@ -425,7 +430,11 @@ export function RemediationQueue({
 
   return (
     <TooltipProvider>
-      <div className="findings-remediation-layout flex flex-col gap-5">
+      <div
+        aria-busy={isLoading}
+        aria-live="polite"
+        className="findings-remediation-layout flex flex-col gap-5"
+      >
         {/* Demo banner */}
         {isDemo ? <DemoBanner /> : null}
 
@@ -812,7 +821,7 @@ export function RemediationQueue({
           </VpwStatusBanner>
         ) : null}
         {isLoading ? (
-          <VpwPanel>
+          <VpwPanel aria-busy="true" aria-label="Loading findings" role="status">
             <VpwSkeletonStack rows={6} />
           </VpwPanel>
         ) : null}
