@@ -40,6 +40,21 @@ from app.services import (
     render_findings_csv,
     render_html_executive_report,
     render_markdown_report,
+    render_sarif_report,
+)
+from vuln_prioritizer.models import (
+    AnalysisContext,
+    FindingProvenance,
+    InputOccurrence,
+    PrioritizedFinding,
+    RemediationComponent,
+    RemediationPlan,
+)
+from vuln_prioritizer.reporting_payloads import generate_sarif_report
+from vuln_prioritizer.reporting_workbench import generate_workbench_sarif
+from vuln_prioritizer.sarif_contract import (
+    SARIF_FINGERPRINT_KEY,
+    SARIF_WORKBENCH_FINGERPRINT_KEY,
 )
 from vuln_prioritizer.sarif_validation import validate_sarif_payload
 
@@ -455,10 +470,208 @@ def test_vpw080_sarif_report_create_downloads_valid_results(
         for result in results
         for reference in result["properties"]["references"]
     )
-    assert first["partialFingerprints"]["vuln-prioritizer-workbench/v1"]
+    assert first["partialFingerprints"][SARIF_FINGERPRINT_KEY]
+    assert first["partialFingerprints"][SARIF_WORKBENCH_FINGERPRINT_KEY]
     assert (
-        first["partialFingerprints"]["vuln-prioritizer-workbench/v1"]
-        != results[1]["partialFingerprints"]["vuln-prioritizer-workbench/v1"]
+        first["partialFingerprints"][SARIF_FINGERPRINT_KEY]
+        == first["partialFingerprints"][SARIF_WORKBENCH_FINGERPRINT_KEY]
+    )
+    assert (
+        first["partialFingerprints"][SARIF_FINGERPRINT_KEY]
+        != results[1]["partialFingerprints"][SARIF_FINGERPRINT_KEY]
+    )
+
+
+def test_vpw103_api_and_cli_workbench_sarif_share_fingerprint_contract() -> None:
+    artifact_uri = "service:payments-api"
+    component_purl = "pkg:deb/debian/xz@5.6.0-1"
+    cve_id = DEMO_CVE_XZ
+    generated_at = datetime(2026, 1, 1, tzinfo=UTC)
+    api_payload = MarkdownReportPayload(
+        generated_at=generated_at,
+        project_id="project-1",
+        project_name="Payments",
+        run_id="run-1",
+        run_status="completed",
+        input_type="generic-occurrence-csv",
+        filename="findings.csv",
+        summary={},
+        provider_snapshot=None,
+        findings=[
+            MarkdownReportFinding(
+                operational_rank=1,
+                cve_id=cve_id,
+                priority="Critical",
+                status="open",
+                risk_score=98.0,
+                epss=0.846,
+                cvss_base_score=10.0,
+                in_kev=False,
+                asset="Payments API",
+                asset_key="payments-api",
+                component="xz 5.6.0",
+                component_purl=component_purl,
+                rationale="Representative SARIF contract fixture.",
+                recommended_action="Patch xz.",
+                data_quality_confidence="high",
+                occurrences=[
+                    {
+                        "evidence": {
+                            "target_kind": "service",
+                            "target_ref": "payments-api",
+                            "purl": component_purl,
+                        }
+                    }
+                ],
+            )
+        ],
+    )
+    cli_payload = {
+        "metadata": {
+            "schema_version": "1.2.0",
+            "input_path": "uploads/findings.csv",
+        },
+        "findings": [
+            {
+                "cve_id": cve_id,
+                "priority_label": "Critical",
+                "cvss_base_score": 10.0,
+                "epss": 0.846,
+                "in_kev": False,
+                "provenance": {
+                    "targets": [artifact_uri],
+                    "components": ["xz 5.6.0"],
+                    "asset_ids": ["payments-api"],
+                    "occurrences": [{"purl": component_purl}],
+                },
+                "remediation": {
+                    "components": [
+                        {
+                            "name": "xz",
+                            "current_version": "5.6.0",
+                            "purl": component_purl,
+                            "targets": [artifact_uri],
+                            "asset_ids": ["payments-api"],
+                        }
+                    ]
+                },
+                "provider_evidence": {"nvd": {"references": []}},
+                "defensive_contexts": [],
+                "data_quality_flags": [],
+                "data_quality_confidence": "high",
+            }
+        ],
+    }
+
+    api_sarif = render_sarif_report(api_payload)
+    cli_sarif = json.loads(generate_workbench_sarif(cli_payload))
+
+    assert validate_sarif_payload(api_sarif) == []
+    assert validate_sarif_payload(cli_sarif) == []
+    api_result = api_sarif["runs"][0]["results"][0]
+    cli_result = cli_sarif["runs"][0]["results"][0]
+    api_rule = api_sarif["runs"][0]["tool"]["driver"]["rules"][0]
+    cli_rule = cli_sarif["runs"][0]["tool"]["driver"]["rules"][0]
+
+    assert api_result["ruleId"] == cli_result["ruleId"] == f"vuln-prioritizer/{cve_id.lower()}"
+    assert api_result["level"] == cli_result["level"] == "error"
+    assert (
+        api_result["locations"][0]["physicalLocation"]["artifactLocation"]["uri"]
+        == cli_result["locations"][0]["physicalLocation"]["artifactLocation"]["uri"]
+        == artifact_uri
+    )
+    assert api_rule["properties"]["security-severity"] == "10.0"
+    assert cli_rule["properties"]["security-severity"] == "10.0"
+    assert api_result["properties"]["references"] == cli_result["properties"]["references"]
+    assert (
+        api_result["partialFingerprints"][SARIF_FINGERPRINT_KEY]
+        == cli_result["partialFingerprints"][SARIF_FINGERPRINT_KEY]
+    )
+    assert (
+        api_result["partialFingerprints"][SARIF_WORKBENCH_FINGERPRINT_KEY]
+        == api_result["partialFingerprints"][SARIF_FINGERPRINT_KEY]
+    )
+
+
+def test_vpw103_cli_analyze_and_workbench_sarif_share_fingerprint_contract() -> None:
+    artifact_uri = "service:payments-api"
+    component_purl = "pkg:deb/debian/xz@5.6.0-1"
+    cve_id = DEMO_CVE_XZ
+    occurrence = InputOccurrence(
+        cve_id=cve_id,
+        source_format="generic-occurrence-csv",
+        component_name="xz",
+        component_version="5.6.0",
+        purl=component_purl,
+        target_kind="service",
+        target_ref="payments-api",
+        asset_id="payments-api",
+    )
+    finding = PrioritizedFinding(
+        cve_id=cve_id,
+        cvss_base_score=10.0,
+        epss=0.846,
+        in_kev=False,
+        provenance=FindingProvenance(
+            occurrence_count=1,
+            active_occurrence_count=1,
+            source_formats=["generic-occurrence-csv"],
+            components=["xz 5.6.0"],
+            targets=[artifact_uri],
+            asset_ids=["payments-api"],
+            occurrences=[occurrence],
+        ),
+        remediation=RemediationPlan(
+            components=[
+                RemediationComponent(
+                    name="xz",
+                    current_version="5.6.0",
+                    purl=component_purl,
+                    targets=[artifact_uri],
+                    asset_ids=["payments-api"],
+                )
+            ]
+        ),
+        priority_label="Critical",
+        priority_rank=1,
+        rationale="Representative SARIF contract fixture.",
+        recommended_action="Patch xz.",
+    )
+    context = AnalysisContext(
+        schema_version="1.2.0",
+        input_path="uploads/findings.csv",
+        output_format="sarif",
+        generated_at="2026-01-01T00:00:00Z",
+        input_format="generic-occurrence-csv",
+    )
+
+    analyze_sarif = json.loads(generate_sarif_report([finding], context))
+    workbench_sarif = json.loads(
+        generate_workbench_sarif(
+            {
+                "metadata": context.model_dump(mode="json"),
+                "findings": [finding.model_dump(mode="json")],
+            }
+        )
+    )
+
+    assert validate_sarif_payload(analyze_sarif) == []
+    assert validate_sarif_payload(workbench_sarif) == []
+    analyze_result = analyze_sarif["runs"][0]["results"][0]
+    workbench_result = workbench_sarif["runs"][0]["results"][0]
+
+    assert (
+        analyze_result["locations"][0]["physicalLocation"]["artifactLocation"]["uri"]
+        == workbench_result["locations"][0]["physicalLocation"]["artifactLocation"]["uri"]
+        == artifact_uri
+    )
+    assert (
+        analyze_result["partialFingerprints"][SARIF_FINGERPRINT_KEY]
+        == workbench_result["partialFingerprints"][SARIF_FINGERPRINT_KEY]
+    )
+    assert (
+        workbench_result["partialFingerprints"][SARIF_WORKBENCH_FINGERPRINT_KEY]
+        == workbench_result["partialFingerprints"][SARIF_FINGERPRINT_KEY]
     )
 
 

@@ -18,7 +18,7 @@
             "text": "CVE-2024-4577: Critical priority based on CVSS/EPSS/KEV with contextual enrichment."
           },
           "partialFingerprints": {
-            "vuln-prioritizer/v1": "5ce7ed89aaf27465c407bc81f6c40213280368cf6c909cf182adacdb2a8e7e04"
+            "vuln-prioritizer/v1": "3606c7de6a1eb9d09a23b2b7fc57f1cf8158867cbcef0dc1819c1e09c856049b"
           },
           "properties": {
             "attack_relevance": "Unmapped",
@@ -147,7 +147,7 @@
             "text": "CVE-2024-3094: Critical priority based on CVSS/EPSS/KEV with contextual enrichment."
           },
           "partialFingerprints": {
-            "vuln-prioritizer/v1": "3ef91edd578f2dfbeaa5b5faf19a986987fbe10b46f4bc2be2a155d4e88b2335"
+            "vuln-prioritizer/v1": "8d524b230c12b8dbcfce51346e8c7bb54b509d697fabcd68a82f6129c17d4389"
           },
           "properties": {
             "attack_relevance": "Unmapped",

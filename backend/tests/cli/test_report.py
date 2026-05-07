@@ -13,6 +13,10 @@ from vuln_prioritizer.reporting_workbench import (
     generate_findings_csv,
     generate_workbench_sarif,
 )
+from vuln_prioritizer.sarif_contract import (
+    SARIF_FINGERPRINT_KEY,
+    SARIF_WORKBENCH_FINGERPRINT_KEY,
+)
 from vuln_prioritizer.sarif_validation import validate_sarif_payload
 
 
@@ -184,6 +188,11 @@ def test_cli_report_workbench_sarif_and_validation(
     assert log4shell["properties"]["references"] == [
         "https://nvd.nist.gov/vuln/detail/CVE-2021-44228"
     ]
+    assert log4shell["partialFingerprints"][SARIF_FINGERPRINT_KEY]
+    assert (
+        log4shell["partialFingerprints"][SARIF_WORKBENCH_FINGERPRINT_KEY]
+        == log4shell["partialFingerprints"][SARIF_FINGERPRINT_KEY]
+    )
     assert rules[log4shell["ruleId"]]["properties"]["security-severity"] == "10.0"
 
     validation_result = runner.invoke(
