@@ -341,6 +341,7 @@ def test_evidence_bundle_redacts_secret_like_text_in_copied_artifacts(tmp_path: 
                 "CVE-2026-0711",
                 "NVD_API_KEY=super-secret-token",
                 "source=/Users/Alice/My Project/secret-cves.txt",
+                'container="/app/workbench-import-uploads/private input/cves.txt"',
                 r"mirror=C:\Users\Alice\My Project\secret-cves.txt",
             ]
         ),
@@ -358,7 +359,10 @@ def test_evidence_bundle_redacts_secret_like_text_in_copied_artifacts(tmp_path: 
                     "token": "super-secret-token",
                 },
                 "findings": [],
-                "warnings": ["Bearer super-secret-token"],
+                "warnings": [
+                    "Bearer super-secret-token",
+                    "Parser failed at /app/workbench-reports/private report.json",
+                ],
             }
         ),
         encoding="utf-8",
@@ -382,8 +386,10 @@ def test_evidence_bundle_redacts_secret_like_text_in_copied_artifacts(tmp_path: 
     assert "super-secret-token" not in combined
     assert str(tmp_path) not in combined
     assert "/Users/Alice" not in combined
+    assert "/app/workbench-" not in combined
     assert r"C:\Users\Alice" not in combined
     assert "My Project" not in combined
+    assert "private report.json" not in combined
     assert "NVD_API_KEY=<redacted>" in combined
     assert "[REDACTED-PATH]" in combined
 
