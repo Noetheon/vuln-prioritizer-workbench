@@ -4,6 +4,7 @@ import {
   type AnalysisRunPublic,
   type AnalysisRunSummaryPublic,
   type AssetPublic,
+  type DashboardSignalCountsPublic,
   AssetsService,
   type FindingDetailPublic,
   type FindingExplanationPublic,
@@ -22,15 +23,9 @@ import {
   demoFindingExplanationForDetail,
 } from "../components/finding-detail/finding-detail-model"
 import { matchesAsset } from "../components/assets/asset-model"
-import type { EpssBucketCounts } from "../lib/chart-data"
+import type { DashboardSignalCounts } from "../components/dashboard/dashboard-model"
 import { DEMO_MODE_ENABLED } from "../lib/runtime-config"
 import { workbenchQueryKeys } from "./workbench-query-keys"
-
-export type DashboardSignalCounts = {
-  highEpss: number
-  internetFacingCriticals: number
-  epssBuckets: EpssBucketCounts
-}
 
 export type RunDetailQueryData = {
   run: AnalysisRunPublic
@@ -98,6 +93,16 @@ export function useProjectSummaryQuery(projectId: string) {
     queryKey: workbenchQueryKeys.projectSummary(projectId),
     retry: false,
     staleTime: 15_000,
+  })
+}
+
+export function useProjectDashboardQuery(projectId: string, enabled: boolean) {
+  return useQuery({
+    enabled: enabled && Boolean(projectId),
+    queryFn: () => ProjectsService.readProjectDashboard({ project_id: projectId }),
+    queryKey: workbenchQueryKeys.projectDashboard(projectId),
+    retry: false,
+    staleTime: 10_000,
   })
 }
 
@@ -241,108 +246,6 @@ export function useFindingsQuery(
   })
 }
 
-export function useDashboardFindingsQuery(projectId: string, enabled: boolean) {
-  return useQuery({
-    enabled: enabled && Boolean(projectId),
-    queryFn: () =>
-      FindingsService.readProjectFindings({
-        direction: "asc",
-        limit: 5,
-        offset: 0,
-        project_id: projectId,
-        sort: "operational",
-      }),
-    queryKey: workbenchQueryKeys.dashboardFindings(projectId),
-    retry: false,
-    staleTime: 10_000,
-  })
-}
-
-export function useDashboardSignalCountsQuery(
-  projectId: string,
-  enabled: boolean,
-) {
-  return useQuery({
-    enabled: enabled && Boolean(projectId),
-    queryFn: async () => {
-      const [
-        highEpssPage,
-        internetFacingCriticalPage,
-        epssLowPage,
-        epssMediumPage,
-        epssHighPage,
-        epssCriticalPage,
-      ] = await Promise.all([
-        FindingsService.readProjectFindings({
-          direction: "desc",
-          epss_min: 0.7,
-          limit: 1,
-          offset: 0,
-          project_id: projectId,
-          sort: "operational",
-        }),
-        FindingsService.readProjectFindings({
-          direction: "desc",
-          exposure: "internet-facing",
-          limit: 1,
-          offset: 0,
-          priority: "critical",
-          project_id: projectId,
-          sort: "operational",
-        }),
-        FindingsService.readProjectFindings({
-          direction: "desc",
-          epss_max: 0.25,
-          epss_min: 0,
-          limit: 1,
-          offset: 0,
-          project_id: projectId,
-          sort: "operational",
-        }),
-        FindingsService.readProjectFindings({
-          direction: "desc",
-          epss_max: 0.5,
-          epss_min: 0.25,
-          limit: 1,
-          offset: 0,
-          project_id: projectId,
-          sort: "operational",
-        }),
-        FindingsService.readProjectFindings({
-          direction: "desc",
-          epss_max: 0.7,
-          epss_min: 0.5,
-          limit: 1,
-          offset: 0,
-          project_id: projectId,
-          sort: "operational",
-        }),
-        FindingsService.readProjectFindings({
-          direction: "desc",
-          epss_min: 0.7,
-          limit: 1,
-          offset: 0,
-          project_id: projectId,
-          sort: "operational",
-        }),
-      ])
-      return {
-        highEpss: highEpssPage.count ?? 0,
-        internetFacingCriticals: internetFacingCriticalPage.count ?? 0,
-        epssBuckets: {
-          low: epssLowPage.count ?? 0,
-          medium: epssMediumPage.count ?? 0,
-          high: epssHighPage.count ?? 0,
-          critical: epssCriticalPage.count ?? 0,
-        },
-      }
-    },
-    queryKey: workbenchQueryKeys.dashboardSignalCounts(projectId),
-    retry: false,
-    staleTime: 10_000,
-  })
-}
-
 export function useFindingDetailQuery(findingId: string | null) {
   return useQuery<FindingDetailQueryData>({
     enabled: Boolean(findingId),
@@ -388,6 +291,22 @@ export function useFindingDetailQuery(findingId: string | null) {
     retry: false,
     staleTime: 10_000,
   })
+}
+
+export function dashboardSignalCountsFromApi(
+  signalCounts: DashboardSignalCountsPublic | null | undefined,
+): DashboardSignalCounts {
+  const buckets = signalCounts?.epss_buckets
+  return {
+    highEpss: signalCounts?.high_epss ?? 0,
+    internetFacingCriticals: signalCounts?.internet_facing_criticals ?? 0,
+    epssBuckets: {
+      low: buckets?.low ?? 0,
+      medium: buckets?.medium ?? 0,
+      high: buckets?.high ?? 0,
+      critical: buckets?.critical ?? 0,
+    },
+  }
 }
 
 export function emptyFindingQueryPage(enabled: boolean) {

@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import uuid
-from typing import Any
+from typing import Any, cast
 
 from sqlalchemy import or_
+from sqlalchemy.orm import QueryableAttribute, selectinload
 from sqlmodel import Session, col, func, select
 
 from app.models import (
@@ -222,9 +223,15 @@ class FindingRepository:
 
     def list_project_findings(self, project_id: uuid.UUID) -> list[Finding]:
         """Return project findings ordered by operational priority."""
+        asset_relationship = cast(QueryableAttribute[Any], Finding.asset)
+        component_relationship = cast(QueryableAttribute[Any], Finding.component)
         statement = (
             select(Finding)
             .where(Finding.project_id == project_id)
+            .options(
+                selectinload(asset_relationship),
+                selectinload(component_relationship),
+            )
             .order_by(col(Finding.operational_rank), col(Finding.priority_rank), Finding.cve_id)
         )
         return list(self.session.exec(statement).all())

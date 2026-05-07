@@ -1348,6 +1348,55 @@ export const Body_login_login_access_tokenSchema = {
     type: 'object'
 } as const;
 
+export const DashboardEpssBucketsPublicSchema = {
+    description: 'EPSS bucket counts for the Workbench dashboard.',
+    properties: {
+        critical: {
+            default: 0,
+            title: 'Critical',
+            type: 'integer'
+        },
+        high: {
+            default: 0,
+            title: 'High',
+            type: 'integer'
+        },
+        low: {
+            default: 0,
+            title: 'Low',
+            type: 'integer'
+        },
+        medium: {
+            default: 0,
+            title: 'Medium',
+            type: 'integer'
+        }
+    },
+    title: 'DashboardEpssBucketsPublic',
+    type: 'object'
+} as const;
+
+export const DashboardSignalCountsPublicSchema = {
+    description: 'Dashboard signal counts that previously required multiple findings queries.',
+    properties: {
+        epss_buckets: {
+            $ref: '#/components/schemas/DashboardEpssBucketsPublic'
+        },
+        high_epss: {
+            default: 0,
+            title: 'High Epss',
+            type: 'integer'
+        },
+        internet_facing_criticals: {
+            default: 0,
+            title: 'Internet Facing Criticals',
+            type: 'integer'
+        }
+    },
+    title: 'DashboardSignalCountsPublic',
+    type: 'object'
+} as const;
+
 export const FindingAttackContextDetailPublicSchema = {
     description: 'Safe finding-level ATT&CK context DTO for the React Workbench.',
     properties: {
@@ -3835,6 +3884,62 @@ export const ProjectCvssOnlyComparisonPublicSchema = {
         'counts'
     ],
     title: 'ProjectCvssOnlyComparisonPublic',
+    type: 'object'
+} as const;
+
+export const ProjectDashboardFindingsPublicSchema = {
+    description: 'Findings data needed by the Workbench dashboard.',
+    properties: {
+        remediation_queue: {
+            $ref: '#/components/schemas/FindingsPublic'
+        },
+        signal_counts: {
+            $ref: '#/components/schemas/DashboardSignalCountsPublic'
+        }
+    },
+    required: [
+        'remediation_queue',
+        'signal_counts'
+    ],
+    title: 'ProjectDashboardFindingsPublic',
+    type: 'object'
+} as const;
+
+export const ProjectDashboardPublicSchema = {
+    description: 'One-call aggregate for the project dashboard route.',
+    properties: {
+        findings: {
+            $ref: '#/components/schemas/ProjectDashboardFindingsPublic'
+        },
+        generated_at: {
+            format: 'date-time',
+            title: 'Generated At',
+            type: 'string'
+        },
+        governance: {
+            $ref: '#/components/schemas/ProjectGovernanceRollupsPublic'
+        },
+        project_id: {
+            format: 'uuid',
+            title: 'Project Id',
+            type: 'string'
+        },
+        runs: {
+            $ref: '#/components/schemas/AnalysisRunsPublic'
+        },
+        summary: {
+            $ref: '#/components/schemas/ProjectDecisionSummaryPublic'
+        }
+    },
+    required: [
+        'project_id',
+        'generated_at',
+        'summary',
+        'governance',
+        'runs',
+        'findings'
+    ],
+    title: 'ProjectDashboardPublic',
     type: 'object'
 } as const;
 

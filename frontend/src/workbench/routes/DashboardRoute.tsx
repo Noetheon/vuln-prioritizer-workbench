@@ -5,12 +5,9 @@ import { epssBucketChartData } from "../../lib/chart-data"
 import { useWorkbenchContext } from "../WorkbenchContext"
 import { governanceServiceRows } from "../route-utils"
 import {
+  dashboardSignalCountsFromApi,
   emptyDashboardSignalCounts,
-  useDashboardFindingsQuery,
-  useDashboardSignalCountsQuery,
-  useProjectGovernanceRollupsQuery,
-  useProjectRunsQuery,
-  useProjectSummaryQuery,
+  useProjectDashboardQuery,
 } from "../useWorkbenchQueries"
 import { workbenchQueryKeys } from "../workbench-query-keys"
 
@@ -28,38 +25,26 @@ function DashboardRouteContainer() {
     setSelectedProjectId,
     statusError,
   } = useWorkbenchContext()
-  const projectSummaryQuery = useProjectSummaryQuery(selectedProjectId)
-  const projectGovernanceRollupsQuery =
-    useProjectGovernanceRollupsQuery(selectedProjectId)
-  const projectRunsQuery = useProjectRunsQuery(selectedProjectId, true)
-  const dashboardFindingsQuery = useDashboardFindingsQuery(
+  const projectDashboardQuery = useProjectDashboardQuery(
     selectedProjectId,
     true,
   )
-  const dashboardSignalQuery = useDashboardSignalCountsQuery(
-    selectedProjectId,
-    true,
-  )
-  const projectSummary = projectSummaryQuery.data ?? null
-  const projectGovernanceRollups =
-    projectGovernanceRollupsQuery.data ?? null
-  const projectRuns = projectRunsQuery.data?.data ?? []
-  const dashboardFindings = dashboardFindingsQuery.data?.data ?? []
+  const projectDashboard = projectDashboardQuery.data ?? null
+  const projectSummary = projectDashboard?.summary ?? null
+  const projectGovernanceRollups = projectDashboard?.governance ?? null
+  const projectRuns = projectDashboard?.runs.data ?? []
+  const dashboardFindings =
+    projectDashboard?.findings.remediation_queue.data ?? []
   const topServiceRows = governanceServiceRows(projectGovernanceRollups)
-  const dashboardSignalCounts =
-    dashboardSignalQuery.data ?? emptyDashboardSignalCounts
+  const dashboardSignalCounts = projectDashboard
+    ? dashboardSignalCountsFromApi(projectDashboard.findings.signal_counts)
+    : emptyDashboardSignalCounts
 
   const refreshDashboard = () => {
     void refreshProjects(selectedProjectId)
     if (selectedProjectId) {
       void queryClient.invalidateQueries({
-        queryKey: workbenchQueryKeys.dashboardFindings(selectedProjectId),
-      })
-      void queryClient.invalidateQueries({
-        queryKey: workbenchQueryKeys.dashboardSignalCounts(selectedProjectId),
-      })
-      void queryClient.invalidateQueries({
-        queryKey: workbenchQueryKeys.projectGovernanceRollups(selectedProjectId),
+        queryKey: workbenchQueryKeys.projectDashboard(selectedProjectId),
       })
     }
   }
@@ -67,34 +52,22 @@ function DashboardRouteContainer() {
   return (
     <RiskOperationsDashboard
       dashboardError={
-        projectSummaryQuery.isError
-          ? apiErrorMessage("Project summary unavailable", projectSummaryQuery.error)
+        projectDashboardQuery.isError
+          ? apiErrorMessage(
+              "Project dashboard unavailable",
+              projectDashboardQuery.error,
+            )
           : ""
       }
       epssBuckets={epssBucketChartData(dashboardSignalCounts.epssBuckets)}
       findings={dashboardFindings}
-      findingsError={
-        dashboardFindingsQuery.isError
-          ? apiErrorMessage(
-              "Remediation queue unavailable",
-              dashboardFindingsQuery.error,
-            )
-          : ""
-      }
+      findingsError=""
       findingsLoading={
-        dashboardFindingsQuery.isLoading || dashboardFindingsQuery.isFetching
+        projectDashboardQuery.isLoading || projectDashboardQuery.isFetching
       }
-      governanceError={
-        projectGovernanceRollupsQuery.isError
-          ? apiErrorMessage(
-              "Governance rollups unavailable",
-              projectGovernanceRollupsQuery.error,
-            )
-          : ""
-      }
+      governanceError=""
       governanceLoading={
-        projectGovernanceRollupsQuery.isLoading ||
-        projectGovernanceRollupsQuery.isFetching
+        projectDashboardQuery.isLoading || projectDashboardQuery.isFetching
       }
       onProjectChange={setSelectedProjectId}
       onRefresh={refreshDashboard}
@@ -105,20 +78,18 @@ function DashboardRouteContainer() {
       providerStatus={providerStatus}
       providerStatusError={providerStatusError || statusError}
       providerStatusLoading={providerStatusLoading}
-      runsLoading={projectRunsQuery.isLoading || projectRunsQuery.isFetching}
+      runsLoading={
+        projectDashboardQuery.isLoading || projectDashboardQuery.isFetching
+      }
       selectedProject={selectedProject}
       selectedProjectId={selectedProjectId}
       signalCounts={dashboardSignalCounts}
-      signalError={
-        dashboardSignalQuery.isError
-          ? apiErrorMessage("Signal counts unavailable", dashboardSignalQuery.error)
-          : ""
-      }
+      signalError=""
       signalLoading={
-        dashboardSignalQuery.isLoading || dashboardSignalQuery.isFetching
+        projectDashboardQuery.isLoading || projectDashboardQuery.isFetching
       }
       summaryLoading={
-        projectSummaryQuery.isLoading || projectSummaryQuery.isFetching
+        projectDashboardQuery.isLoading || projectDashboardQuery.isFetching
       }
       topServiceRows={topServiceRows.rows}
       topServiceSource={topServiceRows.source}

@@ -744,6 +744,47 @@ export type BodyLoginLoginAccessToken = {
 };
 
 /**
+ * DashboardEpssBucketsPublic
+ *
+ * EPSS bucket counts for the Workbench dashboard.
+ */
+export type DashboardEpssBucketsPublic = {
+    /**
+     * Critical
+     */
+    critical?: number;
+    /**
+     * High
+     */
+    high?: number;
+    /**
+     * Low
+     */
+    low?: number;
+    /**
+     * Medium
+     */
+    medium?: number;
+};
+
+/**
+ * DashboardSignalCountsPublic
+ *
+ * Dashboard signal counts that previously required multiple findings queries.
+ */
+export type DashboardSignalCountsPublic = {
+    epss_buckets?: DashboardEpssBucketsPublic;
+    /**
+     * High Epss
+     */
+    high_epss?: number;
+    /**
+     * Internet Facing Criticals
+     */
+    internet_facing_criticals?: number;
+};
+
+/**
  * FindingAttackContextDetailPublic
  *
  * Safe finding-level ATT&CK context DTO for the React Workbench.
@@ -2119,6 +2160,36 @@ export type ProjectCvssOnlyComparisonPublic = {
     top_changes?: Array<{
         [key: string]: unknown;
     }>;
+};
+
+/**
+ * ProjectDashboardFindingsPublic
+ *
+ * Findings data needed by the Workbench dashboard.
+ */
+export type ProjectDashboardFindingsPublic = {
+    remediation_queue: FindingsPublic;
+    signal_counts: DashboardSignalCountsPublic;
+};
+
+/**
+ * ProjectDashboardPublic
+ *
+ * One-call aggregate for the project dashboard route.
+ */
+export type ProjectDashboardPublic = {
+    findings: ProjectDashboardFindingsPublic;
+    /**
+     * Generated At
+     */
+    generated_at: string;
+    governance: ProjectGovernanceRollupsPublic;
+    /**
+     * Project Id
+     */
+    project_id: string;
+    runs: AnalysisRunsPublic;
+    summary: ProjectDecisionSummaryPublic;
 };
 
 /**
@@ -3615,6 +3686,36 @@ export type GetApiV1ProjectsByProjectIdCompareCvssOnlyResponses = {
 };
 
 export type GetApiV1ProjectsByProjectIdCompareCvssOnlyResponse = GetApiV1ProjectsByProjectIdCompareCvssOnlyResponses[keyof GetApiV1ProjectsByProjectIdCompareCvssOnlyResponses];
+
+export type GetApiV1ProjectsByProjectIdDashboardData = {
+    body?: never;
+    path: {
+        /**
+         * Project Id
+         */
+        project_id: string;
+    };
+    query?: never;
+    url: '/api/v1/projects/{project_id}/dashboard';
+};
+
+export type GetApiV1ProjectsByProjectIdDashboardErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type GetApiV1ProjectsByProjectIdDashboardError = GetApiV1ProjectsByProjectIdDashboardErrors[keyof GetApiV1ProjectsByProjectIdDashboardErrors];
+
+export type GetApiV1ProjectsByProjectIdDashboardResponses = {
+    /**
+     * Successful Response
+     */
+    200: ProjectDashboardPublic;
+};
+
+export type GetApiV1ProjectsByProjectIdDashboardResponse = GetApiV1ProjectsByProjectIdDashboardResponses[keyof GetApiV1ProjectsByProjectIdDashboardResponses];
 
 export type GetApiV1ProjectsByProjectIdFindingsData = {
     body?: never;
