@@ -335,7 +335,11 @@ function CreateProjectPanel({
               value={createProjectForm.description}
             />
           </VpwField>
-          <Button disabled={projectActionLoading} type="submit">
+          <Button
+            aria-busy={projectActionLoading}
+            disabled={projectActionLoading}
+            type="submit"
+          >
             <Plus aria-hidden="true" />
             {projectActionLoading ? "Creating project" : "Create project"}
           </Button>
@@ -726,7 +730,11 @@ function ActiveProjectPanel({
             />
           </VpwField>
           <VpwToolbarGroup>
-            <Button disabled={projectActionLoading} type="submit">
+            <Button
+              aria-busy={projectActionLoading}
+              disabled={projectActionLoading}
+              type="submit"
+            >
               Save project
             </Button>
             <Button
@@ -757,6 +765,7 @@ function ActiveProjectPanel({
             </span>
           </label>
           <Button
+            aria-busy={projectActionLoading}
             disabled={projectActionLoading || !deleteConfirmed}
             onClick={() => onDeleteProject(selectedProject)}
             type="button"

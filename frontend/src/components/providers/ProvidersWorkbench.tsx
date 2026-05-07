@@ -368,7 +368,6 @@ export function ProvidersWorkbench({
             <VpwToolbarGroup>
               <Button
                 aria-busy={providerStatusLoading}
-                className="disabled:bg-[var(--vpw-blue)] disabled:text-white disabled:opacity-100"
                 disabled={providerStatusLoading}
                 onClick={onRefreshProviderStatus}
                 type="button"

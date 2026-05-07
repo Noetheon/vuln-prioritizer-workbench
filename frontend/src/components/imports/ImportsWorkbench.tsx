@@ -316,6 +316,7 @@ function ImportWizard({
               </VpwStatusBanner>
             ) : null}
             <Button
+              aria-busy={importLoading}
               disabled={importLoading || projects.length === 0}
               type="submit"
             >

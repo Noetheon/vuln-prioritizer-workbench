@@ -164,3 +164,32 @@
     text-align: center;
   }
 }
+
+[data-slot="button"]:disabled,
+[data-slot="button"][aria-disabled="true"] {
+  border-color: var(--vpw-border-disabled);
+  background: var(--vpw-bg-disabled);
+  color: var(--vpw-text-disabled);
+  box-shadow: none;
+  opacity: 1;
+}
+
+[data-slot="button"]:disabled svg,
+[data-slot="button"][aria-disabled="true"] svg {
+  color: currentColor;
+  opacity: 0.72;
+}
+
+[data-slot="button"][aria-busy="true"] {
+  border-color: var(--vpw-border-busy);
+  background: var(--vpw-bg-busy);
+  color: var(--vpw-text-busy);
+  box-shadow: none;
+  cursor: wait;
+  opacity: 1;
+}
+
+[data-slot="button"][aria-busy="true"] svg {
+  color: currentColor;
+  opacity: 1;
+}
