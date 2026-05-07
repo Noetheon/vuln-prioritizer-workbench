@@ -4,12 +4,12 @@ from __future__ import annotations
 
 import hashlib
 import uuid
+from dataclasses import dataclass
 from typing import Any
 
-from fastapi import HTTPException, Request, UploadFile
 from sqlmodel import Session
 
-from app.api.routes.workbench_access import require_visible_project
+from app.core.config import Settings
 from app.domain.import_asset_context import (
     canonicalize_occurrence_asset_context as _canonicalize_occurrence_asset_context,
 )
@@ -30,6 +30,7 @@ from app.services.import_artifacts import (
 from app.services.import_artifacts import (
     validate_attack_import_options as _validate_attack_import_options,
 )
+from app.services.import_errors import ImportServiceError
 from app.services.import_execution_context import (
     _apply_workbench_asset_context,
     _apply_workbench_vex,
@@ -55,9 +56,6 @@ from app.services.import_uploads import (
 )
 from app.services.import_uploads import (
     optional_upload_summary as _optional_upload_summary,
-)
-from app.services.import_uploads import (
-    read_bounded_upload as _read_bounded_upload,
 )
 from app.services.import_uploads import (
     reject_unsafe_upload_filename as _reject_unsafe_upload_filename,
@@ -104,37 +102,56 @@ from app.services.import_uploads import (
 from app.services.import_uploads import (
     validate_vex_upload as _validate_vex_upload,
 )
-from app.services.import_uploads import (
-    workbench_settings as _workbench_settings,
-)
+
+
+@dataclass(frozen=True, slots=True)
+class ImportUploadContent:
+    """HTTP-independent upload payload accepted by the import service."""
+
+    filename: str | None
+    content_type: str | None
+    content: bytes
+
+
+@dataclass(frozen=True, slots=True)
+class ProjectImportUploadRequest:
+    """Workbench import request normalized at the route boundary."""
+
+    input_type: str
+    file: ImportUploadContent
+    asset_context_file: ImportUploadContent | None = None
+    vex_file: ImportUploadContent | None = None
+    provider_snapshot_file: str | None = None
+    locked_provider_data: bool = False
+    attack_source: str = "none"
+    attack_mapping_file: str | None = None
+    attack_technique_metadata_file: str | None = None
 
 
 async def execute_project_import_upload(
     *,
     project_id: uuid.UUID,
-    request: Request,
     session: Session,
     current_user: User,
-    input_type: str,
-    file: UploadFile,
-    asset_context_file: UploadFile | None = None,
-    vex_file: UploadFile | None = None,
-    provider_snapshot_file: str | None = None,
-    locked_provider_data: bool = False,
-    attack_source: str = "none",
-    attack_mapping_file: str | None = None,
-    attack_technique_metadata_file: str | None = None,
+    settings: Settings,
+    upload: ProjectImportUploadRequest,
 ) -> AnalysisRun:
     """Securely upload, normalize, and persist one Workbench import file."""
-    require_visible_project(session, current_user, project_id)
-    normalized_input_type = _normalize_input_type(input_type)
+    normalized_input_type = _normalize_input_type(upload.input_type)
     _validate_input_type(normalized_input_type)
+    file = upload.file
     original_filename = file.filename or "upload"
     _reject_unsafe_upload_filename(original_filename)
     stored_filename = _sanitize_filename(original_filename)
     _validate_upload_suffix(stored_filename, input_type=normalized_input_type)
     _validate_mime_hint(file.content_type, input_type=normalized_input_type)
-    asset_context_upload = asset_context_file if _has_optional_upload(asset_context_file) else None
+    asset_context_upload = (
+        upload.asset_context_file
+        if _has_optional_upload(
+            upload.asset_context_file.filename if upload.asset_context_file is not None else None
+        )
+        else None
+    )
     asset_context_original_filename = (
         asset_context_upload.filename if asset_context_upload is not None else None
     )
@@ -145,8 +162,15 @@ async def execute_project_import_upload(
             asset_context_original_filename,
             reserved_filename=stored_filename,
         )
-        _validate_asset_context_upload(asset_context_stored_filename, asset_context_upload)
-    vex_upload = vex_file if _has_optional_upload(vex_file) else None
+        _validate_asset_context_upload(
+            asset_context_stored_filename,
+            asset_context_upload.content_type,
+        )
+    vex_upload = (
+        upload.vex_file
+        if _has_optional_upload(upload.vex_file.filename if upload.vex_file is not None else None)
+        else None
+    )
     vex_original_filename = vex_upload.filename if vex_upload is not None else None
     vex_stored_filename: str | None = None
     if vex_upload is not None and vex_original_filename is not None:
@@ -155,52 +179,36 @@ async def execute_project_import_upload(
             vex_original_filename,
             reserved_filenames={stored_filename, asset_context_stored_filename},
         )
-        _validate_vex_upload(vex_stored_filename, vex_upload)
+        _validate_vex_upload(vex_stored_filename, vex_upload.content_type)
     provider_snapshot_path = _resolve_workbench_provider_snapshot_path(
-        provider_snapshot_file,
-        request=request,
+        upload.provider_snapshot_file,
+        settings=settings,
     )
     attack_mapping_path = _resolve_workbench_attack_artifact_path(
-        attack_mapping_file,
-        request=request,
+        upload.attack_mapping_file,
+        settings=settings,
     )
     attack_metadata_path = _resolve_workbench_attack_artifact_path(
-        attack_technique_metadata_file,
-        request=request,
+        upload.attack_technique_metadata_file,
+        settings=settings,
     )
     normalized_attack_source = _validate_attack_import_options(
-        attack_source=attack_source,
+        attack_source=upload.attack_source,
         attack_mapping_path=attack_mapping_path,
         attack_metadata_path=attack_metadata_path,
     )
 
-    active_settings = _workbench_settings(request)
-    upload_bytes = await _read_bounded_upload(file, settings=active_settings)
-    remaining_upload_bytes = active_settings.max_upload_bytes - len(upload_bytes)
-    asset_context_bytes = (
-        await _read_bounded_upload(
-            asset_context_upload,
-            settings=active_settings,
-            max_bytes=remaining_upload_bytes,
-        )
-        if asset_context_upload is not None
-        else None
-    )
-    if asset_context_bytes is not None:
-        remaining_upload_bytes -= len(asset_context_bytes)
-    vex_bytes = (
-        await _read_bounded_upload(
-            vex_upload,
-            settings=active_settings,
-            max_bytes=remaining_upload_bytes,
-        )
-        if vex_upload is not None
-        else None
-    )
     _validate_aggregate_upload_size(
-        settings=active_settings,
-        payloads=[upload_bytes, asset_context_bytes, vex_bytes],
+        settings=settings,
+        payloads=[
+            file.content,
+            asset_context_upload.content if asset_context_upload is not None else None,
+            vex_upload.content if vex_upload is not None else None,
+        ],
     )
+    upload_bytes = file.content
+    asset_context_bytes = asset_context_upload.content if asset_context_upload is not None else None
+    vex_bytes = vex_upload.content if vex_upload is not None else None
     upload_sha256 = hashlib.sha256(upload_bytes).hexdigest()
     asset_context_sha256 = (
         hashlib.sha256(asset_context_bytes).hexdigest() if asset_context_bytes is not None else None
@@ -257,7 +265,7 @@ async def execute_project_import_upload(
         },
     )
     upload_path = _store_upload(
-        request,
+        settings,
         project_id=project_id,
         run_id=run.id,
         filename=stored_filename,
@@ -265,7 +273,7 @@ async def execute_project_import_upload(
     )
     asset_context_path = (
         _store_upload(
-            request,
+            settings,
             project_id=project_id,
             run_id=run.id,
             filename=asset_context_stored_filename or "asset_context.csv",
@@ -276,7 +284,7 @@ async def execute_project_import_upload(
     )
     vex_path = (
         _store_upload(
-            request,
+            settings,
             project_id=project_id,
             run_id=run.id,
             filename=vex_stored_filename or "openvex.json",
@@ -383,7 +391,7 @@ async def execute_project_import_upload(
             input_type=normalized_input_type,
         )
         session.commit()
-        raise HTTPException(
+        raise ImportServiceError(
             status_code=422,
             detail={
                 "message": "Import parsing failed.",
@@ -448,7 +456,7 @@ async def execute_project_import_upload(
                 input_type=normalized_input_type,
             )
             session.commit()
-            raise HTTPException(
+            raise ImportServiceError(
                 status_code=422,
                 detail={
                     "message": "Asset context parsing failed.",
@@ -512,7 +520,7 @@ async def execute_project_import_upload(
                 input_type=normalized_input_type,
             )
             session.commit()
-            raise HTTPException(
+            raise ImportServiceError(
                 status_code=422,
                 detail={
                     "message": "VEX parsing failed.",
@@ -522,12 +530,12 @@ async def execute_project_import_upload(
             ) from exc
 
     try:
-        analysis_result = AnalysisService(session, _workbench_settings(request)).analyze_import(
+        analysis_result = AnalysisService(session, settings).analyze_import(
             input_path=upload_path,
             input_type=normalized_input_type,
             asset_context_file=asset_context_path,
             provider_snapshot_file=provider_snapshot_path,
-            locked_provider_data=locked_provider_data,
+            locked_provider_data=upload.locked_provider_data,
             attack_source=normalized_attack_source,
             attack_mapping_file=attack_mapping_path,
             attack_technique_metadata_file=attack_metadata_path,

@@ -145,7 +145,7 @@ def test_import_upload_route_delegates_to_application_service() -> None:
     service_source = (ROOT / "app/services/import_execution.py").read_text(encoding="utf-8")
     route_imports = _imported_modules("app/api/routes/imports.py")
 
-    assert len(route_source.splitlines()) <= 80
+    assert len(route_source.splitlines()) <= 140
     assert "app.services.import_execution" in route_imports
     assert "AnalysisService" not in route_source
     assert "build_importer_registry" not in route_source
@@ -233,12 +233,12 @@ def test_template_import_validation_and_storage_are_split_from_route_facade() ->
     artifact_source = (ROOT / "app/services/import_artifacts.py").read_text(encoding="utf-8")
 
     assert "app.services.import_execution" in imports
-    assert "app.services.import_uploads" not in imports
+    assert "app.services.import_uploads" in imports
     assert "app.services.import_artifacts" not in imports
     assert "ALLOWED_UPLOAD_SUFFIXES = " not in source
-    assert "def _read_bounded_upload" not in source
-    assert "def _store_upload" not in source
-    assert "def _resolve_template_provider_snapshot_path" not in source
+    assert "def read_bounded_upload" not in source
+    assert "def store_upload" not in source
+    assert "def resolve_workbench_provider_snapshot_path" not in source
     assert "app.services.import_uploads" in execution_source
     assert "app.services.import_artifacts" in execution_source
     assert "ALLOWED_UPLOAD_SUFFIXES = " in upload_source

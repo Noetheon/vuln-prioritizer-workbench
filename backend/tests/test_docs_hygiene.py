@@ -25,6 +25,7 @@ TEXT_SUFFIXES = {
 }
 MEDIA_SUFFIXES = {".gif", ".jpeg", ".jpg", ".png", ".svg", ".webp"}
 CANONICAL_EVIDENCE_CONTRACT_ARTIFACTS = {
+    Path("docs/evidence/backend-service-layer-boundary.md"),
     Path("docs/evidence/vpw-050-analysis-result.v1.json"),
     Path("docs/evidence/vpw-050-findings.csv"),
     Path("docs/evidence/vpw-051-analysis.json"),
@@ -35,7 +36,7 @@ CANONICAL_EVIDENCE_CONTRACT_ARTIFACTS = {
     Path("docs/evidence/vpw-060-attack-navigator-layer.json"),
 }
 # docs/evidence is intentionally kept only for contract artifacts validated by
-# backend report tests. Public and historical evidence belongs in
+# backend contract tests. Public and historical evidence belongs in
 # archive/vpw-evidence so broad evidence sprawl cannot return unnoticed.
 NON_PUBLIC_CONTRACT_MARKDOWN = {
     path for path in CANONICAL_EVIDENCE_CONTRACT_ARTIFACTS if path.suffix.lower() == ".md"

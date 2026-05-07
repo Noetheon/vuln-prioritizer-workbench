@@ -5,9 +5,8 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-from fastapi import HTTPException, Request
-
-from app.services.import_uploads import workbench_settings
+from app.core.config import Settings
+from app.services.import_errors import ImportServiceError
 from vuln_prioritizer.cli_options import AttackSource
 
 SAFE_ATTACK_FILENAME_RE = re.compile(r"^[A-Za-z0-9._-]+$")
@@ -17,7 +16,7 @@ SAFE_SNAPSHOT_FILENAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*[.]json$")
 def resolve_workbench_provider_snapshot_path(
     provider_snapshot_file: str | None,
     *,
-    request: Request,
+    settings: Settings,
 ) -> Path | None:
     value = provider_snapshot_file.strip() if provider_snapshot_file else ""
     if not value:
@@ -28,20 +27,20 @@ def resolve_workbench_provider_snapshot_path(
         or "\\" in value
         or Path(value).name != value
     ):
-        raise HTTPException(status_code=422, detail="Provider snapshot path is not allowed.")
-    snapshot_root = workbench_settings(request).provider_snapshot_dir_path.resolve(strict=False)
+        raise ImportServiceError(status_code=422, detail="Provider snapshot path is not allowed.")
+    snapshot_root = settings.provider_snapshot_dir_path.resolve(strict=False)
     candidate = (snapshot_root / value).resolve(strict=False)
     if not candidate.is_relative_to(snapshot_root):
-        raise HTTPException(status_code=422, detail="Provider snapshot path is not allowed.")
+        raise ImportServiceError(status_code=422, detail="Provider snapshot path is not allowed.")
     if not candidate.exists() or not candidate.is_file():
-        raise HTTPException(status_code=422, detail="Provider snapshot file does not exist.")
+        raise ImportServiceError(status_code=422, detail="Provider snapshot file does not exist.")
     return candidate
 
 
 def resolve_workbench_attack_artifact_path(
     value: str | None,
     *,
-    request: Request,
+    settings: Settings,
 ) -> Path | None:
     filename = value.strip() if value else ""
     if not filename:
@@ -52,13 +51,13 @@ def resolve_workbench_attack_artifact_path(
         or "\\" in filename
         or Path(filename).name != filename
     ):
-        raise HTTPException(status_code=422, detail="ATT&CK artifact path is not allowed.")
-    artifact_root = workbench_settings(request).attack_artifact_dir_path.resolve(strict=False)
+        raise ImportServiceError(status_code=422, detail="ATT&CK artifact path is not allowed.")
+    artifact_root = settings.attack_artifact_dir_path.resolve(strict=False)
     candidate = (artifact_root / filename).resolve(strict=False)
     if not candidate.is_relative_to(artifact_root):
-        raise HTTPException(status_code=422, detail="ATT&CK artifact path is not allowed.")
+        raise ImportServiceError(status_code=422, detail="ATT&CK artifact path is not allowed.")
     if not candidate.exists() or not candidate.is_file():
-        raise HTTPException(status_code=422, detail="ATT&CK artifact file does not exist.")
+        raise ImportServiceError(status_code=422, detail="ATT&CK artifact file does not exist.")
     return candidate
 
 
@@ -72,24 +71,24 @@ def validate_attack_import_options(
     try:
         normalized_source = AttackSource(raw_source)
     except ValueError as exc:
-        raise HTTPException(
+        raise ImportServiceError(
             status_code=422,
             detail=f"Unsupported ATT&CK source: {raw_source}.",
         ) from exc
     if normalized_source == AttackSource.none:
         if attack_mapping_path is not None or attack_metadata_path is not None:
-            raise HTTPException(
+            raise ImportServiceError(
                 status_code=422,
                 detail="ATT&CK mapping files require attack_source=ctid-json.",
             )
         return normalized_source
     if normalized_source not in {AttackSource.ctid_json, AttackSource.local_curated}:
-        raise HTTPException(
+        raise ImportServiceError(
             status_code=422,
             detail="Workbench ATT&CK imports only support ctid-json or local-curated.",
         )
     if attack_mapping_path is None:
-        raise HTTPException(
+        raise ImportServiceError(
             status_code=422,
             detail="ATT&CK imports require a mapping file.",
         )
