@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import uuid
 
-from sqlmodel import Session, select
+from sqlalchemy import or_
+from sqlmodel import Session, col, select
 
 from app.models.github_issues import GitHubIssueExport
 
@@ -26,8 +27,33 @@ class GitHubIssueExportRepository:
             GitHubIssueExport.project_id == project_id,
             GitHubIssueExport.repository == repository,
             GitHubIssueExport.duplicate_key == duplicate_key,
+            col(GitHubIssueExport.issue_url).is_not(None),
+            col(GitHubIssueExport.issue_number).is_not(None),
         )
         return self.session.exec(statement).first() is not None
+
+    def delete_incomplete_export(
+        self,
+        *,
+        project_id: uuid.UUID,
+        repository: str,
+        duplicate_key: str,
+    ) -> int:
+        """Remove stale local reservations that never recorded a GitHub issue."""
+        statement = select(GitHubIssueExport).where(
+            GitHubIssueExport.project_id == project_id,
+            GitHubIssueExport.repository == repository,
+            GitHubIssueExport.duplicate_key == duplicate_key,
+            or_(
+                col(GitHubIssueExport.issue_url).is_(None),
+                col(GitHubIssueExport.issue_number).is_(None),
+            ),
+        )
+        records = list(self.session.exec(statement).all())
+        for record in records:
+            self.session.delete(record)
+        self.session.flush()
+        return len(records)
 
     def create_export(
         self,

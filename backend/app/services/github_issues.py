@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 import re
 import uuid
-from typing import Any
+from typing import Any, Literal
 from urllib.parse import quote
 
 import requests
@@ -31,6 +31,23 @@ GITHUB_SECRET_PATTERN = re.compile(
     r"AKIA[0-9A-Z]{16}"
     r")\b"
 )
+
+GitHubIssueFailureKind = Literal["network_error", "upstream_status"]
+
+
+class GitHubIssueCreationError(HTTPException):
+    """HTTP-facing GitHub create failure with audit-safe classification."""
+
+    def __init__(
+        self,
+        *,
+        failure_kind: GitHubIssueFailureKind,
+        upstream_status_code: int | None = None,
+        detail: str,
+    ) -> None:
+        super().__init__(status_code=502, detail=detail)
+        self.failure_kind = failure_kind
+        self.upstream_status_code = upstream_status_code
 
 
 def build_github_issue_preview_items(
@@ -101,10 +118,14 @@ def create_github_issue(
             allow_redirects=False,
         )
     except requests.RequestException as exc:
-        raise HTTPException(status_code=502, detail="GitHub issue creation failed.") from exc
+        raise GitHubIssueCreationError(
+            failure_kind="network_error",
+            detail="GitHub issue creation failed.",
+        ) from exc
     if response.status_code != 201:
-        raise HTTPException(
-            status_code=502,
+        raise GitHubIssueCreationError(
+            failure_kind="upstream_status",
+            upstream_status_code=response.status_code,
             detail=f"GitHub issue creation failed with status {response.status_code}.",
         )
     response_payload = response.json()

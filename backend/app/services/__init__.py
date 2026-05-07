@@ -17,6 +17,7 @@ from app.services.decisions import (
     build_project_summary_payload,
 )
 from app.services.github_issues import (
+    GitHubIssueCreationError,
     build_github_issue_preview_items,
     create_github_issue,
     github_export_token,
@@ -42,6 +43,7 @@ from app.services.reports import (
 __all__ = [
     "AnalysisService",
     "DecisionDataUnavailableError",
+    "GitHubIssueCreationError",
     "MarkdownProviderSnapshot",
     "MarkdownReportFinding",
     "MarkdownReportPayload",
