@@ -172,3 +172,55 @@ test("evidence: ui-32 responsive screenshots (tablet/mobile)", async ({
     "ui-32-assets-mobile-390.png",
   )
 })
+
+test("evidence: vpw-aud-206 tokenized route screenshots", async ({ page }) => {
+  test.setTimeout(120_000)
+  await page.setViewportSize({ height: 1000, width: 1440 })
+  await login(page)
+
+  await captureRoute(
+    page,
+    "/",
+    async () => {
+      await expect(
+        page
+          .getByRole("heading", { level: 1, name: "Risk Operations" })
+          .first(),
+      ).toBeVisible({ timeout: 15_000 })
+    },
+    "vpw-aud-206-dashboard-1440.png",
+  )
+
+  await captureRoute(
+    page,
+    "/findings",
+    async () => {
+      await expect(
+        page.getByRole("region", { name: "Findings filters" }),
+      ).toBeVisible({ timeout: 15_000 })
+    },
+    "vpw-aud-206-findings-1440.png",
+  )
+
+  await captureRoute(
+    page,
+    "/imports",
+    async () => {
+      await expect(
+        page.getByRole("heading", { name: "Import Wizard" }),
+      ).toBeVisible({ timeout: 15_000 })
+    },
+    "vpw-aud-206-imports-1440.png",
+  )
+
+  await captureRoute(
+    page,
+    "/reports",
+    async () => {
+      await expect(
+        page.getByRole("heading", { level: 1, name: "Evidence Center" }),
+      ).toBeVisible({ timeout: 15_000 })
+    },
+    "vpw-aud-206-reports-1440.png",
+  )
+})
