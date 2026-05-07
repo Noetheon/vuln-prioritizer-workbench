@@ -17,7 +17,7 @@ restore_compose_database() {
     exit 2
   fi
   docker exec -i "$container" sh -c \
-    'PGPASSWORD="${POSTGRES_PASSWORD:-workbench}" pg_restore --clean --if-exists --username="${POSTGRES_USER:-workbench}" --dbname="${POSTGRES_DB:-workbench}"' \
+    ': "${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in the Compose db container.}"; PGPASSWORD="$POSTGRES_PASSWORD" pg_restore --clean --if-exists --username="${POSTGRES_USER:-workbench}" --dbname="${POSTGRES_DB:-workbench}"' \
     < "$BACKUP_DIR/workbench.dump"
 }
 

@@ -15,6 +15,7 @@ Use non-default secrets and exact public origins:
 ENVIRONMENT=production
 SECRET_KEY=<long random value>
 FIRST_SUPERUSER_PASSWORD=<long random value>
+POSTGRES_PASSWORD=<long random value>
 DOMAIN=workbench.example.com
 FRONTEND_HOST=https://workbench.example.com
 VITE_API_URL=
@@ -56,6 +57,34 @@ with `TRAEFIK_APP_ENABLED=true`.
 Do not trust arbitrary forwarded headers from the public internet. Place Traefik
 as the only public entrypoint and keep backend container ports unbound except in
 local override files.
+
+## Compose Volumes And Compatibility
+
+Fresh Compose stacks use Workbench-branded named volumes by default:
+
+```bash
+WORKBENCH_DB_VOLUME=workbench-db-data
+WORKBENCH_IMPORT_UPLOADS_VOLUME=workbench-import-uploads
+WORKBENCH_REPORTS_VOLUME=workbench-reports
+WORKBENCH_PROVIDER_SNAPSHOTS_VOLUME=workbench-provider-snapshots
+WORKBENCH_PROVIDER_CACHE_VOLUME=workbench-provider-cache
+```
+
+Existing deployments created before the volume rename can temporarily point the
+same variables at the historical compatibility names:
+
+```bash
+WORKBENCH_IMPORT_UPLOADS_VOLUME=template-import-uploads
+WORKBENCH_REPORTS_VOLUME=template-reports
+WORKBENCH_PROVIDER_SNAPSHOTS_VOLUME=template-provider-snapshots
+WORKBENCH_PROVIDER_CACHE_VOLUME=template-provider-cache
+```
+
+Use those compatibility names only to attach, back up, or restore existing
+volumes. For a rename migration, back up the old volumes with
+`WORKBENCH_ARTIFACT_MODE=compose`, unset the compatibility overrides, start a
+fresh stack with Workbench-branded volume names, then restore the backup into
+the new stack.
 
 ## Rate Limits And Sessions
 
@@ -136,6 +165,7 @@ scripts/workbench-backup.sh
 Docker Compose named volumes:
 
 ```bash
+POSTGRES_PASSWORD=<password> \
 WORKBENCH_DATABASE_MODE=compose \
 WORKBENCH_ARTIFACT_MODE=compose \
 scripts/workbench-backup.sh
@@ -170,6 +200,7 @@ alembic -c backend/alembic.ini upgrade head
 Docker Compose named volumes:
 
 ```bash
+POSTGRES_PASSWORD=<password> \
 WORKBENCH_DATABASE_MODE=compose \
 WORKBENCH_ARTIFACT_MODE=compose \
 scripts/workbench-restore.sh backups/<backup-dir>

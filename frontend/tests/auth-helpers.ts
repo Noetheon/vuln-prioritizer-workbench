@@ -5,7 +5,7 @@ export const testUserEmail =
 export const testUserPassword =
   process.env.VPW_E2E_PASSWORD ??
   process.env.FIRST_SUPERUSER_PASSWORD ??
-  "changethis"
+  "local-workbench-dev-password"
 
 export async function login(page: Page): Promise<string> {
   const responsePromise = page.waitForResponse(

@@ -5,6 +5,12 @@ BACKEND_TESTS := $(BACKEND_DIR)/tests
 PYTHON_AUDIT_LOCK := $(BACKEND_DIR)/requirements.lock.txt
 COMPOSE := docker compose -f compose.yml -f compose.override.yml
 PRODUCTION_SMOKE_COMPOSE := docker compose -f compose.yml -f compose.production-smoke.yml
+DOCKER_DEMO_SECRET_KEY ?= local-docker-smoke-secret-key
+DOCKER_DEMO_FIRST_SUPERUSER_PASSWORD ?= local-docker-smoke-admin-password
+DOCKER_DEMO_POSTGRES_PASSWORD ?= local-docker-smoke-postgres-password
+PRODUCTION_SMOKE_SECRET_KEY ?= production-smoke-secret-key-change-in-real-deployments
+PRODUCTION_SMOKE_FIRST_SUPERUSER_PASSWORD ?= production-smoke-admin-password
+PRODUCTION_SMOKE_POSTGRES_PASSWORD ?= production-smoke-postgres-password
 
 ATTACK_MAPPING_FILE := data/attack/ctid_kev_enterprise_2025-07-28_attack-16.1_subset.json
 ATTACK_METADATA_FILE := data/attack/attack_techniques_enterprise_16.1_subset.json
@@ -114,6 +120,15 @@ workflow-check:
 
 docker-demo-smoke:
 	@set -e; \
+	export SECRET_KEY="$(DOCKER_DEMO_SECRET_KEY)"; \
+	export FIRST_SUPERUSER_PASSWORD="$(DOCKER_DEMO_FIRST_SUPERUSER_PASSWORD)"; \
+	export POSTGRES_PASSWORD="$(DOCKER_DEMO_POSTGRES_PASSWORD)"; \
+	for port in 8000 5173; do \
+		if ! $(PYTHON) -c "import socket, sys; port=int(sys.argv[1]); sock=socket.socket(); sock.settimeout(0.2); in_use=sock.connect_ex(('127.0.0.1', port)) == 0; sock.close(); sys.exit(1 if in_use else 0)" "$$port"; then \
+			echo "Port $$port is already in use before docker-demo-smoke." >&2; \
+			exit 1; \
+		fi; \
+	done; \
 	on_exit() { status=$$?; if [ "$$status" != "0" ]; then $(COMPOSE) ps || true; $(COMPOSE) logs --no-color || true; fi; $(COMPOSE) down -v --remove-orphans; exit "$$status"; }; \
 	trap on_exit EXIT; \
 	$(COMPOSE) up -d --build backend frontend; \
@@ -154,6 +169,10 @@ docker-demo-smoke:
 
 docker-production-smoke:
 	@set -e; \
+	export SECRET_KEY="$(PRODUCTION_SMOKE_SECRET_KEY)"; \
+	export FIRST_SUPERUSER_PASSWORD="$(PRODUCTION_SMOKE_FIRST_SUPERUSER_PASSWORD)"; \
+	export POSTGRES_PASSWORD="$(PRODUCTION_SMOKE_POSTGRES_PASSWORD)"; \
+	$(PYTHON) -c "import socket, sys; sock=socket.socket(); sock.settimeout(0.2); in_use=sock.connect_ex(('127.0.0.1', 5180)) == 0; sock.close(); sys.exit('Port 5180 is already in use before docker-production-smoke.' if in_use else 0)"; \
 	on_exit() { status=$$?; if [ "$$status" != "0" ]; then $(PRODUCTION_SMOKE_COMPOSE) ps || true; $(PRODUCTION_SMOKE_COMPOSE) logs --no-color || true; fi; $(PRODUCTION_SMOKE_COMPOSE) down -v --remove-orphans; exit "$$status"; }; \
 	trap on_exit EXIT; \
 	$(PRODUCTION_SMOKE_COMPOSE) up -d --build backend frontend; \

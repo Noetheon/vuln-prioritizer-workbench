@@ -14,7 +14,7 @@ backup_compose_database() {
     exit 2
   fi
   docker exec "$container" sh -c \
-    'PGPASSWORD="${POSTGRES_PASSWORD:-workbench}" pg_dump --format=custom --file=- --username="${POSTGRES_USER:-workbench}" --dbname="${POSTGRES_DB:-workbench}"' \
+    ': "${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in the Compose db container.}"; PGPASSWORD="$POSTGRES_PASSWORD" pg_dump --format=custom --file=- --username="${POSTGRES_USER:-workbench}" --dbname="${POSTGRES_DB:-workbench}"' \
     > "$BACKUP_DIR/workbench.dump"
 }
 
