@@ -6,13 +6,11 @@ import re
 import shutil
 import uuid
 from pathlib import Path
-from typing import Any
+from typing import Any, Protocol
 
-from fastapi import HTTPException, Request, UploadFile
-
-from app.core.app_state import workbench_settings as _request_workbench_settings
 from app.core.config import Settings
 from app.importers import UnsupportedInputTypeError, build_importer_registry
+from app.services.import_errors import ImportServiceError
 
 ALLOWED_UPLOAD_SUFFIXES = {
     "cve-list": {".txt", ".csv"},
@@ -40,17 +38,15 @@ ALLOWED_UPLOAD_MIME_HINTS = {
 }
 
 
-def workbench_settings(request: Request) -> Settings:
-    return _request_workbench_settings(request)
+class ReadableUpload(Protocol):
+    """Async readable upload-like stream used at the HTTP boundary."""
 
-
-def template_settings(request: Request) -> Settings:
-    """Backward-compatible alias for older local tests and scripts."""
-    return workbench_settings(request)
+    async def read(self, size: int = -1) -> bytes:
+        raise NotImplementedError
 
 
 async def read_bounded_upload(
-    file: UploadFile,
+    file: ReadableUpload,
     *,
     settings: Settings,
     max_bytes: int | None = None,
@@ -65,7 +61,7 @@ async def read_bounded_upload(
     while chunk := await file.read(1024 * 1024):
         total += len(chunk)
         if total > limit:
-            raise HTTPException(
+            raise ImportServiceError(
                 status_code=413,
                 detail="Upload exceeds configured limit.",
             )
@@ -79,37 +75,37 @@ def validate_aggregate_upload_size(
     payloads: list[bytes | None],
 ) -> None:
     if sum(len(payload) for payload in payloads if payload is not None) > settings.max_upload_bytes:
-        raise HTTPException(
+        raise ImportServiceError(
             status_code=413,
             detail="Upload exceeds configured limit.",
         )
 
 
-def has_optional_upload(file: UploadFile | None) -> bool:
-    return bool(file is not None and file.filename and file.filename.strip())
+def has_optional_upload(filename: str | None) -> bool:
+    return bool(filename and filename.strip())
 
 
-def validate_asset_context_upload(filename: str, file: UploadFile) -> None:
+def validate_asset_context_upload(filename: str, content_type: str | None) -> None:
     if Path(filename).suffix.lower() != ".csv":
-        raise HTTPException(status_code=422, detail="Asset context file must be a CSV.")
-    normalized = (file.content_type or "").split(";", maxsplit=1)[0].strip().lower()
+        raise ImportServiceError(status_code=422, detail="Asset context file must be a CSV.")
+    normalized = (content_type or "").split(";", maxsplit=1)[0].strip().lower()
     if normalized in {"", "application/octet-stream"}:
         return
     if normalized not in {"text/csv", "text/plain", "application/vnd.ms-excel"}:
-        raise HTTPException(
+        raise ImportServiceError(
             status_code=422,
             detail="Asset context content type must be text/csv.",
         )
 
 
-def validate_vex_upload(filename: str, file: UploadFile) -> None:
+def validate_vex_upload(filename: str, content_type: str | None) -> None:
     if Path(filename).suffix.lower() != ".json":
-        raise HTTPException(status_code=422, detail="VEX file must be a JSON document.")
-    normalized = (file.content_type or "").split(";", maxsplit=1)[0].strip().lower()
+        raise ImportServiceError(status_code=422, detail="VEX file must be a JSON document.")
+    normalized = (content_type or "").split(";", maxsplit=1)[0].strip().lower()
     if normalized in {"", "application/octet-stream"}:
         return
     if normalized not in {"application/json", "text/json"}:
-        raise HTTPException(
+        raise ImportServiceError(
             status_code=422,
             detail="VEX content type must be application/json.",
         )
@@ -173,19 +169,19 @@ def upload_storage_ref(
 
 
 def store_upload(
-    request: Request,
+    settings: Settings,
     *,
     project_id: uuid.UUID,
     run_id: uuid.UUID,
     filename: str,
     content: bytes,
 ) -> Path:
-    upload_root = workbench_settings(request).import_upload_dir_path.resolve(strict=False)
+    upload_root = settings.import_upload_dir_path.resolve(strict=False)
     target_dir = upload_root / str(project_id) / str(run_id)
     target_dir.mkdir(parents=True, exist_ok=True)
     target_path = (target_dir / filename).resolve(strict=False)
     if not target_path.is_relative_to(upload_root):
-        raise HTTPException(status_code=422, detail="Upload path is not allowed.")
+        raise ImportServiceError(status_code=422, detail="Upload path is not allowed.")
     try:
         with target_path.open("wb") as output:
             output.write(content)
@@ -238,13 +234,16 @@ def validate_input_type(input_type: str) -> None:
     try:
         build_importer_registry().get(input_type)
     except UnsupportedInputTypeError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
+        raise ImportServiceError(status_code=422, detail=str(exc)) from exc
 
 
 def validate_upload_suffix(filename: str, *, input_type: str) -> None:
     suffix = Path(filename).suffix.lower()
     if suffix not in ALLOWED_UPLOAD_SUFFIXES.get(input_type, set()):
-        raise HTTPException(status_code=422, detail="File extension does not match input type.")
+        raise ImportServiceError(
+            status_code=422,
+            detail="File extension does not match input type.",
+        )
 
 
 def validate_mime_hint(content_type: str | None, *, input_type: str) -> None:
@@ -252,16 +251,16 @@ def validate_mime_hint(content_type: str | None, *, input_type: str) -> None:
     if normalized in {"", "application/octet-stream"}:
         return
     if normalized not in ALLOWED_UPLOAD_MIME_HINTS.get(input_type, set()):
-        raise HTTPException(
+        raise ImportServiceError(
             status_code=422, detail="Upload content type does not match input type."
         )
 
 
 def reject_unsafe_upload_filename(filename: str) -> None:
     if "/" in filename or "\\" in filename or Path(filename).name != filename:
-        raise HTTPException(status_code=422, detail="Upload filename is not allowed.")
+        raise ImportServiceError(status_code=422, detail="Upload filename is not allowed.")
     if any(ord(character) < 32 for character in filename):
-        raise HTTPException(status_code=422, detail="Upload filename is not allowed.")
+        raise ImportServiceError(status_code=422, detail="Upload filename is not allowed.")
 
 
 def sanitize_filename(filename: str) -> str:
@@ -273,7 +272,7 @@ def sanitize_filename(filename: str) -> str:
 def normalize_input_type(input_type: str) -> str:
     normalized = input_type.strip().lower()
     if not normalized:
-        raise HTTPException(status_code=422, detail="input_type is required.")
+        raise ImportServiceError(status_code=422, detail="input_type is required.")
     return normalized
 
 
