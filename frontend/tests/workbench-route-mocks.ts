@@ -40,6 +40,7 @@ type MockFinding = {
 
 type RouteWorkbenchShellOptions = {
   findings?: MockFinding[]
+  findingsDelayMs?: number
   onFindingsRequest?: (url: URL) => void
   projects?: MockProject[]
 }
@@ -88,6 +89,7 @@ export async function routeWorkbenchShell(
 ) {
   const projects = options.projects ?? []
   const findings = options.findings ?? []
+  const findingsDelayMs = options.findingsDelayMs ?? 0
   const onFindingsRequest = options.onFindingsRequest
   await page.addInitScript(() => {
     // biome-ignore lint/suspicious/noDocumentCookie: Playwright sets a mock readable CSRF cookie before app boot.
@@ -266,10 +268,14 @@ export async function routeWorkbenchShell(
         }),
       }),
     )
-    await page.route(`**/api/v1/projects/${project.id}/findings/?*`, (route) =>
-      {
+    await page.route(
+      `**/api/v1/projects/${project.id}/findings/?*`,
+      async (route) => {
         const url = new URL(route.request().url())
         onFindingsRequest?.(url)
+        if (findingsDelayMs > 0) {
+          await new Promise((resolve) => setTimeout(resolve, findingsDelayMs))
+        }
         const { data, count } = mockFindingsPage(findings, url)
         return route.fulfill({
           contentType: "application/json",
