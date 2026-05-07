@@ -138,7 +138,7 @@
 .finding-provider-reasons > span,
 .finding-evidence-grid [data-slot="card-description"],
 .finding-detection-note span {
-  color: #64748b;
+  color: #475569;
   font-size: 0.75rem;
   font-weight: 850;
   letter-spacing: 0.02em;
