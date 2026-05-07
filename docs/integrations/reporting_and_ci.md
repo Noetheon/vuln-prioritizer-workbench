@@ -131,6 +131,16 @@ Current mapping:
 
 - Each result uses a CVE-addressable `ruleId` such as
   `vuln-prioritizer/cve-2024-3094`.
+- CLI `analyze`, CLI `report workbench --format sarif`, and Workbench API SARIF
+  reports share the `vuln-prioritizer/v1` fingerprint contract. Workbench
+  reports also include the legacy `vuln-prioritizer-workbench/v1` alias with
+  the same value for compatibility.
+- The fingerprint material is the CVE ID, canonical artifact or target identity
+  (path first, then `target_kind:target_ref`), canonical component identity
+  (Package URL preferred when present, otherwise component label), and canonical
+  asset identity. It intentionally excludes priority, score, KEV/EPSS/CVSS
+  values, governance state, run IDs, report IDs, timestamps, and Workbench
+  persistence `dedup_key` values.
 - Each result declares `properties.cve`, `properties.references`, `cve_url`,
   priority, EPSS/CVSS/KEV flags, data-quality flags, and governance context.
 - Each declared rule includes `defaultConfiguration.level`,
