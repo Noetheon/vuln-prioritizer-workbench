@@ -3,11 +3,18 @@
 from __future__ import annotations
 
 import csv
-import hashlib
 import json
 from io import StringIO
 from typing import Any
 
+from vuln_prioritizer.sarif_contract import (
+    sarif_artifact_uri,
+    sarif_component_identities,
+    sarif_level,
+    sarif_partial_fingerprints,
+    sarif_rule_id,
+    sarif_security_severity,
+)
 from vuln_prioritizer.sarif_references import dedupe_defensive_http_urls
 
 
@@ -108,12 +115,6 @@ def generate_findings_csv(report_payload: dict[str, Any]) -> str:
 
 def generate_workbench_sarif(report_payload: dict[str, Any]) -> str:
     """Render SARIF from a stored Workbench analysis payload."""
-    level_map = {
-        "Critical": "error",
-        "High": "error",
-        "Medium": "warning",
-        "Low": "note",
-    }
     raw_metadata = report_payload.get("metadata")
     metadata: dict[str, Any] = raw_metadata if isinstance(raw_metadata, dict) else {}
     input_path = str(
@@ -130,13 +131,18 @@ def generate_workbench_sarif(report_payload: dict[str, Any]) -> str:
             finding.get("provenance") if isinstance(finding.get("provenance"), dict) else {}
         )
         paths = provenance.get("affected_paths") if isinstance(provenance, dict) else []
-        uri = str(paths[0]) if isinstance(paths, list) and paths else input_path
+        targets = provenance.get("targets") if isinstance(provenance, dict) else []
+        uri = sarif_artifact_uri(
+            affected_paths=paths if isinstance(paths, list) else [],
+            target_refs=targets if isinstance(targets, list) else [],
+            fallback=input_path,
+        )
         defensive_contexts = [
             item for item in finding.get("defensive_contexts", []) if isinstance(item, dict)
         ]
         decision_guidance = _decision_guidance(finding)
         references = _workbench_sarif_reference_urls(cve_id, finding, defensive_contexts)
-        rule_id = _workbench_sarif_rule_id(cve_id)
+        rule_id = sarif_rule_id(cve_id)
         rules_by_id.setdefault(
             rule_id,
             _workbench_sarif_rule(cve_id, priority, finding, references=references),
@@ -144,7 +150,7 @@ def generate_workbench_sarif(report_payload: dict[str, Any]) -> str:
         results.append(
             {
                 "ruleId": rule_id,
-                "level": level_map.get(priority, "note"),
+                "level": sarif_level(priority),
                 "message": {
                     "text": (
                         f"{cve_id}: {priority} priority based on CVSS/EPSS/KEV, "
@@ -182,13 +188,11 @@ def generate_workbench_sarif(report_payload: dict[str, Any]) -> str:
                     "decision_statement": decision_guidance.get("decision_statement"),
                     "business_impact": decision_guidance.get("business_impact"),
                 },
-                "partialFingerprints": {
-                    "vuln-prioritizer-workbench/v1": _workbench_sarif_fingerprint(
-                        cve_id=cve_id,
-                        uri=uri,
-                        finding=finding,
-                    ),
-                },
+                "partialFingerprints": _workbench_sarif_partial_fingerprints(
+                    cve_id=cve_id,
+                    uri=uri,
+                    finding=finding,
+                ),
                 "locations": [{"physicalLocation": {"artifactLocation": {"uri": uri}}}],
             }
         )
@@ -211,10 +215,6 @@ def generate_workbench_sarif(report_payload: dict[str, Any]) -> str:
     return json.dumps(payload, indent=2, sort_keys=True)
 
 
-def _workbench_sarif_rule_id(cve_id: str) -> str:
-    return f"vuln-prioritizer/{cve_id.lower()}"
-
-
 def _workbench_sarif_rule(
     cve_id: str,
     priority: str,
@@ -222,14 +222,8 @@ def _workbench_sarif_rule(
     *,
     references: list[str],
 ) -> dict[str, Any]:
-    level_map = {
-        "Critical": "error",
-        "High": "error",
-        "Medium": "warning",
-        "Low": "note",
-    }
     return {
-        "id": _workbench_sarif_rule_id(cve_id),
+        "id": sarif_rule_id(cve_id),
         "name": f"{cve_id} prioritized vulnerability",
         "shortDescription": {"text": f"{cve_id}: {priority} Workbench priority."},
         "fullDescription": {
@@ -238,7 +232,7 @@ def _workbench_sarif_rule(
                 "Workbench context for assets, VEX, waivers, remediation, and ATT&CK."
             )
         },
-        "defaultConfiguration": {"level": level_map.get(priority, "note")},
+        "defaultConfiguration": {"level": sarif_level(priority)},
         "helpUri": references[0],
         "properties": {
             "cve": cve_id,
@@ -253,14 +247,10 @@ def _workbench_sarif_rule(
 
 def _workbench_sarif_security_severity(priority: str, finding: dict[str, Any]) -> str:
     cvss_score = finding.get("cvss_base_score")
-    if isinstance(cvss_score, int | float):
-        return f"{min(max(float(cvss_score), 0.0), 10.0):.1f}"
-    return {
-        "Critical": "9.0",
-        "High": "7.0",
-        "Medium": "5.0",
-        "Low": "3.0",
-    }.get(priority, "0.0")
+    return sarif_security_severity(
+        priority=priority,
+        cvss_base_score=cvss_score if isinstance(cvss_score, int | float) else None,
+    )
 
 
 def _workbench_sarif_reference_urls(
@@ -291,26 +281,51 @@ def _dedupe_strings(values: list[str]) -> list[str]:
     return dedupe_defensive_http_urls(values)
 
 
-def _workbench_sarif_fingerprint(
+def _workbench_sarif_partial_fingerprints(
     *,
     cve_id: str,
     uri: str,
     finding: dict[str, Any],
-) -> str:
+) -> dict[str, str]:
     provenance = finding.get("provenance") if isinstance(finding.get("provenance"), dict) else {}
     components = provenance.get("components") if isinstance(provenance, dict) else []
     assets = provenance.get("asset_ids") if isinstance(provenance, dict) else []
-    identity = "|".join(
-        [
-            cve_id,
-            uri,
-            ",".join(str(item) for item in components if item)
-            if isinstance(components, list)
-            else "",
-            ",".join(str(item) for item in assets if item) if isinstance(assets, list) else "",
-        ]
+    return sarif_partial_fingerprints(
+        cve_id=cve_id,
+        artifact_uri=uri,
+        components=_workbench_sarif_component_identities(
+            finding=finding,
+            provenance_components=components if isinstance(components, list) else [],
+        ),
+        asset_ids=assets if isinstance(assets, list) else [],
+        include_workbench_alias=True,
     )
-    return hashlib.sha256(identity.encode("utf-8")).hexdigest()
+
+
+def _workbench_sarif_component_identities(
+    *,
+    finding: dict[str, Any],
+    provenance_components: list[Any],
+) -> list[str]:
+    remediation = finding.get("remediation")
+    remediation_components = remediation.get("components") if isinstance(remediation, dict) else []
+    purls: list[Any] = []
+    if isinstance(remediation_components, list):
+        purls.extend(
+            component.get("purl")
+            for component in remediation_components
+            if isinstance(component, dict)
+        )
+    provenance = finding.get("provenance") if isinstance(finding.get("provenance"), dict) else {}
+    occurrences = provenance.get("occurrences") if isinstance(provenance, dict) else []
+    if isinstance(occurrences, list):
+        purls.extend(
+            occurrence.get("purl") for occurrence in occurrences if isinstance(occurrence, dict)
+        )
+    return sarif_component_identities(
+        component_purls=purls,
+        components=provenance_components,
+    )
 
 
 def _csv_safe_cell(value: object) -> str:

@@ -2,12 +2,21 @@
 
 from __future__ import annotations
 
-import hashlib
 from datetime import datetime
 from typing import Any
 
 from app.services.report_contracts import ANALYSIS_RESULT_SCHEMA_VERSION
 from app.services.report_models import MarkdownReportFinding, MarkdownReportPayload
+from vuln_prioritizer.sarif_contract import (
+    sarif_artifact_uri,
+    sarif_component_identities,
+    sarif_level,
+    sarif_partial_fingerprints,
+    sarif_priority_label,
+    sarif_rule_id,
+    sarif_security_severity,
+    sarif_target_identity,
+)
 from vuln_prioritizer.sarif_references import dedupe_defensive_http_urls
 
 
@@ -16,7 +25,7 @@ def render_sarif_report(payload: MarkdownReportPayload) -> dict[str, Any]:
     rules_by_id: dict[str, dict[str, Any]] = {}
     results: list[dict[str, Any]] = []
     for finding in payload.findings:
-        rule_id = _sarif_rule_id(finding.cve_id)
+        rule_id = sarif_rule_id(finding.cve_id)
         references = _sarif_references(finding)
         rules_by_id.setdefault(rule_id, _sarif_rule(finding, references=references))
         results.append(_sarif_result(finding, references=references))
@@ -57,8 +66,8 @@ def _sarif_result(
 ) -> dict[str, Any]:
     location_uri = _sarif_location_uri(finding)
     return {
-        "ruleId": _sarif_rule_id(finding.cve_id),
-        "level": _sarif_level(finding.priority),
+        "ruleId": sarif_rule_id(finding.cve_id),
+        "level": sarif_level(finding.priority),
         "message": {
             "text": (
                 f"{finding.cve_id}: {_priority_label(finding.priority)} priority "
@@ -81,12 +90,13 @@ def _sarif_result(
                 ],
             }
         ],
-        "partialFingerprints": {
-            "vuln-prioritizer-workbench/v1": _sarif_fingerprint(
-                finding=finding,
-                uri=location_uri,
-            )
-        },
+        "partialFingerprints": sarif_partial_fingerprints(
+            cve_id=finding.cve_id,
+            artifact_uri=location_uri,
+            components=_sarif_components(finding),
+            asset_ids=_sarif_asset_ids(finding),
+            include_workbench_alias=True,
+        ),
         "properties": {
             "cve": finding.cve_id,
             "priority": _priority_label(finding.priority),
@@ -119,7 +129,7 @@ def _sarif_rule(
 ) -> dict[str, Any]:
     priority = _priority_label(finding.priority)
     return {
-        "id": _sarif_rule_id(finding.cve_id),
+        "id": sarif_rule_id(finding.cve_id),
         "name": f"{finding.cve_id} prioritized vulnerability",
         "shortDescription": {"text": f"{finding.cve_id}: {priority} Workbench priority."},
         "fullDescription": {
@@ -128,41 +138,20 @@ def _sarif_rule(
                 "and optional Workbench governance layers."
             )
         },
-        "defaultConfiguration": {"level": _sarif_level(finding.priority)},
+        "defaultConfiguration": {"level": sarif_level(finding.priority)},
         "helpUri": references[0],
         "properties": {
             "cve": finding.cve_id,
             "priority": priority,
             "precision": "very-high",
-            "security-severity": _sarif_security_severity(finding),
+            "security-severity": sarif_security_severity(
+                priority=finding.priority,
+                cvss_base_score=finding.cvss_base_score,
+            ),
             "tags": ["security", "external/cve", f"priority/{priority.lower()}"],
             "references": references,
         },
     }
-
-
-def _sarif_rule_id(cve_id: str) -> str:
-    return f"vuln-prioritizer/{cve_id.lower()}"
-
-
-def _sarif_level(priority: str) -> str:
-    return {
-        "Critical": "error",
-        "High": "error",
-        "Medium": "warning",
-        "Low": "note",
-    }[_priority_label(priority)]
-
-
-def _sarif_security_severity(finding: MarkdownReportFinding) -> str:
-    if finding.cvss_base_score is not None:
-        return f"{min(max(float(finding.cvss_base_score), 0.0), 10.0):.1f}"
-    return {
-        "Critical": "9.0",
-        "High": "7.0",
-        "Medium": "5.0",
-        "Low": "3.0",
-    }[_priority_label(finding.priority)]
 
 
 def _sarif_references(finding: MarkdownReportFinding) -> list[str]:
@@ -199,13 +188,25 @@ def _dedupe_http_urls(values: list[str]) -> list[str]:
 
 
 def _sarif_location_uri(finding: MarkdownReportFinding) -> str:
+    affected_paths: list[str] = []
+    target_refs: list[str] = []
     for occurrence in finding.occurrences:
         evidence = _dict_value(occurrence.get("evidence"))
-        for key in ("path", "file", "target_ref", "artifact_uri"):
+        for key in ("path", "file", "artifact_uri"):
             value = evidence.get(key) or occurrence.get(key)
             if isinstance(value, str) and value.strip():
-                return _sarif_safe_uri(value)
-    return _sarif_safe_uri(finding.component_purl or finding.component or finding.cve_id)
+                affected_paths.append(_sarif_safe_uri(value))
+        target_identity = sarif_target_identity(
+            evidence.get("target_kind") or occurrence.get("target_kind"),
+            evidence.get("target_ref") or occurrence.get("target_ref"),
+        )
+        if target_identity:
+            target_refs.append(_sarif_safe_uri(target_identity))
+    return sarif_artifact_uri(
+        affected_paths=affected_paths,
+        target_refs=target_refs,
+        fallback=_sarif_safe_uri(finding.component_purl or finding.component or finding.cve_id),
+    )
 
 
 def _sarif_safe_uri(value: str) -> str:
@@ -224,43 +225,25 @@ def _sarif_logical_location(finding: MarkdownReportFinding) -> str:
     return " / ".join(str(part) for part in parts if part) or finding.cve_id
 
 
-def _sarif_fingerprint(*, finding: MarkdownReportFinding, uri: str) -> str:
-    occurrence_parts: list[str] = []
+def _sarif_components(finding: MarkdownReportFinding) -> list[str]:
+    occurrence_purls: list[str] = []
     for occurrence in finding.occurrences:
         evidence = _dict_value(occurrence.get("evidence"))
-        occurrence_parts.append(
-            "|".join(
-                str(value or "")
-                for value in (
-                    occurrence.get("source"),
-                    occurrence.get("scanner"),
-                    occurrence.get("raw_reference"),
-                    occurrence.get("fix_version"),
-                    evidence.get("target_ref"),
-                    evidence.get("path"),
-                )
-            )
-        )
-    identity = "|".join(
-        [
-            finding.cve_id,
-            finding.asset_key or finding.asset or "",
-            finding.component_purl or finding.component or "",
-            uri,
-            "||".join(occurrence_parts),
-        ]
+        purl = evidence.get("purl") or occurrence.get("purl")
+        if isinstance(purl, str) and purl.strip():
+            occurrence_purls.append(purl)
+    return sarif_component_identities(
+        component_purls=[finding.component_purl, *occurrence_purls],
+        components=[finding.component],
     )
-    return hashlib.sha256(identity.encode("utf-8")).hexdigest()
+
+
+def _sarif_asset_ids(finding: MarkdownReportFinding) -> list[str]:
+    return [value for value in [finding.asset_key or finding.asset] if value]
 
 
 def _priority_label(value: str) -> str:
-    normalized = value.split(".", maxsplit=1)[-1].strip().lower()
-    return {
-        "critical": "Critical",
-        "high": "High",
-        "medium": "Medium",
-        "low": "Low",
-    }.get(normalized, "Low")
+    return sarif_priority_label(value)
 
 
 def _boolish_signal(finding: MarkdownReportFinding, key: str) -> bool:

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import hashlib
 import json
 from collections import Counter
 from typing import Any
@@ -35,6 +34,14 @@ from vuln_prioritizer.models import (
     StateWaiverReport,
 )
 from vuln_prioritizer.reporting_format import _priority_display_label, normalize_whitespace
+from vuln_prioritizer.sarif_contract import (
+    sarif_artifact_uri,
+    sarif_component_identities,
+    sarif_level,
+    sarif_partial_fingerprints,
+    sarif_rule_id,
+    sarif_security_severity,
+)
 from vuln_prioritizer.sarif_references import dedupe_defensive_http_urls
 from vuln_prioritizer.services.baseline_comparison import (
     build_cvss_baseline_comparison_payload,
@@ -522,19 +529,13 @@ def generate_sarif_report(
     context: AnalysisContext,
 ) -> str:
     """Render a SARIF report for analyze output."""
-    level_map = {
-        "Critical": "error",
-        "High": "error",
-        "Medium": "warning",
-        "Low": "note",
-    }
     results: list[dict[str, Any]] = []
     rules_by_id: dict[str, dict[str, Any]] = {}
     for finding in findings:
-        artifact_uri = (
-            finding.provenance.affected_paths[0]
-            if finding.provenance.affected_paths
-            else context.input_path
+        artifact_uri = sarif_artifact_uri(
+            affected_paths=finding.provenance.affected_paths,
+            target_refs=finding.provenance.targets,
+            fallback=context.input_path,
         )
         message = (
             f"{finding.cve_id}: {finding.priority_label} priority "
@@ -549,12 +550,12 @@ def generate_sarif_report(
             ),
             defensive_contexts=finding.defensive_contexts,
         )
-        rule_id = _sarif_rule_id(finding.cve_id)
+        rule_id = sarif_rule_id(finding.cve_id)
         rules_by_id.setdefault(rule_id, _sarif_rule(finding, references=references))
         results.append(
             {
                 "ruleId": rule_id,
-                "level": level_map.get(finding.priority_label, "note"),
+                "level": sarif_level(finding.priority_label),
                 "message": {"text": message},
                 "properties": {
                     "cve": finding.cve_id,
@@ -619,9 +620,12 @@ def generate_sarif_report(
                         else None
                     ),
                 },
-                "partialFingerprints": {
-                    "vuln-prioritizer/v1": _sarif_fingerprint(finding, artifact_uri),
-                },
+                "partialFingerprints": sarif_partial_fingerprints(
+                    cve_id=finding.cve_id,
+                    artifact_uri=artifact_uri,
+                    components=_sarif_component_identities(finding),
+                    asset_ids=finding.provenance.asset_ids,
+                ),
                 "locations": [{"physicalLocation": {"artifactLocation": {"uri": artifact_uri}}}],
             }
         )
@@ -644,20 +648,10 @@ def generate_sarif_report(
     return json.dumps(payload, indent=2, sort_keys=True)
 
 
-def _sarif_rule_id(cve_id: str) -> str:
-    return f"vuln-prioritizer/{cve_id.lower()}"
-
-
 def _sarif_rule(finding: PrioritizedFinding, *, references: list[str]) -> dict[str, Any]:
-    level_map = {
-        "Critical": "error",
-        "High": "error",
-        "Medium": "warning",
-        "Low": "note",
-    }
     priority = finding.priority_label
     return {
-        "id": _sarif_rule_id(finding.cve_id),
+        "id": sarif_rule_id(finding.cve_id),
         "name": f"{finding.cve_id} prioritized vulnerability",
         "shortDescription": {"text": f"{finding.cve_id}: {priority} priority."},
         "fullDescription": {
@@ -667,7 +661,7 @@ def _sarif_rule(finding: PrioritizedFinding, *, references: list[str]) -> dict[s
                 "remediation, and ATT&CK mapping provenance."
             )
         },
-        "defaultConfiguration": {"level": level_map.get(priority, "note")},
+        "defaultConfiguration": {"level": sarif_level(priority)},
         "helpUri": references[0],
         "help": {
             "text": (
@@ -680,22 +674,14 @@ def _sarif_rule(finding: PrioritizedFinding, *, references: list[str]) -> dict[s
             "cve": finding.cve_id,
             "priority": priority,
             "precision": "very-high",
-            "security-severity": _sarif_security_severity(finding),
+            "security-severity": sarif_security_severity(
+                priority=priority,
+                cvss_base_score=finding.cvss_base_score,
+            ),
             "tags": ["security", "external/cve", f"priority/{priority.lower()}"],
             "references": references,
         },
     }
-
-
-def _sarif_security_severity(finding: PrioritizedFinding) -> str:
-    if finding.cvss_base_score is not None:
-        return f"{min(max(finding.cvss_base_score, 0.0), 10.0):.1f}"
-    return {
-        "Critical": "9.0",
-        "High": "7.0",
-        "Medium": "5.0",
-        "Low": "3.0",
-    }.get(finding.priority_label, "0.0")
 
 
 def _sarif_reference_urls(
@@ -714,17 +700,14 @@ def _sarif_reference_urls(
     return _dedupe_strings(urls)
 
 
+def _sarif_component_identities(finding: PrioritizedFinding) -> list[str]:
+    return sarif_component_identities(
+        component_purls=[
+            component.purl for component in finding.remediation.components if component.purl
+        ],
+        components=finding.provenance.components,
+    )
+
+
 def _dedupe_strings(values: list[str]) -> list[str]:
     return dedupe_defensive_http_urls(values)
-
-
-def _sarif_fingerprint(finding: PrioritizedFinding, artifact_uri: str | None) -> str:
-    identity = "|".join(
-        [
-            finding.cve_id,
-            artifact_uri or "",
-            ",".join(finding.provenance.components),
-            ",".join(finding.provenance.asset_ids),
-        ]
-    )
-    return hashlib.sha256(identity.encode("utf-8")).hexdigest()
