@@ -7,6 +7,7 @@ from pathlib import Path
 from _cli_helpers import install_fake_providers as _install_fake_providers
 from typer.testing import CliRunner
 
+import vuln_prioritizer.commands.state as state_command_module
 import vuln_prioritizer.state_store as state_store_module
 from vuln_prioritizer.cli import app
 
@@ -152,6 +153,69 @@ def test_cli_state_rejects_invalid_query_inputs(tmp_path: Path) -> None:
     assert "'not-a-cve' is not a valid CVE identifier." in invalid_cve.stdout
     assert empty_service.exit_code == 2
     assert "--service must not be empty." in empty_service.stdout
+
+
+def test_cli_state_commands_surface_store_errors(monkeypatch, tmp_path: Path) -> None:
+    class FailingStore:
+        def initialize(self) -> None:
+            raise ValueError("init failed")
+
+        def import_snapshot(self, **_kwargs: object) -> dict[str, object]:
+            raise ValueError("import failed")
+
+        def cve_history(self, **_kwargs: object) -> list[object]:
+            raise ValueError("history failed")
+
+        def waiver_entries(self, **_kwargs: object) -> list[object]:
+            raise ValueError("waivers failed")
+
+        def top_services(self, **_kwargs: object) -> list[object]:
+            raise ValueError("top services failed")
+
+        def trends(self, **_kwargs: object) -> list[object]:
+            raise ValueError("trends failed")
+
+        def service_history(self, **_kwargs: object) -> list[object]:
+            raise ValueError("service history failed")
+
+    monkeypatch.setattr(
+        state_command_module,
+        "state_store_or_exit",
+        lambda _db, *, expect_existing: FailingStore(),
+    )
+    db_path = tmp_path / "state.db"
+    snapshot_file = _write_snapshot_file(
+        tmp_path,
+        "snapshot.json",
+        _snapshot_payload(
+            "2026-04-10T09:00:00+00:00",
+            [_finding("CVE-2024-1001", priority_label="High", priority_rank=2)],
+        ),
+    )
+
+    commands = [
+        (["state", "init", "--db", str(db_path)], "init failed"),
+        (
+            ["state", "import-snapshot", "--db", str(db_path), "--input", str(snapshot_file)],
+            "import failed",
+        ),
+        (
+            ["state", "history", "--db", str(db_path), "--cve", "CVE-2024-1001"],
+            "history failed",
+        ),
+        (["state", "waivers", "--db", str(db_path)], "waivers failed"),
+        (["state", "top-services", "--db", str(db_path)], "top services failed"),
+        (["state", "trends", "--db", str(db_path)], "trends failed"),
+        (
+            ["state", "service-history", "--db", str(db_path), "--service", "payments"],
+            "service history failed",
+        ),
+    ]
+    for command, message in commands:
+        result = runner.invoke(app, command)
+
+        assert result.exit_code == 2
+        assert message in result.stdout
 
 
 def test_cli_state_import_snapshot_reports_duplicate_imports(tmp_path: Path) -> None:

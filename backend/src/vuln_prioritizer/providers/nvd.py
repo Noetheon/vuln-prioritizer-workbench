@@ -258,7 +258,11 @@ class NvdProvider:
             if not url:
                 continue
             references.append(url)
-            tags = [str(tag).strip() for tag in reference.get("tags") or [] if str(tag).strip()]
+            tags = [
+                str(tag).strip()
+                for tag in reference.get("tags") or []
+                if tag is not None and str(tag).strip()
+            ]
             if tags:
                 reference_tags[url] = tags
 

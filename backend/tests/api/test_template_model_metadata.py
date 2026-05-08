@@ -4,6 +4,7 @@ import importlib
 import json
 from pathlib import Path
 
+import pytest
 from alembic import command
 from alembic.autogenerate import compare_metadata
 from alembic.config import Config
@@ -11,7 +12,12 @@ from alembic.migration import MigrationContext
 from sqlalchemy import create_engine, inspect, text
 from sqlmodel import SQLModel
 
-from app.core.migration_bootstrap import stamp_legacy_create_all_database
+from app.core.migration_bootstrap import (
+    ALEMBIC_HEAD,
+    _connect_args,
+    _legacy_revision_for_tables,
+    stamp_legacy_create_all_database,
+)
 
 PUBLIC_MODEL_NAMES = (
     "Token",
@@ -34,6 +40,15 @@ PUBLIC_MODEL_NAMES = (
     "ProjectsPublic",
     "WorkbenchStatus",
 )
+
+
+class _InspectorStub:
+    def __init__(self, api_token_columns: set[str] | None = None) -> None:
+        self.api_token_columns = api_token_columns or set()
+
+    def get_columns(self, table_name: str) -> list[dict[str, str]]:
+        assert table_name == "api_token"
+        return [{"name": column_name} for column_name in sorted(self.api_token_columns)]
 
 
 def test_app_models_remains_public_aggregator_for_modular_models() -> None:
@@ -76,6 +91,63 @@ def test_template_alembic_head_matches_model_metadata(tmp_path: Path) -> None:
         engine.dispose()
 
     assert diffs == []
+
+
+@pytest.mark.parametrize(
+    ("table_names", "api_token_columns", "expected_revision"),
+    [
+        ({"api_token", "github_issue_export"}, set(), "20260430_0009"),
+        (
+            {"api_token", "github_issue_export", "auth_session", "audit_event"},
+            {"project_id"},
+            ALEMBIC_HEAD,
+        ),
+        ({"api_token", "github_issue_export"}, {"project_id"}, "20260505_0010"),
+        ({"api_token"}, set(), "20260430_0008"),
+        ({"api_token"}, {"project_id"}, None),
+        ({"attack_stix_snapshot"}, set(), "20260430_0007"),
+        ({"waiver"}, set(), "20260430_0006"),
+        ({"finding_attack_context"}, set(), "20260429_0005"),
+        ({"report"}, set(), "20260429_0004"),
+        ({"analysis_run"}, set(), "20260428_0003"),
+        ({"finding"}, set(), "20260428_0002"),
+        ({"project", "user"}, set(), "20260428_0001"),
+        ({"project"}, set(), None),
+    ],
+)
+def test_template_migration_bootstrap_identifies_legacy_revision_from_schema_markers(
+    table_names: set[str],
+    api_token_columns: set[str],
+    expected_revision: str | None,
+) -> None:
+    assert (
+        _legacy_revision_for_tables(_InspectorStub(api_token_columns), table_names)
+        == expected_revision
+    )
+
+
+def test_template_migration_bootstrap_connect_args_are_driver_specific() -> None:
+    assert _connect_args("sqlite:///./workbench.db") == {"check_same_thread": False}
+    assert _connect_args("postgresql+psycopg://workbench:secret@db/app") == {}
+
+
+def test_template_migration_bootstrap_ignores_empty_and_already_versioned_databases(
+    tmp_path: Path,
+) -> None:
+    empty_database_url = f"sqlite:///{tmp_path / 'empty.db'}"
+
+    assert stamp_legacy_create_all_database(database_url=empty_database_url) is None
+
+    versioned_database_url = f"sqlite:///{tmp_path / 'versioned.db'}"
+    engine = create_engine(versioned_database_url)
+    try:
+        with engine.begin() as connection:
+            connection.execute(
+                text("CREATE TABLE alembic_version (version_num VARCHAR(32) NOT NULL)")
+            )
+        assert stamp_legacy_create_all_database(database_url=versioned_database_url) is None
+    finally:
+        engine.dispose()
 
 
 def test_template_migration_bootstrap_stamps_legacy_create_all_database(

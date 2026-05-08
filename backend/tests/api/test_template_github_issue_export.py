@@ -6,7 +6,9 @@ from uuid import UUID
 
 import pytest
 import requests
+from fastapi import HTTPException
 from fastapi.testclient import TestClient
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, select
 from utils.template_workbench import (
     TemplateApiEnv,
@@ -494,6 +496,209 @@ def test_template_github_issue_export_uses_report_scope(
     assert allowed.json()["count"] == 1
     assert denied.status_code == 403
     assert "report scope" in denied.text
+
+
+def test_template_github_issue_preview_audits_missing_selected_finding(
+    template_api_env: TemplateApiEnv,
+) -> None:
+    client = template_api_env.client
+    headers = auth_headers(client)
+    project = create_project_via_api(client, headers)
+
+    response = client.post(
+        f"/api/v1/projects/{project['id']}/github/issues/preview",
+        headers=headers,
+        json={"finding_ids": ["11111111-1111-1111-1111-111111111111"]},
+    )
+
+    assert response.status_code == 404
+    failure_event = _audit_payloads(template_api_env, action="github_issue.preview")[-1]
+    assert failure_event["status"] == "failure"
+    assert failure_event["detail"]["failure_kind"] == "http_404"
+    assert failure_event["detail"]["http_status_code"] == 404
+    assert failure_event["detail"]["count"] == 0
+
+
+def test_template_github_issue_export_audits_selection_failure(
+    template_api_env: TemplateApiEnv,
+) -> None:
+    client = template_api_env.client
+    headers = auth_headers(client)
+    project = create_project_via_api(client, headers)
+
+    response = client.post(
+        f"/api/v1/projects/{project['id']}/github/issues/export",
+        headers=headers,
+        json={
+            "repository": "acme/workbench-triage",
+            "finding_ids": ["22222222-2222-2222-2222-222222222222"],
+            "dry_run": True,
+        },
+    )
+
+    assert response.status_code == 404
+    failure_event = _audit_payloads(template_api_env, action="github_issue.export")[-1]
+    assert failure_event["status"] == "failure"
+    assert failure_event["detail"]["failure_kind"] == "http_404"
+    assert failure_event["detail"]["http_status_code"] == 404
+    assert failure_event["detail"]["created_count"] == 0
+    assert failure_event["detail"]["skipped_count"] == 0
+
+
+def test_template_github_issue_export_audits_generic_token_http_failure(
+    template_api_env: TemplateApiEnv,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client = template_api_env.client
+    headers = auth_headers(client)
+    project = create_project_via_api(client, headers)
+    seeded = seed_finding_pair(
+        template_api_env.engine,
+        template_api_env.app_models,
+        template_api_env.repositories,
+        project_id=UUID(project["id"]),
+    )
+
+    def fake_github_export_token(token_env: str | None) -> str:
+        assert token_env == "VPW_GITHUB_TOKEN"
+        raise HTTPException(status_code=409, detail="operator token policy denied")
+
+    monkeypatch.setattr(
+        "app.api.routes.github_issues.github_export_token",
+        fake_github_export_token,
+    )
+
+    response = client.post(
+        f"/api/v1/projects/{project['id']}/github/issues/export",
+        headers=headers,
+        json={
+            "repository": "acme/workbench-triage",
+            "finding_ids": [str(seeded["finding_ids"][0])],
+            "dry_run": False,
+            "token_env": "VPW_GITHUB_TOKEN",
+        },
+    )
+
+    assert response.status_code == 409
+    failure_event = _audit_payloads(template_api_env, action="github_issue.export")[-1]
+    assert failure_event["status"] == "failure"
+    assert failure_event["detail"]["failure_kind"] == "http_409"
+    assert failure_event["detail"]["http_status_code"] == 409
+
+
+def test_template_github_issue_export_skips_integrity_race_duplicate(
+    template_api_env: TemplateApiEnv,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client = template_api_env.client
+    headers = auth_headers(client)
+    project = create_project_via_api(client, headers)
+    seeded = seed_finding_pair(
+        template_api_env.engine,
+        template_api_env.app_models,
+        template_api_env.repositories,
+        project_id=UUID(project["id"]),
+    )
+
+    class RacingExportRepository:
+        def __init__(self, session: Session) -> None:
+            self.session = session
+
+        def export_exists(
+            self,
+            *,
+            project_id: UUID,
+            repository: str,
+            duplicate_key: str,
+        ) -> bool:
+            return False
+
+        def delete_incomplete_export(
+            self,
+            *,
+            project_id: UUID,
+            repository: str,
+            duplicate_key: str,
+        ) -> int:
+            return 0
+
+        def create_export(self, **kwargs: Any) -> app_models.GitHubIssueExport:
+            raise IntegrityError("insert", {}, RuntimeError("duplicate"))
+
+    def forbidden_create_github_issue(*args: Any, **kwargs: Any) -> dict[str, Any]:
+        raise AssertionError("Integrity duplicates must not call GitHub")
+
+    monkeypatch.setenv("VPW_GITHUB_TOKEN", "ghp_test_value")
+    monkeypatch.setattr(
+        "app.api.routes.github_issues.GitHubIssueExportRepository",
+        RacingExportRepository,
+    )
+    monkeypatch.setattr(
+        "app.api.routes.github_issues.create_github_issue",
+        forbidden_create_github_issue,
+    )
+
+    response = client.post(
+        f"/api/v1/projects/{project['id']}/github/issues/export",
+        headers=headers,
+        json={
+            "repository": "acme/workbench-triage",
+            "finding_ids": [str(seeded["finding_ids"][0])],
+            "dry_run": False,
+            "token_env": "VPW_GITHUB_TOKEN",
+        },
+    )
+
+    assert response.status_code == 200, response.text
+    payload = response.json()
+    assert payload["created_count"] == 0
+    assert payload["skipped_count"] == 1
+    assert payload["data"][0]["status"] == "skipped_duplicate"
+    success_event = _audit_payloads(template_api_env, action="github_issue.export")[-1]
+    assert success_event["status"] == "success"
+    assert success_event["detail"]["status_counts"] == {"skipped_duplicate": 1}
+
+
+def test_template_github_issue_export_audits_generic_create_http_failure(
+    template_api_env: TemplateApiEnv,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client = template_api_env.client
+    headers = auth_headers(client)
+    project = create_project_via_api(client, headers)
+    seeded = seed_finding_pair(
+        template_api_env.engine,
+        template_api_env.app_models,
+        template_api_env.repositories,
+        project_id=UUID(project["id"]),
+    )
+
+    def fake_create_github_issue(*args: Any, **kwargs: Any) -> dict[str, Any]:
+        raise HTTPException(status_code=418, detail="generic HTTP failure")
+
+    monkeypatch.setenv("VPW_GITHUB_TOKEN", "ghp_test_value")
+    monkeypatch.setattr(
+        "app.api.routes.github_issues.create_github_issue",
+        fake_create_github_issue,
+    )
+
+    response = client.post(
+        f"/api/v1/projects/{project['id']}/github/issues/export",
+        headers=headers,
+        json={
+            "repository": "acme/workbench-triage",
+            "finding_ids": [str(seeded["finding_ids"][0])],
+            "dry_run": False,
+            "token_env": "VPW_GITHUB_TOKEN",
+        },
+    )
+
+    assert response.status_code == 418
+    failure_event = _audit_payloads(template_api_env, action="github_issue.export")[-1]
+    assert failure_event["status"] == "failure"
+    assert failure_event["detail"]["failure_kind"] == "http_418"
+    assert failure_event["detail"]["http_status_code"] == 418
+    assert failure_event["detail"]["failed_finding_id"] == str(seeded["finding_ids"][0])
 
 
 def _create_token(

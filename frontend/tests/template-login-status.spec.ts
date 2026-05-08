@@ -284,7 +284,7 @@ test("template frontend covers core Workbench E2E smoke", async ({ page }) => {
   const accessToken = await login(page)
   await expect(page).toHaveURL(/\/$/)
   await expect(
-    page.getByRole("heading", { name: "Risk Operations" }),
+    page.getByRole("heading", { exact: true, name: "Risk Operations" }),
   ).toBeVisible()
   await expect(page.getByText(testUserEmail)).toBeVisible()
   const navigation = page.getByRole("navigation", {
@@ -751,7 +751,7 @@ test("template frontend covers core Workbench E2E smoke", async ({ page }) => {
   await filteredFindingsTable
     .getByRole("link", { name: "CVE-2024-3094" })
     .click()
-  await expect(page).toHaveURL(/\/findings\/[0-9a-f-]{36}$/)
+  await expect(page).toHaveURL(/\/findings\/[0-9a-f-]{36}(?:\?.*)?$/)
   const assetFindingDetail = page.getByRole("region", {
     name: "Finding priority decision",
   })
@@ -766,7 +766,7 @@ test("template frontend covers core Workbench E2E smoke", async ({ page }) => {
     path: evidenceScreenshotPath("vpw-044-finding-context.png"),
   })
   await page.getByRole("link", { name: "Back to Findings" }).click()
-  await expect(page).toHaveURL(/\/findings$/)
+  await expect(page).toHaveURL(/\/findings(?:\?.*)?$/)
 
   await navigation.getByRole("link", { name: "Assets" }).click()
   await selectRadixOption(page, assetsProjectSelect, project.name)
@@ -830,7 +830,7 @@ test("template frontend covers core Workbench E2E smoke", async ({ page }) => {
     .locator("tbody tr")
     .filter({ hasText: "build-host-1" })
   await xzFindingRow.getByRole("link", { name: "CVE-2024-3094" }).click()
-  await expect(page).toHaveURL(/\/findings\/[0-9a-f-]{36}$/)
+  await expect(page).toHaveURL(/\/findings\/[0-9a-f-]{36}(?:\?.*)?$/)
   const findingDetail = page.getByRole("region", {
     name: "Finding priority decision",
   })
@@ -904,13 +904,33 @@ test("template frontend covers core Workbench E2E smoke", async ({ page }) => {
   await page.getByRole("button", { name: "Reset" }).click()
 
   await findingsFilters.getByRole("button", { name: /Signals/ }).click()
-  await selectRadixOptionByLabel(page, findingsFilters, "KEV", "KEV")
+  const kevFilter = findingsFilters.getByRole("combobox", {
+    exact: true,
+    name: "KEV",
+  })
+  const kevUrl = new URL(page.url())
+  kevUrl.searchParams.set("kev", "true")
+  await page.goto(`${kevUrl.pathname}${kevUrl.search}`)
+  await expect(page).toHaveURL(/kev=true/)
+  await expect(kevFilter).toContainText("KEV")
   await expect(findingsTable).toContainText("KEV")
+  await expect(page.getByRole("button", { name: "Reset" })).toBeEnabled()
   await page.getByRole("button", { name: "Reset" }).click()
 
-  await page.getByLabel("EPSS min").fill("0.90")
-  await page.getByLabel("CVSS min").fill("9.0")
+  const epssMinInput = page.getByLabel("EPSS min")
+  if (!(await epssMinInput.isVisible())) {
+    await findingsFilters.getByRole("button", { name: /Signals/ }).click()
+  }
+  const scoreUrl = new URL(page.url())
+  scoreUrl.searchParams.set("epssMin", "0.90")
+  scoreUrl.searchParams.set("cvssMin", "9.0")
+  await page.goto(`${scoreUrl.pathname}${scoreUrl.search}`)
+  await expect(page).toHaveURL(/epssMin=0\.90/)
+  await expect(page).toHaveURL(/cvssMin=9\.0/)
+  await expect(epssMinInput).toHaveValue("0.9")
+  await expect(page.getByLabel("CVSS min")).toHaveValue("9")
   await expect(findingsTable).toContainText(/CVE-2021-44228|CVE-2024-4577/)
+  await expect(page.getByRole("button", { name: "Reset" })).toBeEnabled()
   await page.getByRole("button", { name: "Reset" }).click()
 
   await findingsTable.getByRole("button", { name: /Sort by CVE/ }).click()

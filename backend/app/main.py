@@ -15,6 +15,7 @@ from starlette.responses import JSONResponse, Response
 from app.api.errors import (
     error_response_content,
     http_exception_handler,
+    install_error_openapi_schema,
     unhandled_exception_handler,
     validation_error_handler,
 )
@@ -85,6 +86,7 @@ def create_app(active_settings: Settings | None = None) -> FastAPI:
     app.add_exception_handler(StarletteHTTPException, http_exception_handler)
     app.add_exception_handler(RequestValidationError, validation_error_handler)
     app.add_exception_handler(Exception, unhandled_exception_handler)
+    install_error_openapi_schema(app)
     return app
 
 

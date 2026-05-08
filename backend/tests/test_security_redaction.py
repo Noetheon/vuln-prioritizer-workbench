@@ -1,7 +1,12 @@
 from __future__ import annotations
 
 from app.api.errors import redact_request_safe_value
-from vuln_prioritizer.security_redaction import redact_text, redact_value
+from vuln_prioritizer.security_redaction import (
+    redact_text,
+    redact_value,
+    redacted_database_url,
+    should_redact_string,
+)
 
 
 def test_redact_text_covers_container_posix_and_windows_paths_with_spaces() -> None:
@@ -52,3 +57,14 @@ def test_redact_value_and_api_error_projection_covers_embedded_container_paths()
     assert "/app/" not in api_safe
     assert "input files" not in api_safe
     assert "[REDACTED-PATH]" in api_safe
+
+
+def test_database_url_and_string_redaction_edge_cases() -> None:
+    assert redacted_database_url("postgresql://user:secret@localhost:5432/db") == (
+        "postgresql://user:***@localhost:5432/db"
+    )
+    assert redacted_database_url("postgresql://localhost/db") == "postgresql://localhost/db"
+    assert redacted_database_url("postgresql://[broken") == "<set>"
+    assert should_redact_string("") is False
+    assert should_redact_string("/tmp/private.txt", redact_paths=False) is False
+    assert should_redact_string("https://user:pass@example.test/path") is True

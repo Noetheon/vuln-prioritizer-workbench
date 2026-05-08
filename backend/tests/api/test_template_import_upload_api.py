@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import json
 import uuid
@@ -21,6 +22,8 @@ from app.domain.import_asset_context import (
     canonicalize_asset_exposure_value,
 )
 from app.services import TemplateAnalysisError
+from app.services import import_uploads as upload_helpers
+from app.services.import_errors import ImportServiceError
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 SAMPLE_CVES = PROJECT_ROOT / "data" / "sample_cves.txt"
@@ -37,6 +40,116 @@ def test_import_asset_context_adapter_reuses_core_alias_canonicalization() -> No
     assert canonicalize_asset_environment_value("test") == "test"
     assert canonicalize_asset_criticality_value("crit") == "critical"
     assert canonicalize_asset_criticality_value("critical") == "critical"
+
+
+def test_import_upload_helper_rejects_oversized_chunks_and_protocol_default(
+    template_api_env: TemplateApiEnv,
+    tmp_path: Path,
+) -> None:
+    class ChunkedUpload:
+        def __init__(self, chunks: list[bytes]) -> None:
+            self.chunks = chunks
+
+        async def read(self, size: int = -1) -> bytes:
+            return self.chunks.pop(0) if self.chunks else b""
+
+    active_settings = replace(
+        template_api_env.client.app.state.workbench_settings,
+        IMPORT_UPLOAD_DIR=str(tmp_path / "uploads"),
+        MAX_UPLOAD_MB=1,
+    )
+
+    assert (
+        asyncio.run(
+            upload_helpers.read_bounded_upload(
+                ChunkedUpload([b"hello", b"world"]),
+                settings=active_settings,
+                max_bytes=16,
+            )
+        )
+        == b"helloworld"
+    )
+    with pytest.raises(ImportServiceError, match="Upload exceeds configured limit"):
+        asyncio.run(
+            upload_helpers.read_bounded_upload(
+                ChunkedUpload([b"abc", b"def"]),
+                settings=active_settings,
+                max_bytes=5,
+            )
+        )
+    with pytest.raises(NotImplementedError):
+        asyncio.run(upload_helpers.ReadableUpload.read(object()))  # type: ignore[misc]
+
+
+def test_import_upload_helper_edge_validations_and_safe_names(
+    template_api_env: TemplateApiEnv,
+    tmp_path: Path,
+) -> None:
+    active_settings = replace(
+        template_api_env.client.app.state.workbench_settings,
+        IMPORT_UPLOAD_DIR=str(tmp_path / "uploads"),
+        MAX_UPLOAD_MB=1,
+    )
+
+    with pytest.raises(ImportServiceError, match="Upload exceeds configured limit"):
+        upload_helpers.validate_aggregate_upload_size(
+            settings=active_settings,
+            payloads=[b"x" * active_settings.max_upload_bytes, b"y"],
+        )
+    upload_helpers.validate_asset_context_upload("context.csv", "application/octet-stream")
+    upload_helpers.validate_vex_upload("openvex.json", "")
+    assert (
+        upload_helpers.sanitize_context_filename(
+            "input.txt",
+            reserved_filename="input.txt",
+        )
+        == "asset_context_input.txt"
+    )
+    assert (
+        upload_helpers.sanitize_vex_filename(
+            "input.txt",
+            reserved_filenames={"input.txt", None},
+        )
+        == "vex_input.txt"
+    )
+    assert upload_helpers.ignored_line_count("cve-list", b"\xff\xfe") == 0
+    upload_helpers.validate_mime_hint("application/octet-stream", input_type="trivy-json")
+    with pytest.raises(ImportServiceError, match="Upload filename is not allowed"):
+        upload_helpers.reject_unsafe_upload_filename("bad\x00name.txt")
+    with pytest.raises(ImportServiceError, match="input_type is required"):
+        upload_helpers.normalize_input_type("   ")
+
+
+def test_import_upload_store_rejects_escape_and_cleans_failed_write(
+    template_api_env: TemplateApiEnv,
+    tmp_path: Path,
+) -> None:
+    active_settings = replace(
+        template_api_env.client.app.state.workbench_settings,
+        IMPORT_UPLOAD_DIR=str(tmp_path / "uploads"),
+    )
+    project_id = uuid.uuid4()
+    run_id = uuid.uuid4()
+
+    with pytest.raises(ImportServiceError, match="Upload path is not allowed"):
+        upload_helpers.store_upload(
+            active_settings,
+            project_id=project_id,
+            run_id=run_id,
+            filename="../../../escape.txt",
+            content=b"blocked",
+        )
+
+    target_dir = active_settings.import_upload_dir_path / str(project_id) / str(run_id)
+    with pytest.raises(IsADirectoryError):
+        upload_helpers.store_upload(
+            active_settings,
+            project_id=project_id,
+            run_id=run_id,
+            filename=".",
+            content=b"cannot write to directory",
+        )
+    assert not target_dir.exists()
 
 
 def test_valid_cve_list_upload_creates_analysis_run_and_stores_sha256(

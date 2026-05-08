@@ -22,7 +22,7 @@ DEMO_EVIDENCE_ANALYSIS_FILE := build/v1.0-demo-analysis.json
 DEMO_EVIDENCE_BUNDLE_FILE := build/v1.0-demo-evidence-bundle.zip
 DEMO_EVIDENCE_VERIFICATION_FILE := build/v1.0-demo-evidence-bundle-verification.json
 
-.PHONY: install test lint format fix typecheck check benchmark-check performance-smoke playwright-install playwright-check frontend-install frontend-build frontend-lint frontend-test-unit frontend-generate-client api-client-drift-check frontend-audit frontend-check python-lock-check release-evidence-hygiene-check docs-check docs-serve actionlint-check workflow-check docker-demo-smoke docker-production-smoke dependency-audit clean-local clean-deps provider-snapshot-validate provider-testmatrix demo-offline-no-key-proof demo-sync-check demo-sync-check-temp package package-contents-check package-check package-check-temp pipx-source-smoke release-check release-readiness-check demo-report demo-compare demo-explain demo-attack-report demo-attack-compare demo-attack-explain demo-attack-coverage demo-attack-navigator demo-pr-comment demo-results-sarif demo-html-report demo-evidence-analysis demo-evidence-bundle demo-evidence-bundle-check precommit-install
+.PHONY: install test lint format fix typecheck check benchmark-check performance-smoke playwright-install playwright-check frontend-install frontend-build frontend-lint frontend-test-unit frontend-test-unit-coverage frontend-generate-client api-client-drift-check frontend-audit frontend-check python-lock-check release-evidence-hygiene-check docs-check docs-serve actionlint-check workflow-check docker-demo-smoke docker-production-smoke dependency-audit clean-local clean-deps provider-snapshot-validate provider-testmatrix demo-offline-no-key-proof demo-sync-check demo-sync-check-temp package package-contents-check package-check package-check-temp pipx-source-smoke release-check release-readiness-check demo-report demo-compare demo-explain demo-attack-report demo-attack-compare demo-attack-explain demo-attack-coverage demo-attack-navigator demo-pr-comment demo-results-sarif demo-html-report demo-evidence-analysis demo-evidence-bundle demo-evidence-bundle-check precommit-install
 
 install:
 	$(PYTHON) -m pip install -e "$(BACKEND_DIR)[dev]"
@@ -59,7 +59,7 @@ playwright-install: frontend-install
 	cd frontend && npm --workspaces=false exec playwright install chromium
 
 playwright-check: frontend-install
-	cd frontend && npm run test -- tests/ui-smoke.spec.ts tests/responsive-shell.spec.ts tests/accessibility.spec.ts
+	cd frontend && npm run test
 
 frontend-install:
 	cd frontend && npm ci --workspaces=false
@@ -73,16 +73,29 @@ frontend-lint:
 frontend-test-unit:
 	cd frontend && npm run test:unit
 
+frontend-test-unit-coverage:
+	cd frontend && npm run test:unit:coverage
+
 frontend-generate-client:
 	bash scripts/generate-client.sh
 
-api-client-drift-check: frontend-generate-client
-	git diff --exit-code -- frontend/src/client
+api-client-drift-check:
+	before=$$(mktemp); after=$$(mktemp); \
+	find frontend/src/client -type f -print | sort | xargs shasum -a 256 > "$$before"; \
+	$(MAKE) frontend-generate-client; \
+	find frontend/src/client -type f -print | sort | xargs shasum -a 256 > "$$after"; \
+	if ! diff -u "$$before" "$$after"; then \
+		echo "Generated frontend client changed. Run 'make frontend-generate-client' and commit the result." >&2; \
+		git diff -- frontend/src/client; \
+		rm -f "$$before" "$$after"; \
+		exit 1; \
+	fi; \
+	rm -f "$$before" "$$after"
 
 frontend-audit:
 	cd frontend && npm --workspaces=false audit --omit=dev
 
-frontend-check: frontend-install frontend-lint frontend-build frontend-test-unit api-client-drift-check
+frontend-check: frontend-install frontend-lint frontend-build frontend-test-unit-coverage api-client-drift-check
 
 release-evidence-hygiene-check:
 	$(PYTHON) scripts/check_release_evidence_hygiene.py

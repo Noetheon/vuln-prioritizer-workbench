@@ -50,7 +50,9 @@ test("smoke: settings renders", async ({ page }) => {
   test.setTimeout(30_000)
   await login(page)
   await page.goto("/settings")
-  await expect(page.getByRole("region", { name: "API tokens" })).toBeVisible()
+  await expect(
+    page.getByRole("region", { exact: true, name: "API tokens" }),
+  ).toBeVisible()
 })
 
 test("smoke: sign out revokes the active session", async ({ page }) => {

@@ -87,6 +87,27 @@ def test_template_backend_openapi_uses_template_operation_ids() -> None:
     )
 
 
+def test_template_backend_openapi_documents_error_envelope() -> None:
+    client = TestClient(app)
+
+    response = client.get("/api/v1/openapi.json")
+
+    assert response.status_code == 200
+    payload = response.json()
+    error_schema = payload["components"]["schemas"]["ApiErrorEnvelope"]
+    assert error_schema["required"] == ["code", "message", "details", "detail"]
+    assert set(error_schema["properties"]) == {
+        "code",
+        "message",
+        "details",
+        "detail",
+        "trace_id",
+    }
+    assert payload["paths"]["/api/v1/projects/"]["post"]["responses"]["422"]["content"][
+        "application/json"
+    ]["schema"] == {"$ref": "#/components/schemas/ApiErrorEnvelope"}
+
+
 def test_template_backend_rejects_invalid_host_header() -> None:
     client = TestClient(app)
 

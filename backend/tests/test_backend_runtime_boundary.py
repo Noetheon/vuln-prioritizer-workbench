@@ -409,18 +409,27 @@ def test_makefile_has_no_legacy_runtime_smoke_or_compose_path() -> None:
         "dependency-audit:",
         1,
     )[0]
+    playwright_check = makefile.split("playwright-check:", 1)[1].split("frontend-install:", 1)[0]
 
     assert "LEGACY_COMPOSE" not in makefile
     assert "docker-postgres-migration-smoke" not in makefile
     assert "api/test_workbench_api.py" not in makefile
     assert "$(BACKEND_TESTS)/playwright" not in makefile
-    assert (
-        "cd frontend && npm run test -- tests/ui-smoke.spec.ts "
-        "tests/responsive-shell.spec.ts tests/accessibility.spec.ts" in makefile
-    )
+    assert "cd frontend && npm run test" in playwright_check
+    assert "tests/ui-smoke.spec.ts tests/responsive-shell.spec.ts" not in playwright_check
+    assert "frontend-test-unit-coverage" in makefile
     assert "--profile legacy-postgres" not in docker_demo_smoke
     assert "workbench-postgres" not in docker_demo_smoke
     assert not any(marker in docker_demo_smoke for marker in LEGACY_RUNTIME_STARTERS)
+
+
+def test_ci_frontend_gate_runs_coverage_and_full_playwright_suite() -> None:
+    workflow = _read_repo_text(".github/workflows/ci.yml")
+
+    assert "make frontend-test-unit-coverage" in workflow
+    assert "Run frontend Playwright representative PR gate" not in workflow
+    assert "npm --prefix frontend run test -- tests/" not in workflow
+    assert "npm --prefix frontend run test" in workflow
 
 
 def test_cli_does_not_register_removed_workbench_db_or_web_commands() -> None:

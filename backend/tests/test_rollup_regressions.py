@@ -4,9 +4,12 @@ import json
 from pathlib import Path
 
 import jsonschema
+import pytest
+import typer
 from typer.testing import CliRunner
 
 from vuln_prioritizer.cli import app
+from vuln_prioritizer.cli_support import snapshot_rollup
 
 runner = CliRunner()
 BENCHMARK_ROOT = Path(__file__).resolve().parents[2] / "data" / "benchmarks"
@@ -104,3 +107,104 @@ def test_rollup_supports_owner_exposure_environment_and_component_dimensions(
         payload = json.loads(output_file.read_text(encoding="utf-8"))
         assert payload["metadata"]["dimension"] == dimension
         assert {bucket["bucket"] for bucket in payload["buckets"]} == expected
+
+
+def test_rollup_support_helpers_validate_payload_and_json_edges(tmp_path: Path) -> None:
+    invalid_json = tmp_path / "invalid.json"
+    invalid_json.write_text("{bad", encoding="utf-8")
+    with pytest.raises(typer.Exit) as invalid_json_exit:
+        snapshot_rollup.load_json_document_or_exit(invalid_json)
+    assert invalid_json_exit.value.exit_code == 2
+
+    top_level_list = tmp_path / "list.json"
+    top_level_list.write_text("[]", encoding="utf-8")
+    with pytest.raises(typer.Exit) as list_exit:
+        snapshot_rollup.load_json_document_or_exit(top_level_list)
+    assert list_exit.value.exit_code == 2
+
+    bad_snapshot = tmp_path / "bad-snapshot.json"
+    bad_snapshot.write_text(json.dumps({"metadata": {}, "findings": []}), encoding="utf-8")
+    with pytest.raises(typer.Exit) as snapshot_exit:
+        snapshot_rollup.load_snapshot_payload(bad_snapshot)
+    assert snapshot_exit.value.exit_code == 2
+
+    bad_rollup = tmp_path / "bad-rollup.json"
+    bad_rollup.write_text(json.dumps({"metadata": {}}), encoding="utf-8")
+    with pytest.raises(typer.Exit) as rollup_exit:
+        snapshot_rollup.load_rollup_payload(bad_rollup)
+    assert rollup_exit.value.exit_code == 2
+
+    snapshot_payload = json.loads(
+        (BENCHMARK_ROOT / "snapshots" / "lifecycle_before.json").read_text(encoding="utf-8")
+    )
+    snapshot_payload["findings"][0] = "not-an-object"
+    with pytest.raises(ValueError, match="Snapshot finding #1"):
+        snapshot_rollup.validate_snapshot_payload(snapshot_payload)
+
+
+def test_rollup_helpers_cover_unmapped_and_contextual_reason_edges() -> None:
+    finding = {
+        "cve_id": "CVE-2025-0001",
+        "priority_label": "High",
+        "priority_rank": 2,
+        "in_kev": True,
+        "under_investigation": True,
+        "waiver_status": "review_due",
+        "provenance": {
+            "occurrences": [
+                {
+                    "asset_owner": "team-platform",
+                    "asset_exposure": "internet-facing",
+                    "asset_environment": "production",
+                }
+            ]
+        },
+        "recommended_action": "",
+    }
+    expired = {
+        **finding,
+        "cve_id": "CVE-2025-0002",
+        "in_kev": False,
+        "under_investigation": False,
+        "waiver_status": "expired",
+        "waived": False,
+        "provenance": {"occurrences": []},
+    }
+    waived = {
+        **finding,
+        "cve_id": "CVE-2025-0003",
+        "in_kev": False,
+        "under_investigation": False,
+        "waiver_status": "accepted",
+        "waived": True,
+        "waiver_owner": "risk-review",
+        "provenance": {"occurrences": []},
+    }
+
+    assert snapshot_rollup.rollup_bucket_names(finding, dimension="unknown") == ["Unmapped"]
+    assert snapshot_rollup.finding_top_actions([finding], top=3) == []
+    assert snapshot_rollup.finding_exposures(finding) == ["internet-facing"]
+    assert snapshot_rollup.finding_environments(finding) == ["production"]
+    assert snapshot_rollup.string_or_none(None) is None
+    assert snapshot_rollup.string_or_none("   ") is None
+    assert snapshot_rollup.string_or_none(" Prod ", lowercase=True) == "prod"
+
+    hints = snapshot_rollup.rollup_bucket_context_hints([finding, expired, waived])
+    assert "1 under investigation" in hints
+    assert "1 waiver review due" in hints
+    assert "1 waiver expired" in hints
+    assert "waiver owners: risk-review" in hints
+
+    assert snapshot_rollup.rollup_bucket_rank_reason(
+        findings=[waived],
+        actionable_findings=[],
+        highest_priority="High",
+    ).startswith("No actionable findings remain")
+    assert "expired waiver(s)" in snapshot_rollup.rollup_bucket_rank_reason(
+        findings=[finding, expired],
+        actionable_findings=[finding],
+        highest_priority="High",
+    )
+    assert snapshot_rollup.rollup_candidate_reason(finding).endswith("waiver review due")
+    assert snapshot_rollup.rollup_candidate_reason(expired).endswith("waiver expired")
+    assert snapshot_rollup.rollup_candidate_reason(waived).endswith("waived by risk-review")

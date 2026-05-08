@@ -159,6 +159,121 @@ def test_attack_lite_models_reject_unreviewable_mapping_fields(app_models: Any) 
         )
 
 
+def test_attack_lite_model_validators_reject_invalid_stix_and_context_fields(
+    app_models: Any,
+) -> None:
+    with pytest.raises(ValidationError):
+        app_models.AttackTacticBase(tactic_id="T1190", name="Initial Access")
+
+    with pytest.raises(ValidationError):
+        app_models.AttackTechniqueBase(
+            technique_id="T1190",
+            name="Exploit Public-Facing Application",
+            tactic_ids_json=["T1190"],
+        )
+
+    with pytest.raises(ValidationError):
+        app_models.AttackStixSnapshotBase(
+            attack_version=" ",
+            domain="enterprise-attack",
+            bundle_sha256="f" * 64,
+        )
+
+    with pytest.raises(ValidationError):
+        app_models.AttackStixTacticBase(
+            stix_id=" ",
+            tactic_id="TA0001",
+            name="Initial Access",
+        )
+
+    with pytest.raises(ValidationError):
+        app_models.AttackStixTechniqueBase(
+            stix_id="attack-pattern--1",
+            technique_id="T1190",
+            name="Exploit Public-Facing Application",
+            tactic_ids_json=["T1190"],
+        )
+
+    with pytest.raises(ValidationError):
+        app_models.AttackStixMitigationBase(
+            stix_id="course-of-action--1",
+            mitigation_id="     ",
+            name="Update Software",
+        )
+
+    with pytest.raises(ValidationError):
+        app_models.AttackStixTechniqueMitigationBase(
+            relationship_id=" ",
+            technique_id="T1190",
+            mitigation_id="M1051",
+        )
+
+    with pytest.raises(ValidationError):
+        app_models.CveAttackMappingBase(
+            cve_id="CVE-2021-44228",
+            technique_id="T1190",
+            tactic_ids_json=["T1190"],
+            mapping_type="exploitation",
+            source="CTID Mappings Explorer",
+            confidence=0.9,
+            rationale="Tactic list contains a technique identifier.",
+            review_status="reviewed",
+            defensive_note="Defensive context only.",
+        )
+
+    with pytest.raises(ValidationError):
+        app_models.CveAttackMappingBase(
+            cve_id="CVE-2021-44228",
+            technique_id="T1190",
+            mapping_type="unknown",
+            source="CTID Mappings Explorer",
+            confidence=0.9,
+            rationale="Mapping type must be a known defensive category.",
+            review_status="reviewed",
+            defensive_note="Defensive context only.",
+        )
+
+    with pytest.raises(ValidationError):
+        app_models.CveAttackMappingBase(
+            cve_id="CVE-2021-44228",
+            technique_id="T1190",
+            mapping_type="exploitation",
+            source="CTID Mappings Explorer",
+            confidence=0.9,
+            rationale="Review status must be explicit.",
+            review_status="done",
+            defensive_note="Defensive context only.",
+        )
+
+    with pytest.raises(ValidationError):
+        app_models.FindingAttackContextBase(
+            cve_id="CVE-2021-44228",
+            mapped=False,
+            source="CTID Mappings Explorer",
+            review_status="done",
+            defensive_note="Defensive context only.",
+        )
+
+    with pytest.raises(ValidationError):
+        app_models.FindingAttackContextBase(
+            cve_id="CVE-2021-44228",
+            mapped=False,
+            source="CTID Mappings Explorer",
+            review_status="reviewed",
+            defensive_note="Defensive context only.",
+            technique_ids_json=["TA0001"],
+        )
+
+    with pytest.raises(ValidationError):
+        app_models.FindingAttackContextBase(
+            cve_id="CVE-2021-44228",
+            mapped=True,
+            source="CTID Mappings Explorer",
+            review_status="reviewed",
+            defensive_note="Defensive context only.",
+        )
+
+
 def test_project_can_persist_attack_lite_graph(
     app_models: Any,
     migrated_engine: Engine,

@@ -282,6 +282,56 @@ export const AnalysisRunsPublicSchema = {
     type: 'object'
 } as const;
 
+export const ApiErrorEnvelopeSchema = {
+    additionalProperties: false,
+    properties: {
+        code: {
+            description: 'Stable machine-readable error code.',
+            type: 'string'
+        },
+        detail: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    additionalProperties: true,
+                    type: 'object'
+                },
+                {
+                    items: {},
+                    type: 'array'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            description: 'Legacy-compatible FastAPI detail field.'
+        },
+        details: {
+            additionalProperties: true,
+            description: 'Structured, request-safe error details.',
+            type: 'object'
+        },
+        message: {
+            description: 'Request-safe human-readable error message.',
+            type: 'string'
+        },
+        trace_id: {
+            description: 'Optional request/correlation identifier echoed from request headers.',
+            type: 'string'
+        }
+    },
+    required: [
+        'code',
+        'message',
+        'details',
+        'detail'
+    ],
+    title: 'ApiErrorEnvelope',
+    type: 'object'
+} as const;
+
 export const ApiTokenCreateSchema = {
     description: 'Request payload for creating a scoped service token.',
     properties: {

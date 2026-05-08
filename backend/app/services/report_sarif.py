@@ -211,7 +211,11 @@ def _sarif_location_uri(finding: MarkdownReportFinding) -> str:
 
 def _sarif_safe_uri(value: str) -> str:
     stripped = value.strip().replace("\\", "/")
-    if not stripped or stripped.startswith(("/", "../")) or "://" in stripped:
+    if not stripped or "://" in stripped:
+        return "workbench-input"
+    while "//" in stripped:
+        stripped = stripped.replace("//", "/")
+    if stripped.startswith(("/", "../")):
         return "workbench-input"
     return stripped.lstrip("./")
 

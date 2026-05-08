@@ -80,7 +80,7 @@ exclude = ["tests*"]
 vuln_prioritizer = ["py.typed"]
 
 [tool.pytest.ini_options]
-addopts = "-ra --cov=app --cov=vuln_prioritizer --cov-report=term-missing --cov-fail-under=90"
+addopts = "-ra --cov=app --cov=vuln_prioritizer --cov-report=term-missing --cov-fail-under=95"
 testpaths = ["tests"]
 pythonpath = [".", "src"]
 markers = [

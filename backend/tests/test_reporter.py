@@ -2,9 +2,31 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from vuln_prioritizer.models import AnalysisContext, ComparisonFinding, PrioritizedFinding
+from vuln_prioritizer.models import (
+    AnalysisContext,
+    AttackData,
+    AttackMapping,
+    AttackTechnique,
+    BusinessImpactBlock,
+    ComparisonFinding,
+    DefensiveContext,
+    EpssData,
+    ExplanationNote,
+    ExplanationReason,
+    FindingDecisionGuidance,
+    FindingProvenance,
+    InputOccurrence,
+    KevData,
+    NvdData,
+    PrioritizedFinding,
+    PriorityExplanation,
+    RemediationComponent,
+    RemediationPlan,
+    SlaTarget,
+)
 from vuln_prioritizer.reporter import (
     generate_compare_markdown,
+    generate_explain_markdown,
     generate_html_report,
     generate_markdown_report,
     write_output,
@@ -141,6 +163,123 @@ def test_compare_markdown_report_contains_changed_and_unchanged_rows() -> None:
         "| CVE-2024-0002 | No change | Low | Low | N.A. | Unmapped | Unmapped | No change | "
         "No | 3.5 | N.A. | No | None | high | N.A. |" in report
     )
+
+
+def test_markdown_report_renders_attack_defensive_context_and_decision_guidance() -> None:
+    finding = _rich_prioritized_finding()
+    context = _analysis_context(findings_count=1, attack_enabled=True)
+
+    report = generate_markdown_report([finding], context)
+
+    assert "## CVSS-only Baseline Comparison" in report
+    assert "### Top Baseline Changes" in report
+    assert "CVE-2024-3094: Medium (rank 3) -> Critical (rank 1)" in report
+    assert "## ATT&CK-mapped CVEs" in report
+    assert "T1190" in report
+    assert "Initial Access" in report
+    assert "Reviewed defensive mapping" in report
+    assert "| CVE-2024-3094 | OSV, SSVC | OSV-2024-3094, SSVC-2024-3094 |" in report
+    assert "component-a 1.2.3" in report
+    assert "srv-prod-1" in report
+    assert "Emergency patch (24h)" in report
+    assert "Patch xz in the production image" in report
+
+
+def test_explain_markdown_renders_complete_evidence_and_fallback_paths() -> None:
+    finding = _rich_prioritized_finding()
+    context = _analysis_context(findings_count=1, attack_enabled=True)
+    nvd = NvdData(
+        cve_id=finding.cve_id,
+        description="Backdoored upstream archive allows unauthenticated access.",
+        cvss_base_score=5.0,
+        cvss_severity="MEDIUM",
+        cvss_version="3.1",
+        published="2024-03-29T00:00:00Z",
+        last_modified="2024-04-01T00:00:00Z",
+        cwes=["CWE-506"],
+        references=["https://example.test/advisory"],
+    )
+    epss = EpssData(cve_id=finding.cve_id, epss=0.94, percentile=0.99)
+    kev = KevData(
+        cve_id=finding.cve_id,
+        in_kev=True,
+        vendor_project="XZ Utils",
+        product="xz",
+        date_added="2024-03-29",
+        required_action="Apply vendor mitigation.",
+        due_date="2024-04-19",
+    )
+    attack = AttackData(
+        cve_id=finding.cve_id,
+        mapped=True,
+        source="curated",
+        attack_relevance="Remote exploitation",
+        attack_rationale="Exploitation maps to public-facing application compromise.",
+        attack_techniques=["T1190 Exploit Public-Facing Application"],
+        attack_tactics=["Initial Access"],
+        attack_note="Reviewed defensive mapping.",
+        mappings=finding.attack_mappings,
+        techniques=finding.attack_technique_details,
+    )
+    comparison = ComparisonFinding(
+        cve_id=finding.cve_id,
+        description=finding.description,
+        cvss_base_score=5.0,
+        cvss_severity="MEDIUM",
+        epss=0.94,
+        epss_percentile=0.99,
+        in_kev=True,
+        cvss_only_label="Medium",
+        cvss_only_rank=3,
+        enriched_label="Critical",
+        enriched_rank=1,
+        attack_mapped=True,
+        attack_relevance="Remote exploitation",
+        mapped_technique_count=1,
+        changed=True,
+        delta_rank=2,
+        change_reason="EPSS, KEV, and exposure raise the response.",
+        waived=True,
+        waiver_owner="risk-review",
+        waiver_expires_on="2026-06-01",
+    )
+
+    report = generate_explain_markdown(finding, nvd, epss, kev, attack, context, comparison)
+
+    assert "# CVE Explanation: CVE-2024-3094" in report
+    assert "- ATT&CK Techniques: T1190 Exploit Public-Facing Application" in report
+    assert "| kev | CISA KEV | Known exploited | true | false | KEV overrides baseline |" in report
+    assert "- `provider-warning` (NVD, warning): Provider data was partially cached" in report
+    assert "| OSV | OSV-2024-3094 | critical | act |" in report
+    assert (
+        "| component-a 1.2.3 | container:srv-prod-1 | affected | vulnerable_code_present |"
+        in report
+    )
+    assert "| component-a 1.2.3 | /usr/lib/liblzma.so | 5.6.1 | rpm |" in report
+    assert "- Required Action: `Apply vendor mitigation.`" in report
+    assert "- https://example.test/advisory" in report
+
+    minimal = PrioritizedFinding(
+        cve_id="CVE-2024-0002",
+        priority_label="Low",
+        priority_rank=4,
+        rationale="No exploit signals.",
+        recommended_action="Track through normal patching.",
+    )
+    fallback_report = generate_explain_markdown(
+        minimal,
+        NvdData(cve_id=minimal.cve_id),
+        EpssData(cve_id=minimal.cve_id),
+        KevData(cve_id=minimal.cve_id),
+        AttackData(cve_id=minimal.cve_id),
+        _analysis_context(findings_count=1),
+    )
+
+    assert "No structured priority explanation was generated." in fallback_report
+    assert "| N.A. | No CTID mapping | N.A. | N.A. | N.A. |" in fallback_report
+    assert "No OSV, GHSA, Vulnrichment or SSVC context was included." in fallback_report
+    assert "| N.A. | N.A. | N.A. | N.A. | N.A. |" in fallback_report
+    assert "- N.A." in fallback_report
 
 
 def _base_html_payload() -> dict:
@@ -290,6 +429,190 @@ def _base_html_payload() -> dict:
             }
         ],
     }
+
+
+def _analysis_context(*, findings_count: int, attack_enabled: bool = False) -> AnalysisContext:
+    return AnalysisContext(
+        input_path="data/sample_cves.txt",
+        output_path="report.md",
+        output_format="markdown",
+        generated_at="2026-04-18T00:00:00+00:00",
+        attack_enabled=attack_enabled,
+        warnings=["Provider data was partially cached"],
+        total_input=findings_count,
+        valid_input=findings_count,
+        findings_count=findings_count,
+        filtered_out_count=0,
+        nvd_hits=findings_count,
+        epss_hits=findings_count,
+        kev_hits=findings_count,
+        counts_by_priority={"Critical": findings_count},
+        data_sources=["NVD", "EPSS", "KEV", "OSV", "SSVC"],
+    )
+
+
+def _rich_prioritized_finding() -> PrioritizedFinding:
+    mapping = AttackMapping(
+        capability_id="capability.initial-access",
+        attack_object_id="T1190",
+        attack_object_name="Exploit Public-Facing Application",
+        mapping_type="exploitation",
+        capability_group="Initial Access",
+        comments="Remote code execution in exposed service",
+    )
+    technique = AttackTechnique(
+        attack_object_id="T1190",
+        name="Exploit Public-Facing Application",
+        tactics=["Initial Access"],
+    )
+    occurrence = InputOccurrence(
+        cve_id="CVE-2024-3094",
+        source_format="cyclonedx",
+        component_name="component-a",
+        component_version="1.2.3",
+        purl="pkg:rpm/component-a@1.2.3",
+        package_type="rpm",
+        file_path="/usr/lib/liblzma.so",
+        fix_versions=["5.6.1"],
+        target_kind="container",
+        target_ref="srv-prod-1",
+        asset_id="asset-prod",
+        asset_criticality="critical",
+        asset_exposure="internet-facing",
+        asset_environment="production",
+        asset_owner="platform",
+        asset_business_service="identity",
+        vex_status="affected",
+        vex_justification="vulnerable_code_present",
+        vex_action_statement="Patch the affected image.",
+    )
+    return PrioritizedFinding(
+        cve_id="CVE-2024-3094",
+        description="xz backdoor in production image",
+        cvss_base_score=5.0,
+        cvss_severity="MEDIUM",
+        cvss_version="3.1",
+        epss=0.94,
+        epss_percentile=0.99,
+        in_kev=True,
+        attack_mapped=True,
+        attack_relevance="Remote exploitation",
+        attack_techniques=["T1190 Exploit Public-Facing Application"],
+        attack_tactics=["Initial Access"],
+        attack_note="Reviewed defensive mapping.",
+        attack_mappings=[mapping],
+        attack_technique_details=[technique],
+        provenance=FindingProvenance(
+            occurrence_count=1,
+            active_occurrence_count=1,
+            source_formats=["cyclonedx"],
+            components=["component-a 1.2.3"],
+            affected_paths=["/usr/lib/liblzma.so"],
+            fix_versions=["5.6.1"],
+            targets=["srv-prod-1"],
+            asset_ids=["asset-prod"],
+            highest_asset_criticality="critical",
+            highest_asset_exposure="internet-facing",
+            asset_environments=["production"],
+            asset_owners=["platform"],
+            asset_business_services=["identity"],
+            asset_count=1,
+            vex_statuses={"affected": 1},
+            occurrences=[occurrence],
+        ),
+        context_summary="Seen on internet-facing production identity service.",
+        context_recommendation="Coordinate emergency patch with platform owner.",
+        highest_asset_criticality="critical",
+        asset_count=1,
+        waived=True,
+        waiver_status="approved",
+        waiver_owner="risk-review",
+        waiver_expires_on="2026-06-01",
+        operational_rank=1,
+        context_rank_reasons=["KEV", "internet-facing", "production"],
+        priority_label="Critical",
+        priority_rank=1,
+        priority_state="active",
+        operational_score=98,
+        explanation=PriorityExplanation(
+            cve_id="CVE-2024-3094",
+            priority_label="Critical",
+            priority_state="active",
+            operational_score=98,
+            summary="Critical because KEV and exposure are both present.",
+            human_readable="KEV, EPSS, and production exposure require emergency response.",
+            reasons=[
+                ExplanationReason(
+                    code="kev",
+                    source="CISA KEV",
+                    signal="Known exploited",
+                    value="true",
+                    threshold="false",
+                    message="KEV overrides baseline",
+                )
+            ],
+            notes=[
+                ExplanationNote(
+                    code="provider-warning",
+                    source="NVD",
+                    severity="warning",
+                    message="Provider data was partially cached.",
+                )
+            ],
+            recommended_action="Patch xz in the production image.",
+        ),
+        rationale="KEV, high EPSS, and internet exposure create immediate operational risk.",
+        defensive_contexts=[
+            DefensiveContext(
+                cve_id="CVE-2024-3094",
+                source="osv",
+                source_id="OSV-2024-3094",
+                severity="critical",
+                ssvc_decision="act",
+                summary="Malicious release affects downstream packages.",
+            ),
+            DefensiveContext(
+                cve_id="CVE-2024-3094",
+                source="ssvc",
+                source_id="SSVC-2024-3094",
+                severity="high",
+                ssvc_decision="act",
+                title="Prioritize remediation",
+            ),
+        ],
+        remediation=RemediationPlan(
+            strategy="upgrade",
+            ecosystem="rpm",
+            components=[
+                RemediationComponent(
+                    name="component-a",
+                    current_version="1.2.3",
+                    fixed_versions=["5.6.1"],
+                    package_type="rpm",
+                    purl="pkg:rpm/component-a@1.2.3",
+                    path="/usr/lib/liblzma.so",
+                )
+            ],
+        ),
+        decision_guidance=FindingDecisionGuidance(
+            template="patch",
+            template_label="Emergency patch",
+            sla=SlaTarget(
+                priority="Critical",
+                label="Emergency patch",
+                target_hours=24,
+                guidance="Patch within one day.",
+            ),
+            business_impact=BusinessImpactBlock(
+                level="critical",
+                text="Potential compromise of internet-facing identity service.",
+                drivers=["internet-facing", "production"],
+            ),
+            decision_statement="Treat as emergency remediation.",
+            visibility="Escalate to platform and security leadership.",
+        ),
+        recommended_action="Patch xz in the production image.",
+    )
 
 
 def test_generate_html_report_contains_bridge_view_sections_and_context() -> None:

@@ -54,7 +54,10 @@ can still land without a source release for every transitive patch.
 The reproducible Python resolution artifact is the root `uv.lock`. The release
 dependency-audit input is `backend/requirements.lock.txt`, exported from
 `uv.lock` with exact pins and hashes. Keep both committed together when Python
-dependency metadata changes.
+dependency metadata changes. The backend Docker image installs that hash-pinned
+lock with `pip install --require-hashes -r backend/requirements.lock.txt` before
+installing the local package with `--no-deps`, so container builds fail on
+undeclared dependency drift instead of resolving fresh transitive versions.
 
 Regenerate or refresh the audit input by reconciling the union of
 `project.dependencies` and `project.optional-dependencies.dev` from

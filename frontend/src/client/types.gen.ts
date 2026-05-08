@@ -186,6 +186,36 @@ export type AnalysisRunsPublic = {
 };
 
 /**
+ * ApiErrorEnvelope
+ */
+export type ApiErrorEnvelope = {
+    /**
+     * Stable machine-readable error code.
+     */
+    code: string;
+    /**
+     * Legacy-compatible FastAPI detail field.
+     */
+    detail: string | {
+        [key: string]: unknown;
+    } | Array<unknown> | null;
+    /**
+     * Structured, request-safe error details.
+     */
+    details: {
+        [key: string]: unknown;
+    };
+    /**
+     * Request-safe human-readable error message.
+     */
+    message: string;
+    /**
+     * Optional request/correlation identifier echoed from request headers.
+     */
+    trace_id?: string;
+};
+
+/**
  * ApiTokenCreate
  *
  * Request payload for creating a scoped service token.
@@ -3098,7 +3128,7 @@ export type PostApiV1ApiTokensErrors = {
     /**
      * Validation Error
      */
-    422: HttpValidationError;
+    422: ApiErrorEnvelope;
 };
 
 export type PostApiV1ApiTokensError = PostApiV1ApiTokensErrors[keyof PostApiV1ApiTokensErrors];
@@ -3128,7 +3158,7 @@ export type DeleteApiV1ApiTokensByTokenIdErrors = {
     /**
      * Validation Error
      */
-    422: HttpValidationError;
+    422: ApiErrorEnvelope;
 };
 
 export type DeleteApiV1ApiTokensByTokenIdError = DeleteApiV1ApiTokensByTokenIdErrors[keyof DeleteApiV1ApiTokensByTokenIdErrors];
@@ -3158,7 +3188,7 @@ export type PatchApiV1AssetsByAssetIdErrors = {
     /**
      * Validation Error
      */
-    422: HttpValidationError;
+    422: ApiErrorEnvelope;
 };
 
 export type PatchApiV1AssetsByAssetIdError = PatchApiV1AssetsByAssetIdErrors[keyof PatchApiV1AssetsByAssetIdErrors];
@@ -3188,7 +3218,7 @@ export type PostApiV1AssetsByAssetIdRecalculateErrors = {
     /**
      * Validation Error
      */
-    422: HttpValidationError;
+    422: ApiErrorEnvelope;
 };
 
 export type PostApiV1AssetsByAssetIdRecalculateError = PostApiV1AssetsByAssetIdRecalculateErrors[keyof PostApiV1AssetsByAssetIdRecalculateErrors];
@@ -3226,7 +3256,7 @@ export type GetApiV1AuditEventsErrors = {
     /**
      * Validation Error
      */
-    422: HttpValidationError;
+    422: ApiErrorEnvelope;
 };
 
 export type GetApiV1AuditEventsError = GetApiV1AuditEventsErrors[keyof GetApiV1AuditEventsErrors];
@@ -3256,7 +3286,7 @@ export type GetApiV1AuditSessionsErrors = {
     /**
      * Validation Error
      */
-    422: HttpValidationError;
+    422: ApiErrorEnvelope;
 };
 
 export type GetApiV1AuditSessionsError = GetApiV1AuditSessionsErrors[keyof GetApiV1AuditSessionsErrors];
@@ -3286,7 +3316,7 @@ export type GetApiV1FindingsByFindingIdErrors = {
     /**
      * Validation Error
      */
-    422: HttpValidationError;
+    422: ApiErrorEnvelope;
 };
 
 export type GetApiV1FindingsByFindingIdError = GetApiV1FindingsByFindingIdErrors[keyof GetApiV1FindingsByFindingIdErrors];
@@ -3316,7 +3346,7 @@ export type GetApiV1FindingsByFindingIdExplainErrors = {
     /**
      * Validation Error
      */
-    422: HttpValidationError;
+    422: ApiErrorEnvelope;
 };
 
 export type GetApiV1FindingsByFindingIdExplainError = GetApiV1FindingsByFindingIdExplainErrors[keyof GetApiV1FindingsByFindingIdExplainErrors];
@@ -3341,7 +3371,7 @@ export type PostApiV1LoginAccessTokenErrors = {
     /**
      * Validation Error
      */
-    422: HttpValidationError;
+    422: ApiErrorEnvelope;
 };
 
 export type PostApiV1LoginAccessTokenError = PostApiV1LoginAccessTokenErrors[keyof PostApiV1LoginAccessTokenErrors];
@@ -3414,7 +3444,7 @@ export type PostApiV1ProjectsErrors = {
     /**
      * Validation Error
      */
-    422: HttpValidationError;
+    422: ApiErrorEnvelope;
 };
 
 export type PostApiV1ProjectsError = PostApiV1ProjectsErrors[keyof PostApiV1ProjectsErrors];
@@ -3444,7 +3474,7 @@ export type DeleteApiV1ProjectsByProjectIdErrors = {
     /**
      * Validation Error
      */
-    422: HttpValidationError;
+    422: ApiErrorEnvelope;
 };
 
 export type DeleteApiV1ProjectsByProjectIdError = DeleteApiV1ProjectsByProjectIdErrors[keyof DeleteApiV1ProjectsByProjectIdErrors];
@@ -3474,7 +3504,7 @@ export type GetApiV1ProjectsByProjectIdErrors = {
     /**
      * Validation Error
      */
-    422: HttpValidationError;
+    422: ApiErrorEnvelope;
 };
 
 export type GetApiV1ProjectsByProjectIdError = GetApiV1ProjectsByProjectIdErrors[keyof GetApiV1ProjectsByProjectIdErrors];
@@ -3504,7 +3534,7 @@ export type PatchApiV1ProjectsByProjectIdErrors = {
     /**
      * Validation Error
      */
-    422: HttpValidationError;
+    422: ApiErrorEnvelope;
 };
 
 export type PatchApiV1ProjectsByProjectIdError = PatchApiV1ProjectsByProjectIdErrors[keyof PatchApiV1ProjectsByProjectIdErrors];
@@ -3543,7 +3573,7 @@ export type GetApiV1ProjectsByProjectIdAssetsErrors = {
     /**
      * Validation Error
      */
-    422: HttpValidationError;
+    422: ApiErrorEnvelope;
 };
 
 export type GetApiV1ProjectsByProjectIdAssetsError = GetApiV1ProjectsByProjectIdAssetsErrors[keyof GetApiV1ProjectsByProjectIdAssetsErrors];
@@ -3573,7 +3603,7 @@ export type PostApiV1ProjectsByProjectIdAssetsErrors = {
     /**
      * Validation Error
      */
-    422: HttpValidationError;
+    422: ApiErrorEnvelope;
 };
 
 export type PostApiV1ProjectsByProjectIdAssetsError = PostApiV1ProjectsByProjectIdAssetsErrors[keyof PostApiV1ProjectsByProjectIdAssetsErrors];
@@ -3603,7 +3633,7 @@ export type PostApiV1ProjectsByProjectIdAssetsImportErrors = {
     /**
      * Validation Error
      */
-    422: HttpValidationError;
+    422: ApiErrorEnvelope;
 };
 
 export type PostApiV1ProjectsByProjectIdAssetsImportError = PostApiV1ProjectsByProjectIdAssetsImportErrors[keyof PostApiV1ProjectsByProjectIdAssetsImportErrors];
@@ -3638,7 +3668,7 @@ export type GetApiV1ProjectsByProjectIdAttackSummaryErrors = {
     /**
      * Validation Error
      */
-    422: HttpValidationError;
+    422: ApiErrorEnvelope;
 };
 
 export type GetApiV1ProjectsByProjectIdAttackSummaryError = GetApiV1ProjectsByProjectIdAttackSummaryErrors[keyof GetApiV1ProjectsByProjectIdAttackSummaryErrors];
@@ -3673,7 +3703,7 @@ export type GetApiV1ProjectsByProjectIdCompareCvssOnlyErrors = {
     /**
      * Validation Error
      */
-    422: HttpValidationError;
+    422: ApiErrorEnvelope;
 };
 
 export type GetApiV1ProjectsByProjectIdCompareCvssOnlyError = GetApiV1ProjectsByProjectIdCompareCvssOnlyErrors[keyof GetApiV1ProjectsByProjectIdCompareCvssOnlyErrors];
@@ -3703,7 +3733,7 @@ export type GetApiV1ProjectsByProjectIdDashboardErrors = {
     /**
      * Validation Error
      */
-    422: HttpValidationError;
+    422: ApiErrorEnvelope;
 };
 
 export type GetApiV1ProjectsByProjectIdDashboardError = GetApiV1ProjectsByProjectIdDashboardErrors[keyof GetApiV1ProjectsByProjectIdDashboardErrors];
@@ -3798,7 +3828,7 @@ export type GetApiV1ProjectsByProjectIdFindingsErrors = {
     /**
      * Validation Error
      */
-    422: HttpValidationError;
+    422: ApiErrorEnvelope;
 };
 
 export type GetApiV1ProjectsByProjectIdFindingsError = GetApiV1ProjectsByProjectIdFindingsErrors[keyof GetApiV1ProjectsByProjectIdFindingsErrors];
@@ -3828,7 +3858,7 @@ export type PostApiV1ProjectsByProjectIdGithubIssuesExportErrors = {
     /**
      * Validation Error
      */
-    422: HttpValidationError;
+    422: ApiErrorEnvelope;
 };
 
 export type PostApiV1ProjectsByProjectIdGithubIssuesExportError = PostApiV1ProjectsByProjectIdGithubIssuesExportErrors[keyof PostApiV1ProjectsByProjectIdGithubIssuesExportErrors];
@@ -3858,7 +3888,7 @@ export type PostApiV1ProjectsByProjectIdGithubIssuesPreviewErrors = {
     /**
      * Validation Error
      */
-    422: HttpValidationError;
+    422: ApiErrorEnvelope;
 };
 
 export type PostApiV1ProjectsByProjectIdGithubIssuesPreviewError = PostApiV1ProjectsByProjectIdGithubIssuesPreviewErrors[keyof PostApiV1ProjectsByProjectIdGithubIssuesPreviewErrors];
@@ -3893,7 +3923,7 @@ export type GetApiV1ProjectsByProjectIdGovernanceRollupsErrors = {
     /**
      * Validation Error
      */
-    422: HttpValidationError;
+    422: ApiErrorEnvelope;
 };
 
 export type GetApiV1ProjectsByProjectIdGovernanceRollupsError = GetApiV1ProjectsByProjectIdGovernanceRollupsErrors[keyof GetApiV1ProjectsByProjectIdGovernanceRollupsErrors];
@@ -3923,7 +3953,7 @@ export type PostApiV1ProjectsByProjectIdImportsErrors = {
     /**
      * Validation Error
      */
-    422: HttpValidationError;
+    422: ApiErrorEnvelope;
 };
 
 export type PostApiV1ProjectsByProjectIdImportsError = PostApiV1ProjectsByProjectIdImportsErrors[keyof PostApiV1ProjectsByProjectIdImportsErrors];
@@ -3953,7 +3983,7 @@ export type GetApiV1ProjectsByProjectIdRunsErrors = {
     /**
      * Validation Error
      */
-    422: HttpValidationError;
+    422: ApiErrorEnvelope;
 };
 
 export type GetApiV1ProjectsByProjectIdRunsError = GetApiV1ProjectsByProjectIdRunsErrors[keyof GetApiV1ProjectsByProjectIdRunsErrors];
@@ -3983,7 +4013,7 @@ export type GetApiV1ProjectsByProjectIdRuns2Errors = {
     /**
      * Validation Error
      */
-    422: HttpValidationError;
+    422: ApiErrorEnvelope;
 };
 
 export type GetApiV1ProjectsByProjectIdRuns2Error = GetApiV1ProjectsByProjectIdRuns2Errors[keyof GetApiV1ProjectsByProjectIdRuns2Errors];
@@ -4013,7 +4043,7 @@ export type GetApiV1ProjectsByProjectIdSummaryErrors = {
     /**
      * Validation Error
      */
-    422: HttpValidationError;
+    422: ApiErrorEnvelope;
 };
 
 export type GetApiV1ProjectsByProjectIdSummaryError = GetApiV1ProjectsByProjectIdSummaryErrors[keyof GetApiV1ProjectsByProjectIdSummaryErrors];
@@ -4043,7 +4073,7 @@ export type GetApiV1ProjectsByProjectIdWaiversErrors = {
     /**
      * Validation Error
      */
-    422: HttpValidationError;
+    422: ApiErrorEnvelope;
 };
 
 export type GetApiV1ProjectsByProjectIdWaiversError = GetApiV1ProjectsByProjectIdWaiversErrors[keyof GetApiV1ProjectsByProjectIdWaiversErrors];
@@ -4073,7 +4103,7 @@ export type PostApiV1ProjectsByProjectIdWaiversErrors = {
     /**
      * Validation Error
      */
-    422: HttpValidationError;
+    422: ApiErrorEnvelope;
 };
 
 export type PostApiV1ProjectsByProjectIdWaiversError = PostApiV1ProjectsByProjectIdWaiversErrors[keyof PostApiV1ProjectsByProjectIdWaiversErrors];
@@ -4130,7 +4160,7 @@ export type PostApiV1ProvidersUpdateJobsErrors = {
     /**
      * Validation Error
      */
-    422: HttpValidationError;
+    422: ApiErrorEnvelope;
 };
 
 export type PostApiV1ProvidersUpdateJobsError = PostApiV1ProvidersUpdateJobsErrors[keyof PostApiV1ProvidersUpdateJobsErrors];
@@ -4160,7 +4190,7 @@ export type GetApiV1ReportsByReportIdDownloadErrors = {
     /**
      * Validation Error
      */
-    422: HttpValidationError;
+    422: ApiErrorEnvelope;
 };
 
 export type GetApiV1ReportsByReportIdDownloadError = GetApiV1ReportsByReportIdDownloadErrors[keyof GetApiV1ReportsByReportIdDownloadErrors];
@@ -4188,7 +4218,7 @@ export type PostApiV1ReportsByReportIdVerifyErrors = {
     /**
      * Validation Error
      */
-    422: HttpValidationError;
+    422: ApiErrorEnvelope;
 };
 
 export type PostApiV1ReportsByReportIdVerifyError = PostApiV1ReportsByReportIdVerifyErrors[keyof PostApiV1ReportsByReportIdVerifyErrors];
@@ -4218,7 +4248,7 @@ export type GetApiV1RunsByRunIdErrors = {
     /**
      * Validation Error
      */
-    422: HttpValidationError;
+    422: ApiErrorEnvelope;
 };
 
 export type GetApiV1RunsByRunIdError = GetApiV1RunsByRunIdErrors[keyof GetApiV1RunsByRunIdErrors];
@@ -4248,7 +4278,7 @@ export type GetApiV1RunsByRunIdReportsErrors = {
     /**
      * Validation Error
      */
-    422: HttpValidationError;
+    422: ApiErrorEnvelope;
 };
 
 export type GetApiV1RunsByRunIdReportsError = GetApiV1RunsByRunIdReportsErrors[keyof GetApiV1RunsByRunIdReportsErrors];
@@ -4278,7 +4308,7 @@ export type PostApiV1RunsByRunIdReportsErrors = {
     /**
      * Validation Error
      */
-    422: HttpValidationError;
+    422: ApiErrorEnvelope;
 };
 
 export type PostApiV1RunsByRunIdReportsError = PostApiV1RunsByRunIdReportsErrors[keyof PostApiV1RunsByRunIdReportsErrors];
@@ -4308,7 +4338,7 @@ export type GetApiV1RunsByRunIdSummaryErrors = {
     /**
      * Validation Error
      */
-    422: HttpValidationError;
+    422: ApiErrorEnvelope;
 };
 
 export type GetApiV1RunsByRunIdSummaryError = GetApiV1RunsByRunIdSummaryErrors[keyof GetApiV1RunsByRunIdSummaryErrors];
@@ -4349,7 +4379,7 @@ export type PostApiV1UsersMePasswordErrors = {
     /**
      * Validation Error
      */
-    422: HttpValidationError;
+    422: ApiErrorEnvelope;
 };
 
 export type PostApiV1UsersMePasswordError = PostApiV1UsersMePasswordErrors[keyof PostApiV1UsersMePasswordErrors];
@@ -4379,7 +4409,7 @@ export type PostApiV1UsersByUserIdActivateErrors = {
     /**
      * Validation Error
      */
-    422: HttpValidationError;
+    422: ApiErrorEnvelope;
 };
 
 export type PostApiV1UsersByUserIdActivateError = PostApiV1UsersByUserIdActivateErrors[keyof PostApiV1UsersByUserIdActivateErrors];
@@ -4409,7 +4439,7 @@ export type PostApiV1UsersByUserIdDeactivateErrors = {
     /**
      * Validation Error
      */
-    422: HttpValidationError;
+    422: ApiErrorEnvelope;
 };
 
 export type PostApiV1UsersByUserIdDeactivateError = PostApiV1UsersByUserIdDeactivateErrors[keyof PostApiV1UsersByUserIdDeactivateErrors];
@@ -4439,7 +4469,7 @@ export type PostApiV1UsersByUserIdPasswordResetErrors = {
     /**
      * Validation Error
      */
-    422: HttpValidationError;
+    422: ApiErrorEnvelope;
 };
 
 export type PostApiV1UsersByUserIdPasswordResetError = PostApiV1UsersByUserIdPasswordResetErrors[keyof PostApiV1UsersByUserIdPasswordResetErrors];
@@ -4487,7 +4517,7 @@ export type PatchApiV1WaiversByWaiverIdErrors = {
     /**
      * Validation Error
      */
-    422: HttpValidationError;
+    422: ApiErrorEnvelope;
 };
 
 export type PatchApiV1WaiversByWaiverIdError = PatchApiV1WaiversByWaiverIdErrors[keyof PatchApiV1WaiversByWaiverIdErrors];
@@ -4517,7 +4547,7 @@ export type PostApiV1WaiversByWaiverIdExpireErrors = {
     /**
      * Validation Error
      */
-    422: HttpValidationError;
+    422: ApiErrorEnvelope;
 };
 
 export type PostApiV1WaiversByWaiverIdExpireError = PostApiV1WaiversByWaiverIdExpireErrors[keyof PostApiV1WaiversByWaiverIdExpireErrors];

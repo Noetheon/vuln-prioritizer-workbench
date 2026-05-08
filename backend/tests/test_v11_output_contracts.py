@@ -703,11 +703,11 @@ def test_ci_workflow_permissions_are_minimal() -> None:
     assert release["jobs"]["publish-pypi"]["permissions"] == {"id-token": "write"}
 
 
-def test_maintenance_workflow_runs_weekly_release_check_and_install_smokes() -> None:
+def test_maintenance_workflow_runs_weekly_release_readiness_and_install_smokes() -> None:
     payload = yaml.safe_load(MAINTENANCE_WORKFLOW.read_text(encoding="utf-8"))
     triggers = payload.get("on", payload.get(True))
     jobs = payload["jobs"]
-    release_job = jobs["release-check-dry-run"]
+    release_job = jobs["release-readiness-dry-run"]
     install_job = jobs["install-smoke-matrix"]
 
     assert "workflow_dispatch" in triggers
@@ -717,9 +717,9 @@ def test_maintenance_workflow_runs_weekly_release_check_and_install_smokes() -> 
     release_gate = next(
         step
         for step in release_job["steps"]
-        if step.get("name") == "Run weekly release-check dry-run"
+        if step.get("name") == "Run weekly release-readiness dry-run"
     )
-    assert release_gate["run"] == "make release-check"
+    assert release_gate["run"] == "make release-readiness-check"
 
     matrix = install_job["strategy"]["matrix"]
     assert matrix["os"] == ["ubuntu-latest", "macos-latest"]
@@ -849,16 +849,19 @@ def test_release_check_keeps_demo_sync_manual_and_deterministic() -> None:
     release_block = makefile.split("release-check:", 1)[1]
     assert "$(MAKE) frontend-check" in release_block
     assert "frontend-test-unit:" in makefile
+    assert "frontend-test-unit-coverage:" in makefile
     assert (
         "frontend-check: frontend-install frontend-lint frontend-build "
-        "frontend-test-unit api-client-drift-check" in makefile
+        "frontend-test-unit-coverage api-client-drift-check" in makefile
     )
     assert "$(MAKE) dependency-audit" in release_block
     assert "$(MAKE) docker-demo-smoke" in release_block
     assert "$(MAKE) pipx-source-smoke" in release_block
     assert "$(MAKE) demo-sync-check" in release_block
-    assert "api-client-drift-check: frontend-generate-client" in makefile
-    assert "git diff --exit-code -- frontend/src/client" in makefile
+    assert "api-client-drift-check:" in makefile
+    assert "$(MAKE) frontend-generate-client" in makefile
+    assert "find frontend/src/client -type f -print | sort | xargs shasum -a 256" in makefile
+    assert "Generated frontend client changed." in makefile
     assert (
         "release-readiness-check: release-check api-client-drift-check "
         "demo-evidence-bundle-check playwright-check docker-production-smoke" in makefile
@@ -890,10 +893,10 @@ def test_testpypi_workflow_exposes_version_output_and_hosted_index_verification(
     build_steps = jobs["build"]["steps"]
     _assert_node_setup_for_frontend_lockfile(build_steps)
     release_gate_step = next(
-        step for step in build_steps if step.get("name") == "Run release-equivalent local checks"
+        step for step in build_steps if step.get("name") == "Run release-readiness local checks"
     )
     version_step = next(step for step in build_steps if step.get("id") == "package_version")
-    assert release_gate_step["run"] == "make release-check"
+    assert release_gate_step["run"] == "make release-readiness-check"
     assert "payload['project']['version']" in version_step["run"]
 
     verify_job = jobs["verify-testpypi-install"]

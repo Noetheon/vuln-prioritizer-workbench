@@ -241,21 +241,17 @@ jobs:
         if: steps.frontend-scope.outputs.run-frontend == 'true'
         run: git diff --exit-code -- frontend/src/client
 
-      - name: Run frontend unit tests
+      - name: Run frontend unit tests with coverage
         if: steps.frontend-scope.outputs.run-frontend == 'true'
-        run: make frontend-test-unit
+        run: make frontend-test-unit-coverage
 
       - name: Install Playwright browser
         if: steps.frontend-scope.outputs.run-frontend == 'true'
         working-directory: frontend
         run: npx playwright install --with-deps chromium
 
-      - name: Run frontend Playwright representative PR gate
-        if: steps.frontend-scope.outputs.run-frontend == 'true' && github.event_name == 'pull_request'
-        run: npm --prefix frontend run test -- tests/ui-smoke.spec.ts tests/responsive-shell.spec.ts tests/accessibility.spec.ts
-
       - name: Run full frontend Playwright suite
-        if: steps.frontend-scope.outputs.run-frontend == 'true' && github.event_name != 'pull_request'
+        if: steps.frontend-scope.outputs.run-frontend == 'true'
         run: npm --prefix frontend run test
 
       - name: Upload frontend Playwright failure evidence

@@ -9,7 +9,7 @@ dependencies = []
 members = ["backend"]
 
 [tool.pytest.ini_options]
-addopts = "-ra --cov=app --cov=vuln_prioritizer --cov-report=term-missing --cov-fail-under=90"
+addopts = "-ra --cov=app --cov=vuln_prioritizer --cov-report=term-missing --cov-fail-under=95"
 testpaths = ["backend/tests"]
 pythonpath = ["backend", "backend/src"]
 markers = [
