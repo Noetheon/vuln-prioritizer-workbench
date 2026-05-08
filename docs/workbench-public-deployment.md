@@ -4,7 +4,7 @@ This runbook covers the additional controls required before exposing the
 Workbench beyond a local or private single-workspace environment.
 
 Status: deployment-control runbook, not final certification. Public-production
-readiness remains gated by the PP5 scorecard and the
+readiness remains gated by the VPW-AUD-999 final scorecard and the
 [Public-Production Release Evidence Ledger](./public-production-release-evidence-ledger.md).
 
 ## Required Environment
@@ -106,6 +106,12 @@ proxy CIDRs. Leave it blank when the backend is reachable directly.
 Browser JWTs include a persisted session ID. `/api/v1/login/logout` revokes the
 current session, and revoked or expired sessions are rejected before a user is
 returned to API routes.
+
+Scoped API tokens are created after JWT login and are stored only as hashes.
+They support local automation for `read`, `write`, `import`, `report`, or
+`admin` API scopes and are rejected when revoked, expired, or tied to an
+inactive user. They are not a substitute for the full public-deployment control
+set documented in this runbook.
 
 For horizontally scaled deployments, replace the in-process limiter with a
 shared store before increasing replica count; the built-in limiter is still
