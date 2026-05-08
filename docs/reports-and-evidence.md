@@ -68,14 +68,14 @@ under `docs/evidence/`. The docs hygiene test enforces this boundary.
 | Location | Owner | Use | Boundary |
 | --- | --- | --- | --- |
 | `docs/evidence/` | Backend/API contract owners | Small, reviewed contract fixtures referenced by schemas or regression tests. | No screenshots, ad hoc logs, demo bundles, or historical issue proof. |
-| `archive/vpw-evidence/` | Release and roadmap maintainers | Public-safe historical VPW evidence, scorecards, screenshots, demo summaries, and issue closeout artifacts. | Keep entrypoints in `archive/vpw-evidence/MANIFEST.md`; add redacted summaries instead of raw local logs. |
+| `archive/vpw-evidence/` | Release and roadmap maintainers | Selected public-safe historical VPW evidence, screenshots, and demo summaries. | Keep entrypoints in `archive/vpw-evidence/MANIFEST.md`; add tracked Markdown only when current docs or tests need it. |
 | CI artifacts | Release owner for the exact run | Ephemeral command output, package files, Docker logs, Playwright reports, and release-readiness bundles for a commit, tag, or PR. | Link from the PR/issue/release evidence comment; do not copy raw artifacts into `docs/evidence/`. |
 | Historical screenshots | Demo or submission owner | Locked UI proof referenced by submission and demo documentation. | Store under `archive/vpw-evidence/` or a named subdirectory; do not duplicate screenshots across docs pages. |
 
-New VPW-AUD evidence should be a small tracked Markdown summary under
-`archive/vpw-evidence/` when it must survive the PR, or an external CI artifact
-link when the raw output belongs to the exact workflow run. Evidence comments
-must identify which path was used and why.
+New VPW-AUD evidence should normally live in the PR/issue closeout comment or
+as an external CI artifact for the exact workflow run. Do not add audit
+scorecards or one-off validation summaries as tracked Markdown unless a
+maintainer explicitly asks for a durable repository artifact.
 
 ## Historical Evidence Archive
 
@@ -89,9 +89,9 @@ entrypoints:
 - `archive/vpw-evidence/presentation-pack/README.md`
 - `archive/vpw-evidence/presentation-pack/evidence-index.md`
 
-The archive preserves screenshots, issue closeout notes, validation logs,
-presentation-pack references, and old milestone evidence without making the
-public `docs/evidence/` tree sprawl again.
+The archive preserves selected screenshots, demo summaries, presentation-pack
+references, and machine-readable evidence without making the public
+`docs/evidence/` tree sprawl again.
 
 ## Safety Boundary
 
