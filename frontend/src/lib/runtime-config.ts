@@ -8,7 +8,7 @@ declare const __VPW_API_URL__: string | undefined
 declare const __VPW_DEMO_MODE__: boolean | undefined
 declare const __VPW_LEGACY_SESSION_TOKEN_STORAGE__: boolean | undefined
 
-const LOCAL_API_HOSTS = new Set(["localhost", "127.0.0.1", "::1"])
+const LOCAL_API_HOSTS = new Set(["localhost", "127.0.0.1", "::1", "[::1]"])
 
 export function normalizeApiBaseUrl(value: string | undefined): string {
   const trimmed = value?.trim().replace(/\/+$/, "") ?? ""

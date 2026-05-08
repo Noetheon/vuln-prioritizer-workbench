@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+from copy import deepcopy
 from typing import Any
 
-from fastapi import Request
+from fastapi import FastAPI, Request
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
@@ -48,6 +49,46 @@ STATUS_CODES = {
     429: "rate_limited",
 }
 
+API_ERROR_ENVELOPE_SCHEMA: dict[str, Any] = {
+    "title": "ApiErrorEnvelope",
+    "type": "object",
+    "required": ["code", "message", "details", "detail"],
+    "properties": {
+        "code": {
+            "type": "string",
+            "description": "Stable machine-readable error code.",
+        },
+        "message": {
+            "type": "string",
+            "description": "Request-safe human-readable error message.",
+        },
+        "details": {
+            "type": "object",
+            "additionalProperties": True,
+            "description": "Structured, request-safe error details.",
+        },
+        "detail": {
+            "description": "Legacy-compatible FastAPI detail field.",
+            "anyOf": [
+                {"type": "string"},
+                {"type": "object", "additionalProperties": True},
+                {"type": "array", "items": {}},
+                {"type": "null"},
+            ],
+        },
+        "trace_id": {
+            "type": "string",
+            "description": "Optional request/correlation identifier echoed from request headers.",
+        },
+    },
+    "additionalProperties": False,
+}
+API_ERROR_ENVELOPE_SCHEMA_REF = {"$ref": "#/components/schemas/ApiErrorEnvelope"}
+FASTAPI_VALIDATION_SCHEMA_REFS = {
+    "#/components/schemas/HTTPValidationError",
+    "#/components/schemas/ValidationError",
+}
+
 
 def error_response_content(
     *,
@@ -80,6 +121,24 @@ def error_response_content(
     return content
 
 
+def install_error_openapi_schema(app: FastAPI) -> None:
+    """Document FastAPI validation errors with the runtime error envelope."""
+    original_openapi = app.openapi
+
+    def custom_openapi() -> dict[str, Any]:
+        if app.openapi_schema:
+            return app.openapi_schema
+
+        schema = original_openapi()
+        components = schema.setdefault("components", {}).setdefault("schemas", {})
+        components["ApiErrorEnvelope"] = deepcopy(API_ERROR_ENVELOPE_SCHEMA)
+        _replace_fastapi_validation_error_schemas(schema)
+        app.openapi_schema = schema
+        return schema
+
+    app.openapi = custom_openapi  # type: ignore[method-assign]
+
+
 def redact_request_safe_value(value: Any) -> Any:
     """Redact secrets and absolute local paths from request-facing payloads."""
     if isinstance(value, str):
@@ -97,6 +156,48 @@ def redact_public_payload(value: Any) -> Any:
 def production_safe_settings(active_settings: object) -> bool:
     """Return whether diagnostics should use the production-safe projection."""
     return isinstance(active_settings, Settings) and active_settings.ENVIRONMENT != "local"
+
+
+def _replace_fastapi_validation_error_schemas(schema: dict[str, Any]) -> None:
+    paths = schema.get("paths")
+    if not isinstance(paths, Mapping):
+        return
+
+    for path_item in paths.values():
+        if not isinstance(path_item, Mapping):
+            continue
+        for operation in path_item.values():
+            if not isinstance(operation, dict):
+                continue
+            responses = operation.get("responses")
+            if not isinstance(responses, Mapping):
+                continue
+            for response in responses.values():
+                if not isinstance(response, dict):
+                    continue
+                content = response.get("content")
+                if not isinstance(content, Mapping):
+                    continue
+                json_content = content.get("application/json")
+                if not isinstance(json_content, dict):
+                    continue
+                if _is_fastapi_validation_error_schema(json_content.get("schema")):
+                    json_content["schema"] = dict(API_ERROR_ENVELOPE_SCHEMA_REF)
+
+
+def _is_fastapi_validation_error_schema(response_schema: Any) -> bool:
+    if not isinstance(response_schema, Mapping):
+        return False
+    schema_ref = response_schema.get("$ref")
+    if isinstance(schema_ref, str) and schema_ref in FASTAPI_VALIDATION_SCHEMA_REFS:
+        return True
+    for composite_key in ("anyOf", "oneOf", "allOf"):
+        nested_schemas = response_schema.get(composite_key)
+        if isinstance(nested_schemas, list) and any(
+            _is_fastapi_validation_error_schema(nested_schema) for nested_schema in nested_schemas
+        ):
+            return True
+    return False
 
 
 async def http_exception_handler(request: Request, exc: Exception) -> JSONResponse:

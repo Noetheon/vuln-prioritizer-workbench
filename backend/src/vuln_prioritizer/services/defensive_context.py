@@ -177,8 +177,8 @@ def _normalize_context_item(raw_item: Mapping[str, Any]) -> DefensiveContext:
     clean.setdefault("title", _first_text(raw_item, "title", "name"))
     clean.setdefault("summary", _first_text(raw_item, "summary", "description", "details"))
     clean.setdefault("url", _first_text(raw_item, "url", "link"))
-    clean.setdefault("references", _string_list(raw_item.get("references")))
-    clean.setdefault("tags", _string_list(raw_item.get("tags")))
+    clean["references"] = _string_list(raw_item.get("references"))
+    clean["tags"] = _string_list(raw_item.get("tags"))
     ssvc = raw_item.get("ssvc")
     if isinstance(ssvc, Mapping):
         clean.setdefault("ssvc_decision", _first_text(ssvc, "decision", "priority"))

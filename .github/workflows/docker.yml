@@ -107,8 +107,14 @@ jobs:
         if: needs.changes.outputs.run-docker == 'true'
         run: make docker-demo-smoke
 
+      - name: Run production-like Docker smoke
+        if: needs.changes.outputs.run-docker == 'true'
+        run: make docker-production-smoke
+
       - name: Show compose status and logs on failure
         if: failure() && needs.changes.outputs.run-docker == 'true'
         run: |
           docker compose -f compose.yml -f compose.override.yml ps || true
           docker compose -f compose.yml -f compose.override.yml logs --no-color || true
+          docker compose -f compose.yml -f compose.production-smoke.yml ps || true
+          docker compose -f compose.yml -f compose.production-smoke.yml logs --no-color || true

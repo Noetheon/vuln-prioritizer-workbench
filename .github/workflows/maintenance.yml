@@ -15,7 +15,7 @@ permissions:
   contents: read
 
 jobs:
-  release-check-dry-run:
+  release-readiness-dry-run:
     runs-on: ubuntu-latest
 
     steps:
@@ -42,14 +42,14 @@ jobs:
       - name: Install project and dev dependencies
         run: python -m pip install -e "backend[dev]"
 
-      - name: Run weekly release-check dry-run
-        run: make release-check
+      - name: Run weekly release-readiness dry-run
+        run: make release-readiness-check
 
       - name: Upload maintenance dry-run artifacts on failure
         if: failure()
         uses: actions/upload-artifact@v7
         with:
-          name: maintenance-release-check-debug
+          name: maintenance-release-readiness-debug
           if-no-files-found: ignore
           retention-days: 3
           path: |

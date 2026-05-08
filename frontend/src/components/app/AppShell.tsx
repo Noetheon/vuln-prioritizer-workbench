@@ -148,7 +148,7 @@ export function AppShell({
         <aside
           aria-label="Workbench sidebar"
           className={cn(
-            "relative hidden shrink-0 flex-col border-r border-slate-800/80 bg-[var(--vpw-navy)] transition-[width] duration-200 ease-out lg:flex",
+            "sticky top-0 hidden h-dvh max-h-dvh shrink-0 flex-col border-r border-slate-800/80 bg-[var(--vpw-navy)] transition-[width] duration-200 ease-out lg:flex",
             sidebarCollapsed ? "w-[72px]" : "w-[248px]",
           )}
         >
@@ -200,7 +200,7 @@ export function AppShell({
           {/* Nav */}
           <nav
             aria-label="Workbench navigation"
-            className="flex-1 overflow-y-auto p-2"
+            className="min-h-0 flex-1 overflow-y-auto p-2"
           >
             <ul className="flex flex-col gap-1">
               {sidebarCollapsed ? (
@@ -302,9 +302,10 @@ export function AppShell({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent
-                align="start"
+                align="end"
                 className="w-56"
-                side="top"
+                collisionPadding={16}
+                side="right"
                 sideOffset={8}
               >
                 <DropdownMenuLabel>

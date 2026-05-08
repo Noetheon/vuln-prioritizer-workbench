@@ -106,7 +106,9 @@ def generate_summary_markdown(
 
     metadata = report_payload.get("metadata", {})
     attack_summary = report_payload.get("attack_summary", {})
-    findings = report_payload.get("findings", [])
+    raw_findings = report_payload.get("findings", [])
+    findings = raw_findings if isinstance(raw_findings, list) else []
+    finding_rows = [finding for finding in findings if isinstance(finding, dict)]
     counts_by_priority = metadata.get("counts_by_priority", {})
     lines = [
         "# Vulnerability Prioritization Summary",
@@ -145,9 +147,8 @@ def generate_summary_markdown(
         lines.append("")
     threat_context_findings = [
         finding
-        for finding in findings
-        if isinstance(finding, dict)
-        and finding.get("attack_mapped")
+        for finding in finding_rows
+        if finding.get("attack_mapped")
         and finding.get("attack_relevance") in {"High", "Medium"}
         and finding.get("priority_label") != "Low"
     ]
@@ -169,7 +170,7 @@ def generate_summary_markdown(
                 key=lambda item: (-int(item[1]), str(item[0])),
             )[:5]:
                 lines.append(f"- {technique_id}: {count} mapped finding(s)")
-    governance_lines = _governance_summary_lines(metadata, findings)
+    governance_lines = _governance_summary_lines(metadata, finding_rows)
     if governance_lines:
         lines.extend(["", "## Governance", *governance_lines])
     detection_lines = _detection_coverage_summary_lines(report_payload.get("detection_coverage"))
@@ -179,8 +180,8 @@ def generate_summary_markdown(
     if comparison_lines:
         lines.extend(["", "## CVSS-only Baseline Comparison", *comparison_lines])
     lines.extend(["", "## Top Findings"])
-    if findings:
-        top_findings = findings[:5]
+    if finding_rows:
+        top_findings = finding_rows[:5]
         for finding in top_findings:
             lines.append(
                 "- "
@@ -353,7 +354,9 @@ def generate_compact_summary_markdown(report_payload: dict[str, Any]) -> str:
     """Render a compact Markdown summary suitable for GitHub step summaries."""
     metadata = report_payload.get("metadata", {})
     attack_summary = report_payload.get("attack_summary", {})
-    findings = report_payload.get("findings", [])
+    raw_findings = report_payload.get("findings", [])
+    findings = raw_findings if isinstance(raw_findings, list) else []
+    finding_rows = [finding for finding in findings if isinstance(finding, dict)]
     counts_by_priority = metadata.get("counts_by_priority", {})
     metrics = [
         str(metadata.get("findings_count", 0)),
@@ -385,9 +388,9 @@ def generate_compact_summary_markdown(report_payload: dict[str, Any]) -> str:
         "| --- | --- | --- | --- | --- | --- | --- |",
         "| " + " | ".join(metrics) + " |",
     ]
-    if findings:
+    if finding_rows:
         lines.extend(["", "## Top Findings"])
-        for finding in findings[:3]:
+        for finding in finding_rows[:3]:
             lines.append(
                 "- "
                 + f"{finding.get('cve_id', 'N.A.')} "

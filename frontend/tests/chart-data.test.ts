@@ -2,8 +2,10 @@ import assert from "node:assert/strict"
 import test from "node:test"
 
 import {
+  epssBucketChartData,
   findingsByPriorityChartData,
   priorityCount,
+  runActivityTrendData,
   topServicesByRiskChartData,
 } from "../src/lib/chart-data.ts"
 
@@ -105,4 +107,63 @@ test("adds highest priority to top service rollup detail", () => {
   ]
   const data = topServicesByRiskChartData(serviceData, 10)
   assert.equal(data[0].detail, "4 findings · highest priority Critical")
+})
+
+test("builds run activity trends from the latest limited runs", () => {
+  const data = runActivityTrendData(
+    [
+      {
+        started_at: "2026-01-03T08:00:00Z",
+        status: "completed",
+      },
+      {
+        started_at: "2026-01-02T08:00:00Z",
+        status: "failed",
+      },
+      {
+        started_at: "2026-01-01T08:00:00Z",
+        status: "completed",
+      },
+    ],
+    2,
+  )
+
+  assert.deepEqual(
+    data.map((item) => [item.detail, item.tone, item.value]),
+    [
+      ["failed", "failed", 1],
+      ["completed", "completed", 2],
+    ],
+  )
+  assert.notEqual(data[0].label, "Run 1")
+})
+
+test("uses pending fallback labels for runs without start timestamps", () => {
+  const data = runActivityTrendData([{}], 1)
+
+  assert.deepEqual(data, [
+    {
+      detail: "pending",
+      label: "Run 1",
+      tone: "pending",
+      value: 1,
+    },
+  ])
+})
+
+test("normalizes partial EPSS bucket counts into chart buckets", () => {
+  const data = epssBucketChartData({
+    critical: 1,
+    medium: 3,
+  })
+
+  assert.deepEqual(
+    data.map((item) => [item.label, item.detail, item.value, item.tone]),
+    [
+      ["Low Exposure", "0.00 – 0.25", 0, "low"],
+      ["Medium Exposure", "0.25 – 0.50", 3, "medium"],
+      ["High Exposure", "0.50 – 0.70", 0, "high"],
+      ["Critical Exposure", "≥ 0.70", 1, "critical"],
+    ],
+  )
 })

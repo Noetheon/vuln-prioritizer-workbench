@@ -4,6 +4,7 @@ import hashlib
 import json
 import threading
 from pathlib import Path
+from types import SimpleNamespace
 from urllib.parse import urlparse
 
 import pytest
@@ -528,6 +529,142 @@ def test_nvd_api_key_from_env_is_sent_and_redacted_from_warnings(monkeypatch) ->
     assert secret not in warnings[0]
     assert "apiKey=<redacted>" in warnings[0]
     assert provider.last_diagnostics.degraded is True
+
+
+def test_nvd_fetch_many_warns_on_cache_load_failure_and_deduplicates_inputs() -> None:
+    class BrokenCache:
+        def get_json(self, *_args, **_kwargs):  # noqa: ANN002, ANN003
+            raise ValueError("cache contains token secret-value")
+
+        def set_json(self, *_args, **_kwargs):  # noqa: ANN002, ANN003
+            return None
+
+    class Session:
+        def __init__(self) -> None:
+            self.requests: list[str] = []
+
+        def get(self, *args, **kwargs):  # noqa: ANN002, ANN003
+            cve_id = kwargs["params"]["cveId"]
+            self.requests.append(cve_id)
+            return FakeResponse(
+                {
+                    "vulnerabilities": [
+                        {
+                            "cve": {
+                                "descriptions": [{"lang": "en", "value": f"Live {cve_id}"}],
+                            }
+                        }
+                    ]
+                }
+            )
+
+    session = Session()
+    provider = NvdProvider(
+        session=session,
+        api_key="secret-value",
+        cache=BrokenCache(),  # type: ignore[arg-type]
+    )
+
+    results, warnings = provider.fetch_many(["CVE-2026-0301", "CVE-2026-0301"])
+
+    assert list(results) == ["CVE-2026-0301"]
+    assert session.requests == ["CVE-2026-0301"]
+    assert results["CVE-2026-0301"].description == "Live CVE-2026-0301"
+    assert warnings == ["NVD cache load failed for CVE-2026-0301: cache contains token <redacted>"]
+
+
+def test_nvd_fetch_many_uses_expired_cache_when_network_fails(tmp_path: Path) -> None:
+    class Session:
+        def get(self, *args, **kwargs):  # noqa: ANN002, ANN003
+            raise requests.RequestException("nvd offline")
+
+    cache = FileCache(tmp_path / "cache", ttl_hours=1)
+    cache_path = cache._path_for("nvd", "CVE-2026-0302")
+    cache_path.parent.mkdir(parents=True, exist_ok=True)
+    cache_path.write_text(
+        json.dumps(
+            {
+                "key": "CVE-2026-0302",
+                "cached_at": "2000-01-01T00:00:00+00:00",
+                "payload": NvdData(
+                    cve_id="CVE-2026-0302",
+                    description="Expired NVD record",
+                ).model_dump(),
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    provider = NvdProvider(session=Session(), cache=cache)
+    results, warnings = provider.fetch_many(["CVE-2026-0302"])
+
+    assert results["CVE-2026-0302"].description == "Expired NVD record"
+    assert any("using expired cached data" in warning for warning in warnings)
+    assert provider.last_diagnostics.stale_cache_hits == 1
+    assert provider.last_diagnostics.failures == 1
+    assert provider.last_diagnostics.degraded is True
+
+
+def test_nvd_request_handles_404_and_retryable_exceptions(monkeypatch) -> None:  # noqa: ANN001
+    class Session:
+        def __init__(self) -> None:
+            self.calls = 0
+
+        def get(self, *args, **kwargs):  # noqa: ANN002, ANN003
+            self.calls += 1
+            if self.calls == 1:
+                response = FakeResponse(status_code=503, headers={"Retry-After": "invalid"})
+                error = requests.HTTPError("503 transient")
+                error.response = response
+                raise error
+            return FakeResponse(status_code=404)
+
+    sleep_calls: list[float] = []
+    monkeypatch.setattr("vuln_prioritizer.providers.nvd.time.sleep", sleep_calls.append)
+    monkeypatch.setattr("vuln_prioritizer.providers.nvd.random.uniform", lambda *_args: 0.0)
+
+    session = Session()
+    provider = NvdProvider(session=session, max_retries=2)
+    results, warnings = provider.fetch_many(["CVE-2026-0303"])
+
+    assert warnings == []
+    assert session.calls == 2
+    assert sleep_calls == [1.0]
+    assert results["CVE-2026-0303"] == NvdData(cve_id="CVE-2026-0303")
+
+
+def test_nvd_parse_payload_falls_back_to_non_english_description_and_metric_severity() -> None:
+    payload = {
+        "vulnerabilities": [
+            {
+                "cve": {
+                    "descriptions": [{"lang": "de", "value": "Beschreibung"}],
+                    "metrics": {
+                        "cvssMetricV2": [
+                            {
+                                "type": "Secondary",
+                                "baseSeverity": "MEDIUM",
+                                "cvssData": {"vectorString": "AV:N/AC:L/Au:N/C:P/I:N/A:N"},
+                            }
+                        ]
+                    },
+                    "references": [
+                        {"name": "missing-url"},
+                        {"url": "https://example.test/nvd", "tags": [None, " Patch ", ""]},
+                    ],
+                }
+            }
+        ]
+    }
+
+    parsed = NvdProvider.parse_payload("CVE-2026-0304", payload)
+
+    assert parsed.description == "Beschreibung"
+    assert parsed.cvss_base_score is None
+    assert parsed.cvss_severity == "MEDIUM"
+    assert parsed.cvss_version == "2.0"
+    assert parsed.references == ["https://example.test/nvd"]
+    assert parsed.reference_tags == {"https://example.test/nvd": ["Patch"]}
 
 
 def test_enrichment_service_tracks_last_nvd_diagnostics() -> None:
@@ -1462,6 +1599,101 @@ def test_attack_provider_accepts_alias_columns_and_reports_invalid_rows(tmp_path
     assert any("overrides duplicate row" in warning for warning in warnings)
 
 
+def test_attack_provider_source_inference_and_empty_mapping_edges(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    provider = AttackProvider()
+
+    results, metadata, warnings = provider.fetch_many(
+        ["CVE-2024-0001"],
+        enabled=True,
+        source="none",
+    )
+    assert results == {}
+    assert metadata["source"] == "none"
+    assert warnings == []
+
+    results, metadata, warnings = provider.fetch_many(
+        ["CVE-2024-0001"],
+        enabled=True,
+        source="local-csv",
+    )
+    assert results == {}
+    assert metadata["source"] == "local-csv"
+    assert warnings == ["ATT&CK mode requested, but no ATT&CK mapping file was provided."]
+
+    monkeypatch.setattr(
+        provider,
+        "_load_ctid_json",
+        lambda _cve_ids, *, mapping_file, technique_metadata_file: (
+            {"CVE-2024-0001": AttackData(cve_id="CVE-2024-0001", mapped=True)},
+            {"source": "ctid-json", "mapping_file": str(mapping_file)},
+            [str(technique_metadata_file)],
+        ),
+    )
+    inferred_json, inferred_json_metadata, inferred_json_warnings = provider.fetch_many(
+        ["CVE-2024-0001"],
+        enabled=True,
+        source="none",
+        mapping_file=tmp_path / "mapping.json",
+    )
+    assert inferred_json["CVE-2024-0001"].mapped is True
+    assert inferred_json_metadata["source"] == "ctid-json"
+    assert inferred_json_warnings == ["None"]
+
+    monkeypatch.setattr(
+        provider,
+        "_load_local_curated",
+        lambda _cve_ids, *, mapping_file: (
+            {"CVE-2024-0001": AttackData(cve_id="CVE-2024-0001", mapped=True)},
+            {"source": "local-curated", "mapping_file": str(mapping_file)},
+            [],
+        ),
+    )
+    inferred_yaml, inferred_yaml_metadata, _ = provider.fetch_many(
+        ["CVE-2024-0001"],
+        enabled=True,
+        source="none",
+        mapping_file=tmp_path / "mapping.yaml",
+    )
+    assert inferred_yaml["CVE-2024-0001"].mapped is True
+    assert inferred_yaml_metadata["source"] == "local-curated"
+
+    monkeypatch.setattr(
+        provider,
+        "_load_legacy_csv",
+        lambda _cve_ids, _mapping_file: (
+            {"CVE-2024-0001": AttackData(cve_id="CVE-2024-0001", mapped=True)},
+            [],
+        ),
+    )
+    provider.enrichment_service = SimpleNamespace(
+        enrich_legacy_csv=lambda _cve_ids, *, attack_data: attack_data
+    )
+    inferred_csv, inferred_csv_metadata, inferred_csv_warnings = provider.fetch_many(
+        ["CVE-2024-0001"],
+        enabled=True,
+        source="none",
+        mapping_file=tmp_path / "mapping.csv",
+        technique_metadata_file=tmp_path / "metadata.json",
+    )
+    assert inferred_csv["CVE-2024-0001"].mapped is True
+    assert inferred_csv_metadata["source"] == "local-csv"
+    assert any("legacy compatibility mode" in warning for warning in inferred_csv_warnings)
+    assert any("metadata is ignored" in warning for warning in inferred_csv_warnings)
+
+    unsupported, unsupported_metadata, unsupported_warnings = provider.fetch_many(
+        ["CVE-2024-0001"],
+        enabled=True,
+        source="unsupported",
+        mapping_file=tmp_path / "mapping.txt",
+    )
+    assert unsupported == {}
+    assert unsupported_metadata["source"] == "unsupported"
+    assert unsupported_warnings == ["Unsupported ATT&CK source: unsupported"]
+
+
 def test_ctid_provider_loads_official_subset_fixture() -> None:
     provider = CtidMappingsProvider()
 
@@ -1521,6 +1753,83 @@ def test_ctid_provider_loads_official_subset_fixture() -> None:
     }
 
 
+def test_ctid_provider_rejects_missing_file_extension_and_required_sections(
+    tmp_path: Path,
+) -> None:
+    provider = CtidMappingsProvider()
+
+    with pytest.raises(FileNotFoundError, match="mapping file not found"):
+        provider.load(tmp_path / "missing.json")
+
+    csv_file = tmp_path / "mapping.csv"
+    csv_file.write_text("cve,techniques\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="must be a JSON file"):
+        provider.load(csv_file)
+
+    missing_metadata = tmp_path / "missing-metadata.json"
+    missing_metadata.write_text(json.dumps({"mapping_objects": []}), encoding="utf-8")
+    with pytest.raises(ValueError, match="missing a metadata object"):
+        provider.load(missing_metadata)
+
+    missing_mapping_objects = tmp_path / "missing-mapping-objects.json"
+    missing_mapping_objects.write_text(json.dumps({"metadata": {}}), encoding="utf-8")
+    with pytest.raises(ValueError, match="missing a mapping_objects array"):
+        provider.load(missing_mapping_objects)
+
+
+def test_ctid_provider_warns_for_malformed_unknown_and_duplicate_mappings(
+    tmp_path: Path,
+) -> None:
+    mapping_file = tmp_path / "ctid.json"
+    mapping_file.write_text(
+        json.dumps(
+            {
+                "metadata": {
+                    "mapping_framework": "kev",
+                    "mapping_framework_version": "07/28/2025",
+                    "mapping_version": "1",
+                    "attack_version": "16.1",
+                    "technology_domain": " enterprise ",
+                    "mapping_types": {"primary_impact": {}},
+                },
+                "mapping_objects": [
+                    "not an object",
+                    {"capability_id": "not-a-cve", "attack_object_id": "T1190"},
+                    {"capability_id": "CVE-2024-0001"},
+                    {
+                        "capability_id": "CVE-2024-0001",
+                        "attack_object_id": "T1190",
+                        "attack_object_name": "Exploit Public-Facing Application",
+                        "mapping_type": "unexpected",
+                        "capability_group": " initial-access ",
+                        "references": [None, " https://example.test/a ", "https://example.test/a"],
+                    },
+                    {
+                        "capability_id": "CVE-2024-0001",
+                        "attack_object_id": "T1190",
+                        "mapping_type": "unexpected",
+                        "capability_group": "initial-access",
+                    },
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    results, metadata, warnings = CtidMappingsProvider().load(mapping_file)
+
+    assert metadata["domain"] == "enterprise"
+    assert len(results["CVE-2024-0001"]) == 1
+    mapping = results["CVE-2024-0001"][0]
+    assert mapping.mapping_type == "unexpected"
+    assert mapping.references == ["https://example.test/a"]
+    assert any("not a JSON object" in warning for warning in warnings)
+    assert any("invalid capability_id" in warning for warning in warnings)
+    assert any("without attack_object_id" in warning for warning in warnings)
+    assert any("Unknown CTID mapping_type" in warning for warning in warnings)
+    assert any("Ignored duplicate CTID mapping" in warning for warning in warnings)
+
+
 def test_attack_metadata_provider_loads_subset_fixture() -> None:
     provider = AttackMetadataProvider()
 
@@ -1556,6 +1865,74 @@ def test_attack_metadata_provider_loads_stix_bundle_fixture() -> None:
     assert results["T9999"].deprecated is True
 
 
+def test_attack_metadata_provider_rejects_missing_or_wrong_extension(tmp_path: Path) -> None:
+    provider = AttackMetadataProvider()
+
+    with pytest.raises(FileNotFoundError, match="metadata file not found"):
+        provider.load(tmp_path / "missing.json")
+
+    yaml_file = tmp_path / "metadata.yaml"
+    yaml_file.write_text("{}", encoding="utf-8")
+    with pytest.raises(ValueError, match="must be a JSON file"):
+        provider.load(yaml_file)
+
+
+def test_attack_metadata_provider_rejects_missing_techniques_array(tmp_path: Path) -> None:
+    metadata_file = tmp_path / "metadata.json"
+    metadata_file.write_text(json.dumps({"techniques": {}}), encoding="utf-8")
+
+    provider = AttackMetadataProvider()
+
+    with pytest.raises(ValueError, match="missing a techniques array"):
+        provider.load(metadata_file)
+
+
+def test_attack_metadata_provider_warns_for_malformed_and_duplicate_entries(
+    tmp_path: Path,
+) -> None:
+    metadata_file = tmp_path / "metadata.json"
+    metadata_file.write_text(
+        json.dumps(
+            {
+                "attack_version": " 16.1 ",
+                "domain": " enterprise ",
+                "techniques": [
+                    "not an object",
+                    {"attack_object_id": "T0001"},
+                    {
+                        "attack_object_id": " T1059 ",
+                        "name": "Original",
+                        "tactics": "execution",
+                    },
+                    {
+                        "attack_object_id": "T1059",
+                        "name": "Duplicate",
+                        "tactics": [None, " execution ", "execution", ""],
+                        "url": " https://attack.mitre.org/techniques/T1059/ ",
+                        "revoked": True,
+                        "deprecated": True,
+                    },
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    provider = AttackMetadataProvider()
+    results, metadata, warnings = provider.load(metadata_file)
+
+    assert metadata["attack_version"] == "16.1"
+    assert metadata["domain"] == "enterprise"
+    assert results["T1059"].name == "Duplicate"
+    assert results["T1059"].tactics == ["execution"]
+    assert results["T1059"].url == "https://attack.mitre.org/techniques/T1059/"
+    assert results["T1059"].revoked is True
+    assert results["T1059"].deprecated is True
+    assert any("not a JSON object" in warning for warning in warnings)
+    assert any("without attack_object_id or name" in warning for warning in warnings)
+    assert any("overrides duplicate T1059" in warning for warning in warnings)
+
+
 def test_attack_stix_provider_loads_versioned_snapshot_catalog() -> None:
     fixture = DATA_ROOT / "attack" / "attack_stix_enterprise_16.1_subset.json"
     payload = json.loads(fixture.read_text(encoding="utf-8"))
@@ -1587,6 +1964,174 @@ def test_attack_stix_provider_loads_versioned_snapshot_catalog() -> None:
     assert snapshot.mitigations["T9998"].deprecated is True
     assert snapshot.mitigation_relationships[0].mitigation_id == "M1051"
     assert snapshot.mitigation_relationships[0].technique_id == "T1190"
+
+
+def test_attack_stix_provider_rejects_non_bundle_and_missing_objects(tmp_path: Path) -> None:
+    provider = AttackStixProvider()
+
+    with pytest.raises(ValueError, match="must be a STIX bundle"):
+        provider.load_snapshot_payload(
+            {"type": "attack-pattern"},
+            source_path=tmp_path / "attack.json",
+            raw_content=b"{}",
+        )
+
+    with pytest.raises(ValueError, match="missing an objects array"):
+        provider.load_snapshot_payload(
+            {"type": "bundle"},
+            source_path=tmp_path / "attack.json",
+            raw_content=b"{}",
+        )
+
+
+def test_attack_stix_provider_warns_for_malformed_duplicates_and_unknown_relationships(
+    tmp_path: Path,
+) -> None:
+    payload = {
+        "type": "bundle",
+        "spec_version": "2.1",
+        "objects": [
+            "not an object",
+            {"id": "identity--missing-type"},
+            {
+                "type": "x-mitre-collection",
+                "id": "x-mitre-collection--1",
+                "x_mitre_attack_version": "16.1",
+            },
+            {
+                "type": "x-mitre-tactic",
+                "id": "x-mitre-tactic--missing",
+                "external_references": [{"source_name": "mitre-attack", "external_id": "TA0001"}],
+            },
+            {
+                "type": "x-mitre-tactic",
+                "id": "x-mitre-tactic--execution",
+                "name": "Execution",
+                "x_mitre_shortname": "execution",
+                "x_mitre_domains": ["enterprise-attack", "enterprise-attack"],
+                "external_references": [
+                    {
+                        "source_name": "mitre-attack",
+                        "external_id": "TA0002",
+                        "url": "https://attack.mitre.org/tactics/TA0002/",
+                    }
+                ],
+            },
+            {
+                "type": "x-mitre-tactic",
+                "id": "x-mitre-tactic--execution-duplicate",
+                "name": "Execution duplicate",
+                "x_mitre_shortname": "execution",
+                "external_references": [{"source_name": "mitre-attack", "external_id": "TA0002"}],
+            },
+            {
+                "type": "attack-pattern",
+                "id": "attack-pattern--missing",
+                "external_references": [{"source_name": "mitre-attack", "external_id": "T9999"}],
+            },
+            {
+                "type": "attack-pattern",
+                "id": "attack-pattern--command",
+                "name": "Command and Scripting Interpreter",
+                "kill_chain_phases": [
+                    "invalid",
+                    {"kill_chain_name": "not-attack", "phase_name": "ignored"},
+                    {"kill_chain_name": "mitre-attack", "phase_name": "execution"},
+                    {"kill_chain_name": "mitre-attack", "phase_name": "execution"},
+                ],
+                "external_references": [
+                    {
+                        "source_name": "mitre-attack",
+                        "external_id": "T1059",
+                        "url": "https://attack.mitre.org/techniques/T1059/",
+                    }
+                ],
+            },
+            {
+                "type": "attack-pattern",
+                "id": "attack-pattern--command-duplicate",
+                "name": "Command duplicate",
+                "external_references": [{"source_name": "mitre-attack", "external_id": "T1059"}],
+            },
+            {
+                "type": "course-of-action",
+                "id": "course-of-action--missing",
+                "external_references": [{"source_name": "mitre-attack", "external_id": "M0001"}],
+            },
+            {
+                "type": "course-of-action",
+                "id": "course-of-action--mitigation",
+                "name": "Update Software",
+                "external_references": [
+                    {
+                        "source_name": "mitre-attack",
+                        "external_id": "M1051",
+                        "url": "https://attack.mitre.org/mitigations/M1051/",
+                    }
+                ],
+            },
+            {
+                "type": "course-of-action",
+                "id": "course-of-action--mitigation-duplicate",
+                "name": "Update Software duplicate",
+                "external_references": [{"source_name": "mitre-attack", "external_id": "M1051"}],
+            },
+            {
+                "type": "relationship",
+                "id": "relationship--ignored",
+                "relationship_type": "uses",
+            },
+            {
+                "type": "relationship",
+                "id": "relationship--unknown",
+                "relationship_type": "mitigates",
+                "source_ref": "course-of-action--missing-source",
+                "target_ref": "attack-pattern--missing-target",
+            },
+            {
+                "type": "relationship",
+                "id": "relationship--known",
+                "relationship_type": "mitigates",
+                "source_ref": "course-of-action--mitigation",
+                "target_ref": "attack-pattern--command",
+                "description": "Apply vendor patches.",
+            },
+        ],
+    }
+    raw_content = json.dumps(payload).encode("utf-8")
+
+    snapshot = AttackStixProvider().load_snapshot_payload(
+        payload,
+        source_path=tmp_path / "attack.json",
+        raw_content=raw_content,
+    )
+
+    assert snapshot.metadata["attack_version"] == "16.1"
+    assert snapshot.metadata["domain"] == "enterprise"
+    assert snapshot.metadata["stix_spec_version"] == "2.1"
+    assert snapshot.tactics["TA0002"].name == "Execution duplicate"
+    assert snapshot.techniques["T1059"].name == "Command duplicate"
+    assert snapshot.techniques["T1059"].tactic_short_names == []
+    assert snapshot.mitigations["M1051"].name == "Update Software duplicate"
+    assert snapshot.mitigation_relationships[0].mitigation_id == "M1051"
+    assert snapshot.mitigation_relationships[0].technique_id == "T1059"
+    assert any("not a JSON object" in warning for warning in snapshot.warnings)
+    assert any("has no type" in warning for warning in snapshot.warnings)
+    assert any(
+        "tactic without ATT&CK external ID or name" in warning for warning in snapshot.warnings
+    )
+    assert any("overrides duplicate tactic TA0002" in warning for warning in snapshot.warnings)
+    assert any(
+        "attack-pattern without ATT&CK external ID or name" in warning
+        for warning in snapshot.warnings
+    )
+    assert any("overrides duplicate T1059" in warning for warning in snapshot.warnings)
+    assert any(
+        "mitigation without MITRE ATT&CK external ID or name" in warning
+        for warning in snapshot.warnings
+    )
+    assert any("overrides duplicate mitigation M1051" in warning for warning in snapshot.warnings)
+    assert any("without known source mitigation" in warning for warning in snapshot.warnings)
 
 
 def test_attack_provider_ctid_json_enriches_structured_attack_data() -> None:
@@ -1645,6 +2190,92 @@ def test_curated_attack_mapping_provider_loads_yaml_fixture() -> None:
     assert low_confidence.review_status == "needs_review"
     assert bundle.techniques_by_id["T1195.002"].tactics == ["initial-access"]
     assert any("Low-confidence curated" in warning for warning in bundle.warnings)
+
+
+def test_curated_attack_mapping_provider_rejects_missing_suffix_and_top_level_shape(
+    tmp_path: Path,
+) -> None:
+    provider = CuratedAttackMappingProvider()
+
+    with pytest.raises(FileNotFoundError, match="mapping file not found"):
+        provider.load(tmp_path / "missing.yml")
+
+    txt_file = tmp_path / "mapping.txt"
+    txt_file.write_text("{}", encoding="utf-8")
+    with pytest.raises(ValueError, match="must be JSON, YAML, or YML"):
+        provider.load(txt_file)
+
+    top_level_array = tmp_path / "mapping.yml"
+    top_level_array.write_text("- not\n- an object\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="top-level object"):
+        provider.load(top_level_array)
+
+    missing_metadata = tmp_path / "missing-metadata.yml"
+    missing_metadata.write_text("mapping_objects: []\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="missing a metadata object"):
+        provider.load(missing_metadata)
+
+    missing_mapping_objects = tmp_path / "missing-mapping-objects.yml"
+    missing_mapping_objects.write_text("metadata: {}\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="missing a mapping_objects array"):
+        provider.load(missing_mapping_objects)
+
+    empty_mapping_objects = tmp_path / "empty-mapping-objects.yml"
+    empty_mapping_objects.write_text("metadata: {}\nmapping_objects: []\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="mapping_objects array must not be empty"):
+        provider.load(empty_mapping_objects)
+
+    invalid_yaml = tmp_path / "invalid.yml"
+    invalid_yaml.write_text("metadata: [broken\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="YAML is not valid YAML"):
+        provider.load(invalid_yaml)
+
+
+def test_curated_attack_mapping_provider_reports_non_object_and_duplicate_mappings(
+    tmp_path: Path,
+) -> None:
+    mapping_file = tmp_path / "curated.yml"
+    mapping_file.write_text(
+        """
+metadata:
+  mapping_framework: vuln-prioritizer-curated-attack
+  mapping_framework_version: "1.0"
+  attack_version: "16.1"
+  technology_domain: enterprise-attack
+  mapping_types:
+    exploitation: reviewed defensive context
+mapping_objects:
+  - not an object
+  - cve_id: CVE-2024-0001
+    technique_id: T1190
+    technique_name: Exploit Public-Facing Application
+    tactic_ids: [TA0001, TA0001, TA0043]
+    mapping_type: exploitation
+    source: reviewed source
+    confidence: medium
+    rationale: defensive rationale
+    review_status: needs_review
+    defensive_note: defensive note only
+    references: [null, " https://example.test/a ", "https://example.test/a"]
+  - capability_id: CVE-2024-0001
+    attack_object_id: T1190
+    attack_object_name: Exploit Public-Facing Application duplicate
+    mapping_type: exploitation
+    source: reviewed source
+    confidence: medium
+    rationale: defensive rationale
+    review_status: needs_review
+    defensive_note: defensive note only
+""",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(CuratedAttackMappingValidationError) as exc_info:
+        CuratedAttackMappingProvider().load(mapping_file)
+
+    message = str(exc_info.value)
+    assert "mapping_objects[0] must be an object" in message
+    assert "duplicates CVE-2024-0001 / T1190 / exploitation" in message
 
 
 def test_curated_attack_mapping_provider_rejects_missing_reviewer_for_reviewed(

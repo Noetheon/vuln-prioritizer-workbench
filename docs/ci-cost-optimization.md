@@ -13,10 +13,12 @@ Ready pull requests keep the merge-safety checks that are required on `main`:
 - `check (3.11)` remains as a required context and exits with a clear skip
   message on pull requests. The full 3.11 gate runs on `main` and manual
   dispatch.
-- `frontend` runs frontend lint, build, generated-client drift, and Playwright
-  smoke unless the PR is documentation, archive, or workflow-only.
-- `compose-smoke` runs as a required Docker workflow job, but skips Compose when
-  no runtime-impacting Docker inputs changed.
+- `frontend` runs frontend lint, build, generated-client drift, unit coverage,
+  and the full Playwright suite unless the PR is documentation/archive-only or
+  otherwise outside frontend/API/runtime scope.
+- `compose-smoke` runs as a required Docker workflow job. For runtime-impacting
+  Docker inputs, it runs both the demo and production-like Compose smokes; for
+  unrelated paths, it exits with a clear skip message.
 - `Analyze Python` CodeQL remains enabled on ready PRs because it is a required
   branch-protection context.
 
@@ -26,7 +28,7 @@ Pushes to `main` run the full merge validation:
 
 - Python workflow gate on 3.11 and 3.12.
 - Full frontend Playwright suite.
-- Docker compose smoke.
+- Demo and production-like Docker compose smokes.
 - CodeQL analysis.
 
 ## Manual checks
@@ -34,7 +36,7 @@ Pushes to `main` run the full merge validation:
 `workflow_dispatch` remains the full validation escape hatch:
 
 - CI runs the full Python matrix and full frontend Playwright suite.
-- Docker runs Compose regardless of changed paths.
+- Docker runs both Compose smokes regardless of changed paths.
 - CodeQL can be started manually.
 
 ## Draft pull requests
@@ -64,23 +66,26 @@ actionlint, packaging guardrails, and pre-commit checks remain covered.
 ## Frontend-only changes
 
 Frontend route, component, and CSS changes run the frontend job with lint, build,
-generated-client drift, and Playwright smoke. They do not run Docker Compose
-unless Docker build inputs such as frontend package files, Dockerfiles, nginx
-config, or build config changed.
+generated-client drift, unit coverage, and the full Playwright suite. They do
+not run Docker Compose unless Docker build inputs such as frontend package files,
+Dockerfiles, nginx config, or build config changed.
 
 ## Backend and runtime-impacting changes
 
 Backend, compose, Dockerfile, dependency, runtime script, frontend package, and
-frontend build-config changes run Docker Compose. This keeps runtime/deployment
-coverage for changes that can alter container startup, image contents, backend
-API behavior, or frontend image construction.
+frontend build-config changes run both Docker Compose smokes. This keeps
+runtime/deployment coverage for changes that can alter container startup, image
+contents, backend API behavior, frontend image construction, same-origin routing,
+CSRF/session behavior, or report download paths.
 
 ## Tradeoffs
 
 The main tradeoff is that pull requests no longer run the expensive Python gate
 on every supported Python version. The 3.11 required context remains present,
 but the full 3.11 gate runs after merge on `main` and can be run manually before
-merge when a dependency or compatibility-sensitive change warrants it.
+merge when a dependency or compatibility-sensitive change warrants it. In
+exchange, ready PRs that touch frontend/API/runtime behavior now run the full
+browser suite before merge.
 
 CodeQL stays conservative on ready PRs because branch protection currently
 requires `Analyze Python`. If branch protection changes later, CodeQL can move

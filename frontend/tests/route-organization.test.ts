@@ -6,6 +6,7 @@ const routesDir = new URL("../src/routes/_layout/", import.meta.url)
 const authenticatedLayoutFile = new URL("../src/routes/_layout.tsx", import.meta.url)
 const workbenchRoutesDir = new URL("../src/workbench/routes/", import.meta.url)
 const appShellFile = new URL("../src/components/app/AppShell.tsx", import.meta.url)
+const packageJsonFile = new URL("../package.json", import.meta.url)
 const routeDetailsFile = new URL(
   "../src/lib/app-route-config.ts",
   import.meta.url,
@@ -100,5 +101,18 @@ test("Workbench shell is mounted once at the authenticated layout boundary", () 
       /WorkbenchShell/,
       `${file} should rely on the authenticated layout shell`,
     )
+  }
+})
+
+test("frontend unit test scripts automatically include every unit test file", () => {
+  const packageJson = JSON.parse(text(packageJsonFile)) as {
+    scripts: Record<string, string>
+  }
+
+  for (const scriptName of ["test:unit", "test:unit:coverage"]) {
+    const script = packageJson.scripts[scriptName]
+    assert.match(script, /\btests\/\*\.test\.ts\b/)
+    assert.doesNotMatch(script, /tests\/[\w-]+\.test\.ts/)
+    assert.doesNotMatch(script, /\.spec\.ts/)
   }
 })

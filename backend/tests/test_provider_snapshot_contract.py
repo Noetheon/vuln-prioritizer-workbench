@@ -5,10 +5,15 @@ from pathlib import Path
 
 import pytest
 
-from vuln_prioritizer.models import ProviderSnapshotMetadata, ProviderSnapshotReport
+from vuln_prioritizer.models import (
+    ProviderSnapshotItem,
+    ProviderSnapshotMetadata,
+    ProviderSnapshotReport,
+)
 from vuln_prioritizer.provider_snapshot import (
     generate_provider_snapshot_json,
     load_provider_snapshot,
+    resolve_snapshot_provider_data,
 )
 
 SHARED_PROVIDER_SNAPSHOT_METADATA_FIELDS = {
@@ -83,6 +88,93 @@ def test_provider_snapshot_rejects_wrong_snapshot_format(tmp_path: Path) -> None
 
     with pytest.raises(ValueError, match="metadata.snapshot_format must be"):
         load_provider_snapshot(snapshot_file)
+
+
+@pytest.mark.parametrize(
+    ("payload", "message"),
+    [
+        ([], "expected a JSON object"),
+        (
+            {"items": [], "metadata": {}, "warnings": []},
+            "missing required metadata field",
+        ),
+        (
+            {"items": [], "metadata": "not metadata", "warnings": []},
+            "metadata must be a JSON object",
+        ),
+        (
+            {"metadata": {"snapshot_format": "provider-snapshot.v1.json"}},
+            "missing required top-level field",
+        ),
+    ],
+)
+def test_provider_snapshot_loader_rejects_invalid_v1_shapes(
+    tmp_path: Path,
+    payload: object,
+    message: str,
+) -> None:
+    snapshot_file = tmp_path / "provider-snapshot.json"
+    snapshot_file.write_text(json.dumps(payload), encoding="utf-8")
+
+    with pytest.raises(ValueError, match=message):
+        load_provider_snapshot(snapshot_file)
+
+
+def test_provider_snapshot_loader_reports_read_json_and_model_errors(tmp_path: Path) -> None:
+    missing_file = tmp_path / "missing.json"
+    invalid_json = tmp_path / "invalid.json"
+    invalid_model = tmp_path / "invalid-model.json"
+    invalid_json.write_text("{not json", encoding="utf-8")
+    invalid_model.write_text(
+        json.dumps(
+            {
+                "metadata": ProviderSnapshotMetadata(
+                    generated_at="2026-05-01T12:00:00Z",
+                    input_path="cves.txt",
+                    input_paths=["cves.txt"],
+                    selected_sources=["nvd"],
+                    requested_cves=1,
+                    output_path="provider-snapshot.json",
+                    cache_enabled=False,
+                    cache_dir=None,
+                    source_hashes={"nvd": "sha256:nvd"},
+                    source_metadata={},
+                    offline_kev_file=None,
+                    nvd_api_key_env=None,
+                ).model_dump(),
+                "items": [{"cve_id": 42}],
+                "warnings": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="could not be read"):
+        load_provider_snapshot(missing_file)
+    with pytest.raises(ValueError, match="is not valid JSON"):
+        load_provider_snapshot(invalid_json)
+    with pytest.raises(ValueError, match="is not a valid provider snapshot"):
+        load_provider_snapshot(invalid_model)
+
+
+def test_resolve_snapshot_provider_data_tracks_unselected_missing_source() -> None:
+    report = ProviderSnapshotReport(
+        metadata=ProviderSnapshotMetadata(
+            generated_at="2026-05-01T12:00:00Z",
+            selected_sources=["kev"],
+            requested_cves=1,
+        ),
+        items=[ProviderSnapshotItem(cve_id="CVE-2026-0001")],
+    )
+
+    resolved, missing = resolve_snapshot_provider_data(
+        report,
+        source_name="nvd",
+        cve_ids=["CVE-2026-0001", "CVE-2026-0002"],
+    )
+
+    assert resolved == {}
+    assert missing == ["CVE-2026-0001", "CVE-2026-0002"]
 
 
 @pytest.mark.parametrize("unsafe_name", ["lowercase_key", "NVD-API-KEY", "1NVD_API_KEY"])

@@ -47,6 +47,67 @@ test("workbench query keys expose project-scoped invalidation roots", () => {
   ])
 })
 
+test("workbench query keys normalize optional route and filter inputs", () => {
+  const findingsParams = { projectId: "project-1", status: "open" }
+
+  assert.deepEqual(workbenchQueryKeys.apiTokens(), ["workbench", "api-tokens"])
+  assert.deepEqual(workbenchQueryKeys.assetFindings("project-1", null), [
+    "workbench",
+    "asset-findings",
+    "project-1",
+    "none",
+  ])
+  assert.deepEqual(workbenchQueryKeys.assetFindings("project-1", "asset-1"), [
+    "workbench",
+    "asset-findings",
+    "project-1",
+    "asset-1",
+  ])
+  assert.deepEqual(workbenchQueryKeys.assets("project-1"), [
+    "workbench",
+    "assets",
+    "project-1",
+    { owner: "", service: "" },
+  ])
+  assert.deepEqual(workbenchQueryKeys.assets("project-1", { owner: "team-a" }), [
+    "workbench",
+    "assets",
+    "project-1",
+    { owner: "team-a", service: "" },
+  ])
+  assert.deepEqual(workbenchQueryKeys.bootstrap(), ["workbench", "bootstrap"])
+  assert.deepEqual(workbenchQueryKeys.findingDetail(null), [
+    "workbench",
+    "finding-detail",
+    "none",
+  ])
+  assert.deepEqual(workbenchQueryKeys.findings(findingsParams), [
+    "workbench",
+    "findings",
+    findingsParams,
+  ])
+  assert.deepEqual(workbenchQueryKeys.projectAttackSummary("project-1"), [
+    "workbench",
+    "project-attack-summary",
+    "project-1",
+  ])
+  assert.deepEqual(workbenchQueryKeys.projectSummaries(["b", "a"]), [
+    "workbench",
+    "project-summaries",
+    ["b", "a"],
+  ])
+  assert.deepEqual(workbenchQueryKeys.reports("run-1"), [
+    "workbench",
+    "reports",
+    "run-1",
+  ])
+  assert.deepEqual(workbenchQueryKeys.runDetail("run-1"), [
+    "workbench",
+    "run-detail",
+    "run-1",
+  ])
+})
+
 test("project list invalidation uses the shared project roots", async () => {
   const { calls, queryClient } = invalidator()
 
@@ -76,4 +137,12 @@ test("project-scoped invalidation covers route data that can change by project",
     workbenchQueryKeys.assetFindingsRoot("project-1"),
     workbenchQueryKeys.reportsRoot(),
   ])
+})
+
+test("project-scoped invalidation ignores empty project ids", async () => {
+  const { calls, queryClient } = invalidator()
+
+  await invalidateProjectScopedWorkbenchQueries(queryClient, "")
+
+  assert.deepEqual(calls, [])
 })
