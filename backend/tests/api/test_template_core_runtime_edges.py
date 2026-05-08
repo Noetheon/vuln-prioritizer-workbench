@@ -238,6 +238,14 @@ def test_rate_limit_edges_cover_disabled_limits_and_trusted_forwarding(
     assert blocked.allowed is False
     assert blocked.retry_after_seconds == 50
     assert limiter.check("login:alice", limit=1).allowed is True
+    monkeypatch.setattr(rate_limit_module, "monotonic", lambda: 62.0)
+    assert limiter.check("token-failure:preflight", limit=1, record=False).allowed is True
+    assert "token-failure:preflight" not in limiter.attempts
+
+    bounded_limiter = rate_limit_module.InMemoryRateLimiter(max_keys=1)
+    assert bounded_limiter.check("first", limit=2).allowed is True
+    assert bounded_limiter.check("second", limit=2).allowed is True
+    assert len(bounded_limiter.attempts) == 1
 
     disabled_settings = replace(settings, RATE_LIMIT_ENABLED=False)
     assert rate_limit_module.rate_limit_key(_request("/api/v1/users/me"), disabled_settings) is None

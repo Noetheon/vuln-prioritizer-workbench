@@ -3,7 +3,7 @@ import { authHeaders, login } from "./auth-helpers"
 import { evidenceScreenshotPath } from "./evidence-paths"
 import { selectDashboardProject, validCveList } from "./workbench-e2e-helpers"
 
-test("template finding detail renders TTP Context tab", async ({ page }) => {
+test("workbench finding detail renders TTP Context tab", async ({ page }) => {
   test.setTimeout(60_000)
   const testRunSuffix = Date.now().toString(36)
   const projectName = `VPW TTP Context ${testRunSuffix}`

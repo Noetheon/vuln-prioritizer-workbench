@@ -39,7 +39,7 @@ function FindingDetailRouteContainer({ findingId }: { findingId: string }) {
   }
 
   return (
-    <section className="mx-auto w-full max-w-[2040px] px-4 py-6 sm:px-6 lg:px-8 xl:px-10 2xl:px-12">
+    <section className="w-full">
       <FindingDetailPanel
         error={
           findingDetailQuery.isError

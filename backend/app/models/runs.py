@@ -150,6 +150,8 @@ class AnalysisRunSummaryPublic(SQLModel):
     import_job: dict[str, Any] = Field(default_factory=dict)
     input_upload: dict[str, Any] = Field(default_factory=dict)
     dedup_summary: dict[str, Any] = Field(default_factory=dict)
+    analysis_decision_scope: str | None = None
+    persistence_scope: str | None = None
     summary_json: dict[str, Any] = Field(default_factory=dict)
     error_json: dict[str, Any] = Field(default_factory=dict)
 

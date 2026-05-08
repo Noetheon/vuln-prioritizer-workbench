@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import csv
 import io
-import re
 from dataclasses import dataclass
 
 from app.importers.contracts import (
@@ -13,9 +12,9 @@ from app.importers.contracts import (
     InputPayload,
     NormalizedOccurrence,
 )
+from vuln_prioritizer.utils import normalize_cve_id
 
 GENERIC_OCCURRENCE_CSV_INPUT_TYPE = "generic-occurrence-csv"
-_CVE_PATTERN = re.compile(r"^CVE-\d{4}-\d{4,}$", re.IGNORECASE)
 _COMMENT_PREFIX = "#"
 _CSV_DELIMITERS = ",;\t|"
 _KNOWN_FIELDS = {
@@ -196,11 +195,11 @@ def _csv_row(header: list[str], record: list[str]) -> dict[str, str]:
 
 
 def _normalize_cve(value: str, *, line_number: int, errors: list[str]) -> str | None:
-    candidate = value.strip().upper()
-    if not _CVE_PATTERN.fullmatch(candidate):
+    cve_id = normalize_cve_id(value)
+    if cve_id is None:
         errors.append(f"line {line_number}: invalid CVE identifier {value!r}")
         return None
-    return candidate
+    return cve_id
 
 
 def _first_fix_version(row: dict[str, str], field_map: dict[str, str]) -> str | None:

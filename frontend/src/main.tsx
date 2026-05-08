@@ -7,17 +7,18 @@ import {
 import { createRouter, RouterProvider } from "@tanstack/react-router"
 import { StrictMode } from "react"
 import { createRoot } from "react-dom/client"
-import { ApiError, OpenAPI } from "./api-client"
+import { OpenAPI } from "./api-client"
 import { clearAccessToken, getAccessToken } from "./auth"
 import "./index.css"
 import { API_BASE_URL } from "./lib/runtime-config"
+import { shouldClearAuthForApiError } from "./lib/auth-errors"
 import { routeTree } from "./routeTree.gen"
 
 OpenAPI.BASE = API_BASE_URL
 OpenAPI.TOKEN = async () => getAccessToken()
 
 const handleApiError = (error: Error) => {
-  if (error instanceof ApiError && [401, 403].includes(error.status)) {
+  if (shouldClearAuthForApiError(error)) {
     clearAccessToken()
     window.location.href = "/login"
   }

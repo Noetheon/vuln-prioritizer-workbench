@@ -12,8 +12,9 @@ from vuln_prioritizer.sarif_contract import (
     sarif_component_identities,
     sarif_level,
     sarif_partial_fingerprints,
+    sarif_result_location,
     sarif_rule_id,
-    sarif_security_severity,
+    sarif_rule_properties,
 )
 from vuln_prioritizer.sarif_references import dedupe_defensive_http_urls
 
@@ -193,7 +194,7 @@ def generate_workbench_sarif(report_payload: dict[str, Any]) -> str:
                     uri=uri,
                     finding=finding,
                 ),
-                "locations": [{"physicalLocation": {"artifactLocation": {"uri": uri}}}],
+                "locations": [sarif_result_location(artifact_uri=uri)],
             }
         )
     payload = {
@@ -234,23 +235,18 @@ def _workbench_sarif_rule(
         },
         "defaultConfiguration": {"level": sarif_level(priority)},
         "helpUri": references[0],
-        "properties": {
-            "cve": cve_id,
-            "priority": priority,
-            "precision": "very-high",
-            "security-severity": _workbench_sarif_security_severity(priority, finding),
-            "tags": ["security", "external/cve", f"priority/{priority.lower()}"],
-            "references": references,
-        },
+        "properties": sarif_rule_properties(
+            cve_id=cve_id,
+            priority=priority,
+            cvss_base_score=_workbench_cvss_score(finding),
+            references=references,
+        ),
     }
 
 
-def _workbench_sarif_security_severity(priority: str, finding: dict[str, Any]) -> str:
+def _workbench_cvss_score(finding: dict[str, Any]) -> float | int | None:
     cvss_score = finding.get("cvss_base_score")
-    return sarif_security_severity(
-        priority=priority,
-        cvss_base_score=cvss_score if isinstance(cvss_score, int | float) else None,
-    )
+    return cvss_score if isinstance(cvss_score, int | float) else None
 
 
 def _workbench_sarif_reference_urls(

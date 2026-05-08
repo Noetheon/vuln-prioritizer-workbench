@@ -291,6 +291,8 @@ class FindingRepository:
         if direction not in {"asc", "desc"}:
             raise ValueError(f"Unsupported findings sort direction: {direction}.")
 
+        asset_relationship = cast(QueryableAttribute[Any], Finding.asset)
+        component_relationship = cast(QueryableAttribute[Any], Finding.component)
         filters: list[Any] = [Finding.project_id == project_id]
         if priority is not None:
             filters.append(Finding.priority == FindingPriority(priority))
@@ -338,6 +340,10 @@ class FindingRepository:
             select(Finding)
             .outerjoin(Asset, col(Finding.asset_id) == col(Asset.id))
             .outerjoin(Component, col(Finding.component_id) == col(Component.id))
+            .options(
+                selectinload(asset_relationship),
+                selectinload(component_relationship),
+            )
             .where(*filters)
             .order_by(*order_by)
             .offset(offset)

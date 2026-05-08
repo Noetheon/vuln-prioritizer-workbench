@@ -100,6 +100,11 @@ def test_template_alembic_head_matches_model_metadata(tmp_path: Path) -> None:
         (
             {"api_token", "github_issue_export", "auth_session", "audit_event"},
             {"project_id"},
+            "20260506_0011",
+        ),
+        (
+            {"api_token", "github_issue_export", "auth_session", "audit_event"},
+            {"project_id", "expires_at"},
             ALEMBIC_HEAD,
         ),
         ({"api_token", "github_issue_export"}, {"project_id"}, "20260505_0010"),
@@ -243,13 +248,15 @@ def test_template_migration_bootstrap_stamps_legacy_create_all_database(
                 text("SELECT version_num FROM alembic_version")
             ).scalar_one()
             legacy_token_rows = connection.execute(
-                text("SELECT name, revoked_at FROM api_token ORDER BY name")
+                text("SELECT name, revoked_at, expires_at FROM api_token ORDER BY name")
             ).all()
         assert {"auth_session", "audit_event"}.issubset(set(inspector.get_table_names()))
-        assert version == "20260506_0011"
+        assert version == ALEMBIC_HEAD
         assert legacy_token_rows[0][0] == "legacy-admin"
         assert legacy_token_rows[0][1] is None
+        assert legacy_token_rows[0][2] is not None
         assert legacy_token_rows[1][0] == "legacy-read"
         assert legacy_token_rows[1][1] is not None
+        assert legacy_token_rows[1][2] is not None
     finally:
         engine.dispose()

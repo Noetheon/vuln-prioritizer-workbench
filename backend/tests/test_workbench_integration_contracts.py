@@ -13,8 +13,9 @@ def test_backend_dockerfile_prepares_workbench_quickstart_runtime_dirs() -> None
     assert "/app/workbench-provider-cache" in dockerfile
     assert "backend/alembic.ini" in dockerfile
     assert "backend/requirements.lock.txt" in dockerfile
-    assert "python -m pip install --require-hashes -r backend/requirements.lock.txt" in dockerfile
-    assert "python -m pip install --no-deps ./backend" in dockerfile
+    assert "python -m pip install ./backend" in dockerfile
+    assert "Set SECRET_KEY before starting the backend container." in dockerfile
+    assert "Set FIRST_SUPERUSER_PASSWORD before starting the backend container." in dockerfile
     assert "python -m app.core.migration_bootstrap" in dockerfile
     assert "alembic -c /app/backend/alembic.ini upgrade head" in dockerfile
     assert "chown -R workbench:workbench /app" in dockerfile
@@ -50,6 +51,9 @@ def test_compose_uses_workbench_shell_without_legacy_runtime_services() -> None:
     assert backend["environment"]["POSTGRES_PASSWORD"].startswith(
         "${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD"
     )
+    assert backend["environment"]["API_TOKEN_DEFAULT_EXPIRE_DAYS"] == (
+        "${API_TOKEN_DEFAULT_EXPIRE_DAYS:-90}"
+    )
     assert compose["volumes"]["workbench-import-uploads"]["name"] == (
         "${WORKBENCH_IMPORT_UPLOADS_VOLUME:-workbench-import-uploads}"
     )
@@ -66,6 +70,14 @@ def test_compose_uses_workbench_shell_without_legacy_runtime_services() -> None:
     frontend = services["frontend"]
     assert "profiles" not in frontend
     assert frontend["depends_on"]["backend"]["condition"] == "service_healthy"
+    assert frontend["read_only"] is True
+    assert frontend["cap_drop"] == ["ALL"]
+    assert frontend["security_opt"] == ["no-new-privileges:true"]
+    assert "/var/cache/nginx" in frontend["tmpfs"]
+    assert (
+        frontend["labels"][1]
+        == "traefik.http.services.workbench-frontend.loadbalancer.server.port=8080"
+    )
 
     db = services["db"]
     assert db["environment"]["POSTGRES_DB"] == "${POSTGRES_DB:-workbench}"
@@ -93,7 +105,7 @@ def test_compose_override_exposes_template_shell_and_frontend_ports() -> None:
     assert "create_all" not in backend_command
     assert "app.main:app" in backend_command
     assert services["backend"]["environment"]["DEMO_PROVIDER_SNAPSHOT_ENABLED"] == "true"
-    assert services["frontend"]["ports"] == ["127.0.0.1:5173:80"]
+    assert services["frontend"]["ports"] == ["127.0.0.1:5173:8080"]
     assert "workbench-postgres" not in services
 
 
@@ -145,7 +157,7 @@ def test_production_smoke_overlay_uses_same_origin_public_contract() -> None:
     assert backend_env["BACKEND_CORS_ORIGINS"] == "https://workbench.example.test"
     assert backend_env["ALLOWED_HOSTS"] == "workbench.example.test,api.workbench.example.test"
     assert frontend_args["VITE_API_URL"] == ""
-    assert compose["services"]["frontend"]["ports"] == ["127.0.0.1:5180:80"]
+    assert compose["services"]["frontend"]["ports"] == ["127.0.0.1:5180:8080"]
     assert "docker-production-smoke:" in makefile
     assert "$(PRODUCTION_SMOKE_COMPOSE) exec -T backend python -m app.core.schema_smoke" in (
         makefile

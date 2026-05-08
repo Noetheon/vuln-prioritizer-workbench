@@ -274,6 +274,12 @@ package-contents-check: package
 
 package-check: package-contents-check
 	$(PYTHON) -m twine check dist/*
+	tmp="$$(mktemp -d)"; \
+	trap 'rm -rf "$$tmp"' EXIT; \
+	$(PYTHON) -m venv "$$tmp/venv"; \
+	"$$tmp/venv/bin/python" -m pip install --upgrade pip >/dev/null; \
+	"$$tmp/venv/bin/python" -m pip install --force-reinstall dist/*.whl >/dev/null; \
+	"$$tmp/venv/bin/python" scripts/workbench_wheel_smoke.py build/package-workbench-wheel-smoke.json
 
 package-check-temp:
 	@set -e; \

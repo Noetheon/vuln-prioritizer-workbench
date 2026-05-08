@@ -4,11 +4,14 @@ from __future__ import annotations
 
 import secrets
 import uuid
+from datetime import datetime, timedelta
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 
 from app.api.deps import ScopedAdminUser, SessionDep
 from app.api.routes.workbench_access import require_visible_project
+from app.core.app_state import workbench_settings
+from app.core.config import Settings
 from app.models import (
     ApiTokenCreate,
     ApiTokenCreatePublic,
@@ -16,6 +19,7 @@ from app.models import (
     ApiTokensPublic,
 )
 from app.models.api_tokens import api_token_create_public, api_token_public
+from app.models.base import get_datetime_utc
 from app.repositories import ApiTokenRepository
 from app.services.audit import record_audit_event
 from vuln_prioritizer.security_tokens import api_token_digest
@@ -28,6 +32,7 @@ API_TOKEN_PREFIX = "vpr_"
 @router.post("/", response_model=ApiTokenCreatePublic)
 def create_api_token(
     payload: ApiTokenCreate,
+    request: Request,
     session: SessionDep,
     current_user: ScopedAdminUser,
 ) -> ApiTokenCreatePublic:
@@ -40,6 +45,7 @@ def create_api_token(
         token_hash=api_token_digest(token_value),
         scopes=payload.scopes,
         project_id=payload.project_id,
+        expires_at=_api_token_expires_at(payload, workbench_settings(request, required=False)),
     )
     record_audit_event(
         session,
@@ -48,7 +54,11 @@ def create_api_token(
         resource_id=token.id,
         actor=current_user,
         project_id=token.project_id,
-        detail={"name": token.name, "scopes": list(token.scopes)},
+        detail={
+            "name": token.name,
+            "scopes": list(token.scopes),
+            "expires_at": token.expires_at.isoformat(),
+        },
     )
     session.commit()
     session.refresh(token)
@@ -92,3 +102,9 @@ def revoke_api_token(
     session.commit()
     session.refresh(token)
     return api_token_public(token)
+
+
+def _api_token_expires_at(payload: ApiTokenCreate, active_settings: Settings) -> datetime:
+    if payload.expires_at is not None:
+        return payload.expires_at
+    return get_datetime_utc() + timedelta(days=active_settings.API_TOKEN_DEFAULT_EXPIRE_DAYS)

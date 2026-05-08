@@ -40,14 +40,15 @@ function FindingsRouteContainer() {
   }
 
   useEffect(() => {
-    if (currentSearch === cleanedSearch) {
+    if (searchQueryStringsEqual(currentSearch, cleanedSearch)) {
       return
     }
-    const nextUrl = `${location.pathname}${cleanedSearch ? `?${cleanedSearch}` : ""}${
-      location.hash ? `#${location.hash}` : ""
-    }`
-    window.history.replaceState(window.history.state, "", nextUrl)
-  }, [cleanedSearch, currentSearch, location.hash, location.pathname])
+    void navigate({
+      replace: true,
+      search: findingsSearchToUrlSearch(parseFindingsSearch(cleanedSearch)),
+      to: "/findings",
+    })
+  }, [cleanedSearch, currentSearch, navigate])
 
   const {
     activeFindingFilters,
@@ -84,7 +85,7 @@ function FindingsRouteContainer() {
   return (
     <section
       aria-label="Findings Remediation Queue"
-      className="mx-auto w-full max-w-screen-2xl px-4 py-6 sm:px-6"
+      className="w-full"
     >
       <RemediationQueue
         activeFindingFilters={activeFindingFilters}
@@ -134,4 +135,19 @@ export function FindingsRoute() {
   }
 
   return <FindingsRouteContainer />
+}
+
+function searchQueryStringsEqual(left: string, right: string) {
+  return normalizedSearchEntries(left) === normalizedSearchEntries(right)
+}
+
+function normalizedSearchEntries(value: string) {
+  return Array.from(new URLSearchParams(value).entries())
+    .sort(([leftKey, leftValue], [rightKey, rightValue]) =>
+      `${leftKey}\u0000${leftValue}`.localeCompare(
+        `${rightKey}\u0000${rightValue}`,
+      ),
+    )
+    .map(([key, entryValue]) => `${key}=${entryValue}`)
+    .join("&")
 }

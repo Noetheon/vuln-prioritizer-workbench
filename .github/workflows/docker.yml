@@ -111,6 +111,35 @@ jobs:
         if: needs.changes.outputs.run-docker == 'true'
         run: make docker-production-smoke
 
+      - name: Install image supply-chain scanners
+        if: needs.changes.outputs.run-docker == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh \
+            | sh -s -- -b /usr/local/bin
+          curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh \
+            | sh -s -- -b /usr/local/bin
+
+      - name: Generate image SBOMs
+        if: needs.changes.outputs.run-docker == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/docker-sbom
+          syft vuln-prioritizer-workbench-backend:local \
+            -o spdx-json=build/docker-sbom/backend.spdx.json
+          syft vuln-prioritizer-workbench-frontend:local \
+            -o spdx-json=build/docker-sbom/frontend.spdx.json
+
+      - name: Scan images for fixable critical vulnerabilities
+        if: needs.changes.outputs.run-docker == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          grype vuln-prioritizer-workbench-backend:local --only-fixed --fail-on critical
+          grype vuln-prioritizer-workbench-frontend:local --only-fixed --fail-on critical
+
       - name: Show compose status and logs on failure
         if: failure() && needs.changes.outputs.run-docker == 'true'
         run: |

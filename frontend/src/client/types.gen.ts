@@ -71,6 +71,10 @@ export type AnalysisRunStatus = 'pending' | 'running' | 'succeeded' | 'completed
  */
 export type AnalysisRunSummaryPublic = {
     /**
+     * Analysis Decision Scope
+     */
+    analysis_decision_scope?: string | null;
+    /**
      * Counts By Priority
      */
     counts_by_priority?: {
@@ -140,6 +144,10 @@ export type AnalysisRunSummaryPublic = {
      * Parse Errors
      */
     parse_errors?: Array<ImportParseErrorPublic>;
+    /**
+     * Persistence Scope
+     */
+    persistence_scope?: string | null;
     /**
      * Project Id
      */
@@ -222,6 +230,10 @@ export type ApiErrorEnvelope = {
  */
 export type ApiTokenCreate = {
     /**
+     * Expires At
+     */
+    expires_at?: string | null;
+    /**
      * Name
      */
     name: string;
@@ -249,6 +261,10 @@ export type ApiTokenCreatePublic = {
      * Created At
      */
     created_at: string;
+    /**
+     * Expires At
+     */
+    expires_at: string;
     /**
      * Id
      */
@@ -293,6 +309,10 @@ export type ApiTokenPublic = {
      * Created At
      */
     created_at: string;
+    /**
+     * Expires At
+     */
+    expires_at: string;
     /**
      * Id
      */
@@ -3976,7 +3996,7 @@ export type GetApiV1ProjectsByProjectIdRunsData = {
         project_id: string;
     };
     query?: never;
-    url: '/api/v1/projects/{project_id}/runs';
+    url: '/api/v1/projects/{project_id}/runs/';
 };
 
 export type GetApiV1ProjectsByProjectIdRunsErrors = {
@@ -3996,36 +4016,6 @@ export type GetApiV1ProjectsByProjectIdRunsResponses = {
 };
 
 export type GetApiV1ProjectsByProjectIdRunsResponse = GetApiV1ProjectsByProjectIdRunsResponses[keyof GetApiV1ProjectsByProjectIdRunsResponses];
-
-export type GetApiV1ProjectsByProjectIdRuns2Data = {
-    body?: never;
-    path: {
-        /**
-         * Project Id
-         */
-        project_id: string;
-    };
-    query?: never;
-    url: '/api/v1/projects/{project_id}/runs/';
-};
-
-export type GetApiV1ProjectsByProjectIdRuns2Errors = {
-    /**
-     * Validation Error
-     */
-    422: ApiErrorEnvelope;
-};
-
-export type GetApiV1ProjectsByProjectIdRuns2Error = GetApiV1ProjectsByProjectIdRuns2Errors[keyof GetApiV1ProjectsByProjectIdRuns2Errors];
-
-export type GetApiV1ProjectsByProjectIdRuns2Responses = {
-    /**
-     * Successful Response
-     */
-    200: AnalysisRunsPublic;
-};
-
-export type GetApiV1ProjectsByProjectIdRuns2Response = GetApiV1ProjectsByProjectIdRuns2Responses[keyof GetApiV1ProjectsByProjectIdRuns2Responses];
 
 export type GetApiV1ProjectsByProjectIdSummaryData = {
     body?: never;
