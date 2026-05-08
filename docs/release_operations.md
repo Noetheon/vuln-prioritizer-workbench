@@ -219,9 +219,10 @@ The Docker workflow runs `make docker-demo-smoke` and
 `make docker-production-smoke` for backend, Compose, Docker, dependency, runtime
 script, frontend build-config, and Docker workflow changes. Those smokes cover
 health, login, authenticated readiness, locked-provider import, findings,
-provider status, same-origin production routing, CSRF/session controls, report
-download, and logout revocation. Docs/archive-only PRs still get an explicit
-successful skip, and failures print compose status/logs.
+provider status, Postgres Alembic/schema/repository readiness, same-origin
+production routing, CSRF/session controls, report download, and logout
+revocation. Docs/archive-only PRs still get an explicit successful skip, and
+failures print compose status/logs.
 
 Pushes to `main` run the post-merge version of the same CI workflows. Manual
 `workflow_dispatch` remains available for full validation of CI, Docker,

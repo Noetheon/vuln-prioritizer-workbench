@@ -28,7 +28,8 @@ Pushes to `main` run the full merge validation:
 
 - Python workflow gate on 3.11 and 3.12.
 - Full frontend Playwright suite.
-- Demo and production-like Docker compose smokes.
+- Demo and production-like Docker compose smokes, including the Compose
+  Postgres Alembic/schema/repository check inside the backend container.
 - CodeQL analysis.
 
 ## Manual checks

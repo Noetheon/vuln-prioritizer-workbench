@@ -409,6 +409,10 @@ def test_makefile_has_no_legacy_runtime_smoke_or_compose_path() -> None:
         "dependency-audit:",
         1,
     )[0]
+    docker_production_smoke = makefile.split("docker-production-smoke:", 1)[1].split(
+        "dependency-audit:",
+        1,
+    )[0]
     playwright_check = makefile.split("playwright-check:", 1)[1].split("frontend-install:", 1)[0]
 
     assert "LEGACY_COMPOSE" not in makefile
@@ -420,6 +424,11 @@ def test_makefile_has_no_legacy_runtime_smoke_or_compose_path() -> None:
     assert "frontend-test-unit-coverage" in makefile
     assert "--profile legacy-postgres" not in docker_demo_smoke
     assert "workbench-postgres" not in docker_demo_smoke
+    assert "$(COMPOSE) exec -T backend python -m app.core.schema_smoke" in docker_demo_smoke
+    assert (
+        "$(PRODUCTION_SMOKE_COMPOSE) exec -T backend python -m app.core.schema_smoke"
+        in docker_production_smoke
+    )
     assert not any(marker in docker_demo_smoke for marker in LEGACY_RUNTIME_STARTERS)
 
 

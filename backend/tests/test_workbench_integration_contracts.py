@@ -103,6 +103,7 @@ def test_docker_demo_smoke_runs_quickstart_api_import() -> None:
 
     docker_smoke_block = makefile.split("docker-demo-smoke:", 1)[1].split("dependency-audit:", 1)[0]
     assert "$(PYTHON) scripts/docker_quickstart_api_smoke.py" in docker_smoke_block
+    assert "$(COMPOSE) exec -T backend python -m app.core.schema_smoke" in docker_smoke_block
     assert 'export FIRST_SUPERUSER_PASSWORD="$(DOCKER_DEMO_FIRST_SUPERUSER_PASSWORD)"' in (
         docker_smoke_block
     )
@@ -146,6 +147,9 @@ def test_production_smoke_overlay_uses_same_origin_public_contract() -> None:
     assert frontend_args["VITE_API_URL"] == ""
     assert compose["services"]["frontend"]["ports"] == ["127.0.0.1:5180:80"]
     assert "docker-production-smoke:" in makefile
+    assert "$(PRODUCTION_SMOKE_COMPOSE) exec -T backend python -m app.core.schema_smoke" in (
+        makefile
+    )
     assert "$(PYTHON) scripts/production_readiness_smoke.py" in makefile
     assert "connect-src 'self'" in script
     assert "/api/v1/workbench/health" in script
