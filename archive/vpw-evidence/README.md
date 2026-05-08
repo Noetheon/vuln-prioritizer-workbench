@@ -1,7 +1,7 @@
 # VPW Evidence Archive
 
-This directory preserves historical Vuln Prioritizer Workbench evidence files
-that previously lived under `docs/evidence/`.
+This directory preserves selected historical Vuln Prioritizer Workbench evidence
+files that previously lived under `docs/evidence/`.
 
 The files are intentionally outside the MkDocs `docs/` tree so the public
 documentation stays focused on current user, maintainer, architecture, release,
@@ -10,7 +10,8 @@ evidence, screenshots, demo flows, or release closeout notes.
 
 ## Contents
 
-- VPW issue evidence markdown from `vpw-029` through `vpw-085`.
+- Selected VPW issue evidence markdown that is still referenced by active docs
+  or regression tests.
 - Historical screenshot sets for Workbench pages, final demo flows, and design
   system foundation work.
 - Machine-readable evidence JSON, CSV, SARIF validation, and evidence-bundle
@@ -22,4 +23,7 @@ evidence, screenshots, demo flows, or release closeout notes.
 
 Do not write new screenshots here by default. Browser tests write to
 `frontend/test-results/evidence/` unless `VPW_UPDATE_DOCS_EVIDENCE=1` is set.
-Use that opt-in only for an intentional evidence refresh.
+Use that opt-in only for an intentional evidence refresh. Do not add audit
+scorecards, intermediate handoff notes, or one-off validation summaries here by
+default; use PR/issue comments or CI artifacts unless a durable repository
+artifact is explicitly needed.
