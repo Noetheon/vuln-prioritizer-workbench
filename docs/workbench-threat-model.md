@@ -104,7 +104,7 @@ Primary boundaries:
 | GitHub issue export token misuse or over-privileged credentials | Unauthorized issue creation or broader external account compromise | Read tokens only at request time from explicit environment variables such as `GITHUB_TOKEN`; use narrowly scoped external tokens; do not store token values in the Workbench database; include only counts and non-secret metadata in audit events. |
 | Oversized reports or evidence bundles | Disk exhaustion, slow UI, failed downloads | Enforce upload limits, keep generated artifacts in configured report directories, document cleanup responsibility, and surface generation errors. |
 | Supply-chain or dependency compromise | Compromised runtime or generated artifacts | Prefer pinned release installs, local checks, virtual environments, and reproducible docs/build commands. Do not load remote code through ATT&CK metadata or provider data. |
-| Internet-exposed Workbench deployment | Unauthorized access to imports, reports, and local state | Treat the current Workbench as local-first and not certified for public-production exposure until PP5 evidence closes. API tokens are a local automation guard, not a complete internet-facing authentication, authorization, TLS, session, or multi-user isolation model. |
+| Internet-exposed Workbench deployment | Unauthorized access to imports, reports, and local state | Treat the current Workbench as local-first and not certified for public-production exposure until the final VPW-AUD-999 scorecard links fresh deployment evidence. JWT browser sessions and scoped API tokens are implemented controls for the local Workbench, but they do not by themselves certify internet-facing authentication, authorization, TLS, or shared-operation posture. |
 
 ## Operational Assumptions
 
@@ -121,7 +121,8 @@ Primary boundaries:
 - ATT&CK context is optional. Missing CTID files or unmapped CVEs must not block base CVE prioritization.
 - Evidence bundles are integrity artifacts, not encrypted archives. Operators are responsible for secure storage and transfer.
 - API tokens are local automation credentials for scoped active `/api/v1`
-  service calls. They are not an SSO, RBAC, or multi-user session model.
+  service calls. They are not an SSO, organization-wide identity, or
+  multi-user session model.
 - NVD, GitHub issue export, and other implemented token-bearing integrations use
   explicit environment variable names that match `^[A-Z_][A-Z0-9_]*$`; token
   values stay outside committed config and generated evidence.
@@ -137,7 +138,7 @@ Primary boundaries:
 ## Shared Deployment Prerequisites
 
 Public-production readiness is not certified by this page alone. The final
-acceptance boundary is the PP5 scorecard tracked in
+acceptance boundary is VPW-AUD-999, with supporting evidence tracked in
 [Public-Production Release Evidence Ledger](./public-production-release-evidence-ledger.md).
 Until that scorecard closes, the controls below are prerequisites and evidence
 targets, not a blanket production-readiness claim.
@@ -155,7 +156,7 @@ requirements:
 - authentication stronger than local bootstrap defaults that covers browser sessions, automation, token rotation, and recovery
 - explicit `ALLOWED_HOSTS`, non-default `SECRET_KEY` and `FIRST_SUPERUSER_PASSWORD`, and disabled or access-controlled `API_DOCS_ENABLED`
 - disabled Traefik dashboard routing, or dashboard routing protected by a narrow IP allowlist or authentication middleware
-- authorization and RBAC for project-level access, mutable actions, token administration, reports, evidence bundles, and provider jobs
+- authorization rules for project-level access, mutable actions, token administration, reports, evidence bundles, and provider jobs
 - project isolation rules for database queries, filesystem artifacts, uploads, provider snapshots, report downloads, evidence bundles, and cleanup tasks
 - TLS termination and reverse-proxy guidance, including trusted host configuration, secure cookies, forwarded headers, request-size limits, and log redaction
 - audit retention policy for imports, lifecycle changes, waivers, reports, evidence bundles, tokens, provider jobs, GitHub exports, and detection-control changes
@@ -165,9 +166,9 @@ requirements:
 - documented incident response for leaked API tokens, exposed reports, tampered evidence bundles, and compromised provider snapshot directories
 
 These prerequisites are intentionally listed as blockers rather than implied
-support. API tokens remain a local automation control, not a complete
-shared-deployment auth model unless the final PP5 evidence explicitly accepts
-that boundary.
+support. JWT sessions and API tokens are active local Workbench controls, not a
+complete shared-deployment auth model unless the final VPW-AUD-999 evidence
+explicitly accepts that boundary.
 
 ## Readiness Checklist
 
@@ -197,7 +198,8 @@ The current local-first Workbench is readiness-aligned when:
 - GitHub issue export stays operator-triggered, defaults to dry-run, uses an
   explicit `token_env` name, and persists duplicate keys for idempotency without
   storing token values
-- operator docs state that internet exposure, multi-tenancy, SSO, RBAC, background workers, and organization-wide ticket sync policy are out of v1.2 scope
+- operator docs state that internet exposure, multi-tenancy, SSO, background
+  workers, and organization-wide ticket sync policy are out of v1.2 scope
 
 ## Control Evidence for v1.2
 
