@@ -1,0 +1,35 @@
+name: Provider Live Drift
+
+on:
+  schedule:
+    - cron: "17 4 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  live-provider-contracts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: |
+            pyproject.toml
+            backend/pyproject.toml
+
+      - name: Install project and dev dependencies
+        run: python -m pip install -e "backend[dev]"
+
+      - name: Run live provider contract checks
+        env:
+          VPW_RUN_LIVE_PROVIDER_TESTS: "1"
+        run: python -m pytest -q backend/tests/live/test_provider_live_contracts.py --no-cov

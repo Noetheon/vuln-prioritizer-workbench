@@ -14,7 +14,7 @@ export default defineConfig({
   },
   webServer: [
     {
-      command: "cd .. && bash scripts/start-template-playwright-backend.sh",
+      command: "cd .. && bash scripts/start-workbench-playwright-backend.sh",
       reuseExistingServer: true,
       timeout: 120_000,
       url: "http://127.0.0.1:8000/api/v1/utils/health-check/",

@@ -118,10 +118,7 @@ export function useReportsRouteState({
   }, [currentPath, selectedRunId])
 
   useEffect(() => {
-    if (
-      reportsQuery.error instanceof ApiError &&
-      [401, 403].includes(reportsQuery.error.status)
-    ) {
+    if (reportsQuery.error instanceof ApiError && reportsQuery.error.status === 401) {
       void onAuthExpired()
     }
   }, [onAuthExpired, reportsQuery.error])

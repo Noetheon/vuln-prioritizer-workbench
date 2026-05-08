@@ -9,11 +9,15 @@ from pathlib import Path
 REQUIRED_WHEEL_SUFFIXES = (
     "app/main.py",
     "app/api/main.py",
+    "app/alembic/env.py",
+    "app/alembic/versions/20260508_0012_api_token_expiry.py",
     "vuln_prioritizer/cli.py",
 )
 REQUIRED_SDIST_SUFFIXES = (
     "app/main.py",
     "app/api/main.py",
+    "app/alembic/env.py",
+    "app/alembic/versions/20260508_0012_api_token_expiry.py",
     "src/vuln_prioritizer/cli.py",
     "pyproject.toml",
 )

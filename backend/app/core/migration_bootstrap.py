@@ -11,7 +11,7 @@ from sqlalchemy.engine import Inspector
 
 from app.core.config import settings
 
-ALEMBIC_HEAD = "20260506_0011"
+ALEMBIC_HEAD = "20260508_0012"
 ALEMBIC_INI = Path(__file__).resolve().parents[2] / "alembic.ini"
 
 
@@ -55,7 +55,9 @@ def _legacy_revision_for_tables(
             if "project_id" not in api_token_columns:
                 return "20260430_0009"
             if {"auth_session", "audit_event"}.issubset(table_names):
-                return ALEMBIC_HEAD
+                if "expires_at" in api_token_columns:
+                    return ALEMBIC_HEAD
+                return "20260506_0011"
             return "20260505_0010"
         return "20260430_0008" if "project_id" not in api_token_columns else None
     if "attack_stix_snapshot" in table_names:

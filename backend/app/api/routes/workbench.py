@@ -19,7 +19,7 @@ router = APIRouter(prefix="/workbench", tags=["workbench"])
 REQUIRED_SCHEMA_TABLES = frozenset(
     table_name for table_name in SQLModel.metadata.tables if table_name != "alembic_version"
 )
-REQUIRED_API_TOKEN_COLUMNS = frozenset({"id", "project_id", "token_hash"})
+REQUIRED_API_TOKEN_COLUMNS = frozenset({"id", "project_id", "token_hash", "expires_at"})
 REQUIRED_ALEMBIC_TABLE = "alembic_version"
 
 

@@ -1,7 +1,7 @@
 """Scoped service-token models for the Workbench API."""
 
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime, timedelta
 from typing import Literal, Self
 
 from pydantic import field_validator, model_validator
@@ -18,6 +18,7 @@ API_TOKEN_SCOPES: tuple[ApiTokenScope, ...] = (
     "report",
     "admin",
 )
+DEFAULT_API_TOKEN_MODEL_EXPIRE_DAYS = 90
 
 
 def normalize_api_token_scopes(scopes: list[str] | tuple[str, ...]) -> list[ApiTokenScope]:
@@ -38,6 +39,7 @@ class ApiTokenCreate(SQLModel):
     name: str = Field(min_length=1, max_length=200)
     scopes: list[ApiTokenScope] = Field(default_factory=lambda: ["read"])
     project_id: uuid.UUID | None = None
+    expires_at: datetime | None = None
 
     @field_validator("name")
     @classmethod
@@ -51,6 +53,16 @@ class ApiTokenCreate(SQLModel):
     @classmethod
     def validate_scopes(cls, value: list[str]) -> list[ApiTokenScope]:
         return normalize_api_token_scopes(value)
+
+    @field_validator("expires_at")
+    @classmethod
+    def validate_expires_at(cls, value: datetime | None) -> datetime | None:
+        if value is None:
+            return None
+        normalized = _aware_utc(value)
+        if normalized <= get_datetime_utc():
+            raise ValueError("expires_at must be in the future.")
+        return normalized
 
     @model_validator(mode="after")
     def validate_project_scope(self) -> Self:
@@ -89,6 +101,7 @@ class ApiToken(ApiTokenBase, table=True):
     __table_args__ = (
         Index("ix_api_token_active", "revoked_at"),
         Index("ix_api_token_created_at", "created_at"),
+        Index("ix_api_token_expires_at", "expires_at"),
     )
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
@@ -103,6 +116,12 @@ class ApiToken(ApiTokenBase, table=True):
     revoked_at: datetime | None = Field(
         default=None,
         sa_column=Column(DateTime(timezone=True), nullable=True),
+    )
+    expires_at: datetime = Field(
+        default_factory=lambda: (
+            get_datetime_utc() + timedelta(days=DEFAULT_API_TOKEN_MODEL_EXPIRE_DAYS)
+        ),
+        sa_column=Column(DateTime(timezone=True), nullable=False),
     )
 
     @property
@@ -121,6 +140,7 @@ class ApiTokenPublic(SQLModel):
     created_at: datetime
     last_used_at: datetime | None
     revoked_at: datetime | None
+    expires_at: datetime
 
 
 class ApiTokenCreatePublic(ApiTokenPublic):
@@ -143,10 +163,11 @@ def api_token_public(token: ApiToken) -> ApiTokenPublic:
         name=token.name,
         project_id=token.project_id,
         scopes=token.scopes,
-        active=token.revoked_at is None,
+        active=is_api_token_active(token),
         created_at=token.created_at,
         last_used_at=token.last_used_at,
         revoked_at=token.revoked_at,
+        expires_at=_aware_utc(token.expires_at),
     )
 
 
@@ -170,6 +191,18 @@ def scope_set(token: ApiToken | None) -> set[str]:
         return set(token.scopes)
     except ValueError:
         return set()
+
+
+def is_api_token_active(token: ApiToken, *, now: datetime | None = None) -> bool:
+    """Return whether a token can currently authorize API requests."""
+    current_time = now or get_datetime_utc()
+    return token.revoked_at is None and _aware_utc(token.expires_at) > current_time
+
+
+def _aware_utc(value: datetime) -> datetime:
+    if value.tzinfo is None:
+        return value.replace(tzinfo=UTC)
+    return value.astimezone(UTC)
 
 
 API_TOKEN_PROJECT_ID_ATTR = "_vpw_api_token_project_id"

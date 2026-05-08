@@ -15,7 +15,11 @@ ENV NODE_ENV=$NODE_ENV
 
 RUN npm run build
 
-FROM nginx:1.27-alpine
+FROM nginxinc/nginx-unprivileged:1.27-alpine
+
+USER root
+RUN apk upgrade --no-cache
+USER 101
 
 COPY --from=build-stage /app/frontend/dist/ /usr/share/nginx/html
 COPY frontend/nginx.conf /etc/nginx/conf.d/default.conf

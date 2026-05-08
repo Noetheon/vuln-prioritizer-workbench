@@ -120,7 +120,7 @@ function AssetsRouteContainer() {
 
   const handleUnauthorized = useCallback(
     async (caught: unknown) => {
-      if (caught instanceof ApiError && [401, 403].includes(caught.status)) {
+      if (caught instanceof ApiError && caught.status === 401) {
         await handleAuthExpired()
         return true
       }
@@ -164,7 +164,7 @@ function AssetsRouteContainer() {
 
   useEffect(() => {
     const queryError = assetsQuery.error ?? assetFindingsQuery.error
-    if (queryError instanceof ApiError && [401, 403].includes(queryError.status)) {
+    if (queryError instanceof ApiError && queryError.status === 401) {
       void handleAuthExpired()
     }
   }, [assetFindingsQuery.error, assetsQuery.error, handleAuthExpired])

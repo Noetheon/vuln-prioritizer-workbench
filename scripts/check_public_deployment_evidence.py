@@ -125,7 +125,7 @@ def _check_production_smoke(compose: dict[str, Any]) -> list[str]:
             failures.append(f"compose.production-smoke.yml backend {key} must be {value!r}.")
     if frontend_args.get("VITE_API_URL") != "":
         failures.append("compose.production-smoke.yml frontend must build same-origin API calls.")
-    if "127.0.0.1:5180:80" not in _string_list(frontend.get("ports")):
+    if "127.0.0.1:5180:8080" not in _string_list(frontend.get("ports")):
         failures.append("compose.production-smoke.yml must bind frontend smoke to localhost.")
     return failures
 

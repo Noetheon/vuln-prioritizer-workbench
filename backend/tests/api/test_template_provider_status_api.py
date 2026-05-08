@@ -236,8 +236,8 @@ def test_template_provider_status_redacts_production_paths_and_cache_details(
     template_api_env.client.app.state.workbench_settings = replace(
         active_settings,
         ENVIRONMENT="production",
-        SECRET_KEY="template-shell-secret",
-        FIRST_SUPERUSER_PASSWORD="template-shell-password",
+        SECRET_KEY="template-shell-secret-0123456789abcdef",
+        FIRST_SUPERUSER_PASSWORD="template-shell-password-0123456789",
         FRONTEND_HOST="https://workbench.example.com",
         ALLOWED_HOSTS=("workbench.example.com",),
         PROVIDER_CACHE_DIR=str(private_cache),
@@ -248,7 +248,7 @@ def test_template_provider_status_redacts_production_paths_and_cache_details(
             "/api/v1/login/access-token",
             data={
                 "username": active_settings.FIRST_SUPERUSER,
-                "password": "template-shell-password",
+                "password": "template-shell-password-0123456789",
             },
         )
         assert credentials.status_code == 200, credentials.text
@@ -370,8 +370,8 @@ def test_provider_status_projection_redacts_failed_job_error_json_fallback(
         active_settings=replace(
             active_settings,
             ENVIRONMENT="production",
-            SECRET_KEY="template-shell-secret",
-            FIRST_SUPERUSER_PASSWORD="template-shell-password",
+            SECRET_KEY="template-shell-secret-0123456789abcdef",
+            FIRST_SUPERUSER_PASSWORD="template-shell-password-0123456789",
             FRONTEND_HOST="https://workbench.example.com",
             ALLOWED_HOSTS=("workbench.example.com",),
         ),

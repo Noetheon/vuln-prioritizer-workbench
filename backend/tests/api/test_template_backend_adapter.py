@@ -11,6 +11,7 @@ from sqlalchemy.engine import Engine
 from sqlalchemy.pool import StaticPool
 from sqlmodel import Session, SQLModel, create_engine
 
+from app.api.main import PUBLIC_API_ROUTE_PATHS
 from app.api.routes.workbench import _database_readiness
 from app.core import security
 from app.core.config import (
@@ -106,6 +107,24 @@ def test_template_backend_openapi_documents_error_envelope() -> None:
     assert payload["paths"]["/api/v1/projects/"]["post"]["responses"]["422"]["content"][
         "application/json"
     ]["schema"] == {"$ref": "#/components/schemas/ApiErrorEnvelope"}
+
+
+def test_workbench_api_routes_are_auth_protected_unless_allowlisted() -> None:
+    public_paths: set[str] = set()
+    unprotected_paths: list[str] = []
+
+    for route in app.routes:
+        if not isinstance(route, APIRoute) or not route.path.startswith("/api/v1"):
+            continue
+        if route.path in PUBLIC_API_ROUTE_PATHS:
+            public_paths.add(route.path)
+            continue
+        dependency_names = _route_dependency_names(route)
+        if dependency_names.isdisjoint({"dependency", "get_current_user"}):
+            unprotected_paths.append(f"{','.join(sorted(route.methods))} {route.path}")
+
+    assert public_paths == PUBLIC_API_ROUTE_PATHS
+    assert unprotected_paths == []
 
 
 def test_template_backend_rejects_invalid_host_header() -> None:
@@ -211,9 +230,9 @@ def test_template_backend_create_app_uses_isolated_settings_db_auth_and_csrf(
         API_V1_STR="/api/v1",
         PROJECT_NAME="Isolated VPW Adapter",
         ENVIRONMENT="local",
-        SECRET_KEY="selected-template-secret",
+        SECRET_KEY="selected-template-secret-0123456789abcdef",
         FIRST_SUPERUSER="selected-admin@example.test",
-        FIRST_SUPERUSER_PASSWORD="selected-admin-password",
+        FIRST_SUPERUSER_PASSWORD="selected-admin-password-0123456789",
         SQLALCHEMY_DATABASE_URI=f"sqlite:///{tmp_path / 'selected-template.db'}",
     )
     selected_app = create_app(selected_settings)
@@ -287,8 +306,8 @@ def test_template_backend_settings_load_product_env_defaults(
     monkeypatch.setenv("PROJECT_NAME", "VPW Env Shell")
     monkeypatch.setenv("ENVIRONMENT", "staging")
     monkeypatch.setenv("API_V1_STR", "/api/custom")
-    monkeypatch.setenv("SECRET_KEY", "template-shell-secret")
-    monkeypatch.setenv("FIRST_SUPERUSER_PASSWORD", "template-shell-password")
+    monkeypatch.setenv("SECRET_KEY", "template-shell-secret-0123456789abcdef")
+    monkeypatch.setenv("FIRST_SUPERUSER_PASSWORD", "template-shell-password-0123456789")
     monkeypatch.setenv("FRONTEND_HOST", "https://workbench.example.com")
 
     selected_settings = load_settings()
@@ -297,10 +316,10 @@ def test_template_backend_settings_load_product_env_defaults(
         API_V1_STR="/api/custom",
         PROJECT_NAME="VPW Env Shell",
         ENVIRONMENT="staging",
-        SECRET_KEY="template-shell-secret",
+        SECRET_KEY="template-shell-secret-0123456789abcdef",
         ACCESS_TOKEN_EXPIRE_MINUTES=60 * 24 * 8,
         FIRST_SUPERUSER="admin@example.com",
-        FIRST_SUPERUSER_PASSWORD="template-shell-password",
+        FIRST_SUPERUSER_PASSWORD="template-shell-password-0123456789",
         FRONTEND_HOST="https://workbench.example.com",
         BACKEND_CORS_ORIGINS=(),
     )
@@ -388,8 +407,8 @@ def test_template_backend_load_settings_rejects_non_local_default_postgres_passw
     monkeypatch.setenv("ENVIRONMENT", "production")
     monkeypatch.setenv("POSTGRES_SERVER", "db")
     monkeypatch.setenv("POSTGRES_PASSWORD", password)
-    monkeypatch.setenv("SECRET_KEY", "production-secret-key")
-    monkeypatch.setenv("FIRST_SUPERUSER_PASSWORD", "production-admin-password")
+    monkeypatch.setenv("SECRET_KEY", "production-secret-key-0123456789abcdef")
+    monkeypatch.setenv("FIRST_SUPERUSER_PASSWORD", "production-admin-password-0123456789")
 
     with pytest.raises(ValueError, match="POSTGRES_PASSWORD must be set"):
         load_settings()
@@ -415,6 +434,29 @@ def test_template_backend_settings_reject_local_default_secrets_with_public_host
         Settings(ENVIRONMENT="local", ALLOWED_HOSTS=("localhost", "workbench.example.com"))
 
 
+def test_template_backend_settings_reject_weak_non_default_production_secrets() -> None:
+    with pytest.raises(ValueError, match="strong non-default secret values"):
+        Settings(
+            ENVIRONMENT="production",
+            SECRET_KEY="short-secret",
+            FIRST_SUPERUSER_PASSWORD="short-password",
+            FRONTEND_HOST="https://workbench.example.com",
+            ALLOWED_HOSTS=("workbench.example.com",),
+        )
+
+
+def test_template_backend_settings_reject_password_reusing_user_or_secret() -> None:
+    with pytest.raises(ValueError, match="FIRST_SUPERUSER_PASSWORD"):
+        Settings(
+            ENVIRONMENT="production",
+            SECRET_KEY="strong-secret-key-0123456789abcdef",
+            FIRST_SUPERUSER="admin@example.com",
+            FIRST_SUPERUSER_PASSWORD="admin@example.com",
+            FRONTEND_HOST="https://workbench.example.com",
+            ALLOWED_HOSTS=("workbench.example.com",),
+        )
+
+
 def test_template_backend_settings_reject_unknown_environment(monkeypatch) -> None:
     monkeypatch.setenv("ENVIRONMENT", "qa")
 
@@ -424,8 +466,8 @@ def test_template_backend_settings_reject_unknown_environment(monkeypatch) -> No
 
 def test_template_backend_settings_trim_environment_before_validation(monkeypatch) -> None:
     monkeypatch.setenv("ENVIRONMENT", " production ")
-    monkeypatch.setenv("SECRET_KEY", "template-shell-secret")
-    monkeypatch.setenv("FIRST_SUPERUSER_PASSWORD", "template-shell-password")
+    monkeypatch.setenv("SECRET_KEY", "template-shell-secret-0123456789abcdef")
+    monkeypatch.setenv("FIRST_SUPERUSER_PASSWORD", "template-shell-password-0123456789")
     monkeypatch.setenv("FRONTEND_HOST", "https://workbench.example.com")
 
     assert load_settings().ENVIRONMENT == "production"
@@ -464,8 +506,8 @@ def test_template_backend_rejects_unsafe_non_local_cors(
     with pytest.raises(ValueError, match=message):
         Settings(
             ENVIRONMENT="production",
-            SECRET_KEY="template-shell-secret",
-            FIRST_SUPERUSER_PASSWORD="template-shell-password",
+            SECRET_KEY="template-shell-secret-0123456789abcdef",
+            FIRST_SUPERUSER_PASSWORD="template-shell-password-0123456789",
             FRONTEND_HOST=frontend_host,
             BACKEND_CORS_ORIGINS=origins,
             ALLOWED_HOSTS=("workbench.example.com",),
@@ -475,8 +517,8 @@ def test_template_backend_rejects_unsafe_non_local_cors(
 def test_template_backend_accepts_exact_https_non_local_cors() -> None:
     selected_settings = Settings(
         ENVIRONMENT="production",
-        SECRET_KEY="template-shell-secret",
-        FIRST_SUPERUSER_PASSWORD="template-shell-password",
+        SECRET_KEY="template-shell-secret-0123456789abcdef",
+        FIRST_SUPERUSER_PASSWORD="template-shell-password-0123456789",
         FRONTEND_HOST="https://workbench.example.com",
         BACKEND_CORS_ORIGINS=("https://api.workbench.example.com",),
         ALLOWED_HOSTS=("workbench.example.com",),
@@ -522,8 +564,8 @@ def test_template_backend_hides_docs_and_openapi_outside_local_by_default() -> N
     selected_app = create_app(
         Settings(
             ENVIRONMENT="production",
-            SECRET_KEY="template-shell-secret",
-            FIRST_SUPERUSER_PASSWORD="template-shell-password",
+            SECRET_KEY="template-shell-secret-0123456789abcdef",
+            FIRST_SUPERUSER_PASSWORD="template-shell-password-0123456789",
             FRONTEND_HOST="https://workbench.example.com",
             ALLOWED_HOSTS=("workbench.example.com",),
         )
@@ -558,8 +600,8 @@ def test_template_backend_can_explicitly_expose_openapi_for_client_generation() 
     selected_app = create_app(
         Settings(
             ENVIRONMENT="production",
-            SECRET_KEY="template-shell-secret",
-            FIRST_SUPERUSER_PASSWORD="template-shell-password",
+            SECRET_KEY="template-shell-secret-0123456789abcdef",
+            FIRST_SUPERUSER_PASSWORD="template-shell-password-0123456789",
             FRONTEND_HOST="https://workbench.example.com",
             ALLOWED_HOSTS=("workbench.example.com",),
             API_DOCS_ENABLED=True,
@@ -583,6 +625,19 @@ def _stamp_alembic_head(engine: Engine) -> None:
             text("INSERT INTO alembic_version (version_num) VALUES (:version_num)"),
             {"version_num": ALEMBIC_HEAD},
         )
+
+
+def _route_dependency_names(route: APIRoute) -> set[str]:
+    dependency_names: set[str] = set()
+
+    def visit(dependant: object) -> None:
+        for dependency in getattr(dependant, "dependencies", []):
+            call = getattr(dependency, "call", None)
+            dependency_names.add(getattr(call, "__name__", repr(call)))
+            visit(dependency)
+
+    visit(route.dependant)
+    return dependency_names
 
 
 def test_template_backend_adapter_does_not_import_legacy_web_or_db_stack() -> None:

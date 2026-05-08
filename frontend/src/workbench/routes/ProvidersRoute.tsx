@@ -10,7 +10,7 @@ function ProvidersRouteContent() {
   } = useWorkbenchContext()
 
   return (
-    <section className="mx-auto w-full max-w-screen-2xl px-4 py-6 sm:px-6">
+    <section className="w-full">
       <ProvidersRouteContainer
         onRefreshProviderStatus={() => void refreshProviderStatus()}
         providerStatus={providerStatus}

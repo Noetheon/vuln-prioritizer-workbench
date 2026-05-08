@@ -19,12 +19,15 @@ The package boundary is enforced by:
 - `backend/pyproject.toml`, where `tool.setuptools.packages.find.include`
   includes both `vuln_prioritizer*` and `app*`
 - `make package-check`, which builds the backend distributions, validates their
-  content with `scripts/check_package_contents.py`, and runs `twine check`
+  content with `scripts/check_package_contents.py`, runs `twine check`, installs
+  the built wheel into a temporary virtualenv, imports `app.main:create_app`, and
+  migrates a temporary Workbench database through Alembic head
 - `build/package-contents.json`, generated locally by the package-content check
 
 The sdist and wheel must contain `app/main.py`, `app/api/main.py`, and
-`vuln_prioritizer` CLI entrypoints. They must not include the backend test tree.
-They also must not reintroduce removed legacy Workbench runtime packages under
+`vuln_prioritizer` CLI entrypoints, plus the active Workbench Alembic migration
+tree. They must not include the backend test tree. They also must not
+reintroduce removed legacy Workbench runtime packages under
 `vuln_prioritizer/api`, `vuln_prioritizer/db`, or `vuln_prioritizer/web`.
 
 ## Coverage Boundary
@@ -54,10 +57,11 @@ can still land without a source release for every transitive patch.
 The reproducible Python resolution artifact is the root `uv.lock`. The release
 dependency-audit input is `backend/requirements.lock.txt`, exported from
 `uv.lock` with exact pins and hashes. Keep both committed together when Python
-dependency metadata changes. The backend Docker image installs that hash-pinned
-lock with `pip install --require-hashes -r backend/requirements.lock.txt` before
-installing the local package with `--no-deps`, so container builds fail on
-undeclared dependency drift instead of resolving fresh transitive versions.
+dependency metadata changes. The backend Docker image installs the local
+backend package from `backend/pyproject.toml` without the `[dev]` extra, so the
+runtime image carries runtime dependencies only and not test, docs, or
+maintainer tooling. `backend/requirements.lock.txt` remains the audited
+candidate dependency set for release evidence.
 
 Regenerate or refresh the audit input by reconciling the union of
 `project.dependencies` and `project.optional-dependencies.dev` from
@@ -112,11 +116,11 @@ That is not byte-for-byte production pinning. Release owners who need pinned
 container provenance must record the resolved image digests for the backend,
 frontend, and compose stack used by the release candidate.
 
-The Docker workflow currently smoke-tests the built Workbench stack. It is not a
-container vulnerability scan, signature, or SBOM attestation gate. Public
-production release evidence must either add an image scan/signing job for the
-candidate images or explicitly record the external scanning/signing evidence
-that was run for those exact digests.
+The Docker workflow smoke-tests the built Workbench stack, emits SBOMs for the
+backend and frontend images, and fails CI on fixable critical image
+vulnerabilities. Public production release evidence still needs
+candidate-specific image digests and any required signing/provenance attestation
+for those exact images.
 
 ## Dependabot Labels
 

@@ -22,6 +22,14 @@ from app.api.routes import (
     workbench,
 )
 
+PUBLIC_API_ROUTE_PATHS = frozenset(
+    {
+        "/api/v1/login/access-token",
+        "/api/v1/workbench/health",
+        "/api/v1/utils/health-check/",
+    }
+)
+
 api_router = APIRouter()
 api_router.include_router(login.router)
 api_router.include_router(api_tokens.router)
