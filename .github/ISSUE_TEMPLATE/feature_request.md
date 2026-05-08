@@ -60,7 +60,7 @@ What simpler approaches were considered?
 - [ ] Tests or evidence artifacts are named before implementation.
 - [ ] API, DB, generated-client, UI, docs, and security impacts are identified.
 - [ ] Residual risk and follow-up work are documented.
-- [ ] Public-production readiness is not claimed unless PP5 release-readiness
+- [ ] Public deployment certification is not claimed unless release-readiness
       evidence and the final scorecard issue support it.
 
 ## Evidence

@@ -23,7 +23,7 @@ CVE-to-ATT&CK mappings with heuristics or AI.
 
 The current VPW cycle hardens the implemented `backend/app` Workbench, retained
 CLI/core package, React frontend, generated-client boundary, docs, packaging,
-and release gates for public-production review.
+and release gates for public release-readiness review.
 
 1. Security/auth/deployment baseline: document and verify the implemented
    session, token, upload/report, CSP/routing, health/readiness, dependency, and
@@ -31,11 +31,12 @@ and release gates for public-production review.
 2. Migration/package/docs coherence: keep issue templates, package boundaries,
    generated-client ownership, archive boundaries, and current-state docs
    aligned with the implemented runtime.
-3. Public-production release evidence: collect package contents, source-tag
+3. Public release evidence: collect package contents, source-tag
    install smoke, docs build, client drift, evidence bundle verification, Docker
    smoke, and residual-risk decisions in the release evidence ledger.
-4. PP5 certification: run the final quality gate and close the 10/10 scorecard
-   only when every category has current evidence and no unresolved P1/P2 blocker.
+4. Final readiness certification: run the final quality gate and close the
+   release-readiness scorecard only when every category has current evidence and
+   no unresolved high-priority blocker.
 
 ## Roadmap Guardrails
 
@@ -44,8 +45,8 @@ and release gates for public-production review.
   artifacts, residual risk, and follow-up links.
 - Treat historical template-era and removed-runtime notes as reference material,
   not automatic completion evidence for current `backend/app` work.
-- Preserve the local-first posture until public-production deployment hardening
-  and PP5 evidence explicitly support a stronger claim.
+- Preserve the local-first posture until public deployment hardening and fresh
+  release evidence explicitly support a stronger claim.
 - Keep ATT&CK defensive and evidence-based. Do not infer mappings.
 
 ## Key References

@@ -46,11 +46,13 @@ linked from an issue or PR.
 | `make pipx-source-smoke` | Source-at-tag install path compatibility | pipx smoke output and generated smoke artifacts |
 | `make api-client-drift-check` | OpenAPI/generated-client compatibility | `scripts/generate-client.sh`; clean `frontend/src/client` diff |
 | `make docs-check` | Public documentation build | clean MkDocs build |
+| `python3 scripts/check_public_deployment_evidence.py` | Public TLS and Traefik evidence contract | Static validation that Compose Traefik labels, production-smoke topology, and deployment docs cover same-origin routing, optional direct API routing, TLS, dashboard controls, and header evidence |
+| `python3 scripts/check_archive_evidence_manifest.py` | Archive binary evidence manifest | Hash/size/purpose validation for tracked historical binary evidence and ZIP member safety checks |
 | `make demo-evidence-bundle-check` | Evidence bundle integrity | `build/v1.0-demo-evidence-bundle-verification.json` |
 | `make docker-demo-smoke` | Compose runtime smoke | backend/frontend health, Postgres Alembic/schema/repository smoke, plus import/provider smoke |
 | `make docker-production-smoke` | Production-like same-origin smoke | production env, non-default secrets, Postgres Alembic/schema/repository smoke, CSP, cookies, CSRF, health/status split, import, report download, logout |
 | `make playwright-check` | Browser smoke and accessibility path | frontend Playwright smoke, responsive shell, and Axe no serious/critical violations |
-| `make release-readiness-check` | Full local readiness handoff | release gate, client drift, evidence bundle, Playwright/A11y, and production-like Docker smoke |
+| `make release-readiness-check` | Full local readiness handoff | release gate, client drift, public deployment evidence contract, archive binary evidence manifest, evidence bundle, Playwright/A11y, and production-like Docker smoke |
 
 ## VPW-AUD-999 Fresh Evidence Gate
 
@@ -70,6 +72,8 @@ Required before VPW-AUD-999 closure:
   and `make frontend-test-unit` output
 - `make playwright-check`
 - `make docs-check`
+- `python3 scripts/check_public_deployment_evidence.py`
+- `python3 scripts/check_archive_evidence_manifest.py`
 - `make dependency-audit`
 - `make docker-demo-smoke`
 - `make docker-production-smoke`
@@ -82,6 +86,13 @@ Required before VPW-AUD-999 closure:
 Evidence must not include secrets, token values, cookies, customer exports,
 private absolute paths, or shell history. When using workflow artifacts, link
 the run URL and artifact name rather than pasting raw logs into public docs.
+
+Public TLS and Traefik evidence must include the commands from the
+[Public TLS Evidence Checklist](./workbench-public-deployment.md#public-tls-evidence-checklist),
+including header captures for the frontend, same-origin health route, and
+reviewed direct API route. The archive binary evidence manifest must match
+`archive/vpw-evidence/BINARY-MANIFEST.json`; update the manifest only when the
+new binary evidence is public-safe and purpose-labelled.
 
 ## Release Candidate Ledger
 

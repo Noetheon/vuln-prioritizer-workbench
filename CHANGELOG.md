@@ -10,6 +10,15 @@ and this project aims to follow [Semantic Versioning](https://semver.org/).
 ### Added
 
 - VPW-076 release-story evidence that links v1.0 release notes, changelog, demo evidence bundle verification, screenshots, roadmap state, 15-minute technical/CISO storyline, and backup plan.
+- GitHub open-source readiness documentation, maintainer ownership guidance,
+  and stronger public repository routing links across README, Support,
+  Contributing, and MkDocs.
+
+### Changed
+
+- Updated GitHub issue and pull request templates to use the current final
+  release scorecard language and include public TLS/header plus archive binary
+  evidence fields where release-readiness evidence is requested.
 
 ## [1.1.0] - 2026-04-25
 

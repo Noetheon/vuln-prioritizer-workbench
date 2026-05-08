@@ -70,7 +70,7 @@ What should have happened instead?
 - [ ] Commands run and results are posted before closure.
 - [ ] No secrets, customer scanner exports, tokens, cookies, or private paths are
       included in public evidence.
-- [ ] Public-production readiness is not claimed unless PP5 release-readiness
+- [ ] Public deployment certification is not claimed unless release-readiness
       evidence and the final scorecard issue support it.
 
 ## Evidence

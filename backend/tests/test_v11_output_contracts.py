@@ -864,6 +864,7 @@ def test_release_check_keeps_demo_sync_manual_and_deterministic() -> None:
     assert "Generated frontend client changed." in makefile
     assert (
         "release-readiness-check: release-check api-client-drift-check "
+        "archive-evidence-check public-production-evidence-check "
         "demo-evidence-bundle-check playwright-check docker-production-smoke" in makefile
     )
     assert "VULN_PRIORITIZER_FIXED_NOW" in makefile

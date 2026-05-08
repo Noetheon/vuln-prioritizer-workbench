@@ -8,8 +8,15 @@ import yaml
 from paths import REPO_ROOT
 
 MKDOCS_FILE = REPO_ROOT / "mkdocs.yml"
+README_FILE = REPO_ROOT / "README.md"
 ARCHIVE_ROOT = REPO_ROOT / "archive"
 REPORTS_AND_EVIDENCE_FILE = REPO_ROOT / "docs" / "reports-and-evidence.md"
+CURRENT_PRODUCT_STATE_FILE = REPO_ROOT / "docs" / "current-product-state.md"
+DOCUMENTATION_MAP_FILE = REPO_ROOT / "docs" / "documentation-map.md"
+GITHUB_READINESS_FILE = REPO_ROOT / "docs" / "github-open-source-readiness.md"
+COMMUNITY_SETUP_FILE = REPO_ROOT / "docs" / "community_repository_setup.md"
+MAINTAINERS_FILE = REPO_ROOT / "MAINTAINERS.md"
+SUPPORT_FILE = REPO_ROOT / "SUPPORT.md"
 TEXT_SUFFIXES = {
     ".css",
     ".html",
@@ -195,3 +202,56 @@ def test_archives_have_entrypoints_and_public_evidence_tree_is_limited() -> None
     assert "Ownership Rules" in archive_manifest
     assert "Update this manifest" in archive_manifest
     assert "Do not archive secrets" in archive_manifest
+
+
+def test_documentation_map_defines_current_and_historical_boundaries() -> None:
+    mkdocs = yaml.safe_load(MKDOCS_FILE.read_text(encoding="utf-8"))
+    nav_pages = _nav_markdown_pages(mkdocs["nav"])
+    current_state = CURRENT_PRODUCT_STATE_FILE.read_text(encoding="utf-8")
+    documentation_map = DOCUMENTATION_MAP_FILE.read_text(encoding="utf-8")
+
+    assert Path("docs/current-product-state.md") in nav_pages
+    assert Path("docs/documentation-map.md") in nav_pages
+    assert "FastAPI" in current_state
+    assert "`backend/app`" in current_state
+    assert "React, Vite, TypeScript" in current_state
+    assert "CLI and domain core" in current_state
+    assert "Historical evidence in `archive/**`" in current_state
+    assert "Source-Of-Truth Order" in documentation_map
+    assert "Historical Reference" in documentation_map
+    assert "Must not be used as current completion evidence" in documentation_map
+
+
+def test_github_open_source_entrypoints_are_linked_and_versioned() -> None:
+    mkdocs = yaml.safe_load(MKDOCS_FILE.read_text(encoding="utf-8"))
+    nav_pages = _nav_markdown_pages(mkdocs["nav"])
+    readme = README_FILE.read_text(encoding="utf-8")
+    documentation_map = DOCUMENTATION_MAP_FILE.read_text(encoding="utf-8")
+    github_readiness = GITHUB_READINESS_FILE.read_text(encoding="utf-8")
+    community_setup = COMMUNITY_SETUP_FILE.read_text(encoding="utf-8")
+    maintainers = MAINTAINERS_FILE.read_text(encoding="utf-8")
+    support = SUPPORT_FILE.read_text(encoding="utf-8")
+
+    assert Path("docs/github-open-source-readiness.md") in nav_pages
+    for path in (
+        "CONTRIBUTING.md",
+        "SECURITY.md",
+        "CODE_OF_CONDUCT.md",
+        "SUPPORT.md",
+        "MAINTAINERS.md",
+        "CHANGELOG.md",
+        "docs/github-open-source-readiness.md",
+    ):
+        assert path in readme
+
+    assert "Open-source repository health" in documentation_map
+    assert "GitHub-Side Settings Checklist" in github_readiness
+    assert "`MAINTAINERS.md`" in github_readiness
+    assert "`SECURITY.md`" in github_readiness
+    assert "`CONTRIBUTING.md`" in github_readiness
+    assert "`SUPPORT.md`" in github_readiness
+    assert "`CODE_OF_CONDUCT.md`" in github_readiness
+    assert "Release Ownership" in maintainers
+    assert "Security issues follow `SECURITY.md`" in maintainers
+    assert "github-open-source-readiness.md" in support
+    assert "GitHub Open Source Readiness" in community_setup

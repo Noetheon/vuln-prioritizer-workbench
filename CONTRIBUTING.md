@@ -1,6 +1,15 @@
 # Contributing
 
-Thanks for contributing to `vuln-prioritizer`.
+Thanks for contributing to `vuln-prioritizer-workbench`.
+
+Start with the public GitHub routing docs before opening broad changes:
+
+- [README.md](README.md)
+- [SUPPORT.md](SUPPORT.md)
+- [MAINTAINERS.md](MAINTAINERS.md)
+- [docs/current-product-state.md](docs/current-product-state.md)
+- [docs/github-open-source-readiness.md](docs/github-open-source-readiness.md)
+- [docs/documentation-map.md](docs/documentation-map.md)
 
 ## Scope Guardrails
 
@@ -66,10 +75,9 @@ directories too.
 - Use focused branches, normally under `codex/` for Codex-authored work.
 - Prefer one roadmap issue per PR unless the dependency group is documented in
   the PR body.
-- For the Full Stack FastAPI Template migration, keep stacked branches explicit
-  and state the base branch in the PR. Do not claim old Jinja2/SQLAlchemy
-  Workbench behavior as completion evidence for React/JWT/SQLModel/template
-  issues.
+- For historical migration follow-ups, keep stacked branches explicit and state
+  the base branch in the PR. Do not claim removed or archived Workbench behavior
+  as completion evidence for the active FastAPI/React runtime.
 - Open draft PRs while evidence is still being collected.
 - Keep direct pushes to `main` for emergencies only.
 
@@ -159,6 +167,10 @@ To validate the browsable documentation site:
 ```bash
 make docs-check
 ```
+
+This gate includes stale wording checks, archive binary evidence manifest
+validation, public deployment evidence contract validation, and a clean MkDocs
+build.
 
 ## Commit Discipline
 

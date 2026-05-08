@@ -13,6 +13,8 @@ repo hygiene cleanup.
 - Root-level `vpw-*.png`: issue-level browser evidence.
 - Root-level `vpw-*.json`, `vpw-*.csv`, and `vpw-*.zip`: machine-readable
   validation and bundle artifacts.
+- `BINARY-MANIFEST.json`: hash-pinned inventory of tracked binary evidence,
+  including purpose labels and ZIP-safety validation.
 
 ## Ownership Rules
 
@@ -27,6 +29,10 @@ repo hygiene cleanup.
   the repository.
 - Update this manifest when adding a new evidence subdirectory or a new class of
   root-level artifact.
+- Update `BINARY-MANIFEST.json` with
+  `python3 scripts/check_archive_evidence_manifest.py --update` when adding,
+  removing, or intentionally replacing tracked binary evidence, then run
+  `python3 scripts/check_archive_evidence_manifest.py`.
 - Do not archive secrets, tokens, cookies, customer data, private absolute
   paths, or raw local ignored-artifact inventories.
 

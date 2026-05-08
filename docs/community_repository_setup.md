@@ -7,13 +7,17 @@ Use it for two different jobs:
 - keep the local repository documentation consistent
 - configure the small set of GitHub-side settings that cannot be created from files in this repo
 
+For the public reader-facing map of GitHub entrypoints and repository health,
+start with [GitHub Open Source Readiness](./github-open-source-readiness.md).
+
 ## What Lives Where
 
 The split matters:
 
 | Item | Where it is managed | Notes |
 | --- | --- | --- |
-| `CONTRIBUTING.md`, `SECURITY.md`, `CODE_OF_CONDUCT.md` | local docs in the repo | Versioned guidance. GitHub can surface these automatically. |
+| `CONTRIBUTING.md`, `SECURITY.md`, `CODE_OF_CONDUCT.md`, `SUPPORT.md`, `MAINTAINERS.md`, `CHANGELOG.md` | local docs in the repo | Versioned guidance. GitHub can surface several of these automatically; README and docs link the rest. |
+| [docs/github-open-source-readiness.md](./github-open-source-readiness.md) | local doc in the repo | Public GitHub-facing map for community health, routing, and claim boundaries. |
 | `.github/ISSUE_TEMPLATE/*.md` and `.github/ISSUE_TEMPLATE/config.yml` | local files in the repo | Versioned templates and contact links. GitHub uses them after they land on the default branch. |
 | [docs/release_operations.md](./release_operations.md) | local doc in the repo | Maintainer runbook for GitHub Releases and PyPI publishing. |
 | This document | local doc in the repo | Maintainer reference only. It does not create labels, topics, or repository settings by itself. |
@@ -172,7 +176,7 @@ These steps must be done on GitHub. They are not created by local files alone:
 6. Enable delete-branch-on-merge for normal PR hygiene.
 7. Protect `main` against force-push and deletion at minimum. Add stricter PR or status-check requirements only when they match the maintainer workflow you actually intend to enforce.
 8. Enable GitHub code security features that fit a public repository: secret scanning, push protection, vulnerability alerts, automated security fixes, and the existing CodeQL workflow.
-9. Confirm GitHub is surfacing `SECURITY.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, and `SUPPORT.md` in the community health surface where applicable.
+9. Confirm GitHub is surfacing `SECURITY.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, and `SUPPORT.md` in the community health surface where applicable, and that `README.md` links `MAINTAINERS.md`, `CHANGELOG.md`, and the GitHub readiness page.
 10. If private vulnerability reporting is desired, enable the repository security/advisory setting in GitHub after the repository is public.
 11. If public releases are enabled, confirm the GitHub Release object exists for the current tag and that the release workflow still matches the maintainer guidance in [docs/release_operations.md](./release_operations.md), including tag-only publish behavior.
 12. If PyPI publishing is enabled, confirm the PyPI Trusted Publisher points at this repository, the `.github/workflows/release.yml` workflow, and the `pypi` environment, and that the hosted-index install verification job is green.
@@ -209,7 +213,11 @@ These items stay versioned in the repository and should be reviewed together:
 
 1. Keep `CONTRIBUTING.md` aligned with the real local quality gate and scope guardrails.
 2. Keep `SECURITY.md` aligned with the actual disclosure path.
-3. Keep issue templates aligned with the current label names.
-4. Keep [docs/release_operations.md](./release_operations.md) aligned with the actual GitHub Release and PyPI publishing flow.
-5. Revalidate README install wording and public quickstart examples whenever the supported public install path changes, especially when PyPI moves from gated to live.
-6. Update this document when topics, labels, or triage conventions change.
+3. Keep `SUPPORT.md`, `CODE_OF_CONDUCT.md`, and `MAINTAINERS.md` aligned with
+   the actual support, conduct, and ownership paths.
+4. Keep issue templates aligned with the current label names.
+5. Keep [docs/github-open-source-readiness.md](./github-open-source-readiness.md)
+   aligned with the GitHub-facing repository surface.
+6. Keep [docs/release_operations.md](./release_operations.md) aligned with the actual GitHub Release and PyPI publishing flow.
+7. Revalidate README install wording and public quickstart examples whenever the supported public install path changes, especially when PyPI moves from gated to live.
+8. Update this document when topics, labels, or triage conventions change.

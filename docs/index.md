@@ -11,6 +11,9 @@ submission material.
 
 ![Documentation grid preview](media/grid.png)
 
+- [Current product state](current-product-state.md)
+- [Documentation map](documentation-map.md)
+- [GitHub open source readiness](github-open-source-readiness.md)
 - [External user documentation guide](user_documentation.md)
 - [Current product architecture](architecture.md)
 - [Scoring methodology](scoring-methodology.md)
@@ -96,6 +99,12 @@ Workbench remains local-first and uses the import-format matrix documented in
 
 ## Documentation Structure
 
+- Start with [current-product-state.md](current-product-state.md) when you need
+  the canonical current truth for product identity, active stack, release
+  posture, and historical boundaries.
+- Start with [documentation-map.md](documentation-map.md) when you need to know
+  which page owns a claim or whether a page is current, historical, release,
+  submission, evidence, or archive material.
 - Start with [user_documentation.md](user_documentation.md) when you need the full external-user path.
 - Start with [concept.md](concept.md) for positioning and scope.
 - Use [submission/README.md](submission/README.md) for the final Applied
@@ -122,9 +131,12 @@ Workbench remains local-first and uses the import-format matrix documented in
 - Use [user_documentation.md#known-limitations](user_documentation.md#known-limitations) for the consolidated external-user limitations list.
 - Use [roadmap.md](roadmap.md) for shipped scope and deliberate non-goals.
 - Use [release_operations.md](release_operations.md) for maintainer-only release, GitHub Release recovery, and PyPI/TestPyPI operations.
+- Use [github-open-source-readiness.md](github-open-source-readiness.md) for
+  public GitHub entrypoints, community health files, issue/PR routing, and
+  repository-setting checks.
 - Use [public-production-release-evidence-ledger.md](public-production-release-evidence-ledger.md)
   for VPW-AUD release-readiness targets, evidence boundaries, and residual-risk
-  tracking through the final VPW-AUD-999 scorecard.
+  tracking through the final release-readiness scorecard.
 - Use [community_repository_setup.md](community_repository_setup.md) for maintainer-facing public repo topics, labels, and triage defaults.
 - Use [releases/v1.1.0.md](releases/v1.1.0.md) for the current package release.
 
