@@ -22,7 +22,7 @@ DEMO_EVIDENCE_ANALYSIS_FILE := build/v1.0-demo-analysis.json
 DEMO_EVIDENCE_BUNDLE_FILE := build/v1.0-demo-evidence-bundle.zip
 DEMO_EVIDENCE_VERIFICATION_FILE := build/v1.0-demo-evidence-bundle-verification.json
 
-.PHONY: install test lint format fix typecheck check benchmark-check performance-smoke playwright-install playwright-check frontend-install frontend-build frontend-lint frontend-test-unit frontend-test-unit-coverage frontend-generate-client api-client-drift-check frontend-audit frontend-check python-lock-check release-evidence-hygiene-check docs-check docs-serve actionlint-check workflow-check docker-demo-smoke docker-production-smoke dependency-audit clean-local clean-deps provider-snapshot-validate provider-testmatrix demo-offline-no-key-proof demo-sync-check demo-sync-check-temp package package-contents-check package-check package-check-temp pipx-source-smoke release-check release-readiness-check demo-report demo-compare demo-explain demo-attack-report demo-attack-compare demo-attack-explain demo-attack-coverage demo-attack-navigator demo-pr-comment demo-results-sarif demo-html-report demo-evidence-analysis demo-evidence-bundle demo-evidence-bundle-check precommit-install
+.PHONY: install test lint format fix typecheck check benchmark-check performance-smoke playwright-install playwright-check frontend-install frontend-build frontend-lint frontend-test-unit frontend-test-unit-coverage frontend-generate-client api-client-drift-check frontend-audit frontend-check python-lock-check archive-evidence-check public-production-evidence-check release-evidence-hygiene-check docs-check docs-serve actionlint-check workflow-check docker-demo-smoke docker-production-smoke dependency-audit clean-local clean-deps provider-snapshot-validate provider-testmatrix demo-offline-no-key-proof demo-sync-check demo-sync-check-temp package package-contents-check package-check package-check-temp pipx-source-smoke release-check release-readiness-check demo-report demo-compare demo-explain demo-attack-report demo-attack-compare demo-attack-explain demo-attack-coverage demo-attack-navigator demo-pr-comment demo-results-sarif demo-html-report demo-evidence-analysis demo-evidence-bundle demo-evidence-bundle-check precommit-install
 
 install:
 	$(PYTHON) -m pip install -e "$(BACKEND_DIR)[dev]"
@@ -100,10 +100,16 @@ frontend-check: frontend-install frontend-lint frontend-build frontend-test-unit
 release-evidence-hygiene-check:
 	$(PYTHON) scripts/check_release_evidence_hygiene.py
 
+archive-evidence-check:
+	$(PYTHON) scripts/check_archive_evidence_manifest.py
+
+public-production-evidence-check:
+	$(PYTHON) scripts/check_public_deployment_evidence.py
+
 python-lock-check:
 	$(PYTHON) scripts/check_release_evidence_hygiene.py
 
-docs-check: release-evidence-hygiene-check
+docs-check: release-evidence-hygiene-check archive-evidence-check public-production-evidence-check
 	$(PYTHON) -m mkdocs build --clean
 
 docs-serve:
@@ -219,7 +225,7 @@ clean-local:
 	rm -rf .cache .mypy_cache .pytest_cache .ruff_cache .playwright-cli .playwright-mcp
 	rm -rf backend/.mypy_cache backend/.pytest_cache backend/.ruff_cache
 	rm -rf build dist site htmlcov test-results frontend/test-results frontend/playwright-report frontend/dist
-	rm -rf .coverage .coverage.* coverage.xml backend-uvicorn.log frontend-vite.log
+	rm -rf .coverage .coverage.* backend/.coverage backend/.coverage.* coverage.xml backend-uvicorn.log frontend-vite.log
 	find . -name __pycache__ -type d -not -path './.git/*' -prune -exec rm -rf {} +
 	find . -name '*.py[co]' -not -path './.git/*' -delete
 
@@ -288,7 +294,7 @@ release-check:
 	$(MAKE) pipx-source-smoke
 	$(MAKE) demo-sync-check
 
-release-readiness-check: release-check api-client-drift-check demo-evidence-bundle-check playwright-check docker-production-smoke
+release-readiness-check: release-check api-client-drift-check archive-evidence-check public-production-evidence-check demo-evidence-bundle-check playwright-check docker-production-smoke
 
 demo-report:
 	$(DEMO_ENV) $(PYTHON) -m vuln_prioritizer.cli analyze --input data/sample_cves.txt --output docs/example_report.md --format markdown $(DEMO_PROVIDER_FLAGS)

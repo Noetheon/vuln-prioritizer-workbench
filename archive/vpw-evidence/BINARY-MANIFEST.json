@@ -1,0 +1,462 @@
+{
+  "files": [
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/final-demo-flow/01-dashboard-final.png",
+      "purpose": "Historical final demo flow screenshot.",
+      "sha256": "aa7bf36eb50099c980a88001af752d50635ace5db42752c56aa4be92b7199a73",
+      "size_bytes": 258389
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/final-demo-flow/01-dashboard.png",
+      "purpose": "Historical final demo flow screenshot.",
+      "sha256": "aa7bf36eb50099c980a88001af752d50635ace5db42752c56aa4be92b7199a73",
+      "size_bytes": 258389
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/final-demo-flow/02-projects-final.png",
+      "purpose": "Historical final demo flow screenshot.",
+      "sha256": "9bfe5ef49df4c7989bae165407e6af9587ba1e8d8315c39b08f553b964ec5ab3",
+      "size_bytes": 181769
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/final-demo-flow/02-projects.png",
+      "purpose": "Historical final demo flow screenshot.",
+      "sha256": "9bfe5ef49df4c7989bae165407e6af9587ba1e8d8315c39b08f553b964ec5ab3",
+      "size_bytes": 181769
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/final-demo-flow/03-imports-final.png",
+      "purpose": "Historical final demo flow screenshot.",
+      "sha256": "438866032619f09e7f6b904d61476036af561adc2d748f299aad008fdee35c63",
+      "size_bytes": 195643
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/final-demo-flow/03-imports.png",
+      "purpose": "Historical final demo flow screenshot.",
+      "sha256": "438866032619f09e7f6b904d61476036af561adc2d748f299aad008fdee35c63",
+      "size_bytes": 195643
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/final-demo-flow/04-findings-final.png",
+      "purpose": "Historical final demo flow screenshot.",
+      "sha256": "43e70afbfa9104939c7bd504011be4e8180aa65d869554d473f9102eeb6da643",
+      "size_bytes": 283208
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/final-demo-flow/04-findings.png",
+      "purpose": "Historical final demo flow screenshot.",
+      "sha256": "43e70afbfa9104939c7bd504011be4e8180aa65d869554d473f9102eeb6da643",
+      "size_bytes": 283208
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/final-demo-flow/05-finding-detail-final.png",
+      "purpose": "Historical final demo flow screenshot.",
+      "sha256": "b9281863e398964b2456f8ba9aafbc5ddd3115c0728c25ed120fa4b90740fb84",
+      "size_bytes": 467021
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/final-demo-flow/05-finding-detail.png",
+      "purpose": "Historical final demo flow screenshot.",
+      "sha256": "8f31153642e7b40250df1ac18e78da4fcc4ebfb83fe68724b5c2da63b393be40",
+      "size_bytes": 457670
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/final-demo-flow/06-ttp-context-final.png",
+      "purpose": "Historical final demo flow screenshot.",
+      "sha256": "c7e6b03c683f3e3f816bd538336b590b0baf5aaea364a6fb4f12759eeaff4a31",
+      "size_bytes": 277782
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/final-demo-flow/06-ttp-context-mapped-demo.png",
+      "purpose": "Historical final demo flow screenshot.",
+      "sha256": "46c62728d7b5a16b3a0102a87e84f777204ba93c0fc7a29b240b168e8d1e93b3",
+      "size_bytes": 311618
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/final-demo-flow/06-ttp-context.png",
+      "purpose": "Historical final demo flow screenshot.",
+      "sha256": "8a7f3c834b51c49cec756895b118b828fa0c815de5fdb1640e1201968bef5a4e",
+      "size_bytes": 278270
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/final-demo-flow/07-waivers-final.png",
+      "purpose": "Historical final demo flow screenshot.",
+      "sha256": "5545119a11bfd4ca086f4d4c1f602bcb741293ba0ec18d3a3babe40e9f79cff5",
+      "size_bytes": 195828
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/final-demo-flow/07-waivers.png",
+      "purpose": "Historical final demo flow screenshot.",
+      "sha256": "5545119a11bfd4ca086f4d4c1f602bcb741293ba0ec18d3a3babe40e9f79cff5",
+      "size_bytes": 195828
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/final-demo-flow/08-evidence-center-final.png",
+      "purpose": "Historical final demo flow screenshot.",
+      "sha256": "f30d8b1bb7443bb79d7f8da4f7aea8a90f95e6d0aa497701b4fa67a41ae32ca4",
+      "size_bytes": 216812
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/final-demo-flow/08-evidence-center.png",
+      "purpose": "Historical final demo flow screenshot.",
+      "sha256": "8a271f545e43089994d1ef5d4828dbce6f8c8797e288dca117a5826392391b5f",
+      "size_bytes": 213243
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/final-demo-flow/09-report-generated.png",
+      "purpose": "Historical final demo flow screenshot.",
+      "sha256": "9c346748e02387a9f7aaa938841a73a575f71d149ff91fb67b241769a4301b6f",
+      "size_bytes": 200592
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/final-demo-flow/09-report-or-bundle-generated-final.png",
+      "purpose": "Historical final demo flow screenshot.",
+      "sha256": "abe537ac1e6a59ffe949e27385f555768547f80425b0569b438ccf15c97cbc3c",
+      "size_bytes": 225043
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/vpw-036-openapi-docs.png",
+      "purpose": "Historical issue-level Workbench evidence screenshot.",
+      "sha256": "dd6894019111ae39a0be49a3487d01724c69b31d518a26237cfb1393ad511b36",
+      "size_bytes": 427827
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/vpw-037-sidebar.png",
+      "purpose": "Historical issue-level Workbench evidence screenshot.",
+      "sha256": "dbea252e2764cb23a84cb098ecf8ef67d7d9c3bf8daf432d71561c9599130d8b",
+      "size_bytes": 25648
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/vpw-038-dashboard.png",
+      "purpose": "Historical issue-level Workbench evidence screenshot.",
+      "sha256": "35a5bbc0d9df5369bb998a8c8bf98363aa974cb7f35f1d5ee48f8cd0f8594f81",
+      "size_bytes": 187635
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/vpw-039-projects.png",
+      "purpose": "Historical issue-level Workbench evidence screenshot.",
+      "sha256": "1ddd3caf227328807d9f2e5fb61903a24112cd7cd998a57a6b47a678c5c763db",
+      "size_bytes": 174421
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/vpw-040-import-wizard.png",
+      "purpose": "Historical issue-level Workbench evidence screenshot.",
+      "sha256": "7db3728c6232d2ae2ab265f561ba06fca7c7d690f75dc165211e23b15473b373",
+      "size_bytes": 197678
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/vpw-041-import-runs.png",
+      "purpose": "Historical issue-level Workbench evidence screenshot.",
+      "sha256": "1b78a301191b2dc946c64055f5236ec9e3aafdff448720bdd382eea5e4654cfb",
+      "size_bytes": 144586
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/vpw-041-run-detail.png",
+      "purpose": "Historical issue-level Workbench evidence screenshot.",
+      "sha256": "e7a27f7353c055629307111157c9b293ed214caf8bff39dce98f800ca3ee8608",
+      "size_bytes": 109017
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/vpw-042-findings-table.png",
+      "purpose": "Historical issue-level Workbench evidence screenshot.",
+      "sha256": "aa9540ac15e1d808cca623b0b7b635fa3c532c2b06315e4b1c6b7e1dac5ad74b",
+      "size_bytes": 126965
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/vpw-043-finding-detail.png",
+      "purpose": "Historical issue-level Workbench evidence screenshot.",
+      "sha256": "ba2a64927bc3c4a8bdffa8436c9f81be456375e0e59a7d5b3e4100ddadff536e",
+      "size_bytes": 306279
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/vpw-044-assets-page.png",
+      "purpose": "Historical issue-level Workbench evidence screenshot.",
+      "sha256": "30d54be6174f7240eed54ba829e5e7db857e608b3a9d0265f20e9dd17f506669",
+      "size_bytes": 127485
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/vpw-044-finding-context.png",
+      "purpose": "Historical issue-level Workbench evidence screenshot.",
+      "sha256": "8438bdd38024d21790e0a4be511d6b48adf291a0ef6e91075787eecc67842fba",
+      "size_bytes": 306032
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/vpw-045-provider-status.png",
+      "purpose": "Historical issue-level Workbench evidence screenshot.",
+      "sha256": "265deae8c13d0668add8aadf08f4cb6f610f992869d1f9c7f4cd18068f60bd82",
+      "size_bytes": 104959
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/vpw-046-reports-page.png",
+      "purpose": "Historical issue-level Workbench evidence screenshot.",
+      "sha256": "866a525cd0cd5520f64598f44c96fd349d18e8daad36f1a5fa17d7c1071eff7a",
+      "size_bytes": 204039
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/vpw-047-core-workbench-flow.png",
+      "purpose": "Historical issue-level Workbench evidence screenshot.",
+      "sha256": "ba2a64927bc3c4a8bdffa8436c9f81be456375e0e59a7d5b3e4100ddadff536e",
+      "size_bytes": 306279
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/vpw-049-html-executive-report.png",
+      "purpose": "Historical issue-level Workbench evidence screenshot.",
+      "sha256": "f4491d354dc2c217d7280c1cc0369c00a71e3ed99b2d4e8ba2fa27d07bde0fe8",
+      "size_bytes": 199421
+    },
+    {
+      "kind": "zip",
+      "path": "archive/vpw-evidence/vpw-051-evidence-bundle.zip",
+      "purpose": "Historical evidence bundle artifact retained for verification context.",
+      "sha256": "981fff35db0c80e31a432fa051a46ec66b84c424f5016bf80153075b27570b81",
+      "size_bytes": 6649
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/vpw-053-report-downloads.png",
+      "purpose": "Historical issue-level Workbench evidence screenshot.",
+      "sha256": "08ba6a0bd86c63ce2a5b5ae6e58df111c559979747727b12095c551acd3e7edc",
+      "size_bytes": 144956
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/vpw-058-ttp-context-tab.png",
+      "purpose": "Historical issue-level Workbench evidence screenshot.",
+      "sha256": "97fddbe949fce518211574ca339907bb0b5e622ef215b704451402eaa84af331",
+      "size_bytes": 196554
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/vpw-059-attack-summary-dashboard.png",
+      "purpose": "Historical issue-level Workbench evidence screenshot.",
+      "sha256": "c6df486c51ff5a86ccf86a810c71e67477a5f7168e0024fb6ffea04a93abff9e",
+      "size_bytes": 133232
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/vpw-060-attack-navigator-layer.png",
+      "purpose": "Historical issue-level Workbench evidence screenshot.",
+      "sha256": "2422ba352e0ef723be3bab5cf622dbe69b05db74459b837e4718d832e3d5716e",
+      "size_bytes": 131727
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/vpw-063-asset-context-editor.png",
+      "purpose": "Historical issue-level Workbench evidence screenshot.",
+      "sha256": "876c4803fb2727c90c6f423e8b639d045b796c399b6fc7b0e1d6e5106df0c7df",
+      "size_bytes": 221491
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/vpw-063-asset-recalculate.png",
+      "purpose": "Historical issue-level Workbench evidence screenshot.",
+      "sha256": "eef7a9801a74a926d3ef21f8ac7d4061cdc9043229c8dfadda9f71c9d6d0c1ca",
+      "size_bytes": 120274
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/vpw-064-waiver-risk-acceptance.png",
+      "purpose": "Historical issue-level Workbench evidence screenshot.",
+      "sha256": "f68e7293053c35bbae1b89e5759d6b8111b09732c765bb676e47b2a7a66f49ad",
+      "size_bytes": 346182
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/vpw-065-openvex-status-application.png",
+      "purpose": "Historical issue-level Workbench evidence screenshot.",
+      "sha256": "a81636d54f5123e0743547f2219c9a7cd05b61d76ea494ce783a37383d8aa1fa",
+      "size_bytes": 306759
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/vpw-066-cyclonedx-vex-parser.png",
+      "purpose": "Historical issue-level Workbench evidence screenshot.",
+      "sha256": "0101679bed71d78de26de3e025b273b36be35d8a0a989ed590149bca26e18993",
+      "size_bytes": 310899
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/vpw-067-governance-rollups-waiver-debt.png",
+      "purpose": "Historical issue-level Workbench evidence screenshot.",
+      "sha256": "8c721bdbbf7aa53cbe21a3d9fdf6eb46b1a4ab6ab9f7e21fe7d648362bd965a1",
+      "size_bytes": 211368
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/vpw-067-top-services-by-risk.png",
+      "purpose": "Historical issue-level Workbench evidence screenshot.",
+      "sha256": "9dd3574f2b5931ce631efba3ab5330a7ff6e4e99f095f5f633d5782fbcad6291",
+      "size_bytes": 215193
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/vpw-075-dashboard.png",
+      "purpose": "Historical issue-level Workbench evidence screenshot.",
+      "sha256": "111a62d2790072a7936a5594f51a04ba8fc46285f1fd5fea3bd356d2026fb666",
+      "size_bytes": 214739
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/vpw-075-findings.png",
+      "purpose": "Historical issue-level Workbench evidence screenshot.",
+      "sha256": "f522b924033b325acb17435547f6eb7144ee55e1d21fbb1d67ddbab55f55e00f",
+      "size_bytes": 158228
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/vpw-079-detection-coverage-dashboard.png",
+      "purpose": "Historical issue-level Workbench evidence screenshot.",
+      "sha256": "a3fbb45f69ac39d1bd08cc3c96cf575f04329681249d4e057305aad34937db36",
+      "size_bytes": 493890
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/vpw-081-settings-token-ui.png",
+      "purpose": "Historical issue-level Workbench evidence screenshot.",
+      "sha256": "500d75ebd9518deae718e273372a2522ed66c7fc339a50746b0755aa3910de3b",
+      "size_bytes": 174819
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/vpw-design-system-foundation/assets-vpw-integrated.png",
+      "purpose": "Historical design-system evidence screenshot.",
+      "sha256": "4ebe6054d1c2c75af057ace92a1f680c5e9754f22ca929ba3d6491845c6113c0",
+      "size_bytes": 291352
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/vpw-design-system-foundation/evidence-center-vpw-integrated-clean.png",
+      "purpose": "Historical design-system evidence screenshot.",
+      "sha256": "0a327f7de68aa14f1b4601dac405acf20eca5ffbed7caaa9a3ac40b99181cd80",
+      "size_bytes": 400133
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/vpw-design-system-foundation/evidence-center-vpw-integrated.png",
+      "purpose": "Historical design-system evidence screenshot.",
+      "sha256": "20ba59b09410565746d6b27db1597430dfd7ee9e804ea1631f2591cf2be7b9c1",
+      "size_bytes": 407595
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/vpw-design-system-foundation/imports-vpw-integrated.png",
+      "purpose": "Historical design-system evidence screenshot.",
+      "sha256": "0d218bde0480e69ba84ec980562bec2507d909f77db2313328f4a30d42567c59",
+      "size_bytes": 296831
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/vpw-design-system-foundation/projects-vpw-integrated.png",
+      "purpose": "Historical design-system evidence screenshot.",
+      "sha256": "ff94650ede4511d9f262e9c730a6c44f9dc4e56c5cab6e092c4e7b48ce6c1163",
+      "size_bytes": 295445
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/vpw-design-system-foundation/providers-vpw-integrated.png",
+      "purpose": "Historical design-system evidence screenshot.",
+      "sha256": "a0f15a6cd3b69a51171d0fd487b63628b0aa87403f6fb83e1ee9faa2a6b4f666",
+      "size_bytes": 172317
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/vpw-design-system-foundation/settings-vpw-integrated.png",
+      "purpose": "Historical design-system evidence screenshot.",
+      "sha256": "069e643cf33d3624e298e5f7e313665c58190e129a2d46f9b6cd5b72d034f2c9",
+      "size_bytes": 241639
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/vpw-design-system-foundation/vpw-design-system-complete-set-desktop.png",
+      "purpose": "Historical design-system evidence screenshot.",
+      "sha256": "ec3beb6ec7d32fb6d987594f9dcf1a139d8fd2e11d2ab9c237aa390869b8c88d",
+      "size_bytes": 718562
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/vpw-design-system-foundation/vpw-design-system-complete-set-mobile.png",
+      "purpose": "Historical design-system evidence screenshot.",
+      "sha256": "eba3833a29a14702970fd96fcbf0dd0326eaa756c4454518ebd6fb92b33f9d45",
+      "size_bytes": 774819
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/vpw-design-system-foundation/vpw-design-system-foundation-dashboard.png",
+      "purpose": "Historical design-system evidence screenshot.",
+      "sha256": "8348a0e3dc95f24ddd283403a29b1028ccce21779f5f3b5bccb4d3c248fc2393",
+      "size_bytes": 243981
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/vpw-design-system-foundation/vpw-design-system-foundation-evidence-center.png",
+      "purpose": "Historical design-system evidence screenshot.",
+      "sha256": "f8390e81738bc99daf0550e46f55d78d5d26bf6c0fb3d38250acb64b36b22070",
+      "size_bytes": 197113
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/vpw-design-system-foundation/vpw-design-system-foundation-finding-detail.png",
+      "purpose": "Historical design-system evidence screenshot.",
+      "sha256": "fffdc2135447636fce6055f753e394ec23b1953512eced93b45cb4f92556f4ef",
+      "size_bytes": 286992
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/vpw-design-system-foundation/vpw-design-system-foundation-findings.png",
+      "purpose": "Historical design-system evidence screenshot.",
+      "sha256": "c60c7973d6579ec0011f3ec7ca32060f24d26b7792d28f8d66f68c7a517dab79",
+      "size_bytes": 314951
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/vpw-design-system-foundation/vpw-design-system-foundation-showcase.png",
+      "purpose": "Historical design-system evidence screenshot.",
+      "sha256": "ec3beb6ec7d32fb6d987594f9dcf1a139d8fd2e11d2ab9c237aa390869b8c88d",
+      "size_bytes": 718562
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/vpw-design-system-foundation/waivers-vpw-integrated.png",
+      "purpose": "Historical design-system evidence screenshot.",
+      "sha256": "755bf16bb3c4239684c090d3ac31f475d8142d29990fc60966c26834aabbffbb",
+      "size_bytes": 362472
+    }
+  ],
+  "policy": "Historical binary evidence must be public-safe, purpose-labelled, and hash-pinned. ZIP members are checked for unsafe paths and sensitive-looking names.",
+  "root": "archive/vpw-evidence",
+  "schema_version": 1
+}

@@ -5,6 +5,9 @@ Thumbs.db
 # Local note exports kept outside version control
 Threat-Informed Vulnerability Prioritization Report.html
 
+# Internal audits and private scorecards
+docs/audits/
+
 # Environment and secrets
 .env
 .env.*
@@ -32,6 +35,8 @@ __pycache__/
 .benchmarks/
 .coverage
 .coverage.*
+backend/.coverage
+backend/.coverage.*
 coverage.xml
 htmlcov/
 test-results/

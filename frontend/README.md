@@ -22,9 +22,9 @@ bash scripts/generate-client.sh
 git diff --exit-code -- frontend/src/client
 ```
 
-The official template uses Bun. This repository keeps Bun-compatible scripts in
-`package.json`, but the audited local and Docker fallback uses npm with the
-checked-in `frontend/package-lock.json`.
+This repository keeps Bun-compatible scripts in `package.json`, but the audited
+local and Docker fallback uses npm with the checked-in
+`frontend/package-lock.json`.
 
 ## Dependency Audit Notes
 

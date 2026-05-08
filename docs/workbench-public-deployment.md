@@ -58,6 +58,48 @@ Do not trust arbitrary forwarded headers from the public internet. Place Traefik
 as the only public entrypoint and keep backend container ports unbound except in
 local override files.
 
+## Public TLS Evidence Checklist
+
+Before claiming public-production readiness, capture public-safe evidence from
+the exact deployed candidate. Redact cookies, tokens, IP addresses that identify
+private infrastructure, private paths, and shell history.
+
+Required topology evidence:
+
+```bash
+python3 scripts/check_public_deployment_evidence.py
+docker compose -f compose.yml -f compose.traefik.yml config
+```
+
+Required public header evidence:
+
+```bash
+curl -I https://${DOMAIN}/
+curl -I https://${DOMAIN}/api/v1/workbench/health
+curl -I https://api.${DOMAIN}/api/v1/workbench/health
+```
+
+Required browser/API behavior evidence:
+
+- `https://${DOMAIN}/` returns the frontend with security headers and a CSP that
+  keeps same-origin API routing unless a split-domain deployment is explicitly
+  approved.
+- `https://${DOMAIN}/api/v1/workbench/health` returns the minimal public health
+  response.
+- `https://${DOMAIN}/api/v1/workbench/status` is auth-gated.
+- `https://${DOMAIN}/docs` and `/api/v1/openapi.json` are not public when
+  `API_DOCS_ENABLED=false`.
+- `https://api.${DOMAIN}/api/v1/workbench/health` is treated as the Optional
+  direct API route for automation; if exposed publicly, record the split-domain
+  CORS, CSRF, cookie, and CSP decision in the release evidence ledger.
+- HTTP requests redirect to HTTPS.
+- Traefik dashboard routing stays disabled unless a short maintenance window and
+  IP allowlist are documented.
+
+Do not include secrets, token values, cookies, customer exports, private
+absolute paths, shell history, or unredacted environment dumps in public
+evidence.
+
 ## Compose Volumes And Compatibility
 
 Fresh Compose stacks use Workbench-branded named volumes by default:
@@ -244,10 +286,13 @@ the release evidence ledger or linked issue evidence:
 - `make package-check`
 - `make dependency-audit`
 - `make api-client-drift-check`
+- `python3 scripts/check_public_deployment_evidence.py`
+- `python3 scripts/check_archive_evidence_manifest.py`
 - `make docker-demo-smoke`
 - `make docker-production-smoke`
 - `make playwright-check`
-- header captures for the public frontend and API routes
+- Public TLS Evidence Checklist output and header captures for the public
+  frontend and API routes
 - residual-risk decision with owner and follow-up issue for every exception
 
 Do not include secrets, token values, cookies, customer exports, private

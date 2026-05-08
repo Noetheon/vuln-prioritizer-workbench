@@ -48,10 +48,12 @@ make release-check
 make release-readiness-check
 ```
 
-This adds generated-client drift, demo evidence-bundle verification, and
+This adds generated-client drift, archive binary evidence validation, public
+deployment evidence contract validation, demo evidence-bundle verification, and
 Playwright smoke evidence to the normal release gate. It also runs the
 production-like Docker smoke. It does not by itself close the VPW-AUD-999 final
-scorecard.
+scorecard because live public TLS/header evidence still has to be captured for
+the exact deployed candidate.
 For tagged releases, `.github/workflows/release.yml` runs this gate before any
 GitHub Release or PyPI publish job can proceed.
 
@@ -68,6 +70,8 @@ Commit/tag:
 Result:
 Artifact or CI URL:
 SHA-256 artifact list:
+Public TLS/header evidence:
+Archive binary manifest:
 Residual risk:
 Owner:
 Follow-up:

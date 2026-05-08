@@ -42,8 +42,8 @@ Describe the smallest safe change.
 
 ## Safety Checklist
 
-- [ ] No public-production readiness is claimed without explicit threat-model,
-      deployment, release-readiness, and PP5 scorecard evidence.
+- [ ] No public deployment certification is claimed without explicit
+      threat-model, deployment, release-readiness, and final scorecard evidence.
 - [ ] No secrets, token values, cookies, API keys, customer exports, or private
       paths are exposed.
 - [ ] No scanner, exploit, PoC, active probing, credential testing, or

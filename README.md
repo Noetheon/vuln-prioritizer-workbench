@@ -153,6 +153,9 @@ and [Reporting and CI Integration](docs/integrations/reporting_and_ci.md).
 
 Public docs:
 
+- [Current product state](docs/current-product-state.md)
+- [Documentation map](docs/documentation-map.md)
+- [GitHub Open Source Readiness](docs/github-open-source-readiness.md)
 - [Documentation home](docs/index.md)
 - [User Documentation Guide](docs/user_documentation.md)
 - [Product Architecture](docs/architecture.md)
@@ -165,6 +168,8 @@ Public docs:
 - [Support Matrix](docs/support_matrix.md)
 - [Workbench Threat Model](docs/workbench-threat-model.md)
 - [Public-Production Release Evidence Ledger](docs/public-production-release-evidence-ledger.md)
+- [Roadmap](docs/roadmap.md)
+- [Community Repository Setup](docs/community_repository_setup.md)
 
 Submission and reviewer docs:
 
@@ -183,9 +188,12 @@ README:
 - [Presentation evidence index](archive/vpw-evidence/presentation-pack/evidence-index.md)
 - [Presentation pack overview](archive/vpw-evidence/presentation-pack/README.md)
 - [Historical evidence archive](archive/vpw-evidence/MANIFEST.md)
-- [Example technical report artifact](docs/examples/vpw-054-template-technical-report.md)
-- [Example executive report artifact](docs/examples/vpw-054-template-executive-report.html)
-- [Example analysis result artifact](docs/examples/vpw-054-template-analysis-result.v1.json)
+- [Example Markdown report](docs/example_report.md)
+- [Example ATT&CK-aware report](docs/example_attack_report.md)
+- [Example PR comment body](docs/examples/example_pr_comment.md)
+- [VPW-054 technical report snapshot](docs/examples/vpw-054-template-technical-report.md)
+- [VPW-054 executive report snapshot](docs/examples/vpw-054-template-executive-report.html)
+- [VPW-054 analysis result snapshot](docs/examples/vpw-054-template-analysis-result.v1.json)
 - [GitHub Actions report artifact workflow](.github/examples/workbench-report-artifacts.yml)
 
 Canonical report/evidence contract artifacts remain under `docs/evidence/` and
@@ -218,7 +226,7 @@ cd frontend && npm run lint
 cd frontend && npm run test:unit
 cd frontend && npm run test -- tests/ui-smoke.spec.ts
 
-python3 -m pytest -q backend/tests/api/test_template_reports_api.py --no-cov
+python3 -m pytest -q backend/tests/test_docs_hygiene.py --no-cov
 python3 -m pytest -q backend/tests/test_docs_hygiene.py --no-cov
 python3 -m mkdocs build --clean
 make docs-check
@@ -243,9 +251,29 @@ as a final internet-facing certification until
 [VPW-AUD-999](https://github.com/Noetheon/vuln-prioritizer-workbench/issues/430)
 closes with evidence.
 
+## GitHub Community Health
+
+This repository keeps the public GitHub entrypoints versioned in the repo:
+
+- [Contributing guide](CONTRIBUTING.md)
+- [Support guide](SUPPORT.md)
+- [Security policy](SECURITY.md)
+- [Code of conduct](CODE_OF_CONDUCT.md)
+- [Maintainers](MAINTAINERS.md)
+- [Changelog](CHANGELOG.md)
+- [GitHub Open Source Readiness](docs/github-open-source-readiness.md)
+
+Repository settings such as discussions, branch protection, repository topics,
+private vulnerability reporting, and trusted publisher configuration must still
+be confirmed in GitHub; the maintainer checklist is in
+[Community Repository Setup](docs/community_repository_setup.md).
+
 ## License, Security, And Contributing
 
 - License: [MIT](LICENSE)
 - Security policy: [SECURITY.md](SECURITY.md)
 - Contributing: [CONTRIBUTING.md](CONTRIBUTING.md)
 - Support: [SUPPORT.md](SUPPORT.md)
+- Code of conduct: [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
+- Maintainers: [MAINTAINERS.md](MAINTAINERS.md)
+- Changelog: [CHANGELOG.md](CHANGELOG.md)

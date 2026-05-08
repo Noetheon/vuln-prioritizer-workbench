@@ -6,8 +6,12 @@ import re
 import sys
 import tomllib
 from pathlib import Path
+from typing import Any
+
+import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
+MKDOCS_FILE = ROOT / "mkdocs.yml"
 PYPROJECT = ROOT / "backend" / "pyproject.toml"
 PYTHON_AUDIT_INPUT = ROOT / "backend" / "requirements.txt"
 PYTHON_AUDIT_LOCK = ROOT / "backend" / "requirements.lock.txt"
@@ -53,6 +57,12 @@ STALE_WORDING_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
 STALE_WORDING_ALLOWLIST: dict[str, tuple[re.Pattern[str], ...]] = {
     "docs/dependency-and-package-policy.md": (re.compile(r"\bnot\s+CLI-only\b", re.IGNORECASE),),
     ".github/pull_request_template.md": (re.compile(r"\bnot claimed\b", re.IGNORECASE),),
+    "docs/current-product-state.md": (re.compile(r"\bnot\s+a\s+CLI-only\b", re.IGNORECASE),),
+    "docs/documentation-map.md": (
+        re.compile(r"\bCLI-only product claims\b", re.IGNORECASE),
+        re.compile(r"\bunqualified public-production readiness claims\b", re.IGNORECASE),
+        re.compile(r"\btemplate-era evidence as closure proof\b", re.IGNORECASE),
+    ),
     "docs/workbench-public-deployment.md": (
         re.compile(r"\btemplate\.db\b", re.IGNORECASE),
         re.compile(r"\btemplate-[a-z0-9-]+\b", re.IGNORECASE),
@@ -60,15 +70,18 @@ STALE_WORDING_ALLOWLIST: dict[str, tuple[re.Pattern[str], ...]] = {
     ),
 }
 
-ACTIVE_DOC_PATHS = (
-    ROOT / ".github" / "pull_request_template.md",
-    ROOT / "docs" / "contracts.md",
-    ROOT / "docs" / "release_operations.md",
-    ROOT / "docs" / "workbench-threat-model.md",
-    ROOT / "docs" / "workbench-public-deployment.md",
-    ROOT / "docs" / "public-production-release-evidence-ledger.md",
-    ROOT / "docs" / "dependency-and-package-policy.md",
-)
+# These pages are intentionally historical or compatibility inventory. They stay
+# in public navigation, but stale wording inside them is not a current product
+# claim when the page status is explicit.
+STALE_WORDING_HISTORICAL_DOC_PATHS = {
+    Path("docs/full_stack_fastapi_template_migration.md"),
+    Path("docs/vpw_template_execution_sequence.md"),
+    Path("docs/architecture/template-replacement.md"),
+    Path("docs/architecture/template-service-layer.md"),
+    Path("docs/architecture/vpw-013-importer-contract.md"),
+}
+
+NON_NAV_STALE_WORDING_PATHS = (ROOT / ".github" / "pull_request_template.md",)
 
 
 def main() -> int:
@@ -245,7 +258,7 @@ def _pinned_lock_package_names(lock_text: str) -> set[str]:
 def _check_stale_wording() -> list[str]:
     failures: list[str] = []
     matches = 0
-    for path in ACTIVE_DOC_PATHS:
+    for path in _stale_wording_scan_paths():
         rel_path = path.relative_to(ROOT).as_posix()
         lines = path.read_text(encoding="utf-8").splitlines()
         for line_number, line in enumerate(lines, start=1):
@@ -266,6 +279,32 @@ def _check_stale_wording() -> list[str]:
 
 def _is_stale_wording_allowed(rel_path: str, line: str) -> bool:
     return any(pattern.search(line) for pattern in STALE_WORDING_ALLOWLIST.get(rel_path, ()))
+
+
+def _stale_wording_scan_paths() -> list[Path]:
+    mkdocs_config = yaml.safe_load(MKDOCS_FILE.read_text(encoding="utf-8"))
+    nav_pages = _nav_markdown_pages(mkdocs_config["nav"])
+    current_pages = [
+        ROOT / page for page in nav_pages if page not in STALE_WORDING_HISTORICAL_DOC_PATHS
+    ]
+    all_pages = [*current_pages, *NON_NAV_STALE_WORDING_PATHS]
+    return sorted({path for path in all_pages if path.exists()})
+
+
+def _nav_markdown_pages(node: Any) -> set[Path]:
+    pages: set[Path] = set()
+    if isinstance(node, str):
+        if node.endswith(".md"):
+            pages.add(Path("docs") / node)
+        return pages
+    if isinstance(node, list):
+        for item in node:
+            pages.update(_nav_markdown_pages(item))
+        return pages
+    if isinstance(node, dict):
+        for value in node.values():
+            pages.update(_nav_markdown_pages(value))
+    return pages
 
 
 def _check_ledger() -> list[str]:

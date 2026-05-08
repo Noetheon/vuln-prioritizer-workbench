@@ -61,6 +61,8 @@ Commit/tag:
 Result:
 Artifact or CI URL:
 SHA-256 artifact list:
+Public TLS/header evidence:
+Archive binary manifest:
 Residual risk:
 Owner:
 Follow-up:
@@ -86,9 +88,9 @@ Decision wording:
       exposed in code, logs, screenshots, reports, or docs
 - [ ] upload limits, rooted artifact paths, safe parsing, CSRF-sensitive forms,
       security headers, and token hashing are not weakened
-- [ ] public-production Workbench readiness is not claimed before the PP5
-      scorecard closes with threat-model, deployment, release, and residual-risk
-      evidence
+- [ ] public deployment certification is not claimed before the final
+      release-readiness scorecard closes with threat-model, deployment, release,
+      and residual-risk evidence
 
 ## Docs / Release Notes
 
