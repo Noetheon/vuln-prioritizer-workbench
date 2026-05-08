@@ -63,6 +63,20 @@ contract artifacts used by backend report/evidence tests:
 Do not add screenshots, broad historical evidence, or ad hoc demo artifacts
 under `docs/evidence/`. The docs hygiene test enforces this boundary.
 
+## Evidence Ownership Matrix
+
+| Location | Owner | Use | Boundary |
+| --- | --- | --- | --- |
+| `docs/evidence/` | Backend/API contract owners | Small, reviewed contract fixtures referenced by schemas or regression tests. | No screenshots, ad hoc logs, demo bundles, or historical issue proof. |
+| `archive/vpw-evidence/` | Release and roadmap maintainers | Public-safe historical VPW evidence, scorecards, screenshots, demo summaries, and issue closeout artifacts. | Keep entrypoints in `archive/vpw-evidence/MANIFEST.md`; add redacted summaries instead of raw local logs. |
+| CI artifacts | Release owner for the exact run | Ephemeral command output, package files, Docker logs, Playwright reports, and release-readiness bundles for a commit, tag, or PR. | Link from the PR/issue/release evidence comment; do not copy raw artifacts into `docs/evidence/`. |
+| Historical screenshots | Demo or submission owner | Locked UI proof referenced by submission and demo documentation. | Store under `archive/vpw-evidence/` or a named subdirectory; do not duplicate screenshots across docs pages. |
+
+New VPW-AUD evidence should be a small tracked Markdown summary under
+`archive/vpw-evidence/` when it must survive the PR, or an external CI artifact
+link when the raw output belongs to the exact workflow run. Evidence comments
+must identify which path was used and why.
+
 ## Historical Evidence Archive
 
 Historical VPW evidence now lives under `archive/vpw-evidence/`. Important

@@ -9,6 +9,7 @@ from paths import REPO_ROOT
 
 MKDOCS_FILE = REPO_ROOT / "mkdocs.yml"
 ARCHIVE_ROOT = REPO_ROOT / "archive"
+REPORTS_AND_EVIDENCE_FILE = REPO_ROOT / "docs" / "reports-and-evidence.md"
 TEXT_SUFFIXES = {
     ".css",
     ".html",
@@ -178,6 +179,8 @@ def test_archives_have_entrypoints_and_public_evidence_tree_is_limited() -> None
     assert (ARCHIVE_ROOT / "historical-planning" / "README.md").is_file()
 
     archive_readme = (ARCHIVE_ROOT / "README.md").read_text(encoding="utf-8")
+    archive_manifest = (ARCHIVE_ROOT / "vpw-evidence" / "MANIFEST.md").read_text(encoding="utf-8")
+    reports_and_evidence = REPORTS_AND_EVIDENCE_FILE.read_text(encoding="utf-8")
     assert "`build/`" in archive_readme
     assert "`docs/evidence/`" in archive_readme
     assert "`archive/vpw-evidence/`" in archive_readme
@@ -186,3 +189,12 @@ def test_archives_have_entrypoints_and_public_evidence_tree_is_limited() -> None
     assert "`make clean-deps`" in archive_readme
     assert "not release evidence" in archive_readme
     assert "Do not delete user-local artifacts" in archive_readme
+
+    assert "Evidence Ownership Matrix" in reports_and_evidence
+    assert "CI artifacts" in reports_and_evidence
+    assert "Historical screenshots" in reports_and_evidence
+    assert "do not copy raw artifacts into `docs/evidence/`" in reports_and_evidence
+
+    assert "Ownership Rules" in archive_manifest
+    assert "Update this manifest" in archive_manifest
+    assert "Do not archive secrets" in archive_manifest
