@@ -1,6 +1,12 @@
-"""Template Workbench service layer."""
+"""Workbench service layer."""
 
-from app.services.analysis import AnalysisService, TemplateAnalysisError, TemplateAnalysisResult
+from app.services.analysis import (
+    AnalysisService,
+    TemplateAnalysisError,
+    TemplateAnalysisResult,
+    WorkbenchAnalysisError,
+    WorkbenchAnalysisResult,
+)
 from app.services.attack import (
     ATTACK_NAVIGATOR_FILTERS,
     build_attack_navigator_layer_payload,
@@ -52,6 +58,8 @@ __all__ = [
     "ReportService",
     "TemplateAnalysisError",
     "TemplateAnalysisResult",
+    "WorkbenchAnalysisError",
+    "WorkbenchAnalysisResult",
     "ATTACK_NAVIGATOR_FILTERS",
     "build_attack_navigator_layer_payload",
     "build_project_attack_summary_payload",

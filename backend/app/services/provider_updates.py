@@ -61,6 +61,7 @@ class ProviderUpdateValidationError(ValueError):
     """Raised when a provider update request is invalid."""
 
 
+# Compatibility aliases for template-era local integrations.
 TemplateProviderUpdateConflict = ProviderUpdateConflict
 TemplateProviderUpdateValidationError = ProviderUpdateValidationError
 

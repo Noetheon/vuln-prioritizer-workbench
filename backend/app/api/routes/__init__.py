@@ -1,1 +1,1 @@
-"""Template-style API route modules."""
+"""Workbench API route modules."""

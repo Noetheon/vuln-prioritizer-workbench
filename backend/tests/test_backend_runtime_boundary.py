@@ -154,6 +154,56 @@ def test_template_backend_import_graph_does_not_reach_legacy_runtime() -> None:
     assert legacy_runtime_modules == []
 
 
+def test_template_runtime_names_are_documented_compatibility_aliases() -> None:
+    analysis_service = _read_repo_text("backend/app/services/analysis.py")
+    import_artifacts = _read_repo_text("backend/app/services/import_artifacts.py")
+    provider_updates = _read_repo_text("backend/app/services/provider_updates.py")
+    app_state = _read_repo_text("backend/app/core/app_state.py")
+    public_deployment = _read_repo_text("docs/workbench-public-deployment.md")
+    frontend_defaults = _read_repo_text("frontend/src/lib/app-defaults.ts")
+
+    assert "class WorkbenchAnalysisError" in analysis_service
+    assert "class WorkbenchAnalysisResult" in analysis_service
+    assert "DEFAULT_WORKBENCH_PROVIDER_SNAPSHOT" in analysis_service
+    assert "TemplateAnalysisError = WorkbenchAnalysisError" in analysis_service
+    assert "TemplateAnalysisResult = WorkbenchAnalysisResult" in analysis_service
+    assert "DEFAULT_TEMPLATE_PROVIDER_SNAPSHOT = DEFAULT_WORKBENCH_PROVIDER_SNAPSHOT" in (
+        analysis_service
+    )
+
+    assert "Compatibility aliases for template-era local integrations." in import_artifacts
+    assert "resolve_template_provider_snapshot_path" in import_artifacts
+    assert "Compatibility aliases for template-era local integrations." in provider_updates
+    assert "TemplateProviderUpdateConflict = ProviderUpdateConflict" in provider_updates
+
+    assert 'LEGACY_SETTINGS_STATE_KEY = "template_settings"' in app_state
+    assert "Backward-compatible aliases for older local tests and scripts." in app_state
+    assert "historical compatibility names" in public_deployment
+    assert "separate template-era Workbench runtime" in public_deployment
+    assert "WorkbenchReportFormat" in frontend_defaults
+    assert "TemplateReportFormat" not in frontend_defaults
+
+    active_runtime_docs = [
+        _read_repo_text("backend/app/__init__.py"),
+        _read_repo_text("backend/app/api/routes/__init__.py"),
+        _read_repo_text("backend/app/core/security.py"),
+        _read_repo_text("backend/app/repositories/__init__.py"),
+        _read_repo_text("backend/app/services/__init__.py"),
+        _read_repo_text("backend/app/services/reports.py"),
+    ]
+    forbidden_phrases = (
+        "Template Workbench",
+        "Template-stack",
+        "Template-style",
+        "Template-aligned",
+    )
+    violations = [
+        phrase for text in active_runtime_docs for phrase in forbidden_phrases if phrase in text
+    ]
+
+    assert violations == []
+
+
 def test_import_service_modules_do_not_import_http_or_route_boundaries() -> None:
     violations: dict[str, list[str]] = {}
     blocked_prefixes = ("fastapi", "starlette", "app.api")

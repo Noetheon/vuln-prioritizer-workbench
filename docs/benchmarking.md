@@ -83,7 +83,7 @@ from `make check` so the default developer loop stays fast, but it is available
 for release hardening and regression checks.
 
 The smoke generates 10,000 synthetic `generic-occurrence-csv` rows, imports them
-through the template Workbench API with locked provider data, verifies that
+through the Workbench API with locked provider data, verifies that
 10,000 findings are persisted, and checks that a high-offset findings page is
 stable across repeated requests.
 
