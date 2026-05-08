@@ -52,6 +52,37 @@ linked from an issue or PR.
 | `make playwright-check` | Browser smoke and accessibility path | frontend Playwright smoke, responsive shell, and Axe no serious/critical violations |
 | `make release-readiness-check` | Full local readiness handoff | release gate, client drift, evidence bundle, Playwright/A11y, and production-like Docker smoke |
 
+## VPW-AUD-999 Fresh Evidence Gate
+
+VPW-AUD-999 cannot close from historical PP evidence, local ignored artifacts,
+or a previous candidate run. The final scorecard must link public-safe command
+output, CI artifacts, or issue evidence produced for the exact commit, tag, or
+release candidate being scored.
+
+Required before VPW-AUD-999 closure:
+
+- category scorecards are closed for Backend/API (#403), Frontend/UI (#411),
+  Security/Deployment (#417), Docs (#422), CI/Release (#425), and Repo Hygiene
+  (#429)
+- `make check`
+- frontend lint, build, and unit-test evidence, either through
+  `make frontend-check` or explicit `make frontend-lint`, `make frontend-build`,
+  and `make frontend-test-unit` output
+- `make playwright-check`
+- `make docs-check`
+- `make dependency-audit`
+- `make docker-demo-smoke`
+- `make docker-production-smoke`
+- `make api-client-drift-check`
+- `make package-check`
+- `make release-readiness-check`
+- final residual-risk decisions that name an owner and follow-up issue, or state
+  why no follow-up is required
+
+Evidence must not include secrets, token values, cookies, customer exports,
+private absolute paths, or shell history. When using workflow artifacts, link
+the run URL and artifact name rather than pasting raw logs into public docs.
+
 ## Release Candidate Ledger
 
 Every release candidate entry must include the exact command, commit or tag,
