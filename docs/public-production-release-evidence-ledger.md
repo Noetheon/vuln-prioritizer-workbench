@@ -47,8 +47,8 @@ linked from an issue or PR.
 | `make api-client-drift-check` | OpenAPI/generated-client compatibility | `scripts/generate-client.sh`; clean `frontend/src/client` diff |
 | `make docs-check` | Public documentation build | clean MkDocs build |
 | `make demo-evidence-bundle-check` | Evidence bundle integrity | `build/v1.0-demo-evidence-bundle-verification.json` |
-| `make docker-demo-smoke` | Compose runtime smoke | backend/frontend health plus import/provider smoke |
-| `make docker-production-smoke` | Production-like same-origin smoke | production env, non-default secrets, CSP, cookies, CSRF, health/status split, import, report download, logout |
+| `make docker-demo-smoke` | Compose runtime smoke | backend/frontend health, Postgres Alembic/schema/repository smoke, plus import/provider smoke |
+| `make docker-production-smoke` | Production-like same-origin smoke | production env, non-default secrets, Postgres Alembic/schema/repository smoke, CSP, cookies, CSRF, health/status split, import, report download, logout |
 | `make playwright-check` | Browser smoke and accessibility path | frontend Playwright smoke, responsive shell, and Axe no serious/critical violations |
 | `make release-readiness-check` | Full local readiness handoff | release gate, client drift, evidence bundle, Playwright/A11y, and production-like Docker smoke |
 
