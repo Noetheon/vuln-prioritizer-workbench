@@ -55,6 +55,11 @@ scorecard.
 For tagged releases, `.github/workflows/release.yml` runs this gate before any
 GitHub Release or PyPI publish job can proceed.
 
+For VPW-AUD-999, do not reuse historical PP artifacts or local ignored build
+outputs as final evidence. Link fresh output or CI artifacts for the exact
+commit, tag, or release candidate, and confirm every category scorecard is
+closed before recording the final residual-risk decision.
+
 4. Record the readiness evidence with owner-facing fields:
 
 ```text
