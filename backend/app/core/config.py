@@ -40,6 +40,9 @@ DEFAULT_REPORT_DIR = "data/workbench-reports"
 LEGACY_REPORT_DIR = "data/template-reports"
 DEFAULT_PROVIDER_CACHE_DIR = "data/workbench-provider-cache"
 LEGACY_PROVIDER_CACHE_DIR = "data/template-provider-cache"
+MIN_SECRET_KEY_LENGTH = 32
+MIN_FIRST_SUPERUSER_PASSWORD_LENGTH = 16
+DEFAULT_API_TOKEN_EXPIRE_DAYS = 90
 
 
 @dataclass(frozen=True)
@@ -67,6 +70,7 @@ class Settings:
     API_RATE_LIMIT_PER_MINUTE: int = 600
     LOGIN_RATE_LIMIT_PER_MINUTE: int = 60
     TOKEN_FAILURE_RATE_LIMIT_PER_MINUTE: int = 60
+    API_TOKEN_DEFAULT_EXPIRE_DAYS: int = DEFAULT_API_TOKEN_EXPIRE_DAYS
     TRUSTED_PROXY_CIDRS: tuple[str, ...] = field(default_factory=tuple)
     AUDIT_RETENTION_DAYS: int = 365
     SESSION_RETENTION_DAYS: int = 30
@@ -217,6 +221,10 @@ def load_settings() -> Settings:
             "TOKEN_FAILURE_RATE_LIMIT_PER_MINUTE",
             60,
         ),
+        API_TOKEN_DEFAULT_EXPIRE_DAYS=_positive_int_from_env(
+            "API_TOKEN_DEFAULT_EXPIRE_DAYS",
+            DEFAULT_API_TOKEN_EXPIRE_DAYS,
+        ),
         TRUSTED_PROXY_CIDRS=parse_trusted_proxy_cidrs(environ.get("TRUSTED_PROXY_CIDRS", "")),
         AUDIT_RETENTION_DAYS=_positive_int_from_env("AUDIT_RETENTION_DAYS", 365),
         SESSION_RETENTION_DAYS=_positive_int_from_env("SESSION_RETENTION_DAYS", 30),
@@ -295,6 +303,12 @@ def _is_insecure_workbench_secret(value: str) -> bool:
     return value.strip().lower() in INSECURE_WORKBENCH_SECRET_VALUES
 
 
+def _secret_policy_applies(settings: Settings) -> bool:
+    return settings.ENVIRONMENT != "local" or not _allowed_hosts_are_local_only(
+        settings.ALLOWED_HOSTS
+    )
+
+
 def _validate_postgres_password_default(value: str) -> None:
     environment = _validate_environment_name(environ.get("ENVIRONMENT", "local"))
     if environment == "local":
@@ -353,22 +367,23 @@ def _validate_trusted_proxy_cidrs(cidrs: tuple[str, ...]) -> tuple[str, ...]:
 
 
 def _validate_secret_defaults(settings: Settings) -> None:
-    if not _settings_use_insecure_workbench_secret(settings):
+    if not _settings_use_insecure_workbench_secret(settings) and not _weak_secret_fields(settings):
         return
 
-    if settings.ENVIRONMENT == "local" and _allowed_hosts_are_local_only(settings.ALLOWED_HOSTS):
+    if not _secret_policy_applies(settings):
         return
 
     insecure_fields = _insecure_secret_fields(settings)
-    fields = ", ".join(insecure_fields)
+    weak_fields = _weak_secret_fields(settings)
+    fields = ", ".join(dict.fromkeys([*insecure_fields, *weak_fields]))
     if settings.ENVIRONMENT == "local":
         raise ValueError(
-            f"{fields} must be set to non-default secret values when local mode "
+            f"{fields} must be set to strong non-default secret values when local mode "
             "is configured with non-local ALLOWED_HOSTS."
         )
 
     raise ValueError(
-        f"{fields} must be set to non-default secret values when "
+        f"{fields} must be set to strong non-default secret values when "
         f"ENVIRONMENT={settings.ENVIRONMENT}."
     )
 
@@ -414,6 +429,21 @@ def _insecure_secret_fields(settings: Settings) -> list[str]:
         if _is_insecure_workbench_secret(value)
     ]
     return insecure_fields
+
+
+def _weak_secret_fields(settings: Settings) -> list[str]:
+    """Return secret fields that are non-default but too weak for non-local use."""
+    weak_fields: list[str] = []
+    if len(settings.SECRET_KEY.strip()) < MIN_SECRET_KEY_LENGTH:
+        weak_fields.append("SECRET_KEY")
+    password = settings.FIRST_SUPERUSER_PASSWORD.strip()
+    if len(password) < MIN_FIRST_SUPERUSER_PASSWORD_LENGTH:
+        weak_fields.append("FIRST_SUPERUSER_PASSWORD")
+    if password.lower() == settings.FIRST_SUPERUSER.strip().lower():
+        weak_fields.append("FIRST_SUPERUSER_PASSWORD")
+    if password and password == settings.SECRET_KEY:
+        weak_fields.append("FIRST_SUPERUSER_PASSWORD")
+    return weak_fields
 
 
 def _allowed_hosts_are_local_only(hosts: tuple[str, ...]) -> bool:

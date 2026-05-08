@@ -133,7 +133,7 @@ function SettingsRouteContent() {
   }
 
   return (
-    <section className="mx-auto w-full max-w-screen-2xl px-4 py-6 sm:px-6">
+    <section className="w-full">
       <SettingsRouteContainer
         apiTokenActionLoading={
           createApiTokenMutation.isPending || revokeApiTokenMutation.isPending

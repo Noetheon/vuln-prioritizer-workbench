@@ -78,7 +78,7 @@ export type AssetsWorkbenchProps = {
 
 export function AssetsWorkbench(state: AssetsWorkbenchProps) {
   return (
-    <VpwPageContainer className="space-y-6">
+    <VpwPageContainer className="space-y-6 px-0 py-0">
         <VpwSection>
           <VpwPanel className="space-y-5 p-5">
             <VpwSectionHeader

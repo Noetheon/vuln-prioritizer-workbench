@@ -83,7 +83,7 @@ async function selectDashboardProject(page: Page, projectName: string) {
   await expect(projectTrigger).toContainText(projectName)
 }
 
-test("template waiver workflow keeps accepted risk visible", async ({
+test("workbench waiver workflow keeps accepted risk visible", async ({
   page,
 }) => {
   test.setTimeout(60_000)
@@ -178,7 +178,7 @@ test("template waiver workflow keeps accepted risk visible", async ({
   await expect(page.getByText("Temporary accepted risk")).toHaveCount(0)
 })
 
-test("template governance rollups show service risk and waiver debt", async ({
+test("workbench governance rollups show service risk and waiver debt", async ({
   page,
 }) => {
   test.setTimeout(60_000)

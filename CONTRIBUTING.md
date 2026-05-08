@@ -46,7 +46,7 @@ This runs:
 
 - `ruff format --check`
 - `ruff check`
-- `mypy backend/src`
+- `mypy backend/app backend/src`
 - `pytest`
 
 ## Local Workflow Equivalent

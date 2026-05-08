@@ -12,8 +12,7 @@ COPY backend/app ./backend/app
 COPY backend/src ./backend/src
 
 RUN python -m pip install --upgrade pip \
-    && python -m pip install --require-hashes -r backend/requirements.lock.txt \
-    && python -m pip install --no-deps ./backend \
+    && python -m pip install ./backend \
     && adduser --disabled-password --gecos "" --uid 10001 workbench \
     && mkdir -p \
         /app/data \
@@ -40,6 +39,7 @@ ENV SQLALCHEMY_DATABASE_URI=sqlite:////app/data/workbench.db \
     API_RATE_LIMIT_PER_MINUTE=600 \
     LOGIN_RATE_LIMIT_PER_MINUTE=60 \
     TOKEN_FAILURE_RATE_LIMIT_PER_MINUTE=60 \
+    API_TOKEN_DEFAULT_EXPIRE_DAYS=90 \
     AUDIT_RETENTION_DAYS=365 \
     SESSION_RETENTION_DAYS=30 \
     REVOKED_API_TOKEN_RETENTION_DAYS=365 \
@@ -47,4 +47,4 @@ ENV SQLALCHEMY_DATABASE_URI=sqlite:////app/data/workbench.db \
 
 EXPOSE 8000
 
-CMD ["sh", "-c", "python -m app.core.migration_bootstrap && alembic -c /app/backend/alembic.ini upgrade head && exec uvicorn app.main:app --host 0.0.0.0 --port 8000"]
+CMD ["sh", "-c", ": \"${SECRET_KEY:?Set SECRET_KEY before starting the backend container.}\"; : \"${FIRST_SUPERUSER_PASSWORD:?Set FIRST_SUPERUSER_PASSWORD before starting the backend container.}\"; python -m app.core.migration_bootstrap && alembic -c /app/backend/alembic.ini upgrade head && exec uvicorn app.main:app --host 0.0.0.0 --port 8000"]

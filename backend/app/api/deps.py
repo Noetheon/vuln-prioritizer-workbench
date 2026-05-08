@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import secrets
 from collections.abc import Callable, Generator
-from hashlib import sha256
 from typing import Annotated, Literal
 
 from fastapi import Depends, HTTPException, Request, status
@@ -149,11 +148,12 @@ def require_api_scope(
             if token_source != "bearer":
                 raise jwt_error
             if not _looks_like_service_token(raw_token):
-                _enforce_token_failure_rate_limit(request, raw_token)
+                _enforce_token_failure_rate_limit(request)
                 raise jwt_error
+            _enforce_token_failure_rate_limit(request, record=False)
             token_record = _active_service_token(session, raw_token)
             if token_record is None:
-                _enforce_token_failure_rate_limit(request, raw_token)
+                _enforce_token_failure_rate_limit(request)
                 raise jwt_error
             scopes = scope_set(token_record)
             if required_scope not in scopes and "admin" not in scopes:
@@ -247,7 +247,11 @@ def _enforce_cookie_csrf(
         )
 
 
-def _enforce_token_failure_rate_limit(request: Request, raw_token: str) -> None:
+def _enforce_token_failure_rate_limit(
+    request: Request,
+    *,
+    record: bool = True,
+) -> None:
     active_settings = workbench_settings(request, required=False)
     limiter = getattr(request.app.state, "rate_limiter", None)
     if (
@@ -257,10 +261,10 @@ def _enforce_token_failure_rate_limit(request: Request, raw_token: str) -> None:
     ):
         return
     client_host = rate_limit_client_host(request, active_settings)
-    token_hint = sha256(raw_token.encode("utf-8")).hexdigest()[:16]
     decision = limiter.check(
-        f"token-failure:{client_host}:{token_hint}",
+        f"token-failure:{client_host}",
         limit=active_settings.TOKEN_FAILURE_RATE_LIMIT_PER_MINUTE,
+        record=record,
     )
     if not decision.allowed:
         raise HTTPException(

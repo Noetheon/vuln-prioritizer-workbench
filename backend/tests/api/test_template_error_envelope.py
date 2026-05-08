@@ -92,8 +92,8 @@ def test_error_response_content_maps_exact_messages_to_codes() -> None:
         (
             Settings(
                 ENVIRONMENT="production",
-                SECRET_KEY="production-runtime-secret",
-                FIRST_SUPERUSER_PASSWORD="production-runtime-password",
+                SECRET_KEY="production-runtime-secret-0123456789abcdef",
+                FIRST_SUPERUSER_PASSWORD="production-runtime-password-0123456789",
                 FRONTEND_HOST="https://workbench.example.com",
                 ALLOWED_HOSTS=("workbench.example.com",),
             ),

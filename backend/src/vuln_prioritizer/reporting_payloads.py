@@ -39,8 +39,9 @@ from vuln_prioritizer.sarif_contract import (
     sarif_component_identities,
     sarif_level,
     sarif_partial_fingerprints,
+    sarif_result_location,
     sarif_rule_id,
-    sarif_security_severity,
+    sarif_rule_properties,
 )
 from vuln_prioritizer.sarif_references import dedupe_defensive_http_urls
 from vuln_prioritizer.services.baseline_comparison import (
@@ -629,7 +630,7 @@ def generate_sarif_report(
                     components=_sarif_component_identities(finding),
                     asset_ids=finding.provenance.asset_ids,
                 ),
-                "locations": [{"physicalLocation": {"artifactLocation": {"uri": artifact_uri}}}],
+                "locations": [sarif_result_location(artifact_uri=artifact_uri)],
             }
         )
     payload = {
@@ -673,17 +674,12 @@ def _sarif_rule(finding: PrioritizedFinding, *, references: list[str]) -> dict[s
                 "findings and does not scan systems."
             )
         },
-        "properties": {
-            "cve": finding.cve_id,
-            "priority": priority,
-            "precision": "very-high",
-            "security-severity": sarif_security_severity(
-                priority=priority,
-                cvss_base_score=finding.cvss_base_score,
-            ),
-            "tags": ["security", "external/cve", f"priority/{priority.lower()}"],
-            "references": references,
-        },
+        "properties": sarif_rule_properties(
+            cve_id=finding.cve_id,
+            priority=priority,
+            cvss_base_score=finding.cvss_base_score,
+            references=references,
+        ),
     }
 
 

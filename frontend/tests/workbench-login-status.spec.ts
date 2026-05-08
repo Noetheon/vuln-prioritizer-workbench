@@ -11,7 +11,7 @@ import {
   validCveList,
   validOccurrenceCsv,
 } from "./workbench-e2e-helpers"
-test("template frontend covers core Workbench E2E smoke", async ({ page }) => {
+test("workbench frontend covers core Workbench E2E smoke", async ({ page }) => {
   test.setTimeout(180_000)
   const testRunSuffix = Date.now().toString(36)
   const dashboardProjectName = `VPW Dashboard Project ${testRunSuffix}`

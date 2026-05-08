@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import csv
 import io
-import re
 from dataclasses import dataclass
 
 from app.importers.contracts import (
@@ -14,9 +13,9 @@ from app.importers.contracts import (
     NormalizedOccurrence,
 )
 from vuln_prioritizer.security_redaction import redact_text
+from vuln_prioritizer.utils import normalize_cve_id
 
 CVE_LIST_INPUT_TYPE = "cve-list"
-_CVE_PATTERN = re.compile(r"^CVE-\d{4}-\d{4,}$", re.IGNORECASE)
 _COMMENT_PREFIX = "#"
 
 
@@ -151,11 +150,11 @@ def _append_unique(
 
 
 def _normalize_cve(value: str, *, line_number: int) -> str:
-    candidate = value.strip().upper()
-    if not _CVE_PATTERN.fullmatch(candidate):
+    cve_id = normalize_cve_id(value)
+    if cve_id is None:
         safe_value = redact_text(repr(value))
         raise ImporterParseError(f"Invalid CVE identifier at line {line_number}: {safe_value}")
-    return candidate
+    return cve_id
 
 
 def _skip_line(value: str) -> bool:

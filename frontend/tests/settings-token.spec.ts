@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test"
 import { login } from "./auth-helpers"
 
-test("template settings clears one-time API token when leaving settings", async ({
+test("workbench settings clears one-time API token when leaving settings", async ({
   page,
 }) => {
   const testRunSuffix = Date.now().toString(36)

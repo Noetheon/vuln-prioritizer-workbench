@@ -78,6 +78,7 @@ exclude = ["tests*"]
 
 [tool.setuptools.package-data]
 vuln_prioritizer = ["py.typed"]
+app = ["alembic/script.py.mako"]
 
 [tool.pytest.ini_options]
 addopts = "-ra --cov=app --cov=vuln_prioritizer --cov-report=term-missing --cov-fail-under=95"

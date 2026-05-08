@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import replace
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from uuid import UUID
 
@@ -14,6 +15,7 @@ from utils.template_workbench import (
 )
 
 from app import models as app_models
+from app.core.rate_limit import InMemoryRateLimiter
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 
@@ -438,6 +440,67 @@ def test_template_api_token_creation_requires_project_scope_for_non_admin_tokens
     assert "Admin API tokens must not be project-scoped" in admin_with_project.text
 
 
+def test_template_api_tokens_expose_expiry_and_reject_expired_tokens(
+    template_api_env: TemplateApiEnv,
+) -> None:
+    client = template_api_env.client
+    headers = auth_headers(client)
+    project = create_project_via_api(client, headers)
+    explicit_expiry = (datetime.now(UTC) + timedelta(days=7)).replace(microsecond=0)
+
+    token = _create_token(
+        client,
+        headers,
+        name="short-lived-read",
+        scopes=["read"],
+        project_id=project["id"],
+        expires_at=explicit_expiry.isoformat(),
+    )
+
+    assert datetime.fromisoformat(str(token["expires_at"])) == explicit_expiry
+    assert token["active"] is True
+
+    listed = client.get("/api/v1/api-tokens/", headers=headers)
+    assert listed.status_code == 200, listed.text
+    listed_token = next(item for item in listed.json()["data"] if item["id"] == token["id"])
+    assert listed_token["expires_at"] == token["expires_at"]
+    assert listed_token["active"] is True
+
+    with Session(template_api_env.engine) as session:
+        token_record = session.get(app_models.ApiToken, UUID(str(token["id"])))
+        assert token_record is not None
+        token_record.expires_at = datetime.now(UTC) - timedelta(minutes=1)
+        session.add(token_record)
+        session.commit()
+
+    expired = client.get("/api/v1/projects/", headers=_bearer_headers(str(token["token"])))
+    assert expired.status_code == 403
+
+    listed_after_expiry = client.get("/api/v1/api-tokens/", headers=headers)
+    listed_expired = next(
+        item for item in listed_after_expiry.json()["data"] if item["id"] == token["id"]
+    )
+    assert listed_expired["active"] is False
+
+
+def test_template_api_token_creation_rejects_past_expiry(
+    template_api_env: TemplateApiEnv,
+) -> None:
+    headers = auth_headers(template_api_env.client)
+    response = template_api_env.client.post(
+        "/api/v1/api-tokens/",
+        headers=headers,
+        json={
+            "name": "already-expired",
+            "scopes": ["admin"],
+            "expires_at": (datetime.now(UTC) - timedelta(days=1)).isoformat(),
+        },
+    )
+
+    assert response.status_code == 422
+    assert "expires_at must be in the future" in response.text
+
+
 def test_template_malformed_bearer_token_does_not_run_api_token_digest(
     template_api_env: TemplateApiEnv,
     monkeypatch: pytest.MonkeyPatch,
@@ -455,6 +518,43 @@ def test_template_malformed_bearer_token_does_not_run_api_token_digest(
     assert response.status_code == 403
 
 
+def test_template_token_failure_rate_limit_runs_before_service_token_digest(
+    template_api_env: TemplateApiEnv,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client = template_api_env.client
+    old_settings = client.app.state.workbench_settings
+    old_limiter = client.app.state.rate_limiter
+    client.app.state.workbench_settings = replace(
+        old_settings,
+        RATE_LIMIT_ENABLED=True,
+        TOKEN_FAILURE_RATE_LIMIT_PER_MINUTE=1,
+    )
+    client.app.state.rate_limiter = InMemoryRateLimiter()
+
+    try:
+        first_failure = client.get(
+            "/api/v1/projects/",
+            headers={"Authorization": "Bearer not-a-valid-token"},
+        )
+        assert first_failure.status_code == 403
+
+        def fail_digest(_raw_token: str) -> str:
+            raise AssertionError("rate-limited service token reached API-token digest")
+
+        monkeypatch.setattr("app.api.deps.api_token_digest", fail_digest)
+
+        rate_limited = client.get(
+            "/api/v1/projects/",
+            headers={"Authorization": f"Bearer vpr_{'A' * 40}"},
+        )
+    finally:
+        client.app.state.workbench_settings = old_settings
+        client.app.state.rate_limiter = old_limiter
+
+    assert rate_limited.status_code == 429
+
+
 def _create_token(
     client: TestClient,
     headers: dict[str, str],
@@ -462,10 +562,13 @@ def _create_token(
     name: str,
     scopes: list[str],
     project_id: str | None = None,
+    expires_at: str | None = None,
 ) -> dict[str, object]:
     body: dict[str, object] = {"name": name, "scopes": scopes}
     if project_id is not None:
         body["project_id"] = project_id
+    if expires_at is not None:
+        body["expires_at"] = expires_at
     response = client.post(
         "/api/v1/api-tokens/",
         headers=headers,
@@ -477,6 +580,7 @@ def _create_token(
     assert payload["token"] not in payload["id"]
     assert payload["scopes"] == scopes
     assert payload["project_id"] == project_id
+    assert payload["expires_at"]
     return payload
 
 

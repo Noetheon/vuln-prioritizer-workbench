@@ -26,6 +26,7 @@ router = APIRouter(tags=["runs"])
     "/projects/{project_id}/runs",
     response_model=AnalysisRunsPublic,
     operation_id="runs-read_project_runs_without_trailing_slash",
+    include_in_schema=False,
 )
 @router.get(
     "/projects/{project_id}/runs/",
@@ -107,6 +108,8 @@ def _analysis_run_summary(run: AnalysisRun) -> AnalysisRunSummaryPublic:
         import_job=_dict_value(summary_json.get("import_job") or error_json.get("import_job")),
         input_upload=_dict_value(summary_json.get("input_upload")),
         dedup_summary=dedup_summary,
+        analysis_decision_scope=_str_value(summary_json.get("analysis_decision_scope")),
+        persistence_scope=_str_value(summary_json.get("persistence_scope")),
         summary_json=summary_json,
         error_json=error_json,
     )
@@ -135,6 +138,10 @@ def _parse_errors(
 
 def _dict_value(value: Any) -> dict[str, Any]:
     return dict(value) if isinstance(value, dict) else {}
+
+
+def _str_value(value: Any) -> str | None:
+    return value if isinstance(value, str) and value else None
 
 
 def _priority_counts(value: Any) -> dict[str, int]:

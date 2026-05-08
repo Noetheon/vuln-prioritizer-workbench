@@ -28,10 +28,6 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
-      # Branch protection currently requires both matrix check contexts. Pull
-      # requests run the full workflow gate only on the primary Python version;
-      # the secondary PR context exits successfully after a clear skip message.
-      # Pushes to main and manual runs keep the full supported matrix.
       matrix:
         python-version: ["3.11", "3.12"]
 
@@ -43,12 +39,8 @@ jobs:
         if: github.event_name == 'pull_request' && github.event.pull_request.draft
         run: echo "Draft pull request; skipping expensive Python workflow gate."
 
-      - name: Skip secondary Python PR version
-        if: github.event_name == 'pull_request' && !github.event.pull_request.draft && matrix.python-version != '3.12'
-        run: echo "Pull request Python gate runs on 3.12 only; full matrix runs on main and manual dispatch."
-
       - name: Set up Python
-        if: github.event_name != 'pull_request' || (!github.event.pull_request.draft && matrix.python-version == '3.12')
+        if: github.event_name != 'pull_request' || !github.event.pull_request.draft
         uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
@@ -59,11 +51,11 @@ jobs:
             .pre-commit-config.yaml
 
       - name: Install project and dev dependencies
-        if: github.event_name != 'pull_request' || (!github.event.pull_request.draft && matrix.python-version == '3.12')
+        if: github.event_name != 'pull_request' || !github.event.pull_request.draft
         run: python -m pip install -e "backend[dev]"
 
       - name: Run local-equivalent workflow gate
-        if: github.event_name != 'pull_request' || (!github.event.pull_request.draft && matrix.python-version == '3.12')
+        if: github.event_name != 'pull_request' || !github.event.pull_request.draft
         run: make workflow-check
 
   action-smoke:

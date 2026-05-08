@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 from collections.abc import Iterable
+from typing import Any
 
 SARIF_FINGERPRINT_KEY = "vuln-prioritizer/v1"
 SARIF_WORKBENCH_FINGERPRINT_KEY = "vuln-prioritizer-workbench/v1"
@@ -92,6 +93,53 @@ def sarif_partial_fingerprints(
     if include_workbench_alias:
         fingerprints[SARIF_WORKBENCH_FINGERPRINT_KEY] = fingerprint
     return fingerprints
+
+
+def sarif_result_location(
+    *,
+    artifact_uri: str,
+    uri_base_id: str | None = None,
+    logical_location: str | None = None,
+    logical_kind: str = "component",
+) -> dict[str, Any]:
+    """Return the canonical SARIF location block for CLI and Workbench reports."""
+    artifact_location: dict[str, Any] = {"uri": artifact_uri}
+    if uri_base_id is not None:
+        artifact_location["uriBaseId"] = uri_base_id
+    location: dict[str, Any] = {
+        "physicalLocation": {"artifactLocation": artifact_location},
+    }
+    if logical_location:
+        location["logicalLocations"] = [
+            {
+                "fullyQualifiedName": logical_location,
+                "kind": logical_kind,
+            }
+        ]
+    return location
+
+
+def sarif_rule_properties(
+    *,
+    cve_id: str,
+    priority: str,
+    cvss_base_score: float | int | None,
+    references: list[str],
+    priority_property: str | None = None,
+) -> dict[str, Any]:
+    """Return common SARIF rule properties shared by all report renderers."""
+    rendered_priority = priority_property or priority
+    return {
+        "cve": cve_id,
+        "priority": rendered_priority,
+        "precision": "very-high",
+        "security-severity": sarif_security_severity(
+            priority=priority,
+            cvss_base_score=cvss_base_score,
+        ),
+        "tags": ["security", "external/cve", f"priority/{rendered_priority.lower()}"],
+        "references": references,
+    }
 
 
 def sarif_component_identities(

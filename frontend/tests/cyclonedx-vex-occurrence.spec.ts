@@ -6,7 +6,7 @@ import {
   cyclonedxVexOccurrenceCsv,
 } from "./workbench-e2e-helpers"
 
-test("template frontend renders CycloneDX VEX occurrence evidence", async ({
+test("workbench frontend renders CycloneDX VEX occurrence evidence", async ({
   page,
 }) => {
   test.setTimeout(60_000)

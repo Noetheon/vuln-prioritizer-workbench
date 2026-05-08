@@ -10,6 +10,7 @@ import {
   setAccessToken,
   withCsrfHeader,
 } from "../src/auth.ts"
+import { shouldClearAuthForApiError } from "../src/lib/auth-errors.ts"
 
 type DocumentStub = {
   cookie: string
@@ -46,6 +47,13 @@ test("reads CSRF tokens from client-readable cookies", () => {
   assert.equal(getCsrfToken("other=1; XSRF-TOKEN=encoded%20token"), "encoded token")
   assert.equal(getCsrfToken("vpw_csrf_token=%E0%A4%A"), "%E0%A4%A")
   assert.equal(getCsrfToken("session=opaque"), "")
+})
+
+test("clears auth only for unauthenticated API errors", () => {
+  assert.equal(shouldClearAuthForApiError({ status: 401 }), true)
+  assert.equal(shouldClearAuthForApiError({ status: 403 }), false)
+  assert.equal(shouldClearAuthForApiError({ status: "401" }), false)
+  assert.equal(shouldClearAuthForApiError(new Error("not api")), false)
 })
 
 test("falls back to CSRF meta tags when readable cookies are absent", () => {

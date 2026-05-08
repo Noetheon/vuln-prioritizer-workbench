@@ -117,7 +117,7 @@ function WaiversRouteContent() {
   const governanceRollups = projectGovernanceRollupsQuery.data ?? null
 
   return (
-    <section className="mx-auto w-full max-w-screen-2xl px-4 py-6 sm:px-6">
+    <section className="w-full">
       <WaiversWorkbench
         onCreateWaiver={createWaiver}
         onExpireWaiver={(waiver) => void expireWaiver(waiver)}

@@ -114,6 +114,17 @@ export const AnalysisRunStatusSchema = {
 export const AnalysisRunSummaryPublicSchema = {
     description: 'UI-oriented summary for one import or analysis run.',
     properties: {
+        analysis_decision_scope: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Analysis Decision Scope'
+        },
         counts_by_priority: {
             additionalProperties: {
                 type: 'integer'
@@ -204,6 +215,17 @@ export const AnalysisRunSummaryPublicSchema = {
             },
             title: 'Parse Errors',
             type: 'array'
+        },
+        persistence_scope: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Persistence Scope'
         },
         project_id: {
             format: 'uuid',
@@ -335,6 +357,18 @@ export const ApiErrorEnvelopeSchema = {
 export const ApiTokenCreateSchema = {
     description: 'Request payload for creating a scoped service token.',
     properties: {
+        expires_at: {
+            anyOf: [
+                {
+                    format: 'date-time',
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Expires At'
+        },
         name: {
             maxLength: 200,
             minLength: 1,
@@ -385,6 +419,11 @@ export const ApiTokenCreatePublicSchema = {
         created_at: {
             format: 'date-time',
             title: 'Created At',
+            type: 'string'
+        },
+        expires_at: {
+            format: 'date-time',
+            title: 'Expires At',
             type: 'string'
         },
         id: {
@@ -460,6 +499,7 @@ export const ApiTokenCreatePublicSchema = {
         'created_at',
         'last_used_at',
         'revoked_at',
+        'expires_at',
         'token'
     ],
     title: 'ApiTokenCreatePublic',
@@ -476,6 +516,11 @@ export const ApiTokenPublicSchema = {
         created_at: {
             format: 'date-time',
             title: 'Created At',
+            type: 'string'
+        },
+        expires_at: {
+            format: 'date-time',
+            title: 'Expires At',
             type: 'string'
         },
         id: {
@@ -546,7 +591,8 @@ export const ApiTokenPublicSchema = {
         'active',
         'created_at',
         'last_used_at',
-        'revoked_at'
+        'revoked_at',
+        'expires_at'
     ],
     title: 'ApiTokenPublic',
     type: 'object'

@@ -39,7 +39,7 @@ function ReportsRouteContent() {
   }, [projectRuns])
 
   return (
-    <section className="mx-auto w-full max-w-screen-2xl px-4 py-6 sm:px-6">
+    <section className="w-full">
       <EvidenceCenter
         activeReportFormat={reportsState.activeReportFormat}
         onCreateReport={reportsState.createReport}

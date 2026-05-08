@@ -5,6 +5,7 @@ from datetime import timedelta
 from typing import Any
 
 from fastapi.testclient import TestClient
+from sqlalchemy import event
 from sqlmodel import Session
 from utils.template_workbench import (
     DEMO_CVE_LOG4SHELL,
@@ -39,7 +40,6 @@ def test_vpw011_openapi_exposes_workbench_domain_routes_without_items() -> None:
         "/api/v1/assets/{asset_id}",
         "/api/v1/projects/{project_id}/imports",
         "/api/v1/providers/status",
-        "/api/v1/projects/{project_id}/runs",
         "/api/v1/projects/{project_id}/runs/",
         "/api/v1/runs/{run_id}",
         "/api/v1/runs/{run_id}/summary",
@@ -756,6 +756,44 @@ def test_vpw042_findings_sort_direction_and_pagination(
         headers,
         {"sort": "owner", "direction": "desc"},
     ) == ["CVE-2024-4577", DEMO_CVE_LOG4SHELL, "CVE-2022-22965"]
+
+
+def test_vpw042_findings_page_eager_loads_asset_and_component(
+    template_api_env: TemplateApiEnv,
+) -> None:
+    headers = auth_headers(template_api_env.client)
+    project = create_project_via_api(template_api_env.client, headers)
+    _seed_vpw042_findings(template_api_env, uuid.UUID(project["id"]))
+    select_statements: list[str] = []
+
+    def capture_select(
+        _conn: object,
+        _cursor: object,
+        statement: str,
+        _parameters: object,
+        _context: object,
+        _executemany: bool,
+    ) -> None:
+        if statement.lstrip().lower().startswith("select"):
+            select_statements.append(statement)
+
+    event.listen(template_api_env.engine, "before_cursor_execute", capture_select)
+    try:
+        with Session(template_api_env.engine) as session:
+            findings, count = template_api_env.repositories.FindingRepository(
+                session
+            ).list_project_findings_page(
+                uuid.UUID(project["id"]),
+                limit=3,
+            )
+            assert count == 3
+            assert len(findings) == 3
+            assert all(finding.asset is not None for finding in findings)
+            assert all(finding.component is not None for finding in findings)
+    finally:
+        event.remove(template_api_env.engine, "before_cursor_execute", capture_select)
+
+    assert len(select_statements) <= 4
 
 
 def _finding_cves(

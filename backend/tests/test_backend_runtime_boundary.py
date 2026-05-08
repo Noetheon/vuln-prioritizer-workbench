@@ -370,7 +370,10 @@ def test_backup_restore_scripts_support_database_url_and_compose_artifacts() -> 
 def test_active_runtime_entrypoints_use_template_backend_app() -> None:
     dockerfile = (REPO_ROOT / "backend/Dockerfile").read_text(encoding="utf-8")
     override = yaml.safe_load((REPO_ROOT / "compose.override.yml").read_text(encoding="utf-8"))
-    playwright_backend = (REPO_ROOT / "scripts/start-template-playwright-backend.sh").read_text(
+    playwright_backend = (REPO_ROOT / "scripts/start-workbench-playwright-backend.sh").read_text(
+        encoding="utf-8"
+    )
+    playwright_template = (REPO_ROOT / "scripts/start-template-playwright-backend.sh").read_text(
         encoding="utf-8"
     )
 
@@ -389,6 +392,8 @@ def test_active_runtime_entrypoints_use_template_backend_app() -> None:
     assert "init_db" not in playwright_backend
     assert "app.main:app" in override_backend_command
     assert "uvicorn app.main:app" in playwright_backend
+    assert "deprecated" in playwright_template
+    assert "start-workbench-playwright-backend.sh" in playwright_template
     for marker in LEGACY_RUNTIME_STARTERS:
         assert marker not in dockerfile
         assert marker not in override_backend_command

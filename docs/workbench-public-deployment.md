@@ -13,8 +13,8 @@ Use non-default secrets and exact public origins:
 
 ```bash
 ENVIRONMENT=production
-SECRET_KEY=<long random value>
-FIRST_SUPERUSER_PASSWORD=<long random value>
+SECRET_KEY=<random value with at least 32 characters>
+FIRST_SUPERUSER_PASSWORD=<random value with at least 16 characters>
 POSTGRES_PASSWORD=<long random value>
 DOMAIN=workbench.example.com
 FRONTEND_HOST=https://workbench.example.com
@@ -29,6 +29,13 @@ TRAEFIK_DASHBOARD_ENABLED=false
 Production and staging reject wildcard CORS, localhost CORS, non-HTTPS CORS, and
 origin values that include paths. Keep `ALLOWED_HOSTS` exact and do not include
 ports or schemes.
+
+Production and staging also reject known placeholder secrets, `SECRET_KEY`
+values shorter than 32 characters, `FIRST_SUPERUSER_PASSWORD` values shorter
+than 16 characters, passwords that equal the configured superuser, and passwords
+that equal the secret key. The standalone backend container requires
+`SECRET_KEY` and `FIRST_SUPERUSER_PASSWORD` to be set before it starts; Compose
+requires those values plus `POSTGRES_PASSWORD`.
 
 The public browser default is same-origin API routing: leave `VITE_API_URL`
 empty so the built frontend calls `/api/v1/...` through the frontend reverse
@@ -137,6 +144,7 @@ RATE_LIMIT_ENABLED=true
 API_RATE_LIMIT_PER_MINUTE=600
 LOGIN_RATE_LIMIT_PER_MINUTE=60
 TOKEN_FAILURE_RATE_LIMIT_PER_MINUTE=60
+API_TOKEN_DEFAULT_EXPIRE_DAYS=90
 TRUSTED_PROXY_CIDRS=
 ```
 
@@ -152,12 +160,16 @@ returned to API routes.
 Scoped API tokens are created after JWT login and are stored only as hashes.
 They support local automation for `read`, `write`, `import`, `report`, or
 `admin` API scopes and are rejected when revoked, expired, or tied to an
-inactive user. They are not a substitute for the full public-deployment control
-set documented in this runbook.
+inactive user. Tokens default to a 90-day expiry unless creation supplies a
+future `expires_at` value; API responses expose token metadata including
+`expires_at` and computed `active` state. They are not a substitute for the full
+public-deployment control set documented in this runbook.
 
 For horizontally scaled deployments, replace the in-process limiter with a
 shared store before increasing replica count; the built-in limiter is still
-per-process even when trusted proxy parsing is enabled.
+per-process even when trusted proxy parsing is enabled. The in-process limiter
+also bounds stored rate-limit keys to prevent unbounded memory growth, which is
+a local-process safety guard rather than a distributed public-deployment quota.
 
 ## Audit And Retention
 

@@ -13,8 +13,9 @@ from vuln_prioritizer.sarif_contract import (
     sarif_level,
     sarif_partial_fingerprints,
     sarif_priority_label,
+    sarif_result_location,
     sarif_rule_id,
-    sarif_security_severity,
+    sarif_rule_properties,
     sarif_target_identity,
 )
 from vuln_prioritizer.sarif_references import dedupe_defensive_http_urls
@@ -75,20 +76,11 @@ def _sarif_result(
             )
         },
         "locations": [
-            {
-                "physicalLocation": {
-                    "artifactLocation": {
-                        "uri": location_uri,
-                        "uriBaseId": "%SRCROOT%",
-                    }
-                },
-                "logicalLocations": [
-                    {
-                        "fullyQualifiedName": _sarif_logical_location(finding),
-                        "kind": "component",
-                    }
-                ],
-            }
+            sarif_result_location(
+                artifact_uri=location_uri,
+                uri_base_id="%SRCROOT%",
+                logical_location=_sarif_logical_location(finding),
+            )
         ],
         "partialFingerprints": sarif_partial_fingerprints(
             cve_id=finding.cve_id,
@@ -140,17 +132,13 @@ def _sarif_rule(
         },
         "defaultConfiguration": {"level": sarif_level(finding.priority)},
         "helpUri": references[0],
-        "properties": {
-            "cve": finding.cve_id,
-            "priority": priority,
-            "precision": "very-high",
-            "security-severity": sarif_security_severity(
-                priority=finding.priority,
-                cvss_base_score=finding.cvss_base_score,
-            ),
-            "tags": ["security", "external/cve", f"priority/{priority.lower()}"],
-            "references": references,
-        },
+        "properties": sarif_rule_properties(
+            cve_id=finding.cve_id,
+            priority=finding.priority,
+            priority_property=priority,
+            cvss_base_score=finding.cvss_base_score,
+            references=references,
+        ),
     }
 
 

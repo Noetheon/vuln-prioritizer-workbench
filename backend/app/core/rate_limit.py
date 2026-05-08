@@ -26,20 +26,45 @@ class InMemoryRateLimiter:
 
     window_seconds: int = 60
     attempts: dict[str, deque[float]] = field(default_factory=lambda: defaultdict(deque))
+    max_keys: int = 10_000
 
-    def check(self, key: str, *, limit: int) -> RateLimitDecision:
+    def check(self, key: str, *, limit: int, record: bool = True) -> RateLimitDecision:
         """Return whether a request is allowed for the given key and limit."""
         if limit <= 0:
             return RateLimitDecision(allowed=True)
         now = monotonic()
+        self._prune_expired(now)
+        if not record and key not in self.attempts:
+            return RateLimitDecision(allowed=True)
         bucket = self.attempts[key]
         while bucket and now - bucket[0] >= self.window_seconds:
             bucket.popleft()
         if len(bucket) >= limit:
             retry_after = max(1, int(self.window_seconds - (now - bucket[0])))
             return RateLimitDecision(allowed=False, retry_after_seconds=retry_after)
-        bucket.append(now)
+        if record:
+            bucket.append(now)
+            self._enforce_key_bound()
         return RateLimitDecision(allowed=True)
+
+    def _prune_expired(self, now: float) -> None:
+        stale_keys = [
+            key
+            for key, bucket in self.attempts.items()
+            if not bucket or now - bucket[-1] >= self.window_seconds
+        ]
+        for key in stale_keys:
+            self.attempts.pop(key, None)
+
+    def _enforce_key_bound(self) -> None:
+        while len(self.attempts) > self.max_keys:
+            oldest_key = min(
+                self.attempts,
+                key=lambda candidate: (
+                    self.attempts[candidate][0] if self.attempts[candidate] else 0.0
+                ),
+            )
+            self.attempts.pop(oldest_key, None)
 
 
 def rate_limit_key(request: Request, settings: Settings) -> tuple[str, int] | None:

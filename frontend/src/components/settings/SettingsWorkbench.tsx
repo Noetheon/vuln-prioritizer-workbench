@@ -3,7 +3,6 @@ import { Database, KeyRound, ShieldCheck, UserRound } from "lucide-react"
 import type { FormEvent } from "react"
 
 import type {
-  ApiTokenCreate,
   ApiTokenCreatePublic,
   ApiTokenPublic,
   ProjectPublic,
@@ -43,8 +42,14 @@ import {
   VpwToolbarGroup,
 } from "@/components/vpw"
 import { formatCacheAge, providerSnapshotSummary } from "@/lib/provider-format"
-
-export type ApiTokenScope = NonNullable<ApiTokenCreate["scopes"]>[number]
+import {
+  type ApiTokenScope,
+  activeTokenCount,
+  buildApiTokenColumns,
+  formatDateTime,
+  formatScopes,
+  tokenActivityPercent,
+} from "./settings-token-model"
 
 export type SettingsWorkbenchProps = {
   apiTokenActionLoading: boolean
@@ -79,46 +84,8 @@ type ProviderConfigRow = {
   tone: VpwBadgeTone
 }
 
-function formatDateTime(value: string | null | undefined) {
-  if (!value) {
-    return "N.A."
-  }
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) {
-    return value
-  }
-  return new Intl.DateTimeFormat(undefined, {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(date)
-}
-
-function formatScopes(scopes: readonly ApiTokenScope[]) {
-  return scopes.length > 0
-    ? scopes.map((scope) => scope.toUpperCase()).join(", ")
-    : "No scopes"
-}
-
-function projectScopeLabel(
-  projectId: string | null | undefined,
-  projects: readonly ProjectPublic[],
-) {
-  if (!projectId) {
-    return "Global"
-  }
-  return projects.find((project) => project.id === projectId)?.name ?? projectId
-}
-
 function userLabel(user: UserPublic | null) {
   return user?.email ?? "Loading user"
-}
-
-function statusBadgeTone(active: boolean): VpwBadgeTone {
-  return active ? "success" : "neutral"
-}
-
-function statusLabel(active: boolean) {
-  return active ? "Active" : "Revoked"
 }
 
 function sourceByName(
@@ -169,17 +136,6 @@ function evidenceReadiness(
   return providerStatus.status === "ok"
     ? { label: "Ready", tone: "success" as VpwBadgeTone }
     : { label: "Partial", tone: "warning" as VpwBadgeTone }
-}
-
-function activeTokenCount(tokens: readonly ApiTokenPublic[]) {
-  return tokens.filter((token) => token.active).length
-}
-
-function tokenActivityPercent(tokens: readonly ApiTokenPublic[]) {
-  if (tokens.length === 0) {
-    return 0
-  }
-  return Math.round((activeTokenCount(tokens) / tokens.length) * 100)
 }
 
 function safeDiagnosticsCode({
@@ -298,80 +254,11 @@ export function SettingsWorkbench({
   const providerRows = providerConfigRows(providerStatus)
   const tokenHasAdminScope = apiTokenScopes.includes("admin")
 
-  const tokenColumns: VpwDataTableColumn<ApiTokenPublic>[] = [
-    {
-      id: "name",
-      header: "Name",
-      cell: (token) => (
-        <div className="min-w-40">
-          <p className="font-medium text-[var(--vpw-text-primary)]">
-            {token.name}
-          </p>
-          <p className="mt-1 truncate font-mono text-xs text-[var(--vpw-text-muted)]">
-            {token.id}
-          </p>
-        </div>
-      ),
-    },
-    {
-      id: "scopes",
-      header: "Scopes",
-      cell: (token) => (
-        <div className="flex flex-wrap gap-1.5">
-          {token.scopes.map((scope) => (
-            <VpwBadge key={scope} tone="support">
-              {scope.toUpperCase()}
-            </VpwBadge>
-          ))}
-        </div>
-      ),
-    },
-    {
-      id: "project",
-      header: "Project",
-      cell: (token) => projectScopeLabel(token.project_id, apiTokenProjectOptions),
-    },
-    {
-      id: "created",
-      header: "Created",
-      cell: (token) => formatDateTime(token.created_at),
-      className: "whitespace-nowrap",
-    },
-    {
-      id: "last-used",
-      header: "Last used",
-      cell: (token) => formatDateTime(token.last_used_at),
-      className: "whitespace-nowrap",
-    },
-    {
-      id: "status",
-      header: "Status",
-      cell: (token) => (
-        <VpwBadge tone={statusBadgeTone(token.active)}>
-          {statusLabel(token.active)}
-        </VpwBadge>
-      ),
-    },
-    {
-      id: "actions",
-      header: "Actions",
-      cell: (token) =>
-        token.active ? (
-          <Button
-            aria-busy={apiTokenActionLoading}
-            disabled={apiTokenActionLoading}
-            onClick={() => void onRevokeApiToken(token)}
-            size="sm"
-            type="button"
-            variant="outline"
-          >
-            Revoke
-          </Button>
-        ) : (
-          <span className="text-sm text-[var(--vpw-text-muted)]">N.A.</span>
-        ),
-    },
-  ]
+  const tokenColumns = buildApiTokenColumns({
+    actionLoading: apiTokenActionLoading,
+    projects: apiTokenProjectOptions,
+    onRevokeApiToken,
+  })
 
   const providerColumns: VpwDataTableColumn<ProviderConfigRow>[] = [
     {
@@ -713,6 +600,10 @@ export function SettingsWorkbench({
                     {
                       label: "Created",
                       value: formatDateTime(createdApiToken.created_at),
+                    },
+                    {
+                      label: "Expires",
+                      value: formatDateTime(createdApiToken.expires_at),
                     },
                   ]}
                 />

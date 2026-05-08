@@ -465,6 +465,21 @@ function ImportResult({
             value={importRunSummary?.ignored_lines ?? 0}
           />
         </VpwGrid>
+        {importRunSummary?.analysis_decision_scope ||
+        importRunSummary?.persistence_scope ? (
+          <div className="mt-4 flex flex-wrap gap-2">
+            {importRunSummary.analysis_decision_scope ? (
+              <VpwBadge tone="support">
+                Decisions: {importRunSummary.analysis_decision_scope}
+              </VpwBadge>
+            ) : null}
+            {importRunSummary.persistence_scope ? (
+              <VpwBadge tone="info">
+                Persistence: {importRunSummary.persistence_scope}
+              </VpwBadge>
+            ) : null}
+          </div>
+        ) : null}
         <div className="mt-5 flex flex-wrap gap-2">
           <Button asChild variant="outline">
             <Link to="/findings">View Findings</Link>

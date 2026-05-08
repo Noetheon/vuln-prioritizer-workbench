@@ -25,12 +25,14 @@ class ApiTokenRepository:
         token_hash: str,
         scopes: list[ApiTokenScope],
         project_id: uuid.UUID | None,
+        expires_at: datetime,
     ) -> ApiToken:
         token = ApiToken(
             name=name,
             token_hash=token_hash,
             project_id=project_id,
             scopes_json=scopes_payload(scopes),
+            expires_at=expires_at,
         )
         self.session.add(token)
         self.session.flush()
@@ -40,9 +42,11 @@ class ApiTokenRepository:
         return self.session.get(ApiToken, token_id)
 
     def get_active_api_token_by_hash(self, token_hash: str) -> ApiToken | None:
+        now = get_datetime_utc()
         statement = select(ApiToken).where(
             ApiToken.token_hash == token_hash,
             col(ApiToken.revoked_at).is_(None),
+            col(ApiToken.expires_at) > now,
         )
         return self.session.exec(statement).first()
 

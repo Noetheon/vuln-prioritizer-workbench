@@ -1,4 +1,4 @@
-import { useNavigate } from "@tanstack/react-router"
+import { useLocation, useNavigate } from "@tanstack/react-router"
 import { useQueryClient } from "@tanstack/react-query"
 import {
   type Dispatch,
@@ -42,6 +42,11 @@ function readStoredSelectedProjectId() {
   }
 }
 
+function selectedProjectIdFromSearch(searchStr: string) {
+  const rawSearch = searchStr.startsWith("?") ? searchStr.slice(1) : searchStr
+  return new URLSearchParams(rawSearch).get("projectId") ?? ""
+}
+
 function persistSelectedProjectId(projectId: string) {
   if (typeof window === "undefined") {
     return
@@ -77,6 +82,7 @@ export type WorkbenchContextValue = {
 const WorkbenchContext = createContext<WorkbenchContextValue | null>(null)
 
 export function WorkbenchProvider({ children }: { children: ReactNode }) {
+  const location = useLocation()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const handleAuthExpired = useCallback(async () => {
@@ -87,8 +93,9 @@ export function WorkbenchProvider({ children }: { children: ReactNode }) {
   const bootstrapError = bootstrapQuery.error
   const projectsQuery = useProjectsQuery()
   const projects = projectsQuery.data?.data ?? []
+  const urlSelectedProjectId = selectedProjectIdFromSearch(location.searchStr)
   const [selectedProjectId, setSelectedProjectIdState] = useState(
-    readStoredSelectedProjectId,
+    () => urlSelectedProjectId || readStoredSelectedProjectId(),
   )
 
   const setSelectedProjectId = useCallback(
@@ -108,21 +115,32 @@ export function WorkbenchProvider({ children }: { children: ReactNode }) {
   )
 
   useEffect(() => {
-    if (
-      bootstrapError instanceof ApiError &&
-      [401, 403].includes(bootstrapError.status)
-    ) {
+    if (bootstrapError instanceof ApiError && bootstrapError.status === 401) {
       void handleAuthExpired()
     }
   }, [bootstrapError, handleAuthExpired])
 
   useEffect(() => {
+    if (
+      urlSelectedProjectId &&
+      projects.some((project) => project.id === urlSelectedProjectId) &&
+      urlSelectedProjectId !== selectedProjectId
+    ) {
+      persistSelectedProjectId(urlSelectedProjectId)
+      setSelectedProjectIdState(urlSelectedProjectId)
+    }
+  }, [projects, selectedProjectId, urlSelectedProjectId])
+
+  useEffect(() => {
+    if (urlSelectedProjectId) {
+      return
+    }
     setSelectedProjectId((previousProjectId) =>
       projects.some((project) => project.id === previousProjectId)
         ? previousProjectId
         : (projects[0]?.id ?? ""),
     )
-  }, [projects, setSelectedProjectId])
+  }, [projects, setSelectedProjectId, urlSelectedProjectId])
 
   const refreshProjects = useCallback(
     async (preferredProjectId?: string) => {
