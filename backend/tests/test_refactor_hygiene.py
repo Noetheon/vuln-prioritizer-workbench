@@ -227,13 +227,15 @@ def test_provider_status_projection_is_split_from_route_facade() -> None:
 
 def test_template_import_validation_and_storage_are_split_from_route_facade() -> None:
     imports = _imported_modules("app/api/routes/imports.py")
+    upload_helper_imports = _imported_modules("app/api/routes/import_uploads.py")
     source = (ROOT / "app/api/routes/imports.py").read_text(encoding="utf-8")
     execution_source = (ROOT / "app/services/import_execution.py").read_text(encoding="utf-8")
     upload_source = (ROOT / "app/services/import_uploads.py").read_text(encoding="utf-8")
     artifact_source = (ROOT / "app/services/import_artifacts.py").read_text(encoding="utf-8")
 
     assert "app.services.import_execution" in imports
-    assert "app.services.import_uploads" in imports
+    assert "app.api.routes.import_uploads" in imports
+    assert "app.services.import_uploads" in upload_helper_imports
     assert "app.services.import_artifacts" not in imports
     assert "ALLOWED_UPLOAD_SUFFIXES = " not in source
     assert "def read_bounded_upload" not in source
@@ -331,9 +333,10 @@ def test_workbench_reports_route_state_is_split_from_shell() -> None:
     assert "function downloadReportArtifact" not in shell_source
     assert "useReportsRouteState({" in reports_route_source
     assert "ReportsService" in reports_state_source
-    assert "reportDownloadRequest" in reports_state_source
+    assert "fetchReportDownload" in reports_state_source
     assert "function downloadReportArtifact" in reports_state_source
-    assert "function reportDownloadPath" in report_download_source
+    assert "ReportsService.downloadReport" in report_download_source
+    assert 'parseAs: "blob"' in report_download_source
     assert "download_url" not in report_download_source
 
 

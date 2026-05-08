@@ -32,6 +32,7 @@ def raise_analysis_failure(
     ignored_lines: int,
     input_type: str,
     exc: Exception,
+    execution_mode: str = "request",
 ) -> NoReturn:
     analysis_error_message = _sanitize_parser_error_message(str(exc))
     analysis_error = {
@@ -53,6 +54,7 @@ def raise_analysis_failure(
                 job_id=job_id,
                 status="failed",
                 status_history=failed_history,
+                execution_mode=execution_mode,
             ),
         },
         summary_json={
@@ -61,6 +63,7 @@ def raise_analysis_failure(
                 job_id=job_id,
                 status="failed",
                 status_history=failed_history,
+                execution_mode=execution_mode,
             ),
             "analysis_error": analysis_error,
             "parse_errors": [],

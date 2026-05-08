@@ -74,7 +74,7 @@ services:
       - workbench-provider-cache:/app/workbench-provider-cache
       - ./data:/app/examples:ro
     labels:
-      - traefik.enable=${TRAEFIK_APP_ENABLED:-false}
+      - traefik.enable=${TRAEFIK_API_ENABLED:-false}
       - traefik.http.services.workbench-backend.loadbalancer.server.port=8000
       - traefik.http.routers.workbench-backend-http.entrypoints=http
       - traefik.http.routers.workbench-backend-http.rule=Host(`api.${DOMAIN:-localhost}`)

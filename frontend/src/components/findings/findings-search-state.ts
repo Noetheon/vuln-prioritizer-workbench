@@ -97,6 +97,7 @@ const searchKeys = [
   "sort",
   "status",
 ] as const
+const passthroughSearchKeys = ["projectId"] as const
 
 type SearchRecord = Record<string, unknown>
 type SearchValue = string | number | boolean
@@ -275,6 +276,12 @@ export function cleanFindingsSearchQueryString(input: unknown) {
     }
     if (rawValue === String(parsedValue)) {
       params.set(key, rawValue)
+    }
+  }
+  for (const key of passthroughSearchKeys) {
+    const rawValue = searchValue(source, key)
+    if (rawValue) {
+      params.set(key, rawValue.slice(0, 200))
     }
   }
   return params.toString()

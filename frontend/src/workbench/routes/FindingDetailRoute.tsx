@@ -16,7 +16,7 @@ function FindingDetailRouteContainer({ findingId }: { findingId: string }) {
   const queryClient = useQueryClient()
   const location = useLocation()
   const { setSelectedProjectId } = useWorkbenchContext()
-  const findingsSearch = parseFindingsSearch(location.searchStr)
+  const findingsSearch = parseFindingsSearch(activeSearchString(location.searchStr))
   const findingDetailQuery = useFindingDetailQuery(findingId)
   const [findingDetailTab, setFindingDetailTab] =
     useState<FindingDetailTab>("evidence")
@@ -63,4 +63,8 @@ export function FindingDetailRoute() {
   const { findingId } = useParams({ from: "/_layout/findings/$findingId" })
 
   return <FindingDetailRouteContainer findingId={findingId} />
+}
+
+function activeSearchString(fallbackSearch: string) {
+  return typeof window === "undefined" ? fallbackSearch : window.location.search
 }

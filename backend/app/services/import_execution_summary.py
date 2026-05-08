@@ -39,12 +39,13 @@ def _job_payload(
     job_id: str,
     status: str,
     status_history: list[dict[str, str]],
+    execution_mode: str = "request",
 ) -> dict[str, Any]:
     timestamp = get_datetime_utc().isoformat()
     return {
         "id": job_id,
         "status": status,
-        "execution_mode": "request",
+        "execution_mode": execution_mode,
         "updated_at": timestamp,
         "status_history": status_history,
     }

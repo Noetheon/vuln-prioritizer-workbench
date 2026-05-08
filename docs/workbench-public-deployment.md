@@ -83,6 +83,7 @@ Required public header evidence:
 ```bash
 curl -I https://${DOMAIN}/
 curl -I https://${DOMAIN}/api/v1/workbench/health
+# Optional split-domain API route, only when TRAEFIK_API_ENABLED=true:
 curl -I https://api.${DOMAIN}/api/v1/workbench/health
 ```
 

@@ -1,12 +1,12 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router"
 
-import { isLoggedIn } from "../auth"
+import { hasAuthenticatedSession } from "../lib/session-auth"
 import { WorkbenchShell } from "../workbench/WorkbenchShell"
 
 export const Route = createFileRoute("/_layout")({
-  beforeLoad: () => {
-    if (!isLoggedIn()) {
-      throw redirect({ to: "/login" })
+  beforeLoad: async () => {
+    if (!(await hasAuthenticatedSession())) {
+      throw redirect({ search: {} as never, to: "/login" })
     }
   },
   component: () => (

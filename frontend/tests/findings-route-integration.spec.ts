@@ -131,7 +131,7 @@ test("findings URL search state survives reload and drives API params", async ({
   })
 
   await page.goto(
-    "/findings?assetId=asset-1&assetKey=build-host-1&ownerService=payments&priority=critical&status=open&kev=true&exposure=internet-facing&epssMin=0.7&cvssMin=9&sort=score&direction=desc&limit=10&offset=10",
+    "/findings?projectId=project-1&assetId=asset-1&assetKey=build-host-1&ownerService=payments&priority=critical&status=open&kev=true&exposure=internet-facing&epssMin=0.7&cvssMin=9&sort=score&direction=desc&limit=10&offset=10",
   )
 
   await expect(page.getByLabel("Owner / Service")).toHaveValue("payments")
@@ -193,6 +193,13 @@ test("findings controls update canonical URLs and preserve detail back context",
   await page.goto("/findings?assetId=asset-1&assetKey=build-host-1")
   await page.getByRole("button", { name: "Clear asset filter" }).click()
   await expect(page).not.toHaveURL(/assetId=/)
+
+  await page.getByLabel("Owner / Service").fill("payments")
+  await expect(page.getByLabel("Owner / Service")).toHaveValue("payments")
+  await expect(page).toHaveURL(/ownerService=payments/)
+  await expect
+    .poll(() => requests.at(-1)?.searchParams.get("owner_service"))
+    .toBe("payments")
 
   await page.getByRole("combobox", { name: "Priority" }).click()
   await page.getByRole("option", { name: "Critical" }).click()
@@ -342,7 +349,7 @@ test("invalid findings URL params are normalized before API requests", async ({
     "/findings?sort=invalid&direction=sideways&limit=999&offset=-5&priority=urgent&epssMin=nope&cvssMax=42&assetKey=orphan",
   )
 
-  await expect(page).toHaveURL(/\/findings$/)
+  await expect(page).toHaveURL(/\/findings(?:\?.*)?$/)
   await expect.poll(() => requests.at(-1)?.searchParams.get("sort")).toBe(
     "operational",
   )

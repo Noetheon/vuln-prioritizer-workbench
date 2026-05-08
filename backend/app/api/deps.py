@@ -15,7 +15,7 @@ from app.core import security
 from app.core.app_state import workbench_engine, workbench_settings
 from app.core.config import Settings, settings
 from app.core.db import ensure_configured_superuser
-from app.core.rate_limit import InMemoryRateLimiter, rate_limit_client_host
+from app.core.rate_limit import RateLimiter, rate_limit_client_host
 from app.models import ApiToken, ApiTokenScope, TokenPayload, User
 from app.models.api_tokens import attach_api_token_context, scope_set
 from app.repositories import ApiTokenRepository, AuthSessionRepository
@@ -198,6 +198,8 @@ def require_api_scope(
             )
         return user
 
+    setattr(dependency, "_vpw_auth_dependency", True)
+    setattr(dependency, "_vpw_required_scope", required_scope)
     return dependency
 
 
@@ -254,11 +256,9 @@ def _enforce_token_failure_rate_limit(
 ) -> None:
     active_settings = workbench_settings(request, required=False)
     limiter = getattr(request.app.state, "rate_limiter", None)
-    if (
-        not isinstance(active_settings, Settings)
-        or not active_settings.RATE_LIMIT_ENABLED
-        or not isinstance(limiter, InMemoryRateLimiter)
-    ):
+    if not isinstance(active_settings, Settings) or not active_settings.RATE_LIMIT_ENABLED:
+        return
+    if not isinstance(limiter, RateLimiter):
         return
     client_host = rate_limit_client_host(request, active_settings)
     decision = limiter.check(

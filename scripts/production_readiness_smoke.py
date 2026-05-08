@@ -6,6 +6,7 @@ import json
 import mimetypes
 import os
 import re
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -24,6 +25,9 @@ PRIVATE_PATH_PATTERN = re.compile(
     r"(/Users/|/private/|/tmp/|/app/(?:template|workbench)-|[A-Za-z]:\\\\)",
     re.IGNORECASE,
 )
+IMPORT_SUCCESS_STATUSES = {"completed", "succeeded"}
+IMPORT_FAILURE_STATUSES = {"failed"}
+IMPORT_POLL_SECONDS = int(os.environ.get("VPW_PRODUCTION_SMOKE_IMPORT_TIMEOUT", "60"))
 
 
 @dataclass(frozen=True)
@@ -174,9 +178,30 @@ def _import_demo(token: str, project_id: str) -> dict[str, object]:
         headers={"Content-Type": f"multipart/form-data; boundary={boundary}"},
     )
     _assert_no_private_paths(response)
-    if response.get("status") not in {"succeeded", "completed"}:
-        raise RuntimeError(f"Import did not complete successfully: {response!r}")
-    return response
+    if response.get("status") in IMPORT_SUCCESS_STATUSES:
+        return response
+    return _wait_for_import_completion(token, response)
+
+
+def _wait_for_import_completion(
+    token: str, initial_response: dict[str, object]
+) -> dict[str, object]:
+    run_id = str(initial_response.get("id") or "")
+    if not run_id:
+        raise RuntimeError(f"Import response did not include a run id: {initial_response!r}")
+
+    deadline = time.monotonic() + IMPORT_POLL_SECONDS
+    last_response = initial_response
+    while time.monotonic() < deadline:
+        if last_response.get("status") in IMPORT_FAILURE_STATUSES:
+            raise RuntimeError(f"Import failed: {last_response!r}")
+        if last_response.get("status") in IMPORT_SUCCESS_STATUSES:
+            return last_response
+        time.sleep(1)
+        last_response = _json(f"/api/v1/runs/{run_id}", token=token)
+        _assert_no_private_paths(last_response)
+
+    raise RuntimeError(f"Import did not complete within {IMPORT_POLL_SECONDS}s: {last_response!r}")
 
 
 def _get_findings(token: str, project_id: str) -> list[dict[str, object]]:

@@ -4187,10 +4187,12 @@ export type GetApiV1ReportsByReportIdDownloadError = GetApiV1ReportsByReportIdDo
 
 export type GetApiV1ReportsByReportIdDownloadResponses = {
     /**
-     * Successful Response
+     * Report artifact download.
      */
-    200: unknown;
+    200: Blob | File;
 };
+
+export type GetApiV1ReportsByReportIdDownloadResponse = GetApiV1ReportsByReportIdDownloadResponses[keyof GetApiV1ReportsByReportIdDownloadResponses];
 
 export type PostApiV1ReportsByReportIdVerifyData = {
     body?: never;

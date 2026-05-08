@@ -30,6 +30,14 @@ import {
   workbenchQueryKeys,
 } from "../workbench-query-keys"
 
+const TERMINAL_RUN_STATUSES = new Set([
+  "cancelled",
+  "completed",
+  "completed_with_errors",
+  "failed",
+  "succeeded",
+])
+
 function ImportsRouteContainer() {
   const queryClient = useQueryClient()
   const {
@@ -52,6 +60,7 @@ function ImportsRouteContainer() {
     ImportParseErrorPublic[]
   >([])
   const [selectedRunId, setSelectedRunId] = useState("")
+  const [refreshedTerminalRun, setRefreshedTerminalRun] = useState("")
   const projectRunsQuery = useProjectRunsQuery(selectedProjectId, true)
   const projectRuns = projectRunsQuery.data?.data ?? []
   const runDetailQuery = useRunDetailQuery(selectedRunId, true)
@@ -94,6 +103,41 @@ function ImportsRouteContainer() {
       })
     }
   }
+
+  useEffect(() => {
+    const runStatus = runDetailQuery.data?.run.status
+    if (
+      !selectedProjectId ||
+      !selectedRunId ||
+      !runStatus ||
+      !TERMINAL_RUN_STATUSES.has(runStatus)
+    ) {
+      return
+    }
+    const refreshKey = `${selectedRunId}:${runStatus}`
+    if (refreshKey === refreshedTerminalRun) {
+      return
+    }
+    setRefreshedTerminalRun(refreshKey)
+    setImportRun(runDetailQuery.data?.run ?? null)
+    setImportRunSummary(runDetailQuery.data?.summary ?? null)
+    setImportParseErrors(runDetailQuery.data?.summary.parse_errors ?? [])
+    void Promise.all([
+      refreshProjects(selectedProjectId),
+      queryClient.invalidateQueries({
+        queryKey: workbenchQueryKeys.projectRuns(selectedProjectId),
+      }),
+      invalidateProjectScopedWorkbenchQueries(queryClient, selectedProjectId),
+    ])
+  }, [
+    queryClient,
+    refreshedTerminalRun,
+    refreshProjects,
+    runDetailQuery.data?.run,
+    runDetailQuery.data?.summary,
+    selectedProjectId,
+    selectedRunId,
+  ])
 
   async function submitImport(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()

@@ -120,7 +120,18 @@ def read_run_reports(
     )
 
 
-@router.get("/reports/{report_id}/download")
+@router.get(
+    "/reports/{report_id}/download",
+    response_class=FileResponse,
+    responses={
+        200: {
+            "content": {
+                "application/octet-stream": {"schema": {"format": "binary", "type": "string"}}
+            },
+            "description": "Report artifact download.",
+        }
+    },
+)
 def download_report(
     report_id: uuid.UUID,
     request: Request,
