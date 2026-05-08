@@ -116,6 +116,10 @@ Without a matching target, the explain flow still works, but asset-context and V
 - The optional SQLite state store is separate from the existing file cache and does not change `analyze`, `snapshot`, or `report` output semantics.
 - Workbench imports now accept the same input-format matrix as the CLI for single-upload and multi-upload import flows.
 - Workbench artifact retention, cleanup, detection-control history/attachments, config export/defaults, and ATT&CK review queue APIs are additive local Workbench surfaces.
-- Workbench ticket sync supports GitHub issues plus Jira and ServiceNow preview/export flows with dry-run defaults, idempotency keys, and explicit token environment variables.
+- Workbench supports implemented GitHub issue preview/export with dry-run defaults,
+  persisted duplicate keys, and explicit token environment variables. Jira and
+  ServiceNow preview/export flows are not implemented in the active Workbench
+  codebase and should be treated as future integrations until a separate
+  implementation, tests, and threat-model update ship.
 - Parser/provider SDK definitions are static local contracts and do not discover entry points or load remote code.
 - `vuln-prioritizer.yml` is the documented runtime-config filename; `--config` and `--no-config` are the stable CLI overrides.

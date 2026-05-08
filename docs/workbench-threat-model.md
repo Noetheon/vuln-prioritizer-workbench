@@ -17,7 +17,7 @@ The current local-first Workbench threat model covers:
 - database-backed single-node Workbench state through SQLite in local developer
   runs or PostgreSQL in the Compose quickstart
 - JWT login plus scoped service tokens for active `/api/v1` routes
-- local-first GitHub issue export and Jira/ServiceNow ticket preview/create flows
+- local-first GitHub issue preview/export
 - generated JSON, Markdown, HTML, CSV, SARIF, and evidence bundle artifacts
 
 The current local-first Workbench threat model does not cover:
@@ -43,8 +43,8 @@ The current local-first Workbench threat model does not cover:
 | Configuration and secrets | Confidentiality | Environment values such as NVD keys and CSRF tokens must not be displayed in full or written into reports. Secret-bearing settings should store names, state, or hashes rather than values whenever possible. |
 | Provider endpoint configuration | Integrity, least privilege | Built-in NVD, FIRST EPSS, and CISA KEV live endpoints are fixed HTTPS public-source constants. Runtime configuration may choose cache, snapshot, or offline-file inputs but must not accept unsafe live provider URL overrides. |
 | Web session and API tokens | Integrity, confidentiality | JWT login protects browser sessions. Scoped service tokens limit automation to `read`, `write`, `import`, `report`, or `admin`, and only token hashes should be stored. |
-| External ticket-system tokens | Confidentiality, least privilege | GitHub, Jira, and ServiceNow create flows read bearer tokens from explicit environment variable names such as `GITHUB_TOKEN`, `JIRA_API_TOKEN`, or `SERVICENOW_API_TOKEN`; token values must not be stored in the Workbench database, reports, evidence bundles, or audit metadata. |
-| Ticket preview/export records | Integrity, auditability | Preview payloads, duplicate keys, idempotency keys, created external IDs, and ticket URLs support local review and duplicate avoidance without making external ticket systems part of base prioritization. |
+| GitHub issue export tokens | Confidentiality, least privilege | The implemented GitHub issue export reads a bearer token from an explicit environment variable name such as `GITHUB_TOKEN`; token values must not be stored in the Workbench database, reports, evidence bundles, or audit metadata. |
+| GitHub issue preview/export records | Integrity, auditability | Preview payloads, duplicate keys, created issue URLs, and issue numbers support local review and duplicate avoidance without making external ticket systems part of base prioritization. |
 | Documentation and examples | Integrity | Examples should remain defensive and avoid exploit details. |
 
 ## Trust Boundaries
@@ -61,7 +61,7 @@ flowchart LR
   CORE --> CACHE["Provider cache and locked snapshots"]
   CORE --> ATK["Local CTID JSON and ATT&CK metadata"]
   CORE --> LIVE["NVD, EPSS, CISA KEV"]
-  API --> TICKETS["GitHub, Jira, ServiceNow ticket APIs"]
+  API --> TICKETS["GitHub Issues API"]
 ```
 
 Primary boundaries:
@@ -73,7 +73,9 @@ Primary boundaries:
 - Provider cache or snapshot to prioritization: cached and locked data must carry provenance so stale or replayed data is visible.
 - ATT&CK source files to reports: CTID JSON mappings are trusted only as local evidence-backed context, not proof of exploitation.
 - Local Workbench to external providers: live provider calls are optional enrichment paths and must not be required for locked offline replay. Built-in provider calls use fixed HTTPS public-source endpoints rather than operator-supplied runtime URLs.
-- Local Workbench to ticket systems: ticket preview is local-only; create/export flows may call GitHub, Jira, or ServiceNow only when a trusted local operator supplies HTTPS destination settings and an explicit token environment variable name.
+- Local Workbench to GitHub Issues: preview is local-only; create/export calls may
+  call the fixed GitHub API host only when a trusted local operator supplies an
+  `owner/name` repository and an explicit token environment variable name.
 
 ## Threats and Mitigations
 
@@ -97,9 +99,9 @@ Primary boundaries:
 | Traefik dashboard exposed by default | Administrative proxy metadata or controls reachable from an unintended network | The Compose Traefik dashboard router is disabled unless `TRAEFIK_DASHBOARD_ENABLED=true`. If enabled, keep `TRAEFIK_DASHBOARD_IP_ALLOWLIST` narrowed to the operator network or add an equivalent authenticated dashboard middleware before shared use. |
 | Secret exposure in UI, logs, reports, or evidence bundles | Credential leakage | Redact API keys and token values, avoid printing full environment contents, and exclude secrets and local absolute paths from generated reports and evidence manifests. Settings, reports, and log-facing diagnostics should expose only `<set>`, `<not set>`, variable names, counts, hashes, bundle paths, or source labels. |
 | Runtime provider URL override | Provider data tampering, SSRF-style reachability, or non-public-source enrichment | Keep NVD, FIRST EPSS, and CISA KEV provider URLs as fixed HTTPS constants for public sources. Do not add environment variables, request fields, or project settings that override live provider endpoints. Offline fixtures and locked snapshots remain explicit local artifacts, not endpoint substitutes. |
-| Ticket sync or GitHub issue export posts sensitive finding metadata to the wrong destination | Exposure of CVEs, assets, owners, paths, or remediation detail in an external system | Keep ticket sync and GitHub issue export local-first and operator-initiated. GitHub issue export only posts to the fixed GitHub API host after `repository: "owner/name"` validation. Jira/ServiceNow require HTTPS `base_url` values without embedded credentials, reject loopback/private ticket hosts unless explicitly server-allowlisted via `VULN_PRIORITIZER_TICKET_BASE_URL_ALLOWLIST`, require explicit `token_env` names that match environment-variable syntax, validate Jira project keys, use the default ServiceNow `incident` table unless extra tables are server-allowlisted via `VULN_PRIORITIZER_SERVICENOW_TABLE_ALLOWLIST`, and default export requests to `dry_run: true`. |
-| Duplicate or repeated ticket creation | Alert fatigue, duplicate remediation work, or noisy external audit trails | Generate deterministic duplicate keys and idempotency keys, persist created duplicate keys locally, skip duplicates on repeated exports, and send an `Idempotency-Key` header to Jira and ServiceNow create calls. |
-| Ticket token misuse or over-privileged credentials | Unauthorized issue/ticket creation or broader external account compromise | Read tokens only at request time from explicit environment variables such as `GITHUB_TOKEN`, `JIRA_API_TOKEN`, or `SERVICENOW_API_TOKEN`; use narrowly scoped external tokens; do not store token values in the Workbench database; include only counts and non-secret metadata in audit events. |
+| GitHub issue export posts sensitive finding metadata to the wrong destination | Exposure of CVEs, assets, owners, paths, or remediation detail in an external system | Keep GitHub issue export local-first and operator-initiated. The implemented export only posts to the fixed GitHub API host after `repository: "owner/name"` validation and defaults export requests to `dry_run: true`. Jira and ServiceNow export flows are not implemented; adding them requires a separate implementation, tests, allowlist design, and threat-model update. |
+| Duplicate or repeated GitHub issue creation | Alert fatigue, duplicate remediation work, or noisy external audit trails | Generate deterministic duplicate keys, persist completed GitHub issue duplicate keys locally, skip duplicates on repeated exports, and remove failed empty reservations so retries are not blocked by incomplete local rows. |
+| GitHub issue export token misuse or over-privileged credentials | Unauthorized issue creation or broader external account compromise | Read tokens only at request time from explicit environment variables such as `GITHUB_TOKEN`; use narrowly scoped external tokens; do not store token values in the Workbench database; include only counts and non-secret metadata in audit events. |
 | Oversized reports or evidence bundles | Disk exhaustion, slow UI, failed downloads | Enforce upload limits, keep generated artifacts in configured report directories, document cleanup responsibility, and surface generation errors. |
 | Supply-chain or dependency compromise | Compromised runtime or generated artifacts | Prefer pinned release installs, local checks, virtual environments, and reproducible docs/build commands. Do not load remote code through ATT&CK metadata or provider data. |
 | Internet-exposed Workbench deployment | Unauthorized access to imports, reports, and local state | Treat the current Workbench as local-first and not certified for public-production exposure until PP5 evidence closes. API tokens are a local automation guard, not a complete internet-facing authentication, authorization, TLS, session, or multi-user isolation model. |
@@ -120,9 +122,16 @@ Primary boundaries:
 - Evidence bundles are integrity artifacts, not encrypted archives. Operators are responsible for secure storage and transfer.
 - API tokens are local automation credentials for scoped active `/api/v1`
   service calls. They are not an SSO, RBAC, or multi-user session model.
-- NVD, ticket, and other token-bearing integrations use explicit environment variable names that match `^[A-Z_][A-Z0-9_]*$`; token values stay outside committed config and generated evidence.
-- Ticket preview/export and GitHub issue export are optional local automation bridges. Preview does not call external systems; create/export calls are operator-triggered, default to dry-run behavior, and require explicit destination settings plus token environment variables.
-- Jira and ServiceNow token variable names are request fields, not fixed global configuration. Operators should use explicit names such as `JIRA_API_TOKEN` or `SERVICENOW_API_TOKEN` and provide the corresponding process environment values outside committed files.
+- NVD, GitHub issue export, and other implemented token-bearing integrations use
+  explicit environment variable names that match `^[A-Z_][A-Z0-9_]*$`; token
+  values stay outside committed config and generated evidence.
+- GitHub issue preview/export is an optional local automation bridge. Preview
+  does not call GitHub; create/export calls are operator-triggered, default to
+  dry-run behavior, and require an explicit `owner/name` repository plus a token
+  environment variable name.
+- Jira and ServiceNow export flows are future integrations, not active
+  Workbench support. They need a shipped implementation, tests, operator docs,
+  and a threat-model update before they can be described as supported.
 - Documentation examples remain defensive. They should not include exploit code, payloads, PoC links as instructions, or active exploitation workflows.
 
 ## Shared Deployment Prerequisites
@@ -149,7 +158,7 @@ requirements:
 - authorization and RBAC for project-level access, mutable actions, token administration, reports, evidence bundles, and provider jobs
 - project isolation rules for database queries, filesystem artifacts, uploads, provider snapshots, report downloads, evidence bundles, and cleanup tasks
 - TLS termination and reverse-proxy guidance, including trusted host configuration, secure cookies, forwarded headers, request-size limits, and log redaction
-- audit retention policy for imports, lifecycle changes, waivers, reports, evidence bundles, tokens, provider jobs, GitHub exports, Jira/ServiceNow ticket exports, and detection-control changes
+- audit retention policy for imports, lifecycle changes, waivers, reports, evidence bundles, tokens, provider jobs, GitHub exports, and detection-control changes
 - backup and restore procedures for the database, uploads, provider cache, reports, evidence bundles, and configuration snapshots
 - retention ownership and disk-usage limits per project so cleanup cannot remove artifacts from another project or hide required audit evidence
 - operational monitoring for job failures, stale provider data, failed migrations, artifact-integrity failures, and storage pressure
@@ -185,7 +194,9 @@ The current local-first Workbench is readiness-aligned when:
 - ATT&CK docs and UI copy identify `ctid-json` as canonical and local CSV as legacy compatibility only
 - ATT&CK unmapped states are explicit and no heuristic or LLM-generated mappings are promoted
 - base priority remains explainable from CVSS, EPSS, and KEV, with context layers shown separately
-- Jira and ServiceNow ticket create flows stay operator-triggered, default to dry-run, use explicit `token_env` names, and persist duplicate keys for idempotency without storing token values
+- GitHub issue export stays operator-triggered, defaults to dry-run, uses an
+  explicit `token_env` name, and persists duplicate keys for idempotency without
+  storing token values
 - operator docs state that internet exposure, multi-tenancy, SSO, RBAC, background workers, and organization-wide ticket sync policy are out of v1.2 scope
 
 ## Control Evidence for v1.2
