@@ -181,4 +181,8 @@ def test_archives_have_entrypoints_and_public_evidence_tree_is_limited() -> None
     assert "`build/`" in archive_readme
     assert "`docs/evidence/`" in archive_readme
     assert "`archive/vpw-evidence/`" in archive_readme
+    assert "`git status --short --ignored`" in archive_readme
     assert "`make clean-local`" in archive_readme
+    assert "`make clean-deps`" in archive_readme
+    assert "not release evidence" in archive_readme
+    assert "Do not delete user-local artifacts" in archive_readme
