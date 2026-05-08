@@ -8,6 +8,7 @@ from pathlib import Path
 from sqlmodel import Session
 from utils.template_workbench import TemplateApiEnv, auth_headers
 
+from app.services.provider_status import provider_status_payload
 from vuln_prioritizer.models import (
     KevData,
     ProviderSnapshotItem,
@@ -276,6 +277,116 @@ def test_template_provider_status_redacts_production_paths_and_cache_details(
     }
     assert str(tmp_path) not in response.text
     assert "cache_namespace_hash" not in response.text
+
+
+def test_provider_status_projection_uses_source_hashes_when_metadata_omits_selection(
+    template_api_env: TemplateApiEnv,
+) -> None:
+    active_settings = template_api_env.client.app.state.workbench_settings
+    snapshot = template_api_env.app_models.ProviderSnapshot(
+        id=uuid.UUID("00000000-0000-4000-8000-000000000201"),
+        created_at=datetime(2026, 4, 28, 10, 0),
+        content_hash="sha256:provider-source-hash-fallback",
+        source_hashes_json={"kev": "sha256:kev-cache", "custom_feed": "sha256:custom"},
+        source_metadata_json={
+            "requested_cves": "7",
+            "cache_only": "true",
+            "output_path": "provider-snapshot.json",
+        },
+    )
+
+    payload = provider_status_payload(
+        snapshot,
+        latest_update_run=None,
+        active_settings=active_settings,
+    )
+
+    assert payload.snapshot.selected_sources == ["kev", "custom_feed"]
+    assert payload.snapshot.requested_cves == 7
+    assert payload.snapshot.mode == "cache-only"
+    assert payload.snapshot.source_path == "provider-snapshot.json"
+    sources = {source.name: source for source in payload.sources}
+    assert sources["kev"].selected is True
+    assert sources["kev"].available is True
+    assert sources["custom_feed"].selected is True
+    assert sources["custom_feed"].available is True
+    assert sources["custom_feed"].detail == "custom_feed status from the latest stored snapshot."
+    assert isinstance(payload.cache_age_seconds, int)
+
+
+def test_provider_status_projection_falls_back_to_available_snapshot_columns(
+    template_api_env: TemplateApiEnv,
+) -> None:
+    active_settings = template_api_env.client.app.state.workbench_settings
+    snapshot = template_api_env.app_models.ProviderSnapshot(
+        id=uuid.UUID("00000000-0000-4000-8000-000000000202"),
+        created_at=datetime(2026, 4, 28, 10, 0, tzinfo=UTC),
+        content_hash="sha256:provider-column-fallback",
+        nvd_last_sync="2026-04-28T10:15:00Z",
+        epss_date="2026-04-28",
+        source_metadata_json={"locked_provider_data": "yes"},
+    )
+
+    payload = provider_status_payload(
+        snapshot,
+        latest_update_run=None,
+        active_settings=active_settings,
+    )
+
+    assert payload.snapshot.selected_sources == ["nvd", "epss"]
+    assert payload.snapshot.mode == "locked"
+    sources = {source.name: source for source in payload.sources}
+    assert sources["nvd"].selected is True
+    assert sources["nvd"].last_sync == "2026-04-28T10:15:00Z"
+    assert sources["epss"].selected is True
+    assert sources["epss"].last_sync == "2026-04-28"
+    assert sources["kev"].selected is False
+    assert sources["kev"].available is False
+
+
+def test_provider_status_projection_redacts_failed_job_error_json_fallback(
+    template_api_env: TemplateApiEnv,
+    tmp_path: Path,
+) -> None:
+    active_settings = template_api_env.client.app.state.workbench_settings
+    private_path = tmp_path / "private-cache" / "provider.json"
+    failed_run = template_api_env.app_models.AnalysisRun(
+        id=uuid.UUID("00000000-0000-4000-8000-000000000203"),
+        project_id=uuid.UUID("00000000-0000-4000-8000-000000000204"),
+        input_type="provider_update",
+        status=template_api_env.app_models.AnalysisRunStatus.FAILED,
+        error_json={"nested": {"path": str(private_path)}, "fallback": str(private_path)},
+        summary_json={
+            "sources": ["nvd"],
+            "execution_mode": "scheduled",
+            "provider_cache_dir": str(private_path.parent),
+        },
+        started_at=datetime(2026, 4, 28, 10, 0, tzinfo=UTC),
+    )
+
+    payload = provider_status_payload(
+        None,
+        latest_update_run=failed_run,
+        active_settings=replace(
+            active_settings,
+            ENVIRONMENT="production",
+            SECRET_KEY="template-shell-secret",
+            FIRST_SUPERUSER_PASSWORD="template-shell-password",
+            FRONTEND_HOST="https://workbench.example.com",
+            ALLOWED_HOSTS=("workbench.example.com",),
+        ),
+    )
+
+    assert payload.status == "degraded"
+    assert payload.cache_dir is None
+    assert payload.snapshot_dir is None
+    assert payload.latest_update_job is not None
+    assert payload.latest_update_job.execution_mode == "scheduled"
+    assert payload.latest_update_job.requested_sources == ["nvd"]
+    assert "provider_cache_dir" not in payload.latest_update_job.metadata_
+    assert payload.last_error is not None
+    assert str(tmp_path) not in payload.last_error
+    assert all(str(tmp_path) not in warning for warning in payload.warnings)
 
 
 def test_template_provider_update_job_create_list_and_status(

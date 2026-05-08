@@ -158,6 +158,34 @@ def test_provider_update_lock_stale_check_treats_stat_errors_as_active(
     assert _provider_update_lock_is_stale(lock_path) is False
 
 
+def test_provider_update_lock_rejects_stale_lock_reclaim_race(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    lock_path = tmp_path / PROVIDER_UPDATE_LOCK_FILE
+    lock_path.write_text("stale", encoding="utf-8")
+    open_calls = 0
+
+    def fail_open(*_args: object, **_kwargs: object) -> int:
+        nonlocal open_calls
+        open_calls += 1
+        raise FileExistsError("race")
+
+    monkeypatch.setattr(provider_updates_module.os, "open", fail_open)
+    monkeypatch.setattr(
+        provider_updates_module,
+        "_provider_update_lock_is_stale",
+        lambda _path: True,
+    )
+
+    with pytest.raises(ProviderUpdateConflict, match="Provider update already running"):
+        with _provider_update_lock(tmp_path):
+            pass
+
+    assert open_calls == 2
+    assert not lock_path.exists()
+
+
 def test_cached_provider_records_load_valid_nvd_and_warn_on_invalid_payloads(
     tmp_path: Path,
 ) -> None:
@@ -200,10 +228,11 @@ def test_cached_provider_records_load_kev_catalog_and_warn_on_invalid_items(
     records, warnings = _cached_provider_records(
         source="kev",
         cache=cache,
-        cve_ids=["CVE-2024-3094", "CVE-2021-44228"],
+        cve_ids=["CVE-2024-3094", "CVE-2021-44228", "CVE-1999-0001"],
     )
 
     assert records["CVE-2024-3094"].in_kev is True
+    assert "CVE-1999-0001" not in records
     assert warnings == ["Cache-only KEV data invalid for CVE(s): CVE-2021-44228."]
 
 

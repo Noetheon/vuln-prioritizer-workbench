@@ -150,6 +150,24 @@ def test_template_migration_bootstrap_ignores_empty_and_already_versioned_databa
         engine.dispose()
 
 
+def test_template_migration_bootstrap_leaves_unknown_legacy_schema_unstamped(
+    tmp_path: Path,
+) -> None:
+    database_url = f"sqlite:///{tmp_path / 'unknown-legacy.db'}"
+    engine = create_engine(database_url)
+    try:
+        with engine.begin() as connection:
+            connection.execute(text("CREATE TABLE legacy_cache (id INTEGER PRIMARY KEY)"))
+
+        assert stamp_legacy_create_all_database(database_url=database_url) is None
+
+        inspector = inspect(engine)
+        assert "legacy_cache" in set(inspector.get_table_names())
+        assert "alembic_version" not in set(inspector.get_table_names())
+    finally:
+        engine.dispose()
+
+
 def test_template_migration_bootstrap_stamps_legacy_create_all_database(
     tmp_path: Path,
 ) -> None:
