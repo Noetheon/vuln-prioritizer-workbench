@@ -30,16 +30,16 @@ export function getAccessToken(): string {
 }
 
 export function isLoggedIn(): boolean {
-  return (
-    authenticatedInCurrentTab ||
-    getAccessToken().length > 0 ||
-    getCsrfToken().length > 0
-  )
+  return authenticatedInCurrentTab || getAccessToken().length > 0
+}
+
+export function markAuthenticatedSession(): void {
+  authenticatedInCurrentTab = true
 }
 
 export function setAccessToken(token?: string): void {
   inMemoryAccessToken = legacySessionTokenStorage ? (token ?? "") : ""
-  authenticatedInCurrentTab = true
+  markAuthenticatedSession()
   writeLegacySessionToken(inMemoryAccessToken)
 }
 

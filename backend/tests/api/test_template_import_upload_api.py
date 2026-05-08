@@ -9,6 +9,9 @@ from pathlib import Path
 
 import pytest
 from sqlmodel import Session, select
+from starlette.applications import Starlette
+from starlette.requests import Request
+from starlette.responses import Response
 from utils.template_workbench import (
     TemplateApiEnv,
     auth_headers,
@@ -16,14 +19,22 @@ from utils.template_workbench import (
 )
 
 from app import models as app_models
+from app.core.config import Settings
+from app.core.db import ensure_configured_superuser
 from app.domain.import_asset_context import (
     canonicalize_asset_criticality_value,
     canonicalize_asset_environment_value,
     canonicalize_asset_exposure_value,
 )
+from app.main import _upload_size_guard
 from app.services import TemplateAnalysisError
 from app.services import import_uploads as upload_helpers
 from app.services.import_errors import ImportServiceError
+from app.services.import_execution import (
+    ImportUploadContent,
+    ProjectImportUploadRequest,
+    execute_project_import_upload,
+)
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 SAMPLE_CVES = PROJECT_ROOT / "data" / "sample_cves.txt"
@@ -79,6 +90,43 @@ def test_import_upload_helper_rejects_oversized_chunks_and_protocol_default(
         )
     with pytest.raises(NotImplementedError):
         asyncio.run(upload_helpers.ReadableUpload.read(object()))  # type: ignore[misc]
+
+
+def test_upload_middleware_rejects_streaming_body_without_content_length() -> None:
+    response = asyncio.run(
+        _run_upload_size_guard(
+            [
+                {
+                    "type": "http.request",
+                    "body": b"A" * (1024 * 1024),
+                    "more_body": True,
+                },
+                {
+                    "type": "http.request",
+                    "body": b"B" * (128 * 1024),
+                    "more_body": False,
+                },
+            ],
+        )
+    )
+
+    assert response.status_code == 413
+
+
+def test_upload_middleware_allows_streaming_body_within_limit() -> None:
+    response = asyncio.run(
+        _run_upload_size_guard(
+            [
+                {
+                    "type": "http.request",
+                    "body": b"CVE-2024-3094\n",
+                    "more_body": False,
+                },
+            ],
+        )
+    )
+
+    assert response.status_code == 200
 
 
 def test_import_upload_helper_edge_validations_and_safe_names(
@@ -268,6 +316,68 @@ def test_valid_cve_list_upload_creates_analysis_run_and_stores_sha256(
     assert summary_payload["kev_hits"] == payload["summary_json"]["kev_hits"]
     assert summary_payload["parse_errors"] == []
     assert summary_payload["input_upload"]["sha256"] == expected_sha256
+
+
+def test_import_upload_service_can_defer_and_resume_background_execution(
+    template_api_env: TemplateApiEnv,
+    tmp_path: Path,
+) -> None:
+    upload_dir = _configure_upload_dir(template_api_env, tmp_path)
+    headers = auth_headers(template_api_env.client)
+    project = create_project_via_api(template_api_env.client, headers)
+    active_settings = template_api_env.client.app.state.workbench_settings
+    upload = ProjectImportUploadRequest(
+        input_type="cve-list",
+        file=ImportUploadContent(
+            filename="background-cves.txt",
+            content_type="text/plain",
+            content=b"CVE-2024-3094\n",
+        ),
+    )
+
+    with Session(template_api_env.engine) as session:
+        current_user = ensure_configured_superuser(session, active_settings=active_settings)
+        deferred_run = asyncio.run(
+            execute_project_import_upload(
+                project_id=uuid.UUID(project["id"]),
+                session=session,
+                current_user=current_user,
+                settings=active_settings,
+                upload=upload,
+                defer_execution=True,
+                execution_mode="background",
+            )
+        )
+        deferred_summary = deferred_run.summary_json
+
+        assert deferred_run.status == app_models.AnalysisRunStatus.PENDING
+        assert deferred_summary["import_job"]["status"] == "pending"
+        assert deferred_summary["import_job"]["execution_mode"] == "background"
+        assert [item["status"] for item in deferred_summary["import_job"]["status_history"]] == [
+            "pending"
+        ]
+        stored_ref = deferred_summary["input_upload"]["storage_ref"]
+        assert (upload_dir / stored_ref).read_bytes() == b"CVE-2024-3094\n"
+
+        resumed_run = asyncio.run(
+            execute_project_import_upload(
+                project_id=uuid.UUID(project["id"]),
+                session=session,
+                current_user=current_user,
+                settings=active_settings,
+                upload=upload,
+                existing_run_id=deferred_run.id,
+                execution_mode="background",
+            )
+        )
+
+        assert resumed_run.id == deferred_run.id
+        assert resumed_run.status == app_models.AnalysisRunStatus.SUCCEEDED
+        assert resumed_run.summary_json["import_job"]["execution_mode"] == "background"
+        assert [
+            item["status"] for item in resumed_run.summary_json["import_job"]["status_history"]
+        ] == ["pending", "running", "succeeded"]
+        assert resumed_run.summary_json["created_findings"] == 1
 
 
 def test_template_import_uses_demo_snapshot_without_network_or_keys(
@@ -1714,6 +1824,36 @@ def _configure_upload_dir(
         MAX_UPLOAD_MB=max_upload_mb,
     )
     return upload_dir.resolve(strict=False)
+
+
+async def _run_upload_size_guard(messages: list[dict[str, object]]) -> Response:
+    app = Starlette()
+    app.state.workbench_settings = Settings(MAX_UPLOAD_MB=1)
+    message_iter = iter(messages)
+
+    async def receive() -> dict[str, object]:
+        return next(message_iter)
+
+    request = Request(
+        {
+            "app": app,
+            "client": ("testclient", 50000),
+            "headers": [],
+            "method": "POST",
+            "path": f"/api/v1/projects/{uuid.uuid4()}/imports",
+            "query_string": b"",
+            "scheme": "http",
+            "server": ("testserver", 80),
+            "type": "http",
+        },
+        receive,
+    )
+
+    async def call_next(streamed_request: Request) -> Response:
+        await streamed_request.body()
+        return Response("accepted")
+
+    return await _upload_size_guard(request, call_next)
 
 
 def _assert_no_sensitive_path_leak(payload: object, *paths: Path) -> None:

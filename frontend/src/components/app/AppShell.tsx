@@ -493,7 +493,11 @@ export function ProductAppShell({
       // Local logout should complete even if the server session already expired.
     } finally {
       clearAccessToken()
-      await navigate({ to: "/login" })
+      if (typeof window !== "undefined") {
+        window.location.assign("/login")
+      } else {
+        await navigate({ replace: true, search: {} as never, to: "/login" })
+      }
     }
   }
 

@@ -117,6 +117,13 @@ def test_vpw049_openapi_exposes_report_format_contract() -> None:
     assert "/api/v1/runs/{run_id}/reports" in payload["paths"]
     assert "/api/v1/reports/{report_id}/download" in payload["paths"]
     assert "/api/v1/reports/{report_id}/verify" in payload["paths"]
+    download_response = payload["paths"]["/api/v1/reports/{report_id}/download"]["get"][
+        "responses"
+    ]["200"]
+    assert download_response["content"]["application/octet-stream"]["schema"] == {
+        "format": "binary",
+        "type": "string",
+    }
     assert {"ReportCreate", "ReportPublic", "ReportVerificationPublic", "ReportsPublic"}.issubset(
         payload["components"]["schemas"]
     )

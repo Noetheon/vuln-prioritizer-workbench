@@ -26,7 +26,7 @@ export async function login(page: Page): Promise<string> {
   const body = (await response.json().catch(() => ({}))) as {
     access_token?: unknown
   }
-  await expect(page).toHaveURL(/\/$/)
+  await expect(page).toHaveURL(/\/(?:\?.*)?$/)
   return typeof body.access_token === "string" ? body.access_token : ""
 }
 

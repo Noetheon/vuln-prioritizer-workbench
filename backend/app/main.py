@@ -11,6 +11,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.cors import CORSMiddleware
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 from starlette.responses import JSONResponse, Response
+from starlette.types import Message
 
 from app.api.errors import (
     error_response_content,
@@ -19,11 +20,12 @@ from app.api.errors import (
     unhandled_exception_handler,
     validation_error_handler,
 )
-from app.api.main import api_router
+from app.api.main import api_router, assert_api_auth_policy
 from app.core.app_state import configure_workbench_state, workbench_settings
 from app.core.config import Settings, settings
 from app.core.db import create_db_engine
-from app.core.rate_limit import InMemoryRateLimiter, rate_limit_key
+from app.core.rate_limit import RateLimiter, create_rate_limiter, rate_limit_key
+from app.core.schema_smoke import assert_migrated_schema
 
 SECURITY_HEADERS = {
     "X-Content-Type-Options": "nosniff",
@@ -61,12 +63,16 @@ def create_app(active_settings: Settings | None = None) -> FastAPI:
         redoc_url="/redoc" if selected_settings.api_docs_enabled else None,
         generate_unique_id_function=custom_generate_unique_id,
     )
+    active_engine = create_db_engine(selected_settings)
+    assert_api_auth_policy(selected_settings.API_V1_STR)
     configure_workbench_state(
         app,
         active_settings=selected_settings,
-        active_engine=create_db_engine(selected_settings),
+        active_engine=active_engine,
     )
-    app.state.rate_limiter = InMemoryRateLimiter()
+    app.state.rate_limiter = create_rate_limiter(selected_settings, active_engine)
+    if selected_settings.ENVIRONMENT != "local":
+        app.router.on_startup.append(lambda: assert_migrated_schema(active_engine))
     app.add_middleware(
         TrustedHostMiddleware,
         allowed_hosts=list(selected_settings.ALLOWED_HOSTS),
@@ -107,7 +113,7 @@ async def _rate_limit_guard(
     active_settings = workbench_settings(request, required=False)
     key_and_limit = rate_limit_key(request, active_settings)
     limiter = getattr(request.app.state, "rate_limiter", None)
-    if key_and_limit is not None and isinstance(limiter, InMemoryRateLimiter):
+    if key_and_limit is not None and isinstance(limiter, RateLimiter):
         key, limit = key_and_limit
         decision = limiter.check(key, limit=limit)
         if not decision.allowed:
@@ -128,15 +134,15 @@ async def _upload_size_guard(
     call_next: Callable[[Request], Awaitable[Response]],
 ) -> Response:
     if request.method == "POST" and _is_workbench_upload_path(request.url.path):
+        active_settings = workbench_settings(request, required=False)
+        max_request_bytes = active_settings.max_upload_bytes + 64 * 1024
         raw_content_length = request.headers.get("content-length")
         if raw_content_length is not None:
             try:
                 content_length = int(raw_content_length)
             except ValueError:
                 content_length = 0
-            active_settings = workbench_settings(request, required=False)
-            multipart_overhead = 64 * 1024
-            if content_length > active_settings.max_upload_bytes + multipart_overhead:
+            if content_length > max_request_bytes:
                 return JSONResponse(
                     status_code=413,
                     content=error_response_content(
@@ -145,6 +151,30 @@ async def _upload_size_guard(
                         request=request,
                     ),
                 )
+        consumed_bytes = 0
+        receive = request._receive
+
+        async def limited_receive() -> Message:
+            nonlocal consumed_bytes
+            message = await receive()
+            if message.get("type") == "http.request":
+                consumed_bytes += len(message.get("body", b""))
+                if consumed_bytes > max_request_bytes:
+                    raise RequestEntityTooLarge
+            return message
+
+        request._receive = limited_receive
+        try:
+            return await call_next(request)
+        except RequestEntityTooLarge:
+            return JSONResponse(
+                status_code=413,
+                content=error_response_content(
+                    status_code=413,
+                    detail="Upload exceeds configured limit.",
+                    request=request,
+                ),
+            )
     return await call_next(request)
 
 
@@ -152,6 +182,10 @@ def _is_workbench_upload_path(path: str) -> bool:
     return path.startswith("/api/v1/projects/") and (
         path.endswith("/imports") or path.endswith("/assets/import")
     )
+
+
+class RequestEntityTooLarge(Exception):
+    """Raised when an upload stream exceeds the configured request limit."""
 
 
 app = create_app()

@@ -139,6 +139,13 @@ workflow-check:
 
 docker-demo-smoke:
 	@set -e; \
+		smoke_id="vpw-demo-smoke-$$(date +%s)-$$$$"; \
+		export COMPOSE_PROJECT_NAME="$$smoke_id"; \
+		export WORKBENCH_DB_VOLUME="$$smoke_id-db-data"; \
+		export WORKBENCH_IMPORT_UPLOADS_VOLUME="$$smoke_id-import-uploads"; \
+		export WORKBENCH_REPORTS_VOLUME="$$smoke_id-reports"; \
+		export WORKBENCH_PROVIDER_SNAPSHOTS_VOLUME="$$smoke_id-provider-snapshots"; \
+		export WORKBENCH_PROVIDER_CACHE_VOLUME="$$smoke_id-provider-cache"; \
 	export SECRET_KEY="$(DOCKER_DEMO_SECRET_KEY)"; \
 	export FIRST_SUPERUSER_PASSWORD="$(DOCKER_DEMO_FIRST_SUPERUSER_PASSWORD)"; \
 	export POSTGRES_PASSWORD="$(DOCKER_DEMO_POSTGRES_PASSWORD)"; \
@@ -189,6 +196,13 @@ docker-demo-smoke:
 
 docker-production-smoke:
 	@set -e; \
+		smoke_id="vpw-production-smoke-$$(date +%s)-$$$$"; \
+		export COMPOSE_PROJECT_NAME="$$smoke_id"; \
+		export WORKBENCH_DB_VOLUME="$$smoke_id-db-data"; \
+		export WORKBENCH_IMPORT_UPLOADS_VOLUME="$$smoke_id-import-uploads"; \
+		export WORKBENCH_REPORTS_VOLUME="$$smoke_id-reports"; \
+		export WORKBENCH_PROVIDER_SNAPSHOTS_VOLUME="$$smoke_id-provider-snapshots"; \
+		export WORKBENCH_PROVIDER_CACHE_VOLUME="$$smoke_id-provider-cache"; \
 	export SECRET_KEY="$(PRODUCTION_SMOKE_SECRET_KEY)"; \
 	export FIRST_SUPERUSER_PASSWORD="$(PRODUCTION_SMOKE_FIRST_SUPERUSER_PASSWORD)"; \
 	export POSTGRES_PASSWORD="$(PRODUCTION_SMOKE_POSTGRES_PASSWORD)"; \

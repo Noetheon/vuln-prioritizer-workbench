@@ -3,6 +3,7 @@ import test from "node:test"
 
 import {
   clearFindingsFilters,
+  cleanFindingsSearchQueryString,
   defaultFindingsSearchState,
   findingsSearchQueryString,
   findingsSearchToApiParams,
@@ -134,4 +135,13 @@ test("findings search updates reset paging except explicit page movement", () =>
     limit: 25,
     sort: "operational",
   })
+})
+
+test("findings search cleanup preserves route-owned project id", () => {
+  assert.equal(
+    cleanFindingsSearchQueryString(
+      "projectId=project-1&status=open&unknown=drop&limit=999",
+    ),
+    "status=open&projectId=project-1",
+  )
 })

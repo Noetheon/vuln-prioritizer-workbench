@@ -38,6 +38,8 @@ export type FindingDetailQueryData = {
   explanationWarning: string
 }
 
+const RUN_DETAIL_POLL_STATUSES = new Set(["pending", "running"])
+
 export const emptyDashboardSignalCounts: DashboardSignalCounts = {
   highEpss: 0,
   internetFacingCriticals: 0,
@@ -208,6 +210,10 @@ export function useRunDetailQuery(runId: string, enabled: boolean) {
       return { run, summary }
     },
     queryKey: workbenchQueryKeys.runDetail(runId),
+    refetchInterval: (query) => {
+      const status = query.state.data?.run.status
+      return status && RUN_DETAIL_POLL_STATUSES.has(status) ? 3000 : false
+    },
     retry: false,
     staleTime: 15_000,
   })

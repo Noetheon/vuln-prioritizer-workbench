@@ -10,14 +10,14 @@ REQUIRED_WHEEL_SUFFIXES = (
     "app/main.py",
     "app/api/main.py",
     "app/alembic/env.py",
-    "app/alembic/versions/20260508_0012_api_token_expiry.py",
+    "app/alembic/versions/20260508_0013_rate_limit_buckets.py",
     "vuln_prioritizer/cli.py",
 )
 REQUIRED_SDIST_SUFFIXES = (
     "app/main.py",
     "app/api/main.py",
     "app/alembic/env.py",
-    "app/alembic/versions/20260508_0012_api_token_expiry.py",
+    "app/alembic/versions/20260508_0013_rate_limit_buckets.py",
     "src/vuln_prioritizer/cli.py",
     "pyproject.toml",
 )

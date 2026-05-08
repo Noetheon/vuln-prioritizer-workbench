@@ -13,6 +13,7 @@ TABLE_MODEL_MODULES = (
     "app.models.api_tokens",
     "app.models.sessions",
     "app.models.audit",
+    "app.models.runtime",
     "app.models.github_issues",
     "app.models.attack",
     "app.models.waivers",

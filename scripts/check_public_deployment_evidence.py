@@ -86,9 +86,13 @@ def _check_app_labels(compose: dict[str, Any]) -> list[str]:
     backend_labels = _string_list(_mapping(services.get("backend")).get("labels"))
     frontend_labels = _string_list(_mapping(services.get("frontend")).get("labels"))
 
+    expected_enable_labels = {
+        "backend": "traefik.enable=${TRAEFIK_API_ENABLED:-false}",
+        "frontend": "traefik.enable=${TRAEFIK_APP_ENABLED:-false}",
+    }
     for service_name, labels in {"backend": backend_labels, "frontend": frontend_labels}.items():
-        if "traefik.enable=${TRAEFIK_APP_ENABLED:-false}" not in labels:
-            failures.append(f"compose.yml {service_name} must keep Traefik app routing opt-in.")
+        if expected_enable_labels[service_name] not in labels:
+            failures.append(f"compose.yml {service_name} must keep Traefik routing opt-in.")
         if not any(label.endswith(".tls=true") for label in labels):
             failures.append(f"compose.yml {service_name} HTTPS router must enable TLS.")
         if not any("entrypoints=http" in label for label in labels):
@@ -139,7 +143,7 @@ def _check_docs() -> list[str]:
         "same-origin API routing",
         "Optional direct API route for automation",
         "curl -I https://${DOMAIN}/",
-        "curl -I https://api.${DOMAIN}/api/v1/workbench/health",
+        "TRAEFIK_API_ENABLED=true",
         "Do not include secrets",
     )
     for phrase in required_deployment_phrases:

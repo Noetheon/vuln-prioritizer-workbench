@@ -4,21 +4,15 @@ import { useEffect, useState } from "react"
 import {
   type AnalysisRunPublic,
   ApiError,
-  OpenAPI,
   type ReportPublic,
   ReportsService,
   type ReportVerificationPublic,
 } from "../api-client"
-import { getAccessToken } from "../auth"
 import type { WorkbenchPath } from "../components/app/AppShell"
 import type { WorkbenchReportFormat } from "../lib/app-defaults"
-import {
-  apiErrorDetail,
-  apiErrorMessage,
-  objectRecord,
-} from "../lib/app-errors"
+import { apiErrorMessage, objectRecord } from "../lib/app-errors"
 import { isReportableRunStatus, reportFormatLabel } from "../lib/report-format"
-import { reportDownloadRequest } from "./report-download"
+import { fetchReportDownload } from "./report-download"
 import { workbenchQueryKeys } from "./workbench-query-keys"
 
 type UseReportsRouteStateOptions = {
@@ -29,25 +23,11 @@ type UseReportsRouteStateOptions = {
 }
 
 async function downloadReportArtifact(report: ReportPublic) {
-  const request = reportDownloadRequest(report, getAccessToken(), OpenAPI.BASE)
-  const response = await fetch(request.url, {
-    credentials: request.credentials,
-    headers: request.headers,
-  })
-  if (!response.ok) {
-    let detail = ""
-    try {
-      detail = apiErrorDetail(await response.json()) ?? ""
-    } catch {
-      detail = ""
-    }
-    throw new Error(detail || `HTTP ${response.status}`)
-  }
-  const blob = await response.blob()
+  const { blob, filename } = await fetchReportDownload(report)
   const objectUrl = URL.createObjectURL(blob)
   const anchor = document.createElement("a")
   anchor.href = objectUrl
-  anchor.download = report.filename
+  anchor.download = filename
   document.body.append(anchor)
   anchor.click()
   anchor.remove()

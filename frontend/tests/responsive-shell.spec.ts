@@ -106,7 +106,7 @@ test("mobile shell exposes drawer navigation without page-width overflow", async
   ).toBeVisible()
   await page.getByRole("link", { name: "Reports" }).click()
 
-  await expect(page).toHaveURL(/\/reports$/)
+  await expect(page).toHaveURL(/\/reports(?:\?.*)?$/)
   await expect(
     page.getByRole("heading", { name: "Generate Evidence Artifacts" }),
   ).toBeVisible()

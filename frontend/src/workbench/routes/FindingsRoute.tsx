@@ -26,15 +26,16 @@ function FindingsRouteContainer() {
     selectedProjectId,
     setSelectedProjectId,
   } = useWorkbenchContext()
-  const findingsSearch = parseFindingsSearch(location.searchStr)
-  const cleanedSearch = cleanFindingsSearchQueryString(location.searchStr)
-  const currentSearch = location.searchStr.startsWith("?")
-    ? location.searchStr.slice(1)
-    : location.searchStr
+  const routeSearch = activeSearchString(location.searchStr)
+  const findingsSearch = parseFindingsSearch(routeSearch)
+  const cleanedSearch = cleanFindingsSearchQueryString(routeSearch)
+  const currentSearch = routeSearch.startsWith("?")
+    ? routeSearch.slice(1)
+    : routeSearch
 
   function updateFindingsSearch(nextSearch: FindingsSearchState) {
     void navigate({
-      search: findingsSearchToUrlSearch(nextSearch),
+      search: findingsRouteSearch(nextSearch, selectedProjectId),
       to: "/findings",
     })
   }
@@ -45,10 +46,13 @@ function FindingsRouteContainer() {
     }
     void navigate({
       replace: true,
-      search: findingsSearchToUrlSearch(parseFindingsSearch(cleanedSearch)),
+      search: findingsRouteSearch(
+        parseFindingsSearch(cleanedSearch),
+        selectedProjectId,
+      ),
       to: "/findings",
     })
-  }, [cleanedSearch, currentSearch, navigate])
+  }, [cleanedSearch, currentSearch, navigate, selectedProjectId])
 
   const {
     activeFindingFilters,
@@ -104,7 +108,7 @@ function FindingsRouteContainer() {
             : ""
         }
         findingsLoading={findingsQuery.isLoading || findingsQuery.isFetching}
-        findingSearch={findingsSearchToUrlSearch(findingsSearch)}
+        findingSearch={findingsRouteSearch(findingsSearch, selectedProjectId)}
         onClearAssetFilter={clearFindingAssetFilter}
         onClearFilters={clearFindingFilters}
         onDirectionChange={updateFindingDirection}
@@ -141,6 +145,16 @@ function searchQueryStringsEqual(left: string, right: string) {
   return normalizedSearchEntries(left) === normalizedSearchEntries(right)
 }
 
+function findingsRouteSearch(
+  findingsSearch: FindingsSearchState,
+  selectedProjectId: string,
+) {
+  return {
+    ...findingsSearchToUrlSearch(findingsSearch),
+    projectId: selectedProjectId || undefined,
+  }
+}
+
 function normalizedSearchEntries(value: string) {
   return Array.from(new URLSearchParams(value).entries())
     .sort(([leftKey, leftValue], [rightKey, rightValue]) =>
@@ -150,4 +164,8 @@ function normalizedSearchEntries(value: string) {
     )
     .map(([key, entryValue]) => `${key}=${entryValue}`)
     .join("&")
+}
+
+function activeSearchString(fallbackSearch: string) {
+  return typeof window === "undefined" ? fallbackSearch : window.location.search
 }

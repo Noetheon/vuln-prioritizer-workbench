@@ -1,13 +1,17 @@
-"""Lightweight per-process rate limiting for the Workbench API."""
+"""Rate limiting for the Workbench API."""
 
 from __future__ import annotations
 
 from collections import defaultdict, deque
 from dataclasses import dataclass, field
+from datetime import UTC, datetime, timedelta
 from ipaddress import ip_address, ip_network
 from time import monotonic
+from typing import Protocol, runtime_checkable
 
 from fastapi import Request
+from sqlalchemy import text
+from sqlalchemy.engine import Engine
 
 from app.core.config import Settings
 
@@ -18,6 +22,14 @@ class RateLimitDecision:
 
     allowed: bool
     retry_after_seconds: int = 0
+
+
+@runtime_checkable
+class RateLimiter(Protocol):
+    """Common limiter interface used by HTTP middleware and auth dependencies."""
+
+    def check(self, key: str, *, limit: int, record: bool = True) -> RateLimitDecision:
+        """Return whether a request is allowed for the given key and limit."""
 
 
 @dataclass
@@ -65,6 +77,124 @@ class InMemoryRateLimiter:
                 ),
             )
             self.attempts.pop(oldest_key, None)
+
+
+@dataclass(frozen=True)
+class DatabaseRateLimiter:
+    """Database-backed fixed-window limiter for shared non-local deployments."""
+
+    engine: Engine
+    window_seconds: int = 60
+
+    def check(self, key: str, *, limit: int, record: bool = True) -> RateLimitDecision:
+        """Return whether a request is allowed using a shared database bucket."""
+        if limit <= 0:
+            return RateLimitDecision(allowed=True)
+
+        now = datetime.now(UTC)
+        cutoff = now - timedelta(seconds=self.window_seconds)
+        with self.engine.begin() as connection:
+            connection.execute(
+                text("DELETE FROM rate_limit_bucket WHERE window_started_at <= :cutoff"),
+                {"cutoff": cutoff},
+            )
+            if not record:
+                row = (
+                    connection.execute(
+                        text(
+                            "SELECT request_count, window_started_at "
+                            "FROM rate_limit_bucket WHERE bucket_key = :bucket_key"
+                        ),
+                        {"bucket_key": key},
+                    )
+                    .mappings()
+                    .first()
+                )
+                if row is None:
+                    return RateLimitDecision(allowed=True)
+                request_count = int(row["request_count"])
+                if request_count < limit:
+                    return RateLimitDecision(allowed=True)
+                return RateLimitDecision(
+                    allowed=False,
+                    retry_after_seconds=_retry_after_seconds(
+                        _aware_utc(row["window_started_at"]),
+                        now,
+                        self.window_seconds,
+                    ),
+                )
+
+            connection.execute(
+                text(
+                    "INSERT INTO rate_limit_bucket "
+                    "(bucket_key, request_count, window_started_at, updated_at) "
+                    "VALUES (:bucket_key, 0, :window_started_at, :updated_at) "
+                    "ON CONFLICT(bucket_key) DO NOTHING"
+                ),
+                {
+                    "bucket_key": key,
+                    "window_started_at": now,
+                    "updated_at": now,
+                },
+            )
+            increment = connection.execute(
+                text(
+                    "UPDATE rate_limit_bucket "
+                    "SET request_count = request_count + 1, updated_at = :updated_at "
+                    "WHERE bucket_key = :bucket_key AND request_count < :limit"
+                ),
+                {"bucket_key": key, "limit": limit, "updated_at": now},
+            )
+            if increment.rowcount == 1:
+                return RateLimitDecision(allowed=True)
+
+            blocked_row = (
+                connection.execute(
+                    text(
+                        "SELECT window_started_at FROM rate_limit_bucket "
+                        "WHERE bucket_key = :bucket_key"
+                    ),
+                    {"bucket_key": key},
+                )
+                .mappings()
+                .first()
+            )
+            if blocked_row is None:
+                return RateLimitDecision(allowed=True)
+            return RateLimitDecision(
+                allowed=False,
+                retry_after_seconds=_retry_after_seconds(
+                    _aware_utc(blocked_row["window_started_at"]),
+                    now,
+                    self.window_seconds,
+                ),
+            )
+
+
+def create_rate_limiter(settings: Settings, engine: Engine) -> RateLimiter:
+    """Return the limiter implementation for the configured deployment mode."""
+    if settings.ENVIRONMENT == "local":
+        return InMemoryRateLimiter()
+    return DatabaseRateLimiter(engine)
+
+
+def _aware_utc(value: datetime | str) -> datetime:
+    if isinstance(value, str):
+        value = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    if value.tzinfo is None:
+        return value.replace(tzinfo=UTC)
+    return value.astimezone(UTC)
+
+
+def _retry_after_seconds(
+    window_started_at: datetime,
+    now: datetime,
+    window_seconds: int,
+) -> int:
+    return max(
+        1,
+        int((window_started_at + timedelta(seconds=window_seconds) - now).total_seconds()),
+    )
 
 
 def rate_limit_key(request: Request, settings: Settings) -> tuple[str, int] | None:

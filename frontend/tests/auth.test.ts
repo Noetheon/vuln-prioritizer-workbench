@@ -156,7 +156,7 @@ test("tracks same-tab authentication without exposing legacy tokens", () => {
   assert.equal(isLoggedIn(), false)
 })
 
-test("treats readable CSRF cookies as authenticated and clears them on logout", () => {
+test("does not treat readable CSRF cookies as authenticated and clears them on logout", () => {
   const writes: string[] = []
   const documentStub = {
     querySelector: () => null,
@@ -170,7 +170,7 @@ test("treats readable CSRF cookies as authenticated and clears them on logout", 
   })
 
   withDocument(documentStub as DocumentStub, () => {
-    assert.equal(isLoggedIn(), true)
+    assert.equal(isLoggedIn(), false)
 
     clearAccessToken()
 

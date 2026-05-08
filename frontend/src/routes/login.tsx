@@ -2,11 +2,12 @@ import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router"
 import { type FormEvent, useEffect, useState } from "react"
 import { ApiError, LoginService, UtilsService } from "../api-client"
 import { isLoggedIn, setAccessToken } from "../auth"
+import { hasAuthenticatedSession } from "../lib/session-auth"
 
 export const Route = createFileRoute("/login")({
-  beforeLoad: () => {
-    if (isLoggedIn()) {
-      throw redirect({ to: "/" })
+  beforeLoad: async () => {
+    if (isLoggedIn() || (await hasAuthenticatedSession())) {
+      throw redirect({ search: {} as never, to: "/" })
     }
   },
   component: LoginPage,
@@ -57,7 +58,7 @@ function LoginPage() {
       setAccessToken(
         typeof token.access_token === "string" ? token.access_token : "",
       )
-      await navigate({ to: "/" })
+      await navigate({ search: {} as never, to: "/" })
     } catch (caught) {
       const message =
         caught instanceof ApiError && caught.status === 400

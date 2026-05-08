@@ -13,7 +13,8 @@ def test_backend_dockerfile_prepares_workbench_quickstart_runtime_dirs() -> None
     assert "/app/workbench-provider-cache" in dockerfile
     assert "backend/alembic.ini" in dockerfile
     assert "backend/requirements.lock.txt" in dockerfile
-    assert "python -m pip install ./backend" in dockerfile
+    assert "python -m pip install --require-hashes -r backend/requirements.lock.txt" in dockerfile
+    assert "python -m pip install --no-deps ./backend" in dockerfile
     assert "Set SECRET_KEY before starting the backend container." in dockerfile
     assert "Set FIRST_SUPERUSER_PASSWORD before starting the backend container." in dockerfile
     assert "python -m app.core.migration_bootstrap" in dockerfile
@@ -166,6 +167,8 @@ def test_production_smoke_overlay_uses_same_origin_public_contract() -> None:
     assert "connect-src 'self'" in script
     assert "/api/v1/workbench/health" in script
     assert "/api/v1/workbench/status" in script
+    assert "VPW_PRODUCTION_SMOKE_IMPORT_TIMEOUT" in script
+    assert 'f"/api/v1/runs/{run_id}"' in script
     assert "X-CSRF-Token" in script
 
 
