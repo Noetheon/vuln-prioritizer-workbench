@@ -3,7 +3,8 @@
 Status: historical migration plan and current-state reference. The active
 Workbench runtime is now `backend/app`; this document is retained to explain why
 the migration happened and which boundaries must stay preserved. Do not use this
-page by itself as completion evidence for reopened roadmap issues.
+page by itself as completion evidence for reopened roadmap issues or the current
+VPW-AUD-999 final scorecard.
 
 ## Historical Decision
 

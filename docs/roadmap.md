@@ -12,7 +12,7 @@ implemented `backend/app` FastAPI runtime, retained CLI/core package, React
 frontend, generated-client boundary, and release automation. Current work aligns
 security/deployment docs, package and dependency policy, issue-template
 taxonomy, evidence/archive boundaries, generated-client ownership, release
-readiness gates, and the final PP5 scorecard.
+readiness gates, and the current VPW-AUD-999 final scorecard.
 
 Strict DoD evidence remains required for every VPW issue: scoped PR, commands
 run, artifacts or screenshots where relevant, residual risks, and follow-up
