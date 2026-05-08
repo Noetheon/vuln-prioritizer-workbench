@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
@@ -13,9 +14,14 @@ from vuln_prioritizer.models import (
     PrioritizedFinding,
     PriorityPolicy,
     ProviderDataQualityFlag,
+    ProviderLookupDiagnostics,
 )
 from vuln_prioritizer.services import analysis as service_analysis
-from vuln_prioritizer.services.analysis_pipeline import attach_provider_data_quality_flags
+from vuln_prioritizer.services import analysis_provider
+from vuln_prioritizer.services.analysis_pipeline import (
+    _provider_snapshot_hash,
+    attach_provider_data_quality_flags,
+)
 
 
 def test_analysis_service_rejects_invalid_policy_thresholds() -> None:
@@ -109,6 +115,46 @@ def test_prepare_saved_explain_reports_invalid_saved_payload(tmp_path: Path) -> 
         )
 
 
+def test_prepare_saved_explain_reports_json_missing_cve_and_invalid_finding(
+    tmp_path: Path,
+) -> None:
+    invalid_json = tmp_path / "invalid.json"
+    invalid_json.write_text("{not json", encoding="utf-8")
+    with pytest.raises(service_analysis.AnalysisInputError, match="not valid JSON"):
+        service_analysis.prepare_saved_explain(
+            cve_id="CVE-2024-0001",
+            input_path=invalid_json,
+            output=None,
+            format="json",
+        )
+
+    missing_cve = tmp_path / "missing-cve.json"
+    missing_cve.write_text(
+        json.dumps({"metadata": {}, "findings": [{"cve_id": "CVE-2024-0002"}]}),
+        encoding="utf-8",
+    )
+    with pytest.raises(service_analysis.AnalysisInputError, match="does not contain a finding"):
+        service_analysis.prepare_saved_explain(
+            cve_id="CVE-2024-0001",
+            input_path=missing_cve,
+            output=None,
+            format="json",
+        )
+
+    invalid_finding = tmp_path / "invalid-finding.json"
+    invalid_finding.write_text(
+        json.dumps({"metadata": {}, "findings": [{"cve_id": "CVE-2024-0001"}]}),
+        encoding="utf-8",
+    )
+    with pytest.raises(service_analysis.AnalysisInputError, match="invalid saved finding"):
+        service_analysis.prepare_saved_explain(
+            cve_id="CVE-2024-0001",
+            input_path=invalid_finding,
+            output=None,
+            format="json",
+        )
+
+
 def test_prepare_saved_explain_builds_result_from_saved_payload(tmp_path: Path) -> None:
     finding = PrioritizedFinding(
         cve_id="CVE-2024-0001",
@@ -150,6 +196,87 @@ def test_prepare_saved_explain_builds_result_from_saved_payload(tmp_path: Path) 
 
     assert result.finding.cve_id == "CVE-2024-0001"
     assert result.context.input_path == str(saved)
+
+
+def test_analysis_requests_require_snapshot_when_provider_data_is_locked(
+    tmp_path: Path,
+) -> None:
+    policy = PriorityPolicy()
+
+    with pytest.raises(service_analysis.AnalysisInputError, match="--locked-provider-data"):
+        service_analysis.prepare_analysis(
+            service_analysis.AnalysisRequest(
+                input_specs=[],
+                output=None,
+                format="json",
+                provider_snapshot_file=None,
+                locked_provider_data=True,
+                no_attack=True,
+                attack_source="none",
+                attack_mapping_file=None,
+                attack_technique_metadata_file=None,
+                offline_attack_file=None,
+                defensive_context_file=None,
+                priority_filters=None,
+                kev_only=False,
+                min_cvss=None,
+                min_epss=None,
+                sort_by="priority",
+                policy=policy,
+                policy_profile="default",
+                policy_file=None,
+                waiver_file=None,
+                asset_context=None,
+                target_kind="generic",
+                target_ref=None,
+                vex_files=[],
+                show_suppressed=False,
+                hide_waived=False,
+                fail_on_provider_error=False,
+                max_cves=None,
+                offline_kev_file=None,
+                nvd_api_key_env="NVD_API_KEY",
+                no_cache=True,
+                cache_dir=tmp_path / "cache",
+                cache_ttl_hours=24,
+            )
+        )
+
+    with pytest.raises(service_analysis.AnalysisInputError, match="--locked-provider-data"):
+        service_analysis.prepare_explain(
+            service_analysis.ExplainRequest(
+                cve_id="CVE-2024-0001",
+                output=None,
+                format="json",
+                provider_snapshot_file=None,
+                locked_provider_data=True,
+                no_attack=True,
+                attack_source="none",
+                attack_mapping_file=None,
+                attack_technique_metadata_file=None,
+                policy=policy,
+                policy_profile="default",
+                policy_file=None,
+                waiver_file=None,
+                asset_context=None,
+                target_kind="generic",
+                target_ref=None,
+                vex_files=[],
+                show_suppressed=False,
+                fail_on_provider_error=False,
+                offline_kev_file=None,
+                offline_attack_file=None,
+                defensive_context_file=None,
+                nvd_api_key_env="NVD_API_KEY",
+                no_cache=True,
+                cache_dir=tmp_path / "cache",
+                cache_ttl_hours=24,
+            )
+        )
+
+    missing_snapshot = tmp_path / "missing-provider-snapshot.json"
+    assert _provider_snapshot_hash(None) is None
+    assert _provider_snapshot_hash(missing_snapshot) is None
 
 
 def test_attach_provider_data_quality_flags_scopes_flags_and_confidence() -> None:
@@ -278,6 +405,65 @@ def test_attach_provider_data_quality_flags_scopes_provider_errors_by_affected_c
     assert enriched[0].data_quality_confidence == "low"
     assert enriched[1].data_quality_flags == []
     assert enriched[1].data_quality_confidence == "high"
+
+
+def test_provider_freshness_helpers_handle_cache_network_and_timestamp_edges() -> None:
+    cache_time = "2026-04-24T09:00:00Z"
+    lookup_time = "2026-04-24T10:00:00+00:00"
+
+    assert (
+        analysis_provider._provider_source_freshness_at(
+            diagnostics=ProviderLookupDiagnostics(cache_hits=1),
+            cache_timestamp=cache_time,
+            lookup_completed_at=lookup_time,
+        )
+        == cache_time
+    )
+    assert (
+        analysis_provider._provider_source_freshness_at(
+            diagnostics=ProviderLookupDiagnostics(stale_cache_hits=1),
+            cache_timestamp=cache_time,
+            lookup_completed_at=lookup_time,
+        )
+        == cache_time
+    )
+    assert (
+        analysis_provider._provider_source_freshness_at(
+            diagnostics=ProviderLookupDiagnostics(network_fetches=1),
+            cache_timestamp=cache_time,
+            lookup_completed_at=lookup_time,
+        )
+        == lookup_time
+    )
+    assert (
+        analysis_provider._provider_source_freshness_at(
+            diagnostics=ProviderLookupDiagnostics(empty_records=1),
+            cache_timestamp=None,
+            lookup_completed_at=lookup_time,
+        )
+        == lookup_time
+    )
+    assert (
+        analysis_provider._provider_source_freshness_at(
+            diagnostics=ProviderLookupDiagnostics(),
+            cache_timestamp=cache_time,
+            lookup_completed_at=lookup_time,
+        )
+        == cache_time
+    )
+
+    assert analysis_provider._parse_provider_timestamp(None) is None
+    assert analysis_provider._parse_provider_timestamp("   ") is None
+    assert analysis_provider._parse_provider_timestamp("not-a-date") is None
+    assert analysis_provider._parse_provider_timestamp("2026-04-24") == datetime(
+        2026, 4, 24, tzinfo=UTC
+    )
+    assert analysis_provider._parse_provider_timestamp("2026-04-24T09:00:00Z") == datetime(
+        2026, 4, 24, 9, tzinfo=UTC
+    )
+    assert analysis_provider._parse_provider_timestamp("2026-04-24T09:00:00") == datetime(
+        2026, 4, 24, 9, tzinfo=UTC
+    )
 
 
 @pytest.mark.parametrize(

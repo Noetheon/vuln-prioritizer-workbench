@@ -12,6 +12,9 @@ def test_backend_dockerfile_prepares_workbench_quickstart_runtime_dirs() -> None
     assert "/app/workbench-reports" in dockerfile
     assert "/app/workbench-provider-cache" in dockerfile
     assert "backend/alembic.ini" in dockerfile
+    assert "backend/requirements.lock.txt" in dockerfile
+    assert "python -m pip install --require-hashes -r backend/requirements.lock.txt" in dockerfile
+    assert "python -m pip install --no-deps ./backend" in dockerfile
     assert "python -m app.core.migration_bootstrap" in dockerfile
     assert "alembic -c /app/backend/alembic.ini upgrade head" in dockerfile
     assert "chown -R workbench:workbench /app" in dockerfile
@@ -116,6 +119,7 @@ def test_ci_compose_smoke_uses_public_health_not_auth_readiness() -> None:
     script = Path("scripts/docker_quickstart_api_smoke.py").read_text(encoding="utf-8")
 
     assert "make docker-demo-smoke" in workflow
+    assert "make docker-production-smoke" in workflow
     assert "/api/v1/utils/health-check/" in makefile
     assert "workbench/status" in script
     assert "/api/v1/workbench/status" not in workflow

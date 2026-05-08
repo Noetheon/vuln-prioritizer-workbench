@@ -27,7 +27,7 @@ Current safety model:
 - manual `workflow_dispatch` runs on the release workflow are preflight-only and do not create a GitHub Release or publish to PyPI
 - public PyPI publishing is gated behind the repository variable `PYPI_PUBLISH_ENABLED=true`
 - the live PyPI workflow verifies a hosted-index install after publish
-- TestPyPI publishing is available through the manual workflow [`.github/workflows/testpypi.yml`](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/.github/workflows/testpypi.yml), is gated behind `TEST_PYPI_PUBLISH_ENABLED=true`, and verifies a hosted-index install after publish
+- TestPyPI publishing is available through the manual workflow [`.github/workflows/testpypi.yml`](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/.github/workflows/testpypi.yml), runs `make release-readiness-check`, is gated behind `TEST_PYPI_PUBLISH_ENABLED=true`, and verifies a hosted-index install after publish
 
 That keeps normal tagged releases green even before PyPI Trusted Publishing is fully configured.
 
@@ -203,26 +203,27 @@ vuln-prioritizer analyze --input smoke-cves.txt --format json --output smoke.jso
 The repository keeps PR safety checks active while reducing duplicate and
 long-running GitHub Actions work.
 
-Pull requests to `main` run the Python workflow gate, local action smoke,
-frontend lint/build/client drift checks, Playwright smoke coverage, Docker
-workflow status, and CodeQL where configured. Docs/archive-only PRs still get a
-successful Docker workflow, but the expensive Docker compose build is skipped
-after the workflow confirms that only non-runtime paths changed.
+Ready pull requests to `main` run the Python workflow gate, local action smoke,
+frontend lint/build/client drift checks with coverage, full Playwright coverage
+for frontend/API/runtime-impacting changes, Docker workflow status, and CodeQL
+where configured. Docs/archive-only PRs still get successful frontend and Docker
+workflow contexts, but the expensive browser and Docker compose work is skipped
+after the workflows confirm that only non-runtime paths changed.
 
 The CI frontend gate runs for frontend, API, generated-client, runtime, and CI
 gate changes. It runs lint, build, unit tests, generated-client drift, and
-bounded Playwright smoke/responsive/accessibility specs. Docs/archive-only PRs
-still get an explicit successful skip.
+the full Playwright suite. Docs/archive-only PRs still get an explicit
+successful skip.
 
-The Docker workflow runs `make docker-demo-smoke` for backend, Compose, Docker,
-dependency, runtime script, frontend build-config, and Docker workflow changes.
-That smoke covers health, login, authenticated readiness, locked-provider import,
-findings, and provider status. Docs/archive-only PRs still get an explicit
+The Docker workflow runs `make docker-demo-smoke` and
+`make docker-production-smoke` for backend, Compose, Docker, dependency, runtime
+script, frontend build-config, and Docker workflow changes. Those smokes cover
+health, login, authenticated readiness, locked-provider import, findings,
+provider status, same-origin production routing, CSRF/session controls, report
+download, and logout revocation. Docs/archive-only PRs still get an explicit
 successful skip, and failures print compose status/logs.
 
-Pushes to `main` run the post-merge version of the same CI workflows. The
-frontend job runs the full Playwright suite on `main`, while PRs run bounded
-smoke, responsive, and accessibility specs for faster feedback. Manual
+Pushes to `main` run the post-merge version of the same CI workflows. Manual
 `workflow_dispatch` remains available for full validation of CI, Docker,
 maintenance, release, and TestPyPI paths.
 
@@ -231,15 +232,16 @@ The main cost controls are:
 - stale workflow runs are cancelled after newer pushes;
 - feature-branch push workflows are not duplicated when a PR already validates
   the same commit;
-- full Playwright runs on `main` and manual CI, while PRs use smoke,
-  responsive, and accessibility coverage;
+- ready PRs skip expensive frontend and Docker work only when scope analysis
+  shows no relevant runtime/browser inputs changed;
+- draft PRs keep successful required contexts where possible and rerun the full
+  ready-state gates on the `ready_for_review` event;
 - Docker compose is skipped for docs/archive-only changes;
 - failure/debug artifacts use short retention windows.
 
-The tradeoff is that route-specific Playwright regressions outside the bounded
-PR specs may be discovered after merge instead of during every PR. The PR gate
-still covers core route rendering, responsive shell behavior, accessibility, and
-runtime-impacting Docker paths.
+The tradeoff is cost and runtime: frontend/API/runtime PRs now pay for the full
+Playwright suite before merge. Draft PRs remain the intentional exception until
+the PR is marked ready for review.
 
 ## Required Contexts And Ownership
 
