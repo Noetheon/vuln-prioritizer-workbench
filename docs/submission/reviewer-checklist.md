@@ -55,8 +55,8 @@ reproducibly.
 ## Limitations
 
 - [ ] Demo data is clearly marked as sample/evidence data.
-- [ ] Public-production readiness is not claimed unless PP5 evidence and the
-      final scorecard support it.
+- [ ] Public-production readiness is not claimed unless VPW-AUD-999 evidence
+      and the final scorecard support it.
 - [ ] Detection coverage is not overstated as proof of effectiveness.
 - [ ] Waivers are described as governance context, not as risk deletion.
 

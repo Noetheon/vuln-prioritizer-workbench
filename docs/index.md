@@ -123,8 +123,8 @@ Workbench remains local-first and uses the import-format matrix documented in
 - Use [roadmap.md](roadmap.md) for shipped scope and deliberate non-goals.
 - Use [release_operations.md](release_operations.md) for maintainer-only release, GitHub Release recovery, and PyPI/TestPyPI operations.
 - Use [public-production-release-evidence-ledger.md](public-production-release-evidence-ledger.md)
-  for PP4/PP5 release-readiness targets, evidence boundaries, and residual-risk
-  tracking.
+  for VPW-AUD release-readiness targets, evidence boundaries, and residual-risk
+  tracking through the final VPW-AUD-999 scorecard.
 - Use [community_repository_setup.md](community_repository_setup.md) for maintainer-facing public repo topics, labels, and triage defaults.
 - Use [releases/v1.1.0.md](releases/v1.1.0.md) for the current package release.
 

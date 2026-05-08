@@ -236,10 +236,12 @@ runtime, React frontend, retained CLI/domain package, VPW design system,
 evidence/reporting surfaces, public docs, CI cost controls, and package release
 automation.
 
-Public-production readiness is still tracked as explicit PP5 evidence work.
+Public-production readiness is still tracked as explicit VPW-AUD-999 evidence
+work.
 Do not treat this README, the local Workbench quickstart, or local release gates
-as a final internet-facing certification until the public-production scorecard
-issue closes with evidence.
+as a final internet-facing certification until
+[VPW-AUD-999](https://github.com/Noetheon/vuln-prioritizer-workbench/issues/430)
+closes with evidence.
 
 ## License, Security, And Contributing
 

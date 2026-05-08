@@ -50,7 +50,8 @@ make release-readiness-check
 
 This adds generated-client drift, demo evidence-bundle verification, and
 Playwright smoke evidence to the normal release gate. It also runs the
-production-like Docker smoke. It does not by itself close the PP5 scorecard.
+production-like Docker smoke. It does not by itself close the VPW-AUD-999 final
+scorecard.
 For tagged releases, `.github/workflows/release.yml` runs this gate before any
 GitHub Release or PyPI publish job can proceed.
 
