@@ -1,7 +1,8 @@
 # Historical Planning Archive
 
-This directory preserves planning documents that are no longer the active
-roadmap or public documentation surface.
+This directory preserves the original Workbench masterplan for roadmap
+reconstruction. It is no longer the active roadmap or public documentation
+surface.
 
 Current planning and release status lives in:
 
@@ -18,4 +19,6 @@ they are marked historical/current-state reference material:
 - `docs/full_stack_fastapi_template_migration.md`
 
 Archived files here are retained for context only. They should not be treated as
-current scope, acceptance criteria, or release commitments.
+current scope, acceptance criteria, or release commitments. Superseded audit
+drafts and intermediate implementation plans should stay out of the repository
+unless a maintainer explicitly asks for a durable record.
