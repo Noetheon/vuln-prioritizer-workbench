@@ -286,8 +286,9 @@ def test_compose_public_app_routes_are_opt_in_and_https_only() -> None:
     backend_labels = compose["services"]["backend"]["labels"]
     frontend_labels = compose["services"]["frontend"]["labels"]
 
-    assert "traefik.enable=${TRAEFIK_APP_ENABLED:-false}" in backend_labels
+    assert "traefik.enable=${TRAEFIK_API_ENABLED:-false}" in backend_labels
     assert "traefik.enable=${TRAEFIK_APP_ENABLED:-false}" in frontend_labels
+    assert "TRAEFIK_API_ENABLED=false" in (REPO_ROOT / ".env.example").read_text(encoding="utf-8")
     backend_redirect = "traefik.http.routers.workbench-backend-http.middlewares=https-redirect"
     frontend_redirect = "traefik.http.routers.workbench-frontend-http.middlewares=https-redirect"
     assert backend_redirect in backend_labels

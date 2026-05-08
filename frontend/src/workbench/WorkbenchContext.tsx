@@ -25,6 +25,11 @@ import {
   workbenchBootstrapQueryKey,
 } from "./useWorkbenchBootstrapQuery"
 import { useProjectsQuery } from "./useWorkbenchQueries"
+import {
+  searchStringFromUrlSearch,
+  selectedProjectIdFromSearch,
+  selectedProjectUrlSearch,
+} from "./selected-project-search"
 import { invalidateWorkbenchProjectQueries } from "./workbench-query-keys"
 
 const SELECTED_PROJECT_STORAGE_KEY = "vpw.selectedProjectId"
@@ -40,11 +45,6 @@ function readStoredSelectedProjectId() {
   } catch {
     return ""
   }
-}
-
-function selectedProjectIdFromSearch(searchStr: string) {
-  const rawSearch = searchStr.startsWith("?") ? searchStr.slice(1) : searchStr
-  return new URLSearchParams(rawSearch).get("projectId") ?? ""
 }
 
 function persistSelectedProjectId(projectId: string) {
@@ -81,13 +81,17 @@ export type WorkbenchContextValue = {
 
 const WorkbenchContext = createContext<WorkbenchContextValue | null>(null)
 
+function activeSearchString(fallbackSearch: string) {
+  return typeof window === "undefined" ? fallbackSearch : window.location.search
+}
+
 export function WorkbenchProvider({ children }: { children: ReactNode }) {
   const location = useLocation()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const handleAuthExpired = useCallback(async () => {
     clearAccessToken()
-    await navigate({ to: "/login" })
+    await navigate({ replace: true, search: {} as never, to: "/login" })
   }, [navigate])
   const bootstrapQuery = useWorkbenchBootstrapQuery()
   const bootstrapError = bootstrapQuery.error
@@ -98,20 +102,33 @@ export function WorkbenchProvider({ children }: { children: ReactNode }) {
     () => urlSelectedProjectId || readStoredSelectedProjectId(),
   )
 
-  const setSelectedProjectId = useCallback(
-    (update: SetStateAction<string>) => {
-      if (typeof update === "function") {
-        setSelectedProjectIdState((previousProjectId) => {
-          const nextProjectId = update(previousProjectId)
-          persistSelectedProjectId(nextProjectId)
-          return nextProjectId
-        })
+  const selectProjectId = useCallback(
+    (nextProjectId: string, { replace }: { replace: boolean }) => {
+      persistSelectedProjectId(nextProjectId)
+      setSelectedProjectIdState(nextProjectId)
+      const currentLocationSearch = activeSearchString(location.searchStr)
+      const nextSearch = selectedProjectUrlSearch(currentLocationSearch, nextProjectId)
+      const currentSearch = currentLocationSearch.startsWith("?")
+        ? currentLocationSearch.slice(1)
+        : currentLocationSearch
+      if (searchStringFromUrlSearch(nextSearch) === currentSearch) {
         return
       }
-      persistSelectedProjectId(update)
-      setSelectedProjectIdState(update)
+      void navigate({
+        replace,
+        search: (() => nextSearch) as never,
+      })
     },
-    [],
+    [location.searchStr, navigate],
+  )
+
+  const setSelectedProjectId = useCallback(
+    (update: SetStateAction<string>) => {
+      const nextProjectId =
+        typeof update === "function" ? update(selectedProjectId) : update
+      selectProjectId(nextProjectId, { replace: false })
+    },
+    [selectProjectId, selectedProjectId],
   )
 
   useEffect(() => {
@@ -135,12 +152,13 @@ export function WorkbenchProvider({ children }: { children: ReactNode }) {
     if (urlSelectedProjectId) {
       return
     }
-    setSelectedProjectId((previousProjectId) =>
-      projects.some((project) => project.id === previousProjectId)
-        ? previousProjectId
+    selectProjectId(
+      projects.some((project) => project.id === selectedProjectId)
+        ? selectedProjectId
         : (projects[0]?.id ?? ""),
+      { replace: true },
     )
-  }, [projects, setSelectedProjectId, urlSelectedProjectId])
+  }, [projects, selectProjectId, selectedProjectId, urlSelectedProjectId])
 
   const refreshProjects = useCallback(
     async (preferredProjectId?: string) => {

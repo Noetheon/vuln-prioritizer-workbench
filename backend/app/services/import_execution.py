@@ -5,7 +5,7 @@ from __future__ import annotations
 import hashlib
 import uuid
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Literal
 
 from sqlmodel import Session
 
@@ -128,6 +128,15 @@ class ProjectImportUploadRequest:
     attack_technique_metadata_file: str | None = None
 
 
+def _append_job_status(
+    status_history: list[dict[str, str]],
+    status: str,
+) -> list[dict[str, str]]:
+    if status_history and status_history[-1].get("status") == status:
+        return status_history
+    return [*status_history, _job_status_entry(status)]
+
+
 async def execute_project_import_upload(
     *,
     project_id: uuid.UUID,
@@ -135,6 +144,9 @@ async def execute_project_import_upload(
     current_user: User,
     settings: Settings,
     upload: ProjectImportUploadRequest,
+    defer_execution: bool = False,
+    existing_run_id: uuid.UUID | None = None,
+    execution_mode: Literal["request", "background"] = "request",
 ) -> AnalysisRun:
     """Securely upload, normalize, and persist one Workbench import file."""
     normalized_input_type = _normalize_input_type(upload.input_type)
@@ -215,55 +227,74 @@ async def execute_project_import_upload(
     )
     vex_sha256 = hashlib.sha256(vex_bytes).hexdigest() if vex_bytes is not None else None
     ignored_lines = _ignored_line_count(normalized_input_type, upload_bytes)
+    run_repo = RunRepository(session)
     job_id = str(uuid.uuid4())
     job_history = [_job_status_entry("pending")]
-    run_repo = RunRepository(session)
-    run = run_repo.create_analysis_run(
-        project_id=project_id,
-        input_type=normalized_input_type,
-        filename=stored_filename,
-        status=AnalysisRunStatus.PENDING,
-        summary_json={
-            "import_job": _job_payload(
-                job_id=job_id,
-                status="pending",
-                status_history=job_history,
-            ),
-            "input_upload": _upload_summary(
-                input_type=normalized_input_type,
-                original_filename=original_filename,
-                stored_filename=stored_filename,
-                content_type=file.content_type,
-                size_bytes=len(upload_bytes),
-                sha256=upload_sha256,
-                path=None,
-            ),
-            "asset_context_upload": _optional_upload_summary(
-                input_type="asset-context-csv",
-                original_filename=asset_context_original_filename,
-                stored_filename=asset_context_stored_filename,
-                content_type=asset_context_upload.content_type
-                if asset_context_upload is not None
-                else None,
-                size_bytes=len(asset_context_bytes) if asset_context_bytes is not None else None,
-                sha256=asset_context_sha256,
-                path=None,
-            ),
-            "vex_upload": _optional_upload_summary(
-                input_type="vex-json",
-                original_filename=vex_original_filename,
-                stored_filename=vex_stored_filename,
-                content_type=vex_upload.content_type if vex_upload is not None else None,
-                size_bytes=len(vex_bytes) if vex_bytes is not None else None,
-                sha256=vex_sha256,
-                path=None,
-            ),
-            "created_findings": 0,
-            "updated_findings": 0,
-            "ignored_lines": ignored_lines,
-            "parse_errors": [],
-        },
-    )
+    if existing_run_id is not None:
+        run = run_repo.get_analysis_run(existing_run_id)
+        if run is None:
+            raise ImportServiceError(
+                status_code=404,
+                detail="Analysis run not found",
+            )
+        if run.status not in {AnalysisRunStatus.PENDING, AnalysisRunStatus.RUNNING}:
+            return run
+        existing_job = run.summary_json.get("import_job")
+        if isinstance(existing_job, dict):
+            job_id = str(existing_job.get("id") or job_id)
+            raw_history = existing_job.get("status_history")
+            if isinstance(raw_history, list) and raw_history:
+                job_history = [item for item in raw_history if isinstance(item, dict)]
+    else:
+        run = run_repo.create_analysis_run(
+            project_id=project_id,
+            input_type=normalized_input_type,
+            filename=stored_filename,
+            status=AnalysisRunStatus.PENDING,
+            summary_json={
+                "import_job": _job_payload(
+                    job_id=job_id,
+                    status="pending",
+                    status_history=job_history,
+                    execution_mode=execution_mode,
+                ),
+                "input_upload": _upload_summary(
+                    input_type=normalized_input_type,
+                    original_filename=original_filename,
+                    stored_filename=stored_filename,
+                    content_type=file.content_type,
+                    size_bytes=len(upload_bytes),
+                    sha256=upload_sha256,
+                    path=None,
+                ),
+                "asset_context_upload": _optional_upload_summary(
+                    input_type="asset-context-csv",
+                    original_filename=asset_context_original_filename,
+                    stored_filename=asset_context_stored_filename,
+                    content_type=asset_context_upload.content_type
+                    if asset_context_upload is not None
+                    else None,
+                    size_bytes=len(asset_context_bytes)
+                    if asset_context_bytes is not None
+                    else None,
+                    sha256=asset_context_sha256,
+                    path=None,
+                ),
+                "vex_upload": _optional_upload_summary(
+                    input_type="vex-json",
+                    original_filename=vex_original_filename,
+                    stored_filename=vex_stored_filename,
+                    content_type=vex_upload.content_type if vex_upload is not None else None,
+                    size_bytes=len(vex_bytes) if vex_bytes is not None else None,
+                    sha256=vex_sha256,
+                    path=None,
+                ),
+                "created_findings": 0,
+                "updated_findings": 0,
+                "ignored_lines": ignored_lines,
+                "parse_errors": [],
+            },
+        )
     upload_path = _store_upload(
         settings,
         project_id=project_id,
@@ -293,8 +324,6 @@ async def execute_project_import_upload(
         if vex_bytes is not None
         else None
     )
-    run.status = AnalysisRunStatus.RUNNING
-    job_history = [*job_history, _job_status_entry("running")]
     upload_ref = _upload_storage_ref(
         project_id=project_id,
         run_id=run.id,
@@ -322,8 +351,9 @@ async def execute_project_import_upload(
         **run.summary_json,
         "import_job": _job_payload(
             job_id=job_id,
-            status="running",
+            status="pending",
             status_history=job_history,
+            execution_mode=execution_mode,
         ),
         "input_upload": {
             **run.summary_json["input_upload"],
@@ -337,6 +367,22 @@ async def execute_project_import_upload(
         "vex_upload": _upload_summary_with_path(
             run.summary_json.get("vex_upload"),
             path=vex_ref,
+        ),
+    }
+    if defer_execution:
+        session.commit()
+        session.refresh(run)
+        return run
+
+    run.status = AnalysisRunStatus.RUNNING
+    job_history = _append_job_status(job_history, "running")
+    run.summary_json = {
+        **run.summary_json,
+        "import_job": _job_payload(
+            job_id=job_id,
+            status="running",
+            status_history=job_history,
+            execution_mode=execution_mode,
         ),
     }
     session.flush()
@@ -366,6 +412,7 @@ async def execute_project_import_upload(
                     job_id=job_id,
                     status="failed",
                     status_history=failed_history,
+                    execution_mode=execution_mode,
                 ),
             },
             summary_json={
@@ -374,6 +421,7 @@ async def execute_project_import_upload(
                     job_id=job_id,
                     status="failed",
                     status_history=failed_history,
+                    execution_mode=execution_mode,
                 ),
                 "parse_errors": parse_errors,
                 "created_findings": 0,
@@ -430,6 +478,7 @@ async def execute_project_import_upload(
                         job_id=job_id,
                         status="failed",
                         status_history=failed_history,
+                        execution_mode=execution_mode,
                     ),
                 },
                 summary_json={
@@ -438,6 +487,7 @@ async def execute_project_import_upload(
                         job_id=job_id,
                         status="failed",
                         status_history=failed_history,
+                        execution_mode=execution_mode,
                     ),
                     "asset_context_error": asset_context_error,
                     "parse_errors": [],
@@ -494,6 +544,7 @@ async def execute_project_import_upload(
                         job_id=job_id,
                         status="failed",
                         status_history=failed_history,
+                        execution_mode=execution_mode,
                     ),
                 },
                 summary_json={
@@ -502,6 +553,7 @@ async def execute_project_import_upload(
                         job_id=job_id,
                         status="failed",
                         status_history=failed_history,
+                        execution_mode=execution_mode,
                     ),
                     "vex_error": vex_error,
                     "parse_errors": [],
@@ -553,6 +605,7 @@ async def execute_project_import_upload(
             ignored_lines=ignored_lines,
             input_type=normalized_input_type,
             exc=exc,
+            execution_mode=execution_mode,
         )
 
     persist_summary = _persist_workbench_occurrences(
@@ -572,6 +625,7 @@ async def execute_project_import_upload(
                 job_id=job_id,
                 status="succeeded",
                 status_history=[*job_history, _job_status_entry("succeeded")],
+                execution_mode=execution_mode,
             ),
             **analysis_result.summary_json,
             **persist_summary,

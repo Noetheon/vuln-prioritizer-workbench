@@ -1,35 +1,67 @@
 import type { ReportPublic } from "../api-client"
 
-export function reportDownloadPath(report: Pick<ReportPublic, "id">): string {
-  return `/api/v1/reports/${encodeURIComponent(report.id)}/download`
+export type ReportDownloadArtifact = {
+  blob: Blob
+  filename: string
 }
 
-export function reportDownloadUrl(
-  report: Pick<ReportPublic, "id">,
-  baseUrl = "",
-): string {
-  const path = reportDownloadPath(report)
-  const normalizedBaseUrl = baseUrl.trim().replace(/\/+$/, "")
-  return normalizedBaseUrl ? `${normalizedBaseUrl}${path}` : path
+type ReportDownloadResult = {
+  data: Blob | File
+  request: Request
+  response: Response
+}
+type DownloadReportClient = (
+  parameters: { report_id: string },
+  options: { parseAs: "blob"; responseStyle: "fields" },
+) => Promise<ReportDownloadResult>
+
+let reportDownloadClient: DownloadReportClient | null = null
+
+export function configureReportDownloadClient(
+  client: DownloadReportClient | null,
+): void {
+  reportDownloadClient = client
 }
 
-export function reportDownloadHeaders(token = ""): HeadersInit | undefined {
-  if (token) {
-    const headers = new Headers()
-    headers.set("Authorization", `Bearer ${token}`)
-    return headers
-  }
-  return undefined
-}
-
-export function reportDownloadRequest(
-  report: Pick<ReportPublic, "id">,
-  token = "",
-  baseUrl = "",
-) {
+export async function fetchReportDownload(
+  report: Pick<ReportPublic, "filename" | "id">,
+): Promise<ReportDownloadArtifact> {
+  const downloadReport = reportDownloadClient ?? generatedDownloadReport
+  const result = await downloadReport(
+    { report_id: report.id },
+    { parseAs: "blob", responseStyle: "fields" },
+  )
   return {
-    credentials: "include" as const,
-    headers: reportDownloadHeaders(token),
-    url: reportDownloadUrl(report, baseUrl),
+    blob: result.data as Blob,
+    filename:
+      filenameFromContentDisposition(
+        result.response.headers.get("content-disposition"),
+      ) || report.filename,
   }
+}
+
+async function generatedDownloadReport(
+  ...args: Parameters<DownloadReportClient>
+): Promise<ReportDownloadResult> {
+  const { ReportsService } = await import("../api-client")
+  return ReportsService.downloadReport(...args) as unknown as ReportDownloadResult
+}
+
+function filenameFromContentDisposition(header: string | null): string {
+  if (!header) {
+    return ""
+  }
+  const encoded = /filename\*=UTF-8''([^;]+)/i.exec(header)?.[1]
+  if (encoded) {
+    try {
+      return decodeURIComponent(encoded)
+    } catch {
+      return encoded
+    }
+  }
+  const quoted = /filename="([^"]+)"/i.exec(header)?.[1]
+  if (quoted) {
+    return quoted
+  }
+  return /filename=([^;]+)/i.exec(header)?.[1]?.trim() ?? ""
 }

@@ -287,7 +287,14 @@ def test_action_installs_backend_package_from_composite_checkout() -> None:
     install_step = action["runs"]["steps"][1]
 
     assert install_step["name"] == "Install vuln-prioritizer from action checkout"
-    assert 'python -m pip install "${{ github.action_path }}/backend"' in install_step["run"]
+    locked_requirement_install = (
+        'python -m pip install --require-hashes -r "${{ github.action_path }}'
+        '/backend/requirements.lock.txt"'
+    )
+    assert locked_requirement_install in install_step["run"]
+    assert (
+        'python -m pip install --no-deps "${{ github.action_path }}/backend"' in install_step["run"]
+    )
 
 
 def test_vpw082_workbench_report_example_generates_markdown_and_json_secretless() -> None:

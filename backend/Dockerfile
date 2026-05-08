@@ -12,7 +12,8 @@ COPY backend/app ./backend/app
 COPY backend/src ./backend/src
 
 RUN python -m pip install --upgrade pip \
-    && python -m pip install ./backend \
+    && python -m pip install --require-hashes -r backend/requirements.lock.txt \
+    && python -m pip install --no-deps ./backend \
     && adduser --disabled-password --gecos "" --uid 10001 workbench \
     && mkdir -p \
         /app/data \

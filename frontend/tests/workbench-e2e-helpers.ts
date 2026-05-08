@@ -61,31 +61,43 @@ export async function selectRadixOption(
   optionName: string | RegExp,
 ) {
   await expect(trigger).toBeVisible()
-  await trigger.click()
+  await expect(trigger).toBeEnabled()
   if (typeof optionName === "string") {
-    const option = page.getByRole("option", { exact: true, name: optionName })
-    await expect(option).toBeAttached()
-    await option.evaluate((element) => {
-      const target = element as HTMLElement
-      let parent = target.parentElement
-      while (parent) {
-        if (parent.scrollHeight > parent.clientHeight) {
-          parent.scrollTop = target.offsetTop - parent.clientHeight / 2
-          break
+    let lastError: unknown
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      await trigger.click()
+      const option = page.getByRole("option", { exact: true, name: optionName })
+      try {
+        await expect(option).toBeAttached()
+        await option.evaluate((element) => {
+          const target = element as HTMLElement
+          let parent = target.parentElement
+          while (parent) {
+            if (parent.scrollHeight > parent.clientHeight) {
+              parent.scrollTop = target.offsetTop - parent.clientHeight / 2
+              break
+            }
+            parent = parent.parentElement
+          }
+          target.scrollIntoView({ block: "nearest" })
+        })
+        try {
+          await option.click({ timeout: 3000 })
+        } catch {
+          await option.dispatchEvent("pointerdown")
+          await option.dispatchEvent("pointerup")
+          await option.dispatchEvent("click")
         }
-        parent = parent.parentElement
+        return
+      } catch (error) {
+        lastError = error
+        await page.keyboard.press("Escape")
+        await page.waitForTimeout(500)
       }
-      target.scrollIntoView({ block: "nearest" })
-    })
-    try {
-      await option.click({ timeout: 3000 })
-    } catch {
-      await option.dispatchEvent("pointerdown")
-      await option.dispatchEvent("pointerup")
-      await option.dispatchEvent("click")
     }
-    return
+    throw lastError
   }
+  await trigger.click()
   const option = page.getByRole("option", { name: optionName })
   try {
     await option.scrollIntoViewIfNeeded({ timeout: 1000 })

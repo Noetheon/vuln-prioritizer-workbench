@@ -140,6 +140,14 @@ jobs:
           grype vuln-prioritizer-workbench-backend:local --only-fixed --fail-on critical
           grype vuln-prioritizer-workbench-frontend:local --only-fixed --fail-on critical
 
+      - name: Upload container SBOM artifacts
+        if: needs.changes.outputs.run-docker == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: docker-image-sboms
+          retention-days: 14
+          path: build/docker-sbom/*.spdx.json
+
       - name: Show compose status and logs on failure
         if: failure() && needs.changes.outputs.run-docker == 'true'
         run: |

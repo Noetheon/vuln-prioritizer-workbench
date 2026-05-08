@@ -105,6 +105,17 @@ def test_template_alembic_head_matches_model_metadata(tmp_path: Path) -> None:
         (
             {"api_token", "github_issue_export", "auth_session", "audit_event"},
             {"project_id", "expires_at"},
+            "20260508_0012",
+        ),
+        (
+            {
+                "api_token",
+                "github_issue_export",
+                "auth_session",
+                "audit_event",
+                "rate_limit_bucket",
+            },
+            {"project_id", "expires_at"},
             ALEMBIC_HEAD,
         ),
         ({"api_token", "github_issue_export"}, {"project_id"}, "20260505_0010"),

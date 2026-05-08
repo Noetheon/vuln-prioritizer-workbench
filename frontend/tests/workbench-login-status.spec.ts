@@ -27,7 +27,7 @@ test("workbench frontend covers core Workbench E2E smoke", async ({ page }) => {
   await expect(page.getByText("Workbench", { exact: true })).toBeVisible()
 
   const accessToken = await login(page)
-  await expect(page).toHaveURL(/\/$/)
+  await expect(page).toHaveURL(/\/(?:\?.*)?$/)
   await expect(
     page.getByRole("heading", { exact: true, name: "Risk Operations" }),
   ).toBeVisible()
@@ -128,7 +128,7 @@ test("workbench frontend covers core Workbench E2E smoke", async ({ page }) => {
   )
 
   await navigation.getByRole("link", { name: "Providers" }).click()
-  await expect(page).toHaveURL(/\/providers$/)
+  await expect(page).toHaveURL(/\/providers(?:\?.*)?$/)
   await expect(
     page.getByRole("heading", { level: 1, name: "Providers" }),
   ).toBeVisible()
@@ -163,7 +163,7 @@ test("workbench frontend covers core Workbench E2E smoke", async ({ page }) => {
   })
 
   await navigation.getByRole("link", { name: "Reports" }).click()
-  await expect(page).toHaveURL(/\/reports$/)
+  await expect(page).toHaveURL(/\/reports(?:\?.*)?$/)
   await expect(
     page.getByRole("heading", { level: 1, name: "Evidence Center" }),
   ).toBeVisible()
@@ -231,7 +231,7 @@ test("workbench frontend covers core Workbench E2E smoke", async ({ page }) => {
   })
 
   await navigation.getByRole("link", { name: "Projects" }).click()
-  await expect(page).toHaveURL(/\/projects$/)
+  await expect(page).toHaveURL(/\/projects(?:\?.*)?$/)
   await expect(
     page.getByRole("heading", { level: 1, name: "Projects" }),
   ).toBeVisible()
@@ -270,9 +270,9 @@ test("workbench frontend covers core Workbench E2E smoke", async ({ page }) => {
   await expect(projectsTable.getByText(editedUiProjectName)).toHaveCount(0)
 
   await navigation.getByRole("link", { name: "Imports" }).click()
-  await expect(page).toHaveURL(/\/imports$/)
+  await expect(page).toHaveURL(/\/imports(?:\?.*)?$/)
   await page.reload()
-  await expect(page).toHaveURL(/\/imports$/)
+  await expect(page).toHaveURL(/\/imports(?:\?.*)?$/)
   await expect(
     page.getByRole("heading", { name: "Import Wizard" }),
   ).toBeVisible()
@@ -365,7 +365,7 @@ test("workbench frontend covers core Workbench E2E smoke", async ({ page }) => {
   expect(occurrenceImport.ok()).toBeTruthy()
 
   await navigation.getByRole("link", { name: "Assets" }).click()
-  await expect(page).toHaveURL(/\/assets$/)
+  await expect(page).toHaveURL(/\/assets(?:\?.*)?$/)
   await expect(
     page.getByRole("heading", { level: 1, name: "Assets" }),
   ).toBeVisible()
@@ -483,7 +483,7 @@ test("workbench frontend covers core Workbench E2E smoke", async ({ page }) => {
   await expect(assetFindings).toContainText("CVE-2024-3094")
   await expect(assetFindings).not.toContainText("CVE-2024-4577")
   await page.getByRole("link", { name: "View findings" }).nth(1).click()
-  await expect(page).toHaveURL(/\/findings\?assetId=/)
+  await expect(page).toHaveURL(/\/findings\?.*assetId=/)
   await expect(
     page.getByRole("button", { name: "Clear asset filter" }),
   ).toBeVisible()
@@ -529,7 +529,7 @@ test("workbench frontend covers core Workbench E2E smoke", async ({ page }) => {
   })
 
   await navigation.getByRole("link", { name: "Imports" }).click()
-  await expect(page).toHaveURL(/\/imports$/)
+  await expect(page).toHaveURL(/\/imports(?:\?.*)?$/)
   await selectRadixOptionByLabel(page, page, "Import project", project.name)
   await selectRadixOptionByLabel(
     page,
@@ -557,7 +557,7 @@ test("workbench frontend covers core Workbench E2E smoke", async ({ page }) => {
   await expect(page.getByText("Failure Cause").first()).toBeVisible()
   await expect(page.getByText("not-a-cve").first()).toBeVisible()
   await navigation.getByRole("link", { name: "Findings" }).click()
-  await expect(page).toHaveURL(/\/findings$/)
+  await expect(page).toHaveURL(/\/findings(?:\?.*)?$/)
   await expect(
     page.getByRole("region", { name: "Findings filters" }),
   ).toBeVisible()
@@ -632,7 +632,7 @@ test("workbench frontend covers core Workbench E2E smoke", async ({ page }) => {
     path: evidenceScreenshotPath("vpw-043-finding-detail.png"),
   })
   await page.getByRole("link", { name: "Back to Findings" }).click()
-  await expect(page).toHaveURL(/\/findings$/)
+  await expect(page).toHaveURL(/\/findings(?:\?.*)?$/)
   await expect(findingsTable).toBeVisible()
   const findingsFilters = page.getByRole("region", { name: "Findings filters" })
 
@@ -640,9 +640,15 @@ test("workbench frontend covers core Workbench E2E smoke", async ({ page }) => {
   await expect(findingsTable).toContainText("Critical")
   await expect(findingsTable).not.toContainText("Medium")
   await page.getByRole("button", { name: "Reset" }).click()
+  await expect(page).not.toHaveURL(/priority=critical/)
+  await expect(page).toHaveURL(/projectId=/)
+  await expect(page.getByRole("button", { name: "Reset" })).toBeDisabled()
   await expect(findingsTable).toContainText("CVE-2024-3094")
 
-  await page.getByLabel("Owner / Service").fill("payments")
+  const ownerServiceInput = page.getByLabel("Owner / Service")
+  await ownerServiceInput.fill("payments")
+  await expect(ownerServiceInput).toHaveValue("payments")
+  await expect(page).toHaveURL(/ownerService=payments/)
   await expect(findingsTable).toContainText("team-platform")
   await expect(findingsTable).toContainText("payments")
   await expect(findingsTable).not.toContainText("team-web")
@@ -672,8 +678,8 @@ test("workbench frontend covers core Workbench E2E smoke", async ({ page }) => {
   await page.goto(`${scoreUrl.pathname}${scoreUrl.search}`)
   await expect(page).toHaveURL(/epssMin=0\.90/)
   await expect(page).toHaveURL(/cvssMin=9\.0/)
-  await expect(epssMinInput).toHaveValue("0.9")
-  await expect(page.getByLabel("CVSS min")).toHaveValue("9")
+  await expect(epssMinInput).toHaveValue("0.90")
+  await expect(page.getByLabel("CVSS min")).toHaveValue("9.0")
   await expect(findingsTable).toContainText(/CVE-2021-44228|CVE-2024-4577/)
   await expect(page.getByRole("button", { name: "Reset" })).toBeEnabled()
   await page.getByRole("button", { name: "Reset" }).click()
@@ -692,7 +698,7 @@ test("workbench frontend covers core Workbench E2E smoke", async ({ page }) => {
     .click()
 
   await navigation.getByRole("link", { name: "Settings" }).click()
-  await expect(page).toHaveURL(/\/settings$/)
+  await expect(page).toHaveURL(/\/settings(?:\?.*)?$/)
   await expect(
     page.getByRole("heading", { level: 1, name: "Settings" }),
   ).toBeVisible()

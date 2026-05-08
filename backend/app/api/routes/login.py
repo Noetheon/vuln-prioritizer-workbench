@@ -14,12 +14,13 @@ from app.core import security
 from app.core.app_state import workbench_settings
 from app.core.config import Settings
 from app.core.db import ensure_configured_superuser
-from app.core.rate_limit import InMemoryRateLimiter, rate_limit_client_host
+from app.core.rate_limit import RateLimiter, rate_limit_client_host
 from app.models import Token, User, UserPublic
 from app.repositories import AuthSessionRepository
 from app.services.audit import record_audit_event
 
 router = APIRouter(tags=["login"])
+DUMMY_PASSWORD_HASH = security.get_password_hash("vpw timing normalization password")
 
 
 @router.post("/login/access-token")
@@ -102,7 +103,7 @@ def _enforce_login_rate_limit(request: Request, username: str) -> None:
     limiter = getattr(request.app.state, "rate_limiter", None)
     if not active_settings.RATE_LIMIT_ENABLED:
         return
-    if not isinstance(limiter, InMemoryRateLimiter):
+    if not isinstance(limiter, RateLimiter):
         return
     client_host = rate_limit_client_host(request, active_settings)
     normalized_username = username.strip().lower() or "unknown"
@@ -148,10 +149,13 @@ def logout_current_token(
 def _credentials_are_valid(user: User, username: str, password: str) -> bool:
     normalized_username = username.strip().lower()
     normalized_email = user.email.strip().lower()
-    return secrets.compare_digest(
+    username_matches = secrets.compare_digest(
         normalized_username.encode(),
         normalized_email.encode(),
-    ) and security.verify_password(password, user.hashed_password)
+    )
+    hash_to_verify = user.hashed_password if username_matches else DUMMY_PASSWORD_HASH
+    password_matches = security.verify_password(password, hash_to_verify)
+    return username_matches and password_matches
 
 
 def _set_session_cookies(

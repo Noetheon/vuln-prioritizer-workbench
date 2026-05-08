@@ -568,6 +568,7 @@ def test_template_backend_hides_docs_and_openapi_outside_local_by_default() -> N
             FIRST_SUPERUSER_PASSWORD="template-shell-password-0123456789",
             FRONTEND_HOST="https://workbench.example.com",
             ALLOWED_HOSTS=("workbench.example.com",),
+            RATE_LIMIT_ENABLED=False,
         )
     )
     client = TestClient(selected_app)
@@ -596,6 +597,23 @@ def test_template_backend_hides_docs_and_openapi_outside_local_by_default() -> N
     )
 
 
+def test_template_backend_non_local_startup_rejects_stale_schema(tmp_path) -> None:
+    selected_app = create_app(
+        Settings(
+            ENVIRONMENT="production",
+            SECRET_KEY="template-shell-secret-0123456789abcdef",
+            FIRST_SUPERUSER_PASSWORD="template-shell-password-0123456789",
+            FRONTEND_HOST="https://workbench.example.com",
+            ALLOWED_HOSTS=("workbench.example.com",),
+            SQLALCHEMY_DATABASE_URI=f"sqlite:///{tmp_path / 'stale.db'}",
+        )
+    )
+
+    with pytest.raises(RuntimeError, match="missing alembic_version|missing model tables"):
+        with TestClient(selected_app):
+            pass
+
+
 def test_template_backend_can_explicitly_expose_openapi_for_client_generation() -> None:
     selected_app = create_app(
         Settings(
@@ -605,6 +623,7 @@ def test_template_backend_can_explicitly_expose_openapi_for_client_generation() 
             FRONTEND_HOST="https://workbench.example.com",
             ALLOWED_HOSTS=("workbench.example.com",),
             API_DOCS_ENABLED=True,
+            RATE_LIMIT_ENABLED=False,
         )
     )
     client = TestClient(selected_app)

@@ -144,6 +144,7 @@ from app.models.runs import (
     ProviderSnapshot,
     ProviderSnapshotBase,
 )
+from app.models.runtime import RateLimitBucket
 from app.models.sessions import (
     AuthSession,
     AuthSessionBase,
@@ -279,6 +280,7 @@ __all__ = [
     "ReportPublic",
     "ReportVerificationPublic",
     "ReportsPublic",
+    "RateLimitBucket",
     "AuthSession",
     "AuthSessionBase",
     "AuthSessionPublic",

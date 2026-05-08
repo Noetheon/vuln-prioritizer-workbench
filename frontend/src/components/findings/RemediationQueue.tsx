@@ -11,7 +11,7 @@ import {
   Upload,
   X,
 } from "lucide-react"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import type {
   AssetExposure,
   FindingPriority,
@@ -359,6 +359,9 @@ export function RemediationQueue({
   onPageSizeChange,
   onProjectChange,
 }: RemediationQueueProps) {
+  const ownerServiceFilter = findingFilters.ownerService
+  const [ownerServiceDraft, setOwnerServiceDraft] =
+    useState(ownerServiceFilter)
   const [whyFinding, setWhyFinding] = useState<FindingPublic | null>(null)
   const [sheetFinding, setSheetFinding] = useState<FindingPublic | null>(null)
   const [whyOpen, setWhyOpen] = useState(false)
@@ -401,6 +404,21 @@ export function RemediationQueue({
   const filterCount = activeFilterCount(findingFilters, Boolean(findingAssetId))
   const signalFilterCount = advancedFilterCount(findingFilters)
   const showAdvancedFilters = advancedFiltersOpen || signalFilterCount > 0
+
+  useEffect(() => {
+    setOwnerServiceDraft(ownerServiceFilter)
+  }, [ownerServiceFilter])
+
+  useEffect(() => {
+    if (ownerServiceDraft === ownerServiceFilter) {
+      return
+    }
+
+    const timeout = window.setTimeout(() => {
+      onFilterChange("ownerService", ownerServiceDraft)
+    }, 150)
+    return () => window.clearTimeout(timeout)
+  }, [onFilterChange, ownerServiceDraft, ownerServiceFilter])
 
   function openWhy(finding: FindingPublic) {
     setWhyFinding(finding)
@@ -574,11 +592,9 @@ export function RemediationQueue({
                 <Input
                   className="h-9 text-sm"
                   id="queue-search"
-                  onChange={(e) =>
-                    onFilterChange("ownerService", e.target.value)
-                  }
+                  onChange={(e) => setOwnerServiceDraft(e.target.value)}
                   placeholder="payments, infra-team"
-                  value={findingFilters.ownerService}
+                  value={ownerServiceDraft}
                 />
               </label>
 
