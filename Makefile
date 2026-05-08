@@ -161,6 +161,7 @@ docker-demo-smoke:
 		echo "Workbench utility health check failed." >&2; \
 		exit 1; \
 	fi; \
+	$(COMPOSE) exec -T backend python -m app.core.schema_smoke; \
 	frontend_ready=0; \
 	for attempt in $$(seq 1 30); do \
 		if $(PYTHON) -c "import urllib.request; print(urllib.request.urlopen('http://127.0.0.1:5173/', timeout=2).status)" 2>/dev/null; then \
@@ -201,6 +202,7 @@ docker-production-smoke:
 		echo "Production-like Workbench frontend did not become ready." >&2; \
 		exit 1; \
 	fi; \
+	$(PRODUCTION_SMOKE_COMPOSE) exec -T backend python -m app.core.schema_smoke; \
 	$(PYTHON) scripts/production_readiness_smoke.py; \
 	echo "Workbench production-like Docker smoke passed."
 
