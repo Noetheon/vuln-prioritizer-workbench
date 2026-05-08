@@ -851,7 +851,7 @@ def test_release_check_keeps_demo_sync_manual_and_deterministic() -> None:
     assert "frontend-test-unit:" in makefile
     assert (
         "frontend-check: frontend-install frontend-lint frontend-build "
-        "frontend-test-unit frontend-generate-client" in makefile
+        "frontend-test-unit api-client-drift-check" in makefile
     )
     assert "$(MAKE) dependency-audit" in release_block
     assert "$(MAKE) docker-demo-smoke" in release_block

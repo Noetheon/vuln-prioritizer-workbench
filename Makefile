@@ -82,7 +82,7 @@ api-client-drift-check: frontend-generate-client
 frontend-audit:
 	cd frontend && npm --workspaces=false audit --omit=dev
 
-frontend-check: frontend-install frontend-lint frontend-build frontend-test-unit frontend-generate-client
+frontend-check: frontend-install frontend-lint frontend-build frontend-test-unit api-client-drift-check
 
 release-evidence-hygiene-check:
 	$(PYTHON) scripts/check_release_evidence_hygiene.py
