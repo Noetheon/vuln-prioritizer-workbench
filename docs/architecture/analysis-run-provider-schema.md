@@ -158,7 +158,7 @@ auditable traceability.
 
 ## Import Deduplication
 
-Template import persistence uses a stable finding dedup key before each
+Workbench import persistence uses a stable finding dedup key before each
 occurrence is attached to a run. The key material is:
 
 - `project_id`

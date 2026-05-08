@@ -15,7 +15,9 @@ Start with the repo docs first:
 
 - [README.md](README.md)
 - [docs/index.md](docs/index.md)
+- [docs/user_documentation.md](docs/user_documentation.md)
 - [docs/playbooks.md](docs/playbooks.md)
+- [docs/github-open-source-readiness.md](docs/github-open-source-readiness.md)
 
 ## Bugs And Feature Requests
 
@@ -36,4 +38,6 @@ Use GitHub private vulnerability reporting for this public repository. If that f
 
 ## Scope Reminder
 
-`vuln-prioritizer` is a local-first CLI for prioritizing known CVEs and existing findings. It is not a scanner, SaaS platform, or heuristic CVE-to-ATT&CK mapper.
+`vuln-prioritizer` is a local-first CLI and self-hosted Workbench for
+prioritizing known CVEs and existing findings. It is not a scanner, SaaS
+platform, exploit framework, autopatcher, or heuristic CVE-to-ATT&CK mapper.
