@@ -50,7 +50,8 @@ make release-readiness-check
 
 This adds generated-client drift, demo evidence-bundle verification, and
 Playwright smoke evidence to the normal release gate. It also runs the
-production-like Docker smoke. It does not by itself close the PP5 scorecard.
+production-like Docker smoke. It does not by itself close the VPW-AUD-999 final
+scorecard.
 For tagged releases, `.github/workflows/release.yml` runs this gate before any
 GitHub Release or PyPI publish job can proceed.
 
@@ -99,13 +100,19 @@ git push origin vX.Y.Z
 If a tag exists but the GitHub Release object is missing, recreate it from the current tag:
 
 ```bash
-python3 -m build
+make package
 gh release create vX.Y.Z dist/* \
   --title vX.Y.Z \
   --notes-file docs/releases/vX.Y.Z.md
 ```
 
-This is the correct recovery path after accidental GitHub-side deletion or repository history cleanup, as long as the release tag still points to the intended tree.
+`make package` removes stale `dist/` artifacts and runs
+`python3 -m build backend --outdir dist`, matching the GitHub release and
+TestPyPI workflows. Run `make package-check` first when the recovery needs a
+fresh local packaging validation before recreating the GitHub Release object.
+This is the correct recovery path after accidental GitHub-side deletion or
+repository history cleanup, as long as the release tag still points to the
+intended tree.
 
 ## TestPyPI Validation Path
 
