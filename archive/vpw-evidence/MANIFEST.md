@@ -14,6 +14,20 @@ repo hygiene cleanup.
 - Root-level `vpw-*.json`, `vpw-*.csv`, and `vpw-*.zip`: machine-readable
   validation and bundle artifacts.
 
+## Ownership Rules
+
+- Keep long-lived public-safe VPW-AUD scorecards, closeout summaries, and
+  historical screenshots in this archive instead of `docs/evidence/`.
+- Keep `docs/evidence/` limited to contract fixtures that are referenced by
+  schemas or regression tests.
+- Keep raw CI logs, package files, Docker logs, and Playwright reports as CI
+  artifacts for the exact run unless a redacted Markdown summary is needed in
+  the repository.
+- Update this manifest when adding a new evidence subdirectory or a new class of
+  root-level artifact.
+- Do not archive secrets, tokens, cookies, customer data, private absolute
+  paths, or raw local ignored-artifact inventories.
+
 ## Removed During Cleanup
 
 - `vpw-011-openapi-docs.png` was deleted because it had no text references and
