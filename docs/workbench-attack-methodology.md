@@ -105,7 +105,7 @@ Evidence artifacts make ATT&CK provenance auditable.
 - Generated Markdown/HTML/JSON/CSV/SARIF reports: ATT&CK context remains separate from base priority and uses defensive wording.
 - `attack-navigator-layer.json`: optional Navigator layer containing CTID-backed mapped techniques for the run.
 - `governance/detection-coverage.json`: optional evidence-bundle export of operator-supplied detection controls, coverage-gap rollups, and review limitations.
-- Template evidence bundles include `attack-navigator-layer.json` when the run
+- Workbench evidence bundles include `attack-navigator-layer.json` when the run
   has persisted mapped ATT&CK context. The layer comments findings, KEV status,
   confidence, review status, source, and the current `not assessed` coverage
   placeholder.

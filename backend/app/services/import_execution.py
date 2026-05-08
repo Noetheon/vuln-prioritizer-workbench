@@ -20,7 +20,7 @@ from app.models import (
     User,
 )
 from app.repositories import RunRepository
-from app.services import AnalysisService, TemplateAnalysisError
+from app.services import AnalysisService, WorkbenchAnalysisError
 from app.services.import_artifacts import (
     resolve_workbench_attack_artifact_path as _resolve_workbench_attack_artifact_path,
 )
@@ -541,7 +541,7 @@ async def execute_project_import_upload(
             attack_technique_metadata_file=attack_metadata_path,
             vex_files=[vex_path] if vex_path is not None else [],
         )
-    except TemplateAnalysisError as exc:
+    except WorkbenchAnalysisError as exc:
         _raise_analysis_failure(
             session=session,
             run_repo=run_repo,

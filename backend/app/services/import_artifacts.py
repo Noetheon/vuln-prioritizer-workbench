@@ -95,5 +95,6 @@ def validate_attack_import_options(
     return normalized_source
 
 
+# Compatibility aliases for template-era local integrations.
 resolve_template_provider_snapshot_path = resolve_workbench_provider_snapshot_path
 resolve_template_attack_artifact_path = resolve_workbench_attack_artifact_path

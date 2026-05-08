@@ -1,4 +1,4 @@
-"""Template Workbench analysis orchestration backed by the core engine."""
+"""Workbench analysis orchestration backed by the core engine."""
 
 from __future__ import annotations
 
@@ -26,17 +26,17 @@ from vuln_prioritizer.services.analysis import (
     prepare_analysis,
 )
 
-DEFAULT_TEMPLATE_PROVIDER_SNAPSHOT = "demo_provider_snapshot.json"
+DEFAULT_WORKBENCH_PROVIDER_SNAPSHOT = "demo_provider_snapshot.json"
 PRIORITY_LABELS = ("Critical", "High", "Medium", "Low")
 REPO_ROOT = Path(__file__).resolve().parents[3]
 
 
-class TemplateAnalysisError(RuntimeError):
+class WorkbenchAnalysisError(RuntimeError):
     """Raised when a Workbench import cannot complete decision analysis."""
 
 
 @dataclass(frozen=True, slots=True)
-class TemplateAnalysisResult:
+class WorkbenchAnalysisResult:
     """Decision state produced for a Workbench import before persistence."""
 
     findings_by_cve: dict[str, PrioritizedFinding]
@@ -108,7 +108,7 @@ class AnalysisService:
         attack_mapping_file: Path | None = None,
         attack_technique_metadata_file: Path | None = None,
         vex_files: list[Path] | None = None,
-    ) -> TemplateAnalysisResult:
+    ) -> WorkbenchAnalysisResult:
         """Run parse/enrich/score/explain for one uploaded Workbench import."""
         snapshot_path = provider_snapshot_file or self.default_provider_snapshot_file()
         use_locked_snapshot = locked_provider_data or snapshot_path is not None
@@ -157,16 +157,16 @@ class AnalysisService:
             AnalysisInputError,
             AnalysisNoFindingsError,
         ) as exc:
-            raise TemplateAnalysisError(str(exc)) from exc
+            raise WorkbenchAnalysisError(str(exc)) from exc
 
         findings_by_cve = {finding.cve_id: finding for finding in findings}
         if len(findings_by_cve) != len(findings):
-            raise TemplateAnalysisError("Decision analysis produced duplicate CVE keys.")
+            raise WorkbenchAnalysisError("Decision analysis produced duplicate CVE keys.")
         snapshot_id = self.persist_provider_snapshot(
             snapshot_path,
             locked_provider_data=use_locked_snapshot,
         )
-        return TemplateAnalysisResult(
+        return WorkbenchAnalysisResult(
             findings_by_cve=findings_by_cve,
             context=context,
             provider_snapshot_id=snapshot_id,
@@ -179,14 +179,14 @@ class AnalysisService:
         """Return the local demo snapshot only when demo replay is explicitly enabled."""
         if not self.settings.DEMO_PROVIDER_SNAPSHOT_ENABLED:
             return None
-        candidate = self.settings.provider_snapshot_dir_path / DEFAULT_TEMPLATE_PROVIDER_SNAPSHOT
+        candidate = self.settings.provider_snapshot_dir_path / DEFAULT_WORKBENCH_PROVIDER_SNAPSHOT
         if candidate.exists():
             return candidate
         if not self.settings.provider_snapshot_dir_path.is_absolute():
             repo_candidate = (
                 REPO_ROOT
                 / self.settings.provider_snapshot_dir_path
-                / DEFAULT_TEMPLATE_PROVIDER_SNAPSHOT
+                / DEFAULT_WORKBENCH_PROVIDER_SNAPSHOT
             )
             return repo_candidate if repo_candidate.exists() else None
         return None
@@ -205,7 +205,7 @@ class AnalysisService:
             report = load_provider_snapshot(snapshot_path)
         except ValueError as exc:
             if locked_provider_data:
-                raise TemplateAnalysisError(str(exc)) from exc
+                raise WorkbenchAnalysisError(str(exc)) from exc
             snapshot = RunRepository(self.session).get_or_create_provider_snapshot(
                 content_hash=content_hash,
                 source_hashes_json={"provider_snapshot": content_hash},
@@ -287,3 +287,10 @@ def _provider_quality_flags(raw_flags: dict[str, list[Any]]) -> dict[str, list[d
     return {
         source: [_serialize_flag(item) for item in flags] for source, flags in raw_flags.items()
     }
+
+
+# Compatibility aliases retained for older local tests or scripts that imported
+# template-era names before the runtime was fully Workbench-branded.
+DEFAULT_TEMPLATE_PROVIDER_SNAPSHOT = DEFAULT_WORKBENCH_PROVIDER_SNAPSHOT
+TemplateAnalysisError = WorkbenchAnalysisError
+TemplateAnalysisResult = WorkbenchAnalysisResult

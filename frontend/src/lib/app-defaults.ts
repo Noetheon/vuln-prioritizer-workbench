@@ -71,7 +71,7 @@ export const mvpImportFormats = [
 
 export type ImportFormat = (typeof mvpImportFormats)[number]["value"]
 
-export type TemplateReportFormat =
+export type WorkbenchReportFormat =
   | "markdown"
   | "html"
   | "json"
@@ -85,7 +85,7 @@ export const reportActionCards: Array<{
   detail: string
   format: string
   icon: LucideIcon
-  reportFormat: TemplateReportFormat
+  reportFormat: WorkbenchReportFormat
   title: string
 }> = [
   {

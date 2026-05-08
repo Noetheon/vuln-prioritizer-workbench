@@ -33,7 +33,7 @@ from app.models import (
 )
 from app.models.base import get_datetime_utc
 from app.repositories import AssetRepository, FindingRepository, RunRepository
-from app.services import TemplateAnalysisError, TemplateAnalysisResult
+from app.services import WorkbenchAnalysisError, WorkbenchAnalysisResult
 from vuln_prioritizer.models import PrioritizedFinding
 
 DEDUP_DECISION_SAMPLE_LIMIT = 500
@@ -45,7 +45,7 @@ def _persist_workbench_occurrences(
     project_id: uuid.UUID,
     run_id: uuid.UUID,
     occurrences: list[NormalizedOccurrence],
-    analysis_result: TemplateAnalysisResult,
+    analysis_result: WorkbenchAnalysisResult,
 ) -> dict[str, Any]:
     bulk_summary = _persist_workbench_occurrences_bulk_insert(
         session=session,
@@ -268,7 +268,7 @@ def _persist_workbench_occurrences_bulk_insert(
     project_id: uuid.UUID,
     run_id: uuid.UUID,
     occurrences: list[NormalizedOccurrence],
-    analysis_result: TemplateAnalysisResult,
+    analysis_result: WorkbenchAnalysisResult,
 ) -> dict[str, Any] | None:
     """Fast path for large all-new occurrence imports with no component rows."""
     if len(occurrences) < 1000:
@@ -524,7 +524,7 @@ def _persist_workbench_occurrences_bulk_insert(
 
 
 def _attack_context_enabled(
-    analysis_result: TemplateAnalysisResult,
+    analysis_result: WorkbenchAnalysisResult,
     decision: PrioritizedFinding,
 ) -> bool:
     return analysis_result.context.attack_source != "none" or decision.attack_context.mapped
@@ -581,7 +581,7 @@ def _decision_payload_for_occurrence(
 
 
 def _analysis_evidence_for_occurrence(
-    analysis_result: TemplateAnalysisResult,
+    analysis_result: WorkbenchAnalysisResult,
     decision: PrioritizedFinding,
     occurrence: NormalizedOccurrence,
     *,
@@ -906,12 +906,12 @@ def _normalized_identity_value(value: str | None) -> str:
 
 
 def _decision_for_occurrence(
-    analysis_result: TemplateAnalysisResult,
+    analysis_result: WorkbenchAnalysisResult,
     occurrence: NormalizedOccurrence,
 ) -> PrioritizedFinding:
     decision = analysis_result.findings_by_cve.get(occurrence.cve)
     if decision is None:
-        raise TemplateAnalysisError(f"Decision analysis did not produce {occurrence.cve}.")
+        raise WorkbenchAnalysisError(f"Decision analysis did not produce {occurrence.cve}.")
     return decision
 
 

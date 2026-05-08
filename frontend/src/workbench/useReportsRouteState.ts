@@ -11,7 +11,7 @@ import {
 } from "../api-client"
 import { getAccessToken } from "../auth"
 import type { WorkbenchPath } from "../components/app/AppShell"
-import type { TemplateReportFormat } from "../lib/app-defaults"
+import type { WorkbenchReportFormat } from "../lib/app-defaults"
 import {
   apiErrorDetail,
   apiErrorMessage,
@@ -69,7 +69,7 @@ export function useReportsRouteState({
   const [reportActionMessage, setReportActionMessage] = useState("")
   const [reportActionError, setReportActionError] = useState("")
   const [activeReportFormat, setActiveReportFormat] = useState<
-    TemplateReportFormat | ""
+    WorkbenchReportFormat | ""
   >("")
   const reportsQuery = useQuery({
     enabled: currentPath === "/reports" && Boolean(selectedRunId),
@@ -79,7 +79,7 @@ export function useReportsRouteState({
     staleTime: 15_000,
   })
   const createReportMutation = useMutation({
-    mutationFn: (format: TemplateReportFormat) =>
+    mutationFn: (format: WorkbenchReportFormat) =>
       ReportsService.createRunReport({
         run_id: selectedRunId,
         reportCreate: { format },
@@ -132,7 +132,7 @@ export function useReportsRouteState({
     })
   }
 
-  async function createReport(format: TemplateReportFormat) {
+  async function createReport(format: WorkbenchReportFormat) {
     if (!selectedRunId) {
       setReportActionError(
         "Select a completed analysis run before generating reports.",

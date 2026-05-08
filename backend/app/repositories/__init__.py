@@ -1,4 +1,4 @@
-"""Template Workbench repository exports."""
+"""Workbench repository exports."""
 
 from app.repositories.api_tokens import ApiTokenRepository
 from app.repositories.assets import AssetRepository

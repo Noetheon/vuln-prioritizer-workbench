@@ -1,4 +1,4 @@
-"""Template-stack report generation services."""
+"""Workbench report generation services."""
 
 from __future__ import annotations
 
