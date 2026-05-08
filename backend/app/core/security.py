@@ -1,4 +1,4 @@
-"""Template-style JWT helpers for the active backend runtime."""
+"""Workbench JWT helpers for the active backend runtime."""
 
 from __future__ import annotations
 
