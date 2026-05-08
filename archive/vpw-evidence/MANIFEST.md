@@ -16,8 +16,10 @@ repo hygiene cleanup.
 
 ## Ownership Rules
 
-- Keep long-lived public-safe VPW-AUD scorecards, closeout summaries, and
-  historical screenshots in this archive instead of `docs/evidence/`.
+- Keep durable historical screenshots and product evidence in this archive
+  instead of `docs/evidence/`.
+- Keep VPW-AUD scorecards and other audit-remediation Markdown out of the
+  repository unless a maintainer explicitly asks for a durable artifact.
 - Keep `docs/evidence/` limited to contract fixtures that are referenced by
   schemas or regression tests.
 - Keep raw CI logs, package files, Docker logs, and Playwright reports as CI
