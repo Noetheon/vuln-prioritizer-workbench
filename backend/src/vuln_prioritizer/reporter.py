@@ -7,7 +7,11 @@ from __future__ import annotations
 
 from vuln_prioritizer.reporting_html import generate_html_report
 from vuln_prioritizer.reporting_io import write_output
-from vuln_prioritizer.reporting_markdown import *
+from vuln_prioritizer.reporting_markdown import (
+    generate_compare_markdown,
+    generate_explain_markdown,
+    generate_markdown_report,
+)
 from vuln_prioritizer.reporting_payloads import (
     build_analysis_report_payload,
     build_snapshot_report_payload,
@@ -44,7 +48,13 @@ from vuln_prioritizer.reporting_state import (
     render_state_trends_table,
     render_state_waivers_table,
 )
-from vuln_prioritizer.reporting_terminal import *
+from vuln_prioritizer.reporting_terminal import (
+    render_compare_table,
+    render_evidence_bundle_verification_table,
+    render_explain_view,
+    render_findings_table,
+    render_summary_panel,
+)
 
 __all__ = [
     "build_analysis_report_payload",
