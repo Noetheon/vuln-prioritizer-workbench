@@ -261,7 +261,10 @@ test("workbench frontend covers core Workbench E2E smoke", async ({ page }) => {
   await expect(
     page.getByText(`Project ${editedUiProjectName} updated.`),
   ).toBeVisible()
-  await expect(page.getByText(editedUiProjectName).first()).toBeVisible()
+  await expect(projectsTable).toContainText(editedUiProjectName)
+  await expect(
+    page.getByRole("heading", { name: editedUiProjectName }),
+  ).toBeVisible()
   await page.getByLabel(/Confirm deletion for this project/).check()
   await page.getByRole("button", { name: "Delete project" }).click()
   await expect(
