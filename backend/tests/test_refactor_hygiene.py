@@ -173,30 +173,141 @@ def test_legacy_workbench_runtime_modules_are_removed() -> None:
 def test_template_report_contracts_are_split_from_renderer_facade() -> None:
     imports = _imported_modules("app/services/reports.py")
     source = (ROOT / "app/services/reports.py").read_text(encoding="utf-8")
+    service_payload_source = (ROOT / "app/services/report_service_payload.py").read_text(
+        encoding="utf-8"
+    )
+    service_attack_source = (ROOT / "app/services/report_service_attack.py").read_text(
+        encoding="utf-8"
+    )
+    service_persistence_source = (ROOT / "app/services/report_service_persistence.py").read_text(
+        encoding="utf-8"
+    )
     contracts_source = (ROOT / "app/services/report_contracts.py").read_text(encoding="utf-8")
     models_source = (ROOT / "app/services/report_models.py").read_text(encoding="utf-8")
     formatting_source = (ROOT / "app/services/report_formatting.py").read_text(encoding="utf-8")
     renderers_source = (ROOT / "app/services/report_renderers.py").read_text(encoding="utf-8")
     renderers_imports = _imported_modules("app/services/report_renderers.py")
+    markdown_source = (ROOT / "app/services/report_markdown.py").read_text(encoding="utf-8")
+    markdown_imports = _imported_modules("app/services/report_markdown.py")
+    markdown_sections_source = (ROOT / "app/services/report_markdown_sections.py").read_text(
+        encoding="utf-8"
+    )
+    bundle_source = (ROOT / "app/services/report_bundle.py").read_text(encoding="utf-8")
+    bundle_imports = _imported_modules("app/services/report_bundle.py")
+    bundle_archive_source = (ROOT / "app/services/report_bundle_archive.py").read_text(
+        encoding="utf-8"
+    )
+    bundle_governance_source = (ROOT / "app/services/report_bundle_governance.py").read_text(
+        encoding="utf-8"
+    )
+    bundle_governance_rows_source = (
+        ROOT / "app/services/report_bundle_governance_rows.py"
+    ).read_text(encoding="utf-8")
+    bundle_verification_source = (ROOT / "app/services/report_bundle_verification.py").read_text(
+        encoding="utf-8"
+    )
+    html_source = (ROOT / "app/services/report_html.py").read_text(encoding="utf-8")
+    html_imports = _imported_modules("app/services/report_html.py")
+    html_styles_source = (ROOT / "app/services/report_html_styles.py").read_text(encoding="utf-8")
+    html_governance_source = (ROOT / "app/services/report_html_governance.py").read_text(
+        encoding="utf-8"
+    )
+    html_findings_source = (ROOT / "app/services/report_html_findings.py").read_text(
+        encoding="utf-8"
+    )
+    html_provider_source = (ROOT / "app/services/report_html_provider.py").read_text(
+        encoding="utf-8"
+    )
+    html_narrative_source = (ROOT / "app/services/report_html_narrative.py").read_text(
+        encoding="utf-8"
+    )
+    html_components_source = (ROOT / "app/services/report_html_components.py").read_text(
+        encoding="utf-8"
+    )
     sarif_source = (ROOT / "app/services/report_sarif.py").read_text(encoding="utf-8")
 
     assert "app.services.report_contracts" in imports
     assert "app.services.report_models" in imports
     assert "app.services.report_renderers" in imports
     assert "app.services.report_sarif" in imports
+    assert "app.services.report_service_attack" in imports
+    assert "app.services.report_service_payload" in imports
+    assert "app.services.report_service_persistence" in imports
     assert "app.services.report_formatting" in renderers_imports
     assert "CSV_FINDINGS_COLUMNS = [" not in source
     assert "EXECUTIVE_REPORT_CSS = " not in source
     assert "def render_markdown_report" not in source
     assert "def render_evidence_bundle_zip" not in source
+    assert "ReportRepository" not in source
+    assert "build_project_governance_rollups_payload" not in source
+    assert "build_attack_navigator_layer_payload" not in source
+    assert "def _run_findings" not in source
+    assert "def run_findings" in service_payload_source
+    assert "def build_report_payload" in service_payload_source
+    assert "def run_attack_contexts" in service_attack_source
+    assert "def attack_navigator_layer" in service_attack_source
+    assert "def persist_text_report" in service_persistence_source
+    assert "def persist_binary_report" in service_persistence_source
     assert "class MarkdownReportPayload" not in source
+    assert len(source.splitlines()) <= 330
+    assert len(service_payload_source.splitlines()) <= 130
+    assert len(service_attack_source.splitlines()) <= 70
+    assert len(service_persistence_source.splitlines()) <= 190
     assert "CSV_FINDINGS_COLUMNS = [" in contracts_source
     assert "REPORT_FILENAME_EVIDENCE_BUNDLE" in contracts_source
     assert "class MarkdownReportPayload" in models_source
     assert "def safe_cell" in formatting_source
     assert "def csv_safe_cell" in formatting_source
-    assert "EXECUTIVE_REPORT_CSS = " in renderers_source
-    assert "def render_evidence_bundle_zip" in renderers_source
+    assert len(renderers_source.splitlines()) <= 120
+    assert "EXECUTIVE_REPORT_CSS = " not in renderers_source
+    assert "def render_markdown_report" in markdown_source
+    assert "app.services.report_markdown_sections" in markdown_imports
+    assert "def _markdown_governance_section" not in markdown_source
+    assert "def _markdown_governance_section" in markdown_sections_source
+    assert "def _markdown_detection_coverage_section" in markdown_sections_source
+    assert len(markdown_source.splitlines()) <= 220
+    assert len(markdown_sections_source.splitlines()) <= 260
+    assert "EXECUTIVE_REPORT_CSS = " in html_source
+    assert "app.services.report_html_styles" in html_imports
+    assert "app.services.report_html_governance" in html_imports
+    assert "app.services.report_html_findings" in html_imports
+    assert "app.services.report_html_provider" in html_imports
+    assert "app.services.report_html_narrative" in html_imports
+    assert "app.services.report_html_components" in html_imports
+    assert "def _html_governance_rollups" not in html_source
+    assert "def _html_governance_rollups" in html_governance_source
+    assert "def _html_top_risk_row" not in html_source
+    assert "def _html_top_risk_row" in html_findings_source
+    assert "def _html_provider_snapshot" not in html_source
+    assert "def _html_provider_snapshot" in html_provider_source
+    assert "def _executive_summary_text" not in html_source
+    assert "def _executive_summary_text" in html_narrative_source
+    assert "def _html_metric" not in html_source
+    assert "def _html_metric" in html_components_source
+    assert "EXECUTIVE_REPORT_CSS = " in html_styles_source
+    assert len(html_source.splitlines()) <= 190
+    assert len(html_styles_source.splitlines()) <= 240
+    assert len(html_governance_source.splitlines()) <= 170
+    assert len(html_findings_source.splitlines()) <= 70
+    assert len(html_provider_source.splitlines()) <= 70
+    assert len(html_narrative_source.splitlines()) <= 80
+    assert len(html_components_source.splitlines()) <= 40
+    assert "def render_evidence_bundle_zip" in bundle_source
+    assert "app.services.report_bundle_archive" in bundle_imports
+    assert "app.services.report_bundle_governance" in bundle_imports
+    assert "app.services.report_bundle_verification" in bundle_imports
+    assert "def _bundle_file_entry" not in bundle_source
+    assert "def _bundle_file_entry" in bundle_archive_source
+    assert "def _governance_bundle_entries" not in bundle_source
+    assert "def _governance_bundle_entries" in bundle_governance_source
+    assert "def _asset_context_rows" not in bundle_governance_source
+    assert "def _asset_context_rows" in bundle_governance_rows_source
+    assert "def _evidence_bundle_verification_payload" in bundle_verification_source
+    assert len(bundle_source.splitlines()) <= 220
+    assert len(bundle_archive_source.splitlines()) <= 90
+    assert len(bundle_governance_source.splitlines()) <= 210
+    assert len(bundle_governance_rows_source.splitlines()) <= 100
+    assert len(bundle_verification_source.splitlines()) <= 40
     assert "def render_sarif_report" not in renderers_source
     assert "def render_sarif_report" in sarif_source
 
@@ -311,6 +422,26 @@ def test_workbench_shell_is_frame_only_and_routes_own_product_surfaces() -> None
     assert 'from "../components/projects"' not in source
 
 
+def test_workbench_route_shells_delegate_interaction_state() -> None:
+    assets_route_source = (REPO_ROOT / "frontend/src/workbench/routes/AssetsRoute.tsx").read_text(
+        encoding="utf-8"
+    )
+    assets_state_source = (
+        REPO_ROOT / "frontend/src/workbench/routes/useAssetsRouteState.ts"
+    ).read_text(encoding="utf-8")
+
+    assert 'from "./useAssetsRouteState"' in assets_route_source
+    assert "AssetsWorkbench" in assets_route_source
+    assert "AssetsService" not in assets_route_source
+    assert "useMutation" not in assets_route_source
+    assert "useWorkbenchContext" not in assets_route_source
+    assert "AssetsService" in assets_state_source
+    assert "useWorkbenchContext" in assets_state_source
+    assert "AssetsWorkbenchProps" in assets_state_source
+    assert len(assets_route_source.splitlines()) <= 20
+    assert len(assets_state_source.splitlines()) <= 380
+
+
 def test_workbench_reports_route_state_is_split_from_shell() -> None:
     shell_source = (REPO_ROOT / "frontend/src/workbench/WorkbenchShell.tsx").read_text(
         encoding="utf-8"
@@ -358,8 +489,16 @@ def test_imports_workbench_model_helpers_are_split_from_component() -> None:
 
 
 def test_findings_queue_uses_vpw_product_surfaces() -> None:
-    source = (REPO_ROOT / "frontend/src/components/findings/RemediationQueue.tsx").read_text(
-        encoding="utf-8"
+    source = "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in (
+            REPO_ROOT / "frontend/src/components/findings/RemediationQueue.tsx",
+            REPO_ROOT / "frontend/src/components/findings/RemediationQueueView.tsx",
+            REPO_ROOT / "frontend/src/components/findings/RemediationQueueFilters.tsx",
+            REPO_ROOT / "frontend/src/components/findings/RemediationQueueFilterControls.tsx",
+            REPO_ROOT / "frontend/src/components/findings/RemediationQueueStates.tsx",
+            REPO_ROOT / "frontend/src/components/findings/RemediationQueueSummary.tsx",
+        )
     )
 
     assert "@/components/vpw" in source
@@ -494,19 +633,437 @@ def test_internal_package_import_graph_has_no_module_cycles() -> None:
 
 def test_reporter_facade_reexports_private_reporting_renderers() -> None:
     imports = _imported_modules("src/vuln_prioritizer/reporter.py")
+    source = (ROOT / "src/vuln_prioritizer/reporter.py").read_text(encoding="utf-8")
+    terminal_imports = _imported_modules("src/vuln_prioritizer/reporting_terminal.py")
+    terminal_source = (ROOT / "src/vuln_prioritizer/reporting_terminal.py").read_text(
+        encoding="utf-8"
+    )
+    terminal_tables_source = (ROOT / "src/vuln_prioritizer/reporting_terminal_tables.py").read_text(
+        encoding="utf-8"
+    )
+    terminal_summary_source = (
+        ROOT / "src/vuln_prioritizer/reporting_terminal_summary.py"
+    ).read_text(encoding="utf-8")
+    terminal_explain_source = (
+        ROOT / "src/vuln_prioritizer/reporting_terminal_explain.py"
+    ).read_text(encoding="utf-8")
 
     assert "vuln_prioritizer.reporting_html" in imports
     assert "vuln_prioritizer.reporting_markdown" in imports
     assert "vuln_prioritizer.reporting_snapshot" in imports
     assert "vuln_prioritizer.reporting_state" in imports
+    assert "vuln_prioritizer.reporting_terminal" in imports
+    assert "vuln_prioritizer.reporting_terminal_tables" in terminal_imports
+    assert "vuln_prioritizer.reporting_terminal_summary" in terminal_imports
+    assert "vuln_prioritizer.reporting_terminal_explain" in terminal_imports
+    assert "def render_summary_panel" not in source
+    assert "def render_summary_panel" not in terminal_source
+    assert "def render_findings_table" in terminal_tables_source
+    assert "def render_summary_panel" in terminal_summary_source
+    assert "def render_explain_view" in terminal_explain_source
+    assert len(source.splitlines()) <= 100
+    assert len(terminal_source.splitlines()) <= 40
+    assert len(terminal_tables_source.splitlines()) <= 150
+    assert len(terminal_summary_source.splitlines()) <= 170
+    assert len(terminal_explain_source.splitlines()) <= 230
+
+
+def test_reporting_evidence_bundle_delegates_archive_governance_and_input_helpers() -> None:
+    imports = _imported_modules("src/vuln_prioritizer/reporting_evidence_bundle.py")
+    facade_imports = _imported_modules("src/vuln_prioritizer/reporting_evidence.py")
+    source = (ROOT / "src/vuln_prioritizer/reporting_evidence_bundle.py").read_text(
+        encoding="utf-8"
+    )
+    archive_source = (ROOT / "src/vuln_prioritizer/reporting_evidence_archive.py").read_text(
+        encoding="utf-8"
+    )
+    attack_source = (ROOT / "src/vuln_prioritizer/reporting_evidence_attack.py").read_text(
+        encoding="utf-8"
+    )
+    governance_source = (ROOT / "src/vuln_prioritizer/reporting_evidence_governance.py").read_text(
+        encoding="utf-8"
+    )
+    inputs_source = (ROOT / "src/vuln_prioritizer/reporting_evidence_inputs.py").read_text(
+        encoding="utf-8"
+    )
+
+    assert "vuln_prioritizer.reporting_evidence_bundle" in facade_imports
+    assert "vuln_prioritizer.reporting_evidence_archive" in imports
+    assert "vuln_prioritizer.reporting_evidence_attack" in imports
+    assert "vuln_prioritizer.reporting_evidence_governance" in imports
+    assert "vuln_prioritizer.reporting_evidence_inputs" in imports
+    assert "def write_evidence_bundle" in source
+    assert "def redacted_file_bytes" not in source
+    assert "def redacted_file_bytes" in archive_source
+    assert "def attack_navigator_layer_from_summary" not in source
+    assert "def attack_navigator_layer_from_summary" in attack_source
+    assert "def detection_coverage_export" not in source
+    assert "def detection_coverage_export" in governance_source
+    assert "def analysis_input_paths" not in source
+    assert "def analysis_input_paths" in inputs_source
+    assert len(source.splitlines()) <= 260
+    assert len(archive_source.splitlines()) <= 80
+    assert len(attack_source.splitlines()) <= 70
+    assert len(governance_source.splitlines()) <= 80
+    assert len(inputs_source.splitlines()) <= 130
 
 
 def test_reporting_executive_facade_reexports_focused_modules() -> None:
     imports = _imported_modules("src/vuln_prioritizer/reporting_executive.py")
+    model_imports = _imported_modules("src/vuln_prioritizer/reporting_executive_model.py")
+    evidence_model_imports = _imported_modules(
+        "src/vuln_prioritizer/reporting_executive_model_evidence.py"
+    )
+    sections_imports = _imported_modules("src/vuln_prioritizer/reporting_executive_sections.py")
+    chart_imports = _imported_modules("src/vuln_prioritizer/reporting_executive_sections_charts.py")
+    model_source = (ROOT / "src/vuln_prioritizer/reporting_executive_model.py").read_text(
+        encoding="utf-8"
+    )
+    evidence_model_source = (
+        ROOT / "src/vuln_prioritizer/reporting_executive_model_evidence.py"
+    ).read_text(encoding="utf-8")
+    evidence_quality_source = (
+        ROOT / "src/vuln_prioritizer/reporting_executive_model_quality.py"
+    ).read_text(encoding="utf-8")
+    evidence_provider_source = (
+        ROOT / "src/vuln_prioritizer/reporting_executive_model_provider.py"
+    ).read_text(encoding="utf-8")
+    evidence_artifacts_source = (
+        ROOT / "src/vuln_prioritizer/reporting_executive_model_artifacts.py"
+    ).read_text(encoding="utf-8")
+    sections_source = (ROOT / "src/vuln_prioritizer/reporting_executive_sections.py").read_text(
+        encoding="utf-8"
+    )
+    charts_source = (
+        ROOT / "src/vuln_prioritizer/reporting_executive_sections_charts.py"
+    ).read_text(encoding="utf-8")
+    risk_charts_source = (
+        ROOT / "src/vuln_prioritizer/reporting_executive_sections_risk_charts.py"
+    ).read_text(encoding="utf-8")
+    attack_charts_source = (
+        ROOT / "src/vuln_prioritizer/reporting_executive_sections_attack_charts.py"
+    ).read_text(encoding="utf-8")
+    remediation_charts_source = (
+        ROOT / "src/vuln_prioritizer/reporting_executive_sections_remediation_charts.py"
+    ).read_text(encoding="utf-8")
+    scatter_source = (
+        ROOT / "src/vuln_prioritizer/reporting_executive_sections_scatter.py"
+    ).read_text(encoding="utf-8")
 
     assert "vuln_prioritizer.reporting_executive_constants" in imports
     assert "vuln_prioritizer.reporting_executive_model" in imports
     assert "vuln_prioritizer.reporting_executive_renderer" in imports
+    assert "vuln_prioritizer.reporting_executive_model_builder" in model_imports
+    assert "vuln_prioritizer.reporting_executive_model_helpers" in model_imports
+    assert "vuln_prioritizer.reporting_executive_model_artifacts" in evidence_model_imports
+    assert "vuln_prioritizer.reporting_executive_model_provider" in evidence_model_imports
+    assert "vuln_prioritizer.reporting_executive_model_quality" in evidence_model_imports
+    assert "vuln_prioritizer.reporting_executive_sections_top" in sections_imports
+    assert "vuln_prioritizer.reporting_executive_sections_components" in sections_imports
+    assert "vuln_prioritizer.reporting_executive_sections_charts" in sections_imports
+    assert "vuln_prioritizer.reporting_executive_sections_risk_charts" in chart_imports
+    assert "vuln_prioritizer.reporting_executive_sections_attack_charts" in chart_imports
+    assert "vuln_prioritizer.reporting_executive_sections_remediation_charts" in chart_imports
+    assert "vuln_prioritizer.reporting_executive_sections_scatter" in chart_imports
+    assert "def build_executive_report_model" not in model_source
+    assert "def _quality_rows" not in evidence_model_source
+    assert "def _quality_rows" in evidence_quality_source
+    assert "def _provider_transparency_model" in evidence_provider_source
+    assert "def _artifact_model" in evidence_artifacts_source
+    assert "def _overview_section" not in sections_source
+    assert "def _severity_signal_chart" not in charts_source
+    assert "def _severity_signal_chart" in risk_charts_source
+    assert "def _attack_heatmap" in attack_charts_source
+    assert "def _remediation_priority_chart" in remediation_charts_source
+    assert "def _scatter_svg" in scatter_source
+    assert len(model_source.splitlines()) <= 100
+    assert len(evidence_model_source.splitlines()) <= 110
+    assert len(evidence_quality_source.splitlines()) <= 130
+    assert len(evidence_provider_source.splitlines()) <= 130
+    assert len(evidence_artifacts_source.splitlines()) <= 240
+    assert len(sections_source.splitlines()) <= 90
+    assert len(charts_source.splitlines()) <= 50
+    assert len(risk_charts_source.splitlines()) <= 250
+    assert len(attack_charts_source.splitlines()) <= 190
+    assert len(remediation_charts_source.splitlines()) <= 150
+    assert len(scatter_source.splitlines()) <= 110
+
+
+def test_reporting_payloads_delegates_summary_and_sarif_renderers() -> None:
+    imports = _imported_modules("src/vuln_prioritizer/reporting_payloads.py")
+    source = (ROOT / "src/vuln_prioritizer/reporting_payloads.py").read_text(encoding="utf-8")
+    summary_source = (ROOT / "src/vuln_prioritizer/reporting_payloads_summary.py").read_text(
+        encoding="utf-8"
+    )
+    sarif_source = (ROOT / "src/vuln_prioritizer/reporting_payloads_sarif.py").read_text(
+        encoding="utf-8"
+    )
+
+    assert "vuln_prioritizer.reporting_payloads_summary" in imports
+    assert "vuln_prioritizer.reporting_payloads_sarif" in imports
+    assert "def generate_summary_markdown" not in source
+    assert "def generate_sarif_report" not in source
+    assert "def generate_summary_markdown" in summary_source
+    assert "def generate_sarif_report" in sarif_source
+    assert "generate_summary_markdown as generate_summary_markdown" in source
+    assert "generate_sarif_report as generate_sarif_report" in source
+    assert len(source.splitlines()) <= 240
+    assert len(summary_source.splitlines()) <= 360
+    assert len(sarif_source.splitlines()) <= 230
+
+
+def test_workbench_frontend_feature_containers_delegate_to_sections() -> None:
+    reports_source = (REPO_ROOT / "frontend/src/components/reports/EvidenceCenter.tsx").read_text(
+        encoding="utf-8"
+    )
+    reports_sections_source = (
+        REPO_ROOT / "frontend/src/components/reports/EvidenceCenterSections.tsx"
+    ).read_text(encoding="utf-8")
+    reports_run_context_source = (
+        REPO_ROOT / "frontend/src/components/reports/EvidenceCenterRunContext.tsx"
+    ).read_text(encoding="utf-8")
+    reports_summary_source = (
+        REPO_ROOT / "frontend/src/components/reports/EvidenceCenterSummary.tsx"
+    ).read_text(encoding="utf-8")
+    reports_history_source = (
+        REPO_ROOT / "frontend/src/components/reports/EvidenceCenterHistory.tsx"
+    ).read_text(encoding="utf-8")
+    reports_manifest_source = (
+        REPO_ROOT / "frontend/src/components/reports/EvidenceCenterManifest.tsx"
+    ).read_text(encoding="utf-8")
+    reports_decision_source = (
+        REPO_ROOT / "frontend/src/components/reports/EvidenceCenterDecision.tsx"
+    ).read_text(encoding="utf-8")
+    imports_source = (REPO_ROOT / "frontend/src/components/imports/ImportsWorkbench.tsx").read_text(
+        encoding="utf-8"
+    )
+    imports_sections_source = (
+        REPO_ROOT / "frontend/src/components/imports/ImportsWorkbenchSections.tsx"
+    ).read_text(encoding="utf-8")
+    imports_hero_source = (
+        REPO_ROOT / "frontend/src/components/imports/ImportsWorkbenchHero.tsx"
+    ).read_text(encoding="utf-8")
+    imports_wizard_source = (
+        REPO_ROOT / "frontend/src/components/imports/ImportsWorkbenchWizard.tsx"
+    ).read_text(encoding="utf-8")
+    imports_results_source = (
+        REPO_ROOT / "frontend/src/components/imports/ImportsWorkbenchResults.tsx"
+    ).read_text(encoding="utf-8")
+    imports_history_source = (
+        REPO_ROOT / "frontend/src/components/imports/ImportsWorkbenchHistory.tsx"
+    ).read_text(encoding="utf-8")
+    findings_source = (
+        REPO_ROOT / "frontend/src/components/findings/RemediationQueue.tsx"
+    ).read_text(encoding="utf-8")
+    findings_table_source = (
+        REPO_ROOT / "frontend/src/components/findings/FindingsDataTable.tsx"
+    ).read_text(encoding="utf-8")
+    findings_table_columns_source = (
+        REPO_ROOT / "frontend/src/components/findings/FindingsDataTableColumns.tsx"
+    ).read_text(encoding="utf-8")
+    findings_table_headers_source = (
+        REPO_ROOT / "frontend/src/components/findings/FindingsDataTableHeaders.tsx"
+    ).read_text(encoding="utf-8")
+    findings_table_model_source = (
+        REPO_ROOT / "frontend/src/components/findings/FindingsDataTableModel.ts"
+    ).read_text(encoding="utf-8")
+    findings_model_source = (
+        REPO_ROOT / "frontend/src/components/findings/remediation-queue-model.ts"
+    ).read_text(encoding="utf-8")
+    findings_view_source = (
+        REPO_ROOT / "frontend/src/components/findings/RemediationQueueView.tsx"
+    ).read_text(encoding="utf-8")
+    findings_filters_source = (
+        REPO_ROOT / "frontend/src/components/findings/RemediationQueueFilters.tsx"
+    ).read_text(encoding="utf-8")
+    findings_filter_controls_source = (
+        REPO_ROOT / "frontend/src/components/findings/RemediationQueueFilterControls.tsx"
+    ).read_text(encoding="utf-8")
+    projects_source = (
+        REPO_ROOT / "frontend/src/components/projects/ProjectsWorkbench.tsx"
+    ).read_text(encoding="utf-8")
+    projects_sections_source = (
+        REPO_ROOT / "frontend/src/components/projects/ProjectsWorkbenchSections.tsx"
+    ).read_text(encoding="utf-8")
+    projects_overview_source = (
+        REPO_ROOT / "frontend/src/components/projects/ProjectsWorkbenchOverview.tsx"
+    ).read_text(encoding="utf-8")
+    projects_setup_source = (
+        REPO_ROOT / "frontend/src/components/projects/ProjectsWorkbenchSetup.tsx"
+    ).read_text(encoding="utf-8")
+    projects_directory_source = (
+        REPO_ROOT / "frontend/src/components/projects/ProjectsWorkbenchDirectory.tsx"
+    ).read_text(encoding="utf-8")
+    projects_active_source = (
+        REPO_ROOT / "frontend/src/components/projects/ProjectsWorkbenchActive.tsx"
+    ).read_text(encoding="utf-8")
+    projects_model_source = (
+        REPO_ROOT / "frontend/src/components/projects/projects-workbench-model.ts"
+    ).read_text(encoding="utf-8")
+    waivers_source = (REPO_ROOT / "frontend/src/components/waivers/WaiversWorkbench.tsx").read_text(
+        encoding="utf-8"
+    )
+    waivers_sections_source = (
+        REPO_ROOT / "frontend/src/components/waivers/WaiversWorkbenchSections.tsx"
+    ).read_text(encoding="utf-8")
+    waivers_hero_source = (
+        REPO_ROOT / "frontend/src/components/waivers/WaiversWorkbenchHero.tsx"
+    ).read_text(encoding="utf-8")
+    waivers_create_source = (
+        REPO_ROOT / "frontend/src/components/waivers/WaiversWorkbenchCreate.tsx"
+    ).read_text(encoding="utf-8")
+    waivers_register_source = (
+        REPO_ROOT / "frontend/src/components/waivers/WaiversWorkbenchRegister.tsx"
+    ).read_text(encoding="utf-8")
+    waivers_review_source = (
+        REPO_ROOT / "frontend/src/components/waivers/WaiversWorkbenchReview.tsx"
+    ).read_text(encoding="utf-8")
+    waivers_model_source = (
+        REPO_ROOT / "frontend/src/components/waivers/waivers-workbench-model.ts"
+    ).read_text(encoding="utf-8")
+    settings_source = (
+        REPO_ROOT / "frontend/src/components/settings/SettingsWorkbench.tsx"
+    ).read_text(encoding="utf-8")
+    settings_sections_source = (
+        REPO_ROOT / "frontend/src/components/settings/SettingsWorkbenchSections.tsx"
+    ).read_text(encoding="utf-8")
+    settings_hero_source = (
+        REPO_ROOT / "frontend/src/components/settings/SettingsWorkbenchHero.tsx"
+    ).read_text(encoding="utf-8")
+    settings_overview_source = (
+        REPO_ROOT / "frontend/src/components/settings/SettingsWorkbenchOverview.tsx"
+    ).read_text(encoding="utf-8")
+    settings_tokens_source = (
+        REPO_ROOT / "frontend/src/components/settings/SettingsWorkbenchTokens.tsx"
+    ).read_text(encoding="utf-8")
+    settings_runtime_source = (
+        REPO_ROOT / "frontend/src/components/settings/SettingsWorkbenchRuntime.tsx"
+    ).read_text(encoding="utf-8")
+    settings_model_source = (
+        REPO_ROOT / "frontend/src/components/settings/settings-workbench-model.ts"
+    ).read_text(encoding="utf-8")
+    providers_source = (
+        REPO_ROOT / "frontend/src/components/providers/ProvidersWorkbench.tsx"
+    ).read_text(encoding="utf-8")
+    providers_sections_source = (
+        REPO_ROOT / "frontend/src/components/providers/ProvidersWorkbenchSections.tsx"
+    ).read_text(encoding="utf-8")
+    providers_hero_source = (
+        REPO_ROOT / "frontend/src/components/providers/ProvidersWorkbenchHero.tsx"
+    ).read_text(encoding="utf-8")
+    providers_metrics_source = (
+        REPO_ROOT / "frontend/src/components/providers/ProvidersWorkbenchMetrics.tsx"
+    ).read_text(encoding="utf-8")
+    providers_sources_source = (
+        REPO_ROOT / "frontend/src/components/providers/ProvidersWorkbenchSources.tsx"
+    ).read_text(encoding="utf-8")
+    providers_snapshot_source = (
+        REPO_ROOT / "frontend/src/components/providers/ProvidersWorkbenchSnapshot.tsx"
+    ).read_text(encoding="utf-8")
+    providers_quality_source = (
+        REPO_ROOT / "frontend/src/components/providers/ProvidersWorkbenchQuality.tsx"
+    ).read_text(encoding="utf-8")
+    providers_model_source = (
+        REPO_ROOT / "frontend/src/components/providers/providers-workbench-model.ts"
+    ).read_text(encoding="utf-8")
+
+    assert "./EvidenceCenterSections" in reports_source
+    assert "./ImportsWorkbenchSections" in imports_source
+    assert "./RemediationQueueView" in findings_source
+    assert "./ProjectsWorkbenchSections" in projects_source
+    assert "./projects-workbench-model" in projects_source
+    assert "./WaiversWorkbenchSections" in waivers_source
+    assert "./waivers-workbench-model" in waivers_source
+    assert "./SettingsWorkbenchSections" in settings_source
+    assert "./settings-workbench-model" in settings_source
+    assert "./ProvidersWorkbenchSections" in providers_source
+    assert "./providers-workbench-model" in providers_source
+    assert "./RemediationQueueFilters" in findings_view_source
+    assert "./RemediationQueueFilterControls" in findings_filters_source
+    assert "./FindingsDataTableColumns" in findings_table_source
+    assert "./FindingsDataTableHeaders" in findings_table_columns_source
+    assert "./FindingsDataTableModel" in findings_table_columns_source
+    assert "./FindingsDataTable" not in findings_model_source
+    assert "./RemediationQueueStates" in findings_view_source
+    assert "./RemediationQueueSummary" in findings_view_source
+    assert "./RemediationQueueTableSection" in findings_view_source
+    assert "EvidenceCenterRunContext" in reports_sections_source
+    assert "EvidenceCenterSummary" in reports_sections_source
+    assert "EvidenceCenterHistory" in reports_sections_source
+    assert "EvidenceCenterManifest" in reports_sections_source
+    assert "EvidenceCenterDecision" in reports_sections_source
+    assert "ImportsWorkbenchHero" in imports_sections_source
+    assert "ImportsWorkbenchWizard" in imports_sections_source
+    assert "ImportsWorkbenchResults" in imports_sections_source
+    assert "ImportsWorkbenchHistory" in imports_sections_source
+    assert "ProjectsWorkbenchOverview" in projects_sections_source
+    assert "ProjectsWorkbenchSetup" in projects_sections_source
+    assert "ProjectsWorkbenchDirectory" in projects_sections_source
+    assert "ProjectsWorkbenchActive" in projects_sections_source
+    assert "WaiversWorkbenchHero" in waivers_sections_source
+    assert "WaiversWorkbenchCreate" in waivers_sections_source
+    assert "WaiversWorkbenchRegister" in waivers_sections_source
+    assert "WaiversWorkbenchReview" in waivers_sections_source
+    assert "SettingsWorkbenchHero" in settings_sections_source
+    assert "SettingsWorkbenchOverview" in settings_sections_source
+    assert "SettingsWorkbenchTokens" in settings_sections_source
+    assert "SettingsWorkbenchRuntime" in settings_sections_source
+    assert "ProvidersWorkbenchHero" in providers_sections_source
+    assert "ProvidersWorkbenchMetrics" in providers_sections_source
+    assert "ProvidersWorkbenchSources" in providers_sections_source
+    assert "ProvidersWorkbenchSnapshot" in providers_sections_source
+    assert "ProvidersWorkbenchQuality" in providers_sections_source
+    assert len(reports_source.splitlines()) <= 240
+    assert len(reports_sections_source.splitlines()) <= 40
+    assert len(reports_run_context_source.splitlines()) <= 170
+    assert len(reports_summary_source.splitlines()) <= 240
+    assert len(reports_history_source.splitlines()) <= 280
+    assert len(reports_manifest_source.splitlines()) <= 130
+    assert len(reports_decision_source.splitlines()) <= 140
+    assert len(imports_source.splitlines()) <= 120
+    assert len(imports_sections_source.splitlines()) <= 40
+    assert len(imports_hero_source.splitlines()) <= 120
+    assert len(imports_wizard_source.splitlines()) <= 350
+    assert len(imports_results_source.splitlines()) <= 180
+    assert len(imports_history_source.splitlines()) <= 350
+    assert len(projects_source.splitlines()) <= 120
+    assert len(projects_sections_source.splitlines()) <= 40
+    assert len(projects_overview_source.splitlines()) <= 220
+    assert len(projects_setup_source.splitlines()) <= 190
+    assert len(projects_directory_source.splitlines()) <= 230
+    assert len(projects_active_source.splitlines()) <= 260
+    assert len(projects_model_source.splitlines()) <= 170
+    assert len(waivers_source.splitlines()) <= 130
+    assert len(waivers_sections_source.splitlines()) <= 40
+    assert len(waivers_hero_source.splitlines()) <= 200
+    assert len(waivers_create_source.splitlines()) <= 280
+    assert len(waivers_register_source.splitlines()) <= 230
+    assert len(waivers_review_source.splitlines()) <= 110
+    assert len(waivers_model_source.splitlines()) <= 260
+    assert len(settings_source.splitlines()) <= 120
+    assert len(settings_sections_source.splitlines()) <= 40
+    assert len(settings_hero_source.splitlines()) <= 130
+    assert len(settings_overview_source.splitlines()) <= 220
+    assert len(settings_tokens_source.splitlines()) <= 290
+    assert len(settings_runtime_source.splitlines()) <= 200
+    assert len(settings_model_source.splitlines()) <= 220
+    assert len(providers_source.splitlines()) <= 120
+    assert len(providers_sections_source.splitlines()) <= 40
+    assert len(providers_hero_source.splitlines()) <= 130
+    assert len(providers_metrics_source.splitlines()) <= 120
+    assert len(providers_sources_source.splitlines()) <= 140
+    assert len(providers_snapshot_source.splitlines()) <= 130
+    assert len(providers_quality_source.splitlines()) <= 190
+    assert len(providers_model_source.splitlines()) <= 320
+    assert len(findings_source.splitlines()) <= 320
+    assert len(findings_view_source.splitlines()) <= 240
+    assert len(findings_filters_source.splitlines()) <= 190
+    assert len(findings_filter_controls_source.splitlines()) <= 240
+    assert len(findings_table_source.splitlines()) <= 100
+    assert len(findings_table_columns_source.splitlines()) <= 300
+    assert len(findings_table_headers_source.splitlines()) <= 90
+    assert len(findings_table_model_source.splitlines()) <= 80
+    assert len(findings_model_source.splitlines()) <= 280
 
 
 def test_models_facade_reexports_focused_model_modules() -> None:
@@ -600,6 +1157,18 @@ def test_import_execution_is_split_into_stage_services_with_guardrails() -> None
     persistence_source = (ROOT / "app/services/import_execution_persistence.py").read_text(
         encoding="utf-8"
     )
+    persistence_bulk_source = (
+        ROOT / "app/services/import_execution_persistence_bulk.py"
+    ).read_text(encoding="utf-8")
+    persistence_payloads_source = (
+        ROOT / "app/services/import_execution_persistence_payloads.py"
+    ).read_text(encoding="utf-8")
+    persistence_attack_source = (
+        ROOT / "app/services/import_execution_persistence_attack.py"
+    ).read_text(encoding="utf-8")
+    persistence_queries_source = (
+        ROOT / "app/services/import_execution_persistence_queries.py"
+    ).read_text(encoding="utf-8")
     summary_source = (ROOT / "app/services/import_execution_summary.py").read_text(encoding="utf-8")
 
     assert "def execute_project_import_upload" in source
@@ -616,11 +1185,20 @@ def test_import_execution_is_split_into_stage_services_with_guardrails() -> None
     assert "def _finding_dedup_key" in dedup_source
     assert "def _dedup_key_parts" not in persistence_source
     assert "def _persist_workbench_occurrences" in persistence_source
-    assert "def _persist_workbench_occurrences_bulk_insert" in persistence_source
+    assert "def _persist_workbench_occurrences_bulk_insert" not in persistence_source
+    assert "def _persist_workbench_occurrences_bulk_insert" in persistence_bulk_source
+    assert "def _decision_payload_for_occurrence" not in persistence_source
+    assert "def _decision_payload_for_occurrence" in persistence_payloads_source
+    assert "def _persist_workbench_finding_attack_context" in persistence_attack_source
+    assert "def _existing_findings_by_dedup_key" in persistence_queries_source
     assert "def _job_payload" in summary_source
     assert "def _record_import_audit" in summary_source
     assert len(source.splitlines()) <= 700
     assert len(context_source.splitlines()) <= 220
     assert len(failure_source.splitlines()) <= 140
-    assert len(persistence_source.splitlines()) <= 980
+    assert len(persistence_source.splitlines()) <= 320
+    assert len(persistence_bulk_source.splitlines()) <= 340
+    assert len(persistence_payloads_source.splitlines()) <= 320
+    assert len(persistence_attack_source.splitlines()) <= 180
+    assert len(persistence_queries_source.splitlines()) <= 120
     assert len(summary_source.splitlines()) <= 100
