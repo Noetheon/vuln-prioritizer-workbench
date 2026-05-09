@@ -1,23 +1,46 @@
 import { expect, test } from "@playwright/test"
-import { login } from "./auth-helpers"
+import { authHeaders, login } from "./auth-helpers"
 
 test("workbench settings clears one-time API token when leaving settings", async ({
   page,
 }) => {
   const testRunSuffix = Date.now().toString(36)
 
-  await login(page)
+  const accessToken = await login(page)
+  const projectName = `VPW Settings Token ${testRunSuffix}`
+  const projectResponse = await page.request.post(
+    "http://127.0.0.1:8000/api/v1/projects/",
+    {
+      data: {
+        description: "Playwright settings token project",
+        name: projectName,
+      },
+      headers: authHeaders(accessToken),
+    },
+  )
+  expect(projectResponse.ok(), await projectResponse.text()).toBeTruthy()
+  const project = (await projectResponse.json()) as { id: string; name: string }
 
-  await page.goto("/settings")
+  await page.goto(`/settings?projectId=${project.id}`)
   await expect(
     page.getByRole("heading", { name: "Service Token" }),
   ).toBeVisible()
+  const projectScope = page.getByRole("combobox", { name: "Project scope" })
+  await expect(projectScope).toBeEnabled()
+  await expect(projectScope).toContainText(project.name)
+  const tokenForm = page.getByLabel("Name").locator("xpath=ancestor::form[1]")
+  const writeScope = tokenForm.getByRole("checkbox", { name: /WRITE/i })
+  await expect(writeScope).not.toBeChecked()
+  await tokenForm.getByText("WRITE", { exact: true }).click()
+  await expect(writeScope).toBeChecked()
+  await tokenForm.getByText("WRITE", { exact: true }).click()
+  await expect(writeScope).not.toBeChecked()
   await page.getByLabel("Name").fill(`automation-${testRunSuffix}`)
-  const importScope = page.getByRole("checkbox", { name: /IMPORT/i })
+  const importScope = tokenForm.getByRole("checkbox", { name: /IMPORT/i })
   await importScope.focus()
   await page.keyboard.press("Space")
   await expect(importScope).toBeChecked()
-  const reportScope = page.getByRole("checkbox", { name: /REPORT/i })
+  const reportScope = tokenForm.getByRole("checkbox", { name: /REPORT/i })
   await reportScope.focus()
   await page.keyboard.press("Space")
   await expect(reportScope).toBeChecked()

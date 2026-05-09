@@ -28,3 +28,33 @@ export function searchStringFromUrlSearch(search: ProjectUrlSearch): string {
   }
   return params.toString()
 }
+
+export function assetFindingsUrlSearch({
+  assetId,
+  assetKey,
+  projectId,
+}: {
+  assetId: string
+  assetKey: string
+  projectId: string
+}): ProjectUrlSearch {
+  return {
+    projectId,
+    assetId,
+    assetKey,
+  }
+}
+
+export function normalizeSelectedProjectId(
+  candidates: readonly string[],
+  projectIds: readonly string[],
+): string {
+  const availableProjectIds = new Set(projectIds)
+  return (
+    candidates.find(
+      (candidate) => candidate && availableProjectIds.has(candidate),
+    ) ??
+    projectIds[0] ??
+    ""
+  )
+}

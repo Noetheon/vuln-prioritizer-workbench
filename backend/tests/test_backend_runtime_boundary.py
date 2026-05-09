@@ -368,7 +368,7 @@ def test_backup_restore_scripts_support_database_url_and_compose_artifacts() -> 
     )
 
 
-def test_active_runtime_entrypoints_use_template_backend_app() -> None:
+def test_active_runtime_entrypoints_use_workbench_backend_app() -> None:
     dockerfile = (REPO_ROOT / "backend/Dockerfile").read_text(encoding="utf-8")
     override = yaml.safe_load((REPO_ROOT / "compose.override.yml").read_text(encoding="utf-8"))
     playwright_backend = (REPO_ROOT / "scripts/start-workbench-playwright-backend.sh").read_text(

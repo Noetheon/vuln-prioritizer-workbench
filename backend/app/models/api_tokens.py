@@ -1,6 +1,7 @@
 """Scoped service-token models for the Workbench API."""
 
 import uuid
+from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Literal, Self
 
@@ -210,6 +211,15 @@ API_TOKEN_SCOPES_ATTR = "_vpw_api_token_scopes"
 API_TOKEN_ID_ATTR = "_vpw_api_token_id"
 
 
+@dataclass(frozen=True, slots=True)
+class ApiTokenContext:
+    """Request-time service-token context safe to carry into background work."""
+
+    token_id: uuid.UUID
+    project_id: uuid.UUID | None
+    scopes: frozenset[str]
+
+
 def attach_api_token_context(
     principal: object,
     *,
@@ -241,3 +251,15 @@ def api_token_scopes(principal: object) -> set[str] | None:
     if value is None:
         return None
     return {str(scope) for scope in value}
+
+
+def capture_api_token_context(principal: object) -> ApiTokenContext | None:
+    """Return a request-time API-token context snapshot, if one is attached."""
+    token_id = api_token_id(principal)
+    if token_id is None:
+        return None
+    return ApiTokenContext(
+        token_id=token_id,
+        project_id=api_token_project_id(principal),
+        scopes=frozenset(api_token_scopes(principal) or set()),
+    )

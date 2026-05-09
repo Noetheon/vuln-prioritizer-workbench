@@ -10,6 +10,10 @@ import {
 } from "../../api-client"
 import type { VpwBadgeTone } from "../vpw"
 import { formatLabel as labelize } from "../../lib/ui-copy"
+import {
+  assetFindingsUrlSearch,
+  searchStringFromUrlSearch,
+} from "../../workbench/selected-project-search"
 
 export const criticalityOptions: AssetCriticality[] = [
   "critical",
@@ -177,11 +181,14 @@ export function findingAssetLabel(finding: FindingPublic) {
 }
 
 export function assetFindingsHref(asset: AssetPublic) {
-  const params = new URLSearchParams({
-    assetId: asset.id,
-    assetKey: asset.asset_key,
-  })
-  return `/findings?${params.toString()}`
+  const search = searchStringFromUrlSearch(
+    assetFindingsUrlSearch({
+      assetId: asset.id,
+      assetKey: asset.asset_key,
+      projectId: asset.project_id,
+    }),
+  )
+  return `/findings?${search}`
 }
 
 export function criticalityTone(

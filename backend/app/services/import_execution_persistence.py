@@ -2,11 +2,8 @@
 
 from __future__ import annotations
 
-import hashlib
-import json
 import re
 import uuid
-from collections.abc import Mapping
 from copy import deepcopy
 from typing import Any
 
@@ -34,6 +31,7 @@ from app.models import (
 from app.models.base import get_datetime_utc
 from app.repositories import AssetRepository, FindingRepository, RunRepository
 from app.services import WorkbenchAnalysisError, WorkbenchAnalysisResult
+from app.services.import_execution_dedup import _dedup_key_parts, _finding_dedup_key
 from vuln_prioritizer.models import PrioritizedFinding
 
 DEDUP_DECISION_SAMPLE_LIMIT = 500
@@ -864,45 +862,6 @@ def _attack_context_defensive_note(mapped: bool) -> str:
             "and mitigation review."
         )
     return "No reviewed ATT&CK mapping is stored for this finding."
-
-
-def _dedup_key_parts(project_id: uuid.UUID, occurrence: NormalizedOccurrence) -> dict[str, str]:
-    source_id = _normalized_identity_value(
-        _string_evidence(occurrence.raw_evidence, "source_id")
-        or _string_evidence(occurrence.raw_evidence, "vulnerability_id")
-        or occurrence.cve
-    )
-    purl = _normalized_identity_value(_string_evidence(occurrence.raw_evidence, "purl"))
-    component_identity = purl
-    if component_identity == "__none__" and occurrence.component:
-        component_identity = "|".join(
-            [
-                "component",
-                _normalized_identity_value(occurrence.component),
-                _normalized_identity_value(occurrence.version),
-                _normalized_identity_value(
-                    _string_evidence(occurrence.raw_evidence, "package_type")
-                ),
-            ]
-        )
-    return {
-        "project_id": str(project_id),
-        "source_id": source_id,
-        "component_identity": component_identity,
-        "asset_ref": _normalized_identity_value(occurrence.asset_ref),
-    }
-
-
-def _finding_dedup_key(parts: Mapping[str, str]) -> str:
-    material = json.dumps(parts, sort_keys=True, separators=(",", ":"))
-    return "vpw019:" + hashlib.sha256(material.encode("utf-8")).hexdigest()
-
-
-def _normalized_identity_value(value: str | None) -> str:
-    if value is None:
-        return "__none__"
-    normalized = value.strip()
-    return normalized or "__none__"
 
 
 def _decision_for_occurrence(

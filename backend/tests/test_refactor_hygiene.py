@@ -526,10 +526,15 @@ def test_dependency_audit_requirements_include_dev_gate_tools() -> None:
     requirements = (ROOT / "requirements.txt").read_text(encoding="utf-8").splitlines()
     package_names = {line.split(">", 1)[0].split("[", 1)[0] for line in requirements if line}
     audit_lock = (ROOT / "requirements.lock.txt").read_text(encoding="utf-8")
+    runtime_lock = (ROOT / "requirements.runtime.lock.txt").read_text(encoding="utf-8")
     uv_lock = (REPO_ROOT / "uv.lock").read_text(encoding="utf-8")
     pinned_package_names = {
         match.group(1).replace("_", "-").lower()
         for match in re.finditer(r"^([A-Za-z0-9_.-]+)==", audit_lock, flags=re.MULTILINE)
+    }
+    runtime_pinned_package_names = {
+        match.group(1).replace("_", "-").lower()
+        for match in re.finditer(r"^([A-Za-z0-9_.-]+)==", runtime_lock, flags=re.MULTILINE)
     }
 
     assert {"mkdocs", "pytest-cov"}.issubset(package_names)
@@ -542,6 +547,23 @@ def test_dependency_audit_requirements_include_dev_gate_tools() -> None:
     assert "--locked" in audit_lock
     assert "--hash=sha256:" in audit_lock
     assert {"mkdocs", "pip-audit", "pytest-cov"}.issubset(pinned_package_names)
+    assert "backend/requirements.runtime.lock.txt" in runtime_lock
+    assert "--python 3.12" in runtime_lock
+    assert "--no-dev" in runtime_lock
+    assert "--hash=sha256:" in runtime_lock
+    assert {"fastapi", "psycopg", "uvicorn"}.issubset(runtime_pinned_package_names)
+    assert (
+        not {
+            "mkdocs",
+            "mypy",
+            "pip-audit",
+            "pytest",
+            "pytest-cov",
+            "ruff",
+            "twine",
+        }
+        & runtime_pinned_package_names
+    )
 
 
 def test_sdist_manifest_excludes_partial_test_tree() -> None:
@@ -574,6 +596,7 @@ def test_import_execution_is_split_into_stage_services_with_guardrails() -> None
     failure_source = (ROOT / "app/services/import_execution_failures.py").read_text(
         encoding="utf-8"
     )
+    dedup_source = (ROOT / "app/services/import_execution_dedup.py").read_text(encoding="utf-8")
     persistence_source = (ROOT / "app/services/import_execution_persistence.py").read_text(
         encoding="utf-8"
     )
@@ -584,10 +607,14 @@ def test_import_execution_is_split_into_stage_services_with_guardrails() -> None
     assert "app.services.import_execution_failures" in source
     assert "app.services.import_execution_persistence" in source
     assert "app.services.import_execution_summary" in source
+    assert "app.services.import_execution_dedup" in persistence_source
     assert "def _apply_workbench_asset_context" in context_source
     assert "def _apply_workbench_vex" in context_source
     assert "def _parse_error_payload" in context_source
     assert "def raise_analysis_failure" in failure_source
+    assert "def _dedup_key_parts" in dedup_source
+    assert "def _finding_dedup_key" in dedup_source
+    assert "def _dedup_key_parts" not in persistence_source
     assert "def _persist_workbench_occurrences" in persistence_source
     assert "def _persist_workbench_occurrences_bulk_insert" in persistence_source
     assert "def _job_payload" in summary_source
@@ -595,5 +622,5 @@ def test_import_execution_is_split_into_stage_services_with_guardrails() -> None
     assert len(source.splitlines()) <= 700
     assert len(context_source.splitlines()) <= 220
     assert len(failure_source.splitlines()) <= 140
-    assert len(persistence_source.splitlines()) <= 1000
+    assert len(persistence_source.splitlines()) <= 980
     assert len(summary_source.splitlines()) <= 100

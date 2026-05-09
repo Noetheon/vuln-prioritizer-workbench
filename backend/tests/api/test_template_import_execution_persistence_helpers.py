@@ -8,6 +8,7 @@ from utils.template_workbench import TemplateApiEnv, auth_headers, create_projec
 
 from app.importers.contracts import NormalizedOccurrence
 from app.services import WorkbenchAnalysisResult
+from app.services.import_execution_dedup import _dedup_key_parts, _finding_dedup_key
 from app.services.import_execution_persistence import (
     _analysis_evidence_for_occurrence,
     _analysis_semantics_summary,
@@ -16,8 +17,6 @@ from app.services.import_execution_persistence import (
     _chunks,
     _chunks_any,
     _decision_payload_for_occurrence,
-    _dedup_key_parts,
-    _finding_dedup_key,
     _finding_status_for_occurrence,
     _jsonable_model,
     _persist_workbench_occurrences,

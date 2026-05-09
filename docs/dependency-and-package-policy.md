@@ -56,12 +56,15 @@ can still land without a source release for every transitive patch.
 
 The reproducible Python resolution artifact is the root `uv.lock`. The release
 dependency-audit input is `backend/requirements.lock.txt`, exported from
-`uv.lock` with exact pins and hashes. Keep both committed together when Python
-dependency metadata changes. The backend Docker image installs the local
-backend package from `backend/pyproject.toml` without the `[dev]` extra, so the
-runtime image carries runtime dependencies only and not test, docs, or
-maintainer tooling. `backend/requirements.lock.txt` remains the audited
-candidate dependency set for release evidence.
+`uv.lock` with exact pins and hashes for runtime plus maintainer dependencies.
+The backend Docker install input is the separate
+`backend/requirements.runtime.lock.txt`, exported from the same `uv.lock` for
+Python 3.12 without dev extras. Keep all three committed together when Python
+dependency metadata changes. The backend Docker image installs the local backend
+package from `backend/pyproject.toml` with `--no-deps` after installing the
+runtime lock, so runtime containers do not carry test, docs, or maintainer
+tooling. `backend/requirements.lock.txt` remains the audited candidate
+dependency set for release evidence.
 
 Regenerate or refresh the audit input by reconciling the union of
 `project.dependencies` and `project.optional-dependencies.dev` from
@@ -73,6 +76,9 @@ uv lock --python 3.11
 uv export --format requirements.txt --all-packages --all-extras \
   --no-emit-project --no-emit-workspace --locked \
   --python 3.11 --output-file backend/requirements.lock.txt --no-progress
+uv export --format requirements.txt --package vuln-prioritizer --no-dev \
+  --no-emit-project --no-emit-workspace --locked \
+  --python 3.12 --output-file backend/requirements.runtime.lock.txt --no-progress
 ```
 
 The drift and lock checks are enforced by:
@@ -87,10 +93,11 @@ Current audit command:
 make dependency-audit
 ```
 
-`make dependency-audit` first runs the drift and lock checks above, then audits
-`backend/requirements.lock.txt` with `pip-audit`, and finally audits
-`frontend/package-lock.json` through npm. Release evidence must refresh and
-record these exact lock artifacts for the candidate being handed off.
+`make dependency-audit` first runs the drift and lock checks above, including
+the Docker runtime lock check, then audits `backend/requirements.lock.txt` with
+`pip-audit`, and finally audits `frontend/package-lock.json` through npm.
+Release evidence must refresh and record these exact lock artifacts for the
+candidate being handed off.
 
 ## Frontend Dependencies
 

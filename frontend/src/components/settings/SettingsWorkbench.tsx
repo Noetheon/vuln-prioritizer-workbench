@@ -498,29 +498,34 @@ export function SettingsWorkbench({
 
               <VpwField label="Scopes" required>
                 <div className="grid gap-3 sm:grid-cols-2">
-                  {apiTokenScopeOptions.map((scope) => (
-                    <label className="block" key={scope}>
-                      <input
-                        checked={apiTokenScopes.includes(scope)}
-                        className="sr-only"
-                        onChange={() => onToggleApiTokenScope(scope)}
-                        type="checkbox"
-                      />
-                      <VpwSelectionCard
-                        checked={apiTokenScopes.includes(scope)}
-                        meta={scope === "admin" ? "Privileged" : "Service"}
-                        title={scope.toUpperCase()}
-                      >
-                        {scope === "read"
-                          ? "Read workbench findings and evidence metadata."
-                          : scope === "import"
-                            ? "Create import runs and normalize supplied inputs."
-                            : scope === "report"
-                              ? "Generate and download report artifacts."
-                              : "Administrative API access for trusted operators."}
-                      </VpwSelectionCard>
-                    </label>
-                  ))}
+                  {apiTokenScopeOptions.map((scope) => {
+                    const checked = apiTokenScopes.includes(scope)
+                    return (
+                      <label className="block cursor-pointer" key={scope}>
+                        <input
+                          checked={checked}
+                          className="peer sr-only"
+                          onChange={() => onToggleApiTokenScope(scope)}
+                          type="checkbox"
+                        />
+                        <VpwSelectionCard
+                          as="span"
+                          checked={checked}
+                          className="cursor-pointer peer-focus-visible:ring-2 peer-focus-visible:ring-[var(--vpw-blue)] peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-[var(--vpw-bg-default)]"
+                          meta={scope === "admin" ? "Privileged" : "Service"}
+                          title={scope.toUpperCase()}
+                        >
+                          {scope === "read"
+                            ? "Read workbench findings and evidence metadata."
+                            : scope === "import"
+                              ? "Create import runs and normalize supplied inputs."
+                              : scope === "report"
+                                ? "Generate and download report artifacts."
+                                : "Administrative API access for trusted operators."}
+                        </VpwSelectionCard>
+                      </label>
+                    )
+                  })}
                 </div>
               </VpwField>
 
