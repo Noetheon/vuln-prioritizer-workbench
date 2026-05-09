@@ -2,7 +2,7 @@
 
 ## Scope
 
-VPW-009 adds the template-stack persistence contract for import and analysis run
+VPW-009 adds the Workbench persistence contract for import and analysis run
 provenance. It extends the VPW-008 project, asset, vulnerability, and finding
 tables with the run record, concrete source occurrences, and provider data
 snapshot metadata needed to explain where a finding came from.
@@ -10,17 +10,17 @@ snapshot metadata needed to explain where a finding came from.
 This slice is storage-only. It does not introduce scanning, exploit execution,
 remote plugin loading, or heuristic ATT&CK mapping.
 
-The SQLModel tables are singular and owned by the template backend:
+The SQLModel tables are singular and owned by the Workbench backend:
 
 - `analysis_run`
 - `finding_occurrence`
 - `provider_snapshot`
 
-Template code uses `app.models` exports and `app/alembic` migrations.
+Workbench backend code uses `app.models` exports and `app/alembic` migrations.
 
 ## Model Exports
 
-`app.models` remains the public aggregator for template models. VPW-009 expects
+`app.models` remains the public aggregator for Workbench models. VPW-009 expects
 it to export:
 
 - `AnalysisRun`

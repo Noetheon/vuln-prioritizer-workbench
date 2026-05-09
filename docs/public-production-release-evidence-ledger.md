@@ -33,6 +33,8 @@ linked from an issue or PR.
 - `uv.lock` is the reproducible Python resolution artifact.
 - `backend/requirements.lock.txt` is the hash-pinned Python audit input exported
   from `uv.lock`.
+- `backend/requirements.runtime.lock.txt` is the hash-pinned Python 3.12 Docker
+  runtime install input exported from `uv.lock` without dev extras.
 - `frontend/package-lock.json` is the audited frontend lockfile.
 - The root `bun.lock` is retained for Bun-compatible convenience scripts, not
   as the release audit source.
@@ -41,7 +43,7 @@ linked from an issue or PR.
 
 | Target | Purpose | Evidence |
 | --- | --- | --- |
-| `make dependency-audit` | Backend and frontend dependency audit | Python lock hygiene plus `pip-audit` on `backend/requirements.lock.txt`; npm audit on `frontend/package-lock.json` |
+| `make dependency-audit` | Backend and frontend dependency audit | Python lock hygiene for audit and Docker runtime locks plus `pip-audit` on `backend/requirements.lock.txt`; npm audit on `frontend/package-lock.json` |
 | `make package-check` | Build, package-content, and metadata validation | `dist/*`, `twine check`, `build/package-contents.json` |
 | `make pipx-source-smoke` | Source-at-tag install path compatibility | pipx smoke output and generated smoke artifacts |
 | `make api-client-drift-check` | OpenAPI/generated-client compatibility | `scripts/generate-client.sh`; clean `frontend/src/client` diff |
@@ -131,7 +133,7 @@ decisions.
 | [#380](https://github.com/Noetheon/vuln-prioritizer-workbench/issues/380) | CI frontend PR gate runs lint, build, unit coverage, generated-client drift, and the full Playwright suite for frontend/API/runtime changes. | Fresh workflow evidence is still required for docs-only, frontend-only, and API-client-impacting PR examples. |
 | [#381](https://github.com/Noetheon/vuln-prioritizer-workbench/issues/381) | Docker PR gate runs `make docker-demo-smoke` and `make docker-production-smoke` for runtime inputs and prints compose status/logs on failure. | Fresh workflow evidence is still required for backend/Compose and docs-only PR examples. |
 | [#382](https://github.com/Noetheon/vuln-prioritizer-workbench/issues/382) | Tag release workflow runs `make release-readiness-check`, uploads release-readiness evidence, and attaches SHA-256 artifact hashes to GitHub Releases. | A tag-specific workflow run is required before claiming candidate evidence. |
-| [#383](https://github.com/Noetheon/vuln-prioritizer-workbench/issues/383) | `backend/requirements.txt` is the bounded Python policy input; `uv.lock` records the resolver state; `backend/requirements.lock.txt` is exported with pins and hashes; `make dependency-audit` audits that lock. | Fresh lock refresh and audit output are still required for each exact release candidate. |
+| [#383](https://github.com/Noetheon/vuln-prioritizer-workbench/issues/383) | `backend/requirements.txt` is the bounded Python policy input; `uv.lock` records the resolver state; `backend/requirements.lock.txt` is exported with pins and hashes for dependency audit; `backend/requirements.runtime.lock.txt` is exported separately for the Python 3.12 Docker runtime install. | Fresh lock refresh and audit output are still required for each exact release candidate. |
 | [#384](https://github.com/Noetheon/vuln-prioritizer-workbench/issues/384) | `make docs-check` runs the release-evidence hygiene script before MkDocs to catch stale public-production, CLI-only, and historical-template closure wording in active release docs. | The script is intentionally narrow; broader wording cleanup still needs human review during release evidence comments. |
 | [#385](https://github.com/Noetheon/vuln-prioritizer-workbench/issues/385) | This ledger now requires commit/tag, command, result, artifact or CI URL, residual risk, owner, and follow-up fields for candidate evidence. | Build-local artifacts under `build/` are checked only when present in generated release workflow evidence. |
 | [#386](https://github.com/Noetheon/vuln-prioritizer-workbench/issues/386) | PR template and release operations docs require release-readiness ownership, skip rationale, non-readiness wording, and required-context documentation. | Branch protection itself must be confirmed in GitHub repository settings by a maintainer. |

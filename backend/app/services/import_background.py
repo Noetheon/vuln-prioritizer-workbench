@@ -10,6 +10,7 @@ from sqlmodel import Session
 from app.core.config import Settings
 from app.core.db import ensure_configured_superuser
 from app.models import AnalysisRun, AnalysisRunStatus, User
+from app.models.api_tokens import ApiTokenContext, attach_api_token_context
 from app.repositories import RunRepository
 from app.services.import_errors import ImportServiceError
 from app.services.import_execution import (
@@ -34,12 +35,20 @@ async def execute_project_import_upload_background(
     user_id: uuid.UUID,
     upload: ProjectImportUploadRequest,
     run_id: uuid.UUID,
+    api_token_context: ApiTokenContext | None = None,
 ) -> None:
     """Resume a deferred import run outside the request/response path."""
     with Session(engine) as session:
         current_user = session.get(User, user_id)
         if current_user is None:
             current_user = ensure_configured_superuser(session, active_settings=settings)
+        if api_token_context is not None:
+            attach_api_token_context(
+                current_user,
+                token_id=api_token_context.token_id,
+                project_id=api_token_context.project_id,
+                scopes=set(api_token_context.scopes),
+            )
         try:
             await execute_project_import_upload(
                 project_id=project_id,

@@ -12,8 +12,12 @@ def test_backend_dockerfile_prepares_workbench_quickstart_runtime_dirs() -> None
     assert "/app/workbench-reports" in dockerfile
     assert "/app/workbench-provider-cache" in dockerfile
     assert "backend/alembic.ini" in dockerfile
-    assert "backend/requirements.lock.txt" in dockerfile
-    assert "python -m pip install --require-hashes -r backend/requirements.lock.txt" in dockerfile
+    assert "backend/requirements.runtime.lock.txt" in dockerfile
+    assert (
+        "python -m pip install --require-hashes -r backend/requirements.runtime.lock.txt"
+        in dockerfile
+    )
+    assert "backend/requirements.lock.txt" not in dockerfile
     assert "python -m pip install --no-deps ./backend" in dockerfile
     assert "Set SECRET_KEY before starting the backend container." in dockerfile
     assert "Set FIRST_SUPERUSER_PASSWORD before starting the backend container." in dockerfile
@@ -91,7 +95,7 @@ def test_compose_uses_workbench_shell_without_legacy_runtime_services() -> None:
     assert "provider-scheduler" not in services
 
 
-def test_compose_override_exposes_template_shell_and_frontend_ports() -> None:
+def test_compose_override_exposes_workbench_shell_and_frontend_ports() -> None:
     override = yaml.safe_load(Path("compose.override.yml").read_text(encoding="utf-8"))
     services = override["services"]
     backend_command = "\n".join(services["backend"]["command"])

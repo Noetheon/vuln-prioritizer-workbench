@@ -3,6 +3,7 @@ BACKEND_DIR := backend
 BACKEND_SRC := $(BACKEND_DIR)/src
 BACKEND_TESTS := $(BACKEND_DIR)/tests
 PYTHON_AUDIT_LOCK := $(BACKEND_DIR)/requirements.lock.txt
+PYTHON_RUNTIME_LOCK := $(BACKEND_DIR)/requirements.runtime.lock.txt
 COMPOSE := docker compose -f compose.yml -f compose.override.yml
 PRODUCTION_SMOKE_COMPOSE := docker compose -f compose.yml -f compose.production-smoke.yml
 DOCKER_DEMO_SECRET_KEY ?= local-docker-smoke-secret-key

@@ -8,6 +8,7 @@ from dataclasses import replace
 from pathlib import Path
 
 import pytest
+from fastapi.testclient import TestClient
 from sqlmodel import Session, select
 from starlette.applications import Starlette
 from starlette.requests import Request
@@ -378,6 +379,77 @@ def test_import_upload_service_can_defer_and_resume_background_execution(
             item["status"] for item in resumed_run.summary_json["import_job"]["status_history"]
         ] == ["pending", "running", "succeeded"]
         assert resumed_run.summary_json["created_findings"] == 1
+
+
+def test_non_local_background_import_audit_retains_api_token_id(
+    template_api_env: TemplateApiEnv,
+    tmp_path: Path,
+) -> None:
+    _configure_upload_dir(template_api_env, tmp_path)
+    client = template_api_env.client
+    jwt_headers = auth_headers(client)
+    project = create_project_via_api(client, jwt_headers)
+    import_token = _create_api_token(
+        client,
+        jwt_headers,
+        name="background-import-token",
+        scopes=["import"],
+        project_id=project["id"],
+    )
+    old_settings = client.app.state.workbench_settings
+    old_template_settings = getattr(client.app.state, "template_settings", None)
+    old_engine = client.app.state.workbench_engine
+    old_template_engine = getattr(client.app.state, "template_engine", None)
+    background_settings = replace(
+        old_settings,
+        ENVIRONMENT="staging",
+        SECRET_KEY="s" * 32,
+        FIRST_SUPERUSER_PASSWORD="bootstrap-password-123456",
+        FRONTEND_HOST="https://workbench.example.test",
+    )
+
+    client.app.state.workbench_settings = background_settings
+    client.app.state.template_settings = background_settings
+    client.app.state.workbench_engine = template_api_env.engine
+    client.app.state.template_engine = template_api_env.engine
+    try:
+        response = client.post(
+            f"/api/v1/projects/{project['id']}/imports",
+            headers=_bearer_headers(str(import_token["token"])),
+            data={
+                "input_type": "cve-list",
+                "provider_snapshot_file": "demo_provider_snapshot.json",
+                "locked_provider_data": "true",
+            },
+            files={"file": ("background-cves.txt", b"CVE-2024-3094\n", "text/plain")},
+        )
+    finally:
+        client.app.state.workbench_settings = old_settings
+        if old_template_settings is not None:
+            client.app.state.template_settings = old_template_settings
+        client.app.state.workbench_engine = old_engine
+        if old_template_engine is not None:
+            client.app.state.template_engine = old_template_engine
+
+    assert response.status_code == 200, response.text
+    payload = response.json()
+    run_id = uuid.UUID(payload["id"])
+    assert payload["summary_json"]["import_job"]["execution_mode"] == "background"
+
+    with Session(template_api_env.engine) as session:
+        run = session.get(app_models.AnalysisRun, run_id)
+        import_event = session.exec(
+            select(app_models.AuditEvent)
+            .where(app_models.AuditEvent.action == "import.run")
+            .where(app_models.AuditEvent.resource_id == str(run_id))
+        ).one()
+
+    assert run is not None
+    assert run.status == app_models.AnalysisRunStatus.SUCCEEDED
+    assert import_event.status == "success"
+    assert import_event.project_id == uuid.UUID(project["id"])
+    assert import_event.api_token_id == uuid.UUID(str(import_token["id"]))
+    assert import_event.detail_json == {"stage": "succeeded", "input_type": "cve-list"}
 
 
 def test_template_import_uses_demo_snapshot_without_network_or_keys(
@@ -1824,6 +1896,28 @@ def _configure_upload_dir(
         MAX_UPLOAD_MB=max_upload_mb,
     )
     return upload_dir.resolve(strict=False)
+
+
+def _create_api_token(
+    client: TestClient,
+    headers: dict[str, str],
+    *,
+    name: str,
+    scopes: list[str],
+    project_id: str | None = None,
+) -> dict[str, object]:
+    body: dict[str, object] = {"name": name, "scopes": scopes}
+    if project_id is not None:
+        body["project_id"] = project_id
+    response = client.post("/api/v1/api-tokens/", headers=headers, json=body)
+    assert response.status_code == 200, response.text
+    payload = response.json()
+    assert payload["token"].startswith("vpr_")
+    return payload
+
+
+def _bearer_headers(token: str) -> dict[str, str]:
+    return {"Authorization": f"Bearer {token}"}
 
 
 async def _run_upload_size_guard(messages: list[dict[str, object]]) -> Response:

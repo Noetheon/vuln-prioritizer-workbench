@@ -64,6 +64,26 @@ def _request(
     )
 
 
+def test_user_defaults_to_non_superuser_while_bootstrap_remains_admin(
+    tmp_path: Path,
+) -> None:
+    active_settings = replace(
+        settings,
+        FIRST_SUPERUSER="default-admin@example.test",
+        FIRST_SUPERUSER_PASSWORD="bootstrap-password-123",
+        SQLALCHEMY_DATABASE_URI=f"sqlite:///{tmp_path / 'workbench-defaults.db'}",
+    )
+    engine = db_module.create_db_engine(active_settings)
+
+    assert User().is_superuser is False
+
+    with Session(engine) as session:
+        db_module.init_db(session, active_settings=active_settings)
+        user = session.exec(select(User).where(User.email == active_settings.FIRST_SUPERUSER)).one()
+
+    assert user.is_superuser is True
+
+
 def test_db_bootstrap_helpers_create_and_update_configured_superuser(tmp_path: Path) -> None:
     active_settings = replace(
         settings,

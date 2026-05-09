@@ -11,6 +11,7 @@ from app.api.routes.import_uploads import build_project_import_upload_request
 from app.api.routes.workbench_access import require_visible_project
 from app.core.app_state import workbench_engine, workbench_settings
 from app.models import AnalysisRun, AnalysisRunPublic
+from app.models.api_tokens import capture_api_token_context
 from app.services.import_background import execute_project_import_upload_background
 from app.services.import_errors import ImportServiceError
 from app.services.import_execution import execute_project_import_upload
@@ -38,6 +39,7 @@ async def import_project_upload(
     """Accept one upload request and delegate import execution to the service layer."""
     require_visible_project(session, current_user, project_id)
     settings = workbench_settings(request)
+    api_token_context = capture_api_token_context(current_user)
     try:
         upload = await build_project_import_upload_request(
             settings=settings,
@@ -69,6 +71,7 @@ async def import_project_upload(
                 current_user.id,
                 upload,
                 run.id,
+                api_token_context,
             )
             return run
         return await execute_project_import_upload(

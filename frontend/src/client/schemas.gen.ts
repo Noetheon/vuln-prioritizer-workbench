@@ -5024,7 +5024,7 @@ export const UserPublicSchema = {
             type: 'boolean'
         },
         is_superuser: {
-            default: true,
+            default: false,
             title: 'Is Superuser',
             type: 'boolean'
         }

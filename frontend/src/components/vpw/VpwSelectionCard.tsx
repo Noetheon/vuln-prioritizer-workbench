@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils"
 
 export type VpwSelectionCardProps = {
   title: string
+  as?: "button" | "span"
   checked?: boolean
   children?: ReactNode
   className?: string
@@ -13,6 +14,7 @@ export type VpwSelectionCardProps = {
 }
 
 export function VpwSelectionCard({
+  as = "button",
   checked = false,
   children,
   className,
@@ -21,20 +23,15 @@ export function VpwSelectionCard({
   title,
 }: VpwSelectionCardProps) {
   const Icon = checked ? CheckCircle2 : Circle
-
-  return (
-    <button
-      aria-pressed={checked}
-      className={cn(
-        "w-full rounded-[var(--vpw-radius-xl)] border bg-[var(--vpw-bg-card)] p-4 text-left shadow-[var(--vpw-shadow-1)] transition-colors",
-        checked
-          ? "border-[var(--vpw-blue)] ring-2 ring-[color-mix(in_srgb,var(--vpw-blue)_18%,transparent)]"
-          : "border-[var(--vpw-border-default)] hover:bg-[var(--vpw-bg-panel)]",
-        className,
-      )}
-      onClick={onClick}
-      type="button"
-    >
+  const cardClassName = cn(
+    "block w-full rounded-[var(--vpw-radius-xl)] border bg-[var(--vpw-bg-card)] p-4 text-left shadow-[var(--vpw-shadow-1)] transition-colors",
+    checked
+      ? "border-[var(--vpw-blue)] ring-2 ring-[color-mix(in_srgb,var(--vpw-blue)_18%,transparent)]"
+      : "border-[var(--vpw-border-default)] hover:bg-[var(--vpw-bg-panel)]",
+    className,
+  )
+  const content = (
+    <>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="font-semibold text-[var(--vpw-text-primary)]">
@@ -59,6 +56,21 @@ export function VpwSelectionCard({
           {children}
         </div>
       ) : null}
+    </>
+  )
+
+  if (as === "span") {
+    return <span className={cardClassName}>{content}</span>
+  }
+
+  return (
+    <button
+      aria-pressed={checked}
+      className={cardClassName}
+      onClick={onClick}
+      type="button"
+    >
+      {content}
     </button>
   )
 }

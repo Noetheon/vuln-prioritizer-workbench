@@ -2,24 +2,24 @@
 
 ## Scope
 
-VPW-008 adds the first template-stack Workbench domain tables after the user and
+VPW-008 adds the first Workbench domain tables after the user and
 project foundation. The schema is intentionally narrow: it persists already-known
 CVE findings and their project, asset, component, and vulnerability context. It
 does not introduce scanning, exploit execution, heuristic ATT&CK mapping, or a
 second opaque scoring model.
 
-The SQLModel tables are singular and owned by the template backend:
+The SQLModel tables are singular and owned by the Workbench backend:
 
 - `asset`
 - `component`
 - `vulnerability`
 - `finding`
 
-Workbench template code uses `app.models` exports and `app/alembic` migrations.
+Workbench backend code uses `app.models` exports and `app/alembic` migrations.
 
 ## Model Exports
 
-`app.models` should remain the public aggregator for template models. It must
+`app.models` should remain the public aggregator for Workbench models. It must
 export:
 
 - `Asset`
