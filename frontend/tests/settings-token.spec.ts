@@ -54,7 +54,14 @@ test("workbench settings clears one-time API token when leaving settings", async
   await expect(createdTokenPanel).toContainText("READ, IMPORT, REPORT")
 
   await page.getByRole("link", { name: "Dashboard" }).click()
+  await expect(page).toHaveURL(/\/(?:\?.*)?$/)
+  await expect(
+    page.getByRole("heading", { name: "Risk Operations", level: 1 }),
+  ).toBeVisible()
   await page.getByRole("link", { name: "Settings" }).click()
+  await expect(
+    page.getByRole("heading", { name: "Settings", level: 1 }),
+  ).toBeVisible()
 
   await expect(createdTokenPanel).toHaveCount(0)
   await expect(page.getByRole("textbox", { name: "Token" })).toHaveCount(0)
