@@ -6,12 +6,12 @@ import type {
   FindingsReadProjectFindingsData,
 } from "@/api-client"
 import { optionalText } from "@/lib/ui-copy"
-import type { QueueSort } from "./FindingsDataTable"
 
 export type FindingsSort = NonNullable<FindingsReadProjectFindingsData["sort"]>
 export type FindingsDirection = NonNullable<
   FindingsReadProjectFindingsData["direction"]
 >
+export type QueueSort = FindingsSort | "component" | "owner"
 
 export type KevFilter = "" | "true" | "false"
 
@@ -102,14 +102,18 @@ export function isApiSort(sort: QueueSort): sort is FindingsSort {
 
 export function componentLabel(finding: FindingPublic) {
   const name = optionalText(finding.component_name)
-  return finding.component_version ? `${name} ${finding.component_version}` : name
+  return finding.component_version
+    ? `${name} ${finding.component_version}`
+    : name
 }
 
-function serviceLabel(finding: FindingPublic) {
-  return finding.business_service ?? finding.component_purl ?? "Service not linked"
+export function serviceLabel(finding: FindingPublic) {
+  return (
+    finding.business_service ?? finding.component_purl ?? "Service not linked"
+  )
 }
 
-function ownerLabel(finding: FindingPublic) {
+export function ownerLabel(finding: FindingPublic) {
   return finding.owner ?? finding.business_service ?? "Unassigned"
 }
 
@@ -239,7 +243,10 @@ export function riskScoreColor(score: number | null | undefined) {
   return "text-muted-foreground tabular-nums"
 }
 
-export function activeFilterCount(filters: FindingFilters, hasAssetId: boolean) {
+export function activeFilterCount(
+  filters: FindingFilters,
+  hasAssetId: boolean,
+) {
   const fromFilters = Object.values(filters).filter(
     (v) => v.trim() !== "",
   ).length

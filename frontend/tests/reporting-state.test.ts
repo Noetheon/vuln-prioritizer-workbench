@@ -6,6 +6,18 @@ const evidenceCenterFile = new URL(
   "../src/components/reports/EvidenceCenter.tsx",
   import.meta.url,
 )
+const evidenceCenterSectionsFile = new URL(
+  "../src/components/reports/EvidenceCenterSections.tsx",
+  import.meta.url,
+)
+const evidenceCenterSummaryFile = new URL(
+  "../src/components/reports/EvidenceCenterSummary.tsx",
+  import.meta.url,
+)
+const evidenceCenterManifestFile = new URL(
+  "../src/components/reports/EvidenceCenterManifest.tsx",
+  import.meta.url,
+)
 const reportsStateFile = new URL(
   "../src/workbench/useReportsRouteState.ts",
   import.meta.url,
@@ -16,7 +28,14 @@ function text(url: URL) {
 }
 
 test("Evidence Center consumes selected run summaries and verification state", () => {
-  const source = text(evidenceCenterFile)
+  const source = [
+    evidenceCenterFile,
+    evidenceCenterSectionsFile,
+    evidenceCenterSummaryFile,
+    evidenceCenterManifestFile,
+  ]
+    .map(text)
+    .join("\n")
 
   assert.doesNotMatch(source, /void selectedRunSummary/)
   assert.match(source, /selectedRunSummary \?\? projectSummary/)

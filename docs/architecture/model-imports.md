@@ -1,6 +1,6 @@
 # Model Import Registry
 
-The template backend keeps `app.models` as the public model import surface. API
+The Workbench backend keeps `app.models` as the public model import surface. API
 routes, database setup, tests, and Alembic should import from `app.models`
 instead of reaching into individual model modules.
 

@@ -26,6 +26,7 @@ import {
 } from "./useWorkbenchBootstrapQuery"
 import { useProjectsQuery } from "./useWorkbenchQueries"
 import {
+  normalizeSelectedProjectId,
   searchStringFromUrlSearch,
   selectedProjectIdFromSearch,
   selectedProjectUrlSearch,
@@ -98,8 +99,27 @@ export function WorkbenchProvider({ children }: { children: ReactNode }) {
   const projectsQuery = useProjectsQuery()
   const projects = projectsQuery.data?.data ?? []
   const urlSelectedProjectId = selectedProjectIdFromSearch(location.searchStr)
-  const [selectedProjectId, setSelectedProjectIdState] = useState(
+  const [selectedProjectIdState, setSelectedProjectIdState] = useState(
     () => urlSelectedProjectId || readStoredSelectedProjectId(),
+  )
+  const projectIds = useMemo(
+    () => projects.map((project) => project.id),
+    [projects],
+  )
+  const selectedProjectId = useMemo(
+    () =>
+      projectsQuery.isSuccess
+        ? normalizeSelectedProjectId(
+            [urlSelectedProjectId, selectedProjectIdState],
+            projectIds,
+          )
+        : "",
+    [
+      projectIds,
+      projectsQuery.isSuccess,
+      selectedProjectIdState,
+      urlSelectedProjectId,
+    ],
   )
 
   const selectProjectId = useCallback(
@@ -107,7 +127,10 @@ export function WorkbenchProvider({ children }: { children: ReactNode }) {
       persistSelectedProjectId(nextProjectId)
       setSelectedProjectIdState(nextProjectId)
       const currentLocationSearch = activeSearchString(location.searchStr)
-      const nextSearch = selectedProjectUrlSearch(currentLocationSearch, nextProjectId)
+      const nextSearch = selectedProjectUrlSearch(
+        currentLocationSearch,
+        nextProjectId,
+      )
       const currentSearch = currentLocationSearch.startsWith("?")
         ? currentLocationSearch.slice(1)
         : currentLocationSearch
@@ -138,34 +161,30 @@ export function WorkbenchProvider({ children }: { children: ReactNode }) {
   }, [bootstrapError, handleAuthExpired])
 
   useEffect(() => {
-    if (
-      urlSelectedProjectId &&
-      projects.some((project) => project.id === urlSelectedProjectId) &&
-      urlSelectedProjectId !== selectedProjectId
-    ) {
-      persistSelectedProjectId(urlSelectedProjectId)
-      setSelectedProjectIdState(urlSelectedProjectId)
-    }
-  }, [projects, selectedProjectId, urlSelectedProjectId])
-
-  useEffect(() => {
-    if (urlSelectedProjectId) {
+    if (!projectsQuery.isSuccess) {
       return
     }
-    selectProjectId(
-      projects.some((project) => project.id === selectedProjectId)
-        ? selectedProjectId
-        : (projects[0]?.id ?? ""),
-      { replace: true },
-    )
-  }, [projects, selectProjectId, selectedProjectId, urlSelectedProjectId])
+    if (
+      selectedProjectId === selectedProjectIdState &&
+      selectedProjectId === urlSelectedProjectId
+    ) {
+      return
+    }
+    selectProjectId(selectedProjectId, { replace: true })
+  }, [
+    projectsQuery.isSuccess,
+    selectProjectId,
+    selectedProjectId,
+    selectedProjectIdState,
+    urlSelectedProjectId,
+  ])
 
   const refreshProjects = useCallback(
     async (preferredProjectId?: string) => {
+      await invalidateWorkbenchProjectQueries(queryClient)
       if (preferredProjectId) {
         setSelectedProjectId(preferredProjectId)
       }
-      await invalidateWorkbenchProjectQueries(queryClient)
     },
     [queryClient, setSelectedProjectId],
   )
