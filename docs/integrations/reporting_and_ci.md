@@ -285,11 +285,12 @@ records requested sources, completion status, snapshot hashes, warnings, and fai
 corrupting the previous provider snapshot on error.
 
 GitHub issue export is a two-step flow. Use the template
-`POST /api/v1/projects/{project_id}/github/issues/preview` route to review titles, labels,
-markdown bodies, evidence references, and duplicate keys for explicit `finding_ids` or the
-top-ranked findings. Use `POST /api/v1/projects/{project_id}/github/issues/export` with
-`dry_run: false`, `repository: "owner/name"`, and an explicit configured token environment
-variable name to create issues. Created
+`POST /api/v1/projects/{project_id}/github/issues/preview` route with report scope to
+review titles, labels, markdown bodies, evidence references, and duplicate keys for
+explicit `finding_ids` or the top-ranked findings. Use
+`POST /api/v1/projects/{project_id}/github/issues/export` with admin scope,
+`dry_run: false`, `repository: "owner/name"`, and an explicit configured token
+environment variable name to create issues. Created
 duplicate keys are persisted per repository so repeated exports skip already-created Workbench
 issues. Preview and dry-run requests do not require the external GitHub token.
 Workbench records redacted audit events for preview, dry-run, duplicate skip, create summaries,

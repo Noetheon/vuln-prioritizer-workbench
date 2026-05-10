@@ -454,7 +454,7 @@ def test_template_github_issue_export_retries_past_stale_empty_reservation(
     assert created_event["detail"]["stale_reservation_count"] == 1
 
 
-def test_template_github_issue_export_uses_report_scope(
+def test_template_github_issue_preview_uses_report_scope_and_export_requires_admin_scope(
     template_api_env: TemplateApiEnv,
 ) -> None:
     client = template_api_env.client
@@ -491,11 +491,23 @@ def test_template_github_issue_export_uses_report_scope(
         headers=_bearer_headers(str(read_token["token"])),
         json={"limit": 1},
     )
+    denied_export = client.post(
+        f"/api/v1/projects/{project['id']}/github/issues/export",
+        headers=_bearer_headers(str(report_token["token"])),
+        json={
+            "repository": "acme/workbench-triage",
+            "dry_run": False,
+            "token_env": "VPW_GITHUB_TOKEN",
+            "limit": 1,
+        },
+    )
 
     assert allowed.status_code == 200, allowed.text
     assert allowed.json()["count"] == 1
     assert denied.status_code == 403
     assert "report scope" in denied.text
+    assert denied_export.status_code == 403
+    assert "admin scope" in denied_export.text
 
 
 def test_template_github_issue_preview_audits_missing_selected_finding(

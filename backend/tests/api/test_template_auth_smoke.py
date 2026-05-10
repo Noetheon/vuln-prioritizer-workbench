@@ -278,6 +278,28 @@ def test_template_login_access_token_rejects_wrong_password() -> None:
     assert response.json()["detail"] == "Incorrect email or password"
 
 
+def test_template_failed_login_audit_stores_bounded_username_hint(
+    template_api_env: Any,
+) -> None:
+    client = template_api_env.client
+    long_username = "A" * 5000
+
+    response = client.post(
+        "/api/v1/login/access-token",
+        data={"username": long_username, "password": "wrong-password"},
+    )
+
+    assert response.status_code == 400
+    with Session(template_api_env.engine) as db_session:
+        event = db_session.exec(
+            select(template_api_env.app_models.AuditEvent).where(
+                template_api_env.app_models.AuditEvent.action == "login.failure"
+            )
+        ).one()
+    stored_username = str(event.detail_json.get("username", ""))
+    assert stored_username == long_username[:256]
+
+
 def test_template_token_routes_return_current_configured_user() -> None:
     client = _client()
     token = _login(client)
@@ -354,6 +376,41 @@ def test_template_login_rate_limit_blocks_repeated_attempts() -> None:
 
     assert [attempt.status_code for attempt in attempts] == [400, 400, 429]
     assert attempts[-1].headers["retry-after"]
+
+
+def test_template_login_rate_limit_uses_bounded_username_key() -> None:
+    selected_app = create_app(Settings(LOGIN_RATE_LIMIT_PER_MINUTE=5))
+    client = _client(selected_app)
+    long_username = "b" * 5000
+
+    response = client.post(
+        "/api/v1/login/access-token",
+        data={"username": long_username, "password": "wrong-password"},
+    )
+
+    assert response.status_code == 400
+    keys = [
+        key for key in selected_app.state.rate_limiter.attempts if key.startswith("login-user:")
+    ]
+    assert len(keys) == 1
+    assert long_username not in keys[0]
+    assert len(keys[0]) < 128
+
+
+def test_template_login_rejects_oversized_request_body(template_api_env: Any) -> None:
+    client = template_api_env.client
+    long_username = "c" * (70 * 1024)
+
+    response = client.post(
+        "/api/v1/login/access-token",
+        data={"username": long_username, "password": "wrong-password"},
+    )
+
+    assert response.status_code == 413
+    assert response.json()["code"] == "payload_too_large"
+    with Session(template_api_env.engine) as db_session:
+        audits = db_session.exec(select(template_api_env.app_models.AuditEvent)).all()
+    assert audits == []
 
 
 def test_template_rate_limit_uses_forwarded_client_only_from_trusted_proxy() -> None:

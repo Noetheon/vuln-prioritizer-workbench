@@ -117,7 +117,8 @@ Without a matching target, the explain flow still works, but asset-context and V
 - Workbench imports now accept the same input-format matrix as the CLI for single-upload and multi-upload import flows.
 - Workbench artifact retention, cleanup, detection-control history/attachments, config export/defaults, and ATT&CK review queue APIs are additive local Workbench surfaces.
 - Workbench supports implemented GitHub issue preview/export with dry-run defaults,
-  persisted duplicate keys, and explicit token environment variables. Jira and
+  report-scope previews, admin-scope real issue creation, persisted duplicate keys,
+  and explicit token environment variables. Jira and
   ServiceNow preview/export flows are not implemented in the active Workbench
   codebase and should be treated as future integrations until a separate
   implementation, tests, and threat-model update ship.

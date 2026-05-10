@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib
 import inspect
+import json
 import uuid
 from collections.abc import Iterator
 from pathlib import Path
@@ -70,6 +71,26 @@ def test_analysis_service_uses_demo_snapshot_only_when_enabled(session: Session)
     assert enabled.default_provider_snapshot_file() == PROJECT_ROOT / "data" / (
         "demo_provider_snapshot.json"
     )
+
+
+def test_record_audit_event_bounds_detail_json(session: Session) -> None:
+    from app.services.audit import record_audit_event
+
+    event = record_audit_event(
+        session,
+        action="audit.boundary",
+        resource_type="audit_event",
+        detail={
+            "username": "u" * 5000,
+            "nested": {"note": "n" * 5000},
+        },
+    )
+    session.commit()
+
+    serialized = json.dumps(event.detail_json, separators=(",", ":"), sort_keys=True)
+    assert len(serialized.encode("utf-8")) <= 4096
+    assert len(event.detail_json["username"]) == 1024
+    assert len(event.detail_json["nested"]["note"]) == 1024
 
 
 def test_project_repository_scopes_visibility_and_leaves_commit_to_caller(

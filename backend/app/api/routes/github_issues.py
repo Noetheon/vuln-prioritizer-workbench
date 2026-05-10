@@ -9,7 +9,7 @@ from fastapi import APIRouter, HTTPException
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session
 
-from app.api.deps import ScopedReportUser, SessionDep
+from app.api.deps import ScopedAdminUser, ScopedReportUser, SessionDep
 from app.api.routes.workbench_access import require_visible_project
 from app.models import (
     AuditEventStatus,
@@ -80,7 +80,7 @@ def export_project_github_issues(
     project_id: uuid.UUID,
     payload: GitHubIssueExportCreate,
     session: SessionDep,
-    current_user: ScopedReportUser,
+    current_user: ScopedAdminUser,
 ) -> GitHubIssueExportPublic:
     """Dry-run or explicitly create GitHub issues for selected visible findings."""
     require_visible_project(session, current_user, project_id)
