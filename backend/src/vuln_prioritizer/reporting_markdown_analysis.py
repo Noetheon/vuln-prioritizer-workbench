@@ -5,11 +5,6 @@ from __future__ import annotations
 
 from vuln_prioritizer.models import (
     AnalysisContext,
-    AttackData,
-    ComparisonFinding,
-    EpssData,
-    KevData,
-    NvdData,
     PrioritizedFinding,
 )
 from vuln_prioritizer.reporting_format import (
@@ -20,13 +15,10 @@ from vuln_prioritizer.reporting_format import (
     _format_vex_statuses,
     _format_waiver_status,
     _mapping_types,
-    _priority_display_label,
     _run_metadata_lines,
     _summary_lines,
     _warning_lines,
-    comma_or_na,
     escape_pipes,
-    format_change,
     format_data_quality_flags,
     format_score,
     normalize_whitespace,

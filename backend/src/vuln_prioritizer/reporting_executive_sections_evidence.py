@@ -3,18 +3,11 @@
 
 from __future__ import annotations
 
-import math
 from html import escape
 from typing import Any
 
-from vuln_prioritizer.reporting_executive_model import _kpi_value
 from vuln_prioritizer.reporting_executive_utils import (
-    _float_value,
-    _int_value,
-    _pct,
-    _score,
     _text,
-    _truncate,
 )
 
 # ruff: noqa: F403,F405
