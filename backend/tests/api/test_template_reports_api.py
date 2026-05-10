@@ -987,6 +987,31 @@ def test_vpw068_reports_and_evidence_bundle_export_governance_context() -> None:
     assert asset_context["top_assets_by_risk"][0]["label"] == "payments-api"
 
 
+def test_evidence_bundle_redacts_sensitive_governance_map_keys(tmp_path: Path) -> None:
+    payload = _vpw068_governance_payload()
+    governance_rollups = json.loads(json.dumps(payload.governance_rollups))
+    governance_rollups["waiver_debt"]["owner_counts"] = {"token=ghp_super_secret_value": 1}
+    governance_rollups["waiver_debt"]["service_counts"] = {str(tmp_path / "prod-db"): 1}
+    redaction_payload = replace(payload, governance_rollups=governance_rollups)
+
+    bundle, manifest = render_evidence_bundle_zip(redaction_payload)
+
+    with zipfile.ZipFile(BytesIO(bundle)) as archive:
+        bundle_text = "\n".join(
+            archive.read(name).decode("utf-8", errors="replace")
+            for name in archive.namelist()
+            if name.endswith((".json", ".md", ".html"))
+        )
+
+    assert "ghp_super_secret_value" not in bundle_text
+    assert str(tmp_path) not in bundle_text
+    assert "[REDACTED-KEY]" in bundle_text
+    assert not any(
+        "ghp_super_secret_value" in key for key in manifest["redaction"]["redacted_keys"]
+    )
+    assert not any(str(tmp_path) in key for key in manifest["redaction"]["redacted_keys"])
+
+
 def test_vpw079_template_evidence_bundle_includes_detection_coverage_export() -> None:
     payload = replace(
         _vpw068_governance_payload(),
@@ -1390,6 +1415,76 @@ def test_vpw048_download_rejects_path_escape_and_checksum_mismatch(
     assert escaped.json()["detail"] == "Report artifact not found"
 
 
+def test_report_generation_rejects_artifacts_over_configured_size_limit(
+    template_api_env: TemplateApiEnv,
+    tmp_path: Path,
+) -> None:
+    previous_settings = template_api_env.client.app.state.workbench_settings
+    try:
+        report_dir = _configure_report_dir(template_api_env, tmp_path, MAX_REPORT_MB=0)
+        headers = auth_headers(template_api_env.client)
+        project = create_project_via_api(template_api_env.client, headers)
+        run_id = _seed_reportable_run(template_api_env, uuid.UUID(project["id"]))
+
+        response = template_api_env.client.post(
+            f"/api/v1/runs/{run_id}/reports",
+            headers=headers,
+            json={"format": "markdown"},
+        )
+
+        assert response.status_code == 422
+        assert "configured report size limit" in response.text
+        with Session(template_api_env.engine) as session:
+            reports = template_api_env.repositories.ReportRepository(session).list_run_reports(
+                run_id
+            )
+        assert reports == []
+        assert not report_dir.exists()
+    finally:
+        template_api_env.client.app.state.workbench_settings = previous_settings
+
+
+def test_report_generation_prunes_oldest_reports_for_run(
+    template_api_env: TemplateApiEnv,
+    tmp_path: Path,
+) -> None:
+    previous_settings = template_api_env.client.app.state.workbench_settings
+    try:
+        report_dir = _configure_report_dir(
+            template_api_env,
+            tmp_path,
+            MAX_REPORT_MB=50,
+            MAX_REPORTS_PER_RUN=2,
+        )
+        headers = auth_headers(template_api_env.client)
+        project = create_project_via_api(template_api_env.client, headers)
+        run_id = _seed_reportable_run(template_api_env, uuid.UUID(project["id"]))
+
+        created = []
+        for _ in range(3):
+            response = template_api_env.client.post(
+                f"/api/v1/runs/{run_id}/reports",
+                headers=headers,
+                json={"format": "markdown"},
+            )
+            assert response.status_code == 200, response.text
+            created.append(response.json())
+
+        with Session(template_api_env.engine) as session:
+            reports = template_api_env.repositories.ReportRepository(session).list_run_reports(
+                run_id
+            )
+            remaining_ids = {str(report.id) for report in reports}
+
+        assert len(reports) == 2
+        assert remaining_ids == {created[1]["id"], created[2]["id"]}
+        assert not (report_dir / project["id"] / str(run_id) / created[0]["id"]).exists()
+        assert (report_dir / project["id"] / str(run_id) / created[1]["id"]).exists()
+        assert (report_dir / project["id"] / str(run_id) / created[2]["id"]).exists()
+    finally:
+        template_api_env.client.app.state.workbench_settings = previous_settings
+
+
 def test_vpw048_markdown_report_snapshot_is_stable() -> None:
     payload = MarkdownReportPayload(
         generated_at=datetime(2026, 4, 29, 12, 0, tzinfo=UTC),
@@ -1610,12 +1705,18 @@ def _technique_metadata(technique: dict[str, Any], key: str) -> str | None:
     return None
 
 
-def _configure_report_dir(template_api_env: TemplateApiEnv, tmp_path: Path) -> Path:
+def _configure_report_dir(
+    template_api_env: TemplateApiEnv,
+    tmp_path: Path,
+    **settings_overrides: Any,
+) -> Path:
     report_dir = (tmp_path / "template-reports").resolve(strict=False)
     active_settings = template_api_env.client.app.state.workbench_settings
+    overrides = {"MAX_REPORT_MB": 50, "MAX_REPORTS_PER_RUN": 20, **settings_overrides}
     template_api_env.client.app.state.workbench_settings = replace(
         active_settings,
         REPORT_DIR=str(report_dir),
+        **overrides,
     )
     return report_dir
 

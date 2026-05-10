@@ -13,6 +13,8 @@ from sqlmodel import Session
 from app.core.config import Settings
 from app.models import AnalysisRun, Project, Report
 from app.repositories import ReportRepository
+from app.services.report_models import ReportGenerationError
+from app.services.report_service_retention import prune_run_reports
 
 
 def persist_text_report(
@@ -31,6 +33,8 @@ def persist_text_report(
     content_type: str,
     extra_metadata: dict[str, Any] | None = None,
 ) -> Report:
+    content_bytes = content.encode("utf-8")
+    _ensure_report_size_allowed(settings, content_size=len(content_bytes), filename=filename)
     report_id = uuid.uuid4()
     path = report_path(
         settings,
@@ -41,7 +45,7 @@ def persist_text_report(
     )
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(content, encoding="utf-8")
-    return create_report_record(
+    report = create_report_record(
         session,
         report_id=report_id,
         run=run,
@@ -49,7 +53,7 @@ def persist_text_report(
         generated_at=generated_at,
         finding_count=finding_count,
         provider_snapshot_id=provider_snapshot_id,
-        content_bytes=content.encode("utf-8"),
+        content_bytes=content_bytes,
         report_path=path,
         kind=kind,
         report_format=report_format,
@@ -57,6 +61,8 @@ def persist_text_report(
         content_type=content_type,
         extra_metadata=extra_metadata,
     )
+    prune_run_reports(session, settings, report)
+    return report
 
 
 def persist_binary_report(
@@ -75,6 +81,7 @@ def persist_binary_report(
     content_type: str,
     extra_metadata: dict[str, Any] | None = None,
 ) -> Report:
+    _ensure_report_size_allowed(settings, content_size=len(content), filename=filename)
     report_id = uuid.uuid4()
     path = report_path(
         settings,
@@ -85,7 +92,7 @@ def persist_binary_report(
     )
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_bytes(content)
-    return create_report_record(
+    report = create_report_record(
         session,
         report_id=report_id,
         run=run,
@@ -101,6 +108,8 @@ def persist_binary_report(
         content_type=content_type,
         extra_metadata=extra_metadata,
     )
+    prune_run_reports(session, settings, report)
+    return report
 
 
 def create_report_record(
@@ -159,6 +168,15 @@ def report_path(
     filename: str,
 ) -> Path:
     return settings.report_dir_path / str(project_id) / str(run_id) / str(report_id) / filename
+
+
+def _ensure_report_size_allowed(settings: Settings, *, content_size: int, filename: str) -> None:
+    if content_size <= settings.max_report_bytes:
+        return
+    raise ReportGenerationError(
+        f"Generated report {filename} exceeds configured report size limit "
+        f"({settings.MAX_REPORT_MB} MiB)."
+    )
 
 
 __all__ = [

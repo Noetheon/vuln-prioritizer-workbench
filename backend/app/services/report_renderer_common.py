@@ -121,7 +121,7 @@ def _redacted_bundle_payload(
 
 
 def _redact_bundle_value(value: Any, *, path_prefix: str = "") -> tuple[Any, list[str]]:
-    return redact_value(value, path_prefix=path_prefix)
+    return redact_value(value, path_prefix=path_prefix, redact_mapping_keys=True)
 
 
 def _counts_by_priority(findings: list[MarkdownReportFinding]) -> dict[str, int]:

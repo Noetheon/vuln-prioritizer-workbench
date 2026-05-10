@@ -459,10 +459,14 @@ def load_asset_context_file(
                 )
             if match_mode == "regex":
                 try:
-                    re.compile(target_ref)
+                    _occurrence_support.validate_asset_context_regex(target_ref)
                 except re.error as exc:
                     raise ValueError(
                         f"Asset context CSV regex at row {order} is invalid: {exc}."
+                    ) from exc
+                except ValueError as exc:
+                    raise ValueError(
+                        f"Asset context CSV regex at row {order} is unsafe: {exc}."
                     ) from exc
             precedence_raw = (row.get("precedence") or "").strip()
             if precedence_raw:

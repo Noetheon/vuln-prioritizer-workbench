@@ -16,6 +16,14 @@ from vuln_prioritizer.models import (
     ParsedInput,
 )
 
+_ASSET_CONTEXT_REGEX_MAX_CHARS = 256
+_UNSAFE_REGEX_TOKEN_PATTERNS = (
+    re.compile(r"[()]"),
+    re.compile(r"\|"),
+    re.compile(r"\\[1-9]"),
+    re.compile(r"\.\*|\.\+"),
+)
+
 
 @dataclass(frozen=True)
 class AssetContextMatchDiagnostics:
@@ -246,10 +254,26 @@ def _asset_context_rule_matches(
         return rule_ref in occurrence.target_ref
     if match_mode == "regex":
         try:
+            validate_asset_context_regex(rule_ref)
             return re.search(rule_ref, occurrence.target_ref) is not None
-        except re.error:
+        except (ValueError, re.error):
             return False
     return occurrence.target_ref == rule_ref
+
+
+def validate_asset_context_regex(pattern: str) -> None:
+    """Validate the conservative regex subset allowed for asset-context rules."""
+    if len(pattern) > _ASSET_CONTEXT_REGEX_MAX_CHARS:
+        raise ValueError(
+            f"asset context regex must be {_ASSET_CONTEXT_REGEX_MAX_CHARS} characters or fewer"
+        )
+    re.compile(pattern)
+    for unsafe_pattern in _UNSAFE_REGEX_TOKEN_PATTERNS:
+        if unsafe_pattern.search(pattern):
+            raise ValueError(
+                "asset context regex may not use groups, alternation, backreferences, "
+                "or broad dot-star matching"
+            )
 
 
 def _literal_char_count(pattern: str) -> int:

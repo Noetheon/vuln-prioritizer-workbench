@@ -58,7 +58,7 @@ class ReportRepository:
         statement = (
             select(Report)
             .where(Report.analysis_run_id == analysis_run_id)
-            .order_by(col(Report.created_at).desc())
+            .order_by(col(Report.created_at).desc(), col(Report.id).desc())
         )
         return list(self.session.exec(statement).all())
 
@@ -67,6 +67,11 @@ class ReportRepository:
         statement = (
             select(Report)
             .where(Report.project_id == project_id)
-            .order_by(col(Report.created_at).desc())
+            .order_by(col(Report.created_at).desc(), col(Report.id).desc())
         )
         return list(self.session.exec(statement).all())
+
+    def delete_report(self, report: Report) -> None:
+        """Delete report metadata without committing the transaction."""
+        self.session.delete(report)
+        self.session.flush()
