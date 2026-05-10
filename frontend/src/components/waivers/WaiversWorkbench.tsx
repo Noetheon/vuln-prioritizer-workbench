@@ -36,7 +36,7 @@ export function WaiversWorkbench(props: WaiversWorkbenchProps) {
   const queue = reviewQueue(props.waiverDebtItems, props.waivers)
 
   return (
-    <VpwPageContainer className="space-y-8 px-0 py-0">
+    <VpwPageContainer className="flex flex-col gap-8 px-0 py-0">
       <WaiversHero
         activeWaivers={activeWaivers}
         expired={expired}
@@ -73,6 +73,13 @@ export function WaiversWorkbench(props: WaiversWorkbenchProps) {
         missingApprovals={missingApprovals}
         waiversLoading={props.waiversLoading}
       />
+      <WaiverRegister
+        onExpireWaiver={props.onExpireWaiver}
+        onRefreshWaivers={props.onRefreshWaivers}
+        waiverActionLoading={props.waiverActionLoading}
+        waivers={props.waivers}
+        waiversLoading={props.waiversLoading}
+      />
       <CreateWaiverSection
         completeness={completeness}
         onCreateWaiver={props.onCreateWaiver}
@@ -84,13 +91,6 @@ export function WaiversWorkbench(props: WaiversWorkbenchProps) {
         selectedProject={props.selectedProject}
         waiverActionLoading={props.waiverActionLoading}
         waiverForm={props.waiverForm}
-      />
-      <WaiverRegister
-        onExpireWaiver={props.onExpireWaiver}
-        onRefreshWaivers={props.onRefreshWaivers}
-        waiverActionLoading={props.waiverActionLoading}
-        waivers={props.waivers}
-        waiversLoading={props.waiversLoading}
       />
       <WaiverReviewSection
         acceptedFindings={acceptedFindings}

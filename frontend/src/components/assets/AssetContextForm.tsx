@@ -1,6 +1,11 @@
 import { FileInput } from "lucide-react"
 import type { FormEvent } from "react"
-
+import type {
+  AssetCriticality,
+  AssetEnvironment,
+  AssetExposure,
+} from "../../api-client"
+import { formatLabel as labelize } from "../../lib/ui-copy"
 import { Button } from "../ui/button"
 import { Input } from "../ui/input"
 import {
@@ -12,6 +17,7 @@ import {
 } from "../ui/select"
 import {
   VpwField,
+  VpwFileInput,
   VpwGrid,
   VpwKeyValueList,
   VpwPanel,
@@ -24,12 +30,6 @@ import {
   environmentOptions,
   exposureOptions,
 } from "./asset-model"
-import type {
-  AssetCriticality,
-  AssetEnvironment,
-  AssetExposure,
-} from "../../api-client"
-import { formatLabel as labelize } from "../../lib/ui-copy"
 
 export function AssetForm({
   busy = false,
@@ -54,7 +54,11 @@ export function AssetForm({
   const fieldPrefix = isEdit ? "edit-asset" : "create-asset"
 
   return (
-    <form aria-label={formLabel} className="space-y-4" onSubmit={onSubmit}>
+    <form
+      aria-label={formLabel}
+      className="flex flex-col gap-4"
+      onSubmit={onSubmit}
+    >
       <VpwGrid columns={2}>
         <VpwField
           htmlFor={`${fieldPrefix}-asset-key`}
@@ -240,7 +244,7 @@ export function AssetContextForms({
   return (
     <VpwGrid columns={2}>
       <div id="asset-context-import">
-        <VpwPanel className="space-y-4 p-5">
+        <VpwPanel className="flex flex-col gap-4 p-5">
           <VpwSectionHeader
             description="Upload CSV context to update asset ownership, service, environment, exposure and criticality."
             eyebrow="Context intake"
@@ -248,7 +252,7 @@ export function AssetContextForms({
           />
           <form
             aria-label="Import Asset Context form fields"
-            className="space-y-4"
+            className="flex flex-col gap-4"
             onSubmit={importAssetContext}
           >
             <VpwField
@@ -256,14 +260,12 @@ export function AssetContextForms({
               htmlFor="asset-context-csv"
               label="Asset context CSV"
             >
-              <Input
+              <VpwFileInput
                 accept=".csv,text/csv"
-                aria-label="Asset context CSV"
+                file={assetContextFile}
                 id="asset-context-csv"
-                onChange={(event) =>
-                  setAssetContextFile(event.target.files?.[0] ?? null)
-                }
-                type="file"
+                label="Asset context CSV"
+                onFileChange={setAssetContextFile}
               />
             </VpwField>
             <Button
@@ -293,7 +295,7 @@ export function AssetContextForms({
         </VpwPanel>
       </div>
 
-      <VpwPanel className="space-y-4 p-5">
+      <VpwPanel className="flex flex-col gap-4 p-5">
         <VpwSectionHeader
           description="Create a single asset context record when a CSV import is not needed."
           eyebrow="Manual context"

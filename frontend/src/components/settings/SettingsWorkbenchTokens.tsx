@@ -1,7 +1,8 @@
 import { Link } from "@tanstack/react-router"
-import { KeyRound } from "lucide-react"
+import { KeyRound, ShieldAlert } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import {
   Select,
@@ -16,7 +17,6 @@ import {
   VpwEmptyState,
   VpwField,
   VpwGrid,
-  VpwKeyValueList,
   VpwPanel,
   VpwSection,
   VpwSectionHeader,
@@ -24,12 +24,8 @@ import {
   VpwSkeletonStack,
   VpwStatusBanner,
 } from "@/components/vpw"
-import {
-  activeTokenCount,
-  buildApiTokenColumns,
-  formatDateTime,
-  formatScopes,
-} from "./settings-token-model"
+import { SettingsTokenCreationResult } from "./SettingsTokenCreationResult"
+import { activeTokenCount, buildApiTokenColumns } from "./settings-token-model"
 import type { SettingsWorkbenchProps } from "./settings-workbench-model"
 
 type SettingsApiTokensSectionProps = Pick<
@@ -86,13 +82,19 @@ export function SettingsApiTokensSection({
         title="API tokens"
       />
       <VpwGrid columns={2}>
-        <VpwPanel className="space-y-5 p-5">
+        <VpwPanel className="flex flex-col gap-5 p-5">
           <VpwSectionHeader
             description="Select the least-privilege scopes required by the service account."
             eyebrow="Access"
             title="Service Token"
           />
-          <form className="space-y-5" onSubmit={onCreateApiToken}>
+          {tokenHasAdminScope ? (
+            <VpwStatusBanner title="Admin scope is global" tone="warning">
+              Admin tokens bypass the project boundary. Use only for trusted
+              break-glass automation.
+            </VpwStatusBanner>
+          ) : null}
+          <form className="flex flex-col gap-5" onSubmit={onCreateApiToken}>
             <VpwField
               description="Use a short automation or integration name."
               htmlFor="api-token-name"
@@ -111,13 +113,18 @@ export function SettingsApiTokensSection({
               <div className="grid gap-3 sm:grid-cols-2">
                 {apiTokenScopeOptions.map((scope) => {
                   const checked = apiTokenScopes.includes(scope)
+                  const scopeId = `api-token-scope-${scope}`
                   return (
-                    <label className="block cursor-pointer" key={scope}>
-                      <input
+                    <label
+                      className="block cursor-pointer"
+                      htmlFor={scopeId}
+                      key={scope}
+                    >
+                      <Checkbox
                         checked={checked}
                         className="peer sr-only"
-                        onChange={() => onToggleApiTokenScope(scope)}
-                        type="checkbox"
+                        id={scopeId}
+                        onCheckedChange={() => onToggleApiTokenScope(scope)}
                       />
                       <VpwSelectionCard
                         as="span"
@@ -183,60 +190,28 @@ export function SettingsApiTokensSection({
           </form>
         </VpwPanel>
 
-        <VpwPanel className="space-y-5 p-5">
+        <VpwPanel className="flex flex-col gap-5 p-5">
           <VpwSectionHeader
-            description="Token secrets are only shown in the one-time creation response."
+            description="Token secrets are masked by default and only available during the one-time creation response."
             eyebrow="One-time secret"
             title="Creation result"
           />
-          {createdApiToken ? (
-            <section aria-label="Created API token" className="space-y-4">
-              <VpwStatusBanner
-                title={`Token ${createdApiToken.name} created`}
-                tone="success"
-              >
-                Save this one-time token now. It will be cleared when you leave
-                Settings and is not listed again.
-              </VpwStatusBanner>
-              <VpwField htmlFor="created-token-value" label="Token">
-                <Input
-                  className="font-mono"
-                  id="created-token-value"
-                  onFocus={(event) => event.currentTarget.select()}
-                  readOnly
-                  value={createdApiToken.token}
-                />
-              </VpwField>
-              <VpwKeyValueList
-                columns={2}
-                items={[
-                  {
-                    label: "Scopes",
-                    value: formatScopes(createdApiToken.scopes),
-                    tone: "support",
-                  },
-                  {
-                    label: "Created",
-                    value: formatDateTime(createdApiToken.created_at),
-                  },
-                  {
-                    label: "Expires",
-                    value: formatDateTime(createdApiToken.expires_at),
-                  },
-                ]}
-              />
-            </section>
-          ) : (
-            <VpwEmptyState
-              description="Create a token to receive a one-time cleartext value. Existing tokens are shown below without secrets."
-              icon={<KeyRound aria-hidden="true" className="h-5 w-5" />}
-              title="No new token created"
-            />
-          )}
+          <SettingsTokenCreationResult createdApiToken={createdApiToken} />
         </VpwPanel>
       </VpwGrid>
 
       <VpwPanel className="p-0">
+        {activeTokens > 0 ? (
+          <div className="border-b border-[var(--vpw-border-default)] p-4">
+            <VpwStatusBanner title="Revocation is immediate" tone="warning">
+              <span className="inline-flex items-center gap-2">
+                <ShieldAlert aria-hidden="true" className="h-4 w-4" />
+                Revoke tokens before deleting automation credentials or rotating
+                project access.
+              </span>
+            </VpwStatusBanner>
+          </div>
+        ) : null}
         {apiTokensLoading ? (
           <div className="p-5">
             <VpwSkeletonStack rows={6} />

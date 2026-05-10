@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import {
+  VpwBadge,
   VpwEmptyState,
   VpwField,
   VpwKeyValueList,
@@ -67,9 +68,10 @@ function ActiveProjectPanel({
   const readiness = readinessProgress(selectedProject, projectSummary)
 
   return (
-    <VpwPanel className="space-y-5">
+    <VpwPanel className="flex flex-col gap-5 border-[color-mix(in_srgb,var(--vpw-blue)_24%,var(--vpw-border-subtle))] bg-[var(--vpw-bg-card)]">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <VpwSectionHeader
+          actions={<VpwBadge tone={evidence.tone}>{evidence.label}</VpwBadge>}
           eyebrow="Active workspace"
           title={selectedProject.name}
           description={
@@ -129,7 +131,7 @@ function ActiveProjectPanel({
       />
 
       {editProjectId === selectedProject.id ? (
-        <form className="space-y-4" onSubmit={onSaveProject}>
+        <form className="flex flex-col gap-4" onSubmit={onSaveProject}>
           <VpwField
             htmlFor="edit-project-name"
             label="Edit project name"
@@ -174,10 +176,14 @@ function ActiveProjectPanel({
 
       <div className="rounded-[var(--vpw-radius-lg)] border border-[var(--vpw-border-default)] bg-[var(--vpw-bg-card)] p-4">
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <label className="flex items-start gap-3 text-sm text-[var(--vpw-text-secondary)]">
-            <input
+          <label
+            className="flex items-start gap-3 text-sm text-[var(--vpw-text-secondary)]"
+            htmlFor="project-delete-confirmed"
+          >
+            <Input
               checked={deleteConfirmed}
-              className="mt-1"
+              className="mt-1 size-4 min-w-4 shrink-0 p-0 accent-[var(--vpw-blue)] shadow-none"
+              id="project-delete-confirmed"
               onChange={(event) =>
                 onDeleteConfirmedChange(event.target.checked)
               }

@@ -18,7 +18,7 @@ export function VpwSkeletonStack({
   return (
     <div
       aria-label="Loading"
-      className={cn("space-y-3", className)}
+      className={cn("flex flex-col gap-3", className)}
       role="status"
     >
       {rowKeys.map((key, index) => (

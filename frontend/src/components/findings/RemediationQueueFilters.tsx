@@ -81,7 +81,7 @@ export function RemediationQueueFilters({
               >
                 <SelectTrigger
                   aria-label="Project"
-                  className="h-9 w-48 text-sm"
+                  className="h-10 w-48 text-sm"
                 >
                   <SelectValue placeholder="No projects" />
                 </SelectTrigger>
@@ -121,7 +121,7 @@ export function RemediationQueueFilters({
               Owner / Service
             </span>
             <Input
-              className="h-9 text-sm"
+              className="h-10 text-sm"
               id="queue-search"
               onChange={(e) => setOwnerServiceDraft(e.target.value)}
               placeholder="payments, infra-team"
@@ -137,7 +137,7 @@ export function RemediationQueueFilters({
           <div className="ml-auto flex items-end gap-2 self-end">
             <Button
               aria-expanded={showAdvancedFilters}
-              className="h-9"
+              className="h-10"
               onClick={() => setAdvancedFiltersOpen((open) => !open)}
               size="sm"
               type="button"
@@ -153,7 +153,7 @@ export function RemediationQueueFilters({
             </Button>
 
             <Button
-              className="h-9"
+              className="h-10"
               disabled={!activeFindingFilters && filterCount === 0}
               onClick={onClearFilters}
               size="sm"

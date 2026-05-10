@@ -1,5 +1,7 @@
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router"
 import { type FormEvent, useEffect, useState } from "react"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { ApiError, LoginService, UtilsService } from "../api-client"
 import { isLoggedIn, setAccessToken } from "../auth"
 import { hasAuthenticatedSession } from "../lib/session-auth"
@@ -90,12 +92,13 @@ function LoginPage() {
         </div>
 
         <form className="login-form" onSubmit={submitLogin}>
-          <label>
+          <label htmlFor="login-email">
             <span>Email</span>
-            <input
+            <Input
               aria-describedby={error ? errorId : undefined}
               aria-invalid={error ? "true" : undefined}
               autoComplete="username"
+              id="login-email"
               name="username"
               onChange={(event) => setEmail(event.target.value)}
               required
@@ -103,12 +106,13 @@ function LoginPage() {
               value={email}
             />
           </label>
-          <label>
+          <label htmlFor="login-password">
             <span>Password</span>
-            <input
+            <Input
               aria-describedby={error ? errorId : undefined}
               aria-invalid={error ? "true" : undefined}
               autoComplete="current-password"
+              id="login-password"
               name="password"
               onChange={(event) => setPassword(event.target.value)}
               required
@@ -126,13 +130,13 @@ function LoginPage() {
               {error}
             </p>
           ) : null}
-          <button
+          <Button
             className="primary-action"
             disabled={isSubmitting}
             type="submit"
           >
             {isSubmitting ? "Signing in" : "Sign in"}
-          </button>
+          </Button>
         </form>
 
         <div className="login-status" role="status">

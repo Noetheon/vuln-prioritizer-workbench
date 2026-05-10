@@ -6,6 +6,7 @@ export type VpwToolbarProps = {
   children: ReactNode
   className?: string
   label?: string
+  variant?: "framed" | "plain"
 }
 
 export type VpwToolbarGroupProps = {
@@ -13,7 +14,19 @@ export type VpwToolbarGroupProps = {
   className?: string
 }
 
-export function VpwToolbar({ children, className, label }: VpwToolbarProps) {
+const toolbarVariantClass: Record<NonNullable<VpwToolbarProps["variant"]>, string> =
+  {
+    framed:
+      "rounded-[var(--vpw-radius-xl)] border border-[var(--vpw-border-default)] bg-[var(--vpw-bg-card)] p-3 shadow-[var(--vpw-shadow-1)]",
+    plain: "p-0",
+  }
+
+export function VpwToolbar({
+  children,
+  className,
+  label,
+  variant = "framed",
+}: VpwToolbarProps) {
   const accessibilityProps = label
     ? ({ "aria-label": label, role: "toolbar" } as const)
     : {}
@@ -21,7 +34,8 @@ export function VpwToolbar({ children, className, label }: VpwToolbarProps) {
   return (
     <div
       className={cn(
-        "flex flex-col gap-3 rounded-[var(--vpw-radius-xl)] border border-[var(--vpw-border-default)] bg-[var(--vpw-bg-card)] p-3 shadow-[var(--vpw-shadow-1)] sm:flex-row sm:items-center sm:justify-between",
+        "flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between",
+        toolbarVariantClass[variant],
         className,
       )}
       {...accessibilityProps}
@@ -33,7 +47,7 @@ export function VpwToolbar({ children, className, label }: VpwToolbarProps) {
 
 export function VpwToolbarGroup({ children, className }: VpwToolbarGroupProps) {
   return (
-    <div className={cn("flex flex-wrap items-center gap-2", className)}>
+    <div className={cn("flex min-w-0 flex-wrap items-center gap-2", className)}>
       {children}
     </div>
   )

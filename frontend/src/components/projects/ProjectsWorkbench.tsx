@@ -1,4 +1,4 @@
-import { VpwPageContainer, VpwStatusBanner } from "@/components/vpw"
+import { VpwStatusBanner } from "@/components/vpw"
 import {
   ActiveProjectSection,
   ProjectDirectory,
@@ -16,7 +16,7 @@ export type {
 
 export function ProjectsWorkbench(props: ProjectsWorkbenchProps) {
   return (
-    <VpwPageContainer className="space-y-6 px-0 py-0">
+    <div className="flex flex-col gap-6">
       <ProjectHero
         projectSummary={props.projectSummary}
         projects={props.projects}
@@ -45,6 +45,21 @@ export function ProjectsWorkbench(props: ProjectsWorkbenchProps) {
         projects={props.projects}
         selectedProject={props.selectedProject}
       />
+      <ActiveProjectSection
+        deleteConfirmed={props.deleteConfirmed}
+        editProjectForm={props.editProjectForm}
+        editProjectId={props.editProjectId}
+        onCancelEditProject={props.onCancelEditProject}
+        onDeleteConfirmedChange={props.onDeleteConfirmedChange}
+        onDeleteProject={props.onDeleteProject}
+        onEditProjectDescriptionChange={props.onEditProjectDescriptionChange}
+        onEditProjectNameChange={props.onEditProjectNameChange}
+        onSaveProject={props.onSaveProject}
+        onStartEditProject={props.onStartEditProject}
+        projectActionLoading={props.projectActionLoading}
+        projectSummary={props.projectSummary}
+        selectedProject={props.selectedProject}
+      />
       <ProjectSetupSection
         createProjectError={props.createProjectError}
         createProjectForm={props.createProjectForm}
@@ -69,21 +84,6 @@ export function ProjectsWorkbench(props: ProjectsWorkbenchProps) {
         projects={props.projects}
         selectedProjectId={props.selectedProjectId}
       />
-      <ActiveProjectSection
-        deleteConfirmed={props.deleteConfirmed}
-        editProjectForm={props.editProjectForm}
-        editProjectId={props.editProjectId}
-        onCancelEditProject={props.onCancelEditProject}
-        onDeleteConfirmedChange={props.onDeleteConfirmedChange}
-        onDeleteProject={props.onDeleteProject}
-        onEditProjectDescriptionChange={props.onEditProjectDescriptionChange}
-        onEditProjectNameChange={props.onEditProjectNameChange}
-        onSaveProject={props.onSaveProject}
-        onStartEditProject={props.onStartEditProject}
-        projectActionLoading={props.projectActionLoading}
-        projectSummary={props.projectSummary}
-        selectedProject={props.selectedProject}
-      />
-    </VpwPageContainer>
+    </div>
   )
 }

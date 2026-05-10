@@ -1,9 +1,6 @@
 import { Link } from "@tanstack/react-router"
 import { BellRing, Import, RefreshCw, ShieldCheck } from "lucide-react"
-import type {
-  ProjectPublic,
-  ProviderStatusPublic,
-} from "@/api-client"
+import type { ProjectPublic, ProviderStatusPublic } from "@/api-client"
 import { Button } from "@/components/ui/button"
 import {
   Select,
@@ -57,9 +54,9 @@ export function DashboardHero({
           <div className="flex items-center gap-2 mb-1.5">
             <ShieldCheck
               aria-hidden="true"
-              className="size-3.5 text-amber-400"
+              className="size-3.5 text-[var(--vpw-amber)]"
             />
-            <span className="text-[10px] font-bold uppercase tracking-widest text-amber-400">
+            <span className="text-[10px] font-bold uppercase text-[var(--vpw-amber)]">
               Security Operations
             </span>
           </div>
@@ -68,12 +65,12 @@ export function DashboardHero({
               ? effectiveSelectedProject.name
               : "No project selected"}
           </p>
-          <p className="mt-0.5 text-xs text-slate-400">
+          <p className="mt-0.5 text-xs text-white/60">
             Prioritized vulnerability operations for this project
           </p>
         </div>
 
-        <div className="flex shrink-0 flex-wrap items-center gap-2">
+        <div className="flex w-full min-w-0 flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
           <Select
             disabled={
               isDemoMode || projectListLoading || effectiveProjects.length === 0
@@ -85,7 +82,7 @@ export function DashboardHero({
           >
             <SelectTrigger
               aria-label="Dashboard project"
-              className="w-44 border-white/20 bg-white/10 text-white hover:bg-white/20 focus:ring-white/30"
+              className="w-full min-w-0 border-white/20 bg-white/10 text-white hover:bg-white/20 focus:ring-white/30 sm:w-64 xl:w-72"
             >
               <SelectValue placeholder="Select project" />
             </SelectTrigger>
@@ -104,32 +101,32 @@ export function DashboardHero({
 
           <Button
             asChild
-            className="bg-white font-semibold text-slate-900 hover:bg-slate-100"
+            className="w-full justify-center bg-white font-semibold text-[var(--vpw-navy)] hover:bg-white/90 sm:w-auto"
           >
             <Link to="/imports">
-              <Import aria-hidden="true" className="size-4" />
+              <Import aria-hidden="true" data-icon="inline-start" />
               Import findings
             </Link>
           </Button>
           <Button
             asChild
-            className="border border-white/25 bg-transparent text-white hover:bg-white/10 hover:text-white"
+            className="w-full justify-center border border-white/25 bg-transparent text-white hover:bg-white/10 hover:text-white sm:w-auto"
             variant="ghost"
           >
             <Link to="/reports">
-              <BellRing aria-hidden="true" className="size-4" />
+              <BellRing aria-hidden="true" data-icon="inline-start" />
               Generate evidence
             </Link>
           </Button>
           <Button
             aria-label="Refresh dashboard"
-            className="text-white/70 hover:bg-white/10 hover:text-white"
+            className="self-end text-white/70 hover:bg-white/10 hover:text-white sm:self-auto"
             onClick={onRefresh}
             size="icon"
             type="button"
             variant="ghost"
           >
-            <RefreshCw className="size-4" />
+            <RefreshCw aria-hidden="true" />
           </Button>
         </div>
       </div>
@@ -141,9 +138,9 @@ export function DashboardHero({
             (providerStatusLoading ? "loading" : "unknown")
           }
         />
-        <span className="text-sm text-slate-300">{freshness.value}</span>
-        <span className="text-slate-600">·</span>
-        <span className="text-xs text-slate-400">{freshness.detail}</span>
+        <span className="text-sm text-white/75">{freshness.value}</span>
+        <span className="text-white/35">·</span>
+        <span className="text-xs text-white/60">{freshness.detail}</span>
       </div>
     </div>
   )

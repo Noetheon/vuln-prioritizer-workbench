@@ -17,6 +17,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { VpwBadge } from "@/components/vpw"
 import { formatLabel as labelize } from "@/lib/ui-copy"
 import { SortHeader, StaticHeader } from "./FindingsDataTableHeaders"
 import {
@@ -215,18 +216,18 @@ export function buildFindingsDataTableColumns({
       ariaSort: sortAriaState(findingDirection, queueSort, "epss"),
       cell: (finding) => (
         <div className="flex flex-wrap items-center gap-1.5 min-[1500px]:flex-nowrap">
-          <span className="inline-flex min-h-6 items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-2 text-[0.72rem] font-extrabold leading-none text-slate-600">
+          <VpwBadge className="min-h-6 gap-1.5 px-2 text-[0.72rem]" tone="info">
             <span>EPSS</span>
-            <strong className="font-black text-slate-950">
+            <strong className="font-black text-[var(--vpw-text-primary)]">
               <EpssBadge value={finding.epss} />
             </strong>
-          </span>
-          <span className="inline-flex min-h-6 items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-2 text-[0.72rem] font-extrabold leading-none text-slate-600">
+          </VpwBadge>
+          <VpwBadge className="min-h-6 gap-1.5 px-2 text-[0.72rem]" tone="info">
             <span>CVSS</span>
-            <strong className="font-black text-slate-950">
+            <strong className="font-black text-[var(--vpw-text-primary)]">
               <CvssBadge value={finding.cvss_base_score} />
             </strong>
-          </span>
+          </VpwBadge>
           <KevBadge matched={finding.in_kev} />
         </div>
       ),
@@ -239,13 +240,15 @@ export function buildFindingsDataTableColumns({
       cell: (finding) => (
         <>
           <span className="remediation-why-now">{findingWhyNow(finding)}</span>
-          <button
-            className="mt-1 border-0 bg-transparent p-0 text-[0.78rem] font-extrabold text-slate-900 hover:text-teal-700"
+          <Button
+            className="mt-1 h-auto justify-start p-0 text-[0.78rem] font-extrabold text-[var(--vpw-text-primary)]"
             onClick={() => onOpenWhy(finding)}
+            size="sm"
             type="button"
+            variant="link"
           >
             Why now
-          </button>
+          </Button>
         </>
       ),
       className: "w-[25%]",

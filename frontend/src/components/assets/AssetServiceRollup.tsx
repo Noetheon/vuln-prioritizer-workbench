@@ -38,7 +38,7 @@ export function AssetServiceRollup({
             onClick={() => setAssetServiceFilter(rollup.label)}
             title={rollup.label}
           >
-            <div className="space-y-3">
+            <div className="flex flex-col gap-3">
               <div className="flex flex-wrap gap-2">
                 <VpwBadge tone="support">{rollup.owner}</VpwBadge>
                 <VpwBadge tone={exposureTone(rollup.exposure)}>

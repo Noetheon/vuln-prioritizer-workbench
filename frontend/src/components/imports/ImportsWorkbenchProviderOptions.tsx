@@ -49,10 +49,14 @@ export function ProviderAttackOptions({
             value={importWizard.providerSnapshotFile}
           />
         </VpwField>
-        <label className="flex min-h-10 items-start gap-3 rounded-[var(--vpw-radius-md)] border border-[var(--vpw-border-default)] bg-[var(--vpw-bg-panel)] p-3 text-sm">
-          <input
+        <label
+          className="flex min-h-10 items-start gap-3 rounded-[var(--vpw-radius-md)] border border-[var(--vpw-border-default)] bg-[var(--vpw-bg-panel)] p-3 text-sm"
+          htmlFor="locked-provider-data"
+        >
+          <Input
             checked={importWizard.lockedProviderData}
-            className="mt-1"
+            className="mt-1 size-4 min-w-4 shrink-0 p-0 accent-[var(--vpw-blue)] shadow-none"
+            id="locked-provider-data"
             name="lockedProviderData"
             onChange={(event) =>
               onLockedProviderDataChange(event.target.checked)

@@ -78,19 +78,19 @@ export type AssetsWorkbenchProps = {
 
 export function AssetsWorkbench(state: AssetsWorkbenchProps) {
   return (
-    <VpwPageContainer className="space-y-6 px-0 py-0">
+    <VpwPageContainer className="flex flex-col gap-6 px-0 py-0">
         <VpwSection>
-          <VpwPanel className="space-y-5 p-5">
+          <VpwPanel className="flex flex-col gap-5 p-5">
             <VpwSectionHeader
               description="Manage asset, service, exposure and owner context for risk-based prioritization."
               eyebrow="Asset exposure"
               title="Assets"
             />
-            <VpwToolbar label="Asset actions">
+            <VpwToolbar label="Asset actions" variant="plain">
               <VpwToolbarGroup>
                 <Button asChild>
                   <a href="#asset-context-import">
-                    <FileInput aria-hidden="true" />
+                    <FileInput aria-hidden="true" data-icon="inline-start" />
                     Import context
                   </a>
                 </Button>
@@ -104,12 +104,16 @@ export function AssetsWorkbench(state: AssetsWorkbenchProps) {
                   type="button"
                   variant="outline"
                 >
-                  <Activity aria-hidden="true" />
+                  <Activity aria-hidden="true" data-icon="inline-start" />
                   Refresh
                 </Button>
               </VpwToolbarGroup>
             </VpwToolbar>
-            <VpwToolbar className="overflow-hidden" label="Asset page context">
+            <VpwToolbar
+              className="overflow-hidden"
+              label="Asset page context"
+              variant="plain"
+            >
               <VpwToolbarGroup className="min-w-0">
                 <VpwBadge
                   className="max-w-full whitespace-normal text-left [overflow-wrap:anywhere]"

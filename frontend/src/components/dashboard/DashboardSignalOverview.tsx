@@ -119,11 +119,23 @@ export function DashboardSignalOverview({
       </VpwSurfaceHeader>
       <VpwSurfaceBody>
         <Tabs className="w-full" defaultValue="priority">
-          <TabsList className="mb-3 h-8 text-xs">
-            <TabsTrigger value="priority">Findings by Priority</TabsTrigger>
-            <TabsTrigger value="epss">EPSS Distribution</TabsTrigger>
-            <TabsTrigger value="services">Top Services</TabsTrigger>
-            <TabsTrigger value="trend">Risk Trend</TabsTrigger>
+          <TabsList className="mb-3 grid h-auto w-full grid-cols-2 gap-1 text-xs sm:inline-flex sm:h-8 sm:w-auto sm:grid-cols-none">
+            <TabsTrigger className="min-w-0 px-2" value="priority">
+              <span className="hidden sm:inline">Findings by Priority</span>
+              <span className="sm:hidden">Priority</span>
+            </TabsTrigger>
+            <TabsTrigger className="min-w-0 px-2" value="epss">
+              <span className="hidden sm:inline">EPSS Distribution</span>
+              <span className="sm:hidden">EPSS</span>
+            </TabsTrigger>
+            <TabsTrigger className="min-w-0 px-2" value="services">
+              <span className="hidden sm:inline">Top Services</span>
+              <span className="sm:hidden">Services</span>
+            </TabsTrigger>
+            <TabsTrigger className="min-w-0 px-2" value="trend">
+              <span className="hidden sm:inline">Risk Trend</span>
+              <span className="sm:hidden">Trend</span>
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent className="mt-4" value="priority">

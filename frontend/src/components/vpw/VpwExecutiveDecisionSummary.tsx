@@ -41,7 +41,7 @@ export function VpwExecutiveDecisionSummary({
         </div>
         {demo ? <VpwBadge tone="warning">Demo preview</VpwBadge> : null}
       </CardHeader>
-      <CardContent className="space-y-4 pb-6">
+      <CardContent className="flex flex-col gap-4 pb-6">
         <div className="grid gap-3 lg:grid-cols-2">
           <SummaryBlock label="Problem" value={problem} />
           <SummaryBlock label="Business impact" value={businessImpact} />

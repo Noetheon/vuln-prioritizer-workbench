@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router"
 import { Activity } from "lucide-react"
 
+import type { ProviderStatusPublic } from "@/api-client"
 import { Button } from "@/components/ui/button"
 import {
   VpwBadge,
@@ -21,29 +22,29 @@ import {
   providerHealthTone,
 } from "./providers-workbench-model"
 
-type ProvidersHeroProps = ProvidersWorkbenchProps
-
 type ProviderStatusAlertsProps = Pick<
   ProvidersWorkbenchProps,
   "providerStatusError" | "providerStatusLoading"
->
+> & {
+  providerStatus: ProviderStatusPublic | null
+}
 
 export function ProvidersHero({
   onRefreshProviderStatus,
   providerStatus,
   providerStatusLoading,
-}: ProvidersHeroProps) {
+}: ProvidersWorkbenchProps) {
   const evidenceReadiness = evidenceReadinessLabel(providerStatus)
 
   return (
     <VpwSection>
-      <VpwPanel className="space-y-5 p-5">
+      <VpwPanel className="flex flex-col gap-5 p-5">
         <VpwSectionHeader
           description="Monitor vulnerability intelligence sources, snapshot freshness and evidence data quality."
           eyebrow="Provider intelligence"
           title="Providers"
         />
-        <VpwToolbar label="Provider actions">
+        <VpwToolbar label="Provider actions" variant="plain">
           <VpwToolbarGroup>
             <Button
               aria-busy={providerStatusLoading}
@@ -51,7 +52,7 @@ export function ProvidersHero({
               onClick={onRefreshProviderStatus}
               type="button"
             >
-              <Activity aria-hidden="true" />
+              <Activity aria-hidden="true" data-icon="inline-start" />
               Refresh providers
             </Button>
             <Button asChild variant="outline">
@@ -79,9 +80,12 @@ export function ProvidersHero({
 }
 
 export function ProviderStatusAlerts({
+  providerStatus,
   providerStatusError,
   providerStatusLoading,
 }: ProviderStatusAlertsProps) {
+  const providerWarnings = providerStatus?.warnings ?? []
+
   return (
     <>
       {providerStatusError ? (
@@ -89,6 +93,28 @@ export function ProviderStatusAlerts({
           {providerStatusError}
         </VpwStatusBanner>
       ) : null}
+
+      {!providerStatusError && providerStatus?.last_error ? (
+        <VpwStatusBanner title="Provider update failed" tone="critical">
+          {providerStatus.last_error}
+        </VpwStatusBanner>
+      ) : null}
+
+      {!providerStatusError &&
+      !providerStatus?.last_error &&
+      providerStatus &&
+      providerStatus.status !== "ok" ? (
+        <VpwStatusBanner title="Provider status degraded" tone="warning">
+          Current status is {providerStatus.status}. Prioritization can
+          continue, but evidence freshness should be reviewed.
+        </VpwStatusBanner>
+      ) : null}
+
+      {providerWarnings.map((warning) => (
+        <VpwStatusBanner key={warning} title="Provider warning" tone="warning">
+          {warning}
+        </VpwStatusBanner>
+      ))}
 
       {providerStatusLoading ? (
         <VpwPanel className="p-5">
