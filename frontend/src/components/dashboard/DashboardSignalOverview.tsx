@@ -46,6 +46,34 @@ type DashboardSignalOverviewProps = {
   trendItems: readonly ChartDatum[]
 }
 
+function ChartDataSummary({
+  data,
+  label,
+}: {
+  data: readonly ChartDatum[]
+  label: string
+}) {
+  return (
+    <table className="sr-only">
+      <caption>{label}</caption>
+      <thead>
+        <tr>
+          <th scope="col">Signal</th>
+          <th scope="col">Value</th>
+        </tr>
+      </thead>
+      <tbody>
+        {data.map((item) => (
+          <tr key={item.label}>
+            <th scope="row">{item.label}</th>
+            <td>{item.value}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  )
+}
+
 function priorityFill(tone: ChartDatum["tone"]) {
   return tone === "critical"
     ? "var(--vpw-red)"
@@ -118,25 +146,31 @@ export function DashboardSignalOverview({
                   title="No findings yet"
                 />
               ) : (
-                <ResponsiveContainer height={196} width="100%">
-                  <BarChart
+                <>
+                  <ResponsiveContainer height={196} width="100%">
+                    <BarChart
+                      data={priorityItems}
+                      margin={{ bottom: 0, left: 0, right: 6, top: 6 }}
+                    >
+                      <CartesianGrid
+                        className="opacity-40"
+                        strokeDasharray="3 3"
+                      />
+                      <XAxis dataKey="label" tick={{ fontSize: 12 }} />
+                      <YAxis tick={{ fontSize: 12 }} />
+                      <RechartsTooltip />
+                      <Bar dataKey="value" radius={[4, 4, 0, 0]}>
+                        {priorityItems.map((entry) => (
+                          <Cell key={entry.label} fill={priorityFill(entry.tone)} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                  <ChartDataSummary
                     data={priorityItems}
-                    margin={{ bottom: 0, left: 0, right: 6, top: 6 }}
-                  >
-                    <CartesianGrid
-                      className="opacity-40"
-                      strokeDasharray="3 3"
-                    />
-                    <XAxis dataKey="label" tick={{ fontSize: 12 }} />
-                    <YAxis tick={{ fontSize: 12 }} />
-                    <RechartsTooltip />
-                    <Bar dataKey="value" radius={[4, 4, 0, 0]}>
-                      {priorityItems.map((entry) => (
-                        <Cell key={entry.label} fill={priorityFill(entry.tone)} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
+                    label="Findings by priority chart data"
+                  />
+                </>
               )}
             </ChartCard>
           </TabsContent>
@@ -162,25 +196,31 @@ export function DashboardSignalOverview({
                   title="No EPSS data"
                 />
               ) : (
-                <ResponsiveContainer height={196} width="100%">
-                  <BarChart
+                <>
+                  <ResponsiveContainer height={196} width="100%">
+                    <BarChart
+                      data={epssItems}
+                      margin={{ bottom: 0, left: 0, right: 6, top: 6 }}
+                    >
+                      <CartesianGrid
+                        className="opacity-40"
+                        strokeDasharray="3 3"
+                      />
+                      <XAxis dataKey="label" tick={{ fontSize: 12 }} />
+                      <YAxis tick={{ fontSize: 12 }} />
+                      <RechartsTooltip />
+                      <Bar dataKey="value" radius={[4, 4, 0, 0]}>
+                        {epssItems.map((entry) => (
+                          <Cell key={entry.label} fill={epssFill(entry.tone)} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                  <ChartDataSummary
                     data={epssItems}
-                    margin={{ bottom: 0, left: 0, right: 6, top: 6 }}
-                  >
-                    <CartesianGrid
-                      className="opacity-40"
-                      strokeDasharray="3 3"
-                    />
-                    <XAxis dataKey="label" tick={{ fontSize: 12 }} />
-                    <YAxis tick={{ fontSize: 12 }} />
-                    <RechartsTooltip />
-                    <Bar dataKey="value" radius={[4, 4, 0, 0]}>
-                      {epssItems.map((entry) => (
-                        <Cell key={entry.label} fill={epssFill(entry.tone)} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
+                    label="EPSS distribution chart data"
+                  />
+                </>
               )}
             </ChartCard>
           </TabsContent>
@@ -213,25 +253,33 @@ export function DashboardSignalOverview({
                   title="No rollup data"
                 />
               ) : (
-                <ResponsiveContainer height={220} width="100%">
-                  <BarChart
+                <>
+                  <ResponsiveContainer height={220} width="100%">
+                    <BarChart
+                      data={serviceItems}
+                      margin={{ bottom: 0, left: 0, right: 6, top: 6 }}
+                    >
+                      <CartesianGrid
+                        className="opacity-40"
+                        strokeDasharray="3 3"
+                      />
+                      <XAxis dataKey="label" tick={{ fontSize: 12 }} />
+                      <YAxis tick={{ fontSize: 12 }} />
+                      <RechartsTooltip />
+                      <Bar
+                        dataKey="value"
+                        fill="var(--vpw-teal)"
+                        radius={[4, 4, 0, 0]}
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
+                  <ChartDataSummary
                     data={serviceItems}
-                    margin={{ bottom: 0, left: 0, right: 6, top: 6 }}
-                  >
-                    <CartesianGrid
-                      className="opacity-40"
-                      strokeDasharray="3 3"
-                    />
-                    <XAxis dataKey="label" tick={{ fontSize: 12 }} />
-                    <YAxis tick={{ fontSize: 12 }} />
-                    <RechartsTooltip />
-                    <Bar
-                      dataKey="value"
-                      fill="var(--vpw-teal)"
-                      radius={[4, 4, 0, 0]}
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
+                    label={`${
+                      topServiceSource === "assets" ? "Top assets" : "Top services"
+                    } chart data`}
+                  />
+                </>
               )}
             </ChartCard>
           </TabsContent>
@@ -268,27 +316,33 @@ export function DashboardSignalOverview({
                   title="No trend data"
                 />
               ) : (
-                <ResponsiveContainer height={220} width="100%">
-                  <LineChart
+                <>
+                  <ResponsiveContainer height={220} width="100%">
+                    <LineChart
+                      data={trendItems}
+                      margin={{ bottom: 0, left: 0, right: 6, top: 6 }}
+                    >
+                      <CartesianGrid
+                        className="opacity-40"
+                        strokeDasharray="3 3"
+                      />
+                      <XAxis dataKey="label" tick={{ fontSize: 12 }} />
+                      <YAxis tick={{ fontSize: 12 }} />
+                      <RechartsTooltip />
+                      <Line
+                        dataKey="value"
+                        dot={{ r: 3 }}
+                        stroke="var(--vpw-violet)"
+                        strokeWidth={2}
+                        type="monotone"
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                  <ChartDataSummary
                     data={trendItems}
-                    margin={{ bottom: 0, left: 0, right: 6, top: 6 }}
-                  >
-                    <CartesianGrid
-                      className="opacity-40"
-                      strokeDasharray="3 3"
-                    />
-                    <XAxis dataKey="label" tick={{ fontSize: 12 }} />
-                    <YAxis tick={{ fontSize: 12 }} />
-                    <RechartsTooltip />
-                    <Line
-                      dataKey="value"
-                      dot={{ r: 3 }}
-                      stroke="var(--vpw-violet)"
-                      strokeWidth={2}
-                      type="monotone"
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
+                    label="Risk trend chart data"
+                  />
+                </>
               )}
             </ChartCard>
           </TabsContent>

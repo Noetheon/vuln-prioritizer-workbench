@@ -21,6 +21,7 @@ function FindingsRouteContainer() {
   const location = useLocation()
   const {
     projectListLoading,
+    projectListError,
     projects,
     selectedProject,
     selectedProjectId,
@@ -122,6 +123,7 @@ function FindingsRouteContainer() {
         }}
         onSortDirectionChange={updateFindingSortDirection}
         projectListLoading={projectListLoading}
+        projectListError={projectListError}
         projectSummary={projectSummaryQuery.data ?? null}
         projects={projects}
         selectedProject={selectedProject}

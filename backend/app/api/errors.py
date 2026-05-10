@@ -121,7 +121,11 @@ def error_response_content(
     return content
 
 
-def install_error_openapi_schema(app: FastAPI) -> None:
+def install_error_openapi_schema(
+    app: FastAPI,
+    *,
+    oauth2_token_url: str | None = None,
+) -> None:
     """Document FastAPI validation errors with the runtime error envelope."""
     original_openapi = app.openapi
 
@@ -132,11 +136,31 @@ def install_error_openapi_schema(app: FastAPI) -> None:
         schema = original_openapi()
         components = schema.setdefault("components", {}).setdefault("schemas", {})
         components["ApiErrorEnvelope"] = deepcopy(API_ERROR_ENVELOPE_SCHEMA)
+        if oauth2_token_url:
+            _set_oauth2_token_url(schema, oauth2_token_url)
         _replace_fastapi_validation_error_schemas(schema)
         app.openapi_schema = schema
         return schema
 
     app.openapi = custom_openapi  # type: ignore[method-assign]
+
+
+def _set_oauth2_token_url(schema: dict[str, Any], token_url: str) -> None:
+    components = schema.get("components")
+    if not isinstance(components, dict):
+        return
+    security_schemes = components.get("securitySchemes")
+    if not isinstance(security_schemes, dict):
+        return
+    for scheme in security_schemes.values():
+        if not isinstance(scheme, dict) or scheme.get("type") != "oauth2":
+            continue
+        flows = scheme.get("flows")
+        if not isinstance(flows, dict):
+            continue
+        password_flow = flows.get("password")
+        if isinstance(password_flow, dict):
+            password_flow["tokenUrl"] = token_url
 
 
 def redact_request_safe_value(value: Any) -> Any:

@@ -16,6 +16,7 @@ from app.core.migration_bootstrap import (
     ALEMBIC_HEAD,
     _connect_args,
     _legacy_revision_for_tables,
+    current_alembic_head,
     stamp_legacy_create_all_database,
 )
 
@@ -91,6 +92,12 @@ def test_template_alembic_head_matches_model_metadata(tmp_path: Path) -> None:
         engine.dispose()
 
     assert diffs == []
+
+
+def test_template_migration_head_resolves_without_checked_out_alembic_ini(
+    tmp_path: Path,
+) -> None:
+    assert current_alembic_head(tmp_path / "missing-alembic.ini") == ALEMBIC_HEAD
 
 
 @pytest.mark.parametrize(

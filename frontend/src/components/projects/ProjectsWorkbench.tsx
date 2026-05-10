@@ -16,7 +16,7 @@ export type {
 
 export function ProjectsWorkbench(props: ProjectsWorkbenchProps) {
   return (
-    <VpwPageContainer className="space-y-8 px-0 py-0">
+    <VpwPageContainer className="space-y-6 px-0 py-0">
       <ProjectHero
         projectSummary={props.projectSummary}
         projects={props.projects}

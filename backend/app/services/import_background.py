@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import uuid
+from datetime import timedelta
 
 from sqlalchemy.engine import Engine
 from sqlmodel import Session
@@ -11,6 +12,7 @@ from app.core.config import Settings
 from app.core.db import ensure_configured_superuser
 from app.models import AnalysisRun, AnalysisRunStatus, User
 from app.models.api_tokens import ApiTokenContext, attach_api_token_context
+from app.models.base import get_datetime_utc
 from app.repositories import RunRepository
 from app.services.import_errors import ImportServiceError
 from app.services.import_execution import (
@@ -26,6 +28,31 @@ _TERMINAL_IMPORT_STATUSES = {
     AnalysisRunStatus.FAILED,
     AnalysisRunStatus.CANCELLED,
 }
+
+
+def reconcile_stale_background_import_runs(
+    *,
+    engine: Engine,
+    settings: Settings,
+) -> int:
+    """Fail old background imports that could not survive a process restart."""
+    stale_before = get_datetime_utc() - timedelta(minutes=settings.BACKGROUND_IMPORT_STALE_MINUTES)
+    reconciled = 0
+    with Session(engine) as session:
+        run_repo = RunRepository(session)
+        for run in run_repo.list_active_analysis_runs_started_before(stale_before):
+            if not _is_background_import_run(run):
+                continue
+            failed = mark_import_run_background_failed(
+                session=session,
+                run_id=run.id,
+                error_message=(
+                    "Background import did not finish before the Workbench process restarted."
+                ),
+            )
+            if failed is not None and failed.status == AnalysisRunStatus.FAILED:
+                reconciled += 1
+    return reconciled
 
 
 async def execute_project_import_upload_background(
@@ -122,3 +149,8 @@ def _append_job_status(
     if status_history and status_history[-1].get("status") == status:
         return status_history
     return [*status_history, _job_status_entry(status)]
+
+
+def _is_background_import_run(run: AnalysisRun) -> bool:
+    job = run.summary_json.get("import_job")
+    return isinstance(job, dict) and job.get("execution_mode") == "background"

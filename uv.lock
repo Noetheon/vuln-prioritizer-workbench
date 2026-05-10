@@ -2364,7 +2364,7 @@ provides-extras = ["dev"]
 
 [[package]]
 name = "vuln-prioritizer-workbench-workspace"
-version = "0.0.0"
+version = "1.1.0"
 source = { virtual = "." }
 
 [[package]]

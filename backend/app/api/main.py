@@ -25,13 +25,14 @@ from app.api.routes import (
     workbench,
 )
 
-PUBLIC_API_ROUTE_PATHS = frozenset(
+PUBLIC_API_ROUTE_SUFFIXES = frozenset(
     {
-        "/api/v1/login/access-token",
-        "/api/v1/workbench/health",
-        "/api/v1/utils/health-check/",
+        "/login/access-token",
+        "/workbench/health",
+        "/utils/health-check/",
     }
 )
+PUBLIC_API_ROUTE_PATHS = frozenset(f"/api/v1{path}" for path in PUBLIC_API_ROUTE_SUFFIXES)
 
 api_router = APIRouter()
 api_router.include_router(login.router)
@@ -54,8 +55,8 @@ api_router.include_router(workbench.router)
 def assert_api_auth_policy(api_prefix: str) -> None:
     """Fail fast if a non-public API route lacks an explicit auth dependency."""
     public_paths = {
-        *PUBLIC_API_ROUTE_PATHS,
-        *(path.removeprefix(api_prefix) for path in PUBLIC_API_ROUTE_PATHS),
+        *PUBLIC_API_ROUTE_SUFFIXES,
+        *(f"{api_prefix}{path}" for path in PUBLIC_API_ROUTE_SUFFIXES),
     }
     missing: list[str] = []
     for route in api_router.routes:

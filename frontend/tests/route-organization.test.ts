@@ -2,6 +2,8 @@ import assert from "node:assert/strict"
 import { readFileSync, readdirSync } from "node:fs"
 import test from "node:test"
 
+import { workbenchPathFromPathname } from "../src/lib/app-route-config.ts"
+
 const routesDir = new URL("../src/routes/_layout/", import.meta.url)
 const authenticatedLayoutFile = new URL("../src/routes/_layout.tsx", import.meta.url)
 const workbenchRoutesDir = new URL("../src/workbench/routes/", import.meta.url)
@@ -102,6 +104,14 @@ test("Workbench shell is mounted once at the authenticated layout boundary", () 
       `${file} should rely on the authenticated layout shell`,
     )
   }
+})
+
+test("Workbench route matching does not highlight dashboard for unknown paths", () => {
+  assert.equal(workbenchPathFromPathname("/"), "/")
+  assert.equal(workbenchPathFromPathname("/findings/demo-f1"), "/findings")
+  assert.equal(workbenchPathFromPathname("/reports/exported/123"), "/reports")
+  assert.equal(workbenchPathFromPathname("/findings-old"), null)
+  assert.equal(workbenchPathFromPathname("/unknown"), null)
 })
 
 test("frontend unit test scripts automatically include every unit test file", () => {

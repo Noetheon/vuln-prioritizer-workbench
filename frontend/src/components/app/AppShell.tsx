@@ -80,7 +80,7 @@ type PageHeaderProps = {
 }
 
 type AppShellProps = PageHeaderProps & {
-  activePath: WorkbenchPath
+  activePath: WorkbenchPath | null
   children: ReactNode
   currentUserLabel: string
   healthLabel: string
@@ -91,7 +91,7 @@ type AppShellProps = PageHeaderProps & {
 }
 
 type ProductAppShellProps = PageHeaderProps & {
-  activePath: WorkbenchPath
+  activePath: WorkbenchPath | null
   children: ReactNode
   currentUser: UserPublic | null
   hideStatusStrip?: boolean

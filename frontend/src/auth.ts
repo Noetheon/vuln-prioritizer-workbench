@@ -1,10 +1,3 @@
-declare const __VPW_LEGACY_SESSION_TOKEN_STORAGE__: boolean | undefined
-
-const legacySessionTokenStorage =
-  typeof __VPW_LEGACY_SESSION_TOKEN_STORAGE__ === "boolean"
-    ? __VPW_LEGACY_SESSION_TOKEN_STORAGE__
-    : false
-const legacySessionTokenKey = "vpw.legacySessionToken"
 const csrfCookieNames = [
   "vpw_csrf_token",
   "vpw_csrf",
@@ -16,37 +9,26 @@ const csrfMetaNames = ["csrf-token", "vpw-csrf-token"]
 const csrfHeaderName = "X-CSRF-Token"
 const unsafeMethods = new Set(["DELETE", "PATCH", "POST", "PUT"])
 
-let inMemoryAccessToken = readLegacySessionToken()
 let authenticatedInCurrentTab = false
 
 export function getAccessToken(): string {
-  if (!legacySessionTokenStorage) {
-    return ""
-  }
-  if (!inMemoryAccessToken) {
-    inMemoryAccessToken = readLegacySessionToken()
-  }
-  return inMemoryAccessToken
+  return ""
 }
 
 export function isLoggedIn(): boolean {
-  return authenticatedInCurrentTab || getAccessToken().length > 0
+  return authenticatedInCurrentTab
 }
 
 export function markAuthenticatedSession(): void {
   authenticatedInCurrentTab = true
 }
 
-export function setAccessToken(token?: string): void {
-  inMemoryAccessToken = legacySessionTokenStorage ? (token ?? "") : ""
+export function setAccessToken(_token?: string): void {
   markAuthenticatedSession()
-  writeLegacySessionToken(inMemoryAccessToken)
 }
 
 export function clearAccessToken(): void {
-  inMemoryAccessToken = ""
   authenticatedInCurrentTab = false
-  clearLegacySessionToken()
   expireReadableAuthCookies()
 }
 
@@ -86,43 +68,6 @@ export function withCsrfHeader(request: Request): Request {
 
 function browserCookie() {
   return typeof document === "undefined" ? "" : document.cookie
-}
-
-function readLegacySessionToken() {
-  if (!legacySessionTokenStorage || typeof sessionStorage === "undefined") {
-    return ""
-  }
-  try {
-    return sessionStorage.getItem(legacySessionTokenKey) ?? ""
-  } catch {
-    return ""
-  }
-}
-
-function writeLegacySessionToken(token: string) {
-  if (!legacySessionTokenStorage || typeof sessionStorage === "undefined") {
-    return
-  }
-  try {
-    if (token) {
-      sessionStorage.setItem(legacySessionTokenKey, token)
-    } else {
-      sessionStorage.removeItem(legacySessionTokenKey)
-    }
-  } catch {
-    // Session storage can be blocked; cookie sessions remain the primary path.
-  }
-}
-
-function clearLegacySessionToken() {
-  if (!legacySessionTokenStorage || typeof sessionStorage === "undefined") {
-    return
-  }
-  try {
-    sessionStorage.removeItem(legacySessionTokenKey)
-  } catch {
-    // Session storage can be blocked; cookie sessions remain the primary path.
-  }
 }
 
 function readFirstCookieValue(cookie: string, names: readonly string[]) {

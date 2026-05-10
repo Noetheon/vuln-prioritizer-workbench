@@ -170,6 +170,7 @@ export function AssetTable({
       data={assets}
       density="compact"
       getRowKey={(asset) => asset.id}
+      minWidth="1120px"
     />
   )
 }

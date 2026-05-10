@@ -38,6 +38,7 @@ export type ImportsWorkbenchProps = {
   onSubmit: FormEventHandler<HTMLFormElement>
   onVexFileChange: (file: File | null) => void
   projectListLoading: boolean
+  projectListError: string
   projectRuns: AnalysisRunPublic[]
   projects: ProjectPublic[]
   providerStatus: ProviderStatusPublic | null

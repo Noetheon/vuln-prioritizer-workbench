@@ -109,6 +109,23 @@ def test_template_backend_openapi_documents_error_envelope() -> None:
     ]["schema"] == {"$ref": "#/components/schemas/ApiErrorEnvelope"}
 
 
+def test_template_backend_openapi_token_url_uses_active_api_prefix(tmp_path) -> None:
+    selected_app = create_app(
+        Settings(
+            API_V1_STR="/api/custom",
+            SQLALCHEMY_DATABASE_URI=f"sqlite:///{tmp_path / 'custom-openapi.db'}",
+        )
+    )
+    client = TestClient(selected_app)
+
+    response = client.get("/api/custom/openapi.json")
+
+    assert response.status_code == 200
+    security_schemes = response.json()["components"]["securitySchemes"]
+    password_flow = security_schemes["OAuth2PasswordBearer"]["flows"]["password"]
+    assert password_flow["tokenUrl"] == "/api/custom/login/access-token"
+
+
 def test_workbench_api_routes_are_auth_protected_unless_allowlisted() -> None:
     public_paths: set[str] = set()
     unprotected_paths: list[str] = []

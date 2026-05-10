@@ -175,6 +175,21 @@ class RunRepository:
         """Return an analysis run by primary key."""
         return self.session.get(AnalysisRun, run_id)
 
+    def list_active_analysis_runs_started_before(
+        self,
+        started_before: datetime,
+    ) -> list[AnalysisRun]:
+        """Return non-terminal analysis runs older than a cutoff."""
+        statement = (
+            select(AnalysisRun)
+            .where(
+                col(AnalysisRun.status).in_([AnalysisRunStatus.PENDING, AnalysisRunStatus.RUNNING]),
+                AnalysisRun.started_at < started_before,
+            )
+            .order_by(col(AnalysisRun.started_at).asc())
+        )
+        return list(self.session.exec(statement).all())
+
     def get_latest_failed_provider_update_run(self) -> AnalysisRun | None:
         """Return the newest failed provider-update run, if the Workbench shell recorded one."""
         statement = (

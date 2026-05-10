@@ -12,6 +12,7 @@ import { useReportsRouteState } from "../useReportsRouteState"
 function ReportsRouteContent() {
   const {
     handleAuthExpired,
+    projectListError,
     providerStatus,
     selectedProject,
     selectedProjectId,
@@ -46,6 +47,7 @@ function ReportsRouteContent() {
         onDownloadReport={reportsState.downloadReport}
         onRunIdChange={setSelectedRunId}
         onVerifyReport={reportsState.verifyEvidenceReport}
+        projectListError={projectListError}
         projectRuns={projectRuns}
         projectSummary={projectSummaryQuery.data ?? null}
         providerStatus={providerStatus}

@@ -23,7 +23,7 @@ DEMO_EVIDENCE_ANALYSIS_FILE := build/v1.0-demo-analysis.json
 DEMO_EVIDENCE_BUNDLE_FILE := build/v1.0-demo-evidence-bundle.zip
 DEMO_EVIDENCE_VERIFICATION_FILE := build/v1.0-demo-evidence-bundle-verification.json
 
-.PHONY: install test lint format fix typecheck check benchmark-check performance-smoke playwright-install playwright-check frontend-install frontend-build frontend-lint frontend-test-unit frontend-test-unit-coverage frontend-generate-client api-client-drift-check frontend-audit frontend-check python-lock-check archive-evidence-check public-production-evidence-check release-evidence-hygiene-check docs-check docs-serve actionlint-check workflow-check docker-demo-smoke docker-production-smoke dependency-audit clean-local clean-deps provider-snapshot-validate provider-testmatrix demo-offline-no-key-proof demo-sync-check demo-sync-check-temp package package-contents-check package-check package-check-temp pipx-source-smoke release-check release-readiness-check demo-report demo-compare demo-explain demo-attack-report demo-attack-compare demo-attack-explain demo-attack-coverage demo-attack-navigator demo-pr-comment demo-results-sarif demo-html-report demo-evidence-analysis demo-evidence-bundle demo-evidence-bundle-check precommit-install
+.PHONY: install test lint format fix typecheck check benchmark-check performance-smoke playwright-install playwright-check frontend-install frontend-build frontend-lint frontend-test-unit frontend-test-unit-coverage frontend-generate-client api-client-drift-check frontend-audit frontend-check python-lock-check docker-base-image-check archive-evidence-check public-production-evidence-check release-evidence-hygiene-check docs-check docs-serve actionlint-check workflow-check docker-demo-smoke docker-production-smoke dependency-audit clean-local clean-deps provider-snapshot-validate provider-testmatrix demo-offline-no-key-proof demo-sync-check demo-sync-check-temp package package-contents-check package-check package-check-temp pipx-source-smoke release-check release-readiness-check demo-report demo-compare demo-explain demo-attack-report demo-attack-compare demo-attack-explain demo-attack-coverage demo-attack-navigator demo-pr-comment demo-results-sarif demo-html-report demo-evidence-analysis demo-evidence-bundle demo-evidence-bundle-check precommit-install
 
 install:
 	$(PYTHON) -m pip install -e "$(BACKEND_DIR)[dev]"
@@ -110,6 +110,9 @@ public-production-evidence-check:
 python-lock-check:
 	$(PYTHON) scripts/check_release_evidence_hygiene.py
 
+docker-base-image-check:
+	$(PYTHON) scripts/check_dockerfile_base_digests.py
+
 docs-check: release-evidence-hygiene-check archive-evidence-check public-production-evidence-check
 	$(PYTHON) -m mkdocs build --clean
 
@@ -133,6 +136,7 @@ actionlint-check:
 
 workflow-check:
 	$(MAKE) check
+	$(MAKE) docker-base-image-check
 	$(MAKE) docs-check
 	$(MAKE) actionlint-check
 	$(PYTHON) -m pre_commit run --all-files
@@ -227,7 +231,7 @@ docker-production-smoke:
 	$(PYTHON) scripts/production_readiness_smoke.py; \
 	echo "Workbench production-like Docker smoke passed."
 
-dependency-audit: python-lock-check
+dependency-audit: python-lock-check docker-base-image-check
 	@$(PYTHON) -c "import pip_audit" >/dev/null 2>&1 || { \
 		echo "Install pip-audit first: python3 -m pip install pip-audit" >&2; \
 		exit 1; \

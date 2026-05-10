@@ -72,6 +72,7 @@ class Settings:
     LOGIN_RATE_LIMIT_PER_MINUTE: int = 60
     TOKEN_FAILURE_RATE_LIMIT_PER_MINUTE: int = 60
     API_TOKEN_DEFAULT_EXPIRE_DAYS: int = DEFAULT_API_TOKEN_EXPIRE_DAYS
+    BACKGROUND_IMPORT_STALE_MINUTES: int = 120
     TRUSTED_PROXY_CIDRS: tuple[str, ...] = field(default_factory=tuple)
     AUDIT_RETENTION_DAYS: int = 365
     SESSION_RETENTION_DAYS: int = 30
@@ -225,6 +226,10 @@ def load_settings() -> Settings:
         API_TOKEN_DEFAULT_EXPIRE_DAYS=_positive_int_from_env(
             "API_TOKEN_DEFAULT_EXPIRE_DAYS",
             DEFAULT_API_TOKEN_EXPIRE_DAYS,
+        ),
+        BACKGROUND_IMPORT_STALE_MINUTES=_positive_int_from_env(
+            "BACKGROUND_IMPORT_STALE_MINUTES",
+            120,
         ),
         TRUSTED_PROXY_CIDRS=parse_trusted_proxy_cidrs(environ.get("TRUSTED_PROXY_CIDRS", "")),
         AUDIT_RETENTION_DAYS=_positive_int_from_env("AUDIT_RETENTION_DAYS", 365),

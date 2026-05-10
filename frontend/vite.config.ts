@@ -30,7 +30,6 @@ export default defineConfig(({ mode }) => {
     define: {
       __VPW_API_URL__: JSON.stringify(bundledApiUrl),
       __VPW_DEMO_MODE__: JSON.stringify(demoMode),
-      __VPW_LEGACY_SESSION_TOKEN_STORAGE__: JSON.stringify(!isProductionBuild),
     },
     resolve: {
       alias: {

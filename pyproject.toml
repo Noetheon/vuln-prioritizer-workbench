@@ -1,6 +1,6 @@
 [project]
 name = "vuln-prioritizer-workbench-workspace"
-version = "0.0.0"
+version = "1.1.0"
 description = "Workspace metadata for the Vuln Prioritizer Workbench migration."
 requires-python = ">=3.11"
 dependencies = []
