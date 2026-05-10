@@ -28,6 +28,7 @@ export type EvidenceCenterProps = {
   selectedReportRun: AnalysisRunPublic | null
   selectedRunSummary: AnalysisRunSummaryPublic | null
   projectRuns: AnalysisRunPublic[]
+  projectListError: string
   runsLoading: boolean
   runsError: string
   runDetailError: string
@@ -54,6 +55,7 @@ export function EvidenceCenter({
   onDownloadReport,
   onRunIdChange,
   onVerifyReport,
+  projectListError,
   projectRuns,
   projectSummary,
   providerStatus,
@@ -74,8 +76,8 @@ export function EvidenceCenter({
   verificationReport,
   verificationReportTarget,
 }: EvidenceCenterProps) {
-  const isDemo = DEMO_MODE_ENABLED && !selectedProject
   const combinedError = [
+    projectListError,
     runsError,
     runDetailError,
     reportsError,
@@ -83,9 +85,10 @@ export function EvidenceCenter({
   ]
     .filter(Boolean)
     .join(" ")
+  const isDemo = DEMO_MODE_ENABLED && !selectedProject && !combinedError
 
   return (
-    <VpwPageContainer className="space-y-8 px-0 py-0">
+    <VpwPageContainer className="space-y-6 px-0 py-0">
       <RunContext
         isDemo={isDemo}
         onRunIdChange={onRunIdChange}

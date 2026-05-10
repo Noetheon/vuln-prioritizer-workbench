@@ -42,6 +42,7 @@ function ImportsRouteContainer() {
   const queryClient = useQueryClient()
   const {
     projectListLoading,
+    projectListError,
     projects,
     providerStatus,
     refreshProjects,
@@ -255,6 +256,7 @@ function ImportsRouteContainer() {
         setImportWizard((state) => ({ ...state, vexFile: file }))
       }
       projectListLoading={projectListLoading}
+      projectListError={projectListError}
       projectRuns={projectRuns}
       projects={projects}
       providerStatus={providerStatus}

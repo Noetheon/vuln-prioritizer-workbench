@@ -15,6 +15,7 @@ function DashboardRouteContainer() {
   const queryClient = useQueryClient()
   const {
     projectListLoading,
+    projectListError,
     projects,
     providerStatus,
     providerStatusError,
@@ -52,12 +53,13 @@ function DashboardRouteContainer() {
   return (
     <RiskOperationsDashboard
       dashboardError={
-        projectDashboardQuery.isError
+        projectListError ||
+        (projectDashboardQuery.isError
           ? apiErrorMessage(
               "Project dashboard unavailable",
               projectDashboardQuery.error,
             )
-          : ""
+          : "")
       }
       epssBuckets={epssBucketChartData(dashboardSignalCounts.epssBuckets)}
       findings={dashboardFindings}

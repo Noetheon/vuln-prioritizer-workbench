@@ -118,6 +118,37 @@ test("findings search maps URL state to generated findings API params", () => {
   })
 })
 
+test("findings search drops invalid max range values that are below min", () => {
+  const state = parseFindingsSearch({
+    cvssMax: "4",
+    cvssMin: "9",
+    epssMax: "0.2",
+    epssMin: "0.7",
+  })
+
+  assert.equal(state.cvssMin, "9")
+  assert.equal(state.cvssMax, "")
+  assert.equal(state.epssMin, "0.7")
+  assert.equal(state.epssMax, "")
+  assert.deepEqual(findingsSearchToApiParams(state, "project-1"), {
+    asset_id: undefined,
+    cvss_max: undefined,
+    cvss_min: 9,
+    direction: "asc",
+    epss_max: undefined,
+    epss_min: 0.7,
+    exposure: undefined,
+    kev: undefined,
+    limit: 10,
+    offset: 0,
+    owner_service: undefined,
+    priority: undefined,
+    project_id: "project-1",
+    sort: "operational",
+    status: undefined,
+  })
+})
+
 test("findings search updates reset paging except explicit page movement", () => {
   const state = parseFindingsSearch({
     limit: "25",

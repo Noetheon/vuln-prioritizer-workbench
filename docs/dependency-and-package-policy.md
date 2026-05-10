@@ -116,17 +116,21 @@ be used as release evidence unless that policy changes.
 
 ## Container Images
 
-The checked-in Dockerfiles use named upstream image tags so maintainers can
-receive compatible base-image security updates during local-first development.
-That is not byte-for-byte production pinning. Release owners who need pinned
-container provenance must record the resolved image digests for the backend,
-frontend, and compose stack used by the release candidate.
+The checked-in Dockerfiles pin upstream base-image references with image
+digests. Keep the human-readable tag in the `FROM` line for maintenance context,
+but every base image must also include `@sha256:...`. The local guard is:
+
+```bash
+make docker-base-image-check
+```
 
 The Docker workflow smoke-tests the built Workbench stack, emits SBOMs for the
-backend and frontend images, and fails CI on fixable critical image
-vulnerabilities. Public production release evidence still needs
-candidate-specific image digests and any required signing/provenance attestation
-for those exact images.
+backend and frontend images with digest-pinned Syft, emits full Grype JSON
+reports, and gates Grype on fixable high/critical findings. Non-fixable
+upstream base-image findings remain visible in the uploaded reports for
+maintainer triage without making the required PR smoke permanently red. Public
+production release evidence still needs candidate-specific image digests and
+any required signing/provenance attestation for those exact images.
 
 ## Dependabot Labels
 

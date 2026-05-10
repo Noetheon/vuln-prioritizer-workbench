@@ -36,6 +36,7 @@ export type RemediationQueueProps = {
   selectedProject: ProjectPublic | null
   projects: ProjectPublic[]
   projectListLoading: boolean
+  projectListError: string
   selectedProjectId: string
   projectSummary: ProjectDecisionSummaryPublic | null
   findingSearch: FindingsUrlSearch
@@ -72,6 +73,7 @@ export function RemediationQueue({
   selectedProject,
   projects,
   projectListLoading,
+  projectListError,
   selectedProjectId,
   projectSummary,
   findingSearch,
@@ -96,7 +98,11 @@ export function RemediationQueue({
   const queueSort: QueueSort = findingSort
 
   const isDemo =
-    DEMO_MODE_ENABLED && projects.length === 0 && !projectListLoading
+    DEMO_MODE_ENABLED &&
+    projects.length === 0 &&
+    !projectListLoading &&
+    !projectListError &&
+    !findingsError
   const sourceFindings = isDemo ? DEMO_FINDINGS : findings
   const displayFindings = isDemo
     ? sortDisplayFindings(sourceFindings, queueSort, findingDirection)
@@ -192,6 +198,7 @@ export function RemediationQueue({
     onPageSizeChange,
     onProjectChange,
     onSortDirectionChange,
+    projectListError,
     projectListLoading,
     projectSummary,
     projects,
