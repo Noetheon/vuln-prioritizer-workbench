@@ -23,13 +23,10 @@ type DecisionProps = {
 
 export function ExecutiveDecision({
   isDemo,
-  projectSummary,
   selectedReportRun,
   selectedRunSummary,
 }: DecisionProps) {
-  const effectiveSummary = isDemo
-    ? DEMO_SUMMARY
-    : (selectedRunSummary ?? projectSummary)
+  const effectiveSummary = isDemo ? DEMO_SUMMARY : selectedRunSummary
   const critical = priorityCount(effectiveSummary, "critical")
   const high = priorityCount(effectiveSummary, "high")
   const kevHits = effectiveSummary?.kev_hits ?? 0

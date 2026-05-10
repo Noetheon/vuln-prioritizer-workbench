@@ -33,6 +33,11 @@ export function ProjectsWorkbench(props: ProjectsWorkbenchProps) {
           {props.projectActionMessage}
         </VpwStatusBanner>
       ) : null}
+      {props.projectSummaryWarning ? (
+        <VpwStatusBanner title="Project summary data incomplete" tone="warning">
+          {props.projectSummaryWarning}
+        </VpwStatusBanner>
+      ) : null}
 
       <ProjectMetrics
         projectSummary={props.projectSummary}

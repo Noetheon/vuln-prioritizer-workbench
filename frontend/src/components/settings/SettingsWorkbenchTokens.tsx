@@ -132,7 +132,7 @@ export function SettingsApiTokensSection({
                             ? "Create import runs and normalize supplied inputs."
                             : scope === "report"
                               ? "Generate and download report artifacts."
-                              : "Administrative API access for trusted operators."}
+                              : "Root-equivalent global access for trusted operators."}
                       </VpwSelectionCard>
                     </label>
                   )
@@ -143,7 +143,7 @@ export function SettingsApiTokensSection({
             <VpwField
               description={
                 tokenHasAdminScope
-                  ? "Admin tokens are global."
+                  ? "Admin tokens are root-equivalent and global."
                   : "Required project boundary for service tokens."
               }
               htmlFor="api-token-project"

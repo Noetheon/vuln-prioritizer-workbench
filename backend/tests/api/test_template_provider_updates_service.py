@@ -282,7 +282,7 @@ def test_provider_records_fetch_live_source_branches_without_network(
     class FakeNvdProvider:
         @classmethod
         def from_env(cls, *, api_key_env: str, cache: FileCache) -> FakeNvdProvider:
-            assert api_key_env == "NVD_API_KEY"
+            assert api_key_env == "CUSTOM_NVD_KEY"
             assert isinstance(cache, FileCache)
             return cls()
 
@@ -336,6 +336,7 @@ def test_provider_records_fetch_live_source_branches_without_network(
             cache=FileCache(tmp_path / source, ttl_hours=24),
             cache_only=False,
             baseline_items={},
+            nvd_api_key_env="CUSTOM_NVD_KEY",
         )
         assert isinstance(records["CVE-2024-3094"], expected_type)
         assert warnings == []
@@ -350,7 +351,11 @@ def test_provider_records_fetch_live_source_branches_without_network(
 def test_latest_provider_snapshot_reuse_reports_missing_invalid_and_valid_artifacts(
     tmp_path: Path,
 ) -> None:
-    settings = SimpleNamespace(provider_snapshot_dir_path=tmp_path)
+    snapshot_root = tmp_path / "snapshots"
+    snapshot_root.mkdir()
+    outside_root = tmp_path / "outside.json"
+    outside_root.write_text("{}", encoding="utf-8")
+    settings = SimpleNamespace(provider_snapshot_dir_path=snapshot_root)
 
     no_path_snapshot = SimpleNamespace(source_metadata_json={})
     assert _load_latest_snapshot_items(no_path_snapshot, settings=settings) == (
@@ -364,13 +369,22 @@ def test_latest_provider_snapshot_reuse_reports_missing_invalid_and_valid_artifa
         ["Latest provider snapshot artifact is no longer available on disk."],
     )
 
-    invalid_file = tmp_path / "invalid.json"
+    for unsafe_value in ("../outside.json", str(outside_root)):
+        assert _load_latest_snapshot_items(
+            SimpleNamespace(source_metadata_json={"snapshot_file": unsafe_value}),
+            settings=settings,
+        ) == (
+            {},
+            ["Latest provider snapshot artifact path is outside the snapshot directory."],
+        )
+
+    invalid_file = snapshot_root / "invalid.json"
     invalid_file.write_text("{}", encoding="utf-8")
     invalid_snapshot = SimpleNamespace(source_metadata_json={"snapshot_file": invalid_file.name})
     _items, warnings = _load_latest_snapshot_items(invalid_snapshot, settings=settings)
     assert warnings[0].startswith("Latest provider snapshot artifact could not be reused:")
 
-    valid_file = tmp_path / "valid.json"
+    valid_file = snapshot_root / "valid.json"
     valid_file.write_text(
         generate_provider_snapshot_json(
             ProviderSnapshotReport(

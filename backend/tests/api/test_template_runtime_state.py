@@ -6,8 +6,10 @@ import pytest
 from fastapi import HTTPException
 from sqlalchemy import create_engine
 
+from app.api.deps import get_db
 from app.core.app_state import (
     configure_workbench_state,
+    fallback_workbench_engine,
     workbench_engine,
     workbench_settings,
 )
@@ -67,7 +69,7 @@ def test_workbench_settings_raises_when_required_runtime_state_is_missing() -> N
     assert exc_info.value.detail == "Workbench settings are not configured."
 
 
-def test_workbench_engine_prefers_active_state_then_legacy_alias_then_global() -> None:
+def test_workbench_engine_requires_active_state() -> None:
     active_engine = create_engine("sqlite://")
     legacy_engine = create_engine("sqlite://")
     try:
@@ -80,8 +82,36 @@ def test_workbench_engine_prefers_active_state_then_legacy_alias_then_global() -
             )
             is active_engine
         )
-        assert workbench_engine(_request_with_state(template_engine=legacy_engine)) is legacy_engine
-        assert workbench_engine(_request_with_state()) is global_engine
+        with pytest.raises(HTTPException) as legacy_exc_info:
+            workbench_engine(_request_with_state(template_engine=legacy_engine))
+        assert legacy_exc_info.value.status_code == 500
+        assert legacy_exc_info.value.detail == "Workbench database engine is not configured."
+
+        with pytest.raises(HTTPException) as missing_exc_info:
+            workbench_engine(_request_with_state())
+        assert missing_exc_info.value.status_code == 500
+        assert missing_exc_info.value.detail == "Workbench database engine is not configured."
     finally:
         active_engine.dispose()
         legacy_engine.dispose()
+
+
+def test_fallback_workbench_engine_is_explicit_for_legacy_tests() -> None:
+    legacy_engine = create_engine("sqlite://")
+    try:
+        assert fallback_workbench_engine(_request_with_state(template_engine=legacy_engine)) is (
+            legacy_engine
+        )
+        assert fallback_workbench_engine(_request_with_state()) is global_engine
+    finally:
+        legacy_engine.dispose()
+
+
+def test_get_db_fails_closed_without_active_engine_state() -> None:
+    db_dependency = get_db(_request_with_state())
+
+    with pytest.raises(HTTPException) as exc_info:
+        next(db_dependency)
+
+    assert exc_info.value.status_code == 500
+    assert exc_info.value.detail == "Workbench database engine is not configured."

@@ -1475,9 +1475,25 @@ def test_report_generation_prunes_oldest_reports_for_run(
                 run_id
             )
             remaining_ids = {str(report.id) for report in reports}
+            retention_event = session.exec(
+                select(app_models.AuditEvent).where(
+                    app_models.AuditEvent.action == "report.retention.delete"
+                )
+            ).one()
 
         assert len(reports) == 2
         assert remaining_ids == {created[1]["id"], created[2]["id"]}
+        assert retention_event.resource_id == created[0]["id"]
+        assert retention_event.project_id == uuid.UUID(project["id"])
+        assert retention_event.detail_json == {
+            "analysis_run_id": str(run_id),
+            "retained_report_id": created[2]["id"],
+            "format": "markdown",
+            "kind": "technical-markdown",
+            "filename": "technical-report.md",
+            "artifact_deleted": True,
+            "max_reports_per_run": 2,
+        }
         assert not (report_dir / project["id"] / str(run_id) / created[0]["id"]).exists()
         assert (report_dir / project["id"] / str(run_id) / created[1]["id"]).exists()
         assert (report_dir / project["id"] / str(run_id) / created[2]["id"]).exists()

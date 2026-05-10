@@ -42,7 +42,7 @@ export const emptyProjectForm: ProjectFormState = {
   description: "",
 }
 
-export const mvpImportFormats = [
+export const workbenchImportFormats = [
   {
     label: "CVE list",
     value: "cve-list",
@@ -67,9 +67,70 @@ export const mvpImportFormats = [
     accept: ".json,application/json",
     detail: "Grype vulnerability export in JSON format.",
   },
+  {
+    label: "CycloneDX SBOM JSON",
+    value: "cyclonedx-json",
+    accept: ".json,application/json",
+    detail: "CycloneDX JSON SBOM with vulnerability references.",
+  },
+  {
+    label: "SPDX SBOM JSON",
+    value: "spdx-json",
+    accept: ".json,application/json",
+    detail: "SPDX JSON SBOM with package vulnerability context.",
+  },
+  {
+    label: "Dependency-Check JSON",
+    value: "dependency-check-json",
+    accept: ".json,application/json",
+    detail: "OWASP Dependency-Check JSON report.",
+  },
+  {
+    label: "GitHub alerts JSON",
+    value: "github-alerts-json",
+    accept: ".json,application/json",
+    detail: "GitHub Dependabot/code scanning alert export in JSON format.",
+  },
+  {
+    label: "Nessus XML",
+    value: "nessus-xml",
+    accept: ".nessus,.xml,application/xml,text/xml",
+    detail: "Nessus XML export parsed locally without active scanning.",
+  },
+  {
+    label: "OpenVAS XML",
+    value: "openvas-xml",
+    accept: ".xml,application/xml,text/xml",
+    detail: "OpenVAS XML export parsed locally without active scanning.",
+  },
 ] as const
 
-export type ImportFormat = (typeof mvpImportFormats)[number]["value"]
+export const mvpImportFormats = workbenchImportFormats
+
+export type ImportFormat = (typeof workbenchImportFormats)[number]["value"]
+export type AttackImportSource = "none" | "ctid-json" | "local-curated"
+
+export const attackImportSourceOptions: Array<{
+  detail: string
+  label: string
+  value: AttackImportSource
+}> = [
+  {
+    detail: "Do not enrich this import with ATT&CK mappings.",
+    label: "No ATT&CK mapping",
+    value: "none",
+  },
+  {
+    detail: "Use a reviewed CTID JSON mapping file from the managed artifact directory.",
+    label: "CTID JSON",
+    value: "ctid-json",
+  },
+  {
+    detail: "Use a reviewed local curated mapping file from the managed artifact directory.",
+    label: "Local curated",
+    value: "local-curated",
+  },
+]
 
 export type WorkbenchReportFormat =
   | "markdown"
@@ -154,16 +215,26 @@ export const reportActionCards: Array<{
 ]
 
 export type ImportWizardState = {
+  attackMappingFile: string
+  attackSource: AttackImportSource
+  attackTechniqueMetadataFile: string
   assetContextFile: File | null
   file: File | null
   inputType: ImportFormat
+  lockedProviderData: boolean
+  providerSnapshotFile: string
   vexFile: File | null
 }
 
 export const defaultImportWizardState: ImportWizardState = {
+  attackMappingFile: "",
+  attackSource: "none",
+  attackTechniqueMetadataFile: "",
   assetContextFile: null,
   file: null,
   inputType: "cve-list",
+  lockedProviderData: false,
+  providerSnapshotFile: "",
   vexFile: null,
 }
 

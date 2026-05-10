@@ -217,6 +217,79 @@ def test_template_user_password_lifecycle_is_db_backed_and_audited(
     assert "user.deactivate" in audit_actions
 
 
+def test_template_user_password_policy_is_shared_for_rotation_and_reset(
+    template_api_env: Any,
+) -> None:
+    client = template_api_env.client
+    previous_settings = client.app.state.workbench_settings
+    policy_settings = Settings(
+        ENVIRONMENT="production",
+        SECRET_KEY="production-policy-secret-0123456789abcdef",
+        FIRST_SUPERUSER_PASSWORD="valid-bootstrap-password-123",
+        FRONTEND_HOST="https://workbench.example.com",
+        ALLOWED_HOSTS=("workbench.example.com",),
+    )
+    client.app.state.workbench_settings = policy_settings
+    try:
+        initial_token = str(
+            _login_response(
+                client,
+                password=policy_settings.FIRST_SUPERUSER_PASSWORD,
+            ).json()["access_token"]
+        )
+
+        short_rotate = client.post(
+            "/api/v1/users/me/password",
+            headers={"Authorization": f"Bearer {initial_token}"},
+            json={
+                "current_password": policy_settings.FIRST_SUPERUSER_PASSWORD,
+                "new_password": "short-password",
+            },
+        )
+        matching_user_rotate = client.post(
+            "/api/v1/users/me/password",
+            headers={"Authorization": f"Bearer {initial_token}"},
+            json={
+                "current_password": policy_settings.FIRST_SUPERUSER_PASSWORD,
+                "new_password": policy_settings.FIRST_SUPERUSER,
+            },
+        )
+        valid_password = "valid-rotated-password-123"
+        valid_rotate = client.post(
+            "/api/v1/users/me/password",
+            headers={"Authorization": f"Bearer {initial_token}"},
+            json={
+                "current_password": policy_settings.FIRST_SUPERUSER_PASSWORD,
+                "new_password": valid_password,
+            },
+        )
+        assert valid_rotate.status_code == 200, valid_rotate.text
+
+        reset_token = str(_login_response(client, password=valid_password).json()["access_token"])
+        placeholder_reset = client.post(
+            f"/api/v1/users/{valid_rotate.json()['id']}/password-reset",
+            headers={"Authorization": f"Bearer {reset_token}"},
+            json={"new_password": "changethis"},
+        )
+        matching_secret_reset = client.post(
+            f"/api/v1/users/{valid_rotate.json()['id']}/password-reset",
+            headers={"Authorization": f"Bearer {reset_token}"},
+            json={"new_password": policy_settings.SECRET_KEY},
+        )
+
+        expected_detail = "Password does not meet Workbench password policy."
+        assert short_rotate.status_code == 422
+        assert short_rotate.json()["detail"] == expected_detail
+        assert matching_user_rotate.status_code == 422
+        assert matching_user_rotate.json()["detail"] == expected_detail
+        assert placeholder_reset.status_code == 422
+        assert placeholder_reset.json()["detail"] == expected_detail
+        assert matching_secret_reset.status_code == 422
+        assert matching_secret_reset.json()["detail"] == expected_detail
+    finally:
+        client.app.state.workbench_settings = previous_settings
+
+
 def test_template_login_sets_session_and_csrf_cookies() -> None:
     client = _client()
 

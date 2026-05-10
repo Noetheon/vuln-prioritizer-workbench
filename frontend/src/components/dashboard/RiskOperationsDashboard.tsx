@@ -335,55 +335,57 @@ export function RiskOperationsDashboard({
 
         {showEmptyState ? <DashboardSetupEmptyState /> : null}
 
-        <div className="grid gap-4 lg:grid-cols-[1fr_196px]">
-          <div className="min-w-0 space-y-4">
-            <DashboardMetricGrid cards={freshnessCard} isLoading={isLoading} />
-            <Suspense fallback={<DashboardSignalOverviewFallback />}>
-              <DashboardSignalOverview
-                epssItems={epssItems}
-                governanceLoading={governanceLoading}
-                onRunRangeChange={(value: DashboardRunRange) =>
+        {!showEmptyState ? (
+          <div className="grid gap-4 lg:grid-cols-[1fr_196px]">
+            <div className="min-w-0 space-y-4">
+              <DashboardMetricGrid cards={freshnessCard} isLoading={isLoading} />
+              <Suspense fallback={<DashboardSignalOverviewFallback />}>
+                <DashboardSignalOverview
+                  epssItems={epssItems}
+                  governanceLoading={governanceLoading}
+                  onRunRangeChange={(value: DashboardRunRange) =>
+                    setFilters((current) => ({
+                      ...current,
+                      selectedRunRange: value,
+                    }))
+                  }
+                  priorityItems={priorityItems}
+                  runsLoading={runsLoading}
+                  selectedRunRange={filters.selectedRunRange}
+                  serviceItems={serviceItems}
+                  summaryLoading={summaryLoading}
+                  topServiceSource={topServiceSource}
+                  trendItems={trendItems}
+                />
+              </Suspense>
+              <DashboardRemediationSection
+                findingsError={findingsError}
+                findingsLoading={findingsLoading}
+                onQueueSearchChange={(queueSearch) =>
                   setFilters((current) => ({
                     ...current,
-                    selectedRunRange: value,
+                    queueSearch,
                   }))
                 }
-                priorityItems={priorityItems}
-                runsLoading={runsLoading}
-                selectedRunRange={filters.selectedRunRange}
-                serviceItems={serviceItems}
-                summaryLoading={summaryLoading}
-                topServiceSource={topServiceSource}
-                trendItems={trendItems}
+                queueFindings={queueFindings}
+                queueSearch={filters.queueSearch}
               />
-            </Suspense>
-            <DashboardRemediationSection
-              findingsError={findingsError}
-              findingsLoading={findingsLoading}
-              onQueueSearchChange={(queueSearch) =>
-                setFilters((current) => ({
-                  ...current,
-                  queueSearch,
-                }))
-              }
-              queueFindings={queueFindings}
-              queueSearch={filters.queueSearch}
+            </div>
+
+            <DashboardSidePanel
+              dataQualityError={dataQualityError}
+              dataQualityWarnings={dataQualityWarnings}
+              effectiveProviderStatus={effectiveProviderStatus}
+              effectiveRuns={effectiveRuns}
+              effectiveSummary={effectiveSummary}
+              freshness={freshness}
+              latestRun={latestRun}
+              latestRunFactsRows={latestRunFactsRows}
+              providerStatusLoading={providerStatusLoading}
+              staleProvider={staleProvider}
             />
           </div>
-
-          <DashboardSidePanel
-            dataQualityError={dataQualityError}
-            dataQualityWarnings={dataQualityWarnings}
-            effectiveProviderStatus={effectiveProviderStatus}
-            effectiveRuns={effectiveRuns}
-            effectiveSummary={effectiveSummary}
-            freshness={freshness}
-            latestRun={latestRun}
-            latestRunFactsRows={latestRunFactsRows}
-            providerStatusLoading={providerStatusLoading}
-            staleProvider={staleProvider}
-          />
-        </div>
+        ) : null}
       </section>
     </TooltipProvider>
   )

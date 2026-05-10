@@ -13,6 +13,7 @@ ARCHIVE_ROOT = REPO_ROOT / "archive"
 REPORTS_AND_EVIDENCE_FILE = REPO_ROOT / "docs" / "reports-and-evidence.md"
 CURRENT_PRODUCT_STATE_FILE = REPO_ROOT / "docs" / "current-product-state.md"
 DOCUMENTATION_MAP_FILE = REPO_ROOT / "docs" / "documentation-map.md"
+PYPROJECT_FILE = REPO_ROOT / "backend" / "pyproject.toml"
 GITHUB_READINESS_FILE = REPO_ROOT / "docs" / "github-open-source-readiness.md"
 RELEASE_OPERATIONS_FILE = REPO_ROOT / "docs" / "release_operations.md"
 COMMUNITY_SETUP_FILE = REPO_ROOT / "docs" / "community_repository_setup.md"
@@ -263,19 +264,38 @@ def test_archives_have_entrypoints_and_public_evidence_tree_is_limited() -> None
 def test_documentation_map_defines_current_and_historical_boundaries() -> None:
     mkdocs = yaml.safe_load(MKDOCS_FILE.read_text(encoding="utf-8"))
     nav_pages = _nav_markdown_pages(mkdocs["nav"])
+    current_product_pages = _nav_markdown_pages(
+        next(
+            item["Current Product State"]
+            for item in mkdocs["nav"]
+            if "Current Product State" in item
+        )
+    )
+    history_pages = _nav_markdown_pages(
+        next(item["Workbench History"] for item in mkdocs["nav"] if "Workbench History" in item)
+    )
     current_state = CURRENT_PRODUCT_STATE_FILE.read_text(encoding="utf-8")
     documentation_map = DOCUMENTATION_MAP_FILE.read_text(encoding="utf-8")
+    pyproject = PYPROJECT_FILE.read_text(encoding="utf-8")
 
     assert Path("docs/current-product-state.md") in nav_pages
     assert Path("docs/documentation-map.md") in nav_pages
+    assert Path("docs/workbench-threat-model.md") in current_product_pages
+    assert Path("docs/workbench-public-deployment.md") in current_product_pages
+    assert Path("docs/workbench-threat-model.md") not in history_pages
+    assert Path("docs/workbench-public-deployment.md") not in history_pages
     assert "FastAPI" in current_state
     assert "`backend/app`" in current_state
     assert "React, Vite, TypeScript" in current_state
     assert "CLI and domain core" in current_state
     assert "Historical evidence in `archive/**`" in current_state
+    assert "Development Status :: 4 - Beta" in current_state
+    assert "Development Status :: 4 - Beta" in pyproject
+    assert "Development Status :: 5 - Production/Stable" not in pyproject
     assert "Source-Of-Truth Order" in documentation_map
     assert "Historical Reference" in documentation_map
     assert "Must not be used as current completion evidence" in documentation_map
+    assert "Package maturity" in documentation_map
 
 
 def test_github_open_source_entrypoints_are_linked_and_versioned() -> None:

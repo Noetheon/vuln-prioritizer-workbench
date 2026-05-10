@@ -482,7 +482,7 @@ def test_background_import_reconciliation_fails_stale_deferred_runs(
         assert run.summary_json["background_error"]["stage"] == "background_import"
 
 
-def test_non_local_background_import_audit_retains_api_token_id(
+def test_non_local_synchronous_import_audit_retains_api_token_id(
     template_api_env: TemplateApiEnv,
     tmp_path: Path,
 ) -> None:
@@ -493,7 +493,7 @@ def test_non_local_background_import_audit_retains_api_token_id(
     import_token = _create_api_token(
         client,
         jwt_headers,
-        name="background-import-token",
+        name="non-local-import-token",
         scopes=["import"],
         project_id=project["id"],
     )
@@ -535,7 +535,7 @@ def test_non_local_background_import_audit_retains_api_token_id(
     assert response.status_code == 200, response.text
     payload = response.json()
     run_id = uuid.UUID(payload["id"])
-    assert payload["summary_json"]["import_job"]["execution_mode"] == "background"
+    assert payload["summary_json"]["import_job"]["execution_mode"] == "request"
 
     with Session(template_api_env.engine) as session:
         run = session.get(app_models.AnalysisRun, run_id)

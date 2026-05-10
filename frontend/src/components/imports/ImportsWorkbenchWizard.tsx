@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button"
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
   SelectTrigger,
   SelectValue,
@@ -17,17 +18,16 @@ import {
   VpwProgress,
   VpwSection,
   VpwSectionHeader,
-  VpwSelectionCard,
   VpwStatusBanner,
   VpwToolbar,
   VpwToolbarGroup,
 } from "@/components/vpw"
 import {
-  formatExpectedFields,
   type ImportsWorkbenchProps,
   selectedFormat,
   uploadProgress,
 } from "./imports-workbench-model"
+import { ProviderAttackOptions } from "./ImportsWorkbenchProviderOptions"
 
 export function ImportWizard({
   importError,
@@ -36,8 +36,13 @@ export function ImportWizard({
   onAssetContextFileChange,
   onFileChange,
   onInputTypeChange,
+  onLockedProviderDataChange,
+  onProviderSnapshotFileChange,
   onProjectChange,
   onSubmit,
+  onAttackMappingFileChange,
+  onAttackSourceChange,
+  onAttackTechniqueMetadataFileChange,
   onVexFileChange,
   projectListLoading,
   projects,
@@ -51,8 +56,13 @@ export function ImportWizard({
   | "onAssetContextFileChange"
   | "onFileChange"
   | "onInputTypeChange"
+  | "onLockedProviderDataChange"
+  | "onProviderSnapshotFileChange"
   | "onProjectChange"
   | "onSubmit"
+  | "onAttackMappingFileChange"
+  | "onAttackSourceChange"
+  | "onAttackTechniqueMetadataFileChange"
   | "onVexFileChange"
   | "projectListLoading"
   | "projects"
@@ -107,7 +117,7 @@ export function ImportWizard({
       </VpwGrid>
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1.25fr)_minmax(20rem,0.75fr)]">
         <VpwPanel>
-          <form className="space-y-5" onSubmit={onSubmit}>
+          <form className="flex flex-col gap-5" onSubmit={onSubmit}>
             <VpwToolbar label="Import controls">
               <VpwToolbarGroup>
                 <VpwBadge tone={importWizard.file ? "success" : "neutral"}>
@@ -118,6 +128,12 @@ export function ImportWizard({
                 ) : null}
                 {importWizard.vexFile ? (
                   <VpwBadge tone="support">VEX sidecar</VpwBadge>
+                ) : null}
+                {importWizard.providerSnapshotFile ? (
+                  <VpwBadge tone="info">Provider snapshot</VpwBadge>
+                ) : null}
+                {importWizard.attackSource !== "none" ? (
+                  <VpwBadge tone="support">ATT&CK mapping</VpwBadge>
                 ) : null}
               </VpwToolbarGroup>
             </VpwToolbar>
@@ -133,16 +149,18 @@ export function ImportWizard({
                     <SelectValue placeholder="Select project" />
                   </SelectTrigger>
                   <SelectContent>
-                    {projects.length === 0 ? (
-                      <SelectItem disabled value="none">
-                        No projects
-                      </SelectItem>
-                    ) : null}
-                    {projects.map((project) => (
-                      <SelectItem key={project.id} value={project.id}>
-                        {project.name}
-                      </SelectItem>
-                    ))}
+                    <SelectGroup>
+                      {projects.length === 0 ? (
+                        <SelectItem disabled value="none">
+                          No projects
+                        </SelectItem>
+                      ) : null}
+                      {projects.map((project) => (
+                        <SelectItem key={project.id} value={project.id}>
+                          {project.name}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
                   </SelectContent>
                 </Select>
               </VpwField>
@@ -160,11 +178,13 @@ export function ImportWizard({
                     <SelectValue placeholder="Select format" />
                   </SelectTrigger>
                   <SelectContent>
-                    {supportedFormats.map((item) => (
-                      <SelectItem key={item.value} value={item.value}>
-                        {item.label}
-                      </SelectItem>
-                    ))}
+                    <SelectGroup>
+                      {supportedFormats.map((item) => (
+                        <SelectItem key={item.value} value={item.value}>
+                          {item.label}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
                   </SelectContent>
                 </Select>
               </VpwField>
@@ -217,6 +237,16 @@ export function ImportWizard({
                 />
               </VpwField>
             </div>
+            <ProviderAttackOptions
+              importWizard={importWizard}
+              onAttackMappingFileChange={onAttackMappingFileChange}
+              onAttackSourceChange={onAttackSourceChange}
+              onAttackTechniqueMetadataFileChange={
+                onAttackTechniqueMetadataFileChange
+              }
+              onLockedProviderDataChange={onLockedProviderDataChange}
+              onProviderSnapshotFileChange={onProviderSnapshotFileChange}
+            />
             <VpwProgress
               label="Import readiness"
               tone={importWizard.file && selectedProjectId ? "success" : "info"}
@@ -237,7 +267,7 @@ export function ImportWizard({
               disabled={importLoading || projects.length === 0}
               type="submit"
             >
-              <Upload aria-hidden="true" className="h-4 w-4" />
+              <Upload aria-hidden="true" data-icon="inline-start" />
               {importLoading ? "Uploading" : "Upload Import"}
             </Button>
           </form>
@@ -280,57 +310,6 @@ export function ImportWizard({
           />
         </VpwPanel>
       </div>
-    </VpwSection>
-  )
-}
-
-export function SupportedFormats({
-  importWizard,
-  onInputTypeChange,
-  supportedFormats,
-}: Pick<
-  ImportsWorkbenchProps,
-  "importWizard" | "onInputTypeChange" | "supportedFormats"
->) {
-  return (
-    <VpwSection>
-      <VpwSectionHeader
-        description="Supported source formats and parser expectations."
-        title="Supported Input Formats"
-      />
-      <VpwGrid columns={4}>
-        {supportedFormats.map((format) => (
-          <VpwSelectionCard
-            checked={format.value === importWizard.inputType}
-            key={format.value}
-            meta={format.accept}
-            onClick={() => onInputTypeChange(format.value)}
-            title={format.label}
-          >
-            <div className="space-y-2">
-              <p>{format.detail}</p>
-              <p className="text-xs">
-                Expected: {formatExpectedFields(format.value)}
-              </p>
-            </div>
-          </VpwSelectionCard>
-        ))}
-        <VpwSelectionCard
-          checked={Boolean(importWizard.vexFile)}
-          meta=".json, application/json"
-          title="OpenVEX / VEX sidecar"
-        >
-          <div className="space-y-2">
-            <p>
-              Optional VEX JSON sidecar attached to occurrence or SBOM imports.
-            </p>
-            <p className="text-xs">
-              Expected: OpenVEX statements or CycloneDX VEX vulnerability status
-              data.
-            </p>
-          </div>
-        </VpwSelectionCard>
-      </VpwGrid>
     </VpwSection>
   )
 }

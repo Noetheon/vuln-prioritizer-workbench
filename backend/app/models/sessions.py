@@ -1,7 +1,7 @@
 """Revocable Workbench session models."""
 
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 
 from sqlalchemy import Column, DateTime, Index, String
 from sqlmodel import Field, SQLModel
@@ -65,9 +65,21 @@ def auth_session_public(session: AuthSession) -> AuthSessionPublic:
     return AuthSessionPublic(
         id=session.id,
         user_id=session.user_id,
-        active=session.revoked_at is None,
+        active=is_auth_session_active(session),
         created_at=session.created_at,
-        expires_at=session.expires_at,
+        expires_at=_aware_utc(session.expires_at),
         last_seen_at=session.last_seen_at,
         revoked_at=session.revoked_at,
     )
+
+
+def is_auth_session_active(session: AuthSession, *, now: datetime | None = None) -> bool:
+    """Return whether a browser session can currently authorize requests."""
+    current_time = now or get_datetime_utc()
+    return session.revoked_at is None and _aware_utc(session.expires_at) > current_time
+
+
+def _aware_utc(value: datetime) -> datetime:
+    if value.tzinfo is None:
+        return value.replace(tzinfo=UTC)
+    return value.astimezone(UTC)

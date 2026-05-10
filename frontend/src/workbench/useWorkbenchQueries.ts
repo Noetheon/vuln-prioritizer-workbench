@@ -24,6 +24,7 @@ import {
 } from "../components/finding-detail/finding-detail-model"
 import { matchesAsset } from "../components/assets/asset-model"
 import type { DashboardSignalCounts } from "../components/dashboard/dashboard-model"
+import { apiErrorMessage } from "../lib/app-errors"
 import { DEMO_MODE_ENABLED } from "../lib/runtime-config"
 import { workbenchQueryKeys } from "./workbench-query-keys"
 
@@ -36,6 +37,11 @@ export type FindingDetailQueryData = {
   detail: FindingDetailPublic
   explanation: FindingExplanationPublic | null
   explanationWarning: string
+}
+
+export type ProjectSummariesQueryData = {
+  failedProjectIds: string[]
+  summaries: Record<string, ProjectDecisionSummaryPublic>
 }
 
 const RUN_DETAIL_POLL_STATUSES = new Set(["pending", "running"])
@@ -68,7 +74,7 @@ export function useProjectsQuery() {
 
 export function useProjectSummariesQuery(projects: readonly ProjectPublic[]) {
   const projectIds = projects.map((project) => project.id)
-  return useQuery({
+  return useQuery<ProjectSummariesQueryData>({
     enabled: projectIds.length > 0,
     queryFn: async () => {
       const entries = await Promise.allSettled(
@@ -76,13 +82,16 @@ export function useProjectSummariesQuery(projects: readonly ProjectPublic[]) {
           ProjectsService.readProjectSummary({ project_id: projectId }),
         ),
       )
-      const summaryMap: Record<string, ProjectDecisionSummaryPublic> = {}
+      const summaries: Record<string, ProjectDecisionSummaryPublic> = {}
+      const failedProjectIds: string[] = []
       entries.forEach((entry, index) => {
         if (entry.status === "fulfilled") {
-          summaryMap[projectIds[index]] = entry.value
+          summaries[projectIds[index]] = entry.value
+        } else {
+          failedProjectIds.push(projectIds[index])
         }
       })
-      return summaryMap
+      return { failedProjectIds, summaries }
     },
     queryKey: workbenchQueryKeys.projectSummaries(projectIds),
     retry: false,
@@ -294,16 +303,10 @@ export function useFindingDetailQuery(findingId: string | null) {
           finding_id: findingId,
         })
       } catch (caught) {
-        if (
-          caught &&
-          typeof caught === "object" &&
-          "status" in caught &&
-          caught.status === 422
-        ) {
-          explanationWarning = "Priority explanation unavailable"
-        } else {
-          throw caught
-        }
+        explanationWarning = apiErrorMessage(
+          "Priority explanation unavailable",
+          caught,
+        )
       }
       return { detail, explanation, explanationWarning }
     },

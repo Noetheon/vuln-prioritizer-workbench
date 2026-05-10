@@ -1,23 +1,24 @@
 from __future__ import annotations
 
 import json
+import subprocess
 import sys
 import tarfile
 import zipfile
 from pathlib import Path
 
+ROOT = Path(__file__).resolve().parents[1]
+
 REQUIRED_WHEEL_SUFFIXES = (
     "app/main.py",
     "app/api/main.py",
     "app/alembic/env.py",
-    "app/alembic/versions/20260508_0013_rate_limit_buckets.py",
     "vuln_prioritizer/cli.py",
 )
 REQUIRED_SDIST_SUFFIXES = (
     "app/main.py",
     "app/api/main.py",
     "app/alembic/env.py",
-    "app/alembic/versions/20260508_0013_rate_limit_buckets.py",
     "src/vuln_prioritizer/cli.py",
     "pyproject.toml",
 )
@@ -88,16 +89,38 @@ def _assert_no_legacy_workbench_modules(entries: list[str], artifact: str) -> No
         )
 
 
+def _tracked_alembic_migration_suffixes() -> tuple[str, ...]:
+    result = subprocess.run(
+        ["git", "ls-files", "backend/app/alembic/versions/*.py"],
+        check=True,
+        cwd=ROOT,
+        stdout=subprocess.PIPE,
+        text=True,
+    )
+    suffixes = []
+    for line in result.stdout.splitlines():
+        path = Path(line)
+        if path.name == "__init__.py":
+            continue
+        suffixes.append(Path("app/alembic/versions", path.name).as_posix())
+    if not suffixes:
+        raise SystemExit("No tracked Workbench Alembic migrations found.")
+    return tuple(sorted(suffixes))
+
+
 def main() -> None:
     dist_dir = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("dist")
     wheel = _single(dist_dir, "*.whl")
     sdist = _single(dist_dir, "*.tar.gz")
+    required_migration_suffixes = _tracked_alembic_migration_suffixes()
 
     wheel_entries = _wheel_entries(wheel)
     sdist_entries = _sdist_entries(sdist)
 
     _assert_suffixes(wheel_entries, REQUIRED_WHEEL_SUFFIXES, wheel.name)
     _assert_suffixes(sdist_entries, REQUIRED_SDIST_SUFFIXES, sdist.name)
+    _assert_suffixes(wheel_entries, required_migration_suffixes, wheel.name)
+    _assert_suffixes(sdist_entries, required_migration_suffixes, sdist.name)
     _assert_no_tests(wheel_entries, wheel.name)
     _assert_no_tests(sdist_entries, sdist.name)
     _assert_no_legacy_workbench_modules(wheel_entries, wheel.name)
@@ -112,12 +135,14 @@ def main() -> None:
             "path": wheel.as_posix(),
             "entry_count": len(wheel_entries),
             "forbidden_legacy_prefixes": list(FORBIDDEN_WHEEL_PREFIXES),
+            "required_alembic_migrations": list(required_migration_suffixes),
             "required_suffixes": list(REQUIRED_WHEEL_SUFFIXES),
         },
         "sdist": {
             "path": sdist.as_posix(),
             "entry_count": len(sdist_entries),
             "forbidden_legacy_parts": list(FORBIDDEN_SDIST_PARTS),
+            "required_alembic_migrations": list(required_migration_suffixes),
             "required_suffixes": list(REQUIRED_SDIST_SUFFIXES),
         },
     }

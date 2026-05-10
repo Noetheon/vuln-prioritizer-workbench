@@ -13,6 +13,7 @@ import yaml
 ROOT = Path(__file__).resolve().parents[1]
 MKDOCS_FILE = ROOT / "mkdocs.yml"
 PYPROJECT = ROOT / "backend" / "pyproject.toml"
+README = ROOT / "README.md"
 PYTHON_AUDIT_INPUT = ROOT / "backend" / "requirements.txt"
 PYTHON_AUDIT_LOCK = ROOT / "backend" / "requirements.lock.txt"
 PYTHON_RUNTIME_LOCK = ROOT / "backend" / "requirements.runtime.lock.txt"
@@ -99,6 +100,7 @@ NON_NAV_STALE_WORDING_PATHS = (ROOT / ".github" / "pull_request_template.md",)
 def main() -> int:
     failures: list[str] = []
     failures.extend(_check_python_audit_input())
+    failures.extend(_check_package_metadata_maturity())
     failures.extend(_check_stale_wording())
     failures.extend(_check_ledger())
 
@@ -146,6 +148,34 @@ def _check_python_audit_input() -> list[str]:
         )
     failures.extend(_check_python_audit_lock(audit_requirements))
     failures.extend(_check_python_runtime_lock(runtime_requirements, dev_requirements))
+    return failures
+
+
+def _check_package_metadata_maturity() -> list[str]:
+    project = tomllib.loads(PYPROJECT.read_text(encoding="utf-8"))["project"]
+    classifiers = set(project.get("classifiers", []))
+    failures: list[str] = []
+    beta_classifier = "Development Status :: 4 - Beta"
+    stable_classifier = "Development Status :: 5 - Production/Stable"
+    if beta_classifier not in classifiers:
+        failures.append(f"backend/pyproject.toml is missing {beta_classifier!r}.")
+    if stable_classifier in classifiers:
+        failures.append(
+            "backend/pyproject.toml must not claim Production/Stable until "
+            "public-production evidence is certified."
+        )
+
+    readme = README.read_text(encoding="utf-8")
+    ledger = LEDGER.read_text(encoding="utf-8")
+    for path, text in ((README, readme), (LEDGER, ledger)):
+        if beta_classifier not in text:
+            failures.append(
+                f"{path.relative_to(ROOT)} must explain the current package maturity "
+                f"classifier {beta_classifier!r}."
+            )
+
+    if not failures:
+        print("package metadata maturity: OK")
     return failures
 
 

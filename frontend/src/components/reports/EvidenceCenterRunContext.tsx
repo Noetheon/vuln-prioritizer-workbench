@@ -1,13 +1,6 @@
 import { ShieldCheck } from "lucide-react"
 import type { AnalysisRunPublic, ProjectPublic } from "@/api-client"
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import {
   VpwBadge,
   type VpwBadgeTone,
   VpwDemoBanner,
@@ -19,9 +12,14 @@ import {
 import { DEMO_PROJECT, DEMO_RUNS } from "@/lib/demo-data"
 import { runStatusLabel } from "@/lib/risk-format"
 import { runBadgeTone, runFileLabel } from "./evidence-center-model"
+import { ReportProjectSelect, ReportRunSelect } from "./EvidenceCenterRunSelectors"
 
 type RunContextProps = {
   selectedProject: ProjectPublic | null
+  selectedProjectId: string
+  projects: ProjectPublic[]
+  projectListLoading: boolean
+  onProjectChange: (id: string) => void
   selectedRunId: string
   onRunIdChange: (id: string) => void
   selectedReportRun: AnalysisRunPublic | null
@@ -33,11 +31,15 @@ type RunContextProps = {
 
 export function RunContext({
   isDemo,
+  onProjectChange,
   onRunIdChange,
+  projectListLoading,
   projectRuns,
+  projects,
   reportActionsEnabled,
   runsLoading,
   selectedProject,
+  selectedProjectId,
   selectedReportRun,
   selectedRunId,
 }: RunContextProps) {
@@ -103,30 +105,20 @@ export function RunContext({
         </VpwToolbarGroup>
         <VpwToolbarGroup>
           {!isDemo ? (
-            <Select
+            <ReportProjectSelect
+              disabled={projectListLoading || projects.length === 0}
+              onProjectChange={onProjectChange}
+              projects={projects}
+              selectedProjectId={selectedProjectId}
+            />
+          ) : null}
+          {!isDemo ? (
+            <ReportRunSelect
               disabled={runsLoading || projectRuns.length === 0}
-              onValueChange={onRunIdChange}
-              value={selectedRunId}
-            >
-              <SelectTrigger
-                aria-label="Select analysis run"
-                className="h-9 min-w-64 max-w-full"
-              >
-                <SelectValue placeholder="Select analysis run" />
-              </SelectTrigger>
-              <SelectContent>
-                {projectRuns.length === 0 ? (
-                  <SelectItem disabled value="none">
-                    No runs available
-                  </SelectItem>
-                ) : null}
-                {projectRuns.map((run) => (
-                  <SelectItem key={run.id} value={run.id}>
-                    {`${runStatusLabel(run.status)} - ${runFileLabel(run)} - ${run.id.slice(0, 8)}`}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              onRunIdChange={onRunIdChange}
+              runs={projectRuns}
+              selectedRunId={selectedRunId}
+            />
           ) : null}
           <VpwBadge tone={readinessTone}>
             <ShieldCheck aria-hidden="true" className="h-3 w-3" />

@@ -26,7 +26,7 @@ from app.models import (
 from app.models.base import get_datetime_utc
 from app.repositories import RunRepository
 from vuln_prioritizer.cache import FileCache
-from vuln_prioritizer.config import DEFAULT_CACHE_TTL_HOURS
+from vuln_prioritizer.config import DEFAULT_CACHE_TTL_HOURS, DEFAULT_NVD_API_KEY_ENV
 from vuln_prioritizer.models import (
     EpssData,
     KevData,
@@ -247,6 +247,7 @@ def _write_provider_snapshot(
             cache=cache,
             cache_only=cache_only,
             baseline_items=baseline_items,
+            nvd_api_key_env=settings.NVD_API_KEY_ENV,
         )
         warnings.extend(source_warnings)
     if "epss" in selected_sources:
@@ -288,7 +289,7 @@ def _write_provider_snapshot(
                 source_counts=source_counts,
                 cache_only=cache_only,
             ),
-            nvd_api_key_env="NVD_API_KEY",
+            nvd_api_key_env=settings.NVD_API_KEY_ENV,
         ),
         items=[
             ProviderSnapshotItem(
@@ -357,12 +358,16 @@ def _load_latest_snapshot_items(
     if not isinstance(path_value, str) or not path_value or path_value == "[REDACTED]":
         return {}, ["Latest provider snapshot has no reusable source artifact path."]
     path = Path(path_value)
+    snapshot_root = settings.provider_snapshot_dir_path.resolve(strict=False)
     if not path.is_absolute():
-        path = settings.provider_snapshot_dir_path / path
-    if not path.is_file():
+        path = snapshot_root / path
+    candidate = path.resolve(strict=False)
+    if not candidate.is_relative_to(snapshot_root):
+        return {}, ["Latest provider snapshot artifact path is outside the snapshot directory."]
+    if not candidate.is_file():
         return {}, ["Latest provider snapshot artifact is no longer available on disk."]
     try:
-        return snapshot_items_by_cve(load_provider_snapshot(path)), []
+        return snapshot_items_by_cve(load_provider_snapshot(candidate)), []
     except ValueError as exc:
         return {}, [f"Latest provider snapshot artifact could not be reused: {exc}"]
 
@@ -374,15 +379,16 @@ def _provider_records_for_snapshot(
     cache: FileCache,
     cache_only: bool,
     baseline_items: dict[str, ProviderSnapshotItem],
+    nvd_api_key_env: str = DEFAULT_NVD_API_KEY_ENV,
 ) -> tuple[dict[str, Any], list[str], dict[str, int]]:
     warnings: list[str] = []
     if cache_only:
         fetched, warnings = _cached_provider_records(source=source, cache=cache, cve_ids=cve_ids)
     elif source == "nvd":
-        fetched, warnings = NvdProvider.from_env(api_key_env="NVD_API_KEY", cache=cache).fetch_many(
-            cve_ids,
-            refresh=True,
-        )
+        fetched, warnings = NvdProvider.from_env(
+            api_key_env=nvd_api_key_env,
+            cache=cache,
+        ).fetch_many(cve_ids, refresh=True)
     elif source == "epss":
         fetched, warnings = EpssProvider(cache=cache).fetch_many(cve_ids, refresh=True)
     else:

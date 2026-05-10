@@ -12,10 +12,13 @@ import { useReportsRouteState } from "../useReportsRouteState"
 function ReportsRouteContent() {
   const {
     handleAuthExpired,
+    projectListLoading,
     projectListError,
+    projects,
     providerStatus,
     selectedProject,
     selectedProjectId,
+    setSelectedProjectId,
   } = useWorkbenchContext()
   const [selectedRunId, setSelectedRunId] = useState("")
   const projectRunsQuery = useProjectRunsQuery(selectedProjectId, true)
@@ -39,17 +42,25 @@ function ReportsRouteContent() {
     )
   }, [projectRuns])
 
+  function handleProjectChange(projectId: string) {
+    setSelectedProjectId(projectId)
+    setSelectedRunId("")
+  }
+
   return (
     <section className="w-full">
       <EvidenceCenter
         activeReportFormat={reportsState.activeReportFormat}
         onCreateReport={reportsState.createReport}
         onDownloadReport={reportsState.downloadReport}
+        onProjectChange={handleProjectChange}
         onRunIdChange={setSelectedRunId}
         onVerifyReport={reportsState.verifyEvidenceReport}
         projectListError={projectListError}
+        projectListLoading={projectListLoading}
         projectRuns={projectRuns}
         projectSummary={projectSummaryQuery.data ?? null}
+        projects={projects}
         providerStatus={providerStatus}
         reportActionError={reportsState.reportActionError}
         reportActionMessage={reportsState.reportActionMessage}
@@ -69,6 +80,7 @@ function ReportsRouteContent() {
         }
         runsLoading={projectRunsQuery.isLoading || projectRunsQuery.isFetching}
         selectedProject={selectedProject}
+        selectedProjectId={selectedProjectId}
         selectedReportRun={selectedReportRun}
         selectedRunId={selectedRunId}
         selectedRunSummary={runDetailQuery.data?.summary ?? null}

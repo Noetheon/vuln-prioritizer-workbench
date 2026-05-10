@@ -391,8 +391,9 @@ Workbench API changes are versioned under the active `/api/v1` backend:
 
 - `POST /api/v1/api-tokens/`, `GET /api/v1/api-tokens/`, and `DELETE /api/v1/api-tokens/{token_id}` manage Workbench service tokens; the create response is the only response that includes the cleartext token, and metadata responses include `expires_at`
 - `ApiTokenCreate.expires_at` is optional and must be in the future when supplied; omitted values use `API_TOKEN_DEFAULT_EXPIRE_DAYS` from the active Workbench settings, which defaults to 90 days
-- non-admin Workbench service tokens require `project_id` and are limited to that project; `admin` tokens are global and must not carry `project_id`
+- non-admin Workbench service tokens require `project_id` and are limited to that project; `admin` tokens are global, root-equivalent automation credentials and must not carry `project_id`
 - Workbench service-token scopes are enforced by dependency: `read` covers project/run/finding/provider/waiver reads, `write` covers project-scoped project/asset/waiver mutations, `import` covers `/api/v1/projects/{project_id}/imports`, `report` covers report creation/download/verification, and `admin` covers token lifecycle, project creation, and satisfies all scoped dependencies; revoked, expired, or inactive-user tokens are rejected
+- the current Workbench access model is owner/superuser plus project-scoped non-admin service tokens; project membership tables and project-admin roles are not implemented in this local-first release
 - browser JWTs include a persisted session identifier; `/api/v1/login/logout` revokes the active session, and API dependencies reject revoked or expired sessions before returning a user
 - `/api/v1/audit/events` lists redacted audit events for administrators, and `/api/v1/audit/sessions` lists browser session metadata without JWT IDs, token hashes, or cleartext secrets
 - configured rate limits return HTTP 429 with `Retry-After` for excessive API, login, or invalid bearer-token attempts

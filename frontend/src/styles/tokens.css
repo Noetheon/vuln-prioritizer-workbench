@@ -106,6 +106,53 @@
   text-rendering: optimizeLegibility;
 }
 
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: 192 29% 7%;
+    --foreground: 210 40% 96%;
+    --card: 192 24% 11%;
+    --card-foreground: 210 40% 96%;
+    --popover: 192 24% 11%;
+    --popover-foreground: 210 40% 96%;
+    --primary: 217.2 91.2% 59.8%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 195 18% 16%;
+    --secondary-foreground: 210 40% 96%;
+    --muted: 195 18% 16%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 191 24% 18%;
+    --accent-foreground: 210 40% 96%;
+    --destructive: 0 72.2% 50.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 194 18% 21%;
+    --input: 194 18% 21%;
+    --ring: 172.5 66% 50.4%;
+
+    --vpw-bg-app: #0d1518;
+    --vpw-bg-page: #111d21;
+    --vpw-bg-card: #162328;
+    --vpw-bg-panel: #1a2428;
+    --vpw-bg-info: #13283a;
+    --vpw-bg-success: #10261f;
+    --vpw-bg-warning: #2d2414;
+    --vpw-bg-critical: #321a1c;
+    --vpw-bg-disabled: #111d21;
+    --vpw-bg-busy: #123447;
+
+    --vpw-text-primary: #f1f5f9;
+    --vpw-text-secondary: #cbd5e1;
+    --vpw-text-muted: #94a3b8;
+    --vpw-text-disabled: #64748b;
+    --vpw-text-busy: #bae6fd;
+    --vpw-border-default: #2d3b40;
+    --vpw-border-subtle: #243136;
+    --vpw-border-strong: #3b4f56;
+    --vpw-border-disabled: #4b5563;
+    --vpw-border-busy: #38bdf8;
+    --vpw-focus-ring: #14b8a6;
+  }
+}
+
 /* Tailwind v4 uses currentColor for bare `border` — default to the shadcn border token */
 *,
 *::before,

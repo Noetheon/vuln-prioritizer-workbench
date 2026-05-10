@@ -20,6 +20,7 @@ function LoginPage() {
   const [backendReady, setBackendReady] = useState(false)
   const [error, setError] = useState("")
   const [isSubmitting, setSubmitting] = useState(false)
+  const errorId = "login-error"
 
   useEffect(() => {
     let isMounted = true
@@ -92,6 +93,8 @@ function LoginPage() {
           <label>
             <span>Email</span>
             <input
+              aria-describedby={error ? errorId : undefined}
+              aria-invalid={error ? "true" : undefined}
               autoComplete="username"
               name="username"
               onChange={(event) => setEmail(event.target.value)}
@@ -103,6 +106,8 @@ function LoginPage() {
           <label>
             <span>Password</span>
             <input
+              aria-describedby={error ? errorId : undefined}
+              aria-invalid={error ? "true" : undefined}
               autoComplete="current-password"
               name="password"
               onChange={(event) => setPassword(event.target.value)}
@@ -111,7 +116,16 @@ function LoginPage() {
               value={password}
             />
           </label>
-          {error ? <p className="form-error">{error}</p> : null}
+          {error ? (
+            <p
+              aria-live="polite"
+              className="form-error"
+              id={errorId}
+              role="alert"
+            >
+              {error}
+            </p>
+          ) : null}
           <button
             className="primary-action"
             disabled={isSubmitting}

@@ -52,6 +52,14 @@ def workbench_engine(request: Request) -> Engine:
     candidate = getattr(request.app.state, WORKBENCH_ENGINE_STATE_KEY, None)
     if isinstance(candidate, Engine):
         return candidate
+    raise HTTPException(status_code=500, detail="Workbench database engine is not configured.")
+
+
+def fallback_workbench_engine(request: Request) -> Engine:
+    """Return an explicit legacy/global engine fallback for controlled tests."""
+    candidate = getattr(request.app.state, WORKBENCH_ENGINE_STATE_KEY, None)
+    if isinstance(candidate, Engine):
+        return candidate
     legacy_candidate = getattr(request.app.state, LEGACY_ENGINE_STATE_KEY, None)
     if isinstance(legacy_candidate, Engine):
         return legacy_candidate

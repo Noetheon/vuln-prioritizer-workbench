@@ -16,9 +16,14 @@ export type SupportedImportFormat = {
 }
 
 export type ImportWizardStateLike = {
+  attackMappingFile?: string
+  attackSource?: string
+  attackTechniqueMetadataFile?: string
   assetContextFile: File | null
   file: File | null
   inputType: string
+  lockedProviderData?: boolean
+  providerSnapshotFile?: string
   vexFile: File | null
 }
 
@@ -32,10 +37,15 @@ export type ImportsWorkbenchProps = {
   onAssetContextFileChange: (file: File | null) => void
   onFileChange: (file: File | null) => void
   onInputTypeChange: (value: string) => void
+  onLockedProviderDataChange: (value: boolean) => void
+  onProviderSnapshotFileChange: (value: string) => void
   onProjectChange: (projectId: string) => void
   onRefreshRuns: () => void
   onSelectRun: (runId: string) => void
   onSubmit: FormEventHandler<HTMLFormElement>
+  onAttackMappingFileChange: (value: string) => void
+  onAttackSourceChange: (value: string) => void
+  onAttackTechniqueMetadataFileChange: (value: string) => void
   onVexFileChange: (file: File | null) => void
   projectListLoading: boolean
   projectListError: string
@@ -135,6 +145,12 @@ export function formatExpectedFields(value: string) {
   }
   if (value === "trivy-json") return "Trivy Results[].Vulnerabilities"
   if (value === "grype-json") return "Grype matches[] vulnerability data"
+  if (value === "cyclonedx-json") return "CycloneDX components/vulnerabilities"
+  if (value === "spdx-json") return "SPDX packages/vulnerability references"
+  if (value === "dependency-check-json") return "Dependency-Check dependencies[].vulnerabilities"
+  if (value === "github-alerts-json") return "GitHub alert vulnerability records"
+  if (value === "nessus-xml") return "Nessus ReportHost/ReportItem CVE data"
+  if (value === "openvas-xml") return "OpenVAS result CVE data"
   return "Supported Workbench import fields"
 }
 
@@ -155,5 +171,8 @@ export function uploadProgress(wizard: ImportWizardStateLike) {
   if (wizard.file) value += 30
   if (wizard.assetContextFile) value += 15
   if (wizard.vexFile) value += 15
+  if (wizard.providerSnapshotFile || (wizard.attackSource && wizard.attackSource !== "none")) {
+    value += 5
+  }
   return Math.min(value, 100)
 }

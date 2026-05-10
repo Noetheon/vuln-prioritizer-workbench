@@ -143,7 +143,7 @@ class AnalysisService:
             fail_on_provider_error=False,
             max_cves=None,
             offline_kev_file=None,
-            nvd_api_key_env="NVD_API_KEY",
+            nvd_api_key_env=self.settings.NVD_API_KEY_ENV,
             no_cache=False,
             cache_dir=self.settings.provider_cache_dir_path,
             cache_ttl_hours=DEFAULT_CACHE_TTL_HOURS,

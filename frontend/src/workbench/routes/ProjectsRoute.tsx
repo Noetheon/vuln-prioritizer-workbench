@@ -29,6 +29,9 @@ function ProjectsRouteContainer() {
   } = useWorkbenchContext()
   const projectSummariesQuery = useProjectSummariesQuery(projects)
   const projectSummaryQuery = useProjectSummaryQuery(selectedProjectId)
+  const projectSummaryById = projectSummariesQuery.data?.summaries ?? {}
+  const failedProjectSummaryCount =
+    projectSummariesQuery.data?.failedProjectIds.length ?? 0
   const [createProjectForm, setCreateProjectForm] =
     useState<ProjectFormState>(emptyProjectForm)
   const [createProjectError, setCreateProjectError] = useState("")
@@ -144,6 +147,18 @@ function ProjectsRouteContainer() {
     createProjectMutation.isPending ||
     updateProjectMutation.isPending ||
     deleteProjectMutation.isPending
+  const projectSummaryWarning = [
+    failedProjectSummaryCount > 0
+      ? `${failedProjectSummaryCount} project summary ${
+          failedProjectSummaryCount === 1 ? "could" : "summaries could"
+        } not be loaded. Project counts may be incomplete.`
+      : "",
+    projectSummaryQuery.isError
+      ? apiErrorMessage("Selected project summary unavailable", projectSummaryQuery.error)
+      : "",
+  ]
+    .filter(Boolean)
+    .join(" ")
 
   return (
     <ProjectsWorkbench
@@ -197,7 +212,8 @@ function ProjectsRouteContainer() {
         projectSummariesQuery.isLoading
       }
       projectSummary={projectSummaryQuery.data ?? null}
-      projectSummaryById={projectSummariesQuery.data ?? {}}
+      projectSummaryById={projectSummaryById}
+      projectSummaryWarning={projectSummaryWarning}
       projects={projects}
       selectedProject={selectedProject}
       selectedProjectId={selectedProjectId}

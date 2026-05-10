@@ -51,6 +51,35 @@ test("findings route renders the empty live queue without demo data", async ({
   ).toHaveCount(0)
 })
 
+test("projects route surfaces partial summary failures", async ({ page }) => {
+  const secondaryProject = {
+    ...mockProject,
+    id: "project-2",
+    name: "Identity Platform",
+  }
+  await routeWorkbenchShell(page, {
+    findings: [mockFinding],
+    projects: [mockProject, secondaryProject],
+  })
+  await page.route("**/api/v1/projects/project-2/summary", (route) =>
+    route.fulfill({
+      contentType: "application/json",
+      status: 503,
+      body: JSON.stringify({ detail: "Summary unavailable" }),
+    }),
+  )
+
+  await page.goto("/projects")
+
+  await expect(
+    page.getByText("Project summary data incomplete"),
+  ).toBeVisible()
+  await expect(page.getByText(/1 project summary could not be loaded/)).toBeVisible()
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Projects" }),
+  ).toBeVisible()
+})
+
 test("finding detail API errors do not fall back to demo findings", async ({
   page,
 }) => {
@@ -68,6 +97,30 @@ test("finding detail API errors do not fall back to demo findings", async ({
   await expect(page.getByText("Finding detail unavailable")).toBeVisible()
   await expect(page.getByText("Demo preview")).toHaveCount(0)
   await expect(page.getByText("CVE-2024-3094")).toHaveCount(0)
+})
+
+test("finding detail still renders when optional explanation fails", async ({
+  page,
+}) => {
+  await routeWorkbenchShell(page, {
+    findings: [mockFinding],
+    projects: [mockProject],
+  })
+  await page.route("**/api/v1/findings/finding-1/explain", (route) =>
+    route.fulfill({
+      contentType: "application/json",
+      status: 500,
+      body: JSON.stringify({ detail: "Explanation provider unavailable" }),
+    }),
+  )
+
+  await page.goto("/findings/finding-1")
+
+  await expect(page.getByText("Priority explanation unavailable")).toBeVisible()
+  await expect(page.getByRole("heading", { name: /CVE-2024-3094/ })).toBeVisible()
+  await expect(
+    page.getByRole("region", { name: "Finding priority decision" }),
+  ).toBeVisible()
 })
 
 test("findings table owns horizontal scroll without page overflow", async ({

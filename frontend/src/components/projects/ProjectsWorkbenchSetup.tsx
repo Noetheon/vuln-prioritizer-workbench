@@ -38,7 +38,7 @@ function CreateProjectPanel({
         />
         <form className="space-y-4" onSubmit={onCreateProject}>
           <VpwField
-            description="Use a team, application, service, or assessment name."
+            description="Use an application, service, environment, or assessment name."
             error={createProjectError}
             htmlFor="create-project-name"
             label="Project name"
