@@ -143,6 +143,8 @@ async def _upload_size_guard(
 
 
 def _is_template_upload_path(path: str) -> bool:
+    if path.endswith("/login/access-token"):
+        return True
     return path.startswith("/api/v1/projects/") and (
         path.endswith("/imports") or path.endswith("/assets/import")
     )

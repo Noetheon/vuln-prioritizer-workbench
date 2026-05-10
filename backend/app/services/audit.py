@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import uuid
 from typing import Any
 
@@ -12,6 +13,8 @@ from app.models import AuditEvent, AuditEventStatus, User
 from app.models.api_tokens import api_token_id
 from app.repositories import AuditEventRepository
 from vuln_prioritizer.security_redaction import redact_value
+
+_MAX_AUDIT_DETAIL_JSON_BYTES = 4096
 
 
 def record_audit_event(
@@ -31,7 +34,7 @@ def record_audit_event(
         redacted_value, _paths = redact_value(detail)
         if isinstance(redacted_value, dict):
             encoded = jsonable_encoder(redacted_value)
-            redacted_detail = dict(encoded) if isinstance(encoded, dict) else {}
+            redacted_detail = _truncate_audit_detail(encoded) if isinstance(encoded, dict) else {}
     return AuditEventRepository(session).create_audit_event(
         action=action,
         resource_type=resource_type,
@@ -42,3 +45,14 @@ def record_audit_event(
         api_token_id=api_token_id(actor) if actor is not None else None,
         detail=redacted_detail,
     )
+
+
+def _truncate_audit_detail(detail: dict[str, Any]) -> dict[str, Any]:
+    serialized = json.dumps(detail, separators=(",", ":"), ensure_ascii=False)
+    if len(serialized.encode("utf-8")) <= _MAX_AUDIT_DETAIL_JSON_BYTES:
+        return detail
+    for max_chars in (512, 256, 128, 64):
+        candidate = {"truncated": True, "preview": serialized[:max_chars]}
+        if len(json.dumps(candidate, separators=(",", ":"), ensure_ascii=False).encode("utf-8")) <= _MAX_AUDIT_DETAIL_JSON_BYTES:
+            return candidate
+    return {"truncated": True}

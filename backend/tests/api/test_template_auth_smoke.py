@@ -373,6 +373,57 @@ def test_template_api_responses_include_security_headers() -> None:
         _assert_security_headers(response.headers)
 
 
+
+def test_template_failed_login_audit_truncates_username(template_api_env: Any) -> None:
+    client = template_api_env.client
+    long_username = "A" * 5000
+
+    response = client.post(
+        "/api/v1/login/access-token",
+        data={"username": long_username, "password": "wrong-password"},
+    )
+
+    assert response.status_code == 400
+    with Session(template_api_env.engine) as db_session:
+        event = db_session.exec(
+            select(template_api_env.app_models.AuditEvent).where(
+                template_api_env.app_models.AuditEvent.action == "login.failure"
+            )
+        ).one()
+    stored_username = str(event.detail_json.get("username", ""))
+    assert len(stored_username) == 256
+
+
+def test_template_login_rate_limit_uses_hashed_username_key() -> None:
+    selected_app = create_app(Settings(LOGIN_RATE_LIMIT_PER_MINUTE=5))
+    client = _client(selected_app)
+    long_username = "b" * 5000
+
+    response = client.post(
+        "/api/v1/login/access-token",
+        data={"username": long_username, "password": "wrong-password"},
+    )
+
+    assert response.status_code == 400
+    limiter = selected_app.state.rate_limiter
+    keys = [key for key in limiter.attempts if key.startswith("login-user:")]
+    assert len(keys) == 1
+    assert len(keys[0]) < 128
+
+
+def test_template_login_rejects_oversized_request_body() -> None:
+    selected_app = create_app(Settings(MAX_UPLOAD_MB=1))
+    client = _client(selected_app)
+    long_username = "c" * (2 * 1024 * 1024)
+
+    response = client.post(
+        "/api/v1/login/access-token",
+        data={"username": long_username, "password": "wrong-password"},
+    )
+
+    assert response.status_code == 413
+    assert response.json()["error"]["code"] == "payload_too_large"
+
 def _without_generated_fields(payload: dict[str, Any]) -> dict[str, Any]:
     return {key: value for key, value in payload.items() if key not in {"id", "created_at"}}
 

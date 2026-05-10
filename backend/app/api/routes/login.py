@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import secrets
 from datetime import timedelta
 from typing import Annotated
@@ -20,6 +21,9 @@ from app.services.audit import record_audit_event
 
 router = APIRouter(tags=["login"])
 
+_LOGIN_AUDIT_USERNAME_MAX_CHARS = 256
+_LOGIN_RATE_LIMIT_USERNAME_HASH_LEN = 24
+
 
 @router.post("/login/access-token")
 def login_access_token(
@@ -37,7 +41,7 @@ def login_access_token(
             action="login.failure",
             resource_type="auth_session",
             status="failure",
-            detail={"username": form_data.username},
+            detail={"username": _audit_username_hint(form_data.username)},
         )
         session.commit()
         raise HTTPException(status_code=400, detail="Incorrect email or password")
@@ -93,8 +97,9 @@ def _enforce_login_rate_limit(request: Request, username: str) -> None:
         return
     client_host = request.client.host if request.client else "unknown"
     normalized_username = username.strip().lower() or "unknown"
+    limiter_username_key = _rate_limit_username_key(normalized_username)
     decision = limiter.check(
-        f"login-user:{client_host}:{normalized_username}",
+        f"login-user:{client_host}:{limiter_username_key}",
         limit=active_settings.LOGIN_RATE_LIMIT_PER_MINUTE,
     )
     if not decision.allowed:
@@ -180,3 +185,14 @@ def _session_cookie_secure(request: Request) -> bool:
     if isinstance(active_settings, Settings) and active_settings.ENVIRONMENT != "local":
         return True
     return request.url.scheme == "https"
+
+
+def _audit_username_hint(username: str) -> str:
+    normalized = username.strip()
+    if not normalized:
+        return "unknown"
+    return normalized[:_LOGIN_AUDIT_USERNAME_MAX_CHARS]
+
+
+def _rate_limit_username_key(normalized_username: str) -> str:
+    return hashlib.sha256(normalized_username.encode()).hexdigest()[:_LOGIN_RATE_LIMIT_USERNAME_HASH_LEN]
