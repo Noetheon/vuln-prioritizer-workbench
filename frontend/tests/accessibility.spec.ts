@@ -113,6 +113,32 @@ test("login exposes labels, required fields, and keyboard submit", async ({
   await expectNoSeriousA11yViolations(page, "login")
 })
 
+test("login failure is announced and associated with credentials", async ({
+  page,
+}) => {
+  await page.goto("/login")
+  await page.getByLabel("Email").fill("wrong@example.com")
+  await page.getByLabel("Password").fill("wrong-password")
+  await page.getByRole("button", { name: "Sign in" }).click()
+
+  const alert = page.getByRole("alert")
+  await expect(alert).toHaveText(/email or password is incorrect/i)
+  await expect(page.getByLabel("Email")).toHaveAttribute("aria-invalid", "true")
+  await expect(page.getByLabel("Password")).toHaveAttribute(
+    "aria-invalid",
+    "true",
+  )
+  await expect(page.getByLabel("Email")).toHaveAttribute(
+    "aria-describedby",
+    "login-error",
+  )
+  await expect(page.getByLabel("Password")).toHaveAttribute(
+    "aria-describedby",
+    "login-error",
+  )
+  await expectNoSeriousA11yViolations(page, "login failure")
+})
+
 test("authenticated shell exposes landmarks and account controls", async ({
   page,
 }) => {

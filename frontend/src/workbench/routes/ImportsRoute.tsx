@@ -18,8 +18,9 @@ import {
   type ImportFormat,
   type ImportUploadFormData,
   type ImportWizardState,
-  mvpImportFormats,
+  workbenchImportFormats,
 } from "../../lib/app-defaults"
+import { buildImportUploadFormData } from "../import-upload-payload"
 import { useWorkbenchContext } from "../WorkbenchContext"
 import {
   useProjectRunsQuery,
@@ -178,20 +179,12 @@ function ImportsRouteContainer() {
 
     try {
       setSelectedProjectId(importProjectId)
-      const uploadFormData: ImportUploadFormData = {
-        ...(selectedAssetContextFile
-          ? {
-              asset_context_file: selectedAssetContextFile,
-            }
-          : {}),
-        ...(selectedVexFile
-          ? {
-              vex_file: selectedVexFile,
-            }
-          : {}),
-        file: selectedFile,
-        input_type: importWizard.inputType,
-      }
+      const uploadFormData: ImportUploadFormData = buildImportUploadFormData({
+        importWizard,
+        selectedAssetContextFile,
+        selectedFile,
+        selectedVexFile,
+      })
       const run = await importMutation.mutateAsync({
         body: uploadFormData,
         projectId: importProjectId,
@@ -248,10 +241,31 @@ function ImportsRouteContainer() {
           inputType: value as ImportFormat,
         }))
       }
+      onLockedProviderDataChange={(value) =>
+        setImportWizard((state) => ({ ...state, lockedProviderData: value }))
+      }
+      onProviderSnapshotFileChange={(value) =>
+        setImportWizard((state) => ({ ...state, providerSnapshotFile: value }))
+      }
       onProjectChange={setSelectedProjectId}
       onRefreshRuns={() => void refreshProjectRuns(selectedRunId)}
       onSelectRun={setSelectedRunId}
       onSubmit={submitImport}
+      onAttackMappingFileChange={(value) =>
+        setImportWizard((state) => ({ ...state, attackMappingFile: value }))
+      }
+      onAttackSourceChange={(value) =>
+        setImportWizard((state) => ({
+          ...state,
+          attackSource: value as ImportWizardState["attackSource"],
+        }))
+      }
+      onAttackTechniqueMetadataFileChange={(value) =>
+        setImportWizard((state) => ({
+          ...state,
+          attackTechniqueMetadataFile: value,
+        }))
+      }
       onVexFileChange={(file) =>
         setImportWizard((state) => ({ ...state, vexFile: file }))
       }
@@ -277,7 +291,7 @@ function ImportsRouteContainer() {
       selectedRun={runDetailQuery.data?.run ?? null}
       selectedRunId={selectedRunId}
       selectedRunSummary={runDetailQuery.data?.summary ?? null}
-      supportedFormats={mvpImportFormats}
+      supportedFormats={workbenchImportFormats}
     />
   )
 }

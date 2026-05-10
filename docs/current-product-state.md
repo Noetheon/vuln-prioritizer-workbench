@@ -67,6 +67,10 @@ generated-client drift checks, Playwright browser tests, Docker smokes, package
 checks, public deployment evidence contract checks, archive binary evidence
 manifest checks, and release-readiness automation.
 
+The current package maturity classifier is `Development Status :: 4 - Beta`.
+That means the CLI/core and self-hosted Workbench are release-gated for
+local-first operation, while public-production certification remains pending.
+
 These gates do not by themselves certify a public internet deployment. Public
 production readiness still requires fresh evidence for the exact deployment
 candidate, including proxy/TLS topology, strict CORS and cookie behavior,

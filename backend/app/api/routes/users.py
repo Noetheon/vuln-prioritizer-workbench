@@ -4,17 +4,23 @@ from __future__ import annotations
 
 import uuid
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Request, status
 from sqlmodel import Session
 
 from app.api.deps import CurrentUser, ScopedAdminUser, SessionDep
 from app.core import security
+from app.core.app_state import workbench_settings
+from app.core.config import Settings
+from app.core.password_policy import (
+    PASSWORD_POLICY_ERROR,
+    PasswordPolicyInput,
+    validate_password_policy,
+)
 from app.models import User, UserPasswordChange, UserPasswordReset, UserPublic
 from app.repositories import AuthSessionRepository
 from app.services.audit import record_audit_event
 
 router = APIRouter(prefix="/users", tags=["users"])
-INSECURE_USER_PASSWORDS = {"", "changethis"}
 
 
 @router.get("/me", response_model=UserPublic)
@@ -26,6 +32,7 @@ def read_user_me(current_user: CurrentUser) -> User:
 @router.post("/me/password", response_model=UserPublic)
 def rotate_current_user_password(
     payload: UserPasswordChange,
+    request: Request,
     session: SessionDep,
     current_user: CurrentUser,
 ) -> User:
@@ -49,6 +56,7 @@ def rotate_current_user_password(
         session,
         current_user,
         payload.new_password,
+        active_settings=workbench_settings(request, required=False),
         actor=current_user,
         action="user.password.rotate",
     )
@@ -59,6 +67,7 @@ def rotate_current_user_password(
 def reset_user_password(
     user_id: uuid.UUID,
     payload: UserPasswordReset,
+    request: Request,
     session: SessionDep,
     current_user: ScopedAdminUser,
 ) -> User:
@@ -68,6 +77,7 @@ def reset_user_password(
         session,
         user,
         payload.new_password,
+        active_settings=workbench_settings(request, required=False),
         actor=current_user,
         action="user.password.reset",
     )
@@ -125,10 +135,11 @@ def _set_user_password(
     user: User,
     new_password: str,
     *,
+    active_settings: Settings,
     actor: User,
     action: str,
 ) -> None:
-    _validate_new_password(new_password)
+    _validate_new_password(new_password, user=user, active_settings=active_settings)
     user.hashed_password = security.get_password_hash(new_password)
     session.add(user)
     revoked_sessions = AuthSessionRepository(session).revoke_user_sessions(user.id)
@@ -144,12 +155,25 @@ def _set_user_password(
     session.refresh(user)
 
 
-def _validate_new_password(new_password: str) -> None:
-    if new_password.strip().lower() in INSECURE_USER_PASSWORDS:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="Password must not use the default Workbench secret.",
+def _validate_new_password(
+    new_password: str,
+    *,
+    user: User,
+    active_settings: Settings,
+) -> None:
+    try:
+        validate_password_policy(
+            PasswordPolicyInput(
+                password=new_password,
+                username=user.email,
+                secret_key=active_settings.SECRET_KEY,
+            )
         )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail=PASSWORD_POLICY_ERROR,
+        ) from exc
 
 
 def _get_user_or_404(session: Session, user_id: uuid.UUID) -> User:

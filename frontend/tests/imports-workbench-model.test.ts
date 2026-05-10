@@ -12,6 +12,8 @@ import {
   selectedFormat,
   uploadProgress,
 } from "../src/components/imports/imports-workbench-model.ts"
+import { defaultImportWizardState } from "../src/lib/app-defaults.ts"
+import { buildImportUploadFormData } from "../src/workbench/import-upload-payload.ts"
 
 test("import model derives display labels and format metadata", () => {
   const formats = [
@@ -31,6 +33,8 @@ test("import model derives display labels and format metadata", () => {
 
   assert.equal(formatDisplayType("generic-occurrence-csv"), "generic occurrence csv")
   assert.equal(formatExpectedFields("trivy-json"), "Trivy Results[].Vulnerabilities")
+  assert.equal(formatExpectedFields("cyclonedx-json"), "CycloneDX components/vulnerabilities")
+  assert.equal(formatExpectedFields("nessus-xml"), "Nessus ReportHost/ReportItem CVE data")
   assert.equal(selectedFormat(formats, "trivy-json")?.label, "Trivy JSON")
   assert.equal(selectedFormat(formats, "unknown")?.label, "CVE list")
 })
@@ -89,4 +93,57 @@ test("import model maps run statuses to Workbench badge tones", () => {
   assert.equal(runTone("completed_with_errors"), "warning")
   assert.equal(runTone("failed"), "critical")
   assert.equal(runTone("pending"), "neutral")
+})
+
+test("import upload payload includes provider and ATT&CK options", () => {
+  const importFile = {} as File
+  const assetContextFile = {} as File
+  const vexFile = {} as File
+  const payload = buildImportUploadFormData({
+    importWizard: {
+      ...defaultImportWizardState,
+      attackMappingFile: " ctid-map.json ",
+      attackSource: "ctid-json",
+      attackTechniqueMetadataFile: " techniques.json ",
+      inputType: "cyclonedx-json",
+      lockedProviderData: true,
+      providerSnapshotFile: " provider-snapshot.json ",
+    },
+    selectedAssetContextFile: assetContextFile,
+    selectedFile: importFile,
+    selectedVexFile: vexFile,
+  })
+
+  assert.equal(payload.attack_mapping_file, "ctid-map.json")
+  assert.equal(payload.attack_source, "ctid-json")
+  assert.equal(payload.attack_technique_metadata_file, "techniques.json")
+  assert.equal(payload.asset_context_file, assetContextFile)
+  assert.equal(payload.file, importFile)
+  assert.equal(payload.input_type, "cyclonedx-json")
+  assert.equal(payload.locked_provider_data, true)
+  assert.equal(payload.provider_snapshot_file, "provider-snapshot.json")
+  assert.equal(payload.vex_file, vexFile)
+})
+
+test("import upload payload omits empty optional file-name fields", () => {
+  const importFile = {} as File
+  const payload = buildImportUploadFormData({
+    importWizard: {
+      ...defaultImportWizardState,
+      attackMappingFile: " ",
+      attackSource: "none",
+      attackTechniqueMetadataFile: "",
+      providerSnapshotFile: "",
+    },
+    selectedAssetContextFile: null,
+    selectedFile: importFile,
+    selectedVexFile: null,
+  })
+
+  assert.deepEqual(payload, {
+    attack_source: "none",
+    file: importFile,
+    input_type: defaultImportWizardState.inputType,
+    locked_provider_data: false,
+  })
 })

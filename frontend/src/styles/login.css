@@ -66,7 +66,7 @@
 
 .form-error {
   margin: 0;
-  color: var(--vpw-red);
+  color: color-mix(in srgb, var(--vpw-red) 72%, var(--vpw-text-primary));
   font-weight: 700;
 }
 

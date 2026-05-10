@@ -243,6 +243,11 @@ runtime, React frontend, retained CLI/domain package, VPW design system,
 evidence/reporting surfaces, public docs, CI cost controls, and package release
 automation.
 
+The Python package metadata uses `Development Status :: 4 - Beta` for the
+current artifact: the CLI/core and self-hosted Workbench are release-gated for
+local-first operation, but the project does not yet claim public-production
+certification.
+
 Public-production readiness is still tracked as explicit VPW-AUD-999 evidence
 work.
 Do not treat this README, the local Workbench quickstart, or local release gates

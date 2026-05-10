@@ -32,6 +32,7 @@ current tests, current contracts, or current release evidence.
 | Methodology | `methodology.md`, `scoring-methodology.md`, `attack-ttp-methodology.md`, `workbench-attack-methodology.md`, `benchmarking.md` | Domain owner | Must keep scoring, ATT&CK, VEX, and asset-context semantics transparent. |
 | Contracts | `contracts.md`, `support_matrix.md`, `asset-context-csv.md`, importer docs, examples, schemas | API/CLI/report owners | Must change with tests and generated/example artifacts when contracts change. |
 | Security and deployment | `workbench-threat-model.md`, `workbench-public-deployment.md`, `public-production-release-evidence-ledger.md`, `release_operations.md` | Security/release owner | Must separate local demo readiness from public-production evidence. |
+| Package maturity | `backend/pyproject.toml`, `README.md`, `current-product-state.md`, `public-production-release-evidence-ledger.md`, `release_operations.md` | Release owner | Must use the same readiness level; today that level is `Development Status :: 4 - Beta` for local-first/self-hosted readiness without public-production certification. |
 | Open-source repository health | `github-open-source-readiness.md`, `community_repository_setup.md`, root `CONTRIBUTING.md`, `SUPPORT.md`, `SECURITY.md`, `CODE_OF_CONDUCT.md`, `MAINTAINERS.md`, `CHANGELOG.md`, `.github/**` templates | Maintainers | Must route public questions, contributions, security reports, conduct issues, ownership, and GitHub-side settings without overstating what repo files configure. |
 | Release history | `docs/releases/**`, `CHANGELOG.md` | Release owner | Must describe tagged or historical releases, not future state. |
 | Submission package | `docs/submission/**` | Submission owner | May link archived demo proof, but must label it as demo or historical evidence. |
@@ -49,6 +50,8 @@ tests, release evidence, and the audit trail.
 ## Navigation Rules
 
 - Current pages must appear before historical pages in `mkdocs.yml`.
+- Active security and deployment pages must stay in a current navigation group,
+  not under Workbench History.
 - Open-source repository health pages must stay discoverable from both
   `README.md` and the MkDocs navigation.
 - Historical migration and template-era pages must live under a clearly labelled

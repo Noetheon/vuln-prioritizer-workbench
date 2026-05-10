@@ -32,6 +32,7 @@ export type ProjectsWorkbenchProps = {
   projectListLoading: boolean
   projectSummary: ProjectDecisionSummaryPublic | null
   projectSummaryById: Record<string, ProjectDecisionSummaryPublic>
+  projectSummaryWarning: string
   projects: ProjectPublic[]
   selectedProject: ProjectPublic | null
   selectedProjectId: string
