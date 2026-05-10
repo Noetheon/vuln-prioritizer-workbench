@@ -1,4 +1,4 @@
-import type { ReactNode } from "react"
+import type { CSSProperties, ReactNode } from "react"
 
 import { cn } from "@/lib/utils"
 
@@ -20,6 +20,7 @@ export type VpwDataTableProps<TData> = {
   className?: string
   density?: VpwDataTableDensity
   emptyState?: ReactNode
+  minWidth?: string
 }
 
 const densityClass: Record<VpwDataTableDensity, string> = {
@@ -36,15 +37,21 @@ export function VpwDataTable<TData>({
   density = "standard",
   emptyState,
   getRowKey,
+  minWidth,
 }: VpwDataTableProps<TData>) {
   if (data.length === 0 && emptyState) {
     return <>{emptyState}</>
   }
 
+  const tableStyle = {
+    "--vpw-table-min-width": minWidth ?? `${Math.max(640, columns.length * 160)}px`,
+  } as CSSProperties
+
   return (
     <section
       aria-label={caption ?? "Data table"}
       className={cn("vpw-table-wrap", className)}
+      style={tableStyle}
       // biome-ignore lint/a11y/noNoninteractiveTabindex: Data table wrappers can scroll horizontally and need keyboard access.
       tabIndex={0}
     >

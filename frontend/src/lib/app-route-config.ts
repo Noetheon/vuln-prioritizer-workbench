@@ -1,13 +1,15 @@
 import type { WorkbenchPath } from "../components/app/AppShell"
 
+type RouteDetail = {
+  eyebrow: string
+  title: string
+  panelTitle: string
+  panelDetail: string
+}
+
 export const routeDetails: Record<
   WorkbenchPath,
-  {
-    eyebrow: string
-    title: string
-    panelTitle: string
-    panelDetail: string
-  }
+  RouteDetail
 > = {
   "/": {
     eyebrow: "Security Operations",
@@ -64,4 +66,38 @@ export const routeDetails: Record<
     panelTitle: "User Settings",
     panelDetail: "Current authenticated user and workspace session",
   },
+}
+
+export const unknownRouteDetail: RouteDetail = {
+  eyebrow: "Workbench",
+  title: "Workspace",
+  panelTitle: "Workbench",
+  panelDetail: "Current workspace route",
+}
+
+const routePathOrder: readonly WorkbenchPath[] = [
+  "/projects",
+  "/imports",
+  "/findings",
+  "/waivers",
+  "/assets",
+  "/providers",
+  "/reports",
+  "/settings",
+  "/",
+]
+
+export function workbenchPathFromPathname(
+  pathname: string,
+): WorkbenchPath | null {
+  if (pathname === "/" || pathname === "") return "/"
+  for (const routePath of routePathOrder) {
+    if (
+      routePath !== "/" &&
+      (pathname === routePath || pathname.startsWith(`${routePath}/`))
+    ) {
+      return routePath
+    }
+  }
+  return null
 }

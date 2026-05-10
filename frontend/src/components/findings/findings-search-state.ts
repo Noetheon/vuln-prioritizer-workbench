@@ -159,22 +159,50 @@ function numericFilterText(value: string, min: number, max: number) {
   return Number.isFinite(parsed) && parsed >= min && parsed <= max ? value : ""
 }
 
+function numericRange(
+  rawMin: string,
+  rawMax: string,
+  min: number,
+  max: number,
+) {
+  const minValue = numericFilterText(rawMin, min, max)
+  const maxValue = numericFilterText(rawMax, min, max)
+  if (!minValue || !maxValue) {
+    return { maxValue, minValue }
+  }
+  return Number(minValue) <= Number(maxValue)
+    ? { maxValue, minValue }
+    : { maxValue: "", minValue }
+}
+
 export function parseFindingsSearch(input: unknown): FindingsSearchState {
   const source = searchRecord(input)
   const assetId = searchValue(source, "assetId")
+  const cvssRange = numericRange(
+    searchValue(source, "cvssMin"),
+    searchValue(source, "cvssMax"),
+    0,
+    10,
+  )
+  const epssRange = numericRange(
+    searchValue(source, "epssMin"),
+    searchValue(source, "epssMax"),
+    0,
+    1,
+  )
   return {
     ...defaultFindingsSearchState,
     assetId,
     assetKey: assetId ? searchValue(source, "assetKey") : "",
-    cvssMax: numericFilterText(searchValue(source, "cvssMax"), 0, 10),
-    cvssMin: numericFilterText(searchValue(source, "cvssMin"), 0, 10),
+    cvssMax: cvssRange.maxValue,
+    cvssMin: cvssRange.minValue,
     direction: enumValue(
       searchValue(source, "direction"),
       directionOptions,
       defaultFindingsSearchState.direction,
     ),
-    epssMax: numericFilterText(searchValue(source, "epssMax"), 0, 1),
-    epssMin: numericFilterText(searchValue(source, "epssMin"), 0, 1),
+    epssMax: epssRange.maxValue,
+    epssMin: epssRange.minValue,
     exposure: optionalEnumValue<AssetExposure>(
       searchValue(source, "exposure"),
       findingExposureOptions,

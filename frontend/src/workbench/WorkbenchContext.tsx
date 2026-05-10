@@ -68,6 +68,7 @@ function persistSelectedProjectId(projectId: string) {
 export type WorkbenchContextValue = {
   currentUser: UserPublic | null
   handleAuthExpired: () => Promise<void>
+  projectListError: string
   projectListLoading: boolean
   projects: ProjectPublic[]
   providerStatus: ProviderStatusPublic | null
@@ -203,6 +204,9 @@ export function WorkbenchProvider({ children }: { children: ReactNode }) {
     () => ({
       currentUser: currentUserQuery.data ?? null,
       handleAuthExpired,
+      projectListError: projectsQuery.isError
+        ? apiErrorMessage("Projects unavailable", projectsQuery.error)
+        : "",
       projectListLoading: projectsQuery.isLoading || projectsQuery.isFetching,
       projects,
       providerStatus: providerStatusQuery.data ?? null,
@@ -229,7 +233,9 @@ export function WorkbenchProvider({ children }: { children: ReactNode }) {
       providerStatusQuery.isError,
       providerStatusQuery.isFetching,
       providerStatusQuery.isLoading,
+      projectsQuery.error,
       projectsQuery.isFetching,
+      projectsQuery.isError,
       projectsQuery.isLoading,
       refreshProjects,
       refreshProviderStatus,

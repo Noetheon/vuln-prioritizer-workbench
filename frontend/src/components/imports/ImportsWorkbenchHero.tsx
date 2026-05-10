@@ -16,17 +16,22 @@ import {
 
 export function ImportHero({
   importWizard,
+  projectListError,
   projectRuns,
   providerStatus,
   selectedProject,
 }: Pick<
   ImportsWorkbenchProps,
-  "importWizard" | "projectRuns" | "providerStatus" | "selectedProject"
+  | "importWizard"
+  | "projectListError"
+  | "projectRuns"
+  | "providerStatus"
+  | "selectedProject"
 >) {
   const providerSummary = providerStatus
     ? formatProviderFreshness(providerStatus)
     : null
-  const isDemo = DEMO_MODE_ENABLED && !selectedProject
+  const isDemo = DEMO_MODE_ENABLED && !selectedProject && !projectListError
 
   return (
     <VpwSection>

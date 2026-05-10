@@ -121,7 +121,8 @@
   }
 
   .vpw-table {
-    width: 100%;
+    width: max(100%, var(--vpw-table-min-width, 100%));
+    min-width: var(--vpw-table-min-width, 100%);
     border-collapse: separate;
     border-spacing: 0;
     color: var(--vpw-text-primary);

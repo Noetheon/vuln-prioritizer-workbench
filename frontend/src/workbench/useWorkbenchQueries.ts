@@ -273,7 +273,7 @@ export function useFindingDetailQuery(findingId: string | null) {
       if (!findingId) {
         throw new Error("findingId is required")
       }
-      const demoDetail = DEMO_MODE_ENABLED
+      const demoDetail = DEMO_MODE_ENABLED && findingId.startsWith("demo-")
         ? demoFindingDetailForId(findingId)
         : null
       if (demoDetail) {

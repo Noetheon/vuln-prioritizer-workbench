@@ -5,6 +5,7 @@ import hashlib
 import json
 import uuid
 from dataclasses import replace
+from datetime import timedelta
 from pathlib import Path
 
 import pytest
@@ -28,8 +29,10 @@ from app.domain.import_asset_context import (
     canonicalize_asset_exposure_value,
 )
 from app.main import _upload_size_guard
+from app.models.base import get_datetime_utc
 from app.services import TemplateAnalysisError
 from app.services import import_uploads as upload_helpers
+from app.services.import_background import reconcile_stale_background_import_runs
 from app.services.import_errors import ImportServiceError
 from app.services.import_execution import (
     ImportUploadContent,
@@ -379,6 +382,59 @@ def test_import_upload_service_can_defer_and_resume_background_execution(
             item["status"] for item in resumed_run.summary_json["import_job"]["status_history"]
         ] == ["pending", "running", "succeeded"]
         assert resumed_run.summary_json["created_findings"] == 1
+
+
+def test_background_import_reconciliation_fails_stale_deferred_runs(
+    template_api_env: TemplateApiEnv,
+    tmp_path: Path,
+) -> None:
+    _configure_upload_dir(template_api_env, tmp_path)
+    headers = auth_headers(template_api_env.client)
+    project = create_project_via_api(template_api_env.client, headers)
+    active_settings = replace(
+        template_api_env.client.app.state.workbench_settings,
+        BACKGROUND_IMPORT_STALE_MINUTES=1,
+    )
+    upload = ProjectImportUploadRequest(
+        input_type="cve-list",
+        file=ImportUploadContent(
+            filename="stale-background-cves.txt",
+            content_type="text/plain",
+            content=b"CVE-2024-3094\n",
+        ),
+    )
+
+    with Session(template_api_env.engine) as session:
+        current_user = ensure_configured_superuser(session, active_settings=active_settings)
+        deferred_run = asyncio.run(
+            execute_project_import_upload(
+                project_id=uuid.UUID(project["id"]),
+                session=session,
+                current_user=current_user,
+                settings=active_settings,
+                upload=upload,
+                defer_execution=True,
+                execution_mode="background",
+            )
+        )
+        deferred_run.started_at = get_datetime_utc() - timedelta(minutes=5)
+        session.add(deferred_run)
+        session.commit()
+        run_id = deferred_run.id
+
+    reconciled = reconcile_stale_background_import_runs(
+        engine=template_api_env.engine,
+        settings=active_settings,
+    )
+
+    assert reconciled == 1
+    with Session(template_api_env.engine) as session:
+        run = session.get(app_models.AnalysisRun, run_id)
+        assert run is not None
+        assert run.status == app_models.AnalysisRunStatus.FAILED
+        assert run.finished_at is not None
+        assert run.summary_json["import_job"]["status"] == "failed"
+        assert run.summary_json["background_error"]["stage"] == "background_import"
 
 
 def test_non_local_background_import_audit_retains_api_token_id(

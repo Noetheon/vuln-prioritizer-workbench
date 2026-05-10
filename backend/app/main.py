@@ -26,6 +26,7 @@ from app.core.config import Settings, settings
 from app.core.db import create_db_engine
 from app.core.rate_limit import RateLimiter, create_rate_limiter, rate_limit_key
 from app.core.schema_smoke import assert_migrated_schema
+from app.services.import_background import reconcile_stale_background_import_runs
 
 SECURITY_HEADERS = {
     "X-Content-Type-Options": "nosniff",
@@ -73,6 +74,12 @@ def create_app(active_settings: Settings | None = None) -> FastAPI:
     app.state.rate_limiter = create_rate_limiter(selected_settings, active_engine)
     if selected_settings.ENVIRONMENT != "local":
         app.router.on_startup.append(lambda: assert_migrated_schema(active_engine))
+        app.router.on_startup.append(
+            lambda: reconcile_stale_background_import_runs(
+                engine=active_engine,
+                settings=selected_settings,
+            )
+        )
     app.add_middleware(
         TrustedHostMiddleware,
         allowed_hosts=list(selected_settings.ALLOWED_HOSTS),
@@ -92,7 +99,10 @@ def create_app(active_settings: Settings | None = None) -> FastAPI:
     app.add_exception_handler(StarletteHTTPException, http_exception_handler)
     app.add_exception_handler(RequestValidationError, validation_error_handler)
     app.add_exception_handler(Exception, unhandled_exception_handler)
-    install_error_openapi_schema(app)
+    install_error_openapi_schema(
+        app,
+        oauth2_token_url=f"{selected_settings.API_V1_STR}/login/access-token",
+    )
     return app
 
 
