@@ -2,12 +2,24 @@
   box-sizing: border-box;
 }
 
+html {
+  min-width: 320px;
+  background: var(--vpw-bg-app);
+}
+
 body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
   background: var(--vpw-bg-app);
   color: var(--vpw-text-primary);
+}
+
+html:has(.vpw-app-shell),
+body:has(.vpw-app-shell),
+body:has(.vpw-app-shell) #root {
+  height: 100dvh;
+  overflow: hidden;
 }
 
 button {

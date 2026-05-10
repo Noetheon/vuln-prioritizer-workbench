@@ -52,7 +52,7 @@ export function RemediationQueueSummary({
 }: RemediationQueueSummaryProps) {
   return (
     <VpwSection>
-      <VpwPanel className="space-y-5 bg-[var(--vpw-bg-card)]">
+      <VpwPanel className="flex flex-col gap-5 bg-[var(--vpw-bg-card)]">
         <VpwSectionHeader
           actions={
             <>

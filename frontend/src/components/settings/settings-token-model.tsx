@@ -1,3 +1,5 @@
+import { Trash2 } from "lucide-react"
+
 import type {
   ApiTokenCreate,
   ApiTokenPublic,
@@ -125,8 +127,9 @@ export function buildApiTokenColumns({
             onClick={() => void onRevokeApiToken(token)}
             size="sm"
             type="button"
-            variant="outline"
+            variant="destructive"
           >
+            <Trash2 aria-hidden="true" className="h-4 w-4" />
             Revoke
           </Button>
         ) : (

@@ -2,9 +2,9 @@ import type {
   FindingDetailPublic,
   FindingExplanationPublic,
 } from "@/api-client"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
+  VpwBadge,
   VpwKeyValueList,
   VpwSurface,
   VpwSurfaceBody,
@@ -59,11 +59,13 @@ export function WhyPriorityPanel({
           <div className="finding-card-heading">
             <div>
               <VpwSurfaceDescription>Risk to Decision</VpwSurfaceDescription>
-              <VpwSurfaceTitle>Why this priority?</VpwSurfaceTitle>
+              <VpwSurfaceTitle className="finding-card-title">
+                Why this priority?
+              </VpwSurfaceTitle>
             </div>
-            <Badge variant="outline">
+            <VpwBadge tone="info">
               Score {formatNullableNumber(finding.risk_score)}
-            </Badge>
+            </VpwBadge>
           </div>
         </VpwSurfaceHeader>
         <VpwSurfaceBody>
@@ -109,7 +111,9 @@ export function WhyPriorityPanel({
       <VpwSurface className="finding-decision-card finding-action-card">
         <VpwSurfaceHeader>
           <VpwSurfaceDescription>Remediation</VpwSurfaceDescription>
-          <VpwSurfaceTitle>Decision plan</VpwSurfaceTitle>
+          <VpwSurfaceTitle className="finding-card-title">
+            Decision plan
+          </VpwSurfaceTitle>
         </VpwSurfaceHeader>
         <VpwSurfaceBody>
           <VpwKeyValueList

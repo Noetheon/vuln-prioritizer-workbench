@@ -30,7 +30,7 @@ const gridClass: Record<NonNullable<VpwGridProps["columns"]>, string> = {
 
 export function VpwSection({ children, className, ...props }: VpwSectionProps) {
   return (
-    <section className={cn("space-y-4", className)} {...props}>
+    <section className={cn("flex flex-col gap-4", className)} {...props}>
       {children}
     </section>
   )

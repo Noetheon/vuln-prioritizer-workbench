@@ -1,6 +1,7 @@
 import { CheckCircle2, Circle } from "lucide-react"
 import type { ReactNode } from "react"
 
+import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
 export type VpwSelectionCardProps = {
@@ -24,7 +25,7 @@ export function VpwSelectionCard({
 }: VpwSelectionCardProps) {
   const Icon = checked ? CheckCircle2 : Circle
   const cardClassName = cn(
-    "block w-full rounded-[var(--vpw-radius-xl)] border bg-[var(--vpw-bg-card)] p-4 text-left shadow-[var(--vpw-shadow-1)] transition-colors",
+    "block h-auto w-full whitespace-normal rounded-[var(--vpw-radius-xl)] border bg-[var(--vpw-bg-card)] p-4 text-left shadow-[var(--vpw-shadow-1)] transition-colors [overflow-wrap:anywhere]",
     checked
       ? "border-[var(--vpw-blue)] ring-2 ring-[color-mix(in_srgb,var(--vpw-blue)_18%,transparent)]"
       : "border-[var(--vpw-border-default)] hover:bg-[var(--vpw-bg-panel)]",
@@ -64,13 +65,14 @@ export function VpwSelectionCard({
   }
 
   return (
-    <button
+    <Button
       aria-pressed={checked}
       className={cardClassName}
       onClick={onClick}
       type="button"
+      variant="outline"
     >
       {content}
-    </button>
+    </Button>
   )
 }

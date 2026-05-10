@@ -1,7 +1,9 @@
-import { Badge } from "@/components/ui/badge"
 import {
+  VpwBadge,
+  type VpwBadgeTone,
   VpwDataTable,
   type VpwDataTableColumn,
+  VpwStatusBanner,
   VpwSurface,
   VpwSurfaceBody,
   VpwSurfaceDescription,
@@ -9,7 +11,6 @@ import {
   VpwSurfaceTitle,
 } from "@/components/vpw"
 import { optionalText } from "@/lib/ui-copy"
-import { cn } from "@/lib/utils"
 
 import type { FindingAttackContext } from "./finding-detail-model"
 import {
@@ -24,12 +25,18 @@ import {
 
 type FindingAttackTechnique = ReturnType<typeof attackTechniqueRows>[number]
 
-function confidenceBadgeClass(value: string | null | undefined) {
-  return value === "high"
-    ? "bg-green-100 text-green-700 border-green-200"
-    : value === "low"
-      ? "bg-red-100 text-red-700 border-red-200"
-      : "bg-yellow-100 text-yellow-700 border-yellow-200"
+function confidenceTone(value: string | null | undefined): VpwBadgeTone {
+  return value === "high" ? "success" : value === "low" ? "critical" : "warning"
+}
+
+function mappingTone(
+  context: FindingAttackContext | null,
+  source: string | null | undefined,
+): VpwBadgeTone {
+  if (source?.toLowerCase().includes("demo")) {
+    return "support"
+  }
+  return context?.mapped ? "success" : "neutral"
 }
 
 function techniqueColumns(
@@ -40,7 +47,9 @@ function techniqueColumns(
       cell: (technique) => (
         <>
           <span className="font-medium">{technique.technique_id}</span>
-          <small>{optionalText(technique.name)}</small>
+          <small className="vpw-table-subtext">
+            {optionalText(technique.name)}
+          </small>
         </>
       ),
       header: "Technique",
@@ -53,9 +62,9 @@ function techniqueColumns(
     },
     {
       cell: (technique) => (
-        <Badge className={cn(confidenceBadgeClass(technique.confidence))}>
+        <VpwBadge tone={confidenceTone(technique.confidence)}>
           {attackConfidenceLabel(technique.confidence)}
-        </Badge>
+        </VpwBadge>
       ),
       header: "Confidence",
       id: "confidence",
@@ -120,38 +129,37 @@ export function FindingTtpContextTab({
       aria-label="TTP Context"
       className="finding-tab-card finding-ttp-card"
     >
-      <VpwSurfaceHeader>
+      <VpwSurfaceHeader className="finding-ttp-card-header">
         <div className="finding-card-heading">
           <div>
             <VpwSurfaceDescription>ATT&amp;CK</VpwSurfaceDescription>
             <VpwSurfaceTitle>TTP Context</VpwSurfaceTitle>
           </div>
-          <Badge variant="outline">
+          <VpwBadge tone={mappingTone(attackContext, attackSource)}>
             {attackSource?.toLowerCase().includes("demo")
               ? "Curated demo mapping"
               : attackContext?.mapped
                 ? "Mapped context"
                 : "No approved mapping"}
-          </Badge>
+          </VpwBadge>
         </div>
       </VpwSurfaceHeader>
-      <VpwSurfaceBody>
+      <VpwSurfaceBody className="finding-ttp-card-content">
         {attackEmpty ? (
           <section
             aria-label="TTP context empty state"
-            className="finding-empty-panel"
+            className="finding-empty-panel-shell"
           >
-            <div className="finding-empty-panel-heading">
-              <Badge variant="outline">Defensive context</Badge>
-              <strong>
-                No approved ATT&amp;CK mapping is stored for this finding.
-              </strong>
-            </div>
-            <p>
+            <VpwStatusBanner
+              className="finding-empty-panel"
+              title="Defensive context"
+              tone="info"
+            >
+              No approved ATT&amp;CK mapping is stored for this finding.
               Workbench does not infer tactics or techniques for unmapped CVEs.
               Add a reviewed CTID or curated local mapping before using
               ATT&amp;CK context in queue decisions.
-            </p>
+            </VpwStatusBanner>
           </section>
         ) : (
           <>
@@ -177,13 +185,9 @@ export function FindingTtpContextTab({
                 <div>
                   <dt>Confidence</dt>
                   <dd>
-                    <Badge
-                      className={cn(
-                        confidenceBadgeClass(attackContext?.confidence),
-                      )}
-                    >
+                    <VpwBadge tone={confidenceTone(attackContext?.confidence)}>
                       {attackConfidenceLabel(attackContext?.confidence)}
-                    </Badge>
+                    </VpwBadge>
                   </dd>
                 </div>
                 <div>
@@ -277,7 +281,7 @@ export function FindingTtpContextTab({
                   <span>Secondary evidence</span>
                   <strong>Technical mapping details</strong>
                 </div>
-                <Badge variant="outline">Source, confidence, rationale</Badge>
+                <VpwBadge tone="info">Source, confidence, rationale</VpwBadge>
               </summary>
 
               <div className="finding-ttp-technical-body">
@@ -288,29 +292,33 @@ export function FindingTtpContextTab({
                   columns={techniqueColumns(attackContext)}
                   data={attackTechniques}
                   getRowKey={(technique) => technique.technique_id}
+                  minWidth="960px"
+                  variant="detail"
                 />
               </div>
             </details>
           </>
         )}
         {attackEmpty ? (
-          <section
+          <VpwStatusBanner
             className="finding-detection-note"
-            aria-label="Detection coverage"
+            title="Detection coverage"
+            tone="warning"
           >
-            <span>Detection coverage</span>
-            <p>
-              {optionalText(
-                attackContext?.defensive_note ??
-                  "Coverage controls are not connected to this finding yet. Record detection and mitigation evidence when available.",
-              )}
-            </p>
-          </section>
+            {optionalText(
+              attackContext?.defensive_note ??
+                "Coverage controls are not connected to this finding yet. Record detection and mitigation evidence when available.",
+            )}
+          </VpwStatusBanner>
         ) : null}
-        <p className="finding-defensive-note">
-          Defensive context only. No exploit steps, payloads, PoC guidance,
-          active probing, or offensive procedure instructions.
-        </p>
+        <VpwStatusBanner
+          className="finding-defensive-note"
+          title="Defensive context only"
+          tone="info"
+        >
+          No exploit steps, payloads, PoC guidance, active probing, or offensive
+          procedure instructions.
+        </VpwStatusBanner>
       </VpwSurfaceBody>
     </VpwSurface>
   )

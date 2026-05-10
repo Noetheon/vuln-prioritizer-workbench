@@ -547,7 +547,7 @@ def test_findings_queue_uses_vpw_product_surfaces() -> None:
 def test_dashboard_and_finding_detail_use_vpw_surfaces() -> None:
     dashboard_paths = [
         REPO_ROOT / "frontend/src/components/dashboard/RiskOperationsDashboard.tsx",
-        REPO_ROOT / "frontend/src/components/dashboard/TopRemediationQueue.tsx",
+        REPO_ROOT / "frontend/src/components/dashboard/DashboardRemediationSection.tsx",
         REPO_ROOT / "frontend/src/components/dashboard/ProviderFreshnessPanel.tsx",
         REPO_ROOT / "frontend/src/components/risk/MetricCard.tsx",
     ]
@@ -566,7 +566,8 @@ def test_dashboard_and_finding_detail_use_vpw_surfaces() -> None:
         assert "components/ui/card" not in source, path
 
     assert "VpwSurface" in dashboard_paths[0].read_text(encoding="utf-8")
-    assert "VpwPanel" in dashboard_paths[1].read_text(encoding="utf-8")
+    assert "VpwSurface" in dashboard_paths[1].read_text(encoding="utf-8")
+    assert "VpwDataTable" in dashboard_paths[1].read_text(encoding="utf-8")
     assert "VpwPanel" in dashboard_paths[2].read_text(encoding="utf-8")
     assert "VpwSurface" in dashboard_paths[3].read_text(encoding="utf-8")
     assert "VpwStatusBanner" in finding_detail_paths[0].read_text(encoding="utf-8")
@@ -858,6 +859,9 @@ def test_workbench_frontend_feature_containers_delegate_to_sections() -> None:
     reports_summary_source = (
         REPO_ROOT / "frontend/src/components/reports/EvidenceCenterSummary.tsx"
     ).read_text(encoding="utf-8")
+    reports_lifecycle_source = (
+        REPO_ROOT / "frontend/src/components/reports/EvidenceCenterLifecycle.tsx"
+    ).read_text(encoding="utf-8")
     reports_history_source = (
         REPO_ROOT / "frontend/src/components/reports/EvidenceCenterHistory.tsx"
     ).read_text(encoding="utf-8")
@@ -1022,6 +1026,7 @@ def test_workbench_frontend_feature_containers_delegate_to_sections() -> None:
     assert "./RemediationQueueTableSection" in findings_view_source
     assert "EvidenceCenterRunContext" in reports_sections_source
     assert "EvidenceCenterSummary" in reports_sections_source
+    assert "EvidenceCenterLifecycle" in reports_sections_source
     assert "EvidenceCenterHistory" in reports_sections_source
     assert "EvidenceCenterManifest" in reports_sections_source
     assert "EvidenceCenterDecision" in reports_sections_source
@@ -1050,6 +1055,7 @@ def test_workbench_frontend_feature_containers_delegate_to_sections() -> None:
     assert len(reports_sections_source.splitlines()) <= 40
     assert len(reports_run_context_source.splitlines()) <= 170
     assert len(reports_summary_source.splitlines()) <= 240
+    assert len(reports_lifecycle_source.splitlines()) <= 240
     assert len(reports_history_source.splitlines()) <= 280
     assert len(reports_manifest_source.splitlines()) <= 130
     assert len(reports_decision_source.splitlines()) <= 140

@@ -14,7 +14,7 @@ export type { SettingsWorkbenchProps } from "./settings-workbench-model"
 
 export function SettingsWorkbench(props: SettingsWorkbenchProps) {
   return (
-    <VpwPageContainer className="space-y-8 px-0 py-0">
+    <VpwPageContainer className="flex flex-col gap-8 px-0 py-0">
       <SettingsHero
         apiTokens={props.apiTokens}
         currentUser={props.currentUser}

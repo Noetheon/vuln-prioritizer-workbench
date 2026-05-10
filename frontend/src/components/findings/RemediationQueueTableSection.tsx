@@ -8,8 +8,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import type { FindingsUrlSearch } from "./findings-search-state"
 import { FindingsDataTable, type QueueSort } from "./FindingsDataTable"
+import type { FindingsUrlSearch } from "./findings-search-state"
 import {
   type FindingsDirection,
   pageSizeOptions,
@@ -58,9 +58,7 @@ export function RemediationQueueTableSection({
   queueSort,
   totalCount,
 }: RemediationQueueTableSectionProps) {
-  if (displayFindings.length === 0) {
-    return null
-  }
+  if (displayFindings.length === 0) return null
 
   return (
     <div className="flex flex-col gap-3">
@@ -84,7 +82,7 @@ export function RemediationQueueTableSection({
                 onValueChange={(v) => onPageSizeChange(Number(v))}
                 value={String(findingPageSize)}
               >
-                <SelectTrigger aria-label="Rows" className="h-8 w-16 text-xs">
+                <SelectTrigger aria-label="Rows" className="h-10 w-16 text-xs">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -138,7 +136,10 @@ export function RemediationQueueTableSection({
             </Button>
             <Button
               className="h-7"
-              disabled={findingsLoading || findingOffset + findingPageSize >= findingCount}
+              disabled={
+                findingsLoading ||
+                findingOffset + findingPageSize >= findingCount
+              }
               onClick={onPageNext}
               size="sm"
               type="button"

@@ -44,7 +44,7 @@ export function VpwAppFrame({
           </div>
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold">Vuln Prioritizer</p>
-            <p className="truncate text-xs text-slate-500">Workbench</p>
+            <p className="truncate text-xs text-[var(--vpw-text-muted)]">Workbench</p>
           </div>
         </div>
         <nav className="mt-6 grid gap-1" aria-label="VPW app frame preview">
@@ -54,17 +54,17 @@ export function VpwAppFrame({
               <div
                 className={cn(
                   "flex min-h-10 items-center gap-2.5 rounded-[var(--vpw-radius-md)] px-3 text-sm font-medium",
-                  item.active ? "bg-white/10 text-white" : "text-slate-400",
+                  item.active ? "bg-white/10 text-white" : "text-white/60",
                 )}
                 key={item.label}
               >
-                {Icon ? <Icon aria-hidden="true" className="h-4 w-4" /> : null}
+                {Icon ? <Icon aria-hidden="true" className="size-4" /> : null}
                 <span className="truncate">{item.label}</span>
               </div>
             )
           })}
         </nav>
-        <div className="mt-8 rounded-[var(--vpw-radius-md)] border border-white/10 p-3 text-xs text-slate-400">
+        <div className="mt-8 rounded-[var(--vpw-radius-md)] border border-white/10 p-3 text-xs text-white/60">
           {userLabel}
         </div>
       </aside>

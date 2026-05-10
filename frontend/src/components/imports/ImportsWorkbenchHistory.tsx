@@ -60,13 +60,14 @@ export function RecentImports({
       id: "run",
       header: "Run",
       cell: (run) => (
-        <button
-          className="text-left font-mono text-sm font-medium text-[var(--vpw-blue)]"
+        <Button
+          className="h-auto p-0 font-mono text-sm"
           onClick={() => onSelectRun(run.id)}
           type="button"
+          variant="link"
         >
           {run.id.slice(0, 8)}
-        </button>
+        </Button>
       ),
     },
     { id: "file", header: "Input file", cell: (run) => runFileLabel(run) },
@@ -221,7 +222,7 @@ export function RunDetail({
   const selectedParseErrors = selectedRunSummary.parse_errors ?? []
 
   return (
-    <VpwPanel className="space-y-5">
+    <VpwPanel className="flex flex-col gap-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <p className="vpw-label">Run detail</p>

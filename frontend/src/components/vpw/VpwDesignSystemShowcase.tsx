@@ -112,7 +112,7 @@ const findingColumns: VpwDataTableColumn<ShowcaseFinding>[] = [
 
 export function VpwDesignSystemShowcase() {
   return (
-    <VpwPageContainer className="space-y-8">
+    <VpwPageContainer className="flex flex-col gap-8">
       <VpwSectionHeader
         actions={<VpwBadge tone="info">Foundation complete set</VpwBadge>}
         description="Reusable VPW tokens, product components, controls, data display, evidence patterns and product states."
@@ -183,7 +183,7 @@ export function VpwDesignSystemShowcase() {
       </section>
 
       <section className="grid gap-4 xl:grid-cols-2">
-        <div className="vpw-panel space-y-4 p-5">
+        <div className="vpw-panel flex flex-col gap-4 p-5">
           <VpwSectionHeader
             description="Token swatches are based on the installed kit variables."
             eyebrow="Foundations"
@@ -213,7 +213,7 @@ export function VpwDesignSystemShowcase() {
           </div>
         </div>
 
-        <div className="vpw-panel space-y-4 p-5">
+        <div className="vpw-panel flex flex-col gap-4 p-5">
           <VpwSectionHeader
             description="Toolbar, field wrappers and primitive controls."
             eyebrow="Controls"
@@ -222,7 +222,7 @@ export function VpwDesignSystemShowcase() {
           <VpwToolbar label="Design system controls">
             <VpwToolbarGroup>
               <Button>
-                <Download className="h-4 w-4" aria-hidden="true" />
+                <Download aria-hidden="true" data-icon="inline-start" />
                 Generate report
               </Button>
               <Button variant="outline">Verify bundle</Button>
@@ -260,22 +260,22 @@ export function VpwDesignSystemShowcase() {
       </section>
 
       <VpwGrid columns={3}>
-        <VpwPanel className="space-y-4">
+        <VpwPanel className="flex flex-col gap-4">
           <VpwSectionHeader eyebrow="Typography" title="Type Scale" />
           <VpwTypographySpec />
         </VpwPanel>
-        <VpwPanel className="space-y-4">
+        <VpwPanel className="flex flex-col gap-4">
           <VpwSectionHeader eyebrow="Spacing" title="Rhythm and Radius" />
           <VpwSpacingSpec />
         </VpwPanel>
-        <VpwPanel className="space-y-4">
+        <VpwPanel className="flex flex-col gap-4">
           <VpwSectionHeader eyebrow="Elevation" title="Shadow Scale" />
           <VpwElevationSpec />
         </VpwPanel>
       </VpwGrid>
 
       <section className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
-        <div className="space-y-4">
+        <div className="flex flex-col gap-4">
           <VpwFilterBar
             actions={<Button variant="outline">Reset</Button>}
             searchPlaceholder="Search CVE, owner, service"
@@ -321,7 +321,7 @@ export function VpwDesignSystemShowcase() {
           </Tabs>
         </div>
 
-        <div className="vpw-card space-y-5 p-5">
+        <div className="vpw-card flex flex-col gap-5 p-5">
           <VpwSectionHeader
             eyebrow="States"
             title="Product State Rules"
@@ -469,7 +469,7 @@ export function VpwDesignSystemShowcase() {
           problem="Known exploited vulnerabilities are present in priority services."
           recommendation="Patch exposed critical findings first, then generate evidence bundle."
         />
-        <div className="vpw-card space-y-5 p-5">
+        <div className="vpw-card flex flex-col gap-5 p-5">
           <VpwSectionHeader
             eyebrow="Evidence flow"
             title="Timeline and Signal Strength"

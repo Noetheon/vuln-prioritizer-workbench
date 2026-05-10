@@ -1,5 +1,25 @@
 @theme inline {
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
   --color-vpw-app: var(--vpw-bg-app);
+  --color-vpw-background: var(--vpw-bg-app);
   --color-vpw-page: var(--vpw-bg-page);
   --color-vpw-card: var(--vpw-bg-card);
   --color-vpw-panel: var(--vpw-bg-panel);
@@ -14,17 +34,26 @@
   --color-vpw-warning: var(--vpw-amber);
   --color-vpw-critical: var(--vpw-red);
   --color-vpw-support: var(--vpw-violet);
+  --color-vpw-foreground: var(--vpw-text-primary);
   --color-vpw-text-primary: var(--vpw-text-primary);
   --color-vpw-text-secondary: var(--vpw-text-secondary);
   --color-vpw-text-muted: var(--vpw-text-muted);
   --color-vpw-border: var(--vpw-border-default);
   --color-vpw-border-subtle: var(--vpw-border-subtle);
   --color-vpw-border-strong: var(--vpw-border-strong);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: var(--radius);
   --radius-vpw-sm: var(--vpw-radius-sm);
   --radius-vpw-md: var(--vpw-radius-md);
   --radius-vpw-lg: var(--vpw-radius-lg);
   --radius-vpw-xl: var(--vpw-radius-xl);
   --radius-vpw-pill: var(--vpw-radius-pill);
+  --shadow-xs: var(--vpw-shadow-1);
+  --shadow-sm: var(--vpw-shadow-1);
+  --shadow-md: var(--vpw-shadow-2);
+  --shadow-lg: var(--vpw-shadow-3);
   --shadow-vpw-1: var(--vpw-shadow-1);
   --shadow-vpw-2: var(--vpw-shadow-2);
   --shadow-vpw-3: var(--vpw-shadow-3);
@@ -38,23 +67,44 @@
   --card-foreground: 218.8 48.4% 8.4%;
   --popover: 0 0% 100%;
   --popover-foreground: 218.8 48.4% 8.4%;
-  --primary: 221.2 83.2% 53.3%;
-  --primary-foreground: 210 40% 98%;
+  --primary: 222.2 47.4% 5%;
+  --primary-foreground: 0 0% 100%;
   --secondary: 210 40% 98%;
   --secondary-foreground: 218.8 48.4% 8.4%;
   --muted: 210 40% 98%;
   --muted-foreground: 215.3 19.3% 34.5%;
   --accent: 214.3 100% 96.7%;
   --accent-foreground: 221.2 83.2% 53.3%;
-  --destructive: 0 84.2% 60.2%;
+  --destructive: 0 72.2% 42%;
   --destructive-foreground: 210 40% 98%;
   --border: 220 13% 91%;
   --input: 220 13% 91%;
   --ring: 217.2 91.2% 59.8%;
   --radius: 0.5rem;
 
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+
   /* VPW design-system tokens */
   --vpw-bg-app: #fafbfd;
+  --vpw-bg-default: var(--vpw-bg-app);
   --vpw-bg-page: #ffffff;
   --vpw-bg-card: #ffffff;
   --vpw-bg-panel: #f8fafc;
@@ -86,9 +136,9 @@
   --vpw-navy: #0b1020;
 
   --vpw-radius-sm: 4px;
-  --vpw-radius-md: 8px;
-  --vpw-radius-lg: 12px;
-  --vpw-radius-xl: 16px;
+  --vpw-radius-md: 6px;
+  --vpw-radius-lg: 8px;
+  --vpw-radius-xl: 8px;
   --vpw-radius-pill: 9999px;
   --vpw-shadow-0: none;
   --vpw-shadow-1: 0 1px 2px rgba(2, 6, 23, 0.04);
@@ -114,21 +164,22 @@
     --card-foreground: 210 40% 96%;
     --popover: 192 24% 11%;
     --popover-foreground: 210 40% 96%;
-    --primary: 217.2 91.2% 59.8%;
-    --primary-foreground: 210 40% 98%;
+    --primary: 213.1 93.9% 67.8%;
+    --primary-foreground: 222.2 47.4% 11.2%;
     --secondary: 195 18% 16%;
     --secondary-foreground: 210 40% 96%;
     --muted: 195 18% 16%;
     --muted-foreground: 215 20.2% 65.1%;
     --accent: 191 24% 18%;
     --accent-foreground: 210 40% 96%;
-    --destructive: 0 72.2% 50.6%;
+    --destructive: 0 72.2% 42%;
     --destructive-foreground: 210 40% 98%;
     --border: 194 18% 21%;
     --input: 194 18% 21%;
     --ring: 172.5 66% 50.4%;
 
     --vpw-bg-app: #0d1518;
+    --vpw-bg-default: var(--vpw-bg-app);
     --vpw-bg-page: #111d21;
     --vpw-bg-card: #162328;
     --vpw-bg-panel: #1a2428;
@@ -153,9 +204,55 @@
   }
 }
 
+.dark {
+  --background: 192 29% 7%;
+  --foreground: 210 40% 96%;
+  --card: 192 24% 11%;
+  --card-foreground: 210 40% 96%;
+  --popover: 192 24% 11%;
+  --popover-foreground: 210 40% 96%;
+  --primary: 213.1 93.9% 67.8%;
+  --primary-foreground: 222.2 47.4% 11.2%;
+  --secondary: 195 18% 16%;
+  --secondary-foreground: 210 40% 96%;
+  --muted: 195 18% 16%;
+  --muted-foreground: 215 20.2% 65.1%;
+  --accent: 191 24% 18%;
+  --accent-foreground: 210 40% 96%;
+  --destructive: 0 72.2% 42%;
+  --destructive-foreground: 210 40% 98%;
+  --border: 194 18% 21%;
+  --input: 194 18% 21%;
+  --ring: 172.5 66% 50.4%;
+
+  --vpw-bg-app: #0d1518;
+  --vpw-bg-default: var(--vpw-bg-app);
+  --vpw-bg-page: #111d21;
+  --vpw-bg-card: #162328;
+  --vpw-bg-panel: #1a2428;
+  --vpw-bg-info: #13283a;
+  --vpw-bg-success: #10261f;
+  --vpw-bg-warning: #2d2414;
+  --vpw-bg-critical: #321a1c;
+  --vpw-bg-disabled: #111d21;
+  --vpw-bg-busy: #123447;
+
+  --vpw-text-primary: #f1f5f9;
+  --vpw-text-secondary: #cbd5e1;
+  --vpw-text-muted: #94a3b8;
+  --vpw-text-disabled: #64748b;
+  --vpw-text-busy: #bae6fd;
+  --vpw-border-default: #2d3b40;
+  --vpw-border-subtle: #243136;
+  --vpw-border-strong: #3b4f56;
+  --vpw-border-disabled: #4b5563;
+  --vpw-border-busy: #38bdf8;
+  --vpw-focus-ring: #14b8a6;
+}
+
 /* Tailwind v4 uses currentColor for bare `border` — default to the shadcn border token */
 *,
 *::before,
 *::after {
-  border-color: hsl(var(--border));
+  border-color: var(--color-border);
 }

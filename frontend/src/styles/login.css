@@ -78,8 +78,8 @@
   border: 0;
   border-radius: 8px;
   padding: 0 14px;
-  background: var(--vpw-teal);
-  color: var(--vpw-bg-card);
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
   cursor: pointer;
   font-weight: 800;
   text-decoration: none;
@@ -87,7 +87,7 @@
 
 .primary-action:disabled {
   cursor: wait;
-  opacity: 0.72;
+  opacity: 1;
 }
 
 .login-status {

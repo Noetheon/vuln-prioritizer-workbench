@@ -52,7 +52,7 @@ export function WaiversHero({
 }) {
   return (
     <VpwSection>
-      <VpwPanel className="space-y-5 p-5">
+      <VpwPanel className="flex flex-col gap-5 p-5">
         <VpwSectionHeader
           actions={
             <>
@@ -68,9 +68,9 @@ export function WaiversHero({
           eyebrow="Risk acceptance"
           title="Waivers"
         />
-        <VpwToolbar label="Waiver context">
+        <VpwToolbar label="Waiver context" variant="plain">
           <VpwToolbarGroup className="min-w-0">
-            <VpwField className="min-w-64" label="Project">
+            <VpwField className="w-full min-w-0 sm:w-64" label="Project">
               <Select
                 disabled={projectListLoading || projects.length === 0}
                 onValueChange={onProjectChange}

@@ -5,15 +5,13 @@ this sequence:
 
 1. Tailwind and animation runtime imports.
 2. `tokens.css` for VPW design tokens.
-3. `shadcn-compat.css` for shadcn primitive compatibility.
-4. `layout-tokens.css` for shared layout sizing variables.
-5. `vpw-components.css` for reusable VPW component classes.
-6. `base.css` for element-level application defaults.
-7. Domain styles such as `dashboard.css`, `findings.css`, and
-   `finding-detail.css`.
-8. Route-specific utilities such as `login.css`.
-9. Global overrides in `responsive.css`, `accessibility.css`, then
-    `dark-mode.css`.
+3. `layout-tokens.css` for shared layout sizing variables.
+4. `vpw-components.css` for reusable VPW component classes.
+5. `base.css` for element-level application defaults.
+6. Domain styles such as `dashboard.css`, `findings.css`, and focused
+   finding-detail slices.
+7. Route-specific utilities such as `login.css`.
+8. Global overrides in `responsive.css` and `accessibility.css`.
 
 Ownership rules:
 
@@ -21,9 +19,16 @@ Ownership rules:
   `vpw-components.css` and token values from `tokens.css`.
 - Domain CSS files own route or feature-specific classes that are not reusable
   product primitives.
+- Finding detail CSS must stay split by product surface:
+  `finding-detail-decision.css`, `finding-detail-evidence.css`, and
+  `finding-detail-ttp-history.css`. Do not reintroduce a single
+  `finding-detail.css` catch-all.
 - The old `workbench-fallback.css` compatibility layer was retired after the
   VPW-AUD-206 exact-use scan found no mounted selectors. New legacy fallback
   layers require a tracked owner, an expiry condition, and a color-scan
   allowlist update.
-- `responsive.css`, `accessibility.css`, and `dark-mode.css` may override
-  earlier layers only for their named global concern.
+- shadcn semantic utilities are generated from `tokens.css` via Tailwind v4
+  `@theme inline`; do not reintroduce a compatibility utility layer.
+- `responsive.css` and `accessibility.css` may override earlier layers only
+  for their named global concern. Dark mode must be token-driven from
+  `tokens.css`, not global element selectors.

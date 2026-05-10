@@ -1,3 +1,4 @@
+import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
 export type VpwSegmentOption = {
@@ -29,7 +30,7 @@ export function VpwSegmentedControl({
     >
       {label ? <legend className="sr-only">{label}</legend> : null}
       {options.map((option) => (
-        <button
+        <Button
           aria-pressed={option.value === value}
           className={cn(
             "h-8 rounded-[var(--vpw-radius-sm)] px-3 text-sm font-medium text-[var(--vpw-text-secondary)] transition-colors",
@@ -38,10 +39,12 @@ export function VpwSegmentedControl({
           )}
           key={option.value}
           onClick={() => onChange?.(option.value)}
+          size="sm"
           type="button"
+          variant="ghost"
         >
           {option.label}
-        </button>
+        </Button>
       ))}
     </fieldset>
   )

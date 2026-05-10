@@ -7,24 +7,15 @@ import type {
   ReportPublic,
 } from "@/api-client"
 import {
-  VpwBadge,
-  VpwEvidenceArtifactCard,
   VpwGrid,
   VpwMetricCard,
   VpwSection,
   VpwSectionHeader,
-  VpwStatusBanner,
 } from "@/components/vpw"
 import { DEMO_REPORTS, DEMO_RUNS, DEMO_SUMMARY } from "@/lib/demo-data"
 import { formatProviderFreshness } from "@/lib/provider-format"
-import type { ReportFormat } from "@/lib/report-format"
 import { runStatusLabel } from "@/lib/risk-format"
-import {
-  ARTIFACT_CARDS,
-  priorityCount,
-  runMetricTone,
-  statusBannerTone,
-} from "./evidence-center-model"
+import { priorityCount, runMetricTone } from "./evidence-center-model"
 
 type SummaryProps = {
   projectSummary: ProjectDecisionSummaryPublic | null
@@ -126,88 +117,6 @@ export function EvidenceSummary({
           tone={isDemo || providerStatus?.status === "ok" ? "success" : "info"}
           value={reportCount}
         />
-      </VpwGrid>
-    </VpwSection>
-  )
-}
-
-export function ActionStatus({
-  error,
-  message,
-}: {
-  error: string
-  message: string
-}) {
-  if (!error && !message) return null
-
-  return (
-    <div className="space-y-3">
-      {error ? (
-        <VpwStatusBanner title="Report action failed" tone="critical">
-          {error}
-        </VpwStatusBanner>
-      ) : null}
-      {message ? (
-        <VpwStatusBanner
-          title="Report action complete"
-          tone={statusBannerTone(message)}
-        >
-          {message}
-        </VpwStatusBanner>
-      ) : null}
-    </div>
-  )
-}
-
-type ArtifactSectionProps = {
-  activeReportFormat: string
-  isDemo: boolean
-  reportActionsEnabled: boolean
-  onCreateReport: (format: ReportFormat) => Promise<void>
-}
-
-export function ArtifactSection({
-  activeReportFormat,
-  isDemo,
-  onCreateReport,
-  reportActionsEnabled,
-}: ArtifactSectionProps) {
-  return (
-    <VpwSection>
-      <VpwSectionHeader
-        actions={
-          isDemo ? (
-            <VpwBadge tone="warning">Generation disabled</VpwBadge>
-          ) : null
-        }
-        description={
-          reportActionsEnabled
-            ? "Select a format to generate an artifact for the selected run."
-            : isDemo
-              ? "Demo artifacts are preview-only. Connect a real completed run to enable generation."
-              : "Select a completed run to enable generation."
-        }
-        title="Generate Evidence Artifacts"
-      />
-      <VpwGrid columns={4}>
-        {ARTIFACT_CARDS.map((card) => {
-          const Icon = card.icon
-          const isActive = activeReportFormat === card.reportFormat
-          return (
-            <VpwEvidenceArtifactCard
-              actionLabel={isActive ? "Generating..." : card.actionLabel}
-              audience={card.audience}
-              busy={isActive}
-              description={card.description}
-              disabled={!reportActionsEnabled || isActive}
-              format={card.format}
-              icon={<Icon aria-hidden="true" className="h-4 w-4" />}
-              key={card.reportFormat}
-              onAction={() => void onCreateReport(card.reportFormat)}
-              title={card.title}
-            />
-          )
-        })}
       </VpwGrid>
     </VpwSection>
   )

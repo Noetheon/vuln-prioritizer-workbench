@@ -30,13 +30,13 @@ function CreateProjectPanel({
 >) {
   return (
     <div id="create-project">
-      <VpwPanel className="space-y-5">
+      <VpwPanel className="flex flex-col gap-5">
         <VpwSectionHeader
           eyebrow="Workspace setup"
           title="Create Project"
           description="Create a bounded workspace before importing scanner, SBOM, or CVE-list data."
         />
-        <form className="space-y-4" onSubmit={onCreateProject}>
+        <form className="flex flex-col gap-4" onSubmit={onCreateProject}>
           <VpwField
             description="Use an application, service, environment, or assessment name."
             error={createProjectError}
@@ -105,7 +105,7 @@ function ProjectWorkflowGuide() {
   ]
 
   return (
-    <VpwPanel className="space-y-5">
+    <VpwPanel className="flex flex-col gap-5">
       <VpwSectionHeader
         eyebrow="Workflow"
         title="Next best path"

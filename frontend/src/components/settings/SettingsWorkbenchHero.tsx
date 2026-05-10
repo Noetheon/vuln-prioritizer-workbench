@@ -47,7 +47,7 @@ export function SettingsHero({
 
   return (
     <VpwSection aria-label="User Settings">
-      <VpwPanel className="space-y-5 p-5">
+      <VpwPanel className="flex flex-col gap-5 p-5">
         <VpwSectionHeader
           actions={
             <Button asChild variant="outline">
@@ -58,7 +58,7 @@ export function SettingsHero({
           eyebrow="Workspace configuration"
           title="Settings"
         />
-        <VpwToolbar label="Settings context">
+        <VpwToolbar label="Settings context" variant="plain">
           <VpwToolbarGroup>
             <VpwBadge tone={currentUser ? "success" : "warning"}>
               {userLabel(currentUser)}

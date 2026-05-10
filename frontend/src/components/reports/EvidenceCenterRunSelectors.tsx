@@ -31,7 +31,7 @@ export function ReportProjectSelect({
     >
       <SelectTrigger
         aria-label="Reports project"
-        className="h-9 min-w-56 max-w-full"
+        className="h-10 w-full min-w-0 sm:w-56"
       >
         <SelectValue placeholder="Select project" />
       </SelectTrigger>
@@ -67,10 +67,14 @@ export function ReportRunSelect({
   selectedRunId,
 }: ReportRunSelectProps) {
   return (
-    <Select disabled={disabled} onValueChange={onRunIdChange} value={selectedRunId}>
+    <Select
+      disabled={disabled}
+      onValueChange={onRunIdChange}
+      value={selectedRunId}
+    >
       <SelectTrigger
         aria-label="Select analysis run"
-        className="h-9 min-w-64 max-w-full"
+        className="h-10 w-full min-w-0 sm:w-64"
       >
         <SelectValue placeholder="Select analysis run" />
       </SelectTrigger>

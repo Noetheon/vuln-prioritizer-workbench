@@ -1,5 +1,6 @@
 import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react"
 
+import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import type { FindingsDirection, QueueSort } from "./remediation-queue-model"
 import { defaultSortDirections } from "./remediation-queue-model"
@@ -32,15 +33,19 @@ export function SortHeader({
     : ArrowUpDown
 
   return (
-    <button
+    <Button
       aria-label={`Sort by ${label} (${active ? `${currentDirection} active` : `${nextDirection} first`})`}
       aria-pressed={active}
       className={cn(
-        "-ml-1 inline-flex h-7 items-center gap-1 rounded-md px-1.5 text-[0.72rem] font-extrabold uppercase text-inherit transition hover:bg-slate-100 hover:text-slate-900",
-        active ? "text-teal-700" : "text-slate-500",
+        "-ml-1 h-7 px-1.5 text-[0.72rem] font-extrabold uppercase",
+        active
+          ? "text-[var(--vpw-teal)]"
+          : "text-[var(--vpw-text-muted)]",
       )}
       onClick={() => onSort(sort)}
+      size="sm"
       type="button"
+      variant="ghost"
     >
       <Icon
         aria-hidden="true"
@@ -50,7 +55,7 @@ export function SortHeader({
         )}
       />
       <span className="text-left leading-tight">{label}</span>
-    </button>
+    </Button>
   )
 }
 
@@ -64,7 +69,7 @@ export function StaticHeader({
   return (
     <span
       className={cn(
-        "inline-flex h-7 items-center text-[0.72rem] font-extrabold uppercase text-slate-500",
+        "inline-flex h-7 items-center text-[0.72rem] font-extrabold uppercase text-[var(--vpw-text-muted)]",
         align === "right" ? "justify-end" : "justify-start",
       )}
     >

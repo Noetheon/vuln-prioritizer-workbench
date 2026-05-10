@@ -143,25 +143,25 @@ export function AppShell({
 
   return (
     <TooltipProvider>
-      <div className="flex min-h-dvh overflow-x-hidden bg-[var(--vpw-bg-app)]">
+      <div className="vpw-app-shell flex h-dvh min-h-dvh overflow-hidden bg-[var(--vpw-bg-app)]">
         {/* ── Sidebar ── */}
         <aside
           aria-label="Workbench sidebar"
           className={cn(
-            "sticky top-0 hidden h-dvh max-h-dvh shrink-0 flex-col border-r border-slate-800/80 bg-[var(--vpw-navy)] transition-[width] duration-200 ease-out lg:flex",
+            "hidden h-dvh max-h-dvh shrink-0 flex-col border-r border-white/10 bg-[var(--vpw-navy)] transition-[width] duration-200 ease-out lg:flex",
             sidebarCollapsed ? "w-[72px]" : "w-[248px]",
           )}
         >
           {/* Brand */}
           <div
             className={cn(
-              "flex h-16 shrink-0 items-center border-b border-slate-800/80",
+              "flex h-16 shrink-0 items-center border-b border-white/10",
               sidebarCollapsed ? "justify-center px-0" : "gap-3 px-4",
             )}
           >
             <div
               className={cn(
-                "flex shrink-0 items-center justify-center rounded-lg bg-amber-500 font-extrabold text-slate-950",
+                "flex shrink-0 items-center justify-center rounded-lg bg-[var(--vpw-amber)] font-extrabold text-[var(--vpw-navy)]",
                 sidebarCollapsed ? "size-10 text-sm" : "size-9 text-xs",
               )}
             >
@@ -172,7 +172,7 @@ export function AppShell({
                 <p className="truncate text-sm font-semibold text-white">
                   Vuln Prioritizer
                 </p>
-                <p className="truncate text-xs text-slate-300">Workbench</p>
+                <p className="truncate text-xs text-white/75">Workbench</p>
               </div>
             ) : null}
             {!sidebarCollapsed ? (
@@ -181,7 +181,7 @@ export function AppShell({
                   <Button
                     aria-label="Collapse sidebar"
                     aria-pressed={sidebarCollapsed}
-                    className="ml-auto flex size-9 items-center justify-center rounded-md text-slate-400 hover:bg-white/5 hover:text-slate-200"
+                    className="ml-auto flex size-9 items-center justify-center rounded-md text-white/60 hover:bg-white/5 hover:text-white/85"
                     onClick={() =>
                       setSidebarCollapsed((collapsed) => !collapsed)
                     }
@@ -210,7 +210,7 @@ export function AppShell({
                       <Button
                         aria-label="Expand sidebar"
                         aria-pressed={sidebarCollapsed}
-                        className="mx-auto flex size-10 items-center justify-center rounded-md text-slate-400 hover:bg-white/5 hover:text-slate-200"
+                        className="mx-auto flex size-10 items-center justify-center rounded-md text-white/60 hover:bg-white/5 hover:text-white/85"
                         onClick={() =>
                           setSidebarCollapsed((collapsed) => !collapsed)
                         }
@@ -238,7 +238,7 @@ export function AppShell({
                         : "min-h-10 w-full px-3",
                       isActive
                         ? "bg-white/10 text-white"
-                        : "text-slate-400 hover:bg-white/5 hover:text-slate-200",
+                        : "text-white/60 hover:bg-white/5 hover:text-white/85",
                     )}
                     to={entry.to}
                   >
@@ -274,7 +274,7 @@ export function AppShell({
           {/* Footer */}
           <div
             className={cn(
-              "flex shrink-0 items-center gap-2 border-t border-slate-800/80",
+              "flex shrink-0 items-center gap-2 border-t border-white/10",
               sidebarCollapsed ? "flex-col justify-center p-2" : "p-3",
             )}
           >
@@ -283,7 +283,7 @@ export function AppShell({
                 <Button
                   aria-label="Account menu"
                   className={cn(
-                    "h-auto min-h-10 justify-start rounded-md text-slate-400 hover:bg-white/5 hover:text-slate-200",
+                    "h-auto min-h-10 justify-start rounded-md text-white/60 hover:bg-white/5 hover:text-white/85",
                     sidebarCollapsed
                       ? "size-10 justify-center p-0"
                       : "w-full px-2",
@@ -291,7 +291,7 @@ export function AppShell({
                   type="button"
                   variant="ghost"
                 >
-                  <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-slate-700 text-xs font-semibold text-slate-300">
+                  <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-white/10 text-xs font-semibold text-white/75">
                     {currentUserLabel.charAt(0).toUpperCase()}
                   </span>
                   {!sidebarCollapsed ? (
@@ -327,7 +327,7 @@ export function AppShell({
         </aside>
 
         {/* ── Main area ── */}
-        <main className="flex min-h-dvh min-w-0 flex-1 flex-col">
+        <main className="flex h-dvh min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
           {/* Topbar */}
           <header className="flex min-h-14 shrink-0 items-center justify-between gap-3 border-b border-[var(--vpw-border-default)] bg-[var(--vpw-bg-page)] px-4 py-3 lg:h-14 lg:px-6 lg:py-0">
             <div className="flex min-w-0 items-center gap-3">
@@ -347,16 +347,16 @@ export function AppShell({
                   className="flex w-[min(22rem,calc(100vw-2rem))] flex-col overflow-y-auto bg-[var(--vpw-navy)] p-0 text-white"
                   side="left"
                 >
-                  <SheetHeader className="border-b border-slate-800/80 px-4 py-4 text-left">
+                  <SheetHeader className="border-b border-white/10 px-4 py-4 text-left">
                     <div className="flex items-center gap-3">
-                      <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-amber-500 text-xs font-extrabold text-slate-950">
+                      <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-[var(--vpw-amber)] text-xs font-extrabold text-[var(--vpw-navy)]">
                         VP
                       </div>
                       <div className="min-w-0">
                         <SheetTitle className="truncate text-sm font-semibold text-white">
                           Vuln Prioritizer
                         </SheetTitle>
-                        <SheetDescription className="truncate text-xs text-slate-400">
+                        <SheetDescription className="truncate text-xs text-white/60">
                           Workbench
                         </SheetDescription>
                       </div>
@@ -377,7 +377,7 @@ export function AppShell({
                                 "flex min-h-11 items-center gap-3 rounded-md px-3 text-sm font-medium transition-colors",
                                 isActive
                                   ? "bg-white/10 text-white"
-                                  : "text-slate-300 hover:bg-white/5 hover:text-white",
+                                  : "text-white/75 hover:bg-white/5 hover:text-white",
                               )}
                               onClick={() => setMobileNavOpen(false)}
                               to={entry.to}
@@ -394,16 +394,16 @@ export function AppShell({
                       })}
                     </ul>
                   </nav>
-                  <div className="flex shrink-0 items-center gap-2 border-t border-slate-800/80 p-3">
-                    <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-slate-700 text-xs font-semibold text-slate-300">
+                  <div className="flex shrink-0 items-center gap-2 border-t border-white/10 p-3">
+                    <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-white/10 text-xs font-semibold text-white/75">
                       {currentUserLabel.charAt(0).toUpperCase()}
                     </span>
-                    <span className="min-w-0 flex-1 truncate text-left text-xs text-slate-300">
+                    <span className="min-w-0 flex-1 truncate text-left text-xs text-white/75">
                       {currentUserLabel}
                     </span>
                     <Button
                       aria-label="Sign out"
-                      className="size-9 shrink-0 text-slate-300 hover:bg-white/5 hover:text-white"
+                      className="size-9 shrink-0 text-white/75 hover:bg-white/5 hover:text-white"
                       onClick={() => void onSignOut()}
                       size="icon"
                       type="button"
@@ -415,10 +415,10 @@ export function AppShell({
                 </SheetContent>
               </Sheet>
               <div className="min-w-0">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-600">
+                <p className="text-[10px] font-bold uppercase text-[var(--vpw-text-muted)]">
                   {eyebrow}
                 </p>
-                <h1 className="truncate text-base font-bold leading-tight text-slate-900">
+                <h1 className="truncate text-base font-bold leading-tight text-[var(--vpw-text-primary)]">
                   {title}
                 </h1>
               </div>
@@ -427,10 +427,10 @@ export function AppShell({
               <div
                 className={cn(
                   "size-2 rounded-full",
-                  isHealthy ? "bg-green-500" : "bg-amber-500",
+                  isHealthy ? "bg-[var(--vpw-green)]" : "bg-[var(--vpw-amber)]",
                 )}
               />
-              <span className="max-w-[8.5rem] truncate text-sm text-slate-600 sm:max-w-none">
+              <span className="max-w-[8.5rem] truncate text-sm text-[var(--vpw-text-muted)] sm:max-w-none">
                 {healthLabel}
               </span>
             </div>
@@ -438,32 +438,42 @@ export function AppShell({
 
           {/* Status strip */}
           {!hideStatusStrip && statusItems.length > 0 && (
-            <div className="shrink-0 overflow-x-auto border-b border-[var(--vpw-border-subtle)] bg-white/80">
-              <div className="flex min-w-max items-stretch lg:min-w-0">
+            <section
+              aria-label="Workbench status summary"
+              className="shrink-0 border-b border-[var(--vpw-border-subtle)] bg-[var(--vpw-bg-page)]"
+            >
+              <div className="grid grid-cols-2 items-stretch lg:flex lg:min-w-0">
                 {statusItems.map((item, index) => (
                   <div
                     className={cn(
-                      "flex min-w-36 flex-col justify-center px-4 py-2 lg:min-w-0 lg:px-6",
-                      index > 0 && "border-l border-slate-100",
+                      "flex min-w-0 flex-col justify-center px-4 py-2 lg:min-w-0 lg:px-6",
+                      index % 2 === 1 &&
+                        "border-l border-[var(--vpw-border-subtle)]",
+                      index > 1 &&
+                        "border-t border-[var(--vpw-border-subtle)] lg:border-t-0",
+                      index > 0 &&
+                        "lg:border-l lg:border-[var(--vpw-border-subtle)]",
                     )}
                     key={typeof item.label === "string" ? item.label : index}
                   >
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-600">
+                    <span className="text-[10px] font-bold uppercase text-[var(--vpw-text-muted)]">
                       {item.label}
                     </span>
-                    <span className="mt-0.5 truncate text-sm font-semibold text-slate-800">
+                    <span className="mt-0.5 truncate text-sm font-semibold text-[var(--vpw-text-primary)]">
                       {item.value}
                     </span>
                   </div>
                 ))}
               </div>
-            </div>
+            </section>
           )}
 
           {/* Scrollable content */}
           <section
             aria-label="Workbench page content"
-            className="min-w-0 flex-1"
+            className="min-h-0 min-w-0 flex-1 overflow-y-auto"
+            // biome-ignore lint/a11y/noNoninteractiveTabindex: Axe requires keyboard focus for the app's internal scroll region.
+            tabIndex={0}
           >
             <div className="vpw-page-container py-6">{children}</div>
           </section>

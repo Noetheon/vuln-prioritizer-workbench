@@ -1,6 +1,12 @@
 import type { ReactNode } from "react"
 
-import { Card, CardContent } from "@/components/ui/card"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
 import { cn } from "@/lib/utils"
 
 export type VpwMetricTone =
@@ -21,12 +27,26 @@ export type VpwMetricCardProps = {
 }
 
 const iconToneClass: Record<VpwMetricTone, string> = {
-  neutral: "bg-[var(--vpw-bg-panel)] text-[var(--vpw-text-secondary)]",
-  success: "bg-[var(--vpw-bg-success)] text-[var(--vpw-green)]",
-  warning: "bg-[var(--vpw-bg-warning)] text-[var(--vpw-amber)]",
-  critical: "bg-[var(--vpw-bg-critical)] text-[var(--vpw-red)]",
-  info: "bg-[var(--vpw-bg-info)] text-[var(--vpw-blue)]",
-  support: "bg-[var(--vpw-bg-panel)] text-[var(--vpw-violet)]",
+  neutral:
+    "border-[var(--vpw-border-default)] bg-[var(--vpw-bg-panel)] text-[var(--vpw-text-secondary)]",
+  success:
+    "border-[color-mix(in_srgb,var(--vpw-green)_24%,var(--vpw-bg-card))] bg-[var(--vpw-bg-success)] text-[var(--vpw-green)]",
+  warning:
+    "border-[color-mix(in_srgb,var(--vpw-amber)_34%,var(--vpw-bg-card))] bg-[var(--vpw-bg-warning)] text-[var(--vpw-amber)]",
+  critical:
+    "border-[color-mix(in_srgb,var(--vpw-red)_26%,var(--vpw-bg-card))] bg-[var(--vpw-bg-critical)] text-[var(--vpw-red)]",
+  info: "border-[color-mix(in_srgb,var(--vpw-blue)_22%,var(--vpw-bg-card))] bg-[var(--vpw-bg-info)] text-[var(--vpw-blue)]",
+  support:
+    "border-[color-mix(in_srgb,var(--vpw-violet)_22%,var(--vpw-bg-card))] bg-[var(--vpw-bg-panel)] text-[var(--vpw-violet)]",
+}
+
+const cardToneClass: Record<VpwMetricTone, string> = {
+  neutral: "border-t-[var(--vpw-border-default)]",
+  success: "border-t-[var(--vpw-green)]",
+  warning: "border-t-[var(--vpw-amber)]",
+  critical: "border-t-[var(--vpw-red)]",
+  info: "border-t-[var(--vpw-blue)]",
+  support: "border-t-[var(--vpw-violet)]",
 }
 
 export function VpwMetricCard({
@@ -38,28 +58,41 @@ export function VpwMetricCard({
   value,
 }: VpwMetricCardProps) {
   return (
-    <Card className={cn("vpw-card py-0", className)}>
-      <CardContent className="flex min-h-28 items-start justify-between gap-4 p-6">
+    <Card
+      className={cn(
+        "vpw-card min-h-[8rem] gap-0 overflow-hidden border-t-2 py-0",
+        cardToneClass[tone],
+        className,
+      )}
+    >
+      <CardHeader className="flex-row items-start justify-between gap-3 px-4 pb-2 pt-4">
         <div className="min-w-0">
-          <p className="vpw-label">{label}</p>
-          <div className="mt-2 text-3xl font-bold text-[var(--vpw-text-primary)]">
-            {value}
-          </div>
-          {description ? (
-            <p className="mt-1 text-sm leading-5 text-[var(--vpw-text-secondary)]">
-              {description}
-            </p>
-          ) : null}
+          <CardDescription className="vpw-label leading-4">
+            {label}
+          </CardDescription>
         </div>
         {icon ? (
           <div
             className={cn(
-              "rounded-[var(--vpw-radius-lg)] p-2",
+              "flex size-8 shrink-0 items-center justify-center rounded-[var(--vpw-radius-md)] border",
               iconToneClass[tone],
             )}
           >
             {icon}
           </div>
+        ) : null}
+      </CardHeader>
+      <CardContent className="px-4 pb-4 pt-0">
+        <CardTitle className="text-2xl font-semibold leading-tight text-[var(--vpw-text-primary)]">
+          {value}
+        </CardTitle>
+        {description ? (
+          <p
+            className="mt-2 line-clamp-2 text-sm leading-5 text-[var(--vpw-text-secondary)]"
+            title={description}
+          >
+            {description}
+          </p>
         ) : null}
       </CardContent>
     </Card>

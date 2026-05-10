@@ -4,6 +4,10 @@
     padding: 38px;
   }
 
+  .finding-decision-hero h2 {
+    font-size: 3.75rem;
+  }
+
   .finding-decision-hero p {
     max-width: 1080px;
   }
@@ -44,10 +48,6 @@
   .finding-ttp-decision-grid-simple {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   }
-
-  .finding-detail-table-wrap small {
-    max-width: 520px;
-  }
 }
 
 @media (max-width: 1280px) {
@@ -55,6 +55,10 @@
     grid-template-columns: minmax(0, 1fr) minmax(360px, 0.58fr);
     gap: 20px;
     padding: 28px;
+  }
+
+  .finding-decision-hero h2 {
+    font-size: 2.8rem;
   }
 
   .finding-decision-main-grid {
@@ -132,6 +136,10 @@
 
   .finding-decision-hero {
     padding: 20px;
+  }
+
+  .finding-decision-hero h2 {
+    font-size: 2.2rem;
   }
 
   .finding-card-heading,

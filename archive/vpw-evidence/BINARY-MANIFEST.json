@@ -135,6 +135,482 @@
     },
     {
       "kind": "png",
+      "path": "archive/vpw-evidence/ui-productization/screenshots/ui-31-assets-dark-1440.png",
+      "purpose": "Historical issue-level Workbench evidence screenshot.",
+      "sha256": "ffa17505118356eb1e74255899952de945cd660a0be29bfa2e8ead8b1051b6d3",
+      "size_bytes": 431700
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/ui-productization/screenshots/ui-31-dashboard-dark-1440.png",
+      "purpose": "Historical issue-level Workbench evidence screenshot.",
+      "sha256": "7cf140e14e06c12f2cf3c08b11023a21c11689625cf59db62d886edb4f69d13f",
+      "size_bytes": 199640
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/ui-productization/screenshots/ui-31-evidence-center-dark-1440.png",
+      "purpose": "Historical issue-level Workbench evidence screenshot.",
+      "sha256": "76caeed42dab0d24180cca467e139637201fd18875c61e8220560de8f3334e3a",
+      "size_bytes": 419960
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/ui-productization/screenshots/ui-31-findings-dark-1440.png",
+      "purpose": "Historical issue-level Workbench evidence screenshot.",
+      "sha256": "59eb7dc5d249cc0ddcac51499db2ccfdf07a18e03839d30e9553be88c9a944ff",
+      "size_bytes": 172121
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/ui-productization/screenshots/ui-31-imports-dark-1440.png",
+      "purpose": "Historical issue-level Workbench evidence screenshot.",
+      "sha256": "9464a1bf30d3749c12533c0729348dd57301e780d036ee2a539cfd96be9288d4",
+      "size_bytes": 581847
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/ui-productization/screenshots/ui-32-assets-desktop-1440.png",
+      "purpose": "Historical issue-level Workbench evidence screenshot.",
+      "sha256": "2fc6bb4fdc34cfe8c4f0db1abd6dc895040e5c37a6e87a07bd1adb3b29372caf",
+      "size_bytes": 430661
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/ui-productization/screenshots/ui-32-assets-mobile-390.png",
+      "purpose": "Historical issue-level Workbench evidence screenshot.",
+      "sha256": "9f7b86aa6b215c89845096bf5e7981941d5607e875a09df8b942b3ed7ac5884e",
+      "size_bytes": 376772
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/ui-productization/screenshots/ui-32-assets-tablet-768.png",
+      "purpose": "Historical issue-level Workbench evidence screenshot.",
+      "sha256": "67479cee73353be951fd9cb63b73adb569fb1341667fa725f6be6a2493c34c01",
+      "size_bytes": 408152
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/ui-productization/screenshots/ui-32-dashboard-mobile-390.png",
+      "purpose": "Historical issue-level Workbench evidence screenshot.",
+      "sha256": "e4f1ca9a83abc93f491860f0c1aa7b810d47c20f7dcdb03775a211f6f5df1ef2",
+      "size_bytes": 162787
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/ui-productization/screenshots/ui-32-evidence-center-mobile-390.png",
+      "purpose": "Historical issue-level Workbench evidence screenshot.",
+      "sha256": "3c6b27da910f74d95f984d75881ea4c216c6f5f9fea9482e2cc65bb41273608c",
+      "size_bytes": 393171
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/ui-productization/screenshots/ui-32-findings-mobile-390.png",
+      "purpose": "Historical issue-level Workbench evidence screenshot.",
+      "sha256": "13c500d3b66bc2c5075b9f93d11c5dc4b5fc1d51873ec06ed25019f3cc5b4255",
+      "size_bytes": 102221
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/ui-productization/screenshots/ui-32-imports-mobile-390.png",
+      "purpose": "Historical issue-level Workbench evidence screenshot.",
+      "sha256": "c81655db9cdd6193dc3b260de5210e100d7ac548de89470bf499957a07243588",
+      "size_bytes": 558836
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/ui-productization/screenshots/ui-evidence-assets-dark-desktop-1440.png",
+      "purpose": "Historical issue-level Workbench evidence screenshot.",
+      "sha256": "ffa17505118356eb1e74255899952de945cd660a0be29bfa2e8ead8b1051b6d3",
+      "size_bytes": 431700
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/ui-productization/screenshots/ui-evidence-assets-dark-mobile-390.png",
+      "purpose": "Historical issue-level Workbench evidence screenshot.",
+      "sha256": "c65822b4951912204954ad766a4d0dc6e078689c758a6111d015e329a011b551",
+      "size_bytes": 381597
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/ui-productization/screenshots/ui-evidence-assets-dark-tablet-768.png",
+      "purpose": "Historical issue-level Workbench evidence screenshot.",
+      "sha256": "8af07813c13f38596aae34a886f55d7c976d071342c0b292efb2fb7adcdcb622",
+      "size_bytes": 411641
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/ui-productization/screenshots/ui-evidence-assets-light-desktop-1440.png",
+      "purpose": "Historical issue-level Workbench evidence screenshot.",
+      "sha256": "2fc6bb4fdc34cfe8c4f0db1abd6dc895040e5c37a6e87a07bd1adb3b29372caf",
+      "size_bytes": 430661
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/ui-productization/screenshots/ui-evidence-assets-light-mobile-390.png",
+      "purpose": "Historical issue-level Workbench evidence screenshot.",
+      "sha256": "9f7b86aa6b215c89845096bf5e7981941d5607e875a09df8b942b3ed7ac5884e",
+      "size_bytes": 376772
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/ui-productization/screenshots/ui-evidence-assets-light-tablet-768.png",
+      "purpose": "Historical issue-level Workbench evidence screenshot.",
+      "sha256": "67479cee73353be951fd9cb63b73adb569fb1341667fa725f6be6a2493c34c01",
+      "size_bytes": 408152
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/ui-productization/screenshots/ui-evidence-dashboard-dark-desktop-1440.png",
+      "purpose": "Historical issue-level Workbench evidence screenshot.",
+      "sha256": "7cf140e14e06c12f2cf3c08b11023a21c11689625cf59db62d886edb4f69d13f",
+      "size_bytes": 199640
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/ui-productization/screenshots/ui-evidence-dashboard-dark-mobile-390.png",
+      "purpose": "Historical issue-level Workbench evidence screenshot.",
+      "sha256": "27ff55f375dab3310cf3b1f4b1829fe524de010f213815aada30eb7d38509814",
+      "size_bytes": 164915
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/ui-productization/screenshots/ui-evidence-dashboard-light-desktop-1440.png",
+      "purpose": "Historical issue-level Workbench evidence screenshot.",
+      "sha256": "c1d79d2da135d1e6c41565f4f0896e1adba36234ca82c6be0ada6c3c2d4570fe",
+      "size_bytes": 198219
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/ui-productization/screenshots/ui-evidence-dashboard-light-mobile-390.png",
+      "purpose": "Historical issue-level Workbench evidence screenshot.",
+      "sha256": "e4f1ca9a83abc93f491860f0c1aa7b810d47c20f7dcdb03775a211f6f5df1ef2",
+      "size_bytes": 162787
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/ui-productization/screenshots/ui-evidence-finding-detail-dark-desktop-1440.png",
+      "purpose": "Historical issue-level Workbench evidence screenshot.",
+      "sha256": "517c136db8941c867addb5a1bdb1ec6f31a4ef23334db369195c08f35bb35a25",
+      "size_bytes": 401347
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/ui-productization/screenshots/ui-evidence-finding-detail-dark-mobile-390.png",
+      "purpose": "Historical issue-level Workbench evidence screenshot.",
+      "sha256": "d6dd20b3b4e8fd58f30c8c7944884717f9e838e78e1db57d8cc279a2dad0ee84",
+      "size_bytes": 309224
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/ui-productization/screenshots/ui-evidence-finding-detail-light-desktop-1440.png",
+      "purpose": "Historical issue-level Workbench evidence screenshot.",
+      "sha256": "44d726a6f3ee56291d120cdf888e203819e641f485eff027ca9cd38c0ab32e54",
+      "size_bytes": 448214
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/ui-productization/screenshots/ui-evidence-finding-detail-light-mobile-390.png",
+      "purpose": "Historical issue-level Workbench evidence screenshot.",
+      "sha256": "cdf09fa7971e2191c8a74c60973e8ac06588d18ffd1bfa71da516dfad0b0f512",
+      "size_bytes": 331044
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/ui-productization/screenshots/ui-evidence-findings-dark-desktop-1440.png",
+      "purpose": "Historical issue-level Workbench evidence screenshot.",
+      "sha256": "59eb7dc5d249cc0ddcac51499db2ccfdf07a18e03839d30e9553be88c9a944ff",
+      "size_bytes": 172121
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/ui-productization/screenshots/ui-evidence-findings-dark-mobile-390.png",
+      "purpose": "Historical issue-level Workbench evidence screenshot.",
+      "sha256": "c6f2ff453c1300b783f4a082f3dba39ddb54d29df37cff54d6556b730a909df2",
+      "size_bytes": 103012
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/ui-productization/screenshots/ui-evidence-findings-dark-tablet-768.png",
+      "purpose": "Historical issue-level Workbench evidence screenshot.",
+      "sha256": "0b042431c3094eb3a306ff1377633ecb0bbc5145c6d21607d9f11152cfda8aa1",
+      "size_bytes": 124067
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/ui-productization/screenshots/ui-evidence-findings-light-desktop-1440.png",
+      "purpose": "Historical issue-level Workbench evidence screenshot.",
+      "sha256": "abfef79bb9d4d85347d92226ff9ac652df7404f775153ee8544c44cb58606edb",
+      "size_bytes": 171369
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/ui-productization/screenshots/ui-evidence-findings-light-mobile-390.png",
+      "purpose": "Historical issue-level Workbench evidence screenshot.",
+      "sha256": "13c500d3b66bc2c5075b9f93d11c5dc4b5fc1d51873ec06ed25019f3cc5b4255",
+      "size_bytes": 102221
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/ui-productization/screenshots/ui-evidence-findings-light-tablet-768.png",
+      "purpose": "Historical issue-level Workbench evidence screenshot.",
+      "sha256": "601b932990a87ce554fd50d35e3379d7c3e619950d8df4e206f2b6138399bbea",
+      "size_bytes": 123259
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/ui-productization/screenshots/ui-evidence-imports-dark-desktop-1440.png",
+      "purpose": "Historical issue-level Workbench evidence screenshot.",
+      "sha256": "9464a1bf30d3749c12533c0729348dd57301e780d036ee2a539cfd96be9288d4",
+      "size_bytes": 581847
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/ui-productization/screenshots/ui-evidence-imports-dark-mobile-390.png",
+      "purpose": "Historical issue-level Workbench evidence screenshot.",
+      "sha256": "93bd9e465f26d2d01a03fbdef5ac446e9231b03b9acfef64cbaba7a8d0ea4b89",
+      "size_bytes": 571924
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/ui-productization/screenshots/ui-evidence-imports-light-desktop-1440.png",
+      "purpose": "Historical issue-level Workbench evidence screenshot.",
+      "sha256": "008822d8442082f217fc1064c43bdc19a977db9e12964aa0558d03bf4b74fff5",
+      "size_bytes": 572836
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/ui-productization/screenshots/ui-evidence-imports-light-mobile-390.png",
+      "purpose": "Historical issue-level Workbench evidence screenshot.",
+      "sha256": "c81655db9cdd6193dc3b260de5210e100d7ac548de89470bf499957a07243588",
+      "size_bytes": 558836
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/ui-productization/screenshots/ui-evidence-login-dark-desktop-1440.png",
+      "purpose": "Historical issue-level Workbench evidence screenshot.",
+      "sha256": "0433644906198ab9f097a923783d988154f5faa21c5c8fd24525741f1bbab294",
+      "size_bytes": 492314
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/ui-productization/screenshots/ui-evidence-login-dark-mobile-390.png",
+      "purpose": "Historical issue-level Workbench evidence screenshot.",
+      "sha256": "ebcae55b2505c71cd6169224ce8a623bebd9aba932b75879246b72b15590da2b",
+      "size_bytes": 100230
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/ui-productization/screenshots/ui-evidence-login-light-desktop-1440.png",
+      "purpose": "Historical issue-level Workbench evidence screenshot.",
+      "sha256": "8bc5b0d8abd69b8644673ed81fa4bd40ef99319eab7cdbf1d9056a118ef81037",
+      "size_bytes": 498844
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/ui-productization/screenshots/ui-evidence-login-light-mobile-390.png",
+      "purpose": "Historical issue-level Workbench evidence screenshot.",
+      "sha256": "902c6df3803b275038182e851a63d19826e487790d79f073d7311dd3f3b6e23a",
+      "size_bytes": 99874
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/ui-productization/screenshots/ui-evidence-projects-dark-desktop-1440.png",
+      "purpose": "Historical issue-level Workbench evidence screenshot.",
+      "sha256": "ef3d2e7efbe7ebcb1b7ac559817cc4c2e00fef70b6d2c53f6d2ca55bcf0e828c",
+      "size_bytes": 295389
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/ui-productization/screenshots/ui-evidence-projects-dark-mobile-390.png",
+      "purpose": "Historical issue-level Workbench evidence screenshot.",
+      "sha256": "fe96a207a0560c2e51008284baaa3a5e6fcb8135e93830c887b5e508c83d7017",
+      "size_bytes": 260534
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/ui-productization/screenshots/ui-evidence-projects-light-desktop-1440.png",
+      "purpose": "Historical issue-level Workbench evidence screenshot.",
+      "sha256": "55855355f2f87453cc2faacd9a05da04da3618dd5d06012f877f30541d9758f3",
+      "size_bytes": 292956
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/ui-productization/screenshots/ui-evidence-projects-light-mobile-390.png",
+      "purpose": "Historical issue-level Workbench evidence screenshot.",
+      "sha256": "52f789ed0f73f0508cacaebdb3a5d375844adf1fa68829c61a76c0d6b17eee78",
+      "size_bytes": 256050
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/ui-productization/screenshots/ui-evidence-providers-dark-desktop-1440.png",
+      "purpose": "Historical issue-level Workbench evidence screenshot.",
+      "sha256": "a9ce65e05dc4c3619964c8ecdcf575a01ff79a225bc7362a3a6e577b41757cd0",
+      "size_bytes": 394350
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/ui-productization/screenshots/ui-evidence-providers-dark-mobile-390.png",
+      "purpose": "Historical issue-level Workbench evidence screenshot.",
+      "sha256": "2ef09d3992c64af84d773fb81e52431f5ca7c71a8b62464310e6aff6004b34fb",
+      "size_bytes": 337096
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/ui-productization/screenshots/ui-evidence-providers-light-desktop-1440.png",
+      "purpose": "Historical issue-level Workbench evidence screenshot.",
+      "sha256": "d5529957a884aed25bb1caa6b0367ff6e2e4e3e4a55aee5671e3171dac4a3ae8",
+      "size_bytes": 391634
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/ui-productization/screenshots/ui-evidence-providers-light-mobile-390.png",
+      "purpose": "Historical issue-level Workbench evidence screenshot.",
+      "sha256": "b2c1a7ccc250eea91eb816900077578e925d49e7ced13567a72f0142100328ae",
+      "size_bytes": 331813
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/ui-productization/screenshots/ui-evidence-reports-evidence-center-dark-desktop-1440.png",
+      "purpose": "Historical issue-level Workbench evidence screenshot.",
+      "sha256": "76caeed42dab0d24180cca467e139637201fd18875c61e8220560de8f3334e3a",
+      "size_bytes": 419960
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/ui-productization/screenshots/ui-evidence-reports-evidence-center-dark-mobile-390.png",
+      "purpose": "Historical issue-level Workbench evidence screenshot.",
+      "sha256": "3bff565f83af4810d3e9fadcc83680a6f1d2f9560807753245d8bb30869f66c3",
+      "size_bytes": 402424
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/ui-productization/screenshots/ui-evidence-reports-evidence-center-light-desktop-1440.png",
+      "purpose": "Historical issue-level Workbench evidence screenshot.",
+      "sha256": "40408fe708e58e1f6ebfa318e039ae16019b85ba1ddc151cd87f6c95ca69eec0",
+      "size_bytes": 414939
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/ui-productization/screenshots/ui-evidence-reports-evidence-center-light-mobile-390.png",
+      "purpose": "Historical issue-level Workbench evidence screenshot.",
+      "sha256": "3c6b27da910f74d95f984d75881ea4c216c6f5f9fea9482e2cc65bb41273608c",
+      "size_bytes": 393171
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/ui-productization/screenshots/ui-evidence-settings-dark-desktop-1440.png",
+      "purpose": "Historical issue-level Workbench evidence screenshot.",
+      "sha256": "5b1fb43f9fe122b231432b9333357ca261a863c94085e794ba7216fd6980a40b",
+      "size_bytes": 469646
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/ui-productization/screenshots/ui-evidence-settings-dark-mobile-390.png",
+      "purpose": "Historical issue-level Workbench evidence screenshot.",
+      "sha256": "1e820c487dfa23680eec1aa4d10d6ed4c99f7bb30f51f10ef9dbe0c4d58862ee",
+      "size_bytes": 420369
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/ui-productization/screenshots/ui-evidence-settings-dark-tablet-768.png",
+      "purpose": "Historical issue-level Workbench evidence screenshot.",
+      "sha256": "26fda0a6a54f0b10ff6ae22942b875eb5ba9cd9a92263f8f09498b288b333281",
+      "size_bytes": 450396
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/ui-productization/screenshots/ui-evidence-settings-light-desktop-1440.png",
+      "purpose": "Historical issue-level Workbench evidence screenshot.",
+      "sha256": "4fe613d852d86d65f139f70ca709220b74fa0f450b5ca0469b9b2712c22e527c",
+      "size_bytes": 466384
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/ui-productization/screenshots/ui-evidence-settings-light-mobile-390.png",
+      "purpose": "Historical issue-level Workbench evidence screenshot.",
+      "sha256": "4d526acb0f9695ce28f5daa0c8b133f25791bf9ad6a6735d6627671b8e1cc784",
+      "size_bytes": 414633
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/ui-productization/screenshots/ui-evidence-settings-light-tablet-768.png",
+      "purpose": "Historical issue-level Workbench evidence screenshot.",
+      "sha256": "54669b674c60784e9fe61ed553aa1d132141a7c0745be96109d162cc5068aa51",
+      "size_bytes": 445033
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/ui-productization/screenshots/ui-evidence-waivers-dark-desktop-1440.png",
+      "purpose": "Historical issue-level Workbench evidence screenshot.",
+      "sha256": "83922809a94c0f91be3d0c31ca65a0dc4a44b057bec9af2e8f4a51a6197e21b4",
+      "size_bytes": 350071
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/ui-productization/screenshots/ui-evidence-waivers-dark-mobile-390.png",
+      "purpose": "Historical issue-level Workbench evidence screenshot.",
+      "sha256": "6d7f4c6cc4dd20d93818caa300dd45a40896c56372b4937e84a13c18df1b5eb5",
+      "size_bytes": 313360
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/ui-productization/screenshots/ui-evidence-waivers-dark-tablet-768.png",
+      "purpose": "Historical issue-level Workbench evidence screenshot.",
+      "sha256": "58a9f81025e21a2829675ef15b084122c9ab9e4e6ddc25ea769f653b8c4b7bb8",
+      "size_bytes": 321444
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/ui-productization/screenshots/ui-evidence-waivers-light-desktop-1440.png",
+      "purpose": "Historical issue-level Workbench evidence screenshot.",
+      "sha256": "7f49de12c650e9e12aa85ced878b234200d1a66433519b1adf5e18dc8951cf30",
+      "size_bytes": 347355
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/ui-productization/screenshots/ui-evidence-waivers-light-mobile-390.png",
+      "purpose": "Historical issue-level Workbench evidence screenshot.",
+      "sha256": "903ea8af0bca07228b249006464a51270bfc0520827a22f6a79fdeeb3e22d327",
+      "size_bytes": 309581
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/ui-productization/screenshots/ui-evidence-waivers-light-tablet-768.png",
+      "purpose": "Historical issue-level Workbench evidence screenshot.",
+      "sha256": "9d2f8325ab922db47ac8cd01a1f99eabc0a4111f6f4ee66874ffbfa9f453152a",
+      "size_bytes": 318638
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/ui-productization/screenshots/vpw-aud-206-dashboard-1440.png",
+      "purpose": "Historical issue-level Workbench evidence screenshot.",
+      "sha256": "c1d79d2da135d1e6c41565f4f0896e1adba36234ca82c6be0ada6c3c2d4570fe",
+      "size_bytes": 198219
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/ui-productization/screenshots/vpw-aud-206-findings-1440.png",
+      "purpose": "Historical issue-level Workbench evidence screenshot.",
+      "sha256": "abfef79bb9d4d85347d92226ff9ac652df7404f775153ee8544c44cb58606edb",
+      "size_bytes": 171369
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/ui-productization/screenshots/vpw-aud-206-imports-1440.png",
+      "purpose": "Historical issue-level Workbench evidence screenshot.",
+      "sha256": "008822d8442082f217fc1064c43bdc19a977db9e12964aa0558d03bf4b74fff5",
+      "size_bytes": 572836
+    },
+    {
+      "kind": "png",
+      "path": "archive/vpw-evidence/ui-productization/screenshots/vpw-aud-206-reports-1440.png",
+      "purpose": "Historical issue-level Workbench evidence screenshot.",
+      "sha256": "40408fe708e58e1f6ebfa318e039ae16019b85ba1ddc151cd87f6c95ca69eec0",
+      "size_bytes": 414939
+    },
+    {
+      "kind": "png",
       "path": "archive/vpw-evidence/vpw-036-openapi-docs.png",
       "purpose": "Historical issue-level Workbench evidence screenshot.",
       "sha256": "dd6894019111ae39a0be49a3487d01724c69b31d518a26237cfb1393ad511b36",

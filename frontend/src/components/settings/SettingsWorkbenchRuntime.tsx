@@ -57,7 +57,7 @@ function ProviderRuntimeConfiguration({
   providerStatus: ProviderStatusPublic | null
 }) {
   return (
-    <VpwPanel className="space-y-5 p-5">
+    <VpwPanel className="flex flex-col gap-5 p-5">
       <VpwSectionHeader
         description="Safe runtime and provider configuration values reported by existing APIs."
         title="Provider and runtime configuration"
@@ -89,7 +89,7 @@ function DiagnosticsPanel({
   statusError: string
 }) {
   return (
-    <VpwPanel className="space-y-5 p-5">
+    <VpwPanel className="flex flex-col gap-5 p-5">
       <VpwSectionHeader
         description="Compact troubleshooting facts for support and evidence checks."
         title="Diagnostics"

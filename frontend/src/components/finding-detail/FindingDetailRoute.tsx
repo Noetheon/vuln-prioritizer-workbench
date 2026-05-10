@@ -133,9 +133,21 @@ export function FindingDetailRoute({
                 </p>
               </div>
               <TabsList className="finding-detail-tabs-list">
-                <TabsTrigger value="evidence">Evidence</TabsTrigger>
-                <TabsTrigger value="ttp">TTP Context</TabsTrigger>
-                <TabsTrigger value="history">History</TabsTrigger>
+                <TabsTrigger
+                  className="finding-detail-tab-trigger"
+                  value="evidence"
+                >
+                  Evidence
+                </TabsTrigger>
+                <TabsTrigger className="finding-detail-tab-trigger" value="ttp">
+                  TTP Context
+                </TabsTrigger>
+                <TabsTrigger
+                  className="finding-detail-tab-trigger"
+                  value="history"
+                >
+                  History
+                </TabsTrigger>
               </TabsList>
             </div>
 

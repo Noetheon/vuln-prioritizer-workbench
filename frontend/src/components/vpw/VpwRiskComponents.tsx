@@ -1,7 +1,13 @@
 import { AlertTriangle, Server, ShieldCheck } from "lucide-react"
 import type { ReactNode } from "react"
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
 import { cn } from "@/lib/utils"
 
 import { VpwBadge, type VpwBadgeTone } from "./VpwBadge"
@@ -56,15 +62,15 @@ export function VpwFindingSummaryCard({
       <CardHeader className="pb-3 pt-5">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="font-mono text-xs text-[var(--vpw-text-muted)]">
+            <CardDescription className="font-mono text-xs">
               {cveId}
-            </p>
+            </CardDescription>
             <CardTitle className="mt-1 text-base">{title}</CardTitle>
           </div>
           <VpwBadge tone={priorityTone}>{priority}</VpwBadge>
         </div>
       </CardHeader>
-      <CardContent className="space-y-3 pb-5">
+      <CardContent className="flex flex-col gap-3 pb-5">
         <div className="flex flex-wrap gap-2">
           {signals.map((signal) => (
             <VpwBadge key={signal} tone="info">
@@ -98,7 +104,7 @@ export function VpwAssetContextCard({
     <Card className={cn("vpw-card py-0", className)}>
       <CardHeader className="pb-3 pt-5">
         <CardTitle className="flex items-center gap-2 text-base">
-          <Server aria-hidden="true" className="h-4 w-4" />
+          <Server aria-hidden="true" className="size-4" />
           Asset Context
         </CardTitle>
       </CardHeader>
@@ -125,7 +131,7 @@ export function VpwWaiverDecisionCard({
           <VpwBadge tone={statusTone}>{status}</VpwBadge>
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-3 pb-5 text-sm">
+      <CardContent className="flex flex-col gap-3 pb-5 text-sm">
         <p className="leading-6 text-[var(--vpw-text-secondary)]">{reason}</p>
         <VpwKeyValueList
           columns={2}
@@ -150,16 +156,12 @@ export function VpwAttackTechniqueCard({
     <Card className={cn("vpw-card py-0", className)}>
       <CardHeader className="pb-3 pt-5">
         <CardTitle className="flex items-start gap-2 text-base">
-          <ShieldCheck aria-hidden="true" className="mt-0.5 h-4 w-4" />
-          <span>
-            {technique}
-            <span className="mt-1 block text-sm font-normal text-[var(--vpw-text-muted)]">
-              {tactic}
-            </span>
-          </span>
+          <ShieldCheck aria-hidden="true" className="mt-0.5 size-4" />
+          <span>{technique}</span>
         </CardTitle>
+        <CardDescription className="pl-6 text-sm">{tactic}</CardDescription>
       </CardHeader>
-      <CardContent className="space-y-3 pb-5">
+      <CardContent className="flex flex-col gap-3 pb-5">
         <VpwBadge tone="support">{confidence}</VpwBadge>
         {description ? (
           <div className="text-sm leading-6 text-[var(--vpw-text-secondary)]">
@@ -169,7 +171,7 @@ export function VpwAttackTechniqueCard({
           <div className="flex items-start gap-2 rounded-[var(--vpw-radius-lg)] bg-[var(--vpw-bg-warning)] p-3 text-sm text-[var(--vpw-text-secondary)]">
             <AlertTriangle
               aria-hidden="true"
-              className="mt-0.5 h-4 w-4 shrink-0 text-[var(--vpw-amber)]"
+              className="mt-0.5 size-4 shrink-0 text-[var(--vpw-amber)]"
             />
             No heuristic mapping is inferred. Use reviewed mappings only.
           </div>

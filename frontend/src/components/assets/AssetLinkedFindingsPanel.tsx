@@ -139,7 +139,7 @@ export function AssetLinkedFindingsPanel({
         title={selectedAsset.name}
       />
       <VpwGrid columns={2}>
-        <div className="space-y-4">
+        <div className="flex flex-col gap-4">
           <VpwAssetContextCard
             asset={selectedAsset.asset_key}
             businessService={optionalText(selectedAsset.business_service)}
@@ -147,7 +147,7 @@ export function AssetLinkedFindingsPanel({
             exposure={labelize(selectedAsset.exposure)}
             owner={optionalText(selectedAsset.owner)}
           />
-          <VpwPanel className="space-y-4 p-5">
+          <VpwPanel className="flex flex-col gap-4 p-5">
             <VpwSectionHeader
               eyebrow="Metadata"
               title="Prioritization context"
@@ -187,7 +187,7 @@ export function AssetLinkedFindingsPanel({
           </VpwPanel>
         </div>
 
-        <VpwPanel className="space-y-4 p-5">
+        <VpwPanel className="flex flex-col gap-4 p-5">
           {editingAssetId === selectedAsset.id ? (
             <>
               <VpwSectionHeader
@@ -231,7 +231,7 @@ export function AssetLinkedFindingsPanel({
         </VpwPanel>
       </VpwGrid>
 
-      <VpwPanel className="space-y-4 p-5">
+      <VpwPanel className="flex flex-col gap-4 p-5">
         <VpwSectionHeader
           actions={
             <Button asChild variant="outline">

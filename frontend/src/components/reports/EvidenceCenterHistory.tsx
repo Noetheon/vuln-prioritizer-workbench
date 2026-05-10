@@ -204,7 +204,7 @@ export function ReportHistory({
             Report History
           </h3>
         </div>
-        <div className="space-y-3">
+        <div className="flex flex-col gap-3">
           <Skeleton className="h-10 w-full" />
           <Skeleton className="h-10 w-full" />
           <Skeleton className="h-10 w-3/4" />

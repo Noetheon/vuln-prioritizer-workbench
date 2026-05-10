@@ -11,6 +11,7 @@ import {
 import {
   VpwBadge,
   VpwField,
+  VpwFileInput,
   VpwGrid,
   VpwImportStepCard,
   VpwKeyValueList,
@@ -22,12 +23,59 @@ import {
   VpwToolbar,
   VpwToolbarGroup,
 } from "@/components/vpw"
+import { ProviderAttackOptions } from "./ImportsWorkbenchProviderOptions"
 import {
   type ImportsWorkbenchProps,
   selectedFormat,
   uploadProgress,
 } from "./imports-workbench-model"
-import { ProviderAttackOptions } from "./ImportsWorkbenchProviderOptions"
+
+type FileUploadFieldProps = {
+  accept: string | undefined
+  description: string
+  file: File | null
+  id: string
+  label: string
+  name: string
+  onFileChange: (file: File | null) => void
+  required?: boolean
+}
+
+function FileUploadField({
+  accept,
+  description,
+  file,
+  id,
+  label,
+  name,
+  onFileChange,
+  required = false,
+}: FileUploadFieldProps) {
+  return (
+    <VpwField
+      description={
+        <span className="grid gap-1">
+          <span>{description}</span>
+          <span className="font-medium text-[var(--vpw-text-secondary)]">
+            {file ? `Selected: ${file.name}` : "No file selected"}
+          </span>
+        </span>
+      }
+      htmlFor={id}
+      label={label}
+      required={required}
+    >
+      <VpwFileInput
+        accept={accept}
+        file={file}
+        id={id}
+        label={label}
+        name={name}
+        onFileChange={onFileChange}
+      />
+    </VpwField>
+  )
+}
 
 export function ImportWizard({
   importError,
@@ -118,7 +166,7 @@ export function ImportWizard({
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1.25fr)_minmax(20rem,0.75fr)]">
         <VpwPanel>
           <form className="flex flex-col gap-5" onSubmit={onSubmit}>
-            <VpwToolbar label="Import controls">
+            <VpwToolbar label="Import controls" variant="plain">
               <VpwToolbarGroup>
                 <VpwBadge tone={importWizard.file ? "success" : "neutral"}>
                   {importWizard.file ? "Source attached" : "Source required"}
@@ -189,53 +237,35 @@ export function ImportWizard({
                 </Select>
               </VpwField>
             </div>
-            <VpwField
+            <FileUploadField
+              accept={format?.accept}
               description={`Accepted: ${format?.accept ?? "supported files"}`}
+              file={importWizard.file}
+              id="import-file"
               label="Import file"
+              name="importFile"
+              onFileChange={onFileChange}
               required
-            >
-              <input
-                accept={format?.accept}
-                aria-label="Import file"
-                className="w-full rounded-[var(--vpw-radius-md)] border border-[var(--vpw-border-default)] bg-[var(--vpw-bg-card)] px-3 py-2 text-sm"
-                name="importFile"
-                onChange={(event) =>
-                  onFileChange(event.target.files?.[0] ?? null)
-                }
-                type="file"
-              />
-            </VpwField>
+            />
             <div className="grid gap-4 lg:grid-cols-2">
-              <VpwField
+              <FileUploadField
+                accept=".csv,text/csv"
                 description="Optional CSV with target_kind, target_ref, asset_id, owner, service, exposure."
+                file={importWizard.assetContextFile}
+                id="asset-context-file"
                 label="Asset context CSV"
-              >
-                <input
-                  accept=".csv,text/csv"
-                  aria-label="Asset context CSV"
-                  className="w-full rounded-[var(--vpw-radius-md)] border border-[var(--vpw-border-default)] bg-[var(--vpw-bg-card)] px-3 py-2 text-sm"
-                  name="assetContextFile"
-                  onChange={(event) =>
-                    onAssetContextFileChange(event.target.files?.[0] ?? null)
-                  }
-                  type="file"
-                />
-              </VpwField>
-              <VpwField
+                name="assetContextFile"
+                onFileChange={onAssetContextFileChange}
+              />
+              <FileUploadField
+                accept=".json,application/json"
                 description="Optional OpenVEX or CycloneDX VEX JSON sidecar."
+                file={importWizard.vexFile}
+                id="vex-file"
                 label="OpenVEX / VEX JSON"
-              >
-                <input
-                  accept=".json,application/json"
-                  aria-label="OpenVEX/VEX JSON"
-                  className="w-full rounded-[var(--vpw-radius-md)] border border-[var(--vpw-border-default)] bg-[var(--vpw-bg-card)] px-3 py-2 text-sm"
-                  name="vexFile"
-                  onChange={(event) =>
-                    onVexFileChange(event.target.files?.[0] ?? null)
-                  }
-                  type="file"
-                />
-              </VpwField>
+                name="vexFile"
+                onFileChange={onVexFileChange}
+              />
             </div>
             <ProviderAttackOptions
               importWizard={importWizard}

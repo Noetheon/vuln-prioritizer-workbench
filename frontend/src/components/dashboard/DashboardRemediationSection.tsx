@@ -22,19 +22,13 @@ import {
 } from "@/components/ui/sheet"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
-import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import {
+  VpwDataTable,
+  type VpwDataTableColumn,
   VpwSurface,
   VpwSurfaceBody,
   VpwSurfaceDescription,
@@ -62,6 +56,176 @@ export function DashboardRemediationSection({
   queueFindings,
   queueSearch,
 }: DashboardRemediationSectionProps) {
+  const columns: readonly VpwDataTableColumn<FindingPublic>[] = [
+    {
+      id: "priority",
+      header: "Priority",
+      cell: (finding) => <SeverityBadge severity={finding.priority} />,
+      className: "w-20",
+      headerClassName: "w-20",
+    },
+    {
+      id: "score",
+      header: (
+        <Tooltip>
+          <TooltipTrigger className="cursor-default underline decoration-dotted underline-offset-2">
+            Risk Score
+          </TooltipTrigger>
+          <TooltipContent className="max-w-56 text-xs" side="top">
+            Composite score (0-10) combining CVSS severity, EPSS exploitation
+            probability, KEV status, and asset exposure.
+          </TooltipContent>
+        </Tooltip>
+      ),
+      cell: (finding) => <RiskBadge score={finding.risk_score} />,
+      className: "w-20",
+      headerClassName: "w-20",
+    },
+    {
+      id: "cve",
+      header: "CVE",
+      cell: (finding) => (
+        <Button
+          asChild
+          className="h-auto px-0 font-mono text-sm"
+          variant="link"
+        >
+          <Link params={{ findingId: finding.id }} to="/findings/$findingId">
+            {finding.cve_id}
+          </Link>
+        </Button>
+      ),
+      className: "w-36",
+      headerClassName: "w-36",
+    },
+    {
+      id: "component",
+      header: "Component / Service",
+      cell: (finding) => (
+        <div className="max-w-[140px] min-w-0">
+          <p className="truncate text-sm font-medium">
+            {optionalText(finding.component_name)}
+          </p>
+          <p className="truncate text-xs text-muted-foreground">
+            {optionalText(finding.business_service)}
+          </p>
+        </div>
+      ),
+      className: "w-36",
+      headerClassName: "w-36",
+    },
+    {
+      id: "owner",
+      header: "Owner",
+      cell: (finding) => optionalText(finding.owner),
+      className: "w-24 text-sm",
+      headerClassName: "w-24",
+    },
+    {
+      id: "why",
+      header: "Why now",
+      cell: (finding) => (
+        <Dialog>
+          <DialogTrigger asChild>
+            <Button className="text-xs" size="sm" variant="ghost">
+              Why now
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Why now: {finding.cve_id}</DialogTitle>
+              <DialogDescription>
+                Current priority rationale from scoring and operational context.
+              </DialogDescription>
+            </DialogHeader>
+            <p className="text-sm text-muted-foreground">
+              {findingWhyNow(finding)}
+            </p>
+            <DialogClose asChild>
+              <Button size="sm" type="button" variant="secondary">
+                Close
+              </Button>
+            </DialogClose>
+          </DialogContent>
+        </Dialog>
+      ),
+      className: "w-24",
+      headerClassName: "w-24",
+    },
+    {
+      id: "view",
+      header: <span className="sr-only">View</span>,
+      cell: (finding) => (
+        <Sheet>
+          <SheetTrigger asChild>
+            <Button
+              aria-label="View finding"
+              className="size-8"
+              size="icon"
+              variant="default"
+            >
+              <Eye aria-hidden="true" className="size-3.5" />
+            </Button>
+          </SheetTrigger>
+          <SheetContent className="w-[calc(100vw-2rem)] max-w-[460px] overflow-y-auto sm:w-[460px]">
+            <SheetHeader>
+              <SheetTitle className="font-mono">
+                {finding.cve_id ?? "Finding"}
+              </SheetTitle>
+              <SheetDescription>
+                Quick view - open full detail for complete context.
+              </SheetDescription>
+            </SheetHeader>
+            <div className="mt-6 flex flex-col gap-5">
+              <div className="flex flex-wrap gap-2">
+                <SeverityBadge severity={finding.priority} />
+                <RiskBadge score={finding.risk_score} />
+              </div>
+              <dl className="flex flex-col gap-3 text-sm">
+                <div>
+                  <dt className="text-xs font-semibold uppercase text-muted-foreground">
+                    Component
+                  </dt>
+                  <dd className="mt-0.5">{finding.component_name ?? "-"}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs font-semibold uppercase text-muted-foreground">
+                    Service
+                  </dt>
+                  <dd className="mt-0.5">{finding.business_service ?? "-"}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs font-semibold uppercase text-muted-foreground">
+                    Owner
+                  </dt>
+                  <dd className="mt-0.5">{finding.owner ?? "-"}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs font-semibold uppercase text-muted-foreground">
+                    Why now
+                  </dt>
+                  <dd className="mt-0.5 text-muted-foreground">
+                    {findingWhyNow(finding)}
+                  </dd>
+                </div>
+              </dl>
+              <Button asChild className="w-full" size="sm" variant="outline">
+                <Link
+                  params={{ findingId: finding.id }}
+                  to="/findings/$findingId"
+                >
+                  Open full detail
+                </Link>
+              </Button>
+            </div>
+          </SheetContent>
+        </Sheet>
+      ),
+      className: "w-12",
+      headerClassName: "w-12",
+    },
+  ]
+
   return (
     <VpwSurface className="gap-2 py-4">
       <VpwSurfaceHeader className="px-4">
@@ -116,171 +280,16 @@ export function DashboardRemediationSection({
             />
           </div>
         ) : (
-          <Table className="table-fixed">
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-20">Priority</TableHead>
-                <TableHead className="w-20">
-                  <Tooltip>
-                    <TooltipTrigger className="cursor-default underline decoration-dotted underline-offset-2">
-                      Risk Score
-                    </TooltipTrigger>
-                    <TooltipContent side="top" className="max-w-56 text-xs">
-                      Composite score (0–10) combining CVSS severity, EPSS
-                      exploitation probability, KEV status, and asset exposure.
-                    </TooltipContent>
-                  </Tooltip>
-                </TableHead>
-                <TableHead className="w-36">CVE</TableHead>
-                <TableHead className="w-36">Component / Service</TableHead>
-                <TableHead className="w-24">Owner</TableHead>
-                <TableHead className="w-24">Why now</TableHead>
-                <TableHead className="w-12"></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {queueFindings.map((finding) => (
-                <TableRow key={finding.id}>
-                  <TableCell>
-                    <SeverityBadge severity={finding.priority} />
-                  </TableCell>
-                  <TableCell>
-                    <RiskBadge score={finding.risk_score} />
-                  </TableCell>
-                  <TableCell>
-                    <Button
-                      asChild
-                      className="h-auto px-0 font-mono text-sm"
-                      variant="link"
-                    >
-                      <Link
-                        params={{ findingId: finding.id }}
-                        to="/findings/$findingId"
-                      >
-                        {finding.cve_id}
-                      </Link>
-                    </Button>
-                  </TableCell>
-                  <TableCell>
-                    <div className="max-w-[140px] min-w-0">
-                      <p className="truncate text-sm font-medium">
-                        {optionalText(finding.component_name)}
-                      </p>
-                      <p className="truncate text-xs text-muted-foreground">
-                        {optionalText(finding.business_service)}
-                      </p>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-sm">
-                    {optionalText(finding.owner)}
-                  </TableCell>
-                  <TableCell>
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <Button className="text-xs" size="sm" variant="ghost">
-                          Why now
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent>
-                        <DialogHeader>
-                          <DialogTitle>Why now: {finding.cve_id}</DialogTitle>
-                          <DialogDescription>
-                            Current priority rationale from scoring and
-                            operational context.
-                          </DialogDescription>
-                        </DialogHeader>
-                        <p className="text-sm text-muted-foreground">
-                          {findingWhyNow(finding)}
-                        </p>
-                        <DialogClose asChild>
-                          <Button size="sm" type="button" variant="secondary">
-                            Close
-                          </Button>
-                        </DialogClose>
-                      </DialogContent>
-                    </Dialog>
-                  </TableCell>
-                  <TableCell>
-                    <Sheet>
-                      <SheetTrigger asChild>
-                        <Button
-                          aria-label="View finding"
-                          size="icon"
-                          variant="default"
-                          className="size-8"
-                        >
-                          <Eye aria-hidden="true" className="size-3.5" />
-                        </Button>
-                      </SheetTrigger>
-                      <SheetContent className="overflow-y-auto w-[380px] sm:w-[460px]">
-                        <SheetHeader>
-                          <SheetTitle className="font-mono">
-                            {finding.cve_id ?? "Finding"}
-                          </SheetTitle>
-                          <SheetDescription>
-                            Quick view — open full detail for complete context.
-                          </SheetDescription>
-                        </SheetHeader>
-                        <div className="mt-6 space-y-5">
-                          <div className="flex flex-wrap gap-2">
-                            <SeverityBadge severity={finding.priority} />
-                            <RiskBadge score={finding.risk_score} />
-                          </div>
-                          <dl className="space-y-3 text-sm">
-                            <div>
-                              <dt className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                                Component
-                              </dt>
-                              <dd className="mt-0.5">
-                                {finding.component_name ?? "—"}
-                              </dd>
-                            </div>
-                            <div>
-                              <dt className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                                Service
-                              </dt>
-                              <dd className="mt-0.5">
-                                {finding.business_service ?? "—"}
-                              </dd>
-                            </div>
-                            <div>
-                              <dt className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                                Owner
-                              </dt>
-                              <dd className="mt-0.5">
-                                {finding.owner ?? "—"}
-                              </dd>
-                            </div>
-                            <div>
-                              <dt className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                                Why now
-                              </dt>
-                              <dd className="mt-0.5 text-muted-foreground">
-                                {findingWhyNow(finding)}
-                              </dd>
-                            </div>
-                          </dl>
-                          <Button
-                            asChild
-                            className="w-full"
-                            size="sm"
-                            variant="outline"
-                          >
-                            <Link
-                              params={{ findingId: finding.id }}
-                              to="/findings/$findingId"
-                            >
-                              Open full detail
-                            </Link>
-                          </Button>
-                        </div>
-                      </SheetContent>
-                    </Sheet>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+          <VpwDataTable
+            ariaLabel="Top remediation queue"
+            caption="Dashboard remediation table"
+            className="rounded-none border-x-0 border-b-0 shadow-none"
+            columns={columns}
+            data={queueFindings}
+            getRowKey={(finding) => finding.id}
+            minWidth="980px"
+            tableClassName="table-fixed"
+          />
         )}
       </VpwSurfaceBody>
     </VpwSurface>

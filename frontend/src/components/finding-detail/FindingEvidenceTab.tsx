@@ -1,5 +1,5 @@
-import { Badge } from "@/components/ui/badge"
 import {
+  VpwBadge,
   VpwDataTable,
   type VpwDataTableColumn,
   VpwSurface,
@@ -39,7 +39,7 @@ const occurrenceColumns: readonly VpwDataTableColumn<FindingOccurrenceRow>[] = [
               stringValue(occurrence.source),
           )}
         </span>
-        <small>
+        <small className="vpw-table-subtext">
           {optionalText(
             stringValue(occurrence.source_record_id) ??
               stringValue(occurrence.raw_reference),
@@ -59,7 +59,9 @@ const occurrenceColumns: readonly VpwDataTableColumn<FindingOccurrenceRow>[] = [
             stringValue(occurrence.component_version),
           ])}
         </span>
-        <small>{optionalText(stringValue(occurrence.purl))}</small>
+        <small className="vpw-table-subtext">
+          {optionalText(stringValue(occurrence.purl))}
+        </small>
       </>
     ),
     header: "Component",
@@ -74,7 +76,7 @@ const occurrenceColumns: readonly VpwDataTableColumn<FindingOccurrenceRow>[] = [
               stringValue(occurrence.target_ref),
           )}
         </span>
-        <small>
+        <small className="vpw-table-subtext">
           {joinedValues([
             stringValue(occurrence.asset_owner),
             stringValue(occurrence.asset_business_service),
@@ -92,7 +94,9 @@ const occurrenceColumns: readonly VpwDataTableColumn<FindingOccurrenceRow>[] = [
         <span className="font-medium">
           {optionalText(stringValue(occurrence.scanner))}
         </span>
-        <small>{optionalText(stringValue(occurrence.raw_severity))}</small>
+        <small className="vpw-table-subtext">
+          {optionalText(stringValue(occurrence.raw_severity))}
+        </small>
       </>
     ),
     header: "Evidence",
@@ -109,7 +113,7 @@ const occurrenceColumns: readonly VpwDataTableColumn<FindingOccurrenceRow>[] = [
       return (
         <>
           <span className="font-medium">{optionalText(fixVersions)}</span>
-          <small>
+          <small className="vpw-table-subtext">
             {optionalText(
               stringValue(occurrence.vex_status)
                 ? labelize(stringValue(occurrence.vex_status))
@@ -140,12 +144,17 @@ export function FindingEvidenceTab({
             className={cn(
               "finding-evidence-summary-card",
               index === 0 ? "finding-evidence-summary-card-primary" : undefined,
+              index > 0 ? "finding-evidence-summary-card-secondary" : undefined,
             )}
             key={row.label}
           >
             <VpwSurfaceHeader>
-              <VpwSurfaceDescription>{row.label}</VpwSurfaceDescription>
-              <VpwSurfaceTitle>{row.value}</VpwSurfaceTitle>
+              <VpwSurfaceDescription className="finding-evidence-summary-description">
+                {row.label}
+              </VpwSurfaceDescription>
+              <VpwSurfaceTitle className="finding-evidence-summary-title">
+                {row.value}
+              </VpwSurfaceTitle>
             </VpwSurfaceHeader>
             <VpwSurfaceBody>
               <p>{row.detail}</p>
@@ -168,9 +177,9 @@ export function FindingEvidenceTab({
                 <VpwSurfaceDescription>Scanner evidence</VpwSurfaceDescription>
                 <VpwSurfaceTitle>Occurrences</VpwSurfaceTitle>
               </div>
-              <Badge variant="outline">
+              <VpwBadge tone="info">
                 {occurrences.length} source row(s)
-              </Badge>
+              </VpwBadge>
             </div>
           </VpwSurfaceHeader>
           <VpwSurfaceBody>
@@ -183,6 +192,8 @@ export function FindingEvidenceTab({
                 getRowKey={(occurrence, index) =>
                   stringValue(occurrence.id) ?? `occurrence-${index + 1}`
                 }
+                minWidth="960px"
+                variant="detail"
               />
             ) : (
               <p className="text-sm text-muted-foreground">
