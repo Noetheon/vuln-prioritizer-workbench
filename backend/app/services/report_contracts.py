@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from vuln_prioritizer.workbench_report_contracts import CSV_FINDINGS_COLUMNS as CSV_FINDINGS_COLUMNS
+
 REPORT_KIND_TECHNICAL_MARKDOWN = "technical-markdown"
 REPORT_KIND_EXECUTIVE_HTML = "executive-html"
 REPORT_KIND_ANALYSIS_JSON = "analysis-result-json"
@@ -42,37 +44,6 @@ DETERMINISTIC_ZIP_TIMESTAMP = (1980, 1, 1, 0, 0, 0)
 DETERMINISTIC_ZIP_FILE_MODE = 0o644 << 16
 PRIORITY_LABELS = ("Critical", "High", "Medium", "Low")
 MARKDOWN_SPECIAL_CHARS = "\\`*_{}[]()!"
-
-CSV_FINDINGS_COLUMNS = [
-    "cve_id",
-    "priority",
-    "status",
-    "kev",
-    "epss",
-    "cvss",
-    "data_quality_confidence",
-    "data_quality_flags",
-    "component",
-    "asset",
-    "owner",
-    "service",
-    "vex_statuses",
-    "suppressed_by_vex",
-    "under_investigation",
-    "waived",
-    "waiver_status",
-    "waiver_owner",
-    "waiver_expires_on",
-    "waiver_review_on",
-    "attack_mapped",
-    "attack_techniques",
-    "defensive_context_sources",
-    "decision_template",
-    "decision_sla",
-    "decision_statement",
-    "business_impact",
-    "recommended_action",
-]
 
 SECRET_REDACTION_KEYS = (
     "api_key",

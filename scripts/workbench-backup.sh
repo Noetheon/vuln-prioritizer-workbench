@@ -3,6 +3,37 @@ set -eu
 
 BACKUP_DIR="${BACKUP_DIR:-./backups/workbench-$(date -u +%Y%m%dT%H%M%SZ)}"
 mkdir -p "$BACKUP_DIR"
+DEFAULT_ARTIFACT_PATHS="data/workbench-import-uploads data/workbench-reports data/workbench-provider-cache data/provider-snapshots"
+LEGACY_ARTIFACT_PATHS="data/template-import-uploads data/template-reports data/template-provider-cache"
+DEFAULT_COMPOSE_ARTIFACT_PATHS="workbench-import-uploads workbench-reports provider-snapshots workbench-provider-cache"
+LEGACY_COMPOSE_ARTIFACT_PATHS="template-import-uploads template-reports template-provider-cache"
+
+legacy_storage_fallback_enabled() {
+  case "$(printf '%s' "${WORKBENCH_LEGACY_STORAGE_FALLBACK:-}" | tr '[:upper:]' '[:lower:]')" in
+    1|true|yes|on) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+host_artifact_paths() {
+  if [ -n "${WORKBENCH_ARTIFACT_PATHS:-}" ]; then
+    printf '%s\n' "$WORKBENCH_ARTIFACT_PATHS"
+    return
+  fi
+  paths="$DEFAULT_ARTIFACT_PATHS"
+  if legacy_storage_fallback_enabled; then
+    paths="$paths $LEGACY_ARTIFACT_PATHS"
+  fi
+  printf '%s\n' "$paths"
+}
+
+compose_artifact_paths() {
+  paths="$DEFAULT_COMPOSE_ARTIFACT_PATHS"
+  if legacy_storage_fallback_enabled; then
+    paths="$paths $LEGACY_COMPOSE_ARTIFACT_PATHS"
+  fi
+  printf '%s\n' "$paths"
+}
 
 backup_compose_database() {
   container="${WORKBENCH_DATABASE_CONTAINER:-}"
@@ -37,7 +68,7 @@ else
 fi
 
 backup_host_artifacts() {
-  for path in ${WORKBENCH_ARTIFACT_PATHS:-data/workbench-import-uploads data/workbench-reports data/workbench-provider-cache data/provider-snapshots data/template-import-uploads data/template-reports data/template-provider-cache}; do
+  for path in $(host_artifact_paths); do
     if [ -e "$path" ]; then
       tar -C "$(dirname "$path")" -rf "$BACKUP_DIR/artifacts.tar" "$(basename "$path")"
     fi
@@ -53,8 +84,10 @@ backup_compose_artifacts() {
     echo "Set WORKBENCH_BACKUP_CONTAINER or run from a started Docker Compose stack." >&2
     exit 2
   fi
+  artifact_paths="$(compose_artifact_paths)"
   docker exec "$container" sh -c \
-    'set --; for path in workbench-import-uploads workbench-reports provider-snapshots workbench-provider-cache template-import-uploads template-reports template-provider-cache; do [ -e "/app/$path" ] && set -- "$@" "$path"; done; if [ "$#" -gt 0 ]; then tar -C /app -cf - "$@"; else tar -C /tmp -cf - --files-from /dev/null; fi' \
+    'existing=""; for path do [ -e "/app/$path" ] && existing="$existing $path"; done; if [ -n "$existing" ]; then tar -C /app -cf - $existing; else tar -C /tmp -cf - --files-from /dev/null; fi' \
+    sh $artifact_paths \
     > "$BACKUP_DIR/artifacts.tar"
 }
 

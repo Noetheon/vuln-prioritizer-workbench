@@ -10,7 +10,7 @@ from sqlmodel import Session
 
 from app.domain.import_asset_context import string_evidence as _string_evidence
 from app.models import FindingAttackContext
-from app.services import WorkbenchAnalysisResult
+from app.services.analysis import WorkbenchAnalysisResult
 from vuln_prioritizer.models import PrioritizedFinding
 
 

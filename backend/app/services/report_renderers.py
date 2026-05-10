@@ -8,8 +8,9 @@ from collections import Counter as Counter
 from pathlib import Path
 from typing import Any
 
+import app.services.report_bundle as _report_bundle
+
 # fmt: off
-from app.services import report_bundle as _report_bundle
 from app.services.report_bundle import _asset_context_rows, _bundle_file_entry, _bundle_input_hashes, _governance_asset_context_export, _governance_bundle_entries, _governance_detection_coverage_export, _governance_finding_row, _governance_rollups_export, _governance_vex_export, _governance_waivers_export, _json_bytes, _safe_bundle_filename, _write_deterministic_zip_member, render_evidence_bundle_zip
 from app.services.report_exports import render_analysis_result_json, render_findings_csv
 from app.services.report_formatting import safe_html as _safe_html

@@ -20,7 +20,7 @@ from app.models import (
     User,
 )
 from app.repositories import RunRepository
-from app.services import AnalysisService, WorkbenchAnalysisError
+from app.services.analysis import AnalysisService, WorkbenchAnalysisError
 from app.services.import_artifacts import (
     resolve_workbench_attack_artifact_path as _resolve_workbench_attack_artifact_path,
 )

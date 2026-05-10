@@ -8,7 +8,7 @@ from typing import Any
 from app.domain.import_asset_context import string_evidence as _string_evidence
 from app.importers.contracts import NormalizedOccurrence
 from app.models import FindingPriority, FindingStatus
-from app.services import WorkbenchAnalysisError, WorkbenchAnalysisResult
+from app.services.analysis import WorkbenchAnalysisError, WorkbenchAnalysisResult
 from vuln_prioritizer.models import PrioritizedFinding
 
 

@@ -23,7 +23,8 @@ export const workbenchQueryKeys = {
     ] as const,
   assetsRoot: (projectId: string) =>
     [...workbenchQueryKeys.all, "assets", projectId] as const,
-  bootstrap: () => [...workbenchQueryKeys.all, "bootstrap"] as const,
+  currentUser: () => [...workbenchQueryKeys.all, "current-user"] as const,
+  providerStatus: () => [...workbenchQueryKeys.all, "provider-status"] as const,
   projectDashboard: (projectId: string) =>
     [...workbenchQueryKeys.all, "project-dashboard", projectId] as const,
   findingDetail: (findingId: string | null) =>
@@ -51,6 +52,7 @@ export const workbenchQueryKeys = {
     [...workbenchQueryKeys.reportsRoot(), runId] as const,
   runDetail: (runId: string) =>
     [...workbenchQueryKeys.all, "run-detail", runId] as const,
+  status: () => [...workbenchQueryKeys.all, "status"] as const,
   waivers: (projectId: string) =>
     [...workbenchQueryKeys.all, "waivers", projectId] as const,
 }

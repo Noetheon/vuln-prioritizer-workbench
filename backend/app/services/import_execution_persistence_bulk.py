@@ -19,7 +19,7 @@ from app.domain.import_asset_context import string_evidence as _string_evidence
 from app.importers.contracts import NormalizedOccurrence
 from app.models import Asset, Finding, FindingOccurrence, Vulnerability
 from app.models.base import get_datetime_utc
-from app.services import WorkbenchAnalysisResult
+from app.services.analysis import WorkbenchAnalysisResult
 from app.services.import_execution_dedup import _dedup_key_parts, _finding_dedup_key
 from app.services.import_execution_persistence_attack import _attack_context_enabled
 from app.services.import_execution_persistence_common import DEDUP_DECISION_SAMPLE_LIMIT
