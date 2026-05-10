@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import uuid
 
-from fastapi import APIRouter, Query, Request, Response
+from fastapi import APIRouter, HTTPException, Query, Request, Response
 
 from app.api.deps import ScopedAdminTokenOrUser, ScopedReadUser, ScopedWriteUser, SessionDep
 from app.api.routes.workbench_access import require_visible_project
@@ -32,7 +32,7 @@ from app.services import (
     build_project_attack_summary_payload,
     build_project_dashboard_payload,
     build_project_governance_rollups_payload,
-    build_project_summary_payload,
+    build_project_summary_payload_from_counts,
 )
 from app.services.artifact_cleanup import cleanup_project_artifacts
 from app.services.audit import record_audit_event
@@ -91,10 +91,12 @@ def read_project_summary(
 ) -> ProjectDecisionSummaryPublic:
     """Read a dashboard-oriented decision summary for one visible project."""
     require_visible_project(session, current_user, project_id)
-    return build_project_summary_payload(
+    finding_repository = FindingRepository(session)
+    run_repository = RunRepository(session)
+    return build_project_summary_payload_from_counts(
         project_id=project_id,
-        findings=FindingRepository(session).list_project_findings(project_id),
-        runs=RunRepository(session).list_analysis_runs(project_id),
+        summary_counts=finding_repository.project_finding_summary_counts(project_id),
+        latest_run=run_repository.get_latest_analysis_run(project_id),
     )
 
 
@@ -158,16 +160,30 @@ def read_project_governance_rollups(
 @router.get("/{project_id}/compare/cvss-only", response_model=ProjectCvssOnlyComparisonPublic)
 def compare_project_cvss_only(
     project_id: uuid.UUID,
+    request: Request,
     session: SessionDep,
     current_user: ScopedReadUser,
     limit: int = Query(default=10, ge=0, le=100),
+    include_comparisons: bool = Query(default=False),
 ) -> ProjectCvssOnlyComparisonPublic:
     """Compare current enriched priorities with a CVSS-only baseline."""
     require_visible_project(session, current_user, project_id)
+    active_settings = workbench_settings(request)
+    finding_repository = FindingRepository(session)
+    finding_count = finding_repository.count_project_findings(project_id)
+    if finding_count > active_settings.DECISION_API_MAX_FINDINGS:
+        raise HTTPException(
+            status_code=413,
+            detail=(
+                "Project contains too many findings for CVSS comparison. "
+                "Use paginated finding APIs or increase DECISION_API_MAX_FINDINGS."
+            ),
+        )
     return build_cvss_only_comparison_payload(
         project_id=project_id,
-        findings=FindingRepository(session).list_project_findings(project_id),
+        findings=finding_repository.list_project_findings(project_id),
         top_change_limit=limit,
+        include_comparisons=include_comparisons,
     )
 
 

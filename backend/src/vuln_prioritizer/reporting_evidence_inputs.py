@@ -5,7 +5,6 @@ from __future__ import annotations
 import hashlib
 import ntpath
 from pathlib import Path
-from typing import Any
 
 from vuln_prioritizer.models import EvidenceBundleInputHash
 
@@ -47,31 +46,6 @@ def input_hash_entry(
     )
 
 
-def provider_snapshot_manifest_entry(
-    metadata: object,
-    *,
-    analysis_path: Path,
-    bundle_path: str | None = None,
-    bundle_sha256: str | None = None,
-) -> dict[str, Any]:
-    if not isinstance(metadata, dict):
-        return {}
-    snapshot_path = metadata.get("provider_snapshot_file")
-    snapshot_hash = metadata.get("provider_snapshot_hash")
-    if snapshot_hash is None:
-        resolved_snapshot = resolve_analysis_input_path(snapshot_path, analysis_path)
-        if resolved_snapshot is not None:
-            snapshot_hash = hashlib.sha256(resolved_snapshot.read_bytes()).hexdigest()
-    entry = {
-        "id": metadata.get("provider_snapshot_id"),
-        "sha256": bundle_sha256 or snapshot_hash,
-        "path": safe_source_path_label(snapshot_path) if snapshot_path else None,
-        "bundle_path": bundle_path,
-        "sources": metadata.get("provider_snapshot_sources", []),
-    }
-    return {key: value for key, value in entry.items() if value not in (None, "", [])}
-
-
 def safe_source_path_label(value: object) -> str:
     """Return a manifest-safe source label without local directory disclosure."""
     if isinstance(value, Path):
@@ -103,7 +77,6 @@ def resolve_analysis_input_path(reported_path: object, analysis_path: Path) -> P
 __all__ = [
     "analysis_input_paths",
     "input_hash_entry",
-    "provider_snapshot_manifest_entry",
     "resolve_analysis_input_path",
     "safe_source_path_label",
     "source_input_bundle_path",

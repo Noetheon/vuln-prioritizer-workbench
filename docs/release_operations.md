@@ -194,10 +194,14 @@ vuln-prioritizer analyze --input smoke-cves.txt --format json --output smoke.jso
 If TestPyPI is enabled, also verify the staging index first:
 
 ```bash
-pipx install \
+tmpdir="$(mktemp -d)"
+python -m pip download \
+  --no-deps \
+  --only-binary=:all: \
   --index-url https://test.pypi.org/simple/ \
-  --extra-index-url https://pypi.org/simple/ \
+  --dest "$tmpdir" \
   "vuln-prioritizer==X.Y.Z"
+pipx install "$tmpdir"/vuln_prioritizer-X.Y.Z-*.whl
 printf 'CVE-2021-44228\n' > smoke-cves.txt
 vuln-prioritizer analyze --input smoke-cves.txt --format json --output smoke.json
 ```

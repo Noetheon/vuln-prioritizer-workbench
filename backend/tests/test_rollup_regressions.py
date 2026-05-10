@@ -69,6 +69,61 @@ def test_rollup_remediation_fixture_covers_ordering_and_multi_bucket_findings(
     assert buckets["identity"]["top_candidates"][0]["cve_id"] == "CVE-2025-1000"
 
 
+def test_rollup_candidates_use_bucket_scoped_membership_for_multi_bucket_findings() -> None:
+    asset_ids = [f"asset-{index:03d}" for index in range(50)]
+    services = [f"service-{index:03d}" for index in range(50)]
+    finding = {
+        "cve_id": "CVE-2026-0001",
+        "priority_label": "Critical",
+        "priority_rank": 1,
+        "recommended_action": "Patch the affected component.",
+        "provenance": {
+            "asset_ids": asset_ids,
+            "occurrences": [
+                {
+                    "asset_id": asset_id,
+                    "asset_business_service": service,
+                    "asset_owner": "platform",
+                }
+                for asset_id, service in zip(asset_ids, services, strict=True)
+            ],
+        },
+    }
+    payload = {"metadata": {}, "findings": [finding]}
+
+    asset_buckets = snapshot_rollup.build_rollup_buckets(payload, dimension="asset", top=100)
+    service_buckets = snapshot_rollup.build_rollup_buckets(payload, dimension="service", top=100)
+
+    assert len(asset_buckets) == len(asset_ids)
+    assert len(service_buckets) == len(services)
+    assert all(bucket.top_candidates[0].asset_ids == [bucket.bucket] for bucket in asset_buckets)
+    assert all(bucket.top_candidates[0].services == [bucket.bucket] for bucket in service_buckets)
+    assert all(
+        len(bucket.top_candidates[0].services) <= snapshot_rollup.ROLLUP_CANDIDATE_MEMBERSHIP_LIMIT
+        for bucket in asset_buckets
+    )
+
+
+def test_rollup_candidates_are_capped_per_bucket() -> None:
+    payload = {
+        "metadata": {},
+        "findings": [
+            {
+                "cve_id": f"CVE-2026-{index:04d}",
+                "priority_label": "High",
+                "priority_rank": 2,
+                "provenance": {"asset_ids": ["shared-asset"]},
+            }
+            for index in range(snapshot_rollup.MAX_ROLLUP_CANDIDATES_PER_BUCKET + 5)
+        ],
+    }
+
+    buckets = snapshot_rollup.build_rollup_buckets(payload, dimension="asset", top=100)
+
+    assert len(buckets) == 1
+    assert len(buckets[0].top_candidates) == snapshot_rollup.MAX_ROLLUP_CANDIDATES_PER_BUCKET
+
+
 def test_rollup_supports_owner_exposure_environment_and_component_dimensions(
     tmp_path: Path,
 ) -> None:
