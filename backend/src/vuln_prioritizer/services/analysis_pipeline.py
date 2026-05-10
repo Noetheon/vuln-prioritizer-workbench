@@ -347,7 +347,7 @@ def prepare_analysis(request: AnalysisRequest) -> tuple[list[PrioritizedFinding]
         ),
         provider_snapshot_hash=_provider_snapshot_hash(request.provider_snapshot_file),
         provider_snapshot_file=(
-            str(request.provider_snapshot_file) if request.provider_snapshot_file else None
+            _provider_snapshot_metadata_path(request.provider_snapshot_file, request.output)
         ),
         locked_provider_data=request.locked_provider_data,
         provider_snapshot_sources=enrichment.provider_snapshot_sources,
@@ -437,6 +437,17 @@ def _provider_snapshot_hash(path: Path | None) -> str | None:
         return None
 
 
+def _provider_snapshot_metadata_path(path: Path | None, output_path: Path | None) -> str | None:
+    if path is None:
+        return None
+    if output_path is not None:
+        try:
+            return path.resolve().relative_to(output_path.parent.resolve()).as_posix()
+        except ValueError:
+            pass
+    return str(path)
+
+
 def prepare_explain(request: ExplainRequest) -> ExplainResult:
     context_profile = load_context_profile_or_exit(request.policy_profile, request.policy_file)
     if request.locked_provider_data and request.provider_snapshot_file is None:
@@ -513,7 +524,7 @@ def prepare_explain(request: ExplainRequest) -> ExplainResult:
         ),
         provider_snapshot_hash=_provider_snapshot_hash(request.provider_snapshot_file),
         provider_snapshot_file=(
-            str(request.provider_snapshot_file) if request.provider_snapshot_file else None
+            _provider_snapshot_metadata_path(request.provider_snapshot_file, request.output)
         ),
         locked_provider_data=request.locked_provider_data,
         provider_snapshot_sources=enrichment.provider_snapshot_sources,

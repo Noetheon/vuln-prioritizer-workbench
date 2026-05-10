@@ -14,6 +14,7 @@ REPORTS_AND_EVIDENCE_FILE = REPO_ROOT / "docs" / "reports-and-evidence.md"
 CURRENT_PRODUCT_STATE_FILE = REPO_ROOT / "docs" / "current-product-state.md"
 DOCUMENTATION_MAP_FILE = REPO_ROOT / "docs" / "documentation-map.md"
 GITHUB_READINESS_FILE = REPO_ROOT / "docs" / "github-open-source-readiness.md"
+RELEASE_OPERATIONS_FILE = REPO_ROOT / "docs" / "release_operations.md"
 COMMUNITY_SETUP_FILE = REPO_ROOT / "docs" / "community_repository_setup.md"
 GITHUB_ISSUE_TEMPLATE_ROOT = REPO_ROOT / ".github" / "ISSUE_TEMPLATE"
 MAINTAINERS_FILE = REPO_ROOT / "MAINTAINERS.md"
@@ -198,6 +199,18 @@ def test_gitignore_covers_workbench_runtime_artifacts() -> None:
     }
 
     assert {path for path in required_runtime_roots if path not in gitignore} == set()
+
+
+def test_testpypi_release_docs_do_not_mix_package_indexes() -> None:
+    runbook = RELEASE_OPERATIONS_FILE.read_text(encoding="utf-8")
+    testpypi_section = runbook.split("## TestPyPI Validation Path", maxsplit=1)[1].split(
+        "## CI Cost Policy",
+        maxsplit=1,
+    )[0]
+
+    assert "--extra-index-url" not in testpypi_section
+    assert "--no-deps" in testpypi_section
+    assert "--only-binary=:all:" in testpypi_section
 
 
 def test_issue_template_labels_are_documented() -> None:

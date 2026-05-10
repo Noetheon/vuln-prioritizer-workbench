@@ -171,6 +171,15 @@ class RunRepository:
         )
         return list(self.session.exec(statement).all())
 
+    def get_latest_analysis_run(self, project_id: uuid.UUID) -> AnalysisRun | None:
+        """Return the newest analysis run for a project."""
+        statement = (
+            select(AnalysisRun)
+            .where(AnalysisRun.project_id == project_id)
+            .order_by(col(AnalysisRun.started_at).desc())
+        )
+        return self.session.exec(statement).first()
+
     def get_analysis_run(self, run_id: uuid.UUID) -> AnalysisRun | None:
         """Return an analysis run by primary key."""
         return self.session.get(AnalysisRun, run_id)

@@ -27,7 +27,7 @@ from vuln_prioritizer.inputs.loader import load_asset_context_file
 
 router = APIRouter(tags=["assets"])
 
-ASSET_CONTEXT_FIELDS = {
+ASSET_CONTEXT_FIELDS = (
     "asset_key",
     "target_ref",
     "owner",
@@ -35,7 +35,7 @@ ASSET_CONTEXT_FIELDS = {
     "environment",
     "exposure",
     "criticality",
-}
+)
 
 
 @router.get("/projects/{project_id}/assets/", response_model=AssetsPublic)
@@ -69,7 +69,24 @@ def create_project_asset(
 ) -> AssetPublic:
     """Create or upsert an asset for a visible project."""
     require_visible_project(session, current_user, project_id)
-    asset = AssetRepository(session).create_asset(project_id=project_id, asset_in=asset_in)
+    repository = AssetRepository(session)
+    existing = repository.get_project_asset_by_key(project_id, asset_in.asset_key)
+    before_context = _asset_context(existing) if existing is not None else None
+    asset = repository.create_asset(project_id=project_id, asset_in=asset_in)
+    changed_fields = (
+        [
+            field
+            for field, previous in before_context.items()
+            if _asset_context(asset).get(field) != previous
+        ]
+        if before_context is not None
+        else []
+    )
+    if changed_fields:
+        repository.mark_asset_findings_rescore_needed(
+            asset_id=asset.id,
+            changed_fields=changed_fields,
+        )
     record_audit_event(
         session,
         action="asset.create",
@@ -77,7 +94,7 @@ def create_project_asset(
         resource_id=asset.id,
         actor=current_user,
         project_id=project_id,
-        detail={"asset_key": asset.asset_key, "name": asset.name},
+        detail={"asset_key": asset.asset_key, "name": asset.name, "changed_fields": changed_fields},
     )
     session.commit()
     session.refresh(asset)

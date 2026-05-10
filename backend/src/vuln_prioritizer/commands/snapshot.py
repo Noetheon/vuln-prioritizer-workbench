@@ -39,6 +39,7 @@ from vuln_prioritizer.cli_support.common import (
     validate_output_mode,
 )
 from vuln_prioritizer.cli_support.snapshot_rollup import (
+    MAX_ROLLUP_CANDIDATES_PER_BUCKET,
     build_rollup_buckets,
     build_snapshot_diff,
     load_rollup_payload,
@@ -266,7 +267,7 @@ def rollup(
     format: ReportOutputFormat = output_format_option(
         ReportOutputFormat.table, REPORT_OUTPUT_FORMATS
     ),
-    top: int = typer.Option(5, "--top", min=1),
+    top: int = typer.Option(5, "--top", min=1, max=MAX_ROLLUP_CANDIDATES_PER_BUCKET),
 ) -> None:
     """Aggregate analysis or snapshot findings by asset or business service."""
     validate_output_mode(format, output)

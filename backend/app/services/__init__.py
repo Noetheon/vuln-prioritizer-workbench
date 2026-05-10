@@ -21,6 +21,7 @@ from app.services.decisions import (
     build_cvss_only_comparison_payload,
     build_finding_explanation_payload,
     build_project_summary_payload,
+    build_project_summary_payload_from_counts,
 )
 from app.services.github_issues import (
     GitHubIssueCreationError,
@@ -69,6 +70,7 @@ __all__ = [
     "build_github_issue_preview_items",
     "build_project_governance_rollups_payload",
     "build_project_summary_payload",
+    "build_project_summary_payload_from_counts",
     "dashboard_signal_counts",
     "create_github_issue",
     "github_export_token",

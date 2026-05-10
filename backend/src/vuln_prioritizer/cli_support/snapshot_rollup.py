@@ -20,6 +20,10 @@ from vuln_prioritizer.models import (
 
 from .common import RollupBy, exit_input_validation
 
+MAX_ROLLUP_CANDIDATES_PER_BUCKET = 25
+ROLLUP_CANDIDATE_MEMBERSHIP_LIMIT = 20
+UNMAPPED_BUCKET = "Unmapped"
+
 
 def load_json_document_or_exit(input_path: Path) -> dict[str, Any]:
     try:
@@ -238,7 +242,15 @@ def build_rollup_buckets(
         sorted_findings = sorted(findings, key=rollup_finding_sort_key)
         actionable_findings = [finding for finding in sorted_findings if not finding.get("waived")]
         ranking_findings = actionable_findings or sorted_findings
-        top_candidates = [build_rollup_candidate(finding) for finding in sorted_findings[:top]]
+        effective_top = min(top, MAX_ROLLUP_CANDIDATES_PER_BUCKET)
+        top_candidates = [
+            build_rollup_candidate(
+                finding,
+                dimension=dimension,
+                bucket_name=bucket_name,
+            )
+            for finding in sorted_findings[:effective_top]
+        ]
         provisional_buckets.append(
             RollupBucket(
                 bucket=bucket_name,
@@ -288,23 +300,23 @@ def build_rollup_buckets(
 def rollup_bucket_names(finding: dict[str, Any], *, dimension: str) -> list[str]:
     if dimension == RollupBy.asset.value:
         asset_ids = finding.get("provenance", {}).get("asset_ids", [])
-        return sorted(asset_ids) if asset_ids else ["Unmapped"]
+        return sorted(asset_ids) if asset_ids else [UNMAPPED_BUCKET]
     if dimension == RollupBy.service.value:
         services = finding_services(finding)
-        return services if services else ["Unmapped"]
+        return services if services else [UNMAPPED_BUCKET]
     if dimension == RollupBy.owner.value:
         owners = sorted(finding_owner_hints(finding))
-        return owners if owners else ["Unmapped"]
+        return owners if owners else [UNMAPPED_BUCKET]
     if dimension == RollupBy.exposure.value:
         exposures = finding_exposures(finding)
-        return exposures if exposures else ["Unmapped"]
+        return exposures if exposures else [UNMAPPED_BUCKET]
     if dimension == RollupBy.environment.value:
         environments = finding_environments(finding)
-        return environments if environments else ["Unmapped"]
+        return environments if environments else [UNMAPPED_BUCKET]
     if dimension == RollupBy.component.value:
         components = finding.get("provenance", {}).get("components", [])
-        return sorted(str(component) for component in components if component) or ["Unmapped"]
-    return ["Unmapped"]
+        return sorted(str(component) for component in components if component) or [UNMAPPED_BUCKET]
+    return [UNMAPPED_BUCKET]
 
 
 def rollup_finding_sort_key(finding: dict[str, Any]) -> tuple[object, ...]:
@@ -358,7 +370,24 @@ def finding_top_actions(findings: list[dict[str, Any]], *, top: int) -> list[str
     return [action for action, _ in ordered[:top]]
 
 
-def build_rollup_candidate(finding: dict[str, Any]) -> RollupCandidate:
+def build_rollup_candidate(
+    finding: dict[str, Any],
+    *,
+    dimension: str | None = None,
+    bucket_name: str | None = None,
+) -> RollupCandidate:
+    asset_ids = [
+        str(asset_id) for asset_id in finding.get("provenance", {}).get("asset_ids", []) if asset_id
+    ]
+    services = finding_services(finding)
+    if dimension == RollupBy.asset.value and bucket_name and bucket_name != UNMAPPED_BUCKET:
+        asset_ids = [bucket_name]
+    else:
+        asset_ids = _bounded_membership(asset_ids)
+    if dimension == RollupBy.service.value and bucket_name and bucket_name != UNMAPPED_BUCKET:
+        services = [bucket_name]
+    else:
+        services = _bounded_membership(services)
     return RollupCandidate(
         cve_id=str(finding.get("cve_id", "N.A.")),
         priority_label=str(finding.get("priority_label", "Low")),
@@ -369,17 +398,17 @@ def build_rollup_candidate(finding: dict[str, Any]) -> RollupCandidate:
         highest_asset_exposure=string_or_none(
             finding.get("provenance", {}).get("highest_asset_exposure")
         ),
-        asset_ids=[
-            str(asset_id)
-            for asset_id in finding.get("provenance", {}).get("asset_ids", [])
-            if asset_id
-        ],
-        services=finding_services(finding),
-        owners=sorted(finding_owner_hints(finding)),
+        asset_ids=asset_ids,
+        services=services,
+        owners=_bounded_membership(sorted(finding_owner_hints(finding))),
         remediation=RemediationPlan.model_validate(finding.get("remediation") or {}),
         recommended_action=str(finding.get("recommended_action") or "Review remediation options."),
         rank_reason=rollup_candidate_reason(finding),
     )
+
+
+def _bounded_membership(values: list[str]) -> list[str]:
+    return values[:ROLLUP_CANDIDATE_MEMBERSHIP_LIMIT]
 
 
 def rollup_bucket_context_hints(findings: list[dict[str, Any]]) -> list[str]:

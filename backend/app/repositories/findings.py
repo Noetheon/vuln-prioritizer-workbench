@@ -236,6 +236,66 @@ class FindingRepository:
         )
         return list(self.session.exec(statement).all())
 
+    def count_project_findings(self, project_id: uuid.UUID) -> int:
+        """Return the project finding count without materializing finding rows."""
+        statement = (
+            select(func.count()).select_from(Finding).where(Finding.project_id == project_id)
+        )
+        return int(self.session.exec(statement).one())
+
+    def project_finding_summary_counts(self, project_id: uuid.UUID) -> dict[str, Any]:
+        """Return dashboard summary counts with bounded aggregate queries."""
+        open_statuses = [
+            FindingStatus.OPEN,
+            FindingStatus.IN_REVIEW,
+            FindingStatus.REMEDIATING,
+        ]
+        priority_counts = {
+            str(priority): int(count)
+            for priority, count in self.session.exec(
+                select(Finding.priority, func.count())
+                .where(Finding.project_id == project_id)
+                .group_by(Finding.priority)
+            ).all()
+        }
+        status_counts = {
+            str(status): int(count)
+            for status, count in self.session.exec(
+                select(Finding.status, func.count())
+                .where(Finding.project_id == project_id)
+                .group_by(Finding.status)
+            ).all()
+        }
+        return {
+            "finding_count": self.count_project_findings(project_id),
+            "open_finding_count": self._count_project_findings_where(
+                project_id,
+                col(Finding.status).in_(open_statuses),
+            ),
+            "counts_by_priority": priority_counts,
+            "counts_by_status": status_counts,
+            "kev_hits": self._count_project_findings_where(
+                project_id,
+                col(Finding.in_kev).is_(True),
+            ),
+            "epss_hits": self._count_project_findings_where(
+                project_id,
+                col(Finding.epss).is_not(None),
+            ),
+            "cvss_known_count": self._count_project_findings_where(
+                project_id,
+                col(Finding.cvss_base_score).is_not(None),
+            ),
+        }
+
+    def _count_project_findings_where(self, project_id: uuid.UUID, *criteria: Any) -> int:
+        statement = (
+            select(func.count())
+            .select_from(Finding)
+            .where(Finding.project_id == project_id, *criteria)
+        )
+        return int(self.session.exec(statement).one())
+
     def list_project_attack_contexts(self, project_id: uuid.UUID) -> list[FindingAttackContext]:
         """Return ATT&CK contexts for findings in one project, newest rows first."""
         statement = (

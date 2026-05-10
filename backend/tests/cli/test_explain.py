@@ -196,7 +196,7 @@ def test_cli_explain_supports_locked_provider_snapshot_replay(
 
     assert result.exit_code == 0
     payload = json.loads(output_file.read_text(encoding="utf-8"))
-    assert payload["metadata"]["provider_snapshot_file"] == str(snapshot_file)
+    assert payload["metadata"]["provider_snapshot_file"] == snapshot_file.name
     assert payload["metadata"]["provider_snapshot_id"] == "explain-provider-snapshot"
     assert (
         payload["metadata"]["provider_snapshot_hash"]

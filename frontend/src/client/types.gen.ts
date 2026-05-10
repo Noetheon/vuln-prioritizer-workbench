@@ -3715,6 +3715,10 @@ export type GetApiV1ProjectsByProjectIdCompareCvssOnlyData = {
          * Limit
          */
         limit?: number;
+        /**
+         * Include Comparisons
+         */
+        include_comparisons?: boolean;
     };
     url: '/api/v1/projects/{project_id}/compare/cvss-only';
 };

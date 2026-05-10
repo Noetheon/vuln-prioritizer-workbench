@@ -504,8 +504,13 @@ export class ProjectsService {
     public static compareProjectCvssOnly<ThrowOnError extends boolean = true>(parameters: {
         project_id: string;
         limit?: number;
+        include_comparisons?: boolean;
     }, options?: Options<never, ThrowOnError>) {
-        const params = buildClientParams([parameters], [{ args: [{ in: 'path', key: 'project_id' }, { in: 'query', key: 'limit' }] }]);
+        const params = buildClientParams([parameters], [{ args: [
+                    { in: 'path', key: 'project_id' },
+                    { in: 'query', key: 'limit' },
+                    { in: 'query', key: 'include_comparisons' }
+                ] }]);
         return (options?.client ?? client).get<GetApiV1ProjectsByProjectIdCompareCvssOnlyResponses, GetApiV1ProjectsByProjectIdCompareCvssOnlyErrors, ThrowOnError, 'data'>({
             responseStyle: 'data',
             security: [{ scheme: 'bearer', type: 'http' }],

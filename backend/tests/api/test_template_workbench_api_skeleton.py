@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import uuid
+from dataclasses import replace
 from datetime import timedelta
 from typing import Any
 
@@ -569,6 +570,47 @@ def test_vpw044_asset_edit_rescore_flag_is_merged_into_explain(
     assert rescore_flag["changed_fields"] == ["criticality"]
 
 
+def test_asset_post_upsert_marks_existing_asset_findings_for_rescore(
+    template_api_env: TemplateApiEnv,
+) -> None:
+    headers = auth_headers(template_api_env.client)
+    project = create_project_via_api(template_api_env.client, headers)
+    seeded = _seed_vpw042_findings(template_api_env, uuid.UUID(project["id"]))
+
+    response = template_api_env.client.post(
+        f"/api/v1/projects/{project['id']}/assets/",
+        headers=headers,
+        json={
+            "asset_key": "payments-api",
+            "name": "Payments API",
+            "target_ref": "registry.example.test/payments-api:2026.04.28",
+            "owner": "platform",
+            "business_service": "payments",
+            "environment": "production",
+            "exposure": "internal",
+            "criticality": "high",
+        },
+    )
+
+    assert response.status_code == 200, response.text
+    payload = response.json()
+    assert payload["id"] == str(seeded["critical_asset"])
+    assert payload["rescore_needed"] is True
+
+    explain_response = template_api_env.client.get(
+        f"/api/v1/findings/{seeded['critical']}/explain",
+        headers=headers,
+    )
+    assert explain_response.status_code == 200, explain_response.text
+    rescore_flag = next(
+        flag
+        for flag in explain_response.json()["data_quality_flags"]
+        if flag["code"] == "asset_context_rescore_needed"
+    )
+    assert rescore_flag["asset_id"] == str(seeded["critical_asset"])
+    assert set(rescore_flag["changed_fields"]) == {"criticality", "exposure"}
+
+
 def test_vpw063_asset_filters_and_recalculate_action_clear_rescore_flag(
     template_api_env: TemplateApiEnv,
 ) -> None:
@@ -1065,6 +1107,52 @@ def test_vpw036_project_decision_endpoints_handle_empty_projects(
     }
     assert comparison_payload["top_changes"] == []
     assert comparison_payload["comparisons"] == []
+
+
+def test_project_cvss_comparison_suppresses_full_rows_by_default_and_caps_large_projects(
+    template_api_env: TemplateApiEnv,
+) -> None:
+    headers = auth_headers(template_api_env.client)
+    project = create_project_via_api(template_api_env.client, headers)
+    _seed_vpw042_findings(template_api_env, uuid.UUID(project["id"]))
+
+    default_response = template_api_env.client.get(
+        f"/api/v1/projects/{project['id']}/compare/cvss-only",
+        headers=headers,
+        params={"limit": 1},
+    )
+    assert default_response.status_code == 200, default_response.text
+    default_payload = default_response.json()
+    assert default_payload["summary"]["total"] == 3
+    assert len(default_payload["top_changes"]) <= 1
+    assert default_payload["comparisons"] == []
+
+    include_response = template_api_env.client.get(
+        f"/api/v1/projects/{project['id']}/compare/cvss-only",
+        headers=headers,
+        params={"limit": 1, "include_comparisons": True},
+    )
+    assert include_response.status_code == 200, include_response.text
+    assert len(include_response.json()["comparisons"]) == 3
+
+    client = template_api_env.client
+    old_settings = client.app.state.workbench_settings
+    old_template_settings = getattr(client.app.state, "template_settings", None)
+    capped_settings = replace(old_settings, DECISION_API_MAX_FINDINGS=2)
+    client.app.state.workbench_settings = capped_settings
+    client.app.state.template_settings = capped_settings
+    try:
+        capped_response = client.get(
+            f"/api/v1/projects/{project['id']}/compare/cvss-only",
+            headers=headers,
+        )
+    finally:
+        client.app.state.workbench_settings = old_settings
+        if old_template_settings is not None:
+            client.app.state.template_settings = old_template_settings
+
+    assert capped_response.status_code == 413
+    assert "too many findings" in capped_response.json()["detail"]
 
 
 def test_vpw202_project_dashboard_aggregate_replaces_dashboard_query_fanout(

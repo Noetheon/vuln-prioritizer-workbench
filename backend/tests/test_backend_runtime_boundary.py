@@ -251,6 +251,9 @@ def test_default_compose_services_start_only_active_backend_runtime() -> None:
     assert backend_environment["SQLALCHEMY_DATABASE_URI"] == ""
     assert backend_environment["RATE_LIMIT_ENABLED"] == "${RATE_LIMIT_ENABLED:-true}"
     assert backend_environment["MAX_UPLOAD_MB"] == "${MAX_UPLOAD_MB:-25}"
+    assert backend_environment["DECISION_API_MAX_FINDINGS"] == (
+        "${DECISION_API_MAX_FINDINGS:-1000}"
+    )
     assert backend_environment["POSTGRES_PASSWORD"].startswith(
         "${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD"
     )
@@ -328,6 +331,7 @@ def test_env_example_does_not_pin_api_docs_on_for_shared_deployments() -> None:
     assert "\nTRUSTED_PROXY_CIDRS=\n" in env_example
     assert "\nTRAEFIK_APP_ENABLED=false\n" in env_example
     assert "\nMAX_UPLOAD_MB=25\n" in env_example
+    assert "\nDECISION_API_MAX_FINDINGS=1000\n" in env_example
     assert "\nSECRET_KEY=local-workbench-dev-secret\n" in env_example
     assert "\nFIRST_SUPERUSER_PASSWORD=local-workbench-dev-password\n" in env_example
     assert "\nPOSTGRES_PASSWORD=local-workbench-dev-postgres-password\n" in env_example

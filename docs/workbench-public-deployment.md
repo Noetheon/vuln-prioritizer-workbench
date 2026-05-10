@@ -22,6 +22,7 @@ VITE_API_URL=
 BACKEND_CORS_ORIGINS=https://workbench.example.com
 ALLOWED_HOSTS=workbench.example.com,api.workbench.example.com
 API_DOCS_ENABLED=false
+DECISION_API_MAX_FINDINGS=1000
 TRAEFIK_APP_ENABLED=true
 TRAEFIK_DASHBOARD_ENABLED=false
 ```

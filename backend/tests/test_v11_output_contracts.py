@@ -925,8 +925,14 @@ def test_testpypi_workflow_exposes_version_output_and_hosted_index_verification(
     )["run"]
     assert "needs.build.outputs.package_version" in verify_run
     assert "--index-url https://test.pypi.org/simple/" in verify_run
-    assert "--extra-index-url https://pypi.org/simple/" in verify_run
-    assert "python -m pip install --force-reinstall \\" in verify_run
+    assert "--extra-index-url" not in verify_run
+    assert "python -m pip --isolated download \\" in verify_run
+    assert "--only-binary=:all:" in verify_run
+    assert "--no-deps" in verify_run
+    assert '--dest "$wheel_root"' in verify_run
+    assert "python -m pip --isolated install \\" in verify_run
+    assert "--index-url https://pypi.org/simple/" in verify_run
+    assert "python -m pip check" in verify_run
     assert "vuln-prioritizer --help" in verify_run
     assert (
         'vuln-prioritizer doctor --format json --output "$artifact_root/doctor.json"' in verify_run
