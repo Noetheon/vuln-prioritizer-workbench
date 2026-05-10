@@ -39,7 +39,7 @@ export function ProviderSnapshotDetails({
         sources={snapshotSources(rows)}
       />
 
-      <VpwPanel className="space-y-4 p-5">
+      <VpwPanel className="flex flex-col gap-4 p-5">
         <VpwSectionHeader
           description="Snapshot metadata used to make evidence bundles reproducible."
           eyebrow="Snapshot details"

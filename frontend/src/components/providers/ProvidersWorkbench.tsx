@@ -25,7 +25,7 @@ export function ProvidersWorkbench({
   const counts = providerSourceCounts(rows)
 
   return (
-    <VpwPageContainer className="space-y-6 px-0 py-0">
+    <VpwPageContainer className="flex flex-col gap-6 px-0 py-0">
       <ProvidersHero
         onRefreshProviderStatus={onRefreshProviderStatus}
         providerStatus={providerStatus}
@@ -33,6 +33,7 @@ export function ProvidersWorkbench({
         providerStatusLoading={providerStatusLoading}
       />
       <ProviderStatusAlerts
+        providerStatus={providerStatus}
         providerStatusError={providerStatusError}
         providerStatusLoading={providerStatusLoading}
       />

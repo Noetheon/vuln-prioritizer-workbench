@@ -1,5 +1,5 @@
 import type { FindingPublic } from "@/api-client"
-import { cn } from "@/lib/utils"
+import { VpwDataTable } from "@/components/vpw"
 import { buildFindingsDataTableColumns } from "./FindingsDataTableColumns"
 import type { FindingsUrlSearch } from "./findings-search-state"
 import type { FindingsDirection, QueueSort } from "./remediation-queue-model"
@@ -35,46 +35,18 @@ export function FindingsDataTable({
   })
 
   return (
-    <section
-      aria-label="Findings table scroll region"
-      className="vpw-table-wrap remediation-table-wrap shadow-none"
-      // biome-ignore lint/a11y/noNoninteractiveTabindex: The table overflow container must be keyboard-focusable for horizontal scroll access.
-      tabIndex={0}
-    >
-      <table className="vpw-table table-fixed [&_td]:py-3 [&_th]:py-3">
-        <caption className="sr-only">Findings remediation queue</caption>
-        <thead>
-          <tr>
-            {columns.map((column) => (
-              <th
-                aria-sort={column.ariaSort}
-                className={cn("vpw-table-header-cell", column.headerClassName)}
-                key={column.id}
-                scope="col"
-              >
-                {column.header}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {findings.map((finding) => (
-            <tr
-              className="vpw-table-row transition-colors hover:[&>td]:bg-[var(--vpw-bg-panel)]"
-              key={finding.id}
-            >
-              {columns.map((column) => (
-                <td
-                  className={cn("vpw-table-cell", column.className)}
-                  key={column.id}
-                >
-                  {column.cell(finding)}
-                </td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </section>
+    <div className="finding-table-scroll-shell">
+      <VpwDataTable
+        ariaLabel="Findings table scroll region"
+        caption="Findings remediation queue"
+        className="remediation-table-wrap shadow-none"
+        columns={columns}
+        data={findings}
+        density="standard"
+        getRowKey={(finding) => finding.id}
+        minWidth="clamp(1100px, 86vw, 1240px)"
+        tableClassName="table-fixed"
+      />
+    </div>
   )
 }

@@ -7,6 +7,13 @@ import type {
 } from "@/api-client"
 import { optionalText } from "@/lib/ui-copy"
 
+export {
+  exposureOptions,
+  pageSizeOptions,
+  priorityOptions,
+  statusOptions,
+} from "./remediation-queue-options"
+
 export type FindingsSort = NonNullable<FindingsReadProjectFindingsData["sort"]>
 export type FindingsDirection = NonNullable<
   FindingsReadProjectFindingsData["direction"]
@@ -26,31 +33,6 @@ export type FindingFilters = {
   priority: "" | FindingPriority
   status: "" | FindingStatus
 }
-
-export const priorityOptions: FindingPriority[] = [
-  "critical",
-  "high",
-  "medium",
-  "low",
-]
-
-export const statusOptions: FindingStatus[] = [
-  "open",
-  "in_review",
-  "remediating",
-  "fixed",
-  "accepted",
-  "suppressed",
-]
-
-export const exposureOptions: AssetExposure[] = [
-  "internet-facing",
-  "internal",
-  "private",
-  "unknown",
-]
-
-export const pageSizeOptions = [10, 25, 50] as const
 
 const apiSortValues: readonly FindingsSort[] = [
   "operational",
@@ -237,9 +219,9 @@ export function sortDisplayFindings(
 
 export function riskScoreColor(score: number | null | undefined) {
   if (score == null) return "text-muted-foreground"
-  if (score >= 8) return "text-red-500 font-bold tabular-nums"
-  if (score >= 6) return "text-amber-500 font-semibold tabular-nums"
-  if (score >= 4) return "text-yellow-600 tabular-nums"
+  if (score >= 8) return "text-[var(--vpw-red)] font-bold tabular-nums"
+  if (score >= 6) return "text-[var(--vpw-amber)] font-semibold tabular-nums"
+  if (score >= 4) return "text-[var(--vpw-amber)] tabular-nums"
   return "text-muted-foreground tabular-nums"
 }
 

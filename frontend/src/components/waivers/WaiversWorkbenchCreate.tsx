@@ -41,13 +41,13 @@ export function CreateWaiverSection({
   return (
     <VpwGrid columns={2}>
       <div id="create-waiver">
-        <VpwPanel className="space-y-5 p-5">
+        <VpwPanel className="flex flex-col gap-5 p-5">
           <VpwSectionHeader
             description="Create an accepted-risk decision only when remediation cannot happen immediately."
             eyebrow="Governance form"
             title="Create waiver"
           />
-          <form className="space-y-5" onSubmit={onCreateWaiver}>
+          <form className="flex flex-col gap-5" onSubmit={onCreateWaiver}>
             <VpwGrid columns={2}>
               <VpwField htmlFor="waiver-cve-id" label="CVE ID">
                 <Input
@@ -203,7 +203,7 @@ export function CreateWaiverSection({
         </VpwPanel>
       </div>
 
-      <VpwPanel className="space-y-5 p-5">
+      <VpwPanel className="flex flex-col gap-5 p-5">
         <VpwSectionHeader
           description="Accepted risk remains visible in prioritization and evidence."
           eyebrow="Safety rules"

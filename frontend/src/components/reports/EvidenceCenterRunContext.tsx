@@ -75,8 +75,8 @@ export function RunContext({
           run to generate production evidence.
         </VpwDemoBanner>
       ) : null}
-      <VpwToolbar label="Report context">
-        <VpwToolbarGroup>
+      <VpwToolbar className="items-stretch lg:items-center" label="Report context">
+        <VpwToolbarGroup className="flex-1 items-start">
           <div className="min-w-0">
             <p className="vpw-label">Project</p>
             <p className="truncate text-sm font-semibold text-[var(--vpw-text-primary)]">
@@ -103,7 +103,7 @@ export function RunContext({
             </div>
           </div>
         </VpwToolbarGroup>
-        <VpwToolbarGroup>
+        <VpwToolbarGroup className="w-full justify-start sm:w-full lg:w-auto lg:justify-end">
           {!isDemo ? (
             <ReportProjectSelect
               disabled={projectListLoading || projects.length === 0}
@@ -121,7 +121,7 @@ export function RunContext({
             />
           ) : null}
           <VpwBadge tone={readinessTone}>
-            <ShieldCheck aria-hidden="true" className="h-3 w-3" />
+            <ShieldCheck aria-hidden="true" data-icon="inline-start" />
             {reportActionsEnabled
               ? "Ready for generation"
               : isDemo

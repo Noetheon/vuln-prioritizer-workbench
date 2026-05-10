@@ -44,14 +44,14 @@ export function WhyDialog({ finding, open, onClose }: WhyDialogProps) {
             <span className="font-mono text-sm">{finding.cve_id}</span>
           </DialogTitle>
           <DialogDescription className="sr-only">
-            Priority rationale, risk signals, and recommended remediation
-            action for {finding.cve_id}.
+            Priority rationale, risk signals, and recommended remediation action
+            for {finding.cve_id}.
           </DialogDescription>
         </DialogHeader>
         <div className="flex flex-col gap-4 text-sm">
           {finding.rationale ? (
             <div>
-              <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-[var(--vpw-text-secondary)]">
+              <p className="mb-1 text-xs font-semibold uppercase text-[var(--vpw-text-secondary)]">
                 Why now
               </p>
               <p className="leading-relaxed">{finding.rationale}</p>
@@ -151,7 +151,7 @@ export function QuickViewSheet({
           </dl>
 
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">
+            <p className="text-xs font-semibold uppercase text-muted-foreground mb-1">
               Component
             </p>
             <p className="font-medium">{componentLabel(finding)}</p>
@@ -164,7 +164,7 @@ export function QuickViewSheet({
 
           {finding.rationale ? (
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">
+              <p className="text-xs font-semibold uppercase text-muted-foreground mb-1">
                 Rationale
               </p>
               <p className="leading-relaxed text-sm">{finding.rationale}</p>
@@ -172,14 +172,9 @@ export function QuickViewSheet({
           ) : null}
 
           {finding.recommended_action ? (
-            <div className="rounded-md border border-teal-500/30 bg-teal-500/10 p-3">
-              <p className="text-xs font-semibold uppercase tracking-wider text-teal-700 dark:text-teal-400 mb-1">
-                Recommended action
-              </p>
-              <p className="leading-relaxed text-sm">
-                {finding.recommended_action}
-              </p>
-            </div>
+            <VpwStatusBanner title="Recommended action" tone="success">
+              {finding.recommended_action}
+            </VpwStatusBanner>
           ) : null}
 
           <div className="pt-2 border-t">

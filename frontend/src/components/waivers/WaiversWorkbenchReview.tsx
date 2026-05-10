@@ -35,7 +35,7 @@ export function WaiverReviewSection({
 }) {
   return (
     <VpwGrid columns={2}>
-      <VpwPanel className="space-y-5 p-5">
+      <VpwPanel className="flex flex-col gap-5 p-5">
         <VpwSectionHeader
           description="Lifecycle checkpoints for accepted risk decisions."
           eyebrow="Review workflow"

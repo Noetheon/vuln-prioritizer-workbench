@@ -5,7 +5,6 @@ export { DashboardRemediationSection } from "./DashboardRemediationSection"
 export { DashboardSidePanel } from "./DashboardSidePanel"
 export { DashboardSignalOverview } from "./DashboardSignalOverview"
 export { ProviderFreshnessPanel } from "./ProviderFreshnessPanel"
-export { TopRemediationQueue } from "./TopRemediationQueue"
 export { RiskOperationsDashboard } from "./RiskOperationsDashboard"
 export type {
   DashboardMetricSummary,

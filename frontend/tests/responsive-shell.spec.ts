@@ -135,6 +135,96 @@ test("authenticated routes keep content within desktop, tablet, and mobile viewp
   }
 })
 
+test("mobile status summary wraps without horizontal clipping", async ({
+  page,
+}) => {
+  await login(page)
+  await page.setViewportSize({ height: 844, width: 390 })
+  await page.goto("/settings")
+
+  const statusSummary = page.getByLabel("Workbench status summary")
+  await expect(statusSummary).toBeVisible()
+
+  const metrics = await statusSummary.evaluate((element) => {
+    const rect = element.getBoundingClientRect()
+    const children = Array.from(element.children[0]?.children ?? []).map(
+      (child) => {
+        const childRect = child.getBoundingClientRect()
+        return {
+          left: childRect.left,
+          right: childRect.right,
+        }
+      },
+    )
+
+    return {
+      display: getComputedStyle(element.children[0] as Element).display,
+      fitsViewport: rect.left >= 0 && rect.right <= window.innerWidth,
+      childrenFit: children.every(
+        (child) => child.left >= 0 && child.right <= window.innerWidth,
+      ),
+    }
+  })
+
+  expect(metrics.display).toBe("grid")
+  expect(metrics.fitsViewport).toBe(true)
+  expect(metrics.childrenFit).toBe(true)
+  await expectNoPageOverflow(page)
+})
+
+test("desktop shell keeps sidebar pinned while long content scrolls internally", async ({
+  page,
+}) => {
+  await login(page)
+  await page.setViewportSize({ height: 900, width: 1440 })
+  await page.goto("/imports")
+  await expect(page.getByRole("complementary", { name: "Workbench sidebar" }))
+    .toBeVisible()
+  await expect(
+    page.getByRole("region", { name: "Workbench page content" }),
+  ).toBeVisible()
+
+  const metrics = await page.evaluate(() => {
+    const sidebar = document.querySelector(
+      'aside[aria-label="Workbench sidebar"]',
+    )
+    const content = document.querySelector<HTMLElement>(
+      'section[aria-label="Workbench page content"]',
+    )
+    content?.scrollTo({ top: content.scrollHeight })
+    const sidebarRect = sidebar?.getBoundingClientRect()
+    const bottomLeftElement = document.elementFromPoint(24, innerHeight - 24)
+
+    return {
+      bodyOverflowY: getComputedStyle(document.body).overflowY,
+      contentClientHeight: content?.clientHeight ?? 0,
+      contentOverflowY: content ? getComputedStyle(content).overflowY : "",
+      contentScrollHeight: content?.scrollHeight ?? 0,
+      contentScrollTop: content?.scrollTop ?? 0,
+      pageScrollY: scrollY,
+      sidebarBottom: sidebarRect?.bottom ?? 0,
+      sidebarHeight: sidebarRect?.height ?? 0,
+      sidebarIsAtBottom:
+        bottomLeftElement?.closest('aside[aria-label="Workbench sidebar"]') !==
+        null,
+      sidebarTop: sidebarRect?.top ?? 0,
+      viewportHeight: innerHeight,
+    }
+  })
+
+  expect(metrics.bodyOverflowY).toBe("hidden")
+  expect(metrics.contentOverflowY).toBe("auto")
+  expect(metrics.contentScrollHeight).toBeGreaterThan(
+    metrics.contentClientHeight,
+  )
+  expect(metrics.contentScrollTop).toBeGreaterThan(0)
+  expect(metrics.pageScrollY).toBe(0)
+  expect(metrics.sidebarTop).toBe(0)
+  expect(Math.round(metrics.sidebarHeight)).toBe(metrics.viewportHeight)
+  expect(Math.round(metrics.sidebarBottom)).toBe(metrics.viewportHeight)
+  expect(metrics.sidebarIsAtBottom).toBe(true)
+})
+
 test("findings table keeps horizontal scroll contained at desktop, tablet, and mobile widths", async ({
   page,
 }) => {

@@ -172,6 +172,7 @@ test("workbench waiver workflow keeps accepted risk visible", async ({
   await page.goto("/waivers")
   await selectRadixOptionByLabel(page, page, "Waivers project", projectName)
   await waiversTable.getByRole("button", { name: "Expire" }).click()
+  await waiversTable.getByRole("button", { name: "Confirm expiry" }).click()
   await expect(waiversTable).toContainText("Expired")
 
   await page.goto(`/findings/${finding?.id}`)

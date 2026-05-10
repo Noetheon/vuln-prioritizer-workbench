@@ -2,6 +2,7 @@ import {
   AlertCircle,
   AlertTriangle,
   BellRing,
+  CheckCircle2,
   Database,
   ShieldAlert,
   TrendingUp,
@@ -32,7 +33,10 @@ import {
   DEMO_SUMMARY,
   DEMO_TOP_SERVICES,
 } from "@/lib/demo-data"
-import { formatProviderFreshness } from "@/lib/provider-format"
+import {
+  evidenceReadiness,
+  formatProviderFreshness,
+} from "@/lib/provider-format"
 import { DEMO_MODE_ENABLED } from "@/lib/runtime-config"
 import { ErrorState } from "../states"
 import { DashboardDemoBanner, DashboardSetupEmptyState } from "./DashboardEmptyState"
@@ -68,7 +72,7 @@ function DashboardSignalOverviewFallback() {
       <VpwSurfaceBody>
         <div
           aria-label="Loading Signal Overview charts"
-          className="space-y-4"
+          className="flex flex-col gap-4"
           role="status"
         >
           <div className="flex flex-wrap gap-2">
@@ -241,6 +245,17 @@ export function RiskOperationsDashboard({
         value: <span className="text-sm font-semibold">{freshness.value}</span>,
       },
       {
+        detail: "Provider data status for report and audit evidence.",
+        icon: CheckCircle2,
+        label: "Evidence Readiness",
+        tone: staleProvider ? "medium" : "run",
+        value: (
+          <span className="text-sm font-semibold">
+            {evidenceReadiness(effectiveProviderStatus)}
+          </span>
+        ),
+      },
+      {
         detail: latestRun ? latestRunLabel(latestRun) : "No runs available",
         icon: BellRing,
         label: "Latest Analysis",
@@ -258,9 +273,11 @@ export function RiskOperationsDashboard({
       isDemoMode,
       effectiveSummary,
       effectiveSignalCounts.highEpss,
+      effectiveProviderStatus,
       latestRun,
       summaryLoading,
       freshness,
+      staleProvider,
     ],
   )
 
@@ -282,7 +299,7 @@ export function RiskOperationsDashboard({
     <TooltipProvider>
       <section
         aria-label="Risk Operations dashboard"
-        className="space-y-4 pb-4"
+        className="flex flex-col gap-4 pb-4"
       >
         <DashboardHero
           effectiveProjects={effectiveProjects}
@@ -317,15 +334,18 @@ export function RiskOperationsDashboard({
         ) : null}
 
         {staleProvider ? (
-          <VpwSurface className="border-amber-300 bg-amber-50/70 dark:bg-amber-950/35">
+          <VpwSurface className="border-[var(--vpw-amber)] bg-[var(--vpw-bg-warning)]">
             <VpwSurfaceHeader className="py-3">
               <div className="flex items-center gap-2">
-                <AlertCircle className="size-4 text-amber-600 dark:text-amber-400" />
-                <VpwSurfaceTitle className="text-sm text-amber-800 dark:text-amber-300">
+                <AlertCircle
+                  className="size-4 text-[var(--vpw-amber)]"
+                  aria-hidden="true"
+                />
+                <VpwSurfaceTitle className="text-sm text-[var(--vpw-text-primary)]">
                   Provider data needs refresh
                 </VpwSurfaceTitle>
               </div>
-              <VpwSurfaceDescription className="text-xs text-amber-700/80 dark:text-amber-400/80">
+              <VpwSurfaceDescription className="text-xs text-[var(--vpw-text-secondary)]">
                 Freshness is stale or partially degraded. Remediation priority
                 remains functional, but evidence may not be fully current.
               </VpwSurfaceDescription>
@@ -336,8 +356,8 @@ export function RiskOperationsDashboard({
         {showEmptyState ? <DashboardSetupEmptyState /> : null}
 
         {!showEmptyState ? (
-          <div className="grid gap-4 lg:grid-cols-[1fr_196px]">
-            <div className="min-w-0 space-y-4">
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(17rem,20rem)] 2xl:grid-cols-[minmax(0,1fr)_22rem]">
+            <div className="min-w-0 flex flex-col gap-4">
               <DashboardMetricGrid cards={freshnessCard} isLoading={isLoading} />
               <Suspense fallback={<DashboardSignalOverviewFallback />}>
                 <DashboardSignalOverview

@@ -20,7 +20,7 @@ export function DataQualityNotice({
   if (items.length === 0) return null
 
   return (
-    <ul className={cn("space-y-2", className)}>
+    <ul className={cn("flex flex-col gap-2", className)}>
       {items.map((item) => (
         <li
           className="flex gap-3 rounded-[var(--vpw-radius-md)] border border-[color-mix(in_srgb,var(--vpw-amber)_38%,var(--vpw-bg-card))] bg-[var(--vpw-bg-warning)] px-3 py-2"
@@ -30,7 +30,7 @@ export function DataQualityNotice({
             aria-hidden="true"
             className="mt-0.5 size-4 shrink-0 text-[var(--vpw-amber)]"
           />
-          <div className="min-w-0 space-y-0.5">
+          <div className="flex min-w-0 flex-col gap-0.5">
             <div className="flex items-center gap-2">
               <VpwBadge className="text-xs" tone="warning">
                 {item.label}

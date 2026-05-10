@@ -112,7 +112,7 @@ export function SettingsAccountHealth({
 
   return (
     <VpwGrid columns={2}>
-      <VpwPanel className="space-y-5 p-5">
+      <VpwPanel className="flex flex-col gap-5 p-5">
         <VpwSectionHeader
           description="Current authenticated account and workspace runtime state."
           title="Account and session"
@@ -144,7 +144,7 @@ export function SettingsAccountHealth({
         />
       </VpwPanel>
 
-      <VpwPanel className="space-y-5 p-5">
+      <VpwPanel className="flex flex-col gap-5 p-5">
         <VpwSectionHeader
           description="Token inventory, provider health, and reproducibility signals."
           title="Setup health"

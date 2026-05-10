@@ -48,47 +48,45 @@ function ReportsRouteContent() {
   }
 
   return (
-    <section className="w-full">
-      <EvidenceCenter
-        activeReportFormat={reportsState.activeReportFormat}
-        onCreateReport={reportsState.createReport}
-        onDownloadReport={reportsState.downloadReport}
-        onProjectChange={handleProjectChange}
-        onRunIdChange={setSelectedRunId}
-        onVerifyReport={reportsState.verifyEvidenceReport}
-        projectListError={projectListError}
-        projectListLoading={projectListLoading}
-        projectRuns={projectRuns}
-        projectSummary={projectSummaryQuery.data ?? null}
-        projects={projects}
-        providerStatus={providerStatus}
-        reportActionError={reportsState.reportActionError}
-        reportActionMessage={reportsState.reportActionMessage}
-        reportActionsEnabled={reportsState.reportActionsEnabled}
-        reports={reportsState.reports}
-        reportsError={reportsState.reportsError}
-        reportsLoading={reportsState.reportsLoading}
-        runDetailError={
-          runDetailQuery.isError
-            ? apiErrorMessage("Run detail unavailable", runDetailQuery.error)
-            : ""
-        }
-        runsError={
-          projectRunsQuery.isError
-            ? apiErrorMessage("Import runs unavailable", projectRunsQuery.error)
-            : ""
-        }
-        runsLoading={projectRunsQuery.isLoading || projectRunsQuery.isFetching}
-        selectedProject={selectedProject}
-        selectedProjectId={selectedProjectId}
-        selectedReportRun={selectedReportRun}
-        selectedRunId={selectedRunId}
-        selectedRunSummary={runDetailQuery.data?.summary ?? null}
-        verificationLoading={reportsState.verificationLoading}
-        verificationReport={reportsState.verificationReport}
-        verificationReportTarget={reportsState.verificationReportTarget}
-      />
-    </section>
+    <EvidenceCenter
+      activeReportFormat={reportsState.activeReportFormat}
+      onCreateReport={reportsState.createReport}
+      onDownloadReport={reportsState.downloadReport}
+      onProjectChange={handleProjectChange}
+      onRunIdChange={setSelectedRunId}
+      onVerifyReport={reportsState.verifyEvidenceReport}
+      projectListError={projectListError}
+      projectListLoading={projectListLoading}
+      projectRuns={projectRuns}
+      projectSummary={projectSummaryQuery.data ?? null}
+      projects={projects}
+      providerStatus={providerStatus}
+      reportActionError={reportsState.reportActionError}
+      reportActionMessage={reportsState.reportActionMessage}
+      reportActionsEnabled={reportsState.reportActionsEnabled}
+      reports={reportsState.reports}
+      reportsError={reportsState.reportsError}
+      reportsLoading={reportsState.reportsLoading}
+      runDetailError={
+        runDetailQuery.isError
+          ? apiErrorMessage("Run detail unavailable", runDetailQuery.error)
+          : ""
+      }
+      runsError={
+        projectRunsQuery.isError
+          ? apiErrorMessage("Import runs unavailable", projectRunsQuery.error)
+          : ""
+      }
+      runsLoading={projectRunsQuery.isLoading || projectRunsQuery.isFetching}
+      selectedProject={selectedProject}
+      selectedProjectId={selectedProjectId}
+      selectedReportRun={selectedReportRun}
+      selectedRunId={selectedRunId}
+      selectedRunSummary={runDetailQuery.data?.summary ?? null}
+      verificationLoading={reportsState.verificationLoading}
+      verificationReport={reportsState.verificationReport}
+      verificationReportTarget={reportsState.verificationReportTarget}
+    />
   )
 }
 

@@ -65,17 +65,19 @@ export function VpwEvidenceManifestCard({
         <CardTitle className="text-lg">Evidence Manifest</CardTitle>
         <CardDescription>Audit trail and bundle integrity</CardDescription>
       </CardHeader>
-      <CardContent className="space-y-5 pb-6">
+      <CardContent className="flex flex-col gap-5 pb-6">
         <VpwKeyValueList columns={2} items={rows} />
         <VpwChecksum
           demo={demo}
           value={checksumValue}
-          verified={!demo && verificationStatus.toLowerCase().includes("verified")}
+          verified={
+            !demo && verificationStatus.toLowerCase().includes("verified")
+          }
         />
         <div>
           <p className="vpw-label">Included files</p>
           {files.length > 0 ? (
-            <ul className="mt-2 space-y-2 text-sm text-[var(--vpw-text-secondary)]">
+            <ul className="mt-2 flex flex-col gap-2 text-sm text-[var(--vpw-text-secondary)]">
               {files.map((file) => (
                 <li
                   className="flex items-center justify-between gap-2"
@@ -101,7 +103,7 @@ export function VpwEvidenceManifestCard({
           type="button"
           variant="outline"
         >
-          <Download className="h-4 w-4" aria-hidden="true" />
+          <Download aria-hidden="true" data-icon="inline-start" />
           {downloadLabel}
         </Button>
       </CardContent>

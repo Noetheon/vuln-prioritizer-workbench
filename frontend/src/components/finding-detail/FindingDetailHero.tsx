@@ -80,12 +80,12 @@ export function FindingDetailHero({
             <strong>{formatNullableNumber(finding.risk_score)}</strong>
             <small>Operational remediation priority</small>
           </li>
-          <li>
+          <li className="finding-hero-metric-support">
             <span>EPSS</span>
             <EpssBadge value={finding.epss} />
             <small>Exploit probability signal</small>
           </li>
-          <li>
+          <li className="finding-hero-metric-support">
             <span>CVSS</span>
             <CvssBadge value={finding.cvss_base_score} />
             <small>Impact severity signal</small>
@@ -102,10 +102,13 @@ export function FindingDetailHero({
         className="finding-decision-fact-grid"
         aria-label="Finding scope"
       >
-        <VpwSurface>
+        <VpwSurface className="finding-fact-card">
           <VpwSurfaceHeader>
             <VpwSurfaceDescription>Component</VpwSurfaceDescription>
-            <VpwSurfaceTitle title={findingComponentDetailLabel(finding)}>
+            <VpwSurfaceTitle
+              className="finding-fact-card-title"
+              title={findingComponentDetailLabel(finding)}
+            >
               {findingComponentDetailLabel(finding)}
             </VpwSurfaceTitle>
           </VpwSurfaceHeader>
@@ -115,10 +118,13 @@ export function FindingDetailHero({
             </p>
           </VpwSurfaceBody>
         </VpwSurface>
-        <VpwSurface>
+        <VpwSurface className="finding-fact-card">
           <VpwSurfaceHeader>
             <VpwSurfaceDescription>Asset / Service</VpwSurfaceDescription>
-            <VpwSurfaceTitle title={findingAssetServiceDetailLabel(finding)}>
+            <VpwSurfaceTitle
+              className="finding-fact-card-title"
+              title={findingAssetServiceDetailLabel(finding)}
+            >
               {findingAssetServiceDetailLabel(finding)}
             </VpwSurfaceTitle>
           </VpwSurfaceHeader>
@@ -126,10 +132,10 @@ export function FindingDetailHero({
             <p>{labelize(finding.exposure)}</p>
           </VpwSurfaceBody>
         </VpwSurface>
-        <VpwSurface>
+        <VpwSurface className="finding-fact-card">
           <VpwSurfaceHeader>
             <VpwSurfaceDescription>Owner</VpwSurfaceDescription>
-            <VpwSurfaceTitle>
+            <VpwSurfaceTitle className="finding-fact-card-title">
               {findingOwnerDetailLabel(finding, occurrences)}
             </VpwSurfaceTitle>
           </VpwSurfaceHeader>
@@ -137,12 +143,12 @@ export function FindingDetailHero({
             <p>{labelize(finding.asset_environment)}</p>
           </VpwSurfaceBody>
         </VpwSurface>
-        <VpwSurface className="finding-recommendation-card">
+        <VpwSurface className="finding-fact-card finding-recommendation-card">
           <VpwSurfaceHeader>
             <VpwSurfaceDescription>
               Primary recommendation
             </VpwSurfaceDescription>
-            <VpwSurfaceTitle>
+            <VpwSurfaceTitle className="finding-fact-card-title">
               {findingRecommendedAction(finding, explanation)}
             </VpwSurfaceTitle>
           </VpwSurfaceHeader>

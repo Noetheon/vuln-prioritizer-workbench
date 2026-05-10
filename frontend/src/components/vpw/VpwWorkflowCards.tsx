@@ -2,7 +2,13 @@ import { FileInput, GitBranch, History, PackageCheck } from "lucide-react"
 import type { ReactNode } from "react"
 
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
 import { cn } from "@/lib/utils"
 
 import { VpwBadge, type VpwBadgeTone } from "./VpwBadge"
@@ -66,23 +72,21 @@ export function VpwImportStepCard({
   title,
 }: VpwImportStepCardProps) {
   return (
-    <Card className={cn("vpw-card py-0", className)}>
-      <CardContent className="flex items-start gap-4 p-5">
-        <div className="rounded-[var(--vpw-radius-lg)] bg-[var(--vpw-bg-info)] p-2 text-[var(--vpw-blue)]">
-          <FileInput aria-hidden="true" className="h-4 w-4" />
+    <Card className={cn("vpw-card gap-0 py-0", className)}>
+      <CardHeader className="flex-row items-start gap-3 p-4">
+        <div className="flex size-8 shrink-0 items-center justify-center rounded-[var(--vpw-radius-md)] border border-[color-mix(in_srgb,var(--vpw-blue)_22%,var(--vpw-bg-card))] bg-[var(--vpw-bg-info)] text-[var(--vpw-blue)]">
+          <FileInput aria-hidden="true" className="size-4" />
         </div>
         <div className="min-w-0 flex-1">
-          <div className="flex items-start justify-between gap-3">
-            <h3 className="font-semibold text-[var(--vpw-text-primary)]">
-              {title}
-            </h3>
+          <div className="flex items-start justify-between gap-2">
+            <CardTitle className="text-sm leading-5">{title}</CardTitle>
             <VpwBadge tone={statusTone}>{status}</VpwBadge>
           </div>
-          <p className="mt-1 text-sm leading-6 text-[var(--vpw-text-secondary)]">
+          <CardDescription className="mt-1 text-sm leading-5 text-[var(--vpw-text-secondary)]">
             {description}
-          </p>
+          </CardDescription>
         </div>
-      </CardContent>
+      </CardHeader>
     </Card>
   )
 }
@@ -95,7 +99,7 @@ export function VpwReportHistoryCard({
     <Card className={cn("vpw-card py-0", className)}>
       <CardHeader className="pb-3 pt-5">
         <CardTitle className="flex items-center gap-2 text-base">
-          <History aria-hidden="true" className="h-4 w-4" />
+          <History aria-hidden="true" className="size-4" />
           Report History
         </CardTitle>
       </CardHeader>
@@ -124,14 +128,14 @@ export function VpwProviderSnapshotCard({
     <Card className={cn("vpw-card py-0", className)}>
       <CardHeader className="pb-3 pt-5">
         <CardTitle className="flex items-center gap-2 text-base">
-          <PackageCheck aria-hidden="true" className="h-4 w-4" />
+          <PackageCheck aria-hidden="true" className="size-4" />
           Provider Snapshot
         </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4 pb-5">
-        <p className="font-mono text-xs text-[var(--vpw-text-muted)]">
+        <CardDescription className="font-mono text-xs">
           {snapshotId}
-        </p>
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-4 pb-5">
         <div className="flex flex-wrap gap-2">
           {sources.map((source) => (
             <VpwBadge key={source.name} tone={source.tone ?? "success"}>
@@ -163,7 +167,7 @@ export function VpwEvidenceFlowCard({
     <Card className={cn("vpw-card py-0", className)}>
       <CardHeader className="pb-3 pt-5">
         <CardTitle className="flex items-center gap-2 text-base">
-          <GitBranch aria-hidden="true" className="h-4 w-4" />
+          <GitBranch aria-hidden="true" className="size-4" />
           Evidence Flow
         </CardTitle>
       </CardHeader>

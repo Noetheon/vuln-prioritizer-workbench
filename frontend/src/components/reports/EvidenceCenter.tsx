@@ -7,12 +7,17 @@ import type {
   ReportPublic,
   ReportVerificationPublic,
 } from "@/api-client"
-import { VpwBadge, VpwPageContainer, VpwSection, VpwSectionHeader } from "@/components/vpw"
+import {
+  VpwBadge,
+  VpwSection,
+  VpwSectionHeader,
+} from "@/components/vpw"
 import type { ReportFormat } from "@/lib/report-format"
 import { DEMO_MODE_ENABLED } from "@/lib/runtime-config"
 import {
   ActionStatus,
   ArtifactSection,
+  EvidenceLifecycle,
   EvidenceSummary,
   ExecutiveDecision,
   ManifestPreview,
@@ -96,7 +101,7 @@ export function EvidenceCenter({
   const isDemo = DEMO_MODE_ENABLED && !selectedProject && !combinedError
 
   return (
-    <VpwPageContainer className="space-y-6 px-0 py-0">
+    <div className="flex flex-col gap-6">
       <RunContext
         isDemo={isDemo}
         onProjectChange={onProjectChange}
@@ -123,6 +128,18 @@ export function EvidenceCenter({
       />
 
       <ActionStatus error={combinedError} message={reportActionMessage} />
+
+      <EvidenceLifecycle
+        activeReportFormat={activeReportFormat}
+        isDemo={isDemo}
+        reportActionsEnabled={reportActionsEnabled}
+        reports={reports}
+        reportsLoading={reportsLoading}
+        selectedReportRun={selectedReportRun}
+        verificationLoading={verificationLoading}
+        verificationReport={verificationReport}
+        verificationReportTarget={verificationReportTarget}
+      />
 
       <ArtifactSection
         activeReportFormat={activeReportFormat}
@@ -190,6 +207,6 @@ export function EvidenceCenter({
           reports={reports}
         />
       </VpwSection>
-    </VpwPageContainer>
+    </div>
   )
 }

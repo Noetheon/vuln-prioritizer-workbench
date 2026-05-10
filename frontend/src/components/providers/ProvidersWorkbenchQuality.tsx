@@ -31,13 +31,13 @@ function ProviderDataQualityNotes({
   providerStatus: ProviderStatusPublic | null
 }) {
   return (
-    <VpwPanel className="space-y-4 p-5">
+    <VpwPanel className="flex flex-col gap-4 p-5">
       <VpwSectionHeader
         description="Structured trust notes for prioritization and reporting."
         eyebrow="Data quality"
         title="Provider data quality notes"
       />
-      <div className="space-y-3">
+      <div className="flex flex-col gap-3">
         <VpwStatusBanner title="CVSS coverage" tone="info">
           Missing CVSS does not mean low risk; it is a provider data gap.
         </VpwStatusBanner>
@@ -82,7 +82,7 @@ function ProviderUpdateJobPanel({
   providerStatus: ProviderStatusPublic | null
 }) {
   return (
-    <VpwPanel className="space-y-4 p-5">
+    <VpwPanel className="flex flex-col gap-4 p-5">
       <VpwSectionHeader
         description="Latest provider update-job state from the existing provider status response."
         eyebrow="Update job"
@@ -161,7 +161,7 @@ export function ProviderDataQualitySection({
     <VpwGrid columns={2}>
       <ProviderDataQualityNotes providerStatus={providerStatus} />
 
-      <div className="space-y-4">
+      <div className="flex flex-col gap-4">
         <VpwEvidenceFlowCard items={evidenceFlowItems} />
         <ProviderUpdateJobPanel providerStatus={providerStatus} />
       </div>
