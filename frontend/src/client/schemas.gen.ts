@@ -4959,7 +4959,7 @@ export const UserPasswordChangeSchema = {
         },
         new_password: {
             maxLength: 255,
-            minLength: 12,
+            minLength: 1,
             title: 'New Password',
             type: 'string'
         }
@@ -4977,7 +4977,7 @@ export const UserPasswordResetSchema = {
     properties: {
         new_password: {
             maxLength: 255,
-            minLength: 12,
+            minLength: 1,
             title: 'New Password',
             type: 'string'
         }
