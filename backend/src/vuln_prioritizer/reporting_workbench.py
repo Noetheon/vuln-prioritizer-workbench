@@ -17,42 +17,13 @@ from vuln_prioritizer.sarif_contract import (
     sarif_rule_properties,
 )
 from vuln_prioritizer.sarif_references import dedupe_defensive_http_urls
+from vuln_prioritizer.workbench_report_contracts import CSV_FINDINGS_COLUMNS
 
 
 def generate_findings_csv(report_payload: dict[str, Any]) -> str:
     """Render a spreadsheet-safe CSV export for Workbench findings."""
     output = StringIO()
-    fieldnames = [
-        "cve_id",
-        "priority",
-        "status",
-        "kev",
-        "epss",
-        "cvss",
-        "data_quality_confidence",
-        "data_quality_flags",
-        "component",
-        "asset",
-        "owner",
-        "service",
-        "vex_statuses",
-        "suppressed_by_vex",
-        "under_investigation",
-        "waived",
-        "waiver_status",
-        "waiver_owner",
-        "waiver_expires_on",
-        "waiver_review_on",
-        "attack_mapped",
-        "attack_techniques",
-        "defensive_context_sources",
-        "decision_template",
-        "decision_sla",
-        "decision_statement",
-        "business_impact",
-        "recommended_action",
-    ]
-    writer = csv.DictWriter(output, fieldnames=fieldnames, lineterminator="\n")
+    writer = csv.DictWriter(output, fieldnames=CSV_FINDINGS_COLUMNS, lineterminator="\n")
     writer.writeheader()
     for finding in report_payload.get("findings", []):
         if not isinstance(finding, dict):

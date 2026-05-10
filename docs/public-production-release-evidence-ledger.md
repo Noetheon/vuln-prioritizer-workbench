@@ -36,8 +36,8 @@ linked from an issue or PR.
 - `backend/requirements.runtime.lock.txt` is the hash-pinned Python 3.12 Docker
   runtime install input exported from `uv.lock` without dev extras.
 - `frontend/package-lock.json` is the audited frontend lockfile.
-- The root `bun.lock` is retained for Bun-compatible convenience scripts, not
-  as the release audit source.
+- There is no tracked root `bun.lock`; npm and `frontend/package-lock.json`
+  remain the frontend release audit source.
 
 ## Release-Readiness Targets
 

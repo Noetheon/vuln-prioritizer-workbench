@@ -155,7 +155,9 @@ def parse_generic_occurrence_csv(path: Path) -> ParsedInput:
         )
     cve_field = first_existing_field(field_map, "cve_id", "cve", "vulnerability_id")
     if cve_field is None:
-        raise ValueError("generic-occurrence-csv must contain a cve_id or cve column.")
+        raise ValueError(
+            "generic-occurrence-csv must contain a cve_id, cve, or vulnerability_id column."
+        )
 
     for row_number, row in rows:
         total_rows += 1
@@ -214,6 +216,12 @@ def parse_generic_occurrence_csv(path: Path) -> ParsedInput:
                     "service",
                     "asset_business_service",
                 ),
+                raw_evidence=_generic_raw_evidence(
+                    row,
+                    field_map=field_map,
+                    line_number=row_number,
+                    unknown_fields=unknown_fields,
+                ),
             )
         )
 
@@ -262,6 +270,53 @@ def _read_csv_records(
         raise ValueError(f"{document_name} is missing a header row.")
     field_map = {field.strip().lower(): field for field in header if field}
     return field_map, rows
+
+
+def _generic_raw_evidence(
+    row: dict[str, str],
+    *,
+    field_map: dict[str, str],
+    line_number: int,
+    unknown_fields: tuple[str, ...],
+) -> dict[str, object]:
+    return {
+        "input_type": "generic-occurrence-csv",
+        "line_number": line_number,
+        "source_record_id": f"row:{line_number}",
+        "scanner": _csv_optional(row, field_map, "scanner"),
+        "severity": _csv_optional(row, field_map, "severity", "raw_severity"),
+        "purl": _csv_optional(row, field_map, "purl"),
+        "owner": _csv_optional(row, field_map, "owner", "asset_owner"),
+        "business_service": _csv_optional(
+            row,
+            field_map,
+            "business_service",
+            "service",
+            "asset_business_service",
+        ),
+        "target_kind": _csv_optional(row, field_map, "target_kind"),
+        "target_ref": _csv_optional(row, field_map, "target_ref", "target", "asset_ref"),
+        "asset_id": _csv_optional(row, field_map, "asset_id"),
+        "asset_criticality": _csv_optional(row, field_map, "criticality", "asset_criticality"),
+        "asset_exposure": _csv_optional(row, field_map, "exposure", "asset_exposure"),
+        "asset_environment": _csv_optional(row, field_map, "environment", "asset_environment"),
+        "package_type": _csv_optional(row, field_map, "package_type", "ecosystem"),
+        "file_path": _csv_optional(row, field_map, "file_path", "path"),
+        "dependency_path": _csv_optional(row, field_map, "dependency_path"),
+        "unknown_columns": _unknown_column_values(row, unknown_fields),
+    }
+
+
+def _csv_optional(row: dict[str, str], field_map: dict[str, str], *fields: str) -> str | None:
+    for field in fields:
+        value = csv_value(row, field_map, field)
+        if value:
+            return value
+    return None
+
+
+def _unknown_column_values(row: dict[str, str], fields: tuple[str, ...]) -> dict[str, str]:
+    return {field: value for field in fields if (value := (row.get(field) or "").strip())}
 
 
 def _csv_sample(text: str) -> str:

@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 import ast
+import os
+import subprocess
+import tarfile
 from collections import deque
 from pathlib import Path
 from typing import Any
@@ -178,8 +181,9 @@ def test_template_runtime_names_are_documented_compatibility_aliases() -> None:
 
     assert 'LEGACY_SETTINGS_STATE_KEY = "template_settings"' in app_state
     assert "Backward-compatible aliases for older local tests and scripts." in app_state
-    assert "historical compatibility names" in public_deployment
-    assert "separate template-era Workbench runtime" in public_deployment
+    normalized_public_deployment = " ".join(public_deployment.split())
+    assert "historical compatibility names" in normalized_public_deployment
+    assert "separate template-era Workbench runtime" in normalized_public_deployment
     assert "WorkbenchReportFormat" in frontend_defaults
     assert "TemplateReportFormat" not in frontend_defaults
 
@@ -342,6 +346,7 @@ def test_public_deployment_runbook_documents_backup_retention_and_tls() -> None:
     assert "WORKBENCH_ARTIFACT_MODE=compose" in runbook
     assert "WORKBENCH_IMPORT_UPLOADS_VOLUME=workbench-import-uploads" in runbook
     assert "WORKBENCH_IMPORT_UPLOADS_VOLUME=template-import-uploads" in runbook
+    assert "WORKBENCH_LEGACY_STORAGE_FALLBACK=1" in runbook
     assert "POSTGRES_PASSWORD=<long random value>" in runbook
     assert "import-upload, report, provider-snapshot, and\nprovider-cache" in runbook
     assert "/app/template-import-uploads" not in runbook
@@ -362,10 +367,56 @@ def test_backup_restore_scripts_support_database_url_and_compose_artifacts() -> 
     assert "WORKBENCH_ARTIFACT_MODE:-host" in restore
     assert "docker compose ps -q backend" in backup
     assert "docker compose ps -q backend" in restore
+    assert "validate_artifact_archive" in restore
+    assert "Refusing artifact archive with unsafe member path" in restore
+    assert "Refusing artifact archive with symlink or hardlink member" in restore
     assert (
-        "workbench-import-uploads workbench-reports provider-snapshots workbench-provider-cache"
-        in backup
+        'DEFAULT_COMPOSE_ARTIFACT_PATHS="workbench-import-uploads workbench-reports '
+        'provider-snapshots workbench-provider-cache"' in backup
     )
+    assert "LEGACY_COMPOSE_ARTIFACT_PATHS=" in backup
+    assert "legacy_storage_fallback_enabled" in backup
+    assert "for path in $(host_artifact_paths)" in backup
+
+
+def test_backup_script_legacy_artifacts_are_opt_in(tmp_path: Path) -> None:
+    database_path = tmp_path / "workbench.db"
+    database_path.write_text("sqlite bytes\n", encoding="utf-8")
+    for artifact_dir in (
+        tmp_path / "data" / "workbench-reports",
+        tmp_path / "data" / "template-reports",
+    ):
+        artifact_dir.mkdir(parents=True)
+        (artifact_dir / "marker.txt").write_text(artifact_dir.name, encoding="utf-8")
+
+    def run_backup(name: str, *, legacy_fallback: bool = False) -> set[str]:
+        backup_dir = tmp_path / name
+        env = {
+            **os.environ,
+            "BACKUP_DIR": str(backup_dir),
+            "SQLITE_DATABASE_PATH": str(database_path),
+            "WORKBENCH_ARTIFACT_MODE": "host",
+        }
+        if legacy_fallback:
+            env["WORKBENCH_LEGACY_STORAGE_FALLBACK"] = "1"
+        subprocess.run(
+            [str(REPO_ROOT / "scripts/workbench-backup.sh")],
+            capture_output=True,
+            check=True,
+            cwd=tmp_path,
+            env=env,
+            text=True,
+        )
+        with tarfile.open(backup_dir / "artifacts.tar") as archive:
+            return set(archive.getnames())
+
+    default_members = run_backup("backup-default")
+    legacy_members = run_backup("backup-legacy", legacy_fallback=True)
+
+    assert "workbench-reports" in default_members
+    assert "template-reports" not in default_members
+    assert "workbench-reports" in legacy_members
+    assert "template-reports" in legacy_members
 
 
 def test_active_runtime_entrypoints_use_workbench_backend_app() -> None:

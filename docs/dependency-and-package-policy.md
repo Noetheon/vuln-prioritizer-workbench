@@ -110,10 +110,9 @@ cd frontend && npm ci --workspaces=false
 cd frontend && npm --workspaces=false audit --omit=dev
 ```
 
-The root `bun.lock` is intentional because the root workspace keeps
-Bun-compatible convenience scripts in `package.json`. It is not the audited
-frontend install source. Do not use Bun lock updates as release evidence unless
-a future issue changes the frontend package-manager policy.
+The root workspace uses npm workspace scripts only. There is no tracked
+`bun.lock`; adding one would need a package-manager policy change and should not
+be used as release evidence unless that policy changes.
 
 ## Container Images
 

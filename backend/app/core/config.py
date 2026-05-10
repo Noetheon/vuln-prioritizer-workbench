@@ -40,6 +40,7 @@ DEFAULT_REPORT_DIR = "data/workbench-reports"
 LEGACY_REPORT_DIR = "data/template-reports"
 DEFAULT_PROVIDER_CACHE_DIR = "data/workbench-provider-cache"
 LEGACY_PROVIDER_CACHE_DIR = "data/template-provider-cache"
+LEGACY_STORAGE_FALLBACK_ENV = "WORKBENCH_LEGACY_STORAGE_FALLBACK"
 MIN_SECRET_KEY_LENGTH = 32
 MIN_FIRST_SUPERUSER_PASSWORD_LENGTH = 16
 DEFAULT_API_TOKEN_EXPIRE_DAYS = 90
@@ -249,6 +250,8 @@ def _positive_int_from_env(name: str, default: int) -> int:
 
 
 def _default_sqlite_database_uri() -> str:
+    if not _legacy_storage_fallback_enabled():
+        return DEFAULT_SQLITE_DATABASE_URI
     legacy_path = Path("template.db")
     default_path = Path("workbench.db")
     if legacy_path.exists() and not default_path.exists():
@@ -260,11 +263,17 @@ def _storage_path_from_env(name: str, default_path: str, legacy_path: str) -> st
     configured_path = environ.get(name)
     if configured_path:
         return configured_path
+    if not _legacy_storage_fallback_enabled():
+        return default_path
     legacy_root = Path(legacy_path)
     default_root = Path(default_path)
     if not default_root.exists() and _path_contains_data(legacy_root):
         return legacy_path
     return default_path
+
+
+def _legacy_storage_fallback_enabled() -> bool:
+    return _bool_from_env(LEGACY_STORAGE_FALLBACK_ENV, False)
 
 
 def _path_contains_data(path: Path) -> bool:

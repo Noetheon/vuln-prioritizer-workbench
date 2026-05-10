@@ -42,6 +42,7 @@ from app.services import (
     render_markdown_report,
     render_sarif_report,
 )
+from app.services.report_contracts import CSV_FINDINGS_COLUMNS
 from vuln_prioritizer.models import (
     AnalysisContext,
     FindingProvenance,
@@ -57,37 +58,6 @@ from vuln_prioritizer.sarif_contract import (
     SARIF_WORKBENCH_FINGERPRINT_KEY,
 )
 from vuln_prioritizer.sarif_validation import validate_sarif_payload
-
-CSV_FINDINGS_COLUMNS = [
-    "cve_id",
-    "priority",
-    "status",
-    "kev",
-    "epss",
-    "cvss",
-    "data_quality_confidence",
-    "data_quality_flags",
-    "component",
-    "asset",
-    "owner",
-    "service",
-    "vex_statuses",
-    "suppressed_by_vex",
-    "under_investigation",
-    "waived",
-    "waiver_status",
-    "waiver_owner",
-    "waiver_expires_on",
-    "waiver_review_on",
-    "attack_mapped",
-    "attack_techniques",
-    "defensive_context_sources",
-    "decision_template",
-    "decision_sla",
-    "decision_statement",
-    "business_impact",
-    "recommended_action",
-]
 
 VPW054_DEMO_ARTIFACTS = {
     "markdown": Path("docs/examples/vpw-054-template-technical-report.md"),

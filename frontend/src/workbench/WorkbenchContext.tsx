@@ -21,9 +21,11 @@ import {
 import { clearAccessToken } from "../auth"
 import { apiErrorMessage } from "../lib/app-errors"
 import {
-  useWorkbenchBootstrapQuery,
-  workbenchBootstrapQueryKey,
-} from "./useWorkbenchBootstrapQuery"
+  useWorkbenchCurrentUserQuery,
+  useWorkbenchProviderStatusQuery,
+  useWorkbenchStatusQuery,
+  workbenchProviderStatusQueryKey,
+} from "./useWorkbenchRuntimeQueries"
 import { useProjectsQuery } from "./useWorkbenchQueries"
 import {
   normalizeSelectedProjectId,
@@ -94,8 +96,10 @@ export function WorkbenchProvider({ children }: { children: ReactNode }) {
     clearAccessToken()
     await navigate({ replace: true, search: {} as never, to: "/login" })
   }, [navigate])
-  const bootstrapQuery = useWorkbenchBootstrapQuery()
-  const bootstrapError = bootstrapQuery.error
+  const currentUserQuery = useWorkbenchCurrentUserQuery()
+  const providerStatusQuery = useWorkbenchProviderStatusQuery()
+  const statusQuery = useWorkbenchStatusQuery()
+  const currentUserError = currentUserQuery.error
   const projectsQuery = useProjectsQuery()
   const projects = projectsQuery.data?.data ?? []
   const urlSelectedProjectId = selectedProjectIdFromSearch(location.searchStr)
@@ -155,10 +159,10 @@ export function WorkbenchProvider({ children }: { children: ReactNode }) {
   )
 
   useEffect(() => {
-    if (bootstrapError instanceof ApiError && bootstrapError.status === 401) {
+    if (currentUserError instanceof ApiError && currentUserError.status === 401) {
       void handleAuthExpired()
     }
-  }, [bootstrapError, handleAuthExpired])
+  }, [currentUserError, handleAuthExpired])
 
   useEffect(() => {
     if (!projectsQuery.isSuccess) {
@@ -191,47 +195,48 @@ export function WorkbenchProvider({ children }: { children: ReactNode }) {
 
   const refreshProviderStatus = useCallback(async () => {
     await queryClient.invalidateQueries({
-      queryKey: workbenchBootstrapQueryKey,
+      queryKey: workbenchProviderStatusQueryKey,
     })
   }, [queryClient])
 
   const value = useMemo<WorkbenchContextValue>(
     () => ({
-      currentUser: bootstrapQuery.data?.currentUser ?? null,
+      currentUser: currentUserQuery.data ?? null,
       handleAuthExpired,
       projectListLoading: projectsQuery.isLoading || projectsQuery.isFetching,
       projects,
-      providerStatus: bootstrapQuery.data?.providerStatus ?? null,
-      providerStatusError: bootstrapQuery.isError
-        ? apiErrorMessage("Provider status unavailable", bootstrapError)
+      providerStatus: providerStatusQuery.data ?? null,
+      providerStatusError: providerStatusQuery.isError
+        ? apiErrorMessage("Provider status unavailable", providerStatusQuery.error)
         : "",
       providerStatusLoading:
-        bootstrapQuery.isLoading || bootstrapQuery.isFetching,
+        providerStatusQuery.isLoading || providerStatusQuery.isFetching,
       refreshProjects,
       refreshProviderStatus,
       selectedProject:
         projects.find((project) => project.id === selectedProjectId) ?? null,
       selectedProjectId,
       setSelectedProjectId,
-      status: bootstrapQuery.data?.status ?? null,
-      statusError: bootstrapQuery.isError ? "Data services unavailable" : "",
+      status: statusQuery.data ?? null,
+      statusError: statusQuery.isError ? "Data services unavailable" : "",
     }),
     [
-      bootstrapError,
-      bootstrapQuery.data?.currentUser,
-      bootstrapQuery.data?.providerStatus,
-      bootstrapQuery.data?.status,
-      bootstrapQuery.isError,
-      bootstrapQuery.isFetching,
-      bootstrapQuery.isLoading,
+      currentUserQuery.data,
       handleAuthExpired,
       projects,
+      providerStatusQuery.data,
+      providerStatusQuery.error,
+      providerStatusQuery.isError,
+      providerStatusQuery.isFetching,
+      providerStatusQuery.isLoading,
       projectsQuery.isFetching,
       projectsQuery.isLoading,
       refreshProjects,
       refreshProviderStatus,
       selectedProjectId,
       setSelectedProjectId,
+      statusQuery.data,
+      statusQuery.isError,
     ],
   )
 

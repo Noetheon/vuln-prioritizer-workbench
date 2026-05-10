@@ -337,6 +337,7 @@ def test_workbench_settings_use_workbench_storage_defaults(
         "IMPORT_UPLOAD_DIR",
         "REPORT_DIR",
         "PROVIDER_CACHE_DIR",
+        "WORKBENCH_LEGACY_STORAGE_FALLBACK",
     ):
         monkeypatch.delenv(name, raising=False)
 
@@ -349,7 +350,39 @@ def test_workbench_settings_use_workbench_storage_defaults(
     assert selected_settings.PROVIDER_CACHE_DIR == "data/workbench-provider-cache"
 
 
-def test_workbench_settings_keep_legacy_storage_when_existing_local_data_is_present(
+def test_workbench_settings_ignore_legacy_storage_without_explicit_fallback(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    for name in (
+        "SQLALCHEMY_DATABASE_URI",
+        "DATABASE_URL",
+        "POSTGRES_SERVER",
+        "IMPORT_UPLOAD_DIR",
+        "REPORT_DIR",
+        "PROVIDER_CACHE_DIR",
+        "WORKBENCH_LEGACY_STORAGE_FALLBACK",
+    ):
+        monkeypatch.delenv(name, raising=False)
+    (tmp_path / "template.db").write_text("", encoding="utf-8")
+    for legacy_dir in (
+        tmp_path / "data" / "template-import-uploads",
+        tmp_path / "data" / "template-reports",
+        tmp_path / "data" / "template-provider-cache",
+    ):
+        legacy_dir.mkdir(parents=True)
+        (legacy_dir / ".keep").write_text("legacy data\n", encoding="utf-8")
+
+    selected_settings = load_settings()
+
+    assert selected_settings.SQLALCHEMY_DATABASE_URI == "sqlite:///./workbench.db"
+    assert selected_settings.IMPORT_UPLOAD_DIR == "data/workbench-import-uploads"
+    assert selected_settings.REPORT_DIR == "data/workbench-reports"
+    assert selected_settings.PROVIDER_CACHE_DIR == "data/workbench-provider-cache"
+
+
+def test_workbench_settings_keep_legacy_storage_with_explicit_fallback(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
@@ -363,6 +396,7 @@ def test_workbench_settings_keep_legacy_storage_when_existing_local_data_is_pres
         "PROVIDER_CACHE_DIR",
     ):
         monkeypatch.delenv(name, raising=False)
+    monkeypatch.setenv("WORKBENCH_LEGACY_STORAGE_FALLBACK", "1")
     (tmp_path / "template.db").write_text("", encoding="utf-8")
     for legacy_dir in (
         tmp_path / "data" / "template-import-uploads",

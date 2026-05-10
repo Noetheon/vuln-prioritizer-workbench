@@ -3,7 +3,6 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from app.services.report_contracts import CSV_FINDINGS_COLUMNS
 from vuln_prioritizer.cli import app
 from vuln_prioritizer.reporting_workbench import (
     _csv_safe_cell,
@@ -18,6 +17,7 @@ from vuln_prioritizer.sarif_contract import (
     SARIF_WORKBENCH_FINGERPRINT_KEY,
 )
 from vuln_prioritizer.sarif_validation import validate_sarif_payload
+from vuln_prioritizer.workbench_report_contracts import CSV_FINDINGS_COLUMNS
 
 
 def test_cli_report_html_renders_from_analysis_json(

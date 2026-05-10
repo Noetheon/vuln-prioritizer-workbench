@@ -43,6 +43,7 @@ fi
 
 restore_host_artifacts() {
   ARTIFACT_RESTORE_ROOT="${ARTIFACT_RESTORE_ROOT:-.}"
+  validate_artifact_archive "$BACKUP_DIR/artifacts.tar"
   tar -C "$ARTIFACT_RESTORE_ROOT" -xf "$BACKUP_DIR/artifacts.tar"
 }
 
@@ -55,7 +56,42 @@ restore_compose_artifacts() {
     echo "Set WORKBENCH_BACKUP_CONTAINER or run from a started Docker Compose stack." >&2
     exit 2
   fi
+  validate_artifact_archive "$BACKUP_DIR/artifacts.tar"
   docker exec -i "$container" sh -c "tar -C /app -xf -" < "$BACKUP_DIR/artifacts.tar"
+}
+
+validate_artifact_archive() {
+  archive="$1"
+  if ! tar -tf "$archive" >/dev/null; then
+    echo "Artifact archive is not a readable tar file: $archive" >&2
+    exit 2
+  fi
+
+  bad_member="$(
+    tar -tf "$archive" | awk '
+      $0 == "" || $0 == "." || $0 ~ /^\// || $0 == ".." || $0 ~ /^\.\.\// || $0 ~ /\/\.\.(\/|$)/ {
+        print
+        exit
+      }
+    ' || true
+  )"
+  if [ -n "$bad_member" ]; then
+    echo "Refusing artifact archive with unsafe member path: $bad_member" >&2
+    exit 2
+  fi
+
+  bad_link="$(
+    tar -tvf "$archive" | awk '
+      substr($0, 1, 1) == "l" || substr($0, 1, 1) == "h" {
+        print
+        exit
+      }
+    ' || true
+  )"
+  if [ -n "$bad_link" ]; then
+    echo "Refusing artifact archive with symlink or hardlink member: $bad_link" >&2
+    exit 2
+  fi
 }
 
 if [ -f "$BACKUP_DIR/artifacts.tar" ]; then

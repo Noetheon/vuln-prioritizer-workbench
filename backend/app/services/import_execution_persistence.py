@@ -18,7 +18,7 @@ from app.domain.import_asset_context import asset_exposure_from_evidence as _ass
 from app.domain.import_asset_context import string_evidence as _string_evidence
 from app.importers.contracts import NormalizedOccurrence
 from app.repositories import AssetRepository, FindingRepository, RunRepository
-from app.services import WorkbenchAnalysisResult
+from app.services.analysis import WorkbenchAnalysisResult
 from app.services.import_execution_dedup import _dedup_key_parts, _finding_dedup_key
 from app.services.import_execution_persistence_attack import (
     _attack_context_defensive_note,

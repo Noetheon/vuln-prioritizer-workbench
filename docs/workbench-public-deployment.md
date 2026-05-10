@@ -238,14 +238,18 @@ container, so the default stack does not need to publish Postgres on the host.
 container, including the import-upload, report, provider-snapshot, and
 provider-cache Compose volumes.
 
-The backup script also includes historical `data/template-*` artifact
-directories when they still contain data and no explicit artifact path list is
-provided. They are compatibility paths for existing self-hosted installs, not a
-separate template-era Workbench runtime. API responses expose managed artifact
-IDs or relative references rather than container filesystem paths.
+The backup script uses Workbench-branded artifact roots by default. Historical
+`data/template-*` artifact directories and template-era Compose volume names are
+included only when `WORKBENCH_LEGACY_STORAGE_FALLBACK=1` is set, or when an
+explicit `WORKBENCH_ARTIFACT_PATHS` list names them. They are compatibility
+paths for existing self-hosted installs, not a separate template-era Workbench
+runtime. API responses expose managed artifact IDs or relative references rather
+than container filesystem paths.
 
 The script writes a timestamped directory under `./backups` unless `BACKUP_DIR`
-is set. Artifact paths are packed into `artifacts.tar`.
+is set. Artifact paths are packed into `artifacts.tar`. Restore validates the
+tar member list before extraction and refuses absolute paths, `..` traversal,
+symlink members, and hardlink members.
 
 ## Restore
 

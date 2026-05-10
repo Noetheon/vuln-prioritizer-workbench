@@ -8,8 +8,6 @@ from sqlmodel import Session
 
 from app.core.config import Settings
 from app.models import AnalysisRun, Project, Report
-from app.services import report_models as _report_models
-from app.services import report_renderers as _report_renderers
 from app.services.report_contracts import (
     EVIDENCE_BUNDLE_MANIFEST_SCHEMA_VERSION,
     REPORT_CONTENT_TYPE_CSV,
@@ -34,17 +32,20 @@ from app.services.report_contracts import (
     REPORT_KIND_TECHNICAL_MARKDOWN,
 )
 from app.services.report_models import (
-    MarkdownReportPayload as MarkdownReportPayload,
-)
-from app.services.report_models import (
+    MarkdownProviderSnapshot,
+    MarkdownReportFinding,
+    MarkdownReportPayload,
     ReportGenerationError,
+    ReportVerificationError,
 )
 from app.services.report_renderers import (
+    EXECUTIVE_REPORT_CSS,
     render_analysis_result_json,
     render_evidence_bundle_zip,
     render_findings_csv,
     render_html_executive_report,
     render_markdown_report,
+    verify_evidence_bundle_zip,
 )
 from app.services.report_sarif import render_sarif_report
 from app.services.report_service_attack import attack_navigator_layer, run_attack_contexts
@@ -56,12 +57,6 @@ from app.services.report_service_persistence import (
     persist_binary_report,
     persist_text_report,
 )
-
-MarkdownProviderSnapshot = _report_models.MarkdownProviderSnapshot
-MarkdownReportFinding = _report_models.MarkdownReportFinding
-ReportVerificationError = _report_models.ReportVerificationError
-EXECUTIVE_REPORT_CSS: str = _report_renderers.EXECUTIVE_REPORT_CSS
-verify_evidence_bundle_zip = _report_renderers.verify_evidence_bundle_zip
 
 __all__ = [
     "EXECUTIVE_REPORT_CSS",

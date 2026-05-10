@@ -15,6 +15,7 @@ CURRENT_PRODUCT_STATE_FILE = REPO_ROOT / "docs" / "current-product-state.md"
 DOCUMENTATION_MAP_FILE = REPO_ROOT / "docs" / "documentation-map.md"
 GITHUB_READINESS_FILE = REPO_ROOT / "docs" / "github-open-source-readiness.md"
 COMMUNITY_SETUP_FILE = REPO_ROOT / "docs" / "community_repository_setup.md"
+GITHUB_ISSUE_TEMPLATE_ROOT = REPO_ROOT / ".github" / "ISSUE_TEMPLATE"
 MAINTAINERS_FILE = REPO_ROOT / "MAINTAINERS.md"
 SUPPORT_FILE = REPO_ROOT / "SUPPORT.md"
 TEXT_SUFFIXES = {
@@ -87,6 +88,23 @@ def _tracked_text_corpus() -> str:
             continue
         chunks.append((REPO_ROOT / path).read_text(encoding="utf-8", errors="ignore"))
     return "\n".join(chunks)
+
+
+def _issue_template_labels() -> set[str]:
+    labels: set[str] = set()
+    for path in sorted(GITHUB_ISSUE_TEMPLATE_ROOT.glob("*.md")):
+        text = path.read_text(encoding="utf-8")
+        if not text.startswith("---"):
+            continue
+        try:
+            raw_metadata = text.split("---", 2)[1]
+        except IndexError:
+            continue
+        metadata = yaml.safe_load(raw_metadata) or {}
+        raw_labels = metadata.get("labels", "")
+        if isinstance(raw_labels, str):
+            labels.update(label.strip() for label in raw_labels.split(",") if label.strip())
+    return labels
 
 
 def test_mkdocs_nav_includes_all_public_markdown_pages() -> None:
@@ -164,6 +182,31 @@ def test_tracked_tree_excludes_local_artifacts() -> None:
             violations.append(path.as_posix())
 
     assert violations == []
+
+
+def test_gitignore_covers_workbench_runtime_artifacts() -> None:
+    gitignore = (REPO_ROOT / ".gitignore").read_text(encoding="utf-8")
+    required_runtime_roots = {
+        "data/workbench-import-uploads/",
+        "data/workbench-reports/",
+        "data/workbench-provider-cache/",
+        "data/provider-snapshots/",
+        "data/template-import-uploads/",
+        "data/template-reports/",
+        "data/template-provider-cache/",
+        "data/template-provider-snapshots/",
+    }
+
+    assert {path for path in required_runtime_roots if path not in gitignore} == set()
+
+
+def test_issue_template_labels_are_documented() -> None:
+    documented_labels = COMMUNITY_SETUP_FILE.read_text(encoding="utf-8")
+    undocumented_labels = {
+        label for label in _issue_template_labels() if f"`{label}`" not in documented_labels
+    }
+
+    assert undocumented_labels == set()
 
 
 def test_archives_have_entrypoints_and_public_evidence_tree_is_limited() -> None:
