@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 import yaml
 from paths import REPO_ROOT
@@ -17,7 +18,6 @@ MKDOCS_FILE = REPO_ROOT / "mkdocs.yml"
 VPW_082_EVIDENCE = REPO_ROOT / "archive" / "vpw-evidence" / "vpw-082-github-action-reports.md"
 SARIF_EXAMPLE = EXAMPLES_DIR / "code-scanning-sarif.yml"
 WORKBENCH_REPORT_EXAMPLE = EXAMPLES_DIR / "workbench-report-artifacts.yml"
-PARITY_ARTIFACT = REPO_ROOT / "build" / "cli-action-parity.json"
 
 ACTION_MODE_PARITY = {
     "analyze": {
@@ -210,7 +210,7 @@ def test_action_run_step_supports_multiline_inputs_and_snapshot_replay() -> None
     assert 'sarif_validation_path="$INPUT_OUTPUT_PATH"' in script
 
 
-def test_cli_action_parity_matrix_is_machine_checked() -> None:
+def test_cli_action_parity_matrix_is_machine_checked(tmp_path: Path) -> None:
     action = _load_action_definition()
     inputs = action["inputs"]
     mode_description = inputs["mode"]["description"]
@@ -236,13 +236,13 @@ def test_cli_action_parity_matrix_is_machine_checked() -> None:
         "attack_sources": [source.value for source in AttackSource],
         "rollup_by": [value.value for value in RollupBy],
     }
-    PARITY_ARTIFACT.parent.mkdir(parents=True, exist_ok=True)
-    PARITY_ARTIFACT.write_text(
+    parity_artifact_path = tmp_path / "cli-action-parity.json"
+    parity_artifact_path.write_text(
         json.dumps(parity_artifact, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
     )
 
-    assert PARITY_ARTIFACT.is_file()
+    assert json.loads(parity_artifact_path.read_text(encoding="utf-8")) == parity_artifact
 
 
 def test_action_run_step_wires_step_summary_outputs_and_report_html_mode() -> None:

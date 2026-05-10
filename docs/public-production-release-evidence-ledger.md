@@ -27,6 +27,9 @@ linked from an issue or PR.
 - The active browser Workbench runtime is `backend/app`.
 - The Python distribution intentionally ships both `backend/app/**` and
   `backend/src/vuln_prioritizer/**`.
+- The current package maturity classifier is `Development Status :: 4 - Beta`.
+  This means local-first CLI plus self-hosted Workbench readiness; it is not a
+  public-production certification.
 - The frontend generated OpenAPI client is `frontend/src/client/**`.
 - `frontend/src/api-client.ts` is a manual wrapper over the generated client,
   not generated output.
@@ -44,7 +47,7 @@ linked from an issue or PR.
 | Target | Purpose | Evidence |
 | --- | --- | --- |
 | `make dependency-audit` | Backend and frontend dependency audit | Python lock hygiene for audit and Docker runtime locks plus `pip-audit` on `backend/requirements.lock.txt`; npm audit on `frontend/package-lock.json` |
-| `make package-check` | Build, package-content, and metadata validation | `dist/*`, `twine check`, `build/package-contents.json` |
+| `make package-check` | Build, package-content, and metadata validation | `dist/*`, `twine check`, `build/package-contents.json`; package contents must include every tracked Workbench Alembic migration |
 | `make pipx-source-smoke` | Source-at-tag install path compatibility | pipx smoke output and generated smoke artifacts |
 | `make api-client-drift-check` | OpenAPI/generated-client compatibility | `scripts/generate-client.sh`; clean `frontend/src/client` diff |
 | `make docs-check` | Public documentation build | clean MkDocs build |

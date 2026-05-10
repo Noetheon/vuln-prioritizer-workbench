@@ -25,8 +25,10 @@ from app.core import rate_limit as rate_limit_module
 from app.core import retention as retention_module
 from app.core import security as security_module
 from app.core.config import Settings, settings
-from app.models import AuditEvent, User
+from app.models import AuditEvent, AuthSession, User
+from app.models.sessions import auth_session_public
 from app.repositories.reports import ReportRepository
+from app.repositories.sessions import AuthSessionRepository
 from app.services.analysis import AnalysisService, WorkbenchAnalysisError
 from app.services.import_artifacts import (
     resolve_workbench_attack_artifact_path,
@@ -404,6 +406,55 @@ def test_audit_sessions_route_lists_sessions_without_token_material(
     assert "jti" not in payload["data"][0]
 
 
+def test_auth_session_public_active_projection_tracks_expiry_and_revocation(
+    template_api_env: TemplateApiEnv,
+) -> None:
+    now = datetime.now(UTC)
+    with Session(template_api_env.engine) as session:
+        user = session.exec(select(User).where(User.email == settings.FIRST_SUPERUSER)).one()
+        records = [
+            AuthSession(
+                user_id=user.id,
+                jti_hash="active-session",
+                expires_at=now + timedelta(minutes=10),
+            ),
+            AuthSession(
+                user_id=user.id,
+                jti_hash="expired-session",
+                expires_at=now - timedelta(minutes=10),
+            ),
+            AuthSession(
+                user_id=user.id,
+                jti_hash="revoked-session",
+                expires_at=now + timedelta(minutes=10),
+                revoked_at=now - timedelta(minutes=1),
+            ),
+            AuthSession(
+                user_id=user.id,
+                jti_hash="expired-revoked-session",
+                expires_at=now - timedelta(minutes=10),
+                revoked_at=now - timedelta(minutes=1),
+            ),
+        ]
+        session.add_all(records)
+        session.commit()
+        for record in records:
+            session.refresh(record)
+
+        projected = {record.jti_hash: auth_session_public(record).active for record in records}
+        repository = AuthSessionRepository(session)
+
+        assert projected == {
+            "active-session": True,
+            "expired-session": False,
+            "revoked-session": False,
+            "expired-revoked-session": False,
+        }
+        assert repository.get_active_auth_session_by_hash("active-session") is not None
+        assert repository.get_active_auth_session_by_hash("expired-session") is None
+        assert repository.get_active_auth_session_by_hash("revoked-session") is None
+
+
 def test_workbench_database_readiness_reports_schema_edges(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -639,6 +690,7 @@ def test_analysis_service_error_and_snapshot_edge_paths(
         PROVIDER_CACHE_DIR=str(cache_dir),
         PROVIDER_SNAPSHOT_DIR=str(snapshot_dir),
         DEMO_PROVIDER_SNAPSHOT_ENABLED=True,
+        NVD_API_KEY_ENV="CUSTOM_NVD_KEY",
     )
 
     with Session(template_api_env.engine) as session:
@@ -662,7 +714,10 @@ def test_analysis_service_error_and_snapshot_edge_paths(
         )
         assert snapshot_id is not None
 
-        def raise_input_error(_request: object) -> object:
+        captured_request: dict[str, object] = {}
+
+        def raise_input_error(request: object) -> object:
+            captured_request["nvd_api_key_env"] = getattr(request, "nvd_api_key_env", None)
             raise ValueError("bad workbench input")
 
         monkeypatch.setattr("app.services.analysis.prepare_analysis", raise_input_error)
@@ -673,6 +728,7 @@ def test_analysis_service_error_and_snapshot_edge_paths(
                 locked_provider_data=False,
                 provider_snapshot_file=None,
             )
+        assert captured_request["nvd_api_key_env"] == "CUSTOM_NVD_KEY"
 
 
 def test_report_repository_lists_run_and_project_reports(

@@ -12,6 +12,12 @@ The repository ships releases through:
 - checked-in release notes under `docs/releases/`
 - GitHub Release artifacts built from the tagged tree
 
+The current package metadata uses `Development Status :: 4 - Beta`, meaning
+local-first CLI plus self-hosted Workbench readiness without public-production
+certification. Changing that classifier to `Production/Stable` requires the
+same candidate-specific evidence and residual-risk decision used for the
+public-production release ledger.
+
 The workflow already does the important trusted-publishing pieces:
 
 - it builds source and wheel distributions

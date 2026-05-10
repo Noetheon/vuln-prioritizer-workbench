@@ -23,6 +23,10 @@ import {
 
 export type EvidenceCenterProps = {
   selectedProject: ProjectPublic | null
+  selectedProjectId: string
+  projects: ProjectPublic[]
+  projectListLoading: boolean
+  onProjectChange: (id: string) => void
   selectedRunId: string
   onRunIdChange: (id: string) => void
   selectedReportRun: AnalysisRunPublic | null
@@ -53,11 +57,14 @@ export function EvidenceCenter({
   activeReportFormat,
   onCreateReport,
   onDownloadReport,
+  onProjectChange,
   onRunIdChange,
   onVerifyReport,
   projectListError,
+  projectListLoading,
   projectRuns,
   projectSummary,
+  projects,
   providerStatus,
   reportActionError,
   reportActionMessage,
@@ -69,6 +76,7 @@ export function EvidenceCenter({
   runsError,
   runsLoading,
   selectedProject,
+  selectedProjectId,
   selectedReportRun,
   selectedRunId,
   selectedRunSummary,
@@ -91,11 +99,15 @@ export function EvidenceCenter({
     <VpwPageContainer className="space-y-6 px-0 py-0">
       <RunContext
         isDemo={isDemo}
+        onProjectChange={onProjectChange}
         onRunIdChange={onRunIdChange}
         projectRuns={projectRuns}
+        projects={projects}
+        projectListLoading={projectListLoading}
         reportActionsEnabled={reportActionsEnabled}
         runsLoading={runsLoading}
         selectedProject={selectedProject}
+        selectedProjectId={selectedProjectId}
         selectedReportRun={selectedReportRun}
         selectedRunId={selectedRunId}
       />
@@ -149,21 +161,23 @@ export function EvidenceCenter({
         </div>
       </VpwSection>
 
-      <VpwSection>
-        <VpwSectionHeader
-          actions={
-            isDemo ? <VpwBadge tone="warning">Demo language</VpwBadge> : null
-          }
-          description="Decision-ready wording derived from the selected run summary."
-          title="Executive Decision"
-        />
-        <ExecutiveDecision
-          isDemo={isDemo}
-          projectSummary={projectSummary}
-          selectedReportRun={selectedReportRun}
-          selectedRunSummary={selectedRunSummary}
-        />
-      </VpwSection>
+      {isDemo || selectedReportRun ? (
+        <VpwSection>
+          <VpwSectionHeader
+            actions={
+              isDemo ? <VpwBadge tone="warning">Demo language</VpwBadge> : null
+            }
+            description="Decision-ready wording derived from the selected run summary."
+            title="Executive Decision"
+          />
+          <ExecutiveDecision
+            isDemo={isDemo}
+            projectSummary={projectSummary}
+            selectedReportRun={selectedReportRun}
+            selectedRunSummary={selectedRunSummary}
+          />
+        </VpwSection>
+      ) : null}
 
       <VpwSection>
         <VpwSectionHeader

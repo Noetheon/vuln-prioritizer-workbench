@@ -100,12 +100,24 @@ def test_template_scoped_service_tokens_gate_import_report_admin_and_revoke(
     assert read_projects.json()["count"] == 1
     assert read_projects.json()["data"][0]["id"] == project["id"]
 
+    admin_read_projects = client.get("/api/v1/projects/", headers=admin_headers)
+    assert admin_read_projects.status_code == 200, admin_read_projects.text
+    assert {item["id"] for item in admin_read_projects.json()["data"]} == {
+        project["id"],
+        other_project["id"],
+    }
+
     admin_created_project = client.post(
         "/api/v1/projects/",
         headers=admin_headers,
         json={"name": "Admin Token Project"},
     )
     assert admin_created_project.status_code == 200, admin_created_project.text
+    admin_project_delete = client.delete(
+        f"/api/v1/projects/{admin_created_project.json()['id']}",
+        headers=admin_headers,
+    )
+    assert admin_project_delete.status_code == 204, admin_project_delete.text
 
     read_project_update = client.patch(
         f"/api/v1/projects/{project['id']}",

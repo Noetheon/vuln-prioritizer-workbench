@@ -326,6 +326,7 @@ def test_template_backend_settings_load_product_env_defaults(
     monkeypatch.setenv("SECRET_KEY", "template-shell-secret-0123456789abcdef")
     monkeypatch.setenv("FIRST_SUPERUSER_PASSWORD", "template-shell-password-0123456789")
     monkeypatch.setenv("FRONTEND_HOST", "https://workbench.example.com")
+    monkeypatch.setenv("VULN_PRIORITIZER_NVD_API_KEY_ENV", "CUSTOM_NVD_KEY")
 
     selected_settings = load_settings()
 
@@ -339,6 +340,7 @@ def test_template_backend_settings_load_product_env_defaults(
         FIRST_SUPERUSER_PASSWORD="template-shell-password-0123456789",
         FRONTEND_HOST="https://workbench.example.com",
         BACKEND_CORS_ORIGINS=(),
+        NVD_API_KEY_ENV="CUSTOM_NVD_KEY",
     )
 
 
@@ -512,6 +514,15 @@ def test_template_backend_settings_reject_unknown_environment(monkeypatch) -> No
     monkeypatch.setenv("ENVIRONMENT", "qa")
 
     with pytest.raises(ValueError, match="ENVIRONMENT must be one of"):
+        load_settings()
+
+
+def test_template_backend_settings_reject_unsafe_nvd_api_key_env_name(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("VULN_PRIORITIZER_NVD_API_KEY_ENV", "not-safe")
+
+    with pytest.raises(ValueError, match="NVD API key environment variable name"):
         load_settings()
 
 

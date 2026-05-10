@@ -18,6 +18,8 @@ nav:
       - ATT&CK/TTP Methodology: attack-ttp-methodology.md
       - Reports and Evidence: reports-and-evidence.md
       - Demo Readiness: demo-readiness.md
+      - Threat Model and Readiness: workbench-threat-model.md
+      - Public Deployment Runbook: workbench-public-deployment.md
   - Submission Package:
       - Overview: submission/README.md
       - Concept: submission/concept.md
@@ -40,6 +42,7 @@ nav:
       - Provider Snapshot Replay: architecture/vpw-026-provider-snapshot-replay.md
       - Provider Data Quality Flags: architecture/vpw-027-provider-data-quality-flags.md
       - Provider Status API Card: architecture/vpw-028-provider-status-api-card.md
+      - Access Model and Admin Tokens: architecture/vpw-029-access-model-and-admin-tokens.md
       - Parser and Provider Extension Strategy: extension_strategy.md
   - Historical Reference:
       - Full Stack FastAPI Template Migration: full_stack_fastapi_template_migration.md
@@ -69,8 +72,6 @@ nav:
       - v1.0 Release Checklist: workbench-v1-release-checklist.md
       - Offline Demo Runbook: workbench-offline-demo.md
       - ATT&CK Methodology: workbench-attack-methodology.md
-      - Threat Model and Readiness: workbench-threat-model.md
-      - Public Deployment Runbook: workbench-public-deployment.md
   - Examples:
       - CVE List Import: cve-list-import.md
       - Generic Occurrence CSV Import: generic-occurrence-csv-import.md

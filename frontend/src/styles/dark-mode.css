@@ -2,84 +2,84 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    color: #e2e8f0;
-    background: #0d1518;
+    color: var(--vpw-text-primary);
+    background: var(--vpw-bg-app);
   }
 
   h1,
   h2 {
-    color: #f1f5f9;
+    color: var(--vpw-text-primary);
   }
 
   :root h3 {
-    color: #f1f5f9;
+    color: var(--vpw-text-primary);
   }
 
   .eyebrow {
-    color: #94a3b8;
+    color: var(--vpw-text-muted);
   }
 
   .status-dot {
-    background: #22c55e;
+    background: var(--vpw-green);
   }
 
   /* Tables */
   table {
-    border-color: #2d3b40;
+    border-color: var(--vpw-border-default);
   }
 
   th {
-    background: #1a2428;
-    color: #94a3b8;
-    border-color: #2d3b40;
+    background: var(--vpw-bg-panel);
+    color: var(--vpw-text-muted);
+    border-color: var(--vpw-border-default);
   }
 
   td {
-    border-color: #2d3b40;
-    color: #e2e8f0;
+    border-color: var(--vpw-border-default);
+    color: var(--vpw-text-primary);
   }
 
   tr:hover td {
-    background: #1e2d32;
+    background: color-mix(in srgb, var(--vpw-bg-panel) 82%, var(--vpw-teal));
   }
 
   /* Forms */
   :root input,
   :root select,
   :root textarea {
-    background: #1a2428;
-    border-color: #3b4f56;
-    color: #e2e8f0;
+    background: var(--vpw-bg-panel);
+    border-color: var(--vpw-border-strong);
+    color: var(--vpw-text-primary);
   }
 
   input::placeholder,
   textarea::placeholder {
-    color: #64748b;
+    color: var(--vpw-text-muted);
   }
 
   :root input:disabled,
   :root select:disabled {
-    background: #111d21;
-    color: #4b5563;
+    background: var(--vpw-bg-disabled);
+    color: var(--vpw-text-disabled);
   }
 
   /* Buttons */
   .secondary-action {
-    background: #1a2428;
-    border-color: #3b4f56;
-    color: #cbd5e1;
+    background: var(--vpw-bg-panel);
+    border-color: var(--vpw-border-strong);
+    color: var(--vpw-text-secondary);
   }
 
   .secondary-action:hover {
-    background: #243136;
-    border-color: #0f766e;
+    background: var(--vpw-border-subtle);
+    border-color: var(--vpw-teal);
   }
 
   /* Login page */
   .login-form input {
-    background: #111d21;
-    border-color: #3b4f56;
-    color: #e2e8f0;
+    background: var(--vpw-bg-disabled);
+    border-color: var(--vpw-border-strong);
+    color: var(--vpw-text-primary);
   }
 
   /* Risk badges stay high-contrast — no dark override needed for colored badges */

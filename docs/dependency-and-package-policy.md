@@ -14,14 +14,21 @@ This is the selected package story for the current tree. The package is not
 CLI-only, and README/release wording should not imply that `app/*` is an
 accidental inclusion.
 
+The current package maturity classifier is `Development Status :: 4 - Beta`.
+Treat that as local-first CLI plus self-hosted Workbench readiness, not public
+internet deployment certification. Moving to `Production/Stable` requires
+candidate-specific evidence in the public-production release ledger and release
+operations handoff.
+
 The package boundary is enforced by:
 
 - `backend/pyproject.toml`, where `tool.setuptools.packages.find.include`
   includes both `vuln_prioritizer*` and `app*`
-- `make package-check`, which builds the backend distributions, validates their
-  content with `scripts/check_package_contents.py`, runs `twine check`, installs
-  the built wheel into a temporary virtualenv, imports `app.main:create_app`, and
-  migrates a temporary Workbench database through Alembic head
+- `make package-check`, which builds the backend distributions, validates that
+  their content includes every tracked Workbench Alembic migration through
+  `scripts/check_package_contents.py`, runs `twine check`, installs the built
+  wheel into a temporary virtualenv, imports `app.main:create_app`, and migrates
+  a temporary Workbench database through Alembic head
 - `build/package-contents.json`, generated locally by the package-content check
 
 The sdist and wheel must contain `app/main.py`, `app/api/main.py`, and

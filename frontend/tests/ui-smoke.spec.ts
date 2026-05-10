@@ -17,6 +17,13 @@ test("smoke: imports renders", async ({ page }) => {
   await expect(
     page.getByRole("heading", { name: "Import Wizard" }),
   ).toBeVisible()
+  await expect(page.getByText("Provider and ATT&CK options")).toBeVisible()
+  await expect(page.getByLabel("Provider snapshot file")).toBeVisible()
+  await expect(page.getByLabel("ATT&CK source")).toBeVisible()
+  await page.getByRole("combobox", { name: "Input type" }).click()
+  await expect(page.getByRole("option", { name: "CycloneDX SBOM JSON" })).toBeVisible()
+  await expect(page.getByRole("option", { name: "Nessus XML" })).toBeVisible()
+  await page.keyboard.press("Escape")
 })
 
 test("smoke: findings renders", async ({ page }) => {

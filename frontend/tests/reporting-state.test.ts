@@ -14,6 +14,10 @@ const evidenceCenterSummaryFile = new URL(
   "../src/components/reports/EvidenceCenterSummary.tsx",
   import.meta.url,
 )
+const evidenceCenterDecisionFile = new URL(
+  "../src/components/reports/EvidenceCenterDecision.tsx",
+  import.meta.url,
+)
 const evidenceCenterManifestFile = new URL(
   "../src/components/reports/EvidenceCenterManifest.tsx",
   import.meta.url,
@@ -38,7 +42,8 @@ test("Evidence Center consumes selected run summaries and verification state", (
     .join("\n")
 
   assert.doesNotMatch(source, /void selectedRunSummary/)
-  assert.match(source, /selectedRunSummary \?\? projectSummary/)
+  assert.match(text(evidenceCenterFile), /isDemo \|\| selectedReportRun/)
+  assert.match(text(evidenceCenterDecisionFile), /isDemo \? DEMO_SUMMARY : selectedRunSummary/)
   assert.match(source, /verificationReportTarget/)
   assert.match(source, /verificationStatus/)
 })

@@ -80,6 +80,13 @@ The current web/API import path uses the same local input-format matrix as the C
 
 The Workbench threat model and readiness checklist are maintained in [workbench-threat-model.md](../workbench-threat-model.md). The current architecture includes local JWT browser sessions and scoped API tokens, assumes a trusted local operator, supports SQLite default storage, and does not certify public-internet exposure until the shared-deployment controls are configured and verified.
 
+The current project access decision is documented in
+[VPW-029 Access Model and Admin Tokens](vpw-029-access-model-and-admin-tokens.md):
+browser users use owner/superuser visibility, non-admin service tokens are
+project-scoped, and `admin` service tokens are global root-equivalent automation
+credentials. Project membership tables and project-admin RBAC are not part of
+the current local-first scope.
+
 ### Input normalization
 
 `backend/src/vuln_prioritizer/inputs/loader.py` is the canonical input entry point.

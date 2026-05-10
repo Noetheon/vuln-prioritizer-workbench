@@ -9,11 +9,18 @@ from pathlib import Path
 from typing import Literal, cast
 from urllib.parse import quote_plus, urlparse
 
+from app.core.password_policy import (
+    DEFAULT_WORKBENCH_SECRET,
+    LOCAL_WORKBENCH_PASSWORD_PLACEHOLDER,
+    LOCAL_WORKBENCH_SECRET_PLACEHOLDER,
+    MIN_WORKBENCH_PASSWORD_LENGTH,
+    PasswordPolicyInput,
+    password_policy_violations,
+)
+from vuln_prioritizer.config import DEFAULT_NVD_API_KEY_ENV, validate_env_var_name
+
 EnvironmentName = Literal["local", "staging", "production"]
 VALID_ENVIRONMENTS: set[str] = {"local", "staging", "production"}
-DEFAULT_WORKBENCH_SECRET = "changethis"
-LOCAL_WORKBENCH_SECRET_PLACEHOLDER = "local-workbench-dev-secret"
-LOCAL_WORKBENCH_PASSWORD_PLACEHOLDER = "local-workbench-dev-password"
 LOCAL_WORKBENCH_POSTGRES_PASSWORD_PLACEHOLDER = "local-workbench-dev-postgres-password"
 INSECURE_WORKBENCH_SECRET_VALUES = {
     "",
@@ -42,7 +49,7 @@ DEFAULT_PROVIDER_CACHE_DIR = "data/workbench-provider-cache"
 LEGACY_PROVIDER_CACHE_DIR = "data/template-provider-cache"
 LEGACY_STORAGE_FALLBACK_ENV = "WORKBENCH_LEGACY_STORAGE_FALLBACK"
 MIN_SECRET_KEY_LENGTH = 32
-MIN_FIRST_SUPERUSER_PASSWORD_LENGTH = 16
+MIN_FIRST_SUPERUSER_PASSWORD_LENGTH = MIN_WORKBENCH_PASSWORD_LENGTH
 DEFAULT_API_TOKEN_EXPIRE_DAYS = 90
 
 
@@ -64,6 +71,7 @@ class Settings:
     REPORT_DIR: str = DEFAULT_REPORT_DIR
     PROVIDER_SNAPSHOT_DIR: str = "data"
     PROVIDER_CACHE_DIR: str = DEFAULT_PROVIDER_CACHE_DIR
+    NVD_API_KEY_ENV: str = DEFAULT_NVD_API_KEY_ENV
     ATTACK_ARTIFACT_DIR: str = "data/attack"
     DEMO_PROVIDER_SNAPSHOT_ENABLED: bool = False
     MAX_UPLOAD_MB: int = 25
@@ -91,6 +99,14 @@ class Settings:
         object.__setattr__(self, "ENVIRONMENT", environment)
         object.__setattr__(self, "ALLOWED_HOSTS", allowed_hosts)
         object.__setattr__(self, "TRUSTED_PROXY_CIDRS", trusted_proxy_cidrs)
+        object.__setattr__(
+            self,
+            "NVD_API_KEY_ENV",
+            validate_env_var_name(
+                self.NVD_API_KEY_ENV,
+                label="NVD API key environment variable name",
+            ),
+        )
         _validate_secret_defaults(self)
         frontend_host, cors_origins = _validate_cors_origins(
             self.FRONTEND_HOST,
@@ -217,6 +233,10 @@ def load_settings() -> Settings:
             "PROVIDER_CACHE_DIR",
             DEFAULT_PROVIDER_CACHE_DIR,
             LEGACY_PROVIDER_CACHE_DIR,
+        ),
+        NVD_API_KEY_ENV=environ.get(
+            "VULN_PRIORITIZER_NVD_API_KEY_ENV",
+            DEFAULT_NVD_API_KEY_ENV,
         ),
         ATTACK_ARTIFACT_DIR=environ.get("ATTACK_ARTIFACT_DIR", "data/attack"),
         DEMO_PROVIDER_SNAPSHOT_ENABLED=_bool_from_env(
@@ -461,12 +481,14 @@ def _weak_secret_fields(settings: Settings) -> list[str]:
     weak_fields: list[str] = []
     if len(settings.SECRET_KEY.strip()) < MIN_SECRET_KEY_LENGTH:
         weak_fields.append("SECRET_KEY")
-    password = settings.FIRST_SUPERUSER_PASSWORD.strip()
-    if len(password) < MIN_FIRST_SUPERUSER_PASSWORD_LENGTH:
-        weak_fields.append("FIRST_SUPERUSER_PASSWORD")
-    if password.lower() == settings.FIRST_SUPERUSER.strip().lower():
-        weak_fields.append("FIRST_SUPERUSER_PASSWORD")
-    if password and password == settings.SECRET_KEY:
+    if password_policy_violations(
+        PasswordPolicyInput(
+            password=settings.FIRST_SUPERUSER_PASSWORD,
+            username=settings.FIRST_SUPERUSER,
+            secret_key=settings.SECRET_KEY,
+            allow_local_bootstrap_default=not _secret_policy_applies(settings),
+        )
+    ):
         weak_fields.append("FIRST_SUPERUSER_PASSWORD")
     return weak_fields
 
