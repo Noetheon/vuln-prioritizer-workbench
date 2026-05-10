@@ -215,7 +215,10 @@ def rate_limit_client_host(request: Request, settings: Settings) -> str:
     """Return the client host used for rate-limit buckets."""
     direct_host = request.client.host if request.client else "unknown"
     if _is_trusted_proxy_host(direct_host, settings.TRUSTED_PROXY_CIDRS):
-        forwarded_host = _forwarded_for_host(request.headers.get("x-forwarded-for"))
+        forwarded_host = _forwarded_for_host(
+            request.headers.get("x-forwarded-for"),
+            settings.TRUSTED_PROXY_CIDRS,
+        )
         if forwarded_host:
             return forwarded_host
     return direct_host
@@ -244,10 +247,25 @@ def _is_trusted_proxy_host(host: str, trusted_proxy_cidrs: tuple[str, ...]) -> b
     return False
 
 
-def _forwarded_for_host(header_value: str | None) -> str | None:
+def _forwarded_for_host(
+    header_value: str | None,
+    trusted_proxy_cidrs: tuple[str, ...] = (),
+) -> str | None:
     if not header_value:
         return None
-    candidate = header_value.split(",", maxsplit=1)[0].strip().strip('"')
+    forwarded_hosts = [
+        parsed_host
+        for raw_candidate in header_value.split(",")
+        if (parsed_host := _parse_forwarded_for_host(raw_candidate)) is not None
+    ]
+    for forwarded_host in reversed(forwarded_hosts):
+        if not _is_trusted_proxy_host(forwarded_host, trusted_proxy_cidrs):
+            return forwarded_host
+    return forwarded_hosts[-1] if forwarded_hosts else None
+
+
+def _parse_forwarded_for_host(raw_candidate: str) -> str | None:
+    candidate = raw_candidate.strip().strip('"')
     if candidate.startswith("[") and "]" in candidate:
         candidate = candidate[1 : candidate.index("]")]
     elif candidate.count(":") == 1 and "." in candidate.rsplit(":", maxsplit=1)[0]:

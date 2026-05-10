@@ -21,7 +21,7 @@ from app.models import (
     AssetsPublic,
     AssetUpdate,
 )
-from app.repositories import AssetRepository
+from app.repositories import AssetRepository, WaiverRepository
 from app.services.audit import record_audit_event
 from vuln_prioritizer.inputs.loader import load_asset_context_file
 
@@ -36,6 +36,7 @@ ASSET_CONTEXT_FIELDS = {
     "exposure",
     "criticality",
 }
+WAIVER_MATCH_CONTEXT_FIELDS = {"asset_key", "business_service"}
 
 
 @router.get("/projects/{project_id}/assets/", response_model=AssetsPublic)
@@ -70,6 +71,7 @@ def create_project_asset(
     """Create or upsert an asset for a visible project."""
     require_visible_project(session, current_user, project_id)
     asset = AssetRepository(session).create_asset(project_id=project_id, asset_in=asset_in)
+    WaiverRepository(session).sync_project_waivers(project_id)
     record_audit_event(
         session,
         action="asset.create",
@@ -120,6 +122,7 @@ async def import_project_assets(
         project_id=project_id,
         catalog=catalog,
     )
+    WaiverRepository(session).sync_project_waivers(project_id)
     record_audit_event(
         session,
         action="asset.import",
@@ -157,6 +160,8 @@ def update_asset(
             asset_id=updated.id,
             changed_fields=changed_fields,
         )
+    if WAIVER_MATCH_CONTEXT_FIELDS.intersection(changed_fields):
+        WaiverRepository(session).sync_project_waivers(updated.project_id)
     record_audit_event(
         session,
         action="asset.update",
@@ -185,6 +190,7 @@ def recalculate_asset(
         raise HTTPException(status_code=404, detail="Asset not found")
     require_visible_project(session, current_user, asset.project_id)
     result = repository.recalculate_asset_findings(asset)
+    WaiverRepository(session).sync_project_waivers(asset.project_id)
     record_audit_event(
         session,
         action="asset.recalculate",

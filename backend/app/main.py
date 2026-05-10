@@ -195,7 +195,7 @@ async def _upload_size_guard(
 def _request_size_limit(path: str, active_settings: Settings) -> int | None:
     if _is_workbench_auth_body_path(path):
         return _AUTH_REQUEST_MAX_BYTES
-    if _is_workbench_upload_path(path):
+    if _is_workbench_upload_path(path, active_settings.API_V1_STR):
         return active_settings.max_upload_bytes + 64 * 1024
     return None
 
@@ -214,8 +214,9 @@ def _request_too_large_detail(path: str) -> str:
     return "Upload exceeds configured limit."
 
 
-def _is_workbench_upload_path(path: str) -> bool:
-    return path.startswith("/api/v1/projects/") and (
+def _is_workbench_upload_path(path: str, api_prefix: str) -> bool:
+    normalized_prefix = f"/{api_prefix.strip('/')}"
+    return path.startswith(f"{normalized_prefix}/projects/") and (
         path.endswith("/imports") or path.endswith("/assets/import")
     )
 

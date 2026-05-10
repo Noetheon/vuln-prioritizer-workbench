@@ -58,6 +58,8 @@ with `TRAEFIK_APP_ENABLED=true`.
 - Backend upload requests are bounded by
   `TRAEFIK_MAX_REQUEST_BODY_BYTES`, which should match or stay slightly above
   `MAX_UPLOAD_MB`.
+- Generated reports are bounded by `MAX_REPORT_MB` per artifact and
+  `MAX_REPORTS_PER_RUN` retained artifacts per analysis run.
 - Keep the Traefik dashboard disabled. If enabled for maintenance, set a narrow
   `TRAEFIK_DASHBOARD_IP_ALLOWLIST`.
 
@@ -185,6 +187,8 @@ Retention windows are configured through:
 AUDIT_RETENTION_DAYS=365
 SESSION_RETENTION_DAYS=30
 REVOKED_API_TOKEN_RETENTION_DAYS=365
+MAX_REPORT_MB=50
+MAX_REPORTS_PER_RUN=20
 ```
 
 Preview cleanup:
@@ -199,8 +203,11 @@ Apply cleanup:
 python -m app.core.retention
 ```
 
-Project deletion removes managed upload/report artifact trees for the project
-and writes an audit event with the removed and missing managed paths.
+Report generation rejects artifacts larger than `MAX_REPORT_MB` and prunes the
+oldest report artifact directories for the same run after
+`MAX_REPORTS_PER_RUN`. Project deletion removes managed upload/report artifact
+trees for the project and writes an audit event with the removed and missing
+managed paths.
 
 ## Backup
 

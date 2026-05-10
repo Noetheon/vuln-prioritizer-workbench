@@ -133,6 +133,51 @@ def test_upload_middleware_allows_streaming_body_within_limit() -> None:
     assert response.status_code == 200
 
 
+def test_upload_middleware_rejects_streaming_body_with_custom_api_prefix() -> None:
+    response = asyncio.run(
+        _run_upload_size_guard(
+            [
+                {
+                    "type": "http.request",
+                    "body": b"A" * (1024 * 1024),
+                    "more_body": True,
+                },
+                {
+                    "type": "http.request",
+                    "body": b"B" * (128 * 1024),
+                    "more_body": False,
+                },
+            ],
+            api_prefix="/api/custom",
+        )
+    )
+
+    assert response.status_code == 413
+
+
+def test_upload_middleware_rejects_asset_import_with_custom_api_prefix() -> None:
+    response = asyncio.run(
+        _run_upload_size_guard(
+            [
+                {
+                    "type": "http.request",
+                    "body": b"A" * (1024 * 1024),
+                    "more_body": True,
+                },
+                {
+                    "type": "http.request",
+                    "body": b"B" * (128 * 1024),
+                    "more_body": False,
+                },
+            ],
+            api_prefix="/api/custom",
+            route_suffix="/assets/import",
+        )
+    )
+
+    assert response.status_code == 413
+
+
 def test_import_upload_helper_edge_validations_and_safe_names(
     template_api_env: TemplateApiEnv,
     tmp_path: Path,
@@ -1323,6 +1368,37 @@ def test_import_upload_rejects_invalid_asset_context_sidecar_with_clear_error(
     assert findings.json()["count"] == 0
 
 
+def test_import_upload_rejects_unsafe_asset_context_regex_sidecar(
+    template_api_env: TemplateApiEnv,
+    tmp_path: Path,
+) -> None:
+    _configure_upload_dir(template_api_env, tmp_path)
+    headers = auth_headers(template_api_env.client)
+    project = create_project_via_api(template_api_env.client, headers)
+
+    response = template_api_env.client.post(
+        f"/api/v1/projects/{project['id']}/imports",
+        headers=headers,
+        data={"input_type": "generic-occurrence-csv"},
+        files={
+            "file": (
+                "occurrences.csv",
+                b"cve_id,asset_ref\nCVE-2024-3094,aaaaaaaaaaaaaaaaaaaaX\n",
+                "text/csv",
+            ),
+            "asset_context_file": (
+                "bad-asset-context.csv",
+                b"target_kind,target_ref,asset_id,match_mode\ngeneric,^(a+)+$,asset-redos,regex\n",
+                "text/csv",
+            ),
+        },
+    )
+
+    assert response.status_code == 422, response.text
+    assert response.json()["code"] == "import_asset_context_parse_failed"
+    assert "regex at row 1 is unsafe" in response.text
+
+
 def test_analysis_failure_persists_failed_run_without_partial_findings(
     monkeypatch: pytest.MonkeyPatch,
     template_api_env: TemplateApiEnv,
@@ -1879,6 +1955,13 @@ def test_xml_parse_errors_redact_local_upload_paths(
         (
             "assets.csv",
             "text/csv",
+            b"target_kind,target_ref,asset_id,match_mode\nhost,^(a+)+$,asset-redos,regex\n",
+            422,
+            "regex at row 1 is unsafe",
+        ),
+        (
+            "assets.csv",
+            "text/csv",
             b"A" * ((1024 * 1024) + 1),
             413,
             "Upload exceeds configured limit",
@@ -1976,9 +2059,14 @@ def _bearer_headers(token: str) -> dict[str, str]:
     return {"Authorization": f"Bearer {token}"}
 
 
-async def _run_upload_size_guard(messages: list[dict[str, object]]) -> Response:
+async def _run_upload_size_guard(
+    messages: list[dict[str, object]],
+    *,
+    api_prefix: str = "/api/v1",
+    route_suffix: str = "/imports",
+) -> Response:
     app = Starlette()
-    app.state.workbench_settings = Settings(MAX_UPLOAD_MB=1)
+    app.state.workbench_settings = Settings(MAX_UPLOAD_MB=1, API_V1_STR=api_prefix)
     message_iter = iter(messages)
 
     async def receive() -> dict[str, object]:
@@ -1990,7 +2078,7 @@ async def _run_upload_size_guard(messages: list[dict[str, object]]) -> Response:
             "client": ("testclient", 50000),
             "headers": [],
             "method": "POST",
-            "path": f"/api/v1/projects/{uuid.uuid4()}/imports",
+            "path": f"{api_prefix}/projects/{uuid.uuid4()}{route_suffix}",
             "query_string": b"",
             "scheme": "http",
             "server": ("testserver", 80),

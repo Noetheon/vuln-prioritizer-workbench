@@ -436,6 +436,20 @@ def test_template_rate_limit_uses_forwarded_client_only_from_trusted_proxy() -> 
 
     assert [attempt.status_code for attempt in trusted_attempts] == [400, 429, 400]
 
+    trusted_chain_attempts = [
+        trusted_proxy_client.post(
+            "/api/v1/login/access-token",
+            headers={"X-Forwarded-For": forwarded_for},
+            data={"username": settings.FIRST_SUPERUSER, "password": "wrong-password"},
+        )
+        for forwarded_for in (
+            "198.51.100.10, 203.0.113.9",
+            "198.51.100.11, 203.0.113.9",
+        )
+    ]
+
+    assert [attempt.status_code for attempt in trusted_chain_attempts] == [400, 429]
+
     untrusted_proxy_app = create_app(selected_settings)
     untrusted_proxy_client = _client(untrusted_proxy_app, client_addr=("192.0.2.10", 50000))
     untrusted_attempts = [
