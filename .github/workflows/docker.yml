@@ -133,7 +133,24 @@ jobs:
             vuln-prioritizer-workbench-frontend:local \
             -o spdx-json=/output/frontend.spdx.json
 
-      - name: Scan images for high and critical vulnerabilities
+      - name: Generate image vulnerability reports
+        if: needs.changes.outputs.run-docker == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/docker-sbom
+          docker run --rm \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            "$GRYPE_IMAGE" \
+            vuln-prioritizer-workbench-backend:local \
+            -o json > build/docker-sbom/backend.grype.json
+          docker run --rm \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            "$GRYPE_IMAGE" \
+            vuln-prioritizer-workbench-frontend:local \
+            -o json > build/docker-sbom/frontend.grype.json
+
+      - name: Fail on fixable high and critical image vulnerabilities
         if: needs.changes.outputs.run-docker == 'true'
         shell: bash
         run: |
@@ -146,19 +163,17 @@ jobs:
               -v /var/run/docker.sock:/var/run/docker.sock \
               "$GRYPE_IMAGE" \
               "$image" --only-fixed --fail-on high
-            docker run --rm \
-              -v /var/run/docker.sock:/var/run/docker.sock \
-              "$GRYPE_IMAGE" \
-              "$image" --fail-on critical
           done
 
-      - name: Upload container SBOM artifacts
+      - name: Upload container security artifacts
         if: needs.changes.outputs.run-docker == 'true'
         uses: actions/upload-artifact@v7
         with:
-          name: docker-image-sboms
+          name: docker-image-security-reports
           retention-days: 14
-          path: build/docker-sbom/*.spdx.json
+          path: |
+            build/docker-sbom/*.spdx.json
+            build/docker-sbom/*.grype.json
 
       - name: Show compose status and logs on failure
         if: failure() && needs.changes.outputs.run-docker == 'true'

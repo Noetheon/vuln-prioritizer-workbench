@@ -125,10 +125,12 @@ make docker-base-image-check
 ```
 
 The Docker workflow smoke-tests the built Workbench stack, emits SBOMs for the
-backend and frontend images with digest-pinned Syft, and gates Grype on fixable
-high/critical findings plus any critical finding. Public production release
-evidence still needs candidate-specific image digests and any required
-signing/provenance attestation for those exact images.
+backend and frontend images with digest-pinned Syft, emits full Grype JSON
+reports, and gates Grype on fixable high/critical findings. Non-fixable
+upstream base-image findings remain visible in the uploaded reports for
+maintainer triage without making the required PR smoke permanently red. Public
+production release evidence still needs candidate-specific image digests and
+any required signing/provenance attestation for those exact images.
 
 ## Dependabot Labels
 
