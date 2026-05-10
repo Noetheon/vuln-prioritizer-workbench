@@ -367,6 +367,7 @@ def test_vpw082_ci_action_smoke_runs_local_action_and_uploads_artifacts() -> Non
     )
 
     assert job["runs-on"] == "ubuntu-latest"
+    assert job["if"] == "github.event_name != 'pull_request'"
 
     local_action_steps = [step for step in steps if step.get("uses") == "./"]
     assert [step["id"] for step in local_action_steps] == [
@@ -410,6 +411,20 @@ def test_vpw082_ci_action_smoke_runs_local_action_and_uploads_artifacts() -> Non
     assert upload_step["with"]["name"] == "vpw-082-action-smoke-reports"
     assert "build/vpw-082-action-smoke/workbench-report.md" in upload_step["with"]["path"]
     assert "build/vpw-082-action-smoke/workbench-report.json" in upload_step["with"]["path"]
+
+
+def test_ci_pull_request_jobs_do_not_run_local_actions_with_token() -> None:
+    workflow = yaml.safe_load(CI_WORKFLOW.read_text(encoding="utf-8"))
+    for job_name, job in workflow["jobs"].items():
+        job_condition = str(job.get("if", ""))
+        local_action_steps = [
+            step for step in job.get("steps", []) if str(step.get("uses", "")).startswith("./")
+        ]
+        if local_action_steps:
+            assert "github.event_name != 'pull_request'" in job_condition, job_name
+        for step in job.get("steps", []):
+            if step.get("uses") == "actions/checkout@v6":
+                assert step.get("with", {}).get("persist-credentials") is False
 
 
 def test_vpw082_docs_and_evidence_link_the_action_report_flow() -> None:

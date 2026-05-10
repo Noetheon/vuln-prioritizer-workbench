@@ -59,6 +59,29 @@ def test_redact_value_and_api_error_projection_covers_embedded_container_paths()
     assert "[REDACTED-PATH]" in api_safe
 
 
+def test_redact_value_can_hide_sensitive_mapping_keys() -> None:
+    payload = {
+        "owner_counts": {
+            "token=ghp_super_secret_value": 1,
+            "/home/alice/prod-db": 2,
+        },
+    }
+
+    redacted, paths = redact_value(payload, redact_mapping_keys=True)
+    rendered = str(redacted)
+
+    assert "ghp_super_secret_value" not in rendered
+    assert "/home/alice" not in rendered
+    assert redacted["owner_counts"] == {
+        "[REDACTED-KEY]": "[REDACTED]",
+        "[REDACTED-KEY]-2": 2,
+    }
+    assert sorted(paths) == [
+        "owner_counts.[REDACTED-KEY]",
+        "owner_counts.[REDACTED-KEY]-2",
+    ]
+
+
 def test_database_url_and_string_redaction_edge_cases() -> None:
     assert redacted_database_url("postgresql://user:secret@localhost:5432/db") == (
         "postgresql://user:***@localhost:5432/db"

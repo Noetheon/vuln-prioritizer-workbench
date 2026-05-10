@@ -67,6 +67,8 @@ class Settings:
     ATTACK_ARTIFACT_DIR: str = "data/attack"
     DEMO_PROVIDER_SNAPSHOT_ENABLED: bool = False
     MAX_UPLOAD_MB: int = 25
+    MAX_REPORT_MB: int = 50
+    MAX_REPORTS_PER_RUN: int = 20
     RATE_LIMIT_ENABLED: bool = True
     API_RATE_LIMIT_PER_MINUTE: int = 600
     LOGIN_RATE_LIMIT_PER_MINUTE: int = 60
@@ -144,6 +146,11 @@ class Settings:
         """Return the configured per-file upload limit in bytes."""
         return self.MAX_UPLOAD_MB * 1024 * 1024
 
+    @property
+    def max_report_bytes(self) -> int:
+        """Return the configured generated-report artifact limit in bytes."""
+        return self.MAX_REPORT_MB * 1024 * 1024
+
 
 def parse_cors_origins(raw_origins: str) -> tuple[str, ...]:
     """Parse comma-separated CORS origins using the Workbench env var name."""
@@ -217,6 +224,8 @@ def load_settings() -> Settings:
             False,
         ),
         MAX_UPLOAD_MB=_positive_int_from_env("MAX_UPLOAD_MB", 25),
+        MAX_REPORT_MB=_positive_int_from_env("MAX_REPORT_MB", 50),
+        MAX_REPORTS_PER_RUN=_positive_int_from_env("MAX_REPORTS_PER_RUN", 20),
         RATE_LIMIT_ENABLED=_bool_from_env("RATE_LIMIT_ENABLED", True),
         API_RATE_LIMIT_PER_MINUTE=_positive_int_from_env("API_RATE_LIMIT_PER_MINUTE", 600),
         LOGIN_RATE_LIMIT_PER_MINUTE=_positive_int_from_env("LOGIN_RATE_LIMIT_PER_MINUTE", 60),

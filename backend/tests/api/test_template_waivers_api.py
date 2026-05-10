@@ -3,6 +3,7 @@ from __future__ import annotations
 import uuid
 from typing import Any
 
+import pytest
 from sqlmodel import Session
 from utils.template_workbench import (
     DEMO_CVE_LOG4SHELL,
@@ -173,6 +174,123 @@ def test_vpw064_template_waiver_scopes_match_finding_cve_asset_and_service(
     )
     assert listed.status_code == 200
     assert listed.json()["count"] == 4
+
+
+@pytest.mark.parametrize(
+    ("waiver_scope", "asset_update"),
+    [
+        ({"service": "checkout", "owner": "service-risk"}, {"business_service": "identity"}),
+        ({"asset_key": "payments-api", "owner": "asset-risk"}, {"asset_key": "renamed-api"}),
+    ],
+)
+def test_template_asset_context_changes_resync_waiver_state(
+    template_api_env: TemplateApiEnv,
+    waiver_scope: dict[str, str],
+    asset_update: dict[str, str],
+) -> None:
+    headers = auth_headers(template_api_env.client)
+    project = create_project_via_api(template_api_env.client, headers)
+    seeded = seed_finding_pair(
+        template_api_env.engine,
+        template_api_env.app_models,
+        template_api_env.repositories,
+        project_id=uuid.UUID(project["id"]),
+    )
+    finding_id = str(seeded["finding_ids"][0])
+    finding = template_api_env.client.get(f"/api/v1/findings/{finding_id}", headers=headers).json()
+    asset_id = finding["asset_id"]
+    asset_seed = template_api_env.client.patch(
+        f"/api/v1/assets/{asset_id}",
+        headers=headers,
+        json={"asset_key": "payments-api", "business_service": "checkout"},
+    )
+    assert asset_seed.status_code == 200, asset_seed.text
+
+    created = template_api_env.client.post(
+        f"/api/v1/projects/{project['id']}/waivers/",
+        headers=headers,
+        json={
+            **waiver_scope,
+            "reason": "Scope should clear when asset context no longer matches.",
+            "expires_at": "2099-12-31",
+            "approval_ref": "CAB-ASSET-SYNC",
+        },
+    )
+    assert created.status_code == 200, created.text
+    assert (
+        template_api_env.client.get(
+            f"/api/v1/findings/{finding_id}",
+            headers=headers,
+        ).json()["waived"]
+        is True
+    )
+
+    changed = template_api_env.client.patch(
+        f"/api/v1/assets/{asset_id}",
+        headers=headers,
+        json=asset_update,
+    )
+
+    assert changed.status_code == 200, changed.text
+    refreshed = template_api_env.client.get(f"/api/v1/findings/{finding_id}", headers=headers)
+    assert refreshed.status_code == 200
+    finding_payload = refreshed.json()
+    assert finding_payload["status"] == "open"
+    assert finding_payload["waived"] is False
+    assert "waiver" not in finding_payload["evidence_json"]
+
+
+def test_template_asset_context_import_resyncs_waiver_state(
+    template_api_env: TemplateApiEnv,
+) -> None:
+    headers = auth_headers(template_api_env.client)
+    project = create_project_via_api(template_api_env.client, headers)
+    seeded = seed_finding_pair(
+        template_api_env.engine,
+        template_api_env.app_models,
+        template_api_env.repositories,
+        project_id=uuid.UUID(project["id"]),
+    )
+    finding_id = str(seeded["finding_ids"][0])
+    finding = template_api_env.client.get(f"/api/v1/findings/{finding_id}", headers=headers).json()
+    asset_id = finding["asset_id"]
+    asset_seed = template_api_env.client.patch(
+        f"/api/v1/assets/{asset_id}",
+        headers=headers,
+        json={"asset_key": "payments-api", "business_service": "checkout"},
+    )
+    assert asset_seed.status_code == 200, asset_seed.text
+    waiver = template_api_env.client.post(
+        f"/api/v1/projects/{project['id']}/waivers/",
+        headers=headers,
+        json={
+            "service": "checkout",
+            "owner": "service-risk",
+            "reason": "Import should clear this service scope.",
+            "expires_at": "2099-12-31",
+            "approval_ref": "CAB-ASSET-IMPORT-SYNC",
+        },
+    )
+    assert waiver.status_code == 200, waiver.text
+
+    context_csv = "\n".join(
+        [
+            "target_kind,target_ref,asset_id,business_service",
+            "host,payments-api,payments-api,identity",
+            "",
+        ]
+    ).encode()
+    imported = template_api_env.client.post(
+        f"/api/v1/projects/{project['id']}/assets/import",
+        headers=headers,
+        files={"asset_context_file": ("asset-context.csv", context_csv, "text/csv")},
+    )
+
+    assert imported.status_code == 200, imported.text
+    refreshed = template_api_env.client.get(f"/api/v1/findings/{finding_id}", headers=headers)
+    assert refreshed.status_code == 200
+    assert refreshed.json()["status"] == "open"
+    assert refreshed.json()["waived"] is False
 
 
 def test_vpw064_template_waiver_validation_errors(template_api_env: TemplateApiEnv) -> None:

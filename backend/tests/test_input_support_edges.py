@@ -127,6 +127,13 @@ def test_asset_context_rule_match_rejects_kind_mismatch_and_invalid_regex() -> N
         )
         is False
     )
+    assert (
+        _asset_context_rule_matches(
+            _occurrence("a" * 30 + "X"),
+            SimpleNamespace(target_kind="host", target_ref="^(a+)+$", match_mode="regex"),
+        )
+        is False
+    )
 
 
 def test_finalize_occurrences_tracks_truncation_duplicates_and_source_summary() -> None:

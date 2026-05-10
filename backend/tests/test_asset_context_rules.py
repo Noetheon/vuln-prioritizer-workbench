@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from vuln_prioritizer.inputs._occurrence_support import apply_asset_context
 from vuln_prioritizer.inputs.loader import load_asset_context_file
 from vuln_prioritizer.models import InputOccurrence, PrioritizedFinding
@@ -222,6 +224,23 @@ def test_asset_context_invalid_regex_reports_row_number(tmp_path: Path) -> None:
         assert "regex at row 1 is invalid" in str(exc)
     else:  # pragma: no cover - defensive assertion for clearer failure output
         raise AssertionError("invalid regex should raise ValueError")
+
+
+def test_asset_context_unsafe_regex_reports_row_number(tmp_path: Path) -> None:
+    asset_context_file = tmp_path / "assets.csv"
+    asset_context_file.write_text(
+        "\n".join(
+            [
+                "rule_id,target_kind,target_ref,asset_id,match_mode,precedence",
+                "unsafe-regex,host,^(a+)+$,asset-regex,regex,20",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="regex at row 1 is unsafe"):
+        load_asset_context_file(asset_context_file)
 
 
 def test_asset_context_application_recomputes_operational_score(
