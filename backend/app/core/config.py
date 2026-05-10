@@ -73,6 +73,7 @@ class Settings:
     API_RATE_LIMIT_PER_MINUTE: int = 600
     LOGIN_RATE_LIMIT_PER_MINUTE: int = 60
     TOKEN_FAILURE_RATE_LIMIT_PER_MINUTE: int = 60
+    DECISION_API_MAX_FINDINGS: int = 1000
     API_TOKEN_DEFAULT_EXPIRE_DAYS: int = DEFAULT_API_TOKEN_EXPIRE_DAYS
     BACKGROUND_IMPORT_STALE_MINUTES: int = 120
     TRUSTED_PROXY_CIDRS: tuple[str, ...] = field(default_factory=tuple)
@@ -232,6 +233,7 @@ def load_settings() -> Settings:
             "TOKEN_FAILURE_RATE_LIMIT_PER_MINUTE",
             60,
         ),
+        DECISION_API_MAX_FINDINGS=_positive_int_from_env("DECISION_API_MAX_FINDINGS", 1000),
         API_TOKEN_DEFAULT_EXPIRE_DAYS=_positive_int_from_env(
             "API_TOKEN_DEFAULT_EXPIRE_DAYS",
             DEFAULT_API_TOKEN_EXPIRE_DAYS,

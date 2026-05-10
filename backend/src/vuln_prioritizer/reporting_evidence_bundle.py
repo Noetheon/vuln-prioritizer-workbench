@@ -36,10 +36,13 @@ from vuln_prioritizer.reporting_evidence_governance import (
 from vuln_prioritizer.reporting_evidence_inputs import (
     analysis_input_paths,
     input_hash_entry,
-    provider_snapshot_manifest_entry,
     resolve_analysis_input_path,
     safe_source_path_label,
     source_input_bundle_path,
+)
+from vuln_prioritizer.reporting_evidence_provider import (
+    provider_snapshot_manifest_entry,
+    resolve_provider_snapshot_path,
 )
 from vuln_prioritizer.security_redaction import redact_value
 from vuln_prioritizer.utils import iso_utc_now
@@ -88,7 +91,7 @@ def write_evidence_bundle(
             )
         )
     provider_snapshot_bundle_path = None
-    provider_snapshot_path = resolve_analysis_input_path(
+    provider_snapshot_path = resolve_provider_snapshot_path(
         metadata.get("provider_snapshot_file") if isinstance(metadata, dict) else None,
         analysis_path,
     )

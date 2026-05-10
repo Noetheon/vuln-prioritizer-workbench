@@ -87,6 +87,28 @@ def test_remediation_service_prefers_actionable_component_evidence() -> None:
     assert "widget 1.2.3 (package-lock.json) -> 1.2.0, 1.10.0, 2.0.0" in action
 
 
+def test_remediation_natural_sort_handles_long_numeric_chunks_without_int_conversion() -> None:
+    long_digits = "9" * 5000
+
+    remediation = RemediationService().derive(
+        [
+            _occurrence(
+                component_name="numeric-package",
+                component_version=f"1.{long_digits}",
+                package_type="python",
+                file_path=f"/srv/app/{long_digits}.py",
+                fix_versions=[f"2.{long_digits}"],
+            )
+        ]
+    )
+
+    assert remediation.strategy == "upgrade"
+    component = remediation.components[0]
+    assert component.name == "numeric-package"
+    assert component.current_version == f"1.{long_digits}"
+    assert component.fixed_versions == [f"2.{long_digits}"]
+
+
 def test_remediation_service_reviews_known_ecosystem_without_fix_versions() -> None:
     provenance = FindingProvenance(
         occurrences=[

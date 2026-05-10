@@ -782,6 +782,7 @@ def test_decision_api_endpoints_expose_explain_summary_and_cvss_comparison(
     comparison_response = template_api_env.client.get(
         f"/api/v1/projects/{project['id']}/compare/cvss-only",
         headers=headers,
+        params={"include_comparisons": True},
     )
     assert comparison_response.status_code == 200
     comparison_payload = comparison_response.json()
