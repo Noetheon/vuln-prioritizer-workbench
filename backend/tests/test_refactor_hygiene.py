@@ -275,10 +275,10 @@ def test_template_report_contracts_are_split_from_renderer_facade() -> None:
     assert len(service_payload_source.splitlines()) <= 130
     assert len(service_attack_source.splitlines()) <= 70
     assert len(service_persistence_source.splitlines()) <= 190
-    assert (
-        "from vuln_prioritizer.workbench_report_contracts import "
-        "CSV_FINDINGS_COLUMNS as CSV_FINDINGS_COLUMNS"
-    ) in contracts_source
+    assert "from vuln_prioritizer import workbench_report_contracts" in contracts_source
+    assert "CSV_FINDINGS_COLUMNS = _workbench_report_contracts.CSV_FINDINGS_COLUMNS" in (
+        contracts_source
+    )
     assert "CSV_FINDINGS_COLUMNS = [" not in api_reports_test_source
     assert (
         "from app.services.report_contracts import CSV_FINDINGS_COLUMNS" in api_reports_test_source
