@@ -56,6 +56,24 @@ from app.services.import_execution_persistence_queries import (
     _existing_findings_by_dedup_key,
 )
 
+__all__ = [
+    "DEDUP_DECISION_SAMPLE_LIMIT",
+    "_analysis_evidence_for_occurrence",
+    "_analysis_semantics_summary",
+    "_attack_context_defensive_note",
+    "_attack_context_review_status",
+    "_chunks",
+    "_chunks_any",
+    "_decision_payload_for_occurrence",
+    "_finding_status_for_occurrence",
+    "_jsonable_model",
+    "_persist_workbench_occurrences",
+    "_priority_state_for_occurrence",
+    "_suppressed_by_vex_for_occurrence",
+    "_technique_ids_from_context",
+    "_valid_attack_tactic_ids",
+]
+
 
 def _persist_workbench_occurrences(
     *,
