@@ -71,7 +71,7 @@ jobs:
               scripts/docker_quickstart_api_smoke.py|scripts/production_readiness_smoke.py|scripts/start*)
                 run_docker=true
                 ;;
-              package.json|bun.lock|frontend/package.json|frontend/package-lock.json)
+              package.json|frontend/package.json|frontend/package-lock.json)
                 run_docker=true
                 ;;
               frontend/nginx.conf|frontend/nginx-backend-not-found.conf)
@@ -93,6 +93,9 @@ jobs:
   compose-smoke:
     runs-on: ubuntu-latest
     needs: changes
+    env:
+      GRYPE_VERSION: v0.106.0
+      SYFT_VERSION: v1.40.0
 
     steps:
       - name: Skip Docker smoke for non-runtime PR
@@ -116,10 +119,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh \
-            | sh -s -- -b /usr/local/bin
-          curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh \
-            | sh -s -- -b /usr/local/bin
+          curl -sSfL "https://raw.githubusercontent.com/anchore/syft/${SYFT_VERSION}/install.sh" \
+            | sh -s -- -b /usr/local/bin "${SYFT_VERSION}"
+          curl -sSfL "https://raw.githubusercontent.com/anchore/grype/${GRYPE_VERSION}/install.sh" \
+            | sh -s -- -b /usr/local/bin "${GRYPE_VERSION}"
 
       - name: Generate image SBOMs
         if: needs.changes.outputs.run-docker == 'true'

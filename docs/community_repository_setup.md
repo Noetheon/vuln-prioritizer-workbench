@@ -76,6 +76,9 @@ These should exist before opening the repo to wider contribution:
 | --- | --- | --- |
 | `bug` | behavior is incorrect, regressed, or broken | Already used by the bug issue template. |
 | `type:feature` | a scoped product improvement is requested | Used by the feature request template. |
+| `type:parser` | parser, import-format, normalized-occurrence, or Workbench import workflow work | Used by the parser/import issue template. |
+| `type:provider` | enrichment provider, cache, snapshot, or provider freshness work | Used by the provider issue template. |
+| `type:attack` | defensive ATT&CK/TTP mapping, provenance, Navigator, or coverage review | Used by the ATT&CK mapping review template. |
 | `type:docs` | the main work is docs, examples, or guidance | Good candidate for low-risk external contributions. |
 | `type:task` | engineering work without standalone user-facing value | Useful for roadmap and release-readiness tracking. |
 | `type:security` | security hardening, threat modeling, or secure defaults | Public disclosures still use `SECURITY.md`, not public issue details. |

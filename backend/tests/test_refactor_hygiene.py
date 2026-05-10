@@ -118,6 +118,24 @@ def test_service_modules_do_not_import_cli_adapter_modules() -> None:
         }, path
 
 
+def test_app_service_modules_do_not_import_through_service_facade() -> None:
+    service_root = ROOT / "app" / "services"
+    violations: dict[str, list[int]] = {}
+    for path in sorted(service_root.rglob("*.py")):
+        if path.name == "__init__.py":
+            continue
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+        line_numbers = [
+            node.lineno
+            for node in ast.walk(tree)
+            if isinstance(node, ast.ImportFrom) and node.module == "app.services"
+        ]
+        if line_numbers:
+            violations[str(path.relative_to(ROOT))] = sorted(line_numbers)
+
+    assert violations == {}
+
+
 def test_template_backend_does_not_import_legacy_workbench_layers() -> None:
     backend_app_root = ROOT / "app"
     blocked_prefixes = (
@@ -225,6 +243,10 @@ def test_template_report_contracts_are_split_from_renderer_facade() -> None:
         encoding="utf-8"
     )
     sarif_source = (ROOT / "app/services/report_sarif.py").read_text(encoding="utf-8")
+    api_reports_test_source = (ROOT / "tests/api/test_template_reports_api.py").read_text(
+        encoding="utf-8"
+    )
+    cli_report_test_source = (ROOT / "tests/cli/test_report.py").read_text(encoding="utf-8")
 
     assert "app.services.report_contracts" in imports
     assert "app.services.report_models" in imports
@@ -253,7 +275,18 @@ def test_template_report_contracts_are_split_from_renderer_facade() -> None:
     assert len(service_payload_source.splitlines()) <= 130
     assert len(service_attack_source.splitlines()) <= 70
     assert len(service_persistence_source.splitlines()) <= 190
-    assert "CSV_FINDINGS_COLUMNS = [" in contracts_source
+    assert "from vuln_prioritizer import workbench_report_contracts" in contracts_source
+    assert "CSV_FINDINGS_COLUMNS = _workbench_report_contracts.CSV_FINDINGS_COLUMNS" in (
+        contracts_source
+    )
+    assert "CSV_FINDINGS_COLUMNS = [" not in api_reports_test_source
+    assert (
+        "from app.services.report_contracts import CSV_FINDINGS_COLUMNS" in api_reports_test_source
+    )
+    assert (
+        "from vuln_prioritizer.workbench_report_contracts import CSV_FINDINGS_COLUMNS"
+        in cli_report_test_source
+    )
     assert "REPORT_FILENAME_EVIDENCE_BUNDLE" in contracts_source
     assert "class MarkdownReportPayload" in models_source
     assert "def safe_cell" in formatting_source

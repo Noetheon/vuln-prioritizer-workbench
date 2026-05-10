@@ -47,6 +47,7 @@ class InputOccurrence(StrictModel):
     vex_source_record_id: str | None = None
     vex_source_path: str | None = None
     vex_candidate_count: int = 0
+    raw_evidence: dict[str, object] = Field(default_factory=dict, exclude=True)
 
 
 class InputSourceSummary(StrictModel):

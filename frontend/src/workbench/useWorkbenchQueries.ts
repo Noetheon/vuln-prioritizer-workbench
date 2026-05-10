@@ -55,6 +55,8 @@ function emptyFindingPage() {
   return { count: 0, data: [] as FindingPublic[] }
 }
 
+const ASSET_FINDINGS_PAGE_LIMIT = 500
+
 export function useProjectsQuery() {
   return useQuery({
     queryFn: () => ProjectsService.readProjects(),
@@ -184,14 +186,26 @@ export function useAssetFindingsQuery({
       if (!asset) {
         return [] as FindingPublic[]
       }
-      const page = await FindingsService.readProjectFindings({
-        asset_id: asset.id,
-        limit: 200,
-        offset: 0,
-        project_id: projectId,
-        sort: "operational",
-      })
-      return page.data.filter((finding) => matchesAsset(finding, asset))
+      const findings: FindingPublic[] = []
+      let offset = 0
+      let total = 0
+      let received = 0
+      do {
+        const page = await FindingsService.readProjectFindings({
+          asset_id: asset.id,
+          limit: ASSET_FINDINGS_PAGE_LIMIT,
+          offset,
+          project_id: projectId,
+          sort: "operational",
+        })
+        findings.push(
+          ...page.data.filter((finding) => matchesAsset(finding, asset)),
+        )
+        total = page.count
+        received = page.data.length
+        offset += received
+      } while (received > 0 && offset < total)
+      return findings
     },
     queryKey: workbenchQueryKeys.assetFindings(projectId, asset?.id ?? null),
     retry: false,

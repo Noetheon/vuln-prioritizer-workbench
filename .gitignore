@@ -47,7 +47,14 @@ Library/
 /data/*.db
 /data/*.sqlite
 /data/*.sqlite3
+data/workbench-import-uploads/
+data/workbench-reports/
+data/workbench-provider-cache/
+data/provider-snapshots/
 data/template-import-uploads/
+data/template-reports/
+data/template-provider-cache/
+data/template-provider-snapshots/
 backend/template.db
 
 # Build and packaging artifacts

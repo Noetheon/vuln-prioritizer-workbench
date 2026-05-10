@@ -75,11 +75,18 @@ test("workbench query keys normalize optional route and filter inputs", () => {
     "project-1",
     { owner: "team-a", service: "" },
   ])
-  assert.deepEqual(workbenchQueryKeys.bootstrap(), ["workbench", "bootstrap"])
+  assert.deepEqual(workbenchQueryKeys.currentUser(), [
+    "workbench",
+    "current-user",
+  ])
   assert.deepEqual(workbenchQueryKeys.findingDetail(null), [
     "workbench",
     "finding-detail",
     "none",
+  ])
+  assert.deepEqual(workbenchQueryKeys.providerStatus(), [
+    "workbench",
+    "provider-status",
   ])
   assert.deepEqual(workbenchQueryKeys.findings(findingsParams), [
     "workbench",
@@ -106,6 +113,7 @@ test("workbench query keys normalize optional route and filter inputs", () => {
     "run-detail",
     "run-1",
   ])
+  assert.deepEqual(workbenchQueryKeys.status(), ["workbench", "status"])
 })
 
 test("project list invalidation uses the shared project roots", async () => {
