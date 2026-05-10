@@ -3,33 +3,17 @@
 
 from __future__ import annotations
 
-from collections import Counter
 from typing import Any
 
 from vuln_prioritizer.reporting_executive_constants import (
     PRIORITY_ORDER,
     PRIORITY_TONES,
-    SECTION_NAV,
 )
 from vuln_prioritizer.reporting_executive_utils import (
-    _attack_label,
-    _attr,
-    _baseline_delta_label,
-    _basename,
-    _dict_value,
     _float_value,
-    _format_report_timestamp,
     _int_value,
-    _list_first,
-    _list_values,
     _pct,
-    _positive_int,
     _priority_label,
-    _provider_value,
-    _report_period,
-    _score,
-    _sha_preview,
-    _short_provider_date,
     _text,
     _truncate,
 )

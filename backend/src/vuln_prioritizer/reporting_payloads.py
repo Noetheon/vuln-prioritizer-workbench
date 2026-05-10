@@ -45,6 +45,29 @@ from vuln_prioritizer.services.baseline_comparison import (
     build_cvss_baseline_comparison_payload,
 )
 
+__all__ = [
+    "build_analysis_report_payload",
+    "build_snapshot_report_payload",
+    "generate_compare_json",
+    "generate_compact_summary_markdown",
+    "generate_doctor_json",
+    "generate_evidence_bundle_manifest_json",
+    "generate_evidence_bundle_verification_json",
+    "generate_explain_json",
+    "generate_json_report",
+    "generate_rollup_json",
+    "generate_sarif_report",
+    "generate_snapshot_diff_json",
+    "generate_state_history_json",
+    "generate_state_import_json",
+    "generate_state_init_json",
+    "generate_state_service_history_json",
+    "generate_state_top_services_json",
+    "generate_state_trends_json",
+    "generate_state_waivers_json",
+    "generate_summary_markdown",
+]
+
 
 def generate_json_report(
     findings: list[PrioritizedFinding],

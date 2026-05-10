@@ -11,7 +11,7 @@ export function ProviderStatusBadge({
 }: ProviderStatusBadgeProps) {
   const normalized = (status ?? "unknown").toLowerCase()
 
-  let tone: VpwBadgeTone = "neutral"
+  let tone: VpwBadgeTone
   let label = status ?? "Unknown"
 
   switch (normalized) {
@@ -33,8 +33,8 @@ export function ProviderStatusBadge({
       break
     case "loading":
     case "pending":
-      tone = "neutral"
       label = "Loading..."
+      tone = "neutral"
       break
     default:
       tone = "neutral"

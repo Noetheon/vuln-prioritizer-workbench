@@ -5,29 +5,18 @@ from __future__ import annotations
 
 import hashlib
 import json
-import ntpath
 import zipfile
-from collections.abc import Callable
 from pathlib import Path
-from typing import Any
 
 from pydantic import ValidationError
 
 from vuln_prioritizer.models import (
     EvidenceBundleFile,
-    EvidenceBundleGovernanceArtifact,
-    EvidenceBundleInputHash,
     EvidenceBundleManifest,
     EvidenceBundleVerificationItem,
     EvidenceBundleVerificationMetadata,
     EvidenceBundleVerificationSummary,
 )
-from vuln_prioritizer.reporter import (
-    generate_evidence_bundle_manifest_json,
-    generate_html_report,
-    generate_summary_markdown,
-)
-from vuln_prioritizer.security_redaction import redact_text, redact_value
 from vuln_prioritizer.utils import iso_utc_now
 
 DETERMINISTIC_ZIP_TIMESTAMP = (1980, 1, 1, 0, 0, 0)

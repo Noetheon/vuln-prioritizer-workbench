@@ -10,7 +10,7 @@ export function RiskBadge({ score, className }: RiskBadgeProps) {
     return <VpwBadge className={className}>N/A</VpwBadge>
   }
 
-  let tone: VpwBadgeTone = "info"
+  let tone: VpwBadgeTone
 
   if (score >= 90) {
     tone = "critical"
