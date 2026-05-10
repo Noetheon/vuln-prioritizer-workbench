@@ -380,7 +380,8 @@ def _natural_sort_key(value: str) -> tuple[object, ...]:
     parts: list[object] = []
     for chunk in re.findall(r"\d+|\D+", value.casefold()):
         if chunk.isdigit():
-            parts.append(int(chunk))
+            normalized = chunk.lstrip("0") or "0"
+            parts.append((0, len(normalized), normalized))
         else:
-            parts.append(chunk)
+            parts.append((1, chunk))
     return tuple(parts)

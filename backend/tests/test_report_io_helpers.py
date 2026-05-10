@@ -9,6 +9,7 @@ import pytest
 import typer
 from pydantic import ValidationError
 
+import vuln_prioritizer.reporting_evidence_verify as evidence_verify
 from vuln_prioritizer.cli_support.report_io import (
     analysis_input_paths,
     attack_navigator_layer_from_summary,
@@ -19,6 +20,7 @@ from vuln_prioritizer.cli_support.report_io import (
     load_analysis_report_payload,
     provider_snapshot_manifest_entry,
     resolve_analysis_input_path,
+    resolve_provider_snapshot_path,
     source_input_bundle_path,
     validate_evidence_manifest_structure,
     verify_evidence_bundle,
@@ -116,6 +118,60 @@ def test_verify_evidence_bundle_reports_manifest_structure_errors(tmp_path: Path
     assert any("same bundle member path" in item.detail for item in items)
 
 
+def test_verify_evidence_bundle_rejects_archive_level_limits(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(evidence_verify, "MAX_EVIDENCE_BUNDLE_MEMBERS", 1)
+    bundle = tmp_path / "too-many-members.zip"
+    _write_zip(bundle, {"manifest.json": b"{}", "extra.txt": b"ok"})
+
+    _, summary, items = evidence_verify.verify_evidence_bundle(bundle)
+
+    assert summary.ok is False
+    assert summary.manifest_errors == 1
+    assert items[0].path == "*"
+    assert "member verifier limit" in items[0].detail
+
+
+def test_verify_evidence_bundle_rejects_oversized_member_without_hashing(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(evidence_verify, "MAX_EVIDENCE_BUNDLE_MEMBER_BYTES", 10)
+    monkeypatch.setattr(evidence_verify, "MAX_EVIDENCE_BUNDLE_TOTAL_BYTES", 1000)
+    content = b"x" * 20
+    manifest_payload = {
+        "generated_at": "2026-04-24T10:00:00Z",
+        "source_analysis_path": "analysis.json",
+        "files": [
+            {
+                "path": "big.txt",
+                "kind": "analysis-json",
+                "size_bytes": len(content),
+                "sha256": hashlib.sha256(content).hexdigest(),
+            }
+        ],
+    }
+    bundle = tmp_path / "oversized-member.zip"
+    _write_zip(
+        bundle,
+        {
+            "manifest.json": json.dumps(manifest_payload).encode("utf-8"),
+            "big.txt": content,
+        },
+    )
+
+    _, summary, items = evidence_verify.verify_evidence_bundle(bundle)
+
+    assert summary.ok is False
+    assert summary.modified_files == 1
+    oversized = next(item for item in items if item.path == "big.txt")
+    assert oversized.status == "error"
+    assert oversized.actual_sha256 is None
+    assert "was not decompressed" in oversized.detail
+
+
 def test_verify_evidence_bundle_rejects_bad_zip(tmp_path: Path) -> None:
     bad_zip = tmp_path / "bad.zip"
     bad_zip.write_text("not a zip", encoding="utf-8")
@@ -185,6 +241,17 @@ def test_evidence_bundle_helper_functions_cover_manifest_and_path_edges(
         "sha256": "d" * 64,
         "path": "provider-snapshot.json",
     }
+    secret_snapshot = tmp_path / "secret-provider-snapshot.json"
+    secret_snapshot.write_text('{"secret": true}', encoding="utf-8")
+    assert resolve_provider_snapshot_path(str(secret_snapshot), analysis_file) is None
+    assert resolve_provider_snapshot_path("../secret-provider-snapshot.json", analysis_file) is None
+    assert provider_snapshot_manifest_entry(
+        {
+            "provider_snapshot_id": "snapshot-4",
+            "provider_snapshot_file": str(secret_snapshot),
+        },
+        analysis_path=analysis_file,
+    ) == {"id": "snapshot-4", "path": "secret-provider-snapshot.json"}
 
 
 def test_attack_navigator_layer_from_summary_filters_invalid_distribution_entries() -> None:
@@ -238,6 +305,40 @@ def test_write_evidence_bundle_handles_missing_input_copy_and_navigator_layer(
         names = set(archive.namelist())
         assert "attack-navigator-layer.json" in names
         assert not any(name.startswith("input/") for name in names)
+
+
+def test_write_evidence_bundle_does_not_hash_absolute_provider_snapshot_paths(
+    tmp_path: Path,
+) -> None:
+    secret_snapshot = tmp_path / "private-snapshot.json"
+    analysis_file = tmp_path / "analysis.json"
+    output_file = tmp_path / "evidence.zip"
+    secret_snapshot.write_text("local secret marker", encoding="utf-8")
+    payload = {
+        "metadata": {
+            "provider_snapshot_id": "attacker-controlled",
+            "provider_snapshot_file": str(secret_snapshot),
+        },
+        "findings": [],
+    }
+    analysis_file.write_text(json.dumps(payload), encoding="utf-8")
+
+    manifest = write_evidence_bundle(
+        analysis_path=analysis_file,
+        output_path=output_file,
+        payload=payload,
+        include_input_copy=False,
+    )
+
+    assert manifest.provider_snapshot == {
+        "id": "attacker-controlled",
+        "path": "private-snapshot.json",
+    }
+    with zipfile.ZipFile(output_file) as archive:
+        names = set(archive.namelist())
+        manifest_payload = json.loads(archive.read("manifest.json"))
+    assert "provider/provider-snapshot.json" not in names
+    assert "sha256" not in manifest_payload["provider_snapshot"]
 
 
 def test_write_evidence_bundle_redacts_windows_source_paths_in_manifest(

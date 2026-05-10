@@ -593,7 +593,7 @@ def test_cli_analyze_supports_locked_provider_snapshot_replay(
 
     assert result.exit_code == 0
     payload = json.loads(output_file.read_text(encoding="utf-8"))
-    assert payload["metadata"]["provider_snapshot_file"] == str(snapshot_file)
+    assert payload["metadata"]["provider_snapshot_file"] == snapshot_file.name
     assert payload["metadata"]["locked_provider_data"] is True
     assert payload["metadata"]["provider_snapshot_sources"] == ["nvd", "epss", "kev"]
     assert payload["metadata"]["max_provider_age_hours"] == 1000000

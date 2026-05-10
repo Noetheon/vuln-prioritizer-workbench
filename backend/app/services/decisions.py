@@ -95,17 +95,43 @@ def build_project_summary_payload(
     )
 
 
+def build_project_summary_payload_from_counts(
+    *,
+    project_id: uuid.UUID,
+    summary_counts: dict[str, Any],
+    latest_run: AnalysisRun | None,
+) -> ProjectDecisionSummaryPublic:
+    """Build a dashboard summary from pre-aggregated database counts."""
+    latest_run_summary = _dict_value(latest_run.summary_json if latest_run else None)
+    return ProjectDecisionSummaryPublic(
+        project_id=project_id,
+        finding_count=int(summary_counts.get("finding_count", 0)),
+        open_finding_count=int(summary_counts.get("open_finding_count", 0)),
+        counts_by_priority=_ordered_priority_counts(summary_counts.get("counts_by_priority")),
+        counts_by_status=_ordered_status_counts(summary_counts.get("counts_by_status")),
+        kev_hits=int(summary_counts.get("kev_hits", 0)),
+        epss_hits=int(summary_counts.get("epss_hits", 0)),
+        cvss_known_count=int(summary_counts.get("cvss_known_count", 0)),
+        provider_degraded=bool(latest_run_summary.get("provider_degraded", False)),
+        latest_run_id=latest_run.id if latest_run is not None else None,
+        latest_run_status=latest_run.status if latest_run is not None else None,
+        latest_run_summary=latest_run_summary,
+    )
+
+
 def build_cvss_only_comparison_payload(
     *,
     project_id: uuid.UUID,
     findings: Sequence[Finding],
     top_change_limit: int,
+    include_comparisons: bool = True,
 ) -> ProjectCvssOnlyComparisonPublic:
     """Build a typed CVSS-only comparison response for Workbench API clients."""
     payload = build_cvss_baseline_comparison_payload(
         [prioritized_finding_from_workbench(finding) for finding in findings],
         project_id=str(project_id),
         top_change_limit=top_change_limit,
+        include_comparisons=include_comparisons,
     )
     return ProjectCvssOnlyComparisonPublic.model_validate(payload)
 
@@ -147,6 +173,26 @@ def _counts_by_priority(findings: Sequence[Finding]) -> dict[str, int]:
 def _counts_by_status(findings: Sequence[Finding]) -> dict[str, int]:
     counts = Counter(str(finding.status) for finding in findings)
     return {status: counts.get(status, 0) for status in STATUS_LABELS}
+
+
+def _ordered_priority_counts(value: Any) -> dict[str, int]:
+    counts = Counter(
+        {
+            _priority_label(str(priority)): int(count)
+            for priority, count in _dict_value(value).items()
+        }
+    )
+    return {priority: counts.get(priority, 0) for priority in PRIORITY_LABELS}
+
+
+def _ordered_status_counts(value: Any) -> dict[str, int]:
+    counts = Counter(
+        {
+            str(status).split(".", maxsplit=1)[-1].strip().lower(): int(count)
+            for status, count in _dict_value(value).items()
+        }
+    )
+    return {status: int(counts.get(status, 0)) for status in STATUS_LABELS}
 
 
 def _data_quality_flags(
