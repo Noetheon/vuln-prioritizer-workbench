@@ -40,6 +40,7 @@ SECURITY_HEADERS = {
         "connect-src 'self'; frame-ancestors 'none'"
     ),
 }
+_AUTH_REQUEST_MAX_BYTES = 64 * 1024
 
 
 def custom_generate_unique_id(route: APIRoute) -> str:
@@ -143,9 +144,12 @@ async def _upload_size_guard(
     request: Request,
     call_next: Callable[[Request], Awaitable[Response]],
 ) -> Response:
-    if request.method == "POST" and _is_workbench_upload_path(request.url.path):
+    if request.method == "POST":
         active_settings = workbench_settings(request, required=False)
-        max_request_bytes = active_settings.max_upload_bytes + 64 * 1024
+        max_request_bytes = _request_size_limit(request.url.path, active_settings)
+        if max_request_bytes is None:
+            return await call_next(request)
+        limit_detail = _request_too_large_detail(request.url.path)
         raw_content_length = request.headers.get("content-length")
         if raw_content_length is not None:
             try:
@@ -157,7 +161,7 @@ async def _upload_size_guard(
                     status_code=413,
                     content=error_response_content(
                         status_code=413,
-                        detail="Upload exceeds configured limit.",
+                        detail=limit_detail,
                         request=request,
                     ),
                 )
@@ -181,11 +185,33 @@ async def _upload_size_guard(
                 status_code=413,
                 content=error_response_content(
                     status_code=413,
-                    detail="Upload exceeds configured limit.",
+                    detail=limit_detail,
                     request=request,
                 ),
             )
     return await call_next(request)
+
+
+def _request_size_limit(path: str, active_settings: Settings) -> int | None:
+    if _is_workbench_auth_body_path(path):
+        return _AUTH_REQUEST_MAX_BYTES
+    if _is_workbench_upload_path(path):
+        return active_settings.max_upload_bytes + 64 * 1024
+    return None
+
+
+def _is_workbench_auth_body_path(path: str) -> bool:
+    return (
+        path.endswith("/login/access-token")
+        or path.endswith("/login/logout")
+        or path.endswith("/login/test-token")
+    )
+
+
+def _request_too_large_detail(path: str) -> str:
+    if _is_workbench_auth_body_path(path):
+        return "Request body exceeds configured limit."
+    return "Upload exceeds configured limit."
 
 
 def _is_workbench_upload_path(path: str) -> bool:

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import secrets
 from datetime import timedelta
 from typing import Annotated
@@ -21,6 +22,8 @@ from app.services.audit import record_audit_event
 
 router = APIRouter(tags=["login"])
 DUMMY_PASSWORD_HASH = security.get_password_hash("vpw timing normalization password")
+_LOGIN_AUDIT_USERNAME_MAX_CHARS = 256
+_LOGIN_RATE_LIMIT_USERNAME_HASH_CHARS = 24
 
 
 @router.post("/login/access-token")
@@ -40,7 +43,7 @@ def login_access_token(
             action="login.failure",
             resource_type="auth_session",
             status="failure",
-            detail={"username": form_data.username},
+            detail={"username": _audit_username_hint(form_data.username)},
         )
         session.commit()
         raise HTTPException(status_code=400, detail="Incorrect email or password")
@@ -50,7 +53,10 @@ def login_access_token(
             action="login.failure",
             resource_type="auth_session",
             status="failure",
-            detail={"username": form_data.username, "reason": "inactive_user"},
+            detail={
+                "username": _audit_username_hint(form_data.username),
+                "reason": "inactive_user",
+            },
         )
         session.commit()
         raise HTTPException(status_code=400, detail="Incorrect email or password")
@@ -107,8 +113,9 @@ def _enforce_login_rate_limit(request: Request, username: str) -> None:
         return
     client_host = rate_limit_client_host(request, active_settings)
     normalized_username = username.strip().lower() or "unknown"
+    username_key = _rate_limit_username_key(normalized_username)
     decision = limiter.check(
-        f"login-user:{client_host}:{normalized_username}",
+        f"login-user:{client_host}:{username_key}",
         limit=active_settings.LOGIN_RATE_LIMIT_PER_MINUTE,
     )
     if not decision.allowed:
@@ -156,6 +163,18 @@ def _credentials_are_valid(user: User, username: str, password: str) -> bool:
     hash_to_verify = user.hashed_password if username_matches else DUMMY_PASSWORD_HASH
     password_matches = security.verify_password(password, hash_to_verify)
     return username_matches and password_matches
+
+
+def _audit_username_hint(username: str) -> str:
+    normalized = username.strip()
+    if not normalized:
+        return "unknown"
+    return normalized[:_LOGIN_AUDIT_USERNAME_MAX_CHARS]
+
+
+def _rate_limit_username_key(normalized_username: str) -> str:
+    digest = hashlib.sha256(normalized_username.encode("utf-8")).hexdigest()
+    return digest[:_LOGIN_RATE_LIMIT_USERNAME_HASH_CHARS]
 
 
 def _set_session_cookies(
