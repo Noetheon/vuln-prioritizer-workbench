@@ -40,7 +40,7 @@ export function SettingsTokenCreationResult({
         tone="success"
       >
         Save this one-time token now. It will be cleared when you leave Settings
-        and is not listed again.
+        or close this drawer and is not listed again.
       </VpwStatusBanner>
       <VpwField
         description="Reveal only long enough to store it in your secret manager."

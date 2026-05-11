@@ -1,3 +1,4 @@
+import { useLocation, useNavigate } from "@tanstack/react-router"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { type FormEvent, useEffect, useState } from "react"
 import {
@@ -6,6 +7,10 @@ import {
   type ApiTokenPublic,
 } from "../../api-client"
 import { SettingsRouteContainer } from "../../components/settings/SettingsRouteContainer"
+import {
+  normalizeSettingsTab,
+  type SettingsTab,
+} from "../../components/settings/settings-workbench-model"
 import { apiErrorMessage } from "../../lib/app-errors"
 import {
   type ApiTokenScope,
@@ -18,6 +23,8 @@ import { useApiTokensQuery } from "../useWorkbenchQueries"
 import { workbenchQueryKeys } from "../workbench-query-keys"
 
 function SettingsRouteContent() {
+  const location = useLocation()
+  const navigate = useNavigate()
   const queryClient = useQueryClient()
   const {
     currentUser,
@@ -38,6 +45,12 @@ function SettingsRouteContent() {
   const [apiTokenProjectId, setApiTokenProjectId] = useState("")
   const [createdApiToken, setCreatedApiToken] =
     useState<ApiTokenCreatePublic | null>(null)
+  const routeSearch = activeSearchString(location.searchStr)
+  const activeSettingsTab = normalizeSettingsTab(
+    new URLSearchParams(
+      routeSearch.startsWith("?") ? routeSearch.slice(1) : routeSearch,
+    ).get("tab"),
+  )
   const apiTokensQuery = useApiTokensQuery(true)
   const createApiTokenMutation = useMutation({
     mutationFn: (apiTokenCreate: {
@@ -66,6 +79,22 @@ function SettingsRouteContent() {
       return projects[0]?.id ?? ""
     })
   }, [apiTokenScopes, projects, selectedProjectId])
+
+  useEffect(() => {
+    if (activeSettingsTab !== "tokens") {
+      setCreatedApiToken(null)
+    }
+  }, [activeSettingsTab])
+
+  function updateSettingsTab(tab: SettingsTab) {
+    if (tab !== "tokens") {
+      setCreatedApiToken(null)
+    }
+    void navigate({
+      search: settingsRouteSearch(activeSearchString(location.searchStr), tab),
+      to: "/settings",
+    })
+  }
 
   function toggleApiTokenScope(scope: ApiTokenScope) {
     setApiTokenScopes((previousScopes) => {
@@ -135,6 +164,7 @@ function SettingsRouteContent() {
   return (
     <section className="w-full">
       <SettingsRouteContainer
+        activeSettingsTab={activeSettingsTab}
         apiTokenActionLoading={
           createApiTokenMutation.isPending || revokeApiTokenMutation.isPending
         }
@@ -154,10 +184,12 @@ function SettingsRouteContent() {
         apiTokensLoading={apiTokensQuery.isLoading || apiTokensQuery.isFetching}
         createdApiToken={createdApiToken}
         currentUser={currentUser}
+        onClearCreatedApiToken={() => setCreatedApiToken(null)}
         onApiTokenNameChange={setApiTokenName}
         onApiTokenProjectChange={setApiTokenProjectId}
         onCreateApiToken={createApiToken}
         onRevokeApiToken={(token) => void revokeApiToken(token)}
+        onSettingsTabChange={updateSettingsTab}
         onToggleApiTokenScope={toggleApiTokenScope}
         providerStatus={providerStatus}
         providerStatusError={providerStatusError}
@@ -171,4 +203,19 @@ function SettingsRouteContent() {
 
 export function SettingsRoute() {
   return <SettingsRouteContent />
+}
+
+function settingsRouteSearch(searchStr: string, tab: SettingsTab) {
+  const rawSearch = searchStr.startsWith("?") ? searchStr.slice(1) : searchStr
+  const params = new URLSearchParams(rawSearch)
+  if (tab === "overview") {
+    params.delete("tab")
+  } else {
+    params.set("tab", tab)
+  }
+  return Object.fromEntries(params.entries())
+}
+
+function activeSearchString(fallbackSearch: string) {
+  return typeof window === "undefined" ? fallbackSearch : window.location.search
 }
