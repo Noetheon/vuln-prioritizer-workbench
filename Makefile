@@ -57,9 +57,9 @@ performance-smoke:
 	VPW_PERFORMANCE_SMOKE=1 VPW_PERFORMANCE_SMOKE_OUTPUT=build/vpw-072-performance-smoke.json $(PYTHON) -m pytest -q $(BACKEND_TESTS)/performance/test_vpw072_performance_smoke.py --no-cov
 
 playwright-install: frontend-install
-	cd frontend && npm --workspaces=false exec playwright install chromium
+	cd frontend && npm --workspaces=false exec playwright install --with-deps chromium
 
-playwright-check: frontend-install
+playwright-check: playwright-install
 	cd frontend && npm run test
 
 frontend-install:
