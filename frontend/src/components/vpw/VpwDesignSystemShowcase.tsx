@@ -510,9 +510,9 @@ export function VpwDesignSystemShowcase() {
           <VpwKeyValueList
             columns={2}
             items={[
-              { label: "Container", value: "1600px max", tone: "info" },
+              { label: "Container", value: "1920px max", tone: "info" },
               { label: "Density", value: "40px standard rows" },
-              { label: "Radius", value: "4 / 8 / 12 / 16" },
+              { label: "Radius", value: "4 / 6 / 8 / 8" },
               { label: "Overlay", value: "Shadow 3", tone: "support" },
             ]}
           />

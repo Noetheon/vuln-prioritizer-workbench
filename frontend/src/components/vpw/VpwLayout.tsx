@@ -38,7 +38,9 @@ export function VpwSection({ children, className, ...props }: VpwSectionProps) {
 
 export function VpwGrid({ children, className, columns = 3 }: VpwGridProps) {
   return (
-    <div className={cn("grid gap-4", gridClass[columns], className)}>
+    <div
+      className={cn("grid min-w-0 gap-4 [&>*]:min-w-0", gridClass[columns], className)}
+    >
       {children}
     </div>
   )

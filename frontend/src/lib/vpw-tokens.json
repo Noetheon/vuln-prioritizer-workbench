@@ -42,9 +42,9 @@
   },
   "radius": {
     "sm": "4px",
-    "md": "8px",
-    "lg": "12px",
-    "xl": "16px",
+    "md": "6px",
+    "lg": "8px",
+    "xl": "8px",
     "pill": "9999px"
   },
   "shadow": {
@@ -54,7 +54,7 @@
     "3": "0 12px 24px rgba(2, 6, 23, 0.08)"
   },
   "layout": {
-    "maxWidth": "1600px",
+    "maxWidth": "1920px",
     "pagePadding": {
       "base": "1rem",
       "sm": "1.5rem",

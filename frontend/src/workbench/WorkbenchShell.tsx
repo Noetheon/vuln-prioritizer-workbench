@@ -2,8 +2,7 @@ import { type ReactNode, Suspense } from "react"
 import { useLocation } from "@tanstack/react-router"
 import { LoadingSkeleton } from "../components/states"
 import {
-  routeDetails,
-  unknownRouteDetail,
+  routeDetailFromPathname,
   workbenchPathFromPathname,
 } from "../lib/app-route-config"
 import type { WorkbenchPath } from "../lib/workbench-navigation"
@@ -15,8 +14,6 @@ type WorkbenchShellProps = {
   routePath?: WorkbenchPath | null
 }
 
-const routesWithStatusStrip = new Set<WorkbenchPath>(["/providers", "/settings"])
-
 function WorkbenchShellFrame({ children, routePath }: WorkbenchShellProps) {
   const location = useLocation()
   const {
@@ -26,20 +23,17 @@ function WorkbenchShellFrame({ children, routePath }: WorkbenchShellProps) {
     statusError,
   } = useWorkbenchContext()
   const activeRoutePath = routePath ?? workbenchPathFromPathname(location.pathname)
-  const routeDetail = activeRoutePath
-    ? routeDetails[activeRoutePath]
-    : unknownRouteDetail
-  const isFindingDetail =
-    activeRoutePath === "/findings" && /^\/findings\/[^/]+$/.test(location.pathname)
-  const hideStatusStrip =
-    !activeRoutePath || !routesWithStatusStrip.has(activeRoutePath)
+  const routeDetail = routeDetailFromPathname(
+    location.pathname,
+    activeRoutePath,
+  )
 
   return (
     <ProductAppShell
       activePath={activeRoutePath}
       currentUser={currentUser}
       eyebrow={routeDetail.eyebrow}
-      hideStatusStrip={hideStatusStrip || Boolean(isFindingDetail)}
+      hideStatusStrip
       providerStatus={providerStatus}
       status={status}
       statusError={statusError}
