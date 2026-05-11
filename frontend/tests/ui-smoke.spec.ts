@@ -15,12 +15,13 @@ test("smoke: imports renders", async ({ page }) => {
   await login(page)
   await page.goto("/imports")
   await expect(
-    page.getByRole("heading", { name: "Import Wizard" }),
+    page.getByRole("heading", { name: "Validate and ingest source evidence" }),
   ).toBeVisible()
+  await page.getByText("Advanced evidence controls").click()
   await expect(page.getByText("Provider and ATT&CK options")).toBeVisible()
   await expect(page.getByLabel("Provider snapshot file")).toBeVisible()
   await expect(page.getByLabel("ATT&CK source")).toBeVisible()
-  await page.getByRole("combobox", { name: "Input type" }).click()
+  await page.getByRole("combobox", { name: "Parser" }).click()
   await expect(page.getByRole("option", { name: "CycloneDX SBOM JSON" })).toBeVisible()
   await expect(page.getByRole("option", { name: "Nessus XML" })).toBeVisible()
   await page.keyboard.press("Escape")

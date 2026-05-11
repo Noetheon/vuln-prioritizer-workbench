@@ -262,6 +262,73 @@ test("mobile shell keeps compact health status without duplicate summary strip",
   await expectNoPageOverflow(page)
 })
 
+test("internal design-system route renders without overflow or framework errors", async ({
+  page,
+}) => {
+  const consoleErrors: string[] = []
+  const pageErrors: string[] = []
+  page.on("console", (message) => {
+    if (message.type() === "error") consoleErrors.push(message.text())
+  })
+  page.on("pageerror", (error) => pageErrors.push(error.message))
+
+  await routeWorkbenchShell(page, { projects: [mockProject] })
+  await page.setViewportSize({ height: 1440, width: 2560 })
+  await page.goto("/dev/design-system")
+
+  await expect(
+    page.getByRole("heading", { name: "Workbench Patterns" }).first(),
+  ).toBeVisible()
+  await expect(
+    page.getByRole("heading", { name: "Workbench Composition System" }),
+  ).toBeVisible()
+  await expectNoPageOverflow(page)
+  await expectNoGlobalStatusStrip(page)
+  await expectWqhdContainerBehavior(page, { height: 1440, width: 2560 })
+  expect(consoleErrors).toEqual([])
+  expect(pageErrors).toEqual([])
+})
+
+test("imports pilot keeps the primary workflow visible and advanced controls reachable", async ({
+  page,
+}) => {
+  await page.addInitScript((projectId) => {
+    window.localStorage.setItem("vpw.selectedProjectId", projectId)
+  }, mockProject.id)
+  await routeWorkbenchShell(page, { projects: [mockProject] })
+  await page.route(`**/api/v1/projects/${mockProject.id}/runs/`, (route) =>
+    route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({ count: 0, data: [] }),
+    }),
+  )
+  await page.route(`**/api/v1/projects/${mockProject.id}/runs/?*`, (route) =>
+    route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({ count: 0, data: [] }),
+    }),
+  )
+
+  await page.setViewportSize({ height: 1440, width: 2560 })
+  await page.goto("/imports")
+
+  await expect(
+    page.getByRole("heading", {
+      name: "Validate and ingest source evidence",
+    }),
+  ).toBeVisible()
+  await expect(page.getByRole("complementary", { name: "Import context" }))
+    .toBeVisible()
+  await expect(page.getByRole("button", { name: "Upload import" }))
+    .toBeDisabled()
+  await page.getByText("Advanced evidence controls").click()
+  await expect(page.getByLabel("Provider snapshot file")).toBeVisible()
+  await expect(page.getByLabel("ATT&CK source")).toBeVisible()
+  await expectNoPageOverflow(page)
+  await expectNoGlobalStatusStrip(page)
+  await expectWqhdContainerBehavior(page, { height: 1440, width: 2560 })
+})
+
 test("desktop shell keeps sidebar pinned while long content scrolls internally", async ({
   page,
 }) => {

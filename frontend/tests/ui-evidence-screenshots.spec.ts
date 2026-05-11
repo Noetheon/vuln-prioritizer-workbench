@@ -463,12 +463,29 @@ const authenticatedRoutes: readonly EvidenceRoute[] = [
   {
     assertReady: async (page) => {
       await expect(
-        page.getByRole("heading", { name: "Import Wizard" }),
+        page.getByRole("heading", {
+          name: "Validate and ingest source evidence",
+        }),
       ).toBeVisible({ timeout: 15_000 })
-      await expect(page.getByLabel("Input type")).toBeVisible()
+      await expect(page.getByLabel("Parser")).toBeVisible()
+      await expect(
+        page.getByText("Advanced evidence controls"),
+      ).toBeVisible()
     },
     id: "imports",
     path: "/imports",
+  },
+  {
+    assertReady: async (page) => {
+      await expect(
+        page.getByRole("heading", { name: "Complete Design Set" }),
+      ).toBeVisible({ timeout: 15_000 })
+      await expect(
+        page.getByRole("heading", { name: "Workbench Composition System" }),
+      ).toBeVisible()
+    },
+    id: "design-system",
+    path: "/dev/design-system",
   },
   {
     assertReady: async (page) => {

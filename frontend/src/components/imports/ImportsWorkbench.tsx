@@ -1,4 +1,4 @@
-import { VpwStatusBanner } from "@/components/vpw"
+import { VpwPageStack, VpwStatusBanner } from "@/components/vpw"
 import type { ImportsWorkbenchProps } from "./imports-workbench-model"
 import {
   ImportHero,
@@ -13,7 +13,7 @@ export function ImportsWorkbench(props: ImportsWorkbenchProps) {
   const hasProject = Boolean(props.selectedProjectId)
 
   return (
-    <div className="flex flex-col gap-6">
+    <VpwPageStack className="imports-page">
       <ImportHero
         importWizard={props.importWizard}
         projectListError={props.projectListError}
@@ -32,17 +32,17 @@ export function ImportsWorkbench(props: ImportsWorkbenchProps) {
         </VpwStatusBanner>
       ) : null}
       <ImportWizard {...props} />
-      <SupportedFormats
-        importWizard={props.importWizard}
-        onInputTypeChange={props.onInputTypeChange}
-        supportedFormats={props.supportedFormats}
-      />
       <ImportResult
         importRun={props.importRun}
         importRunSummary={props.importRunSummary}
       />
       <ParserErrors errors={props.importParseErrors} />
       <RecentImports {...props} />
-    </div>
+      <SupportedFormats
+        importWizard={props.importWizard}
+        onInputTypeChange={props.onInputTypeChange}
+        supportedFormats={props.supportedFormats}
+      />
+    </VpwPageStack>
   )
 }

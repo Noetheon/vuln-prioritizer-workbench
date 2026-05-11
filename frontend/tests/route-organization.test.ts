@@ -2,7 +2,10 @@ import assert from "node:assert/strict"
 import { readFileSync, readdirSync } from "node:fs"
 import test from "node:test"
 
-import { workbenchPathFromPathname } from "../src/lib/app-route-config.ts"
+import {
+  routeDetailFromPathname,
+  workbenchPathFromPathname,
+} from "../src/lib/app-route-config.ts"
 
 const routesDir = new URL("../src/routes/_layout/", import.meta.url)
 const authenticatedLayoutFile = new URL("../src/routes/_layout.tsx", import.meta.url)
@@ -83,6 +86,7 @@ test("WorkbenchPath, navigation, route details, and route adapters stay in sync"
     /\{\s*label:\s*"[^"]+",\s*icon:\s*[^,]+,\s*to:\s*"([^"]+)"/g,
   ).sort()
   const routeDetailPaths = uniqueMatches(routeDetails, /^\s+"([^"]+)":\s+\{/gm)
+    .filter((path) => path !== "/dev/design-system")
     .sort()
   const adapterPaths = readdirSync(routesDir)
     .filter((file) => file.endsWith(".tsx"))
@@ -117,8 +121,13 @@ test("Workbench route matching does not highlight dashboard for unknown paths", 
   assert.equal(workbenchPathFromPathname("/"), "/")
   assert.equal(workbenchPathFromPathname("/findings/demo-f1"), "/findings")
   assert.equal(workbenchPathFromPathname("/reports/exported/123"), "/reports")
+  assert.equal(workbenchPathFromPathname("/dev/design-system"), null)
   assert.equal(workbenchPathFromPathname("/findings-old"), null)
   assert.equal(workbenchPathFromPathname("/unknown"), null)
+  assert.equal(
+    routeDetailFromPathname("/dev/design-system", null).title,
+    "Workbench Patterns",
+  )
 })
 
 test("frontend unit test scripts automatically include every unit test file", () => {

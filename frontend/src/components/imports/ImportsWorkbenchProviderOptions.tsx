@@ -7,7 +7,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { VpwField, VpwPanel, VpwSectionHeader } from "@/components/vpw"
+import { VpwField, VpwSectionHeader } from "@/components/vpw"
 import { attackImportSourceOptions } from "@/lib/app-defaults"
 import type { ImportsWorkbenchProps } from "./imports-workbench-model"
 
@@ -28,7 +28,7 @@ export function ProviderAttackOptions({
   | "onProviderSnapshotFileChange"
 >) {
   return (
-    <VpwPanel className="flex flex-col gap-4 border-[var(--vpw-border-default)] bg-[var(--vpw-bg-card)] p-4">
+    <div className="flex flex-col gap-4">
       <VpwSectionHeader
         description="Optional deterministic enrichment from managed Workbench artifact directories."
         title="Provider and ATT&CK options"
@@ -50,12 +50,12 @@ export function ProviderAttackOptions({
           />
         </VpwField>
         <label
-          className="flex min-h-10 items-start gap-3 rounded-[var(--vpw-radius-md)] border border-[var(--vpw-border-default)] bg-[var(--vpw-bg-panel)] p-3 text-sm"
+          className="flex min-h-10 items-start gap-3 rounded-[var(--vpw-radius-md)] border border-[var(--vpw-border-default)] bg-[var(--vpw-surface-card)] p-3 text-sm"
           htmlFor="locked-provider-data"
         >
           <Input
             checked={importWizard.lockedProviderData}
-            className="mt-1 size-4 min-w-4 shrink-0 p-0 accent-[var(--vpw-blue)] shadow-none"
+            className="mt-1 size-4 min-w-4 shrink-0 p-0 accent-[var(--vpw-color-brand-primary)] shadow-none"
             id="locked-provider-data"
             name="lockedProviderData"
             onChange={(event) =>
@@ -133,6 +133,6 @@ export function ProviderAttackOptions({
           />
         </VpwField>
       </div>
-    </VpwPanel>
+    </div>
   )
 }

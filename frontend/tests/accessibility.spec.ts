@@ -163,7 +163,7 @@ test("authenticated shell exposes landmarks and account controls", async ({
 test("core authenticated routes have no serious accessibility violations", async ({
   page,
 }) => {
-  test.setTimeout(60_000)
+  test.setTimeout(90_000)
   await login(page)
 
   for (const [path, routeName] of [
@@ -176,6 +176,7 @@ test("core authenticated routes have no serious accessibility violations", async
     ["/providers", "providers"],
     ["/settings", "settings"],
     ["/waivers", "waivers"],
+    ["/dev/design-system", "design system"],
   ] as const) {
     await page.goto(path)
     await expect(page.getByRole("main")).toBeVisible()

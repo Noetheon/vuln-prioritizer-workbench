@@ -4,6 +4,7 @@ import {
   Download,
   FileArchive,
   FileText,
+  RefreshCw,
   ShieldCheck,
 } from "lucide-react"
 
@@ -40,6 +41,13 @@ import { VpwKeyValueList } from "./VpwKeyValueList"
 import { VpwGrid, VpwPanel, VpwSection } from "./VpwLayout"
 import { VpwMetricCard } from "./VpwMetricCard"
 import { VpwPageContainer } from "./VpwPageContainer"
+import {
+  VpwAdvancedOptionsDisclosure,
+  VpwContextRail,
+  VpwOutcomeSummary,
+  VpwTaskHero,
+  VpwWorkflowPanel,
+} from "./VpwPagePatterns"
 import { VpwProgress } from "./VpwProgress"
 import {
   VpwAssetContextCard,
@@ -112,7 +120,7 @@ const findingColumns: VpwDataTableColumn<ShowcaseFinding>[] = [
 
 export function VpwDesignSystemShowcase() {
   return (
-    <VpwPageContainer className="flex flex-col gap-8">
+    <VpwPageContainer className="flex min-w-0 flex-col gap-8 overflow-hidden px-0 py-0">
       <VpwSectionHeader
         actions={<VpwBadge tone="info">Foundation complete set</VpwBadge>}
         description="Reusable VPW tokens, product components, controls, data display, evidence patterns and product states."
@@ -127,6 +135,125 @@ export function VpwDesignSystemShowcase() {
           { label: "Complete set", current: true },
         ]}
       />
+
+      <VpwSection>
+        <VpwSectionHeader
+          description="Route compositions for primary workflows, dense data pages, detail views, settings and responsive workbench surfaces."
+          eyebrow="Page Patterns"
+          title="Workbench Composition System"
+        />
+        <VpwTaskHero
+          actions={
+            <>
+              <Button>
+                <RefreshCw aria-hidden="true" data-icon="inline-start" />
+                Run import
+              </Button>
+              <Button variant="outline">Review history</Button>
+            </>
+          }
+          description="Guide users through the next operational task first, with supporting evidence and technical controls kept nearby."
+          eyebrow="Workflow Page"
+          statusItems={[
+            { label: "Readiness", value: "Action needed", tone: "warning" },
+            { label: "Provider data", value: "Snapshot", tone: "info" },
+            { label: "Network", value: "Local only", tone: "success" },
+            { label: "Layout", value: "Mobile to WQHD" },
+          ]}
+          title="Normalize Scanner Inputs"
+        />
+        <div className="grid min-w-0 gap-4 [&>*]:min-w-0 xl:grid-cols-[minmax(0,1.35fr)_minmax(20rem,0.65fr)]">
+          <VpwWorkflowPanel
+            description="Primary path stays linear. Secondary evidence controls move into an explicit disclosure."
+            steps={[
+              {
+                label: "Select project",
+                description: "Scope the imported findings.",
+                state: "warning",
+              },
+              {
+                label: "Choose format",
+                description: "Match parser behavior.",
+                state: "complete",
+              },
+              {
+                label: "Attach file",
+                description: "Upload source evidence.",
+                state: "active",
+              },
+              {
+                label: "Validate",
+                description: "Record import outcome.",
+                state: "pending",
+              },
+            ]}
+            title="Primary Workflow"
+          >
+            <div className="grid min-w-0 gap-4 [&>*]:min-w-0 lg:grid-cols-2">
+              <VpwField htmlFor="pattern-project" label="Project">
+                <Input id="pattern-project" defaultValue="Payments Service" />
+              </VpwField>
+              <VpwField label="Input type">
+                <Select defaultValue="cve-list">
+                  <SelectTrigger aria-label="Pattern input type">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="cve-list">CVE list</SelectItem>
+                    <SelectItem value="sbom">SBOM</SelectItem>
+                  </SelectContent>
+                </Select>
+              </VpwField>
+            </div>
+            <div className="mt-4 flex flex-col gap-4">
+              <VpwAdvancedOptionsDisclosure
+                badge={<VpwBadge tone="neutral">Secondary</VpwBadge>}
+                description="Provider, VEX, asset and ATT&CK controls stay visible without dominating the first decision."
+                title="Advanced evidence controls"
+              >
+                <div className="grid min-w-0 gap-4 [&>*]:min-w-0 md:grid-cols-2">
+                  <VpwField
+                    htmlFor="pattern-provider-snapshot"
+                    label="Provider snapshot"
+                  >
+                    <Input
+                      id="pattern-provider-snapshot"
+                      defaultValue="demo_provider_snapshot.json"
+                    />
+                  </VpwField>
+                  <VpwField
+                    htmlFor="pattern-technique-metadata"
+                    label="Technique metadata"
+                  >
+                    <Input
+                      id="pattern-technique-metadata"
+                      placeholder="techniques.json"
+                    />
+                  </VpwField>
+                </div>
+              </VpwAdvancedOptionsDisclosure>
+              <VpwProgress label="Import readiness" tone="warning" value={60} />
+            </div>
+          </VpwWorkflowPanel>
+          <VpwContextRail label="Pattern context">
+            <VpwOutcomeSummary
+              description="Compact context replaces a wall of equal-weight status cards."
+              items={[
+                { label: "Evidence", value: "Partial", tone: "warning" },
+                { label: "Provider", value: "Needs sync", tone: "warning" },
+                { label: "Network", value: "No scanning", tone: "success" },
+              ]}
+              title="Context Rail"
+              tone="info"
+            />
+            <VpwOutcomeSummary
+              description="Avoid duplicate shell status strips, route-level card floods, nested cards and backend vocabulary in primary flows."
+              title="Anti-Patterns"
+              tone="warning"
+            />
+          </VpwContextRail>
+        </div>
+      </VpwSection>
 
       <VpwAppFrame
         navItems={[
@@ -151,7 +278,7 @@ export function VpwDesignSystemShowcase() {
         </VpwGrid>
       </VpwAppFrame>
 
-      <section className="grid gap-4 lg:grid-cols-4">
+      <section className="grid min-w-0 gap-4 [&>*]:min-w-0 lg:grid-cols-4">
         <VpwMetricCard
           description="Open high-impact findings"
           icon={<ShieldCheck className="h-5 w-5" aria-hidden="true" />}
@@ -182,14 +309,14 @@ export function VpwDesignSystemShowcase() {
         />
       </section>
 
-      <section className="grid gap-4 xl:grid-cols-2">
+      <section className="grid min-w-0 gap-4 [&>*]:min-w-0 xl:grid-cols-2">
         <div className="vpw-panel flex flex-col gap-4 p-5">
           <VpwSectionHeader
             description="Token swatches are based on the installed kit variables."
             eyebrow="Foundations"
             title="Color and Surface Tokens"
           />
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid min-w-0 gap-3 [&>*]:min-w-0 sm:grid-cols-2 lg:grid-cols-4">
             <VpwTokenSwatch
               name="Primary"
               usage="Primary actions and focus"
@@ -233,16 +360,17 @@ export function VpwDesignSystemShowcase() {
               <VpwBadge tone="warning">Demo</VpwBadge>
             </VpwToolbarGroup>
           </VpwToolbar>
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid min-w-0 gap-3 [&>*]:min-w-0 sm:grid-cols-2">
             <VpwField
               description="Used by imports, reports and waivers."
+              htmlFor="showcase-project"
               label="Project"
             >
-              <Input defaultValue="Payments Service" />
+              <Input id="showcase-project" defaultValue="Payments Service" />
             </VpwField>
             <VpwField label="Priority">
               <Select defaultValue="critical">
-                <SelectTrigger>
+                <SelectTrigger aria-label="Showcase priority">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -252,8 +380,15 @@ export function VpwDesignSystemShowcase() {
                 </SelectContent>
               </Select>
             </VpwField>
-            <VpwField className="sm:col-span-2" label="Evidence note">
-              <Textarea defaultValue="Reviewed provider snapshot, asset exposure, waiver state and evidence bundle readiness." />
+            <VpwField
+              className="sm:col-span-2"
+              htmlFor="showcase-evidence-note"
+              label="Evidence note"
+            >
+              <Textarea
+                id="showcase-evidence-note"
+                defaultValue="Reviewed provider snapshot, asset exposure, waiver state and evidence bundle readiness."
+              />
             </VpwField>
           </div>
         </div>
@@ -274,8 +409,8 @@ export function VpwDesignSystemShowcase() {
         </VpwPanel>
       </VpwGrid>
 
-      <section className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
-        <div className="flex flex-col gap-4">
+      <section className="grid min-w-0 gap-4 [&>*]:min-w-0 xl:grid-cols-[1.2fr_0.8fr]">
+        <div className="flex min-w-0 flex-col gap-4">
           <VpwFilterBar
             actions={<Button variant="outline">Reset</Button>}
             searchPlaceholder="Search CVE, owner, service"
@@ -364,7 +499,7 @@ export function VpwDesignSystemShowcase() {
         </VpwGrid>
       </VpwSection>
 
-      <section className="grid gap-4 xl:grid-cols-3">
+      <section className="grid min-w-0 gap-4 [&>*]:min-w-0 xl:grid-cols-3">
         <VpwEvidenceArtifactCard
           actionLabel="Generate Markdown"
           audience="Engineering"
@@ -460,7 +595,7 @@ export function VpwDesignSystemShowcase() {
         />
       </VpwGrid>
 
-      <section className="grid gap-4 xl:grid-cols-2">
+      <section className="grid min-w-0 gap-4 [&>*]:min-w-0 xl:grid-cols-2">
         <VpwExecutiveDecisionSummary
           businessImpact="Public-facing service exposure raises operational risk."
           decisionStatement="Approve immediate remediation for critical KEV findings and review accepted-risk waivers weekly."

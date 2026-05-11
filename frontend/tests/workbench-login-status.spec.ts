@@ -277,17 +277,17 @@ test("workbench frontend covers core Workbench E2E smoke", async ({ page }) => {
   await page.reload()
   await expect(page).toHaveURL(/\/imports(?:\?.*)?$/)
   await expect(
-    page.getByRole("heading", { name: "Import Wizard" }),
+    page.getByRole("heading", { name: "Validate and ingest source evidence" }),
   ).toBeVisible()
-  await expect(page.getByText("Upload Security Notes")).toBeVisible()
-  await expect(page.getByText("Files are parsed locally")).toBeVisible()
+  await expect(page.getByText("Advanced evidence controls")).toBeVisible()
+  await expect(page.getByText("Local parsing only")).toBeVisible()
   await expect(page.getByText("Supported Input Formats")).toBeVisible()
   await expect(page.getByRole("button", { name: /^Trivy JSON/ })).toBeVisible()
   await selectRadixOptionByLabel(page, page, "Import project", project.name)
   await selectRadixOptionByLabel(
     page,
     page,
-    "Input type",
+    "Parser",
     "Generic occurrence CSV",
   )
   const importFileInput = page.locator('input[name="importFile"]')
@@ -313,7 +313,7 @@ test("workbench frontend covers core Workbench E2E smoke", async ({ page }) => {
     mimeType: "application/json",
     name: "import-wizard-openvex.json",
   })
-  await page.getByRole("button", { name: "Upload Import" }).click()
+  await page.getByRole("button", { name: "Upload import" }).click()
   await page.waitForTimeout(1000)
   const importWizardFindingsResponse = await page.request.get(
     `http://127.0.0.1:8000/api/v1/projects/${project.id}/findings/?sort=cve`,
@@ -537,15 +537,15 @@ test("workbench frontend covers core Workbench E2E smoke", async ({ page }) => {
   await selectRadixOptionByLabel(
     page,
     page,
-    "Input type",
+    "Parser",
     "Generic occurrence CSV",
   )
-  await page.getByLabel("Import file").setInputFiles({
+  await page.locator('input[name="importFile"]').setInputFiles({
     buffer: invalidOccurrenceCsv,
     mimeType: "text/csv",
     name: "invalid-occurrences.csv",
   })
-  await page.getByRole("button", { name: "Upload Import" }).click()
+  await page.getByRole("button", { name: "Upload import" }).click()
   await expect(
     page.getByRole("alert").filter({ hasText: "Import upload failed" }),
   ).toContainText("Import upload failed")

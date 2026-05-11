@@ -1,14 +1,10 @@
 import { Link } from "@tanstack/react-router"
-import { CheckCircle2 } from "lucide-react"
 import type { ImportParseErrorPublic } from "@/api-client"
 import { Button } from "@/components/ui/button"
 import {
   VpwBadge,
   VpwDataTable,
   type VpwDataTableColumn,
-  VpwGrid,
-  VpwMetricCard,
-  VpwPanel,
   VpwSection,
   VpwSectionHeader,
 } from "@/components/vpw"
@@ -24,47 +20,53 @@ export function ImportResult({
   const summaryRun = importRunSummary ?? importRun
   const status = summaryRun?.status ?? "pending"
   const runId = summaryRun?.id ?? importRun?.id ?? ""
+  const stats = [
+    {
+      label: "Created",
+      value: importRunSummary?.created_findings ?? 0,
+      tone: "info" as const,
+    },
+    {
+      label: "Updated",
+      value: importRunSummary?.updated_findings ?? 0,
+      tone: "support" as const,
+    },
+    {
+      label: "Ignored",
+      value: importRunSummary?.ignored_lines ?? 0,
+      tone: "warning" as const,
+    },
+  ]
 
   return (
-    <VpwSection>
-      <VpwSectionHeader
-        actions={
+    <VpwSection className="imports-result-section">
+      <section className="imports-result-panel">
+        <div className="imports-result-copy">
+          <p className="imports-kicker">Import result</p>
+          <h2>{runId ? `Run ${runId.slice(0, 8)}` : "Run pending"}</h2>
           <VpwBadge tone={runTone(status)}>{runStatusLabel(status)}</VpwBadge>
-        }
-        description="Latest completed import result from the current session."
-        title="Import Result"
-      />
-      <VpwPanel>
-        <VpwGrid columns={4}>
-          <VpwMetricCard
-            description={runId ? `Run ${runId.slice(0, 8)}` : "Run pending"}
-            icon={<CheckCircle2 aria-hidden="true" className="h-4 w-4" />}
-            label="Run status"
-            tone={runTone(status) === "critical" ? "critical" : "success"}
-            value={runStatusLabel(status)}
-          />
-          <VpwMetricCard
-            description="New findings"
-            label="Created findings"
-            tone="info"
-            value={importRunSummary?.created_findings ?? 0}
-          />
-          <VpwMetricCard
-            description="Existing findings"
-            label="Updated findings"
-            tone="support"
-            value={importRunSummary?.updated_findings ?? 0}
-          />
-          <VpwMetricCard
-            description={runId ? runId : "N.A."}
-            label="Ignored lines"
-            tone="warning"
-            value={importRunSummary?.ignored_lines ?? 0}
-          />
-        </VpwGrid>
+        </div>
+        <dl className="imports-result-stats">
+          {stats.map((item) => (
+            <div className="imports-result-stat" key={item.label}>
+              <dt>{item.label}</dt>
+              <dd>
+                <VpwBadge tone={item.tone}>{item.value}</VpwBadge>
+              </dd>
+            </div>
+          ))}
+        </dl>
+        <div className="imports-result-actions">
+          <Button asChild variant="outline">
+            <Link to="/findings">View findings</Link>
+          </Button>
+          <Button asChild variant="outline">
+            <Link to="/reports">Generate evidence</Link>
+          </Button>
+        </div>
         {importRunSummary?.analysis_decision_scope ||
         importRunSummary?.persistence_scope ? (
-          <div className="mt-4 flex flex-wrap gap-2">
+          <div className="imports-result-evidence">
             {importRunSummary.analysis_decision_scope ? (
               <VpwBadge tone="support">
                 Decisions: {importRunSummary.analysis_decision_scope}
@@ -77,15 +79,7 @@ export function ImportResult({
             ) : null}
           </div>
         ) : null}
-        <div className="mt-5 flex flex-wrap gap-2">
-          <Button asChild variant="outline">
-            <Link to="/findings">View Findings</Link>
-          </Button>
-          <Button asChild variant="outline">
-            <Link to="/reports">Generate Evidence</Link>
-          </Button>
-        </div>
-      </VpwPanel>
+      </section>
     </VpwSection>
   )
 }

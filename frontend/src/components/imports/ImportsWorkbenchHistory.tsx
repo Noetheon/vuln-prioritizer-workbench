@@ -7,9 +7,6 @@ import {
   VpwDataTable,
   type VpwDataTableColumn,
   VpwEmptyState,
-  VpwGrid,
-  VpwKeyValueList,
-  VpwMetricCard,
   VpwPanel,
   VpwSection,
   VpwSectionHeader,
@@ -25,6 +22,7 @@ import {
   type ImportsWorkbenchProps,
   jsonPreview,
   metadataRows,
+  objectRecord,
   runFileLabel,
   runTone,
 } from "./imports-workbench-model"
@@ -57,49 +55,39 @@ export function RecentImports({
 >) {
   const columns: VpwDataTableColumn<AnalysisRunPublic>[] = [
     {
-      id: "run",
-      header: "Run",
+      id: "source",
+      header: "Source",
       cell: (run) => (
-        <Button
-          className="h-auto p-0 font-mono text-sm"
-          onClick={() => onSelectRun(run.id)}
-          type="button"
-          variant="link"
-        >
-          {run.id.slice(0, 8)}
-        </Button>
+        <div className="imports-run-source">
+          <button onClick={() => onSelectRun(run.id)} type="button">
+            {runFileLabel(run)}
+          </button>
+          <span>Run {run.id.slice(0, 8)}</span>
+        </div>
       ),
     },
-    { id: "file", header: "Input file", cell: (run) => runFileLabel(run) },
     {
-      id: "type",
-      header: "Input type",
+      id: "parser",
+      header: "Parser",
       cell: (run) => (
         <VpwBadge tone="info">{formatDisplayType(run.input_type)}</VpwBadge>
       ),
     },
     {
-      id: "status",
-      header: "Status",
+      id: "result",
+      header: "Result",
       cell: (run) => (
-        <VpwBadge tone={runTone(run.status)}>
-          {runStatusLabel(run.status)}
-        </VpwBadge>
+        <div className="imports-run-result">
+          <VpwBadge tone={runTone(run.status)}>
+            {runStatusLabel(run.status)}
+          </VpwBadge>
+          <span>{runCountLabel(run, selectedRunId, selectedRunSummary)}</span>
+        </div>
       ),
     },
     {
-      id: "findings",
-      header: "Findings",
-      cell: (run) =>
-        selectedRunId === run.id && selectedRunSummary
-          ? `${selectedRunSummary.created_findings ?? 0} created / ${
-              selectedRunSummary.updated_findings ?? 0
-            } updated`
-          : "Select for counts",
-    },
-    {
       id: "started",
-      header: "Timestamp",
+      header: "Time",
       cell: (run) => formatDateTime(run.started_at),
     },
     {
@@ -142,32 +130,38 @@ export function RecentImports({
           {runsError}
         </VpwStatusBanner>
       ) : null}
-      {runsLoading ? (
-        <VpwPanel>
-          <VpwSkeletonStack rows={4} />
-        </VpwPanel>
-      ) : (
-        <VpwDataTable
-          caption="Recent import runs"
-          columns={columns}
-          data={projectRuns}
-          emptyState={
-            <VpwEmptyState
-              description="Upload a supported file to create import run history."
-              icon={<History aria-hidden="true" className="h-5 w-5" />}
-              title="No import runs yet"
+      <div className="imports-history-shell">
+        <div className="min-w-0">
+          {runsLoading ? (
+            <VpwPanel>
+              <VpwSkeletonStack rows={4} />
+            </VpwPanel>
+          ) : (
+            <VpwDataTable
+              caption="Recent import runs"
+              columns={columns}
+              data={projectRuns}
+              density="compact"
+              emptyState={
+                <VpwEmptyState
+                  description="Upload a supported file to create import run history."
+                  icon={<History aria-hidden="true" className="h-5 w-5" />}
+                  title="No import runs yet"
+                />
+              }
+              getRowKey={(run) => run.id}
+              minWidth="820px"
             />
-          }
-          getRowKey={(run) => run.id}
+          )}
+        </div>
+        <RunDetail
+          runDetailError={runDetailError}
+          runDetailLoading={runDetailLoading}
+          selectedRun={selectedRun}
+          selectedRunId={selectedRunId}
+          selectedRunSummary={selectedRunSummary}
         />
-      )}
-      <RunDetail
-        runDetailError={runDetailError}
-        runDetailLoading={runDetailLoading}
-        selectedRun={selectedRun}
-        selectedRunId={selectedRunId}
-        selectedRunSummary={selectedRunSummary}
-      />
+      </div>
     </VpwSection>
   )
 }
@@ -220,65 +214,54 @@ export function RunDetail({
     }),
   )
   const selectedParseErrors = selectedRunSummary.parse_errors ?? []
+  const stats = [
+    ["Created", selectedRunSummary.created_findings ?? 0],
+    ["Updated", selectedRunSummary.updated_findings ?? 0],
+    ["Findings", selectedRunSummary.finding_count ?? 0],
+    ["Ignored", selectedRunSummary.ignored_lines ?? 0],
+  ] as const
 
   return (
-    <VpwPanel className="flex flex-col gap-5">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+    <VpwPanel className="imports-run-detail">
+      <div className="imports-run-detail-header">
         <div>
-          <p className="vpw-label">Run detail</p>
-          <h3 className="mt-1 text-lg font-semibold text-[var(--vpw-text-primary)]">
-            {selectedRunId.slice(0, 8)}
-          </h3>
+          <p className="imports-kicker">Run detail</p>
+          <h3>{selectedRunId.slice(0, 8)}</h3>
         </div>
         <Button asChild size="sm" variant="outline">
           <Link to="/findings">Findings</Link>
         </Button>
       </div>
-      <VpwKeyValueList
-        columns={2}
-        items={[
-          {
-            label: "Status",
-            value: runStatusLabel(selectedRunSummary.status),
-            tone: runTone(selectedRunSummary.status),
-          },
-          {
-            label: "Input type",
-            value: formatDisplayType(selectedRunSummary.input_type),
-          },
-          { label: "Filename", value: runFileLabel(selectedRunSummary) },
-          {
-            label: "Started",
-            value: formatDateTime(selectedRunSummary.started_at),
-          },
-          {
-            label: "Finished",
-            value: formatDateTime(selectedRunSummary.finished_at),
-          },
-          {
-            label: "Provider snapshot",
-            value: selectedRunSummary.provider_snapshot_id ?? "N.A.",
-          },
-        ]}
-      />
-      <VpwGrid columns={4}>
-        <VpwMetricCard
-          label="Created"
-          value={selectedRunSummary.created_findings ?? 0}
-        />
-        <VpwMetricCard
-          label="Updated"
-          value={selectedRunSummary.updated_findings ?? 0}
-        />
-        <VpwMetricCard
-          label="Findings"
-          value={selectedRunSummary.finding_count ?? 0}
-        />
-        <VpwMetricCard
-          label="Ignored"
-          value={selectedRunSummary.ignored_lines ?? 0}
-        />
-      </VpwGrid>
+      <dl className="imports-run-detail-summary">
+        <div className="imports-run-summary-row">
+          <dt>Status</dt>
+          <dd>
+            <VpwBadge tone={runTone(selectedRunSummary.status)}>
+              {runStatusLabel(selectedRunSummary.status)}
+            </VpwBadge>
+          </dd>
+        </div>
+        <div className="imports-run-summary-row">
+          <dt>Parser</dt>
+          <dd>{formatDisplayType(selectedRunSummary.input_type)}</dd>
+        </div>
+        <div className="imports-run-summary-row">
+          <dt>Input</dt>
+          <dd>{runFileLabel(selectedRunSummary)}</dd>
+        </div>
+        <div className="imports-run-summary-row">
+          <dt>Started</dt>
+          <dd>{formatDateTime(selectedRunSummary.started_at)}</dd>
+        </div>
+      </dl>
+      <dl className="imports-run-stats">
+        {stats.map(([label, value]) => (
+          <div className="imports-run-stat" key={label}>
+            <dt>{label}</dt>
+            <dd>{value}</dd>
+          </div>
+        ))}
+      </dl>
       {selectedRunSummary.status === "failed" ? (
         <VpwStatusBanner title="Failure Cause" tone="critical">
           <p>{failedRunCause(selectedRun, selectedRunSummary)}</p>
@@ -287,29 +270,49 @@ export function RunDetail({
           </pre>
         </VpwStatusBanner>
       ) : null}
-      <VpwSectionHeader title="Upload Metadata" />
-      {metadata.length > 0 ? (
-        <VpwKeyValueList columns={2} items={metadata} />
-      ) : (
-        <VpwEmptyState title="No upload metadata recorded" />
-      )}
-      <VpwSectionHeader
-        actions={
-          selectedParseErrors.length > 0 ? (
-            <VpwBadge tone="critical">
-              {selectedParseErrors.length} parser issue(s)
-            </VpwBadge>
-          ) : (
-            <VpwBadge tone="success">No parser errors</VpwBadge>
-          )
-        }
-        title="Run Parser Errors"
-      />
-      {selectedParseErrors.length > 0 ? (
-        <ParserErrors errors={selectedParseErrors} />
-      ) : (
-        <VpwEmptyState title="No parser errors recorded" />
-      )}
+      <details className="imports-technical-details">
+        <summary>Technical metadata</summary>
+        {metadata.length > 0 ? (
+          <dl>
+            {metadata.map((item) => (
+              <div key={item.label}>
+                <dt>{item.label}</dt>
+                <dd>{item.value}</dd>
+              </div>
+            ))}
+          </dl>
+        ) : (
+          <p>No upload metadata recorded.</p>
+        )}
+      </details>
+      <details className="imports-technical-details">
+        <summary>
+          Parser errors{" "}
+          {selectedParseErrors.length > 0
+            ? `(${selectedParseErrors.length})`
+            : "(none)"}
+        </summary>
+        {selectedParseErrors.length > 0 ? (
+          <ParserErrors errors={selectedParseErrors} />
+        ) : (
+          <p>No parser errors recorded.</p>
+        )}
+      </details>
     </VpwPanel>
   )
+}
+
+function runCountLabel(
+  run: AnalysisRunPublic,
+  selectedRunId: string,
+  selectedRunSummary: ImportsWorkbenchProps["selectedRunSummary"],
+) {
+  const summary =
+    selectedRunId === run.id && selectedRunSummary
+      ? selectedRunSummary
+      : objectRecord(run.summary_json)
+  const created = Number(summary.created_findings ?? 0)
+  const updated = Number(summary.updated_findings ?? 0)
+  if (created === 0 && updated === 0) return "No finding changes"
+  return `${created} created / ${updated} updated`
 }

@@ -5,6 +5,7 @@
 @import "./styles/vpw-components.css";
 @import "./styles/base.css";
 @import "./styles/dashboard.css";
+@import "./styles/imports.css";
 @import "./styles/findings.css";
 @import "./styles/finding-detail-decision.css";
 @import "./styles/finding-detail-evidence.css";

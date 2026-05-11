@@ -21,6 +21,7 @@ import { Route as LayoutImportsRouteImport } from './routes/_layout/imports'
 import { Route as LayoutFindingsRouteImport } from './routes/_layout/findings'
 import { Route as LayoutAssetsRouteImport } from './routes/_layout/assets'
 import { Route as LayoutFindingsFindingIdRouteImport } from './routes/_layout/findings.$findingId'
+import { Route as LayoutDevDesignSystemRouteImport } from './routes/_layout/dev/design-system'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -81,6 +82,11 @@ const LayoutFindingsFindingIdRoute = LayoutFindingsFindingIdRouteImport.update({
   path: '/$findingId',
   getParentRoute: () => LayoutFindingsRoute,
 } as any)
+const LayoutDevDesignSystemRoute = LayoutDevDesignSystemRouteImport.update({
+  id: '/dev/design-system',
+  path: '/dev/design-system',
+  getParentRoute: () => LayoutRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof LayoutIndexRoute
@@ -93,6 +99,7 @@ export interface FileRoutesByFullPath {
   '/reports': typeof LayoutReportsRoute
   '/settings': typeof LayoutSettingsRoute
   '/waivers': typeof LayoutWaiversRoute
+  '/dev/design-system': typeof LayoutDevDesignSystemRoute
   '/findings/$findingId': typeof LayoutFindingsFindingIdRoute
 }
 export interface FileRoutesByTo {
@@ -106,6 +113,7 @@ export interface FileRoutesByTo {
   '/settings': typeof LayoutSettingsRoute
   '/waivers': typeof LayoutWaiversRoute
   '/': typeof LayoutIndexRoute
+  '/dev/design-system': typeof LayoutDevDesignSystemRoute
   '/findings/$findingId': typeof LayoutFindingsFindingIdRoute
 }
 export interface FileRoutesById {
@@ -121,6 +129,7 @@ export interface FileRoutesById {
   '/_layout/settings': typeof LayoutSettingsRoute
   '/_layout/waivers': typeof LayoutWaiversRoute
   '/_layout/': typeof LayoutIndexRoute
+  '/_layout/dev/design-system': typeof LayoutDevDesignSystemRoute
   '/_layout/findings/$findingId': typeof LayoutFindingsFindingIdRoute
 }
 export interface FileRouteTypes {
@@ -136,6 +145,7 @@ export interface FileRouteTypes {
     | '/reports'
     | '/settings'
     | '/waivers'
+    | '/dev/design-system'
     | '/findings/$findingId'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -149,6 +159,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/waivers'
     | '/'
+    | '/dev/design-system'
     | '/findings/$findingId'
   id:
     | '__root__'
@@ -163,6 +174,7 @@ export interface FileRouteTypes {
     | '/_layout/settings'
     | '/_layout/waivers'
     | '/_layout/'
+    | '/_layout/dev/design-system'
     | '/_layout/findings/$findingId'
   fileRoutesById: FileRoutesById
 }
@@ -257,6 +269,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutFindingsFindingIdRouteImport
       parentRoute: typeof LayoutFindingsRoute
     }
+    '/_layout/dev/design-system': {
+      id: '/_layout/dev/design-system'
+      path: '/dev/design-system'
+      fullPath: '/dev/design-system'
+      preLoaderRoute: typeof LayoutDevDesignSystemRouteImport
+      parentRoute: typeof LayoutRoute
+    }
   }
 }
 
@@ -282,6 +301,7 @@ interface LayoutRouteChildren {
   LayoutSettingsRoute: typeof LayoutSettingsRoute
   LayoutWaiversRoute: typeof LayoutWaiversRoute
   LayoutIndexRoute: typeof LayoutIndexRoute
+  LayoutDevDesignSystemRoute: typeof LayoutDevDesignSystemRoute
 }
 
 const LayoutRouteChildren: LayoutRouteChildren = {
@@ -294,6 +314,7 @@ const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutSettingsRoute: LayoutSettingsRoute,
   LayoutWaiversRoute: LayoutWaiversRoute,
   LayoutIndexRoute: LayoutIndexRoute,
+  LayoutDevDesignSystemRoute: LayoutDevDesignSystemRoute,
 }
 
 const LayoutRouteWithChildren =

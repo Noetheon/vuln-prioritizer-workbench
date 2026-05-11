@@ -75,6 +75,15 @@ export const unknownRouteDetail: RouteDetail = {
   panelDetail: "Current workspace route",
 }
 
+const hiddenRouteDetails: Record<string, RouteDetail> = {
+  "/dev/design-system": {
+    eyebrow: "Design System",
+    title: "Workbench Patterns",
+    panelTitle: "Pattern Reference",
+    panelDetail: "Internal reusable UI and page composition guidance",
+  },
+}
+
 const routePathOrder: readonly WorkbenchPath[] = [
   "/projects",
   "/imports",
@@ -103,9 +112,9 @@ export function workbenchPathFromPathname(
 }
 
 export function routeDetailFromPathname(
-  _pathname: string,
+  pathname: string,
   routePath: WorkbenchPath | null,
 ): RouteDetail {
   if (routePath) return routeDetails[routePath]
-  return unknownRouteDetail
+  return hiddenRouteDetails[pathname] ?? unknownRouteDetail
 }
