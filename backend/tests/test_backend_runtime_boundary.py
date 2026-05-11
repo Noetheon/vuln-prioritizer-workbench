@@ -488,12 +488,18 @@ def test_makefile_has_no_legacy_runtime_smoke_or_compose_path() -> None:
         "dependency-audit:",
         1,
     )[0]
+    playwright_install = makefile.split("playwright-install:", 1)[1].split(
+        "playwright-check:",
+        1,
+    )[0]
     playwright_check = makefile.split("playwright-check:", 1)[1].split("frontend-install:", 1)[0]
 
     assert "LEGACY_COMPOSE" not in makefile
     assert "docker-postgres-migration-smoke" not in makefile
     assert "api/test_workbench_api.py" not in makefile
     assert "$(BACKEND_TESTS)/playwright" not in makefile
+    assert "playwright install --with-deps chromium" in playwright_install
+    assert "playwright-check: playwright-install" in makefile
     assert "cd frontend && npm run test" in playwright_check
     assert "tests/ui-smoke.spec.ts tests/responsive-shell.spec.ts" not in playwright_check
     assert "frontend-test-unit-coverage" in makefile
