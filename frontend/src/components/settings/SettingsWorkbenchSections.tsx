@@ -4,7 +4,7 @@ export {
   SettingsMetrics,
 } from "./SettingsWorkbenchOverview"
 export {
-  SettingsRuntimeDiagnostics,
-  SettingsSecurityNotes,
+  SettingsDiagnostics,
+  SettingsRuntimeProviders,
 } from "./SettingsWorkbenchRuntime"
 export { SettingsApiTokensSection } from "./SettingsWorkbenchTokens"

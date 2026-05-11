@@ -1,15 +1,15 @@
 import type { ProviderStatusPublic, WorkbenchStatus } from "@/api-client"
+import { Info, ShieldAlert } from "lucide-react"
+import type { ReactNode } from "react"
 import {
   VpwBadge,
+  type VpwBadgeTone,
   VpwCodeBlock,
   VpwDataTable,
   type VpwDataTableColumn,
-  VpwGrid,
-  VpwKeyValueList,
   VpwPanel,
   VpwSection,
   VpwSectionHeader,
-  VpwStatusBanner,
 } from "@/components/vpw"
 import { providerSnapshotSummary } from "@/lib/provider-format"
 import {
@@ -20,7 +20,7 @@ import {
   safeDiagnosticsCode,
 } from "./settings-workbench-model"
 
-type SettingsRuntimeDiagnosticsProps = Pick<
+type SettingsDiagnosticsProps = Pick<
   SettingsWorkbenchProps,
   "providerStatus" | "providerStatusError" | "status" | "statusError"
 >
@@ -57,22 +57,37 @@ function ProviderRuntimeConfiguration({
   providerStatus: ProviderStatusPublic | null
 }) {
   return (
-    <VpwPanel className="flex flex-col gap-5 p-5">
-      <VpwSectionHeader
-        description="Safe runtime and provider configuration values reported by existing APIs."
-        title="Provider and runtime configuration"
-      />
-      <VpwDataTable
-        caption="Provider runtime configuration"
-        columns={providerColumns}
-        data={providerConfigRows(providerStatus)}
-        density="compact"
-        getRowKey={(row) => row.id}
-      />
-      <VpwStatusBanner title="Secrets are not displayed" tone="info">
-        Provider keys, environment secrets, and stored token secrets are not
-        rendered in Settings. Use environment variables for provider keys.
-      </VpwStatusBanner>
+    <VpwPanel className="overflow-hidden p-0">
+      <div className="border-b border-[var(--vpw-border-subtle)] bg-[color-mix(in_srgb,var(--vpw-bg-panel)_52%,var(--vpw-bg-card))] px-5 py-4">
+        <VpwSectionHeader
+          description="Safe provider configuration values reported by existing APIs."
+          title="Runtime & providers"
+        />
+      </div>
+      <div className="p-4">
+        <VpwDataTable
+          caption="Provider runtime configuration"
+          columns={providerColumns}
+          data={providerConfigRows(providerStatus)}
+          density="compact"
+          getRowKey={(row) => row.id}
+        />
+      </div>
+      <div className="border-t border-[var(--vpw-border-subtle)] bg-[color-mix(in_srgb,var(--vpw-blue)_6%,var(--vpw-bg-card))] px-5 py-3">
+        <p className="flex gap-2 text-sm leading-6 text-[var(--vpw-text-secondary)]">
+          <Info
+            aria-hidden="true"
+            className="mt-1 h-4 w-4 shrink-0 text-[var(--vpw-blue)]"
+          />
+          <span>
+            <span className="font-medium text-[var(--vpw-text-primary)]">
+              Secrets are not displayed.
+            </span>{" "}
+            Provider keys, environment secrets, and stored token secrets stay
+            outside Settings.
+          </span>
+        </p>
+      </div>
     </VpwPanel>
   )
 }
@@ -88,14 +103,21 @@ function DiagnosticsPanel({
   status: WorkbenchStatus | null
   statusError: string
 }) {
+  const diagnosticsCode = safeDiagnosticsCode({
+    providerStatus,
+    status,
+    statusError,
+  })
+
   return (
-    <VpwPanel className="flex flex-col gap-5 p-5">
-      <VpwSectionHeader
-        description="Compact troubleshooting facts for support and evidence checks."
-        title="Diagnostics"
-      />
-      <VpwKeyValueList
-        columns={2}
+    <VpwPanel className="overflow-hidden p-0">
+      <div className="border-b border-[var(--vpw-border-subtle)] bg-[color-mix(in_srgb,var(--vpw-bg-panel)_52%,var(--vpw-bg-card))] px-5 py-4">
+        <VpwSectionHeader
+          description="Support-only facts for troubleshooting. Expand JSON only when you need to share safe diagnostics."
+          title="Diagnostics"
+        />
+      </div>
+      <SettingsDiagnosticRows
         items={[
           {
             label: "Frontend",
@@ -116,24 +138,93 @@ function DiagnosticsPanel({
           },
         ]}
       />
-      <VpwCodeBlock
-        code={safeDiagnosticsCode({ providerStatus, status, statusError })}
-        label="Safe diagnostics"
-      />
-      <VpwStatusBanner title="Generated client stays managed" tone="warning">
-        API contracts are consumed through the generated client and should not
-        be edited by hand.
-      </VpwStatusBanner>
+      <details className="group border-t border-[var(--vpw-border-subtle)] bg-[var(--vpw-bg-card)]">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-medium text-[var(--vpw-text-primary)] marker:hidden">
+          Safe diagnostics payload
+          <span className="font-mono text-xs text-[var(--vpw-text-muted)] group-open:hidden">
+            Expand
+          </span>
+          <span className="hidden font-mono text-xs text-[var(--vpw-text-muted)] group-open:inline">
+            Collapse
+          </span>
+        </summary>
+        <div className="border-t border-[var(--vpw-border-subtle)] p-3">
+          <VpwCodeBlock
+            code={diagnosticsCode}
+            label="Safe diagnostics"
+            onCopy={() => void navigator.clipboard?.writeText(diagnosticsCode)}
+          />
+        </div>
+      </details>
+      <div className="border-t border-[var(--vpw-border-subtle)] bg-[color-mix(in_srgb,var(--vpw-amber)_9%,var(--vpw-bg-card))] px-5 py-3">
+        <p className="flex gap-2 text-sm leading-6 text-[var(--vpw-text-secondary)]">
+          <ShieldAlert
+            aria-hidden="true"
+            className="mt-1 h-4 w-4 shrink-0 text-[var(--vpw-amber)]"
+          />
+          <span>
+            <span className="font-medium text-[var(--vpw-text-primary)]">
+              Generated client stays managed.
+            </span>{" "}
+            API contracts are consumed through the generated client and should
+            not be edited by hand.
+          </span>
+        </p>
+      </div>
     </VpwPanel>
   )
 }
 
-export function SettingsRuntimeDiagnostics({
+type SettingsDiagnosticRow = {
+  label: string
+  value: ReactNode
+  tone?: VpwBadgeTone
+}
+
+function SettingsDiagnosticRows({
+  items,
+}: {
+  items: readonly SettingsDiagnosticRow[]
+}) {
+  return (
+    <dl className="grid divide-y divide-[var(--vpw-border-subtle)] lg:grid-cols-2 lg:divide-x lg:divide-y-0">
+      {items.map((item) => (
+        <div
+          className="min-w-0 px-5 py-4 odd:lg:border-b odd:lg:border-[var(--vpw-border-subtle)] even:lg:border-b even:lg:border-[var(--vpw-border-subtle)]"
+          key={item.label}
+        >
+          <dt className="vpw-label">{item.label}</dt>
+          <dd className="mt-2 min-w-0 font-medium text-[var(--vpw-text-primary)] [overflow-wrap:anywhere]">
+            {item.tone ? (
+              <VpwBadge tone={item.tone}>{item.value}</VpwBadge>
+            ) : (
+              item.value
+            )}
+          </dd>
+        </div>
+      ))}
+    </dl>
+  )
+}
+
+export function SettingsRuntimeProviders({
+  providerStatus,
+}: {
+  providerStatus: ProviderStatusPublic | null
+}) {
+  return (
+    <VpwSection aria-label="Runtime and providers">
+      <ProviderRuntimeConfiguration providerStatus={providerStatus} />
+    </VpwSection>
+  )
+}
+
+export function SettingsDiagnostics({
   providerStatus,
   providerStatusError,
   status,
   statusError,
-}: SettingsRuntimeDiagnosticsProps) {
+}: SettingsDiagnosticsProps) {
   const evidence = evidenceReadiness(
     providerStatus,
     providerStatusError,
@@ -141,37 +232,13 @@ export function SettingsRuntimeDiagnostics({
   )
 
   return (
-    <VpwGrid columns={2}>
-      <ProviderRuntimeConfiguration providerStatus={providerStatus} />
+    <VpwSection aria-label="Diagnostics">
       <DiagnosticsPanel
         evidence={evidence}
         providerStatus={providerStatus}
         status={status}
         statusError={statusError}
       />
-    </VpwGrid>
-  )
-}
-
-export function SettingsSecurityNotes() {
-  return (
-    <VpwSection>
-      <VpwSectionHeader
-        description="Operational guardrails for access and troubleshooting."
-        title="Security notes"
-      />
-      <VpwGrid columns={3}>
-        <VpwStatusBanner title="Do not share API tokens" tone="critical">
-          Treat service tokens like passwords and revoke unused tokens.
-        </VpwStatusBanner>
-        <VpwStatusBanner title="Accepted diagnostics only" tone="info">
-          Diagnostics show status and version metadata, not provider secrets.
-        </VpwStatusBanner>
-        <VpwStatusBanner title="Evidence remains reproducible" tone="success">
-          Provider snapshot state is visible so generated reports can explain
-          their data sources.
-        </VpwStatusBanner>
-      </VpwGrid>
     </VpwSection>
   )
 }

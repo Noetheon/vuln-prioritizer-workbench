@@ -57,8 +57,10 @@ test("smoke: settings renders", async ({ page }) => {
   test.setTimeout(30_000)
   await login(page)
   await page.goto("/settings")
+  await expect(page.getByRole("tab", { name: "Overview" })).toBeVisible()
+  await expect(page.getByRole("tab", { name: "API Tokens" })).toBeVisible()
   await expect(
-    page.getByRole("region", { exact: true, name: "API tokens" }),
+    page.getByRole("heading", { name: "Account and session" }),
   ).toBeVisible()
 })
 

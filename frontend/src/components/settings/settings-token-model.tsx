@@ -90,51 +90,51 @@ export function buildApiTokenColumns({
       cell: (token) => projectScopeLabel(token.project_id, projects),
     },
     {
-      id: "created",
-      header: "Created",
-      cell: (token) => formatDateTime(token.created_at),
-      className: "whitespace-nowrap",
-    },
-    {
-      id: "last-used",
-      header: "Last used",
-      cell: (token) => formatDateTime(token.last_used_at),
-      className: "whitespace-nowrap",
+      id: "activity",
+      header: "Activity",
+      cell: (token) => (
+        <div className="min-w-36 space-y-1 text-sm">
+          <p className="text-[var(--vpw-text-primary)]">
+            <span className="vpw-label mr-2">Created</span>
+            {formatDateTime(token.created_at)}
+          </p>
+          <p className="text-[var(--vpw-text-secondary)]">
+            <span className="vpw-label mr-2">Last used</span>
+            {formatDateTime(token.last_used_at)}
+          </p>
+        </div>
+      ),
     },
     {
       id: "expires",
       header: "Expires",
       cell: (token) => formatDateTime(token.expires_at),
-      className: "whitespace-nowrap",
     },
     {
-      id: "status",
-      header: "Status",
+      id: "access",
+      header: "Access",
       cell: (token) => (
-        <VpwBadge tone={statusBadgeTone(token.active)}>
-          {statusLabel(token.active)}
-        </VpwBadge>
+        <div className="flex min-w-28 flex-col items-start gap-2">
+          <VpwBadge tone={statusBadgeTone(token.active)}>
+            {statusLabel(token.active)}
+          </VpwBadge>
+          {token.active ? (
+            <Button
+              aria-busy={actionLoading}
+              disabled={actionLoading}
+              onClick={() => void onRevokeApiToken(token)}
+              size="sm"
+              type="button"
+              variant="destructive"
+            >
+              <Trash2 aria-hidden="true" className="h-4 w-4" />
+              Revoke
+            </Button>
+          ) : (
+            <span className="text-sm text-[var(--vpw-text-muted)]">N.A.</span>
+          )}
+        </div>
       ),
-    },
-    {
-      id: "actions",
-      header: "Actions",
-      cell: (token) =>
-        token.active ? (
-          <Button
-            aria-busy={actionLoading}
-            disabled={actionLoading}
-            onClick={() => void onRevokeApiToken(token)}
-            size="sm"
-            type="button"
-            variant="destructive"
-          >
-            <Trash2 aria-hidden="true" className="h-4 w-4" />
-            Revoke
-          </Button>
-        ) : (
-          <span className="text-sm text-[var(--vpw-text-muted)]">N.A.</span>
-        ),
     },
   ]
 }
