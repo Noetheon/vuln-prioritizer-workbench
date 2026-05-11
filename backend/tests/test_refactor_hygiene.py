@@ -374,6 +374,13 @@ def test_template_import_validation_and_storage_are_split_from_route_facade() ->
     upload_helper_imports = _imported_modules("app/api/routes/import_uploads.py")
     source = (ROOT / "app/api/routes/imports.py").read_text(encoding="utf-8")
     execution_source = (ROOT / "app/services/import_execution.py").read_text(encoding="utf-8")
+    parse_failure_source = (ROOT / "app/services/import_execution_parse_failures.py").read_text(
+        encoding="utf-8"
+    )
+    type_source = (ROOT / "app/services/import_execution_types.py").read_text(encoding="utf-8")
+    upload_stage_source = (ROOT / "app/services/import_execution_uploads.py").read_text(
+        encoding="utf-8"
+    )
     upload_source = (ROOT / "app/services/import_uploads.py").read_text(encoding="utf-8")
     artifact_source = (ROOT / "app/services/import_artifacts.py").read_text(encoding="utf-8")
 
@@ -385,12 +392,88 @@ def test_template_import_validation_and_storage_are_split_from_route_facade() ->
     assert "def read_bounded_upload" not in source
     assert "def store_upload" not in source
     assert "def resolve_workbench_provider_snapshot_path" not in source
-    assert "app.services.import_uploads" in execution_source
-    assert "app.services.import_artifacts" in execution_source
+    assert "app.services.import_uploads" in upload_stage_source
+    assert "app.services.import_artifacts" in upload_stage_source
     assert "ALLOWED_UPLOAD_SUFFIXES = " in upload_source
     assert "def store_upload" in upload_source
     assert "def resolve_workbench_provider_snapshot_path" in artifact_source
     assert "def validate_attack_import_options" in artifact_source
+    assert "app.services.import_execution_types" in execution_source
+    assert "app.services.import_execution_types" in upload_stage_source
+    assert "app.services.import_execution_uploads" in execution_source
+    assert "app.services.import_execution_parse_failures" in execution_source
+    assert "class PreparedImportUpload" in type_source
+    assert "class ResolvedImportRun" in type_source
+    assert "class StoredImportArtifacts" in type_source
+    assert "def prepare_import_upload" in upload_stage_source
+    assert "def resolve_import_run" in upload_stage_source
+    assert "def store_prepared_uploads" in upload_stage_source
+    assert "def _parse_prepared_upload" in execution_source
+    assert "def raise_parse_failure" in parse_failure_source
+    assert "def raise_sidecar_parse_failure" in parse_failure_source
+
+
+def test_findings_page_uses_internal_query_object() -> None:
+    repository_source = (ROOT / "app/repositories/findings.py").read_text(encoding="utf-8")
+    query_source = (ROOT / "app/repositories/finding_page_query.py").read_text(encoding="utf-8")
+    route_source = (ROOT / "app/api/routes/findings.py").read_text(encoding="utf-8")
+    github_issue_source = (ROOT / "app/services/github_issues.py").read_text(encoding="utf-8")
+
+    assert "app.repositories.finding_page_query" in repository_source
+    assert "class FindingPageQuery" in query_source
+    assert "def finding_page_filters" in query_source
+    assert "def finding_page_order_by" in query_source
+    assert "def list_project_findings_query" in repository_source
+    assert "FindingPageQuery(" in route_source
+    assert "list_project_findings_query" in route_source
+    assert "FindingPageQuery(" in github_issue_source
+
+
+def test_cli_analysis_commands_delegate_output_emission() -> None:
+    command_source = (ROOT / "src/vuln_prioritizer/commands/analysis.py").read_text(
+        encoding="utf-8"
+    )
+    output_source = (ROOT / "src/vuln_prioritizer/cli_support/analysis_output.py").read_text(
+        encoding="utf-8"
+    )
+
+    assert "vuln_prioritizer.cli_support.analysis_output" in command_source
+    assert "emit_analyze_result(" in command_source
+    assert "emit_compare_result(" in command_source
+    assert "emit_explain_result(" in command_source
+    assert "def emit_analyze_result" in output_source
+    assert "def emit_compare_result" in output_source
+    assert "def emit_explain_result" in output_source
+    assert "generate_json_report" not in command_source
+    assert "generate_compare_json" not in command_source
+    assert "generate_explain_json" not in command_source
+
+
+def test_scoring_operational_rules_are_split_from_priority_facade() -> None:
+    scoring_source = (ROOT / "src/vuln_prioritizer/scoring.py").read_text(encoding="utf-8")
+    operational_source = (ROOT / "src/vuln_prioritizer/scoring_operational.py").read_text(
+        encoding="utf-8"
+    )
+    rationale_source = (ROOT / "src/vuln_prioritizer/scoring_rationale.py").read_text(
+        encoding="utf-8"
+    )
+
+    assert "vuln_prioritizer.scoring_operational" in scoring_source
+    assert "vuln_prioritizer.scoring_rationale" in scoring_source
+    assert "def determine_priority(" in scoring_source
+    assert "def build_rationale(" not in scoring_source
+    assert "def build_comparison_reason(" not in scoring_source
+    assert "def build_operational_score(" not in scoring_source
+    assert "def determine_priority_state(" not in scoring_source
+    assert "def build_operational_score(" in operational_source
+    assert "def determine_priority_state(" in operational_source
+    assert "def clamp_operational_score(" in operational_source
+    assert "def build_rationale(" in rationale_source
+    assert "def build_comparison_reason(" in rationale_source
+    assert "def recommended_action(" in rationale_source
+    assert len(scoring_source.splitlines()) <= 160
+    assert len(operational_source.splitlines()) <= 320
+    assert len(rationale_source.splitlines()) <= 220
 
 
 def test_frontend_routes_use_workbench_route_containers_instead_of_app_facade() -> None:
@@ -581,6 +664,58 @@ def test_dashboard_and_finding_detail_use_vpw_surfaces() -> None:
     assert "bg-gradient-to-br" not in dashboard_source
     assert "bg-linear-to-br" not in dashboard_source
     assert "bg-slate-900" not in dashboard_source
+
+
+def test_finding_detail_model_is_split_by_behavior() -> None:
+    model_root = REPO_ROOT / "frontend/src/components/finding-detail"
+    facade_source = (model_root / "finding-detail-model.ts").read_text(encoding="utf-8")
+    expected_slices = {
+        "finding-detail-attack-model.ts": "export function attackTechniqueRows",
+        "finding-detail-demo-model.ts": "export function demoFindingDetailForId",
+        "finding-detail-evidence-model.ts": "export function findingEvidenceRows",
+        "finding-detail-shared.ts": "export function findingHeroSummary",
+    }
+
+    assert len(facade_source.splitlines()) <= 8
+    for filename, symbol in expected_slices.items():
+        source = (model_root / filename).read_text(encoding="utf-8")
+        assert symbol in source
+        assert filename.removesuffix(".ts") in facade_source
+        assert len(source.splitlines()) <= 380
+
+
+def test_findings_search_and_asset_models_are_split_by_behavior() -> None:
+    findings_root = REPO_ROOT / "frontend/src/components/findings"
+    findings_facade = (findings_root / "findings-search-state.ts").read_text(encoding="utf-8")
+    expected_findings_slices = {
+        "findings-search-types.ts": "export type FindingsSearchState",
+        "findings-search-parser.ts": "export function parseFindingsSearch",
+        "findings-search-serialization.ts": "export function findingsSearchToApiParams",
+    }
+    asset_root = REPO_ROOT / "frontend/src/components/assets"
+    asset_facade = (asset_root / "asset-model.ts").read_text(encoding="utf-8")
+    expected_asset_slices = {
+        "asset-errors.ts": "export function apiErrorMessage",
+        "asset-form-model.ts": "export function validateAssetForm",
+        "asset-format-model.ts": "export function formatDateTime",
+        "asset-finding-model.ts": "export function matchesAsset",
+        "asset-rollup-model.ts": "export function buildServiceRollups",
+        "asset-tone-model.ts": "export function criticalityTone",
+    }
+
+    assert len(findings_facade.splitlines()) <= 20
+    for filename, symbol in expected_findings_slices.items():
+        source = (findings_root / filename).read_text(encoding="utf-8")
+        assert symbol in source
+        assert filename.removesuffix(".ts") in findings_facade
+        assert len(source.splitlines()) <= 220
+
+    assert len(asset_facade.splitlines()) <= 40
+    for filename, symbol in expected_asset_slices.items():
+        source = (asset_root / filename).read_text(encoding="utf-8")
+        assert symbol in source
+        assert filename.removesuffix(".ts") in asset_facade
+        assert len(source.splitlines()) <= 140
 
 
 def test_frontend_css_drops_unused_pre_vpw_shell_classes() -> None:
@@ -1192,6 +1327,10 @@ def test_import_execution_is_split_into_stage_services_with_guardrails() -> None
     failure_source = (ROOT / "app/services/import_execution_failures.py").read_text(
         encoding="utf-8"
     )
+    parse_failure_source = (ROOT / "app/services/import_execution_parse_failures.py").read_text(
+        encoding="utf-8"
+    )
+    upload_source = (ROOT / "app/services/import_execution_uploads.py").read_text(encoding="utf-8")
     dedup_source = (ROOT / "app/services/import_execution_dedup.py").read_text(encoding="utf-8")
     persistence_source = (ROOT / "app/services/import_execution_persistence.py").read_text(
         encoding="utf-8"
@@ -1213,6 +1352,8 @@ def test_import_execution_is_split_into_stage_services_with_guardrails() -> None
     assert "def execute_project_import_upload" in source
     assert "app.services.import_execution_context" in source
     assert "app.services.import_execution_failures" in source
+    assert "app.services.import_execution_parse_failures" in source
+    assert "app.services.import_execution_uploads" in source
     assert "app.services.import_execution_persistence" in source
     assert "app.services.import_execution_summary" in source
     assert "app.services.import_execution_dedup" in persistence_source
@@ -1220,6 +1361,10 @@ def test_import_execution_is_split_into_stage_services_with_guardrails() -> None
     assert "def _apply_workbench_vex" in context_source
     assert "def _parse_error_payload" in context_source
     assert "def raise_analysis_failure" in failure_source
+    assert "def raise_parse_failure" in parse_failure_source
+    assert "def raise_sidecar_parse_failure" in parse_failure_source
+    assert "def prepare_import_upload" in upload_source
+    assert "def apply_stored_upload_summaries" in upload_source
     assert "def _dedup_key_parts" in dedup_source
     assert "def _finding_dedup_key" in dedup_source
     assert "def _dedup_key_parts" not in persistence_source
@@ -1232,9 +1377,11 @@ def test_import_execution_is_split_into_stage_services_with_guardrails() -> None
     assert "def _existing_findings_by_dedup_key" in persistence_queries_source
     assert "def _job_payload" in summary_source
     assert "def _record_import_audit" in summary_source
-    assert len(source.splitlines()) <= 700
+    assert len(source.splitlines()) <= 320
     assert len(context_source.splitlines()) <= 220
     assert len(failure_source.splitlines()) <= 140
+    assert len(parse_failure_source.splitlines()) <= 240
+    assert len(upload_source.splitlines()) <= 520
     assert len(persistence_source.splitlines()) <= 320
     assert len(persistence_bulk_source.splitlines()) <= 340
     assert len(persistence_payloads_source.splitlines()) <= 320
