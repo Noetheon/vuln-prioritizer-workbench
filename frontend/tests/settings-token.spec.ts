@@ -21,21 +21,31 @@ test("workbench settings clears one-time API token when leaving settings", async
   expect(projectResponse.ok(), await projectResponse.text()).toBeTruthy()
   const project = (await projectResponse.json()) as { id: string; name: string }
 
-  await page.goto(`/settings?projectId=${project.id}`)
+  await page.goto(`/settings?projectId=${project.id}&tab=tokens`)
   await expect(
-    page.getByRole("heading", { name: "Service Token" }),
+    page.getByRole("region", { exact: true, name: "API tokens" }),
   ).toBeVisible()
-  const projectScope = page.getByRole("combobox", { name: "Project scope" })
+  await page.getByRole("button", { name: "Create token" }).first().click()
+  const tokenDrawer = page.getByRole("dialog", { name: "Create API token" })
+  await expect(tokenDrawer).toBeVisible()
+  await expect(
+    tokenDrawer.getByRole("heading", { name: "Service Token" }),
+  ).toBeVisible()
+  const projectScope = tokenDrawer.getByRole("combobox", {
+    name: "Project scope",
+  })
   await expect(projectScope).toBeEnabled()
   await expect(projectScope).toContainText(project.name)
-  const tokenForm = page.getByLabel("Name").locator("xpath=ancestor::form[1]")
+  const tokenForm = tokenDrawer
+    .getByLabel("Name")
+    .locator("xpath=ancestor::form[1]")
   const writeScope = tokenForm.getByRole("checkbox", { name: /WRITE/i })
   await expect(writeScope).not.toBeChecked()
   await tokenForm.getByText("WRITE", { exact: true }).click()
   await expect(writeScope).toBeChecked()
   await tokenForm.getByText("WRITE", { exact: true }).click()
   await expect(writeScope).not.toBeChecked()
-  await page.getByLabel("Name").fill(`automation-${testRunSuffix}`)
+  await tokenDrawer.getByLabel("Name").fill(`automation-${testRunSuffix}`)
   const importScope = tokenForm.getByRole("checkbox", { name: /IMPORT/i })
   await importScope.focus()
   await page.keyboard.press("Space")
@@ -44,14 +54,16 @@ test("workbench settings clears one-time API token when leaving settings", async
   await reportScope.focus()
   await page.keyboard.press("Space")
   await expect(reportScope).toBeChecked()
-  await page.getByRole("button", { name: "Create Token" }).click()
+  await tokenForm.getByRole("button", { name: "Create token" }).click()
 
-  const createdTokenPanel = page.getByRole("region", {
+  const createdTokenPanel = tokenDrawer.getByRole("region", {
     name: "Created API token",
   })
   await expect(createdTokenPanel).toBeVisible()
   await expect(createdTokenPanel.getByLabel("Token")).toHaveValue(/^vpr_/)
   await expect(createdTokenPanel).toContainText("READ, IMPORT, REPORT")
+  await tokenDrawer.getByRole("button", { name: "Close" }).click()
+  await expect(createdTokenPanel).toHaveCount(0)
 
   await page.getByRole("link", { name: "Dashboard" }).click()
   await expect(page).toHaveURL(/\/(?:\?.*)?$/)
@@ -65,6 +77,7 @@ test("workbench settings clears one-time API token when leaving settings", async
 
   await expect(createdTokenPanel).toHaveCount(0)
   await expect(page.getByRole("textbox", { name: "Token" })).toHaveCount(0)
+  await page.getByRole("tab", { name: "API Tokens" }).click()
   await expect(
     page.getByRole("table", { name: "API tokens table" }),
   ).toContainText(/READ\s*IMPORT\s*REPORT/)

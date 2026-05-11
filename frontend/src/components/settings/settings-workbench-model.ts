@@ -13,6 +13,7 @@ import { formatCacheAge, providerSnapshotSummary } from "@/lib/provider-format"
 import type { ApiTokenScope } from "./settings-token-model"
 
 export type SettingsWorkbenchProps = {
+  activeSettingsTab: SettingsTab
   apiTokenActionLoading: boolean
   apiTokenError: string
   apiTokenMessage: string
@@ -30,11 +31,34 @@ export type SettingsWorkbenchProps = {
   providerStatusLoading: boolean
   status: WorkbenchStatus | null
   statusError: string
+  onClearCreatedApiToken: () => void
   onApiTokenNameChange: (value: string) => void
   onApiTokenProjectChange: (value: string) => void
   onCreateApiToken: (event: FormEvent<HTMLFormElement>) => void | Promise<void>
   onRevokeApiToken: (token: ApiTokenPublic) => void | Promise<void>
+  onSettingsTabChange: (tab: SettingsTab) => void
   onToggleApiTokenScope: (scope: ApiTokenScope) => void
+}
+
+export const settingsTabOptions = [
+  { label: "Overview", value: "overview" },
+  { label: "API Tokens", value: "tokens" },
+  { label: "Runtime & Providers", value: "runtime" },
+  { label: "Diagnostics", value: "diagnostics" },
+] as const
+
+export type SettingsTab = (typeof settingsTabOptions)[number]["value"]
+
+const settingsTabValues = new Set<string>(
+  settingsTabOptions.map((option) => option.value),
+)
+
+export function normalizeSettingsTab(
+  value: string | null | undefined,
+): SettingsTab {
+  return value && settingsTabValues.has(value)
+    ? (value as SettingsTab)
+    : "overview"
 }
 
 export type ProviderConfigRow = {

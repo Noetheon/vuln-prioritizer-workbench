@@ -2,7 +2,6 @@ import { Database, KeyRound, ShieldCheck, UserRound } from "lucide-react"
 
 import {
   VpwGrid,
-  VpwKeyValueList,
   VpwMetricCard,
   VpwPanel,
   VpwProgress,
@@ -20,6 +19,7 @@ import {
   providerHealth,
   type SettingsWorkbenchProps,
 } from "./settings-workbench-model"
+import { SettingsFactRows } from "./SettingsFactRows"
 
 type SettingsMetricsProps = Pick<
   SettingsWorkbenchProps,
@@ -111,14 +111,15 @@ export function SettingsAccountHealth({
   const provider = providerHealth(providerStatus)
 
   return (
-    <VpwGrid columns={2}>
-      <VpwPanel className="flex flex-col gap-5 p-5">
-        <VpwSectionHeader
-          description="Current authenticated account and workspace runtime state."
-          title="Account and session"
-        />
-        <VpwKeyValueList
-          columns={2}
+    <VpwGrid className="items-start" columns={2}>
+      <VpwPanel className="overflow-hidden p-0">
+        <div className="border-b border-[var(--vpw-border-subtle)] px-5 py-4">
+          <VpwSectionHeader
+            description="Current account and session state."
+            title="Account and session"
+          />
+        </div>
+        <SettingsFactRows
           items={[
             {
               label: "Signed-in user",
@@ -144,16 +145,19 @@ export function SettingsAccountHealth({
         />
       </VpwPanel>
 
-      <VpwPanel className="flex flex-col gap-5 p-5">
-        <VpwSectionHeader
-          description="Token inventory, provider health, and reproducibility signals."
-          title="Setup health"
-        />
+      <VpwPanel className="overflow-hidden p-0">
+        <div className="border-b border-[var(--vpw-border-subtle)] px-5 py-4">
+          <VpwSectionHeader
+            description="Token inventory, provider health, and reproducibility signals."
+            title="Setup health"
+          />
+        </div>
         {providerStatusLoading ? (
-          <VpwSkeletonStack rows={4} />
+          <div className="p-5">
+            <VpwSkeletonStack rows={4} />
+          </div>
         ) : (
-          <VpwKeyValueList
-            columns={2}
+          <SettingsFactRows
             items={[
               {
                 label: "Backend status",
@@ -186,11 +190,13 @@ export function SettingsAccountHealth({
             ]}
           />
         )}
-        <VpwProgress
-          label="Active token coverage"
-          tone={apiTokens.length > 0 ? "info" : "neutral"}
-          value={tokenActivityPercent(apiTokens)}
-        />
+        <div className="border-t border-[var(--vpw-border-subtle)] bg-[color-mix(in_srgb,var(--vpw-bg-panel)_58%,var(--vpw-bg-card))] px-5 py-4">
+          <VpwProgress
+            label="Active token coverage"
+            tone={apiTokens.length > 0 ? "info" : "neutral"}
+            value={tokenActivityPercent(apiTokens)}
+          />
+        </div>
       </VpwPanel>
     </VpwGrid>
   )

@@ -558,10 +558,14 @@ const authenticatedRoutes: readonly EvidenceRoute[] = [
   {
     assertReady: async (page) => {
       await expect(
-        page.getByRole("heading", { level: 2, name: "Settings" }),
+        page.getByRole("heading", { level: 2, name: "Workspace controls" }),
       ).toBeVisible({ timeout: 15_000 })
+      await expect(page.getByRole("tab", { name: "Overview" })).toBeVisible()
       await expect(
-        page.getByRole("region", { exact: true, name: "API tokens" }),
+        page.getByRole("heading", { name: "Account and session" }),
+      ).toBeVisible()
+      await expect(
+        page.getByRole("tab", { name: "API Tokens" }),
       ).toBeVisible()
     },
     id: "settings",
