@@ -14,6 +14,32 @@ async function expectNoPageOverflow(page: Page) {
   )
 }
 
+async function expectNoGlobalStatusStrip(page: Page) {
+  await expect(page.getByLabel("Workbench status summary")).toHaveCount(0)
+}
+
+async function expectWqhdContainerBehavior(
+  page: Page,
+  viewport: { width: number; height: number },
+) {
+  const metrics = await page
+    .locator('section[aria-label="Workbench page content"] > .vpw-page-container')
+    .first()
+    .evaluate((container) => {
+      const rect = container.getBoundingClientRect()
+      return {
+        cssMaxWidth: getComputedStyle(container).maxWidth,
+        width: rect.width,
+      }
+    })
+
+  expect(metrics.cssMaxWidth).toBe("1920px")
+  expect(metrics.width).toBeLessThanOrEqual(1922)
+  if (viewport.width >= 2560) {
+    expect(metrics.width).toBeGreaterThanOrEqual(1918)
+  }
+}
+
 async function expectFindingsTableScrollContainment(
   page: Page,
   viewport: { width: number; height: number },
@@ -160,6 +186,16 @@ const authenticatedRoutes = [
   "/settings",
 ] as const
 
+const responsiveViewports = [
+  { height: 800, width: 360 },
+  { height: 667, width: 375 },
+  { height: 844, width: 390 },
+  { height: 1024, width: 768 },
+  { height: 900, width: 1440 },
+  { height: 1080, width: 1920 },
+  { height: 1440, width: 2560 },
+] as const
+
 test("mobile shell exposes drawer navigation without page-width overflow", async ({
   page,
 }) => {
@@ -182,14 +218,10 @@ test("mobile shell exposes drawer navigation without page-width overflow", async
 test("authenticated routes keep content within desktop, tablet, and mobile viewports", async ({
   page,
 }) => {
-  test.setTimeout(120_000)
+  test.setTimeout(180_000)
   await login(page)
 
-  for (const viewport of [
-    { height: 900, width: 1440 },
-    { height: 1024, width: 768 },
-    { height: 844, width: 390 },
-  ]) {
+  for (const viewport of responsiveViewports) {
     await page.setViewportSize(viewport)
     for (const route of authenticatedRoutes) {
       await page.goto(route)
@@ -197,20 +229,28 @@ test("authenticated routes keep content within desktop, tablet, and mobile viewp
       await page.keyboard.press("Tab")
       await expect(page.locator(":focus")).toBeVisible()
       await expectNoPageOverflow(page)
+      await expectNoGlobalStatusStrip(page)
+      await expectWqhdContainerBehavior(page, viewport)
     }
   }
 })
 
-test("mobile status summary wraps without horizontal clipping", async ({
+test("mobile shell keeps compact health status without duplicate summary strip", async ({
   page,
 }) => {
-  await login(page)
+  await routeWorkbenchShell(page, { projects: [mockProject] })
+  await page.route("**/api/v1/api-tokens/", (route) =>
+    route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({ data: [], count: 0 }),
+    }),
+  )
   await page.setViewportSize({ height: 844, width: 390 })
   await page.goto("/settings")
 
   const statusSummary = page.getByLabel("Workbench status summary")
   const headerHealth = page.getByLabel("Workspace health: Data services healthy")
-  await expect(statusSummary).toBeVisible()
+  await expect(statusSummary).toHaveCount(0)
   const visibleHeaderHealthText = await headerHealth.evaluate((element) =>
     Array.from(element.querySelectorAll("span"))
       .filter((span) => getComputedStyle(span).display !== "none")
@@ -219,31 +259,6 @@ test("mobile status summary wraps without horizontal clipping", async ({
       .join(" "),
   )
   expect(visibleHeaderHealthText).toBe("Healthy")
-
-  const metrics = await statusSummary.evaluate((element) => {
-    const rect = element.getBoundingClientRect()
-    const children = Array.from(element.children[0]?.children ?? []).map(
-      (child) => {
-        const childRect = child.getBoundingClientRect()
-        return {
-          left: childRect.left,
-          right: childRect.right,
-        }
-      },
-    )
-
-    return {
-      display: getComputedStyle(element.children[0] as Element).display,
-      fitsViewport: rect.left >= 0 && rect.right <= window.innerWidth,
-      childrenFit: children.every(
-        (child) => child.left >= 0 && child.right <= window.innerWidth,
-      ),
-    }
-  })
-
-  expect(metrics.display).toBe("grid")
-  expect(metrics.fitsViewport).toBe(true)
-  expect(metrics.childrenFit).toBe(true)
   await expectNoPageOverflow(page)
 })
 

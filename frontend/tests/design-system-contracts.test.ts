@@ -238,6 +238,36 @@ test("retired compatibility and dark-mode override styles stay retired", () => {
   assert.deepEqual(offenders, [])
 })
 
+test("runtime CSS, TypeScript tokens, JSON tokens, and showcase copy stay synchronized", () => {
+  const tokenJson = JSON.parse(readProjectFile("src/lib/vpw-tokens.json")) as {
+    layout: { maxWidth: string }
+    radius: Record<string, string>
+  }
+  const tokenTs = readProjectFile("src/lib/vpw-tokens.ts")
+  const tokenCss = readProjectFile("src/styles/tokens.css")
+  const showcase = readProjectFile("src/components/vpw/VpwDesignSystemShowcase.tsx")
+  const expectedRadius = {
+    sm: "4px",
+    md: "6px",
+    lg: "8px",
+    xl: "8px",
+    pill: "9999px",
+  }
+
+  assert.equal(tokenJson.layout.maxWidth, "1920px")
+  assert.deepEqual(tokenJson.radius, expectedRadius)
+  assert.match(tokenTs, /maxWidth:\s*"1920px"/)
+  assert.match(tokenCss, /--vpw-container-max:\s*1920px;/)
+  assert.match(showcase, /1920px max/)
+
+  for (const [name, value] of Object.entries(expectedRadius)) {
+    assert.match(tokenTs, new RegExp(`${name}:\\s*"${value}"`))
+    assert.match(tokenCss, new RegExp(`--vpw-radius-${name}:\\s*${value};`))
+  }
+
+  assert.match(showcase, /4 \/ 6 \/ 8 \/ 8/)
+})
+
 test("cards and panels stay inside the eight-pixel radius system", () => {
   const offenders: string[] = []
 

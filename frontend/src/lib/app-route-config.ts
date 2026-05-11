@@ -101,3 +101,11 @@ export function workbenchPathFromPathname(
   }
   return null
 }
+
+export function routeDetailFromPathname(
+  _pathname: string,
+  routePath: WorkbenchPath | null,
+): RouteDetail {
+  if (routePath) return routeDetails[routePath]
+  return unknownRouteDetail
+}
