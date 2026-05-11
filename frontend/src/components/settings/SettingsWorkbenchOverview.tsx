@@ -1,13 +1,10 @@
 import { Database, KeyRound, ShieldCheck, UserRound } from "lucide-react"
-import type { ReactNode } from "react"
 
 import {
   VpwGrid,
   VpwMetricCard,
   VpwPanel,
   VpwProgress,
-  VpwBadge,
-  type VpwBadgeTone,
   VpwSectionHeader,
   VpwSkeletonStack,
 } from "@/components/vpw"
@@ -22,6 +19,7 @@ import {
   providerHealth,
   type SettingsWorkbenchProps,
 } from "./settings-workbench-model"
+import { SettingsFactRows } from "./SettingsFactRows"
 
 type SettingsMetricsProps = Pick<
   SettingsWorkbenchProps,
@@ -201,33 +199,5 @@ export function SettingsAccountHealth({
         </div>
       </VpwPanel>
     </VpwGrid>
-  )
-}
-
-type SettingsFactRow = {
-  label: string
-  value: ReactNode
-  tone?: VpwBadgeTone
-}
-
-function SettingsFactRows({ items }: { items: readonly SettingsFactRow[] }) {
-  return (
-    <dl className="divide-y divide-[var(--vpw-border-subtle)]">
-      {items.map((item) => (
-        <div
-          className="grid gap-1 px-5 py-3.5 sm:grid-cols-[minmax(8rem,0.38fr)_minmax(0,1fr)] sm:items-center"
-          key={item.label}
-        >
-          <dt className="vpw-label">{item.label}</dt>
-          <dd className="min-w-0 font-medium text-[var(--vpw-text-primary)] [overflow-wrap:anywhere]">
-            {item.tone ? (
-              <VpwBadge tone={item.tone}>{item.value}</VpwBadge>
-            ) : (
-              item.value
-            )}
-          </dd>
-        </div>
-      ))}
-    </dl>
   )
 }

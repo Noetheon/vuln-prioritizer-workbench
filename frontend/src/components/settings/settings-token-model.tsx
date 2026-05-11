@@ -93,7 +93,7 @@ export function buildApiTokenColumns({
       id: "activity",
       header: "Activity",
       cell: (token) => (
-        <div className="min-w-36 space-y-1 text-sm">
+        <div className="flex min-w-36 flex-col gap-1 text-sm">
           <p className="text-[var(--vpw-text-primary)]">
             <span className="vpw-label mr-2">Created</span>
             {formatDateTime(token.created_at)}

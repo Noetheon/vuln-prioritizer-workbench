@@ -5,7 +5,6 @@ import {
   VpwBadge,
   type VpwBadgeTone,
   VpwSection,
-  VpwStatusBanner,
 } from "@/components/vpw"
 import {
   evidenceReadiness,
@@ -21,11 +20,6 @@ type SettingsHeroProps = Pick<
   | "providerStatus"
   | "providerStatusError"
   | "statusError"
->
-
-type SettingsAlertsProps = Pick<
-  SettingsWorkbenchProps,
-  "apiTokenError" | "apiTokenMessage" | "providerStatusError" | "statusError"
 >
 
 export function SettingsHero({
@@ -102,40 +96,5 @@ function SettingsHeroFact({
         <VpwBadge tone={tone}>{value}</VpwBadge>
       </div>
     </div>
-  )
-}
-
-export function SettingsAlerts({
-  apiTokenError,
-  apiTokenMessage,
-  providerStatusError,
-  statusError,
-}: SettingsAlertsProps) {
-  return (
-    <>
-      {statusError ? (
-        <VpwStatusBanner title="Workbench status unavailable" tone="critical">
-          {statusError}
-        </VpwStatusBanner>
-      ) : null}
-
-      {providerStatusError ? (
-        <VpwStatusBanner title="Provider status unavailable" tone="warning">
-          {providerStatusError}
-        </VpwStatusBanner>
-      ) : null}
-
-      {apiTokenError ? (
-        <VpwStatusBanner title="API token action failed" tone="critical">
-          {apiTokenError}
-        </VpwStatusBanner>
-      ) : null}
-
-      {apiTokenMessage ? (
-        <VpwStatusBanner title="API token action complete" tone="success">
-          {apiTokenMessage}
-        </VpwStatusBanner>
-      ) : null}
-    </>
   )
 }
