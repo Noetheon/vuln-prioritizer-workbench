@@ -37,14 +37,16 @@ export function VpwAppFrame({
 }: VpwAppFrameProps) {
   return (
     <div className="grid min-h-[34rem] overflow-hidden rounded-[var(--vpw-radius-xl)] border border-[var(--vpw-border-default)] bg-[var(--vpw-bg-app)] shadow-[var(--vpw-shadow-3)] lg:grid-cols-[248px_1fr]">
-      <aside className="hidden bg-[var(--vpw-navy)] p-4 text-white lg:block">
+      <aside className="hidden border-r border-[var(--vpw-border-default)] bg-[var(--vpw-bg-page)] p-4 text-[var(--vpw-text-primary)] lg:block">
         <div className="flex items-center gap-3">
-          <div className="grid size-9 place-items-center rounded-[var(--vpw-radius-md)] bg-[var(--vpw-amber)] font-extrabold text-[var(--vpw-text-primary)] text-xs">
+          <div className="grid size-9 place-items-center rounded-[var(--vpw-radius-md)] bg-[var(--vpw-text-primary)] font-extrabold text-[var(--vpw-bg-card)] text-xs">
             VP
           </div>
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold">Vuln Prioritizer</p>
-            <p className="truncate text-xs text-[var(--vpw-text-muted)]">Workbench</p>
+            <p className="truncate text-xs text-[var(--vpw-text-muted)]">
+              Workbench
+            </p>
           </div>
         </div>
         <nav className="mt-6 grid gap-1" aria-label="VPW app frame preview">
@@ -54,7 +56,9 @@ export function VpwAppFrame({
               <div
                 className={cn(
                   "flex min-h-10 items-center gap-2.5 rounded-[var(--vpw-radius-md)] px-3 text-sm font-medium",
-                  item.active ? "bg-white/10 text-white" : "text-white/60",
+                  item.active
+                    ? "bg-[var(--vpw-text-primary)] text-[var(--vpw-bg-card)]"
+                    : "text-[var(--vpw-text-secondary)]",
                 )}
                 key={item.label}
               >
@@ -64,7 +68,7 @@ export function VpwAppFrame({
             )
           })}
         </nav>
-        <div className="mt-8 rounded-[var(--vpw-radius-md)] border border-white/10 p-3 text-xs text-white/60">
+        <div className="mt-8 rounded-[var(--vpw-radius-md)] border border-[var(--vpw-border-default)] bg-[var(--vpw-bg-panel)] p-3 text-xs text-[var(--vpw-text-muted)]">
           {userLabel}
         </div>
       </aside>

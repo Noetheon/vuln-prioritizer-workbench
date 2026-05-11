@@ -102,7 +102,7 @@ def test_compose_override_exposes_workbench_shell_and_frontend_ports() -> None:
     services = override["services"]
     backend_command = "\n".join(services["backend"]["command"])
 
-    assert services["backend"]["ports"] == ["127.0.0.1:8000:8000"]
+    assert services["backend"]["ports"] == ["127.0.0.1:${DOCKER_DEMO_BACKEND_PORT:-8000}:8000"]
     assert "cp -n /app/examples/*provider_snapshot*.json /app/provider-snapshots/" in (
         backend_command
     )
@@ -112,7 +112,7 @@ def test_compose_override_exposes_workbench_shell_and_frontend_ports() -> None:
     assert "create_all" not in backend_command
     assert "app.main:app" in backend_command
     assert services["backend"]["environment"]["DEMO_PROVIDER_SNAPSHOT_ENABLED"] == "true"
-    assert services["frontend"]["ports"] == ["127.0.0.1:5173:8080"]
+    assert services["frontend"]["ports"] == ["127.0.0.1:${DOCKER_DEMO_FRONTEND_PORT:-5173}:8080"]
     assert "workbench-postgres" not in services
 
 
@@ -121,6 +121,11 @@ def test_docker_demo_smoke_runs_quickstart_api_import() -> None:
     script = Path("scripts/docker_quickstart_api_smoke.py").read_text(encoding="utf-8")
 
     docker_smoke_block = makefile.split("docker-demo-smoke:", 1)[1].split("dependency-audit:", 1)[0]
+    assert "DOCKER_DEMO_BACKEND_PORT ?= 8000" in makefile
+    assert "DOCKER_DEMO_FRONTEND_PORT ?= 5173" in makefile
+    assert 'export DOCKER_DEMO_BACKEND_PORT="$(DOCKER_DEMO_BACKEND_PORT)"' in docker_smoke_block
+    assert 'export DOCKER_DEMO_FRONTEND_PORT="$(DOCKER_DEMO_FRONTEND_PORT)"' in docker_smoke_block
+    assert "DOCKER_QUICKSTART_API_BASE_URL=" in docker_smoke_block
     assert "$(PYTHON) scripts/docker_quickstart_api_smoke.py" in docker_smoke_block
     assert "$(COMPOSE) exec -T backend python -m app.core.schema_smoke" in docker_smoke_block
     assert 'export FIRST_SUPERUSER_PASSWORD="$(DOCKER_DEMO_FIRST_SUPERUSER_PASSWORD)"' in (

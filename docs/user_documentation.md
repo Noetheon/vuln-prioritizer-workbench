@@ -69,6 +69,13 @@ Maintainers can run the same active-runtime readiness path with:
 make docker-demo-smoke
 ```
 
+When local `8000` or `5173` host ports are unavailable, override the host
+bindings while preserving the same Compose services:
+
+```bash
+DOCKER_DEMO_BACKEND_PORT=18080 DOCKER_DEMO_FRONTEND_PORT=15174 make docker-demo-smoke
+```
+
 ## Documentation Map
 
 | Need | Start here | What it covers |

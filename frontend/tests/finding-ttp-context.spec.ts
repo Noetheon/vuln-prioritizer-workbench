@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test"
-import { authHeaders, login } from "./auth-helpers"
+import { authHeaders, backendBaseUrl, login } from "./auth-helpers"
 import { evidenceScreenshotPath } from "./evidence-paths"
 import { selectDashboardProject, validCveList } from "./workbench-e2e-helpers"
 
@@ -11,7 +11,7 @@ test("workbench finding detail renders TTP Context tab", async ({ page }) => {
   const accessToken = await login(page)
   const headers = authHeaders(accessToken)
   const projectResponse = await page.request.post(
-    "http://127.0.0.1:8000/api/v1/projects/",
+    `${backendBaseUrl}/api/v1/projects/`,
     {
       data: {
         description: "Playwright TTP Context project",
@@ -24,7 +24,7 @@ test("workbench finding detail renders TTP Context tab", async ({ page }) => {
   const project = (await projectResponse.json()) as { id: string }
 
   const importResponse = await page.request.post(
-    `http://127.0.0.1:8000/api/v1/projects/${project.id}/imports`,
+    `${backendBaseUrl}/api/v1/projects/${project.id}/imports`,
     {
       headers,
       multipart: {
@@ -40,7 +40,7 @@ test("workbench finding detail renders TTP Context tab", async ({ page }) => {
   expect(importResponse.ok()).toBeTruthy()
 
   const findingsResponse = await page.request.get(
-    `http://127.0.0.1:8000/api/v1/projects/${project.id}/findings/?sort=cve`,
+    `${backendBaseUrl}/api/v1/projects/${project.id}/findings/?sort=cve`,
     { headers },
   )
   expect(findingsResponse.ok()).toBeTruthy()

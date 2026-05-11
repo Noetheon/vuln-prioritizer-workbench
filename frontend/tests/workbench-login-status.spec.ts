@@ -1,5 +1,10 @@
 import { expect, test } from "@playwright/test"
-import { authHeaders, login, testUserEmail } from "./auth-helpers"
+import {
+  authHeaders,
+  backendBaseUrl,
+  login,
+  testUserEmail,
+} from "./auth-helpers"
 import { evidenceScreenshotPath } from "./evidence-paths"
 import {
   importWizardOpenVex,
@@ -55,7 +60,7 @@ test("workbench frontend covers core Workbench E2E smoke", async ({ page }) => {
 
   const headers = authHeaders(accessToken)
   const projectResponse = await page.request.post(
-    "http://127.0.0.1:8000/api/v1/projects/",
+    `${backendBaseUrl}/api/v1/projects/`,
     {
       data: {
         description: "Playwright dashboard summary project",
@@ -78,7 +83,7 @@ test("workbench frontend covers core Workbench E2E smoke", async ({ page }) => {
   )
 
   const importResponse = await page.request.post(
-    `http://127.0.0.1:8000/api/v1/projects/${project.id}/imports`,
+    `${backendBaseUrl}/api/v1/projects/${project.id}/imports`,
     {
       headers,
       multipart: {
@@ -107,7 +112,7 @@ test("workbench frontend covers core Workbench E2E smoke", async ({ page }) => {
   ).toBeVisible()
 
   const providerStatusResponse = await page.request.get(
-    "http://127.0.0.1:8000/api/v1/providers/status",
+    `${backendBaseUrl}/api/v1/providers/status`,
     { headers },
   )
   expect(providerStatusResponse.ok()).toBeTruthy()
@@ -316,7 +321,7 @@ test("workbench frontend covers core Workbench E2E smoke", async ({ page }) => {
   await page.getByRole("button", { name: "Upload Import" }).click()
   await page.waitForTimeout(1000)
   const importWizardFindingsResponse = await page.request.get(
-    `http://127.0.0.1:8000/api/v1/projects/${project.id}/findings/?sort=cve`,
+    `${backendBaseUrl}/api/v1/projects/${project.id}/findings/?sort=cve`,
     { headers },
   )
   expect(importWizardFindingsResponse.ok()).toBeTruthy()
@@ -352,7 +357,7 @@ test("workbench frontend covers core Workbench E2E smoke", async ({ page }) => {
   })
 
   const occurrenceImport = await page.request.post(
-    `http://127.0.0.1:8000/api/v1/projects/${project.id}/imports`,
+    `${backendBaseUrl}/api/v1/projects/${project.id}/imports`,
     {
       headers,
       multipart: {

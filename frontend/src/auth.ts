@@ -40,6 +40,10 @@ export function getCsrfToken(cookie = browserCookie()): string {
   return readCsrfMetaToken()
 }
 
+export function hasReadableSessionEvidence(): boolean {
+  return Boolean(getCsrfToken())
+}
+
 export function csrfHeaderForMethod(method: string): HeadersInit | undefined {
   if (!unsafeMethods.has(method.toUpperCase())) {
     return undefined

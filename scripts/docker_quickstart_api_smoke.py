@@ -11,7 +11,9 @@ import urllib.request
 from pathlib import Path
 from uuid import uuid4
 
-BASE_URL = "http://127.0.0.1:8000/api/v1"
+BASE_URL = os.environ.get("DOCKER_QUICKSTART_API_BASE_URL", "http://127.0.0.1:8000/api/v1").rstrip(
+    "/"
+)
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SAMPLE_CVES = REPO_ROOT / "data" / "sample_cves.txt"
 

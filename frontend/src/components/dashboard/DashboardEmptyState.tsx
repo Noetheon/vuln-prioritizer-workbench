@@ -25,14 +25,14 @@ export function DashboardDemoBanner() {
 export function DashboardSetupEmptyState() {
   return (
     <VpwSurface
-      aria-label="No project selected — getting started"
+      aria-label="No project selected - getting started"
       className="border-[var(--vpw-border-default)] bg-[var(--vpw-bg-card)] px-8 py-10"
     >
       <div className="mx-auto max-w-lg">
-          <div className="flex flex-col items-center text-center">
-            <div className="mb-4 flex size-14 items-center justify-center rounded-[var(--vpw-radius-lg)] bg-[var(--vpw-navy)] shadow-[var(--vpw-shadow-2)]">
-              <ShieldCheck className="size-7 text-[var(--vpw-amber)]" />
-            </div>
+        <div className="flex flex-col items-center text-center">
+          <div className="mb-4 flex size-14 items-center justify-center rounded-[var(--vpw-radius-lg)] bg-[var(--vpw-navy)] shadow-[var(--vpw-shadow-2)]">
+            <ShieldCheck className="size-7 text-[var(--vpw-amber)]" />
+          </div>
           <h3 className="text-lg font-semibold text-[var(--vpw-text-primary)]">
             Set up Risk Operations
           </h3>
