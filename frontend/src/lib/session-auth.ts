@@ -1,9 +1,16 @@
 import { ApiError, UsersService } from "../api-client"
-import { isLoggedIn, markAuthenticatedSession } from "../auth"
+import {
+  hasReadableSessionEvidence,
+  isLoggedIn,
+  markAuthenticatedSession,
+} from "../auth"
 
 export async function hasAuthenticatedSession(): Promise<boolean> {
   if (isLoggedIn()) {
     return true
+  }
+  if (!hasReadableSessionEvidence()) {
+    return false
   }
   try {
     await UsersService.readUserMe()

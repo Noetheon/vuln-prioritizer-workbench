@@ -1,11 +1,11 @@
 @media (min-width: 1600px) {
   .finding-decision-hero {
-    grid-template-columns: minmax(0, 1.28fr) minmax(500px, 0.58fr);
-    padding: 38px;
+    grid-template-columns: minmax(0, 1.24fr) minmax(440px, 0.56fr);
+    padding: 28px;
   }
 
   .finding-decision-hero h2 {
-    font-size: 3.75rem;
+    font-size: 2.85rem;
   }
 
   .finding-decision-hero p {
@@ -54,11 +54,11 @@
   .finding-decision-hero {
     grid-template-columns: minmax(0, 1fr) minmax(360px, 0.58fr);
     gap: 20px;
-    padding: 28px;
+    padding: 22px;
   }
 
   .finding-decision-hero h2 {
-    font-size: 2.8rem;
+    font-size: 2.35rem;
   }
 
   .finding-decision-main-grid {
@@ -139,7 +139,7 @@
   }
 
   .finding-decision-hero h2 {
-    font-size: 2.2rem;
+    font-size: 2rem;
   }
 
   .finding-card-heading,

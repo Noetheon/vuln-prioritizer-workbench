@@ -1,10 +1,107 @@
+.findings-remediation-layout {
+  --findings-analyst-border: color-mix(
+    in srgb,
+    var(--vpw-border-default) 76%,
+    var(--vpw-bg-card)
+  );
+  --findings-analyst-soft-border: color-mix(
+    in srgb,
+    var(--vpw-border-subtle) 72%,
+    var(--vpw-bg-card)
+  );
+  --findings-analyst-fill: color-mix(
+    in srgb,
+    var(--vpw-bg-card) 90%,
+    var(--vpw-bg-panel)
+  );
+  --findings-analyst-muted-fill: color-mix(
+    in srgb,
+    var(--vpw-bg-panel) 86%,
+    var(--vpw-bg-card)
+  );
+}
+
+.findings-remediation-layout .vpw-panel,
+.findings-remediation-layout .vpw-card {
+  border-color: var(--findings-analyst-border);
+  background: var(--findings-analyst-fill);
+  box-shadow: none;
+}
+
+.findings-remediation-layout .vpw-label,
+.findings-remediation-layout .vpw-table-header-cell,
+.findings-mobile-label {
+  letter-spacing: 0;
+}
+
+.findings-analyst-summary {
+  position: relative;
+  overflow: hidden;
+  background: var(--vpw-bg-card);
+}
+
+.findings-analyst-summary::before {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  background: var(--vpw-violet);
+  content: "";
+}
+
+.findings-remediation-layout .vpw-table-header-cell {
+  background: var(--findings-analyst-muted-fill);
+  color: var(--vpw-text-secondary);
+  font-size: 0.72rem;
+  font-weight: 750;
+}
+
+.findings-remediation-layout .vpw-table-cell {
+  border-bottom-color: var(--findings-analyst-soft-border);
+  padding-top: 0.78rem;
+  padding-bottom: 0.78rem;
+}
+
+.findings-remediation-layout .vpw-table-row:hover > .vpw-table-cell {
+  background: color-mix(
+    in srgb,
+    var(--vpw-bg-info) 30%,
+    var(--vpw-bg-card)
+  );
+}
+
+.findings-remediation-layout .findings-filter-card {
+  background: var(--vpw-bg-card);
+}
+
+.findings-remediation-layout .findings-queue-panel {
+  background: var(--vpw-bg-card);
+}
+
+.findings-remediation-layout .remediation-table-wrap {
+  border-color: var(--findings-analyst-border);
+  background: var(--vpw-bg-card);
+  box-shadow: none;
+}
+
+.findings-remediation-layout .risk-score-pill {
+  border-color: var(--findings-analyst-border);
+  background: var(--findings-analyst-muted-fill);
+  font-weight: 750;
+}
+
+.findings-remediation-layout .remediation-subtext,
+.findings-remediation-layout .remediation-why-now {
+  color: var(--vpw-text-muted);
+}
+
 .governance-summary-widget {
   display: grid;
   gap: 14px;
-  border: 1px solid var(--vpw-border-subtle);
+  border: 1px solid var(--findings-analyst-border);
   border-radius: 8px;
   padding: 16px;
   background: var(--vpw-bg-card);
+  box-shadow: none;
 }
 
 .governance-summary-widget {
@@ -17,9 +114,9 @@
   gap: 1px;
   margin: 0;
   overflow: hidden;
-  border: 1px solid var(--vpw-border-subtle);
+  border: 1px solid var(--findings-analyst-border);
   border-radius: 8px;
-  background: var(--vpw-border-subtle);
+  background: var(--findings-analyst-soft-border);
 }
 
 .governance-debt-grid div {
@@ -27,7 +124,7 @@
   gap: 5px;
   min-height: 76px;
   padding: 10px;
-  background: var(--vpw-bg-card);
+  background: var(--findings-analyst-fill);
 }
 
 .governance-debt-grid dt,
@@ -71,10 +168,10 @@
 .governance-service-list li {
   display: grid;
   gap: 8px;
-  border: 1px solid var(--vpw-border-default);
+  border: 1px solid var(--findings-analyst-border);
   border-radius: 8px;
   padding: 11px;
-  background: var(--vpw-bg-panel);
+  background: var(--findings-analyst-muted-fill);
 }
 
 .governance-service-list div {
@@ -110,22 +207,6 @@
   min-width: 0;
 }
 
-.finding-table-scroll-shell::after {
-  position: absolute;
-  top: 1px;
-  right: 1px;
-  bottom: 1px;
-  width: clamp(28px, 7vw, 54px);
-  border-radius: 0 var(--vpw-radius-xl) var(--vpw-radius-xl) 0;
-  background: linear-gradient(90deg, transparent, var(--vpw-bg-card));
-  content: "";
-  pointer-events: none;
-}
-
-.finding-table-scroll-shell:focus-within::after,
-.finding-table-scroll-shell:hover::after {
-  opacity: 0.35;
-}
 
 @media (max-width: 820px) {
   .findings-queue-panel .remediation-table-wrap {
@@ -140,11 +221,11 @@
 
 .findings-mobile-card {
   min-width: 0;
-  border: 1px solid var(--vpw-border-default);
+  border: 1px solid var(--findings-analyst-border);
   border-radius: var(--vpw-radius-xl);
   padding: 14px;
   background: var(--vpw-bg-card);
-  box-shadow: var(--vpw-shadow-1);
+  box-shadow: none;
 }
 
 .findings-mobile-card-header,
@@ -202,10 +283,10 @@
   min-width: 0;
   align-content: start;
   gap: 4px;
-  border: 1px solid var(--vpw-border-subtle);
+  border: 1px solid var(--findings-analyst-border);
   border-radius: var(--vpw-radius-lg);
   padding: 9px;
-  background: var(--vpw-bg-panel);
+  background: var(--findings-analyst-muted-fill);
 }
 
 .findings-mobile-meta-value {
@@ -220,6 +301,10 @@
   font-weight: 800;
   line-height: 1;
   text-transform: uppercase;
+}
+
+.findings-remediation-layout .findings-filter-card > div {
+  padding: 14px 16px;
 }
 
 .findings-mobile-signals {

@@ -299,7 +299,7 @@ export function RiskOperationsDashboard({
     <TooltipProvider>
       <section
         aria-label="Risk Operations dashboard"
-        className="flex flex-col gap-4 pb-4"
+        className="dashboard-analyst-layout flex flex-col gap-4 pb-4"
       >
         <DashboardHero
           effectiveProjects={effectiveProjects}

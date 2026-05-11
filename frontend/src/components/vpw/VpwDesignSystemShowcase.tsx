@@ -114,17 +114,17 @@ export function VpwDesignSystemShowcase() {
   return (
     <VpwPageContainer className="flex flex-col gap-8">
       <VpwSectionHeader
-        actions={<VpwBadge tone="info">Foundation complete set</VpwBadge>}
-        description="Reusable VPW tokens, product components, controls, data display, evidence patterns and product states."
+        actions={<VpwBadge tone="info">Precision Light Analyst</VpwBadge>}
+        description="Reusable VPW tokens, product components, controls, read/write evidence patterns and analyst product states."
         eyebrow="VPW Design System"
-        title="Complete Design Set"
+        title="Precision Light Analyst Design Set"
       />
 
       <VpwBreadcrumbs
         items={[
           { label: "VPW" },
           { label: "Design system" },
-          { label: "Complete set", current: true },
+          { label: "Precision Light Analyst", current: true },
         ]}
       />
 
@@ -191,24 +191,24 @@ export function VpwDesignSystemShowcase() {
           />
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <VpwTokenSwatch
-              name="Primary"
-              usage="Primary actions and focus"
-              value="#2563EB"
+              name="Ink"
+              usage="Primary actions and product chrome"
+              value="#171717"
             />
             <VpwTokenSwatch
-              name="Teal"
-              usage="Security and evidence accent"
-              value="#14B8A6"
+              name="Link Blue"
+              usage="Focus and informational states"
+              value="#0070F3"
             />
             <VpwTokenSwatch
               name="Success"
               usage="Healthy and verified states"
-              value="#22C55E"
+              value="#047857"
             />
             <VpwTokenSwatch
               name="Critical"
               usage="Critical and destructive states"
-              value="#EF4444"
+              value="#C40000"
             />
           </div>
         </div>

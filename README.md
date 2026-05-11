@@ -114,6 +114,20 @@ Open:
 - Workbench frontend: `http://127.0.0.1:5173`
 - Backend health: `http://127.0.0.1:8000/api/v1/utils/health-check/`
 
+If those local ports are already reserved, keep the container ports unchanged
+and override only the host bindings:
+
+```bash
+DOCKER_DEMO_BACKEND_PORT=18080 DOCKER_DEMO_FRONTEND_PORT=15174 make docker-demo-smoke
+```
+
+Playwright uses separate defaults to avoid colliding with the Docker demo
+ports: frontend `http://127.0.0.1:15173` and backend
+`http://127.0.0.1:18000`. Override them with
+`VPW_PLAYWRIGHT_FRONTEND_PORT`, `VPW_PLAYWRIGHT_BACKEND_PORT`,
+`VPW_E2E_FRONTEND_URL`, or `VPW_E2E_BACKEND_URL` when reusing an existing
+local server.
+
 Local demo login defaults from `.env.example`:
 
 - email: `admin@example.com`

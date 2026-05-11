@@ -94,24 +94,24 @@ export function AppShell({
   return (
     <TooltipProvider>
       <div className="vpw-app-shell flex h-dvh min-h-dvh overflow-hidden bg-[var(--vpw-bg-app)]">
-        {/* ── Sidebar ── */}
+        {/* Sidebar */}
         <aside
           aria-label="Workbench sidebar"
           className={cn(
-            "hidden h-dvh max-h-dvh shrink-0 flex-col border-r border-white/10 bg-[var(--vpw-navy)] transition-[width] duration-200 ease-out lg:flex",
+            "hidden h-dvh max-h-dvh shrink-0 flex-col border-r border-[var(--vpw-border-default)] bg-[var(--vpw-bg-page)] transition-[width] duration-200 ease-out lg:flex",
             sidebarCollapsed ? "w-[72px]" : "w-[248px]",
           )}
         >
           {/* Brand */}
           <div
             className={cn(
-              "flex h-16 shrink-0 items-center border-b border-white/10",
+              "flex h-16 shrink-0 items-center border-b border-[var(--vpw-border-default)]",
               sidebarCollapsed ? "justify-center px-0" : "gap-3 px-4",
             )}
           >
             <div
               className={cn(
-                "flex shrink-0 items-center justify-center rounded-lg bg-[var(--vpw-amber)] font-extrabold text-[var(--vpw-navy)]",
+                "flex shrink-0 items-center justify-center rounded-[var(--vpw-radius-lg)] bg-[var(--vpw-text-primary)] font-extrabold text-[var(--vpw-bg-card)]",
                 sidebarCollapsed ? "size-10 text-sm" : "size-9 text-xs",
               )}
             >
@@ -119,10 +119,12 @@ export function AppShell({
             </div>
             {!sidebarCollapsed ? (
               <div className="min-w-0">
-                <p className="truncate text-sm font-semibold text-white">
+                <p className="truncate text-sm font-semibold text-[var(--vpw-text-primary)]">
                   Vuln Prioritizer
                 </p>
-                <p className="truncate text-xs text-white/75">Workbench</p>
+                <p className="truncate text-xs text-[var(--vpw-text-muted)]">
+                  Workbench
+                </p>
               </div>
             ) : null}
             {!sidebarCollapsed ? (
@@ -131,7 +133,7 @@ export function AppShell({
                   <Button
                     aria-label="Collapse sidebar"
                     aria-pressed={sidebarCollapsed}
-                    className="ml-auto flex size-9 items-center justify-center rounded-md text-white/60 hover:bg-white/5 hover:text-white/85"
+                    className="ml-auto flex size-9 items-center justify-center rounded-[var(--vpw-radius-md)] text-[var(--vpw-text-muted)] hover:bg-[var(--vpw-bg-panel)] hover:text-[var(--vpw-text-primary)]"
                     onClick={() =>
                       setSidebarCollapsed((collapsed) => !collapsed)
                     }
@@ -162,7 +164,7 @@ export function AppShell({
                       <Button
                         aria-label="Expand sidebar"
                         aria-pressed={sidebarCollapsed}
-                        className="mx-auto flex size-10 items-center justify-center rounded-md text-white/60 hover:bg-white/5 hover:text-white/85"
+                        className="mx-auto flex size-10 items-center justify-center rounded-[var(--vpw-radius-md)] text-[var(--vpw-text-muted)] hover:bg-[var(--vpw-bg-panel)] hover:text-[var(--vpw-text-primary)]"
                         onClick={() =>
                           setSidebarCollapsed((collapsed) => !collapsed)
                         }
@@ -184,13 +186,13 @@ export function AppShell({
                     aria-current={isActive ? "page" : undefined}
                     aria-label={sidebarCollapsed ? entry.label : undefined}
                     className={cn(
-                      "flex items-center gap-2.5 rounded-md text-sm font-medium transition-colors",
+                      "flex items-center gap-2.5 rounded-[var(--vpw-radius-md)] text-sm font-medium transition-colors",
                       sidebarCollapsed
                         ? "mx-auto size-10 justify-center p-0"
                         : "min-h-10 w-full px-3",
                       isActive
-                        ? "bg-white/10 text-white"
-                        : "text-white/60 hover:bg-white/5 hover:text-white/85",
+                        ? "bg-[var(--vpw-text-primary)] text-[var(--vpw-bg-card)] shadow-[var(--vpw-shadow-1)]"
+                        : "text-[var(--vpw-text-secondary)] hover:bg-[var(--vpw-bg-panel)] hover:text-[var(--vpw-text-primary)]",
                     )}
                     to={entry.to}
                   >
@@ -226,7 +228,7 @@ export function AppShell({
           {/* Footer */}
           <div
             className={cn(
-              "flex shrink-0 items-center gap-2 border-t border-white/10",
+              "flex shrink-0 items-center gap-2 border-t border-[var(--vpw-border-default)]",
               sidebarCollapsed ? "flex-col justify-center p-2" : "p-3",
             )}
           >
@@ -235,7 +237,7 @@ export function AppShell({
                 <Button
                   aria-label="Account menu"
                   className={cn(
-                    "h-auto min-h-10 justify-start rounded-md text-white/60 hover:bg-white/5 hover:text-white/85",
+                    "h-auto min-h-10 justify-start rounded-[var(--vpw-radius-md)] text-[var(--vpw-text-secondary)] hover:bg-[var(--vpw-bg-panel)] hover:text-[var(--vpw-text-primary)]",
                     sidebarCollapsed
                       ? "size-10 justify-center p-0"
                       : "w-full px-2",
@@ -243,7 +245,7 @@ export function AppShell({
                   type="button"
                   variant="ghost"
                 >
-                  <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-white/10 text-xs font-semibold text-white/75">
+                  <span className="flex size-8 shrink-0 items-center justify-center rounded-full border border-[var(--vpw-border-default)] bg-[var(--vpw-bg-panel)] text-xs font-semibold text-[var(--vpw-text-secondary)]">
                     {currentUserLabel.charAt(0).toUpperCase()}
                   </span>
                   {!sidebarCollapsed ? (
@@ -278,7 +280,7 @@ export function AppShell({
           </div>
         </aside>
 
-        {/* ── Main area ── */}
+        {/* Main area */}
         <main className="flex h-dvh min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
           {/* Topbar */}
           <header className="flex min-h-14 shrink-0 items-center justify-between gap-3 border-b border-[var(--vpw-border-default)] bg-[var(--vpw-bg-page)] px-4 py-3 lg:h-14 lg:px-6 lg:py-0">
@@ -296,19 +298,19 @@ export function AppShell({
                   </Button>
                 </SheetTrigger>
                 <SheetContent
-                  className="flex w-[min(22rem,calc(100vw-2rem))] flex-col overflow-y-auto bg-[var(--vpw-navy)] p-0 text-white"
+                  className="flex w-[min(22rem,calc(100vw-2rem))] flex-col overflow-y-auto bg-[var(--vpw-bg-page)] p-0 text-[var(--vpw-text-primary)]"
                   side="left"
                 >
-                  <SheetHeader className="border-b border-white/10 px-4 py-4 text-left">
+                  <SheetHeader className="border-b border-[var(--vpw-border-default)] px-4 py-4 text-left">
                     <div className="flex items-center gap-3">
-                      <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-[var(--vpw-amber)] text-xs font-extrabold text-[var(--vpw-navy)]">
+                      <div className="flex size-9 shrink-0 items-center justify-center rounded-[var(--vpw-radius-lg)] bg-[var(--vpw-text-primary)] text-xs font-extrabold text-[var(--vpw-bg-card)]">
                         VP
                       </div>
                       <div className="min-w-0">
-                        <SheetTitle className="truncate text-sm font-semibold text-white">
+                        <SheetTitle className="truncate text-sm font-semibold text-[var(--vpw-text-primary)]">
                           Vuln Prioritizer
                         </SheetTitle>
-                        <SheetDescription className="truncate text-xs text-white/60">
+                        <SheetDescription className="truncate text-xs text-[var(--vpw-text-muted)]">
                           Workbench
                         </SheetDescription>
                       </div>
@@ -326,10 +328,10 @@ export function AppShell({
                             <Link
                               aria-current={isActive ? "page" : undefined}
                               className={cn(
-                                "flex min-h-11 items-center gap-3 rounded-md px-3 text-sm font-medium transition-colors",
+                                "flex min-h-11 items-center gap-3 rounded-[var(--vpw-radius-md)] px-3 text-sm font-medium transition-colors",
                                 isActive
-                                  ? "bg-white/10 text-white"
-                                  : "text-white/75 hover:bg-white/5 hover:text-white",
+                                  ? "bg-[var(--vpw-text-primary)] text-[var(--vpw-bg-card)]"
+                                  : "text-[var(--vpw-text-secondary)] hover:bg-[var(--vpw-bg-panel)] hover:text-[var(--vpw-text-primary)]",
                               )}
                               onClick={() => setMobileNavOpen(false)}
                               to={entry.to}
@@ -346,16 +348,16 @@ export function AppShell({
                       })}
                     </ul>
                   </nav>
-                  <div className="flex shrink-0 items-center gap-2 border-t border-white/10 p-3">
-                    <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-white/10 text-xs font-semibold text-white/75">
+                  <div className="flex shrink-0 items-center gap-2 border-t border-[var(--vpw-border-default)] p-3">
+                    <span className="flex size-8 shrink-0 items-center justify-center rounded-full border border-[var(--vpw-border-default)] bg-[var(--vpw-bg-panel)] text-xs font-semibold text-[var(--vpw-text-secondary)]">
                       {currentUserLabel.charAt(0).toUpperCase()}
                     </span>
-                    <span className="min-w-0 flex-1 truncate text-left text-xs text-white/75">
+                    <span className="min-w-0 flex-1 truncate text-left text-xs text-[var(--vpw-text-secondary)]">
                       {currentUserLabel}
                     </span>
                     <Button
                       aria-label="Sign out"
-                      className="size-9 shrink-0 text-white/75 hover:bg-white/5 hover:text-white"
+                      className="size-9 shrink-0 text-[var(--vpw-text-secondary)] hover:bg-[var(--vpw-bg-panel)] hover:text-[var(--vpw-text-primary)]"
                       onClick={() => void onSignOut()}
                       size="icon"
                       type="button"

@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test"
-import { authHeaders, login } from "./auth-helpers"
+import { authHeaders, backendBaseUrl, login } from "./auth-helpers"
 
 test("smoke: dashboard renders", async ({ page }) => {
   test.setTimeout(30_000)
@@ -72,7 +72,7 @@ test("smoke: sign out revokes the active session", async ({ page }) => {
   await expect(page).toHaveURL(/\/login$/)
   await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible()
   const response = await page.request.get(
-    "http://127.0.0.1:8000/api/v1/users/me",
+    `${backendBaseUrl}/api/v1/users/me`,
     {
       headers: authHeaders(accessToken),
     },
