@@ -4,8 +4,9 @@ set -euo pipefail
 repo_root="$(git rev-parse --show-toplevel)"
 cd "$repo_root"
 
-db_path="${WORKBENCH_PLAYWRIGHT_DB:-$repo_root/build/frontend-playwright-workbench.db}"
-report_dir="${WORKBENCH_PLAYWRIGHT_REPORT_DIR:-$repo_root/build/frontend-playwright-workbench-reports}"
+backend_port="${WORKBENCH_PLAYWRIGHT_BACKEND_PORT:-18000}"
+db_path="${WORKBENCH_PLAYWRIGHT_DB:-$repo_root/build/frontend-playwright-workbench-$backend_port.db}"
+report_dir="${WORKBENCH_PLAYWRIGHT_REPORT_DIR:-$repo_root/build/frontend-playwright-workbench-$backend_port-reports}"
 mkdir -p "$(dirname "$db_path")"
 mkdir -p "$report_dir"
 rm -f "$db_path"
@@ -28,4 +29,4 @@ export FIRST_SUPERUSER_PASSWORD="${FIRST_SUPERUSER_PASSWORD:-local-workbench-dev
 python3 -m app.core.migration_bootstrap
 python3 -m alembic -c backend/alembic.ini upgrade head
 
-exec python3 -m uvicorn app.main:app --host 127.0.0.1 --port 8000
+exec python3 -m uvicorn app.main:app --host 127.0.0.1 --port "$backend_port"

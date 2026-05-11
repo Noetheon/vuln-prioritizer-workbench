@@ -26,6 +26,13 @@ Open `http://127.0.0.1:5173` and create the project `online-shop-demo`.
 The browser demo uses the active backend in `backend/app` and the generated
 `/api/v1` React client.
 
+If default host ports are already occupied, run the smoke with explicit host
+bindings, for example:
+
+```bash
+DOCKER_DEMO_BACKEND_PORT=18080 DOCKER_DEMO_FRONTEND_PORT=15174 make docker-demo-smoke
+```
+
 If `pip-audit`, npm, or advisory data is unavailable, record that as a release-checklist exception instead of treating the offline browser demo itself as failed.
 
 ## Demo Steps

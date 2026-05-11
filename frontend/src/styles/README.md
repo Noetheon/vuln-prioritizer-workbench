@@ -32,3 +32,18 @@ Ownership rules:
 - `responsive.css` and `accessibility.css` may override earlier layers only
   for their named global concern. Dark mode must be token-driven from
   `tokens.css`, not global element selectors.
+
+Design direction:
+
+- `frontend/DESIGN.md` is the durable VPW Precision Light Analyst designset for
+  read/write redesign slices. Treat it as guidance for density, tone, component
+  choice, and state language.
+- The designset adapts only the `frontend-design-awesome-design-md` references
+  selected for VPW: Linear precision, Sentry triage, and HashiCorp enterprise
+  infrastructure discipline.
+- Keep implementation color, radius, elevation, and dark-mode behavior mapped
+  to `tokens.css`. Do not create route-local color constants or parallel token
+  ladders while applying the designset.
+- Read/write analyst states such as demo, stale provider, waiver review,
+  generated, verified, blocked, and failed verification should use existing VPW
+  tone classes or component props before adding any new CSS.

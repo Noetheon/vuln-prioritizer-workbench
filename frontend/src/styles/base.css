@@ -37,7 +37,7 @@ input:focus-visible,
 select:focus-visible,
 textarea:focus-visible,
 [tabindex]:focus-visible {
-  outline: 3px solid var(--vpw-teal);
+  outline: 3px solid var(--vpw-focus-ring);
   outline-offset: 2px;
   border-radius: 4px;
 }
@@ -55,8 +55,8 @@ textarea:focus-visible,
   height: 42px;
   place-items: center;
   border-radius: 8px;
-  background: var(--vpw-amber);
-  color: var(--vpw-text-primary);
+  background: var(--vpw-text-primary);
+  color: var(--vpw-bg-card);
   font-weight: 800;
 }
 
@@ -73,8 +73,11 @@ textarea:focus-visible,
 
 .eyebrow {
   color: var(--vpw-text-muted);
+  font-family:
+    "Geist Mono", "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo,
+    Monaco, Consolas, monospace;
   font-size: 0.82rem;
-  font-weight: 700;
+  font-weight: 500;
   text-transform: uppercase;
 }
 

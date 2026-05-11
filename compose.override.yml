@@ -5,7 +5,7 @@ services:
   backend:
     restart: "no"
     ports:
-      - "127.0.0.1:8000:8000"
+      - "127.0.0.1:${DOCKER_DEMO_BACKEND_PORT:-8000}:8000"
     environment:
       DEMO_PROVIDER_SNAPSHOT_ENABLED: "true"
     command:
@@ -31,7 +31,7 @@ services:
   frontend:
     restart: "no"
     ports:
-      - "127.0.0.1:5173:8080"
+      - "127.0.0.1:${DOCKER_DEMO_FRONTEND_PORT:-5173}:8080"
 
   playwright:
     build:

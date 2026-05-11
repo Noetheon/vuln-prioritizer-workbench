@@ -9,6 +9,8 @@ PRODUCTION_SMOKE_COMPOSE := docker compose -f compose.yml -f compose.production-
 DOCKER_DEMO_SECRET_KEY ?= local-docker-smoke-secret-key
 DOCKER_DEMO_FIRST_SUPERUSER_PASSWORD ?= local-docker-smoke-admin-password
 DOCKER_DEMO_POSTGRES_PASSWORD ?= local-docker-smoke-postgres-password
+DOCKER_DEMO_BACKEND_PORT ?= 8000
+DOCKER_DEMO_FRONTEND_PORT ?= 5173
 PRODUCTION_SMOKE_SECRET_KEY ?= production-smoke-secret-key-change-in-real-deployments
 PRODUCTION_SMOKE_FIRST_SUPERUSER_PASSWORD ?= production-smoke-admin-password
 PRODUCTION_SMOKE_POSTGRES_PASSWORD ?= production-smoke-postgres-password
@@ -154,7 +156,11 @@ docker-demo-smoke:
 	export SECRET_KEY="$(DOCKER_DEMO_SECRET_KEY)"; \
 	export FIRST_SUPERUSER_PASSWORD="$(DOCKER_DEMO_FIRST_SUPERUSER_PASSWORD)"; \
 	export POSTGRES_PASSWORD="$(DOCKER_DEMO_POSTGRES_PASSWORD)"; \
-	for port in 8000 5173; do \
+	export DOCKER_DEMO_BACKEND_PORT="$(DOCKER_DEMO_BACKEND_PORT)"; \
+	export DOCKER_DEMO_FRONTEND_PORT="$(DOCKER_DEMO_FRONTEND_PORT)"; \
+	export FRONTEND_HOST="http://localhost:$$DOCKER_DEMO_FRONTEND_PORT"; \
+	export BACKEND_CORS_ORIGINS="http://localhost,http://localhost:$$DOCKER_DEMO_FRONTEND_PORT,http://127.0.0.1:$$DOCKER_DEMO_FRONTEND_PORT"; \
+	for port in "$$DOCKER_DEMO_BACKEND_PORT" "$$DOCKER_DEMO_FRONTEND_PORT"; do \
 		if ! $(PYTHON) -c "import socket, sys; port=int(sys.argv[1]); sock=socket.socket(); sock.settimeout(0.2); in_use=sock.connect_ex(('127.0.0.1', port)) == 0; sock.close(); sys.exit(1 if in_use else 0)" "$$port"; then \
 			echo "Port $$port is already in use before docker-demo-smoke." >&2; \
 			exit 1; \
@@ -165,7 +171,7 @@ docker-demo-smoke:
 	$(COMPOSE) up -d --build backend frontend; \
 	backend_ready=0; \
 		for attempt in $$(seq 1 30); do \
-			if $(PYTHON) -c "import json, urllib.request; data=json.load(urllib.request.urlopen('http://127.0.0.1:8000/api/v1/utils/health-check/', timeout=2)); assert data is True; print(data)" 2>/dev/null; then \
+			if $(PYTHON) -c "import json, sys, urllib.request; port=sys.argv[1]; data=json.load(urllib.request.urlopen(f'http://127.0.0.1:{port}/api/v1/utils/health-check/', timeout=2)); assert data is True; print(data)" "$$DOCKER_DEMO_BACKEND_PORT" 2>/dev/null; then \
 				backend_ready=1; \
 				break; \
 			fi; \
@@ -175,14 +181,14 @@ docker-demo-smoke:
 		echo "Workbench backend health check failed." >&2; \
 		exit 1; \
 	fi; \
-	if ! $(PYTHON) -c "import urllib.request; print(urllib.request.urlopen('http://127.0.0.1:8000/api/v1/utils/health-check/', timeout=2).read().decode())" 2>/dev/null; then \
+	if ! $(PYTHON) -c "import sys, urllib.request; port=sys.argv[1]; print(urllib.request.urlopen(f'http://127.0.0.1:{port}/api/v1/utils/health-check/', timeout=2).read().decode())" "$$DOCKER_DEMO_BACKEND_PORT" 2>/dev/null; then \
 		echo "Workbench utility health check failed." >&2; \
 		exit 1; \
 	fi; \
 	$(COMPOSE) exec -T backend python -m app.core.schema_smoke; \
 	frontend_ready=0; \
 	for attempt in $$(seq 1 30); do \
-		if $(PYTHON) -c "import urllib.request; print(urllib.request.urlopen('http://127.0.0.1:5173/', timeout=2).status)" 2>/dev/null; then \
+		if $(PYTHON) -c "import sys, urllib.request; port=sys.argv[1]; print(urllib.request.urlopen(f'http://127.0.0.1:{port}/', timeout=2).status)" "$$DOCKER_DEMO_FRONTEND_PORT" 2>/dev/null; then \
 			frontend_ready=1; \
 			break; \
 		fi; \
@@ -192,11 +198,11 @@ docker-demo-smoke:
 		echo "Workbench frontend health check failed." >&2; \
 		exit 1; \
 	fi; \
-	if ! $(PYTHON) -c "import urllib.request; print(urllib.request.urlopen('http://127.0.0.1:5173/login', timeout=2).status)" 2>/dev/null; then \
+	if ! $(PYTHON) -c "import sys, urllib.request; port=sys.argv[1]; print(urllib.request.urlopen(f'http://127.0.0.1:{port}/login', timeout=2).status)" "$$DOCKER_DEMO_FRONTEND_PORT" 2>/dev/null; then \
 		echo "Workbench login route check failed." >&2; \
 		exit 1; \
 	fi; \
-	$(PYTHON) scripts/docker_quickstart_api_smoke.py; \
+	DOCKER_QUICKSTART_API_BASE_URL="http://127.0.0.1:$$DOCKER_DEMO_BACKEND_PORT/api/v1" $(PYTHON) scripts/docker_quickstart_api_smoke.py; \
 	echo "Workbench Docker smoke passed."
 
 docker-production-smoke:

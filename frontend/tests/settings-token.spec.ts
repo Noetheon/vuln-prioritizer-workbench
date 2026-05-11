@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test"
-import { authHeaders, login } from "./auth-helpers"
+import { authHeaders, backendBaseUrl, login } from "./auth-helpers"
 
 test("workbench settings clears one-time API token when leaving settings", async ({
   page,
@@ -9,7 +9,7 @@ test("workbench settings clears one-time API token when leaving settings", async
   const accessToken = await login(page)
   const projectName = `VPW Settings Token ${testRunSuffix}`
   const projectResponse = await page.request.post(
-    "http://127.0.0.1:8000/api/v1/projects/",
+    `${backendBaseUrl}/api/v1/projects/`,
     {
       data: {
         description: "Playwright settings token project",

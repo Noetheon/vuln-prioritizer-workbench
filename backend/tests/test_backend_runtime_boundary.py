@@ -447,6 +447,8 @@ def test_active_runtime_entrypoints_use_workbench_backend_app() -> None:
     assert "alembic -c /app/backend/alembic.ini upgrade head" in override_backend_command
     assert "python3 -m app.core.migration_bootstrap" in playwright_backend
     assert "python3 -m alembic -c backend/alembic.ini upgrade head" in playwright_backend
+    assert "frontend-playwright-workbench-$backend_port.db" in playwright_backend
+    assert "frontend-playwright-workbench-$backend_port-reports" in playwright_backend
     assert "RATE_LIMIT_ENABLED=false" in playwright_backend
     assert "init_db" not in override_backend_command
     assert "init_db" not in playwright_backend

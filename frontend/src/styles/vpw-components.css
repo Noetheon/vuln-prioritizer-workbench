@@ -15,9 +15,10 @@
   }
 
   .vpw-panel {
-    background: var(--vpw-bg-panel);
-    border: 1px solid var(--vpw-border-subtle);
+    background: var(--vpw-bg-card);
+    border: 1px solid var(--vpw-border-default);
     border-radius: var(--vpw-radius-xl);
+    box-shadow: var(--vpw-shadow-0);
   }
 
   .vpw-dialog-content,
@@ -29,8 +30,11 @@
 
   .vpw-label {
     color: var(--vpw-text-muted);
+    font-family:
+      "Geist Mono", "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo,
+      Monaco, Consolas, monospace;
     font-size: 0.75rem;
-    font-weight: 700;
+    font-weight: 500;
     line-height: 1rem;
     letter-spacing: 0;
     text-transform: uppercase;
@@ -44,7 +48,7 @@
       color-mix(in srgb, var(--vpw-amber) 45%, var(--vpw-bg-card));
     border-radius: var(--vpw-radius-xl);
     background: var(--vpw-bg-warning);
-    color: color-mix(in srgb, var(--vpw-amber) 55%, var(--vpw-text-primary));
+    color: color-mix(in srgb, var(--vpw-amber) 70%, var(--vpw-text-primary));
     padding: 0.75rem 1rem;
     font-size: 0.875rem;
     line-height: 1.25rem;
@@ -55,8 +59,11 @@
     border-radius: var(--vpw-radius-pill);
     border-width: 1px;
     padding: 0.125rem 0.5rem;
+    font-family:
+      "Geist Mono", "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo,
+      Monaco, Consolas, monospace;
     font-size: 0.75rem;
-    font-weight: 600;
+    font-weight: 500;
     line-height: 1rem;
   }
 
@@ -111,12 +118,12 @@
     border: 1px solid var(--vpw-border-default);
     border-radius: var(--vpw-radius-xl);
     background: var(--vpw-bg-card);
-    box-shadow: var(--vpw-shadow-1);
+    box-shadow: var(--vpw-shadow-0);
     -webkit-overflow-scrolling: touch;
   }
 
   .vpw-table-wrap:focus-visible {
-    outline: 2px solid color-mix(in srgb, var(--vpw-teal) 70%, white);
+    outline: 2px solid var(--vpw-focus-ring);
     outline-offset: 3px;
   }
 
@@ -138,8 +145,11 @@
     border-bottom: 1px solid var(--vpw-border-default);
     background: var(--vpw-bg-panel);
     color: var(--vpw-text-muted);
+    font-family:
+      "Geist Mono", "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo,
+      Monaco, Consolas, monospace;
     font-size: 0.75rem;
-    font-weight: 700;
+    font-weight: 500;
     line-height: 1rem;
     padding: 0.75rem 1rem;
     text-align: left;
@@ -159,7 +169,7 @@
   }
 
   .vpw-table-row:hover > .vpw-table-cell {
-    background: var(--vpw-bg-panel);
+    background: color-mix(in srgb, var(--vpw-bg-panel) 72%, var(--vpw-bg-card));
   }
 
   .vpw-table-detail .vpw-table-header-cell {

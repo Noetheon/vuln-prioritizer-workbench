@@ -6,12 +6,8 @@
   border: 1px solid var(--vpw-border-strong);
   border-radius: var(--vpw-radius-lg);
   padding: clamp(16px, 1.2vw, 22px);
-  background: linear-gradient(
-    180deg,
-    var(--vpw-bg-card) 0%,
-    color-mix(in srgb, var(--vpw-bg-card) 84%, var(--vpw-bg-info)) 100%
-  );
-  box-shadow: 0 18px 38px color-mix(in srgb, var(--vpw-navy) 6%, transparent);
+  background: var(--vpw-bg-card);
+  box-shadow: var(--vpw-shadow-1);
 }
 
 .finding-tabs-toolbar {
@@ -20,14 +16,9 @@
   justify-content: space-between;
   gap: 18px;
   border: 1px solid var(--vpw-border-default);
-  border-radius: var(--vpw-radius-lg);
+  border-radius: var(--vpw-radius-md);
   padding: 14px;
-  background: linear-gradient(
-    135deg,
-    var(--vpw-bg-panel) 0%,
-    var(--vpw-bg-card) 56%,
-    color-mix(in srgb, var(--vpw-bg-success) 45%, var(--vpw-bg-info)) 100%
-  );
+  background: var(--vpw-bg-panel);
 }
 
 .finding-tabs-heading {
@@ -79,7 +70,7 @@
 .finding-detail-tabs-list [data-state="active"] {
   background: var(--vpw-bg-card);
   color: var(--vpw-teal);
-  box-shadow: 0 5px 16px color-mix(in srgb, var(--vpw-navy) 9%, transparent);
+  box-shadow: var(--vpw-shadow-1);
 }
 
 .finding-detail-tabs-list [data-state="active"]::after {
@@ -134,7 +125,7 @@
 .finding-evidence-summary-card-primary {
   grid-column: span 2;
   border-color: color-mix(in srgb, var(--vpw-teal) 18%, var(--vpw-bg-card));
-  background: color-mix(in srgb, var(--vpw-bg-success) 45%, var(--vpw-bg-info));
+  background: color-mix(in srgb, var(--vpw-bg-success) 58%, var(--vpw-bg-card));
 }
 
 .finding-evidence-summary-card-primary {
@@ -166,11 +157,7 @@
 
 .finding-data-quality-card {
   border-color: color-mix(in srgb, var(--vpw-amber) 38%, var(--vpw-bg-card));
-  background: linear-gradient(
-    180deg,
-    var(--vpw-bg-card) 0%,
-    color-mix(in srgb, var(--vpw-bg-warning) 52%, var(--vpw-bg-card)) 100%
-  );
+  background: color-mix(in srgb, var(--vpw-bg-warning) 72%, var(--vpw-bg-card));
 }
 
 .finding-detail-table-wrap {
@@ -185,17 +172,6 @@
   -webkit-overflow-scrolling: touch;
 }
 
-.finding-detail-table-wrap::after {
-  position: absolute;
-  top: 1px;
-  right: 0;
-  bottom: 1px;
-  width: clamp(24px, 7vw, 48px);
-  border-radius: 0 var(--vpw-radius-lg) var(--vpw-radius-lg) 0;
-  background: linear-gradient(90deg, transparent, var(--vpw-bg-card));
-  content: "";
-  pointer-events: none;
-}
 
 .finding-data-quality-list {
   display: grid;
@@ -251,11 +227,7 @@
   display: grid;
   gap: 10px;
   border: 1px dashed color-mix(in srgb, var(--vpw-blue) 22%, var(--vpw-bg-card));
-  background: linear-gradient(
-    135deg,
-    var(--vpw-bg-panel) 0%,
-    color-mix(in srgb, var(--vpw-bg-info) 72%, var(--vpw-bg-card)) 100%
-  );
+  background: color-mix(in srgb, var(--vpw-bg-info) 58%, var(--vpw-bg-card));
 }
 
 .finding-empty-panel-heading {
@@ -279,11 +251,7 @@
 }
 
 .finding-ttp-card-header {
-  background: linear-gradient(
-    135deg,
-    var(--vpw-bg-panel) 0%,
-    var(--vpw-bg-info) 100%
-  );
+  background: color-mix(in srgb, var(--vpw-bg-info) 54%, var(--vpw-bg-panel));
 }
 
 .finding-ttp-card-content {

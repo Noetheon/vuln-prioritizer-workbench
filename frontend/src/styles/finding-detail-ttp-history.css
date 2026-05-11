@@ -6,14 +6,8 @@
   border: 1px solid color-mix(in srgb, var(--vpw-blue) 24%, var(--vpw-bg-card));
   border-radius: var(--vpw-radius-lg);
   padding: 18px;
-  background:
-    linear-gradient(
-      135deg,
-      color-mix(in srgb, var(--vpw-bg-success) 45%, transparent),
-      color-mix(in srgb, var(--vpw-bg-info) 96%, transparent)
-    ),
-    var(--vpw-bg-card);
-  box-shadow: 0 12px 26px color-mix(in srgb, var(--vpw-navy) 5%, transparent);
+  background: color-mix(in srgb, var(--vpw-bg-info) 46%, var(--vpw-bg-card));
+  box-shadow: var(--vpw-shadow-1);
 }
 
 .finding-ttp-context-hero span,
@@ -262,11 +256,7 @@
 
 .finding-ttp-actions-card {
   border-color: color-mix(in srgb, var(--vpw-green) 28%, var(--vpw-bg-card));
-  background: linear-gradient(
-    180deg,
-    var(--vpw-bg-card) 0%,
-    var(--vpw-bg-success) 100%
-  );
+  background: color-mix(in srgb, var(--vpw-bg-success) 68%, var(--vpw-bg-card));
 }
 
 .finding-ttp-checklist {
@@ -384,11 +374,7 @@
 
 .finding-accepted-risk-card {
   border-color: color-mix(in srgb, var(--vpw-blue) 24%, var(--vpw-bg-card));
-  background: linear-gradient(
-    180deg,
-    var(--vpw-bg-card) 0%,
-    color-mix(in srgb, var(--vpw-bg-card) 88%, var(--vpw-bg-info)) 100%
-  );
+  background: color-mix(in srgb, var(--vpw-bg-info) 42%, var(--vpw-bg-card));
 }
 
 .finding-detection-note {

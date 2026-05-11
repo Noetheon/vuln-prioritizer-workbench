@@ -22,6 +22,8 @@ export default defineConfig(({ mode }) => {
   const isProductionBuild =
     mode === "production" || process.env.NODE_ENV === "production"
   const configuredApiUrl = normalizedApiUrl(env.VITE_API_URL)
+  const devProxyTarget =
+    normalizedApiUrl(env.VITE_DEV_PROXY_TARGET) || "http://127.0.0.1:8000"
   const bundledApiUrl = isProductionBuild ? "" : configuredApiUrl
   const demoMode =
     !isProductionBuild && env.VITE_DEMO_MODE?.trim().toLowerCase() === "true"
@@ -40,7 +42,7 @@ export default defineConfig(({ mode }) => {
       host: "127.0.0.1",
       port: 5173,
       proxy: {
-        "/api": "http://127.0.0.1:8000",
+        "/api": devProxyTarget,
       },
     },
     plugins: [

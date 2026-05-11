@@ -28,7 +28,8 @@
   --color-vpw-warning-surface: var(--vpw-bg-warning);
   --color-vpw-critical-surface: var(--vpw-bg-critical);
   --color-vpw-navy: var(--vpw-navy);
-  --color-vpw-primary: var(--vpw-blue);
+  --color-vpw-primary: var(--vpw-text-primary);
+  --color-vpw-link: var(--vpw-blue);
   --color-vpw-teal: var(--vpw-teal);
   --color-vpw-success: var(--vpw-green);
   --color-vpw-warning: var(--vpw-amber);
@@ -61,25 +62,25 @@
 
 :root {
   /* shadcn CSS variables */
-  --background: 220 42.9% 98.6%;
-  --foreground: 218.8 48.4% 8.4%;
+  --background: 0 0% 98%;
+  --foreground: 0 0% 9%;
   --card: 0 0% 100%;
-  --card-foreground: 218.8 48.4% 8.4%;
+  --card-foreground: 0 0% 9%;
   --popover: 0 0% 100%;
-  --popover-foreground: 218.8 48.4% 8.4%;
-  --primary: 222.2 47.4% 5%;
+  --popover-foreground: 0 0% 9%;
+  --primary: 0 0% 9%;
   --primary-foreground: 0 0% 100%;
-  --secondary: 210 40% 98%;
-  --secondary-foreground: 218.8 48.4% 8.4%;
-  --muted: 210 40% 98%;
-  --muted-foreground: 215.3 19.3% 34.5%;
-  --accent: 214.3 100% 96.7%;
-  --accent-foreground: 221.2 83.2% 53.3%;
-  --destructive: 0 72.2% 42%;
+  --secondary: 0 0% 96.1%;
+  --secondary-foreground: 0 0% 9%;
+  --muted: 0 0% 96.1%;
+  --muted-foreground: 0 0% 30.2%;
+  --accent: 212 100% 97%;
+  --accent-foreground: 212 100% 47.6%;
+  --destructive: 0 100% 46.7%;
   --destructive-foreground: 210 40% 98%;
-  --border: 220 13% 91%;
-  --input: 220 13% 91%;
-  --ring: 217.2 91.2% 59.8%;
+  --border: 0 0% 92.2%;
+  --input: 0 0% 92.2%;
+  --ring: 212 100% 47.6%;
   --radius: 0.5rem;
 
   --color-background: hsl(var(--background));
@@ -103,37 +104,37 @@
   --color-ring: hsl(var(--ring));
 
   /* VPW design-system tokens */
-  --vpw-bg-app: #fafbfd;
+  --vpw-bg-app: #fafafa;
   --vpw-bg-default: var(--vpw-bg-app);
   --vpw-bg-page: #ffffff;
   --vpw-bg-card: #ffffff;
-  --vpw-bg-panel: #f8fafc;
-  --vpw-bg-info: #eff6ff;
-  --vpw-bg-success: #ecfdf5;
-  --vpw-bg-warning: #fffbeb;
-  --vpw-bg-critical: #fef2f2;
-  --vpw-bg-disabled: #e2e8f0;
-  --vpw-bg-busy: #e0f2fe;
+  --vpw-bg-panel: #f5f5f5;
+  --vpw-bg-info: #eef6ff;
+  --vpw-bg-success: #ecfdf3;
+  --vpw-bg-warning: #fff7e6;
+  --vpw-bg-critical: #fff1f1;
+  --vpw-bg-disabled: #eeeeee;
+  --vpw-bg-busy: #e8f4ff;
 
-  --vpw-text-primary: #0b1220;
-  --vpw-text-secondary: #4b5563;
-  --vpw-text-muted: #64748b;
-  --vpw-text-disabled: #334155;
-  --vpw-text-busy: #075985;
-  --vpw-border-default: #e5e7eb;
-  --vpw-border-subtle: #eef2f7;
+  --vpw-text-primary: #171717;
+  --vpw-text-secondary: #4d4d4d;
+  --vpw-text-muted: #6b6b6b;
+  --vpw-text-disabled: #6b7280;
+  --vpw-text-busy: #0761d1;
+  --vpw-border-default: #ebebeb;
+  --vpw-border-subtle: #f0f0f0;
   --vpw-border-strong: #d1d5db;
-  --vpw-border-disabled: #94a3b8;
-  --vpw-border-busy: #38bdf8;
-  --vpw-focus-ring: #3b82f6;
+  --vpw-border-disabled: #a1a1a1;
+  --vpw-border-busy: #0070f3;
+  --vpw-focus-ring: #0070f3;
 
-  --vpw-blue: #2563eb;
-  --vpw-teal: #0f766e;
-  --vpw-green: #22c55e;
-  --vpw-amber: #f59e0b;
-  --vpw-red: #ef4444;
-  --vpw-violet: #6366f1;
-  --vpw-navy: #0b1020;
+  --vpw-blue: #0070f3;
+  --vpw-teal: #047857;
+  --vpw-green: #047857;
+  --vpw-amber: #b54708;
+  --vpw-red: #c40000;
+  --vpw-violet: #7928ca;
+  --vpw-navy: #171717;
 
   --vpw-radius-sm: 4px;
   --vpw-radius-md: 6px;
@@ -141,16 +142,16 @@
   --vpw-radius-xl: 8px;
   --vpw-radius-pill: 9999px;
   --vpw-shadow-0: none;
-  --vpw-shadow-1: 0 1px 2px rgba(2, 6, 23, 0.04);
-  --vpw-shadow-2: 0 4px 12px rgba(2, 6, 23, 0.06);
-  --vpw-shadow-3: 0 12px 24px rgba(2, 6, 23, 0.08);
+  --vpw-shadow-1: 0 1px 1px rgba(0, 0, 0, 0.03), 0 2px 2px rgba(0, 0, 0, 0.04);
+  --vpw-shadow-2: 0 2px 2px rgba(0, 0, 0, 0.04), 0 8px 8px -8px rgba(0, 0, 0, 0.08);
+  --vpw-shadow-3: 0 2px 2px rgba(0, 0, 0, 0.04), 0 8px 16px -4px rgba(0, 0, 0, 0.08);
   --vpw-container-max: 1920px;
   --vpw-container-padding: 1rem;
 
   color: var(--vpw-text-primary);
   background: var(--vpw-bg-app);
   font-family:
-    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+    "Geist", Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
     "Segoe UI", sans-serif;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -158,99 +159,107 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: 192 29% 7%;
-    --foreground: 210 40% 96%;
-    --card: 192 24% 11%;
-    --card-foreground: 210 40% 96%;
-    --popover: 192 24% 11%;
-    --popover-foreground: 210 40% 96%;
-    --primary: 213.1 93.9% 67.8%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-    --secondary: 195 18% 16%;
-    --secondary-foreground: 210 40% 96%;
-    --muted: 195 18% 16%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 191 24% 18%;
-    --accent-foreground: 210 40% 96%;
-    --destructive: 0 72.2% 42%;
+    --background: 0 0% 4%;
+    --foreground: 0 0% 96%;
+    --card: 0 0% 7%;
+    --card-foreground: 0 0% 96%;
+    --popover: 0 0% 7%;
+    --popover-foreground: 0 0% 96%;
+    --primary: 0 0% 96%;
+    --primary-foreground: 0 0% 9%;
+    --secondary: 0 0% 11%;
+    --secondary-foreground: 0 0% 96%;
+    --muted: 0 0% 11%;
+    --muted-foreground: 0 0% 66%;
+    --accent: 210 56% 14%;
+    --accent-foreground: 210 100% 82%;
+    --destructive: 0 100% 62%;
     --destructive-foreground: 210 40% 98%;
-    --border: 194 18% 21%;
-    --input: 194 18% 21%;
-    --ring: 172.5 66% 50.4%;
+    --border: 0 0% 16%;
+    --input: 0 0% 16%;
+    --ring: 210 100% 64%;
 
-    --vpw-bg-app: #0d1518;
+    --vpw-bg-app: #090909;
     --vpw-bg-default: var(--vpw-bg-app);
-    --vpw-bg-page: #111d21;
-    --vpw-bg-card: #162328;
-    --vpw-bg-panel: #1a2428;
-    --vpw-bg-info: #13283a;
-    --vpw-bg-success: #10261f;
-    --vpw-bg-warning: #2d2414;
-    --vpw-bg-critical: #321a1c;
-    --vpw-bg-disabled: #111d21;
-    --vpw-bg-busy: #123447;
+    --vpw-bg-page: #0f0f0f;
+    --vpw-bg-card: #111111;
+    --vpw-bg-panel: #171717;
+    --vpw-bg-info: #0d2238;
+    --vpw-bg-success: #0f251c;
+    --vpw-bg-warning: #2a1e0c;
+    --vpw-bg-critical: #2d1113;
+    --vpw-bg-disabled: #1f1f1f;
+    --vpw-bg-busy: #0d2238;
 
-    --vpw-text-primary: #f1f5f9;
-    --vpw-text-secondary: #cbd5e1;
-    --vpw-text-muted: #94a3b8;
-    --vpw-text-disabled: #64748b;
-    --vpw-text-busy: #bae6fd;
-    --vpw-border-default: #2d3b40;
-    --vpw-border-subtle: #243136;
-    --vpw-border-strong: #3b4f56;
-    --vpw-border-disabled: #4b5563;
-    --vpw-border-busy: #38bdf8;
-    --vpw-focus-ring: #14b8a6;
+    --vpw-text-primary: #f5f5f5;
+    --vpw-text-secondary: #c7c7c7;
+    --vpw-text-muted: #8f8f8f;
+    --vpw-text-disabled: #737373;
+    --vpw-text-busy: #8ccfff;
+    --vpw-border-default: #2b2b2b;
+    --vpw-border-subtle: #222222;
+    --vpw-border-strong: #3f3f3f;
+    --vpw-border-disabled: #525252;
+    --vpw-border-busy: #0070f3;
+    --vpw-focus-ring: #0070f3;
+    --vpw-teal: #34d399;
+    --vpw-green: #34d399;
+    --vpw-amber: #fbbf24;
+    --vpw-red: #ff7a7a;
   }
 }
 
 .dark {
-  --background: 192 29% 7%;
-  --foreground: 210 40% 96%;
-  --card: 192 24% 11%;
-  --card-foreground: 210 40% 96%;
-  --popover: 192 24% 11%;
-  --popover-foreground: 210 40% 96%;
-  --primary: 213.1 93.9% 67.8%;
-  --primary-foreground: 222.2 47.4% 11.2%;
-  --secondary: 195 18% 16%;
-  --secondary-foreground: 210 40% 96%;
-  --muted: 195 18% 16%;
-  --muted-foreground: 215 20.2% 65.1%;
-  --accent: 191 24% 18%;
-  --accent-foreground: 210 40% 96%;
-  --destructive: 0 72.2% 42%;
+  --background: 0 0% 4%;
+  --foreground: 0 0% 96%;
+  --card: 0 0% 7%;
+  --card-foreground: 0 0% 96%;
+  --popover: 0 0% 7%;
+  --popover-foreground: 0 0% 96%;
+  --primary: 0 0% 96%;
+  --primary-foreground: 0 0% 9%;
+  --secondary: 0 0% 11%;
+  --secondary-foreground: 0 0% 96%;
+  --muted: 0 0% 11%;
+  --muted-foreground: 0 0% 66%;
+  --accent: 210 56% 14%;
+  --accent-foreground: 210 100% 82%;
+  --destructive: 0 100% 62%;
   --destructive-foreground: 210 40% 98%;
-  --border: 194 18% 21%;
-  --input: 194 18% 21%;
-  --ring: 172.5 66% 50.4%;
+  --border: 0 0% 16%;
+  --input: 0 0% 16%;
+  --ring: 210 100% 64%;
 
-  --vpw-bg-app: #0d1518;
+  --vpw-bg-app: #090909;
   --vpw-bg-default: var(--vpw-bg-app);
-  --vpw-bg-page: #111d21;
-  --vpw-bg-card: #162328;
-  --vpw-bg-panel: #1a2428;
-  --vpw-bg-info: #13283a;
-  --vpw-bg-success: #10261f;
-  --vpw-bg-warning: #2d2414;
-  --vpw-bg-critical: #321a1c;
-  --vpw-bg-disabled: #111d21;
-  --vpw-bg-busy: #123447;
+  --vpw-bg-page: #0f0f0f;
+  --vpw-bg-card: #111111;
+  --vpw-bg-panel: #171717;
+  --vpw-bg-info: #0d2238;
+  --vpw-bg-success: #0f251c;
+  --vpw-bg-warning: #2a1e0c;
+  --vpw-bg-critical: #2d1113;
+  --vpw-bg-disabled: #1f1f1f;
+  --vpw-bg-busy: #0d2238;
 
-  --vpw-text-primary: #f1f5f9;
-  --vpw-text-secondary: #cbd5e1;
-  --vpw-text-muted: #94a3b8;
-  --vpw-text-disabled: #64748b;
-  --vpw-text-busy: #bae6fd;
-  --vpw-border-default: #2d3b40;
-  --vpw-border-subtle: #243136;
-  --vpw-border-strong: #3b4f56;
-  --vpw-border-disabled: #4b5563;
-  --vpw-border-busy: #38bdf8;
-  --vpw-focus-ring: #14b8a6;
+  --vpw-text-primary: #f5f5f5;
+  --vpw-text-secondary: #c7c7c7;
+  --vpw-text-muted: #8f8f8f;
+  --vpw-text-disabled: #737373;
+  --vpw-text-busy: #8ccfff;
+  --vpw-border-default: #2b2b2b;
+  --vpw-border-subtle: #222222;
+  --vpw-border-strong: #3f3f3f;
+  --vpw-border-disabled: #525252;
+  --vpw-border-busy: #0070f3;
+  --vpw-focus-ring: #0070f3;
+  --vpw-teal: #34d399;
+  --vpw-green: #34d399;
+  --vpw-amber: #fbbf24;
+  --vpw-red: #ff7a7a;
 }
 
-/* Tailwind v4 uses currentColor for bare `border` — default to the shadcn border token */
+/* Tailwind v4 uses currentColor for bare `border` - default to the shadcn border token */
 *,
 *::before,
 *::after {

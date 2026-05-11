@@ -1,5 +1,11 @@
 import { expect, type Page } from "@playwright/test"
 
+const backendPort = process.env.VPW_PLAYWRIGHT_BACKEND_PORT ?? "18000"
+
+export const backendBaseUrl = (
+  process.env.VPW_E2E_BACKEND_URL ?? `http://127.0.0.1:${backendPort}`
+).replace(/\/+$/, "")
+
 export const testUserEmail =
   process.env.VPW_E2E_EMAIL ?? process.env.FIRST_SUPERUSER ?? "admin@example.com"
 export const testUserPassword =

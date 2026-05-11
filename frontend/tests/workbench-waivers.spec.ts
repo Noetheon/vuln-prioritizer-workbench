@@ -1,5 +1,5 @@
 import { expect, type Locator, type Page, test } from "@playwright/test"
-import { authHeaders, login } from "./auth-helpers"
+import { authHeaders, backendBaseUrl, login } from "./auth-helpers"
 import { evidenceScreenshotPath } from "./evidence-paths"
 
 const validOccurrenceCsv = Buffer.from(
@@ -94,7 +94,7 @@ test("workbench waiver workflow keeps accepted risk visible", async ({
   const headers = authHeaders(accessToken)
 
   const projectResponse = await page.request.post(
-    "http://127.0.0.1:8000/api/v1/projects/",
+    `${backendBaseUrl}/api/v1/projects/`,
     {
       data: {
         description: "Playwright waiver project",
@@ -107,7 +107,7 @@ test("workbench waiver workflow keeps accepted risk visible", async ({
   const project = (await projectResponse.json()) as { id: string }
 
   const importResponse = await page.request.post(
-    `http://127.0.0.1:8000/api/v1/projects/${project.id}/imports`,
+    `${backendBaseUrl}/api/v1/projects/${project.id}/imports`,
     {
       headers,
       multipart: {
@@ -145,7 +145,7 @@ test("workbench waiver workflow keeps accepted risk visible", async ({
   await expect(waiversTable).toContainText("CAB-064")
 
   const findingsResponse = await page.request.get(
-    `http://127.0.0.1:8000/api/v1/projects/${project.id}/findings/?sort=cve`,
+    `${backendBaseUrl}/api/v1/projects/${project.id}/findings/?sort=cve`,
     { headers },
   )
   expect(findingsResponse.ok()).toBeTruthy()
@@ -190,7 +190,7 @@ test("workbench governance rollups show service risk and waiver debt", async ({
   const headers = authHeaders(accessToken)
 
   const projectResponse = await page.request.post(
-    "http://127.0.0.1:8000/api/v1/projects/",
+    `${backendBaseUrl}/api/v1/projects/`,
     {
       data: {
         description: "Playwright governance rollup project",
@@ -203,7 +203,7 @@ test("workbench governance rollups show service risk and waiver debt", async ({
   const project = (await projectResponse.json()) as { id: string }
 
   const importResponse = await page.request.post(
-    `http://127.0.0.1:8000/api/v1/projects/${project.id}/imports`,
+    `${backendBaseUrl}/api/v1/projects/${project.id}/imports`,
     {
       headers,
       multipart: {
@@ -219,7 +219,7 @@ test("workbench governance rollups show service risk and waiver debt", async ({
   expect(importResponse.ok(), await importResponse.text()).toBeTruthy()
 
   const reviewDueWaiver = await page.request.post(
-    `http://127.0.0.1:8000/api/v1/projects/${project.id}/waivers/`,
+    `${backendBaseUrl}/api/v1/projects/${project.id}/waivers/`,
     {
       data: {
         approval_ref: "CAB-067-A",
@@ -235,7 +235,7 @@ test("workbench governance rollups show service risk and waiver debt", async ({
   expect(reviewDueWaiver.ok(), await reviewDueWaiver.text()).toBeTruthy()
 
   const expiredWaiver = await page.request.post(
-    `http://127.0.0.1:8000/api/v1/projects/${project.id}/waivers/`,
+    `${backendBaseUrl}/api/v1/projects/${project.id}/waivers/`,
     {
       data: {
         approval_ref: "CAB-067-B",
@@ -251,7 +251,7 @@ test("workbench governance rollups show service risk and waiver debt", async ({
   expect(expiredWaiver.ok(), await expiredWaiver.text()).toBeTruthy()
 
   const rollupsResponse = await page.request.get(
-    `http://127.0.0.1:8000/api/v1/projects/${project.id}/governance/rollups/`,
+    `${backendBaseUrl}/api/v1/projects/${project.id}/governance/rollups/`,
     { headers },
   )
   expect(rollupsResponse.ok()).toBeTruthy()

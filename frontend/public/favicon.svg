@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Vuln Prioritizer Workbench">
+  <rect width="64" height="64" rx="8" fill="#171717" />
+  <path d="M18 15h28v16c0 10.5-5.7 16.8-14 20-8.3-3.2-14-9.5-14-20V15Z" fill="#ffffff" />
+  <path d="M25 24l5.1 16h3.8L39 24h-4.1l-2.8 10.6L29.3 24H25Z" fill="#171717" />
+</svg>

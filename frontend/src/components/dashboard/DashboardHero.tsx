@@ -39,33 +39,24 @@ export function DashboardHero({
   selectedProjectId,
 }: DashboardHeroProps) {
   return (
-    <div className="relative overflow-hidden rounded-[var(--vpw-radius-lg)] border border-[var(--vpw-border-strong)] bg-[var(--vpw-navy)] px-5 py-4 shadow-[var(--vpw-shadow-2)]">
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 opacity-[0.04]"
-        style={{
-          backgroundImage:
-            "radial-gradient(circle at 1px 1px, white 1px, transparent 0)",
-          backgroundSize: "24px 24px",
-        }}
-      />
-      <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div className="dashboard-analyst-hero">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
           <div className="flex items-center gap-2 mb-1.5">
             <ShieldCheck
               aria-hidden="true"
-              className="size-3.5 text-[var(--vpw-amber)]"
+              className="size-3.5 text-[var(--vpw-violet)]"
             />
-            <span className="text-[10px] font-bold uppercase text-[var(--vpw-amber)]">
+            <span className="text-[10px] font-bold uppercase text-[var(--vpw-text-muted)]">
               Security Operations
             </span>
           </div>
-          <p className="truncate text-base font-semibold text-white">
+          <p className="truncate text-base font-semibold text-[var(--vpw-text-primary)]">
             {effectiveSelectedProject
               ? effectiveSelectedProject.name
               : "No project selected"}
           </p>
-          <p className="mt-0.5 text-xs text-white/60">
+          <p className="mt-0.5 text-xs text-[var(--vpw-text-muted)]">
             Prioritized vulnerability operations for this project
           </p>
         </div>
@@ -82,7 +73,7 @@ export function DashboardHero({
           >
             <SelectTrigger
               aria-label="Dashboard project"
-              className="w-full min-w-0 border-white/20 bg-white/10 text-white hover:bg-white/20 focus:ring-white/30 sm:w-64 xl:w-72"
+              className="w-full min-w-0 bg-[var(--vpw-bg-card)] sm:w-64 xl:w-72"
             >
               <SelectValue placeholder="Select project" />
             </SelectTrigger>
@@ -101,7 +92,7 @@ export function DashboardHero({
 
           <Button
             asChild
-            className="w-full justify-center bg-white font-semibold text-[var(--vpw-navy)] hover:bg-white/90 sm:w-auto"
+            className="w-full justify-center font-semibold sm:w-auto"
           >
             <Link to="/imports">
               <Import aria-hidden="true" data-icon="inline-start" />
@@ -110,7 +101,7 @@ export function DashboardHero({
           </Button>
           <Button
             asChild
-            className="w-full justify-center border border-white/25 bg-transparent text-white hover:bg-white/10 hover:text-white sm:w-auto"
+            className="w-full justify-center sm:w-auto"
             variant="ghost"
           >
             <Link to="/reports">
@@ -120,7 +111,7 @@ export function DashboardHero({
           </Button>
           <Button
             aria-label="Refresh dashboard"
-            className="self-end text-white/70 hover:bg-white/10 hover:text-white sm:self-auto"
+            className="self-end text-[var(--vpw-text-muted)] sm:self-auto"
             onClick={onRefresh}
             size="icon"
             type="button"
@@ -131,16 +122,20 @@ export function DashboardHero({
         </div>
       </div>
 
-      <div className="relative mt-3 flex flex-wrap items-center gap-3 border-t border-white/10 pt-3">
+      <div className="mt-3 flex flex-wrap items-center gap-3 border-t border-[var(--vpw-border-subtle)] pt-3">
         <ProviderStatusBadge
           status={
             effectiveProviderStatus?.status ??
             (providerStatusLoading ? "loading" : "unknown")
           }
         />
-        <span className="text-sm text-white/75">{freshness.value}</span>
-        <span className="text-white/35">·</span>
-        <span className="text-xs text-white/60">{freshness.detail}</span>
+        <span className="text-sm text-[var(--vpw-text-secondary)]">
+          {freshness.value}
+        </span>
+        <span className="text-[var(--vpw-text-muted)]">/</span>
+        <span className="text-xs text-[var(--vpw-text-muted)]">
+          {freshness.detail}
+        </span>
       </div>
     </div>
   )

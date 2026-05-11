@@ -1,43 +1,44 @@
 {
   "color": {
     "brand": {
-      "primary": "#2563EB",
-      "teal": "#14B8A6",
-      "success": "#22C55E",
-      "warning": "#F59E0B",
-      "critical": "#EF4444",
-      "support": "#6366F1",
-      "navy": "#0B1020"
+      "primary": "#171717",
+      "link": "#0070F3",
+      "teal": "#047857",
+      "success": "#047857",
+      "warning": "#B54708",
+      "critical": "#C40000",
+      "support": "#7928CA",
+      "navy": "#171717"
     },
     "neutral": {
-      "950": "#0B1220",
-      "900": "#111827",
-      "800": "#1F2937",
-      "700": "#374151",
-      "600": "#4B5563",
-      "500": "#6B7280",
-      "400": "#9CA3AF",
+      "950": "#171717",
+      "900": "#262626",
+      "800": "#333333",
+      "700": "#4D4D4D",
+      "600": "#666666",
+      "500": "#6B6B6B",
+      "400": "#A1A1A1",
       "300": "#D1D5DB",
-      "200": "#E5E7EB",
-      "100": "#F3F4F6",
-      "50": "#F8FAFC",
-      "25": "#FAFBFD"
+      "200": "#EBEBEB",
+      "100": "#F5F5F5",
+      "50": "#FAFAFA",
+      "25": "#FCFCFC"
     },
     "surface": {
-      "app": "#FAFBFD",
+      "app": "#FAFAFA",
       "page": "#FFFFFF",
       "card": "#FFFFFF",
-      "panel": "#F8FAFC",
-      "info": "#EFF6FF",
-      "success": "#ECFDF5",
-      "warning": "#FFFBEB",
-      "critical": "#FEF2F2"
+      "panel": "#F5F5F5",
+      "info": "#EEF6FF",
+      "success": "#ECFDF3",
+      "warning": "#FFF7E6",
+      "critical": "#FFF1F1"
     },
     "border": {
-      "default": "#E5E7EB",
-      "subtle": "#EEF2F7",
+      "default": "#EBEBEB",
+      "subtle": "#F0F0F0",
       "strong": "#D1D5DB",
-      "focus": "#3B82F6"
+      "focus": "#0070F3"
     }
   },
   "radius": {
@@ -49,9 +50,9 @@
   },
   "shadow": {
     "0": "none",
-    "1": "0 1px 2px rgba(2, 6, 23, 0.04)",
-    "2": "0 4px 12px rgba(2, 6, 23, 0.06)",
-    "3": "0 12px 24px rgba(2, 6, 23, 0.08)"
+    "1": "0 1px 1px rgba(0, 0, 0, 0.03), 0 2px 2px rgba(0, 0, 0, 0.04)",
+    "2": "0 2px 2px rgba(0, 0, 0, 0.04), 0 8px 8px -8px rgba(0, 0, 0, 0.08)",
+    "3": "0 2px 2px rgba(0, 0, 0, 0.04), 0 8px 16px -4px rgba(0, 0, 0, 0.08)"
   },
   "layout": {
     "maxWidth": "1920px",

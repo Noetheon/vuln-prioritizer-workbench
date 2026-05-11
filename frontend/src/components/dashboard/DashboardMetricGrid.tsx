@@ -13,16 +13,16 @@ export function DashboardMetricGrid({
 }: DashboardMetricGridProps) {
   if (isLoading) {
     return (
-      <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="dashboard-metric-grid grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
         {Array.from({ length: 6 }, (_, i) => i).map((i) => (
-          <Skeleton className="h-24 rounded-xl" key={i} />
+          <Skeleton className="h-24 rounded-[var(--vpw-radius-lg)]" key={i} />
         ))}
       </div>
     )
   }
 
   return (
-    <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+    <div className="dashboard-metric-grid grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
       {cards.map((card) => (
         <MetricCard
           detail={card.detail}

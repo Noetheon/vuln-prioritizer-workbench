@@ -282,8 +282,8 @@ export function RunDetail({
       {selectedRunSummary.status === "failed" ? (
         <VpwStatusBanner title="Failure Cause" tone="critical">
           <p>{failedRunCause(selectedRun, selectedRunSummary)}</p>
-          <pre className="mt-3 max-h-64 overflow-auto rounded-[var(--vpw-radius-md)] bg-[var(--vpw-bg-card)] p-3 text-xs">
-            {jsonPreview(selectedRunSummary.error_json)}
+          <pre className="mt-3 whitespace-pre-wrap break-words rounded-[var(--vpw-radius-md)] bg-[var(--vpw-bg-card)] p-3 text-xs">
+            <code>{jsonPreview(selectedRunSummary.error_json)}</code>
           </pre>
         </VpwStatusBanner>
       ) : null}

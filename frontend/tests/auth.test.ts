@@ -6,6 +6,7 @@ import {
   csrfHeaderForMethod,
   getAccessToken,
   getCsrfToken,
+  hasReadableSessionEvidence,
   isLoggedIn,
   setAccessToken,
   withCsrfHeader,
@@ -177,4 +178,26 @@ test("does not treat readable CSRF cookies as authenticated and clears them on l
     assert.ok(writes.some((value) => value.startsWith("vpw_csrf_token=")))
     assert.ok(writes.every((value) => value.includes("Max-Age=0")))
   })
+})
+
+test("detects readable browser-session evidence before probing the server", () => {
+  withDocument(
+    {
+      cookie: "",
+      querySelector: () => null,
+    },
+    () => {
+      assert.equal(hasReadableSessionEvidence(), false)
+    },
+  )
+
+  withDocument(
+    {
+      cookie: "vpw_csrf=readable-token",
+      querySelector: () => null,
+    },
+    () => {
+      assert.equal(hasReadableSessionEvidence(), true)
+    },
+  )
 })
