@@ -132,3 +132,115 @@
     box-shadow: inset -16px 0 18px -18px var(--vpw-text-muted);
   }
 }
+
+.findings-mobile-cards {
+  display: grid;
+  gap: 12px;
+}
+
+.findings-mobile-card {
+  min-width: 0;
+  border: 1px solid var(--vpw-border-default);
+  border-radius: var(--vpw-radius-xl);
+  padding: 14px;
+  background: var(--vpw-bg-card);
+  box-shadow: var(--vpw-shadow-1);
+}
+
+.findings-mobile-card-header,
+.findings-mobile-card-actions {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.findings-mobile-card-title,
+.findings-mobile-signals {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.findings-mobile-cve {
+  overflow-wrap: anywhere;
+  font-size: 0.95rem;
+}
+
+.findings-mobile-component {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+  margin-top: 12px;
+}
+
+.findings-mobile-component-name {
+  color: var(--vpw-text-primary);
+  font-size: 0.95rem;
+  overflow-wrap: anywhere;
+}
+
+.findings-mobile-component-detail,
+.findings-mobile-meta-detail {
+  color: var(--vpw-text-muted);
+  font-size: 0.78rem;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.findings-mobile-meta-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.findings-mobile-meta-grid > div {
+  display: grid;
+  min-width: 0;
+  align-content: start;
+  gap: 4px;
+  border: 1px solid var(--vpw-border-subtle);
+  border-radius: var(--vpw-radius-lg);
+  padding: 9px;
+  background: var(--vpw-bg-panel);
+}
+
+.findings-mobile-meta-value {
+  color: var(--vpw-text-primary);
+  font-size: 0.84rem;
+  overflow-wrap: anywhere;
+}
+
+.findings-mobile-label {
+  color: var(--vpw-text-muted);
+  font-size: 0.7rem;
+  font-weight: 800;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.findings-mobile-signals {
+  margin-top: 12px;
+}
+
+.findings-mobile-why {
+  margin-top: 12px;
+  color: var(--vpw-text-secondary);
+  font-size: 0.83rem;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.findings-mobile-card-actions {
+  align-items: center;
+  margin-top: 8px;
+}
+
+@media (min-width: 640px) {
+  .findings-mobile-cards {
+    display: none;
+  }
+}

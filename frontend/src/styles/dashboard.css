@@ -373,13 +373,38 @@
   line-height: 1.35;
 }
 
+.finding-sort-stack,
+.finding-primary-badges {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+
+.finding-sort-stack {
+  margin-left: -4px;
+  border: 0;
+  padding: 0;
+}
+
+.finding-primary-cell {
+  display: grid;
+  min-width: 0;
+  gap: 8px;
+}
+
+.finding-primary-cell .finding-cve-link {
+  width: fit-content;
+}
+
 .remediation-why-now {
   display: block;
-  overflow: hidden;
+  max-width: 42ch;
+  overflow-wrap: anywhere;
   color: var(--vpw-text-secondary);
   font-size: 0.8rem;
-  line-height: 1.4;
-  max-width: 28ch;
+  line-height: 1.45;
 }
 
 .finding-view-action {
@@ -391,13 +416,13 @@
   border: 1px solid var(--vpw-text-primary);
   border-radius: 7px;
   padding: 0;
-  background: var(--vpw-navy);
+  background: var(--vpw-text-primary);
   color: var(--vpw-bg-card);
   text-decoration: none;
 }
 
 .finding-view-action:hover {
-  background: var(--vpw-text-primary);
+  background: var(--vpw-text-secondary);
   color: var(--vpw-bg-card);
 }
 

@@ -57,12 +57,9 @@ When hosted GitHub Actions are unavailable, the recommended local equivalent is:
 make workflow-check
 ```
 
-This adds:
-
-- `python3 -m pre_commit run --all-files`
-- `python3 -m mkdocs build --clean`
-- `python3 -m build backend --outdir dist`
-- `python3 -m twine check dist/*`
+This runs the backend quality gate, Docker base-image digest check, docs build
+and evidence hygiene checks, GitHub workflow linting, pre-commit hooks, and the
+Python package build/check/smoke path.
 
 Use `make clean-local` to remove ignored local caches, logs, build outputs,
 coverage files, generated docs sites, and `.DS_Store` files without deleting

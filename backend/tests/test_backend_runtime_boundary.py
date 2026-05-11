@@ -460,6 +460,16 @@ def test_active_runtime_entrypoints_use_workbench_backend_app() -> None:
         assert marker not in playwright_backend
 
 
+def test_init_db_does_not_create_schema_metadata() -> None:
+    db_source = _read_repo_text("backend/app/core/db.py")
+    init_body = db_source.split("def init_db", 1)[1].split(
+        "def ensure_configured_superuser",
+        1,
+    )[0]
+
+    assert "metadata.create_all" not in init_body
+
+
 def test_generated_browser_api_client_is_built_from_active_backend_app() -> None:
     generate_client = (REPO_ROOT / "scripts/generate-client.sh").read_text(encoding="utf-8")
 

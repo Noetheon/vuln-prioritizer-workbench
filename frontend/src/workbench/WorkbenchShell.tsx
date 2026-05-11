@@ -1,12 +1,13 @@
 import { type ReactNode, Suspense } from "react"
 import { useLocation } from "@tanstack/react-router"
-import { ProductAppShell, type WorkbenchPath } from "../components/app/AppShell"
 import { LoadingSkeleton } from "../components/states"
 import {
   routeDetails,
   unknownRouteDetail,
   workbenchPathFromPathname,
 } from "../lib/app-route-config"
+import type { WorkbenchPath } from "../lib/workbench-navigation"
+import { ProductAppShell } from "./ProductAppShell"
 import { useWorkbenchContext, WorkbenchProvider } from "./WorkbenchContext"
 
 type WorkbenchShellProps = {

@@ -8,10 +8,10 @@ import {
   ReportsService,
   type ReportVerificationPublic,
 } from "../api-client"
-import type { WorkbenchPath } from "../components/app/AppShell"
 import type { WorkbenchReportFormat } from "../lib/app-defaults"
 import { apiErrorMessage, objectRecord } from "../lib/app-errors"
 import { isReportableRunStatus, reportFormatLabel } from "../lib/report-format"
+import type { WorkbenchPath } from "../lib/workbench-navigation"
 import { fetchReportDownload } from "./report-download"
 import { workbenchQueryKeys } from "./workbench-query-keys"
 

@@ -19,7 +19,10 @@ from vuln_prioritizer.models import EpssData, KevData, NvdData
 from vuln_prioritizer.providers.epss import EpssProvider
 from vuln_prioritizer.providers.kev import KevProvider
 from vuln_prioritizer.providers.nvd import NvdProvider
-from vuln_prioritizer.reporting_evidence import write_evidence_bundle
+from vuln_prioritizer.reporting_evidence import (
+    resolve_provider_snapshot_path,
+    write_evidence_bundle,
+)
 
 
 def test_cli_verify_evidence_bundle_succeeds_for_clean_bundle(
@@ -329,6 +332,48 @@ def test_cli_evidence_bundle_includes_provider_snapshot_and_replays_offline(
         item["path"] == "provider/provider-snapshot.json" and item["kind"] == "provider-snapshot"
         for item in manifest["files"]
     )
+
+
+def test_evidence_bundle_resolves_repo_relative_provider_snapshot(
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    analysis_file = tmp_path / "build" / "analysis.json"
+    analysis_file.parent.mkdir()
+    analysis_file.write_text("{}", encoding="utf-8")
+    snapshot_file = tmp_path / "data" / "demo_provider_snapshot.json"
+    snapshot_file.parent.mkdir()
+    snapshot_file.write_text(
+        json.dumps(
+            {
+                "items": [],
+                "metadata": {
+                    "artifact_kind": "provider-snapshot",
+                    "generated_at": "2026-04-21T12:00:00+00:00",
+                    "selected_sources": ["nvd", "epss", "kev"],
+                    "snapshot_format": "provider-snapshot.v1.json",
+                    "snapshot_id": "test-provider-snapshot",
+                },
+                "warnings": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+    env_file = tmp_path / ".env"
+    env_file.write_text("SECRET_KEY=local-secret\n", encoding="utf-8")
+    secret_json = tmp_path / "secrets" / "export.json"
+    secret_json.parent.mkdir()
+    secret_json.write_text('{"SECRET_KEY": "local-secret"}', encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+
+    assert (
+        resolve_provider_snapshot_path("data/demo_provider_snapshot.json", analysis_file)
+        == snapshot_file
+    )
+    assert resolve_provider_snapshot_path("../private/provider.json", analysis_file) is None
+    assert resolve_provider_snapshot_path(str(snapshot_file), analysis_file) is None
+    assert resolve_provider_snapshot_path(".env", analysis_file) is None
+    assert resolve_provider_snapshot_path("secrets/export.json", analysis_file) is None
 
 
 def test_evidence_bundle_redacts_secret_like_text_in_copied_artifacts(tmp_path: Path) -> None:

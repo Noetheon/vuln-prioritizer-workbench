@@ -25,10 +25,10 @@ import {
   type FindingOccurrenceRow,
   findingAssetServiceDetailLabel,
   findingComponentDetailLabel,
+  findingHeroSummary,
   findingOwnerDetailLabel,
   findingRecommendedAction,
   findingSlaLabel,
-  findingWhyText,
 } from "./finding-detail-model"
 
 export type FindingDetailHeroProps = {
@@ -44,6 +44,10 @@ export function FindingDetailHero({
   isDemo,
   occurrences,
 }: FindingDetailHeroProps) {
+  const assetEnvironmentLabel = finding.asset_environment
+    ? labelize(finding.asset_environment)
+    : "Environment not recorded"
+
   return (
     <>
       {isDemo ? (
@@ -64,7 +68,7 @@ export function FindingDetailHero({
             Why this priority?
           </VpwBadge>
           <h2>{finding.cve_id}</h2>
-          <p>{findingWhyText(finding, explanation)}</p>
+          <p>{findingHeroSummary(finding, explanation)}</p>
           <div className="finding-decision-badges">
             <PriorityBadge priority={finding.priority} />
             <FindingStatusBadge status={finding.status} />
@@ -140,7 +144,7 @@ export function FindingDetailHero({
             </VpwSurfaceTitle>
           </VpwSurfaceHeader>
           <VpwSurfaceBody>
-            <p>{labelize(finding.asset_environment)}</p>
+            <p>{assetEnvironmentLabel}</p>
           </VpwSurfaceBody>
         </VpwSurface>
         <VpwSurface className="finding-fact-card finding-recommendation-card">

@@ -43,8 +43,11 @@ const tabletViewport: EvidenceViewport = {
   label: "tablet-768",
   width: 768,
 }
-const baseViewports = [desktopViewport, mobileViewport] as const
-const tabletRouteIds = new Set(["findings", "assets", "waivers", "settings"])
+const evidenceViewports = [
+  desktopViewport,
+  mobileViewport,
+  tabletViewport,
+] as const
 
 const timestamp = "2026-05-10T10:00:00Z"
 const runId = "run-1"
@@ -472,6 +475,13 @@ const authenticatedRoutes: readonly EvidenceRoute[] = [
       await expect(
         page.getByRole("region", { name: "Findings filters" }),
       ).toBeVisible({ timeout: 15_000 })
+      if ((page.viewportSize()?.width ?? desktopViewport.width) < 640) {
+        await expect(
+          page.getByRole("region", { name: "Findings remediation cards" }),
+        ).toContainText(mockFinding.cve_id)
+        return
+      }
+
       await expect(
         page.getByRole("table", { name: "Findings remediation queue" }),
       ).toContainText(mockFinding.cve_id)
@@ -484,6 +494,14 @@ const authenticatedRoutes: readonly EvidenceRoute[] = [
       await expect(
         page.getByRole("heading", { name: new RegExp(mockFinding.cve_id) }),
       ).toBeVisible({ timeout: 15_000 })
+      await expect(
+        page.getByText(
+          "Critical priority combines CISA KEV, 92% EPSS, CVSS 10.0, and Internet Facing exposure.",
+        ),
+      ).toBeVisible()
+      await expect(
+        page.getByText(mockFinding.rationale, { exact: true }).first(),
+      ).toBeVisible()
       await expect(
         page.getByRole("region", { name: "Finding priority decision" }),
       ).toBeVisible()
@@ -629,12 +647,6 @@ function aliasKey(
   return `${routeId}:${theme}:${viewportLabel}`
 }
 
-function routeViewports(route: EvidenceRoute) {
-  return tabletRouteIds.has(route.id)
-    ? [...baseViewports, tabletViewport]
-    : [...baseViewports]
-}
-
 function explicitScreenshotName(
   routeId: string,
   theme: Theme,
@@ -757,7 +769,11 @@ async function captureRouteScreenshot({
   await page.evaluate(() => document.fonts.ready.then(() => undefined))
   await assertEvidenceLayout({ page, route, theme, viewport })
 
-  const screenshot = await page.screenshot({ fullPage: true })
+  const appShell = page.locator(".vpw-app-shell").first()
+  const screenshot =
+    (await appShell.count()) > 0
+      ? await appShell.screenshot()
+      : await page.screenshot({ fullPage: false })
   const fileNames = [
     explicitScreenshotName(route.id, theme, viewport.label),
     ...(legacyScreenshotAliases.get(
@@ -871,7 +887,7 @@ test("evidence: login route light and dark screenshots", async ({ page }) => {
   await routeLoginScreenshotApi(page)
 
   for (const theme of themes) {
-    for (const viewport of baseViewports) {
+    for (const viewport of evidenceViewports) {
       await captureRouteScreenshot({ page, route: loginRoute, theme, viewport })
     }
   }
@@ -885,7 +901,7 @@ for (const theme of themes) {
     await routeEvidenceScreenshotApi(page)
 
     for (const route of authenticatedRoutes) {
-      for (const viewport of routeViewports(route)) {
+      for (const viewport of evidenceViewports) {
         await captureRouteScreenshot({ page, route, theme, viewport })
       }
     }

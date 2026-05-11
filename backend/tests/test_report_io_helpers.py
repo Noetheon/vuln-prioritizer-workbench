@@ -188,9 +188,26 @@ def test_evidence_bundle_helper_functions_cover_manifest_and_path_edges(
     input_file = tmp_path / "input.txt"
     analysis_file = tmp_path / "analysis.json"
     snapshot_file = tmp_path / "snapshot.json"
+    invalid_snapshot_file = tmp_path / "not-a-snapshot.json"
     input_file.write_text("CVE-2024-0001\n", encoding="utf-8")
     analysis_file.write_text("{}", encoding="utf-8")
-    snapshot_file.write_text('{"metadata": {}}', encoding="utf-8")
+    snapshot_file.write_text(
+        json.dumps(
+            {
+                "items": [],
+                "metadata": {
+                    "artifact_kind": "provider-snapshot",
+                    "generated_at": "2026-04-21T12:00:00+00:00",
+                    "selected_sources": ["nvd"],
+                    "snapshot_format": "provider-snapshot.v1.json",
+                    "snapshot_id": "snapshot-1",
+                },
+                "warnings": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+    invalid_snapshot_file.write_text('{"metadata": {}}', encoding="utf-8")
 
     monkeypatch.chdir(tmp_path)
 
@@ -219,6 +236,18 @@ def test_evidence_bundle_helper_functions_cover_manifest_and_path_edges(
         "id": "snapshot-1",
         "sha256": hashlib.sha256(snapshot_file.read_bytes()).hexdigest(),
         "path": "snapshot.json",
+        "sources": ["nvd"],
+    }
+    assert provider_snapshot_manifest_entry(
+        {
+            "provider_snapshot_id": "snapshot-invalid",
+            "provider_snapshot_file": "not-a-snapshot.json",
+            "provider_snapshot_sources": ["nvd"],
+        },
+        analysis_path=analysis_file,
+    ) == {
+        "id": "snapshot-invalid",
+        "path": "not-a-snapshot.json",
         "sources": ["nvd"],
     }
     assert provider_snapshot_manifest_entry(

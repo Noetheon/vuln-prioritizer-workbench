@@ -51,6 +51,7 @@ data/workbench-import-uploads/
 data/workbench-reports/
 data/workbench-provider-cache/
 data/provider-snapshots/
+data/provider-snapshot-*.json
 data/template-import-uploads/
 data/template-reports/
 data/template-provider-cache/

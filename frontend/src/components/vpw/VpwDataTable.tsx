@@ -18,6 +18,7 @@ export type VpwDataTableColumn<TData> = {
   ariaSort?: "ascending" | "descending" | "none"
   className?: string
   headerClassName?: string
+  width?: string
 }
 
 export type VpwDataTableDensity = "compact" | "standard" | "comfortable"
@@ -92,6 +93,14 @@ export function VpwDataTable<TData>({
         {caption ? (
           <TableCaption className="sr-only">{caption}</TableCaption>
         ) : null}
+        <colgroup>
+          {columns.map((column) => (
+            <col
+              key={column.id}
+              style={column.width ? { width: column.width } : undefined}
+            />
+          ))}
+        </colgroup>
         <TableHeader>
           <TableRow>
             {columns.map((column) => (
@@ -115,7 +124,10 @@ export function VpwDataTable<TData>({
               >
                 {columns.map((column) => (
                   <TableCell
-                    className={cn("vpw-table-cell", column.className)}
+                    className={cn(
+                      "vpw-table-cell !whitespace-normal",
+                      column.className,
+                    )}
                     key={column.id}
                   >
                     {column.cell(row)}

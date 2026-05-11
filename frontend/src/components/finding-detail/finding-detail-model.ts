@@ -142,6 +142,73 @@ export function findingWhyText(
   )
 }
 
+function summaryList(values: readonly string[]) {
+  if (values.length <= 1) {
+    return values[0] ?? ""
+  }
+  if (values.length === 2) {
+    return `${values[0]} and ${values[1]}`
+  }
+  return `${values.slice(0, -1).join(", ")}, and ${values.at(-1)}`
+}
+
+function firstCompactSentence(value: string, maxLength = 190) {
+  const trimmed = value.trim()
+  const firstSentence = trimmed.match(/^(.+?[.!?])(?:\s|$)/)?.[1] ?? trimmed
+  if (firstSentence.length <= maxLength) {
+    return firstSentence
+  }
+  const words = firstSentence.split(/\s+/)
+  let compact = ""
+  for (const word of words) {
+    const candidate = compact ? `${compact} ${word}` : word
+    if (candidate.length > maxLength - 3) {
+      break
+    }
+    compact = candidate
+  }
+  return `${compact || firstSentence.slice(0, maxLength - 3).trimEnd()}...`
+}
+
+export function findingHeroSummary(
+  finding: FindingDetailPublic | null,
+  explanation: FindingExplanationPublic | null,
+) {
+  if (!finding) {
+    return findingWhyText(finding, explanation)
+  }
+
+  const signals: string[] = []
+  if (finding.in_kev) {
+    signals.push("CISA KEV")
+  }
+  if (finding.epss !== null && finding.epss !== undefined) {
+    signals.push(`${formatEpss(finding.epss)} EPSS`)
+  }
+  if (
+    finding.cvss_base_score !== null &&
+    finding.cvss_base_score !== undefined
+  ) {
+    signals.push(`CVSS ${formatNullableNumber(finding.cvss_base_score)}`)
+  }
+  if (isInternetFacingExposure(finding.exposure)) {
+    signals.push(`${labelize(finding.exposure)} exposure`)
+  }
+  if (isProductionEnvironment(finding.asset_environment)) {
+    signals.push(`${labelize(finding.asset_environment)} environment`)
+  }
+
+  if (signals.length > 0) {
+    const priority =
+      finding.priority && labelize(finding.priority) !== "N.A."
+        ? `${labelize(finding.priority)} priority`
+        : "Priority"
+    return `${priority} combines ${summaryList(signals)}.`
+  }
+
+  return firstCompactSentence(findingWhyText(finding, explanation))
+}
+
 export function findingRecommendedAction(
   finding: FindingDetailPublic | null,
   explanation: FindingExplanationPublic | null,

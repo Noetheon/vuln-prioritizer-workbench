@@ -1,5 +1,7 @@
 import { defineConfig, devices } from "@playwright/test"
 
+const reuseExistingServer = process.env.VPW_PLAYWRIGHT_REUSE_EXISTING_SERVER === "1"
+
 export default defineConfig({
   testDir: "./tests",
   testMatch: /.*\.spec\.ts/,
@@ -15,13 +17,13 @@ export default defineConfig({
   webServer: [
     {
       command: "cd .. && bash scripts/start-workbench-playwright-backend.sh",
-      reuseExistingServer: true,
+      reuseExistingServer,
       timeout: 120_000,
       url: "http://127.0.0.1:8000/api/v1/utils/health-check/",
     },
     {
       command: "npm run dev -- --host 127.0.0.1 --port 5173",
-      reuseExistingServer: true,
+      reuseExistingServer,
       timeout: 120_000,
       url: "http://127.0.0.1:5173/login",
     },

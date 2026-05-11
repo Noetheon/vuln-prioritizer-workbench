@@ -1,32 +1,12 @@
-import { Link, useNavigate } from "@tanstack/react-router"
+import { Link } from "@tanstack/react-router"
 import {
-  Database,
-  FileArchive,
-  FileCheck2,
-  FileInput,
-  FolderKanban,
-  LayoutDashboard,
-  ListChecks,
   LogOut,
-  type LucideIcon,
   Menu,
-  Settings,
-  ShieldCheck,
   Sidebar,
 } from "lucide-react"
 import { type ReactNode, useEffect, useState } from "react"
-import {
-  LoginService,
-  type ProviderStatusPublic,
-  type UserPublic,
-  type WorkbenchStatus,
-} from "../../api-client"
-import { clearAccessToken } from "../../auth"
-import {
-  dataServicesSummary,
-  workspaceHealthLabel,
-} from "../../lib/provider-format"
 import { cn } from "../../lib/utils"
+import type { NavigationEntry, WorkbenchPath } from "../../lib/workbench-navigation"
 import { Button } from "../ui/button"
 import {
   DropdownMenu,
@@ -52,23 +32,6 @@ import {
   TooltipTrigger,
 } from "../ui/tooltip"
 
-export type WorkbenchPath =
-  | "/"
-  | "/projects"
-  | "/imports"
-  | "/findings"
-  | "/waivers"
-  | "/assets"
-  | "/providers"
-  | "/reports"
-  | "/settings"
-
-export type NavigationEntry = {
-  icon: LucideIcon
-  label: string
-  to: WorkbenchPath
-}
-
 export type StatusSummaryItem = {
   label: string
   value: ReactNode
@@ -90,29 +53,15 @@ type AppShellProps = PageHeaderProps & {
   statusItems: readonly StatusSummaryItem[]
 }
 
-type ProductAppShellProps = PageHeaderProps & {
-  activePath: WorkbenchPath | null
-  children: ReactNode
-  currentUser: UserPublic | null
-  hideStatusStrip?: boolean
-  providerStatus: ProviderStatusPublic | null
-  status: WorkbenchStatus | null
-  statusError: string
-}
-
 const sidebarStorageKey = "vpw-sidebar-collapsed"
 
-export const workbenchNavigation: readonly NavigationEntry[] = [
-  { label: "Dashboard", icon: LayoutDashboard, to: "/" },
-  { label: "Projects", icon: FolderKanban, to: "/projects" },
-  { label: "Imports", icon: FileInput, to: "/imports" },
-  { label: "Findings", icon: ListChecks, to: "/findings" },
-  { label: "Waivers", icon: FileCheck2, to: "/waivers" },
-  { label: "Assets", icon: ShieldCheck, to: "/assets" },
-  { label: "Providers", icon: Database, to: "/providers" },
-  { label: "Reports", icon: FileArchive, to: "/reports" },
-  { label: "Settings", icon: Settings, to: "/settings" },
-]
+function compactHealthLabel(healthLabel: string, isHealthy: boolean) {
+  const normalizedHealthLabel = healthLabel.toLowerCase()
+  if (isHealthy) return "Healthy"
+  if (normalizedHealthLabel.includes("degraded")) return "Degraded"
+  if (normalizedHealthLabel.includes("checking")) return "Checking"
+  return "Issue"
+}
 
 export function AppShell({
   activePath,
@@ -140,6 +89,7 @@ export function AppShell({
     !healthLabel.toLowerCase().includes("unavailable") &&
     !healthLabel.toLowerCase().includes("error") &&
     !healthLabel.toLowerCase().includes("degraded")
+  const mobileHealthLabel = compactHealthLabel(healthLabel, isHealthy)
 
   return (
     <TooltipProvider>
@@ -192,7 +142,9 @@ export function AppShell({
                     <Sidebar aria-hidden="true" size={16} />
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent side="right">Collapse sidebar</TooltipContent>
+                <TooltipContent align="end" side="bottom" sideOffset={8}>
+                  Collapse sidebar
+                </TooltipContent>
               </Tooltip>
             ) : null}
           </div>
@@ -423,14 +375,21 @@ export function AppShell({
                 </h1>
               </div>
             </div>
-            <div className="flex min-w-0 shrink-0 items-center gap-1.5">
+            <div
+              aria-label={`Workspace health: ${healthLabel}`}
+              className="flex min-w-0 shrink-0 items-center gap-1.5"
+              role="status"
+            >
               <div
                 className={cn(
                   "size-2 rounded-full",
                   isHealthy ? "bg-[var(--vpw-green)]" : "bg-[var(--vpw-amber)]",
                 )}
               />
-              <span className="max-w-[8.5rem] truncate text-sm text-[var(--vpw-text-muted)] sm:max-w-none">
+              <span className="text-sm text-[var(--vpw-text-muted)] sm:hidden">
+                {mobileHealthLabel}
+              </span>
+              <span className="hidden text-sm text-[var(--vpw-text-muted)] sm:inline">
                 {healthLabel}
               </span>
             </div>
@@ -481,53 +440,4 @@ export function AppShell({
       </div>
     </TooltipProvider>
   )
-}
-
-export function ProductAppShell({
-  activePath,
-  children,
-  currentUser,
-  eyebrow,
-  hideStatusStrip = false,
-  providerStatus,
-  status,
-  statusError,
-  title,
-}: ProductAppShellProps) {
-  const navigate = useNavigate()
-
-  async function signOut() {
-    try {
-      await LoginService.logoutCurrentToken()
-    } catch {
-      // Local logout should complete even if the server session already expired.
-    } finally {
-      clearAccessToken()
-      if (typeof window !== "undefined") {
-        window.location.assign("/login")
-      } else {
-        await navigate({ replace: true, search: {} as never, to: "/login" })
-      }
-    }
-  }
-
-  return (
-    <AppShell
-      activePath={activePath}
-      currentUserLabel={currentUserLabel(currentUser)}
-      eyebrow={eyebrow}
-      healthLabel={workspaceHealthLabel(status, statusError)}
-      hideStatusStrip={hideStatusStrip}
-      navigation={workbenchNavigation}
-      onSignOut={signOut}
-      statusItems={dataServicesSummary(status, providerStatus)}
-      title={title}
-    >
-      {children}
-    </AppShell>
-  )
-}
-
-function currentUserLabel(user: UserPublic | null) {
-  return user?.email ?? "Local workspace"
 }

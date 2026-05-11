@@ -278,10 +278,11 @@ demo-sync-check-temp:
 	@set -e; \
 	tmp="$$(mktemp -d)"; \
 	trap 'rm -rf "$$tmp"' EXIT; \
+	tracked="$$(git ls-files docs archive)"; \
 	rsync -a --exclude .git --exclude .venv --exclude .cache --exclude Library --exclude node_modules --exclude dist --exclude build --exclude site --exclude .mypy_cache --exclude .pytest_cache --exclude .ruff_cache . "$$tmp"/; \
 	git -C "$$tmp" init -q; \
-	git -C "$$tmp" add docs; \
-	git -C "$$tmp" -c user.email=codex@example.invalid -c user.name=Codex commit -q -m baseline-docs -- docs; \
+	printf '%s\n' "$$tracked" | git -C "$$tmp" add --pathspec-from-file=-; \
+	git -C "$$tmp" -c user.email=codex@example.invalid -c user.name=Codex commit -q -m baseline-docs-archive; \
 	$(MAKE) -C "$$tmp" demo-sync-check
 
 package:

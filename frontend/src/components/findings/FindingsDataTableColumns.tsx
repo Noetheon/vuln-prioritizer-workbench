@@ -40,6 +40,7 @@ export type FindingsDataTableColumn = {
   ariaSort?: "ascending" | "descending"
   className?: string
   headerClassName?: string
+  width?: string
 }
 
 type BuildFindingsColumnsOptions = {
@@ -61,51 +62,39 @@ export function buildFindingsDataTableColumns({
 }: BuildFindingsColumnsOptions): readonly FindingsDataTableColumn[] {
   return [
     {
-      id: "priority",
+      id: "finding",
       header: (
-        <SortHeader
-          currentDirection={findingDirection}
-          currentSort={queueSort}
-          label="Priority"
-          onSort={onSort}
-          sort="priority"
-        />
+        <fieldset className="finding-sort-stack">
+          <legend className="sr-only">Finding sort controls</legend>
+          <SortHeader
+            currentDirection={findingDirection}
+            currentSort={queueSort}
+            label="Priority"
+            onSort={onSort}
+            sort="priority"
+          />
+          <SortHeader
+            currentDirection={findingDirection}
+            currentSort={queueSort}
+            label="Score"
+            onSort={onSort}
+            sort="score"
+          />
+          <SortHeader
+            currentDirection={findingDirection}
+            currentSort={queueSort}
+            label="CVE"
+            onSort={onSort}
+            sort="cve"
+          />
+        </fieldset>
       ),
-      ariaSort: sortAriaState(findingDirection, queueSort, "priority"),
-      cell: (finding) => <PriorityBadge priority={finding.priority} />,
-      className: "w-[6%]",
-      headerClassName: "w-[6%]",
-    },
-    {
-      id: "score",
-      header: (
-        <SortHeader
-          currentDirection={findingDirection}
-          currentSort={queueSort}
-          label="Score"
-          onSort={onSort}
-          sort="score"
-        />
-      ),
-      ariaSort: sortAriaState(findingDirection, queueSort, "score"),
-      cell: (finding) => <RiskScore value={finding.risk_score} />,
-      className: "w-[5%]",
-      headerClassName: "w-[5%]",
-    },
-    {
-      id: "cve",
-      header: (
-        <SortHeader
-          currentDirection={findingDirection}
-          currentSort={queueSort}
-          label="CVE"
-          onSort={onSort}
-          sort="cve"
-        />
-      ),
-      ariaSort: sortAriaState(findingDirection, queueSort, "cve"),
       cell: (finding) => (
-        <>
+        <div className="finding-primary-cell">
+          <div className="finding-primary-badges">
+            <PriorityBadge priority={finding.priority} />
+            <RiskScore value={finding.risk_score} />
+          </div>
           <Link
             className="finding-cve-link"
             params={{ findingId: finding.id }}
@@ -118,10 +107,11 @@ export function buildFindingsDataTableColumns({
           {finding.attack_mapped ? (
             <span className="remediation-subtext">ATT&amp;CK mapped</span>
           ) : null}
-        </>
+        </div>
       ),
-      className: "w-[8%]",
-      headerClassName: "w-[8%]",
+      className: "w-[22%]",
+      headerClassName: "w-[22%]",
+      width: "22%",
     },
     {
       id: "component",
@@ -148,8 +138,9 @@ export function buildFindingsDataTableColumns({
           </span>
         </div>
       ),
-      className: "w-[19%] min-w-0",
-      headerClassName: "w-[19%]",
+      className: "w-[20%] min-w-0",
+      headerClassName: "w-[20%]",
+      width: "20%",
     },
     {
       id: "owner",
@@ -173,8 +164,9 @@ export function buildFindingsDataTableColumns({
           ) : null}
         </>
       ),
-      className: "w-[10%]",
-      headerClassName: "w-[10%]",
+      className: "w-[12%]",
+      headerClassName: "w-[12%]",
+      width: "12%",
     },
     {
       id: "status",
@@ -199,8 +191,9 @@ export function buildFindingsDataTableColumns({
           </span>
         </div>
       ),
-      className: "w-[8%]",
-      headerClassName: "w-[8%]",
+      className: "w-[10%]",
+      headerClassName: "w-[10%]",
+      width: "10%",
     },
     {
       id: "signals",
@@ -231,8 +224,9 @@ export function buildFindingsDataTableColumns({
           <KevBadge matched={finding.in_kev} />
         </div>
       ),
-      className: "w-[13%]",
-      headerClassName: "w-[13%]",
+      className: "w-[15%]",
+      headerClassName: "w-[15%]",
+      width: "15%",
     },
     {
       id: "why",
@@ -251,8 +245,9 @@ export function buildFindingsDataTableColumns({
           </Button>
         </>
       ),
-      className: "w-[25%]",
-      headerClassName: "w-[25%]",
+      className: "w-[17%]",
+      headerClassName: "w-[17%]",
+      width: "17%",
     },
     {
       id: "view",
@@ -277,6 +272,7 @@ export function buildFindingsDataTableColumns({
         "sticky right-0 z-10 w-16 min-w-16 bg-[var(--vpw-bg-card)] pr-4 text-right",
       headerClassName:
         "sticky right-0 z-20 w-16 min-w-16 bg-[var(--vpw-bg-panel)] pr-4 text-right",
+      width: "4%",
     },
   ]
 }

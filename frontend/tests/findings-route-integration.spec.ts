@@ -308,8 +308,10 @@ test("findings detail, quick-view sheet, why dialog, and scroll evidence are cov
       scrollWidth: region.scrollWidth,
     }
   })
-  expect(scrollMetrics.scrollWidth).toBeGreaterThan(scrollMetrics.clientWidth)
-  expect(scrollMetrics.scrollLeft).toBeGreaterThan(0)
+  expect(scrollMetrics.scrollWidth).toBeLessThanOrEqual(
+    scrollMetrics.clientWidth + 2,
+  )
+  expect(scrollMetrics.scrollLeft).toBeLessThanOrEqual(1)
   await captureAuditScreenshot(
     page,
     "vpw-aud-204-findings-table-scroll-1440.png",

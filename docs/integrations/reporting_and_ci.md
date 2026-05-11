@@ -207,6 +207,8 @@ The bundle packages:
 - a regenerated `report.html`
 - a regenerated `summary.md`
 - `manifest.json` with checksums and artifact metadata
+- `provider/provider-snapshot.json` when a replay snapshot is referenced and resolvable
+- `attack-navigator-layer.json` when ATT&CK mapping evidence exists
 - the original input file when it can be resolved from the saved analysis metadata
 
 Integrity verification contract:

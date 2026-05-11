@@ -29,7 +29,7 @@ Workbench runtime and CLI/domain tests.
 - Default prioritization stays grounded in `CVSS + EPSS + KEV`.
 - ATT&CK, asset context, and VEX remain explicit contextual layers.
 - The composite GitHub Action mirrors `analyze`, `compare`, `explain`, `doctor`, input validation, snapshot, rollup, provider verification, ATT&CK validation/coverage, reporting, evidence, SARIF validation, and provider freshness gates as additive inputs.
-- Local quality gates now start enforcing coverage with `--cov-fail-under=90`, and temp-copy package/demo checks are available for read-only validation.
+- Local quality gates now enforce backend coverage with `--cov-fail-under=95`, and temp-copy package/demo checks are available for read-only validation.
 - Docker and Compose provide a local runtime bootstrap for the Workbench while keeping the CLI core available in the same image.
 - Parser and provider contributions are governed by the static local
   [extension strategy](./extension_strategy.md), including fixture requirements,
