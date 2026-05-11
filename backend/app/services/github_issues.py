@@ -19,7 +19,7 @@ from app.models.github_issues import (
     GitHubIssuePreviewCreate,
     GitHubIssuePreviewRecord,
 )
-from app.repositories import FindingRepository
+from app.repositories import FindingPageQuery, FindingRepository
 from vuln_prioritizer.security_redaction import redact_text, redact_value
 
 GITHUB_SECRET_PATTERN = re.compile(
@@ -151,14 +151,16 @@ def _selected_findings(
             findings.append(finding)
         return findings
 
-    findings, _count = repo.list_project_findings_page(
-        project_id,
-        limit=payload.limit,
-        offset=0,
-        sort="operational",
-        direction="asc",
-        priority=payload.priority,
-        status=None,
+    findings, _count = repo.list_project_findings_query(
+        FindingPageQuery(
+            project_id=project_id,
+            limit=payload.limit,
+            offset=0,
+            sort="operational",
+            direction="asc",
+            priority=payload.priority,
+            status=None,
+        )
     )
     return findings
 
