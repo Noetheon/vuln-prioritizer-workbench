@@ -6,7 +6,7 @@ import uuid
 
 from sqlalchemy.engine import Engine
 from sqlalchemy.exc import IntegrityError
-from sqlmodel import Session, SQLModel, create_engine, select
+from sqlmodel import Session, create_engine, select
 
 from app.core import security
 from app.core.config import Settings, settings
@@ -39,8 +39,7 @@ def configured_superuser_id(email: str) -> uuid.UUID:
 
 
 def init_db(session: Session, active_settings: Settings | None = None) -> None:
-    """Create metadata in local/dev contexts and ensure the configured user exists."""
-    SQLModel.metadata.create_all(session.get_bind())
+    """Ensure the configured bootstrap user exists on an already migrated schema."""
     ensure_configured_superuser(session, active_settings=active_settings)
 
 

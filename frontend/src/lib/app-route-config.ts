@@ -1,4 +1,4 @@
-import type { WorkbenchPath } from "../components/app/AppShell"
+import type { WorkbenchPath } from "./workbench-navigation"
 
 type RouteDetail = {
   eyebrow: string

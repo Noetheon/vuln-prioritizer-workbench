@@ -1,6 +1,7 @@
 import type { FindingPublic } from "@/api-client"
 import { VpwDataTable } from "@/components/vpw"
 import { buildFindingsDataTableColumns } from "./FindingsDataTableColumns"
+import { FindingsMobileCards } from "./FindingsMobileCards"
 import type { FindingsUrlSearch } from "./findings-search-state"
 import type { FindingsDirection, QueueSort } from "./remediation-queue-model"
 
@@ -35,18 +36,26 @@ export function FindingsDataTable({
   })
 
   return (
-    <div className="finding-table-scroll-shell">
-      <VpwDataTable
-        ariaLabel="Findings table scroll region"
-        caption="Findings remediation queue"
-        className="remediation-table-wrap shadow-none"
-        columns={columns}
-        data={findings}
-        density="standard"
-        getRowKey={(finding) => finding.id}
-        minWidth="clamp(1100px, 86vw, 1240px)"
-        tableClassName="table-fixed"
+    <>
+      <FindingsMobileCards
+        findingSearch={findingSearch}
+        findings={findings}
+        onOpenSheet={onOpenSheet}
+        onOpenWhy={onOpenWhy}
       />
-    </div>
+      <div className="finding-table-scroll-shell hidden sm:block">
+        <VpwDataTable
+          ariaLabel="Findings table scroll region"
+          caption="Findings remediation queue"
+          className="remediation-table-wrap shadow-none"
+          columns={columns}
+          data={findings}
+          density="standard"
+          getRowKey={(finding) => finding.id}
+          minWidth="960px"
+          tableClassName="table-fixed"
+        />
+      </div>
+    </>
   )
 }

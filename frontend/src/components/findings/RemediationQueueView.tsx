@@ -1,4 +1,9 @@
-import type { Dispatch, SetStateAction } from "react"
+import {
+  type Dispatch,
+  type SetStateAction,
+  useEffect,
+  useState,
+} from "react"
 import type { FindingPublic, ProjectPublic } from "@/api-client"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import type { FindingsUrlSearch } from "./findings-search-state"
@@ -96,6 +101,30 @@ export function RemediationQueueView({
   const closeSheet = () => setSheetOpen(false)
   const closeWhy = () => setWhyOpen(false)
   const stableFindingSearch: FindingsUrlSearch = findingSearch
+  const mobileFilterLayout = useMobileFilterLayout()
+  const renderFilters = (controlIdPrefix: string) => (
+    <RemediationQueueFilters
+      activeFindingFilters={activeFindingFilters}
+      controlIdPrefix={controlIdPrefix}
+      filterCount={filterCount}
+      findingAssetId={findingAssetId}
+      findingAssetKey={findingAssetKey}
+      findingFilters={findingFilters}
+      isDemo={isDemo}
+      onClearAssetFilter={onClearAssetFilter}
+      onClearFilters={onClearFilters}
+      onFilterChange={onFilterChange}
+      onProjectChange={onProjectChange}
+      ownerServiceDraft={ownerServiceDraft}
+      projectListLoading={projectListLoading}
+      projects={projects}
+      selectedProjectId={selectedProjectId}
+      setAdvancedFiltersOpen={setAdvancedFiltersOpen}
+      setOwnerServiceDraft={setOwnerServiceDraft}
+      showAdvancedFilters={showAdvancedFilters}
+      signalFilterCount={signalFilterCount}
+    />
+  )
 
   return (
     <TooltipProvider>
@@ -112,26 +141,7 @@ export function RemediationQueueView({
           kevCount={kevCount}
           openCount={openCount}
         />
-        <RemediationQueueFilters
-          activeFindingFilters={activeFindingFilters}
-          filterCount={filterCount}
-          findingAssetId={findingAssetId}
-          findingAssetKey={findingAssetKey}
-          findingFilters={findingFilters}
-          isDemo={isDemo}
-          onClearAssetFilter={onClearAssetFilter}
-          onClearFilters={onClearFilters}
-          onFilterChange={onFilterChange}
-          onProjectChange={onProjectChange}
-          ownerServiceDraft={ownerServiceDraft}
-          projectListLoading={projectListLoading}
-          projects={projects}
-          selectedProjectId={selectedProjectId}
-          setAdvancedFiltersOpen={setAdvancedFiltersOpen}
-          setOwnerServiceDraft={setOwnerServiceDraft}
-          showAdvancedFilters={showAdvancedFilters}
-          signalFilterCount={signalFilterCount}
-        />
+        {!mobileFilterLayout ? renderFilters("queue-desktop") : null}
         <RemediationQueueStates
           activeFindingFilters={activeFindingFilters}
           displayFindings={displayFindings}
@@ -164,6 +174,7 @@ export function RemediationQueueView({
           queueSort={queueSort}
           totalCount={totalCount}
         />
+        {mobileFilterLayout ? renderFilters("queue-mobile") : null}
         <WhyDialog finding={whyFinding} onClose={closeWhy} open={whyOpen} />
         <QuickViewSheet
           finding={sheetFinding}
@@ -174,4 +185,22 @@ export function RemediationQueueView({
       </div>
     </TooltipProvider>
   )
+}
+
+function useMobileFilterLayout() {
+  const [mobileFilterLayout, setMobileFilterLayout] = useState(() => {
+    if (typeof window === "undefined") return false
+    return window.matchMedia("(max-width: 639px)").matches
+  })
+
+  useEffect(() => {
+    const media = window.matchMedia("(max-width: 639px)")
+    const update = () => setMobileFilterLayout(media.matches)
+
+    update()
+    media.addEventListener("change", update)
+    return () => media.removeEventListener("change", update)
+  }, [])
+
+  return mobileFilterLayout
 }

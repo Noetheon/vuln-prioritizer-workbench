@@ -10,7 +10,7 @@ from pathlib import Path
 import pytest
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
-from sqlmodel import Session, create_engine, select
+from sqlmodel import Session, SQLModel, create_engine, select
 from starlette.requests import Request
 from utils.template_workbench import (
     TemplateApiEnv,
@@ -79,6 +79,7 @@ def test_user_defaults_to_non_superuser_while_bootstrap_remains_admin(
 
     assert User().is_superuser is False
 
+    SQLModel.metadata.create_all(engine)
     with Session(engine) as session:
         db_module.init_db(session, active_settings=active_settings)
         user = session.exec(select(User).where(User.email == active_settings.FIRST_SUPERUSER)).one()
@@ -100,6 +101,7 @@ def test_db_bootstrap_helpers_create_and_update_configured_superuser(tmp_path: P
         db_module.configured_superuser_id("admin@example.test")
     )
 
+    SQLModel.metadata.create_all(engine)
     with Session(engine) as session:
         db_module.init_db(session, active_settings=active_settings)
         user = session.exec(select(User).where(User.email == active_settings.FIRST_SUPERUSER)).one()

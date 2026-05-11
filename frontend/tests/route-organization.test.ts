@@ -13,6 +13,10 @@ const routeDetailsFile = new URL(
   "../src/lib/app-route-config.ts",
   import.meta.url,
 )
+const workbenchNavigationFile = new URL(
+  "../src/lib/workbench-navigation.ts",
+  import.meta.url,
+)
 
 function text(url: URL) {
   return readFileSync(url, "utf8")
@@ -70,11 +74,12 @@ test("authenticated route adapters map to existing Workbench route containers", 
 })
 
 test("WorkbenchPath, navigation, route details, and route adapters stay in sync", () => {
-  const appShell = text(appShellFile)
   const routeDetails = text(routeDetailsFile)
-  const workbenchPaths = uniqueMatches(appShell, /\|\s+"([^"]+)"/g).sort()
+  const workbenchNavigation = text(workbenchNavigationFile)
+  const workbenchPaths = uniqueMatches(workbenchNavigation, /\|\s+"([^"]+)"/g)
+    .sort()
   const navigationPaths = uniqueMatches(
-    appShell,
+    workbenchNavigation,
     /\{\s*label:\s*"[^"]+",\s*icon:\s*[^,]+,\s*to:\s*"([^"]+)"/g,
   ).sort()
   const routeDetailPaths = uniqueMatches(routeDetails, /^\s+"([^"]+)":\s+\{/gm)
@@ -88,6 +93,8 @@ test("WorkbenchPath, navigation, route details, and route adapters stay in sync"
   assert.deepEqual(navigationPaths, workbenchPaths)
   assert.deepEqual(routeDetailPaths, workbenchPaths)
   assert.deepEqual(adapterPaths, workbenchPaths)
+  assert.doesNotMatch(routeDetails, /components\/app\/AppShell/)
+  assert.doesNotMatch(text(appShellFile), /workbenchNavigation|LoginService/)
 })
 
 test("Workbench shell is mounted once at the authenticated layout boundary", () => {

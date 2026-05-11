@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 from pathlib import Path
 from typing import Any
 
@@ -37,19 +38,44 @@ def provider_snapshot_manifest_entry(
 
 
 def resolve_provider_snapshot_path(reported_path: object, analysis_path: Path) -> Path | None:
-    """Resolve a provider snapshot only when it is a sidecar beside the analysis file."""
+    """Resolve a safe relative provider snapshot path for evidence bundling."""
     if not isinstance(reported_path, str) or not reported_path.strip():
         return None
     candidate = Path(reported_path)
     if candidate.is_absolute() or ".." in candidate.parts:
         return None
-    analysis_root = analysis_path.parent.resolve()
-    resolved = (analysis_root / candidate).resolve()
-    if not resolved.is_relative_to(analysis_root) or not resolved.is_file():
-        return None
-    if resolved.stat().st_size > PROVIDER_SNAPSHOT_MAX_BYTES:
-        return None
-    return resolved
+    roots = (analysis_path.parent.resolve(), Path.cwd().resolve())
+    for root in roots:
+        resolved = (root / candidate).resolve()
+        if not resolved.is_relative_to(root) or not resolved.is_file():
+            continue
+        if resolved.stat().st_size > PROVIDER_SNAPSHOT_MAX_BYTES:
+            continue
+        if not _looks_like_provider_snapshot(resolved):
+            continue
+        return resolved
+    return None
+
+
+def _looks_like_provider_snapshot(path: Path) -> bool:
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+        return False
+    if not isinstance(payload, dict):
+        return False
+    metadata = payload.get("metadata")
+    if not isinstance(metadata, dict):
+        return False
+    return (
+        metadata.get("artifact_kind") == "provider-snapshot"
+        and metadata.get("snapshot_format") == "provider-snapshot.v1.json"
+        and isinstance(metadata.get("snapshot_id"), str)
+        and isinstance(metadata.get("generated_at"), str)
+        and isinstance(metadata.get("selected_sources"), list)
+        and isinstance(payload.get("items"), list)
+        and isinstance(payload.get("warnings"), list)
+    )
 
 
 def _sha256_file(path: Path, *, max_bytes: int) -> str | None:
