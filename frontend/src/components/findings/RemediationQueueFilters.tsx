@@ -19,6 +19,7 @@ import type { FindingFilters } from "./remediation-queue-model"
 
 type RemediationQueueFiltersProps = {
   activeFindingFilters: boolean
+  controlIdPrefix?: string
   filterCount: number
   findingAssetId: string | null
   findingAssetKey: string | null
@@ -43,6 +44,7 @@ type RemediationQueueFiltersProps = {
 
 export function RemediationQueueFilters({
   activeFindingFilters,
+  controlIdPrefix = "queue",
   filterCount,
   findingAssetId,
   findingAssetKey,
@@ -61,6 +63,8 @@ export function RemediationQueueFilters({
   showAdvancedFilters,
   signalFilterCount,
 }: RemediationQueueFiltersProps) {
+  const queueSearchId = `${controlIdPrefix}-search`
+
   return (
     <VpwPanel
       aria-label="Findings filters"
@@ -115,14 +119,14 @@ export function RemediationQueueFilters({
 
           <label
             className="flex min-w-56 flex-1 flex-col gap-1"
-            htmlFor="queue-search"
+            htmlFor={queueSearchId}
           >
             <span className="text-[11px] font-semibold uppercase text-muted-foreground">
               Owner / Service
             </span>
             <Input
               className="h-10 text-sm"
-              id="queue-search"
+              id={queueSearchId}
               onChange={(e) => setOwnerServiceDraft(e.target.value)}
               placeholder="payments, infra-team"
               value={ownerServiceDraft}

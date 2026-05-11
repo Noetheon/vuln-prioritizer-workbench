@@ -1,7 +1,5 @@
 export {
   AppShell,
-  ProductAppShell,
-  workbenchNavigation,
-  type WorkbenchPath,
-  type NavigationEntry,
+  type StatusSummaryItem,
 } from "./AppShell"
+export type { NavigationEntry, WorkbenchPath } from "../../lib/workbench-navigation"

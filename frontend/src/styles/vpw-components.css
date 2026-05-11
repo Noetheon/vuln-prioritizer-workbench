@@ -155,6 +155,7 @@
     padding: 0.875rem 1rem;
     transition: background-color 120ms ease;
     vertical-align: top;
+    white-space: normal;
   }
 
   .vpw-table-row:hover > .vpw-table-cell {

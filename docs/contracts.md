@@ -489,7 +489,7 @@ The public combinations currently intended for use are:
 - `data export-provider-snapshot`: JSON file output
 - `report workbench`: `json`, `markdown`, `html`, `csv`, `sarif`
 - `report html`: HTML file output
-- `report evidence-bundle`: ZIP file output containing `analysis.json`, `report.html`, `summary.md`, `manifest.json`, and optional `governance/rollups.json`, `governance/waivers.json`, `governance/vex-summary.json`, `governance/asset-context.json`, and `governance/detection-coverage.json`
+- `report evidence-bundle`: ZIP file output containing `analysis.json`, `report.html`, `summary.md`, `manifest.json`, optional `attack-navigator-layer.json`, optional `provider/provider-snapshot.json`, optional source input copies under `input/`, and optional `governance/rollups.json`, `governance/waivers.json`, `governance/vex-summary.json`, `governance/asset-context.json`, and `governance/detection-coverage.json`
 - `report verify-evidence-bundle`: `table` and `json`
 - `report validate-sarif`: `table` and `json`
 

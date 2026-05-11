@@ -64,7 +64,7 @@ make demo-evidence-bundle-check
 For an already generated bundle, the verification command is:
 
 ```bash
-PYTHONPATH=src VULN_PRIORITIZER_FIXED_NOW=2026-04-21T12:00:00+00:00 \
+PYTHONPATH=backend/src VULN_PRIORITIZER_FIXED_NOW=2026-04-21T12:00:00+00:00 \
   python3 -m vuln_prioritizer.cli report verify-evidence-bundle \
   --input build/v1.0-demo-evidence-bundle.zip \
   --output build/v1.0-demo-evidence-bundle-verification.json \
@@ -92,31 +92,32 @@ Reference release evidence run from the locked demo path:
 
 | Artifact | SHA-256 | Size |
 | --- | --- | ---: |
-| `build/v1.0-demo-analysis.json` | `89c65a424db58de2313d44d201c63c806155a3543d5ee1af8dc12512e5e3d77b` | 49,024 bytes |
-| `build/v1.0-demo-evidence-bundle.zip` | `246a80012271deae22be15dfbb7e24408c2431324b0a244cbe0e0ec58c8dbad2` | 28,473 bytes |
-| `build/v1.0-demo-evidence-bundle-verification.json` | `c1da50f6c006859b2737b99d1d6917c583fda05101ef663012ae432a7bca9634` | 2,566 bytes |
-| `manifest.json` inside the ZIP | `1c828e916bd7b0e1427921acde2c77efff8c30b8790992eed010ea241fafffbb` | 2,497 bytes |
+| `build/v1.0-demo-analysis.json` | `3d77cca073d02abcdd007fa9d3654ffcdb0574d3813f03fc6cd41f106ba2d3a3` | 95,610 bytes |
+| `build/v1.0-demo-evidence-bundle.zip` | `a3a97bb176b80ea6c2136d6242975138e06bbcce08bc881d1c8dff044e32ef1f` | 45,862 bytes |
+| `build/v1.0-demo-evidence-bundle-verification.json` | `bc17f21cc89a0dc2cb7eec6a2f4abf4bb5fb49310aee566b8ca4bd9f5005ed2d` | 3,003 bytes |
+| `manifest.json` inside the ZIP | `77fb5060c4dca0a99f6f80c84ae5d74a8859e840751feeba51b3ecb7fb1f6467` | 3,302 bytes |
 
 Manifest details for that run:
 
 - `schema_version`: `1.1.0`
 - `bundle_kind`: `evidence-bundle`
 - `generated_at`: `2026-04-21T12:00:00+00:00`
-- `source_analysis_sha256`: `89c65a424db58de2313d44d201c63c806155a3543d5ee1af8dc12512e5e3d77b`
-- `provider_snapshot.path`: `data/demo_provider_snapshot.json`
-- `provider_snapshot.sha256`: `a110e4c372a5ec750e0b766e23f19884596f6ac82185b8fd0eefe8384be71c5b`
+- `source_analysis_sha256`: `3d77cca073d02abcdd007fa9d3654ffcdb0574d3813f03fc6cd41f106ba2d3a3`
+- `provider_snapshot.path`: `demo_provider_snapshot.json`
+- `provider_snapshot.sha256`: `d94b51defd676be1b852612d82d7f70aa213f1995af67a717c1ca6afb6c48f0c`
 - `provider_snapshot.sources`: `nvd`, `epss`, `kev`
-- verification summary: `ok=true`, `expected_files=5`, `verified_files=5`, `missing_files=0`, `modified_files=0`, `unexpected_files=0`, `manifest_errors=0`
+- verification summary: `ok=true`, `expected_files=6`, `verified_files=6`, `missing_files=0`, `modified_files=0`, `unexpected_files=0`, `manifest_errors=0`
 
 Manifest file entries:
 
 | Bundle member | Kind | SHA-256 | Size |
 | --- | --- | --- | ---: |
-| `analysis.json` | `analysis-json` | `89c65a424db58de2313d44d201c63c806155a3543d5ee1af8dc12512e5e3d77b` | 49,024 bytes |
-| `report.html` | `html-report` | `9b958bf1103add7731b8068fa2fef61353f6a01a8cb47ea979b77dd6e0988f97` | 109,325 bytes |
-| `summary.md` | `markdown-summary` | `916377f25d8a84db8d338201c9e413d5df7a9518a0f2d06ece66e405fade10a3` | 3,038 bytes |
+| `analysis.json` | `analysis-json` | `5a05ced10c550b27261ef433563708de2d831e134ad907d992004cbb3839fe39` | 95,587 bytes |
+| `report.html` | `html-report` | `3e3995ab3d49982dc8291cf43570a3861ddca1e6c6755da9c7760f6af9d91ddf` | 101,449 bytes |
+| `summary.md` | `markdown-summary` | `206e3e9d10e426f7f6fd413ce6c988a3b0b8de2a060d50f0e75f78b09977202b` | 3,950 bytes |
 | `attack-navigator-layer.json` | `attack-navigator-layer` | `18d94bbe54e47b27c10db18eeaade92b4ceddd3ab08b2370625f08c866f9d331` | 1,825 bytes |
-| `input/trivy_report.json` | `source-input` | `43b29a02a88bc6d9c8c2e8d599a5218fcc253f025f42acbcc780e377bad26e82` | 2,200 bytes |
+| `provider/provider-snapshot.json` | `provider-snapshot` | `d94b51defd676be1b852612d82d7f70aa213f1995af67a717c1ca6afb6c48f0c` | 60,530 bytes |
+| `input/trivy_report.json` | `source-input` | `24d65249ea6f77b56c7870df3dd98bc8120294b886e226117c40b22e4825a81d` | 2,188 bytes |
 
 Record the release commit with `git rev-parse HEAD`, the date of the run, and the exact command output. Do not include `.env` files, API keys, cookies, shell history, machine-specific home paths, or customer scanner exports in the public release evidence.
 

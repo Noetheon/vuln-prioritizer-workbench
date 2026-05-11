@@ -56,13 +56,25 @@ async function expectFindingsTableScrollContainment(
   expect(metrics.regionClientWidth).toBeLessThanOrEqual(
     metrics.viewportWidth + 1,
   )
-  expect(metrics.tableScrollWidth, JSON.stringify(metrics)).toBeGreaterThan(
-    metrics.regionClientWidth,
-  )
-  expect(metrics.regionScrollWidth, JSON.stringify(metrics)).toBeGreaterThan(
-    metrics.regionClientWidth,
-  )
-  expect(metrics.regionScrollLeft, JSON.stringify(metrics)).toBeGreaterThan(0)
+  if (viewport.width >= 1200) {
+    expect(metrics.tableScrollWidth, JSON.stringify(metrics)).toBeLessThanOrEqual(
+      metrics.regionClientWidth + 2,
+    )
+    expect(metrics.regionScrollWidth, JSON.stringify(metrics)).toBeLessThanOrEqual(
+      metrics.regionClientWidth + 2,
+    )
+    expect(metrics.regionScrollLeft, JSON.stringify(metrics)).toBeLessThanOrEqual(
+      1,
+    )
+  } else {
+    expect(metrics.tableScrollWidth, JSON.stringify(metrics)).toBeGreaterThan(
+      metrics.regionClientWidth,
+    )
+    expect(metrics.regionScrollWidth, JSON.stringify(metrics)).toBeGreaterThan(
+      metrics.regionClientWidth,
+    )
+    expect(metrics.regionScrollLeft, JSON.stringify(metrics)).toBeGreaterThan(0)
+  }
 
   await page.screenshot({
     fullPage: true,
@@ -78,6 +90,60 @@ async function expectFindingsTableScrollContainment(
       "ui-productization",
       "screenshots",
       `vpw-aud-204-findings-table-scroll-${viewport.width}.png`,
+    ),
+  })
+}
+
+async function expectFindingsMobileCards(page: Page) {
+  const cardsRegion = page.getByRole("region", {
+    name: "Findings remediation cards",
+  })
+  await expect(cardsRegion).toBeVisible()
+  await expect(
+    page.getByRole("table", { name: "Findings remediation queue" }),
+  ).toBeHidden()
+
+  const metrics = await page
+    .locator('[data-testid="findings-mobile-cards"]')
+    .evaluate((region) => {
+      const cards = Array.from(
+        region.querySelectorAll('[data-testid="findings-mobile-card"]'),
+      )
+      const documentElement = document.documentElement
+      return {
+        bodyScrollWidth: document.body.scrollWidth,
+        cardCount: cards.length,
+        cardsFit: cards.every((card) => {
+          const rect = card.getBoundingClientRect()
+          return rect.left >= 0 && rect.right <= documentElement.clientWidth
+        }),
+        documentScrollWidth: documentElement.scrollWidth,
+        viewportWidth: documentElement.clientWidth,
+      }
+    })
+
+  expect(metrics.cardCount).toBeGreaterThan(0)
+  expect(metrics.cardsFit).toBe(true)
+  expect(metrics.bodyScrollWidth).toBeLessThanOrEqual(
+    metrics.viewportWidth + 1,
+  )
+  expect(metrics.documentScrollWidth).toBeLessThanOrEqual(
+    metrics.viewportWidth + 1,
+  )
+
+  await page.screenshot({
+    fullPage: true,
+    path: evidenceScreenshotPath(
+      "ui-productization",
+      "screenshots",
+      "vpw-aud-201-findings-390.png",
+    ),
+  })
+  await cardsRegion.screenshot({
+    path: evidenceScreenshotPath(
+      "ui-productization",
+      "screenshots",
+      "vpw-aud-204-findings-mobile-cards-390.png",
     ),
   })
 }
@@ -143,7 +209,16 @@ test("mobile status summary wraps without horizontal clipping", async ({
   await page.goto("/settings")
 
   const statusSummary = page.getByLabel("Workbench status summary")
+  const headerHealth = page.getByLabel("Workspace health: Data services healthy")
   await expect(statusSummary).toBeVisible()
+  const visibleHeaderHealthText = await headerHealth.evaluate((element) =>
+    Array.from(element.querySelectorAll("span"))
+      .filter((span) => getComputedStyle(span).display !== "none")
+      .map((span) => span.textContent?.trim())
+      .filter(Boolean)
+      .join(" "),
+  )
+  expect(visibleHeaderHealthText).toBe("Healthy")
 
   const metrics = await statusSummary.evaluate((element) => {
     const rect = element.getBoundingClientRect()
@@ -236,11 +311,15 @@ test("findings table keeps horizontal scroll contained at desktop, tablet, and m
   for (const viewport of [
     { height: 900, width: 1440 },
     { height: 1024, width: 768 },
-    { height: 844, width: 390 },
   ]) {
     await page.setViewportSize(viewport)
     await page.goto("/findings")
     await expect(page.getByRole("main")).toBeVisible()
     await expectFindingsTableScrollContainment(page, viewport)
   }
+
+  await page.setViewportSize({ height: 844, width: 390 })
+  await page.goto("/findings")
+  await expect(page.getByRole("main")).toBeVisible()
+  await expectFindingsMobileCards(page)
 })
