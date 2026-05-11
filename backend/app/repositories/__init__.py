@@ -3,6 +3,7 @@
 from app.repositories.api_tokens import ApiTokenRepository
 from app.repositories.assets import AssetRepository
 from app.repositories.audit import AuditEventRepository
+from app.repositories.finding_page_query import FindingPageQuery
 from app.repositories.findings import FindingRepository
 from app.repositories.github_issues import GitHubIssueExportRepository
 from app.repositories.projects import ProjectRepository
@@ -15,6 +16,7 @@ __all__ = [
     "AssetRepository",
     "ApiTokenRepository",
     "AuditEventRepository",
+    "FindingPageQuery",
     "FindingRepository",
     "GitHubIssueExportRepository",
     "ProjectRepository",

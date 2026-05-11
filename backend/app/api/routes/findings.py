@@ -26,7 +26,7 @@ from app.models import (
     FindingsPublic,
     FindingStatus,
 )
-from app.repositories import FindingRepository
+from app.repositories import FindingPageQuery, FindingRepository
 from app.services import DecisionDataUnavailableError, build_finding_explanation_payload
 from vuln_prioritizer.security_redaction import redact_value
 
@@ -72,24 +72,26 @@ def read_project_findings(
 ) -> FindingsPublic:
     """List a paginated page of findings for a visible project."""
     require_visible_project(session, current_user, project_id)
-    findings, count = FindingRepository(session).list_project_findings_page(
-        project_id,
-        limit=limit,
-        offset=offset,
-        sort=sort,
-        direction=direction,
-        priority=priority,
-        status=status,
-        kev=kev,
-        owner=owner,
-        service=service,
-        owner_service=owner_service,
-        asset_id=asset_id,
-        exposure=exposure,
-        epss_min=epss_min,
-        epss_max=epss_max,
-        cvss_min=cvss_min,
-        cvss_max=cvss_max,
+    findings, count = FindingRepository(session).list_project_findings_query(
+        FindingPageQuery(
+            project_id=project_id,
+            limit=limit,
+            offset=offset,
+            sort=sort,
+            direction=direction,
+            priority=priority,
+            status=status,
+            kev=kev,
+            owner=owner,
+            service=service,
+            owner_service=owner_service,
+            asset_id=asset_id,
+            exposure=exposure,
+            epss_min=epss_min,
+            epss_max=epss_max,
+            cvss_min=cvss_min,
+            cvss_max=cvss_max,
+        )
     )
     return FindingsPublic(
         data=[_finding_public(finding) for finding in findings],

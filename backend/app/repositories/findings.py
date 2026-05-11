@@ -5,7 +5,6 @@ from __future__ import annotations
 import uuid
 from typing import Any, cast
 
-from sqlalchemy import or_
 from sqlalchemy.orm import QueryableAttribute, selectinload
 from sqlmodel import Session, col, func, select
 
@@ -19,6 +18,11 @@ from app.models import (
     Vulnerability,
 )
 from app.models.base import get_datetime_utc
+from app.repositories.finding_page_query import (
+    FindingPageQuery,
+    finding_page_filters,
+    finding_page_order_by,
+)
 
 
 class FindingRepository:
@@ -328,62 +332,36 @@ class FindingRepository:
         cvss_max: float | None = None,
     ) -> tuple[list[Finding], int]:
         """Return a filtered, sorted, paginated project finding page."""
-        order_fields: dict[str, tuple[Any, ...]] = {
-            "operational": (col(Finding.operational_rank), col(Finding.priority_rank)),
-            "priority": (col(Finding.priority_rank), col(Finding.cve_id)),
-            "score": (col(Finding.risk_score), col(Finding.priority_rank)),
-            "cve": (col(Finding.cve_id),),
-            "status": (col(Finding.status), col(Finding.cve_id)),
-            "epss": (col(Finding.epss), col(Finding.priority_rank)),
-            "cvss": (col(Finding.cvss_base_score), col(Finding.priority_rank)),
-            "kev": (col(Finding.in_kev), col(Finding.priority_rank)),
-            "last_seen": (col(Finding.last_seen_at), col(Finding.priority_rank)),
-            "component": (
-                col(Component.name),
-                col(Component.version),
-                col(Asset.business_service),
-                col(Asset.asset_key),
-            ),
-            "owner": (col(Asset.owner), col(Asset.business_service), col(Asset.asset_key)),
-        }
-        if sort not in order_fields:
-            raise ValueError(f"Unsupported findings sort field: {sort}.")
-        if direction not in {"asc", "desc"}:
-            raise ValueError(f"Unsupported findings sort direction: {direction}.")
+        return self.list_project_findings_query(
+            FindingPageQuery(
+                project_id=project_id,
+                limit=limit,
+                offset=offset,
+                sort=sort,
+                direction=direction,
+                priority=priority,
+                status=status,
+                kev=kev,
+                owner=owner,
+                service=service,
+                owner_service=owner_service,
+                asset_id=asset_id,
+                exposure=exposure,
+                epss_min=epss_min,
+                epss_max=epss_max,
+                cvss_min=cvss_min,
+                cvss_max=cvss_max,
+            )
+        )
 
+    def list_project_findings_query(
+        self,
+        query: FindingPageQuery,
+    ) -> tuple[list[Finding], int]:
+        """Return a filtered, sorted, paginated project finding page."""
         asset_relationship = cast(QueryableAttribute[Any], Finding.asset)
         component_relationship = cast(QueryableAttribute[Any], Finding.component)
-        filters: list[Any] = [Finding.project_id == project_id]
-        if priority is not None:
-            filters.append(Finding.priority == FindingPriority(priority))
-        if status is not None:
-            filters.append(Finding.status == FindingStatus(status))
-        if kev is not None:
-            filters.append(Finding.in_kev == kev)
-        if owner and owner.strip():
-            filters.append(col(Asset.owner).ilike(f"%{owner.strip()}%"))
-        if service and service.strip():
-            filters.append(col(Asset.business_service).ilike(f"%{service.strip()}%"))
-        if owner_service and owner_service.strip():
-            pattern = f"%{owner_service.strip()}%"
-            filters.append(
-                or_(
-                    col(Asset.owner).ilike(pattern),
-                    col(Asset.business_service).ilike(pattern),
-                )
-            )
-        if asset_id is not None:
-            filters.append(Finding.asset_id == asset_id)
-        if exposure is not None:
-            filters.append(Asset.exposure == exposure)
-        if epss_min is not None:
-            filters.append(col(Finding.epss) >= epss_min)
-        if epss_max is not None:
-            filters.append(col(Finding.epss) <= epss_max)
-        if cvss_min is not None:
-            filters.append(col(Finding.cvss_base_score) >= cvss_min)
-        if cvss_max is not None:
-            filters.append(col(Finding.cvss_base_score) <= cvss_max)
+        filters = finding_page_filters(query)
 
         count_statement = (
             select(func.count())
@@ -391,11 +369,7 @@ class FindingRepository:
             .outerjoin(Asset, col(Finding.asset_id) == col(Asset.id))
             .where(*filters)
         )
-        order_by: list[Any] = [
-            field.desc() if direction == "desc" else field.asc() for field in order_fields[sort]
-        ]
-        order_by.append(col(Finding.cve_id).asc())
-        order_by.append(col(Finding.id).asc())
+        order_by = finding_page_order_by(query)
         statement = (
             select(Finding)
             .outerjoin(Asset, col(Finding.asset_id) == col(Asset.id))
@@ -406,8 +380,8 @@ class FindingRepository:
             )
             .where(*filters)
             .order_by(*order_by)
-            .offset(offset)
-            .limit(limit)
+            .offset(query.offset)
+            .limit(query.limit)
         )
         count = self.session.exec(count_statement).one()
         findings = self.session.exec(statement).all()

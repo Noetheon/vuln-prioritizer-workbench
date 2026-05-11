@@ -1,4 +1,4 @@
-"""Failure handling stages for Workbench import execution."""
+"""Analysis failure handling for Workbench import execution."""
 
 from __future__ import annotations
 

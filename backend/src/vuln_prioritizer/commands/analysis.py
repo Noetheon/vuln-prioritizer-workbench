@@ -11,15 +11,15 @@ from rich.panel import Panel
 from vuln_prioritizer.cli_support.analysis import (
     AnalysisRequest,
     ExplainRequest,
-    ExplainResult,
     build_priority_policy,
-    handle_fail_on,
-    handle_provider_error_fail_on,
-    handle_provider_staleness_fail_on,
-    handle_waiver_lifecycle_fail_on,
     prepare_analysis,
     prepare_explain,
     prepare_saved_explain,
+)
+from vuln_prioritizer.cli_support.analysis_output import (
+    emit_analyze_result,
+    emit_compare_result,
+    emit_explain_result,
 )
 from vuln_prioritizer.cli_support.common import (
     FULL_OUTPUT_FORMATS,
@@ -40,7 +40,6 @@ from vuln_prioritizer.cli_support.common import (
     emit_stdout,
     exit_input_validation,
     output_format_option,
-    print_warnings,
     should_emit_json_stdout,
     validate_command_formats,
     validate_output_mode,
@@ -56,21 +55,7 @@ from vuln_prioritizer.config import (
     DEFAULT_NVD_API_KEY_ENV,
 )
 from vuln_prioritizer.reporter import (
-    build_analysis_report_payload,
-    generate_compare_json,
-    generate_compare_markdown,
     generate_doctor_json,
-    generate_explain_json,
-    generate_explain_markdown,
-    generate_html_report,
-    generate_json_report,
-    generate_markdown_report,
-    generate_sarif_report,
-    generate_summary_markdown,
-    render_compare_table,
-    render_explain_view,
-    render_findings_table,
-    render_summary_panel,
     write_output,
 )
 from vuln_prioritizer.services.prioritization import PrioritizationService
@@ -205,66 +190,17 @@ def analyze(
         )
     )
 
-    payload = build_analysis_report_payload(findings, context)
-    if should_emit_json_stdout(format, output):
-        if html_output is not None:
-            write_output(html_output, generate_html_report(payload))
-        if summary_output is not None:
-            write_output(
-                summary_output,
-                generate_summary_markdown(payload, template=summary_template.value),
-            )
-        emit_stdout(generate_json_report(findings, context))
-        if fail_on is not None:
-            handle_fail_on(findings, fail_on)
-        handle_provider_error_fail_on(
-            context,
-            fail_on_provider_error=fail_on_provider_error,
-        )
-        handle_provider_staleness_fail_on(
-            context,
-            fail_on_stale_provider_data=fail_on_stale_provider_data,
-        )
-        handle_waiver_lifecycle_fail_on(
-            context,
-            fail_on_expired_waivers=fail_on_expired_waivers,
-            fail_on_review_due_waivers=fail_on_review_due_waivers,
-        )
-        return
-
-    console.print(render_findings_table(findings))
-    console.print(render_summary_panel(context))
-    print_warnings(context.warnings)
-
-    if output is not None:
-        if format == OutputFormat.markdown:
-            write_output(output, generate_markdown_report(findings, context))
-        elif format == OutputFormat.json:
-            write_output(output, generate_json_report(findings, context))
-        elif format == OutputFormat.sarif:
-            write_output(output, generate_sarif_report(findings, context))
-        console.print(f"[green]Wrote {format.value} output to {output}[/green]")
-    if html_output is not None:
-        write_output(html_output, generate_html_report(payload))
-        console.print(f"[green]Wrote html output to {html_output}[/green]")
-    if summary_output is not None:
-        write_output(
-            summary_output,
-            generate_summary_markdown(payload, template=summary_template.value),
-        )
-        console.print(f"[green]Wrote markdown summary to {summary_output}[/green]")
-    if fail_on is not None:
-        handle_fail_on(findings, fail_on)
-    handle_provider_error_fail_on(
+    emit_analyze_result(
+        findings,
         context,
+        output=output,
+        html_output=html_output,
+        summary_output=summary_output,
+        summary_template=summary_template,
+        format=format,
+        fail_on=fail_on,
         fail_on_provider_error=fail_on_provider_error,
-    )
-    handle_provider_staleness_fail_on(
-        context,
         fail_on_stale_provider_data=fail_on_stale_provider_data,
-    )
-    handle_waiver_lifecycle_fail_on(
-        context,
         fail_on_expired_waivers=fail_on_expired_waivers,
         fail_on_review_due_waivers=fail_on_review_due_waivers,
     )
@@ -387,36 +323,12 @@ def compare(
 
     prioritizer = PrioritizationService()
     comparisons = prioritizer.build_comparison(findings, sort_by=sort_by.value)
-    changed_count = sum(1 for row in comparisons if row.changed)
-
-    if should_emit_json_stdout(format, output):
-        emit_stdout(generate_compare_json(comparisons, context))
-        handle_provider_error_fail_on(
-            context,
-            fail_on_provider_error=fail_on_provider_error,
-        )
-        handle_provider_staleness_fail_on(
-            context,
-            fail_on_stale_provider_data=fail_on_stale_provider_data,
-        )
-        return
-
-    console.print(render_compare_table(comparisons))
-    console.print(render_summary_panel(context, mode="compare", changed_count=changed_count))
-    print_warnings(context.warnings)
-
-    if output is not None:
-        if format == OutputFormat.markdown:
-            write_output(output, generate_compare_markdown(comparisons, context))
-        elif format == OutputFormat.json:
-            write_output(output, generate_compare_json(comparisons, context))
-        console.print(f"[green]Wrote {format.value} output to {output}[/green]")
-    handle_provider_error_fail_on(
+    emit_compare_result(
+        comparisons,
         context,
+        output=output,
+        format=format,
         fail_on_provider_error=fail_on_provider_error,
-    )
-    handle_provider_staleness_fail_on(
-        context,
         fail_on_stale_provider_data=fail_on_stale_provider_data,
     )
 
@@ -495,7 +407,7 @@ def explain(
             output=output,
             format=format,
         )
-        _emit_explain_result(
+        emit_explain_result(
             result,
             output=output,
             format=format,
@@ -541,81 +453,10 @@ def explain(
         )
     )
 
-    _emit_explain_result(
+    emit_explain_result(
         result,
         output=output,
         format=format,
-        fail_on_provider_error=fail_on_provider_error,
-    )
-
-
-def _emit_explain_result(
-    result: ExplainResult,
-    *,
-    output: Path | None,
-    format: ReportOutputFormat,
-    fail_on_provider_error: bool,
-) -> None:
-    if should_emit_json_stdout(format, output):
-        emit_stdout(
-            generate_explain_json(
-                result.finding,
-                result.nvd,
-                result.epss,
-                result.kev,
-                result.attack,
-                result.context,
-                result.comparison,
-            )
-        )
-        handle_provider_error_fail_on(
-            result.context,
-            fail_on_provider_error=fail_on_provider_error,
-        )
-        return
-
-    console.print(
-        render_explain_view(
-            result.finding,
-            result.nvd,
-            result.epss,
-            result.kev,
-            result.attack,
-            result.comparison,
-        )
-    )
-    print_warnings(result.warnings)
-
-    if output is not None:
-        if format == OutputFormat.markdown:
-            write_output(
-                output,
-                generate_explain_markdown(
-                    result.finding,
-                    result.nvd,
-                    result.epss,
-                    result.kev,
-                    result.attack,
-                    result.context,
-                    result.comparison,
-                ),
-            )
-        elif format == OutputFormat.json:
-            write_output(
-                output,
-                generate_explain_json(
-                    result.finding,
-                    result.nvd,
-                    result.epss,
-                    result.kev,
-                    result.attack,
-                    result.context,
-                    result.comparison,
-                ),
-            )
-        console.print(f"[green]Wrote {format.value} output to {output}[/green]")
-    handle_provider_error_fail_on(
-        result.context,
         fail_on_provider_error=fail_on_provider_error,
     )
 
