@@ -18,6 +18,7 @@ import {
   type ImportFormat,
   type ImportUploadFormData,
   type ImportWizardState,
+  withDemoProviderSnapshot,
   workbenchImportFormats,
 } from "../../lib/app-defaults"
 import { buildImportUploadFormData } from "../import-upload-payload"
@@ -246,6 +247,9 @@ function ImportsRouteContainer() {
       }
       onProviderSnapshotFileChange={(value) =>
         setImportWizard((state) => ({ ...state, providerSnapshotFile: value }))
+      }
+      onUseDemoProviderSnapshot={() =>
+        setImportWizard((state) => withDemoProviderSnapshot(state))
       }
       onProjectChange={setSelectedProjectId}
       onRefreshRuns={() => void refreshProjectRuns(selectedRunId)}

@@ -43,6 +43,7 @@ export type ImportsWorkbenchProps = {
   onRefreshRuns: () => void
   onSelectRun: (runId: string) => void
   onSubmit: FormEventHandler<HTMLFormElement>
+  onUseDemoProviderSnapshot: () => void
   onAttackMappingFileChange: (value: string) => void
   onAttackSourceChange: (value: string) => void
   onAttackTechniqueMetadataFileChange: (value: string) => void
