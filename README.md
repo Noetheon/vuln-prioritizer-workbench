@@ -136,7 +136,7 @@ Suggested demo path:
 
 1. Create or select a project.
 2. Import `data/sample_cves.txt` as a CVE list.
-3. Use `demo_provider_snapshot.json` with locked provider data enabled.
+3. Use `data/demo_provider_snapshot.json` with locked provider data enabled.
 4. Review Findings, Finding Detail, TTP Context, Waivers, and Evidence Center.
 
 The demo path uses local checked-in fixtures and provider replay. Do not reuse

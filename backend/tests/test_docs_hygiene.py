@@ -191,6 +191,16 @@ def test_tracked_tree_excludes_local_artifacts() -> None:
     assert violations == []
 
 
+def test_docs_examples_do_not_use_template_named_artifacts() -> None:
+    template_named_examples = [
+        path.as_posix()
+        for path in _git_ls_files("docs/examples")
+        if "template" in path.name.lower()
+    ]
+
+    assert template_named_examples == []
+
+
 def test_gitignore_covers_workbench_runtime_artifacts() -> None:
     gitignore = (REPO_ROOT / ".gitignore").read_text(encoding="utf-8")
     required_runtime_roots = {
