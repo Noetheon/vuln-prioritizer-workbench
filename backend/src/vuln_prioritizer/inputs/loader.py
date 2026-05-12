@@ -378,7 +378,8 @@ def load_asset_context_file(
     path: Path | None,
     *,
     return_diagnostics: Literal[False] = False,
-) -> AssetContextCatalog: ...
+) -> AssetContextCatalog:
+    raise TypeError("overload declaration only")
 
 
 @overload
@@ -386,7 +387,8 @@ def load_asset_context_file(
     path: Path | None,
     *,
     return_diagnostics: Literal[True],
-) -> tuple[AssetContextCatalog, AssetContextLoadDiagnostics]: ...
+) -> tuple[AssetContextCatalog, AssetContextLoadDiagnostics]:
+    raise TypeError("overload declaration only")
 
 
 def load_asset_context_file(
@@ -566,7 +568,8 @@ def load_vex_files(
     paths: list[Path] | None,
     *,
     return_diagnostics: Literal[False] = False,
-) -> list[VexStatement]: ...
+) -> list[VexStatement]:
+    raise TypeError("overload declaration only")
 
 
 @overload
@@ -574,7 +577,8 @@ def load_vex_files(
     paths: list[Path] | None,
     *,
     return_diagnostics: Literal[True],
-) -> tuple[list[VexStatement], VexLoadDiagnostics]: ...
+) -> tuple[list[VexStatement], VexLoadDiagnostics]:
+    raise TypeError("overload declaration only")
 
 
 def load_vex_files(

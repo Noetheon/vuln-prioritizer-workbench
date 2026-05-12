@@ -16,7 +16,8 @@ def test_workbench_api_token_routes_are_not_active(
     assert "/api/v1/api-tokens/{token_id}" not in openapi["paths"]
     assert client.get("/api/v1/api-tokens/").status_code == 404
     assert client.post("/api/v1/api-tokens/", json={"name": "unused"}).status_code == 404
-    assert client.delete(f"/api/v1/api-tokens/{uuid4()}").status_code == 404
+    delete_response = client.delete(f"/api/v1/api-tokens/{uuid4()}")
+    assert delete_response.status_code == 404
 
 
 def test_workbench_bearer_headers_do_not_activate_service_token_auth(

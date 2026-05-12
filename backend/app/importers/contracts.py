@@ -64,7 +64,7 @@ class Importer(Protocol):
     @property
     def input_type(self) -> str:
         """Stable Workbench input type claimed by the importer."""
-        ...
+        raise TypeError("Protocol declaration only")
 
     def parse(
         self,
@@ -73,4 +73,4 @@ class Importer(Protocol):
         filename: str | None = None,
     ) -> list[NormalizedOccurrence]:
         """Parse payload bytes/text without provider, database, or network access."""
-        ...
+        raise TypeError("Protocol declaration only")

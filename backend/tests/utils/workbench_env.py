@@ -487,7 +487,7 @@ def seed_secondary_project_graph(
 ) -> dict[str, uuid.UUID]:
     """Seed another local project graph for cross-project tests."""
     with Session(engine) as session:
-        _actor = create_local_actor(
+        create_local_actor(
             session,
             app_models,
             email=f"{uuid.uuid4()}@example.test",

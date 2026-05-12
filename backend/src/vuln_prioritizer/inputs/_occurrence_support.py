@@ -62,7 +62,8 @@ def apply_asset_context(
     asset_records: Mapping[tuple[str, str], AssetContextRecord] | Any,
     *,
     return_diagnostics: Literal[False] = False,
-) -> list[InputOccurrence]: ...
+) -> list[InputOccurrence]:
+    raise TypeError("overload declaration only")
 
 
 @overload
@@ -71,7 +72,8 @@ def apply_asset_context(
     asset_records: Mapping[tuple[str, str], AssetContextRecord] | Any,
     *,
     return_diagnostics: Literal[True],
-) -> tuple[list[InputOccurrence], AssetContextMatchDiagnostics]: ...
+) -> tuple[list[InputOccurrence], AssetContextMatchDiagnostics]:
+    raise TypeError("overload declaration only")
 
 
 def apply_asset_context(

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict"
-import { readFileSync, readdirSync, statSync } from "node:fs"
+import { readFileSync, readdirSync } from "node:fs"
 import { join, relative } from "node:path"
 import test from "node:test"
 import { fileURLToPath } from "node:url"
@@ -28,7 +28,6 @@ test("settings source stays aligned with local single-user access", () => {
     "token " + "management",
   ]
   const offenders = sourceFiles(settingsDir).flatMap((path) => {
-    if (!statSync(path).isFile()) return []
     const source = readFileSync(path, "utf8")
     return forbiddenPhrases
       .filter((phrase) => source.includes(phrase))
