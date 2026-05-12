@@ -1,8 +1,8 @@
 export { SettingsAlerts } from "./SettingsWorkbenchAlerts"
 export { SettingsHero } from "./SettingsWorkbenchHero"
 export {
-  SettingsAccountHealth,
   SettingsMetrics,
+  SettingsWorkspaceHealth,
 } from "./SettingsWorkbenchOverview"
 export {
   SettingsDiagnostics,

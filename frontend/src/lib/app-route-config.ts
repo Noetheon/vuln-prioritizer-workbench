@@ -63,8 +63,8 @@ export const routeDetails: Record<
   "/settings": {
     eyebrow: "Workbench Settings",
     title: "Settings",
-    panelTitle: "User Settings",
-    panelDetail: "Current authenticated user and workspace session",
+    panelTitle: "Workspace Settings",
+    panelDetail: "Local workspace access, provider state, and diagnostics",
   },
 }
 

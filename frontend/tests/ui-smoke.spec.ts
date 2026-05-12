@@ -67,11 +67,13 @@ test("smoke: settings renders", async ({ page }) => {
   ).toBeVisible()
 })
 
-test("smoke: account menu does not expose legacy sign out", async ({ page }) => {
+test("smoke: local workspace indicator does not expose legacy sign out", async ({
+  page,
+}) => {
   test.setTimeout(30_000)
   await login(page)
 
-  await page.getByRole("button", { name: "Account menu" }).click()
+  await expect(page.getByLabel("Local workspace status")).toBeVisible()
   await expect(page.getByRole("menuitem", { name: "Sign out" })).toHaveCount(0)
-  await expect(page.getByText("Account")).toBeVisible()
+  await expect(page.getByText("Account")).toHaveCount(0)
 })

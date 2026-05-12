@@ -1,6 +1,5 @@
 import { Link } from "@/lib/router"
 import {
-  LogOut,
   Menu,
   Sidebar,
 } from "lucide-react"
@@ -8,15 +7,6 @@ import { type ReactNode, useEffect, useState } from "react"
 import { cn } from "../../lib/utils"
 import type { NavigationEntry, WorkbenchPath } from "../../lib/workbench-navigation"
 import { Button } from "../ui/button"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "../ui/dropdown-menu"
 import {
   Sheet,
   SheetContent,
@@ -45,12 +35,11 @@ type PageHeaderProps = {
 type AppShellProps = PageHeaderProps & {
   activePath: WorkbenchPath | null
   children: ReactNode
-  currentUserLabel: string
   healthLabel: string
   hideStatusStrip?: boolean
   navigation: readonly NavigationEntry[]
-  onSignOut?: () => Promise<void> | void
   statusItems: readonly StatusSummaryItem[]
+  workspaceLabel: string
 }
 
 const sidebarStorageKey = "vpw-sidebar-collapsed"
@@ -66,14 +55,13 @@ function compactHealthLabel(healthLabel: string, isHealthy: boolean) {
 export function AppShell({
   activePath,
   children,
-  currentUserLabel,
   eyebrow,
   healthLabel,
   hideStatusStrip = false,
   navigation,
-  onSignOut,
   statusItems,
   title,
+  workspaceLabel,
 }: AppShellProps) {
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
@@ -90,6 +78,7 @@ export function AppShell({
     !healthLabel.toLowerCase().includes("error") &&
     !healthLabel.toLowerCase().includes("degraded")
   const mobileHealthLabel = compactHealthLabel(healthLabel, isHealthy)
+  const workspaceInitial = workspaceLabel.charAt(0).toUpperCase()
 
   return (
     <TooltipProvider>
@@ -232,55 +221,23 @@ export function AppShell({
               sidebarCollapsed ? "flex-col justify-center p-2" : "p-3",
             )}
           >
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  aria-label="Account menu"
-                  className={cn(
-                    "h-auto min-h-10 justify-start rounded-[var(--vpw-radius-md)] text-[var(--vpw-text-secondary)] hover:bg-[var(--vpw-bg-panel)] hover:text-[var(--vpw-text-primary)]",
-                    sidebarCollapsed
-                      ? "size-10 justify-center p-0"
-                      : "w-full px-2",
-                  )}
-                  type="button"
-                  variant="ghost"
-                >
-                  <span className="flex size-8 shrink-0 items-center justify-center rounded-full border border-[var(--vpw-border-default)] bg-[var(--vpw-bg-panel)] text-xs font-semibold text-[var(--vpw-text-secondary)]">
-                    {currentUserLabel.charAt(0).toUpperCase()}
-                  </span>
-                  {!sidebarCollapsed ? (
-                    <span className="min-w-0 flex-1 truncate text-left text-xs">
-                      {currentUserLabel}
-                    </span>
-                  ) : null}
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent
-                align="end"
-                className="w-56"
-                collisionPadding={16}
-                side="right"
-                sideOffset={8}
-              >
-                <DropdownMenuLabel>
-                  <span className="block text-sm">Account</span>
-                  <span className="block truncate text-muted-foreground text-xs font-normal">
-                    {currentUserLabel}
-                  </span>
-                </DropdownMenuLabel>
-                {onSignOut ? (
-                  <>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuGroup>
-                      <DropdownMenuItem onSelect={() => void onSignOut()}>
-                        <LogOut aria-hidden="true" size={14} />
-                        Sign out
-                      </DropdownMenuItem>
-                    </DropdownMenuGroup>
-                  </>
-                ) : null}
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <div
+              aria-label="Local workspace status"
+              className={cn(
+                "flex h-auto min-h-10 items-center justify-start rounded-[var(--vpw-radius-md)] px-2 text-[var(--vpw-text-secondary)]",
+                sidebarCollapsed ? "size-10 justify-center p-0" : "w-full",
+              )}
+              role="status"
+            >
+              <span className="flex size-8 shrink-0 items-center justify-center rounded-full border border-[var(--vpw-border-default)] bg-[var(--vpw-bg-panel)] text-xs font-semibold text-[var(--vpw-text-secondary)]">
+                {workspaceInitial}
+              </span>
+              {!sidebarCollapsed ? (
+                <span className="min-w-0 flex-1 truncate pl-2 text-left text-xs">
+                  {workspaceLabel}
+                </span>
+              ) : null}
+            </div>
           </div>
         </aside>
 
@@ -354,23 +311,11 @@ export function AppShell({
                   </nav>
                   <div className="flex shrink-0 items-center gap-2 border-t border-[var(--vpw-border-default)] p-3">
                     <span className="flex size-8 shrink-0 items-center justify-center rounded-full border border-[var(--vpw-border-default)] bg-[var(--vpw-bg-panel)] text-xs font-semibold text-[var(--vpw-text-secondary)]">
-                      {currentUserLabel.charAt(0).toUpperCase()}
+                      {workspaceInitial}
                     </span>
                     <span className="min-w-0 flex-1 truncate text-left text-xs text-[var(--vpw-text-secondary)]">
-                      {currentUserLabel}
+                      {workspaceLabel}
                     </span>
-                    {onSignOut ? (
-                      <Button
-                        aria-label="Sign out"
-                        className="size-9 shrink-0 text-[var(--vpw-text-secondary)] hover:bg-[var(--vpw-bg-panel)] hover:text-[var(--vpw-text-primary)]"
-                        onClick={() => void onSignOut()}
-                        size="icon"
-                        type="button"
-                        variant="ghost"
-                      >
-                        <LogOut aria-hidden="true" size={15} />
-                      </Button>
-                    ) : null}
                   </div>
                 </SheetContent>
               </Sheet>

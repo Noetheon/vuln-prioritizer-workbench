@@ -67,7 +67,10 @@ components:
 | Providers | `components/providers/ProvidersRouteContainer.tsx` | Typed container over `ProvidersWorkbench`; provider status remains shared state. |
 | Reports | `components/reports/EvidenceCenter.tsx` | Evidence Center for report generation, download, verification, and bundle metadata. |
 | Settings | `components/settings/SettingsRouteContainer.tsx` | Typed wrapper over `SettingsWorkbench`; local runtime/provider status remains shell-owned. |
-| Login | `routes/login.tsx` | Compatibility route that redirects to the local single-user Workbench. |
+
+The legacy `/login` browser path is handled as an `AppRouter` redirect to `/`.
+There is no mounted login route or credential screen in the active local
+single-user Workbench.
 
 ## WorkbenchShell Role
 

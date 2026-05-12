@@ -43,6 +43,7 @@ type RouteWorkbenchShellOptions = {
   findingsDelayMs?: number
   onFindingsRequest?: (url: URL) => void
   providerStatusDelayMs?: number
+  providerStatusError?: boolean
   projects?: MockProject[]
 }
 
@@ -93,6 +94,7 @@ export async function routeWorkbenchShell(
   const findingsDelayMs = options.findingsDelayMs ?? 0
   const onFindingsRequest = options.onFindingsRequest
   const providerStatusDelayMs = options.providerStatusDelayMs ?? 0
+  const providerStatusError = options.providerStatusError ?? false
   await page.addInitScript(() => {
     // biome-ignore lint/suspicious/noDocumentCookie: Playwright sets a mock readable CSRF cookie before app boot.
     document.cookie = "vpw_csrf_token=mock-csrf; Path=/; SameSite=Strict"
@@ -127,6 +129,13 @@ export async function routeWorkbenchShell(
   await page.route("**/api/v1/providers/status", async (route) => {
     if (providerStatusDelayMs > 0) {
       await new Promise((resolve) => setTimeout(resolve, providerStatusDelayMs))
+    }
+    if (providerStatusError) {
+      return route.fulfill({
+        contentType: "application/json",
+        status: 503,
+        body: JSON.stringify({ detail: "Provider status unavailable" }),
+      })
     }
     return route.fulfill({
       contentType: "application/json",

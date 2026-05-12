@@ -6,10 +6,10 @@ Use this checklist before tagging or publishing a Workbench-capable package rele
 
 The Workbench v1.0 milestone evidence is preserved here, but the current package tree is versioned `1.1.0`. A tag cut from this tree must therefore be `v1.1.0`; the release workflow rejects tags that do not match `pyproject.toml`.
 
-For current public-production remediation and VPW-AUD-999 certification, use
+For current public or shared deployment evidence, use
 [Public-Production Release Evidence Ledger](public-production-release-evidence-ledger.md).
-This historical checklist remains useful release context, but it is not the
-final public-production scorecard.
+This historical checklist remains useful release context, but it is not a
+candidate-specific public deployment scorecard.
 
 ## Current Closeout Evidence
 
@@ -57,8 +57,8 @@ curl http://127.0.0.1:8000/api/v1/workbench/health
 - [x] Confirm the React shell opens at `http://127.0.0.1:5173`.
 - [x] Confirm the stack can be stopped and restarted without manual database repair.
 - [x] VPW-075 fresh validation confirms the Docker quickstart also supports
-  browser login, project creation, locked provider snapshot import, and
-  non-empty findings without live API keys.
+  project creation, locked provider snapshot import, and non-empty findings
+  without live API keys.
 - [x] Record the smoke-gate result, date, commit, and relevant environment notes in the release evidence.
 
 ## Performance Smoke

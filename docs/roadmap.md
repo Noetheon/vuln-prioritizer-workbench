@@ -6,18 +6,19 @@ The product remains a CLI and local Workbench for prioritizing known CVEs and im
 
 ## Current VPW Public-Production Track
 
-The active duplicate VPW cycle is now tracked as a public-production remediation
+The active duplicate VPW cycle was tracked as a public-production remediation
 track, summarized in the repository-root `ROADMAP.md`. It starts from the
 implemented `backend/app` FastAPI runtime, retained CLI/core package, React
 frontend, generated-client boundary, and release automation. Current work aligns
 security/deployment docs, package and dependency policy, issue-template
 taxonomy, evidence/archive boundaries, generated-client ownership, release
-readiness gates, and the current VPW-AUD-999 final scorecard.
+readiness gates, and the VPW-AUD-999 final scorecard that closed on
+2026-05-08.
 
 Strict DoD evidence remains required for every VPW issue: scoped PR, commands
 run, artifacts or screenshots where relevant, residual risks, and follow-up
-links. Current completion evidence comes from the active React/JWT/SQLModel
-Workbench runtime and CLI/domain tests.
+links. Current completion evidence comes from the active React/local-route
+Workbench runtime, FastAPI/SQLModel backend, and CLI/domain tests.
 
 ## Current Release Surface
 
@@ -49,8 +50,10 @@ Current Workbench scope:
 - Findings table and detail views that expose priority, evidence, owner/service context, and "why this priority?" explanations.
 - Dashboard and report flows for Markdown, HTML, JSON, and evidence bundles.
 - Assets, waivers, VEX, detection controls, coverage gaps, ATT&CK Navigator exports, and technique detail views.
-- Local JWT/service-token gating, provider snapshot refresh, report artifacts,
-  ATT&CK context, GitHub issue preview/export, SARIF validation, and CI/CD docs.
+- Local single-user Workbench access, optional scoped service-token enforcement
+  when explicit bearer tokens are supplied, provider snapshot refresh, report
+  artifacts, ATT&CK context, GitHub issue preview/export, SARIF validation, and
+  CI/CD docs.
 
 The current active Compose stack runs the `backend/app` FastAPI runtime on
 `127.0.0.1:8000` and the React frontend on `127.0.0.1:5173`; the CLI remains

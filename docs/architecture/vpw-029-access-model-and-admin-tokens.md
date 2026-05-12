@@ -8,9 +8,9 @@ Accepted for the current local-first Workbench.
 
 The current Workbench access model is intentionally small:
 
-- browser sessions resolve to persisted users
-- normal users can see and mutate only projects they own
-- superusers can see and administer all projects
+- local browser access resolves to the single trusted Workbench operator
+- the browser UI does not require login, RBAC setup, or team membership
+- the local operator can administer the local workspace
 - non-admin service tokens must carry `project_id` and are limited to that project
 - `admin` service tokens are global, root-equivalent automation credentials
 
@@ -21,9 +21,9 @@ routing metadata, not authorization membership.
 ## Rationale
 
 The active product target is a self-hosted, local-first Workbench operated by a
-trusted owner or a small trusted operator group. The owner/superuser model plus
-project-scoped service tokens is enough for that target and keeps the migration,
-API, and UI contract understandable.
+trusted owner. The local browser model plus optional project-scoped service
+tokens is enough for that target and keeps the migration, API, and UI contract
+understandable.
 
 Admin service tokens remain root-equivalent because trusted local automation
 needs to create projects, manage token lifecycle, and run cross-project
@@ -34,8 +34,7 @@ not accept `project_id`.
 
 | Principal | Visibility | Mutations | Notes |
 | --- | --- | --- | --- |
-| Normal browser user | Own projects only | Own project-scoped routes permitted by route dependency | No membership expansion. |
-| Superuser browser user | All projects | All admin and project routes | Configured operator identity. |
+| Local browser operator | All local workspace projects | All local Workbench routes | Trusted single-user browser access. |
 | Non-admin service token | Exactly its `project_id` | Only routes matching its `read`, `write`, `import`, or `report` scopes | Fails closed for other projects. |
 | Admin service token | All projects | Token lifecycle, project create/delete, and all scoped dependencies | Root-equivalent; trusted automation only. |
 

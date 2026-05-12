@@ -21,7 +21,7 @@ type SettingsMetricsProps = Pick<
   "currentUser" | "providerStatus" | "providerStatusError" | "statusError"
 >
 
-type SettingsAccountHealthProps = Pick<
+type SettingsWorkspaceHealthProps = Pick<
   SettingsWorkbenchProps,
   | "currentUser"
   | "providerStatus"
@@ -48,11 +48,12 @@ export function SettingsMetrics({
     <VpwGrid columns={4}>
       <VpwMetricCard
         description={
-          currentUser?.email ??
-          (currentUser?.is_active ? "Local user ready" : "Checking workspace")
+          currentUser?.is_active
+            ? "This browser uses the local Workbench directly."
+            : "Checking workspace readiness."
         }
         icon={<UserRound aria-hidden="true" className="h-5 w-5" />}
-        label="Workspace user"
+        label="Workspace mode"
         tone={currentUser?.is_active ? "success" : "warning"}
         value={currentUser ? "Local" : "Loading"}
       />
@@ -85,14 +86,14 @@ export function SettingsMetrics({
   )
 }
 
-export function SettingsAccountHealth({
+export function SettingsWorkspaceHealth({
   currentUser,
   providerStatus,
   providerStatusError,
   providerStatusLoading,
   status,
   statusError,
-}: SettingsAccountHealthProps) {
+}: SettingsWorkspaceHealthProps) {
   const provider = providerHealth(providerStatus)
 
   return (
@@ -107,8 +108,8 @@ export function SettingsAccountHealth({
         <SettingsFactRows
           items={[
             {
-              label: "Workspace user",
-              value: currentUser?.email ?? "Loading user",
+              label: "Workspace profile",
+              value: currentUser?.is_active ? "Local workspace" : "Loading",
             },
             {
               label: "Access mode",
@@ -116,12 +117,12 @@ export function SettingsAccountHealth({
               tone: currentUser ? "success" : "warning",
             },
             {
-              label: "Workspace mode",
+              label: "Backend mode",
               value: status?.app ?? "Workbench",
             },
             {
-              label: "Auth mode",
-              value: "Disabled for local use",
+              label: "Service tokens",
+              value: "Optional for automation",
               tone: "info",
             },
           ]}

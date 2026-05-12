@@ -1,20 +1,20 @@
 # Public-Production Release Evidence Ledger
 
-This ledger tracks the public-production readiness evidence story without
-claiming final readiness before the current VPW-AUD final scorecard accepts the
-release. It is a public-safe index for commands, generated artifacts, package
-boundaries, and residual risks. Historical PP5/PP6 rows are retained for
-provenance only; they do not close or replace the current VPW-AUD evidence
-requirements.
+This ledger tracks public or shared deployment evidence without turning one
+audit closeout into a blanket certification. It is a public-safe index for
+commands, generated artifacts, package boundaries, and residual risks.
+Historical PP5/PP6 rows are retained for provenance only; they do not replace
+fresh evidence for a current release or deployment candidate.
 
 ## Acceptance Boundary
 
-Public-production readiness is not claimed until
-[VPW-AUD-999](https://github.com/Noetheon/vuln-prioritizer-workbench/issues/430)
-closes with fresh final scorecard evidence links. Historical scorecards such as
+The historical
+[VPW-AUD-999 final scorecard](https://github.com/Noetheon/vuln-prioritizer-workbench/issues/430)
+closed on 2026-05-08. Historical scorecards such as
 [#350](https://github.com/Noetheon/vuln-prioritizer-workbench/issues/350) are
-background evidence only. Until VPW-AUD-999 closes, this document is a
-readiness ledger and release-target checklist, not a certification.
+background evidence only. This document remains a readiness ledger and
+release-target checklist, not a standing certification for future public
+deployments.
 
 Evidence added to public docs must avoid secrets, tokens, cookies, customer
 exports, private absolute paths, and shell history. Current contract artifacts
@@ -59,14 +59,16 @@ linked from an issue or PR.
 | `make playwright-check` | Browser smoke and accessibility path | frontend Playwright smoke, responsive shell, and Axe no serious/critical violations |
 | `make release-readiness-check` | Full local readiness handoff | release gate, client drift, public deployment evidence contract, archive binary evidence manifest, evidence bundle, Playwright/A11y, and production-like Docker smoke |
 
-## VPW-AUD-999 Fresh Evidence Gate
+## Candidate Fresh Evidence Gate
 
-VPW-AUD-999 cannot close from historical PP evidence, local ignored artifacts,
-or a previous candidate run. The final scorecard must link public-safe command
-output, CI artifacts, or issue evidence produced for the exact commit, tag, or
-release candidate being scored.
+Current launch or deployment claims cannot rely on historical PP evidence,
+local ignored artifacts, or a previous candidate run. The current release or
+deployment decision must link public-safe command output, CI artifacts, or
+issue evidence produced for the exact commit, tag, or release candidate being
+scored.
 
-Required before VPW-AUD-999 closure:
+Required before public or shared deployment readiness is claimed for a
+candidate:
 
 - category scorecards are closed for Backend/API (#403), Frontend/UI (#411),
   Security/Deployment (#417), Docs (#422), CI/Release (#425), and Repo Hygiene
@@ -85,8 +87,8 @@ Required before VPW-AUD-999 closure:
 - `make api-client-drift-check`
 - `make package-check`
 - `make release-readiness-check`
-- final residual-risk decisions that name an owner and follow-up issue, or state
-  why no follow-up is required
+- final residual-risk decisions that name an owner and follow-up issue, or
+  state why no follow-up is required
 
 Evidence must not include secrets, token values, cookies, customer exports,
 private absolute paths, or shell history. When using workflow artifacts, link
@@ -109,7 +111,7 @@ shell history.
 
 | Candidate | Commit/Tag | Command | Result | Artifact or CI URL | Residual risk | Owner | Follow-up |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| Historical PP6 dry-run gate design | working tree before the next tag at the time of the PP6 work | `python3 scripts/check_release_evidence_hygiene.py`; `make docs-check`; tag workflow runs `make release-readiness-check` | Historical local hygiene and docs-build design evidence. Current release readiness still requires fresh VPW-AUD-999 evidence for the exact candidate. | `docs/evidence/vpw-052-positive-verification.json`; historical `release-readiness-evidence` workflow artifacts on tag runs | Tag-specific Docker logs and artifact hashes exist only after the release workflow runs for the exact candidate. Historical PP6 evidence is not a current release certification. | Release owner | Historical references: [#382](https://github.com/Noetheon/vuln-prioritizer-workbench/issues/382), [#385](https://github.com/Noetheon/vuln-prioritizer-workbench/issues/385), [#386](https://github.com/Noetheon/vuln-prioritizer-workbench/issues/386); current final gate: [#430](https://github.com/Noetheon/vuln-prioritizer-workbench/issues/430) |
+| Historical PP6 dry-run gate design | working tree before the next tag at the time of the PP6 work | `python3 scripts/check_release_evidence_hygiene.py`; `make docs-check`; tag workflow runs `make release-readiness-check` | Historical local hygiene and docs-build design evidence. Current release readiness still requires fresh evidence for the exact candidate. | `docs/evidence/vpw-052-positive-verification.json`; historical `release-readiness-evidence` workflow artifacts on tag runs | Tag-specific Docker logs and artifact hashes exist only after the release workflow runs for the exact candidate. Historical PP6 evidence is not a current release certification. | Release owner | Historical references: [#382](https://github.com/Noetheon/vuln-prioritizer-workbench/issues/382), [#385](https://github.com/Noetheon/vuln-prioritizer-workbench/issues/385), [#386](https://github.com/Noetheon/vuln-prioritizer-workbench/issues/386), and the closed VPW-AUD-999 final scorecard [#430](https://github.com/Noetheon/vuln-prioritizer-workbench/issues/430). |
 
 ## Historical Issue Ledger
 
@@ -121,7 +123,7 @@ decisions.
 | Issue | Current docs/CI/package evidence target | Residual risk until closure |
 | --- | --- | --- |
 | [#326](https://github.com/Noetheon/vuln-prioritizer-workbench/issues/326) | Dependency policy, `uv.lock`, `backend/requirements.lock.txt`, `make dependency-audit`, npm audit, PR #287 disposition | Release owners still need candidate-specific audit output and artifact hashes before closeout. |
-| [#327](https://github.com/Noetheon/vuln-prioritizer-workbench/issues/327) | README, `SECURITY.md`, threat model, deployment runbook, release ledger | Historical public-production wording; current readiness is gated by VPW-AUD-999 #430. |
+| [#327](https://github.com/Noetheon/vuln-prioritizer-workbench/issues/327) | README, `SECURITY.md`, threat model, deployment runbook, release ledger | Historical public-production wording; current readiness is candidate-specific and cannot be inherited from prior scorecards. |
 | [#339](https://github.com/Noetheon/vuln-prioritizer-workbench/issues/339) | Current issue-template labels, Dependabot labels, strict evidence language | GitHub labels/milestones still require live repository review before closeout. |
 | [#340](https://github.com/Noetheon/vuln-prioritizer-workbench/issues/340) | Package policy, package-content check, `make package-check` | Future PyPI wording must keep the CLI-plus-Workbench package story explicit. |
 | [#341](https://github.com/Noetheon/vuln-prioritizer-workbench/issues/341) | Current-state roadmap docs and historical migration notes | Historical template pages must not be used as active acceptance evidence. |
@@ -132,7 +134,7 @@ decisions.
 | [#346](https://github.com/Noetheon/vuln-prioritizer-workbench/issues/346) | `compose.production-smoke.yml`, `scripts/production_readiness_smoke.py`, and `make docker-production-smoke` | Production proof still depends on the command output from the exact release candidate. |
 | [#347](https://github.com/Noetheon/vuln-prioritizer-workbench/issues/347) | Client drift target in `release-readiness-check` | API error-envelope/auth contract assertions must remain covered by API tests. |
 | [#349](https://github.com/Noetheon/vuln-prioritizer-workbench/issues/349) | Full quality-gate command list and residual-risk section | Any exception needs owner, rationale, and a follow-up issue before closure. |
-| [#350](https://github.com/Noetheon/vuln-prioritizer-workbench/issues/350) | Historical final scorecard target and PP5 acceptance boundary | Historical scorecard evidence; current closure is owned by VPW-AUD-999 #430 and must link fresh evidence. |
+| [#350](https://github.com/Noetheon/vuln-prioritizer-workbench/issues/350) | Historical final scorecard target and PP5 acceptance boundary | Historical scorecard evidence; current public deployment claims still need fresh candidate evidence. |
 | [#380](https://github.com/Noetheon/vuln-prioritizer-workbench/issues/380) | CI frontend PR gate runs lint, build, unit coverage, generated-client drift, and the full Playwright suite for frontend/API/runtime changes. | Fresh workflow evidence is still required for docs-only, frontend-only, and API-client-impacting PR examples. |
 | [#381](https://github.com/Noetheon/vuln-prioritizer-workbench/issues/381) | Docker PR gate runs `make docker-demo-smoke` and `make docker-production-smoke` for runtime inputs and prints compose status/logs on failure. | Fresh workflow evidence is still required for backend/Compose and docs-only PR examples. |
 | [#382](https://github.com/Noetheon/vuln-prioritizer-workbench/issues/382) | Tag release workflow runs `make release-readiness-check`, uploads release-readiness evidence, and attaches SHA-256 artifact hashes to GitHub Releases. | A tag-specific workflow run is required before claiming candidate evidence. |
@@ -173,11 +175,12 @@ gh issue list --milestone "PP6 CI/Release Evidence Hardening" \
 ## Final Scorecard Evidence Boundary
 
 Issue [#430](https://github.com/Noetheon/vuln-prioritizer-workbench/issues/430)
-owns the current final 10/10 closure decision. The scorecard must link command
-output or CI artifacts for security/auth, backend/API correctness, frontend
-architecture/testability, package/docs/release coherence, and production
-certification. If any P1/P2 closure audit finding remains unproven, the score is
-not final and the issue stays open or names the follow-up owner.
+closed the historical final 10/10 audit scorecard on 2026-05-08. That scorecard
+does not replace current candidate evidence for security/auth, backend/API
+correctness, frontend architecture/testability, package/docs/release coherence,
+and production deployment decisions. If any P1/P2 release-candidate audit
+finding remains unproven, the current candidate must name the follow-up owner
+and avoid public-readiness wording.
 
 Use this format in the VPW-AUD-999 issue or PR evidence comment:
 

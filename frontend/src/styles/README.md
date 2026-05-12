@@ -10,8 +10,7 @@ this sequence:
 5. `base.css` for element-level application defaults.
 6. Domain styles such as `dashboard.css`, `findings.css`, and focused
    finding-detail slices.
-7. Route-specific utilities such as `login.css`.
-8. Global overrides in `responsive.css` and `accessibility.css`.
+7. Global overrides in `responsive.css` and `accessibility.css`.
 
 Ownership rules:
 

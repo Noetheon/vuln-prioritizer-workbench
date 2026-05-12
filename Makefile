@@ -14,6 +14,7 @@ DOCKER_DEMO_FRONTEND_PORT ?= 5173
 PRODUCTION_SMOKE_SECRET_KEY ?= production-smoke-secret-key-change-in-real-deployments
 PRODUCTION_SMOKE_FIRST_SUPERUSER_PASSWORD ?= production-smoke-admin-password
 PRODUCTION_SMOKE_POSTGRES_PASSWORD ?= production-smoke-postgres-password
+PRODUCTION_SMOKE_FRONTEND_PORT ?= 5180
 
 ATTACK_MAPPING_FILE := data/attack/ctid_kev_enterprise_2025-07-28_attack-16.1_subset.json
 ATTACK_METADATA_FILE := data/attack/attack_techniques_enterprise_16.1_subset.json
@@ -198,8 +199,8 @@ docker-demo-smoke:
 		echo "Workbench frontend health check failed." >&2; \
 		exit 1; \
 	fi; \
-	if ! $(PYTHON) -c "import sys, urllib.request; port=sys.argv[1]; print(urllib.request.urlopen(f'http://127.0.0.1:{port}/login', timeout=2).status)" "$$DOCKER_DEMO_FRONTEND_PORT" 2>/dev/null; then \
-		echo "Workbench login route check failed." >&2; \
+	if ! $(PYTHON) -c "import sys, urllib.request; port=sys.argv[1]; print(urllib.request.urlopen(f'http://127.0.0.1:{port}/', timeout=2).status)" "$$DOCKER_DEMO_FRONTEND_PORT" 2>/dev/null; then \
+		echo "Workbench frontend root route check failed." >&2; \
 		exit 1; \
 	fi; \
 	DOCKER_QUICKSTART_API_BASE_URL="http://127.0.0.1:$$DOCKER_DEMO_BACKEND_PORT/api/v1" $(PYTHON) scripts/docker_quickstart_api_smoke.py; \
@@ -217,13 +218,14 @@ docker-production-smoke:
 	export SECRET_KEY="$(PRODUCTION_SMOKE_SECRET_KEY)"; \
 	export FIRST_SUPERUSER_PASSWORD="$(PRODUCTION_SMOKE_FIRST_SUPERUSER_PASSWORD)"; \
 	export POSTGRES_PASSWORD="$(PRODUCTION_SMOKE_POSTGRES_PASSWORD)"; \
-	$(PYTHON) -c "import socket, sys; sock=socket.socket(); sock.settimeout(0.2); in_use=sock.connect_ex(('127.0.0.1', 5180)) == 0; sock.close(); sys.exit('Port 5180 is already in use before docker-production-smoke.' if in_use else 0)"; \
+	export PRODUCTION_SMOKE_FRONTEND_PORT="$(PRODUCTION_SMOKE_FRONTEND_PORT)"; \
+	$(PYTHON) -c "import socket, sys; port=int(sys.argv[1]); sock=socket.socket(); sock.settimeout(0.2); in_use=sock.connect_ex(('127.0.0.1', port)) == 0; sock.close(); sys.exit(f'Port {port} is already in use before docker-production-smoke.' if in_use else 0)" "$$PRODUCTION_SMOKE_FRONTEND_PORT"; \
 	on_exit() { status=$$?; if [ "$$status" != "0" ]; then $(PRODUCTION_SMOKE_COMPOSE) ps || true; $(PRODUCTION_SMOKE_COMPOSE) logs --no-color || true; fi; $(PRODUCTION_SMOKE_COMPOSE) down -v --remove-orphans; exit "$$status"; }; \
 	trap on_exit EXIT; \
 	$(PRODUCTION_SMOKE_COMPOSE) up -d --build backend frontend; \
 	frontend_ready=0; \
 	for attempt in $$(seq 1 45); do \
-		if $(PYTHON) -c "import urllib.request; req=urllib.request.Request('http://127.0.0.1:5180/', headers={'Host': 'workbench.example.test'}); print(urllib.request.urlopen(req, timeout=2).status)" 2>/dev/null; then \
+		if $(PYTHON) -c "import sys, urllib.request; port=sys.argv[1]; req=urllib.request.Request(f'http://127.0.0.1:{port}/', headers={'Host': 'workbench.example.test'}); print(urllib.request.urlopen(req, timeout=2).status)" "$$PRODUCTION_SMOKE_FRONTEND_PORT" 2>/dev/null; then \
 			frontend_ready=1; \
 			break; \
 		fi; \
@@ -234,7 +236,7 @@ docker-production-smoke:
 		exit 1; \
 	fi; \
 	$(PRODUCTION_SMOKE_COMPOSE) exec -T backend python -m app.core.schema_smoke; \
-	$(PYTHON) scripts/production_readiness_smoke.py; \
+	VPW_PRODUCTION_SMOKE_BASE_URL="http://127.0.0.1:$$PRODUCTION_SMOKE_FRONTEND_PORT" $(PYTHON) scripts/production_readiness_smoke.py; \
 	echo "Workbench production-like Docker smoke passed."
 
 dependency-audit: python-lock-check docker-base-image-check

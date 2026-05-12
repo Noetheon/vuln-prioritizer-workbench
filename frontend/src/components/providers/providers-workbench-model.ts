@@ -38,12 +38,6 @@ export type ProviderSourceCounts = {
   missingSources: number
 }
 
-const fallbackProviderSources: ProviderSourceStatusPublic[] = [
-  { name: "nvd", available: false, value: null },
-  { name: "epss", available: false, value: null },
-  { name: "kev", available: false, value: null },
-]
-
 function objectRecord(value: unknown): Record<string, unknown> {
   return typeof value === "object" && value !== null
     ? (value as Record<string, unknown>)
@@ -155,23 +149,25 @@ export function sourceHashes(providerStatus: ProviderStatusPublic | null) {
 export function sourceRows(
   providerStatus: ProviderStatusPublic | null,
 ): ProviderSourceRow[] {
-  const rows = (providerStatus?.sources ?? fallbackProviderSources).map(
-    (source) => {
-      const status = sourceStatusLabel(source)
-      return {
-        cacheAge: formatCacheAge(source.cache_age_seconds),
-        detail: providerSourceDetail(source),
-        id: source.name,
-        lastUpdated: formatDateTime(source.last_sync),
-        name: providerSourceLabel(source),
-        sourceType: sourceType(source.name),
-        status,
-        tone: sourceStatusTone(status),
-        usedInEvidence: source.selected ? "Yes" : "No",
-        value: source.value ?? "N.A.",
-      }
-    },
-  )
+  if (!providerStatus) {
+    return []
+  }
+
+  const rows = (providerStatus.sources ?? []).map((source) => {
+    const status = sourceStatusLabel(source)
+    return {
+      cacheAge: formatCacheAge(source.cache_age_seconds),
+      detail: providerSourceDetail(source),
+      id: source.name,
+      lastUpdated: formatDateTime(source.last_sync),
+      name: providerSourceLabel(source),
+      sourceType: sourceType(source.name),
+      status,
+      tone: sourceStatusTone(status),
+      usedInEvidence: source.selected ? "Yes" : "No",
+      value: source.value ?? "N.A.",
+    }
+  })
 
   rows.push({
     cacheAge: formatCacheAge(providerStatus?.cache_age_seconds),

@@ -3,7 +3,6 @@ import {
   authHeaders,
   backendBaseUrl,
   login,
-  testUserEmail,
 } from "./auth-helpers"
 import { evidenceScreenshotPath } from "./evidence-paths"
 import {
@@ -38,7 +37,7 @@ test("workbench frontend covers core Workbench E2E smoke", async ({ page }) => {
   await expect(
     page.getByRole("heading", { exact: true, name: "Risk Operations" }),
   ).toBeVisible()
-  await expect(page.getByText(testUserEmail)).toBeVisible()
+  await expect(page.getByLabel("Local workspace status")).toBeVisible()
   const navigation = page.getByRole("navigation", {
     name: "Workbench navigation",
   })
@@ -716,9 +715,9 @@ test("workbench frontend covers core Workbench E2E smoke", async ({ page }) => {
     page.getByRole("heading", { level: 1, name: "Settings" }),
   ).toBeVisible()
   await expect(
-    page.getByRole("region", { name: "User Settings" }),
-  ).toContainText(testUserEmail)
+    page.getByRole("region", { name: "Workspace settings" }),
+  ).toContainText("Local workspace")
 
-  await page.getByRole("button", { name: "Account menu" }).click()
+  await expect(page.getByLabel("Local workspace status")).toBeVisible()
   await expect(page.getByRole("menuitem", { name: "Sign out" })).toHaveCount(0)
 })
