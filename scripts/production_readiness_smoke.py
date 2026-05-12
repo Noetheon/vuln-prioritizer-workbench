@@ -8,7 +8,6 @@ import os
 import re
 import time
 import urllib.error
-import urllib.parse
 import urllib.request
 from dataclasses import dataclass
 from http.cookies import SimpleCookie
@@ -17,8 +16,6 @@ from uuid import uuid4
 
 BASE_URL = os.environ.get("VPW_PRODUCTION_SMOKE_BASE_URL", "http://127.0.0.1:5180")
 HOST = os.environ.get("VPW_PRODUCTION_SMOKE_HOST", "workbench.example.test")
-USERNAME = os.environ.get("VPW_PRODUCTION_SMOKE_USERNAME", "admin@example.com")
-PASSWORD = os.environ.get("VPW_PRODUCTION_SMOKE_PASSWORD", "production-smoke-admin-password")
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SAMPLE_CVES = REPO_ROOT / "data" / "sample_cves.txt"
 PRIVATE_PATH_PATTERN = re.compile(
@@ -30,26 +27,16 @@ IMPORT_FAILURE_STATUSES = {"failed"}
 IMPORT_POLL_SECONDS = int(os.environ.get("VPW_PRODUCTION_SMOKE_IMPORT_TIMEOUT", "60"))
 
 
-@dataclass(frozen=True)
-class LoginSession:
-    token: str
-    csrf_token: str
-    cookie_header: str
-
-
 def main() -> None:
     _assert_frontend_headers()
-    _assert_public_health_and_gated_diagnostics()
-    login = _login()
-    _assert_cookie_csrf(login)
-    status = _json("/api/v1/workbench/status", token=login.token)
+    _assert_public_health_and_status()
+    status = _json("/api/v1/workbench/status")
     _assert_ready_status(status)
-    project_id = _create_project(login.token)
-    run = _import_demo(login.token, project_id)
-    findings = _get_findings(login.token, project_id)
-    report = _create_report(login.token, str(run["id"]))
-    _download_report(login.token, str(report["id"]))
-    _logout_and_assert_revoked(login.token)
+    project_id = _create_project()
+    run = _import_demo(project_id)
+    findings = _get_findings(project_id)
+    report = _create_report(str(run["id"]))
+    _download_report(str(report["id"]))
 
     print(
         "Production-like smoke passed: "
@@ -68,74 +55,14 @@ def _assert_frontend_headers() -> None:
             raise RuntimeError(f"Frontend CSP leaks a forbidden API origin: {forbidden}")
 
 
-def _assert_public_health_and_gated_diagnostics() -> None:
+def _assert_public_health_and_status() -> None:
     health = _json("/api/v1/workbench/health")
     if health != {"status": "ok"}:
         raise RuntimeError(f"Unexpected public health payload: {health!r}")
-    _raw("/api/v1/workbench/status", expected_status=401)
-    _raw("/api/v1/providers/status", expected_status=401)
+    _assert_ready_status(_json("/api/v1/workbench/status"))
+    _assert_no_private_paths(_json("/api/v1/providers/status"))
     _raw("/docs", expected_status=404)
     _raw("/api/v1/openapi.json", expected_status=404)
-
-
-def _login() -> LoginSession:
-    payload = urllib.parse.urlencode({"username": USERNAME, "password": PASSWORD}).encode()
-    response = _raw(
-        "/api/v1/login/access-token",
-        data=payload,
-        headers={"Content-Type": "application/x-www-form-urlencoded"},
-    )
-    body = json.loads(response.body.decode("utf-8"))
-    _assert_no_private_paths(body)
-    token = str(body["access_token"])
-    cookies = _response_cookies(response)
-    cookie_header = _cookie_header(cookies)
-    session_cookie = cookies.get("vpw_session")
-    csrf_cookie = cookies.get("vpw_csrf")
-    if not session_cookie or not csrf_cookie:
-        raise RuntimeError("Login did not set vpw_session and vpw_csrf cookies.")
-    for cookie_name in ("vpw_session", "vpw_csrf"):
-        raw_cookie = response.cookies[cookie_name]
-        if "secure" not in raw_cookie.lower() or "samesite=lax" not in raw_cookie.lower():
-            raise RuntimeError(f"{cookie_name} cookie is not production hardened: {raw_cookie!r}")
-    if "httponly" not in response.cookies["vpw_session"].lower():
-        raise RuntimeError("vpw_session cookie is not HttpOnly.")
-    if "httponly" in response.cookies["vpw_csrf"].lower():
-        raise RuntimeError("vpw_csrf cookie must be readable for CSRF header submission.")
-    return LoginSession(token=token, csrf_token=csrf_cookie, cookie_header=cookie_header)
-
-
-def _assert_cookie_csrf(login: LoginSession) -> None:
-    payload = json.dumps(
-        {
-            "name": f"csrf-negative-{uuid4().hex[:8]}",
-            "description": "CSRF negative smoke",
-        }
-    ).encode()
-    _raw(
-        "/api/v1/projects/",
-        data=payload,
-        expected_status=403,
-        headers={
-            "Content-Type": "application/json",
-            "Cookie": login.cookie_header,
-        },
-    )
-    response = _json(
-        "/api/v1/projects/",
-        data=json.dumps(
-            {
-                "name": f"csrf-positive-{uuid4().hex[:8]}",
-                "description": "CSRF positive smoke",
-            }
-        ).encode(),
-        headers={
-            "Content-Type": "application/json",
-            "Cookie": login.cookie_header,
-            "X-CSRF-Token": login.csrf_token,
-        },
-    )
-    _assert_no_private_paths(response)
 
 
 def _assert_ready_status(status: dict[str, object]) -> None:
@@ -144,7 +71,7 @@ def _assert_ready_status(status: dict[str, object]) -> None:
         raise RuntimeError(f"Production readiness status is not ready: {status!r}")
 
 
-def _create_project(token: str) -> str:
+def _create_project() -> str:
     response = _json(
         "/api/v1/projects/",
         data=json.dumps(
@@ -153,14 +80,13 @@ def _create_project(token: str) -> str:
                 "description": "Production-like Docker smoke",
             }
         ).encode(),
-        token=token,
         headers={"Content-Type": "application/json"},
     )
     _assert_no_private_paths(response)
     return str(response["id"])
 
 
-def _import_demo(token: str, project_id: str) -> dict[str, object]:
+def _import_demo(project_id: str) -> dict[str, object]:
     boundary = f"vpw-{uuid4().hex}"
     body = _multipart_body(
         boundary=boundary,
@@ -174,18 +100,15 @@ def _import_demo(token: str, project_id: str) -> dict[str, object]:
     response = _json(
         f"/api/v1/projects/{project_id}/imports",
         data=body,
-        token=token,
         headers={"Content-Type": f"multipart/form-data; boundary={boundary}"},
     )
     _assert_no_private_paths(response)
     if response.get("status") in IMPORT_SUCCESS_STATUSES:
         return response
-    return _wait_for_import_completion(token, response)
+    return _wait_for_import_completion(response)
 
 
-def _wait_for_import_completion(
-    token: str, initial_response: dict[str, object]
-) -> dict[str, object]:
+def _wait_for_import_completion(initial_response: dict[str, object]) -> dict[str, object]:
     run_id = str(initial_response.get("id") or "")
     if not run_id:
         raise RuntimeError(f"Import response did not include a run id: {initial_response!r}")
@@ -198,14 +121,14 @@ def _wait_for_import_completion(
         if last_response.get("status") in IMPORT_SUCCESS_STATUSES:
             return last_response
         time.sleep(1)
-        last_response = _json(f"/api/v1/runs/{run_id}", token=token)
+        last_response = _json(f"/api/v1/runs/{run_id}")
         _assert_no_private_paths(last_response)
 
     raise RuntimeError(f"Import did not complete within {IMPORT_POLL_SECONDS}s: {last_response!r}")
 
 
-def _get_findings(token: str, project_id: str) -> list[dict[str, object]]:
-    response = _json(f"/api/v1/projects/{project_id}/findings/?sort=cve", token=token)
+def _get_findings(project_id: str) -> list[dict[str, object]]:
+    response = _json(f"/api/v1/projects/{project_id}/findings/?sort=cve")
     _assert_no_private_paths(response)
     findings = response.get("data")
     if not isinstance(findings, list) or not findings:
@@ -213,29 +136,23 @@ def _get_findings(token: str, project_id: str) -> list[dict[str, object]]:
     return findings
 
 
-def _create_report(token: str, run_id: str) -> dict[str, object]:
+def _create_report(run_id: str) -> dict[str, object]:
     response = _json(
         f"/api/v1/runs/{run_id}/reports",
         data=json.dumps({"format": "markdown"}).encode(),
-        token=token,
         headers={"Content-Type": "application/json"},
     )
     _assert_no_private_paths(response)
     return response
 
 
-def _download_report(token: str, report_id: str) -> None:
-    response = _raw(f"/api/v1/reports/{report_id}/download", token=token)
+def _download_report(report_id: str) -> None:
+    response = _raw(f"/api/v1/reports/{report_id}/download")
     if not response.body:
         raise RuntimeError("Report download returned an empty body.")
     content_disposition = response.headers.get("Content-Disposition", "")
     if "attachment" not in content_disposition.lower():
         raise RuntimeError(f"Report download is not an attachment: {content_disposition!r}")
-
-
-def _logout_and_assert_revoked(token: str) -> None:
-    _json("/api/v1/login/logout", data=b"", token=token)
-    _raw("/api/v1/users/me", token=token, expected_status=403)
 
 
 @dataclass(frozen=True)
@@ -312,20 +229,6 @@ def _raw_set_cookie_headers(headers: object) -> dict[str, str]:
         for name, morsel in parsed.items():
             cookies[name] = raw_value
     return cookies
-
-
-def _response_cookies(response: RawResponse) -> dict[str, str]:
-    values: dict[str, str] = {}
-    for raw_value in response.cookies.values():
-        parsed = SimpleCookie()
-        parsed.load(raw_value)
-        for name, morsel in parsed.items():
-            values[name] = morsel.value
-    return values
-
-
-def _cookie_header(cookies: dict[str, str]) -> str:
-    return "; ".join(f"{name}={value}" for name, value in cookies.items())
 
 
 def _multipart_body(

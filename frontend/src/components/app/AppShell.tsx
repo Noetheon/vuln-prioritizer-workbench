@@ -1,4 +1,4 @@
-import { Link } from "@tanstack/react-router"
+import { Link } from "@/lib/router"
 import {
   LogOut,
   Menu,
@@ -49,7 +49,7 @@ type AppShellProps = PageHeaderProps & {
   healthLabel: string
   hideStatusStrip?: boolean
   navigation: readonly NavigationEntry[]
-  onSignOut: () => Promise<void> | void
+  onSignOut?: () => Promise<void> | void
   statusItems: readonly StatusSummaryItem[]
 }
 
@@ -268,13 +268,17 @@ export function AppShell({
                     {currentUserLabel}
                   </span>
                 </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuGroup>
-                  <DropdownMenuItem onSelect={() => void onSignOut()}>
-                    <LogOut aria-hidden="true" size={14} />
-                    Sign out
-                  </DropdownMenuItem>
-                </DropdownMenuGroup>
+                {onSignOut ? (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuGroup>
+                      <DropdownMenuItem onSelect={() => void onSignOut()}>
+                        <LogOut aria-hidden="true" size={14} />
+                        Sign out
+                      </DropdownMenuItem>
+                    </DropdownMenuGroup>
+                  </>
+                ) : null}
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
@@ -355,16 +359,18 @@ export function AppShell({
                     <span className="min-w-0 flex-1 truncate text-left text-xs text-[var(--vpw-text-secondary)]">
                       {currentUserLabel}
                     </span>
-                    <Button
-                      aria-label="Sign out"
-                      className="size-9 shrink-0 text-[var(--vpw-text-secondary)] hover:bg-[var(--vpw-bg-panel)] hover:text-[var(--vpw-text-primary)]"
-                      onClick={() => void onSignOut()}
-                      size="icon"
-                      type="button"
-                      variant="ghost"
-                    >
-                      <LogOut aria-hidden="true" size={15} />
-                    </Button>
+                    {onSignOut ? (
+                      <Button
+                        aria-label="Sign out"
+                        className="size-9 shrink-0 text-[var(--vpw-text-secondary)] hover:bg-[var(--vpw-bg-panel)] hover:text-[var(--vpw-text-primary)]"
+                        onClick={() => void onSignOut()}
+                        size="icon"
+                        type="button"
+                        variant="ghost"
+                      >
+                        <LogOut aria-hidden="true" size={15} />
+                      </Button>
+                    ) : null}
                   </div>
                 </SheetContent>
               </Sheet>

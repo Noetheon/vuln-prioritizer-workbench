@@ -7,7 +7,7 @@ from sqlalchemy import inspect, text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlmodel import Session, SQLModel
 
-from app.api.deps import ScopedReadUser, SessionDep
+from app.api.deps import SessionDep
 from app.core.app_state import workbench_settings
 from app.core.config import Settings
 from app.core.migration_bootstrap import ALEMBIC_HEAD
@@ -33,9 +33,8 @@ def workbench_health() -> WorkbenchHealth:
 def workbench_status(
     request: Request,
     session: SessionDep,
-    _current_user: ScopedReadUser,
 ) -> WorkbenchStatus:
-    """Return authenticated active Workbench readiness and version status."""
+    """Return local Workbench readiness and version status."""
     active_settings = _request_settings(request)
     database, schema = _database_readiness(session)
     return WorkbenchStatus(

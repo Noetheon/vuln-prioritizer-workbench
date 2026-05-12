@@ -1314,7 +1314,7 @@ def test_vpw060_attack_navigator_layer_snapshot_is_stable() -> None:
     )
 
 
-def test_vpw048_report_auth_project_visibility_and_invalid_run_state(
+def test_vpw048_report_local_project_visibility_and_invalid_run_state(
     restricted_template_api_env: TemplateApiEnv,
     tmp_path: Path,
 ) -> None:
@@ -1344,14 +1344,14 @@ def test_vpw048_report_auth_project_visibility_and_invalid_run_state(
             headers=headers,
             json={"format": "markdown"},
         ).status_code
-        == 403
+        == 200
     )
     assert (
         restricted_template_api_env.client.get(
             f"/api/v1/reports/{foreign_report_id}/download",
             headers=headers,
         ).status_code
-        == 403
+        == 404
     )
     for run_id in (pending_run_id, failed_run_id):
         response = restricted_template_api_env.client.post(

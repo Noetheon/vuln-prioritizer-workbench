@@ -8,4 +8,3 @@ export {
   SettingsDiagnostics,
   SettingsRuntimeProviders,
 } from "./SettingsWorkbenchRuntime"
-export { SettingsApiTokensSection } from "./SettingsWorkbenchTokens"

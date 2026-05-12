@@ -1,4 +1,4 @@
-import { Link } from "@tanstack/react-router"
+import { Link } from "@/lib/router"
 import { BellRing, Import, RefreshCw, ShieldCheck } from "lucide-react"
 import type { ProjectPublic, ProviderStatusPublic } from "@/api-client"
 import { Button } from "@/components/ui/button"

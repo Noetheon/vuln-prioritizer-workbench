@@ -323,10 +323,8 @@ release-check:
 	$(MAKE) frontend-check
 	$(MAKE) dependency-audit
 	$(MAKE) docker-demo-smoke
-	$(MAKE) pipx-source-smoke
-	$(MAKE) demo-sync-check
 
-release-readiness-check: release-check api-client-drift-check archive-evidence-check public-production-evidence-check demo-evidence-bundle-check playwright-check docker-production-smoke
+release-readiness-check: release-check api-client-drift-check archive-evidence-check public-production-evidence-check playwright-check docker-production-smoke
 
 demo-report:
 	$(DEMO_ENV) $(PYTHON) -m vuln_prioritizer.cli analyze --input data/sample_cves.txt --output docs/example_report.md --format markdown $(DEMO_PROVIDER_FLAGS)

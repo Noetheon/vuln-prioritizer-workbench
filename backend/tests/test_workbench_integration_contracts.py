@@ -180,7 +180,8 @@ def test_production_smoke_overlay_uses_same_origin_public_contract() -> None:
     assert "/api/v1/workbench/status" in script
     assert "VPW_PRODUCTION_SMOKE_IMPORT_TIMEOUT" in script
     assert 'f"/api/v1/runs/{run_id}"' in script
-    assert "X-CSRF-Token" in script
+    assert "locked_provider_data" in script
+    assert "reports/{report_id}/download" in script
 
 
 def test_frontend_nginx_serves_security_headers_and_same_origin_api_proxy() -> None:

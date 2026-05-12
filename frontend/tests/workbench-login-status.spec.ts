@@ -26,10 +26,12 @@ test("workbench frontend covers core Workbench E2E smoke", async ({ page }) => {
   const uiAssetName = `Playwright Asset ${testRunSuffix}`
   const editedUiAssetName = `Playwright Asset Edited ${testRunSuffix}`
 
-  await page.goto("/login")
-  await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible()
-  await expect(page.getByText("Vuln Prioritizer")).toBeVisible()
-  await expect(page.getByText("Workbench", { exact: true })).toBeVisible()
+  await page.goto("/")
+  await expect(
+    page.getByRole("heading", { exact: true, name: "Risk Operations" }),
+  ).toBeVisible()
+  await expect(page.getByLabel("Email")).toHaveCount(0)
+  await expect(page.getByLabel("Password")).toHaveCount(0)
 
   const accessToken = await login(page)
   await expect(page).toHaveURL(/\/(?:\?.*)?$/)
@@ -54,9 +56,12 @@ test("workbench frontend covers core Workbench E2E smoke", async ({ page }) => {
   }
   await expect(navigation.getByRole("link", { name: "Items" })).toHaveCount(0)
   await expect(page.getByText("Items", { exact: true })).toHaveCount(0)
-  await expect(page.getByText("Provider Freshness").first()).toBeVisible()
-  await expect(page.getByText("Evidence Readiness").first()).toBeVisible()
-  await expect(page.getByText("Data Quality", { exact: true })).toBeVisible()
+  await expect(
+    page.getByRole("link", { name: "Import findings" }).first(),
+  ).toBeVisible()
+  await expect(
+    page.getByRole("link", { name: "Generate evidence" }).first(),
+  ).toBeVisible()
 
   const headers = authHeaders(accessToken)
   const projectResponse = await page.request.post(
@@ -715,7 +720,5 @@ test("workbench frontend covers core Workbench E2E smoke", async ({ page }) => {
   ).toContainText(testUserEmail)
 
   await page.getByRole("button", { name: "Account menu" }).click()
-  await page.getByRole("menuitem", { name: "Sign out" }).click()
-  await expect(page).toHaveURL(/\/login$/)
-  await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible()
+  await expect(page.getByRole("menuitem", { name: "Sign out" })).toHaveCount(0)
 })

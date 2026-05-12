@@ -1,4 +1,4 @@
-import { Link } from "@tanstack/react-router"
+import { Link } from "@/lib/router"
 import type { FindingPublic } from "@/api-client"
 import {
   CvssBadge,

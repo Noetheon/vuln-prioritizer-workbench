@@ -239,12 +239,6 @@ test("mobile shell keeps compact health status without duplicate summary strip",
   page,
 }) => {
   await routeWorkbenchShell(page, { projects: [mockProject] })
-  await page.route("**/api/v1/api-tokens/", (route) =>
-    route.fulfill({
-      contentType: "application/json",
-      body: JSON.stringify({ data: [], count: 0 }),
-    }),
-  )
   await page.setViewportSize({ height: 844, width: 390 })
   await page.goto("/settings")
 
@@ -273,6 +267,15 @@ test("desktop shell keeps sidebar pinned while long content scrolls internally",
   await expect(
     page.getByRole("region", { name: "Workbench page content" }),
   ).toBeVisible()
+  await page.evaluate(() => {
+    const content = document.querySelector<HTMLElement>(
+      'section[aria-label="Workbench page content"]',
+    )
+    const spacer = document.createElement("div")
+    spacer.setAttribute("aria-hidden", "true")
+    spacer.style.minHeight = "1200px"
+    content?.appendChild(spacer)
+  })
 
   const metrics = await page.evaluate(() => {
     const sidebar = document.querySelector(

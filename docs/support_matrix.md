@@ -98,7 +98,8 @@ Without a matching target, the explain flow still works, but asset-context and V
 - Prefer JSON for automation.
 - Prefer `--input-format` over `auto` in CI if reproducibility matters.
 - Prefer `--html-output` when one analyze run needs both machine-readable JSON and a human-facing HTML artifact.
-- Prefer `--summary-output` when GitHub Actions, PR automation, or local review needs a compact Markdown executive summary.
+- Prefer Workbench report generation when local review needs a compact Markdown
+  executive summary.
 - Prefer `state import-snapshot` plus `state history|waivers|top-services|trends|service-history` when you need repeated local review over saved snapshots rather than another live enrichment run.
 - Prefer `report evidence-bundle` when a review board or release gate needs a reproducible offline artifact set from a saved analysis run.
 - Prefer `report verify-evidence-bundle` before shipping or archiving an evidence ZIP outside the repository or CI workspace.

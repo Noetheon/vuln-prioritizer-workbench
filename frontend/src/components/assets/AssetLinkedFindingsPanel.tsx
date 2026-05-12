@@ -1,4 +1,4 @@
-import { Link } from "@tanstack/react-router"
+import { Link } from "@/lib/router"
 import { Database, RefreshCw } from "lucide-react"
 import type { FormEvent } from "react"
 

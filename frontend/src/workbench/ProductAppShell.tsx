@@ -1,13 +1,10 @@
-import { useNavigate } from "@tanstack/react-router"
 import type { ReactNode } from "react"
 
-import {
-  LoginService,
-  type ProviderStatusPublic,
-  type UserPublic,
-  type WorkbenchStatus,
+import type {
+  ProviderStatusPublic,
+  UserPublic,
+  WorkbenchStatus,
 } from "../api-client"
-import { clearAccessToken } from "../auth"
 import { AppShell } from "../components/app/AppShell"
 import {
   dataServicesSummary,
@@ -41,23 +38,6 @@ export function ProductAppShell({
   statusError,
   title,
 }: ProductAppShellProps) {
-  const navigate = useNavigate()
-
-  async function signOut() {
-    try {
-      await LoginService.logoutCurrentToken()
-    } catch {
-      // Local logout should complete even if the server session already expired.
-    } finally {
-      clearAccessToken()
-      if (typeof window !== "undefined") {
-        window.location.assign("/login")
-      } else {
-        await navigate({ replace: true, search: {} as never, to: "/login" })
-      }
-    }
-  }
-
   return (
     <AppShell
       activePath={activePath}
@@ -66,7 +46,6 @@ export function ProductAppShell({
       healthLabel={workspaceHealthLabel(status, statusError)}
       hideStatusStrip={hideStatusStrip}
       navigation={workbenchNavigation}
-      onSignOut={signOut}
       statusItems={dataServicesSummary(status, providerStatus)}
       title={title}
     >

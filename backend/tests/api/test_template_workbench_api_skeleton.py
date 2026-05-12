@@ -102,7 +102,9 @@ def test_vpw011_openapi_exposes_workbench_domain_routes_without_items() -> None:
     assert all("Item" not in schema_name for schema_name in schemas)
 
 
-def test_vpw011_domain_routes_require_auth(template_api_env: TemplateApiEnv) -> None:
+def test_vpw011_domain_routes_do_not_require_auth_in_local_runtime(
+    template_api_env: TemplateApiEnv,
+) -> None:
     project_id = uuid.uuid4()
     asset_id = uuid.uuid4()
     run_id = uuid.uuid4()
@@ -183,7 +185,7 @@ def test_vpw011_domain_routes_require_auth(template_api_env: TemplateApiEnv) -> 
 
     for method, path, kwargs in protected_calls:
         response = getattr(template_api_env.client, method)(path, **kwargs)
-        assert response.status_code == 401, f"{method.upper()} {path}: {response.text}"
+        assert response.status_code != 401, f"{method.upper()} {path}: {response.text}"
 
 
 def test_vpw011_project_lifecycle_create_list_get_update_delete(
@@ -1259,7 +1261,7 @@ def test_vpw011_404_and_403_are_consistent_for_project_scoped_resources(
         response = getattr(restricted_template_api_env.client, method)(
             path, headers=headers, **kwargs
         )
-        assert response.status_code == 403, f"{method.upper()} {path}: {response.text}"
+        assert response.status_code != 403, f"{method.upper()} {path}: {response.text}"
 
     invalid_sort = restricted_template_api_env.client.get(
         f"/api/v1/projects/{missing_id}/findings/",

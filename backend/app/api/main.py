@@ -29,6 +29,7 @@ PUBLIC_API_ROUTE_SUFFIXES = frozenset(
     {
         "/login/access-token",
         "/workbench/health",
+        "/workbench/status",
         "/utils/health-check/",
     }
 )

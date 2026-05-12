@@ -1,48 +1,24 @@
-import type { FormEvent } from "react"
-
 import type {
-  ApiTokenCreatePublic,
-  ApiTokenPublic,
-  ProjectPublic,
   ProviderStatusPublic,
   UserPublic,
   WorkbenchStatus,
 } from "@/api-client"
 import type { VpwBadgeTone } from "@/components/vpw"
 import { formatCacheAge, providerSnapshotSummary } from "@/lib/provider-format"
-import type { ApiTokenScope } from "./settings-token-model"
 
 export type SettingsWorkbenchProps = {
   activeSettingsTab: SettingsTab
-  apiTokenActionLoading: boolean
-  apiTokenError: string
-  apiTokenMessage: string
-  apiTokenName: string
-  apiTokenProjectId: string
-  apiTokenProjectOptions: readonly ProjectPublic[]
-  apiTokenScopeOptions: readonly ApiTokenScope[]
-  apiTokenScopes: readonly ApiTokenScope[]
-  apiTokens: readonly ApiTokenPublic[]
-  apiTokensLoading: boolean
-  createdApiToken: ApiTokenCreatePublic | null
   currentUser: UserPublic | null
   providerStatus: ProviderStatusPublic | null
   providerStatusError: string
   providerStatusLoading: boolean
   status: WorkbenchStatus | null
   statusError: string
-  onClearCreatedApiToken: () => void
-  onApiTokenNameChange: (value: string) => void
-  onApiTokenProjectChange: (value: string) => void
-  onCreateApiToken: (event: FormEvent<HTMLFormElement>) => void | Promise<void>
-  onRevokeApiToken: (token: ApiTokenPublic) => void | Promise<void>
   onSettingsTabChange: (tab: SettingsTab) => void
-  onToggleApiTokenScope: (scope: ApiTokenScope) => void
 }
 
 export const settingsTabOptions = [
   { label: "Overview", value: "overview" },
-  { label: "API Tokens", value: "tokens" },
   { label: "Runtime & Providers", value: "runtime" },
   { label: "Diagnostics", value: "diagnostics" },
 ] as const
@@ -71,6 +47,20 @@ export type ProviderConfigRow = {
 
 export function userLabel(user: UserPublic | null) {
   return user?.email ?? "Loading user"
+}
+
+export function formatDateTime(value: string | null | undefined) {
+  if (!value) {
+    return "N.A."
+  }
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) {
+    return value
+  }
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(date)
 }
 
 function sourceByName(

@@ -27,7 +27,6 @@ export class ApiTokensService {
     public static listApiTokens<ThrowOnError extends boolean = true>(options?: Options<never, ThrowOnError>) {
         return (options?.client ?? client).get<GetApiV1ApiTokensResponses, unknown, ThrowOnError, 'data'>({
             responseStyle: 'data',
-            security: [{ scheme: 'bearer', type: 'http' }],
             url: '/api/v1/api-tokens/',
             ...options
         });
@@ -44,7 +43,6 @@ export class ApiTokensService {
         const params = buildClientParams([parameters], [{ args: [{ key: 'apiTokenCreate', map: 'body' }] }]);
         return (options?.client ?? client).post<PostApiV1ApiTokensResponses, PostApiV1ApiTokensErrors, ThrowOnError, 'data'>({
             responseStyle: 'data',
-            security: [{ scheme: 'bearer', type: 'http' }],
             url: '/api/v1/api-tokens/',
             ...options,
             ...params,
@@ -67,7 +65,6 @@ export class ApiTokensService {
         const params = buildClientParams([parameters], [{ args: [{ in: 'path', key: 'token_id' }] }]);
         return (options?.client ?? client).delete<DeleteApiV1ApiTokensByTokenIdResponses, DeleteApiV1ApiTokensByTokenIdErrors, ThrowOnError, 'data'>({
             responseStyle: 'data',
-            security: [{ scheme: 'bearer', type: 'http' }],
             url: '/api/v1/api-tokens/{token_id}',
             ...options,
             ...params
@@ -88,7 +85,6 @@ export class AssetsService {
         const params = buildClientParams([parameters], [{ args: [{ in: 'path', key: 'asset_id' }, { key: 'assetUpdate', map: 'body' }] }]);
         return (options?.client ?? client).patch<PatchApiV1AssetsByAssetIdResponses, PatchApiV1AssetsByAssetIdErrors, ThrowOnError, 'data'>({
             responseStyle: 'data',
-            security: [{ scheme: 'bearer', type: 'http' }],
             url: '/api/v1/assets/{asset_id}',
             ...options,
             ...params,
@@ -111,7 +107,6 @@ export class AssetsService {
         const params = buildClientParams([parameters], [{ args: [{ in: 'path', key: 'asset_id' }] }]);
         return (options?.client ?? client).post<PostApiV1AssetsByAssetIdRecalculateResponses, PostApiV1AssetsByAssetIdRecalculateErrors, ThrowOnError, 'data'>({
             responseStyle: 'data',
-            security: [{ scheme: 'bearer', type: 'http' }],
             url: '/api/v1/assets/{asset_id}/recalculate',
             ...options,
             ...params
@@ -135,7 +130,6 @@ export class AssetsService {
                 ] }]);
         return (options?.client ?? client).get<GetApiV1ProjectsByProjectIdAssetsResponses, GetApiV1ProjectsByProjectIdAssetsErrors, ThrowOnError, 'data'>({
             responseStyle: 'data',
-            security: [{ scheme: 'bearer', type: 'http' }],
             url: '/api/v1/projects/{project_id}/assets/',
             ...options,
             ...params
@@ -154,7 +148,6 @@ export class AssetsService {
         const params = buildClientParams([parameters], [{ args: [{ in: 'path', key: 'project_id' }, { key: 'assetCreate', map: 'body' }] }]);
         return (options?.client ?? client).post<PostApiV1ProjectsByProjectIdAssetsResponses, PostApiV1ProjectsByProjectIdAssetsErrors, ThrowOnError, 'data'>({
             responseStyle: 'data',
-            security: [{ scheme: 'bearer', type: 'http' }],
             url: '/api/v1/projects/{project_id}/assets/',
             ...options,
             ...params,
@@ -179,7 +172,6 @@ export class AssetsService {
         return (options?.client ?? client).post<PostApiV1ProjectsByProjectIdAssetsImportResponses, PostApiV1ProjectsByProjectIdAssetsImportErrors, ThrowOnError, 'data'>({
             ...formDataBodySerializer,
             responseStyle: 'data',
-            security: [{ scheme: 'bearer', type: 'http' }],
             url: '/api/v1/projects/{project_id}/assets/import',
             ...options,
             ...params,
@@ -210,7 +202,6 @@ export class AuditService {
                 ] }]);
         return (options?.client ?? client).get<GetApiV1AuditEventsResponses, GetApiV1AuditEventsErrors, ThrowOnError, 'data'>({
             responseStyle: 'data',
-            security: [{ scheme: 'bearer', type: 'http' }],
             url: '/api/v1/audit/events',
             ...options,
             ...params
@@ -228,7 +219,6 @@ export class AuditService {
         const params = buildClientParams([parameters], [{ args: [{ in: 'query', key: 'limit' }] }]);
         return (options?.client ?? client).get<GetApiV1AuditSessionsResponses, GetApiV1AuditSessionsErrors, ThrowOnError, 'data'>({
             responseStyle: 'data',
-            security: [{ scheme: 'bearer', type: 'http' }],
             url: '/api/v1/audit/sessions',
             ...options,
             ...params
@@ -248,7 +238,6 @@ export class FindingsService {
         const params = buildClientParams([parameters], [{ args: [{ in: 'path', key: 'finding_id' }] }]);
         return (options?.client ?? client).get<GetApiV1FindingsByFindingIdResponses, GetApiV1FindingsByFindingIdErrors, ThrowOnError, 'data'>({
             responseStyle: 'data',
-            security: [{ scheme: 'bearer', type: 'http' }],
             url: '/api/v1/findings/{finding_id}',
             ...options,
             ...params
@@ -266,7 +255,6 @@ export class FindingsService {
         const params = buildClientParams([parameters], [{ args: [{ in: 'path', key: 'finding_id' }] }]);
         return (options?.client ?? client).get<GetApiV1FindingsByFindingIdExplainResponses, GetApiV1FindingsByFindingIdExplainErrors, ThrowOnError, 'data'>({
             responseStyle: 'data',
-            security: [{ scheme: 'bearer', type: 'http' }],
             url: '/api/v1/findings/{finding_id}/explain',
             ...options,
             ...params
@@ -318,7 +306,6 @@ export class FindingsService {
                 ] }]);
         return (options?.client ?? client).get<GetApiV1ProjectsByProjectIdFindingsResponses, GetApiV1ProjectsByProjectIdFindingsErrors, ThrowOnError, 'data'>({
             responseStyle: 'data',
-            security: [{ scheme: 'bearer', type: 'http' }],
             url: '/api/v1/projects/{project_id}/findings/',
             ...options,
             ...params
@@ -358,7 +345,6 @@ export class LoginService {
     public static logoutCurrentToken<ThrowOnError extends boolean = true>(options?: Options<never, ThrowOnError>) {
         return (options?.client ?? client).post<PostApiV1LoginLogoutResponses, unknown, ThrowOnError, 'data'>({
             responseStyle: 'data',
-            security: [{ scheme: 'bearer', type: 'http' }],
             url: '/api/v1/login/logout',
             ...options
         });
@@ -372,7 +358,6 @@ export class LoginService {
     public static testToken<ThrowOnError extends boolean = true>(options?: Options<never, ThrowOnError>) {
         return (options?.client ?? client).post<PostApiV1LoginTestTokenResponses, unknown, ThrowOnError, 'data'>({
             responseStyle: 'data',
-            security: [{ scheme: 'bearer', type: 'http' }],
             url: '/api/v1/login/test-token',
             ...options
         });
@@ -388,7 +373,6 @@ export class ProjectsService {
     public static readProjects<ThrowOnError extends boolean = true>(options?: Options<never, ThrowOnError>) {
         return (options?.client ?? client).get<GetApiV1ProjectsResponses, unknown, ThrowOnError, 'data'>({
             responseStyle: 'data',
-            security: [{ scheme: 'bearer', type: 'http' }],
             url: '/api/v1/projects/',
             ...options
         });
@@ -405,7 +389,6 @@ export class ProjectsService {
         const params = buildClientParams([parameters], [{ args: [{ key: 'projectCreate', map: 'body' }] }]);
         return (options?.client ?? client).post<PostApiV1ProjectsResponses, PostApiV1ProjectsErrors, ThrowOnError, 'data'>({
             responseStyle: 'data',
-            security: [{ scheme: 'bearer', type: 'http' }],
             url: '/api/v1/projects/',
             ...options,
             ...params,
@@ -428,7 +411,6 @@ export class ProjectsService {
         const params = buildClientParams([parameters], [{ args: [{ in: 'path', key: 'project_id' }] }]);
         return (options?.client ?? client).delete<DeleteApiV1ProjectsByProjectIdResponses, DeleteApiV1ProjectsByProjectIdErrors, ThrowOnError, 'data'>({
             responseStyle: 'data',
-            security: [{ scheme: 'bearer', type: 'http' }],
             url: '/api/v1/projects/{project_id}',
             ...options,
             ...params
@@ -446,7 +428,6 @@ export class ProjectsService {
         const params = buildClientParams([parameters], [{ args: [{ in: 'path', key: 'project_id' }] }]);
         return (options?.client ?? client).get<GetApiV1ProjectsByProjectIdResponses, GetApiV1ProjectsByProjectIdErrors, ThrowOnError, 'data'>({
             responseStyle: 'data',
-            security: [{ scheme: 'bearer', type: 'http' }],
             url: '/api/v1/projects/{project_id}',
             ...options,
             ...params
@@ -465,7 +446,6 @@ export class ProjectsService {
         const params = buildClientParams([parameters], [{ args: [{ in: 'path', key: 'project_id' }, { key: 'projectUpdate', map: 'body' }] }]);
         return (options?.client ?? client).patch<PatchApiV1ProjectsByProjectIdResponses, PatchApiV1ProjectsByProjectIdErrors, ThrowOnError, 'data'>({
             responseStyle: 'data',
-            security: [{ scheme: 'bearer', type: 'http' }],
             url: '/api/v1/projects/{project_id}',
             ...options,
             ...params,
@@ -489,7 +469,6 @@ export class ProjectsService {
         const params = buildClientParams([parameters], [{ args: [{ in: 'path', key: 'project_id' }, { in: 'query', key: 'limit' }] }]);
         return (options?.client ?? client).get<GetApiV1ProjectsByProjectIdAttackSummaryResponses, GetApiV1ProjectsByProjectIdAttackSummaryErrors, ThrowOnError, 'data'>({
             responseStyle: 'data',
-            security: [{ scheme: 'bearer', type: 'http' }],
             url: '/api/v1/projects/{project_id}/attack/summary',
             ...options,
             ...params
@@ -513,7 +492,6 @@ export class ProjectsService {
                 ] }]);
         return (options?.client ?? client).get<GetApiV1ProjectsByProjectIdCompareCvssOnlyResponses, GetApiV1ProjectsByProjectIdCompareCvssOnlyErrors, ThrowOnError, 'data'>({
             responseStyle: 'data',
-            security: [{ scheme: 'bearer', type: 'http' }],
             url: '/api/v1/projects/{project_id}/compare/cvss-only',
             ...options,
             ...params
@@ -531,7 +509,6 @@ export class ProjectsService {
         const params = buildClientParams([parameters], [{ args: [{ in: 'path', key: 'project_id' }] }]);
         return (options?.client ?? client).get<GetApiV1ProjectsByProjectIdDashboardResponses, GetApiV1ProjectsByProjectIdDashboardErrors, ThrowOnError, 'data'>({
             responseStyle: 'data',
-            security: [{ scheme: 'bearer', type: 'http' }],
             url: '/api/v1/projects/{project_id}/dashboard',
             ...options,
             ...params
@@ -550,7 +527,6 @@ export class ProjectsService {
         const params = buildClientParams([parameters], [{ args: [{ in: 'path', key: 'project_id' }, { in: 'query', key: 'limit' }] }]);
         return (options?.client ?? client).get<GetApiV1ProjectsByProjectIdGovernanceRollupsResponses, GetApiV1ProjectsByProjectIdGovernanceRollupsErrors, ThrowOnError, 'data'>({
             responseStyle: 'data',
-            security: [{ scheme: 'bearer', type: 'http' }],
             url: '/api/v1/projects/{project_id}/governance/rollups/',
             ...options,
             ...params
@@ -568,7 +544,6 @@ export class ProjectsService {
         const params = buildClientParams([parameters], [{ args: [{ in: 'path', key: 'project_id' }] }]);
         return (options?.client ?? client).get<GetApiV1ProjectsByProjectIdSummaryResponses, GetApiV1ProjectsByProjectIdSummaryErrors, ThrowOnError, 'data'>({
             responseStyle: 'data',
-            security: [{ scheme: 'bearer', type: 'http' }],
             url: '/api/v1/projects/{project_id}/summary',
             ...options,
             ...params
@@ -589,7 +564,6 @@ export class GithubIssuesService {
         const params = buildClientParams([parameters], [{ args: [{ in: 'path', key: 'project_id' }, { key: 'gitHubIssueExportCreate', map: 'body' }] }]);
         return (options?.client ?? client).post<PostApiV1ProjectsByProjectIdGithubIssuesExportResponses, PostApiV1ProjectsByProjectIdGithubIssuesExportErrors, ThrowOnError, 'data'>({
             responseStyle: 'data',
-            security: [{ scheme: 'bearer', type: 'http' }],
             url: '/api/v1/projects/{project_id}/github/issues/export',
             ...options,
             ...params,
@@ -613,7 +587,6 @@ export class GithubIssuesService {
         const params = buildClientParams([parameters], [{ args: [{ in: 'path', key: 'project_id' }, { key: 'gitHubIssuePreviewCreate', map: 'body' }] }]);
         return (options?.client ?? client).post<PostApiV1ProjectsByProjectIdGithubIssuesPreviewResponses, PostApiV1ProjectsByProjectIdGithubIssuesPreviewErrors, ThrowOnError, 'data'>({
             responseStyle: 'data',
-            security: [{ scheme: 'bearer', type: 'http' }],
             url: '/api/v1/projects/{project_id}/github/issues/preview',
             ...options,
             ...params,
@@ -640,7 +613,6 @@ export class ImportsService {
         return (options?.client ?? client).post<PostApiV1ProjectsByProjectIdImportsResponses, PostApiV1ProjectsByProjectIdImportsErrors, ThrowOnError, 'data'>({
             ...formDataBodySerializer,
             responseStyle: 'data',
-            security: [{ scheme: 'bearer', type: 'http' }],
             url: '/api/v1/projects/{project_id}/imports',
             ...options,
             ...params,
@@ -665,7 +637,6 @@ export class RunsService {
         const params = buildClientParams([parameters], [{ args: [{ in: 'path', key: 'project_id' }] }]);
         return (options?.client ?? client).get<GetApiV1ProjectsByProjectIdRunsResponses, GetApiV1ProjectsByProjectIdRunsErrors, ThrowOnError, 'data'>({
             responseStyle: 'data',
-            security: [{ scheme: 'bearer', type: 'http' }],
             url: '/api/v1/projects/{project_id}/runs/',
             ...options,
             ...params
@@ -683,7 +654,6 @@ export class RunsService {
         const params = buildClientParams([parameters], [{ args: [{ in: 'path', key: 'run_id' }] }]);
         return (options?.client ?? client).get<GetApiV1RunsByRunIdResponses, GetApiV1RunsByRunIdErrors, ThrowOnError, 'data'>({
             responseStyle: 'data',
-            security: [{ scheme: 'bearer', type: 'http' }],
             url: '/api/v1/runs/{run_id}',
             ...options,
             ...params
@@ -701,7 +671,6 @@ export class RunsService {
         const params = buildClientParams([parameters], [{ args: [{ in: 'path', key: 'run_id' }] }]);
         return (options?.client ?? client).get<GetApiV1RunsByRunIdSummaryResponses, GetApiV1RunsByRunIdSummaryErrors, ThrowOnError, 'data'>({
             responseStyle: 'data',
-            security: [{ scheme: 'bearer', type: 'http' }],
             url: '/api/v1/runs/{run_id}/summary',
             ...options,
             ...params
@@ -721,7 +690,6 @@ export class WaiversService {
         const params = buildClientParams([parameters], [{ args: [{ in: 'path', key: 'project_id' }] }]);
         return (options?.client ?? client).get<GetApiV1ProjectsByProjectIdWaiversResponses, GetApiV1ProjectsByProjectIdWaiversErrors, ThrowOnError, 'data'>({
             responseStyle: 'data',
-            security: [{ scheme: 'bearer', type: 'http' }],
             url: '/api/v1/projects/{project_id}/waivers/',
             ...options,
             ...params
@@ -740,7 +708,6 @@ export class WaiversService {
         const params = buildClientParams([parameters], [{ args: [{ in: 'path', key: 'project_id' }, { key: 'waiverCreate', map: 'body' }] }]);
         return (options?.client ?? client).post<PostApiV1ProjectsByProjectIdWaiversResponses, PostApiV1ProjectsByProjectIdWaiversErrors, ThrowOnError, 'data'>({
             responseStyle: 'data',
-            security: [{ scheme: 'bearer', type: 'http' }],
             url: '/api/v1/projects/{project_id}/waivers/',
             ...options,
             ...params,
@@ -764,7 +731,6 @@ export class WaiversService {
         const params = buildClientParams([parameters], [{ args: [{ in: 'path', key: 'waiver_id' }, { key: 'waiverUpdate', map: 'body' }] }]);
         return (options?.client ?? client).patch<PatchApiV1WaiversByWaiverIdResponses, PatchApiV1WaiversByWaiverIdErrors, ThrowOnError, 'data'>({
             responseStyle: 'data',
-            security: [{ scheme: 'bearer', type: 'http' }],
             url: '/api/v1/waivers/{waiver_id}',
             ...options,
             ...params,
@@ -787,7 +753,6 @@ export class WaiversService {
         const params = buildClientParams([parameters], [{ args: [{ in: 'path', key: 'waiver_id' }] }]);
         return (options?.client ?? client).post<PostApiV1WaiversByWaiverIdExpireResponses, PostApiV1WaiversByWaiverIdExpireErrors, ThrowOnError, 'data'>({
             responseStyle: 'data',
-            security: [{ scheme: 'bearer', type: 'http' }],
             url: '/api/v1/waivers/{waiver_id}/expire',
             ...options,
             ...params
@@ -804,7 +769,6 @@ export class ProvidersService {
     public static readProviderStatus<ThrowOnError extends boolean = true>(options?: Options<never, ThrowOnError>) {
         return (options?.client ?? client).get<GetApiV1ProvidersStatusResponses, unknown, ThrowOnError, 'data'>({
             responseStyle: 'data',
-            security: [{ scheme: 'bearer', type: 'http' }],
             url: '/api/v1/providers/status',
             ...options
         });
@@ -818,7 +782,6 @@ export class ProvidersService {
     public static listProviderUpdateJobs<ThrowOnError extends boolean = true>(options?: Options<never, ThrowOnError>) {
         return (options?.client ?? client).get<GetApiV1ProvidersUpdateJobsResponses, unknown, ThrowOnError, 'data'>({
             responseStyle: 'data',
-            security: [{ scheme: 'bearer', type: 'http' }],
             url: '/api/v1/providers/update-jobs',
             ...options
         });
@@ -835,7 +798,6 @@ export class ProvidersService {
         const params = buildClientParams([parameters], [{ args: [{ key: 'providerUpdateJobCreate', map: 'body' }] }]);
         return (options?.client ?? client).post<PostApiV1ProvidersUpdateJobsResponses, PostApiV1ProvidersUpdateJobsErrors, ThrowOnError, 'data'>({
             responseStyle: 'data',
-            security: [{ scheme: 'bearer', type: 'http' }],
             url: '/api/v1/providers/update-jobs',
             ...options,
             ...params,
@@ -860,7 +822,6 @@ export class ReportsService {
         const params = buildClientParams([parameters], [{ args: [{ in: 'path', key: 'report_id' }] }]);
         return (options?.client ?? client).get<GetApiV1ReportsByReportIdDownloadResponses, GetApiV1ReportsByReportIdDownloadErrors, ThrowOnError, 'data'>({
             responseStyle: 'data',
-            security: [{ scheme: 'bearer', type: 'http' }],
             url: '/api/v1/reports/{report_id}/download',
             ...options,
             ...params
@@ -878,7 +839,6 @@ export class ReportsService {
         const params = buildClientParams([parameters], [{ args: [{ in: 'path', key: 'report_id' }] }]);
         return (options?.client ?? client).post<PostApiV1ReportsByReportIdVerifyResponses, PostApiV1ReportsByReportIdVerifyErrors, ThrowOnError, 'data'>({
             responseStyle: 'data',
-            security: [{ scheme: 'bearer', type: 'http' }],
             url: '/api/v1/reports/{report_id}/verify',
             ...options,
             ...params
@@ -896,7 +856,6 @@ export class ReportsService {
         const params = buildClientParams([parameters], [{ args: [{ in: 'path', key: 'run_id' }] }]);
         return (options?.client ?? client).get<GetApiV1RunsByRunIdReportsResponses, GetApiV1RunsByRunIdReportsErrors, ThrowOnError, 'data'>({
             responseStyle: 'data',
-            security: [{ scheme: 'bearer', type: 'http' }],
             url: '/api/v1/runs/{run_id}/reports',
             ...options,
             ...params
@@ -915,7 +874,6 @@ export class ReportsService {
         const params = buildClientParams([parameters], [{ args: [{ in: 'path', key: 'run_id' }, { key: 'reportCreate', map: 'body' }] }]);
         return (options?.client ?? client).post<PostApiV1RunsByRunIdReportsResponses, PostApiV1RunsByRunIdReportsErrors, ThrowOnError, 'data'>({
             responseStyle: 'data',
-            security: [{ scheme: 'bearer', type: 'http' }],
             url: '/api/v1/runs/{run_id}/reports',
             ...options,
             ...params,
@@ -937,7 +895,6 @@ export class UsersService {
     public static readUserMe<ThrowOnError extends boolean = true>(options?: Options<never, ThrowOnError>) {
         return (options?.client ?? client).get<GetApiV1UsersMeResponses, unknown, ThrowOnError, 'data'>({
             responseStyle: 'data',
-            security: [{ scheme: 'bearer', type: 'http' }],
             url: '/api/v1/users/me',
             ...options
         });
@@ -954,7 +911,6 @@ export class UsersService {
         const params = buildClientParams([parameters], [{ args: [{ key: 'userPasswordChange', map: 'body' }] }]);
         return (options?.client ?? client).post<PostApiV1UsersMePasswordResponses, PostApiV1UsersMePasswordErrors, ThrowOnError, 'data'>({
             responseStyle: 'data',
-            security: [{ scheme: 'bearer', type: 'http' }],
             url: '/api/v1/users/me/password',
             ...options,
             ...params,
@@ -977,7 +933,6 @@ export class UsersService {
         const params = buildClientParams([parameters], [{ args: [{ in: 'path', key: 'user_id' }] }]);
         return (options?.client ?? client).post<PostApiV1UsersByUserIdActivateResponses, PostApiV1UsersByUserIdActivateErrors, ThrowOnError, 'data'>({
             responseStyle: 'data',
-            security: [{ scheme: 'bearer', type: 'http' }],
             url: '/api/v1/users/{user_id}/activate',
             ...options,
             ...params
@@ -995,7 +950,6 @@ export class UsersService {
         const params = buildClientParams([parameters], [{ args: [{ in: 'path', key: 'user_id' }] }]);
         return (options?.client ?? client).post<PostApiV1UsersByUserIdDeactivateResponses, PostApiV1UsersByUserIdDeactivateErrors, ThrowOnError, 'data'>({
             responseStyle: 'data',
-            security: [{ scheme: 'bearer', type: 'http' }],
             url: '/api/v1/users/{user_id}/deactivate',
             ...options,
             ...params
@@ -1014,7 +968,6 @@ export class UsersService {
         const params = buildClientParams([parameters], [{ args: [{ in: 'path', key: 'user_id' }, { key: 'userPasswordReset', map: 'body' }] }]);
         return (options?.client ?? client).post<PostApiV1UsersByUserIdPasswordResetResponses, PostApiV1UsersByUserIdPasswordResetErrors, ThrowOnError, 'data'>({
             responseStyle: 'data',
-            security: [{ scheme: 'bearer', type: 'http' }],
             url: '/api/v1/users/{user_id}/password-reset',
             ...options,
             ...params,
@@ -1059,12 +1012,11 @@ export class WorkbenchService {
     /**
      * Workbench Status
      *
-     * Return authenticated active Workbench readiness and version status.
+     * Return local Workbench readiness and version status.
      */
     public static workbenchStatus<ThrowOnError extends boolean = true>(options?: Options<never, ThrowOnError>) {
         return (options?.client ?? client).get<GetApiV1WorkbenchStatusResponses, unknown, ThrowOnError, 'data'>({
             responseStyle: 'data',
-            security: [{ scheme: 'bearer', type: 'http' }],
             url: '/api/v1/workbench/status',
             ...options
         });
