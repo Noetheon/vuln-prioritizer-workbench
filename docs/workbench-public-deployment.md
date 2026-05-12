@@ -3,9 +3,11 @@
 This runbook covers the additional controls required before exposing the
 Workbench beyond a local or private single-workspace environment.
 
-Status: deployment-control runbook, not final certification. Public-production
-readiness remains gated by the VPW-AUD-999 final scorecard and the
-[Public-Production Release Evidence Ledger](./public-production-release-evidence-ledger.md).
+Status: deployment-control runbook, not a blanket certification. The historical
+VPW-AUD-999 final scorecard closed on 2026-05-08; every public or shared
+deployment still needs fresh evidence in the
+[Public-Production Release Evidence Ledger](./public-production-release-evidence-ledger.md)
+for the exact candidate and topology.
 
 ## Required Environment
 
@@ -142,7 +144,7 @@ volumes. For a rename migration, back up the old volumes with
 fresh stack with Workbench-branded volume names, then restore the backup into
 the new stack.
 
-## Rate Limits And Sessions
+## Rate Limits And Local Automation Tokens
 
 The backend enables per-process rate limiting by default:
 
@@ -160,16 +162,17 @@ are the sole public entrypoint. When configured, rate-limit buckets use the
 first `X-Forwarded-For` address only for requests received from those trusted
 proxy CIDRs. Leave it blank when the backend is reachable directly.
 
-Browser JWTs include a persisted session ID. `/api/v1/login/logout` revokes the
-current session, and revoked or expired sessions are rejected before a user is
-returned to API routes.
+The active browser Workbench is local single-user and does not require a login
+step. Legacy login/session endpoints remain backend compatibility surface, but
+they are not the current browser access model.
 
-Scoped API tokens are created after JWT login and are stored only as hashes.
-They support local automation for `read`, `write`, `import`, `report`, or
-`admin` API scopes and are rejected when revoked, expired, or tied to an
-inactive user. Tokens default to a 90-day expiry unless creation supplies a
-future `expires_at` value; API responses expose token metadata including
-`expires_at` and computed `active` state. They are not a substitute for the full
+Scoped service tokens are optional local automation credentials and are stored
+only as hashes. Normal browser/API use works without them. When an explicit
+`vpr_` bearer token is supplied, dependencies enforce `read`, `write`,
+`import`, `report`, or `admin` API scopes and reject revoked or expired tokens.
+Tokens default to a 90-day expiry unless creation supplies a future
+`expires_at` value; API responses expose token metadata including `expires_at`
+and computed `active` state. They are not a substitute for the full
 public-deployment control set documented in this runbook.
 
 For horizontally scaled deployments, replace the in-process limiter with a
@@ -180,10 +183,11 @@ a local-process safety guard rather than a distributed public-deployment quota.
 
 ## Audit And Retention
 
-The `audit_event` table records login lifecycle, project lifecycle, token
-lifecycle, imports, report create/download/verify, waivers, assets, provider
-jobs, GitHub issue exports, and retention cleanup. API token secrets and token
-hashes are never returned by audit routes.
+The `audit_event` table records legacy login lifecycle events when those
+endpoints are used, project lifecycle, token lifecycle, imports, report
+create/download/verify, waivers, assets, provider jobs, GitHub issue exports,
+and retention cleanup. API token secrets and token hashes are never returned by
+audit routes.
 
 Retention windows are configured through:
 

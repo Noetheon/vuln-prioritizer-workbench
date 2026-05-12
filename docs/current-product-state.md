@@ -65,13 +65,15 @@ manifest checks, and release-readiness automation.
 
 The current package maturity classifier is `Development Status :: 4 - Beta`.
 That means the self-hosted Workbench is release-gated for local-first
-operation, while public-production certification remains pending.
+operation, while public or shared deployments remain candidate-specific
+decisions.
 
-These gates do not by themselves certify a public internet deployment. Public
-production readiness still requires fresh evidence for the exact deployment
-candidate, including proxy/TLS topology, strict CORS and cookie behavior,
-security headers, backup/restore, schema readiness, retention, auditability,
-rate limits, and dependency/container posture.
+The historical VPW-AUD-999 final scorecard closed on 2026-05-08. That closeout
+does not by itself certify a new public internet deployment. Public deployment
+readiness still requires fresh evidence for the exact deployment candidate,
+including proxy/TLS topology, strict CORS and cookie behavior, security
+headers, backup/restore, schema readiness, retention, auditability, rate
+limits, and dependency/container posture.
 
 Historical evidence in `archive/**` is useful context and demo proof. It is not
 current release certification unless a current release or evidence page

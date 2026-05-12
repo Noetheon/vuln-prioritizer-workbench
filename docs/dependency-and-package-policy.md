@@ -124,8 +124,11 @@ be used as release evidence unless that policy changes.
 ## Container Images
 
 The checked-in Dockerfiles pin upstream base-image references with image
-digests. Keep the human-readable tag in the `FROM` line for maintenance context,
-but every base image must also include `@sha256:...`. The local guard is:
+digests. Static external service images in Compose files are also pinned by
+digest; locally built images that are parameterized through environment
+variables stay unpinned because they point at the candidate image being built.
+Keep the human-readable tag for maintenance context, but every checked external
+image must also include `@sha256:...`. The local guard is:
 
 ```bash
 make docker-base-image-check

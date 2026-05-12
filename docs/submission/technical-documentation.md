@@ -2,15 +2,15 @@
 
 ## System Overview
 
-VPW consists of a FastAPI backend, a React/Vite/TanStack Router frontend, and a
-generated API client. The active Workbench is local-first and self-hosted. The
-CLI and domain implementation remain available for automation, compatible
-reports, and maintainer workflows.
+VPW consists of a FastAPI backend, a React/Vite frontend with a local route
+adapter, and a generated API client. The active Workbench is local-first and
+self-hosted. The CLI and domain implementation remain available for automation,
+compatible reports, and maintainer workflows.
 
 | Area | Implementation |
 | --- | --- |
-| Backend | FastAPI, auth/session, SQL models, services, repositories, Alembic. |
-| Frontend | React, Vite, TypeScript, TanStack Router, VPW Design System. |
+| Backend | FastAPI, local single-user access, SQL models, services, repositories, Alembic. |
+| Frontend | React, Vite, TypeScript, local route adapter, VPW Design System. |
 | API Boundary | `frontend/src/client/**` is generated from OpenAPI. |
 | Product Logic | `frontend/src/api-client.ts` is manual wrapper code; components import services/types from the generated client but do not edit generated files manually. |
 | Package Boundary | The backend distribution intentionally ships both `app/**` and `src/vuln_prioritizer/**`. |
@@ -47,10 +47,10 @@ visible surfaces:
 - Providers and Settings: typed route containers
 - Reports / Evidence Center: `frontend/src/components/reports/EvidenceCenter.tsx`
 
-`WorkbenchShell` remains the central composition root for global session,
+`WorkbenchShell` remains the central composition root for global workspace,
 project, provider, and cross-route status data. That responsibility is
-intentionally not fully extracted so auth, project selection, API timing, and
-provider freshness stay consistent.
+intentionally not fully extracted so project selection, API timing, and provider
+freshness stay consistent.
 
 ## Data Flow
 

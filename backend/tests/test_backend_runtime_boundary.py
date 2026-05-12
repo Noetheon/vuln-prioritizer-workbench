@@ -208,6 +208,18 @@ def test_template_runtime_names_are_documented_compatibility_aliases() -> None:
     assert violations == []
 
 
+def test_container_image_digest_policy_covers_compose_service_images() -> None:
+    digest_check = _read_repo_text("scripts/check_dockerfile_base_digests.py")
+    compose = yaml.safe_load(_read_repo_text("compose.yml"))
+    traefik_compose = yaml.safe_load(_read_repo_text("compose.traefik.yml"))
+
+    assert "compose.yml" in digest_check
+    assert "compose.traefik.yml" in digest_check
+    assert "services" in digest_check
+    assert "@sha256:" in compose["services"]["db"]["image"]
+    assert "@sha256:" in traefik_compose["services"]["traefik"]["image"]
+
+
 def test_import_service_modules_do_not_import_http_or_route_boundaries() -> None:
     violations: dict[str, list[str]] = {}
     blocked_prefixes = ("fastapi", "starlette", "app.api")

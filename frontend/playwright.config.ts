@@ -43,7 +43,7 @@ export default defineConfig({
       command: `VITE_API_URL= VITE_DEV_PROXY_TARGET=${shellQuote(backendBaseUrl)} npm run dev -- --host 127.0.0.1 --port ${shellQuote(frontendPort)}`,
       reuseExistingServer,
       timeout: 120_000,
-      url: `${frontendBaseUrl}/login`,
+      url: `${frontendBaseUrl}/`,
     },
   ],
   projects: [

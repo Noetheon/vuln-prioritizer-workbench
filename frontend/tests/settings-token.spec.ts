@@ -17,6 +17,7 @@ test("workbench settings no longer exposes API token management", async ({
   ).toBeVisible()
   await expect(page.getByRole("tab", { name: "Diagnostics" })).toBeVisible()
   await expect(page).toHaveURL(/\/settings(?:\?[^#]*)?$/)
+  expect(new URL(page.url()).searchParams.has("tab")).toBe(false)
 
   await expect(page.getByRole("tab", { name: "API Tokens" })).toHaveCount(0)
   await expect(

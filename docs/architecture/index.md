@@ -78,7 +78,12 @@ data mutable.
 
 The current web/API import path uses the same local input-format matrix as the CLI for single-upload and multi-upload imports: CVE lists, generic occurrence CSV, Trivy JSON, Grype JSON, Dependency-Check JSON, GitHub alerts JSON, CycloneDX JSON, SPDX JSON, Nessus XML, and OpenVAS XML. XML support remains safe local parsing of exported findings only; the Workbench does not scan systems.
 
-The Workbench threat model and readiness checklist are maintained in [workbench-threat-model.md](../workbench-threat-model.md). The current architecture includes local JWT browser sessions and scoped API tokens, assumes a trusted local operator, supports SQLite default storage, and does not certify public-internet exposure until the shared-deployment controls are configured and verified.
+The Workbench threat model and readiness checklist are maintained in
+[workbench-threat-model.md](../workbench-threat-model.md). The current
+architecture uses local single-user browser access with optional scoped service
+tokens for explicit automation, assumes a trusted local operator, supports
+SQLite default storage, and does not certify public-internet exposure until the
+shared-deployment controls are configured and verified for the exact candidate.
 
 The current project access decision is documented in
 [VPW-029 Access Model and Admin Tokens](vpw-029-access-model-and-admin-tokens.md):
@@ -218,8 +223,8 @@ evidence-bundle inclusion behavior is documented in
 The finding-scoped provider data-quality flags and confidence behavior are
 documented in
 [VPW-027 Provider Data Quality Flags](vpw-027-provider-data-quality-flags.md).
-The template-stack authenticated provider status API and React status-card
-evidence expectations are documented in
+The Workbench provider status API and React status-card evidence expectations
+are documented in
 [VPW-028 Provider Status API Card](vpw-028-provider-status-api-card.md).
 
 The current `data` command tree is intentionally small:

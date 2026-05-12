@@ -1,6 +1,6 @@
 services:
   traefik:
-    image: traefik:3.6
+    image: traefik:3.6@sha256:de16063bdcee0ae14c1cfaa3fcbc8a6c8afb36a2e467a707cdbc2598951e3527
     restart: always
     ports:
       - "80:80"

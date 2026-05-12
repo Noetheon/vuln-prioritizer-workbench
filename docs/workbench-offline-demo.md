@@ -58,7 +58,7 @@ If `pip-audit`, npm, or advisory data is unavailable, record that as a release-c
 | Upload filename/path validation | `tests/api/test_template_import_upload_api.py` covers active `/api/v1` upload size, suffix, MIME, path, and provider snapshot validation. |
 | Report/evidence downloads | `tests/api/test_template_reports_api.py`; browser evidence should show report links and Evidence ZIP verification. |
 | 10k findings API smoke | `make performance-smoke` runs the active Workbench import and pagination smoke with 10,000 findings. |
-| Docker demo smoke | `make docker-demo-smoke` output showing `/api/v1/utils/health-check/` succeeds, the Compose Postgres Alembic/schema/repository smoke passes, and the authenticated import/provider smoke tears down cleanly. |
+| Docker demo smoke | `make docker-demo-smoke` output showing `/api/v1/utils/health-check/` succeeds, the Compose Postgres Alembic/schema/repository smoke passes, and the local import/provider smoke tears down cleanly. |
 | Dependency audit | `make dependency-audit` result for the backend Python lock and frontend production dependencies, or a documented exception when audit tooling or advisory data is unavailable. |
 | Demo evidence bundle | `make demo-evidence-bundle-check` output plus `build/v1.0-demo-evidence-bundle-verification.json` showing `ok=true`. |
 | Provider test matrix | `make provider-testmatrix` plus `archive/vpw-evidence/vpw-029-provider-testmatrix.md`. |
