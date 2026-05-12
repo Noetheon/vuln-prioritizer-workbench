@@ -38,7 +38,8 @@ candidate-specific public deployment scorecard.
 
 - [x] Package version, tag target, release notes, and public docs use `v1.1.0` for the package release; Workbench `v1.0.0` remains milestone evidence only.
 - [x] Release scope is described as a local-first self-hosted Workbench for prioritizing known CVEs and imported findings.
-- [x] SQLite-backed single-node Workbench operation is documented as the default runtime model.
+- [x] Single-node Workbench operation is documented for local SQLite developer
+  runs and the private Compose Postgres quickstart.
 - [x] Public docs identify live provider use, local cache use, and locked provider snapshot replay as distinct modes.
 - [x] Workbench docs identify evidence bundles as integrity artifacts, not encrypted archives.
 
@@ -111,8 +112,8 @@ Capture screenshots from the same release candidate that produced the evidence b
 - [x] Dashboard with priority counts and provider freshness visible.
 - [x] Findings table with filters applied.
 - [x] Finding detail page showing priority rationale, CVSS, EPSS, KEV, component, asset, owner, and raw evidence.
-- [x] Vulnerability Intelligence or equivalent lookup page showing stored provider data.
-- [x] Settings or runtime status page showing secret redaction.
+- [x] Providers page showing provider status, cache state, snapshot state, and data-quality notes.
+- [x] Settings page showing local runtime and provider diagnostics without secret values.
 - [x] Reports page showing generated JSON, Markdown, HTML, and Evidence ZIP artifacts.
 - [x] Evidence ZIP verification result.
 - [x] README media links point to the current checked-in Workbench screenshots:
@@ -209,7 +210,8 @@ The v1.0 release must keep these boundaries visible in docs, UI copy, examples, 
 - [x] SSO, multi-user isolation, RBAC, API tokens, and ticket sync remain outside
   the local Workbench scope unless explicitly shipped; the earlier API-token
   track has since been removed from the active product path.
-- [x] SQLite backup, retention, filesystem permissions, and local disk protection remain operator responsibilities.
+- [x] SQLite/Postgres backup, retention, volume permissions, and local disk
+  protection remain operator responsibilities.
 - [x] Evidence bundles provide integrity checks but not encryption.
 - [x] Imported scanner exports may contain sensitive hostnames, package paths, image names, services, owners, and environment labels.
 - [x] Live provider availability and advisory feeds may fail or be rate-limited; locked snapshots are the reproducible demo path.
