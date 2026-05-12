@@ -55,9 +55,11 @@ curl http://127.0.0.1:8000/api/v1/workbench/health
 ```
 
 Open `http://127.0.0.1:5173`, create or select a project, and import
-`data/sample_cves.txt` with `data/demo_provider_snapshot.json` plus locked
-provider data enabled. The current local Workbench is single-user and does not
-require a login step. This path works without live provider API keys.
+`data/sample_cves.txt`. In the provider snapshot field, enter
+`demo_provider_snapshot.json` and enable locked provider data. The checked-in
+snapshot source is `data/demo_provider_snapshot.json`. The current local
+Workbench is single-user and does not require a login step. This path works
+without live provider API keys.
 
 The Compose path starts the current FastAPI backend and React frontend. The
 Workbench remains local-first and uses the import-format matrix documented in
