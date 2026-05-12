@@ -1,3 +1,5 @@
+import { FileJson } from "lucide-react"
+import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
   Select,
@@ -8,7 +10,10 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { VpwField, VpwPanel, VpwSectionHeader } from "@/components/vpw"
-import { attackImportSourceOptions } from "@/lib/app-defaults"
+import {
+  attackImportSourceOptions,
+  demoProviderSnapshotFile,
+} from "@/lib/app-defaults"
 import type { ImportsWorkbenchProps } from "./imports-workbench-model"
 
 export function ProviderAttackOptions({
@@ -18,6 +23,7 @@ export function ProviderAttackOptions({
   onAttackTechniqueMetadataFileChange,
   onLockedProviderDataChange,
   onProviderSnapshotFileChange,
+  onUseDemoProviderSnapshot,
 }: Pick<
   ImportsWorkbenchProps,
   | "importWizard"
@@ -26,6 +32,7 @@ export function ProviderAttackOptions({
   | "onAttackTechniqueMetadataFileChange"
   | "onLockedProviderDataChange"
   | "onProviderSnapshotFileChange"
+  | "onUseDemoProviderSnapshot"
 >) {
   return (
     <VpwPanel className="flex flex-col gap-4 border-[var(--vpw-border-default)] bg-[var(--vpw-bg-card)] p-4">
@@ -35,19 +42,31 @@ export function ProviderAttackOptions({
       />
       <div className="grid gap-4 lg:grid-cols-2">
         <VpwField
-          description="Filename under the configured provider snapshot directory, for example demo_provider_snapshot.json."
+          description={`Filename under the configured provider snapshot directory, for example ${demoProviderSnapshotFile}.`}
           htmlFor="provider-snapshot-file"
           label="Provider snapshot file"
         >
-          <Input
-            id="provider-snapshot-file"
-            name="providerSnapshotFile"
-            onChange={(event) =>
-              onProviderSnapshotFileChange(event.target.value)
-            }
-            placeholder="demo_provider_snapshot.json"
-            value={importWizard.providerSnapshotFile}
-          />
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <Input
+              id="provider-snapshot-file"
+              name="providerSnapshotFile"
+              onChange={(event) =>
+                onProviderSnapshotFileChange(event.target.value)
+              }
+              placeholder={demoProviderSnapshotFile}
+              value={importWizard.providerSnapshotFile}
+            />
+            <Button
+              className="sm:w-auto"
+              onClick={onUseDemoProviderSnapshot}
+              size="sm"
+              type="button"
+              variant="outline"
+            >
+              <FileJson aria-hidden="true" data-icon="inline-start" />
+              Use demo snapshot
+            </Button>
+          </div>
         </VpwField>
         <label
           className="flex min-h-10 items-start gap-3 rounded-[var(--vpw-radius-md)] border border-[var(--vpw-border-default)] bg-[var(--vpw-bg-panel)] p-3 text-sm"
