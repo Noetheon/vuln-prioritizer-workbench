@@ -201,6 +201,24 @@ def test_docs_examples_do_not_use_template_named_artifacts() -> None:
     assert template_named_examples == []
 
 
+def test_workbench_demo_docs_use_managed_snapshot_filename_in_import_field() -> None:
+    active_demo_docs = {
+        "README.md": README_FILE,
+        "docs/index.md": REPO_ROOT / "docs" / "index.md",
+        "docs/workbench-offline-demo.md": WORKBENCH_OFFLINE_DEMO_FILE,
+    }
+    violations = {
+        name: [
+            line
+            for line in path.read_text(encoding="utf-8").splitlines()
+            if "provider snapshot" in line.lower() and "data/demo_provider_snapshot.json" in line
+        ]
+        for name, path in active_demo_docs.items()
+    }
+
+    assert violations == {name: [] for name in active_demo_docs}
+
+
 def test_gitignore_covers_workbench_runtime_artifacts() -> None:
     gitignore = (REPO_ROOT / ".gitignore").read_text(encoding="utf-8")
     required_runtime_roots = {

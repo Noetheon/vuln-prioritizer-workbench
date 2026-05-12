@@ -38,7 +38,8 @@ If `pip-audit`, npm, or advisory data is unavailable, record that as a release-c
 1. Open **Import**.
 2. Select `CVE list`.
 3. Upload `data/sample_cves.txt`.
-4. Set provider snapshot to `data/demo_provider_snapshot.json`.
+4. Set provider snapshot to `demo_provider_snapshot.json`; the checked-in source
+   file is `data/demo_provider_snapshot.json`.
 5. Enable locked provider data.
 6. Submit the import and open the generated reports page.
 7. Return to the dashboard and confirm provider freshness is visible.
