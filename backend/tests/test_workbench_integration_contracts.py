@@ -169,9 +169,15 @@ def test_production_smoke_overlay_uses_same_origin_public_contract() -> None:
     assert backend_env["BACKEND_CORS_ORIGINS"] == "https://workbench.example.test"
     assert backend_env["ALLOWED_HOSTS"] == "workbench.example.test,api.workbench.example.test"
     assert frontend_args["VITE_API_URL"] == ""
-    assert compose["services"]["frontend"]["ports"] == ["127.0.0.1:5180:8080"]
+    assert compose["services"]["frontend"]["ports"] == [
+        "127.0.0.1:${PRODUCTION_SMOKE_FRONTEND_PORT:-5180}:8080"
+    ]
     assert "docker-production-smoke:" in makefile
+    assert "PRODUCTION_SMOKE_FRONTEND_PORT ?= 5180" in makefile
     assert "$(PRODUCTION_SMOKE_COMPOSE) exec -T backend python -m app.core.schema_smoke" in (
+        makefile
+    )
+    assert 'VPW_PRODUCTION_SMOKE_BASE_URL="http://127.0.0.1:$$PRODUCTION_SMOKE_FRONTEND_PORT"' in (
         makefile
     )
     assert "$(PYTHON) scripts/production_readiness_smoke.py" in makefile

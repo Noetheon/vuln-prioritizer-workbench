@@ -32,7 +32,7 @@ export function SettingsHero({
   )
 
   return (
-    <VpwSection aria-label="User Settings">
+    <VpwSection aria-label="Workspace settings">
       <div className="flex flex-col gap-4 border-b border-[var(--vpw-border-default)] pb-4 lg:flex-row lg:items-end lg:justify-between">
         <div className="min-w-0">
           <p className="vpw-label text-[var(--vpw-teal)]">Settings console</p>
@@ -51,7 +51,7 @@ export function SettingsHero({
       </div>
       <div className="mt-3 flex min-w-0 flex-wrap gap-2">
         <SettingsHeroFact
-          label="Account"
+          label="Workspace"
           tone={currentUser ? "success" : "warning"}
           value={userLabel(currentUser)}
         />

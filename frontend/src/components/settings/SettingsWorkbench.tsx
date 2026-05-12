@@ -1,11 +1,11 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { VpwPageContainer } from "@/components/vpw"
 import {
-  SettingsAccountHealth,
   SettingsAlerts,
   SettingsHero,
   SettingsDiagnostics,
   SettingsRuntimeProviders,
+  SettingsWorkspaceHealth,
 } from "./SettingsWorkbenchSections"
 import {
   normalizeSettingsTab,
@@ -53,7 +53,7 @@ export function SettingsWorkbench(props: SettingsWorkbenchProps) {
         </div>
 
         <TabsContent className="mt-5" value="overview">
-          <SettingsAccountHealth
+          <SettingsWorkspaceHealth
             currentUser={props.currentUser}
             providerStatus={props.providerStatus}
             providerStatusError={props.providerStatusError}

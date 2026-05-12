@@ -57,16 +57,16 @@ make release-readiness-check
 This adds generated-client drift, archive binary evidence validation, public
 deployment evidence contract validation, demo evidence-bundle verification, and
 Playwright smoke evidence to the normal release gate. It also runs the
-production-like Docker smoke. It does not by itself close the VPW-AUD-999 final
-scorecard because live public TLS/header evidence still has to be captured for
-the exact deployed candidate.
+production-like Docker smoke. It does not by itself certify a public deployment:
+live public TLS/header evidence still has to be captured for the exact deployed
+candidate.
 For tagged releases, `.github/workflows/release.yml` runs this gate before any
 GitHub Release or PyPI publish job can proceed.
 
-For VPW-AUD-999, do not reuse historical PP artifacts or local ignored build
-outputs as final evidence. Link fresh output or CI artifacts for the exact
-commit, tag, or release candidate, and confirm every category scorecard is
-closed before recording the final residual-risk decision.
+The VPW-AUD-999 final scorecard closed on 2026-05-08, but historical PP
+artifacts or local ignored build outputs must not be reused as current release
+evidence. Link fresh output or CI artifacts for the exact commit, tag, or
+release candidate before recording the final residual-risk decision.
 
 4. Record the readiness evidence with owner-facing fields:
 
@@ -230,13 +230,13 @@ the full Playwright suite. Docs/archive-only PRs still get an explicit
 successful skip.
 
 The Docker workflow runs `make docker-demo-smoke` and
-`make docker-production-smoke` for backend, Compose, Docker, dependency, runtime
-script, frontend build-config, and Docker workflow changes. Those smokes cover
-health, login, authenticated readiness, locked-provider import, findings,
+`make docker-production-smoke` for backend, Compose, Docker, dependency,
+runtime script, frontend build-config, and Docker workflow changes. Those
+smokes cover health, local readiness, locked-provider import, findings,
 provider status, Postgres Alembic/schema/repository readiness, same-origin
-production routing, CSRF/session controls, report download, and logout
-revocation. Docs/archive-only PRs still get an explicit successful skip, and
-failures print compose status/logs.
+production routing, security headers, report download, and path redaction.
+Docs/archive-only PRs still get an explicit successful skip, and failures print
+compose status/logs.
 
 Pushes to `main` run the post-merge version of the same CI workflows. Manual
 `workflow_dispatch` remains available for full validation of CI, Docker,

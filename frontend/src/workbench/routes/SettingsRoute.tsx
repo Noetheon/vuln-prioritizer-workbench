@@ -1,3 +1,4 @@
+import { useEffect } from "react"
 import { useLocation, useNavigate } from "@/lib/router"
 import { SettingsRouteContainer } from "../../components/settings/SettingsRouteContainer"
 import {
@@ -18,11 +19,21 @@ function SettingsRouteContent() {
     statusError,
   } = useWorkbenchContext()
   const routeSearch = activeSearchString(location.searchStr)
-  const activeSettingsTab = normalizeSettingsTab(
-    new URLSearchParams(
-      routeSearch.startsWith("?") ? routeSearch.slice(1) : routeSearch,
-    ).get("tab"),
-  )
+  const rawSettingsTab = new URLSearchParams(
+    routeSearch.startsWith("?") ? routeSearch.slice(1) : routeSearch,
+  ).get("tab")
+  const activeSettingsTab = normalizeSettingsTab(rawSettingsTab)
+
+  useEffect(() => {
+    if (!rawSettingsTab || rawSettingsTab === activeSettingsTab) {
+      return
+    }
+    void navigate({
+      replace: true,
+      search: settingsRouteSearch(routeSearch, activeSettingsTab),
+      to: "/settings",
+    })
+  }, [activeSettingsTab, navigate, rawSettingsTab, routeSearch])
 
   function updateSettingsTab(tab: SettingsTab) {
     void navigate({

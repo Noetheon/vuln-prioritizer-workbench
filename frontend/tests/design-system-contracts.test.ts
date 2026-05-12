@@ -160,7 +160,6 @@ test("domain styles do not target shadcn internals or global elements", () => {
     "src/styles/finding-detail-decision.css",
     "src/styles/finding-detail-evidence.css",
     "src/styles/finding-detail-ttp-history.css",
-    "src/styles/login.css",
   ]
   const forbiddenPattern =
     /(?:^\s*(?:(?:table|thead|tbody|tr|th|td|input|select|textarea|button)\b|\[data-slot|[^\n{]*\[role=|[^\n{]*:nth-child)|(?:^|[\s>,+~])(?:table|thead|tbody|tr|th|td)(?=[\s.#:[>,{]))/m

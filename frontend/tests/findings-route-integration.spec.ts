@@ -36,9 +36,8 @@ test("findings route renders the empty live queue without demo data", async ({
   const sidebar = page.getByLabel("Workbench sidebar")
   await expect(sidebar).toHaveCSS("width", "248px")
   await expect(page.getByText("Sign out")).toHaveCount(0)
-  await page.getByRole("button", { name: "Account menu" }).click()
+  await expect(page.getByLabel("Local workspace status")).toBeVisible()
   await expect(page.getByRole("menuitem", { name: "Sign out" })).toHaveCount(0)
-  await page.keyboard.press("Escape")
   await page.getByRole("button", { name: "Collapse sidebar" }).click()
   await expect(sidebar).toHaveCSS("width", "72px")
   await expect(
@@ -78,6 +77,22 @@ test("projects route surfaces partial summary failures", async ({ page }) => {
   await expect(
     page.getByRole("heading", { level: 1, name: "Projects" }),
   ).toBeVisible()
+})
+
+test("providers route shows provider failures without placeholder source rows", async ({
+  page,
+}) => {
+  await routeWorkbenchShell(page, { providerStatusError: true })
+
+  await page.goto("/providers")
+
+  await expect(page.getByText("Provider data unavailable")).toBeVisible()
+  await expect(
+    page.getByRole("table", { name: "Provider sources" }),
+  ).toHaveCount(0)
+  await expect(page.getByText("NVD source")).toHaveCount(0)
+  await expect(page.getByText("EPSS provider")).toHaveCount(0)
+  await expect(page.getByText("KEV provider")).toHaveCount(0)
 })
 
 test("finding detail API errors do not fall back to demo findings", async ({

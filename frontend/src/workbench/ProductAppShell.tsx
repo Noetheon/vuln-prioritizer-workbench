@@ -2,7 +2,6 @@ import type { ReactNode } from "react"
 
 import type {
   ProviderStatusPublic,
-  UserPublic,
   WorkbenchStatus,
 } from "../api-client"
 import { AppShell } from "../components/app/AppShell"
@@ -18,7 +17,6 @@ import {
 type ProductAppShellProps = {
   activePath: WorkbenchPath | null
   children: ReactNode
-  currentUser: UserPublic | null
   eyebrow: string
   hideStatusStrip?: boolean
   providerStatus: ProviderStatusPublic | null
@@ -30,7 +28,6 @@ type ProductAppShellProps = {
 export function ProductAppShell({
   activePath,
   children,
-  currentUser,
   eyebrow,
   hideStatusStrip = false,
   providerStatus,
@@ -41,19 +38,15 @@ export function ProductAppShell({
   return (
     <AppShell
       activePath={activePath}
-      currentUserLabel={currentUserLabel(currentUser)}
       eyebrow={eyebrow}
       healthLabel={workspaceHealthLabel(status, statusError)}
       hideStatusStrip={hideStatusStrip}
       navigation={workbenchNavigation}
       statusItems={dataServicesSummary(status, providerStatus)}
       title={title}
+      workspaceLabel="Local workspace"
     >
       {children}
     </AppShell>
   )
-}
-
-function currentUserLabel(user: UserPublic | null) {
-  return user?.email ?? "Local workspace"
 }

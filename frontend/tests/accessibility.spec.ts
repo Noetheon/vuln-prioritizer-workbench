@@ -123,7 +123,7 @@ test("local Workbench entry has no credential failure state", async ({
   await expectNoSeriousA11yViolations(page, "local Workbench entry")
 })
 
-test("authenticated shell exposes landmarks and account controls", async ({
+test("local shell exposes landmarks and workspace controls", async ({
   page,
 }) => {
   await login(page)
@@ -132,14 +132,14 @@ test("authenticated shell exposes landmarks and account controls", async ({
   await expect(
     page.getByRole("navigation", { name: "Workbench navigation" }),
   ).toBeVisible()
-  await expect(page.getByRole("button", { name: "Account menu" })).toBeVisible()
+  await expect(page.getByLabel("Local workspace status")).toBeVisible()
   await expect(
     page
       .getByRole("navigation", { name: "Workbench navigation" })
       .getByRole("link", { exact: true, name: "Findings" }),
   ).toBeVisible()
 
-  await expectNoSeriousA11yViolations(page, "authenticated shell")
+  await expectNoSeriousA11yViolations(page, "local shell")
   await page.keyboard.press("Tab")
   await expectFocusedElementVisible(page)
 })

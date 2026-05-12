@@ -21,7 +21,8 @@ export function ProvidersWorkbench({
   providerStatusError,
   providerStatusLoading,
 }: ProvidersWorkbenchProps) {
-  const rows = sourceRows(providerStatus)
+  const showProviderDetails = !providerStatusError
+  const rows = showProviderDetails ? sourceRows(providerStatus) : []
   const counts = providerSourceCounts(rows)
 
   return (
@@ -37,21 +38,25 @@ export function ProvidersWorkbench({
         providerStatusError={providerStatusError}
         providerStatusLoading={providerStatusLoading}
       />
-      <ProviderMetricsGrid counts={counts} providerStatus={providerStatus} />
-      <ProviderSourcesTable
-        onRefreshProviderStatus={onRefreshProviderStatus}
-        providerStatusLoading={providerStatusLoading}
-        rows={rows}
-      />
-      <ProviderSnapshotDetails
-        onRefreshProviderStatus={onRefreshProviderStatus}
-        providerStatus={providerStatus}
-        rows={rows}
-      />
-      <ProviderDataQualitySection
-        counts={counts}
-        providerStatus={providerStatus}
-      />
+      {showProviderDetails ? (
+        <>
+          <ProviderMetricsGrid counts={counts} providerStatus={providerStatus} />
+          <ProviderSourcesTable
+            onRefreshProviderStatus={onRefreshProviderStatus}
+            providerStatusLoading={providerStatusLoading}
+            rows={rows}
+          />
+          <ProviderSnapshotDetails
+            onRefreshProviderStatus={onRefreshProviderStatus}
+            providerStatus={providerStatus}
+            rows={rows}
+          />
+          <ProviderDataQualitySection
+            counts={counts}
+            providerStatus={providerStatus}
+          />
+        </>
+      ) : null}
     </VpwPageContainer>
   )
 }

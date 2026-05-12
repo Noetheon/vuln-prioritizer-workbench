@@ -17,7 +17,6 @@ type WorkbenchShellProps = {
 function WorkbenchShellFrame({ children, routePath }: WorkbenchShellProps) {
   const location = useLocation()
   const {
-    currentUser,
     providerStatus,
     status,
     statusError,
@@ -31,7 +30,6 @@ function WorkbenchShellFrame({ children, routePath }: WorkbenchShellProps) {
   return (
     <ProductAppShell
       activePath={activeRoutePath}
-      currentUser={currentUser}
       eyebrow={routeDetail.eyebrow}
       hideStatusStrip
       providerStatus={providerStatus}

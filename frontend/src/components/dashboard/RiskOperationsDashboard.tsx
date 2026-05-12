@@ -264,7 +264,9 @@ export function RiskOperationsDashboard({
           <span className="text-sm font-semibold">
             {effectiveSummary?.latest_run_id
               ? `Run ${effectiveSummary.latest_run_id.slice(0, 8)}`
-              : "Pending"}
+              : latestRun
+                ? latestRunLabel(latestRun)
+                : "No runs"}
           </span>
         ),
       },

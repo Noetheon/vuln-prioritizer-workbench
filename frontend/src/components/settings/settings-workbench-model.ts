@@ -46,7 +46,7 @@ export type ProviderConfigRow = {
 }
 
 export function userLabel(user: UserPublic | null) {
-  return user?.email ?? "Loading user"
+  return user?.is_active ? "Local workspace" : "Checking workspace"
 }
 
 export function formatDateTime(value: string | null | undefined) {

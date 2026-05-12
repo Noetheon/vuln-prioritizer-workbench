@@ -30,7 +30,7 @@ services:
   frontend:
     restart: "no"
     ports:
-      - "127.0.0.1:5180:8080"
+      - "127.0.0.1:${PRODUCTION_SMOKE_FRONTEND_PORT:-5180}:8080"
     build:
       args:
         VITE_API_URL: ""

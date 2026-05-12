@@ -236,14 +236,16 @@ package validation.
 
 The Python package metadata uses `Development Status :: 4 - Beta` for the
 current artifact: the self-hosted Workbench is release-gated for local-first
-operation, but the project does not yet claim public-production certification.
+operation, while public or shared deployments still require candidate-specific
+evidence for the exact release and environment.
 
-Public-production readiness is still tracked as explicit VPW-AUD-999 evidence
-work.
-Do not treat this README, the local Workbench quickstart, or local release gates
-as a final internet-facing certification until
-[VPW-AUD-999](https://github.com/Noetheon/vuln-prioritizer-workbench/issues/430)
-closes with evidence.
+The historical
+[VPW-AUD-999 final scorecard](https://github.com/Noetheon/vuln-prioritizer-workbench/issues/430)
+closed on 2026-05-08. That closeout is not a blanket certification for every
+future deployment. Treat this README, the local Workbench quickstart, and local
+release gates as local/self-hosted launch evidence unless the current release
+ledger records fresh public TLS, header, Docker, dependency, and residual-risk
+evidence for the exact candidate.
 
 ## GitHub Community Health
 
