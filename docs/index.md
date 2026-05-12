@@ -1,8 +1,9 @@
 # vuln-prioritizer
 
-`vuln-prioritizer` is a local-first CLI and self-hosted Workbench for
-prioritizing known CVEs with transparent scoring from `CVSS + EPSS + KEV`, plus
-optional ATT&CK, asset-context, VEX, waiver, report, and evidence layers.
+`vuln-prioritizer` is a local-first Workbench for prioritizing known CVEs with
+transparent scoring from `CVSS + EPSS + KEV`, plus optional ATT&CK,
+asset-context, VEX, waiver, report, and evidence layers. New product work
+starts from the FastAPI/React Workbench.
 
 ## Public Docs
 
@@ -30,11 +31,12 @@ submission material.
 
 ## What It Does
 
-- accepts plain CVE lists plus scanner and SBOM JSON inputs
+- accepts plain CVE lists plus scanner and SBOM JSON inputs through the Workbench
 - keeps the default priority decision rule-based and explainable
 - adds CTID/MITRE ATT&CK context without heuristic CVE-to-ATT&CK guesses
-- renders terminal, Markdown, JSON, SARIF, and static HTML outputs
-- supports local cache inspection and refresh workflows for reproducibility
+- renders Markdown, JSON, SARIF, static HTML, and evidence-bundle outputs where
+  the active Workbench supports them
+- supports local provider status and refresh workflows for reproducibility
 - runs a local Workbench with API, browser UI, imports, reports, evidence
   bundles, governance context, and ATT&CK coverage views
 
@@ -44,42 +46,6 @@ For a complete external-user path across install, Docker, Workbench demo,
 architecture, scoring, providers, reports, ATT&CK, security, and known
 limitations, start with the [User Documentation Guide](user_documentation.md).
 
-- Works after a public install: examples that use files you create or already have locally, such as `cves.txt`, `trivy-results.json`, `analysis.json`, or `report.html`.
-- Requires local ATT&CK data files: examples that use `--attack-mapping-file` and `--attack-technique-metadata-file`.
-- Repo checkout only: examples that use `data/...` or `make ...` in this repository.
-
-Baseline analysis:
-
-```bash
-printf 'CVE-2021-44228\nCVE-2024-3094\n' > cves.txt
-vuln-prioritizer analyze --input cves.txt
-```
-
-Scanner-native analysis:
-
-```bash
-vuln-prioritizer analyze \
-  --input trivy-results.json \
-  --input-format trivy-json \
-  --format json \
-  --output analysis.json
-```
-
-ATT&CK-aware analysis with your own local mapping files:
-
-```bash
-vuln-prioritizer analyze \
-  --input cves.txt \
-  --format markdown \
-  --output attack-report.md \
-  --attack-source ctid-json \
-  --attack-mapping-file ./attack-mapping.json \
-  --attack-technique-metadata-file ./attack-techniques.json
-```
-
-The documented default ATT&CK workflow is `ctid-json`. The older `local-csv` mode remains available only as a compatibility fallback.
-If you are working from a repository checkout, the checked-in demo ATT&CK files live under `data/attack/`; they are not installed by `pipx`.
-
 Local Workbench from a repository checkout:
 
 ```bash
@@ -88,10 +54,10 @@ docker compose -f compose.yml -f compose.override.yml up --build backend fronten
 curl http://127.0.0.1:8000/api/v1/workbench/health
 ```
 
-Open `http://127.0.0.1:5173`, sign in with the local `.env.example` defaults,
-create a project, and import `data/sample_cves.txt` with
-`demo_provider_snapshot.json` plus locked provider data enabled. This path works
-without live provider API keys.
+Open `http://127.0.0.1:5173`, create or select a project, and import
+`data/sample_cves.txt` with `demo_provider_snapshot.json` plus locked provider
+data enabled. The current local Workbench is single-user and does not require a
+login step. This path works without live provider API keys.
 
 The Compose path starts the current FastAPI backend and React frontend. The
 Workbench remains local-first and uses the import-format matrix documented in
@@ -122,7 +88,7 @@ Workbench remains local-first and uses the import-format matrix documented in
 - Use [architecture/index.md](architecture/index.md), [architecture/core-workbench-schema.md](architecture/core-workbench-schema.md), and [architecture/analysis-run-provider-schema.md](architecture/analysis-run-provider-schema.md) for architecture and data-model details.
 - Use [asset-context-csv.md](asset-context-csv.md) for the local asset-context CSV schema, match modes, precedence, and re-score semantics.
 - Use [playbooks.md](playbooks.md) when you want the shortest role-oriented path for CI scans, SBOM triage, or infrastructure scan triage.
-- Use [integrations/reporting_and_ci.md](integrations/reporting_and_ci.md) for SARIF, GitHub Action, HTML, and local workflow guidance.
+- Use [integrations/reporting_and_ci.md](integrations/reporting_and_ci.md) for SARIF, HTML, and local workflow guidance.
 - Use [workbench-threat-model.md](workbench-threat-model.md) for Workbench security boundaries, residual risk, and release readiness checks.
 - Use [workbench-offline-demo.md](workbench-offline-demo.md) only when you need
   the older locked-provider demo runbook.
@@ -134,9 +100,7 @@ Workbench remains local-first and uses the import-format matrix documented in
 - Use [github-open-source-readiness.md](github-open-source-readiness.md) for
   public GitHub entrypoints, community health files, issue/PR routing, and
   repository-setting checks.
-- Use [public-production-release-evidence-ledger.md](public-production-release-evidence-ledger.md)
-  for VPW-AUD release-readiness targets, evidence boundaries, and residual-risk
-  tracking through the final release-readiness scorecard.
+- Use [public-production-release-evidence-ledger.md](public-production-release-evidence-ledger.md) only when explicitly working on public/shared deployment evidence. It is not part of the normal local Workbench development path or release-readiness path.
 - Use [community_repository_setup.md](community_repository_setup.md) for maintainer-facing public repo topics, labels, and triage defaults.
 - Use [releases/v1.1.0.md](releases/v1.1.0.md) for the current package release.
 
@@ -158,7 +122,8 @@ make docs-serve
 
 This project is intentionally:
 
-- a CLI and local Workbench for known CVEs
+- a local Workbench for known CVEs, backed by shared domain services in the
+  active app
 - explicit about upstream sources
 - local-first and demo-friendly
 - conservative about ATT&CK provenance and explainability

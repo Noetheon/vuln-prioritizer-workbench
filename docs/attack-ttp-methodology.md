@@ -18,14 +18,14 @@ reviewable.
 For imported CTID Mappings Explorer JSON, VPW normalizes each mapping to
 `source=ctid-mappings-explorer`, `confidence=high`, and
 `review_status=reviewed` because the local artifact is an explicit CTID source
-snapshot. The `attack validate` quality report still keeps source, confidence,
-review status, mapping-type counts, and duplicate-context conflicts visible so a
-reviewer can audit what the imported CTID file contributed.
+snapshot. ATT&CK validation still keeps source, confidence, review status,
+mapping-type counts, and duplicate-context conflicts visible so a reviewer can
+audit what the imported CTID file contributed.
 
-When reviewers need a local-vs-CTID comparison, `attack validate` accepts
-`--comparison-mapping-file` with a local curated mapping file while
-`--attack-source ctid-json` is selected. The resulting quality report emits
-`local_ctid_conflicts[]` instead of merging or overriding either source.
+When reviewers need a local-vs-CTID comparison, the validation flow compares a
+local curated mapping file against the CTID JSON source. The resulting quality
+report emits `local_ctid_conflicts[]` instead of merging or overriding either
+source.
 
 ## Tactic, Technique, And Procedure Boundary
 
@@ -163,11 +163,10 @@ and it does not download live ATT&CK content during CI.
 
 ## Validation
 
-Use the published schema for local artifact checks:
+Use the provider and Workbench tests for local artifact checks:
 
 ```bash
-python3 -m pytest -q backend/tests/test_output_schemas.py::test_attack_curated_mapping_example_matches_schema --no-cov
-python3 -m vuln_prioritizer.cli attack validate --attack-source local-curated --attack-mapping-file data/cve_attack_mappings.yml --format json
+python3 -m pytest -q backend/tests/test_providers.py backend/tests/api/test_workbench_import_upload_api.py --no-cov
 ```
 
 The schema and loader reject missing `source`, `rationale`, `confidence`,

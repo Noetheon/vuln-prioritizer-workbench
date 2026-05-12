@@ -1,5 +1,5 @@
 site_name: Vuln Prioritizer Workbench
-site_description: Local-first CLI and Workbench for prioritizing known CVEs with CVSS, EPSS, KEV, ATT&CK, Asset Context, and VEX.
+site_description: Local-first Workbench for prioritizing known CVEs with CVSS, EPSS, KEV, ATT&CK, Asset Context, and VEX.
 repo_url: https://github.com/Noetheon/vuln-prioritizer-workbench
 repo_name: Noetheon/vuln-prioritizer-workbench
 theme:
@@ -19,7 +19,7 @@ nav:
       - Reports and Evidence: reports-and-evidence.md
       - Demo Readiness: demo-readiness.md
       - Threat Model and Readiness: workbench-threat-model.md
-      - Public Deployment Runbook: workbench-public-deployment.md
+      - Local/Private Deployment Runbook: workbench-public-deployment.md
   - Submission Package:
       - Overview: submission/README.md
       - Concept: submission/concept.md
@@ -42,14 +42,14 @@ nav:
       - Provider Snapshot Replay: architecture/vpw-026-provider-snapshot-replay.md
       - Provider Data Quality Flags: architecture/vpw-027-provider-data-quality-flags.md
       - Provider Status API Card: architecture/vpw-028-provider-status-api-card.md
-      - Access Model and Admin Tokens: architecture/vpw-029-access-model-and-admin-tokens.md
+      - Local Access Model: architecture/vpw-029-access-model-and-admin-tokens.md
+      - Workbench Importer Contract: architecture/vpw-013-importer-contract.md
       - Parser and Provider Extension Strategy: extension_strategy.md
   - Historical Reference:
       - Full Stack FastAPI Template Migration: full_stack_fastapi_template_migration.md
       - VPW Template Execution Sequence: vpw_template_execution_sequence.md
       - Template Replacement Strategy: architecture/template-replacement.md
       - Template Repository Layer: architecture/template-service-layer.md
-      - Template Importer Contract: architecture/vpw-013-importer-contract.md
   - Use Cases: use_cases.md
   - Playbooks:
       - Overview: playbooks.md
@@ -78,13 +78,10 @@ nav:
       - Trivy JSON Import: trivy-json-import.md
       - Grype JSON Import: grype-json-import.md
       - Base Report: example_report.md
-      - Base Compare: example_compare.md
       - ATT&CK Report: example_attack_report.md
-      - ATT&CK Compare: example_attack_compare.md
       - ATT&CK Coverage: example_attack_coverage.md
-      - VPW-054 Template Technical Report: examples/vpw-054-template-technical-report.md
+      - VPW-054 Workbench Technical Report: examples/vpw-054-workbench-technical-report.md
       - PR Comment Body: examples/example_pr_comment.md
-      - GitHub Summary Templates: examples/github_action_summary_templates.md
   - Historical Evidence Archive: evidence.md
   - Evidence:
       - VPW-054 Report Snapshots: evidence/vpw-054-report-snapshots.md

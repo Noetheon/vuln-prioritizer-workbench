@@ -35,3 +35,31 @@ def test_package_contents_fails_when_a_tracked_migration_is_absent() -> None:
 
     with pytest.raises(SystemExit, match="missing required package entries"):
         module._assert_suffixes(entries, required, "vuln_prioritizer-0.0.0-py3-none-any.whl")
+
+
+def test_package_contents_rejects_removed_cli_and_report_modules_from_wheel() -> None:
+    module = _load_package_contents_module()
+
+    with pytest.raises(SystemExit, match="removed legacy Workbench modules"):
+        module._assert_no_legacy_workbench_modules(
+            [
+                "app/main.py",
+                "vuln_prioritizer/cli.py",
+                "vuln_prioritizer/reporting_payloads.py",
+            ],
+            "vuln_prioritizer-0.0.0-py3-none-any.whl",
+        )
+
+
+def test_package_contents_rejects_removed_cli_and_report_modules_from_sdist() -> None:
+    module = _load_package_contents_module()
+
+    with pytest.raises(SystemExit, match="removed legacy Workbench modules"):
+        module._assert_no_legacy_workbench_modules(
+            [
+                "vuln_prioritizer-0.0.0/app/main.py",
+                "vuln_prioritizer-0.0.0/src/vuln_prioritizer/commands/report.py",
+                "vuln_prioritizer-0.0.0/src/vuln_prioritizer/reporting_html.py",
+            ],
+            "vuln_prioritizer-0.0.0.tar.gz",
+        )

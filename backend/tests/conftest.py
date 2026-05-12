@@ -17,7 +17,7 @@ if str(SRC_PATH) not in sys.path:
 if str(TESTS_PATH) not in sys.path:
     sys.path.insert(0, str(TESTS_PATH))
 
-pytest_plugins = ("utils.template_workbench",)
+pytest_plugins = ("utils.workbench_env",)
 
 
 @pytest.fixture(autouse=True)

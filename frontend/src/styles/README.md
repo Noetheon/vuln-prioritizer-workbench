@@ -22,12 +22,12 @@ Ownership rules:
   `finding-detail-decision.css`, `finding-detail-evidence.css`, and
   `finding-detail-ttp-history.css`. Do not reintroduce a single
   `finding-detail.css` catch-all.
-- The old `workbench-fallback.css` compatibility layer was retired after the
-  VPW-AUD-206 exact-use scan found no mounted selectors. New legacy fallback
-  layers require a tracked owner, an expiry condition, and a color-scan
+- The old `workbench-fallback.css` layer was retired after the VPW-AUD-206
+  exact-use scan found no mounted selectors. New temporary fallback layers
+  require a tracked owner, an expiry condition, and a color-scan
   allowlist update.
 - shadcn semantic utilities are generated from `tokens.css` via Tailwind v4
-  `@theme inline`; do not reintroduce a compatibility utility layer.
+  `@theme inline`; do not reintroduce a parallel utility layer.
 - `responsive.css` and `accessibility.css` may override earlier layers only
   for their named global concern. Dark mode must be token-driven from
   `tokens.css`, not global element selectors.

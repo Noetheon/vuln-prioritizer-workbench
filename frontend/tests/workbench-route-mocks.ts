@@ -5,7 +5,6 @@ type MockProject = {
   description: string
   id: string
   name: string
-  owner_id: string
   updated_at: string
 }
 
@@ -52,7 +51,6 @@ export const mockProject: MockProject = {
   description: "Critical payment processing workloads.",
   id: "project-1",
   name: "Payments Platform",
-  owner_id: "demo-user",
   updated_at: "2025-01-02T00:00:00Z",
 }
 
@@ -95,24 +93,6 @@ export async function routeWorkbenchShell(
   const onFindingsRequest = options.onFindingsRequest
   const providerStatusDelayMs = options.providerStatusDelayMs ?? 0
   const providerStatusError = options.providerStatusError ?? false
-  await page.addInitScript(() => {
-    // biome-ignore lint/suspicious/noDocumentCookie: Playwright sets a mock readable CSRF cookie before app boot.
-    document.cookie = "vpw_csrf_token=mock-csrf; Path=/; SameSite=Strict"
-  })
-
-  await page.route("**/api/v1/users/me", (route) =>
-    route.fulfill({
-      contentType: "application/json",
-      body: JSON.stringify({
-        id: "demo-user",
-        email: "admin@example.com",
-        full_name: "Admin",
-        is_active: true,
-        is_superuser: true,
-        created_at: "2025-01-01T00:00:00Z",
-      }),
-    }),
-  )
   await page.route("**/api/v1/workbench/status", (route) =>
     route.fulfill({
       contentType: "application/json",

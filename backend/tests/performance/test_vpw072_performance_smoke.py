@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from utils.template_workbench import TemplateApiEnv, auth_headers, create_project_via_api
+from utils.workbench_env import WorkbenchApiEnv, create_project_via_api, local_api_headers
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 ROW_COUNT = int(os.getenv("VPW_PERFORMANCE_SMOKE_ROWS", "10000"))
@@ -24,17 +24,17 @@ DEFAULT_MEMORY_LIMIT_MIB = 512.0
 pytestmark = pytest.mark.performance
 
 
-def test_vpw072_template_import_10k_occurrences_performance_smoke(
-    template_api_env: TemplateApiEnv,
+def test_vpw072_workbench_import_10k_occurrences_performance_smoke(
+    workbench_api_env: WorkbenchApiEnv,
     tmp_path: Path,
 ) -> None:
     """Exercise the VPW-072 10k import, persistence, scoring, and pagination contract."""
     if os.getenv("VPW_PERFORMANCE_SMOKE") != "1":
         pytest.skip("Set VPW_PERFORMANCE_SMOKE=1 to run the optional VPW-072 scale smoke.")
 
-    _configure_template_runtime(template_api_env, tmp_path)
-    headers = auth_headers(template_api_env.client)
-    project = create_project_via_api(template_api_env.client, headers)
+    _configure_workbench_runtime(workbench_api_env, tmp_path)
+    headers = local_api_headers(workbench_api_env.client)
+    project = create_project_via_api(workbench_api_env.client, headers)
     import_limit_seconds = float(
         os.getenv("VPW_PERFORMANCE_IMPORT_SECONDS", str(DEFAULT_IMPORT_LIMIT_SECONDS))
     )
@@ -51,7 +51,7 @@ def test_vpw072_template_import_10k_occurrences_performance_smoke(
     fixture_seconds = time.perf_counter() - fixture_start
 
     import_start = time.perf_counter()
-    import_response = template_api_env.client.post(
+    import_response = workbench_api_env.client.post(
         f"/api/v1/projects/{project['id']}/imports",
         headers=headers,
         data={
@@ -66,7 +66,7 @@ def test_vpw072_template_import_10k_occurrences_performance_smoke(
 
     page_offset = ROW_COUNT - PAGE_SIZE
     first_page_start = time.perf_counter()
-    first_page_response = template_api_env.client.get(
+    first_page_response = workbench_api_env.client.get(
         f"/api/v1/projects/{project['id']}/findings/",
         headers=headers,
         params={"sort": "cve", "direction": "asc", "limit": PAGE_SIZE, "offset": page_offset},
@@ -77,7 +77,7 @@ def test_vpw072_template_import_10k_occurrences_performance_smoke(
     first_page_seconds = time.perf_counter() - first_page_start
 
     repeat_page_start = time.perf_counter()
-    repeat_page_response = template_api_env.client.get(
+    repeat_page_response = workbench_api_env.client.get(
         f"/api/v1/projects/{project['id']}/findings/",
         headers=headers,
         params={"sort": "cve", "direction": "asc", "limit": PAGE_SIZE, "offset": page_offset},
@@ -154,11 +154,11 @@ def test_vpw072_template_import_10k_occurrences_performance_smoke(
     assert metrics["measurements"]["peak_rss_delta_mib"] <= memory_limit_mib, metrics
 
 
-def _configure_template_runtime(template_api_env: TemplateApiEnv, tmp_path: Path) -> None:
-    active_settings = template_api_env.client.app.state.workbench_settings
-    template_api_env.client.app.state.workbench_settings = replace(
+def _configure_workbench_runtime(workbench_api_env: WorkbenchApiEnv, tmp_path: Path) -> None:
+    active_settings = workbench_api_env.client.app.state.workbench_settings
+    workbench_api_env.client.app.state.workbench_settings = replace(
         active_settings,
-        IMPORT_UPLOAD_DIR=str(tmp_path / "template-import-uploads"),
+        IMPORT_UPLOAD_DIR=str(tmp_path / "workbench-import-uploads"),
         PROVIDER_SNAPSHOT_DIR=str(PROJECT_ROOT / "data"),
         ATTACK_ARTIFACT_DIR=str(PROJECT_ROOT / "data" / "attack"),
         MAX_UPLOAD_MB=10,

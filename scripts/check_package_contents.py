@@ -13,25 +13,40 @@ REQUIRED_WHEEL_SUFFIXES = (
     "app/main.py",
     "app/api/main.py",
     "app/alembic/env.py",
-    "vuln_prioritizer/cli.py",
 )
 REQUIRED_SDIST_SUFFIXES = (
     "app/main.py",
     "app/api/main.py",
     "app/alembic/env.py",
-    "src/vuln_prioritizer/cli.py",
     "pyproject.toml",
 )
 FORBIDDEN_WHEEL_PREFIXES = (
     "vuln_prioritizer/api/",
+    "vuln_prioritizer/cli_support/",
+    "vuln_prioritizer/commands/",
     "vuln_prioritizer/db/",
+    "vuln_prioritizer/reporting_",
     "vuln_prioritizer/web/",
+)
+FORBIDDEN_WHEEL_FILES = (
+    "vuln_prioritizer/cli.py",
+    "vuln_prioritizer/cli_options.py",
+    "vuln_prioritizer/parser.py",
+    "vuln_prioritizer/reporter.py",
+    "vuln_prioritizer/runtime_config.py",
+    "vuln_prioritizer/sarif_validation.py",
+    "vuln_prioritizer/security_tokens.py",
+    "vuln_prioritizer/state_store.py",
 )
 FORBIDDEN_SDIST_PARTS = (
     "/src/vuln_prioritizer/api/",
+    "/src/vuln_prioritizer/cli_support/",
+    "/src/vuln_prioritizer/commands/",
     "/src/vuln_prioritizer/db/",
+    "/src/vuln_prioritizer/reporting_",
     "/src/vuln_prioritizer/web/",
 )
+FORBIDDEN_SDIST_FILES = tuple(f"/src/{path}" for path in FORBIDDEN_WHEEL_FILES)
 
 
 def _single(path: Path, pattern: str) -> Path:
@@ -76,11 +91,15 @@ def _assert_no_legacy_workbench_modules(entries: list[str], artifact: str) -> No
         legacy_entries = [
             entry
             for entry in entries
-            if any(entry.startswith(prefix) for prefix in FORBIDDEN_WHEEL_PREFIXES)
+            if entry in FORBIDDEN_WHEEL_FILES
+            or any(entry.startswith(prefix) for prefix in FORBIDDEN_WHEEL_PREFIXES)
         ]
     else:
         legacy_entries = [
-            entry for entry in entries if any(part in entry for part in FORBIDDEN_SDIST_PARTS)
+            entry
+            for entry in entries
+            if any(entry.endswith(file_path) for file_path in FORBIDDEN_SDIST_FILES)
+            or any(part in entry for part in FORBIDDEN_SDIST_PARTS)
         ]
     if legacy_entries:
         raise SystemExit(
@@ -91,7 +110,15 @@ def _assert_no_legacy_workbench_modules(entries: list[str], artifact: str) -> No
 
 def _tracked_alembic_migration_suffixes() -> tuple[str, ...]:
     result = subprocess.run(
-        ["git", "ls-files", "backend/app/alembic/versions/*.py"],
+        [
+            "git",
+            "ls-files",
+            "--cached",
+            "--others",
+            "--exclude-standard",
+            "--",
+            "backend/app/alembic/versions/*.py",
+        ],
         check=True,
         cwd=ROOT,
         stdout=subprocess.PIPE,
@@ -100,6 +127,8 @@ def _tracked_alembic_migration_suffixes() -> tuple[str, ...]:
     suffixes = []
     for line in result.stdout.splitlines():
         path = Path(line)
+        if not (ROOT / path).is_file():
+            continue
         if path.name == "__init__.py":
             continue
         suffixes.append(Path("app/alembic/versions", path.name).as_posix())
@@ -129,12 +158,14 @@ def main() -> None:
     report = {
         "boundary": (
             "The backend distribution intentionally ships both the shared domain "
-            "package and the active Workbench FastAPI app package."
+            "package and the active Workbench FastAPI app package. It does not "
+            "publish the legacy CLI as a console entrypoint."
         ),
         "wheel": {
             "path": wheel.as_posix(),
             "entry_count": len(wheel_entries),
             "forbidden_legacy_prefixes": list(FORBIDDEN_WHEEL_PREFIXES),
+            "forbidden_legacy_files": list(FORBIDDEN_WHEEL_FILES),
             "required_alembic_migrations": list(required_migration_suffixes),
             "required_suffixes": list(REQUIRED_WHEEL_SUFFIXES),
         },
@@ -142,6 +173,7 @@ def main() -> None:
             "path": sdist.as_posix(),
             "entry_count": len(sdist_entries),
             "forbidden_legacy_parts": list(FORBIDDEN_SDIST_PARTS),
+            "forbidden_legacy_files": list(FORBIDDEN_SDIST_FILES),
             "required_alembic_migrations": list(required_migration_suffixes),
             "required_suffixes": list(REQUIRED_SDIST_SUFFIXES),
         },

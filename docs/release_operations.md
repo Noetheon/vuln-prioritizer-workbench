@@ -13,10 +13,10 @@ The repository ships releases through:
 - GitHub Release artifacts built from the tagged tree
 
 The current package metadata uses `Development Status :: 4 - Beta`, meaning
-local-first CLI plus self-hosted Workbench readiness without public-production
-certification. Changing that classifier to `Production/Stable` requires the
-same candidate-specific evidence and residual-risk decision used for the
-public-production release ledger.
+local-first self-hosted Workbench readiness, with shared domain code in the
+package, but without public-production certification. Changing that
+classifier to `Production/Stable` requires the same candidate-specific evidence
+and residual-risk decision used for the public-production release ledger.
 
 The workflow already does the important trusted-publishing pieces:
 
@@ -48,18 +48,18 @@ Use this path for normal releases:
 make release-check
 ```
 
-3. Before tagging a release candidate, run and record the broader gate:
+3. Before tagging a release candidate, run and record the broader local gate:
 
 ```bash
 make release-readiness-check
 ```
 
-This adds generated-client drift, archive binary evidence validation, public
-deployment evidence contract validation, demo evidence-bundle verification, and
-Playwright smoke evidence to the normal release gate. It also runs the
-production-like Docker smoke. It does not by itself certify a public deployment:
-live public TLS/header evidence still has to be captured for the exact deployed
-candidate.
+This adds generated-client drift, archive binary evidence validation,
+Playwright smoke evidence, and package smoke validation to the normal release
+gate. It also runs the production-like Docker smoke. It does not by itself
+certify a public deployment: live public TLS/header evidence and the explicit
+public deployment evidence contract still have to be captured for the exact
+deployed candidate.
 For tagged releases, `.github/workflows/release.yml` runs this gate before any
 GitHub Release or PyPI publish job can proceed.
 
@@ -176,21 +176,30 @@ After each public release:
 2. Verify the documented GitHub tag install path:
 
 ```bash
-pipx install git+https://github.com/Noetheon/vuln-prioritizer-workbench.git@vX.Y.Z#subdirectory=backend
-printf 'CVE-2021-44228\n' > smoke-cves.txt
-vuln-prioritizer analyze --input smoke-cves.txt --format json --output smoke.json
+tmpdir="$(mktemp -d)"
+python3 -m venv "$tmpdir/venv"
+"$tmpdir/venv/bin/python" -m pip install \
+  "git+https://github.com/Noetheon/vuln-prioritizer-workbench.git@vX.Y.Z#subdirectory=backend"
+"$tmpdir/venv/bin/python" scripts/workbench_wheel_smoke.py \
+  "$tmpdir/workbench-source-smoke.json"
 ```
 
-This validates the supported source-at-tag install path. It does not validate installation from the GitHub Release asset files themselves.
+This validates the supported source-at-tag install path and the installed
+Workbench app/Alembic package contents. It does not validate installation from
+the GitHub Release asset files themselves.
 
-The tag-push release workflow now performs the same source-at-tag smoke automatically before publication. Keep the manual check here as an operator-level confirmation rather than the only verification step.
+The tag-push release workflow performs the same source-at-tag Workbench smoke
+automatically before publication. Keep the manual check here as an
+operator-level confirmation rather than the only verification step.
 
 3. If PyPI is enabled, install from PyPI too:
 
 ```bash
-pipx install "vuln-prioritizer==X.Y.Z"
-printf 'CVE-2021-44228\n' > smoke-cves.txt
-vuln-prioritizer analyze --input smoke-cves.txt --format json --output smoke.json
+tmpdir="$(mktemp -d)"
+python3 -m venv "$tmpdir/venv"
+"$tmpdir/venv/bin/python" -m pip install "vuln-prioritizer==X.Y.Z"
+"$tmpdir/venv/bin/python" scripts/workbench_wheel_smoke.py \
+  "$tmpdir/workbench-pypi-smoke.json"
 ```
 
 4. Confirm the README install instructions still match reality.
@@ -201,15 +210,16 @@ If TestPyPI is enabled, also verify the staging index first:
 
 ```bash
 tmpdir="$(mktemp -d)"
-python -m pip download \
+python3 -m venv "$tmpdir/venv"
+"$tmpdir/venv/bin/python" -m pip download \
   --no-deps \
   --only-binary=:all: \
   --index-url https://test.pypi.org/simple/ \
   --dest "$tmpdir" \
   "vuln-prioritizer==X.Y.Z"
-pipx install "$tmpdir"/vuln_prioritizer-X.Y.Z-*.whl
-printf 'CVE-2021-44228\n' > smoke-cves.txt
-vuln-prioritizer analyze --input smoke-cves.txt --format json --output smoke.json
+"$tmpdir/venv/bin/python" -m pip install "$tmpdir"/vuln_prioritizer-X.Y.Z-*.whl
+"$tmpdir/venv/bin/python" scripts/workbench_wheel_smoke.py \
+  "$tmpdir/workbench-testpypi-smoke.json"
 ```
 
 ## CI Cost Policy
@@ -217,7 +227,7 @@ vuln-prioritizer analyze --input smoke-cves.txt --format json --output smoke.jso
 The repository keeps PR safety checks active while reducing duplicate and
 long-running GitHub Actions work.
 
-Ready pull requests to `main` run the Python workflow gate, local action smoke,
+Ready pull requests to `main` run the Python workflow gate, package smoke,
 frontend lint/build/client drift checks with coverage, full Playwright coverage
 for frontend/API/runtime-impacting changes, Docker workflow status, and CodeQL
 where configured. Docs/archive-only PRs still get successful frontend and Docker
@@ -289,6 +299,6 @@ If the PyPI publish job fails, check these before anything else:
 
 - Keep this document in sync with [`release.yml`](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/.github/workflows/release.yml).
 - Keep the public install wording in [`README.md`](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/README.md) aligned with the real supported install path.
-- Keep the package story aligned with [Dependency and Package Policy](./dependency-and-package-policy.md): the backend distribution intentionally ships both the CLI/core package and active `backend/app` Workbench runtime.
+- Keep the package story aligned with [Dependency and Package Policy](./dependency-and-package-policy.md): the backend distribution intentionally ships both the shared domain package and active `backend/app` Workbench runtime.
 - Keep public-production release evidence aligned with [Public-Production Release Evidence Ledger](./public-production-release-evidence-ledger.md).
 - If PyPI goes live, update the README and release docs immediately so GitHub-tag install is no longer described as the only verified public path.

@@ -20,8 +20,8 @@
 | CVE-2020-1472 | Yes | High | T1087.002, T1133, T1021, T1110, T1486, T1068 | discovery, persistence, initial-access, lateral-movement, credential-access, impact, privilege-escalation | secondary_impact, primary_impact, exploitation_technique |
 | CVE-2023-34362 | Yes | High | T1190, T1059, T1531, T1136, T1005, T1082, T1105 | initial-access, execution, impact, persistence, collection, discovery, command-and-control | exploitation_technique, primary_impact, secondary_impact |
 | CVE-2024-4577 | Yes | High | T1190, T1059, T1112, T1053, T1543, T1033, T1068, T1071.001, T1570, T1003, T1003.001, T1041 | initial-access, execution, defense-evasion, persistence, privilege-escalation, discovery, command-and-control, lateral-movement, credential-access, exfiltration | exploitation_technique, primary_impact, secondary_impact |
-| CVE-2023-44487 | No | Unmapped | N.A. | N.A. | N.A. |
-| CVE-2024-3094 | No | Unmapped | N.A. | N.A. | N.A. |
+| CVE-2023-44487 | No | Unmapped | Not recorded | Not recorded | Not recorded |
+| CVE-2024-3094 | No | Unmapped | Not recorded | Not recorded | Not recorded |
 
 ## Warnings
 - None

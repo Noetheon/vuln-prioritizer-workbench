@@ -34,10 +34,8 @@ dependencies = [
   "PyYAML>=6.0,<7.0",
   "python-dotenv>=1.0,<2.0",
   "requests>=2.31,<3.0",
-  "rich>=13.7,<16.0",
   "sqlalchemy>=2.0,<3.0",
   "sqlmodel>=0.0.21,<1.0",
-  "typer>=0.12,<1.0",
   "uvicorn[standard]>=0.30,<1.0",
 ]
 
@@ -67,9 +65,6 @@ dev = [
   "types-requests>=2.32,<3.0",
 ]
 
-[project.scripts]
-vuln-prioritizer = "vuln_prioritizer.cli:main"
-
 [tool.setuptools.packages.find]
 where = ["src", "."]
 include = ["vuln_prioritizer*", "app*"]
@@ -85,7 +80,7 @@ testpaths = ["tests"]
 pythonpath = [".", "src"]
 markers = [
   "browser_e2e: real browser Workbench tests driven by Playwright.",
-  "e2e: end-to-end CLI entrypoint tests that may spawn subprocesses.",
+  "e2e: end-to-end tests that may spawn subprocesses.",
   "live_network: allow real network access through requests in this test.",
   "performance: optional performance and scale smoke tests; enable explicitly.",
 ]
@@ -97,11 +92,6 @@ line-length = 100
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP"]
 extend-select = ["B018"]
-
-[tool.ruff.lint.per-file-ignores]
-"src/vuln_prioritizer/reporter.py" = ["E501"]
-"src/vuln_prioritizer/reporting_html.py" = ["E501"]
-"tests/test_reporter.py" = ["E501"]
 
 [tool.mypy]
 python_version = "3.11"

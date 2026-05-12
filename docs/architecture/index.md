@@ -2,20 +2,25 @@
 
 ## Scope
 
-`vuln-prioritizer` is a CLI and local Workbench for prioritizing known CVEs. It is not a scanner, does not discover vulnerabilities on its own, and does not perform heuristic or LLM-generated CVE-to-ATT&CK mapping.
+`vuln-prioritizer` is a local Workbench for prioritizing known CVEs. It is not
+a scanner, does not discover vulnerabilities on its own, and does not perform
+heuristic or LLM-generated CVE-to-ATT&CK mapping. Legacy CLI entrypoints and
+command modules have been removed; the retained `backend/src/vuln_prioritizer`
+code is shared domain logic used by the Workbench.
 
 The current runtime architecture keeps one invariant across all supported inputs:
 
 - normalize many source formats into occurrence-level CVE evidence
 - deduplicate to a unique CVE set for enrichment and base prioritization
 - preserve provenance, asset context, and VEX applicability as explainable context
-- render the same finding model into terminal, Markdown, JSON, SARIF, HTML, API, and Workbench web surfaces
+- render the same finding model into Workbench API/UI, Markdown, JSON, SARIF,
+  HTML, and evidence surfaces
 
 ## Flow
 
 ```mermaid
 flowchart LR
-  A["CLI command"] --> B["Input normalization"]
+  A["Workbench import"] --> B["Input normalization"]
   B --> C["Occurrence model"]
   C --> D["Unique CVE set"]
   C --> E["Asset context and VEX"]
@@ -26,41 +31,12 @@ flowchart LR
   G --> I
   H --> I
   I --> J["Finding and comparison models"]
-  J --> K["Terminal and file reporters"]
+  J --> K["Report and evidence renderers"]
   J --> L["Analysis JSON"]
   L --> M["Static HTML renderer"]
 ```
 
 ## Layering
-
-### CLI surface
-
-`backend/src/vuln_prioritizer/cli.py` is the CLI composition root. It assembles the public Typer tree, shared runtime defaults, and cross-command wiring, while private command modules and private support modules hold command handlers and reusable CLI-only helpers.
-
-Current public command groups:
-
-- `analyze`
-- `compare`
-- `explain`
-- `doctor`
-- `snapshot create`
-- `snapshot diff`
-- `rollup`
-- `input validate`
-- `state`
-- `attack validate`
-- `attack coverage`
-- `attack navigator-layer`
-- `data status`
-- `data update`
-- `data verify`
-- `data export-provider-snapshot`
-- `report workbench`
-- `report html`
-- `report evidence-bundle`
-- `report verify-evidence-bundle`
-
-The command layer owns flag parsing, validation, cache wiring, and output-mode dispatch. The public command tree is part of the CLI surface; the private command/support modules are implementation detail and do not widen the architecture boundary. Parser-specific logic remains below this layer apart from compatibility routing.
 
 ### Workbench surface
 
@@ -76,27 +52,31 @@ keeps provider snapshots writable for refresh jobs, and mounts checked-in demo
 data read-only so startup can seed locked demo snapshots without making fixture
 data mutable.
 
-The current web/API import path uses the same local input-format matrix as the CLI for single-upload and multi-upload imports: CVE lists, generic occurrence CSV, Trivy JSON, Grype JSON, Dependency-Check JSON, GitHub alerts JSON, CycloneDX JSON, SPDX JSON, Nessus XML, and OpenVAS XML. XML support remains safe local parsing of exported findings only; the Workbench does not scan systems.
+The current web/API import path uses the local input-format matrix for
+single-upload and multi-upload imports: CVE lists, generic occurrence CSV,
+Trivy JSON, Grype JSON, Dependency-Check JSON, GitHub alerts JSON, CycloneDX
+JSON, SPDX JSON, Nessus XML, and OpenVAS XML. XML support remains safe local
+parsing of exported findings only; the Workbench does not scan systems.
 
 The Workbench threat model and readiness checklist are maintained in
 [workbench-threat-model.md](../workbench-threat-model.md). The current
-architecture uses local single-user browser access with optional scoped service
-tokens for explicit automation, assumes a trusted local operator, supports
-SQLite default storage, and does not certify public-internet exposure until the
-shared-deployment controls are configured and verified for the exact candidate.
+architecture uses local single-user browser/API access without active login,
+RBAC, API tokens, or session cookies, assumes a trusted local operator,
+supports SQLite default storage, and does not certify public-internet exposure
+until the shared-deployment controls are configured and verified for the exact
+candidate.
 
 The current project access decision is documented in
-[VPW-029 Access Model and Admin Tokens](vpw-029-access-model-and-admin-tokens.md):
-browser users use owner/superuser visibility, non-admin service tokens are
-project-scoped, and `admin` service tokens are global root-equivalent automation
-credentials. Project membership tables and project-admin RBAC are not part of
-the current local-first scope.
+[VPW-029 Access Model](vpw-029-access-model-and-admin-tokens.md): active
+project-scoped routes check that the project exists and otherwise return 404.
+Project membership tables, API tokens, and project-admin RBAC are not part of
+the current local-first active scope.
 
 ### Input normalization
 
 `backend/src/vuln_prioritizer/inputs/loader.py` is the canonical input entry point.
 
-The template-aligned Workbench import boundary is documented in
+The Workbench import boundary is documented in
 [vpw-013-importer-contract.md](vpw-013-importer-contract.md). It defines the
 pure importer protocol, normalized occurrence DTO, registry lookup behavior,
 and the rule that parser adapters stay free of FastAPI, database, repository,
@@ -114,7 +94,10 @@ Supported input families currently normalize into the same occurrence model:
 - SBOM JSON
 - advisory/export JSON
 
-`backend/src/vuln_prioritizer/parser.py` remains a backward-compatible facade for historical `.txt` and `.csv` CVE-list flows and delegates internally to the loader.
+The old `backend/src/vuln_prioritizer/parser.py` compatibility facade has been
+removed. Active Workbench and domain code should use `InputLoader`, importer
+adapters, or the focused parser modules under
+`backend/src/vuln_prioritizer/inputs/parsers/`.
 
 ### Provenance, asset context, and VEX
 
@@ -171,17 +154,22 @@ Current architectural boundary:
 
 ### Reporting
 
-`backend/src/vuln_prioritizer/reporter.py` remains the public reporting facade and delegates report-format, JSON/payload, and serialization helpers to private internal reporting modules.
+The old `backend/src/vuln_prioritizer/reporter.py` facade has been removed.
+Active report generation is owned by the Workbench services under
+`backend/app/services/report_*` plus framework-neutral renderers under
+`backend/src/vuln_prioritizer/reporting_*`.
 
 Current output families:
 
-- terminal tables and panels for interactive use
 - Markdown reports for human-readable artifacts
 - JSON exports for machine consumption
-- SARIF for `analyze`
-- static HTML rendered from a previously exported analysis JSON payload
+- SARIF report artifacts
+- CSV findings exports
+- static executive HTML rendered from Workbench report payloads
+- evidence ZIP bundles with manifest and verification output
 
-The machine boundary is the JSON export, not the terminal or Markdown layout.
+The machine boundary is the JSON/export and evidence manifest data, not the
+Markdown or HTML layout.
 
 ## Contract boundaries
 
@@ -197,11 +185,15 @@ These payloads embed `metadata.schema_version`, currently `1.0.0`.
 
 ### Derived renderers
 
-`report html` does not rerun enrichment. It consumes an existing analysis JSON export and renders a static document from that saved payload. This keeps HTML generation reproducible and decoupled from live provider state.
+HTML report rendering does not rerun enrichment. It consumes an existing
+analysis JSON export and renders a static document from that saved payload.
+This keeps HTML generation reproducible and decoupled from live provider state.
 
 ### Human-facing surfaces
 
-Terminal tables, panels, warning phrasing, and Markdown table layout are intentionally optimized for readability. They are user-visible interfaces, but not machine-stable parsing targets.
+Workbench tables, report panels, warning phrasing, Markdown layout, and HTML
+layout are intentionally optimized for readability. They are user-visible
+interfaces, but not machine-stable parsing targets.
 
 ## Cache and live data
 
@@ -227,20 +219,23 @@ The Workbench provider status API and React status-card evidence expectations
 are documented in
 [VPW-028 Provider Status API Card](vpw-028-provider-status-api-card.md).
 
-The current `data` command tree is intentionally small:
+The current provider update surface is intentionally small:
 
-- `data status` inspects namespace counts, timestamps, and local ATT&CK metadata
-- `data update` refreshes NVD/EPSS per-CVE cache entries and the cached KEV catalog
-- `data verify` inspects cache coverage, namespace checksums, and pinned local file checksums
+- provider status APIs inspect namespace counts, timestamps, and local ATT&CK
+  metadata
+- provider update services refresh NVD/EPSS per-CVE cache entries and the cached
+  KEV catalog
+- provider validation checks cache coverage, namespace checksums, and pinned
+  local file checksums
 
 Important boundary:
 
-- `data update` is cache-oriented, not a full mirror or snapshot framework for upstream feeds
+- provider updates are cache-oriented, not a full mirror or snapshot framework for upstream feeds
 - NVD and EPSS updates are still scoped to the requested CVE set, not to the whole upstream corpus
 - ATT&CK remains local-file based and is verified from disk rather than refreshed from a remote feed
 
 For reproducible automation, prefer:
 
-- explicit `--input-format` over auto-detection
+- explicit Workbench `input_type` values over auto-detection
 - JSON exports with schema validation
 - pinned local ATT&CK mapping files when ATT&CK context is required

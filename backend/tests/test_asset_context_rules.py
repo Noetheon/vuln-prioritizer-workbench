@@ -20,7 +20,7 @@ def _occurrence() -> InputOccurrence:
     )
 
 
-def test_asset_context_legacy_exact_rules_keep_last_row_wins(tmp_path: Path) -> None:
+def test_asset_context_basic_exact_rules_keep_last_row_wins(tmp_path: Path) -> None:
     asset_context_file = tmp_path / "assets.csv"
     asset_context_file.write_text(
         "\n".join(
@@ -39,7 +39,7 @@ def test_asset_context_legacy_exact_rules_keep_last_row_wins(tmp_path: Path) -> 
 
     assert resolved[0].asset_id == "asset-new"
     assert resolved[0].asset_criticality == "high"
-    assert catalog.diagnostics.legacy_schema is True
+    assert catalog.diagnostics.basic_schema is True
     assert catalog.diagnostics.glob_rules == 0
 
 
@@ -99,7 +99,7 @@ def test_asset_context_higher_precedence_wins_and_returns_load_diagnostics(
     assert diagnostics.contains_rules == 0
     assert diagnostics.regex_rules == 0
     assert diagnostics.glob_rules == 0
-    assert diagnostics.legacy_schema is False
+    assert diagnostics.basic_schema is False
 
 
 def test_asset_context_contains_rule_matches_asset_ref_alias_and_reports_invalid_enums(

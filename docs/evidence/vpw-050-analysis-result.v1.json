@@ -24,13 +24,13 @@
       ],
       "decision_guidance": {
         "decision_statement": "Decision Statement: patch after owner validation.",
-        "template_label": "Patch"
+        "recommendation_label": "Patch"
       }
     },
     "CVE-2024-3094": {
       "decision_guidance": {
         "decision_statement": "Decision Statement: patch CVE-2024-3094 on Payments API within the emergency SLA.",
-        "template_label": "Patch"
+        "recommendation_label": "Patch"
       }
     }
   },
@@ -69,7 +69,7 @@
       "explanation": {
         "decision_guidance": {
           "decision_statement": "Decision Statement: patch CVE-2024-3094 on Payments API within the emergency SLA.",
-          "template_label": "Patch"
+          "recommendation_label": "Patch"
         }
       },
       "first_seen_at": "2026-04-29T11:00:00Z",
@@ -95,7 +95,7 @@
         "business_impact": "Checkout traffic depends on the affected service.",
         "decision_guidance": {
           "decision_statement": "Decision Statement: patch CVE-2024-3094 on Payments API within the emergency SLA.",
-          "template_label": "Patch"
+          "recommendation_label": "Patch"
         },
         "decision_sla": "Emergency / 24h",
         "decision_statement": "Decision Statement: patch CVE-2024-3094 on Payments API within the emergency SLA.",
@@ -159,7 +159,7 @@
         ],
         "decision_guidance": {
           "decision_statement": "Decision Statement: patch after owner validation.",
-          "template_label": "Patch"
+          "recommendation_label": "Patch"
         }
       },
       "first_seen_at": "2026-04-29T11:00:00Z",
@@ -185,7 +185,7 @@
         "business_impact": "Operational tooling exposure requires management visibility.",
         "decision_guidance": {
           "decision_statement": "Decision Statement: patch after owner validation.",
-          "template_label": "Patch"
+          "recommendation_label": "Patch"
         },
         "decision_sla": "Emergency / 24h",
         "decision_statement": "Decision Statement: patch after owner validation.",
@@ -212,7 +212,6 @@
     "description": "Snapshot project for VPW-050 exports.",
     "id": "00000000-0000-4000-8000-000000000156",
     "name": "VPW-050 Snapshot",
-    "owner_id": "00000000-0000-4000-8000-000000000011",
     "updated_at": "2026-04-29T10:30:00Z"
   },
   "provider_snapshot": {

@@ -17,8 +17,8 @@ from vuln_prioritizer.security_redaction import redact_text, redact_value
 
 DEFAULT_ERROR_MESSAGES = {
     400: "Bad request.",
-    401: "Authentication required.",
-    403: "Not enough permissions.",
+    401: "Unauthorized request.",
+    403: "Request forbidden.",
     404: "Resource not found.",
     409: "Request conflict.",
     413: "Upload exceeds configured limit.",
@@ -40,8 +40,8 @@ EXACT_MESSAGE_CODES = {
 
 STATUS_CODES = {
     400: "bad_request",
-    401: "authentication_required",
-    403: "permission_denied",
+    401: "unauthorized",
+    403: "forbidden",
     404: "not_found",
     409: "conflict",
     413: "payload_too_large",
@@ -68,7 +68,7 @@ API_ERROR_ENVELOPE_SCHEMA: dict[str, Any] = {
             "description": "Structured, request-safe error details.",
         },
         "detail": {
-            "description": "Legacy-compatible FastAPI detail field.",
+            "description": "FastAPI-compatible detail field for standard error clients.",
             "anyOf": [
                 {"type": "string"},
                 {"type": "object", "additionalProperties": True},
@@ -98,7 +98,7 @@ def error_response_content(
     message: str | None = None,
     request: Request | None = None,
 ) -> dict[str, Any]:
-    """Build the stable API error envelope plus legacy ``detail`` compatibility."""
+    """Build the stable API error envelope plus FastAPI ``detail`` compatibility."""
     safe_detail = redact_request_safe_value(detail)
     resolved_message = _resolve_message(status_code, safe_detail, message)
     resolved_details = _resolve_details(safe_detail)
@@ -108,7 +108,7 @@ def error_response_content(
         "code": resolved_code,
         "message": resolved_message,
         "details": resolved_details,
-        "detail": _legacy_detail(
+        "detail": _fastapi_detail(
             safe_detail,
             code=resolved_code,
             details=resolved_details,
@@ -121,11 +121,7 @@ def error_response_content(
     return content
 
 
-def install_error_openapi_schema(
-    app: FastAPI,
-    *,
-    oauth2_token_url: str | None = None,
-) -> None:
+def install_error_openapi_schema(app: FastAPI) -> None:
     """Document FastAPI validation errors with the runtime error envelope."""
     original_openapi = app.openapi
 
@@ -136,31 +132,11 @@ def install_error_openapi_schema(
         schema = original_openapi()
         components = schema.setdefault("components", {}).setdefault("schemas", {})
         components["ApiErrorEnvelope"] = deepcopy(API_ERROR_ENVELOPE_SCHEMA)
-        if oauth2_token_url:
-            _set_oauth2_token_url(schema, oauth2_token_url)
         _replace_fastapi_validation_error_schemas(schema)
         app.openapi_schema = schema
         return schema
 
     app.openapi = custom_openapi  # type: ignore[method-assign]
-
-
-def _set_oauth2_token_url(schema: dict[str, Any], token_url: str) -> None:
-    components = schema.get("components")
-    if not isinstance(components, dict):
-        return
-    security_schemes = components.get("securitySchemes")
-    if not isinstance(security_schemes, dict):
-        return
-    for scheme in security_schemes.values():
-        if not isinstance(scheme, dict) or scheme.get("type") != "oauth2":
-            continue
-        flows = scheme.get("flows")
-        if not isinstance(flows, dict):
-            continue
-        password_flow = flows.get("password")
-        if isinstance(password_flow, dict):
-            password_flow["tokenUrl"] = token_url
 
 
 def redact_request_safe_value(value: Any) -> Any:
@@ -309,7 +285,7 @@ def _resolve_code(status_code: int, detail: Any, message: str) -> str:
     return STATUS_CODES.get(status_code, "internal_server_error")
 
 
-def _legacy_detail(
+def _fastapi_detail(
     detail: Any,
     *,
     code: str,
@@ -317,11 +293,11 @@ def _legacy_detail(
     message: str,
 ) -> Any:
     if isinstance(detail, Mapping):
-        legacy = dict(detail)
-        legacy.setdefault("message", message)
-        legacy.setdefault("code", code)
-        legacy.setdefault("details", details)
-        return legacy
+        fastapi_detail = dict(detail)
+        fastapi_detail.setdefault("message", message)
+        fastapi_detail.setdefault("code", code)
+        fastapi_detail.setdefault("details", details)
+        return fastapi_detail
     return detail if detail not in (None, "") else message
 
 

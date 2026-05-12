@@ -18,12 +18,11 @@ import { SettingsFactRows } from "./SettingsFactRows"
 
 type SettingsMetricsProps = Pick<
   SettingsWorkbenchProps,
-  "currentUser" | "providerStatus" | "providerStatusError" | "statusError"
+  "providerStatus" | "providerStatusError" | "statusError"
 >
 
 type SettingsWorkspaceHealthProps = Pick<
   SettingsWorkbenchProps,
-  | "currentUser"
   | "providerStatus"
   | "providerStatusError"
   | "providerStatusLoading"
@@ -32,7 +31,6 @@ type SettingsWorkspaceHealthProps = Pick<
 >
 
 export function SettingsMetrics({
-  currentUser,
   providerStatus,
   providerStatusError,
   statusError,
@@ -47,18 +45,14 @@ export function SettingsMetrics({
   return (
     <VpwGrid columns={4}>
       <VpwMetricCard
-        description={
-          currentUser?.is_active
-            ? "This browser uses the local Workbench directly."
-            : "Checking workspace readiness."
-        }
+        description="This browser uses the local Workbench directly."
         icon={<UserRound aria-hidden="true" className="h-5 w-5" />}
         label="Workspace mode"
-        tone={currentUser?.is_active ? "success" : "warning"}
-        value={currentUser ? "Local" : "Loading"}
+        tone="success"
+        value="Local"
       />
       <VpwMetricCard
-        description="No login, RBAC, or service-token setup required."
+        description="The local operator can use the Workbench directly."
         icon={<MonitorCog aria-hidden="true" className="h-5 w-5" />}
         label="Access mode"
         tone="info"
@@ -87,7 +81,6 @@ export function SettingsMetrics({
 }
 
 export function SettingsWorkspaceHealth({
-  currentUser,
   providerStatus,
   providerStatusError,
   providerStatusLoading,
@@ -109,21 +102,17 @@ export function SettingsWorkspaceHealth({
           items={[
             {
               label: "Workspace profile",
-              value: currentUser?.is_active ? "Local workspace" : "Loading",
+              value: "Local workspace",
+              tone: "success",
             },
             {
               label: "Access mode",
-              value: currentUser ? "Local single-user" : "Loading",
-              tone: currentUser ? "success" : "warning",
+              value: "Local single-user",
+              tone: "success",
             },
             {
               label: "Backend mode",
               value: status?.app ?? "Workbench",
-            },
-            {
-              label: "Service tokens",
-              value: "Optional for automation",
-              tone: "info",
             },
           ]}
         />

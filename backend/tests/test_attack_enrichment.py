@@ -135,10 +135,10 @@ def test_attack_enrichment_surfaces_missing_metadata_in_note_and_rationale() -> 
     assert "Local ATT&CK technique metadata is unavailable for: T1190." in attack.attack_rationale
 
 
-def test_attack_enrichment_legacy_csv_rationale_marks_mode_as_legacy() -> None:
+def test_attack_enrichment_local_csv_rationale_marks_mode_as_basic_csv() -> None:
     service = AttackEnrichmentService()
 
-    results = service.enrich_legacy_csv(
+    results = service.enrich_local_csv(
         ["CVE-2024-0001"],
         attack_data={
             "CVE-2024-0001": AttackData(
@@ -146,11 +146,11 @@ def test_attack_enrichment_legacy_csv_rationale_marks_mode_as_legacy() -> None:
                 mapped=True,
                 attack_techniques=["T1059"],
                 attack_tactics=["Execution"],
-                attack_note="Legacy demo note.",
+                attack_note="Local CSV demo note.",
             )
         },
     )
 
     assert results["CVE-2024-0001"].attack_rationale is not None
-    assert "Legacy local ATT&CK CSV context" in results["CVE-2024-0001"].attack_rationale
-    assert "Prefer --attack-source ctid-json" in results["CVE-2024-0001"].attack_rationale
+    assert "Local ATT&CK CSV context" in results["CVE-2024-0001"].attack_rationale
+    assert "Prefer Workbench ATT&CK source ctid-json" in results["CVE-2024-0001"].attack_rationale

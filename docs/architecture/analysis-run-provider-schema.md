@@ -242,9 +242,9 @@ The shared result contains:
 - `data_quality_flags`: stored under `status.data_quality_flags`
 
 Provider failures must degrade into status and data-quality flags rather than
-aborting the caller by default. Optional CLI or workflow gates may still fail a
-pipeline after output is written, but the provider contract must first preserve
-the failure as structured evidence.
+aborting the caller by default. Optional Workbench automation or workflow gates
+may still fail a pipeline after output is written, but the provider contract
+must first preserve the failure as structured evidence.
 
 Example status DTO:
 
@@ -306,7 +306,7 @@ Timeout and retry contract:
 
 ## Migration Contract
 
-The template Alembic head under `backend/app/alembic` must create the three
+The Workbench Alembic head under `backend/app/alembic` must create the three
 VPW-009 tables and their foreign keys/indexes on a fresh SQLite database. The
 focused API model tests use a temporary SQLite database and an Alembic `Config`
 rather than production settings.

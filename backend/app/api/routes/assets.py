@@ -9,8 +9,8 @@ from typing import Any
 
 from fastapi import APIRouter, File, HTTPException, Query, Request, UploadFile
 
-from app.api.deps import ScopedReadUser, ScopedWriteUser, SessionDep
-from app.api.routes.workbench_access import require_visible_project
+from app.api.deps import LocalActor, SessionDep
+from app.api.routes.workbench_access import require_project
 from app.core.app_state import workbench_settings
 from app.models import (
     Asset,
@@ -43,12 +43,12 @@ WAIVER_MATCH_CONTEXT_FIELDS = {"asset_key", "business_service"}
 def read_project_assets(
     project_id: uuid.UUID,
     session: SessionDep,
-    current_user: ScopedReadUser,
+    local_actor: LocalActor,
     owner: str | None = Query(default=None, max_length=200),
     service: str | None = Query(default=None, max_length=200),
 ) -> AssetsPublic:
     """List assets for a visible project."""
-    require_visible_project(session, current_user, project_id)
+    require_project(session, project_id)
     assets = AssetRepository(session).list_project_assets(
         project_id,
         owner=owner,
@@ -65,11 +65,11 @@ def create_project_asset(
     *,
     project_id: uuid.UUID,
     session: SessionDep,
-    current_user: ScopedWriteUser,
+    local_actor: LocalActor,
     asset_in: AssetCreate,
 ) -> AssetPublic:
     """Create or upsert an asset for a visible project."""
-    require_visible_project(session, current_user, project_id)
+    require_project(session, project_id)
     repository = AssetRepository(session)
     existing = repository.get_project_asset_by_key(project_id, asset_in.asset_key)
     before_context = _asset_context(existing) if existing is not None else None
@@ -95,7 +95,7 @@ def create_project_asset(
         action="asset.create",
         resource_type="asset",
         resource_id=asset.id,
-        actor=current_user,
+        actor=local_actor,
         project_id=project_id,
         detail={"asset_key": asset.asset_key, "name": asset.name, "changed_fields": changed_fields},
     )
@@ -110,11 +110,11 @@ async def import_project_assets(
     project_id: uuid.UUID,
     request: Request,
     session: SessionDep,
-    current_user: ScopedWriteUser,
+    local_actor: LocalActor,
     asset_context_file: UploadFile | None = File(None),
 ) -> AssetContextImportPublic:
     """Import asset-context CSV rows into editable assets for a visible project."""
-    require_visible_project(session, current_user, project_id)
+    require_project(session, project_id)
     if asset_context_file is None or not asset_context_file.filename:
         raise HTTPException(status_code=422, detail="Asset context CSV file is required.")
     _validate_asset_context_upload(asset_context_file)
@@ -145,7 +145,7 @@ async def import_project_assets(
         session,
         action="asset.import",
         resource_type="asset",
-        actor=current_user,
+        actor=local_actor,
         project_id=project_id,
         detail=dict(result),
     )
@@ -158,7 +158,7 @@ def update_asset(
     *,
     asset_id: uuid.UUID,
     session: SessionDep,
-    current_user: ScopedWriteUser,
+    local_actor: LocalActor,
     asset_in: AssetUpdate,
 ) -> AssetPublic:
     """Update an asset if its project is visible."""
@@ -166,7 +166,7 @@ def update_asset(
     asset = repository.get_asset(asset_id)
     if asset is None:
         raise HTTPException(status_code=404, detail="Asset not found")
-    require_visible_project(session, current_user, asset.project_id)
+    require_project(session, asset.project_id)
     before_context = _asset_context(asset)
     updated = repository.update_asset(asset, asset_in)
     after_context = _asset_context(updated)
@@ -185,7 +185,7 @@ def update_asset(
         action="asset.update",
         resource_type="asset",
         resource_id=updated.id,
-        actor=current_user,
+        actor=local_actor,
         project_id=updated.project_id,
         detail={"changed_fields": changed_fields},
     )
@@ -199,14 +199,14 @@ def recalculate_asset(
     *,
     asset_id: uuid.UUID,
     session: SessionDep,
-    current_user: ScopedWriteUser,
+    local_actor: LocalActor,
 ) -> AssetRecalculatePublic:
     """Recalculate linked finding scores for a visible asset."""
     repository = AssetRepository(session)
     asset = repository.get_asset(asset_id)
     if asset is None:
         raise HTTPException(status_code=404, detail="Asset not found")
-    require_visible_project(session, current_user, asset.project_id)
+    require_project(session, asset.project_id)
     result = repository.recalculate_asset_findings(asset)
     WaiverRepository(session).sync_project_waivers(asset.project_id)
     record_audit_event(
@@ -214,7 +214,7 @@ def recalculate_asset(
         action="asset.recalculate",
         resource_type="asset",
         resource_id=asset.id,
-        actor=current_user,
+        actor=local_actor,
         project_id=asset.project_id,
         detail=dict(result),
     )

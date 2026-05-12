@@ -90,7 +90,7 @@ class AssetContextLoadDiagnostics:
     contains_rules: int
     regex_rules: int
     glob_rules: int
-    legacy_schema: bool
+    basic_schema: bool
     warnings: tuple[str, ...] = ()
 
 
@@ -378,8 +378,7 @@ def load_asset_context_file(
     path: Path | None,
     *,
     return_diagnostics: Literal[False] = False,
-) -> AssetContextCatalog:
-    raise NotImplementedError
+) -> AssetContextCatalog: ...
 
 
 @overload
@@ -387,8 +386,7 @@ def load_asset_context_file(
     path: Path | None,
     *,
     return_diagnostics: Literal[True],
-) -> tuple[AssetContextCatalog, AssetContextLoadDiagnostics]:
-    raise NotImplementedError
+) -> tuple[AssetContextCatalog, AssetContextLoadDiagnostics]: ...
 
 
 def load_asset_context_file(
@@ -409,7 +407,7 @@ def load_asset_context_file(
                 contains_rules=0,
                 regex_rules=0,
                 glob_rules=0,
-                legacy_schema=True,
+                basic_schema=True,
             ),
         )
         return (empty, empty.diagnostics) if return_diagnostics else empty
@@ -428,7 +426,7 @@ def load_asset_context_file(
             )
 
         optional_schema_fields = {"rule_id", "match_mode", "precedence"}
-        legacy_schema = not bool(optional_schema_fields & fieldnames)
+        basic_schema = not bool(optional_schema_fields & fieldnames)
         records: dict[tuple[str, str], AssetContextRecord] = {}
         rules: list[AssetContextRule] = []
         exact_rule_count = 0
@@ -480,7 +478,7 @@ def load_asset_context_file(
                 precedence = order
             rule_id = (row.get("rule_id") or "").strip() or f"asset-rule:{order}"
             signature = (target_kind, target_ref, match_mode, precedence)
-            if legacy_schema and match_mode == "exact" and (target_kind, target_ref) in records:
+            if basic_schema and match_mode == "exact" and (target_kind, target_ref) in records:
                 duplicate_exact_rows += 1
             elif signature in seen_signatures:
                 competing_rule_rows += 1
@@ -536,7 +534,7 @@ def load_asset_context_file(
         warning_messages.append(
             "Asset context CSV contains "
             f"{duplicate_exact_rows} duplicate exact-match row(s); later rows remain preferred "
-            "under legacy precedence, but conflicts are now reported."
+            "under basic-schema row order, but conflicts are now reported."
         )
     if competing_rule_rows:
         warning_messages.append(
@@ -556,7 +554,7 @@ def load_asset_context_file(
             contains_rules=contains_rule_count,
             regex_rules=regex_rule_count,
             glob_rules=glob_rule_count,
-            legacy_schema=legacy_schema,
+            basic_schema=basic_schema,
             warnings=tuple(warning_messages),
         ),
     )
@@ -568,8 +566,7 @@ def load_vex_files(
     paths: list[Path] | None,
     *,
     return_diagnostics: Literal[False] = False,
-) -> list[VexStatement]:
-    raise NotImplementedError
+) -> list[VexStatement]: ...
 
 
 @overload
@@ -577,8 +574,7 @@ def load_vex_files(
     paths: list[Path] | None,
     *,
     return_diagnostics: Literal[True],
-) -> tuple[list[VexStatement], VexLoadDiagnostics]:
-    raise NotImplementedError
+) -> tuple[list[VexStatement], VexLoadDiagnostics]: ...
 
 
 def load_vex_files(

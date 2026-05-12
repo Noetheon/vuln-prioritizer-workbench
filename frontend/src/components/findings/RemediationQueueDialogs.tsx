@@ -70,7 +70,7 @@ export function WhyDialog({ finding, open, onClose }: WhyDialogProps) {
             <div>
               <dt className="text-[var(--vpw-text-secondary)]">Risk Score</dt>
               <dd className="font-bold text-sm text-[var(--vpw-text-primary)]">
-                {finding.risk_score?.toFixed(1) ?? "N.A."}
+                {finding.risk_score?.toFixed(1) ?? "Not scored"}
               </dd>
             </div>
             <div>
@@ -129,7 +129,7 @@ export function QuickViewSheet({
             {[
               {
                 label: "Risk Score",
-                value: finding.risk_score?.toFixed(1) ?? "N.A.",
+                value: finding.risk_score?.toFixed(1) ?? "Not scored",
               },
               { label: "EPSS", value: <EpssBadge value={finding.epss} /> },
               {

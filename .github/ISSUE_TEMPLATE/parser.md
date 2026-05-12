@@ -12,8 +12,7 @@ Name the scanner, SBOM, advisory, or export format.
 
 ## Target
 
-Which parser, import path, CLI command, API route, or Workbench workflow should
-change?
+Which parser, import path, API route, or Workbench workflow should change?
 
 ## Goal
 
@@ -25,7 +24,6 @@ prioritization?
 - [ ] new parser/import format
 - [ ] existing parser behavior change
 - [ ] Workbench import path
-- [ ] CLI input validation/normalization
 - [ ] schema or contract update
 - [ ] documentation/support matrix update
 
@@ -52,15 +50,14 @@ secrets, internal hostnames, tokens, cookies, or private paths.
 - [ ] sanitized valid fixture
 - [ ] malformed fixture
 - [ ] empty/no-CVE fixture
-- [ ] CLI normalization or validation test
-- [ ] Workbench import test, if applicable
+- [ ] Workbench import/API test
 - [ ] docs/support matrix check
 
 ## Definition Of Done
 
 - [ ] Sanitized fixtures are committed.
 - [ ] Parser/import tests cover valid, malformed, and empty inputs.
-- [ ] CLI and Workbench import behavior stays consistent where applicable.
+- [ ] Workbench import behavior and normalized output are deterministic.
 - [ ] Commands run and results are posted before closure.
 
 ## Evidence

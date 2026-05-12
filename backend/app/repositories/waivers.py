@@ -103,7 +103,7 @@ class WaiverRepository:
         explanation = dict(finding.explanation_json or {})
         evidence = dict(finding.evidence_json or {})
         waiver_record = _object_value(explanation.get("waiver"))
-        if waiver_record.get("source") not in {"workbench-api", "template-api"}:
+        if waiver_record.get("source") != "workbench-api":
             return
 
         for key in (

@@ -47,11 +47,11 @@ class ProviderEnrichmentClient(Protocol):
     @property
     def source(self) -> str:
         """Stable provider source name."""
-        raise NotImplementedError
+        ...
 
     def enrich(self, cve_ids: Sequence[str], **kwargs: Any) -> ProviderEnrichmentResult:
         """Return provider records, status, snapshot DTO, and data-quality flags."""
-        raise NotImplementedError
+        ...
 
 
 @dataclass(frozen=True)

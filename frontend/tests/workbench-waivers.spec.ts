@@ -1,6 +1,10 @@
 import { expect, type Locator, type Page, test } from "@playwright/test"
-import { authHeaders, backendBaseUrl, login } from "./auth-helpers"
 import { evidenceScreenshotPath } from "./evidence-paths"
+import {
+  backendBaseUrl,
+  localApiHeaders,
+  openWorkbench,
+} from "./workbench-runtime-helpers"
 
 const validOccurrenceCsv = Buffer.from(
   [
@@ -90,8 +94,8 @@ test("workbench waiver workflow keeps accepted risk visible", async ({
   const testRunSuffix = Date.now().toString(36)
   const projectName = `VPW Waiver Project ${testRunSuffix}`
 
-  const accessToken = await login(page)
-  const headers = authHeaders(accessToken)
+  await openWorkbench(page)
+  const headers = localApiHeaders()
 
   const projectResponse = await page.request.post(
     `${backendBaseUrl}/api/v1/projects/`,
@@ -186,8 +190,8 @@ test("workbench governance rollups show service risk and waiver debt", async ({
   const testRunSuffix = Date.now().toString(36)
   const projectName = `VPW Governance Project ${testRunSuffix}`
 
-  const accessToken = await login(page)
-  const headers = authHeaders(accessToken)
+  await openWorkbench(page)
+  const headers = localApiHeaders()
 
   const projectResponse = await page.request.post(
     `${backendBaseUrl}/api/v1/projects/`,

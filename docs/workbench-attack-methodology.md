@@ -1,6 +1,6 @@
 # Workbench ATT&CK Methodology
 
-Current state: this page describes the local Workbench ATT&CK contract reviewed on 2026-04-25. It is not an unshipped milestone plan. It complements the CLI ATT&CK methodology by documenting the implemented API, UI/report, and evidence behavior.
+Current state: this page describes the local Workbench ATT&CK contract reviewed on 2026-04-25. It is not an unshipped milestone plan. It documents the implemented API, UI/report, and evidence behavior.
 
 The detailed curated-mapping methodology, Tactic/Technique/Procedure boundary,
 confidence rubric, and mapping review checklist live in
@@ -12,7 +12,8 @@ surfaces follow the same safety contract.
 Workbench ATT&CK context uses CTID Mappings Explorer JSON as the canonical source for CVE-to-ATT&CK mappings.
 
 - CTID JSON is the only canonical source for Workbench CVE-to-ATT&CK mapping decisions.
-- Local CSV mapping remains legacy CLI compatibility and is not the Workbench source of record.
+- Reviewed local CSV mappings remain an explicit local override path, but they
+  are not the Workbench source of record.
 - Imported technique metadata enriches names, tactics, URLs, STIX spec/version metadata, and deprecation state; it does not create new CVE mappings.
 - Pinned ATT&CK STIX bundles are versioned catalog snapshots for tactics,
   techniques, mitigations, and mitigation relationships. They are not

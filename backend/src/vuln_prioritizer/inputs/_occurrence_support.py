@@ -62,8 +62,7 @@ def apply_asset_context(
     asset_records: Mapping[tuple[str, str], AssetContextRecord] | Any,
     *,
     return_diagnostics: Literal[False] = False,
-) -> list[InputOccurrence]:
-    raise NotImplementedError
+) -> list[InputOccurrence]: ...
 
 
 @overload
@@ -72,8 +71,7 @@ def apply_asset_context(
     asset_records: Mapping[tuple[str, str], AssetContextRecord] | Any,
     *,
     return_diagnostics: Literal[True],
-) -> tuple[list[InputOccurrence], AssetContextMatchDiagnostics]:
-    raise NotImplementedError
+) -> tuple[list[InputOccurrence], AssetContextMatchDiagnostics]: ...
 
 
 def apply_asset_context(
@@ -151,21 +149,21 @@ def apply_asset_context(
         )
         return (enriched, diagnostics) if return_diagnostics else enriched
 
-    legacy_enriched: list[InputOccurrence] = []
+    mapped_enriched: list[InputOccurrence] = []
     matched_occurrences = 0
     unmatched_occurrences = 0
     for occurrence in occurrences:
         if not occurrence.target_ref:
             unmatched_occurrences += 1
-            legacy_enriched.append(occurrence)
+            mapped_enriched.append(occurrence)
             continue
         asset = asset_records.get((occurrence.target_kind.lower(), occurrence.target_ref))
         if asset is None:
             unmatched_occurrences += 1
-            legacy_enriched.append(occurrence)
+            mapped_enriched.append(occurrence)
             continue
         matched_occurrences += 1
-        legacy_enriched.append(_apply_asset_context_record(occurrence, asset, candidate_count=1))
+        mapped_enriched.append(_apply_asset_context_record(occurrence, asset, candidate_count=1))
 
     diagnostics = AssetContextMatchDiagnostics(
         matched_occurrences=matched_occurrences,
@@ -176,7 +174,7 @@ def apply_asset_context(
         glob_matches=0,
         ambiguous_occurrences=0,
     )
-    return (legacy_enriched, diagnostics) if return_diagnostics else legacy_enriched
+    return (mapped_enriched, diagnostics) if return_diagnostics else mapped_enriched
 
 
 def _apply_asset_context_record(

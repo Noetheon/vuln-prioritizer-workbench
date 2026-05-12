@@ -103,7 +103,7 @@ def _nearest_known_module(imported: str, modules: dict[str, Path]) -> str | None
     return None
 
 
-def _reachable_modules_from_template_backend() -> set[str]:
+def _reachable_modules_from_workbench_backend() -> set[str]:
     modules = _module_paths()
     queue = deque(
         sorted(module for module in modules if module == "app" or module.startswith("app."))
@@ -147,8 +147,8 @@ def test_legacy_workbench_runtime_source_is_removed() -> None:
     assert remaining_workbench_services == []
 
 
-def test_template_backend_import_graph_does_not_reach_legacy_runtime() -> None:
-    reachable = _reachable_modules_from_template_backend()
+def test_workbench_backend_import_graph_does_not_reach_legacy_runtime() -> None:
+    reachable = _reachable_modules_from_workbench_backend()
 
     legacy_runtime_modules = sorted(
         module for module in reachable if _matches_legacy_runtime(module)
@@ -157,7 +157,7 @@ def test_template_backend_import_graph_does_not_reach_legacy_runtime() -> None:
     assert legacy_runtime_modules == []
 
 
-def test_template_runtime_names_are_documented_compatibility_aliases() -> None:
+def test_workbench_runtime_names_are_not_active_service_aliases() -> None:
     analysis_service = _read_repo_text("backend/app/services/analysis.py")
     import_artifacts = _read_repo_text("backend/app/services/import_artifacts.py")
     provider_updates = _read_repo_text("backend/app/services/provider_updates.py")
@@ -168,29 +168,27 @@ def test_template_runtime_names_are_documented_compatibility_aliases() -> None:
     assert "class WorkbenchAnalysisError" in analysis_service
     assert "class WorkbenchAnalysisResult" in analysis_service
     assert "DEFAULT_WORKBENCH_PROVIDER_SNAPSHOT" in analysis_service
-    assert "TemplateAnalysisError = WorkbenchAnalysisError" in analysis_service
-    assert "TemplateAnalysisResult = WorkbenchAnalysisResult" in analysis_service
-    assert "DEFAULT_TEMPLATE_PROVIDER_SNAPSHOT = DEFAULT_WORKBENCH_PROVIDER_SNAPSHOT" in (
-        analysis_service
-    )
+    assert "TemplateAnalysisError" not in analysis_service
+    assert "TemplateAnalysisResult" not in analysis_service
+    assert "DEFAULT_TEMPLATE_PROVIDER_SNAPSHOT" not in analysis_service
 
-    assert "Compatibility aliases for template-era local integrations." in import_artifacts
-    assert "resolve_template_provider_snapshot_path" in import_artifacts
-    assert "Compatibility aliases for template-era local integrations." in provider_updates
-    assert "TemplateProviderUpdateConflict = ProviderUpdateConflict" in provider_updates
+    assert "resolve_template_provider_snapshot_path" not in import_artifacts
+    assert "resolve_template_attack_artifact_path" not in import_artifacts
+    assert "TemplateProviderUpdateConflict" not in provider_updates
+    assert "TemplateProviderUpdateValidationError" not in provider_updates
 
-    assert 'LEGACY_SETTINGS_STATE_KEY = "template_settings"' in app_state
-    assert "Backward-compatible aliases for older local tests and scripts." in app_state
+    assert 'WORKBENCH_SETTINGS_STATE_KEY = "workbench_settings"' in app_state
+    assert '"template_settings"' not in app_state
     normalized_public_deployment = " ".join(public_deployment.split())
-    assert "historical compatibility names" in normalized_public_deployment
-    assert "separate template-era Workbench runtime" in normalized_public_deployment
+    assert "template_settings" not in normalized_public_deployment
+    assert "WORKBENCH_LEGACY_STORAGE_FALLBACK" not in normalized_public_deployment
     assert "WorkbenchReportFormat" in frontend_defaults
     assert "TemplateReportFormat" not in frontend_defaults
 
     active_runtime_docs = [
         _read_repo_text("backend/app/__init__.py"),
         _read_repo_text("backend/app/api/routes/__init__.py"),
-        _read_repo_text("backend/app/core/security.py"),
+        _read_repo_text("backend/app/core/local_actor.py"),
         _read_repo_text("backend/app/repositories/__init__.py"),
         _read_repo_text("backend/app/services/__init__.py"),
         _read_repo_text("backend/app/services/reports.py"),
@@ -271,14 +269,18 @@ def test_default_compose_services_start_only_active_backend_runtime() -> None:
     assert backend_environment["POSTGRES_PASSWORD"].startswith(
         "${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD"
     )
-    assert backend_environment["LOGIN_RATE_LIMIT_PER_MINUTE"] == (
-        "${LOGIN_RATE_LIMIT_PER_MINUTE:-60}"
-    )
+    assert "LOGIN_RATE_LIMIT_PER_MINUTE" not in backend_environment
+    assert "TOKEN_FAILURE_RATE_LIMIT_PER_MINUTE" not in backend_environment
+    assert "API_TOKEN_DEFAULT_EXPIRE_DAYS" not in backend_environment
+    assert "SESSION_RETENTION_DAYS" not in backend_environment
+    assert "REVOKED_API_TOKEN_RETENTION_DAYS" not in backend_environment
     assert backend_environment["TRUSTED_PROXY_CIDRS"] == "${TRUSTED_PROXY_CIDRS:-}"
     assert backend_environment["SECRET_KEY"].startswith("${SECRET_KEY:?Set SECRET_KEY")
-    assert backend_environment["FIRST_SUPERUSER_PASSWORD"].startswith(
-        "${FIRST_SUPERUSER_PASSWORD:?Set FIRST_SUPERUSER_PASSWORD"
+    assert backend_environment["LOCAL_WORKBENCH_USER_EMAIL"] == (
+        "${LOCAL_WORKBENCH_USER_EMAIL:-local@workbench.test}"
     )
+    assert "FIRST_SUPERUSER" not in backend_environment
+    assert "FIRST_SUPERUSER_PASSWORD" not in backend_environment
     assert backend_environment["DEMO_PROVIDER_SNAPSHOT_ENABLED"] == (
         "${DEMO_PROVIDER_SNAPSHOT_ENABLED:-false}"
     )
@@ -349,7 +351,9 @@ def test_env_example_does_not_pin_api_docs_on_for_shared_deployments() -> None:
     assert "\nMAX_REPORTS_PER_RUN=20\n" in env_example
     assert "\nDECISION_API_MAX_FINDINGS=1000\n" in env_example
     assert "\nSECRET_KEY=local-workbench-dev-secret\n" in env_example
-    assert "\nFIRST_SUPERUSER_PASSWORD=local-workbench-dev-password\n" in env_example
+    assert "\nLOCAL_WORKBENCH_USER_EMAIL=local@workbench.test\n" in env_example
+    assert "FIRST_SUPERUSER=" not in env_example
+    assert "FIRST_SUPERUSER_PASSWORD" not in env_example
     assert "\nPOSTGRES_PASSWORD=local-workbench-dev-postgres-password\n" in env_example
     assert "\nWORKBENCH_DB_VOLUME=workbench-db-data\n" in env_example
     assert "\nWORKBENCH_IMPORT_UPLOADS_VOLUME=workbench-import-uploads\n" in env_example
@@ -365,8 +369,6 @@ def test_public_deployment_runbook_documents_backup_retention_and_tls() -> None:
     assert "scripts/workbench-restore.sh" in runbook
     assert "WORKBENCH_ARTIFACT_MODE=compose" in runbook
     assert "WORKBENCH_IMPORT_UPLOADS_VOLUME=workbench-import-uploads" in runbook
-    assert "WORKBENCH_IMPORT_UPLOADS_VOLUME=template-import-uploads" in runbook
-    assert "WORKBENCH_LEGACY_STORAGE_FALLBACK=1" in runbook
     assert "POSTGRES_PASSWORD=<long random value>" in runbook
     assert "import-upload, report, provider-snapshot, and\nprovider-cache" in runbook
     assert "/app/template-import-uploads" not in runbook
@@ -394,12 +396,12 @@ def test_backup_restore_scripts_support_database_url_and_compose_artifacts() -> 
         'DEFAULT_COMPOSE_ARTIFACT_PATHS="workbench-import-uploads workbench-reports '
         'provider-snapshots workbench-provider-cache"' in backup
     )
-    assert "LEGACY_COMPOSE_ARTIFACT_PATHS=" in backup
-    assert "legacy_storage_fallback_enabled" in backup
+    assert "LEGACY_COMPOSE_ARTIFACT_PATHS=" not in backup
+    assert "legacy_storage_fallback_enabled" not in backup
     assert "for path in $(host_artifact_paths)" in backup
 
 
-def test_backup_script_legacy_artifacts_are_opt_in(tmp_path: Path) -> None:
+def test_backup_script_uses_workbench_artifacts_only_by_default(tmp_path: Path) -> None:
     database_path = tmp_path / "workbench.db"
     database_path.write_text("sqlite bytes\n", encoding="utf-8")
     for artifact_dir in (
@@ -409,7 +411,7 @@ def test_backup_script_legacy_artifacts_are_opt_in(tmp_path: Path) -> None:
         artifact_dir.mkdir(parents=True)
         (artifact_dir / "marker.txt").write_text(artifact_dir.name, encoding="utf-8")
 
-    def run_backup(name: str, *, legacy_fallback: bool = False) -> set[str]:
+    def run_backup(name: str) -> set[str]:
         backup_dir = tmp_path / name
         env = {
             **os.environ,
@@ -417,8 +419,6 @@ def test_backup_script_legacy_artifacts_are_opt_in(tmp_path: Path) -> None:
             "SQLITE_DATABASE_PATH": str(database_path),
             "WORKBENCH_ARTIFACT_MODE": "host",
         }
-        if legacy_fallback:
-            env["WORKBENCH_LEGACY_STORAGE_FALLBACK"] = "1"
         subprocess.run(
             [str(REPO_ROOT / "scripts/workbench-backup.sh")],
             capture_output=True,
@@ -431,12 +431,9 @@ def test_backup_script_legacy_artifacts_are_opt_in(tmp_path: Path) -> None:
             return set(archive.getnames())
 
     default_members = run_backup("backup-default")
-    legacy_members = run_backup("backup-legacy", legacy_fallback=True)
 
     assert "workbench-reports" in default_members
     assert "template-reports" not in default_members
-    assert "workbench-reports" in legacy_members
-    assert "template-reports" in legacy_members
 
 
 def test_active_runtime_entrypoints_use_workbench_backend_app() -> None:
@@ -445,19 +442,16 @@ def test_active_runtime_entrypoints_use_workbench_backend_app() -> None:
     playwright_backend = (REPO_ROOT / "scripts/start-workbench-playwright-backend.sh").read_text(
         encoding="utf-8"
     )
-    playwright_template = (REPO_ROOT / "scripts/start-template-playwright-backend.sh").read_text(
-        encoding="utf-8"
-    )
 
     override_backend_command = _as_text(override["services"]["backend"]["command"])
 
     assert "alembic -c /app/backend/alembic.ini upgrade head" in dockerfile
-    assert "python -m app.core.migration_bootstrap" in dockerfile
+    assert "python -m app.core.migration_bootstrap" not in dockerfile
     assert "exec uvicorn app.main:app" in dockerfile
     assert "set -e" in override_backend_command
-    assert "python -m app.core.migration_bootstrap" in override_backend_command
+    assert "python -m app.core.migration_bootstrap" not in override_backend_command
     assert "alembic -c /app/backend/alembic.ini upgrade head" in override_backend_command
-    assert "python3 -m app.core.migration_bootstrap" in playwright_backend
+    assert "python3 -m app.core.migration_bootstrap" not in playwright_backend
     assert "python3 -m alembic -c backend/alembic.ini upgrade head" in playwright_backend
     assert "frontend-playwright-workbench-$backend_port.db" in playwright_backend
     assert "frontend-playwright-workbench-$backend_port-reports" in playwright_backend
@@ -466,8 +460,6 @@ def test_active_runtime_entrypoints_use_workbench_backend_app() -> None:
     assert "init_db" not in playwright_backend
     assert "app.main:app" in override_backend_command
     assert "uvicorn app.main:app" in playwright_backend
-    assert "deprecated" in playwright_template
-    assert "start-workbench-playwright-backend.sh" in playwright_template
     for marker in LEGACY_RUNTIME_STARTERS:
         assert marker not in dockerfile
         assert marker not in override_backend_command
@@ -476,12 +468,10 @@ def test_active_runtime_entrypoints_use_workbench_backend_app() -> None:
 
 def test_init_db_does_not_create_schema_metadata() -> None:
     db_source = _read_repo_text("backend/app/core/db.py")
-    init_body = db_source.split("def init_db", 1)[1].split(
-        "def ensure_configured_superuser",
-        1,
-    )[0]
+    init_body = db_source.split("def init_db", 1)[1]
 
     assert "metadata.create_all" not in init_body
+    assert "ensure_configured_superuser" not in db_source
 
 
 def test_generated_browser_api_client_is_built_from_active_backend_app() -> None:
@@ -494,6 +484,10 @@ def test_generated_browser_api_client_is_built_from_active_backend_app() -> None
 
 def test_makefile_has_no_legacy_runtime_smoke_or_compose_path() -> None:
     makefile = _read_repo_text("Makefile")
+    release_readiness = makefile.split("release-readiness-check:", 1)[1].split(
+        "precommit-install:",
+        1,
+    )[0]
     docker_demo_smoke = makefile.split("docker-demo-smoke:", 1)[1].split(
         "dependency-audit:",
         1,
@@ -517,6 +511,8 @@ def test_makefile_has_no_legacy_runtime_smoke_or_compose_path() -> None:
     assert "cd frontend && npm run test" in playwright_check
     assert "tests/ui-smoke.spec.ts tests/responsive-shell.spec.ts" not in playwright_check
     assert "frontend-test-unit-coverage" in makefile
+    assert "public-production-evidence-check" not in release_readiness
+    assert "release-check api-client-drift-check archive-evidence-check" in release_readiness
     assert "--profile legacy-postgres" not in docker_demo_smoke
     assert "workbench-postgres" not in docker_demo_smoke
     assert "$(COMPOSE) exec -T backend python -m app.core.schema_smoke" in docker_demo_smoke
@@ -536,13 +532,8 @@ def test_ci_frontend_gate_runs_coverage_and_full_playwright_suite() -> None:
     assert "npm --prefix frontend run test" in workflow
 
 
-def test_cli_does_not_register_removed_workbench_db_or_web_commands() -> None:
-    cli_source = _read_repo_text("backend/src/vuln_prioritizer/cli.py")
-
-    assert "commands.db" not in cli_source
-    assert "commands.web" not in cli_source
-    assert "add_typer(db_app" not in cli_source
-    assert "add_typer(web_app" not in cli_source
+def test_legacy_cli_entrypoint_is_removed() -> None:
+    assert not (REPO_ROOT / "backend/src/vuln_prioritizer/cli.py").exists()
 
 
 def test_active_status_contract_has_no_migration_or_legacy_fields() -> None:
@@ -562,7 +553,6 @@ def test_active_runtime_state_uses_workbench_names() -> None:
     active_sources = {
         "backend/app/main.py": _read_repo_text("backend/app/main.py"),
         "backend/app/api/deps.py": _read_repo_text("backend/app/api/deps.py"),
-        "backend/app/api/routes/login.py": _read_repo_text("backend/app/api/routes/login.py"),
         "backend/app/api/routes/providers.py": _read_repo_text(
             "backend/app/api/routes/providers.py"
         ),
@@ -573,12 +563,15 @@ def test_active_runtime_state_uses_workbench_names() -> None:
     }
 
     assert "WORKBENCH_SETTINGS_STATE_KEY" in app_state_source
-    assert "LEGACY_SETTINGS_STATE_KEY" in app_state_source
+    assert "LEGACY_SETTINGS_STATE_KEY" not in app_state_source
     assert all('"template_settings"' not in source for source in active_sources.values())
     assert all("template-provider-update" not in source for source in active_sources.values())
     assert all(
         "template-workbench-current-findings" not in source for source in active_sources.values()
     )
+    assert not (REPO_ROOT / "backend/app/api/routes/login.py").exists()
+    assert not (REPO_ROOT / "backend/app/api/routes/api_tokens.py").exists()
+    assert not (REPO_ROOT / "backend/app/api/routes/users.py").exists()
 
 
 def test_runtime_boundary_docs_do_not_advertise_removed_legacy_runtime() -> None:

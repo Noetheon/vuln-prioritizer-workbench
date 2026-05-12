@@ -17,12 +17,12 @@ def main() -> None:
     )
     database_path = output_path.with_suffix(".db").resolve()
     database_url = f"sqlite:///{database_path}"
+    database_path.unlink(missing_ok=True)
 
     os.environ.update(
         {
             "SQLALCHEMY_DATABASE_URI": database_url,
             "SECRET_KEY": "wheel-smoke-secret-key-0123456789abcdef",
-            "FIRST_SUPERUSER_PASSWORD": "wheel-smoke-admin-password-0123456789",
             "ALLOWED_HOSTS": "localhost,127.0.0.1,testserver",
             "RATE_LIMIT_ENABLED": "false",
         }
@@ -51,10 +51,14 @@ def main() -> None:
 
     if revision != ALEMBIC_HEAD:
         raise SystemExit(f"Expected Alembic head {ALEMBIC_HEAD}, got {revision}.")
-    required_tables = {"api_token", "auth_session", "audit_event", "project", "user"}
+    required_tables = {"audit_event", "project"}
     missing = sorted(required_tables - tables)
     if missing:
         raise SystemExit(f"Installed Workbench migration is missing tables: {missing}")
+    removed_tables = {"api_token", "auth_session", "user"}
+    still_present = sorted(removed_tables & tables)
+    if still_present:
+        raise SystemExit(f"Installed Workbench migration kept removed tables: {still_present}")
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(

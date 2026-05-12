@@ -8,16 +8,17 @@ will remove the demo `Item` surface and replace it with first-class
 `Project` and `Finding` domain objects.
 
 The migration keeps the template's useful application patterns: FastAPI app
-layout, `/api/v1` routing, JWT/user flow, generated OpenAPI client, React,
-TanStack Router/Query, Docker Compose, SQLModel, and Alembic. It does not keep
-the demo Item ownership model as the Workbench authorization model.
+layout, `/api/v1` routing, generated OpenAPI client, React, TanStack
+Router/Query, Docker Compose, SQLModel, and Alembic. It does not keep the demo
+Item ownership model, JWT/user flow, or template authorization model as active
+Workbench behavior.
 
-Current state after `codex/fsft-08-project-domain-shell`: the active
-template-shaped app omits `/items` and `ItemsService`, adds template-native
-SQLModel `User` and `Project` tables, and exposes `/api/v1/projects` through the
-generated client. That is completion evidence for the first `Project` domain
-shell only. It is not completion evidence for `Finding`, imports, memberships,
-RBAC, or React Workbench feature parity.
+Current state: the active Workbench app omits `/items` and `ItemsService`,
+exposes `/api/v1/projects` through the generated client, and uses a local
+single-user access model. The current Alembic head drops the inactive template
+user/session/API-token tables. Finding, import, report, provider, waiver, and
+asset behavior must be judged from current Workbench tests and docs, not from
+old template shell milestones.
 
 ## VPW-003 Scope
 
@@ -49,11 +50,11 @@ commit 13652b51ea0acca7dfe243ac25e2bbdc066f3c4f
 | `backend/app/models.py` | Defines `ItemBase`, `ItemCreate`, `ItemUpdate`, `Item`, `ItemPublic`, `ItemsPublic`, and `User.items`. `Item.owner_id` points to `user.id`. | Do not copy the `Item` entity. Introduce Workbench `Project`, `Asset`, `Component`, `Vulnerability`, `Finding`, and related public schemas in follow-up SQLModel slices. |
 | `backend/app/api/routes/items.py` | Exposes `/api/v1/items/` list, create, read, update, and delete. Superusers see all items; normal users are scoped by `owner_id`. | Replace with project and finding APIs. Findings should normally be produced by imports, not arbitrary manual create. |
 | `backend/app/api/main.py` | Includes `items.router` in the versioned API router. | Do not include an Items router. Include project, import, finding, report, provider, evidence, and governance routers as they land. |
-| `backend/app/crud.py` | Provides `create_item(session, item_in, owner_id)`. | Replace with project/finding services and repositories. Keep user CRUD/auth patterns separately. |
-| `backend/app/api/routes/users.py` | Imports `Item`; superuser user-delete explicitly deletes owned items. | Do not add a `User.items` dependency. User deletion must be revisited with explicit project membership, ownership, audit, and cascade policy. |
+| `backend/app/crud.py` | Provides `create_item(session, item_in, owner_id)`. | Replace with project/finding services and repositories. Do not recreate generic user CRUD/auth paths for the current single-user Workbench. |
+| `backend/app/api/routes/users.py` | Imports `Item`; superuser user-delete explicitly deletes owned items. | Do not add a `User.items` dependency or active user-management route. The current product uses a local in-memory actor. |
 | `backend/app/alembic/versions/e2412789c190_initialize_models.py` and later Item-related revisions | Creates and evolves the template `item` table. | New migrations must create Workbench tables instead of carrying forward `item`. |
-| `backend/tests/api/routes/test_items.py` | Tests Item CRUD, permission checks, not-found behavior, and owner scoping. | Replace with project CRUD, finding list/detail/status, import, pagination, and authorization tests. |
-| `backend/tests/utils/item.py` | Creates random users and items for backend tests. | Replace with fixtures for user, project, asset, component, vulnerability, finding, run, and occurrence data. |
+| `backend/tests/api/routes/test_items.py` | Tests Item CRUD, permission checks, not-found behavior, and owner scoping. | Replace with project CRUD, finding list/detail/status, import, pagination, and local single-user project-exists checks. |
+| `backend/tests/utils/item.py` | Creates random users and items for backend tests. | Replace with fixtures for project, asset, component, vulnerability, finding, run, and occurrence data. |
 
 ### Frontend
 
@@ -74,7 +75,7 @@ commit 13652b51ea0acca7dfe243ac25e2bbdc066f3c4f
 
 ## Workbench Replacement Inventory
 
-The retained `backend/src/vuln_prioritizer` package is CLI and domain source
+The retained `backend/src/vuln_prioritizer` package is shared domain source
 material. Active Workbench persistence, routes, and UI live under `backend/app`
 and `frontend`.
 
@@ -88,8 +89,9 @@ and `frontend`.
 ## Template Shell Boundary
 
 The active template shell composes the new app from `backend/app/main.py` and
-`backend/app/api/main.py`. It currently includes login, users, utilities, and
-the `/api/v1/workbench/status` adapter from
+`backend/app/api/main.py`. It currently includes local single-user API
+dependencies, utilities, domain Workbench routes, and the
+`/api/v1/workbench/status` adapter from
 `backend/app/api/routes/workbench.py`.
 
 The template shell may import framework-neutral core modules such as
@@ -100,22 +102,22 @@ or active `backend/app` services.
 
 ## Remaining Compatibility Inventory
 
-The active runtime is `backend/app` plus the React Workbench. The names below
-are intentionally retained compatibility surfaces, not evidence of a second
-runtime:
+The active runtime is `backend/app` plus the React Workbench. The cleanup
+decisions below record which former compatibility surfaces are gone and which
+historical artifacts remain for evidence only:
 
 | Surface | Current path | Disposition |
 | --- | --- | --- |
-| App-state aliases | `backend/app/core/app_state.py` keeps `template_settings` and `template_engine` beside `workbench_settings` and `workbench_engine`. | Retain until local scripts/tests no longer need template-era state names; tests now verify active keys are preferred. |
-| Legacy local storage defaults | `backend/app/core/config.py`, `scripts/workbench-backup.sh`, and `scripts/workbench-restore.sh` still recognize `template.db` and `data/template-*` artifact roots. | Legacy storage fallback is opt-in through `WORKBENCH_LEGACY_STORAGE_FALLBACK=1`; new defaults and backup paths use `workbench-*` names so stray local template artifacts do not change runtime defaults or backup contents. |
-| Compatibility aliases | `backend/app/services/analysis.py`, `backend/app/services/provider_updates.py`, and `backend/app/services/import_artifacts.py` expose `Template*` aliases for older local integrations. | Keep as documented compatibility shims only; new code should import Workbench-named symbols. |
-| Playwright compatibility starter | `scripts/start-workbench-playwright-backend.sh` is the active backend start script referenced by `frontend/playwright.config.ts`; Playwright defaults to backend port `18000` and frontend port `15173` to avoid Docker demo collisions, and its default SQLite/report paths are port-scoped so parallel local previews do not overwrite each other. `scripts/start-template-playwright-backend.sh` is a deprecation shim. | Retain the shim temporarily for older local commands; new browser tooling must use the Workbench-named script and the `VPW_PLAYWRIGHT_*` / `VPW_E2E_*` overrides when reusing existing servers. |
-| Generated historical artifacts | `docs/examples/vpw-054-template-*` and related evidence files preserve release snapshots. | Treat as immutable historical evidence, not active runtime naming. |
-| CLI compatibility modes | `backend/src/vuln_prioritizer` keeps legacy input and ATT&CK CSV compatibility for CLI users. | Supported CLI/core surface; do not remove as part of FastAPI Workbench cleanup. |
+| App-state aliases | `backend/app/core/app_state.py` stores only `workbench_settings` and `workbench_engine`. | Removed. Active code must not read or write `template_settings` or `template_engine`. |
+| Legacy local storage defaults | `backend/app/core/config.py`, `scripts/workbench-backup.sh`, and `scripts/workbench-restore.sh` use Workbench-branded paths only. | Removed. Fresh local runs should not auto-detect `template.db` or `data/template-*` artifact roots. |
+| Compatibility aliases | `backend/app/services/analysis.py`, `backend/app/services/provider_updates.py`, and `backend/app/services/import_artifacts.py` expose only Workbench-named symbols. | Removed. New code should import Workbench-named symbols. |
+| Playwright starter | `scripts/start-workbench-playwright-backend.sh` is the active backend start script referenced by `frontend/playwright.config.ts`; Playwright defaults to backend port `18000` and frontend port `15173` to avoid Docker demo collisions, and its default SQLite/report paths are port-scoped so parallel local previews do not overwrite each other. | Use the Workbench-named script and the `VPW_PLAYWRIGHT_*` / `VPW_E2E_*` overrides when reusing existing servers. |
+| Generated historical artifacts | `docs/examples/vpw-054-workbench-*` and related evidence files preserve report snapshots. | Treat as immutable historical evidence, not active runtime naming. |
+| Domain package | `backend/src/vuln_prioritizer` keeps parsers, providers, scoring, SARIF contract helpers, redaction, and framework-neutral domain logic. | Keep framework-neutral domain logic. Typer command/support files and legacy report facades have been removed from the active product surface. |
 
 New runtime code must not add additional `template_*`, `Template*`, or
-`template-*` names unless the change is explicitly a compatibility shim with a
-removal or retention decision.
+`template-*` names unless the change is explicitly historical documentation or
+evidence.
 
 ## Replacement Mapping
 
@@ -124,7 +126,7 @@ removal or retention decision.
 | `Item` table | No direct equivalent. Use `Project` for an investigation workspace and `Finding` for prioritized vulnerability evidence. |
 | `Item.title` | `Project.name` only in project CRUD. Finding titles should be derived from CVE, component, and asset context. |
 | `Item.description` | `Project.description` for project metadata. Finding explanation belongs in provider/context/explanation fields. |
-| `Item.owner_id` | Do not map to finding owner. Use project membership/ownership and later RBAC. Asset/business owner is a different concept. |
+| `Item.owner_id` | Do not map to finding owner. The current single-user Workbench only checks that a project exists. Asset/business owner is routing metadata, not authorization. |
 | `/api/v1/items/` | `/api/v1/projects`, `/api/v1/projects/{project_id}`, `/api/v1/projects/{project_id}/findings`, `/api/v1/findings/{finding_id}`, and import/report/provider APIs. |
 | `ItemsPublic { data, count }` | Project and finding list contracts with explicit pagination and domain names. Findings should support `total`, `limit`, and `offset`. |
 | `/items` frontend page | Workbench navigation and pages for dashboard, projects, imports, findings, assets, providers, reports, and settings. |
@@ -134,11 +136,13 @@ removal or retention decision.
 
 ## Dependencies To Handle During Implementation
 
-- `User.items` and `Item.owner_id` are tightly coupled in the template. Replacing
-  them requires a deliberate Project/User relationship, not a blind rename.
+- `User.items` and `Item.owner_id` are tightly coupled in the template. The
+  current Workbench deliberately removed that relationship instead of renaming
+  it into a fake ownership model.
 - User deletion currently cascades or explicitly deletes Items in the official
-  template. Workbench deletion must preserve auditability and avoid silently
-  deleting investigation history.
+  template. The active Workbench has no user-management route; project deletion
+  and cleanup must preserve auditability and avoid silently deleting
+  investigation history.
 - Alembic migrations must start from the adopted template baseline and create
   Workbench tables without leaving an unused `item` table.
 - Generated OpenAPI client changes must be committed with backend route changes.
@@ -163,8 +167,8 @@ removal or retention decision.
 - A simple `Item` to `Project` rename would keep the wrong mental model and hide
   the fact that findings are created from imports, enrichment, and
   prioritization.
-- Mapping `owner_id` directly to finding ownership would confuse system user,
-  project owner, asset owner, and risk owner.
+- Mapping `owner_id` directly to finding ownership would confuse local actor,
+  project selection, asset owner, and risk owner.
 - Introducing another runtime into the template app would mix architectures and
   make SQLModel/Alembic verification harder.
 - Closing implementation issues based on removed Workbench behavior would recreate
@@ -177,11 +181,11 @@ removal or retention decision.
 This VPW-003 slice is docs-only. Rollback is a normal revert of this document
 and the MkDocs navigation change.
 
-For future implementation slices, rollback should keep the FSFT-04 login/status
-shell intact and revert only the Project/Finding change set that failed. Do not
-restore the demo `Item` feature into the mainline app. The pinned template
-branch remains the reference if the original Item implementation needs to be
-inspected again.
+For future implementation slices, rollback should preserve the current
+single-user Workbench shell and revert only the Project/Finding change set that
+failed. Do not restore the demo `Item`, login, user-management, or API-token
+features into the mainline app. The pinned template branch remains the
+reference if the original Item implementation needs to be inspected again.
 
 ## Evidence Checklist
 

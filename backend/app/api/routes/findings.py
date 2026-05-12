@@ -8,8 +8,8 @@ from typing import Literal
 from fastapi import APIRouter, HTTPException, Query
 from sqlmodel import Session, col, select
 
-from app.api.deps import ScopedReadUser, SessionDep
-from app.api.routes.workbench_access import require_visible_project
+from app.api.deps import LocalActor, SessionDep
+from app.api.routes.workbench_access import require_project
 from app.models import (
     AssetExposure,
     Finding,
@@ -52,7 +52,7 @@ FindingsSortDirection = Literal["asc", "desc"]
 def read_project_findings(
     project_id: uuid.UUID,
     session: SessionDep,
-    current_user: ScopedReadUser,
+    local_actor: LocalActor,
     limit: int = Query(default=100, ge=1, le=500),
     offset: int = Query(default=0, ge=0),
     sort: FindingsSort = Query(default="operational"),
@@ -71,7 +71,7 @@ def read_project_findings(
     cvss_max: float | None = Query(default=None, ge=0, le=10),
 ) -> FindingsPublic:
     """List a paginated page of findings for a visible project."""
-    require_visible_project(session, current_user, project_id)
+    require_project(session, project_id)
     findings, count = FindingRepository(session).list_project_findings_query(
         FindingPageQuery(
             project_id=project_id,
@@ -103,13 +103,13 @@ def read_project_findings(
 def read_finding(
     finding_id: uuid.UUID,
     session: SessionDep,
-    current_user: ScopedReadUser,
+    local_actor: LocalActor,
 ) -> FindingDetailPublic:
     """Read one finding if its project is visible."""
     finding = FindingRepository(session).get_finding(finding_id)
     if finding is None:
         raise HTTPException(status_code=404, detail="Finding not found")
-    require_visible_project(session, current_user, finding.project_id)
+    require_project(session, finding.project_id)
     return _finding_detail_public_with_attack_context(session, finding)
 
 
@@ -525,13 +525,13 @@ def _int_evidence(evidence: dict[str, object], key: str) -> int:
 def explain_finding(
     finding_id: uuid.UUID,
     session: SessionDep,
-    current_user: ScopedReadUser,
+    local_actor: LocalActor,
 ) -> FindingExplanationPublic:
     """Read the persisted decision explanation for one visible finding."""
     finding = FindingRepository(session).get_finding(finding_id)
     if finding is None:
         raise HTTPException(status_code=404, detail="Finding not found")
-    require_visible_project(session, current_user, finding.project_id)
+    require_project(session, finding.project_id)
     try:
         return build_finding_explanation_payload(finding)
     except DecisionDataUnavailableError as exc:

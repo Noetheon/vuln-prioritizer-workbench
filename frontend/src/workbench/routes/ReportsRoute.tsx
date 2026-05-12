@@ -11,7 +11,6 @@ import { useReportsRouteState } from "../useReportsRouteState"
 
 function ReportsRouteContent() {
   const {
-    handleAuthExpired,
     projectListLoading,
     projectListError,
     projects,
@@ -29,7 +28,6 @@ function ReportsRouteContent() {
     projectRuns.find((run) => run.id === selectedRunId) ?? null
   const reportsState = useReportsRouteState({
     currentPath: "/reports",
-    onAuthExpired: handleAuthExpired,
     selectedReportRun,
     selectedRunId,
   })

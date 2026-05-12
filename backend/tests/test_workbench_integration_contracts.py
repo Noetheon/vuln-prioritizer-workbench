@@ -20,8 +20,9 @@ def test_backend_dockerfile_prepares_workbench_quickstart_runtime_dirs() -> None
     assert "backend/requirements.lock.txt" not in dockerfile
     assert "python -m pip install --no-deps ./backend" in dockerfile
     assert "Set SECRET_KEY before starting the backend container." in dockerfile
-    assert "Set FIRST_SUPERUSER_PASSWORD before starting the backend container." in dockerfile
-    assert "python -m app.core.migration_bootstrap" in dockerfile
+    assert "FIRST_SUPERUSER" not in dockerfile
+    assert "FIRST_SUPERUSER_PASSWORD" not in dockerfile
+    assert "python -m app.core.migration_bootstrap" not in dockerfile
     assert "alembic -c /app/backend/alembic.ini upgrade head" in dockerfile
     assert "chown -R workbench:workbench /app" in dockerfile
 
@@ -52,15 +53,19 @@ def test_compose_uses_workbench_shell_without_legacy_runtime_services() -> None:
     assert "./data:/app/examples:ro" in backend["volumes"]
     assert "/api/v1/utils/health-check/" in backend["healthcheck"]["test"][3]
     assert backend["environment"]["SECRET_KEY"].startswith("${SECRET_KEY:?Set SECRET_KEY")
-    assert backend["environment"]["FIRST_SUPERUSER_PASSWORD"].startswith(
-        "${FIRST_SUPERUSER_PASSWORD:?Set FIRST_SUPERUSER_PASSWORD"
+    assert backend["environment"]["LOCAL_WORKBENCH_USER_EMAIL"] == (
+        "${LOCAL_WORKBENCH_USER_EMAIL:-local@workbench.test}"
     )
+    assert "FIRST_SUPERUSER" not in backend["environment"]
+    assert "FIRST_SUPERUSER_PASSWORD" not in backend["environment"]
     assert backend["environment"]["POSTGRES_PASSWORD"].startswith(
         "${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD"
     )
-    assert backend["environment"]["API_TOKEN_DEFAULT_EXPIRE_DAYS"] == (
-        "${API_TOKEN_DEFAULT_EXPIRE_DAYS:-90}"
-    )
+    assert "API_TOKEN_DEFAULT_EXPIRE_DAYS" not in backend["environment"]
+    assert "LOGIN_RATE_LIMIT_PER_MINUTE" not in backend["environment"]
+    assert "TOKEN_FAILURE_RATE_LIMIT_PER_MINUTE" not in backend["environment"]
+    assert "SESSION_RETENTION_DAYS" not in backend["environment"]
+    assert "REVOKED_API_TOKEN_RETENTION_DAYS" not in backend["environment"]
     assert compose["volumes"]["workbench-import-uploads"]["name"] == (
         "${WORKBENCH_IMPORT_UPLOADS_VOLUME:-workbench-import-uploads}"
     )
@@ -107,7 +112,7 @@ def test_compose_override_exposes_workbench_shell_and_frontend_ports() -> None:
         backend_command
     )
     assert "alembic -c /app/backend/alembic.ini upgrade head" in backend_command
-    assert "python -m app.core.migration_bootstrap" in backend_command
+    assert "python -m app.core.migration_bootstrap" not in backend_command
     assert "init_db(session)" not in backend_command
     assert "create_all" not in backend_command
     assert "app.main:app" in backend_command
@@ -121,18 +126,16 @@ def test_docker_demo_smoke_runs_quickstart_api_import() -> None:
     script = Path("scripts/docker_quickstart_api_smoke.py").read_text(encoding="utf-8")
 
     docker_smoke_block = makefile.split("docker-demo-smoke:", 1)[1].split("dependency-audit:", 1)[0]
-    assert "DOCKER_DEMO_BACKEND_PORT ?= 8000" in makefile
-    assert "DOCKER_DEMO_FRONTEND_PORT ?= 5173" in makefile
+    assert "DOCKER_DEMO_BACKEND_PORT ?= 18080" in makefile
+    assert "DOCKER_DEMO_FRONTEND_PORT ?= 15174" in makefile
     assert 'export DOCKER_DEMO_BACKEND_PORT="$(DOCKER_DEMO_BACKEND_PORT)"' in docker_smoke_block
     assert 'export DOCKER_DEMO_FRONTEND_PORT="$(DOCKER_DEMO_FRONTEND_PORT)"' in docker_smoke_block
     assert "DOCKER_QUICKSTART_API_BASE_URL=" in docker_smoke_block
     assert "$(PYTHON) scripts/docker_quickstart_api_smoke.py" in docker_smoke_block
     assert "$(COMPOSE) exec -T backend python -m app.core.schema_smoke" in docker_smoke_block
-    assert 'export FIRST_SUPERUSER_PASSWORD="$(DOCKER_DEMO_FIRST_SUPERUSER_PASSWORD)"' in (
-        docker_smoke_block
-    )
     assert 'export POSTGRES_PASSWORD="$(DOCKER_DEMO_POSTGRES_PASSWORD)"' in docker_smoke_block
-    assert '"local-workbench-dev-password"' in script
+    assert "login/access-token" not in script
+    assert "Authorization" not in script
     assert "locked_provider_data" in script
     assert "demo_provider_snapshot.json" in script
     assert "providers/update-jobs" in script
@@ -160,9 +163,11 @@ def test_production_smoke_overlay_uses_same_origin_public_contract() -> None:
 
     assert backend_env["ENVIRONMENT"] == "production"
     assert backend_env["SECRET_KEY"].startswith("${SECRET_KEY:?Set SECRET_KEY")
-    assert backend_env["FIRST_SUPERUSER_PASSWORD"].startswith(
-        "${FIRST_SUPERUSER_PASSWORD:?Set FIRST_SUPERUSER_PASSWORD"
+    assert backend_env["LOCAL_WORKBENCH_USER_EMAIL"] == (
+        "${LOCAL_WORKBENCH_USER_EMAIL:-local@workbench.test}"
     )
+    assert "FIRST_SUPERUSER" not in backend_env
+    assert "FIRST_SUPERUSER_PASSWORD" not in backend_env
     assert backend_env["POSTGRES_PASSWORD"].startswith("${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD")
     assert backend_env["API_DOCS_ENABLED"] == "false"
     assert backend_env["FRONTEND_HOST"] == "https://workbench.example.test"

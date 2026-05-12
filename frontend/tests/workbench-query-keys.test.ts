@@ -74,10 +74,6 @@ test("workbench query keys normalize optional route and filter inputs", () => {
     "project-1",
     { owner: "team-a", service: "" },
   ])
-  assert.deepEqual(workbenchQueryKeys.currentUser(), [
-    "workbench",
-    "current-user",
-  ])
   assert.deepEqual(workbenchQueryKeys.findingDetail(null), [
     "workbench",
     "finding-detail",

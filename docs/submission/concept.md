@@ -39,7 +39,7 @@ Finding -> CVSS/EPSS/KEV -> asset context -> governance context
 
 ## Scope
 
-VPW is a local, self-hosted Workbench and CLI for:
+VPW is a local, self-hosted Workbench for:
 
 - importing existing CVE lists, scanner/SBOM exports, and VEX context data
 - enriching findings with CVSS, EPSS, CISA KEV, and provider freshness

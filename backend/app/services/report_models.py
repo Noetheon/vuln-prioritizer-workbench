@@ -92,7 +92,6 @@ class MarkdownReportPayload:
     governance_rollups: dict[str, Any] = field(default_factory=dict)
     detection_coverage: dict[str, Any] = field(default_factory=dict)
     project_description: str | None = None
-    project_owner_id: str | None = None
     project_created_at: datetime | None = None
     project_updated_at: datetime | None = None
     run_started_at: datetime | None = None

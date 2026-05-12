@@ -15,15 +15,15 @@ external readers and contributors.
 | --- | --- | --- |
 | Understand the project quickly | [`README.md`](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/README.md) | Public overview, quickstarts, safety boundaries, docs links, and project status. |
 | Find the canonical product truth | [Current Product State](current-product-state.md) | Active stack, user surfaces, release posture, and historical boundaries. |
-| Use the CLI or Workbench | [User Documentation Guide](user_documentation.md) | Full external-user path across install, Docker, CLI, Workbench, providers, reports, and limitations. |
+| Use the Workbench | [User Documentation Guide](user_documentation.md) | Full external-user path across local setup, Docker, Workbench, providers, reports, and limitations. |
 | Check supported inputs and outputs | [Support Matrix](support_matrix.md) | Import formats, report formats, evidence outputs, and feature overlays. |
-| Understand stable contracts | [Contracts](contracts.md) | CLI, report, evidence bundle, API, and schema contract details. |
+| Understand stable contracts | [Contracts](contracts.md) | Workbench API, report, evidence bundle, and schema contract details. |
 | Contribute safely | [`CONTRIBUTING.md`](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/CONTRIBUTING.md) | Local setup, quality gates, branch/PR rules, and scope guardrails. |
 | Ask for help | [`SUPPORT.md`](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/SUPPORT.md) | Issue, discussion, and security-report routing. |
 | Report security issues | [`SECURITY.md`](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/SECURITY.md) | Private disclosure path and project-specific security notes. |
 | Understand conduct expectations | [`CODE_OF_CONDUCT.md`](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/CODE_OF_CONDUCT.md) | Community behavior and conduct escalation. |
 | Understand ownership | [`MAINTAINERS.md`](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/MAINTAINERS.md) and [`.github/CODEOWNERS`](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/.github/CODEOWNERS) | Maintainer responsibilities and default review ownership. |
-| Review releases | [`CHANGELOG.md`](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/CHANGELOG.md), [Release Operations](release_operations.md), and [Release Evidence Ledger](public-production-release-evidence-ledger.md) | Historical changes, release workflow, evidence requirements, and residual-risk tracking. |
+| Review releases | [`CHANGELOG.md`](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/CHANGELOG.md), [Release Operations](release_operations.md), and [Dependency and Package Policy](dependency-and-package-policy.md) | Historical changes, package workflow, evidence requirements, and residual-risk tracking. |
 
 ## Community Health Files
 
@@ -73,17 +73,19 @@ Private vulnerability reporting follows `SECURITY.md`.
 A reviewable pull request should include:
 
 - a concise summary and linked issue or roadmap ID when relevant
-- changed surfaces: CLI, backend API, DB/migrations, generated client, frontend,
-  Docker, docs, release, packaging, or security
+- changed surfaces: domain services, Workbench backend API, DB/migrations,
+  generated client, frontend, Docker, docs, package metadata, or explicitly
+  scoped security/release work
 - exact commands run and result summaries
 - generated artifacts or screenshots when the changed surface needs them
 - residual risk and follow-up issues when something remains open
-- release-readiness evidence when the PR affects release, deployment, public
-  documentation claims, Docker, package publication, or security boundaries
+- local validation evidence matched to the touched surface
 
-The pull request template encodes this checklist. Maintainers should not close
-strict evidence issues from old notes, archived screenshots, or historical demo
-proof without fresh evidence for the current candidate.
+The pull request template encodes this lighter default checklist. Release
+readiness, public/shared deployment evidence, and package publication evidence
+are only required when the linked issue or PR explicitly scopes that work.
+Maintainers should not use archived screenshots or historical demo proof as
+current completion evidence.
 
 ## Documentation Quality Bar
 
@@ -104,14 +106,15 @@ The repository can document a release process, local validation, and expected
 public deployment evidence. It cannot prove a live public deployment only from
 checked-in Markdown.
 
-Before an external deployment claim is made for a release candidate, the public
-release ledger must include fresh evidence for that exact candidate:
+Before an external deployment claim is made for a release candidate, the
+handoff must include fresh evidence for that exact candidate:
 
-- `make release-readiness-check` or a documented equivalent with owner-approved
+- current local quality gates or a documented equivalent with owner-approved
   skip rationale
 - public TLS/header captures from the deployed host
 - Traefik/proxy topology evidence
-- strict CORS, cookie, CSRF, and security-header behavior
+- strict CORS, CSP, host-routing, and security-header behavior; cookie/CSRF
+  evidence is required only if browser-session auth is reintroduced
 - backup/restore, schema readiness, retention, and audit evidence where relevant
 - dependency and container/image posture evidence
 - residual-risk decision with owner and follow-up
@@ -121,7 +124,7 @@ release ledger must include fresh evidence for that exact candidate:
 These settings are not created by files in this repository. Maintainers should
 verify them in GitHub before broad public launch or release promotion:
 
-- repository description and topics match the current Workbench plus CLI scope
+- repository description and topics match the current Workbench scope
 - homepage points to stable docs or is intentionally empty
 - discussions are enabled only if they are actively supported
 - wiki is disabled if versioned docs remain canonical

@@ -112,5 +112,5 @@ export function joinedValues(values: Array<string | null | undefined>) {
     (value): value is string =>
       typeof value === "string" && value.trim() !== "",
   )
-  return present.length > 0 ? present.join(" / ") : "N.A."
+  return present.length > 0 ? present.join(" / ") : "Not supplied"
 }

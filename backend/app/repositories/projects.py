@@ -6,8 +6,7 @@ import uuid
 
 from sqlmodel import Session, col, func, select
 
-from app.models import Project, ProjectCreate, ProjectUpdate, User
-from app.models.api_tokens import api_token_project_id, api_token_scopes
+from app.models import Project, ProjectCreate, ProjectUpdate
 from app.models.base import get_datetime_utc
 
 
@@ -17,25 +16,18 @@ class ProjectRepository:
     def __init__(self, session: Session) -> None:
         self.session = session
 
-    def list_visible_projects(self, user: User) -> tuple[list[Project], int]:
-        """Return local projects, narrowed only for explicit service tokens."""
+    def list_projects(self) -> tuple[list[Project], int]:
+        """Return every local Workbench project."""
         count_statement = select(func.count()).select_from(Project)
         statement = select(Project).order_by(col(Project.created_at).desc())
-        service_token_scopes = api_token_scopes(user)
-        if service_token_scopes is not None and "admin" not in service_token_scopes:
-            scoped_project_id = api_token_project_id(user)
-            if scoped_project_id is None:
-                return [], 0
-            count_statement = count_statement.where(Project.id == scoped_project_id)
-            statement = statement.where(Project.id == scoped_project_id)
 
         count = self.session.exec(count_statement).one()
         projects = self.session.exec(statement).all()
         return list(projects), count
 
-    def create_project(self, project_in: ProjectCreate, *, owner_id: uuid.UUID) -> Project:
+    def create_project(self, project_in: ProjectCreate) -> Project:
         """Create a project shell without committing the transaction."""
-        project = Project.model_validate(project_in, update={"owner_id": owner_id})
+        project = Project.model_validate(project_in)
         self.session.add(project)
         self.session.flush()
         return project
@@ -43,17 +35,6 @@ class ProjectRepository:
     def get_project(self, project_id: uuid.UUID) -> Project | None:
         """Return a project by primary key."""
         return self.session.get(Project, project_id)
-
-    def get_visible_project(self, project_id: uuid.UUID, user: User) -> Project | None:
-        """Return a project unless an explicit service token scopes it out."""
-        project = self.get_project(project_id)
-        if project is None:
-            return None
-        service_token_scopes = api_token_scopes(user)
-        if service_token_scopes is None or "admin" in service_token_scopes:
-            return project
-        scoped_project_id = api_token_project_id(user)
-        return project if scoped_project_id == project_id else None
 
     def update_project(self, project: Project, project_in: ProjectUpdate) -> Project:
         """Update mutable project fields without committing the transaction."""

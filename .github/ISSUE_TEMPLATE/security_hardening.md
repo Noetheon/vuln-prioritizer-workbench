@@ -1,6 +1,6 @@
 ---
 name: Security hardening
-about: Propose auth, token, upload/download, deployment, audit, or secure-default work
+about: Propose local access, upload/download, deployment, audit, or secure-default work
 title: "[Security] "
 labels: type:security,status:needs-review
 assignees: ""
@@ -12,14 +12,15 @@ What security boundary changes?
 
 ## Target
 
-Which route, command, token, upload/download path, deployment setting, report,
+Which route, API endpoint, upload/download path, deployment setting, report,
 evidence artifact, or documentation surface is affected?
 
 ## Scope
 
-- [ ] Auth/session/token behavior
+- [ ] Local access behavior
+- [ ] Shared-deployment behavior explicitly requested
 - [ ] Upload/import/download/artifact handling
-- [ ] API authorization or project access
+- [ ] Local API exposure or project data access
 - [ ] Docker/Compose/deployment configuration
 - [ ] Audit/retention/backup/restore
 - [ ] Provider/ticket-system integration
@@ -33,6 +34,9 @@ Describe the asset, attacker capability, impact, and current mitigation gap.
 
 Describe the smallest safe change.
 
+Auth, RBAC, API tokens, multi-user operation, and public-deployment hardening are
+future/explicit tracks. Do not add them to ordinary product work by implication.
+
 ## Tests
 
 - [ ] Targeted tests or smoke checks
@@ -42,14 +46,14 @@ Describe the smallest safe change.
 
 ## Safety Checklist
 
-- [ ] No public deployment certification is claimed without explicit
-      threat-model, deployment, release-readiness, and final scorecard evidence.
-- [ ] No secrets, token values, cookies, API keys, customer exports, or private
+- [ ] Public/shared deployment certification is only claimed when that track is
+      explicitly requested and backed by dedicated evidence.
+- [ ] No secrets, credentials, cookies, API keys, customer exports, or private
       paths are exposed.
 - [ ] No scanner, exploit, PoC, active probing, credential testing, or
       autopatching behavior is introduced.
 - [ ] Upload limits, rooted paths, safe parsing, CSRF-sensitive forms, security
-      headers, and token hashing are not weakened.
+      headers, and credential handling are not weakened.
 
 ## Definition Of Done
 

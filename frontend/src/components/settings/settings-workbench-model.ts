@@ -1,6 +1,5 @@
 import type {
   ProviderStatusPublic,
-  UserPublic,
   WorkbenchStatus,
 } from "@/api-client"
 import type { VpwBadgeTone } from "@/components/vpw"
@@ -8,7 +7,6 @@ import { formatCacheAge, providerSnapshotSummary } from "@/lib/provider-format"
 
 export type SettingsWorkbenchProps = {
   activeSettingsTab: SettingsTab
-  currentUser: UserPublic | null
   providerStatus: ProviderStatusPublic | null
   providerStatusError: string
   providerStatusLoading: boolean
@@ -45,13 +43,9 @@ export type ProviderConfigRow = {
   tone: VpwBadgeTone
 }
 
-export function userLabel(user: UserPublic | null) {
-  return user?.is_active ? "Local workspace" : "Checking workspace"
-}
-
 export function formatDateTime(value: string | null | undefined) {
   if (!value) {
-    return "N.A."
+    return "Not recorded"
   }
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) {

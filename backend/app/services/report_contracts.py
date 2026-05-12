@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from vuln_prioritizer import workbench_report_contracts as _workbench_report_contracts
+import vuln_prioritizer.workbench_report_contracts as _workbench_report_contracts
 
 CSV_FINDINGS_COLUMNS = _workbench_report_contracts.CSV_FINDINGS_COLUMNS
 

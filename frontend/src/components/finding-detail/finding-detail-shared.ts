@@ -169,7 +169,7 @@ export function findingHeroSummary(
 
   if (signals.length > 0) {
     const priority =
-      finding.priority && labelize(finding.priority) !== "N.A."
+      finding.priority && labelize(finding.priority) !== "Not recorded"
         ? `${labelize(finding.priority)} priority`
         : "Priority"
     return `${priority} combines ${summaryList(signals)}.`
@@ -195,7 +195,7 @@ export function findingComponentDetailLabel(
   finding: FindingDetailPublic | null,
 ) {
   if (!finding) {
-    return "N.A."
+    return "Not supplied"
   }
   const name = optionalText(finding.component_name)
   return finding.component_version
@@ -207,7 +207,7 @@ export function findingAssetServiceDetailLabel(
   finding: FindingDetailPublic | null,
 ) {
   if (!finding) {
-    return "N.A."
+    return "Not supplied"
   }
   return joinedValues([
     finding.business_service,
@@ -265,7 +265,7 @@ export function findingAssetLabel(finding: FindingDetailPublic) {
     finding.asset_name ??
     finding.asset_key ??
     finding.business_service ??
-    "N.A."
+    "Unmapped asset"
   )
 }
 

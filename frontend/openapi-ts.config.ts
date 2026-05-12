@@ -11,6 +11,7 @@ export default defineConfig({
     "@hey-api/typescript",
     {
       name: "@hey-api/sdk",
+      auth: false,
       paramsStructure: "flat",
       responseStyle: "data",
       throwOnError: true,

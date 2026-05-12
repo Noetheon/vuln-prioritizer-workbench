@@ -202,7 +202,7 @@ export type ApiErrorEnvelope = {
      */
     code: string;
     /**
-     * Legacy-compatible FastAPI detail field.
+     * FastAPI-compatible detail field for standard error clients.
      */
     detail: string | {
         [key: string]: unknown;
@@ -221,138 +221,6 @@ export type ApiErrorEnvelope = {
      * Optional request/correlation identifier echoed from request headers.
      */
     trace_id?: string;
-};
-
-/**
- * ApiTokenCreate
- *
- * Request payload for creating a scoped service token.
- */
-export type ApiTokenCreate = {
-    /**
-     * Expires At
-     */
-    expires_at?: string | null;
-    /**
-     * Name
-     */
-    name: string;
-    /**
-     * Project Id
-     */
-    project_id?: string | null;
-    /**
-     * Scopes
-     */
-    scopes?: Array<'read' | 'write' | 'import' | 'report' | 'admin'>;
-};
-
-/**
- * ApiTokenCreatePublic
- *
- * Creation response that shows the cleartext token exactly once.
- */
-export type ApiTokenCreatePublic = {
-    /**
-     * Active
-     */
-    active: boolean;
-    /**
-     * Created At
-     */
-    created_at: string;
-    /**
-     * Expires At
-     */
-    expires_at: string;
-    /**
-     * Id
-     */
-    id: string;
-    /**
-     * Last Used At
-     */
-    last_used_at: string | null;
-    /**
-     * Name
-     */
-    name: string;
-    /**
-     * Project Id
-     */
-    project_id: string | null;
-    /**
-     * Revoked At
-     */
-    revoked_at: string | null;
-    /**
-     * Scopes
-     */
-    scopes: Array<'read' | 'write' | 'import' | 'report' | 'admin'>;
-    /**
-     * Token
-     */
-    token: string;
-};
-
-/**
- * ApiTokenPublic
- *
- * API token metadata returned after creation, listing, and revocation.
- */
-export type ApiTokenPublic = {
-    /**
-     * Active
-     */
-    active: boolean;
-    /**
-     * Created At
-     */
-    created_at: string;
-    /**
-     * Expires At
-     */
-    expires_at: string;
-    /**
-     * Id
-     */
-    id: string;
-    /**
-     * Last Used At
-     */
-    last_used_at: string | null;
-    /**
-     * Name
-     */
-    name: string;
-    /**
-     * Project Id
-     */
-    project_id: string | null;
-    /**
-     * Revoked At
-     */
-    revoked_at: string | null;
-    /**
-     * Scopes
-     */
-    scopes: Array<'read' | 'write' | 'import' | 'report' | 'admin'>;
-};
-
-/**
- * ApiTokensPublic
- *
- * Collection response for token metadata.
- */
-export type ApiTokensPublic = {
-    /**
-     * Count
-     */
-    count: number;
-    /**
-     * Data
-     */
-    data: Array<ApiTokenPublic>;
 };
 
 /**
@@ -604,14 +472,6 @@ export type AuditEventPublic = {
      */
     action: string;
     /**
-     * Actor User Id
-     */
-    actor_user_id: string | null;
-    /**
-     * Api Token Id
-     */
-    api_token_id: string | null;
-    /**
      * Created At
      */
     created_at: string;
@@ -657,58 +517,6 @@ export type AuditEventsPublic = {
      * Data
      */
     data: Array<AuditEventPublic>;
-};
-
-/**
- * AuthSessionPublic
- *
- * Session metadata returned by administrative endpoints.
- */
-export type AuthSessionPublic = {
-    /**
-     * Active
-     */
-    active: boolean;
-    /**
-     * Created At
-     */
-    created_at: string;
-    /**
-     * Expires At
-     */
-    expires_at: string;
-    /**
-     * Id
-     */
-    id: string;
-    /**
-     * Last Seen At
-     */
-    last_seen_at: string | null;
-    /**
-     * Revoked At
-     */
-    revoked_at: string | null;
-    /**
-     * User Id
-     */
-    user_id: string;
-};
-
-/**
- * AuthSessionsPublic
- *
- * Collection response for session metadata.
- */
-export type AuthSessionsPublic = {
-    /**
-     * Count
-     */
-    count: number;
-    /**
-     * Data
-     */
-    data: Array<AuthSessionPublic>;
 };
 
 /**
@@ -761,36 +569,6 @@ export type BodyImportsImportProjectUpload = {
      * Vex File
      */
     vex_file?: Blob | File | null;
-};
-
-/**
- * Body_login-login_access_token
- */
-export type BodyLoginLoginAccessToken = {
-    /**
-     * Client Id
-     */
-    client_id?: string | null;
-    /**
-     * Client Secret
-     */
-    client_secret?: string | null;
-    /**
-     * Grant Type
-     */
-    grant_type?: string | null;
-    /**
-     * Password
-     */
-    password: string;
-    /**
-     * Scope
-     */
-    scope?: string;
-    /**
-     * Username
-     */
-    username: string;
 };
 
 /**
@@ -2365,10 +2143,6 @@ export type ProjectPublic = {
      */
     name: string;
     /**
-     * Owner Id
-     */
-    owner_id: string;
-    /**
      * Updated At
      */
     updated_at: string;
@@ -2767,86 +2541,6 @@ export type ReportsPublic = {
 };
 
 /**
- * Token
- *
- * OAuth2 bearer token response.
- */
-export type Token = {
-    /**
-     * Access Token
-     */
-    access_token: string;
-    /**
-     * Csrf Token
-     */
-    csrf_token?: string | null;
-    /**
-     * Token Type
-     */
-    token_type?: string;
-};
-
-/**
- * UserPasswordChange
- *
- * Payload for rotating the current user's password.
- */
-export type UserPasswordChange = {
-    /**
-     * Current Password
-     */
-    current_password: string;
-    /**
-     * New Password
-     */
-    new_password: string;
-};
-
-/**
- * UserPasswordReset
- *
- * Admin payload for resetting a persisted user password.
- */
-export type UserPasswordReset = {
-    /**
-     * New Password
-     */
-    new_password: string;
-};
-
-/**
- * UserPublic
- *
- * Public user shape exposed by Workbench auth routes.
- */
-export type UserPublic = {
-    /**
-     * Created At
-     */
-    created_at: string;
-    /**
-     * Email
-     */
-    email: string;
-    /**
-     * Full Name
-     */
-    full_name?: string | null;
-    /**
-     * Id
-     */
-    id: string;
-    /**
-     * Is Active
-     */
-    is_active?: boolean;
-    /**
-     * Is Superuser
-     */
-    is_superuser?: boolean;
-};
-
-/**
  * ValidationError
  */
 export type ValidationError = {
@@ -3080,7 +2774,7 @@ export type WaiversPublic = {
 /**
  * WorkbenchHealth
  *
- * Minimal unauthenticated health response.
+ * Minimal local health response.
  */
 export type WorkbenchHealth = {
     /**
@@ -3120,77 +2814,6 @@ export type WorkbenchStatus = {
      */
     status: string;
 };
-
-export type GetApiV1ApiTokensData = {
-    body?: never;
-    path?: never;
-    query?: never;
-    url: '/api/v1/api-tokens/';
-};
-
-export type GetApiV1ApiTokensResponses = {
-    /**
-     * Successful Response
-     */
-    200: ApiTokensPublic;
-};
-
-export type GetApiV1ApiTokensResponse = GetApiV1ApiTokensResponses[keyof GetApiV1ApiTokensResponses];
-
-export type PostApiV1ApiTokensData = {
-    body: ApiTokenCreate;
-    path?: never;
-    query?: never;
-    url: '/api/v1/api-tokens/';
-};
-
-export type PostApiV1ApiTokensErrors = {
-    /**
-     * Validation Error
-     */
-    422: ApiErrorEnvelope;
-};
-
-export type PostApiV1ApiTokensError = PostApiV1ApiTokensErrors[keyof PostApiV1ApiTokensErrors];
-
-export type PostApiV1ApiTokensResponses = {
-    /**
-     * Successful Response
-     */
-    200: ApiTokenCreatePublic;
-};
-
-export type PostApiV1ApiTokensResponse = PostApiV1ApiTokensResponses[keyof PostApiV1ApiTokensResponses];
-
-export type DeleteApiV1ApiTokensByTokenIdData = {
-    body?: never;
-    path: {
-        /**
-         * Token Id
-         */
-        token_id: string;
-    };
-    query?: never;
-    url: '/api/v1/api-tokens/{token_id}';
-};
-
-export type DeleteApiV1ApiTokensByTokenIdErrors = {
-    /**
-     * Validation Error
-     */
-    422: ApiErrorEnvelope;
-};
-
-export type DeleteApiV1ApiTokensByTokenIdError = DeleteApiV1ApiTokensByTokenIdErrors[keyof DeleteApiV1ApiTokensByTokenIdErrors];
-
-export type DeleteApiV1ApiTokensByTokenIdResponses = {
-    /**
-     * Successful Response
-     */
-    200: ApiTokenPublic;
-};
-
-export type DeleteApiV1ApiTokensByTokenIdResponse = DeleteApiV1ApiTokensByTokenIdResponses[keyof DeleteApiV1ApiTokensByTokenIdResponses];
 
 export type PatchApiV1AssetsByAssetIdData = {
     body: AssetUpdate;
@@ -3290,36 +2913,6 @@ export type GetApiV1AuditEventsResponses = {
 
 export type GetApiV1AuditEventsResponse = GetApiV1AuditEventsResponses[keyof GetApiV1AuditEventsResponses];
 
-export type GetApiV1AuditSessionsData = {
-    body?: never;
-    path?: never;
-    query?: {
-        /**
-         * Limit
-         */
-        limit?: number;
-    };
-    url: '/api/v1/audit/sessions';
-};
-
-export type GetApiV1AuditSessionsErrors = {
-    /**
-     * Validation Error
-     */
-    422: ApiErrorEnvelope;
-};
-
-export type GetApiV1AuditSessionsError = GetApiV1AuditSessionsErrors[keyof GetApiV1AuditSessionsErrors];
-
-export type GetApiV1AuditSessionsResponses = {
-    /**
-     * Successful Response
-     */
-    200: AuthSessionsPublic;
-};
-
-export type GetApiV1AuditSessionsResponse = GetApiV1AuditSessionsResponses[keyof GetApiV1AuditSessionsResponses];
-
 export type GetApiV1FindingsByFindingIdData = {
     body?: never;
     path: {
@@ -3379,63 +2972,6 @@ export type GetApiV1FindingsByFindingIdExplainResponses = {
 };
 
 export type GetApiV1FindingsByFindingIdExplainResponse = GetApiV1FindingsByFindingIdExplainResponses[keyof GetApiV1FindingsByFindingIdExplainResponses];
-
-export type PostApiV1LoginAccessTokenData = {
-    body: BodyLoginLoginAccessToken;
-    path?: never;
-    query?: never;
-    url: '/api/v1/login/access-token';
-};
-
-export type PostApiV1LoginAccessTokenErrors = {
-    /**
-     * Validation Error
-     */
-    422: ApiErrorEnvelope;
-};
-
-export type PostApiV1LoginAccessTokenError = PostApiV1LoginAccessTokenErrors[keyof PostApiV1LoginAccessTokenErrors];
-
-export type PostApiV1LoginAccessTokenResponses = {
-    /**
-     * Successful Response
-     */
-    200: Token;
-};
-
-export type PostApiV1LoginAccessTokenResponse = PostApiV1LoginAccessTokenResponses[keyof PostApiV1LoginAccessTokenResponses];
-
-export type PostApiV1LoginLogoutData = {
-    body?: never;
-    path?: never;
-    query?: never;
-    url: '/api/v1/login/logout';
-};
-
-export type PostApiV1LoginLogoutResponses = {
-    /**
-     * Successful Response
-     */
-    200: UserPublic;
-};
-
-export type PostApiV1LoginLogoutResponse = PostApiV1LoginLogoutResponses[keyof PostApiV1LoginLogoutResponses];
-
-export type PostApiV1LoginTestTokenData = {
-    body?: never;
-    path?: never;
-    query?: never;
-    url: '/api/v1/login/test-token';
-};
-
-export type PostApiV1LoginTestTokenResponses = {
-    /**
-     * Successful Response
-     */
-    200: UserPublic;
-};
-
-export type PostApiV1LoginTestTokenResponse = PostApiV1LoginTestTokenResponses[keyof PostApiV1LoginTestTokenResponses];
 
 export type GetApiV1ProjectsData = {
     body?: never;
@@ -4347,137 +3883,6 @@ export type GetApiV1RunsByRunIdSummaryResponses = {
 };
 
 export type GetApiV1RunsByRunIdSummaryResponse = GetApiV1RunsByRunIdSummaryResponses[keyof GetApiV1RunsByRunIdSummaryResponses];
-
-export type GetApiV1UsersMeData = {
-    body?: never;
-    path?: never;
-    query?: never;
-    url: '/api/v1/users/me';
-};
-
-export type GetApiV1UsersMeResponses = {
-    /**
-     * Successful Response
-     */
-    200: UserPublic;
-};
-
-export type GetApiV1UsersMeResponse = GetApiV1UsersMeResponses[keyof GetApiV1UsersMeResponses];
-
-export type PostApiV1UsersMePasswordData = {
-    body: UserPasswordChange;
-    path?: never;
-    query?: never;
-    url: '/api/v1/users/me/password';
-};
-
-export type PostApiV1UsersMePasswordErrors = {
-    /**
-     * Validation Error
-     */
-    422: ApiErrorEnvelope;
-};
-
-export type PostApiV1UsersMePasswordError = PostApiV1UsersMePasswordErrors[keyof PostApiV1UsersMePasswordErrors];
-
-export type PostApiV1UsersMePasswordResponses = {
-    /**
-     * Successful Response
-     */
-    200: UserPublic;
-};
-
-export type PostApiV1UsersMePasswordResponse = PostApiV1UsersMePasswordResponses[keyof PostApiV1UsersMePasswordResponses];
-
-export type PostApiV1UsersByUserIdActivateData = {
-    body?: never;
-    path: {
-        /**
-         * User Id
-         */
-        user_id: string;
-    };
-    query?: never;
-    url: '/api/v1/users/{user_id}/activate';
-};
-
-export type PostApiV1UsersByUserIdActivateErrors = {
-    /**
-     * Validation Error
-     */
-    422: ApiErrorEnvelope;
-};
-
-export type PostApiV1UsersByUserIdActivateError = PostApiV1UsersByUserIdActivateErrors[keyof PostApiV1UsersByUserIdActivateErrors];
-
-export type PostApiV1UsersByUserIdActivateResponses = {
-    /**
-     * Successful Response
-     */
-    200: UserPublic;
-};
-
-export type PostApiV1UsersByUserIdActivateResponse = PostApiV1UsersByUserIdActivateResponses[keyof PostApiV1UsersByUserIdActivateResponses];
-
-export type PostApiV1UsersByUserIdDeactivateData = {
-    body?: never;
-    path: {
-        /**
-         * User Id
-         */
-        user_id: string;
-    };
-    query?: never;
-    url: '/api/v1/users/{user_id}/deactivate';
-};
-
-export type PostApiV1UsersByUserIdDeactivateErrors = {
-    /**
-     * Validation Error
-     */
-    422: ApiErrorEnvelope;
-};
-
-export type PostApiV1UsersByUserIdDeactivateError = PostApiV1UsersByUserIdDeactivateErrors[keyof PostApiV1UsersByUserIdDeactivateErrors];
-
-export type PostApiV1UsersByUserIdDeactivateResponses = {
-    /**
-     * Successful Response
-     */
-    200: UserPublic;
-};
-
-export type PostApiV1UsersByUserIdDeactivateResponse = PostApiV1UsersByUserIdDeactivateResponses[keyof PostApiV1UsersByUserIdDeactivateResponses];
-
-export type PostApiV1UsersByUserIdPasswordResetData = {
-    body: UserPasswordReset;
-    path: {
-        /**
-         * User Id
-         */
-        user_id: string;
-    };
-    query?: never;
-    url: '/api/v1/users/{user_id}/password-reset';
-};
-
-export type PostApiV1UsersByUserIdPasswordResetErrors = {
-    /**
-     * Validation Error
-     */
-    422: ApiErrorEnvelope;
-};
-
-export type PostApiV1UsersByUserIdPasswordResetError = PostApiV1UsersByUserIdPasswordResetErrors[keyof PostApiV1UsersByUserIdPasswordResetErrors];
-
-export type PostApiV1UsersByUserIdPasswordResetResponses = {
-    /**
-     * Successful Response
-     */
-    200: UserPublic;
-};
-
-export type PostApiV1UsersByUserIdPasswordResetResponse = PostApiV1UsersByUserIdPasswordResetResponses[keyof PostApiV1UsersByUserIdPasswordResetResponses];
 
 export type GetApiV1UtilsHealthCheckData = {
     body?: never;

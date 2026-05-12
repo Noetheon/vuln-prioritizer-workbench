@@ -320,25 +320,25 @@ def _safe_text(value: Any) -> str:
 
 
 def _table_cell(value: Any) -> str:
-    text = _safe_text(value).strip() or "N.A."
+    text = _safe_text(value).strip() or "Not recorded"
     return text.replace("|", "\\|").replace("\n", " ")
 
 
 def _number_label(value: float | None) -> str:
     if value is None:
-        return "N.A."
+        return "Not recorded"
     return f"{value:.2f}".rstrip("0").rstrip(".")
 
 
 def _epss_label(value: float | None) -> str:
     if value is None:
-        return "N.A."
+        return "Not recorded"
     return f"{value:.4f}".rstrip("0").rstrip(".")
 
 
 def _component_label(finding: Finding) -> str:
     if finding.component is None:
-        return "N.A."
+        return "Not recorded"
     if finding.component.version:
         return f"{finding.component.name} {finding.component.version}"
     return finding.component.name
@@ -346,5 +346,5 @@ def _component_label(finding: Finding) -> str:
 
 def _asset_label(finding: Finding) -> str:
     if finding.asset is None:
-        return "N.A."
+        return "Not recorded"
     return finding.asset.name or finding.asset.asset_key

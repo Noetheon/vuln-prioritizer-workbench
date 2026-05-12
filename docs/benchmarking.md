@@ -1,6 +1,9 @@
 # Benchmarking
 
-This document describes the checked-in regression corpus used by `make benchmark-check`.
+This document describes the checked-in regression corpus that originated with
+the legacy command-line benchmark harness. The `make benchmark-check` target has
+been retired with the old Typer CLI; active parser and Workbench regressions now
+run through focused backend tests and `make check`.
 
 ## Purpose
 
@@ -56,7 +59,8 @@ Each benchmark case records deterministic invariants such as:
 - ordered `cve_id` results
 - warning substrings for expected edge-case behavior
 
-The benchmark suite intentionally uses the fake-provider path from the test suite so that:
+The retained corpus intentionally uses the fake-provider shape from the test
+suite so that:
 
 - NVD/EPSS/KEV network drift does not break the benchmark corpus
 - failures point to parser and prioritization regressions instead of live-source variance
@@ -138,19 +142,25 @@ Avoid:
 
 ## How To Update The Corpus
 
-When adding or changing a benchmark case:
+When adding or changing parser or prioritization fixture coverage:
 
 1. Start from a sanitized fixture under `data/input_fixtures/`.
-2. Add or update the case in `data/benchmarks/fixture_regressions.json`.
-3. Record the expected warning substrings and output invariants.
-4. Run:
+2. Prefer adding the active Workbench/parser assertion under
+   `data/input_fixtures/normalization_contracts.json` and the relevant backend
+   API or domain test.
+3. If the historical corpus still carries useful review context, update the
+   corresponding case in `data/benchmarks/fixture_regressions.json`.
+4. Record the expected warning substrings and output invariants in the active
+   test.
+5. Run:
 
 ```bash
-make benchmark-check
+python3 -m pytest -q backend/tests/api/test_workbench_parser_fixture_matrix.py backend/tests/test_input_loader_contracts.py --no-cov
 make check
 ```
 
-5. If the fixture is a new supported input shape, also update the normalization contracts and the fixture tests.
+6. If the fixture is a new supported input shape, also update the normalization
+   contracts and the fixture tests.
 
 When adding snapshot-diff fixtures:
 
@@ -164,7 +174,8 @@ When updating the rollup remediation fixture:
 1. Prefer analysis JSON with realistic saved finding fields over synthetic bucket-only payloads.
 2. Keep at least one finding that contributes to multiple assets or services.
 3. Keep at least one active `Unmapped` finding and one fully waived bucket.
-4. Re-run `make benchmark-check` so ordering and candidate summaries stay stable.
+4. Add or update an active backend service/report test before relying on the
+   historical corpus for ordering or candidate-summary stability.
 
 ## Maintainer Notes
 

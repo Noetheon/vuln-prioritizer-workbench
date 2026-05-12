@@ -7,26 +7,14 @@ PYTHON_RUNTIME_LOCK := $(BACKEND_DIR)/requirements.runtime.lock.txt
 COMPOSE := docker compose -f compose.yml -f compose.override.yml
 PRODUCTION_SMOKE_COMPOSE := docker compose -f compose.yml -f compose.production-smoke.yml
 DOCKER_DEMO_SECRET_KEY ?= local-docker-smoke-secret-key
-DOCKER_DEMO_FIRST_SUPERUSER_PASSWORD ?= local-docker-smoke-admin-password
 DOCKER_DEMO_POSTGRES_PASSWORD ?= local-docker-smoke-postgres-password
-DOCKER_DEMO_BACKEND_PORT ?= 8000
-DOCKER_DEMO_FRONTEND_PORT ?= 5173
+DOCKER_DEMO_BACKEND_PORT ?= 18080
+DOCKER_DEMO_FRONTEND_PORT ?= 15174
 PRODUCTION_SMOKE_SECRET_KEY ?= production-smoke-secret-key-change-in-real-deployments
-PRODUCTION_SMOKE_FIRST_SUPERUSER_PASSWORD ?= production-smoke-admin-password
 PRODUCTION_SMOKE_POSTGRES_PASSWORD ?= production-smoke-postgres-password
 PRODUCTION_SMOKE_FRONTEND_PORT ?= 5180
 
-ATTACK_MAPPING_FILE := data/attack/ctid_kev_enterprise_2025-07-28_attack-16.1_subset.json
-ATTACK_METADATA_FILE := data/attack/attack_techniques_enterprise_16.1_subset.json
-DEMO_FIXED_NOW := 2026-04-21T12:00:00+00:00
-DEMO_ENV := PYTHONPATH=$(BACKEND_SRC) VULN_PRIORITIZER_FIXED_NOW=$(DEMO_FIXED_NOW)
-DEMO_PROVIDER_SNAPSHOT_FILE := data/demo_provider_snapshot.json
-DEMO_PROVIDER_FLAGS := --provider-snapshot-file $(DEMO_PROVIDER_SNAPSHOT_FILE) --locked-provider-data
-DEMO_EVIDENCE_ANALYSIS_FILE := build/v1.0-demo-analysis.json
-DEMO_EVIDENCE_BUNDLE_FILE := build/v1.0-demo-evidence-bundle.zip
-DEMO_EVIDENCE_VERIFICATION_FILE := build/v1.0-demo-evidence-bundle-verification.json
-
-.PHONY: install test lint format fix typecheck check benchmark-check performance-smoke playwright-install playwright-check frontend-install frontend-build frontend-lint frontend-test-unit frontend-test-unit-coverage frontend-generate-client api-client-drift-check frontend-audit frontend-check python-lock-check docker-base-image-check archive-evidence-check public-production-evidence-check release-evidence-hygiene-check docs-check docs-serve actionlint-check workflow-check docker-demo-smoke docker-production-smoke dependency-audit clean-local clean-deps provider-snapshot-validate provider-testmatrix demo-offline-no-key-proof demo-sync-check demo-sync-check-temp package package-contents-check package-check package-check-temp pipx-source-smoke release-check release-readiness-check demo-report demo-compare demo-explain demo-attack-report demo-attack-compare demo-attack-explain demo-attack-coverage demo-attack-navigator demo-pr-comment demo-results-sarif demo-html-report demo-evidence-analysis demo-evidence-bundle demo-evidence-bundle-check precommit-install
+.PHONY: install test lint format fix typecheck check local-workbench-check performance-smoke playwright-install playwright-check frontend-install frontend-build frontend-lint frontend-test-unit frontend-test-unit-coverage frontend-generate-client api-client-drift-check frontend-audit frontend-check python-lock-check docker-base-image-check archive-evidence-check public-production-evidence-check release-evidence-hygiene-check docs-check docs-serve actionlint-check workflow-check docker-demo-smoke docker-production-smoke dependency-audit clean-local clean-deps provider-snapshot-validate package package-contents-check package-check package-check-temp release-check release-readiness-check precommit-install
 
 install:
 	$(PYTHON) -m pip install -e "$(BACKEND_DIR)[dev]"
@@ -53,8 +41,9 @@ check:
 	cd $(BACKEND_DIR) && $(PYTHON) -m mypy app src
 	$(PYTHON) -m pytest $(BACKEND_TESTS)
 
-benchmark-check:
-	$(PYTHON) -m pytest -q $(BACKEND_TESTS)/test_benchmark_regressions.py $(BACKEND_TESTS)/test_snapshot_diff_regressions.py $(BACKEND_TESTS)/test_rollup_regressions.py --no-cov
+local-workbench-check:
+	$(MAKE) check
+	$(MAKE) docs-check
 
 performance-smoke:
 	VPW_PERFORMANCE_SMOKE=1 VPW_PERFORMANCE_SMOKE_OUTPUT=build/vpw-072-performance-smoke.json $(PYTHON) -m pytest -q $(BACKEND_TESTS)/performance/test_vpw072_performance_smoke.py --no-cov
@@ -116,26 +105,18 @@ python-lock-check:
 docker-base-image-check:
 	$(PYTHON) scripts/check_dockerfile_base_digests.py
 
-docs-check: release-evidence-hygiene-check archive-evidence-check public-production-evidence-check
+docs-check: release-evidence-hygiene-check archive-evidence-check
 	$(PYTHON) -m mkdocs build --clean
 
 docs-serve:
 	$(PYTHON) -m mkdocs serve
 
 provider-snapshot-validate:
-	$(PYTHON) -m pytest -q $(BACKEND_TESTS)/test_output_schemas.py::test_provider_snapshot_v1_example_matches_schema_and_model $(BACKEND_TESTS)/test_output_schemas.py::test_demo_provider_snapshot_matches_schema_and_model $(BACKEND_TESTS)/test_provider_snapshot_contract.py --no-cov
+	$(PYTHON) -m pytest -q $(BACKEND_TESTS)/test_provider_snapshot_contract.py --no-cov
 	$(PYTHON) -c 'import json, jsonschema; from pathlib import Path; schema = json.loads(Path("docs/schemas/provider-snapshot-report.schema.json").read_text(encoding="utf-8")); paths = ("docs/examples/example_provider_snapshot.v1.json", "data/demo_provider_snapshot.json"); [jsonschema.validate(json.loads(Path(path).read_text(encoding="utf-8")), schema) or print(f"{path}: OK") for path in paths]'
 
-provider-testmatrix:
-	$(PYTHON) -m pytest -q $(BACKEND_TESTS)/test_provider_response_contracts.py $(BACKEND_TESTS)/test_provider_contract.py $(BACKEND_TESTS)/test_provider_snapshot_contract.py $(BACKEND_TESTS)/test_cli_data.py::test_data_export_provider_snapshot_cache_only_uses_local_cache $(BACKEND_TESTS)/test_output_schemas.py::test_demo_provider_snapshot_matches_schema_and_model $(BACKEND_TESTS)/api/test_template_import_upload_api.py::test_template_import_uses_demo_snapshot_without_network_or_keys $(BACKEND_TESTS)/test_evidence_bundle_verification.py --no-cov
-
-demo-offline-no-key-proof:
-	mkdir -p build
-	env -u NVD_API_KEY HTTP_PROXY=http://127.0.0.1:9 HTTPS_PROXY=http://127.0.0.1:9 ALL_PROXY=http://127.0.0.1:9 $(DEMO_ENV) $(PYTHON) -m vuln_prioritizer.cli analyze --input data/sample_cves.txt --output build/vpw-029-demo-offline-no-key-proof.json --format json $(DEMO_PROVIDER_FLAGS)
-	$(PYTHON) -c 'import json; from pathlib import Path; payload = json.loads(Path("build/vpw-029-demo-offline-no-key-proof.json").read_text(encoding="utf-8")); diagnostics = payload["metadata"]["provider_diagnostics"]; assert payload["metadata"]["provider_snapshot_file"] == "data/demo_provider_snapshot.json"; assert payload["metadata"]["locked_provider_data"] is True; assert all(item.get("network_fetches", 0) == 0 for item in diagnostics.values()); print("build/vpw-029-demo-offline-no-key-proof.json: OK")'
-
 actionlint-check:
-	docker run --rm -v "$$(pwd):/repo" -w /repo rhysd/actionlint:1.7.12 -color .github/workflows/*.yml .github/examples/*.yml
+	docker run --rm -v "$$(pwd):/repo" -w /repo rhysd/actionlint:1.7.12 -color .github/workflows/*.yml
 
 workflow-check:
 	$(MAKE) check
@@ -155,7 +136,6 @@ docker-demo-smoke:
 		export WORKBENCH_PROVIDER_SNAPSHOTS_VOLUME="$$smoke_id-provider-snapshots"; \
 		export WORKBENCH_PROVIDER_CACHE_VOLUME="$$smoke_id-provider-cache"; \
 	export SECRET_KEY="$(DOCKER_DEMO_SECRET_KEY)"; \
-	export FIRST_SUPERUSER_PASSWORD="$(DOCKER_DEMO_FIRST_SUPERUSER_PASSWORD)"; \
 	export POSTGRES_PASSWORD="$(DOCKER_DEMO_POSTGRES_PASSWORD)"; \
 	export DOCKER_DEMO_BACKEND_PORT="$(DOCKER_DEMO_BACKEND_PORT)"; \
 	export DOCKER_DEMO_FRONTEND_PORT="$(DOCKER_DEMO_FRONTEND_PORT)"; \
@@ -216,7 +196,6 @@ docker-production-smoke:
 		export WORKBENCH_PROVIDER_SNAPSHOTS_VOLUME="$$smoke_id-provider-snapshots"; \
 		export WORKBENCH_PROVIDER_CACHE_VOLUME="$$smoke_id-provider-cache"; \
 	export SECRET_KEY="$(PRODUCTION_SMOKE_SECRET_KEY)"; \
-	export FIRST_SUPERUSER_PASSWORD="$(PRODUCTION_SMOKE_FIRST_SUPERUSER_PASSWORD)"; \
 	export POSTGRES_PASSWORD="$(PRODUCTION_SMOKE_POSTGRES_PASSWORD)"; \
 	export PRODUCTION_SMOKE_FRONTEND_PORT="$(PRODUCTION_SMOKE_FRONTEND_PORT)"; \
 	$(PYTHON) -c "import socket, sys; port=int(sys.argv[1]); sock=socket.socket(); sock.settimeout(0.2); in_use=sock.connect_ex(('127.0.0.1', port)) == 0; sock.close(); sys.exit(f'Port {port} is already in use before docker-production-smoke.' if in_use else 0)" "$$PRODUCTION_SMOKE_FRONTEND_PORT"; \
@@ -259,40 +238,6 @@ clean-local:
 clean-deps: clean-local
 	rm -rf node_modules frontend/node_modules Library/Caches/ms-playwright
 
-demo-sync-check:
-	@before="$$(mktemp)"; after="$$(mktemp)"; \
-	git diff --binary -- docs > "$$before"; \
-	$(MAKE) demo-pr-comment; \
-	$(MAKE) demo-results-sarif; \
-	$(MAKE) demo-html-report; \
-	$(MAKE) demo-report; \
-	$(MAKE) demo-compare; \
-	$(MAKE) demo-explain; \
-	$(MAKE) demo-attack-report; \
-	$(MAKE) demo-attack-compare; \
-	$(MAKE) demo-attack-explain; \
-	$(MAKE) demo-attack-coverage; \
-	$(MAKE) demo-attack-navigator; \
-	$(MAKE) docs-check; \
-	git diff --binary -- docs > "$$after"; \
-	if ! cmp -s "$$before" "$$after"; then \
-		echo "Checked-in docs/example artifacts are out of sync. Regenerate them and commit the result." >&2; \
-		rm -f "$$before" "$$after"; \
-		exit 1; \
-	fi; \
-	rm -f "$$before" "$$after"
-
-demo-sync-check-temp:
-	@set -e; \
-	tmp="$$(mktemp -d)"; \
-	trap 'rm -rf "$$tmp"' EXIT; \
-	tracked="$$(git ls-files docs archive)"; \
-	rsync -a --exclude .git --exclude .venv --exclude .cache --exclude Library --exclude node_modules --exclude dist --exclude build --exclude site --exclude .mypy_cache --exclude .pytest_cache --exclude .ruff_cache . "$$tmp"/; \
-	git -C "$$tmp" init -q; \
-	printf '%s\n' "$$tracked" | git -C "$$tmp" add --pathspec-from-file=-; \
-	git -C "$$tmp" -c user.email=codex@example.invalid -c user.name=Codex commit -q -m baseline-docs-archive; \
-	$(MAKE) -C "$$tmp" demo-sync-check
-
 package:
 	rm -rf dist
 	$(PYTHON) -m build $(BACKEND_DIR) --outdir dist
@@ -316,62 +261,13 @@ package-check-temp:
 	rsync -a --exclude .git --exclude .venv --exclude .cache --exclude Library --exclude node_modules --exclude dist --exclude build --exclude site --exclude .mypy_cache --exclude .pytest_cache --exclude .ruff_cache . "$$tmp"/; \
 	$(MAKE) -C "$$tmp" package-check
 
-pipx-source-smoke:
-	$(PYTHON) -m pip install --upgrade pip pipx
-	PYTHON_BIN=$(PYTHON) bash scripts/p1_pipx_source_smoke.sh
-
 release-check:
 	$(MAKE) workflow-check
 	$(MAKE) frontend-check
 	$(MAKE) dependency-audit
 	$(MAKE) docker-demo-smoke
 
-release-readiness-check: release-check api-client-drift-check archive-evidence-check public-production-evidence-check playwright-check docker-production-smoke
-
-demo-report:
-	$(DEMO_ENV) $(PYTHON) -m vuln_prioritizer.cli analyze --input data/sample_cves.txt --output docs/example_report.md --format markdown $(DEMO_PROVIDER_FLAGS)
-
-demo-compare:
-	$(DEMO_ENV) $(PYTHON) -m vuln_prioritizer.cli compare --input data/sample_cves.txt --output docs/example_compare.md --format markdown $(DEMO_PROVIDER_FLAGS)
-
-demo-explain:
-	$(DEMO_ENV) $(PYTHON) -m vuln_prioritizer.cli explain --cve CVE-2021-44228 --output docs/example_explain.json --format json --offline-attack-file data/optional_attack_to_cve.csv $(DEMO_PROVIDER_FLAGS)
-
-demo-attack-report:
-	$(DEMO_ENV) $(PYTHON) -m vuln_prioritizer.cli analyze --input data/sample_cves_mixed.txt --output docs/example_attack_report.md --format markdown --attack-source ctid-json --attack-mapping-file $(ATTACK_MAPPING_FILE) --attack-technique-metadata-file $(ATTACK_METADATA_FILE) $(DEMO_PROVIDER_FLAGS)
-
-demo-attack-compare:
-	$(DEMO_ENV) $(PYTHON) -m vuln_prioritizer.cli compare --input data/sample_cves_mixed.txt --output docs/example_attack_compare.md --format markdown --attack-source ctid-json --attack-mapping-file $(ATTACK_MAPPING_FILE) --attack-technique-metadata-file $(ATTACK_METADATA_FILE) $(DEMO_PROVIDER_FLAGS)
-
-demo-attack-explain:
-	$(DEMO_ENV) $(PYTHON) -m vuln_prioritizer.cli explain --cve CVE-2023-34362 --output docs/example_attack_explain.json --format json --attack-source ctid-json --attack-mapping-file $(ATTACK_MAPPING_FILE) --attack-technique-metadata-file $(ATTACK_METADATA_FILE) $(DEMO_PROVIDER_FLAGS)
-
-demo-attack-coverage:
-	$(DEMO_ENV) $(PYTHON) -m vuln_prioritizer.cli attack coverage --input data/sample_cves_mixed.txt --output docs/example_attack_coverage.md --format markdown --attack-mapping-file $(ATTACK_MAPPING_FILE) --attack-technique-metadata-file $(ATTACK_METADATA_FILE)
-
-demo-attack-navigator:
-	$(DEMO_ENV) $(PYTHON) -m vuln_prioritizer.cli attack navigator-layer --input data/sample_cves_attack.txt --output docs/example_attack_navigator_layer.json --attack-mapping-file $(ATTACK_MAPPING_FILE) --attack-technique-metadata-file $(ATTACK_METADATA_FILE)
-
-demo-pr-comment:
-	$(DEMO_ENV) $(PYTHON) -m vuln_prioritizer.cli analyze --input data/input_fixtures/trivy_report.json --input-format trivy-json --asset-context data/input_fixtures/example_asset_context.csv --vex-file data/input_fixtures/openvex_statements.json --policy-profile enterprise --output docs/examples/example_pr_comment.md --format markdown $(DEMO_PROVIDER_FLAGS)
-
-demo-results-sarif:
-	$(DEMO_ENV) $(PYTHON) -m vuln_prioritizer.cli analyze --input data/input_fixtures/trivy_report.json --input-format trivy-json --asset-context data/input_fixtures/example_asset_context.csv --vex-file data/input_fixtures/openvex_statements.json --policy-profile enterprise --output docs/examples/example_results.sarif --format sarif $(DEMO_PROVIDER_FLAGS)
-
-demo-html-report:
-	mkdir -p build
-	$(DEMO_ENV) $(PYTHON) -m vuln_prioritizer.cli analyze --input data/input_fixtures/trivy_report.json --input-format trivy-json --asset-context data/input_fixtures/example_asset_context.csv --vex-file data/input_fixtures/openvex_statements.json --policy-profile enterprise --attack-source ctid-json --attack-mapping-file $(ATTACK_MAPPING_FILE) --attack-technique-metadata-file $(ATTACK_METADATA_FILE) --output build/example_report_analysis.json --format json $(DEMO_PROVIDER_FLAGS)
-	$(DEMO_ENV) $(PYTHON) -m vuln_prioritizer.cli report html --input build/example_report_analysis.json --output docs/examples/example_report.html
-
-demo-evidence-analysis:
-	mkdir -p build
-	$(DEMO_ENV) $(PYTHON) -m vuln_prioritizer.cli analyze --input data/input_fixtures/trivy_report.json --input-format trivy-json --asset-context data/input_fixtures/example_asset_context.csv --vex-file data/input_fixtures/openvex_statements.json --policy-profile enterprise --attack-source ctid-json --attack-mapping-file $(ATTACK_MAPPING_FILE) --attack-technique-metadata-file $(ATTACK_METADATA_FILE) --output $(DEMO_EVIDENCE_ANALYSIS_FILE) --format json $(DEMO_PROVIDER_FLAGS)
-
-demo-evidence-bundle: demo-evidence-analysis
-	$(DEMO_ENV) $(PYTHON) -m vuln_prioritizer.cli report evidence-bundle --input $(DEMO_EVIDENCE_ANALYSIS_FILE) --output $(DEMO_EVIDENCE_BUNDLE_FILE)
-
-demo-evidence-bundle-check: demo-evidence-bundle
-	$(DEMO_ENV) $(PYTHON) -m vuln_prioritizer.cli report verify-evidence-bundle --input $(DEMO_EVIDENCE_BUNDLE_FILE) --output $(DEMO_EVIDENCE_VERIFICATION_FILE) --format json
+release-readiness-check: release-check api-client-drift-check archive-evidence-check playwright-check docker-production-smoke
 
 precommit-install:
 	pre-commit install

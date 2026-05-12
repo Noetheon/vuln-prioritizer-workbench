@@ -56,7 +56,7 @@ export function ImportResult({
             value={importRunSummary?.updated_findings ?? 0}
           />
           <VpwMetricCard
-            description={runId ? runId : "N.A."}
+            description={runId ? runId : "No run recorded"}
             label="Ignored lines"
             tone="warning"
             value={importRunSummary?.ignored_lines ?? 0}
@@ -94,9 +94,9 @@ export function ParserErrors({ errors }: { errors: ImportParseErrorPublic[] }) {
   if (errors.length === 0) return null
 
   const columns: VpwDataTableColumn<ImportParseErrorPublic>[] = [
-    { id: "line", header: "Line", cell: (error) => error.line ?? "N.A." },
-    { id: "field", header: "Field", cell: (error) => error.field ?? "N.A." },
-    { id: "value", header: "Value", cell: (error) => error.value ?? "N.A." },
+    { id: "line", header: "Line", cell: (error) => error.line ?? "Not supplied" },
+    { id: "field", header: "Field", cell: (error) => error.field ?? "Not supplied" },
+    { id: "value", header: "Value", cell: (error) => error.value ?? "Not supplied" },
     { id: "message", header: "Message", cell: (error) => error.message },
   ]
 

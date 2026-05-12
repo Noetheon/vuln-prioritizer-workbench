@@ -14,7 +14,6 @@ services:
       - |
         set -e
         cp -n /app/examples/*provider_snapshot*.json /app/provider-snapshots/ 2>/dev/null || true
-        python -m app.core.migration_bootstrap
         alembic -c /app/backend/alembic.ini upgrade head
         exec uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
     develop:

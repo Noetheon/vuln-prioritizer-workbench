@@ -50,7 +50,7 @@ export function ExecutiveDecision({
   const decisionStatement = isDemo
     ? "Demo preview - connect a real project and run to generate evidence-backed decision language."
     : openFindings > 0
-      ? `${openFindings} open findings require remediation owner assignment. Evidence artifacts for run ${selectedReportRun?.id.slice(0, 8) ?? "N.A."} are available for audit review.`
+      ? `${openFindings} open findings require remediation owner assignment. Evidence artifacts for run ${selectedReportRun?.id.slice(0, 8) ?? "not recorded"} are available for audit review.`
       : "All findings are resolved or waived. Keep the evidence bundle for compliance archive."
 
   return (

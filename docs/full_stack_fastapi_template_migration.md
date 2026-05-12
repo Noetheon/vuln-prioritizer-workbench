@@ -13,7 +13,7 @@ The Workbench migration restarted from the official
 the previous second Workbench runtime in place.
 
 The retained repository domain engine remains valuable. The implemented runtime
-now reuses the existing `vuln_prioritizer` CLI/core logic through the active
+now reuses the existing `vuln_prioritizer` domain logic through the active
 `backend/app` backend and React frontend.
 
 ## Why This Direction
@@ -39,18 +39,17 @@ below.
 
 ```text
 repo root
-|-- backend/                  # FastAPI template backend
-|   |-- app/                  # Template app package, auth, users, API v1
+|-- backend/                  # FastAPI backend
+|   |-- app/                  # Active Workbench app package and API v1
 |   |-- app/api/routes/       # Workbench API routes added incrementally
 |   |-- app/models.py         # SQLModel entities or re-exported model modules
 |   |-- app/alembic/          # Template Alembic migration path
-|   |-- src/vuln_prioritizer/ # Existing CLI/core package during migration
+|   |-- src/vuln_prioritizer/ # Existing domain package during migration
 |   `-- tests/                # Template backend tests
 |-- frontend/                 # Template React/TanStack/shadcn frontend
 |   |-- src/client/           # Generated OpenAPI client
 |   |-- src/routes/           # Workbench routes
 |   `-- tests/                # Playwright browser tests
-|-- cli/                      # Optional thin CLI package, if separated later
 |-- compose.yml               # Template Docker Compose
 |-- compose.override.yml
 |-- compose.traefik.yml
@@ -59,8 +58,8 @@ repo root
 ```
 
 The existing `vuln_prioritizer` code now lives under the backend workspace as
-`backend/src/vuln_prioritizer` so the current CLI and tests can keep working
-while the template app is introduced. A later cleanup can split it into a
+`backend/src/vuln_prioritizer` so domain tests can keep working while the
+Workbench app is introduced. A later cleanup can split it into a
 separate `packages/vuln-prioritizer-core` package if that proves useful.
 
 Backend integration calls the core package through service boundaries and the
@@ -82,7 +81,7 @@ Safe core modules to reuse:
 
 Runtime-specific web/API/database packages are not part of the retained core.
 New shared logic should be extracted into the neutral modules above before it is
-used by both the CLI and active backend.
+used by the active backend.
 
 ## Historical Branch Strategy
 
@@ -91,7 +90,8 @@ The migration used stacked PRs from clean `main`.
 - `template/full-stack-fastapi-template-13652b5`: pinned local reference branch
   for the official template snapshot
 - `codex/fsft-01-backend-workspace`: move current Python package/tests into
-  `backend/`, add template workspace scaffolding, keep CLI behavior unchanged
+  `backend/`, add template workspace scaffolding, keep the then-current CLI
+  behavior unchanged during that historical slice
 - `codex/fsft-02-template-backend-adapter`: add template backend entrypoint and
   adapter layer
 - `codex/fsft-03-compose-env`: adopt template-style compose/env layout
@@ -104,25 +104,29 @@ Do not merge the official template history into `main` as one giant
 unrelated-history merge. Keep the template snapshot reproducible and move the app
 in small reviewable PRs.
 
-## Migration Rules Preserved As Current Guardrails
+## Historical Migration Rules
 
 - One roadmap issue per PR unless a dependency group is explicitly documented.
 - Treat historical implementation notes as source material, not as automatic
   completion evidence.
 - Preserve the non-scanner scope: the product prioritizes known CVEs from supplied
   inputs and does not discover vulnerabilities.
-- Use the official template auth, user, JWT, Docker Compose, generated client, and
-  SQLModel patterns unless a user-approved ADR explicitly replaces one of them.
+- The template auth, user, JWT, and Items patterns were migration inputs, not
+  current product guardrails. The active Workbench now uses local single-user
+  access without login, RBAC, API tokens, user sessions, or project membership.
+- Keep the generated-client and SQLModel/Alembic workflow where it still matches
+  the active Workbench, but prefer the current local Workbench architecture over
+  generic template behavior.
 - Keep provider tests offline and fixture-based.
-- Do not regress CLI/core contracts while moving code.
+- Do not regress domain contracts while moving code.
 
 ## Historical First Implementation PRs
 
 1. `VPW-001`: create a template baseline branch from the official template and
    record baseline evidence.
 2. Backend workspace extraction: move the current Python package/tests into
-   `backend/` while keeping the CLI and current tests green. No API behavior
-   changes.
+   `backend/` while keeping the then-current CLI and tests green. No API
+   behavior changes in that historical slice.
 3. Template backend adapter: introduce the template backend entrypoint and a thin
    adapter boundary to current core services. Do not rewrite the domain model in
    this PR.
@@ -132,14 +136,21 @@ in small reviewable PRs.
 5. Frontend source scaffold: add the template React frontend and generated
    OpenAPI client tooling.
 
-The SQLModel/JWT/domain replacement work from `VPW-006` onward should start after
-the template baseline and backend workspace are stable. It is real roadmap work,
-not something to fake by pointing at historical implementation notes.
+The then-planned SQLModel/JWT/domain replacement work from `VPW-006` onward was
+sequenced after the template baseline and backend workspace. Treat this as
+historical roadmap context, not as current instruction to restore JWT or user
+management.
 
-## Current Implementation Progress
+## Historical Implementation Progress
+
+This section is retained only to explain how the repository reached the current
+shape. Later cleanup removed the active login/auth/token paths and consolidated
+the Workbench around local single-user access.
 
 - `codex/fsft-01-backend-workspace` extracted the current Python package and
-  tests into `backend/` while preserving CLI, Docker, CI, and packaging behavior.
+  tests into `backend/` while preserving the then-current CLI, Docker, CI, and
+  packaging behavior. The CLI was removed from the active product in later
+  cleanup.
 - `codex/fsft-02-template-backend-adapter` introduces the first template-shaped
   `backend/app` entrypoint with a versioned `/api/v1/workbench/status` adapter
   and a React/Vite frontend workspace scaffold. It intentionally does not mount
@@ -148,12 +159,12 @@ not something to fake by pointing at historical implementation notes.
   template-style `compose.yml`, `compose.override.yml`, and
   `compose.traefik.yml`, starts the template backend shell plus React frontend,
   for the active backend and frontend.
-- `codex/fsft-04-template-login-smoke` adds the first real template-shaped
+- `codex/fsft-04-template-login-smoke` added the first template-shaped
   login path: `/api/v1/login/access-token`, `/api/v1/login/test-token`,
   `/api/v1/users/me`, `/api/v1/utils/health-check/`, CORS for the React
   frontend, a generated OpenAPI client from `app.main`, TanStack Router login
   wiring, and a Playwright login smoke. This is intentionally still a
-  configured-superuser smoke, not DB-backed SQLModel user management.
+  historical configured-superuser smoke, not a current Workbench contract.
 - `codex/fsft-05-template-replacement-strategy` documents the official template
   `Item` inventory and the approved replacement direction in
   [Template Replacement Strategy](architecture/template-replacement.md):
@@ -182,12 +193,13 @@ not something to fake by pointing at historical implementation notes.
   frontend screens.
 - `codex/vpw-010-service-layer` adds split template repositories under
   `backend/app/repositories/` for Projects, Assets, Findings, and Runs. Existing
-  Project routes now delegate Workbench persistence/query construction to
-  `ProjectRepository`; User/Auth code remains outside the Workbench repository
-  layer.
+  Project routes delegated Workbench persistence/query construction to
+  `ProjectRepository`; later cleanup removed the active User/Auth path from the
+  local Workbench.
 
-Frontend issues `VPW-037` to `VPW-047` must wait until the backend OpenAPI client
-is generated and the template login flow remains green.
+Frontend issues `VPW-037` to `VPW-047` were template-era sequencing notes. New
+frontend work should target the current generated client and local access flow,
+not the removed template login flow.
 
 ## Baseline Evidence Required
 

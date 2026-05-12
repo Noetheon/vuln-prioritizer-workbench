@@ -228,7 +228,7 @@ def build_attack_navigator_layer_payload(
         {"name": "Findings considered", "value": str(filter_finding_count)},
         {"name": "Mapped findings included", "value": str(len(mapped_finding_ids))},
         {"name": "Unmapped findings omitted", "value": str(unmapped_count)},
-        {"name": "Coverage model", "value": "not assessed placeholder"},
+        {"name": "Coverage model", "value": "not assessed by Workbench export"},
     ]
     if generated_at is not None:
         metadata.append({"name": "Generated at", "value": generated_at.isoformat()})
@@ -383,7 +383,7 @@ def _navigator_technique_payload(row: _NavigatorTechniqueAccumulator) -> dict[st
         "comment": (
             f"Findings: {', '.join(sorted(row.cves))}. "
             f"KEV: {len(row.kev_cves)} finding(s). "
-            "Coverage: not assessed; placeholder until detection coverage is configured. "
+            "Coverage: not assessed by this Workbench export. "
             f"Confidence: {confidence}. Review: {review_status}."
         ),
         "metadata": metadata,

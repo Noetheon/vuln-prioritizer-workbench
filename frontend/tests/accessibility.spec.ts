@@ -1,6 +1,6 @@
 import AxeBuilder from "@axe-core/playwright"
 import { expect, type Page, test } from "@playwright/test"
-import { login } from "./auth-helpers"
+import { openWorkbench } from "./workbench-runtime-helpers"
 import { mockFinding, mockProject, routeWorkbenchShell } from "./workbench-route-mocks"
 
 async function expectFocusedElementVisible(page: Page) {
@@ -126,7 +126,7 @@ test("local Workbench entry has no credential failure state", async ({
 test("local shell exposes landmarks and workspace controls", async ({
   page,
 }) => {
-  await login(page)
+  await openWorkbench(page)
 
   await expect(page.getByRole("main")).toBeVisible()
   await expect(
@@ -144,11 +144,11 @@ test("local shell exposes landmarks and workspace controls", async ({
   await expectFocusedElementVisible(page)
 })
 
-test("core authenticated routes have no serious accessibility violations", async ({
+test("core Workbench routes have no serious accessibility violations", async ({
   page,
 }) => {
   test.setTimeout(60_000)
-  await login(page)
+  await openWorkbench(page)
 
   for (const [path, routeName] of [
     ["/", "dashboard"],

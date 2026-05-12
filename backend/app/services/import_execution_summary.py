@@ -7,7 +7,7 @@ from typing import Any, Literal
 
 from sqlmodel import Session
 
-from app.models import User
+from app.core.local_actor import LocalWorkbenchActor
 from app.models.base import get_datetime_utc
 from app.services.audit import record_audit_event
 
@@ -15,7 +15,7 @@ from app.services.audit import record_audit_event
 def _record_import_audit(
     session: Session,
     *,
-    current_user: User,
+    local_actor: LocalWorkbenchActor,
     project_id: uuid.UUID,
     run_id: uuid.UUID,
     status: Literal["success", "failure"],
@@ -28,7 +28,7 @@ def _record_import_audit(
         resource_type="analysis_run",
         resource_id=run_id,
         status=status,
-        actor=current_user,
+        actor=local_actor,
         project_id=project_id,
         detail={"stage": stage, "input_type": input_type},
     )

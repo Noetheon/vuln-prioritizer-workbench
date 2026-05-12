@@ -2,8 +2,9 @@
 
 ## Scope
 
-VPW-008 adds the first Workbench domain tables after the user and
-project foundation. The schema is intentionally narrow: it persists already-known
+VPW-008 added the first Workbench domain tables after the project foundation.
+The current local-first schema has since removed DB-backed users and ownership
+fields. The schema is intentionally narrow: it persists already-known
 CVE findings and their project, asset, component, and vulnerability context. It
 does not introduce scanning, exploit execution, heuristic ATT&CK mapping, or a
 second opaque scoring model.
@@ -157,12 +158,12 @@ A single project must be able to persist and retrieve a connected graph:
 `Project -> Asset -> Finding -> Component -> Vulnerability`
 
 The finding remains the Workbench triage unit. Asset and component context route
-work; vulnerability records keep provider facts deduplicated; project ownership
-continues to use the template `User` and `Project` tables.
+work; vulnerability records keep provider facts deduplicated. Project access is
+local and existence-based rather than user-owned.
 
 ## Migration Contract
 
-The template Alembic head under `backend/app/alembic` must create the four core
+The Workbench Alembic head under `backend/app/alembic` must create the four core
 Workbench tables and match SQLModel metadata on a fresh SQLite database. Tests
 use a temporary SQLite database and an Alembic `Config` rather than production
 settings.

@@ -22,8 +22,8 @@ also satisfy the same explicit v1 metadata contract.
 
 ## Replay
 
-CLI and Workbench replay use `--provider-snapshot-file` plus
-`--locked-provider-data` when live providers must not be used. Locked replay
+Workbench replay uses the import fields `provider_snapshot_file` plus
+`locked_provider_data` when live providers must not be used. Locked replay
 requires complete coverage for the selected provider sources. When unlocked,
 snapshot data may be used as a fallback and missing data can still resolve from
 live/cache providers.
@@ -62,6 +62,6 @@ path, bundle path, and selected sources.
 
 VPW-029 adds versioned provider response fixtures under
 `data/provider_contract_fixtures/v1` and validates the demo snapshot with
-`make provider-snapshot-validate`. The no-key/no-network demo proof is
-`make demo-offline-no-key-proof`, which runs locked snapshot replay and asserts
+`make provider-snapshot-validate`. Current no-key/no-network proof comes from
+locked-provider Workbench import tests and Docker demo smoke paths, which assert
 that provider diagnostics report `network_fetches = 0`.

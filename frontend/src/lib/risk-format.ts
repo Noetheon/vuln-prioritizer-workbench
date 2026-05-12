@@ -3,7 +3,7 @@ import type {
   FindingPriority,
   FindingStatus,
 } from "../api-client"
-import { formatLabel } from "./ui-copy"
+import { formatLabel } from "./ui-copy.ts"
 
 export type FindingPriorityTone = "critical" | "high" | "standard"
 export type RunStatusTone = "succeeded" | "failed" | "warning" | "pending"
@@ -28,16 +28,19 @@ export function findingStatusLabel(status: FindingStatus | null | undefined) {
 }
 
 export function formatNullableNumber(value: number | null | undefined) {
-  return value === null || value === undefined ? "N.A." : value.toFixed(1)
+  return value === null || value === undefined ? "Not scored" : value.toFixed(1)
 }
 
 export function formatEpss(value: number | null | undefined) {
   return value === null || value === undefined
-    ? "N.A."
+    ? "Not scored"
     : `${Math.round(value * 1000) / 10}%`
 }
 
 export function formatKev(value: boolean | null | undefined) {
+  if (value === null || value === undefined) {
+    return "Not recorded"
+  }
   return value ? "Yes" : "No"
 }
 
