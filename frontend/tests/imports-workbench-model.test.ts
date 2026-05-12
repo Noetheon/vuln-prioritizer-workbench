@@ -12,7 +12,11 @@ import {
   selectedFormat,
   uploadProgress,
 } from "../src/components/imports/imports-workbench-model.ts"
-import { defaultImportWizardState } from "../src/lib/app-defaults.ts"
+import {
+  defaultImportWizardState,
+  demoProviderSnapshotFile,
+  withDemoProviderSnapshot,
+} from "../src/lib/app-defaults.ts"
 import { buildImportUploadFormData } from "../src/workbench/import-upload-payload.ts"
 
 test("import model derives display labels and format metadata", () => {
@@ -146,4 +150,15 @@ test("import upload payload omits empty optional file-name fields", () => {
     input_type: defaultImportWizardState.inputType,
     locked_provider_data: false,
   })
+})
+
+test("demo provider snapshot preset enables deterministic replay", () => {
+  const state = withDemoProviderSnapshot({
+    ...defaultImportWizardState,
+    file: {} as File,
+    providerSnapshotFile: "",
+  })
+
+  assert.equal(state.lockedProviderData, true)
+  assert.equal(state.providerSnapshotFile, demoProviderSnapshotFile)
 })

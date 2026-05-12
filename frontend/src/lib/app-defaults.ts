@@ -209,6 +209,8 @@ export type ImportWizardState = {
   vexFile: File | null
 }
 
+export const demoProviderSnapshotFile = "demo_provider_snapshot.json"
+
 export const defaultImportWizardState: ImportWizardState = {
   attackMappingFile: "",
   attackSource: "none",
@@ -219,6 +221,16 @@ export const defaultImportWizardState: ImportWizardState = {
   lockedProviderData: false,
   providerSnapshotFile: "",
   vexFile: null,
+}
+
+export function withDemoProviderSnapshot(
+  state: ImportWizardState,
+): ImportWizardState {
+  return {
+    ...state,
+    lockedProviderData: true,
+    providerSnapshotFile: demoProviderSnapshotFile,
+  }
 }
 
 export type ImportUploadFormData = Parameters<

@@ -88,6 +88,7 @@ export function ImportWizard({
   onProviderSnapshotFileChange,
   onProjectChange,
   onSubmit,
+  onUseDemoProviderSnapshot,
   onAttackMappingFileChange,
   onAttackSourceChange,
   onAttackTechniqueMetadataFileChange,
@@ -108,6 +109,7 @@ export function ImportWizard({
   | "onProviderSnapshotFileChange"
   | "onProjectChange"
   | "onSubmit"
+  | "onUseDemoProviderSnapshot"
   | "onAttackMappingFileChange"
   | "onAttackSourceChange"
   | "onAttackTechniqueMetadataFileChange"
@@ -276,6 +278,7 @@ export function ImportWizard({
               }
               onLockedProviderDataChange={onLockedProviderDataChange}
               onProviderSnapshotFileChange={onProviderSnapshotFileChange}
+              onUseDemoProviderSnapshot={onUseDemoProviderSnapshot}
             />
             <VpwProgress
               label="Import readiness"
