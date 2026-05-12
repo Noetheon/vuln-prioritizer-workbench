@@ -13,7 +13,7 @@ from app.repositories import ProjectRepository
 
 
 def require_visible_project(session: Session, current_user: User, project_id: uuid.UUID) -> Project:
-    """Return a project or raise a consistent 404/403 API error."""
+    """Return a project for the local Workbench or enforce explicit token scope."""
     project = ProjectRepository(session).get_project(project_id)
     if project is None:
         raise HTTPException(status_code=404, detail="Project not found")
@@ -25,6 +25,4 @@ def require_visible_project(session: Session, current_user: User, project_id: uu
                 status_code=403,
                 detail="API token is not scoped to this project.",
             )
-    if not current_user.is_superuser and project.owner_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Not enough permissions")
     return project

@@ -3,7 +3,6 @@ import { VpwPageContainer } from "@/components/vpw"
 import {
   SettingsAccountHealth,
   SettingsAlerts,
-  SettingsApiTokensSection,
   SettingsHero,
   SettingsDiagnostics,
   SettingsRuntimeProviders,
@@ -20,15 +19,12 @@ export function SettingsWorkbench(props: SettingsWorkbenchProps) {
   return (
     <VpwPageContainer className="flex flex-col gap-5 px-0 py-0">
       <SettingsHero
-        apiTokens={props.apiTokens}
         currentUser={props.currentUser}
         providerStatus={props.providerStatus}
         providerStatusError={props.providerStatusError}
         statusError={props.statusError}
       />
       <SettingsAlerts
-        apiTokenError={props.apiTokenError}
-        apiTokenMessage={props.apiTokenMessage}
         providerStatusError={props.providerStatusError}
         statusError={props.statusError}
       />
@@ -42,7 +38,7 @@ export function SettingsWorkbench(props: SettingsWorkbenchProps) {
         <div className="flex min-w-0 border-b border-[var(--vpw-border-default)] pb-3">
           <TabsList
             aria-label="Settings sections"
-            className="grid h-auto w-full min-w-0 grid-cols-2 gap-1 rounded-[var(--vpw-radius-lg)] border border-[var(--vpw-border-subtle)] bg-[var(--vpw-bg-panel)] p-1 sm:inline-grid sm:w-auto sm:grid-cols-4"
+            className="grid h-auto w-full min-w-0 grid-cols-1 gap-1 rounded-[var(--vpw-radius-lg)] border border-[var(--vpw-border-subtle)] bg-[var(--vpw-bg-panel)] p-1 sm:inline-grid sm:w-auto sm:grid-cols-3"
           >
             {settingsTabOptions.map((option) => (
               <TabsTrigger
@@ -58,33 +54,12 @@ export function SettingsWorkbench(props: SettingsWorkbenchProps) {
 
         <TabsContent className="mt-5" value="overview">
           <SettingsAccountHealth
-            apiTokens={props.apiTokens}
             currentUser={props.currentUser}
             providerStatus={props.providerStatus}
             providerStatusError={props.providerStatusError}
             providerStatusLoading={props.providerStatusLoading}
             status={props.status}
             statusError={props.statusError}
-          />
-        </TabsContent>
-
-        <TabsContent className="mt-5" value="tokens">
-          <SettingsApiTokensSection
-            apiTokenActionLoading={props.apiTokenActionLoading}
-            apiTokenName={props.apiTokenName}
-            apiTokenProjectId={props.apiTokenProjectId}
-            apiTokenProjectOptions={props.apiTokenProjectOptions}
-            apiTokenScopeOptions={props.apiTokenScopeOptions}
-            apiTokenScopes={props.apiTokenScopes}
-            apiTokens={props.apiTokens}
-            apiTokensLoading={props.apiTokensLoading}
-            createdApiToken={props.createdApiToken}
-            onClearCreatedApiToken={props.onClearCreatedApiToken}
-            onApiTokenNameChange={props.onApiTokenNameChange}
-            onApiTokenProjectChange={props.onApiTokenProjectChange}
-            onCreateApiToken={props.onCreateApiToken}
-            onRevokeApiToken={props.onRevokeApiToken}
-            onToggleApiTokenScope={props.onToggleApiTokenScope}
           />
         </TabsContent>
 

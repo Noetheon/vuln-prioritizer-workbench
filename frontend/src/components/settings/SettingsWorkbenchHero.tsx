@@ -1,4 +1,4 @@
-import { Link } from "@tanstack/react-router"
+import { Link } from "@/lib/router"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -15,15 +15,10 @@ import {
 
 type SettingsHeroProps = Pick<
   SettingsWorkbenchProps,
-  | "apiTokens"
-  | "currentUser"
-  | "providerStatus"
-  | "providerStatusError"
-  | "statusError"
+  "currentUser" | "providerStatus" | "providerStatusError" | "statusError"
 >
 
 export function SettingsHero({
-  apiTokens,
   currentUser,
   providerStatus,
   providerStatusError,
@@ -45,7 +40,7 @@ export function SettingsHero({
             Workspace controls
           </h2>
           <p className="mt-1 max-w-2xl text-sm leading-6 text-[var(--vpw-text-secondary)]">
-            Access, automation tokens, provider state, and safe diagnostics.
+            Local workspace defaults, provider state, and diagnostics.
           </p>
         </div>
         <div className="flex shrink-0">
@@ -61,9 +56,9 @@ export function SettingsHero({
           value={userLabel(currentUser)}
         />
         <SettingsHeroFact
-          label="API tokens"
-          tone={apiTokens.length > 0 ? "info" : "neutral"}
-          value={apiTokens.length}
+          label="Access"
+          tone="info"
+          value="Local single-user"
         />
         <SettingsHeroFact
           label="Snapshot"

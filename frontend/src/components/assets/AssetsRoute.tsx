@@ -1,4 +1,4 @@
-import { Link } from "@tanstack/react-router"
+import { Link } from "@/lib/router"
 import { Activity, FileInput } from "lucide-react"
 import type { Dispatch, FormEvent, SetStateAction } from "react"
 

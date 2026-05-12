@@ -16,7 +16,6 @@ import {
   ProjectsService,
   RunsService,
   WaiversService,
-  ApiTokensService,
 } from "../api-client"
 import {
   demoFindingDetailForId,
@@ -237,16 +236,6 @@ export function useRunDetailQuery(runId: string, enabled: boolean) {
       const status = query.state.data?.run.status
       return status && RUN_DETAIL_POLL_STATUSES.has(status) ? 3000 : false
     },
-    retry: false,
-    staleTime: 15_000,
-  })
-}
-
-export function useApiTokensQuery(enabled: boolean) {
-  return useQuery({
-    enabled,
-    queryFn: () => ApiTokensService.listApiTokens(),
-    queryKey: workbenchQueryKeys.apiTokens(),
     retry: false,
     staleTime: 15_000,
   })

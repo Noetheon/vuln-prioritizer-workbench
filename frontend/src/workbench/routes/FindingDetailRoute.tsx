@@ -1,4 +1,4 @@
-import { useLocation, useParams } from "@tanstack/react-router"
+import { useLocation, useParams } from "@/lib/router"
 import { useQueryClient } from "@tanstack/react-query"
 import { useEffect, useState } from "react"
 import { FindingDetailRoute as FindingDetailPanel } from "../../components/finding-detail/FindingDetailRoute"

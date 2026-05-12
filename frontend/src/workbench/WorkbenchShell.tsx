@@ -1,5 +1,5 @@
 import { type ReactNode, Suspense } from "react"
-import { useLocation } from "@tanstack/react-router"
+import { useLocation } from "@/lib/router"
 import { LoadingSkeleton } from "../components/states"
 import {
   routeDetailFromPathname,

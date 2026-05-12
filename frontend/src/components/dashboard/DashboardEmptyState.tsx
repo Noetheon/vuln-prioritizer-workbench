@@ -1,4 +1,4 @@
-import { Link } from "@tanstack/react-router"
+import { Link } from "@/lib/router"
 import { Import, ShieldCheck } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { VpwStatusBanner, VpwSurface } from "@/components/vpw"

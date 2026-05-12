@@ -287,7 +287,8 @@ def test_documentation_map_defines_current_and_historical_boundaries() -> None:
     assert "FastAPI" in current_state
     assert "`backend/app`" in current_state
     assert "React, Vite, TypeScript" in current_state
-    assert "CLI and domain core" in current_state
+    assert "Domain core" in current_state
+    assert "CLI is not the current product direction" in current_state
     assert "Historical evidence in `archive/**`" in current_state
     assert "Development Status :: 4 - Beta" in current_state
     assert "Development Status :: 4 - Beta" in pyproject

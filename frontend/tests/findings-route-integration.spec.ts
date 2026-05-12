@@ -37,7 +37,7 @@ test("findings route renders the empty live queue without demo data", async ({
   await expect(sidebar).toHaveCSS("width", "248px")
   await expect(page.getByText("Sign out")).toHaveCount(0)
   await page.getByRole("button", { name: "Account menu" }).click()
-  await expect(page.getByRole("menuitem", { name: "Sign out" })).toBeVisible()
+  await expect(page.getByRole("menuitem", { name: "Sign out" })).toHaveCount(0)
   await page.keyboard.press("Escape")
   await page.getByRole("button", { name: "Collapse sidebar" }).click()
   await expect(sidebar).toHaveCSS("width", "72px")

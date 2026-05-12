@@ -21,10 +21,13 @@ from vuln_prioritizer.provider_snapshot import (
 )
 
 
-def test_template_provider_status_requires_auth(template_api_env: TemplateApiEnv) -> None:
+def test_template_provider_status_is_available_locally(
+    template_api_env: TemplateApiEnv,
+) -> None:
     response = template_api_env.client.get("/api/v1/providers/status")
 
-    assert response.status_code == 401
+    assert response.status_code == 200
+    assert response.json()["snapshot_mode"] == "missing"
 
 
 def test_template_provider_status_reports_missing_snapshot(

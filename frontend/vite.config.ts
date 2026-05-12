@@ -1,6 +1,5 @@
 import path from "node:path"
 import tailwindcss from "@tailwindcss/vite"
-import { tanstackRouter } from "@tanstack/router-plugin/vite"
 import react from "@vitejs/plugin-react"
 import { defineConfig, loadEnv } from "vite"
 
@@ -45,13 +44,6 @@ export default defineConfig(({ mode }) => {
         "/api": devProxyTarget,
       },
     },
-    plugins: [
-      tanstackRouter({
-        autoCodeSplitting: true,
-        target: "react",
-      }),
-      tailwindcss(),
-      react(),
-    ],
+    plugins: [tailwindcss(), react()],
   }
 })

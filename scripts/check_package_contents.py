@@ -128,8 +128,8 @@ def main() -> None:
 
     report = {
         "boundary": (
-            "The backend distribution intentionally ships both the CLI/core package "
-            "and the active Workbench FastAPI app package."
+            "The backend distribution intentionally ships both the shared domain "
+            "package and the active Workbench FastAPI app package."
         ),
         "wheel": {
             "path": wheel.as_posix(),

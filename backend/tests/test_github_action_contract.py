@@ -439,7 +439,8 @@ def test_vpw082_docs_and_evidence_link_the_action_report_flow() -> None:
     assert "workbench-report-artifacts.yml" in integration_doc
     assert "provider-snapshot-file: provider-snapshot.json" in integration_doc
     assert 'locked-provider-data: "true"' in integration_doc
-    assert "workbench-report-artifacts.yml" in readme
+    assert "workbench-report-artifacts.yml" not in readme
+    assert "Quickstart: Local Workbench" in readme
     assert "action-smoke" in evidence
     assert "no `secrets.*`" in evidence
     assert "Historical Evidence Archive: evidence.md" in mkdocs

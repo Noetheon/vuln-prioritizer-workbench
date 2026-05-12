@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router"
+import { createFileRoute } from "@/lib/router"
 
 import { SettingsRoute } from "../../workbench/routes/SettingsRoute"
 

@@ -18,7 +18,7 @@ class ProjectRepository:
         self.session = session
 
     def list_visible_projects(self, user: User) -> tuple[list[Project], int]:
-        """Return projects visible to a user plus the matching total count."""
+        """Return local projects, narrowed only for explicit service tokens."""
         count_statement = select(func.count()).select_from(Project)
         statement = select(Project).order_by(col(Project.created_at).desc())
         service_token_scopes = api_token_scopes(user)
@@ -28,9 +28,6 @@ class ProjectRepository:
                 return [], 0
             count_statement = count_statement.where(Project.id == scoped_project_id)
             statement = statement.where(Project.id == scoped_project_id)
-        elif not user.is_superuser:
-            count_statement = count_statement.where(Project.owner_id == user.id)
-            statement = statement.where(Project.owner_id == user.id)
 
         count = self.session.exec(count_statement).one()
         projects = self.session.exec(statement).all()
@@ -48,13 +45,15 @@ class ProjectRepository:
         return self.session.get(Project, project_id)
 
     def get_visible_project(self, project_id: uuid.UUID, user: User) -> Project | None:
-        """Return a project only when it is visible to the user."""
+        """Return a project unless an explicit service token scopes it out."""
         project = self.get_project(project_id)
         if project is None:
             return None
-        if user.is_superuser or project.owner_id == user.id:
+        service_token_scopes = api_token_scopes(user)
+        if service_token_scopes is None or "admin" in service_token_scopes:
             return project
-        return None
+        scoped_project_id = api_token_project_id(user)
+        return project if scoped_project_id == project_id else None
 
     def update_project(self, project: Project, project_in: ProjectUpdate) -> Project:
         """Update mutable project fields without committing the transaction."""

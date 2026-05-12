@@ -1,4 +1,4 @@
-import { Link } from "@tanstack/react-router"
+import { Link } from "@/lib/router"
 import { Activity } from "lucide-react"
 
 import type { ProviderStatusPublic } from "@/api-client"

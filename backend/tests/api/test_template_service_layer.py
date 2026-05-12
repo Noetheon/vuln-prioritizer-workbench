@@ -93,7 +93,7 @@ def test_record_audit_event_bounds_detail_json(session: Session) -> None:
     assert len(event.detail_json["nested"]["note"]) == 1024
 
 
-def test_project_repository_scopes_visibility_and_leaves_commit_to_caller(
+def test_project_repository_lists_all_local_projects_and_leaves_commit_to_caller(
     app_models: Any,
     repository_classes: Any,
     session: Session,
@@ -120,12 +120,12 @@ def test_project_repository_scopes_visibility_and_leaves_commit_to_caller(
     owner_projects, owner_count = repository.list_visible_projects(owner)
     admin_projects, admin_count = repository.list_visible_projects(admin)
 
-    assert {project.id for project in owner_projects} == {owned.id}
-    assert owner_count == 1
+    assert {project.name for project in owner_projects} == {"Owned", "Other"}
+    assert owner_count == 2
     assert {project.name for project in admin_projects} == {"Owned", "Other"}
     assert admin_count == 2
     assert repository.get_visible_project(owned.id, owner) is not None
-    assert repository.get_visible_project(owned.id, other) is None
+    assert repository.get_visible_project(owned.id, other) is not None
 
     rolled_back = repository.create_project(
         app_models.ProjectCreate(name="Rollback", description=None),

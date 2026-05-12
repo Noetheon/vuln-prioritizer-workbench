@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test"
-import { authHeaders, backendBaseUrl, login } from "./auth-helpers"
+import { login } from "./auth-helpers"
 
 test("smoke: dashboard renders", async ({ page }) => {
   test.setTimeout(30_000)
@@ -58,26 +58,20 @@ test("smoke: settings renders", async ({ page }) => {
   await login(page)
   await page.goto("/settings")
   await expect(page.getByRole("tab", { name: "Overview" })).toBeVisible()
-  await expect(page.getByRole("tab", { name: "API Tokens" })).toBeVisible()
   await expect(
-    page.getByRole("heading", { name: "Account and session" }),
+    page.getByRole("tab", { name: "Runtime & Providers" }),
+  ).toBeVisible()
+  await expect(page.getByRole("tab", { name: "Diagnostics" })).toBeVisible()
+  await expect(
+    page.getByRole("heading", { name: "Workspace access" }),
   ).toBeVisible()
 })
 
-test("smoke: sign out revokes the active session", async ({ page }) => {
+test("smoke: account menu does not expose legacy sign out", async ({ page }) => {
   test.setTimeout(30_000)
-  const accessToken = await login(page)
+  await login(page)
 
   await page.getByRole("button", { name: "Account menu" }).click()
-  await page.getByRole("menuitem", { name: "Sign out" }).click()
-
-  await expect(page).toHaveURL(/\/login$/)
-  await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible()
-  const response = await page.request.get(
-    `${backendBaseUrl}/api/v1/users/me`,
-    {
-      headers: authHeaders(accessToken),
-    },
-  )
-  expect(response.status()).toBe(403)
+  await expect(page.getByRole("menuitem", { name: "Sign out" })).toHaveCount(0)
+  await expect(page.getByText("Account")).toBeVisible()
 })

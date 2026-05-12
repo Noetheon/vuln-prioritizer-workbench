@@ -854,7 +854,7 @@ def test_release_workflow_is_tag_bound_and_verifies_pypi_install() -> None:
     assert "${{ runner.temp }}/workflow-artifacts/**" in verify_failure_upload["with"]["path"]
 
 
-def test_release_check_keeps_demo_sync_manual_and_deterministic() -> None:
+def test_release_check_stays_workbench_first_without_legacy_cli_gates() -> None:
     makefile = MAKEFILE.read_text(encoding="utf-8")
 
     assert "workflow-check:" in makefile
@@ -871,8 +871,8 @@ def test_release_check_keeps_demo_sync_manual_and_deterministic() -> None:
     )
     assert "$(MAKE) dependency-audit" in release_block
     assert "$(MAKE) docker-demo-smoke" in release_block
-    assert "$(MAKE) pipx-source-smoke" in release_block
-    assert "$(MAKE) demo-sync-check" in release_block
+    assert "$(MAKE) pipx-source-smoke" not in release_block
+    assert "$(MAKE) demo-sync-check" not in release_block
     assert "api-client-drift-check:" in makefile
     assert "$(MAKE) frontend-generate-client" in makefile
     assert "find frontend/src/client -type f -print | sort | xargs shasum -a 256" in makefile
@@ -880,7 +880,7 @@ def test_release_check_keeps_demo_sync_manual_and_deterministic() -> None:
     assert (
         "release-readiness-check: release-check api-client-drift-check "
         "archive-evidence-check public-production-evidence-check "
-        "demo-evidence-bundle-check playwright-check docker-production-smoke" in makefile
+        "playwright-check docker-production-smoke" in makefile
     )
     assert "VULN_PRIORITIZER_FIXED_NOW" in makefile
     assert "git diff --binary -- docs" in makefile
@@ -892,7 +892,9 @@ def test_public_docs_use_release_placeholders_for_install_examples() -> None:
     ci_docs = CI_DOCS_FILE.read_text(encoding="utf-8")
     examples_readme = EXAMPLES_README.read_text(encoding="utf-8")
 
-    assert "@vX.Y.Z" in readme
+    assert "@vX.Y.Z" not in readme
+    assert "Quickstart: CLI" not in readme
+    assert "docker compose -f compose.yml -f compose.override.yml" in readme
     assert "@vX.Y.Z" in ci_docs
     assert "@vX.Y.Z" in examples_readme
     assert "@v1.1.0" not in readme

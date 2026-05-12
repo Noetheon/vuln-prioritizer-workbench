@@ -19,7 +19,7 @@ import {
   VpwSectionHeader,
   VpwSkeletonStack,
 } from "../vpw"
-import { Link } from "@tanstack/react-router"
+import { Link } from "@/lib/router"
 import type { ReactNode } from "react"
 
 export function AssetInventoryShell({

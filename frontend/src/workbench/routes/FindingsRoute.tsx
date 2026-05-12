@@ -1,4 +1,4 @@
-import { Outlet, useLocation, useNavigate } from "@tanstack/react-router"
+import { Outlet, useLocation, useNavigate } from "@/lib/router"
 import { useEffect } from "react"
 import { RemediationQueue } from "../../components/findings/RemediationQueue"
 import { useFindingsRouteState } from "../../components/findings/useFindingsRouteState"

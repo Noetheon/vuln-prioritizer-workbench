@@ -4,7 +4,7 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Quality: local-first](https://img.shields.io/badge/quality-local--first-informational)](#safety-boundaries)
 
-Vuln Prioritizer Workbench is a local-first CLI and self-hosted Workbench for
+Vuln Prioritizer Workbench is a local-first, single-user Workbench for
 prioritizing known CVEs from existing evidence. It accepts CVE lists, scanner
 exports, SBOM outputs, VEX statements, and asset context, then explains priority
 with transparent signals such as CVSS, EPSS, CISA KEV, provider freshness,
@@ -33,7 +33,7 @@ existing CVE evidence
 
 ## What It Is
 
-- a CLI plus FastAPI/React Workbench for known CVE prioritization
+- a FastAPI/React Workbench for known CVE prioritization
 - a local-first, self-hosted reviewer and operator tool
 - a transparent rule-based scoring workflow
 - a Workbench for projects, imports, findings, finding detail, TTP context,
@@ -82,19 +82,20 @@ for decisions.
 
 ## Architecture At A Glance
 
-- Active backend runtime: `backend/app` FastAPI, auth/session support,
-  `/api/v1` routes, services, repositories, models, and Alembic migrations.
-- Frontend: React, Vite, TypeScript, TanStack Router, and VPW design-system
-  components.
+- Active backend runtime: `backend/app` FastAPI, `/api/v1` routes, services,
+  repositories, models, and Alembic migrations.
+- Frontend: React, Vite, TypeScript, TanStack Query, a local route adapter, and
+  VPW design-system components.
 - API boundary: generated client files under `frontend/src/client/**`; the
   `frontend/src/api-client.ts` wrapper is manual integration code over that
   generated client.
-- CLI/domain layer: retained under `backend/src/vuln_prioritizer/**` for
-  automation, reporting, and neutral domain helpers shared with the active
-  backend.
+- Domain layer: retained under `backend/src/vuln_prioritizer/**` for parsers,
+  providers, scoring, reporting helpers, and neutral logic shared with the
+  active backend. The old Typer CLI is legacy maintenance surface, not the
+  product direction.
 - Python package boundary: the backend distribution intentionally ships both
-  the CLI/core package and the active Workbench FastAPI app under `app/*`; it is
-  not a CLI-only package.
+  the domain package and the active Workbench FastAPI app under `app/*`; it is
+  not a CLI-first package.
 
 See [Product Architecture](docs/architecture.md) for route ownership,
 WorkbenchShell responsibilities, shared provider/status state, and explicit
@@ -128,10 +129,7 @@ ports: frontend `http://127.0.0.1:15173` and backend
 `VPW_E2E_FRONTEND_URL`, or `VPW_E2E_BACKEND_URL` when reusing an existing
 local server.
 
-Local demo login defaults from `.env.example`:
-
-- email: `admin@example.com`
-- password: `local-workbench-dev-password`
+The current local mode is single-user and does not require a login step.
 
 Suggested demo path:
 
@@ -142,26 +140,6 @@ Suggested demo path:
 
 The demo path uses local checked-in fixtures and provider replay. Do not reuse
 placeholder `.env.example` secrets outside a local workstation.
-
-## Quickstart: CLI
-
-Install from a tagged source checkout with `pipx`:
-
-```bash
-pipx install git+https://github.com/Noetheon/vuln-prioritizer-workbench.git@vX.Y.Z#subdirectory=backend
-vuln-prioritizer --help
-```
-
-Minimal analysis:
-
-```bash
-printf 'CVE-2021-44228\nCVE-2024-3094\n' > cves.txt
-vuln-prioritizer analyze --input cves.txt --format markdown --output report.md
-```
-
-For full CLI usage, scanner/SBOM input formats, SARIF, reports, and GitHub
-Action patterns, start with the [User Documentation Guide](docs/user_documentation.md)
-and [Reporting and CI Integration](docs/integrations/reporting_and_ci.md).
 
 ## Documentation
 
@@ -208,7 +186,6 @@ README:
 - [VPW-054 technical report snapshot](docs/examples/vpw-054-template-technical-report.md)
 - [VPW-054 executive report snapshot](docs/examples/vpw-054-template-executive-report.html)
 - [VPW-054 analysis result snapshot](docs/examples/vpw-054-template-analysis-result.v1.json)
-- [GitHub Actions report artifact workflow](.github/examples/workbench-report-artifacts.yml)
 
 Canonical report/evidence contract artifacts remain under `docs/evidence/` and
 are described in [Reports and Evidence](docs/reports-and-evidence.md).
@@ -253,14 +230,13 @@ Security reporting and deployment-scope caveats are in [SECURITY.md](SECURITY.md
 ## Project Status
 
 The current repository state includes the active `backend/app` Workbench
-runtime, React frontend, retained CLI/domain package, VPW design system,
-evidence/reporting surfaces, public docs, CI cost controls, and package release
-automation.
+runtime, React frontend, retained domain package, VPW design system,
+evidence/reporting surfaces, public docs, CI cost controls, and Workbench
+package validation.
 
 The Python package metadata uses `Development Status :: 4 - Beta` for the
-current artifact: the CLI/core and self-hosted Workbench are release-gated for
-local-first operation, but the project does not yet claim public-production
-certification.
+current artifact: the self-hosted Workbench is release-gated for local-first
+operation, but the project does not yet claim public-production certification.
 
 Public-production readiness is still tracked as explicit VPW-AUD-999 evidence
 work.

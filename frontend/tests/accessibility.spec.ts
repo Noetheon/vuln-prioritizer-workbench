@@ -93,50 +93,34 @@ async function expectDialogVisibleTextContrast(page: Page, label: string) {
   expect(minimumContrast, `${label} computed visible text contrast`).toBeGreaterThanOrEqual(4.5)
 }
 
-test("login exposes labels, required fields, and keyboard submit", async ({
+test("local Workbench opens without credential fields", async ({
   page,
 }) => {
-  await page.goto("/login")
+  await page.goto("/")
 
   await expect(page.getByRole("main")).toBeVisible()
-  await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible()
-  await expect(page.getByLabel("Email")).toHaveValue("")
-  await expect(page.getByLabel("Password")).toHaveValue("")
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Risk Operations" }),
+  ).toBeVisible()
+  await expect(page.getByLabel("Email")).toHaveCount(0)
+  await expect(page.getByLabel("Password")).toHaveCount(0)
   await expect(
     page.evaluate(() => window.localStorage.getItem("access_token")),
   ).resolves.toBeNull()
-  await expect(page.getByLabel("Email")).toHaveAttribute("required", "")
-  await expect(page.getByLabel("Password")).toHaveAttribute("required", "")
 
   await page.keyboard.press("Tab")
-  await expect(page.getByLabel("Email")).toBeFocused()
-  await expectNoSeriousA11yViolations(page, "login")
+  await expectFocusedElementVisible(page)
+  await expectNoSeriousA11yViolations(page, "local Workbench entry")
 })
 
-test("login failure is announced and associated with credentials", async ({
+test("local Workbench entry has no credential failure state", async ({
   page,
 }) => {
-  await page.goto("/login")
-  await page.getByLabel("Email").fill("wrong@example.com")
-  await page.getByLabel("Password").fill("wrong-password")
-  await page.getByRole("button", { name: "Sign in" }).click()
+  await page.goto("/")
 
-  const alert = page.getByRole("alert")
-  await expect(alert).toHaveText(/email or password is incorrect/i)
-  await expect(page.getByLabel("Email")).toHaveAttribute("aria-invalid", "true")
-  await expect(page.getByLabel("Password")).toHaveAttribute(
-    "aria-invalid",
-    "true",
-  )
-  await expect(page.getByLabel("Email")).toHaveAttribute(
-    "aria-describedby",
-    "login-error",
-  )
-  await expect(page.getByLabel("Password")).toHaveAttribute(
-    "aria-describedby",
-    "login-error",
-  )
-  await expectNoSeriousA11yViolations(page, "login failure")
+  await expect(page.getByRole("alert")).toHaveCount(0)
+  await expect(page.getByRole("button", { name: "Sign in" })).toHaveCount(0)
+  await expectNoSeriousA11yViolations(page, "local Workbench entry")
 })
 
 test("authenticated shell exposes landmarks and account controls", async ({
@@ -155,9 +139,9 @@ test("authenticated shell exposes landmarks and account controls", async ({
       .getByRole("link", { exact: true, name: "Findings" }),
   ).toBeVisible()
 
+  await expectNoSeriousA11yViolations(page, "authenticated shell")
   await page.keyboard.press("Tab")
   await expectFocusedElementVisible(page)
-  await expectNoSeriousA11yViolations(page, "authenticated shell")
 })
 
 test("core authenticated routes have no serious accessibility violations", async ({

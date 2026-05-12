@@ -7,16 +7,16 @@ for release and security hygiene work.
 
 The `vuln-prioritizer` backend distribution intentionally ships both:
 
-- the CLI/core package under `backend/src/vuln_prioritizer/**`
+- the shared domain package under `backend/src/vuln_prioritizer/**`
 - the active Workbench FastAPI runtime under `backend/app/**`
 
-This is the selected package story for the current tree. The package is not
-CLI-only, and README/release wording should not imply that `app/*` is an
-accidental inclusion.
+This is the selected package story for the current tree. The package is
+Workbench-first, and README/release wording should not imply that `app/*` is an
+accidental inclusion or that the old CLI is the product direction.
 
 The current package maturity classifier is `Development Status :: 4 - Beta`.
-Treat that as local-first CLI plus self-hosted Workbench readiness, not public
-internet deployment certification. Moving to `Production/Stable` requires
+Treat that as local-first self-hosted Workbench readiness, not public internet
+deployment certification. Moving to `Production/Stable` requires
 candidate-specific evidence in the public-production release ledger and release
 operations handoff.
 
@@ -31,8 +31,8 @@ The package boundary is enforced by:
   a temporary Workbench database through Alembic head
 - `build/package-contents.json`, generated locally by the package-content check
 
-The sdist and wheel must contain `app/main.py`, `app/api/main.py`, and
-`vuln_prioritizer` CLI entrypoints, plus the active Workbench Alembic migration
+The sdist and wheel must contain `app/main.py`, `app/api/main.py`, the shared
+`vuln_prioritizer` domain package, and the active Workbench Alembic migration
 tree. They must not include the backend test tree. They also must not
 reintroduce removed legacy Workbench runtime packages under
 `vuln_prioritizer/api`, `vuln_prioritizer/db`, or `vuln_prioritizer/web`.
@@ -41,7 +41,7 @@ reintroduce removed legacy Workbench runtime packages under
 
 The current backend pytest coverage gate in `backend/pyproject.toml` measures
 both `vuln_prioritizer` and the active FastAPI Workbench package under
-`backend/app`. This keeps the CLI/core package and shipped API runtime inside the
+`backend/app`. This keeps the domain package and shipped API runtime inside the
 same enforced release threshold.
 
 Recommended follow-up, owned by the coverage-config maintainer: keep the

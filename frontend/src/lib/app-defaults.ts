@@ -8,29 +8,12 @@ import {
 } from "lucide-react"
 
 import type {
-  ApiTokenCreate,
   AssetExposure,
   FindingPriority,
   FindingStatus,
   FindingsReadProjectFindingsData,
   ImportsService,
 } from "../api-client"
-
-export type ApiTokenScope = NonNullable<ApiTokenCreate["scopes"]>[number]
-
-export const apiTokenScopeOptions: ApiTokenScope[] = [
-  "read",
-  "write",
-  "import",
-  "report",
-  "admin",
-]
-export const defaultApiTokenScopes: ApiTokenScope[] = ["read"]
-
-export function canonicalApiTokenScopes(scopes: ApiTokenScope[]) {
-  const selected = new Set(scopes)
-  return apiTokenScopeOptions.filter((scope) => selected.has(scope))
-}
 
 export type ProjectFormState = {
   name: string

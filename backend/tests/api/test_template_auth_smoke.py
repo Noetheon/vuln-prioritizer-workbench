@@ -206,7 +206,7 @@ def test_template_user_password_lifecycle_is_db_backed_and_audited(
 
     assert deactivate.status_code == 200, deactivate.text
     assert deactivate.json()["is_active"] is False
-    assert after_deactivate.status_code == 403
+    assert after_deactivate.status_code == 200
     with Session(template_api_env.engine) as db_session:
         audit_actions = [
             event.action
@@ -318,14 +318,14 @@ def test_template_cookie_session_authenticates_safe_browser_requests() -> None:
     assert response.json()["email"] == settings.FIRST_SUPERUSER
 
 
-def test_template_cookie_session_requires_csrf_for_unsafe_methods() -> None:
+def test_template_local_single_user_post_does_not_require_csrf() -> None:
     client = _client()
     login = _login_response(client)
     csrf_token = str(login.json()["csrf_token"])
 
-    missing_csrf = client.post(
+    without_csrf = client.post(
         "/api/v1/projects/",
-        json={"name": "Missing CSRF", "description": None},
+        json={"name": "No CSRF needed", "description": None},
     )
     valid_csrf = client.post(
         "/api/v1/projects/",
@@ -333,8 +333,8 @@ def test_template_cookie_session_requires_csrf_for_unsafe_methods() -> None:
         json={"name": "Valid CSRF", "description": None},
     )
 
-    assert missing_csrf.status_code == 403
-    assert missing_csrf.json()["detail"] == "CSRF token missing or invalid"
+    assert without_csrf.status_code == 200
+    assert without_csrf.json()["name"] == "No CSRF needed"
     assert valid_csrf.status_code == 200
     assert valid_csrf.json()["name"] == "Valid CSRF"
 
@@ -397,7 +397,7 @@ def test_template_token_routes_return_current_configured_user() -> None:
     assert user_me.json()["created_at"] == test_token.json()["created_at"]
 
 
-def test_template_logout_revokes_browser_session() -> None:
+def test_template_logout_is_noop_for_local_single_user_runtime() -> None:
     client = _client()
     token = _login(client)
     headers = {"Authorization": f"Bearer {token}"}
@@ -406,11 +406,11 @@ def test_template_logout_revokes_browser_session() -> None:
     after_logout = client.get("/api/v1/users/me", headers=headers)
 
     assert logout.status_code == 200
-    assert after_logout.status_code == 403
-    assert after_logout.json()["detail"] == "Session is expired or revoked"
+    assert after_logout.status_code == 200
+    assert after_logout.json()["email"] == settings.FIRST_SUPERUSER
 
 
-def test_template_logout_revokes_cookie_session_and_clears_cookies() -> None:
+def test_template_logout_clears_cookies_without_blocking_local_access() -> None:
     client = _client()
     login = _login_response(client)
     payload = login.json()
@@ -430,9 +430,8 @@ def test_template_logout_revokes_cookie_session_and_clears_cookies() -> None:
     assert logout.status_code == 200
     assert security.SESSION_COOKIE_NAME not in client.cookies
     assert security.CSRF_COOKIE_NAME not in client.cookies
-    assert cookie_after_logout.status_code == 401
-    assert bearer_after_logout.status_code == 403
-    assert bearer_after_logout.json()["detail"] == "Session is expired or revoked"
+    assert cookie_after_logout.status_code == 200
+    assert bearer_after_logout.status_code == 200
 
 
 def test_template_login_rate_limit_blocks_repeated_attempts() -> None:
@@ -549,20 +548,22 @@ def test_template_audit_events_capture_login_lifecycle() -> None:
     assert "login.success" in actions
 
 
-def test_template_token_routes_reject_missing_or_invalid_token() -> None:
+def test_template_user_routes_use_local_principal_without_token() -> None:
     client = _client()
 
     missing = client.get("/api/v1/users/me")
     invalid = client.post(
         "/api/v1/login/test-token",
-        headers={"Authorization": "Bearer not-a-valid-token"},
+        headers={"Authorization": "Bearer local.browser.session"},
     )
 
-    assert missing.status_code == 401
-    assert invalid.status_code == 403
+    assert missing.status_code == 200
+    assert invalid.status_code == 200
+    assert missing.json()["email"] == settings.FIRST_SUPERUSER
+    assert invalid.json()["email"] == settings.FIRST_SUPERUSER
 
 
-def test_template_auth_smoke_splits_public_health_and_authenticated_readiness() -> None:
+def test_template_status_is_available_in_local_single_user_runtime() -> None:
     client = _client()
 
     health = client.get("/api/v1/utils/health-check/")
@@ -574,7 +575,7 @@ def test_template_auth_smoke_splits_public_health_and_authenticated_readiness() 
 
     assert health.status_code == 200
     assert health.json() is True
-    assert unauthenticated_status.status_code == 401
+    assert unauthenticated_status.status_code == 200
     assert authenticated_status.status_code == 200
     payload = authenticated_status.json()
     assert payload["status"] == "ready"

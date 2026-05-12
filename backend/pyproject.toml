@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "vuln-prioritizer"
 version = "1.1.0"
-description = "Local-first CLI and self-hosted Workbench for prioritizing known CVEs with NVD, EPSS, KEV, ATT&CK, asset context, and VEX."
+description = "Local-first single-user Workbench for prioritizing known CVEs with NVD, EPSS, KEV, ATT&CK, asset context, and VEX."
 readme = "README.md"
 requires-python = ">=3.11"
 license = "MIT"
@@ -13,7 +13,6 @@ authors = [{ name = "vuln-prioritizer contributors" }]
 keywords = ["cve", "cvss", "epss", "kev", "security", "vulnerability-management"]
 classifiers = [
   "Development Status :: 4 - Beta",
-  "Environment :: Console",
   "Intended Audience :: Information Technology",
   "Intended Audience :: System Administrators",
   "Operating System :: OS Independent",

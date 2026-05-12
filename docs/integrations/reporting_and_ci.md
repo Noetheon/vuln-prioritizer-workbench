@@ -1,13 +1,18 @@
-# Reporting and CI Integration
+# Legacy CLI and CI Integration
 
-This document describes the current SARIF, GitHub Action, PR comment, HTML reporting, and Workbench reporting integration surface.
+This document is a legacy CLI and GitHub Action reference. The current product
+direction is the local single-user Workbench; new user flows should prefer the
+Workbench Imports and Evidence Center screens plus the `/api/v1` reports API.
 
-- Public-install-safe examples in this document use placeholders like `trivy-results.json`, `analysis.json`, `report.html`, and `evidence.zip`. They work after `pipx install` as long as you provide those files from your own repo, CI workspace, or workstation.
+- Legacy examples in this document use placeholders like `trivy-results.json`,
+  `analysis.json`, `report.html`, and `evidence.zip`. They are retained as
+  historical integration context while the Workbench becomes the only supported
+  product surface.
 - Repo checkout only: examples that use `data/...` or `make ...`. In this repository those refer to checked-in fixtures, checked-in example artifacts, or maintainer gates.
 
-## Current Production State
+## Legacy CLI State
 
-Today the CLI supports:
+The retired CLI surface contains:
 
 - `analyze --format markdown|json|sarif|table`
 - `analyze --input-format auto|cve-list|generic-occurrence-csv|trivy-json|grype-json|cyclonedx-json|spdx-json|dependency-check-json|github-alerts-json|nessus-xml|openvas-xml`
