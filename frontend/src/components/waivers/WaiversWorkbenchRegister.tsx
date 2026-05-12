@@ -1,4 +1,4 @@
-import { Link } from "@tanstack/react-router"
+import { Link } from "@/lib/router"
 import { RefreshCw } from "lucide-react"
 import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"

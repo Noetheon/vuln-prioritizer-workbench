@@ -1,21 +1,16 @@
-import { Database, KeyRound, ShieldCheck, UserRound } from "lucide-react"
+import { Database, MonitorCog, ShieldCheck, UserRound } from "lucide-react"
 
 import {
   VpwGrid,
   VpwMetricCard,
   VpwPanel,
-  VpwProgress,
   VpwSectionHeader,
   VpwSkeletonStack,
 } from "@/components/vpw"
 import { formatCacheAge, providerSnapshotSummary } from "@/lib/provider-format"
 import {
-  activeTokenCount,
-  formatDateTime,
-  tokenActivityPercent,
-} from "./settings-token-model"
-import {
   evidenceReadiness,
+  formatDateTime,
   providerHealth,
   type SettingsWorkbenchProps,
 } from "./settings-workbench-model"
@@ -23,17 +18,11 @@ import { SettingsFactRows } from "./SettingsFactRows"
 
 type SettingsMetricsProps = Pick<
   SettingsWorkbenchProps,
-  | "apiTokens"
-  | "apiTokensLoading"
-  | "currentUser"
-  | "providerStatus"
-  | "providerStatusError"
-  | "statusError"
+  "currentUser" | "providerStatus" | "providerStatusError" | "statusError"
 >
 
 type SettingsAccountHealthProps = Pick<
   SettingsWorkbenchProps,
-  | "apiTokens"
   | "currentUser"
   | "providerStatus"
   | "providerStatusError"
@@ -43,14 +32,11 @@ type SettingsAccountHealthProps = Pick<
 >
 
 export function SettingsMetrics({
-  apiTokens,
-  apiTokensLoading,
   currentUser,
   providerStatus,
   providerStatusError,
   statusError,
 }: SettingsMetricsProps) {
-  const activeTokens = activeTokenCount(apiTokens)
   const provider = providerHealth(providerStatus)
   const evidence = evidenceReadiness(
     providerStatus,
@@ -63,19 +49,19 @@ export function SettingsMetrics({
       <VpwMetricCard
         description={
           currentUser?.email ??
-          (currentUser?.is_active ? "Session active" : "Checking account")
+          (currentUser?.is_active ? "Local user ready" : "Checking workspace")
         }
         icon={<UserRound aria-hidden="true" className="h-5 w-5" />}
-        label="Signed-in user"
+        label="Workspace user"
         tone={currentUser?.is_active ? "success" : "warning"}
-        value={currentUser ? "Authenticated" : "Loading"}
+        value={currentUser ? "Local" : "Loading"}
       />
       <VpwMetricCard
-        description={`${activeTokens} active`}
-        icon={<KeyRound aria-hidden="true" className="h-5 w-5" />}
-        label="API tokens"
-        tone={apiTokens.length > 0 ? "info" : "neutral"}
-        value={apiTokensLoading ? "Loading" : apiTokens.length}
+        description="No login, RBAC, or service-token setup required."
+        icon={<MonitorCog aria-hidden="true" className="h-5 w-5" />}
+        label="Access mode"
+        tone="info"
+        value="Single-user"
       />
       <VpwMetricCard
         description={providerSnapshotSummary(providerStatus)}
@@ -100,7 +86,6 @@ export function SettingsMetrics({
 }
 
 export function SettingsAccountHealth({
-  apiTokens,
   currentUser,
   providerStatus,
   providerStatusError,
@@ -115,19 +100,19 @@ export function SettingsAccountHealth({
       <VpwPanel className="overflow-hidden p-0">
         <div className="border-b border-[var(--vpw-border-subtle)] px-5 py-4">
           <VpwSectionHeader
-            description="Current account and session state."
-            title="Account and session"
+            description="Current local workspace state."
+            title="Workspace access"
           />
         </div>
         <SettingsFactRows
           items={[
             {
-              label: "Signed-in user",
+              label: "Workspace user",
               value: currentUser?.email ?? "Loading user",
             },
             {
-              label: "Session state",
-              value: currentUser ? "Authenticated" : "Loading",
+              label: "Access mode",
+              value: currentUser ? "Local single-user" : "Loading",
               tone: currentUser ? "success" : "warning",
             },
             {
@@ -136,10 +121,8 @@ export function SettingsAccountHealth({
             },
             {
               label: "Auth mode",
-              value: currentUser?.is_superuser
-                ? "Admin session"
-                : "User session",
-              tone: currentUser?.is_superuser ? "support" : "info",
+              value: "Disabled for local use",
+              tone: "info",
             },
           ]}
         />
@@ -148,7 +131,7 @@ export function SettingsAccountHealth({
       <VpwPanel className="overflow-hidden p-0">
         <div className="border-b border-[var(--vpw-border-subtle)] px-5 py-4">
           <VpwSectionHeader
-            description="Token inventory, provider health, and reproducibility signals."
+            description="Provider health and reproducibility signals."
             title="Setup health"
           />
         </div>
@@ -190,13 +173,6 @@ export function SettingsAccountHealth({
             ]}
           />
         )}
-        <div className="border-t border-[var(--vpw-border-subtle)] bg-[color-mix(in_srgb,var(--vpw-bg-panel)_58%,var(--vpw-bg-card))] px-5 py-4">
-          <VpwProgress
-            label="Active token coverage"
-            tone={apiTokens.length > 0 ? "info" : "neutral"}
-            value={tokenActivityPercent(apiTokens)}
-          />
-        </div>
       </VpwPanel>
     </VpwGrid>
   )

@@ -50,7 +50,6 @@ test("workbench query keys expose project-scoped invalidation roots", () => {
 test("workbench query keys normalize optional route and filter inputs", () => {
   const findingsParams = { projectId: "project-1", status: "open" }
 
-  assert.deepEqual(workbenchQueryKeys.apiTokens(), ["workbench", "api-tokens"])
   assert.deepEqual(workbenchQueryKeys.assetFindings("project-1", null), [
     "workbench",
     "asset-findings",

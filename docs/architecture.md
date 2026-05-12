@@ -13,18 +13,18 @@ The repository now follows the FastAPI Full Stack Template shape for the active
 Workbench surface:
 
 - `backend/app/`: FastAPI application, API routes, SQL models, services,
-  repositories, auth/session support, and Alembic migrations.
-- `frontend/`: React, Vite, TanStack Router, TypeScript, and the generated API
-  client consumed by the browser app.
+  repositories, and Alembic migrations.
+- `frontend/`: React, Vite, TypeScript, TanStack Query, a local route adapter,
+  and the generated API client consumed by the browser app.
 - `frontend/src/client/**`: generated OpenAPI client. Generated files are not
   manually edited.
 - `frontend/src/api-client.ts`: manual wrapper and integration layer over the
   generated client.
-- `backend/src/vuln_prioritizer/**`: retained CLI and domain implementation
-  used by maintainer workflows and shared analysis/reporting helpers.
+- `backend/src/vuln_prioritizer/**`: retained domain implementation used by
+  shared parsing, provider, scoring, and reporting helpers.
 - Python package boundary: `backend/pyproject.toml` intentionally includes both
-  `vuln_prioritizer*` and `app*`, so the backend distribution ships the CLI/core
-  package and the active Workbench FastAPI app.
+  `vuln_prioritizer*` and `app*`, so the backend distribution ships the shared
+  domain package and the active Workbench FastAPI app.
 
 The frontend and backend communicate through the generated API client. UI
 component structure, route extraction, CSS organization, and VPW design-system
@@ -37,11 +37,11 @@ quickstart, Playwright backend startup, and OpenAPI client generation must point
 to `app.main:app` or import `app.main.app`. The generated browser API boundary is
 `frontend/src/client/**`; `frontend/src/api-client.ts` is manual wrapper code.
 
-`backend/src/vuln_prioritizer/**` remains the retained CLI and domain
-implementation. The active Workbench backend may import neutral, framework-light
-domain helpers from this package, such as input normalization, provider clients,
-scoring, report/evidence helpers, redaction, and token hashing. Reusable logic
-needed by the CLI and browser runtime must live in these neutral modules.
+`backend/src/vuln_prioritizer/**` remains the retained domain implementation.
+The active Workbench backend may import neutral, framework-light domain helpers
+from this package, such as input normalization, provider clients, scoring,
+report/evidence helpers, and redaction. Reusable logic needed by browser/API
+workflows must live in these neutral modules.
 
 The old Workbench runtime packages, runtime database package, provider
 scheduler, and `web`/`db` CLI entrypoints have been removed. The active
@@ -51,8 +51,9 @@ logic must not be added under runtime-specific packages.
 
 ## Frontend Route Ownership
 
-TanStack Router file routes remain small entrypoints. Most product rendering is
-owned by route-level Workbench components:
+The local route adapter owns browser navigation without depending on generated
+route trees. Most product rendering is owned by route-level Workbench
+components:
 
 | Route | Main owner | Notes |
 | --- | --- | --- |
@@ -62,19 +63,17 @@ owned by route-level Workbench components:
 | Findings | `components/findings/RemediationQueue.tsx` | Uses `useFindingsRouteState` for filters/sort/pagination and `FindingsDataTable` for the table surface. |
 | Finding Detail | `components/finding-detail/FindingDetailRoute.tsx` | Hero, priority explanation, evidence, TTP Context, and history are extracted from `WorkbenchShell`. |
 | Waivers | `components/waivers/WaiversWorkbench.tsx` | VPW-based waiver register and governance workflow; handlers remain shell-owned. |
-| Assets | `routes/_layout/assets.tsx` + `components/assets/*` | Thin route wrapper; Assets module owns route state, filters, forms, asset table, service rollup, linked findings panel, and helpers. |
+| Assets | `workbench/routes/AssetsRoute.tsx` + `components/assets/*` | Assets module owns route state, filters, forms, asset table, service rollup, linked findings panel, and helpers. |
 | Providers | `components/providers/ProvidersRouteContainer.tsx` | Typed container over `ProvidersWorkbench`; provider status remains shared state. |
 | Reports | `components/reports/EvidenceCenter.tsx` | Evidence Center for report generation, download, verification, and bundle metadata. |
-| Settings | `components/settings/SettingsRouteContainer.tsx` | Typed wrapper over `SettingsWorkbench`; token/session data remains shell-owned. |
-| Login | `routes/login.tsx` | Standalone login route using local auth defaults and API status. |
+| Settings | `components/settings/SettingsRouteContainer.tsx` | Typed wrapper over `SettingsWorkbench`; local runtime/provider status remains shell-owned. |
+| Login | `routes/login.tsx` | Compatibility route that redirects to the local single-user Workbench. |
 
 ## WorkbenchShell Role
 
 `frontend/src/workbench/WorkbenchShell.tsx` is still the app-level Workbench
 composition root. It intentionally owns cross-route concerns:
 
-- current user/session loading and sign-out
-- generated API client setup through the auth token
 - selected project state and project list refresh
 - provider status and Workbench status
 - dashboard, findings, finding detail, import, report, project, waiver, and
@@ -84,7 +83,7 @@ composition root. It intentionally owns cross-route concerns:
 
 Recent refactors moved large route rendering surfaces out of the shell without
 moving high-risk global state. Future state extraction should stay route-by-route
-and preserve API timing, selected project behavior, and auth/session redirects.
+and preserve API timing plus selected project behavior.
 
 ## VPW Design System Role
 
@@ -105,7 +104,7 @@ Provider and status state is intentionally shared:
 - Dashboard displays provider freshness and stale/degraded states.
 - Providers route exposes source status and refresh controls.
 - Reports and Evidence Center use provider/run readiness for report generation.
-- Settings shows session, provider, and Workbench status.
+- Settings shows local runtime, provider, and Workbench status.
 - AppShell uses health/status context for top-level status indicators.
 
 Keeping this state in `WorkbenchShell` avoids duplicate provider requests and

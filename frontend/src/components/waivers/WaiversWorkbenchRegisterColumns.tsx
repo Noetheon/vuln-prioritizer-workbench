@@ -1,4 +1,4 @@
-import { Link } from "@tanstack/react-router"
+import { Link } from "@/lib/router"
 import { ShieldAlert } from "lucide-react"
 import type { Dispatch, SetStateAction } from "react"
 import type { WaiverPublic } from "@/api-client"

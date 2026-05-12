@@ -1,4 +1,4 @@
-import { useLocation, useNavigate } from "@tanstack/react-router"
+import { useLocation, useNavigate } from "@/lib/router"
 import { useQueryClient } from "@tanstack/react-query"
 import {
   type Dispatch,
@@ -11,14 +11,12 @@ import {
   useMemo,
   useState,
 } from "react"
-import {
-  ApiError,
-  type ProjectPublic,
-  type ProviderStatusPublic,
-  type UserPublic,
-  type WorkbenchStatus,
+import type {
+  ProjectPublic,
+  ProviderStatusPublic,
+  UserPublic,
+  WorkbenchStatus,
 } from "../api-client"
-import { clearAccessToken } from "../auth"
 import { apiErrorMessage } from "../lib/app-errors"
 import {
   useWorkbenchCurrentUserQuery,
@@ -94,13 +92,11 @@ export function WorkbenchProvider({ children }: { children: ReactNode }) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const handleAuthExpired = useCallback(async () => {
-    clearAccessToken()
-    await navigate({ replace: true, search: {} as never, to: "/login" })
+    await navigate({ replace: true, search: {}, to: "/" })
   }, [navigate])
   const currentUserQuery = useWorkbenchCurrentUserQuery()
   const providerStatusQuery = useWorkbenchProviderStatusQuery()
   const statusQuery = useWorkbenchStatusQuery()
-  const currentUserError = currentUserQuery.error
   const projectsQuery = useProjectsQuery()
   const projects = projectsQuery.data?.data ?? []
   const urlSelectedProjectId = selectedProjectIdFromSearch(location.searchStr)
@@ -144,7 +140,7 @@ export function WorkbenchProvider({ children }: { children: ReactNode }) {
       }
       void navigate({
         replace,
-        search: (() => nextSearch) as never,
+        search: () => nextSearch,
       })
     },
     [location.searchStr, navigate],
@@ -158,12 +154,6 @@ export function WorkbenchProvider({ children }: { children: ReactNode }) {
     },
     [selectProjectId, selectedProjectId],
   )
-
-  useEffect(() => {
-    if (currentUserError instanceof ApiError && currentUserError.status === 401) {
-      void handleAuthExpired()
-    }
-  }, [currentUserError, handleAuthExpired])
 
   useEffect(() => {
     if (!projectsQuery.isSuccess) {

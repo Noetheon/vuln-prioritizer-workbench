@@ -3,12 +3,10 @@ import type { SettingsWorkbenchProps } from "./settings-workbench-model"
 
 type SettingsAlertsProps = Pick<
   SettingsWorkbenchProps,
-  "apiTokenError" | "apiTokenMessage" | "providerStatusError" | "statusError"
+  "providerStatusError" | "statusError"
 >
 
 export function SettingsAlerts({
-  apiTokenError,
-  apiTokenMessage,
   providerStatusError,
   statusError,
 }: SettingsAlertsProps) {
@@ -26,17 +24,6 @@ export function SettingsAlerts({
         </VpwStatusBanner>
       ) : null}
 
-      {apiTokenError ? (
-        <VpwStatusBanner title="API token action failed" tone="critical">
-          {apiTokenError}
-        </VpwStatusBanner>
-      ) : null}
-
-      {apiTokenMessage ? (
-        <VpwStatusBanner title="API token action complete" tone="success">
-          {apiTokenMessage}
-        </VpwStatusBanner>
-      ) : null}
     </>
   )
 }

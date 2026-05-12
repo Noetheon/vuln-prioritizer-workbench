@@ -1,4 +1,4 @@
-import { Link } from "@tanstack/react-router"
+import { Link } from "@/lib/router"
 import { History } from "lucide-react"
 import type { AnalysisRunPublic } from "@/api-client"
 import { Button } from "@/components/ui/button"

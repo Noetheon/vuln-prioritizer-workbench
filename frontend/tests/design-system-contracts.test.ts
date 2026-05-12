@@ -10,7 +10,6 @@ const srcRoot = fileURLToPath(new URL("../src/", import.meta.url))
 const sourceExtensions = new Set([".css", ".ts", ".tsx"])
 const ignoredPathParts = new Set([
   "client",
-  "routeTree.gen.ts",
   "vite-env.d.ts",
 ])
 

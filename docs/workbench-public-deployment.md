@@ -97,7 +97,10 @@ Required browser/API behavior evidence:
   approved.
 - `https://${DOMAIN}/api/v1/workbench/health` returns the minimal public health
   response.
-- `https://${DOMAIN}/api/v1/workbench/status` is auth-gated.
+- `https://${DOMAIN}/api/v1/workbench/status` returns local Workbench readiness
+  without requiring a browser login.
+- `https://${DOMAIN}/api/v1/providers/status` returns redacted provider
+  diagnostics for the local Workbench status UI.
 - `https://${DOMAIN}/docs` and `/api/v1/openapi.json` are not public when
   `API_DOCS_ENABLED=false`.
 - `https://api.${DOMAIN}/api/v1/workbench/health` is treated as the Optional
@@ -298,9 +301,9 @@ python -c "import urllib.request; print(urllib.request.urlopen('https://${DOMAIN
 ```
 
 The public health response should only report a minimal OK status. Verify
-`/api/v1/workbench/status` with an authenticated admin session or automation API
-token before promoting the restored environment; that auth-gated status response
-should report `database_status=ready` and `schema_status=ready`.
+`/api/v1/workbench/status` before promoting the restored environment; that local
+readiness response should report `database_status=ready` and
+`schema_status=ready`.
 
 ## Release Evidence
 

@@ -407,30 +407,16 @@ const evidenceProviderStatus = {
   warnings: [],
 }
 
-const evidenceApiTokens = [
-  {
-    active: true,
-    created_at: timestamp,
-    expires_at: "2026-08-10T10:00:00Z",
-    id: "token-1",
-    last_used_at: "2026-05-09T08:00:00Z",
-    name: "automation",
-    project_id: mockProject.id,
-    revoked_at: null,
-    scopes: ["read", "report"],
-  },
-]
-
 const loginRoute: EvidenceRoute = {
   assertReady: async (page) => {
-    await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible({
-      timeout: 15_000,
-    })
-    await expect(page.getByLabel("Email")).toHaveValue("")
-    await expect(page.getByLabel("Password")).toHaveValue("")
+    await expect(
+      page.getByRole("heading", { level: 1, name: "Risk Operations" }),
+    ).toBeVisible({ timeout: 15_000 })
+    await expect(page.getByLabel("Email")).toHaveCount(0)
+    await expect(page.getByLabel("Password")).toHaveCount(0)
   },
-  id: "login",
-  path: "/login",
+  id: "workbench-entry",
+  path: "/",
 }
 
 const authenticatedRoutes: readonly EvidenceRoute[] = [
@@ -563,9 +549,10 @@ const authenticatedRoutes: readonly EvidenceRoute[] = [
       await expect(page.getByRole("tab", { name: "Overview" })).toBeVisible()
       await expect(
         page.getByRole("heading", { name: "Account and session" }),
-      ).toBeVisible()
+      ).toHaveCount(0)
+      await expect(page.getByRole("tab", { name: "API Tokens" })).toHaveCount(0)
       await expect(
-        page.getByRole("tab", { name: "API Tokens" }),
+        page.getByRole("tab", { name: "Runtime & Providers" }),
       ).toBeVisible()
     },
     id: "settings",
@@ -794,12 +781,10 @@ async function captureRouteScreenshot({
 }
 
 async function routeLoginScreenshotApi(page: Page) {
-  await page.route("**/api/v1/users/me", (route) =>
-    fulfillJson(route, { detail: "Not authenticated" }, 401),
-  )
-  await page.route("**/api/v1/utils/health-check/", (route) =>
-    fulfillJson(route, true),
-  )
+  await routeWorkbenchShell(page, {
+    findings: [mockFinding],
+    projects: [mockProject],
+  })
 }
 
 async function routeEvidenceScreenshotApi(page: Page) {
@@ -878,15 +863,9 @@ async function routeEvidenceScreenshotApi(page: Page) {
     `**/api/v1/projects/${mockProject.id}/governance/rollups/?*`,
     (route) => fulfillJson(route, evidenceGovernance),
   )
-  await page.route("**/api/v1/api-tokens/", (route) =>
-    fulfillJson(route, {
-      count: evidenceApiTokens.length,
-      data: evidenceApiTokens,
-    }),
-  )
 }
 
-test("evidence: login route light and dark screenshots", async ({ page }) => {
+test("evidence: Workbench entry light and dark screenshots", async ({ page }) => {
   test.setTimeout(60_000)
   await routeLoginScreenshotApi(page)
 

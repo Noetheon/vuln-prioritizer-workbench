@@ -1105,9 +1105,9 @@ def test_workbench_frontend_feature_containers_delegate_to_sections() -> None:
     settings_overview_source = (
         REPO_ROOT / "frontend/src/components/settings/SettingsWorkbenchOverview.tsx"
     ).read_text(encoding="utf-8")
-    settings_tokens_source = (
+    settings_tokens_path = (
         REPO_ROOT / "frontend/src/components/settings/SettingsWorkbenchTokens.tsx"
-    ).read_text(encoding="utf-8")
+    )
     settings_runtime_source = (
         REPO_ROOT / "frontend/src/components/settings/SettingsWorkbenchRuntime.tsx"
     ).read_text(encoding="utf-8")
@@ -1179,8 +1179,9 @@ def test_workbench_frontend_feature_containers_delegate_to_sections() -> None:
     assert "WaiversWorkbenchReview" in waivers_sections_source
     assert "SettingsWorkbenchHero" in settings_sections_source
     assert "SettingsWorkbenchOverview" in settings_sections_source
-    assert "SettingsWorkbenchTokens" in settings_sections_source
     assert "SettingsWorkbenchRuntime" in settings_sections_source
+    assert "SettingsWorkbenchTokens" not in settings_sections_source
+    assert not settings_tokens_path.exists()
     assert "ProvidersWorkbenchHero" in providers_sections_source
     assert "ProvidersWorkbenchMetrics" in providers_sections_source
     assert "ProvidersWorkbenchSources" in providers_sections_source
@@ -1218,7 +1219,6 @@ def test_workbench_frontend_feature_containers_delegate_to_sections() -> None:
     assert len(settings_sections_source.splitlines()) <= 40
     assert len(settings_hero_source.splitlines()) <= 130
     assert len(settings_overview_source.splitlines()) <= 220
-    assert len(settings_tokens_source.splitlines()) <= 290
     assert len(settings_runtime_source.splitlines()) <= 200
     assert len(settings_model_source.splitlines()) <= 220
     assert len(providers_source.splitlines()) <= 120

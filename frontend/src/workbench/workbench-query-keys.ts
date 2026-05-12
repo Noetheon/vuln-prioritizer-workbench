@@ -2,7 +2,6 @@ import type { QueryClient } from "@tanstack/react-query"
 
 export const workbenchQueryKeys = {
   all: ["workbench"] as const,
-  apiTokens: () => [...workbenchQueryKeys.all, "api-tokens"] as const,
   assetFindings: (projectId: string, assetId: string | null) =>
     [
       ...workbenchQueryKeys.assetFindingsRoot(projectId),

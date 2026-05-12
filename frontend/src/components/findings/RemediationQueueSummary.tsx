@@ -1,4 +1,4 @@
-import { Link } from "@tanstack/react-router"
+import { Link } from "@/lib/router"
 import { AlertTriangle, ArrowUp, Eye, FileDown, Upload } from "lucide-react"
 import type { ProjectPublic } from "@/api-client"
 import { Button } from "@/components/ui/button"
