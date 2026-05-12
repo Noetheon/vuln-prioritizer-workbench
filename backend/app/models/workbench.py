@@ -15,6 +15,6 @@ class WorkbenchStatus(SQLModel):
 
 
 class WorkbenchHealth(SQLModel):
-    """Minimal unauthenticated health response."""
+    """Minimal local health response."""
 
     status: str

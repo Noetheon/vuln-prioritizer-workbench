@@ -24,9 +24,7 @@ export PROVIDER_SNAPSHOT_DIR="$repo_root/data"
 export DEMO_PROVIDER_SNAPSHOT_ENABLED=true
 export RATE_LIMIT_ENABLED=false
 export SECRET_KEY="${SECRET_KEY:-local-workbench-dev-secret}"
-export FIRST_SUPERUSER_PASSWORD="${FIRST_SUPERUSER_PASSWORD:-local-workbench-dev-password}"
 
-python3 -m app.core.migration_bootstrap
 python3 -m alembic -c backend/alembic.ini upgrade head
 
 exec python3 -m uvicorn app.main:app --host 127.0.0.1 --port "$backend_port"

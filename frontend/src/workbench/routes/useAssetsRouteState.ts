@@ -9,7 +9,6 @@ import {
 } from "react"
 
 import {
-  ApiError,
   type AssetPublic,
   AssetsService,
 } from "../../api-client"
@@ -35,7 +34,6 @@ import { invalidateProjectScopedWorkbenchQueries } from "../workbench-query-keys
 export function useAssetsRouteState(): AssetsWorkbenchProps {
   const queryClient = useQueryClient()
   const {
-    handleAuthExpired,
     projectListLoading,
     projects,
     providerStatus,
@@ -115,17 +113,6 @@ export function useAssetsRouteState(): AssetsWorkbenchProps {
       }),
   })
 
-  const handleUnauthorized = useCallback(
-    async (caught: unknown) => {
-      if (caught instanceof ApiError && caught.status === 401) {
-        await handleAuthExpired()
-        return true
-      }
-      return false
-    },
-    [handleAuthExpired],
-  )
-
   const refreshAssets = useCallback(
     async (preferredAssetId?: string) => {
       if (preferredAssetId) {
@@ -159,13 +146,6 @@ export function useAssetsRouteState(): AssetsWorkbenchProps {
     )
   }, [assets])
 
-  useEffect(() => {
-    const queryError = assetsQuery.error ?? assetFindingsQuery.error
-    if (queryError instanceof ApiError && queryError.status === 401) {
-      void handleAuthExpired()
-    }
-  }, [assetFindingsQuery.error, assetsQuery.error, handleAuthExpired])
-
   async function createAsset(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setCreateError("")
@@ -190,9 +170,6 @@ export function useAssetsRouteState(): AssetsWorkbenchProps {
       setAssetMessage(`Asset ${asset.name} created.`)
       await refreshAssets(asset.id)
     } catch (caught) {
-      if (await handleUnauthorized(caught)) {
-        return
-      }
       setAssetsError(apiErrorMessage("Asset create failed", caught))
     }
   }
@@ -228,9 +205,6 @@ export function useAssetsRouteState(): AssetsWorkbenchProps {
       setAssetMessage(`Asset ${asset.name} updated.`)
       await refreshAssets(asset.id)
     } catch (caught) {
-      if (await handleUnauthorized(caught)) {
-        return
-      }
       setAssetsError(apiErrorMessage("Asset update failed", caught))
     }
   }
@@ -245,9 +219,6 @@ export function useAssetsRouteState(): AssetsWorkbenchProps {
       )
       await refreshAssets(asset.id)
     } catch (caught) {
-      if (await handleUnauthorized(caught)) {
-        return
-      }
       setAssetsError(apiErrorMessage("Asset recalculation failed", caught))
     }
   }
@@ -276,9 +247,6 @@ export function useAssetsRouteState(): AssetsWorkbenchProps {
       )
       await refreshAssets(selectedAssetId)
     } catch (caught) {
-      if (await handleUnauthorized(caught)) {
-        return
-      }
       setAssetsError(apiErrorMessage("Asset context import failed", caught))
     }
   }

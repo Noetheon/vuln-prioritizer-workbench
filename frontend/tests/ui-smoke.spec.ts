@@ -1,9 +1,9 @@
 import { expect, test } from "@playwright/test"
-import { login } from "./auth-helpers"
+import { openWorkbench } from "./workbench-runtime-helpers"
 
 test("smoke: dashboard renders", async ({ page }) => {
   test.setTimeout(30_000)
-  await login(page)
+  await openWorkbench(page)
   await page.goto("/")
   await expect(
     page.getByRole("heading", { name: "Risk Operations", level: 1 }).first(),
@@ -12,7 +12,7 @@ test("smoke: dashboard renders", async ({ page }) => {
 
 test("smoke: imports renders", async ({ page }) => {
   test.setTimeout(30_000)
-  await login(page)
+  await openWorkbench(page)
   await page.goto("/imports")
   await expect(
     page.getByRole("heading", { name: "Import Wizard" }),
@@ -28,7 +28,7 @@ test("smoke: imports renders", async ({ page }) => {
 
 test("smoke: findings renders", async ({ page }) => {
   test.setTimeout(30_000)
-  await login(page)
+  await openWorkbench(page)
   await page.goto("/findings")
   await expect(
     page.getByRole("region", { name: "Findings filters" }),
@@ -37,7 +37,7 @@ test("smoke: findings renders", async ({ page }) => {
 
 test("smoke: evidence center renders", async ({ page }) => {
   test.setTimeout(30_000)
-  await login(page)
+  await openWorkbench(page)
   await page.goto("/reports")
   await expect(
     page.getByRole("heading", { name: "Generate Evidence Artifacts" }),
@@ -46,7 +46,7 @@ test("smoke: evidence center renders", async ({ page }) => {
 
 test("smoke: providers renders", async ({ page }) => {
   test.setTimeout(30_000)
-  await login(page)
+  await openWorkbench(page)
   await page.goto("/providers")
   await expect(
     page.getByRole("heading", { name: "Provider sources" }),
@@ -55,7 +55,7 @@ test("smoke: providers renders", async ({ page }) => {
 
 test("smoke: settings renders", async ({ page }) => {
   test.setTimeout(30_000)
-  await login(page)
+  await openWorkbench(page)
   await page.goto("/settings")
   await expect(page.getByRole("tab", { name: "Overview" })).toBeVisible()
   await expect(
@@ -71,7 +71,7 @@ test("smoke: local workspace indicator does not expose legacy sign out", async (
   page,
 }) => {
   test.setTimeout(30_000)
-  await login(page)
+  await openWorkbench(page)
 
   await expect(page.getByLabel("Local workspace status")).toBeVisible()
   await expect(page.getByRole("menuitem", { name: "Sign out" })).toHaveCount(0)

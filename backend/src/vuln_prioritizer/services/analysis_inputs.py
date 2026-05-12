@@ -25,7 +25,7 @@ from vuln_prioritizer.services.waivers import (
 )
 
 
-def load_asset_records_or_exit(
+def load_asset_records(
     asset_context: Path | None,
 ) -> AssetContextCatalog:
     try:
@@ -34,21 +34,21 @@ def load_asset_records_or_exit(
         raise AnalysisInputError(str(exc)) from exc
 
 
-def load_vex_statements_or_exit(vex_files: list[Path]) -> list[VexStatement]:
+def load_vex_statements(vex_files: list[Path]) -> list[VexStatement]:
     try:
         return load_vex_files(vex_files)
     except ValueError as exc:
         raise AnalysisInputError(str(exc)) from exc
 
 
-def load_waiver_rules_or_exit(waiver_file: Path | None) -> list[WaiverRule]:
+def load_analysis_waiver_rules(waiver_file: Path | None) -> list[WaiverRule]:
     try:
         return load_waiver_rules(waiver_file)
     except ValueError as exc:
         raise AnalysisInputError(str(exc)) from exc
 
 
-def load_context_profile_or_exit(
+def load_analysis_context_profile(
     policy_profile: str,
     policy_file: Path | None,
 ) -> ContextPolicyProfile:
@@ -58,7 +58,7 @@ def load_context_profile_or_exit(
         raise AnalysisInputError(str(exc)) from exc
 
 
-def load_provider_snapshot_or_exit(path: Path | None) -> ProviderSnapshotReport | None:
+def load_analysis_provider_snapshot(path: Path | None) -> ProviderSnapshotReport | None:
     if path is None:
         return None
     try:

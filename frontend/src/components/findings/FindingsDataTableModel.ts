@@ -14,7 +14,7 @@ export function assetLabel(finding: FindingPublic) {
     finding.asset_name ??
     finding.asset_key ??
     finding.business_service ??
-    "N.A."
+    "Unmapped asset"
   )
 }
 
@@ -27,10 +27,10 @@ export function findingWhyNow(finding: FindingPublic) {
 }
 
 export function formatDateTime(value: string | null | undefined) {
-  if (!value) return "N.A."
+  if (!value) return "Not recorded"
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) {
-    return "N.A."
+    return "Not recorded"
   }
   return new Intl.DateTimeFormat(undefined, {
     dateStyle: "medium",
@@ -39,10 +39,10 @@ export function formatDateTime(value: string | null | undefined) {
 }
 
 export function formatShortDate(value: string | null | undefined) {
-  if (!value) return "N.A."
+  if (!value) return "Not recorded"
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) {
-    return "N.A."
+    return "Not recorded"
   }
   return new Intl.DateTimeFormat(undefined, {
     day: "2-digit",

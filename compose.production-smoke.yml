@@ -9,7 +9,7 @@ services:
     environment:
       ENVIRONMENT: production
       SECRET_KEY: ${SECRET_KEY:?Set SECRET_KEY for production smoke.}
-      FIRST_SUPERUSER_PASSWORD: ${FIRST_SUPERUSER_PASSWORD:?Set FIRST_SUPERUSER_PASSWORD for production smoke.}
+      LOCAL_WORKBENCH_USER_EMAIL: ${LOCAL_WORKBENCH_USER_EMAIL:-local@workbench.test}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD for production smoke.}
       DOMAIN: workbench.example.test
       FRONTEND_HOST: https://workbench.example.test
@@ -23,7 +23,6 @@ services:
       - |
         set -e
         cp -n /app/examples/*provider_snapshot*.json /app/provider-snapshots/ 2>/dev/null || true
-        python -m app.core.migration_bootstrap
         alembic -c /app/backend/alembic.ini upgrade head
         exec uvicorn app.main:app --host 0.0.0.0 --port 8000
 

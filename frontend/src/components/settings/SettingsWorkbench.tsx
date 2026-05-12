@@ -19,7 +19,6 @@ export function SettingsWorkbench(props: SettingsWorkbenchProps) {
   return (
     <VpwPageContainer className="flex flex-col gap-5 px-0 py-0">
       <SettingsHero
-        currentUser={props.currentUser}
         providerStatus={props.providerStatus}
         providerStatusError={props.providerStatusError}
         statusError={props.statusError}
@@ -54,7 +53,6 @@ export function SettingsWorkbench(props: SettingsWorkbenchProps) {
 
         <TabsContent className="mt-5" value="overview">
           <SettingsWorkspaceHealth
-            currentUser={props.currentUser}
             providerStatus={props.providerStatus}
             providerStatusError={props.providerStatusError}
             providerStatusLoading={props.providerStatusLoading}

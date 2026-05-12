@@ -7,6 +7,9 @@ import yaml
 REPO_ROOT = Path(__file__).resolve().parents[2]
 ISSUE_TEMPLATE_DIR = REPO_ROOT / ".github" / "ISSUE_TEMPLATE"
 DEPENDABOT_FILE = REPO_ROOT / ".github" / "dependabot.yml"
+PULL_REQUEST_TEMPLATE = REPO_ROOT / ".github" / "pull_request_template.md"
+CI_WORKFLOW = REPO_ROOT / ".github" / "workflows" / "ci.yml"
+MAKEFILE = REPO_ROOT / "Makefile"
 
 CURRENT_TRACKER_LABELS = {
     "area:api",
@@ -45,12 +48,12 @@ CURRENT_TRACKER_LABELS = {
     "risk:scope",
     "risk:security",
     "status:blocked",
+    "status:architecture-decision",
     "status:needs-docs",
     "status:needs-revalidation",
     "status:needs-review",
     "status:needs-tests",
     "status:strict-dod",
-    "status:template-gap",
     "type:api",
     "type:attack",
     "type:backend",
@@ -106,6 +109,44 @@ def test_issue_templates_keep_strict_evidence_sections() -> None:
             missing.append(path.name)
 
     assert missing == []
+
+
+def test_general_templates_do_not_make_release_hardening_the_default() -> None:
+    generic_templates = [
+        ISSUE_TEMPLATE_DIR / "bug_report.md",
+        ISSUE_TEMPLATE_DIR / "feature_request.md",
+        PULL_REQUEST_TEMPLATE,
+    ]
+    forbidden_phrases = [
+        "public deployment certification",
+        "Public deployment certification",
+        "final scorecard",
+        "mandatory release-readiness",
+    ]
+
+    offenders: dict[str, list[str]] = {}
+    for path in generic_templates:
+        text = path.read_text(encoding="utf-8")
+        matched = [phrase for phrase in forbidden_phrases if phrase in text]
+        if matched:
+            offenders[path.name] = matched
+
+    assert offenders == {}
+
+
+def test_default_ci_uses_local_workbench_gate_not_release_or_package_gate() -> None:
+    ci_workflow = CI_WORKFLOW.read_text(encoding="utf-8")
+    makefile = MAKEFILE.read_text(encoding="utf-8")
+    local_gate = makefile.split("\nperformance-smoke:", maxsplit=1)[0]
+
+    assert "run: make local-workbench-check" in ci_workflow
+    assert "run: make workflow-check" not in ci_workflow
+    assert "local-workbench-check:" in makefile
+    assert "$(MAKE) check" in local_gate
+    assert "$(MAKE) docs-check" in local_gate
+    assert "$(MAKE) package-check" not in local_gate
+    assert "$(MAKE) docker-production-smoke" not in local_gate
+    assert "$(MAKE) release-readiness-check" not in local_gate
 
 
 def test_dependabot_labels_exist_and_use_current_frontend_taxonomy() -> None:

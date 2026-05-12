@@ -9,8 +9,8 @@ route, design-system, evidence, and CI cleanup work.
 VPW is a local-first application for prioritizing already-known CVEs from
 uploaded inputs. It is not a scanner and it does not actively probe systems.
 
-The repository now follows the FastAPI Full Stack Template shape for the active
-Workbench surface:
+The repository now uses a focused FastAPI backend plus React Workbench shape for
+the active local product surface:
 
 - `backend/app/`: FastAPI application, API routes, SQL models, services,
   repositories, and Alembic migrations.
@@ -21,7 +21,7 @@ Workbench surface:
 - `frontend/src/api-client.ts`: manual wrapper and integration layer over the
   generated client.
 - `backend/src/vuln_prioritizer/**`: retained domain implementation used by
-  shared parsing, provider, scoring, and reporting helpers.
+  shared parsing, provider, scoring, SARIF contract, and redaction logic.
 - Python package boundary: `backend/pyproject.toml` intentionally includes both
   `vuln_prioritizer*` and `app*`, so the backend distribution ships the shared
   domain package and the active Workbench FastAPI app.
@@ -40,8 +40,8 @@ to `app.main:app` or import `app.main.app`. The generated browser API boundary i
 `backend/src/vuln_prioritizer/**` remains the retained domain implementation.
 The active Workbench backend may import neutral, framework-light domain helpers
 from this package, such as input normalization, provider clients, scoring,
-report/evidence helpers, and redaction. Reusable logic needed by browser/API
-workflows must live in these neutral modules.
+SARIF contract helpers, and redaction. Workbench-specific report rendering and
+evidence bundle verification belong in `backend/app/services`.
 
 The old Workbench runtime packages, runtime database package, provider
 scheduler, and `web`/`db` CLI entrypoints have been removed. The active
@@ -68,9 +68,8 @@ components:
 | Reports | `components/reports/EvidenceCenter.tsx` | Evidence Center for report generation, download, verification, and bundle metadata. |
 | Settings | `components/settings/SettingsRouteContainer.tsx` | Typed wrapper over `SettingsWorkbench`; local runtime/provider status remains shell-owned. |
 
-The legacy `/login` browser path is handled as an `AppRouter` redirect to `/`.
-There is no mounted login route or credential screen in the active local
-single-user Workbench.
+There is no mounted login route, redirect shim, or credential screen in the
+active local single-user Workbench.
 
 ## WorkbenchShell Role
 

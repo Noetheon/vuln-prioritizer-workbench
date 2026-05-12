@@ -1,7 +1,7 @@
 # VPW-025 NVD Provider Fallback
 
-VPW-025 keeps NVD enrichment deterministic and non-blocking for CLI and
-Workbench imports.
+VPW-025 keeps NVD enrichment deterministic and non-blocking for Workbench
+imports.
 
 ## Provider Behavior
 

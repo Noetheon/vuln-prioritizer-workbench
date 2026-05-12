@@ -37,7 +37,6 @@ def render_analysis_result_json(payload: MarkdownReportPayload) -> str:
             "id": payload.project_id,
             "name": payload.project_name,
             "description": payload.project_description,
-            "owner_id": payload.project_owner_id,
             "created_at": _iso_datetime(payload.project_created_at)
             if payload.project_created_at
             else None,
@@ -126,9 +125,9 @@ def render_findings_csv(payload: MarkdownReportPayload) -> str:
                         )
                     )
                 ),
-                "decision_template": _csv_safe_cell(
-                    _decision_guidance_from_payload(finding).get("template_label")
-                    or _decision_guidance_from_payload(finding).get("template")
+                "decision_recommendation": _csv_safe_cell(
+                    _decision_guidance_from_payload(finding).get("recommendation_label")
+                    or _decision_guidance_from_payload(finding).get("recommendation")
                 ),
                 "decision_sla": _csv_safe_cell(finding.decision_sla),
                 "decision_statement": _csv_safe_cell(finding.decision_statement),

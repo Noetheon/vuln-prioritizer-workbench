@@ -62,7 +62,6 @@ def build_report_payload(
         provider_snapshot=_provider_snapshot_payload(run.provider_snapshot),
         governance_rollups=governance_rollups.model_dump(mode="json"),
         project_description=project.description,
-        project_owner_id=str(project.owner_id),
         project_created_at=project.created_at,
         project_updated_at=project.updated_at,
         run_started_at=run.started_at,

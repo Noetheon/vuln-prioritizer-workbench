@@ -1,11 +1,13 @@
-# Workbench Public Deployment Runbook
+# Local And Private Workbench Deployment Runbook
 
-This runbook covers the additional controls required before exposing the
-Workbench beyond a local or private single-workspace environment.
+This runbook covers local and private single-operator Workbench deployments.
+The active product target is a self-hosted Workbench for a trusted operator, not
+a shared SaaS or internet-facing multi-user service.
 
-Status: deployment-control runbook, not a blanket certification. The historical
-VPW-AUD-999 final scorecard closed on 2026-05-08; every public or shared
-deployment still needs fresh evidence in the
+Status: local/private deployment guidance. Public or shared exposure is outside
+the normal product scope and remains a future reviewed security decision. The
+historical VPW-AUD-999 final scorecard closed on 2026-05-08; any public or
+shared deployment still needs fresh evidence in the
 [Public-Production Release Evidence Ledger](./public-production-release-evidence-ledger.md)
 for the exact candidate and topology.
 
@@ -16,7 +18,6 @@ Use non-default secrets and exact public origins:
 ```bash
 ENVIRONMENT=production
 SECRET_KEY=<random value with at least 32 characters>
-FIRST_SUPERUSER_PASSWORD=<random value with at least 16 characters>
 POSTGRES_PASSWORD=<long random value>
 DOMAIN=workbench.example.com
 FRONTEND_HOST=https://workbench.example.com
@@ -33,19 +34,18 @@ Production and staging reject wildcard CORS, localhost CORS, non-HTTPS CORS, and
 origin values that include paths. Keep `ALLOWED_HOSTS` exact and do not include
 ports or schemes.
 
-Production and staging also reject known placeholder secrets, `SECRET_KEY`
-values shorter than 32 characters, `FIRST_SUPERUSER_PASSWORD` values shorter
-than 16 characters, passwords that equal the configured superuser, and passwords
-that equal the secret key. The standalone backend container requires
-`SECRET_KEY` and `FIRST_SUPERUSER_PASSWORD` to be set before it starts; Compose
-requires those values plus `POSTGRES_PASSWORD`.
+Production and staging also reject known placeholder secrets and `SECRET_KEY`
+values shorter than 32 characters. The standalone backend container requires
+`SECRET_KEY` to be set before it starts; Compose requires that value plus
+`POSTGRES_PASSWORD`.
 
 The public browser default is same-origin API routing: leave `VITE_API_URL`
 empty so the built frontend calls `/api/v1/...` through the frontend reverse
 proxy. A split API domain such as `https://api.workbench.example.com` is a
-separate deployment variant and must update CSP `connect-src`, CORS,
-`ALLOWED_HOSTS`, cookie domain/path, and CSRF verification together before it is
-approved for public browser traffic.
+separate deployment variant and must update CSP `connect-src`, CORS, and
+`ALLOWED_HOSTS` together before it is approved for public browser traffic. If a
+future deployment reintroduces browser-session auth, its cookie and CSRF design
+must be reviewed in the same change.
 
 ## Reverse Proxy And TLS
 
@@ -55,7 +55,7 @@ with `TRAEFIK_APP_ENABLED=true`.
 - Frontend route: `https://${DOMAIN}`.
 - Browser API route: same-origin `https://${DOMAIN}/api/...`.
 - Optional direct API route for automation: `https://api.${DOMAIN}` only when
-  its CSP/CORS/cookie/CSRF contract is reviewed as a split-domain deployment.
+  its CSP/CORS contract is reviewed as a split-domain deployment.
 - HTTP is redirected to HTTPS.
 - Traefik terminates TLS through the configured ACME resolver.
 - Backend upload requests are bounded by
@@ -71,6 +71,10 @@ as the only public entrypoint and keep backend container ports unbound except in
 local override files.
 
 ## Public TLS Evidence Checklist
+
+This checklist is not part of the normal single-user local/private path. Use it
+only if a future reviewed decision intentionally exposes the Workbench beyond a
+trusted local or private network.
 
 Before claiming public-production readiness, capture public-safe evidence from
 the exact deployed candidate. Redact cookies, tokens, IP addresses that identify
@@ -107,7 +111,7 @@ Required browser/API behavior evidence:
   `API_DOCS_ENABLED=false`.
 - `https://api.${DOMAIN}/api/v1/workbench/health` is treated as the Optional
   direct API route for automation; if exposed publicly, record the split-domain
-  CORS, CSRF, cookie, and CSP decision in the release evidence ledger.
+  CORS, CSP, and host-routing decision in the release evidence ledger.
 - HTTP requests redirect to HTTPS.
 - Traefik dashboard routing stays disabled unless a short maintenance window and
   IP allowlist are documented.
@@ -128,21 +132,9 @@ WORKBENCH_PROVIDER_SNAPSHOTS_VOLUME=workbench-provider-snapshots
 WORKBENCH_PROVIDER_CACHE_VOLUME=workbench-provider-cache
 ```
 
-Existing deployments created before the volume rename can temporarily point the
-same variables at the historical compatibility names:
-
-```bash
-WORKBENCH_IMPORT_UPLOADS_VOLUME=template-import-uploads
-WORKBENCH_REPORTS_VOLUME=template-reports
-WORKBENCH_PROVIDER_SNAPSHOTS_VOLUME=template-provider-snapshots
-WORKBENCH_PROVIDER_CACHE_VOLUME=template-provider-cache
-```
-
-Use those compatibility names only to attach, back up, or restore existing
-volumes. For a rename migration, back up the old volumes with
-`WORKBENCH_ARTIFACT_MODE=compose`, unset the compatibility overrides, start a
-fresh stack with Workbench-branded volume names, then restore the backup into
-the new stack.
+For a local reset, back up the current Workbench volumes with
+`WORKBENCH_ARTIFACT_MODE=compose`, start a fresh stack with Workbench-branded
+volume names, then restore the backup into the new stack.
 
 ## Rate Limits And Local Automation Tokens
 
@@ -151,9 +143,6 @@ The backend enables per-process rate limiting by default:
 ```bash
 RATE_LIMIT_ENABLED=true
 API_RATE_LIMIT_PER_MINUTE=600
-LOGIN_RATE_LIMIT_PER_MINUTE=60
-TOKEN_FAILURE_RATE_LIMIT_PER_MINUTE=60
-API_TOKEN_DEFAULT_EXPIRE_DAYS=90
 TRUSTED_PROXY_CIDRS=
 ```
 
@@ -163,17 +152,14 @@ first `X-Forwarded-For` address only for requests received from those trusted
 proxy CIDRs. Leave it blank when the backend is reachable directly.
 
 The active browser Workbench is local single-user and does not require a login
-step. Legacy login/session endpoints remain backend compatibility surface, but
-they are not the current browser access model.
+step. The active API no longer exposes login, user-management, API-token, or
+session-list routes. Bearer headers are ignored by the local principal path
+rather than enabling scoped token enforcement.
 
-Scoped service tokens are optional local automation credentials and are stored
-only as hashes. Normal browser/API use works without them. When an explicit
-`vpr_` bearer token is supplied, dependencies enforce `read`, `write`,
-`import`, `report`, or `admin` API scopes and reject revoked or expired tokens.
-Tokens default to a 90-day expiry unless creation supplies a future
-`expires_at` value; API responses expose token metadata including `expires_at`
-and computed `active` state. They are not a substitute for the full
-public-deployment control set documented in this runbook.
+The current migration head drops the inactive API-token and auth-session
+tables. Treat any future reintroduction of
+automation tokens, browser login, or shared-user access as a new reviewed
+security design.
 
 For horizontally scaled deployments, replace the in-process limiter with a
 shared store before increasing replica count; the built-in limiter is still
@@ -183,18 +169,15 @@ a local-process safety guard rather than a distributed public-deployment quota.
 
 ## Audit And Retention
 
-The `audit_event` table records legacy login lifecycle events when those
-endpoints are used, project lifecycle, token lifecycle, imports, report
+The `audit_event` table records project lifecycle, imports, report
 create/download/verify, waivers, assets, provider jobs, GitHub issue exports,
-and retention cleanup. API token secrets and token hashes are never returned by
-audit routes.
+and retention cleanup. Historical rows may still contain legacy login or token
+lifecycle actions from older local runs.
 
 Retention windows are configured through:
 
 ```bash
 AUDIT_RETENTION_DAYS=365
-SESSION_RETENTION_DAYS=30
-REVOKED_API_TOKEN_RETENTION_DAYS=365
 MAX_REPORT_MB=50
 MAX_REPORTS_PER_RUN=20
 ```
@@ -253,13 +236,9 @@ container, so the default stack does not need to publish Postgres on the host.
 container, including the import-upload, report, provider-snapshot, and
 provider-cache Compose volumes.
 
-The backup script uses Workbench-branded artifact roots by default. Historical
-`data/template-*` artifact directories and template-era Compose volume names are
-included only when `WORKBENCH_LEGACY_STORAGE_FALLBACK=1` is set, or when an
-explicit `WORKBENCH_ARTIFACT_PATHS` list names them. They are compatibility
-paths for existing self-hosted installs, not a separate template-era Workbench
-runtime. API responses expose managed artifact IDs or relative references rather
-than container filesystem paths.
+The backup script uses Workbench-branded artifact roots by default. API
+responses expose managed artifact IDs or relative references rather than
+container filesystem paths.
 
 The script writes a timestamped directory under `./backups` unless `BACKUP_DIR`
 is set. Artifact paths are packed into `artifacts.tar`. Restore validates the
@@ -299,7 +278,6 @@ alembic -c backend/alembic.ini upgrade head
 After restore, verify:
 
 ```bash
-python -m app.core.migration_bootstrap
 alembic -c backend/alembic.ini upgrade head
 python -c "import urllib.request; print(urllib.request.urlopen('https://${DOMAIN}/api/v1/workbench/health', timeout=5).read().decode())"
 ```
@@ -311,8 +289,10 @@ readiness response should report `database_status=ready` and
 
 ## Release Evidence
 
-Before a public-production release claim, record these public-safe results in
-the release evidence ledger or linked issue evidence:
+Before a public or shared deployment claim, record these public-safe results in
+the release evidence ledger or linked issue evidence. The normal
+`make release-readiness-check` gate is local/self-hosted readiness; it does not
+include the explicit public-deployment evidence contract.
 
 - `make release-readiness-check`
 - `make package-check`

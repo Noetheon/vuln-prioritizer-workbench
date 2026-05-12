@@ -90,9 +90,9 @@ for decisions.
   `frontend/src/api-client.ts` wrapper is manual integration code over that
   generated client.
 - Domain layer: retained under `backend/src/vuln_prioritizer/**` for parsers,
-  providers, scoring, reporting helpers, and neutral logic shared with the
-  active backend. The old Typer CLI is legacy maintenance surface, not the
-  product direction.
+  providers, scoring, SARIF contracts, and neutral vulnerability logic shared
+  with the active backend. The old Typer CLI and legacy report facades have
+  been removed from the active product surface.
 - Python package boundary: the backend distribution intentionally ships both
   the domain package and the active Workbench FastAPI app under `app/*`; it is
   not a CLI-first package.
@@ -115,11 +115,12 @@ Open:
 - Workbench frontend: `http://127.0.0.1:5173`
 - Backend health: `http://127.0.0.1:8000/api/v1/utils/health-check/`
 
-If those local ports are already reserved, keep the container ports unchanged
-and override only the host bindings:
+The `make docker-demo-smoke` release gate uses isolated host defaults to avoid
+colliding with a manually running quickstart: backend `18080` and frontend
+`15174`. You can still override only the host bindings when needed:
 
 ```bash
-DOCKER_DEMO_BACKEND_PORT=18080 DOCKER_DEMO_FRONTEND_PORT=15174 make docker-demo-smoke
+DOCKER_DEMO_BACKEND_PORT=18081 DOCKER_DEMO_FRONTEND_PORT=15175 make docker-demo-smoke
 ```
 
 Playwright uses separate defaults to avoid colliding with the Docker demo
@@ -159,7 +160,7 @@ Public docs:
 - [Contracts](docs/contracts.md)
 - [Support Matrix](docs/support_matrix.md)
 - [Workbench Threat Model](docs/workbench-threat-model.md)
-- [Public-Production Release Evidence Ledger](docs/public-production-release-evidence-ledger.md)
+- [Local/Private Workbench Deployment](docs/workbench-public-deployment.md)
 - [Roadmap](docs/roadmap.md)
 - [Community Repository Setup](docs/community_repository_setup.md)
 
@@ -183,9 +184,9 @@ README:
 - [Example Markdown report](docs/example_report.md)
 - [Example ATT&CK-aware report](docs/example_attack_report.md)
 - [Example PR comment body](docs/examples/example_pr_comment.md)
-- [VPW-054 technical report snapshot](docs/examples/vpw-054-template-technical-report.md)
-- [VPW-054 executive report snapshot](docs/examples/vpw-054-template-executive-report.html)
-- [VPW-054 analysis result snapshot](docs/examples/vpw-054-template-analysis-result.v1.json)
+- [VPW-054 technical report snapshot](docs/examples/vpw-054-workbench-technical-report.md)
+- [VPW-054 executive report snapshot](docs/examples/vpw-054-workbench-executive-report.html)
+- [VPW-054 analysis result snapshot](docs/examples/vpw-054-workbench-analysis-result.v1.json)
 
 Canonical report/evidence contract artifacts remain under `docs/evidence/` and
 are described in [Reports and Evidence](docs/reports-and-evidence.md).
@@ -219,6 +220,7 @@ cd frontend && npm run test -- tests/ui-smoke.spec.ts
 
 python3 -m pytest -q backend/tests/test_docs_hygiene.py --no-cov
 python3 -m mkdocs build --clean
+make local-workbench-check
 make docs-check
 make package-check
 make api-client-drift-check
@@ -243,8 +245,8 @@ The historical
 [VPW-AUD-999 final scorecard](https://github.com/Noetheon/vuln-prioritizer-workbench/issues/430)
 closed on 2026-05-08. That closeout is not a blanket certification for every
 future deployment. Treat this README, the local Workbench quickstart, and local
-release gates as local/self-hosted launch evidence unless the current release
-ledger records fresh public TLS, header, Docker, dependency, and residual-risk
+release gates as local/self-hosted launch evidence. Public or shared deployment
+claims require fresh public TLS, header, Docker, dependency, and residual-risk
 evidence for the exact candidate.
 
 ## GitHub Community Health

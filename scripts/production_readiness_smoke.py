@@ -167,10 +167,9 @@ def _json(
     path: str,
     *,
     data: bytes | None = None,
-    token: str | None = None,
     headers: dict[str, str] | None = None,
 ) -> dict[str, object]:
-    response = _raw(path, data=data, token=token, headers=headers)
+    response = _raw(path, data=data, headers=headers)
     return json.loads(response.body.decode("utf-8"))
 
 
@@ -178,13 +177,10 @@ def _raw(
     path: str,
     *,
     data: bytes | None = None,
-    token: str | None = None,
     headers: dict[str, str] | None = None,
     expected_status: int = 200,
 ) -> RawResponse:
     request_headers = {"Host": HOST, **(headers or {})}
-    if token:
-        request_headers["Authorization"] = f"Bearer {token}"
     request = urllib.request.Request(
         f"{BASE_URL}{path}",
         data=data,

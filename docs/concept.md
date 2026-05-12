@@ -2,7 +2,10 @@
 
 ## Goal
 
-`vuln-prioritizer` prioritizes known CVEs for operational vulnerability management. The tool is intentionally small, CLI-first, and explicit about methodology.
+`vuln-prioritizer` prioritizes known CVEs for operational vulnerability
+management. The current product is intentionally small, local-first, and
+explicit about methodology, with the FastAPI/React Workbench as the active user
+surface.
 
 ## Core Security Idea
 
@@ -13,17 +16,18 @@ The core security idea is layered prioritization:
 - CISA KEV provides a known-exploitation signal
 - CTID ATT&CK mappings provide adversary-behavior and impact context where official mappings exist
 
-The broader differentiator in the current release line is that this core model now extends cleanly into scanner-native inputs, provenance, asset context, VEX-aware applicability, and CI-friendly outputs without abandoning a small CLI shape.
+The broader differentiator in the current release line is that this core model
+extends into scanner-native inputs, provenance, asset context, VEX-aware
+applicability, and reviewer-ready Workbench outputs without becoming a scanner
+or enterprise vulnerability-management platform.
 
 ## Main Workflows
 
-- `analyze` for prioritized triage output
-- `compare` for `CVSS-only` versus enriched reasoning
-- `explain` for a single-CVE deep dive
-- `data status` for cache and source transparency
-- `report html` for static executive reporting from saved analysis JSON
-- `attack coverage` for mapped versus unmapped visibility
-- `attack navigator-layer` for ATT&CK visualization output
+- create or select a local project
+- import existing CVE, scanner, SBOM, VEX, and asset-context evidence
+- review the prioritized findings queue and single-finding explanations
+- inspect provider freshness, ATT&CK/TTP context, waivers, and asset context
+- generate decision reports and evidence bundles
 
 ## Target Audience
 

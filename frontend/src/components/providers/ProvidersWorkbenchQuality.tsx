@@ -109,7 +109,7 @@ function ProviderUpdateJobPanel({
               value:
                 providerStatus.latest_update_job.requested_sources?.join(
                   ", ",
-                ) ?? "N.A.",
+                ) ?? "Not recorded",
             },
             {
               label: "Started",

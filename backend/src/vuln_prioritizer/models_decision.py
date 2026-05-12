@@ -8,7 +8,7 @@ from pydantic import Field
 
 from vuln_prioritizer.model_base import StrictModel
 
-DecisionTemplate = Literal["patch", "mitigate", "monitor", "review", "waiver"]
+DecisionRecommendation = Literal["patch", "mitigate", "monitor", "review", "waiver"]
 
 
 class SlaTarget(StrictModel):
@@ -27,8 +27,8 @@ class BusinessImpactBlock(StrictModel):
 
 
 class FindingDecisionGuidance(StrictModel):
-    template: DecisionTemplate
-    template_label: str
+    recommendation: DecisionRecommendation
+    recommendation_label: str
     sla: SlaTarget
     business_impact: BusinessImpactBlock
     decision_statement: str

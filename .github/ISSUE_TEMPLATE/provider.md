@@ -12,8 +12,8 @@ Name the provider, endpoint, file format, cache, or snapshot source.
 
 ## Target
 
-Which provider, cache, snapshot, CLI command, API route, or report/evidence
-surface should change?
+Which provider, cache, snapshot, API route, or report/evidence surface should
+change?
 
 ## Decision Need
 
@@ -34,7 +34,8 @@ provider support?
 - [ ] Source is official/public or explicitly local.
 - [ ] CVE keys and timestamps are clearly defined.
 - [ ] Cache and locked-snapshot behavior are documented.
-- [ ] Rate limits, authentication, and offline behavior are described.
+- [ ] Rate limits, provider credentials/API keys, and offline behavior are
+      described.
 - [ ] Provider data is context/evidence unless the scoring rule explicitly says
       otherwise.
 

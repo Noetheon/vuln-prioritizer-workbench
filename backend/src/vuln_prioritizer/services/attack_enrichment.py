@@ -1,4 +1,4 @@
-"""Compatibility facade for ATT&CK enrichment services."""
+"""Re-export facade for ATT&CK enrichment services."""
 
 from __future__ import annotations
 

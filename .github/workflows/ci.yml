@@ -56,85 +56,9 @@ jobs:
         if: github.event_name != 'pull_request' || !github.event.pull_request.draft
         run: python -m pip install -e "backend[dev]"
 
-      - name: Run local-equivalent workflow gate
+      - name: Run local Workbench gate
         if: github.event_name != 'pull_request' || !github.event.pull_request.draft
-        run: make workflow-check
-
-  action-smoke:
-    runs-on: ubuntu-latest
-    if: github.event_name != 'pull_request'
-
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@v6
-        with:
-          persist-credentials: false
-
-      - name: Prepare action smoke output directory
-        run: mkdir -p build/vpw-082-action-smoke
-
-      - name: Generate locked analysis JSON
-        id: analyze
-        uses: ./
-        with:
-          mode: analyze
-          input: data/input_fixtures/trivy_report.json
-          input-format: trivy-json
-          output-format: json
-          output-path: build/vpw-082-action-smoke/analysis.json
-          provider-snapshot-file: data/demo_provider_snapshot.json
-          locked-provider-data: "true"
-          summary-output-path: build/vpw-082-action-smoke/summary.md
-          summary-template: compact
-          github-step-summary: "true"
-
-      - name: Render Workbench Markdown report
-        id: markdown-report
-        uses: ./
-        with:
-          mode: workbench-report
-          input: ${{ steps.analyze.outputs.report-path }}
-          output-format: markdown
-          output-path: build/vpw-082-action-smoke/workbench-report.md
-
-      - name: Render Workbench JSON report
-        id: json-report
-        uses: ./
-        with:
-          mode: workbench-report
-          input: ${{ steps.analyze.outputs.report-path }}
-          output-format: json
-          output-path: build/vpw-082-action-smoke/workbench-report.json
-
-      - name: Verify action smoke artifacts
-        run: |
-          test -s build/vpw-082-action-smoke/analysis.json
-          test -s build/vpw-082-action-smoke/summary.md
-          test -s build/vpw-082-action-smoke/workbench-report.md
-          test -s build/vpw-082-action-smoke/workbench-report.json
-          python - <<'PY'
-          import json
-          from pathlib import Path
-
-          root = Path("build/vpw-082-action-smoke")
-          analysis = json.loads((root / "analysis.json").read_text(encoding="utf-8"))
-          report = json.loads((root / "workbench-report.json").read_text(encoding="utf-8"))
-          assert analysis["metadata"]["locked_provider_data"] is True
-          assert analysis["metadata"]["provider_snapshot_file"] == "data/demo_provider_snapshot.json"
-          assert report["metadata"]["output_format"] == "json"
-          assert (root / "workbench-report.md").read_text(encoding="utf-8").startswith("# ")
-          PY
-
-      - name: Upload VPW-082 action smoke artifacts
-        uses: actions/upload-artifact@v7
-        with:
-          name: vpw-082-action-smoke-reports
-          retention-days: 3
-          path: |
-            build/vpw-082-action-smoke/analysis.json
-            build/vpw-082-action-smoke/summary.md
-            build/vpw-082-action-smoke/workbench-report.md
-            build/vpw-082-action-smoke/workbench-report.json
+        run: make local-workbench-check
 
   dependency-audit:
     runs-on: ubuntu-latest

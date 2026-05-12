@@ -1,19 +1,22 @@
 # Operator Playbooks
 
-These playbooks are the shortest path from "I have findings" to "I know what to run next".
+These playbooks are the shortest path from "I have findings" to "I know what
+to do in the Workbench next".
 
 They are intentionally operator-facing:
 
 - concise
-- command-first
-- aligned with the current public CLI surface
-- cross-linked to the deeper reference docs instead of repeating them
+- Workbench-first
+- aligned with the local single-user product surface
+- cross-linked to deeper reference docs instead of repeating them
 
 Scope note:
 
-- Public-install-safe examples use files you already have in your own workspace, such as `trivy-results.json`, `analysis.json`, or `report.html`.
-- Repo-checkout examples intentionally use the checked-in fixtures under `data/` and assume you are running from this repository root.
-- ATT&CK examples always require local mapping files unless the playbook explicitly points at the repository fixtures.
+- Workbench examples use files you already have locally, such as Trivy, Grype,
+  CycloneDX, SPDX, Dependency-Check, Nessus, OpenVAS, VEX, or asset-context
+  exports.
+- Repo-checkout examples may reference checked-in fixtures under `data/`.
+- ATT&CK examples always require reviewed local mapping data.
 
 Use the playbook that matches your workflow:
 
@@ -23,7 +26,10 @@ Use the playbook that matches your workflow:
 
 Reference material:
 
-- [Support Matrix](support_matrix.md) for supported inputs, outputs, and feature overlays
-- [Contracts](contracts.md) for stable machine-readable surfaces
-- [Reporting and CI Integration](integrations/reporting_and_ci.md) for SARIF, summaries, HTML, and GitHub Action patterns
-- [Use Cases](use_cases.md) for the higher-level product story behind these workflows
+- [Support Matrix](support_matrix.md) for supported Workbench inputs, outputs,
+  and overlays
+- [Contracts](contracts.md) for stable API and report surfaces
+- [Reports and Evidence](reports-and-evidence.md) for report artifacts and
+  evidence bundles
+- [Use Cases](use_cases.md) for the higher-level product story behind these
+  workflows

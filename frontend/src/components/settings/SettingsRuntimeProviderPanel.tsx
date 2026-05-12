@@ -71,8 +71,8 @@ export function SettingsRuntimeProviderPanel({
             <span className="font-medium text-[var(--vpw-text-primary)]">
               Secrets are not displayed.
             </span>{" "}
-            Provider keys, environment secrets, and stored token secrets stay
-            outside Settings.
+            Provider keys, environment secrets, and stored credentials stay outside
+            Settings.
           </span>
         </p>
       </div>

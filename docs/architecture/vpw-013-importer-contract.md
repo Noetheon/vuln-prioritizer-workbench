@@ -2,7 +2,7 @@
 
 ## Scope
 
-VPW-013 defines the template-backend importer contract for turning an uploaded
+VPW-013 defines the Workbench importer contract for turning an uploaded
 input payload into normalized vulnerability occurrences.
 
 Importers are pure parser adapters. They do not own project authorization,
@@ -69,13 +69,13 @@ tests or future plugin-free extension points.
 
 The shared positive parser contract lives in
 `data/input_fixtures/normalization_contracts.json`. It is test evidence for
-deterministic API importer and CLI/input-loader normalization; it is not a
+deterministic API importer and domain input-loader normalization; it is not a
 runtime API and does not change the upload, database, or OpenAPI contracts.
 
 Each input fixture in the manifest records the raw shape, expected total rows,
 expected occurrence count, unique CVE order, skipped non-CVE advisory IDs, and
 the normalized occurrence fields shared by the Workbench API importer and the
-CLI/core `InputLoader`.
+domain `InputLoader`.
 
 | Input type | Positive fixture | Normalization coverage |
 | --- | --- | --- |
@@ -83,17 +83,17 @@ CLI/core `InputLoader`.
 | `generic-occurrence-csv` | `parser_matrix/generic-occurrence-csv/positive.csv` | Component, version, PURL, fix version, severity, and target evidence |
 | Scanner, SBOM, GitHub alert, Nessus, and OpenVAS formats | format-specific fixtures under `data/input_fixtures/` | Source metadata, package fields, affected paths, fix versions, raw severity, non-CVE advisory filtering, and CVE order |
 
-`backend/tests/api/test_template_parser_fixture_matrix.py` loads every manifest
+`backend/tests/api/test_workbench_parser_fixture_matrix.py` loads every manifest
 fixture through `build_importer_registry()` and compares normalized occurrences
-to the same projection asserted by the CLI/core
+to the same projection asserted by the domain
 `backend/tests/test_input_loader_contracts.py` tests.
 
 Workbench parse-error fixtures live under `data/input_fixtures/parser_matrix/`.
 They cover fail-closed API upload behavior, not positive normalization
-snapshots. `cve-list` and `generic-occurrence-csv` intentionally differ from the
-legacy CLI on mixed invalid rows: the Workbench importer raises
-`ImporterParseError`, while the CLI/input-loader keeps compatibility by warning
-and skipping invalid rows.
+snapshots. `cve-list` and `generic-occurrence-csv` intentionally fail closed on
+mixed invalid uploaded rows: the Workbench importer raises
+`ImporterParseError` with sanitized row context instead of silently skipping
+invalid CVEs.
 
 Maintenance rules:
 

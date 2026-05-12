@@ -72,11 +72,11 @@ def test_core_analysis_service_is_focused_facade() -> None:
         "count_epss_hits",
         "count_kev_hits",
         "count_nvd_hits",
-        "load_asset_records_or_exit",
-        "load_context_profile_or_exit",
-        "load_provider_snapshot_or_exit",
-        "load_vex_statements_or_exit",
-        "load_waiver_rules_or_exit",
+        "load_analysis_context_profile",
+        "load_analysis_provider_snapshot",
+        "load_analysis_waiver_rules",
+        "load_asset_records",
+        "load_vex_statements",
         "normalize_priority_filters",
         "prepare_analysis",
         "prepare_explain",
@@ -136,7 +136,17 @@ def test_app_service_modules_do_not_import_through_service_facade() -> None:
     assert violations == {}
 
 
-def test_template_backend_does_not_import_legacy_workbench_layers() -> None:
+def test_workbench_app_imports_domain_options_not_cli_options() -> None:
+    violations: list[str] = []
+    for path in sorted((ROOT / "app").rglob("*.py")):
+        imports = _imported_modules(str(path.relative_to(ROOT)))
+        if "vuln_prioritizer.cli_options" in imports:
+            violations.append(str(path.relative_to(ROOT)))
+
+    assert violations == []
+
+
+def test_workbench_backend_does_not_import_legacy_layers() -> None:
     backend_app_root = ROOT / "app"
     blocked_prefixes = (
         "vuln_prioritizer.api",
@@ -188,7 +198,7 @@ def test_legacy_workbench_runtime_modules_are_removed() -> None:
     assert sorted(SRC_ROOT.glob("services/workbench_*.py")) == []
 
 
-def test_template_report_contracts_are_split_from_renderer_facade() -> None:
+def test_workbench_report_contracts_are_split_from_renderer_facade() -> None:
     imports = _imported_modules("app/services/reports.py")
     source = (ROOT / "app/services/reports.py").read_text(encoding="utf-8")
     service_payload_source = (ROOT / "app/services/report_service_payload.py").read_text(
@@ -243,10 +253,9 @@ def test_template_report_contracts_are_split_from_renderer_facade() -> None:
         encoding="utf-8"
     )
     sarif_source = (ROOT / "app/services/report_sarif.py").read_text(encoding="utf-8")
-    api_reports_test_source = (ROOT / "tests/api/test_template_reports_api.py").read_text(
+    api_reports_test_source = (ROOT / "tests/api/test_workbench_reports_api.py").read_text(
         encoding="utf-8"
     )
-    cli_report_test_source = (ROOT / "tests/cli/test_report.py").read_text(encoding="utf-8")
 
     assert "app.services.report_contracts" in imports
     assert "app.services.report_models" in imports
@@ -275,17 +284,13 @@ def test_template_report_contracts_are_split_from_renderer_facade() -> None:
     assert len(service_payload_source.splitlines()) <= 130
     assert len(service_attack_source.splitlines()) <= 70
     assert len(service_persistence_source.splitlines()) <= 190
-    assert "from vuln_prioritizer import workbench_report_contracts" in contracts_source
+    assert "import vuln_prioritizer.workbench_report_contracts" in contracts_source
     assert "CSV_FINDINGS_COLUMNS = _workbench_report_contracts.CSV_FINDINGS_COLUMNS" in (
         contracts_source
     )
     assert "CSV_FINDINGS_COLUMNS = [" not in api_reports_test_source
     assert (
         "from app.services.report_contracts import CSV_FINDINGS_COLUMNS" in api_reports_test_source
-    )
-    assert (
-        "from vuln_prioritizer.workbench_report_contracts import CSV_FINDINGS_COLUMNS"
-        in cli_report_test_source
     )
     assert "REPORT_FILENAME_EVIDENCE_BUNDLE" in contracts_source
     assert "class MarkdownReportPayload" in models_source
@@ -369,7 +374,7 @@ def test_provider_status_projection_is_split_from_route_facade() -> None:
     assert "def provider_update_job_public" in status_source
 
 
-def test_template_import_validation_and_storage_are_split_from_route_facade() -> None:
+def test_workbench_import_validation_and_storage_are_split_from_route_facade() -> None:
     imports = _imported_modules("app/api/routes/imports.py")
     upload_helper_imports = _imported_modules("app/api/routes/import_uploads.py")
     source = (ROOT / "app/api/routes/imports.py").read_text(encoding="utf-8")
@@ -429,24 +434,11 @@ def test_findings_page_uses_internal_query_object() -> None:
     assert "FindingPageQuery(" in github_issue_source
 
 
-def test_cli_analysis_commands_delegate_output_emission() -> None:
-    command_source = (ROOT / "src/vuln_prioritizer/commands/analysis.py").read_text(
-        encoding="utf-8"
-    )
-    output_source = (ROOT / "src/vuln_prioritizer/cli_support/analysis_output.py").read_text(
-        encoding="utf-8"
-    )
-
-    assert "vuln_prioritizer.cli_support.analysis_output" in command_source
-    assert "emit_analyze_result(" in command_source
-    assert "emit_compare_result(" in command_source
-    assert "emit_explain_result(" in command_source
-    assert "def emit_analyze_result" in output_source
-    assert "def emit_compare_result" in output_source
-    assert "def emit_explain_result" in output_source
-    assert "generate_json_report" not in command_source
-    assert "generate_compare_json" not in command_source
-    assert "generate_explain_json" not in command_source
+def test_legacy_cli_adapter_modules_are_removed() -> None:
+    assert not (ROOT / "src/vuln_prioritizer/cli.py").exists()
+    assert not (ROOT / "src/vuln_prioritizer/cli_options.py").exists()
+    assert not (ROOT / "src/vuln_prioritizer/cli_support").exists()
+    assert not (ROOT / "src/vuln_prioritizer/commands").exists()
 
 
 def test_scoring_operational_rules_are_split_from_priority_facade() -> None:
@@ -477,25 +469,35 @@ def test_scoring_operational_rules_are_split_from_priority_facade() -> None:
 
 
 def test_frontend_routes_use_workbench_route_containers_instead_of_app_facade() -> None:
-    route_files = sorted((REPO_ROOT / "frontend/src/routes/_layout").glob("*.tsx"))
-    active_route_files = [path for path in route_files if path.name != "assets.tsx"]
     app_facade = REPO_ROOT / "frontend/src/App.tsx"
+    old_routes_dir = REPO_ROOT / "frontend/src/routes"
+    app_router_source = (REPO_ROOT / "frontend/src/AppRouter.tsx").read_text(encoding="utf-8")
+    expected_route_modules = (
+        "AssetsRoute",
+        "DashboardRoute",
+        "FindingDetailRoute",
+        "FindingsRoute",
+        "ImportsRoute",
+        "ProjectsRoute",
+        "ProvidersRoute",
+        "ReportsRoute",
+        "SettingsRoute",
+        "WaiversRoute",
+    )
 
     assert not app_facade.exists()
-    assert active_route_files
-    for path in active_route_files:
-        source = path.read_text(encoding="utf-8")
-
-        assert "../../App" not in source, path
-        assert "workbench/routes/" in source, path
+    assert not old_routes_dir.exists()
+    assert "components/app/AppShell" not in app_router_source
+    for module_name in expected_route_modules:
+        assert f"./workbench/routes/{module_name}" in app_router_source
 
 
-def test_workbench_shell_mounts_once_at_authenticated_layout() -> None:
-    layout_source = (REPO_ROOT / "frontend/src/routes/_layout.tsx").read_text(encoding="utf-8")
+def test_workbench_shell_mounts_once_in_app_router() -> None:
+    app_router_source = (REPO_ROOT / "frontend/src/AppRouter.tsx").read_text(encoding="utf-8")
     route_files = sorted((REPO_ROOT / "frontend/src/workbench/routes").glob("*Route.tsx"))
 
-    assert "WorkbenchShell" in layout_source
-    assert "<Outlet />" in layout_source
+    assert "<WorkbenchShell routePath={match.routePath}>" in app_router_source
+    assert "<RouteParamsProvider params={match.params}>" in app_router_source
     assert route_files
     for path in route_files:
         source = path.read_text(encoding="utf-8")
@@ -510,8 +512,10 @@ def test_workbench_shell_mounts_once_at_authenticated_layout() -> None:
     finding_detail_route = (
         REPO_ROOT / "frontend/src/workbench/routes/FindingDetailRoute.tsx"
     ).read_text(encoding="utf-8")
-    assert "Outlet" in findings_route
+    assert "Outlet" not in findings_route
+    assert 'routePath: "/findings"' in app_router_source
     assert "findingDetailId=" not in findings_route
+    assert "useParams" in finding_detail_route
     assert "findingId=" in finding_detail_route
 
 
@@ -800,185 +804,85 @@ def test_internal_package_import_graph_has_no_module_cycles() -> None:
             visit(module)
 
 
-def test_reporter_facade_reexports_private_reporting_renderers() -> None:
-    imports = _imported_modules("src/vuln_prioritizer/reporter.py")
-    source = (ROOT / "src/vuln_prioritizer/reporter.py").read_text(encoding="utf-8")
-    terminal_imports = _imported_modules("src/vuln_prioritizer/reporting_terminal.py")
-    terminal_source = (ROOT / "src/vuln_prioritizer/reporting_terminal.py").read_text(
-        encoding="utf-8"
-    )
-    terminal_tables_source = (ROOT / "src/vuln_prioritizer/reporting_terminal_tables.py").read_text(
-        encoding="utf-8"
-    )
-    terminal_summary_source = (
-        ROOT / "src/vuln_prioritizer/reporting_terminal_summary.py"
-    ).read_text(encoding="utf-8")
-    terminal_explain_source = (
-        ROOT / "src/vuln_prioritizer/reporting_terminal_explain.py"
-    ).read_text(encoding="utf-8")
-
-    assert "vuln_prioritizer.reporting_html" in imports
-    assert "vuln_prioritizer.reporting_markdown" in imports
-    assert "vuln_prioritizer.reporting_snapshot" in imports
-    assert "vuln_prioritizer.reporting_state" in imports
-    assert "vuln_prioritizer.reporting_terminal" in imports
-    assert "vuln_prioritizer.reporting_terminal_tables" in terminal_imports
-    assert "vuln_prioritizer.reporting_terminal_summary" in terminal_imports
-    assert "vuln_prioritizer.reporting_terminal_explain" in terminal_imports
-    assert "def render_summary_panel" not in source
-    assert "def render_summary_panel" not in terminal_source
-    assert "def render_findings_table" in terminal_tables_source
-    assert "def render_summary_panel" in terminal_summary_source
-    assert "def render_explain_view" in terminal_explain_source
-    assert len(source.splitlines()) <= 100
-    assert len(terminal_source.splitlines()) <= 40
-    assert len(terminal_tables_source.splitlines()) <= 150
-    assert len(terminal_summary_source.splitlines()) <= 170
-    assert len(terminal_explain_source.splitlines()) <= 230
-
-
-def test_reporting_evidence_bundle_delegates_archive_governance_and_input_helpers() -> None:
-    imports = _imported_modules("src/vuln_prioritizer/reporting_evidence_bundle.py")
-    facade_imports = _imported_modules("src/vuln_prioritizer/reporting_evidence.py")
-    source = (ROOT / "src/vuln_prioritizer/reporting_evidence_bundle.py").read_text(
-        encoding="utf-8"
-    )
-    archive_source = (ROOT / "src/vuln_prioritizer/reporting_evidence_archive.py").read_text(
-        encoding="utf-8"
-    )
-    attack_source = (ROOT / "src/vuln_prioritizer/reporting_evidence_attack.py").read_text(
-        encoding="utf-8"
-    )
-    governance_source = (ROOT / "src/vuln_prioritizer/reporting_evidence_governance.py").read_text(
-        encoding="utf-8"
-    )
-    inputs_source = (ROOT / "src/vuln_prioritizer/reporting_evidence_inputs.py").read_text(
-        encoding="utf-8"
+def test_legacy_reporter_and_terminal_facades_are_removed() -> None:
+    removed_modules = (
+        "reporter.py",
+        "reporting_state.py",
+        "reporting_terminal.py",
+        "reporting_terminal_tables.py",
+        "reporting_terminal_summary.py",
+        "reporting_terminal_explain.py",
+        "runtime_config.py",
+        "state_store.py",
+        "models_state.py",
+        "reporting_workbench.py",
+        "reporting_io.py",
+        "parser.py",
     )
 
-    assert "vuln_prioritizer.reporting_evidence_bundle" in facade_imports
-    assert "vuln_prioritizer.reporting_evidence_archive" in imports
-    assert "vuln_prioritizer.reporting_evidence_attack" in imports
-    assert "vuln_prioritizer.reporting_evidence_governance" in imports
-    assert "vuln_prioritizer.reporting_evidence_inputs" in imports
-    assert "def write_evidence_bundle" in source
-    assert "def redacted_file_bytes" not in source
-    assert "def redacted_file_bytes" in archive_source
-    assert "def attack_navigator_layer_from_summary" not in source
-    assert "def attack_navigator_layer_from_summary" in attack_source
-    assert "def detection_coverage_export" not in source
-    assert "def detection_coverage_export" in governance_source
-    assert "def analysis_input_paths" not in source
-    assert "def analysis_input_paths" in inputs_source
-    assert len(source.splitlines()) <= 260
-    assert len(archive_source.splitlines()) <= 80
-    assert len(attack_source.splitlines()) <= 70
-    assert len(governance_source.splitlines()) <= 80
-    assert len(inputs_source.splitlines()) <= 130
+    for module in removed_modules:
+        assert not (ROOT / f"src/vuln_prioritizer/{module}").exists()
 
 
-def test_reporting_executive_facade_reexports_focused_modules() -> None:
-    imports = _imported_modules("src/vuln_prioritizer/reporting_executive.py")
-    model_imports = _imported_modules("src/vuln_prioritizer/reporting_executive_model.py")
-    evidence_model_imports = _imported_modules(
-        "src/vuln_prioritizer/reporting_executive_model_evidence.py"
-    )
-    sections_imports = _imported_modules("src/vuln_prioritizer/reporting_executive_sections.py")
-    chart_imports = _imported_modules("src/vuln_prioritizer/reporting_executive_sections_charts.py")
-    model_source = (ROOT / "src/vuln_prioritizer/reporting_executive_model.py").read_text(
-        encoding="utf-8"
-    )
-    evidence_model_source = (
-        ROOT / "src/vuln_prioritizer/reporting_executive_model_evidence.py"
-    ).read_text(encoding="utf-8")
-    evidence_quality_source = (
-        ROOT / "src/vuln_prioritizer/reporting_executive_model_quality.py"
-    ).read_text(encoding="utf-8")
-    evidence_provider_source = (
-        ROOT / "src/vuln_prioritizer/reporting_executive_model_provider.py"
-    ).read_text(encoding="utf-8")
-    evidence_artifacts_source = (
-        ROOT / "src/vuln_prioritizer/reporting_executive_model_artifacts.py"
-    ).read_text(encoding="utf-8")
-    sections_source = (ROOT / "src/vuln_prioritizer/reporting_executive_sections.py").read_text(
-        encoding="utf-8"
-    )
-    charts_source = (
-        ROOT / "src/vuln_prioritizer/reporting_executive_sections_charts.py"
-    ).read_text(encoding="utf-8")
-    risk_charts_source = (
-        ROOT / "src/vuln_prioritizer/reporting_executive_sections_risk_charts.py"
-    ).read_text(encoding="utf-8")
-    attack_charts_source = (
-        ROOT / "src/vuln_prioritizer/reporting_executive_sections_attack_charts.py"
-    ).read_text(encoding="utf-8")
-    remediation_charts_source = (
-        ROOT / "src/vuln_prioritizer/reporting_executive_sections_remediation_charts.py"
-    ).read_text(encoding="utf-8")
-    scatter_source = (
-        ROOT / "src/vuln_prioritizer/reporting_executive_sections_scatter.py"
-    ).read_text(encoding="utf-8")
-
-    assert "vuln_prioritizer.reporting_executive_constants" in imports
-    assert "vuln_prioritizer.reporting_executive_model" in imports
-    assert "vuln_prioritizer.reporting_executive_renderer" in imports
-    assert "vuln_prioritizer.reporting_executive_model_builder" in model_imports
-    assert "vuln_prioritizer.reporting_executive_model_helpers" in model_imports
-    assert "vuln_prioritizer.reporting_executive_model_artifacts" in evidence_model_imports
-    assert "vuln_prioritizer.reporting_executive_model_provider" in evidence_model_imports
-    assert "vuln_prioritizer.reporting_executive_model_quality" in evidence_model_imports
-    assert "vuln_prioritizer.reporting_executive_sections_top" in sections_imports
-    assert "vuln_prioritizer.reporting_executive_sections_components" in sections_imports
-    assert "vuln_prioritizer.reporting_executive_sections_charts" in sections_imports
-    assert "vuln_prioritizer.reporting_executive_sections_risk_charts" in chart_imports
-    assert "vuln_prioritizer.reporting_executive_sections_attack_charts" in chart_imports
-    assert "vuln_prioritizer.reporting_executive_sections_remediation_charts" in chart_imports
-    assert "vuln_prioritizer.reporting_executive_sections_scatter" in chart_imports
-    assert "def build_executive_report_model" not in model_source
-    assert "def _quality_rows" not in evidence_model_source
-    assert "def _quality_rows" in evidence_quality_source
-    assert "def _provider_transparency_model" in evidence_provider_source
-    assert "def _artifact_model" in evidence_artifacts_source
-    assert "def _overview_section" not in sections_source
-    assert "def _severity_signal_chart" not in charts_source
-    assert "def _severity_signal_chart" in risk_charts_source
-    assert "def _attack_heatmap" in attack_charts_source
-    assert "def _remediation_priority_chart" in remediation_charts_source
-    assert "def _scatter_svg" in scatter_source
-    assert len(model_source.splitlines()) <= 100
-    assert len(evidence_model_source.splitlines()) <= 110
-    assert len(evidence_quality_source.splitlines()) <= 130
-    assert len(evidence_provider_source.splitlines()) <= 130
-    assert len(evidence_artifacts_source.splitlines()) <= 240
-    assert len(sections_source.splitlines()) <= 90
-    assert len(charts_source.splitlines()) <= 50
-    assert len(risk_charts_source.splitlines()) <= 250
-    assert len(attack_charts_source.splitlines()) <= 190
-    assert len(remediation_charts_source.splitlines()) <= 150
-    assert len(scatter_source.splitlines()) <= 110
-
-
-def test_reporting_payloads_delegates_summary_and_sarif_renderers() -> None:
-    imports = _imported_modules("src/vuln_prioritizer/reporting_payloads.py")
-    source = (ROOT / "src/vuln_prioritizer/reporting_payloads.py").read_text(encoding="utf-8")
-    summary_source = (ROOT / "src/vuln_prioritizer/reporting_payloads_summary.py").read_text(
-        encoding="utf-8"
-    )
-    sarif_source = (ROOT / "src/vuln_prioritizer/reporting_payloads_sarif.py").read_text(
-        encoding="utf-8"
+def test_legacy_cli_evidence_bundle_writer_modules_are_removed() -> None:
+    removed_modules = (
+        "reporting_evidence.py",
+        "reporting_evidence_archive.py",
+        "reporting_evidence_attack.py",
+        "reporting_evidence_bundle.py",
+        "reporting_evidence_governance.py",
+        "reporting_evidence_inputs.py",
+        "reporting_evidence_provider.py",
+        "reporting_evidence_verify.py",
+        "sarif_validation.py",
     )
 
-    assert "vuln_prioritizer.reporting_payloads_summary" in imports
-    assert "vuln_prioritizer.reporting_payloads_sarif" in imports
-    assert "def generate_summary_markdown" not in source
-    assert "def generate_sarif_report" not in source
-    assert "def generate_summary_markdown" in summary_source
-    assert "def generate_sarif_report" in sarif_source
-    assert "generate_summary_markdown as generate_summary_markdown" in source
-    assert "generate_sarif_report as generate_sarif_report" in source
-    assert len(source.splitlines()) <= 240
-    assert len(summary_source.splitlines()) <= 360
-    assert len(sarif_source.splitlines()) <= 230
+    for module in removed_modules:
+        assert not (ROOT / f"src/vuln_prioritizer/{module}").exists()
+
+    imports = _imported_modules("app/services/report_bundle.py")
+    assert "app.services.report_bundle_archive_verification" in imports
+
+
+def test_legacy_domain_reporting_facades_are_removed() -> None:
+    removed_modules = (
+        "reporting_executive.py",
+        "reporting_executive_constants.py",
+        "reporting_executive_model.py",
+        "reporting_executive_model_artifacts.py",
+        "reporting_executive_model_attack.py",
+        "reporting_executive_model_builder.py",
+        "reporting_executive_model_evidence.py",
+        "reporting_executive_model_findings.py",
+        "reporting_executive_model_helpers.py",
+        "reporting_executive_model_overview.py",
+        "reporting_executive_model_provider.py",
+        "reporting_executive_model_quality.py",
+        "reporting_executive_model_remediation.py",
+        "reporting_executive_renderer.py",
+        "reporting_executive_sections.py",
+        "reporting_executive_sections_attack_charts.py",
+        "reporting_executive_sections_charts.py",
+        "reporting_executive_sections_chrome.py",
+        "reporting_executive_sections_components.py",
+        "reporting_executive_sections_evidence.py",
+        "reporting_executive_sections_remediation_charts.py",
+        "reporting_executive_sections_risk_charts.py",
+        "reporting_executive_sections_scatter.py",
+        "reporting_executive_sections_summary.py",
+        "reporting_executive_sections_top.py",
+        "reporting_executive_utils.py",
+        "reporting_format.py",
+        "reporting_html.py",
+        "reporting_markdown.py",
+        "reporting_markdown_analysis.py",
+        "reporting_payloads.py",
+        "reporting_payloads_sarif.py",
+        "reporting_payloads_summary.py",
+    )
+
+    for module in removed_modules:
+        assert not (ROOT / f"src/vuln_prioritizer/{module}").exists()
 
 
 def test_workbench_frontend_feature_containers_delegate_to_sections() -> None:
@@ -1249,7 +1153,6 @@ def test_models_facade_reexports_focused_model_modules() -> None:
     assert "vuln_prioritizer.models_input" in imports
     assert "vuln_prioritizer.models_provider" in imports
     assert "vuln_prioritizer.models_remediation" in imports
-    assert "vuln_prioritizer.models_state" in imports
     assert "vuln_prioritizer.models_waivers" in imports
 
 
@@ -1270,6 +1173,7 @@ def test_dependency_audit_requirements_include_dev_gate_tools() -> None:
 
     assert {"mkdocs", "pytest-cov"}.issubset(package_names)
     assert "playwright" not in package_names
+    assert {"rich", "typer"}.isdisjoint(package_names)
     assert all("==" not in line and "--hash" not in line for line in requirements)
     assert 'name = "vuln-prioritizer"' in uv_lock
     assert 'name = "vuln-prioritizer-workbench-workspace"' in uv_lock
@@ -1283,6 +1187,8 @@ def test_dependency_audit_requirements_include_dev_gate_tools() -> None:
     assert "--no-dev" in runtime_lock
     assert "--hash=sha256:" in runtime_lock
     assert {"fastapi", "psycopg", "uvicorn"}.issubset(runtime_pinned_package_names)
+    assert {"rich", "typer"}.isdisjoint(runtime_pinned_package_names)
+    assert "typer" not in pinned_package_names
     assert (
         not {
             "mkdocs",
@@ -1311,14 +1217,19 @@ def test_backend_package_boundary_intentionally_ships_workbench_app() -> None:
     makefile = (ROOT.parent / "Makefile").read_text(encoding="utf-8")
 
     assert 'include = ["vuln_prioritizer*", "app*"]' in pyproject
+    assert "[project.scripts]" not in pyproject
     assert "app/main.py" in package_check
-    assert "vuln_prioritizer/cli.py" in package_check
+    assert '"vuln_prioritizer/cli.py"' in package_check
     assert "FORBIDDEN_WHEEL_PREFIXES" in package_check
+    assert "FORBIDDEN_WHEEL_FILES" in package_check
     assert "vuln_prioritizer/api/" in package_check
+    assert "vuln_prioritizer/commands/" in package_check
     assert "vuln_prioritizer/db/" in package_check
+    assert "vuln_prioritizer/reporting_" in package_check
     assert "vuln_prioritizer/web/" in package_check
     assert "package-contents-check: package" in makefile
     assert "package-check: package-contents-check" in makefile
+    assert "pipx-source-smoke" not in makefile
 
 
 def test_import_execution_is_split_into_stage_services_with_guardrails() -> None:

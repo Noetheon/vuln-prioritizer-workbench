@@ -9,11 +9,12 @@ from typing import Any, Literal
 from sqlmodel import Session
 
 from app.core.config import Settings
+from app.core.local_actor import LocalWorkbenchActor
 from app.domain.import_asset_context import (
     canonicalize_occurrence_asset_context as _canonicalize_occurrence_asset_context,
 )
 from app.importers import ImporterParseError, ImporterValidationError, build_importer_registry
-from app.models import AnalysisRun, AnalysisRunStatus, User
+from app.models import AnalysisRun, AnalysisRunStatus
 from app.repositories import RunRepository
 from app.services.analysis import AnalysisService, WorkbenchAnalysisError
 from app.services.import_execution_context import (
@@ -68,7 +69,7 @@ class _ImportFailureContext:
     session: Session
     run_repo: RunRepository
     run: AnalysisRun
-    current_user: User
+    local_actor: LocalWorkbenchActor
     project_id: uuid.UUID
     job_id: str
     job_history: list[dict[str, str]]
@@ -90,7 +91,7 @@ async def execute_project_import_upload(
     *,
     project_id: uuid.UUID,
     session: Session,
-    current_user: User,
+    local_actor: LocalWorkbenchActor,
     settings: Settings,
     upload: ProjectImportUploadRequest,
     defer_execution: bool = False,
@@ -139,7 +140,7 @@ async def execute_project_import_upload(
         session=session,
         run_repo=run_repo,
         run=run,
-        current_user=current_user,
+        local_actor=local_actor,
         project_id=project_id,
         job_id=resolved_run.job_id,
         job_history=job_history,
@@ -155,7 +156,7 @@ async def execute_project_import_upload(
             session=failure_context.session,
             run_repo=failure_context.run_repo,
             run=failure_context.run,
-            current_user=failure_context.current_user,
+            local_actor=failure_context.local_actor,
             project_id=failure_context.project_id,
             job_id=failure_context.job_id,
             job_history=failure_context.job_history,
@@ -178,7 +179,7 @@ async def execute_project_import_upload(
                 session=failure_context.session,
                 run_repo=failure_context.run_repo,
                 run=failure_context.run,
-                current_user=failure_context.current_user,
+                local_actor=failure_context.local_actor,
                 project_id=failure_context.project_id,
                 job_id=failure_context.job_id,
                 job_history=failure_context.job_history,
@@ -204,7 +205,7 @@ async def execute_project_import_upload(
                 session=failure_context.session,
                 run_repo=failure_context.run_repo,
                 run=failure_context.run,
-                current_user=failure_context.current_user,
+                local_actor=failure_context.local_actor,
                 project_id=failure_context.project_id,
                 job_id=failure_context.job_id,
                 job_history=failure_context.job_history,
@@ -235,7 +236,7 @@ async def execute_project_import_upload(
             session=failure_context.session,
             run_repo=failure_context.run_repo,
             run=failure_context.run,
-            current_user=failure_context.current_user,
+            local_actor=failure_context.local_actor,
             project_id=failure_context.project_id,
             job_id=failure_context.job_id,
             job_history=failure_context.job_history,
@@ -275,7 +276,7 @@ async def execute_project_import_upload(
     )
     _record_import_audit(
         session,
-        current_user=current_user,
+        local_actor=local_actor,
         project_id=project_id,
         run_id=finished_run.id,
         status="success",

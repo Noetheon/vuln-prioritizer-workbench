@@ -1,14 +1,14 @@
 # VPW-054 Report Snapshots
 
-VPW-054 makes the template report demo artifacts part of the tested repository
+VPW-054 makes the Workbench report demo artifacts part of the tested repository
 contract. The current demo set is rendered from the deterministic VPW-054
-payload in `backend/tests/api/test_template_reports_api.py`.
+payload in `backend/tests/api/test_workbench_reports_api.py`.
 
 ## Demo Artifacts
 
-- [docs/examples/vpw-054-template-technical-report.md](../examples/vpw-054-template-technical-report.md)
-- [docs/examples/vpw-054-template-executive-report.html](../examples/vpw-054-template-executive-report.html)
-- [docs/examples/vpw-054-template-analysis-result.v1.json](../examples/vpw-054-template-analysis-result.v1.json)
+- [docs/examples/vpw-054-workbench-technical-report.md](../examples/vpw-054-workbench-technical-report.md)
+- [docs/examples/vpw-054-workbench-executive-report.html](../examples/vpw-054-workbench-executive-report.html)
+- [docs/examples/vpw-054-workbench-analysis-result.v1.json](../examples/vpw-054-workbench-analysis-result.v1.json)
 
 ## Snapshot Coverage
 
@@ -25,9 +25,9 @@ payload in `backend/tests/api/test_template_reports_api.py`.
 ## Artifact Hashes
 
 ```text
-bc8dc6af67958a6d5ef5c48dc487af7a9aaffa356db2a883f4294ff9b560033e  docs/examples/vpw-054-template-technical-report.md
-a96ded8d66ab40667badd38319d30fd9b7ebf9e85fc71fb3d06a54b71addbfd5  docs/examples/vpw-054-template-executive-report.html
-dd9210c755d9df913f7a2de94baa293debaca38736037dbf887dcfecd5cbf206  docs/examples/vpw-054-template-analysis-result.v1.json
+bc8dc6af67958a6d5ef5c48dc487af7a9aaffa356db2a883f4294ff9b560033e  docs/examples/vpw-054-workbench-technical-report.md
+a96ded8d66ab40667badd38319d30fd9b7ebf9e85fc71fb3d06a54b71addbfd5  docs/examples/vpw-054-workbench-executive-report.html
+dd9210c755d9df913f7a2de94baa293debaca38736037dbf887dcfecd5cbf206  docs/examples/vpw-054-workbench-analysis-result.v1.json
 3795823e05b422db9e09d9b70af98015aadf751928830f98fe7d88b27319f3ed  backend/tests/api/snapshots/vpw_054_executive_report.normalized.html
 ```
 
@@ -36,13 +36,13 @@ dd9210c755d9df913f7a2de94baa293debaca38736037dbf887dcfecd5cbf206  docs/examples/
 Only update these artifacts when a report contract change is intentional.
 
 1. Change the report renderer, schema, or deterministic VPW-054 payload.
-2. Regenerate the three `docs/examples/vpw-054-template-*` artifacts and the
+2. Regenerate the three `docs/examples/vpw-054-workbench-*` artifacts and the
    normalized HTML snapshot from the renderer output.
 3. Review the diff for contract changes and secret/path leakage.
 4. Run the targeted snapshot gate:
 
 ```bash
-python3 -m pytest -q backend/tests/api/test_template_reports_api.py --no-cov
+python3 -m pytest -q backend/tests/api/test_workbench_reports_api.py --no-cov
 ```
 
 5. Run the docs gate:

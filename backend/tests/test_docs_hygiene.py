@@ -17,9 +17,14 @@ PYPROJECT_FILE = REPO_ROOT / "backend" / "pyproject.toml"
 GITHUB_READINESS_FILE = REPO_ROOT / "docs" / "github-open-source-readiness.md"
 RELEASE_OPERATIONS_FILE = REPO_ROOT / "docs" / "release_operations.md"
 COMMUNITY_SETUP_FILE = REPO_ROOT / "docs" / "community_repository_setup.md"
+REFERENCE_GAP_FILE = REPO_ROOT / "docs" / "reference_cve_prioritizer_gap_analysis.md"
+WORKBENCH_OFFLINE_DEMO_FILE = REPO_ROOT / "docs" / "workbench-offline-demo.md"
+FULL_STACK_TEMPLATE_MIGRATION_FILE = REPO_ROOT / "docs" / "full_stack_fastapi_template_migration.md"
+VPW_TEMPLATE_SEQUENCE_FILE = REPO_ROOT / "docs" / "vpw_template_execution_sequence.md"
 GITHUB_ISSUE_TEMPLATE_ROOT = REPO_ROOT / ".github" / "ISSUE_TEMPLATE"
 MAINTAINERS_FILE = REPO_ROOT / "MAINTAINERS.md"
 SUPPORT_FILE = REPO_ROOT / "SUPPORT.md"
+USER_DOCUMENTATION_FILE = REPO_ROOT / "docs" / "user_documentation.md"
 TEXT_SUFFIXES = {
     ".css",
     ".html",
@@ -193,10 +198,6 @@ def test_gitignore_covers_workbench_runtime_artifacts() -> None:
         "data/workbench-reports/",
         "data/workbench-provider-cache/",
         "data/provider-snapshots/",
-        "data/template-import-uploads/",
-        "data/template-reports/",
-        "data/template-provider-cache/",
-        "data/template-provider-snapshots/",
     }
 
     assert {path for path in required_runtime_roots if path not in gitignore} == set()
@@ -299,6 +300,72 @@ def test_documentation_map_defines_current_and_historical_boundaries() -> None:
     assert "Package maturity" in documentation_map
 
 
+def test_current_docs_do_not_reframe_workbench_as_cli_or_release_gate() -> None:
+    reference_gap = REFERENCE_GAP_FILE.read_text(encoding="utf-8")
+    offline_demo = WORKBENCH_OFFLINE_DEMO_FILE.read_text(encoding="utf-8")
+    docs_index = (REPO_ROOT / "docs" / "index.md").read_text(encoding="utf-8")
+    normalized_reference_gap = " ".join(reference_gap.split())
+
+    assert "broader CLI/CI workflow tool" not in normalized_reference_gap
+    assert "old CLI/CI-oriented surfaces are historical" in normalized_reference_gap
+    assert "release-readiness path" not in offline_demo
+    assert "reproducible local demo path" in offline_demo
+    assert "not part of the normal local Workbench development path" in docs_index
+
+
+def test_active_docs_do_not_publish_removed_cli_report_examples() -> None:
+    mkdocs = yaml.safe_load(MKDOCS_FILE.read_text(encoding="utf-8"))
+    nav_pages = _nav_markdown_pages(mkdocs["nav"])
+    offline_demo = WORKBENCH_OFFLINE_DEMO_FILE.read_text(encoding="utf-8")
+    removed_examples = {
+        Path("docs/example_compare.md"),
+        Path("docs/example_explain.json"),
+        Path("docs/example_attack_compare.md"),
+        Path("docs/example_attack_explain.json"),
+    }
+
+    assert nav_pages.isdisjoint(removed_examples)
+    assert all(not (REPO_ROOT / path).exists() for path in removed_examples)
+    assert "docs/example_compare.md" not in offline_demo
+    assert "docs/example_explain.json" not in offline_demo
+    assert "docs/example_attack_compare.md" not in offline_demo
+    assert "docs/example_attack_explain.json" not in offline_demo
+
+
+def test_template_history_docs_do_not_restore_auth_or_cli_guardrails() -> None:
+    migration = FULL_STACK_TEMPLATE_MIGRATION_FILE.read_text(encoding="utf-8")
+    sequence = VPW_TEMPLATE_SEQUENCE_FILE.read_text(encoding="utf-8")
+    normalized_migration = " ".join(migration.split())
+    normalized_sequence = " ".join(sequence.split())
+
+    assert "Migration Rules Preserved As Current Guardrails" not in migration
+    assert "Use the official template auth" not in migration
+    assert "not current product guardrails" in normalized_migration
+    assert "CLI was removed from the active product" in normalized_migration
+    assert "template auth/login tests are green" not in sequence
+    assert "preserving template user/auth behavior" not in sequence
+    assert "does not need to preserve the removed CLI surface" in normalized_sequence
+
+
+def test_root_roadmap_keeps_local_workbench_work_lightweight() -> None:
+    roadmap = (REPO_ROOT / "ROADMAP.md").read_text(encoding="utf-8")
+
+    assert "ordinary local Workbench changes small" in roadmap
+    assert "Formal roadmap issue grouping is only needed" in roadmap
+    assert (
+        "Template Replacement Strategy](docs/architecture/template-replacement.md) (historical)"
+        in (roadmap)
+    )
+
+
+def test_user_documentation_keeps_demo_path_separate_from_release_evidence() -> None:
+    user_documentation = USER_DOCUMENTATION_FILE.read_text(encoding="utf-8")
+
+    assert "active-runtime smoke path" in user_documentation
+    assert "reproducible local demos" in user_documentation
+    assert "release evidence" not in user_documentation
+
+
 def test_github_open_source_entrypoints_are_linked_and_versioned() -> None:
     mkdocs = yaml.safe_load(MKDOCS_FILE.read_text(encoding="utf-8"))
     nav_pages = _nav_markdown_pages(mkdocs["nav"])
@@ -323,6 +390,10 @@ def test_github_open_source_entrypoints_are_linked_and_versioned() -> None:
 
     assert "Open-source repository health" in documentation_map
     assert "GitHub-Side Settings Checklist" in github_readiness
+    assert "lighter default checklist" in github_readiness
+    assert "only required when the linked issue or PR explicitly scopes that work" in (
+        github_readiness
+    )
     assert "`MAINTAINERS.md`" in github_readiness
     assert "`SECURITY.md`" in github_readiness
     assert "`CONTRIBUTING.md`" in github_readiness

@@ -7,17 +7,14 @@ scans when Grype can emit one JSON report for the target.
 See `examples/grype-demo.json` for a checked-in sample adapted from
 `data/input_fixtures/grype_report.json`.
 
-## Example
+## Workbench Import
 
-```bash
-vuln-prioritizer analyze \
-  --input examples/grype-demo.json \
-  --input-format grype-json \
-  --format markdown
-```
+Import the file through the Workbench with `input_type=grype-json`. Automation
+can use `POST /api/v1/projects/{project_id}/imports` with multipart form fields
+`input_type=grype-json` and `file=@grype-results.json`.
 
-Auto-detection selects `grype-json` for JSON documents with a top-level
-`matches` array, but CI jobs should prefer `--input-format grype-json` for
+The importer recognizes JSON documents with a top-level `matches` array, but
+Workbench imports should still pass the explicit `grype-json` type for
 reproducibility.
 
 ## Supported Shape
@@ -87,8 +84,7 @@ The importer performs local parsing and normalization only. It does not run
 Grype, read package databases, inspect images, or fetch NVD, EPSS, KEV,
 ATT&CK, GHSA, OSV, or vendor advisory data during import.
 
-- A non-JSON file is rejected unless the caller explicitly selects
-  `--input-format grype-json`.
+- A non-JSON file is rejected.
 - A JSON document without a top-level object is rejected.
 - Missing or empty `matches[]` creates no occurrences.
 - Match items that are not JSON objects are ignored as unexpected match shapes.

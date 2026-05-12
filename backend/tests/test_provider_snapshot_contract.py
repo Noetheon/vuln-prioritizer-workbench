@@ -209,10 +209,10 @@ def test_provider_snapshot_json_redacts_warnings_without_hiding_env_name() -> No
     assert "apiKey=<redacted>" in payload["warnings"][0]
 
 
-def test_provider_snapshot_metadata_contract_covers_cli_and_workbench_exports() -> None:
-    cli_report = ProviderSnapshotReport(
+def test_provider_snapshot_metadata_contract_covers_domain_and_workbench_exports() -> None:
+    domain_report = ProviderSnapshotReport(
         metadata=ProviderSnapshotMetadata(
-            snapshot_id="cli-snapshot",
+            snapshot_id="domain-snapshot",
             generated_at="2026-04-30T00:00:00+00:00",
             input_paths=["cves.txt"],
             input_format="cve-list",
@@ -249,12 +249,12 @@ def test_provider_snapshot_metadata_contract_covers_cli_and_workbench_exports() 
         ),
     )
 
-    cli_payload = json.loads(generate_provider_snapshot_json(cli_report))
+    domain_payload = json.loads(generate_provider_snapshot_json(domain_report))
     workbench_payload = json.loads(generate_provider_snapshot_json(workbench_report))
 
-    assert SHARED_PROVIDER_SNAPSHOT_METADATA_FIELDS.issubset(cli_payload["metadata"])
+    assert SHARED_PROVIDER_SNAPSHOT_METADATA_FIELDS.issubset(domain_payload["metadata"])
     assert SHARED_PROVIDER_SNAPSHOT_METADATA_FIELDS.issubset(workbench_payload["metadata"])
-    assert cli_payload["metadata"]["snapshot_format"] == "provider-snapshot.v1.json"
+    assert domain_payload["metadata"]["snapshot_format"] == "provider-snapshot.v1.json"
     assert workbench_payload["metadata"]["snapshot_format"] == "provider-snapshot.v1.json"
-    assert cli_payload["metadata"]["cache_only"] is False
+    assert domain_payload["metadata"]["cache_only"] is False
     assert workbench_payload["metadata"]["cache_only"] is True

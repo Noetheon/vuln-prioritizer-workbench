@@ -30,7 +30,6 @@ type NavigateOptions = {
 type RouterContextValue = {
   location: RouterLocation
   navigate: (options: NavigateOptions | string) => Promise<void>
-  outlet: ReactNode
   params: Record<string, string>
 }
 
@@ -124,7 +123,7 @@ export function BrowserRouter({ children }: { children: ReactNode }) {
   )
 
   const value = useMemo<RouterContextValue>(
-    () => ({ location, navigate, outlet: null, params: {} }),
+    () => ({ location, navigate, params: {} }),
     [location, navigate],
   )
 
@@ -158,10 +157,6 @@ export function useParams<TParams extends Record<string, string> = Record<string
   _options?: unknown,
 ) {
   return useRouterContext().params as TParams
-}
-
-export function Outlet() {
-  return <>{useRouterContext().outlet}</>
 }
 
 type LinkProps = Omit<AnchorHTMLAttributes<HTMLAnchorElement>, "href"> & {
@@ -198,18 +193,6 @@ export function Link({
   }
 
   return <a href={href} onClick={handleClick} {...props} />
-}
-
-export function createFileRoute(_path: string) {
-  return <TConfig,>(config: TConfig) => config
-}
-
-export function createRootRoute<TConfig>(config: TConfig) {
-  return config
-}
-
-export function redirect(options: NavigateOptions) {
-  return { type: "redirect", ...options }
 }
 
 function useRouterContext() {

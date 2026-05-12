@@ -1,4 +1,4 @@
-"""CLI-independent analysis orchestration facade."""
+"""Runtime-independent analysis orchestration facade."""
 
 from __future__ import annotations
 
@@ -12,11 +12,11 @@ from vuln_prioritizer.services.analysis_filters import (
     normalize_priority_filters,
 )
 from vuln_prioritizer.services.analysis_inputs import (
-    load_asset_records_or_exit,
-    load_context_profile_or_exit,
-    load_provider_snapshot_or_exit,
-    load_vex_statements_or_exit,
-    load_waiver_rules_or_exit,
+    load_analysis_context_profile,
+    load_analysis_provider_snapshot,
+    load_analysis_waiver_rules,
+    load_asset_records,
+    load_vex_statements,
 )
 from vuln_prioritizer.services.analysis_models import (
     AnalysisInputError,
@@ -53,11 +53,11 @@ __all__ = [
     "PRIORITY_LABELS",
     "build_active_filters",
     "normalize_priority_filters",
-    "load_asset_records_or_exit",
-    "load_context_profile_or_exit",
-    "load_provider_snapshot_or_exit",
-    "load_vex_statements_or_exit",
-    "load_waiver_rules_or_exit",
+    "load_analysis_context_profile",
+    "load_analysis_provider_snapshot",
+    "load_analysis_waiver_rules",
+    "load_asset_records",
+    "load_vex_statements",
     "AnalysisInputError",
     "AnalysisNoFindingsError",
     "AnalysisRequest",

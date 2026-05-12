@@ -9,7 +9,7 @@ from sqlalchemy import inspect, text
 from sqlalchemy.engine import Engine
 from sqlmodel import Session, SQLModel
 
-from app.core.db import engine, ensure_configured_superuser
+from app.core.db import engine
 from app.core.migration_bootstrap import ALEMBIC_HEAD
 from app.models import Project, ProjectCreate, import_table_models
 from app.repositories import ProjectRepository
@@ -77,18 +77,16 @@ def run_project_repository_smoke(active_engine: Engine) -> uuid.UUID:
     with Session(active_engine) as session:
         repository = ProjectRepository(session)
         try:
-            user = ensure_configured_superuser(session)
             project = repository.create_project(
                 ProjectCreate(
                     name=f"compose-postgres-schema-smoke-{uuid.uuid4().hex[:8]}",
                     description="Temporary Compose Postgres repository smoke.",
-                ),
-                owner_id=user.id,
+                )
             )
             project_id = project.id
             session.commit()
 
-            projects, _count = repository.list_visible_projects(user)
+            projects, _count = repository.list_projects()
             if project_id not in {candidate.id for candidate in projects}:
                 raise RuntimeError("Project repository smoke did not list the inserted project.")
             return project_id
@@ -110,7 +108,7 @@ def run_smoke(active_engine: Engine = engine) -> SchemaSmokeResult:
 
 
 def main() -> None:
-    """CLI entrypoint for ``python -m app.core.schema_smoke``."""
+    """Module entrypoint for ``python -m app.core.schema_smoke``."""
     result = run_smoke()
     print(
         "Compose Postgres schema smoke passed: "

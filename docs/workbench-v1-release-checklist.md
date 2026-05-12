@@ -37,7 +37,7 @@ candidate-specific public deployment scorecard.
 ## Release Scope
 
 - [x] Package version, tag target, release notes, and public docs use `v1.1.0` for the package release; Workbench `v1.0.0` remains milestone evidence only.
-- [x] Release scope is described as local-first CLI plus self-hosted Workbench for prioritizing known CVEs and imported findings.
+- [x] Release scope is described as a local-first self-hosted Workbench for prioritizing known CVEs and imported findings.
 - [x] SQLite-backed single-node Workbench operation is documented as the default runtime model.
 - [x] Public docs identify live provider use, local cache use, and locked provider snapshot replay as distinct modes.
 - [x] Workbench docs identify evidence bundles as integrity artifacts, not encrypted archives.
@@ -77,7 +77,7 @@ make performance-smoke
 ## Demo Evidence Bundle
 
 - [x] Run the locked-provider Workbench demo path from `docs/workbench-offline-demo.md`.
-- [x] Generate and verify the CLI evidence bundle:
+- [x] Generate and verify the Workbench demo evidence bundle:
 
 ```bash
 make demo-evidence-bundle-check
@@ -149,11 +149,18 @@ make dependency-audit
 make release-check
 ```
 
-- [ ] For public-production readiness handoff, run the broader gate and record
-  the result with residual risk:
+- [ ] For local release handoff, run the broader local gate and record the
+  result with residual risk:
 
 ```bash
 make release-readiness-check
+```
+
+- [ ] If this exact candidate will be exposed as a public or shared deployment,
+  also run and record the explicit public-deployment evidence contract:
+
+```bash
+python3 scripts/check_public_deployment_evidence.py
 ```
 
 - [x] Run the documentation gate:
@@ -199,7 +206,9 @@ The v1.0 release must keep these boundaries visible in docs, UI copy, examples, 
 
 - [x] The Workbench v1.0 evidence was local-first; public-production certification
   requires the separate VPW-AUD-999 evidence ledger and scorecard.
-- [x] SSO, multi-user isolation, audit logging, and ticket sync remain outside the v1.0 local Workbench scope unless explicitly shipped; the later local API-token gate is documented as a v1.2 automation control, not a full internet-facing auth model.
+- [x] SSO, multi-user isolation, RBAC, API tokens, and ticket sync remain outside
+  the local Workbench scope unless explicitly shipped; the earlier API-token
+  track has since been removed from the active product path.
 - [x] SQLite backup, retention, filesystem permissions, and local disk protection remain operator responsibilities.
 - [x] Evidence bundles provide integrity checks but not encryption.
 - [x] Imported scanner exports may contain sensitive hostnames, package paths, image names, services, owners, and environment labels.

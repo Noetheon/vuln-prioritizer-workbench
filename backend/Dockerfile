@@ -38,14 +38,9 @@ ENV SQLALCHEMY_DATABASE_URI=sqlite:////app/data/workbench.db \
     DEMO_PROVIDER_SNAPSHOT_ENABLED=false \
     RATE_LIMIT_ENABLED=true \
     API_RATE_LIMIT_PER_MINUTE=600 \
-    LOGIN_RATE_LIMIT_PER_MINUTE=60 \
-    TOKEN_FAILURE_RATE_LIMIT_PER_MINUTE=60 \
-    API_TOKEN_DEFAULT_EXPIRE_DAYS=90 \
     AUDIT_RETENTION_DAYS=365 \
-    SESSION_RETENTION_DAYS=30 \
-    REVOKED_API_TOKEN_RETENTION_DAYS=365 \
     MAX_UPLOAD_MB=25
 
 EXPOSE 8000
 
-CMD ["sh", "-c", ": \"${SECRET_KEY:?Set SECRET_KEY before starting the backend container.}\"; : \"${FIRST_SUPERUSER_PASSWORD:?Set FIRST_SUPERUSER_PASSWORD before starting the backend container.}\"; python -m app.core.migration_bootstrap && alembic -c /app/backend/alembic.ini upgrade head && exec uvicorn app.main:app --host 0.0.0.0 --port 8000"]
+CMD ["sh", "-c", ": \"${SECRET_KEY:?Set SECRET_KEY before starting the backend container.}\"; alembic -c /app/backend/alembic.ini upgrade head && exec uvicorn app.main:app --host 0.0.0.0 --port 8000"]

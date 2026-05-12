@@ -25,7 +25,7 @@ explanation. Do not frame mappings as exploit proof.
 
 - [ ] mapping provenance review
 - [ ] technique metadata review
-- [ ] validation command/update
+- [ ] Workbench validation/update
 - [ ] Navigator/coverage output
 - [ ] finding explanation/report wording
 - [ ] docs update
@@ -52,8 +52,8 @@ explanation. Do not frame mappings as exploit proof.
 
 ## Tests
 
-- [ ] `attack validate`
-- [ ] `attack coverage`
+- [ ] ATT&CK validation output
+- [ ] ATT&CK coverage output
 - [ ] Navigator layer generation
 - [ ] snapshot/report fixture
 - [ ] ATT&CK safety wording test
@@ -63,7 +63,7 @@ explanation. Do not frame mappings as exploit proof.
 ## Definition Of Done
 
 - [ ] Mapping/provenance evidence is linked or committed.
-- [ ] Validation command output is posted.
+- [ ] Validation output is posted.
 - [ ] UI/API/report wording stays defensive and avoids overclaiming.
 
 ## Evidence

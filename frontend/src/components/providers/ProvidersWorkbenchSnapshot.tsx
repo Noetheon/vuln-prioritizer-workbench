@@ -81,7 +81,7 @@ export function ProviderSnapshotDetails({
             },
             {
               label: "Source path",
-              value: providerStatus?.snapshot.source_path ?? "N.A.",
+              value: providerStatus?.snapshot.source_path ?? "Not recorded",
             },
             {
               label: "NVD last sync",
@@ -89,11 +89,12 @@ export function ProviderSnapshotDetails({
             },
             {
               label: "EPSS date",
-              value: providerStatus?.snapshot.epss_date ?? "N.A.",
+              value: providerStatus?.snapshot.epss_date ?? "Not recorded",
             },
             {
               label: "KEV catalog",
-              value: providerStatus?.snapshot.kev_catalog_version ?? "N.A.",
+              value:
+                providerStatus?.snapshot.kev_catalog_version ?? "Not recorded",
             },
             {
               label: "Source hashes",

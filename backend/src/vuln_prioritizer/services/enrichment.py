@@ -73,7 +73,7 @@ class EnrichmentService:
         locked_provider_data: bool = False,
     ) -> EnrichmentResult:
         if locked_provider_data and provider_snapshot is None:
-            raise ValueError("--locked-provider-data requires --provider-snapshot-file.")
+            raise ValueError("Locked provider data requires a provider snapshot file.")
 
         nvd_results, nvd_warnings = self._resolve_nvd_results(
             cve_ids,

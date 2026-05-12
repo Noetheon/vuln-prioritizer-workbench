@@ -7,8 +7,8 @@ import uuid
 from fastapi import APIRouter, HTTPException
 from sqlmodel import Session
 
-from app.api.deps import ScopedReadUser, ScopedWriteUser, SessionDep
-from app.api.routes.workbench_access import require_visible_project
+from app.api.deps import LocalActor, SessionDep
+from app.api.routes.workbench_access import require_project
 from app.models import Waiver, WaiverCreate, WaiverPublic, WaiversPublic, WaiverUpdate
 from app.repositories import AssetRepository, FindingRepository, WaiverRepository
 from app.services.audit import record_audit_event
@@ -20,10 +20,10 @@ router = APIRouter(tags=["waivers"])
 def read_project_waivers(
     project_id: uuid.UUID,
     session: SessionDep,
-    current_user: ScopedReadUser,
+    local_actor: LocalActor,
 ) -> WaiversPublic:
     """List visible project waivers."""
-    require_visible_project(session, current_user, project_id)
+    require_project(session, project_id)
     repository = WaiverRepository(session)
     waivers = repository.list_project_waivers(project_id)
     return WaiversPublic(
@@ -37,11 +37,11 @@ def create_project_waiver(
     *,
     project_id: uuid.UUID,
     session: SessionDep,
-    current_user: ScopedWriteUser,
+    local_actor: LocalActor,
     waiver_in: WaiverCreate,
 ) -> WaiverPublic:
     """Create a scoped risk acceptance for a visible project."""
-    require_visible_project(session, current_user, project_id)
+    require_project(session, project_id)
     _validate_project_scope(session, project_id=project_id, waiver_in=waiver_in)
     repository = WaiverRepository(session)
     waiver = repository.create_project_waiver(project_id=project_id, waiver_in=waiver_in)
@@ -51,7 +51,7 @@ def create_project_waiver(
         action="waiver.create",
         resource_type="waiver",
         resource_id=waiver.id,
-        actor=current_user,
+        actor=local_actor,
         project_id=project_id,
         detail={"cve_id": waiver.cve_id, "owner": waiver.owner},
     )
@@ -65,7 +65,7 @@ def update_waiver(
     *,
     waiver_id: uuid.UUID,
     session: SessionDep,
-    current_user: ScopedWriteUser,
+    local_actor: LocalActor,
     waiver_in: WaiverUpdate,
 ) -> WaiverPublic:
     """Update a waiver's scope, owner, reason, approval, and lifecycle dates."""
@@ -73,7 +73,7 @@ def update_waiver(
     waiver = repository.get_waiver(waiver_id)
     if waiver is None:
         raise HTTPException(status_code=404, detail="Waiver not found")
-    require_visible_project(session, current_user, waiver.project_id)
+    require_project(session, waiver.project_id)
     _validate_project_scope(session, project_id=waiver.project_id, waiver_in=waiver_in)
     updated = repository.update_waiver(waiver, waiver_in)
     repository.sync_project_waivers(updated.project_id)
@@ -82,7 +82,7 @@ def update_waiver(
         action="waiver.update",
         resource_type="waiver",
         resource_id=updated.id,
-        actor=current_user,
+        actor=local_actor,
         project_id=updated.project_id,
         detail=waiver_in.model_dump(exclude_unset=True, mode="json"),
     )
@@ -95,14 +95,14 @@ def update_waiver(
 def expire_waiver(
     waiver_id: uuid.UUID,
     session: SessionDep,
-    current_user: ScopedWriteUser,
+    local_actor: LocalActor,
 ) -> WaiverPublic:
     """Expire a waiver and resynchronize visible accepted-risk state."""
     repository = WaiverRepository(session)
     waiver = repository.get_waiver(waiver_id)
     if waiver is None:
         raise HTTPException(status_code=404, detail="Waiver not found")
-    require_visible_project(session, current_user, waiver.project_id)
+    require_project(session, waiver.project_id)
     expired = repository.expire_waiver(waiver)
     repository.sync_project_waivers(expired.project_id)
     record_audit_event(
@@ -110,7 +110,7 @@ def expire_waiver(
         action="waiver.expire",
         resource_type="waiver",
         resource_id=expired.id,
-        actor=current_user,
+        actor=local_actor,
         project_id=expired.project_id,
         detail={"cve_id": expired.cve_id, "owner": expired.owner},
     )

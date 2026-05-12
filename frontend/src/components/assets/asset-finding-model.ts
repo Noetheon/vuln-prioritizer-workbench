@@ -18,7 +18,7 @@ export function findingAssetLabel(finding: FindingPublic) {
     finding.asset_name ??
     finding.asset_key ??
     finding.business_service ??
-    "N.A."
+    "Unmapped asset"
   )
 }
 
@@ -39,5 +39,5 @@ export function highestFindingPriority(findings: readonly FindingPublic[]) {
     .map((finding) => String(finding.priority ?? "").toLowerCase())
     .filter(Boolean)
   const highest = order.find((priority) => priorities.includes(priority))
-  return highest ? labelize(highest) : "N.A."
+  return highest ? labelize(highest) : "No findings"
 }

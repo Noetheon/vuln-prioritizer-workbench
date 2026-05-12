@@ -9,9 +9,8 @@ from sqlalchemy.engine import Engine
 from sqlmodel import Session
 
 from app.core.config import Settings
-from app.core.db import ensure_configured_superuser
-from app.models import AnalysisRun, AnalysisRunStatus, User
-from app.models.api_tokens import ApiTokenContext, attach_api_token_context
+from app.core.local_actor import configured_local_actor
+from app.models import AnalysisRun, AnalysisRunStatus
 from app.models.base import get_datetime_utc
 from app.repositories import RunRepository
 from app.services.import_errors import ImportServiceError
@@ -59,28 +58,19 @@ async def execute_project_import_upload_background(
     engine: Engine,
     settings: Settings,
     project_id: uuid.UUID,
-    user_id: uuid.UUID,
+    actor_id: uuid.UUID,
     upload: ProjectImportUploadRequest,
     run_id: uuid.UUID,
-    api_token_context: ApiTokenContext | None = None,
 ) -> None:
     """Resume a deferred import run outside the request/response path."""
+    _ = actor_id
     with Session(engine) as session:
-        current_user = session.get(User, user_id)
-        if current_user is None:
-            current_user = ensure_configured_superuser(session, active_settings=settings)
-        if api_token_context is not None:
-            attach_api_token_context(
-                current_user,
-                token_id=api_token_context.token_id,
-                project_id=api_token_context.project_id,
-                scopes=set(api_token_context.scopes),
-            )
+        local_actor = configured_local_actor(settings)
         try:
             await execute_project_import_upload(
                 project_id=project_id,
                 session=session,
-                current_user=current_user,
+                local_actor=local_actor,
                 settings=settings,
                 upload=upload,
                 existing_run_id=run_id,

@@ -13,12 +13,9 @@ This runbook keeps the Workbench demo reproducible without live provider calls. 
 ```bash
 make install
 make provider-snapshot-validate
-make provider-testmatrix
-make demo-offline-no-key-proof
-python3 -m pytest -q backend/tests/api/test_template_auth_smoke.py backend/tests/api/test_template_import_upload_api.py backend/tests/api/test_template_reports_api.py --no-cov
+python3 -m pytest -q backend/tests/api/test_workbench_local_runtime_smoke.py backend/tests/api/test_workbench_import_upload_api.py backend/tests/api/test_workbench_reports_api.py --no-cov
 make docker-demo-smoke
 make dependency-audit
-make demo-evidence-bundle-check
 docker compose -f compose.yml -f compose.override.yml up --build backend frontend
 ```
 
@@ -26,11 +23,12 @@ Open `http://127.0.0.1:5173` and create the project `online-shop-demo`.
 The browser demo uses the active backend in `backend/app` and the generated
 `/api/v1` React client.
 
-If default host ports are already occupied, run the smoke with explicit host
-bindings, for example:
+The smoke target defaults to backend `18080` and frontend `15174`. If those
+host ports are already occupied, run it with explicit host bindings, for
+example:
 
 ```bash
-DOCKER_DEMO_BACKEND_PORT=18080 DOCKER_DEMO_FRONTEND_PORT=15174 make docker-demo-smoke
+DOCKER_DEMO_BACKEND_PORT=18081 DOCKER_DEMO_FRONTEND_PORT=15175 make docker-demo-smoke
 ```
 
 If `pip-audit`, npm, or advisory data is unavailable, record that as a release-checklist exception instead of treating the offline browser demo itself as failed.
@@ -54,15 +52,14 @@ If `pip-audit`, npm, or advisory data is unavailable, record that as a release-c
 
 | Check | Evidence to capture |
 | --- | --- |
-| Security headers | `tests/api/test_template_auth_smoke.py` and an optional `curl -I http://127.0.0.1:8000/api/v1/utils/health-check/` capture showing `nosniff`, `DENY`, and CSP. |
-| Upload filename/path validation | `tests/api/test_template_import_upload_api.py` covers active `/api/v1` upload size, suffix, MIME, path, and provider snapshot validation. |
-| Report/evidence downloads | `tests/api/test_template_reports_api.py`; browser evidence should show report links and Evidence ZIP verification. |
+| Security headers | `tests/api/test_workbench_local_runtime_smoke.py` and an optional `curl -I http://127.0.0.1:8000/api/v1/utils/health-check/` capture showing `nosniff`, `DENY`, and CSP. |
+| Upload filename/path validation | `tests/api/test_workbench_import_upload_api.py` covers active `/api/v1` upload size, suffix, MIME, path, and provider snapshot validation. |
+| Report/evidence downloads | `tests/api/test_workbench_reports_api.py`; browser evidence should show report links and Evidence ZIP verification. |
 | 10k findings API smoke | `make performance-smoke` runs the active Workbench import and pagination smoke with 10,000 findings. |
 | Docker demo smoke | `make docker-demo-smoke` output showing `/api/v1/utils/health-check/` succeeds, the Compose Postgres Alembic/schema/repository smoke passes, and the local import/provider smoke tears down cleanly. |
 | Dependency audit | `make dependency-audit` result for the backend Python lock and frontend production dependencies, or a documented exception when audit tooling or advisory data is unavailable. |
-| Demo evidence bundle | `make demo-evidence-bundle-check` output plus `build/v1.0-demo-evidence-bundle-verification.json` showing `ok=true`. |
-| Provider test matrix | `make provider-testmatrix` plus `archive/vpw-evidence/vpw-029-provider-testmatrix.md`. |
-| Offline/no-key proof | `make demo-offline-no-key-proof` output plus `build/vpw-029-demo-offline-no-key-proof.json` showing locked replay and provider `network_fetches=0`. |
+| Demo evidence bundle | Generate JSON, Markdown, HTML, and Evidence ZIP from the Workbench report page and verify the ZIP through the report API. |
+| Provider replay | `make provider-snapshot-validate` plus the Workbench import test showing locked provider snapshot replay without live keys. |
 
 ## Updating the Demo Provider Snapshot
 
@@ -70,35 +67,17 @@ Only update `data/demo_provider_snapshot.json` as an intentional release task.
 The snapshot must remain a valid explicit `provider-snapshot.v1.json` artifact
 and must not depend on reviewer API keys or live provider availability.
 
-1. Refresh provider cache from a controlled maintainer environment:
+1. Refresh `data/demo_provider_snapshot.json` from reviewed provider data in a
+   controlled maintainer environment.
 
-   ```bash
-   PYTHONPATH=backend/src python3 -m vuln_prioritizer.cli data update \
-     --input data/sample_cves.txt \
-     --cache-dir .cache/vuln-prioritizer \
-     --offline-kev-file data/input_fixtures/kev_catalog.json
-   ```
-
-2. Export the locked replay artifact:
-
-   ```bash
-   PYTHONPATH=backend/src python3 -m vuln_prioritizer.cli data export-provider-snapshot \
-     --input data/sample_cves.txt \
-     --output data/demo_provider_snapshot.json \
-     --cache-dir .cache/vuln-prioritizer \
-     --cache-only
-   ```
-
-3. Re-run the offline proof and generated demo artifacts:
+2. Re-run the local Workbench validation:
 
    ```bash
    make provider-snapshot-validate
-   make demo-offline-no-key-proof
-   make demo-sync-check
-   make demo-evidence-bundle-check
+   python3 -m pytest -q backend/tests/api/test_workbench_import_upload_api.py backend/tests/api/test_workbench_reports_api.py --no-cov
    ```
 
-4. Review the snapshot diff before committing. Expected changes are provider
+3. Review the snapshot diff before committing. Expected changes are provider
    dates, source hashes, provider records, and generated demo artifact hashes.
    Do not commit secrets, local private paths, or customer scanner exports.
 
@@ -126,12 +105,11 @@ Checked-in README screenshots from the current offline demo path:
 If the browser demo cannot be shown, use these checked-in or generated artifacts:
 
 - `docs/example_report.md`
-- `docs/example_compare.md`
 - `docs/example_attack_report.md`
 - `docs/examples/example_report.html`
-- `docs/examples/vpw-054-template-technical-report.md`
-- `docs/examples/vpw-054-template-executive-report.html`
-- `docs/examples/vpw-054-template-analysis-result.v1.json`
+- `docs/examples/vpw-054-workbench-technical-report.md`
+- `docs/examples/vpw-054-workbench-executive-report.html`
+- `docs/examples/vpw-054-workbench-analysis-result.v1.json`
 - `docs/examples/example_pr_comment.md`
 - `docs/examples/example_results.sarif`
 - `data/demo_provider_snapshot.json`
@@ -151,4 +129,4 @@ If the browser demo cannot be shown, use these checked-in or generated artifacts
 - The Workbench remains local-first and is not ready for internet-exposed or multi-tenant operation.
 - Evidence bundles are integrity-checked ZIP artifacts, not encrypted archives.
 - SQLite backup, retention, and filesystem permissions remain operator responsibilities.
-- Live provider availability is not required for this demo; locked snapshots and local fixtures are the release-readiness path.
+- Live provider availability is not required for this demo; locked snapshots and local fixtures are the reproducible local demo path.

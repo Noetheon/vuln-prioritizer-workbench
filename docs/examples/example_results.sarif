@@ -60,7 +60,7 @@
               "target_hours": 24
             },
             "decision_statement": "Top finding #2: Patch decision: patch CVE-2024-4577 by applying validated vendor fixes or package upgrades, then confirm the affected assets are clean. SLA: Emergency - Validate scope and begin remediation or approved mitigation within 24 hours. Business impact: Executive attention is warranted because the finding combines urgent security signals with business routing context: CISA KEV known-exploited listing; EPSS 0.944; CVSS 9.8; unknown asset context.",
-            "decision_template": "patch",
+            "decision_recommendation": "patch",
             "defensive_context_count": 0,
             "defensive_context_ids": [],
             "defensive_context_sources": [],
@@ -192,7 +192,7 @@
               "target_hours": 24
             },
             "decision_statement": "Top finding #1: Patch decision: patch CVE-2024-3094 by applying validated vendor fixes or package upgrades, then confirm the affected assets are clean. SLA: Emergency - Validate scope and begin remediation or approved mitigation within 24 hours. Business impact: Executive attention is warranted because the finding combines urgent security signals with business routing context: EPSS 0.846; CVSS 10.0; internet-facing exposure; environment prod; critical asset criticality; business service customer-login; owner platform-team.",
-            "decision_template": "patch",
+            "decision_recommendation": "patch",
             "defensive_context_count": 0,
             "defensive_context_ids": [],
             "defensive_context_sources": [],

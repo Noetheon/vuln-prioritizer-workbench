@@ -14,12 +14,10 @@ import {
 import type {
   ProjectPublic,
   ProviderStatusPublic,
-  UserPublic,
   WorkbenchStatus,
 } from "../api-client"
 import { apiErrorMessage } from "../lib/app-errors"
 import {
-  useWorkbenchCurrentUserQuery,
   useWorkbenchProviderStatusQuery,
   useWorkbenchStatusQuery,
   workbenchProviderStatusQueryKey,
@@ -64,8 +62,6 @@ function persistSelectedProjectId(projectId: string) {
 }
 
 export type WorkbenchContextValue = {
-  currentUser: UserPublic | null
-  handleAuthExpired: () => Promise<void>
   projectListError: string
   projectListLoading: boolean
   projects: ProjectPublic[]
@@ -91,10 +87,6 @@ export function WorkbenchProvider({ children }: { children: ReactNode }) {
   const location = useLocation()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-  const handleAuthExpired = useCallback(async () => {
-    await navigate({ replace: true, search: {}, to: "/" })
-  }, [navigate])
-  const currentUserQuery = useWorkbenchCurrentUserQuery()
   const providerStatusQuery = useWorkbenchProviderStatusQuery()
   const statusQuery = useWorkbenchStatusQuery()
   const projectsQuery = useProjectsQuery()
@@ -192,8 +184,6 @@ export function WorkbenchProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo<WorkbenchContextValue>(
     () => ({
-      currentUser: currentUserQuery.data ?? null,
-      handleAuthExpired,
       projectListError: projectsQuery.isError
         ? apiErrorMessage("Projects unavailable", projectsQuery.error)
         : "",
@@ -215,8 +205,6 @@ export function WorkbenchProvider({ children }: { children: ReactNode }) {
       statusError: statusQuery.isError ? "Data services unavailable" : "",
     }),
     [
-      currentUserQuery.data,
-      handleAuthExpired,
       projects,
       providerStatusQuery.data,
       providerStatusQuery.error,

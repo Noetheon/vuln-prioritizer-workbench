@@ -51,7 +51,7 @@
     },
     {
       "name": "Coverage model",
-      "value": "not assessed placeholder"
+      "value": "not assessed by Workbench export"
     },
     {
       "name": "Generated at",
@@ -63,7 +63,7 @@
   "showTacticRowBackground": true,
   "techniques": [
     {
-      "comment": "Findings: CVE-2021-44228. KEV: 1 finding(s). Coverage: not assessed; placeholder until detection coverage is configured. Confidence: low:1. Review: needs_review:1.",
+      "comment": "Findings: CVE-2021-44228. KEV: 1 finding(s). Coverage: not assessed by this Workbench export. Confidence: low:1. Review: needs_review:1.",
       "enabled": true,
       "metadata": [
         {

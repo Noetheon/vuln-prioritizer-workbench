@@ -1,6 +1,9 @@
 # Community And Public Repository Setup
 
-This document is a maintainer checklist for running `vuln-prioritizer` as a public GitHub repository. It is intentionally scoped to a security-focused CLI and local Workbench for prioritizing known CVEs, not a general scanner, SaaS platform, or community program.
+This document is a maintainer checklist for running `vuln-prioritizer` as a
+public GitHub repository. It is intentionally scoped to a security-focused local
+Workbench for prioritizing known CVEs, not a general scanner, SaaS platform, or
+community program.
 
 Use it for two different jobs:
 
@@ -43,7 +46,7 @@ Before broader public launch, set a homepage only if there is a stable docs, rel
 Start with a small topic set that accurately describes the project:
 
 - `python`
-- `cli`
+- `workbench`
 - `security`
 - `cve`
 - `epss`
@@ -61,7 +64,9 @@ Optional topics when they reflect the current release surface:
 - `docker`
 - `sqlite`
 
-Avoid adding adjacent-but-misleading topics such as `scanner`, `siem`, `edr`, or `threat-intelligence-platform`. The project is a local-first prioritization CLI and Workbench for known CVEs, not a scanning engine or broad security platform.
+Avoid adding adjacent-but-misleading topics such as `scanner`, `siem`, `edr`, or
+`threat-intelligence-platform`. The project is a local-first prioritization
+Workbench for known CVEs, not a scanning engine or broad security platform.
 
 ## Recommended Label Taxonomy
 
@@ -80,7 +85,7 @@ These should exist before opening the repo to wider contribution:
 | `type:provider` | enrichment provider, cache, snapshot, or provider freshness work | Used by the provider issue template. |
 | `type:attack` | defensive ATT&CK/TTP mapping, provenance, Navigator, or coverage review | Used by the ATT&CK mapping review template. |
 | `type:docs` | the main work is docs, examples, or guidance | Good candidate for low-risk external contributions. |
-| `type:task` | engineering work without standalone user-facing value | Useful for roadmap and release-readiness tracking. |
+| `type:task` | engineering work without standalone user-facing value | Useful for roadmap, cleanup, and validation tracking. |
 | `type:security` | security hardening, threat modeling, or secure defaults | Public disclosures still use `SECURITY.md`, not public issue details. |
 | `maintenance` | dependency, CI, release, packaging, or cleanup work | Use for repo upkeep that is not user-facing behavior. |
 
@@ -104,8 +109,8 @@ Use `status:*` labels for tracker state:
 | `status:needs-tests` | implementation exists but test coverage is incomplete | Keep the issue open with a named test target. |
 | `status:needs-docs` | implementation exists but documentation is incomplete | Link the required docs path. |
 | `status:blocked` | work depends on an upstream change, external data issue, or another issue/PR | Remove it as soon as the blocker clears. |
-| `status:strict-dod` | explicit Definition of Done and evidence are required before closure | Use for public-production, release, and roadmap closeout work. |
-| `status:template-gap` | full-stack-template assumptions still need implementation or an approved decision | Use only where exact template alignment is still the issue. |
+| `status:strict-dod` | explicit Definition of Done and evidence are required before closure | Use for release, deployment, and roadmap closeout work. |
+| `status:architecture-decision` | implementation needs an explicit product or architecture decision | Use when scope is unclear rather than reviving template-alignment assumptions. |
 | `duplicate` | another open or closed issue already tracks the same work | Close with a link to the canonical issue. |
 
 ### Area Labels
@@ -159,7 +164,7 @@ Use the following conventions to keep the public tracker readable:
 
 For this repository, a `good first issue` should usually meet all of these conditions:
 
-- touches docs, examples, packaging, or a narrow CLI edge case
+- touches docs, examples, packaging, or a narrow Workbench edge case
 - does not require live-provider debugging against NVD, EPSS, or KEV
 - does not change scoring methodology without explicit maintainer direction
 - does not introduce heuristic or LLM-generated CVE-to-ATT&CK mapping behavior
@@ -204,7 +209,7 @@ This keeps normal contributions on the PR path without deadlocking a solo mainta
 
 Treat a PR as ready for review when it:
 
-- explains whether the change affects CLI, Workbench, Docker, docs, release, packaging, or GitHub Action behavior
+- explains whether the change affects Workbench, Docker, docs, release, packaging, or repository automation behavior
 - includes the local checks run, with `make check` for behavior changes and `make docs-check` or targeted command-help checks for docs-only changes
 - keeps README, roadmap, release operations, and public examples aligned with the currently supported install and Workbench quickstart paths
 - preserves the no-scanner and no-heuristic/AI CVE-to-ATT&CK scope boundaries

@@ -1,0 +1,238 @@
+{
+  "analysis_run": {
+    "error_message": null,
+    "errors": {},
+    "filename": "vpw-054-known-cves.txt",
+    "finished_at": "2026-04-29T11:45:00Z",
+    "id": "00000000-0000-4000-8000-000000000540",
+    "input_type": "cve-list",
+    "project_id": "00000000-0000-4000-8000-000000000054",
+    "started_at": "2026-04-29T11:00:00Z",
+    "status": "completed",
+    "summary": {
+      "counts_by_priority": {
+        "Critical": 1,
+        "High": 1
+      },
+      "finding_count": 2
+    }
+  },
+  "explanations": {
+    "CVE-2021-44228": {
+      "attack_techniques": [
+        "T1190"
+      ],
+      "decision_guidance": {
+        "decision_statement": "Decision Statement: patch after owner validation.",
+        "recommendation_label": "Patch"
+      }
+    },
+    "CVE-2024-3094": {
+      "decision_guidance": {
+        "decision_statement": "Decision Statement: patch CVE-2024-3094 on Payments API within the emergency SLA.",
+        "recommendation_label": "Patch"
+      }
+    }
+  },
+  "findings": [
+    {
+      "asset": {
+        "asset_key": "payments-api",
+        "business_service": "checkout",
+        "criticality": "critical",
+        "environment": "prod",
+        "exposure": "internet-facing",
+        "label": "Payments API",
+        "owner": "platform-team"
+      },
+      "attack_mapped": false,
+      "component": {
+        "label": "xz 5.6.0-r0",
+        "purl": "pkg:apk/alpine/xz@5.6.0-r0"
+      },
+      "created_at": "2026-04-29T11:00:00Z",
+      "cve_id": "CVE-2024-3094",
+      "cvss_base_score": 10.0,
+      "data_quality": {
+        "confidence": "high",
+        "flags": [],
+        "raw": {
+          "confidence": "high",
+          "flags": []
+        }
+      },
+      "dedup_key": "vpw050-xz",
+      "epss": 0.846,
+      "evidence": {
+        "source": "snapshot"
+      },
+      "explanation": {
+        "decision_guidance": {
+          "decision_statement": "Decision Statement: patch CVE-2024-3094 on Payments API within the emergency SLA.",
+          "recommendation_label": "Patch"
+        }
+      },
+      "first_seen_at": "2026-04-29T11:00:00Z",
+      "id": "00000000-0000-4000-8000-000000000501",
+      "in_kev": false,
+      "last_seen_at": "2026-04-29T11:30:00Z",
+      "occurrences": [
+        {
+          "analysis_run_id": "00000000-0000-4000-8000-000000000050",
+          "evidence": {
+            "line": 1
+          },
+          "id": "00000000-0000-4000-8000-000000000601",
+          "raw_reference": "CVE-2024-3094",
+          "source": "cve-list"
+        }
+      ],
+      "operational_rank": 1,
+      "priority": "Critical",
+      "priority_rank": 1,
+      "priority_raw": "critical",
+      "recommendation": {
+        "business_impact": "Checkout traffic depends on the affected service.",
+        "decision_guidance": {
+          "decision_statement": "Decision Statement: patch CVE-2024-3094 on Payments API within the emergency SLA.",
+          "recommendation_label": "Patch"
+        },
+        "decision_sla": "Emergency / 24h",
+        "decision_statement": "Decision Statement: patch CVE-2024-3094 on Payments API within the emergency SLA.",
+        "rationale": "Internet-facing production asset with critical score.",
+        "recommended_action": "Patch [open](javascript:alert(1)) now."
+      },
+      "risk_score": 100.0,
+      "status": "open",
+      "suppressed_by_vex": false,
+      "under_investigation": false,
+      "updated_at": "2026-04-29T11:30:00Z",
+      "vulnerability": {
+        "provider": {
+          "nvd": "locked"
+        },
+        "severity": "CRITICAL"
+      },
+      "waived": false
+    },
+    {
+      "asset": {
+        "asset_key": "ops-api",
+        "business_service": "operations",
+        "criticality": "high",
+        "environment": "prod",
+        "exposure": "internal",
+        "label": "Ops API",
+        "owner": "secops"
+      },
+      "attack_mapped": true,
+      "component": {
+        "label": "log4j-core 2.14.1",
+        "purl": "pkg:maven/org.apache.logging.log4j/log4j-core@2.14.1"
+      },
+      "created_at": "2026-04-29T11:00:00Z",
+      "cve_id": "CVE-2021-44228",
+      "cvss_base_score": 10.0,
+      "data_quality": {
+        "confidence": "medium",
+        "flags": [
+          "missing_asset_owner - Owner is not set"
+        ],
+        "raw": {
+          "confidence": "medium",
+          "flags": [
+            {
+              "code": "missing_asset_owner",
+              "message": "Owner is not set"
+            }
+          ]
+        }
+      },
+      "dedup_key": "vpw050-log4shell",
+      "epss": 0.944,
+      "evidence": {
+        "source": "snapshot"
+      },
+      "explanation": {
+        "attack_techniques": [
+          "T1190"
+        ],
+        "decision_guidance": {
+          "decision_statement": "Decision Statement: patch after owner validation.",
+          "recommendation_label": "Patch"
+        }
+      },
+      "first_seen_at": "2026-04-29T11:00:00Z",
+      "id": "00000000-0000-4000-8000-000000000502",
+      "in_kev": true,
+      "last_seen_at": "2026-04-29T11:30:00Z",
+      "occurrences": [
+        {
+          "analysis_run_id": "00000000-0000-4000-8000-000000000050",
+          "evidence": {
+            "line": 2
+          },
+          "id": "00000000-0000-4000-8000-000000000602",
+          "raw_reference": "CVE-2021-44228",
+          "source": "cve-list"
+        }
+      ],
+      "operational_rank": 2,
+      "priority": "High",
+      "priority_rank": 2,
+      "priority_raw": "high",
+      "recommendation": {
+        "business_impact": "Operational tooling exposure requires management visibility.",
+        "decision_guidance": {
+          "decision_statement": "Decision Statement: patch after owner validation.",
+          "recommendation_label": "Patch"
+        },
+        "decision_sla": "Emergency / 24h",
+        "decision_statement": "Decision Statement: patch after owner validation.",
+        "rationale": "CISA KEV listing and vulnerable component evidence.",
+        "recommended_action": "Patch via vendor upgrade."
+      },
+      "risk_score": 94.2,
+      "status": "in_review",
+      "suppressed_by_vex": false,
+      "under_investigation": false,
+      "updated_at": "2026-04-29T11:30:00Z",
+      "vulnerability": {
+        "provider": {
+          "kev": true
+        },
+        "severity": "CRITICAL"
+      },
+      "waived": false
+    }
+  ],
+  "generated_at": "2026-04-29T12:00:00Z",
+  "project": {
+    "created_at": "2026-04-29T10:00:00Z",
+    "description": "Committed demo artifacts for VPW-054 report snapshot coverage.",
+    "id": "00000000-0000-4000-8000-000000000054",
+    "name": "VPW-054 Demo Reports",
+    "updated_at": "2026-04-29T10:30:00Z"
+  },
+  "provider_snapshot": {
+    "content_hash": "sha256:vpw050-snapshot",
+    "created_at": "2026-04-28T10:20:00Z",
+    "epss_date": "2026-04-28",
+    "id": "00000000-0000-4000-8000-000000000650",
+    "kev_catalog_version": "2026-04-28",
+    "nvd_last_sync": "2026-04-28T10:15:00Z",
+    "source_hashes": {
+      "provider_snapshot": "sha256:vpw050-snapshot"
+    },
+    "source_metadata": {
+      "locked_provider_data": true,
+      "selected_sources": [
+        "nvd",
+        "epss",
+        "kev"
+      ]
+    }
+  },
+  "schema": "analysis-result.v1",
+  "schema_version": "1.0.0"
+}

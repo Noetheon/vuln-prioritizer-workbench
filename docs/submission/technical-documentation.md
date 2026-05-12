@@ -4,8 +4,8 @@
 
 VPW consists of a FastAPI backend, a React/Vite frontend with a local route
 adapter, and a generated API client. The active Workbench is local-first and
-self-hosted. The CLI and domain implementation remain available for automation,
-compatible reports, and maintainer workflows.
+self-hosted. The domain implementation remains available for automation,
+compatible reports, and maintainer workflows through the Workbench backend.
 
 | Area | Implementation |
 | --- | --- |
@@ -26,14 +26,14 @@ Playwright backend startup, and OpenAPI client generation use `app.main:app` or
 `frontend/src/client/**` through manual frontend integration code such as
 `frontend/src/api-client.ts`.
 
-`backend/src/vuln_prioritizer/**` remains available for CLI, domain logic, and
+`backend/src/vuln_prioritizer/**` remains available for domain logic and
 reports. Neutral modules such as input normalization, providers, scoring,
-reporting, redaction, and token hashing may be shared.
+reporting, and redaction may be shared.
 
 The old second Workbench runtime with its own FastAPI stack, Workbench database
 package, scheduler, and `web`/`db` CLI entrypoints has been removed. The active
 repository runtime is now unambiguously `backend/app`. New shared logic belongs
-in neutral CLI/domain modules, not runtime-specific packages.
+in neutral domain modules, not runtime-specific packages.
 
 ## Frontend Structure
 

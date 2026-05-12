@@ -21,9 +21,9 @@ The template backend owns the repository layer under `backend/app/repositories/`
 - `app.repositories.runs.RunRepository`
 - `app.repositories.__init__` as the public import surface
 
-Existing User/Auth behavior remains in the template authentication path. VPW-010
-does not introduce `UserRepository`, `AuthRepository`, password-management
-services, or a replacement authentication flow.
+DB-backed User/Auth behavior is not part of the active local Workbench path.
+VPW-010 does not introduce `UserRepository`, `AuthRepository`,
+password-management services, or a replacement authentication flow.
 
 `backend/app/services/` is intentionally not introduced yet. That package should
 be added later only when a real use-case orchestration layer needs to coordinate
@@ -55,9 +55,9 @@ boundaries. In the current project route, the route creates through
 
 ### `ProjectRepository`
 
-- Create project shells for an owner.
-- List projects visible to the current user.
-- Resolve project visibility without duplicating select/count logic in routes.
+- Create project shells.
+- List local projects.
+- Resolve project existence without duplicating select/count logic in routes.
 
 ### `AssetRepository`
 
@@ -80,9 +80,8 @@ boundaries. In the current project route, the route creates through
 ## API Route Contract
 
 Template API routes should call repositories or higher-level services for
-domain persistence. User/Auth compatibility is preserved; the existing auth
-dependency and configured superuser bootstrap remain separate from the Workbench
-domain repositories.
+domain persistence. User/Auth compatibility is no longer an active Workbench
+runtime concern; routes use the local single-user dependency boundary.
 
 The initial route conversion is limited to `app.api.routes.projects`, because it
 is the only template-stack Workbench domain route currently present. Later
@@ -91,11 +90,11 @@ service layer instead of embedding SQLModel query logic directly.
 
 ## Tests
 
-VPW-010 is covered by `backend/tests/api/test_template_service_layer.py`:
+VPW-010 is covered by `backend/tests/api/test_workbench_service_layer.py`:
 
 - project routes delegate persistence/query construction to `ProjectRepository`
 - repositories flush but leave commit/rollback to the caller
-- project visibility is scoped by user/superuser status
+- project visibility is local and existence-based
 - asset, finding, provider snapshot, run, and occurrence repositories can
   persist a connected domain graph
 - User/Auth CRUD is not moved into the Workbench repositories

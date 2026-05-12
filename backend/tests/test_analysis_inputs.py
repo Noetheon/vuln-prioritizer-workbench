@@ -12,15 +12,15 @@ from vuln_prioritizer.services.analysis_models import AnalysisInputError
 @pytest.mark.parametrize(
     ("wrapper_name", "dependency_name", "args"),
     [
-        ("load_asset_records_or_exit", "load_asset_context_file", (Path("assets.json"),)),
-        ("load_vex_statements_or_exit", "load_vex_files", ([Path("vex.json")],)),
-        ("load_waiver_rules_or_exit", "load_waiver_rules", (Path("waivers.yml"),)),
+        ("load_asset_records", "load_asset_context_file", (Path("assets.json"),)),
+        ("load_vex_statements", "load_vex_files", ([Path("vex.json")],)),
+        ("load_analysis_waiver_rules", "load_waiver_rules", (Path("waivers.yml"),)),
         (
-            "load_context_profile_or_exit",
+            "load_analysis_context_profile",
             "load_context_profile",
             ("enterprise", Path("policy.yml")),
         ),
-        ("load_provider_snapshot_or_exit", "load_provider_snapshot", (Path("snapshot.json"),)),
+        ("load_analysis_provider_snapshot", "load_provider_snapshot", (Path("snapshot.json"),)),
     ],
 )
 def test_analysis_input_wrappers_translate_value_errors(
@@ -38,7 +38,7 @@ def test_analysis_input_wrappers_translate_value_errors(
         getattr(analysis_inputs, wrapper_name)(*args)
 
 
-def test_load_provider_snapshot_or_exit_skips_missing_path(
+def test_load_analysis_provider_snapshot_skips_missing_path(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     def fail(_path: Path) -> ProviderSnapshotReport:
@@ -46,4 +46,4 @@ def test_load_provider_snapshot_or_exit_skips_missing_path(
 
     monkeypatch.setattr(analysis_inputs, "load_provider_snapshot", fail)
 
-    assert analysis_inputs.load_provider_snapshot_or_exit(None) is None
+    assert analysis_inputs.load_analysis_provider_snapshot(None) is None

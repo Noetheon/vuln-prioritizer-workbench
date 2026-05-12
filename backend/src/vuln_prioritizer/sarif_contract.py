@@ -1,4 +1,4 @@
-"""Shared SARIF contract helpers for CLI and Workbench reports."""
+"""Shared SARIF contract helpers for analysis and Workbench reports."""
 
 from __future__ import annotations
 
@@ -16,7 +16,7 @@ def sarif_rule_id(cve_id: str) -> str:
 
 
 def sarif_priority_label(value: str) -> str:
-    """Normalize priority strings from API enums, CLI models, and JSON payloads."""
+    """Normalize priority strings from API enums, domain models, and JSON payloads."""
     normalized = value.split(".", maxsplit=1)[-1].strip().lower()
     return {
         "critical": "Critical",
@@ -102,7 +102,7 @@ def sarif_result_location(
     logical_location: str | None = None,
     logical_kind: str = "component",
 ) -> dict[str, Any]:
-    """Return the canonical SARIF location block for CLI and Workbench reports."""
+    """Return the canonical SARIF location block for Workbench reports."""
     artifact_location: dict[str, Any] = {"uri": artifact_uri}
     if uri_base_id is not None:
         artifact_location["uriBaseId"] = uri_base_id

@@ -22,11 +22,11 @@ Security teams usually face more known vulnerabilities than they can remediate i
 
 ## Output
 
-The tool now provides:
+The Workbench now provides:
 
-- prioritized terminal output
+- prioritized finding views
 - Markdown and JSON reports
 - `CVSS-only` vs enriched comparison output
-- mapped-CVE ATT&CK context in `explain`
+- mapped-CVE ATT&CK context in finding detail and reports
 - ATT&CK coverage summaries
 - ATT&CK Navigator layer export

@@ -7,17 +7,14 @@ when Trivy can emit one JSON report for the target.
 See `examples/trivy-demo.json` for a checked-in sample adapted from
 `data/input_fixtures/trivy_report.json`.
 
-## Example
+## Workbench Import
 
-```bash
-vuln-prioritizer analyze \
-  --input examples/trivy-demo.json \
-  --input-format trivy-json \
-  --format markdown
-```
+Import the file through the Workbench with `input_type=trivy-json`.
+Automation can use `POST /api/v1/projects/{project_id}/imports` with multipart
+form fields `input_type=trivy-json` and `file=@trivy-results.json`.
 
-Auto-detection also selects `trivy-json` for JSON documents with a top-level
-`Results` array, but CI jobs should prefer `--input-format trivy-json` for
+The importer recognizes JSON documents with a top-level `Results` array, but
+Workbench imports should still pass the explicit `trivy-json` type for
 reproducibility.
 
 ## Supported Shape
@@ -84,8 +81,7 @@ for resolvable CVE IDs.
 The importer performs local parsing and normalization only. It does not fetch
 NVD, EPSS, KEV, ATT&CK, GHSA, OSV, or vendor advisory data during import.
 
-- A non-JSON file is rejected unless the caller explicitly selects
-  `--input-format trivy-json`.
+- A non-JSON file is rejected.
 - A JSON document without a top-level object is rejected.
 - Missing or empty `Results[]` creates no occurrences.
 - Missing or empty `Vulnerabilities[]` on a result creates no occurrences for

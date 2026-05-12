@@ -41,11 +41,11 @@ from vuln_prioritizer.services.analysis_filters import (
     normalize_priority_filters,
 )
 from vuln_prioritizer.services.analysis_inputs import (
-    load_asset_records_or_exit,
-    load_context_profile_or_exit,
-    load_provider_snapshot_or_exit,
-    load_vex_statements_or_exit,
-    load_waiver_rules_or_exit,
+    load_analysis_context_profile,
+    load_analysis_provider_snapshot,
+    load_analysis_waiver_rules,
+    load_asset_records,
+    load_vex_statements,
 )
 from vuln_prioritizer.services.analysis_models import (
     AnalysisInputError,
@@ -94,7 +94,7 @@ def validate_requested_attack_mode(
     if attack_mapping_file is not None or offline_attack_file is not None:
         return
     raise AnalysisInputError(
-        "ATT&CK mode requires --attack-mapping-file or legacy --offline-attack-file."
+        "ATT&CK mode requires a mapping file for the selected Workbench ATT&CK source."
     )
 
 
@@ -250,11 +250,11 @@ def prepare_analysis(request: AnalysisRequest) -> tuple[list[PrioritizedFinding]
         )
     )
     try:
-        asset_records = load_asset_records_or_exit(request.asset_context)
-        vex_statements = load_vex_statements_or_exit(request.vex_files)
+        asset_records = load_asset_records(request.asset_context)
+        vex_statements = load_vex_statements(request.vex_files)
         if request.locked_provider_data and request.provider_snapshot_file is None:
-            raise AnalysisInputError("--locked-provider-data requires --provider-snapshot-file.")
-        provider_snapshot = load_provider_snapshot_or_exit(request.provider_snapshot_file)
+            raise AnalysisInputError("Locked provider data requires a provider snapshot file.")
+        provider_snapshot = load_analysis_provider_snapshot(request.provider_snapshot_file)
         parsed_input = InputLoader().load_many(
             request.input_specs,
             max_cves=request.max_cves,
@@ -267,8 +267,8 @@ def prepare_analysis(request: AnalysisRequest) -> tuple[list[PrioritizedFinding]
         raise AnalysisInputError(str(exc)) from exc
 
     cve_ids = parsed_input.unique_cves
-    context_profile = load_context_profile_or_exit(request.policy_profile, request.policy_file)
-    waiver_rules = load_waiver_rules_or_exit(request.waiver_file)
+    context_profile = load_analysis_context_profile(request.policy_profile, request.policy_file)
+    waiver_rules = load_analysis_waiver_rules(request.waiver_file)
     all_findings, _, enrichment = build_findings(
         cve_ids,
         policy=request.policy,
@@ -449,10 +449,10 @@ def _provider_snapshot_metadata_path(path: Path | None, output_path: Path | None
 
 
 def prepare_explain(request: ExplainRequest) -> ExplainResult:
-    context_profile = load_context_profile_or_exit(request.policy_profile, request.policy_file)
+    context_profile = load_analysis_context_profile(request.policy_profile, request.policy_file)
     if request.locked_provider_data and request.provider_snapshot_file is None:
-        raise AnalysisInputError("--locked-provider-data requires --provider-snapshot-file.")
-    provider_snapshot = load_provider_snapshot_or_exit(request.provider_snapshot_file)
+        raise AnalysisInputError("Locked provider data requires a provider snapshot file.")
+    provider_snapshot = load_analysis_provider_snapshot(request.provider_snapshot_file)
     attack_enabled, resolved_attack_source, resolved_mapping_file, resolved_metadata_file = (
         resolve_attack_options(
             no_attack=request.no_attack,
@@ -462,9 +462,9 @@ def prepare_explain(request: ExplainRequest) -> ExplainResult:
             offline_attack_file=request.offline_attack_file,
         )
     )
-    asset_records = load_asset_records_or_exit(request.asset_context)
-    vex_statements = load_vex_statements_or_exit(request.vex_files)
-    waiver_rules = load_waiver_rules_or_exit(request.waiver_file)
+    asset_records = load_asset_records(request.asset_context)
+    vex_statements = load_vex_statements(request.vex_files)
+    waiver_rules = load_analysis_waiver_rules(request.waiver_file)
     parsed_input = build_inline_input(
         request.cve_id,
         target_kind=request.target_kind,

@@ -1,6 +1,6 @@
 {
   "name": "vuln-prioritizer-workbench",
-  "description": "CLI and self-hosted Workbench for prioritizing known CVEs from existing evidence.",
+  "description": "Local-first Workbench for prioritizing known CVEs from existing evidence.",
   "private": true,
   "workspaces": [
     "frontend"

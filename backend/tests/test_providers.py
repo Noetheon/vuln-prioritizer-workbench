@@ -1594,7 +1594,7 @@ def test_attack_provider_accepts_alias_columns_and_reports_invalid_rows(tmp_path
     assert results["CVE-2021-44228"].attack_techniques == ["T1059"]
     assert results["CVE-2021-44228"].attack_tactics == ["Execution"]
     assert results["CVE-2021-44228"].attack_note == "Override row"
-    assert any("legacy compatibility mode" in warning for warning in warnings)
+    assert any("basic local CSV mapping format" in warning for warning in warnings)
     assert any("invalid CVE identifier" in warning for warning in warnings)
     assert any("overrides duplicate row" in warning for warning in warnings)
 
@@ -1662,14 +1662,14 @@ def test_attack_provider_source_inference_and_empty_mapping_edges(
 
     monkeypatch.setattr(
         provider,
-        "_load_legacy_csv",
+        "_load_local_csv",
         lambda _cve_ids, _mapping_file: (
             {"CVE-2024-0001": AttackData(cve_id="CVE-2024-0001", mapped=True)},
             [],
         ),
     )
     provider.enrichment_service = SimpleNamespace(
-        enrich_legacy_csv=lambda _cve_ids, *, attack_data: attack_data
+        enrich_local_csv=lambda _cve_ids, *, attack_data: attack_data
     )
     inferred_csv, inferred_csv_metadata, inferred_csv_warnings = provider.fetch_many(
         ["CVE-2024-0001"],
@@ -1680,7 +1680,7 @@ def test_attack_provider_source_inference_and_empty_mapping_edges(
     )
     assert inferred_csv["CVE-2024-0001"].mapped is True
     assert inferred_csv_metadata["source"] == "local-csv"
-    assert any("legacy compatibility mode" in warning for warning in inferred_csv_warnings)
+    assert any("basic local CSV mapping format" in warning for warning in inferred_csv_warnings)
     assert any("metadata is ignored" in warning for warning in inferred_csv_warnings)
 
     unsupported, unsupported_metadata, unsupported_warnings = provider.fetch_many(

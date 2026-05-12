@@ -20,7 +20,7 @@ There are two parser-facing contracts:
 
 - Workbench upload importers implement
   `app.importers.contracts.Importer`.
-- CLI/input-loader extensions use
+- Domain input-loader extensions use
   `vuln_prioritizer.inputs.sdk.InputParserDefinition`.
 
 Workbench importers must expose:
@@ -30,7 +30,7 @@ Workbench importers must expose:
 - `NormalizedOccurrence` output with CVE, component, version, asset reference,
   source, optional fix version, and sanitized raw evidence
 
-CLI parser definitions must declare:
+Domain parser definitions must declare:
 
 - `name`: stable parser name
 - `parser`: callable that accepts a local `Path` and returns `ParsedInput`

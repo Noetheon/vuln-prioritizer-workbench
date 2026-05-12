@@ -328,7 +328,7 @@ export const ApiErrorEnvelopeSchema = {
                     type: 'null'
                 }
             ],
-            description: 'Legacy-compatible FastAPI detail field.'
+            description: 'FastAPI-compatible detail field for standard error clients.'
         },
         details: {
             additionalProperties: true,
@@ -351,273 +351,6 @@ export const ApiErrorEnvelopeSchema = {
         'detail'
     ],
     title: 'ApiErrorEnvelope',
-    type: 'object'
-} as const;
-
-export const ApiTokenCreateSchema = {
-    description: 'Request payload for creating a scoped service token.',
-    properties: {
-        expires_at: {
-            anyOf: [
-                {
-                    format: 'date-time',
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Expires At'
-        },
-        name: {
-            maxLength: 200,
-            minLength: 1,
-            title: 'Name',
-            type: 'string'
-        },
-        project_id: {
-            anyOf: [
-                {
-                    format: 'uuid',
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Project Id'
-        },
-        scopes: {
-            items: {
-                enum: [
-                    'read',
-                    'write',
-                    'import',
-                    'report',
-                    'admin'
-                ],
-                type: 'string'
-            },
-            title: 'Scopes',
-            type: 'array'
-        }
-    },
-    required: [
-        'name'
-    ],
-    title: 'ApiTokenCreate',
-    type: 'object'
-} as const;
-
-export const ApiTokenCreatePublicSchema = {
-    description: 'Creation response that shows the cleartext token exactly once.',
-    properties: {
-        active: {
-            title: 'Active',
-            type: 'boolean'
-        },
-        created_at: {
-            format: 'date-time',
-            title: 'Created At',
-            type: 'string'
-        },
-        expires_at: {
-            format: 'date-time',
-            title: 'Expires At',
-            type: 'string'
-        },
-        id: {
-            format: 'uuid',
-            title: 'Id',
-            type: 'string'
-        },
-        last_used_at: {
-            anyOf: [
-                {
-                    format: 'date-time',
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Last Used At'
-        },
-        name: {
-            title: 'Name',
-            type: 'string'
-        },
-        project_id: {
-            anyOf: [
-                {
-                    format: 'uuid',
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Project Id'
-        },
-        revoked_at: {
-            anyOf: [
-                {
-                    format: 'date-time',
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Revoked At'
-        },
-        scopes: {
-            items: {
-                enum: [
-                    'read',
-                    'write',
-                    'import',
-                    'report',
-                    'admin'
-                ],
-                type: 'string'
-            },
-            title: 'Scopes',
-            type: 'array'
-        },
-        token: {
-            title: 'Token',
-            type: 'string'
-        }
-    },
-    required: [
-        'id',
-        'name',
-        'project_id',
-        'scopes',
-        'active',
-        'created_at',
-        'last_used_at',
-        'revoked_at',
-        'expires_at',
-        'token'
-    ],
-    title: 'ApiTokenCreatePublic',
-    type: 'object'
-} as const;
-
-export const ApiTokenPublicSchema = {
-    description: 'API token metadata returned after creation, listing, and revocation.',
-    properties: {
-        active: {
-            title: 'Active',
-            type: 'boolean'
-        },
-        created_at: {
-            format: 'date-time',
-            title: 'Created At',
-            type: 'string'
-        },
-        expires_at: {
-            format: 'date-time',
-            title: 'Expires At',
-            type: 'string'
-        },
-        id: {
-            format: 'uuid',
-            title: 'Id',
-            type: 'string'
-        },
-        last_used_at: {
-            anyOf: [
-                {
-                    format: 'date-time',
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Last Used At'
-        },
-        name: {
-            title: 'Name',
-            type: 'string'
-        },
-        project_id: {
-            anyOf: [
-                {
-                    format: 'uuid',
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Project Id'
-        },
-        revoked_at: {
-            anyOf: [
-                {
-                    format: 'date-time',
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Revoked At'
-        },
-        scopes: {
-            items: {
-                enum: [
-                    'read',
-                    'write',
-                    'import',
-                    'report',
-                    'admin'
-                ],
-                type: 'string'
-            },
-            title: 'Scopes',
-            type: 'array'
-        }
-    },
-    required: [
-        'id',
-        'name',
-        'project_id',
-        'scopes',
-        'active',
-        'created_at',
-        'last_used_at',
-        'revoked_at',
-        'expires_at'
-    ],
-    title: 'ApiTokenPublic',
-    type: 'object'
-} as const;
-
-export const ApiTokensPublicSchema = {
-    description: 'Collection response for token metadata.',
-    properties: {
-        count: {
-            title: 'Count',
-            type: 'integer'
-        },
-        data: {
-            items: {
-                $ref: '#/components/schemas/ApiTokenPublic'
-            },
-            title: 'Data',
-            type: 'array'
-        }
-    },
-    required: [
-        'data',
-        'count'
-    ],
-    title: 'ApiTokensPublic',
     type: 'object'
 } as const;
 
@@ -1080,30 +813,6 @@ export const AuditEventPublicSchema = {
             title: 'Action',
             type: 'string'
         },
-        actor_user_id: {
-            anyOf: [
-                {
-                    format: 'uuid',
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Actor User Id'
-        },
-        api_token_id: {
-            anyOf: [
-                {
-                    format: 'uuid',
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Api Token Id'
-        },
         created_at: {
             format: 'date-time',
             title: 'Created At',
@@ -1157,9 +866,7 @@ export const AuditEventPublicSchema = {
         'resource_type',
         'resource_id',
         'status',
-        'actor_user_id',
         'project_id',
-        'api_token_id',
         'detail',
         'created_at'
     ],
@@ -1187,94 +894,6 @@ export const AuditEventsPublicSchema = {
         'count'
     ],
     title: 'AuditEventsPublic',
-    type: 'object'
-} as const;
-
-export const AuthSessionPublicSchema = {
-    description: 'Session metadata returned by administrative endpoints.',
-    properties: {
-        active: {
-            title: 'Active',
-            type: 'boolean'
-        },
-        created_at: {
-            format: 'date-time',
-            title: 'Created At',
-            type: 'string'
-        },
-        expires_at: {
-            format: 'date-time',
-            title: 'Expires At',
-            type: 'string'
-        },
-        id: {
-            format: 'uuid',
-            title: 'Id',
-            type: 'string'
-        },
-        last_seen_at: {
-            anyOf: [
-                {
-                    format: 'date-time',
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Last Seen At'
-        },
-        revoked_at: {
-            anyOf: [
-                {
-                    format: 'date-time',
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Revoked At'
-        },
-        user_id: {
-            format: 'uuid',
-            title: 'User Id',
-            type: 'string'
-        }
-    },
-    required: [
-        'id',
-        'user_id',
-        'active',
-        'created_at',
-        'expires_at',
-        'last_seen_at',
-        'revoked_at'
-    ],
-    title: 'AuthSessionPublic',
-    type: 'object'
-} as const;
-
-export const AuthSessionsPublicSchema = {
-    description: 'Collection response for session metadata.',
-    properties: {
-        count: {
-            title: 'Count',
-            type: 'integer'
-        },
-        data: {
-            items: {
-                $ref: '#/components/schemas/AuthSessionPublic'
-            },
-            title: 'Data',
-            type: 'array'
-        }
-    },
-    required: [
-        'data',
-        'count'
-    ],
-    title: 'AuthSessionsPublic',
     type: 'object'
 } as const;
 
@@ -1381,66 +1000,6 @@ export const Body_imports_import_project_uploadSchema = {
         'file'
     ],
     title: 'Body_imports-import_project_upload',
-    type: 'object'
-} as const;
-
-export const Body_login_login_access_tokenSchema = {
-    properties: {
-        client_id: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Client Id'
-        },
-        client_secret: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            format: 'password',
-            title: 'Client Secret'
-        },
-        grant_type: {
-            anyOf: [
-                {
-                    pattern: '^password$',
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Grant Type'
-        },
-        password: {
-            format: 'password',
-            title: 'Password',
-            type: 'string'
-        },
-        scope: {
-            default: '',
-            title: 'Scope',
-            type: 'string'
-        },
-        username: {
-            title: 'Username',
-            type: 'string'
-        }
-    },
-    required: [
-        'username',
-        'password'
-    ],
-    title: 'Body_login-login_access_token',
     type: 'object'
 } as const;
 
@@ -4224,11 +3783,6 @@ export const ProjectPublicSchema = {
             title: 'Name',
             type: 'string'
         },
-        owner_id: {
-            format: 'uuid',
-            title: 'Owner Id',
-            type: 'string'
-        },
         updated_at: {
             format: 'date-time',
             title: 'Updated At',
@@ -4238,7 +3792,6 @@ export const ProjectPublicSchema = {
     required: [
         'name',
         'id',
-        'owner_id',
         'created_at',
         'updated_at'
     ],
@@ -4917,127 +4470,6 @@ export const ReportsPublicSchema = {
     type: 'object'
 } as const;
 
-export const TokenSchema = {
-    description: 'OAuth2 bearer token response.',
-    properties: {
-        access_token: {
-            title: 'Access Token',
-            type: 'string'
-        },
-        csrf_token: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Csrf Token'
-        },
-        token_type: {
-            default: 'bearer',
-            title: 'Token Type',
-            type: 'string'
-        }
-    },
-    required: [
-        'access_token'
-    ],
-    title: 'Token',
-    type: 'object'
-} as const;
-
-export const UserPasswordChangeSchema = {
-    description: 'Payload for rotating the current user\'s password.',
-    properties: {
-        current_password: {
-            maxLength: 255,
-            minLength: 1,
-            title: 'Current Password',
-            type: 'string'
-        },
-        new_password: {
-            maxLength: 255,
-            minLength: 1,
-            title: 'New Password',
-            type: 'string'
-        }
-    },
-    required: [
-        'current_password',
-        'new_password'
-    ],
-    title: 'UserPasswordChange',
-    type: 'object'
-} as const;
-
-export const UserPasswordResetSchema = {
-    description: 'Admin payload for resetting a persisted user password.',
-    properties: {
-        new_password: {
-            maxLength: 255,
-            minLength: 1,
-            title: 'New Password',
-            type: 'string'
-        }
-    },
-    required: [
-        'new_password'
-    ],
-    title: 'UserPasswordReset',
-    type: 'object'
-} as const;
-
-export const UserPublicSchema = {
-    description: 'Public user shape exposed by Workbench auth routes.',
-    properties: {
-        created_at: {
-            format: 'date-time',
-            title: 'Created At',
-            type: 'string'
-        },
-        email: {
-            maxLength: 255,
-            title: 'Email',
-            type: 'string'
-        },
-        full_name: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Full Name'
-        },
-        id: {
-            format: 'uuid',
-            title: 'Id',
-            type: 'string'
-        },
-        is_active: {
-            default: true,
-            title: 'Is Active',
-            type: 'boolean'
-        },
-        is_superuser: {
-            default: false,
-            title: 'Is Superuser',
-            type: 'boolean'
-        }
-    },
-    required: [
-        'email',
-        'id',
-        'created_at'
-    ],
-    title: 'UserPublic',
-    type: 'object'
-} as const;
-
 export const ValidationErrorSchema = {
     properties: {
         ctx: {
@@ -5551,7 +4983,7 @@ export const WaiversPublicSchema = {
 } as const;
 
 export const WorkbenchHealthSchema = {
-    description: 'Minimal unauthenticated health response.',
+    description: 'Minimal local health response.',
     properties: {
         status: {
             title: 'Status',

@@ -1,7 +1,7 @@
 [project]
 name = "vuln-prioritizer-workbench-workspace"
 version = "1.1.0"
-description = "Workspace metadata for the Vuln Prioritizer Workbench migration."
+description = "Workspace metadata for the local-first Vuln Prioritizer Workbench."
 requires-python = ">=3.11"
 dependencies = []
 
@@ -14,7 +14,7 @@ testpaths = ["backend/tests"]
 pythonpath = ["backend", "backend/src"]
 markers = [
   "browser_e2e: real browser Workbench tests driven by Playwright.",
-  "e2e: end-to-end CLI entrypoint tests that may spawn subprocesses.",
+  "e2e: end-to-end Workbench tests that may spawn subprocesses.",
   "live_network: allow real network access through requests in this test.",
   "performance: optional performance and scale smoke tests; enable explicitly.",
 ]

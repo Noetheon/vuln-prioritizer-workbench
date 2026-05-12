@@ -10,7 +10,7 @@ reproducibly.
 - [ ] Frontend unit tests pass: `cd frontend && npm run test:unit`
 - [ ] UI smoke passes: `cd frontend && npm run test -- tests/ui-smoke.spec.ts`
 - [ ] Backend report contracts pass:
-      `python3 -m pytest -q backend/tests/api/test_template_reports_api.py --no-cov`
+      `python3 -m pytest -q backend/tests/api/test_workbench_reports_api.py --no-cov`
 - [ ] Backend smoke subset passes.
 - [ ] Docs hygiene passes:
       `python3 -m pytest -q backend/tests/test_docs_hygiene.py --no-cov`

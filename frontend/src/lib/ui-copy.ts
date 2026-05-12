@@ -1,6 +1,6 @@
 export function formatLabel(value: string | null | undefined) {
   if (!value) {
-    return "N.A."
+    return "Not recorded"
   }
   return value
     .replaceAll("_", " ")
@@ -9,5 +9,5 @@ export function formatLabel(value: string | null | undefined) {
 }
 
 export function optionalText(value: string | null | undefined) {
-  return value?.trim() ? value : "N.A."
+  return value?.trim() ? value : "Not supplied"
 }

@@ -257,7 +257,7 @@ export function RunDetail({
           },
           {
             label: "Provider snapshot",
-            value: selectedRunSummary.provider_snapshot_id ?? "N.A.",
+            value: selectedRunSummary.provider_snapshot_id ?? "Not recorded",
           },
         ]}
       />

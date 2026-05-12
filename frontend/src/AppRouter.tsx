@@ -1,5 +1,5 @@
-import { lazy, useEffect } from "react"
-import { RouteParamsProvider, useLocation, useNavigate } from "./lib/router"
+import { lazy } from "react"
+import { RouteParamsProvider, useLocation } from "./lib/router"
 import type { WorkbenchPath } from "./lib/workbench-navigation"
 import { WorkbenchShell } from "./workbench/WorkbenchShell"
 
@@ -84,19 +84,8 @@ function NotFoundRoute() {
   )
 }
 
-function Redirect({ to }: { to: string }) {
-  const navigate = useNavigate()
-  useEffect(() => {
-    void navigate({ replace: true, search: {}, to })
-  }, [navigate, to])
-  return null
-}
-
 export function AppRouter() {
   const location = useLocation()
-  if (location.pathname === "/login") {
-    return <Redirect to="/" />
-  }
   const match = routeMatch(location.pathname)
 
   return (

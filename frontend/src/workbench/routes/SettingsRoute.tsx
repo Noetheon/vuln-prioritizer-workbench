@@ -11,7 +11,6 @@ function SettingsRouteContent() {
   const location = useLocation()
   const navigate = useNavigate()
   const {
-    currentUser,
     providerStatus,
     providerStatusError,
     providerStatusLoading,
@@ -46,7 +45,6 @@ function SettingsRouteContent() {
     <section className="w-full">
       <SettingsRouteContainer
         activeSettingsTab={activeSettingsTab}
-        currentUser={currentUser}
         onSettingsTabChange={updateSettingsTab}
         providerStatus={providerStatus}
         providerStatusError={providerStatusError}

@@ -25,7 +25,7 @@ export function attackTechniqueRows(context: FindingAttackContext | null) {
 }
 
 export function attackTacticsLabel(values: string[] | null | undefined) {
-  return values && values.length > 0 ? values.join(", ") : "N.A."
+  return values && values.length > 0 ? values.join(", ") : "Not mapped"
 }
 
 export function attackConfidenceLabel(value: string | null | undefined) {

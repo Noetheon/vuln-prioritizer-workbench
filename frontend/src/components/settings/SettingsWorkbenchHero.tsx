@@ -10,16 +10,14 @@ import {
   evidenceReadiness,
   providerHealth,
   type SettingsWorkbenchProps,
-  userLabel,
 } from "./settings-workbench-model"
 
 type SettingsHeroProps = Pick<
   SettingsWorkbenchProps,
-  "currentUser" | "providerStatus" | "providerStatusError" | "statusError"
+  "providerStatus" | "providerStatusError" | "statusError"
 >
 
 export function SettingsHero({
-  currentUser,
   providerStatus,
   providerStatusError,
   statusError,
@@ -52,8 +50,8 @@ export function SettingsHero({
       <div className="mt-3 flex min-w-0 flex-wrap gap-2">
         <SettingsHeroFact
           label="Workspace"
-          tone={currentUser ? "success" : "warning"}
-          value={userLabel(currentUser)}
+          tone="success"
+          value="Local workspace"
         />
         <SettingsHeroFact
           label="Access"

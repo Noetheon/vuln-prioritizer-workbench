@@ -6,9 +6,9 @@ import uuid
 
 from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
 
-from app.api.deps import ScopedImportUser, SessionDep
+from app.api.deps import LocalActor, SessionDep
 from app.api.routes.import_uploads import build_project_import_upload_request
-from app.api.routes.workbench_access import require_visible_project
+from app.api.routes.workbench_access import require_project
 from app.core.app_state import workbench_settings
 from app.models import AnalysisRun, AnalysisRunPublic
 from app.services.import_errors import ImportServiceError
@@ -22,7 +22,7 @@ async def import_project_upload(
     project_id: uuid.UUID,
     request: Request,
     session: SessionDep,
-    current_user: ScopedImportUser,
+    local_actor: LocalActor,
     input_type: str = Form(...),
     file: UploadFile = File(...),
     asset_context_file: UploadFile | None = File(None),
@@ -34,7 +34,7 @@ async def import_project_upload(
     attack_technique_metadata_file: str | None = Form(None),
 ) -> AnalysisRun:
     """Accept one upload request and delegate import execution to the service layer."""
-    require_visible_project(session, current_user, project_id)
+    require_project(session, project_id)
     settings = workbench_settings(request)
     try:
         upload = await build_project_import_upload_request(
@@ -52,7 +52,7 @@ async def import_project_upload(
         return await execute_project_import_upload(
             project_id=project_id,
             session=session,
-            current_user=current_user,
+            local_actor=local_actor,
             settings=settings,
             upload=upload,
             execution_mode="request",

@@ -1,4 +1,4 @@
-"""Validate the Docker Compose quickstart login and locked-snapshot import path."""
+"""Validate the Docker Compose quickstart local Workbench import path."""
 
 from __future__ import annotations
 
@@ -6,7 +6,6 @@ import json
 import mimetypes
 import os
 import urllib.error
-import urllib.parse
 import urllib.request
 from pathlib import Path
 from uuid import uuid4
@@ -19,13 +18,12 @@ SAMPLE_CVES = REPO_ROOT / "data" / "sample_cves.txt"
 
 
 def main() -> None:
-    token = _login()
-    workbench_status = _get_workbench_status(token)
-    project_id = _create_project(token)
-    run = _import_demo(token, project_id)
-    findings = _get_findings(token, project_id)
-    provider_job = _trigger_provider_update(token)
-    provider_status = _get_provider_status(token)
+    workbench_status = _get_workbench_status()
+    project_id = _create_project()
+    run = _import_demo(project_id)
+    findings = _get_findings(project_id)
+    provider_job = _trigger_provider_update()
+    provider_status = _get_provider_status()
 
     summary = run.get("summary_json") or {}
     if run.get("status") not in {"succeeded", "completed"}:
@@ -67,27 +65,11 @@ def main() -> None:
     )
 
 
-def _login() -> str:
-    password = os.environ.get("FIRST_SUPERUSER_PASSWORD", "local-workbench-dev-password")
-    payload = urllib.parse.urlencode(
-        {"username": "admin@example.com", "password": password}
-    ).encode()
-    response = _request(
-        f"{BASE_URL}/login/access-token",
-        data=payload,
-        headers={"Content-Type": "application/x-www-form-urlencoded"},
-    )
-    return str(response["access_token"])
+def _get_workbench_status() -> dict[str, object]:
+    return _request(f"{BASE_URL}/workbench/status")
 
 
-def _get_workbench_status(token: str) -> dict[str, object]:
-    return _request(
-        f"{BASE_URL}/workbench/status",
-        headers={"Authorization": f"Bearer {token}"},
-    )
-
-
-def _create_project(token: str) -> str:
+def _create_project() -> str:
     payload = json.dumps(
         {
             "name": f"docker-quickstart-{uuid4().hex[:8]}",
@@ -97,15 +79,12 @@ def _create_project(token: str) -> str:
     response = _request(
         f"{BASE_URL}/projects/",
         data=payload,
-        headers={
-            "Authorization": f"Bearer {token}",
-            "Content-Type": "application/json",
-        },
+        headers={"Content-Type": "application/json"},
     )
     return str(response["id"])
 
 
-def _import_demo(token: str, project_id: str) -> dict[str, object]:
+def _import_demo(project_id: str) -> dict[str, object]:
     boundary = f"vpw-{uuid4().hex}"
     body = _multipart_body(
         boundary=boundary,
@@ -121,17 +100,13 @@ def _import_demo(token: str, project_id: str) -> dict[str, object]:
     return _request(
         f"{BASE_URL}/projects/{project_id}/imports",
         data=body,
-        headers={
-            "Authorization": f"Bearer {token}",
-            "Content-Type": f"multipart/form-data; boundary={boundary}",
-        },
+        headers={"Content-Type": f"multipart/form-data; boundary={boundary}"},
     )
 
 
-def _get_findings(token: str, project_id: str) -> list[dict[str, object]]:
+def _get_findings(project_id: str) -> list[dict[str, object]]:
     response = _request(
         f"{BASE_URL}/projects/{project_id}/findings/?sort=cve",
-        headers={"Authorization": f"Bearer {token}"},
     )
     findings = response.get("data")
     if not isinstance(findings, list):
@@ -139,7 +114,7 @@ def _get_findings(token: str, project_id: str) -> list[dict[str, object]]:
     return findings
 
 
-def _trigger_provider_update(token: str) -> dict[str, object]:
+def _trigger_provider_update() -> dict[str, object]:
     payload = json.dumps(
         {
             "sources": ["kev"],
@@ -151,18 +126,12 @@ def _trigger_provider_update(token: str) -> dict[str, object]:
     return _request(
         f"{BASE_URL}/providers/update-jobs",
         data=payload,
-        headers={
-            "Authorization": f"Bearer {token}",
-            "Content-Type": "application/json",
-        },
+        headers={"Content-Type": "application/json"},
     )
 
 
-def _get_provider_status(token: str) -> dict[str, object]:
-    return _request(
-        f"{BASE_URL}/providers/status",
-        headers={"Authorization": f"Bearer {token}"},
-    )
+def _get_provider_status() -> dict[str, object]:
+    return _request(f"{BASE_URL}/providers/status")
 
 
 def _request(

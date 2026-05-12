@@ -11,7 +11,6 @@ from vuln_prioritizer import (
     models_input,
     models_provider,
     models_remediation,
-    models_state,
     models_waivers,
 )
 
@@ -121,39 +120,6 @@ def test_models_facade_reexports_input_model_identities(facade_name: str, module
 @pytest.mark.parametrize(
     ("facade_name", "module_name"),
     [
-        ("StateInitMetadata", "StateInitMetadata"),
-        ("StateInitSummary", "StateInitSummary"),
-        ("StateInitReport", "StateInitReport"),
-        ("StateImportMetadata", "StateImportMetadata"),
-        ("StateImportSummary", "StateImportSummary"),
-        ("StateImportReport", "StateImportReport"),
-        ("StateHistoryMetadata", "StateHistoryMetadata"),
-        ("StateHistoryEntry", "StateHistoryEntry"),
-        ("StateHistoryReport", "StateHistoryReport"),
-        ("StateWaiverMetadata", "StateWaiverMetadata"),
-        ("StateWaiverEntry", "StateWaiverEntry"),
-        ("StateWaiverReport", "StateWaiverReport"),
-        ("StateTopServicesMetadata", "StateTopServicesMetadata"),
-        ("StateTopServiceEntry", "StateTopServiceEntry"),
-        ("StateTopServicesReport", "StateTopServicesReport"),
-        ("StateTrendsMetadata", "StateTrendsMetadata"),
-        ("StateTrendEntry", "StateTrendEntry"),
-        ("StateTrendsReport", "StateTrendsReport"),
-        ("StateServiceHistoryMetadata", "StateServiceHistoryMetadata"),
-        ("StateServiceHistoryEntry", "StateServiceHistoryEntry"),
-        ("StateServiceHistoryReport", "StateServiceHistoryReport"),
-    ],
-)
-def test_models_facade_reexports_state_model_identities(facade_name: str, module_name: str) -> None:
-    assert getattr(models, facade_name) is getattr(models_state, module_name)
-
-
-@pytest.mark.parametrize(
-    ("facade_name", "module_name"),
-    [
-        ("DoctorCheck", "DoctorCheck"),
-        ("DoctorSummary", "DoctorSummary"),
-        ("DoctorReport", "DoctorReport"),
         ("EvidenceBundleFile", "EvidenceBundleFile"),
         ("EvidenceBundleInputHash", "EvidenceBundleInputHash"),
         ("EvidenceBundleManifest", "EvidenceBundleManifest"),
@@ -212,11 +178,18 @@ def test_models_facade_reexports_waiver_model_identities(
 
 def test_moved_models_keep_strict_frozen_behavior_and_default_factories() -> None:
     with pytest.raises(ValidationError):
-        models.StateInitSummary(unexpected=True)
+        models.EvidenceBundleManifest(
+            generated_at="2026-04-25T00:00:00Z",
+            source_analysis_path="analysis.json",
+            unexpected=True,
+        )
 
-    summary = models.StateInitSummary()
+    summary = models.EvidenceBundleManifest(
+        generated_at="2026-04-25T00:00:00Z",
+        source_analysis_path="analysis.json",
+    )
     with pytest.raises(ValidationError):
-        summary.snapshot_count = 3
+        summary.source_analysis_path = "changed.json"
 
     first = models.EvidenceBundleManifest(
         generated_at="2026-04-25T00:00:00Z",

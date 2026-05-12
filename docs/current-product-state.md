@@ -26,7 +26,7 @@ hosted SaaS product.
 | Frontend runtime | `frontend` | React, Vite, TypeScript, TanStack Query, local route adapter, Playwright tests, and Workbench UI. |
 | Generated client | `frontend/src/client/**` | Generated from backend OpenAPI. Do not edit generated files manually. |
 | Frontend integration wrapper | `frontend/src/api-client.ts` | Handwritten wrapper over generated client code. Normal app code should use this boundary. |
-| Domain core | `backend/src/vuln_prioritizer` | Parsers, providers, scoring, report helpers, and neutral domain logic shared with Workbench services. Remaining Typer CLI files are legacy maintenance surface, not product direction. |
+| Domain core | `backend/src/vuln_prioritizer` | Parsers, providers, scoring, SARIF contracts, and neutral vulnerability logic shared with Workbench services. Typer command modules, CLI entrypoints, and legacy report facades have been removed from the active package. |
 | Docs site | `mkdocs.yml` and `docs/**` | Public docs, contracts, examples, release notes, submission material, and historical references. |
 | Historical evidence | `archive/**` | Historical screenshots, issue proof, demo flow evidence, presentation material, and archived validation notes. |
 
@@ -45,14 +45,14 @@ hosted SaaS product.
 | Full user path | [User Documentation Guide](user_documentation.md) |
 | Product architecture | [Product Architecture](architecture.md) |
 | Documentation ownership and classification | [Documentation Map](documentation-map.md) |
-| Stable API/CLI/report behavior | [Contracts](contracts.md) |
+| Stable API and report behavior | [Contracts](contracts.md) |
 | Supported inputs and outputs | [Support Matrix](support_matrix.md) |
 | Scoring rules | [Scoring Methodology](scoring-methodology.md) |
 | ATT&CK/TTP provenance | [ATT&CK/TTP Methodology](attack-ttp-methodology.md) |
 | Reports and evidence bundles | [Reports and Evidence](reports-and-evidence.md) |
 | Security boundaries | [Workbench Threat Model](workbench-threat-model.md) |
-| Deployment caveats | [Workbench Public Deployment](workbench-public-deployment.md) |
-| Release evidence | [Public-Production Release Evidence Ledger](public-production-release-evidence-ledger.md) |
+| Deployment caveats | [Local/Private Workbench Deployment](workbench-public-deployment.md) |
+| Local readiness posture | [Dependency and Package Policy](dependency-and-package-policy.md), [Local/Private Workbench Deployment](workbench-public-deployment.md) |
 | GitHub repository health | [GitHub Open Source Readiness](github-open-source-readiness.md) |
 
 ## Current Release And Evidence Posture
@@ -60,8 +60,8 @@ hosted SaaS product.
 The repository has strong local and CI-oriented gates, including backend
 format/lint/type/test coverage, docs hygiene, frontend lint/build/unit coverage,
 generated-client drift checks, Playwright browser tests, Docker smokes, package
-checks, public deployment evidence contract checks, archive binary evidence
-manifest checks, and release-readiness automation.
+checks, local/private deployment guardrail checks, archive binary evidence
+manifest checks, and candidate-specific release automation.
 
 The current package maturity classifier is `Development Status :: 4 - Beta`.
 That means the self-hosted Workbench is release-gated for local-first
@@ -69,11 +69,11 @@ operation, while public or shared deployments remain candidate-specific
 decisions.
 
 The historical VPW-AUD-999 final scorecard closed on 2026-05-08. That closeout
-does not by itself certify a new public internet deployment. Public deployment
-readiness still requires fresh evidence for the exact deployment candidate,
-including proxy/TLS topology, strict CORS and cookie behavior, security
-headers, backup/restore, schema readiness, retention, auditability, rate
-limits, and dependency/container posture.
+does not by itself certify a shared or exposed deployment. Public/shared
+deployment readiness is a separate future track that requires fresh evidence
+for the exact deployment candidate, including proxy/TLS topology, strict CORS
+and cookie behavior, security headers, backup/restore, schema readiness,
+retention, auditability, rate limits, and dependency/container posture.
 
 Historical evidence in `archive/**` is useful context and demo proof. It is not
 current release certification unless a current release or evidence page
@@ -83,14 +83,11 @@ explicitly links it as such and explains the scope. Tracked binary evidence unde
 
 ## Compatibility And Historical Material
 
-Some names still contain `template`, `Template`, CLI, or historical
-compatibility phrasing. The active app is not a second template runtime and the
-CLI is not the current product direction. The remaining names fall into three
-classes:
-
-- compatibility shims that protect existing local data or scripts
-- historical evidence and release snapshots that should not be renamed
-- naming debt that can be cleaned up in focused follow-up work
+The active app is not a second template runtime, and the old Typer CLI is no
+longer an active product surface. CLI is not the current product direction.
+Remaining uses of `template`, `Template`, CLI, or historical compatibility
+phrasing should be limited to clearly labelled historical material, archived
+evidence, release snapshots, or generator-owned framework internals.
 
 Do not use historical migration plans, old roadmap notes, or archived issue
 evidence as proof that current runtime behavior is complete. Use current tests,

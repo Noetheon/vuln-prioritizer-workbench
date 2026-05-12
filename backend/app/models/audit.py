@@ -19,23 +19,9 @@ class AuditEventBase(SQLModel):
     resource_type: str = Field(max_length=100, index=True)
     resource_id: str | None = Field(default=None, max_length=100, index=True)
     status: str = Field(default="success", max_length=20, index=True)
-    actor_user_id: uuid.UUID | None = Field(
-        default=None,
-        foreign_key="user.id",
-        index=True,
-        nullable=True,
-        ondelete="SET NULL",
-    )
     project_id: uuid.UUID | None = Field(
         default=None,
         foreign_key="project.id",
-        index=True,
-        nullable=True,
-        ondelete="SET NULL",
-    )
-    api_token_id: uuid.UUID | None = Field(
-        default=None,
-        foreign_key="api_token.id",
         index=True,
         nullable=True,
         ondelete="SET NULL",
@@ -70,9 +56,7 @@ class AuditEventPublic(SQLModel):
     resource_type: str
     resource_id: str | None
     status: str
-    actor_user_id: uuid.UUID | None
     project_id: uuid.UUID | None
-    api_token_id: uuid.UUID | None
     detail: dict[str, Any]
     created_at: datetime
 
@@ -92,9 +76,7 @@ def audit_event_public(event: AuditEvent) -> AuditEventPublic:
         resource_type=event.resource_type,
         resource_id=event.resource_id,
         status=event.status,
-        actor_user_id=event.actor_user_id,
         project_id=event.project_id,
-        api_token_id=event.api_token_id,
         detail=dict(event.detail_json or {}),
         created_at=event.created_at,
     )

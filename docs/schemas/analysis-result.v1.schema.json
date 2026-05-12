@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://noetheon.github.io/vuln-prioritizer-workbench/schemas/analysis-result.v1.schema.json",
-  "title": "vuln-prioritizer template analysis result v1",
+  "title": "vuln-prioritizer Workbench analysis result v1",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -122,7 +122,6 @@
         "id",
         "name",
         "description",
-        "owner_id",
         "created_at",
         "updated_at"
       ],
@@ -135,9 +134,6 @@
         },
         "description": {
           "$ref": "#/$defs/nullableString"
-        },
-        "owner_id": {
-          "$ref": "#/$defs/nullableUuid"
         },
         "created_at": {
           "$ref": "#/$defs/nullableDateTime"

@@ -5,17 +5,14 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
-import typer
 
-from vuln_prioritizer.cli_support import analysis as cli_analysis
-from vuln_prioritizer.cli_support.common import PriorityFilter
 from vuln_prioritizer.models import (
-    AnalysisContext,
     PrioritizedFinding,
     PriorityPolicy,
     ProviderDataQualityFlag,
     ProviderLookupDiagnostics,
 )
+from vuln_prioritizer.options import PriorityFilter
 from vuln_prioritizer.services import analysis as service_analysis
 from vuln_prioritizer.services import analysis_provider
 from vuln_prioritizer.services.analysis_pipeline import (
@@ -203,7 +200,7 @@ def test_analysis_requests_require_snapshot_when_provider_data_is_locked(
 ) -> None:
     policy = PriorityPolicy()
 
-    with pytest.raises(service_analysis.AnalysisInputError, match="--locked-provider-data"):
+    with pytest.raises(service_analysis.AnalysisInputError, match="Locked provider data"):
         service_analysis.prepare_analysis(
             service_analysis.AnalysisRequest(
                 input_specs=[],
@@ -242,7 +239,7 @@ def test_analysis_requests_require_snapshot_when_provider_data_is_locked(
             )
         )
 
-    with pytest.raises(service_analysis.AnalysisInputError, match="--locked-provider-data"):
+    with pytest.raises(service_analysis.AnalysisInputError, match="Locked provider data"):
         service_analysis.prepare_explain(
             service_analysis.ExplainRequest(
                 cve_id="CVE-2024-0001",
@@ -464,79 +461,3 @@ def test_provider_freshness_helpers_handle_cache_network_and_timestamp_edges() -
     assert analysis_provider._parse_provider_timestamp("2026-04-24T09:00:00") == datetime(
         2026, 4, 24, 9, tzinfo=UTC
     )
-
-
-@pytest.mark.parametrize(
-    ("wrapper_name", "target_name"),
-    [
-        ("build_priority_policy", "_build_priority_policy"),
-        ("load_asset_records_or_exit", "_load_asset_records"),
-        ("load_vex_statements_or_exit", "_load_vex_statements"),
-        ("load_waiver_rules_or_exit", "_load_waiver_rules"),
-        ("load_context_profile_or_exit", "_load_context_profile"),
-        ("load_provider_snapshot_or_exit", "_load_provider_snapshot"),
-        ("build_findings", "_build_findings"),
-        ("prepare_saved_explain", "_prepare_saved_explain"),
-    ],
-)
-def test_cli_analysis_facade_translates_input_errors(
-    monkeypatch: pytest.MonkeyPatch,
-    wrapper_name: str,
-    target_name: str,
-) -> None:
-    def fail(*args: object, **kwargs: object) -> None:
-        raise service_analysis.AnalysisInputError("bad input")
-
-    monkeypatch.setattr(cli_analysis, target_name, fail)
-
-    with pytest.raises(typer.Exit) as exc_info:
-        getattr(cli_analysis, wrapper_name)()
-
-    assert exc_info.value.exit_code == 2
-
-
-def test_cli_analysis_facade_translates_no_findings(monkeypatch: pytest.MonkeyPatch) -> None:
-    def fail(request: object) -> None:
-        raise service_analysis.AnalysisNoFindingsError("nothing")
-
-    monkeypatch.setattr(cli_analysis, "_prepare_analysis", fail)
-
-    with pytest.raises(typer.Exit) as exc_info:
-        cli_analysis.prepare_analysis(object())  # type: ignore[arg-type]
-
-    assert exc_info.value.exit_code == 1
-
-
-def test_cli_fail_handlers_raise_expected_exit_codes() -> None:
-    finding = PrioritizedFinding(
-        cve_id="CVE-2024-0001",
-        priority_label="High",
-        priority_rank=2,
-        rationale="High priority.",
-        recommended_action="Patch.",
-    )
-    context = AnalysisContext(
-        input_path="input.txt",
-        output_format="json",
-        generated_at="2026-04-25T00:00:00+00:00",
-        total_input=1,
-        valid_input=1,
-        findings_count=1,
-        filtered_out_count=0,
-        nvd_hits=0,
-        epss_hits=0,
-        kev_hits=0,
-        provider_degraded=True,
-        expired_waiver_count=1,
-    )
-
-    with pytest.raises(typer.Exit):
-        cli_analysis.handle_fail_on([finding], PriorityFilter.high)
-    with pytest.raises(typer.Exit):
-        cli_analysis.handle_provider_error_fail_on(context, fail_on_provider_error=True)
-    with pytest.raises(typer.Exit):
-        cli_analysis.handle_waiver_lifecycle_fail_on(
-            context,
-            fail_on_expired_waivers=True,
-            fail_on_review_due_waivers=False,
-        )

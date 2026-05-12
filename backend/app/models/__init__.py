@@ -1,19 +1,9 @@
 """Public model aggregator for the Workbench backend app.
 
-Keep imports from this package stable. API routes and tests should continue to
-use ``from app.models import User, ProjectPublic`` while table definitions live
-in focused modules.
+Keep imports from this package stable while table definitions live in focused
+modules.
 """
 
-from app.models.api_tokens import (
-    API_TOKEN_SCOPES,
-    ApiToken,
-    ApiTokenCreate,
-    ApiTokenCreatePublic,
-    ApiTokenPublic,
-    ApiTokenScope,
-    ApiTokensPublic,
-)
 from app.models.assets import (
     Asset,
     AssetBase,
@@ -61,7 +51,6 @@ from app.models.audit import (
     AuditEventsPublic,
     AuditEventStatus,
 )
-from app.models.auth import Token, TokenPayload
 from app.models.dashboard import (
     DashboardEpssBucketsPublic,
     DashboardSignalCountsPublic,
@@ -145,20 +134,6 @@ from app.models.runs import (
     ProviderSnapshotBase,
 )
 from app.models.runtime import RateLimitBucket
-from app.models.sessions import (
-    AuthSession,
-    AuthSessionBase,
-    AuthSessionPublic,
-    AuthSessionsPublic,
-)
-from app.models.users import (
-    User,
-    UserBase,
-    UserPasswordChange,
-    UserPasswordReset,
-    UserPublic,
-    UsersPublic,
-)
 from app.models.vulnerabilities import Vulnerability, VulnerabilityBase
 from app.models.waivers import (
     Waiver,
@@ -177,13 +152,6 @@ __all__ = [
     "AnalysisRunSummaryPublic",
     "AnalysisRunsPublic",
     "AnalysisRunStatus",
-    "API_TOKEN_SCOPES",
-    "ApiToken",
-    "ApiTokenCreate",
-    "ApiTokenCreatePublic",
-    "ApiTokenPublic",
-    "ApiTokenScope",
-    "ApiTokensPublic",
     "AuditEvent",
     "AuditEventBase",
     "AuditEventPublic",
@@ -281,18 +249,6 @@ __all__ = [
     "ReportVerificationPublic",
     "ReportsPublic",
     "RateLimitBucket",
-    "AuthSession",
-    "AuthSessionBase",
-    "AuthSessionPublic",
-    "AuthSessionsPublic",
-    "Token",
-    "TokenPayload",
-    "User",
-    "UserBase",
-    "UserPasswordChange",
-    "UserPasswordReset",
-    "UserPublic",
-    "UsersPublic",
     "Vulnerability",
     "VulnerabilityBase",
     "Waiver",

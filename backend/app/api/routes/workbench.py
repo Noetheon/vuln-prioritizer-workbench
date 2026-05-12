@@ -19,13 +19,12 @@ router = APIRouter(prefix="/workbench", tags=["workbench"])
 REQUIRED_SCHEMA_TABLES = frozenset(
     table_name for table_name in SQLModel.metadata.tables if table_name != "alembic_version"
 )
-REQUIRED_API_TOKEN_COLUMNS = frozenset({"id", "project_id", "token_hash", "expires_at"})
 REQUIRED_ALEMBIC_TABLE = "alembic_version"
 
 
 @router.get("/health", response_model=WorkbenchHealth)
 def workbench_health() -> WorkbenchHealth:
-    """Return minimal unauthenticated liveness for browser and proxy checks."""
+    """Return minimal local liveness for browser and proxy checks."""
     return WorkbenchHealth(status="ok")
 
 
@@ -61,9 +60,6 @@ def _database_readiness(session: Session) -> tuple[str, str]:
         if REQUIRED_ALEMBIC_TABLE not in table_names:
             return "ready", "not_ready"
         if not _alembic_head_is_current(session):
-            return "ready", "not_ready"
-        api_token_columns = {column["name"] for column in inspector.get_columns("api_token")}
-        if not REQUIRED_API_TOKEN_COLUMNS.issubset(api_token_columns):
             return "ready", "not_ready"
     except SQLAlchemyError:
         return "unavailable", "not_ready"

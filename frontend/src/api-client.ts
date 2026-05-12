@@ -1,16 +1,10 @@
 import { client } from "./client/client.gen"
-import { withCsrfHeader } from "./auth"
 
 export * from "./client"
 export { client } from "./client/client.gen"
 export type FindingsReadProjectFindingsData = Parameters<
   typeof import("./client").FindingsService.readProjectFindings
 >[0]
-
-type TokenProvider =
-  | string
-  | undefined
-  | (() => Promise<string | undefined> | string | undefined)
 
 export class ApiError extends Error {
   body: unknown
@@ -25,16 +19,6 @@ export class ApiError extends Error {
 }
 
 let hasErrorInterceptor = false
-let hasRequestInterceptor = false
-
-function installRequestInterceptor() {
-  if (hasRequestInterceptor) {
-    return
-  }
-
-  client.interceptors.request.use((request) => withCsrfHeader(request))
-  hasRequestInterceptor = true
-}
 
 function installErrorInterceptor() {
   if (hasErrorInterceptor) {
@@ -54,7 +38,6 @@ function installErrorInterceptor() {
 }
 
 function configureClient(config: Parameters<typeof client.setConfig>[0]) {
-  installRequestInterceptor()
   installErrorInterceptor()
   client.setConfig({
     credentials: "include",
@@ -70,15 +53,5 @@ export const OpenAPI = {
   },
   set BASE(baseUrl: string) {
     configureClient({ baseUrl })
-  },
-  set TOKEN(provider: TokenProvider) {
-    configureClient({
-      auth: async () => {
-        if (typeof provider === "function") {
-          return provider()
-        }
-        return provider
-      },
-    })
   },
 }

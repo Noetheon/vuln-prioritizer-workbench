@@ -10,8 +10,8 @@ from typing import Any
 from fastapi.encoders import jsonable_encoder
 from sqlmodel import Session
 
-from app.models import AuditEvent, AuditEventStatus, User
-from app.models.api_tokens import api_token_id
+from app.core.local_actor import LocalWorkbenchActor
+from app.models import AuditEvent, AuditEventStatus
 from app.repositories import AuditEventRepository
 from vuln_prioritizer.security_redaction import redact_value
 
@@ -28,7 +28,7 @@ def record_audit_event(
     resource_type: str,
     resource_id: uuid.UUID | str | None = None,
     status: AuditEventStatus = "success",
-    actor: User | None = None,
+    actor: LocalWorkbenchActor | None = None,
     project_id: uuid.UUID | None = None,
     detail: dict[str, Any] | None = None,
 ) -> AuditEvent:
@@ -44,9 +44,7 @@ def record_audit_event(
         resource_type=resource_type,
         resource_id=str(resource_id) if resource_id is not None else None,
         status=status,
-        actor_user_id=actor.id if actor is not None else None,
         project_id=project_id,
-        api_token_id=api_token_id(actor) if actor is not None else None,
         detail=redacted_detail,
     )
 

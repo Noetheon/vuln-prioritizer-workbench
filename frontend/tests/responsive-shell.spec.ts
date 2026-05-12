@@ -1,5 +1,5 @@
 import { expect, type Page, test } from "@playwright/test"
-import { login } from "./auth-helpers"
+import { openWorkbench } from "./workbench-runtime-helpers"
 import { evidenceScreenshotPath } from "./evidence-paths"
 import { mockFinding, mockProject, routeWorkbenchShell } from "./workbench-route-mocks"
 
@@ -174,7 +174,7 @@ async function expectFindingsMobileCards(page: Page) {
   })
 }
 
-const authenticatedRoutes = [
+const workbenchRoutes = [
   "/",
   "/projects",
   "/imports",
@@ -199,7 +199,7 @@ const responsiveViewports = [
 test("mobile shell exposes drawer navigation without page-width overflow", async ({
   page,
 }) => {
-  await login(page)
+  await openWorkbench(page)
   await expectNoPageOverflow(page)
 
   await page.getByRole("button", { name: "Open navigation" }).click()
@@ -215,15 +215,15 @@ test("mobile shell exposes drawer navigation without page-width overflow", async
   await expectNoPageOverflow(page)
 })
 
-test("authenticated routes keep content within desktop, tablet, and mobile viewports", async ({
+test("Workbench routes keep content within desktop, tablet, and mobile viewports", async ({
   page,
 }) => {
   test.setTimeout(180_000)
-  await login(page)
+  await openWorkbench(page)
 
   for (const viewport of responsiveViewports) {
     await page.setViewportSize(viewport)
-    for (const route of authenticatedRoutes) {
+    for (const route of workbenchRoutes) {
       await page.goto(route)
       await expect(page.getByRole("main")).toBeVisible()
       await page.keyboard.press("Tab")
@@ -259,7 +259,7 @@ test("mobile shell keeps compact health status without duplicate summary strip",
 test("desktop shell keeps sidebar pinned while long content scrolls internally", async ({
   page,
 }) => {
-  await login(page)
+  await openWorkbench(page)
   await page.setViewportSize({ height: 900, width: 1440 })
   await page.goto("/imports")
   await expect(page.getByRole("complementary", { name: "Workbench sidebar" }))

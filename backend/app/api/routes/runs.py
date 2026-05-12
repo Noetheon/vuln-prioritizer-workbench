@@ -7,9 +7,9 @@ from typing import Any
 
 from fastapi import APIRouter, HTTPException
 
-from app.api.deps import ScopedReadUser, SessionDep
+from app.api.deps import LocalActor, SessionDep
 from app.api.errors import redact_public_payload
-from app.api.routes.workbench_access import require_visible_project
+from app.api.routes.workbench_access import require_project
 from app.models import (
     AnalysisRun,
     AnalysisRunPublic,
@@ -36,10 +36,10 @@ router = APIRouter(tags=["runs"])
 def read_project_runs(
     project_id: uuid.UUID,
     session: SessionDep,
-    current_user: ScopedReadUser,
+    local_actor: LocalActor,
 ) -> AnalysisRunsPublic:
     """List analysis runs for a visible project."""
-    require_visible_project(session, current_user, project_id)
+    require_project(session, project_id)
     runs = RunRepository(session).list_analysis_runs(project_id)
     return AnalysisRunsPublic(
         data=[_analysis_run_public(run) for run in runs],
@@ -51,13 +51,13 @@ def read_project_runs(
 def read_run(
     run_id: uuid.UUID,
     session: SessionDep,
-    current_user: ScopedReadUser,
+    local_actor: LocalActor,
 ) -> AnalysisRunPublic:
     """Read one analysis run if its project is visible."""
     run = RunRepository(session).get_analysis_run(run_id)
     if run is None:
         raise HTTPException(status_code=404, detail="Analysis run not found")
-    require_visible_project(session, current_user, run.project_id)
+    require_project(session, run.project_id)
     return _analysis_run_public(run)
 
 
@@ -65,13 +65,13 @@ def read_run(
 def read_run_summary(
     run_id: uuid.UUID,
     session: SessionDep,
-    current_user: ScopedReadUser,
+    local_actor: LocalActor,
 ) -> AnalysisRunSummaryPublic:
     """Read a UI-stable summary for one visible analysis run."""
     run = RunRepository(session).get_analysis_run(run_id)
     if run is None:
         raise HTTPException(status_code=404, detail="Analysis run not found")
-    require_visible_project(session, current_user, run.project_id)
+    require_project(session, run.project_id)
     return _analysis_run_summary(run)
 
 

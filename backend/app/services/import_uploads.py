@@ -42,7 +42,7 @@ class ReadableUpload(Protocol):
     """Async readable upload-like stream used at the HTTP boundary."""
 
     async def read(self, size: int = -1) -> bytes:
-        raise NotImplementedError
+        raise TypeError("Protocol declaration only")
 
 
 async def read_bounded_upload(

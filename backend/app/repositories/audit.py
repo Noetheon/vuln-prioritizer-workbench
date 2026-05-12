@@ -22,9 +22,7 @@ class AuditEventRepository:
         resource_type: str,
         resource_id: str | None = None,
         status: AuditEventStatus = "success",
-        actor_user_id: uuid.UUID | None = None,
         project_id: uuid.UUID | None = None,
-        api_token_id: uuid.UUID | None = None,
         detail: dict[str, Any] | None = None,
     ) -> AuditEvent:
         """Create an audit event without committing the transaction."""
@@ -33,9 +31,7 @@ class AuditEventRepository:
             resource_type=resource_type,
             resource_id=resource_id,
             status=status,
-            actor_user_id=actor_user_id,
             project_id=project_id,
-            api_token_id=api_token_id,
             detail_json=detail or {},
         )
         self.session.add(event)

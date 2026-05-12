@@ -22,7 +22,6 @@ export const workbenchQueryKeys = {
     ] as const,
   assetsRoot: (projectId: string) =>
     [...workbenchQueryKeys.all, "assets", projectId] as const,
-  currentUser: () => [...workbenchQueryKeys.all, "current-user"] as const,
   providerStatus: () => [...workbenchQueryKeys.all, "provider-status"] as const,
   projectDashboard: (projectId: string) =>
     [...workbenchQueryKeys.all, "project-dashboard", projectId] as const,

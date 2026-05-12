@@ -1,4 +1,4 @@
-"""Shared Workbench report contract constants used by CLI and API renderers."""
+"""Shared Workbench report contract constants used by API renderers."""
 
 from __future__ import annotations
 
@@ -26,7 +26,7 @@ CSV_FINDINGS_COLUMNS = [
     "attack_mapped",
     "attack_techniques",
     "defensive_context_sources",
-    "decision_template",
+    "decision_recommendation",
     "decision_sla",
     "decision_statement",
     "business_impact",

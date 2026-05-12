@@ -20,11 +20,11 @@ WORKBENCH_ALLOWED_MAPPING_SOURCES = {
 WORKBENCH_DISALLOWED_MAPPING_SOURCES = {"heuristic"}
 WORKBENCH_DISALLOWED_MAPPING_SOURCE_PREFIXES = ("llm", "llm_")
 
-LEGACY_LOCAL_CSV_WARNING = (
-    "ATT&CK source local-csv is a legacy compatibility mode; "
-    "prefer --attack-source ctid-json for structured CTID-backed ATT&CK context."
+LOCAL_CSV_WARNING = (
+    "ATT&CK source local-csv uses a basic local CSV mapping format; "
+    "prefer Workbench ATT&CK source ctid-json for structured CTID-backed ATT&CK context."
 )
-LEGACY_LOCAL_CSV_RATIONALE = (
-    "Legacy local ATT&CK CSV context is available for this CVE. "
-    "Prefer --attack-source ctid-json for structured CTID-backed ATT&CK context."
+LOCAL_CSV_RATIONALE = (
+    "Local ATT&CK CSV context is available for this CVE. "
+    "Prefer Workbench ATT&CK source ctid-json for structured CTID-backed ATT&CK context."
 )

@@ -1,6 +1,10 @@
 import { expect, test } from "@playwright/test"
-import { authHeaders, backendBaseUrl, login } from "./auth-helpers"
 import { evidenceScreenshotPath } from "./evidence-paths"
+import {
+  backendBaseUrl,
+  localApiHeaders,
+  openWorkbench,
+} from "./workbench-runtime-helpers"
 import {
   cyclonedxVex,
   cyclonedxVexOccurrenceCsv,
@@ -13,8 +17,8 @@ test("workbench frontend renders CycloneDX VEX occurrence evidence", async ({
   const testRunSuffix = Date.now().toString(36)
   const projectName = `VPW CycloneDX VEX ${testRunSuffix}`
 
-  const accessToken = await login(page)
-  const headers = authHeaders(accessToken)
+  await openWorkbench(page)
+  const headers = localApiHeaders()
   const projectResponse = await page.request.post(
     `${backendBaseUrl}/api/v1/projects/`,
     {

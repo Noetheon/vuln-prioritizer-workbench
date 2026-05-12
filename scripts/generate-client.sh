@@ -24,6 +24,9 @@ PY
 
 npm --prefix frontend run generate-client
 
+rm -rf frontend/src/client/client frontend/src/client/core
+cp frontend/src/client-runtime/local-client.ts frontend/src/client/client.ts
+
 python3 - <<'PY'
 from pathlib import Path
 

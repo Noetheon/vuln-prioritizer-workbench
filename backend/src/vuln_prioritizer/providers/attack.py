@@ -1,4 +1,4 @@
-"""ATT&CK provider dispatch for legacy CSV and CTID JSON sources."""
+"""ATT&CK provider dispatch for local CSV, curated, and CTID JSON sources."""
 
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ from vuln_prioritizer.attack_sources import (
     ATTACK_SOURCE_LOCAL_CSV,
     ATTACK_SOURCE_LOCAL_CURATED,
     ATTACK_SOURCE_NONE,
-    LEGACY_LOCAL_CSV_WARNING,
+    LOCAL_CSV_WARNING,
 )
 from vuln_prioritizer.models import AttackData, AttackTechnique
 from vuln_prioritizer.providers.attack_metadata import AttackMetadataProvider
@@ -68,13 +68,13 @@ class AttackProvider:
             )
 
         if normalized_source == ATTACK_SOURCE_LOCAL_CSV:
-            results, warnings = self._load_legacy_csv(cve_ids, mapping_file)
-            warnings.insert(0, LEGACY_LOCAL_CSV_WARNING)
+            results, warnings = self._load_local_csv(cve_ids, mapping_file)
+            warnings.insert(0, LOCAL_CSV_WARNING)
             if technique_metadata_file is not None:
                 warnings.append(
-                    "ATT&CK technique metadata is ignored when --attack-source local-csv is used."
+                    "ATT&CK technique metadata is ignored when local-csv ATT&CK source is used."
                 )
-            enriched = self.enrichment_service.enrich_legacy_csv(cve_ids, attack_data=results)
+            enriched = self.enrichment_service.enrich_local_csv(cve_ids, attack_data=results)
             return (
                 enriched,
                 _build_metadata(
@@ -100,15 +100,15 @@ class AttackProvider:
             [f"Unsupported ATT&CK source: {normalized_source}"],
         )
 
-    def inspect_legacy_csv(
+    def inspect_local_csv(
         self,
         mapping_file: Path,
     ) -> tuple[dict[str, AttackData], dict[str, str | None], list[str]]:
-        """Load legacy CSV mappings without filtering by requested CVE IDs."""
-        results, warnings = self._load_legacy_csv([], mapping_file)
+        """Load local CSV mappings without filtering by requested CVE IDs."""
+        results, warnings = self._load_local_csv([], mapping_file)
         warnings.insert(
             0,
-            LEGACY_LOCAL_CSV_WARNING,
+            LOCAL_CSV_WARNING,
         )
         return (
             results,
@@ -207,7 +207,7 @@ class AttackProvider:
         )
         return results, metadata, bundle.warnings
 
-    def _load_legacy_csv(
+    def _load_local_csv(
         self,
         cve_ids: list[str],
         offline_file: Path,

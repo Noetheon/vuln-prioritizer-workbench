@@ -12,9 +12,8 @@ The active backend exposes:
 GET /api/v1/providers/status
 ```
 
-The active local Workbench uses same-origin browser access for this route.
-Optional `vpr_` service tokens may be supplied by automation; when present, the
-backend enforces their scopes and expiry.
+The active local Workbench uses same-origin local single-user access for this
+route. It does not require login, API tokens, session cookies, or CSRF headers.
 
 ## Response Contract
 

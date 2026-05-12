@@ -42,7 +42,7 @@ For XML ingest, the parser rejects `DOCTYPE` and `ENTITY` declarations before pa
 
 Three local ATT&CK modes exist:
 
-- `local-csv`: legacy compatibility mode for small hand-authored CSV mappings
+- `local-csv`: basic local CSV mode for small hand-authored mappings
 - `local-curated`: reviewed YAML/JSON curated mappings with confidence enum,
   source, rationale, reviewer metadata, and defensive notes
 - `ctid-json`: structured CTID Mappings Explorer JSON plus local ATT&CK technique metadata
@@ -160,7 +160,8 @@ ATT&CK is a contextual signal. It enriches explanation, reporting, and managemen
 
 Presentation notes:
 
-- KEV membership is surfaced more aggressively in terminal and HTML views as known exploited urgency
+- KEV membership is surfaced more aggressively in Workbench and report views as
+  known exploited urgency
 - this does not change `priority_label`
 
 Asset context and VEX follow the same principle:
@@ -168,11 +169,12 @@ Asset context and VEX follow the same principle:
 - asset context changes explanatory recommendation text and the operational queue score, not `priority_label`
 - remediation guidance now uses explicit package/component evidence when available
 - VEX determines visibility/applicability at occurrence level with deterministic ranked matching
-- `--show-suppressed` exposes otherwise hidden fully-suppressed findings
+- Workbench filters can expose otherwise hidden fully-suppressed findings for
+  review.
 
 ## Comparison Mode
 
-The `compare` command still uses:
+Workbench comparison uses:
 
 - `CVSS-only`: Critical `>= 9.0`, High `>= 7.0`, Medium `>= 4.0`, Low otherwise
 - `Enriched`: the default CVSS/EPSS/KEV model above
@@ -187,15 +189,15 @@ shows how the current policy differs from a CVSS-only baseline; remediation
 owners still need to validate asset exposure, business criticality, compensating
 controls, and applicability.
 
-`compare` now additionally shows ATT&CK context:
+Comparison output also shows ATT&CK context:
 
 - mapped or unmapped state
 - `attack_relevance`
 - mapped tactic count and technique count in exports
 
-## Explain Mode
+## Explanation Mode
 
-`explain` is the most detailed view and includes:
+Workbench finding detail and explanation payloads include:
 
 - CVE metadata
 - CVSS score, severity, and version
@@ -206,16 +208,11 @@ controls, and applicability.
 - tactic context
 - ATT&CK rationale and notes
 
-## ATT&CK Utility Commands
+## ATT&CK Validation
 
-The current release line includes:
-
-- `attack validate`
-- `attack coverage`
-- `attack navigator-layer`
-
-These commands work from local ATT&CK files and do not require NVD/EPSS/KEV.
-`attack validate` and `attack coverage` emit ATT&CK mapping and technique metadata SHA256 values so a run can identify the exact CTID/STIX artifacts used.
+ATT&CK validation works from local CTID and ATT&CK metadata files and does not
+require NVD/EPSS/KEV. Validation outputs include ATT&CK mapping and technique
+metadata SHA256 values so a run can identify the exact CTID/STIX artifacts used.
 
 ## Caching
 
@@ -223,9 +220,11 @@ These commands work from local ATT&CK files and do not require NVD/EPSS/KEV.
 - NVD and EPSS are cached per CVE
 - the online KEV catalog is cached as an indexed dataset
 - ATT&CK local files are read directly from disk
-- `data status` exposes cache timestamps, namespace counts, checksums, and local ATT&CK version metadata
-- `data update` is the explicit cache refresh path for NVD, EPSS, and KEV
-- `data verify` checks namespace integrity, requested-CVE cache coverage, and pinned local file checksums
+- provider status exposes cache timestamps, namespace counts, checksums, and
+  local ATT&CK version metadata
+- provider refresh is the explicit cache refresh path for NVD, EPSS, and KEV
+- provider validation checks namespace integrity, requested-CVE cache coverage,
+  and pinned local file checksums
 
 Important boundary:
 

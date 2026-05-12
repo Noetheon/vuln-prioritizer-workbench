@@ -60,7 +60,7 @@ function FindingDetailRouteContainer({ findingId }: { findingId: string }) {
 }
 
 export function FindingDetailRoute() {
-  const { findingId } = useParams({ from: "/_layout/findings/$findingId" })
+  const { findingId } = useParams<{ findingId: string }>()
 
   return <FindingDetailRouteContainer findingId={findingId} />
 }

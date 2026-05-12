@@ -15,6 +15,9 @@ from app.services.report_bundle_archive import (
     _safe_bundle_filename,
     _write_deterministic_zip_member,
 )
+from app.services.report_bundle_archive_verification import (
+    verify_evidence_bundle as verify_evidence_bundle_archive,
+)
 from app.services.report_bundle_governance import (
     _asset_context_rows,
     _governance_asset_context_export,
@@ -42,9 +45,6 @@ from app.services.report_renderer_common import (
     _boolish_signal,
     _redact_bundle_value,
     _redacted_bundle_payload,
-)
-from vuln_prioritizer.reporting_evidence import (
-    verify_evidence_bundle as verify_evidence_bundle_archive,
 )
 
 

@@ -9,8 +9,9 @@ from fastapi import APIRouter, HTTPException
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session
 
-from app.api.deps import ScopedAdminUser, ScopedReportUser, SessionDep
-from app.api.routes.workbench_access import require_visible_project
+from app.api.deps import LocalActor, SessionDep
+from app.api.routes.workbench_access import require_project
+from app.core.local_actor import LocalWorkbenchActor
 from app.models import (
     AuditEventStatus,
     GitHubIssueExportCreate,
@@ -18,7 +19,6 @@ from app.models import (
     GitHubIssueExportRecord,
     GitHubIssuePreviewCreate,
     GitHubIssuePreviewPublic,
-    User,
 )
 from app.repositories import GitHubIssueExportRepository
 from app.services import (
@@ -41,10 +41,10 @@ def preview_project_github_issues(
     project_id: uuid.UUID,
     payload: GitHubIssuePreviewCreate,
     session: SessionDep,
-    current_user: ScopedReportUser,
+    local_actor: LocalActor,
 ) -> GitHubIssuePreviewPublic:
     """Prepare GitHub issue markdown for selected or top-ranked visible findings."""
-    require_visible_project(session, current_user, project_id)
+    require_project(session, project_id)
     try:
         items = build_github_issue_preview_items(session, project_id=project_id, payload=payload)
     except HTTPException as exc:
@@ -52,7 +52,7 @@ def preview_project_github_issues(
             session,
             project_id=project_id,
             payload=payload,
-            actor=current_user,
+            actor=local_actor,
             status="failure",
             count=0,
             failure_kind=_http_failure_kind(exc),
@@ -64,7 +64,7 @@ def preview_project_github_issues(
         session,
         project_id=project_id,
         payload=payload,
-        actor=current_user,
+        actor=local_actor,
         status="success",
         count=len(items),
     )
@@ -80,10 +80,10 @@ def export_project_github_issues(
     project_id: uuid.UUID,
     payload: GitHubIssueExportCreate,
     session: SessionDep,
-    current_user: ScopedAdminUser,
+    local_actor: LocalActor,
 ) -> GitHubIssueExportPublic:
     """Dry-run or explicitly create GitHub issues for selected visible findings."""
-    require_visible_project(session, current_user, project_id)
+    require_project(session, project_id)
     repository_path = github_repository_path(payload.repository)
     try:
         token = None if payload.dry_run else github_export_token(payload.token_env)
@@ -92,7 +92,7 @@ def export_project_github_issues(
             session,
             project_id=project_id,
             payload=payload,
-            actor=current_user,
+            actor=local_actor,
             status="failure",
             data=[],
             created_count=0,
@@ -114,7 +114,7 @@ def export_project_github_issues(
             session,
             project_id=project_id,
             payload=payload,
-            actor=current_user,
+            actor=local_actor,
             status="failure",
             data=[],
             created_count=0,
@@ -200,7 +200,7 @@ def export_project_github_issues(
                     session,
                     project_id=project_id,
                     payload=payload,
-                    actor=current_user,
+                    actor=local_actor,
                     status="failure",
                     data=data,
                     created_count=created_count,
@@ -237,7 +237,7 @@ def export_project_github_issues(
         session,
         project_id=project_id,
         payload=payload,
-        actor=current_user,
+        actor=local_actor,
         status="success",
         data=data,
         created_count=created_count,
@@ -259,7 +259,7 @@ def _record_github_issue_preview_audit(
     *,
     project_id: uuid.UUID,
     payload: GitHubIssuePreviewCreate,
-    actor: User,
+    actor: LocalWorkbenchActor,
     status: AuditEventStatus,
     count: int,
     failure_kind: str | None = None,
@@ -293,7 +293,7 @@ def _record_github_issue_export_audit(
     *,
     project_id: uuid.UUID,
     payload: GitHubIssueExportCreate,
-    actor: User,
+    actor: LocalWorkbenchActor,
     status: AuditEventStatus,
     data: list[GitHubIssueExportRecord],
     created_count: int,

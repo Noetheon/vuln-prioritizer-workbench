@@ -2,15 +2,15 @@
 
 ## Supported Use
 
-`vuln-prioritizer` is a defensive prioritization CLI and local self-hosted
-Workbench for known CVEs and imported findings. It is not a scanning engine,
+`vuln-prioritizer` is a defensive local self-hosted Workbench for known CVEs
+and imported findings. It is not a scanning engine,
 exploit framework, or asset discovery platform.
 
 The Workbench is local-first and self-hosted by default. Treat it as a trusted
 single-workspace operator tool unless the public deployment runbook, threat
 model, release evidence ledger, and final release scorecard all cover the target
-deployment's TLS/proxy configuration, backup and restore, audit retention, token
-handling, role boundaries, upload/download storage, and residual risks.
+deployment's TLS/proxy configuration, backup and restore, audit retention,
+local access boundary, upload/download storage, and residual risks.
 
 The project does not accept changes that turn the tool into an exploit runner,
 PoC generator, credential tester, active network probe, attack simulator,
@@ -51,10 +51,10 @@ Include, when possible:
 - affected version or commit
 - clear impact summary
 - exact reproduction prerequisites
-- whether the issue affects the CLI itself, packaging, release workflow, or repository configuration
-- whether the issue requires local Workbench access, API-token access, a crafted
+- whether the issue affects the Workbench, domain package, packaging, release workflow, or repository configuration
+- whether the issue requires local Workbench access, a crafted
   input file, or a specific deployment configuration
-- whether the issue touches Workbench API/auth behavior, uploads, report
+- whether the issue touches Workbench API/local access behavior, uploads, report
   downloads, evidence bundles, provider snapshots, or generated artifacts
 
 ## Maintainer Response Expectations

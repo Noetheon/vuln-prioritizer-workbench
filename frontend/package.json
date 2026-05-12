@@ -12,7 +12,7 @@
     "generate-client": "openapi-ts",
     "test": "playwright test",
     "test:unit": "node --test --experimental-strip-types tests/*.test.ts",
-    "test:unit:coverage": "node --test --experimental-strip-types --experimental-test-coverage --test-coverage-include='src/auth.ts' --test-coverage-include='src/lib/**/*.ts' --test-coverage-include='src/components/findings/*-state.ts' --test-coverage-include='src/components/imports/*-model.ts' --test-coverage-include='src/components/reports/*-model.ts' --test-coverage-include='src/workbench/*.ts' --test-coverage-exclude='src/client/**' --test-coverage-exclude='src/vite-env.d.ts' --test-coverage-lines=90 --test-coverage-functions=90 --test-coverage-branches=80 tests/*.test.ts",
+    "test:unit:coverage": "node --test --experimental-strip-types --experimental-test-coverage --test-coverage-include='src/lib/**/*.ts' --test-coverage-include='src/components/findings/*-state.ts' --test-coverage-include='src/components/imports/*-model.ts' --test-coverage-include='src/components/reports/*-model.ts' --test-coverage-include='src/workbench/*.ts' --test-coverage-exclude='src/client/**' --test-coverage-exclude='src/vite-env.d.ts' --test-coverage-lines=90 --test-coverage-functions=90 --test-coverage-branches=80 tests/*.test.ts",
     "test:pr-frontend": "npm run test:unit:coverage && npm run test",
     "test:ui": "playwright test --ui"
   },

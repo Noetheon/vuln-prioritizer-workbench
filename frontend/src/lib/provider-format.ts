@@ -20,7 +20,7 @@ export type DataServicesSummaryItem = {
 
 export function formatCacheAge(seconds: number | null | undefined): string {
   if (seconds === null || seconds === undefined) {
-    return "N.A."
+    return "No cache age"
   }
   if (seconds < 60) {
     return `${seconds}s`

@@ -12,8 +12,6 @@ from app.core.db import engine
 
 WORKBENCH_SETTINGS_STATE_KEY = "workbench_settings"
 WORKBENCH_ENGINE_STATE_KEY = "workbench_engine"
-LEGACY_SETTINGS_STATE_KEY = "template_settings"
-LEGACY_ENGINE_STATE_KEY = "template_engine"
 
 
 def configure_workbench_state(
@@ -25,9 +23,6 @@ def configure_workbench_state(
     """Store active Workbench settings and engine on the FastAPI app state."""
     app.state.workbench_settings = active_settings
     app.state.workbench_engine = active_engine
-    # Backward-compatible aliases for older local tests and scripts.
-    app.state.template_settings = active_settings
-    app.state.template_engine = active_engine
 
 
 def workbench_settings(
@@ -39,9 +34,6 @@ def workbench_settings(
     candidate = getattr(request.app.state, WORKBENCH_SETTINGS_STATE_KEY, None)
     if isinstance(candidate, Settings):
         return candidate
-    legacy_candidate = getattr(request.app.state, LEGACY_SETTINGS_STATE_KEY, None)
-    if isinstance(legacy_candidate, Settings):
-        return legacy_candidate
     if not required:
         return settings
     raise HTTPException(status_code=500, detail="Workbench settings are not configured.")
@@ -56,11 +48,8 @@ def workbench_engine(request: Request) -> Engine:
 
 
 def fallback_workbench_engine(request: Request) -> Engine:
-    """Return an explicit legacy/global engine fallback for controlled tests."""
+    """Return the active engine or the process-global engine for controlled tests."""
     candidate = getattr(request.app.state, WORKBENCH_ENGINE_STATE_KEY, None)
     if isinstance(candidate, Engine):
         return candidate
-    legacy_candidate = getattr(request.app.state, LEGACY_ENGINE_STATE_KEY, None)
-    if isinstance(legacy_candidate, Engine):
-        return legacy_candidate
     return engine

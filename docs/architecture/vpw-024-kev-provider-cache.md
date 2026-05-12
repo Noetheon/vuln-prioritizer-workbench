@@ -10,7 +10,10 @@ Checked-in offline fixtures live in:
 - `data/input_fixtures/kev_catalog.csv`
 - `docs/examples/example_kev_enrichment_response.json`
 
-The cache stores the KEV catalog under namespace `kev` and key `catalog`. `data verify`, `data status`, Workbench provider refresh jobs, and provider snapshot exports inspect the namespace checksum rather than requiring live CISA access in CI.
+The cache stores the KEV catalog under namespace `kev` and key `catalog`.
+Provider validation, Workbench provider refresh jobs, status APIs, and provider
+snapshot exports inspect the namespace checksum rather than requiring live CISA
+access in CI.
 
 Provider snapshot metadata includes `source_hashes` keyed by selected provider source. The values are SHA-256 namespace checksums from the local cache when cache documents exist, or `null` when a selected namespace has no cached documents yet.
 

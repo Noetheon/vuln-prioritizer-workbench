@@ -20,7 +20,7 @@ from app.api.errors import (
     unhandled_exception_handler,
     validation_error_handler,
 )
-from app.api.main import api_router, assert_api_auth_policy
+from app.api.main import api_router, assert_api_local_actor_policy
 from app.core.app_state import configure_workbench_state, workbench_settings
 from app.core.config import Settings, settings
 from app.core.db import create_db_engine
@@ -40,7 +40,6 @@ SECURITY_HEADERS = {
         "connect-src 'self'; frame-ancestors 'none'"
     ),
 }
-_AUTH_REQUEST_MAX_BYTES = 64 * 1024
 
 
 def custom_generate_unique_id(route: APIRoute) -> str:
@@ -66,7 +65,7 @@ def create_app(active_settings: Settings | None = None) -> FastAPI:
         generate_unique_id_function=custom_generate_unique_id,
     )
     active_engine = create_db_engine(selected_settings)
-    assert_api_auth_policy(selected_settings.API_V1_STR)
+    assert_api_local_actor_policy(selected_settings.API_V1_STR)
     configure_workbench_state(
         app,
         active_settings=selected_settings,
@@ -91,7 +90,7 @@ def create_app(active_settings: Settings | None = None) -> FastAPI:
             allow_origins=list(selected_settings.all_cors_origins),
             allow_credentials=True,
             allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-            allow_headers=["Authorization", "Content-Type", "Accept", "X-CSRF-Token"],
+            allow_headers=["Content-Type", "Accept"],
         )
     app.middleware("http")(_rate_limit_guard)
     app.middleware("http")(_upload_size_guard)
@@ -100,10 +99,7 @@ def create_app(active_settings: Settings | None = None) -> FastAPI:
     app.add_exception_handler(StarletteHTTPException, http_exception_handler)
     app.add_exception_handler(RequestValidationError, validation_error_handler)
     app.add_exception_handler(Exception, unhandled_exception_handler)
-    install_error_openapi_schema(
-        app,
-        oauth2_token_url=f"{selected_settings.API_V1_STR}/login/access-token",
-    )
+    install_error_openapi_schema(app)
     return app
 
 
@@ -193,24 +189,12 @@ async def _upload_size_guard(
 
 
 def _request_size_limit(path: str, active_settings: Settings) -> int | None:
-    if _is_workbench_auth_body_path(path):
-        return _AUTH_REQUEST_MAX_BYTES
     if _is_workbench_upload_path(path, active_settings.API_V1_STR):
         return active_settings.max_upload_bytes + 64 * 1024
     return None
 
 
-def _is_workbench_auth_body_path(path: str) -> bool:
-    return (
-        path.endswith("/login/access-token")
-        or path.endswith("/login/logout")
-        or path.endswith("/login/test-token")
-    )
-
-
 def _request_too_large_detail(path: str) -> str:
-    if _is_workbench_auth_body_path(path):
-        return "Request body exceeds configured limit."
     return "Upload exceeds configured limit."
 
 

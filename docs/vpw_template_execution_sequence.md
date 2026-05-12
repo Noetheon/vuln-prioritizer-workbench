@@ -1,10 +1,9 @@
 # VPW Template Execution Sequence
 
-Status: historical execution sequence and current-state reference. The active
-runtime is now `backend/app`; current public-production readiness work is tracked
-through the root `ROADMAP.md` and
-[Public-Production Release Evidence Ledger](public-production-release-evidence-ledger.md).
-This file should not be used as standalone closure evidence for reopened issues.
+Status: historical execution sequence. The active runtime is now `backend/app`,
+and current local Workbench product work is tracked through the root
+`ROADMAP.md`. This file should not be used as standalone closure evidence for
+reopened issues or as current implementation guidance.
 
 This file mapped the reopened duplicate VPW roadmap to a safer template-first
 execution order. The reopened GitHub issues remain authoritative. This document
@@ -27,13 +26,13 @@ Goal:
 Create a reproducible FastAPI Full Stack Template baseline and prove that the
 stock template runs before any Workbench customization.
 
-Exit criteria:
+Historical exit criteria:
 
 - template source and commit are documented
 - remote to `fastapi/full-stack-fastapi-template` exists
 - Docker, backend, frontend, generated client, and Playwright baseline evidence is
   captured
-- product identity is changed without breaking template auth
+- product identity is changed without breaking the then-current template baseline
 - issue and PR templates require strict evidence
 
 ## Phase 1: Template Backend Domain Foundation
@@ -46,7 +45,8 @@ Issues:
 Goal:
 
 Replace template demo Items with Workbench Projects and add the first SQLModel
-domain model set while preserving template user/auth behavior.
+domain model set. The original plan preserved template user/auth behavior during
+the migration, but that is no longer a current product requirement.
 
 Grouping:
 
@@ -55,10 +55,10 @@ Grouping:
 - `VPW-008` to `VPW-012` should normally be separate PRs unless a migration and
   repository test must land together.
 
-Blocked until:
+Historical blockers:
 
 - `VPW-001` baseline evidence is present
-- template auth/login tests are green
+- the template baseline smoke tests are green
 
 ## Phase 2: Core Package Extraction
 
@@ -77,7 +77,9 @@ Rules:
 - Do not reintroduce runtime-specific web routes outside `backend/app`.
 - Do not reintroduce a second repository/database layer as the new persistence
   layer.
-- Preserve CLI behavior through a compatibility package or thin CLI wrapper.
+- Historical note: this phase originally preserved CLI behavior. Current product
+  work should move useful behavior into Workbench services and does not need to
+  preserve the removed CLI surface.
 - Add import-boundary tests before wiring API routes.
 
 ## Phase 3: Imports, Providers, And Decision API
@@ -110,13 +112,13 @@ Issues:
 Goal:
 
 Implement the Workbench in the template React/TanStack frontend, using the
-generated OpenAPI client and preserving login/user settings.
+generated OpenAPI client and the local single-user runtime settings.
 
 Blocked until:
 
 - decision API endpoints exist
 - generated client works
-- template login flow is green
+- local single-user Workbench flow is green
 
 ## Phase 5: Reports, Evidence, ATT&CK, Governance
 
@@ -144,7 +146,7 @@ Issues:
 Goal:
 
 Make the template Workbench releasable: upload security, safe rendering, CI,
-Docker, docs, release evidence, API tokens, scheduled provider updates, GitHub
+Docker, docs, release evidence, single-user runtime reset, scheduled provider updates, GitHub
 Action, GitHub Issue export, SARIF validation, and extension strategy.
 
 Exit criteria:

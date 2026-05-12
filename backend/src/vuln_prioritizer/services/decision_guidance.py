@@ -10,7 +10,7 @@ from vuln_prioritizer.models import (
     PrioritizedFinding,
     SlaTarget,
 )
-from vuln_prioritizer.models_decision import DecisionTemplate
+from vuln_prioritizer.models_decision import DecisionRecommendation
 
 SLA_BY_PRIORITY: dict[str, SlaTarget] = {
     "Critical": SlaTarget(
@@ -61,7 +61,7 @@ GOVERNANCE_SLA_BY_STATE: dict[str, SlaTarget] = {
     ),
 }
 
-TEMPLATE_LABELS = {
+RECOMMENDATION_LABELS = {
     "patch": "Patch",
     "mitigate": "Mitigate",
     "monitor": "Monitor",
@@ -76,26 +76,26 @@ class DecisionGuidanceService:
     """Build deterministic management-readable guidance from finding evidence."""
 
     def build(self, finding: PrioritizedFinding) -> FindingDecisionGuidance:
-        template, template_reasons = _select_template(finding)
+        recommendation, recommendation_reasons = _select_recommendation(finding)
         sla = _sla_for_finding(finding)
         business_impact = _business_impact(finding)
         visibility = _visibility_statement(finding)
         decision_statement = _decision_statement(
             finding,
-            template=template,
+            recommendation=recommendation,
             sla=sla,
             business_impact=business_impact,
         )
         reason_codes = [
-            f"template.{template}",
+            f"recommendation.{recommendation}",
             f"sla.{sla.priority.lower().replace(' ', '_')}.{sla.label.lower().replace(' ', '_')}",
             f"impact.{business_impact.level}",
-            *template_reasons,
+            *recommendation_reasons,
             *_impact_reason_codes(business_impact.drivers),
         ]
         return FindingDecisionGuidance(
-            template=template,
-            template_label=TEMPLATE_LABELS[template],
+            recommendation=recommendation,
+            recommendation_label=RECOMMENDATION_LABELS[recommendation],
             sla=sla,
             business_impact=business_impact,
             decision_statement=decision_statement,
@@ -109,19 +109,19 @@ def build_decision_guidance(finding: PrioritizedFinding) -> FindingDecisionGuida
     return DecisionGuidanceService().build(finding)
 
 
-def _select_template(finding: PrioritizedFinding) -> tuple[DecisionTemplate, list[str]]:
+def _select_recommendation(finding: PrioritizedFinding) -> tuple[DecisionRecommendation, list[str]]:
     state = finding.priority_state or finding.priority_label
     if state == "Accepted" or finding.waived:
-        return "waiver", ["template.waiver.accepted_risk_visible"]
+        return "waiver", ["recommendation.waiver.accepted_risk_visible"]
     if state in {"Suppressed", "Fixed"} or finding.suppressed_by_vex:
-        return "monitor", [f"template.monitor.{state.lower()}_evidence_visible"]
+        return "monitor", [f"recommendation.monitor.{state.lower()}_evidence_visible"]
     if _has_fixed_version_evidence(finding):
-        return "patch", ["template.patch.fixed_version_evidence"]
+        return "patch", ["recommendation.patch.fixed_version_evidence"]
     if finding.in_kev or finding.priority_label in {"Critical", "High"}:
-        return "mitigate", ["template.mitigate.urgent_without_fix_evidence"]
+        return "mitigate", ["recommendation.mitigate.urgent_without_fix_evidence"]
     if _needs_review(finding):
-        return "review", ["template.review.incomplete_context"]
-    return "monitor", ["template.monitor.normal_cycle"]
+        return "review", ["recommendation.review.incomplete_context"]
+    return "monitor", ["recommendation.monitor.normal_cycle"]
 
 
 def _sla_for_finding(finding: PrioritizedFinding) -> SlaTarget:
@@ -247,7 +247,7 @@ def _visibility_statement(finding: PrioritizedFinding) -> str:
 def _decision_statement(
     finding: PrioritizedFinding,
     *,
-    template: DecisionTemplate,
+    recommendation: DecisionRecommendation,
     sla: SlaTarget,
     business_impact: BusinessImpactBlock,
 ) -> str:
@@ -255,22 +255,22 @@ def _decision_statement(
     if 0 < finding.operational_rank <= 5:
         rank_prefix = f"Top finding #{finding.operational_rank}: "
     cve = finding.cve_id
-    if template == "patch":
+    if recommendation == "patch":
         action = (
             f"patch {cve} by applying validated vendor fixes or package upgrades, then confirm "
             "the affected assets are clean."
         )
-    elif template == "mitigate":
+    elif recommendation == "mitigate":
         action = (
             f"mitigate {cve} with approved compensating controls while the owner confirms "
             "patch availability and affected scope."
         )
-    elif template == "waiver":
+    elif recommendation == "waiver":
         action = (
             f"keep {cve} under accepted-risk governance with owner, review date, and expiry "
             "evidence visible."
         )
-    elif template == "review":
+    elif recommendation == "review":
         action = (
             f"review {cve} with the asset owner because evidence is incomplete or context "
             "needs validation before scheduling."
@@ -279,9 +279,10 @@ def _decision_statement(
         action = (
             f"monitor {cve} and re-evaluate if provider, VEX, waiver, or asset context changes."
         )
+    label = RECOMMENDATION_LABELS[recommendation]
     return (
-        f"{rank_prefix}{TEMPLATE_LABELS[template]} decision: {action} SLA: {sla.label} - "
-        f"{sla.guidance} Business impact: {business_impact.text}"
+        f"{rank_prefix}{label} decision: {action} SLA: {sla.label} - {sla.guidance} "
+        f"Business impact: {business_impact.text}"
     )
 
 

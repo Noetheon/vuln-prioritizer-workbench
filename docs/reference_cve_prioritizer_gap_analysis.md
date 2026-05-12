@@ -19,9 +19,9 @@ Important note:
 | EPSS enrichment | yes | yes | yes |
 | CISA KEV enrichment | yes | yes | yes |
 | VulnCheck-oriented enrichment | visible in project positioning | no | no |
-| `compare` command | not a visible core differentiator | yes | yes |
-| `explain` command | not a visible core differentiator | yes | ATT&CK-aware |
-| Local ATT&CK CSV hook | no visible core feature | yes | legacy compatibility |
+| CVSS-only comparison | not a visible core differentiator | yes | Workbench/API report surface |
+| Explainability detail | not a visible core differentiator | yes | ATT&CK-aware Workbench/API surface |
+| Local ATT&CK mapping hook | no visible core feature | yes | explicit reviewed local override |
 | CTID Mappings Explorer import | no visible core feature | no | yes |
 | Structured ATT&CK technique metadata | no visible core feature | no | yes |
 | ATT&CK coverage summary | no visible core feature | no | yes |
@@ -55,4 +55,7 @@ This project additionally answers:
 
 ## Conclusion
 
-The current release line positions `vuln-prioritizer` as a CTID/ATT&CK-informed extension of standard CVE prioritization that has since grown into a broader CLI/CI workflow tool without copying the reference project.
+The current product line positions `vuln-prioritizer` as a local
+FastAPI/React Workbench for CTID/ATT&CK-informed CVE prioritization. The old
+CLI/CI-oriented surfaces are historical context, not the current product
+identity, and the repository does not copy code from the reference project.
