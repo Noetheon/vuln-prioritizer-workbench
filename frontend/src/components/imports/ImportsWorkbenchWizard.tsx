@@ -25,6 +25,7 @@ import {
 } from "@/components/vpw"
 import { ProviderAttackOptions } from "./ImportsWorkbenchProviderOptions"
 import {
+  importSubmitDisabled,
   type ImportsWorkbenchProps,
   selectedFormat,
   uploadProgress,
@@ -120,6 +121,13 @@ export function ImportWizard({
   | "supportedFormats"
 >) {
   const format = selectedFormat(supportedFormats, importWizard.inputType)
+  const submitDisabled = importSubmitDisabled({
+    importLoading,
+    projectListLoading,
+    projectCount: projects.length,
+    selectedProjectId,
+    wizard: importWizard,
+  })
   const stepCards = [
     {
       title: "Select project",
@@ -297,7 +305,7 @@ export function ImportWizard({
             ) : null}
             <Button
               aria-busy={importLoading}
-              disabled={importLoading || projects.length === 0}
+              disabled={submitDisabled}
               type="submit"
             >
               <Upload aria-hidden="true" data-icon="inline-start" />
