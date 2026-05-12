@@ -1,16 +1,24 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://noetheon.github.io/vuln-prioritizer/schemas/evidence-bundle-verification-report.schema.json",
-  "title": "vuln-prioritizer evidence bundle verification report",
-  "description": "Verification contract emitted by `report verify-evidence-bundle --format json`.",
+  "title": "Workbench evidence bundle verification report",
+  "description": "Verification contract emitted by Workbench evidence bundle verification.",
   "type": "object",
   "additionalProperties": true,
-  "required": ["metadata", "summary", "items"],
+  "required": [
+    "metadata",
+    "summary",
+    "items"
+  ],
   "properties": {
     "metadata": {
       "type": "object",
       "additionalProperties": true,
-      "required": ["schema_version", "generated_at", "bundle_path"],
+      "required": [
+        "schema_version",
+        "generated_at",
+        "bundle_path"
+      ],
       "properties": {
         "schema_version": {
           "const": "1.2.0"
@@ -22,10 +30,16 @@
           "type": "string"
         },
         "manifest_schema_version": {
-          "type": ["string", "null"]
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "bundle_kind": {
-          "type": ["string", "null"]
+          "type": [
+            "string",
+            "null"
+          ]
         }
       }
     },
@@ -80,32 +94,57 @@
     "verificationItem": {
       "type": "object",
       "additionalProperties": true,
-      "required": ["path", "status", "detail"],
+      "required": [
+        "path",
+        "status",
+        "detail"
+      ],
       "properties": {
         "path": {
           "type": "string"
         },
         "kind": {
-          "type": ["string", "null"]
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "status": {
-          "enum": ["ok", "missing", "modified", "unexpected", "error"]
+          "enum": [
+            "ok",
+            "missing",
+            "modified",
+            "unexpected",
+            "error"
+          ]
         },
         "detail": {
           "type": "string"
         },
         "expected_size_bytes": {
-          "type": ["integer", "null"]
+          "type": [
+            "integer",
+            "null"
+          ]
         },
         "actual_size_bytes": {
-          "type": ["integer", "null"]
+          "type": [
+            "integer",
+            "null"
+          ]
         },
         "expected_sha256": {
-          "type": ["string", "null"],
+          "type": [
+            "string",
+            "null"
+          ],
           "pattern": "^[a-f0-9]{64}$"
         },
         "actual_sha256": {
-          "type": ["string", "null"],
+          "type": [
+            "string",
+            "null"
+          ],
           "pattern": "^[a-f0-9]{64}$"
         }
       }

@@ -50,7 +50,7 @@ function stringValue(value: unknown) {
 
 export function formatDateTime(value: string | null | undefined) {
   if (!value) {
-    return "N.A."
+    return "Not recorded"
   }
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) {
@@ -141,7 +141,7 @@ export function sourceHashes(providerStatus: ProviderStatusPublic | null) {
   const values = Object.entries(hashes).map(([source, hash]) =>
     typeof hash === "string" && hash.trim()
       ? `${source}: ${hash}`
-      : `${source}: N.A.`,
+      : `${source}: not recorded`,
   )
   return values.length > 0 ? values.join(" | ") : "No source hashes recorded"
 }
@@ -165,7 +165,7 @@ export function sourceRows(
       status,
       tone: sourceStatusTone(status),
       usedInEvidence: source.selected ? "Yes" : "No",
-      value: source.value ?? "N.A.",
+      value: source.value ?? "Not recorded",
     }
   })
 
@@ -194,7 +194,9 @@ export function sourceRows(
       ? "Yes"
       : "Recorded",
     value:
-      providerStatus?.snapshot.mode ?? providerStatus?.snapshot_mode ?? "N.A.",
+      providerStatus?.snapshot.mode ??
+      providerStatus?.snapshot_mode ??
+      "Not recorded",
   })
 
   return rows

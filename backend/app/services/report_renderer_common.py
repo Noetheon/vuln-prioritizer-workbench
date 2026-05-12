@@ -105,7 +105,6 @@ def _redacted_bundle_payload(
             payload,
             project_name=redact(payload.project_name, "project.name"),
             project_description=redact(payload.project_description, "project.description"),
-            project_owner_id=redact(payload.project_owner_id, "project.owner_id"),
             input_type=redact(payload.input_type, "analysis_run.input_type"),
             filename=redact(payload.filename, "analysis_run.filename"),
             summary=redact(payload.summary, "analysis_run.summary"),

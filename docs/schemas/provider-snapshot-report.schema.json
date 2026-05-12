@@ -1,11 +1,15 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://noetheon.github.io/vuln-prioritizer/schemas/provider-snapshot-report.schema.json",
-  "title": "vuln-prioritizer provider snapshot report",
-  "description": "JSON contract for `vuln-prioritizer data export-provider-snapshot`.",
+  "title": "Workbench provider snapshot report",
+  "description": "JSON contract for Workbench provider snapshot artifacts.",
   "type": "object",
   "additionalProperties": true,
-  "required": ["metadata", "items", "warnings"],
+  "required": [
+    "metadata",
+    "items",
+    "warnings"
+  ],
   "properties": {
     "metadata": {
       "$ref": "#/$defs/metadata"
@@ -22,10 +26,16 @@
   },
   "$defs": {
     "nullableString": {
-      "type": ["string", "null"]
+      "type": [
+        "string",
+        "null"
+      ]
     },
     "nullableNumber": {
-      "type": ["number", "null"]
+      "type": [
+        "number",
+        "null"
+      ]
     },
     "stringArray": {
       "type": "array",
@@ -41,7 +51,9 @@
         {
           "type": "object",
           "additionalProperties": true,
-          "required": ["cve_id"],
+          "required": [
+            "cve_id"
+          ],
           "properties": {
             "cve_id": {
               "type": "string"
@@ -94,7 +106,9 @@
         {
           "type": "object",
           "additionalProperties": true,
-          "required": ["cve_id"],
+          "required": [
+            "cve_id"
+          ],
           "properties": {
             "cve_id": {
               "type": "string"
@@ -120,7 +134,10 @@
         {
           "type": "object",
           "additionalProperties": true,
-          "required": ["cve_id", "in_kev"],
+          "required": [
+            "cve_id",
+            "in_kev"
+          ],
           "properties": {
             "cve_id": {
               "type": "string"
@@ -162,7 +179,10 @@
     "defensiveContext": {
       "type": "object",
       "additionalProperties": true,
-      "required": ["cve_id", "source"],
+      "required": [
+        "cve_id",
+        "source"
+      ],
       "properties": {
         "cve_id": {
           "type": "string"
@@ -291,7 +311,12 @@
           "additionalProperties": {
             "type": "object",
             "additionalProperties": {
-              "type": ["string", "integer", "boolean", "null"]
+              "type": [
+                "string",
+                "integer",
+                "boolean",
+                "null"
+              ]
             }
           }
         },
@@ -306,7 +331,12 @@
     "item": {
       "type": "object",
       "additionalProperties": true,
-      "required": ["cve_id", "nvd", "epss", "kev"],
+      "required": [
+        "cve_id",
+        "nvd",
+        "epss",
+        "kev"
+      ],
       "properties": {
         "cve_id": {
           "type": "string"

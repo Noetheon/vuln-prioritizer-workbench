@@ -87,7 +87,7 @@ export function ProviderFreshnessPanel({
         </div>
         <div>
           <dt>Last sync</dt>
-          <dd>{providerStatus?.last_sync ?? "N.A."}</dd>
+          <dd>{providerStatus?.last_sync ?? "Not recorded"}</dd>
         </div>
         <div>
           <dt>Cache age</dt>
@@ -106,7 +106,7 @@ export function ProviderFreshnessPanel({
             title={providerSourceDetail(source)}
           >
             <strong>{providerSourceLabel(source)}</strong>
-            <span>{source.value ?? "N.A."}</span>
+            <span>{source.value ?? "Not recorded"}</span>
           </li>
         ))}
       </ul>

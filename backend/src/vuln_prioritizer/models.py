@@ -1,4 +1,4 @@
-"""Pydantic models for the CLI."""
+"""Pydantic models for vulnerability prioritization workflows."""
 
 from __future__ import annotations
 
@@ -12,7 +12,6 @@ import vuln_prioritizer.models_decision as _models_decision
 import vuln_prioritizer.models_input as _models_input
 import vuln_prioritizer.models_provider as _models_provider
 import vuln_prioritizer.models_remediation as _models_remediation
-import vuln_prioritizer.models_state as _models_state
 import vuln_prioritizer.models_waivers as _models_waivers
 from vuln_prioritizer.config import validate_env_var_name
 from vuln_prioritizer.model_base import StrictModel
@@ -31,10 +30,7 @@ FindingAttackContextSummary = _models_attack.FindingAttackContextSummary
 AssetContextRecord = _models_input.AssetContextRecord
 BusinessImpactBlock = _models_decision.BusinessImpactBlock
 ContextPolicyProfile = _models_input.ContextPolicyProfile
-DecisionTemplate = _models_decision.DecisionTemplate
-DoctorCheck = _models_artifacts.DoctorCheck
-DoctorReport = _models_artifacts.DoctorReport
-DoctorSummary = _models_artifacts.DoctorSummary
+DecisionRecommendation = _models_decision.DecisionRecommendation
 EvidenceBundleFile = _models_artifacts.EvidenceBundleFile
 EvidenceBundleGovernanceArtifact = _models_artifacts.EvidenceBundleGovernanceArtifact
 EvidenceBundleInputHash = _models_artifacts.EvidenceBundleInputHash
@@ -63,27 +59,6 @@ RemediationComponent = _models_remediation.RemediationComponent
 RemediationPlan = _models_remediation.RemediationPlan
 SlaTarget = _models_decision.SlaTarget
 
-StateHistoryEntry = _models_state.StateHistoryEntry
-StateHistoryMetadata = _models_state.StateHistoryMetadata
-StateHistoryReport = _models_state.StateHistoryReport
-StateImportMetadata = _models_state.StateImportMetadata
-StateImportReport = _models_state.StateImportReport
-StateImportSummary = _models_state.StateImportSummary
-StateInitMetadata = _models_state.StateInitMetadata
-StateInitReport = _models_state.StateInitReport
-StateInitSummary = _models_state.StateInitSummary
-StateServiceHistoryEntry = _models_state.StateServiceHistoryEntry
-StateServiceHistoryMetadata = _models_state.StateServiceHistoryMetadata
-StateServiceHistoryReport = _models_state.StateServiceHistoryReport
-StateTopServiceEntry = _models_state.StateTopServiceEntry
-StateTopServicesMetadata = _models_state.StateTopServicesMetadata
-StateTopServicesReport = _models_state.StateTopServicesReport
-StateTrendEntry = _models_state.StateTrendEntry
-StateTrendsMetadata = _models_state.StateTrendsMetadata
-StateTrendsReport = _models_state.StateTrendsReport
-StateWaiverEntry = _models_state.StateWaiverEntry
-StateWaiverMetadata = _models_state.StateWaiverMetadata
-StateWaiverReport = _models_state.StateWaiverReport
 VexStatement = _models_input.VexStatement
 WaiverHealthSummary = _models_waivers.WaiverHealthSummary
 WaiverRule = _models_waivers.WaiverRule

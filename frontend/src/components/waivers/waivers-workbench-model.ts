@@ -56,11 +56,11 @@ export function joinedValues(values: Array<string | null | undefined>) {
 }
 
 export function shortId(value: string | null | undefined) {
-  return value ? value.slice(0, 8) : "N.A."
+  return value ? value.slice(0, 8) : "Not recorded"
 }
 
 export function formatDate(value: string | null | undefined) {
-  if (!value) return "N.A."
+  if (!value) return "Not recorded"
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return value
   return new Intl.DateTimeFormat(undefined, {

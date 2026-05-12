@@ -51,17 +51,18 @@ the generated `/api/v1` browser client:
 curl http://127.0.0.1:8000/api/v1/workbench/health
 ```
 
-Maintainers can run the same active-runtime readiness path with:
+Maintainers can run the same active-runtime smoke path with isolated smoke
+ports, backend `18080` and frontend `15174`, by default:
 
 ```bash
 make docker-demo-smoke
 ```
 
-When local `8000` or `5173` host ports are unavailable, override the host
-bindings while preserving the same Compose services:
+Override the host bindings when those smoke ports are unavailable while
+preserving the same Compose services:
 
 ```bash
-DOCKER_DEMO_BACKEND_PORT=18080 DOCKER_DEMO_FRONTEND_PORT=15174 make docker-demo-smoke
+DOCKER_DEMO_BACKEND_PORT=18081 DOCKER_DEMO_FRONTEND_PORT=15175 make docker-demo-smoke
 ```
 
 ## Documentation Map
@@ -78,7 +79,7 @@ DOCKER_DEMO_BACKEND_PORT=18080 DOCKER_DEMO_FRONTEND_PORT=15174 make docker-demo-
 | Reports and evidence | [Support matrix](support_matrix.md), [Contracts](contracts.md), [Evidence archive](evidence.md) | Markdown, JSON, SARIF, HTML, CSV, evidence ZIP manifests, verification, and governance artifacts. |
 | ATT&CK boundaries | [ATT&CK/TTP methodology](attack-ttp-methodology.md), [Workbench ATT&CK methodology](workbench-attack-methodology.md), [Methodology](methodology.md) | CTID/local mapping sources, confidence, no heuristic mappings, tactic/technique/procedure boundary, and report wording rules. |
 | Security and deployment limits | [Workbench threat model](workbench-threat-model.md), [Release checklist](workbench-v1-release-checklist.md) | Local-first assumptions, upload/download controls, secret redaction, public-exposure blockers, Docker and dependency evidence. |
-| Reports and integrations | [Reporting and CI integrations](integrations/reporting_and_ci.md), [GitHub summary templates](examples/github_action_summary_templates.md) | SARIF validation, summaries, evidence bundles, fail gates, and report artifacts. |
+| Reports and integrations | [Reporting and CI integrations](integrations/reporting_and_ci.md) | SARIF validation, summaries, evidence bundles, fail gates, and report artifacts. |
 | Current release status | [v1.1.0 release notes](releases/v1.1.0.md), [Roadmap](roadmap.md) | Current package line, Workbench milestone evidence, shipped surfaces, and deliberate future scope. |
 
 ## Data And Provider Boundaries
@@ -122,7 +123,7 @@ or customer scanner exports in public docs.
   outside the current local-first threat model.
 - Evidence bundles provide integrity metadata, not encryption.
 - Live provider availability can vary; use locked provider snapshots for
-  reproducible demos and release evidence.
+  reproducible local demos.
 - ATT&CK coverage depends on CTID or reviewed local mapping data. Unmapped CVEs
   stay unmapped.
 - The tool does not scan systems, prove exploitation, generate payloads, create
@@ -132,7 +133,7 @@ or customer scanner exports in public docs.
 
 The README and docs use checked-in screenshots from the locked offline demo
 path. They are safe public demo assets and should be refreshed only as part of a
-documented release evidence or docs refresh change.
+documented docs refresh change.
 
 - `docs/examples/media/html-report-preview.png`
 - `docs/examples/media/workbench-dashboard.png`

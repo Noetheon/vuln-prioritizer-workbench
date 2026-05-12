@@ -1,4 +1,4 @@
-"""Pure factories for template Workbench domain model tests."""
+"""Pure factories for Workbench domain model tests."""
 
 from __future__ import annotations
 
@@ -8,6 +8,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Any, TypeVar
 
 from app import models as app_models
+from app.core.local_actor import LocalWorkbenchActor, local_actor_id
 
 app_models.import_table_models()
 
@@ -22,7 +23,7 @@ _T = TypeVar("_T")
 class WorkbenchGraph:
     """A coherent unsaved Workbench object graph for tests."""
 
-    user: app_models.User
+    actor: LocalWorkbenchActor
     project: app_models.Project
     asset: app_models.Asset
     component: app_models.Component
@@ -32,48 +33,42 @@ class WorkbenchGraph:
     analysis_run: app_models.AnalysisRun
 
 
-def template_user(index: int = 1, **overrides: Any) -> app_models.User:
-    """Build an unsaved template user."""
+def workbench_local_actor(index: int = 1, **overrides: Any) -> LocalWorkbenchActor:
+    """Build a local actor fixture."""
 
+    email = str(overrides.pop("email", f"owner-{index}@example.test"))
     values = {
-        "id": template_id("user", index),
+        "id": local_actor_id(email),
         "email": f"owner-{index}@example.test",
-        "hashed_password": "not-used",
         "is_active": True,
-        "is_superuser": True,
         "full_name": f"Workbench Owner {index}",
-        "created_at": _time(index),
     }
+    values["email"] = email
     values.update(overrides)
-    return app_models.User(**values)
+    return LocalWorkbenchActor(**values)
 
 
-def template_project(
+def workbench_project(
     index: int = 1,
     *,
-    owner: app_models.User | None = None,
-    owner_id: uuid.UUID | None = None,
+    local_actor: LocalWorkbenchActor | None = None,
     **overrides: Any,
 ) -> app_models.Project:
-    """Build an unsaved project owned by ``owner`` or ``owner_id``."""
+    """Build an unsaved project."""
 
-    resolved_owner_id = owner_id or (owner.id if owner is not None else template_id("user", index))
+    _ = local_actor
     values = {
-        "id": template_id("project", index),
-        "owner_id": resolved_owner_id,
+        "id": workbench_id("project", index),
         "name": f"Workbench Project {index}",
-        "description": "Template Workbench domain fixture.",
+        "description": "Workbench domain fixture.",
         "created_at": _time(index),
         "updated_at": _time(index),
     }
     values.update(overrides)
-    project = app_models.Project(**values)
-    if owner is not None:
-        project.owner = owner
-    return project
+    return app_models.Project(**values)
 
 
-def template_asset(
+def workbench_asset(
     index: int = 1,
     *,
     project: app_models.Project | None = None,
@@ -83,10 +78,10 @@ def template_asset(
     """Build an unsaved asset scoped to a project."""
 
     resolved_project_id = project_id or (
-        project.id if project is not None else template_id("project", index)
+        project.id if project is not None else workbench_id("project", index)
     )
     values = {
-        "id": template_id("asset", index),
+        "id": workbench_id("asset", index),
         "project_id": resolved_project_id,
         "asset_key": f"payments-api-{index}",
         "name": f"Payments API {index}",
@@ -106,11 +101,11 @@ def template_asset(
     return asset
 
 
-def template_component(index: int = 1, **overrides: Any) -> app_models.Component:
+def workbench_component(index: int = 1, **overrides: Any) -> app_models.Component:
     """Build an unsaved software component."""
 
     values = {
-        "id": template_id("component", index),
+        "id": workbench_id("component", index),
         "name": "log4j-core",
         "version": f"2.14.{index}",
         "purl": f"pkg:maven/org.apache.logging.log4j/log4j-core@2.14.{index}",
@@ -123,15 +118,15 @@ def template_component(index: int = 1, **overrides: Any) -> app_models.Component
     return app_models.Component(**values)
 
 
-def template_vulnerability(index: int = 1, **overrides: Any) -> app_models.Vulnerability:
+def workbench_vulnerability(index: int = 1, **overrides: Any) -> app_models.Vulnerability:
     """Build an unsaved vulnerability."""
 
     cve_id = _cve_id(index)
     values = {
-        "id": template_id("vulnerability", index),
+        "id": workbench_id("vulnerability", index),
         "cve_id": cve_id,
         "source_id": cve_id,
-        "title": f"Template vulnerability {cve_id}",
+        "title": f"Workbench vulnerability {cve_id}",
         "description": "Offline vulnerability fixture for Workbench tests.",
         "cvss_score": 10.0,
         "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:C/C:H/I:H/A:H",
@@ -147,7 +142,7 @@ def template_vulnerability(index: int = 1, **overrides: Any) -> app_models.Vulne
     return app_models.Vulnerability(**values)
 
 
-def template_finding(
+def workbench_finding(
     index: int = 1,
     *,
     project: app_models.Project | None = None,
@@ -163,16 +158,16 @@ def template_finding(
     """Build an unsaved prioritized finding."""
 
     resolved_project_id = project_id or (
-        project.id if project is not None else template_id("project", index)
+        project.id if project is not None else workbench_id("project", index)
     )
     resolved_asset_id = _optional_related_id(asset_id, asset)
     resolved_component_id = _optional_related_id(component_id, component)
     resolved_vulnerability_id = vulnerability_id or (
-        vulnerability.id if vulnerability is not None else template_id("vulnerability", index)
+        vulnerability.id if vulnerability is not None else workbench_id("vulnerability", index)
     )
     cve_id = vulnerability.cve_id if vulnerability is not None else _cve_id(index)
     values = {
-        "id": template_id("finding", index),
+        "id": workbench_id("finding", index),
         "project_id": resolved_project_id,
         "asset_id": resolved_asset_id,
         "component_id": resolved_component_id,
@@ -207,14 +202,14 @@ def template_finding(
     return finding
 
 
-def template_provider_snapshot(
+def workbench_provider_snapshot(
     index: int = 1,
     **overrides: Any,
 ) -> app_models.ProviderSnapshot:
     """Build an unsaved provider snapshot."""
 
     values = {
-        "id": template_id("provider-snapshot", index),
+        "id": workbench_id("provider-snapshot", index),
         "nvd_last_sync": "2026-04-28T10:15:00Z",
         "epss_date": "2026-04-28",
         "kev_catalog_version": "2026-04-28",
@@ -235,7 +230,7 @@ def template_provider_snapshot(
     return app_models.ProviderSnapshot(**values)
 
 
-def template_analysis_run(
+def workbench_analysis_run(
     index: int = 1,
     *,
     project: app_models.Project | None = None,
@@ -247,11 +242,11 @@ def template_analysis_run(
     """Build an unsaved analysis run."""
 
     resolved_project_id = project_id or (
-        project.id if project is not None else template_id("project", index)
+        project.id if project is not None else workbench_id("project", index)
     )
     resolved_provider_snapshot_id = _optional_related_id(provider_snapshot_id, provider_snapshot)
     values = {
-        "id": template_id("analysis-run", index),
+        "id": workbench_id("analysis-run", index),
         "project_id": resolved_project_id,
         "provider_snapshot_id": resolved_provider_snapshot_id,
         "input_type": "cve-list",
@@ -270,29 +265,29 @@ def template_analysis_run(
     return analysis_run
 
 
-def template_workbench_graph(index: int = 1) -> WorkbenchGraph:
-    """Build a coherent, unsaved user-to-analysis-run Workbench graph."""
+def workbench_test_graph(index: int = 1) -> WorkbenchGraph:
+    """Build a coherent, unsaved project-to-analysis-run Workbench graph."""
 
-    user = template_user(index)
-    project = template_project(index, owner=user)
-    asset = template_asset(index, project=project)
-    component = template_component(index)
-    vulnerability = template_vulnerability(index)
-    finding = template_finding(
+    actor = workbench_local_actor(index)
+    project = workbench_project(index, local_actor=actor)
+    asset = workbench_asset(index, project=project)
+    component = workbench_component(index)
+    vulnerability = workbench_vulnerability(index)
+    finding = workbench_finding(
         index,
         project=project,
         asset=asset,
         component=component,
         vulnerability=vulnerability,
     )
-    provider_snapshot = template_provider_snapshot(index)
-    analysis_run = template_analysis_run(
+    provider_snapshot = workbench_provider_snapshot(index)
+    analysis_run = workbench_analysis_run(
         index,
         project=project,
         provider_snapshot=provider_snapshot,
     )
     return WorkbenchGraph(
-        user=user,
+        actor=actor,
         project=project,
         asset=asset,
         component=component,
@@ -303,7 +298,7 @@ def template_workbench_graph(index: int = 1) -> WorkbenchGraph:
     )
 
 
-def template_id(name: str, index: int = 1) -> uuid.UUID:
+def workbench_id(name: str, index: int = 1) -> uuid.UUID:
     """Return a stable UUID for a factory object name and index."""
 
     return uuid.uuid5(_ID_NAMESPACE, f"{name}:{index}")

@@ -92,7 +92,7 @@ def _asset_provenance() -> FindingProvenance:
     )
 
 
-def test_decision_guidance_selects_patch_template_and_emergency_sla_for_critical() -> None:
+def test_decision_guidance_selects_patch_recommendation_and_emergency_sla_for_critical() -> None:
     finding = _finding(
         priority_label="Critical",
         in_kev=True,
@@ -105,7 +105,7 @@ def test_decision_guidance_selects_patch_template_and_emergency_sla_for_critical
 
     guidance = DecisionGuidanceService().build(finding)
 
-    assert guidance.template == "patch"
+    assert guidance.recommendation == "patch"
     assert guidance.sla.label == "Emergency"
     assert guidance.sla.target_hours == 24
     assert guidance.business_impact.level == "critical"
@@ -113,20 +113,21 @@ def test_decision_guidance_selects_patch_template_and_emergency_sla_for_critical
     assert "customer-login" in guidance.business_impact.text
 
 
-def test_decision_guidance_covers_all_templates_and_visibility_states() -> None:
+def test_decision_guidance_covers_all_recommendations_and_visibility_states() -> None:
     service = DecisionGuidanceService()
 
     assert (
-        service.build(_finding(priority_label="High", remediation=RemediationPlan())).template
+        service.build(_finding(priority_label="High", remediation=RemediationPlan())).recommendation
         == "mitigate"
     )
-    assert service.build(_finding(priority_label="Low", epss=0.01, cvss=3.1)).template == "monitor"
-    assert service.build(_finding(priority_label="Medium", epss=None)).template == "review"
+    low_guidance = service.build(_finding(priority_label="Low", epss=0.01, cvss=3.1))
+    assert low_guidance.recommendation == "monitor"
+    assert service.build(_finding(priority_label="Medium", epss=None)).recommendation == "review"
 
     accepted = service.build(
         _finding(priority_label="Critical", priority_state="Accepted", waived=True)
     )
-    assert accepted.template == "waiver"
+    assert accepted.recommendation == "waiver"
     assert accepted.sla.label == "Governance Review"
     assert accepted.business_impact.level == "governance"
     assert "Accepted risk remains visible" in accepted.visibility
@@ -138,7 +139,7 @@ def test_decision_guidance_covers_all_templates_and_visibility_states() -> None:
             suppressed_by_vex=True,
         )
     )
-    assert suppressed.template == "monitor"
+    assert suppressed.recommendation == "monitor"
     assert suppressed.sla.label == "Evidence Review"
     assert suppressed.business_impact.level == "governance"
     assert "Suppressed evidence remains visible" in suppressed.visibility
@@ -148,12 +149,12 @@ def test_decision_guidance_uses_evidence_flags_for_governance_sla() -> None:
     service = DecisionGuidanceService()
 
     accepted = service.build(_finding(priority_label="Critical", waived=True))
-    assert accepted.template == "waiver"
+    assert accepted.recommendation == "waiver"
     assert accepted.sla.label == "Governance Review"
     assert accepted.business_impact.level == "governance"
 
     suppressed = service.build(_finding(priority_label="Critical", suppressed_by_vex=True))
-    assert suppressed.template == "monitor"
+    assert suppressed.recommendation == "monitor"
     assert suppressed.sla.label == "Evidence Review"
     assert suppressed.business_impact.level == "governance"
 
@@ -197,7 +198,7 @@ def test_example_recommendation_decision_matches_model_snapshot() -> None:
     )
 
     assert guidance.model_dump() == expected.model_dump()
-    assert guidance.template == "patch"
+    assert guidance.recommendation == "patch"
     assert guidance.sla.label == "Emergency"
     assert guidance.business_impact.level == "critical"
     assert "Top finding #1" in guidance.decision_statement

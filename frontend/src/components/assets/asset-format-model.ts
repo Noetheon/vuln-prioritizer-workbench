@@ -1,10 +1,10 @@
 export function formatDateTime(value: string | null | undefined) {
   if (!value) {
-    return "N.A."
+    return "Not recorded"
   }
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) {
-    return "N.A."
+    return "Not recorded"
   }
   return new Intl.DateTimeFormat(undefined, {
     dateStyle: "medium",

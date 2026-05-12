@@ -1,4 +1,4 @@
-"""Compatibility facade for Workbench report renderers."""
+"""Re-export facade for Workbench report renderers."""
 
 # ruff: noqa: F401,F403,F405,I001,E501
 
@@ -41,7 +41,7 @@ def verify_evidence_bundle_zip(
     *,
     display_path: str | None = None,
 ) -> dict[str, Any]:
-    """Verify evidence bundles while preserving facade-level monkeypatch compatibility."""
+    """Verify evidence bundles while preserving facade-level test overrides."""
     original = _report_bundle.verify_evidence_bundle_archive
     _report_bundle.verify_evidence_bundle_archive = verify_evidence_bundle_archive
     try:

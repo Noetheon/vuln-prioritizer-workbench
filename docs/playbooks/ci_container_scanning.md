@@ -1,128 +1,57 @@
 # CI Container Scanning Playbook
 
-Use this playbook when a CI job already produces a container-vulnerability export and you want one deterministic prioritization pass with machine-readable output plus a short operator summary.
+Use this playbook when a CI job already produces a Trivy or Grype JSON export
+and you want that export reviewed in the local Workbench. The Workbench does not
+run the scanner; it imports the scanner's existing output.
 
-This is the narrow operator path for:
-
-- `trivy-json`
-- `grype-json`
-- optional OpenVEX suppression
-- GitHub step summaries, PR comments, or HTML artifacts
-
-For the full command and action surface, see:
-
-- [Reporting and CI integration](../integrations/reporting_and_ci.md)
-- [Support matrix](../support_matrix.md)
-- [GitHub Action summary templates](../examples/github_action_summary_templates.md)
-
-## When to use this path
+## When To Use
 
 Choose this workflow when:
 
 - the source of truth is a CI-produced scanner export
-- you want stable JSON or SARIF for automation
-- you want a short Markdown summary for humans
-- you may need VEX-based suppression without hiding why a decision changed
+- package, path, image, and fix-version context should stay visible
+- VEX or asset context may change the visible remediation queue
+- a local operator will review and export reports from the Workbench
 
-Prefer explicit `--input-format` in CI. Do not rely on `auto` if reproducibility matters.
+## Workbench Import
 
-## Minimal Local Fixture Run (Repo Checkout Example)
+1. Download the scanner JSON artifact from CI.
+2. Open the local Workbench and select a project.
+3. Import the file with `input_type=trivy-json` or `input_type=grype-json`.
+4. Upload an OpenVEX or CycloneDX VEX file if the run should reflect known
+   applicability decisions.
+5. Upload asset context when owner, service, environment, exposure, or
+   criticality should influence triage.
 
-This uses the checked-in Trivy and OpenVEX fixtures and produces the three outputs most teams need first:
-
-- `analysis.json`
-- `summary.md`
-- `report.html`
-
-```bash
-vuln-prioritizer analyze \
-  --input data/input_fixtures/trivy_report.json \
-  --input-format trivy-json \
-  --vex-file data/input_fixtures/openvex_statements.json \
-  --format json \
-  --output build/ci-analysis.json \
-  --summary-output build/ci-summary.md \
-  --html-output build/ci-report.html
-```
-
-What this gives you:
-
-- JSON for downstream automation or archival
-- a short Markdown summary for CI surfaces
-- a static HTML artifact for human review
-- VEX-aware suppression with the underlying evidence still preserved in the analysis payload
-
-If you are working from a `pipx` install or another consumer repository instead of this repository checkout, replace the `data/...` paths above with your own scanner export and VEX file.
-
-## CI gate variant
-
-If the job should fail when prioritized findings cross a threshold, add `--fail-on`:
+Automation can call the same local API:
 
 ```bash
-vuln-prioritizer analyze \
-  --input trivy-results.json \
-  --input-format trivy-json \
-  --format sarif \
-  --output results.sarif \
-  --summary-output summary.md \
-  --fail-on high
+curl -F input_type=trivy-json \
+  -F file=@trivy-results.json \
+  http://127.0.0.1:8000/api/v1/projects/<project-id>/imports
 ```
 
-Common pattern:
-
-- use `json` when another internal step needs the full analysis payload
-- use `sarif` when GitHub Code Scanning is the primary consumer
-- keep `summary.md` when developers need a readable decision summary in the same run
-
-## GitHub Action path
-
-The repository already ships a composite GitHub Action. Use that instead of re-creating the analyze command by hand in every workflow.
-
-Typical operator choice:
-
-- `summary-template: compact` for `$GITHUB_STEP_SUMMARY` or PR comments
-- `summary-template: detailed` when you want a reusable summary artifact
-
-The examples here stay current:
-
-- [SARIF example workflow](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/.github/examples/code-scanning-sarif.yml)
-- [PR comment example workflow](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/.github/examples/pr-comment-report.yml)
-- [HTML artifact example workflow](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/.github/examples/html-report-artifact.yml)
-- [Workbench Markdown/JSON artifact workflow](https://github.com/Noetheon/vuln-prioritizer-workbench/blob/main/.github/examples/workbench-report-artifacts.yml)
-
-## Suggested operator sequence
-
-1. Run `doctor` first if config, cache, or live source health is unclear.
-2. Run `analyze` with an explicit scanner format.
-3. Keep JSON or SARIF as the machine contract.
-4. Add `--summary-output` for CI review surfaces.
-5. Add `--html-output` only when a human artifact is needed from the same run.
-6. Add `--fail-on` only after the team agrees on the gate level.
-
-## What to review in the output
+## Review
 
 Focus on:
 
 - prioritized findings, not raw scanner severity alone
 - KEV hits
 - EPSS outliers
-- VEX-suppressed items that changed the visible result set
-- target and package context preserved from the scanner export
+- VEX-suppressed or under-investigation items
+- target, package, and path evidence preserved from the scanner export
 
-If a finding needs a deeper single-item explanation, use `explain` on the CVE rather than expanding the CI summary into a long narrative.
+## Follow-Through
 
-## Follow-through options
+After the import completes:
 
-After a CI run, the usual next steps are:
-
-- publish the HTML artifact for reviewers
-- archive an evidence ZIP with `report evidence-bundle`
-- verify that ZIP before external sharing with `report verify-evidence-bundle`
-- compare today’s run with a saved prior state through `snapshot create` and `snapshot diff`
+- use Findings for queue review
+- use Assets when service or owner routing matters
+- create JSON, CSV, Markdown, HTML, SARIF, or evidence ZIP reports from Reports
+- verify evidence bundles before external sharing
 
 ## Notes
 
-- This tool prioritizes known findings; it does not replace the scanner.
-- OpenVEX suppression reduces noise but does not create a second opaque score.
-- If multiple teams consume the same workflow, consider a shared `vuln-prioritizer.yml` so CI defaults stay explicit and versioned.
-- The repo-fixture example above is for reproducible local validation; the public operator contract is the same command shape with user-supplied inputs.
+- This product prioritizes known findings; it does not replace Trivy or Grype.
+- Keep the scanner export as the source evidence artifact.
+- Use provider snapshots for deterministic local demos or review evidence.

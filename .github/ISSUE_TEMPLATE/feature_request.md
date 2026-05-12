@@ -22,7 +22,7 @@ Describe the smallest useful version of the feature.
 
 Target surface:
 
-- [ ] CLI/core
+- [ ] Domain core
 - [ ] Workbench backend API
 - [ ] SQLModel/Alembic persistence
 - [ ] React frontend
@@ -37,8 +37,8 @@ Target surface:
 - [ ] this does not add scanning, exploit execution, PoC generation, active
       probing, credential testing, autopatching, or offensive guidance
 - [ ] this does not require heuristic or LLM-generated CVE-to-ATT&CK mapping
-- [ ] this does not claim public/shared Workbench readiness without explicit
-      threat-model, deployment, release-readiness, and residual-risk evidence
+- [ ] this does not add auth, RBAC, API tokens, multi-user behavior, or
+      public-deployment hardening unless that boundary is explicitly requested
 
 ## Tests
 
@@ -60,8 +60,6 @@ What simpler approaches were considered?
 - [ ] Tests or evidence artifacts are named before implementation.
 - [ ] API, DB, generated-client, UI, docs, and security impacts are identified.
 - [ ] Residual risk and follow-up work are documented.
-- [ ] Public deployment certification is not claimed unless release-readiness
-      evidence and the final scorecard issue support it.
 
 ## Evidence
 

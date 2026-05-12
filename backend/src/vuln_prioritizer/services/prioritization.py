@@ -169,7 +169,7 @@ class PrioritizationService:
         *,
         sort_by: SortField = "priority",
     ) -> list[PrioritizedFinding]:
-        """Sort findings for terminal and report output."""
+        """Sort findings for Workbench and report output."""
         return sorted(findings, key=lambda finding: _finding_sort_key(finding, sort_by))
 
     def assign_operational_ranks(

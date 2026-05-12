@@ -60,7 +60,7 @@ export function buildServiceRollups(
       findings: 0,
       id: label,
       label,
-      owner: "N.A.",
+      owner: "Unassigned",
     }
 
     existing.assetCount += 1
@@ -68,7 +68,7 @@ export function buildServiceRollups(
     if (["critical", "high"].includes(String(asset.criticality ?? ""))) {
       existing.criticalAssets += 1
     }
-    if (asset.owner && existing.owner === "N.A.") {
+    if (asset.owner && existing.owner === "Unassigned") {
       existing.owner = asset.owner
     }
     if (asset.exposure === "internet-facing") {

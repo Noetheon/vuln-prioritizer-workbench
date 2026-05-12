@@ -17,8 +17,8 @@ accidental inclusion or that the old CLI is the product direction.
 The current package maturity classifier is `Development Status :: 4 - Beta`.
 Treat that as local-first self-hosted Workbench readiness, not public internet
 deployment certification. Moving to `Production/Stable` requires
-candidate-specific evidence in the public-production release ledger and release
-operations handoff.
+candidate-specific release and deployment evidence with an explicit owner
+handoff.
 
 The package boundary is enforced by:
 
@@ -33,8 +33,9 @@ The package boundary is enforced by:
 
 The sdist and wheel must contain `app/main.py`, `app/api/main.py`, the shared
 `vuln_prioritizer` domain package, and the active Workbench Alembic migration
-tree. They must not include the backend test tree. They also must not
-reintroduce removed legacy Workbench runtime packages under
+tree. They do not publish the old Typer CLI as a console entrypoint. They must
+not include the backend test tree. They also must not reintroduce removed legacy
+Workbench runtime packages under
 `vuln_prioritizer/api`, `vuln_prioritizer/db`, or `vuln_prioritizer/web`.
 
 ## Coverage Boundary
@@ -167,7 +168,6 @@ Use these commands when dependency or package policy changes:
 ```bash
 make dependency-audit
 make package-check
-make pipx-source-smoke
 cd frontend && npm ci --workspaces=false && npm audit --omit=dev
 ```
 

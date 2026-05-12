@@ -1,4 +1,4 @@
-"""Minimal Workbench settings used before the full auth stack lands."""
+"""Workbench settings for the local single-user runtime."""
 
 from __future__ import annotations
 
@@ -9,24 +9,17 @@ from pathlib import Path
 from typing import Literal, cast
 from urllib.parse import quote_plus, urlparse
 
-from app.core.password_policy import (
-    DEFAULT_WORKBENCH_SECRET,
-    LOCAL_WORKBENCH_PASSWORD_PLACEHOLDER,
-    LOCAL_WORKBENCH_SECRET_PLACEHOLDER,
-    MIN_WORKBENCH_PASSWORD_LENGTH,
-    PasswordPolicyInput,
-    password_policy_violations,
-)
 from vuln_prioritizer.config import DEFAULT_NVD_API_KEY_ENV, validate_env_var_name
 
 EnvironmentName = Literal["local", "staging", "production"]
 VALID_ENVIRONMENTS: set[str] = {"local", "staging", "production"}
 LOCAL_WORKBENCH_POSTGRES_PASSWORD_PLACEHOLDER = "local-workbench-dev-postgres-password"
+DEFAULT_WORKBENCH_SECRET = "changethis"
+LOCAL_WORKBENCH_SECRET_PLACEHOLDER = "local-workbench-dev-secret"
 INSECURE_WORKBENCH_SECRET_VALUES = {
     "",
     DEFAULT_WORKBENCH_SECRET,
     LOCAL_WORKBENCH_SECRET_PLACEHOLDER,
-    LOCAL_WORKBENCH_PASSWORD_PLACEHOLDER,
 }
 INSECURE_POSTGRES_PASSWORD_VALUES = {
     "",
@@ -40,17 +33,10 @@ LOCAL_ONLY_ALLOWED_HOSTS = {"localhost", "127.0.0.1", "testserver", "backend"}
 TRUE_VALUES = {"1", "true", "yes", "on"}
 FALSE_VALUES = {"0", "false", "no", "off"}
 DEFAULT_SQLITE_DATABASE_URI = "sqlite:///./workbench.db"
-LEGACY_SQLITE_DATABASE_URI = "sqlite:///./template.db"
 DEFAULT_IMPORT_UPLOAD_DIR = "data/workbench-import-uploads"
-LEGACY_IMPORT_UPLOAD_DIR = "data/template-import-uploads"
 DEFAULT_REPORT_DIR = "data/workbench-reports"
-LEGACY_REPORT_DIR = "data/template-reports"
 DEFAULT_PROVIDER_CACHE_DIR = "data/workbench-provider-cache"
-LEGACY_PROVIDER_CACHE_DIR = "data/template-provider-cache"
-LEGACY_STORAGE_FALLBACK_ENV = "WORKBENCH_LEGACY_STORAGE_FALLBACK"
 MIN_SECRET_KEY_LENGTH = 32
-MIN_FIRST_SUPERUSER_PASSWORD_LENGTH = MIN_WORKBENCH_PASSWORD_LENGTH
-DEFAULT_API_TOKEN_EXPIRE_DAYS = 90
 
 
 @dataclass(frozen=True)
@@ -61,9 +47,7 @@ class Settings:
     PROJECT_NAME: str = "Vuln Prioritizer Workbench"
     ENVIRONMENT: EnvironmentName = "local"
     SECRET_KEY: str = "changethis"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 8
-    FIRST_SUPERUSER: str = "admin@example.com"
-    FIRST_SUPERUSER_PASSWORD: str = "changethis"
+    LOCAL_WORKBENCH_USER_EMAIL: str = "local@workbench.test"
     FRONTEND_HOST: str = "http://localhost:5173"
     BACKEND_CORS_ORIGINS: tuple[str, ...] = field(default_factory=tuple)
     SQLALCHEMY_DATABASE_URI: str = DEFAULT_SQLITE_DATABASE_URI
@@ -79,15 +63,10 @@ class Settings:
     MAX_REPORTS_PER_RUN: int = 20
     RATE_LIMIT_ENABLED: bool = True
     API_RATE_LIMIT_PER_MINUTE: int = 600
-    LOGIN_RATE_LIMIT_PER_MINUTE: int = 60
-    TOKEN_FAILURE_RATE_LIMIT_PER_MINUTE: int = 60
     DECISION_API_MAX_FINDINGS: int = 1000
-    API_TOKEN_DEFAULT_EXPIRE_DAYS: int = DEFAULT_API_TOKEN_EXPIRE_DAYS
     BACKGROUND_IMPORT_STALE_MINUTES: int = 120
     TRUSTED_PROXY_CIDRS: tuple[str, ...] = field(default_factory=tuple)
     AUDIT_RETENTION_DAYS: int = 365
-    SESSION_RETENTION_DAYS: int = 30
-    REVOKED_API_TOKEN_RETENTION_DAYS: int = 365
     ALLOWED_HOSTS: tuple[str, ...] = field(default_factory=lambda: DEFAULT_ALLOWED_HOSTS)
     API_DOCS_ENABLED: bool | None = None
 
@@ -211,29 +190,17 @@ def load_settings() -> Settings:
         PROJECT_NAME=environ.get("PROJECT_NAME", "Vuln Prioritizer Workbench"),
         ENVIRONMENT=environment,
         SECRET_KEY=environ.get("SECRET_KEY", DEFAULT_WORKBENCH_SECRET),
-        ACCESS_TOKEN_EXPIRE_MINUTES=int(
-            environ.get("ACCESS_TOKEN_EXPIRE_MINUTES", str(60 * 24 * 8))
-        ),
-        FIRST_SUPERUSER=environ.get("FIRST_SUPERUSER", "admin@example.com"),
-        FIRST_SUPERUSER_PASSWORD=environ.get(
-            "FIRST_SUPERUSER_PASSWORD",
-            DEFAULT_WORKBENCH_SECRET,
+        LOCAL_WORKBENCH_USER_EMAIL=environ.get(
+            "LOCAL_WORKBENCH_USER_EMAIL",
+            "local@workbench.test",
         ),
         FRONTEND_HOST=environ.get("FRONTEND_HOST", "http://localhost:5173"),
         BACKEND_CORS_ORIGINS=parse_cors_origins(environ.get("BACKEND_CORS_ORIGINS", "")),
         SQLALCHEMY_DATABASE_URI=build_database_uri(),
-        IMPORT_UPLOAD_DIR=_storage_path_from_env(
-            "IMPORT_UPLOAD_DIR",
-            DEFAULT_IMPORT_UPLOAD_DIR,
-            LEGACY_IMPORT_UPLOAD_DIR,
-        ),
-        REPORT_DIR=_storage_path_from_env("REPORT_DIR", DEFAULT_REPORT_DIR, LEGACY_REPORT_DIR),
+        IMPORT_UPLOAD_DIR=environ.get("IMPORT_UPLOAD_DIR", DEFAULT_IMPORT_UPLOAD_DIR),
+        REPORT_DIR=environ.get("REPORT_DIR", DEFAULT_REPORT_DIR),
         PROVIDER_SNAPSHOT_DIR=environ.get("PROVIDER_SNAPSHOT_DIR", "data"),
-        PROVIDER_CACHE_DIR=_storage_path_from_env(
-            "PROVIDER_CACHE_DIR",
-            DEFAULT_PROVIDER_CACHE_DIR,
-            LEGACY_PROVIDER_CACHE_DIR,
-        ),
+        PROVIDER_CACHE_DIR=environ.get("PROVIDER_CACHE_DIR", DEFAULT_PROVIDER_CACHE_DIR),
         NVD_API_KEY_ENV=environ.get(
             "VULN_PRIORITIZER_NVD_API_KEY_ENV",
             DEFAULT_NVD_API_KEY_ENV,
@@ -248,27 +215,13 @@ def load_settings() -> Settings:
         MAX_REPORTS_PER_RUN=_positive_int_from_env("MAX_REPORTS_PER_RUN", 20),
         RATE_LIMIT_ENABLED=_bool_from_env("RATE_LIMIT_ENABLED", True),
         API_RATE_LIMIT_PER_MINUTE=_positive_int_from_env("API_RATE_LIMIT_PER_MINUTE", 600),
-        LOGIN_RATE_LIMIT_PER_MINUTE=_positive_int_from_env("LOGIN_RATE_LIMIT_PER_MINUTE", 60),
-        TOKEN_FAILURE_RATE_LIMIT_PER_MINUTE=_positive_int_from_env(
-            "TOKEN_FAILURE_RATE_LIMIT_PER_MINUTE",
-            60,
-        ),
         DECISION_API_MAX_FINDINGS=_positive_int_from_env("DECISION_API_MAX_FINDINGS", 1000),
-        API_TOKEN_DEFAULT_EXPIRE_DAYS=_positive_int_from_env(
-            "API_TOKEN_DEFAULT_EXPIRE_DAYS",
-            DEFAULT_API_TOKEN_EXPIRE_DAYS,
-        ),
         BACKGROUND_IMPORT_STALE_MINUTES=_positive_int_from_env(
             "BACKGROUND_IMPORT_STALE_MINUTES",
             120,
         ),
         TRUSTED_PROXY_CIDRS=parse_trusted_proxy_cidrs(environ.get("TRUSTED_PROXY_CIDRS", "")),
         AUDIT_RETENTION_DAYS=_positive_int_from_env("AUDIT_RETENTION_DAYS", 365),
-        SESSION_RETENTION_DAYS=_positive_int_from_env("SESSION_RETENTION_DAYS", 30),
-        REVOKED_API_TOKEN_RETENTION_DAYS=_positive_int_from_env(
-            "REVOKED_API_TOKEN_RETENTION_DAYS",
-            365,
-        ),
         ALLOWED_HOSTS=allowed_hosts,
         API_DOCS_ENABLED=_optional_bool_from_env("API_DOCS_ENABLED"),
     )
@@ -286,36 +239,7 @@ def _positive_int_from_env(name: str, default: int) -> int:
 
 
 def _default_sqlite_database_uri() -> str:
-    if not _legacy_storage_fallback_enabled():
-        return DEFAULT_SQLITE_DATABASE_URI
-    legacy_path = Path("template.db")
-    default_path = Path("workbench.db")
-    if legacy_path.exists() and not default_path.exists():
-        return LEGACY_SQLITE_DATABASE_URI
     return DEFAULT_SQLITE_DATABASE_URI
-
-
-def _storage_path_from_env(name: str, default_path: str, legacy_path: str) -> str:
-    configured_path = environ.get(name)
-    if configured_path:
-        return configured_path
-    if not _legacy_storage_fallback_enabled():
-        return default_path
-    legacy_root = Path(legacy_path)
-    default_root = Path(default_path)
-    if not default_root.exists() and _path_contains_data(legacy_root):
-        return legacy_path
-    return default_path
-
-
-def _legacy_storage_fallback_enabled() -> bool:
-    return _bool_from_env(LEGACY_STORAGE_FALLBACK_ENV, False)
-
-
-def _path_contains_data(path: Path) -> bool:
-    if not path.exists() or not path.is_dir():
-        return False
-    return any(path.iterdir())
 
 
 def _optional_bool_from_env(name: str) -> bool | None:
@@ -467,10 +391,7 @@ def _settings_use_insecure_workbench_secret(settings: Settings) -> bool:
 def _insecure_secret_fields(settings: Settings) -> list[str]:
     insecure_fields = [
         name
-        for name, value in (
-            ("SECRET_KEY", settings.SECRET_KEY),
-            ("FIRST_SUPERUSER_PASSWORD", settings.FIRST_SUPERUSER_PASSWORD),
-        )
+        for name, value in (("SECRET_KEY", settings.SECRET_KEY),)
         if _is_insecure_workbench_secret(value)
     ]
     return insecure_fields
@@ -481,15 +402,6 @@ def _weak_secret_fields(settings: Settings) -> list[str]:
     weak_fields: list[str] = []
     if len(settings.SECRET_KEY.strip()) < MIN_SECRET_KEY_LENGTH:
         weak_fields.append("SECRET_KEY")
-    if password_policy_violations(
-        PasswordPolicyInput(
-            password=settings.FIRST_SUPERUSER_PASSWORD,
-            username=settings.FIRST_SUPERUSER,
-            secret_key=settings.SECRET_KEY,
-            allow_local_bootstrap_default=not _secret_policy_applies(settings),
-        )
-    ):
-        weak_fields.append("FIRST_SUPERUSER_PASSWORD")
     return weak_fields
 
 

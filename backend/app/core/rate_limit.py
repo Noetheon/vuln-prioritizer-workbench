@@ -26,7 +26,7 @@ class RateLimitDecision:
 
 @runtime_checkable
 class RateLimiter(Protocol):
-    """Common limiter interface used by HTTP middleware and auth dependencies."""
+    """Common limiter interface used by HTTP middleware."""
 
     def check(self, key: str, *, limit: int, record: bool = True) -> RateLimitDecision:
         """Return whether a request is allowed for the given key and limit."""
@@ -203,9 +203,6 @@ def rate_limit_key(request: Request, settings: Settings) -> tuple[str, int] | No
         return None
     client_host = rate_limit_client_host(request, settings)
     path = request.url.path
-    if path.endswith("/login/access-token"):
-        username = _form_username_hint(request)
-        return f"login:{client_host}:{username}", settings.LOGIN_RATE_LIMIT_PER_MINUTE
     if path.startswith(f"{settings.API_V1_STR}/"):
         return f"api:{client_host}", settings.API_RATE_LIMIT_PER_MINUTE
     return None
@@ -222,13 +219,6 @@ def rate_limit_client_host(request: Request, settings: Settings) -> str:
         if forwarded_host:
             return forwarded_host
     return direct_host
-
-
-def _form_username_hint(request: Request) -> str:
-    content_type = request.headers.get("content-type", "")
-    if "application/x-www-form-urlencoded" not in content_type:
-        return "unknown"
-    return "submitted"
 
 
 def _is_trusted_proxy_host(host: str, trusted_proxy_cidrs: tuple[str, ...]) -> bool:

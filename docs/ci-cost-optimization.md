@@ -76,8 +76,8 @@ Dockerfiles, nginx config, or build config changed.
 Backend, compose, Dockerfile, dependency, runtime script, frontend package, and
 frontend build-config changes run both Docker Compose smokes. This keeps
 runtime/deployment coverage for changes that can alter container startup, image
-contents, backend API behavior, frontend image construction, same-origin routing,
-CSRF/session behavior, or report download paths.
+contents, backend API behavior, frontend image construction, same-origin
+routing, public-deployment controls, or report download paths.
 
 ## Tradeoffs
 

@@ -1,23 +1,22 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 
 import {
   type AnalysisRunPublic,
-  ApiError,
   type ReportPublic,
   ReportsService,
   type ReportVerificationPublic,
 } from "../api-client"
 import type { WorkbenchReportFormat } from "../lib/app-defaults"
 import { apiErrorMessage, objectRecord } from "../lib/app-errors"
-import { isReportableRunStatus, reportFormatLabel } from "../lib/report-format"
+import { reportFormatLabel } from "../lib/report-format"
 import type { WorkbenchPath } from "../lib/workbench-navigation"
 import { fetchReportDownload } from "./report-download"
+import { reportActionsAvailable } from "./report-action-state.ts"
 import { workbenchQueryKeys } from "./workbench-query-keys"
 
 type UseReportsRouteStateOptions = {
   currentPath: WorkbenchPath
-  onAuthExpired: () => Promise<void>
   selectedReportRun: AnalysisRunPublic | null
   selectedRunId: string
 }
@@ -36,7 +35,6 @@ async function downloadReportArtifact(report: ReportPublic) {
 
 export function useReportsRouteState({
   currentPath,
-  onAuthExpired,
   selectedReportRun,
   selectedRunId,
 }: UseReportsRouteStateOptions) {
@@ -48,6 +46,7 @@ export function useReportsRouteState({
   const [verificationLoading, setVerificationLoading] = useState(false)
   const [reportActionMessage, setReportActionMessage] = useState("")
   const [reportActionError, setReportActionError] = useState("")
+  const reportGenerationInFlight = useRef(false)
   const [activeReportFormat, setActiveReportFormat] = useState<
     WorkbenchReportFormat | ""
   >("")
@@ -79,11 +78,16 @@ export function useReportsRouteState({
   const reportsError = reportsQuery.isError
     ? apiErrorMessage("Report history unavailable", reportsQuery.error)
     : ""
-  const reportActionsEnabled =
-    currentPath === "/reports" &&
-    Boolean(selectedReportRun) &&
-    isReportableRunStatus(selectedReportRun?.status) &&
-    !reportsLoading
+  const reportActionPending =
+    createReportMutation.isPending ||
+    Boolean(activeReportFormat) ||
+    reportGenerationInFlight.current
+  const reportActionsEnabled = reportActionsAvailable({
+    currentPath,
+    reportActionPending,
+    reportsLoading,
+    selectedReportRun,
+  })
 
   useEffect(() => {
     if (currentPath === "/reports" && selectedRunId) {
@@ -97,12 +101,6 @@ export function useReportsRouteState({
     setVerificationLoading(false)
   }, [currentPath, selectedRunId])
 
-  useEffect(() => {
-    if (reportsQuery.error instanceof ApiError && reportsQuery.error.status === 401) {
-      void onAuthExpired()
-    }
-  }, [onAuthExpired, reportsQuery.error])
-
   function refreshReports() {
     void queryClient.invalidateQueries({
       queryKey: workbenchQueryKeys.reports(selectedRunId),
@@ -110,6 +108,9 @@ export function useReportsRouteState({
   }
 
   async function createReport(format: WorkbenchReportFormat) {
+    if (reportGenerationInFlight.current) {
+      return
+    }
     if (!selectedRunId) {
       setReportActionError(
         "Select a completed analysis run before generating reports.",
@@ -118,6 +119,7 @@ export function useReportsRouteState({
     }
     setReportActionError("")
     setReportActionMessage("")
+    reportGenerationInFlight.current = true
     setActiveReportFormat(format)
     try {
       const report = await createReportMutation.mutateAsync(format)
@@ -127,6 +129,7 @@ export function useReportsRouteState({
     } catch (caught) {
       setReportActionError(apiErrorMessage("Report generation failed", caught))
     } finally {
+      reportGenerationInFlight.current = false
       setActiveReportFormat("")
     }
   }

@@ -17,7 +17,7 @@ from vuln_prioritizer.providers.sdk import ProviderDefinition
 
 
 def parse_acme_scan(path: Path) -> ParsedInput:
-    """Parse a tiny reviewed JSON fixture into the CLI ParsedInput contract."""
+    """Parse a tiny reviewed JSON fixture into the Workbench ParsedInput contract."""
 
     payload = json.loads(path.read_text(encoding="utf-8"))
     records = payload.get("findings", [])

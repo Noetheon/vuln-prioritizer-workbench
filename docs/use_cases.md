@@ -1,134 +1,94 @@
 # Use Cases
 
-This page focuses on concrete operational workflows that the current CLI surface supports well.
+This page focuses on concrete local Workbench workflows. The old CLI examples
+have been retired; new work should use the browser Workbench or the local
+FastAPI API.
 
-If you want the shortest operator-facing runbooks instead of the product-story view, start with [Operator Playbooks](playbooks.md).
-
-All CLI examples below are repo-checkout examples that intentionally use the checked-in fixtures under `data/`. The commands themselves are part of the public CLI surface, but after `pipx install` alone you must replace those fixture paths with your own existing scan exports, SBOMs, VEX files, asset-context CSVs, and ATT&CK mapping files.
-
-## 1. Trivy + VEX + GitHub Summary
+## 1. Container Scan Triage
 
 Goal:
 
-- turn an existing container-security scan export into a CI-friendly prioritized summary
-- suppress matching `not_affected` VEX cases
-- keep a JSON artifact plus a short Markdown summary for the GitHub run
+- import an existing Trivy or Grype JSON export
+- preserve package, image, path, and fix-version context
+- review CVSS, EPSS, KEV, VEX, waiver, and asset context in one queue
+- export Markdown, HTML, JSON, CSV, SARIF, or an evidence bundle
 
-CLI shape (repo checkout example):
+Workbench path:
 
-```bash
-vuln-prioritizer analyze \
-  --input data/input_fixtures/trivy_report.json \
-  --input-format trivy-json \
-  --vex-file data/input_fixtures/openvex_statements.json \
-  --format json \
-  --output analysis.json \
-  --summary-output summary.md \
-  --html-output report.html
-```
+1. Open the local Workbench.
+2. Select or create a project.
+3. Import the scanner export with `input_type=trivy-json` or
+   `input_type=grype-json`.
+4. Add optional VEX and asset-context files during import.
+5. Review Findings and create reports from the Reports view.
 
 Why it matters:
 
-- developers get a short executive summary
-- automation still consumes stable JSON or SARIF
+- developers see a short prioritized queue instead of raw scanner severity alone
 - VEX reduces noise without hiding how the decision was made
+- report artifacts remain tied to the analysis run
 
-## 2. CycloneDX or Dependency-Check Triage
+## 2. SBOM and Dependency Triage
 
 Goal:
 
-- prioritize SBOM and dependency findings without introducing a second opaque risk model
-- compare raw CVSS-only intuition with enriched prioritization
+- prioritize CycloneDX, SPDX, or Dependency-Check vulnerability exports
+- keep package names, versions, paths, and fix hints visible
+- route remediation by owner, service, or asset when context is available
 
-CLI shape (repo checkout example):
+Workbench path:
 
-```bash
-vuln-prioritizer compare \
-  --input data/input_fixtures/cyclonedx_bom.json \
-  --input-format cyclonedx-json \
-  --format markdown \
-  --output compare.md
-```
+1. Import the SBOM or dependency export with the matching input type.
+2. Add asset context when ownership matters.
+3. Use Findings filters for priority, KEV, VEX, waiver, and ATT&CK context.
+4. Use Reports for durable JSON, CSV, Markdown, HTML, SARIF, or evidence ZIP
+   artifacts.
 
 Why it matters:
 
 - dependency-heavy teams can explain why a CVE moved up or stayed flat
-- SBOM inputs keep package context, paths, and fix-version hints visible
+- package context stays visible next to prioritization signals
+- governance rollups support service-level remediation planning
 
-## 3. Nessus or OpenVAS + Asset Context + ATT&CK
-
-Goal:
-
-- move from an existing infrastructure scan export to service-aware prioritization
-- attach mapped assets and business services
-- add optional ATT&CK context and later aggregate by asset or service
-
-CLI shape (repo checkout example):
-
-```bash
-vuln-prioritizer analyze \
-  --input data/input_fixtures/openvas_report.xml \
-  --input-format openvas-xml \
-  --asset-context data/input_fixtures/example_asset_context.csv \
-  --attack-source ctid-json \
-  --attack-mapping-file data/attack/ctid_kev_enterprise_2025-07-28_attack-16.1_subset.json \
-  --attack-technique-metadata-file data/attack/attack_techniques_enterprise_16.1_subset.json \
-  --format json \
-  --output analysis.json
-
-vuln-prioritizer rollup \
-  --input analysis.json \
-  --by service \
-  --format markdown \
-  --output rollup.md
-```
-
-Why it matters:
-
-- remediation can be discussed at the service layer, not only at the CVE layer
-- the rollup output now ranks services explicitly and surfaces per-bucket “patch these first” candidates
-- ATT&CK stays an explicit context layer instead of silently changing the base score
-
-## 4. Provider Snapshot Replay for Release Gates
+## 3. Infrastructure Scan Triage
 
 Goal:
 
-- pin `NVD + EPSS + KEV` evidence once
-- replay the same provider evidence later without refreshing live sources
-- keep local smoke tests deterministic with cache-only exports
+- import Nessus or OpenVAS XML exports without running a scanner
+- attach asset, owner, service, environment, exposure, and criticality context
+- use optional reviewed ATT&CK mappings as defensive context
 
-CLI shape:
+Workbench path:
 
-```bash
-vuln-prioritizer data export-provider-snapshot \
-  --input cves.txt \
-  --output provider-snapshot.json
-
-vuln-prioritizer analyze \
-  --input cves.txt \
-  --provider-snapshot-file provider-snapshot.json \
-  --locked-provider-data \
-  --format json \
-  --output analysis.json
-```
-
-Cache-only smoke shape:
-
-```bash
-vuln-prioritizer data export-provider-snapshot \
-  --input cves.txt \
-  --cache-only \
-  --output provider-snapshot.json
-```
+1. Import the XML export with `input_type=nessus-xml` or
+   `input_type=openvas-xml`.
+2. Upload asset context when available.
+3. Select reviewed ATT&CK context only when you have explicit local mapping data.
+4. Review Findings, Assets, TTP Context, and Reports.
 
 Why it matters:
 
-- release evidence can be reproduced without feed drift
-- CI smokes can run without requiring network refreshes
-- locked replay fails loudly if a selected provider source lacks required CVE coverage
+- remediation can be discussed at the asset and service layer
+- ATT&CK remains explicit context instead of silently changing the base score
+- XML parsing stays local and bounded
 
-## Media
+## 4. Deterministic Review With Provider Snapshots
 
-Current static preview assets live here:
+Goal:
 
-- [HTML report preview](examples/media/html-report-preview.png)
+- pin NVD, EPSS, and KEV evidence for repeatable demos or review runs
+- avoid feed drift while validating UI, reports, and evidence bundles
+
+Workbench path:
+
+1. Store or generate a provider snapshot JSON file.
+2. Import findings with the provider snapshot selected.
+3. Enable locked provider data when the run must fail on missing snapshot
+   coverage.
+4. Export the report and evidence bundle from the completed run.
+
+Why it matters:
+
+- evidence can be reproduced without live feed drift
+- demos and tests do not require provider API keys
+- missing coverage fails visibly instead of silently falling back

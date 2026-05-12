@@ -322,7 +322,7 @@ export function findingHistoryRows(
           stringValue(occurrence.vex_match_type),
         ]),
       )
-      .find((value) => value !== "N.A.") ?? null
+      .find((value) => value !== "Not supplied") ?? null
 
   return [
     {
@@ -330,14 +330,14 @@ export function findingHistoryRows(
       label: "First seen",
       value: finding?.first_seen_at
         ? formatFindingDateTime(finding.first_seen_at)
-        : "N.A.",
+        : "Not recorded",
     },
     {
       detail: "Most recent source occurrence recorded by Workbench.",
       label: "Last seen",
       value: finding?.last_seen_at
         ? formatFindingDateTime(finding.last_seen_at)
-        : "N.A.",
+        : "Not recorded",
     },
     {
       detail: finding?.updated_at

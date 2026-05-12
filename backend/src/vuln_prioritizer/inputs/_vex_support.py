@@ -213,7 +213,7 @@ def apply_vex_statements(
     *,
     return_diagnostics: Literal[False] = False,
 ) -> list[InputOccurrence]:
-    raise NotImplementedError
+    raise TypeError("overload declaration only")
 
 
 @overload
@@ -223,7 +223,7 @@ def apply_vex_statements(
     *,
     return_diagnostics: Literal[True],
 ) -> tuple[list[InputOccurrence], VexMatchDiagnostics]:
-    raise NotImplementedError
+    raise TypeError("overload declaration only")
 
 
 def apply_vex_statements(

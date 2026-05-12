@@ -1,11 +1,11 @@
 import assert from "node:assert/strict"
-import { readFileSync, readdirSync } from "node:fs"
+import { existsSync, readFileSync, readdirSync } from "node:fs"
 import test from "node:test"
 
 import { workbenchPathFromPathname } from "../src/lib/app-route-config.ts"
 
-const routesDir = new URL("../src/routes/_layout/", import.meta.url)
-const authenticatedLayoutFile = new URL("../src/routes/_layout.tsx", import.meta.url)
+const appRouterFile = new URL("../src/AppRouter.tsx", import.meta.url)
+const oldRoutesDir = new URL("../src/routes/", import.meta.url)
 const workbenchRoutesDir = new URL("../src/workbench/routes/", import.meta.url)
 const appShellFile = new URL("../src/components/app/AppShell.tsx", import.meta.url)
 const packageJsonFile = new URL("../package.json", import.meta.url)
@@ -26,54 +26,41 @@ function uniqueMatches(source: string, pattern: RegExp) {
   return [...new Set([...source.matchAll(pattern)].map((match) => match[1]))]
 }
 
-function routePathFromAdapter(source: string) {
-  const routePath = source.match(/createFileRoute\("([^"]+)"\)/)?.[1] ?? ""
-  if (!routePath.startsWith("/_layout")) {
-    return null
-  }
-  const publicPath = routePath.replace("/_layout", "") || "/"
-  return publicPath === "/" ? "/" : publicPath
-}
+test("AppRouter owns the active Workbench route table", () => {
+  const appRouter = text(appRouterFile)
+  const workbenchNavigation = text(workbenchNavigationFile)
+  const workbenchPaths = uniqueMatches(workbenchNavigation, /\|\s+"([^"]+)"/g)
+    .sort()
+  const navigationPaths = uniqueMatches(
+    workbenchNavigation,
+    /\{\s*label:\s*"[^"]+",\s*icon:\s*[^,]+,\s*to:\s*"([^"]+)"/g,
+  ).sort()
+  const routerPaths = uniqueMatches(appRouter, /^\s+"([^"]+)":\s+\{/gm)
+    .sort()
 
-test("authenticated route adapters only import Workbench route containers", () => {
-  const routeFiles = readdirSync(routesDir).filter((file) => file.endsWith(".tsx"))
-
-  for (const file of routeFiles) {
-    const source = text(new URL(file, routesDir))
-    const imports = uniqueMatches(source, /^import .* from "([^"]+)"/gm)
-      .filter((specifier) => specifier.startsWith("../"))
-
-    assert.deepEqual(
-      imports.filter((specifier) => !specifier.startsWith("../../workbench/routes/")),
-      [],
-      `${file} should not import feature components directly`,
-    )
-  }
+  assert.deepEqual(navigationPaths, workbenchPaths)
+  assert.deepEqual(routerPaths, workbenchPaths)
+  assert.match(appRouter, /const findingDetailMatch = normalizedPath\.match/)
+  assert.match(appRouter, /routePath: "\/findings"/)
 })
 
-test("authenticated route adapters map to existing Workbench route containers", () => {
-  const routeFiles = readdirSync(routesDir).filter((file) => file.endsWith(".tsx"))
+test("AppRouter lazy imports existing Workbench route containers", () => {
+  const appRouter = text(appRouterFile)
+  const lazyModules = uniqueMatches(
+    appRouter,
+    /import\("\.\/workbench\/routes\/([^"]+)"\)/g,
+  )
+  const routeFiles = readdirSync(workbenchRoutesDir)
 
-  for (const file of routeFiles) {
-    const source = text(new URL(file, routesDir))
-    const routeImport = source.match(
-      /^import \{ ([^}]+) \} from "\.\.\/\.\.\/workbench\/routes\/([^"]+)"/m,
-    )
-    assert.ok(routeImport, `${file} should import a Workbench route container`)
-    const [, componentName, moduleName] = routeImport
+  for (const moduleName of lazyModules) {
     assert.ok(
-      readdirSync(workbenchRoutesDir).includes(`${moduleName}.tsx`),
-      `${file} imports missing Workbench route module ${moduleName}`,
-    )
-    assert.match(
-      source,
-      new RegExp(`component:\\s*${componentName}`),
-      `${file} should mount its imported route container directly`,
+      routeFiles.includes(`${moduleName}.tsx`),
+      `AppRouter imports missing Workbench route module ${moduleName}`,
     )
   }
 })
 
-test("WorkbenchPath, navigation, route details, and route adapters stay in sync", () => {
+test("WorkbenchPath, navigation, and route details stay in sync", () => {
   const routeDetails = text(routeDetailsFile)
   const workbenchNavigation = text(workbenchNavigationFile)
   const workbenchPaths = uniqueMatches(workbenchNavigation, /\|\s+"([^"]+)"/g)
@@ -84,22 +71,24 @@ test("WorkbenchPath, navigation, route details, and route adapters stay in sync"
   ).sort()
   const routeDetailPaths = uniqueMatches(routeDetails, /^\s+"([^"]+)":\s+\{/gm)
     .sort()
-  const adapterPaths = readdirSync(routesDir)
-    .filter((file) => file.endsWith(".tsx"))
-    .map((file) => routePathFromAdapter(text(new URL(file, routesDir))))
-    .filter((path): path is string => Boolean(path) && !path.includes("$"))
-    .sort()
 
   assert.deepEqual(navigationPaths, workbenchPaths)
   assert.deepEqual(routeDetailPaths, workbenchPaths)
-  assert.deepEqual(adapterPaths, workbenchPaths)
   assert.doesNotMatch(routeDetails, /components\/app\/AppShell/)
-  assert.doesNotMatch(text(appShellFile), /workbenchNavigation|LoginService/)
+  assert.doesNotMatch(
+    `${routeDetails}\n${text(appShellFile)}`,
+    /workbenchNavigation|LoginService|UsersService|ApiTokensService/,
+  )
 })
 
-test("Workbench shell is mounted once at the authenticated layout boundary", () => {
-  const layoutSource = text(authenticatedLayoutFile)
-  assert.match(layoutSource, /<WorkbenchShell>\s*<Outlet \/>/s)
+test("obsolete file-route scaffolding is not part of the active frontend", () => {
+  assert.equal(existsSync(oldRoutesDir), false)
+})
+
+test("Workbench shell is mounted once by AppRouter", () => {
+  const appRouter = text(appRouterFile)
+  assert.match(appRouter, /<WorkbenchShell routePath=\{match\.routePath\}>/)
+  assert.match(appRouter, /<RouteParamsProvider params=\{match\.params\}>/)
 
   for (const file of readdirSync(workbenchRoutesDir).filter((item) =>
     item.endsWith(".tsx"),
@@ -108,7 +97,7 @@ test("Workbench shell is mounted once at the authenticated layout boundary", () 
     assert.doesNotMatch(
       source,
       /WorkbenchShell/,
-      `${file} should rely on the authenticated layout shell`,
+      `${file} should rely on AppRouter for the shell`,
     )
   }
 })

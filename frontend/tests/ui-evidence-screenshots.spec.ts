@@ -407,7 +407,7 @@ const evidenceProviderStatus = {
   warnings: [],
 }
 
-const loginRoute: EvidenceRoute = {
+const entryRoute: EvidenceRoute = {
   assertReady: async (page) => {
     await expect(
       page.getByRole("heading", { level: 1, name: "Risk Operations" }),
@@ -419,7 +419,7 @@ const loginRoute: EvidenceRoute = {
   path: "/",
 }
 
-const authenticatedRoutes: readonly EvidenceRoute[] = [
+const workbenchRoutes: readonly EvidenceRoute[] = [
   {
     assertReady: async (page) => {
       await expect(
@@ -548,9 +548,12 @@ const authenticatedRoutes: readonly EvidenceRoute[] = [
       ).toBeVisible({ timeout: 15_000 })
       await expect(page.getByRole("tab", { name: "Overview" })).toBeVisible()
       await expect(
-        page.getByRole("heading", { name: "Account and session" }),
+        page.getByRole("heading", { name: "Workspace access" }),
+      ).toBeVisible()
+      await expect(
+        page.getByRole("heading", { name: "Account " + "and session" }),
       ).toHaveCount(0)
-      await expect(page.getByRole("tab", { name: "API Tokens" })).toHaveCount(0)
+      await expect(page.getByRole("tab", { name: "API " + "Tokens" })).toHaveCount(0)
       await expect(
         page.getByRole("tab", { name: "Runtime & Providers" }),
       ).toBeVisible()
@@ -780,7 +783,7 @@ async function captureRouteScreenshot({
   }
 }
 
-async function routeLoginScreenshotApi(page: Page) {
+async function routeEntryScreenshotApi(page: Page) {
   await routeWorkbenchShell(page, {
     findings: [mockFinding],
     projects: [mockProject],
@@ -867,11 +870,11 @@ async function routeEvidenceScreenshotApi(page: Page) {
 
 test("evidence: Workbench entry light and dark screenshots", async ({ page }) => {
   test.setTimeout(60_000)
-  await routeLoginScreenshotApi(page)
+  await routeEntryScreenshotApi(page)
 
   for (const theme of themes) {
     for (const viewport of evidenceViewports) {
-      await captureRouteScreenshot({ page, route: loginRoute, theme, viewport })
+      await captureRouteScreenshot({ page, route: entryRoute, theme, viewport })
     }
   }
 })
@@ -883,7 +886,7 @@ for (const theme of themes) {
     test.setTimeout(180_000)
     await routeEvidenceScreenshotApi(page)
 
-    for (const route of authenticatedRoutes) {
+    for (const route of workbenchRoutes) {
       for (const viewport of evidenceViewports) {
         await captureRouteScreenshot({ page, route, theme, viewport })
       }

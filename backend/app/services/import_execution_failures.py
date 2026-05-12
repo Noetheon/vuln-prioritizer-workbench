@@ -7,7 +7,8 @@ from typing import NoReturn
 
 from sqlmodel import Session
 
-from app.models import AnalysisRun, AnalysisRunStatus, User
+from app.core.local_actor import LocalWorkbenchActor
+from app.models import AnalysisRun, AnalysisRunStatus
 from app.repositories import RunRepository
 from app.services.import_errors import ImportServiceError
 from app.services.import_execution_summary import (
@@ -25,7 +26,7 @@ def raise_analysis_failure(
     session: Session,
     run_repo: RunRepository,
     run: AnalysisRun,
-    current_user: User,
+    local_actor: LocalWorkbenchActor,
     project_id: uuid.UUID,
     job_id: str,
     job_history: list[dict[str, str]],
@@ -74,7 +75,7 @@ def raise_analysis_failure(
     )
     _record_import_audit(
         session,
-        current_user=current_user,
+        local_actor=local_actor,
         project_id=project_id,
         run_id=failed_run.id,
         status="failure",

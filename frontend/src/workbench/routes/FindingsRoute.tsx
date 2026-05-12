@@ -1,4 +1,4 @@
-import { Outlet, useLocation, useNavigate } from "@/lib/router"
+import { useLocation, useNavigate } from "@/lib/router"
 import { useEffect } from "react"
 import { RemediationQueue } from "../../components/findings/RemediationQueue"
 import { useFindingsRouteState } from "../../components/findings/useFindingsRouteState"
@@ -134,12 +134,6 @@ function FindingsRouteContainer() {
 }
 
 export function FindingsRoute() {
-  const location = useLocation()
-  const detailMatch = location.pathname.match(/^\/findings\/([^/]+)$/)
-  if (detailMatch) {
-    return <Outlet />
-  }
-
   return <FindingsRouteContainer />
 }
 

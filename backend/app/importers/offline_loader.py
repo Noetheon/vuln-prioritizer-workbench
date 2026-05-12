@@ -1,4 +1,4 @@
-"""Adapters from the offline CLI input loader into the active importer contract."""
+"""Adapters from the offline input loader into the active importer contract."""
 
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ from app.importers.contracts import (
 from app.importers.cve_list import CveListImporter
 from app.importers.generic_occurrence_csv import GenericOccurrenceCsvImporter
 from app.importers.input_loader_adapter import parse_payload_with_input_loader
-from vuln_prioritizer.cli_options import InputFormat
+from vuln_prioritizer.options import InputFormat
 
 DEFAULT_IMPORT_INPUT_TYPES = (
     InputFormat.cve_list.value,

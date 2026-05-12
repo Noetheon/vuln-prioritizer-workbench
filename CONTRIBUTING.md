@@ -2,7 +2,7 @@
 
 Thanks for contributing to `vuln-prioritizer-workbench`.
 
-Start with the public GitHub routing docs before opening broad changes:
+Start with the current local Workbench docs before opening broad changes:
 
 - [README.md](README.md)
 - [SUPPORT.md](SUPPORT.md)
@@ -20,9 +20,9 @@ Start with the public GitHub routing docs before opening broad changes:
 - Do not add exploit execution, PoC generation, credential testing, active
   probing, attack simulation, autopatching, offensive attack-chain
   instructions, or hidden live data collection.
-- Keep the Workbench local-first unless a change explicitly updates the threat
-  model, deployment docs, audit/retention story, backup/restore expectations,
-  and token/role boundaries.
+- Keep the Workbench local-first and single-user. Do not add auth, RBAC, API
+  tokens, multi-user behavior, or public-deployment hardening unless the issue
+  explicitly asks for that boundary.
 
 ## Local Development
 
@@ -37,7 +37,7 @@ make install
 GitHub Actions are intentionally not required for day-to-day development. The CI workflow mirrors the local gate below, so run all checks locally before pushing:
 
 ```bash
-make check
+make local-workbench-check
 ```
 
 For changes that are intended to land on `main`, prefer a pull request flow over direct pushes. The repository is maintained as a public project, so branch protection and hosted checks should act as a second line of defense after the local gate.
@@ -48,10 +48,11 @@ This runs:
 - `ruff check`
 - `mypy backend/app backend/src`
 - `pytest`
+- documentation hygiene and MkDocs build
 
 ## Local Workflow Equivalent
 
-When hosted GitHub Actions are unavailable, the recommended local equivalent is:
+When you explicitly need the heavier maintainer workflow gate, run:
 
 ```bash
 make workflow-check
@@ -59,7 +60,8 @@ make workflow-check
 
 This runs the backend quality gate, Docker base-image digest check, docs build
 and evidence hygiene checks, GitHub workflow linting, pre-commit hooks, and the
-Python package build/check/smoke path.
+Python package build/check/smoke path. It is intentionally heavier than the
+ordinary PR CI gate.
 
 Use `make clean-local` to remove ignored local caches, logs, build outputs,
 coverage files, generated docs sites, and `.DS_Store` files without deleting
@@ -81,8 +83,8 @@ directories too.
 Pull request checklist:
 
 - State the issue or roadmap ID, scope, and intended disposition.
-- List changed surfaces: CLI, backend API, DB/migrations, frontend, Docker,
-  docs, release, packaging, or security.
+- List changed surfaces: domain services, Workbench backend API, DB/migrations,
+  generated client, frontend, Docker, docs, release/packaging, or security.
 - Paste commands run and their results.
 - Include evidence paths, screenshots, traces, API responses, migration output,
   or generated-client drift checks when relevant.
@@ -123,10 +125,9 @@ Before opening or merging a change, verify that it does not:
   simulation, autopatching, or heuristic ATT&CK mapping behavior
 - expose tokens, API keys, cookies, private exports, or absolute local paths in
   logs, reports, screenshots, or documentation
-- weaken upload limits, safe XML/file parsing, rooted artifact paths, security
-  headers, CSRF-sensitive forms, token hashing, or authorization gates
-- imply public-internet readiness without updating the threat model and
-  deployment hardening docs
+- weaken upload limits, safe XML/file parsing, or rooted artifact paths
+- add auth, RBAC, API tokens, multi-user behavior, or public-deployment
+  hardening unless that boundary is explicitly in scope
 - silently replace deterministic fixture tests with live-network tests
 
 ## Demo Artifacts
@@ -147,7 +148,8 @@ make release-check
 
 `make release-check` remains the stricter maintainer sweep because it also regenerates the checked-in demo artifacts before packaging.
 
-For release-readiness evidence that also verifies the demo evidence bundle:
+Only for an explicitly scoped release or public/shared deployment track, run the
+release-readiness evidence sweep:
 
 ```bash
 make release-readiness-check
@@ -166,8 +168,7 @@ make docs-check
 ```
 
 This gate includes stale wording checks, archive binary evidence manifest
-validation, public deployment evidence contract validation, and a clean MkDocs
-build.
+validation, and a clean MkDocs build.
 
 ## Commit Discipline
 

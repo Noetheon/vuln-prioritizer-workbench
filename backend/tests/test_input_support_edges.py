@@ -83,8 +83,8 @@ def test_asset_context_rule_mode_diagnostics_cover_glob_and_regex() -> None:
     assert diagnostics.exact_matches == 0
 
 
-def test_asset_context_legacy_mapping_reports_matched_and_unmatched_occurrences() -> None:
-    legacy_records = {
+def test_asset_context_exact_mapping_reports_matched_and_unmatched_occurrences() -> None:
+    exact_records = {
         ("host", "app-01"): AssetContextRecord(
             target_kind="host",
             target_ref="app-01",
@@ -99,7 +99,7 @@ def test_asset_context_legacy_mapping_reports_matched_and_unmatched_occurrences(
             _occurrence("missing", cve_id="CVE-2024-0002"),
             _occurrence("app-01", cve_id="CVE-2024-0003"),
         ],
-        legacy_records,
+        exact_records,
         return_diagnostics=True,
     )
 

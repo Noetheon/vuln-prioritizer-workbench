@@ -1,4 +1,4 @@
-"""Doctor and evidence bundle response models."""
+"""Evidence bundle response models."""
 
 from __future__ import annotations
 
@@ -7,32 +7,6 @@ from typing import Any
 from pydantic import Field
 
 from vuln_prioritizer.model_base import StrictModel
-
-
-class DoctorCheck(StrictModel):
-    check_id: str
-    name: str
-    scope: str = "local"
-    category: str = "general"
-    status: str
-    detail: str
-    hint: str | None = None
-
-
-class DoctorSummary(StrictModel):
-    overall_status: str = "ok"
-    ok_count: int = 0
-    degraded_count: int = 0
-    error_count: int = 0
-
-
-class DoctorReport(StrictModel):
-    schema_version: str = "1.2.0"
-    generated_at: str
-    live: bool = False
-    config_file: str | None = None
-    summary: DoctorSummary = Field(default_factory=DoctorSummary)
-    checks: list[DoctorCheck] = Field(default_factory=list)
 
 
 class EvidenceBundleFile(StrictModel):

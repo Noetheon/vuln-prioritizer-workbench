@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException, Request, status
 
-from app.api.deps import ScopedAdminUser, ScopedReadUser, SessionDep
+from app.api.deps import LocalActor, SessionDep
 from app.core.app_state import workbench_settings
 from app.core.config import Settings
 from app.models import (
@@ -35,7 +35,7 @@ router = APIRouter(prefix="/providers", tags=["providers"])
 def list_provider_update_jobs(
     request: Request,
     session: SessionDep,
-    _current_user: ScopedReadUser,
+    _local_actor: LocalActor,
 ) -> ProviderUpdateJobsPublic:
     """Return provider update jobs newest first."""
     active_settings = _request_settings(request)
@@ -52,7 +52,7 @@ def create_provider_update_job(
     request: Request,
     session: SessionDep,
     payload: ProviderUpdateJobCreate,
-    current_user: ScopedAdminUser,
+    local_actor: LocalActor,
 ) -> ProviderUpdateJobPublic:
     """Synchronously create a cache-friendly provider snapshot refresh job."""
     active_settings = _request_settings(request)
@@ -61,7 +61,6 @@ def create_provider_update_job(
             session,
             settings=active_settings,
             payload=payload,
-            owner_id=current_user.id,
         )
     except ProviderUpdateValidationError as exc:
         raise HTTPException(
@@ -77,7 +76,7 @@ def create_provider_update_job(
         resource_type="analysis_run",
         resource_id=run.id,
         status="failure" if run.status == AnalysisRunStatus.FAILED else "success",
-        actor=current_user,
+        actor=local_actor,
         detail={"sources": list(payload.sources), "status": str(run.status)},
     )
     session.commit()
@@ -92,7 +91,7 @@ def create_provider_update_job(
 def read_provider_status(
     request: Request,
     session: SessionDep,
-    _current_user: ScopedReadUser,
+    _local_actor: LocalActor,
 ) -> ProviderStatusPublic:
     """Return provider status from the latest stored SQLModel provider snapshot."""
     repository = RunRepository(session)

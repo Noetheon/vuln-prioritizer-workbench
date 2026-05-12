@@ -2,8 +2,6 @@
 
 from app.services.analysis import (
     AnalysisService,
-    TemplateAnalysisError,
-    TemplateAnalysisResult,
     WorkbenchAnalysisError,
     WorkbenchAnalysisResult,
 )
@@ -57,8 +55,6 @@ __all__ = [
     "ReportGenerationError",
     "ReportVerificationError",
     "ReportService",
-    "TemplateAnalysisError",
-    "TemplateAnalysisResult",
     "WorkbenchAnalysisError",
     "WorkbenchAnalysisResult",
     "ATTACK_NAVIGATOR_FILTERS",

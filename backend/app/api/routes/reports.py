@@ -8,8 +8,8 @@ from pathlib import Path
 from fastapi import APIRouter, HTTPException, Request
 from starlette.responses import FileResponse
 
-from app.api.deps import ScopedReportUser, SessionDep
-from app.api.routes.workbench_access import require_visible_project
+from app.api.deps import LocalActor, SessionDep
+from app.api.routes.workbench_access import require_project
 from app.core.app_state import workbench_settings
 from app.models import (
     Report,
@@ -42,13 +42,13 @@ def create_run_report(
     payload: ReportCreate,
     request: Request,
     session: SessionDep,
-    current_user: ScopedReportUser,
+    local_actor: LocalActor,
 ) -> ReportPublic:
     """Create a report artifact for a completed visible analysis run."""
     run = RunRepository(session).get_analysis_run(run_id)
     if run is None:
         raise HTTPException(status_code=404, detail="Analysis run not found")
-    project = require_visible_project(session, current_user, run.project_id)
+    project = require_project(session, run.project_id)
     try:
         report_service = ReportService(session, workbench_settings(request))
         if payload.format == "html":
@@ -77,7 +77,7 @@ def create_run_report(
             resource_type="analysis_run",
             resource_id=run.id,
             status="failure",
-            actor=current_user,
+            actor=local_actor,
             project_id=run.project_id,
             detail={
                 "format": payload.format,
@@ -92,7 +92,7 @@ def create_run_report(
         action="report.create",
         resource_type="report",
         resource_id=report.id,
-        actor=current_user,
+        actor=local_actor,
         project_id=report.project_id,
         detail={"format": report.format, "kind": report.kind, "run_id": str(run.id)},
     )
@@ -106,13 +106,13 @@ def read_run_reports(
     run_id: uuid.UUID,
     request: Request,
     session: SessionDep,
-    current_user: ScopedReportUser,
+    local_actor: LocalActor,
 ) -> ReportsPublic:
     """List report metadata for a visible analysis run."""
     run = RunRepository(session).get_analysis_run(run_id)
     if run is None:
         raise HTTPException(status_code=404, detail="Analysis run not found")
-    require_visible_project(session, current_user, run.project_id)
+    require_project(session, run.project_id)
     reports = ReportRepository(session).list_run_reports(run.id)
     return ReportsPublic(
         data=[_report_public(report, request) for report in reports],
@@ -136,20 +136,20 @@ def download_report(
     report_id: uuid.UUID,
     request: Request,
     session: SessionDep,
-    current_user: ScopedReportUser,
+    local_actor: LocalActor,
 ) -> FileResponse:
     """Download a visible report after root and checksum validation."""
     report = ReportRepository(session).get_report(report_id)
     if report is None:
         raise HTTPException(status_code=404, detail="Report not found")
-    require_visible_project(session, current_user, report.project_id)
+    require_project(session, report.project_id)
     report_path = _report_artifact_path(report, request)
     record_audit_event(
         session,
         action="report.download",
         resource_type="report",
         resource_id=report.id,
-        actor=current_user,
+        actor=local_actor,
         project_id=report.project_id,
         detail={"format": report.format, "kind": report.kind},
     )
@@ -169,13 +169,13 @@ def verify_report(
     report_id: uuid.UUID,
     request: Request,
     session: SessionDep,
-    current_user: ScopedReportUser,
+    local_actor: LocalActor,
 ) -> ReportVerificationPublic:
     """Verify a visible evidence bundle report against its embedded manifest."""
     report = ReportRepository(session).get_report(report_id)
     if report is None:
         raise HTTPException(status_code=404, detail="Report not found")
-    require_visible_project(session, current_user, report.project_id)
+    require_project(session, report.project_id)
     if report.kind != "evidence-bundle" or report.format != "zip":
         raise HTTPException(status_code=422, detail="Report is not an evidence bundle")
 
@@ -189,7 +189,7 @@ def verify_report(
             resource_type="report",
             resource_id=report.id,
             status="failure",
-            actor=current_user,
+            actor=local_actor,
             project_id=report.project_id,
             detail={"error": str(exc)},
         )
@@ -200,7 +200,7 @@ def verify_report(
         action="report.verify",
         resource_type="report",
         resource_id=report.id,
-        actor=current_user,
+        actor=local_actor,
         project_id=report.project_id,
         detail={"format": report.format, "kind": report.kind},
     )

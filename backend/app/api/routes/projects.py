@@ -6,8 +6,8 @@ import uuid
 
 from fastapi import APIRouter, HTTPException, Query, Request, Response
 
-from app.api.deps import ScopedAdminTokenOrUser, ScopedReadUser, ScopedWriteUser, SessionDep
-from app.api.routes.workbench_access import require_visible_project
+from app.api.deps import LocalActor, SessionDep
+from app.api.routes.workbench_access import require_project
 from app.core.app_state import workbench_settings
 from app.models import (
     Project,
@@ -41,9 +41,10 @@ router = APIRouter(prefix="/projects", tags=["projects"])
 
 
 @router.get("/", response_model=ProjectsPublic)
-def read_projects(session: SessionDep, current_user: ScopedReadUser) -> ProjectsPublic:
-    """List projects visible to the current user."""
-    projects, count = ProjectRepository(session).list_visible_projects(current_user)
+def read_projects(session: SessionDep, local_actor: LocalActor) -> ProjectsPublic:
+    """List local Workbench projects."""
+    _ = local_actor
+    projects, count = ProjectRepository(session).list_projects()
     return ProjectsPublic(
         data=[ProjectPublic.model_validate(project) for project in projects],
         count=count,
@@ -54,17 +55,17 @@ def read_projects(session: SessionDep, current_user: ScopedReadUser) -> Projects
 def create_project(
     *,
     session: SessionDep,
-    current_user: ScopedAdminTokenOrUser,
+    local_actor: LocalActor,
     project_in: ProjectCreate,
 ) -> Project:
-    """Create a Project owned by the current user."""
-    project = ProjectRepository(session).create_project(project_in, owner_id=current_user.id)
+    """Create a local Workbench project."""
+    project = ProjectRepository(session).create_project(project_in)
     record_audit_event(
         session,
         action="project.create",
         resource_type="project",
         resource_id=project.id,
-        actor=current_user,
+        actor=local_actor,
         project_id=project.id,
         detail={"name": project.name},
     )
@@ -77,20 +78,20 @@ def create_project(
 def read_project(
     project_id: uuid.UUID,
     session: SessionDep,
-    current_user: ScopedReadUser,
+    local_actor: LocalActor,
 ) -> Project:
-    """Read a single project if it belongs to the user or the user is superuser."""
-    return require_visible_project(session, current_user, project_id)
+    """Read a single local project."""
+    return require_project(session, project_id)
 
 
 @router.get("/{project_id}/summary", response_model=ProjectDecisionSummaryPublic)
 def read_project_summary(
     project_id: uuid.UUID,
     session: SessionDep,
-    current_user: ScopedReadUser,
+    local_actor: LocalActor,
 ) -> ProjectDecisionSummaryPublic:
     """Read a dashboard-oriented decision summary for one visible project."""
-    require_visible_project(session, current_user, project_id)
+    require_project(session, project_id)
     finding_repository = FindingRepository(session)
     run_repository = RunRepository(session)
     return build_project_summary_payload_from_counts(
@@ -104,10 +105,10 @@ def read_project_summary(
 def read_project_dashboard(
     project_id: uuid.UUID,
     session: SessionDep,
-    current_user: ScopedReadUser,
+    local_actor: LocalActor,
 ) -> ProjectDashboardPublic:
     """Read the one-call aggregate payload for the project dashboard."""
-    require_visible_project(session, current_user, project_id)
+    require_project(session, project_id)
     finding_repository = FindingRepository(session)
     run_repository = RunRepository(session)
     waiver_repository = WaiverRepository(session)
@@ -124,11 +125,11 @@ def read_project_dashboard(
 def read_project_attack_summary(
     project_id: uuid.UUID,
     session: SessionDep,
-    current_user: ScopedReadUser,
+    local_actor: LocalActor,
     limit: int = Query(default=5, ge=1, le=20),
 ) -> ProjectAttackSummaryPublic:
     """Read top ATT&CK techniques, tactics, and confidence distribution."""
-    require_visible_project(session, current_user, project_id)
+    require_project(session, project_id)
     finding_repo = FindingRepository(session)
     return build_project_attack_summary_payload(
         project_id=project_id,
@@ -142,11 +143,11 @@ def read_project_attack_summary(
 def read_project_governance_rollups(
     project_id: uuid.UUID,
     session: SessionDep,
-    current_user: ScopedReadUser,
+    local_actor: LocalActor,
     limit: int = Query(default=5, ge=1, le=20),
 ) -> ProjectGovernanceRollupsPublic:
     """Read owner, service, environment, and waiver-debt rollups."""
-    require_visible_project(session, current_user, project_id)
+    require_project(session, project_id)
     waiver_repository = WaiverRepository(session)
     return build_project_governance_rollups_payload(
         project_id=project_id,
@@ -162,12 +163,12 @@ def compare_project_cvss_only(
     project_id: uuid.UUID,
     request: Request,
     session: SessionDep,
-    current_user: ScopedReadUser,
+    local_actor: LocalActor,
     limit: int = Query(default=10, ge=0, le=100),
     include_comparisons: bool = Query(default=False),
 ) -> ProjectCvssOnlyComparisonPublic:
     """Compare current enriched priorities with a CVSS-only baseline."""
-    require_visible_project(session, current_user, project_id)
+    require_project(session, project_id)
     active_settings = workbench_settings(request)
     finding_repository = FindingRepository(session)
     finding_count = finding_repository.count_project_findings(project_id)
@@ -192,19 +193,19 @@ def update_project(
     *,
     project_id: uuid.UUID,
     session: SessionDep,
-    current_user: ScopedWriteUser,
+    local_actor: LocalActor,
     project_in: ProjectUpdate,
 ) -> Project:
-    """Update a project if it belongs to the user or the user is superuser."""
+    """Update a local project."""
     repository = ProjectRepository(session)
-    project = require_visible_project(session, current_user, project_id)
+    project = require_project(session, project_id)
     updated = repository.update_project(project, project_in)
     record_audit_event(
         session,
         action="project.update",
         resource_type="project",
         resource_id=updated.id,
-        actor=current_user,
+        actor=local_actor,
         project_id=updated.id,
         detail=project_in.model_dump(exclude_unset=True),
     )
@@ -218,11 +219,11 @@ def delete_project(
     request: Request,
     project_id: uuid.UUID,
     session: SessionDep,
-    current_user: ScopedAdminTokenOrUser,
+    local_actor: LocalActor,
 ) -> Response:
-    """Delete a project if it belongs to the user or the user is superuser."""
+    """Delete a local project."""
     repository = ProjectRepository(session)
-    project = require_visible_project(session, current_user, project_id)
+    project = require_project(session, project_id)
     cleanup_result = cleanup_project_artifacts(
         settings=workbench_settings(request),
         project_id=project.id,
@@ -232,7 +233,7 @@ def delete_project(
         action="project.delete",
         resource_type="project",
         resource_id=project.id,
-        actor=current_user,
+        actor=local_actor,
         detail={
             "name": project.name,
             "removed_artifact_paths": list(cleanup_result.removed_paths),

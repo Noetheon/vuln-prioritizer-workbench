@@ -13,10 +13,10 @@ from sqlmodel import Session
 
 from app.core.config import Settings
 from app.repositories import RunRepository
-from vuln_prioritizer.cli_options import AttackSource, InputFormat, OutputFormat, SortBy
 from vuln_prioritizer.config import DEFAULT_CACHE_TTL_HOURS
 from vuln_prioritizer.inputs.loader import InputSpec
 from vuln_prioritizer.models import AnalysisContext, PrioritizedFinding, PriorityPolicy
+from vuln_prioritizer.options import AttackSource, InputFormat, OutputFormat, SortBy
 from vuln_prioritizer.provider_snapshot import load_provider_snapshot
 from vuln_prioritizer.security_redaction import redact_value
 from vuln_prioritizer.services.analysis import (
@@ -287,10 +287,3 @@ def _provider_quality_flags(raw_flags: dict[str, list[Any]]) -> dict[str, list[d
     return {
         source: [_serialize_flag(item) for item in flags] for source, flags in raw_flags.items()
     }
-
-
-# Compatibility aliases retained for older local tests or scripts that imported
-# template-era names before the runtime was fully Workbench-branded.
-DEFAULT_TEMPLATE_PROVIDER_SNAPSHOT = DEFAULT_WORKBENCH_PROVIDER_SNAPSHOT
-TemplateAnalysisError = WorkbenchAnalysisError
-TemplateAnalysisResult = WorkbenchAnalysisResult

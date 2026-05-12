@@ -171,7 +171,7 @@ export const reportActionCards: Array<{
   {
     actionLabel: "Export Navigator Layer",
     detail:
-      "MITRE ATT&CK Navigator JSON with mapped techniques, risk scores, KEV notes, and coverage placeholders.",
+      "MITRE ATT&CK Navigator JSON with mapped techniques, risk scores, KEV notes, and explicit coverage scope.",
     format: "Navigator JSON",
     icon: GitBranch,
     reportFormat: "attack-navigator",

@@ -12,12 +12,11 @@ Describe the defect clearly and concretely.
 
 ## Target
 
-What user workflow, command, API route, page, package, or release path is
-affected?
+What Workbench workflow, backend API route, frontend page, package, or release
+path is affected?
 
 ## Affected Surface
 
-- [ ] CLI
 - [ ] Workbench backend API
 - [ ] Active Workbench UI/API
 - [ ] React frontend
@@ -31,10 +30,10 @@ What is broken, how severe is it, and what should stay unchanged?
 
 ## Reproduction
 
-Command or steps:
+Steps:
 
 ```bash
-# paste the exact command
+# paste exact local commands only when they are needed to reproduce the issue
 ```
 
 ## Observed Behavior
@@ -70,8 +69,8 @@ What should have happened instead?
 - [ ] Commands run and results are posted before closure.
 - [ ] No secrets, customer scanner exports, tokens, cookies, or private paths are
       included in public evidence.
-- [ ] Public deployment certification is not claimed unless release-readiness
-      evidence and the final scorecard issue support it.
+- [ ] Auth/RBAC/API-token, multi-user, or public-deployment scope is not added
+      unless the issue explicitly asks for that boundary.
 
 ## Evidence
 

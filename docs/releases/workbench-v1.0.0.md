@@ -40,8 +40,8 @@ The v1.0 release gate recorded these historical acceptance criteria:
 - `make workflow-check`
 - `make docker-demo-smoke`
 - `make dependency-audit`
-- `make demo-sync-check-temp`
-- a verified demo evidence bundle from `make demo-evidence-bundle-check`
+- historical demo artifact sync and evidence-bundle verification from the
+  then-active CLI release path
 - README screenshots from the locked offline demo:
   `docs/examples/media/workbench-dashboard.png`,
   `docs/examples/media/workbench-findings.png`,
@@ -55,21 +55,17 @@ Dependency audit disposition for the 2026-04-24 release pass: `make dependency-a
 
 The reproducible demo bundle is generated from a repository checkout, the checked-in Trivy fixture, the checked-in asset context and VEX fixtures, the checked-in ATT&CK subset, and locked replay from `data/demo_provider_snapshot.json`. The `Makefile` pins `VULN_PRIORITIZER_FIXED_NOW=2026-04-21T12:00:00+00:00` for this path so release reviewers can compare artifacts without feed drift or local clock drift.
 
-Generate and verify the bundle with:
+In the historical v1.0 release branch, reviewers generated and verified the
+bundle with:
 
 ```bash
 make demo-evidence-bundle-check
 ```
 
-For an already generated bundle, the verification command is:
-
-```bash
-PYTHONPATH=backend/src VULN_PRIORITIZER_FIXED_NOW=2026-04-21T12:00:00+00:00 \
-  python3 -m vuln_prioritizer.cli report verify-evidence-bundle \
-  --input build/v1.0-demo-evidence-bundle.zip \
-  --output build/v1.0-demo-evidence-bundle-verification.json \
-  --format json
-```
+For an already generated bundle, the historical branch used the then-active CLI
+verification path. That command surface has since been retired with the Typer
+CLI. Current verification coverage lives in the Workbench report verification
+service and the local quality gates documented in the active release checklist.
 
 Expected release-evidence artifact paths:
 

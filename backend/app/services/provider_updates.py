@@ -61,17 +61,11 @@ class ProviderUpdateValidationError(ValueError):
     """Raised when a provider update request is invalid."""
 
 
-# Compatibility aliases for template-era local integrations.
-TemplateProviderUpdateConflict = ProviderUpdateConflict
-TemplateProviderUpdateValidationError = ProviderUpdateValidationError
-
-
 def create_provider_update_job(
     session: Session,
     *,
     settings: Settings,
     payload: ProviderUpdateJobCreate,
-    owner_id: uuid.UUID,
 ) -> AnalysisRun:
     """Create and synchronously execute a deterministic cache-friendly update job."""
     repository = RunRepository(session)
@@ -82,7 +76,7 @@ def create_provider_update_job(
 
     selected_sources = _normalize_sources(payload.sources)
     cve_ids = _provider_update_cve_ids(session, payload=payload)
-    project = _provider_update_project(session, owner_id=owner_id)
+    project = _provider_update_project(session)
     run = repository.create_analysis_run(
         project_id=project.id,
         input_type=PROVIDER_UPDATE_INPUT_TYPE,
@@ -191,16 +185,12 @@ def _provider_update_cve_ids(
     return cve_ids
 
 
-def _provider_update_project(session: Session, *, owner_id: uuid.UUID) -> Project:
-    statement = select(Project).where(
-        Project.owner_id == owner_id,
-        Project.name == PROVIDER_UPDATE_PROJECT_NAME,
-    )
+def _provider_update_project(session: Session) -> Project:
+    statement = select(Project).where(Project.name == PROVIDER_UPDATE_PROJECT_NAME)
     project = session.exec(statement).first()
     if project is not None:
         return project
     project = Project(
-        owner_id=owner_id,
         name=PROVIDER_UPDATE_PROJECT_NAME,
         description="System project for global provider update jobs.",
     )
