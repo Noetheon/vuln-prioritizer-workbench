@@ -71,12 +71,14 @@ def _check_traefik_service(compose: dict[str, Any]) -> list[str]:
     required_labels = {
         "traefik.enable=${TRAEFIK_DASHBOARD_ENABLED:-false}",
         "traefik.http.routers.traefik-dashboard-https.tls=true",
-        "traefik.http.routers.traefik-dashboard-https.middlewares=traefik-dashboard-ipallowlist",
+        "traefik.http.routers.traefik-dashboard-https.middlewares=traefik-dashboard-ipallowlist,traefik-dashboard-auth",
         "traefik.http.routers.traefik-dashboard-http.middlewares=https-redirect",
     }
     for item in sorted(required_labels):
         if item not in labels:
             failures.append(f"compose.traefik.yml traefik label is missing {item!r}.")
+    if not any("traefik-dashboard-auth.basicauth.users=" in label for label in labels):
+        failures.append("compose.traefik.yml Traefik dashboard must require basic auth.")
     return failures
 
 

@@ -350,9 +350,10 @@ def test_compose_public_app_routes_are_opt_in_and_https_only() -> None:
     ) in backend_labels
 
 
-def test_traefik_dashboard_route_is_opt_in_and_ip_limited() -> None:
+def test_traefik_dashboard_route_is_opt_in_ip_limited_and_basic_auth_protected() -> None:
     compose = yaml.safe_load((REPO_ROOT / "compose.traefik.yml").read_text(encoding="utf-8"))
     labels = compose["services"]["traefik"]["labels"]
+    env_example = (REPO_ROOT / ".env.example").read_text(encoding="utf-8")
 
     assert "traefik.enable=${TRAEFIK_DASHBOARD_ENABLED:-false}" in labels
     assert (
@@ -360,8 +361,15 @@ def test_traefik_dashboard_route_is_opt_in_and_ip_limited() -> None:
         "${TRAEFIK_DASHBOARD_IP_ALLOWLIST:-127.0.0.1/32}"
     ) in labels
     assert (
-        "traefik.http.routers.traefik-dashboard-https.middlewares=traefik-dashboard-ipallowlist"
+        "traefik.http.middlewares.traefik-dashboard-auth.basicauth.users="
+        "${TRAEFIK_DASHBOARD_AUTH_USERS:-dashboard-disabled:"
+    ) in "\n".join(labels)
+    assert (
+        "traefik.http.routers.traefik-dashboard-https.middlewares="
+        "traefik-dashboard-ipallowlist,traefik-dashboard-auth"
     ) in labels
+    assert "TRAEFIK_DASHBOARD_AUTH_USERS=" in env_example
+    assert "openssl passwd -apr1" in env_example
 
 
 def test_env_example_does_not_pin_api_docs_on_for_shared_deployments() -> None:
