@@ -226,6 +226,24 @@ def test_container_image_digest_policy_covers_compose_service_images() -> None:
     assert "@sha256:" in traefik_compose["services"]["traefik"]["image"]
 
 
+def test_github_workflow_actions_are_sha_pinned() -> None:
+    makefile = _read_repo_text("Makefile")
+    pin_check = _read_repo_text("scripts/check_github_action_pins.py")
+
+    assert "scripts/check_github_action_pins.py" in makefile
+    assert "GitHub workflow remote actions must be pinned by commit SHA" in pin_check
+
+    result = subprocess.run(
+        ["python3", "scripts/check_github_action_pins.py"],
+        capture_output=True,
+        cwd=REPO_ROOT,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+
+
 def test_import_service_modules_do_not_import_http_or_route_boundaries() -> None:
     violations: dict[str, list[str]] = {}
     blocked_prefixes = ("fastapi", "starlette", "app.api")

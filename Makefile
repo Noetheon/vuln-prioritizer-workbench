@@ -125,6 +125,7 @@ actionlint-check:
 workflow-check:
 	$(MAKE) check
 	$(MAKE) docker-base-image-check
+	$(PYTHON) scripts/check_github_action_pins.py
 	$(MAKE) docs-check
 	$(MAKE) actionlint-check
 	$(PYTHON) -m pre_commit run --all-files
