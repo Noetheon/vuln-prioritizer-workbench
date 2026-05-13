@@ -49,6 +49,10 @@ def _check_traefik_service(compose: dict[str, Any]) -> list[str]:
     command = _string_list(traefik.get("command"))
     ports = _string_list(traefik.get("ports"))
     volumes = _string_list(traefik.get("volumes"))
+    cap_drop = _string_list(traefik.get("cap_drop"))
+    cap_add = _string_list(traefik.get("cap_add"))
+    security_opt = _string_list(traefik.get("security_opt"))
+    tmpfs = _string_list(traefik.get("tmpfs"))
 
     required_commands = {
         "--providers.docker",
@@ -67,6 +71,16 @@ def _check_traefik_service(compose: dict[str, Any]) -> list[str]:
         failures.append("compose.traefik.yml must mount Docker socket read-only.")
     if not any("/certificates" in volume for volume in volumes):
         failures.append("compose.traefik.yml must persist ACME certificates.")
+    if traefik.get("read_only") is not True:
+        failures.append("compose.traefik.yml traefik service must use a read-only root filesystem.")
+    if "ALL" not in cap_drop:
+        failures.append("compose.traefik.yml traefik service must drop all Linux capabilities.")
+    if "NET_BIND_SERVICE" not in cap_add:
+        failures.append("compose.traefik.yml traefik service must only restore low-port binding.")
+    if "no-new-privileges:true" not in security_opt:
+        failures.append("compose.traefik.yml traefik service must set no-new-privileges.")
+    if "/tmp" not in tmpfs:
+        failures.append("compose.traefik.yml traefik service must keep /tmp writable via tmpfs.")
 
     required_labels = {
         "traefik.enable=${TRAEFIK_DASHBOARD_ENABLED:-false}",

@@ -352,9 +352,15 @@ def test_compose_public_app_routes_are_opt_in_and_https_only() -> None:
 
 def test_traefik_dashboard_route_is_opt_in_ip_limited_and_basic_auth_protected() -> None:
     compose = yaml.safe_load((REPO_ROOT / "compose.traefik.yml").read_text(encoding="utf-8"))
-    labels = compose["services"]["traefik"]["labels"]
+    traefik = compose["services"]["traefik"]
+    labels = traefik["labels"]
     env_example = (REPO_ROOT / ".env.example").read_text(encoding="utf-8")
 
+    assert traefik["read_only"] is True
+    assert traefik["cap_drop"] == ["ALL"]
+    assert traefik["cap_add"] == ["NET_BIND_SERVICE"]
+    assert traefik["security_opt"] == ["no-new-privileges:true"]
+    assert "/tmp" in traefik["tmpfs"]
     assert "traefik.enable=${TRAEFIK_DASHBOARD_ENABLED:-false}" in labels
     assert (
         "traefik.http.middlewares.traefik-dashboard-ipallowlist.ipallowlist.sourcerange="

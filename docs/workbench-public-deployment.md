@@ -58,6 +58,9 @@ with `TRAEFIK_APP_ENABLED=true`.
   its CSP/CORS contract is reviewed as a split-domain deployment.
 - HTTP is redirected to HTTPS.
 - Traefik terminates TLS through the configured ACME resolver.
+- The Traefik container uses a read-only root filesystem, `no-new-privileges`,
+  dropped Linux capabilities with only `NET_BIND_SERVICE` restored, a writable
+  `/tmp` tmpfs, and a dedicated ACME certificate volume.
 - Backend upload requests are bounded by
   `TRAEFIK_MAX_REQUEST_BODY_BYTES`, which should match or stay slightly above
   `MAX_UPLOAD_MB`.
