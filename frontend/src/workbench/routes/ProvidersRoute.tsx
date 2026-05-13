@@ -7,6 +7,7 @@ function ProvidersRouteContent() {
     providerStatusError,
     providerStatusLoading,
     refreshProviderStatus,
+    selectedProjectId,
   } = useWorkbenchContext()
 
   return (
@@ -16,6 +17,7 @@ function ProvidersRouteContent() {
         providerStatus={providerStatus}
         providerStatusError={providerStatusError}
         providerStatusLoading={providerStatusLoading}
+        selectedProjectId={selectedProjectId}
       />
     </section>
   )

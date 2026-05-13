@@ -16,6 +16,7 @@ export type ProvidersWorkbenchProps = {
   providerStatus: ProviderStatusPublic | null
   providerStatusError: string
   providerStatusLoading: boolean
+  selectedProjectId: string
   onRefreshProviderStatus: () => void
 }
 
