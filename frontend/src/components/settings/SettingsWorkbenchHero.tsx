@@ -6,6 +6,7 @@ import {
   type VpwBadgeTone,
   VpwSection,
 } from "@/components/vpw"
+import { selectedProjectRouteSearch } from "@/workbench/selected-project-search"
 import {
   evidenceReadiness,
   providerHealth,
@@ -14,12 +15,13 @@ import {
 
 type SettingsHeroProps = Pick<
   SettingsWorkbenchProps,
-  "providerStatus" | "providerStatusError" | "statusError"
+  "providerStatus" | "providerStatusError" | "selectedProjectId" | "statusError"
 >
 
 export function SettingsHero({
   providerStatus,
   providerStatusError,
+  selectedProjectId,
   statusError,
 }: SettingsHeroProps) {
   const provider = providerHealth(providerStatus)
@@ -43,7 +45,12 @@ export function SettingsHero({
         </div>
         <div className="flex shrink-0">
           <Button asChild variant="outline">
-            <Link to="/providers">View providers</Link>
+            <Link
+              search={selectedProjectRouteSearch(selectedProjectId)}
+              to="/providers"
+            >
+              View providers
+            </Link>
           </Button>
         </div>
       </div>

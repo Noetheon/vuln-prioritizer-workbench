@@ -54,7 +54,8 @@ workflows around the same transparent prioritization model.
 Current Workbench scope:
 
 - Docker Compose quickstart as the local web/API runtime entry point.
-- SQLite-first deployment with provider cache, upload, and report directories mounted locally.
+- Local developer runs may use SQLite; the Compose quickstart uses private
+  Postgres plus mounted provider cache, upload, snapshot, and report volumes.
 - Import paths for the local input-format matrix, including CVE lists, generic occurrence CSV, Trivy JSON, Grype JSON, CycloneDX JSON, SPDX JSON, Dependency-Check JSON, GitHub alerts JSON, Nessus XML, and OpenVAS XML.
 - Findings table and detail views that expose priority, evidence, owner/service context, and "why this priority?" explanations.
 - Dashboard and report flows for Markdown, HTML, JSON, and evidence bundles.

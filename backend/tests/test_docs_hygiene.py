@@ -191,6 +191,34 @@ def test_tracked_tree_excludes_local_artifacts() -> None:
     assert violations == []
 
 
+def test_docs_examples_do_not_use_template_named_artifacts() -> None:
+    template_named_examples = [
+        path.as_posix()
+        for path in _git_ls_files("docs/examples")
+        if "template" in path.name.lower()
+    ]
+
+    assert template_named_examples == []
+
+
+def test_workbench_demo_docs_use_managed_snapshot_filename_in_import_field() -> None:
+    active_demo_docs = {
+        "README.md": README_FILE,
+        "docs/index.md": REPO_ROOT / "docs" / "index.md",
+        "docs/workbench-offline-demo.md": WORKBENCH_OFFLINE_DEMO_FILE,
+    }
+    violations = {
+        name: [
+            line
+            for line in path.read_text(encoding="utf-8").splitlines()
+            if "provider snapshot" in line.lower() and "data/demo_provider_snapshot.json" in line
+        ]
+        for name, path in active_demo_docs.items()
+    }
+
+    assert violations == {name: [] for name in active_demo_docs}
+
+
 def test_gitignore_covers_workbench_runtime_artifacts() -> None:
     gitignore = (REPO_ROOT / ".gitignore").read_text(encoding="utf-8")
     required_runtime_roots = {
@@ -304,13 +332,25 @@ def test_current_docs_do_not_reframe_workbench_as_cli_or_release_gate() -> None:
     reference_gap = REFERENCE_GAP_FILE.read_text(encoding="utf-8")
     offline_demo = WORKBENCH_OFFLINE_DEMO_FILE.read_text(encoding="utf-8")
     docs_index = (REPO_ROOT / "docs" / "index.md").read_text(encoding="utf-8")
+    release_notes = (REPO_ROOT / "docs" / "releases" / "v1.1.0.md").read_text(encoding="utf-8")
+    workbench_release_notes = (REPO_ROOT / "docs" / "releases" / "workbench-v1.0.0.md").read_text(
+        encoding="utf-8"
+    )
     normalized_reference_gap = " ".join(reference_gap.split())
+    normalized_release_notes = " ".join(release_notes.split())
+    normalized_workbench_release_notes = " ".join(workbench_release_notes.split())
 
     assert "broader CLI/CI workflow tool" not in normalized_reference_gap
     assert "old CLI/CI-oriented surfaces are historical" in normalized_reference_gap
     assert "release-readiness path" not in offline_demo
     assert "reproducible local demo path" in offline_demo
     assert "not part of the normal local Workbench development path" in docs_index
+    assert "current Workbench-ready tree" not in normalized_release_notes
+    assert "historical public package release" in normalized_release_notes
+    assert "not current product surfaces" in normalized_release_notes
+    assert "does not expose API-token gating" in normalized_release_notes
+    assert "post-v1.0 package-line work" in normalized_workbench_release_notes
+    assert "does not expose API-token gating" in normalized_workbench_release_notes
 
 
 def test_active_docs_do_not_publish_removed_cli_report_examples() -> None:

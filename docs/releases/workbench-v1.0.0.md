@@ -128,6 +128,13 @@ Record the release commit with `git rev-parse HEAD`, the date of the run, and th
 
 ## Post-Milestone Status
 
-- The pinned ATT&CK STIX import, ATT&CK version/hash tracking, CTID provider provenance, and detection coverage work were completed on `main` after this Workbench v1.0 readiness milestone.
-- Local API-token gating, optional PostgreSQL profile, scheduled provider update jobs, SARIF/Action workflow expansion, GitHub issue export, config-as-code, and CI/CD docs were completed on `main` after this Workbench v1.0 readiness milestone.
+- The pinned ATT&CK STIX import, ATT&CK version/hash tracking, CTID provider
+  provenance, and detection coverage work landed after this Workbench v1.0
+  readiness milestone and remain part of the current Workbench evidence model.
+- API-token gating, optional PostgreSQL profile, scheduled provider update jobs,
+  SARIF/Action workflow expansion, GitHub issue export, config-as-code, and
+  CI/CD docs belonged to post-v1.0 package-line work in the historical
+  `v1.1.0` tree. Current `main` has since narrowed the active product to the
+  local single-user Workbench and does not expose API-token gating, RBAC,
+  login/session flows, or the old CLI/Action product surface.
 - The `v1.1.0` package tag and GitHub Release now carry the completed Workbench scope from `main`; future Workbench work should be tracked as new issues rather than as unfinished v1.0 follow-up.

@@ -43,6 +43,7 @@ export type ImportsWorkbenchProps = {
   onRefreshRuns: () => void
   onSelectRun: (runId: string) => void
   onSubmit: FormEventHandler<HTMLFormElement>
+  onUseDemoProviderSnapshot: () => void
   onAttackMappingFileChange: (value: string) => void
   onAttackSourceChange: (value: string) => void
   onAttackTechniqueMetadataFileChange: (value: string) => void
@@ -175,4 +176,26 @@ export function uploadProgress(wizard: ImportWizardStateLike) {
     value += 5
   }
   return Math.min(value, 100)
+}
+
+export function importSubmitDisabled({
+  importLoading,
+  projectListLoading,
+  projectCount,
+  selectedProjectId,
+  wizard,
+}: {
+  importLoading: boolean
+  projectListLoading: boolean
+  projectCount: number
+  selectedProjectId: string
+  wizard: ImportWizardStateLike
+}) {
+  return (
+    importLoading ||
+    projectListLoading ||
+    projectCount === 0 ||
+    !selectedProjectId ||
+    !wizard.file
+  )
 }

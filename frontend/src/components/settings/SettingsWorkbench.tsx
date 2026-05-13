@@ -21,6 +21,7 @@ export function SettingsWorkbench(props: SettingsWorkbenchProps) {
       <SettingsHero
         providerStatus={props.providerStatus}
         providerStatusError={props.providerStatusError}
+        selectedProjectId={props.selectedProjectId}
         statusError={props.statusError}
       />
       <SettingsAlerts

@@ -5,6 +5,7 @@ import {
   failedRunCause,
   formatDisplayType,
   formatExpectedFields,
+  importSubmitDisabled,
   jsonPreview,
   metadataRows,
   runFileLabel,
@@ -12,7 +13,11 @@ import {
   selectedFormat,
   uploadProgress,
 } from "../src/components/imports/imports-workbench-model.ts"
-import { defaultImportWizardState } from "../src/lib/app-defaults.ts"
+import {
+  defaultImportWizardState,
+  demoProviderSnapshotFile,
+  withDemoProviderSnapshot,
+} from "../src/lib/app-defaults.ts"
 import { buildImportUploadFormData } from "../src/workbench/import-upload-payload.ts"
 
 test("import model derives display labels and format metadata", () => {
@@ -146,4 +151,63 @@ test("import upload payload omits empty optional file-name fields", () => {
     input_type: defaultImportWizardState.inputType,
     locked_provider_data: false,
   })
+})
+
+test("demo provider snapshot preset enables deterministic replay", () => {
+  const state = withDemoProviderSnapshot({
+    ...defaultImportWizardState,
+    file: {} as File,
+    providerSnapshotFile: "",
+  })
+
+  assert.equal(state.lockedProviderData, true)
+  assert.equal(state.providerSnapshotFile, demoProviderSnapshotFile)
+})
+
+test("import submit stays disabled until project and source file are ready", () => {
+  const readyWizard = {
+    ...defaultImportWizardState,
+    file: {} as File,
+  }
+
+  assert.equal(
+    importSubmitDisabled({
+      importLoading: false,
+      projectListLoading: false,
+      projectCount: 1,
+      selectedProjectId: "project-1",
+      wizard: readyWizard,
+    }),
+    false,
+  )
+  assert.equal(
+    importSubmitDisabled({
+      importLoading: false,
+      projectListLoading: false,
+      projectCount: 1,
+      selectedProjectId: "",
+      wizard: readyWizard,
+    }),
+    true,
+  )
+  assert.equal(
+    importSubmitDisabled({
+      importLoading: false,
+      projectListLoading: false,
+      projectCount: 1,
+      selectedProjectId: "project-1",
+      wizard: defaultImportWizardState,
+    }),
+    true,
+  )
+  assert.equal(
+    importSubmitDisabled({
+      importLoading: true,
+      projectListLoading: false,
+      projectCount: 1,
+      selectedProjectId: "project-1",
+      wizard: readyWizard,
+    }),
+    true,
+  )
 })
