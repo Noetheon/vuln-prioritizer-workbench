@@ -1,6 +1,7 @@
 import { Link } from "@/lib/router"
 import type { FindingPublic, ProjectPublic } from "@/api-client"
 import { Button } from "@/components/ui/button"
+import { selectedProjectRouteSearch } from "@/workbench/selected-project-search"
 import {
   VpwEmptyState,
   VpwPanel,
@@ -31,6 +32,8 @@ export function RemediationQueueStates({
   projects,
   selectedProject,
 }: RemediationQueueStatesProps) {
+  const projectSearch = selectedProjectRouteSearch(selectedProject?.id ?? "")
+
   return (
     <>
       {hasError ? (
@@ -66,7 +69,9 @@ export function RemediationQueueStates({
         <VpwEmptyState
           action={
             <Button asChild>
-              <Link to="/imports">Import data</Link>
+              <Link search={projectSearch} to="/imports">
+                Import data
+              </Link>
             </Button>
           }
           ariaLabel="No findings empty state"

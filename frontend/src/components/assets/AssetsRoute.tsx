@@ -9,6 +9,7 @@ import type {
   ProviderStatusPublic,
 } from "../../api-client"
 import { Button } from "../ui/button"
+import { selectedProjectRouteSearch } from "../../workbench/selected-project-search"
 import {
   VpwBadge,
   VpwPageContainer,
@@ -77,6 +78,8 @@ export type AssetsWorkbenchProps = {
 }
 
 export function AssetsWorkbench(state: AssetsWorkbenchProps) {
+  const projectSearch = selectedProjectRouteSearch(state.selectedProjectId)
+
   return (
     <VpwPageContainer className="flex flex-col gap-6 px-0 py-0">
         <VpwSection>
@@ -95,7 +98,9 @@ export function AssetsWorkbench(state: AssetsWorkbenchProps) {
                   </a>
                 </Button>
                 <Button asChild variant="outline">
-                  <Link to="/findings">View findings</Link>
+                  <Link search={projectSearch} to="/findings">
+                    View findings
+                  </Link>
                 </Button>
                 <Button
                   aria-label="Refresh assets"

@@ -9,6 +9,7 @@ import {
   Upload,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { selectedProjectRouteSearch } from "@/workbench/selected-project-search"
 import {
   VpwBadge,
   VpwGrid,
@@ -38,6 +39,7 @@ export function ProjectHero({
   "projectSummary" | "projects" | "selectedProject"
 >) {
   const evidence = evidenceState(projectSummary)
+  const projectSearch = selectedProjectRouteSearch(selectedProject?.id ?? "")
 
   return (
     <VpwSection>
@@ -55,7 +57,7 @@ export function ProjectHero({
             </a>
           </Button>
           <Button asChild variant="outline">
-            <Link to="/imports">
+            <Link search={projectSearch} to="/imports">
               <Upload aria-hidden="true" />
               Import findings
             </Link>

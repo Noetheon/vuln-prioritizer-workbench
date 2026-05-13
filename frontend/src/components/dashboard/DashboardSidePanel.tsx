@@ -7,6 +7,7 @@ import type {
 } from "@/api-client"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
+import { selectedProjectRouteSearch } from "@/workbench/selected-project-search"
 import {
   VpwBadge,
   type VpwBadgeTone,
@@ -31,6 +32,7 @@ type DashboardSidePanelProps = {
   latestRun: AnalysisRunPublic | null
   latestRunFactsRows: readonly DashboardRunFact[]
   providerStatusLoading: boolean
+  selectedProjectId: string
   staleProvider: boolean
 }
 
@@ -44,11 +46,13 @@ export function DashboardSidePanel({
   latestRun,
   latestRunFactsRows,
   providerStatusLoading,
+  selectedProjectId,
   staleProvider,
 }: DashboardSidePanelProps) {
   const qualityIssueCount =
     dataQualityWarnings.length + (dataQualityError ? 1 : 0)
   const readinessTone: VpwBadgeTone = staleProvider ? "warning" : "success"
+  const projectSearch = selectedProjectRouteSearch(selectedProjectId)
 
   return (
     <div className="flex flex-col gap-4 lg:sticky lg:top-20">
@@ -182,7 +186,9 @@ export function DashboardSidePanel({
             </div>
           )}
           <Button asChild className="mt-3 w-full" size="sm" variant="outline">
-            <Link to="/imports">View all imports</Link>
+            <Link search={projectSearch} to="/imports">
+              View all imports
+            </Link>
           </Button>
         </VpwSurfaceBody>
       </VpwSurface>

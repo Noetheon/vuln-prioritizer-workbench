@@ -220,6 +220,11 @@ export function RunDetail({
     }),
   )
   const selectedParseErrors = selectedRunSummary.parse_errors ?? []
+  const findingsSearch = { projectId: selectedRunSummary.project_id }
+  const reportsSearch = {
+    projectId: selectedRunSummary.project_id,
+    runId: selectedRunSummary.id,
+  }
 
   return (
     <VpwPanel className="flex flex-col gap-5">
@@ -230,9 +235,18 @@ export function RunDetail({
             {selectedRunId.slice(0, 8)}
           </h3>
         </div>
-        <Button asChild size="sm" variant="outline">
-          <Link to="/findings">Findings</Link>
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button asChild size="sm" variant="outline">
+            <Link search={findingsSearch} to="/findings">
+              Findings
+            </Link>
+          </Button>
+          <Button asChild size="sm" variant="outline">
+            <Link search={reportsSearch} to="/reports">
+              Evidence
+            </Link>
+          </Button>
+        </div>
       </div>
       <VpwKeyValueList
         columns={2}
