@@ -177,3 +177,25 @@ export function uploadProgress(wizard: ImportWizardStateLike) {
   }
   return Math.min(value, 100)
 }
+
+export function importSubmitDisabled({
+  importLoading,
+  projectListLoading,
+  projectCount,
+  selectedProjectId,
+  wizard,
+}: {
+  importLoading: boolean
+  projectListLoading: boolean
+  projectCount: number
+  selectedProjectId: string
+  wizard: ImportWizardStateLike
+}) {
+  return (
+    importLoading ||
+    projectListLoading ||
+    projectCount === 0 ||
+    !selectedProjectId ||
+    !wizard.file
+  )
+}

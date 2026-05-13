@@ -5,6 +5,7 @@ import {
   failedRunCause,
   formatDisplayType,
   formatExpectedFields,
+  importSubmitDisabled,
   jsonPreview,
   metadataRows,
   runFileLabel,
@@ -161,4 +162,52 @@ test("demo provider snapshot preset enables deterministic replay", () => {
 
   assert.equal(state.lockedProviderData, true)
   assert.equal(state.providerSnapshotFile, demoProviderSnapshotFile)
+})
+
+test("import submit stays disabled until project and source file are ready", () => {
+  const readyWizard = {
+    ...defaultImportWizardState,
+    file: {} as File,
+  }
+
+  assert.equal(
+    importSubmitDisabled({
+      importLoading: false,
+      projectListLoading: false,
+      projectCount: 1,
+      selectedProjectId: "project-1",
+      wizard: readyWizard,
+    }),
+    false,
+  )
+  assert.equal(
+    importSubmitDisabled({
+      importLoading: false,
+      projectListLoading: false,
+      projectCount: 1,
+      selectedProjectId: "",
+      wizard: readyWizard,
+    }),
+    true,
+  )
+  assert.equal(
+    importSubmitDisabled({
+      importLoading: false,
+      projectListLoading: false,
+      projectCount: 1,
+      selectedProjectId: "project-1",
+      wizard: defaultImportWizardState,
+    }),
+    true,
+  )
+  assert.equal(
+    importSubmitDisabled({
+      importLoading: true,
+      projectListLoading: false,
+      projectCount: 1,
+      selectedProjectId: "project-1",
+      wizard: readyWizard,
+    }),
+    true,
+  )
 })
