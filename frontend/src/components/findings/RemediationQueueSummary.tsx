@@ -2,6 +2,7 @@ import { Link } from "@/lib/router"
 import { AlertTriangle, ArrowUp, Eye, FileDown, Upload } from "lucide-react"
 import type { ProjectPublic } from "@/api-client"
 import { Button } from "@/components/ui/button"
+import { selectedProjectRouteSearch } from "@/workbench/selected-project-search"
 import {
   VpwBadge,
   VpwDemoBanner,
@@ -63,6 +64,8 @@ export function RemediationQueueSummary({
   kevCount,
   openCount,
 }: RemediationQueueSummaryProps) {
+  const projectSearch = selectedProjectRouteSearch(displayProject?.id ?? "")
+
   return (
     <VpwSection>
       <VpwPanel className="findings-analyst-summary flex flex-col gap-5 bg-[var(--vpw-bg-card)]">
@@ -70,13 +73,13 @@ export function RemediationQueueSummary({
           actions={
             <>
               <Button asChild size="sm" variant="outline">
-                <Link to="/reports">
+                <Link search={projectSearch} to="/reports">
                   <FileDown aria-hidden="true" className="mr-1.5" size={14} />
                   Generate evidence
                 </Link>
               </Button>
               <Button asChild size="sm">
-                <Link to="/imports">
+                <Link search={projectSearch} to="/imports">
                   <Upload aria-hidden="true" className="mr-1.5" size={14} />
                   Import findings
                 </Link>

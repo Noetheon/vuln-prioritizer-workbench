@@ -6,6 +6,7 @@ import {
   normalizeSelectedProjectId,
   searchStringFromUrlSearch,
   selectedProjectIdFromSearch,
+  selectedProjectRouteSearch,
   selectedProjectUrlSearch,
 } from "../src/workbench/selected-project-search.ts"
 
@@ -29,6 +30,13 @@ test("updates project id in route search while preserving other keys", () => {
     ),
     "status=open",
   )
+})
+
+test("builds route search for project-aware navigation", () => {
+  assert.deepEqual(selectedProjectRouteSearch("project-1"), {
+    projectId: "project-1",
+  })
+  assert.deepEqual(selectedProjectRouteSearch(""), {})
 })
 
 test("normalizes stale selected project ids to an available project", () => {

@@ -2,6 +2,7 @@ import { Link } from "@/lib/router"
 import { BellRing, Import, RefreshCw, ShieldCheck } from "lucide-react"
 import type { ProjectPublic, ProviderStatusPublic } from "@/api-client"
 import { Button } from "@/components/ui/button"
+import { selectedProjectRouteSearch } from "@/workbench/selected-project-search"
 import {
   Select,
   SelectContent,
@@ -38,6 +39,10 @@ export function DashboardHero({
   providerStatusLoading,
   selectedProjectId,
 }: DashboardHeroProps) {
+  const projectSearch = selectedProjectRouteSearch(
+    isDemoMode ? "" : selectedProjectId,
+  )
+
   return (
     <div className="dashboard-analyst-hero">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -94,7 +99,7 @@ export function DashboardHero({
             asChild
             className="w-full justify-center font-semibold sm:w-auto"
           >
-            <Link to="/imports">
+            <Link search={projectSearch} to="/imports">
               <Import aria-hidden="true" data-icon="inline-start" />
               Import findings
             </Link>
@@ -104,7 +109,7 @@ export function DashboardHero({
             className="w-full justify-center sm:w-auto"
             variant="ghost"
           >
-            <Link to="/reports">
+            <Link search={projectSearch} to="/reports">
               <BellRing aria-hidden="true" data-icon="inline-start" />
               Generate evidence
             </Link>
