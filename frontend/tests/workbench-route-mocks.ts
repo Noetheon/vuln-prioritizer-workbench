@@ -1,4 +1,8 @@
 import type { Page } from "@playwright/test"
+import type {
+  AnalysisRunPublic,
+  AnalysisRunSummaryPublic,
+} from "../src/api-client"
 
 type MockProject = {
   created_at: string
@@ -44,6 +48,8 @@ type RouteWorkbenchShellOptions = {
   providerStatusDelayMs?: number
   providerStatusError?: boolean
   projects?: MockProject[]
+  runSummaries?: Record<string, AnalysisRunSummaryPublic>
+  runs?: AnalysisRunPublic[]
 }
 
 export const mockProject: MockProject = {
@@ -89,6 +95,8 @@ export async function routeWorkbenchShell(
 ) {
   const projects = options.projects ?? []
   const findings = options.findings ?? []
+  const runs = options.runs ?? []
+  const runSummaries = options.runSummaries ?? {}
   const findingsDelayMs = options.findingsDelayMs ?? 0
   const onFindingsRequest = options.onFindingsRequest
   const providerStatusDelayMs = options.providerStatusDelayMs ?? 0
@@ -197,6 +205,7 @@ export async function routeWorkbenchShell(
     }),
   )
   for (const project of projects) {
+    const projectRuns = runs.filter((run) => run.project_id === project.id)
     const projectSummary = {
       counts_by_priority: { critical: findings.length },
       counts_by_status: { open: findings.length },
@@ -204,8 +213,8 @@ export async function routeWorkbenchShell(
       epss_hits: findings.filter((finding) => finding.epss > 0).length,
       finding_count: findings.length,
       kev_hits: findings.filter((finding) => finding.in_kev).length,
-      latest_run_id: null,
-      latest_run_status: null,
+      latest_run_id: projectRuns[0]?.id ?? null,
+      latest_run_status: projectRuns[0]?.status ?? null,
       latest_run_summary: {},
       open_finding_count: findings.length,
       project_id: project.id,
@@ -257,9 +266,21 @@ export async function routeWorkbenchShell(
             top_services_by_risk: [],
           },
           project_id: project.id,
-          runs: { data: [], count: 0 },
+          runs: { data: projectRuns, count: projectRuns.length },
           summary: projectSummary,
         }),
+      }),
+    )
+    await page.route(`**/api/v1/projects/${project.id}/runs/`, (route) =>
+      route.fulfill({
+        contentType: "application/json",
+        body: JSON.stringify({ data: projectRuns, count: projectRuns.length }),
+      }),
+    )
+    await page.route(`**/api/v1/projects/${project.id}/runs/?*`, (route) =>
+      route.fulfill({
+        contentType: "application/json",
+        body: JSON.stringify({ data: projectRuns, count: projectRuns.length }),
       }),
     )
     await page.route(
@@ -277,6 +298,40 @@ export async function routeWorkbenchShell(
         })
       },
     )
+  }
+  for (const run of runs) {
+    await page.route(`**/api/v1/runs/${run.id}`, (route) =>
+      route.fulfill({
+        contentType: "application/json",
+        body: JSON.stringify(run),
+      }),
+    )
+    await page.route(`**/api/v1/runs/${run.id}/summary`, (route) =>
+      route.fulfill({
+        contentType: "application/json",
+        body: JSON.stringify(runSummaries[run.id] ?? runSummaryFromRun(run)),
+      }),
+    )
+  }
+}
+
+function runSummaryFromRun(run: AnalysisRunPublic): AnalysisRunSummaryPublic {
+  return {
+    created_findings: 0,
+    filename: run.filename ?? null,
+    finding_count: 0,
+    finished_at: run.finished_at ?? null,
+    id: run.id,
+    ignored_lines: 0,
+    input_type: run.input_type,
+    parse_errors: [],
+    project_id: run.project_id,
+    provider_degraded: false,
+    provider_snapshot_id: run.provider_snapshot_id,
+    started_at: run.started_at ?? "2025-01-01T00:00:00Z",
+    status: run.status ?? "pending",
+    summary_json: run.summary_json,
+    updated_findings: 0,
   }
 }
 
