@@ -1,12 +1,16 @@
 import assert from "node:assert/strict"
 import { existsSync, readFileSync, readdirSync } from "node:fs"
+import { dirname, join } from "node:path"
 import test from "node:test"
+import { fileURLToPath } from "node:url"
 
 import { workbenchPathFromPathname } from "../src/lib/app-route-config.ts"
 
+const frontendRoot = dirname(dirname(fileURLToPath(import.meta.url)))
 const appRouterFile = new URL("../src/AppRouter.tsx", import.meta.url)
 const oldRoutesDir = new URL("../src/routes/", import.meta.url)
 const workbenchRoutesDir = new URL("../src/workbench/routes/", import.meta.url)
+const componentsDir = join(frontendRoot, "src/components")
 const appShellFile = new URL("../src/components/app/AppShell.tsx", import.meta.url)
 const packageJsonFile = new URL("../package.json", import.meta.url)
 const routeDetailsFile = new URL(
@@ -24,6 +28,16 @@ function text(url: URL) {
 
 function uniqueMatches(source: string, pattern: RegExp) {
   return [...new Set([...source.matchAll(pattern)].map((match) => match[1]))]
+}
+
+function tsxFiles(directory: string): string[] {
+  return readdirSync(directory, { withFileTypes: true })
+    .flatMap((entry) => {
+      const path = join(directory, entry.name)
+      if (entry.isDirectory()) return tsxFiles(path)
+      return path.endsWith(".tsx") ? [path] : []
+    })
+    .sort()
 }
 
 test("AppRouter owns the active Workbench route table", () => {
@@ -121,4 +135,24 @@ test("frontend unit test scripts automatically include every unit test file", ()
     assert.doesNotMatch(script, /tests\/[\w-]+\.test\.ts/)
     assert.doesNotMatch(script, /\.spec\.ts/)
   }
+})
+
+test("finding detail links preserve selected project context", () => {
+  const sourceFiles = [
+    ...tsxFiles(componentsDir),
+    ...tsxFiles(fileURLToPath(workbenchRoutesDir)),
+  ]
+  const missingProjectSearch = sourceFiles.flatMap((file) => {
+    const source = readFileSync(file, "utf8")
+    const links = [
+      ...source.matchAll(
+        /<Link\b(?=[^>]*\bto="\/findings\/\$findingId")(?=[^>]*\bparams=\{\{\s*findingId:)[^>]*>/gs,
+      ),
+    ]
+    return links
+      .filter((match) => !/\bsearch=/.test(match[0]))
+      .map(() => file.replace(`${frontendRoot}/`, ""))
+  })
+
+  assert.deepEqual(missingProjectSearch, [])
 })

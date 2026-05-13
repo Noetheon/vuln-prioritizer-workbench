@@ -4,6 +4,7 @@ import type { FormEvent } from "react"
 
 import type { AssetPublic, FindingPublic } from "../../api-client"
 import { formatLabel as labelize, optionalText } from "../../lib/ui-copy"
+import { selectedProjectRouteSearch } from "../../workbench/selected-project-search"
 import { Button } from "../ui/button"
 import {
   VpwAssetContextCard,
@@ -76,6 +77,7 @@ export function AssetLinkedFindingsPanel({
         <Link
           className="font-mono text-sm font-semibold text-[var(--vpw-blue)] hover:underline"
           params={{ findingId: finding.id }}
+          search={selectedProjectRouteSearch(finding.project_id)}
           to="/findings/$findingId"
         >
           {finding.cve_id}
