@@ -1,7 +1,14 @@
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
+import { useLocation, useNavigate } from "@/lib/router"
 import { EvidenceCenter } from "../../components/reports/EvidenceCenter"
 import { apiErrorMessage } from "../../lib/app-errors"
 import { useWorkbenchContext } from "../WorkbenchContext"
+import {
+  normalizeSelectedRunId,
+  reportRunUrlSearch,
+  selectedReportRunIdFromSearch,
+} from "../report-route-search"
+import { searchStringFromUrlSearch } from "../selected-project-search"
 import {
   useProjectRunsQuery,
   useProjectSummaryQuery,
@@ -9,7 +16,13 @@ import {
 } from "../useWorkbenchQueries"
 import { useReportsRouteState } from "../useReportsRouteState"
 
+function activeSearchString(fallbackSearch: string) {
+  return typeof window === "undefined" ? fallbackSearch : window.location.search
+}
+
 function ReportsRouteContent() {
+  const location = useLocation()
+  const navigate = useNavigate()
   const {
     projectListLoading,
     projectListError,
@@ -19,7 +32,8 @@ function ReportsRouteContent() {
     selectedProjectId,
     setSelectedProjectId,
   } = useWorkbenchContext()
-  const [selectedRunId, setSelectedRunId] = useState("")
+  const routeRunId = selectedReportRunIdFromSearch(location.searchStr)
+  const [selectedRunId, setSelectedRunIdState] = useState(routeRunId)
   const projectRunsQuery = useProjectRunsQuery(selectedProjectId, true)
   const projectRuns = projectRunsQuery.data?.data ?? []
   const runDetailQuery = useRunDetailQuery(selectedRunId, true)
@@ -31,18 +45,50 @@ function ReportsRouteContent() {
     selectedReportRun,
     selectedRunId,
   })
+  const runIds = useMemo(() => projectRuns.map((run) => run.id), [projectRuns])
+
+  const selectRunId = useCallback(
+    (nextRunId: string, { replace }: { replace: boolean }) => {
+      setSelectedRunIdState(nextRunId)
+      const currentLocationSearch = activeSearchString(location.searchStr)
+      const nextSearch = reportRunUrlSearch(currentLocationSearch, nextRunId)
+      const currentSearch = currentLocationSearch.startsWith("?")
+        ? currentLocationSearch.slice(1)
+        : currentLocationSearch
+      if (searchStringFromUrlSearch(nextSearch) === currentSearch) {
+        return
+      }
+      void navigate({
+        replace,
+        search: () => nextSearch,
+      })
+    },
+    [location.searchStr, navigate],
+  )
 
   useEffect(() => {
-    setSelectedRunId((currentRunId) =>
-      projectRuns.some((run) => run.id === currentRunId)
-        ? currentRunId
-        : (projectRuns[0]?.id ?? ""),
+    if (projectRunsQuery.isLoading && runIds.length === 0) {
+      return
+    }
+    const nextRunId = normalizeSelectedRunId(
+      [routeRunId, selectedRunId],
+      runIds,
     )
-  }, [projectRuns])
+    if (nextRunId === selectedRunId && nextRunId === routeRunId) {
+      return
+    }
+    selectRunId(nextRunId, { replace: true })
+  }, [
+    projectRunsQuery.isLoading,
+    routeRunId,
+    runIds,
+    selectRunId,
+    selectedRunId,
+  ])
 
   function handleProjectChange(projectId: string) {
     setSelectedProjectId(projectId)
-    setSelectedRunId("")
+    selectRunId("", { replace: true })
   }
 
   return (
@@ -51,7 +97,7 @@ function ReportsRouteContent() {
       onCreateReport={reportsState.createReport}
       onDownloadReport={reportsState.downloadReport}
       onProjectChange={handleProjectChange}
-      onRunIdChange={setSelectedRunId}
+      onRunIdChange={(runId) => selectRunId(runId, { replace: false })}
       onVerifyReport={reportsState.verifyEvidenceReport}
       projectListError={projectListError}
       projectListLoading={projectListLoading}

@@ -24,6 +24,9 @@ export function ImportResult({
   const summaryRun = importRunSummary ?? importRun
   const status = summaryRun?.status ?? "pending"
   const runId = summaryRun?.id ?? importRun?.id ?? ""
+  const projectId = summaryRun?.project_id ?? importRun?.project_id ?? ""
+  const findingsSearch = { projectId }
+  const reportsSearch = { projectId, runId }
 
   return (
     <VpwSection>
@@ -79,10 +82,14 @@ export function ImportResult({
         ) : null}
         <div className="mt-5 flex flex-wrap gap-2">
           <Button asChild variant="outline">
-            <Link to="/findings">View Findings</Link>
+            <Link search={findingsSearch} to="/findings">
+              View Findings
+            </Link>
           </Button>
           <Button asChild variant="outline">
-            <Link to="/reports">Generate Evidence</Link>
+            <Link search={reportsSearch} to="/reports">
+              Generate Evidence
+            </Link>
           </Button>
         </div>
       </VpwPanel>
