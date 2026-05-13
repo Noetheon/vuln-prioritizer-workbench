@@ -6,6 +6,7 @@ export type ProvidersRouteContainerProps = {
   providerStatus: ProviderStatusPublic | null
   providerStatusError: string
   providerStatusLoading: boolean
+  selectedProjectId: string
   onRefreshProviderStatus: () => Promise<void> | void
 }
 
@@ -14,6 +15,7 @@ export function ProvidersRouteContainer({
   providerStatus,
   providerStatusError,
   providerStatusLoading,
+  selectedProjectId,
 }: ProvidersRouteContainerProps) {
   return (
     <ProvidersWorkbench
@@ -21,6 +23,7 @@ export function ProvidersRouteContainer({
       providerStatus={providerStatus}
       providerStatusError={providerStatusError}
       providerStatusLoading={providerStatusLoading}
+      selectedProjectId={selectedProjectId}
     />
   )
 }

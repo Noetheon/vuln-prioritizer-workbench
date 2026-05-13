@@ -20,6 +20,7 @@ export function ProvidersWorkbench({
   providerStatus,
   providerStatusError,
   providerStatusLoading,
+  selectedProjectId,
 }: ProvidersWorkbenchProps) {
   const showProviderDetails = !providerStatusError
   const rows = showProviderDetails ? sourceRows(providerStatus) : []
@@ -32,6 +33,7 @@ export function ProvidersWorkbench({
         providerStatus={providerStatus}
         providerStatusError={providerStatusError}
         providerStatusLoading={providerStatusLoading}
+        selectedProjectId={selectedProjectId}
       />
       <ProviderStatusAlerts
         providerStatus={providerStatus}

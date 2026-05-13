@@ -14,6 +14,7 @@ import {
   VpwToolbarGroup,
 } from "@/components/vpw"
 import { providerSnapshotHealth } from "@/lib/provider-format"
+import { selectedProjectRouteSearch } from "@/workbench/selected-project-search"
 import {
   evidenceReadinessLabel,
   evidenceReadinessTone,
@@ -33,8 +34,10 @@ export function ProvidersHero({
   onRefreshProviderStatus,
   providerStatus,
   providerStatusLoading,
+  selectedProjectId,
 }: ProvidersWorkbenchProps) {
   const evidenceReadiness = evidenceReadinessLabel(providerStatus)
+  const projectSearch = selectedProjectRouteSearch(selectedProjectId)
 
   return (
     <VpwSection>
@@ -56,7 +59,7 @@ export function ProvidersHero({
               Refresh providers
             </Button>
             <Button asChild variant="outline">
-              <Link to="/reports">View Evidence Center</Link>
+              <Link search={projectSearch} to="/reports">View Evidence Center</Link>
             </Button>
           </VpwToolbarGroup>
           <VpwToolbarGroup>
