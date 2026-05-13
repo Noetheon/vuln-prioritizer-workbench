@@ -38,14 +38,15 @@ If `pip-audit`, npm, or advisory data is unavailable, record that as a release-c
 1. Open **Import**.
 2. Select `CVE list`.
 3. Upload `data/sample_cves.txt`.
-4. Set provider snapshot to `demo_provider_snapshot.json`.
+4. Set provider snapshot to `demo_provider_snapshot.json`; the checked-in source
+   file is `data/demo_provider_snapshot.json`.
 5. Enable locked provider data.
 6. Submit the import and open the generated reports page.
 7. Return to the dashboard and confirm provider freshness is visible.
 8. Open **Findings** and apply filters for `Critical`, `High`, `KEV`, owner, service, and CVE search.
 9. Open a critical finding and show `Why this priority?`, EPSS, CVSS, KEV, component, asset, owner, and raw evidence.
-10. Open **Intelligence**, search for `CVE-2021-44228`, and show stored provider data plus project findings.
-11. Open **Settings** and confirm runtime paths and provider status are visible while secrets are redacted.
+10. Open **Providers** and show NVD, EPSS, and KEV status, cache age, snapshot mode, and provider data-quality notes.
+11. Open **Settings** and confirm local workspace access, runtime health, provider status, and diagnostics are visible without exposing secrets.
 12. Create JSON, Markdown, HTML, and Evidence ZIP artifacts from the run page.
 
 ## Readiness Checks
@@ -88,8 +89,8 @@ and must not depend on reviewer API keys or live provider availability.
 - Dashboard with priority counts and provider freshness.
 - Findings table with filters applied.
 - Finding detail showing CVSS, EPSS, KEV, component, asset, owner, rationale, recommended action, and raw evidence.
-- Vulnerability Intelligence lookup result.
-- Settings page showing `<set>` or `<not set>` instead of secret values.
+- Providers page showing NVD, EPSS, KEV status, cache state, and snapshot state.
+- Settings page showing local workspace, runtime, and provider diagnostics without secret values.
 - Reports page showing generated JSON, Markdown, HTML, and Evidence ZIP.
 - Downloaded Evidence ZIP verification output.
 
@@ -128,5 +129,6 @@ If the browser demo cannot be shown, use these checked-in or generated artifacts
 
 - The Workbench remains local-first and is not ready for internet-exposed or multi-tenant operation.
 - Evidence bundles are integrity-checked ZIP artifacts, not encrypted archives.
-- SQLite backup, retention, and filesystem permissions remain operator responsibilities.
+- SQLite or Postgres backup, retention, volume permissions, and filesystem
+  protections remain operator responsibilities.
 - Live provider availability is not required for this demo; locked snapshots and local fixtures are the reproducible local demo path.

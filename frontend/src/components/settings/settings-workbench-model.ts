@@ -10,6 +10,7 @@ export type SettingsWorkbenchProps = {
   providerStatus: ProviderStatusPublic | null
   providerStatusError: string
   providerStatusLoading: boolean
+  selectedProjectId: string
   status: WorkbenchStatus | null
   statusError: string
   onSettingsTabChange: (tab: SettingsTab) => void

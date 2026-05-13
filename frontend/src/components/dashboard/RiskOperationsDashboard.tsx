@@ -373,6 +373,7 @@ export function RiskOperationsDashboard({
                   }
                   priorityItems={priorityItems}
                   runsLoading={runsLoading}
+                  selectedProjectId={isDemoMode ? "" : selectedProjectId}
                   selectedRunRange={filters.selectedRunRange}
                   serviceItems={serviceItems}
                   summaryLoading={summaryLoading}
@@ -404,6 +405,7 @@ export function RiskOperationsDashboard({
               latestRun={latestRun}
               latestRunFactsRows={latestRunFactsRows}
               providerStatusLoading={providerStatusLoading}
+              selectedProjectId={isDemoMode ? "" : selectedProjectId}
               staleProvider={staleProvider}
             />
           </div>

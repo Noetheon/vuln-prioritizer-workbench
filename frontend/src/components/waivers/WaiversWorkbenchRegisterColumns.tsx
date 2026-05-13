@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { VpwBadge, type VpwDataTableColumn } from "@/components/vpw"
 import { optionalText } from "@/lib/ui-copy"
 import { cn } from "@/lib/utils"
+import { selectedProjectRouteSearch } from "@/workbench/selected-project-search"
 import {
   daysLabel,
   formatDate,
@@ -147,8 +148,9 @@ function WaiverRegisterActions({
       {waiver.finding_id ? (
         <Button asChild size="sm" variant="outline">
           <Link
-            to="/findings/$findingId"
             params={{ findingId: waiver.finding_id }}
+            search={selectedProjectRouteSearch(waiver.project_id)}
+            to="/findings/$findingId"
           >
             View finding
           </Link>

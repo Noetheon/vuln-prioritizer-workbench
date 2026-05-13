@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query"
-import { type FormEvent, useEffect, useState } from "react"
+import { useLocation, useNavigate } from "@/lib/router"
+import { type FormEvent, useCallback, useEffect, useMemo, useState } from "react"
 import {
   type AnalysisRunPublic,
   type AnalysisRunSummaryPublic,
@@ -18,9 +19,16 @@ import {
   type ImportFormat,
   type ImportUploadFormData,
   type ImportWizardState,
+  withDemoProviderSnapshot,
   workbenchImportFormats,
 } from "../../lib/app-defaults"
 import { buildImportUploadFormData } from "../import-upload-payload"
+import {
+  importRunUrlSearch,
+  normalizeSelectedRunId,
+  selectedImportRunIdFromSearch,
+} from "../import-route-search"
+import { searchStringFromUrlSearch } from "../selected-project-search"
 import { useWorkbenchContext } from "../WorkbenchContext"
 import {
   useProjectRunsQuery,
@@ -39,7 +47,13 @@ const TERMINAL_RUN_STATUSES = new Set([
   "succeeded",
 ])
 
+function activeSearchString(fallbackSearch: string) {
+  return typeof window === "undefined" ? fallbackSearch : window.location.search
+}
+
 function ImportsRouteContainer() {
+  const location = useLocation()
+  const navigate = useNavigate()
   const queryClient = useQueryClient()
   const {
     projectListLoading,
@@ -62,10 +76,20 @@ function ImportsRouteContainer() {
     ImportParseErrorPublic[]
   >([])
   const [selectedRunId, setSelectedRunId] = useState("")
+  const [pendingSelectableRunId, setPendingSelectableRunId] = useState("")
   const [refreshedTerminalRun, setRefreshedTerminalRun] = useState("")
+  const routeRunId = selectedImportRunIdFromSearch(location.searchStr)
   const projectRunsQuery = useProjectRunsQuery(selectedProjectId, true)
   const projectRuns = projectRunsQuery.data?.data ?? []
   const runDetailQuery = useRunDetailQuery(selectedRunId, true)
+  const runIds = useMemo(() => projectRuns.map((run) => run.id), [projectRuns])
+  const selectableRunIds = useMemo(
+    () =>
+      pendingSelectableRunId && !runIds.includes(pendingSelectableRunId)
+        ? [pendingSelectableRunId, ...runIds]
+        : runIds,
+    [pendingSelectableRunId, runIds],
+  )
   const importMutation = useMutation({
     mutationFn: ({
       body,
@@ -80,21 +104,60 @@ function ImportsRouteContainer() {
       }),
   })
 
+  const selectRunId = useCallback(
+    (nextRunId: string, { replace }: { replace: boolean }) => {
+      setSelectedRunId(nextRunId)
+      const currentLocationSearch = activeSearchString(location.searchStr)
+      const nextSearch = importRunUrlSearch(currentLocationSearch, nextRunId)
+      const currentSearch = currentLocationSearch.startsWith("?")
+        ? currentLocationSearch.slice(1)
+        : currentLocationSearch
+      if (searchStringFromUrlSearch(nextSearch) === currentSearch) {
+        return
+      }
+      void navigate({
+        replace,
+        search: () => nextSearch,
+      })
+    },
+    [location.searchStr, navigate],
+  )
+
   useEffect(() => {
-    setSelectedRunId((currentRunId) =>
-      projectRuns.some((run) => run.id === currentRunId)
-        ? currentRunId
-        : (projectRuns[0]?.id ?? ""),
+    if (projectRunsQuery.isLoading && runIds.length === 0) {
+      return
+    }
+    const nextRunId = normalizeSelectedRunId(
+      [routeRunId, selectedRunId],
+      selectableRunIds,
     )
-  }, [projectRuns])
+    if (nextRunId === selectedRunId && nextRunId === routeRunId) {
+      return
+    }
+    selectRunId(nextRunId, { replace: true })
+  }, [
+    projectRunsQuery.isLoading,
+    routeRunId,
+    runIds,
+    selectRunId,
+    selectableRunIds,
+    selectedRunId,
+  ])
+
+  useEffect(() => {
+    if (pendingSelectableRunId && runIds.includes(pendingSelectableRunId)) {
+      setPendingSelectableRunId("")
+    }
+  }, [pendingSelectableRunId, runIds])
 
   async function refreshProjectRuns(preferredRunId?: string) {
     if (!selectedProjectId) {
-      setSelectedRunId("")
+      selectRunId("", { replace: true })
       return
     }
     if (preferredRunId) {
-      setSelectedRunId(preferredRunId)
+      setPendingSelectableRunId(preferredRunId)
+      selectRunId(preferredRunId, { replace: false })
     }
     await queryClient.invalidateQueries({
       queryKey: workbenchQueryKeys.projectRuns(selectedProjectId),
@@ -193,7 +256,8 @@ function ImportsRouteContainer() {
       const summary = await RunsService.readRunSummary({ run_id: run.id })
       setImportRunSummary(summary)
       setImportParseErrors(summary.parse_errors ?? [])
-      setSelectedRunId(run.id)
+      setPendingSelectableRunId(run.id)
+      selectRunId(run.id, { replace: false })
       await refreshProjects(importProjectId)
       await refreshProjectRuns(run.id)
       await invalidateProjectScopedWorkbenchQueries(queryClient, importProjectId)
@@ -203,7 +267,8 @@ function ImportsRouteContainer() {
       const parseErrors = parseErrorsFromError(caught)
       setImportParseErrors(parseErrors)
       if (runId) {
-        setSelectedRunId(runId)
+        setPendingSelectableRunId(runId)
+        selectRunId(runId, { replace: false })
         try {
           const summary = await RunsService.readRunSummary({ run_id: runId })
           setImportRunSummary(summary)
@@ -216,6 +281,11 @@ function ImportsRouteContainer() {
       await refreshProjectRuns(runId ?? undefined)
       await invalidateProjectScopedWorkbenchQueries(queryClient, importProjectId)
     }
+  }
+
+  function handleProjectChange(projectId: string) {
+    setSelectedProjectId(projectId)
+    selectRunId("", { replace: true })
   }
 
   return (
@@ -247,9 +317,12 @@ function ImportsRouteContainer() {
       onProviderSnapshotFileChange={(value) =>
         setImportWizard((state) => ({ ...state, providerSnapshotFile: value }))
       }
-      onProjectChange={setSelectedProjectId}
+      onUseDemoProviderSnapshot={() =>
+        setImportWizard((state) => withDemoProviderSnapshot(state))
+      }
+      onProjectChange={handleProjectChange}
       onRefreshRuns={() => void refreshProjectRuns(selectedRunId)}
-      onSelectRun={setSelectedRunId}
+      onSelectRun={(runId) => selectRunId(runId, { replace: false })}
       onSubmit={submitImport}
       onAttackMappingFileChange={(value) =>
         setImportWizard((state) => ({ ...state, attackMappingFile: value }))

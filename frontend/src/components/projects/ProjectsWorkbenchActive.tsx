@@ -3,6 +3,7 @@ import { Archive, FolderKanban, PlayCircle, Upload } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
+import { selectedProjectRouteSearch } from "@/workbench/selected-project-search"
 import {
   VpwBadge,
   VpwEmptyState,
@@ -66,6 +67,7 @@ function ActiveProjectPanel({
 
   const evidence = evidenceState(projectSummary)
   const readiness = readinessProgress(selectedProject, projectSummary)
+  const projectSearch = selectedProjectRouteSearch(selectedProject.id)
 
   return (
     <VpwPanel className="flex flex-col gap-5 border-[color-mix(in_srgb,var(--vpw-blue)_24%,var(--vpw-border-subtle))] bg-[var(--vpw-bg-card)]">
@@ -87,13 +89,13 @@ function ActiveProjectPanel({
             Edit
           </Button>
           <Button asChild variant="outline">
-            <Link to="/imports">
+            <Link search={projectSearch} to="/imports">
               <Upload aria-hidden="true" />
               Import findings
             </Link>
           </Button>
           <Button asChild>
-            <Link to="/reports">
+            <Link search={projectSearch} to="/reports">
               <PlayCircle aria-hidden="true" />
               Generate evidence
             </Link>

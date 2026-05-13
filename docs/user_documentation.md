@@ -116,8 +116,8 @@ or customer scanner exports in public docs.
 ## Known Limitations
 
 - The Workbench is local-first and single-node by default.
-- SQLite is the default Workbench store; the Compose Postgres profile is an
-  optional private smoke path.
+- Local developer runs can use SQLite by default; the Compose quickstart uses a
+  private single-node Postgres service.
 - Public internet exposure, SSO, multi-tenancy, managed backups, retention
   policy, background workers, and organization-wide ticket-sync governance are
   outside the current local-first threat model.
