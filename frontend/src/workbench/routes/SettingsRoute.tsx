@@ -14,6 +14,7 @@ function SettingsRouteContent() {
     providerStatus,
     providerStatusError,
     providerStatusLoading,
+    selectedProjectId,
     status,
     statusError,
   } = useWorkbenchContext()
@@ -49,6 +50,7 @@ function SettingsRouteContent() {
         providerStatus={providerStatus}
         providerStatusError={providerStatusError}
         providerStatusLoading={providerStatusLoading}
+        selectedProjectId={selectedProjectId}
         status={status}
         statusError={statusError}
       />
