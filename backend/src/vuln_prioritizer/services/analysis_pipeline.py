@@ -250,19 +250,22 @@ def prepare_analysis(request: AnalysisRequest) -> tuple[list[PrioritizedFinding]
         )
     )
     try:
-        asset_records = load_asset_records(request.asset_context)
-        vex_statements = load_vex_statements(request.vex_files)
         if request.locked_provider_data and request.provider_snapshot_file is None:
             raise AnalysisInputError("Locked provider data requires a provider snapshot file.")
         provider_snapshot = load_analysis_provider_snapshot(request.provider_snapshot_file)
-        parsed_input = InputLoader().load_many(
-            request.input_specs,
-            max_cves=request.max_cves,
-            target_kind=request.target_kind,
-            target_ref=request.target_ref,
-            asset_records=asset_records,
-            vex_statements=vex_statements,
-        )
+        if request.parsed_input is not None:
+            parsed_input = request.parsed_input
+        else:
+            asset_records = load_asset_records(request.asset_context)
+            vex_statements = load_vex_statements(request.vex_files)
+            parsed_input = InputLoader().load_many(
+                request.input_specs,
+                max_cves=request.max_cves,
+                target_kind=request.target_kind,
+                target_ref=request.target_ref,
+                asset_records=asset_records,
+                vex_statements=vex_statements,
+            )
     except (ValidationError, ValueError) as exc:
         raise AnalysisInputError(str(exc)) from exc
 
@@ -320,7 +323,7 @@ def prepare_analysis(request: AnalysisRequest) -> tuple[list[PrioritizedFinding]
     provider_stale_sources = stale_provider_sources(
         provider_freshness,
         max_age_hours=request.max_provider_age_hours,
-        snapshot_sources=enrichment.provider_snapshot_sources,
+        snapshot_sources=enrichment.provider_snapshot_sources if provider_snapshot else None,
     )
     if provider_stale_sources:
         warnings.append(

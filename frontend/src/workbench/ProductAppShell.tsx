@@ -19,6 +19,7 @@ type ProductAppShellProps = {
   children: ReactNode
   eyebrow: string
   hideStatusStrip?: boolean
+  navigationKey: string
   providerStatus: ProviderStatusPublic | null
   status: WorkbenchStatus | null
   statusError: string
@@ -30,6 +31,7 @@ export function ProductAppShell({
   children,
   eyebrow,
   hideStatusStrip = false,
+  navigationKey,
   providerStatus,
   status,
   statusError,
@@ -42,6 +44,7 @@ export function ProductAppShell({
       healthLabel={workspaceHealthLabel(status, statusError)}
       hideStatusStrip={hideStatusStrip}
       navigation={workbenchNavigation}
+      navigationKey={navigationKey}
       statusItems={dataServicesSummary(status, providerStatus)}
       title={title}
       workspaceLabel="Local workspace"

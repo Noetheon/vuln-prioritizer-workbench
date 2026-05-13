@@ -58,13 +58,18 @@ with `TRAEFIK_APP_ENABLED=true`.
   its CSP/CORS contract is reviewed as a split-domain deployment.
 - HTTP is redirected to HTTPS.
 - Traefik terminates TLS through the configured ACME resolver.
+- The Traefik container uses a read-only root filesystem, `no-new-privileges`,
+  dropped Linux capabilities with only `NET_BIND_SERVICE` restored, a writable
+  `/tmp` tmpfs, and a dedicated ACME certificate volume.
 - Backend upload requests are bounded by
   `TRAEFIK_MAX_REQUEST_BODY_BYTES`, which should match or stay slightly above
   `MAX_UPLOAD_MB`.
 - Generated reports are bounded by `MAX_REPORT_MB` per artifact and
   `MAX_REPORTS_PER_RUN` retained artifacts per analysis run.
 - Keep the Traefik dashboard disabled. If enabled for maintenance, set a narrow
-  `TRAEFIK_DASHBOARD_IP_ALLOWLIST`.
+  `TRAEFIK_DASHBOARD_IP_ALLOWLIST` and a htpasswd-compatible
+  `TRAEFIK_DASHBOARD_AUTH_USERS` value. Without an operator-supplied auth hash,
+  the Compose default is a non-operational placeholder user.
 
 Do not trust arbitrary forwarded headers from the public internet. Place Traefik
 as the only public entrypoint and keep backend container ports unbound except in
@@ -113,8 +118,8 @@ Required browser/API behavior evidence:
   direct API route for automation; if exposed publicly, record the split-domain
   CORS, CSP, and host-routing decision in the release evidence ledger.
 - HTTP requests redirect to HTTPS.
-- Traefik dashboard routing stays disabled unless a short maintenance window and
-  IP allowlist are documented.
+- Traefik dashboard routing stays disabled unless a short maintenance window,
+  IP allowlist, and dashboard Basic Auth users are documented.
 
 Do not include secrets, token values, cookies, customer exports, private
 absolute paths, shell history, or unredacted environment dumps in public

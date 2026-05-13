@@ -58,7 +58,7 @@ If `pip-audit`, npm, or advisory data is unavailable, record that as a release-c
 | Report/evidence downloads | `tests/api/test_workbench_reports_api.py`; browser evidence should show report links and Evidence ZIP verification. |
 | 10k findings API smoke | `make performance-smoke` runs the active Workbench import and pagination smoke with 10,000 findings. |
 | Docker demo smoke | `make docker-demo-smoke` output showing `/api/v1/utils/health-check/` succeeds, the Compose Postgres Alembic/schema/repository smoke passes, and the local import/provider smoke tears down cleanly. |
-| Dependency audit | `make dependency-audit` result for the backend Python lock and frontend production dependencies, or a documented exception when audit tooling or advisory data is unavailable. |
+| Dependency audit | `make dependency-audit` result for the backend Python lock and frontend runtime plus dev/build-chain dependencies, or a documented exception when audit tooling or advisory data is unavailable. |
 | Demo evidence bundle | Generate JSON, Markdown, HTML, and Evidence ZIP from the Workbench report page and verify the ZIP through the report API. |
 | Provider replay | `make provider-snapshot-validate` plus the Workbench import test showing locked provider snapshot replay without live keys. |
 

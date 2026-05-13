@@ -901,6 +901,44 @@ def test_double_import_deduplicates_findings_and_appends_occurrences(
     )
 
 
+def test_generic_import_persists_multi_fix_versions(
+    workbench_api_env: WorkbenchApiEnv,
+    tmp_path: Path,
+) -> None:
+    _configure_upload_dir(workbench_api_env, tmp_path)
+    headers = local_api_headers(workbench_api_env.client)
+    project = create_project_via_api(workbench_api_env.client, headers)
+    content = "\n".join(
+        [
+            "cve_id,asset_ref,component,version,fix_versions",
+            'CVE-2024-3094,build-host-1,xz,5.6.0,"5.6.1-r2|5.6.2"',
+            "",
+        ]
+    ).encode()
+
+    response = workbench_api_env.client.post(
+        f"/api/v1/projects/{project['id']}/imports",
+        headers=headers,
+        data={"input_type": "generic-occurrence-csv"},
+        files={"file": ("occurrences.csv", content, "text/csv")},
+    )
+
+    assert response.status_code == 200, response.text
+    payload = response.json()
+    assert payload["summary_json"]["occurrence_count"] == 1
+    findings = workbench_api_env.client.get(
+        f"/api/v1/projects/{project['id']}/findings/",
+        headers=headers,
+    )
+    assert findings.status_code == 200, findings.text
+    finding = findings.json()["data"][0]
+    detail = workbench_api_env.client.get(f"/api/v1/findings/{finding['id']}", headers=headers)
+    assert detail.status_code == 200, detail.text
+    occurrence = detail.json()["occurrences"][0]
+    assert occurrence["fix_version"] == "5.6.1-r2"
+    assert occurrence["fix_versions"] == ["5.6.1-r2", "5.6.2"]
+
+
 def test_same_batch_duplicate_bulk_import_reuses_finding_and_appends_occurrences(
     workbench_api_env: WorkbenchApiEnv,
     tmp_path: Path,

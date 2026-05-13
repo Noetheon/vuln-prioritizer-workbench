@@ -114,6 +114,43 @@ test("finding detail API errors do not fall back to demo findings", async ({
   await expect(page.getByText("CVE-2024-3094")).toHaveCount(0)
 })
 
+test("malformed finding detail URL fails closed without app crash", async ({
+  page,
+}) => {
+  const pageErrors: Error[] = []
+  page.on("pageerror", (error) => pageErrors.push(error))
+  await routeWorkbenchShell(page)
+
+  await page.goto("/findings")
+  await page.evaluate(() => {
+    window.history.pushState({}, "", "/findings/%E0%A4%A")
+    window.dispatchEvent(new PopStateEvent("popstate"))
+  })
+
+  await expect(page.getByText("Route not found")).toBeVisible()
+  expect(pageErrors).toEqual([])
+})
+
+test("workbench shell renders when localStorage access is blocked", async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    const blocked = () => {
+      throw new DOMException("localStorage blocked", "SecurityError")
+    }
+    Storage.prototype.getItem = blocked
+    Storage.prototype.setItem = blocked
+  })
+  await routeWorkbenchShell(page)
+
+  await page.goto("/findings")
+
+  await expect(
+    page.getByRole("region", { name: "Findings filters" }),
+  ).toBeVisible()
+  await expect(page.getByLabel("Local workspace status")).toBeVisible()
+})
+
 test("finding detail still renders when optional explanation fails", async ({
   page,
 }) => {

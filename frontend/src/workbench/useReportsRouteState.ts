@@ -52,7 +52,8 @@ export function useReportsRouteState({
   >("")
   const reportsQuery = useQuery({
     enabled: currentPath === "/reports" && Boolean(selectedRunId),
-    queryFn: () => ReportsService.readRunReports({ run_id: selectedRunId }),
+    queryFn: ({ signal }) =>
+      ReportsService.readRunReports({ run_id: selectedRunId }, { signal }),
     queryKey: workbenchQueryKeys.reports(selectedRunId),
     retry: false,
     staleTime: 15_000,

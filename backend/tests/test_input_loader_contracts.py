@@ -273,6 +273,31 @@ def test_generic_occurrence_csv_preserves_component_target_and_asset_context(
     assert any("unknown asset environment" in warning for warning in parsed.warnings)
 
 
+def test_generic_occurrence_csv_auto_detection_sniffs_delimiters_and_comments(
+    tmp_path: Path,
+) -> None:
+    loader_module = _load_loader_module()
+    input_file = tmp_path / "generic-occurrences.csv"
+    input_file.write_text(
+        "\n".join(
+            [
+                "# exported from scanner",
+                "cve_id;component;version;target_ref",
+                "CVE-2024-0101;openssl;3.0.0;host-01",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    assert loader_module.detect_input_format(input_file) == "generic-occurrence-csv"
+    parsed = loader_module.InputLoader().load(input_file)
+
+    assert parsed.input_format == "generic-occurrence-csv"
+    assert parsed.unique_cves == ["CVE-2024-0101"]
+    assert parsed.occurrences[0].component_name == "openssl"
+
+
 def test_generic_occurrence_csv_sniffs_semicolon_dialect_and_warns_unknowns(
     tmp_path: Path,
 ) -> None:

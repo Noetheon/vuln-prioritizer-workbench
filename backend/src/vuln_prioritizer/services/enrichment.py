@@ -47,8 +47,9 @@ class EnrichmentService:
     ) -> None:
         shared_session = session or requests.Session()
         cache = FileCache(cache_dir, cache_ttl_hours) if use_cache else None
+        nvd_session = session if session is not None else None
         self.nvd = NvdProvider.from_env(
-            api_key_env=nvd_api_key_env, session=shared_session, cache=cache
+            api_key_env=nvd_api_key_env, session=nvd_session, cache=cache
         )
         self.epss = EpssProvider(session=shared_session, cache=cache)
         self.kev = KevProvider(session=shared_session, cache=cache)
@@ -154,6 +155,10 @@ class EnrichmentService:
                 epss_results=epss_results,
                 provider_snapshot=provider_snapshot,
                 locked_provider_data=locked_provider_data,
+                active_provider_sources=_active_provider_sources(
+                    provider_snapshot=provider_snapshot,
+                    locked_provider_data=locked_provider_data,
+                ),
                 nvd=(nvd_diagnostics, nvd_warnings),
                 epss=(epss_diagnostics, epss_warnings),
                 kev=(kev_diagnostics, kev_warnings),
@@ -183,14 +188,20 @@ class EnrichmentService:
         snapshot_results: dict[str, NvdData] = {}
         missing_ids = list(cve_ids)
         if provider_snapshot is not None:
-            resolved, missing_ids = resolve_snapshot_provider_data(
-                provider_snapshot,
-                source_name="nvd",
-                cve_ids=cve_ids,
-            )
-            snapshot_results = {
-                cve_id: data for cve_id, data in resolved.items() if isinstance(data, NvdData)
-            }
+            if not _snapshot_source_selected(provider_snapshot, "nvd"):
+                if locked_provider_data:
+                    self.last_nvd_diagnostics = NvdFetchDiagnostics(requested=0)
+                    return _merge_provider_results(cve_ids, {}, {}, NvdData), []
+                missing_ids = list(cve_ids)
+            else:
+                resolved, missing_ids = resolve_snapshot_provider_data(
+                    provider_snapshot,
+                    source_name="nvd",
+                    cve_ids=cve_ids,
+                )
+                snapshot_results = {
+                    cve_id: data for cve_id, data in resolved.items() if isinstance(data, NvdData)
+                }
         if locked_provider_data and missing_ids:
             raise ValueError(
                 "Provider snapshot is missing NVD coverage for: " + ", ".join(sorted(missing_ids))
@@ -239,14 +250,20 @@ class EnrichmentService:
         snapshot_results: dict[str, EpssData] = {}
         missing_ids = list(cve_ids)
         if provider_snapshot is not None:
-            resolved, missing_ids = resolve_snapshot_provider_data(
-                provider_snapshot,
-                source_name="epss",
-                cve_ids=cve_ids,
-            )
-            snapshot_results = {
-                cve_id: data for cve_id, data in resolved.items() if isinstance(data, EpssData)
-            }
+            if not _snapshot_source_selected(provider_snapshot, "epss"):
+                if locked_provider_data:
+                    self.last_epss_diagnostics = ProviderLookupDiagnostics(requested=0)
+                    return _merge_provider_results(cve_ids, {}, {}, EpssData), []
+                missing_ids = list(cve_ids)
+            else:
+                resolved, missing_ids = resolve_snapshot_provider_data(
+                    provider_snapshot,
+                    source_name="epss",
+                    cve_ids=cve_ids,
+                )
+                snapshot_results = {
+                    cve_id: data for cve_id, data in resolved.items() if isinstance(data, EpssData)
+                }
         if locked_provider_data and missing_ids:
             raise ValueError(
                 "Provider snapshot is missing EPSS coverage for: " + ", ".join(sorted(missing_ids))
@@ -298,14 +315,20 @@ class EnrichmentService:
         snapshot_results: dict[str, KevData] = {}
         missing_ids = list(cve_ids)
         if provider_snapshot is not None:
-            resolved, missing_ids = resolve_snapshot_provider_data(
-                provider_snapshot,
-                source_name="kev",
-                cve_ids=cve_ids,
-            )
-            snapshot_results = {
-                cve_id: data for cve_id, data in resolved.items() if isinstance(data, KevData)
-            }
+            if not _snapshot_source_selected(provider_snapshot, "kev"):
+                if locked_provider_data:
+                    self.last_kev_diagnostics = ProviderLookupDiagnostics(requested=0)
+                    return _merge_provider_results(cve_ids, {}, {}, KevData), []
+                missing_ids = list(cve_ids)
+            else:
+                resolved, missing_ids = resolve_snapshot_provider_data(
+                    provider_snapshot,
+                    source_name="kev",
+                    cve_ids=cve_ids,
+                )
+                snapshot_results = {
+                    cve_id: data for cve_id, data in resolved.items() if isinstance(data, KevData)
+                }
         if locked_provider_data and missing_ids:
             raise ValueError(
                 "Provider snapshot is missing KEV coverage for: " + ", ".join(sorted(missing_ids))
@@ -357,16 +380,40 @@ def _snapshot_defensive_contexts(
     }
 
 
+def _snapshot_source_selected(
+    provider_snapshot: ProviderSnapshotReport,
+    source_name: str,
+) -> bool:
+    return source_name in set(provider_snapshot.metadata.selected_sources)
+
+
+def _active_provider_sources(
+    *,
+    provider_snapshot: ProviderSnapshotReport | None,
+    locked_provider_data: bool,
+) -> set[str]:
+    if provider_snapshot is None or not locked_provider_data:
+        return {"nvd", "epss", "kev"}
+    return {
+        source
+        for source in provider_snapshot.metadata.selected_sources
+        if source in {"nvd", "epss", "kev"}
+    }
+
+
 def _provider_data_quality_flags(
     *,
     nvd_results: dict[str, NvdData] | None = None,
     epss_results: dict[str, EpssData] | None = None,
     provider_snapshot: ProviderSnapshotReport | None = None,
     locked_provider_data: bool = False,
+    active_provider_sources: set[str] | None = None,
     **sources: tuple[ProviderLookupDiagnostics, list[str]],
 ) -> dict[str, list[ProviderDataQualityFlag]]:
     flags_by_source: dict[str, list[ProviderDataQualityFlag]] = {}
     for source, (diagnostics, warnings) in sources.items():
+        if active_provider_sources is not None and source not in active_provider_sources:
+            continue
         flags = provider_data_quality_flags(
             source=source,
             diagnostics=diagnostics,
@@ -380,13 +427,19 @@ def _provider_data_quality_flags(
             diagnostics=diagnostics,
             warnings=warnings,
         )
-    missing_cvss_flags = _nvd_missing_cvss_flags(nvd_results or {})
+    active_sources = active_provider_sources or {"nvd", "epss", "kev"}
+    missing_cvss_flags = (
+        _nvd_missing_cvss_flags(nvd_results or {}) if "nvd" in active_sources else []
+    )
     if missing_cvss_flags:
         flags_by_source.setdefault("nvd", []).extend(missing_cvss_flags)
-    _append_nvd_missing_flags(flags_by_source, nvd_results or {})
-    _append_epss_missing_flags(flags_by_source, epss_results or {})
-    _append_epss_outdated_flag(flags_by_source, sources.get("epss"))
-    _append_kev_unavailable_flag(flags_by_source, sources.get("kev"))
+    if "nvd" in active_sources:
+        _append_nvd_missing_flags(flags_by_source, nvd_results or {})
+    if "epss" in active_sources:
+        _append_epss_missing_flags(flags_by_source, epss_results or {})
+        _append_epss_outdated_flag(flags_by_source, sources.get("epss"))
+    if "kev" in active_sources:
+        _append_kev_unavailable_flag(flags_by_source, sources.get("kev"))
     if locked_provider_data and provider_snapshot is not None:
         flags_by_source.setdefault("provider_snapshot", []).append(
             ProviderDataQualityFlag(

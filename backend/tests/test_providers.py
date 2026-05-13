@@ -25,6 +25,7 @@ from vuln_prioritizer.models import (
     KevData,
     NvdData,
     ProviderLookupDiagnostics,
+    ProviderSnapshotItem,
     ProviderSnapshotMetadata,
     ProviderSnapshotReport,
 )
@@ -61,6 +62,33 @@ class FakeResponse:
             error = requests.HTTPError(f"{self.status_code} error")
             error.response = self
             raise error
+
+
+class _NoopAttackProvider:
+    def fetch_many(  # noqa: ANN001
+        self,
+        cve_ids,
+        *,
+        enabled: bool,
+        source: str,
+        mapping_file,
+        technique_metadata_file,
+        offline_file,
+    ):
+        return (
+            {cve_id: AttackData(cve_id=cve_id) for cve_id in cve_ids},
+            {
+                "source": source if enabled else "none",
+                "mapping_file": None,
+                "technique_metadata_file": None,
+                "source_version": None,
+                "attack_version": None,
+                "domain": None,
+                "mapping_framework": None,
+                "mapping_framework_version": None,
+            },
+            [],
+        )
 
 
 def test_provider_endpoint_constants_are_https_and_pinned_to_public_hosts() -> None:
@@ -734,6 +762,131 @@ def test_enrichment_service_tracks_last_nvd_diagnostics() -> None:
         failures=0,
         content_hits=1,
     )
+
+
+def test_enrichment_locked_partial_snapshot_uses_only_selected_sources() -> None:
+    class ExplodingProvider:
+        def fetch_many(self, *args, **kwargs):  # noqa: ANN002, ANN003
+            raise AssertionError("unselected locked snapshot source should not fetch live data")
+
+    service = EnrichmentService(use_cache=False)
+    service.nvd = ExplodingProvider()
+    service.epss = ExplodingProvider()
+    service.kev = ExplodingProvider()
+    service.attack = _NoopAttackProvider()
+    snapshot = ProviderSnapshotReport(
+        metadata=ProviderSnapshotMetadata(
+            generated_at="2026-05-01T12:00:00Z",
+            selected_sources=["nvd"],
+            requested_cves=1,
+        ),
+        items=[
+            ProviderSnapshotItem(
+                cve_id="CVE-2026-7001",
+                nvd=NvdData(cve_id="CVE-2026-7001", description="snapshot"),
+            )
+        ],
+    )
+
+    result = service.enrich(
+        ["CVE-2026-7001"],
+        attack_enabled=False,
+        provider_snapshot=snapshot,
+        locked_provider_data=True,
+    )
+
+    assert result.nvd["CVE-2026-7001"].description == "snapshot"
+    assert result.epss_diagnostics.requested == 0
+    assert result.kev_diagnostics.requested == 0
+    assert "epss" not in result.provider_data_quality_flags
+    assert "kev" not in result.provider_data_quality_flags
+
+
+def test_enrichment_unlocked_partial_snapshot_uses_live_fallback() -> None:
+    class StubNvdProvider:
+        last_diagnostics = NvdFetchDiagnostics(
+            requested=1,
+            network_fetches=1,
+            content_hits=1,
+        )
+
+        def __init__(self) -> None:
+            self.requested: list[str] = []
+
+        def fetch_many(self, cve_ids):  # noqa: ANN001
+            self.requested = list(cve_ids)
+            return (
+                {
+                    cve_id: NvdData(cve_id=cve_id, description=f"live {cve_id}")
+                    for cve_id in cve_ids
+                },
+                [],
+            )
+
+    class StubEpssProvider:
+        last_diagnostics = ProviderLookupDiagnostics(
+            requested=2,
+            network_fetches=1,
+            content_hits=2,
+        )
+
+        def __init__(self) -> None:
+            self.requested: list[str] = []
+
+        def fetch_many(self, cve_ids):  # noqa: ANN001
+            self.requested = list(cve_ids)
+            return ({cve_id: EpssData(cve_id=cve_id, epss=0.4) for cve_id in cve_ids}, [])
+
+    class StubKevProvider:
+        last_diagnostics = ProviderLookupDiagnostics(
+            requested=2,
+            network_fetches=1,
+            content_hits=0,
+            empty_records=2,
+        )
+
+        def __init__(self) -> None:
+            self.requested: list[str] = []
+
+        def fetch_many(self, cve_ids, offline_file=None):  # noqa: ANN001, ARG002
+            self.requested = list(cve_ids)
+            return ({cve_id: KevData(cve_id=cve_id, in_kev=False) for cve_id in cve_ids}, [])
+
+    nvd = StubNvdProvider()
+    epss = StubEpssProvider()
+    kev = StubKevProvider()
+    service = EnrichmentService(use_cache=False)
+    service.nvd = nvd
+    service.epss = epss
+    service.kev = kev
+    service.attack = _NoopAttackProvider()
+    snapshot = ProviderSnapshotReport(
+        metadata=ProviderSnapshotMetadata(
+            generated_at="2026-05-01T12:00:00Z",
+            selected_sources=["nvd"],
+            requested_cves=2,
+        ),
+        items=[
+            ProviderSnapshotItem(
+                cve_id="CVE-2026-7001",
+                nvd=NvdData(cve_id="CVE-2026-7001", description="snapshot"),
+            )
+        ],
+    )
+
+    result = service.enrich(
+        ["CVE-2026-7001", "CVE-2026-7002"],
+        attack_enabled=False,
+        provider_snapshot=snapshot,
+        locked_provider_data=False,
+    )
+
+    assert nvd.requested == ["CVE-2026-7002"]
+    assert epss.requested == ["CVE-2026-7001", "CVE-2026-7002"]
+    assert kev.requested == ["CVE-2026-7001", "CVE-2026-7002"]
+    assert result.nvd["CVE-2026-7001"].description == "snapshot"
+    assert result.nvd["CVE-2026-7002"].description == "live CVE-2026-7002"
+    assert result.provider_snapshot_sources == ["nvd"]
 
 
 def test_enrichment_service_nvd_failure_records_data_quality_flags() -> None:

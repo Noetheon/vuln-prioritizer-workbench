@@ -17,6 +17,7 @@ from vuln_prioritizer.inputs.parsers.common import (
 from vuln_prioritizer.inputs.parsers.common import (
     normalize_asset_exposure as _core_normalize_asset_exposure,
 )
+from vuln_prioritizer.inputs.parsers.common import split_versions
 from vuln_prioritizer.models import InputOccurrence
 
 _UNKNOWN = "unknown"
@@ -58,7 +59,12 @@ def input_occurrence_from_workbench_occurrence(
 ) -> InputOccurrence:
     """Map a Workbench importer occurrence back to the core occurrence model."""
     evidence = occurrence.raw_evidence
-    fix_versions = [occurrence.fix_version] if occurrence.fix_version else []
+    fix_versions = (
+        string_list_evidence(evidence, "fix_versions")
+        or string_list_evidence(evidence, "fixed_versions")
+        or string_list_evidence(evidence, "fix_version")
+        or ([occurrence.fix_version] if occurrence.fix_version else [])
+    )
     return InputOccurrence(
         cve_id=occurrence.cve,
         source_format=occurrence.source,
@@ -83,6 +89,20 @@ def input_occurrence_from_workbench_occurrence(
         asset_owner=string_evidence(evidence, "asset_owner") or string_evidence(evidence, "owner"),
         asset_business_service=string_evidence(evidence, "asset_business_service")
         or string_evidence(evidence, "business_service"),
+        asset_match_rule_id=string_evidence(evidence, "asset_match_rule_id"),
+        asset_match_row=int_evidence(evidence, "asset_match_row"),
+        asset_match_mode=string_evidence(evidence, "asset_match_mode"),
+        asset_match_pattern=string_evidence(evidence, "asset_match_pattern"),
+        asset_match_precedence=int_evidence(evidence, "asset_match_precedence"),
+        asset_match_candidate_count=int_evidence(evidence, "asset_match_candidate_count") or 0,
+        vex_status=string_evidence(evidence, "vex_status"),
+        vex_justification=string_evidence(evidence, "vex_justification"),
+        vex_action_statement=string_evidence(evidence, "vex_action_statement"),
+        vex_match_type=string_evidence(evidence, "vex_match_type"),
+        vex_source_format=string_evidence(evidence, "vex_source_format"),
+        vex_source_record_id=string_evidence(evidence, "vex_source_record_id"),
+        vex_source_path=string_evidence(evidence, "vex_source_path"),
+        vex_candidate_count=int_evidence(evidence, "vex_candidate_count") or 0,
     )
 
 
@@ -218,6 +238,23 @@ def canonicalize_asset_environment_value(value: str | None) -> str | None:
 def string_evidence(evidence: Mapping[str, Any], key: str) -> str | None:
     value = evidence.get(key)
     return str(value) if value else None
+
+
+def string_list_evidence(evidence: Mapping[str, Any], key: str) -> list[str]:
+    value = evidence.get(key)
+    if isinstance(value, list):
+        return [item.strip() for item in value if isinstance(item, str) and item.strip()]
+    return split_versions(value)
+
+
+def int_evidence(evidence: Mapping[str, Any], key: str) -> int | None:
+    value = evidence.get(key)
+    if value is None or value == "":
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
 
 
 def _canonicalize_evidence_key(

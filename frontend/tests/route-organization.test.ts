@@ -9,6 +9,14 @@ import { workbenchPathFromPathname } from "../src/lib/app-route-config.ts"
 const frontendRoot = dirname(dirname(fileURLToPath(import.meta.url)))
 const appRouterFile = new URL("../src/AppRouter.tsx", import.meta.url)
 const oldRoutesDir = new URL("../src/routes/", import.meta.url)
+const routeErrorBoundaryFile = new URL(
+  "../src/workbench/RouteErrorBoundary.tsx",
+  import.meta.url,
+)
+const workbenchShellFile = new URL(
+  "../src/workbench/WorkbenchShell.tsx",
+  import.meta.url,
+)
 const workbenchRoutesDir = new URL("../src/workbench/routes/", import.meta.url)
 const componentsDir = join(frontendRoot, "src/components")
 const appShellFile = new URL("../src/components/app/AppShell.tsx", import.meta.url)
@@ -116,6 +124,33 @@ test("Workbench shell is mounted once by AppRouter", () => {
   }
 })
 
+test("finding route decoding and lazy routes fail closed", () => {
+  const appRouter = text(appRouterFile)
+  const routeErrorBoundary = text(routeErrorBoundaryFile)
+  const workbenchShell = text(workbenchShellFile)
+
+  assert.match(appRouter, /safeDecodeURIComponent/)
+  assert.match(appRouter, /findingId === null/)
+  assert.doesNotMatch(appRouter, /decodeURIComponent\(findingDetailMatch/)
+  assert.match(workbenchShell, /<RouteErrorBoundary/)
+  assert.match(workbenchShell, /key=\{location\.pathname\}/)
+  assert.match(workbenchShell, /resetKey=\{`\$\{location\.pathname\}\$\{location\.searchStr\}`\}/)
+  assert.match(workbenchShell, /<Suspense fallback=/)
+  assert.match(routeErrorBoundary, /Workbench route failed to render/)
+})
+
+test("AppShell handles blocked storage and restores route focus", () => {
+  const appShell = text(appShellFile)
+
+  assert.match(appShell, /function readSidebarCollapsed/)
+  assert.match(appShell, /try \{\s*return window\.localStorage\.getItem/s)
+  assert.match(appShell, /function writeSidebarCollapsed/)
+  assert.match(appShell, /catch \{/)
+  assert.match(appShell, /contentRef/)
+  assert.match(appShell, /content\.scrollTop = 0/)
+  assert.match(appShell, /content\.focus\(\{ preventScroll: true \}\)/)
+})
+
 test("Workbench route matching does not highlight dashboard for unknown paths", () => {
   assert.equal(workbenchPathFromPathname("/"), "/")
   assert.equal(workbenchPathFromPathname("/findings/demo-f1"), "/findings")
@@ -135,6 +170,7 @@ test("frontend unit test scripts automatically include every unit test file", ()
     assert.doesNotMatch(script, /tests\/[\w-]+\.test\.ts/)
     assert.doesNotMatch(script, /\.spec\.ts/)
   }
+  assert.equal(packageJson.scripts["test:types"], "tsc -p tsconfig.tests.json")
 })
 
 test("finding detail links preserve selected project context", () => {

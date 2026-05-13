@@ -9,7 +9,10 @@ from app.importers.contracts import (
     InputPayload,
     NormalizedOccurrence,
 )
-from app.importers.input_loader_adapter import parse_payload_with_input_loader
+from app.importers.input_loader_adapter import (
+    ParsedWorkbenchInput,
+    parse_payload_with_input_loader_result,
+)
 
 GENERIC_OCCURRENCE_CSV_INPUT_TYPE = "generic-occurrence-csv"
 
@@ -26,9 +29,17 @@ class GenericOccurrenceCsvImporter:
         *,
         filename: str | None = None,
     ) -> list[NormalizedOccurrence]:
+        return self.parse_with_metadata(payload, filename=filename).occurrences
+
+    def parse_with_metadata(
+        self,
+        payload: InputPayload,
+        *,
+        filename: str | None = None,
+    ) -> ParsedWorkbenchInput:
         if _filename_suffix(filename) not in {"", ".csv"}:
             raise ImporterParseError("generic-occurrence-csv supports .csv inputs.")
-        return parse_payload_with_input_loader(
+        return parse_payload_with_input_loader_result(
             GENERIC_OCCURRENCE_CSV_INPUT_TYPE,
             payload,
             default_suffix=".csv",

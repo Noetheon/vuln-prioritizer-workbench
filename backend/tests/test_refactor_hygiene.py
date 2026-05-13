@@ -171,6 +171,7 @@ def test_workbench_backend_does_not_import_legacy_layers() -> None:
 def test_import_upload_route_delegates_to_application_service() -> None:
     route_source = (ROOT / "app/api/routes/imports.py").read_text(encoding="utf-8")
     service_source = (ROOT / "app/services/import_execution.py").read_text(encoding="utf-8")
+    parsing_source = (ROOT / "app/services/import_execution_parsing.py").read_text(encoding="utf-8")
     route_imports = _imported_modules("app/api/routes/imports.py")
 
     assert len(route_source.splitlines()) <= 140
@@ -180,7 +181,8 @@ def test_import_upload_route_delegates_to_application_service() -> None:
     assert "RunRepository" not in route_source
     assert "def execute_project_import_upload" in service_source
     assert "AnalysisService" in service_source
-    assert "build_importer_registry" in service_source
+    assert "app.services.import_execution_parsing" in service_source
+    assert "build_importer_registry" in parsing_source
 
 
 def test_legacy_workbench_runtime_modules_are_removed() -> None:
@@ -379,6 +381,7 @@ def test_workbench_import_validation_and_storage_are_split_from_route_facade() -
     upload_helper_imports = _imported_modules("app/api/routes/import_uploads.py")
     source = (ROOT / "app/api/routes/imports.py").read_text(encoding="utf-8")
     execution_source = (ROOT / "app/services/import_execution.py").read_text(encoding="utf-8")
+    parsing_source = (ROOT / "app/services/import_execution_parsing.py").read_text(encoding="utf-8")
     parse_failure_source = (ROOT / "app/services/import_execution_parse_failures.py").read_text(
         encoding="utf-8"
     )
@@ -406,6 +409,7 @@ def test_workbench_import_validation_and_storage_are_split_from_route_facade() -
     assert "app.services.import_execution_types" in execution_source
     assert "app.services.import_execution_types" in upload_stage_source
     assert "app.services.import_execution_uploads" in execution_source
+    assert "app.services.import_execution_parsing" in execution_source
     assert "app.services.import_execution_parse_failures" in execution_source
     assert "class PreparedImportUpload" in type_source
     assert "class ResolvedImportRun" in type_source
@@ -413,7 +417,7 @@ def test_workbench_import_validation_and_storage_are_split_from_route_facade() -
     assert "def prepare_import_upload" in upload_stage_source
     assert "def resolve_import_run" in upload_stage_source
     assert "def store_prepared_uploads" in upload_stage_source
-    assert "def _parse_prepared_upload" in execution_source
+    assert "def parse_prepared_upload" in parsing_source
     assert "def raise_parse_failure" in parse_failure_source
     assert "def raise_sidecar_parse_failure" in parse_failure_source
 

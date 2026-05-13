@@ -119,13 +119,12 @@ def resolve_snapshot_provider_data(
     missing: list[str] = []
 
     for cve_id in cve_ids:
+        if source_name not in selected_sources:
+            continue
         item = items_by_cve.get(cve_id)
         provider_value = None if item is None else getattr(item, source_name, None)
         if provider_value is None:
-            if source_name in selected_sources:
-                missing.append(cve_id)
-            else:
-                missing.append(cve_id)
+            missing.append(cve_id)
             continue
         resolved[cve_id] = provider_value
 

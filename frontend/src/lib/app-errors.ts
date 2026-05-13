@@ -1,4 +1,5 @@
-import { ApiError, type ImportParseErrorPublic } from "../api-client"
+import type { ImportParseErrorPublic } from "../api-client"
+import { ApiError } from "./api-client-errors"
 
 export function apiErrorMessage(prefix: string, caught: unknown) {
   if (caught instanceof ApiError) {

@@ -208,14 +208,40 @@ def test_workbench_runtime_names_are_not_active_service_aliases() -> None:
 
 def test_container_image_digest_policy_covers_compose_service_images() -> None:
     digest_check = _read_repo_text("scripts/check_dockerfile_base_digests.py")
+    makefile = _read_repo_text("Makefile")
+    dockerignore = _read_repo_text(".dockerignore")
     compose = yaml.safe_load(_read_repo_text("compose.yml"))
     traefik_compose = yaml.safe_load(_read_repo_text("compose.traefik.yml"))
 
     assert "compose.yml" in digest_check
     assert "compose.traefik.yml" in digest_check
+    assert "Dockerfile.playwright" in digest_check
+    assert "MAKE_IMAGE_RE" in digest_check
     assert "services" in digest_check
+    assert ".env" in dockerignore
+    assert "!.env.example" in dockerignore
+    assert "ACTIONLINT_IMAGE ?= rhysd/actionlint:1.7.12@sha256:" in makefile
+    assert "audit --audit-level=high" in makefile
     assert "@sha256:" in compose["services"]["db"]["image"]
     assert "@sha256:" in traefik_compose["services"]["traefik"]["image"]
+
+
+def test_github_workflow_actions_are_sha_pinned() -> None:
+    makefile = _read_repo_text("Makefile")
+    pin_check = _read_repo_text("scripts/check_github_action_pins.py")
+
+    assert "scripts/check_github_action_pins.py" in makefile
+    assert "GitHub workflow remote actions must be pinned by commit SHA" in pin_check
+
+    result = subprocess.run(
+        ["python3", "scripts/check_github_action_pins.py"],
+        capture_output=True,
+        cwd=REPO_ROOT,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
 
 
 def test_import_service_modules_do_not_import_http_or_route_boundaries() -> None:
@@ -324,18 +350,32 @@ def test_compose_public_app_routes_are_opt_in_and_https_only() -> None:
     ) in backend_labels
 
 
-def test_traefik_dashboard_route_is_opt_in_and_ip_limited() -> None:
+def test_traefik_dashboard_route_is_opt_in_ip_limited_and_basic_auth_protected() -> None:
     compose = yaml.safe_load((REPO_ROOT / "compose.traefik.yml").read_text(encoding="utf-8"))
-    labels = compose["services"]["traefik"]["labels"]
+    traefik = compose["services"]["traefik"]
+    labels = traefik["labels"]
+    env_example = (REPO_ROOT / ".env.example").read_text(encoding="utf-8")
 
+    assert traefik["read_only"] is True
+    assert traefik["cap_drop"] == ["ALL"]
+    assert traefik["cap_add"] == ["NET_BIND_SERVICE"]
+    assert traefik["security_opt"] == ["no-new-privileges:true"]
+    assert "/tmp" in traefik["tmpfs"]
     assert "traefik.enable=${TRAEFIK_DASHBOARD_ENABLED:-false}" in labels
     assert (
         "traefik.http.middlewares.traefik-dashboard-ipallowlist.ipallowlist.sourcerange="
         "${TRAEFIK_DASHBOARD_IP_ALLOWLIST:-127.0.0.1/32}"
     ) in labels
     assert (
-        "traefik.http.routers.traefik-dashboard-https.middlewares=traefik-dashboard-ipallowlist"
+        "traefik.http.middlewares.traefik-dashboard-auth.basicauth.users="
+        "${TRAEFIK_DASHBOARD_AUTH_USERS:-dashboard-disabled:"
+    ) in "\n".join(labels)
+    assert (
+        "traefik.http.routers.traefik-dashboard-https.middlewares="
+        "traefik-dashboard-ipallowlist,traefik-dashboard-auth"
     ) in labels
+    assert "TRAEFIK_DASHBOARD_AUTH_USERS=" in env_example
+    assert "openssl passwd -apr1" in env_example
 
 
 def test_env_example_does_not_pin_api_docs_on_for_shared_deployments() -> None:

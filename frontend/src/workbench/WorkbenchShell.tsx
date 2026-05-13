@@ -7,6 +7,7 @@ import {
 } from "../lib/app-route-config"
 import type { WorkbenchPath } from "../lib/workbench-navigation"
 import { ProductAppShell } from "./ProductAppShell"
+import { RouteErrorBoundary } from "./RouteErrorBoundary"
 import { useWorkbenchContext, WorkbenchProvider } from "./WorkbenchContext"
 
 type WorkbenchShellProps = {
@@ -36,10 +37,16 @@ function WorkbenchShellFrame({ children, routePath }: WorkbenchShellProps) {
       status={status}
       statusError={statusError}
       title={routeDetail.title}
+      navigationKey={`${location.pathname}${location.searchStr}`}
     >
-      <Suspense fallback={<LoadingSkeleton label="Loading Workbench route" />}>
-        {children}
-      </Suspense>
+      <RouteErrorBoundary
+        key={location.pathname}
+        resetKey={`${location.pathname}${location.searchStr}`}
+      >
+        <Suspense fallback={<LoadingSkeleton label="Loading Workbench route" />}>
+          {children}
+        </Suspense>
+      </RouteErrorBoundary>
     </ProductAppShell>
   )
 }

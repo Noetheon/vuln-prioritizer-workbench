@@ -44,6 +44,7 @@ export type ProjectSummariesQueryData = {
 }
 
 const RUN_DETAIL_POLL_STATUSES = new Set(["pending", "running"])
+const PROJECT_SUMMARY_CONCURRENCY = 4
 
 export const emptyDashboardSignalCounts: DashboardSignalCounts = {
   highEpss: 0,
@@ -62,9 +63,48 @@ function emptyFindingPage() {
 
 const ASSET_FINDINGS_PAGE_LIMIT = 500
 
+async function readProjectSummariesWithLimit(
+  projectIds: readonly string[],
+  signal: AbortSignal,
+): Promise<ProjectSummariesQueryData> {
+  const summaries: Record<string, ProjectDecisionSummaryPublic> = {}
+  const failedProjectIds: string[] = []
+  let nextIndex = 0
+
+  async function readNextProject() {
+    while (nextIndex < projectIds.length) {
+      if (signal.aborted) {
+        throw new DOMException("Project summary query aborted", "AbortError")
+      }
+      const index = nextIndex
+      nextIndex += 1
+      const projectId = projectIds[index]
+      try {
+        summaries[projectId] = await ProjectsService.readProjectSummary(
+          { project_id: projectId },
+          { signal },
+        )
+      } catch (caught) {
+        if (signal.aborted) {
+          throw caught
+        }
+        failedProjectIds.push(projectId)
+      }
+    }
+  }
+
+  await Promise.all(
+    Array.from(
+      { length: Math.min(PROJECT_SUMMARY_CONCURRENCY, projectIds.length) },
+      readNextProject,
+    ),
+  )
+  return { failedProjectIds, summaries }
+}
+
 export function useProjectsQuery() {
   return useQuery({
-    queryFn: () => ProjectsService.readProjects(),
+    queryFn: ({ signal }) => ProjectsService.readProjects({ signal }),
     queryKey: workbenchQueryKeys.projects(),
     retry: false,
     staleTime: 15_000,
@@ -75,23 +115,7 @@ export function useProjectSummariesQuery(projects: readonly ProjectPublic[]) {
   const projectIds = projects.map((project) => project.id)
   return useQuery<ProjectSummariesQueryData>({
     enabled: projectIds.length > 0,
-    queryFn: async () => {
-      const entries = await Promise.allSettled(
-        projectIds.map((projectId) =>
-          ProjectsService.readProjectSummary({ project_id: projectId }),
-        ),
-      )
-      const summaries: Record<string, ProjectDecisionSummaryPublic> = {}
-      const failedProjectIds: string[] = []
-      entries.forEach((entry, index) => {
-        if (entry.status === "fulfilled") {
-          summaries[projectIds[index]] = entry.value
-        } else {
-          failedProjectIds.push(projectIds[index])
-        }
-      })
-      return { failedProjectIds, summaries }
-    },
+    queryFn: ({ signal }) => readProjectSummariesWithLimit(projectIds, signal),
     queryKey: workbenchQueryKeys.projectSummaries(projectIds),
     retry: false,
     staleTime: 15_000,
@@ -101,7 +125,8 @@ export function useProjectSummariesQuery(projects: readonly ProjectPublic[]) {
 export function useProjectSummaryQuery(projectId: string) {
   return useQuery({
     enabled: Boolean(projectId),
-    queryFn: () => ProjectsService.readProjectSummary({ project_id: projectId }),
+    queryFn: ({ signal }) =>
+      ProjectsService.readProjectSummary({ project_id: projectId }, { signal }),
     queryKey: workbenchQueryKeys.projectSummary(projectId),
     retry: false,
     staleTime: 15_000,
@@ -111,7 +136,8 @@ export function useProjectSummaryQuery(projectId: string) {
 export function useProjectDashboardQuery(projectId: string, enabled: boolean) {
   return useQuery({
     enabled: enabled && Boolean(projectId),
-    queryFn: () => ProjectsService.readProjectDashboard({ project_id: projectId }),
+    queryFn: ({ signal }) =>
+      ProjectsService.readProjectDashboard({ project_id: projectId }, { signal }),
     queryKey: workbenchQueryKeys.projectDashboard(projectId),
     retry: false,
     staleTime: 10_000,
@@ -121,8 +147,11 @@ export function useProjectDashboardQuery(projectId: string, enabled: boolean) {
 export function useProjectAttackSummaryQuery(projectId: string) {
   return useQuery({
     enabled: Boolean(projectId),
-    queryFn: () =>
-      ProjectsService.readProjectAttackSummary({ project_id: projectId }),
+    queryFn: ({ signal }) =>
+      ProjectsService.readProjectAttackSummary(
+        { project_id: projectId },
+        { signal },
+      ),
     queryKey: workbenchQueryKeys.projectAttackSummary(projectId),
     retry: false,
     staleTime: 15_000,
@@ -132,11 +161,11 @@ export function useProjectAttackSummaryQuery(projectId: string) {
 export function useProjectGovernanceRollupsQuery(projectId: string) {
   return useQuery({
     enabled: Boolean(projectId),
-    queryFn: () =>
+    queryFn: ({ signal }) =>
       ProjectsService.readProjectGovernanceRollups({
         project_id: projectId,
         limit: 5,
-      }),
+      }, { signal }),
     queryKey: workbenchQueryKeys.projectGovernanceRollups(projectId),
     retry: false,
     staleTime: 15_000,
@@ -146,7 +175,8 @@ export function useProjectGovernanceRollupsQuery(projectId: string) {
 export function useProjectRunsQuery(projectId: string, enabled: boolean) {
   return useQuery({
     enabled: enabled && Boolean(projectId),
-    queryFn: () => RunsService.readProjectRuns({ project_id: projectId }),
+    queryFn: ({ signal }) =>
+      RunsService.readProjectRuns({ project_id: projectId }, { signal }),
     queryKey: workbenchQueryKeys.projectRuns(projectId),
     retry: false,
     staleTime: 15_000,
@@ -166,12 +196,12 @@ export function useProjectAssetsQuery({
   const serviceFilter = service.trim()
   return useQuery({
     enabled: Boolean(projectId),
-    queryFn: () =>
+    queryFn: ({ signal }) =>
       AssetsService.readProjectAssets({
         owner: ownerFilter || undefined,
         project_id: projectId,
         service: serviceFilter || undefined,
-      }),
+      }, { signal }),
     queryKey: workbenchQueryKeys.assets(projectId, {
       owner: ownerFilter,
       service: serviceFilter,
@@ -190,7 +220,7 @@ export function useAssetFindingsQuery({
 }) {
   return useQuery({
     enabled: Boolean(projectId && asset),
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       if (!asset) {
         return [] as FindingPublic[]
       }
@@ -205,7 +235,7 @@ export function useAssetFindingsQuery({
           offset,
           project_id: projectId,
           sort: "operational",
-        })
+        }, { signal })
         findings.push(
           ...page.data.filter((finding) => matchesAsset(finding, asset)),
         )
@@ -224,10 +254,10 @@ export function useAssetFindingsQuery({
 export function useRunDetailQuery(runId: string, enabled: boolean) {
   return useQuery<RunDetailQueryData>({
     enabled: enabled && Boolean(runId),
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       const [run, summary] = await Promise.all([
-        RunsService.readRun({ run_id: runId }),
-        RunsService.readRunSummary({ run_id: runId }),
+        RunsService.readRun({ run_id: runId }, { signal }),
+        RunsService.readRunSummary({ run_id: runId }, { signal }),
       ])
       return { run, summary }
     },
@@ -244,7 +274,8 @@ export function useRunDetailQuery(runId: string, enabled: boolean) {
 export function useWaiversQuery(projectId: string, enabled: boolean) {
   return useQuery({
     enabled: enabled && Boolean(projectId),
-    queryFn: () => WaiversService.readProjectWaivers({ project_id: projectId }),
+    queryFn: ({ signal }) =>
+      WaiversService.readProjectWaivers({ project_id: projectId }, { signal }),
     queryKey: workbenchQueryKeys.waivers(projectId),
     retry: false,
     staleTime: 15_000,
@@ -257,7 +288,7 @@ export function useFindingsQuery(
 ) {
   return useQuery({
     enabled,
-    queryFn: () => FindingsService.readProjectFindings(params),
+    queryFn: ({ signal }) => FindingsService.readProjectFindings(params, { signal }),
     queryKey: workbenchQueryKeys.findings(params),
     retry: false,
     staleTime: 10_000,
@@ -267,7 +298,7 @@ export function useFindingsQuery(
 export function useFindingDetailQuery(findingId: string | null) {
   return useQuery<FindingDetailQueryData>({
     enabled: Boolean(findingId),
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       if (!findingId) {
         throw new Error("findingId is required")
       }
@@ -284,14 +315,17 @@ export function useFindingDetailQuery(findingId: string | null) {
 
       const detail = await FindingsService.readFinding({
         finding_id: findingId,
-      })
+      }, { signal })
       let explanation: FindingExplanationPublic | null = null
       let explanationWarning = ""
       try {
         explanation = await FindingsService.explainFinding({
           finding_id: findingId,
-        })
+        }, { signal })
       } catch (caught) {
+        if (signal.aborted) {
+          throw caught
+        }
         explanationWarning = apiErrorMessage(
           "Priority explanation unavailable",
           caught,

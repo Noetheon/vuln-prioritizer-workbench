@@ -1,22 +1,12 @@
 import { client } from "./client/client.gen"
+import { createApiFetch, ApiError } from "./lib/api-client-errors"
 
 export * from "./client"
 export { client } from "./client/client.gen"
+export { ApiError, createApiFetch } from "./lib/api-client-errors"
 export type FindingsReadProjectFindingsData = Parameters<
   typeof import("./client").FindingsService.readProjectFindings
 >[0]
-
-export class ApiError extends Error {
-  body: unknown
-  status: number
-
-  constructor(status: number, body: unknown, message?: string) {
-    super(message ?? `HTTP ${status}`)
-    this.name = "ApiError"
-    this.status = status
-    this.body = body
-  }
-}
 
 let hasErrorInterceptor = false
 
@@ -39,11 +29,15 @@ function installErrorInterceptor() {
 
 function configureClient(config: Parameters<typeof client.setConfig>[0]) {
   installErrorInterceptor()
-  client.setConfig({
-    credentials: "include",
-    responseStyle: "data",
-    throwOnError: true,
+  const nextConfig: Parameters<typeof client.setConfig>[0] = {
+    credentials: "include" as const,
+    responseStyle: "data" as const,
+    throwOnError: true as const,
     ...config,
+  }
+  client.setConfig({
+    ...nextConfig,
+    fetch: createApiFetch(nextConfig.fetch),
   })
 }
 

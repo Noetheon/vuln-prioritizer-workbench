@@ -69,6 +69,9 @@ GENERIC_OCCURRENCE_HINT_FIELDS = {
     "raw_severity",
 }
 
+_COMMENT_PREFIX = "#"
+_CSV_DELIMITERS = ",;\t|"
+
 
 @dataclass(frozen=True)
 class AssetContextRule:
@@ -651,9 +654,16 @@ def load_vex_files(
 
 def _looks_like_generic_occurrence_csv(path: Path) -> bool:
     try:
-        with path.open("r", encoding="utf-8", newline="") as handle:
-            reader = csv.reader(handle)
-            header = next(reader, [])
+        text = path.read_text(encoding="utf-8")
+    except OSError:
+        return False
+    try:
+        dialect = csv.Sniffer().sniff(_csv_sample(text), delimiters=_CSV_DELIMITERS)
+    except csv.Error:
+        dialect = csv.excel
+    try:
+        reader = csv.reader(text.splitlines(), dialect=dialect)
+        header = next((record for record in reader if not _ignored_csv_record(record)), [])
     except csv.Error:
         return False
     normalized_header = {field.strip().lower() for field in header if field}
@@ -661,6 +671,21 @@ def _looks_like_generic_occurrence_csv(path: Path) -> bool:
         normalized_header.intersection(GENERIC_OCCURRENCE_CVE_FIELDS)
         and normalized_header.intersection(GENERIC_OCCURRENCE_HINT_FIELDS)
     )
+
+
+def _csv_sample(text: str) -> str:
+    sample = "\n".join(
+        line
+        for line in text.splitlines()
+        if line.strip() and not line.strip().startswith(_COMMENT_PREFIX)
+    )
+    return sample or text
+
+
+def _ignored_csv_record(record: list[str]) -> bool:
+    if not record or all(not value.strip() for value in record):
+        return True
+    return record[0].strip().startswith(_COMMENT_PREFIX)
 
 
 def _normalize_asset_criticality(

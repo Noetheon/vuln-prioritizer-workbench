@@ -115,8 +115,13 @@ against that lockfile:
 
 ```bash
 cd frontend && npm ci --workspaces=false
-cd frontend && npm --workspaces=false audit --omit=dev
+cd frontend && npm --workspaces=false audit --audit-level=high
 ```
+
+The frontend audit intentionally covers both runtime and dev/build-chain
+dependencies from the committed lockfile. Do not exclude dev dependencies from
+release or CI evidence unless the dependency policy is changed in the same
+review.
 
 The root workspace uses npm workspace scripts only. There is no tracked
 `bun.lock`; adding one would need a package-manager policy change and should not
@@ -168,7 +173,8 @@ Use these commands when dependency or package policy changes:
 ```bash
 make dependency-audit
 make package-check
-cd frontend && npm ci --workspaces=false && npm audit --omit=dev
+cd frontend && npm ci --workspaces=false
+cd frontend && npm --workspaces=false audit --audit-level=high
 ```
 
 Evidence must not include secrets, token values, cookies, customer exports,

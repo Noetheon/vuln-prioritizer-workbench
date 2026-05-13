@@ -12,8 +12,10 @@ function invalidator() {
   return {
     calls,
     queryClient: {
-      async invalidateQueries({ queryKey }: { queryKey: unknown[] }) {
-        calls.push(queryKey)
+      async invalidateQueries(filters?: { queryKey?: readonly unknown[] }) {
+        if (filters?.queryKey) {
+          calls.push([...filters.queryKey])
+        }
       },
     },
   }

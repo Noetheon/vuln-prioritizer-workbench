@@ -16,12 +16,14 @@ from app.domain.import_asset_context import (
     workbench_occurrence_with_vex as _workbench_occurrence_with_vex,
 )
 from app.importers.contracts import NormalizedOccurrence
+from app.services.import_execution_parsing import summary_warnings as _summary_warnings
 from app.services.import_uploads import (
     sanitize_parser_error_message as _sanitize_parser_error_message,
 )
-from vuln_prioritizer.inputs._occurrence_support import apply_asset_context
+from vuln_prioritizer.inputs._occurrence_support import apply_asset_context, finalize_occurrences
 from vuln_prioritizer.inputs._vex_support import apply_vex_statements
 from vuln_prioritizer.inputs.loader import load_asset_context_file, load_vex_files
+from vuln_prioritizer.models import InputSourceSummary, ParsedInput
 
 
 def _apply_workbench_asset_context(
@@ -103,6 +105,55 @@ def _apply_workbench_vex(
     )
 
 
+def _parsed_input_from_workbench_occurrences(
+    occurrences: list[NormalizedOccurrence],
+    *,
+    input_path: Path,
+    input_type: str,
+    base_parsed_input: ParsedInput | None = None,
+    asset_context_summary: dict[str, Any] | None,
+    vex_summary: dict[str, Any] | None,
+) -> ParsedInput:
+    input_occurrences = [
+        _input_occurrence_from_workbench_occurrence(occurrence) for occurrence in occurrences
+    ]
+    warnings = [
+        *(base_parsed_input.warnings if base_parsed_input is not None else []),
+        *_summary_warnings(asset_context_summary),
+        *_summary_warnings(vex_summary),
+    ]
+    total_rows = (
+        base_parsed_input.total_rows if base_parsed_input is not None else len(input_occurrences)
+    )
+    warning_count = (
+        len(base_parsed_input.warnings) if base_parsed_input is not None else len(warnings)
+    )
+    return finalize_occurrences(
+        input_occurrences,
+        input_format=base_parsed_input.input_format
+        if base_parsed_input is not None
+        else input_type,
+        warnings=warnings,
+        total_rows=total_rows,
+        max_cves=None,
+        input_paths=[str(input_path)],
+        source_summaries=[
+            InputSourceSummary(
+                input_path=str(input_path),
+                input_format=input_type,
+                total_rows=total_rows,
+                occurrence_count=len(input_occurrences),
+                unique_cves=len({occurrence.cve_id for occurrence in input_occurrences}),
+                warning_count=warning_count,
+            )
+        ],
+        asset_match_conflict_count=int(
+            (asset_context_summary or {}).get("ambiguous_occurrences") or 0
+        ),
+        vex_conflict_count=int((vex_summary or {}).get("conflict_occurrences") or 0),
+    )
+
+
 def _parse_errors(
     exc: Exception,
     *,
@@ -152,11 +203,11 @@ def _parse_error_line(message: str) -> int | None:
 
 def _parse_error_field(message: str) -> str | None:
     lower_message = message.lower()
-    if "cve_id column" in lower_message:
-        return "cve_id"
-    if "cve identifier" in lower_message:
-        return "cve_id"
-    return None
+    return (
+        "cve_id"
+        if any(marker in lower_message for marker in ("cve_id column", "cve identifier"))
+        else None
+    )
 
 
 def _parse_error_value(message: str) -> str | None:

@@ -56,13 +56,6 @@ class Finding(FindingBase, table=True):
     __tablename__ = "finding"
     __table_args__ = (
         UniqueConstraint("project_id", "dedup_key", name="uq_finding_project_dedup_key"),
-        UniqueConstraint(
-            "project_id",
-            "vulnerability_id",
-            "component_id",
-            "asset_id",
-            name="uq_finding_project_vulnerability_component_asset",
-        ),
         Index("ix_finding_cve_id", "cve_id"),
         Index("ix_finding_project_priority", "project_id", "priority_rank"),
         Index("ix_finding_project_status", "project_id", "status"),

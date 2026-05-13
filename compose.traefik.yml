@@ -2,6 +2,15 @@ services:
   traefik:
     image: traefik:3.6@sha256:de16063bdcee0ae14c1cfaa3fcbc8a6c8afb36a2e467a707cdbc2598951e3527
     restart: always
+    read_only: true
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp
     ports:
       - "80:80"
       - "443:443"
@@ -15,10 +24,11 @@ services:
       - traefik.http.routers.traefik-dashboard-https.tls=true
       - traefik.http.routers.traefik-dashboard-https.tls.certresolver=le
       - traefik.http.routers.traefik-dashboard-https.service=api@internal
-      - traefik.http.routers.traefik-dashboard-https.middlewares=traefik-dashboard-ipallowlist
+      - traefik.http.routers.traefik-dashboard-https.middlewares=traefik-dashboard-ipallowlist,traefik-dashboard-auth
       - traefik.http.middlewares.https-redirect.redirectscheme.scheme=https
       - traefik.http.middlewares.https-redirect.redirectscheme.permanent=true
       - traefik.http.middlewares.traefik-dashboard-ipallowlist.ipallowlist.sourcerange=${TRAEFIK_DASHBOARD_IP_ALLOWLIST:-127.0.0.1/32}
+      - traefik.http.middlewares.traefik-dashboard-auth.basicauth.users=${TRAEFIK_DASHBOARD_AUTH_USERS:-dashboard-disabled:$$apr1$$Qnt/pWel$$95wh56txq.SWBbi3ZHYuj.}
       - traefik.http.routers.traefik-dashboard-http.middlewares=https-redirect
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro

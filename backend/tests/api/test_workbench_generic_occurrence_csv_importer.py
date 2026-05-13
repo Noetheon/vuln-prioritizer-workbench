@@ -121,6 +121,7 @@ def test_generic_occurrence_csv_importer_accepts_comments_blanks_and_pipe_fix_ve
     assert len(occurrences) == 1
     assert occurrences[0].cve == "CVE-2024-3094"
     assert occurrences[0].fix_version == "5.6.1-r2"
+    assert occurrences[0].raw_evidence["fix_versions"] == ["5.6.1-r2", "5.6.2"]
 
 
 def test_generic_occurrence_csv_importer_collects_row_specific_errors() -> None:
