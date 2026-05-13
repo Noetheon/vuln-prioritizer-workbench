@@ -59,9 +59,7 @@ export function ProvidersHero({
               Refresh providers
             </Button>
             <Button asChild variant="outline">
-              <Link search={projectSearch} to="/reports">
-                View Evidence Center
-              </Link>
+              <Link search={projectSearch} to="/reports">View Evidence Center</Link>
             </Button>
           </VpwToolbarGroup>
           <VpwToolbarGroup>
