@@ -36,6 +36,7 @@ import {
   VpwSurfaceTitle,
 } from "@/components/vpw"
 import { optionalText } from "@/lib/ui-copy"
+import { selectedProjectRouteSearch } from "@/workbench/selected-project-search"
 import { RiskBadge } from "../risk/RiskBadge"
 import { SeverityBadge } from "../risk/SeverityBadge"
 import { EmptyState, ErrorState } from "../states"
@@ -90,7 +91,11 @@ export function DashboardRemediationSection({
           className="h-auto px-0 font-mono text-sm"
           variant="link"
         >
-          <Link params={{ findingId: finding.id }} to="/findings/$findingId">
+          <Link
+            params={{ findingId: finding.id }}
+            search={selectedProjectRouteSearch(finding.project_id)}
+            to="/findings/$findingId"
+          >
             {finding.cve_id}
           </Link>
         </Button>
@@ -212,6 +217,7 @@ export function DashboardRemediationSection({
               <Button asChild className="w-full" size="sm" variant="outline">
                 <Link
                   params={{ findingId: finding.id }}
+                  search={selectedProjectRouteSearch(finding.project_id)}
                   to="/findings/$findingId"
                 >
                   Open full detail
