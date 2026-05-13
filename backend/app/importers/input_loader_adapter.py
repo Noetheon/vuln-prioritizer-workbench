@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from dataclasses import dataclass
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Any
@@ -18,6 +19,12 @@ from vuln_prioritizer.inputs.parsers import parse_cve_list, parse_generic_occurr
 from vuln_prioritizer.models_input import InputOccurrence, ParsedInput
 
 
+@dataclass(frozen=True, slots=True)
+class ParsedWorkbenchInput:
+    parsed_input: ParsedInput
+    occurrences: list[NormalizedOccurrence]
+
+
 def parse_payload_with_input_loader(
     input_type: str,
     payload: InputPayload,
@@ -28,6 +35,26 @@ def parse_payload_with_input_loader(
     strict_invalid_cve_warnings: bool = False,
 ) -> list[NormalizedOccurrence]:
     """Parse an upload payload through the core InputLoader parser registry."""
+    return parse_payload_with_input_loader_result(
+        input_type,
+        payload,
+        default_suffix=default_suffix,
+        filename=filename,
+        prefer_asset_id_as_asset_ref=prefer_asset_id_as_asset_ref,
+        strict_invalid_cve_warnings=strict_invalid_cve_warnings,
+    ).occurrences
+
+
+def parse_payload_with_input_loader_result(
+    input_type: str,
+    payload: InputPayload,
+    *,
+    default_suffix: str,
+    filename: str | None = None,
+    prefer_asset_id_as_asset_ref: bool = True,
+    strict_invalid_cve_warnings: bool = False,
+) -> ParsedWorkbenchInput:
+    """Parse an upload once and keep both Workbench and core parsed forms."""
     suffix = _payload_suffix(filename=filename, default_suffix=default_suffix)
     with TemporaryDirectory(prefix="vpw-import-") as temp_dir:
         input_path = Path(temp_dir) / f"input{suffix}"
@@ -46,14 +73,17 @@ def parse_payload_with_input_loader(
     if strict_invalid_cve_warnings:
         _raise_invalid_cve_warnings(input_type, parsed_input.warnings)
 
-    return [
-        _normalize_occurrence(
-            item,
-            input_type=input_type,
-            prefer_asset_id_as_asset_ref=prefer_asset_id_as_asset_ref,
-        )
-        for item in parsed_input.occurrences
-    ]
+    return ParsedWorkbenchInput(
+        parsed_input=parsed_input,
+        occurrences=[
+            _normalize_occurrence(
+                item,
+                input_type=input_type,
+                prefer_asset_id_as_asset_ref=prefer_asset_id_as_asset_ref,
+            )
+            for item in parsed_input.occurrences
+        ],
+    )
 
 
 def _parse_input_path(
@@ -127,6 +157,8 @@ def _normalize_occurrence(
     raw_evidence = dict(occurrence.raw_evidence)
     if not raw_evidence:
         raw_evidence = _raw_evidence(occurrence, input_type=input_type)
+    elif occurrence.fix_versions and not raw_evidence.get("fix_versions"):
+        raw_evidence["fix_versions"] = list(occurrence.fix_versions)
     return NormalizedOccurrence(
         cve=occurrence.cve_id,
         component=occurrence.component_name,

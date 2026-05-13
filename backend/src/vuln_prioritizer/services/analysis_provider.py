@@ -88,7 +88,7 @@ def build_provider_freshness(
     epss_dates = sorted(item.date for item in enrichment.epss.values() if item.date)
     kev_date_added = sorted(item.date_added for item in enrichment.kev.values() if item.date_added)
     kev_due_dates = sorted(item.due_date for item in enrichment.kev.values() if item.due_date)
-    cache_timestamps = {} if provider_snapshot is not None else enrichment.provider_cache_timestamps
+    cache_timestamps = enrichment.provider_cache_timestamps
     nvd_cache_latest = cache_timestamps.get("nvd")
     epss_cache_latest = cache_timestamps.get("epss")
     kev_cache_latest = cache_timestamps.get("kev")
@@ -116,6 +116,9 @@ def build_provider_freshness(
             cache_timestamp=kev_cache_latest,
             lookup_completed_at=lookup_completed_at,
         ),
+        "nvd_live_fallback_used": _provider_lookup_used(enrichment.nvd_diagnostics),
+        "epss_live_fallback_used": _provider_lookup_used(enrichment.epss_diagnostics),
+        "kev_live_fallback_used": _provider_lookup_used(enrichment.kev_diagnostics),
         "provider_snapshot_generated_at": (
             provider_snapshot.metadata.generated_at if provider_snapshot is not None else None
         ),
@@ -134,25 +137,33 @@ def stale_provider_sources(
         return []
     active_now = now or datetime.now(UTC)
     threshold = active_now - timedelta(hours=max_age_hours)
-    if snapshot_sources is not None:
+    if snapshot_sources is None:
         source_fields = {
-            source: "provider_snapshot_generated_at"
-            for source in snapshot_sources
-            if source in {"nvd", "epss", "kev"}
+            "nvd": ["nvd_freshness_at"],
+            "epss": ["epss_freshness_at"],
+            "kev": ["kev_freshness_at"],
         }
     else:
-        source_fields = {
-            "nvd": "nvd_freshness_at",
-            "epss": "epss_freshness_at",
-            "kev": "kev_freshness_at",
-        }
+        selected_snapshot_sources = set(snapshot_sources)
+        source_fields = {}
+        for source in ("nvd", "epss", "kev"):
+            if source in selected_snapshot_sources:
+                fields = ["provider_snapshot_generated_at"]
+                if freshness.get(f"{source}_live_fallback_used"):
+                    fields.append(f"{source}_freshness_at")
+                source_fields[source] = fields
+                continue
+            if freshness.get(f"{source}_live_fallback_used"):
+                source_fields[source] = [f"{source}_freshness_at"]
     stale_sources: list[str] = []
-    for source, field in source_fields.items():
-        value = freshness.get(field)
-        if value is None and snapshot_sources is None:
-            value = freshness.get("lookup_completed_at")
-        parsed = _parse_provider_timestamp(value)
-        if parsed is None or parsed < threshold:
+    for source, fields in source_fields.items():
+        parsed_values = []
+        for field in fields:
+            value = freshness.get(field)
+            if value is None and snapshot_sources is None:
+                value = freshness.get("lookup_completed_at")
+            parsed_values.append(_parse_provider_timestamp(value))
+        if any(parsed is None or parsed < threshold for parsed in parsed_values):
             stale_sources.append(source)
     return stale_sources
 
@@ -168,6 +179,15 @@ def _provider_source_freshness_at(
     if diagnostics.network_fetches or diagnostics.content_hits or diagnostics.empty_records:
         return lookup_completed_at
     return cache_timestamp or lookup_completed_at
+
+
+def _provider_lookup_used(diagnostics: ProviderLookupDiagnostics) -> bool:
+    return bool(
+        diagnostics.cache_hits
+        or diagnostics.stale_cache_hits
+        or diagnostics.network_fetches
+        or diagnostics.failures
+    )
 
 
 def _parse_provider_timestamp(value: object) -> datetime | None:

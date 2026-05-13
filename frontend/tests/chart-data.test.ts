@@ -8,14 +8,23 @@ import {
   runActivityTrendData,
   topServicesByRiskChartData,
 } from "../src/lib/chart-data.ts"
+import type {
+  AnalysisRunPublic,
+  ProjectDecisionSummaryPublic,
+} from "../src/api-client"
 
-type SummaryFixture = {
-  counts_by_priority?: Record<string, number>
-  counts_by_status?: Record<string, number>
+function summaryFixture(
+  value: Partial<ProjectDecisionSummaryPublic>,
+): ProjectDecisionSummaryPublic {
+  return value as unknown as ProjectDecisionSummaryPublic
+}
+
+function runFixture(value: Partial<AnalysisRunPublic>): AnalysisRunPublic {
+  return value as unknown as AnalysisRunPublic
 }
 
 test("includes lifecycle states when present", () => {
-  const data = findingsByPriorityChartData({
+  const data = findingsByPriorityChartData(summaryFixture({
     counts_by_priority: {
       Critical: 2,
       High: 1,
@@ -26,7 +35,7 @@ test("includes lifecycle states when present", () => {
       accepted: 4,
       suppressed: 1,
     },
-  } as SummaryFixture)
+  }))
 
   assert.deepEqual(
     data.map((item) => [item.label, item.value]),
@@ -42,14 +51,14 @@ test("includes lifecycle states when present", () => {
 })
 
 test("keeps base priority buckets when lifecycle states are zero", () => {
-  const data = findingsByPriorityChartData({
+  const data = findingsByPriorityChartData(summaryFixture({
     counts_by_priority: {
       Critical: 1,
     },
     counts_by_status: {
       accepted: 0,
     },
-  } as SummaryFixture)
+  }))
 
   assert.deepEqual(
     data.map((item) => item.label),
@@ -75,12 +84,12 @@ test("returns zero-value priority buckets for null summary", () => {
 })
 
 test("normalizes API priority casing for dashboard counts", () => {
-  const summary = {
+  const summary = summaryFixture({
     counts_by_priority: {
       critical: 3,
       High: 2,
     },
-  } as SummaryFixture
+  })
 
   assert.equal(priorityCount(summary, "Critical"), 3)
   assert.equal(priorityCount(summary, "High"), 2)
@@ -112,18 +121,18 @@ test("adds highest priority to top service rollup detail", () => {
 test("builds run activity trends from the latest limited runs", () => {
   const data = runActivityTrendData(
     [
-      {
+      runFixture({
         started_at: "2026-01-03T08:00:00Z",
         status: "completed",
-      },
-      {
+      }),
+      runFixture({
         started_at: "2026-01-02T08:00:00Z",
         status: "failed",
-      },
-      {
+      }),
+      runFixture({
         started_at: "2026-01-01T08:00:00Z",
         status: "completed",
-      },
+      }),
     ],
     2,
   )
@@ -139,7 +148,7 @@ test("builds run activity trends from the latest limited runs", () => {
 })
 
 test("uses pending fallback labels for runs without start timestamps", () => {
-  const data = runActivityTrendData([{}], 1)
+  const data = runActivityTrendData([runFixture({})], 1)
 
   assert.deepEqual(data, [
     {

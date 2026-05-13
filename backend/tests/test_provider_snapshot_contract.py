@@ -6,6 +6,7 @@ from pathlib import Path
 import pytest
 
 from vuln_prioritizer.models import (
+    NvdData,
     ProviderSnapshotItem,
     ProviderSnapshotMetadata,
     ProviderSnapshotReport,
@@ -157,7 +158,7 @@ def test_provider_snapshot_loader_reports_read_json_and_model_errors(tmp_path: P
         load_provider_snapshot(invalid_model)
 
 
-def test_resolve_snapshot_provider_data_tracks_unselected_missing_source() -> None:
+def test_resolve_snapshot_provider_data_ignores_unselected_source() -> None:
     report = ProviderSnapshotReport(
         metadata=ProviderSnapshotMetadata(
             generated_at="2026-05-01T12:00:00Z",
@@ -174,7 +175,32 @@ def test_resolve_snapshot_provider_data_tracks_unselected_missing_source() -> No
     )
 
     assert resolved == {}
-    assert missing == ["CVE-2026-0001", "CVE-2026-0002"]
+    assert missing == []
+
+
+def test_resolve_snapshot_provider_data_tracks_selected_missing_source() -> None:
+    report = ProviderSnapshotReport(
+        metadata=ProviderSnapshotMetadata(
+            generated_at="2026-05-01T12:00:00Z",
+            selected_sources=["nvd"],
+            requested_cves=2,
+        ),
+        items=[
+            ProviderSnapshotItem(
+                cve_id="CVE-2026-0001",
+                nvd=NvdData(cve_id="CVE-2026-0001", description="snapshot"),
+            )
+        ],
+    )
+
+    resolved, missing = resolve_snapshot_provider_data(
+        report,
+        source_name="nvd",
+        cve_ids=["CVE-2026-0001", "CVE-2026-0002"],
+    )
+
+    assert sorted(resolved) == ["CVE-2026-0001"]
+    assert missing == ["CVE-2026-0002"]
 
 
 @pytest.mark.parametrize("unsafe_name", ["lowercase_key", "NVD-API-KEY", "1NVD_API_KEY"])

@@ -1,4 +1,4 @@
-import { ApiError } from "../../api-client"
+import { ApiError } from "../../lib/api-client-errors"
 
 export function apiErrorMessage(prefix: string, caught: unknown) {
   if (caught instanceof ApiError) {

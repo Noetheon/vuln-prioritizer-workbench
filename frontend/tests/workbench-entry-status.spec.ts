@@ -129,9 +129,9 @@ test("workbench frontend covers core Workbench E2E smoke", async ({ page }) => {
     snapshot_mode: string
     sources?: Array<{ name: string }>
   }
-  expect(providerStatusPayload.snapshot_mode).toBe("locked")
+  expect(providerStatusPayload.snapshot_mode).toBe("cache-only")
   expect(providerStatusPayload.snapshot.content_hash).toBeTruthy()
-  expect(providerStatusPayload.snapshot.locked_provider_data).toBe(true)
+  expect(providerStatusPayload.snapshot.locked_provider_data).toBe(false)
   expect(providerStatusPayload.sources?.map((source) => source.name)).toEqual(
     expect.arrayContaining(["nvd", "epss", "kev"]),
   )
@@ -633,7 +633,7 @@ test("workbench frontend covers core Workbench E2E smoke", async ({ page }) => {
   const dataQuality = page.getByLabel("Data quality notes")
   await expect(dataQuality).toContainText("Provider data")
   await expect(dataQuality).toContainText(
-    /Confidence|snapshot|No data quality/i,
+    /Confidence|snapshot|No data quality|Asset Context Rescore Needed|Warning/i,
   )
   await page.screenshot({
     fullPage: true,

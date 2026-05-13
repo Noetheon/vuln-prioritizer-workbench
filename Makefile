@@ -13,8 +13,9 @@ DOCKER_DEMO_FRONTEND_PORT ?= 15174
 PRODUCTION_SMOKE_SECRET_KEY ?= production-smoke-secret-key-change-in-real-deployments
 PRODUCTION_SMOKE_POSTGRES_PASSWORD ?= production-smoke-postgres-password
 PRODUCTION_SMOKE_FRONTEND_PORT ?= 5180
+ACTIONLINT_IMAGE ?= rhysd/actionlint:1.7.12@sha256:b1934ee5f1c509618f2508e6eb47ee0d3520686341fec936f3b79331f9315667
 
-.PHONY: install test lint format fix typecheck check local-workbench-check performance-smoke playwright-install playwright-check frontend-install frontend-build frontend-lint frontend-test-unit frontend-test-unit-coverage frontend-generate-client api-client-drift-check frontend-audit frontend-check python-lock-check docker-base-image-check archive-evidence-check public-production-evidence-check release-evidence-hygiene-check docs-check docs-serve actionlint-check workflow-check docker-demo-smoke docker-production-smoke dependency-audit clean-local clean-deps provider-snapshot-validate package package-contents-check package-check package-check-temp release-check release-readiness-check precommit-install
+.PHONY: install test lint format fix typecheck check local-workbench-check performance-smoke playwright-install playwright-check frontend-install frontend-build frontend-lint frontend-test-types frontend-test-unit frontend-test-unit-coverage frontend-generate-client api-client-drift-check frontend-audit frontend-check python-lock-check docker-base-image-check archive-evidence-check public-production-evidence-check release-evidence-hygiene-check docs-check docs-serve actionlint-check workflow-check docker-demo-smoke docker-production-smoke dependency-audit clean-local clean-deps provider-snapshot-validate package package-contents-check package-check package-check-temp release-check release-readiness-check precommit-install
 
 install:
 	$(PYTHON) -m pip install -e "$(BACKEND_DIR)[dev]"
@@ -63,6 +64,9 @@ frontend-build:
 frontend-lint:
 	cd frontend && npm run lint
 
+frontend-test-types:
+	cd frontend && npm run test:types
+
 frontend-test-unit:
 	cd frontend && npm run test:unit
 
@@ -86,9 +90,9 @@ api-client-drift-check:
 	rm -f "$$before" "$$after"
 
 frontend-audit:
-	cd frontend && npm --workspaces=false audit --omit=dev
+	cd frontend && npm --workspaces=false audit --audit-level=high
 
-frontend-check: frontend-install frontend-lint frontend-build frontend-test-unit-coverage api-client-drift-check
+frontend-check: frontend-install frontend-lint frontend-build frontend-test-types frontend-test-unit-coverage api-client-drift-check
 
 release-evidence-hygiene-check:
 	$(PYTHON) scripts/check_release_evidence_hygiene.py
@@ -116,11 +120,12 @@ provider-snapshot-validate:
 	$(PYTHON) -c 'import json, jsonschema; from pathlib import Path; schema = json.loads(Path("docs/schemas/provider-snapshot-report.schema.json").read_text(encoding="utf-8")); paths = ("docs/examples/example_provider_snapshot.v1.json", "data/demo_provider_snapshot.json"); [jsonschema.validate(json.loads(Path(path).read_text(encoding="utf-8")), schema) or print(f"{path}: OK") for path in paths]'
 
 actionlint-check:
-	docker run --rm -v "$$(pwd):/repo" -w /repo rhysd/actionlint:1.7.12 -color .github/workflows/*.yml
+	docker run --rm -v "$$(pwd):/repo" -w /repo $(ACTIONLINT_IMAGE) -color .github/workflows/*.yml
 
 workflow-check:
 	$(MAKE) check
 	$(MAKE) docker-base-image-check
+	$(PYTHON) scripts/check_github_action_pins.py
 	$(MAKE) docs-check
 	$(MAKE) actionlint-check
 	$(PYTHON) -m pre_commit run --all-files

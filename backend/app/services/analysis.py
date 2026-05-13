@@ -15,7 +15,7 @@ from app.core.config import Settings
 from app.repositories import RunRepository
 from vuln_prioritizer.config import DEFAULT_CACHE_TTL_HOURS
 from vuln_prioritizer.inputs.loader import InputSpec
-from vuln_prioritizer.models import AnalysisContext, PrioritizedFinding, PriorityPolicy
+from vuln_prioritizer.models import AnalysisContext, ParsedInput, PrioritizedFinding, PriorityPolicy
 from vuln_prioritizer.options import AttackSource, InputFormat, OutputFormat, SortBy
 from vuln_prioritizer.provider_snapshot import load_provider_snapshot
 from vuln_prioritizer.security_redaction import redact_value
@@ -108,13 +108,15 @@ class AnalysisService:
         attack_mapping_file: Path | None = None,
         attack_technique_metadata_file: Path | None = None,
         vex_files: list[Path] | None = None,
+        parsed_input: ParsedInput | None = None,
     ) -> WorkbenchAnalysisResult:
         """Run parse/enrich/score/explain for one uploaded Workbench import."""
         snapshot_path = provider_snapshot_file or self.default_provider_snapshot_file()
-        use_locked_snapshot = locked_provider_data or snapshot_path is not None
+        use_locked_snapshot = locked_provider_data
         normalized_attack_source = AttackSource(attack_source)
         request = AnalysisRequest(
             input_specs=[InputSpec(path=input_path, input_format=InputFormat(input_type).value)],
+            parsed_input=parsed_input,
             output=None,
             format=OutputFormat.json,
             provider_snapshot_file=snapshot_path,
@@ -247,7 +249,7 @@ class AnalysisService:
                 "item_count": len(report.items),
                 "warnings": report.warnings,
                 "missing": False,
-                "selected_sources": ["nvd", "epss", "kev"],
+                "selected_sources": list(report.metadata.selected_sources),
             }
         )
         snapshot = RunRepository(self.session).get_or_create_provider_snapshot(

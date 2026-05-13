@@ -204,6 +204,7 @@ def test_analysis_requests_require_snapshot_when_provider_data_is_locked(
         service_analysis.prepare_analysis(
             service_analysis.AnalysisRequest(
                 input_specs=[],
+                parsed_input=None,
                 output=None,
                 format="json",
                 provider_snapshot_file=None,
@@ -461,3 +462,46 @@ def test_provider_freshness_helpers_handle_cache_network_and_timestamp_edges() -
     assert analysis_provider._parse_provider_timestamp("2026-04-24T09:00:00") == datetime(
         2026, 4, 24, 9, tzinfo=UTC
     )
+
+
+def test_stale_provider_sources_handles_mixed_snapshot_live_fallback() -> None:
+    now = datetime(2026, 5, 1, 12, tzinfo=UTC)
+    freshness = {
+        "provider_snapshot_generated_at": "2026-04-01T12:00:00Z",
+        "nvd_freshness_at": "2026-05-01T11:30:00Z",
+        "nvd_live_fallback_used": True,
+        "epss_freshness_at": "2026-05-01T11:30:00Z",
+        "epss_live_fallback_used": True,
+    }
+
+    assert analysis_provider.stale_provider_sources(
+        freshness,
+        max_age_hours=2,
+        snapshot_sources=["nvd"],
+        now=now,
+    ) == ["nvd"]
+
+    fresh_snapshot_freshness = {
+        **freshness,
+        "provider_snapshot_generated_at": "2026-05-01T11:45:00Z",
+    }
+    assert (
+        analysis_provider.stale_provider_sources(
+            fresh_snapshot_freshness,
+            max_age_hours=2,
+            snapshot_sources=["nvd"],
+            now=now,
+        )
+        == []
+    )
+
+    snapshot_only_freshness = {
+        **freshness,
+        "nvd_live_fallback_used": False,
+    }
+    assert analysis_provider.stale_provider_sources(
+        snapshot_only_freshness,
+        max_age_hours=2,
+        snapshot_sources=["nvd"],
+        now=now,
+    ) == ["nvd"]
