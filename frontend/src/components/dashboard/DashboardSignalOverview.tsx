@@ -13,6 +13,7 @@ import {
 } from "recharts"
 import { ChartCard } from "@/components/charts/ChartCard"
 import { Button } from "@/components/ui/button"
+import { selectedProjectRouteSearch } from "@/workbench/selected-project-search"
 import {
   Select,
   SelectContent,
@@ -39,6 +40,7 @@ type DashboardSignalOverviewProps = {
   onRunRangeChange: (value: DashboardRunRange) => void
   priorityItems: readonly ChartDatum[]
   runsLoading: boolean
+  selectedProjectId: string
   selectedRunRange: DashboardRunRange
   serviceItems: readonly ChartDatum[]
   summaryLoading: boolean
@@ -102,12 +104,15 @@ export function DashboardSignalOverview({
   onRunRangeChange,
   priorityItems,
   runsLoading,
+  selectedProjectId,
   selectedRunRange,
   serviceItems,
   summaryLoading,
   topServiceSource,
   trendItems,
 }: DashboardSignalOverviewProps) {
+  const projectSearch = selectedProjectRouteSearch(selectedProjectId)
+
   return (
     <VpwSurface className="gap-2 py-4">
       <VpwSurfaceHeader>
@@ -149,7 +154,9 @@ export function DashboardSignalOverview({
                 <EmptyState
                   action={
                     <Button asChild size="sm" variant="outline">
-                      <Link to="/imports">Import findings</Link>
+                      <Link search={projectSearch} to="/imports">
+                        Import findings
+                      </Link>
                     </Button>
                   }
                   ariaLabel="No priority data"
@@ -199,7 +206,9 @@ export function DashboardSignalOverview({
                 <EmptyState
                   action={
                     <Button asChild size="sm" variant="outline">
-                      <Link to="/imports">Run import</Link>
+                      <Link search={projectSearch} to="/imports">
+                        Run import
+                      </Link>
                     </Button>
                   }
                   ariaLabel="No EPSS data"
@@ -256,7 +265,9 @@ export function DashboardSignalOverview({
                 <EmptyState
                   action={
                     <Button asChild size="sm" variant="outline">
-                      <Link to="/findings">Review findings</Link>
+                      <Link search={projectSearch} to="/findings">
+                        Review findings
+                      </Link>
                     </Button>
                   }
                   ariaLabel="No service risk data"
@@ -319,7 +330,9 @@ export function DashboardSignalOverview({
                 <EmptyState
                   action={
                     <Button asChild size="sm" variant="outline">
-                      <Link to="/imports">Create first import</Link>
+                      <Link search={projectSearch} to="/imports">
+                        Create first import
+                      </Link>
                     </Button>
                   }
                   ariaLabel="No trend data"
