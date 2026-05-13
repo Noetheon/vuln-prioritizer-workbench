@@ -7,6 +7,7 @@ import {
   ShieldCheck,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { selectedProjectRouteSearch } from "@/workbench/selected-project-search"
 import {
   Select,
   SelectContent,
@@ -50,6 +51,8 @@ export function WaiversHero({
   expired: string
   expiringSoon: string
 }) {
+  const projectSearch = selectedProjectRouteSearch(selectedProjectId)
+
   return (
     <VpwSection>
       <VpwPanel className="flex flex-col gap-5 p-5">
@@ -60,7 +63,9 @@ export function WaiversHero({
                 <a href="#create-waiver">Create waiver</a>
               </Button>
               <Button asChild variant="outline">
-                <Link to="/findings">View findings</Link>
+                <Link search={projectSearch} to="/findings">
+                  View findings
+                </Link>
               </Button>
             </>
           }

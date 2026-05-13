@@ -373,6 +373,7 @@ export function RiskOperationsDashboard({
                   }
                   priorityItems={priorityItems}
                   runsLoading={runsLoading}
+                  selectedProjectId={isDemoMode ? "" : selectedProjectId}
                   selectedRunRange={filters.selectedRunRange}
                   serviceItems={serviceItems}
                   summaryLoading={summaryLoading}

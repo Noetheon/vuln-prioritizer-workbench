@@ -2,6 +2,7 @@ import { Link } from "@/lib/router"
 import { RefreshCw } from "lucide-react"
 import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
+import { selectedProjectRouteSearch } from "@/workbench/selected-project-search"
 import {
   VpwDataTable,
   VpwEmptyState,
@@ -16,6 +17,7 @@ import type { WaiversWorkbenchProps } from "./waivers-workbench-model"
 export function WaiverRegister({
   onExpireWaiver,
   onRefreshWaivers,
+  selectedProjectId,
   waiverActionLoading,
   waivers,
   waiversLoading,
@@ -23,11 +25,13 @@ export function WaiverRegister({
   WaiversWorkbenchProps,
   | "onExpireWaiver"
   | "onRefreshWaivers"
+  | "selectedProjectId"
   | "waiverActionLoading"
   | "waivers"
   | "waiversLoading"
 >) {
   const [confirmExpireId, setConfirmExpireId] = useState<string | null>(null)
+  const projectSearch = selectedProjectRouteSearch(selectedProjectId)
 
   useEffect(() => {
     if (
@@ -84,7 +88,9 @@ export function WaiverRegister({
                     <a href="#create-waiver">Create waiver</a>
                   </Button>
                   <Button asChild variant="outline">
-                    <Link to="/findings">View findings</Link>
+                    <Link search={projectSearch} to="/findings">
+                      View findings
+                    </Link>
                   </Button>
                 </div>
               }
