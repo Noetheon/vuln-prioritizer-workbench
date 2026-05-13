@@ -2,6 +2,7 @@ import { Link } from "@/lib/router"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
+import { selectedProjectRouteSearch } from "@/workbench/selected-project-search"
 import {
   VpwField,
   VpwGrid,
@@ -22,6 +23,7 @@ export function CreateWaiverSection({
   projects,
   reviewDue,
   selectedProject,
+  selectedProjectId,
   waiverActionLoading,
   waiverForm,
 }: Pick<
@@ -32,12 +34,17 @@ export function CreateWaiverSection({
   | "projectSummary"
   | "projects"
   | "selectedProject"
+  | "selectedProjectId"
   | "waiverActionLoading"
   | "waiverForm"
 > & {
   completeness: number
   reviewDue: string
 }) {
+  const projectSearch = selectedProjectRouteSearch(
+    selectedProject?.id ?? selectedProjectId,
+  )
+
   return (
     <VpwGrid columns={2}>
       <div id="create-waiver">
@@ -196,7 +203,9 @@ export function CreateWaiverSection({
                 {waiverActionLoading ? "Creating" : "Create waiver"}
               </Button>
               <Button asChild type="button" variant="outline">
-                <Link to="/findings">View findings</Link>
+                <Link search={projectSearch} to="/findings">
+                  View findings
+                </Link>
               </Button>
             </div>
           </form>
