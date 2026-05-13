@@ -12,8 +12,6 @@ import {
   VpwBadge,
   VpwField,
   VpwFileInput,
-  VpwGrid,
-  VpwImportStepCard,
   VpwKeyValueList,
   VpwPanel,
   VpwProgress,
@@ -23,8 +21,10 @@ import {
   VpwToolbar,
   VpwToolbarGroup,
 } from "@/components/vpw"
+import { ImportWizardSteps } from "./ImportWizardSteps"
 import { ProviderAttackOptions } from "./ImportsWorkbenchProviderOptions"
 import {
+  importSubmitDisabled,
   type ImportsWorkbenchProps,
   selectedFormat,
   uploadProgress,
@@ -120,51 +120,25 @@ export function ImportWizard({
   | "supportedFormats"
 >) {
   const format = selectedFormat(supportedFormats, importWizard.inputType)
-  const stepCards = [
-    {
-      title: "Select project",
-      description: "Choose the workspace that owns the imported findings.",
-      status: selectedProjectId ? "Ready" : "Required",
-      statusTone: selectedProjectId ? "success" : "warning",
-    },
-    {
-      title: "Select input type",
-      description: "Match parser behavior to the file format.",
-      status: format?.label ?? "Required",
-      statusTone: "info",
-    },
-    {
-      title: "Upload file",
-      description: "Attach the source file that should become findings.",
-      status: importWizard.file ? "Ready" : "Required",
-      statusTone: importWizard.file ? "success" : "warning",
-    },
-    {
-      title: "Validate and import",
-      description:
-        "The backend validates format, parses input, and records run evidence.",
-      status: importLoading ? "Running" : "Ready",
-      statusTone: importLoading ? "info" : "neutral",
-    },
-  ] as const
-
+  const submitDisabled = importSubmitDisabled({
+    importLoading,
+    projectListLoading,
+    projectCount: projects.length,
+    selectedProjectId,
+    wizard: importWizard,
+  })
   return (
     <VpwSection>
       <VpwSectionHeader
         description="Step through project, format, files, and validation before import."
         title="Import Wizard"
       />
-      <VpwGrid columns={4}>
-        {stepCards.map((step) => (
-          <VpwImportStepCard
-            description={step.description}
-            key={step.title}
-            status={step.status}
-            statusTone={step.statusTone}
-            title={step.title}
-          />
-        ))}
-      </VpwGrid>
+      <ImportWizardSteps
+        format={format}
+        importLoading={importLoading}
+        importWizard={importWizard}
+        selectedProjectId={selectedProjectId}
+      />
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1.25fr)_minmax(20rem,0.75fr)]">
         <VpwPanel>
           <form className="flex flex-col gap-5" onSubmit={onSubmit}>
@@ -297,7 +271,7 @@ export function ImportWizard({
             ) : null}
             <Button
               aria-busy={importLoading}
-              disabled={importLoading || projects.length === 0}
+              disabled={submitDisabled}
               type="submit"
             >
               <Upload aria-hidden="true" data-icon="inline-start" />
