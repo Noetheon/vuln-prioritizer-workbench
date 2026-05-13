@@ -6,5 +6,5 @@ import {
 
 export { normalizeSelectedRunId }
 
-export const selectedReportRunIdFromSearch = selectedRunIdFromSearch
-export const reportRunUrlSearch = runUrlSearch
+export const selectedImportRunIdFromSearch = selectedRunIdFromSearch
+export const importRunUrlSearch = runUrlSearch
