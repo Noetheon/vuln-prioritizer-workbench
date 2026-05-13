@@ -19,6 +19,10 @@ export function selectedProjectUrlSearch(
   return Object.fromEntries(params.entries())
 }
 
+export function selectedProjectRouteSearch(projectId: string): ProjectUrlSearch {
+  return projectId ? { projectId } : {}
+}
+
 export function searchStringFromUrlSearch(search: ProjectUrlSearch): string {
   const params = new URLSearchParams()
   for (const [key, value] of Object.entries(search)) {

@@ -404,6 +404,7 @@ export function RiskOperationsDashboard({
               latestRun={latestRun}
               latestRunFactsRows={latestRunFactsRows}
               providerStatusLoading={providerStatusLoading}
+              selectedProjectId={isDemoMode ? "" : selectedProjectId}
               staleProvider={staleProvider}
             />
           </div>
