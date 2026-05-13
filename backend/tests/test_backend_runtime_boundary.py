@@ -208,12 +208,20 @@ def test_workbench_runtime_names_are_not_active_service_aliases() -> None:
 
 def test_container_image_digest_policy_covers_compose_service_images() -> None:
     digest_check = _read_repo_text("scripts/check_dockerfile_base_digests.py")
+    makefile = _read_repo_text("Makefile")
+    dockerignore = _read_repo_text(".dockerignore")
     compose = yaml.safe_load(_read_repo_text("compose.yml"))
     traefik_compose = yaml.safe_load(_read_repo_text("compose.traefik.yml"))
 
     assert "compose.yml" in digest_check
     assert "compose.traefik.yml" in digest_check
+    assert "Dockerfile.playwright" in digest_check
+    assert "MAKE_IMAGE_RE" in digest_check
     assert "services" in digest_check
+    assert ".env" in dockerignore
+    assert "!.env.example" in dockerignore
+    assert "ACTIONLINT_IMAGE ?= rhysd/actionlint:1.7.12@sha256:" in makefile
+    assert "audit --audit-level=high" in makefile
     assert "@sha256:" in compose["services"]["db"]["image"]
     assert "@sha256:" in traefik_compose["services"]["traefik"]["image"]
 

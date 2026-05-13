@@ -109,25 +109,31 @@ def _assert_no_legacy_workbench_modules(entries: list[str], artifact: str) -> No
 
 
 def _tracked_alembic_migration_suffixes() -> tuple[str, ...]:
-    result = subprocess.run(
-        [
-            "git",
-            "ls-files",
-            "--cached",
-            "--others",
-            "--exclude-standard",
-            "--",
-            "backend/app/alembic/versions/*.py",
-        ],
-        check=True,
-        cwd=ROOT,
-        stdout=subprocess.PIPE,
-        text=True,
-    )
+    migration_dir = ROOT / "backend" / "app" / "alembic" / "versions"
+    try:
+        result = subprocess.run(
+            [
+                "git",
+                "ls-files",
+                "--cached",
+                "--others",
+                "--exclude-standard",
+                "--",
+                "backend/app/alembic/versions/*.py",
+            ],
+            check=True,
+            cwd=ROOT,
+            stderr=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            text=True,
+        )
+        paths = [ROOT / Path(line) for line in result.stdout.splitlines()]
+    except (FileNotFoundError, subprocess.CalledProcessError):
+        paths = sorted(migration_dir.glob("*.py"))
+
     suffixes = []
-    for line in result.stdout.splitlines():
-        path = Path(line)
-        if not (ROOT / path).is_file():
+    for path in paths:
+        if not path.is_file():
             continue
         if path.name == "__init__.py":
             continue

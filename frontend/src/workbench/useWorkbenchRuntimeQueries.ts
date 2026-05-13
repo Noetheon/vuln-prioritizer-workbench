@@ -11,7 +11,7 @@ export const workbenchStatusQueryKey = workbenchQueryKeys.status()
 
 export function useWorkbenchProviderStatusQuery() {
   return useQuery({
-    queryFn: () => ProvidersService.readProviderStatus(),
+    queryFn: ({ signal }) => ProvidersService.readProviderStatus({ signal }),
     queryKey: workbenchProviderStatusQueryKey,
     retry: false,
     staleTime: 30_000,
@@ -20,7 +20,7 @@ export function useWorkbenchProviderStatusQuery() {
 
 export function useWorkbenchStatusQuery() {
   return useQuery({
-    queryFn: () => WorkbenchService.workbenchStatus(),
+    queryFn: ({ signal }) => WorkbenchService.workbenchStatus({ signal }),
     queryKey: workbenchStatusQueryKey,
     retry: false,
     staleTime: 30_000,

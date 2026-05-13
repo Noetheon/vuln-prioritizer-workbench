@@ -9,7 +9,10 @@ from app.importers.contracts import (
     InputPayload,
     NormalizedOccurrence,
 )
-from app.importers.input_loader_adapter import parse_payload_with_input_loader
+from app.importers.input_loader_adapter import (
+    ParsedWorkbenchInput,
+    parse_payload_with_input_loader_result,
+)
 
 CVE_LIST_INPUT_TYPE = "cve-list"
 
@@ -26,10 +29,18 @@ class CveListImporter:
         *,
         filename: str | None = None,
     ) -> list[NormalizedOccurrence]:
+        return self.parse_with_metadata(payload, filename=filename).occurrences
+
+    def parse_with_metadata(
+        self,
+        payload: InputPayload,
+        *,
+        filename: str | None = None,
+    ) -> ParsedWorkbenchInput:
         suffix = _filename_suffix(filename)
         if suffix not in {"", ".txt", ".csv"}:
             raise ImporterParseError("cve-list supports .txt and .csv inputs.")
-        return parse_payload_with_input_loader(
+        return parse_payload_with_input_loader_result(
             CVE_LIST_INPUT_TYPE,
             payload,
             default_suffix=".csv" if suffix == ".csv" else ".txt",

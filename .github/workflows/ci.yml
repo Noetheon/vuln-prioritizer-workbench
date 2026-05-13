@@ -187,6 +187,10 @@ jobs:
         if: steps.frontend-scope.outputs.run-frontend == 'true'
         run: make frontend-build
 
+      - name: Typecheck frontend tests
+        if: steps.frontend-scope.outputs.run-frontend == 'true'
+        run: make frontend-test-types
+
       - name: Regenerate frontend client
         if: steps.frontend-scope.outputs.run-frontend == 'true'
         run: make frontend-generate-client

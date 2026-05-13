@@ -7,15 +7,18 @@ from pathlib import Path
 import yaml
 
 FROM_RE = re.compile(r"^\s*FROM\s+(?P<image>\S+)", re.IGNORECASE)
+MAKE_IMAGE_RE = re.compile(r"^\s*(?P<name>[A-Z0-9_]*IMAGE)\s*(?:\?=|:=|=)\s*(?P<image>\S+)")
 ROOT = Path(__file__).resolve().parents[1]
 DOCKERFILES = (
     ROOT / "backend" / "Dockerfile",
     ROOT / "frontend" / "Dockerfile",
+    ROOT / "frontend" / "Dockerfile.playwright",
 )
 COMPOSE_FILES = (
     ROOT / "compose.yml",
     ROOT / "compose.traefik.yml",
 )
+MAKEFILES = (ROOT / "Makefile",)
 
 
 def _requires_digest(image: str) -> bool:
@@ -47,6 +50,19 @@ def main() -> int:
             if "@sha256:" not in image:
                 failures.append(
                     f"{compose_file.relative_to(ROOT)}:services.{service_name}.image: {image}"
+                )
+
+    for makefile in MAKEFILES:
+        for line_number, line in enumerate(makefile.read_text(encoding="utf-8").splitlines(), 1):
+            match = MAKE_IMAGE_RE.match(line)
+            if match is None:
+                continue
+            image = match.group("image")
+            if not _requires_digest(image):
+                continue
+            if "@sha256:" not in image:
+                failures.append(
+                    f"{makefile.relative_to(ROOT)}:{line_number}:{match.group('name')}: {image}"
                 )
 
     if failures:

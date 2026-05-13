@@ -9,12 +9,21 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from sqlalchemy import create_engine
+from sqlalchemy import UniqueConstraint, create_engine
 from sqlalchemy.pool import StaticPool
 from sqlmodel import Session, SQLModel
 
 from app.core.config import Settings
+from app.importers.generic_occurrence_csv import GenericOccurrenceCsvImporter
 from app.services import AnalysisService
+from app.services.import_execution_context import _parsed_input_from_workbench_occurrences
+from vuln_prioritizer.models import (
+    KevData,
+    ProviderSnapshotItem,
+    ProviderSnapshotMetadata,
+    ProviderSnapshotReport,
+)
+from vuln_prioritizer.provider_snapshot import generate_provider_snapshot_json
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 
@@ -71,6 +80,90 @@ def test_analysis_service_uses_demo_snapshot_only_when_enabled(session: Session)
     assert enabled.default_provider_snapshot_file() == PROJECT_ROOT / "data" / (
         "demo_provider_snapshot.json"
     )
+
+
+def test_analysis_service_locked_provider_data_uses_explicit_flag() -> None:
+    source = inspect.getsource(AnalysisService.analyze_import)
+
+    assert "use_locked_snapshot = locked_provider_data" in source
+    assert "or snapshot_path is not None" not in source
+
+
+def test_analysis_service_persists_selected_snapshot_sources(
+    app_models: Any,
+    session: Session,
+    tmp_path: Path,
+) -> None:
+    snapshot_file = tmp_path / "provider-snapshot.json"
+    report = ProviderSnapshotReport(
+        metadata=ProviderSnapshotMetadata(
+            generated_at="2026-05-01T12:00:00Z",
+            selected_sources=["kev"],
+            requested_cves=1,
+        ),
+        items=[
+            ProviderSnapshotItem(
+                cve_id="CVE-2026-0001",
+                kev=KevData(cve_id="CVE-2026-0001", in_kev=True),
+            )
+        ],
+        warnings=[],
+    )
+    snapshot_file.write_text(generate_provider_snapshot_json(report), encoding="utf-8")
+
+    snapshot_id = AnalysisService(session, Settings()).persist_provider_snapshot(
+        snapshot_file,
+        locked_provider_data=False,
+    )
+    session.commit()
+
+    assert snapshot_id is not None
+    snapshot = session.get(app_models.ProviderSnapshot, snapshot_id)
+    assert snapshot is not None
+    assert snapshot.source_metadata_json["selected_sources"] == ["kev"]
+
+
+def test_finding_identity_uses_project_dedup_key_unique_constraint(app_models: Any) -> None:
+    unique_constraints = {
+        constraint.name
+        for constraint in app_models.Finding.__table__.constraints
+        if isinstance(constraint, UniqueConstraint)
+    }
+
+    assert unique_constraints == {"uq_finding_project_dedup_key"}
+
+
+def test_workbench_parsed_input_preserves_parser_metadata(tmp_path: Path) -> None:
+    input_file = tmp_path / "generic.csv"
+    payload = "\n".join(
+        [
+            "# ignored before header",
+            "cve_id;asset_ref;component_name;fix_versions;ticket_url",
+            'CVE-2024-3094;build-host-1;xz;"2.0.0|2.1.0";SEC-1001',
+            "",
+        ]
+    ).encode()
+    parsed_upload = GenericOccurrenceCsvImporter().parse_with_metadata(
+        payload,
+        filename=input_file.name,
+    )
+
+    parsed_input = _parsed_input_from_workbench_occurrences(
+        parsed_upload.occurrences,
+        input_path=input_file,
+        input_type="generic-occurrence-csv",
+        base_parsed_input=parsed_upload.parsed_input,
+        asset_context_summary={"warnings": ["asset context warning"]},
+        vex_summary=None,
+    )
+
+    assert parsed_input.total_rows == 1
+    assert parsed_input.input_paths == [str(input_file)]
+    assert parsed_input.source_summaries[0].total_rows == 1
+    assert parsed_input.source_summaries[0].warning_count == 1
+    assert parsed_input.occurrences[0].fix_versions == ["2.0.0", "2.1.0"]
+    assert any("ticket_url" in warning for warning in parsed_input.warnings)
+    assert "asset context warning" in parsed_input.warnings
 
 
 def test_record_audit_event_bounds_detail_json(session: Session) -> None:

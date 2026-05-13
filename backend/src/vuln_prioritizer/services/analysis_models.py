@@ -17,6 +17,7 @@ from vuln_prioritizer.models import (
     EpssData,
     KevData,
     NvdData,
+    ParsedInput,
     PrioritizedFinding,
     PriorityPolicy,
 )
@@ -37,6 +38,7 @@ def _enum_value(value: StrEnum | str) -> str:
 @dataclass(frozen=True)
 class AnalysisRequest:
     input_specs: list[InputSpec]
+    parsed_input: ParsedInput | None
     output: Path | None
     format: StrEnum | str
     provider_snapshot_file: Path | None

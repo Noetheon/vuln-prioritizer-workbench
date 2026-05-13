@@ -97,13 +97,17 @@ export function AppRouter() {
   )
 }
 
-function routeMatch(pathname: string): RouteMatch {
+export function routeMatch(pathname: string): RouteMatch {
   const normalizedPath = pathname.replace(/\/+$/, "") || "/"
   const findingDetailMatch = normalizedPath.match(/^\/findings\/([^/]+)$/)
   if (findingDetailMatch) {
+    const findingId = safeDecodeURIComponent(findingDetailMatch[1] ?? "")
+    if (findingId === null) {
+      return { Component: NotFoundRoute, params: {}, routePath: null }
+    }
     return {
       Component: FindingDetailRoute,
-      params: { findingId: decodeURIComponent(findingDetailMatch[1] ?? "") },
+      params: { findingId },
       routePath: "/findings",
     }
   }
@@ -112,4 +116,12 @@ function routeMatch(pathname: string): RouteMatch {
     return { ...staticMatch, params: {} }
   }
   return { Component: NotFoundRoute, params: {}, routePath: null }
+}
+
+function safeDecodeURIComponent(value: string): string | null {
+  try {
+    return decodeURIComponent(value)
+  } catch {
+    return null
+  }
 }

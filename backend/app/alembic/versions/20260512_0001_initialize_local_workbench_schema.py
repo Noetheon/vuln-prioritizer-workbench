@@ -452,13 +452,6 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(["vulnerability_id"], ["vulnerability.id"], ondelete="RESTRICT"),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("project_id", "dedup_key", name="uq_finding_project_dedup_key"),
-        sa.UniqueConstraint(
-            "project_id",
-            "vulnerability_id",
-            "component_id",
-            "asset_id",
-            name="uq_finding_project_vulnerability_component_asset",
-        ),
     )
     op.create_index(op.f("ix_finding_asset_id"), "finding", ["asset_id"], unique=False)
     op.create_index(op.f("ix_finding_component_id"), "finding", ["component_id"], unique=False)
