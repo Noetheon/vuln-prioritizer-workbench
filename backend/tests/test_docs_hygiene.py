@@ -231,6 +231,26 @@ def test_gitignore_covers_workbench_runtime_artifacts() -> None:
     assert {path for path in required_runtime_roots if path not in gitignore} == set()
 
 
+def test_dependency_audit_docs_cover_frontend_build_chain_dependencies() -> None:
+    active_docs = {
+        "docs/dependency-and-package-policy.md": REPO_ROOT
+        / "docs"
+        / "dependency-and-package-policy.md",
+        "docs/workbench-threat-model.md": REPO_ROOT / "docs" / "workbench-threat-model.md",
+        "docs/workbench-offline-demo.md": REPO_ROOT / "docs" / "workbench-offline-demo.md",
+        "docs/workbench-v1-release-checklist.md": REPO_ROOT
+        / "docs"
+        / "workbench-v1-release-checklist.md",
+    }
+    stale_phrases = ("--omit=dev", "frontend production dependencies")
+    violations = {
+        name: [phrase for phrase in stale_phrases if phrase in path.read_text(encoding="utf-8")]
+        for name, path in active_docs.items()
+    }
+
+    assert violations == {name: [] for name in active_docs}
+
+
 def test_testpypi_release_docs_do_not_mix_package_indexes() -> None:
     runbook = RELEASE_OPERATIONS_FILE.read_text(encoding="utf-8")
     testpypi_section = runbook.split("## TestPyPI Validation Path", maxsplit=1)[1].split(
