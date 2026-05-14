@@ -60,6 +60,7 @@ def create_provider_update_job(
 ) -> ProviderUpdateJobPublic:
     """Create a cache-friendly provider snapshot refresh job."""
     active_settings = _request_settings(request)
+    active_engine: Engine | None = None
     try:
         if payload.execution_mode == "background":
             active_bind = session.get_bind()
@@ -104,6 +105,11 @@ def create_provider_update_job(
     session.commit()
     session.refresh(run)
     if payload.execution_mode == "background":
+        if active_engine is None:
+            raise HTTPException(
+                status_code=500,
+                detail="Workbench database engine is not configured.",
+            )
         background_tasks.add_task(
             execute_provider_update_job_background,
             active_engine,
