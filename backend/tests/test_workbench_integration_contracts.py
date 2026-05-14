@@ -46,6 +46,7 @@ def test_compose_uses_workbench_shell_without_legacy_runtime_services() -> None:
     assert backend["environment"]["DEMO_PROVIDER_SNAPSHOT_ENABLED"] == (
         "${DEMO_PROVIDER_SNAPSHOT_ENABLED:-false}"
     )
+    assert backend["environment"]["DEMO_WORKSPACE_ENABLED"] == ("${DEMO_WORKSPACE_ENABLED:-false}")
     assert "workbench-import-uploads:/app/workbench-import-uploads" in backend["volumes"]
     assert "workbench-reports:/app/workbench-reports" in backend["volumes"]
     assert "workbench-provider-snapshots:/app/provider-snapshots" in backend["volumes"]
@@ -117,6 +118,7 @@ def test_compose_override_exposes_workbench_shell_and_frontend_ports() -> None:
     assert "create_all" not in backend_command
     assert "app.main:app" in backend_command
     assert services["backend"]["environment"]["DEMO_PROVIDER_SNAPSHOT_ENABLED"] == "true"
+    assert services["backend"]["environment"]["DEMO_WORKSPACE_ENABLED"] == "true"
     assert services["frontend"]["ports"] == ["127.0.0.1:${DOCKER_DEMO_FRONTEND_PORT:-5173}:8080"]
     assert "workbench-postgres" not in services
 

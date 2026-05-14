@@ -143,7 +143,13 @@ from app.models.waivers import (
     WaiversPublic,
     WaiverUpdate,
 )
-from app.models.workbench import WorkbenchHealth, WorkbenchStatus
+from app.models.workbench import (
+    DemoWorkspaceCreate,
+    DemoWorkspacePublic,
+    DemoWorkspaceStatusPublic,
+    WorkbenchHealth,
+    WorkbenchStatus,
+)
 
 __all__ = [
     "AnalysisRun",
@@ -192,6 +198,9 @@ __all__ = [
     "CveAttackMappingPublic",
     "DashboardEpssBucketsPublic",
     "DashboardSignalCountsPublic",
+    "DemoWorkspaceCreate",
+    "DemoWorkspacePublic",
+    "DemoWorkspaceStatusPublic",
     "Finding",
     "FindingAttackContext",
     "FindingAttackContextBase",

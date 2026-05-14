@@ -23,6 +23,7 @@ export const workbenchQueryKeys = {
   assetsRoot: (projectId: string) =>
     [...workbenchQueryKeys.all, "assets", projectId] as const,
   providerStatus: () => [...workbenchQueryKeys.all, "provider-status"] as const,
+  demoWorkspace: () => [...workbenchQueryKeys.all, "demo-workspace"] as const,
   projectDashboard: (projectId: string) =>
     [...workbenchQueryKeys.all, "project-dashboard", projectId] as const,
   findingDetail: (findingId: string | null) =>
@@ -62,6 +63,9 @@ export async function invalidateWorkbenchProjectQueries(
 ) {
   await Promise.all([
     queryClient.invalidateQueries({ queryKey: workbenchQueryKeys.projects() }),
+    queryClient.invalidateQueries({
+      queryKey: workbenchQueryKeys.demoWorkspace(),
+    }),
     queryClient.invalidateQueries({
       queryKey: workbenchQueryKeys.projectSummariesRoot(),
     }),
@@ -109,6 +113,9 @@ export async function invalidateProjectScopedWorkbenchQueries(
     }),
     queryClient.invalidateQueries({
       queryKey: workbenchQueryKeys.reportsRoot(),
+    }),
+    queryClient.invalidateQueries({
+      queryKey: workbenchQueryKeys.demoWorkspace(),
     }),
   ])
 }

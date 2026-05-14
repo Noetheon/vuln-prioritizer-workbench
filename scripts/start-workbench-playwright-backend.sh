@@ -22,6 +22,7 @@ export SQLALCHEMY_DATABASE_URI="sqlite:///$db_path"
 export REPORT_DIR="$report_dir"
 export PROVIDER_SNAPSHOT_DIR="$repo_root/data"
 export DEMO_PROVIDER_SNAPSHOT_ENABLED=true
+export DEMO_WORKSPACE_ENABLED=true
 export RATE_LIMIT_ENABLED=false
 export SECRET_KEY="${SECRET_KEY:-local-workbench-dev-secret}"
 

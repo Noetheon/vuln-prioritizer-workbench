@@ -8,6 +8,7 @@ services:
       - "127.0.0.1:${DOCKER_DEMO_BACKEND_PORT:-8000}:8000"
     environment:
       DEMO_PROVIDER_SNAPSHOT_ENABLED: "true"
+      DEMO_WORKSPACE_ENABLED: "true"
     command:
       - sh
       - -c

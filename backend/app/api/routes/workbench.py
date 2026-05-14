@@ -2,16 +2,33 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, HTTPException, Request, Response
 from sqlalchemy import inspect, text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlmodel import Session, SQLModel
 
-from app.api.deps import SessionDep
+from app.api.deps import LocalActor, SessionDep
 from app.core.app_state import workbench_settings
 from app.core.config import Settings
 from app.core.migration_bootstrap import ALEMBIC_HEAD
-from app.models import WorkbenchHealth, WorkbenchStatus
+from app.models import (
+    DemoWorkspaceCreate,
+    DemoWorkspacePublic,
+    DemoWorkspaceStatusPublic,
+    WorkbenchHealth,
+    WorkbenchStatus,
+)
+from app.services.audit import record_audit_event
+from app.services.demo_workspace import (
+    DemoWorkspaceSnapshot,
+    delete_demo_workspace,
+    demo_workspace_enabled,
+    read_demo_workspace_snapshot,
+    seed_demo_workspace,
+)
+from app.services.import_errors import ImportServiceError
+from app.services.report_artifacts import build_report_public
+from app.services.report_models import ReportGenerationError
 from vuln_prioritizer import __version__
 
 router = APIRouter(prefix="/workbench", tags=["workbench"])
@@ -46,8 +63,126 @@ def workbench_status(
     )
 
 
+@router.get("/demo", response_model=DemoWorkspaceStatusPublic)
+def read_demo_workspace(
+    request: Request,
+    session: SessionDep,
+    local_actor: LocalActor,
+) -> DemoWorkspaceStatusPublic:
+    """Return the optional local demo workspace status."""
+    _ = local_actor
+    active_settings = _request_settings(request)
+    return _demo_workspace_status(
+        read_demo_workspace_snapshot(session),
+        enabled=demo_workspace_enabled(active_settings),
+    )
+
+
+@router.post("/demo", response_model=DemoWorkspacePublic)
+async def create_demo_workspace(
+    *,
+    request: Request,
+    session: SessionDep,
+    local_actor: LocalActor,
+    payload: DemoWorkspaceCreate,
+) -> DemoWorkspacePublic:
+    """Create or reset the deterministic local demo workspace."""
+    active_settings = _request_settings(request)
+    if not demo_workspace_enabled(active_settings):
+        raise HTTPException(status_code=403, detail="Demo workspace is disabled.")
+    try:
+        snapshot = await seed_demo_workspace(
+            session=session,
+            settings=active_settings,
+            local_actor=local_actor,
+            reset=payload.reset,
+        )
+    except ImportServiceError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+    except ReportGenerationError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    record_audit_event(
+        session,
+        action="workbench.demo.reset" if payload.reset else "workbench.demo.seed",
+        resource_type="project",
+        resource_id=snapshot.project.id if snapshot.project is not None else None,
+        actor=local_actor,
+        project_id=snapshot.project.id if snapshot.project is not None else None,
+        detail={
+            "finding_count": snapshot.finding_count,
+            "asset_count": snapshot.asset_count,
+            "report_count": snapshot.report_count,
+            "waiver_count": snapshot.waiver_count,
+        },
+    )
+    session.commit()
+    return _demo_workspace_public(snapshot, active_settings)
+
+
+@router.delete("/demo", status_code=204)
+def remove_demo_workspace(
+    request: Request,
+    session: SessionDep,
+    local_actor: LocalActor,
+) -> Response:
+    """Remove the deterministic local demo workspace and its artifacts."""
+    active_settings = _request_settings(request)
+    if not demo_workspace_enabled(active_settings):
+        raise HTTPException(status_code=403, detail="Demo workspace is disabled.")
+    snapshot = read_demo_workspace_snapshot(session)
+    record_audit_event(
+        session,
+        action="workbench.demo.delete",
+        resource_type="project",
+        resource_id=snapshot.project.id if snapshot.project is not None else None,
+        actor=local_actor,
+        project_id=snapshot.project.id if snapshot.project is not None else None,
+        detail={"seeded": snapshot.seeded},
+    )
+    delete_demo_workspace(session=session, settings=active_settings)
+    session.commit()
+    return Response(status_code=204)
+
+
 def _request_settings(request: Request) -> Settings:
     return workbench_settings(request, required=False)
+
+
+def _demo_workspace_status(
+    snapshot: DemoWorkspaceSnapshot,
+    *,
+    enabled: bool,
+) -> DemoWorkspaceStatusPublic:
+    return DemoWorkspaceStatusPublic(
+        enabled=enabled,
+        seeded=snapshot.seeded,
+        project_id=snapshot.project.id if snapshot.project is not None else None,
+        project_name=snapshot.project.name if snapshot.project is not None else None,
+        latest_run_id=snapshot.latest_run.id if snapshot.latest_run is not None else None,
+        finding_count=snapshot.finding_count,
+        asset_count=snapshot.asset_count,
+        report_count=snapshot.report_count,
+        waiver_count=snapshot.waiver_count,
+        message=(
+            "Demo workspace is available."
+            if enabled
+            else "Demo workspace can be enabled with DEMO_WORKSPACE_ENABLED=true in local mode."
+        ),
+    )
+
+
+def _demo_workspace_public(
+    snapshot: DemoWorkspaceSnapshot,
+    settings: Settings,
+) -> DemoWorkspacePublic:
+    if snapshot.project is None or snapshot.latest_run is None:
+        raise HTTPException(status_code=500, detail="Demo workspace seed did not complete.")
+    return DemoWorkspacePublic(
+        **_demo_workspace_status(snapshot, enabled=demo_workspace_enabled(settings)).model_dump(),
+        project=snapshot.project,
+        latest_run=snapshot.latest_run,
+        reports=[build_report_public(report, settings) for report in snapshot.reports],
+    )
 
 
 def _database_readiness(session: Session) -> tuple[str, str]:

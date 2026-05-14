@@ -370,6 +370,7 @@ def test_default_compose_services_start_only_active_backend_runtime() -> None:
     assert backend_environment["DEMO_PROVIDER_SNAPSHOT_ENABLED"] == (
         "${DEMO_PROVIDER_SNAPSHOT_ENABLED:-false}"
     )
+    assert backend_environment["DEMO_WORKSPACE_ENABLED"] == ("${DEMO_WORKSPACE_ENABLED:-false}")
     assert volumes["app-db-data"]["name"] == "${WORKBENCH_DB_VOLUME:-workbench-db-data}"
     assert volumes["workbench-import-uploads"]["name"] == (
         "${WORKBENCH_IMPORT_UPLOADS_VOLUME:-workbench-import-uploads}"
@@ -452,6 +453,7 @@ def test_env_example_does_not_pin_api_docs_on_for_shared_deployments() -> None:
     assert "\nDECISION_API_MAX_FINDINGS=1000\n" in env_example
     assert "\nSECRET_KEY=local-workbench-dev-secret\n" in env_example
     assert "\nLOCAL_WORKBENCH_USER_EMAIL=local@workbench.test\n" in env_example
+    assert "\nDEMO_WORKSPACE_ENABLED=false\n" in env_example
     assert "FIRST_SUPERUSER=" not in env_example
     assert "FIRST_SUPERUSER_PASSWORD" not in env_example
     assert "\nPOSTGRES_PASSWORD=local-workbench-dev-postgres-password\n" in env_example

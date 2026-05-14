@@ -1,5 +1,11 @@
 import { Link } from "@/lib/router"
-import { BellRing, Import, RefreshCw, ShieldCheck } from "lucide-react"
+import {
+  BellRing,
+  DatabaseZap,
+  Import,
+  RefreshCw,
+  ShieldCheck,
+} from "lucide-react"
 import type { ProjectPublic, ProviderStatusPublic } from "@/api-client"
 import { Button } from "@/components/ui/button"
 import { selectedProjectRouteSearch } from "@/workbench/selected-project-search"
@@ -19,9 +25,14 @@ type DashboardHeroProps = {
   effectiveProviderStatus: ProviderStatusPublic | null
   effectiveSelectedProject: ProjectPublic | null
   freshness: ProviderFreshnessSummary
+  demoWorkspaceEnabled: boolean
+  demoWorkspacePending: boolean
+  isManagedDemoWorkspace: boolean
   isDemoMode: boolean
+  onLoadDemoWorkspace: () => void
   onProjectChange: (projectId: string) => void
   onRefresh: () => void
+  onResetDemoWorkspace: () => void
   projectListLoading: boolean
   providerStatusLoading: boolean
   selectedProjectId: string
@@ -32,9 +43,14 @@ export function DashboardHero({
   effectiveProviderStatus,
   effectiveSelectedProject,
   freshness,
+  demoWorkspaceEnabled,
+  demoWorkspacePending,
+  isManagedDemoWorkspace,
   isDemoMode,
+  onLoadDemoWorkspace,
   onProjectChange,
   onRefresh,
+  onResetDemoWorkspace,
   projectListLoading,
   providerStatusLoading,
   selectedProjectId,
@@ -114,6 +130,26 @@ export function DashboardHero({
               Generate evidence
             </Link>
           </Button>
+          {demoWorkspaceEnabled ? (
+            <Button
+              className="w-full justify-center sm:w-auto"
+              disabled={demoWorkspacePending}
+              onClick={
+                isManagedDemoWorkspace
+                  ? onResetDemoWorkspace
+                  : onLoadDemoWorkspace
+              }
+              type="button"
+              variant="outline"
+            >
+              <DatabaseZap aria-hidden="true" data-icon="inline-start" />
+              {demoWorkspacePending
+                ? "Preparing demo"
+                : isManagedDemoWorkspace
+                  ? "Reset demo"
+                  : "Load demo"}
+            </Button>
+          ) : null}
           <Button
             aria-label="Refresh dashboard"
             className="self-end text-[var(--vpw-text-muted)] sm:self-auto"

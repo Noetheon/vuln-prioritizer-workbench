@@ -158,8 +158,10 @@ def create_workbench_api_env() -> tuple[WorkbenchApiEnv, Callable[[], None]]:
     """Create a TestClient wired to a disposable in-memory SQLModel database."""
     from app.api import deps
 
+    previous_settings = getattr(app.state, "workbench_settings", settings)
     app.dependency_overrides.clear()
     app.state.rate_limiter = InMemoryRateLimiter()
+    app.state.workbench_settings = settings
     app_models = importlib.import_module("app.models")
     app_models.import_table_models()
     repositories = importlib.import_module("app.repositories")
@@ -179,6 +181,7 @@ def create_workbench_api_env() -> tuple[WorkbenchApiEnv, Callable[[], None]]:
 
     def cleanup() -> None:
         app.dependency_overrides.clear()
+        app.state.workbench_settings = previous_settings
         engine.dispose()
 
     return WorkbenchApiEnv(TestClient(app), engine, app_models, repositories), cleanup
