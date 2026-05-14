@@ -11,7 +11,7 @@ import type { WorkbenchReportFormat } from "../lib/app-defaults"
 import { apiErrorMessage, objectRecord } from "../lib/app-errors"
 import { reportFormatLabel } from "../lib/report-format"
 import type { WorkbenchPath } from "../lib/workbench-navigation"
-import { fetchReportDownload } from "./report-download"
+import { fetchReportDownload, startReportDownload } from "./report-download"
 import { reportActionsAvailable } from "./report-action-state.ts"
 import { workbenchQueryKeys } from "./workbench-query-keys"
 
@@ -22,15 +22,7 @@ type UseReportsRouteStateOptions = {
 }
 
 async function downloadReportArtifact(report: ReportPublic) {
-  const { blob, filename } = await fetchReportDownload(report)
-  const objectUrl = URL.createObjectURL(blob)
-  const anchor = document.createElement("a")
-  anchor.href = objectUrl
-  anchor.download = filename
-  document.body.append(anchor)
-  anchor.click()
-  anchor.remove()
-  URL.revokeObjectURL(objectUrl)
+  startReportDownload(await fetchReportDownload(report))
 }
 
 export function useReportsRouteState({

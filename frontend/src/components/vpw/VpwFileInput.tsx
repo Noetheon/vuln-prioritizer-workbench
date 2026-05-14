@@ -7,6 +7,10 @@ export type VpwFileInputProps = {
   id: string
   label: string
   accept?: string
+  "aria-describedby"?: string
+  "aria-errormessage"?: string
+  "aria-invalid"?: boolean | "true" | "false"
+  "aria-required"?: boolean | "true" | "false"
   className?: string
   disabled?: boolean
   file?: File | null
@@ -16,6 +20,10 @@ export type VpwFileInputProps = {
 
 export function VpwFileInput({
   accept,
+  "aria-describedby": ariaDescribedBy,
+  "aria-errormessage": ariaErrorMessage,
+  "aria-invalid": ariaInvalid,
+  "aria-required": ariaRequired,
   className,
   disabled = false,
   file,
@@ -32,12 +40,16 @@ export function VpwFileInput({
     <div className={cn("grid gap-2", className)}>
       <input
         accept={accept}
+        aria-describedby={ariaDescribedBy}
+        aria-errormessage={ariaErrorMessage}
         aria-label={label}
+        aria-invalid={ariaInvalid}
         className="sr-only"
         disabled={disabled}
         id={id}
         name={name}
         onChange={handleChange}
+        required={ariaRequired === true || ariaRequired === "true"}
         type="file"
       />
       <label

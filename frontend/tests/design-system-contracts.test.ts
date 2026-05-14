@@ -310,3 +310,23 @@ test("typography does not use viewport-scaled text or tracking drift", () => {
 
   assert.deepEqual(offenders, [])
 })
+
+test("VpwField associates descriptions and errors with field controls", () => {
+  const field = readProjectFile("src/components/vpw/VpwField.tsx")
+  const fileInput = readProjectFile("src/components/vpw/VpwFileInput.tsx")
+
+  assert.match(field, /withFieldControlA11y\(children/)
+  assert.match(field, /"aria-describedby": mergeIdRefs/)
+  assert.match(field, /nextProps\["aria-required"\] = true/)
+  assert.match(field, /nextProps\["aria-invalid"\] = true/)
+  assert.match(field, /nextProps\["aria-errormessage"\] = errorId/)
+  assert.match(field, /<FieldLabel htmlFor=\{controlId\}/)
+  assert.match(field, /aria-hidden="true"/)
+  assert.match(field, /<FieldDescription id=\{descriptionId\}/)
+  assert.match(field, /<FieldError id=\{errorId\}/)
+
+  assert.match(fileInput, /aria-describedby=\{ariaDescribedBy\}/)
+  assert.match(fileInput, /aria-errormessage=\{ariaErrorMessage\}/)
+  assert.match(fileInput, /aria-invalid=\{ariaInvalid\}/)
+  assert.match(fileInput, /required=\{ariaRequired === true/)
+})
