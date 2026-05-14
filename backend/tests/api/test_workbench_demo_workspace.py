@@ -1,11 +1,28 @@
 from __future__ import annotations
 
+import uuid
+from collections import Counter
 from dataclasses import replace
+from datetime import timedelta
 from pathlib import Path
+from typing import Any
 
+from sqlmodel import Session, select
 from utils.workbench_env import WorkbenchApiEnv, local_api_headers
 
+from app.models.base import get_datetime_utc
+
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
+DEMO_PROJECT_NAME = "Online Shop Demo Workspace"
+EXPECTED_REPORT_FILENAMES = {
+    "technical-report.md",
+    "executive-report.html",
+    "analysis-result.v1.json",
+    "findings.csv",
+    "attack-navigator-layer.json",
+    "results.sarif",
+    "evidence-bundle.zip",
+}
 
 
 def test_demo_workspace_status_is_disabled_by_default(
@@ -80,8 +97,12 @@ def test_demo_workspace_can_be_seeded_reset_and_removed(
         f"/api/v1/runs/{first_run_id}/reports",
         headers=headers,
     )
+    dashboard_response = workbench_api_env.client.get(
+        f"/api/v1/projects/{project_id}/dashboard",
+        headers=headers,
+    )
     governance_response = workbench_api_env.client.get(
-        f"/api/v1/projects/{project_id}/governance/rollups/",
+        f"/api/v1/projects/{project_id}/governance/rollups/?limit=20",
         headers=headers,
     )
     attack_response = workbench_api_env.client.get(
@@ -116,7 +137,17 @@ def test_demo_workspace_can_be_seeded_reset_and_removed(
     assert waiver_debt["accepted_finding_count"] == 4
     assert reports_response.status_code == 200
     assert reports_response.json()["count"] == 7
+    assert dashboard_response.status_code == 200
     assert attack_response.status_code == 200
+    _assert_demo_totals_are_coherent(
+        dashboard=dashboard_response.json(),
+        findings=findings,
+        assets=assets_response.json()["data"],
+        waivers=waivers_response.json()["data"],
+        reports=reports_response.json()["data"],
+        governance=governance_response.json(),
+        attack=attack_response.json(),
+    )
     assert attack_response.json()["mapped_finding_count"] == 21
     assert attack_response.json()["mapped_coverage_percent"] == 87.5
     assert (tmp_path / "uploads" / project_id).exists()
@@ -153,6 +184,109 @@ def test_demo_workspace_can_be_seeded_reset_and_removed(
     assert status_response.json()["seeded"] is False
     assert not (tmp_path / "uploads" / project_id).exists()
     assert not (tmp_path / "reports" / project_id).exists()
+
+    recreated_response = workbench_api_env.client.post(
+        "/api/v1/workbench/demo",
+        headers=headers,
+        json={"reset": False},
+    )
+    assert recreated_response.status_code == 200
+    assert recreated_response.json()["project"]["id"] == project_id
+    assert recreated_response.json()["finding_count"] == 24
+    assert recreated_response.json()["asset_count"] == 21
+    assert recreated_response.json()["waiver_count"] == 4
+    assert recreated_response.json()["report_count"] == 7
+
+
+def test_demo_workspace_load_self_heals_mutated_state(
+    workbench_api_env: WorkbenchApiEnv,
+    tmp_path: Path,
+) -> None:
+    _enable_demo_workspace(workbench_api_env, tmp_path)
+    headers = local_api_headers(workbench_api_env.client)
+
+    first_response = workbench_api_env.client.post(
+        "/api/v1/workbench/demo",
+        headers=headers,
+        json={"reset": True},
+    )
+    assert first_response.status_code == 200
+    first_payload = first_response.json()
+    project_id = first_payload["project"]["id"]
+    first_run_id = first_payload["latest_run"]["id"]
+
+    _corrupt_demo_workspace_without_changing_counts(workbench_api_env, project_id)
+
+    repaired_response = workbench_api_env.client.post(
+        "/api/v1/workbench/demo",
+        headers=headers,
+        json={"reset": False},
+    )
+
+    assert repaired_response.status_code == 200
+    repaired_payload = repaired_response.json()
+    assert repaired_payload["project"]["id"] == project_id
+    assert repaired_payload["project"]["name"] == DEMO_PROJECT_NAME
+    assert repaired_payload["latest_run"]["id"] != first_run_id
+    assert repaired_payload["finding_count"] == 24
+    assert repaired_payload["asset_count"] == 21
+    assert repaired_payload["waiver_count"] == 4
+    assert repaired_payload["report_count"] == 7
+
+    governance_response = workbench_api_env.client.get(
+        f"/api/v1/projects/{project_id}/governance/rollups/?limit=20",
+        headers=headers,
+    )
+    assert governance_response.status_code == 200
+    waiver_debt = governance_response.json()["waiver_debt"]
+    assert waiver_debt["active_count"] == 3
+    assert waiver_debt["review_due_count"] == 1
+    assert waiver_debt["expired_count"] == 0
+
+
+def test_demo_workspace_load_repairs_missing_report_artifact(
+    workbench_api_env: WorkbenchApiEnv,
+    tmp_path: Path,
+) -> None:
+    _enable_demo_workspace(workbench_api_env, tmp_path)
+    headers = local_api_headers(workbench_api_env.client)
+
+    first_response = workbench_api_env.client.post(
+        "/api/v1/workbench/demo",
+        headers=headers,
+        json={"reset": True},
+    )
+    assert first_response.status_code == 200
+    first_payload = first_response.json()
+    project_id = first_payload["project"]["id"]
+    first_run_id = first_payload["latest_run"]["id"]
+
+    deleted_artifact = _delete_one_demo_report_artifact(
+        workbench_api_env,
+        project_id=project_id,
+        run_id=first_run_id,
+    )
+    assert not deleted_artifact.exists()
+
+    repaired_response = workbench_api_env.client.post(
+        "/api/v1/workbench/demo",
+        headers=headers,
+        json={"reset": False},
+    )
+
+    assert repaired_response.status_code == 200
+    repaired_payload = repaired_response.json()
+    assert repaired_payload["project"]["id"] == project_id
+    assert repaired_payload["latest_run"]["id"] != first_run_id
+    assert repaired_payload["finding_count"] == 24
+    assert repaired_payload["asset_count"] == 21
+    assert repaired_payload["waiver_count"] == 4
+    assert repaired_payload["report_count"] == 7
+    assert _all_demo_report_artifacts_exist(
+        workbench_api_env,
+        project_id=project_id,
+        run_id=repaired_payload["latest_run"]["id"],
+    )
 
 
 def test_demo_workspace_seed_stays_disabled_outside_local(
@@ -195,3 +329,167 @@ def _enable_demo_workspace(
         SECRET_KEY="workbench-demo-test-secret-0123456789",
     )
     workbench_api_env.client.app.state.workbench_settings = active_settings
+
+
+def _corrupt_demo_workspace_without_changing_counts(
+    workbench_api_env: WorkbenchApiEnv,
+    project_id: str,
+) -> None:
+    project_uuid = uuid.UUID(project_id)
+    models = workbench_api_env.app_models
+    with Session(workbench_api_env.engine) as session:
+        project = session.get(models.Project, project_uuid)
+        assert project is not None
+        project.name = "Mutated Demo Project"
+        project.description = "corrupted by local demo exploration"
+
+        waiver = session.exec(
+            select(models.Waiver).where(models.Waiver.project_id == project_uuid)
+        ).first()
+        assert waiver is not None
+        expired_at = get_datetime_utc().date() - timedelta(days=1)
+        waiver.expires_at = expired_at
+        waiver.review_at = expired_at
+
+        session.add(project)
+        session.add(waiver)
+        session.commit()
+
+
+def _delete_one_demo_report_artifact(
+    workbench_api_env: WorkbenchApiEnv,
+    *,
+    project_id: str,
+    run_id: str,
+) -> Path:
+    project_uuid = uuid.UUID(project_id)
+    run_uuid = uuid.UUID(run_id)
+    models = workbench_api_env.app_models
+    with Session(workbench_api_env.engine) as session:
+        report = session.exec(
+            select(models.Report)
+            .where(models.Report.project_id == project_uuid)
+            .where(models.Report.analysis_run_id == run_uuid)
+        ).first()
+        assert report is not None
+        artifact_path = Path(report.path)
+    assert artifact_path.is_file()
+    artifact_path.unlink()
+    return artifact_path
+
+
+def _all_demo_report_artifacts_exist(
+    workbench_api_env: WorkbenchApiEnv,
+    *,
+    project_id: str,
+    run_id: str,
+) -> bool:
+    project_uuid = uuid.UUID(project_id)
+    run_uuid = uuid.UUID(run_id)
+    models = workbench_api_env.app_models
+    with Session(workbench_api_env.engine) as session:
+        reports = session.exec(
+            select(models.Report)
+            .where(models.Report.project_id == project_uuid)
+            .where(models.Report.analysis_run_id == run_uuid)
+        ).all()
+    return len(reports) == 7 and all(Path(report.path).is_file() for report in reports)
+
+
+def _assert_demo_totals_are_coherent(
+    *,
+    dashboard: dict[str, Any],
+    findings: list[dict[str, Any]],
+    assets: list[dict[str, Any]],
+    waivers: list[dict[str, Any]],
+    reports: list[dict[str, Any]],
+    governance: dict[str, Any],
+    attack: dict[str, Any],
+) -> None:
+    summary = dashboard["summary"]
+    signal_counts = dashboard["findings"]["signal_counts"]
+
+    assert summary["finding_count"] == len(findings) == 24
+    assert summary["open_finding_count"] == sum(
+        1 for finding in findings if finding["status"] in {"open", "in_review", "remediating"}
+    )
+    assert summary["counts_by_status"] == _expected_count_map(
+        Counter(finding["status"] for finding in findings),
+        summary["counts_by_status"],
+    )
+    assert summary["counts_by_priority"] == _expected_count_map(
+        Counter(str(finding["priority"]).title() for finding in findings),
+        summary["counts_by_priority"],
+    )
+    assert sum(summary["counts_by_status"].values()) == summary["finding_count"]
+    assert sum(summary["counts_by_priority"].values()) == summary["finding_count"]
+
+    assert len({asset["asset_key"] for asset in assets}) == 21
+    assert sum(asset["finding_count"] for asset in assets) == summary["finding_count"]
+    assert len(waivers) == 4
+    assert {report["filename"] for report in reports} == EXPECTED_REPORT_FILENAMES
+
+    epss_bucket_counts = {
+        "low": sum(1 for finding in findings if _epss_in_range(finding, 0, 0.25)),
+        "medium": sum(1 for finding in findings if _epss_in_range(finding, 0.25, 0.5)),
+        "high": sum(1 for finding in findings if _epss_in_range(finding, 0.5, 0.7)),
+        "critical": sum(1 for finding in findings if _epss_in_range(finding, 0.7, None)),
+    }
+    assert signal_counts["epss_buckets"] == epss_bucket_counts
+    assert signal_counts["high_epss"] == epss_bucket_counts["critical"]
+    assert sum(signal_counts["epss_buckets"].values()) == summary["epss_hits"]
+    assert signal_counts["internet_facing_criticals"] == sum(
+        1
+        for finding in findings
+        if finding["priority"] == "critical" and finding["exposure"] == "internet-facing"
+    )
+
+    waiver_debt = governance["waiver_debt"]
+    assert waiver_debt["waiver_count"] == (
+        waiver_debt["active_count"] + waiver_debt["review_due_count"] + waiver_debt["expired_count"]
+    )
+    assert waiver_debt["accepted_finding_count"] == sum(
+        1 for finding in findings if finding["status"] == "accepted" or finding["waived"]
+    )
+    assert attack["mapped_finding_count"] + attack["unmapped_finding_count"] == len(findings)
+
+    assert sum(service["finding_count"] for service in governance["services"]) == len(findings)
+    for rollup_group in (
+        governance["owners"],
+        governance["services"],
+        governance["environments"],
+        governance["assets"],
+        governance["top_services_by_risk"],
+        governance["top_assets_by_risk"],
+    ):
+        for rollup in rollup_group:
+            _assert_rollup_counts_are_coherent(rollup)
+
+
+def _assert_rollup_counts_are_coherent(rollup: dict[str, Any]) -> None:
+    assert sum(rollup["priority_counts"].values()) == rollup["finding_count"]
+    assert sum(rollup["status_counts"].values()) == rollup["finding_count"]
+    assert rollup["open_count"] == sum(
+        rollup["status_counts"].get(status, 0) for status in ("open", "in_review", "remediating")
+    )
+    assert rollup["accepted_count"] >= rollup["status_counts"].get("accepted", 0)
+    assert rollup["fixed_count"] == rollup["status_counts"].get("fixed", 0)
+    assert rollup["suppressed_count"] == rollup["status_counts"].get("suppressed", 0)
+
+
+def _expected_count_map(
+    actual_counts: Counter[str],
+    expected_shape: dict[str, int],
+) -> dict[str, int]:
+    return {key: actual_counts.get(key, 0) for key in expected_shape}
+
+
+def _epss_in_range(
+    finding: dict[str, Any],
+    minimum: float,
+    maximum: float | None,
+) -> bool:
+    value = finding.get("epss")
+    if not isinstance(value, (int, float)) or value < minimum:
+        return False
+    return maximum is None or value < maximum

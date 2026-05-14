@@ -39,7 +39,10 @@ import {
 } from "@/lib/provider-format"
 import { DEMO_MODE_ENABLED } from "@/lib/runtime-config"
 import { ErrorState } from "../states"
-import { DashboardDemoBanner, DashboardSetupEmptyState } from "./DashboardEmptyState"
+import {
+  DashboardDemoBanner,
+  DashboardSetupEmptyState,
+} from "./DashboardEmptyState"
 import { DashboardHero } from "./DashboardHero"
 import { DashboardMetricGrid } from "./DashboardMetricGrid"
 import { DashboardRemediationSection } from "./DashboardRemediationSection"
@@ -204,9 +207,9 @@ export function RiskOperationsDashboard({
   const freshnessCard = useMemo<DashboardMetricSummary[]>(
     () => [
       {
-        detail: "Critical-priority active findings",
+        detail: "Critical-priority findings in scope",
         icon: AlertTriangle,
-        label: "Critical Open",
+        label: "Critical Priority",
         tone: "critical",
         value:
           (!isDemoMode && summaryLoading) || effectiveSummary === null
@@ -234,9 +237,9 @@ export function RiskOperationsDashboard({
             : String(effectiveSignalCounts.highEpss),
       },
       {
-        detail: "High-priority active findings",
+        detail: "High-priority findings in scope",
         icon: AlertCircle,
-        label: "High Open",
+        label: "High Priority",
         tone: "high",
         value:
           (!isDemoMode && summaryLoading) || effectiveSummary === null
@@ -388,7 +391,10 @@ export function RiskOperationsDashboard({
         {!showEmptyState ? (
           <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(17rem,20rem)] 2xl:grid-cols-[minmax(0,1fr)_22rem]">
             <div className="min-w-0 flex flex-col gap-4">
-              <DashboardMetricGrid cards={freshnessCard} isLoading={isLoading} />
+              <DashboardMetricGrid
+                cards={freshnessCard}
+                isLoading={isLoading}
+              />
               <Suspense fallback={<DashboardSignalOverviewFallback />}>
                 <DashboardSignalOverview
                   epssItems={epssItems}
