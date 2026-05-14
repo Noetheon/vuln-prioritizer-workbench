@@ -42,6 +42,7 @@ type MockFinding = {
 }
 
 type RouteWorkbenchShellOptions = {
+  demoWorkspaceEnabled?: boolean
   findings?: MockFinding[]
   findingsDelayMs?: number
   onFindingsRequest?: (url: URL) => void
@@ -98,6 +99,7 @@ export async function routeWorkbenchShell(
   const runs = options.runs ?? []
   const runSummaries = options.runSummaries ?? {}
   const findingsDelayMs = options.findingsDelayMs ?? 0
+  const demoWorkspaceEnabled = options.demoWorkspaceEnabled ?? false
   const onFindingsRequest = options.onFindingsRequest
   const providerStatusDelayMs = options.providerStatusDelayMs ?? 0
   const providerStatusError = options.providerStatusError ?? false
@@ -111,6 +113,25 @@ export async function routeWorkbenchShell(
         core_version: "demo",
         database_status: "ready",
         schema_status: "ready",
+      }),
+    }),
+  )
+  await page.route("**/api/v1/workbench/demo", (route) =>
+    route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({
+        enabled: demoWorkspaceEnabled,
+        seeded: false,
+        project_id: null,
+        project_name: null,
+        latest_run_id: null,
+        finding_count: 0,
+        asset_count: 0,
+        report_count: 0,
+        waiver_count: 0,
+        message: demoWorkspaceEnabled
+          ? "Demo workspace is available."
+          : "Demo workspace can be enabled with DEMO_WORKSPACE_ENABLED=true in local mode.",
       }),
     }),
   )

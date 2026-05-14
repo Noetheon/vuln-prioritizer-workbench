@@ -613,6 +613,120 @@ export type DashboardSignalCountsPublic = {
 };
 
 /**
+ * DemoWorkspaceCreate
+ *
+ * Request payload for creating or resetting the local demo workspace.
+ */
+export type DemoWorkspaceCreate = {
+    /**
+     * Reset
+     */
+    reset?: boolean;
+};
+
+/**
+ * DemoWorkspacePublic
+ *
+ * Materialized local demo workspace response.
+ */
+export type DemoWorkspacePublic = {
+    /**
+     * Asset Count
+     */
+    asset_count?: number;
+    /**
+     * Enabled
+     */
+    enabled: boolean;
+    /**
+     * Finding Count
+     */
+    finding_count?: number;
+    latest_run: AnalysisRunPublic;
+    /**
+     * Latest Run Id
+     */
+    latest_run_id?: string | null;
+    /**
+     * Message
+     */
+    message?: string | null;
+    project: ProjectPublic;
+    /**
+     * Project Id
+     */
+    project_id?: string | null;
+    /**
+     * Project Name
+     */
+    project_name?: string | null;
+    /**
+     * Report Count
+     */
+    report_count?: number;
+    /**
+     * Reports
+     */
+    reports?: Array<ReportPublic>;
+    /**
+     * Seeded
+     */
+    seeded?: boolean;
+    /**
+     * Waiver Count
+     */
+    waiver_count?: number;
+};
+
+/**
+ * DemoWorkspaceStatusPublic
+ *
+ * Status for the optional local demo workspace.
+ */
+export type DemoWorkspaceStatusPublic = {
+    /**
+     * Asset Count
+     */
+    asset_count?: number;
+    /**
+     * Enabled
+     */
+    enabled: boolean;
+    /**
+     * Finding Count
+     */
+    finding_count?: number;
+    /**
+     * Latest Run Id
+     */
+    latest_run_id?: string | null;
+    /**
+     * Message
+     */
+    message?: string | null;
+    /**
+     * Project Id
+     */
+    project_id?: string | null;
+    /**
+     * Project Name
+     */
+    project_name?: string | null;
+    /**
+     * Report Count
+     */
+    report_count?: number;
+    /**
+     * Seeded
+     */
+    seeded?: boolean;
+    /**
+     * Waiver Count
+     */
+    waiver_count?: number;
+};
+
+/**
  * FindingAttackContextDetailPublic
  *
  * Safe finding-level ATT&CK context DTO for the React Workbench.
@@ -3965,6 +4079,63 @@ export type PostApiV1WaiversByWaiverIdExpireResponses = {
 };
 
 export type PostApiV1WaiversByWaiverIdExpireResponse = PostApiV1WaiversByWaiverIdExpireResponses[keyof PostApiV1WaiversByWaiverIdExpireResponses];
+
+export type DeleteApiV1WorkbenchDemoData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/workbench/demo';
+};
+
+export type DeleteApiV1WorkbenchDemoResponses = {
+    /**
+     * Successful Response
+     */
+    204: void;
+};
+
+export type DeleteApiV1WorkbenchDemoResponse = DeleteApiV1WorkbenchDemoResponses[keyof DeleteApiV1WorkbenchDemoResponses];
+
+export type GetApiV1WorkbenchDemoData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/workbench/demo';
+};
+
+export type GetApiV1WorkbenchDemoResponses = {
+    /**
+     * Successful Response
+     */
+    200: DemoWorkspaceStatusPublic;
+};
+
+export type GetApiV1WorkbenchDemoResponse = GetApiV1WorkbenchDemoResponses[keyof GetApiV1WorkbenchDemoResponses];
+
+export type PostApiV1WorkbenchDemoData = {
+    body: DemoWorkspaceCreate;
+    path?: never;
+    query?: never;
+    url: '/api/v1/workbench/demo';
+};
+
+export type PostApiV1WorkbenchDemoErrors = {
+    /**
+     * Validation Error
+     */
+    422: ApiErrorEnvelope;
+};
+
+export type PostApiV1WorkbenchDemoError = PostApiV1WorkbenchDemoErrors[keyof PostApiV1WorkbenchDemoErrors];
+
+export type PostApiV1WorkbenchDemoResponses = {
+    /**
+     * Successful Response
+     */
+    200: DemoWorkspacePublic;
+};
+
+export type PostApiV1WorkbenchDemoResponse = PostApiV1WorkbenchDemoResponses[keyof PostApiV1WorkbenchDemoResponses];
 
 export type GetApiV1WorkbenchHealthData = {
     body?: never;

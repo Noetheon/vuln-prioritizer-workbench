@@ -58,6 +58,7 @@ class Settings:
     NVD_API_KEY_ENV: str = DEFAULT_NVD_API_KEY_ENV
     ATTACK_ARTIFACT_DIR: str = "data/attack"
     DEMO_PROVIDER_SNAPSHOT_ENABLED: bool = False
+    DEMO_WORKSPACE_ENABLED: bool = False
     MAX_UPLOAD_MB: int = 25
     MAX_REPORT_MB: int = 50
     MAX_REPORTS_PER_RUN: int = 20
@@ -211,6 +212,7 @@ def load_settings() -> Settings:
             "DEMO_PROVIDER_SNAPSHOT_ENABLED",
             False,
         ),
+        DEMO_WORKSPACE_ENABLED=_bool_from_env("DEMO_WORKSPACE_ENABLED", False),
         MAX_UPLOAD_MB=_positive_int_from_env("MAX_UPLOAD_MB", 25),
         MAX_REPORT_MB=_positive_int_from_env("MAX_REPORT_MB", 50),
         MAX_REPORTS_PER_RUN=_positive_int_from_env("MAX_REPORTS_PER_RUN", 20),
