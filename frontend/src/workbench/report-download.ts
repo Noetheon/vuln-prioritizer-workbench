@@ -5,6 +5,22 @@ export type ReportDownloadArtifact = {
   filename: string
 }
 
+type ReportDownloadDocument = Pick<Document, "createElement"> & {
+  body: Pick<HTMLElement, "append">
+}
+type ReportDownloadTimer = (handler: () => void, delayMs: number) => unknown
+type ReportDownloadUrlApi = Pick<
+  typeof URL,
+  "createObjectURL" | "revokeObjectURL"
+>
+
+export type StartReportDownloadOptions = {
+  document?: ReportDownloadDocument
+  revokeDelayMs?: number
+  setTimeout?: ReportDownloadTimer
+  urlApi?: ReportDownloadUrlApi
+}
+
 type ReportDownloadResult = {
   data: Blob | File
   request: Request
@@ -16,6 +32,8 @@ type DownloadReportClient = (
 ) => Promise<ReportDownloadResult>
 
 let reportDownloadClient: DownloadReportClient | null = null
+
+export const REPORT_OBJECT_URL_REVOKE_DELAY_MS = 1_000
 
 export function configureReportDownloadClient(
   client: DownloadReportClient | null,
@@ -37,6 +55,29 @@ export async function fetchReportDownload(
       filenameFromContentDisposition(
         result.response.headers.get("content-disposition"),
       ) || report.filename,
+  }
+}
+
+export function startReportDownload(
+  { blob, filename }: ReportDownloadArtifact,
+  options: StartReportDownloadOptions = {},
+): void {
+  const ownerDocument = options.document ?? document
+  const setTimer = options.setTimeout ?? globalThis.setTimeout
+  const urlApi = options.urlApi ?? URL
+  const objectUrl = urlApi.createObjectURL(blob)
+  const anchor = ownerDocument.createElement("a")
+
+  anchor.href = objectUrl
+  anchor.download = filename
+  ownerDocument.body.append(anchor)
+  try {
+    anchor.click()
+  } finally {
+    anchor.remove()
+    setTimer(() => {
+      urlApi.revokeObjectURL(objectUrl)
+    }, options.revokeDelayMs ?? REPORT_OBJECT_URL_REVOKE_DELAY_MS)
   }
 }
 

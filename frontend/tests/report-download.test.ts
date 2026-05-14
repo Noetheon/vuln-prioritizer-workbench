@@ -4,6 +4,8 @@ import test from "node:test"
 import {
   configureReportDownloadClient,
   fetchReportDownload,
+  startReportDownload,
+  type StartReportDownloadOptions,
 } from "../src/workbench/report-download.ts"
 
 type DownloadReportClient = Parameters<typeof configureReportDownloadClient>[0]
@@ -74,4 +76,77 @@ test("does not derive report download targets from absolute metadata URLs", asyn
       id: "visible-report",
     } as Parameters<typeof fetchReportDownload>[0],
   )
+})
+
+test("delays report object URL revocation until after download click returns", () => {
+  const events: string[] = []
+  const timers: Array<() => void> = []
+  const anchor = {
+    download: "",
+    href: "",
+    click() {
+      events.push(`click:${anchor.href}:${anchor.download}`)
+    },
+    remove() {
+      events.push("remove")
+    },
+  }
+  const documentStub: StartReportDownloadOptions["document"] = {
+    body: {
+      append(node: HTMLElement) {
+        assert.equal(node, anchor)
+        events.push("append")
+      },
+    },
+    createElement(tagName: string) {
+      assert.equal(tagName, "a")
+      return anchor as HTMLAnchorElement
+    },
+  }
+  const urlApi: StartReportDownloadOptions["urlApi"] = {
+    createObjectURL(blob: Blob) {
+      assert.equal(blob.type, "text/markdown")
+      events.push("create")
+      return "blob:visible"
+    },
+    revokeObjectURL(objectUrl: string) {
+      events.push(`revoke:${objectUrl}`)
+    },
+  }
+
+  startReportDownload(
+    {
+      blob: new Blob(["report-body"], { type: "text/markdown" }),
+      filename: "visible.md",
+    },
+    {
+      document: documentStub,
+      revokeDelayMs: 25,
+      setTimeout(handler, delayMs) {
+        events.push(`timer:${delayMs}`)
+        timers.push(handler)
+      },
+      urlApi,
+    },
+  )
+
+  assert.deepEqual(events, [
+    "create",
+    "append",
+    "click:blob:visible:visible.md",
+    "remove",
+    "timer:25",
+  ])
+  assert.equal(timers.length, 1)
+
+  timers[0]()
+
+  assert.deepEqual(events, [
+    "create",
+    "append",
+    "click:blob:visible:visible.md",
+    "remove",
+    "timer:25",
+    "revoke:blob:visible",
+  ])
 })
