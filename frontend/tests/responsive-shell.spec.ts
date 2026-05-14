@@ -157,6 +157,62 @@ async function expectFindingsMobileCards(page: Page) {
     metrics.viewportWidth + 1,
   )
 
+  const card = page.getByRole("article", {
+    name: `Finding ${mockFinding.cve_id}`,
+  })
+  await expect(card).toContainText("xz")
+  await expect(card).toContainText("payments / build-host-1")
+  await expect(card).toContainText("Owner")
+  await expect(card).toContainText("platform")
+  await expect(card).toContainText("Status")
+  await expect(card).toContainText("Known exploited dependency")
+
+  await page
+    .getByRole("button", { name: `Quick view ${mockFinding.cve_id}` })
+    .click()
+  const drawer = page.getByRole("dialog", {
+    name: new RegExp(mockFinding.cve_id),
+  })
+  await expect(drawer).toBeVisible()
+  await expect
+    .poll(async () =>
+      drawer.evaluate((element) => {
+        const rect = element.getBoundingClientRect()
+        const viewportWidth = document.documentElement.clientWidth
+        return rect.left >= 0 && rect.right <= viewportWidth
+      }),
+    )
+    .toBe(true)
+  const drawerMetrics = await drawer.evaluate((element) => {
+    const rect = element.getBoundingClientRect()
+    return {
+      bodyScrollWidth: document.body.scrollWidth,
+      height: rect.height,
+      left: rect.left,
+      right: rect.right,
+      viewportHeight: window.innerHeight,
+      viewportWidth: document.documentElement.clientWidth,
+    }
+  })
+  expect(drawerMetrics.left).toBeGreaterThanOrEqual(0)
+  expect(drawerMetrics.right).toBeLessThanOrEqual(drawerMetrics.viewportWidth)
+  expect(drawerMetrics.height).toBeLessThanOrEqual(drawerMetrics.viewportHeight)
+  expect(drawerMetrics.bodyScrollWidth).toBeLessThanOrEqual(
+    drawerMetrics.viewportWidth + 1,
+  )
+  await expect(
+    drawer.getByRole("button", { name: "Close" }).first(),
+  ).toBeInViewport()
+  await expect(
+    drawer.getByRole("link", { name: "Open full detail" }),
+  ).toBeInViewport()
+  await expect(drawer).toContainText("Decision summary")
+  await expect(drawer).toContainText("Open full detail")
+  await expect(drawer.getByRole("link", { name: "Open full detail" }))
+    .toHaveAttribute("href", /\/findings\/finding-1/)
+  await drawer.getByRole("button", { name: "Close" }).first().click()
+  await expect(drawer).toHaveCount(0)
+
   await page.screenshot({
     fullPage: true,
     path: evidenceScreenshotPath(
@@ -199,19 +255,66 @@ const responsiveViewports = [
 test("mobile shell exposes drawer navigation without page-width overflow", async ({
   page,
 }) => {
+  await page.setViewportSize({ height: 844, width: 390 })
   await openWorkbench(page)
   await expectNoPageOverflow(page)
 
-  await page.getByRole("button", { name: "Open navigation" }).click()
+  const navButton = page.getByRole("button", { name: "Open navigation" })
+  await navButton.click()
+  const navDialog = page.getByRole("dialog", { name: "Vuln Prioritizer" })
+  await expect(navDialog).toBeVisible()
+  await expect(navDialog.locator(":focus")).toBeVisible()
   await expect(
-    page.getByRole("navigation", { name: "Workbench mobile navigation" }),
+    navDialog.getByRole("navigation", { name: "Workbench mobile navigation" }),
   ).toBeVisible()
-  await page.getByRole("link", { name: "Reports" }).click()
+  await expect(navDialog.getByRole("button", { name: "Close" }))
+    .toBeVisible()
+  await expect
+    .poll(async () =>
+      navDialog.evaluate((element) => {
+        const rect = element.getBoundingClientRect()
+        const viewportWidth = document.documentElement.clientWidth
+        return rect.left >= 0 && rect.right <= viewportWidth
+      }),
+    )
+    .toBe(true)
+  const navMetrics = await navDialog.evaluate((element) => {
+    const rect = element.getBoundingClientRect()
+    return {
+      left: rect.left,
+      right: rect.right,
+      viewportWidth: document.documentElement.clientWidth,
+    }
+  })
+  expect(navMetrics.left).toBeGreaterThanOrEqual(0)
+  expect(navMetrics.right).toBeLessThanOrEqual(navMetrics.viewportWidth)
+
+  await page.keyboard.press("Escape")
+  await expect(navDialog).toHaveCount(0)
+  await expect(navButton).toBeFocused()
+
+  await navButton.click()
+  await expect(navDialog).toBeVisible()
+  await navDialog.getByRole("link", { name: "Evidence Center" }).click()
 
   await expect(page).toHaveURL(/\/reports(?:\?.*)?$/)
   await expect(
     page.getByRole("heading", { name: "Generate Evidence Artifacts" }),
   ).toBeVisible()
+  for (const tabName of [
+    "Artifacts",
+    "Decision Summary",
+    "Manifest & Verification",
+    "History",
+    "Data Quality",
+  ]) {
+    await page.getByRole("tab", { name: tabName }).click()
+    await expect(page.getByRole("tab", { name: tabName })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    )
+    await expectNoPageOverflow(page)
+  }
   await expectNoPageOverflow(page)
 })
 

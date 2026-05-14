@@ -55,6 +55,10 @@ CANONICAL_EVIDENCE_CONTRACT_ARTIFACTS = {
 # archive/vpw-evidence so broad evidence sprawl cannot return unnoticed.
 NON_PUBLIC_CONTRACT_MARKDOWN = {
     path for path in CANONICAL_EVIDENCE_CONTRACT_ARTIFACTS if path.suffix.lower() == ".md"
+} | {
+    Path("docs/_uiux_redesign_context/chatgpt-context-pack.md"),
+    Path("docs/_uiux_redesign_context/uiux-codebase-brief.md"),
+    Path("docs/_uiux_redesign_context/vpw-design-direction.md"),
 }
 
 

@@ -96,7 +96,7 @@ test("shared controls show tokenized busy state separately from disabled", async
   await page.goto("/providers")
   const refreshButton = page
     .getByLabel("Provider actions")
-    .getByRole("button", { name: "Refresh providers" })
+    .getByRole("button", { name: "Refresh status" })
   await expect(refreshButton).toBeVisible()
   await expect(refreshButton).toBeDisabled()
   await expect(refreshButton).toHaveAttribute("aria-busy", "true")

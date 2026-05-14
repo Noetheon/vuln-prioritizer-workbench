@@ -1,9 +1,9 @@
 import {
+  AlertTriangle,
   Archive,
   Clock3,
   Database,
   FileArchive,
-  ShieldCheck,
   Signal,
 } from "lucide-react"
 
@@ -34,6 +34,8 @@ export function ProviderMetricsGrid({
 }: ProviderMetricsGridProps) {
   const dataQuality = dataQualityLabel(providerStatus)
   const evidenceReadiness = evidenceReadinessLabel(providerStatus)
+  const warningCount =
+    (providerStatus?.warnings ?? []).length + (providerStatus?.last_error ? 1 : 0)
 
   return (
     <VpwGrid
@@ -46,6 +48,13 @@ export function ProviderMetricsGrid({
         label="Provider health"
         tone={providerHealthTone(providerStatus)}
         value={providerSnapshotHealth(providerStatus)}
+      />
+      <VpwMetricCard
+        description="Age and completeness of stored provider source data"
+        icon={<Database aria-hidden="true" />}
+        label="Provider freshness"
+        tone={counts.staleSources > 0 ? "warning" : "info"}
+        value={formatCacheAge(providerStatus?.cache_age_seconds)}
       />
       <VpwMetricCard
         description={
@@ -67,24 +76,18 @@ export function ProviderMetricsGrid({
         value={formatDateTime(providerStatus?.last_sync)}
       />
       <VpwMetricCard
-        description="Age of stored provider cache"
-        icon={<Database aria-hidden="true" />}
-        label="Cache age"
-        value={formatCacheAge(providerStatus?.cache_age_seconds)}
-      />
-      <VpwMetricCard
         description={`${counts.missingSources} missing, ${counts.staleSources} stale`}
-        icon={<ShieldCheck aria-hidden="true" />}
+        icon={<AlertTriangle aria-hidden="true" />}
         label="Data quality"
         tone={counts.missingSources > 0 ? "warning" : "success"}
         value={dataQuality}
       />
       <VpwMetricCard
-        description="Provider data for reports"
+        description="Provider warnings and last-error state"
         icon={<FileArchive aria-hidden="true" />}
-        label="Evidence readiness"
-        tone={evidenceReadinessTone(providerStatus)}
-        value={evidenceReadiness}
+        label="Warnings"
+        tone={warningCount > 0 ? "warning" : evidenceReadinessTone(providerStatus)}
+        value={warningCount > 0 ? warningCount : evidenceReadiness}
       />
     </VpwGrid>
   )

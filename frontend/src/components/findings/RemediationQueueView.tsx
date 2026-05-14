@@ -4,12 +4,17 @@ import {
   useEffect,
   useState,
 } from "react"
-import type { FindingPublic, ProjectPublic } from "@/api-client"
+import type {
+  FindingDetailPublic,
+  FindingExplanationPublic,
+  FindingPublic,
+  ProjectPublic,
+} from "@/api-client"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import type { FindingsUrlSearch } from "./findings-search-state"
 import type { QueueSort } from "./FindingsDataTable"
 import type { RemediationQueueProps } from "./RemediationQueue"
-import { QuickViewSheet, WhyDialog } from "./RemediationQueueDialogs"
+import { QuickViewSheet } from "./RemediationQueueDialogs"
 import { RemediationQueueFilters } from "./RemediationQueueFilters"
 import { RemediationQueueStates } from "./RemediationQueueStates"
 import { DemoBanner, RemediationQueueSummary } from "./RemediationQueueSummary"
@@ -26,7 +31,6 @@ type RemediationQueueViewProps = RemediationQueueProps & {
   isLoading: boolean
   kevCount: number
   onOpenSheet: (finding: FindingPublic) => void
-  onOpenWhy: (finding: FindingPublic) => void
   onUpdateColumnSort: (sort: QueueSort) => void
   openCount: number
   ownerServiceDraft: string
@@ -35,15 +39,18 @@ type RemediationQueueViewProps = RemediationQueueProps & {
   queueSort: QueueSort
   setAdvancedFiltersOpen: Dispatch<SetStateAction<boolean>>
   setOwnerServiceDraft: Dispatch<SetStateAction<string>>
-  setSheetOpen: Dispatch<SetStateAction<boolean>>
-  setWhyOpen: Dispatch<SetStateAction<boolean>>
+  sheetDetail: FindingDetailPublic | null
+  sheetError: string
+  sheetExplanation: FindingExplanationPublic | null
+  sheetExplanationWarning: string
   sheetFinding: FindingPublic | null
+  sheetLoading: boolean
+  sheetOnClose: () => void
+  sheetOnRefresh: () => void
   sheetOpen: boolean
   showAdvancedFilters: boolean
   signalFilterCount: number
   totalCount: number
-  whyFinding: FindingPublic | null
-  whyOpen: boolean
 }
 
 export function RemediationQueueView({
@@ -71,11 +78,11 @@ export function RemediationQueueView({
   onClearFilters,
   onFilterChange,
   onOpenSheet,
-  onOpenWhy,
   onPageNext,
   onPagePrev,
   onPageSizeChange,
   onProjectChange,
+  onSavedViewChange,
   onUpdateColumnSort,
   openCount,
   ownerServiceDraft,
@@ -88,18 +95,19 @@ export function RemediationQueueView({
   selectedProjectId,
   setAdvancedFiltersOpen,
   setOwnerServiceDraft,
-  setSheetOpen,
-  setWhyOpen,
+  sheetDetail,
+  sheetError,
+  sheetExplanation,
+  sheetExplanationWarning,
   sheetFinding,
+  sheetLoading,
+  sheetOnClose,
+  sheetOnRefresh,
   sheetOpen,
   showAdvancedFilters,
   signalFilterCount,
   totalCount,
-  whyFinding,
-  whyOpen,
 }: RemediationQueueViewProps) {
-  const closeSheet = () => setSheetOpen(false)
-  const closeWhy = () => setWhyOpen(false)
   const stableFindingSearch: FindingsUrlSearch = findingSearch
   const mobileFilterLayout = useMobileFilterLayout()
   const renderFilters = (controlIdPrefix: string) => (
@@ -115,6 +123,7 @@ export function RemediationQueueView({
       onClearFilters={onClearFilters}
       onFilterChange={onFilterChange}
       onProjectChange={onProjectChange}
+      onSavedViewChange={onSavedViewChange}
       ownerServiceDraft={ownerServiceDraft}
       projectListLoading={projectListLoading}
       projects={projects}
@@ -164,7 +173,6 @@ export function RemediationQueueView({
           findingsLoading={findingsLoading}
           isDemo={isDemo}
           onOpenSheet={onOpenSheet}
-          onOpenWhy={onOpenWhy}
           onPageNext={onPageNext}
           onPagePrev={onPagePrev}
           onPageSizeChange={onPageSizeChange}
@@ -175,11 +183,16 @@ export function RemediationQueueView({
           totalCount={totalCount}
         />
         {mobileFilterLayout ? renderFilters("queue-mobile") : null}
-        <WhyDialog finding={whyFinding} onClose={closeWhy} open={whyOpen} />
         <QuickViewSheet
+          detail={sheetDetail}
+          error={sheetError}
+          explanation={sheetExplanation}
+          explanationWarning={sheetExplanationWarning}
           finding={sheetFinding}
           findingSearch={stableFindingSearch}
-          onClose={closeSheet}
+          loading={sheetLoading}
+          onClose={sheetOnClose}
+          onRefresh={sheetOnRefresh}
           open={sheetOpen}
         />
       </div>

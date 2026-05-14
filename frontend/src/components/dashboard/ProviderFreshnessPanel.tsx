@@ -12,7 +12,7 @@ import {
   providerSourceState,
 } from "../../lib/provider-format"
 import { DataQualityNotice, type DataQualityNoticeItem } from "../states"
-import { VpwPanel } from "../vpw"
+import { StatusLozenge, VpwPanel } from "../vpw"
 
 type ProviderFreshnessPanelProps = {
   providerStatus: ProviderStatusPublic | null
@@ -24,6 +24,12 @@ const fallbackProviderSources: ProviderSourceStatusPublic[] = [
   { name: "epss", available: false, value: null },
   { name: "kev", available: false, value: null },
 ]
+
+function freshnessStatus(value: string) {
+  if (value === "Fresh") return "fresh"
+  if (value === "Needs sync") return "stale"
+  return "unknown"
+}
 
 function providerQualityItems(
   providerStatus: ProviderStatusPublic | null,
@@ -71,9 +77,10 @@ export function ProviderFreshnessPanel({
           <h3>Provider Freshness</h3>
           <p>{providerSnapshotSummary(providerStatus)}</p>
         </div>
-        <strong className={`freshness-pill tone-${freshness.tone}`}>
-          {freshness.value}
-        </strong>
+        <StatusLozenge
+          label={freshness.value}
+          status={freshnessStatus(freshness.value)}
+        />
       </div>
 
       <dl className="freshness-facts">

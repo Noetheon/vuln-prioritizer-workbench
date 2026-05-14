@@ -1,48 +1,40 @@
-import { VpwBadge, type VpwBadgeTone } from "@/components/vpw"
+import { StatusLozenge } from "@/components/vpw"
 
 interface ProviderStatusBadgeProps {
   status: string | null | undefined
   className?: string
 }
 
+function providerStatusLabel(status: string | null | undefined) {
+  const normalized = String(status ?? "unknown").toLowerCase()
+  switch (normalized) {
+    case "ok":
+    case "healthy":
+      return "Healthy"
+    case "degraded":
+    case "warning":
+      return "Degraded"
+    case "error":
+    case "failed":
+    case "unavailable":
+      return status ?? "Error"
+    case "loading":
+    case "pending":
+      return "Loading..."
+    default:
+      return status ?? "Unknown"
+  }
+}
+
 export function ProviderStatusBadge({
   status,
   className,
 }: ProviderStatusBadgeProps) {
-  const normalized = (status ?? "unknown").toLowerCase()
-
-  let tone: VpwBadgeTone
-  let label = status ?? "Unknown"
-
-  switch (normalized) {
-    case "ok":
-    case "healthy":
-      tone = "success"
-      label = "Healthy"
-      break
-    case "degraded":
-    case "warning":
-      tone = "warning"
-      label = "Degraded"
-      break
-    case "error":
-    case "failed":
-    case "unavailable":
-      tone = "critical"
-      label = status ?? "Error"
-      break
-    case "loading":
-    case "pending":
-      label = "Loading..."
-      tone = "neutral"
-      break
-    default:
-      tone = "neutral"
-  }
-
   return (
-    <VpwBadge className={className} tone={tone}>
-      {label}
-    </VpwBadge>
+    <StatusLozenge
+      className={className}
+      label={providerStatusLabel(status)}
+      status={status}
+    />
   )
 }

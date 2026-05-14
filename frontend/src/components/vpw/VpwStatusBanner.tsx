@@ -31,7 +31,7 @@ const alertVariantClass: Record<AlertVariant, string> = {
 }
 
 const toneClass: Record<VpwStatusBannerTone, string> = {
-  info: "border-[color-mix(in_srgb,var(--vpw-blue)_24%,var(--vpw-bg-card))] bg-[var(--vpw-bg-info)] text-[var(--vpw-blue)]",
+  info: "border-[color-mix(in_srgb,var(--vpw-blue)_24%,var(--vpw-bg-card))] bg-[var(--vpw-bg-info)] text-[var(--vpw-text-info)]",
   success:
     "border-[color-mix(in_srgb,var(--vpw-green)_28%,var(--vpw-bg-card))] bg-[var(--vpw-bg-success)] text-[color-mix(in_srgb,var(--vpw-green)_50%,var(--vpw-text-primary))]",
   warning:

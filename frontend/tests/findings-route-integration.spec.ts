@@ -46,7 +46,7 @@ test("findings route renders the empty live queue without demo data", async ({
   await expect(
     page
       .getByRole("navigation", { name: "Workbench navigation" })
-      .getByText("Dashboard"),
+      .getByText("Overview"),
   ).toHaveCount(0)
 })
 
@@ -88,7 +88,7 @@ test("providers route shows provider failures without placeholder source rows", 
 
   await expect(page.getByText("Provider data unavailable")).toBeVisible()
   await expect(
-    page.getByRole("table", { name: "Provider sources" }),
+    page.getByRole("table", { name: "Data source inventory" }),
   ).toHaveCount(0)
   await expect(page.getByText("NVD source")).toHaveCount(0)
   await expect(page.getByText("EPSS provider")).toHaveCount(0)
@@ -246,7 +246,11 @@ test("findings URL search state survives reload and drives API params", async ({
   await expect(page.getByRole("combobox", { name: "Status" })).toContainText(
     "Open",
   )
-  await expect(page.getByText("build-host-1", { exact: true })).toBeVisible()
+  await expect(
+    page
+      .getByRole("region", { name: "Findings filters" })
+      .getByText("build-host-1", { exact: true }),
+  ).toBeVisible()
   await expect(page.getByLabel("EPSS min")).toHaveValue("0.7")
   await expect(page.getByLabel("CVSS min")).toHaveValue("9")
   await expect(
@@ -272,6 +276,18 @@ test("findings URL search state survives reload and drives API params", async ({
   await page.reload()
 
   await expect(page.getByLabel("Owner / Service")).toHaveValue("payments")
+  for (const pattern of [
+    /projectId=project-1/,
+    /assetId=asset-1/,
+    /kev=true/,
+    /epssMin=0\.7/,
+    /cvssMin=9/,
+    /sort=score/,
+    /direction=desc/,
+    /offset=10/,
+  ]) {
+    await expect(page).toHaveURL(pattern)
+  }
   await expect(page).toHaveURL(/ownerService=payments/)
   await expect.poll(() => requests.at(-1)?.searchParams.get("offset")).toBe(
     "10",
@@ -312,6 +328,34 @@ test("findings controls update canonical URLs and preserve detail back context",
   await expect.poll(() => requests.at(-1)?.searchParams.get("priority")).toBe(
     "critical",
   )
+  const signalsButton = page.getByRole("button", {
+    name: /^Signals(?:\s+\d+)?$/,
+  })
+  await expect(signalsButton).toHaveAttribute(
+    "aria-expanded",
+    "false",
+  )
+  await expect(page.getByRole("combobox", { name: "KEV" })).toHaveCount(0)
+  await signalsButton.click()
+  await expect(signalsButton).toHaveAttribute(
+    "aria-expanded",
+    "true",
+  )
+  await expect(page.getByRole("combobox", { name: "KEV" })).toBeVisible()
+  await expect(page.getByRole("combobox", { name: "Exposure" })).toBeVisible()
+  await expect(page.getByLabel("EPSS min")).toBeVisible()
+  await expect(page.getByLabel("EPSS max")).toBeVisible()
+  await expect(page.getByLabel("CVSS min")).toBeVisible()
+  await expect(page.getByLabel("CVSS max")).toBeVisible()
+  await page.getByRole("combobox", { name: "KEV" }).click()
+  await page.getByRole("option", { exact: true, name: "KEV" }).click()
+  await expect(page).toHaveURL(/kev=true/)
+  await expect.poll(() => requests.at(-1)?.searchParams.get("kev")).toBe(
+    "true",
+  )
+  await page.reload()
+  await expect(signalsButton).toHaveAttribute("aria-expanded", "true")
+  await expect(page.getByRole("combobox", { name: "KEV" })).toBeVisible()
 
   await page.getByRole("button", { name: /Sort by Score/ }).click()
   await expect(page).toHaveURL(/sort=score/)
@@ -326,7 +370,9 @@ test("findings controls update canonical URLs and preserve detail back context",
     "10",
   )
 
-  await page.getByRole("link", { name: "CVE-2024-3210" }).click()
+  await page
+    .getByRole("link", { exact: true, name: "CVE-2024-3210" })
+    .click()
   await expect(page).toHaveURL(/\/findings\/finding-10\?/)
   await expect(page).toHaveURL(/priority=critical/)
   await page.getByRole("link", { name: "Back to Findings" }).click()
@@ -336,7 +382,7 @@ test("findings controls update canonical URLs and preserve detail back context",
   await expect(page).toHaveURL(/offset=10/)
 })
 
-test("findings detail, quick-view sheet, why dialog, and scroll evidence are covered", async ({
+test("findings detail, drawer preview, and scroll evidence are covered", async ({
   page,
 }) => {
   const cvePattern = new RegExp(mockFinding.cve_id)
@@ -369,25 +415,44 @@ test("findings detail, quick-view sheet, why dialog, and scroll evidence are cov
     "vpw-aud-204-findings-table-scroll-1440.png",
   )
 
-  await page.getByRole("button", { name: "Why now" }).click()
-  const whyDialog = page.getByRole("dialog", { name: cvePattern })
-  await expect(whyDialog).toBeVisible()
-  await expect(whyDialog).toContainText("Recommended action")
-  await expect(whyDialog).toContainText("Patch xz.")
-  await captureAuditScreenshot(page, "vpw-aud-204-why-dialog-1440.png")
-  await page.keyboard.press("Escape")
-  await expect(whyDialog).toHaveCount(0)
-
+  const quickViewButton = page.getByRole("button", {
+    name: `Quick view ${mockFinding.cve_id}`,
+  })
   await page
     .getByRole("button", { name: `Quick view ${mockFinding.cve_id}` })
     .click()
   const quickViewSheet = page.getByRole("dialog", { name: cvePattern })
   await expect(quickViewSheet).toBeVisible()
-  await expect(quickViewSheet).toContainText("Risk Score")
+  await expect(quickViewSheet).toContainText("Decision summary")
+  await expect(quickViewSheet).toContainText(
+    "Known exploited dependency in a critical runtime.",
+  )
+  await expect(quickViewSheet).toContainText("Patch xz.")
+  await expect(quickViewSheet).toContainText("Evidence snapshot")
+  await expect(quickViewSheet).toContainText("generic-occurrence-csv")
+  await expect(quickViewSheet).toContainText("Defensive ATT&CK context")
+  await expect(quickViewSheet).toContainText("does not prove compromise")
+  await expect(quickViewSheet).toContainText("Governance")
   await expect(quickViewSheet).toContainText("Open full detail")
+  const fullDetailLink = quickViewSheet.getByRole("link", {
+    name: "Open full detail",
+  })
+  await expect(fullDetailLink).toHaveAttribute(
+    "href",
+    /\/findings\/finding-1\?.*priority=critical/,
+  )
+  await expect(fullDetailLink).toHaveAttribute("href", /sort=score/)
+  await expect(fullDetailLink).toHaveAttribute("href", /direction=desc/)
   await captureAuditScreenshot(page, "vpw-aud-204-quick-view-sheet-1440.png")
+  await quickViewSheet.getByRole("button", { name: "Close" }).first().click()
+  await expect(quickViewSheet).toHaveCount(0)
+  await expect(quickViewButton).toBeFocused()
 
-  await quickViewSheet.getByRole("link", { name: "Open full detail" }).click()
+  await quickViewButton.click()
+  await page
+    .getByRole("dialog", { name: cvePattern })
+    .getByRole("link", { name: "Open full detail" })
+    .click()
   await expect(page).toHaveURL(/\/findings\/finding-1\?/)
   await expect(page).toHaveURL(/priority=critical/)
   await expect(
@@ -398,8 +463,9 @@ test("findings detail, quick-view sheet, why dialog, and scroll evidence are cov
 
   await page.getByRole("tab", { name: "TTP Context" }).click()
   await expect(
-    page.getByRole("region", { name: "TTP context empty state" }),
+    page.getByRole("region", { name: "Threat informed context" }),
   ).toBeVisible()
+  await expect(page.getByText("does not prove exploitation")).toBeVisible()
 
   await page.getByRole("tab", { name: "History" }).click()
   await expect(page.getByRole("region", { name: "Finding history" })).toBeVisible()

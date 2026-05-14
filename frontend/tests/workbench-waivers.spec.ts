@@ -127,11 +127,21 @@ test("workbench waiver workflow keeps accepted risk visible", async ({
   expect(importResponse.ok(), await importResponse.text()).toBeTruthy()
 
   await page.goto("/waivers")
-  await expect(page.getByRole("link", { name: "Waivers" })).toBeVisible()
-  await selectRadixOptionByLabel(page, page, "Waivers project", projectName)
+  await expect(
+    page.getByRole("link", { name: "Risk Acceptance" }),
+  ).toBeVisible()
+  await selectRadixOptionByLabel(
+    page,
+    page,
+    "Risk Acceptance project",
+    projectName,
+  )
 
-  await expect(page.getByText("Create waiver").first()).toBeVisible()
-  const createWaiver = page
+  await page.getByRole("button", { name: "Create acceptance" }).first().click()
+  const createWaiver = page.getByRole("dialog", {
+    name: "Create acceptance",
+  })
+  await expect(createWaiver).toBeVisible()
   await createWaiver.getByLabel("Waiver CVE ID").fill("CVE-2024-3094")
   await createWaiver.getByLabel("Waiver owner").fill("risk-owner")
   await createWaiver
@@ -142,7 +152,9 @@ test("workbench waiver workflow keeps accepted risk visible", async ({
   await createWaiver.getByLabel("Waiver approval reference").fill("CAB-064")
   await createWaiver.getByRole("button", { name: "Create waiver" }).click()
 
-  const waiversTable = page.getByRole("table", { name: "Waivers table" })
+  const waiversTable = page.getByRole("table", {
+    name: "Risk acceptance register table",
+  })
   await expect(waiversTable).toContainText("CVE-2024-3094")
   await expect(waiversTable).toContainText("risk-owner")
   await expect(waiversTable).toContainText("Active")
@@ -174,9 +186,19 @@ test("workbench waiver workflow keeps accepted risk visible", async ({
   })
 
   await page.goto("/waivers")
-  await selectRadixOptionByLabel(page, page, "Waivers project", projectName)
+  await selectRadixOptionByLabel(
+    page,
+    page,
+    "Risk Acceptance project",
+    projectName,
+  )
   await waiversTable.getByRole("button", { name: "Expire" }).click()
-  await waiversTable.getByRole("button", { name: "Confirm expiry" }).click()
+  const expireDrawer = page.getByRole("dialog", {
+    name: /Expire CVE CVE-2024-3094/,
+  })
+  await expect(expireDrawer).toBeVisible()
+  await expireDrawer.getByRole("button", { name: "Confirm expiry" }).click()
+  await page.getByRole("button", { name: "Close" }).click()
   await expect(waiversTable).toContainText("Expired")
 
   await page.goto(`/findings/${finding?.id}`)
@@ -283,7 +305,13 @@ test("workbench governance rollups show service risk and waiver debt", async ({
   })
 
   await page.goto("/waivers")
-  await selectRadixOptionByLabel(page, page, "Waivers project", projectName)
+  await selectRadixOptionByLabel(
+    page,
+    page,
+    "Risk Acceptance project",
+    projectName,
+  )
+  await page.getByText("Review queue and lifecycle context").click()
   await expect(page.getByText("Owner follow-up")).toBeVisible()
   await expect(page.getByText("Expired").first()).toBeVisible()
   await expect(page.getByText("Review due").first()).toBeVisible()

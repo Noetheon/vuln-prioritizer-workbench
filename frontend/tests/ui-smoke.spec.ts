@@ -6,7 +6,7 @@ test("smoke: dashboard renders", async ({ page }) => {
   await openWorkbench(page)
   await page.goto("/")
   await expect(
-    page.getByRole("heading", { name: "Risk Operations", level: 1 }).first(),
+    page.getByRole("heading", { name: "Overview", level: 1 }).first(),
   ).toBeVisible()
 })
 
@@ -15,8 +15,10 @@ test("smoke: imports renders", async ({ page }) => {
   await openWorkbench(page)
   await page.goto("/imports")
   await expect(
-    page.getByRole("heading", { name: "Import Wizard" }),
+    page.getByRole("heading", { name: "Upload evidence" }),
   ).toBeVisible()
+  await expect(page.getByText("Provider and ATT&CK options")).toBeHidden()
+  await page.locator("summary").filter({ hasText: "Optional context overlays" }).click()
   await expect(page.getByText("Provider and ATT&CK options")).toBeVisible()
   await expect(page.getByLabel("Provider snapshot file")).toBeVisible()
   await expect(page.getByLabel("ATT&CK source")).toBeVisible()
@@ -45,6 +47,13 @@ test("smoke: evidence center renders", async ({ page }) => {
   await openWorkbench(page)
   await page.goto("/reports")
   await expect(
+    page.getByRole("heading", { level: 1, name: "Evidence Center" }),
+  ).toBeVisible()
+  await expect(page.getByRole("tab", { name: "Artifacts" })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  )
+  await expect(
     page.getByRole("heading", { name: "Generate Evidence Artifacts" }),
   ).toBeVisible()
 })
@@ -54,7 +63,10 @@ test("smoke: providers renders", async ({ page }) => {
   await openWorkbench(page)
   await page.goto("/providers")
   await expect(
-    page.getByRole("heading", { name: "Provider sources" }),
+    page.getByRole("heading", { level: 1, name: "Data Sources" }),
+  ).toBeVisible()
+  await expect(
+    page.getByRole("heading", { name: "Data source inventory" }),
   ).toBeVisible()
 })
 

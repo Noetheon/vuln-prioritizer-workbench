@@ -1,6 +1,7 @@
 import type { WorkbenchPath } from "./workbench-navigation"
 
 type RouteDetail = {
+  description: string
   eyebrow: string
   title: string
   panelTitle: string
@@ -12,67 +13,85 @@ export const routeDetails: Record<
   RouteDetail
 > = {
   "/": {
-    eyebrow: "Security Operations",
-    title: "Risk Operations",
-    panelTitle: "Priority Queue",
-    panelDetail: "Current project signal review",
+    description: "Current risk posture, provider freshness, and next remediation priorities.",
+    eyebrow: "Operate",
+    title: "Overview",
+    panelTitle: "Overview",
+    panelDetail: "Current risk posture and next remediation priorities.",
   },
   "/projects": {
-    eyebrow: "Workbench Projects",
+    description: "Manage local Workbench projects.",
+    eyebrow: "System",
     title: "Projects",
     panelTitle: "Projects",
-    panelDetail:
-      "Manage workbench projects, imported findings, runs, and evidence readiness.",
+    panelDetail: "Manage local Workbench projects.",
   },
   "/imports": {
-    eyebrow: "Workbench Imports",
+    description: "Import supplied vulnerability evidence and review parser/provider results.",
+    eyebrow: "Prepare",
     title: "Imports",
-    panelTitle: "Import Queue",
-    panelDetail: "Normalized scanner, SBOM, and CVE-list inputs",
+    panelTitle: "Imports",
+    panelDetail: "Bring supplied evidence into the Workbench.",
   },
   "/findings": {
-    eyebrow: "Workbench Findings",
-    title: "Findings",
-    panelTitle: "Remediation Queue",
-    panelDetail: "Prioritized remediation worklist",
+    description:
+      "Prioritize known CVEs using risk signals, asset context, VEX, and accepted-risk state.",
+    eyebrow: "Operate",
+    title: "Triage",
+    panelTitle: "Triage",
+    panelDetail: "Decide what to remediate or accept next.",
   },
   "/waivers": {
-    eyebrow: "Risk Acceptance",
-    title: "Waivers",
-    panelTitle: "Waiver Register",
-    panelDetail: "Scoped accepted-risk decisions and lifecycle review",
+    description: "Track accepted risk, review deadlines, expiry, and matched findings.",
+    eyebrow: "Govern",
+    title: "Risk Acceptance",
+    panelTitle: "Risk Acceptance",
+    panelDetail: "Track accepted risk, reviews, and expiry.",
   },
   "/assets": {
-    eyebrow: "Workbench Assets",
+    description: "Maintain ownership, service, exposure, and criticality context for findings.",
+    eyebrow: "Prepare",
     title: "Assets",
-    panelTitle: "Asset Context",
-    panelDetail: "Business and exposure context for ranking",
+    panelTitle: "Assets",
+    panelDetail: "Maintain asset context and ownership.",
   },
   "/providers": {
-    eyebrow: "Workbench Providers",
-    title: "Providers",
-    panelTitle: "Provider Signals",
-    panelDetail: "NVD, EPSS, KEV, and local snapshot status",
+    description: "Check provider freshness, local snapshots, warnings, and diagnostics.",
+    eyebrow: "Prepare",
+    title: "Data Sources",
+    panelTitle: "Data Sources",
+    panelDetail: "Check provider freshness and trust state.",
   },
   "/reports": {
-    eyebrow: "Evidence Center",
+    description: "Generate, verify, and download reports and deterministic evidence bundles.",
+    eyebrow: "Govern",
     title: "Evidence Center",
-    panelTitle: "Evidence Outputs",
-    panelDetail: "Report and evidence bundle readiness",
+    panelTitle: "Evidence Center",
+    panelDetail: "Generate, verify, and download evidence.",
   },
   "/settings": {
-    eyebrow: "Workbench Settings",
-    title: "Settings",
+    description: "Inspect local Workbench runtime, provider, and diagnostic state.",
+    eyebrow: "System",
+    title: "Workspace Settings",
     panelTitle: "Workspace Settings",
-    panelDetail: "Local workspace access, provider state, and diagnostics",
+    panelDetail: "Local runtime and diagnostics.",
   },
 }
 
 export const unknownRouteDetail: RouteDetail = {
+  description: "Current workspace route.",
   eyebrow: "Workbench",
   title: "Workspace",
   panelTitle: "Workbench",
   panelDetail: "Current workspace route",
+}
+
+export const findingDetailRouteDetail: RouteDetail = {
+  description: "Explain evidence, risk, and decision rationale.",
+  eyebrow: "Operate",
+  title: "Finding detail",
+  panelTitle: "Finding detail",
+  panelDetail: "Explain evidence, risk, and decision rationale.",
 }
 
 const routePathOrder: readonly WorkbenchPath[] = [
@@ -103,9 +122,12 @@ export function workbenchPathFromPathname(
 }
 
 export function routeDetailFromPathname(
-  _pathname: string,
+  pathname: string,
   routePath: WorkbenchPath | null,
 ): RouteDetail {
+  if (routePath === "/findings" && /^\/findings\/[^/]+/.test(pathname)) {
+    return findingDetailRouteDetail
+  }
   if (routePath) return routeDetails[routePath]
   return unknownRouteDetail
 }

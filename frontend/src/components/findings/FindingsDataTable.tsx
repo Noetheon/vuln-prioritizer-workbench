@@ -12,7 +12,6 @@ type FindingsDataTableProps = {
   findingDirection: FindingsDirection
   findingSearch: FindingsUrlSearch
   onOpenSheet: (finding: FindingPublic) => void
-  onOpenWhy: (finding: FindingPublic) => void
   onSort: (sort: QueueSort) => void
   queueSort: QueueSort
 }
@@ -22,7 +21,6 @@ export function FindingsDataTable({
   findingDirection,
   findingSearch,
   onOpenSheet,
-  onOpenWhy,
   onSort,
   queueSort,
 }: FindingsDataTableProps) {
@@ -30,7 +28,6 @@ export function FindingsDataTable({
     findingDirection,
     findingSearch,
     onOpenSheet,
-    onOpenWhy,
     onSort,
     queueSort,
   })
@@ -41,7 +38,6 @@ export function FindingsDataTable({
         findingSearch={findingSearch}
         findings={findings}
         onOpenSheet={onOpenSheet}
-        onOpenWhy={onOpenWhy}
       />
       <div className="finding-table-scroll-shell hidden sm:block">
         <VpwDataTable
@@ -52,7 +48,7 @@ export function FindingsDataTable({
           data={findings}
           density="standard"
           getRowKey={(finding) => finding.id}
-          minWidth="960px"
+          minWidth="1040px"
           tableClassName="table-fixed"
         />
       </div>

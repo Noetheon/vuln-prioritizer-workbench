@@ -28,22 +28,32 @@ export type WaiverDebtSummaryItem = {
   value: string
 }
 
+export type WaiverDrawerMode = "detail" | "create" | "review" | "expire" | null
+
 export type WaiversWorkbenchProps = {
   projectListLoading: boolean
   projectSummary: ProjectDecisionSummaryPublic | null
   projects: ProjectPublic[]
   selectedProject: ProjectPublic | null
   selectedProjectId: string
+  closeWaiverDrawer: () => void
   onCreateWaiver: FormEventHandler<HTMLFormElement>
   onExpireWaiver: (waiver: WaiverPublic) => void
   onFieldChange: (field: keyof WaiverFormStateLike, value: string) => void
   onProjectChange: (projectId: string) => void
   onRefreshWaivers: () => void
+  onReviewFieldChange: (field: keyof WaiverFormStateLike, value: string) => void
+  onUpdateWaiver: FormEventHandler<HTMLFormElement>
+  openWaiverDrawer: (mode: Exclude<WaiverDrawerMode, null>, waiver?: WaiverPublic) => void
+  selectedWaiver: WaiverPublic | null
+  selectedWaiverId: string
   waiverActionError: string
   waiverActionLoading: boolean
   waiverActionMessage: string
   waiverDebtItems: readonly GovernanceWaiverDebtEntryPublic[]
   waiverDebtSummary: readonly WaiverDebtSummaryItem[]
+  waiverDrawerMode: WaiverDrawerMode
+  waiverEditForm: WaiverFormStateLike
   waiverForm: WaiverFormStateLike
   waivers: WaiverPublic[]
   waiversError: string

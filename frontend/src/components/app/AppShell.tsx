@@ -5,7 +5,7 @@ import {
 } from "lucide-react"
 import { type ReactNode, useEffect, useRef, useState } from "react"
 import { cn } from "../../lib/utils"
-import type { NavigationEntry, WorkbenchPath } from "../../lib/workbench-navigation"
+import type { NavigationGroup, WorkbenchPath } from "../../lib/workbench-navigation"
 import { Button } from "../ui/button"
 import {
   Sheet,
@@ -28,6 +28,7 @@ export type StatusSummaryItem = {
 }
 
 type PageHeaderProps = {
+  description: string
   eyebrow: string
   title: string
 }
@@ -37,7 +38,7 @@ type AppShellProps = PageHeaderProps & {
   children: ReactNode
   healthLabel: string
   hideStatusStrip?: boolean
-  navigation: readonly NavigationEntry[]
+  navigationGroups: readonly NavigationGroup[]
   navigationKey: string
   statusItems: readonly StatusSummaryItem[]
   workspaceLabel: string
@@ -74,10 +75,11 @@ function writeSidebarCollapsed(collapsed: boolean) {
 export function AppShell({
   activePath,
   children,
+  description,
   eyebrow,
   healthLabel,
   hideStatusStrip = false,
-  navigation,
+  navigationGroups,
   navigationKey,
   statusItems,
   title,
@@ -87,6 +89,7 @@ export function AppShell({
   const [sidebarCollapsed, setSidebarCollapsed] = useState(readSidebarCollapsed)
   const contentRef = useRef<HTMLElement | null>(null)
   const lastNavigationKeyRef = useRef<string | null>(null)
+  const mobileNavButtonRef = useRef<HTMLButtonElement | null>(null)
 
   useEffect(() => {
     writeSidebarCollapsed(sidebarCollapsed)
@@ -206,49 +209,62 @@ export function AppShell({
                   </Tooltip>
                 </li>
               ) : null}
-              {navigation.map((entry) => {
-                const isActive = activePath === entry.to
-                const navLink = (
-                  <Link
-                    aria-current={isActive ? "page" : undefined}
-                    aria-label={sidebarCollapsed ? entry.label : undefined}
-                    className={cn(
-                      "flex items-center gap-2.5 rounded-[var(--vpw-radius-md)] text-sm font-medium transition-colors",
-                      sidebarCollapsed
-                        ? "mx-auto size-10 justify-center p-0"
-                        : "min-h-10 w-full px-3",
-                      isActive
-                        ? "bg-[var(--vpw-text-primary)] text-[var(--vpw-bg-card)] shadow-[var(--vpw-shadow-1)]"
-                        : "text-[var(--vpw-text-secondary)] hover:bg-[var(--vpw-bg-panel)] hover:text-[var(--vpw-text-primary)]",
-                    )}
-                    to={entry.to}
-                  >
-                    <entry.icon
-                      aria-hidden="true"
-                      className="shrink-0"
-                      size={16}
-                    />
-                    {!sidebarCollapsed ? (
-                      <span className="truncate">{entry.label}</span>
-                    ) : null}
-                  </Link>
-                )
+              {navigationGroups.map((group) => (
+                <li key={group.label}>
+                  {!sidebarCollapsed ? (
+                    <p className="px-3 pb-1 pt-3 text-[10px] font-bold uppercase text-[var(--vpw-text-muted)]">
+                      {group.label}
+                    </p>
+                  ) : null}
+                  <ul className="flex flex-col gap-1">
+                    {group.items.map((entry) => {
+                      const isActive = activePath === entry.to
+                      const navLink = (
+                        <Link
+                          aria-current={isActive ? "page" : undefined}
+                          aria-label={
+                            sidebarCollapsed ? entry.label : undefined
+                          }
+                          className={cn(
+                            "flex items-center gap-2.5 rounded-[var(--vpw-radius-md)] text-sm font-medium transition-colors",
+                            sidebarCollapsed
+                              ? "mx-auto size-10 justify-center p-0"
+                              : "min-h-10 w-full px-3",
+                            isActive
+                              ? "bg-[var(--vpw-text-primary)] text-[var(--vpw-bg-card)] shadow-[var(--vpw-shadow-1)]"
+                              : "text-[var(--vpw-text-secondary)] hover:bg-[var(--vpw-bg-panel)] hover:text-[var(--vpw-text-primary)]",
+                          )}
+                          to={entry.to}
+                        >
+                          <entry.icon
+                            aria-hidden="true"
+                            className="shrink-0"
+                            size={16}
+                          />
+                          {!sidebarCollapsed ? (
+                            <span className="truncate">{entry.label}</span>
+                          ) : null}
+                        </Link>
+                      )
 
-                return (
-                  <li key={entry.label}>
-                    {sidebarCollapsed ? (
-                      <Tooltip>
-                        <TooltipTrigger asChild>{navLink}</TooltipTrigger>
-                        <TooltipContent side="right">
-                          {entry.label}
-                        </TooltipContent>
-                      </Tooltip>
-                    ) : (
-                      navLink
-                    )}
-                  </li>
-                )
-              })}
+                      return (
+                        <li key={entry.label}>
+                          {sidebarCollapsed ? (
+                            <Tooltip>
+                              <TooltipTrigger asChild>{navLink}</TooltipTrigger>
+                              <TooltipContent side="right">
+                                {entry.label}
+                              </TooltipContent>
+                            </Tooltip>
+                          ) : (
+                            navLink
+                          )}
+                        </li>
+                      )
+                    })}
+                  </ul>
+                </li>
+              ))}
             </ul>
           </nav>
 
@@ -289,6 +305,7 @@ export function AppShell({
                   <Button
                     aria-label="Open navigation"
                     className="size-9 border-[var(--vpw-border-default)] text-[var(--vpw-text-secondary)] lg:hidden"
+                    ref={mobileNavButtonRef}
                     size="icon"
                     type="button"
                     variant="outline"
@@ -298,6 +315,12 @@ export function AppShell({
                 </SheetTrigger>
                 <SheetContent
                   className="flex w-[min(22rem,calc(100vw-2rem))] flex-col overflow-y-auto bg-[var(--vpw-bg-page)] p-0 text-[var(--vpw-text-primary)]"
+                  onCloseAutoFocus={(event) => {
+                    event.preventDefault()
+                    mobileNavButtonRef.current?.focus({
+                      preventScroll: true,
+                    })
+                  }}
                   side="left"
                 >
                   <SheetHeader className="border-b border-[var(--vpw-border-default)] px-4 py-4 text-left">
@@ -319,32 +342,45 @@ export function AppShell({
                     aria-label="Workbench mobile navigation"
                     className="flex-1 p-2"
                   >
-                    <ul className="flex flex-col gap-1">
-                      {navigation.map((entry) => {
-                        const isActive = activePath === entry.to
-                        return (
-                          <li key={entry.label}>
-                            <Link
-                              aria-current={isActive ? "page" : undefined}
-                              className={cn(
-                                "flex min-h-11 items-center gap-3 rounded-[var(--vpw-radius-md)] px-3 text-sm font-medium transition-colors",
-                                isActive
-                                  ? "bg-[var(--vpw-text-primary)] text-[var(--vpw-bg-card)]"
-                                  : "text-[var(--vpw-text-secondary)] hover:bg-[var(--vpw-bg-panel)] hover:text-[var(--vpw-text-primary)]",
-                              )}
-                              onClick={() => setMobileNavOpen(false)}
-                              to={entry.to}
-                            >
-                              <entry.icon
-                                aria-hidden="true"
-                                className="shrink-0"
-                                size={17}
-                              />
-                              <span className="truncate">{entry.label}</span>
-                            </Link>
-                          </li>
-                        )
-                      })}
+                    <ul className="flex flex-col gap-3">
+                      {navigationGroups.map((group) => (
+                        <li key={group.label}>
+                          <p className="px-3 pb-1 text-[10px] font-bold uppercase text-[var(--vpw-text-muted)]">
+                            {group.label}
+                          </p>
+                          <ul className="flex flex-col gap-1">
+                            {group.items.map((entry) => {
+                              const isActive = activePath === entry.to
+                              return (
+                                <li key={entry.label}>
+                                  <Link
+                                    aria-current={
+                                      isActive ? "page" : undefined
+                                    }
+                                    className={cn(
+                                      "flex min-h-11 items-center gap-3 rounded-[var(--vpw-radius-md)] px-3 text-sm font-medium transition-colors",
+                                      isActive
+                                        ? "bg-[var(--vpw-text-primary)] text-[var(--vpw-bg-card)]"
+                                        : "text-[var(--vpw-text-secondary)] hover:bg-[var(--vpw-bg-panel)] hover:text-[var(--vpw-text-primary)]",
+                                    )}
+                                    onClick={() => setMobileNavOpen(false)}
+                                    to={entry.to}
+                                  >
+                                    <entry.icon
+                                      aria-hidden="true"
+                                      className="shrink-0"
+                                      size={17}
+                                    />
+                                    <span className="truncate">
+                                      {entry.label}
+                                    </span>
+                                  </Link>
+                                </li>
+                              )
+                            })}
+                          </ul>
+                        </li>
+                      ))}
                     </ul>
                   </nav>
                   <div className="flex shrink-0 items-center gap-2 border-t border-[var(--vpw-border-default)] p-3">
@@ -364,6 +400,9 @@ export function AppShell({
                 <h1 className="truncate text-base font-bold leading-tight text-[var(--vpw-text-primary)]">
                   {title}
                 </h1>
+                <p className="hidden truncate text-xs text-[var(--vpw-text-muted)] md:block">
+                  {description}
+                </p>
               </div>
             </div>
             <div

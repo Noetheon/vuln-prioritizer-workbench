@@ -1,4 +1,4 @@
-import { BriefcaseBusiness, RefreshCw, Server } from "lucide-react"
+import { BriefcaseBusiness, Server } from "lucide-react"
 
 import type { ProjectPublic } from "../../api-client"
 import { Button } from "../ui/button"
@@ -29,12 +29,11 @@ export function AssetInventoryShell({
   children,
   clearAssetFilters,
   hasAssets,
+  openImportAssets,
   projectLoading,
   projects,
   projectSelectDisabled,
-  refreshAssets,
   selectProject,
-  selectedAssetId,
   selectedProject,
   selectedProjectId,
   setAssetOwnerFilter,
@@ -46,12 +45,11 @@ export function AssetInventoryShell({
   children: ReactNode
   clearAssetFilters: () => void
   hasAssets: boolean
+  openImportAssets: () => void
   projectLoading: boolean
   projects: ProjectPublic[]
   projectSelectDisabled: boolean
-  refreshAssets: (preferredAssetId?: string) => Promise<void>
   selectProject: (projectId: string) => void
-  selectedAssetId: string
   selectedProject: ProjectPublic | null
   selectedProjectId: string
   setAssetOwnerFilter: (value: string) => void
@@ -60,17 +58,6 @@ export function AssetInventoryShell({
   return (
     <VpwSection>
       <VpwSectionHeader
-        actions={
-          <Button
-            disabled={projectSelectDisabled}
-            onClick={() => void refreshAssets(selectedAssetId)}
-            type="button"
-            variant="outline"
-          >
-            <RefreshCw aria-hidden="true" />
-            Refresh
-          </Button>
-        }
         description="Filter project assets by service and owner, then inspect the context that changes prioritization."
         eyebrow="In-scope assets"
         title="Asset inventory"
@@ -135,8 +122,8 @@ export function AssetInventoryShell({
       {!assetsLoading && selectedProject && !hasAssets ? (
         <VpwEmptyState
           action={
-            <Button asChild variant="outline">
-              <a href="#asset-context-import">Import asset context</a>
+            <Button onClick={openImportAssets} type="button" variant="outline">
+              Import asset context
             </Button>
           }
           icon={<Server aria-hidden="true" />}

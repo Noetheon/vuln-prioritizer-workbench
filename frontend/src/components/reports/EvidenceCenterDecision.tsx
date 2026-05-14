@@ -70,16 +70,22 @@ export function QualityFacts({
   isDemo,
   providerStatus,
   reports,
+  selectedRunSummary,
 }: {
   isDemo: boolean
   providerStatus: ProviderStatusPublic | null
   reports: ReportPublic[]
+  selectedRunSummary: AnalysisRunSummaryPublic | null
 }) {
   const providerSummary = providerStatus
     ? formatProviderFreshness(providerStatus)
     : null
   const effectiveReports = isDemo ? DEMO_REPORTS : reports
   const bundle = effectiveReports.find((report) => report.format === "zip")
+  const parserIssueCount = isDemo
+    ? 0
+    : (selectedRunSummary?.parse_errors?.length ?? 0)
+  const ignoredLines = isDemo ? 0 : (selectedRunSummary?.ignored_lines ?? 0)
 
   return (
     <VpwKeyValueList
@@ -102,6 +108,21 @@ export function QualityFacts({
             ? bundle.sha256
             : "Generate an evidence ZIP to record bundle integrity.",
           tone: bundle ? "success" : "neutral",
+        },
+        {
+          label: "Parser warnings",
+          value: parserIssueCount,
+          description:
+            parserIssueCount > 0
+              ? "Review rejected rows in the import run diagnostics."
+              : "No parser warnings recorded for the selected run.",
+          tone: parserIssueCount > 0 ? "warning" : "success",
+        },
+        {
+          label: "Ignored rows",
+          value: ignoredLines,
+          description: "Rows ignored during import normalization.",
+          tone: ignoredLines > 0 ? "warning" : "neutral",
         },
       ]}
     />

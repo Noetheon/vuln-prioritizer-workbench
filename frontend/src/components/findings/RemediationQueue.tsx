@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import type {
   FindingPublic,
   ProjectDecisionSummaryPublic,
@@ -7,6 +7,8 @@ import type {
 import type { FindingsUrlSearch } from "./findings-search-state"
 import { DEMO_FINDINGS, DEMO_PROJECT, DEMO_SUMMARY } from "@/lib/demo-data"
 import { DEMO_MODE_ENABLED } from "@/lib/runtime-config"
+import { apiErrorMessage } from "@/lib/app-errors"
+import { useFindingDetailQuery } from "@/workbench/useWorkbenchQueries"
 import type { QueueSort } from "./FindingsDataTable"
 import { RemediationQueueView } from "./RemediationQueueView"
 import {
@@ -14,6 +16,7 @@ import {
   advancedFilterCount,
   defaultSortDirections,
   type FindingFilters,
+  type FindingsSavedView,
   type FindingsDirection,
   type FindingsSort,
   isApiSort,
@@ -55,6 +58,7 @@ export type RemediationQueueProps = {
   onPagePrev: () => void
   onPageSizeChange: (size: number) => void
   onProjectChange: (id: string) => void
+  onSavedViewChange: (view: FindingsSavedView) => void
 }
 
 export function RemediationQueue({
@@ -86,16 +90,18 @@ export function RemediationQueue({
   onPagePrev,
   onPageSizeChange,
   onProjectChange,
+  onSavedViewChange,
 }: RemediationQueueProps) {
   const ownerServiceFilter = findingFilters.ownerService
   const [ownerServiceDraft, setOwnerServiceDraft] =
     useState(ownerServiceFilter)
-  const [whyFinding, setWhyFinding] = useState<FindingPublic | null>(null)
   const [sheetFinding, setSheetFinding] = useState<FindingPublic | null>(null)
-  const [whyOpen, setWhyOpen] = useState(false)
   const [sheetOpen, setSheetOpen] = useState(false)
   const [advancedFiltersOpen, setAdvancedFiltersOpen] = useState(false)
+  const sheetTriggerRef = useRef<HTMLElement | null>(null)
   const queueSort: QueueSort = findingSort
+  const selectedFindingId = sheetOpen ? (sheetFinding?.id ?? null) : null
+  const findingDetailQuery = useFindingDetailQuery(selectedFindingId)
 
   const isDemo =
     DEMO_MODE_ENABLED &&
@@ -152,13 +158,21 @@ export function RemediationQueue({
     return () => window.clearTimeout(timeout)
   }, [onFilterChange, ownerServiceDraft, ownerServiceFilter])
 
-  function openWhy(finding: FindingPublic) {
-    setWhyFinding(finding)
-    setWhyOpen(true)
-  }
   function openSheet(finding: FindingPublic) {
+    if (
+      typeof document !== "undefined" &&
+      document.activeElement instanceof HTMLElement
+    ) {
+      sheetTriggerRef.current = document.activeElement
+    }
     setSheetFinding(finding)
     setSheetOpen(true)
+  }
+  function closeSheet() {
+    setSheetOpen(false)
+    window.setTimeout(() => {
+      sheetTriggerRef.current?.focus({ preventScroll: true })
+    }, 0)
   }
 
   function updateColumnSort(sort: QueueSort) {
@@ -197,6 +211,7 @@ export function RemediationQueue({
     onPagePrev,
     onPageSizeChange,
     onProjectChange,
+    onSavedViewChange,
     onSortDirectionChange,
     projectListError,
     projectListLoading,
@@ -219,7 +234,6 @@ export function RemediationQueue({
       isLoading={isLoading}
       kevCount={kevCount}
       onOpenSheet={openSheet}
-      onOpenWhy={openWhy}
       onUpdateColumnSort={updateColumnSort}
       openCount={openCount}
       ownerServiceDraft={ownerServiceDraft}
@@ -228,15 +242,27 @@ export function RemediationQueue({
       queueSort={queueSort}
       setAdvancedFiltersOpen={setAdvancedFiltersOpen}
       setOwnerServiceDraft={setOwnerServiceDraft}
-      setSheetOpen={setSheetOpen}
-      setWhyOpen={setWhyOpen}
+      sheetDetail={findingDetailQuery.data?.detail ?? null}
+      sheetError={
+        findingDetailQuery.isError
+          ? apiErrorMessage("Finding detail unavailable", findingDetailQuery.error)
+          : ""
+      }
+      sheetExplanation={findingDetailQuery.data?.explanation ?? null}
+      sheetExplanationWarning={
+        findingDetailQuery.data?.explanationWarning ?? ""
+      }
       sheetFinding={sheetFinding}
+      sheetLoading={
+        Boolean(selectedFindingId) &&
+        (findingDetailQuery.isLoading || findingDetailQuery.isFetching)
+      }
+      sheetOnClose={closeSheet}
       sheetOpen={sheetOpen}
+      sheetOnRefresh={() => void findingDetailQuery.refetch()}
       showAdvancedFilters={showAdvancedFilters}
       signalFilterCount={signalFilterCount}
       totalCount={totalCount}
-      whyFinding={whyFinding}
-      whyOpen={whyOpen}
     />
   )
 }

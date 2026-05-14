@@ -410,7 +410,7 @@ const evidenceProviderStatus = {
 const entryRoute: EvidenceRoute = {
   assertReady: async (page) => {
     await expect(
-      page.getByRole("heading", { level: 1, name: "Risk Operations" }),
+      page.getByRole("heading", { level: 1, name: "Overview" }),
     ).toBeVisible({ timeout: 15_000 })
     await expect(page.getByLabel("Email")).toHaveCount(0)
     await expect(page.getByLabel("Password")).toHaveCount(0)
@@ -424,7 +424,7 @@ const workbenchRoutes: readonly EvidenceRoute[] = [
     assertReady: async (page) => {
       await expect(
         page
-          .getByRole("heading", { level: 1, name: "Risk Operations" })
+          .getByRole("heading", { level: 1, name: "Overview" })
           .first(),
       ).toBeVisible({ timeout: 15_000 })
       await expect(
@@ -449,7 +449,7 @@ const workbenchRoutes: readonly EvidenceRoute[] = [
   {
     assertReady: async (page) => {
       await expect(
-        page.getByRole("heading", { name: "Import Wizard" }),
+        page.getByRole("heading", { name: "Upload evidence" }),
       ).toBeVisible({ timeout: 15_000 })
       await expect(page.getByLabel("Input type")).toBeVisible()
     },
@@ -501,6 +501,9 @@ const workbenchRoutes: readonly EvidenceRoute[] = [
         page.getByRole("heading", { level: 2, name: "Evidence Center" }),
       ).toBeVisible({ timeout: 15_000 })
       await expect(
+        page.getByRole("tab", { name: "Artifacts" }),
+      ).toHaveAttribute("aria-selected", "true")
+      await expect(
         page.getByRole("heading", { name: "Generate Evidence Artifacts" }),
       ).toBeVisible()
     },
@@ -513,7 +516,10 @@ const workbenchRoutes: readonly EvidenceRoute[] = [
         page.getByRole("heading", { level: 2, name: "Assets" }).first(),
       ).toBeVisible({ timeout: 15_000 })
       await expect(
-        page.getByRole("heading", { name: "build-host-1" }).first(),
+        page.getByRole("table", { name: "Assets table" }),
+      ).toContainText("build-host-1")
+      await expect(
+        page.getByRole("button", { name: "Add asset" }),
       ).toBeVisible()
     },
     id: "assets",
@@ -522,7 +528,11 @@ const workbenchRoutes: readonly EvidenceRoute[] = [
   {
     assertReady: async (page) => {
       await expect(
-        page.getByRole("heading", { level: 2, name: "Waivers" }),
+        page.getByRole("heading", {
+          exact: true,
+          level: 2,
+          name: "Risk Acceptance",
+        }),
       ).toBeVisible({ timeout: 15_000 })
       await expect(page.getByText("CAB-2026-014").first()).toBeVisible()
     },
@@ -532,10 +542,10 @@ const workbenchRoutes: readonly EvidenceRoute[] = [
   {
     assertReady: async (page) => {
       await expect(
-        page.getByRole("heading", { level: 2, name: "Providers" }),
+        page.getByRole("heading", { level: 1, name: "Data Sources" }),
       ).toBeVisible({ timeout: 15_000 })
       await expect(
-        page.getByRole("heading", { level: 2, name: "Provider sources" }),
+        page.getByRole("heading", { level: 2, name: "Data source inventory" }),
       ).toBeVisible()
     },
     id: "providers",

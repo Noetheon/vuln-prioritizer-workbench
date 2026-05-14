@@ -19,26 +19,33 @@ test("imports route deep links selected run and preserves it across reload", asy
 
   await page.goto(`/imports?projectId=${mockProject.id}&runId=${runTwo.id}`)
 
-  await expect(page.getByRole("heading", { name: runTwo.id })).toBeVisible()
+  const runTwoRow = page.getByRole("row", {
+    name: /historical-import-two\.txt/,
+  })
   await expect(
     page.getByRole("cell", { name: "historical-import-two.txt" }),
   ).toBeVisible()
+  await expect(runTwoRow).toContainText("4 finding(s)")
+  await runTwoRow.getByRole("button", { name: "View diagnostics" }).click()
+  const diagnostics = page.getByRole("dialog", { name: "Run diagnostics" })
+  await expect(diagnostics).toContainText(runTwo.id)
   await expect(
-    page.getByRole("link", { exact: true, name: "Evidence" }),
+    diagnostics.getByRole("link", { exact: true, name: "Evidence Center" }),
   ).toHaveAttribute("href", `/reports?projectId=${mockProject.id}&runId=${runTwo.id}`)
+  await page.keyboard.press("Escape")
 
   await page.reload()
 
   await expect(page).toHaveURL(new RegExp(`runId=${runTwo.id}`))
-  await expect(page.getByRole("heading", { name: runTwo.id })).toBeVisible()
+  await expect(runTwoRow).toContainText("4 finding(s)")
 
   await page
     .getByRole("row", { name: /historical-import-one\.txt/ })
-    .getByRole("button", { name: "Inspect" })
+    .getByRole("button", { name: "View diagnostics" })
     .click()
 
   await expect(page).toHaveURL(new RegExp(`runId=${runOne.id}`))
-  await expect(page.getByRole("heading", { name: runOne.id })).toBeVisible()
+  await expect(diagnostics).toContainText(runOne.id)
 })
 
 function importRun(id: string, filename: string): AnalysisRunPublic {

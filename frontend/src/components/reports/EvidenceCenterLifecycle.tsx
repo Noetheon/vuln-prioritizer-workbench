@@ -181,7 +181,7 @@ export function ArtifactSection({
   reportActionsEnabled,
 }: ArtifactSectionProps) {
   return (
-    <VpwSection>
+    <VpwSection id="evidence-artifacts">
       <VpwSectionHeader
         actions={
           isDemo ? (
