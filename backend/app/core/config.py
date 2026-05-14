@@ -65,6 +65,7 @@ class Settings:
     API_RATE_LIMIT_PER_MINUTE: int = 600
     DECISION_API_MAX_FINDINGS: int = 1000
     BACKGROUND_IMPORT_STALE_MINUTES: int = 120
+    PROVIDER_UPDATE_STALE_MINUTES: int = 120
     TRUSTED_PROXY_CIDRS: tuple[str, ...] = field(default_factory=tuple)
     AUDIT_RETENTION_DAYS: int = 365
     ALLOWED_HOSTS: tuple[str, ...] = field(default_factory=lambda: DEFAULT_ALLOWED_HOSTS)
@@ -218,6 +219,10 @@ def load_settings() -> Settings:
         DECISION_API_MAX_FINDINGS=_positive_int_from_env("DECISION_API_MAX_FINDINGS", 1000),
         BACKGROUND_IMPORT_STALE_MINUTES=_positive_int_from_env(
             "BACKGROUND_IMPORT_STALE_MINUTES",
+            120,
+        ),
+        PROVIDER_UPDATE_STALE_MINUTES=_positive_int_from_env(
+            "PROVIDER_UPDATE_STALE_MINUTES",
             120,
         ),
         TRUSTED_PROXY_CIDRS=parse_trusted_proxy_cidrs(environ.get("TRUSTED_PROXY_CIDRS", "")),

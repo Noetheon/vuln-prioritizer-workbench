@@ -668,7 +668,7 @@ export class ProvidersService {
     /**
      * Create Provider Update Job
      *
-     * Synchronously create a cache-friendly provider snapshot refresh job.
+     * Create a cache-friendly provider snapshot refresh job.
      */
     public static createProviderUpdateJob<ThrowOnError extends boolean = true>(parameters: {
         providerUpdateJobCreate: ProviderUpdateJobCreate;
