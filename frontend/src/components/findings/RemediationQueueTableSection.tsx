@@ -26,7 +26,6 @@ type RemediationQueueTableSectionProps = {
   findingsLoading: boolean
   isDemo: boolean
   onOpenSheet: (finding: FindingPublic) => void
-  onOpenWhy: (finding: FindingPublic) => void
   onPageNext: () => void
   onPagePrev: () => void
   onPageSizeChange: (size: number) => void
@@ -48,7 +47,6 @@ export function RemediationQueueTableSection({
   findingsLoading,
   isDemo,
   onOpenSheet,
-  onOpenWhy,
   onPageNext,
   onPagePrev,
   onPageSizeChange,
@@ -102,7 +100,6 @@ export function RemediationQueueTableSection({
           findingSearch={findingSearch}
           findings={displayFindings}
           onOpenSheet={onOpenSheet}
-          onOpenWhy={onOpenWhy}
           onSort={onUpdateColumnSort}
           queueSort={queueSort}
         />

@@ -264,7 +264,7 @@ export function buildProviderEvidenceFlowItems({
       description:
         "NVD, EPSS and KEV context is read from the stored source state.",
       meta: `${availableSources} available`,
-      title: "Provider sources",
+      title: "Data sources",
       tone: missingSources > 0 ? "warning" : "success",
     },
     {

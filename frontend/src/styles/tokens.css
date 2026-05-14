@@ -135,6 +135,7 @@
   --vpw-red: #c40000;
   --vpw-violet: #7928ca;
   --vpw-navy: #171717;
+  --vpw-text-info: color-mix(in srgb, var(--vpw-blue) 80%, var(--vpw-text-primary));
 
   --vpw-radius-sm: 4px;
   --vpw-radius-md: 6px;

@@ -1,27 +1,23 @@
-import { RefreshCw } from "lucide-react"
+import { Eye, ListTree, RefreshCw } from "lucide-react"
 
 import type { AssetPublic } from "../../api-client"
 import { Button } from "../ui/button"
 import {
-  VpwBadge,
+  CountBadge,
+  MetaTag,
+  RiskBadge,
+  StatusLozenge,
   VpwDataTable,
   type VpwDataTableColumn,
 } from "../vpw"
-import {
-  assetFindingsHref,
-  assetScoreTone,
-  criticalityTone,
-  environmentTone,
-  exposureTone,
-  findingPriorityTone,
-  formatDateTime,
-  scoreStatusLabel,
-} from "./asset-model"
 import { formatLabel as labelize, optionalText } from "../../lib/ui-copy"
+import type { AssetDrawerMode } from "./AssetsRoute"
+import { formatDateTime, scoreStatusLabel } from "./asset-model"
 
 export function AssetTable({
   assetActionLoading,
   assets,
+  openAssetDrawer,
   recalculateAsset,
   selectedAssetId,
   selectedHighestPriority,
@@ -30,6 +26,10 @@ export function AssetTable({
 }: {
   assetActionLoading: boolean
   assets: AssetPublic[]
+  openAssetDrawer: (
+    mode: Exclude<AssetDrawerMode, null>,
+    asset?: AssetPublic,
+  ) => void
   recalculateAsset: (asset: AssetPublic) => Promise<void>
   selectedAssetId: string
   selectedHighestPriority: string
@@ -60,46 +60,31 @@ export function AssetTable({
       id: "asset",
     },
     {
-      cell: (asset) => optionalText(asset.business_service),
-      header: "Service",
-      id: "service",
-    },
-    {
-      cell: (asset) => optionalText(asset.owner),
-      header: "Owner",
-      id: "owner",
-    },
-    {
       cell: (asset) => (
-        <VpwBadge tone={environmentTone(asset.environment)}>
-          {labelize(asset.environment)}
-        </VpwBadge>
+        <div className="flex min-w-36 flex-wrap gap-1.5">
+          <MetaTag label={optionalText(asset.business_service)} />
+          <MetaTag label={optionalText(asset.owner)} />
+        </div>
       ),
-      header: "Environment",
-      id: "environment",
+      header: "Service / Owner",
+      id: "service-owner",
     },
     {
       cell: (asset) => (
-        <VpwBadge tone={exposureTone(asset.exposure)}>
-          {labelize(asset.exposure)}
-        </VpwBadge>
+        <div className="flex min-w-36 flex-wrap gap-1.5">
+          <MetaTag label={labelize(asset.environment)} />
+          <MetaTag label={labelize(asset.exposure)} />
+        </div>
       ),
-      header: "Exposure",
-      id: "exposure",
+      header: "Environment / Exposure",
+      id: "environment-exposure",
     },
     {
       cell: (asset) => (
-        <VpwBadge tone={criticalityTone(asset.criticality)}>
-          {labelize(asset.criticality)}
-        </VpwBadge>
+        <RiskBadge level={asset.criticality} />
       ),
       header: "Criticality",
       id: "criticality",
-    },
-    {
-      cell: (asset) => asset.finding_count ?? 0,
-      header: "Findings",
-      id: "findings",
     },
     {
       cell: (asset) => {
@@ -109,30 +94,58 @@ export function AssetTable({
             : asset.finding_count
               ? "Linked"
               : "None"
-        return <VpwBadge tone={findingPriorityTone(value)}>{value}</VpwBadge>
+        return (
+          <div className="flex min-w-28 flex-wrap gap-1.5">
+            <CountBadge value={asset.finding_count ?? 0} />
+            {["critical", "high", "medium", "low"].includes(
+              value.toLowerCase(),
+            ) ? (
+              <RiskBadge level={value} />
+            ) : (
+              <StatusLozenge label={value} status="unknown" />
+            )}
+          </div>
+        )
       },
-      header: "Highest priority",
-      id: "highest-priority",
+      header: "Findings",
+      id: "findings",
     },
     {
       cell: (asset) => (
-        <VpwBadge tone={assetScoreTone(asset)}>
-          {scoreStatusLabel(asset)}
-        </VpwBadge>
+        <div className="grid min-w-32 gap-1">
+          <StatusLozenge
+            label={scoreStatusLabel(asset)}
+            status={asset.rescore_needed ? "review_due" : "fresh"}
+          />
+          <span className="text-xs text-[var(--vpw-text-muted)]">
+            {formatDateTime(asset.updated_at)}
+          </span>
+        </div>
       ),
-      header: "Score state",
-      id: "score-state",
-    },
-    {
-      cell: (asset) => formatDateTime(asset.updated_at),
-      header: "Updated",
-      id: "updated",
+      header: "Status",
+      id: "status",
     },
     {
       cell: (asset) => (
-        <div className="flex min-w-52 flex-wrap gap-2">
-          <Button asChild size="sm" variant="outline">
-            <a href={assetFindingsHref(asset)}>Findings</a>
+        <div className="flex min-w-64 flex-wrap gap-2">
+          <Button
+            aria-current={selectedAssetId === asset.id ? "true" : undefined}
+            onClick={() => openAssetDrawer("detail", asset)}
+            size="sm"
+            type="button"
+            variant="outline"
+          >
+            <Eye aria-hidden="true" />
+            View
+          </Button>
+          <Button
+            onClick={() => openAssetDrawer("linked-findings", asset)}
+            size="sm"
+            type="button"
+            variant="outline"
+          >
+            <ListTree aria-hidden="true" />
+            Linked findings
           </Button>
           <Button
             onClick={() => {
@@ -170,7 +183,7 @@ export function AssetTable({
       data={assets}
       density="compact"
       getRowKey={(asset) => asset.id}
-      minWidth="1120px"
+      minWidth="1040px"
     />
   )
 }

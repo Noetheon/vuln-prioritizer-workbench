@@ -32,6 +32,7 @@ export function WaiversHero({
   activeWaivers,
   expired,
   expiringSoon,
+  openWaiverDrawer,
   onProjectChange,
   projectListLoading,
   projectSummary,
@@ -40,6 +41,7 @@ export function WaiversHero({
   selectedProjectId,
 }: Pick<
   WaiversWorkbenchProps,
+  | "openWaiverDrawer"
   | "onProjectChange"
   | "projectListLoading"
   | "projectSummary"
@@ -59,8 +61,12 @@ export function WaiversHero({
         <VpwSectionHeader
           actions={
             <>
-              <Button asChild>
-                <a href="#create-waiver">Create waiver</a>
+              <Button
+                disabled={projectListLoading || projects.length === 0}
+                onClick={() => openWaiverDrawer("create")}
+                type="button"
+              >
+                Create acceptance
               </Button>
               <Button asChild variant="outline">
                 <Link search={projectSearch} to="/findings">
@@ -71,7 +77,7 @@ export function WaiversHero({
           }
           description="Govern accepted risk decisions with owner, scope, expiry and evidence."
           eyebrow="Risk acceptance"
-          title="Waivers"
+          title="Risk Acceptance"
         />
         <VpwToolbar label="Waiver context" variant="plain">
           <VpwToolbarGroup className="min-w-0">
@@ -81,7 +87,7 @@ export function WaiversHero({
                 onValueChange={onProjectChange}
                 value={selectedProjectId}
               >
-                <SelectTrigger aria-label="Waivers project">
+                <SelectTrigger aria-label="Risk Acceptance project">
                   <SelectValue placeholder="Select project" />
                 </SelectTrigger>
                 <SelectContent>
@@ -141,7 +147,7 @@ export function WaiverMetrics({
       <VpwMetricCard
         description="currently accepted risk"
         icon={<ShieldCheck aria-hidden="true" className="h-4 w-4" />}
-        label="Active waivers"
+        label="Active acceptances"
         tone="success"
         value={waiversLoading ? "Loading" : activeWaivers}
       />
@@ -155,7 +161,7 @@ export function WaiverMetrics({
       <VpwMetricCard
         description="past expiry date"
         icon={<AlertTriangle aria-hidden="true" className="h-4 w-4" />}
-        label="Expired waivers"
+        label="Expired acceptances"
         tone={Number(expired) > 0 ? "critical" : "neutral"}
         value={expired}
       />

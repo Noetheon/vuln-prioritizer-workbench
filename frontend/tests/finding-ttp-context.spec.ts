@@ -79,6 +79,12 @@ test("workbench finding detail renders TTP Context tab", async ({ page }) => {
   await expect(ttpPanel).toContainText(
     "Workbench does not infer tactics or techniques for unmapped CVEs.",
   )
+  await expect(ttpPanel).toContainText(
+    "No exploit steps, payloads, PoC guidance, active probing, or offensive procedure instructions.",
+  )
+  await expect(ttpPanel).not.toContainText(
+    /generate PoC|run PoC|autopatch|start active probing|exploit payload/i,
+  )
   await page.screenshot({
     fullPage: true,
     path: evidenceScreenshotPath("vpw-058-ttp-context-tab.png"),

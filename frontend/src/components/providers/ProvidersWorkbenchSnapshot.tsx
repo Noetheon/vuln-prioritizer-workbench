@@ -34,7 +34,7 @@ export function ProviderSnapshotDetails({
     <VpwGrid columns={2}>
       <VpwProviderSnapshotCard
         onRefresh={onRefreshProviderStatus}
-        refreshLabel="Refresh providers"
+        refreshLabel="Refresh status"
         snapshotId={snapshotId(providerStatus)}
         sources={snapshotSources(rows)}
       />

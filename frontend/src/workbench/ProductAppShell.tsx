@@ -11,12 +11,13 @@ import {
 } from "../lib/provider-format"
 import {
   type WorkbenchPath,
-  workbenchNavigation,
+  workbenchNavigationGroups,
 } from "../lib/workbench-navigation"
 
 type ProductAppShellProps = {
   activePath: WorkbenchPath | null
   children: ReactNode
+  description: string
   eyebrow: string
   hideStatusStrip?: boolean
   navigationKey: string
@@ -29,6 +30,7 @@ type ProductAppShellProps = {
 export function ProductAppShell({
   activePath,
   children,
+  description,
   eyebrow,
   hideStatusStrip = false,
   navigationKey,
@@ -40,10 +42,11 @@ export function ProductAppShell({
   return (
     <AppShell
       activePath={activePath}
+      description={description}
       eyebrow={eyebrow}
       healthLabel={workspaceHealthLabel(status, statusError)}
       hideStatusStrip={hideStatusStrip}
-      navigation={workbenchNavigation}
+      navigationGroups={workbenchNavigationGroups}
       navigationKey={navigationKey}
       statusItems={dataServicesSummary(status, providerStatus)}
       title={title}

@@ -1,5 +1,5 @@
 import { Link } from "@/lib/router"
-import { Activity, FileInput } from "lucide-react"
+import { Activity, FileInput, Plus } from "lucide-react"
 import type { Dispatch, FormEvent, SetStateAction } from "react"
 
 import type {
@@ -24,18 +24,38 @@ import {
   providerSnapshotHealth,
   providerSnapshotSummary,
 } from "../../lib/provider-format"
-import { AssetContextForms } from "./AssetContextForm"
+import { AssetContextImportForm, AssetForm } from "./AssetContextForm"
 import { AssetInventoryShell } from "./AssetFilters"
-import { AssetLinkedFindingsPanel } from "./AssetLinkedFindingsPanel"
 import { AssetServiceRollup } from "./AssetServiceRollup"
 import { AssetSummaryCards } from "./AssetSummaryCards"
 import { AssetTable } from "./AssetTable"
 import type { AssetFormState, AssetSummary, ServiceRollup } from "./asset-model"
+import {
+  AssetDetailContent,
+  AssetEditContent,
+  AssetLinkedFindingsContent,
+} from "./AssetLinkedFindingsPanel"
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "../ui/sheet"
+
+export type AssetDrawerMode =
+  | "detail"
+  | "create"
+  | "edit"
+  | "import"
+  | "linked-findings"
+  | null
 
 export type AssetsWorkbenchProps = {
   activeProjectLabel: string
   assetActionLoading: boolean
   assetContextFile: File | null
+  assetDrawerMode: AssetDrawerMode
   assetFindings: FindingPublic[]
   assetFindingsError: string
   assetFindingsLoading: boolean
@@ -47,6 +67,7 @@ export type AssetsWorkbenchProps = {
   assetServiceFilter: string
   assetSummary: AssetSummary
   clearAssetFilters: () => void
+  closeAssetDrawer: () => void
   createAsset: (event: FormEvent<HTMLFormElement>) => Promise<void>
   createError: string
   createForm: AssetFormState
@@ -54,6 +75,10 @@ export type AssetsWorkbenchProps = {
   editForm: AssetFormState
   editingAssetId: string
   importAssetContext: (event: FormEvent<HTMLFormElement>) => Promise<void>
+  openAssetDrawer: (
+    mode: Exclude<AssetDrawerMode, null>,
+    asset?: AssetPublic,
+  ) => void
   projectLoading: boolean
   projects: ProjectPublic[]
   projectSelectDisabled: boolean
@@ -79,6 +104,8 @@ export type AssetsWorkbenchProps = {
 
 export function AssetsWorkbench(state: AssetsWorkbenchProps) {
   const projectSearch = selectedProjectRouteSearch(state.selectedProjectId)
+  const drawerTitle = assetDrawerTitle(state)
+  const drawerDescription = assetDrawerDescription(state)
 
   return (
     <VpwPageContainer className="flex flex-col gap-6 px-0 py-0">
@@ -91,11 +118,22 @@ export function AssetsWorkbench(state: AssetsWorkbenchProps) {
             />
             <VpwToolbar label="Asset actions" variant="plain">
               <VpwToolbarGroup>
-                <Button asChild>
-                  <a href="#asset-context-import">
-                    <FileInput aria-hidden="true" data-icon="inline-start" />
-                    Import context
-                  </a>
+                <Button
+                  disabled={state.projects.length === 0}
+                  onClick={() => state.openAssetDrawer("create")}
+                  type="button"
+                >
+                  <Plus aria-hidden="true" data-icon="inline-start" />
+                  Add asset
+                </Button>
+                <Button
+                  disabled={state.projects.length === 0}
+                  onClick={() => state.openAssetDrawer("import")}
+                  type="button"
+                  variant="outline"
+                >
+                  <FileInput aria-hidden="true" data-icon="inline-start" />
+                  Import assets
                 </Button>
                 <Button asChild variant="outline">
                   <Link search={projectSearch} to="/findings">
@@ -169,31 +207,17 @@ export function AssetsWorkbench(state: AssetsWorkbenchProps) {
 
         <AssetSummaryCards assetSummary={state.assetSummary} />
 
-        <AssetContextForms
-          activeProjectLabel={state.activeProjectLabel}
-          assetActionLoading={state.assetActionLoading}
-          assetContextFile={state.assetContextFile}
-          createAsset={state.createAsset}
-          createError={state.createError}
-          createForm={state.createForm}
-          importAssetContext={state.importAssetContext}
-          projectCount={state.projects.length}
-          setAssetContextFile={state.setAssetContextFile}
-          setCreateForm={state.setCreateForm}
-        />
-
         <AssetInventoryShell
           assetOwnerFilter={state.assetOwnerFilter}
           assetServiceFilter={state.assetServiceFilter}
           assetsLoading={state.assetsLoading}
           clearAssetFilters={state.clearAssetFilters}
           hasAssets={state.assets.length > 0}
+          openImportAssets={() => state.openAssetDrawer("import")}
           projectLoading={state.projectLoading}
           projects={state.projects}
           projectSelectDisabled={state.projectSelectDisabled}
-          refreshAssets={state.refreshAssets}
           selectProject={state.selectProject}
-          selectedAssetId={state.selectedAssetId}
           selectedProject={state.selectedProject}
           selectedProjectId={state.selectedProjectId}
           setAssetOwnerFilter={state.setAssetOwnerFilter}
@@ -203,6 +227,7 @@ export function AssetsWorkbench(state: AssetsWorkbenchProps) {
             <AssetTable
               assetActionLoading={state.assetActionLoading}
               assets={state.assets}
+              openAssetDrawer={state.openAssetDrawer}
               recalculateAsset={state.recalculateAsset}
               selectedAssetId={state.selectedAssetId}
               selectedHighestPriority={state.selectedHighestPriority}
@@ -217,23 +242,129 @@ export function AssetsWorkbench(state: AssetsWorkbenchProps) {
           setAssetServiceFilter={state.setAssetServiceFilter}
         />
 
-        {state.selectedAsset ? (
-          <AssetLinkedFindingsPanel
-            assetActionLoading={state.assetActionLoading}
-            assetFindings={state.assetFindings}
-            assetFindingsError={state.assetFindingsError}
-            assetFindingsLoading={state.assetFindingsLoading}
-            editError={state.editError}
-            editForm={state.editForm}
-            editingAssetId={state.editingAssetId}
-            recalculateAsset={state.recalculateAsset}
-            saveAsset={state.saveAsset}
-            selectedAsset={state.selectedAsset}
-            selectedHighestPriority={state.selectedHighestPriority}
-            setEditForm={state.setEditForm}
-            startEditAsset={state.startEditAsset}
-          />
-        ) : null}
+        <Sheet
+          onOpenChange={(open) => {
+            if (!open) {
+              state.closeAssetDrawer()
+            }
+          }}
+          open={state.assetDrawerMode !== null}
+        >
+          <SheetContent className="w-[min(100vw,48rem)] overflow-y-auto sm:max-w-none">
+            <SheetHeader>
+              <SheetTitle>{drawerTitle}</SheetTitle>
+              <SheetDescription>{drawerDescription}</SheetDescription>
+            </SheetHeader>
+            <AssetDrawerContent state={state} />
+          </SheetContent>
+        </Sheet>
     </VpwPageContainer>
   )
+}
+
+function AssetDrawerContent({ state }: { state: AssetsWorkbenchProps }) {
+  if (state.assetDrawerMode === "create") {
+    return (
+      <AssetForm
+        busy={state.assetActionLoading}
+        buttonLabel="Create Asset"
+        disabled={state.assetActionLoading || state.projects.length === 0}
+        error={state.createError}
+        form={state.createForm}
+        formLabel="Create Asset form fields"
+        onChange={state.setCreateForm}
+        onSubmit={state.createAsset}
+      />
+    )
+  }
+
+  if (state.assetDrawerMode === "import") {
+    return (
+      <AssetContextImportForm
+        activeProjectLabel={state.activeProjectLabel}
+        assetActionLoading={state.assetActionLoading}
+        assetContextFile={state.assetContextFile}
+        importAssetContext={state.importAssetContext}
+        projectCount={state.projects.length}
+        setAssetContextFile={state.setAssetContextFile}
+      />
+    )
+  }
+
+  if (!state.selectedAsset) {
+    return (
+      <VpwStatusBanner title="No asset selected" tone="warning">
+        Select an asset from the inventory before opening this panel.
+      </VpwStatusBanner>
+    )
+  }
+
+  if (state.assetDrawerMode === "edit") {
+    return (
+      <AssetEditContent
+        assetActionLoading={state.assetActionLoading}
+        editError={state.editError}
+        editForm={state.editForm}
+        saveAsset={state.saveAsset}
+        setEditForm={state.setEditForm}
+      />
+    )
+  }
+
+  if (state.assetDrawerMode === "linked-findings") {
+    return (
+      <AssetLinkedFindingsContent
+        assetFindings={state.assetFindings}
+        assetFindingsError={state.assetFindingsError}
+        assetFindingsLoading={state.assetFindingsLoading}
+        selectedAsset={state.selectedAsset}
+      />
+    )
+  }
+
+  return (
+    <AssetDetailContent
+      assetActionLoading={state.assetActionLoading}
+      openAssetDrawer={state.openAssetDrawer}
+      recalculateAsset={state.recalculateAsset}
+      selectedAsset={state.selectedAsset}
+      selectedHighestPriority={state.selectedHighestPriority}
+    />
+  )
+}
+
+function assetDrawerTitle(state: AssetsWorkbenchProps) {
+  switch (state.assetDrawerMode) {
+    case "create":
+      return "Add asset"
+    case "edit":
+      return state.selectedAsset ? `Edit ${state.selectedAsset.name}` : "Edit asset"
+    case "import":
+      return "Import assets"
+    case "linked-findings":
+      return state.selectedAsset
+        ? `Linked findings for ${state.selectedAsset.name}`
+        : "Linked findings"
+    case "detail":
+      return state.selectedAsset?.name ?? "Asset detail"
+    default:
+      return "Asset panel"
+  }
+}
+
+function assetDrawerDescription(state: AssetsWorkbenchProps) {
+  switch (state.assetDrawerMode) {
+    case "create":
+      return "Create one asset context record for the selected project."
+    case "edit":
+      return "Update ownership, service, exposure, environment and criticality context."
+    case "import":
+      return "Upload CSV context to update assets for the active project."
+    case "linked-findings":
+      return "Review findings currently linked to this asset context."
+    case "detail":
+      return "Inspect identity, metadata and prioritization context for the selected asset."
+    default:
+      return "Asset context drawer."
+  }
 }

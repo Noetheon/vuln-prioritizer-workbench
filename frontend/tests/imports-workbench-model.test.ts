@@ -3,11 +3,15 @@ import test from "node:test"
 
 import {
   failedRunCause,
+  fileSizeLabel,
+  formatDateTime,
   formatDisplayType,
   formatExpectedFields,
+  hasOptionalContext,
   importSubmitDisabled,
   jsonPreview,
   metadataRows,
+  optionalContextLabels,
   runFileLabel,
   runTone,
   selectedFormat,
@@ -17,6 +21,7 @@ import {
   defaultImportWizardState,
   demoProviderSnapshotFile,
   withDemoProviderSnapshot,
+  workbenchImportFormats,
 } from "../src/lib/app-defaults.ts"
 import { buildImportUploadFormData } from "../src/workbench/import-upload-payload.ts"
 
@@ -39,12 +44,39 @@ test("import model derives display labels and format metadata", () => {
   assert.equal(formatDisplayType("generic-occurrence-csv"), "generic occurrence csv")
   assert.equal(formatExpectedFields("trivy-json"), "Trivy Results[].Vulnerabilities")
   assert.equal(formatExpectedFields("cyclonedx-json"), "CycloneDX components/vulnerabilities")
+  assert.equal(formatExpectedFields("generic-occurrence-csv"), "cve_id plus optional asset/component columns")
   assert.equal(formatExpectedFields("nessus-xml"), "Nessus ReportHost/ReportItem CVE data")
+  assert.equal(formatExpectedFields("openvas-xml"), "OpenVAS result CVE data")
+  assert.equal(formatExpectedFields("unknown"), "Supported Workbench import fields")
   assert.equal(selectedFormat(formats, "trivy-json")?.label, "Trivy JSON")
   assert.equal(selectedFormat(formats, "unknown")?.label, "CVE list")
 })
 
+test("import formats preserve exact supported input keys", () => {
+  assert.deepEqual(
+    workbenchImportFormats.map((format) => format.value),
+    [
+      "cve-list",
+      "generic-occurrence-csv",
+      "trivy-json",
+      "grype-json",
+      "cyclonedx-json",
+      "spdx-json",
+      "dependency-check-json",
+      "github-alerts-json",
+      "nessus-xml",
+      "openvas-xml",
+    ],
+  )
+})
+
 test("import model derives upload progress and safe file labels", () => {
+  assert.equal(formatDateTime(null), "Not recorded")
+  assert.equal(formatDateTime("not-a-date"), "Not recorded")
+  assert.equal(fileSizeLabel(null), "No file selected")
+  assert.equal(fileSizeLabel({ size: 12 } as File), "12 B")
+  assert.equal(fileSizeLabel({ size: 2048 } as File), "2.0 KB")
+  assert.equal(fileSizeLabel({ size: 2 * 1024 * 1024 } as File), "2.0 MB")
   assert.equal(
     uploadProgress({
       assetContextFile: null,
@@ -59,6 +91,7 @@ test("import model derives upload progress and safe file labels", () => {
       assetContextFile: {} as File,
       file: {} as File,
       inputType: "cve-list",
+      providerSnapshotFile: "snapshot.json",
       vexFile: {} as File,
     }),
     100,
@@ -83,6 +116,21 @@ test("import model redacts path-like metadata rows from detail display", () => {
 test("import model selects readable failure causes", () => {
   assert.equal(failedRunCause(null, null), "No failure detail available.")
   assert.equal(
+    failedRunCause(
+      { error_message: "Run level error" } as never,
+      { error_json: { message: "Summary message" } } as never,
+    ),
+    "Run level error",
+  )
+  assert.equal(
+    failedRunCause(null, { error_json: { error: "Parser error" } } as never),
+    "Parser error",
+  )
+  assert.equal(
+    failedRunCause(null, { error_json: { last_error: "Last parser error" } } as never),
+    "Last parser error",
+  )
+  assert.equal(
     failedRunCause(null, {
       error_json: {
         analysis_error: { message: "Parser rejected the source file." },
@@ -95,9 +143,32 @@ test("import model selects readable failure causes", () => {
 
 test("import model maps run statuses to Workbench badge tones", () => {
   assert.equal(runTone("succeeded"), "success")
+  assert.equal(runTone("completed"), "success")
   assert.equal(runTone("completed_with_errors"), "warning")
   assert.equal(runTone("failed"), "critical")
+  assert.equal(runTone("cancelled"), "critical")
   assert.equal(runTone("pending"), "neutral")
+})
+
+test("import model summarizes optional overlays", () => {
+  assert.equal(hasOptionalContext(defaultImportWizardState), false)
+  assert.deepEqual(optionalContextLabels(defaultImportWizardState), [])
+  const wizard = {
+    ...defaultImportWizardState,
+    assetContextFile: {} as File,
+    attackSource: "local-curated" as const,
+    lockedProviderData: true,
+    providerSnapshotFile: "snapshot.json",
+    vexFile: {} as File,
+  }
+  assert.equal(hasOptionalContext(wizard), true)
+  assert.deepEqual(optionalContextLabels(wizard), [
+    "Asset context CSV",
+    "VEX sidecar",
+    "Provider snapshot",
+    "Locked provider data",
+    "Reviewed ATT&CK mapping",
+  ])
 })
 
 test("import upload payload includes provider and ATT&CK options", () => {

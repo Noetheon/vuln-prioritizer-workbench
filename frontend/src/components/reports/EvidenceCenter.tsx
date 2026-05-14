@@ -7,24 +7,14 @@ import type {
   ReportPublic,
   ReportVerificationPublic,
 } from "@/api-client"
-import {
-  VpwBadge,
-  VpwSection,
-  VpwSectionHeader,
-} from "@/components/vpw"
 import type { ReportFormat } from "@/lib/report-format"
 import { DEMO_MODE_ENABLED } from "@/lib/runtime-config"
 import {
   ActionStatus,
-  ArtifactSection,
-  EvidenceLifecycle,
   EvidenceSummary,
-  ExecutiveDecision,
-  ManifestPreview,
-  QualityFacts,
-  ReportHistory,
   RunContext,
 } from "./EvidenceCenterSections"
+import { EvidenceCenterTabs } from "./EvidenceCenterTabs"
 
 export type EvidenceCenterProps = {
   selectedProject: ProjectPublic | null
@@ -99,6 +89,7 @@ export function EvidenceCenter({
     .filter(Boolean)
     .join(" ")
   const isDemo = DEMO_MODE_ENABLED && !selectedProject && !combinedError
+  const hasDecisionContext = isDemo || selectedReportRun
 
   return (
     <div className="flex flex-col gap-6">
@@ -129,84 +120,25 @@ export function EvidenceCenter({
 
       <ActionStatus error={combinedError} message={reportActionMessage} />
 
-      <EvidenceLifecycle
+      <EvidenceCenterTabs
         activeReportFormat={activeReportFormat}
+        hasDecisionContext={hasDecisionContext}
         isDemo={isDemo}
+        onCreateReport={onCreateReport}
+        onDownloadReport={onDownloadReport}
+        onVerifyReport={onVerifyReport}
+        projectSummary={projectSummary}
+        providerStatus={providerStatus}
         reportActionsEnabled={reportActionsEnabled}
         reports={reports}
         reportsLoading={reportsLoading}
+        selectedProject={selectedProject}
         selectedReportRun={selectedReportRun}
+        selectedRunSummary={selectedRunSummary}
         verificationLoading={verificationLoading}
         verificationReport={verificationReport}
         verificationReportTarget={verificationReportTarget}
       />
-
-      <ArtifactSection
-        activeReportFormat={activeReportFormat}
-        isDemo={isDemo}
-        onCreateReport={onCreateReport}
-        reportActionsEnabled={reportActionsEnabled}
-      />
-
-      <VpwSection>
-        <VpwSectionHeader
-          description="Generated reports and manifest metadata remain connected to the selected run."
-          title="Report History and Evidence Manifest"
-        />
-        <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(22rem,0.65fr)]">
-          <ReportHistory
-            isDemo={isDemo}
-            onDownload={onDownloadReport}
-            onVerify={onVerifyReport}
-            reports={reports}
-            reportsLoading={reportsLoading}
-            verificationLoading={verificationLoading}
-            verificationReport={verificationReport}
-            verificationReportTarget={verificationReportTarget}
-          />
-          <ManifestPreview
-            isDemo={isDemo}
-            onDownload={onDownloadReport}
-            providerStatus={providerStatus}
-            reports={reports}
-            selectedProject={selectedProject}
-            selectedReportRun={selectedReportRun}
-            verificationLoading={verificationLoading}
-            verificationReport={verificationReport}
-            verificationReportTarget={verificationReportTarget}
-          />
-        </div>
-      </VpwSection>
-
-      {isDemo || selectedReportRun ? (
-        <VpwSection>
-          <VpwSectionHeader
-            actions={
-              isDemo ? <VpwBadge tone="warning">Demo language</VpwBadge> : null
-            }
-            description="Decision-ready wording derived from the selected run summary."
-            title="Executive Decision"
-          />
-          <ExecutiveDecision
-            isDemo={isDemo}
-            projectSummary={projectSummary}
-            selectedReportRun={selectedReportRun}
-            selectedRunSummary={selectedRunSummary}
-          />
-        </VpwSection>
-      ) : null}
-
-      <VpwSection>
-        <VpwSectionHeader
-          description="Operational evidence metadata for audit review."
-          title="Evidence Quality"
-        />
-        <QualityFacts
-          isDemo={isDemo}
-          providerStatus={providerStatus}
-          reports={reports}
-        />
-      </VpwSection>
     </div>
   )
 }

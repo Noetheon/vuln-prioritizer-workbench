@@ -35,7 +35,7 @@ const iconToneClass: Record<VpwMetricTone, string> = {
     "border-[color-mix(in_srgb,var(--vpw-amber)_34%,var(--vpw-bg-card))] bg-[var(--vpw-bg-warning)] text-[var(--vpw-amber)]",
   critical:
     "border-[color-mix(in_srgb,var(--vpw-red)_26%,var(--vpw-bg-card))] bg-[var(--vpw-bg-critical)] text-[var(--vpw-red)]",
-  info: "border-[color-mix(in_srgb,var(--vpw-blue)_22%,var(--vpw-bg-card))] bg-[var(--vpw-bg-info)] text-[var(--vpw-blue)]",
+  info: "border-[color-mix(in_srgb,var(--vpw-blue)_22%,var(--vpw-bg-card))] bg-[var(--vpw-bg-info)] text-[var(--vpw-text-info)]",
   support:
     "border-[color-mix(in_srgb,var(--vpw-violet)_22%,var(--vpw-bg-card))] bg-[var(--vpw-bg-panel)] text-[var(--vpw-violet)]",
 }

@@ -21,6 +21,25 @@ export type FindingsDirection = NonNullable<
 export type QueueSort = FindingsSort | "component" | "owner"
 
 export type KevFilter = "" | "true" | "false"
+export type FindingsSavedView =
+  | "all"
+  | "immediate"
+  | "kev"
+  | "internet"
+  | "accepted"
+  | "fixed"
+
+export const findingsSavedViewOptions: Array<{
+  label: string
+  value: FindingsSavedView
+}> = [
+  { label: "All", value: "all" },
+  { label: "Immediate", value: "immediate" },
+  { label: "KEV", value: "kev" },
+  { label: "Internet-facing", value: "internet" },
+  { label: "Accepted", value: "accepted" },
+  { label: "Fixed", value: "fixed" },
+]
 
 export type FindingFilters = {
   cvssMax: string
@@ -97,6 +116,19 @@ export function serviceLabel(finding: FindingPublic) {
 
 export function ownerLabel(finding: FindingPublic) {
   return finding.owner ?? finding.business_service ?? "Unassigned"
+}
+
+export function savedViewFromFilters(
+  filters: FindingFilters,
+): FindingsSavedView {
+  if (filters.status === "accepted") return "accepted"
+  if (filters.status === "fixed") return "fixed"
+  if (filters.kev === "true") return "kev"
+  if (filters.exposure === "internet-facing") return "internet"
+  if (filters.priority === "critical" && filters.status === "open") {
+    return "immediate"
+  }
+  return "all"
 }
 
 function dateSortValue(value: string | null | undefined) {
