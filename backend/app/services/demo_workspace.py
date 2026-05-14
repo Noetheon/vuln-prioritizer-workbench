@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import uuid
+from collections import Counter
 from dataclasses import dataclass
 from datetime import timedelta
 from pathlib import Path
@@ -23,11 +24,17 @@ from app.models import (
 )
 from app.models.base import get_datetime_utc
 from app.repositories import RunRepository, WaiverRepository
+from app.repositories.waivers import waiver_lifecycle_status
 from app.services.artifact_cleanup import cleanup_project_artifacts
 from app.services.import_execution import (
     ImportUploadContent,
     ProjectImportUploadRequest,
     execute_project_import_upload,
+)
+from app.services.report_artifacts import (
+    ReportArtifactChecksumError,
+    ReportArtifactNotFoundError,
+    validated_report_path,
 )
 from app.services.reports import ReportService
 
@@ -44,6 +51,25 @@ EXPECTED_REPORT_FORMATS = (
     "sarif",
     "zip",
 )
+EXPECTED_REPORT_FILENAMES = frozenset(
+    {
+        "technical-report.md",
+        "executive-report.html",
+        "analysis-result.v1.json",
+        "findings.csv",
+        "attack-navigator-layer.json",
+        "results.sarif",
+        "evidence-bundle.zip",
+    }
+)
+EXPECTED_FINDING_COUNT = 24
+EXPECTED_ASSET_COUNT = 21
+EXPECTED_WAIVER_COUNT = 4
+EXPECTED_WAIVER_STATUS_COUNTS = {
+    "active": 3,
+    "review_due": 1,
+    "expired": 0,
+}
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 _DATA_DIR = _REPO_ROOT / "data"
@@ -61,10 +87,30 @@ class DemoWorkspaceSnapshot:
     asset_count: int
     waiver_count: int
     report_count: int
+    waiver_status_counts: dict[str, int]
 
     @property
     def seeded(self) -> bool:
         return self.project is not None and self.latest_run is not None and self.finding_count > 0
+
+    @property
+    def canonical(self) -> bool:
+        if not self.seeded or self.project is None:
+            return False
+        return (
+            self.project.name == DEMO_PROJECT_NAME
+            and DEMO_WORKSPACE_MARKER in (self.project.description or "")
+            and self.finding_count == EXPECTED_FINDING_COUNT
+            and self.asset_count == EXPECTED_ASSET_COUNT
+            and self.waiver_count == EXPECTED_WAIVER_COUNT
+            and self.report_count == len(EXPECTED_REPORT_FORMATS)
+            and {report.filename for report in self.reports} == EXPECTED_REPORT_FILENAMES
+            and {
+                status: self.waiver_status_counts.get(status, 0)
+                for status in EXPECTED_WAIVER_STATUS_COUNTS
+            }
+            == EXPECTED_WAIVER_STATUS_COUNTS
+        )
 
 
 def demo_workspace_enabled(settings: Settings) -> bool:
@@ -84,6 +130,7 @@ def read_demo_workspace_snapshot(session: Session) -> DemoWorkspaceSnapshot:
             asset_count=0,
             waiver_count=0,
             report_count=0,
+            waiver_status_counts={},
         )
 
     latest_run = RunRepository(session).get_latest_analysis_run(project.id)
@@ -96,6 +143,7 @@ def read_demo_workspace_snapshot(session: Session) -> DemoWorkspaceSnapshot:
         asset_count=_count_for_project(session, "asset", project.id),
         waiver_count=_count_for_project(session, "waiver", project.id),
         report_count=_count_for_project(session, "report", project.id),
+        waiver_status_counts=_waiver_status_counts(session, project.id),
     )
 
 
@@ -108,7 +156,7 @@ async def seed_demo_workspace(
 ) -> DemoWorkspaceSnapshot:
     """Create the deterministic local demo workspace using normal import/report services."""
     snapshot = read_demo_workspace_snapshot(session)
-    if snapshot.seeded and not reset and snapshot.report_count >= len(EXPECTED_REPORT_FORMATS):
+    if snapshot.canonical and _report_artifacts_available(snapshot, settings) and not reset:
         return snapshot
 
     if snapshot.project is not None:
@@ -165,6 +213,17 @@ class ReportServiceSnapshot:
             .order_by(col(Report.created_at).desc(), col(Report.id).desc())
         )
         return list(self.session.exec(statement).all())
+
+
+def _report_artifacts_available(snapshot: DemoWorkspaceSnapshot, settings: Settings) -> bool:
+    if not snapshot.reports:
+        return False
+    try:
+        for report in snapshot.reports:
+            validated_report_path(report, settings)
+    except (ReportArtifactChecksumError, ReportArtifactNotFoundError):
+        return False
+    return True
 
 
 def _create_demo_project(session: Session) -> Project:
@@ -302,3 +361,9 @@ def _count_for_project(session: Session, table: str, project_id: uuid.UUID) -> i
     model = model_by_table[table]
     statement = select(func.count()).select_from(model).where(model.project_id == project_id)
     return int(session.exec(statement).one())
+
+
+def _waiver_status_counts(session: Session, project_id: uuid.UUID) -> dict[str, int]:
+    waivers = session.exec(select(Waiver).where(Waiver.project_id == project_id)).all()
+    counts = Counter(waiver_lifecycle_status(waiver)[0] for waiver in waivers)
+    return {status: counts.get(status, 0) for status in EXPECTED_WAIVER_STATUS_COUNTS}

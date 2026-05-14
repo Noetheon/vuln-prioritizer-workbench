@@ -38,32 +38,14 @@ const priorityKeyAliases: Record<PriorityBucket, string[]> = {
   Low: ["Low", "low"],
 }
 
-const lifecyclePriorityOrder: Array<{
-  key: string
-  label: string
-  tone: string
-}> = [
-  { key: "accepted", label: "Accepted", tone: "accepted" },
-  { key: "suppressed", label: "Suppressed", tone: "suppressed" },
-]
-
 export function findingsByPriorityChartData(
   summary: ProjectDecisionSummaryPublic | null,
 ): ChartDatum[] {
-  const priorityItems = priorityOrder.map((priority) => ({
+  return priorityOrder.map((priority) => ({
     label: priority.label,
     tone: priority.tone,
     value: priorityCount(summary, priority.key),
   }))
-  const lifecycleItems = lifecyclePriorityOrder
-    .map((status) => ({
-      detail: "lifecycle state",
-      label: status.label,
-      tone: status.tone,
-      value: summary?.counts_by_status?.[status.key] ?? 0,
-    }))
-    .filter((item) => item.value > 0)
-  return [...priorityItems, ...lifecycleItems]
 }
 
 export function priorityCount(
@@ -101,17 +83,20 @@ export function runActivityTrendData(
   runs: readonly AnalysisRunPublic[],
   limit = 6,
 ): ChartDatum[] {
-  return runs.slice(0, limit).reverse().map((run, index) => ({
-    detail: run.status ?? "pending",
-    label: run.started_at
-      ? new Intl.DateTimeFormat(undefined, {
-          month: "short",
-          day: "numeric",
-        }).format(new Date(run.started_at))
-      : `Run ${index + 1}`,
-    tone: run.status ?? "pending",
-    value: index + 1,
-  }))
+  return runs
+    .slice(0, limit)
+    .reverse()
+    .map((run, index) => ({
+      detail: run.status ?? "pending",
+      label: run.started_at
+        ? new Intl.DateTimeFormat(undefined, {
+            month: "short",
+            day: "numeric",
+          }).format(new Date(run.started_at))
+        : `Run ${index + 1}`,
+      tone: run.status ?? "pending",
+      value: index + 1,
+    }))
 }
 
 export function epssBucketChartData(

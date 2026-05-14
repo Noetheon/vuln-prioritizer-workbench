@@ -23,19 +23,21 @@ function runFixture(value: Partial<AnalysisRunPublic>): AnalysisRunPublic {
   return value as unknown as AnalysisRunPublic
 }
 
-test("includes lifecycle states when present", () => {
-  const data = findingsByPriorityChartData(summaryFixture({
-    counts_by_priority: {
-      Critical: 2,
-      High: 1,
-      Medium: 0,
-      Low: 3,
-    },
-    counts_by_status: {
-      accepted: 4,
-      suppressed: 1,
-    },
-  }))
+test("keeps priority chart additive when lifecycle states are present", () => {
+  const data = findingsByPriorityChartData(
+    summaryFixture({
+      counts_by_priority: {
+        Critical: 2,
+        High: 1,
+        Medium: 0,
+        Low: 3,
+      },
+      counts_by_status: {
+        accepted: 4,
+        suppressed: 1,
+      },
+    }),
+  )
 
   assert.deepEqual(
     data.map((item) => [item.label, item.value]),
@@ -44,21 +46,25 @@ test("includes lifecycle states when present", () => {
       ["High", 1],
       ["Medium", 0],
       ["Low", 3],
-      ["Accepted", 4],
-      ["Suppressed", 1],
     ],
+  )
+  assert.equal(
+    data.reduce((total, item) => total + item.value, 0),
+    6,
   )
 })
 
 test("keeps base priority buckets when lifecycle states are zero", () => {
-  const data = findingsByPriorityChartData(summaryFixture({
-    counts_by_priority: {
-      Critical: 1,
-    },
-    counts_by_status: {
-      accepted: 0,
-    },
-  }))
+  const data = findingsByPriorityChartData(
+    summaryFixture({
+      counts_by_priority: {
+        Critical: 1,
+      },
+      counts_by_status: {
+        accepted: 0,
+      },
+    }),
+  )
 
   assert.deepEqual(
     data.map((item) => item.label),

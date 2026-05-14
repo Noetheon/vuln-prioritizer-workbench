@@ -145,7 +145,7 @@ export function DashboardSignalOverview({
 
           <TabsContent className="mt-4" value="priority">
             <ChartCard
-              description="Severity distribution across open findings"
+              description="Severity distribution across findings in scope"
               title="Findings by priority"
             >
               {summaryLoading ? (
@@ -180,7 +180,10 @@ export function DashboardSignalOverview({
                       <RechartsTooltip />
                       <Bar dataKey="value" radius={[4, 4, 0, 0]}>
                         {priorityItems.map((entry) => (
-                          <Cell key={entry.label} fill={priorityFill(entry.tone)} />
+                          <Cell
+                            key={entry.label}
+                            fill={priorityFill(entry.tone)}
+                          />
                         ))}
                       </Bar>
                     </BarChart>
@@ -299,7 +302,9 @@ export function DashboardSignalOverview({
                   <ChartDataSummary
                     data={serviceItems}
                     label={`${
-                      topServiceSource === "assets" ? "Top assets" : "Top services"
+                      topServiceSource === "assets"
+                        ? "Top assets"
+                        : "Top services"
                     } chart data`}
                   />
                 </>
@@ -310,7 +315,10 @@ export function DashboardSignalOverview({
           <TabsContent className="mt-4" value="trend">
             <ChartCard
               action={
-                <Select onValueChange={onRunRangeChange} value={selectedRunRange}>
+                <Select
+                  onValueChange={onRunRangeChange}
+                  value={selectedRunRange}
+                >
                   <SelectTrigger aria-label="Risk trend range" className="w-36">
                     <SelectValue placeholder="Range" />
                   </SelectTrigger>
