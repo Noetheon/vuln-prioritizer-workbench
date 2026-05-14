@@ -1,5 +1,6 @@
 import { ShieldCheck } from "lucide-react"
 import type { AnalysisRunPublic, ProjectPublic } from "@/api-client"
+import { Button } from "@/components/ui/button"
 import {
   VpwBadge,
   type VpwBadgeTone,
@@ -62,7 +63,12 @@ export function RunContext({
     <VpwSection>
       <VpwSectionHeader
         actions={
-          isDemo ? <VpwBadge tone="warning">Demo preview</VpwBadge> : null
+          <>
+            {isDemo ? <VpwBadge tone="warning">Demo preview</VpwBadge> : null}
+            <Button asChild>
+              <a href="#evidence-artifacts">Generate evidence</a>
+            </Button>
+          </>
         }
         description="Generate audit-ready vulnerability evidence, executive summaries, and technical exports."
         eyebrow="Reports"

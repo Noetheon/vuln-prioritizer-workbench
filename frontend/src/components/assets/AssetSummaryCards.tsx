@@ -1,4 +1,4 @@
-import { Globe2, Server, ShieldCheck, Users } from "lucide-react"
+import { Globe2, Link2, RefreshCw, Server, ShieldCheck } from "lucide-react"
 
 import { VpwGrid, VpwMetricCard } from "../vpw"
 import type { AssetSummary } from "./asset-model"
@@ -9,7 +9,7 @@ export function AssetSummaryCards({
   assetSummary: AssetSummary
 }) {
   return (
-    <VpwGrid columns={1} className="lg:grid-cols-2 xl:grid-cols-4">
+    <VpwGrid columns={1} className="lg:grid-cols-2 xl:grid-cols-5">
       <VpwMetricCard
         description="Assets and target references in scope"
         icon={<Server aria-hidden="true" />}
@@ -24,18 +24,25 @@ export function AssetSummaryCards({
         value={assetSummary.internetFacing}
       />
       <VpwMetricCard
-        description="Production environment context"
+        description="Critical and high asset context"
         icon={<ShieldCheck aria-hidden="true" />}
-        label="Production assets"
-        tone="info"
-        value={assetSummary.production}
+        label="Critical services"
+        tone="critical"
+        value={assetSummary.criticalServices}
       />
       <VpwMetricCard
-        description={`${assetSummary.ownerCoverage}% of assets have an owner`}
-        icon={<Users aria-hidden="true" />}
-        label="Owner coverage"
-        tone="support"
-        value={`${assetSummary.ownerCoverage}%`}
+        description="Findings associated with asset context"
+        icon={<Link2 aria-hidden="true" />}
+        label="Linked findings"
+        tone="info"
+        value={assetSummary.linkedFindings}
+      />
+      <VpwMetricCard
+        description={`${assetSummary.ownerCoverage}% owner coverage; ${assetSummary.production} production assets`}
+        icon={<RefreshCw aria-hidden="true" />}
+        label="Rescore needed"
+        tone={assetSummary.rescoreNeeded > 0 ? "warning" : "success"}
+        value={assetSummary.rescoreNeeded}
       />
     </VpwGrid>
   )

@@ -31,6 +31,7 @@ function WorkbenchShellFrame({ children, routePath }: WorkbenchShellProps) {
   return (
     <ProductAppShell
       activePath={activeRoutePath}
+      description={routeDetail.description}
       eyebrow={routeDetail.eyebrow}
       hideStatusStrip
       providerStatus={providerStatus}

@@ -9,7 +9,7 @@ test("workbench settings uses local access and hides API token management", asyn
   await page.goto("/settings?tab=tokens")
 
   await expect(
-    page.getByRole("heading", { level: 1, name: "Settings" }),
+    page.getByRole("heading", { level: 1, name: "Workspace Settings" }),
   ).toBeVisible()
   await expect(page.getByRole("tab", { name: "Overview" })).toBeVisible()
   await expect(

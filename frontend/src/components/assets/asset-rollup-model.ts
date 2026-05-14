@@ -6,6 +6,7 @@ export type AssetSummary = {
   linkedFindings: number
   ownerCoverage: number
   production: number
+  rescoreNeeded: number
   total: number
 }
 
@@ -32,6 +33,7 @@ export function summarizeAssets(assets: readonly AssetPublic[]): AssetSummary {
     ownerCoverage: total > 0 ? Math.round((ownerCount / total) * 100) : 0,
     production: assets.filter((asset) => asset.environment === "production")
       .length,
+    rescoreNeeded: assets.filter((asset) => asset.rescore_needed).length,
     total,
   }
 }

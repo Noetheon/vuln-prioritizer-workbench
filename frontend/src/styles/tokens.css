@@ -76,7 +76,7 @@
   --muted-foreground: 0 0% 30.2%;
   --accent: 212 100% 97%;
   --accent-foreground: 212 100% 47.6%;
-  --destructive: 0 100% 46.7%;
+  --destructive: 0 100% 38.4%;
   --destructive-foreground: 210 40% 98%;
   --border: 0 0% 92.2%;
   --input: 0 0% 92.2%;
@@ -135,6 +135,7 @@
   --vpw-red: #c40000;
   --vpw-violet: #7928ca;
   --vpw-navy: #171717;
+  --vpw-text-info: color-mix(in srgb, var(--vpw-blue) 80%, var(--vpw-text-primary));
 
   --vpw-radius-sm: 4px;
   --vpw-radius-md: 6px;
@@ -174,7 +175,7 @@
     --accent: 210 56% 14%;
     --accent-foreground: 210 100% 82%;
     --destructive: 0 100% 62%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive-foreground: 0 0% 9%;
     --border: 0 0% 16%;
     --input: 0 0% 16%;
     --ring: 210 100% 64%;
@@ -225,7 +226,7 @@
   --accent: 210 56% 14%;
   --accent-foreground: 210 100% 82%;
   --destructive: 0 100% 62%;
-  --destructive-foreground: 210 40% 98%;
+  --destructive-foreground: 0 0% 9%;
   --border: 0 0% 16%;
   --input: 0 0% 16%;
   --ring: 210 100% 64%;

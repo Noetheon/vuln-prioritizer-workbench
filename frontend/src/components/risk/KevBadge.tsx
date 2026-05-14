@@ -1,12 +1,18 @@
-import { VpwBadge } from "@/components/vpw"
+import { MetaTag, SignalChip, type BadgeDensity } from "@/components/vpw"
 
 type KevBadgeProps = {
+  density?: BadgeDensity
   matched: boolean | null | undefined
+  showAbsent?: boolean
 }
 
-export function KevBadge({ matched }: KevBadgeProps) {
+export function KevBadge({
+  density = "compact",
+  matched,
+  showAbsent = false,
+}: KevBadgeProps) {
   if (matched) {
-    return <VpwBadge tone="critical">KEV</VpwBadge>
+    return <SignalChip density={density} kind="kev" />
   }
-  return <VpwBadge>—</VpwBadge>
+  return showAbsent ? <MetaTag density={density} label="No KEV" /> : null
 }

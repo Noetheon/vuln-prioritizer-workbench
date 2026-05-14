@@ -1,9 +1,9 @@
 import { Link } from "@/lib/router"
 import { Activity } from "lucide-react"
-
 import type { ProviderStatusPublic } from "@/api-client"
 import { Button } from "@/components/ui/button"
 import {
+  StatusLozenge,
   VpwBadge,
   VpwPanel,
   VpwSection,
@@ -44,8 +44,8 @@ export function ProvidersHero({
       <VpwPanel className="flex flex-col gap-5 p-5">
         <VpwSectionHeader
           description="Monitor vulnerability intelligence sources, snapshot freshness and evidence data quality."
-          eyebrow="Provider intelligence"
-          title="Providers"
+          eyebrow="Data source trust"
+          title="Data Sources"
         />
         <VpwToolbar label="Provider actions" variant="plain">
           <VpwToolbarGroup>
@@ -56,7 +56,7 @@ export function ProvidersHero({
               type="button"
             >
               <Activity aria-hidden="true" data-icon="inline-start" />
-              Refresh providers
+              Refresh status
             </Button>
             <Button asChild variant="outline">
               <Link search={projectSearch} to="/reports">View Evidence Center</Link>
@@ -69,9 +69,10 @@ export function ProvidersHero({
             <VpwBadge tone="neutral">
               Last sync: {formatDateTime(providerStatus?.last_sync)}
             </VpwBadge>
-            <VpwBadge tone={providerHealthTone(providerStatus)}>
-              Provider health: {providerSnapshotHealth(providerStatus)}
-            </VpwBadge>
+            <StatusLozenge
+              label={`Provider health: ${providerSnapshotHealth(providerStatus)}`}
+              status={providerStatus?.status ?? "unknown"}
+            />
             <VpwBadge tone={evidenceReadinessTone(providerStatus)}>
               Evidence: {evidenceReadiness}
             </VpwBadge>

@@ -28,14 +28,42 @@ export type NavigationEntry = {
   to: WorkbenchPath
 }
 
-export const workbenchNavigation: readonly NavigationEntry[] = [
-  { label: "Dashboard", icon: LayoutDashboard, to: "/" },
-  { label: "Projects", icon: FolderKanban, to: "/projects" },
-  { label: "Imports", icon: FileInput, to: "/imports" },
-  { label: "Findings", icon: ListChecks, to: "/findings" },
-  { label: "Waivers", icon: FileCheck2, to: "/waivers" },
-  { label: "Assets", icon: ShieldCheck, to: "/assets" },
-  { label: "Providers", icon: Database, to: "/providers" },
-  { label: "Reports", icon: FileArchive, to: "/reports" },
-  { label: "Settings", icon: Settings, to: "/settings" },
+export type NavigationGroup = {
+  items: readonly NavigationEntry[]
+  label: string
+}
+
+export const workbenchNavigationGroups: readonly NavigationGroup[] = [
+  {
+    label: "Operate",
+    items: [
+      { label: "Overview", icon: LayoutDashboard, to: "/" },
+      { label: "Triage", icon: ListChecks, to: "/findings" },
+    ],
+  },
+  {
+    label: "Prepare",
+    items: [
+      { label: "Imports", icon: FileInput, to: "/imports" },
+      { label: "Assets", icon: ShieldCheck, to: "/assets" },
+      { label: "Data Sources", icon: Database, to: "/providers" },
+    ],
+  },
+  {
+    label: "Govern",
+    items: [
+      { label: "Risk Acceptance", icon: FileCheck2, to: "/waivers" },
+      { label: "Evidence Center", icon: FileArchive, to: "/reports" },
+    ],
+  },
+  {
+    label: "System",
+    items: [
+      { label: "Workspace Settings", icon: Settings, to: "/settings" },
+      { label: "Projects", icon: FolderKanban, to: "/projects" },
+    ],
+  },
 ]
+
+export const workbenchNavigation: readonly NavigationEntry[] =
+  workbenchNavigationGroups.flatMap((group) => group.items)

@@ -1,1 +1,5 @@
-export { AssetsWorkbench, type AssetsWorkbenchProps } from "./AssetsRoute"
+export {
+  AssetsWorkbench,
+  type AssetDrawerMode,
+  type AssetsWorkbenchProps,
+} from "./AssetsRoute"

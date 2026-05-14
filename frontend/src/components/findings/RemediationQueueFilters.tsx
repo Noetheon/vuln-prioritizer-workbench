@@ -3,19 +3,18 @@ import type { Dispatch, SetStateAction } from "react"
 import type { ProjectPublic } from "@/api-client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import { VpwBadge, VpwPanel } from "@/components/vpw"
 import {
   AdvancedFilterSelects,
   PrimaryFilterSelects,
 } from "./RemediationQueueFilterControls"
-import type { FindingFilters } from "./remediation-queue-model"
+import { RemediationQueueProjectSelect } from "./RemediationQueueProjectSelect"
+import { RemediationQueueSavedViews } from "./RemediationQueueSavedViews"
+import {
+  savedViewFromFilters,
+  type FindingFilters,
+  type FindingsSavedView,
+} from "./remediation-queue-model"
 
 type RemediationQueueFiltersProps = {
   activeFindingFilters: boolean
@@ -32,6 +31,7 @@ type RemediationQueueFiltersProps = {
     value: FindingFilters[K],
   ) => void
   onProjectChange: (id: string) => void
+  onSavedViewChange: (view: FindingsSavedView) => void
   ownerServiceDraft: string
   projectListLoading: boolean
   projects: ProjectPublic[]
@@ -54,6 +54,7 @@ export function RemediationQueueFilters({
   onClearFilters,
   onFilterChange,
   onProjectChange,
+  onSavedViewChange,
   ownerServiceDraft,
   projectListLoading,
   projects,
@@ -64,6 +65,7 @@ export function RemediationQueueFilters({
   signalFilterCount,
 }: RemediationQueueFiltersProps) {
   const queueSearchId = `${controlIdPrefix}-search`
+  const activeSavedView = savedViewFromFilters(findingFilters)
 
   return (
     <VpwPanel
@@ -74,30 +76,12 @@ export function RemediationQueueFilters({
       <div className="px-4 py-3">
         <div className="flex flex-wrap items-center gap-2">
           {!isDemo ? (
-            <div className="flex min-w-44 flex-col gap-1">
-              <span className="text-[11px] font-semibold uppercase text-muted-foreground">
-                Project
-              </span>
-              <Select
-                disabled={projectListLoading || projects.length === 0}
-                onValueChange={onProjectChange}
-                value={selectedProjectId}
-              >
-                <SelectTrigger
-                  aria-label="Project"
-                  className="h-10 w-48 text-sm"
-                >
-                  <SelectValue placeholder="No projects" />
-                </SelectTrigger>
-                <SelectContent>
-                  {projects.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>
-                      {p.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            <RemediationQueueProjectSelect
+              onProjectChange={onProjectChange}
+              projectListLoading={projectListLoading}
+              projects={projects}
+              selectedProjectId={selectedProjectId}
+            />
           ) : null}
 
           {findingAssetId ? (
@@ -136,6 +120,11 @@ export function RemediationQueueFilters({
           <PrimaryFilterSelects
             findingFilters={findingFilters}
             onFilterChange={onFilterChange}
+          />
+
+          <RemediationQueueSavedViews
+            activeSavedView={activeSavedView}
+            onSavedViewChange={onSavedViewChange}
           />
 
           <div className="ml-auto flex items-end gap-2 self-end">

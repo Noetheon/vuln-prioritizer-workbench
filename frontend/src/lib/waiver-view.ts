@@ -104,6 +104,22 @@ export function waiverRequestBody(form: WaiverFormState): WaiverCreate {
   }
 }
 
+export function waiverFormFromWaiver(waiver: WaiverPublic): WaiverFormState {
+  return {
+    approvalRef: waiver.approval_ref ?? "",
+    assetId: waiver.asset_id ?? "",
+    assetKey: waiver.asset_key ?? "",
+    cveId: waiver.cve_id ?? "",
+    expiresAt: waiver.expires_at?.slice(0, 10) ?? "",
+    findingId: waiver.finding_id ?? "",
+    owner: waiver.owner,
+    reason: waiver.reason,
+    reviewAt: waiver.review_at?.slice(0, 10) ?? "",
+    service: waiver.service ?? "",
+    ticketUrl: waiver.ticket_url ?? "",
+  }
+}
+
 export function waiverScopeLabel(waiver: WaiverPublic) {
   return joinedValues([
     waiver.finding_id ? `Finding ${waiver.finding_id.slice(0, 8)}` : null,

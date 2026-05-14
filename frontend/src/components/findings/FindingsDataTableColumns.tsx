@@ -1,31 +1,29 @@
 import { Link } from "@/lib/router"
-import { Eye } from "lucide-react"
+import { ExternalLink, Eye } from "lucide-react"
 import type { ReactNode } from "react"
-
 import type { FindingPublic } from "@/api-client"
-import {
-  CvssBadge,
-  EpssBadge,
-  FindingStatusBadge,
-  KevBadge,
-  PriorityBadge,
-  RiskScore,
-} from "@/components/risk"
 import { Button } from "@/components/ui/button"
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { VpwBadge } from "@/components/vpw"
+import {
+  MetaTag,
+  RiskBadge,
+  RiskScoreBadge,
+  SignalChip,
+  StatusLozenge,
+  VpwSignalCluster,
+} from "@/components/vpw"
 import { formatLabel as labelize } from "@/lib/ui-copy"
 import { SortHeader, StaticHeader } from "./FindingsDataTableHeaders"
 import {
   assetLabel,
   componentLabel,
-  findingWhyNow,
   formatDateTime,
   formatShortDate,
+  findingSlaLabel,
   ownerLabel,
   serviceLabel,
   sortAriaState,
@@ -47,7 +45,6 @@ type BuildFindingsColumnsOptions = {
   findingDirection: FindingsDirection
   findingSearch: FindingsUrlSearch
   onOpenSheet: (finding: FindingPublic) => void
-  onOpenWhy: (finding: FindingPublic) => void
   onSort: (sort: QueueSort) => void
   queueSort: QueueSort
 }
@@ -56,16 +53,15 @@ export function buildFindingsDataTableColumns({
   findingDirection,
   findingSearch,
   onOpenSheet,
-  onOpenWhy,
   onSort,
   queueSort,
 }: BuildFindingsColumnsOptions): readonly FindingsDataTableColumn[] {
   return [
     {
-      id: "finding",
+      id: "priority",
       header: (
         <fieldset className="finding-sort-stack">
-          <legend className="sr-only">Finding sort controls</legend>
+          <legend className="sr-only">Priority sort controls</legend>
           <SortHeader
             currentDirection={findingDirection}
             currentSort={queueSort}
@@ -80,21 +76,32 @@ export function buildFindingsDataTableColumns({
             onSort={onSort}
             sort="score"
           />
-          <SortHeader
-            currentDirection={findingDirection}
-            currentSort={queueSort}
-            label="CVE"
-            onSort={onSort}
-            sort="cve"
-          />
         </fieldset>
       ),
       cell: (finding) => (
+        <div className="finding-priority-cell">
+          <RiskBadge density="compact" level={finding.priority} />
+          <RiskScoreBadge density="compact" value={finding.risk_score} />
+        </div>
+      ),
+      className: "w-[13%]",
+      headerClassName: "w-[13%]",
+      width: "13%",
+    },
+    {
+      id: "finding",
+      header: (
+        <SortHeader
+          currentDirection={findingDirection}
+          currentSort={queueSort}
+          label="Finding"
+          onSort={onSort}
+          sort="cve"
+        />
+      ),
+      ariaSort: sortAriaState(findingDirection, queueSort, "cve"),
+      cell: (finding) => (
         <div className="finding-primary-cell">
-          <div className="finding-primary-badges">
-            <PriorityBadge priority={finding.priority} />
-            <RiskScore value={finding.risk_score} />
-          </div>
           <Link
             className="finding-cve-link"
             params={{ findingId: finding.id }}
@@ -104,43 +111,53 @@ export function buildFindingsDataTableColumns({
           >
             {finding.cve_id}
           </Link>
-          {finding.attack_mapped ? (
-            <span className="remediation-subtext">ATT&amp;CK mapped</span>
+          <strong className="finding-component-name" title={componentLabel(finding)}>
+            {componentLabel(finding)}
+          </strong>
+          {finding.component_purl ? (
+            <span className="remediation-subtext truncate" title={finding.component_purl}>
+              {finding.component_purl}
+            </span>
           ) : null}
         </div>
       ),
-      className: "w-[22%]",
+      className: "w-[22%] min-w-0",
       headerClassName: "w-[22%]",
       width: "22%",
     },
     {
-      id: "component",
+      id: "asset",
       header: (
         <SortHeader
           currentDirection={findingDirection}
           currentSort={queueSort}
-          label="Component / Service"
+          label="Asset / Service"
           onSort={onSort}
           sort="component"
         />
       ),
       ariaSort: sortAriaState(findingDirection, queueSort, "component"),
       cell: (finding) => (
-        <div className="min-w-0">
-          <strong className="block truncate" title={componentLabel(finding)}>
-            {componentLabel(finding)}
+        <div className="finding-asset-cell">
+          <strong className="block truncate" title={assetLabel(finding)}>
+            {assetLabel(finding)}
           </strong>
-          <span
-            className="remediation-subtext truncate"
-            title={`${serviceLabel(finding)} / ${assetLabel(finding)}`}
-          >
-            {serviceLabel(finding)} / {assetLabel(finding)}
+          <span className="remediation-subtext truncate" title={serviceLabel(finding)}>
+            {serviceLabel(finding)}
           </span>
+          <div className="finding-meta-tags">
+            {finding.asset_environment ? (
+              <MetaTag label={labelize(finding.asset_environment)} />
+            ) : null}
+            {finding.exposure ? (
+              <MetaTag label={labelize(finding.exposure)} />
+            ) : null}
+          </div>
         </div>
       ),
-      className: "w-[20%] min-w-0",
-      headerClassName: "w-[20%]",
-      width: "20%",
+      className: "w-[18%] min-w-0",
+      headerClassName: "w-[18%]",
+      width: "18%",
     },
     {
       id: "owner",
@@ -155,45 +172,18 @@ export function buildFindingsDataTableColumns({
       ),
       ariaSort: sortAriaState(findingDirection, queueSort, "owner"),
       cell: (finding) => (
-        <>
+        <div className="finding-owner-cell">
           <strong>{ownerLabel(finding)}</strong>
-          {finding.exposure ? (
+          {finding.business_service ? (
             <span className="remediation-subtext">
-              {labelize(finding.exposure)}
+              {finding.business_service}
             </span>
           ) : null}
-        </>
-      ),
-      className: "w-[12%]",
-      headerClassName: "w-[12%]",
-      width: "12%",
-    },
-    {
-      id: "status",
-      header: (
-        <SortHeader
-          currentDirection={findingDirection}
-          currentSort={queueSort}
-          label="Status"
-          onSort={onSort}
-          sort="status"
-        />
-      ),
-      ariaSort: sortAriaState(findingDirection, queueSort, "status"),
-      cell: (finding) => (
-        <div className="grid justify-items-start gap-1.5">
-          <FindingStatusBadge status={finding.status} />
-          <span
-            className="remediation-subtext"
-            title={`Last seen ${formatDateTime(finding.last_seen_at)}`}
-          >
-            {formatShortDate(finding.last_seen_at)}
-          </span>
         </div>
       ),
-      className: "w-[10%]",
-      headerClassName: "w-[10%]",
-      width: "10%",
+      className: "w-[11%]",
+      headerClassName: "w-[11%]",
+      width: "11%",
     },
     {
       id: "signals",
@@ -208,71 +198,101 @@ export function buildFindingsDataTableColumns({
       ),
       ariaSort: sortAriaState(findingDirection, queueSort, "epss"),
       cell: (finding) => (
-        <div className="flex flex-wrap items-center gap-1.5 min-[1500px]:flex-nowrap">
-          <VpwBadge className="min-h-6 gap-1.5 px-2 text-[0.72rem]" tone="info">
-            <span>EPSS</span>
-            <strong className="font-black text-[var(--vpw-text-primary)]">
-              <EpssBadge value={finding.epss} />
-            </strong>
-          </VpwBadge>
-          <VpwBadge className="min-h-6 gap-1.5 px-2 text-[0.72rem]" tone="info">
-            <span>CVSS</span>
-            <strong className="font-black text-[var(--vpw-text-primary)]">
-              <CvssBadge value={finding.cvss_base_score} />
-            </strong>
-          </VpwBadge>
-          <KevBadge matched={finding.in_kev} />
-        </div>
+        <VpwSignalCluster className="min-[1500px]:flex-nowrap" maxVisible={3}>
+          {finding.in_kev ? <SignalChip kind="kev" /> : null}
+          {finding.epss !== null && finding.epss !== undefined ? (
+            <SignalChip kind="epss" value={finding.epss} />
+          ) : null}
+          {finding.cvss_base_score !== null &&
+          finding.cvss_base_score !== undefined ? (
+            <SignalChip kind="cvss" value={finding.cvss_base_score} />
+          ) : null}
+          {finding.attack_mapped ? <SignalChip kind="attack" /> : null}
+          {finding.suppressed_by_vex ? <SignalChip kind="vex" /> : null}
+        </VpwSignalCluster>
       ),
       className: "w-[15%]",
       headerClassName: "w-[15%]",
       width: "15%",
     },
     {
-      id: "why",
-      header: <StaticHeader label="Why now" />,
-      cell: (finding) => (
-        <>
-          <span className="remediation-why-now">{findingWhyNow(finding)}</span>
-          <Button
-            className="mt-1 h-auto justify-start p-0 text-[0.78rem] font-extrabold text-[var(--vpw-text-primary)]"
-            onClick={() => onOpenWhy(finding)}
-            size="sm"
-            type="button"
-            variant="link"
-          >
-            Why now
-          </Button>
-        </>
+      id: "status",
+      header: (
+        <SortHeader
+          currentDirection={findingDirection}
+          currentSort={queueSort}
+          label="Status / SLA"
+          onSort={onSort}
+          sort="status"
+        />
       ),
-      className: "w-[17%]",
-      headerClassName: "w-[17%]",
-      width: "17%",
+      ariaSort: sortAriaState(findingDirection, queueSort, "status"),
+      cell: (finding) => (
+        <div className="finding-status-cell">
+          <StatusLozenge density="compact" status={finding.status} />
+          <span
+            className="remediation-subtext"
+            title={`Last seen ${formatDateTime(finding.last_seen_at)}`}
+          >
+            {formatShortDate(finding.last_seen_at)}
+          </span>
+          <div className="finding-meta-tags">
+            <MetaTag label={findingSlaLabel(finding.priority)} />
+            {finding.waived ? <MetaTag label="Accepted risk" /> : null}
+            {finding.under_investigation ? (
+              <MetaTag label="Under review" />
+            ) : null}
+          </div>
+        </div>
+      ),
+      className: "w-[13%]",
+      headerClassName: "w-[13%]",
+      width: "13%",
     },
     {
       id: "view",
-      header: <StaticHeader align="right" label="View" />,
+      header: <StaticHeader align="right" label="Actions" />,
       cell: (finding) => (
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              aria-label={`Quick view ${finding.cve_id}`}
-              className="finding-view-action"
-              onClick={() => onOpenSheet(finding)}
-              type="button"
-              variant="ghost"
-            >
-              <Eye aria-hidden="true" size={16} />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side="left">Quick view</TooltipContent>
-        </Tooltip>
+        <div className="finding-row-actions">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                aria-label={`Quick view ${finding.cve_id}`}
+                className="finding-view-action"
+                onClick={() => onOpenSheet(finding)}
+                type="button"
+                variant="ghost"
+              >
+                <Eye aria-hidden="true" size={16} />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="left">Open drawer</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                asChild
+                className="finding-view-action"
+                type="button"
+                variant="ghost"
+              >
+                <Link
+                  aria-label={`Open full detail ${finding.cve_id}`}
+                  params={{ findingId: finding.id }}
+                  search={findingSearch}
+                  to="/findings/$findingId"
+                >
+                  <ExternalLink aria-hidden="true" size={16} />
+                </Link>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="left">Full detail</TooltipContent>
+          </Tooltip>
+        </div>
       ),
-      className:
-        "sticky right-0 z-10 w-16 min-w-16 bg-[var(--vpw-bg-card)] pr-4 text-right",
-      headerClassName:
-        "sticky right-0 z-20 w-16 min-w-16 bg-[var(--vpw-bg-panel)] pr-4 text-right",
-      width: "4%",
+      className: "w-20 min-w-20 bg-[var(--vpw-bg-card)] px-2 text-right",
+      headerClassName: "w-20 min-w-20 bg-[var(--vpw-bg-panel)] px-2 text-right",
+      width: "8%",
     },
   ]
 }

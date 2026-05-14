@@ -4,7 +4,7 @@ import type { ProjectPublic } from "@/api-client"
 import { Button } from "@/components/ui/button"
 import { selectedProjectRouteSearch } from "@/workbench/selected-project-search"
 import {
-  VpwBadge,
+  CountBadge,
   VpwDemoBanner,
   VpwGrid,
   VpwMetricCard,
@@ -36,16 +36,16 @@ function SummaryChip({
   tone = "info",
 }: SummaryChipProps) {
   return (
-    <VpwBadge
+    <CountBadge
       className={
         compact
           ? "min-h-9 w-full justify-between gap-2 px-3 text-[0.72rem]"
           : undefined
       }
+      label={`${label}: ${value}`}
       tone={tone}
-    >
-      {label}: <span className="font-bold">{value}</span>
-    </VpwBadge>
+      value={value}
+    />
   )
 }
 

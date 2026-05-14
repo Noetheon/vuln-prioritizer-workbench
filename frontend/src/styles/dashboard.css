@@ -427,22 +427,6 @@
   padding: 18px;
 }
 
-.risk-score-pill {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 38px;
-  min-height: 24px;
-  border: 1px solid var(--vpw-border-default);
-  border-radius: 999px;
-  padding: 0 9px;
-  background: var(--dashboard-analyst-muted-fill);
-  color: var(--vpw-text-secondary);
-  font-size: 0.82rem;
-  font-weight: 750;
-  line-height: 1;
-}
-
 .remediation-subtext {
   display: block;
   margin-top: 4px;
@@ -504,30 +488,6 @@
   border-color: var(--vpw-text-primary);
   background: var(--vpw-text-primary);
   color: var(--vpw-bg-card);
-}
-
-.freshness-pill {
-  display: inline-flex;
-  align-items: center;
-  min-height: 32px;
-  border-radius: 8px;
-  padding: 0 10px;
-  background: var(--vpw-bg-info);
-  color: var(--vpw-blue);
-  font-size: 0.72rem;
-  font-weight: 750;
-  text-transform: uppercase;
-  white-space: nowrap;
-}
-
-.freshness-pill.tone-kev {
-  background: var(--vpw-bg-success);
-  color: color-mix(in srgb, var(--vpw-green) 50%, var(--vpw-text-primary));
-}
-
-.freshness-pill.tone-high {
-  background: var(--vpw-bg-warning);
-  color: color-mix(in srgb, var(--vpw-amber) 55%, var(--vpw-text-primary));
 }
 
 .freshness-facts,

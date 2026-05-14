@@ -1,15 +1,14 @@
 import { Link } from "@/lib/router"
-import { History } from "lucide-react"
+import { FileSearch, History } from "lucide-react"
 import type { AnalysisRunPublic } from "@/api-client"
 import { Button } from "@/components/ui/button"
 import {
-  VpwBadge,
+  MetaTag,
+  SourceMark,
+  StatusLozenge,
   VpwDataTable,
   type VpwDataTableColumn,
   VpwEmptyState,
-  VpwGrid,
-  VpwKeyValueList,
-  VpwMetricCard,
   VpwPanel,
   VpwSection,
   VpwSectionHeader,
@@ -17,19 +16,20 @@ import {
   VpwStatusBanner,
 } from "@/components/vpw"
 import { runStatusLabel } from "@/lib/risk-format"
-import { ParserErrors } from "./ImportsWorkbenchResults"
+import { RunDiagnosticsSheet } from "./ImportsWorkbenchRunDetail"
 import {
-  failedRunCause,
   formatDateTime,
   formatDisplayType,
   type ImportsWorkbenchProps,
-  jsonPreview,
-  metadataRows,
+  objectRecord,
   runFileLabel,
-  runTone,
 } from "./imports-workbench-model"
 
 export function RecentImports({
+  diagnosticsOpen,
+  diagnosticsRunId,
+  onDiagnosticsOpenChange,
+  onOpenDiagnostics,
   onRefreshRuns,
   onSelectRun,
   projectRuns,
@@ -54,53 +54,82 @@ export function RecentImports({
   | "selectedRun"
   | "selectedRunId"
   | "selectedRunSummary"
->) {
+> & {
+  diagnosticsOpen: boolean
+  diagnosticsRunId: string
+  onDiagnosticsOpenChange: (open: boolean) => void
+  onOpenDiagnostics: (runId: string) => void
+}) {
+  function findingsLabel(run: AnalysisRunPublic) {
+    if (selectedRunId === run.id && selectedRunSummary) {
+      const count =
+        selectedRunSummary.finding_count ??
+        (selectedRunSummary.created_findings ?? 0) +
+          (selectedRunSummary.updated_findings ?? 0)
+      return `${count} finding(s)`
+    }
+    const summary = objectRecord(run.summary_json)
+    const count = summary.finding_count
+    return typeof count === "number" ? `${count} finding(s)` : "Open for counts"
+  }
+
   const columns: VpwDataTableColumn<AnalysisRunPublic>[] = [
     {
       id: "run",
       header: "Run",
       cell: (run) => (
-        <Button
-          className="h-auto p-0 font-mono text-sm"
-          onClick={() => onSelectRun(run.id)}
-          type="button"
-          variant="link"
-        >
-          {run.id.slice(0, 8)}
-        </Button>
+        <div className="min-w-0">
+          <Button
+            className="h-auto p-0 font-mono text-sm"
+            onClick={() => onSelectRun(run.id)}
+            type="button"
+            variant="link"
+          >
+            {run.id.slice(0, 8)}
+          </Button>
+          <span className="vpw-table-subtext">
+            {formatDateTime(run.started_at)}
+          </span>
+        </div>
       ),
     },
-    { id: "file", header: "Input file", cell: (run) => runFileLabel(run) },
     {
-      id: "type",
-      header: "Input type",
+      id: "source",
+      header: "Source",
       cell: (run) => (
-        <VpwBadge tone="info">{formatDisplayType(run.input_type)}</VpwBadge>
+        <div className="flex min-w-0 flex-col gap-1">
+          <span className="font-medium text-[var(--vpw-text-primary)]">
+            {runFileLabel(run)}
+          </span>
+          <MetaTag label={formatDisplayType(run.input_type)} />
+        </div>
       ),
     },
     {
       id: "status",
       header: "Status",
       cell: (run) => (
-        <VpwBadge tone={runTone(run.status)}>
-          {runStatusLabel(run.status)}
-        </VpwBadge>
+        <StatusLozenge
+          density="compact"
+          label={runStatusLabel(run.status)}
+          status={run.status}
+        />
       ),
     },
     {
       id: "findings",
       header: "Findings",
-      cell: (run) =>
-        selectedRunId === run.id && selectedRunSummary
-          ? `${selectedRunSummary.created_findings ?? 0} created / ${
-              selectedRunSummary.updated_findings ?? 0
-            } updated`
-          : "Select for counts",
+      cell: findingsLabel,
     },
     {
-      id: "started",
-      header: "Timestamp",
-      cell: (run) => formatDateTime(run.started_at),
+      id: "provider",
+      header: "Provider snapshot",
+      cell: (run) =>
+        run.provider_snapshot_id ? (
+          <SourceMark label={run.provider_snapshot_id} source="provider" />
+        ) : (
+          <span className="text-[var(--vpw-text-muted)]">Not recorded</span>
+        ),
     },
     {
       id: "actions",
@@ -108,14 +137,22 @@ export function RecentImports({
       className: "text-right",
       headerClassName: "text-right",
       cell: (run) => (
-        <Button
-          onClick={() => onSelectRun(run.id)}
-          size="sm"
-          type="button"
-          variant={selectedRunId === run.id ? "default" : "outline"}
-        >
-          {selectedRunId === run.id ? "Selected" : "Inspect"}
-        </Button>
+        <div className="flex flex-wrap justify-end gap-2">
+          <Button
+            onClick={() => onOpenDiagnostics(run.id)}
+            size="sm"
+            type="button"
+            variant="outline"
+          >
+            <FileSearch aria-hidden="true" data-icon="inline-start" />
+            View diagnostics
+          </Button>
+          <Button asChild size="sm" variant="outline">
+            <Link search={{ projectId: run.project_id }} to="/findings">
+              Review findings
+            </Link>
+          </Button>
+        </div>
       ),
     },
   ]
@@ -151,6 +188,7 @@ export function RecentImports({
           caption="Recent import runs"
           columns={columns}
           data={projectRuns}
+          density="compact"
           emptyState={
             <VpwEmptyState
               description="Upload a supported file to create import run history."
@@ -159,9 +197,13 @@ export function RecentImports({
             />
           }
           getRowKey={(run) => run.id}
+          minWidth="960px"
         />
       )}
-      <RunDetail
+      <RunDiagnosticsSheet
+        diagnosticsOpen={diagnosticsOpen}
+        diagnosticsRunId={diagnosticsRunId}
+        onDiagnosticsOpenChange={onDiagnosticsOpenChange}
         runDetailError={runDetailError}
         runDetailLoading={runDetailLoading}
         selectedRun={selectedRun}
@@ -169,161 +211,5 @@ export function RecentImports({
         selectedRunSummary={selectedRunSummary}
       />
     </VpwSection>
-  )
-}
-
-export function RunDetail({
-  runDetailError,
-  runDetailLoading,
-  selectedRun,
-  selectedRunId,
-  selectedRunSummary,
-}: Pick<
-  ImportsWorkbenchProps,
-  | "runDetailError"
-  | "runDetailLoading"
-  | "selectedRun"
-  | "selectedRunId"
-  | "selectedRunSummary"
->) {
-  if (runDetailLoading) {
-    return (
-      <VpwPanel>
-        <VpwSkeletonStack rows={4} />
-      </VpwPanel>
-    )
-  }
-
-  if (runDetailError) {
-    return (
-      <VpwStatusBanner title="Run detail unavailable" tone="critical">
-        {runDetailError}
-      </VpwStatusBanner>
-    )
-  }
-
-  if (!selectedRunId) {
-    return (
-      <VpwEmptyState
-        description="Select a historical import run to inspect details."
-        title="No run selected"
-      />
-    )
-  }
-
-  if (!selectedRun || !selectedRunSummary) return null
-
-  const metadata = metadataRows(selectedRunSummary.input_upload).map(
-    ([label, value]) => ({
-      label,
-      value: String(value),
-    }),
-  )
-  const selectedParseErrors = selectedRunSummary.parse_errors ?? []
-  const findingsSearch = { projectId: selectedRunSummary.project_id }
-  const reportsSearch = {
-    projectId: selectedRunSummary.project_id,
-    runId: selectedRunSummary.id,
-  }
-
-  return (
-    <VpwPanel className="flex flex-col gap-5">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <p className="vpw-label">Run detail</p>
-          <h3 className="mt-1 text-lg font-semibold text-[var(--vpw-text-primary)]">
-            {selectedRunId.slice(0, 8)}
-          </h3>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button asChild size="sm" variant="outline">
-            <Link search={findingsSearch} to="/findings">
-              Findings
-            </Link>
-          </Button>
-          <Button asChild size="sm" variant="outline">
-            <Link search={reportsSearch} to="/reports">
-              Evidence
-            </Link>
-          </Button>
-        </div>
-      </div>
-      <VpwKeyValueList
-        columns={2}
-        items={[
-          {
-            label: "Status",
-            value: runStatusLabel(selectedRunSummary.status),
-            tone: runTone(selectedRunSummary.status),
-          },
-          {
-            label: "Input type",
-            value: formatDisplayType(selectedRunSummary.input_type),
-          },
-          { label: "Filename", value: runFileLabel(selectedRunSummary) },
-          {
-            label: "Started",
-            value: formatDateTime(selectedRunSummary.started_at),
-          },
-          {
-            label: "Finished",
-            value: formatDateTime(selectedRunSummary.finished_at),
-          },
-          {
-            label: "Provider snapshot",
-            value: selectedRunSummary.provider_snapshot_id ?? "Not recorded",
-          },
-        ]}
-      />
-      <VpwGrid columns={4}>
-        <VpwMetricCard
-          label="Created"
-          value={selectedRunSummary.created_findings ?? 0}
-        />
-        <VpwMetricCard
-          label="Updated"
-          value={selectedRunSummary.updated_findings ?? 0}
-        />
-        <VpwMetricCard
-          label="Findings"
-          value={selectedRunSummary.finding_count ?? 0}
-        />
-        <VpwMetricCard
-          label="Ignored"
-          value={selectedRunSummary.ignored_lines ?? 0}
-        />
-      </VpwGrid>
-      {selectedRunSummary.status === "failed" ? (
-        <VpwStatusBanner title="Failure Cause" tone="critical">
-          <p>{failedRunCause(selectedRun, selectedRunSummary)}</p>
-          <pre className="mt-3 whitespace-pre-wrap break-words rounded-[var(--vpw-radius-md)] bg-[var(--vpw-bg-card)] p-3 text-xs">
-            <code>{jsonPreview(selectedRunSummary.error_json)}</code>
-          </pre>
-        </VpwStatusBanner>
-      ) : null}
-      <VpwSectionHeader title="Upload Metadata" />
-      {metadata.length > 0 ? (
-        <VpwKeyValueList columns={2} items={metadata} />
-      ) : (
-        <VpwEmptyState title="No upload metadata recorded" />
-      )}
-      <VpwSectionHeader
-        actions={
-          selectedParseErrors.length > 0 ? (
-            <VpwBadge tone="critical">
-              {selectedParseErrors.length} parser issue(s)
-            </VpwBadge>
-          ) : (
-            <VpwBadge tone="success">No parser errors</VpwBadge>
-          )
-        }
-        title="Run Parser Errors"
-      />
-      {selectedParseErrors.length > 0 ? (
-        <ParserErrors errors={selectedParseErrors} />
-      ) : (
-        <VpwEmptyState title="No parser errors recorded" />
-      )}
-    </VpwPanel>
   )
 }

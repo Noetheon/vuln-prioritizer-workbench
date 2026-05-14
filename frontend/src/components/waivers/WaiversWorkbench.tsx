@@ -1,11 +1,12 @@
+import { ChevronDown } from "lucide-react"
 import { VpwPageContainer, VpwStatusBanner } from "@/components/vpw"
 import {
-  CreateWaiverSection,
   WaiverMetrics,
   WaiverRegister,
   WaiverReviewSection,
   WaiversHero,
 } from "./WaiversWorkbenchSections"
+import { WaiverDrawer } from "./WaiversWorkbenchDrawer"
 import {
   evidenceCompleteness,
   isMissingApproval,
@@ -15,6 +16,7 @@ import {
 } from "./waivers-workbench-model"
 
 export type {
+  WaiverDrawerMode,
   WaiverDebtSummaryItem,
   WaiverFormStateLike,
   WaiversWorkbenchProps,
@@ -41,6 +43,7 @@ export function WaiversWorkbench(props: WaiversWorkbenchProps) {
         activeWaivers={activeWaivers}
         expired={expired}
         expiringSoon={expiringSoon}
+        openWaiverDrawer={props.openWaiverDrawer}
         onProjectChange={props.onProjectChange}
         projectListLoading={props.projectListLoading}
         projectSummary={props.projectSummary}
@@ -74,33 +77,43 @@ export function WaiversWorkbench(props: WaiversWorkbenchProps) {
         waiversLoading={props.waiversLoading}
       />
       <WaiverRegister
-        onExpireWaiver={props.onExpireWaiver}
+        openWaiverDrawer={props.openWaiverDrawer}
         onRefreshWaivers={props.onRefreshWaivers}
+        selectedWaiverId={props.selectedWaiverId}
         selectedProjectId={props.selectedProjectId}
         waiverActionLoading={props.waiverActionLoading}
         waivers={props.waivers}
         waiversLoading={props.waiversLoading}
       />
-      <CreateWaiverSection
-        completeness={completeness}
-        onCreateWaiver={props.onCreateWaiver}
-        onFieldChange={props.onFieldChange}
-        projectListLoading={props.projectListLoading}
-        projectSummary={props.projectSummary}
-        projects={props.projects}
-        reviewDue={reviewDue}
-        selectedProject={props.selectedProject}
-        selectedProjectId={props.selectedProjectId}
-        waiverActionLoading={props.waiverActionLoading}
-        waiverForm={props.waiverForm}
-      />
-      <WaiverReviewSection
-        acceptedFindings={acceptedFindings}
-        expired={expired}
-        expiringSoon={expiringSoon}
-        queue={queue}
-        reviewDue={reviewDue}
-      />
+      <details className="group rounded-[var(--vpw-radius-xl)] border border-[var(--vpw-border-default)] bg-[var(--vpw-bg-card)] shadow-[var(--vpw-shadow-0)]">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-5 py-4 [&::-webkit-details-marker]:hidden">
+          <span>
+            <span className="vpw-label text-[var(--vpw-teal)]">
+              Governance rollups
+            </span>
+            <span className="mt-1 block text-base font-semibold text-[var(--vpw-text-primary)]">
+              Review queue and lifecycle context
+            </span>
+            <span className="mt-1 block text-sm text-[var(--vpw-text-secondary)]">
+              {completeness}% evidence completeness across accepted-risk records.
+            </span>
+          </span>
+          <ChevronDown
+            aria-hidden="true"
+            className="size-4 shrink-0 text-[var(--vpw-text-muted)] transition-transform group-open:rotate-180"
+          />
+        </summary>
+        <div className="border-t border-[var(--vpw-border-subtle)] p-5">
+          <WaiverReviewSection
+            acceptedFindings={acceptedFindings}
+            expired={expired}
+            expiringSoon={expiringSoon}
+            queue={queue}
+            reviewDue={reviewDue}
+          />
+        </div>
+      </details>
+      <WaiverDrawer state={props} />
     </VpwPageContainer>
   )
 }

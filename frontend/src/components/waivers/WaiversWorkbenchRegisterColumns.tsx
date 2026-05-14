@@ -1,9 +1,13 @@
 import { Link } from "@/lib/router"
-import { ShieldAlert } from "lucide-react"
-import type { Dispatch, SetStateAction } from "react"
+import { Eye, Pencil, ShieldAlert } from "lucide-react"
+
 import type { WaiverPublic } from "@/api-client"
 import { Button } from "@/components/ui/button"
-import { VpwBadge, type VpwDataTableColumn } from "@/components/vpw"
+import {
+  CountBadge,
+  StatusLozenge,
+  type VpwDataTableColumn,
+} from "@/components/vpw"
 import { optionalText } from "@/lib/ui-copy"
 import { cn } from "@/lib/utils"
 import { selectedProjectRouteSearch } from "@/workbench/selected-project-search"
@@ -12,120 +16,106 @@ import {
   formatDate,
   shortId,
   statusLabel,
-  statusTone,
   type WaiversWorkbenchProps,
   waiverScopeLabel,
 } from "./waivers-workbench-model"
 
 type BuildWaiverRegisterColumnsArgs = Pick<
   WaiversWorkbenchProps,
-  "onExpireWaiver" | "waiverActionLoading"
-> & {
-  confirmExpireId: string | null
-  setConfirmExpireId: Dispatch<SetStateAction<string | null>>
-}
+  "openWaiverDrawer" | "selectedWaiverId" | "waiverActionLoading"
+>
 
 export function buildWaiverRegisterColumns({
-  confirmExpireId,
-  onExpireWaiver,
-  setConfirmExpireId,
+  openWaiverDrawer,
+  selectedWaiverId,
   waiverActionLoading,
 }: BuildWaiverRegisterColumnsArgs): VpwDataTableColumn<WaiverPublic>[] {
   const columns: VpwDataTableColumn<WaiverPublic>[] = [
     {
-      id: "finding",
-      header: "Finding / CVE",
-      className: "w-[12%] break-words",
-      headerClassName: "w-[12%]",
       cell: (waiver) => (
-        <div>
-          <strong className="block text-sm text-[var(--vpw-text-primary)]">
-            {waiver.cve_id ?? "Scoped waiver"}
+        <div className="grid min-w-44 gap-0.5">
+          <strong className="text-sm text-[var(--vpw-text-primary)]">
+            {waiverScopeLabel(waiver)}
           </strong>
           <span className="font-mono text-xs text-[var(--vpw-text-muted)]">
             {waiver.finding_id
               ? `Finding ${shortId(waiver.finding_id)}`
-              : `Waiver ${shortId(waiver.id)}`}
+              : `Acceptance ${shortId(waiver.id)}`}
           </span>
         </div>
       ),
-    },
-    {
-      id: "scope",
       header: "Scope",
-      className: "w-[12%] break-words",
-      headerClassName: "w-[12%]",
-      cell: (waiver) => waiverScopeLabel(waiver),
+      id: "scope",
+      width: "18rem",
     },
     {
-      id: "owner",
-      header: "Owner",
-      className: "w-[9%] break-words",
-      headerClassName: "w-[9%]",
-      cell: (waiver) => waiver.owner,
-    },
-    {
-      id: "reason",
+      cell: (waiver) => (
+        <span className="line-clamp-2 text-sm leading-5">
+          {waiver.reason}
+        </span>
+      ),
       header: "Reason",
-      className: "w-[14%]",
-      headerClassName: "w-[14%]",
-      cell: (waiver) => (
-        <span className="line-clamp-2 text-sm leading-5">{waiver.reason}</span>
-      ),
+      id: "reason",
+      width: "18rem",
     },
     {
-      id: "status",
+      cell: (waiver) => waiver.owner,
+      header: "Owner",
+      id: "owner",
+      width: "10rem",
+    },
+    {
+      cell: (waiver) => (
+        <StatusLozenge
+          label={statusLabel(waiver.status)}
+          status={waiver.status}
+        />
+      ),
       header: "Status",
-      className: "w-[9%]",
-      headerClassName: "w-[9%]",
-      cell: (waiver) => (
-        <VpwBadge tone={statusTone(waiver.status)}>
-          {statusLabel(waiver.status)}
-        </VpwBadge>
-      ),
+      id: "status",
+      width: "9rem",
     },
     {
-      id: "expires",
-      header: "Expires",
-      className: "w-[11%]",
-      headerClassName: "w-[11%]",
       cell: (waiver) => (
-        <div>
+        <div className="grid min-w-32 gap-1">
           <span>{formatDate(waiver.expires_at)}</span>
-          <small className="block text-xs text-[var(--vpw-text-muted)]">
+          <small className="text-xs text-[var(--vpw-text-muted)]">
             {daysLabel(waiver.days_remaining)}
+          </small>
+          <small className="text-xs text-[var(--vpw-text-muted)]">
+            Review {formatDate(waiver.review_at)}
           </small>
         </div>
       ),
+      header: "Expiry / Review",
+      id: "lifecycle",
+      width: "12rem",
     },
     {
-      id: "review",
-      header: "Review date",
-      className: "w-[10%]",
-      headerClassName: "w-[10%]",
-      cell: (waiver) => formatDate(waiver.review_at),
+      cell: (waiver) => <CountBadge value={waiver.matched_findings ?? 0} />,
+      header: "Matched findings",
+      id: "matched-findings",
+      width: "9rem",
     },
     {
-      id: "approval",
-      header: "Approval reference",
-      className: "w-[13%] break-words",
-      headerClassName: "w-[13%]",
-      cell: (waiver) => optionalText(waiver.approval_ref ?? waiver.ticket_url),
+      cell: (waiver) =>
+        optionalText(waiver.approval_ref ?? waiver.ticket_url),
+      header: "Evidence",
+      id: "evidence",
+      width: "12rem",
     },
     {
-      id: "actions",
-      header: "Actions",
-      className: "w-[10%]",
-      headerClassName: "w-[10%]",
       cell: (waiver) => (
         <WaiverRegisterActions
-          confirmExpireId={confirmExpireId}
-          onExpireWaiver={onExpireWaiver}
-          setConfirmExpireId={setConfirmExpireId}
+          openWaiverDrawer={openWaiverDrawer}
+          selectedWaiverId={selectedWaiverId}
           waiver={waiver}
           waiverActionLoading={waiverActionLoading}
         />
       ),
+      header: "Actions",
+      id: "actions",
+      width: "17rem",
     },
   ]
 
@@ -137,14 +127,47 @@ export function buildWaiverRegisterColumns({
 }
 
 function WaiverRegisterActions({
-  confirmExpireId,
-  onExpireWaiver,
-  setConfirmExpireId,
+  openWaiverDrawer,
+  selectedWaiverId,
   waiver,
   waiverActionLoading,
 }: BuildWaiverRegisterColumnsArgs & { waiver: WaiverPublic }) {
   return (
-    <div className="flex flex-wrap gap-2">
+    <div className="flex min-w-60 flex-wrap gap-2">
+      <Button
+        aria-current={selectedWaiverId === waiver.id ? "true" : undefined}
+        onClick={() => openWaiverDrawer("detail", waiver)}
+        size="sm"
+        type="button"
+        variant="outline"
+      >
+        <Eye aria-hidden="true" />
+        View
+      </Button>
+      {waiver.status !== "expired" ? (
+        <>
+          <Button
+            onClick={() => openWaiverDrawer("review", waiver)}
+            size="sm"
+            type="button"
+            variant="outline"
+          >
+            <Pencil aria-hidden="true" />
+            Review/edit
+          </Button>
+          <Button
+            aria-busy={waiverActionLoading}
+            disabled={waiverActionLoading}
+            onClick={() => openWaiverDrawer("expire", waiver)}
+            size="sm"
+            type="button"
+            variant="outline"
+          >
+            <ShieldAlert aria-hidden="true" />
+            Expire
+          </Button>
+        </>
+      ) : null}
       {waiver.finding_id ? (
         <Button asChild size="sm" variant="outline">
           <Link
@@ -154,44 +177,6 @@ function WaiverRegisterActions({
           >
             View finding
           </Link>
-        </Button>
-      ) : null}
-      {waiver.status !== "expired" && confirmExpireId === waiver.id ? (
-        <>
-          <Button
-            aria-busy={waiverActionLoading}
-            disabled={waiverActionLoading}
-            onClick={() => {
-              onExpireWaiver(waiver)
-              setConfirmExpireId(null)
-            }}
-            size="sm"
-            type="button"
-            variant="destructive"
-          >
-            <ShieldAlert aria-hidden="true" className="h-4 w-4" />
-            Confirm expiry
-          </Button>
-          <Button
-            disabled={waiverActionLoading}
-            onClick={() => setConfirmExpireId(null)}
-            size="sm"
-            type="button"
-            variant="ghost"
-          >
-            Cancel
-          </Button>
-        </>
-      ) : waiver.status !== "expired" ? (
-        <Button
-          aria-busy={waiverActionLoading}
-          disabled={waiverActionLoading}
-          onClick={() => setConfirmExpireId(waiver.id)}
-          size="sm"
-          type="button"
-          variant="outline"
-        >
-          Expire
         </Button>
       ) : null}
     </div>

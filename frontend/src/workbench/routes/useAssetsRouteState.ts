@@ -12,7 +12,10 @@ import {
   type AssetPublic,
   AssetsService,
 } from "../../api-client"
-import type { AssetsWorkbenchProps } from "../../components/assets"
+import type {
+  AssetDrawerMode,
+  AssetsWorkbenchProps,
+} from "../../components/assets"
 import {
   apiErrorMessage,
   assetFormFromAsset,
@@ -52,6 +55,8 @@ export function useAssetsRouteState(): AssetsWorkbenchProps {
   const [editError, setEditError] = useState("")
   const [editingAssetId, setEditingAssetId] = useState("")
   const [selectedAssetId, setSelectedAssetId] = useState("")
+  const [assetDrawerMode, setAssetDrawerMode] =
+    useState<AssetDrawerMode>(null)
   const previousProjectId = useRef(selectedProjectId)
   const assetsQuery = useProjectAssetsQuery({
     owner: assetOwnerFilter,
@@ -134,8 +139,10 @@ export function useAssetsRouteState(): AssetsWorkbenchProps {
     previousProjectId.current = selectedProjectId
     setSelectedAssetId("")
     setEditingAssetId("")
+    setAssetDrawerMode(null)
     setAssetMessage("")
     setAssetsError("")
+    setAssetContextFile(null)
   }, [selectedProjectId])
 
   useEffect(() => {
@@ -168,6 +175,7 @@ export function useAssetsRouteState(): AssetsWorkbenchProps {
       })
       setCreateForm(emptyAssetForm)
       setAssetMessage(`Asset ${asset.name} created.`)
+      setAssetDrawerMode("detail")
       await refreshAssets(asset.id)
     } catch (caught) {
       setAssetsError(apiErrorMessage("Asset create failed", caught))
@@ -175,11 +183,42 @@ export function useAssetsRouteState(): AssetsWorkbenchProps {
   }
 
   function startEditAsset(asset: AssetPublic) {
+    setSelectedAssetId(asset.id)
     setEditingAssetId(asset.id)
     setEditForm(assetFormFromAsset(asset))
     setEditError("")
     setAssetMessage("")
     setAssetsError("")
+    setAssetDrawerMode("edit")
+  }
+
+  function openAssetDrawer(
+    mode: Exclude<AssetDrawerMode, null>,
+    asset?: AssetPublic,
+  ) {
+    if (asset) {
+      setSelectedAssetId(asset.id)
+    }
+    setAssetMessage("")
+    setAssetsError("")
+    if (mode === "edit" && asset) {
+      startEditAsset(asset)
+      return
+    }
+    if (mode !== "edit") {
+      setEditingAssetId("")
+      setEditError("")
+    }
+    if (mode === "create") {
+      setCreateError("")
+    }
+    setAssetDrawerMode(mode)
+  }
+
+  function closeAssetDrawer() {
+    setAssetDrawerMode(null)
+    setEditingAssetId("")
+    setEditError("")
   }
 
   async function saveAsset(event: FormEvent<HTMLFormElement>) {
@@ -203,6 +242,7 @@ export function useAssetsRouteState(): AssetsWorkbenchProps {
       })
       setEditingAssetId("")
       setAssetMessage(`Asset ${asset.name} updated.`)
+      setAssetDrawerMode("detail")
       await refreshAssets(asset.id)
     } catch (caught) {
       setAssetsError(apiErrorMessage("Asset update failed", caught))
@@ -245,6 +285,7 @@ export function useAssetsRouteState(): AssetsWorkbenchProps {
       setAssetMessage(
         `Imported ${result.imported_assets} asset(s); ${result.rescore_needed_findings} finding(s) need recalculation.`,
       )
+      setAssetDrawerMode(null)
       await refreshAssets(selectedAssetId)
     } catch (caught) {
       setAssetsError(apiErrorMessage("Asset context import failed", caught))
@@ -254,6 +295,7 @@ export function useAssetsRouteState(): AssetsWorkbenchProps {
   function selectProject(projectId: string) {
     setSelectedProjectId(projectId)
     setEditingAssetId("")
+    setAssetDrawerMode(null)
     setAssetMessage("")
   }
 
@@ -280,6 +322,7 @@ export function useAssetsRouteState(): AssetsWorkbenchProps {
       selectedProject?.name ?? (projectListLoading ? "Loading" : "No project"),
     assetActionLoading,
     assetContextFile,
+    assetDrawerMode,
     assetFindings,
     assetFindingsError,
     assetFindingsLoading:
@@ -292,6 +335,7 @@ export function useAssetsRouteState(): AssetsWorkbenchProps {
     assetServiceFilter,
     assetSummary: summarizeAssets(assets),
     clearAssetFilters,
+    closeAssetDrawer,
     createAsset,
     createError,
     createForm,
@@ -299,6 +343,7 @@ export function useAssetsRouteState(): AssetsWorkbenchProps {
     editForm,
     editingAssetId,
     importAssetContext,
+    openAssetDrawer,
     projectLoading: projectListLoading,
     projects,
     projectSelectDisabled: projectListLoading || projects.length === 0,

@@ -1,5 +1,6 @@
 export { ProviderStatusAlerts, ProvidersHero } from "./ProvidersWorkbenchHero"
 export { ProviderMetricsGrid } from "./ProvidersWorkbenchMetrics"
+export { ProviderDiagnosticsSection } from "./ProvidersWorkbenchDiagnostics"
 export { ProviderDataQualitySection } from "./ProvidersWorkbenchQuality"
 export { ProviderSnapshotDetails } from "./ProvidersWorkbenchSnapshot"
 export { ProviderSourcesTable } from "./ProvidersWorkbenchSources"

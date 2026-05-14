@@ -37,7 +37,7 @@ import {
 } from "@/components/vpw"
 import { optionalText } from "@/lib/ui-copy"
 import { selectedProjectRouteSearch } from "@/workbench/selected-project-search"
-import { RiskBadge } from "../risk/RiskBadge"
+import { RiskScore } from "../risk/RiskScore"
 import { SeverityBadge } from "../risk/SeverityBadge"
 import { EmptyState, ErrorState } from "../states"
 import { findingWhyNow } from "./dashboard-model"
@@ -78,7 +78,7 @@ export function DashboardRemediationSection({
           </TooltipContent>
         </Tooltip>
       ),
-      cell: (finding) => <RiskBadge score={finding.risk_score} />,
+      cell: (finding) => <RiskScore value={finding.risk_score} />,
       className: "w-20",
       headerClassName: "w-20",
     },
@@ -184,7 +184,7 @@ export function DashboardRemediationSection({
             <div className="mt-6 flex flex-col gap-5">
               <div className="flex flex-wrap gap-2">
                 <SeverityBadge severity={finding.priority} />
-                <RiskBadge score={finding.risk_score} />
+                <RiskScore value={finding.risk_score} />
               </div>
               <dl className="flex flex-col gap-3 text-sm">
                 <div>

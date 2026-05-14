@@ -1,30 +1,35 @@
-import { VpwBadge, type VpwBadgeTone } from "@/components/vpw"
+import {
+  RiskBadge as SemanticRiskBadge,
+  RiskScoreBadge,
+  type BadgeDensity,
+  type RiskLevel,
+} from "@/components/vpw"
 
 interface RiskBadgeProps {
-  score: number | null | undefined
   className?: string
+  density?: BadgeDensity
+  label?: string
+  level?: RiskLevel | string | null | undefined
+  score?: number | null | undefined
 }
 
-export function RiskBadge({ score, className }: RiskBadgeProps) {
-  if (score === null || score === undefined) {
-    return <VpwBadge className={className}>N/A</VpwBadge>
+export function RiskBadge({
+  className,
+  density,
+  label,
+  level,
+  score,
+}: RiskBadgeProps) {
+  if (level !== undefined) {
+    return (
+      <SemanticRiskBadge
+        className={className}
+        density={density}
+        label={label}
+        level={level}
+      />
+    )
   }
 
-  let tone: VpwBadgeTone
-
-  if (score >= 90) {
-    tone = "critical"
-  } else if (score >= 70) {
-    tone = "warning"
-  } else if (score >= 40) {
-    tone = "warning"
-  } else {
-    tone = "info"
-  }
-
-  return (
-    <VpwBadge className={className} tone={tone}>
-      {score.toFixed(1)}
-    </VpwBadge>
-  )
+  return <RiskScoreBadge className={className} density={density} value={score} />
 }

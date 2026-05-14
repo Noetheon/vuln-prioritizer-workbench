@@ -2,12 +2,13 @@ import { Database } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import {
-  VpwBadge,
   VpwDataTable,
   type VpwDataTableColumn,
   VpwEmptyState,
   VpwSection,
   VpwSectionHeader,
+  SourceMark,
+  StatusLozenge,
 } from "@/components/vpw"
 import type { ProviderSourceRow } from "./providers-workbench-model"
 
@@ -26,9 +27,7 @@ export function ProviderSourcesTable({
     {
       cell: (row) => (
         <div className="min-w-40">
-          <p className="font-semibold text-[var(--vpw-text-primary)]">
-            {row.name}
-          </p>
+          <SourceMark source={row.name} />
           <p className="text-xs text-[var(--vpw-text-muted)]">{row.detail}</p>
         </div>
       ),
@@ -36,7 +35,7 @@ export function ProviderSourcesTable({
       id: "source",
     },
     {
-      cell: (row) => <VpwBadge tone={row.tone}>{row.status}</VpwBadge>,
+      cell: (row) => <StatusLozenge label={row.status} status={row.status} />,
       header: "Status",
       id: "status",
     },
@@ -57,9 +56,10 @@ export function ProviderSourcesTable({
     },
     {
       cell: (row) => (
-        <VpwBadge tone={row.usedInEvidence === "No" ? "neutral" : "info"}>
-          {row.usedInEvidence}
-        </VpwBadge>
+        <StatusLozenge
+          label={row.usedInEvidence}
+          status={row.usedInEvidence === "No" ? "unknown" : "ready"}
+        />
       ),
       header: "Used in evidence",
       id: "used-in-evidence",
@@ -85,13 +85,13 @@ export function ProviderSourcesTable({
       <VpwSectionHeader
         description="Configured vulnerability intelligence sources and whether they are available for prioritization evidence."
         eyebrow="Source inventory"
-        title="Provider sources"
+        title="Data source inventory"
       />
       {rows.length === 0 && !providerStatusLoading ? (
         <VpwEmptyState
           action={
             <Button onClick={onRefreshProviderStatus} type="button">
-              Refresh providers
+              Refresh status
             </Button>
           }
           description="Refresh provider status to load the latest stored source state."
@@ -100,7 +100,7 @@ export function ProviderSourcesTable({
         />
       ) : (
         <VpwDataTable
-          caption="Provider sources"
+          caption="Data source inventory"
           columns={columns}
           data={rows}
           density="compact"

@@ -159,11 +159,34 @@ export function formatDisplayType(value: string) {
   return value.replaceAll("-", " ")
 }
 
+export function fileSizeLabel(file: File | null | undefined) {
+  if (!file) return "No file selected"
+  if (file.size < 1024) return `${file.size} B`
+  if (file.size < 1024 * 1024) return `${(file.size / 1024).toFixed(1)} KB`
+  return `${(file.size / (1024 * 1024)).toFixed(1)} MB`
+}
+
 export function selectedFormat(
   formats: readonly SupportedImportFormat[],
   inputType: string,
 ) {
   return formats.find((format) => format.value === inputType) ?? formats[0]
+}
+
+export function optionalContextLabels(wizard: ImportWizardStateLike) {
+  const labels: string[] = []
+  if (wizard.assetContextFile) labels.push("Asset context CSV")
+  if (wizard.vexFile) labels.push("VEX sidecar")
+  if (wizard.providerSnapshotFile) labels.push("Provider snapshot")
+  if (wizard.lockedProviderData) labels.push("Locked provider data")
+  if (wizard.attackSource && wizard.attackSource !== "none") {
+    labels.push("Reviewed ATT&CK mapping")
+  }
+  return labels
+}
+
+export function hasOptionalContext(wizard: ImportWizardStateLike) {
+  return optionalContextLabels(wizard).length > 0
 }
 
 export function uploadProgress(wizard: ImportWizardStateLike) {

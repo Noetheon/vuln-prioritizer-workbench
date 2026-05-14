@@ -68,9 +68,11 @@ test("workbench demo workspace seeds persisted dashboard and reports", async ({
 
   await page
     .getByRole("navigation", { name: "Workbench navigation" })
-    .getByRole("link", { name: "Waivers" })
+    .getByRole("link", { name: "Risk Acceptance" })
     .click()
-  await expect(page.getByRole("heading", { name: "Waivers" })).toBeVisible()
+  await expect(
+    page.getByRole("heading", { name: "Risk Acceptance" }),
+  ).toBeVisible()
   await expect(page.getByText("Active: 3", { exact: true })).toBeVisible()
   await expect(
     page.getByText("Expiring soon: 1", { exact: true }),
@@ -80,11 +82,12 @@ test("workbench demo workspace seeds persisted dashboard and reports", async ({
 
   await page
     .getByRole("navigation", { name: "Workbench navigation" })
-    .getByRole("link", { name: "Reports" })
+    .getByRole("link", { name: "Evidence Center" })
     .click()
   await expect(
     page.getByRole("heading", { level: 1, name: "Evidence Center" }),
   ).toBeVisible()
+  await page.getByRole("tab", { name: "History" }).click()
   const reportHistory = page.getByRole("table", { name: "Report history list" })
   await expect(reportHistory).toContainText("technical-report.md")
   await expect(reportHistory).toContainText("executive-report.html")

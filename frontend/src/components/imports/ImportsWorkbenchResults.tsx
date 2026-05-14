@@ -1,5 +1,6 @@
 import { Link } from "@/lib/router"
-import { CheckCircle2 } from "lucide-react"
+import { CheckCircle2, FileSearch } from "lucide-react"
+import { useState } from "react"
 import type { ImportParseErrorPublic } from "@/api-client"
 import { Button } from "@/components/ui/button"
 import {
@@ -18,7 +19,10 @@ import { type ImportsWorkbenchProps, runTone } from "./imports-workbench-model"
 export function ImportResult({
   importRun,
   importRunSummary,
-}: Pick<ImportsWorkbenchProps, "importRun" | "importRunSummary">) {
+  onOpenDiagnostics,
+}: Pick<ImportsWorkbenchProps, "importRun" | "importRunSummary"> & {
+  onOpenDiagnostics?: (runId: string) => void
+}) {
   if (!importRun && !importRunSummary) return null
 
   const summaryRun = importRunSummary ?? importRun
@@ -81,14 +85,23 @@ export function ImportResult({
           </div>
         ) : null}
         <div className="mt-5 flex flex-wrap gap-2">
-          <Button asChild variant="outline">
+          <Button asChild>
             <Link search={findingsSearch} to="/findings">
-              View Findings
+              Review findings
             </Link>
+          </Button>
+          <Button
+            disabled={!runId}
+            onClick={() => runId && onOpenDiagnostics?.(runId)}
+            type="button"
+            variant="outline"
+          >
+            <FileSearch aria-hidden="true" data-icon="inline-start" />
+            View run diagnostics
           </Button>
           <Button asChild variant="outline">
             <Link search={reportsSearch} to="/reports">
-              Generate Evidence
+              Evidence Center
             </Link>
           </Button>
         </div>
@@ -97,9 +110,11 @@ export function ImportResult({
   )
 }
 
-export function ParserErrors({ errors }: { errors: ImportParseErrorPublic[] }) {
-  if (errors.length === 0) return null
-
+export function ParserErrorsTable({
+  errors,
+}: {
+  errors: ImportParseErrorPublic[]
+}) {
   const columns: VpwDataTableColumn<ImportParseErrorPublic>[] = [
     { id: "line", header: "Line", cell: (error) => error.line ?? "Not supplied" },
     { id: "field", header: "Field", cell: (error) => error.field ?? "Not supplied" },
@@ -108,22 +123,49 @@ export function ParserErrors({ errors }: { errors: ImportParseErrorPublic[] }) {
   ]
 
   return (
+    <VpwDataTable
+      caption="Parser errors"
+      columns={columns}
+      data={errors}
+      getRowKey={(error, index) =>
+        [error.filename, error.line, error.field, error.value, index].join(":")
+      }
+    />
+  )
+}
+
+export function ParserErrors({
+  defaultOpen = false,
+  errors,
+}: {
+  defaultOpen?: boolean
+  errors: ImportParseErrorPublic[]
+}) {
+  const [open, setOpen] = useState(defaultOpen)
+  if (errors.length === 0) return null
+
+  return (
     <VpwSection>
-      <VpwSectionHeader
-        actions={<VpwBadge tone="critical">{errors.length} issue(s)</VpwBadge>}
-        description="Rows rejected during parser validation."
-        title="Parser Errors"
-      />
-      <VpwDataTable
-        caption="Parser errors"
-        columns={columns}
-        data={errors}
-        getRowKey={(error, index) =>
-          [error.filename, error.line, error.field, error.value, index].join(
-            ":",
-          )
-        }
-      />
+      <details
+        className="rounded-[var(--vpw-radius-xl)] border border-[var(--vpw-border-default)] bg-[var(--vpw-bg-card)] shadow-[var(--vpw-shadow-0)]"
+        onToggle={(event) => setOpen(event.currentTarget.open)}
+        open={open}
+      >
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-5 py-4 [&::-webkit-details-marker]:hidden">
+          <span className="min-w-0">
+            <span className="block text-base font-semibold text-[var(--vpw-text-primary)]">
+              Parser diagnostics
+            </span>
+            <span className="mt-1 block text-sm text-[var(--vpw-text-secondary)]">
+              Rows rejected during parser validation.
+            </span>
+          </span>
+          <VpwBadge tone="critical">{errors.length} issue(s)</VpwBadge>
+        </summary>
+        <div className="border-t border-[var(--vpw-border-default)] p-5">
+          <ParserErrorsTable errors={errors} />
+        </div>
+      </details>
     </VpwSection>
   )
 }

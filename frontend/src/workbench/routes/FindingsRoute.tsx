@@ -5,12 +5,14 @@ import { useFindingsRouteState } from "../../components/findings/useFindingsRout
 import { apiErrorMessage } from "../../lib/app-errors"
 import { useWorkbenchContext } from "../WorkbenchContext"
 import {
+  defaultFindingsSearchState,
   cleanFindingsSearchQueryString,
   findingsSearchToApiParams,
   findingsSearchToUrlSearch,
   parseFindingsSearch,
   type FindingsSearchState,
 } from "../../components/findings/findings-search-state"
+import type { FindingsSavedView } from "../../components/findings/remediation-queue-model"
 import {
   useFindingsQuery,
   useProjectSummaryQuery,
@@ -37,6 +39,16 @@ function FindingsRouteContainer() {
   function updateFindingsSearch(nextSearch: FindingsSearchState) {
     void navigate({
       search: findingsRouteSearch(nextSearch, selectedProjectId),
+      to: "/findings",
+    })
+  }
+
+  function updateSavedView(view: FindingsSavedView) {
+    void navigate({
+      search: findingsRouteSearch(
+        findingsSearchForSavedView(findingsSearch, view),
+        selectedProjectId,
+      ),
       to: "/findings",
     })
   }
@@ -121,6 +133,7 @@ function FindingsRouteContainer() {
           resetFindingOffset()
           setSelectedProjectId(id)
         }}
+        onSavedViewChange={updateSavedView}
         onSortDirectionChange={updateFindingSortDirection}
         projectListLoading={projectListLoading}
         projectListError={projectListError}
@@ -148,6 +161,52 @@ function findingsRouteSearch(
   return {
     ...findingsSearchToUrlSearch(findingsSearch),
     projectId: selectedProjectId || undefined,
+  }
+}
+
+function findingsSearchForSavedView(
+  findingsSearch: FindingsSearchState,
+  view: FindingsSavedView,
+): FindingsSearchState {
+  const base: FindingsSearchState = {
+    ...findingsSearch,
+    cvssMax: "",
+    cvssMin: "",
+    direction: defaultFindingsSearchState.direction,
+    epssMax: "",
+    epssMin: "",
+    exposure: "",
+    kev: "",
+    offset: 0,
+    priority: "",
+    sort: defaultFindingsSearchState.sort,
+    status: "",
+  }
+
+  switch (view) {
+    case "accepted":
+      return { ...base, direction: "desc", sort: "last_seen", status: "accepted" }
+    case "fixed":
+      return { ...base, direction: "desc", sort: "last_seen", status: "fixed" }
+    case "immediate":
+      return {
+        ...base,
+        direction: "asc",
+        priority: "critical",
+        sort: "priority",
+        status: "open",
+      }
+    case "internet":
+      return {
+        ...base,
+        direction: "asc",
+        exposure: "internet-facing",
+        sort: "priority",
+      }
+    case "kev":
+      return { ...base, direction: "desc", kev: "true", sort: "kev" }
+    case "all":
+      return base
   }
 }
 

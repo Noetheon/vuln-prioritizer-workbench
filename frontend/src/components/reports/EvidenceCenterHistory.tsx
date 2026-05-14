@@ -9,6 +9,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import {
+  StatusLozenge,
   VpwBadge,
   VpwDataTable,
   type VpwDataTableColumn,
@@ -21,7 +22,7 @@ import {
   reportFormatLabel,
   reportSizeLabel,
 } from "@/lib/report-format"
-import { reportFormatTone, verificationSummary } from "./evidence-center-model"
+import { verificationSummary } from "./evidence-center-model"
 
 type HistoryProps = {
   reports: ReportPublic[]
@@ -32,6 +33,9 @@ type HistoryProps = {
   verificationLoading: boolean
   onDownload: (report: ReportPublic) => void
   onVerify: (report: ReportPublic) => void
+  emptyDescription?: string
+  panelEyebrow?: string
+  panelTitle?: string
 }
 
 export function ReportHistory({
@@ -43,6 +47,9 @@ export function ReportHistory({
   verificationLoading,
   verificationReport,
   verificationReportTarget,
+  emptyDescription = "Use the artifact cards above to generate the first report for this run.",
+  panelEyebrow = "Generated artifacts",
+  panelTitle = "Report History",
 }: HistoryProps) {
   const rows = isDemo ? DEMO_REPORTS : reports
   const verifiedTargetId = verificationReportTarget?.id ?? ""
@@ -60,29 +67,55 @@ export function ReportHistory({
             {isDemo ? <VpwBadge tone="warning">Demo</VpwBadge> : null}
           </div>
           <p className="mt-1 text-xs text-[var(--vpw-text-secondary)]">
-            {reportSizeLabel(report.size_bytes)}
+            {reportFormatLabel(report.format)}
           </p>
         </div>
       ),
       className: "min-w-52",
     },
     {
-      id: "format",
-      header: "Format",
-      cell: (report) => (
-        <VpwBadge tone={reportFormatTone(report.format)}>
-          {reportFormatLabel(report.format)}
-        </VpwBadge>
-      ),
+      id: "status",
+      header: "Status",
+      cell: (report) => {
+        const isVerificationTarget = verifiedTargetId === report.id
+        const verificationOk =
+          isVerificationTarget && verifiedSummary.ok === true
+        const verificationFailed = Boolean(
+          isVerificationTarget &&
+            verificationReport &&
+            verifiedSummary.ok !== true,
+        )
+        const verificationInProgress =
+          isVerificationTarget && verificationLoading
+        const status = isDemo
+          ? "ready"
+          : verificationInProgress
+            ? "in_review"
+            : verificationOk
+              ? "succeeded"
+              : verificationFailed
+                ? "failed"
+                : "succeeded"
+        const label = isDemo
+          ? "Demo"
+          : verificationInProgress
+            ? "Verifying"
+            : verificationOk
+              ? "Verified"
+              : verificationFailed
+                ? "Verify failed"
+                : report.format === "zip"
+                  ? "Bundle"
+                  : "Generated"
+        return (
+          <StatusLozenge density="compact" label={label} status={status} />
+        )
+      },
     },
     {
-      id: "generated",
-      header: "Generated",
-      cell: (report) => (
-        <span className="text-sm text-[var(--vpw-text-secondary)]">
-          {formatReportDateTime(report.created_at)}
-        </span>
-      ),
+      id: "size",
+      header: "Size",
+      cell: (report) => reportSizeLabel(report.size_bytes),
     },
     {
       id: "checksum",
@@ -111,47 +144,13 @@ export function ReportHistory({
       },
     },
     {
-      id: "status",
-      header: "Status",
-      cell: (report) => {
-        const isVerificationTarget = verifiedTargetId === report.id
-        const verificationOk =
-          isVerificationTarget && verifiedSummary.ok === true
-        const verificationFailed = Boolean(
-          isVerificationTarget &&
-            verificationReport &&
-            verifiedSummary.ok !== true,
-        )
-        const verificationInProgress =
-          isVerificationTarget && verificationLoading
-        return (
-          <VpwBadge
-            tone={
-              isDemo
-                ? "warning"
-                : verificationFailed
-                  ? "critical"
-                  : verificationOk
-                    ? "success"
-                    : verificationInProgress
-                      ? "info"
-                      : "success"
-            }
-          >
-            {isDemo
-              ? "Demo"
-              : verificationInProgress
-                ? "Verifying"
-                : verificationOk
-                  ? "Verified"
-                  : verificationFailed
-                    ? "Verify failed"
-                    : report.format === "zip"
-                      ? "Bundle"
-                      : "Generated"}
-          </VpwBadge>
-        )
-      },
+      id: "generated",
+      header: "Generated",
+      cell: (report) => (
+        <span className="text-sm text-[var(--vpw-text-secondary)]">
+          {formatReportDateTime(report.created_at)}
+        </span>
+      ),
     },
     {
       id: "actions",
@@ -201,7 +200,7 @@ export function ReportHistory({
         <div className="mb-4 flex items-center gap-2">
           <History aria-hidden="true" className="h-4 w-4" />
           <h3 className="font-semibold text-[var(--vpw-text-primary)]">
-            Report History
+            {panelTitle}
           </h3>
         </div>
         <div className="flex flex-col gap-3">
@@ -218,9 +217,9 @@ export function ReportHistory({
       <div className="border-b border-[var(--vpw-border-subtle)] p-5">
         <div className="flex items-center justify-between gap-4">
           <div>
-            <p className="vpw-label">Generated artifacts</p>
+            <p className="vpw-label">{panelEyebrow}</p>
             <h3 className="mt-1 text-lg font-semibold text-[var(--vpw-text-primary)]">
-              Report History
+              {panelTitle}
             </h3>
           </div>
           <History
@@ -237,7 +236,7 @@ export function ReportHistory({
         density="compact"
         emptyState={
           <VpwEmptyState
-            description="Use the artifact cards above to generate the first report for this run."
+            description={emptyDescription}
             icon={<FileText aria-hidden="true" className="h-5 w-5" />}
             title="No reports generated yet"
           />

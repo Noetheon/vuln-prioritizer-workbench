@@ -165,14 +165,6 @@
   font-size: 2.34rem;
 }
 
-.finding-hero-metric-decision .risk-score-pill {
-  width: 100%;
-  min-height: 30px;
-  border-color: color-mix(in srgb, var(--vpw-blue) 24%, var(--vpw-bg-card));
-  background: color-mix(in srgb, var(--vpw-blue) 16%, var(--vpw-bg-card));
-  color: color-mix(in srgb, var(--vpw-blue) 72%, var(--vpw-text-primary));
-}
-
 .finding-decision-hero-metrics small,
 .finding-decision-fact-grid p,
 .finding-evidence-grid p,

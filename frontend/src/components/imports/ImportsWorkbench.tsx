@@ -1,3 +1,4 @@
+import { useState } from "react"
 import { VpwStatusBanner } from "@/components/vpw"
 import type { ImportsWorkbenchProps } from "./imports-workbench-model"
 import {
@@ -11,6 +12,14 @@ import {
 
 export function ImportsWorkbench(props: ImportsWorkbenchProps) {
   const hasProject = Boolean(props.selectedProjectId)
+  const [diagnosticsOpen, setDiagnosticsOpen] = useState(false)
+  const [diagnosticsRunId, setDiagnosticsRunId] = useState("")
+
+  function openDiagnostics(runId: string) {
+    props.onSelectRun(runId)
+    setDiagnosticsRunId(runId)
+    setDiagnosticsOpen(true)
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -40,9 +49,16 @@ export function ImportsWorkbench(props: ImportsWorkbenchProps) {
       <ImportResult
         importRun={props.importRun}
         importRunSummary={props.importRunSummary}
+        onOpenDiagnostics={openDiagnostics}
       />
       <ParserErrors errors={props.importParseErrors} />
-      <RecentImports {...props} />
+      <RecentImports
+        {...props}
+        diagnosticsOpen={diagnosticsOpen}
+        diagnosticsRunId={diagnosticsRunId}
+        onDiagnosticsOpenChange={setDiagnosticsOpen}
+        onOpenDiagnostics={openDiagnostics}
+      />
     </div>
   )
 }

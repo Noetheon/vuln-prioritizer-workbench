@@ -4,6 +4,21 @@ import { extname, join, relative, sep } from "node:path"
 import test from "node:test"
 import { fileURLToPath } from "node:url"
 
+import {
+  formatRiskScore,
+  normalizeRiskLevel,
+  normalizeSignalKind,
+  normalizeStatus,
+  riskLabel,
+  riskScoreTone,
+  riskTone,
+  signalLabel,
+  signalTone,
+  statusLabel,
+  statusTone,
+  visibleSignalItems,
+} from "../src/components/vpw/semantic-badge-model.ts"
+
 const frontendRoot = fileURLToPath(new URL("../", import.meta.url))
 const srcRoot = fileURLToPath(new URL("../src/", import.meta.url))
 
@@ -85,6 +100,173 @@ function walk(directory: string, files: string[] = []) {
 function violationsFor(pattern: RegExp, source: string) {
   return [...source.matchAll(pattern)].map((match) => match[0])
 }
+
+test("semantic risk badges normalize levels, labels, and tones", () => {
+  assert.deepEqual(
+    [
+      normalizeRiskLevel("CRITICAL"),
+      normalizeRiskLevel("high"),
+      normalizeRiskLevel(" Medium "),
+      normalizeRiskLevel("LOW"),
+      normalizeRiskLevel("accepted"),
+      normalizeRiskLevel("not-a-level"),
+      normalizeRiskLevel(null),
+    ],
+    ["critical", "high", "medium", "low", "accepted", "unknown", "unknown"],
+  )
+
+  assert.deepEqual(
+    [
+      riskLabel("critical"),
+      riskLabel("high"),
+      riskLabel("medium"),
+      riskLabel("low"),
+      riskLabel("accepted"),
+      riskLabel(undefined),
+    ],
+    ["Critical", "High", "Medium", "Low", "Accepted", "Unknown"],
+  )
+
+  assert.deepEqual(
+    [
+      riskTone("critical"),
+      riskTone("high"),
+      riskTone("medium"),
+      riskTone("low"),
+      riskTone("accepted"),
+      riskTone("unknown"),
+    ],
+    ["critical", "warning", "warning", "info", "success", "neutral"],
+  )
+})
+
+test("semantic risk scores format consistently across CVSS and percent scales", () => {
+  assert.deepEqual(
+    [
+      formatRiskScore(9.876),
+      formatRiskScore("72.34"),
+      formatRiskScore(0),
+      formatRiskScore(null),
+      formatRiskScore(""),
+      formatRiskScore("not-a-number"),
+    ],
+    ["9.9", "72.3", "0.0", "Not scored", "Not scored", "Not scored"],
+  )
+
+  assert.deepEqual(
+    [
+      riskScoreTone(9.1),
+      riskScoreTone(7),
+      riskScoreTone(4),
+      riskScoreTone(3.9),
+      riskScoreTone(91),
+      riskScoreTone(70),
+      riskScoreTone(40),
+      riskScoreTone(undefined),
+    ],
+    [
+      "critical",
+      "warning",
+      "info",
+      "neutral",
+      "critical",
+      "warning",
+      "info",
+      "neutral",
+    ],
+  )
+})
+
+test("semantic finding statuses map to stable labels and tones", () => {
+  assert.deepEqual(
+    [
+      normalizeStatus("open"),
+      normalizeStatus("in-review"),
+      normalizeStatus("in progress"),
+      normalizeStatus("resolved"),
+      normalizeStatus("accepted"),
+      normalizeStatus("wont_fix"),
+    ],
+    ["open", "in_review", "remediating", "fixed", "accepted", "suppressed"],
+  )
+
+  assert.deepEqual(
+    ["open", "in_review", "remediating", "fixed", "accepted", "suppressed"].map(
+      (status) => ({
+        label: statusLabel(status),
+        tone: statusTone(status),
+      }),
+    ),
+    [
+      { label: "Open", tone: "info" },
+      { label: "In review", tone: "warning" },
+      { label: "Remediating", tone: "warning" },
+      { label: "Fixed", tone: "success" },
+      { label: "Accepted", tone: "success" },
+      { label: "Suppressed", tone: "neutral" },
+    ],
+  )
+})
+
+test("semantic signal badges format labels, aliases, tones, and overflow", () => {
+  assert.deepEqual(
+    [
+      normalizeSignalKind("kev"),
+      normalizeSignalKind("_epss"),
+      normalizeSignalKind("attack_mapped"),
+      normalizeSignalKind("source"),
+      normalizeSignalKind("unknown-source"),
+    ],
+    ["kev", "epss", "attack", "provider", "unknown"],
+  )
+
+  assert.deepEqual(
+    [
+      signalLabel({ kind: "kev" }),
+      signalLabel({ kind: "epss", value: 0.934 }),
+      signalLabel({ kind: "cvss", value: 9.81 }),
+      signalLabel({ kind: "provider", value: "NVD" }),
+      signalLabel({ kind: "attack" }),
+      signalLabel({ kind: "vex" }),
+      signalLabel({ kind: "unknown", value: "Vendor advisory" }),
+      signalLabel({ kind: "unknown" }),
+    ],
+    [
+      "KEV",
+      "EPSS 93.4%",
+      "CVSS 9.8",
+      "Provider NVD",
+      "ATT&CK mapped",
+      "VEX",
+      "Vendor advisory",
+      "Signal",
+    ],
+  )
+
+  assert.deepEqual(
+    ["kev", "epss", "cvss", "attack", "vex", "provider", "unknown"].map(
+      signalTone,
+    ),
+    ["critical", "info", "info", "support", "support", "info", "neutral"],
+  )
+  assert.deepEqual(visibleSignalItems(["kev", "epss", "cvss", "vex"], 3), {
+    overflowCount: 1,
+    visibleItems: ["kev", "epss", "cvss"],
+  })
+  assert.deepEqual(visibleSignalItems(["kev"], -1), {
+    overflowCount: 1,
+    visibleItems: [],
+  })
+})
+
+test("legacy risk and KEV wrappers emit semantic badges without absent placeholders", () => {
+  const riskScore = readProjectFile("src/components/risk/RiskScore.tsx")
+  const kevBadge = readProjectFile("src/components/risk/KevBadge.tsx")
+
+  assert.doesNotMatch(riskScore, /risk-score-pill/)
+  assert.match(riskScore, /RiskScoreBadge/)
+  assert.doesNotMatch(kevBadge, />\s*—\s*</)
+})
 
 test("design-system colors are tokenized outside token and showcase files", () => {
   const offenders: string[] = []

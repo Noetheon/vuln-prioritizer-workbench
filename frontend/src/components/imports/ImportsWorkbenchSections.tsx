@@ -1,5 +1,6 @@
 export { ImportHero } from "./ImportsWorkbenchHero"
-export { RecentImports, RunDetail } from "./ImportsWorkbenchHistory"
+export { RecentImports } from "./ImportsWorkbenchHistory"
+export { RunDetail } from "./ImportsWorkbenchRunDetail"
 export { ProviderAttackOptions } from "./ImportsWorkbenchProviderOptions"
 export { ImportResult, ParserErrors } from "./ImportsWorkbenchResults"
 export { SupportedFormats } from "./ImportsWorkbenchSupportedFormats"

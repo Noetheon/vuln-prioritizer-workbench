@@ -1,4 +1,5 @@
-import { Upload } from "lucide-react"
+import { ChevronDown, Upload } from "lucide-react"
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import {
   Select,
@@ -9,9 +10,9 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import {
+  MetaTag,
   VpwBadge,
   VpwField,
-  VpwFileInput,
   VpwKeyValueList,
   VpwPanel,
   VpwProgress,
@@ -21,61 +22,20 @@ import {
   VpwToolbar,
   VpwToolbarGroup,
 } from "@/components/vpw"
+import { FileUploadField } from "./ImportsWorkbenchFileUploadField"
 import { ImportWizardSteps } from "./ImportWizardSteps"
 import { ProviderAttackOptions } from "./ImportsWorkbenchProviderOptions"
 import {
+  fileSizeLabel,
+  formatDisplayType,
+  formatExpectedFields,
+  hasOptionalContext,
   importSubmitDisabled,
   type ImportsWorkbenchProps,
+  optionalContextLabels,
   selectedFormat,
   uploadProgress,
 } from "./imports-workbench-model"
-
-type FileUploadFieldProps = {
-  accept: string | undefined
-  description: string
-  file: File | null
-  id: string
-  label: string
-  name: string
-  onFileChange: (file: File | null) => void
-  required?: boolean
-}
-
-function FileUploadField({
-  accept,
-  description,
-  file,
-  id,
-  label,
-  name,
-  onFileChange,
-  required = false,
-}: FileUploadFieldProps) {
-  return (
-    <VpwField
-      description={
-        <span className="grid gap-1">
-          <span>{description}</span>
-          <span className="font-medium text-[var(--vpw-text-secondary)]">
-            {file ? `Selected: ${file.name}` : "No file selected"}
-          </span>
-        </span>
-      }
-      htmlFor={id}
-      label={label}
-      required={required}
-    >
-      <VpwFileInput
-        accept={accept}
-        file={file}
-        id={id}
-        label={label}
-        name={name}
-        onFileChange={onFileChange}
-      />
-    </VpwField>
-  )
-}
 
 export function ImportWizard({
   importError,
@@ -127,11 +87,33 @@ export function ImportWizard({
     selectedProjectId,
     wizard: importWizard,
   })
+  const optionalLabels = optionalContextLabels(importWizard)
+  const optionalContextSelected = hasOptionalContext(importWizard)
+  const [optionalOpen, setOptionalOpen] = useState(optionalContextSelected)
+  useEffect(() => {
+    if (optionalContextSelected) setOptionalOpen(true)
+  }, [optionalContextSelected])
+  const optionalSummary =
+    optionalLabels.length > 0 ? optionalLabels.join(", ") : "None selected"
+  const selectedProject = projects.find((project) => project.id === selectedProjectId)
+  const sourceFileLabel = importWizard.file
+    ? `${importWizard.file.name} (${fileSizeLabel(importWizard.file)})`
+    : "Required"
+  const providerSetting = importWizard.providerSnapshotFile
+    ? importWizard.providerSnapshotFile
+    : importWizard.lockedProviderData
+      ? "Locked provider data"
+      : "Current provider data"
+  const attackSetting =
+    importWizard.attackSource && importWizard.attackSource !== "none"
+      ? formatDisplayType(importWizard.attackSource)
+      : "None"
+
   return (
-    <VpwSection>
+    <VpwSection id="import-wizard">
       <VpwSectionHeader
-        description="Step through project, format, files, and validation before import."
-        title="Import Wizard"
+        description="Choose a source format, attach the evidence file, add optional overlays only when needed, then review before upload."
+        title="Upload evidence"
       />
       <ImportWizardSteps
         format={format}
@@ -139,26 +121,27 @@ export function ImportWizard({
         importWizard={importWizard}
         selectedProjectId={selectedProjectId}
       />
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1.25fr)_minmax(20rem,0.75fr)]">
-        <VpwPanel>
-          <form className="flex flex-col gap-5" onSubmit={onSubmit}>
-            <VpwToolbar label="Import controls" variant="plain">
+      <form
+        className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1.3fr)_minmax(20rem,0.7fr)]"
+        onSubmit={onSubmit}
+      >
+        <div className="flex min-w-0 flex-col gap-4">
+          <VpwPanel className="flex flex-col gap-5">
+            <VpwSectionHeader
+              description="Required fields for a valid import run."
+              title="Source"
+            />
+            <VpwToolbar label="Import readiness" variant="plain">
               <VpwToolbarGroup>
-                <VpwBadge tone={importWizard.file ? "success" : "neutral"}>
-                  {importWizard.file ? "Source attached" : "Source required"}
+                <VpwBadge tone={selectedProjectId ? "success" : "warning"}>
+                  {selectedProjectId ? "Project ready" : "Project required"}
                 </VpwBadge>
-                {importWizard.assetContextFile ? (
-                  <VpwBadge tone="info">Asset context</VpwBadge>
-                ) : null}
-                {importWizard.vexFile ? (
-                  <VpwBadge tone="support">VEX sidecar</VpwBadge>
-                ) : null}
-                {importWizard.providerSnapshotFile ? (
-                  <VpwBadge tone="info">Provider snapshot</VpwBadge>
-                ) : null}
-                {importWizard.attackSource !== "none" ? (
-                  <VpwBadge tone="support">ATT&CK mapping</VpwBadge>
-                ) : null}
+                <VpwBadge tone={importWizard.inputType ? "info" : "warning"}>
+                  {format?.label ?? "Input type required"}
+                </VpwBadge>
+                <VpwBadge tone={importWizard.file ? "success" : "warning"}>
+                  {importWizard.file ? "File ready" : "File required"}
+                </VpwBadge>
               </VpwToolbarGroup>
             </VpwToolbar>
             <div className="grid gap-4 lg:grid-cols-2">
@@ -223,100 +206,137 @@ export function ImportWizard({
               onFileChange={onFileChange}
               required
             />
-            <div className="grid gap-4 lg:grid-cols-2">
-              <FileUploadField
-                accept=".csv,text/csv"
-                description="Optional CSV with target_kind, target_ref, asset_id, owner, service, exposure."
-                file={importWizard.assetContextFile}
-                id="asset-context-file"
-                label="Asset context CSV"
-                name="assetContextFile"
-                onFileChange={onAssetContextFileChange}
-              />
-              <FileUploadField
-                accept=".json,application/json"
-                description="Optional OpenVEX or CycloneDX VEX JSON sidecar."
-                file={importWizard.vexFile}
-                id="vex-file"
-                label="OpenVEX / VEX JSON"
-                name="vexFile"
-                onFileChange={onVexFileChange}
+          </VpwPanel>
+
+          <details
+            className="rounded-[var(--vpw-radius-xl)] border border-[var(--vpw-border-default)] bg-[var(--vpw-bg-card)] shadow-[var(--vpw-shadow-0)]"
+            onToggle={(event) => setOptionalOpen(event.currentTarget.open)}
+            open={optionalOpen}
+          >
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-5 py-4 [&::-webkit-details-marker]:hidden">
+              <span className="min-w-0">
+                <span className="block text-base font-semibold text-[var(--vpw-text-primary)]">
+                  Optional context overlays
+                </span>
+                <span className="mt-1 block text-sm text-[var(--vpw-text-secondary)]">
+                  Asset context, VEX, provider replay, and reviewed ATT&CK mappings stay collapsed unless needed.
+                </span>
+              </span>
+              <span className="flex shrink-0 items-center gap-2">
+                <VpwBadge tone={optionalLabels.length > 0 ? "info" : "neutral"}>
+                  {optionalLabels.length > 0
+                    ? `${optionalLabels.length} selected`
+                    : "Optional"}
+                </VpwBadge>
+                <ChevronDown aria-hidden="true" className="size-4" />
+              </span>
+            </summary>
+            <div className="flex flex-col gap-4 border-t border-[var(--vpw-border-default)] p-5">
+              <div className="grid gap-4 lg:grid-cols-2">
+                <FileUploadField
+                  accept=".csv,text/csv"
+                  description="Optional CSV with target_kind, target_ref, asset_id, owner, service, exposure."
+                  file={importWizard.assetContextFile}
+                  id="asset-context-file"
+                  label="Asset context CSV"
+                  name="assetContextFile"
+                  onFileChange={onAssetContextFileChange}
+                />
+                <FileUploadField
+                  accept=".json,application/json"
+                  description="Optional OpenVEX or CycloneDX VEX JSON sidecar."
+                  file={importWizard.vexFile}
+                  id="vex-file"
+                  label="OpenVEX / VEX JSON"
+                  name="vexFile"
+                  onFileChange={onVexFileChange}
+                />
+              </div>
+              <ProviderAttackOptions
+                importWizard={importWizard}
+                onAttackMappingFileChange={onAttackMappingFileChange}
+                onAttackSourceChange={onAttackSourceChange}
+                onAttackTechniqueMetadataFileChange={
+                  onAttackTechniqueMetadataFileChange
+                }
+                onLockedProviderDataChange={onLockedProviderDataChange}
+                onProviderSnapshotFileChange={onProviderSnapshotFileChange}
+                onUseDemoProviderSnapshot={onUseDemoProviderSnapshot}
               />
             </div>
-            <ProviderAttackOptions
-              importWizard={importWizard}
-              onAttackMappingFileChange={onAttackMappingFileChange}
-              onAttackSourceChange={onAttackSourceChange}
-              onAttackTechniqueMetadataFileChange={
-                onAttackTechniqueMetadataFileChange
-              }
-              onLockedProviderDataChange={onLockedProviderDataChange}
-              onProviderSnapshotFileChange={onProviderSnapshotFileChange}
-              onUseDemoProviderSnapshot={onUseDemoProviderSnapshot}
-            />
-            <VpwProgress
-              label="Import readiness"
-              tone={importWizard.file && selectedProjectId ? "success" : "info"}
-              value={uploadProgress(importWizard)}
-            />
-            {importError ? (
-              <VpwStatusBanner title="Import upload failed" tone="critical">
-                {importError}
-              </VpwStatusBanner>
-            ) : null}
-            {importLoading ? (
-              <VpwStatusBanner title="Uploading and parsing import file">
-                Backend validation and normalization are running.
-              </VpwStatusBanner>
-            ) : null}
-            <Button
-              aria-busy={importLoading}
-              disabled={submitDisabled}
-              type="submit"
-            >
-              <Upload aria-hidden="true" data-icon="inline-start" />
-              {importLoading ? "Uploading" : "Upload Import"}
-            </Button>
-          </form>
-        </VpwPanel>
-        <VpwPanel>
+          </details>
+        </div>
+
+        <VpwPanel className="flex flex-col gap-5">
           <VpwSectionHeader
-            description="Files are accepted only when they match the selected parser."
-            title="Upload Security Notes"
+            description="Review the exact local import settings before creating a run."
+            title="Review settings"
           />
           <VpwKeyValueList
             items={[
               {
-                label: "Parsing",
-                value: "Workbench backend",
-                description: "Files are parsed locally by Workbench services.",
+                label: "Project",
+                value: selectedProject?.name ?? "Required",
+                tone: selectedProjectId ? "success" : "warning",
+              },
+              {
+                label: "Input type",
+                value: format?.label ?? formatDisplayType(importWizard.inputType),
+                description: formatExpectedFields(importWizard.inputType),
                 tone: "info",
               },
               {
-                label: "Unsupported formats",
-                value: "Rejected",
-                description:
-                  "Uploads must match the selected format and extension.",
-                tone: "warning",
+                label: "Main file",
+                value: sourceFileLabel,
+                tone: importWizard.file ? "success" : "warning",
               },
               {
-                label: "Evidence handling",
-                value: "Configured",
-                description:
-                  "Original inputs may be included in evidence only when configured.",
-                tone: "neutral",
+                label: "Optional overlays",
+                value: optionalSummary,
+                tone: optionalLabels.length > 0 ? "info" : "neutral",
               },
               {
-                label: "Network activity",
-                value: "No scanning",
-                description:
-                  "The import wizard does not run probes or scanners.",
-                tone: "success",
+                label: "Provider snapshot",
+                value: providerSetting,
+              },
+              {
+                label: "ATT&CK source",
+                value: attackSetting,
               },
             ]}
           />
+          {optionalLabels.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {optionalLabels.map((label) => (
+                <MetaTag key={label} label={label} />
+              ))}
+            </div>
+          ) : null}
+          <VpwProgress
+            label="Import readiness"
+            tone={importWizard.file && selectedProjectId ? "success" : "info"}
+            value={uploadProgress(importWizard)}
+          />
+          {importError ? (
+            <VpwStatusBanner title="Import upload failed" tone="critical">
+              {importError}
+            </VpwStatusBanner>
+          ) : null}
+          {importLoading ? (
+            <VpwStatusBanner title="Uploading and parsing import file">
+              Workbench validation and normalization are running locally.
+            </VpwStatusBanner>
+          ) : null}
+          <Button
+            aria-busy={importLoading}
+            disabled={submitDisabled}
+            type="submit"
+          >
+            <Upload aria-hidden="true" data-icon="inline-start" />
+            {importLoading ? "Uploading" : "Start import"}
+          </Button>
         </VpwPanel>
-      </div>
+      </form>
     </VpwSection>
   )
 }

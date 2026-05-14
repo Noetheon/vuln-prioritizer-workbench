@@ -1,27 +1,27 @@
 import { Link } from "@/lib/router"
-import { Eye } from "lucide-react"
+import { ExternalLink, Eye } from "lucide-react"
 
 import type { FindingPublic } from "@/api-client"
-import {
-  CvssBadge,
-  EpssBadge,
-  FindingStatusBadge,
-  KevBadge,
-  PriorityBadge,
-  RiskScore,
-} from "@/components/risk"
 import { Button } from "@/components/ui/button"
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { VpwBadge } from "@/components/vpw"
+import {
+  MetaTag,
+  RiskBadge,
+  RiskScoreBadge,
+  SignalChip,
+  StatusLozenge,
+  VpwSignalCluster,
+} from "@/components/vpw"
 import { formatLabel as labelize } from "@/lib/ui-copy"
 import {
   assetLabel,
   componentLabel,
-  findingWhyNow,
+  findingSlaLabel,
+  findingWhyNowCompact,
   formatShortDate,
   ownerLabel,
   serviceLabel,
@@ -32,14 +32,12 @@ type FindingsMobileCardsProps = {
   findings: readonly FindingPublic[]
   findingSearch: FindingsUrlSearch
   onOpenSheet: (finding: FindingPublic) => void
-  onOpenWhy: (finding: FindingPublic) => void
 }
 
 export function FindingsMobileCards({
   findings,
   findingSearch,
   onOpenSheet,
-  onOpenWhy,
 }: FindingsMobileCardsProps) {
   return (
     <section
@@ -56,7 +54,7 @@ export function FindingsMobileCards({
         >
           <div className="findings-mobile-card-header">
             <div className="findings-mobile-card-title">
-              <PriorityBadge priority={finding.priority} />
+              <RiskBadge density="compact" level={finding.priority} />
               <Link
                 className="finding-cve-link findings-mobile-cve"
                 params={{ findingId: finding.id }}
@@ -67,7 +65,7 @@ export function FindingsMobileCards({
                 {finding.cve_id}
               </Link>
             </div>
-            <RiskScore value={finding.risk_score} />
+            <RiskScoreBadge density="compact" value={finding.risk_score} />
           </div>
 
           <div className="findings-mobile-component">
@@ -83,6 +81,14 @@ export function FindingsMobileCards({
             >
               {serviceLabel(finding)} / {assetLabel(finding)}
             </span>
+            <div className="finding-meta-tags">
+              {finding.asset_environment ? (
+                <MetaTag label={labelize(finding.asset_environment)} />
+              ) : null}
+              {finding.exposure ? (
+                <MetaTag label={labelize(finding.exposure)} />
+              ) : null}
+            </div>
           </div>
 
           <div className="findings-mobile-meta-grid">
@@ -99,40 +105,43 @@ export function FindingsMobileCards({
             </div>
             <div>
               <span className="findings-mobile-label">Status</span>
-              <FindingStatusBadge status={finding.status} />
+              <StatusLozenge density="compact" status={finding.status} />
               <small className="findings-mobile-meta-detail">
                 {formatShortDate(finding.last_seen_at)}
               </small>
+              <div className="finding-meta-tags">
+                <MetaTag label={findingSlaLabel(finding.priority)} />
+              </div>
             </div>
           </div>
 
           <div className="findings-mobile-signals">
-            <VpwBadge className="min-h-6 gap-1.5 px-2 text-[0.72rem]" tone="info">
-              <span>EPSS</span>
-              <strong className="font-black text-[var(--vpw-text-primary)]">
-                <EpssBadge value={finding.epss} />
-              </strong>
-            </VpwBadge>
-            <VpwBadge className="min-h-6 gap-1.5 px-2 text-[0.72rem]" tone="info">
-              <span>CVSS</span>
-              <strong className="font-black text-[var(--vpw-text-primary)]">
-                <CvssBadge value={finding.cvss_base_score} />
-              </strong>
-            </VpwBadge>
-            <KevBadge matched={finding.in_kev} />
+            <VpwSignalCluster maxVisible={3}>
+              {finding.in_kev ? <SignalChip kind="kev" /> : null}
+              {finding.epss !== null && finding.epss !== undefined ? (
+                <SignalChip kind="epss" value={finding.epss} />
+              ) : null}
+              {finding.cvss_base_score !== null &&
+              finding.cvss_base_score !== undefined ? (
+                <SignalChip kind="cvss" value={finding.cvss_base_score} />
+              ) : null}
+              {finding.attack_mapped ? <SignalChip kind="attack" /> : null}
+              {finding.suppressed_by_vex ? <SignalChip kind="vex" /> : null}
+            </VpwSignalCluster>
           </div>
 
-          <p className="findings-mobile-why">{findingWhyNow(finding)}</p>
+          <p className="findings-mobile-why">{findingWhyNowCompact(finding)}</p>
 
           <div className="findings-mobile-card-actions">
-            <Button
-              className="h-8 justify-start px-0 text-[0.78rem] font-extrabold text-[var(--vpw-text-primary)]"
-              onClick={() => onOpenWhy(finding)}
-              size="sm"
-              type="button"
-              variant="link"
-            >
-              Why now
+            <Button asChild className="h-8 px-2" size="sm" variant="outline">
+              <Link
+                params={{ findingId: finding.id }}
+                search={findingSearch}
+                to="/findings/$findingId"
+              >
+                <ExternalLink aria-hidden="true" size={14} />
+                Full detail
+              </Link>
             </Button>
             <Tooltip>
               <TooltipTrigger asChild>

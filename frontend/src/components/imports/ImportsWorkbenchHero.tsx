@@ -1,4 +1,5 @@
 import { CheckCircle2, History, PackageCheck, Upload } from "lucide-react"
+import { Button } from "@/components/ui/button"
 import {
   VpwBadge,
   VpwDemoBanner,
@@ -8,10 +9,13 @@ import {
   VpwSectionHeader,
 } from "@/components/vpw"
 import { formatProviderFreshness } from "@/lib/provider-format"
+import { runStatusLabel } from "@/lib/risk-format"
 import { DEMO_MODE_ENABLED } from "@/lib/runtime-config"
 import {
+  formatDateTime,
   formatDisplayType,
   type ImportsWorkbenchProps,
+  runFileLabel,
 } from "./imports-workbench-model"
 
 export function ImportHero({
@@ -32,14 +36,20 @@ export function ImportHero({
     ? formatProviderFreshness(providerStatus)
     : null
   const isDemo = DEMO_MODE_ENABLED && !selectedProject && !projectListError
+  const lastRun = projectRuns[0] ?? null
 
   return (
     <VpwSection>
       <VpwSectionHeader
         actions={
-          isDemo ? <VpwBadge tone="warning">Demo preview</VpwBadge> : null
+          <>
+            {isDemo ? <VpwBadge tone="warning">Demo preview</VpwBadge> : null}
+            <Button asChild>
+              <a href="#import-wizard">Upload evidence</a>
+            </Button>
+          </>
         }
-        description="Normalize scanner, SBOM, and CVE-list inputs into prioritized findings."
+        description="Bring supplied vulnerability evidence into the Workbench with a guided import flow."
         eyebrow="Imports"
         title="Imports"
       />
@@ -65,11 +75,15 @@ export function ImportHero({
           value={providerSummary?.value ?? "Checking"}
         />
         <VpwMetricCard
-          description="Historical import runs"
+          description={
+            lastRun
+              ? `${runFileLabel(lastRun)} · ${formatDateTime(lastRun.started_at)}`
+              : "No run recorded yet"
+          }
           icon={<History aria-hidden="true" className="h-4 w-4" />}
-          label="Run history"
+          label="Last import run"
           tone="info"
-          value={projectRuns.length}
+          value={lastRun ? runStatusLabel(lastRun.status) : "No runs"}
         />
         <VpwMetricCard
           description={formatDisplayType(importWizard.inputType)}

@@ -1,7 +1,15 @@
-import type { Page } from "@playwright/test"
+import type { Page, Route } from "@playwright/test"
 import type {
   AnalysisRunPublic,
   AnalysisRunSummaryPublic,
+  AssetCreate,
+  AssetPublic,
+  AssetUpdate,
+  ProjectGovernanceRollupsPublic,
+  ProviderStatusPublic,
+  WaiverCreate,
+  WaiverPublic,
+  WaiverUpdate,
 } from "../src/api-client"
 
 type MockProject = {
@@ -43,14 +51,18 @@ type MockFinding = {
 
 type RouteWorkbenchShellOptions = {
   demoWorkspaceEnabled?: boolean
+  assets?: AssetPublic[]
   findings?: MockFinding[]
   findingsDelayMs?: number
   onFindingsRequest?: (url: URL) => void
+  providerStatus?: ProviderStatusPublic
   providerStatusDelayMs?: number
   providerStatusError?: boolean
   projects?: MockProject[]
+  governanceRollups?: ProjectGovernanceRollupsPublic
   runSummaries?: Record<string, AnalysisRunSummaryPublic>
   runs?: AnalysisRunPublic[]
+  waivers?: WaiverPublic[]
 }
 
 export const mockProject: MockProject = {
@@ -90,19 +102,74 @@ export const mockFinding: MockFinding = {
   vulnerability_id: "CVE-2024-3094",
 }
 
+export const mockAsset: AssetPublic = {
+  asset_key: "build-host-1",
+  business_service: "payments",
+  created_at: "2025-01-01T00:00:00Z",
+  criticality: "critical",
+  environment: "production",
+  exposure: "internet-facing",
+  finding_count: 1,
+  id: "asset-1",
+  name: "build-host-1",
+  owner: "platform",
+  project_id: mockProject.id,
+  rescore_needed: true,
+  target_ref: "host:build-host-1",
+  updated_at: "2025-01-02T00:00:00Z",
+}
+
+export const mockWaiver: WaiverPublic = {
+  approval_ref: "CAB-2026-014",
+  asset_id: null,
+  asset_key: "build-host-1",
+  created_at: "2025-01-02T00:00:00Z",
+  cve_id: "CVE-2024-3094",
+  days_remaining: 14,
+  expires_at: "2026-06-01",
+  finding_id: mockFinding.id,
+  id: "waiver-1",
+  matched_findings: 1,
+  owner: "risk-owner",
+  project_id: mockProject.id,
+  reason: "Temporary accepted risk while patch validation completes.",
+  review_at: "2026-05-20",
+  service: "payments",
+  status: "active",
+  ticket_url: null,
+  updated_at: "2025-01-02T00:00:00Z",
+}
+
 export async function routeWorkbenchShell(
   page: Page,
   options: RouteWorkbenchShellOptions = {},
 ) {
   const projects = options.projects ?? []
+  let assets = [...(options.assets ?? [])]
+  let waivers = [...(options.waivers ?? [])]
   const findings = options.findings ?? []
   const runs = options.runs ?? []
   const runSummaries = options.runSummaries ?? {}
   const findingsDelayMs = options.findingsDelayMs ?? 0
   const demoWorkspaceEnabled = options.demoWorkspaceEnabled ?? false
   const onFindingsRequest = options.onFindingsRequest
+  const providerStatus = options.providerStatus ?? {
+    status: "ok",
+    snapshot_mode: "demo",
+    cache_age_seconds: 0,
+    last_sync: "2025-04-30T10:00:00Z",
+    warnings: [],
+    snapshot: {
+      id: "demo",
+      mode: "demo",
+      missing: false,
+      selected_sources: ["epss", "kev"],
+    },
+    sources: [],
+  }
   const providerStatusDelayMs = options.providerStatusDelayMs ?? 0
   const providerStatusError = options.providerStatusError ?? false
+  const governanceRollups = options.governanceRollups
   await page.route("**/api/v1/workbench/status", (route) =>
     route.fulfill({
       contentType: "application/json",
@@ -148,20 +215,7 @@ export async function routeWorkbenchShell(
     }
     return route.fulfill({
       contentType: "application/json",
-      body: JSON.stringify({
-        status: "ok",
-        snapshot_mode: "demo",
-        cache_age_seconds: 0,
-        last_sync: "2025-04-30T10:00:00Z",
-        warnings: [],
-        snapshot: {
-          id: "demo",
-          mode: "demo",
-          missing: false,
-          selected_sources: ["epss", "kev"],
-        },
-        sources: [],
-      }),
+      body: JSON.stringify(providerStatus),
     })
   })
   await page.route("**/api/v1/utils/health-check/", (route) =>
@@ -208,8 +262,53 @@ export async function routeWorkbenchShell(
       contentType: "application/json",
       body: JSON.stringify({
         ...finding,
-        attack_context: null,
-        occurrences: [],
+        attack_context: {
+          confidence: "medium",
+          defensive_note:
+            "Validate detection coverage for public-facing exploitation attempts; this context is defensive and does not prove compromise.",
+          mapped: true,
+          review_status: "reviewed",
+          source: "local-curated",
+          tactics: ["Initial Access"],
+          technique_ids: ["T1190"],
+          techniques: [
+            {
+              confidence: "medium",
+              defensive_note:
+                "Review edge request telemetry and package integrity alerts.",
+              name: "Exploit Public-Facing Application",
+              rationale:
+                "The finding affects an internet-facing service and is useful for defensive coverage planning.",
+              review_status: "reviewed",
+              source: "local-curated",
+              tactics: ["Initial Access"],
+              technique_id: "T1190",
+              url: null,
+            },
+          ],
+        },
+        occurrences: [
+          {
+            analysis_run_id: "run-1",
+            asset_business_service: finding.business_service,
+            asset_exposure: finding.exposure,
+            asset_owner: finding.owner,
+            asset_ref: finding.asset_key,
+            component_name: finding.component_name,
+            component_version: finding.component_version,
+            created_at: finding.first_seen_at,
+            id: `${finding.id}-occurrence-1`,
+            purl: finding.component_purl,
+            raw_reference: finding.asset_name,
+            raw_severity: "critical",
+            scanner: "imported evidence",
+            source: "generic-occurrence-csv",
+            source_format: "generic-occurrence-csv",
+            source_record_id: "row-1",
+            target_kind: "host",
+            target_ref: finding.asset_name,
+          },
+        ],
       }),
     })
   })
@@ -305,6 +404,148 @@ export async function routeWorkbenchShell(
       }),
     )
     await page.route(
+      `**/api/v1/projects/${project.id}/governance/rollups/`,
+      (route) =>
+        route.fulfill({
+          contentType: "application/json",
+          body: JSON.stringify(
+            governanceRollups ?? emptyGovernanceRollups(project.id, waivers),
+          ),
+        }),
+    )
+    await page.route(
+      `**/api/v1/projects/${project.id}/governance/rollups/?*`,
+      (route) =>
+        route.fulfill({
+          contentType: "application/json",
+          body: JSON.stringify(
+            governanceRollups ?? emptyGovernanceRollups(project.id, waivers),
+          ),
+        }),
+    )
+    await page.route(
+      `**/api/v1/projects/${project.id}/waivers/`,
+      async (route) => {
+        if (route.request().method() === "POST") {
+          const payload = route.request().postDataJSON() as WaiverCreate
+          const nextWaiver = {
+            approval_ref: payload.approval_ref ?? null,
+            asset_id: payload.asset_id ?? null,
+            asset_key: payload.asset_key ?? null,
+            created_at: "2025-01-03T00:00:00Z",
+            cve_id: payload.cve_id ?? null,
+            days_remaining: 30,
+            expires_at: payload.expires_at ?? "2026-06-01",
+            finding_id: payload.finding_id ?? null,
+            id: `waiver-${waivers.length + 1}`,
+            matched_findings: 1,
+            owner: payload.owner ?? "risk-owner",
+            project_id: project.id,
+            reason: payload.reason ?? "Accepted risk.",
+            review_at: payload.review_at ?? null,
+            service: payload.service ?? null,
+            status: "active",
+            ticket_url: payload.ticket_url ?? null,
+            updated_at: "2025-01-03T00:00:00Z",
+          } satisfies WaiverPublic
+          waivers = [...waivers, nextWaiver]
+          return route.fulfill({
+            contentType: "application/json",
+            body: JSON.stringify(nextWaiver),
+          })
+        }
+        return fulfillWaivers(route, waivers, project.id)
+      },
+    )
+    await page.route(
+      `**/api/v1/projects/${project.id}/waivers/?*`,
+      (route) => fulfillWaivers(route, waivers, project.id),
+    )
+    await page.route(
+      `**/api/v1/projects/${project.id}/assets/import`,
+      async (route) => {
+        const importedAsset = {
+          asset_key: "imported-host-1",
+          business_service: "imported-service",
+          created_at: "2025-01-03T00:00:00Z",
+          criticality: "medium",
+          environment: "staging",
+          exposure: "internal",
+          finding_count: 0,
+          id: `asset-${assets.length + 1}`,
+          name: "imported-host-1",
+          owner: "imported-owner",
+          project_id: project.id,
+          rescore_needed: false,
+          target_ref: "host:imported-host-1",
+          updated_at: "2025-01-03T00:00:00Z",
+        } satisfies AssetPublic
+        if (!assets.some((asset) => asset.asset_key === importedAsset.asset_key)) {
+          assets = [...assets, importedAsset]
+        }
+        return route.fulfill({
+          contentType: "application/json",
+          body: JSON.stringify({
+            asset_keys: [importedAsset.asset_key],
+            created_assets: 1,
+            imported_assets: 1,
+            loaded_rows: 1,
+            project_id: project.id,
+            rescore_needed_findings: 0,
+            skipped_rows: 0,
+            total_rows: 1,
+            unchanged_assets: 0,
+            updated_assets: 0,
+            warnings: [],
+          }),
+        })
+      },
+    )
+    await page.route(
+      `**/api/v1/projects/${project.id}/assets/`,
+      async (route) => {
+        if (route.request().method() === "POST") {
+          const payload = route.request().postDataJSON() as AssetCreate
+          const timestamp = "2025-01-03T00:00:00Z"
+          const existing = assets.find(
+            (asset) =>
+              asset.project_id === project.id &&
+              asset.asset_key === payload.asset_key,
+          )
+          const nextAsset = {
+            asset_key: payload.asset_key,
+            business_service: payload.business_service ?? null,
+            created_at: existing?.created_at ?? timestamp,
+            criticality: payload.criticality ?? "unknown",
+            environment: payload.environment ?? "unknown",
+            exposure: payload.exposure ?? "unknown",
+            finding_count: existing?.finding_count ?? 0,
+            id: existing?.id ?? `asset-${assets.length + 1}`,
+            name: payload.name,
+            owner: payload.owner ?? null,
+            project_id: project.id,
+            rescore_needed: existing?.rescore_needed ?? false,
+            target_ref: payload.target_ref ?? null,
+            updated_at: timestamp,
+          } satisfies AssetPublic
+          assets = existing
+            ? assets.map((asset) =>
+                asset.id === existing.id ? nextAsset : asset,
+              )
+            : [...assets, nextAsset]
+          return route.fulfill({
+            contentType: "application/json",
+            body: JSON.stringify(nextAsset),
+          })
+        }
+        return fulfillAssets(route, assets, project.id)
+      },
+    )
+    await page.route(
+      `**/api/v1/projects/${project.id}/assets/?*`,
+      (route) => fulfillAssets(route, assets, project.id),
+    )
+    await page.route(
       `**/api/v1/projects/${project.id}/findings/?*`,
       async (route) => {
         const url = new URL(route.request().url())
@@ -333,6 +574,214 @@ export async function routeWorkbenchShell(
         body: JSON.stringify(runSummaries[run.id] ?? runSummaryFromRun(run)),
       }),
     )
+  }
+  await page.route("**/api/v1/assets/**", async (route) => {
+    const url = new URL(route.request().url())
+    const assetId = url.pathname.split("/assets/")[1]?.split("/")[0]
+    const existing = assets.find((asset) => asset.id === assetId)
+    if (!assetId || !existing) {
+      return route.fulfill({
+        contentType: "application/json",
+        status: 404,
+        body: JSON.stringify({ detail: "Asset not found" }),
+      })
+    }
+    if (url.pathname.endsWith("/recalculate")) {
+      const nextAsset = { ...existing, rescore_needed: false }
+      assets = assets.map((asset) =>
+        asset.id === assetId ? nextAsset : asset,
+      )
+      return route.fulfill({
+        contentType: "application/json",
+        body: JSON.stringify({
+          asset_id: existing.id,
+          asset_key: existing.asset_key,
+          cleared_rescore_flags: existing.finding_count ?? 0,
+          operational_scores: [],
+          recalculated_findings: existing.finding_count ?? 0,
+          rescore_needed: false,
+        }),
+      })
+    }
+    if (route.request().method() === "PATCH") {
+      const payload = route.request().postDataJSON() as AssetUpdate
+      const nextAsset = {
+        ...existing,
+        asset_key: payload.asset_key ?? existing.asset_key,
+        business_service:
+          payload.business_service === undefined
+            ? existing.business_service
+            : payload.business_service,
+        criticality: payload.criticality ?? existing.criticality,
+        environment: payload.environment ?? existing.environment,
+        exposure: payload.exposure ?? existing.exposure,
+        name: payload.name ?? existing.name,
+        owner: payload.owner === undefined ? existing.owner : payload.owner,
+        rescore_needed: true,
+        target_ref:
+          payload.target_ref === undefined
+            ? existing.target_ref
+            : payload.target_ref,
+        updated_at: "2025-01-03T00:00:00Z",
+      } satisfies AssetPublic
+      assets = assets.map((asset) =>
+        asset.id === assetId ? nextAsset : asset,
+      )
+      return route.fulfill({
+        contentType: "application/json",
+        body: JSON.stringify(nextAsset),
+      })
+    }
+    return route.fallback()
+  })
+  await page.route("**/api/v1/waivers/**", async (route) => {
+    const url = new URL(route.request().url())
+    const waiverId = url.pathname.split("/waivers/")[1]?.split("/")[0]
+    const existing = waivers.find((waiver) => waiver.id === waiverId)
+    if (!waiverId || !existing) {
+      return route.fulfill({
+        contentType: "application/json",
+        status: 404,
+        body: JSON.stringify({ detail: "Waiver not found" }),
+      })
+    }
+    if (url.pathname.endsWith("/expire")) {
+      const expired = {
+        ...existing,
+        days_remaining: -1,
+        status: "expired",
+        updated_at: "2025-01-04T00:00:00Z",
+      } satisfies WaiverPublic
+      waivers = waivers.map((waiver) =>
+        waiver.id === waiverId ? expired : waiver,
+      )
+      return route.fulfill({
+        contentType: "application/json",
+        body: JSON.stringify(expired),
+      })
+    }
+    if (route.request().method() === "PATCH") {
+      const payload = route.request().postDataJSON() as WaiverUpdate
+      const updated = {
+        ...existing,
+        approval_ref:
+          payload.approval_ref === undefined
+            ? existing.approval_ref
+            : payload.approval_ref,
+        asset_id:
+          payload.asset_id === undefined ? existing.asset_id : payload.asset_id,
+        asset_key:
+          payload.asset_key === undefined
+            ? existing.asset_key
+            : payload.asset_key,
+        cve_id: payload.cve_id === undefined ? existing.cve_id : payload.cve_id,
+        expires_at: payload.expires_at ?? existing.expires_at,
+        finding_id:
+          payload.finding_id === undefined
+            ? existing.finding_id
+            : payload.finding_id,
+        owner: payload.owner ?? existing.owner,
+        reason: payload.reason ?? existing.reason,
+        review_at:
+          payload.review_at === undefined
+            ? existing.review_at
+            : payload.review_at,
+        service:
+          payload.service === undefined ? existing.service : payload.service,
+        ticket_url:
+          payload.ticket_url === undefined
+            ? existing.ticket_url
+            : payload.ticket_url,
+        updated_at: "2025-01-04T00:00:00Z",
+      } satisfies WaiverPublic
+      waivers = waivers.map((waiver) =>
+        waiver.id === waiverId ? updated : waiver,
+      )
+      return route.fulfill({
+        contentType: "application/json",
+        body: JSON.stringify(updated),
+      })
+    }
+    return route.fallback()
+  })
+}
+
+function fulfillAssets(route: Route, assets: AssetPublic[], projectId: string) {
+  const url = new URL(route.request().url())
+  const owner = url.searchParams.get("owner")?.trim().toLowerCase()
+  const service = url.searchParams.get("service")?.trim().toLowerCase()
+  const data = assets.filter((asset) => {
+    if (asset.project_id !== projectId) return false
+    if (owner && !String(asset.owner ?? "").toLowerCase().includes(owner)) {
+      return false
+    }
+    if (
+      service &&
+      !String(asset.business_service ?? "").toLowerCase().includes(service)
+    ) {
+      return false
+    }
+    return true
+  })
+  return route.fulfill({
+    contentType: "application/json",
+    body: JSON.stringify({ data, count: data.length }),
+  })
+}
+
+function fulfillWaivers(
+  route: Route,
+  waivers: WaiverPublic[],
+  projectId: string,
+) {
+  const data = waivers.filter((waiver) => waiver.project_id === projectId)
+  return route.fulfill({
+    contentType: "application/json",
+    body: JSON.stringify({ data, count: data.length }),
+  })
+}
+
+function emptyGovernanceRollups(
+  projectId: string,
+  waivers: WaiverPublic[],
+): ProjectGovernanceRollupsPublic {
+  const projectWaivers = waivers.filter((waiver) => waiver.project_id === projectId)
+  return {
+    assets: [],
+    environments: [],
+    generated_at: "2025-01-02T00:00:00Z",
+    owners: [],
+    project_id: projectId,
+    services: [],
+    top_assets_by_risk: [],
+    top_services_by_risk: [],
+    waiver_debt: {
+      accepted_finding_count: projectWaivers.reduce(
+        (total, waiver) => total + (waiver.matched_findings ?? 0),
+        0,
+      ),
+      active_count: projectWaivers.filter((waiver) => waiver.status === "active")
+        .length,
+      expired_count: projectWaivers.filter(
+        (waiver) => waiver.status === "expired",
+      ).length,
+      expiring_soon_count: projectWaivers.filter(
+        (waiver) =>
+          waiver.status !== "expired" &&
+          waiver.days_remaining !== null &&
+          waiver.days_remaining !== undefined &&
+          waiver.days_remaining <= 30,
+      ).length,
+      items: [],
+      matched_finding_count: projectWaivers.reduce(
+        (total, waiver) => total + (waiver.matched_findings ?? 0),
+        0,
+      ),
+      review_due_count: projectWaivers.filter(
+        (waiver) => waiver.status === "review_due",
+      ).length,
+      waiver_count: projectWaivers.length,
+    },
   }
 }
 
