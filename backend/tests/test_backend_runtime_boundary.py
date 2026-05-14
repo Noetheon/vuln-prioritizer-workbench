@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ast
+import json
 import os
 import subprocess
 import tarfile
@@ -226,12 +227,35 @@ def test_container_image_digest_policy_covers_compose_service_images() -> None:
     assert "@sha256:" in traefik_compose["services"]["traefik"]["image"]
 
 
+def test_runtime_containers_avoid_unpinned_upgrade_drift() -> None:
+    backend_dockerfile = _read_repo_text("backend/Dockerfile")
+    frontend_dockerfile = _read_repo_text("frontend/Dockerfile")
+
+    assert "python -m pip install --upgrade pip" not in backend_dockerfile
+    assert "python -m pip install --require-hashes" in backend_dockerfile
+    assert "apk upgrade" not in frontend_dockerfile
+    assert "npm ci --workspaces=false" in frontend_dockerfile
+
+
+def test_node_package_manifests_pin_ci_runtime_family() -> None:
+    expected_engines = {"node": ">=22 <23", "npm": ">=10.9 <11"}
+    packages = [
+        json.loads(_read_repo_text("package.json")),
+        json.loads(_read_repo_text("frontend/package.json")),
+    ]
+
+    for package in packages:
+        assert package["packageManager"] == "npm@10.9.4"
+        assert package["engines"] == expected_engines
+
+
 def test_github_workflow_actions_are_sha_pinned() -> None:
     makefile = _read_repo_text("Makefile")
     pin_check = _read_repo_text("scripts/check_github_action_pins.py")
 
     assert "scripts/check_github_action_pins.py" in makefile
     assert "GitHub workflow remote actions must be pinned by commit SHA" in pin_check
+    assert "GitHub checkout steps must disable persisted credentials" in pin_check
 
     result = subprocess.run(
         ["python3", "scripts/check_github_action_pins.py"],
@@ -242,6 +266,36 @@ def test_github_workflow_actions_are_sha_pinned() -> None:
     )
 
     assert result.returncode == 0, result.stderr
+
+
+def test_github_workflow_checkouts_do_not_persist_credentials() -> None:
+    offenders: list[str] = []
+
+    for workflow in sorted((REPO_ROOT / ".github" / "workflows").glob("*.y*ml")):
+        document = yaml.safe_load(workflow.read_text(encoding="utf-8")) or {}
+        jobs = document.get("jobs", {})
+        if not isinstance(jobs, dict):
+            continue
+        for job_name, job in sorted(jobs.items()):
+            if not isinstance(job, dict):
+                continue
+            steps = job.get("steps", [])
+            if not isinstance(steps, list):
+                continue
+            for index, step in enumerate(steps, 1):
+                if not isinstance(step, dict):
+                    continue
+                uses = step.get("uses")
+                if not isinstance(uses, str) or not uses.startswith("actions/checkout@"):
+                    continue
+                with_config = step.get("with")
+                if (
+                    not isinstance(with_config, dict)
+                    or with_config.get("persist-credentials") is not False
+                ):
+                    offenders.append(f"{workflow.relative_to(REPO_ROOT)}:{job_name}:step-{index}")
+
+    assert offenders == []
 
 
 def test_import_service_modules_do_not_import_http_or_route_boundaries() -> None:
