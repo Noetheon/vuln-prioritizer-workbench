@@ -4177,7 +4177,7 @@ export const ProviderStatusPublicSchema = {
 } as const;
 
 export const ProviderUpdateJobCreateSchema = {
-    description: 'Request body for a deterministic provider update job.',
+    description: 'Request body for a provider update job.',
     properties: {
         cache_only: {
             default: true,
@@ -4190,6 +4190,15 @@ export const ProviderUpdateJobCreateSchema = {
             },
             title: 'Cve Ids',
             type: 'array'
+        },
+        execution_mode: {
+            default: 'request',
+            enum: [
+                'request',
+                'background'
+            ],
+            title: 'Execution Mode',
+            type: 'string'
         },
         max_cves: {
             anyOf: [
