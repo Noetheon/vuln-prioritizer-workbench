@@ -7,6 +7,7 @@ from collections.abc import Awaitable, Callable
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.routing import APIRoute
+from sqlalchemy.engine import Engine
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.cors import CORSMiddleware
 from starlette.middleware.trustedhost import TrustedHostMiddleware
@@ -74,12 +75,9 @@ def create_app(active_settings: Settings | None = None) -> FastAPI:
     app.state.rate_limiter = create_rate_limiter(selected_settings, active_engine)
     if selected_settings.ENVIRONMENT != "local":
         app.router.on_startup.append(lambda: assert_migrated_schema(active_engine))
-        app.router.on_startup.append(
-            lambda: reconcile_stale_background_import_runs(
-                engine=active_engine,
-                settings=selected_settings,
-            )
-        )
+    app.router.on_startup.append(
+        lambda: _reconcile_stale_import_runs_on_startup(active_engine, selected_settings)
+    )
     app.add_middleware(
         TrustedHostMiddleware,
         allowed_hosts=list(selected_settings.ALLOWED_HOSTS),
@@ -101,6 +99,22 @@ def create_app(active_settings: Settings | None = None) -> FastAPI:
     app.add_exception_handler(Exception, unhandled_exception_handler)
     install_error_openapi_schema(app)
     return app
+
+
+def _reconcile_stale_import_runs_on_startup(
+    active_engine: Engine,
+    selected_settings: Settings,
+) -> int:
+    """Reconcile background imports without breaking first-run local schema setup."""
+    try:
+        return reconcile_stale_background_import_runs(
+            engine=active_engine,
+            settings=selected_settings,
+        )
+    except Exception:
+        if selected_settings.ENVIRONMENT == "local":
+            return 0
+        raise
 
 
 async def _security_headers(

@@ -9,6 +9,7 @@ from sqlmodel import Session
 from utils.workbench_env import WorkbenchApiEnv, local_api_headers
 
 from app.services.provider_status import provider_status_payload
+from app.services.provider_updates import PROVIDER_UPDATE_LOCK_FILE
 from vuln_prioritizer.models import (
     KevData,
     ProviderSnapshotItem,
@@ -619,5 +620,38 @@ def test_workbench_provider_update_job_rejects_active_job(
         assert response.status_code == 409
         assert response.json()["code"] == "conflict"
         assert "Provider update already running" in response.json()["detail"]
+    finally:
+        workbench_api_env.client.app.state.workbench_settings = active_settings
+
+
+def test_workbench_provider_update_job_rejects_active_filesystem_lock(
+    workbench_api_env: WorkbenchApiEnv,
+    tmp_path: Path,
+) -> None:
+    headers = local_api_headers(workbench_api_env.client)
+    active_settings = workbench_api_env.client.app.state.workbench_settings
+    snapshot_dir = tmp_path / "workbench-provider-snapshots"
+    snapshot_dir.mkdir()
+    (snapshot_dir / PROVIDER_UPDATE_LOCK_FILE).write_text("active", encoding="utf-8")
+    workbench_api_env.client.app.state.workbench_settings = replace(
+        active_settings,
+        PROVIDER_SNAPSHOT_DIR=str(snapshot_dir),
+        PROVIDER_CACHE_DIR=str(tmp_path / "workbench-provider-cache"),
+    )
+    try:
+        response = workbench_api_env.client.post(
+            "/api/v1/providers/update-jobs",
+            headers=headers,
+            json={"sources": ["kev"], "cve_ids": ["CVE-2024-3094"]},
+        )
+
+        assert response.status_code == 409
+        assert response.json()["code"] == "conflict"
+        assert "Provider update already running" in response.json()["detail"]
+        with Session(workbench_api_env.engine) as session:
+            update_runs = workbench_api_env.repositories.RunRepository(
+                session
+            ).list_provider_update_runs()
+        assert update_runs == []
     finally:
         workbench_api_env.client.app.state.workbench_settings = active_settings

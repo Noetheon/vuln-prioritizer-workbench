@@ -1304,6 +1304,56 @@ def test_report_generation_rejects_artifacts_over_configured_size_limit(
         workbench_api_env.client.app.state.workbench_settings = previous_settings
 
 
+def test_report_persistence_cleans_artifact_directory_when_record_creation_fails(
+    monkeypatch: pytest.MonkeyPatch,
+    workbench_api_env: WorkbenchApiEnv,
+    tmp_path: Path,
+) -> None:
+    from app.services import report_service_persistence
+
+    previous_settings = workbench_api_env.client.app.state.workbench_settings
+    try:
+        report_dir = _configure_report_dir(workbench_api_env, tmp_path)
+        headers = local_api_headers(workbench_api_env.client)
+        project = create_project_via_api(workbench_api_env.client, headers)
+        run_id = _seed_reportable_run(workbench_api_env, uuid.UUID(project["id"]))
+
+        def fail_create_report_record(*_args: object, **_kwargs: object) -> app_models.Report:
+            raise RuntimeError("database write failed")
+
+        monkeypatch.setattr(
+            report_service_persistence,
+            "create_report_record",
+            fail_create_report_record,
+        )
+        active_settings = workbench_api_env.client.app.state.workbench_settings
+        with Session(workbench_api_env.engine) as session:
+            run = session.get(app_models.AnalysisRun, run_id)
+            stored_project = session.get(app_models.Project, uuid.UUID(project["id"]))
+            assert run is not None
+            assert stored_project is not None
+
+            with pytest.raises(RuntimeError, match="database write failed"):
+                report_service_persistence.persist_text_report(
+                    session,
+                    active_settings,
+                    run=run,
+                    project=stored_project,
+                    generated_at=datetime.now(UTC),
+                    finding_count=0,
+                    provider_snapshot_id=None,
+                    content="temporary report\n",
+                    kind="technical-markdown",
+                    report_format="markdown",
+                    filename="technical-report.md",
+                    content_type="text/markdown; charset=utf-8",
+                )
+
+        assert not list(report_dir.rglob("technical-report.md"))
+    finally:
+        workbench_api_env.client.app.state.workbench_settings = previous_settings
+
+
 def test_report_generation_prunes_oldest_reports_for_run(
     workbench_api_env: WorkbenchApiEnv,
     tmp_path: Path,

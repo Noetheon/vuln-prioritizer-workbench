@@ -5,6 +5,8 @@ import json
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
+import pytest
+
 from vuln_prioritizer.cache import FileCache
 
 
@@ -36,6 +38,28 @@ def test_file_cache_returns_none_for_invalid_json(tmp_path: Path) -> None:
     path.write_text("{invalid", encoding="utf-8")
 
     assert cache.get_json("kev", "catalog") is None
+
+
+def test_file_cache_keeps_existing_document_when_atomic_replace_fails(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    cache = FileCache(tmp_path / "cache", ttl_hours=24)
+    cache.set_json("nvd", "CVE-2026-0001", {"value": "old"})
+    path = cache._path_for("nvd", "CVE-2026-0001")
+    original_content = path.read_text(encoding="utf-8")
+
+    def fail_replace(_source: Path, _target: Path) -> None:
+        raise OSError("replace failed")
+
+    monkeypatch.setattr("vuln_prioritizer.cache.os.replace", fail_replace)
+
+    with pytest.raises(OSError, match="replace failed"):
+        cache.set_json("nvd", "CVE-2026-0001", {"value": "new"})
+
+    assert path.read_text(encoding="utf-8") == original_content
+    assert cache.get_json("nvd", "CVE-2026-0001") == {"value": "old"}
+    assert list(path.parent.glob(f".{path.name}.*.tmp")) == []
 
 
 def test_file_cache_inspect_namespace_reports_valid_expired_and_invalid_documents(

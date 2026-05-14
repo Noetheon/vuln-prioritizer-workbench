@@ -579,6 +579,41 @@ def test_workbench_backend_non_local_startup_rejects_stale_schema(tmp_path) -> N
             pass
 
 
+def test_workbench_backend_local_startup_reconciles_stale_import_runs(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    calls: list[tuple[Engine, Settings]] = []
+
+    def record_reconciliation(*, engine: Engine, settings: Settings) -> int:
+        calls.append((engine, settings))
+        return 0
+
+    monkeypatch.setattr(
+        "app.main.reconcile_stale_background_import_runs",
+        record_reconciliation,
+    )
+    selected_app = create_app(
+        Settings(SQLALCHEMY_DATABASE_URI=f"sqlite:///{tmp_path / 'local-reconcile.db'}")
+    )
+
+    with TestClient(selected_app) as client:
+        assert client.get("/api/v1/utils/health-check/").status_code == 200
+
+    assert calls == [(selected_app.state.workbench_engine, selected_app.state.workbench_settings)]
+
+
+def test_workbench_backend_local_startup_tolerates_first_run_missing_schema(
+    tmp_path: Path,
+) -> None:
+    selected_app = create_app(
+        Settings(SQLALCHEMY_DATABASE_URI=f"sqlite:///{tmp_path / 'first-run.db'}")
+    )
+
+    with TestClient(selected_app) as client:
+        assert client.get("/api/v1/utils/health-check/").status_code == 200
+
+
 def test_workbench_backend_can_explicitly_expose_openapi_for_client_generation() -> None:
     selected_app = create_app(
         Settings(
