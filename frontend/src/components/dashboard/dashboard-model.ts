@@ -22,6 +22,9 @@ export type DashboardRunRange = "10" | "30" | "all"
 
 export type RiskOperationsDashboardProps = {
   dashboardError?: string
+  demoWorkspaceEnabled: boolean
+  demoWorkspaceError: string
+  demoWorkspacePending: boolean
   epssBuckets: readonly ChartDatum[]
   findings: readonly FindingPublic[]
   findingsError: string
@@ -29,6 +32,8 @@ export type RiskOperationsDashboardProps = {
   governanceError: string
   governanceLoading: boolean
   onRefresh: () => void
+  onLoadDemoWorkspace: () => void
+  onResetDemoWorkspace: () => void
   onProjectChange: (projectId: string) => void
   projectListLoading: boolean
   projectRuns: readonly AnalysisRunPublic[]
@@ -46,6 +51,7 @@ export type RiskOperationsDashboardProps = {
   topServiceRows: readonly GovernanceRollupPublic[]
   topServiceSource: "assets" | "services"
   projectSummary: ProjectDecisionSummaryPublic | null
+  isManagedDemoWorkspace: boolean
 }
 
 export type QueueFilterState = {

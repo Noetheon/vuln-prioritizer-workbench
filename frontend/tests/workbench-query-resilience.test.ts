@@ -53,6 +53,7 @@ test("runtime and report queries propagate abort signals", () => {
     /ProvidersService\.readProviderStatus\(\{ signal \}\)/,
   )
   assert.match(runtimeQueries, /WorkbenchService\.workbenchStatus\(\{ signal \}\)/)
+  assert.match(runtimeQueries, /WorkbenchService\.readDemoWorkspace\(\{ signal \}\)/)
   assert.match(
     reportsRouteState,
     /ReportsService\.readRunReports\(\{ run_id: selectedRunId \}, \{ signal \}\)/,

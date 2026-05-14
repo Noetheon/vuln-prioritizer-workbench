@@ -90,14 +90,20 @@ function DashboardSignalOverviewFallback() {
 
 export function RiskOperationsDashboard({
   dashboardError,
+  demoWorkspaceEnabled,
+  demoWorkspaceError,
+  demoWorkspacePending,
   epssBuckets,
   findings,
   findingsError,
   findingsLoading,
   governanceError,
   governanceLoading,
+  isManagedDemoWorkspace,
+  onLoadDemoWorkspace,
   onRefresh,
   onProjectChange,
+  onResetDemoWorkspace,
   projectListLoading,
   projectRuns,
   projects,
@@ -304,24 +310,38 @@ export function RiskOperationsDashboard({
         className="dashboard-analyst-layout flex flex-col gap-4 pb-4"
       >
         <DashboardHero
+          demoWorkspaceEnabled={demoWorkspaceEnabled}
+          demoWorkspacePending={demoWorkspacePending}
           effectiveProjects={effectiveProjects}
           effectiveProviderStatus={effectiveProviderStatus}
           effectiveSelectedProject={effectiveSelectedProject}
           freshness={freshness}
+          isManagedDemoWorkspace={isManagedDemoWorkspace}
           isDemoMode={isDemoMode}
+          onLoadDemoWorkspace={onLoadDemoWorkspace}
           onProjectChange={onProjectChange}
           onRefresh={onRefresh}
+          onResetDemoWorkspace={onResetDemoWorkspace}
           projectListLoading={projectListLoading}
           providerStatusLoading={providerStatusLoading}
           selectedProjectId={selectedProjectId}
         />
 
-        {isDemoMode ? <DashboardDemoBanner /> : null}
+        {isDemoMode || isManagedDemoWorkspace ? (
+          <DashboardDemoBanner
+            demoWorkspaceEnabled={demoWorkspaceEnabled}
+            demoWorkspacePending={demoWorkspacePending}
+            isManagedDemoWorkspace={isManagedDemoWorkspace}
+            onLoadDemoWorkspace={onLoadDemoWorkspace}
+            onResetDemoWorkspace={onResetDemoWorkspace}
+          />
+        ) : null}
 
         {dashboardError ||
         signalError ||
         providerStatusError ||
         findingsError ||
+        demoWorkspaceError ||
         governanceError ? (
           <ErrorState
             message={
@@ -329,6 +349,7 @@ export function RiskOperationsDashboard({
               signalError ||
               providerStatusError ||
               findingsError ||
+              demoWorkspaceError ||
               governanceError ||
               "Dashboard is currently unavailable"
             }
@@ -355,7 +376,14 @@ export function RiskOperationsDashboard({
           </VpwSurface>
         ) : null}
 
-        {showEmptyState ? <DashboardSetupEmptyState /> : null}
+        {showEmptyState ? (
+          <DashboardSetupEmptyState
+            demoWorkspaceEnabled={demoWorkspaceEnabled}
+            demoWorkspacePending={demoWorkspacePending}
+            onLoadDemoWorkspace={onLoadDemoWorkspace}
+            onResetDemoWorkspace={onResetDemoWorkspace}
+          />
+        ) : null}
 
         {!showEmptyState ? (
           <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(17rem,20rem)] 2xl:grid-cols-[minmax(0,1fr)_22rem]">

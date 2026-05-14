@@ -85,6 +85,10 @@ test("workbench query keys normalize optional route and filter inputs", () => {
     "workbench",
     "provider-status",
   ])
+  assert.deepEqual(workbenchQueryKeys.demoWorkspace(), [
+    "workbench",
+    "demo-workspace",
+  ])
   assert.deepEqual(workbenchQueryKeys.findings(findingsParams), [
     "workbench",
     "findings",
@@ -120,6 +124,7 @@ test("project list invalidation uses the shared project roots", async () => {
 
   assert.deepEqual(calls, [
     workbenchQueryKeys.projects(),
+    workbenchQueryKeys.demoWorkspace(),
     workbenchQueryKeys.projectSummariesRoot(),
     workbenchQueryKeys.projectSummaryRoot(),
   ])
@@ -141,6 +146,7 @@ test("project-scoped invalidation covers route data that can change by project",
     workbenchQueryKeys.assetsRoot("project-1"),
     workbenchQueryKeys.assetFindingsRoot("project-1"),
     workbenchQueryKeys.reportsRoot(),
+    workbenchQueryKeys.demoWorkspace(),
   ])
 })
 

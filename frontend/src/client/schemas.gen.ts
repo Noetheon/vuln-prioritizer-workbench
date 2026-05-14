@@ -1052,6 +1052,206 @@ export const DashboardSignalCountsPublicSchema = {
     type: 'object'
 } as const;
 
+export const DemoWorkspaceCreateSchema = {
+    description: 'Request payload for creating or resetting the local demo workspace.',
+    properties: {
+        reset: {
+            default: false,
+            title: 'Reset',
+            type: 'boolean'
+        }
+    },
+    title: 'DemoWorkspaceCreate',
+    type: 'object'
+} as const;
+
+export const DemoWorkspacePublicSchema = {
+    description: 'Materialized local demo workspace response.',
+    properties: {
+        asset_count: {
+            default: 0,
+            title: 'Asset Count',
+            type: 'integer'
+        },
+        enabled: {
+            title: 'Enabled',
+            type: 'boolean'
+        },
+        finding_count: {
+            default: 0,
+            title: 'Finding Count',
+            type: 'integer'
+        },
+        latest_run: {
+            $ref: '#/components/schemas/AnalysisRunPublic'
+        },
+        latest_run_id: {
+            anyOf: [
+                {
+                    format: 'uuid',
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Latest Run Id'
+        },
+        message: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Message'
+        },
+        project: {
+            $ref: '#/components/schemas/ProjectPublic'
+        },
+        project_id: {
+            anyOf: [
+                {
+                    format: 'uuid',
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Project Id'
+        },
+        project_name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Project Name'
+        },
+        report_count: {
+            default: 0,
+            title: 'Report Count',
+            type: 'integer'
+        },
+        reports: {
+            items: {
+                $ref: '#/components/schemas/ReportPublic'
+            },
+            title: 'Reports',
+            type: 'array'
+        },
+        seeded: {
+            default: false,
+            title: 'Seeded',
+            type: 'boolean'
+        },
+        waiver_count: {
+            default: 0,
+            title: 'Waiver Count',
+            type: 'integer'
+        }
+    },
+    required: [
+        'enabled',
+        'project',
+        'latest_run'
+    ],
+    title: 'DemoWorkspacePublic',
+    type: 'object'
+} as const;
+
+export const DemoWorkspaceStatusPublicSchema = {
+    description: 'Status for the optional local demo workspace.',
+    properties: {
+        asset_count: {
+            default: 0,
+            title: 'Asset Count',
+            type: 'integer'
+        },
+        enabled: {
+            title: 'Enabled',
+            type: 'boolean'
+        },
+        finding_count: {
+            default: 0,
+            title: 'Finding Count',
+            type: 'integer'
+        },
+        latest_run_id: {
+            anyOf: [
+                {
+                    format: 'uuid',
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Latest Run Id'
+        },
+        message: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Message'
+        },
+        project_id: {
+            anyOf: [
+                {
+                    format: 'uuid',
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Project Id'
+        },
+        project_name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Project Name'
+        },
+        report_count: {
+            default: 0,
+            title: 'Report Count',
+            type: 'integer'
+        },
+        seeded: {
+            default: false,
+            title: 'Seeded',
+            type: 'boolean'
+        },
+        waiver_count: {
+            default: 0,
+            title: 'Waiver Count',
+            type: 'integer'
+        }
+    },
+    required: [
+        'enabled'
+    ],
+    title: 'DemoWorkspaceStatusPublic',
+    type: 'object'
+} as const;
+
 export const FindingAttackContextDetailPublicSchema = {
     description: 'Safe finding-level ATT&CK context DTO for the React Workbench.',
     properties: {

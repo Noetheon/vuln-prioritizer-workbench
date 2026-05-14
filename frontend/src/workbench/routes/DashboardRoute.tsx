@@ -1,9 +1,12 @@
-import { useQueryClient } from "@tanstack/react-query"
+import { useMutation, useQueryClient } from "@tanstack/react-query"
+import { useState } from "react"
+import { WorkbenchService } from "../../api-client"
 import { RiskOperationsDashboard } from "../../components/dashboard/RiskOperationsDashboard"
 import { apiErrorMessage } from "../../lib/app-errors"
 import { epssBucketChartData } from "../../lib/chart-data"
 import { useWorkbenchContext } from "../WorkbenchContext"
 import { governanceServiceRows } from "../route-utils"
+import { useWorkbenchDemoWorkspaceQuery } from "../useWorkbenchRuntimeQueries"
 import {
   dashboardSignalCountsFromApi,
   emptyDashboardSignalCounts,
@@ -21,15 +24,24 @@ function DashboardRouteContainer() {
     providerStatusError,
     providerStatusLoading,
     refreshProjects,
+    refreshProviderStatus,
     selectedProject,
     selectedProjectId,
     setSelectedProjectId,
     statusError,
   } = useWorkbenchContext()
+  const [demoWorkspaceActionError, setDemoWorkspaceActionError] = useState("")
   const projectDashboardQuery = useProjectDashboardQuery(
     selectedProjectId,
     true,
   )
+  const demoWorkspaceQuery = useWorkbenchDemoWorkspaceQuery()
+  const demoWorkspaceMutation = useMutation({
+    mutationFn: (reset: boolean) =>
+      WorkbenchService.createDemoWorkspace({
+        demoWorkspaceCreate: { reset },
+      }),
+  })
   const projectDashboard = projectDashboardQuery.data ?? null
   const projectSummary = projectDashboard?.summary ?? null
   const projectGovernanceRollups = projectDashboard?.governance ?? null
@@ -50,6 +62,27 @@ function DashboardRouteContainer() {
     }
   }
 
+  const activateDemoWorkspace = async (reset: boolean) => {
+    setDemoWorkspaceActionError("")
+    try {
+      const workspace = await demoWorkspaceMutation.mutateAsync(reset)
+      await queryClient.invalidateQueries({ queryKey: workbenchQueryKeys.all })
+      await refreshProviderStatus()
+      await refreshProjects(workspace.project.id)
+      setSelectedProjectId(workspace.project.id)
+    } catch (caught) {
+      setDemoWorkspaceActionError(
+        apiErrorMessage("Demo workspace setup failed", caught),
+      )
+    }
+  }
+
+  const demoWorkspaceStatus = demoWorkspaceQuery.data ?? null
+  const demoWorkspaceEnabled = Boolean(demoWorkspaceStatus?.enabled)
+  const isManagedDemoWorkspace =
+    Boolean(demoWorkspaceStatus?.project_id) &&
+    selectedProjectId === demoWorkspaceStatus?.project_id
+
   return (
     <RiskOperationsDashboard
       dashboardError={
@@ -61,6 +94,9 @@ function DashboardRouteContainer() {
             )
           : "")
       }
+      demoWorkspaceEnabled={demoWorkspaceEnabled}
+      demoWorkspaceError={demoWorkspaceActionError}
+      demoWorkspacePending={demoWorkspaceMutation.isPending}
       epssBuckets={epssBucketChartData(dashboardSignalCounts.epssBuckets)}
       findings={dashboardFindings}
       findingsError=""
@@ -71,8 +107,11 @@ function DashboardRouteContainer() {
       governanceLoading={
         projectDashboardQuery.isLoading || projectDashboardQuery.isFetching
       }
+      isManagedDemoWorkspace={isManagedDemoWorkspace}
+      onLoadDemoWorkspace={() => void activateDemoWorkspace(false)}
       onProjectChange={setSelectedProjectId}
       onRefresh={refreshDashboard}
+      onResetDemoWorkspace={() => void activateDemoWorkspace(true)}
       projectListLoading={projectListLoading}
       projectRuns={projectRuns}
       projectSummary={projectSummary}

@@ -35,3 +35,108 @@ mapping_objects:
     comments: Defensive demo mapping only. It contains no exploit steps, payloads, proof-of-concept guidance, active probing, or offensive procedure instructions.
     references:
       - Local curated demo mapping
+  - cve_id: CVE-2022-22965
+    technique_id: T1190
+    technique_name: Exploit Public-Facing Application
+    tactic_ids:
+      - TA0001
+    mapping_type: exploitation
+    capability_group: public-facing-java-application-risk
+    capability_description: Defensive demo mapping for exposed Java application framework risk.
+    source: Local curated demo mapping
+    confidence: high
+    rationale: The mapping supports prioritization and detection review for Spring framework exposure. It does not prove exploitation.
+    review_status: reviewed
+    reviewer: security-review
+    reviewed_at: "2026-05-03"
+    defensive_note: |-
+      Patch affected services and verify servlet container exposure.
+      Prioritize internet-facing production workloads first.
+      Confirm web, proxy, WAF, application and EDR telemetry.
+    comments: Defensive demo mapping only. It contains no exploit steps, payloads, proof-of-concept guidance, active probing, or offensive procedure instructions.
+    references:
+      - Local curated demo mapping
+  - cve_id: CVE-2023-34362
+    technique_id: T1190
+    technique_name: Exploit Public-Facing Application
+    tactic_ids:
+      - TA0001
+    mapping_type: exploitation
+    capability_group: managed-file-transfer-risk
+    capability_description: Defensive demo mapping for managed file-transfer exposure.
+    source: Local curated demo mapping
+    confidence: high
+    rationale: The mapping supports review of externally reachable transfer services and partner upload paths. It does not prove exploitation.
+    review_status: reviewed
+    reviewer: security-review
+    reviewed_at: "2026-05-03"
+    defensive_note: |-
+      Validate exposed transfer portals and partner upload paths.
+      Review file-transfer application telemetry and identity logs.
+      Keep VEX not-affected evidence attached to scoped disaster recovery nodes.
+    comments: Defensive demo mapping only. It contains no exploit steps, payloads, proof-of-concept guidance, active probing, or offensive procedure instructions.
+    references:
+      - Local curated demo mapping
+  - cve_id: CVE-2021-44228
+    technique_id: T1190
+    technique_name: Exploit Public-Facing Application
+    tactic_ids:
+      - TA0001
+    mapping_type: exploitation
+    capability_group: java-logging-runtime-risk
+    capability_description: Defensive demo mapping for vulnerable Java logging runtime exposure.
+    source: Local curated demo mapping
+    confidence: high
+    rationale: The mapping supports prioritization when vulnerable logging runtimes are present in reachable application paths. It does not prove exploitation.
+    review_status: reviewed
+    reviewer: security-review
+    reviewed_at: "2026-05-03"
+    defensive_note: |-
+      Patch or confirm fixed VEX status for each scoped component.
+      Review application, proxy, identity and EDR telemetry around exposed Java services.
+      Keep fixed evidence visible so stale scanner findings can be explained.
+    comments: Defensive demo mapping only. It contains no exploit steps, payloads, proof-of-concept guidance, active probing, or offensive procedure instructions.
+    references:
+      - Local curated demo mapping
+  - cve_id: CVE-2020-1472
+    technique_id: T1210
+    technique_name: Exploitation of Remote Services
+    tactic_ids:
+      - TA0008
+    mapping_type: exploitation
+    capability_group: identity-infrastructure-risk
+    capability_description: Defensive demo mapping for domain-controller remote service risk.
+    source: Local curated demo mapping
+    confidence: high
+    rationale: The mapping supports identity infrastructure prioritization and compensating-control review. It does not prove exploitation.
+    review_status: reviewed
+    reviewer: security-review
+    reviewed_at: "2026-05-03"
+    defensive_note: |-
+      Prioritize domain-controller patch state and isolation controls.
+      Review identity, directory service and endpoint telemetry for anomalous remote service activity.
+      Revisit accepted-risk waivers at every maintenance checkpoint.
+    comments: Defensive demo mapping only. It contains no exploit steps, payloads, proof-of-concept guidance, active probing, or offensive procedure instructions.
+    references:
+      - Local curated demo mapping
+  - cve_id: CVE-2023-44487
+    technique_id: T1499
+    technique_name: Endpoint Denial of Service
+    tactic_ids:
+      - TA0040
+    mapping_type: detection_context
+    capability_group: edge-availability-risk
+    capability_description: Defensive demo mapping for edge availability and rate-limit review.
+    source: Local curated demo mapping
+    confidence: medium
+    rationale: The mapping supports availability-oriented detection and mitigation review for edge services. It does not prove exploitation.
+    review_status: reviewed
+    reviewer: security-review
+    reviewed_at: "2026-05-03"
+    defensive_note: |-
+      Review CDN, load balancer, proxy and service-rate telemetry.
+      Validate accepted-risk scope against upstream mitigation evidence.
+      Keep availability controls tied to the specific edge assets in scope.
+    comments: Defensive demo mapping only. It contains no exploit steps, payloads, proof-of-concept guidance, active probing, or offensive procedure instructions.
+    references:
+      - Local curated demo mapping

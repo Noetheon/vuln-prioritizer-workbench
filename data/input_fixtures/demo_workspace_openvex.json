@@ -1,0 +1,72 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://example.com/vex/demo-workspace-openvex",
+  "author": "Noetheon Demo Security",
+  "timestamp": "2026-04-23T17:00:00Z",
+  "version": 1,
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "CVE-2024-3094"
+      },
+      "products": [
+        {
+          "@id": "pkg:apk/alpine/xz@5.6.0-r0"
+        }
+      ],
+      "status": "affected",
+      "action_statement": "Rebuild affected images with xz 5.6.1-r2 or a clean vendor base image."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2021-44228"
+      },
+      "products": [
+        {
+          "identifiers": {
+            "purl": "pkg:maven/org.apache.logging.log4j/log4j-core@2.17.2"
+          }
+        }
+      ],
+      "status": "fixed",
+      "action_statement": "Scanner finding is retained as evidence; the scoped component is already on 2.17.2."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2023-34362"
+      },
+      "products": [
+        {
+          "@id": "pkg:pypi/moveit-transfer@2023.0.1"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "The disaster recovery node has the transfer service disabled and does not process inbound uploads."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2024-4577"
+      },
+      "products": [
+        {
+          "@id": "pkg:generic/php-cgi@8.1.28"
+        }
+      ],
+      "status": "under_investigation",
+      "action_statement": "Confirm locale and CGI exposure before closing or escalating."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2022-22965"
+      },
+      "products": [
+        {
+          "@id": "pkg:maven/org.springframework/spring-webmvc@5.3.17"
+        }
+      ],
+      "status": "affected",
+      "action_statement": "Upgrade to 5.3.18 or later and confirm servlet container exposure."
+    }
+  ]
+}

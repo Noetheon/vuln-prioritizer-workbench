@@ -1,28 +1,73 @@
 import { Link } from "@/lib/router"
-import { Import, ShieldCheck } from "lucide-react"
+import { DatabaseZap, Import, RotateCcw, ShieldCheck } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { VpwStatusBanner, VpwSurface } from "@/components/vpw"
 
-export function DashboardDemoBanner() {
+type DemoWorkspaceActionProps = {
+  demoWorkspacePending: boolean
+  onLoadDemoWorkspace: () => void
+  onResetDemoWorkspace: () => void
+}
+
+type DashboardDemoBannerProps = DemoWorkspaceActionProps & {
+  demoWorkspaceEnabled: boolean
+  isManagedDemoWorkspace: boolean
+}
+
+export function DashboardDemoBanner({
+  demoWorkspaceEnabled,
+  demoWorkspacePending,
+  isManagedDemoWorkspace,
+  onLoadDemoWorkspace,
+  onResetDemoWorkspace,
+}: DashboardDemoBannerProps) {
   return (
     <VpwStatusBanner
       action={
-        <Button asChild size="sm" variant="outline">
-          <Link to="/projects">Add project</Link>
-        </Button>
+        demoWorkspaceEnabled ? (
+          <Button
+            disabled={demoWorkspacePending}
+            onClick={
+              isManagedDemoWorkspace ? onResetDemoWorkspace : onLoadDemoWorkspace
+            }
+            size="sm"
+            type="button"
+            variant="outline"
+          >
+            {isManagedDemoWorkspace ? (
+              <RotateCcw aria-hidden="true" className="size-4" />
+            ) : (
+              <DatabaseZap aria-hidden="true" className="size-4" />
+            )}
+            {demoWorkspacePending
+              ? "Preparing demo"
+              : isManagedDemoWorkspace
+                ? "Reset demo workspace"
+                : "Load demo workspace"}
+          </Button>
+        ) : null
       }
-      title="Demo preview"
+      title={isManagedDemoWorkspace ? "Demo workspace" : "Demo preview"}
       tone="warning"
     >
       <p>
-        Sample data from a fictional payments service. Connect a real project
-        to see live metrics.
+        {isManagedDemoWorkspace
+          ? "Persisted local demo data from a fictional online shop. Reset it any time to return to the canonical walkthrough state."
+          : "Sample data from a fictional payments service. Load the demo workspace to explore real persisted routes and reports."}
       </p>
     </VpwStatusBanner>
   )
 }
 
-export function DashboardSetupEmptyState() {
+type DashboardSetupEmptyStateProps = DemoWorkspaceActionProps & {
+  demoWorkspaceEnabled: boolean
+}
+
+export function DashboardSetupEmptyState({
+  demoWorkspaceEnabled,
+  demoWorkspacePending,
+  onLoadDemoWorkspace,
+}: DashboardSetupEmptyStateProps) {
   return (
     <VpwSurface
       aria-label="No project selected - getting started"
@@ -47,6 +92,20 @@ export function DashboardSetupEmptyState() {
                 Import findings
               </Link>
             </Button>
+            {demoWorkspaceEnabled ? (
+              <Button
+                disabled={demoWorkspacePending}
+                onClick={onLoadDemoWorkspace}
+                size="sm"
+                type="button"
+                variant="outline"
+              >
+                <DatabaseZap aria-hidden="true" className="size-4" />
+                {demoWorkspacePending
+                  ? "Preparing demo"
+                  : "Load demo workspace"}
+              </Button>
+            ) : null}
             <Button asChild size="sm" variant="outline">
               <Link to="/projects">View projects</Link>
             </Button>
