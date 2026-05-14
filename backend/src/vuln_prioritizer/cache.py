@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
+import tempfile
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
@@ -44,7 +46,29 @@ class FileCache:
         path = self._path_for(namespace, key)
         path.parent.mkdir(parents=True, exist_ok=True)
         document = {"key": key, "cached_at": iso_utc_now(), "payload": payload}
-        path.write_text(json.dumps(document, indent=2, sort_keys=True), encoding="utf-8")
+        serialized = json.dumps(document, indent=2, sort_keys=True)
+        temporary_path: Path | None = None
+        try:
+            with tempfile.NamedTemporaryFile(
+                "w",
+                delete=False,
+                dir=path.parent,
+                encoding="utf-8",
+                prefix=f".{path.name}.",
+                suffix=".tmp",
+            ) as handle:
+                temporary_path = Path(handle.name)
+                handle.write(serialized)
+                handle.flush()
+                os.fsync(handle.fileno())
+            os.replace(temporary_path, path)
+        except Exception:
+            if temporary_path is not None:
+                try:
+                    temporary_path.unlink(missing_ok=True)
+                except OSError:
+                    pass
+            raise
 
     def _path_for(self, namespace: str, key: str) -> Path:
         digest = hashlib.sha256(key.encode("utf-8")).hexdigest()
