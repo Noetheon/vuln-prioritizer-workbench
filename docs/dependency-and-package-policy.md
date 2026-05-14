@@ -45,9 +45,9 @@ both `vuln_prioritizer` and the active FastAPI Workbench package under
 `backend/app`. This keeps the domain package and shipped API runtime inside the
 same enforced release threshold.
 
-Recommended follow-up, owned by the coverage-config maintainer: keep the
-coverage command aligned with the package boundary when modules move. Do not
-treat package inclusion of `app*` as coverage proof by itself.
+Coverage configuration must stay aligned with the package boundary when modules
+move. Package inclusion of `app*` is not coverage proof by itself; the pytest
+coverage command must continue to measure both `app` and `vuln_prioritizer`.
 
 ## Python Dependencies
 

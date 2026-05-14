@@ -5,6 +5,7 @@ import json
 import os
 import subprocess
 import tarfile
+import tomllib
 from collections import deque
 from pathlib import Path
 from typing import Any
@@ -138,6 +139,11 @@ def _as_text(value: Any) -> str:
 
 def _read_repo_text(path: str) -> str:
     return (REPO_ROOT / path).read_text(encoding="utf-8")
+
+
+def _read_repo_toml(path: str) -> dict[str, Any]:
+    with (REPO_ROOT / path).open("rb") as handle:
+        return tomllib.load(handle)
 
 
 def test_legacy_workbench_runtime_source_is_removed() -> None:
@@ -628,6 +634,23 @@ def test_ci_frontend_gate_runs_coverage_and_full_playwright_suite() -> None:
 
 def test_legacy_cli_entrypoint_is_removed() -> None:
     assert not (REPO_ROOT / "backend/src/vuln_prioritizer/cli.py").exists()
+
+
+def test_backend_package_boundary_matches_pytest_coverage_boundary() -> None:
+    backend_pyproject = _read_repo_toml("backend/pyproject.toml")
+    root_pyproject = _read_repo_toml("pyproject.toml")
+
+    package_include = set(backend_pyproject["tool"]["setuptools"]["packages"]["find"]["include"])
+    assert {"app*", "vuln_prioritizer*"}.issubset(package_include)
+
+    for config, expected_pythonpath in (
+        (backend_pyproject, {".", "src"}),
+        (root_pyproject, {"backend", "backend/src"}),
+    ):
+        pytest_options = config["tool"]["pytest"]["ini_options"]
+        addopts = set(pytest_options["addopts"].split())
+        assert {"--cov=app", "--cov=vuln_prioritizer"}.issubset(addopts)
+        assert set(pytest_options["pythonpath"]) == expected_pythonpath
 
 
 def test_active_status_contract_has_no_migration_or_legacy_fields() -> None:
