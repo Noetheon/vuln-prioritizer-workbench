@@ -31,8 +31,26 @@ test("workbench demo workspace seeds persisted dashboard and reports", async ({
     page.getByText("Online Shop Demo Workspace").first(),
   ).toBeVisible({ timeout: 60_000 })
   await expect(page.getByText("Demo workspace").first()).toBeVisible()
-  await expect(page.getByLabel("Critical Open summary card")).toContainText("24")
+  await expect(page.getByLabel("Critical Priority summary card")).toContainText(
+    "24",
+  )
   await expect(page.getByLabel("High EPSS summary card")).toContainText("24")
+  await expect(
+    page.getByRole("table", { name: "Findings by priority chart data" }),
+  ).toContainText("Critical")
+  await expect(
+    page.getByRole("table", { name: "Findings by priority chart data" }),
+  ).toContainText("24")
+  await expect(
+    page.getByRole("table", { name: "Findings by priority chart data" }),
+  ).not.toContainText("Accepted")
+  await page.getByRole("tab", { name: "EPSS Distribution" }).click()
+  await expect(
+    page.getByRole("table", { name: "EPSS distribution chart data" }),
+  ).toContainText("Critical Exposure")
+  await expect(
+    page.getByRole("table", { name: "EPSS distribution chart data" }),
+  ).toContainText("24")
   await expect(
     page.getByRole("link", { name: "CVE-2021-44228" }).first(),
   ).toBeVisible()

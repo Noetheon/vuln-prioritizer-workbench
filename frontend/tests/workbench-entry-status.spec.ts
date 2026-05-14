@@ -81,7 +81,9 @@ test("workbench frontend covers core Workbench E2E smoke", async ({ page }) => {
   await expect(page.getByLabel("No remediation queue items")).toContainText(
     "No findings",
   )
-  await expect(page.getByLabel("Critical Open summary card")).toContainText("0")
+  await expect(page.getByLabel("Critical Priority summary card")).toContainText(
+    "0",
+  )
   await expect(page.getByLabel("Latest Analysis summary card")).toContainText(
     "No runs",
   )
