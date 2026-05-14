@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import hashlib
 import json
 import os
@@ -64,10 +65,8 @@ class FileCache:
             os.replace(temporary_path, path)
         except Exception:
             if temporary_path is not None:
-                try:
+                with contextlib.suppress(OSError):
                     temporary_path.unlink(missing_ok=True)
-                except OSError:
-                    pass
             raise
 
     def _path_for(self, namespace: str, key: str) -> Path:
