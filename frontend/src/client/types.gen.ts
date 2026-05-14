@@ -2345,7 +2345,7 @@ export type ProviderStatusPublic = {
 /**
  * ProviderUpdateJobCreate
  *
- * Request body for a deterministic provider update job.
+ * Request body for a provider update job.
  */
 export type ProviderUpdateJobCreate = {
     /**
@@ -2356,6 +2356,10 @@ export type ProviderUpdateJobCreate = {
      * Cve Ids
      */
     cve_ids?: Array<string>;
+    /**
+     * Execution Mode
+     */
+    execution_mode?: 'request' | 'background';
     /**
      * Max Cves
      */

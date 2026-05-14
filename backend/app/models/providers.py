@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict
 from sqlmodel import Field, SQLModel
@@ -43,12 +43,13 @@ class ProviderSnapshotStatusPublic(SQLModel):
 
 
 class ProviderUpdateJobCreate(BaseModel):
-    """Request body for a deterministic provider update job."""
+    """Request body for a provider update job."""
 
     sources: list[str] = Field(default_factory=lambda: ["nvd", "epss", "kev"])
     cve_ids: list[str] = Field(default_factory=list)
     max_cves: int | None = Field(default=None, ge=1, le=10000)
     cache_only: bool = True
+    execution_mode: Literal["request", "background"] = "request"
 
 
 class ProviderUpdateJobPublic(BaseModel):

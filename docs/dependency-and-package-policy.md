@@ -159,12 +159,10 @@ The current automation label policy is:
 | GitHub Actions | `maintenance`, `dependencies`, `github-actions` |
 | Frontend npm | `maintenance`, `dependencies`, `type:frontend`, `area:ui` |
 
-Dependabot PR
-[#287](https://github.com/Noetheon/vuln-prioritizer-workbench/pull/287)
-remains the linked GitHub Actions dependency-update follow-up for this policy.
-It should be merged, closed, or explicitly carried forward by a maintainer after
-the release gate confirms the `actions/upload-artifact` upgrade is compatible
-with the current artifact upload usage.
+Closed dependency-update PRs are not carried forward as active policy tasks in
+this document. When an ecosystem still needs a dependency refresh, track it in a
+current issue or PR and remove the reference when the release gate accepts or
+rejects the update.
 
 ## Release Evidence Commands
 

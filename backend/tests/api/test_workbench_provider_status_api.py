@@ -2,14 +2,19 @@ from __future__ import annotations
 
 import uuid
 from dataclasses import replace
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from sqlmodel import Session
 from utils.workbench_env import WorkbenchApiEnv, local_api_headers
 
+from app.models.base import get_datetime_utc
+from app.services import provider_updates as provider_updates_module
 from app.services.provider_status import provider_status_payload
-from app.services.provider_updates import PROVIDER_UPDATE_LOCK_FILE
+from app.services.provider_updates import (
+    PROVIDER_UPDATE_LOCK_FILE,
+    reconcile_stale_provider_update_runs,
+)
 from vuln_prioritizer.models import (
     KevData,
     ProviderSnapshotItem,
@@ -453,6 +458,153 @@ def test_workbench_provider_update_job_create_list_and_status(
         workbench_api_env.client.app.state.workbench_settings = active_settings
 
 
+def test_workbench_provider_update_job_can_run_in_background(
+    workbench_api_env: WorkbenchApiEnv,
+    tmp_path: Path,
+) -> None:
+    headers = local_api_headers(workbench_api_env.client)
+    active_settings = workbench_api_env.client.app.state.workbench_settings
+    workbench_api_env.client.app.state.workbench_settings = replace(
+        active_settings,
+        PROVIDER_SNAPSHOT_DIR=str(tmp_path / "workbench-provider-snapshots"),
+        PROVIDER_CACHE_DIR=str(tmp_path / "workbench-provider-cache"),
+    )
+    try:
+        response = workbench_api_env.client.post(
+            "/api/v1/providers/update-jobs",
+            headers=headers,
+            json={
+                "sources": ["kev"],
+                "cve_ids": ["CVE-2024-3094"],
+                "cache_only": True,
+                "execution_mode": "background",
+            },
+        )
+
+        assert response.status_code == 200, response.text
+        queued_job = response.json()
+        assert queued_job["execution_mode"] == "background"
+        assert queued_job["status"] == "pending"
+
+        with Session(workbench_api_env.engine) as session:
+            run = session.get(
+                workbench_api_env.app_models.AnalysisRun,
+                uuid.UUID(queued_job["id"]),
+            )
+
+        assert run is not None
+        assert run.status == workbench_api_env.app_models.AnalysisRunStatus.COMPLETED
+        assert run.summary_json["execution_mode"] == "background"
+        assert run.summary_json["snapshot_created"] is True
+    finally:
+        workbench_api_env.client.app.state.workbench_settings = active_settings
+
+
+def test_workbench_provider_update_live_failure_preserves_previous_snapshot(
+    monkeypatch,
+    workbench_api_env: WorkbenchApiEnv,
+    tmp_path: Path,
+) -> None:
+    class FailingKevProvider:
+        def __init__(self, **_kwargs: object) -> None:
+            pass
+
+        def fetch_many(
+            self,
+            cve_ids: list[str],
+            *,
+            refresh: bool = False,
+        ) -> tuple[dict[str, KevData], list[str]]:
+            assert refresh is True
+            return (
+                {cve_id: KevData(cve_id=cve_id, in_kev=False) for cve_id in cve_ids},
+                ["KEV catalog load failed: upstream unavailable"],
+            )
+
+    headers = local_api_headers(workbench_api_env.client)
+    active_settings = workbench_api_env.client.app.state.workbench_settings
+    snapshot_dir = tmp_path / "workbench-provider-snapshots"
+    cache_dir = tmp_path / "workbench-provider-cache"
+    workbench_api_env.client.app.state.workbench_settings = replace(
+        active_settings,
+        PROVIDER_SNAPSHOT_DIR=str(snapshot_dir),
+        PROVIDER_CACHE_DIR=str(cache_dir),
+    )
+    monkeypatch.setattr(provider_updates_module, "KevProvider", FailingKevProvider)
+    try:
+        snapshot_dir.mkdir()
+        baseline_path = snapshot_dir / "baseline-provider-snapshot.json"
+        baseline_path.write_text(
+            generate_provider_snapshot_json(
+                ProviderSnapshotReport(
+                    metadata=ProviderSnapshotMetadata(
+                        snapshot_id="baseline-workbench-provider-data",
+                        generated_at="2026-04-30T10:00:00Z",
+                        input_paths=[],
+                        input_format="workbench-test",
+                        selected_sources=["kev"],
+                        requested_cves=1,
+                        output_path=baseline_path.name,
+                        cache_enabled=True,
+                        cache_only=True,
+                        cache_dir=None,
+                        source_hashes={"kev": "sha256:baseline-kev"},
+                        source_metadata={"kev": {"source": "CISA KEV catalog"}},
+                        nvd_api_key_env=None,
+                    ),
+                    items=[ProviderSnapshotItem(cve_id="CVE-2024-3094")],
+                )
+            ),
+            encoding="utf-8",
+        )
+        with Session(workbench_api_env.engine) as session:
+            previous_snapshot = workbench_api_env.repositories.RunRepository(
+                session
+            ).create_provider_snapshot(
+                kev_catalog_version="2026-04-01",
+                content_hash="sha256:baseline-workbench-provider-data",
+                source_hashes_json={"provider_snapshot": "sha256:baseline-workbench-provider-data"},
+                source_metadata_json={
+                    "snapshot_file": baseline_path.name,
+                    "selected_sources": ["kev"],
+                    "requested_cves": 1,
+                    "generated_at": "2026-04-30T10:00:00Z",
+                },
+            )
+            previous_snapshot_id = previous_snapshot.id
+            session.commit()
+
+        response = workbench_api_env.client.post(
+            "/api/v1/providers/update-jobs",
+            headers=headers,
+            json={
+                "sources": ["kev"],
+                "cve_ids": ["CVE-2024-3094"],
+                "cache_only": False,
+            },
+        )
+
+        assert response.status_code == 200, response.text
+        job = response.json()
+        assert job["status"] == "failed"
+        assert job["metadata"]["snapshot_created"] is False
+        assert "upstream unavailable" in job["error_message"]
+        assert sorted(path.name for path in snapshot_dir.glob("*.json")) == [
+            "baseline-provider-snapshot.json"
+        ]
+
+        status_payload = workbench_api_env.client.get(
+            "/api/v1/providers/status",
+            headers=headers,
+        ).json()
+        assert status_payload["status"] == "degraded"
+        assert status_payload["snapshot"]["id"] == str(previous_snapshot_id)
+        assert status_payload["latest_update_job"]["id"] == job["id"]
+        assert any("Latest provider update failed" in item for item in status_payload["warnings"])
+    finally:
+        workbench_api_env.client.app.state.workbench_settings = active_settings
+
+
 def test_workbench_provider_update_job_reuses_previous_provider_records(
     workbench_api_env: WorkbenchApiEnv,
     tmp_path: Path,
@@ -622,6 +774,51 @@ def test_workbench_provider_update_job_rejects_active_job(
         assert "Provider update already running" in response.json()["detail"]
     finally:
         workbench_api_env.client.app.state.workbench_settings = active_settings
+
+
+def test_workbench_provider_update_reconciliation_fails_stale_active_job(
+    workbench_api_env: WorkbenchApiEnv,
+    tmp_path: Path,
+) -> None:
+    active_settings = replace(
+        workbench_api_env.client.app.state.workbench_settings,
+        PROVIDER_SNAPSHOT_DIR=str(tmp_path / "workbench-provider-snapshots"),
+        PROVIDER_CACHE_DIR=str(tmp_path / "workbench-provider-cache"),
+        PROVIDER_UPDATE_STALE_MINUTES=1,
+    )
+    with Session(workbench_api_env.engine) as session:
+        project = workbench_api_env.repositories.ProjectRepository(session).create_project(
+            workbench_api_env.app_models.ProjectCreate(name="Stale Provider Job")
+        )
+        run = workbench_api_env.repositories.RunRepository(session).create_analysis_run(
+            project_id=project.id,
+            input_type="provider_update",
+            status=workbench_api_env.app_models.AnalysisRunStatus.RUNNING,
+            summary_json={
+                "requested_sources": ["kev"],
+                "requested_cves": 1,
+                "cache_only": True,
+                "execution_mode": "request",
+            },
+        )
+        run.started_at = get_datetime_utc() - timedelta(minutes=5)
+        session.add(run)
+        session.commit()
+        run_id = run.id
+
+    reconciled = reconcile_stale_provider_update_runs(
+        engine=workbench_api_env.engine,
+        settings=active_settings,
+    )
+
+    assert reconciled == 1
+    with Session(workbench_api_env.engine) as session:
+        reconciled_run = session.get(workbench_api_env.app_models.AnalysisRun, run_id)
+
+    assert reconciled_run is not None
+    assert reconciled_run.status == workbench_api_env.app_models.AnalysisRunStatus.FAILED
+    assert reconciled_run.finished_at is not None
+    assert "did not finish" in reconciled_run.error_message
 
 
 def test_workbench_provider_update_job_rejects_active_filesystem_lock(

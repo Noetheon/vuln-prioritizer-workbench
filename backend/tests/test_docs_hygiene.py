@@ -251,6 +251,13 @@ def test_dependency_audit_docs_cover_frontend_build_chain_dependencies() -> None
     assert violations == {name: [] for name in active_docs}
 
 
+def test_dependency_policy_does_not_carry_closed_dependency_prs() -> None:
+    policy = (REPO_ROOT / "docs" / "dependency-and-package-policy.md").read_text(encoding="utf-8")
+
+    assert "pull/287" not in policy
+    assert "remains the linked GitHub Actions dependency-update follow-up" not in policy
+
+
 def test_testpypi_release_docs_do_not_mix_package_indexes() -> None:
     runbook = RELEASE_OPERATIONS_FILE.read_text(encoding="utf-8")
     testpypi_section = runbook.split("## TestPyPI Validation Path", maxsplit=1)[1].split(
