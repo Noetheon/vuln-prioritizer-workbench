@@ -1,4 +1,5 @@
 import { Link } from "@/lib/router"
+import { CheckCircle2 } from "lucide-react"
 import {
   Bar,
   BarChart,
@@ -44,6 +45,7 @@ type DashboardSignalOverviewProps = {
   selectedRunRange: DashboardRunRange
   serviceItems: readonly ChartDatum[]
   summaryLoading: boolean
+  keyTakeaways: readonly string[]
   topServiceSource: "assets" | "services"
   trendItems: readonly ChartDatum[]
 }
@@ -76,31 +78,95 @@ function ChartDataSummary({
   )
 }
 
-function priorityFill(tone: ChartDatum["tone"]) {
+function riskToneFill(
+  tone: ChartDatum["tone"],
+  fallback = "var(--vpw-chart-risk)",
+) {
   return tone === "critical"
-    ? "var(--vpw-red)"
+    ? "var(--vpw-chart-critical)"
     : tone === "high"
-      ? "var(--vpw-amber)"
+      ? "var(--vpw-chart-high)"
       : tone === "medium"
-        ? "var(--vpw-amber)"
+        ? "var(--vpw-chart-medium)"
         : tone === "low"
-          ? "var(--vpw-green)"
-          : "var(--vpw-text-muted)"
+          ? "var(--vpw-chart-low)"
+          : fallback
+}
+
+function priorityFill(tone: ChartDatum["tone"]) {
+  return riskToneFill(tone, "var(--vpw-text-muted)")
 }
 
 function epssFill(tone: ChartDatum["tone"]) {
-  return tone === "critical"
-    ? "var(--vpw-red)"
-    : tone === "high"
-      ? "var(--vpw-amber)"
-      : tone === "medium"
-        ? "var(--vpw-amber)"
-        : "var(--vpw-green)"
+  return riskToneFill(tone, "var(--vpw-chart-low)")
+}
+
+function rankFill(index: number) {
+  return `var(--vpw-chart-rank-${(index % 5) + 1})`
+}
+
+const chartAxisTick = { fill: "var(--vpw-text-muted)", fontSize: 12 }
+
+const chartTooltipProps = {
+  contentStyle: {
+    background: "var(--vpw-bg-card)",
+    border: "1px solid var(--vpw-border-default)",
+    borderRadius: "var(--vpw-radius-md)",
+    boxShadow: "var(--vpw-shadow-2)",
+    color: "var(--vpw-text-primary)",
+  },
+  cursor: {
+    fill: "color-mix(in srgb, var(--vpw-blue) 7%, transparent)",
+  },
+  itemStyle: {
+    color: "var(--vpw-text-primary)",
+  },
+  labelStyle: {
+    color: "var(--vpw-text-secondary)",
+    fontWeight: 600,
+  },
+}
+
+function DashboardKeyTakeaways({
+  items,
+  projectSearch,
+}: {
+  items: readonly string[]
+  projectSearch: ReturnType<typeof selectedProjectRouteSearch>
+}) {
+  return (
+    <aside aria-label="Key takeaways" className="dashboard-key-takeaways">
+      <div>
+        <p className="text-sm font-semibold text-[var(--vpw-text-primary)]">
+          Key takeaways
+        </p>
+        <ul className="mt-4 flex flex-col gap-3">
+          {items.map((item) => (
+            <li className="flex gap-2 text-xs" key={item}>
+              <CheckCircle2
+                aria-hidden="true"
+                className="mt-0.5 size-3.5 shrink-0 text-[var(--vpw-green)]"
+              />
+              <span className="leading-relaxed text-[var(--vpw-text-secondary)]">
+                {item}
+              </span>
+            </li>
+          ))}
+        </ul>
+      </div>
+      <Button asChild className="w-fit" size="sm" variant="outline">
+        <Link search={projectSearch} to="/findings">
+          Go to Triage
+        </Link>
+      </Button>
+    </aside>
+  )
 }
 
 export function DashboardSignalOverview({
   epssItems,
   governanceLoading,
+  keyTakeaways,
   onRunRangeChange,
   priorityItems,
   runsLoading,
@@ -123,263 +189,294 @@ export function DashboardSignalOverview({
         </VpwSurfaceDescription>
       </VpwSurfaceHeader>
       <VpwSurfaceBody>
-        <Tabs className="w-full" defaultValue="priority">
-          <TabsList className="mb-3 grid h-auto w-full grid-cols-2 gap-1 text-xs sm:inline-flex sm:h-8 sm:w-auto sm:grid-cols-none">
-            <TabsTrigger className="min-w-0 px-2" value="priority">
-              <span className="hidden sm:inline">Findings by Priority</span>
-              <span className="sm:hidden">Priority</span>
-            </TabsTrigger>
-            <TabsTrigger className="min-w-0 px-2" value="epss">
-              <span className="hidden sm:inline">EPSS Distribution</span>
-              <span className="sm:hidden">EPSS</span>
-            </TabsTrigger>
-            <TabsTrigger className="min-w-0 px-2" value="services">
-              <span className="hidden sm:inline">Top Services</span>
-              <span className="sm:hidden">Services</span>
-            </TabsTrigger>
-            <TabsTrigger className="min-w-0 px-2" value="trend">
-              <span className="hidden sm:inline">Risk Trend</span>
-              <span className="sm:hidden">Trend</span>
-            </TabsTrigger>
-          </TabsList>
+        <div className="dashboard-signal-layout">
+          <Tabs className="min-w-0 w-full" defaultValue="priority">
+            <TabsList className="mb-3 grid h-auto w-full grid-cols-2 gap-1 text-xs sm:inline-flex sm:h-8 sm:w-auto sm:grid-cols-none">
+              <TabsTrigger className="min-w-0 px-2" value="priority">
+                <span className="hidden sm:inline">Findings by Priority</span>
+                <span className="sm:hidden">Priority</span>
+              </TabsTrigger>
+              <TabsTrigger className="min-w-0 px-2" value="epss">
+                <span className="hidden sm:inline">EPSS Distribution</span>
+                <span className="sm:hidden">EPSS</span>
+              </TabsTrigger>
+              <TabsTrigger className="min-w-0 px-2" value="services">
+                <span className="hidden sm:inline">Top Services</span>
+                <span className="sm:hidden">Services</span>
+              </TabsTrigger>
+              <TabsTrigger className="min-w-0 px-2" value="trend">
+                <span className="hidden sm:inline">Risk Trend</span>
+                <span className="sm:hidden">Trend</span>
+              </TabsTrigger>
+            </TabsList>
 
-          <TabsContent className="mt-4" value="priority">
-            <ChartCard
-              description="Severity distribution across findings in scope"
-              title="Findings by priority"
-            >
-              {summaryLoading ? (
-                <Skeleton className="h-64" />
-              ) : priorityItems.length === 0 ? (
-                <EmptyState
-                  action={
-                    <Button asChild size="sm" variant="outline">
-                      <Link search={projectSearch} to="/imports">
-                        Import findings
-                      </Link>
-                    </Button>
-                  }
-                  ariaLabel="No priority data"
-                  compact
-                  detail="Import findings to populate priority distribution."
-                  title="No findings yet"
-                />
-              ) : (
-                <>
-                  <ResponsiveContainer height={196} width="100%">
-                    <BarChart
+            <TabsContent className="mt-4" value="priority">
+              <ChartCard
+                description="Severity distribution across findings in scope"
+                title="Findings by priority"
+              >
+                {summaryLoading ? (
+                  <Skeleton className="h-64" />
+                ) : priorityItems.length === 0 ? (
+                  <EmptyState
+                    action={
+                      <Button asChild size="sm" variant="outline">
+                        <Link search={projectSearch} to="/imports">
+                          Import findings
+                        </Link>
+                      </Button>
+                    }
+                    ariaLabel="No priority data"
+                    compact
+                    detail="Import findings to populate priority distribution."
+                    title="No findings yet"
+                  />
+                ) : (
+                  <>
+                    <ResponsiveContainer height={196} width="100%">
+                      <BarChart
+                        data={priorityItems}
+                        margin={{ bottom: 0, left: 0, right: 6, top: 6 }}
+                      >
+                        <CartesianGrid
+                          className="opacity-40"
+                          stroke="var(--vpw-chart-grid)"
+                          strokeDasharray="3 3"
+                        />
+                        <XAxis dataKey="label" tick={chartAxisTick} />
+                        <YAxis tick={chartAxisTick} />
+                        <RechartsTooltip {...chartTooltipProps} />
+                        <Bar
+                          dataKey="value"
+                          maxBarSize={72}
+                          radius={[4, 4, 0, 0]}
+                        >
+                          {priorityItems.map((entry) => (
+                            <Cell
+                              key={entry.label}
+                              fill={priorityFill(entry.tone)}
+                            />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                    <ChartDataSummary
                       data={priorityItems}
-                      margin={{ bottom: 0, left: 0, right: 6, top: 6 }}
-                    >
-                      <CartesianGrid
-                        className="opacity-40"
-                        strokeDasharray="3 3"
-                      />
-                      <XAxis dataKey="label" tick={{ fontSize: 12 }} />
-                      <YAxis tick={{ fontSize: 12 }} />
-                      <RechartsTooltip />
-                      <Bar dataKey="value" radius={[4, 4, 0, 0]}>
-                        {priorityItems.map((entry) => (
-                          <Cell
-                            key={entry.label}
-                            fill={priorityFill(entry.tone)}
-                          />
-                        ))}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                  <ChartDataSummary
-                    data={priorityItems}
-                    label="Findings by priority chart data"
-                  />
-                </>
-              )}
-            </ChartCard>
-          </TabsContent>
+                      label="Findings by priority chart data"
+                    />
+                  </>
+                )}
+              </ChartCard>
+            </TabsContent>
 
-          <TabsContent className="mt-4" value="epss">
-            <ChartCard
-              description="EPSS bucket distribution for exploit likelihood"
-              title="EPSS exploit probability"
-            >
-              {summaryLoading ? (
-                <Skeleton className="h-64" />
-              ) : epssItems.length === 0 ||
-                epssItems.every((e) => e.value === 0) ? (
-                <EmptyState
-                  action={
-                    <Button asChild size="sm" variant="outline">
-                      <Link search={projectSearch} to="/imports">
-                        Run import
-                      </Link>
-                    </Button>
-                  }
-                  ariaLabel="No EPSS data"
-                  compact
-                  detail="EPSS signals need a provider-enriched import to display buckets."
-                  title="No EPSS data"
-                />
-              ) : (
-                <>
-                  <ResponsiveContainer height={196} width="100%">
-                    <BarChart
+            <TabsContent className="mt-4" value="epss">
+              <ChartCard
+                description="EPSS bucket distribution for exploit likelihood"
+                title="EPSS exploit probability"
+              >
+                {summaryLoading ? (
+                  <Skeleton className="h-64" />
+                ) : epssItems.length === 0 ||
+                  epssItems.every((e) => e.value === 0) ? (
+                  <EmptyState
+                    action={
+                      <Button asChild size="sm" variant="outline">
+                        <Link search={projectSearch} to="/imports">
+                          Run import
+                        </Link>
+                      </Button>
+                    }
+                    ariaLabel="No EPSS data"
+                    compact
+                    detail="EPSS signals need a provider-enriched import to display buckets."
+                    title="No EPSS data"
+                  />
+                ) : (
+                  <>
+                    <ResponsiveContainer height={196} width="100%">
+                      <BarChart
+                        data={epssItems}
+                        margin={{ bottom: 0, left: 0, right: 6, top: 6 }}
+                      >
+                        <CartesianGrid
+                          className="opacity-40"
+                          stroke="var(--vpw-chart-grid)"
+                          strokeDasharray="3 3"
+                        />
+                        <XAxis dataKey="label" tick={chartAxisTick} />
+                        <YAxis tick={chartAxisTick} />
+                        <RechartsTooltip {...chartTooltipProps} />
+                        <Bar
+                          dataKey="value"
+                          maxBarSize={72}
+                          radius={[4, 4, 0, 0]}
+                        >
+                          {epssItems.map((entry) => (
+                            <Cell
+                              key={entry.label}
+                              fill={epssFill(entry.tone)}
+                            />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                    <ChartDataSummary
                       data={epssItems}
-                      margin={{ bottom: 0, left: 0, right: 6, top: 6 }}
-                    >
-                      <CartesianGrid
-                        className="opacity-40"
-                        strokeDasharray="3 3"
-                      />
-                      <XAxis dataKey="label" tick={{ fontSize: 12 }} />
-                      <YAxis tick={{ fontSize: 12 }} />
-                      <RechartsTooltip />
-                      <Bar dataKey="value" radius={[4, 4, 0, 0]}>
-                        {epssItems.map((entry) => (
-                          <Cell key={entry.label} fill={epssFill(entry.tone)} />
-                        ))}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                  <ChartDataSummary
-                    data={epssItems}
-                    label="EPSS distribution chart data"
-                  />
-                </>
-              )}
-            </ChartCard>
-          </TabsContent>
+                      label="EPSS distribution chart data"
+                    />
+                  </>
+                )}
+              </ChartCard>
+            </TabsContent>
 
-          <TabsContent className="mt-4" value="services">
-            <ChartCard
-              description={
-                topServiceSource === "assets"
-                  ? "Assets with highest accumulated risk score"
-                  : "Services with highest accumulated risk score"
-              }
-              title={
-                topServiceSource === "assets"
-                  ? "Top Assets by Risk"
-                  : "Top Services by Risk"
-              }
-            >
-              {governanceLoading ? (
-                <Skeleton className="h-72" />
-              ) : serviceItems.length === 0 ? (
-                <EmptyState
-                  action={
-                    <Button asChild size="sm" variant="outline">
-                      <Link search={projectSearch} to="/findings">
-                        Review findings
-                      </Link>
-                    </Button>
-                  }
-                  ariaLabel="No service risk data"
-                  compact
-                  detail="Add ownership or component labels and rerun analysis to build entity rankings."
-                  title="No rollup data"
-                />
-              ) : (
-                <>
-                  <ResponsiveContainer height={220} width="100%">
-                    <BarChart
+            <TabsContent className="mt-4" value="services">
+              <ChartCard
+                description={
+                  topServiceSource === "assets"
+                    ? "Assets with highest accumulated risk score"
+                    : "Services with highest accumulated risk score"
+                }
+                title={
+                  topServiceSource === "assets"
+                    ? "Top Assets by Risk"
+                    : "Top Services by Risk"
+                }
+              >
+                {governanceLoading ? (
+                  <Skeleton className="h-72" />
+                ) : serviceItems.length === 0 ? (
+                  <EmptyState
+                    action={
+                      <Button asChild size="sm" variant="outline">
+                        <Link search={projectSearch} to="/findings">
+                          Review findings
+                        </Link>
+                      </Button>
+                    }
+                    ariaLabel="No service risk data"
+                    compact
+                    detail="Add ownership or component labels and rerun analysis to build entity rankings."
+                    title="No rollup data"
+                  />
+                ) : (
+                  <>
+                    <ResponsiveContainer height={220} width="100%">
+                      <BarChart
+                        data={serviceItems}
+                        margin={{ bottom: 0, left: 0, right: 6, top: 6 }}
+                      >
+                        <CartesianGrid
+                          className="opacity-40"
+                          stroke="var(--vpw-chart-grid)"
+                          strokeDasharray="3 3"
+                        />
+                        <XAxis dataKey="label" tick={chartAxisTick} />
+                        <YAxis tick={chartAxisTick} />
+                        <RechartsTooltip {...chartTooltipProps} />
+                        <Bar
+                          dataKey="value"
+                          maxBarSize={72}
+                          radius={[4, 4, 0, 0]}
+                        >
+                          {serviceItems.map((entry, index) => (
+                            <Cell
+                              key={entry.label}
+                              fill={rankFill(index)}
+                            />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                    <ChartDataSummary
                       data={serviceItems}
-                      margin={{ bottom: 0, left: 0, right: 6, top: 6 }}
-                    >
-                      <CartesianGrid
-                        className="opacity-40"
-                        strokeDasharray="3 3"
-                      />
-                      <XAxis dataKey="label" tick={{ fontSize: 12 }} />
-                      <YAxis tick={{ fontSize: 12 }} />
-                      <RechartsTooltip />
-                      <Bar
-                        dataKey="value"
-                        fill="var(--vpw-teal)"
-                        radius={[4, 4, 0, 0]}
-                      />
-                    </BarChart>
-                  </ResponsiveContainer>
-                  <ChartDataSummary
-                    data={serviceItems}
-                    label={`${
-                      topServiceSource === "assets"
-                        ? "Top assets"
-                        : "Top services"
-                    } chart data`}
-                  />
-                </>
-              )}
-            </ChartCard>
-          </TabsContent>
+                      label={`${
+                        topServiceSource === "assets"
+                          ? "Top assets"
+                          : "Top services"
+                      } chart data`}
+                    />
+                  </>
+                )}
+              </ChartCard>
+            </TabsContent>
 
-          <TabsContent className="mt-4" value="trend">
-            <ChartCard
-              action={
-                <Select
-                  onValueChange={onRunRangeChange}
-                  value={selectedRunRange}
-                >
-                  <SelectTrigger aria-label="Risk trend range" className="w-36">
-                    <SelectValue placeholder="Range" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="10">Last 10 runs</SelectItem>
-                    <SelectItem value="30">Last 30 runs</SelectItem>
-                    <SelectItem value="all">All runs</SelectItem>
-                  </SelectContent>
-                </Select>
-              }
-              description="Imported run cadence and trend signal over time"
-              title="Risk trend"
-            >
-              {runsLoading ? (
-                <Skeleton className="h-72" />
-              ) : trendItems.length === 0 ? (
-                <EmptyState
-                  action={
-                    <Button asChild size="sm" variant="outline">
-                      <Link search={projectSearch} to="/imports">
-                        Create first import
-                      </Link>
-                    </Button>
-                  }
-                  ariaLabel="No trend data"
-                  compact
-                  detail="Run at least one import to generate trend history."
-                  title="No trend data"
-                />
-              ) : (
-                <>
-                  <ResponsiveContainer height={220} width="100%">
-                    <LineChart
-                      data={trendItems}
-                      margin={{ bottom: 0, left: 0, right: 6, top: 6 }}
+            <TabsContent className="mt-4" value="trend">
+              <ChartCard
+                action={
+                  <Select
+                    onValueChange={onRunRangeChange}
+                    value={selectedRunRange}
+                  >
+                    <SelectTrigger
+                      aria-label="Risk trend range"
+                      className="w-36"
                     >
-                      <CartesianGrid
-                        className="opacity-40"
-                        strokeDasharray="3 3"
-                      />
-                      <XAxis dataKey="label" tick={{ fontSize: 12 }} />
-                      <YAxis tick={{ fontSize: 12 }} />
-                      <RechartsTooltip />
-                      <Line
-                        dataKey="value"
-                        dot={{ r: 3 }}
-                        stroke="var(--vpw-violet)"
-                        strokeWidth={2}
-                        type="monotone"
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
-                  <ChartDataSummary
-                    data={trendItems}
-                    label="Risk trend chart data"
+                      <SelectValue placeholder="Range" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="10">Last 10 runs</SelectItem>
+                      <SelectItem value="30">Last 30 runs</SelectItem>
+                      <SelectItem value="all">All runs</SelectItem>
+                    </SelectContent>
+                  </Select>
+                }
+                description="Imported run cadence and trend signal over time"
+                title="Risk trend"
+              >
+                {runsLoading ? (
+                  <Skeleton className="h-72" />
+                ) : trendItems.length === 0 ? (
+                  <EmptyState
+                    action={
+                      <Button asChild size="sm" variant="outline">
+                        <Link search={projectSearch} to="/imports">
+                          Create first import
+                        </Link>
+                      </Button>
+                    }
+                    ariaLabel="No trend data"
+                    compact
+                    detail="Run at least one import to generate trend history."
+                    title="No trend data"
                   />
-                </>
-              )}
-            </ChartCard>
-          </TabsContent>
-        </Tabs>
+                ) : (
+                  <>
+                    <ResponsiveContainer height={220} width="100%">
+                      <LineChart
+                        data={trendItems}
+                        margin={{ bottom: 0, left: 0, right: 6, top: 6 }}
+                      >
+                        <CartesianGrid
+                          className="opacity-40"
+                          stroke="var(--vpw-chart-grid)"
+                          strokeDasharray="3 3"
+                        />
+                        <XAxis dataKey="label" tick={chartAxisTick} />
+                        <YAxis tick={chartAxisTick} />
+                        <RechartsTooltip {...chartTooltipProps} />
+                        <Line
+                          dataKey="value"
+                          dot={{ r: 3 }}
+                          stroke="var(--vpw-chart-trend)"
+                          strokeWidth={2}
+                          type="monotone"
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                    <ChartDataSummary
+                      data={trendItems}
+                      label="Risk trend chart data"
+                    />
+                  </>
+                )}
+              </ChartCard>
+            </TabsContent>
+          </Tabs>
+          <DashboardKeyTakeaways
+            items={keyTakeaways}
+            projectSearch={projectSearch}
+          />
+        </div>
       </VpwSurfaceBody>
     </VpwSurface>
   )

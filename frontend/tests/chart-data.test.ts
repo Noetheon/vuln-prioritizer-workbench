@@ -122,6 +122,7 @@ test("adds highest priority to top service rollup detail", () => {
   ]
   const data = topServicesByRiskChartData(serviceData, 10)
   assert.equal(data[0].detail, "4 findings · highest priority Critical")
+  assert.equal(data[0].tone, "critical")
 })
 
 test("builds run activity trends from the latest limited runs", () => {

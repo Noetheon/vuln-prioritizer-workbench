@@ -71,7 +71,17 @@ Use the installed VPW variables from `frontend/src/styles/tokens.css`.
 - Success: `--vpw-green`
 - Warning: `--vpw-amber`
 - Critical/destructive: `--vpw-red`
-- Support/context: `--vpw-violet`
+- Support/context: `--vpw-violet` mapped to a cool slate support tone, not
+  purple.
+- Chart severity: `--vpw-chart-critical`, `--vpw-chart-high`,
+  `--vpw-chart-medium`, `--vpw-chart-low`
+- Chart rankings and trend: `--vpw-chart-risk`, `--vpw-chart-trend`,
+  `--vpw-chart-grid`
+  Use a clearer cobalt/cyan chart accent set for analytical energy; avoid
+  charcoal-only bars and avoid returning to purple.
+- Ranked entity charts: `--vpw-chart-rank-1` through `--vpw-chart-rank-5`.
+  Use this ordered cool palette for Top Services/Assets so repeated critical
+  services do not collapse into a single solid severity color.
 - Radius: `--vpw-radius-sm`, `--vpw-radius-md`, `--vpw-radius-lg`,
   `--vpw-radius-xl`, `--vpw-radius-pill`
 - Elevation: `--vpw-shadow-0`, `--vpw-shadow-1`, `--vpw-shadow-2`,

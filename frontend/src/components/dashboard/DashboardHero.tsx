@@ -61,18 +61,18 @@ export function DashboardHero({
 
   return (
     <div className="dashboard-analyst-hero">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div className="min-w-0">
           <div className="flex items-center gap-2 mb-1.5">
             <ShieldCheck
               aria-hidden="true"
-              className="size-3.5 text-[var(--vpw-violet)]"
+              className="size-3.5 text-[var(--vpw-teal)]"
             />
             <span className="text-[10px] font-bold uppercase text-[var(--vpw-text-muted)]">
               Security Operations
             </span>
           </div>
-          <p className="truncate text-base font-semibold text-[var(--vpw-text-primary)]">
+          <p className="break-words text-base font-semibold text-[var(--vpw-text-primary)]">
             {effectiveSelectedProject
               ? effectiveSelectedProject.name
               : "No project selected"}
@@ -82,35 +82,53 @@ export function DashboardHero({
           </p>
         </div>
 
-        <div className="flex w-full min-w-0 flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
-          <Select
-            disabled={
-              isDemoMode || projectListLoading || effectiveProjects.length === 0
-            }
-            onValueChange={(value) => {
-              if (value !== "none") onProjectChange(value)
-            }}
-            value={isDemoMode ? DEMO_PROJECT_ID : selectedProjectId || "none"}
+        <Select
+          disabled={
+            isDemoMode || projectListLoading || effectiveProjects.length === 0
+          }
+          onValueChange={(value) => {
+            if (value !== "none") onProjectChange(value)
+          }}
+          value={isDemoMode ? DEMO_PROJECT_ID : selectedProjectId || "none"}
+        >
+          <SelectTrigger
+            aria-label="Dashboard project"
+            className="w-full min-w-0 bg-[var(--vpw-bg-card)] lg:w-72"
           >
-            <SelectTrigger
-              aria-label="Dashboard project"
-              className="w-full min-w-0 bg-[var(--vpw-bg-card)] sm:w-64 xl:w-72"
-            >
-              <SelectValue placeholder="Select project" />
-            </SelectTrigger>
-            <SelectContent>
-              {effectiveProjects.length === 0 ? (
-                <SelectItem value="none">No projects yet</SelectItem>
-              ) : (
-                effectiveProjects.map((project) => (
-                  <SelectItem key={project.id} value={project.id}>
-                    {project.name}
-                  </SelectItem>
-                ))
-              )}
-            </SelectContent>
-          </Select>
+            <SelectValue placeholder="Select project" />
+          </SelectTrigger>
+          <SelectContent>
+            {effectiveProjects.length === 0 ? (
+              <SelectItem value="none">No projects yet</SelectItem>
+            ) : (
+              effectiveProjects.map((project) => (
+                <SelectItem key={project.id} value={project.id}>
+                  {project.name}
+                </SelectItem>
+              ))
+            )}
+          </SelectContent>
+        </Select>
+      </div>
 
+      <div className="mt-4 flex flex-col gap-3 border-t border-[var(--vpw-border-subtle)] pt-3 xl:flex-row xl:items-center xl:justify-between">
+        <div className="flex flex-wrap items-center gap-3">
+          <ProviderStatusBadge
+            status={
+              effectiveProviderStatus?.status ??
+              (providerStatusLoading ? "loading" : "unknown")
+            }
+          />
+          <span className="text-sm text-[var(--vpw-text-secondary)]">
+            {freshness.value}
+          </span>
+          <span className="text-[var(--vpw-text-muted)]">/</span>
+          <span className="text-xs text-[var(--vpw-text-muted)]">
+            {freshness.detail}
+          </span>
+        </div>
+
+        <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center xl:justify-end">
           <Button
             asChild
             className="w-full justify-center font-semibold sm:w-auto"
@@ -152,7 +170,7 @@ export function DashboardHero({
           ) : null}
           <Button
             aria-label="Refresh dashboard"
-            className="self-end text-[var(--vpw-text-muted)] sm:self-auto"
+            className="self-start text-[var(--vpw-text-muted)] sm:self-auto"
             onClick={onRefresh}
             size="icon"
             type="button"
@@ -161,22 +179,6 @@ export function DashboardHero({
             <RefreshCw aria-hidden="true" />
           </Button>
         </div>
-      </div>
-
-      <div className="mt-3 flex flex-wrap items-center gap-3 border-t border-[var(--vpw-border-subtle)] pt-3">
-        <ProviderStatusBadge
-          status={
-            effectiveProviderStatus?.status ??
-            (providerStatusLoading ? "loading" : "unknown")
-          }
-        />
-        <span className="text-sm text-[var(--vpw-text-secondary)]">
-          {freshness.value}
-        </span>
-        <span className="text-[var(--vpw-text-muted)]">/</span>
-        <span className="text-xs text-[var(--vpw-text-muted)]">
-          {freshness.detail}
-        </span>
       </div>
     </div>
   )

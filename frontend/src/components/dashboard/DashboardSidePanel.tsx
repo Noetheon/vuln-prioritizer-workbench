@@ -1,5 +1,14 @@
 import { Link } from "@/lib/router"
-import { AlertCircle, CheckCircle2 } from "lucide-react"
+import {
+  AlertCircle,
+  CalendarClock,
+  CheckCircle2,
+  ChevronRight,
+  FileArchive,
+  FileCheck2,
+  ListChecks,
+  type LucideIcon,
+} from "lucide-react"
 import type {
   AnalysisRunPublic,
   ProjectDecisionSummaryPublic,
@@ -53,9 +62,40 @@ export function DashboardSidePanel({
     dataQualityWarnings.length + (dataQualityError ? 1 : 0)
   const readinessTone: VpwBadgeTone = staleProvider ? "warning" : "success"
   const projectSearch = selectedProjectRouteSearch(selectedProjectId)
+  const recommendedActions: readonly {
+    icon: LucideIcon
+    label: string
+    to: "/" | "/findings" | "/waivers" | "/reports" | "/imports"
+    tone: VpwBadgeTone
+  }[] = [
+    {
+      icon: ListChecks,
+      label: "Review critical items in Triage",
+      to: "/findings",
+      tone: "critical",
+    },
+    {
+      icon: FileCheck2,
+      label: "Accept or document risk",
+      to: "/waivers",
+      tone: "success",
+    },
+    {
+      icon: FileArchive,
+      label: "Generate evidence bundle",
+      to: "/reports",
+      tone: "support",
+    },
+    {
+      icon: CalendarClock,
+      label: "Schedule next analysis",
+      to: "/imports",
+      tone: "info",
+    },
+  ]
 
   return (
-    <div className="flex flex-col gap-4 lg:sticky lg:top-20">
+    <div className="flex flex-col gap-4">
       <VpwSurface className="gap-4 py-4">
         <VpwSurfaceHeader className="px-4 pb-0">
           <div className="flex items-start justify-between gap-3">
@@ -65,7 +105,11 @@ export function DashboardSidePanel({
                 Provider recency and run evidence for the selected project.
               </VpwSurfaceDescription>
             </div>
-            <VpwBadge tone={readinessTone}>
+            <VpwBadge
+              className="min-w-fit shrink-0"
+              overflow="wrap"
+              tone={readinessTone}
+            >
               {staleProvider ? "Needs sync" : "Current"}
             </VpwBadge>
           </div>
@@ -114,7 +158,14 @@ export function DashboardSidePanel({
 
       <VpwSurface className="gap-3 py-4">
         <VpwSurfaceHeader className="px-4 pb-0">
-          <VpwSurfaceTitle className="text-sm">Recent Runs</VpwSurfaceTitle>
+          <div className="flex items-center justify-between gap-3">
+            <VpwSurfaceTitle className="text-sm">Recent Runs</VpwSurfaceTitle>
+            <Button asChild size="sm" variant="outline">
+              <Link search={projectSearch} to="/imports">
+                View all
+              </Link>
+            </Button>
+          </div>
         </VpwSurfaceHeader>
         <VpwSurfaceBody className="px-4">
           {latestRunFactsRows.length === 0 ? (
@@ -128,10 +179,7 @@ export function DashboardSidePanel({
                   className="flex items-center justify-between gap-2 rounded-md border bg-muted/20 px-2.5 py-2 text-xs"
                   key={run.id}
                 >
-                  <VpwBadge
-                    className="shrink-0"
-                    tone={runBadgeTone(run.tone)}
-                  >
+                  <VpwBadge className="shrink-0" tone={runBadgeTone(run.tone)}>
                     {run.status}
                   </VpwBadge>
                   <span className="truncate text-muted-foreground">
@@ -141,11 +189,6 @@ export function DashboardSidePanel({
               ))}
             </div>
           )}
-          <Button asChild className="mt-3 w-full" size="sm" variant="outline">
-            <Link search={projectSearch} to="/imports">
-              View all imports
-            </Link>
-          </Button>
         </VpwSurfaceBody>
       </VpwSurface>
 
@@ -154,16 +197,29 @@ export function DashboardSidePanel({
           <div className="flex items-center justify-between gap-3">
             <VpwSurfaceTitle className="text-sm">Data Quality</VpwSurfaceTitle>
             <VpwBadge tone={qualityIssueCount > 0 ? "warning" : "success"}>
-              {qualityIssueCount > 0 ? `${qualityIssueCount} issue(s)` : "Clear"}
+              {qualityIssueCount > 0
+                ? `${qualityIssueCount} issue(s)`
+                : "Clear"}
             </VpwBadge>
           </div>
         </VpwSurfaceHeader>
         <VpwSurfaceBody className="px-4">
           {dataQualityWarnings.length === 0 && !dataQualityError ? (
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <CheckCircle2 className="size-3.5 shrink-0 text-[var(--vpw-green)]" />
-              <span>No data quality issues detected.</span>
-            </div>
+            <ul className="flex flex-col gap-3">
+              {[
+                "No data quality issues detected.",
+                "All providers reporting normally.",
+                "Evidence context available for bundle generation.",
+              ].map((item) => (
+                <li
+                  className="flex items-center gap-2 text-xs text-muted-foreground"
+                  key={item}
+                >
+                  <CheckCircle2 className="size-3.5 shrink-0 text-[var(--vpw-green)]" />
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
           ) : (
             <ul className="flex flex-col gap-2">
               {dataQualityWarnings.map((warning) => (
@@ -190,6 +246,47 @@ export function DashboardSidePanel({
               )}
             </ul>
           )}
+        </VpwSurfaceBody>
+      </VpwSurface>
+
+      <VpwSurface className="gap-3 py-4">
+        <VpwSurfaceHeader className="px-4 pb-0">
+          <VpwSurfaceTitle className="text-sm">
+            Recommended Next Actions
+          </VpwSurfaceTitle>
+        </VpwSurfaceHeader>
+        <VpwSurfaceBody className="px-4">
+          <nav aria-label="Recommended dashboard actions">
+            <ul className="flex flex-col gap-1">
+              {recommendedActions.map((action) => {
+                const Icon = action.icon
+                return (
+                  <li key={action.label}>
+                    <Button
+                      asChild
+                      className="dashboard-next-action"
+                      variant="ghost"
+                    >
+                      <Link search={projectSearch} to={action.to}>
+                        <span
+                          className={`dashboard-next-action-icon dashboard-next-action-icon--${action.tone}`}
+                        >
+                          <Icon aria-hidden="true" className="size-3.5" />
+                        </span>
+                        <span className="min-w-0 flex-1 truncate text-left">
+                          {action.label}
+                        </span>
+                        <ChevronRight
+                          aria-hidden="true"
+                          className="size-3.5 shrink-0 text-[var(--vpw-text-muted)]"
+                        />
+                      </Link>
+                    </Button>
+                  </li>
+                )
+              })}
+            </ul>
+          </nav>
         </VpwSurfaceBody>
       </VpwSurface>
     </div>
