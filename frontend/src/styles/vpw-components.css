@@ -142,8 +142,9 @@
     max-width: 100%;
     min-width: 0;
     overflow-x: auto;
+    overflow-y: hidden;
     overscroll-behavior-inline: contain;
-    scrollbar-gutter: stable;
+    scrollbar-gutter: auto;
     border: 1px solid var(--vpw-border-default);
     border-radius: var(--vpw-radius-xl);
     background: var(--vpw-bg-card);
@@ -157,14 +158,14 @@
   }
 
   .vpw-table-container {
-    width: max(100%, var(--vpw-table-min-width, 100%));
-    min-width: 100%;
+    width: 100%;
+    min-width: var(--vpw-table-min-width, 100%);
     overflow: visible;
   }
 
   .vpw-table {
-    width: max(100%, var(--vpw-table-min-width, 100%));
-    min-width: var(--vpw-table-min-width, 100%);
+    width: 100%;
+    min-width: 100%;
     border-collapse: separate;
     border-spacing: 0;
     color: var(--vpw-text-primary);

@@ -1,9 +1,7 @@
 import {
   AlertCircle,
   AlertTriangle,
-  BellRing,
-  CheckCircle2,
-  Database,
+  Globe2,
   ShieldAlert,
   TrendingUp,
 } from "lucide-react"
@@ -33,10 +31,7 @@ import {
   DEMO_SUMMARY,
   DEMO_TOP_SERVICES,
 } from "@/lib/demo-data"
-import {
-  evidenceReadiness,
-  formatProviderFreshness,
-} from "@/lib/provider-format"
+import { formatProviderFreshness } from "@/lib/provider-format"
 import { DEMO_MODE_ENABLED } from "@/lib/runtime-config"
 import { ErrorState } from "../states"
 import {
@@ -49,7 +44,6 @@ import { DashboardRemediationSection } from "./DashboardRemediationSection"
 import { DashboardSidePanel } from "./DashboardSidePanel"
 import {
   latestRunFacts,
-  latestRunLabel,
   type DashboardMetricSummary,
   type DashboardRunRange,
   type QueueFilterState,
@@ -204,7 +198,7 @@ export function RiskOperationsDashboard({
   }, [effectiveFindings, filters.queueSearch])
 
   const latestRun = effectiveRuns[0] ?? null
-  const freshnessCard = useMemo<DashboardMetricSummary[]>(
+  const summaryCards = useMemo<DashboardMetricSummary[]>(
     () => [
       {
         detail: "Critical-priority findings in scope",
@@ -232,63 +226,28 @@ export function RiskOperationsDashboard({
         label: "High EPSS",
         tone: "high",
         value:
-          (!isDemoMode && summaryLoading) || effectiveSummary === null
+          !isDemoMode && signalLoading
             ? "—"
             : String(effectiveSignalCounts.highEpss),
       },
       {
-        detail: "High-priority findings in scope",
-        icon: AlertCircle,
-        label: "High Priority",
-        tone: "high",
+        detail: "Critical internet-facing findings",
+        icon: Globe2,
+        label: "Internet Facing",
+        tone: "exposure",
         value:
-          (!isDemoMode && summaryLoading) || effectiveSummary === null
+          !isDemoMode && signalLoading
             ? "—"
-            : String(priorityCount(effectiveSummary, "High")),
-      },
-      {
-        detail: freshness.detail,
-        icon: Database,
-        label: "Provider Freshness",
-        tone: freshness.tone,
-        value: <span className="text-sm font-semibold">{freshness.value}</span>,
-      },
-      {
-        detail: "Provider data status for report and audit evidence.",
-        icon: CheckCircle2,
-        label: "Evidence Readiness",
-        tone: staleProvider ? "medium" : "run",
-        value: (
-          <span className="text-sm font-semibold">
-            {evidenceReadiness(effectiveProviderStatus)}
-          </span>
-        ),
-      },
-      {
-        detail: latestRun ? latestRunLabel(latestRun) : "No runs available",
-        icon: BellRing,
-        label: "Latest Analysis",
-        tone: "run",
-        value: (
-          <span className="text-sm font-semibold">
-            {effectiveSummary?.latest_run_id
-              ? `Run ${effectiveSummary.latest_run_id.slice(0, 8)}`
-              : latestRun
-                ? latestRunLabel(latestRun)
-                : "No runs"}
-          </span>
-        ),
+            : String(effectiveSignalCounts.internetFacingCriticals),
       },
     ],
     [
       isDemoMode,
       effectiveSummary,
       effectiveSignalCounts.highEpss,
-      effectiveProviderStatus,
-      latestRun,
+      effectiveSignalCounts.internetFacingCriticals,
+      signalLoading,
       summaryLoading,
-      freshness,
-      staleProvider,
     ],
   )
 
@@ -392,8 +351,20 @@ export function RiskOperationsDashboard({
           <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(17rem,20rem)] 2xl:grid-cols-[minmax(0,1fr)_22rem]">
             <div className="min-w-0 flex flex-col gap-4">
               <DashboardMetricGrid
-                cards={freshnessCard}
+                cards={summaryCards}
                 isLoading={isLoading}
+              />
+              <DashboardRemediationSection
+                findingsError={findingsError}
+                findingsLoading={findingsLoading}
+                onQueueSearchChange={(queueSearch) =>
+                  setFilters((current) => ({
+                    ...current,
+                    queueSearch,
+                  }))
+                }
+                queueFindings={queueFindings}
+                queueSearch={filters.queueSearch}
               />
               <Suspense fallback={<DashboardSignalOverviewFallback />}>
                 <DashboardSignalOverview
@@ -415,18 +386,6 @@ export function RiskOperationsDashboard({
                   trendItems={trendItems}
                 />
               </Suspense>
-              <DashboardRemediationSection
-                findingsError={findingsError}
-                findingsLoading={findingsLoading}
-                onQueueSearchChange={(queueSearch) =>
-                  setFilters((current) => ({
-                    ...current,
-                    queueSearch,
-                  }))
-                }
-                queueFindings={queueFindings}
-                queueSearch={filters.queueSearch}
-              />
             </div>
 
             <DashboardSidePanel
