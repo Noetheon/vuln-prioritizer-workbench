@@ -366,19 +366,6 @@ export function RiskOperationsDashboard({
       ) : (
         <>
           <DashboardMetricGrid cards={summaryCards} isLoading={isLoading} />
-          <DashboardRemediationSection
-            findingsError={findingsError}
-            findingsLoading={findingsLoading}
-            onQueueSearchChange={(queueSearch) =>
-              setFilters((current) => ({
-                ...current,
-                queueSearch,
-              }))
-            }
-            queueFindings={queueFindings}
-            queueSearch={filters.queueSearch}
-            selectedProjectId={isDemoMode ? "" : selectedProjectId}
-          />
           <Suspense fallback={<DashboardSignalOverviewFallback />}>
             <DashboardSignalOverview
               epssItems={epssItems}
@@ -400,6 +387,19 @@ export function RiskOperationsDashboard({
               trendItems={trendItems}
             />
           </Suspense>
+          <DashboardRemediationSection
+            findingsError={findingsError}
+            findingsLoading={findingsLoading}
+            onQueueSearchChange={(queueSearch) =>
+              setFilters((current) => ({
+                ...current,
+                queueSearch,
+              }))
+            }
+            queueFindings={queueFindings}
+            queueSearch={filters.queueSearch}
+            selectedProjectId={isDemoMode ? "" : selectedProjectId}
+          />
         </>
       )}
     </div>

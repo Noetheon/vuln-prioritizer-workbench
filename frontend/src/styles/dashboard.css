@@ -47,7 +47,7 @@
   position: absolute;
   inset: 0 auto 0 0;
   width: 4px;
-  background: var(--vpw-violet);
+  background: var(--vpw-teal);
   content: "";
 }
 
@@ -71,7 +71,7 @@
 .dashboard-metric-grid > .vpw-panel:hover {
   border-color: color-mix(
     in srgb,
-    var(--vpw-violet) 24%,
+    var(--vpw-blue) 22%,
     var(--vpw-border-default)
   );
   box-shadow: none;
@@ -252,19 +252,19 @@
 }
 
 .chart-row.tone-critical .chart-bar-fill {
-  background: var(--vpw-red);
+  background: var(--vpw-chart-critical);
 }
 
 .chart-row.tone-high .chart-bar-fill {
-  background: var(--vpw-amber);
+  background: var(--vpw-chart-high);
 }
 
 .chart-row.tone-medium .chart-bar-fill {
-  background: var(--vpw-amber);
+  background: var(--vpw-chart-medium);
 }
 
 .chart-row.tone-low .chart-bar-fill {
-  background: var(--vpw-blue);
+  background: var(--vpw-chart-low);
 }
 
 .chart-row.tone-accepted .chart-bar-fill {
@@ -305,14 +305,14 @@
 
 .trend-line {
   fill: none;
-  stroke: var(--vpw-teal);
+  stroke: var(--vpw-chart-trend);
   stroke-linecap: round;
   stroke-width: 2.5;
   vector-effect: non-scaling-stroke;
 }
 
 .trend-point {
-  fill: var(--vpw-teal);
+  fill: var(--vpw-chart-trend);
   vector-effect: non-scaling-stroke;
 }
 

@@ -78,26 +78,53 @@ function ChartDataSummary({
   )
 }
 
-function priorityFill(tone: ChartDatum["tone"]) {
+function riskToneFill(
+  tone: ChartDatum["tone"],
+  fallback = "var(--vpw-chart-risk)",
+) {
   return tone === "critical"
-    ? "var(--vpw-red)"
+    ? "var(--vpw-chart-critical)"
     : tone === "high"
-      ? "var(--vpw-amber)"
+      ? "var(--vpw-chart-high)"
       : tone === "medium"
-        ? "var(--vpw-amber)"
+        ? "var(--vpw-chart-medium)"
         : tone === "low"
-          ? "var(--vpw-green)"
-          : "var(--vpw-text-muted)"
+          ? "var(--vpw-chart-low)"
+          : fallback
+}
+
+function priorityFill(tone: ChartDatum["tone"]) {
+  return riskToneFill(tone, "var(--vpw-text-muted)")
 }
 
 function epssFill(tone: ChartDatum["tone"]) {
-  return tone === "critical"
-    ? "var(--vpw-red)"
-    : tone === "high"
-      ? "var(--vpw-amber)"
-      : tone === "medium"
-        ? "var(--vpw-amber)"
-        : "var(--vpw-green)"
+  return riskToneFill(tone, "var(--vpw-chart-low)")
+}
+
+function rankFill(index: number) {
+  return `var(--vpw-chart-rank-${(index % 5) + 1})`
+}
+
+const chartAxisTick = { fill: "var(--vpw-text-muted)", fontSize: 12 }
+
+const chartTooltipProps = {
+  contentStyle: {
+    background: "var(--vpw-bg-card)",
+    border: "1px solid var(--vpw-border-default)",
+    borderRadius: "var(--vpw-radius-md)",
+    boxShadow: "var(--vpw-shadow-2)",
+    color: "var(--vpw-text-primary)",
+  },
+  cursor: {
+    fill: "color-mix(in srgb, var(--vpw-blue) 7%, transparent)",
+  },
+  itemStyle: {
+    color: "var(--vpw-text-primary)",
+  },
+  labelStyle: {
+    color: "var(--vpw-text-secondary)",
+    fontWeight: 600,
+  },
 }
 
 function DashboardKeyTakeaways({
@@ -213,12 +240,17 @@ export function DashboardSignalOverview({
                       >
                         <CartesianGrid
                           className="opacity-40"
+                          stroke="var(--vpw-chart-grid)"
                           strokeDasharray="3 3"
                         />
-                        <XAxis dataKey="label" tick={{ fontSize: 12 }} />
-                        <YAxis tick={{ fontSize: 12 }} />
-                        <RechartsTooltip />
-                        <Bar dataKey="value" radius={[4, 4, 0, 0]}>
+                        <XAxis dataKey="label" tick={chartAxisTick} />
+                        <YAxis tick={chartAxisTick} />
+                        <RechartsTooltip {...chartTooltipProps} />
+                        <Bar
+                          dataKey="value"
+                          maxBarSize={72}
+                          radius={[4, 4, 0, 0]}
+                        >
                           {priorityItems.map((entry) => (
                             <Cell
                               key={entry.label}
@@ -268,12 +300,17 @@ export function DashboardSignalOverview({
                       >
                         <CartesianGrid
                           className="opacity-40"
+                          stroke="var(--vpw-chart-grid)"
                           strokeDasharray="3 3"
                         />
-                        <XAxis dataKey="label" tick={{ fontSize: 12 }} />
-                        <YAxis tick={{ fontSize: 12 }} />
-                        <RechartsTooltip />
-                        <Bar dataKey="value" radius={[4, 4, 0, 0]}>
+                        <XAxis dataKey="label" tick={chartAxisTick} />
+                        <YAxis tick={chartAxisTick} />
+                        <RechartsTooltip {...chartTooltipProps} />
+                        <Bar
+                          dataKey="value"
+                          maxBarSize={72}
+                          radius={[4, 4, 0, 0]}
+                        >
                           {epssItems.map((entry) => (
                             <Cell
                               key={entry.label}
@@ -330,16 +367,24 @@ export function DashboardSignalOverview({
                       >
                         <CartesianGrid
                           className="opacity-40"
+                          stroke="var(--vpw-chart-grid)"
                           strokeDasharray="3 3"
                         />
-                        <XAxis dataKey="label" tick={{ fontSize: 12 }} />
-                        <YAxis tick={{ fontSize: 12 }} />
-                        <RechartsTooltip />
+                        <XAxis dataKey="label" tick={chartAxisTick} />
+                        <YAxis tick={chartAxisTick} />
+                        <RechartsTooltip {...chartTooltipProps} />
                         <Bar
                           dataKey="value"
-                          fill="var(--vpw-teal)"
+                          maxBarSize={72}
                           radius={[4, 4, 0, 0]}
-                        />
+                        >
+                          {serviceItems.map((entry, index) => (
+                            <Cell
+                              key={entry.label}
+                              fill={rankFill(index)}
+                            />
+                          ))}
+                        </Bar>
                       </BarChart>
                     </ResponsiveContainer>
                     <ChartDataSummary
@@ -403,15 +448,16 @@ export function DashboardSignalOverview({
                       >
                         <CartesianGrid
                           className="opacity-40"
+                          stroke="var(--vpw-chart-grid)"
                           strokeDasharray="3 3"
                         />
-                        <XAxis dataKey="label" tick={{ fontSize: 12 }} />
-                        <YAxis tick={{ fontSize: 12 }} />
-                        <RechartsTooltip />
+                        <XAxis dataKey="label" tick={chartAxisTick} />
+                        <YAxis tick={chartAxisTick} />
+                        <RechartsTooltip {...chartTooltipProps} />
                         <Line
                           dataKey="value"
                           dot={{ r: 3 }}
-                          stroke="var(--vpw-violet)"
+                          stroke="var(--vpw-chart-trend)"
                           strokeWidth={2}
                           type="monotone"
                         />

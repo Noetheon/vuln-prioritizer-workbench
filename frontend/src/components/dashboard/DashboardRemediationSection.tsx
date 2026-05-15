@@ -268,29 +268,16 @@ export function DashboardRemediationSection({
             />
           </div>
         ) : (
-          <>
-            <VpwDataTable
-              ariaLabel="Top remediation queue"
-              caption="Dashboard remediation table"
-              className="rounded-none border-x-0 border-b-0 shadow-none"
-              columns={columns}
-              data={previewFindings}
-              getRowKey={(finding) => finding.id}
-              minWidth="1060px"
-              tableClassName="table-fixed"
-            />
-            <div className="flex flex-col gap-2 px-4 pt-3 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
-              <span>
-                Showing top {previewFindings.length} of {queueFindings.length}
-                {queueSearch ? " matching" : ""} findings
-              </span>
-              <Button asChild size="sm" variant="outline">
-                <Link search={fullQueueSearch} to="/findings">
-                  View all
-                </Link>
-              </Button>
-            </div>
-          </>
+          <VpwDataTable
+            ariaLabel="Top remediation queue"
+            caption="Dashboard remediation table"
+            className="rounded-none border-x-0 border-b-0 shadow-none"
+            columns={columns}
+            data={previewFindings}
+            getRowKey={(finding) => finding.id}
+            minWidth="1060px"
+            tableClassName="table-fixed"
+          />
         )}
       </VpwSurfaceBody>
     </VpwSurface>

@@ -133,9 +133,21 @@
   --vpw-green: #047857;
   --vpw-amber: #b54708;
   --vpw-red: #c40000;
-  --vpw-violet: #7928ca;
+  --vpw-violet: #475569;
   --vpw-navy: #171717;
   --vpw-text-info: color-mix(in srgb, var(--vpw-blue) 80%, var(--vpw-text-primary));
+  --vpw-chart-critical: #dc2626;
+  --vpw-chart-high: #f97316;
+  --vpw-chart-medium: #d97706;
+  --vpw-chart-low: #0ea5e9;
+  --vpw-chart-risk: #2563eb;
+  --vpw-chart-trend: #06b6d4;
+  --vpw-chart-grid: #e5e7eb;
+  --vpw-chart-rank-1: #2563eb;
+  --vpw-chart-rank-2: #0284c7;
+  --vpw-chart-rank-3: #0891b2;
+  --vpw-chart-rank-4: #0d9488;
+  --vpw-chart-rank-5: #14b8a6;
 
   --vpw-radius-sm: 4px;
   --vpw-radius-md: 6px;
@@ -207,6 +219,19 @@
     --vpw-green: #34d399;
     --vpw-amber: #fbbf24;
     --vpw-red: #ff7a7a;
+    --vpw-violet: #94a3b8;
+    --vpw-chart-critical: #f87171;
+    --vpw-chart-high: #fb923c;
+    --vpw-chart-medium: #facc15;
+    --vpw-chart-low: #38bdf8;
+    --vpw-chart-risk: #60a5fa;
+    --vpw-chart-trend: #22d3ee;
+    --vpw-chart-grid: #2b2b2b;
+    --vpw-chart-rank-1: #60a5fa;
+    --vpw-chart-rank-2: #38bdf8;
+    --vpw-chart-rank-3: #22d3ee;
+    --vpw-chart-rank-4: #2dd4bf;
+    --vpw-chart-rank-5: #5eead4;
   }
 }
 
@@ -258,6 +283,19 @@
   --vpw-green: #34d399;
   --vpw-amber: #fbbf24;
   --vpw-red: #ff7a7a;
+  --vpw-violet: #94a3b8;
+  --vpw-chart-critical: #f87171;
+  --vpw-chart-high: #fb923c;
+  --vpw-chart-medium: #facc15;
+  --vpw-chart-low: #38bdf8;
+  --vpw-chart-risk: #60a5fa;
+  --vpw-chart-trend: #22d3ee;
+  --vpw-chart-grid: #2b2b2b;
+  --vpw-chart-rank-1: #60a5fa;
+  --vpw-chart-rank-2: #38bdf8;
+  --vpw-chart-rank-3: #22d3ee;
+  --vpw-chart-rank-4: #2dd4bf;
+  --vpw-chart-rank-5: #5eead4;
 }
 
 /* Tailwind v4 uses currentColor for bare `border` - default to the shadcn border token */

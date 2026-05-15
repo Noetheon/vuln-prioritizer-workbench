@@ -105,7 +105,11 @@ export function DashboardSidePanel({
                 Provider recency and run evidence for the selected project.
               </VpwSurfaceDescription>
             </div>
-            <VpwBadge tone={readinessTone}>
+            <VpwBadge
+              className="min-w-fit shrink-0"
+              overflow="wrap"
+              tone={readinessTone}
+            >
               {staleProvider ? "Needs sync" : "Current"}
             </VpwBadge>
           </div>

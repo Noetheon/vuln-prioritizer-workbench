@@ -66,7 +66,7 @@ export function DashboardHero({
           <div className="flex items-center gap-2 mb-1.5">
             <ShieldCheck
               aria-hidden="true"
-              className="size-3.5 text-[var(--vpw-violet)]"
+              className="size-3.5 text-[var(--vpw-teal)]"
             />
             <span className="text-[10px] font-bold uppercase text-[var(--vpw-text-muted)]">
               Security Operations
