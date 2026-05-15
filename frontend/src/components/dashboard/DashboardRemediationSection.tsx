@@ -1,8 +1,7 @@
 import { Link } from "@/lib/router"
-import { ArrowUpRight, Eye, Search } from "lucide-react"
+import { ArrowUpRight, Eye } from "lucide-react"
 import type { FindingPublic } from "@/api-client"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import {
   Sheet,
   SheetContent,
@@ -24,6 +23,7 @@ import {
   VpwSurfaceBody,
   VpwSurfaceDescription,
   VpwSurfaceHeader,
+  VpwSearchInput,
   VpwSurfaceTitle,
 } from "@/components/vpw"
 import { optionalText } from "@/lib/ui-copy"
@@ -210,7 +210,7 @@ export function DashboardRemediationSection({
 
   return (
     <VpwSurface className="gap-2 py-4">
-      <VpwSurfaceHeader className="px-4">
+      <VpwSurfaceHeader>
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <VpwSurfaceTitle>Top Remediation Queue</VpwSurfaceTitle>
@@ -218,25 +218,17 @@ export function DashboardRemediationSection({
               Prioritized items ranked by risk score for immediate action.
             </VpwSurfaceDescription>
           </div>
-          <div className="flex shrink-0 flex-wrap items-center gap-2">
-            <Input
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:min-w-[30rem] sm:flex-row sm:items-center sm:justify-end">
+            <VpwSearchInput
               aria-label="Filter remediation queue"
-              className="w-56 max-w-full"
+              className="min-w-0 flex-1 sm:max-w-80"
               onChange={(event) =>
                 onQueueSearchChange(event.currentTarget.value)
               }
-              placeholder="Filter CVE, owner, component…"
+              placeholder="Filter CVE, owner, component"
               value={queueSearch}
             />
-            <Button
-              aria-label="Search"
-              size="icon"
-              type="button"
-              variant="secondary"
-            >
-              <Search className="size-4" />
-            </Button>
-            <Button asChild size="sm" variant="outline">
+            <Button asChild className="shrink-0" size="sm" variant="outline">
               <Link search={fullQueueSearch} to="/findings">
                 View full queue
                 <ArrowUpRight aria-hidden="true" className="size-3.5" />
@@ -245,17 +237,17 @@ export function DashboardRemediationSection({
           </div>
         </div>
       </VpwSurfaceHeader>
-      <VpwSurfaceBody className="px-0 pb-2">
+      <VpwSurfaceBody className="pb-4">
         {findingsLoading ? (
-          <div className="px-6">
+          <div>
             <Skeleton className="h-64" />
           </div>
         ) : findingsError ? (
-          <div className="px-6">
+          <div>
             <ErrorState message={findingsError} />
           </div>
         ) : previewFindings.length === 0 ? (
-          <div className="px-6">
+          <div>
             <EmptyState
               ariaLabel="No remediation queue items"
               compact
@@ -271,7 +263,6 @@ export function DashboardRemediationSection({
           <VpwDataTable
             ariaLabel="Top remediation queue"
             caption="Dashboard remediation table"
-            className="rounded-none border-x-0 border-b-0 shadow-none"
             columns={columns}
             data={previewFindings}
             getRowKey={(finding) => finding.id}

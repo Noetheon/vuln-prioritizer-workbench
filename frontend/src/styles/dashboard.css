@@ -364,10 +364,10 @@
 .provider-freshness-panel,
 .dashboard-readiness-card {
   display: grid;
-  gap: 14px;
+  gap: var(--vpw-surface-gap);
   border: 1px solid var(--dashboard-analyst-border);
   border-radius: 8px;
-  padding: 16px;
+  padding: var(--vpw-panel-padding);
   background: var(--vpw-bg-card);
   box-shadow: none;
 }
@@ -427,8 +427,8 @@
 }
 
 .findings-queue-panel {
-  gap: 16px;
-  padding: 18px;
+  gap: var(--vpw-surface-gap);
+  padding: var(--vpw-panel-padding);
 }
 
 .remediation-subtext {

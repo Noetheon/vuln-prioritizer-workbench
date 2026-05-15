@@ -53,7 +53,14 @@ export function VpwPanel({
   ...props
 }: VpwPanelProps) {
   return (
-    <div className={cn("vpw-panel", padded && "p-5", className)} {...props}>
+    <div
+      className={cn(
+        "vpw-panel",
+        padded && "p-[var(--vpw-panel-padding)]",
+        className,
+      )}
+      {...props}
+    >
       {children}
     </div>
   )
@@ -62,7 +69,10 @@ export function VpwPanel({
 export function VpwSurface({ children, className, ...props }: VpwSurfaceProps) {
   return (
     <VpwPanel
-      className={cn("flex flex-col gap-6 py-6", className)}
+      className={cn(
+        "flex flex-col gap-[var(--vpw-surface-gap)] py-[var(--vpw-surface-padding-block)]",
+        className,
+      )}
       padded={false}
       {...props}
     >
@@ -77,7 +87,13 @@ export function VpwSurfaceHeader({
   ...props
 }: VpwSurfaceProps) {
   return (
-    <div className={cn("flex flex-col gap-1.5 px-6", className)} {...props}>
+    <div
+      className={cn(
+        "flex flex-col gap-1.5 px-[var(--vpw-surface-padding-inline)]",
+        className,
+      )}
+      {...props}
+    >
       {children}
     </div>
   )
@@ -122,7 +138,10 @@ export function VpwSurfaceBody({
   ...props
 }: VpwSurfaceProps) {
   return (
-    <div className={cn("px-6", className)} {...props}>
+    <div
+      className={cn("px-[var(--vpw-surface-padding-inline)]", className)}
+      {...props}
+    >
       {children}
     </div>
   )
