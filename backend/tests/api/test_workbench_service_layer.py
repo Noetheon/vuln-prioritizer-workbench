@@ -329,3 +329,43 @@ def test_user_auth_crud_surface_stays_outside_workbench_repositories() -> None:
     }.issubset(repository_exports)
     assert "UserRepository" not in repository_exports
     assert "AuthRepository" not in repository_exports
+
+
+def test_provider_snapshot_reuse_refreshes_replay_mode_metadata(
+    repository_classes: Any,
+    session: Session,
+) -> None:
+    run_repository = repository_classes.RunRepository(session)
+    locked_snapshot = run_repository.get_or_create_provider_snapshot(
+        content_hash="sha256:mode-reuse",
+        nvd_last_sync="2026-04-28T10:15:00Z",
+        epss_date="2026-04-28",
+        kev_catalog_version="2026-04-28",
+        source_hashes_json={"provider_snapshot": "sha256:mode-reuse"},
+        source_metadata_json={
+            "cache_only": True,
+            "locked_provider_data": True,
+            "selected_sources": ["nvd", "epss", "kev"],
+        },
+    )
+
+    unlocked_snapshot = run_repository.get_or_create_provider_snapshot(
+        content_hash="sha256:mode-reuse",
+        nvd_last_sync="2026-04-28T10:15:00Z",
+        epss_date="2026-04-28",
+        kev_catalog_version="2026-04-28",
+        source_hashes_json={"provider_snapshot": "sha256:mode-reuse"},
+        source_metadata_json={
+            "cache_only": True,
+            "locked_provider_data": False,
+            "selected_sources": ["nvd", "epss", "kev"],
+        },
+    )
+
+    same_snapshot = run_repository.get_or_create_provider_snapshot(
+        content_hash="sha256:mode-reuse",
+    )
+
+    assert unlocked_snapshot.id == locked_snapshot.id == same_snapshot.id
+    assert same_snapshot.source_metadata_json["cache_only"] is True
+    assert same_snapshot.source_metadata_json["locked_provider_data"] is False
