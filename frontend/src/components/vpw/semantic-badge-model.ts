@@ -1,7 +1,5 @@
 import type { VpwBadgeTone } from "./VpwBadge"
 
-export type BadgeDensity = "default" | "compact"
-
 export type RiskLevel =
   | "critical"
   | "high"

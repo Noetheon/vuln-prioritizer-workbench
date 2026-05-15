@@ -159,7 +159,8 @@ export function AssetsWorkbench(state: AssetsWorkbenchProps) {
             >
               <VpwToolbarGroup className="min-w-0">
                 <VpwBadge
-                  className="max-w-full whitespace-normal text-left [overflow-wrap:anywhere]"
+                  className="max-w-full"
+                  overflow="wrap"
                   tone="info"
                 >
                   Active project: {state.activeProjectLabel}

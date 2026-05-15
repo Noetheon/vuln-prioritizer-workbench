@@ -139,7 +139,7 @@ export function RemediationQueueFilters({
               <ListFilter aria-hidden="true" size={14} />
               Signals
               {signalFilterCount > 0 ? (
-                <VpwBadge className="ml-1 h-4 min-w-4 px-1 py-0 text-[10px]">
+                <VpwBadge className="ml-1" density="compact">
                   {signalFilterCount}
                 </VpwBadge>
               ) : null}
