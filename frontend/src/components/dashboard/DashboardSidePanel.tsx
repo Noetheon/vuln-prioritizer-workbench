@@ -114,6 +114,43 @@ export function DashboardSidePanel({
 
       <VpwSurface className="gap-3 py-4">
         <VpwSurfaceHeader className="px-4 pb-0">
+          <VpwSurfaceTitle className="text-sm">Recent Runs</VpwSurfaceTitle>
+        </VpwSurfaceHeader>
+        <VpwSurfaceBody className="px-4">
+          {latestRunFactsRows.length === 0 ? (
+            <p className="text-xs text-muted-foreground">
+              No analysis runs yet.
+            </p>
+          ) : (
+            <div className="flex flex-col gap-2">
+              {latestRunFactsRows.map((run) => (
+                <div
+                  className="flex items-center justify-between gap-2 rounded-md border bg-muted/20 px-2.5 py-2 text-xs"
+                  key={run.id}
+                >
+                  <VpwBadge
+                    className="shrink-0"
+                    tone={runBadgeTone(run.tone)}
+                  >
+                    {run.status}
+                  </VpwBadge>
+                  <span className="truncate text-muted-foreground">
+                    {run.startedAt}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+          <Button asChild className="mt-3 w-full" size="sm" variant="outline">
+            <Link search={projectSearch} to="/imports">
+              View all imports
+            </Link>
+          </Button>
+        </VpwSurfaceBody>
+      </VpwSurface>
+
+      <VpwSurface className="gap-3 py-4">
+        <VpwSurfaceHeader className="px-4 pb-0">
           <div className="flex items-center justify-between gap-3">
             <VpwSurfaceTitle className="text-sm">Data Quality</VpwSurfaceTitle>
             <VpwBadge tone={qualityIssueCount > 0 ? "warning" : "success"}>
@@ -153,43 +190,6 @@ export function DashboardSidePanel({
               )}
             </ul>
           )}
-        </VpwSurfaceBody>
-      </VpwSurface>
-
-      <VpwSurface className="gap-3 py-4">
-        <VpwSurfaceHeader className="px-4 pb-0">
-          <VpwSurfaceTitle className="text-sm">Recent Runs</VpwSurfaceTitle>
-        </VpwSurfaceHeader>
-        <VpwSurfaceBody className="px-4">
-          {latestRunFactsRows.length === 0 ? (
-            <p className="text-xs text-muted-foreground">
-              No analysis runs yet.
-            </p>
-          ) : (
-            <div className="flex flex-col gap-2">
-              {latestRunFactsRows.map((run) => (
-                <div
-                  className="flex items-center justify-between gap-2 rounded-md border bg-muted/20 px-2.5 py-2 text-xs"
-                  key={run.id}
-                >
-                  <VpwBadge
-                    className="shrink-0"
-                    tone={runBadgeTone(run.tone)}
-                  >
-                    {run.status}
-                  </VpwBadge>
-                  <span className="truncate text-muted-foreground">
-                    {run.startedAt}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
-          <Button asChild className="mt-3 w-full" size="sm" variant="outline">
-            <Link search={projectSearch} to="/imports">
-              View all imports
-            </Link>
-          </Button>
         </VpwSurfaceBody>
       </VpwSurface>
     </div>

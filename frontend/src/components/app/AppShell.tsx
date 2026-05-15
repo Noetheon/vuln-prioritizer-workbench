@@ -298,7 +298,7 @@ export function AppShell({
         {/* Main area */}
         <main className="flex h-dvh min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
           {/* Topbar */}
-          <header className="flex min-h-14 shrink-0 items-center justify-between gap-3 border-b border-[var(--vpw-border-default)] bg-[var(--vpw-bg-page)] px-4 py-3 lg:h-14 lg:px-6 lg:py-0">
+          <header className="flex h-16 shrink-0 items-center justify-between gap-3 border-b border-[var(--vpw-border-default)] bg-[var(--vpw-bg-page)] px-4 lg:px-6">
             <div className="flex min-w-0 items-center gap-3">
               <Sheet open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
                 <SheetTrigger asChild>
@@ -394,13 +394,13 @@ export function AppShell({
                 </SheetContent>
               </Sheet>
               <div className="min-w-0">
-                <p className="text-[10px] font-bold uppercase text-[var(--vpw-text-muted)]">
+                <p className="text-[10px] font-bold uppercase tracking-[0.06em] text-[var(--vpw-text-muted)]">
                   {eyebrow}
                 </p>
-                <h1 className="truncate text-base font-bold leading-tight text-[var(--vpw-text-primary)]">
+                <h1 className="truncate text-base font-bold leading-tight text-[var(--vpw-text-primary)] sm:text-lg">
                   {title}
                 </h1>
-                <p className="hidden truncate text-xs text-[var(--vpw-text-muted)] md:block">
+                <p className="sr-only">
                   {description}
                 </p>
               </div>

@@ -85,9 +85,7 @@ test("workbench frontend covers core Workbench E2E smoke", async ({ page }) => {
   await expect(page.getByLabel("Critical Priority summary card")).toContainText(
     "0",
   )
-  await expect(page.getByLabel("Latest Analysis summary card")).toContainText(
-    "No runs",
-  )
+  await expect(page.getByText("No runs yet").first()).toBeVisible()
 
   const importResponse = await page.request.post(
     `${backendBaseUrl}/api/v1/projects/${project.id}/imports`,
@@ -110,9 +108,7 @@ test("workbench frontend covers core Workbench E2E smoke", async ({ page }) => {
   await expect(page.getByLabel("KEV Exposed summary card")).toContainText(
     /[1-9]/,
   )
-  await expect(page.getByLabel("Latest Analysis summary card")).toContainText(
-    "succeeded",
-  )
+  await expect(page.getByText("succeeded").first()).toBeVisible()
   await expect(page.getByText("Top Remediation Queue")).toBeVisible()
   await expect(
     page.getByRole("link", { name: "CVE-2024-3094" }).first(),
