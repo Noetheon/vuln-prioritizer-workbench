@@ -264,6 +264,146 @@ export function RiskOperationsDashboard({
   const latestRunFactsRows = latestRunFacts(effectiveRuns)
   const dataQualityWarnings = effectiveProviderStatus?.warnings ?? []
   const dataQualityError = effectiveProviderStatus?.last_error ?? null
+  const criticalCount =
+    effectiveSummary === null ? 0 : priorityCount(effectiveSummary, "Critical")
+  const kevCount = effectiveSummary?.kev_hits ?? 0
+  const internetFacingCount = effectiveSignalCounts.internetFacingCriticals
+  const topServiceLabel = serviceItems[0]?.label ?? null
+  const acceptedRiskCount = effectiveFindings.filter(
+    (finding) => finding.status === "accepted",
+  ).length
+  const signalTakeaways = [
+    `${criticalCount} critical findings demand immediate action.`,
+    kevCount > 0
+      ? `${kevCount} known-exploited KEV findings are active prioritization signals.`
+      : "No known-exploited KEV findings are currently in scope.",
+    internetFacingCount > 0
+      ? `${internetFacingCount} internet-facing critical findings drive near-term risk.`
+      : "No internet-facing critical findings are currently driving the queue.",
+    acceptedRiskCount > 0
+      ? `${acceptedRiskCount} accepted-risk records should stay on review cadence.`
+      : topServiceLabel
+        ? `${topServiceLabel} is the highest-risk service concentration.`
+        : "Service concentration will appear after ownership data is imported.",
+  ]
+
+  const dashboardContent = (
+    <div className="min-w-0 flex flex-col gap-4">
+      <DashboardHero
+        demoWorkspaceEnabled={demoWorkspaceEnabled}
+        demoWorkspacePending={demoWorkspacePending}
+        effectiveProjects={effectiveProjects}
+        effectiveProviderStatus={effectiveProviderStatus}
+        effectiveSelectedProject={effectiveSelectedProject}
+        freshness={freshness}
+        isManagedDemoWorkspace={isManagedDemoWorkspace}
+        isDemoMode={isDemoMode}
+        onLoadDemoWorkspace={onLoadDemoWorkspace}
+        onProjectChange={onProjectChange}
+        onRefresh={onRefresh}
+        onResetDemoWorkspace={onResetDemoWorkspace}
+        projectListLoading={projectListLoading}
+        providerStatusLoading={providerStatusLoading}
+        selectedProjectId={selectedProjectId}
+      />
+
+      {isDemoMode || isManagedDemoWorkspace ? (
+        <DashboardDemoBanner
+          demoWorkspaceEnabled={demoWorkspaceEnabled}
+          demoWorkspacePending={demoWorkspacePending}
+          isManagedDemoWorkspace={isManagedDemoWorkspace}
+          onLoadDemoWorkspace={onLoadDemoWorkspace}
+          onResetDemoWorkspace={onResetDemoWorkspace}
+        />
+      ) : null}
+
+      {dashboardError ||
+      signalError ||
+      providerStatusError ||
+      findingsError ||
+      demoWorkspaceError ||
+      governanceError ? (
+        <ErrorState
+          message={
+            dashboardError ||
+            signalError ||
+            providerStatusError ||
+            findingsError ||
+            demoWorkspaceError ||
+            governanceError ||
+            "Dashboard is currently unavailable"
+          }
+        />
+      ) : null}
+
+      {staleProvider ? (
+        <VpwSurface className="border-[var(--vpw-amber)] bg-[var(--vpw-bg-warning)]">
+          <VpwSurfaceHeader className="py-3">
+            <div className="flex items-center gap-2">
+              <AlertCircle
+                className="size-4 text-[var(--vpw-amber)]"
+                aria-hidden="true"
+              />
+              <VpwSurfaceTitle className="text-sm text-[var(--vpw-text-primary)]">
+                Provider data needs refresh
+              </VpwSurfaceTitle>
+            </div>
+            <VpwSurfaceDescription className="text-xs text-[var(--vpw-text-secondary)]">
+              Freshness is stale or partially degraded. Remediation priority
+              remains functional, but evidence may not be fully current.
+            </VpwSurfaceDescription>
+          </VpwSurfaceHeader>
+        </VpwSurface>
+      ) : null}
+
+      {showEmptyState ? (
+        <DashboardSetupEmptyState
+          demoWorkspaceEnabled={demoWorkspaceEnabled}
+          demoWorkspacePending={demoWorkspacePending}
+          onLoadDemoWorkspace={onLoadDemoWorkspace}
+          onResetDemoWorkspace={onResetDemoWorkspace}
+        />
+      ) : (
+        <>
+          <DashboardMetricGrid cards={summaryCards} isLoading={isLoading} />
+          <DashboardRemediationSection
+            findingsError={findingsError}
+            findingsLoading={findingsLoading}
+            onQueueSearchChange={(queueSearch) =>
+              setFilters((current) => ({
+                ...current,
+                queueSearch,
+              }))
+            }
+            queueFindings={queueFindings}
+            queueSearch={filters.queueSearch}
+            selectedProjectId={isDemoMode ? "" : selectedProjectId}
+          />
+          <Suspense fallback={<DashboardSignalOverviewFallback />}>
+            <DashboardSignalOverview
+              epssItems={epssItems}
+              governanceLoading={governanceLoading}
+              keyTakeaways={signalTakeaways}
+              onRunRangeChange={(value: DashboardRunRange) =>
+                setFilters((current) => ({
+                  ...current,
+                  selectedRunRange: value,
+                }))
+              }
+              priorityItems={priorityItems}
+              runsLoading={runsLoading}
+              selectedProjectId={isDemoMode ? "" : selectedProjectId}
+              selectedRunRange={filters.selectedRunRange}
+              serviceItems={serviceItems}
+              summaryLoading={summaryLoading}
+              topServiceSource={topServiceSource}
+              trendItems={trendItems}
+            />
+          </Suspense>
+        </>
+      )}
+    </div>
+  )
 
   return (
     <TooltipProvider>
@@ -271,123 +411,15 @@ export function RiskOperationsDashboard({
         aria-label="Risk Operations dashboard"
         className="dashboard-analyst-layout flex flex-col gap-4 pb-4"
       >
-        <DashboardHero
-          demoWorkspaceEnabled={demoWorkspaceEnabled}
-          demoWorkspacePending={demoWorkspacePending}
-          effectiveProjects={effectiveProjects}
-          effectiveProviderStatus={effectiveProviderStatus}
-          effectiveSelectedProject={effectiveSelectedProject}
-          freshness={freshness}
-          isManagedDemoWorkspace={isManagedDemoWorkspace}
-          isDemoMode={isDemoMode}
-          onLoadDemoWorkspace={onLoadDemoWorkspace}
-          onProjectChange={onProjectChange}
-          onRefresh={onRefresh}
-          onResetDemoWorkspace={onResetDemoWorkspace}
-          projectListLoading={projectListLoading}
-          providerStatusLoading={providerStatusLoading}
-          selectedProjectId={selectedProjectId}
-        />
-
-        {isDemoMode || isManagedDemoWorkspace ? (
-          <DashboardDemoBanner
-            demoWorkspaceEnabled={demoWorkspaceEnabled}
-            demoWorkspacePending={demoWorkspacePending}
-            isManagedDemoWorkspace={isManagedDemoWorkspace}
-            onLoadDemoWorkspace={onLoadDemoWorkspace}
-            onResetDemoWorkspace={onResetDemoWorkspace}
-          />
-        ) : null}
-
-        {dashboardError ||
-        signalError ||
-        providerStatusError ||
-        findingsError ||
-        demoWorkspaceError ||
-        governanceError ? (
-          <ErrorState
-            message={
-              dashboardError ||
-              signalError ||
-              providerStatusError ||
-              findingsError ||
-              demoWorkspaceError ||
-              governanceError ||
-              "Dashboard is currently unavailable"
-            }
-          />
-        ) : null}
-
-        {staleProvider ? (
-          <VpwSurface className="border-[var(--vpw-amber)] bg-[var(--vpw-bg-warning)]">
-            <VpwSurfaceHeader className="py-3">
-              <div className="flex items-center gap-2">
-                <AlertCircle
-                  className="size-4 text-[var(--vpw-amber)]"
-                  aria-hidden="true"
-                />
-                <VpwSurfaceTitle className="text-sm text-[var(--vpw-text-primary)]">
-                  Provider data needs refresh
-                </VpwSurfaceTitle>
-              </div>
-              <VpwSurfaceDescription className="text-xs text-[var(--vpw-text-secondary)]">
-                Freshness is stale or partially degraded. Remediation priority
-                remains functional, but evidence may not be fully current.
-              </VpwSurfaceDescription>
-            </VpwSurfaceHeader>
-          </VpwSurface>
-        ) : null}
-
-        {showEmptyState ? (
-          <DashboardSetupEmptyState
-            demoWorkspaceEnabled={demoWorkspaceEnabled}
-            demoWorkspacePending={demoWorkspacePending}
-            onLoadDemoWorkspace={onLoadDemoWorkspace}
-            onResetDemoWorkspace={onResetDemoWorkspace}
-          />
-        ) : null}
-
-        {!showEmptyState ? (
-          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(17rem,20rem)] 2xl:grid-cols-[minmax(0,1fr)_22rem]">
-            <div className="min-w-0 flex flex-col gap-4">
-              <DashboardMetricGrid
-                cards={summaryCards}
-                isLoading={isLoading}
-              />
-              <DashboardRemediationSection
-                findingsError={findingsError}
-                findingsLoading={findingsLoading}
-                onQueueSearchChange={(queueSearch) =>
-                  setFilters((current) => ({
-                    ...current,
-                    queueSearch,
-                  }))
-                }
-                queueFindings={queueFindings}
-                queueSearch={filters.queueSearch}
-              />
-              <Suspense fallback={<DashboardSignalOverviewFallback />}>
-                <DashboardSignalOverview
-                  epssItems={epssItems}
-                  governanceLoading={governanceLoading}
-                  onRunRangeChange={(value: DashboardRunRange) =>
-                    setFilters((current) => ({
-                      ...current,
-                      selectedRunRange: value,
-                    }))
-                  }
-                  priorityItems={priorityItems}
-                  runsLoading={runsLoading}
-                  selectedProjectId={isDemoMode ? "" : selectedProjectId}
-                  selectedRunRange={filters.selectedRunRange}
-                  serviceItems={serviceItems}
-                  summaryLoading={summaryLoading}
-                  topServiceSource={topServiceSource}
-                  trendItems={trendItems}
-                />
-              </Suspense>
-            </div>
-
+        <div
+          className={
+            showEmptyState
+              ? "grid gap-4"
+              : "dashboard-command-grid grid gap-4 2xl:grid-cols-[minmax(0,1fr)_22rem]"
+          }
+        >
+          {dashboardContent}
+          {!showEmptyState ? (
             <DashboardSidePanel
               dataQualityError={dataQualityError}
               dataQualityWarnings={dataQualityWarnings}
@@ -401,8 +433,8 @@ export function RiskOperationsDashboard({
               selectedProjectId={isDemoMode ? "" : selectedProjectId}
               staleProvider={staleProvider}
             />
-          </div>
-        ) : null}
+          ) : null}
+        </div>
       </section>
     </TooltipProvider>
   )

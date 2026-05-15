@@ -1,16 +1,7 @@
 import { Link } from "@/lib/router"
-import { Eye, Search } from "lucide-react"
+import { ArrowUpRight, Eye, Search } from "lucide-react"
 import type { FindingPublic } from "@/api-client"
 import { Button } from "@/components/ui/button"
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import {
   Sheet,
@@ -48,6 +39,7 @@ type DashboardRemediationSectionProps = {
   onQueueSearchChange: (value: string) => void
   queueFindings: readonly FindingPublic[]
   queueSearch: string
+  selectedProjectId: string
 }
 
 export function DashboardRemediationSection({
@@ -56,7 +48,11 @@ export function DashboardRemediationSection({
   onQueueSearchChange,
   queueFindings,
   queueSearch,
+  selectedProjectId,
 }: DashboardRemediationSectionProps) {
+  const previewFindings = queueFindings.slice(0, 5)
+  const queueProjectId = selectedProjectId || queueFindings[0]?.project_id || ""
+  const fullQueueSearch = selectedProjectRouteSearch(queueProjectId)
   const columns: readonly VpwDataTableColumn<FindingPublic>[] = [
     {
       id: "priority",
@@ -130,32 +126,12 @@ export function DashboardRemediationSection({
       id: "why",
       header: "Why now",
       cell: (finding) => (
-        <Dialog>
-          <DialogTrigger asChild>
-            <Button className="text-xs" size="sm" variant="ghost">
-              Why now
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Why now: {finding.cve_id}</DialogTitle>
-              <DialogDescription>
-                Current priority rationale from scoring and operational context.
-              </DialogDescription>
-            </DialogHeader>
-            <p className="text-sm text-muted-foreground">
-              {findingWhyNow(finding)}
-            </p>
-            <DialogClose asChild>
-              <Button size="sm" type="button" variant="secondary">
-                Close
-              </Button>
-            </DialogClose>
-          </DialogContent>
-        </Dialog>
+        <span className="dashboard-queue-why" title={findingWhyNow(finding)}>
+          {findingWhyNow(finding)}
+        </span>
       ),
-      className: "w-24",
-      headerClassName: "w-24",
+      className: "w-52",
+      headerClassName: "w-52",
     },
     {
       id: "view",
@@ -242,10 +218,10 @@ export function DashboardRemediationSection({
               Prioritized items ranked by risk score for immediate action.
             </VpwSurfaceDescription>
           </div>
-          <div className="flex shrink-0 items-center gap-2">
+          <div className="flex shrink-0 flex-wrap items-center gap-2">
             <Input
               aria-label="Filter remediation queue"
-              className="w-40"
+              className="w-56 max-w-full"
               onChange={(event) =>
                 onQueueSearchChange(event.currentTarget.value)
               }
@@ -260,6 +236,12 @@ export function DashboardRemediationSection({
             >
               <Search className="size-4" />
             </Button>
+            <Button asChild size="sm" variant="outline">
+              <Link search={fullQueueSearch} to="/findings">
+                View full queue
+                <ArrowUpRight aria-hidden="true" className="size-3.5" />
+              </Link>
+            </Button>
           </div>
         </div>
       </VpwSurfaceHeader>
@@ -272,7 +254,7 @@ export function DashboardRemediationSection({
           <div className="px-6">
             <ErrorState message={findingsError} />
           </div>
-        ) : queueFindings.length === 0 ? (
+        ) : previewFindings.length === 0 ? (
           <div className="px-6">
             <EmptyState
               ariaLabel="No remediation queue items"
@@ -286,16 +268,29 @@ export function DashboardRemediationSection({
             />
           </div>
         ) : (
-          <VpwDataTable
-            ariaLabel="Top remediation queue"
-            caption="Dashboard remediation table"
-            className="rounded-none border-x-0 border-b-0 shadow-none"
-            columns={columns}
-            data={queueFindings}
-            getRowKey={(finding) => finding.id}
-            minWidth="980px"
-            tableClassName="table-fixed"
-          />
+          <>
+            <VpwDataTable
+              ariaLabel="Top remediation queue"
+              caption="Dashboard remediation table"
+              className="rounded-none border-x-0 border-b-0 shadow-none"
+              columns={columns}
+              data={previewFindings}
+              getRowKey={(finding) => finding.id}
+              minWidth="1060px"
+              tableClassName="table-fixed"
+            />
+            <div className="flex flex-col gap-2 px-4 pt-3 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
+              <span>
+                Showing top {previewFindings.length} of {queueFindings.length}
+                {queueSearch ? " matching" : ""} findings
+              </span>
+              <Button asChild size="sm" variant="outline">
+                <Link search={fullQueueSearch} to="/findings">
+                  View all
+                </Link>
+              </Button>
+            </div>
+          </>
         )}
       </VpwSurfaceBody>
     </VpwSurface>
