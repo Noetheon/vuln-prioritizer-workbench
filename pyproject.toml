@@ -9,7 +9,7 @@ dependencies = []
 members = ["backend"]
 
 [tool.pytest.ini_options]
-addopts = "-ra --cov=app --cov=vuln_prioritizer --cov-report=term-missing --cov-fail-under=95"
+addopts = "-ra --cov=app --cov=vuln_prioritizer --cov-report=term-missing --cov-fail-under=96"
 testpaths = ["backend/tests"]
 pythonpath = ["backend", "backend/src"]
 markers = [
@@ -17,6 +17,7 @@ markers = [
   "e2e: end-to-end Workbench tests that may spawn subprocesses.",
   "live_network: allow real network access through requests in this test.",
   "performance: optional performance and scale smoke tests; enable explicitly.",
+  "property: deterministic property-based tests for parser and report invariants.",
 ]
 
 [tool.ruff]

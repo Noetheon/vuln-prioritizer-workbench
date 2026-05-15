@@ -203,10 +203,10 @@ jobs:
         if: steps.frontend-scope.outputs.run-frontend == 'true'
         run: make frontend-test-unit-coverage
 
-      - name: Install Playwright browser
+      - name: Install Playwright browsers
         if: steps.frontend-scope.outputs.run-frontend == 'true'
         working-directory: frontend
-        run: npx playwright install --with-deps chromium
+        run: npx playwright install --with-deps chromium firefox webkit
 
       - name: Run full frontend Playwright suite
         if: steps.frontend-scope.outputs.run-frontend == 'true'

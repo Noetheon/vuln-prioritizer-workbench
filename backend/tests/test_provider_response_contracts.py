@@ -103,6 +103,27 @@ def test_nvd_fixture_response_maps_to_nvd_data_contract() -> None:
     }
 
 
+def test_nvd_fixture_response_fetch_many_maps_live_contract_without_network() -> None:
+    payload = _load_fixture(
+        "nvd",
+        FIXTURE_ROOT / "nvd_cve_api_2_0_response.json",
+        required_keys={"vulnerabilities"},
+    )
+    session = FixtureSession(payload)
+    provider = NvdProvider.from_env(session=session)
+
+    records, warnings = provider.fetch_many(["CVE-2026-2001"])
+
+    assert warnings == []
+    assert session.calls[0]["params"] == {"cveId": "CVE-2026-2001"}
+    assert records["CVE-2026-2001"].cve_id == "CVE-2026-2001"
+    assert records["CVE-2026-2001"].description == (
+        "Example Product allows command injection through a crafted request."
+    )
+    assert provider.last_diagnostics.content_hits == 1
+    assert provider.last_diagnostics.network_fetches == 1
+
+
 def test_provider_contract_fixture_schema_failures_include_provider_and_path() -> None:
     fixture_path = FIXTURE_ROOT / "invalid" / "epss_missing_data.json"
 

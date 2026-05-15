@@ -1,7 +1,9 @@
 PYTHON ?= python3
+MUTMUT ?= $(shell command -v mutmut 2>/dev/null || $(PYTHON) -c 'import os, shutil, site, sysconfig; paths=[sysconfig.get_path("scripts"), os.path.join(site.USER_BASE, "bin")]; print(shutil.which("mutmut") or next((os.path.join(path, "mutmut") for path in paths if os.path.exists(os.path.join(path, "mutmut"))), "mutmut"))')
 BACKEND_DIR := backend
 BACKEND_SRC := $(BACKEND_DIR)/src
 BACKEND_TESTS := $(BACKEND_DIR)/tests
+MUTATION_PATTERNS := "app.services.import_background.x__append_job_status*" "app.services.report_sarif_validation.x_validate_sarif_file*" "vuln_prioritizer.services.analysis_pipeline.x__finding_data_quality_confidence*" "vuln_prioritizer.services.analysis_pipeline.x__provider_snapshot_hash*" "vuln_prioritizer.services.analysis_pipeline.x__provider_snapshot_metadata_path*" "vuln_prioritizer.services.analysis_pipeline.x_attach_provider_data_quality_flags*"
 PYTHON_AUDIT_LOCK := $(BACKEND_DIR)/requirements.lock.txt
 PYTHON_RUNTIME_LOCK := $(BACKEND_DIR)/requirements.runtime.lock.txt
 COMPOSE := docker compose -f compose.yml -f compose.override.yml
@@ -15,7 +17,7 @@ PRODUCTION_SMOKE_POSTGRES_PASSWORD ?= production-smoke-postgres-password
 PRODUCTION_SMOKE_FRONTEND_PORT ?= 5180
 ACTIONLINT_IMAGE ?= rhysd/actionlint:1.7.12@sha256:b1934ee5f1c509618f2508e6eb47ee0d3520686341fec936f3b79331f9315667
 
-.PHONY: install test lint format fix typecheck check local-workbench-check performance-smoke playwright-install playwright-check frontend-install frontend-build frontend-lint frontend-test-types frontend-test-unit frontend-test-unit-coverage frontend-generate-client api-client-drift-check frontend-audit frontend-check python-lock-check docker-base-image-check archive-evidence-check public-production-evidence-check release-evidence-hygiene-check docs-check docs-serve actionlint-check workflow-check docker-demo-smoke docker-production-smoke dependency-audit clean-local clean-deps provider-snapshot-validate package package-contents-check package-check package-check-temp release-check release-readiness-check precommit-install
+.PHONY: install test lint format fix typecheck check critical-coverage-check property-check mutation-check quality-10-check local-workbench-check performance-smoke playwright-install playwright-check frontend-install frontend-build frontend-lint frontend-test-types frontend-test-unit frontend-test-unit-coverage frontend-generate-client api-client-drift-check frontend-audit frontend-check python-lock-check docker-base-image-check archive-evidence-check public-production-evidence-check release-evidence-hygiene-check docs-check docs-serve actionlint-check workflow-check docker-demo-smoke docker-production-smoke dependency-audit clean-local clean-deps provider-snapshot-validate package package-contents-check package-check package-check-temp release-check release-readiness-check precommit-install
 
 install:
 	$(PYTHON) -m pip install -e "$(BACKEND_DIR)[dev]"
@@ -41,6 +43,21 @@ check:
 	$(PYTHON) -m ruff check $(BACKEND_DIR)
 	cd $(BACKEND_DIR) && $(PYTHON) -m mypy app src
 	$(PYTHON) -m pytest $(BACKEND_TESTS)
+	mkdir -p build
+	$(PYTHON) -m coverage json -o build/coverage-current.json
+	$(MAKE) critical-coverage-check
+
+critical-coverage-check:
+	$(PYTHON) scripts/check_critical_coverage.py build/coverage-current.json
+
+property-check:
+	$(PYTHON) -m pytest -q $(BACKEND_TESTS)/property --no-cov
+
+mutation-check:
+	rm -rf .mutmut-cache mutants $(BACKEND_DIR)/.mutmut-cache $(BACKEND_DIR)/mutants
+	cd $(BACKEND_DIR) && $(MUTMUT) run --max-children 4 $(MUTATION_PATTERNS)
+	cd $(BACKEND_DIR) && $(PYTHON) ../scripts/check_mutmut_results.py mutants $(MUTATION_PATTERNS)
+	rm -rf $(BACKEND_DIR)/.mutmut-cache $(BACKEND_DIR)/mutants
 
 local-workbench-check:
 	$(MAKE) check
@@ -50,7 +67,7 @@ performance-smoke:
 	VPW_PERFORMANCE_SMOKE=1 VPW_PERFORMANCE_SMOKE_OUTPUT=build/vpw-072-performance-smoke.json $(PYTHON) -m pytest -q $(BACKEND_TESTS)/performance/test_vpw072_performance_smoke.py --no-cov
 
 playwright-install: frontend-install
-	cd frontend && npm --workspaces=false exec playwright install --with-deps chromium
+	cd frontend && npm --workspaces=false exec -- playwright install --with-deps chromium firefox webkit
 
 playwright-check: playwright-install
 	cd frontend && npm run test
@@ -273,6 +290,11 @@ release-check:
 	$(MAKE) docker-demo-smoke
 
 release-readiness-check: release-check api-client-drift-check archive-evidence-check playwright-check docker-production-smoke
+
+quality-10-check:
+	$(MAKE) release-readiness-check
+	$(MAKE) performance-smoke
+	$(MAKE) mutation-check
 
 precommit-install:
 	pre-commit install

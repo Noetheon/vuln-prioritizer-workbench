@@ -75,6 +75,14 @@ class RunRepository:
         """Return an existing snapshot for a hash, or create one."""
         snapshot = self.get_provider_snapshot_by_hash(content_hash)
         if snapshot is not None:
+            self._refresh_provider_snapshot(
+                snapshot,
+                nvd_last_sync=nvd_last_sync,
+                epss_date=epss_date,
+                kev_catalog_version=kev_catalog_version,
+                source_hashes_json=source_hashes_json,
+                source_metadata_json=source_metadata_json,
+            )
             return snapshot
         return self.create_provider_snapshot(
             content_hash=content_hash,
@@ -84,6 +92,39 @@ class RunRepository:
             source_hashes_json=source_hashes_json,
             source_metadata_json=source_metadata_json,
         )
+
+    def _refresh_provider_snapshot(
+        self,
+        snapshot: ProviderSnapshot,
+        *,
+        nvd_last_sync: str | None,
+        epss_date: str | None,
+        kev_catalog_version: str | None,
+        source_hashes_json: dict[str, Any] | None,
+        source_metadata_json: dict[str, Any] | None,
+    ) -> None:
+        """Refresh replay metadata when the same snapshot content is reused."""
+        changed = False
+        if nvd_last_sync is not None and snapshot.nvd_last_sync != nvd_last_sync:
+            snapshot.nvd_last_sync = nvd_last_sync
+            changed = True
+        if epss_date is not None and snapshot.epss_date != epss_date:
+            snapshot.epss_date = epss_date
+            changed = True
+        if kev_catalog_version is not None and snapshot.kev_catalog_version != kev_catalog_version:
+            snapshot.kev_catalog_version = kev_catalog_version
+            changed = True
+        if source_hashes_json is not None and snapshot.source_hashes_json != source_hashes_json:
+            snapshot.source_hashes_json = source_hashes_json
+            changed = True
+        if source_metadata_json is not None:
+            redacted_metadata = _redacted_json_payload(source_metadata_json)
+            if snapshot.source_metadata_json != redacted_metadata:
+                snapshot.source_metadata_json = redacted_metadata
+                changed = True
+        if changed:
+            self.session.add(snapshot)
+            self.session.flush()
 
     def create_analysis_run(
         self,

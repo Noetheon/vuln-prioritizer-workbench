@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import json
 import uuid
+import zipfile
 from collections import Counter
 from dataclasses import replace
 from datetime import timedelta
+from io import BytesIO
 from pathlib import Path
 from typing import Any
 
@@ -147,6 +150,11 @@ def test_demo_workspace_can_be_seeded_reset_and_removed(
         reports=reports_response.json()["data"],
         governance=governance_response.json(),
         attack=attack_response.json(),
+    )
+    _assert_demo_report_downloads(
+        workbench_api_env,
+        headers=headers,
+        reports=reports_response.json()["data"],
     )
     assert attack_response.json()["mapped_finding_count"] == 21
     assert attack_response.json()["mapped_coverage_percent"] == 87.5
@@ -464,6 +472,59 @@ def _assert_demo_totals_are_coherent(
     ):
         for rollup in rollup_group:
             _assert_rollup_counts_are_coherent(rollup)
+
+
+def _assert_demo_report_downloads(
+    workbench_api_env: WorkbenchApiEnv,
+    *,
+    headers: dict[str, str],
+    reports: list[dict[str, Any]],
+) -> None:
+    reports_by_filename = {report["filename"]: report for report in reports}
+    assert set(reports_by_filename) == EXPECTED_REPORT_FILENAMES
+
+    for filename, report in reports_by_filename.items():
+        download = workbench_api_env.client.get(report["download_url"], headers=headers)
+
+        assert download.status_code == 200, filename
+        assert download.headers["cache-control"] == "no-store"
+        assert "attachment" in download.headers["content-disposition"]
+        assert filename in download.headers["content-disposition"]
+        assert len(download.content) > 500
+
+        if filename == "technical-report.md":
+            assert "# Technical Vulnerability Report" in download.text
+        elif filename == "executive-report.html":
+            assert "<!doctype html>" in download.text
+            assert "Executive Summary" in download.text
+        elif filename == "analysis-result.v1.json":
+            payload = download.json()
+            assert payload["schema"] == "analysis-result.v1"
+            assert payload["project"]["name"] == DEMO_PROJECT_NAME
+        elif filename == "findings.csv":
+            assert "cve_id" in download.text
+            assert "CVE-" in download.text
+        elif filename == "attack-navigator-layer.json":
+            payload = download.json()
+            assert payload["version"] == "4.5"
+            assert payload["domain"] == "enterprise-attack"
+            assert payload["techniques"]
+        elif filename == "results.sarif":
+            payload = download.json()
+            assert payload["version"] == "2.1.0"
+            assert payload["runs"]
+        elif filename == "evidence-bundle.zip":
+            with zipfile.ZipFile(BytesIO(download.content)) as archive:
+                names = set(archive.namelist())
+                expected_bundle_files = {
+                    "analysis.json",
+                    "executive.html",
+                    "manifest.json",
+                    "technical.md",
+                }
+                assert expected_bundle_files.issubset(names)
+                manifest = json.loads(archive.read("manifest.json"))
+                assert manifest["bundle_kind"] == "evidence-bundle"
 
 
 def _assert_rollup_counts_are_coherent(rollup: dict[str, Any]) -> None:

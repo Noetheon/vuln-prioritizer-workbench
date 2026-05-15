@@ -7,6 +7,9 @@ from pathlib import Path
 import pytest
 
 from vuln_prioritizer.models import (
+    EnrichmentResult,
+    InputOccurrence,
+    ParsedInput,
     PrioritizedFinding,
     PriorityPolicy,
     ProviderDataQualityFlag,
@@ -14,9 +17,10 @@ from vuln_prioritizer.models import (
 )
 from vuln_prioritizer.options import PriorityFilter
 from vuln_prioritizer.services import analysis as service_analysis
-from vuln_prioritizer.services import analysis_provider
+from vuln_prioritizer.services import analysis_pipeline, analysis_provider
 from vuln_prioritizer.services.analysis_pipeline import (
     _provider_snapshot_hash,
+    _provider_snapshot_metadata_path,
     attach_provider_data_quality_flags,
 )
 
@@ -277,6 +281,214 @@ def test_analysis_requests_require_snapshot_when_provider_data_is_locked(
     assert _provider_snapshot_hash(missing_snapshot) is None
 
 
+def test_provider_snapshot_metadata_path_prefers_output_relative_paths(
+    tmp_path: Path,
+) -> None:
+    output_path = tmp_path / "reports" / "analysis.json"
+    snapshot_path = tmp_path / "reports" / "snapshots" / "provider.json"
+
+    assert _provider_snapshot_metadata_path(snapshot_path, output_path) == (
+        "snapshots/provider.json"
+    )
+    outside = tmp_path / "outside" / "provider.json"
+    assert _provider_snapshot_metadata_path(outside, output_path) == str(outside)
+    assert _provider_snapshot_metadata_path(None, output_path) is None
+
+
+def test_build_findings_wraps_provider_and_defensive_context_errors(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    parsed_input = _parsed_input()
+
+    class FailingEnrichmentService:
+        def __init__(self, **_kwargs: object) -> None:
+            pass
+
+        def enrich(self, *_args: object, **_kwargs: object) -> EnrichmentResult:
+            raise ValueError("provider snapshot is malformed")
+
+    monkeypatch.setattr(analysis_pipeline, "EnrichmentService", FailingEnrichmentService)
+    with pytest.raises(service_analysis.AnalysisInputError, match="provider snapshot is malformed"):
+        analysis_pipeline.build_findings(
+            parsed_input.unique_cves,
+            policy=PriorityPolicy(),
+            parsed_input=parsed_input,
+            context_profile=analysis_pipeline.ContextPolicyProfile(),
+            attack_enabled=False,
+            attack_source="none",
+            attack_mapping_file=None,
+            attack_technique_metadata_file=None,
+            offline_kev_file=None,
+            offline_attack_file=None,
+            defensive_context_file=None,
+            nvd_api_key_env="NVD_API_KEY",
+            no_cache=True,
+            cache_dir=tmp_path / "cache",
+            cache_ttl_hours=24,
+        )
+
+    class SuccessfulEnrichmentService:
+        def __init__(self, **_kwargs: object) -> None:
+            pass
+
+        def enrich(self, *_args: object, **_kwargs: object) -> EnrichmentResult:
+            return EnrichmentResult()
+
+    def fail_defensive_context(_path: Path | None) -> object:
+        raise ValueError("defensive context is malformed")
+
+    monkeypatch.setattr(analysis_pipeline, "EnrichmentService", SuccessfulEnrichmentService)
+    monkeypatch.setattr(
+        analysis_pipeline,
+        "load_defensive_context_file",
+        fail_defensive_context,
+    )
+    with pytest.raises(service_analysis.AnalysisInputError, match="defensive context"):
+        analysis_pipeline.build_findings(
+            parsed_input.unique_cves,
+            policy=PriorityPolicy(),
+            parsed_input=parsed_input,
+            context_profile=analysis_pipeline.ContextPolicyProfile(),
+            attack_enabled=False,
+            attack_source="none",
+            attack_mapping_file=None,
+            attack_technique_metadata_file=None,
+            offline_kev_file=None,
+            offline_attack_file=None,
+            defensive_context_file=tmp_path / "defensive.json",
+            nvd_api_key_env="NVD_API_KEY",
+            no_cache=True,
+            cache_dir=tmp_path / "cache",
+            cache_ttl_hours=24,
+        )
+
+
+def test_prepare_analysis_reports_no_findings(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def no_findings(
+        *_args: object, **_kwargs: object
+    ) -> tuple[list[PrioritizedFinding], dict[str, int], EnrichmentResult]:
+        return [], {}, EnrichmentResult()
+
+    monkeypatch.setattr(analysis_pipeline, "build_findings", no_findings)
+
+    with pytest.raises(service_analysis.AnalysisNoFindingsError, match="No findings"):
+        analysis_pipeline.prepare_analysis(
+            _analysis_request(tmp_path, parsed_input=_parsed_input())
+        )
+
+
+def test_prepare_analysis_applies_filters_summary_and_provider_degradation(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    critical = _finding(
+        "CVE-2024-3094",
+        priority_label="Critical",
+        priority_rank=1,
+        epss=0.95,
+        in_kev=True,
+    )
+    low = _finding(
+        "CVE-2026-0001",
+        priority_label="Low",
+        priority_rank=4,
+        epss=0.01,
+        in_kev=False,
+    )
+    enrichment = EnrichmentResult(
+        warnings=["provider warning"],
+        nvd_diagnostics=ProviderLookupDiagnostics(failures=1, degraded=True),
+        provider_data_quality_flags={
+            "nvd": [
+                ProviderDataQualityFlag(
+                    source="nvd",
+                    code="provider_error",
+                    message="NVD provider returned recoverable errors.",
+                    severity="error",
+                )
+            ]
+        },
+        provider_snapshot_sources=["nvd"],
+    )
+
+    def two_findings(
+        *_args: object, **_kwargs: object
+    ) -> tuple[list[PrioritizedFinding], dict[str, int], EnrichmentResult]:
+        return [critical, low], {"Critical": 1, "Low": 1}, enrichment
+
+    monkeypatch.setattr(analysis_pipeline, "build_findings", two_findings)
+    monkeypatch.setattr(
+        analysis_pipeline,
+        "stale_provider_sources",
+        lambda *_args, **_kwargs: ["nvd"],
+    )
+
+    findings, context = analysis_pipeline.prepare_analysis(
+        _analysis_request(
+            tmp_path,
+            parsed_input=_parsed_input("CVE-2024-3094", "CVE-2026-0001"),
+            priority_filters=["critical"],
+            kev_only=True,
+            min_epss=0.5,
+            sort_by="cve",
+            max_provider_age_hours=24,
+        )
+    )
+
+    assert [finding.cve_id for finding in findings] == ["CVE-2024-3094"]
+    assert context.findings_count == 1
+    assert context.filtered_out_count == 1
+    assert context.provider_degraded is True
+    assert context.provider_stale is True
+    assert context.provider_stale_sources == ["nvd"]
+    assert "Provider data exceeded --max-provider-age-hours for: nvd" in context.warnings
+    assert context.active_filters == ["priority=Critical", "kev-only", "min-epss>=0.500"]
+    assert context.counts_by_priority == {"Critical": 1}
+
+
+def test_prepare_explain_honors_suppressed_visibility(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    suppressed = _finding(
+        "CVE-2024-3094",
+        priority_label="High",
+        priority_rank=2,
+        suppressed_by_vex=True,
+    )
+
+    def suppressed_finding(
+        *_args: object, **_kwargs: object
+    ) -> tuple[list[PrioritizedFinding], dict[str, int], EnrichmentResult]:
+        return [suppressed], {"High": 1}, EnrichmentResult()
+
+    monkeypatch.setattr(analysis_pipeline, "build_findings", suppressed_finding)
+
+    with pytest.raises(service_analysis.AnalysisNoFindingsError, match="No finding"):
+        analysis_pipeline.prepare_explain(_explain_request(tmp_path, show_suppressed=False))
+
+    result = analysis_pipeline.prepare_explain(_explain_request(tmp_path, show_suppressed=True))
+
+    assert result.finding.cve_id == "CVE-2024-3094"
+    assert result.context.suppressed_by_vex == 1
+
+
+def test_prepare_saved_explain_reports_unreadable_payload(tmp_path: Path) -> None:
+    missing = tmp_path / "missing-analysis.json"
+
+    with pytest.raises(service_analysis.AnalysisInputError, match="could not be read"):
+        service_analysis.prepare_saved_explain(
+            cve_id="CVE-2024-0001",
+            input_path=missing,
+            output=None,
+            format="json",
+        )
+
+
 def test_attach_provider_data_quality_flags_scopes_flags_and_confidence() -> None:
     findings = [
         PrioritizedFinding(
@@ -505,3 +717,130 @@ def test_stale_provider_sources_handles_mixed_snapshot_live_fallback() -> None:
         snapshot_sources=["nvd"],
         now=now,
     ) == ["nvd"]
+
+
+def _analysis_request(
+    tmp_path: Path,
+    *,
+    parsed_input: ParsedInput,
+    priority_filters: list[str] | None = None,
+    kev_only: bool = False,
+    min_cvss: float | None = None,
+    min_epss: float | None = None,
+    sort_by: str = "priority",
+    max_provider_age_hours: int | None = None,
+) -> service_analysis.AnalysisRequest:
+    return service_analysis.AnalysisRequest(
+        input_specs=[],
+        parsed_input=parsed_input,
+        output=None,
+        format="json",
+        provider_snapshot_file=None,
+        locked_provider_data=False,
+        no_attack=True,
+        attack_source="none",
+        attack_mapping_file=None,
+        attack_technique_metadata_file=None,
+        offline_attack_file=None,
+        defensive_context_file=None,
+        priority_filters=priority_filters,
+        kev_only=kev_only,
+        min_cvss=min_cvss,
+        min_epss=min_epss,
+        sort_by=sort_by,
+        policy=PriorityPolicy(),
+        policy_profile="default",
+        policy_file=None,
+        waiver_file=None,
+        asset_context=None,
+        target_kind="generic",
+        target_ref=None,
+        vex_files=[],
+        show_suppressed=False,
+        hide_waived=False,
+        fail_on_provider_error=False,
+        max_cves=None,
+        offline_kev_file=None,
+        nvd_api_key_env="NVD_API_KEY",
+        no_cache=True,
+        cache_dir=tmp_path / "cache",
+        cache_ttl_hours=24,
+        max_provider_age_hours=max_provider_age_hours,
+    )
+
+
+def _explain_request(
+    tmp_path: Path,
+    *,
+    show_suppressed: bool,
+) -> service_analysis.ExplainRequest:
+    return service_analysis.ExplainRequest(
+        cve_id="CVE-2024-3094",
+        output=None,
+        format="json",
+        provider_snapshot_file=None,
+        locked_provider_data=False,
+        no_attack=True,
+        attack_source="none",
+        attack_mapping_file=None,
+        attack_technique_metadata_file=None,
+        policy=PriorityPolicy(),
+        policy_profile="default",
+        policy_file=None,
+        waiver_file=None,
+        asset_context=None,
+        target_kind="generic",
+        target_ref=None,
+        vex_files=[],
+        show_suppressed=show_suppressed,
+        fail_on_provider_error=False,
+        offline_kev_file=None,
+        offline_attack_file=None,
+        defensive_context_file=None,
+        nvd_api_key_env="NVD_API_KEY",
+        no_cache=True,
+        cache_dir=tmp_path / "cache",
+        cache_ttl_hours=24,
+    )
+
+
+def _parsed_input(*cve_ids: str) -> ParsedInput:
+    resolved = list(cve_ids or ("CVE-2024-3094",))
+    occurrences = [
+        InputOccurrence(
+            cve_id=cve_id,
+            source_format="cve-list",
+            source_record_id=f"line:{index}",
+        )
+        for index, cve_id in enumerate(resolved, start=1)
+    ]
+    return ParsedInput(
+        input_format="cve-list",
+        total_rows=len(occurrences),
+        occurrences=occurrences,
+        unique_cves=resolved,
+        input_paths=["input.txt"],
+        included_occurrence_count=len(occurrences),
+        included_unique_cves=len(resolved),
+    )
+
+
+def _finding(
+    cve_id: str,
+    *,
+    priority_label: str,
+    priority_rank: int,
+    epss: float | None = None,
+    in_kev: bool = False,
+    suppressed_by_vex: bool = False,
+) -> PrioritizedFinding:
+    return PrioritizedFinding(
+        cve_id=cve_id,
+        epss=epss,
+        in_kev=in_kev,
+        suppressed_by_vex=suppressed_by_vex,
+        priority_label=priority_label,
+        priority_rank=priority_rank,
+        rationale="Test finding rationale.",
+        recommended_action="Review the finding.",
+    )
