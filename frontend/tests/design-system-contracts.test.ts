@@ -268,6 +268,33 @@ test("legacy risk and KEV wrappers emit semantic badges without absent placehold
   assert.doesNotMatch(kevBadge, />\s*—\s*</)
 })
 
+test("badges use centralized density and overflow contracts", () => {
+  const badge = readProjectFile("src/components/vpw/VpwBadge.tsx")
+  const semanticBadges = readProjectFile(
+    "src/components/vpw/VpwSemanticBadges.tsx",
+  )
+  const badgeStyles = readProjectFile("src/styles/vpw-components.css")
+  const rawBadge = readProjectFile("src/components/ui/badge.tsx")
+  const remediationFilters = readProjectFile(
+    "src/components/findings/RemediationQueueFilters.tsx",
+  )
+
+  assert.match(badge, /export type BadgeDensity = "default" \| "compact"/)
+  assert.match(badge, /overflow\?: "truncate" \| "wrap"/)
+  assert.match(badge, /vpw-badge__label/)
+  assert.match(badgeStyles, /--vpw-badge-max-inline-size/)
+  assert.match(badgeStyles, /\.vpw-badge--compact/)
+  assert.match(badgeStyles, /\.vpw-badge--wrap/)
+  assert.match(rawBadge, /max-w-full min-w-0/)
+
+  assert.match(semanticBadges, /density=\{density\}/)
+  assert.doesNotMatch(semanticBadges, /vpw-semantic-badge--compact/)
+  assert.doesNotMatch(
+    remediationFilters,
+    /h-4 min-w-4 px-1 py-0 text-\[10px\]/,
+  )
+})
+
 test("design-system colors are tokenized outside token and showcase files", () => {
   const offenders: string[] = []
 
