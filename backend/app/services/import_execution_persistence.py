@@ -233,6 +233,8 @@ def _persist_workbench_occurrences(
                 flush=False,
             )
             findings_by_dedup_key[dedup_key] = finding
+            if action == "created":
+                session.flush()
             if finding.id not in attack_context_finding_ids and _attack_context_enabled(
                 analysis_result,
                 decision,
