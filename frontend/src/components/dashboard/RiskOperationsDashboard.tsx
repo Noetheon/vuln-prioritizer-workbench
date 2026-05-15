@@ -3,6 +3,7 @@ import {
   AlertTriangle,
   Globe2,
   ShieldAlert,
+  ShieldCheck,
   TrendingUp,
 } from "lucide-react"
 import { lazy, Suspense, useMemo, useState } from "react"
@@ -198,10 +199,11 @@ export function RiskOperationsDashboard({
   }, [effectiveFindings, filters.queueSearch])
 
   const latestRun = effectiveRuns[0] ?? null
+  const acceptedRiskCount = effectiveSummary?.counts_by_status?.accepted ?? 0
   const summaryCards = useMemo<DashboardMetricSummary[]>(
     () => [
       {
-        detail: "Critical-priority findings in scope",
+        detail: "Critical findings in scope",
         icon: AlertTriangle,
         label: "Critical Priority",
         tone: "critical",
@@ -211,7 +213,7 @@ export function RiskOperationsDashboard({
             : String(priorityCount(effectiveSummary, "Critical")),
       },
       {
-        detail: "Known CISA KEV findings in scope",
+        detail: "Known CISA KEV findings",
         icon: ShieldAlert,
         label: "KEV Exposed",
         tone: "kev",
@@ -221,7 +223,7 @@ export function RiskOperationsDashboard({
             : String(effectiveSummary?.kev_hits ?? 0),
       },
       {
-        detail: "High-confidence EPSS signals (≥70%)",
+        detail: "EPSS ≥70% signals",
         icon: TrendingUp,
         label: "High EPSS",
         tone: "high",
@@ -231,7 +233,7 @@ export function RiskOperationsDashboard({
             : String(effectiveSignalCounts.highEpss),
       },
       {
-        detail: "Critical internet-facing findings",
+        detail: "Internet-facing criticals",
         icon: Globe2,
         label: "Internet Facing",
         tone: "exposure",
@@ -240,9 +242,20 @@ export function RiskOperationsDashboard({
             ? "—"
             : String(effectiveSignalCounts.internetFacingCriticals),
       },
+      {
+        detail: "Accepted-risk findings",
+        icon: ShieldCheck,
+        label: "Accepted Risk Due",
+        tone: "accepted",
+        value:
+          (!isDemoMode && summaryLoading) || effectiveSummary === null
+            ? "—"
+            : String(acceptedRiskCount),
+      },
     ],
     [
       isDemoMode,
+      acceptedRiskCount,
       effectiveSummary,
       effectiveSignalCounts.highEpss,
       effectiveSignalCounts.internetFacingCriticals,
@@ -269,9 +282,6 @@ export function RiskOperationsDashboard({
   const kevCount = effectiveSummary?.kev_hits ?? 0
   const internetFacingCount = effectiveSignalCounts.internetFacingCriticals
   const topServiceLabel = serviceItems[0]?.label ?? null
-  const acceptedRiskCount = effectiveFindings.filter(
-    (finding) => finding.status === "accepted",
-  ).length
   const signalTakeaways = [
     `${criticalCount} critical findings demand immediate action.`,
     kevCount > 0
