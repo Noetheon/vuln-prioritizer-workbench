@@ -73,9 +73,9 @@ EXPECTED_WAIVER_STATUS_COUNTS = {
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 _DATA_DIR = _REPO_ROOT / "data"
-_DEMO_OCCURRENCES = _DATA_DIR / "input_fixtures" / "demo_workspace_occurrences.csv"
-_DEMO_OPENVEX = _DATA_DIR / "input_fixtures" / "demo_workspace_openvex.json"
-_ATTACK_MAPPING = _DATA_DIR / "attack" / "local_curated_demo_mappings.yml"
+_DEMO_OCCURRENCES_FILENAME = "demo_workspace_occurrences.csv"
+_DEMO_OPENVEX_FILENAME = "demo_workspace_openvex.json"
+_ATTACK_MAPPING_FILENAME = "local_curated_demo_mappings.yml"
 
 
 @dataclass(frozen=True, slots=True)
@@ -247,6 +247,7 @@ async def _run_seed_imports(
     settings: Settings,
     local_actor: LocalWorkbenchActor,
 ) -> None:
+    demo_data_dir = _demo_data_dir(settings)
     await execute_project_import_upload(
         project_id=DEMO_PROJECT_ID,
         session=session,
@@ -254,15 +255,37 @@ async def _run_seed_imports(
         settings=settings,
         upload=ProjectImportUploadRequest(
             input_type="generic-occurrence-csv",
-            file=_upload_content(_DEMO_OCCURRENCES, content_type="text/csv"),
-            vex_file=_upload_content(_DEMO_OPENVEX, content_type="application/json"),
+            file=_upload_content(
+                demo_data_dir / "input_fixtures" / _DEMO_OCCURRENCES_FILENAME,
+                content_type="text/csv",
+            ),
+            vex_file=_upload_content(
+                demo_data_dir / "input_fixtures" / _DEMO_OPENVEX_FILENAME,
+                content_type="application/json",
+            ),
             provider_snapshot_file=DEMO_PROVIDER_SNAPSHOT,
             locked_provider_data=True,
             attack_source="local-curated",
-            attack_mapping_file=_ATTACK_MAPPING.name,
+            attack_mapping_file=_ATTACK_MAPPING_FILENAME,
         ),
         execution_mode="request",
     )
+
+
+def _demo_data_dir(settings: Settings) -> Path:
+    attack_artifact_dir = settings.attack_artifact_dir_path
+    candidates = []
+    if attack_artifact_dir.name == "attack":
+        candidates.append(attack_artifact_dir.parent)
+    candidates.append(_DATA_DIR)
+
+    for candidate in candidates:
+        input_fixtures = candidate / "input_fixtures"
+        if (input_fixtures / _DEMO_OCCURRENCES_FILENAME).is_file() and (
+            input_fixtures / _DEMO_OPENVEX_FILENAME
+        ).is_file():
+            return candidate
+    return _DATA_DIR
 
 
 def _create_demo_waivers(session: Session, *, project_id: uuid.UUID) -> None:

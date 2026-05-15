@@ -14,6 +14,7 @@ from sqlmodel import Session, select
 from utils.workbench_env import WorkbenchApiEnv, local_api_headers
 
 from app.models.base import get_datetime_utc
+from app.services.demo_workspace import _demo_data_dir
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 DEMO_PROJECT_NAME = "Online Shop Demo Workspace"
@@ -44,6 +45,25 @@ def test_demo_workspace_status_is_disabled_by_default(
     assert status_response.json()["enabled"] is False
     assert status_response.json()["seeded"] is False
     assert seed_response.status_code == 403
+
+
+def test_demo_workspace_fixture_root_follows_attack_artifact_parent(
+    workbench_api_env: WorkbenchApiEnv,
+    tmp_path: Path,
+) -> None:
+    mounted_data = tmp_path / "mounted-data"
+    input_fixtures = mounted_data / "input_fixtures"
+    input_fixtures.mkdir(parents=True)
+    (mounted_data / "attack").mkdir()
+    (input_fixtures / "demo_workspace_occurrences.csv").write_text("cve_id\n", encoding="utf-8")
+    (input_fixtures / "demo_workspace_openvex.json").write_text("{}", encoding="utf-8")
+
+    active_settings = replace(
+        workbench_api_env.client.app.state.workbench_settings,
+        ATTACK_ARTIFACT_DIR=str(mounted_data / "attack"),
+    )
+
+    assert _demo_data_dir(active_settings) == mounted_data
 
 
 def test_demo_workspace_can_be_seeded_reset_and_removed(
