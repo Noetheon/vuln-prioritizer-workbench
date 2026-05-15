@@ -1,13 +1,13 @@
 import { FolderKanban, GitBranch, Plus, Search } from "lucide-react"
 import { useMemo, useState } from "react"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import {
   VpwDataTable,
   VpwEmptyState,
   VpwPanel,
   VpwSection,
   VpwSectionHeader,
+  VpwSearchInput,
   VpwSkeletonStack,
 } from "@/components/vpw"
 import { buildProjectDirectoryColumns } from "./ProjectsWorkbenchDirectoryColumns"
@@ -53,19 +53,13 @@ export function ProjectDirectory({
       <VpwSectionHeader
         actions={
           <>
-            <div className="relative w-full sm:w-64">
-              <Search
-                aria-hidden="true"
-                className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-[var(--vpw-text-muted)]"
-              />
-              <Input
-                aria-label="Search projects"
-                className="pl-8"
-                onChange={(event) => setProjectSearch(event.target.value)}
-                placeholder="Search projects"
-                value={projectSearch}
-              />
-            </div>
+            <VpwSearchInput
+              aria-label="Search projects"
+              className="w-full sm:w-64"
+              onChange={(event) => setProjectSearch(event.target.value)}
+              placeholder="Search projects"
+              value={projectSearch}
+            />
             <Button
               disabled={projectListLoading}
               onClick={onRefreshProjects}

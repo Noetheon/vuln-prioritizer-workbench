@@ -2,8 +2,7 @@ import { Filter, ListFilter, X } from "lucide-react"
 import type { Dispatch, SetStateAction } from "react"
 import type { ProjectPublic } from "@/api-client"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { VpwBadge, VpwPanel } from "@/components/vpw"
+import { VpwBadge, VpwPanel, VpwSearchInput } from "@/components/vpw"
 import {
   AdvancedFilterSelects,
   PrimaryFilterSelects,
@@ -108,8 +107,7 @@ export function RemediationQueueFilters({
             <span className="text-[11px] font-semibold uppercase text-muted-foreground">
               Owner / Service
             </span>
-            <Input
-              className="h-10 text-sm"
+            <VpwSearchInput
               id={queueSearchId}
               onChange={(e) => setOwnerServiceDraft(e.target.value)}
               placeholder="payments, infra-team"
