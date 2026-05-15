@@ -324,6 +324,7 @@ class FindingRepository:
         owner: str | None = None,
         service: str | None = None,
         owner_service: str | None = None,
+        query: str | None = None,
         asset_id: uuid.UUID | None = None,
         exposure: str | None = None,
         epss_min: float | None = None,
@@ -345,6 +346,7 @@ class FindingRepository:
                 owner=owner,
                 service=service,
                 owner_service=owner_service,
+                query=query,
                 asset_id=asset_id,
                 exposure=exposure,
                 epss_min=epss_min,
@@ -367,6 +369,7 @@ class FindingRepository:
             select(func.count())
             .select_from(Finding)
             .outerjoin(Asset, col(Finding.asset_id) == col(Asset.id))
+            .outerjoin(Component, col(Finding.component_id) == col(Component.id))
             .where(*filters)
         )
         order_by = finding_page_order_by(query)

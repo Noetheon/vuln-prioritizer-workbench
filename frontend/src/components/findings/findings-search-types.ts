@@ -54,6 +54,7 @@ export const defaultFindingFilters: FindingFilters = {
   kev: "",
   ownerService: "",
   priority: "",
+  query: "",
   status: "",
 }
 
@@ -101,6 +102,7 @@ export const searchKeys = [
   "offset",
   "ownerService",
   "priority",
+  "query",
   "sort",
   "status",
 ] as const

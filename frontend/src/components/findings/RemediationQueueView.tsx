@@ -17,6 +17,7 @@ import type { RemediationQueueProps } from "./RemediationQueue"
 import { QuickViewSheet } from "./RemediationQueueDialogs"
 import { RemediationQueueFilters } from "./RemediationQueueFilters"
 import { RemediationQueueStates } from "./RemediationQueueStates"
+import { findingsStatusAnnouncement } from "./RemediationQueueStatusAnnouncement"
 import { DemoBanner, RemediationQueueSummary } from "./RemediationQueueSummary"
 import { RemediationQueueTableSection } from "./RemediationQueueTableSection"
 
@@ -36,9 +37,11 @@ type RemediationQueueViewProps = RemediationQueueProps & {
   ownerServiceDraft: string
   pageEnd: number
   pageStart: number
+  queryDraft: string
   queueSort: QueueSort
   setAdvancedFiltersOpen: Dispatch<SetStateAction<boolean>>
   setOwnerServiceDraft: Dispatch<SetStateAction<string>>
+  setQueryDraft: Dispatch<SetStateAction<string>>
   sheetDetail: FindingDetailPublic | null
   sheetError: string
   sheetExplanation: FindingExplanationPublic | null
@@ -88,6 +91,7 @@ export function RemediationQueueView({
   ownerServiceDraft,
   pageEnd,
   pageStart,
+  queryDraft,
   projectListLoading,
   projects,
   queueSort,
@@ -95,6 +99,7 @@ export function RemediationQueueView({
   selectedProjectId,
   setAdvancedFiltersOpen,
   setOwnerServiceDraft,
+  setQueryDraft,
   sheetDetail,
   sheetError,
   sheetExplanation,
@@ -127,9 +132,11 @@ export function RemediationQueueView({
       ownerServiceDraft={ownerServiceDraft}
       projectListLoading={projectListLoading}
       projects={projects}
+      queryDraft={queryDraft}
       selectedProjectId={selectedProjectId}
       setAdvancedFiltersOpen={setAdvancedFiltersOpen}
       setOwnerServiceDraft={setOwnerServiceDraft}
+      setQueryDraft={setQueryDraft}
       showAdvancedFilters={showAdvancedFilters}
       signalFilterCount={signalFilterCount}
     />
@@ -139,7 +146,6 @@ export function RemediationQueueView({
     <TooltipProvider>
       <div
         aria-busy={isLoading}
-        aria-live="polite"
         className="findings-remediation-layout flex flex-col gap-5"
       >
         {isDemo ? <DemoBanner /> : null}
@@ -150,7 +156,17 @@ export function RemediationQueueView({
           kevCount={kevCount}
           openCount={openCount}
         />
+        <p aria-live="polite" className="sr-only" role="status">
+          {findingsStatusAnnouncement({
+            hasError,
+            isLoading,
+            pageEnd,
+            pageStart,
+            totalCount,
+          })}
+        </p>
         {!mobileFilterLayout ? renderFilters("queue-desktop") : null}
+        {mobileFilterLayout ? renderFilters("queue-mobile") : null}
         <RemediationQueueStates
           activeFindingFilters={activeFindingFilters}
           displayFindings={displayFindings}
@@ -182,7 +198,6 @@ export function RemediationQueueView({
           queueSort={queueSort}
           totalCount={totalCount}
         />
-        {mobileFilterLayout ? renderFilters("queue-mobile") : null}
         <QuickViewSheet
           detail={sheetDetail}
           error={sheetError}

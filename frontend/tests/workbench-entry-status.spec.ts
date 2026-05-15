@@ -709,6 +709,14 @@ test("workbench frontend covers core Workbench E2E smoke", async ({ page }) => {
   await expect(page.getByRole("button", { name: "Reset" })).toBeDisabled()
   await expect(findingsTable).toContainText("CVE-2024-3094")
 
+  const searchInput = findingsFilters.getByLabel("Search")
+  await searchInput.fill("CVE-2024-3094")
+  await expect(searchInput).toHaveValue("CVE-2024-3094")
+  await expect(page).toHaveURL(/query=CVE-2024-3094/)
+  await expect(findingsTable).toContainText("CVE-2024-3094")
+  await expect(findingsTable).not.toContainText("CVE-2021-44228")
+  await page.getByRole("button", { name: "Reset" }).click()
+
   const ownerServiceInput = page.getByLabel("Owner / Service")
   await ownerServiceInput.fill("payments")
   await expect(ownerServiceInput).toHaveValue("payments")

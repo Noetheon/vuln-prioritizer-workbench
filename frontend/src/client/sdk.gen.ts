@@ -207,6 +207,7 @@ export class FindingsService {
         owner?: string | null;
         service?: string | null;
         owner_service?: string | null;
+        q?: string | null;
         asset_id?: string | null;
         exposure?: AssetExposure | null;
         epss_min?: number | null;
@@ -226,6 +227,7 @@ export class FindingsService {
                     { in: 'query', key: 'owner' },
                     { in: 'query', key: 'service' },
                     { in: 'query', key: 'owner_service' },
+                    { in: 'query', key: 'q' },
                     { in: 'query', key: 'asset_id' },
                     { in: 'query', key: 'exposure' },
                     { in: 'query', key: 'epss_min' },
