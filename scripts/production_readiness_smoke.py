@@ -25,6 +25,7 @@ PRIVATE_PATH_PATTERN = re.compile(
 IMPORT_SUCCESS_STATUSES = {"completed", "succeeded"}
 IMPORT_FAILURE_STATUSES = {"failed"}
 IMPORT_POLL_SECONDS = int(os.environ.get("VPW_PRODUCTION_SMOKE_IMPORT_TIMEOUT", "60"))
+REPORT_FORMATS = ("markdown", "html", "json", "csv", "sarif", "zip")
 
 
 def main() -> None:
@@ -35,13 +36,14 @@ def main() -> None:
     project_id = _create_project()
     run = _import_demo(project_id)
     findings = _get_findings(project_id)
-    report = _create_report(str(run["id"]))
-    _download_report(str(report["id"]))
+    reports = _create_reports(str(run["id"]))
+    for report_format, report in reports.items():
+        _download_report(report_format=report_format, report=report)
 
     print(
         "Production-like smoke passed: "
         f"project_id={project_id} run_id={run['id']} findings={len(findings)} "
-        f"report_id={report['id']} host={HOST}"
+        f"reports={','.join(reports)} host={HOST}"
     )
 
 
@@ -136,23 +138,47 @@ def _get_findings(project_id: str) -> list[dict[str, object]]:
     return findings
 
 
-def _create_report(run_id: str) -> dict[str, object]:
-    response = _json(
-        f"/api/v1/runs/{run_id}/reports",
-        data=json.dumps({"format": "markdown"}).encode(),
-        headers={"Content-Type": "application/json"},
-    )
-    _assert_no_private_paths(response)
-    return response
+def _create_reports(run_id: str) -> dict[str, dict[str, object]]:
+    reports: dict[str, dict[str, object]] = {}
+    for report_format in REPORT_FORMATS:
+        response = _json(
+            f"/api/v1/runs/{run_id}/reports",
+            data=json.dumps({"format": report_format}).encode(),
+            headers={"Content-Type": "application/json"},
+        )
+        _assert_no_private_paths(response)
+        reports[report_format] = response
+    return reports
 
 
-def _download_report(report_id: str) -> None:
+def _download_report(*, report_format: str, report: dict[str, object]) -> None:
+    report_id = str(report["id"])
     response = _raw(f"/api/v1/reports/{report_id}/download")
-    if not response.body:
-        raise RuntimeError("Report download returned an empty body.")
-    content_disposition = response.headers.get("Content-Disposition", "")
-    if "attachment" not in content_disposition.lower():
-        raise RuntimeError(f"Report download is not an attachment: {content_disposition!r}")
+    _assert_download_response(response, report=report)
+    if report_format == "json":
+        payload = json.loads(response.body.decode("utf-8"))
+        _assert_no_private_paths(payload)
+        if payload.get("schema") != "analysis-result.v1":
+            raise RuntimeError(f"JSON report has unexpected schema: {payload.get('schema')!r}")
+    elif report_format == "sarif":
+        payload = json.loads(response.body.decode("utf-8"))
+        _assert_no_private_paths(payload)
+        if payload.get("version") != "2.1.0" or not isinstance(payload.get("runs"), list):
+            raise RuntimeError("SARIF report does not contain version=2.1.0 and runs[].")
+    elif report_format == "zip":
+        if not response.body.startswith(b"PK"):
+            raise RuntimeError("Evidence ZIP download does not start with a ZIP file header.")
+        verification = _json(
+            f"/api/v1/reports/{report_id}/verify",
+            data=b"",
+            headers={"Content-Type": "application/json"},
+        )
+        _assert_no_private_paths(verification)
+        summary = verification.get("summary")
+        if not isinstance(summary, dict) or summary.get("ok") is not True:
+            raise RuntimeError(f"Evidence ZIP verification failed: {verification!r}")
+    else:
+        _assert_no_private_paths(response.body.decode("utf-8", errors="replace"))
 
 
 @dataclass(frozen=True)
@@ -261,9 +287,25 @@ def _multipart_body(
 
 
 def _assert_no_private_paths(payload: object) -> None:
-    serialized = json.dumps(payload, sort_keys=True)
+    serialized = json.dumps(payload, sort_keys=True) if not isinstance(payload, str) else payload
     if PRIVATE_PATH_PATTERN.search(serialized):
         raise RuntimeError(f"Response leaked a private path: {serialized[:500]}")
+
+
+def _assert_download_response(response: RawResponse, *, report: dict[str, object]) -> None:
+    if not response.body:
+        raise RuntimeError(f"Report {report.get('id')} download returned an empty body.")
+    content_disposition = response.headers.get("Content-Disposition", "")
+    if "attachment" not in content_disposition.lower():
+        raise RuntimeError(f"Report download is not an attachment: {content_disposition!r}")
+    filename = str(report.get("filename") or "")
+    if filename and filename not in content_disposition:
+        raise RuntimeError(
+            f"Report download disposition does not contain filename {filename!r}: "
+            f"{content_disposition!r}"
+        )
+    _assert_no_private_paths(content_disposition)
+    _assert_no_private_paths(response.body.decode("utf-8", errors="replace"))
 
 
 if __name__ == "__main__":

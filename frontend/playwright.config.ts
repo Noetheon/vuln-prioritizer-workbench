@@ -1,6 +1,7 @@
 import { defineConfig, devices } from "@playwright/test"
 
-const reuseExistingServer = process.env.VPW_PLAYWRIGHT_REUSE_EXISTING_SERVER === "1"
+const reuseExistingServer =
+  process.env.VPW_PLAYWRIGHT_REUSE_EXISTING_SERVER === "1"
 const portPattern = /^\d+$/
 const defaultBackendPort = "18000"
 const defaultFrontendPort = "15173"
@@ -49,13 +50,26 @@ export default defineConfig({
   projects: [
     {
       name: "chromium",
-      testIgnore: /.*responsive-shell\.spec\.ts/,
+      testIgnore: [
+        /.*responsive-shell\.spec\.ts/,
+        /.*cross-browser-critical-smoke\.spec\.ts/,
+      ],
       use: { ...devices["Desktop Chrome"] },
     },
     {
       name: "mobile-chromium",
       testMatch: /.*responsive-shell\.spec\.ts/,
       use: { ...devices["Pixel 5"] },
+    },
+    {
+      name: "firefox-smoke",
+      testMatch: /.*cross-browser-critical-smoke\.spec\.ts/,
+      use: { ...devices["Desktop Firefox"] },
+    },
+    {
+      name: "webkit-smoke",
+      testMatch: /.*cross-browser-critical-smoke\.spec\.ts/,
+      use: { ...devices["Desktop Safari"] },
     },
   ],
 })

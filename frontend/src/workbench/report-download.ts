@@ -85,7 +85,9 @@ async function generatedDownloadReport(
   ...args: Parameters<DownloadReportClient>
 ): Promise<ReportDownloadResult> {
   const { ReportsService } = await import("../api-client")
-  return ReportsService.downloadReport(...args) as unknown as ReportDownloadResult
+  return ReportsService.downloadReport(
+    ...args,
+  ) as unknown as ReportDownloadResult
 }
 
 function filenameFromContentDisposition(header: string | null): string {
@@ -97,7 +99,7 @@ function filenameFromContentDisposition(header: string | null): string {
     try {
       return decodeURIComponent(encoded)
     } catch {
-      return encoded
+      // Fall back to filename= metadata rather than surfacing malformed RFC 5987 bytes.
     }
   }
   const quoted = /filename="([^"]+)"/i.exec(header)?.[1]
