@@ -7,7 +7,7 @@ export const vpwTokens = {
       success: "#047857",
       warning: "#B54708",
       critical: "#C40000",
-      support: "#7928CA",
+      support: "#475569",
       navy: "#171717",
     },
     neutral: {

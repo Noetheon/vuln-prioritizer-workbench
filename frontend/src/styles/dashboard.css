@@ -47,13 +47,17 @@
   position: absolute;
   inset: 0 auto 0 0;
   width: 4px;
-  background: var(--vpw-violet);
+  background: var(--vpw-teal);
   content: "";
 }
 
 .dashboard-analyst-hero [data-icon="inline-start"] {
   width: 1rem;
   height: 1rem;
+}
+
+.dashboard-command-grid {
+  align-items: start;
 }
 
 .dashboard-metric-grid > .vpw-panel {
@@ -67,7 +71,7 @@
 .dashboard-metric-grid > .vpw-panel:hover {
   border-color: color-mix(
     in srgb,
-    var(--vpw-violet) 24%,
+    var(--vpw-blue) 22%,
     var(--vpw-border-default)
   );
   box-shadow: none;
@@ -248,19 +252,19 @@
 }
 
 .chart-row.tone-critical .chart-bar-fill {
-  background: var(--vpw-red);
+  background: var(--vpw-chart-critical);
 }
 
 .chart-row.tone-high .chart-bar-fill {
-  background: var(--vpw-amber);
+  background: var(--vpw-chart-high);
 }
 
 .chart-row.tone-medium .chart-bar-fill {
-  background: var(--vpw-amber);
+  background: var(--vpw-chart-medium);
 }
 
 .chart-row.tone-low .chart-bar-fill {
-  background: var(--vpw-blue);
+  background: var(--vpw-chart-low);
 }
 
 .chart-row.tone-accepted .chart-bar-fill {
@@ -301,14 +305,14 @@
 
 .trend-line {
   fill: none;
-  stroke: var(--vpw-teal);
+  stroke: var(--vpw-chart-trend);
   stroke-linecap: round;
   stroke-width: 2.5;
   vector-effect: non-scaling-stroke;
 }
 
 .trend-point {
-  fill: var(--vpw-teal);
+  fill: var(--vpw-chart-trend);
   vector-effect: non-scaling-stroke;
 }
 
@@ -470,6 +474,17 @@
   line-height: 1.45;
 }
 
+.dashboard-queue-why {
+  display: block;
+  max-width: 44ch;
+  overflow: hidden;
+  color: var(--vpw-text-secondary);
+  font-size: 0.82rem;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .finding-view-action {
   display: inline-flex;
   align-items: center;
@@ -572,4 +587,67 @@
   overflow-wrap: anywhere;
   color: var(--vpw-text-muted);
   font-size: 0.78rem;
+}
+
+.dashboard-signal-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 0.42fr);
+  gap: 14px;
+  align-items: stretch;
+}
+
+.dashboard-key-takeaways {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 16px;
+  min-width: 0;
+  border: 1px solid var(--dashboard-analyst-border);
+  border-radius: 8px;
+  padding: 16px;
+  background: var(--vpw-bg-card);
+}
+
+.dashboard-next-action {
+  width: 100%;
+  justify-content: flex-start;
+  gap: 10px;
+  min-height: 40px;
+  padding-inline: 0;
+  color: var(--vpw-text-secondary);
+}
+
+.dashboard-next-action:hover {
+  color: var(--vpw-text-primary);
+}
+
+.dashboard-next-action-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  flex: 0 0 24px;
+  border-radius: var(--vpw-radius-md);
+  background: var(--vpw-bg-panel);
+}
+
+.dashboard-next-action-icon--critical {
+  background: var(--vpw-bg-critical);
+  color: var(--vpw-red);
+}
+
+.dashboard-next-action-icon--success {
+  background: var(--vpw-bg-success);
+  color: var(--vpw-green);
+}
+
+.dashboard-next-action-icon--support {
+  background: color-mix(in srgb, var(--vpw-violet) 10%, var(--vpw-bg-card));
+  color: var(--vpw-violet);
+}
+
+.dashboard-next-action-icon--info {
+  background: var(--vpw-bg-info);
+  color: var(--vpw-blue);
 }

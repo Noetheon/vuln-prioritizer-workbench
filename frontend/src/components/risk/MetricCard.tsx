@@ -13,6 +13,7 @@ type MetricCardProps = {
 }
 
 const accentStyles: Record<string, string> = {
+  accepted: "border-l-[var(--vpw-green)]",
   critical: "border-l-[var(--vpw-red)]",
   exposure: "border-l-[var(--vpw-blue)]",
   high: "border-l-[var(--vpw-amber)]",
@@ -24,6 +25,7 @@ const accentStyles: Record<string, string> = {
 }
 
 const iconBgStyles: Record<string, string> = {
+  accepted: "bg-[var(--vpw-bg-success)] text-[var(--vpw-green)]",
   critical: "bg-[var(--vpw-bg-critical)] text-[var(--vpw-red)]",
   exposure: "bg-[var(--vpw-bg-info)] text-[var(--vpw-blue)]",
   high: "bg-[var(--vpw-bg-warning)] text-[var(--vpw-amber)]",
