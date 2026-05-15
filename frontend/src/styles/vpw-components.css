@@ -55,11 +55,16 @@
   }
 
   .vpw-badge {
+    --vpw-badge-max-inline-size: 16rem;
+    --vpw-badge-min-inline-size: 0;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    max-width: 100%;
+    width: fit-content;
+    max-width: min(100%, var(--vpw-badge-max-inline-size));
+    min-width: var(--vpw-badge-min-inline-size);
     min-height: 1.5rem;
+    flex: 0 1 auto;
     gap: 0.25rem;
     border-radius: var(--vpw-radius-pill);
     border-width: 1px;
@@ -74,11 +79,66 @@
     white-space: nowrap;
   }
 
-  .vpw-semantic-badge--compact,
   .vpw-badge--compact {
     min-height: 1.375rem;
     padding-inline: 0.375rem;
     font-size: 0.72rem;
+  }
+
+  .vpw-badge__label {
+    display: block;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .vpw-badge--truncate .vpw-badge__label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .vpw-badge--wrap {
+    max-width: 100%;
+    align-items: flex-start;
+    white-space: normal;
+  }
+
+  .vpw-badge--wrap .vpw-badge__label {
+    overflow-wrap: anywhere;
+    text-align: left;
+    white-space: normal;
+  }
+
+  .vpw-badge svg {
+    flex: 0 0 auto;
+    width: 0.875rem;
+    height: 0.875rem;
+  }
+
+  .vpw-badge--compact svg {
+    width: 0.75rem;
+    height: 0.75rem;
+  }
+
+  .vpw-semantic-badge {
+    font-variant-numeric: tabular-nums;
+  }
+
+  .vpw-semantic-badge--count {
+    --vpw-badge-max-inline-size: 4.5rem;
+    --vpw-badge-min-inline-size: 1.375rem;
+  }
+
+  .vpw-semantic-badge--meta,
+  .vpw-semantic-badge--source,
+  .vpw-semantic-badge--signal {
+    --vpw-badge-max-inline-size: 12rem;
+  }
+
+  .vpw-semantic-badge--risk,
+  .vpw-semantic-badge--score,
+  .vpw-semantic-badge--status {
+    --vpw-badge-max-inline-size: 9rem;
   }
 
   .vpw-signal-cluster,

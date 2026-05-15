@@ -1,8 +1,7 @@
 import { cn } from "@/lib/utils"
 
-import { VpwBadge, type VpwBadgeTone } from "./VpwBadge"
+import { VpwBadge, type BadgeDensity, type VpwBadgeTone } from "./VpwBadge"
 import {
-  type BadgeDensity,
   type RiskLevel,
   type SignalKind,
   type StatusKind,
@@ -20,13 +19,11 @@ import {
 
 function semanticBadgeClass(
   kind: string,
-  density: BadgeDensity,
   className?: string,
 ) {
   return cn(
     "vpw-semantic-badge",
     `vpw-semantic-badge--${kind}`,
-    density === "compact" && "vpw-semantic-badge--compact",
     className,
   )
 }
@@ -45,7 +42,8 @@ export function RiskBadge({
   const normalized = normalizeRiskLevel(level)
   return (
     <VpwBadge
-      className={semanticBadgeClass("risk", density, className)}
+      className={semanticBadgeClass("risk", className)}
+      density={density}
       tone={riskTone(normalized)}
     >
       {label ?? riskLabel(normalized)}
@@ -64,7 +62,8 @@ export function RiskScoreBadge({
 }) {
   return (
     <VpwBadge
-      className={semanticBadgeClass("score", density, className)}
+      className={semanticBadgeClass("score", className)}
+      density={density}
       tone={riskScoreTone(value)}
     >
       {formatRiskScore(value)}
@@ -86,7 +85,8 @@ export function StatusLozenge({
   const normalized = normalizeStatus(status)
   return (
     <VpwBadge
-      className={semanticBadgeClass("status", density, className)}
+      className={semanticBadgeClass("status", className)}
+      density={density}
       tone={statusTone(normalized)}
     >
       {label ?? statusLabel(normalized)}
@@ -109,7 +109,8 @@ export function SignalChip({
 }) {
   return (
     <VpwBadge
-      className={semanticBadgeClass("signal", density, className)}
+      className={semanticBadgeClass("signal", className)}
+      density={density}
       tone={signalTone(kind)}
     >
       {label ?? signalLabel({ kind, value })}
@@ -132,7 +133,8 @@ export function CountBadge({
 }) {
   return (
     <VpwBadge
-      className={semanticBadgeClass("count", density, className)}
+      className={semanticBadgeClass("count", className)}
+      density={density}
       tone={tone}
     >
       {label ?? value}
@@ -151,7 +153,8 @@ export function MetaTag({
 }) {
   return (
     <VpwBadge
-      className={semanticBadgeClass("meta", density, className)}
+      className={semanticBadgeClass("meta", className)}
+      density={density}
       tone="neutral"
     >
       {label}
@@ -172,7 +175,8 @@ export function SourceMark({
 }) {
   return (
     <VpwBadge
-      className={semanticBadgeClass("source", density, className)}
+      className={semanticBadgeClass("source", className)}
+      density={density}
       tone="info"
     >
       {label ?? source.toUpperCase()}
