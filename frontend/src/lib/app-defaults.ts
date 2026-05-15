@@ -253,6 +253,7 @@ export type FindingFilters = {
   kev: KevFilter
   ownerService: string
   priority: "" | FindingPriority
+  query: string
   status: "" | FindingStatus
 }
 
@@ -265,6 +266,7 @@ export const defaultFindingFilters: FindingFilters = {
   kev: "",
   ownerService: "",
   priority: "",
+  query: "",
   status: "",
 }
 

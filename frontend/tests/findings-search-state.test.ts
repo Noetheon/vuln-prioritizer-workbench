@@ -50,6 +50,7 @@ test("findings search state serializes only shareable non-default params", () =>
     offset: "50",
     ownerService: "platform",
     priority: "critical",
+    query: "log4j",
     sort: "score",
     status: "open",
   })
@@ -59,6 +60,7 @@ test("findings search state serializes only shareable non-default params", () =>
     assetKey: "payments-api",
     ownerService: "platform",
     priority: "critical",
+    query: "log4j",
     status: "open",
     kev: "true",
     exposure: "internet-facing",
@@ -71,7 +73,7 @@ test("findings search state serializes only shareable non-default params", () =>
   })
   assert.equal(
     findingsSearchQueryString(state),
-    "assetId=asset-1&assetKey=payments-api&cvssMin=7.5&direction=desc&epssMax=0.9&exposure=internet-facing&kev=true&limit=25&offset=50&ownerService=platform&priority=critical&sort=score&status=open",
+    "assetId=asset-1&assetKey=payments-api&cvssMin=7.5&direction=desc&epssMax=0.9&exposure=internet-facing&kev=true&limit=25&offset=50&ownerService=platform&priority=critical&query=log4j&sort=score&status=open",
   )
 })
 
@@ -85,6 +87,7 @@ test("findings search maps URL state to generated findings API params", () => {
     kev: "false",
     ownerService: "payments",
     priority: "high",
+    query: "spring",
     sort: "epss",
   })
 
@@ -97,6 +100,7 @@ test("findings search maps URL state to generated findings API params", () => {
     kev: "false",
     ownerService: "payments",
     priority: "high",
+    query: "spring",
     status: "",
   })
   assert.deepEqual(findingsSearchToApiParams(state, "project-1"), {
@@ -113,6 +117,7 @@ test("findings search maps URL state to generated findings API params", () => {
     owner_service: "payments",
     priority: "high",
     project_id: "project-1",
+    q: "spring",
     sort: "epss",
     status: undefined,
   })
@@ -144,6 +149,7 @@ test("findings search drops invalid max range values that are below min", () => 
     owner_service: undefined,
     priority: undefined,
     project_id: "project-1",
+    q: undefined,
     sort: "operational",
     status: undefined,
   })

@@ -483,6 +483,15 @@ def test_vpw042_findings_list_filters_and_display_fields(
     assert _finding_cves(workbench_api_env, project, headers, {"owner_service": "payments"}) == [
         DEMO_CVE_LOG4SHELL
     ]
+    assert _finding_cves(workbench_api_env, project, headers, {"q": "spring-webmvc"}) == [
+        "CVE-2022-22965"
+    ]
+    assert _finding_cves(workbench_api_env, project, headers, {"q": "edge-worker"}) == [
+        "CVE-2024-4577"
+    ]
+    assert _finding_cves(workbench_api_env, project, headers, {"q": DEMO_CVE_LOG4SHELL}) == [
+        DEMO_CVE_LOG4SHELL
+    ]
     assert _finding_cves(
         workbench_api_env,
         project,

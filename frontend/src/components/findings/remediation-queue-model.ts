@@ -50,6 +50,7 @@ export type FindingFilters = {
   kev: KevFilter
   ownerService: string
   priority: "" | FindingPriority
+  query: string
   status: "" | FindingStatus
 }
 

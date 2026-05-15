@@ -1,3 +1,5 @@
+import "@/styles/dashboard.css"
+import "@/styles/responsive.css"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { useState } from "react"
 import { WorkbenchService } from "../../api-client"

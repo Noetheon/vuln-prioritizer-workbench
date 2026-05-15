@@ -93,8 +93,10 @@ export function RemediationQueue({
   onSavedViewChange,
 }: RemediationQueueProps) {
   const ownerServiceFilter = findingFilters.ownerService
+  const queryFilter = findingFilters.query
   const [ownerServiceDraft, setOwnerServiceDraft] =
     useState(ownerServiceFilter)
+  const [queryDraft, setQueryDraft] = useState(queryFilter)
   const [sheetFinding, setSheetFinding] = useState<FindingPublic | null>(null)
   const [sheetOpen, setSheetOpen] = useState(false)
   const [advancedFiltersOpen, setAdvancedFiltersOpen] = useState(false)
@@ -148,6 +150,10 @@ export function RemediationQueue({
   }, [ownerServiceFilter])
 
   useEffect(() => {
+    setQueryDraft(queryFilter)
+  }, [queryFilter])
+
+  useEffect(() => {
     if (ownerServiceDraft === ownerServiceFilter) {
       return
     }
@@ -157,6 +163,17 @@ export function RemediationQueue({
     }, 150)
     return () => window.clearTimeout(timeout)
   }, [onFilterChange, ownerServiceDraft, ownerServiceFilter])
+
+  useEffect(() => {
+    if (queryDraft === queryFilter) {
+      return
+    }
+
+    const timeout = window.setTimeout(() => {
+      onFilterChange("query", queryDraft)
+    }, 150)
+    return () => window.clearTimeout(timeout)
+  }, [onFilterChange, queryDraft, queryFilter])
 
   function openSheet(finding: FindingPublic) {
     if (
@@ -239,9 +256,11 @@ export function RemediationQueue({
       ownerServiceDraft={ownerServiceDraft}
       pageEnd={pageEnd}
       pageStart={pageStart}
+      queryDraft={queryDraft}
       queueSort={queueSort}
       setAdvancedFiltersOpen={setAdvancedFiltersOpen}
       setOwnerServiceDraft={setOwnerServiceDraft}
+      setQueryDraft={setQueryDraft}
       sheetDetail={findingDetailQuery.data?.detail ?? null}
       sheetError={
         findingDetailQuery.isError
