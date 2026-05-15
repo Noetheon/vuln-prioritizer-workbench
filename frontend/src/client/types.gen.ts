@@ -3475,6 +3475,10 @@ export type GetApiV1ProjectsByProjectIdFindingsData = {
          */
         owner_service?: string | null;
         /**
+         * Q
+         */
+        q?: string | null;
+        /**
          * Asset Id
          */
         asset_id?: string | null;

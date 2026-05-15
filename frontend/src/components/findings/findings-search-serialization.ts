@@ -32,6 +32,7 @@ export function findingsSearchToUrlSearch(
     offset: undefined,
     ownerService: undefined,
     priority: undefined,
+    query: undefined,
     sort: undefined,
     status: undefined,
   }
@@ -39,6 +40,7 @@ export function findingsSearchToUrlSearch(
   addIfPresent(search, "assetKey", normalized)
   addIfPresent(search, "ownerService", normalized)
   addIfPresent(search, "priority", normalized)
+  addIfPresent(search, "query", normalized)
   addIfPresent(search, "status", normalized)
   addIfPresent(search, "kev", normalized)
   addIfPresent(search, "exposure", normalized)
@@ -102,6 +104,7 @@ export function findingsSearchToFilters(
     kev: state.kev,
     ownerService: state.ownerService,
     priority: state.priority,
+    query: state.query,
     status: state.status,
   }
 }
@@ -125,6 +128,7 @@ export function findingsSearchToApiParams(
     owner_service: filters.ownerService.trim() || undefined,
     priority: filters.priority || undefined,
     project_id: projectId,
+    q: filters.query.trim() || undefined,
     sort: state.sort,
     status: filters.status || undefined,
   }

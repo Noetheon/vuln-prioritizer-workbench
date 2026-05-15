@@ -1,3 +1,7 @@
+import "@/styles/finding-detail-decision.css"
+import "@/styles/finding-detail-evidence.css"
+import "@/styles/finding-detail-ttp-history.css"
+import "@/styles/responsive.css"
 import { useLocation, useParams } from "@/lib/router"
 import { useQueryClient } from "@tanstack/react-query"
 import { useEffect, useState } from "react"

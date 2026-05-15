@@ -34,9 +34,11 @@ type RemediationQueueFiltersProps = {
   ownerServiceDraft: string
   projectListLoading: boolean
   projects: ProjectPublic[]
+  queryDraft: string
   selectedProjectId: string
   setAdvancedFiltersOpen: Dispatch<SetStateAction<boolean>>
   setOwnerServiceDraft: Dispatch<SetStateAction<string>>
+  setQueryDraft: Dispatch<SetStateAction<string>>
   showAdvancedFilters: boolean
   signalFilterCount: number
 }
@@ -57,13 +59,16 @@ export function RemediationQueueFilters({
   ownerServiceDraft,
   projectListLoading,
   projects,
+  queryDraft,
   selectedProjectId,
   setAdvancedFiltersOpen,
   setOwnerServiceDraft,
+  setQueryDraft,
   showAdvancedFilters,
   signalFilterCount,
 }: RemediationQueueFiltersProps) {
   const queueSearchId = `${controlIdPrefix}-search`
+  const ownerServiceSearchId = `${controlIdPrefix}-owner-service`
   const activeSavedView = savedViewFromFilters(findingFilters)
 
   return (
@@ -101,14 +106,29 @@ export function RemediationQueueFilters({
           ) : null}
 
           <label
-            className="flex min-w-56 flex-1 flex-col gap-1"
+            className="flex min-w-64 flex-[1.35] flex-col gap-1"
             htmlFor={queueSearchId}
+          >
+            <span className="text-[11px] font-semibold uppercase text-muted-foreground">
+              Search
+            </span>
+            <VpwSearchInput
+              id={queueSearchId}
+              onChange={(e) => setQueryDraft(e.target.value)}
+              placeholder="CVE, component, asset"
+              value={queryDraft}
+            />
+          </label>
+
+          <label
+            className="flex min-w-48 flex-1 flex-col gap-1"
+            htmlFor={ownerServiceSearchId}
           >
             <span className="text-[11px] font-semibold uppercase text-muted-foreground">
               Owner / Service
             </span>
             <VpwSearchInput
-              id={queueSearchId}
+              id={ownerServiceSearchId}
               onChange={(e) => setOwnerServiceDraft(e.target.value)}
               placeholder="payments, infra-team"
               value={ownerServiceDraft}

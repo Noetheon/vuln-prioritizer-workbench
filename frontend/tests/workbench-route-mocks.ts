@@ -846,6 +846,7 @@ function mockFindingsPage(findings: MockFinding[], url: URL) {
   const status = url.searchParams.get("status")
   const exposure = url.searchParams.get("exposure")
   const ownerService = url.searchParams.get("owner_service")?.trim().toLowerCase()
+  const query = url.searchParams.get("q")?.trim().toLowerCase()
   const kev = boolParam(url, "kev")
   const assetId = url.searchParams.get("asset_id")
   const epssMin = numericParam(url, "epss_min")
@@ -870,6 +871,7 @@ function mockFindingsPage(findings: MockFinding[], url: URL) {
     ) {
       return false
     }
+    if (query && !findingSearchText(finding).includes(query)) return false
     if (epssMin !== null && finding.epss < epssMin) return false
     if (epssMax !== null && finding.epss > epssMax) return false
     if (cvssMin !== null && finding.cvss_base_score < cvssMin) return false
@@ -904,4 +906,22 @@ function mockFindingsPage(findings: MockFinding[], url: URL) {
     count: sorted.length,
     data: sorted.slice(offset, offset + limit),
   }
+}
+
+function findingSearchText(finding: MockFinding) {
+  return [
+    finding.cve_id,
+    finding.component_name,
+    finding.component_version,
+    finding.component_purl,
+    finding.asset_name,
+    finding.asset_key,
+    finding.owner,
+    finding.business_service,
+    finding.rationale,
+    finding.recommended_action,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase()
 }

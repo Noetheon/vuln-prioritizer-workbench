@@ -74,6 +74,7 @@ export function parseFindingsSearch(input: unknown): FindingsSearchState {
       searchValue(source, "priority"),
       findingPriorityOptions,
     ),
+    query: searchValue(source, "query").slice(0, 200),
     sort: enumValue(
       searchValue(source, "sort"),
       sortOptions,

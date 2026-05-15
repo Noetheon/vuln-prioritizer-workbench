@@ -1,17 +1,6 @@
 import { Link } from "@/lib/router"
 import { CheckCircle2 } from "lucide-react"
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Cell,
-  Line,
-  LineChart,
-  Tooltip as RechartsTooltip,
-  ResponsiveContainer,
-  XAxis,
-  YAxis,
-} from "recharts"
+import { lazy, Suspense, useState } from "react"
 import { ChartCard } from "@/components/charts/ChartCard"
 import { Button } from "@/components/ui/button"
 import { selectedProjectRouteSearch } from "@/workbench/selected-project-search"
@@ -50,82 +39,12 @@ type DashboardSignalOverviewProps = {
   trendItems: readonly ChartDatum[]
 }
 
-function ChartDataSummary({
-  data,
-  label,
-}: {
-  data: readonly ChartDatum[]
-  label: string
-}) {
-  return (
-    <table className="sr-only">
-      <caption>{label}</caption>
-      <thead>
-        <tr>
-          <th scope="col">Signal</th>
-          <th scope="col">Value</th>
-        </tr>
-      </thead>
-      <tbody>
-        {data.map((item) => (
-          <tr key={item.label}>
-            <th scope="row">{item.label}</th>
-            <td>{item.value}</td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  )
-}
+type SignalTab = "priority" | "epss" | "services" | "trend"
 
-function riskToneFill(
-  tone: ChartDatum["tone"],
-  fallback = "var(--vpw-chart-risk)",
-) {
-  return tone === "critical"
-    ? "var(--vpw-chart-critical)"
-    : tone === "high"
-      ? "var(--vpw-chart-high)"
-      : tone === "medium"
-        ? "var(--vpw-chart-medium)"
-        : tone === "low"
-          ? "var(--vpw-chart-low)"
-          : fallback
-}
-
-function priorityFill(tone: ChartDatum["tone"]) {
-  return riskToneFill(tone, "var(--vpw-text-muted)")
-}
-
-function epssFill(tone: ChartDatum["tone"]) {
-  return riskToneFill(tone, "var(--vpw-chart-low)")
-}
-
-function rankFill(index: number) {
-  return `var(--vpw-chart-rank-${(index % 5) + 1})`
-}
-
-const chartAxisTick = { fill: "var(--vpw-text-muted)", fontSize: 12 }
-
-const chartTooltipProps = {
-  contentStyle: {
-    background: "var(--vpw-bg-card)",
-    border: "1px solid var(--vpw-border-default)",
-    borderRadius: "var(--vpw-radius-md)",
-    boxShadow: "var(--vpw-shadow-2)",
-    color: "var(--vpw-text-primary)",
-  },
-  cursor: {
-    fill: "color-mix(in srgb, var(--vpw-blue) 7%, transparent)",
-  },
-  itemStyle: {
-    color: "var(--vpw-text-primary)",
-  },
-  labelStyle: {
-    color: "var(--vpw-text-secondary)",
-    fontWeight: 600,
-  },
-}
+const DashboardPriorityChart = lazy(() => import("./DashboardPriorityChart"))
+const DashboardEpssChart = lazy(() => import("./DashboardEpssChart"))
+const DashboardServicesChart = lazy(() => import("./DashboardServicesChart"))
+const DashboardTrendChart = lazy(() => import("./DashboardTrendChart"))
 
 function DashboardKeyTakeaways({
   items,
@@ -178,6 +97,8 @@ export function DashboardSignalOverview({
   trendItems,
 }: DashboardSignalOverviewProps) {
   const projectSearch = selectedProjectRouteSearch(selectedProjectId)
+  const [activeSignalTab, setActiveSignalTab] =
+    useState<SignalTab>("priority")
 
   return (
     <VpwSurface className="gap-2 py-4">
@@ -190,7 +111,11 @@ export function DashboardSignalOverview({
       </VpwSurfaceHeader>
       <VpwSurfaceBody>
         <div className="dashboard-signal-layout">
-          <Tabs className="min-w-0 w-full" defaultValue="priority">
+          <Tabs
+            className="min-w-0 w-full"
+            onValueChange={(value) => setActiveSignalTab(value as SignalTab)}
+            value={activeSignalTab}
+          >
             <TabsList className="mb-3 grid h-auto w-full grid-cols-2 gap-1 text-xs sm:inline-flex sm:h-8 sm:w-auto sm:grid-cols-none">
               <TabsTrigger className="min-w-0 px-2" value="priority">
                 <span className="hidden sm:inline">Findings by Priority</span>
@@ -232,39 +157,11 @@ export function DashboardSignalOverview({
                     title="No findings yet"
                   />
                 ) : (
-                  <>
-                    <ResponsiveContainer height={196} width="100%">
-                      <BarChart
-                        data={priorityItems}
-                        margin={{ bottom: 0, left: 0, right: 6, top: 6 }}
-                      >
-                        <CartesianGrid
-                          className="opacity-40"
-                          stroke="var(--vpw-chart-grid)"
-                          strokeDasharray="3 3"
-                        />
-                        <XAxis dataKey="label" tick={chartAxisTick} />
-                        <YAxis tick={chartAxisTick} />
-                        <RechartsTooltip {...chartTooltipProps} />
-                        <Bar
-                          dataKey="value"
-                          maxBarSize={72}
-                          radius={[4, 4, 0, 0]}
-                        >
-                          {priorityItems.map((entry) => (
-                            <Cell
-                              key={entry.label}
-                              fill={priorityFill(entry.tone)}
-                            />
-                          ))}
-                        </Bar>
-                      </BarChart>
-                    </ResponsiveContainer>
-                    <ChartDataSummary
-                      data={priorityItems}
-                      label="Findings by priority chart data"
-                    />
-                  </>
+                  activeSignalTab === "priority" && (
+                    <Suspense fallback={<Skeleton className="h-64" />}>
+                      <DashboardPriorityChart items={priorityItems} />
+                    </Suspense>
+                  )
                 )}
               </ChartCard>
             </TabsContent>
@@ -292,39 +189,11 @@ export function DashboardSignalOverview({
                     title="No EPSS data"
                   />
                 ) : (
-                  <>
-                    <ResponsiveContainer height={196} width="100%">
-                      <BarChart
-                        data={epssItems}
-                        margin={{ bottom: 0, left: 0, right: 6, top: 6 }}
-                      >
-                        <CartesianGrid
-                          className="opacity-40"
-                          stroke="var(--vpw-chart-grid)"
-                          strokeDasharray="3 3"
-                        />
-                        <XAxis dataKey="label" tick={chartAxisTick} />
-                        <YAxis tick={chartAxisTick} />
-                        <RechartsTooltip {...chartTooltipProps} />
-                        <Bar
-                          dataKey="value"
-                          maxBarSize={72}
-                          radius={[4, 4, 0, 0]}
-                        >
-                          {epssItems.map((entry) => (
-                            <Cell
-                              key={entry.label}
-                              fill={epssFill(entry.tone)}
-                            />
-                          ))}
-                        </Bar>
-                      </BarChart>
-                    </ResponsiveContainer>
-                    <ChartDataSummary
-                      data={epssItems}
-                      label="EPSS distribution chart data"
-                    />
-                  </>
+                  activeSignalTab === "epss" && (
+                    <Suspense fallback={<Skeleton className="h-64" />}>
+                      <DashboardEpssChart items={epssItems} />
+                    </Suspense>
+                  )
                 )}
               </ChartCard>
             </TabsContent>
@@ -359,43 +228,18 @@ export function DashboardSignalOverview({
                     title="No rollup data"
                   />
                 ) : (
-                  <>
-                    <ResponsiveContainer height={220} width="100%">
-                      <BarChart
-                        data={serviceItems}
-                        margin={{ bottom: 0, left: 0, right: 6, top: 6 }}
-                      >
-                        <CartesianGrid
-                          className="opacity-40"
-                          stroke="var(--vpw-chart-grid)"
-                          strokeDasharray="3 3"
-                        />
-                        <XAxis dataKey="label" tick={chartAxisTick} />
-                        <YAxis tick={chartAxisTick} />
-                        <RechartsTooltip {...chartTooltipProps} />
-                        <Bar
-                          dataKey="value"
-                          maxBarSize={72}
-                          radius={[4, 4, 0, 0]}
-                        >
-                          {serviceItems.map((entry, index) => (
-                            <Cell
-                              key={entry.label}
-                              fill={rankFill(index)}
-                            />
-                          ))}
-                        </Bar>
-                      </BarChart>
-                    </ResponsiveContainer>
-                    <ChartDataSummary
-                      data={serviceItems}
-                      label={`${
-                        topServiceSource === "assets"
-                          ? "Top assets"
-                          : "Top services"
-                      } chart data`}
-                    />
-                  </>
+                  activeSignalTab === "services" && (
+                    <Suspense fallback={<Skeleton className="h-72" />}>
+                      <DashboardServicesChart
+                        items={serviceItems}
+                        label={`${
+                          topServiceSource === "assets"
+                            ? "Top assets"
+                            : "Top services"
+                        } chart data`}
+                      />
+                    </Suspense>
+                  )
                 )}
               </ChartCard>
             </TabsContent>
@@ -440,34 +284,11 @@ export function DashboardSignalOverview({
                     title="No trend data"
                   />
                 ) : (
-                  <>
-                    <ResponsiveContainer height={220} width="100%">
-                      <LineChart
-                        data={trendItems}
-                        margin={{ bottom: 0, left: 0, right: 6, top: 6 }}
-                      >
-                        <CartesianGrid
-                          className="opacity-40"
-                          stroke="var(--vpw-chart-grid)"
-                          strokeDasharray="3 3"
-                        />
-                        <XAxis dataKey="label" tick={chartAxisTick} />
-                        <YAxis tick={chartAxisTick} />
-                        <RechartsTooltip {...chartTooltipProps} />
-                        <Line
-                          dataKey="value"
-                          dot={{ r: 3 }}
-                          stroke="var(--vpw-chart-trend)"
-                          strokeWidth={2}
-                          type="monotone"
-                        />
-                      </LineChart>
-                    </ResponsiveContainer>
-                    <ChartDataSummary
-                      data={trendItems}
-                      label="Risk trend chart data"
-                    />
-                  </>
+                  activeSignalTab === "trend" && (
+                    <Suspense fallback={<Skeleton className="h-72" />}>
+                      <DashboardTrendChart items={trendItems} />
+                    </Suspense>
+                  )
                 )}
               </ChartCard>
             </TabsContent>

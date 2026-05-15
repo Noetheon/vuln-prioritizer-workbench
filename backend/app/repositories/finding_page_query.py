@@ -33,6 +33,7 @@ class FindingPageQuery:
     owner: str | None = None
     service: str | None = None
     owner_service: str | None = None
+    query: str | None = None
     asset_id: uuid.UUID | None = None
     exposure: str | None = None
     epss_min: float | None = None
@@ -46,6 +47,7 @@ def finding_page_filters(query: FindingPageQuery) -> list[Any]:
         Finding.project_id == query.project_id,
         *_finding_state_filters(query),
         *_finding_asset_text_filters(query),
+        *_finding_global_search_filters(query),
         *_finding_asset_filters(query),
         *_finding_score_filters(query),
     ]
@@ -76,6 +78,31 @@ def _finding_asset_text_filters(query: FindingPageQuery) -> list[Any]:
                 col(Asset.business_service).ilike(pattern),
             )
         )
+    return filters
+
+
+def _finding_global_search_filters(query: FindingPageQuery) -> list[Any]:
+    filters: list[Any] = []
+    if not query.query or not query.query.strip():
+        return filters
+
+    pattern = f"%{query.query.strip()}%"
+    filters.append(
+        or_(
+            col(Finding.cve_id).ilike(pattern),
+            col(Finding.recommended_action).ilike(pattern),
+            col(Finding.rationale).ilike(pattern),
+            col(Component.name).ilike(pattern),
+            col(Component.version).ilike(pattern),
+            col(Component.purl).ilike(pattern),
+            col(Component.ecosystem).ilike(pattern),
+            col(Asset.asset_key).ilike(pattern),
+            col(Asset.name).ilike(pattern),
+            col(Asset.target_ref).ilike(pattern),
+            col(Asset.owner).ilike(pattern),
+            col(Asset.business_service).ilike(pattern),
+        )
+    )
     return filters
 
 

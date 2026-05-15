@@ -1,3 +1,4 @@
+import "@/styles/findings.css"
 import { useLocation, useNavigate } from "@/lib/router"
 import { useEffect } from "react"
 import { RemediationQueue } from "../../components/findings/RemediationQueue"
