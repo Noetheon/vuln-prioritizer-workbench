@@ -1,4 +1,4 @@
-import { Filter, ListFilter, X } from "lucide-react"
+import { ListFilter, RotateCcw, X } from "lucide-react"
 import type { Dispatch, SetStateAction } from "react"
 import type { ProjectPublic } from "@/api-client"
 import { Button } from "@/components/ui/button"
@@ -74,11 +74,12 @@ export function RemediationQueueFilters({
   return (
     <VpwPanel
       aria-label="Findings filters"
-      className="findings-filter-card py-0 shadow-sm"
+      className="findings-filter-card"
+      padded={false}
       role="region"
     >
-      <div className="px-4 py-3">
-        <div className="flex flex-wrap items-center gap-2">
+      <div className="findings-filter-card__inner">
+        <div className="findings-filter-grid">
           {!isDemo ? (
             <RemediationQueueProjectSelect
               onProjectChange={onProjectChange}
@@ -89,7 +90,7 @@ export function RemediationQueueFilters({
           ) : null}
 
           {findingAssetId ? (
-            <div className="inline-flex h-9 items-center gap-1.5 rounded-md border bg-muted px-2 text-xs font-medium">
+            <div className="findings-filter-asset">
               <span>Asset</span>
               <strong>{findingAssetKey ?? findingAssetId}</strong>
               <Button
@@ -106,10 +107,10 @@ export function RemediationQueueFilters({
           ) : null}
 
           <label
-            className="flex min-w-64 flex-[1.35] flex-col gap-1"
+            className="findings-filter-field findings-filter-field--search"
             htmlFor={queueSearchId}
           >
-            <span className="text-[11px] font-semibold uppercase text-muted-foreground">
+            <span className="vpw-label findings-filter-label">
               Search
             </span>
             <VpwSearchInput
@@ -121,10 +122,10 @@ export function RemediationQueueFilters({
           </label>
 
           <label
-            className="flex min-w-48 flex-1 flex-col gap-1"
+            className="findings-filter-field findings-filter-field--owner"
             htmlFor={ownerServiceSearchId}
           >
-            <span className="text-[11px] font-semibold uppercase text-muted-foreground">
+            <span className="vpw-label findings-filter-label">
               Owner / Service
             </span>
             <VpwSearchInput
@@ -145,10 +146,10 @@ export function RemediationQueueFilters({
             onSavedViewChange={onSavedViewChange}
           />
 
-          <div className="ml-auto flex items-end gap-2 self-end">
+          <div className="findings-filter-actions">
             <Button
               aria-expanded={showAdvancedFilters}
-              className="h-10"
+              className="h-9"
               onClick={() => setAdvancedFiltersOpen((open) => !open)}
               size="sm"
               type="button"
@@ -164,14 +165,14 @@ export function RemediationQueueFilters({
             </Button>
 
             <Button
-              className="h-10"
+              className="h-9"
               disabled={!activeFindingFilters && filterCount === 0}
               onClick={onClearFilters}
               size="sm"
               type="button"
               variant="ghost"
             >
-              <Filter aria-hidden="true" size={14} />
+              <RotateCcw aria-hidden="true" size={14} />
               Reset
             </Button>
           </div>

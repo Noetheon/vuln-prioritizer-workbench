@@ -61,6 +61,8 @@ const componentFieldControlNames = new Set([
   "SelectTrigger",
   "Textarea",
   "VpwFileInput",
+  "VpwSearchControl",
+  "VpwSelectControl",
 ])
 
 function elementTypeName(type: FieldControlElementType): string | undefined {
@@ -154,7 +156,7 @@ export function Field({
       data-orientation={orientation}
       data-slot="field"
       className={cn(
-        "group/field flex w-full gap-1.5 data-[invalid=true]:text-[var(--vpw-red)]",
+        "vpw-field group/field flex w-full gap-1.5 data-[invalid=true]:text-[var(--vpw-red)]",
         fieldOrientationClass[orientation],
         className,
       )}
@@ -172,7 +174,7 @@ export function FieldLabel({
     <label
       data-slot="field-label"
       className={cn(
-        "flex w-fit items-center gap-1 text-sm font-medium leading-snug text-[var(--vpw-text-primary)] group-data-[disabled=true]/field:opacity-50",
+        "vpw-field-label flex w-fit items-center gap-1 text-sm font-medium leading-snug text-[var(--vpw-text-primary)] group-data-[disabled=true]/field:opacity-50",
         className,
       )}
       {...props}

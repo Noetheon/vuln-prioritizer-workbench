@@ -42,7 +42,7 @@ export function FindingsMobileCards({
   return (
     <section
       aria-label="Findings remediation cards"
-      className="findings-mobile-cards sm:hidden"
+      className="findings-mobile-cards"
       data-testid="findings-mobile-cards"
     >
       {findings.map((finding) => (

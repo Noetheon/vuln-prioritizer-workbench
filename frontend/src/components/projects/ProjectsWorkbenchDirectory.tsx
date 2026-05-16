@@ -1,14 +1,14 @@
-import { FolderKanban, GitBranch, Plus, Search } from "lucide-react"
+import { FolderKanban, Plus, RefreshCw, Search } from "lucide-react"
 import { useMemo, useState } from "react"
 import { Button } from "@/components/ui/button"
 import {
   VpwDataTable,
   VpwEmptyState,
-  VpwPanel,
+  VpwFilterBar,
   VpwSection,
   VpwSectionHeader,
-  VpwSearchInput,
   VpwSkeletonStack,
+  VpwTableCard,
 } from "@/components/vpw"
 import { buildProjectDirectoryColumns } from "./ProjectsWorkbenchDirectoryColumns"
 import type { ProjectsWorkbenchProps } from "./projects-workbench-model"
@@ -52,65 +52,70 @@ export function ProjectDirectory({
     <VpwSection>
       <VpwSectionHeader
         actions={
-          <>
-            <VpwSearchInput
-              aria-label="Search projects"
-              className="w-full sm:w-64"
-              onChange={(event) => setProjectSearch(event.target.value)}
-              placeholder="Search projects"
-              value={projectSearch}
-            />
-            <Button
-              disabled={projectListLoading}
-              onClick={onRefreshProjects}
-              type="button"
-              variant="outline"
-            >
-              <GitBranch aria-hidden="true" />
-              Refresh projects
-            </Button>
-          </>
+          <Button
+            disabled={projectListLoading}
+            onClick={onRefreshProjects}
+            type="button"
+            variant="outline"
+          >
+            <RefreshCw aria-hidden="true" />
+            Refresh
+          </Button>
         }
         eyebrow="Directory"
-        title="Projects Directory"
+        title="Projects directory"
         description="Search, select the active workspace, or jump into imports, findings, and evidence."
       />
-      {projectListLoading ? (
-        <VpwPanel>
+      <VpwFilterBar
+        onSearchChange={setProjectSearch}
+        searchClassName="vpw-filter-field--lg"
+        searchLabel="Project search"
+        searchPlaceholder="Search projects"
+        searchTitle="Search"
+        searchValue={projectSearch}
+      />
+      <VpwTableCard
+        description={`${filteredProjects.length} project${
+          filteredProjects.length === 1 ? "" : "s"
+        } match the current directory view.`}
+        title="Project register"
+      >
+        {projectListLoading ? (
           <VpwSkeletonStack rows={4} />
-        </VpwPanel>
-      ) : (
-        <VpwDataTable
-          caption="Projects"
-          columns={columns}
-          data={filteredProjects}
-          density="comfortable"
-          emptyState={
-            trimmedProjectSearch ? (
-              <VpwEmptyState
-                icon={<Search aria-hidden="true" className="h-5 w-5" />}
-                title="No matching projects"
-                description="Adjust the search query to show more project rows."
-              />
-            ) : (
-              <VpwEmptyState
-                action={
-                  <Button asChild>
-                    <a href="#create-project">
-                      <Plus aria-hidden="true" />
-                      Create project
-                    </a>
-                  </Button>
-                }
-                icon={<FolderKanban aria-hidden="true" className="h-5 w-5" />}
-                title="No projects yet"
-                description="Create a project to start importing findings and generating evidence."
-              />
-            )
-          }
-          getRowKey={(project) => project.id}
-        />
-      )}
+        ) : (
+          <VpwDataTable
+            caption="Projects"
+            columns={columns}
+            data={filteredProjects}
+            density="comfortable"
+            emptyState={
+              trimmedProjectSearch ? (
+                <VpwEmptyState
+                  icon={<Search aria-hidden="true" className="h-5 w-5" />}
+                  title="No matching projects"
+                  description="Adjust the search query to show more project rows."
+                />
+              ) : (
+                <VpwEmptyState
+                  action={
+                    <Button asChild>
+                      <a href="#create-project">
+                        <Plus aria-hidden="true" />
+                        Create project
+                      </a>
+                    </Button>
+                  }
+                  icon={<FolderKanban aria-hidden="true" className="h-5 w-5" />}
+                  title="No projects yet"
+                  description="Create a project to start importing findings and generating evidence."
+                />
+              )
+            }
+            getRowKey={(project) => project.id}
+            minWidth="920px"
+          />
+        )}
+      </VpwTableCard>
     </VpwSection>
   )
 }

@@ -23,10 +23,7 @@ const frontendRoot = fileURLToPath(new URL("../", import.meta.url))
 const srcRoot = fileURLToPath(new URL("../src/", import.meta.url))
 
 const sourceExtensions = new Set([".css", ".ts", ".tsx"])
-const ignoredPathParts = new Set([
-  "client",
-  "vite-env.d.ts",
-])
+const ignoredPathParts = new Set(["client", "vite-env.d.ts"])
 
 const colorTokenFiles = new Set([
   "src/lib/vpw-tokens.json",
@@ -50,6 +47,60 @@ const rawTableAllowlist = new Set([
   "src/components/vpw/VpwDataTable.tsx",
   "src/components/dashboard/DashboardSignalOverview.tsx",
 ])
+
+const rowActionContractFiles = [
+  "src/components/assets/AssetTable.tsx",
+  "src/components/dashboard/DashboardRemediationSection.tsx",
+  "src/components/findings/FindingsDataTableColumns.tsx",
+  "src/components/imports/ImportsWorkbenchHistory.tsx",
+  "src/components/projects/ProjectsWorkbenchDirectoryColumns.tsx",
+  "src/components/providers/ProvidersWorkbenchSources.tsx",
+  "src/components/reports/EvidenceCenterHistory.tsx",
+  "src/components/waivers/WaiversWorkbenchRegisterColumns.tsx",
+]
+
+const inventoryTableCardContractFiles = [
+  "src/components/assets/AssetTable.tsx",
+  "src/components/providers/ProvidersWorkbenchSources.tsx",
+  "src/components/waivers/WaiversWorkbenchRegister.tsx",
+  "src/components/imports/ImportsWorkbenchHistory.tsx",
+  "src/components/reports/EvidenceCenterHistory.tsx",
+  "src/components/projects/ProjectsWorkbenchDirectory.tsx",
+]
+
+const inventoryActionColumnContractFiles = [
+  "src/components/assets/AssetTable.tsx",
+  "src/components/providers/ProvidersWorkbenchSources.tsx",
+  "src/components/waivers/WaiversWorkbenchRegisterColumns.tsx",
+  "src/components/imports/ImportsWorkbenchHistory.tsx",
+  "src/components/reports/EvidenceCenterHistory.tsx",
+  "src/components/projects/ProjectsWorkbenchDirectoryColumns.tsx",
+]
+
+const inventoryFilterContractFiles = [
+  "src/components/assets/AssetFilters.tsx",
+  "src/components/waivers/WaiversWorkbenchRegister.tsx",
+  "src/components/projects/ProjectsWorkbenchDirectory.tsx",
+]
+
+const filterControlFiles = [
+  "src/components/vpw/VpwSearchControl.tsx",
+  "src/components/vpw/VpwSelectControl.tsx",
+]
+
+const resetControlContractFiles = [
+  "src/components/assets/AssetFilters.tsx",
+  "src/components/findings/RemediationQueueFilters.tsx",
+  "src/components/waivers/WaiversWorkbenchRegister.tsx",
+]
+
+const findingsFilterControlContractFiles = [
+  "src/components/findings/RemediationQueueProjectSelect.tsx",
+  "src/components/findings/RemediationQueueFilterControls.tsx",
+  "src/components/findings/RemediationQueueRangeFilter.tsx",
+  "src/components/findings/RemediationQueueSavedViews.tsx",
+  "src/components/findings/RemediationQueueTableSection.tsx",
+]
 
 const retiredStyleFiles = [
   "src/styles/shadcn-compat.css",
@@ -99,6 +150,61 @@ function walk(directory: string, files: string[] = []) {
 
 function violationsFor(pattern: RegExp, source: string) {
   return [...source.matchAll(pattern)].map((match) => match[0])
+}
+
+function assertSourceOrder(path: string, source: string, tokens: string[]) {
+  let cursor = -1
+  for (const token of tokens) {
+    const next = source.indexOf(token, cursor + 1)
+    assert.notEqual(next, -1, `${path} is missing ${token}`)
+    assert.ok(
+      next > cursor,
+      `${path} should keep ${tokens.join(" -> ")} in order`,
+    )
+    cursor = next
+  }
+}
+
+function tableCardWrapViolation(path: string, source: string) {
+  const tableCardStart = source.indexOf("<VpwTableCard")
+  const tableStart = source.indexOf("<VpwDataTable")
+  const tableCardEnd = source.lastIndexOf("</VpwTableCard>")
+
+  if (tableCardStart === -1) return `${path}: missing VpwTableCard`
+  if (tableStart === -1) return `${path}: missing VpwDataTable`
+  if (tableCardEnd === -1) return `${path}: missing VpwTableCard close`
+  if (!(tableCardStart < tableStart && tableStart < tableCardEnd)) {
+    return `${path}: VpwDataTable is not wrapped by VpwTableCard`
+  }
+  return null
+}
+
+function assertCompactRightAlignedActions(path: string, source: string) {
+  assert.match(source, /id:\s*"actions"/, `${path} needs an actions column`)
+  assert.match(
+    source,
+    /headerClassName:\s*"[^"]*text-right[^"]*"/,
+    `${path} should right-align the actions header`,
+  )
+  assert.match(
+    source,
+    /className:\s*"[^"]*text-right[^"]*"/,
+    `${path} should right-align action cells`,
+  )
+  assert.match(
+    source,
+    /size="icon-(?:xs|sm)"/,
+    `${path} should use compact icon action buttons`,
+  )
+}
+
+function assertStandardResetControl(path: string, source: string) {
+  assert.match(source, /RotateCcw/, `${path} should use the reset icon`)
+  assert.match(
+    source,
+    /<RotateCcw\s+aria-hidden="true"[\s\S]{0,160}\/>\s*Reset\s*</,
+    `${path} should pair the reset icon with standard Reset text`,
+  )
 }
 
 test("semantic risk badges normalize levels, labels, and tones", () => {
@@ -289,10 +395,7 @@ test("badges use centralized density and overflow contracts", () => {
 
   assert.match(semanticBadges, /density=\{density\}/)
   assert.doesNotMatch(semanticBadges, /vpw-semantic-badge--compact/)
-  assert.doesNotMatch(
-    remediationFilters,
-    /h-4 min-w-4 px-1 py-0 text-\[10px\]/,
-  )
+  assert.doesNotMatch(remediationFilters, /h-4 min-w-4 px-1 py-0 text-\[10px\]/)
 })
 
 test("design-system colors are tokenized outside token and showcase files", () => {
@@ -404,6 +507,133 @@ test("tables expose a single keyboard-scroll owner", () => {
   )
 })
 
+test("table row actions use the VPW icon action contract", () => {
+  for (const path of rowActionContractFiles) {
+    const source = readProjectFile(path)
+    assert.match(source, /vpw-table-actions/, `${path} needs action wrapper`)
+    assert.match(
+      source,
+      /vpw-table-action-button/,
+      `${path} needs action buttons`,
+    )
+  }
+})
+
+test("inventory data tables use the shared VPW table card shell", () => {
+  const offenders = inventoryTableCardContractFiles
+    .map((path) => tableCardWrapViolation(path, readProjectFile(path)))
+    .filter((violation) => violation !== null)
+
+  assert.deepEqual(offenders, [])
+
+  const tableCard = readProjectFile("src/components/vpw/VpwTableCard.tsx")
+  assert.match(tableCard, /titleLevel = 2/)
+  assert.match(tableCard, /const TitleTag = titleLevel === 2 \? "h2" : "h3"/)
+})
+
+test("inventory action columns stay compact and right aligned", () => {
+  for (const path of inventoryActionColumnContractFiles) {
+    assertCompactRightAlignedActions(path, readProjectFile(path))
+  }
+})
+
+test("shared filter bars expose search and select control primitives", () => {
+  const missingControls = filterControlFiles.filter(
+    (path) => !existsSync(join(frontendRoot, path)),
+  )
+  assert.deepEqual(missingControls, [])
+
+  const vpwIndex = readProjectFile("src/components/vpw/index.ts")
+  assert.match(vpwIndex, /export \* from "\.\/VpwSearchControl"/)
+  assert.match(vpwIndex, /export \* from "\.\/VpwSelectControl"/)
+
+  const filterBar = readProjectFile("src/components/vpw/VpwFilterBar.tsx")
+  assert.match(filterBar, /VpwSearchControl/)
+  assert.doesNotMatch(filterBar, /VpwSearchInput/)
+})
+
+test("filter bars keep the Workbench scope-search-filter-action order", () => {
+  const filterBar = readProjectFile("src/components/vpw/VpwFilterBar.tsx")
+  assertSourceOrder("src/components/vpw/VpwFilterBar.tsx", filterBar, [
+    "vpw-filter-bar__leading",
+    "vpw-filter-field--search",
+    "vpw-filter-bar__controls",
+    "vpw-filter-bar__actions",
+  ])
+
+  const assets = readProjectFile("src/components/assets/AssetFilters.tsx")
+  assertSourceOrder("src/components/assets/AssetFilters.tsx", assets, [
+    'label="Project"',
+    'searchTitle="Service"',
+    'label="Owner"',
+  ])
+  assert.match(assets, /searchClassName="vpw-filter-field--md"/)
+  assert.match(assets, />\s*Reset\s*</)
+
+  const projects = readProjectFile(
+    "src/components/projects/ProjectsWorkbenchDirectory.tsx",
+  )
+  assert.match(projects, /<VpwFilterBar/)
+  assert.match(projects, /searchLabel="Project search"/)
+  assert.doesNotMatch(projects, /VpwSearchInput/)
+
+  const waivers = readProjectFile(
+    "src/components/waivers/WaiversWorkbenchRegister.tsx",
+  )
+  assert.match(waivers, /<VpwFilterBar/)
+  assert.match(waivers, /leading=\{/)
+  assert.match(waivers, /searchLabel="Risk acceptance search"/)
+  assert.match(waivers, /actions=\{/)
+})
+
+test("inventory filter sections use shared filter controls", () => {
+  const offenders: string[] = []
+
+  for (const path of inventoryFilterContractFiles) {
+    const source = readProjectFile(path)
+    if (!/<VpwFilterBar/.test(source)) {
+      offenders.push(`${path}: missing VpwFilterBar`)
+    }
+    if (/VpwSearchInput/.test(source)) {
+      offenders.push(`${path}: uses legacy VpwSearchInput`)
+    }
+  }
+
+  const assets = readProjectFile("src/components/assets/AssetFilters.tsx")
+  if (!/VpwSelectControl/.test(assets)) {
+    offenders.push(
+      "src/components/assets/AssetFilters.tsx: missing VpwSelectControl",
+    )
+  }
+  if (
+    /components\/ui\/(?:input|select)|\.\.\/ui\/(?:input|select)/.test(assets)
+  ) {
+    offenders.push(
+      "src/components/assets/AssetFilters.tsx: imports raw input/select",
+    )
+  }
+
+  assert.deepEqual(offenders, [])
+})
+
+test("findings filter controls share the Workbench control height contract", () => {
+  const offenders: string[] = []
+  for (const path of findingsFilterControlContractFiles) {
+    const source = readProjectFile(path)
+    if (!/findings-filter-control/.test(source)) {
+      offenders.push(`${path}: missing findings-filter-control`)
+    }
+  }
+
+  assert.deepEqual(offenders, [])
+})
+
+test("filter reset controls use the standard reset icon and text", () => {
+  for (const path of resetControlContractFiles) {
+    assertStandardResetControl(path, readProjectFile(path))
+  }
+})
+
 test("app shell owns page scrolling in the content region", () => {
   const appShell = readProjectFile("src/components/app/AppShell.tsx")
   const baseCss = readProjectFile("src/styles/base.css")
@@ -452,7 +682,9 @@ test("runtime CSS, TypeScript tokens, JSON tokens, and showcase copy stay synchr
   }
   const tokenTs = readProjectFile("src/lib/vpw-tokens.ts")
   const tokenCss = readProjectFile("src/styles/tokens.css")
-  const showcase = readProjectFile("src/components/vpw/VpwDesignSystemShowcase.tsx")
+  const showcase = readProjectFile(
+    "src/components/vpw/VpwDesignSystemShowcase.tsx",
+  )
   const expectedRadius = {
     sm: "4px",
     md: "6px",
