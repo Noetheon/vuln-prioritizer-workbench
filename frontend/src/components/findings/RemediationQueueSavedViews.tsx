@@ -38,7 +38,7 @@ export function RemediationQueueSavedViews({
       >
         <SelectTrigger
           aria-label="Finding view"
-          className="findings-saved-view-select h-9 w-full text-sm"
+          className="findings-filter-control findings-saved-view-select h-9 w-full text-sm"
         >
           <SelectValue />
         </SelectTrigger>

@@ -2,7 +2,7 @@ import { useId, type ReactNode } from "react"
 
 import { cn } from "@/lib/utils"
 
-import { VpwSearchInput } from "./VpwSearchInput"
+import { VpwSearchControl } from "./VpwSearchControl"
 
 export type VpwFilterBarProps = {
   actions?: ReactNode
@@ -48,7 +48,7 @@ export function VpwFilterBar({
         <label className="vpw-label vpw-filter-label" htmlFor={searchId}>
           {searchTitle}
         </label>
-        <VpwSearchInput
+        <VpwSearchControl
           aria-label={searchLabel}
           id={searchId}
           onChange={(event) => onSearchChange?.(event.target.value)}

@@ -282,8 +282,16 @@
 
   .vpw-filter-bar__actions {
     flex: 0 0 auto;
-    margin-left: auto;
+    margin-left: 0.25rem;
     justify-content: flex-end;
+  }
+
+  .vpw-filter-bar__controls > .vpw-button,
+  .vpw-filter-bar__actions > .vpw-button {
+    height: var(--vpw-control-height-lg);
+    min-height: var(--vpw-control-height-lg);
+    font-size: 0.875rem;
+    line-height: 1.2;
   }
 
   .vpw-filter-field {
@@ -334,7 +342,68 @@
 
   .vpw-filter-bar .vpw-search-control__input,
   .vpw-filter-bar .vpw-filter-control {
-    height: var(--vpw-control-height);
+    height: var(--vpw-control-height-lg);
+    min-height: var(--vpw-control-height-lg);
+    font-size: 0.875rem;
+    line-height: 1.2;
+  }
+
+  .vpw-table-card {
+    display: grid;
+    gap: var(--vpw-surface-gap);
+    padding: var(--vpw-panel-padding);
+  }
+
+  .vpw-table-card__header {
+    display: flex;
+    min-width: 0;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  .vpw-table-card__heading {
+    min-width: 0;
+  }
+
+  .vpw-table-card__eyebrow {
+    color: var(--vpw-teal);
+  }
+
+  .vpw-table-card__title {
+    margin-top: 0.25rem;
+    color: var(--vpw-text-primary);
+    font-size: 1rem;
+    font-weight: 720;
+    line-height: 1.25;
+  }
+
+  .vpw-table-card__description {
+    margin-top: 0.25rem;
+    max-width: 48rem;
+    color: var(--vpw-text-secondary);
+    font-size: 0.875rem;
+    line-height: 1.45;
+  }
+
+  .vpw-table-card__actions {
+    display: flex;
+    min-width: 0;
+    flex: 0 0 auto;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.5rem;
+  }
+
+  .vpw-table-card__body {
+    display: grid;
+    gap: var(--vpw-surface-gap);
+    min-width: 0;
+  }
+
+  .vpw-table-card .vpw-filter-bar {
+    box-shadow: var(--vpw-shadow-0);
   }
 
   .vpw-filter-bar fieldset {
@@ -357,6 +426,16 @@
 
     .vpw-filter-bar__actions {
       margin-left: 0;
+      justify-content: flex-start;
+    }
+
+    .vpw-table-card__header {
+      align-items: flex-start;
+      flex-direction: column;
+    }
+
+    .vpw-table-card__actions {
+      width: 100%;
       justify-content: flex-start;
     }
 

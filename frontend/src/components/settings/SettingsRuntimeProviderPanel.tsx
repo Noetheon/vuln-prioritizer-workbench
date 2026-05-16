@@ -5,8 +5,7 @@ import {
   VpwBadge,
   VpwDataTable,
   type VpwDataTableColumn,
-  VpwPanel,
-  VpwSectionHeader,
+  VpwTableCard,
 } from "@/components/vpw"
 import {
   type ProviderConfigRow,
@@ -45,23 +44,18 @@ export function SettingsRuntimeProviderPanel({
   providerStatus: ProviderStatusPublic | null
 }) {
   return (
-    <VpwPanel className="overflow-hidden p-0">
-      <div className="border-b border-[var(--vpw-border-subtle)] bg-[color-mix(in_srgb,var(--vpw-bg-panel)_52%,var(--vpw-bg-card))] px-5 py-4">
-        <VpwSectionHeader
-          description="Safe provider configuration values reported by existing APIs."
-          title="Runtime & providers"
-        />
-      </div>
-      <div className="p-4">
-        <VpwDataTable
-          caption="Provider runtime configuration"
-          columns={providerColumns}
-          data={providerConfigRows(providerStatus)}
-          density="compact"
-          getRowKey={(row) => row.id}
-        />
-      </div>
-      <div className="border-t border-[var(--vpw-border-subtle)] bg-[color-mix(in_srgb,var(--vpw-blue)_6%,var(--vpw-bg-card))] px-5 py-3">
+    <VpwTableCard
+      description="Safe provider configuration values reported by existing APIs."
+      title="Runtime & providers"
+    >
+      <VpwDataTable
+        caption="Provider runtime configuration"
+        columns={providerColumns}
+        data={providerConfigRows(providerStatus)}
+        density="compact"
+        getRowKey={(row) => row.id}
+      />
+      <div className="rounded-[var(--vpw-radius-lg)] border border-[var(--vpw-border-subtle)] bg-[color-mix(in_srgb,var(--vpw-blue)_6%,var(--vpw-bg-card))] px-4 py-3">
         <p className="flex gap-2 text-sm leading-6 text-[var(--vpw-text-secondary)]">
           <Info
             aria-hidden="true"
@@ -76,6 +70,6 @@ export function SettingsRuntimeProviderPanel({
           </span>
         </p>
       </div>
-    </VpwPanel>
+    </VpwTableCard>
   )
 }

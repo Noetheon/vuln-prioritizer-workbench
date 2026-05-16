@@ -31,7 +31,7 @@ export function RangeFilter({
       <div className="findings-filter-range-control">
         <Input
           aria-label={minLabel}
-          className="h-9 w-20 text-sm"
+          className="findings-filter-control h-9 w-20 text-sm"
           inputMode="decimal"
           max={max}
           min="0"
@@ -44,7 +44,7 @@ export function RangeFilter({
         <span className="text-xs text-muted-foreground">to</span>
         <Input
           aria-label={maxLabel}
-          className="h-9 w-20 text-sm"
+          className="findings-filter-control h-9 w-20 text-sm"
           inputMode="decimal"
           max={max}
           min="0"

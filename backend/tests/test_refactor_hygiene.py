@@ -941,9 +941,9 @@ def test_workbench_frontend_feature_containers_delegate_to_sections() -> None:
     findings_table_columns_source = (
         REPO_ROOT / "frontend/src/components/findings/FindingsDataTableColumns.tsx"
     ).read_text(encoding="utf-8")
-    findings_table_headers_source = (
-        REPO_ROOT / "frontend/src/components/findings/FindingsDataTableHeaders.tsx"
-    ).read_text(encoding="utf-8")
+    vpw_data_table_source = (REPO_ROOT / "frontend/src/components/vpw/VpwDataTable.tsx").read_text(
+        encoding="utf-8"
+    )
     findings_table_model_source = (
         REPO_ROOT / "frontend/src/components/findings/FindingsDataTableModel.ts"
     ).read_text(encoding="utf-8")
@@ -1061,8 +1061,9 @@ def test_workbench_frontend_feature_containers_delegate_to_sections() -> None:
     assert "./RemediationQueueFilters" in findings_view_source
     assert "./RemediationQueueFilterControls" in findings_filters_source
     assert "./FindingsDataTableColumns" in findings_table_source
-    assert "./FindingsDataTableHeaders" in findings_table_columns_source
     assert "./FindingsDataTableModel" in findings_table_columns_source
+    assert "sort?: VpwDataTableSort" in vpw_data_table_source
+    assert "VpwDataTableHeaderContent" in vpw_data_table_source
     assert "./FindingsDataTable" not in findings_model_source
     assert "./RemediationQueueStates" in findings_view_source
     assert "./RemediationQueueSummary" in findings_view_source
@@ -1143,7 +1144,7 @@ def test_workbench_frontend_feature_containers_delegate_to_sections() -> None:
     assert len(findings_filter_controls_source.splitlines()) <= 240
     assert len(findings_table_source.splitlines()) <= 100
     assert len(findings_table_columns_source.splitlines()) <= 300
-    assert len(findings_table_headers_source.splitlines()) <= 90
+    assert len(vpw_data_table_source.splitlines()) <= 200
     assert len(findings_table_model_source.splitlines()) <= 80
     assert len(findings_model_source.splitlines()) <= 280
 

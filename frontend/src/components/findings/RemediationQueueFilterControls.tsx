@@ -47,7 +47,10 @@ export function PrimaryFilterSelects({
           }
           value={findingFilters.priority || "__all"}
         >
-          <SelectTrigger aria-label="Priority" className="h-9 w-full text-sm">
+          <SelectTrigger
+            aria-label="Priority"
+            className="findings-filter-control h-9 w-full text-sm"
+          >
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -71,7 +74,10 @@ export function PrimaryFilterSelects({
           }
           value={findingFilters.status || "__all"}
         >
-          <SelectTrigger aria-label="Status" className="h-9 w-full text-sm">
+          <SelectTrigger
+            aria-label="Status"
+            className="findings-filter-control h-9 w-full text-sm"
+          >
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -104,7 +110,10 @@ export function AdvancedFilterSelects({
           }
           value={findingFilters.kev || "__all"}
         >
-          <SelectTrigger aria-label="KEV" className="h-9 w-full text-sm">
+          <SelectTrigger
+            aria-label="KEV"
+            className="findings-filter-control h-9 w-full text-sm"
+          >
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -128,7 +137,10 @@ export function AdvancedFilterSelects({
           }
           value={findingFilters.exposure || "__all"}
         >
-          <SelectTrigger aria-label="Exposure" className="h-9 w-full text-sm">
+          <SelectTrigger
+            aria-label="Exposure"
+            className="findings-filter-control h-9 w-full text-sm"
+          >
             <SelectValue />
           </SelectTrigger>
           <SelectContent>

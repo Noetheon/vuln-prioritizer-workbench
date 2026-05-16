@@ -191,10 +191,11 @@ export function buildProjectDirectoryColumns({
           ))}
         </div>
       ),
-      className: "text-right",
+      className: "min-w-[10rem] text-right",
       header: "Actions",
       headerClassName: "text-right",
       id: "actions",
+      width: "10rem",
     },
   ]
 }

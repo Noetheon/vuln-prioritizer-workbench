@@ -15,11 +15,10 @@ import {
   VpwDataTable,
   type VpwDataTableColumn,
   VpwEmptyState,
-  VpwPanel,
   VpwSection,
-  VpwSectionHeader,
   VpwSkeletonStack,
   VpwStatusBanner,
+  VpwTableCard,
 } from "@/components/vpw"
 import { runStatusLabel } from "@/lib/risk-format"
 import { RunDiagnosticsSheet } from "./ImportsWorkbenchRunDetail"
@@ -194,7 +193,7 @@ export function RecentImports({
 
   return (
     <VpwSection>
-      <VpwSectionHeader
+      <VpwTableCard
         actions={
           <Button
             disabled={runsLoading || !selectedProject}
@@ -208,33 +207,32 @@ export function RecentImports({
         }
         description={selectedProject?.name ?? "No project selected"}
         title="Recent Imports"
-      />
-      {runsError ? (
-        <VpwStatusBanner title="Import runs unavailable" tone="critical">
-          {runsError}
-        </VpwStatusBanner>
-      ) : null}
-      {runsLoading ? (
-        <VpwPanel>
+      >
+        {runsError ? (
+          <VpwStatusBanner title="Import runs unavailable" tone="critical">
+            {runsError}
+          </VpwStatusBanner>
+        ) : null}
+        {runsLoading ? (
           <VpwSkeletonStack rows={4} />
-        </VpwPanel>
-      ) : (
-        <VpwDataTable
-          caption="Recent import runs"
-          columns={columns}
-          data={projectRuns}
-          density="compact"
-          emptyState={
-            <VpwEmptyState
-              description="Upload a supported file to create import run history."
-              icon={<History aria-hidden="true" className="h-5 w-5" />}
-              title="No import runs yet"
-            />
-          }
-          getRowKey={(run) => run.id}
-          minWidth="960px"
-        />
-      )}
+        ) : (
+          <VpwDataTable
+            caption="Recent import runs"
+            columns={columns}
+            data={projectRuns}
+            density="compact"
+            emptyState={
+              <VpwEmptyState
+                description="Upload a supported file to create import run history."
+                icon={<History aria-hidden="true" className="h-5 w-5" />}
+                title="No import runs yet"
+              />
+            }
+            getRowKey={(run) => run.id}
+            minWidth="960px"
+          />
+        )}
+      </VpwTableCard>
       <RunDiagnosticsSheet
         diagnosticsOpen={diagnosticsOpen}
         diagnosticsRunId={diagnosticsRunId}

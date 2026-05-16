@@ -108,7 +108,7 @@ export function buildWaiverRegisterColumns({
         optionalText(waiver.approval_ref ?? waiver.ticket_url),
       header: "Evidence",
       id: "evidence",
-      width: "9%",
+      width: "10%",
     },
     {
       cell: (waiver) => (
@@ -122,8 +122,8 @@ export function buildWaiverRegisterColumns({
       header: "Actions",
       headerClassName: "text-right",
       id: "actions",
-      className: "text-right",
-      width: "13%",
+      className: "min-w-[8.5rem] text-right align-middle",
+      width: "8.5rem",
     },
   ]
 
@@ -160,10 +160,10 @@ function WaiverRegisterActions({
       <WaiverAction label="View acceptance">
         <Button
           aria-current={selectedWaiverId === waiver.id ? "true" : undefined}
-          aria-label={`View ${waiverScopeLabel(waiver)}`}
+          aria-label="View"
           className="vpw-table-action-button"
           onClick={() => openWaiverDrawer("detail", waiver)}
-          size="icon-sm"
+          size="icon-xs"
           type="button"
           variant="outline"
         >
@@ -177,7 +177,7 @@ function WaiverRegisterActions({
               aria-label={`Review ${waiverScopeLabel(waiver)}`}
               className="vpw-table-action-button"
               onClick={() => openWaiverDrawer("review", waiver)}
-              size="icon-sm"
+              size="icon-xs"
               type="button"
               variant="outline"
             >
@@ -191,7 +191,7 @@ function WaiverRegisterActions({
               className="vpw-table-action-button"
               disabled={waiverActionLoading}
               onClick={() => openWaiverDrawer("expire", waiver)}
-              size="icon-sm"
+              size="icon-xs"
               type="button"
               variant="outline"
             >
@@ -205,7 +205,7 @@ function WaiverRegisterActions({
           <Button
             asChild
             className="vpw-table-action-button"
-            size="icon-sm"
+            size="icon-xs"
             variant="outline"
           >
             <Link

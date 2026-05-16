@@ -47,7 +47,7 @@ export function FindingsDataTable({
           data={findings}
           density="standard"
           getRowKey={(finding) => finding.id}
-          minWidth="1120px"
+          minWidth="1040px"
           tableClassName="table-fixed"
         />
       </div>

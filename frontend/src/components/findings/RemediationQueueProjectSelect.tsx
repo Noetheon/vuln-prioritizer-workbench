@@ -30,7 +30,10 @@ export function RemediationQueueProjectSelect({
         onValueChange={onProjectChange}
         value={selectedProjectId}
       >
-        <SelectTrigger aria-label="Project" className="h-9 w-full text-sm">
+        <SelectTrigger
+          aria-label="Project"
+          className="findings-filter-control h-9 w-full text-sm"
+        >
           <SelectValue placeholder="No projects" />
         </SelectTrigger>
         <SelectContent>

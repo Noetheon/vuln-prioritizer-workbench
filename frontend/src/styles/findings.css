@@ -78,7 +78,7 @@
 }
 
 .findings-filter-label {
-  font-size: 0.68rem;
+  font-size: 0.75rem;
   line-height: 1rem;
 }
 
@@ -120,7 +120,7 @@
 
 .findings-filter-asset {
   display: inline-flex;
-  height: var(--vpw-control-height);
+  height: var(--vpw-control-height-lg);
   align-items: center;
   gap: 0.375rem;
   border: 1px solid var(--findings-analyst-border);
@@ -141,6 +141,14 @@
   min-width: 0;
   align-items: center;
   gap: 0.375rem;
+}
+
+.findings-filter-control,
+.findings-filter-actions .vpw-button,
+.findings-saved-view-options .vpw-button {
+  height: var(--vpw-control-height-lg);
+  min-height: var(--vpw-control-height-lg);
+  line-height: 1.2;
 }
 
 .findings-remediation-layout .findings-queue-panel {
@@ -252,7 +260,6 @@
 }
 
 .findings-saved-view-options .vpw-button {
-  height: 2rem;
   min-width: max-content;
   padding-inline: 0.65rem;
   font-size: 0.82rem;
@@ -666,13 +673,7 @@
   margin-top: 8px;
 }
 
-@media (min-width: 760px) and (max-width: 1023px) {
-  .findings-mobile-cards {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-@media (min-width: 1024px) {
+@media (min-width: 760px) {
   .findings-mobile-cards {
     display: none;
   }
@@ -732,7 +733,11 @@
   }
 }
 
-@media (max-width: 720px) {
+@media (max-width: 900px) {
+  .findings-filter-grid {
+    flex-wrap: wrap;
+  }
+
   .findings-filter-field,
   .findings-filter-field--project,
   .findings-filter-field--search,

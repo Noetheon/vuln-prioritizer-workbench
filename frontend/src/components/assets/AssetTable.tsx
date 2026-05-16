@@ -3,17 +3,14 @@ import type { ReactNode } from "react"
 
 import type { AssetPublic } from "../../api-client"
 import { Button } from "../ui/button"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "../ui/tooltip"
+import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip"
 import {
   CountBadge,
   MetaTag,
   RiskBadge,
   StatusLozenge,
   VpwDataTable,
+  VpwTableCard,
   type VpwDataTableColumn,
 } from "../vpw"
 import { formatLabel as labelize, optionalText } from "../../lib/ui-copy"
@@ -67,7 +64,7 @@ export function AssetTable({
           type="button"
           variant="ghost"
         >
-          <span className="grid min-w-44 gap-0.5">
+          <span className="grid min-w-40 gap-0.5">
             <span className="font-semibold text-[var(--vpw-text-primary)]">
               {asset.name}
             </span>
@@ -77,43 +74,41 @@ export function AssetTable({
           </span>
         </Button>
       ),
-      className: "min-w-52",
+      className: "min-w-44",
       header: "Asset / target ref",
       id: "asset",
-      width: "20%",
+      width: "18%",
     },
     {
       cell: (asset) => (
-        <div className="flex min-w-36 flex-wrap gap-1.5">
+        <div className="flex min-w-32 flex-wrap gap-1.5">
           <MetaTag label={optionalText(asset.business_service)} />
           <MetaTag label={optionalText(asset.owner)} />
         </div>
       ),
-      className: "min-w-40",
+      className: "min-w-32",
       header: "Service / Owner",
       id: "service-owner",
-      width: "16%",
+      width: "14%",
     },
     {
       cell: (asset) => (
-        <div className="flex min-w-36 flex-wrap gap-1.5">
+        <div className="flex min-w-32 flex-wrap gap-1.5">
           <MetaTag label={labelize(asset.environment)} />
           <MetaTag label={labelize(asset.exposure)} />
         </div>
       ),
-      className: "min-w-44",
+      className: "min-w-36",
       header: "Environment / Exposure",
       id: "environment-exposure",
-      width: "17%",
+      width: "16%",
     },
     {
-      cell: (asset) => (
-        <RiskBadge level={asset.criticality} />
-      ),
-      className: "min-w-28",
+      cell: (asset) => <RiskBadge level={asset.criticality} />,
+      className: "min-w-24",
       header: "Criticality",
       id: "criticality",
-      width: "9%",
+      width: "8%",
     },
     {
       cell: (asset) => {
@@ -124,7 +119,7 @@ export function AssetTable({
               ? "Linked"
               : "None"
         return (
-          <div className="flex min-w-28 flex-wrap gap-1.5">
+          <div className="flex min-w-24 flex-wrap gap-1.5">
             <CountBadge value={asset.finding_count ?? 0} />
             {["critical", "high", "medium", "low"].includes(
               value.toLowerCase(),
@@ -136,14 +131,14 @@ export function AssetTable({
           </div>
         )
       },
-      className: "min-w-32",
+      className: "min-w-28",
       header: "Findings",
       id: "findings",
       width: "10%",
     },
     {
       cell: (asset) => (
-        <div className="grid min-w-32 gap-1">
+        <div className="grid min-w-28 gap-1">
           <StatusLozenge
             label={scoreStatusLabel(asset)}
             status={asset.rescore_needed ? "review_due" : "fresh"}
@@ -153,7 +148,7 @@ export function AssetTable({
           </span>
         </div>
       ),
-      className: "min-w-36",
+      className: "min-w-32",
       header: "Status",
       id: "status",
       width: "15%",
@@ -164,7 +159,7 @@ export function AssetTable({
           <AssetTableAction label="View asset">
             <Button
               aria-current={selectedAssetId === asset.id ? "true" : undefined}
-              aria-label={`View ${asset.name}`}
+              aria-label="View"
               className="vpw-table-action-button"
               onClick={() => openAssetDrawer("detail", asset)}
               size="icon-sm"
@@ -216,22 +211,29 @@ export function AssetTable({
           </AssetTableAction>
         </div>
       ),
-      className: "min-w-40 text-right",
+      className: "min-w-[9rem] text-right",
       header: "Actions",
       headerClassName: "text-right",
       id: "actions",
-      width: "13%",
+      width: "9rem",
     },
   ]
 
   return (
-    <VpwDataTable
-      caption="Assets table"
-      columns={assetColumns}
-      data={assets}
-      density="compact"
-      getRowKey={(asset) => asset.id}
-      minWidth="1040px"
-    />
+    <VpwTableCard
+      description={`${assets.length} asset${
+        assets.length === 1 ? "" : "s"
+      } match the current project and filters.`}
+      title="Asset register"
+    >
+      <VpwDataTable
+        caption="Assets table"
+        columns={assetColumns}
+        data={assets}
+        density="compact"
+        getRowKey={(asset) => asset.id}
+        minWidth="1040px"
+      />
+    </VpwTableCard>
   )
 }

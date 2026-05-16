@@ -5,10 +5,10 @@ import {
   VpwDataTable,
   VpwEmptyState,
   VpwFilterBar,
-  VpwPanel,
   VpwSection,
   VpwSectionHeader,
   VpwSkeletonStack,
+  VpwTableCard,
 } from "@/components/vpw"
 import { buildProjectDirectoryColumns } from "./ProjectsWorkbenchDirectoryColumns"
 import type { ProjectsWorkbenchProps } from "./projects-workbench-model"
@@ -51,11 +51,6 @@ export function ProjectDirectory({
   return (
     <VpwSection>
       <VpwSectionHeader
-        eyebrow="Directory"
-        title="Projects Directory"
-        description="Search, select the active workspace, or jump into imports, findings, and evidence."
-      />
-      <VpwFilterBar
         actions={
           <Button
             disabled={projectListLoading}
@@ -67,50 +62,60 @@ export function ProjectDirectory({
             Refresh
           </Button>
         }
+        eyebrow="Directory"
+        title="Projects directory"
+        description="Search, select the active workspace, or jump into imports, findings, and evidence."
+      />
+      <VpwFilterBar
         onSearchChange={setProjectSearch}
         searchClassName="vpw-filter-field--lg"
-        searchLabel="Search projects"
+        searchLabel="Project search"
         searchPlaceholder="Search projects"
-        searchTitle="Project"
+        searchTitle="Search"
         searchValue={projectSearch}
       />
-      {projectListLoading ? (
-        <VpwPanel>
+      <VpwTableCard
+        description={`${filteredProjects.length} project${
+          filteredProjects.length === 1 ? "" : "s"
+        } match the current directory view.`}
+        title="Project register"
+      >
+        {projectListLoading ? (
           <VpwSkeletonStack rows={4} />
-        </VpwPanel>
-      ) : (
-        <VpwDataTable
-          caption="Projects"
-          columns={columns}
-          data={filteredProjects}
-          density="comfortable"
-          emptyState={
-            trimmedProjectSearch ? (
-              <VpwEmptyState
-                icon={<Search aria-hidden="true" className="h-5 w-5" />}
-                title="No matching projects"
-                description="Adjust the search query to show more project rows."
-              />
-            ) : (
-              <VpwEmptyState
-                action={
-                  <Button asChild>
-                    <a href="#create-project">
-                      <Plus aria-hidden="true" />
-                      Create project
-                    </a>
-                  </Button>
-                }
-                icon={<FolderKanban aria-hidden="true" className="h-5 w-5" />}
-                title="No projects yet"
-                description="Create a project to start importing findings and generating evidence."
-              />
-            )
-          }
-          getRowKey={(project) => project.id}
-          minWidth="920px"
-        />
-      )}
+        ) : (
+          <VpwDataTable
+            caption="Projects"
+            columns={columns}
+            data={filteredProjects}
+            density="comfortable"
+            emptyState={
+              trimmedProjectSearch ? (
+                <VpwEmptyState
+                  icon={<Search aria-hidden="true" className="h-5 w-5" />}
+                  title="No matching projects"
+                  description="Adjust the search query to show more project rows."
+                />
+              ) : (
+                <VpwEmptyState
+                  action={
+                    <Button asChild>
+                      <a href="#create-project">
+                        <Plus aria-hidden="true" />
+                        Create project
+                      </a>
+                    </Button>
+                  }
+                  icon={<FolderKanban aria-hidden="true" className="h-5 w-5" />}
+                  title="No projects yet"
+                  description="Create a project to start importing findings and generating evidence."
+                />
+              )
+            }
+            getRowKey={(project) => project.id}
+            minWidth="920px"
+          />
+        )}
+      </VpwTableCard>
     </VpwSection>
   )
 }

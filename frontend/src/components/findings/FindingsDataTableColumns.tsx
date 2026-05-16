@@ -207,7 +207,7 @@ export function buildFindingsDataTableColumns({
       id: "view",
       header: "Actions",
       cell: (finding) => (
-        <div className="vpw-table-actions finding-row-actions">
+        <div className="vpw-table-actions">
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
@@ -246,9 +246,9 @@ export function buildFindingsDataTableColumns({
           </Tooltip>
         </div>
       ),
-      className: "w-20 min-w-20 px-2 text-center",
-      headerClassName: "w-20 min-w-20 px-2 text-center",
-      width: "7%",
+      className: "min-w-[5rem] px-2 text-right",
+      headerClassName: "px-2 text-right",
+      width: "5rem",
     },
   ]
 }

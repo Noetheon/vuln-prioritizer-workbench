@@ -14,6 +14,7 @@ import {
   type FindingsDirection,
   pageSizeOptions,
 } from "./remediation-queue-model"
+import { VpwTableCard } from "@/components/vpw"
 
 type RemediationQueueTableSectionProps = {
   displayFindings: FindingPublic[]
@@ -60,27 +61,19 @@ export function RemediationQueueTableSection({
 
   return (
     <div className="flex flex-col gap-3">
-      <section
-        aria-label="Findings remediation queue"
-        className="findings-queue-panel"
-      >
-        <div className="findings-queue-heading">
-          <div>
-            <span>Remediation Focus</span>
-            <h3>Remediation Queue</h3>
-            <p>
-              {totalCount} prioritized finding{totalCount === 1 ? "" : "s"} for{" "}
-              {displayProject?.name ?? "the selected project"}.
-            </p>
-          </div>
-          {!isDemo ? (
+      <VpwTableCard
+        actions={
+          !isDemo ? (
             <div className="findings-rows-control">
               <span>Rows</span>
               <Select
                 onValueChange={(v) => onPageSizeChange(Number(v))}
                 value={String(findingPageSize)}
               >
-                <SelectTrigger aria-label="Rows" className="h-9 w-full text-sm">
+                <SelectTrigger
+                  aria-label="Rows"
+                  className="findings-filter-control h-9 w-full text-sm"
+                >
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -92,9 +85,16 @@ export function RemediationQueueTableSection({
                 </SelectContent>
               </Select>
             </div>
-          ) : null}
-        </div>
-
+          ) : null
+        }
+        aria-label="Findings remediation queue"
+        className="findings-queue-panel"
+        description={`${totalCount} prioritized finding${
+          totalCount === 1 ? "" : "s"
+        } for ${displayProject?.name ?? "the selected project"}.`}
+        eyebrow="Remediation Focus"
+        title="Remediation Queue"
+      >
         <FindingsDataTable
           findingDirection={findingDirection}
           findingSearch={findingSearch}
@@ -103,7 +103,7 @@ export function RemediationQueueTableSection({
           onSort={onUpdateColumnSort}
           queueSort={queueSort}
         />
-      </section>
+      </VpwTableCard>
 
       {!isDemo ? (
         <div className="findings-pagination">

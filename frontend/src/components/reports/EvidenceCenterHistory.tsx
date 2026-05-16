@@ -1,4 +1,4 @@
-import { Download, FileText, History, ShieldCheck } from "lucide-react"
+import { Download, FileText, ShieldCheck } from "lucide-react"
 import type { ReportPublic, ReportVerificationPublic } from "@/api-client"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -14,7 +14,7 @@ import {
   VpwDataTable,
   type VpwDataTableColumn,
   VpwEmptyState,
-  VpwPanel,
+  VpwTableCard,
 } from "@/components/vpw"
 import { DEMO_REPORTS } from "@/lib/demo-data"
 import {
@@ -34,6 +34,7 @@ type HistoryProps = {
   onDownload: (report: ReportPublic) => void
   onVerify: (report: ReportPublic) => void
   emptyDescription?: string
+  panelDescription?: string
   panelEyebrow?: string
   panelTitle?: string
 }
@@ -48,6 +49,7 @@ export function ReportHistory({
   verificationReport,
   verificationReportTarget,
   emptyDescription = "Use the artifact cards above to generate the first report for this run.",
+  panelDescription = "Previously generated reports for the selected run.",
   panelEyebrow = "Generated artifacts",
   panelTitle = "Report History",
 }: HistoryProps) {
@@ -72,6 +74,7 @@ export function ReportHistory({
         </div>
       ),
       className: "min-w-52",
+      width: "28%",
     },
     {
       id: "status",
@@ -111,11 +114,13 @@ export function ReportHistory({
           <StatusLozenge density="compact" label={label} status={status} />
         )
       },
+      width: "12%",
     },
     {
       id: "size",
       header: "Size",
       cell: (report) => reportSizeLabel(report.size_bytes),
+      width: "10%",
     },
     {
       id: "checksum",
@@ -142,6 +147,7 @@ export function ReportHistory({
           </TooltipProvider>
         )
       },
+      width: "18%",
     },
     {
       id: "generated",
@@ -151,12 +157,13 @@ export function ReportHistory({
           {formatReportDateTime(report.created_at)}
         </span>
       ),
+      width: "18%",
     },
     {
       id: "actions",
       header: "Actions",
       headerClassName: "text-right",
-      className: "text-right",
+      className: "min-w-[5rem] text-right",
       cell: (report) => (
         <div className="vpw-table-actions">
           {report.format === "zip" && !isDemo ? (
@@ -202,46 +209,36 @@ export function ReportHistory({
           </Tooltip>
         </div>
       ),
+      width: "5rem",
     },
   ]
 
   if (reportsLoading && !isDemo) {
     return (
-      <VpwPanel className="min-h-80">
-        <div className="mb-4 flex items-center gap-2">
-          <History aria-hidden="true" className="h-4 w-4" />
-          <h3 className="font-semibold text-[var(--vpw-text-primary)]">
-            {panelTitle}
-          </h3>
-        </div>
+      <VpwTableCard
+        className="min-h-80"
+        description={panelDescription}
+        eyebrow={panelEyebrow}
+        title={panelTitle}
+      >
         <div className="flex flex-col gap-3">
           <Skeleton className="h-10 w-full" />
           <Skeleton className="h-10 w-full" />
           <Skeleton className="h-10 w-3/4" />
         </div>
-      </VpwPanel>
+      </VpwTableCard>
     )
   }
 
   return (
-    <VpwPanel className="min-h-80 min-w-0 overflow-hidden p-0">
-      <div className="border-b border-[var(--vpw-border-subtle)] p-5">
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            <p className="vpw-label">{panelEyebrow}</p>
-            <h3 className="mt-1 text-lg font-semibold text-[var(--vpw-text-primary)]">
-              {panelTitle}
-            </h3>
-          </div>
-          <History
-            aria-hidden="true"
-            className="h-4 w-4 text-[var(--vpw-text-muted)]"
-          />
-        </div>
-      </div>
+    <VpwTableCard
+      className="min-h-80"
+      description={panelDescription}
+      eyebrow={panelEyebrow}
+      title={panelTitle}
+    >
       <VpwDataTable
         caption="Report history list"
-        className="overflow-x-auto"
         columns={columns}
         data={rows}
         density="compact"
@@ -253,7 +250,8 @@ export function ReportHistory({
           />
         }
         getRowKey={(report) => report.id}
+        minWidth="860px"
       />
-    </VpwPanel>
+    </VpwTableCard>
   )
 }

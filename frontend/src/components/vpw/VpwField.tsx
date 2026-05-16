@@ -61,6 +61,8 @@ const componentFieldControlNames = new Set([
   "SelectTrigger",
   "Textarea",
   "VpwFileInput",
+  "VpwSearchControl",
+  "VpwSelectControl",
 ])
 
 function elementTypeName(type: FieldControlElementType): string | undefined {

@@ -1,4 +1,4 @@
-import { Filter, ListFilter, X } from "lucide-react"
+import { ListFilter, RotateCcw, X } from "lucide-react"
 import type { Dispatch, SetStateAction } from "react"
 import type { ProjectPublic } from "@/api-client"
 import { Button } from "@/components/ui/button"
@@ -172,7 +172,7 @@ export function RemediationQueueFilters({
               type="button"
               variant="ghost"
             >
-              <Filter aria-hidden="true" size={14} />
+              <RotateCcw aria-hidden="true" size={14} />
               Reset
             </Button>
           </div>
