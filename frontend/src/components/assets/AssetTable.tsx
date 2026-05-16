@@ -1,7 +1,13 @@
-import { Eye, ListTree, RefreshCw } from "lucide-react"
+import { Eye, ListTree, Pencil, RefreshCw } from "lucide-react"
+import type { ReactNode } from "react"
 
 import type { AssetPublic } from "../../api-client"
 import { Button } from "../ui/button"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "../ui/tooltip"
 import {
   CountBadge,
   MetaTag,
@@ -13,6 +19,21 @@ import {
 import { formatLabel as labelize, optionalText } from "../../lib/ui-copy"
 import type { AssetDrawerMode } from "./AssetsRoute"
 import { formatDateTime, scoreStatusLabel } from "./asset-model"
+
+function AssetTableAction({
+  children,
+  label,
+}: {
+  children: ReactNode
+  label: string
+}) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>{children}</TooltipTrigger>
+      <TooltipContent>{label}</TooltipContent>
+    </Tooltip>
+  )
+}
 
 export function AssetTable({
   assetActionLoading,
@@ -56,8 +77,10 @@ export function AssetTable({
           </span>
         </Button>
       ),
+      className: "min-w-52",
       header: "Asset / target ref",
       id: "asset",
+      width: "20%",
     },
     {
       cell: (asset) => (
@@ -66,8 +89,10 @@ export function AssetTable({
           <MetaTag label={optionalText(asset.owner)} />
         </div>
       ),
+      className: "min-w-40",
       header: "Service / Owner",
       id: "service-owner",
+      width: "16%",
     },
     {
       cell: (asset) => (
@@ -76,15 +101,19 @@ export function AssetTable({
           <MetaTag label={labelize(asset.exposure)} />
         </div>
       ),
+      className: "min-w-44",
       header: "Environment / Exposure",
       id: "environment-exposure",
+      width: "17%",
     },
     {
       cell: (asset) => (
         <RiskBadge level={asset.criticality} />
       ),
+      className: "min-w-28",
       header: "Criticality",
       id: "criticality",
+      width: "9%",
     },
     {
       cell: (asset) => {
@@ -107,8 +136,10 @@ export function AssetTable({
           </div>
         )
       },
+      className: "min-w-32",
       header: "Findings",
       id: "findings",
+      width: "10%",
     },
     {
       cell: (asset) => (
@@ -122,57 +153,74 @@ export function AssetTable({
           </span>
         </div>
       ),
+      className: "min-w-36",
       header: "Status",
       id: "status",
+      width: "15%",
     },
     {
       cell: (asset) => (
-        <div className="flex min-w-64 flex-wrap gap-2">
-          <Button
-            aria-current={selectedAssetId === asset.id ? "true" : undefined}
-            onClick={() => openAssetDrawer("detail", asset)}
-            size="sm"
-            type="button"
-            variant="outline"
-          >
-            <Eye aria-hidden="true" />
-            View
-          </Button>
-          <Button
-            onClick={() => openAssetDrawer("linked-findings", asset)}
-            size="sm"
-            type="button"
-            variant="outline"
-          >
-            <ListTree aria-hidden="true" />
-            Linked findings
-          </Button>
-          <Button
-            onClick={() => {
-              setSelectedAssetId(asset.id)
-              startEditAsset(asset)
-            }}
-            size="sm"
-            type="button"
-            variant="outline"
-          >
-            Edit
-          </Button>
-          <Button
-            aria-label={`Recalculate ${asset.name}`}
-            disabled={assetActionLoading || (asset.finding_count ?? 0) === 0}
-            onClick={() => void recalculateAsset(asset)}
-            size="sm"
-            type="button"
-            variant="outline"
-          >
-            <RefreshCw aria-hidden="true" />
-            Recalculate
-          </Button>
+        <div className="vpw-table-actions">
+          <AssetTableAction label="View asset">
+            <Button
+              aria-current={selectedAssetId === asset.id ? "true" : undefined}
+              aria-label={`View ${asset.name}`}
+              className="vpw-table-action-button"
+              onClick={() => openAssetDrawer("detail", asset)}
+              size="icon-sm"
+              type="button"
+              variant="outline"
+            >
+              <Eye aria-hidden="true" />
+            </Button>
+          </AssetTableAction>
+          <AssetTableAction label="Linked findings">
+            <Button
+              aria-label={`Open linked findings for ${asset.name}`}
+              className="vpw-table-action-button"
+              onClick={() => openAssetDrawer("linked-findings", asset)}
+              size="icon-sm"
+              type="button"
+              variant="outline"
+            >
+              <ListTree aria-hidden="true" />
+            </Button>
+          </AssetTableAction>
+          <AssetTableAction label="Edit asset">
+            <Button
+              aria-label={`Edit ${asset.name}`}
+              className="vpw-table-action-button"
+              onClick={() => {
+                setSelectedAssetId(asset.id)
+                startEditAsset(asset)
+              }}
+              size="icon-sm"
+              type="button"
+              variant="outline"
+            >
+              <Pencil aria-hidden="true" />
+            </Button>
+          </AssetTableAction>
+          <AssetTableAction label="Recalculate asset">
+            <Button
+              aria-label={`Recalculate ${asset.name}`}
+              className="vpw-table-action-button"
+              disabled={assetActionLoading || (asset.finding_count ?? 0) === 0}
+              onClick={() => void recalculateAsset(asset)}
+              size="icon-sm"
+              type="button"
+              variant="outline"
+            >
+              <RefreshCw aria-hidden="true" />
+            </Button>
+          </AssetTableAction>
         </div>
       ),
+      className: "min-w-40 text-right",
       header: "Actions",
+      headerClassName: "text-right",
       id: "actions",
+      width: "13%",
     },
   ]
 

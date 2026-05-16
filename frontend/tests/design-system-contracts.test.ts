@@ -51,6 +51,17 @@ const rawTableAllowlist = new Set([
   "src/components/dashboard/DashboardSignalOverview.tsx",
 ])
 
+const rowActionContractFiles = [
+  "src/components/assets/AssetTable.tsx",
+  "src/components/dashboard/DashboardRemediationSection.tsx",
+  "src/components/findings/FindingsDataTableColumns.tsx",
+  "src/components/imports/ImportsWorkbenchHistory.tsx",
+  "src/components/projects/ProjectsWorkbenchDirectoryColumns.tsx",
+  "src/components/providers/ProvidersWorkbenchSources.tsx",
+  "src/components/reports/EvidenceCenterHistory.tsx",
+  "src/components/waivers/WaiversWorkbenchRegisterColumns.tsx",
+]
+
 const retiredStyleFiles = [
   "src/styles/shadcn-compat.css",
   "src/styles/dark-mode.css",
@@ -99,6 +110,19 @@ function walk(directory: string, files: string[] = []) {
 
 function violationsFor(pattern: RegExp, source: string) {
   return [...source.matchAll(pattern)].map((match) => match[0])
+}
+
+function assertSourceOrder(path: string, source: string, tokens: string[]) {
+  let cursor = -1
+  for (const token of tokens) {
+    const next = source.indexOf(token, cursor + 1)
+    assert.notEqual(next, -1, `${path} is missing ${token}`)
+    assert.ok(
+      next > cursor,
+      `${path} should keep ${tokens.join(" -> ")} in order`,
+    )
+    cursor = next
+  }
 }
 
 test("semantic risk badges normalize levels, labels, and tones", () => {
@@ -402,6 +426,49 @@ test("tables expose a single keyboard-scroll owner", () => {
     readProjectFile("src/components/vpw/VpwDataTable.tsx"),
     /tabIndex=\{0\}/,
   )
+})
+
+test("table row actions use the VPW icon action contract", () => {
+  for (const path of rowActionContractFiles) {
+    const source = readProjectFile(path)
+    assert.match(source, /vpw-table-actions/, `${path} needs action wrapper`)
+    assert.match(source, /vpw-table-action-button/, `${path} needs action buttons`)
+  }
+})
+
+test("filter bars keep the Workbench scope-search-filter-action order", () => {
+  const filterBar = readProjectFile("src/components/vpw/VpwFilterBar.tsx")
+  assertSourceOrder("src/components/vpw/VpwFilterBar.tsx", filterBar, [
+    "vpw-filter-bar__leading",
+    "vpw-filter-field--search",
+    "vpw-filter-bar__controls",
+    "vpw-filter-bar__actions",
+  ])
+
+  const assets = readProjectFile("src/components/assets/AssetFilters.tsx")
+  assertSourceOrder("src/components/assets/AssetFilters.tsx", assets, [
+    'label="Project"',
+    'searchTitle="Service"',
+    'label="Owner"',
+  ])
+  assert.match(assets, /searchClassName="vpw-filter-field--md"/)
+  assert.match(assets, />\s*Reset\s*</)
+
+  const projects = readProjectFile(
+    "src/components/projects/ProjectsWorkbenchDirectory.tsx",
+  )
+  assert.match(projects, /<VpwFilterBar/)
+  assert.match(projects, /searchTitle="Project"/)
+  assert.doesNotMatch(projects, /VpwSearchInput/)
+
+  const waivers = readProjectFile(
+    "src/components/waivers/WaiversWorkbenchRegister.tsx",
+  )
+  assertSourceOrder("src/components/waivers/WaiversWorkbenchRegister.tsx", waivers, [
+    "searchLabel",
+    ">View<",
+  ])
+  assert.match(waivers, />\s*Reset view\s*</)
 })
 
 test("app shell owns page scrolling in the content region", () => {

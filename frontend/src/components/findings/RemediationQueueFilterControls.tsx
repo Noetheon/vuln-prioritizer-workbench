@@ -34,8 +34,8 @@ export function PrimaryFilterSelects({
 }: FilterSelectsProps) {
   return (
     <>
-      <div className="flex flex-col gap-1">
-        <span className="text-[11px] font-semibold uppercase text-muted-foreground">
+      <div className="findings-filter-field findings-filter-field--select">
+        <span className="vpw-label findings-filter-label">
           Priority
         </span>
         <Select
@@ -47,7 +47,7 @@ export function PrimaryFilterSelects({
           }
           value={findingFilters.priority || "__all"}
         >
-          <SelectTrigger aria-label="Priority" className="h-10 w-32 text-sm">
+          <SelectTrigger aria-label="Priority" className="h-9 w-full text-sm">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -61,8 +61,8 @@ export function PrimaryFilterSelects({
         </Select>
       </div>
 
-      <div className="flex flex-col gap-1">
-        <span className="text-[11px] font-semibold uppercase text-muted-foreground">
+      <div className="findings-filter-field findings-filter-field--select">
+        <span className="vpw-label findings-filter-label">
           Status
         </span>
         <Select
@@ -71,7 +71,7 @@ export function PrimaryFilterSelects({
           }
           value={findingFilters.status || "__all"}
         >
-          <SelectTrigger aria-label="Status" className="h-10 w-36 text-sm">
+          <SelectTrigger aria-label="Status" className="h-9 w-full text-sm">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -93,9 +93,9 @@ export function AdvancedFilterSelects({
   onFilterChange,
 }: FilterSelectsProps) {
   return (
-    <div className="mt-3 flex flex-wrap items-end gap-2 border-t pt-3">
-      <div className="flex flex-col gap-1">
-        <span className="text-[11px] font-semibold uppercase text-muted-foreground">
+    <div className="findings-filter-advanced">
+      <div className="findings-filter-field findings-filter-field--select">
+        <span className="vpw-label findings-filter-label">
           KEV
         </span>
         <Select
@@ -104,7 +104,7 @@ export function AdvancedFilterSelects({
           }
           value={findingFilters.kev || "__all"}
         >
-          <SelectTrigger aria-label="KEV" className="h-10 w-28 text-sm">
+          <SelectTrigger aria-label="KEV" className="h-9 w-full text-sm">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -115,8 +115,8 @@ export function AdvancedFilterSelects({
         </Select>
       </div>
 
-      <div className="flex flex-col gap-1">
-        <span className="text-[11px] font-semibold uppercase text-muted-foreground">
+      <div className="findings-filter-field findings-filter-field--wide-select">
+        <span className="vpw-label findings-filter-label">
           Exposure
         </span>
         <Select
@@ -128,7 +128,7 @@ export function AdvancedFilterSelects({
           }
           value={findingFilters.exposure || "__all"}
         >
-          <SelectTrigger aria-label="Exposure" className="h-10 w-40 text-sm">
+          <SelectTrigger aria-label="Exposure" className="h-9 w-full text-sm">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>

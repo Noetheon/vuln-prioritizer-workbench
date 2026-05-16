@@ -101,12 +101,15 @@ export function WaiverRegister({
         searchPlaceholder="Search scope, owner, reason, evidence"
         searchValue={registerSearch}
       >
-        <VpwSegmentedControl
-          label="Risk acceptance views"
-          onChange={setRegisterView}
-          options={waiverViews}
-          value={registerView}
-        />
+        <div className="vpw-filter-field vpw-filter-field--lg">
+          <span className="vpw-label vpw-filter-label">View</span>
+          <VpwSegmentedControl
+            label="Risk acceptance views"
+            onChange={setRegisterView}
+            options={waiverViews}
+            value={registerView}
+          />
+        </div>
       </VpwFilterBar>
       {waiversLoading ? (
         <VpwPanel className="p-5">

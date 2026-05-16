@@ -1,13 +1,13 @@
-import { FolderKanban, GitBranch, Plus, Search } from "lucide-react"
+import { FolderKanban, Plus, RefreshCw, Search } from "lucide-react"
 import { useMemo, useState } from "react"
 import { Button } from "@/components/ui/button"
 import {
   VpwDataTable,
   VpwEmptyState,
+  VpwFilterBar,
   VpwPanel,
   VpwSection,
   VpwSectionHeader,
-  VpwSearchInput,
   VpwSkeletonStack,
 } from "@/components/vpw"
 import { buildProjectDirectoryColumns } from "./ProjectsWorkbenchDirectoryColumns"
@@ -51,29 +51,28 @@ export function ProjectDirectory({
   return (
     <VpwSection>
       <VpwSectionHeader
-        actions={
-          <>
-            <VpwSearchInput
-              aria-label="Search projects"
-              className="w-full sm:w-64"
-              onChange={(event) => setProjectSearch(event.target.value)}
-              placeholder="Search projects"
-              value={projectSearch}
-            />
-            <Button
-              disabled={projectListLoading}
-              onClick={onRefreshProjects}
-              type="button"
-              variant="outline"
-            >
-              <GitBranch aria-hidden="true" />
-              Refresh projects
-            </Button>
-          </>
-        }
         eyebrow="Directory"
         title="Projects Directory"
         description="Search, select the active workspace, or jump into imports, findings, and evidence."
+      />
+      <VpwFilterBar
+        actions={
+          <Button
+            disabled={projectListLoading}
+            onClick={onRefreshProjects}
+            type="button"
+            variant="outline"
+          >
+            <RefreshCw aria-hidden="true" />
+            Refresh
+          </Button>
+        }
+        onSearchChange={setProjectSearch}
+        searchClassName="vpw-filter-field--lg"
+        searchLabel="Search projects"
+        searchPlaceholder="Search projects"
+        searchTitle="Project"
+        searchValue={projectSearch}
       />
       {projectListLoading ? (
         <VpwPanel>
@@ -109,6 +108,7 @@ export function ProjectDirectory({
             )
           }
           getRowKey={(project) => project.id}
+          minWidth="920px"
         />
       )}
     </VpwSection>

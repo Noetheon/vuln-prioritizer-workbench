@@ -137,71 +137,75 @@ export function DashboardRemediationSection({
       id: "view",
       header: <span className="sr-only">View</span>,
       cell: (finding) => (
-        <Sheet>
-          <SheetTrigger asChild>
-            <Button
-              aria-label="View finding"
-              className="size-8"
-              size="icon"
-              variant="default"
-            >
-              <Eye aria-hidden="true" className="size-3.5" />
-            </Button>
-          </SheetTrigger>
-          <SheetContent className="w-[calc(100vw-2rem)] max-w-[460px] overflow-y-auto sm:w-[460px]">
-            <SheetHeader>
-              <SheetTitle className="font-mono">
-                {finding.cve_id ?? "Finding"}
-              </SheetTitle>
-              <SheetDescription>
-                Quick view - open full detail for complete context.
-              </SheetDescription>
-            </SheetHeader>
-            <div className="mt-6 flex flex-col gap-5">
-              <div className="flex flex-wrap gap-2">
-                <SeverityBadge severity={finding.priority} />
-                <RiskScore value={finding.risk_score} />
-              </div>
-              <dl className="flex flex-col gap-3 text-sm">
-                <div>
-                  <dt className="text-xs font-semibold uppercase text-muted-foreground">
-                    Component
-                  </dt>
-                  <dd className="mt-0.5">{finding.component_name ?? "-"}</dd>
-                </div>
-                <div>
-                  <dt className="text-xs font-semibold uppercase text-muted-foreground">
-                    Service
-                  </dt>
-                  <dd className="mt-0.5">{finding.business_service ?? "-"}</dd>
-                </div>
-                <div>
-                  <dt className="text-xs font-semibold uppercase text-muted-foreground">
-                    Owner
-                  </dt>
-                  <dd className="mt-0.5">{finding.owner ?? "-"}</dd>
-                </div>
-                <div>
-                  <dt className="text-xs font-semibold uppercase text-muted-foreground">
-                    Why now
-                  </dt>
-                  <dd className="mt-0.5 text-muted-foreground">
-                    {findingWhyNow(finding)}
-                  </dd>
-                </div>
-              </dl>
-              <Button asChild className="w-full" size="sm" variant="outline">
-                <Link
-                  params={{ findingId: finding.id }}
-                  search={selectedProjectRouteSearch(finding.project_id)}
-                  to="/findings/$findingId"
-                >
-                  Open full detail
-                </Link>
+        <div className="vpw-table-actions">
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button
+                aria-label={`View ${finding.cve_id}`}
+                className="vpw-table-action-button"
+                size="icon-sm"
+                variant="outline"
+              >
+                <Eye aria-hidden="true" className="size-3.5" />
               </Button>
-            </div>
-          </SheetContent>
-        </Sheet>
+            </SheetTrigger>
+            <SheetContent className="w-[calc(100vw-2rem)] max-w-[460px] overflow-y-auto sm:w-[460px]">
+              <SheetHeader>
+                <SheetTitle className="font-mono">
+                  {finding.cve_id ?? "Finding"}
+                </SheetTitle>
+                <SheetDescription>
+                  Quick view - open full detail for complete context.
+                </SheetDescription>
+              </SheetHeader>
+              <div className="mt-6 flex flex-col gap-5">
+                <div className="flex flex-wrap gap-2">
+                  <SeverityBadge severity={finding.priority} />
+                  <RiskScore value={finding.risk_score} />
+                </div>
+                <dl className="flex flex-col gap-3 text-sm">
+                  <div>
+                    <dt className="text-xs font-semibold uppercase text-muted-foreground">
+                      Component
+                    </dt>
+                    <dd className="mt-0.5">{finding.component_name ?? "-"}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs font-semibold uppercase text-muted-foreground">
+                      Service
+                    </dt>
+                    <dd className="mt-0.5">
+                      {finding.business_service ?? "-"}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs font-semibold uppercase text-muted-foreground">
+                      Owner
+                    </dt>
+                    <dd className="mt-0.5">{finding.owner ?? "-"}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs font-semibold uppercase text-muted-foreground">
+                      Why now
+                    </dt>
+                    <dd className="mt-0.5 text-muted-foreground">
+                      {findingWhyNow(finding)}
+                    </dd>
+                  </div>
+                </dl>
+                <Button asChild className="w-full" size="sm" variant="outline">
+                  <Link
+                    params={{ findingId: finding.id }}
+                    search={selectedProjectRouteSearch(finding.project_id)}
+                    to="/findings/$findingId"
+                  >
+                    Open full detail
+                  </Link>
+                </Button>
+              </div>
+            </SheetContent>
+          </Sheet>
+        </div>
       ),
       className: "w-12",
       headerClassName: "w-12",

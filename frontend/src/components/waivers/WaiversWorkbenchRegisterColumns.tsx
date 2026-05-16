@@ -1,8 +1,14 @@
 import { Link } from "@/lib/router"
-import { Eye, Pencil, ShieldAlert } from "lucide-react"
+import { ExternalLink, Eye, Pencil, ShieldAlert } from "lucide-react"
+import type { ReactNode } from "react"
 
 import type { WaiverPublic } from "@/api-client"
 import { Button } from "@/components/ui/button"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import {
   CountBadge,
   StatusLozenge,
@@ -46,7 +52,7 @@ export function buildWaiverRegisterColumns({
       ),
       header: "Scope",
       id: "scope",
-      width: "18rem",
+      width: "18%",
     },
     {
       cell: (waiver) => (
@@ -56,13 +62,13 @@ export function buildWaiverRegisterColumns({
       ),
       header: "Reason",
       id: "reason",
-      width: "18rem",
+      width: "18%",
     },
     {
       cell: (waiver) => waiver.owner,
       header: "Owner",
       id: "owner",
-      width: "10rem",
+      width: "10%",
     },
     {
       cell: (waiver) => (
@@ -73,7 +79,7 @@ export function buildWaiverRegisterColumns({
       ),
       header: "Status",
       id: "status",
-      width: "9rem",
+      width: "11%",
     },
     {
       cell: (waiver) => (
@@ -89,20 +95,20 @@ export function buildWaiverRegisterColumns({
       ),
       header: "Expiry / Review",
       id: "lifecycle",
-      width: "12rem",
+      width: "13%",
     },
     {
       cell: (waiver) => <CountBadge value={waiver.matched_findings ?? 0} />,
       header: "Matched findings",
       id: "matched-findings",
-      width: "9rem",
+      width: "8%",
     },
     {
       cell: (waiver) =>
         optionalText(waiver.approval_ref ?? waiver.ticket_url),
       header: "Evidence",
       id: "evidence",
-      width: "12rem",
+      width: "9%",
     },
     {
       cell: (waiver) => (
@@ -114,8 +120,10 @@ export function buildWaiverRegisterColumns({
         />
       ),
       header: "Actions",
+      headerClassName: "text-right",
       id: "actions",
-      width: "17rem",
+      className: "text-right",
+      width: "13%",
     },
   ]
 
@@ -126,6 +134,21 @@ export function buildWaiverRegisterColumns({
   }))
 }
 
+function WaiverAction({
+  children,
+  label,
+}: {
+  children: ReactNode
+  label: string
+}) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>{children}</TooltipTrigger>
+      <TooltipContent>{label}</TooltipContent>
+    </Tooltip>
+  )
+}
+
 function WaiverRegisterActions({
   openWaiverDrawer,
   selectedWaiverId,
@@ -133,51 +156,68 @@ function WaiverRegisterActions({
   waiverActionLoading,
 }: BuildWaiverRegisterColumnsArgs & { waiver: WaiverPublic }) {
   return (
-    <div className="flex min-w-60 flex-wrap gap-2">
-      <Button
-        aria-current={selectedWaiverId === waiver.id ? "true" : undefined}
-        onClick={() => openWaiverDrawer("detail", waiver)}
-        size="sm"
-        type="button"
-        variant="outline"
-      >
-        <Eye aria-hidden="true" />
-        View
-      </Button>
+    <div className="vpw-table-actions">
+      <WaiverAction label="View acceptance">
+        <Button
+          aria-current={selectedWaiverId === waiver.id ? "true" : undefined}
+          aria-label={`View ${waiverScopeLabel(waiver)}`}
+          className="vpw-table-action-button"
+          onClick={() => openWaiverDrawer("detail", waiver)}
+          size="icon-sm"
+          type="button"
+          variant="outline"
+        >
+          <Eye aria-hidden="true" />
+        </Button>
+      </WaiverAction>
       {waiver.status !== "expired" ? (
         <>
-          <Button
-            onClick={() => openWaiverDrawer("review", waiver)}
-            size="sm"
-            type="button"
-            variant="outline"
-          >
-            <Pencil aria-hidden="true" />
-            Review/edit
-          </Button>
-          <Button
-            aria-busy={waiverActionLoading}
-            disabled={waiverActionLoading}
-            onClick={() => openWaiverDrawer("expire", waiver)}
-            size="sm"
-            type="button"
-            variant="outline"
-          >
-            <ShieldAlert aria-hidden="true" />
-            Expire
-          </Button>
+          <WaiverAction label="Review or edit">
+            <Button
+              aria-label={`Review ${waiverScopeLabel(waiver)}`}
+              className="vpw-table-action-button"
+              onClick={() => openWaiverDrawer("review", waiver)}
+              size="icon-sm"
+              type="button"
+              variant="outline"
+            >
+              <Pencil aria-hidden="true" />
+            </Button>
+          </WaiverAction>
+          <WaiverAction label="Expire acceptance">
+            <Button
+              aria-busy={waiverActionLoading}
+              aria-label={`Expire ${waiverScopeLabel(waiver)}`}
+              className="vpw-table-action-button"
+              disabled={waiverActionLoading}
+              onClick={() => openWaiverDrawer("expire", waiver)}
+              size="icon-sm"
+              type="button"
+              variant="outline"
+            >
+              <ShieldAlert aria-hidden="true" />
+            </Button>
+          </WaiverAction>
         </>
       ) : null}
       {waiver.finding_id ? (
-        <Button asChild size="sm" variant="outline">
-          <Link
-            params={{ findingId: waiver.finding_id }}
-            search={selectedProjectRouteSearch(waiver.project_id)}
-            to="/findings/$findingId"
+        <WaiverAction label="Open finding">
+          <Button
+            asChild
+            className="vpw-table-action-button"
+            size="icon-sm"
+            variant="outline"
           >
-            View finding
-          </Link>
-        </Button>
+            <Link
+              aria-label={`Open finding for ${waiverScopeLabel(waiver)}`}
+              params={{ findingId: waiver.finding_id }}
+              search={selectedProjectRouteSearch(waiver.project_id)}
+              to="/findings/$findingId"
+            >
+              <ExternalLink aria-hidden="true" />
+            </Link>
+          </Button>
+        </WaiverAction>
       ) : null}
     </div>
   )

@@ -39,16 +39,15 @@ export function FindingsDataTable({
         findings={findings}
         onOpenSheet={onOpenSheet}
       />
-      <div className="finding-table-scroll-shell hidden sm:block">
+      <div className="finding-table-scroll-shell">
         <VpwDataTable
           ariaLabel="Findings table scroll region"
           caption="Findings remediation queue"
-          className="remediation-table-wrap shadow-none"
           columns={columns}
           data={findings}
           density="standard"
           getRowKey={(finding) => finding.id}
-          minWidth="1040px"
+          minWidth="1120px"
           tableClassName="table-fixed"
         />
       </div>

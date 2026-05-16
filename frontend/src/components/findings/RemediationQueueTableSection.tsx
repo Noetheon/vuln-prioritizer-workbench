@@ -62,9 +62,9 @@ export function RemediationQueueTableSection({
     <div className="flex flex-col gap-3">
       <section
         aria-label="Findings remediation queue"
-        className="top-remediation-panel findings-queue-panel"
+        className="findings-queue-panel"
       >
-        <div className="dashboard-panel-heading">
+        <div className="findings-queue-heading">
           <div>
             <span>Remediation Focus</span>
             <h3>Remediation Queue</h3>
@@ -74,13 +74,13 @@ export function RemediationQueueTableSection({
             </p>
           </div>
           {!isDemo ? (
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <div className="findings-rows-control">
               <span>Rows</span>
               <Select
                 onValueChange={(v) => onPageSizeChange(Number(v))}
                 value={String(findingPageSize)}
               >
-                <SelectTrigger aria-label="Rows" className="h-10 w-16 text-xs">
+                <SelectTrigger aria-label="Rows" className="h-9 w-full text-sm">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -106,8 +106,8 @@ export function RemediationQueueTableSection({
       </section>
 
       {!isDemo ? (
-        <div className="flex flex-wrap items-center justify-between gap-3 px-1">
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+        <div className="findings-pagination">
+          <div className="findings-pagination__status">
             <span aria-live="polite">
               Showing{" "}
               <strong className="font-semibold text-foreground">
@@ -119,9 +119,9 @@ export function RemediationQueueTableSection({
               </strong>
             </span>
           </div>
-          <div className="flex items-center gap-1.5">
+          <div className="findings-pagination__actions">
             <Button
-              className="h-7"
+              className="findings-pagination__button"
               disabled={findingsLoading || findingOffset === 0}
               onClick={onPagePrev}
               size="sm"
@@ -132,7 +132,7 @@ export function RemediationQueueTableSection({
               Previous
             </Button>
             <Button
-              className="h-7"
+              className="findings-pagination__button"
               disabled={
                 findingsLoading ||
                 findingOffset + findingPageSize >= findingCount

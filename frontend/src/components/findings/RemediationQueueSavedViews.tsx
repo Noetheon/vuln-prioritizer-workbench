@@ -1,4 +1,11 @@
-import { Button } from "@/components/ui/button"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { VpwSegmentedControl } from "@/components/vpw"
 import {
   findingsSavedViewOptions,
   type FindingsSavedView,
@@ -14,28 +21,35 @@ export function RemediationQueueSavedViews({
   onSavedViewChange,
 }: RemediationQueueSavedViewsProps) {
   return (
-    <fieldset className="findings-saved-view-group">
-      <legend className="text-[11px] font-semibold uppercase text-muted-foreground">
+    <div className="findings-filter-field findings-filter-field--views">
+      <span className="vpw-label findings-filter-label">
         View
-      </legend>
-      <div className="findings-saved-view-options">
-        {findingsSavedViewOptions.map((option) => {
-          const active = option.value === activeSavedView
-          return (
-            <Button
-              aria-pressed={active}
-              className="h-8 px-2 text-xs"
-              key={option.value}
-              onClick={() => onSavedViewChange(option.value)}
-              size="sm"
-              type="button"
-              variant={active ? "secondary" : "ghost"}
-            >
+      </span>
+      <VpwSegmentedControl
+        className="findings-saved-view-options findings-saved-view-options--segmented"
+        label="Finding view"
+        onChange={(value) => onSavedViewChange(value as FindingsSavedView)}
+        options={findingsSavedViewOptions}
+        value={activeSavedView}
+      />
+      <Select
+        onValueChange={(value) => onSavedViewChange(value as FindingsSavedView)}
+        value={activeSavedView}
+      >
+        <SelectTrigger
+          aria-label="Finding view"
+          className="findings-saved-view-select h-9 w-full text-sm"
+        >
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {findingsSavedViewOptions.map((option) => (
+            <SelectItem key={option.value} value={option.value}>
               {option.label}
-            </Button>
-          )
-        })}
-      </div>
-    </fieldset>
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
   )
 }

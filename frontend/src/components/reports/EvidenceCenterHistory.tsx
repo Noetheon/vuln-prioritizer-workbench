@@ -158,37 +158,48 @@ export function ReportHistory({
       headerClassName: "text-right",
       className: "text-right",
       cell: (report) => (
-        <div className="flex items-center justify-end gap-2">
+        <div className="vpw-table-actions">
           {report.format === "zip" && !isDemo ? (
-            <Button
-              aria-label={`Verify ${report.filename}`}
-              aria-busy={
-                verificationLoading &&
-                verificationReportTarget?.id === report.id
-              }
-              disabled={
-                verificationLoading &&
-                verificationReportTarget?.id === report.id
-              }
-              onClick={() => onVerify(report)}
-              size="icon"
-              type="button"
-              variant="ghost"
-            >
-              <ShieldCheck aria-hidden="true" className="h-4 w-4" />
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  aria-label={`Verify ${report.filename}`}
+                  aria-busy={
+                    verificationLoading &&
+                    verificationReportTarget?.id === report.id
+                  }
+                  className="vpw-table-action-button"
+                  disabled={
+                    verificationLoading &&
+                    verificationReportTarget?.id === report.id
+                  }
+                  onClick={() => onVerify(report)}
+                  size="icon-sm"
+                  type="button"
+                  variant="outline"
+                >
+                  <ShieldCheck aria-hidden="true" className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="left">Verify bundle</TooltipContent>
+            </Tooltip>
           ) : null}
-          <Button
-            aria-label={`Download ${report.filename}`}
-            disabled={isDemo}
-            onClick={() => !isDemo && onDownload(report)}
-            size="sm"
-            type="button"
-            variant="outline"
-          >
-            <Download aria-hidden="true" className="h-4 w-4" />
-            Download
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                aria-label={`Download ${report.filename}`}
+                className="vpw-table-action-button"
+                disabled={isDemo}
+                onClick={() => !isDemo && onDownload(report)}
+                size="icon-sm"
+                type="button"
+                variant="outline"
+              >
+                <Download aria-hidden="true" className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="left">Download report</TooltipContent>
+          </Tooltip>
         </div>
       ),
     },

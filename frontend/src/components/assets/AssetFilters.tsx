@@ -1,4 +1,4 @@
-import { BriefcaseBusiness, Server } from "lucide-react"
+import { BriefcaseBusiness, RotateCcw, Server } from "lucide-react"
 
 import type { ProjectPublic } from "../../api-client"
 import { Button } from "../ui/button"
@@ -70,39 +70,48 @@ export function AssetInventoryShell({
             type="button"
             variant="outline"
           >
-            Clear filters
+            <RotateCcw aria-hidden="true" />
+            Reset
           </Button>
         }
+        leading={
+          <VpwField className="vpw-filter-field--lg" label="Project">
+            <Select
+              disabled={projectSelectDisabled}
+              onValueChange={selectProject}
+              value={selectedProjectId}
+            >
+              <SelectTrigger
+                aria-label="Assets project"
+                className="vpw-filter-control"
+              >
+                <SelectValue placeholder="Select project" />
+              </SelectTrigger>
+              <SelectContent>
+                {projects.map((project) => (
+                  <SelectItem key={project.id} value={project.id}>
+                    {project.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </VpwField>
+        }
         onSearchChange={setAssetServiceFilter}
+        searchClassName="vpw-filter-field--md"
         searchLabel="Asset service filter"
         searchPlaceholder="Filter by service"
+        searchTitle="Service"
         searchValue={assetServiceFilter}
       >
-        <VpwField className="min-w-52" label="Owner">
+        <VpwField className="vpw-filter-field--md" label="Owner">
           <Input
             aria-label="Asset owner filter"
+            className="vpw-filter-control"
             onChange={(event) => setAssetOwnerFilter(event.target.value)}
             placeholder="Filter owner"
             value={assetOwnerFilter}
           />
-        </VpwField>
-        <VpwField className="min-w-64" label="Project">
-          <Select
-            disabled={projectSelectDisabled}
-            onValueChange={selectProject}
-            value={selectedProjectId}
-          >
-            <SelectTrigger aria-label="Assets project">
-              <SelectValue placeholder="Select project" />
-            </SelectTrigger>
-            <SelectContent>
-              {projects.map((project) => (
-                <SelectItem key={project.id} value={project.id}>
-                  {project.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
         </VpwField>
       </VpwFilterBar>
 

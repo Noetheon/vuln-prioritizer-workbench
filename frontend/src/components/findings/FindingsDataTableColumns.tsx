@@ -1,6 +1,5 @@
 import { Link } from "@/lib/router"
 import { ExternalLink, Eye } from "lucide-react"
-import type { ReactNode } from "react"
 import type { FindingPublic } from "@/api-client"
 import { Button } from "@/components/ui/button"
 import {
@@ -15,9 +14,9 @@ import {
   SignalChip,
   StatusLozenge,
   VpwSignalCluster,
+  type VpwDataTableColumn,
 } from "@/components/vpw"
 import { formatLabel as labelize } from "@/lib/ui-copy"
-import { SortHeader, StaticHeader } from "./FindingsDataTableHeaders"
 import {
   assetLabel,
   componentLabel,
@@ -30,16 +29,6 @@ import {
 } from "./FindingsDataTableModel"
 import type { FindingsUrlSearch } from "./findings-search-state"
 import type { FindingsDirection, QueueSort } from "./remediation-queue-model"
-
-export type FindingsDataTableColumn = {
-  id: string
-  header: ReactNode
-  cell: (finding: FindingPublic) => ReactNode
-  ariaSort?: "ascending" | "descending"
-  className?: string
-  headerClassName?: string
-  width?: string
-}
 
 type BuildFindingsColumnsOptions = {
   findingDirection: FindingsDirection
@@ -55,50 +44,42 @@ export function buildFindingsDataTableColumns({
   onOpenSheet,
   onSort,
   queueSort,
-}: BuildFindingsColumnsOptions): readonly FindingsDataTableColumn[] {
+}: BuildFindingsColumnsOptions): readonly VpwDataTableColumn<FindingPublic>[] {
+  const sortable = (sort: QueueSort, label: string) => ({
+    active: queueSort === sort,
+    direction: queueSort === sort ? findingDirection : undefined,
+    label,
+    onSort: () => onSort(sort),
+  })
+
   return [
     {
       id: "priority",
-      header: (
-        <fieldset className="finding-sort-stack">
-          <legend className="sr-only">Priority sort controls</legend>
-          <SortHeader
-            currentDirection={findingDirection}
-            currentSort={queueSort}
-            label="Priority"
-            onSort={onSort}
-            sort="priority"
-          />
-          <SortHeader
-            currentDirection={findingDirection}
-            currentSort={queueSort}
-            label="Score"
-            onSort={onSort}
-            sort="score"
-          />
-        </fieldset>
-      ),
+      header: "Priority",
+      ariaSort: sortAriaState(findingDirection, queueSort, "priority"),
       cell: (finding) => (
-        <div className="finding-priority-cell">
-          <RiskBadge density="compact" level={finding.priority} />
-          <RiskScoreBadge density="compact" value={finding.risk_score} />
-        </div>
+        <RiskBadge density="compact" level={finding.priority} />
       ),
-      className: "w-[13%]",
-      headerClassName: "w-[13%]",
-      width: "13%",
+      className: "w-[9%]",
+      headerClassName: "w-[9%]",
+      sort: sortable("priority", "Priority"),
+      width: "9%",
+    },
+    {
+      id: "score",
+      header: "Score",
+      ariaSort: sortAriaState(findingDirection, queueSort, "score"),
+      cell: (finding) => (
+        <RiskScoreBadge density="compact" value={finding.risk_score} />
+      ),
+      className: "w-[7%]",
+      headerClassName: "w-[7%]",
+      sort: sortable("score", "Score"),
+      width: "7%",
     },
     {
       id: "finding",
-      header: (
-        <SortHeader
-          currentDirection={findingDirection}
-          currentSort={queueSort}
-          label="Finding"
-          onSort={onSort}
-          sort="cve"
-        />
-      ),
+      header: "Finding",
       ariaSort: sortAriaState(findingDirection, queueSort, "cve"),
       cell: (finding) => (
         <div className="finding-primary-cell">
@@ -121,21 +102,14 @@ export function buildFindingsDataTableColumns({
           ) : null}
         </div>
       ),
-      className: "w-[22%] min-w-0",
-      headerClassName: "w-[22%]",
-      width: "22%",
+      className: "w-[20%] min-w-0",
+      headerClassName: "w-[20%]",
+      sort: sortable("cve", "Finding"),
+      width: "20%",
     },
     {
       id: "asset",
-      header: (
-        <SortHeader
-          currentDirection={findingDirection}
-          currentSort={queueSort}
-          label="Asset / Service"
-          onSort={onSort}
-          sort="component"
-        />
-      ),
+      header: "Asset / Service",
       ariaSort: sortAriaState(findingDirection, queueSort, "component"),
       cell: (finding) => (
         <div className="finding-asset-cell">
@@ -157,19 +131,12 @@ export function buildFindingsDataTableColumns({
       ),
       className: "w-[18%] min-w-0",
       headerClassName: "w-[18%]",
+      sort: sortable("component", "Asset / Service"),
       width: "18%",
     },
     {
       id: "owner",
-      header: (
-        <SortHeader
-          currentDirection={findingDirection}
-          currentSort={queueSort}
-          label="Owner"
-          onSort={onSort}
-          sort="owner"
-        />
-      ),
+      header: "Owner",
       ariaSort: sortAriaState(findingDirection, queueSort, "owner"),
       cell: (finding) => (
         <div className="finding-owner-cell">
@@ -183,22 +150,15 @@ export function buildFindingsDataTableColumns({
       ),
       className: "w-[11%]",
       headerClassName: "w-[11%]",
+      sort: sortable("owner", "Owner"),
       width: "11%",
     },
     {
       id: "signals",
-      header: (
-        <SortHeader
-          currentDirection={findingDirection}
-          currentSort={queueSort}
-          label="Signals"
-          onSort={onSort}
-          sort="epss"
-        />
-      ),
+      header: "Signals",
       ariaSort: sortAriaState(findingDirection, queueSort, "epss"),
       cell: (finding) => (
-        <VpwSignalCluster className="min-[1500px]:flex-nowrap" maxVisible={3}>
+        <VpwSignalCluster maxVisible={3}>
           {finding.in_kev ? <SignalChip kind="kev" /> : null}
           {finding.epss !== null && finding.epss !== undefined ? (
             <SignalChip kind="epss" value={finding.epss} />
@@ -211,21 +171,14 @@ export function buildFindingsDataTableColumns({
           {finding.suppressed_by_vex ? <SignalChip kind="vex" /> : null}
         </VpwSignalCluster>
       ),
-      className: "w-[15%]",
-      headerClassName: "w-[15%]",
-      width: "15%",
+      className: "w-[14%]",
+      headerClassName: "w-[14%]",
+      sort: sortable("epss", "Signals"),
+      width: "14%",
     },
     {
       id: "status",
-      header: (
-        <SortHeader
-          currentDirection={findingDirection}
-          currentSort={queueSort}
-          label="Status / SLA"
-          onSort={onSort}
-          sort="status"
-        />
-      ),
+      header: "Status / SLA",
       ariaSort: sortAriaState(findingDirection, queueSort, "status"),
       cell: (finding) => (
         <div className="finding-status-cell">
@@ -245,23 +198,25 @@ export function buildFindingsDataTableColumns({
           </div>
         </div>
       ),
-      className: "w-[13%]",
-      headerClassName: "w-[13%]",
-      width: "13%",
+      className: "w-[14%]",
+      headerClassName: "w-[14%]",
+      sort: sortable("status", "Status / SLA"),
+      width: "14%",
     },
     {
       id: "view",
-      header: <StaticHeader align="right" label="Actions" />,
+      header: "Actions",
       cell: (finding) => (
-        <div className="finding-row-actions">
+        <div className="vpw-table-actions finding-row-actions">
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
                 aria-label={`Quick view ${finding.cve_id}`}
-                className="finding-view-action"
+                className="vpw-table-action-button finding-view-action"
                 onClick={() => onOpenSheet(finding)}
+                size="icon-sm"
                 type="button"
-                variant="ghost"
+                variant="outline"
               >
                 <Eye aria-hidden="true" size={16} />
               </Button>
@@ -272,9 +227,10 @@ export function buildFindingsDataTableColumns({
             <TooltipTrigger asChild>
               <Button
                 asChild
-                className="finding-view-action"
+                className="vpw-table-action-button finding-view-action"
+                size="icon-sm"
                 type="button"
-                variant="ghost"
+                variant="outline"
               >
                 <Link
                   aria-label={`Open full detail ${finding.cve_id}`}
@@ -290,9 +246,9 @@ export function buildFindingsDataTableColumns({
           </Tooltip>
         </div>
       ),
-      className: "w-20 min-w-20 bg-[var(--vpw-bg-card)] px-2 text-right",
-      headerClassName: "w-20 min-w-20 bg-[var(--vpw-bg-panel)] px-2 text-right",
-      width: "8%",
+      className: "w-20 min-w-20 px-2 text-center",
+      headerClassName: "w-20 min-w-20 px-2 text-center",
+      width: "7%",
     },
   ]
 }

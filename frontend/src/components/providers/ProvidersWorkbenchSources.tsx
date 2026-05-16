@@ -1,6 +1,11 @@
-import { Database } from "lucide-react"
+import { Database, RefreshCw } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import {
   VpwDataTable,
   type VpwDataTableColumn,
@@ -66,16 +71,28 @@ export function ProviderSourcesTable({
     },
     {
       cell: () => (
-        <Button
-          onClick={onRefreshProviderStatus}
-          size="sm"
-          type="button"
-          variant="outline"
-        >
-          Refresh
-        </Button>
+        <div className="vpw-table-actions">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                aria-label="Refresh provider status"
+                className="vpw-table-action-button"
+                disabled={providerStatusLoading}
+                onClick={onRefreshProviderStatus}
+                size="icon-sm"
+                type="button"
+                variant="outline"
+              >
+                <RefreshCw aria-hidden="true" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="left">Refresh status</TooltipContent>
+          </Tooltip>
+        </div>
       ),
+      className: "text-right",
       header: "Actions",
+      headerClassName: "text-right",
       id: "actions",
     },
   ]

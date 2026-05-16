@@ -21,8 +21,8 @@ export function RemediationQueueProjectSelect({
   selectedProjectId,
 }: RemediationQueueProjectSelectProps) {
   return (
-    <div className="flex min-w-44 flex-col gap-1">
-      <span className="text-[11px] font-semibold uppercase text-muted-foreground">
+    <div className="findings-filter-field findings-filter-field--project">
+      <span className="vpw-label findings-filter-label">
         Project
       </span>
       <Select
@@ -30,7 +30,7 @@ export function RemediationQueueProjectSelect({
         onValueChange={onProjectChange}
         value={selectedProjectId}
       >
-        <SelectTrigger aria-label="Project" className="h-10 w-48 text-sm">
+        <SelectTrigger aria-label="Project" className="h-9 w-full text-sm">
           <SelectValue placeholder="No projects" />
         </SelectTrigger>
         <SelectContent>
