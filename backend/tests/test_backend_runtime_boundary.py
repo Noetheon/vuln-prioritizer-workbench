@@ -240,6 +240,7 @@ def test_runtime_containers_avoid_unpinned_upgrade_drift() -> None:
     assert "python -m pip install --upgrade pip" not in backend_dockerfile
     assert "python -m pip install --require-hashes" in backend_dockerfile
     assert "apk upgrade" not in frontend_dockerfile
+    assert "apk del --no-network curl libcurl" in frontend_dockerfile
     assert "npm ci --workspaces=false" in frontend_dockerfile
 
 
