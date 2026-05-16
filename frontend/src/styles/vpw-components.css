@@ -250,6 +250,206 @@
     box-shadow: 0 0 0 3px color-mix(in srgb, var(--vpw-blue) 14%, transparent);
   }
 
+  .vpw-filter-bar {
+    display: flex;
+    min-width: 0;
+    align-items: flex-end;
+    gap: 0.75rem;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    border: 1px solid var(--vpw-border-default);
+    border-radius: var(--vpw-radius-xl);
+    background: var(--vpw-bg-card);
+    padding: var(--vpw-panel-padding);
+    box-shadow: var(--vpw-shadow-1);
+    scrollbar-gutter: stable;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .vpw-filter-bar__leading,
+  .vpw-filter-bar__controls,
+  .vpw-filter-bar__actions {
+    display: flex;
+    min-width: 0;
+    align-items: flex-end;
+    gap: 0.75rem;
+  }
+
+  .vpw-filter-bar__leading,
+  .vpw-filter-bar__controls {
+    flex: 0 0 auto;
+  }
+
+  .vpw-filter-bar__actions {
+    flex: 0 0 auto;
+    margin-left: 0.25rem;
+    justify-content: flex-end;
+  }
+
+  .vpw-filter-bar__controls > .vpw-button,
+  .vpw-filter-bar__actions > .vpw-button {
+    height: var(--vpw-control-height-lg);
+    min-height: var(--vpw-control-height-lg);
+    font-size: 0.875rem;
+    line-height: 1.2;
+  }
+
+  .vpw-filter-field {
+    display: flex;
+    min-width: 0;
+    flex: 1 1 18rem;
+    flex-direction: column;
+    gap: 0.375rem;
+  }
+
+  .vpw-filter-field--search {
+    min-width: 16rem;
+    flex-basis: 22rem;
+  }
+
+  .vpw-filter-field--sm {
+    min-width: 9rem;
+    flex: 0 0 10rem;
+  }
+
+  .vpw-filter-field--md {
+    min-width: 12rem;
+    flex: 0 0 14rem;
+  }
+
+  .vpw-filter-field--lg {
+    min-width: 15rem;
+    flex: 0 0 18rem;
+  }
+
+  .vpw-filter-bar .vpw-field {
+    width: auto;
+    gap: 0.375rem;
+  }
+
+  .vpw-filter-bar .vpw-field-label,
+  .vpw-filter-label {
+    color: var(--vpw-text-muted);
+    font-family:
+      "Geist Mono", "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo,
+      Monaco, Consolas, monospace;
+    font-size: 0.75rem;
+    font-weight: 650;
+    line-height: 1rem;
+    letter-spacing: 0;
+    text-transform: uppercase;
+  }
+
+  .vpw-filter-bar .vpw-search-control__input,
+  .vpw-filter-bar .vpw-filter-control {
+    height: var(--vpw-control-height-lg);
+    min-height: var(--vpw-control-height-lg);
+    font-size: 0.875rem;
+    line-height: 1.2;
+  }
+
+  .vpw-table-card {
+    display: grid;
+    gap: var(--vpw-surface-gap);
+    padding: var(--vpw-panel-padding);
+  }
+
+  .vpw-table-card__header {
+    display: flex;
+    min-width: 0;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  .vpw-table-card__heading {
+    min-width: 0;
+  }
+
+  .vpw-table-card__eyebrow {
+    color: var(--vpw-teal);
+  }
+
+  .vpw-table-card__title {
+    margin-top: 0.25rem;
+    color: var(--vpw-text-primary);
+    font-size: 1rem;
+    font-weight: 720;
+    line-height: 1.25;
+  }
+
+  .vpw-table-card__description {
+    margin-top: 0.25rem;
+    max-width: 48rem;
+    color: var(--vpw-text-secondary);
+    font-size: 0.875rem;
+    line-height: 1.45;
+  }
+
+  .vpw-table-card__actions {
+    display: flex;
+    min-width: 0;
+    flex: 0 0 auto;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.5rem;
+  }
+
+  .vpw-table-card__body {
+    display: grid;
+    gap: var(--vpw-surface-gap);
+    min-width: 0;
+  }
+
+  .vpw-table-card .vpw-filter-bar {
+    box-shadow: var(--vpw-shadow-0);
+  }
+
+  .vpw-filter-bar fieldset {
+    flex: 0 0 auto;
+  }
+
+  @media (max-width: 640px) {
+    .vpw-filter-bar {
+      align-items: stretch;
+      flex-direction: column;
+      overflow-x: visible;
+    }
+
+    .vpw-filter-bar__leading,
+    .vpw-filter-bar__controls,
+    .vpw-filter-bar__actions {
+      width: 100%;
+      flex-wrap: wrap;
+    }
+
+    .vpw-filter-bar__actions {
+      margin-left: 0;
+      justify-content: flex-start;
+    }
+
+    .vpw-table-card__header {
+      align-items: flex-start;
+      flex-direction: column;
+    }
+
+    .vpw-table-card__actions {
+      width: 100%;
+      justify-content: flex-start;
+    }
+
+    .vpw-filter-field,
+    .vpw-filter-field--search,
+    .vpw-filter-field--sm,
+    .vpw-filter-field--md,
+    .vpw-filter-field--lg,
+    .vpw-filter-bar .vpw-field {
+      min-width: 0;
+      flex: 1 1 100%;
+    }
+  }
+
   .vpw-table-wrap {
     max-width: 100%;
     min-width: 0;
@@ -302,6 +502,50 @@
     white-space: nowrap;
   }
 
+  .vpw-table-sort-button {
+    display: inline-flex;
+    min-width: 0;
+    height: 1.5rem;
+    align-items: center;
+    gap: 0.35rem;
+    border: 0;
+    border-radius: var(--vpw-radius-sm);
+    margin-left: -0.25rem;
+    padding: 0 0.25rem;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    text-align: inherit;
+    text-transform: inherit;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+
+  .vpw-table-sort-button:hover {
+    background: color-mix(in srgb, var(--vpw-blue) 8%, transparent);
+    color: var(--vpw-text-primary);
+  }
+
+  .vpw-table-sort-button:focus-visible {
+    outline: 2px solid var(--vpw-focus-ring);
+    outline-offset: 2px;
+  }
+
+  .vpw-table-sort-button[aria-pressed="true"] {
+    color: var(--vpw-teal);
+  }
+
+  .vpw-table-sort-button__icon {
+    width: 0.78rem;
+    height: 0.78rem;
+    flex: 0 0 auto;
+    opacity: 0.52;
+  }
+
+  .vpw-table-sort-button[aria-pressed="true"] .vpw-table-sort-button__icon {
+    opacity: 1;
+  }
+
   .vpw-table-cell {
     border-bottom: 1px solid var(--vpw-border-subtle);
     color: var(--vpw-text-primary);
@@ -319,6 +563,33 @@
 
   .vpw-table-row:hover > .vpw-table-cell {
     background: color-mix(in srgb, var(--vpw-bg-info) 42%, var(--vpw-bg-card));
+  }
+
+  .vpw-table-actions {
+    display: inline-flex;
+    min-width: 0;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.375rem;
+    white-space: nowrap;
+  }
+
+  .vpw-table-action-button {
+    border-color: var(--vpw-border-default);
+    background: var(--vpw-bg-card);
+    color: var(--vpw-text-secondary);
+    box-shadow: none;
+  }
+
+  .vpw-table-action-button:hover,
+  .vpw-table-action-button[aria-current="true"] {
+    border-color: color-mix(
+      in srgb,
+      var(--vpw-blue) 32%,
+      var(--vpw-border-default)
+    );
+    background: var(--vpw-bg-info);
+    color: var(--vpw-text-primary);
   }
 
   .vpw-table-detail .vpw-table-header-cell {

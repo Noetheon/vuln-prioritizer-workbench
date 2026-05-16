@@ -1,23 +1,17 @@
-import { BriefcaseBusiness, Server } from "lucide-react"
+import { BriefcaseBusiness, RotateCcw, Server } from "lucide-react"
 
 import type { ProjectPublic } from "../../api-client"
 import { Button } from "../ui/button"
-import { Input } from "../ui/input"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "../ui/select"
 import {
   VpwEmptyState,
   VpwField,
   VpwFilterBar,
-  VpwPanel,
   VpwSection,
   VpwSectionHeader,
+  VpwSearchControl,
+  VpwSelectControl,
   VpwSkeletonStack,
+  VpwTableCard,
 } from "../vpw"
 import { Link } from "@/lib/router"
 import type { ReactNode } from "react"
@@ -63,47 +57,46 @@ export function AssetInventoryShell({
         title="Asset inventory"
       />
       <VpwFilterBar
-        actions={
-          <Button
-            disabled={!assetOwnerFilter && !assetServiceFilter}
-            onClick={clearAssetFilters}
-            type="button"
-            variant="outline"
-          >
-            Clear filters
-          </Button>
+        leading={
+          <VpwField className="vpw-filter-field--lg" label="Project">
+            <VpwSelectControl
+              ariaLabel="Assets project"
+              disabled={projectSelectDisabled}
+              options={projects.map((project) => ({
+                label: project.name,
+                value: project.id,
+              }))}
+              onValueChange={selectProject}
+              placeholder="Select project"
+              value={selectedProjectId}
+            />
+          </VpwField>
         }
         onSearchChange={setAssetServiceFilter}
+        searchClassName="vpw-filter-field--md"
         searchLabel="Asset service filter"
         searchPlaceholder="Filter by service"
+        searchTitle="Service"
         searchValue={assetServiceFilter}
       >
-        <VpwField className="min-w-52" label="Owner">
-          <Input
+        <VpwField className="vpw-filter-field--md" label="Owner">
+          <VpwSearchControl
             aria-label="Asset owner filter"
             onChange={(event) => setAssetOwnerFilter(event.target.value)}
-            placeholder="Filter owner"
+            placeholder="Filter by owner"
             value={assetOwnerFilter}
           />
         </VpwField>
-        <VpwField className="min-w-64" label="Project">
-          <Select
-            disabled={projectSelectDisabled}
-            onValueChange={selectProject}
-            value={selectedProjectId}
-          >
-            <SelectTrigger aria-label="Assets project">
-              <SelectValue placeholder="Select project" />
-            </SelectTrigger>
-            <SelectContent>
-              {projects.map((project) => (
-                <SelectItem key={project.id} value={project.id}>
-                  {project.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </VpwField>
+        <Button
+          aria-label="Reset asset filters"
+          disabled={!assetOwnerFilter && !assetServiceFilter}
+          onClick={clearAssetFilters}
+          type="button"
+          variant="outline"
+        >
+          <RotateCcw aria-hidden="true" />
+          Reset
+        </Button>
       </VpwFilterBar>
 
       {projects.length === 0 && !projectLoading ? (
@@ -133,9 +126,12 @@ export function AssetInventoryShell({
       ) : null}
 
       {assetsLoading ? (
-        <VpwPanel className="p-5">
+        <VpwTableCard
+          description="Loading the asset rows for the selected project and filters."
+          title="Asset register"
+        >
           <VpwSkeletonStack rows={6} />
-        </VpwPanel>
+        </VpwTableCard>
       ) : null}
 
       {children}

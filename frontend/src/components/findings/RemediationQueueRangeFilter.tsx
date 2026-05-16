@@ -24,14 +24,14 @@ export function RangeFilter({
   step,
 }: RangeFilterProps) {
   return (
-    <div className="flex flex-col gap-1">
-      <span className="text-[11px] font-semibold uppercase text-muted-foreground">
+    <div className="findings-filter-field findings-filter-field--range">
+      <span className="vpw-label findings-filter-label">
         {name}
       </span>
-      <div className="flex items-center gap-1">
+      <div className="findings-filter-range-control">
         <Input
           aria-label={minLabel}
-          className="h-10 w-20 text-sm"
+          className="findings-filter-control h-9 w-20 text-sm"
           inputMode="decimal"
           max={max}
           min="0"
@@ -44,7 +44,7 @@ export function RangeFilter({
         <span className="text-xs text-muted-foreground">to</span>
         <Input
           aria-label={maxLabel}
-          className="h-10 w-20 text-sm"
+          className="findings-filter-control h-9 w-20 text-sm"
           inputMode="decimal"
           max={max}
           min="0"

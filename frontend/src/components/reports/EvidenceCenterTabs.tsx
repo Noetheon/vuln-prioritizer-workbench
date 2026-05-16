@@ -88,6 +88,7 @@ export function EvidenceCenterTabs({
           isDemo={isDemo}
           onDownload={onDownloadReport}
           onVerify={onVerifyReport}
+          panelDescription="Generated report artifacts for the selected run."
           panelEyebrow="Artifact inventory"
           panelTitle="Generated Artifacts"
           reports={reports}
@@ -149,22 +150,17 @@ export function EvidenceCenterTabs({
       </TabsContent>
 
       <TabsContent className="mt-0" value="history">
-        <VpwSection>
-          <VpwSectionHeader
-            description="Previously generated reports for the selected run."
-            title="Report History"
-          />
-          <ReportHistory
-            isDemo={isDemo}
-            onDownload={onDownloadReport}
-            onVerify={onVerifyReport}
-            reports={reports}
-            reportsLoading={reportsLoading}
-            verificationLoading={verificationLoading}
-            verificationReport={verificationReport}
-            verificationReportTarget={verificationReportTarget}
-          />
-        </VpwSection>
+        <ReportHistory
+          isDemo={isDemo}
+          onDownload={onDownloadReport}
+          onVerify={onVerifyReport}
+          panelDescription="Previously generated reports for the selected run."
+          reports={reports}
+          reportsLoading={reportsLoading}
+          verificationLoading={verificationLoading}
+          verificationReport={verificationReport}
+          verificationReportTarget={verificationReportTarget}
+        />
       </TabsContent>
 
       <TabsContent className="mt-0" value="quality">

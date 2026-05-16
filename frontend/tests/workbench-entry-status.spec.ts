@@ -518,7 +518,7 @@ test("workbench frontend covers core Workbench E2E smoke", async ({ page }) => {
   await expect(assetsTable).not.toContainText("web-tier")
   await page.getByLabel("Asset service filter").fill("payments-runtime")
   await expect(assetsTable).toContainText("build-host-1")
-  await page.getByRole("button", { name: "Clear Filters" }).click()
+  await page.getByRole("button", { name: "Reset" }).click()
   await expect(page.getByLabel("Asset owner filter")).toHaveValue("")
   await expect(page.getByLabel("Asset service filter")).toHaveValue("")
   await page.screenshot({

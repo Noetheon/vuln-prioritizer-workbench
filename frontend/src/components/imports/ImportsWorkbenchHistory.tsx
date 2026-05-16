@@ -1,7 +1,13 @@
 import { Link } from "@/lib/router"
-import { FileSearch, History } from "lucide-react"
+import { FileSearch, History, ListChecks } from "lucide-react"
+import type { ReactNode } from "react"
 import type { AnalysisRunPublic } from "@/api-client"
 import { Button } from "@/components/ui/button"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import {
   MetaTag,
   SourceMark,
@@ -9,11 +15,10 @@ import {
   VpwDataTable,
   type VpwDataTableColumn,
   VpwEmptyState,
-  VpwPanel,
   VpwSection,
-  VpwSectionHeader,
   VpwSkeletonStack,
   VpwStatusBanner,
+  VpwTableCard,
 } from "@/components/vpw"
 import { runStatusLabel } from "@/lib/risk-format"
 import { RunDiagnosticsSheet } from "./ImportsWorkbenchRunDetail"
@@ -24,6 +29,21 @@ import {
   objectRecord,
   runFileLabel,
 } from "./imports-workbench-model"
+
+function ImportRunAction({
+  children,
+  label,
+}: {
+  children: ReactNode
+  label: string
+}) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>{children}</TooltipTrigger>
+      <TooltipContent>{label}</TooltipContent>
+    </Tooltip>
+  )
+}
 
 export function RecentImports({
   diagnosticsOpen,
@@ -137,21 +157,35 @@ export function RecentImports({
       className: "text-right",
       headerClassName: "text-right",
       cell: (run) => (
-        <div className="flex flex-wrap justify-end gap-2">
-          <Button
-            onClick={() => onOpenDiagnostics(run.id)}
-            size="sm"
-            type="button"
-            variant="outline"
-          >
-            <FileSearch aria-hidden="true" data-icon="inline-start" />
-            View diagnostics
-          </Button>
-          <Button asChild size="sm" variant="outline">
-            <Link search={{ projectId: run.project_id }} to="/findings">
-              Review findings
-            </Link>
-          </Button>
+        <div className="vpw-table-actions">
+          <ImportRunAction label="View diagnostics">
+            <Button
+              aria-label={`View diagnostics for run ${run.id.slice(0, 8)}`}
+              className="vpw-table-action-button"
+              onClick={() => onOpenDiagnostics(run.id)}
+              size="icon-sm"
+              type="button"
+              variant="outline"
+            >
+              <FileSearch aria-hidden="true" />
+            </Button>
+          </ImportRunAction>
+          <ImportRunAction label="Review findings">
+            <Button
+              asChild
+              className="vpw-table-action-button"
+              size="icon-sm"
+              variant="outline"
+            >
+              <Link
+                aria-label={`Review findings for run ${run.id.slice(0, 8)}`}
+                search={{ projectId: run.project_id }}
+                to="/findings"
+              >
+                <ListChecks aria-hidden="true" />
+              </Link>
+            </Button>
+          </ImportRunAction>
         </div>
       ),
     },
@@ -159,7 +193,7 @@ export function RecentImports({
 
   return (
     <VpwSection>
-      <VpwSectionHeader
+      <VpwTableCard
         actions={
           <Button
             disabled={runsLoading || !selectedProject}
@@ -173,33 +207,32 @@ export function RecentImports({
         }
         description={selectedProject?.name ?? "No project selected"}
         title="Recent Imports"
-      />
-      {runsError ? (
-        <VpwStatusBanner title="Import runs unavailable" tone="critical">
-          {runsError}
-        </VpwStatusBanner>
-      ) : null}
-      {runsLoading ? (
-        <VpwPanel>
+      >
+        {runsError ? (
+          <VpwStatusBanner title="Import runs unavailable" tone="critical">
+            {runsError}
+          </VpwStatusBanner>
+        ) : null}
+        {runsLoading ? (
           <VpwSkeletonStack rows={4} />
-        </VpwPanel>
-      ) : (
-        <VpwDataTable
-          caption="Recent import runs"
-          columns={columns}
-          data={projectRuns}
-          density="compact"
-          emptyState={
-            <VpwEmptyState
-              description="Upload a supported file to create import run history."
-              icon={<History aria-hidden="true" className="h-5 w-5" />}
-              title="No import runs yet"
-            />
-          }
-          getRowKey={(run) => run.id}
-          minWidth="960px"
-        />
-      )}
+        ) : (
+          <VpwDataTable
+            caption="Recent import runs"
+            columns={columns}
+            data={projectRuns}
+            density="compact"
+            emptyState={
+              <VpwEmptyState
+                description="Upload a supported file to create import run history."
+                icon={<History aria-hidden="true" className="h-5 w-5" />}
+                title="No import runs yet"
+              />
+            }
+            getRowKey={(run) => run.id}
+            minWidth="960px"
+          />
+        )}
+      </VpwTableCard>
       <RunDiagnosticsSheet
         diagnosticsOpen={diagnosticsOpen}
         diagnosticsRunId={diagnosticsRunId}

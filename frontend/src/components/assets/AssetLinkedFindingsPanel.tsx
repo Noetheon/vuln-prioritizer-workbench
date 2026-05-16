@@ -19,6 +19,7 @@ import {
   VpwSectionHeader,
   VpwSkeletonStack,
   VpwStatusBanner,
+  VpwTableCard,
   VpwToolbarGroup,
 } from "../vpw"
 import { AssetForm } from "./AssetContextForm"
@@ -250,17 +251,16 @@ export function AssetLinkedFindingsContent({
   ]
 
   return (
-    <VpwPanel className="flex flex-col gap-4 p-5">
-      <VpwSectionHeader
-        actions={
-          <Button asChild variant="outline">
-            <a href={assetFindingsHref(selectedAsset)}>Open findings</a>
-          </Button>
-        }
-        description="Findings returned by the existing project findings API for this asset."
-        eyebrow="Linked findings"
-        title="Findings for asset"
-      />
+    <VpwTableCard
+      actions={
+        <Button asChild variant="outline">
+          <a href={assetFindingsHref(selectedAsset)}>Open findings</a>
+        </Button>
+      }
+      description="Findings returned by the existing project findings API for this asset."
+      eyebrow="Linked findings"
+      title="Findings for asset"
+    >
       {assetFindingsError ? (
         <VpwStatusBanner title="Asset findings unavailable" tone="critical">
           {assetFindingsError}
@@ -284,7 +284,7 @@ export function AssetLinkedFindingsContent({
           minWidth="760px"
         />
       ) : null}
-    </VpwPanel>
+    </VpwTableCard>
   )
 }
 

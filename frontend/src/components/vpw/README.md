@@ -19,6 +19,18 @@ Precision Light Analyst usage rules:
 
 - Use tables, filter bars, toolbars, badges, and key-value lists for scan-heavy
   read surfaces.
+- Keep table workspaces as one visual system: a `VpwSectionHeader`, optional
+  `VpwFilterBar`, and `VpwDataTable` should sit in the same `VpwSection` or in
+  a route-specific table panel with identical padding rhythm. Do not put search
+  controls in a table header unless the surface is intentionally compact, such
+  as the dashboard queue preview.
+- Order reusable filters by decision context: project/scope first, search next,
+  domain text filters after that, then select/status/view controls, and reset or
+  advanced actions at the end. This keeps matching tables from feeling randomly
+  rearranged between routes.
+- Use `vpw-table-actions` plus `vpw-table-action-button` for repeated table-row
+  commands. Icon-only actions need an `aria-label` and tooltip; reserve text
+  buttons for primary commands outside repeated table rows.
 - Use fields, segmented controls, selection cards, status banners, and explicit
   action buttons for write surfaces such as decision capture, waiver review,
   report generation, and provider verification.

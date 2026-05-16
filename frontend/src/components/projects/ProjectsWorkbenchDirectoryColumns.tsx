@@ -1,6 +1,19 @@
 import { Link } from "@/lib/router"
+import {
+  CheckCircle2,
+  Circle,
+  FileInput,
+  FileText,
+  ListChecks,
+} from "lucide-react"
+import type { ReactNode } from "react"
 import type { ProjectPublic } from "@/api-client"
 import { Button } from "@/components/ui/button"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import { VpwBadge, type VpwDataTableColumn } from "@/components/vpw"
 import {
   evidenceState,
@@ -19,6 +32,21 @@ type BuildProjectDirectoryColumnsArgs = Pick<
   | "projectSummaryById"
   | "selectedProjectId"
 >
+
+function ProjectTableAction({
+  children,
+  label,
+}: {
+  children: ReactNode
+  label: string
+}) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>{children}</TooltipTrigger>
+      <TooltipContent>{label}</TooltipContent>
+    </Tooltip>
+  )
+}
 
 export function buildProjectDirectoryColumns({
   onSelectProject,
@@ -93,37 +121,81 @@ export function buildProjectDirectoryColumns({
     },
     {
       cell: (project) => (
-        <div className="flex flex-wrap items-center justify-end gap-2">
-          <Button
-            disabled={projectListLoading}
-            onClick={() => onSelectProject(project.id)}
-            size="sm"
-            type="button"
-            variant={project.id === selectedProjectId ? "secondary" : "outline"}
+        <div className="vpw-table-actions">
+          <ProjectTableAction
+            label={
+              project.id === selectedProjectId
+                ? "Active project"
+                : "Select project"
+            }
           >
-            {project.id === selectedProjectId ? "Selected" : "Select"}
-          </Button>
-          {(["imports", "findings", "reports"] as const).map((route) => (
             <Button
-              asChild
-              key={route}
+              aria-current={
+                project.id === selectedProjectId ? "true" : undefined
+              }
+              aria-label={
+                project.id === selectedProjectId
+                  ? `${project.name} is active`
+                  : `Select ${project.name}`
+              }
+              className="vpw-table-action-button"
+              disabled={projectListLoading}
               onClick={() => onSelectProject(project.id)}
-              size="sm"
-              variant="ghost"
+              size="icon-sm"
+              type="button"
+              variant={
+                project.id === selectedProjectId ? "secondary" : "outline"
+              }
             >
-              <Link to={`/${route}`}>
-                {route === "reports"
-                  ? "Evidence"
-                  : route[0].toUpperCase() + route.slice(1)}
-              </Link>
+              {project.id === selectedProjectId ? (
+                <CheckCircle2 aria-hidden="true" />
+              ) : (
+                <Circle aria-hidden="true" />
+              )}
             </Button>
+          </ProjectTableAction>
+          {(["imports", "findings", "reports"] as const).map((route) => (
+            <ProjectTableAction
+              key={route}
+              label={
+                route === "imports"
+                  ? "Open imports"
+                  : route === "findings"
+                    ? "Open findings"
+                    : "Open evidence"
+              }
+            >
+              <Button
+                asChild
+                className="vpw-table-action-button"
+                onClick={() => onSelectProject(project.id)}
+                size="icon-sm"
+                variant="outline"
+              >
+                <Link
+                  aria-label={`Open ${
+                    route === "reports" ? "evidence" : route
+                  } for ${project.name}`}
+                  to={`/${route}`}
+                >
+                  {route === "imports" ? (
+                    <FileInput aria-hidden="true" />
+                  ) : route === "findings" ? (
+                    <ListChecks aria-hidden="true" />
+                  ) : (
+                    <FileText aria-hidden="true" />
+                  )}
+                </Link>
+              </Button>
+            </ProjectTableAction>
           ))}
         </div>
       ),
-      className: "text-right",
+      className: "min-w-[10rem] text-right",
       header: "Actions",
       headerClassName: "text-right",
       id: "actions",
+      width: "10rem",
     },
   ]
 }

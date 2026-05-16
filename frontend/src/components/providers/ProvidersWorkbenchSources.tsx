@@ -1,12 +1,17 @@
-import { Database } from "lucide-react"
+import { Database, RefreshCw } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import {
   VpwDataTable,
   type VpwDataTableColumn,
   VpwEmptyState,
   VpwSection,
-  VpwSectionHeader,
+  VpwTableCard,
   SourceMark,
   StatusLozenge,
 } from "@/components/vpw"
@@ -33,26 +38,31 @@ export function ProviderSourcesTable({
       ),
       header: "Source",
       id: "source",
+      width: "24%",
     },
     {
       cell: (row) => <StatusLozenge label={row.status} status={row.status} />,
       header: "Status",
       id: "status",
+      width: "10%",
     },
     {
       cell: (row) => row.lastUpdated,
       header: "Last updated",
       id: "last-updated",
+      width: "16%",
     },
     {
       cell: (row) => row.cacheAge,
       header: "Cache age",
       id: "cache-age",
+      width: "10%",
     },
     {
       cell: (row) => row.sourceType,
       header: "Source type",
       id: "source-type",
+      width: "16%",
     },
     {
       cell: (row) => (
@@ -63,50 +73,66 @@ export function ProviderSourcesTable({
       ),
       header: "Used in evidence",
       id: "used-in-evidence",
+      width: "14%",
     },
     {
       cell: () => (
-        <Button
-          onClick={onRefreshProviderStatus}
-          size="sm"
-          type="button"
-          variant="outline"
-        >
-          Refresh
-        </Button>
+        <div className="vpw-table-actions">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                aria-label="Refresh provider status"
+                className="vpw-table-action-button"
+                disabled={providerStatusLoading}
+                onClick={onRefreshProviderStatus}
+                size="icon-sm"
+                type="button"
+                variant="outline"
+              >
+                <RefreshCw aria-hidden="true" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="left">Refresh status</TooltipContent>
+          </Tooltip>
+        </div>
       ),
+      className: "min-w-[3.25rem] text-right",
       header: "Actions",
+      headerClassName: "text-right",
       id: "actions",
+      width: "3.25rem",
     },
   ]
 
   return (
     <VpwSection>
-      <VpwSectionHeader
+      <VpwTableCard
         description="Configured vulnerability intelligence sources and whether they are available for prioritization evidence."
         eyebrow="Source inventory"
         title="Data source inventory"
-      />
-      {rows.length === 0 && !providerStatusLoading ? (
-        <VpwEmptyState
-          action={
-            <Button onClick={onRefreshProviderStatus} type="button">
-              Refresh status
-            </Button>
-          }
-          description="Refresh provider status to load the latest stored source state."
-          icon={<Database aria-hidden="true" />}
-          title="No provider sources recorded"
-        />
-      ) : (
-        <VpwDataTable
-          caption="Data source inventory"
-          columns={columns}
-          data={rows}
-          density="compact"
-          getRowKey={(row) => row.id}
-        />
-      )}
+      >
+        {rows.length === 0 && !providerStatusLoading ? (
+          <VpwEmptyState
+            action={
+              <Button onClick={onRefreshProviderStatus} type="button">
+                Refresh status
+              </Button>
+            }
+            description="Refresh provider status to load the latest stored source state."
+            icon={<Database aria-hidden="true" />}
+            title="No provider sources recorded"
+          />
+        ) : (
+          <VpwDataTable
+            caption="Data source inventory"
+            columns={columns}
+            data={rows}
+            density="compact"
+            getRowKey={(row) => row.id}
+            minWidth="880px"
+          />
+        )}
+      </VpwTableCard>
     </VpwSection>
   )
 }

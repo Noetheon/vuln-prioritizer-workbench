@@ -1,4 +1,5 @@
 import type { CSSProperties, ReactNode } from "react"
+import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react"
 
 import {
   Table,
@@ -9,6 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
 export type VpwDataTableColumn<TData> = {
@@ -18,7 +20,15 @@ export type VpwDataTableColumn<TData> = {
   ariaSort?: "ascending" | "descending" | "none"
   className?: string
   headerClassName?: string
+  sort?: VpwDataTableSort
   width?: string
+}
+
+export type VpwDataTableSort = {
+  active?: boolean
+  direction?: "asc" | "desc"
+  label: string
+  onSort: () => void
 }
 
 export type VpwDataTableDensity = "compact" | "standard" | "comfortable"
@@ -48,6 +58,35 @@ const densityClass: Record<VpwDataTableDensity, string> = {
 const variantClass: Record<VpwDataTableVariant, string> = {
   default: "",
   detail: "vpw-table-detail",
+}
+
+function VpwDataTableHeaderContent<TData>({
+  column,
+}: {
+  column: VpwDataTableColumn<TData>
+}) {
+  if (!column.sort) return <>{column.header}</>
+
+  const Icon = column.sort.active
+    ? column.sort.direction === "asc"
+      ? ArrowUp
+      : ArrowDown
+    : ArrowUpDown
+
+  return (
+    <Button
+      aria-label={`Sort by ${column.sort.label}`}
+      aria-pressed={column.sort.active}
+      className="vpw-table-sort-button"
+      onClick={column.sort.onSort}
+      size="xs"
+      type="button"
+      variant="ghost"
+    >
+      <Icon aria-hidden="true" className="vpw-table-sort-button__icon" />
+      <span>{column.header}</span>
+    </Button>
+  )
 }
 
 export function VpwDataTable<TData>({
@@ -110,7 +149,7 @@ export function VpwDataTable<TData>({
                 key={column.id}
                 scope="col"
               >
-                {column.header}
+                <VpwDataTableHeaderContent column={column} />
               </TableHead>
             ))}
           </TableRow>
