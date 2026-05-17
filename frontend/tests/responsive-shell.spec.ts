@@ -1,7 +1,11 @@
 import { expect, type Page, test } from "@playwright/test"
 import { openWorkbench } from "./workbench-runtime-helpers"
 import { evidenceScreenshotPath } from "./evidence-paths"
-import { mockFinding, mockProject, routeWorkbenchShell } from "./workbench-route-mocks"
+import {
+  mockFinding,
+  mockProject,
+  routeWorkbenchShell,
+} from "./workbench-route-mocks"
 
 async function expectNoPageOverflow(page: Page) {
   const dimensions = await page.evaluate(() => ({
@@ -23,7 +27,9 @@ async function expectWqhdContainerBehavior(
   viewport: { width: number; height: number },
 ) {
   const metrics = await page
-    .locator('section[aria-label="Workbench page content"] > .vpw-page-container')
+    .locator(
+      'section[aria-label="Workbench page content"] > .vpw-page-container',
+    )
     .first()
     .evaluate((container) => {
       const rect = container.getBoundingClientRect()
@@ -33,10 +39,10 @@ async function expectWqhdContainerBehavior(
       }
     })
 
-  expect(metrics.cssMaxWidth).toBe("1920px")
-  expect(metrics.width).toBeLessThanOrEqual(1922)
+  expect(metrics.cssMaxWidth).toBe("2400px")
+  expect(metrics.width).toBeLessThanOrEqual(2402)
   if (viewport.width >= 2560) {
-    expect(metrics.width).toBeGreaterThanOrEqual(1918)
+    expect(metrics.width).toBeGreaterThanOrEqual(2300)
   }
 }
 
@@ -72,9 +78,7 @@ async function expectFindingsTableScrollContainment(
     }
   })
 
-  expect(metrics.bodyScrollWidth).toBeLessThanOrEqual(
-    metrics.viewportWidth + 1,
-  )
+  expect(metrics.bodyScrollWidth).toBeLessThanOrEqual(metrics.viewportWidth + 1)
   expect(metrics.documentScrollWidth).toBeLessThanOrEqual(
     metrics.viewportWidth + 1,
   )
@@ -83,15 +87,18 @@ async function expectFindingsTableScrollContainment(
     metrics.viewportWidth + 1,
   )
   if (viewport.width >= 1200) {
-    expect(metrics.tableScrollWidth, JSON.stringify(metrics)).toBeLessThanOrEqual(
-      metrics.regionClientWidth + 2,
-    )
-    expect(metrics.regionScrollWidth, JSON.stringify(metrics)).toBeLessThanOrEqual(
-      metrics.regionClientWidth + 2,
-    )
-    expect(metrics.regionScrollLeft, JSON.stringify(metrics)).toBeLessThanOrEqual(
-      1,
-    )
+    expect(
+      metrics.tableScrollWidth,
+      JSON.stringify(metrics),
+    ).toBeLessThanOrEqual(metrics.regionClientWidth + 2)
+    expect(
+      metrics.regionScrollWidth,
+      JSON.stringify(metrics),
+    ).toBeLessThanOrEqual(metrics.regionClientWidth + 2)
+    expect(
+      metrics.regionScrollLeft,
+      JSON.stringify(metrics),
+    ).toBeLessThanOrEqual(1)
   } else {
     expect(metrics.tableScrollWidth, JSON.stringify(metrics)).toBeGreaterThan(
       metrics.regionClientWidth,
@@ -150,9 +157,7 @@ async function expectFindingsMobileCards(page: Page) {
 
   expect(metrics.cardCount).toBeGreaterThan(0)
   expect(metrics.cardsFit).toBe(true)
-  expect(metrics.bodyScrollWidth).toBeLessThanOrEqual(
-    metrics.viewportWidth + 1,
-  )
+  expect(metrics.bodyScrollWidth).toBeLessThanOrEqual(metrics.viewportWidth + 1)
   expect(metrics.documentScrollWidth).toBeLessThanOrEqual(
     metrics.viewportWidth + 1,
   )
@@ -208,8 +213,9 @@ async function expectFindingsMobileCards(page: Page) {
   ).toBeInViewport()
   await expect(drawer).toContainText("Decision summary")
   await expect(drawer).toContainText("Open full detail")
-  await expect(drawer.getByRole("link", { name: "Open full detail" }))
-    .toHaveAttribute("href", /\/findings\/finding-1/)
+  await expect(
+    drawer.getByRole("link", { name: "Open full detail" }),
+  ).toHaveAttribute("href", /\/findings\/finding-1/)
   await drawer.getByRole("button", { name: "Close" }).first().click()
   await expect(drawer).toHaveCount(0)
 
@@ -267,8 +273,7 @@ test("mobile shell exposes drawer navigation without page-width overflow", async
   await expect(
     navDialog.getByRole("navigation", { name: "Workbench mobile navigation" }),
   ).toBeVisible()
-  await expect(navDialog.getByRole("button", { name: "Close" }))
-    .toBeVisible()
+  await expect(navDialog.getByRole("button", { name: "Close" })).toBeVisible()
   await expect
     .poll(async () =>
       navDialog.evaluate((element) => {
@@ -346,7 +351,9 @@ test("mobile shell keeps compact health status without duplicate summary strip",
   await page.goto("/settings")
 
   const statusSummary = page.getByLabel("Workbench status summary")
-  const headerHealth = page.getByLabel("Workspace health: Data services healthy")
+  const headerHealth = page.getByLabel(
+    "Workspace health: Data services healthy",
+  )
   await expect(statusSummary).toHaveCount(0)
   const visibleHeaderHealthText = await headerHealth.evaluate((element) =>
     Array.from(element.querySelectorAll("span"))
@@ -365,8 +372,9 @@ test("desktop shell keeps sidebar pinned while long content scrolls internally",
   await openWorkbench(page)
   await page.setViewportSize({ height: 900, width: 1440 })
   await page.goto("/imports")
-  await expect(page.getByRole("complementary", { name: "Workbench sidebar" }))
-    .toBeVisible()
+  await expect(
+    page.getByRole("complementary", { name: "Workbench sidebar" }),
+  ).toBeVisible()
   await expect(
     page.getByRole("region", { name: "Workbench page content" }),
   ).toBeVisible()

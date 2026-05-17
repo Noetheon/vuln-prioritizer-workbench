@@ -135,7 +135,11 @@
   --vpw-red: #c40000;
   --vpw-violet: #475569;
   --vpw-navy: #171717;
-  --vpw-text-info: color-mix(in srgb, var(--vpw-blue) 80%, var(--vpw-text-primary));
+  --vpw-text-info: color-mix(
+    in srgb,
+    var(--vpw-blue) 80%,
+    var(--vpw-text-primary)
+  );
   --vpw-chart-critical: #dc2626;
   --vpw-chart-high: #f97316;
   --vpw-chart-medium: #d97706;
@@ -156,15 +160,17 @@
   --vpw-radius-pill: 9999px;
   --vpw-shadow-0: none;
   --vpw-shadow-1: 0 1px 1px rgba(0, 0, 0, 0.03), 0 2px 2px rgba(0, 0, 0, 0.04);
-  --vpw-shadow-2: 0 2px 2px rgba(0, 0, 0, 0.04), 0 8px 8px -8px rgba(0, 0, 0, 0.08);
-  --vpw-shadow-3: 0 2px 2px rgba(0, 0, 0, 0.04), 0 8px 16px -4px rgba(0, 0, 0, 0.08);
+  --vpw-shadow-2:
+    0 2px 2px rgba(0, 0, 0, 0.04), 0 8px 8px -8px rgba(0, 0, 0, 0.08);
+  --vpw-shadow-3:
+    0 2px 2px rgba(0, 0, 0, 0.04), 0 8px 16px -4px rgba(0, 0, 0, 0.08);
   --vpw-panel-padding: 1.25rem;
   --vpw-surface-padding-inline: 1.5rem;
   --vpw-surface-padding-block: 1rem;
   --vpw-surface-gap: 0.875rem;
   --vpw-control-height: 2.25rem;
   --vpw-control-height-lg: 2.5rem;
-  --vpw-container-max: 1920px;
+  --vpw-container-max: 2400px;
   --vpw-container-padding: 1rem;
 
   color: var(--vpw-text-primary);

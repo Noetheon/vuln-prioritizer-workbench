@@ -55,13 +55,13 @@
     "3": "0 2px 2px rgba(0, 0, 0, 0.04), 0 8px 16px -4px rgba(0, 0, 0, 0.08)"
   },
   "layout": {
-    "maxWidth": "1920px",
+    "maxWidth": "2400px",
     "pagePadding": {
       "base": "1rem",
       "sm": "1.5rem",
       "lg": "2rem",
       "xl": "2.5rem",
-      "xxl": "3rem"
+      "xxl": "2.5rem"
     }
   }
 }

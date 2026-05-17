@@ -1,11 +1,11 @@
 import { Link } from "@/lib/router"
-import {
-  Menu,
-  Sidebar,
-} from "lucide-react"
+import { Menu, Sidebar } from "lucide-react"
 import { type ReactNode, useEffect, useRef, useState } from "react"
 import { cn } from "../../lib/utils"
-import type { NavigationGroup, WorkbenchPath } from "../../lib/workbench-navigation"
+import type {
+  NavigationGroup,
+  WorkbenchPath,
+} from "../../lib/workbench-navigation"
 import { Button } from "../ui/button"
 import {
   Sheet,
@@ -297,131 +297,133 @@ export function AppShell({
 
         {/* Main area */}
         <main className="flex h-dvh min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-          {/* Topbar */}
-          <header className="flex h-16 shrink-0 items-center justify-between gap-3 border-b border-[var(--vpw-border-default)] bg-[var(--vpw-bg-page)] px-4 lg:px-6">
-            <div className="flex min-w-0 items-center gap-3">
-              <Sheet open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
-                <SheetTrigger asChild>
-                  <Button
-                    aria-label="Open navigation"
-                    className="size-9 border-[var(--vpw-border-default)] text-[var(--vpw-text-secondary)] lg:hidden"
-                    ref={mobileNavButtonRef}
-                    size="icon"
-                    type="button"
-                    variant="outline"
+          {/* Page header */}
+          <header className="shrink-0 bg-[var(--vpw-bg-app)] pt-5 pb-3 sm:pt-6 sm:pb-4">
+            <div className="vpw-page-container flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div className="flex min-w-0 items-start gap-3 sm:flex-1">
+                <Sheet open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
+                  <SheetTrigger asChild>
+                    <Button
+                      aria-label="Open navigation"
+                      className="mt-0.5 size-9 shrink-0 border-[var(--vpw-border-default)] bg-[var(--vpw-bg-card)] text-[var(--vpw-text-secondary)] lg:hidden"
+                      ref={mobileNavButtonRef}
+                      size="icon"
+                      type="button"
+                      variant="outline"
+                    >
+                      <Menu aria-hidden="true" size={18} />
+                    </Button>
+                  </SheetTrigger>
+                  <SheetContent
+                    className="flex w-[min(22rem,calc(100vw-2rem))] flex-col overflow-y-auto bg-[var(--vpw-bg-page)] p-0 text-[var(--vpw-text-primary)]"
+                    onCloseAutoFocus={(event) => {
+                      event.preventDefault()
+                      mobileNavButtonRef.current?.focus({
+                        preventScroll: true,
+                      })
+                    }}
+                    side="left"
                   >
-                    <Menu aria-hidden="true" size={18} />
-                  </Button>
-                </SheetTrigger>
-                <SheetContent
-                  className="flex w-[min(22rem,calc(100vw-2rem))] flex-col overflow-y-auto bg-[var(--vpw-bg-page)] p-0 text-[var(--vpw-text-primary)]"
-                  onCloseAutoFocus={(event) => {
-                    event.preventDefault()
-                    mobileNavButtonRef.current?.focus({
-                      preventScroll: true,
-                    })
-                  }}
-                  side="left"
-                >
-                  <SheetHeader className="border-b border-[var(--vpw-border-default)] px-4 py-4 text-left">
-                    <div className="flex items-center gap-3">
-                      <div className="flex size-9 shrink-0 items-center justify-center rounded-[var(--vpw-radius-lg)] bg-[var(--vpw-text-primary)] text-xs font-extrabold text-[var(--vpw-bg-card)]">
-                        VP
+                    <SheetHeader className="border-b border-[var(--vpw-border-default)] px-4 py-4 text-left">
+                      <div className="flex items-center gap-3">
+                        <div className="flex size-9 shrink-0 items-center justify-center rounded-[var(--vpw-radius-lg)] bg-[var(--vpw-text-primary)] text-xs font-extrabold text-[var(--vpw-bg-card)]">
+                          VP
+                        </div>
+                        <div className="min-w-0">
+                          <SheetTitle className="truncate text-sm font-semibold text-[var(--vpw-text-primary)]">
+                            Vuln Prioritizer
+                          </SheetTitle>
+                          <SheetDescription className="truncate text-xs text-[var(--vpw-text-muted)]">
+                            Workbench
+                          </SheetDescription>
+                        </div>
                       </div>
-                      <div className="min-w-0">
-                        <SheetTitle className="truncate text-sm font-semibold text-[var(--vpw-text-primary)]">
-                          Vuln Prioritizer
-                        </SheetTitle>
-                        <SheetDescription className="truncate text-xs text-[var(--vpw-text-muted)]">
-                          Workbench
-                        </SheetDescription>
-                      </div>
+                    </SheetHeader>
+                    <nav
+                      aria-label="Workbench mobile navigation"
+                      className="flex-1 p-2"
+                    >
+                      <ul className="flex flex-col gap-3">
+                        {navigationGroups.map((group) => (
+                          <li key={group.label}>
+                            <p className="px-3 pb-1 text-[10px] font-bold uppercase text-[var(--vpw-text-muted)]">
+                              {group.label}
+                            </p>
+                            <ul className="flex flex-col gap-1">
+                              {group.items.map((entry) => {
+                                const isActive = activePath === entry.to
+                                return (
+                                  <li key={entry.label}>
+                                    <Link
+                                      aria-current={
+                                        isActive ? "page" : undefined
+                                      }
+                                      className={cn(
+                                        "flex min-h-11 items-center gap-3 rounded-[var(--vpw-radius-md)] px-3 text-sm font-medium transition-colors",
+                                        isActive
+                                          ? "bg-[var(--vpw-text-primary)] text-[var(--vpw-bg-card)]"
+                                          : "text-[var(--vpw-text-secondary)] hover:bg-[var(--vpw-bg-panel)] hover:text-[var(--vpw-text-primary)]",
+                                      )}
+                                      onClick={() => setMobileNavOpen(false)}
+                                      to={entry.to}
+                                    >
+                                      <entry.icon
+                                        aria-hidden="true"
+                                        className="shrink-0"
+                                        size={17}
+                                      />
+                                      <span className="truncate">
+                                        {entry.label}
+                                      </span>
+                                    </Link>
+                                  </li>
+                                )
+                              })}
+                            </ul>
+                          </li>
+                        ))}
+                      </ul>
+                    </nav>
+                    <div className="flex shrink-0 items-center gap-2 border-t border-[var(--vpw-border-default)] p-3">
+                      <span className="flex size-8 shrink-0 items-center justify-center rounded-full border border-[var(--vpw-border-default)] bg-[var(--vpw-bg-panel)] text-xs font-semibold text-[var(--vpw-text-secondary)]">
+                        {workspaceInitial}
+                      </span>
+                      <span className="min-w-0 flex-1 truncate text-left text-xs text-[var(--vpw-text-secondary)]">
+                        {workspaceLabel}
+                      </span>
                     </div>
-                  </SheetHeader>
-                  <nav
-                    aria-label="Workbench mobile navigation"
-                    className="flex-1 p-2"
-                  >
-                    <ul className="flex flex-col gap-3">
-                      {navigationGroups.map((group) => (
-                        <li key={group.label}>
-                          <p className="px-3 pb-1 text-[10px] font-bold uppercase text-[var(--vpw-text-muted)]">
-                            {group.label}
-                          </p>
-                          <ul className="flex flex-col gap-1">
-                            {group.items.map((entry) => {
-                              const isActive = activePath === entry.to
-                              return (
-                                <li key={entry.label}>
-                                  <Link
-                                    aria-current={
-                                      isActive ? "page" : undefined
-                                    }
-                                    className={cn(
-                                      "flex min-h-11 items-center gap-3 rounded-[var(--vpw-radius-md)] px-3 text-sm font-medium transition-colors",
-                                      isActive
-                                        ? "bg-[var(--vpw-text-primary)] text-[var(--vpw-bg-card)]"
-                                        : "text-[var(--vpw-text-secondary)] hover:bg-[var(--vpw-bg-panel)] hover:text-[var(--vpw-text-primary)]",
-                                    )}
-                                    onClick={() => setMobileNavOpen(false)}
-                                    to={entry.to}
-                                  >
-                                    <entry.icon
-                                      aria-hidden="true"
-                                      className="shrink-0"
-                                      size={17}
-                                    />
-                                    <span className="truncate">
-                                      {entry.label}
-                                    </span>
-                                  </Link>
-                                </li>
-                              )
-                            })}
-                          </ul>
-                        </li>
-                      ))}
-                    </ul>
-                  </nav>
-                  <div className="flex shrink-0 items-center gap-2 border-t border-[var(--vpw-border-default)] p-3">
-                    <span className="flex size-8 shrink-0 items-center justify-center rounded-full border border-[var(--vpw-border-default)] bg-[var(--vpw-bg-panel)] text-xs font-semibold text-[var(--vpw-text-secondary)]">
-                      {workspaceInitial}
-                    </span>
-                    <span className="min-w-0 flex-1 truncate text-left text-xs text-[var(--vpw-text-secondary)]">
-                      {workspaceLabel}
-                    </span>
-                  </div>
-                </SheetContent>
-              </Sheet>
-              <div className="min-w-0">
-                <p className="text-[10px] font-bold uppercase tracking-[0.06em] text-[var(--vpw-text-muted)]">
-                  {eyebrow}
-                </p>
-                <h1 className="truncate text-base font-bold leading-tight text-[var(--vpw-text-primary)] sm:text-lg">
-                  {title}
-                </h1>
-                <p className="sr-only">
-                  {description}
-                </p>
+                  </SheetContent>
+                </Sheet>
+                <div className="min-w-0">
+                  <p className="sr-only">{eyebrow}</p>
+                  <h1 className="text-2xl font-semibold leading-tight text-[var(--vpw-text-primary)] sm:text-[1.625rem]">
+                    {title}
+                  </h1>
+                  <p className="mt-1 max-w-[52rem] text-sm leading-5 text-[var(--vpw-text-muted)] sm:leading-6">
+                    {description}
+                  </p>
+                </div>
               </div>
-            </div>
-            <div
-              aria-label={`Workspace health: ${healthLabel}`}
-              className="flex min-w-0 shrink-0 items-center gap-1.5"
-              role="status"
-            >
               <div
-                className={cn(
-                  "size-2 rounded-full",
-                  isHealthy ? "bg-[var(--vpw-green)]" : "bg-[var(--vpw-amber)]",
-                )}
-              />
-              <span className="text-sm text-[var(--vpw-text-muted)] sm:hidden">
-                {mobileHealthLabel}
-              </span>
-              <span className="hidden text-sm text-[var(--vpw-text-muted)] sm:inline">
-                {healthLabel}
-              </span>
+                aria-label={`Workspace health: ${healthLabel}`}
+                className="flex min-w-0 shrink-0 items-center gap-1.5 sm:mt-1"
+                role="status"
+              >
+                <div
+                  className={cn(
+                    "size-2 rounded-full",
+                    isHealthy
+                      ? "bg-[var(--vpw-green)]"
+                      : "bg-[var(--vpw-amber)]",
+                  )}
+                />
+                <span className="text-sm text-[var(--vpw-text-muted)] sm:hidden">
+                  {mobileHealthLabel}
+                </span>
+                <span className="hidden text-sm text-[var(--vpw-text-muted)] sm:inline">
+                  {healthLabel}
+                </span>
+              </div>
             </div>
           </header>
 
@@ -465,7 +467,7 @@ export function AppShell({
             // biome-ignore lint/a11y/noNoninteractiveTabindex: This is the app's keyboard-scroll owner.
             tabIndex={0}
           >
-            <div className="vpw-page-container py-6">{children}</div>
+            <div className="vpw-page-container pt-2 pb-6">{children}</div>
           </section>
         </main>
       </div>
