@@ -1,6 +1,6 @@
 import { Link } from "@/lib/router"
 import { Search, Upload } from "lucide-react"
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -13,13 +13,12 @@ import {
 } from "@/components/ui/select"
 import {
   MetaTag,
+  VpwCodeBlock,
   VpwDataTable,
   type VpwDataTableColumn,
   VpwEmptyState,
   VpwKeyValueList,
   VpwPanel,
-  VpwSection,
-  VpwSectionHeader,
 } from "@/components/vpw"
 import {
   FORMAT_CATEGORY_LABELS,
@@ -33,15 +32,14 @@ import type { ImportsWorkbenchProps } from "./imports-workbench-model"
 
 type CategoryFilter = "all" | SupportedFormatCategory
 
-export function SupportedFormatsRoute({ selectedProjectId }: ImportsWorkbenchProps) {
+export function SupportedFormatsRoute({
+  selectedProjectId,
+}: ImportsWorkbenchProps) {
   const [query, setQuery] = useState("")
   const [category, setCategory] = useState<CategoryFilter>("all")
   const [selectedInputType, setSelectedInputType] = useState(
     SUPPORTED_IMPORT_FORMATS[0].inputType,
   )
-  const selectedFormat =
-    SUPPORTED_IMPORT_FORMATS.find((format) => format.inputType === selectedInputType) ??
-    SUPPORTED_IMPORT_FORMATS[0]
   const filteredFormats = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase()
     return SUPPORTED_IMPORT_FORMATS.filter((format) => {
@@ -59,7 +57,27 @@ export function SupportedFormatsRoute({ selectedProjectId }: ImportsWorkbenchPro
         .includes(normalizedQuery)
     })
   }, [category, query])
+  const selectedFormat =
+    filteredFormats.find((format) => format.inputType === selectedInputType) ??
+    null
+
+  useEffect(() => {
+    if (filteredFormats.length === 0) return
+    if (
+      filteredFormats.some((format) => format.inputType === selectedInputType)
+    ) {
+      return
+    }
+    setSelectedInputType(filteredFormats[0].inputType)
+  }, [filteredFormats, selectedInputType])
+
   const projectSearch = selectedProjectRouteSearch(selectedProjectId)
+  const newImportSearch = selectedFormat
+    ? importFormatUrlSearch(
+        projectSearchString(selectedProjectId),
+        selectedFormat.inputType,
+      )
+    : projectSearch
   const columns: VpwDataTableColumn<SupportedFormat>[] = [
     {
       id: "format",
@@ -76,55 +94,62 @@ export function SupportedFormatsRoute({ selectedProjectId }: ImportsWorkbenchPro
         </Button>
       ),
     },
-    { id: "category", header: "Category", cell: (format) => format.categoryLabel },
-    { id: "extensions", header: "Extensions", cell: (format) => format.extensions.join(", ") },
+    {
+      id: "category",
+      header: "Category",
+      cell: (format) => format.categoryLabel,
+    },
+    {
+      id: "extensions",
+      header: "Extensions",
+      cell: (format) => format.extensions.join(", "),
+    },
     { id: "best", header: "Best for", cell: (format) => format.bestFor },
-    { id: "shape", header: "Expected shape", cell: (format) => format.expectedShape },
+    {
+      id: "shape",
+      header: "Expected shape",
+      cell: (format) => format.expectedShape,
+    },
     {
       id: "context",
       header: "Context support",
       cell: (format) => format.contextSupport.replaceAll("-", " "),
     },
     {
-      id: "example",
-      header: "Example",
+      id: "details",
+      header: "Details",
       cell: (format) => (
-        <code className="text-xs text-[var(--vpw-text-secondary)]">
-          {format.exampleSnippet.slice(0, 40)}
-        </code>
+        <Button
+          className="w-full justify-center whitespace-nowrap px-2"
+          onClick={() => setSelectedInputType(format.inputType)}
+          size="sm"
+          type="button"
+          variant={
+            format.inputType === selectedInputType ? "secondary" : "outline"
+          }
+        >
+          View example
+        </Button>
       ),
+      width: "128px",
     },
   ]
 
   return (
-    <div className="imports-page-shell mx-auto flex w-full max-w-[1480px] flex-col gap-6">
-      <VpwSection>
-        <VpwSectionHeader
-          actions={
-            <>
-              <Button asChild variant="outline">
-                <Link search={projectSearch} to="/imports">
-                  Back to imports
-                </Link>
-              </Button>
-              <Button asChild>
-                <Link
-                  search={importFormatUrlSearch(
-                    projectSearchString(selectedProjectId),
-                    selectedFormat.inputType,
-                  )}
-                  to="/imports/new"
-                >
-                  <Upload aria-hidden="true" data-icon="inline-start" />
-                  New import
-                </Link>
-              </Button>
-            </>
-          }
-          description="File formats and structure expectations for imports."
-          title="Supported formats"
-        />
-      </VpwSection>
+    <div className="imports-page-shell flex w-full min-w-0 flex-col gap-6">
+      <div className="flex flex-wrap justify-end gap-2">
+        <Button asChild variant="outline">
+          <Link search={projectSearch} to="/imports">
+            Back to imports
+          </Link>
+        </Button>
+        <Button asChild>
+          <Link search={newImportSearch} to="/imports/new">
+            <Upload aria-hidden="true" data-icon="inline-start" />
+            New import
+          </Link>
+        </Button>
+      </div>
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_380px]">
         <VpwPanel className="flex min-w-0 flex-col gap-4">
@@ -161,11 +186,13 @@ export function SupportedFormatsRoute({ selectedProjectId }: ImportsWorkbenchPro
                 <SelectContent>
                   <SelectGroup>
                     <SelectItem value="all">All formats</SelectItem>
-                    {Object.entries(FORMAT_CATEGORY_LABELS).map(([value, label]) => (
-                      <SelectItem key={value} value={value}>
-                        {label}
-                      </SelectItem>
-                    ))}
+                    {Object.entries(FORMAT_CATEGORY_LABELS).map(
+                      ([value, label]) => (
+                        <SelectItem key={value} value={value}>
+                          {label}
+                        </SelectItem>
+                      ),
+                    )}
                   </SelectGroup>
                 </SelectContent>
               </Select>
@@ -178,19 +205,33 @@ export function SupportedFormatsRoute({ selectedProjectId }: ImportsWorkbenchPro
               data={filteredFormats}
               density="compact"
               getRowKey={(format) => format.inputType}
-              minWidth="1100px"
+              minWidth="960px"
             />
           ) : (
             <VpwEmptyState
-              description="Clear search or category filters to see all supported formats."
-              title="No supported format matches your search"
+              action={
+                <Button
+                  onClick={() => {
+                    setQuery("")
+                    setCategory("all")
+                  }}
+                  type="button"
+                  variant="outline"
+                >
+                  Clear search
+                </Button>
+              }
+              description="Try another search or clear filters."
+              title={`No supported format matches${query.trim() ? ` "${query.trim()}"` : " your filters"}.`}
             />
           )}
         </VpwPanel>
-        <SupportedFormatDetailPanel
-          format={selectedFormat}
-          projectId={selectedProjectId}
-        />
+        {selectedFormat ? (
+          <SupportedFormatDetailPanel
+            format={selectedFormat}
+            projectId={selectedProjectId}
+          />
+        ) : null}
       </div>
     </div>
   )
@@ -207,6 +248,9 @@ function SupportedFormatDetailPanel({
     projectSearchString(projectId),
     format.inputType,
   )
+  const copyExample = () => {
+    void navigator.clipboard?.writeText(format.exampleSnippet)
+  }
   return (
     <VpwPanel className="flex flex-col gap-4">
       <div>
@@ -228,7 +272,10 @@ function SupportedFormatDetailPanel({
           { label: "Minimum fields", value: format.minimumFields.join(", ") },
           {
             label: "Optional fields recognized",
-            value: format.optionalFields.length > 0 ? format.optionalFields.join(", ") : "None",
+            value:
+              format.optionalFields.length > 0
+                ? format.optionalFields.join(", ")
+                : "None",
           },
           {
             label: "Context support",
@@ -237,10 +284,12 @@ function SupportedFormatDetailPanel({
         ]}
       />
       <div>
-        <p className="vpw-label">Example snippet</p>
-        <pre className="mt-2 max-h-48 overflow-auto rounded-[var(--vpw-radius-md)] border border-[var(--vpw-border-default)] bg-[var(--vpw-bg-panel)] p-3 text-xs text-[var(--vpw-text-primary)]">
-          <code>{format.exampleSnippet}</code>
-        </pre>
+        <VpwCodeBlock
+          code={format.exampleSnippet}
+          copyLabel="Copy example"
+          label="Example snippet"
+          onCopy={copyExample}
+        />
       </div>
       {format.notes.length > 0 ? (
         <div className="grid gap-2 text-sm text-[var(--vpw-text-secondary)]">

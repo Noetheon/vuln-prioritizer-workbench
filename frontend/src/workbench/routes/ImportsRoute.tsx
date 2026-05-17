@@ -67,6 +67,7 @@ function ImportsRouteContainer() {
     defaultImportWizardState,
   )
   const [importError, setImportError] = useState("")
+  const [failedImportRunId, setFailedImportRunId] = useState("")
   const [importRun, setImportRun] = useState<AnalysisRunPublic | null>(null)
   const [importRunSummary, setImportRunSummary] =
     useState<AnalysisRunSummaryPublic | null>(null)
@@ -227,6 +228,7 @@ function ImportsRouteContainer() {
       (formVexFile instanceof File && formVexFile.size > 0 ? formVexFile : null)
 
     setImportError("")
+    setFailedImportRunId("")
     setImportRun(null)
     setImportRunSummary(null)
     setImportParseErrors([])
@@ -259,6 +261,7 @@ function ImportsRouteContainer() {
       const summary = await RunsService.readRunSummary({ run_id: run.id })
       setImportRunSummary(summary)
       setImportParseErrors(summary.parse_errors ?? [])
+      setFailedImportRunId("")
       setPendingSelectableRunId(run.id)
       selectRunId(run.id)
       void navigate({
@@ -273,15 +276,11 @@ function ImportsRouteContainer() {
       setImportError(apiErrorMessage("Import upload failed", caught))
       const runId = analysisRunIdFromError(caught)
       const parseErrors = parseErrorsFromError(caught)
+      setFailedImportRunId(runId ?? "")
       setImportParseErrors(parseErrors)
       if (runId) {
         setPendingSelectableRunId(runId)
         selectRunId(runId)
-        void navigate({
-          params: { runId },
-          search: selectedProjectRouteSearch(importProjectId),
-          to: "/imports/runs/$runId",
-        })
         try {
           const summary = await RunsService.readRunSummary({ run_id: runId })
           setImportRunSummary(summary)
@@ -303,6 +302,7 @@ function ImportsRouteContainer() {
 
   return (
     <ImportsWorkbench
+      failedImportRunId={failedImportRunId}
       importError={importError}
       importLoading={importMutation.isPending}
       importParseErrors={importParseErrors}

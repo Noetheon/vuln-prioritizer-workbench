@@ -36,6 +36,7 @@ export type ImportWizardStateLike = {
 export type ImportsWorkbenchProps = {
   view?: "home" | "new" | "run" | "formats"
   importError: string
+  failedImportRunId: string
   importLoading: boolean
   importParseErrors: ImportParseErrorPublic[]
   importRun: AnalysisRunPublic | null

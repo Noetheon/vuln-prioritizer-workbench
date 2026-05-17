@@ -98,6 +98,35 @@ export const findingDetailRouteDetail: RouteDetail = {
   panelDetail: "Explain evidence, risk, and decision rationale.",
 }
 
+const importsNewRouteDetail: RouteDetail = {
+  description: "Upload supplied evidence and create findings for triage.",
+  eyebrow: "Prepare",
+  title: "New import",
+  panelTitle: "New import",
+  panelDetail: "Upload supplied evidence and create findings.",
+}
+
+const importsFormatsRouteDetail: RouteDetail = {
+  description: "File formats and structure expectations for imports.",
+  eyebrow: "Prepare",
+  title: "Supported formats",
+  panelTitle: "Supported formats",
+  panelDetail: "Review supported import formats.",
+}
+
+function importsRunRouteDetail(pathname: string): RouteDetail {
+  const [, rawRunId = ""] = pathname.match(/^\/imports\/runs\/([^/]+)/) ?? []
+  const runId = decodeRouteSegment(rawRunId)
+  const shortRunId = runId ? runId.slice(0, 8) : "selected"
+  return {
+    description: "Review parser results, source evidence, diagnostics, and triage actions.",
+    eyebrow: "Prepare",
+    title: `Import run ${shortRunId}`,
+    panelTitle: "Import run",
+    panelDetail: "Review import run details.",
+  }
+}
+
 const routePathOrder: readonly WorkbenchPath[] = [
   "/projects",
   "/imports",
@@ -132,6 +161,21 @@ export function routeDetailFromPathname(
   if (routePath === "/findings" && /^\/findings\/[^/]+/.test(pathname)) {
     return findingDetailRouteDetail
   }
+  if (routePath === "/imports") {
+    if (pathname === "/imports/new") return importsNewRouteDetail
+    if (pathname === "/imports/formats") return importsFormatsRouteDetail
+    if (/^\/imports\/runs\/[^/]+/.test(pathname)) {
+      return importsRunRouteDetail(pathname)
+    }
+  }
   if (routePath) return routeDetails[routePath]
   return unknownRouteDetail
+}
+
+function decodeRouteSegment(value: string) {
+  try {
+    return decodeURIComponent(value)
+  } catch {
+    return value
+  }
 }

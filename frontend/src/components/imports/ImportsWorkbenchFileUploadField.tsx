@@ -43,6 +43,7 @@ export function FileUploadField({
         label={label}
         name={name}
         onFileChange={onFileChange}
+        showSelectedFileActions
       />
     </VpwField>
   )

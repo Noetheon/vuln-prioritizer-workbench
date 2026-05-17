@@ -177,7 +177,15 @@ test("route details specialize finding detail and unknown paths", () => {
     routeDetailFromPathname("/findings/finding-1", "/findings").title,
     "Finding detail",
   )
-  assert.equal(routeDetailFromPathname("/imports/new", "/imports").title, "Imports")
+  assert.equal(routeDetailFromPathname("/imports/new", "/imports").title, "New import")
+  assert.equal(
+    routeDetailFromPathname("/imports/runs/run-2", "/imports").title,
+    "Import run run-2",
+  )
+  assert.equal(
+    routeDetailFromPathname("/imports/formats", "/imports").title,
+    "Supported formats",
+  )
   assert.equal(routeDetailFromPathname("/unknown", null).title, "Workspace")
 })
 

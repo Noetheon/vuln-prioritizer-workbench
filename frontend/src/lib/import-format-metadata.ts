@@ -520,7 +520,7 @@ export function readinessBlocksImport(checks: readonly ImportReadinessCheck[]) {
     (check) =>
       check.status === "missing" ||
       check.status === "error" ||
-      ((check.id === "file-type" || check.id === "parser-preview") &&
+      (["file-type", "parser-preview", "asset-context", "vex"].includes(check.id) &&
         check.status === "pending"),
   )
 }

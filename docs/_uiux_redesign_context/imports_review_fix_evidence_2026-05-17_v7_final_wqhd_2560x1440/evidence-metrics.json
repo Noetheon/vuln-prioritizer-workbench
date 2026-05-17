@@ -1,0 +1,569 @@
+{
+  "duplicateHashes": [],
+  "generatedAt": "2026-05-17T18:51:40.423Z",
+  "overflowFailures": [],
+  "screenshotCount": 22,
+  "screenshots": [
+    {
+      "bodyScrollWidth": 2560,
+      "clientWidth": 2560,
+      "dialog": null,
+      "h1Texts": [
+        "Imports"
+      ],
+      "path": "/imports?projectId=project-1",
+      "summaryRail": null,
+      "url": "http://127.0.0.1:15173/imports?projectId=project-1",
+      "viewportHeight": 1440,
+      "viewportWidth": 2560,
+      "consoleErrors": [],
+      "consoleWarnings": [],
+      "file": "/Users/umutgoksular/Python CLI - CVE Priorisierung mit EPSS, KEV und ATT&CK copy/docs/_uiux_redesign_context/imports_review_fix_evidence_2026-05-17_v7_final_wqhd_2560x1440/screenshots/01_import-center_wqhd_2560x1440.png",
+      "hash": "0e596a26d8d4ad2161befbe5c78304bbcc5511ff36361bfdfb96cf0c28e5e0c4",
+      "name": "01_import-center_wqhd_2560x1440.png",
+      "pageErrors": [],
+      "screenshotHeight": 1440,
+      "screenshotWidth": 2560
+    },
+    {
+      "bodyScrollWidth": 2560,
+      "clientWidth": 2560,
+      "dialog": {
+        "bottom": 1440,
+        "height": 1440,
+        "left": 1960,
+        "right": 2560,
+        "top": 0,
+        "width": 600
+      },
+      "h1Texts": [
+        "Imports"
+      ],
+      "path": "/imports?projectId=project-1",
+      "summaryRail": null,
+      "url": "http://127.0.0.1:15173/imports?projectId=project-1",
+      "viewportHeight": 1440,
+      "viewportWidth": 2560,
+      "consoleErrors": [],
+      "consoleWarnings": [],
+      "file": "/Users/umutgoksular/Python CLI - CVE Priorisierung mit EPSS, KEV und ATT&CK copy/docs/_uiux_redesign_context/imports_review_fix_evidence_2026-05-17_v7_final_wqhd_2560x1440/screenshots/02_import-center_diagnostics-drawer_wqhd_2560x1440.png",
+      "hash": "39cb95ec8cfcea8ed5675203282d0553dcb64235d113f7d0c5ccad6097bc756f",
+      "name": "02_import-center_diagnostics-drawer_wqhd_2560x1440.png",
+      "pageErrors": [],
+      "screenshotHeight": 1440,
+      "screenshotWidth": 2560
+    },
+    {
+      "bodyScrollWidth": 2560,
+      "clientWidth": 2560,
+      "dialog": null,
+      "h1Texts": [
+        "New import"
+      ],
+      "path": "/imports/new?projectId=project-1",
+      "summaryRail": {
+        "left": 2200,
+        "right": 2520,
+        "width": 320
+      },
+      "url": "http://127.0.0.1:15173/imports/new?projectId=project-1",
+      "viewportHeight": 1440,
+      "viewportWidth": 2560,
+      "consoleErrors": [],
+      "consoleWarnings": [],
+      "file": "/Users/umutgoksular/Python CLI - CVE Priorisierung mit EPSS, KEV und ATT&CK copy/docs/_uiux_redesign_context/imports_review_fix_evidence_2026-05-17_v7_final_wqhd_2560x1440/screenshots/03_new-import_step-1_choose-source_wqhd_2560x1440.png",
+      "hash": "86368fc19db17ca02f4752b29d6e44da13ae7245021750a21bccdffd962263eb",
+      "name": "03_new-import_step-1_choose-source_wqhd_2560x1440.png",
+      "pageErrors": [],
+      "screenshotHeight": 1440,
+      "screenshotWidth": 2560
+    },
+    {
+      "bodyScrollWidth": 2560,
+      "clientWidth": 2560,
+      "dialog": null,
+      "h1Texts": [
+        "New import"
+      ],
+      "path": "/imports/new?projectId=project-1",
+      "summaryRail": {
+        "left": 2200,
+        "right": 2520,
+        "width": 320
+      },
+      "url": "http://127.0.0.1:15173/imports/new?projectId=project-1",
+      "viewportHeight": 1440,
+      "viewportWidth": 2560,
+      "consoleErrors": [],
+      "consoleWarnings": [],
+      "file": "/Users/umutgoksular/Python CLI - CVE Priorisierung mit EPSS, KEV und ATT&CK copy/docs/_uiux_redesign_context/imports_review_fix_evidence_2026-05-17_v7_final_wqhd_2560x1440/screenshots/04_new-import_step-2_missing-file_wqhd_2560x1440.png",
+      "hash": "bd7d94266a16830e21b13ce997d0316583a93a5017a363616b8905a035bfc23a",
+      "name": "04_new-import_step-2_missing-file_wqhd_2560x1440.png",
+      "pageErrors": [],
+      "screenshotHeight": 1440,
+      "screenshotWidth": 2560
+    },
+    {
+      "bodyScrollWidth": 2560,
+      "clientWidth": 2560,
+      "dialog": null,
+      "h1Texts": [
+        "New import"
+      ],
+      "path": "/imports/new?projectId=project-1",
+      "summaryRail": {
+        "left": 2200,
+        "right": 2520,
+        "width": 320
+      },
+      "url": "http://127.0.0.1:15173/imports/new?projectId=project-1",
+      "viewportHeight": 1440,
+      "viewportWidth": 2560,
+      "consoleErrors": [],
+      "consoleWarnings": [],
+      "file": "/Users/umutgoksular/Python CLI - CVE Priorisierung mit EPSS, KEV und ATT&CK copy/docs/_uiux_redesign_context/imports_review_fix_evidence_2026-05-17_v7_final_wqhd_2560x1440/screenshots/05_new-import_step-2_file-check-passed_wqhd_2560x1440.png",
+      "hash": "b88ed69db493511cb916fbd974f11a5d14cabc981d6ff9d4e2367ed686b0588d",
+      "name": "05_new-import_step-2_file-check-passed_wqhd_2560x1440.png",
+      "pageErrors": [],
+      "screenshotHeight": 1440,
+      "screenshotWidth": 2560
+    },
+    {
+      "bodyScrollWidth": 2560,
+      "clientWidth": 2560,
+      "dialog": null,
+      "h1Texts": [
+        "New import"
+      ],
+      "path": "/imports/new?projectId=project-1",
+      "summaryRail": {
+        "left": 2200,
+        "right": 2520,
+        "width": 320
+      },
+      "url": "http://127.0.0.1:15173/imports/new?projectId=project-1",
+      "viewportHeight": 1440,
+      "viewportWidth": 2560,
+      "consoleErrors": [],
+      "consoleWarnings": [],
+      "file": "/Users/umutgoksular/Python CLI - CVE Priorisierung mit EPSS, KEV und ATT&CK copy/docs/_uiux_redesign_context/imports_review_fix_evidence_2026-05-17_v7_final_wqhd_2560x1440/screenshots/06_new-import_step-3_advanced-expanded_wqhd_2560x1440.png",
+      "hash": "04157bc60f375e86af71445b65d8c667068f58dcd1d003e2fb2dfda0874c9e96",
+      "name": "06_new-import_step-3_advanced-expanded_wqhd_2560x1440.png",
+      "pageErrors": [],
+      "screenshotHeight": 1440,
+      "screenshotWidth": 2560
+    },
+    {
+      "bodyScrollWidth": 2560,
+      "clientWidth": 2560,
+      "dialog": null,
+      "h1Texts": [
+        "New import"
+      ],
+      "path": "/imports/new?projectId=project-1",
+      "summaryRail": {
+        "left": 2200,
+        "right": 2520,
+        "width": 320
+      },
+      "url": "http://127.0.0.1:15173/imports/new?projectId=project-1",
+      "viewportHeight": 1440,
+      "viewportWidth": 2560,
+      "consoleErrors": [],
+      "consoleWarnings": [],
+      "file": "/Users/umutgoksular/Python CLI - CVE Priorisierung mit EPSS, KEV und ATT&CK copy/docs/_uiux_redesign_context/imports_review_fix_evidence_2026-05-17_v7_final_wqhd_2560x1440/screenshots/07_new-import_step-4_review_wqhd_2560x1440.png",
+      "hash": "ff598523a71d87d40c0d2eb3dd377fe4e6d2cc7ea3ac3fffc89a9c551120a2b0",
+      "name": "07_new-import_step-4_review_wqhd_2560x1440.png",
+      "pageErrors": [],
+      "screenshotHeight": 1440,
+      "screenshotWidth": 2560
+    },
+    {
+      "bodyScrollWidth": 2560,
+      "clientWidth": 2560,
+      "dialog": null,
+      "h1Texts": [
+        "Import run run-2"
+      ],
+      "path": "/imports/runs/run-2?projectId=project-1",
+      "summaryRail": null,
+      "url": "http://127.0.0.1:15173/imports/runs/run-2?projectId=project-1",
+      "viewportHeight": 1440,
+      "viewportWidth": 2560,
+      "consoleErrors": [],
+      "consoleWarnings": [],
+      "file": "/Users/umutgoksular/Python CLI - CVE Priorisierung mit EPSS, KEV und ATT&CK copy/docs/_uiux_redesign_context/imports_review_fix_evidence_2026-05-17_v7_final_wqhd_2560x1440/screenshots/08_run-detail_overview_wqhd_2560x1440.png",
+      "hash": "01989f1d991f0f5eabab047ca222999327eaa47dd6540537d63e0480a37280f2",
+      "name": "08_run-detail_overview_wqhd_2560x1440.png",
+      "pageErrors": [],
+      "screenshotHeight": 1440,
+      "screenshotWidth": 2560
+    },
+    {
+      "bodyScrollWidth": 2560,
+      "clientWidth": 2560,
+      "dialog": null,
+      "h1Texts": [
+        "Import run run-2"
+      ],
+      "path": "/imports/runs/run-2?projectId=project-1",
+      "summaryRail": null,
+      "url": "http://127.0.0.1:15173/imports/runs/run-2?projectId=project-1",
+      "viewportHeight": 1440,
+      "viewportWidth": 2560,
+      "consoleErrors": [],
+      "consoleWarnings": [],
+      "file": "/Users/umutgoksular/Python CLI - CVE Priorisierung mit EPSS, KEV und ATT&CK copy/docs/_uiux_redesign_context/imports_review_fix_evidence_2026-05-17_v7_final_wqhd_2560x1440/screenshots/09_run-detail_findings_wqhd_2560x1440.png",
+      "hash": "aa67515f8e5255d66a921606fc58b6422a00792ee594901c7077f163697711b5",
+      "name": "09_run-detail_findings_wqhd_2560x1440.png",
+      "pageErrors": [],
+      "screenshotHeight": 1440,
+      "screenshotWidth": 2560
+    },
+    {
+      "bodyScrollWidth": 2560,
+      "clientWidth": 2560,
+      "dialog": null,
+      "h1Texts": [
+        "Import run run-2"
+      ],
+      "path": "/imports/runs/run-2?projectId=project-1",
+      "summaryRail": null,
+      "url": "http://127.0.0.1:15173/imports/runs/run-2?projectId=project-1",
+      "viewportHeight": 1440,
+      "viewportWidth": 2560,
+      "consoleErrors": [],
+      "consoleWarnings": [],
+      "file": "/Users/umutgoksular/Python CLI - CVE Priorisierung mit EPSS, KEV und ATT&CK copy/docs/_uiux_redesign_context/imports_review_fix_evidence_2026-05-17_v7_final_wqhd_2560x1440/screenshots/10_run-detail_diagnostics_wqhd_2560x1440.png",
+      "hash": "1874cc01f72915fb78a501b5b789e78f37ce361a5393333e4953148f30ed6ae2",
+      "name": "10_run-detail_diagnostics_wqhd_2560x1440.png",
+      "pageErrors": [],
+      "screenshotHeight": 1440,
+      "screenshotWidth": 2560
+    },
+    {
+      "bodyScrollWidth": 2560,
+      "clientWidth": 2560,
+      "dialog": null,
+      "h1Texts": [
+        "Import run run-2"
+      ],
+      "path": "/imports/runs/run-2?projectId=project-1",
+      "summaryRail": null,
+      "url": "http://127.0.0.1:15173/imports/runs/run-2?projectId=project-1",
+      "viewportHeight": 1440,
+      "viewportWidth": 2560,
+      "consoleErrors": [],
+      "consoleWarnings": [],
+      "file": "/Users/umutgoksular/Python CLI - CVE Priorisierung mit EPSS, KEV und ATT&CK copy/docs/_uiux_redesign_context/imports_review_fix_evidence_2026-05-17_v7_final_wqhd_2560x1440/screenshots/11_run-detail_evidence_wqhd_2560x1440.png",
+      "hash": "90a6485e50ee0c484919cacceed1d6827cde61dd606652b0e4def569a7bebedb",
+      "name": "11_run-detail_evidence_wqhd_2560x1440.png",
+      "pageErrors": [],
+      "screenshotHeight": 1440,
+      "screenshotWidth": 2560
+    },
+    {
+      "bodyScrollWidth": 2560,
+      "clientWidth": 2560,
+      "dialog": null,
+      "h1Texts": [
+        "Import run run-2"
+      ],
+      "path": "/imports/runs/run-2?projectId=project-1",
+      "summaryRail": null,
+      "url": "http://127.0.0.1:15173/imports/runs/run-2?projectId=project-1",
+      "viewportHeight": 1440,
+      "viewportWidth": 2560,
+      "consoleErrors": [],
+      "consoleWarnings": [],
+      "file": "/Users/umutgoksular/Python CLI - CVE Priorisierung mit EPSS, KEV und ATT&CK copy/docs/_uiux_redesign_context/imports_review_fix_evidence_2026-05-17_v7_final_wqhd_2560x1440/screenshots/12_run-detail_metadata_wqhd_2560x1440.png",
+      "hash": "77387f4069ea155e23fff5ed1fa6aac9c3b75c48c7d50657d98ac1ad21a26435",
+      "name": "12_run-detail_metadata_wqhd_2560x1440.png",
+      "pageErrors": [],
+      "screenshotHeight": 1440,
+      "screenshotWidth": 2560
+    },
+    {
+      "bodyScrollWidth": 2560,
+      "clientWidth": 2560,
+      "dialog": null,
+      "h1Texts": [
+        "New import"
+      ],
+      "path": "/imports/new?projectId=project-1",
+      "summaryRail": {
+        "left": 2200,
+        "right": 2520,
+        "width": 320
+      },
+      "url": "http://127.0.0.1:15173/imports/new?projectId=project-1",
+      "viewportHeight": 1440,
+      "viewportWidth": 2560,
+      "consoleErrors": [
+        "Failed to load resource: the server responded with a status of 400 (Bad Request)"
+      ],
+      "consoleWarnings": [],
+      "file": "/Users/umutgoksular/Python CLI - CVE Priorisierung mit EPSS, KEV und ATT&CK copy/docs/_uiux_redesign_context/imports_review_fix_evidence_2026-05-17_v7_final_wqhd_2560x1440/screenshots/13_new-import_failure-without-run_wqhd_2560x1440.png",
+      "hash": "f66f8533af4148563d8163670d185acd546b2676afb7bd56e1cf494aa58dee78",
+      "name": "13_new-import_failure-without-run_wqhd_2560x1440.png",
+      "pageErrors": [],
+      "screenshotHeight": 1440,
+      "screenshotWidth": 2560
+    },
+    {
+      "bodyScrollWidth": 2560,
+      "clientWidth": 2560,
+      "dialog": null,
+      "h1Texts": [
+        "New import"
+      ],
+      "path": "/imports/new?projectId=project-1",
+      "summaryRail": {
+        "left": 2200,
+        "right": 2520,
+        "width": 320
+      },
+      "url": "http://127.0.0.1:15173/imports/new?projectId=project-1",
+      "viewportHeight": 1440,
+      "viewportWidth": 2560,
+      "consoleErrors": [
+        "Failed to load resource: the server responded with a status of 400 (Bad Request)",
+        "Failed to load resource: the server responded with a status of 400 (Bad Request)"
+      ],
+      "consoleWarnings": [],
+      "file": "/Users/umutgoksular/Python CLI - CVE Priorisierung mit EPSS, KEV und ATT&CK copy/docs/_uiux_redesign_context/imports_review_fix_evidence_2026-05-17_v7_final_wqhd_2560x1440/screenshots/14_new-import_failure-with-run_wqhd_2560x1440.png",
+      "hash": "f4df2ef6b69aa0d2d4af8f1c527cc7f1942c69477d2e643c40d806d6b2c67580",
+      "name": "14_new-import_failure-with-run_wqhd_2560x1440.png",
+      "pageErrors": [],
+      "screenshotHeight": 1440,
+      "screenshotWidth": 2560
+    },
+    {
+      "bodyScrollWidth": 390,
+      "clientWidth": 390,
+      "dialog": {
+        "bottom": 844,
+        "height": 844,
+        "left": 0,
+        "right": 390,
+        "top": 0,
+        "width": 390
+      },
+      "h1Texts": [
+        "Import run run-2"
+      ],
+      "path": "/imports/runs/run-2?projectId=project-1",
+      "summaryRail": null,
+      "url": "http://127.0.0.1:15173/imports/runs/run-2?projectId=project-1",
+      "viewportHeight": 844,
+      "viewportWidth": 390,
+      "consoleErrors": [
+        "Failed to load resource: the server responded with a status of 400 (Bad Request)",
+        "Failed to load resource: the server responded with a status of 400 (Bad Request)"
+      ],
+      "consoleWarnings": [],
+      "file": "/Users/umutgoksular/Python CLI - CVE Priorisierung mit EPSS, KEV und ATT&CK copy/docs/_uiux_redesign_context/imports_review_fix_evidence_2026-05-17_v7_final_wqhd_2560x1440/screenshots/15_run-detail_diagnostics-drawer_mobile-summary_390x844.png",
+      "hash": "39e44477fcbf3e7aa82f101c2245b45320ac260116d8d627cb2e6e22d647f9af",
+      "name": "15_run-detail_diagnostics-drawer_mobile-summary_390x844.png",
+      "pageErrors": [],
+      "screenshotHeight": 844,
+      "screenshotWidth": 390
+    },
+    {
+      "bodyScrollWidth": 390,
+      "clientWidth": 390,
+      "dialog": {
+        "bottom": 844,
+        "height": 844,
+        "left": 0,
+        "right": 390,
+        "top": 0,
+        "width": 390
+      },
+      "h1Texts": [
+        "Import run run-2"
+      ],
+      "path": "/imports/runs/run-2?projectId=project-1",
+      "summaryRail": null,
+      "url": "http://127.0.0.1:15173/imports/runs/run-2?projectId=project-1",
+      "viewportHeight": 844,
+      "viewportWidth": 390,
+      "consoleErrors": [
+        "Failed to load resource: the server responded with a status of 400 (Bad Request)",
+        "Failed to load resource: the server responded with a status of 400 (Bad Request)"
+      ],
+      "consoleWarnings": [],
+      "file": "/Users/umutgoksular/Python CLI - CVE Priorisierung mit EPSS, KEV und ATT&CK copy/docs/_uiux_redesign_context/imports_review_fix_evidence_2026-05-17_v7_final_wqhd_2560x1440/screenshots/16_run-detail_diagnostics-drawer_mobile-parser_390x844.png",
+      "hash": "4b665e705c885acf1b275915f7a74baea206b764678a566c2f45b87b271d18c3",
+      "name": "16_run-detail_diagnostics-drawer_mobile-parser_390x844.png",
+      "pageErrors": [],
+      "screenshotHeight": 844,
+      "screenshotWidth": 390
+    },
+    {
+      "bodyScrollWidth": 390,
+      "clientWidth": 390,
+      "dialog": {
+        "bottom": 844,
+        "height": 844,
+        "left": 0,
+        "right": 390,
+        "top": 0,
+        "width": 390
+      },
+      "h1Texts": [
+        "Import run run-2"
+      ],
+      "path": "/imports/runs/run-2?projectId=project-1",
+      "summaryRail": null,
+      "url": "http://127.0.0.1:15173/imports/runs/run-2?projectId=project-1",
+      "viewportHeight": 844,
+      "viewportWidth": 390,
+      "consoleErrors": [
+        "Failed to load resource: the server responded with a status of 400 (Bad Request)",
+        "Failed to load resource: the server responded with a status of 400 (Bad Request)"
+      ],
+      "consoleWarnings": [],
+      "file": "/Users/umutgoksular/Python CLI - CVE Priorisierung mit EPSS, KEV und ATT&CK copy/docs/_uiux_redesign_context/imports_review_fix_evidence_2026-05-17_v7_final_wqhd_2560x1440/screenshots/17_run-detail_diagnostics-drawer_mobile-upload_390x844.png",
+      "hash": "45f14751190f6e770675f5b3842808af9918905bf34a002a475400f8ebc6b9e4",
+      "name": "17_run-detail_diagnostics-drawer_mobile-upload_390x844.png",
+      "pageErrors": [],
+      "screenshotHeight": 844,
+      "screenshotWidth": 390
+    },
+    {
+      "bodyScrollWidth": 390,
+      "clientWidth": 390,
+      "dialog": {
+        "bottom": 844,
+        "height": 844,
+        "left": 0,
+        "right": 390,
+        "top": 0,
+        "width": 390
+      },
+      "h1Texts": [
+        "Import run run-2"
+      ],
+      "path": "/imports/runs/run-2?projectId=project-1",
+      "summaryRail": null,
+      "url": "http://127.0.0.1:15173/imports/runs/run-2?projectId=project-1",
+      "viewportHeight": 844,
+      "viewportWidth": 390,
+      "consoleErrors": [
+        "Failed to load resource: the server responded with a status of 400 (Bad Request)",
+        "Failed to load resource: the server responded with a status of 400 (Bad Request)"
+      ],
+      "consoleWarnings": [],
+      "file": "/Users/umutgoksular/Python CLI - CVE Priorisierung mit EPSS, KEV und ATT&CK copy/docs/_uiux_redesign_context/imports_review_fix_evidence_2026-05-17_v7_final_wqhd_2560x1440/screenshots/18_run-detail_diagnostics-drawer_mobile-provider_390x844.png",
+      "hash": "37f3095732eb70b85c6309759e04c5970079d129ebab1de183fa9ffc9ee4ccd8",
+      "name": "18_run-detail_diagnostics-drawer_mobile-provider_390x844.png",
+      "pageErrors": [],
+      "screenshotHeight": 844,
+      "screenshotWidth": 390
+    },
+    {
+      "bodyScrollWidth": 390,
+      "clientWidth": 390,
+      "dialog": {
+        "bottom": 844,
+        "height": 844,
+        "left": 0,
+        "right": 390,
+        "top": 0,
+        "width": 390
+      },
+      "h1Texts": [
+        "Import run run-2"
+      ],
+      "path": "/imports/runs/run-2?projectId=project-1",
+      "summaryRail": null,
+      "url": "http://127.0.0.1:15173/imports/runs/run-2?projectId=project-1",
+      "viewportHeight": 844,
+      "viewportWidth": 390,
+      "consoleErrors": [
+        "Failed to load resource: the server responded with a status of 400 (Bad Request)",
+        "Failed to load resource: the server responded with a status of 400 (Bad Request)"
+      ],
+      "consoleWarnings": [],
+      "file": "/Users/umutgoksular/Python CLI - CVE Priorisierung mit EPSS, KEV und ATT&CK copy/docs/_uiux_redesign_context/imports_review_fix_evidence_2026-05-17_v7_final_wqhd_2560x1440/screenshots/19_run-detail_diagnostics-drawer_mobile-raw_390x844.png",
+      "hash": "2adfd2a8d0bab3ca85526f209298e56d262589587a18947cc4e241188bee24ba",
+      "name": "19_run-detail_diagnostics-drawer_mobile-raw_390x844.png",
+      "pageErrors": [],
+      "screenshotHeight": 844,
+      "screenshotWidth": 390
+    },
+    {
+      "bodyScrollWidth": 2560,
+      "clientWidth": 2560,
+      "dialog": null,
+      "h1Texts": [
+        "Supported formats"
+      ],
+      "path": "/imports/formats?projectId=project-1",
+      "summaryRail": null,
+      "url": "http://127.0.0.1:15173/imports/formats?projectId=project-1",
+      "viewportHeight": 1440,
+      "viewportWidth": 2560,
+      "consoleErrors": [
+        "Failed to load resource: the server responded with a status of 400 (Bad Request)",
+        "Failed to load resource: the server responded with a status of 400 (Bad Request)"
+      ],
+      "consoleWarnings": [],
+      "file": "/Users/umutgoksular/Python CLI - CVE Priorisierung mit EPSS, KEV und ATT&CK copy/docs/_uiux_redesign_context/imports_review_fix_evidence_2026-05-17_v7_final_wqhd_2560x1440/screenshots/20_supported-formats_search-nessus_wqhd_2560x1440.png",
+      "hash": "3d0e008bd651d3f15791feb8cde6d060e76cf517e2327f0c6fdd7aa9f0dd31b6",
+      "name": "20_supported-formats_search-nessus_wqhd_2560x1440.png",
+      "pageErrors": [],
+      "screenshotHeight": 1440,
+      "screenshotWidth": 2560
+    },
+    {
+      "bodyScrollWidth": 2560,
+      "clientWidth": 2560,
+      "dialog": null,
+      "h1Texts": [
+        "Supported formats"
+      ],
+      "path": "/imports/formats?projectId=project-1",
+      "summaryRail": null,
+      "url": "http://127.0.0.1:15173/imports/formats?projectId=project-1",
+      "viewportHeight": 1440,
+      "viewportWidth": 2560,
+      "consoleErrors": [
+        "Failed to load resource: the server responded with a status of 400 (Bad Request)",
+        "Failed to load resource: the server responded with a status of 400 (Bad Request)"
+      ],
+      "consoleWarnings": [],
+      "file": "/Users/umutgoksular/Python CLI - CVE Priorisierung mit EPSS, KEV und ATT&CK copy/docs/_uiux_redesign_context/imports_review_fix_evidence_2026-05-17_v7_final_wqhd_2560x1440/screenshots/21_supported-formats_no-results_wqhd_2560x1440.png",
+      "hash": "87247fa82e29ed02a4c09f08ddf748dbe6038c0305e87abb0ec22a6eed3026b6",
+      "name": "21_supported-formats_no-results_wqhd_2560x1440.png",
+      "pageErrors": [],
+      "screenshotHeight": 1440,
+      "screenshotWidth": 2560
+    },
+    {
+      "bodyScrollWidth": 2560,
+      "clientWidth": 2560,
+      "dialog": null,
+      "h1Texts": [
+        "Supported formats"
+      ],
+      "path": "/imports/formats?projectId=project-1",
+      "summaryRail": null,
+      "url": "http://127.0.0.1:15173/imports/formats?projectId=project-1",
+      "viewportHeight": 1440,
+      "viewportWidth": 2560,
+      "consoleErrors": [
+        "Failed to load resource: the server responded with a status of 400 (Bad Request)",
+        "Failed to load resource: the server responded with a status of 400 (Bad Request)"
+      ],
+      "consoleWarnings": [],
+      "file": "/Users/umutgoksular/Python CLI - CVE Priorisierung mit EPSS, KEV und ATT&CK copy/docs/_uiux_redesign_context/imports_review_fix_evidence_2026-05-17_v7_final_wqhd_2560x1440/screenshots/22_supported-formats_cyclonedx-detail_wqhd_2560x1440.png",
+      "hash": "6e074bd8f47235b5b2613b0e3e1b3ff11a332fb2441e3bbb9f2b2a65591af339",
+      "name": "22_supported-formats_cyclonedx-detail_wqhd_2560x1440.png",
+      "pageErrors": [],
+      "screenshotHeight": 1440,
+      "screenshotWidth": 2560
+    }
+  ]
+}

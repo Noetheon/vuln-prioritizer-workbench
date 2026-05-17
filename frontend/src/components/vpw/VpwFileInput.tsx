@@ -2,6 +2,7 @@ import { FileCheck2, UploadCloud } from "lucide-react"
 import type { ChangeEvent } from "react"
 
 import { cn } from "@/lib/utils"
+import { Button } from "../ui/button"
 
 export type VpwFileInputProps = {
   id: string
@@ -16,6 +17,7 @@ export type VpwFileInputProps = {
   file?: File | null
   name?: string
   onFileChange: (file: File | null) => void
+  showSelectedFileActions?: boolean
 }
 
 export function VpwFileInput({
@@ -31,9 +33,11 @@ export function VpwFileInput({
   label,
   name,
   onFileChange,
+  showSelectedFileActions = false,
 }: VpwFileInputProps) {
   function handleChange(event: ChangeEvent<HTMLInputElement>) {
     onFileChange(event.target.files?.[0] ?? null)
+    event.target.value = ""
   }
 
   return (
@@ -78,6 +82,23 @@ export function VpwFileInput({
           </span>
         </span>
       </label>
+      {file && showSelectedFileActions ? (
+        <div className="flex flex-wrap gap-2">
+          <Button asChild size="sm" variant="outline">
+            <label className="cursor-pointer" htmlFor={id}>
+              Change file
+            </label>
+          </Button>
+          <Button
+            onClick={() => onFileChange(null)}
+            size="sm"
+            type="button"
+            variant="outline"
+          >
+            Remove
+          </Button>
+        </div>
+      ) : null}
     </div>
   )
 }

@@ -34,29 +34,22 @@ export function ImportsHomeRoute(props: ImportsHomeRouteProps) {
   const projectSearch = selectedProjectRouteSearch(props.selectedProjectId)
 
   return (
-    <div className="imports-page-shell mx-auto flex w-full max-w-[1480px] flex-col gap-6">
+    <div className="imports-page-shell flex w-full min-w-0 flex-col gap-6">
       <VpwSection>
-        <VpwSectionHeader
-          actions={
-            <>
-              <Button asChild variant="outline">
-                <Link search={projectSearch} to="/imports/formats">
-                  <TableProperties aria-hidden="true" data-icon="inline-start" />
-                  Supported formats
-                </Link>
-              </Button>
-              <Button asChild>
-                <Link search={projectSearch} to="/imports/new">
-                  <Plus aria-hidden="true" data-icon="inline-start" />
-                  New import
-                </Link>
-              </Button>
-            </>
-          }
-          description="Bring supplied vulnerability evidence into the Workbench with a guided import flow."
-          eyebrow="Prepare"
-          title="Imports"
-        />
+        <div className="flex flex-wrap justify-end gap-2">
+          <Button asChild variant="outline">
+            <Link search={projectSearch} to="/imports/formats">
+              <TableProperties aria-hidden="true" data-icon="inline-start" />
+              Supported formats
+            </Link>
+          </Button>
+          <Button asChild>
+            <Link search={projectSearch} to="/imports/new">
+              <Plus aria-hidden="true" data-icon="inline-start" />
+              New import
+            </Link>
+          </Button>
+        </div>
         <VpwGrid columns={3}>
           <VpwMetricCard
             description={props.selectedProject?.name ?? "No project selected"}

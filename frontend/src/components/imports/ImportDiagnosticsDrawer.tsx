@@ -5,18 +5,26 @@ import {
   Sheet,
   SheetContent,
   SheetDescription,
+  SheetFooter,
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   VpwEmptyState,
-  VpwKeyValueList,
   VpwPanel,
   VpwSkeletonStack,
   VpwStatusBanner,
 } from "@/components/vpw"
 import { runStatusLabel } from "@/lib/risk-format"
+import {
+  CompactRows,
+  CopyableValue,
+  CopyButton,
+  recordedValue,
+  stringValue,
+  warningCount,
+} from "./ImportDiagnosticsDrawerParts"
 import { ParserErrorsTable } from "./ImportsWorkbenchResults"
 import {
   failedRunCause,
@@ -26,7 +34,6 @@ import {
   metadataRows,
   objectRecord,
   runFileLabel,
-  runTone,
 } from "./imports-workbench-model"
 
 type ImportDiagnosticsDrawerProps = {
@@ -56,32 +63,52 @@ export function ImportDiagnosticsDrawer({
 
   return (
     <Sheet open={diagnosticsOpen} onOpenChange={onDiagnosticsOpenChange}>
-      <SheetContent className="vpw-sheet-content w-full overflow-y-auto max-sm:left-0 max-sm:right-0 max-sm:w-auto max-sm:max-w-none sm:max-w-2xl">
-        <SheetHeader>
+      <SheetContent className="vpw-sheet-content h-[100dvh] w-screen max-w-none gap-0 overflow-hidden p-0 max-sm:left-0 max-sm:right-0 max-sm:w-auto max-sm:max-w-none sm:w-[600px] sm:max-w-[640px]">
+        <SheetHeader className="shrink-0 border-b border-[var(--vpw-border-subtle)] px-5 py-4 pr-12 text-left">
           <SheetTitle>Run diagnostics</SheetTitle>
           <SheetDescription>
             Run ID {diagnosticsRunId ? diagnosticsRunId.slice(0, 8) : "not selected"}
           </SheetDescription>
         </SheetHeader>
-        {waitingForSelectedRun || runDetailLoading ? (
-          <VpwPanel>
-            <VpwSkeletonStack rows={5} />
-          </VpwPanel>
-        ) : runDetailError ? (
-          <VpwStatusBanner title="Run detail unavailable" tone="critical">
-            {runDetailError}
-          </VpwStatusBanner>
-        ) : selectedRun && selectedRunSummary ? (
-          <DiagnosticsTabs
-            run={selectedRun}
-            summary={selectedRunSummary}
-          />
-        ) : (
-          <VpwEmptyState
-            description="Select an import run to inspect parser, upload, provider, and raw metadata."
-            title="No run selected"
-          />
-        )}
+        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
+          {waitingForSelectedRun || runDetailLoading ? (
+            <VpwPanel>
+              <VpwSkeletonStack rows={5} />
+            </VpwPanel>
+          ) : runDetailError ? (
+            <VpwStatusBanner title="Run detail unavailable" tone="critical">
+              {runDetailError}
+            </VpwStatusBanner>
+          ) : selectedRun && selectedRunSummary ? (
+            <DiagnosticsTabs
+              run={selectedRun}
+              summary={selectedRunSummary}
+            />
+          ) : (
+            <VpwEmptyState
+              description="Select an import run to inspect parser, upload, provider, and raw metadata."
+              title="No run selected"
+            />
+          )}
+        </div>
+        {selectedRunSummary ? (
+          <SheetFooter className="sticky bottom-0 flex-col shrink-0 border-t border-[var(--vpw-border-subtle)] bg-[var(--vpw-bg-panel)] px-5 py-3 sm:flex-row sm:justify-between">
+            <Button asChild size="sm" variant="outline">
+              <Link search={{ projectId: selectedRunSummary.project_id }} to="/findings">
+                Review findings
+              </Link>
+            </Button>
+            <Button asChild size="sm">
+              <Link
+                params={{ runId: selectedRunSummary.id }}
+                search={{ projectId: selectedRunSummary.project_id }}
+                to="/imports/runs/$runId"
+              >
+                Open run detail
+              </Link>
+            </Button>
+          </SheetFooter>
+        ) : null}
       </SheetContent>
     </Sheet>
   )
@@ -95,6 +122,8 @@ function DiagnosticsTabs({
   summary: AnalysisRunSummaryPublic
 }) {
   const parseErrors = summary.parse_errors ?? []
+  const summaryJson = objectRecord(summary.summary_json)
+  const rawJson = jsonPreview({ run, summary })
   const uploadRows = metadataRows(summary.input_upload).map(([label, value]) => ({
     label,
     value: String(value),
@@ -106,7 +135,14 @@ function DiagnosticsTabs({
     },
     {
       label: "Provider snapshot",
-      value: summary.provider_snapshot_id ?? "Not recorded",
+      value: summary.provider_snapshot_id ? (
+        <CopyableValue
+          label="Copy provider snapshot ID"
+          value={summary.provider_snapshot_id}
+        />
+      ) : (
+        "Not recorded"
+      ),
     },
     {
       label: "Locked replay",
@@ -115,8 +151,11 @@ function DiagnosticsTabs({
   ]
 
   return (
-    <Tabs className="mt-5" defaultValue="summary">
-      <TabsList aria-label="Run diagnostics tabs" className="flex flex-wrap justify-start">
+    <Tabs defaultValue="summary">
+      <TabsList
+        aria-label="Run diagnostics tabs"
+        className="flex w-full flex-nowrap justify-start overflow-x-auto whitespace-nowrap"
+      >
         <TabsTrigger value="summary">Summary</TabsTrigger>
         <TabsTrigger value="parser">Parser</TabsTrigger>
         <TabsTrigger value="upload">Upload</TabsTrigger>
@@ -125,17 +164,15 @@ function DiagnosticsTabs({
       </TabsList>
       <TabsContent value="summary">
         <VpwPanel className="flex flex-col gap-4">
-          <VpwKeyValueList
-            columns={2}
+          <CompactRows
             items={[
               {
                 label: "Run ID",
-                value: summary.id,
+                value: <CopyableValue label="Copy run ID" value={summary.id} />,
               },
               {
                 label: "Status",
                 value: runStatusLabel(summary.status),
-                tone: runTone(summary.status),
               },
               {
                 label: "Input type",
@@ -172,47 +209,34 @@ function DiagnosticsTabs({
               {failedRunCause(run, summary)}
             </VpwStatusBanner>
           ) : null}
-          <div className="flex flex-wrap gap-2">
-            <Button asChild size="sm" variant="outline">
-              <Link search={{ projectId: summary.project_id }} to="/findings">
-                Review findings
-              </Link>
-            </Button>
-            <Button asChild size="sm">
-              <Link
-                params={{ runId: summary.id }}
-                search={{ projectId: summary.project_id }}
-                to="/imports/runs/$runId"
-              >
-                Open run detail
-              </Link>
-            </Button>
-          </div>
         </VpwPanel>
       </TabsContent>
       <TabsContent value="parser">
         <VpwPanel className="flex flex-col gap-4">
-          <VpwKeyValueList
-            columns={2}
+          <CompactRows
             items={[
+              { label: "Rows read", value: recordedValue(summaryJson.rows_read) },
               { label: "Created findings", value: summary.created_findings ?? 0 },
               { label: "Updated findings", value: summary.updated_findings ?? 0 },
               { label: "Finding count", value: summary.finding_count ?? 0 },
               { label: "Ignored lines", value: summary.ignored_lines ?? 0 },
               { label: "Parser errors", value: parseErrors.length },
+              { label: "Warnings", value: warningCount(summaryJson) },
             ]}
           />
           {parseErrors.length > 0 ? (
             <ParserErrorsTable errors={parseErrors} />
           ) : (
-            <VpwEmptyState title="No parser errors recorded" />
+            <p className="rounded-[var(--vpw-radius-md)] border border-[var(--vpw-border-subtle)] bg-[var(--vpw-bg-card)] px-3 py-2 text-sm text-[var(--vpw-text-secondary)]">
+              No parser errors recorded.
+            </p>
           )}
         </VpwPanel>
       </TabsContent>
       <TabsContent value="upload">
         <VpwPanel>
           {uploadRows.length > 0 ? (
-            <VpwKeyValueList columns={2} items={uploadRows} />
+            <CompactRows items={uploadRows} />
           ) : (
             <VpwEmptyState title="No upload metadata recorded" />
           )}
@@ -220,7 +244,7 @@ function DiagnosticsTabs({
       </TabsContent>
       <TabsContent value="provider">
         <VpwPanel>
-          <VpwKeyValueList columns={2} items={providerRows} />
+          <CompactRows items={providerRows} />
         </VpwPanel>
       </TabsContent>
       <TabsContent value="raw">
@@ -230,19 +254,14 @@ function DiagnosticsTabs({
               Raw run metadata
             </summary>
             <pre className="mt-3 max-h-[26rem] overflow-auto rounded-[var(--vpw-radius-md)] bg-[var(--vpw-bg-panel)] p-3 text-xs text-[var(--vpw-text-primary)]">
-              <code>{jsonPreview({ run, summary })}</code>
+              <code>{rawJson}</code>
             </pre>
+            <div className="mt-3 flex justify-end">
+              <CopyButton label="Copy raw diagnostics JSON" value={rawJson} />
+            </div>
           </details>
         </VpwPanel>
       </TabsContent>
     </Tabs>
   )
-}
-
-function stringValue(source: unknown, key: string) {
-  const record = objectRecord(source)
-  const value = record[key]
-  if (typeof value === "string" && value.trim()) return value
-  if (typeof value === "boolean") return value ? "Yes" : "No"
-  return null
 }

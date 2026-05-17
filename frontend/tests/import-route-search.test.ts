@@ -24,12 +24,9 @@ test("updates import run id while preserving project search", () => {
       tab: "imports",
     },
   )
-  assert.deepEqual(
-    importRunUrlSearch("?projectId=project-1&runId=old", ""),
-    {
-      projectId: "project-1",
-    },
-  )
+  assert.deepEqual(importRunUrlSearch("?projectId=project-1&runId=old", ""), {
+    projectId: "project-1",
+  })
 })
 
 test("cleans legacy import run id from route search", () => {
@@ -44,6 +41,10 @@ test("cleans legacy import run id from route search", () => {
 
 test("reads and writes new import input type search", () => {
   assert.equal(
+    importInputTypeFromSearch("?projectId=project-1&input_type=cve-list"),
+    "cve-list",
+  )
+  assert.equal(
     importInputTypeFromSearch("?projectId=project-1&inputType=trivy-json"),
     "trivy-json",
   )
@@ -54,12 +55,15 @@ test("reads and writes new import input type search", () => {
   assert.deepEqual(
     importFormatUrlSearch("?projectId=project-1&runId=old", "cyclonedx-json"),
     {
-      inputType: "cyclonedx-json",
+      input_type: "cyclonedx-json",
       projectId: "project-1",
     },
   )
   assert.deepEqual(
-    importFormatUrlSearch("?projectId=project-1&inputType=old", ""),
+    importFormatUrlSearch(
+      "?projectId=project-1&input_type=old&inputType=legacy&format=old",
+      "",
+    ),
     {
       projectId: "project-1",
     },

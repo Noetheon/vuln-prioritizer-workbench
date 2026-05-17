@@ -45,7 +45,9 @@ export function ImportsWorkbench(props: ImportsWorkbenchProps) {
           Create or select a project before uploading import files.
         </VpwStatusBanner>
       ) : null}
-      {props.view === "new" ? <NewImportRoute {...props} /> : null}
+      {props.view === "new" ? (
+        <NewImportRoute {...props} onOpenDiagnostics={openDiagnostics} />
+      ) : null}
       {props.view === "run" ? (
         <ImportRunDetailRoute {...props} onOpenDiagnostics={openDiagnostics} />
       ) : null}

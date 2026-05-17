@@ -20,7 +20,12 @@ export function importsRouteUrlSearch(searchStr: string): ProjectUrlSearch {
 export function importInputTypeFromSearch(searchStr: string): string {
   const rawSearch = searchStr.startsWith("?") ? searchStr.slice(1) : searchStr
   const params = new URLSearchParams(rawSearch)
-  return params.get("inputType") ?? params.get("format") ?? ""
+  return (
+    params.get("input_type") ??
+    params.get("inputType") ??
+    params.get("format") ??
+    ""
+  )
 }
 
 export function importFormatUrlSearch(
@@ -31,9 +36,11 @@ export function importFormatUrlSearch(
   const params = new URLSearchParams(rawSearch)
   params.delete("runId")
   if (inputType) {
-    params.set("inputType", inputType)
+    params.set("input_type", inputType)
   } else {
-    params.delete("inputType")
+    params.delete("input_type")
   }
+  params.delete("inputType")
+  params.delete("format")
   return Object.fromEntries(params.entries())
 }

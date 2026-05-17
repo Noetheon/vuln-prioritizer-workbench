@@ -20,6 +20,11 @@ import {
   uploadProgress,
 } from "../src/components/imports/imports-workbench-model.ts"
 import {
+  optionalContextReadiness,
+  validateAssetContextCsvFile,
+  validateVexJsonFile,
+} from "../src/components/imports/new-import-route-state.ts"
+import {
   defaultImportWizardState,
   demoProviderSnapshotFile,
   withDemoProviderSnapshot,
@@ -285,6 +290,10 @@ test("active imports exports do not expose the legacy all-in-one wizard path", (
     new URL("../src/components/imports/ImportsHomeRoute.tsx", import.meta.url),
     "utf8",
   )
+  const importsRouteSource = readFileSync(
+    new URL("../src/workbench/routes/ImportsRoute.tsx", import.meta.url),
+    "utf8",
+  )
   const legacyAllInOneFiles = [
     "../src/components/imports/ImportWizardSteps.tsx",
     "../src/components/imports/ImportsWorkbenchHero.tsx",
@@ -300,6 +309,17 @@ test("active imports exports do not expose the legacy all-in-one wizard path", (
   assert.doesNotMatch(sectionsSource, /export \{ SupportedFormats \}/)
   assert.match(importsHomeSource, /runTone\(lastRun\.status\)/)
   assert.doesNotMatch(newImportRouteSource, /Import result/)
+  assert.doesNotMatch(
+    importsRouteSource,
+    /catch \(caught\)[\s\S]*to: "\/imports\/runs\/\$runId"/,
+  )
+  assert.doesNotMatch(
+    readFileSync(
+      new URL("../src/components/imports/NewImportWizardSections.tsx", import.meta.url),
+      "utf8",
+    ),
+    /Updates expected/,
+  )
   for (const file of legacyAllInOneFiles) {
     assert.equal(existsSync(new URL(file, import.meta.url)), false)
   }
@@ -493,6 +513,63 @@ test("readiness model blocks required fields and allows optional context", () =>
   )
   assert.equal(readinessBlocksImport(missingChecks), true)
   assert.equal(readinessBlocksImport(readyChecks), false)
+})
+
+test("optional context readiness validates selected asset and VEX files shallowly", async () => {
+  const assetFile = new File(["owner,service\nplatform,payments"], "assets.csv", {
+    type: "text/csv",
+  })
+  const emptyAssetFile = new File(["\nplatform,payments"], "assets.csv", {
+    type: "text/csv",
+  })
+  const invalidVexFile = new File(["{"], "overlay.json", {
+    type: "application/json",
+  })
+  const validVexFile = new File([JSON.stringify({ statements: [] })], "overlay.json", {
+    type: "application/json",
+  })
+
+  const assetValidation = await validateAssetContextCsvFile(assetFile)
+  const emptyAssetValidation = await validateAssetContextCsvFile(emptyAssetFile)
+  const invalidVexValidation = await validateVexJsonFile(invalidVexFile)
+  const validVexValidation = await validateVexJsonFile(validVexFile)
+
+  assert.equal(assetValidation.status, "passed")
+  assert.equal(emptyAssetValidation.status, "error")
+  assert.match(emptyAssetValidation.message, /non-empty header row/)
+  assert.equal(invalidVexValidation.status, "error")
+  assert.match(invalidVexValidation.message, /Invalid VEX overlay/)
+  assert.equal(validVexValidation.status, "passed")
+
+  const pendingChecks = optionalContextReadiness({
+    assetContextFile: assetFile,
+    assetContextValidation: {
+      fileKey: assetValidation.fileKey,
+      message: "Checking asset context CSV.",
+      status: "checking",
+    },
+    vexFile: null,
+  })
+  assert.equal(pendingChecks["asset-context"]?.status, "pending")
+  assert.equal(readinessBlocksImport(Object.values(pendingChecks)), true)
+
+  const invalidChecks = optionalContextReadiness({
+    assetContextFile: null,
+    vexFile: invalidVexFile,
+    vexValidation: invalidVexValidation,
+  })
+  assert.equal(invalidChecks.vex?.status, "error")
+  assert.equal(readinessBlocksImport(Object.values(invalidChecks)), true)
+
+  const validChecks = optionalContextReadiness({
+    assetContextFile: assetFile,
+    assetContextValidation: assetValidation,
+    vexFile: validVexFile,
+    vexValidation: validVexValidation,
+  })
+  assert.equal(validChecks["asset-context"]?.status, "passed")
+  assert.equal(validChecks.vex?.status, "passed")
+  assert.equal(readinessBlocksImport(Object.values(validChecks)), false)
 })
 
 test("readiness model blocks parser preview until the file check has passed", () => {
