@@ -136,7 +136,14 @@ export function readinessToneForStep(
   importFailed = false,
 ) {
   if (importFailed) return "critical" as const
+  const projectMissing = checkHasStatus(readiness, "project", "missing")
+  const inputMissing = checkHasStatus(readiness, "input-type", "missing")
+  const evidenceMissing = checkHasStatus(readiness, "evidence-file", "missing")
+  const parserPending = checkHasStatus(readiness, "parser-preview", "pending")
   if (step === 4 && !readinessBlocksImport(readiness)) return "success" as const
+  if (step === 1 && !projectMissing && !inputMissing) return "success" as const
+  if (step === 2 && !evidenceMissing && !parserPending) return "success" as const
+  if (step === 3 && !readinessBlocksImport(readiness)) return "success" as const
   if (
     readiness.some(
       (check) => check.status === "missing" || check.status === "error",

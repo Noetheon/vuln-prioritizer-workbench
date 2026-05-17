@@ -1,5 +1,5 @@
 import { Link } from "@/lib/router"
-import { ArrowLeft, ArrowRight, Upload } from "lucide-react"
+import { ArrowLeft, ArrowRight, CheckCircle2, Upload } from "lucide-react"
 import { type FormEventHandler, useEffect, useMemo, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { VpwPanel, VpwStatusBanner } from "@/components/vpw"
@@ -51,6 +51,8 @@ export function NewImportRoute(props: NewImportRouteProps) {
   const [optionalContextValidation, setOptionalContextValidation] =
     useState<OptionalContextValidationMap>({ assetContext: null, vex: null })
   const submitRequestedRef = useRef(false)
+  const stepPanelRef = useRef<HTMLDivElement | null>(null)
+  const initialStepRenderRef = useRef(true)
   const format = selectedFormat(props.supportedFormats, props.importWizard.inputType)
   const metadataFormat = getImportFormat(props.importWizard.inputType)
   const projectSearch = selectedProjectRouteSearch(props.selectedProjectId)
@@ -86,6 +88,7 @@ export function NewImportRoute(props: NewImportRouteProps) {
     props.selectedProjectId,
   ])
   const canStartImport = !readinessBlocksImport(readiness)
+  const selectedFormatLabel = metadataFormat?.label ?? ""
   const continueDisabledReason = disabledReasonForStep({
     canStartImport,
     importLoading: props.importLoading,
@@ -113,6 +116,20 @@ export function NewImportRoute(props: NewImportRouteProps) {
       cancelled = true
     }
   }, [props.importWizard.file, props.importWizard.inputType])
+
+  useEffect(() => {
+    if (step < 1) return
+    if (initialStepRenderRef.current) {
+      initialStepRenderRef.current = false
+      return
+    }
+    window.requestAnimationFrame(() => {
+      stepPanelRef.current?.scrollIntoView({
+        block: "start",
+        inline: "nearest",
+      })
+    })
+  }, [step])
 
   useEffect(() => {
     const file = props.importWizard.assetContextFile
@@ -193,7 +210,7 @@ export function NewImportRoute(props: NewImportRouteProps) {
 
   return (
     <form
-      className="imports-page-shell flex w-full min-w-0 flex-col gap-4"
+      className="imports-page-shell flex w-full min-w-0 flex-col gap-6"
       onSubmit={handleSubmit}
     >
       <div className="flex justify-end">
@@ -203,60 +220,67 @@ export function NewImportRoute(props: NewImportRouteProps) {
           </Link>
         </Button>
       </div>
-      <div className="grid min-w-0 gap-6 min-[1240px]:grid-cols-[220px_minmax(0,1fr)_320px] min-[1240px]:items-start">
+      <div className="imports-wizard-layout grid min-w-0 gap-6">
         <StepNav currentStep={step} onStepChange={setStep} readiness={readiness} />
-        <VpwPanel className="flex min-w-0 flex-col gap-5">
-          {step === 1 ? <ChooseSourceStep {...props} /> : null}
-          {step === 2 ? (
-            <UploadFileStep
-              {...props}
-              format={format}
-              parserPreview={parserPreview}
-            />
-          ) : null}
-          {step === 3 ? <AddContextStep {...props} readiness={readiness} /> : null}
-          {step === 4 ? (
-            <ReviewImportStep
-              {...props}
-              parserPreview={parserPreview}
-              readiness={readiness}
-            />
-          ) : null}
-          {props.importError ? (
-            <ImportFailurePanel
-              failedImportRunId={props.failedImportRunId}
-              importError={props.importError}
-            />
-          ) : null}
-          {props.importLoading ? (
-            <VpwStatusBanner title="Importing">
-              Preparing upload, uploading evidence, and creating a run.
-            </VpwStatusBanner>
-          ) : null}
-          {importFailed ? (
-            <FailureFooter
-              failedImportRunId={props.failedImportRunId}
-              onBackToFile={() => setStep(2)}
-              onOpenDiagnostics={props.onOpenDiagnostics}
-              onRetry={() => {
-                submitRequestedRef.current = true
-              }}
-              selectedProjectId={props.selectedProjectId}
-            />
-          ) : (
-            <WizardFooter
-              continueDisabledReason={continueDisabledReason}
-              goBack={goBack}
-              importLoading={props.importLoading}
-              onContinue={continueToNextStep}
-              onSubmitClick={() => {
-                submitRequestedRef.current = true
-              }}
-              readiness={readiness}
-              step={step}
-            />
-          )}
-        </VpwPanel>
+        <div className="min-w-0 lg:h-full" ref={stepPanelRef}>
+          <VpwPanel className="flex min-w-0 flex-col overflow-hidden p-0 lg:h-full">
+            <div className="flex min-w-0 flex-col gap-5 p-5 sm:p-6">
+              {step === 1 ? <ChooseSourceStep {...props} /> : null}
+              {step === 2 ? (
+                <UploadFileStep
+                  {...props}
+                  format={format}
+                  parserPreview={parserPreview}
+                />
+              ) : null}
+              {step === 3 ? (
+                <AddContextStep {...props} readiness={readiness} />
+              ) : null}
+              {step === 4 ? (
+                <ReviewImportStep
+                  {...props}
+                  parserPreview={parserPreview}
+                  readiness={readiness}
+                />
+              ) : null}
+              {props.importError ? (
+                <ImportFailurePanel
+                  failedImportRunId={props.failedImportRunId}
+                  importError={props.importError}
+                />
+              ) : null}
+              {props.importLoading ? (
+                <VpwStatusBanner title="Importing">
+                  Preparing upload, uploading evidence, and creating a run.
+                </VpwStatusBanner>
+              ) : null}
+            </div>
+            {importFailed ? (
+              <FailureFooter
+                failedImportRunId={props.failedImportRunId}
+                onBackToFile={() => setStep(2)}
+                onOpenDiagnostics={props.onOpenDiagnostics}
+                onRetry={() => {
+                  submitRequestedRef.current = true
+                }}
+                selectedProjectId={props.selectedProjectId}
+              />
+            ) : (
+              <WizardFooter
+                continueDisabledReason={continueDisabledReason}
+                goBack={goBack}
+                importLoading={props.importLoading}
+                onContinue={continueToNextStep}
+                onSubmitClick={() => {
+                  submitRequestedRef.current = true
+                }}
+                readiness={readiness}
+                selectedFormatLabel={selectedFormatLabel}
+                step={step}
+              />
+            )}
+          </VpwPanel>
+        </div>
         <SummaryRail
           importFailed={importFailed}
           inputTypeLabel={metadataFormat?.label ?? "Not selected"}
@@ -277,6 +301,7 @@ function WizardFooter({
   onContinue,
   onSubmitClick,
   readiness,
+  selectedFormatLabel,
   step,
 }: {
   continueDisabledReason: string
@@ -285,14 +310,28 @@ function WizardFooter({
   onContinue: () => void
   onSubmitClick: () => void
   readiness: ReturnType<typeof buildImportReadinessChecks>
+  selectedFormatLabel: string
   step: StepId
 }) {
+  const readyCopy = readinessCopyForStep(step, readiness)
+  const footerCopy =
+    step === 1 && selectedFormatLabel && !continueDisabledReason
+      ? `Selected: ${selectedFormatLabel}`
+      : readyCopy
   return (
-    <div className="sticky bottom-0 -mx-[var(--vpw-panel-padding)] -mb-[var(--vpw-panel-padding)] flex flex-col gap-3 border-t border-[var(--vpw-border-default)] bg-[var(--vpw-bg-card)] px-[var(--vpw-panel-padding)] py-4 sm:flex-row sm:items-center sm:justify-between">
-      <div className="text-sm text-[var(--vpw-text-muted)]">
-        {importLoading
-          ? "Creating import run..."
-          : continueDisabledReason || readinessCopyForStep(step, readiness)}
+    <div className="sticky bottom-0 flex flex-col gap-3 border-t border-[var(--vpw-border-default)] bg-[color-mix(in_srgb,var(--vpw-bg-card)_92%,var(--vpw-bg-panel))] px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+      <div className="flex min-w-0 items-center gap-2 text-sm text-[var(--vpw-text-muted)]">
+        {!importLoading && step === 1 && selectedFormatLabel && !continueDisabledReason ? (
+          <CheckCircle2
+            aria-hidden="true"
+            className="size-4 shrink-0 text-[var(--vpw-green)]"
+          />
+        ) : null}
+        <span className="min-w-0 truncate">
+          {importLoading
+            ? "Creating import run..."
+            : continueDisabledReason || footerCopy}
+        </span>
       </div>
       <div className="flex flex-wrap gap-2">
         <Button
@@ -343,7 +382,7 @@ function FailureFooter({
   selectedProjectId: string
 }) {
   return (
-    <div className="sticky bottom-0 -mx-[var(--vpw-panel-padding)] -mb-[var(--vpw-panel-padding)] flex flex-col gap-3 border-t border-[var(--vpw-border-default)] bg-[var(--vpw-bg-card)] px-[var(--vpw-panel-padding)] py-4 sm:flex-row sm:items-center sm:justify-between">
+    <div className="sticky bottom-0 flex flex-col gap-3 border-t border-[var(--vpw-border-default)] bg-[color-mix(in_srgb,var(--vpw-bg-card)_92%,var(--vpw-bg-panel))] px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
       <div className="text-sm font-medium text-[var(--vpw-red)]">
         Import failed
       </div>
