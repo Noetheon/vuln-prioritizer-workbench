@@ -116,7 +116,7 @@ export function DashboardSignalOverview({
             onValueChange={(value) => setActiveSignalTab(value as SignalTab)}
             value={activeSignalTab}
           >
-            <TabsList className="mb-3 grid h-auto w-full grid-cols-2 gap-1 text-xs sm:inline-flex sm:h-8 sm:w-auto sm:grid-cols-none">
+            <TabsList className="mb-3 grid h-auto w-full grid-cols-2 gap-1 text-xs sm:h-8 sm:grid-cols-4 2xl:inline-flex 2xl:w-auto 2xl:grid-cols-none">
               <TabsTrigger className="min-w-0 px-2" value="priority">
                 <span className="hidden sm:inline">Findings by Priority</span>
                 <span className="sm:hidden">Priority</span>

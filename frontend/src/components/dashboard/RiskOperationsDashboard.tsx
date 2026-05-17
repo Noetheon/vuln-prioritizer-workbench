@@ -423,9 +423,7 @@ export function RiskOperationsDashboard({
       >
         <div
           className={
-            showEmptyState
-              ? "grid gap-4"
-              : "dashboard-command-grid grid gap-4 2xl:grid-cols-[minmax(0,1fr)_22rem]"
+            showEmptyState ? "grid gap-4" : "dashboard-command-grid grid gap-4"
           }
         >
           {dashboardContent}
