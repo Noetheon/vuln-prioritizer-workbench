@@ -54,14 +54,11 @@ export function MetricCard({
       )}
     >
       <VpwSurfaceBody className="p-3">
-        <div className="flex items-start justify-between gap-3">
+        <div className="flex items-start justify-between gap-2">
           <div className="min-w-0 flex-1">
             <p className="vpw-label truncate text-[11px]">{label}</p>
             <p className="mt-1 text-2xl font-bold leading-none text-[var(--vpw-text-primary)]">
               {value}
-            </p>
-            <p className="mt-0.5 truncate text-xs text-[var(--vpw-text-muted)]">
-              {detail}
             </p>
           </div>
           <div
@@ -73,6 +70,9 @@ export function MetricCard({
             <Icon size={18} />
           </div>
         </div>
+        <p className="mt-0.5 truncate text-xs text-[var(--vpw-text-muted)]">
+          {detail}
+        </p>
       </VpwSurfaceBody>
     </VpwSurface>
   )

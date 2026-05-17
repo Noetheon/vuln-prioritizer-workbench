@@ -693,11 +693,11 @@ test("runtime CSS, TypeScript tokens, JSON tokens, and showcase copy stay synchr
     pill: "9999px",
   }
 
-  assert.equal(tokenJson.layout.maxWidth, "1920px")
+  assert.equal(tokenJson.layout.maxWidth, "2400px")
   assert.deepEqual(tokenJson.radius, expectedRadius)
-  assert.match(tokenTs, /maxWidth:\s*"1920px"/)
-  assert.match(tokenCss, /--vpw-container-max:\s*1920px;/)
-  assert.match(showcase, /1920px max/)
+  assert.match(tokenTs, /maxWidth:\s*"2400px"/)
+  assert.match(tokenCss, /--vpw-container-max:\s*2400px;/)
+  assert.match(showcase, /2400px max/)
 
   for (const [name, value] of Object.entries(expectedRadius)) {
     assert.match(tokenTs, new RegExp(`${name}:\\s*"${value}"`))

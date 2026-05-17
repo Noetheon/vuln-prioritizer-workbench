@@ -60,6 +60,28 @@
   align-items: start;
 }
 
+.dashboard-metric-grid {
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 640px) {
+  .dashboard-metric-grid {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 10.75rem), 1fr));
+  }
+}
+
+@media (min-width: 1280px) {
+  .dashboard-command-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(18rem, 20rem);
+  }
+}
+
+@media (min-width: 1536px) {
+  .dashboard-command-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(20rem, 22rem);
+  }
+}
+
 .dashboard-metric-grid > .vpw-panel {
   min-height: 104px;
   background: var(--vpw-bg-card);
