@@ -204,6 +204,11 @@ export function SupportedFormatsRoute({
               columns={columns}
               data={filteredFormats}
               density="compact"
+              getRowClassName={(format) =>
+                format.inputType === selectedInputType
+                  ? "[&>td]:bg-[var(--vpw-bg-info)] [&>td:first-child]:shadow-[inset_2px_0_0_var(--vpw-blue)]"
+                  : undefined
+              }
               getRowKey={(format) => format.inputType}
               minWidth="960px"
             />

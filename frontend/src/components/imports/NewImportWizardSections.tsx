@@ -1,8 +1,10 @@
 import { Link } from "@/lib/router"
 import {
+  AlertCircle,
   Check,
   CheckCircle2,
   Circle,
+  FileCheck2,
   X,
 } from "lucide-react"
 import type { CSSProperties } from "react"
@@ -543,32 +545,64 @@ export function UploadFileStep({
     format?.value === "generic-occurrence-csv"
       ? "Your CSV must include a CVE identifier for each row. Optional columns can add component or asset context."
       : "Attach the supplied evidence export for the selected input type."
+  const acceptedCopy = format?.accept
+    ?.split(",")
+    .map((value) => value.trim())
+    .filter(Boolean)
+    .join(", ")
 
   return (
     <section className="flex flex-col gap-5">
       <VpwSectionHeader
-        description="Attach the main evidence file for the selected input type."
+        description={
+          format
+            ? `Your ${format.label} evidence must match the selected format before continuing.`
+            : "Attach the main evidence file for the selected input type."
+        }
         title="Upload file"
       />
-      <div className="rounded-[var(--vpw-radius-md)] bg-[var(--vpw-bg-panel)] p-4">
-        <p className="font-medium text-[var(--vpw-text-primary)]">
-          {format?.label ?? "Input type not selected"}
-        </p>
-        <p className="mt-1 text-sm text-[var(--vpw-text-secondary)]">
-          {format?.detail ?? "Choose an input type before uploading evidence."}
-        </p>
+      <div className="rounded-[var(--vpw-radius-lg)] border border-[var(--vpw-border-default)] bg-[var(--vpw-bg-card)] p-4">
+        <div className="mb-4">
+          <p className="text-base font-semibold text-[var(--vpw-text-primary)]">
+            A. Evidence file
+          </p>
+          <p className="mt-1 text-sm text-[var(--vpw-text-secondary)]">
+            <span className="font-medium text-[var(--vpw-text-primary)]">
+              {format?.label ?? "Input type not selected"}
+            </span>
+            {format?.detail ? ` - ${format.detail}` : ""}
+          </p>
+        </div>
+        <FileUploadField
+          accept={format?.accept}
+          acceptedLabel={acceptedCopy}
+          description={uploadHelp}
+          file={importWizard.file}
+          id="import-file"
+          label="Evidence file"
+          name="importFile"
+          onFileChange={onFileChange}
+          required
+        />
       </div>
-      <FileUploadField
-        accept={format?.accept}
-        description={uploadHelp}
-        file={importWizard.file}
-        id="import-file"
-        label="Evidence file"
-        name="importFile"
-        onFileChange={onFileChange}
-        required
-      />
-      <ParserPreviewPanel parserPreview={parserPreview} />
+      <div className="rounded-[var(--vpw-radius-lg)] border border-[var(--vpw-border-default)] bg-[var(--vpw-bg-card)] p-4">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="text-base font-semibold text-[var(--vpw-text-primary)]">
+              B. File check
+            </p>
+            <p className="mt-1 text-sm text-[var(--vpw-text-secondary)]">
+              Shallow validation runs locally before the import starts.
+            </p>
+          </div>
+          {parserPreview.state === "passed" || parserPreview.state === "warning" ? (
+            <VpwBadge tone={parserPreview.state === "warning" ? "warning" : "success"}>
+              {parserPreview.state === "warning" ? "Warning" : "Passed"}
+            </VpwBadge>
+          ) : null}
+        </div>
+        <ParserPreviewPanel parserPreview={parserPreview} />
+      </div>
     </section>
   )
 }
@@ -589,24 +623,28 @@ export function AddContextStep(
     <section className="flex flex-col gap-5">
       <VpwSectionHeader
         description="Optional context can improve prioritization and explanations. You can skip this step."
-        title="Add context"
+        title="Add context (optional)"
       />
       <div className="grid gap-4 md:grid-cols-2">
         <FileUploadField
           accept=".csv,text/csv"
+          acceptedLabel=".csv, text/csv"
           description="Optional CSV with owner, service, environment, exposure, and criticality context."
           file={props.importWizard.assetContextFile}
           id="asset-context-file"
           label="Asset context CSV"
+          layout="centered"
           name="assetContextFile"
           onFileChange={props.onAssetContextFileChange}
         />
         <FileUploadField
           accept=".json,application/json"
+          acceptedLabel=".json, application/json"
           description="Optional OpenVEX or CycloneDX VEX sidecar."
           file={props.importWizard.vexFile}
           id="vex-file"
           label="VEX overlay"
+          layout="centered"
           name="vexFile"
           onFileChange={props.onVexFileChange}
         />
@@ -626,13 +664,29 @@ export function AddContextStep(
           {attackContextCheck.message}
         </VpwStatusBanner>
       ) : null}
-      <VpwStatusBanner title="ATT&CK/TTP context">
-        Adds reviewed defensive ATT&CK mappings where available. Unmapped CVEs remain
-        unmapped, and this context does not override base priority.
-      </VpwStatusBanner>
+      <div className="flex items-start gap-3 rounded-[var(--vpw-radius-lg)] border border-[color-mix(in_srgb,var(--vpw-blue)_32%,var(--vpw-border-default))] bg-[var(--vpw-bg-info)] p-4 text-sm text-[var(--vpw-text-secondary)]">
+        <AlertCircle
+          aria-hidden="true"
+          className="mt-0.5 size-5 shrink-0 text-[var(--vpw-blue)]"
+        />
+        <div>
+          <p className="font-semibold text-[var(--vpw-blue)]">
+            ATT&CK/TTP context
+          </p>
+          <p className="mt-1 leading-6">
+            Adds reviewed defensive ATT&CK mappings where available. Unmapped
+            CVEs remain unmapped, and this context does not override base priority.
+          </p>
+        </div>
+      </div>
       <details className="rounded-[var(--vpw-radius-lg)] border border-[var(--vpw-border-default)] bg-[var(--vpw-bg-card)]">
-        <summary className="cursor-pointer px-4 py-3 text-sm font-medium text-[var(--vpw-text-primary)]">
-          Advanced provider data and reviewed ATT&CK context
+        <summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-[var(--vpw-text-primary)]">
+          <span className="inline-flex w-full items-center justify-between gap-3">
+            <span>Advanced provider data and reviewed ATT&CK context</span>
+            <span className="rounded-[var(--vpw-radius-md)] border border-[var(--vpw-border-default)] bg-[var(--vpw-bg-info)] px-2 py-1 font-mono text-xs text-[var(--vpw-blue)]">
+              Optional
+            </span>
+          </span>
         </summary>
         <div className="border-t border-[var(--vpw-border-default)] p-4">
           <ProviderAttackOptions
@@ -751,9 +805,8 @@ export function SummaryRail({
       data-testid="import-summary-rail"
     >
       <VpwSectionHeader title="Import summary" />
-      <VpwKeyValueList
-        density="compact"
-        items={[
+      <dl className="grid border-t border-[var(--vpw-border-subtle)] text-sm">
+        {[
           {
             label: "Project",
             value: props.selectedProject?.name ?? "Required",
@@ -769,10 +822,12 @@ export function SummaryRail({
           {
             label: "Asset context",
             value: props.importWizard.assetContextFile?.name ?? "Not selected",
+            muted: !props.importWizard.assetContextFile,
           },
           {
             label: "VEX",
             value: props.importWizard.vexFile?.name ?? "Not selected",
+            muted: !props.importWizard.vexFile,
           },
           {
             label: "ATT&CK context",
@@ -781,6 +836,9 @@ export function SummaryRail({
               props.importWizard.attackSource !== "none"
                 ? "Reviewed defensive context configured"
                 : "Not selected",
+            muted:
+              !props.importWizard.attackSource ||
+              props.importWizard.attackSource === "none",
           },
           {
             label: "Provider data",
@@ -791,15 +849,34 @@ export function SummaryRail({
           {
             label: "Deterministic replay",
             value: props.importWizard.lockedProviderData ? "Yes" : "No",
+            muted: !props.importWizard.lockedProviderData,
           },
-          {
-            label: "Readiness",
-            value: readinessCopyForStep(step, readiness, importFailed),
-            tone: readinessToneForStep(step, readiness, importFailed),
-          },
-        ]}
-      />
-      <div className="flex flex-wrap gap-2">
+        ].map((item) => (
+          <div
+            className="border-b border-[var(--vpw-border-subtle)] py-3"
+            key={item.label}
+          >
+            <dt className="vpw-label">{item.label}</dt>
+            <dd
+              className={cn(
+                "mt-1 min-w-0 font-medium text-[var(--vpw-text-primary)] [overflow-wrap:anywhere]",
+                item.muted && "text-[var(--vpw-text-secondary)]",
+              )}
+            >
+              {item.value}
+            </dd>
+          </div>
+        ))}
+        <div className="border-b border-[var(--vpw-border-subtle)] py-3">
+          <dt className="vpw-label">Readiness</dt>
+          <dd className="mt-2">
+            <VpwBadge tone={readinessToneForStep(step, readiness, importFailed)}>
+              {readinessCopyForStep(step, readiness, importFailed)}
+            </VpwBadge>
+          </dd>
+        </div>
+      </dl>
+      <div className="flex flex-wrap gap-2 pt-1">
         {hasOptionalContext(props.importWizard)
           ? optionalContextLabels(props.importWizard).map((label) => (
               <MetaTag key={label} label={label} />
@@ -836,7 +913,22 @@ function ParserPreviewPanel({ parserPreview }: { parserPreview: ParserPreview })
     )
   }
   return (
-    <div className="rounded-[var(--vpw-radius-md)] border border-[var(--vpw-border-subtle)] bg-[var(--vpw-bg-card)] p-4">
+    <div>
+      {parserPreview.fileName ? (
+        <div className="mb-3 flex items-center gap-3 rounded-[var(--vpw-radius-md)] border border-[color-mix(in_srgb,var(--vpw-green)_24%,var(--vpw-border-default))] bg-[var(--vpw-bg-success)] px-3 py-2.5">
+          <span className="grid size-8 shrink-0 place-items-center rounded-full bg-[var(--vpw-green)] text-[var(--vpw-bg-card)]">
+            <FileCheck2 aria-hidden="true" className="size-4" />
+          </span>
+          <span className="min-w-0">
+            <span className="block truncate font-semibold text-[var(--vpw-text-primary)]">
+              {parserPreview.fileName}
+            </span>
+            <span className="block text-xs text-[var(--vpw-text-secondary)]">
+              Accepted for shallow parser preview.
+            </span>
+          </span>
+        </div>
+      ) : null}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="font-semibold text-[var(--vpw-text-primary)]">
@@ -860,7 +952,7 @@ function ParserPreviewPanel({ parserPreview }: { parserPreview: ParserPreview })
           {
             label: "File type",
             value: parserPreview.detectedInputType
-              ? getImportFormat(parserPreview.detectedInputType)?.label
+              ? `${getImportFormat(parserPreview.detectedInputType)?.label ?? "Selected format"}`
               : "Matches selected format",
           },
           {
@@ -868,7 +960,7 @@ function ParserPreviewPanel({ parserPreview }: { parserPreview: ParserPreview })
             value:
               parserPreview.requiredFieldsFound &&
               parserPreview.requiredFieldsFound.length > 0
-                ? parserPreview.requiredFieldsFound.join(", ")
+                ? requiredFieldsPreviewLabel(parserPreview)
                 : "Checked by full parser after import",
           },
           {
@@ -969,4 +1061,10 @@ function PreviewSummary({ parserPreview }: { parserPreview: ParserPreview }) {
       ]}
     />
   )
+}
+
+function requiredFieldsPreviewLabel(parserPreview: ParserPreview) {
+  const fields = parserPreview.requiredFieldsFound ?? []
+  if (fields.includes("CVE column")) return "cve_id column found"
+  return fields.join(", ")
 }

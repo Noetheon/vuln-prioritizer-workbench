@@ -1,6 +1,15 @@
 import { Link } from "@/lib/router"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { Clipboard, Download, RotateCcw } from "lucide-react"
+import {
+  CheckCircle2,
+  ChevronRight,
+  Clipboard,
+  Download,
+  FolderOpen,
+  ListChecks,
+  RotateCcw,
+  UploadCloud,
+} from "lucide-react"
 import type { ReportPublic } from "@/api-client"
 import { ReportsService } from "@/api-client"
 import { Button } from "@/components/ui/button"
@@ -15,6 +24,7 @@ import {
   VpwStatusBanner,
 } from "@/components/vpw"
 import { reportFormatLabel } from "@/lib/report-format"
+import { runStatusLabel } from "@/lib/risk-format"
 import { fetchReportDownload, startReportDownload } from "@/workbench/report-download"
 import { workbenchQueryKeys } from "@/workbench/workbench-query-keys"
 import { ParserErrorsTable } from "./ImportsWorkbenchResults"
@@ -56,6 +66,7 @@ export function OverviewTab({
         <VpwSectionHeader title="Source details" />
         <VpwKeyValueList
           columns={2}
+          density="compact"
           items={[
             { label: "Project", value: projectName ?? summary.project_id },
             { label: "Input type", value: formatDisplayType(summary.input_type) },
@@ -73,6 +84,7 @@ export function OverviewTab({
       <VpwPanel>
         <VpwSectionHeader title="Context overlays" />
         <VpwKeyValueList
+          density="compact"
           items={[
             {
               label: "Asset context",
@@ -112,11 +124,24 @@ export function OverviewTab({
       <VpwPanel>
         <VpwSectionHeader title="What happened" />
         {timelineItems.length > 0 ? (
-          <ol className="grid gap-3 text-sm text-[var(--vpw-text-secondary)]">
+          <ol className="grid gap-3 text-sm">
             {timelineItems.map((item) => (
-              <li className="flex items-center gap-2" key={item}>
-                <span className="size-1.5 rounded-full bg-[var(--vpw-text-muted)]" />
-                {item}
+              <li className="grid grid-cols-[1.5rem_minmax(0,1fr)_auto] items-start gap-3" key={item}>
+                <CheckCircle2
+                  aria-hidden="true"
+                  className="mt-0.5 size-4 text-[var(--vpw-green)]"
+                />
+                <span className="min-w-0">
+                  <span className="block font-semibold text-[var(--vpw-text-primary)]">
+                    {item}
+                  </span>
+                  <span className="block text-sm text-[var(--vpw-text-secondary)]">
+                    {timelineDetail(item, summary)}
+                  </span>
+                </span>
+                <span className="text-sm text-[var(--vpw-text-secondary)]">
+                  {timelineTime(item, summary)}
+                </span>
               </li>
             ))}
           </ol>
@@ -126,22 +151,51 @@ export function OverviewTab({
       </VpwPanel>
       <VpwPanel>
         <VpwSectionHeader title="Next actions" />
-        <div className="flex flex-wrap gap-2">
-          <Button asChild>
-            <Link search={{ projectId: summary.project_id }} to="/findings">
-              Review findings
+        <div className="grid gap-3">
+          {[
+            {
+              description: "Open Triage with this project context preserved.",
+              href: "/findings" as const,
+              icon: ListChecks,
+              label: "Review findings",
+              search: { projectId: summary.project_id },
+            },
+            {
+              description: "Review imported file metadata and report artifacts.",
+              href: "/reports" as const,
+              icon: FolderOpen,
+              label: "Inspect evidence",
+              search: { projectId: summary.project_id, runId: summary.id },
+            },
+            {
+              description: "Start another guided import.",
+              href: "/imports/new" as const,
+              icon: UploadCloud,
+              label: "Import another file",
+              search: { projectId: summary.project_id },
+            },
+          ].map(({ description, href, icon: Icon, label, search }) => (
+            <Link
+              className="group flex items-center gap-3 rounded-[var(--vpw-radius-md)] border border-[var(--vpw-border-subtle)] bg-[var(--vpw-bg-card)] px-3 py-3 text-sm transition-colors hover:border-[var(--vpw-border-strong)] hover:bg-[var(--vpw-bg-panel)]"
+              key={label}
+              search={search}
+              to={href}
+            >
+              <Icon aria-hidden="true" className="size-4 shrink-0 text-[var(--vpw-text-primary)]" />
+              <span className="min-w-0 flex-1">
+                <span className="block font-semibold text-[var(--vpw-text-primary)]">
+                  {label}
+                </span>
+                <span className="block text-sm text-[var(--vpw-text-secondary)]">
+                  {description}
+                </span>
+              </span>
+              <ChevronRight
+                aria-hidden="true"
+                className="size-4 shrink-0 text-[var(--vpw-text-muted)] transition-transform group-hover:translate-x-0.5"
+              />
             </Link>
-          </Button>
-          <Button asChild variant="outline">
-            <Link search={{ projectId: summary.project_id, runId: summary.id }} to="/reports">
-              Inspect evidence
-            </Link>
-          </Button>
-          <Button asChild variant="outline">
-            <Link search={{ projectId: summary.project_id }} to="/imports/new">
-              Import another file
-            </Link>
-          </Button>
+          ))}
         </div>
       </VpwPanel>
       {summary.status === "failed" ? (
@@ -223,6 +277,7 @@ export function DiagnosticsTab({
           columns={2}
           density="compact"
           items={[
+            { label: "Status", value: runStatusLabel(summary.status) },
             { label: "Rows read", value: recordedValue(numberFromSummary(summary, "rows_read")) },
             { label: "Candidate findings", value: candidateFindings(summary) },
             { label: "Findings created", value: summary.created_findings ?? 0 },
@@ -556,6 +611,34 @@ function booleanFromRecord(source: unknown, key: string) {
   const value = objectRecord(source)[key]
   if (typeof value === "boolean") return value ? "Yes" : "No"
   return null
+}
+
+function timelineDetail(item: string, summary: ImportRunSummary) {
+  const created = summary.created_findings ?? 0
+  const updated = summary.updated_findings ?? 0
+  if (item === "File uploaded") return runFileLabel(summary)
+  if (item === "Data parsed") return `${candidateFindings(summary)} candidate findings`
+  if (item === "Provider data applied") {
+    return summary.provider_snapshot_id
+      ? `${summary.provider_snapshot_id} snapshot`
+      : "Current provider data"
+  }
+  if (item === "Optional context applied") return "Reviewed supplemental context"
+  if (item === "Findings created or updated") {
+    return `${created} created, ${updated} updated`
+  }
+  if (item === "Import completed") return runStatusLabel(summary.status)
+  if (item === "Parser diagnostics recorded") {
+    return `${summary.parse_errors?.length ?? 0} parser error(s)`
+  }
+  return formatDisplayType(summary.input_type)
+}
+
+function timelineTime(item: string, summary: ImportRunSummary) {
+  if (item === "Import completed") return formatDateTime(summary.finished_at)
+  return item === "Findings created or updated"
+    ? `${summary.created_findings ?? 0} created`
+    : formatDateTime(summary.started_at)
 }
 
 function numberFromSummary(summary: ImportRunSummary, key: string) {

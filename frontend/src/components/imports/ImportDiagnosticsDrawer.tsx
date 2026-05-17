@@ -225,6 +225,7 @@ function DiagnosticsTabs({
         <VpwPanel className="flex flex-col gap-4">
           <CompactRows
             items={[
+              { label: "Parser status", value: runStatusLabel(summary.status) },
               { label: "Rows read", value: recordedValue(summaryJson.rows_read) },
               { label: "Created findings", value: summary.created_findings ?? 0 },
               { label: "Updated findings", value: summary.updated_findings ?? 0 },

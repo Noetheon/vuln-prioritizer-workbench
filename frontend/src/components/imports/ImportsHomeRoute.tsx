@@ -1,9 +1,19 @@
 import { Link } from "@/lib/router"
-import { CheckCircle2, Database, History, ListChecks, Plus, TableProperties } from "lucide-react"
+import {
+  ChevronRight,
+  Database,
+  FileJson,
+  FileText,
+  History,
+  ListChecks,
+  Network,
+  Plus,
+  ScanLine,
+  TableProperties,
+} from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   VpwGrid,
-  VpwKeyValueList,
   VpwMetricCard,
   VpwPanel,
   VpwSection,
@@ -90,51 +100,91 @@ export function ImportsHomeRoute(props: ImportsHomeRouteProps) {
             description="A short path through the import flow."
             title="Quick start"
           />
-          <VpwKeyValueList
-            items={[
-              {
-                label: "1. Choose source",
-                value: "Select project and input type.",
-              },
-              {
-                label: "2. Upload file",
-                value: "Attach the main evidence file.",
-              },
-              {
-                label: "3. Add context",
-                value: "Optionally add asset context, VEX, or reviewed ATT&CK context.",
-              },
-              {
-                label: "4. Review import",
-                value: "Check readiness and start the run.",
-              },
-            ]}
-          />
+          <div className="grid gap-3">
+            {[
+              ["1", "Choose source", "Select project and input type."],
+              ["2", "Upload file", "Attach the main evidence file."],
+              [
+                "3",
+                "Add context (optional)",
+                "Add asset context, VEX, or reviewed ATT&CK context.",
+              ],
+              ["4", "Review import", "Check readiness and start the run."],
+            ].map(([number, title, description]) => (
+              <Link
+                className="group flex items-center gap-4 rounded-[var(--vpw-radius-md)] border border-[var(--vpw-border-subtle)] bg-[var(--vpw-bg-card)] px-4 py-3 text-sm transition-colors hover:border-[var(--vpw-border-strong)] hover:bg-[var(--vpw-bg-panel)]"
+                key={number}
+                search={projectSearch}
+                to="/imports/new"
+              >
+                <span className="grid size-6 shrink-0 place-items-center rounded-full bg-[var(--vpw-green)] font-mono text-xs font-semibold text-[var(--vpw-bg-card)]">
+                  {number}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block font-semibold text-[var(--vpw-text-primary)]">
+                    {title}
+                  </span>
+                  <span className="block text-sm text-[var(--vpw-text-secondary)]">
+                    {description}
+                  </span>
+                </span>
+                <ChevronRight
+                  aria-hidden="true"
+                  className="size-4 shrink-0 text-[var(--vpw-text-muted)] transition-transform group-hover:translate-x-0.5"
+                />
+              </Link>
+            ))}
+          </div>
         </VpwPanel>
         <VpwPanel className="flex flex-col gap-4">
           <VpwSectionHeader
-            description={`${SUPPORTED_IMPORT_FORMATS.length} supported input types.`}
+            description={`${SUPPORTED_IMPORT_FORMATS.length} supported input types grouped by evidence source.`}
             title="Supported formats"
           />
           <div className="grid gap-2 text-sm text-[var(--vpw-text-secondary)]">
-            {["Simple inputs", "Scanner exports", "SBOM / dependency data", "Network scanner exports"].map(
-              (category) => (
+            {[
+              {
+                description: "CVE lists, CSV files",
+                icon: FileText,
+                label: "Simple inputs",
+              },
+              {
+                description: "Trivy, Grype, Dependency-Check, GitHub alerts",
+                icon: ScanLine,
+                label: "Scanner exports",
+              },
+              {
+                description: "CycloneDX, SPDX",
+                icon: FileJson,
+                label: "SBOM / dependency data",
+              },
+              {
+                description: "Nessus XML, OpenVAS XML",
+                icon: Network,
+                label: "Network scanner exports",
+              },
+            ].map(({ description, icon: Icon, label }) => (
                 <div
-                  className="flex items-center justify-between gap-3 border-b border-[var(--vpw-border-subtle)] py-2 last:border-b-0"
-                  key={category}
+                  className="flex items-start gap-3 border-b border-[var(--vpw-border-subtle)] py-2 last:border-b-0"
+                  key={label}
                 >
-                  <span>{category}</span>
-                  <CheckCircle2
+                  <Icon
                     aria-hidden="true"
-                    className="size-4 text-[var(--vpw-text-muted)]"
+                    className="mt-0.5 size-4 shrink-0 text-[var(--vpw-green)]"
                   />
+                  <span className="min-w-0">
+                    <span className="block font-semibold text-[var(--vpw-text-primary)]">
+                      {label}
+                    </span>
+                    <span className="block text-xs leading-5">{description}</span>
+                  </span>
                 </div>
-              ),
-            )}
+              ))}
           </div>
           <Button asChild size="sm" variant="outline">
             <Link search={projectSearch} to="/imports/formats">
-              View format requirements
+              View all formats and requirements
+              <ChevronRight aria-hidden="true" data-icon="inline-end" />
             </Link>
           </Button>
         </VpwPanel>

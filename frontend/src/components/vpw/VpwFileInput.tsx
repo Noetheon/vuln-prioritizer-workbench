@@ -8,6 +8,7 @@ export type VpwFileInputProps = {
   id: string
   label: string
   accept?: string
+  acceptedLabel?: string
   "aria-describedby"?: string
   "aria-errormessage"?: string
   "aria-invalid"?: boolean | "true" | "false"
@@ -15,6 +16,7 @@ export type VpwFileInputProps = {
   className?: string
   disabled?: boolean
   file?: File | null
+  layout?: "default" | "centered"
   name?: string
   onFileChange: (file: File | null) => void
   showSelectedFileActions?: boolean
@@ -22,6 +24,7 @@ export type VpwFileInputProps = {
 
 export function VpwFileInput({
   accept,
+  acceptedLabel,
   "aria-describedby": ariaDescribedBy,
   "aria-errormessage": ariaErrorMessage,
   "aria-invalid": ariaInvalid,
@@ -31,17 +34,20 @@ export function VpwFileInput({
   file,
   id,
   label,
+  layout = "default",
   name,
   onFileChange,
   showSelectedFileActions = false,
 }: VpwFileInputProps) {
-  const acceptedLabel = accept
-    ? accept
-        .split(",")
-        .map((value) => value.trim())
-        .filter(Boolean)
-        .join(", ")
-    : ""
+  const acceptedText = acceptedLabel
+    ? acceptedLabel
+    : accept
+      ? accept
+          .split(",")
+          .map((value) => value.trim())
+          .filter(Boolean)
+          .join(", ")
+      : ""
 
   function handleChange(event: ChangeEvent<HTMLInputElement>) {
     onFileChange(event.target.files?.[0] ?? null)
@@ -66,7 +72,10 @@ export function VpwFileInput({
       />
       <label
         className={cn(
-          "flex min-h-28 cursor-pointer items-center gap-3 rounded-[var(--vpw-radius-lg)] border border-dashed border-[var(--vpw-border-strong)] bg-[var(--vpw-bg-card)] px-4 py-3 text-sm transition-colors",
+          "flex min-h-28 cursor-pointer rounded-[var(--vpw-radius-lg)] border border-dashed border-[var(--vpw-border-strong)] bg-[var(--vpw-bg-card)] px-4 py-3 text-sm transition-colors",
+          layout === "centered"
+            ? "flex-col items-center justify-center gap-3 text-center"
+            : "items-center gap-3",
           "hover:border-[var(--vpw-blue)] hover:bg-[var(--vpw-bg-info)]",
           "focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[var(--vpw-focus-ring)]",
           disabled &&
@@ -86,8 +95,8 @@ export function VpwFileInput({
             {file ? file.name : "Choose or drop a file"}
           </span>
           <span className="mt-1 block text-xs leading-5 text-[var(--vpw-text-muted)]">
-            {acceptedLabel
-              ? `Accepted: ${acceptedLabel}`
+            {acceptedText
+              ? `Accepted: ${acceptedText}`
               : "Supported workbench input"}
           </span>
         </span>
