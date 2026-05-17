@@ -531,9 +531,15 @@
 
 .dashboard-signal-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(260px, 0.42fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: 14px;
   align-items: stretch;
+}
+
+@media (min-width: 1536px) {
+  .dashboard-signal-layout {
+    grid-template-columns: minmax(0, 1fr) minmax(260px, 0.42fr);
+  }
 }
 
 .dashboard-key-takeaways {
